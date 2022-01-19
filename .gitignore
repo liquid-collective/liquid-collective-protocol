@@ -1,0 +1,15 @@
+node_modules
+.env
+coverage
+coverage.json
+typechain
+.vscode
+
+#Hardhat files
+hardhat-cache
+artifacts
+
+# Forge files
+cache
+forge-artifacts
+out
