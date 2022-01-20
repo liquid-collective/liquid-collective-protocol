@@ -9,7 +9,15 @@ contract RiverV1 is DepositManagerV1, TransferManagerV1 {
         this;
     }
 
-    function riverInitializeV1(address _depositContractAddress) public {
-        DepositManagerV1.depositManagerInitializeV1(_depositContractAddress);
+    function riverInitializeV1(
+        address _depositContractAddress,
+        address _validatorCredentialsProviderAddress,
+        bytes32 _withdrawalCredentials
+    ) public {
+        DepositManagerV1.depositManagerInitializeV1(
+            _depositContractAddress,
+            _validatorCredentialsProviderAddress,
+            _withdrawalCredentials
+        );
     }
 }

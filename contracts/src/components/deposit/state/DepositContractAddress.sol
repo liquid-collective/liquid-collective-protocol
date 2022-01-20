@@ -11,10 +11,27 @@ library DepositContractAddress {
         IDepositContract value;
     }
 
-    function get() internal pure returns (Slot storage r) {
+    function get() internal view returns (IDepositContract) {
         bytes32 slot = DEPOSIT_CONTRACT_ADDRESS_SLOT;
+
+        Slot storage r;
+
         assembly {
             r.slot := slot
         }
+
+        return r.value;
+    }
+
+    function set(IDepositContract newValue) internal {
+        bytes32 slot = DEPOSIT_CONTRACT_ADDRESS_SLOT;
+
+        Slot storage r;
+
+        assembly {
+            r.slot := slot
+        }
+
+        r.value = newValue;
     }
 }

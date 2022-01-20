@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
-
 pragma solidity 0.8.10;
+
+import "./console.sol";
 
 interface Vm {
     function prank(address) external;
