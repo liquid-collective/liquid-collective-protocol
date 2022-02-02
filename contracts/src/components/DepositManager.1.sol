@@ -1,47 +1,58 @@
 //SPDX-License-Identifier: BUSL-1.1
 pragma solidity 0.8.10;
 
-import "./interfaces/IDepositContract.sol";
-import "./interfaces/IValidatorCredentialsProvider.sol";
-import "./state/DepositContractAddress.sol";
-import "./state/ValidatorCredentialsProviderAddress.sol";
-import "./state/WithdrawalCredentials.sol";
+import "../interfaces/IDepositContract.sol";
+import "../state/DepositContractAddress.sol";
+import "../state/WithdrawalCredentials.sol";
+import "../state/DepositedValidatorCount.sol";
 
-import "../../shared/libraries/BytesLib.sol";
-import "../../shared/libraries/UintLib.sol";
+import "../libraries/BytesLib.sol";
+import "../libraries/UintLib.sol";
 
-contract DepositManagerV1 {
+/// @title Deposit Manager (v1)
+/// @author Iulian Rotaru
+/// @notice This contract handles the interactions with the official deposit contract, funding all validators
+/// @dev _onValidatorKeyRequest must be overriden.
+abstract contract DepositManagerV1 {
     error NotEnoughFunds();
-
     error InconsistentPublicKeys();
     error InconsistentSignatures();
-
     error NoAvailableValidatorKeys();
     error InvalidPublicKeyCount();
     error InvalidSignatureCount();
-
     error InvalidWithdrawalCredentials();
 
     uint256 public constant PUBLIC_KEY_LENGTH = 48;
     uint256 public constant SIGNATURE_LENGTH = 96;
     uint256 public constant DEPOSIT_SIZE = 32 ether;
 
+    /// @notice Initializer to set the deposit contract address and the withdrawal credentials to use
+    /// @param _depositContractAddress The address of the deposit contract
+    /// @param _withdrawalCredentials The withdrawal credentials to apply to all deposits
     function depositManagerInitializeV1(
         address _depositContractAddress,
-        address _validatorCredentialsProviderAddress,
         bytes32 _withdrawalCredentials
     ) internal {
         DepositContractAddress.set(IDepositContract(_depositContractAddress));
 
-        ValidatorCredentialsProviderAddress.set(
-            IValidatorCredentialsProvider(_validatorCredentialsProviderAddress)
-        );
-
         WithdrawalCredentials.set(_withdrawalCredentials);
     }
 
-    function depositToETH2() external {
-        uint256 validatorsToDeposit = address(this).balance / DEPOSIT_SIZE;
+    /// @notice Internal helper to retrieve validator keys ready to be funded
+    /// @dev Must be overriden with an implementation that provides keyCount or less keys upon call
+    /// @param _keyCount The amount of keys (or less) to return.
+    function _onValidatorKeyRequest(uint256 _keyCount)
+        internal
+        virtual
+        returns (bytes memory publicKeys, bytes memory signatures);
+
+    /// @notice Deposits current balance to the Consensus Layer by batches of 32 ETH
+    /// @param _maxCount The maximum amount of validator keys to fund
+    function depositToConsensusLayer(uint256 _maxCount) external {
+        uint256 validatorsToDeposit = UintLib.min(
+            address(this).balance / DEPOSIT_SIZE,
+            _maxCount
+        );
 
         if (validatorsToDeposit == 0) {
             revert NotEnoughFunds();
@@ -50,9 +61,7 @@ contract DepositManagerV1 {
         (
             bytes memory publicKeys,
             bytes memory signatures
-        ) = ValidatorCredentialsProviderAddress.get().getValidatorKeys(
-                validatorsToDeposit
-            );
+        ) = _onValidatorKeyRequest(validatorsToDeposit);
 
         if (publicKeys.length % PUBLIC_KEY_LENGTH != 0) {
             revert InconsistentPublicKeys();
@@ -97,8 +106,16 @@ contract DepositManagerV1 {
             );
             _depositPublicKey(publicKey, signature, withdrawalCredentials);
         }
+
+        DepositedValidatorCount.set(
+            DepositedValidatorCount.get() + receivedPublicKeyCount
+        );
     }
 
+    /// @notice Deposits 32 ETH to the official Deposit contract
+    /// @param _publicKey The public key of the validator
+    /// @param _signature The signature provided by the operator
+    /// @param _withdrawalCredentials The withdrawal credentials provided by River
     function _depositPublicKey(
         bytes memory _publicKey,
         bytes memory _signature,

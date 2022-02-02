@@ -4,7 +4,8 @@
     "test": "hardhat forge-test",
     "format": "prettier --write ./contracts",
     "format:check": "prettier --check ./contracts",
-    "lint:check": "hardhat check"
+    "lint:check": "hardhat check",
+    "compile": "hardhat compile"
   },
   "devDependencies": {
     "@nomiclabs/hardhat-ethers": "^2.0.4",

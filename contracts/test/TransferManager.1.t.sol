@@ -3,7 +3,7 @@
 pragma solidity 0.8.10;
 
 import "./Vm.sol";
-import "../src/components/transfer/TransferManager.1.sol";
+import "../src/components/TransferManager.1.sol";
 
 contract TransferManagerV1EmptyDeposit is TransferManagerV1 {
     function _onDeposit() internal view override {

@@ -1,3 +1,4 @@
+//SPDX-License-Identifier: BUSL-1.1
 pragma solidity 0.8.10;
 
 library UintLib {
@@ -15,5 +16,9 @@ library UintLib {
 
         assert(0 == temp_value); // fully converted
         result <<= (24 * 8);
+    }
+
+    function min(uint256 a, uint256 b) internal pure returns (uint256 max) {
+        return (a > b ? b : a);
     }
 }

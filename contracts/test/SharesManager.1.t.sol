@@ -3,11 +3,21 @@
 pragma solidity 0.8.10;
 
 import "./Vm.sol";
-import "../src/components/shares/SharesManager.1.sol";
+import "../src/components/SharesManager.1.sol";
 
 contract SharesManagerPublicDeal is SharesManagerV1 {
+    uint256 public balanceSum;
+
     function setValidatorBalance(uint256 _amount) external {
-        ValidatorBalanceSum.set(_amount);
+        balanceSum = _amount;
+    }
+
+    function _assetBalance() internal view override returns (uint256) {
+        return balanceSum + address(this).balance;
+    }
+
+    function _isAllowed(address) internal pure override returns (bool) {
+        return true;
     }
 
     function deal(address _owner, uint256 _amount) external {

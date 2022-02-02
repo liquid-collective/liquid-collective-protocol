@@ -1,15 +1,27 @@
 //SPDX-License-Identifier: BUSL-1.1
 pragma solidity 0.8.10;
 
-import "./interfaces/IERC20.sol";
-import "./state/Shares.sol";
-import "./state/SharesPerOwner.sol";
-import "./state/ApprovalsPerOwner.sol";
-import "./state/ValidatorBalanceSum.sol";
+import "../interfaces/IERC20.sol";
+import "../state/Shares.sol";
+import "../state/SharesPerOwner.sol";
+import "../state/ApprovalsPerOwner.sol";
+import "../libraries/Errors.sol";
 
-contract SharesManagerV1 is IERC20 {
+/// @title Shares Manager (v1)
+/// @author Iulian Rotaru
+/// @notice This contract handles the shares of the depositor and the rebasing effect depending on the oracle data
+abstract contract SharesManagerV1 is IERC20 {
     error BalanceTooLow();
     error UnauthorizedOperation();
+
+    function _isAllowed(address _account) internal view virtual returns (bool);
+
+    modifier allowed(address _account) {
+        if (!_isAllowed(_account)) {
+            revert Errors.Unauthorized(_account);
+        }
+        _;
+    }
 
     function name() external pure returns (string memory) {
         return "River";
@@ -45,6 +57,8 @@ contract SharesManagerV1 is IERC20 {
 
     function transfer(address _to, uint256 _value)
         external
+        allowed(msg.sender)
+        allowed(_to)
         returns (bool success)
     {
         if (_balanceOf(msg.sender) >= _value) {
@@ -56,6 +70,8 @@ contract SharesManagerV1 is IERC20 {
         SharesPerOwner.set(msg.sender, SharesPerOwner.get(msg.sender) - shares);
         SharesPerOwner.set(_to, SharesPerOwner.get(_to) + shares);
 
+        emit Transfer(msg.sender, _to, _value);
+
         return true;
     }
 
@@ -63,7 +79,7 @@ contract SharesManagerV1 is IERC20 {
         address _from,
         address _to,
         uint256 _value
-    ) external returns (bool success) {
+    ) external allowed(_from) allowed(_to) returns (bool success) {
         if (
             _from != msg.sender &&
             ApprovalsPerOwner.get(msg.sender, _from) < _value
@@ -77,23 +93,25 @@ contract SharesManagerV1 is IERC20 {
 
         uint256 shares = _sharesFromBalance(_value);
 
-        SharesPerOwner.set(msg.sender, SharesPerOwner.get(msg.sender) - shares);
+        SharesPerOwner.set(_from, SharesPerOwner.get(_from) - shares);
         SharesPerOwner.set(_to, SharesPerOwner.get(_to) + shares);
+
+        emit Transfer(_from, _to, _value);
 
         return true;
     }
 
     function approve(address _spender, uint256 _value)
         external
+        allowed(msg.sender)
         returns (bool success)
     {
         ApprovalsPerOwner.set(msg.sender, _spender, _value);
+        emit Approval(msg.sender, _spender, _value);
         return true;
     }
 
-    function _assetBalance() internal view returns (uint256) {
-        return ValidatorBalanceSum.get() + address(this).balance;
-    }
+    function _assetBalance() internal view virtual returns (uint256);
 
     function _balanceFromShares(uint256 shares)
         internal
@@ -134,11 +152,6 @@ contract SharesManagerV1 is IERC20 {
         } else {
             uint256 sharesToMint = (_value * _totalShares()) /
                 oldTotalAssetBalance;
-            // uint256 sharesToMint = (((assetBalance * 1 ether) /
-            //     oldTotalAssetBalance) * _totalShares()) /
-            //     1 ether -
-            //     _totalShares();
-
             Shares.set(Shares.get() + sharesToMint);
             SharesPerOwner.set(
                 _owner,
