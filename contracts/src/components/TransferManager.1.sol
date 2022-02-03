@@ -17,7 +17,9 @@ abstract contract TransferManagerV1 {
 
     /// @notice Handler called whenever a user has sent funds to the contract
     /// @dev Must be overriden
-    function _onDeposit() internal virtual;
+    /// @param _depositor Address that made the deposit
+    /// @param _amount Amount deposited
+    function _onDeposit(address _depositor, uint256 _amount) internal virtual;
 
     /// @notice Internal utility calling the deposit handler and emitting the deposit details and the referral address
     /// @param _referral Referral address, address(0) if none
@@ -26,7 +28,7 @@ abstract contract TransferManagerV1 {
             revert EmptyDeposit();
         }
 
-        _onDeposit();
+        _onDeposit(msg.sender, msg.value);
 
         emit UserDeposit(msg.sender, _referral, msg.value);
     }

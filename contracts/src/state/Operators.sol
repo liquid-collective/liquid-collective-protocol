@@ -65,6 +65,16 @@ library Operators {
         return r.value[index];
     }
 
+    function _hasFundableKeys(Operators.Operator memory operator)
+        internal
+        pure
+        returns (bool)
+    {
+        return (operator.active &&
+            operator.keys > operator.funded &&
+            operator.limit > operator.funded);
+    }
+
     function getAllActive() internal view returns (Operator[] memory) {
         bytes32 slot = OPERATORS_SLOT;
 
@@ -77,7 +87,7 @@ library Operators {
         uint256 activeCount = 0;
 
         for (uint256 idx = 0; idx < r.value.length; ++idx) {
-            if (r.value[idx].active) {
+            if (r.value[idx].active == true) {
                 ++activeCount;
             }
         }
@@ -86,7 +96,37 @@ library Operators {
 
         uint256 activeIdx = 0;
         for (uint256 idx = 0; idx < r.value.length; ++idx) {
-            if (r.value[idx].active) {
+            if (r.value[idx].active == true) {
+                activeOperators[activeIdx] = r.value[idx];
+                ++activeIdx;
+            }
+        }
+
+        return activeOperators;
+    }
+
+    function getAllFundable() internal view returns (Operator[] memory) {
+        bytes32 slot = OPERATORS_SLOT;
+
+        SlotOperator storage r;
+
+        assembly {
+            r.slot := slot
+        }
+
+        uint256 activeCount = 0;
+
+        for (uint256 idx = 0; idx < r.value.length; ++idx) {
+            if (_hasFundableKeys(r.value[idx])) {
+                ++activeCount;
+            }
+        }
+
+        Operator[] memory activeOperators = new Operator[](activeCount);
+
+        uint256 activeIdx = 0;
+        for (uint256 idx = 0; idx < r.value.length; ++idx) {
+            if (_hasFundableKeys(r.value[idx])) {
                 activeOperators[activeIdx] = r.value[idx];
                 ++activeIdx;
             }

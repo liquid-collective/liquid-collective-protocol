@@ -4,7 +4,7 @@ pragma solidity 0.8.10;
 import "../state/AdministratorAddress.sol";
 import "../state/Operators.sol";
 import "../state/ValidatorKeys.sol";
-import "../libraries/Errors.sol";
+import "../libraries/Utils.sol";
 
 /// @title Operators Manager (v1)
 /// @author Iulian Rotaru
@@ -32,14 +32,6 @@ contract OperatorsManagerV1 {
     );
     event AddedValidatorKeys(string indexed name, uint256 totalKeyCount);
     event RemovedValidatorKeys(string indexed name, uint256 keyCount);
-
-    /// @notice Prevents anyone except the admin to make the call
-    modifier admin() {
-        if (msg.sender != AdministratorAddress.get()) {
-            revert Errors.Unauthorized(msg.sender);
-        }
-        _;
-    }
 
     /// @notice Prevents the call from working if the operator is not active
     /// @param _name The name identifying the operator
@@ -70,10 +62,8 @@ contract OperatorsManagerV1 {
     /// @dev Only callable by the administrator
     /// @param _name The name identifying the operator
     /// @param _operator The address representing the operator, receiving the rewards
-    function addOperator(string calldata _name, address _operator)
-        external
-        admin
-    {
+    function addOperator(string calldata _name, address _operator) external {
+        UtilsLib.adminOnly();
         if (Operators.get(_name).active == true) {
             revert OperatorAlreadyExists(_name);
         }
@@ -114,9 +104,9 @@ contract OperatorsManagerV1 {
     /// @param _newStatus The new status of the operator
     function setOperatorStatus(string calldata _name, bool _newStatus)
         external
-        admin
         active(_name)
     {
+        UtilsLib.adminOnly();
         Operators.Operator storage operator = Operators.get(_name);
 
         operator.active = _newStatus;
@@ -131,7 +121,8 @@ contract OperatorsManagerV1 {
     function setOperatorStoppedValidatorCount(
         string calldata _name,
         uint256 _newStoppedValidatorCount
-    ) external admin active(_name) {
+    ) external active(_name) {
+        UtilsLib.adminOnly();
         Operators.Operator storage operator = Operators.get(_name);
 
         operator.stopped = _newStoppedValidatorCount;
@@ -145,9 +136,9 @@ contract OperatorsManagerV1 {
     /// @param _newLimit The new staking limit of the operator
     function setOperatorLimit(string calldata _name, uint256 _newLimit)
         external
-        admin
         active(_name)
     {
+        UtilsLib.adminOnly();
         Operators.Operator storage operator = Operators.get(_name);
 
         operator.limit = _newLimit;
@@ -246,5 +237,31 @@ contract OperatorsManagerV1 {
         }
 
         emit RemovedValidatorKeys(_name, operator.keys);
+    }
+
+    /// @notice Get operator details
+    /// @param _name The name identifying the operator
+    function getOperator(string calldata _name)
+        external
+        view
+        returns (Operators.Operator memory)
+    {
+        return Operators.get(_name);
+    }
+
+    /// @notice Get the key of an operator at a specific index
+    /// @param _operatorName The name identifying the operator
+    /// @param _index The key index
+    function getKey(string calldata _operatorName, uint256 _index)
+        external
+        view
+        returns (
+            bytes memory publicKey,
+            bytes memory signature,
+            bool funded
+        )
+    {
+        (publicKey, signature) = ValidatorKeys.get(_operatorName, _index);
+        funded = _index <= Operators.get(_operatorName).funded;
     }
 }

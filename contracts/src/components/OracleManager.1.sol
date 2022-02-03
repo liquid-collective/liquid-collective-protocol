@@ -73,4 +73,27 @@ abstract contract OracleManagerV1 {
 
         emit BeaconDataUpdate(_validatorCount, _validatorBalanceSum, _roundId);
     }
+
+    /// @notice Get Oracle address
+    function getOracle() external view returns (address oracle) {
+        oracle = OracleAddress.get();
+    }
+
+    /// @notice Get Beacon validator balance sum
+    function getBeaconValidatorBalanceSum()
+        external
+        view
+        returns (uint256 beaconValidatorBalanceSum)
+    {
+        beaconValidatorBalanceSum = BeaconValidatorBalanceSum.get();
+    }
+
+    /// @notice Get Beacon validator count (the amount of validator reported by the oracles)
+    function getBeaconValidatorCount()
+        external
+        view
+        returns (uint256 beaconValidatorCount)
+    {
+        beaconValidatorCount = BeaconValidatorCount.get();
+    }
 }

@@ -44,7 +44,7 @@ abstract contract DepositManagerV1 {
     function _onValidatorKeyRequest(uint256 _keyCount)
         internal
         virtual
-        returns (bytes memory publicKeys, bytes memory signatures);
+        returns (bytes[] memory publicKeys, bytes[] memory signatures);
 
     /// @notice Deposits current balance to the Consensus Layer by batches of 32 ETH
     /// @param _maxCount The maximum amount of validator keys to fund
@@ -59,19 +59,11 @@ abstract contract DepositManagerV1 {
         }
 
         (
-            bytes memory publicKeys,
-            bytes memory signatures
+            bytes[] memory publicKeys,
+            bytes[] memory signatures
         ) = _onValidatorKeyRequest(validatorsToDeposit);
 
-        if (publicKeys.length % PUBLIC_KEY_LENGTH != 0) {
-            revert InconsistentPublicKeys();
-        }
-
-        if (signatures.length % SIGNATURE_LENGTH != 0) {
-            revert InconsistentSignatures();
-        }
-
-        uint256 receivedPublicKeyCount = publicKeys.length / PUBLIC_KEY_LENGTH;
+        uint256 receivedPublicKeyCount = publicKeys.length;
 
         if (receivedPublicKeyCount == 0) {
             revert NoAvailableValidatorKeys();
@@ -81,7 +73,7 @@ abstract contract DepositManagerV1 {
             revert InvalidPublicKeyCount();
         }
 
-        uint256 receivedSignatureCount = signatures.length / SIGNATURE_LENGTH;
+        uint256 receivedSignatureCount = signatures.length;
 
         if (receivedSignatureCount != receivedPublicKeyCount) {
             revert InvalidSignatureCount();
@@ -94,16 +86,18 @@ abstract contract DepositManagerV1 {
         }
 
         for (uint256 idx = 0; idx < receivedPublicKeyCount; idx += 1) {
-            bytes memory publicKey = BytesLib.slice(
-                publicKeys,
-                PUBLIC_KEY_LENGTH * idx,
-                PUBLIC_KEY_LENGTH
-            );
-            bytes memory signature = BytesLib.slice(
-                signatures,
-                SIGNATURE_LENGTH * idx,
-                SIGNATURE_LENGTH
-            );
+            bytes memory publicKey = publicKeys[idx];
+
+            if (publicKey.length != PUBLIC_KEY_LENGTH) {
+                revert InconsistentPublicKeys();
+            }
+
+            bytes memory signature = signatures[idx];
+
+            if (signature.length != SIGNATURE_LENGTH) {
+                revert InconsistentSignatures();
+            }
+
             _depositPublicKey(publicKey, signature, withdrawalCredentials);
         }
 
@@ -162,5 +156,14 @@ abstract contract DepositManagerV1 {
             address(this).balance == targetBalance,
             "EXPECTING_DEPOSIT_TO_HAPPEN"
         );
+    }
+
+    /// @notice Get the deposited validator count (the count of deposits made by the contract)
+    function getDepositedValidatorCount()
+        external
+        view
+        returns (uint256 depositedValidatorCount)
+    {
+        depositedValidatorCount = DepositedValidatorCount.get();
     }
 }

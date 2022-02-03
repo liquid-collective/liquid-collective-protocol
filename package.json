@@ -1,5 +1,6 @@
 {
   "name": "river",
+  "version": "0.0.1",
   "scripts": {
     "test": "hardhat forge-test",
     "format": "prettier --write ./contracts",
@@ -7,7 +8,7 @@
     "lint:check": "hardhat check",
     "compile": "hardhat compile"
   },
-  "devDependencies": {
+  "dependencies": {
     "@nomiclabs/hardhat-ethers": "^2.0.4",
     "@nomiclabs/hardhat-etherscan": "^2.1.8",
     "@nomiclabs/hardhat-waffle": "^2.0.1",
@@ -30,6 +31,7 @@
     "ethereum-waffle": "^3.4.0",
     "ethers": "^5.5.3",
     "hardhat": "^2.8.2",
+    "hardhat-foundry": "0.0.5",
     "hardhat-gas-reporter": "^1.0.7",
     "prettier": "^2.5.1",
     "prettier-plugin-solidity": "^1.0.0-beta.13",
@@ -38,6 +40,9 @@
     "ts-node": "^10.4.0",
     "typechain": "^5.2.0",
     "typescript": "^4.5.4",
-    "hardhat-foundry": "0.0.5"
+    "@openzeppelin/contracts": "4.4.2",
+    "hardhat-contract-sizer": "^2.4.0",
+    "hardhat-deploy": "^0.10.4",
+    "hardhat-docgen": "^1.3.0"
   }
 }

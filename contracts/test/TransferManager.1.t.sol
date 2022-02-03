@@ -6,7 +6,7 @@ import "./Vm.sol";
 import "../src/components/TransferManager.1.sol";
 
 contract TransferManagerV1EmptyDeposit is TransferManagerV1 {
-    function _onDeposit() internal view override {
+    function _onDeposit(address, uint256) internal view override {
         this;
     }
 }
@@ -102,10 +102,10 @@ contract TransferManagerV1DepositTests {
 }
 
 contract TransferManagerV1CatchableDeposit is TransferManagerV1 {
-    event InternalCallbackCalled();
+    event InternalCallbackCalled(address user, uint256 amount);
 
-    function _onDeposit() internal override {
-        emit InternalCallbackCalled();
+    function _onDeposit(address user, uint256 amount) internal override {
+        emit InternalCallbackCalled(user, amount);
     }
 }
 
@@ -113,7 +113,7 @@ contract TransferManagerV1CallbackTests {
     Vm internal vm = Vm(0x7109709ECfa91a80626fF3989D68f67F5b1DD12D);
     TransferManagerV1 internal transferManager;
 
-    event InternalCallbackCalled();
+    event InternalCallbackCalled(address user, uint256 amount);
 
     function setUp() public {
         transferManager = new TransferManagerV1CatchableDeposit();
@@ -126,7 +126,7 @@ contract TransferManagerV1CallbackTests {
         assert(_user.balance == _amount);
 
         vm.expectEmit(true, true, true, true);
-        emit InternalCallbackCalled();
+        emit InternalCallbackCalled(_user, _amount);
         transferManager.deposit{value: _amount}(address(0));
 
         assert(_user.balance == 0);
