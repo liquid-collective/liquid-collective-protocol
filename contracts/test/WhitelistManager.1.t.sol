@@ -7,9 +7,7 @@ import "../src/components/WhitelistManager.1.sol";
 import "../src/libraries/Errors.sol";
 
 contract WhitelistManagerV1ExposeInitializer is WhitelistManagerV1 {
-    function publicWhitelistManagerInitializeV1(address _whitelistorAddress)
-        external
-    {
+    function publicWhitelistManagerInitializeV1(address _whitelistorAddress) external {
         WhitelistManagerV1.whitelistManagerInitializeV1(_whitelistorAddress);
     }
 }
@@ -19,15 +17,13 @@ contract WhitelistManagerV1Tests {
 
     bytes32 internal withdrawalCredentials = bytes32(uint256(1));
 
-    address internal whitelistor =
-        address(0xEA674fdDe714fd979de3EdF0F56AA9716B898ec8);
+    address internal whitelistor = address(0xEA674fdDe714fd979de3EdF0F56AA9716B898ec8);
 
     WhitelistManagerV1 internal whitelistManager;
 
     function setUp() public {
         whitelistManager = new WhitelistManagerV1ExposeInitializer();
-        WhitelistManagerV1ExposeInitializer(address(whitelistManager))
-            .publicWhitelistManagerInitializeV1(whitelistor);
+        WhitelistManagerV1ExposeInitializer(address(whitelistManager)).publicWhitelistManagerInitializeV1(whitelistor);
     }
 
     function testSetWhitelistStatus(address user) public {

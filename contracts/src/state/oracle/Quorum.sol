@@ -1,16 +1,15 @@
 //SPDX-License-Identifier: BUSL-1.1
 pragma solidity 0.8.10;
 
-library GlobalFee {
-    bytes32 public constant GLOBAL_FEE_SLOT =
-        bytes32(uint256(keccak256("river.state.globalFee")) - 1);
+library Quorum {
+    bytes32 public constant QUORUM_SLOT = bytes32(uint256(keccak256("river.state.quorum")) - 1);
 
     struct Slot {
         uint256 value;
     }
 
     function get() internal view returns (uint256) {
-        bytes32 slot = GLOBAL_FEE_SLOT;
+        bytes32 slot = QUORUM_SLOT;
 
         Slot storage r;
 
@@ -21,8 +20,8 @@ library GlobalFee {
         return r.value;
     }
 
-    function set(uint256 newGlobalFee) internal {
-        bytes32 slot = GLOBAL_FEE_SLOT;
+    function set(uint256 newValue) internal {
+        bytes32 slot = QUORUM_SLOT;
 
         Slot storage r;
 
@@ -30,6 +29,6 @@ library GlobalFee {
             r.slot := slot
         }
 
-        r.value = newGlobalFee;
+        r.value = newValue;
     }
 }

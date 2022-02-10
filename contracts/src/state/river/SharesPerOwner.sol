@@ -2,8 +2,7 @@
 pragma solidity 0.8.10;
 
 library SharesPerOwner {
-    bytes32 public constant SHARES_SLOT =
-        bytes32(uint256(keccak256("river.state.sharesPerOwner")) - 1);
+    bytes32 public constant SHARES_SLOT = bytes32(uint256(keccak256("river.state.sharesPerOwner")) - 1);
 
     struct Slot {
         mapping(address => uint256) value;

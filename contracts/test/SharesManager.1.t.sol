@@ -44,9 +44,7 @@ contract SharesManagerV1Tests {
     }
 
     function testBalanceOf(address _user) public {
-        SharesManagerPublicDeal(address(sharesManager)).setValidatorBalance(
-            3200 ether
-        );
+        SharesManagerPublicDeal(address(sharesManager)).setValidatorBalance(3200 ether);
         assert(sharesManager.balanceOf(_user) == 0);
 
         uint256 shares = sharesManager.totalShares();
@@ -61,26 +59,17 @@ contract SharesManagerV1Tests {
 
     function testSharesOf(address _user, address _anotherUser) public {
         _anotherUser = address(uint160(_user) + 1);
-        SharesManagerPublicDeal(address(sharesManager)).setValidatorBalance(
-            0 ether
-        );
+        SharesManagerPublicDeal(address(sharesManager)).setValidatorBalance(0 ether);
 
         assert(sharesManager.sharesOf(_user) == 0);
 
-        SharesManagerPublicDeal(address(sharesManager)).setValidatorBalance(
-            300 ether
-        );
+        SharesManagerPublicDeal(address(sharesManager)).setValidatorBalance(300 ether);
         SharesManagerPublicDeal(address(sharesManager)).mint(_user, 300 ether);
 
         assert(sharesManager.sharesOf(_user) == 300 ether);
 
-        SharesManagerPublicDeal(address(sharesManager)).setValidatorBalance(
-            440 ether
-        );
-        SharesManagerPublicDeal(address(sharesManager)).mint(
-            _anotherUser,
-            100 ether
-        );
+        SharesManagerPublicDeal(address(sharesManager)).setValidatorBalance(440 ether);
+        SharesManagerPublicDeal(address(sharesManager)).mint(_anotherUser, 100 ether);
 
         assert(sharesManager.sharesOf(_user) == 300 ether);
         assert(sharesManager.sharesOf(_anotherUser) == 88235294117647058823);

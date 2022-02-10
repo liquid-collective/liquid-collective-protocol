@@ -3,9 +3,14 @@ pragma solidity 0.8.10;
 
 import "@openzeppelin/contracts/proxy/transparent/TransparentUpgradeableProxy.sol";
 
+/// @title TUPProxy (Transparent Upgradeable Pausable Proxy)
+/// @author Iulian Rotaru
+/// @notice This contract extends the Transparent Upgradeable proxy and adds a system wide pause feature.
+///         When the system is paused, the fallback will fail no matter what calls are made.
 contract TUPProxy is TransparentUpgradeableProxy {
-    bytes32 private constant _PAUSE_SLOT =
-        bytes32(uint256(keccak256("eip1967.proxy.pause")) - 1);
+    bytes32 private constant _PAUSE_SLOT = bytes32(uint256(keccak256("eip1967.proxy.pause")) - 1);
+
+    error CallWhenPaused();
 
     constructor(
         address _logic,
@@ -29,15 +34,11 @@ contract TUPProxy is TransparentUpgradeableProxy {
         StorageSlot.getBooleanSlot(_PAUSE_SLOT).value = false;
     }
 
-    modifier isNotPaused() {
-        require(
-            StorageSlot.getBooleanSlot(_PAUSE_SLOT).value == false,
-            "system paused"
-        );
-        _;
-    }
-
-    function _beforeFallback() internal override isNotPaused {
+    /// @dev Overrides the fallback method to check if system is not paused before
+    function _beforeFallback() internal override {
+        if (StorageSlot.getBooleanSlot(_PAUSE_SLOT).value == true) {
+            revert CallWhenPaused();
+        }
         super._beforeFallback();
     }
 }

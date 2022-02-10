@@ -2,8 +2,7 @@
 pragma solidity 0.8.10;
 
 library Whitelist {
-    bytes32 public constant WHITELIST_SLOT =
-        bytes32(uint256(keccak256("river.state.whitelist")) - 1);
+    bytes32 public constant WHITELIST_SLOT = bytes32(uint256(keccak256("river.state.whitelist")) - 1);
 
     struct Slot {
         mapping(address => bool) value;

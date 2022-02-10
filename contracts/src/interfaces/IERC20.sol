@@ -3,11 +3,7 @@ pragma solidity 0.8.10;
 
 interface IERC20 {
     event Transfer(address indexed _from, address indexed _to, uint256 _value);
-    event Approval(
-        address indexed _owner,
-        address indexed _spender,
-        uint256 _value
-    );
+    event Approval(address indexed _owner, address indexed _spender, uint256 _value);
 
     function name() external view returns (string memory);
 
@@ -19,9 +15,7 @@ interface IERC20 {
 
     function balanceOf(address _owner) external view returns (uint256 balance);
 
-    function transfer(address _to, uint256 _value)
-        external
-        returns (bool success);
+    function transfer(address _to, uint256 _value) external returns (bool success);
 
     function transferFrom(
         address _from,
@@ -29,12 +23,7 @@ interface IERC20 {
         uint256 _value
     ) external returns (bool success);
 
-    function approve(address _spender, uint256 _value)
-        external
-        returns (bool success);
+    function approve(address _spender, uint256 _value) external returns (bool success);
 
-    function allowance(address _owner, address _spender)
-        external
-        view
-        returns (uint256 remaining);
+    function allowance(address _owner, address _spender) external view returns (uint256 remaining);
 }

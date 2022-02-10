@@ -17,19 +17,13 @@ contract TransferManagerV1DepositTests {
 
     error InvalidCall();
 
-    event UserDeposit(
-        address indexed user,
-        address indexed referral,
-        uint256 amount
-    );
+    event UserDeposit(address indexed user, address indexed referral, uint256 amount);
 
     function setUp() public {
         transferManager = new TransferManagerV1EmptyDeposit();
     }
 
-    function testDepositWithDedicatedMethod(address _user, uint256 _amount)
-        public
-    {
+    function testDepositWithDedicatedMethod(address _user, uint256 _amount) public {
         vm.deal(_user, _amount);
         vm.deal(address(transferManager), 0);
         vm.startPrank(_user);
@@ -65,9 +59,7 @@ contract TransferManagerV1DepositTests {
         assert(address(transferManager).balance == _amount);
     }
 
-    function testDepositWithReceiveFallback(address _user, uint256 _amount)
-        public
-    {
+    function testDepositWithReceiveFallback(address _user, uint256 _amount) public {
         vm.deal(_user, _amount);
         vm.deal(address(transferManager), 0);
         vm.startPrank(_user);
@@ -84,20 +76,13 @@ contract TransferManagerV1DepositTests {
         assert(address(transferManager).balance == _amount);
     }
 
-    function testDepositWithCalldataFallback(address _user, uint256 _amount)
-        public
-    {
+    function testDepositWithCalldataFallback(address _user, uint256 _amount) public {
         vm.deal(_user, _amount);
         vm.startPrank(_user);
 
-        (bool success, bytes memory returnData) = address(transferManager).call{
-            value: _amount
-        }("0x1234");
+        (bool success, bytes memory returnData) = address(transferManager).call{value: _amount}("0x1234");
         assert(success == false);
-        assert(
-            keccak256(returnData) ==
-                keccak256(abi.encodeWithSignature("InvalidCall()"))
-        );
+        assert(keccak256(returnData) == keccak256(abi.encodeWithSignature("InvalidCall()")));
     }
 }
 

@@ -1,7 +1,7 @@
 //SPDX-License-Identifier: BUSL-1.1
 pragma solidity 0.8.10;
 
-import "../libraries/BytesLib.sol";
+import "../../libraries/BytesLib.sol";
 
 library ValidatorKeys {
     uint256 public constant PUBLIC_KEY_LENGTH = 48;
@@ -10,8 +10,7 @@ library ValidatorKeys {
     error InvalidPublicKey();
     error InvalidSignature();
 
-    bytes32 public constant VALIDATOR_KEYS_SLOT =
-        bytes32(uint256(keccak256("river.state.validatorKeys")) - 1);
+    bytes32 public constant VALIDATOR_KEYS_SLOT = bytes32(uint256(keccak256("river.state.validatorKeys")) - 1);
 
     struct Slot {
         mapping(string => mapping(uint256 => bytes)) value;
@@ -40,11 +39,7 @@ library ValidatorKeys {
         string memory name,
         uint256 startIdx,
         uint256 amount
-    )
-        internal
-        view
-        returns (bytes[] memory publicKey, bytes[] memory signatures)
-    {
+    ) internal view returns (bytes[] memory publicKey, bytes[] memory signatures) {
         publicKey = new bytes[](amount);
         signatures = new bytes[](amount);
 
@@ -58,16 +53,8 @@ library ValidatorKeys {
 
         for (uint256 idx = startIdx; idx < startIdx + amount; ++idx) {
             bytes memory rawCredentials = r.value[name][idx];
-            publicKey[idx - startIdx] = BytesLib.slice(
-                rawCredentials,
-                0,
-                PUBLIC_KEY_LENGTH
-            );
-            signatures[idx - startIdx] = BytesLib.slice(
-                rawCredentials,
-                PUBLIC_KEY_LENGTH,
-                SIGNATURE_LENGTH
-            );
+            publicKey[idx - startIdx] = BytesLib.slice(rawCredentials, 0, PUBLIC_KEY_LENGTH);
+            signatures[idx - startIdx] = BytesLib.slice(rawCredentials, PUBLIC_KEY_LENGTH, SIGNATURE_LENGTH);
         }
     }
 

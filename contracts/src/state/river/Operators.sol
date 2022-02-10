@@ -2,11 +2,9 @@
 pragma solidity 0.8.10;
 
 library Operators {
-    bytes32 public constant OPERATORS_SLOT =
-        bytes32(uint256(keccak256("river.state.operators")) - 1);
+    bytes32 public constant OPERATORS_SLOT = bytes32(uint256(keccak256("river.state.operators")) - 1);
 
-    bytes32 public constant OPERATORS_MAPPING_SLOT =
-        bytes32(uint256(keccak256("river.state.operatorsMapping")) - 1);
+    bytes32 public constant OPERATORS_MAPPING_SLOT = bytes32(uint256(keccak256("river.state.operatorsMapping")) - 1);
 
     struct Operator {
         bool active;
@@ -26,11 +24,7 @@ library Operators {
         mapping(string => uint256) value;
     }
 
-    function _getOperatorIndex(string memory name)
-        internal
-        view
-        returns (uint256)
-    {
+    function _getOperatorIndex(string memory name) internal view returns (uint256) {
         bytes32 slot = OPERATORS_MAPPING_SLOT;
 
         SlotOperatorMapping storage opm;
@@ -65,14 +59,8 @@ library Operators {
         return r.value[index];
     }
 
-    function _hasFundableKeys(Operators.Operator memory operator)
-        internal
-        pure
-        returns (bool)
-    {
-        return (operator.active &&
-            operator.keys > operator.funded &&
-            operator.limit > operator.funded);
+    function _hasFundableKeys(Operators.Operator memory operator) internal pure returns (bool) {
+        return (operator.active && operator.keys > operator.funded && operator.limit > operator.funded);
     }
 
     function getAllActive() internal view returns (Operator[] memory) {

@@ -7,11 +7,7 @@ import "../libraries/Errors.sol";
 /// @author Iulian Rotaru
 /// @notice This contract handles the inbound transfers cases or the explicit submissions
 abstract contract TransferManagerV1 {
-    event UserDeposit(
-        address indexed user,
-        address indexed referral,
-        uint256 amount
-    );
+    event UserDeposit(address indexed user, address indexed referral, uint256 amount);
 
     error EmptyDeposit();
 

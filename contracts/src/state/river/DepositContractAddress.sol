@@ -1,7 +1,7 @@
 //SPDX-License-Identifier: BUSL-1.1
 pragma solidity 0.8.10;
 
-import "../interfaces/IDepositContract.sol";
+import "../../interfaces/IDepositContract.sol";
 
 library DepositContractAddress {
     bytes32 public constant DEPOSIT_CONTRACT_ADDRESS_SLOT =

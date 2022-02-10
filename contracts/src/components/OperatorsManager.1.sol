@@ -1,10 +1,11 @@
 //SPDX-License-Identifier: BUSL-1.1
 pragma solidity 0.8.10;
 
-import "../state/AdministratorAddress.sol";
-import "../state/Operators.sol";
-import "../state/ValidatorKeys.sol";
 import "../libraries/Utils.sol";
+
+import "../state/shared/AdministratorAddress.sol";
+import "../state/river/Operators.sol";
+import "../state/river/ValidatorKeys.sol";
 
 /// @title Operators Manager (v1)
 /// @author Iulian Rotaru
@@ -22,14 +23,8 @@ contract OperatorsManagerV1 {
     event AddedOperator(string indexed name, address operatorAddress);
     event ChangedOperatorStatus(string indexed name, bool active);
     event ChangedOperatorLimit(string indexed name, uint256 newLimit);
-    event ChangedOperatorStoppedValidatorCount(
-        string indexed name,
-        uint256 newStoppedValidatorCount
-    );
-    event ChangedOperatorAddress(
-        string indexed name,
-        address newOperatorAddress
-    );
+    event ChangedOperatorStoppedValidatorCount(string indexed name, uint256 newStoppedValidatorCount);
+    event ChangedOperatorAddress(string indexed name, address newOperatorAddress);
     event AddedValidatorKeys(string indexed name, uint256 totalKeyCount);
     event RemovedValidatorKeys(string indexed name, uint256 keyCount);
 
@@ -49,10 +44,7 @@ contract OperatorsManagerV1 {
         if (operator.active == false) {
             revert InactiveOperator(_name);
         }
-        if (
-            msg.sender != operator.operator &&
-            msg.sender != AdministratorAddress.get()
-        ) {
+        if (msg.sender != operator.operator && msg.sender != AdministratorAddress.get()) {
             revert Errors.Unauthorized(msg.sender);
         }
         _;
@@ -87,10 +79,7 @@ contract OperatorsManagerV1 {
     /// @dev Only callable by the administrator or the previous operator address
     /// @param _name The name identifying the operator
     /// @param _newOperatorAddress The new address representing the operator
-    function changeOperatorAddress(
-        string calldata _name,
-        address _newOperatorAddress
-    ) external operatorOrAdmin(_name) {
+    function changeOperatorAddress(string calldata _name, address _newOperatorAddress) external operatorOrAdmin(_name) {
         Operators.Operator storage operator = Operators.get(_name);
 
         operator.operator = _newOperatorAddress;
@@ -102,10 +91,7 @@ contract OperatorsManagerV1 {
     /// @dev Only callable by the administrator
     /// @param _name The name identifying the operator
     /// @param _newStatus The new status of the operator
-    function setOperatorStatus(string calldata _name, bool _newStatus)
-        external
-        active(_name)
-    {
+    function setOperatorStatus(string calldata _name, bool _newStatus) external active(_name) {
         UtilsLib.adminOnly();
         Operators.Operator storage operator = Operators.get(_name);
 
@@ -118,10 +104,10 @@ contract OperatorsManagerV1 {
     /// @dev Only callable by the administrator
     /// @param _name The name identifying the operator
     /// @param _newStoppedValidatorCount The new stopped validator count of the operator
-    function setOperatorStoppedValidatorCount(
-        string calldata _name,
-        uint256 _newStoppedValidatorCount
-    ) external active(_name) {
+    function setOperatorStoppedValidatorCount(string calldata _name, uint256 _newStoppedValidatorCount)
+        external
+        active(_name)
+    {
         UtilsLib.adminOnly();
         Operators.Operator storage operator = Operators.get(_name);
 
@@ -134,10 +120,7 @@ contract OperatorsManagerV1 {
     /// @dev Only callable by the administrator
     /// @param _name The name identifying the operator
     /// @param _newLimit The new staking limit of the operator
-    function setOperatorLimit(string calldata _name, uint256 _newLimit)
-        external
-        active(_name)
-    {
+    function setOperatorLimit(string calldata _name, uint256 _newLimit) external active(_name) {
         UtilsLib.adminOnly();
         Operators.Operator storage operator = Operators.get(_name);
 
@@ -183,12 +166,7 @@ contract OperatorsManagerV1 {
                 idx * ValidatorKeys.SIGNATURE_LENGTH,
                 ValidatorKeys.SIGNATURE_LENGTH
             );
-            ValidatorKeys.set(
-                operator.name,
-                operator.keys + idx,
-                publicKey,
-                signature
-            );
+            ValidatorKeys.set(operator.name, operator.keys + idx, publicKey, signature);
         }
 
         operator.keys += _keyCount;
@@ -201,10 +179,7 @@ contract OperatorsManagerV1 {
     /// @dev The indexes must be provided sorted in decreasing order, otherwise the method will revert
     /// @param _name The name identifying the operator
     /// @param _indexes The indexes of the keys to remove
-    function removeValidatorKeys(
-        string calldata _name,
-        uint256[] calldata _indexes
-    ) external operatorOrAdmin(_name) {
+    function removeValidatorKeys(string calldata _name, uint256[] calldata _indexes) external operatorOrAdmin(_name) {
         Operators.Operator storage operator = Operators.get(_name);
 
         if (_indexes.length == 0) {
@@ -227,10 +202,7 @@ contract OperatorsManagerV1 {
             }
 
             uint256 lastKeyIndex = operator.keys - 1;
-            (
-                bytes memory lastPublicKey,
-                bytes memory lastSignature
-            ) = ValidatorKeys.get(_name, lastKeyIndex);
+            (bytes memory lastPublicKey, bytes memory lastSignature) = ValidatorKeys.get(_name, lastKeyIndex);
             ValidatorKeys.set(_name, keyIndex, lastPublicKey, lastSignature);
             ValidatorKeys.set(_name, lastKeyIndex, new bytes(0), new bytes(0));
             operator.keys -= 1;
@@ -241,11 +213,7 @@ contract OperatorsManagerV1 {
 
     /// @notice Get operator details
     /// @param _name The name identifying the operator
-    function getOperator(string calldata _name)
-        external
-        view
-        returns (Operators.Operator memory)
-    {
+    function getOperator(string calldata _name) external view returns (Operators.Operator memory) {
         return Operators.get(_name);
     }
 

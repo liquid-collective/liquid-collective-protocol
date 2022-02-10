@@ -2,11 +2,7 @@
 pragma solidity 0.8.10;
 
 library UintLib {
-    function toLittleEndian64(uint256 _value)
-        internal
-        pure
-        returns (uint256 result)
-    {
+    function toLittleEndian64(uint256 _value) internal pure returns (uint256 result) {
         result = 0;
         uint256 temp_value = _value;
         for (uint256 i = 0; i < 8; ++i) {

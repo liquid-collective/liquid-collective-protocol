@@ -19,7 +19,9 @@ const func: DeployFunction = async function ({
 }: HardhatRuntimeEnvironment) {
   logStep();
 
-  const { deployer, proxyAdministrator } = await getNamedAccounts();
+  const { deployer, proxyAdministrator, systemAdministrator } =
+    await getNamedAccounts();
+  const riverDeployment = await deployments.get("RiverV1");
 
   await deployments.deploy("OracleV1", {
     from: deployer,
@@ -27,6 +29,19 @@ const func: DeployFunction = async function ({
     proxy: {
       owner: proxyAdministrator,
       proxyContract: "TUPProxy",
+      execute: {
+        methodName: "oracleInitializeV1",
+        args: [
+          riverDeployment.address,
+          systemAdministrator,
+          225,
+          32,
+          12,
+          1606824023,
+          1000,
+          500,
+        ],
+      },
     },
   });
 

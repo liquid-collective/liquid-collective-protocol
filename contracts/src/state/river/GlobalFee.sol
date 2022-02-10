@@ -1,16 +1,15 @@
 //SPDX-License-Identifier: BUSL-1.1
 pragma solidity 0.8.10;
 
-library Shares {
-    bytes32 public constant SHARES_SLOT =
-        bytes32(uint256(keccak256("river.state.shares")) - 1);
+library GlobalFee {
+    bytes32 public constant GLOBAL_FEE_SLOT = bytes32(uint256(keccak256("river.state.globalFee")) - 1);
 
     struct Slot {
         uint256 value;
     }
 
     function get() internal view returns (uint256) {
-        bytes32 slot = SHARES_SLOT;
+        bytes32 slot = GLOBAL_FEE_SLOT;
 
         Slot storage r;
 
@@ -21,8 +20,8 @@ library Shares {
         return r.value;
     }
 
-    function set(uint256 newValue) internal {
-        bytes32 slot = SHARES_SLOT;
+    function set(uint256 newGlobalFee) internal {
+        bytes32 slot = GLOBAL_FEE_SLOT;
 
         Slot storage r;
 
@@ -30,6 +29,6 @@ library Shares {
             r.slot := slot
         }
 
-        r.value = newValue;
+        r.value = newGlobalFee;
     }
 }

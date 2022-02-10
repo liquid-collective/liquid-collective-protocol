@@ -1,10 +1,11 @@
 //SPDX-License-Identifier: BUSL-1.1
 pragma solidity 0.8.10;
 
-import "../state/WhitelistorAddress.sol";
-import "../state/AdministratorAddress.sol";
-import "../state/Whitelist.sol";
 import "../libraries/Errors.sol";
+
+import "../state/shared/AdministratorAddress.sol";
+import "../state/river/WhitelistorAddress.sol";
+import "../state/river/Whitelist.sol";
 
 /// @title Whitelist Manager (v1)
 /// @author Iulian Rotaru
@@ -14,9 +15,7 @@ abstract contract WhitelistManagerV1 {
 
     /// @notice Initializes the whitelistor address
     /// @param _whitelistorAddress Address allowed to edit the whitelist
-    function whitelistManagerInitializeV1(address _whitelistorAddress)
-        internal
-    {
+    function whitelistManagerInitializeV1(address _whitelistorAddress) internal {
         WhitelistorAddress.set(_whitelistorAddress);
     }
 
@@ -24,10 +23,7 @@ abstract contract WhitelistManagerV1 {
     /// @param _account Account status to edit
     /// @param _status Whitelist status
     function setWhitelistStatus(address _account, bool _status) external {
-        if (
-            msg.sender != WhitelistorAddress.get() &&
-            msg.sender != AdministratorAddress.get()
-        ) {
+        if (msg.sender != WhitelistorAddress.get() && msg.sender != AdministratorAddress.get()) {
             revert Errors.Unauthorized(msg.sender);
         }
 

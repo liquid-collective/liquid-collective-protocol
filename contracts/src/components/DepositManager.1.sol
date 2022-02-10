@@ -2,12 +2,13 @@
 pragma solidity 0.8.10;
 
 import "../interfaces/IDepositContract.sol";
-import "../state/DepositContractAddress.sol";
-import "../state/WithdrawalCredentials.sol";
-import "../state/DepositedValidatorCount.sol";
 
 import "../libraries/BytesLib.sol";
 import "../libraries/UintLib.sol";
+
+import "../state/river/DepositContractAddress.sol";
+import "../state/river/WithdrawalCredentials.sol";
+import "../state/river/DepositedValidatorCount.sol";
 
 /// @title Deposit Manager (v1)
 /// @author Iulian Rotaru
@@ -29,10 +30,7 @@ abstract contract DepositManagerV1 {
     /// @notice Initializer to set the deposit contract address and the withdrawal credentials to use
     /// @param _depositContractAddress The address of the deposit contract
     /// @param _withdrawalCredentials The withdrawal credentials to apply to all deposits
-    function depositManagerInitializeV1(
-        address _depositContractAddress,
-        bytes32 _withdrawalCredentials
-    ) internal {
+    function depositManagerInitializeV1(address _depositContractAddress, bytes32 _withdrawalCredentials) internal {
         DepositContractAddress.set(IDepositContract(_depositContractAddress));
 
         WithdrawalCredentials.set(_withdrawalCredentials);
@@ -49,19 +47,13 @@ abstract contract DepositManagerV1 {
     /// @notice Deposits current balance to the Consensus Layer by batches of 32 ETH
     /// @param _maxCount The maximum amount of validator keys to fund
     function depositToConsensusLayer(uint256 _maxCount) external {
-        uint256 validatorsToDeposit = UintLib.min(
-            address(this).balance / DEPOSIT_SIZE,
-            _maxCount
-        );
+        uint256 validatorsToDeposit = UintLib.min(address(this).balance / DEPOSIT_SIZE, _maxCount);
 
         if (validatorsToDeposit == 0) {
             revert NotEnoughFunds();
         }
 
-        (
-            bytes[] memory publicKeys,
-            bytes[] memory signatures
-        ) = _onValidatorKeyRequest(validatorsToDeposit);
+        (bytes[] memory publicKeys, bytes[] memory signatures) = _onValidatorKeyRequest(validatorsToDeposit);
 
         uint256 receivedPublicKeyCount = publicKeys.length;
 
@@ -101,9 +93,7 @@ abstract contract DepositManagerV1 {
             _depositPublicKey(publicKey, signature, withdrawalCredentials);
         }
 
-        DepositedValidatorCount.set(
-            DepositedValidatorCount.get() + receivedPublicKeyCount
-        );
+        DepositedValidatorCount.set(DepositedValidatorCount.get() + receivedPublicKeyCount);
     }
 
     /// @notice Deposits 32 ETH to the official Deposit contract
@@ -124,23 +114,14 @@ abstract contract DepositManagerV1 {
         bytes32 signatureRoot = sha256(
             abi.encodePacked(
                 sha256(BytesLib.slice(_signature, 0, 64)),
-                sha256(
-                    BytesLib.pad64(
-                        BytesLib.slice(_signature, 64, SIGNATURE_LENGTH - 64)
-                    )
-                )
+                sha256(BytesLib.pad64(BytesLib.slice(_signature, 64, SIGNATURE_LENGTH - 64)))
             )
         );
 
         bytes32 depositDataRoot = sha256(
             abi.encodePacked(
                 sha256(abi.encodePacked(pubkeyRoot, _withdrawalCredentials)),
-                sha256(
-                    abi.encodePacked(
-                        UintLib.toLittleEndian64(depositAmount),
-                        signatureRoot
-                    )
-                )
+                sha256(abi.encodePacked(UintLib.toLittleEndian64(depositAmount), signatureRoot))
             )
         );
 
@@ -152,18 +133,11 @@ abstract contract DepositManagerV1 {
             _signature,
             depositDataRoot
         );
-        require(
-            address(this).balance == targetBalance,
-            "EXPECTING_DEPOSIT_TO_HAPPEN"
-        );
+        require(address(this).balance == targetBalance, "EXPECTING_DEPOSIT_TO_HAPPEN");
     }
 
     /// @notice Get the deposited validator count (the count of deposits made by the contract)
-    function getDepositedValidatorCount()
-        external
-        view
-        returns (uint256 depositedValidatorCount)
-    {
+    function getDepositedValidatorCount() external view returns (uint256 depositedValidatorCount) {
         depositedValidatorCount = DepositedValidatorCount.get();
     }
 }

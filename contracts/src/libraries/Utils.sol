@@ -1,7 +1,7 @@
 //SPDX-License-Identifier: BUSL-1.1
 pragma solidity 0.8.10;
 
-import "../state/AdministratorAddress.sol";
+import "../state/shared/AdministratorAddress.sol";
 import "./Errors.sol";
 
 library UtilsLib {

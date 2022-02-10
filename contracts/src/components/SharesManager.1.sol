@@ -2,10 +2,11 @@
 pragma solidity 0.8.10;
 
 import "../interfaces/IERC20.sol";
-import "../state/Shares.sol";
-import "../state/SharesPerOwner.sol";
-import "../state/ApprovalsPerOwner.sol";
 import "../libraries/Errors.sol";
+
+import "../state/river/Shares.sol";
+import "../state/river/SharesPerOwner.sol";
+import "../state/river/ApprovalsPerOwner.sol";
 
 /// @title Shares Manager (v1)
 /// @author Iulian Rotaru
@@ -43,11 +44,7 @@ abstract contract SharesManagerV1 is IERC20 {
         return _balanceOf(_owner);
     }
 
-    function allowance(address _owner, address _spender)
-        external
-        view
-        returns (uint256 remaining)
-    {
+    function allowance(address _owner, address _spender) external view returns (uint256 remaining) {
         return ApprovalsPerOwner.get(_owner, _spender);
     }
 
@@ -55,12 +52,7 @@ abstract contract SharesManagerV1 is IERC20 {
         return SharesPerOwner.get(_owner);
     }
 
-    function transfer(address _to, uint256 _value)
-        external
-        allowed(msg.sender)
-        allowed(_to)
-        returns (bool success)
-    {
+    function transfer(address _to, uint256 _value) external allowed(msg.sender) allowed(_to) returns (bool success) {
         if (_balanceOf(msg.sender) >= _value) {
             revert BalanceTooLow();
         }
@@ -80,10 +72,7 @@ abstract contract SharesManagerV1 is IERC20 {
         address _to,
         uint256 _value
     ) external allowed(_from) allowed(_to) returns (bool success) {
-        if (
-            _from != msg.sender &&
-            ApprovalsPerOwner.get(msg.sender, _from) < _value
-        ) {
+        if (_from != msg.sender && ApprovalsPerOwner.get(msg.sender, _from) < _value) {
             revert UnauthorizedOperation();
         }
 
@@ -101,11 +90,7 @@ abstract contract SharesManagerV1 is IERC20 {
         return true;
     }
 
-    function approve(address _spender, uint256 _value)
-        external
-        allowed(msg.sender)
-        returns (bool success)
-    {
+    function approve(address _spender, uint256 _value) external allowed(msg.sender) returns (bool success) {
         ApprovalsPerOwner.set(msg.sender, _spender, _value);
         emit Approval(msg.sender, _spender, _value);
         return true;
@@ -113,11 +98,7 @@ abstract contract SharesManagerV1 is IERC20 {
 
     function _assetBalance() internal view virtual returns (uint256);
 
-    function _balanceFromShares(uint256 shares)
-        internal
-        view
-        returns (uint256)
-    {
+    function _balanceFromShares(uint256 shares) internal view returns (uint256) {
         uint256 _totalSharesValue = Shares.get();
 
         if (_totalSharesValue == 0) {
@@ -127,11 +108,7 @@ abstract contract SharesManagerV1 is IERC20 {
         return ((shares * _assetBalance())) / _totalSharesValue;
     }
 
-    function _sharesFromBalance(uint256 balance)
-        internal
-        view
-        returns (uint256)
-    {
+    function _sharesFromBalance(uint256 balance) internal view returns (uint256) {
         uint256 assetBalance = _assetBalance();
 
         if (assetBalance == 0) {
@@ -150,21 +127,13 @@ abstract contract SharesManagerV1 is IERC20 {
             Shares.set(Shares.get() + assetBalance);
             SharesPerOwner.set(_owner, assetBalance);
         } else {
-            uint256 sharesToMint = (_value * _totalShares()) /
-                oldTotalAssetBalance;
+            uint256 sharesToMint = (_value * _totalShares()) / oldTotalAssetBalance;
             Shares.set(Shares.get() + sharesToMint);
-            SharesPerOwner.set(
-                _owner,
-                SharesPerOwner.get(_owner) + sharesToMint
-            );
+            SharesPerOwner.set(_owner, SharesPerOwner.get(_owner) + sharesToMint);
         }
     }
 
-    function _balanceOf(address _owner)
-        internal
-        view
-        returns (uint256 balance)
-    {
+    function _balanceOf(address _owner) internal view returns (uint256 balance) {
         return _balanceFromShares(SharesPerOwner.get(_owner));
     }
 

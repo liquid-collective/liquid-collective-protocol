@@ -27,8 +27,10 @@ const func: DeployFunction = async function ({
     treasury,
   } = await getNamedAccounts();
 
-  const oracleDeployment = await deployments.get("OracleV1");
-  // const withdrawDeployment = await deployments.get("WithdrawV1");
+  const withdrawDeployment = await deployments.get("WithdrawV1");
+  const withdrawalCredentials = `0x01${"00".repeat(
+    11
+  )}${withdrawDeployment.address.slice(2)}`;
 
   await deployments.deploy("RiverV1", {
     from: deployer,
@@ -40,8 +42,7 @@ const func: DeployFunction = async function ({
         methodName: "riverInitializeV1",
         args: [
           depositContract,
-          `0x${"0".repeat(64)}`,
-          oracleDeployment.address,
+          withdrawalCredentials,
           systemAdministrator,
           treasury,
           500,

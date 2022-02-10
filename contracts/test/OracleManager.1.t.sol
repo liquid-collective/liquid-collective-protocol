@@ -34,46 +34,30 @@ contract OracleManagerV1ExposeInitializer is OracleManagerV1 {
 contract OracleManagerV1Tests {
     Vm internal vm = Vm(0x7109709ECfa91a80626fF3989D68f67F5b1DD12D);
 
-    address internal oracle =
-        address(0xEA674fdDe714fd979de3EdF0F56AA9716B898ec8);
+    address internal oracle = address(0xEA674fdDe714fd979de3EdF0F56AA9716B898ec8);
 
     OracleManagerV1 internal oracleManager;
 
     function setUp() public {
         oracleManager = new OracleManagerV1ExposeInitializer();
-        OracleManagerV1ExposeInitializer(address(oracleManager))
-            .publicOracleManagerInitializeV1(oracle);
+        OracleManagerV1ExposeInitializer(address(oracleManager)).publicOracleManagerInitializeV1(oracle);
     }
 
     function testSetBeaconData(uint256 val2, bytes32 roundId) public {
         vm.startPrank(oracle);
-        OracleManagerV1ExposeInitializer(address(oracleManager))
-            .supersedeBalanceSum(32 ether);
-        OracleManagerV1ExposeInitializer(address(oracleManager))
-            .supersedeAllValidatorCount(1);
+        OracleManagerV1ExposeInitializer(address(oracleManager)).supersedeBalanceSum(32 ether);
+        OracleManagerV1ExposeInitializer(address(oracleManager)).supersedeAllValidatorCount(1);
         oracleManager.setBeaconData(1, val2 + 32 ether, roundId);
-        assert(
-            OracleManagerV1ExposeInitializer(address(oracleManager))
-                .lastReceived() == val2
-        );
+        assert(OracleManagerV1ExposeInitializer(address(oracleManager)).lastReceived() == val2);
     }
 
-    function testSetBeaconDataWithValidatorCountDelta(
-        uint256 val2,
-        bytes32 roundId
-    ) public {
+    function testSetBeaconDataWithValidatorCountDelta(uint256 val2, bytes32 roundId) public {
         vm.startPrank(oracle);
-        OracleManagerV1ExposeInitializer(address(oracleManager))
-            .supersedeBalanceSum(32 ether);
-        OracleManagerV1ExposeInitializer(address(oracleManager))
-            .supersedeAllValidatorCount(1);
-        OracleManagerV1ExposeInitializer(address(oracleManager))
-            .supersedeDepositedValidatorCount(2);
+        OracleManagerV1ExposeInitializer(address(oracleManager)).supersedeBalanceSum(32 ether);
+        OracleManagerV1ExposeInitializer(address(oracleManager)).supersedeAllValidatorCount(1);
+        OracleManagerV1ExposeInitializer(address(oracleManager)).supersedeDepositedValidatorCount(2);
         oracleManager.setBeaconData(2, val2 + 64 ether, roundId);
-        assert(
-            OracleManagerV1ExposeInitializer(address(oracleManager))
-                .lastReceived() == val2
-        );
+        assert(OracleManagerV1ExposeInitializer(address(oracleManager)).lastReceived() == val2);
     }
 
     function testSetBeaconDataUnauthorized(
@@ -82,8 +66,7 @@ contract OracleManagerV1Tests {
         bytes32 roundId
     ) public {
         vm.startPrank(user);
-        OracleManagerV1ExposeInitializer(address(oracleManager))
-            .supersedeAllValidatorCount(1);
+        OracleManagerV1ExposeInitializer(address(oracleManager)).supersedeAllValidatorCount(1);
         vm.expectRevert(abi.encodeWithSignature("Unauthorized(address)", user));
         oracleManager.setBeaconData(1, val1 + 32 ether, roundId);
     }

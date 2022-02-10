@@ -2,18 +2,13 @@
 pragma solidity 0.8.10;
 
 library ApprovalsPerOwner {
-    bytes32 public constant APPROVALS_PER_OWNER_SLOT =
-        bytes32(uint256(keccak256("river.state.approvalsPerOwner")) - 1);
+    bytes32 public constant APPROVALS_PER_OWNER_SLOT = bytes32(uint256(keccak256("river.state.approvalsPerOwner")) - 1);
 
     struct Slot {
         mapping(address => mapping(address => uint256)) value;
     }
 
-    function get(address owner, address operator)
-        internal
-        view
-        returns (uint256)
-    {
+    function get(address owner, address operator) internal view returns (uint256) {
         bytes32 slot = APPROVALS_PER_OWNER_SLOT;
 
         Slot storage r;

@@ -2,8 +2,7 @@
 pragma solidity 0.8.10;
 
 library TreasuryAddress {
-    bytes32 public constant TREASURY_ADDRESS_SLOT =
-        bytes32(uint256(keccak256("river.state.treasuryAddress")) - 1);
+    bytes32 public constant TREASURY_ADDRESS_SLOT = bytes32(uint256(keccak256("river.state.treasuryAddress")) - 1);
 
     struct Slot {
         address value;

@@ -2,8 +2,7 @@
 pragma solidity 0.8.10;
 
 library OracleAddress {
-    bytes32 public constant ORACLE_ADDRESS_SLOT =
-        bytes32(uint256(keccak256("river.state.oracleAddress")) - 1);
+    bytes32 public constant ORACLE_ADDRESS_SLOT = bytes32(uint256(keccak256("river.state.oracleAddress")) - 1);
 
     struct Slot {
         address value;
