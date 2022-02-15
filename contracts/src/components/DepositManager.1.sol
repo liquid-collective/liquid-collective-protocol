@@ -30,6 +30,7 @@ abstract contract DepositManagerV1 {
     /// @notice Initializer to set the deposit contract address and the withdrawal credentials to use
     /// @param _depositContractAddress The address of the deposit contract
     /// @param _withdrawalCredentials The withdrawal credentials to apply to all deposits
+    // review(nmvalera): minor: rename method so it starts with a verb (e.g. initDepositManagerV1)
     function depositManagerInitializeV1(address _depositContractAddress, bytes32 _withdrawalCredentials) internal {
         DepositContractAddress.set(IDepositContract(_depositContractAddress));
 
@@ -39,6 +40,8 @@ abstract contract DepositManagerV1 {
     /// @notice Internal helper to retrieve validator keys ready to be funded
     /// @dev Must be overriden with an implementation that provides keyCount or less keys upon call
     /// @param _keyCount The amount of keys (or less) to return.
+    // review(nmvalera): minor: rename method so it starts with action verb (example: _getNextValidators)
+    // review(nmvalera): minor: keyCount input required?
     function _onValidatorKeyRequest(uint256 _keyCount)
         internal
         virtual
@@ -46,6 +49,7 @@ abstract contract DepositManagerV1 {
 
     /// @notice Deposits current balance to the Consensus Layer by batches of 32 ETH
     /// @param _maxCount The maximum amount of validator keys to fund
+    // review(nmvalera): minor: method naming could be made clearer (e.g. stakeBufferedDeposits)
     function depositToConsensusLayer(uint256 _maxCount) external {
         uint256 validatorsToDeposit = UintLib.min(address(this).balance / DEPOSIT_SIZE, _maxCount);
 
@@ -53,6 +57,7 @@ abstract contract DepositManagerV1 {
             revert NotEnoughFunds();
         }
 
+        // review(nmvalera): we could probably avoid some sanity checks by moving _onValidatorKeyRequest call into the for loop (also making _onValidatorKeyRequest return a single (publicKey, signature) instead of arrays)
         (bytes[] memory publicKeys, bytes[] memory signatures) = _onValidatorKeyRequest(validatorsToDeposit);
 
         uint256 receivedPublicKeyCount = publicKeys.length;
@@ -77,6 +82,7 @@ abstract contract DepositManagerV1 {
             revert InvalidWithdrawalCredentials();
         }
 
+        // review(nmvalera): minor: the for loop could be wrapped in an internal method _depositValidators(...)
         for (uint256 idx = 0; idx < receivedPublicKeyCount; idx += 1) {
             bytes memory publicKey = publicKeys[idx];
 
@@ -93,6 +99,9 @@ abstract contract DepositManagerV1 {
             _depositPublicKey(publicKey, signature, withdrawalCredentials);
         }
 
+        // review(nmvalera): it is not the responsibility of the DepositsManager to manage the validators
+        // an alternative would be to call an abstract method _stakedValidators(bytes[] memory publicKeys, bytes[] memory signatures)
+        // that holds the validators management logic
         DepositedValidatorCount.set(DepositedValidatorCount.get() + receivedPublicKeyCount);
     }
 
@@ -100,11 +109,14 @@ abstract contract DepositManagerV1 {
     /// @param _publicKey The public key of the validator
     /// @param _signature The signature provided by the operator
     /// @param _withdrawalCredentials The withdrawal credentials provided by River
+    // review(nmvalera): minor: method could have a cleaner naming mentionning validator instead of publicKey (e.g. _depositValidator)
     function _depositPublicKey(
         bytes memory _publicKey,
         bytes memory _signature,
         bytes32 _withdrawalCredentials
     ) internal {
+        // review(nmvalera): medium: inputs sanity checks should happen here better than in the caller function  
+
         uint256 value = DEPOSIT_SIZE;
 
         uint256 depositAmount = value / 1000000000 wei;
@@ -127,6 +139,7 @@ abstract contract DepositManagerV1 {
 
         uint256 targetBalance = address(this).balance - value;
 
+        // review(nmvalera): medium: the kind of global DepositContractAddress is quite blackbox. I would tend in favor of setting a _getDepositContract abstract method that is implemented by the River contract
         DepositContractAddress.get().deposit{value: value}(
             _publicKey,
             abi.encodePacked(_withdrawalCredentials),
@@ -137,7 +150,10 @@ abstract contract DepositManagerV1 {
     }
 
     /// @notice Get the deposited validator count (the count of deposits made by the contract)
+    // review(nmvalera): is this method require on the DepositManager? Probably more the responsibility of the OperatorsManager
     function getDepositedValidatorCount() external view returns (uint256 depositedValidatorCount) {
         depositedValidatorCount = DepositedValidatorCount.get();
     }
+
+    // review(nmvalera): deposit() external method should be supported on this contract
 }

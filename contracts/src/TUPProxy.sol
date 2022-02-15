@@ -21,6 +21,7 @@ contract TUPProxy is TransparentUpgradeableProxy {
     /// @dev Retrieves Paused state
     /// @return Paused state
     function isPaused() external ifAdmin returns (bool) {
+        // question(nmvalera): where does StorageSlot comes from? (I can not find the import)
         return StorageSlot.getBooleanSlot(_PAUSE_SLOT).value;
     }
 

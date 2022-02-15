@@ -11,6 +11,7 @@ import "../state/river/ApprovalsPerOwner.sol";
 /// @title Shares Manager (v1)
 /// @author Iulian Rotaru
 /// @notice This contract handles the shares of the depositor and the rebasing effect depending on the oracle data
+// review(nmvalera): could be named rETHToken or similar?
 abstract contract SharesManagerV1 is IERC20 {
     error BalanceTooLow();
     error UnauthorizedOperation();
@@ -96,6 +97,7 @@ abstract contract SharesManagerV1 is IERC20 {
         return true;
     }
 
+    // review(nmvalera): minor rename _totalBalance()
     function _assetBalance() internal view virtual returns (uint256);
 
     function _balanceFromShares(uint256 shares) internal view returns (uint256) {

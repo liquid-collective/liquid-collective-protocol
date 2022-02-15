@@ -6,6 +6,7 @@ import "../libraries/Errors.sol";
 /// @title Transfer Manager (v1)
 /// @author Iulian Rotaru
 /// @notice This contract handles the inbound transfers cases or the explicit submissions
+// review(nmvalera): do we really need this contract, it feels like DepositManager and SharesManager are enough to hold the logic
 abstract contract TransferManagerV1 {
     event UserDeposit(address indexed user, address indexed referral, uint256 amount);
 

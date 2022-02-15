@@ -59,6 +59,7 @@ contract OracleV1 is Initializable {
     /// @param _genesisTime Beacon spec parameter. Timestamp of the genesis slot.
     /// @param _annualAprUpperBound Beacon bound parameter. Maximum apr allowed for balance increase. Delta between updates is extrapolated on a year time frame.
     /// @param _relativeLowerBound Beacon bound parameter. Maximum relative balance decrease.
+    // review(nmvalera): minor: rename method starting with a verb (e.g. initOracleV1)
     function oracleInitializeV1(
         address _riverContractAddress,
         address _administratorAddress,
@@ -89,6 +90,7 @@ contract OracleV1 is Initializable {
 
     /// @notice Prevents unauthorized calls
     modifier adminOnly() {
+        // review(nmvalera): oracle should have its dedicated admin (we can always set it to same address as the River one)
         UtilsLib.adminOnly();
         _;
     }
@@ -265,12 +267,14 @@ contract OracleV1 is Initializable {
     }
 
     /// @notice Retrieve the block timestamp
+    // review(nmvalera): make method external so the off-chain Oracle service can use it
     function _getTime() internal view returns (uint256) {
         return block.timestamp; // solhint-disable-line not-rely-on-time
     }
 
     /// @notice Retrieve the current epoch id based on block timestamp
     /// @param _beaconSpec Beacon spec parameters
+    // review(nmvalera): make method external so the off-chain Oracle service can use it
     function _getCurrentEpochId(BeaconSpec.BeaconSpecStruct memory _beaconSpec) internal view returns (uint256) {
         return (_getTime() - _beaconSpec.genesisTime) / (_beaconSpec.slotsPerEpoch * _beaconSpec.secondsPerSlot);
     }
@@ -278,6 +282,7 @@ contract OracleV1 is Initializable {
     /// @notice Retrieve the first epoch id of the frame of the provided epoch id
     /// @param _epochId Epoch id used to get the frame
     /// @param _beaconSpec Beacon spec parameters
+    // review(nmvalera): make method external so the off-chain Oracle service can use it
     function _getFrameFirstEpochId(uint256 _epochId, BeaconSpec.BeaconSpecStruct memory _beaconSpec)
         internal
         pure
@@ -285,6 +290,10 @@ contract OracleV1 is Initializable {
     {
         return (_epochId / _beaconSpec.epochsPerFrame) * _beaconSpec.epochsPerFrame;
     }
+
+    // review(nmvalera): add an external view method returning _getExpectedEpochId
+
+    // review(nmvalera): add an external view method allowing to retrieve reports
 
     /// @notice Clear reporting data
     /// @param _epochId Next expected epoch id (first epoch of the next frame)

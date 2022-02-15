@@ -15,6 +15,7 @@ abstract contract WhitelistManagerV1 {
 
     /// @notice Initializes the whitelistor address
     /// @param _whitelistorAddress Address allowed to edit the whitelist
+    // review(nmvalera): minor: rename starting with a verb: initWhitelistManager
     function whitelistManagerInitializeV1(address _whitelistorAddress) internal {
         WhitelistorAddress.set(_whitelistorAddress);
     }
@@ -22,6 +23,7 @@ abstract contract WhitelistManagerV1 {
     /// @notice Sets the whitelisting status for an account
     /// @param _account Account status to edit
     /// @param _status Whitelist status
+    // review(nmvalera): minor: could be renamed to whitelist
     function setWhitelistStatus(address _account, bool _status) external {
         if (msg.sender != WhitelistorAddress.get() && msg.sender != AdministratorAddress.get()) {
             revert Errors.Unauthorized(msg.sender);

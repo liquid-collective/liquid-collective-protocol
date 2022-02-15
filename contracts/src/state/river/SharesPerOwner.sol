@@ -8,6 +8,7 @@ library SharesPerOwner {
         mapping(address => uint256) value;
     }
 
+    // review(nmvalera): for maps storage could we use something like this to avoid using the intermediary 'Slot storage': https://ethereum.stackexchange.com/questions/80529/how-to-get-access-to-the-storage-mapping-through-the-solidity-assembler
     function get(address owner) internal view returns (uint256) {
         bytes32 slot = SHARES_SLOT;
 

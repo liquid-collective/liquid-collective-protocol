@@ -21,6 +21,7 @@ contract OperatorsManagerV1 {
     error InvalidIndexOutOfBounds();
 
     event AddedOperator(string indexed name, address operatorAddress);
+    // review(nmvalera): minor: rename events Changed* to Set* or Updated*
     event ChangedOperatorStatus(string indexed name, bool active);
     event ChangedOperatorLimit(string indexed name, uint256 newLimit);
     event ChangedOperatorStoppedValidatorCount(string indexed name, uint256 newStoppedValidatorCount);
@@ -30,6 +31,7 @@ contract OperatorsManagerV1 {
 
     /// @notice Prevents the call from working if the operator is not active
     /// @param _name The name identifying the operator
+    // review(nmvalera): minor: rename isActive
     modifier active(string memory _name) {
         if (Operators.get(_name).active == false) {
             revert InactiveOperator(_name);
@@ -39,11 +41,14 @@ contract OperatorsManagerV1 {
 
     /// @notice Prevents anyone except the admin or the given operator to make the call. Also checks if operator is active
     /// @param _name The name identifying the operator
+    // review(nmvalera): minor: could be renamed isActiveOrAdmin
     modifier operatorOrAdmin(string calldata _name) {
+        // review(nmvalera): minor: we can start with the admin check to faster execution in case caller is admin
         Operators.Operator storage operator = Operators.get(_name);
         if (operator.active == false) {
             revert InactiveOperator(_name);
         }
+
         if (msg.sender != operator.operator && msg.sender != AdministratorAddress.get()) {
             revert Errors.Unauthorized(msg.sender);
         }
@@ -55,6 +60,7 @@ contract OperatorsManagerV1 {
     /// @param _name The name identifying the operator
     /// @param _operator The address representing the operator, receiving the rewards
     function addOperator(string calldata _name, address _operator) external {
+        // review(nmvalera): why not declaring a modifier in this contract?
         UtilsLib.adminOnly();
         if (Operators.get(_name).active == true) {
             revert OperatorAlreadyExists(_name);
@@ -79,6 +85,7 @@ contract OperatorsManagerV1 {
     /// @dev Only callable by the administrator or the previous operator address
     /// @param _name The name identifying the operator
     /// @param _newOperatorAddress The new address representing the operator
+    // review(nmvalera): minor: rename setOperatorAddress
     function changeOperatorAddress(string calldata _name, address _newOperatorAddress) external operatorOrAdmin(_name) {
         Operators.Operator storage operator = Operators.get(_name);
 
@@ -104,6 +111,7 @@ contract OperatorsManagerV1 {
     /// @dev Only callable by the administrator
     /// @param _name The name identifying the operator
     /// @param _newStoppedValidatorCount The new stopped validator count of the operator
+    // review(nmvalera): medium: should this method be internal?
     function setOperatorStoppedValidatorCount(string calldata _name, uint256 _newStoppedValidatorCount)
         external
         active(_name)
@@ -135,6 +143,7 @@ contract OperatorsManagerV1 {
     /// @param _keyCount The amount of keys provided
     /// @param _publicKeys Public keys of the validator, concatenated
     /// @param _signatures Signatures of the validator keys, concatenated
+    // review(nmvalera): minor: rename addValidators
     function addValidatorKeys(
         string calldata _name,
         uint256 _keyCount,
@@ -179,6 +188,7 @@ contract OperatorsManagerV1 {
     /// @dev The indexes must be provided sorted in decreasing order, otherwise the method will revert
     /// @param _name The name identifying the operator
     /// @param _indexes The indexes of the keys to remove
+    // review(nmvalera): minor: rename removeValidator
     function removeValidatorKeys(string calldata _name, uint256[] calldata _indexes) external operatorOrAdmin(_name) {
         Operators.Operator storage operator = Operators.get(_name);
 
@@ -213,6 +223,7 @@ contract OperatorsManagerV1 {
 
     /// @notice Get operator details
     /// @param _name The name identifying the operator
+    // review(nmvalera): so far the off-chain Oracle queries operator by index. 
     function getOperator(string calldata _name) external view returns (Operators.Operator memory) {
         return Operators.get(_name);
     }
@@ -220,6 +231,7 @@ contract OperatorsManagerV1 {
     /// @notice Get the key of an operator at a specific index
     /// @param _operatorName The name identifying the operator
     /// @param _index The key index
+    // review(nmvalera): minor: rename getValidator
     function getKey(string calldata _operatorName, uint256 _index)
         external
         view
@@ -232,4 +244,10 @@ contract OperatorsManagerV1 {
         (publicKey, signature) = ValidatorKeys.get(_operatorName, _index);
         funded = _index <= Operators.get(_operatorName).funded;
     }
+
+    // review(nmvalera): add an external view method getOperatorsCount (it is needed by the Oracle)
+
+    // review(nmvalera): add an internal method activateValidator
+
+    // review(nmvalera): add an internal method stopValidator
 }

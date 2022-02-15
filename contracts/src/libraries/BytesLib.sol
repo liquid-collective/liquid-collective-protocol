@@ -1,6 +1,7 @@
 //SPDX-License-Identifier: BUSL-1.1
 pragma solidity 0.8.10;
 
+// review(nmvalera): could we use an existing implementation such as https://github.com/GNSPS/solidity-bytes-utils/blob/master/contracts/BytesLib.sol
 library BytesLib {
     function pad64(bytes memory _b) internal pure returns (bytes memory) {
         assert(_b.length >= 32 && _b.length <= 64);

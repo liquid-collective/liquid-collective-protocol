@@ -1,6 +1,7 @@
 //SPDX-License-Identifier: BUSL-1.1
 pragma solidity 0.8.10;
 
+// review(nmvlera): For base types uint256, bool, etc. we could re-use like https://github.com/aragon/aragonOS/blob/next/contracts/common/UnstructuredStorage.sol
 library ReportsPositions {
     bytes32 public constant REPORTS_POSITIONS_SLOT = bytes32(uint256(keccak256("river.state.reportsPositions")) - 1);
 

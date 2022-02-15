@@ -13,6 +13,7 @@ import "../state/river/DepositedValidatorCount.sol";
 /// @title Oracle Manager (v1)
 /// @author Iulian Rotaru
 /// @notice This contract handles the inputs provided by the oracle
+// review(nmvalera): minor: naming maybe not mention the Oracle maybe better BeaconDataManager or BeaconBalanceManager 
 abstract contract OracleManagerV1 {
     event BeaconDataUpdate(uint256 validatorCount, uint256 validatorBalanceSum, bytes32 roundId);
 
@@ -28,11 +29,13 @@ abstract contract OracleManagerV1 {
     /// @param _validatorCount The number of active validators on the consensus layer
     /// @param _validatorBalanceSum The validator balance sum of the active validators on the consensus layer
     /// @param _roundId An identifier for this update
+    // review(nmvalera): minor: method does more than only setting maybe rename updateBeaconData
     function setBeaconData(
         uint256 _validatorCount,
         uint256 _validatorBalanceSum,
         bytes32 _roundId
     ) external {
+        // review(nmvalera): should we not better set a modifier onlyOracle?
         if (msg.sender != OracleAddress.get()) {
             revert Errors.Unauthorized(msg.sender);
         }
@@ -40,6 +43,8 @@ abstract contract OracleManagerV1 {
         if (_validatorCount > DepositedValidatorCount.get()) {
             revert InvalidValidatorCountReport(_validatorCount, DepositedValidatorCount.get());
         }
+
+        // review(nmvalera): should we perform some sanity checks on the roundId?
 
         uint256 previousValidatorBalanceSum = BeaconValidatorBalanceSum.get();
         uint256 newValidators = _validatorCount - BeaconValidatorCount.get();
@@ -68,12 +73,18 @@ abstract contract OracleManagerV1 {
     }
 
     /// @notice Get Beacon validator balance sum
+    // review(nmvalera): minor: rename getActiveBeaconValidatorsBalance
     function getBeaconValidatorBalanceSum() external view returns (uint256 beaconValidatorBalanceSum) {
         beaconValidatorBalanceSum = BeaconValidatorBalanceSum.get();
     }
 
     /// @notice Get Beacon validator count (the amount of validator reported by the oracles)
+    // review(nmvalera): minor: rename getActiveBeaconValidatorsCount
     function getBeaconValidatorCount() external view returns (uint256 beaconValidatorCount) {
         beaconValidatorCount = BeaconValidatorCount.get();
     }
+
+    // review(nmvalera): the logic to manage the epoch to report for belong to this contract and not the oracle (including the _getCurrentEpochId, beacon spec, etc.)
+
+    // review(nmvalera): the logic performing sanity checks on validator balance variation (annualAprUpperBound, relativeLowerBound) should belong to this contract and not the oracle
 }

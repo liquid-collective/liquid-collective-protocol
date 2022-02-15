@@ -7,8 +7,10 @@ interface IRiverOracleInput {
         uint256 _validatorBalanceSum,
         bytes32 _roundId
     ) external;
-
+    
+    // review(nmvalera): why do we need totalSupply on Oracle interface  
     function totalSupply() external returns (uint256);
 
+    // review(nmvalera): why do we need totalShares on Oracle interface
     function totalShares() external returns (uint256);
 }

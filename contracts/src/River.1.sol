@@ -36,6 +36,7 @@ contract RiverV1 is
     /// @param _treasuryAddress Address receiving the fee minus the operator share
     /// @param _globalFee Amount retained when the eth balance increases, splitted between the treasury and the operators
     /// @param _operatorRewardsShare Share of the global fee used to reward node operators
+    // review(nmvalera): minor: rename starting with a verb (e.g. initRiverV1)
     function riverInitializeV1(
         address _depositContractAddress,
         bytes32 _withdrawalCredentials,
@@ -54,6 +55,7 @@ contract RiverV1 is
 
     /// @notice Changes the global fee parameter
     /// @param newFee New fee value
+    // review(nmvalera): should we move the fee logic into a RewardDispatcher contract that River inherits from?
     function setGlobalFee(uint256 newFee) external {
         UtilsLib.adminOnly();
 
@@ -77,6 +79,7 @@ contract RiverV1 is
     }
 
     /// @notice Retrieve system administrator address
+    // review(nmvalera): should we move the admin logic into an ACL contract that River inherits from?
     function getAdministrator() external view returns (address) {
         return AdministratorAddress.get();
     }
