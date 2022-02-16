@@ -1,35 +1,17 @@
 //SPDX-License-Identifier: BUSL-1.1
 pragma solidity 0.8.10;
 
+import "../../libraries/UnstructuredStorage.sol";
+
 library OperatorRewardsShare {
     bytes32 public constant OPERATOR_REWARDS_SHARE_SLOT =
         bytes32(uint256(keccak256("river.state.operatorRewardsShare")) - 1);
 
-    struct Slot {
-        uint256 value;
-    }
-
     function get() internal view returns (uint256) {
-        bytes32 slot = OPERATOR_REWARDS_SHARE_SLOT;
-
-        Slot storage r;
-
-        assembly {
-            r.slot := slot
-        }
-
-        return r.value;
+        return UnstructuredStorage.getStorageUint256(OPERATOR_REWARDS_SHARE_SLOT);
     }
 
-    function set(uint256 newOperatorRewardsShare) internal {
-        bytes32 slot = OPERATOR_REWARDS_SHARE_SLOT;
-
-        Slot storage r;
-
-        assembly {
-            r.slot := slot
-        }
-
-        r.value = newOperatorRewardsShare;
+    function set(uint256 newValue) internal {
+        UnstructuredStorage.setStorageUint256(OPERATOR_REWARDS_SHARE_SLOT, newValue);
     }
 }

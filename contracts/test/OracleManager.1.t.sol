@@ -5,6 +5,7 @@ pragma solidity 0.8.10;
 import "./Vm.sol";
 import "../src/components/OracleManager.1.sol";
 import "../src/libraries/Errors.sol";
+import "../src/state/shared/AdministratorAddress.sol";
 
 contract OracleManagerV1ExposeInitializer is OracleManagerV1 {
     uint256 public lastReceived;
@@ -26,8 +27,8 @@ contract OracleManagerV1ExposeInitializer is OracleManagerV1 {
         DepositedValidatorCount.set(amount);
     }
 
-    function publicOracleManagerInitializeV1(address _oracleAddress) external {
-        OracleManagerV1.oracleManagerInitializeV1(_oracleAddress);
+    constructor(address admin) {
+        AdministratorAddress.set(admin);
     }
 }
 
@@ -39,8 +40,8 @@ contract OracleManagerV1Tests {
     OracleManagerV1 internal oracleManager;
 
     function setUp() public {
-        oracleManager = new OracleManagerV1ExposeInitializer();
-        OracleManagerV1ExposeInitializer(address(oracleManager)).publicOracleManagerInitializeV1(oracle);
+        oracleManager = new OracleManagerV1ExposeInitializer(address(this));
+        oracleManager.setOracle(oracle);
     }
 
     function testSetBeaconData(uint256 val2, bytes32 roundId) public {
