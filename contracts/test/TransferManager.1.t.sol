@@ -31,8 +31,12 @@ contract TransferManagerV1DepositTests {
         assert(_user.balance == _amount);
         assert(address(transferManager).balance == 0);
 
-        vm.expectEmit(true, true, true, true);
-        emit UserDeposit(_user, address(0), _amount);
+        if (_amount > 0) {
+            vm.expectEmit(true, true, true, true);
+            emit UserDeposit(_user, address(0), _amount);
+        } else {
+            vm.expectRevert(abi.encodeWithSignature("EmptyDeposit()"));
+        }
         transferManager.deposit{value: _amount}(address(0));
 
         assert(_user.balance == 0);
@@ -51,8 +55,12 @@ contract TransferManagerV1DepositTests {
         assert(_user.balance == _amount);
         assert(address(transferManager).balance == 0);
 
-        vm.expectEmit(true, true, true, true);
-        emit UserDeposit(_user, _referral, _amount);
+        if (_amount > 0) {
+            vm.expectEmit(true, true, true, true);
+            emit UserDeposit(_user, _referral, _amount);
+        } else {
+            vm.expectRevert(abi.encodeWithSignature("EmptyDeposit()"));
+        }
         transferManager.deposit{value: _amount}(_referral);
 
         assert(_user.balance == 0);
@@ -67,8 +75,12 @@ contract TransferManagerV1DepositTests {
         assert(_user.balance == _amount);
         assert(address(transferManager).balance == 0);
 
-        vm.expectEmit(true, true, true, true);
-        emit UserDeposit(_user, address(0), _amount);
+        if (_amount > 0) {
+            vm.expectEmit(true, true, true, true);
+            emit UserDeposit(_user, address(0), _amount);
+        } else {
+            vm.expectRevert(abi.encodeWithSignature("EmptyDeposit()"));
+        }
         (bool success, ) = address(transferManager).call{value: _amount}("");
         assert(success == true);
 
@@ -110,8 +122,12 @@ contract TransferManagerV1CallbackTests {
 
         assert(_user.balance == _amount);
 
-        vm.expectEmit(true, true, true, true);
-        emit InternalCallbackCalled(_user, _amount);
+        if (_amount > 0) {
+            vm.expectEmit(true, true, true, true);
+            emit InternalCallbackCalled(_user, _amount);
+        } else {
+            vm.expectRevert(abi.encodeWithSignature("EmptyDeposit()"));
+        }
         transferManager.deposit{value: _amount}(address(0));
 
         assert(_user.balance == 0);

@@ -40,7 +40,7 @@ const config: HardhatUserConfig = {
     },
   },
   forge: {
-    version: "8d8470182b8c98d560e0cdc9913cdba988d5a725",
+    version: "f137539944ac554d62d357a689e21308a4fa73f8",
     verbosity: 3,
   },
   namedAccounts: {

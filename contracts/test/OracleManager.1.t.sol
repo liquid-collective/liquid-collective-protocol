@@ -44,7 +44,7 @@ contract OracleManagerV1Tests {
         oracleManager.setOracle(oracle);
     }
 
-    function testSetBeaconData(uint256 val2, bytes32 roundId) public {
+    function testSetBeaconData(uint64 val2, bytes32 roundId) public {
         vm.startPrank(oracle);
         OracleManagerV1ExposeInitializer(address(oracleManager)).supersedeBalanceSum(32 ether);
         OracleManagerV1ExposeInitializer(address(oracleManager)).supersedeAllValidatorCount(1);
@@ -52,7 +52,7 @@ contract OracleManagerV1Tests {
         assert(OracleManagerV1ExposeInitializer(address(oracleManager)).lastReceived() == val2);
     }
 
-    function testSetBeaconDataWithValidatorCountDelta(uint256 val2, bytes32 roundId) public {
+    function testSetBeaconDataWithValidatorCountDelta(uint64 val2, bytes32 roundId) public {
         vm.startPrank(oracle);
         OracleManagerV1ExposeInitializer(address(oracleManager)).supersedeBalanceSum(32 ether);
         OracleManagerV1ExposeInitializer(address(oracleManager)).supersedeAllValidatorCount(1);
@@ -63,7 +63,7 @@ contract OracleManagerV1Tests {
 
     function testSetBeaconDataUnauthorized(
         address user,
-        uint256 val1,
+        uint64 val1,
         bytes32 roundId
     ) public {
         vm.startPrank(user);

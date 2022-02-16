@@ -7,10 +7,6 @@ library BeaconValidatorCount {
     bytes32 public constant BEACON_VALIDATOR_COUNT_SLOT =
         bytes32(uint256(keccak256("river.state.beaconValidatorCount")) - 1);
 
-    struct Slot {
-        uint256 value;
-    }
-
     function get() internal view returns (uint256) {
         return UnstructuredStorage.getStorageUint256(BEACON_VALIDATOR_COUNT_SLOT);
     }
