@@ -29,7 +29,7 @@ abstract contract SharesManagerV1 is IERC20 {
     }
 
     function symbol() external pure returns (string memory) {
-        return "RIV";
+        return "rETH";
     }
 
     function decimals() external pure returns (uint8) {

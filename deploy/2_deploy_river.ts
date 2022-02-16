@@ -39,10 +39,11 @@ const func: DeployFunction = async function ({
       owner: proxyAdministrator,
       proxyContract: "TUPProxy",
       execute: {
-        methodName: "riverInitializeV1",
+        methodName: "initRiverV1",
         args: [
           depositContract,
           withdrawalCredentials,
+          systemAdministrator,
           systemAdministrator,
           treasury,
           500,

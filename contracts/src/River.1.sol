@@ -8,7 +8,7 @@ import "./components/OracleManager.1.sol";
 import "./components/OperatorsManager.1.sol";
 import "./components/WhitelistManager.1.sol";
 import "./Initializable.sol";
-import "./libraries/Utils.sol";
+import "./libraries/LibOwnable.sol";
 
 import "./state/shared/AdministratorAddress.sol";
 import "./state/river/TreasuryAddress.sol";
@@ -29,34 +29,43 @@ contract RiverV1 is
 {
     uint256 public constant BASE = 100000;
 
+    /// @notice Prevents unauthorized calls
+    modifier onlyAdmin() override(OperatorsManagerV1, OracleManagerV1) {
+        if (msg.sender != LibOwnable._getAdmin()) {
+            revert Errors.Unauthorized(msg.sender);
+        }
+        _;
+    }
+
     /// @notice Initializes the River system
     /// @param _depositContractAddress Address to make Consensus Layer deposits
     /// @param _withdrawalCredentials Credentials to use for every validator deposit
     /// @param _systemAdministratorAddress Administrator address
+    /// @param _whitelistorAddress Address able to manage the whitelist
     /// @param _treasuryAddress Address receiving the fee minus the operator share
     /// @param _globalFee Amount retained when the eth balance increases, splitted between the treasury and the operators
     /// @param _operatorRewardsShare Share of the global fee used to reward node operators
-    function riverInitializeV1(
+    function initRiverV1(
         address _depositContractAddress,
         bytes32 _withdrawalCredentials,
         address _systemAdministratorAddress,
+        address _whitelistorAddress,
         address _treasuryAddress,
         uint256 _globalFee,
         uint256 _operatorRewardsShare
     ) external init(0) {
-        AdministratorAddress.set(_systemAdministratorAddress);
+        LibOwnable._setAdmin(_systemAdministratorAddress);
         TreasuryAddress.set(_treasuryAddress);
         GlobalFee.set(_globalFee);
         OperatorRewardsShare.set(_operatorRewardsShare);
 
-        DepositManagerV1.depositManagerInitializeV1(_depositContractAddress, _withdrawalCredentials);
+        DepositManagerV1.initDepositManagerV1(_depositContractAddress, _withdrawalCredentials);
+        WhitelistManagerV1.initWhitelistManagerV1(_whitelistorAddress);
     }
 
     /// @notice Changes the global fee parameter
     /// @param newFee New fee value
-    function setGlobalFee(uint256 newFee) external {
-        UtilsLib.adminOnly();
-
+    function setGlobalFee(uint256 newFee) external onlyAdmin {
         if (newFee > BASE) {
             revert Errors.InvalidArgument();
         }
@@ -66,9 +75,7 @@ contract RiverV1 is
 
     /// @notice Changes the operator rewards share.
     /// @param newOperatorRewardsShare New share value
-    function setOperatorRewardsShare(uint256 newOperatorRewardsShare) external {
-        UtilsLib.adminOnly();
-
+    function setOperatorRewardsShare(uint256 newOperatorRewardsShare) external onlyAdmin {
         if (newOperatorRewardsShare > BASE) {
             revert Errors.InvalidArgument();
         }
@@ -78,7 +85,7 @@ contract RiverV1 is
 
     /// @notice Retrieve system administrator address
     function getAdministrator() external view returns (address) {
-        return AdministratorAddress.get();
+        return LibOwnable._getAdmin();
     }
 
     /// @notice Handler called whenever a user deposits ETH to the system. Mints the adequate amount of shares.
@@ -111,7 +118,7 @@ contract RiverV1 is
 
     /// @notice Handler called whenever a deposit to the consensus layer is made. Should retrieve _requestedAmount or lower keys
     /// @param _requestedAmount Amount of keys required. Contract is expected to send _requestedAmount or lower.
-    function _onValidatorKeyRequest(uint256 _requestedAmount)
+    function _getNextValidators(uint256 _requestedAmount)
         internal
         override
         returns (bytes[] memory publicKeys, bytes[] memory signatures)
@@ -129,7 +136,7 @@ contract RiverV1 is
             }
         }
 
-        uint256 availableOperatorKeys = UintLib.min(
+        uint256 availableOperatorKeys = Uint256Lib.min(
             operators[selectedOperatorIndex].keys,
             operators[selectedOperatorIndex].limit
         ) - operators[selectedOperatorIndex].funded;
@@ -149,7 +156,7 @@ contract RiverV1 is
                 availableOperatorKeys
             );
             operator.funded += availableOperatorKeys;
-            (bytes[] memory additionalPublicKeys, bytes[] memory additionalSignatures) = _onValidatorKeyRequest(
+            (bytes[] memory additionalPublicKeys, bytes[] memory additionalSignatures) = _getNextValidators(
                 _requestedAmount - availableOperatorKeys
             );
             publicKeys = _concatenateByteArrays(publicKeys, additionalPublicKeys);

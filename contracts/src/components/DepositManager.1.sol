@@ -4,7 +4,7 @@ pragma solidity 0.8.10;
 import "../interfaces/IDepositContract.sol";
 
 import "../libraries/BytesLib.sol";
-import "../libraries/UintLib.sol";
+import "../libraries/Uint256Lib.sol";
 
 import "../state/river/DepositContractAddress.sol";
 import "../state/river/WithdrawalCredentials.sol";
@@ -30,7 +30,7 @@ abstract contract DepositManagerV1 {
     /// @notice Initializer to set the deposit contract address and the withdrawal credentials to use
     /// @param _depositContractAddress The address of the deposit contract
     /// @param _withdrawalCredentials The withdrawal credentials to apply to all deposits
-    function depositManagerInitializeV1(address _depositContractAddress, bytes32 _withdrawalCredentials) internal {
+    function initDepositManagerV1(address _depositContractAddress, bytes32 _withdrawalCredentials) internal {
         DepositContractAddress.set(IDepositContract(_depositContractAddress));
 
         WithdrawalCredentials.set(_withdrawalCredentials);
@@ -39,7 +39,7 @@ abstract contract DepositManagerV1 {
     /// @notice Internal helper to retrieve validator keys ready to be funded
     /// @dev Must be overriden with an implementation that provides keyCount or less keys upon call
     /// @param _keyCount The amount of keys (or less) to return.
-    function _onValidatorKeyRequest(uint256 _keyCount)
+    function _getNextValidators(uint256 _keyCount)
         internal
         virtual
         returns (bytes[] memory publicKeys, bytes[] memory signatures);
@@ -47,13 +47,13 @@ abstract contract DepositManagerV1 {
     /// @notice Deposits current balance to the Consensus Layer by batches of 32 ETH
     /// @param _maxCount The maximum amount of validator keys to fund
     function depositToConsensusLayer(uint256 _maxCount) external {
-        uint256 validatorsToDeposit = UintLib.min(address(this).balance / DEPOSIT_SIZE, _maxCount);
+        uint256 validatorsToDeposit = Uint256Lib.min(address(this).balance / DEPOSIT_SIZE, _maxCount);
 
         if (validatorsToDeposit == 0) {
             revert NotEnoughFunds();
         }
 
-        (bytes[] memory publicKeys, bytes[] memory signatures) = _onValidatorKeyRequest(validatorsToDeposit);
+        (bytes[] memory publicKeys, bytes[] memory signatures) = _getNextValidators(validatorsToDeposit);
 
         uint256 receivedPublicKeyCount = publicKeys.length;
 
@@ -78,19 +78,7 @@ abstract contract DepositManagerV1 {
         }
 
         for (uint256 idx = 0; idx < receivedPublicKeyCount; idx += 1) {
-            bytes memory publicKey = publicKeys[idx];
-
-            if (publicKey.length != PUBLIC_KEY_LENGTH) {
-                revert InconsistentPublicKeys();
-            }
-
-            bytes memory signature = signatures[idx];
-
-            if (signature.length != SIGNATURE_LENGTH) {
-                revert InconsistentSignatures();
-            }
-
-            _depositPublicKey(publicKey, signature, withdrawalCredentials);
+            _depositValidator(publicKeys[idx], signatures[idx], withdrawalCredentials);
         }
 
         DepositedValidatorCount.set(DepositedValidatorCount.get() + receivedPublicKeyCount);
@@ -100,11 +88,18 @@ abstract contract DepositManagerV1 {
     /// @param _publicKey The public key of the validator
     /// @param _signature The signature provided by the operator
     /// @param _withdrawalCredentials The withdrawal credentials provided by River
-    function _depositPublicKey(
+    function _depositValidator(
         bytes memory _publicKey,
         bytes memory _signature,
         bytes32 _withdrawalCredentials
     ) internal {
+        if (_publicKey.length != PUBLIC_KEY_LENGTH) {
+            revert InconsistentPublicKeys();
+        }
+
+        if (_signature.length != SIGNATURE_LENGTH) {
+            revert InconsistentSignatures();
+        }
         uint256 value = DEPOSIT_SIZE;
 
         uint256 depositAmount = value / 1000000000 wei;
@@ -121,7 +116,7 @@ abstract contract DepositManagerV1 {
         bytes32 depositDataRoot = sha256(
             abi.encodePacked(
                 sha256(abi.encodePacked(pubkeyRoot, _withdrawalCredentials)),
-                sha256(abi.encodePacked(UintLib.toLittleEndian64(depositAmount), signatureRoot))
+                sha256(abi.encodePacked(Uint256Lib.toLittleEndian64(depositAmount), signatureRoot))
             )
         );
 

@@ -30,7 +30,7 @@ const func: DeployFunction = async function ({
       owner: proxyAdministrator,
       proxyContract: "TUPProxy",
       execute: {
-        methodName: "oracleInitializeV1",
+        methodName: "initOracleV1",
         args: [
           riverDeployment.address,
           systemAdministrator,

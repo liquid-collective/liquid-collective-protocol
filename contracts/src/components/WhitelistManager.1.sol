@@ -15,7 +15,7 @@ abstract contract WhitelistManagerV1 {
 
     /// @notice Initializes the whitelistor address
     /// @param _whitelistorAddress Address allowed to edit the whitelist
-    function whitelistManagerInitializeV1(address _whitelistorAddress) internal {
+    function initWhitelistManagerV1(address _whitelistorAddress) internal {
         WhitelistorAddress.set(_whitelistorAddress);
     }
 

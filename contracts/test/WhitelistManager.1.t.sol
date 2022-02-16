@@ -8,7 +8,7 @@ import "../src/libraries/Errors.sol";
 
 contract WhitelistManagerV1ExposeInitializer is WhitelistManagerV1 {
     function publicWhitelistManagerInitializeV1(address _whitelistorAddress) external {
-        WhitelistManagerV1.whitelistManagerInitializeV1(_whitelistorAddress);
+        WhitelistManagerV1.initWhitelistManagerV1(_whitelistorAddress);
     }
 }
 

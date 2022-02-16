@@ -3,7 +3,7 @@ pragma solidity 0.8.10;
 
 import "./Initializable.sol";
 import "./libraries/Errors.sol";
-import "./libraries/Utils.sol";
+import "./libraries/LibOwnable.sol";
 import "./interfaces/IRiverOracleInput.sol";
 
 import "./state/shared/AdministratorAddress.sol";
@@ -59,7 +59,7 @@ contract OracleV1 is Initializable {
     /// @param _genesisTime Beacon spec parameter. Timestamp of the genesis slot.
     /// @param _annualAprUpperBound Beacon bound parameter. Maximum apr allowed for balance increase. Delta between updates is extrapolated on a year time frame.
     /// @param _relativeLowerBound Beacon bound parameter. Maximum relative balance decrease.
-    function oracleInitializeV1(
+    function initOracleV1(
         address _riverContractAddress,
         address _administratorAddress,
         uint64 _epochsPerFrame,
@@ -69,8 +69,8 @@ contract OracleV1 is Initializable {
         uint256 _annualAprUpperBound,
         uint256 _relativeLowerBound
     ) external init(0) {
+        LibOwnable._setAdmin(_administratorAddress);
         RiverAddress.set(_riverContractAddress);
-        AdministratorAddress.set(_administratorAddress);
         BeaconSpec.set(
             BeaconSpec.BeaconSpecStruct({
                 epochsPerFrame: _epochsPerFrame,
@@ -88,15 +88,39 @@ contract OracleV1 is Initializable {
     }
 
     /// @notice Prevents unauthorized calls
-    modifier adminOnly() {
-        UtilsLib.adminOnly();
+    modifier onlyAdmin() {
+        if (msg.sender != LibOwnable._getAdmin()) {
+            revert Errors.Unauthorized(msg.sender);
+        }
         _;
+    }
+
+    /// @notice Retrieve the block timestamp
+    function getTime() external view returns (uint256) {
+        return _getTime();
+    }
+
+    /// @notice Retrieve the current epoch id based on block timestamp
+    /// @param _beaconSpec Beacon spec parameters
+    function getCurrentEpochId(BeaconSpec.BeaconSpecStruct memory _beaconSpec) external view returns (uint256) {
+        return _getCurrentEpochId(_beaconSpec);
+    }
+
+    /// @notice Retrieve the first epoch id of the frame of the provided epoch id
+    /// @param _epochId Epoch id used to get the frame
+    /// @param _beaconSpec Beacon spec parameters
+    function getFrameFirstEpochId(uint256 _epochId, BeaconSpec.BeaconSpecStruct memory _beaconSpec)
+        external
+        pure
+        returns (uint256)
+    {
+        return _getFrameFirstEpochId(_epochId, _beaconSpec);
     }
 
     /// @notice Adds new address as oracle member, giving the ability to push beacon reports.
     /// @dev Only callable by the adminstrator
     /// @param _newOracleMember Address of the new member
-    function addMember(address _newOracleMember) external adminOnly {
+    function addMember(address _newOracleMember) external onlyAdmin {
         int256 memberIdx = OracleMembers.indexOf(_newOracleMember);
         if (memberIdx >= 0) {
             revert Errors.InvalidCall();
@@ -107,7 +131,7 @@ contract OracleV1 is Initializable {
     /// @notice Removes an address from the oracle members.
     /// @dev Only callable by the adminstrator
     /// @param _oracleMember Address to remove
-    function removeMember(address _oracleMember) external adminOnly {
+    function removeMember(address _oracleMember) external onlyAdmin {
         int256 memberIdx = OracleMembers.indexOf(_oracleMember);
         if (memberIdx < 0) {
             revert Errors.InvalidCall();
@@ -126,7 +150,7 @@ contract OracleV1 is Initializable {
         uint64 _slotsPerEpoch,
         uint64 _secondsPerSlot,
         uint64 _genesisTime
-    ) external adminOnly {
+    ) external onlyAdmin {
         BeaconSpec.set(
             BeaconSpec.BeaconSpecStruct({
                 epochsPerFrame: _epochsPerFrame,
@@ -141,7 +165,7 @@ contract OracleV1 is Initializable {
     /// @dev Only callable by the adminstrator
     /// @param _annualAprUpperBound Maximum apr allowed for balance increase. Delta between updates is extrapolated on a year time frame.
     /// @param _relativeLowerBound Maximum relative balance decrease.
-    function setBeaconBounds(uint256 _annualAprUpperBound, uint256 _relativeLowerBound) external adminOnly {
+    function setBeaconBounds(uint256 _annualAprUpperBound, uint256 _relativeLowerBound) external onlyAdmin {
         BeaconReportBounds.set(
             BeaconReportBounds.BeaconReportBoundsStruct({
                 annualAprUpperBound: _annualAprUpperBound,
@@ -153,7 +177,7 @@ contract OracleV1 is Initializable {
     /// @notice Edits the quorum required to forward beacon data to River
     /// @dev Only callable by the adminstrator
     /// @param _newQuorum New quorum parameter
-    function setQuorum(uint256 _newQuorum) external adminOnly {
+    function setQuorum(uint256 _newQuorum) external onlyAdmin {
         if (_newQuorum == 0) {
             revert Errors.InvalidArgument();
         }

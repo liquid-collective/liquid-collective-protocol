@@ -2,7 +2,7 @@
 pragma solidity 0.8.10;
 
 import "../libraries/Errors.sol";
-import "../libraries/Utils.sol";
+import "../libraries/LibOwnable.sol";
 
 import "../state/river/OracleAddress.sol";
 import "../state/river/LastOracleRoundId.sol";
@@ -22,6 +22,14 @@ abstract contract OracleManagerV1 {
     /// @dev Must be overriden
     /// @param _profits The positive increase in the validator balance sum (staking rewards)
     function _onEarnings(uint256 _profits) internal virtual;
+
+    /// @notice Prevents unauthorized calls
+    modifier onlyAdmin() virtual {
+        if (msg.sender != LibOwnable._getAdmin()) {
+            revert Errors.Unauthorized(msg.sender);
+        }
+        _;
+    }
 
     /// @notice Sets the validator count and validator balance sum reported by the oracle
     /// @dev Can only be called by the oracle address
@@ -62,8 +70,7 @@ abstract contract OracleManagerV1 {
 
     /// @notice Set Oracle address
     /// @param _oracleAddress Address of the oracle
-    function setOracle(address _oracleAddress) external {
-        UtilsLib.adminOnly();
+    function setOracle(address _oracleAddress) external onlyAdmin {
         OracleAddress.set(_oracleAddress);
     }
 

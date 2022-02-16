@@ -59,6 +59,30 @@ library Operators {
         return r.value[index];
     }
 
+    function getByIndex(uint256 index) internal view returns (Operator storage) {
+        bytes32 slot = OPERATORS_SLOT;
+
+        SlotOperator storage r;
+
+        assembly {
+            r.slot := slot
+        }
+
+        return r.value[index];
+    }
+
+    function getCount() internal view returns (uint256) {
+        bytes32 slot = OPERATORS_SLOT;
+
+        SlotOperator storage r;
+
+        assembly {
+            r.slot := slot
+        }
+
+        return r.value.length;
+    }
+
     function _hasFundableKeys(Operators.Operator memory operator) internal pure returns (bool) {
         return (operator.active && operator.keys > operator.funded && operator.limit > operator.funded);
     }
