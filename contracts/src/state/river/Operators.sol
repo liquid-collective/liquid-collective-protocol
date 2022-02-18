@@ -16,13 +16,20 @@ library Operators {
         uint256 stopped;
     }
 
+    struct OperatorResolution {
+        bool active;
+        uint256 index;
+    }
+
     struct SlotOperator {
         Operator[] value;
     }
 
     struct SlotOperatorMapping {
-        mapping(string => uint256) value;
+        mapping(string => OperatorResolution) value;
     }
+
+    error OperatorNotFound(string name);
 
     function _getOperatorIndex(string memory name) internal view returns (uint256) {
         bytes32 slot = OPERATORS_MAPPING_SLOT;
@@ -32,10 +39,15 @@ library Operators {
         assembly {
             opm.slot := slot
         }
-        return opm.value[name];
+
+        if (opm.value[name].active == false) {
+            revert OperatorNotFound(name);
+        }
+
+        return opm.value[name].index;
     }
 
-    function _setOperatorIndex(string memory name, uint256 index) internal {
+    function _getOperatorActive(string memory name) internal view returns (bool) {
         bytes32 slot = OPERATORS_MAPPING_SLOT;
 
         SlotOperatorMapping storage opm;
@@ -43,7 +55,26 @@ library Operators {
         assembly {
             opm.slot := slot
         }
-        opm.value[name] = index;
+        return opm.value[name].active;
+    }
+
+    function _setOperatorIndex(
+        string memory name,
+        bool active,
+        uint256 index
+    ) internal {
+        bytes32 slot = OPERATORS_MAPPING_SLOT;
+
+        SlotOperatorMapping storage opm;
+
+        assembly {
+            opm.slot := slot
+        }
+        opm.value[name] = OperatorResolution({active: active, index: index});
+    }
+
+    function exists(string memory name) internal view returns (bool) {
+        return _getOperatorActive(name);
     }
 
     function get(string memory name) internal view returns (Operator storage) {
@@ -148,7 +179,7 @@ library Operators {
     }
 
     function set(string memory name, Operator memory newValue) internal {
-        uint256 index = _getOperatorIndex(name);
+        bool opExists = _getOperatorActive(name);
 
         bytes32 slot = OPERATORS_SLOT;
 
@@ -158,11 +189,15 @@ library Operators {
             r.slot := slot
         }
 
-        if (index == 0) {
+        if (opExists == false) {
             r.value.push(newValue);
-            _setOperatorIndex(name, r.value.length - 1);
+            _setOperatorIndex(name, newValue.active, r.value.length - 1);
         } else {
+            uint256 index = _getOperatorIndex(name);
             r.value[index] = newValue;
+            if (opExists != newValue.active) {
+                _setOperatorIndex(name, newValue.active, index);
+            }
         }
     }
 }

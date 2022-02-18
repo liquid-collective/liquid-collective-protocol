@@ -63,7 +63,7 @@ contract OperatorsManagerV1 {
     /// @param _name The name identifying the operator
     /// @param _operator The address representing the operator, receiving the rewards
     function addOperator(string calldata _name, address _operator) external onlyAdmin {
-        if (Operators.get(_name).active == true) {
+        if (Operators.exists(_name) == true) {
             revert OperatorAlreadyExists(_name);
         }
 
@@ -193,7 +193,7 @@ contract OperatorsManagerV1 {
         for (uint256 idx = 0; idx < _indexes.length; ++idx) {
             uint256 keyIndex = _indexes[idx];
 
-            if (keyIndex <= operator.funded) {
+            if (keyIndex < operator.funded) {
                 revert InvalidFundedKeyDeletionAttempt();
             }
 

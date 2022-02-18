@@ -64,14 +64,6 @@ library ValidatorKeys {
         bytes memory publicKey,
         bytes memory signature
     ) internal {
-        if (publicKey.length != PUBLIC_KEY_LENGTH) {
-            revert InvalidPublicKey();
-        }
-
-        if (signature.length != SIGNATURE_LENGTH) {
-            revert InvalidSignature();
-        }
-
         bytes memory concatenatedKeys = BytesLib.concat(publicKey, signature);
 
         bytes32 slot = VALIDATOR_KEYS_SLOT;
