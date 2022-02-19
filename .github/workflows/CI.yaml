@@ -1,6 +1,9 @@
 name: River Contracts CI
 
-on: [push]
+on:
+  push:
+  schedule:
+    - cron:  '0 */4 * * *' # every 4 hours, perpetual fuzz testing
 
 jobs:
   run-tests:
@@ -41,3 +44,5 @@ jobs:
         run: yarn lint:check
       - name: run tests
         run: yarn test
+        env:
+          FOUNDRY_FUZZ_RUNS: 5000

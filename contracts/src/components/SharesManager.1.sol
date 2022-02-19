@@ -52,8 +52,14 @@ abstract contract SharesManagerV1 is IERC20 {
         return SharesPerOwner.get(_owner);
     }
 
+    error AllowanceTooLow(address _from, address _operator, uint256 _allowance, uint256 _value);
+    error NullTransfer();
+
     function transfer(address _to, uint256 _value) external allowed(msg.sender) allowed(_to) returns (bool success) {
-        if (_balanceOf(msg.sender) >= _value) {
+        if (_value == 0) {
+            revert NullTransfer();
+        }
+        if (_balanceOf(msg.sender) < _value) {
             revert BalanceTooLow();
         }
 
@@ -72,11 +78,18 @@ abstract contract SharesManagerV1 is IERC20 {
         address _to,
         uint256 _value
     ) external allowed(_from) allowed(_to) returns (bool success) {
-        if (_from != msg.sender && ApprovalsPerOwner.get(msg.sender, _from) < _value) {
-            revert UnauthorizedOperation();
+        if (_value == 0) {
+            revert NullTransfer();
+        }
+        if (_from != msg.sender) {
+            uint256 currentAllowance = ApprovalsPerOwner.get(_from, msg.sender);
+            if (currentAllowance < _value) {
+                revert AllowanceTooLow(_from, msg.sender, currentAllowance, _value);
+            }
+            ApprovalsPerOwner.set(_from, msg.sender, currentAllowance - _value);
         }
 
-        if (_balanceOf(_from) >= _value) {
+        if (_balanceOf(_from) < _value) {
             revert BalanceTooLow();
         }
 
