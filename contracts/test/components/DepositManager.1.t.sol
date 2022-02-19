@@ -2,9 +2,9 @@
 
 pragma solidity 0.8.10;
 
-import "./Vm.sol";
-import "../src/components/DepositManager.1.sol";
-import "../src/libraries/UnstructuredStorage.sol";
+import "../Vm.sol";
+import "../../src/components/DepositManager.1.sol";
+import "../../src/libraries/UnstructuredStorage.sol";
 
 contract DepositManagerV1ExposeInitializer is DepositManagerV1 {
     function publicDepositManagerInitializeV1(address _depositContractAddress, bytes32 _withdrawalCredentials)

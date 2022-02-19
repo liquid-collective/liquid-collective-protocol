@@ -2,9 +2,9 @@
 
 pragma solidity 0.8.10;
 
-import "./Vm.sol";
-import "../src/components/WhitelistManager.1.sol";
-import "../src/libraries/Errors.sol";
+import "../Vm.sol";
+import "../../src/components/WhitelistManager.1.sol";
+import "../../src/libraries/Errors.sol";
 
 contract WhitelistManagerV1ExposeInitializer is WhitelistManagerV1 {
     function publicWhitelistManagerInitializeV1(address _whitelistorAddress) external {

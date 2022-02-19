@@ -2,10 +2,10 @@
 
 pragma solidity 0.8.10;
 
-import "./Vm.sol";
-import "../src/components/OracleManager.1.sol";
-import "../src/libraries/Errors.sol";
-import "../src/state/shared/AdministratorAddress.sol";
+import "../Vm.sol";
+import "../../src/components/OracleManager.1.sol";
+import "../../src/libraries/Errors.sol";
+import "../../src/state/shared/AdministratorAddress.sol";
 
 contract OracleManagerV1ExposeInitializer is OracleManagerV1 {
     uint256 public lastReceived;

@@ -2,9 +2,9 @@
 
 pragma solidity 0.8.10;
 
-import "./Vm.sol";
-import "./console.sol";
-import "../src/components/SharesManager.1.sol";
+import "../Vm.sol";
+import "../console.sol";
+import "../../src/components/SharesManager.1.sol";
 
 contract SharesManagerPublicDeal is SharesManagerV1 {
     uint256 public balanceSum;
