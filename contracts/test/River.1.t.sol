@@ -392,4 +392,78 @@ contract RiverV1SetupOneTests {
                     river.sharesOf(treasury)
         );
     }
+
+    function testRiverFuzzing(
+        uint96 joeBalance,
+        uint96 bobBalance,
+        uint96 increasePerValidator
+    ) public {
+        vm.deal(joe, joeBalance);
+        vm.deal(bob, bobBalance);
+
+        vm.startPrank(admin);
+        river.whitelist(joe, true);
+        river.whitelist(bob, true);
+        vm.stopPrank();
+
+        vm.startPrank(joe);
+        if (joeBalance == 0) {
+            vm.expectRevert(abi.encodeWithSignature("EmptyDeposit()"));
+        }
+        river.deposit{value: joeBalance}(address(0));
+        vm.stopPrank();
+        vm.startPrank(bob);
+        if (bobBalance == 0) {
+            vm.expectRevert(abi.encodeWithSignature("EmptyDeposit()"));
+        }
+        river.deposit{value: bobBalance}(address(0));
+        vm.stopPrank();
+        assert(river.balanceOf(joe) == joeBalance);
+        assert(river.balanceOf(bob) == bobBalance);
+        assert(river.getDepositedValidatorCount() == 0);
+        assert(river.totalSupply() == uint256(joeBalance) + uint256(bobBalance));
+
+        uint256 validatorCount = river.totalSupply() / 32 ether;
+        if (validatorCount > 0) {
+            uint256 realValidatorCount = Uint256Lib.min(34, validatorCount);
+            uint256 op1Validator = realValidatorCount / 2;
+            uint256 op2Validator = op1Validator;
+            if (op1Validator + op2Validator != realValidatorCount) {
+                op1Validator += 1;
+            }
+
+            river.depositToConsensusLayer(op1Validator);
+            if (op2Validator > 0) {
+                river.depositToConsensusLayer(op2Validator);
+            }
+
+            Operators.Operator memory op1 = river.getOperatorByName(operatorOneName);
+            Operators.Operator memory op2 = river.getOperatorByName(operatorTwoName);
+
+            assert(op1.funded == op1Validator);
+            assert(op2.funded == op2Validator);
+
+            assert(river.getDepositedValidatorCount() == realValidatorCount);
+            assert(river.totalSupply() == uint256(joeBalance) + uint256(bobBalance));
+            assert(address(river).balance == river.totalSupply() - (32 ether * realValidatorCount));
+            assert(river.balanceOf(joe) == joeBalance);
+            assert(river.balanceOf(bob) == bobBalance);
+
+            vm.startPrank(oracle);
+            river.setBeaconData(
+                realValidatorCount,
+                realValidatorCount * (32 ether + uint256(increasePerValidator)),
+                bytes32(0)
+            );
+            vm.stopPrank();
+
+            assert(
+                river.totalSupply() ==
+                    uint256(joeBalance) + uint256(bobBalance) + (realValidatorCount * increasePerValidator)
+            );
+        } else {
+            vm.expectRevert(abi.encodeWithSignature("NotEnoughFunds()"));
+            river.depositToConsensusLayer(1);
+        }
+    }
 }
