@@ -20,4 +20,6 @@ interface Vm {
         bool,
         bool
     ) external;
+
+    function ffi(string[] calldata) external returns (bytes memory);
 }

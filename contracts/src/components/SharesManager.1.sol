@@ -14,6 +14,8 @@ import "../state/river/ApprovalsPerOwner.sol";
 abstract contract SharesManagerV1 is IERC20 {
     error BalanceTooLow();
     error UnauthorizedOperation();
+    error AllowanceTooLow(address _from, address _operator, uint256 _allowance, uint256 _value);
+    error NullTransfer();
 
     function _isAllowed(address _account) internal view virtual returns (bool);
 
@@ -51,9 +53,6 @@ abstract contract SharesManagerV1 is IERC20 {
     function sharesOf(address _owner) external view returns (uint256 shares) {
         return SharesPerOwner.get(_owner);
     }
-
-    error AllowanceTooLow(address _from, address _operator, uint256 _allowance, uint256 _value);
-    error NullTransfer();
 
     function transfer(address _to, uint256 _value) external allowed(msg.sender) allowed(_to) returns (bool success) {
         if (_value == 0) {
@@ -137,13 +136,18 @@ abstract contract SharesManagerV1 is IERC20 {
         uint256 oldTotalAssetBalance = _assetBalance() - _value;
 
         if (oldTotalAssetBalance == 0) {
-            Shares.set(Shares.get() + assetBalance);
-            SharesPerOwner.set(_owner, assetBalance);
+            _mintRawShares(_owner, assetBalance);
         } else {
             uint256 sharesToMint = (_value * _totalShares()) / oldTotalAssetBalance;
-            Shares.set(Shares.get() + sharesToMint);
-            SharesPerOwner.set(_owner, SharesPerOwner.get(_owner) + sharesToMint);
+            _mintRawShares(_owner, sharesToMint);
         }
+    }
+
+    // assuming funds are received, _assetBalance should have taken _value into account
+    function _mintRawShares(address _owner, uint256 _value) internal {
+        Shares.set(Shares.get() + _value);
+        SharesPerOwner.set(_owner, SharesPerOwner.get(_owner) + _value);
+        emit Transfer(address(0), _owner, _value);
     }
 
     function _balanceOf(address _owner) internal view returns (uint256 balance) {

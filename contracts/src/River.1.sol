@@ -92,6 +92,9 @@ contract RiverV1 is
     /// @param _depositor User address that made the deposit
     /// @param _amount Amount of ETH deposited
     function _onDeposit(address _depositor, uint256 _amount) internal override {
+        if (WhitelistManagerV1._isWhitelisted(_depositor) == false) {
+            revert Errors.Unauthorized(_depositor);
+        }
         SharesManagerV1._mintShares(_depositor, _amount);
     }
 
@@ -167,9 +170,11 @@ contract RiverV1 is
     /// @notice Handler called whenever the balance of ETH handled by the system increases. Splits funds between operators and treasury.
     /// @param _amount Additional eth received
     function _onEarnings(uint256 _amount) internal override {
-        uint256 collectedFees = (_amount * GlobalFee.get()) / BASE;
+        uint256 globalFee = GlobalFee.get();
+        uint256 sharesToMint = (_amount * _totalShares() * globalFee) /
+            ((_assetBalance() * BASE) - (_amount * globalFee));
 
-        uint256 operatorRewards = (collectedFees * OperatorRewardsShare.get()) / BASE;
+        uint256 operatorRewards = (sharesToMint * OperatorRewardsShare.get()) / BASE;
 
         Operators.Operator[] memory operators = Operators.getAllActive();
         uint256[] memory validatorCounts = new uint256[](operators.length);
@@ -178,26 +183,26 @@ contract RiverV1 is
         for (uint256 idx = 0; idx < operators.length; ++idx) {
             uint256 operatorActiveValidatorCount = operators[idx].funded - operators[idx].stopped;
             totalActiveValidators += operatorActiveValidatorCount;
-            validatorCounts[operatorActiveValidatorCount];
+            validatorCounts[idx] = operatorActiveValidatorCount;
         }
 
         if (totalActiveValidators > 0) {
             uint256 rewardsPerActiveValidator = operatorRewards / totalActiveValidators;
 
             for (uint256 idx = 0; idx < validatorCounts.length; ++idx) {
-                _mintShares(operators[idx].operator, validatorCounts[idx] * rewardsPerActiveValidator);
+                _mintRawShares(operators[idx].operator, validatorCounts[idx] * rewardsPerActiveValidator);
             }
         } else {
             operatorRewards = 0;
         }
 
-        _mintShares(TreasuryAddress.get(), collectedFees - operatorRewards);
+        _mintRawShares(TreasuryAddress.get(), sharesToMint - operatorRewards);
     }
 
     /// @notice Handler called whenever the total balance of ETH is requested
     function _assetBalance() internal view override returns (uint256) {
         uint256 beaconValidatorCount = BeaconValidatorCount.get();
-        uint256 depositedValidatorCount = BeaconValidatorCount.get();
+        uint256 depositedValidatorCount = DepositedValidatorCount.get();
         if (beaconValidatorCount < depositedValidatorCount) {
             return
                 BeaconValidatorBalanceSum.get() +

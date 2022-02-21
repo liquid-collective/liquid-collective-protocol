@@ -52,13 +52,13 @@ abstract contract OracleManagerV1 {
         uint256 previousValidatorBalanceSum = BeaconValidatorBalanceSum.get();
         uint256 newValidators = _validatorCount - BeaconValidatorCount.get();
 
-        if (previousValidatorBalanceSum < _validatorBalanceSum) {
-            _onEarnings(_validatorBalanceSum - previousValidatorBalanceSum - newValidators * 32 ether);
-        }
-
         BeaconValidatorBalanceSum.set(_validatorBalanceSum);
         BeaconValidatorCount.set(_validatorCount);
         LastOracleRoundId.set(_roundId);
+
+        if (previousValidatorBalanceSum < _validatorBalanceSum) {
+            _onEarnings(_validatorBalanceSum - previousValidatorBalanceSum - newValidators * 32 ether);
+        }
 
         emit BeaconDataUpdate(_validatorCount, _validatorBalanceSum, _roundId);
     }

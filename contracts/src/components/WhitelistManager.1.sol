@@ -22,7 +22,7 @@ abstract contract WhitelistManagerV1 {
     /// @notice Sets the whitelisting status for an account
     /// @param _account Account status to edit
     /// @param _status Whitelist status
-    function setWhitelistStatus(address _account, bool _status) external {
+    function whitelist(address _account, bool _status) external {
         if (msg.sender != WhitelistorAddress.get() && msg.sender != AdministratorAddress.get()) {
             revert Errors.Unauthorized(msg.sender);
         }

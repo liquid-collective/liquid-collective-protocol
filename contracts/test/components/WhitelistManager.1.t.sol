@@ -29,13 +29,13 @@ contract WhitelistManagerV1Tests {
     function testSetWhitelistStatus(address user) public {
         vm.startPrank(whitelistor);
         assert(whitelistManager.isWhitelisted(user) == false);
-        whitelistManager.setWhitelistStatus(user, true);
+        whitelistManager.whitelist(user, true);
         assert(whitelistManager.isWhitelisted(user) == true);
     }
 
     function testSetWhitelistStatusUnauthorized(address user) public {
         vm.startPrank(user);
         vm.expectRevert(abi.encodeWithSignature("Unauthorized(address)", user));
-        whitelistManager.setWhitelistStatus(user, true);
+        whitelistManager.whitelist(user, true);
     }
 }

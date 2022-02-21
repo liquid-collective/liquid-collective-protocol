@@ -71,4 +71,11 @@ contract OracleManagerV1Tests {
         vm.expectRevert(abi.encodeWithSignature("Unauthorized(address)", user));
         oracleManager.setBeaconData(1, val1 + 32 ether, roundId);
     }
+
+    function testSetBeaconDataInvalidValidatorCount(uint64 val1, bytes32 roundId) public {
+        vm.startPrank(oracle);
+        OracleManagerV1ExposeInitializer(address(oracleManager)).supersedeAllValidatorCount(1);
+        vm.expectRevert(abi.encodeWithSignature("InvalidValidatorCountReport(uint256,uint256)", 2, 1));
+        oracleManager.setBeaconData(2, val1 + 32 ether, roundId);
+    }
 }
