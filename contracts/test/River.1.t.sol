@@ -120,6 +120,14 @@ contract RiverV1SetupOneTests {
         vm.stopPrank();
     }
 
+    function testUnauthorizedDeposit() public {
+        vm.deal(joe, 100 ether);
+
+        vm.startPrank(joe);
+        vm.expectRevert(abi.encodeWithSignature("Unauthorized(address)", joe));
+        river.deposit{value: 100 ether}(address(0));
+    }
+
     // Testing regular parameters
     function testUserDeposits() public {
         vm.deal(joe, 100 ether);

@@ -31,7 +31,7 @@ contract OracleV1 is Initializable {
         uint256 _prevTotalEth,
         uint256 _postTotalEth,
         uint256 _timeElapsed,
-        uint256 _annuamAprUpperBound
+        uint256 _annualAprUpperBound
     );
     error BeaconBalanceDecreaseOutOfBounds(
         uint256 _prevTotalEth,
@@ -85,6 +85,7 @@ contract OracleV1 is Initializable {
                 relativeLowerBound: _relativeLowerBound
             })
         );
+        Quorum.set(1);
     }
 
     /// @notice Prevents unauthorized calls
@@ -101,20 +102,29 @@ contract OracleV1 is Initializable {
     }
 
     /// @notice Retrieve the current epoch id based on block timestamp
-    /// @param _beaconSpec Beacon spec parameters
-    function getCurrentEpochId(BeaconSpec.BeaconSpecStruct memory _beaconSpec) external view returns (uint256) {
-        return _getCurrentEpochId(_beaconSpec);
+    function getCurrentEpochId() external view returns (uint256) {
+        BeaconSpec.BeaconSpecStruct memory beaconSpec = BeaconSpec.get();
+        return _getCurrentEpochId(beaconSpec);
     }
 
     /// @notice Retrieve the first epoch id of the frame of the provided epoch id
     /// @param _epochId Epoch id used to get the frame
-    /// @param _beaconSpec Beacon spec parameters
-    function getFrameFirstEpochId(uint256 _epochId, BeaconSpec.BeaconSpecStruct memory _beaconSpec)
-        external
-        pure
-        returns (uint256)
-    {
-        return _getFrameFirstEpochId(_epochId, _beaconSpec);
+    function getFrameFirstEpochId(uint256 _epochId) external view returns (uint256) {
+        BeaconSpec.BeaconSpecStruct memory beaconSpec = BeaconSpec.get();
+        return _getFrameFirstEpochId(_epochId, beaconSpec);
+    }
+
+    /// @notice Returns true if address is member
+    /// @dev Performs a naive search, do not call this on-chain, used as an off-chain helper
+    /// @param _memberAddress Address of the member
+    function isMember(address _memberAddress) external view returns (bool) {
+        address[] memory members = OracleMembers.get();
+        for (uint256 idx = 0; idx < members.length; ++idx) {
+            if (members[idx] == _memberAddress) {
+                return true;
+            }
+        }
+        return false;
     }
 
     /// @notice Adds new address as oracle member, giving the ability to push beacon reports.
@@ -139,6 +149,10 @@ contract OracleV1 is Initializable {
         OracleMembers.deleteItem(uint256(memberIdx));
     }
 
+    function getBeaconSpec() external view returns (BeaconSpec.BeaconSpecStruct memory) {
+        return BeaconSpec.get();
+    }
+
     /// @notice Edits the beacon spec parameters
     /// @dev Only callable by the adminstrator
     /// @param _epochsPerFrame Number of epochs in a frame.
@@ -159,6 +173,10 @@ contract OracleV1 is Initializable {
                 genesisTime: _genesisTime
             })
         );
+    }
+
+    function getBeaconBounds() external view returns (BeaconReportBounds.BeaconReportBoundsStruct memory) {
+        return BeaconReportBounds.get();
     }
 
     /// @notice Edits the beacon bounds parameters
@@ -199,6 +217,15 @@ contract OracleV1 is Initializable {
                 );
             }
         }
+    }
+
+    function getExpectedEpochId() external view returns (uint256) {
+        return ExpectedEpochId.get();
+    }
+
+    function getMemberReportStatus(address _oracleMember) external view returns (bool) {
+        int256 memberIndex = OracleMembers.indexOf(_oracleMember);
+        return ReportsPositions.get(uint256(memberIndex));
     }
 
     /// @notice Report beacon chain data
@@ -399,6 +426,7 @@ contract OracleV1 is Initializable {
         uint256 timeElapsed = (_epochId - LastEpochId.get()) * _beaconSpec.slotsPerEpoch * _beaconSpec.secondsPerSlot;
 
         _sanityChecks(postTotalEth, prevTotalEth, timeElapsed);
+        LastEpochId.set(_epochId);
 
         emit PostTotalShares(postTotalEth, prevTotalEth, timeElapsed, riverAddress.totalShares());
     }
