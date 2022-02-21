@@ -28,9 +28,8 @@ const func: DeployFunction = async function ({
   } = await getNamedAccounts();
 
   const withdrawDeployment = await deployments.get("WithdrawV1");
-  const withdrawalCredentials = `0x01${"00".repeat(
-    11
-  )}${withdrawDeployment.address.slice(2)}`;
+  const WithdrawContract = await ethers.getContractAt("WithdrawV1", withdrawDeployment.address);
+  const withdrawalCredentials = await WithdrawContract.getCredentials();
 
   await deployments.deploy("RiverV1", {
     from: deployer,
