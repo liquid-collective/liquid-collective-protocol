@@ -11,7 +11,7 @@ import "../state/river/WithdrawalCredentials.sol";
 import "../state/river/DepositedValidatorCount.sol";
 
 /// @title Deposit Manager (v1)
-/// @author Iulian Rotaru
+/// @author SkillZ
 /// @notice This contract handles the interactions with the official deposit contract, funding all validators
 /// @dev _onValidatorKeyRequest must be overriden.
 abstract contract DepositManagerV1 {

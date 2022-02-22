@@ -8,7 +8,7 @@ import "../state/river/AllowerAddress.sol";
 import "../state/river/Allowlist.sol";
 
 /// @title Allowlist Manager (v1)
-/// @author Iulian Rotaru
+/// @author SkillZ
 /// @notice This contract handles the allowlist of accounts allowed to own shares
 abstract contract AllowlistManagerV1 {
     event ChangedAllowlistStatus(address indexed account, bool status);
