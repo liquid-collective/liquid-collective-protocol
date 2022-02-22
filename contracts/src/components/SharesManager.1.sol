@@ -17,10 +17,10 @@ abstract contract SharesManagerV1 is IERC20 {
     error AllowanceTooLow(address _from, address _operator, uint256 _allowance, uint256 _value);
     error NullTransfer();
 
-    function _isAllowed(address _account) internal view virtual returns (bool);
+    function _isAccountAllowed(address _account) internal view virtual returns (bool);
 
     modifier allowed(address _account) {
-        if (!_isAllowed(_account)) {
+        if (!_isAccountAllowed(_account)) {
             revert Errors.Unauthorized(_account);
         }
         _;

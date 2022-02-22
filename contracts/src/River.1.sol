@@ -6,7 +6,7 @@ import "./components/TransferManager.1.sol";
 import "./components/SharesManager.1.sol";
 import "./components/OracleManager.1.sol";
 import "./components/OperatorsManager.1.sol";
-import "./components/WhitelistManager.1.sol";
+import "./components/AllowlistManager.1.sol";
 import "./Initializable.sol";
 import "./libraries/LibOwnable.sol";
 
@@ -24,7 +24,7 @@ contract RiverV1 is
     SharesManagerV1,
     OracleManagerV1,
     OperatorsManagerV1,
-    WhitelistManagerV1,
+    AllowlistManagerV1,
     Initializable
 {
     uint256 public constant BASE = 100000;
@@ -41,7 +41,7 @@ contract RiverV1 is
     /// @param _depositContractAddress Address to make Consensus Layer deposits
     /// @param _withdrawalCredentials Credentials to use for every validator deposit
     /// @param _systemAdministratorAddress Administrator address
-    /// @param _whitelistorAddress Address able to manage the whitelist
+    /// @param _allowerAddress Address able to manage the allowlist
     /// @param _treasuryAddress Address receiving the fee minus the operator share
     /// @param _globalFee Amount retained when the eth balance increases, splitted between the treasury and the operators
     /// @param _operatorRewardsShare Share of the global fee used to reward node operators
@@ -49,7 +49,7 @@ contract RiverV1 is
         address _depositContractAddress,
         bytes32 _withdrawalCredentials,
         address _systemAdministratorAddress,
-        address _whitelistorAddress,
+        address _allowerAddress,
         address _treasuryAddress,
         uint256 _globalFee,
         uint256 _operatorRewardsShare
@@ -60,7 +60,7 @@ contract RiverV1 is
         OperatorRewardsShare.set(_operatorRewardsShare);
 
         DepositManagerV1.initDepositManagerV1(_depositContractAddress, _withdrawalCredentials);
-        WhitelistManagerV1.initWhitelistManagerV1(_whitelistorAddress);
+        AllowlistManagerV1.initAllowlistManagerV1(_allowerAddress);
     }
 
     /// @notice Changes the global fee parameter
@@ -92,31 +92,16 @@ contract RiverV1 is
     /// @param _depositor User address that made the deposit
     /// @param _amount Amount of ETH deposited
     function _onDeposit(address _depositor, uint256 _amount) internal override {
-        if (WhitelistManagerV1._isWhitelisted(_depositor) == false) {
+        if (AllowlistManagerV1._isAllowed(_depositor) == false) {
             revert Errors.Unauthorized(_depositor);
         }
         SharesManagerV1._mintShares(_depositor, _amount);
     }
 
-    /// @notice Handler called whenever a whitelist check is made for an address. Asks the Whitelist Manager component.
+    /// @notice Handler called whenever an allowlist check is made for an address. Asks the Allowlist Manager component.
     /// @param _account Address to verify
-    function _isAllowed(address _account) internal view override returns (bool) {
-        return WhitelistManagerV1._isWhitelisted(_account);
-    }
-
-    /// @notice Internal utility to concatenate bytes arrays together
-    function _concatenateByteArrays(bytes[] memory arr1, bytes[] memory arr2)
-        internal
-        pure
-        returns (bytes[] memory res)
-    {
-        res = new bytes[](arr1.length + arr2.length);
-        for (uint256 idx = 0; idx < arr1.length; ++idx) {
-            res[idx] = arr1[idx];
-        }
-        for (uint256 idx = 0; idx < arr2.length; ++idx) {
-            res[idx + arr1.length] = arr2[idx];
-        }
+    function _isAccountAllowed(address _account) internal view override returns (bool) {
+        return AllowlistManagerV1._isAllowed(_account);
     }
 
     /// @notice Handler called whenever a deposit to the consensus layer is made. Should retrieve _requestedAmount or lower keys
@@ -126,45 +111,7 @@ contract RiverV1 is
         override
         returns (bytes[] memory publicKeys, bytes[] memory signatures)
     {
-        Operators.Operator[] memory operators = Operators.getAllFundable();
-
-        if (operators.length == 0) {
-            return (new bytes[](0), new bytes[](0));
-        }
-
-        uint256 selectedOperatorIndex = 0;
-        for (uint256 idx = 1; idx < operators.length; ++idx) {
-            if (operators[idx].funded < operators[selectedOperatorIndex].funded) {
-                selectedOperatorIndex = idx;
-            }
-        }
-
-        uint256 availableOperatorKeys = Uint256Lib.min(
-            operators[selectedOperatorIndex].keys,
-            operators[selectedOperatorIndex].limit
-        ) - operators[selectedOperatorIndex].funded;
-
-        Operators.Operator storage operator = Operators.get(operators[selectedOperatorIndex].name);
-        if (availableOperatorKeys >= _requestedAmount) {
-            (publicKeys, signatures) = ValidatorKeys.getKeys(
-                operators[selectedOperatorIndex].name,
-                operators[selectedOperatorIndex].funded,
-                _requestedAmount
-            );
-            operator.funded += _requestedAmount;
-        } else {
-            (publicKeys, signatures) = ValidatorKeys.getKeys(
-                operators[selectedOperatorIndex].name,
-                operators[selectedOperatorIndex].funded,
-                availableOperatorKeys
-            );
-            operator.funded += availableOperatorKeys;
-            (bytes[] memory additionalPublicKeys, bytes[] memory additionalSignatures) = _getNextValidators(
-                _requestedAmount - availableOperatorKeys
-            );
-            publicKeys = _concatenateByteArrays(publicKeys, additionalPublicKeys);
-            signatures = _concatenateByteArrays(signatures, additionalSignatures);
-        }
+        return OperatorsManagerV1._getNextValidatorsFromActiveOperators(_requestedAmount);
     }
 
     /// @notice Handler called whenever the balance of ETH handled by the system increases. Splits funds between operators and treasury.

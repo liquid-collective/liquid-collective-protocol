@@ -19,7 +19,7 @@ import "./state/oracle/ReportsVariants.sol";
 
 /// @title Oracle (v1)
 /// @author Iulian Rotaru
-/// @notice This contract handles the input from the whitelisted oracle members. Highly inspired by Lido's implementation.
+/// @notice This contract handles the input from the allowed oracle members. Highly inspired by Lido's implementation.
 contract OracleV1 is Initializable {
     /// @notice Received ETH input has only 9 decimals
     uint128 internal constant DENOMINATION_OFFSET = 1e9;

@@ -2,6 +2,7 @@
 pragma solidity 0.8.10;
 
 import "../libraries/Errors.sol";
+import "../libraries/Uint256Lib.sol";
 import "../libraries/LibOwnable.sol";
 
 import "../state/river/Operators.sol";
@@ -246,5 +247,68 @@ contract OperatorsManagerV1 {
     {
         (publicKey, signature) = ValidatorKeys.get(_operatorName, _index);
         funded = _index <= Operators.get(_operatorName).funded;
+    }
+
+    /// @notice Internal utility to concatenate bytes arrays together
+    function _concatenateByteArrays(bytes[] memory arr1, bytes[] memory arr2)
+        internal
+        pure
+        returns (bytes[] memory res)
+    {
+        res = new bytes[](arr1.length + arr2.length);
+        for (uint256 idx = 0; idx < arr1.length; ++idx) {
+            res[idx] = arr1[idx];
+        }
+        for (uint256 idx = 0; idx < arr2.length; ++idx) {
+            res[idx + arr1.length] = arr2[idx];
+        }
+    }
+
+    /// @notice Handler called whenever a deposit to the consensus layer is made. Should retrieve _requestedAmount or lower keys
+    /// @param _requestedAmount Amount of keys required. Contract is expected to send _requestedAmount or lower.
+    function _getNextValidatorsFromActiveOperators(uint256 _requestedAmount)
+        internal
+        returns (bytes[] memory publicKeys, bytes[] memory signatures)
+    {
+        Operators.Operator[] memory operators = Operators.getAllFundable();
+
+        if (operators.length == 0) {
+            return (new bytes[](0), new bytes[](0));
+        }
+
+        uint256 selectedOperatorIndex = 0;
+        for (uint256 idx = 1; idx < operators.length; ++idx) {
+            if (operators[idx].funded < operators[selectedOperatorIndex].funded) {
+                selectedOperatorIndex = idx;
+            }
+        }
+
+        uint256 availableOperatorKeys = Uint256Lib.min(
+            operators[selectedOperatorIndex].keys,
+            operators[selectedOperatorIndex].limit
+        ) - operators[selectedOperatorIndex].funded;
+
+        Operators.Operator storage operator = Operators.get(operators[selectedOperatorIndex].name);
+        if (availableOperatorKeys >= _requestedAmount) {
+            (publicKeys, signatures) = ValidatorKeys.getKeys(
+                operators[selectedOperatorIndex].name,
+                operators[selectedOperatorIndex].funded,
+                _requestedAmount
+            );
+            operator.funded += _requestedAmount;
+        } else {
+            (publicKeys, signatures) = ValidatorKeys.getKeys(
+                operators[selectedOperatorIndex].name,
+                operators[selectedOperatorIndex].funded,
+                availableOperatorKeys
+            );
+            operator.funded += availableOperatorKeys;
+            (
+                bytes[] memory additionalPublicKeys,
+                bytes[] memory additionalSignatures
+            ) = _getNextValidatorsFromActiveOperators(_requestedAmount - availableOperatorKeys);
+            publicKeys = _concatenateByteArrays(publicKeys, additionalPublicKeys);
+            signatures = _concatenateByteArrays(signatures, additionalSignatures);
+        }
     }
 }

@@ -17,7 +17,7 @@ contract SharesManagerPublicDeal is SharesManagerV1 {
         return balanceSum + address(this).balance;
     }
 
-    function _isAllowed(address) internal pure override returns (bool) {
+    function _isAccountAllowed(address) internal pure override returns (bool) {
         return true;
     }
 

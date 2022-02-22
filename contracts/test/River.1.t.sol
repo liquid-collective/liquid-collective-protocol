@@ -55,7 +55,7 @@ contract RiverV1SetupOneTests {
     address internal admin = address(0xEA674fdDe714fd979de3EdF0F56AA9716B898ec8);
     address internal treasury = address(0xC88F7666330b4b511358b7742dC2a3234710e7B1);
     address internal oracle = address(0xD97bF0222C8F4b21A4cedd9d6aC8e3269b099Eba);
-    address internal whitelistor = address(0x363ED97eebe06690625bf7b4e21c5B6540016366);
+    address internal allower = address(0x363ED97eebe06690625bf7b4e21c5B6540016366);
 
     address internal operatorOne = address(0x7fe52bbF4D779cA115231b604637d5f80bab2C40);
     string internal operatorOneName = "NodeMasters";
@@ -68,9 +68,9 @@ contract RiverV1SetupOneTests {
     function setUp() public {
         deposit = new DepositContractMock();
         withdraw = new WithdrawV1();
-        bytes32 withdrawalCredentials = withdraw.getCrendentials();
+        bytes32 withdrawalCredentials = withdraw.getCredentials();
         river = new RiverV1();
-        river.initRiverV1(address(deposit), withdrawalCredentials, admin, whitelistor, treasury, 5000, 50000);
+        river.initRiverV1(address(deposit), withdrawalCredentials, admin, allower, treasury, 5000, 50000);
         vm.startPrank(admin);
         river.setOracle(oracle);
 
@@ -93,10 +93,10 @@ contract RiverV1SetupOneTests {
     }
 
     function testAdditionalInit() public {
-        bytes32 withdrawalCredentials = withdraw.getCrendentials();
+        bytes32 withdrawalCredentials = withdraw.getCredentials();
         vm.startPrank(admin);
         vm.expectRevert(abi.encodeWithSignature("InvalidInitialization(uint256,uint256)", 0, 1));
-        river.initRiverV1(address(deposit), withdrawalCredentials, admin, whitelistor, treasury, 5000, 50000);
+        river.initRiverV1(address(deposit), withdrawalCredentials, admin, allower, treasury, 5000, 50000);
         vm.stopPrank();
     }
 
@@ -134,8 +134,8 @@ contract RiverV1SetupOneTests {
         vm.deal(bob, 1000 ether);
 
         vm.startPrank(admin);
-        river.whitelist(joe, true);
-        river.whitelist(bob, true);
+        river.allow(joe, true);
+        river.allow(bob, true);
         vm.stopPrank();
 
         vm.startPrank(joe);
@@ -201,8 +201,8 @@ contract RiverV1SetupOneTests {
         vm.deal(bob, 1000 ether);
 
         vm.startPrank(admin);
-        river.whitelist(joe, true);
-        river.whitelist(bob, true);
+        river.allow(joe, true);
+        river.allow(bob, true);
         river.setGlobalFee(10000);
         vm.stopPrank();
 
@@ -270,8 +270,8 @@ contract RiverV1SetupOneTests {
         vm.deal(bob, 1000 ether);
 
         vm.startPrank(admin);
-        river.whitelist(joe, true);
-        river.whitelist(bob, true);
+        river.allow(joe, true);
+        river.allow(bob, true);
         vm.stopPrank();
 
         vm.startPrank(joe);
@@ -338,8 +338,8 @@ contract RiverV1SetupOneTests {
         vm.deal(bob, 1000 ether);
 
         vm.startPrank(admin);
-        river.whitelist(joe, true);
-        river.whitelist(bob, true);
+        river.allow(joe, true);
+        river.allow(bob, true);
         river.setOperatorStoppedValidatorCount(operatorOneName, 10);
         vm.stopPrank();
 
@@ -410,8 +410,8 @@ contract RiverV1SetupOneTests {
         vm.deal(bob, bobBalance);
 
         vm.startPrank(admin);
-        river.whitelist(joe, true);
-        river.whitelist(bob, true);
+        river.allow(joe, true);
+        river.allow(bob, true);
         vm.stopPrank();
 
         vm.startPrank(joe);
