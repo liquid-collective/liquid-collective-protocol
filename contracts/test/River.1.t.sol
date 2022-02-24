@@ -79,17 +79,25 @@ contract RiverV1SetupOneTests {
         river.addOperator(operatorOneName, operatorOne);
         river.addOperator(operatorTwoName, operatorTwo);
 
+        (int256 _operatorOneIndex, ) = river.getOperatorDetails(operatorOneName);
+        assert(_operatorOneIndex >= 0);
+        uint256 operatorOneIndex = uint256(_operatorOneIndex);
+
+        (int256 _operatorTwoIndex, ) = river.getOperatorDetails(operatorTwoName);
+        assert(_operatorTwoIndex >= 0);
+        uint256 operatorTwoIndex = uint256(_operatorTwoIndex);
+
         bytes memory op1PublicKeys = RiverSetupOne.getOperatorOnePublicKeys();
         bytes memory op1Signatures = RiverSetupOne.getOperatorOneSignatures();
 
-        river.addValidators(operatorOneName, 100, op1PublicKeys, op1Signatures);
-        river.setOperatorLimit(operatorOneName, 100);
+        river.addValidators(operatorOneIndex, 100, op1PublicKeys, op1Signatures);
+        river.setOperatorLimit(operatorOneIndex, 100);
 
         bytes memory op2PublicKeys = RiverSetupOne.getOperatorTwoPublicKeys();
         bytes memory op2Signatures = RiverSetupOne.getOperatorTwoSignatures();
 
-        river.addValidators(operatorTwoName, 100, op2PublicKeys, op2Signatures);
-        river.setOperatorLimit(operatorTwoName, 100);
+        river.addValidators(operatorTwoIndex, 100, op2PublicKeys, op2Signatures);
+        river.setOperatorLimit(operatorTwoIndex, 100);
     }
 
     function testAdditionalInit() public {
@@ -340,7 +348,10 @@ contract RiverV1SetupOneTests {
         vm.startPrank(admin);
         river.allow(joe, true);
         river.allow(bob, true);
-        river.setOperatorStoppedValidatorCount(operatorOneName, 10);
+        (int256 _operatorOneIndex, ) = river.getOperatorDetails(operatorOneName);
+        assert(_operatorOneIndex >= 0);
+        uint256 operatorOneIndex = uint256(_operatorOneIndex);
+        river.setOperatorStoppedValidatorCount(operatorOneIndex, 10);
         vm.stopPrank();
 
         vm.startPrank(joe);

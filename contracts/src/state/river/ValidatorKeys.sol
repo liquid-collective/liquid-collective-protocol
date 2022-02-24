@@ -13,10 +13,10 @@ library ValidatorKeys {
     bytes32 public constant VALIDATOR_KEYS_SLOT = bytes32(uint256(keccak256("river.state.validatorKeys")) - 1);
 
     struct Slot {
-        mapping(string => mapping(uint256 => bytes)) value;
+        mapping(uint256 => mapping(uint256 => bytes)) value;
     }
 
-    function get(string memory name, uint256 idx)
+    function get(uint256 operatorIndex, uint256 idx)
         internal
         view
         returns (bytes memory publicKey, bytes memory signature)
@@ -29,14 +29,14 @@ library ValidatorKeys {
             r.slot := slot
         }
 
-        bytes storage entry = r.value[name][idx];
+        bytes storage entry = r.value[operatorIndex][idx];
 
         publicKey = BytesLib.slice(entry, 0, PUBLIC_KEY_LENGTH);
         signature = BytesLib.slice(entry, PUBLIC_KEY_LENGTH, SIGNATURE_LENGTH);
     }
 
     function getKeys(
-        string memory name,
+        uint256 operatorIndex,
         uint256 startIdx,
         uint256 amount
     ) internal view returns (bytes[] memory publicKey, bytes[] memory signatures) {
@@ -52,14 +52,14 @@ library ValidatorKeys {
         }
 
         for (uint256 idx = startIdx; idx < startIdx + amount; ++idx) {
-            bytes memory rawCredentials = r.value[name][idx];
+            bytes memory rawCredentials = r.value[operatorIndex][idx];
             publicKey[idx - startIdx] = BytesLib.slice(rawCredentials, 0, PUBLIC_KEY_LENGTH);
             signatures[idx - startIdx] = BytesLib.slice(rawCredentials, PUBLIC_KEY_LENGTH, SIGNATURE_LENGTH);
         }
     }
 
     function set(
-        string memory name,
+        uint256 operatorIndex,
         uint256 idx,
         bytes memory publicKey,
         bytes memory signature
@@ -74,6 +74,6 @@ library ValidatorKeys {
             r.slot := slot
         }
 
-        r.value[name][idx] = concatenatedKeys;
+        r.value[operatorIndex][idx] = concatenatedKeys;
     }
 }

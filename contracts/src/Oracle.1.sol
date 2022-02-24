@@ -101,10 +101,79 @@ contract OracleV1 is Initializable {
         return _getTime();
     }
 
+    /// @notice Retrieve expected epoch id
+    function getExpectedEpochId() external view returns (uint256) {
+        return ExpectedEpochId.get();
+    }
+
+    /// @notice Retrieve member report status
+    /// @param _oracleMember Address of member to check
+    function getMemberReportStatus(address _oracleMember) external view returns (bool) {
+        int256 memberIndex = OracleMembers.indexOf(_oracleMember);
+        return ReportsPositions.get(uint256(memberIndex));
+    }
+
+    /// @notice Retrieve member report status
+    function getGlobalReportStatus() external view returns (uint256) {
+        return ReportsPositions.getRaw();
+    }
+
+    /// @notice Retrieve report variants count
+    function getReportVariantsCount() external view returns (uint256) {
+        return ReportsVariants.get().length;
+    }
+
+    /// @notice Retrieve decoded report at provided index
+    /// @param _idx Index of report
+    function getReportVariant(uint256 _idx)
+        external
+        view
+        returns (
+            uint64 _beaconBalance,
+            uint32 _beaconValidators,
+            uint16 _reportCount
+        )
+    {
+        uint256 report = ReportsVariants.get()[_idx];
+        (_beaconBalance, _beaconValidators) = _decodeReport(report);
+        _reportCount = _getReportCount(report);
+    }
+
+    /// @notice Retrieve the last completed epoch id
+    function getLastCompletedEpochId() external view returns (uint256) {
+        return LastEpochId.get();
+    }
+
     /// @notice Retrieve the current epoch id based on block timestamp
     function getCurrentEpochId() external view returns (uint256) {
         BeaconSpec.BeaconSpecStruct memory beaconSpec = BeaconSpec.get();
         return _getCurrentEpochId(beaconSpec);
+    }
+
+    /// @notice Retrieve the current quorum
+    function getQuorum() external view returns (uint256) {
+        return Quorum.get();
+    }
+
+    /// @notice Retrieve the current beacon spec
+    function getBeaconSpec() external view returns (BeaconSpec.BeaconSpecStruct memory) {
+        return BeaconSpec.get();
+    }
+
+    /// @notice Retrieve the current frame details
+    function getCurrentFrame()
+        external
+        view
+        returns (
+            uint256 _startEpochId,
+            uint256 _startTime,
+            uint256 _endTime
+        )
+    {
+        BeaconSpec.BeaconSpecStruct memory beaconSpec = BeaconSpec.get();
+        _startEpochId = _getFrameFirstEpochId(_getCurrentEpochId(beaconSpec), beaconSpec);
+        _startTime = beaconSpec.genesisTime + _startEpochId * beaconSpec.secondsPerSlot * beaconSpec.slotsPerEpoch;
+        _endTime = _startTime + beaconSpec.secondsPerSlot * beaconSpec.slotsPerEpoch * beaconSpec.epochsPerFrame - 1;
     }
 
     /// @notice Retrieve the first epoch id of the frame of the provided epoch id
@@ -112,6 +181,14 @@ contract OracleV1 is Initializable {
     function getFrameFirstEpochId(uint256 _epochId) external view returns (uint256) {
         BeaconSpec.BeaconSpecStruct memory beaconSpec = BeaconSpec.get();
         return _getFrameFirstEpochId(_epochId, beaconSpec);
+    }
+
+    function getBeaconBounds() external view returns (BeaconReportBounds.BeaconReportBoundsStruct memory) {
+        return BeaconReportBounds.get();
+    }
+
+    function getOracleMembers() external view returns (address[] memory) {
+        return OracleMembers.get();
     }
 
     /// @notice Returns true if address is member
@@ -149,10 +226,6 @@ contract OracleV1 is Initializable {
         OracleMembers.deleteItem(uint256(memberIdx));
     }
 
-    function getBeaconSpec() external view returns (BeaconSpec.BeaconSpecStruct memory) {
-        return BeaconSpec.get();
-    }
-
     /// @notice Edits the beacon spec parameters
     /// @dev Only callable by the adminstrator
     /// @param _epochsPerFrame Number of epochs in a frame.
@@ -173,10 +246,6 @@ contract OracleV1 is Initializable {
                 genesisTime: _genesisTime
             })
         );
-    }
-
-    function getBeaconBounds() external view returns (BeaconReportBounds.BeaconReportBoundsStruct memory) {
-        return BeaconReportBounds.get();
     }
 
     /// @notice Edits the beacon bounds parameters
@@ -217,15 +286,6 @@ contract OracleV1 is Initializable {
                 );
             }
         }
-    }
-
-    function getExpectedEpochId() external view returns (uint256) {
-        return ExpectedEpochId.get();
-    }
-
-    function getMemberReportStatus(address _oracleMember) external view returns (bool) {
-        int256 memberIndex = OracleMembers.indexOf(_oracleMember);
-        return ReportsPositions.get(uint256(memberIndex));
     }
 
     /// @notice Report beacon chain data
@@ -270,7 +330,7 @@ contract OracleV1 is Initializable {
 
         if (reportIndex >= 0) {
             uint256 registeredReport = ReportsVariants.get()[uint256(reportIndex)];
-            if (_reportCount(registeredReport) + 1 >= quorum) {
+            if (_getReportCount(registeredReport) + 1 >= quorum) {
                 _pushToRiver(_epochId, beaconBalanceEth1, _beaconValidators, beaconSpec);
             } else {
                 ReportsVariants.set(uint256(reportIndex), registeredReport + 1);
@@ -290,7 +350,7 @@ contract OracleV1 is Initializable {
         // check most frequent cases first: all reports are the same or no reports yet
         uint256[] memory variants = ReportsVariants.get();
         if (variants.length == 1) {
-            return (_reportCount(variants[0]) >= _quorum, variants[0]);
+            return (_getReportCount(variants[0]) >= _quorum, variants[0]);
         } else if (variants.length == 0) {
             return (false, 0);
         }
@@ -301,7 +361,7 @@ contract OracleV1 is Initializable {
         uint16 maxval = 0;
         uint16 cur = 0;
         for (uint256 i = 0; i < variants.length; ++i) {
-            cur = _reportCount(variants[i]);
+            cur = _getReportCount(variants[i]);
             if (cur >= maxval) {
                 if (cur == maxval) {
                     ++repeat;
@@ -362,7 +422,7 @@ contract OracleV1 is Initializable {
 
     /// @notice Retrieve the vote count from the encoded report (last 16 bits)
     /// @param _report Encoded report
-    function _reportCount(uint256 _report) internal pure returns (uint16) {
+    function _getReportCount(uint256 _report) internal pure returns (uint16) {
         return uint16(_report);
     }
 

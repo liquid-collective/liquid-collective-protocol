@@ -30,6 +30,7 @@ library Operators {
     }
 
     error OperatorNotFound(string name);
+    error OperatorNotFoundAtIndex(uint256 index);
 
     function _getOperatorIndex(string memory name) internal view returns (uint256) {
         bytes32 slot = OPERATORS_MAPPING_SLOT;
@@ -77,6 +78,22 @@ library Operators {
         return _getOperatorActive(name);
     }
 
+    function indexOf(string memory name) internal view returns (int256) {
+        bytes32 slot = OPERATORS_MAPPING_SLOT;
+
+        SlotOperatorMapping storage opm;
+
+        assembly {
+            opm.slot := slot
+        }
+
+        if (opm.value[name].active == false) {
+            return -1;
+        }
+
+        return int256(opm.value[name].index);
+    }
+
     function get(string memory name) internal view returns (Operator storage) {
         bytes32 slot = OPERATORS_SLOT;
         uint256 index = _getOperatorIndex(name);
@@ -97,6 +114,10 @@ library Operators {
 
         assembly {
             r.slot := slot
+        }
+
+        if (r.value.length <= index) {
+            revert OperatorNotFoundAtIndex(index);
         }
 
         return r.value[index];
@@ -178,7 +199,7 @@ library Operators {
         return activeOperators;
     }
 
-    function set(string memory name, Operator memory newValue) internal {
+    function set(string memory name, Operator memory newValue) internal returns (uint256) {
         bool opExists = _getOperatorActive(name);
 
         bytes32 slot = OPERATORS_SLOT;
@@ -192,12 +213,14 @@ library Operators {
         if (opExists == false) {
             r.value.push(newValue);
             _setOperatorIndex(name, newValue.active, r.value.length - 1);
+            return (r.value.length - 1);
         } else {
             uint256 index = _getOperatorIndex(name);
             r.value[index] = newValue;
             if (opExists != newValue.active) {
                 _setOperatorIndex(name, newValue.active, index);
             }
+            return (index);
         }
     }
 }
