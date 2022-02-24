@@ -11,6 +11,10 @@ library ReportsPositions {
         return UnstructuredStorage.getStorageUint256(REPORTS_POSITIONS_SLOT) & mask == 1;
     }
 
+    function getRaw() internal view returns (uint256) {
+        return UnstructuredStorage.getStorageUint256(REPORTS_POSITIONS_SLOT);
+    }
+
     function register(uint256 idx) internal {
         uint256 mask = 1 << idx;
         return

@@ -53,6 +53,9 @@ const func: DeployFunction = async function ({
     }
   } while (oracleAddress.toLowerCase() !== oracleDeployment.address.toLowerCase());
 
+  console.log();
+  console.log("Proper oracle address set on RiverV1");
+
   logStepEnd();
 };
 export default func;

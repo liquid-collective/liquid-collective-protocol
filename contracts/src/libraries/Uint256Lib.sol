@@ -1,7 +1,7 @@
 //SPDX-License-Identifier: BUSL-1.1
 pragma solidity 0.8.10;
 
-library UintLib {
+library Uint256Lib {
     function toLittleEndian64(uint256 _value) internal pure returns (uint256 result) {
         result = 0;
         uint256 temp_value = _value;

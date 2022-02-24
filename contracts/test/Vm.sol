@@ -4,6 +4,8 @@ pragma solidity 0.8.10;
 import "./console.sol";
 
 interface Vm {
+    function warp(uint256) external;
+
     function prank(address) external;
 
     function startPrank(address) external;
@@ -20,4 +22,6 @@ interface Vm {
         bool,
         bool
     ) external;
+
+    function ffi(string[] calldata) external returns (bytes memory);
 }

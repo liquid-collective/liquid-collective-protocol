@@ -2,14 +2,15 @@
 
 pragma solidity 0.8.10;
 
-import "./Vm.sol";
-import "../src/components/DepositManager.1.sol";
+import "../Vm.sol";
+import "../../src/components/DepositManager.1.sol";
+import "../../src/libraries/UnstructuredStorage.sol";
 
 contract DepositManagerV1ExposeInitializer is DepositManagerV1 {
     function publicDepositManagerInitializeV1(address _depositContractAddress, bytes32 _withdrawalCredentials)
         external
     {
-        DepositManagerV1.depositManagerInitializeV1(_depositContractAddress, _withdrawalCredentials);
+        DepositManagerV1.initDepositManagerV1(_depositContractAddress, _withdrawalCredentials);
     }
 
     bytes public _publicKeys =
@@ -17,7 +18,7 @@ contract DepositManagerV1ExposeInitializer is DepositManagerV1 {
     bytes public _signatures =
         hex"6e93b287f9972d6e4bb7b9b7bdf75e2f3190b61dff0699d9708ee2a6e08f0ce1436b3f0213c1d7e0168cd1b221326b917e0dba509208bf586923ccc53e30b9bc697834508a4c54cd4f097f2c8c5d1b7b3c829fdc326f8df92aae75f008099e1e0324e6ea8734ab375bc33000ab02c63423c3dec20823ac27cadc1e393fa1f15774e52c6a5194dd9136f253b1dc8e0cf9f1a9eec02517d923af4f242e2215d4f82d2bfb657e666f24e5c5f8e6c9636250c0e8f2c20ddd91eda71d1ef5896dbc0fd84508f71958ab19b047030cee1911d55194e38051111021e0710e0be25c3f878ba11c7db118b06a6fc04570cba519c1aa4184693f024bc0e02019dfb62dacab8a2b1127d1b03645ed6377717cbd099aab8d6a5bef2be1aa8e0bb7e2565c8eddfa91b72ae014adb0a47a272d1aedd5920a2ec2f788fe76852b45961d959fdb627329326352f8f3e73bb758022265174af7bc6e3b8ef19f173244735f68789d0f6a34de6da1e22142478205388e8b9db291e01227aa5e4e7173aa11624341b31a202ffade6b5418099dd583708c1fb95525bbfa87b1d08455b640ce25cf322b00471f8dc813dbcd8b82c20e9d07c6215e86237d94ed6f81c7a7ffce0180c128be4f036203e9acfa713d41609a654de0a56a1689da6dcd3950dfd1e3f36987cca569ba947c97b205e34f8ed2dd87b4e29a822676457121ff48ee8bb4dd0b7200093883f6cde4edf1026abc5bc5692dbbfb2197fb4cfbac4eecc99b7956a4dab19cc74db50cf83ff35e880ef58457d3a5b444a17c072ea617ff28cf7bba2657f8ef118a8e6f65453548aafea8c8b88a0df7dbeeaecff69d05ff0dfc55fb97eb94b05b7d7aa748f5aaf6fe38aa6183f400d65e0152004780a089449a5bd77e04b7bd0682c67f5c4fd12bf56b6b31ec3eccfe104f8f64c8b9d23375e0078ba8fe6253037a8a2171682301d5463ce24b4e920af83fd009b6214450382309a143332e8dfa05a95dfa686a630b95b80cfd9b42d33cc3de7f5708dd67714192a14ca814a1f3cc4b4932c36831674ee8ba3a58f12643c1b4bf1e00370290ac4d5e994410d69bad8c691efaf5b6e8fe8331882f7dc304d8ccb6bd9d6079c1698dbdef47996c937046157498db082443ddd33f61e1abb204f12d553b25ea1d773812f701a3c9b36c5909c3b9ebd18d2ba1b8a2daeae36a2811a59bbae1d334fde54e07eac5770172c36d50d821fb181c97bb00a9684a904a2fc8c9c520e730fca4751b4f0d266dc33ddbb7e8ea065ccc47a7dbea61a185ab2413917a039e505e85e2f781eeef96658b94a07f9662ff3e6c8728de755c7a305f975ae8772c8b75468ad30a5467";
 
-    function _onValidatorKeyRequest(uint256 _amount) internal view override returns (bytes[] memory, bytes[] memory) {
+    function _getNextValidators(uint256 _amount) internal view override returns (bytes[] memory, bytes[] memory) {
         uint256 amount = _amount > 10 ? 10 : _amount;
         bytes[] memory publicKeys = new bytes[](amount);
         bytes[] memory signatures = new bytes[](amount);
@@ -114,7 +115,7 @@ contract DepositManagerV1ControllableValidatorKeyRequest is DepositManagerV1 {
     function publicDepositManagerInitializeV1(address _depositContractAddress, bytes32 _withdrawalCredentials)
         external
     {
-        DepositManagerV1.depositManagerInitializeV1(_depositContractAddress, _withdrawalCredentials);
+        DepositManagerV1.initDepositManagerV1(_depositContractAddress, _withdrawalCredentials);
     }
 
     bytes public _publicKeys =
@@ -128,7 +129,7 @@ contract DepositManagerV1ControllableValidatorKeyRequest is DepositManagerV1 {
         scenario = _newScenario;
     }
 
-    function _onValidatorKeyRequest(uint256 _amount) internal view override returns (bytes[] memory, bytes[] memory) {
+    function _getNextValidators(uint256 _amount) internal view override returns (bytes[] memory, bytes[] memory) {
         if (scenario == 0) {
             uint256 amount = _amount > 10 ? 10 : _amount;
             bytes[] memory publicKeys = new bytes[](amount);

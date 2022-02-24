@@ -9,16 +9,18 @@ import "../state/river/SharesPerOwner.sol";
 import "../state/river/ApprovalsPerOwner.sol";
 
 /// @title Shares Manager (v1)
-/// @author Iulian Rotaru
+/// @author SkillZ
 /// @notice This contract handles the shares of the depositor and the rebasing effect depending on the oracle data
 abstract contract SharesManagerV1 is IERC20 {
     error BalanceTooLow();
     error UnauthorizedOperation();
+    error AllowanceTooLow(address _from, address _operator, uint256 _allowance, uint256 _value);
+    error NullTransfer();
 
-    function _isAllowed(address _account) internal view virtual returns (bool);
+    function _isAccountAllowed(address _account) internal view virtual returns (bool);
 
     modifier allowed(address _account) {
-        if (!_isAllowed(_account)) {
+        if (!_isAccountAllowed(_account)) {
             revert Errors.Unauthorized(_account);
         }
         _;
@@ -29,7 +31,7 @@ abstract contract SharesManagerV1 is IERC20 {
     }
 
     function symbol() external pure returns (string memory) {
-        return "RIV";
+        return "rETH";
     }
 
     function decimals() external pure returns (uint8) {
@@ -53,7 +55,10 @@ abstract contract SharesManagerV1 is IERC20 {
     }
 
     function transfer(address _to, uint256 _value) external allowed(msg.sender) allowed(_to) returns (bool success) {
-        if (_balanceOf(msg.sender) >= _value) {
+        if (_value == 0) {
+            revert NullTransfer();
+        }
+        if (_balanceOf(msg.sender) < _value) {
             revert BalanceTooLow();
         }
 
@@ -72,11 +77,18 @@ abstract contract SharesManagerV1 is IERC20 {
         address _to,
         uint256 _value
     ) external allowed(_from) allowed(_to) returns (bool success) {
-        if (_from != msg.sender && ApprovalsPerOwner.get(msg.sender, _from) < _value) {
-            revert UnauthorizedOperation();
+        if (_value == 0) {
+            revert NullTransfer();
+        }
+        if (_from != msg.sender) {
+            uint256 currentAllowance = ApprovalsPerOwner.get(_from, msg.sender);
+            if (currentAllowance < _value) {
+                revert AllowanceTooLow(_from, msg.sender, currentAllowance, _value);
+            }
+            ApprovalsPerOwner.set(_from, msg.sender, currentAllowance - _value);
         }
 
-        if (_balanceOf(_from) >= _value) {
+        if (_balanceOf(_from) < _value) {
             revert BalanceTooLow();
         }
 
@@ -124,13 +136,18 @@ abstract contract SharesManagerV1 is IERC20 {
         uint256 oldTotalAssetBalance = _assetBalance() - _value;
 
         if (oldTotalAssetBalance == 0) {
-            Shares.set(Shares.get() + assetBalance);
-            SharesPerOwner.set(_owner, assetBalance);
+            _mintRawShares(_owner, assetBalance);
         } else {
             uint256 sharesToMint = (_value * _totalShares()) / oldTotalAssetBalance;
-            Shares.set(Shares.get() + sharesToMint);
-            SharesPerOwner.set(_owner, SharesPerOwner.get(_owner) + sharesToMint);
+            _mintRawShares(_owner, sharesToMint);
         }
+    }
+
+    // assuming funds are received, _assetBalance should have taken _value into account
+    function _mintRawShares(address _owner, uint256 _value) internal {
+        Shares.set(Shares.get() + _value);
+        SharesPerOwner.set(_owner, SharesPerOwner.get(_owner) + _value);
+        emit Transfer(address(0), _owner, _value);
     }
 
     function _balanceOf(address _owner) internal view returns (uint256 balance) {

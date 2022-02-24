@@ -2,10 +2,10 @@
 
 pragma solidity 0.8.10;
 
-import "./Vm.sol";
-import "../src/components/OracleManager.1.sol";
-import "../src/libraries/Errors.sol";
-import "../src/state/shared/AdministratorAddress.sol";
+import "../Vm.sol";
+import "../../src/components/OracleManager.1.sol";
+import "../../src/libraries/Errors.sol";
+import "../../src/state/shared/AdministratorAddress.sol";
 
 contract OracleManagerV1ExposeInitializer is OracleManagerV1 {
     uint256 public lastReceived;
@@ -44,7 +44,7 @@ contract OracleManagerV1Tests {
         oracleManager.setOracle(oracle);
     }
 
-    function testSetBeaconData(uint256 val2, bytes32 roundId) public {
+    function testSetBeaconData(uint64 val2, bytes32 roundId) public {
         vm.startPrank(oracle);
         OracleManagerV1ExposeInitializer(address(oracleManager)).supersedeBalanceSum(32 ether);
         OracleManagerV1ExposeInitializer(address(oracleManager)).supersedeAllValidatorCount(1);
@@ -52,7 +52,7 @@ contract OracleManagerV1Tests {
         assert(OracleManagerV1ExposeInitializer(address(oracleManager)).lastReceived() == val2);
     }
 
-    function testSetBeaconDataWithValidatorCountDelta(uint256 val2, bytes32 roundId) public {
+    function testSetBeaconDataWithValidatorCountDelta(uint64 val2, bytes32 roundId) public {
         vm.startPrank(oracle);
         OracleManagerV1ExposeInitializer(address(oracleManager)).supersedeBalanceSum(32 ether);
         OracleManagerV1ExposeInitializer(address(oracleManager)).supersedeAllValidatorCount(1);
@@ -63,12 +63,19 @@ contract OracleManagerV1Tests {
 
     function testSetBeaconDataUnauthorized(
         address user,
-        uint256 val1,
+        uint64 val1,
         bytes32 roundId
     ) public {
         vm.startPrank(user);
         OracleManagerV1ExposeInitializer(address(oracleManager)).supersedeAllValidatorCount(1);
         vm.expectRevert(abi.encodeWithSignature("Unauthorized(address)", user));
         oracleManager.setBeaconData(1, val1 + 32 ether, roundId);
+    }
+
+    function testSetBeaconDataInvalidValidatorCount(uint64 val1, bytes32 roundId) public {
+        vm.startPrank(oracle);
+        OracleManagerV1ExposeInitializer(address(oracleManager)).supersedeAllValidatorCount(1);
+        vm.expectRevert(abi.encodeWithSignature("InvalidValidatorCountReport(uint256,uint256)", 2, 1));
+        oracleManager.setBeaconData(2, val1 + 32 ether, roundId);
     }
 }
