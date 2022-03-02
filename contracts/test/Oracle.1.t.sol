@@ -278,6 +278,12 @@ contract OracleV1Tests {
         vm.warp(uint256(GENESIS_TIME) + uint256(timeFromGenesis));
         vm.startPrank(admin);
         oracle.addMember(oracleMember);
+        address secondOracleMember;
+        unchecked {
+            secondOracleMember = address(uint160(oracleMember) + 1);
+        }
+        oracle.addMember(secondOracleMember);
+        oracle.setQuorum(3);
         vm.stopPrank();
 
         uint256 epochId = oracle.getCurrentEpochId();
@@ -290,6 +296,14 @@ contract OracleV1Tests {
                 abi.encodeWithSignature("AlreadyReported(uint256,address)", frameFirstEpochId, oracleMember)
             );
             oracle.reportBeacon(frameFirstEpochId, 0, 0);
+            vm.stopPrank();
+            vm.startPrank(secondOracleMember);
+            oracle.reportBeacon(frameFirstEpochId, 0, 0);
+            vm.expectRevert(
+                abi.encodeWithSignature("AlreadyReported(uint256,address)", frameFirstEpochId, secondOracleMember)
+            );
+            oracle.reportBeacon(frameFirstEpochId, 0, 0);
+            vm.stopPrank();
         }
     }
 

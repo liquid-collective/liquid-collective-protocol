@@ -8,7 +8,7 @@ library ReportsPositions {
 
     function get(uint256 idx) internal view returns (bool) {
         uint256 mask = 1 << idx;
-        return UnstructuredStorage.getStorageUint256(REPORTS_POSITIONS_SLOT) & mask == 1;
+        return UnstructuredStorage.getStorageUint256(REPORTS_POSITIONS_SLOT) & mask == mask;
     }
 
     function getRaw() internal view returns (uint256) {
