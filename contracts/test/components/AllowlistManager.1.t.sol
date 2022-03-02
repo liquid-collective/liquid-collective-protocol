@@ -5,10 +5,15 @@ pragma solidity 0.8.10;
 import "../Vm.sol";
 import "../../src/components/AllowlistManager.1.sol";
 import "../../src/libraries/Errors.sol";
+import "../../src/libraries/LibOwnable.sol";
 
 contract AllowlistManagerV1ExposeInitializer is AllowlistManagerV1 {
     function publicAllowlistManagerInitializeV1(address _AllowlistorAddress) external {
         AllowlistManagerV1.initAllowlistManagerV1(_AllowlistorAddress);
+    }
+
+    function sudoSetAdmin(address admin) external {
+        LibOwnable._setAdmin(admin);
     }
 }
 
@@ -17,25 +22,39 @@ contract AllowlistManagerV1Tests {
 
     bytes32 internal withdrawalCredentials = bytes32(uint256(1));
 
-    address internal Allowlistor = address(0xEA674fdDe714fd979de3EdF0F56AA9716B898ec8);
+    address internal allower = address(0xEA674fdDe714fd979de3EdF0F56AA9716B898ec8);
 
-    AllowlistManagerV1 internal AllowlistManager;
+    AllowlistManagerV1 internal allowlistManager;
 
     function setUp() public {
-        AllowlistManager = new AllowlistManagerV1ExposeInitializer();
-        AllowlistManagerV1ExposeInitializer(address(AllowlistManager)).publicAllowlistManagerInitializeV1(Allowlistor);
+        allowlistManager = new AllowlistManagerV1ExposeInitializer();
+        AllowlistManagerV1ExposeInitializer(address(allowlistManager)).publicAllowlistManagerInitializeV1(allower);
     }
 
     function testSetAllowlistStatus(address user) public {
-        vm.startPrank(Allowlistor);
-        assert(AllowlistManager.isAllowed(user) == false);
-        AllowlistManager.allow(user, true);
-        assert(AllowlistManager.isAllowed(user) == true);
+        vm.startPrank(allower);
+        assert(allowlistManager.isAllowed(user) == false);
+        allowlistManager.allow(user, true);
+        assert(allowlistManager.isAllowed(user) == true);
     }
 
     function testSetAllowlistStatusUnauthorized(address user) public {
         vm.startPrank(user);
         vm.expectRevert(abi.encodeWithSignature("Unauthorized(address)", user));
-        AllowlistManager.allow(user, true);
+        allowlistManager.allow(user, true);
+    }
+
+    function testSetAllower(address admin, address newAllower) public {
+        AllowlistManagerV1ExposeInitializer(address(allowlistManager)).sudoSetAdmin(admin);
+        assert(allowlistManager.getAllower() == allower);
+        vm.startPrank(admin);
+        allowlistManager.setAllower(newAllower);
+        assert(allowlistManager.getAllower() == newAllower);
+    }
+
+    function testSetAllowerUnauthorized(address nonAdmin, address newAllower) public {
+        vm.startPrank(nonAdmin);
+        vm.expectRevert(abi.encodeWithSignature("Unauthorized(address)", nonAdmin));
+        allowlistManager.setAllower(newAllower);
     }
 }

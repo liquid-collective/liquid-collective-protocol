@@ -6,6 +6,7 @@ import "../libraries/Errors.sol";
 import "../state/shared/AdministratorAddress.sol";
 import "../state/river/AllowerAddress.sol";
 import "../state/river/Allowlist.sol";
+import "../libraries/LibOwnable.sol";
 
 /// @title Allowlist Manager (v1)
 /// @author SkillZ
@@ -13,10 +14,29 @@ import "../state/river/Allowlist.sol";
 abstract contract AllowlistManagerV1 {
     event ChangedAllowlistStatus(address indexed account, bool status);
 
+    /// @notice Prevents unauthorized calls
+    modifier onlyAdmin() virtual {
+        if (msg.sender != LibOwnable._getAdmin()) {
+            revert Errors.Unauthorized(msg.sender);
+        }
+        _;
+    }
+
     /// @notice Initializes the allower address
     /// @param _allowerAddress Address allowed to edit the allowlist
     function initAllowlistManagerV1(address _allowerAddress) internal {
         AllowerAddress.set(_allowerAddress);
+    }
+
+    /// @notice Changes the allower address
+    /// @param _newAllowerAddress New address allowed to edit the allowlist
+    function setAllower(address _newAllowerAddress) external onlyAdmin {
+        AllowerAddress.set(_newAllowerAddress);
+    }
+
+    /// @notice Retrieves the allower address
+    function getAllower() external view returns (address) {
+        return AllowerAddress.get();
     }
 
     /// @notice Sets the allowlisting status for an account

@@ -123,6 +123,10 @@ contract OperatorsManagerV1 {
     function setOperatorStoppedValidatorCount(uint256 _index, uint256 _newStoppedValidatorCount) external onlyAdmin {
         Operators.Operator storage operator = Operators.getByIndex(_index);
 
+        if (_newStoppedValidatorCount > operator.funded) {
+            revert Errors.InvalidArgument();
+        }
+
         operator.stopped = _newStoppedValidatorCount;
 
         emit SetOperatorStoppedValidatorCount(_index, operator.stopped);
@@ -276,7 +280,7 @@ contract OperatorsManagerV1 {
         internal
         returns (bytes[] memory publicKeys, bytes[] memory signatures)
     {
-        Operators.Operator[] memory operators = Operators.getAllFundable();
+        Operators.CachedOperator[] memory operators = Operators.getAllFundable();
 
         if (operators.length == 0) {
             return (new bytes[](0), new bytes[](0));
@@ -284,35 +288,42 @@ contract OperatorsManagerV1 {
 
         uint256 selectedOperatorIndex = 0;
         for (uint256 idx = 1; idx < operators.length; ++idx) {
-            if (operators[idx].funded < operators[selectedOperatorIndex].funded) {
+            if (
+                operators[idx].funded - operators[idx].stopped <
+                operators[selectedOperatorIndex].funded - operators[selectedOperatorIndex].stopped
+            ) {
                 selectedOperatorIndex = idx;
             }
         }
 
-        uint256 availableOperatorKeys = Uint256Lib.min(
+        uint256 selectedOperatorAvailableKeys = Uint256Lib.min(
             operators[selectedOperatorIndex].keys,
             operators[selectedOperatorIndex].limit
         ) - operators[selectedOperatorIndex].funded;
 
+        if (selectedOperatorAvailableKeys == 0) {
+            return (new bytes[](0), new bytes[](0));
+        }
+
         Operators.Operator storage operator = Operators.get(operators[selectedOperatorIndex].name);
-        if (availableOperatorKeys >= _requestedAmount) {
+        if (selectedOperatorAvailableKeys >= _requestedAmount) {
             (publicKeys, signatures) = ValidatorKeys.getKeys(
-                selectedOperatorIndex,
+                operators[selectedOperatorIndex].index,
                 operators[selectedOperatorIndex].funded,
                 _requestedAmount
             );
             operator.funded += _requestedAmount;
         } else {
             (publicKeys, signatures) = ValidatorKeys.getKeys(
-                selectedOperatorIndex,
+                operators[selectedOperatorIndex].index,
                 operators[selectedOperatorIndex].funded,
-                availableOperatorKeys
+                selectedOperatorAvailableKeys
             );
-            operator.funded += availableOperatorKeys;
+            operator.funded += selectedOperatorAvailableKeys;
             (
                 bytes[] memory additionalPublicKeys,
                 bytes[] memory additionalSignatures
-            ) = _getNextValidatorsFromActiveOperators(_requestedAmount - availableOperatorKeys);
+            ) = _getNextValidatorsFromActiveOperators(_requestedAmount - selectedOperatorAvailableKeys);
             publicKeys = _concatenateByteArrays(publicKeys, additionalPublicKeys);
             signatures = _concatenateByteArrays(signatures, additionalSignatures);
         }

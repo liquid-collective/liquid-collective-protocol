@@ -351,7 +351,6 @@ contract RiverV1SetupOneTests {
         (int256 _operatorOneIndex, ) = river.getOperatorDetails(operatorOneName);
         assert(_operatorOneIndex >= 0);
         uint256 operatorOneIndex = uint256(_operatorOneIndex);
-        river.setOperatorStoppedValidatorCount(operatorOneIndex, 10);
         vm.stopPrank();
 
         vm.startPrank(joe);
@@ -366,6 +365,9 @@ contract RiverV1SetupOneTests {
         assert(river.totalSupply() == 1100 ether);
 
         river.depositToConsensusLayer(20);
+        vm.startPrank(admin);
+        river.setOperatorStoppedValidatorCount(operatorOneIndex, 10);
+        vm.stopPrank();
         river.depositToConsensusLayer(10);
 
         Operators.Operator memory op1 = river.getOperatorByName(operatorOneName);

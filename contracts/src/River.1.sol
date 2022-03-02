@@ -30,7 +30,7 @@ contract RiverV1 is
     uint256 public constant BASE = 100000;
 
     /// @notice Prevents unauthorized calls
-    modifier onlyAdmin() override(OperatorsManagerV1, OracleManagerV1) {
+    modifier onlyAdmin() override(OperatorsManagerV1, OracleManagerV1, AllowlistManagerV1) {
         if (msg.sender != LibOwnable._getAdmin()) {
             revert Errors.Unauthorized(msg.sender);
         }
