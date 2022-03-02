@@ -15,6 +15,13 @@ contract OperatorsManagerInitializableV1 is OperatorsManagerV1 {
         Operators.Operator storage operator = Operators.get(_name);
         operator.funded = _funded;
     }
+
+    function debugGetNextValidatorsFromActiveOperators(uint256 _requestedAmount)
+        external
+        returns (bytes[] memory publicKeys, bytes[] memory signatures)
+    {
+        return _getNextValidatorsFromActiveOperators(_requestedAmount);
+    }
 }
 
 contract OperatorsManagerV1MemberManagementTests {
@@ -130,10 +137,10 @@ contract OperatorsManagerV1MemberManagementTests {
         operatorsManager.setOperatorStatus(index, false);
     }
 
-    function testSetOperatorStoppedValidatorCountAsAdmin(
+    function testSetOperatorStoppedValidatorCountWhileUnfunded(
         bytes32 _name,
         address _firstAddress,
-        uint256 _stoppedCount
+        uint128 _stoppedCount
     ) public {
         vm.startPrank(admin);
         operatorsManager.addOperator(string(abi.encodePacked(_name)), _firstAddress);
@@ -142,6 +149,28 @@ contract OperatorsManagerV1MemberManagementTests {
         uint256 index = uint256(_index);
         Operators.Operator memory newOperator = operatorsManager.getOperator(index);
         assert(newOperator.stopped == 0);
+        if (_stoppedCount > 0) {
+            vm.expectRevert(abi.encodeWithSignature("InvalidArgument()"));
+        }
+        operatorsManager.setOperatorStoppedValidatorCount(index, _stoppedCount);
+    }
+
+    function testSetOperatorStoppedValidatorCountAsAdmin(
+        bytes32 _name,
+        address _firstAddress,
+        uint128 _stoppedCount
+    ) public {
+        vm.startPrank(admin);
+        operatorsManager.addOperator(string(abi.encodePacked(_name)), _firstAddress);
+        (int256 _index, ) = operatorsManager.getOperatorDetails(string(abi.encodePacked(_name)));
+        assert(_index >= 0);
+        uint256 index = uint256(_index);
+        Operators.Operator memory newOperator = operatorsManager.getOperator(index);
+        assert(newOperator.stopped == 0);
+        OperatorsManagerInitializableV1(address(operatorsManager)).sudoSetFunded(
+            string(abi.encodePacked(_name)),
+            uint256(_stoppedCount) + 1
+        );
         operatorsManager.setOperatorStoppedValidatorCount(index, _stoppedCount);
         newOperator = operatorsManager.getOperator(index);
         assert(newOperator.stopped == _stoppedCount);

@@ -16,6 +16,17 @@ library Operators {
         uint256 stopped;
     }
 
+    struct CachedOperator {
+        bool active;
+        string name;
+        address operator;
+        uint256 limit;
+        uint256 funded;
+        uint256 keys;
+        uint256 stopped;
+        uint256 index;
+    }
+
     struct OperatorResolution {
         bool active;
         uint256 index;
@@ -136,7 +147,9 @@ library Operators {
     }
 
     function _hasFundableKeys(Operators.Operator memory operator) internal pure returns (bool) {
-        return (operator.active && operator.keys > operator.funded && operator.limit > operator.funded);
+        return (operator.active &&
+            operator.keys > operator.funded - operator.stopped &&
+            operator.limit > operator.funded - operator.stopped);
     }
 
     function getAllActive() internal view returns (Operator[] memory) {
@@ -169,7 +182,7 @@ library Operators {
         return activeOperators;
     }
 
-    function getAllFundable() internal view returns (Operator[] memory) {
+    function getAllFundable() internal view returns (CachedOperator[] memory) {
         bytes32 slot = OPERATORS_SLOT;
 
         SlotOperator storage r;
@@ -186,12 +199,22 @@ library Operators {
             }
         }
 
-        Operator[] memory activeOperators = new Operator[](activeCount);
+        CachedOperator[] memory activeOperators = new CachedOperator[](activeCount);
 
         uint256 activeIdx = 0;
         for (uint256 idx = 0; idx < r.value.length; ++idx) {
-            if (_hasFundableKeys(r.value[idx])) {
-                activeOperators[activeIdx] = r.value[idx];
+            Operator memory op = r.value[idx];
+            if (_hasFundableKeys(op)) {
+                activeOperators[activeIdx] = CachedOperator({
+                    active: op.active,
+                    name: op.name,
+                    operator: op.operator,
+                    limit: op.limit,
+                    funded: op.funded,
+                    keys: op.keys,
+                    stopped: op.stopped,
+                    index: idx
+                });
                 ++activeIdx;
             }
         }
