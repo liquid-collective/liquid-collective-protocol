@@ -88,6 +88,11 @@ contract OracleV1 is Initializable {
         Quorum.set(1);
     }
 
+    /// @notice Retrieve system administrator address
+    function getAdministrator() external view returns (address) {
+        return LibOwnable._getAdmin();
+    }
+
     /// @notice Prevents unauthorized calls
     modifier onlyAdmin() {
         if (msg.sender != LibOwnable._getAdmin()) {
@@ -476,7 +481,7 @@ contract OracleV1 is Initializable {
         uint32 _validatorCount,
         BeaconSpec.BeaconSpecStruct memory _beaconSpec
     ) internal {
-        _clearReporting(_epochId);
+        _clearReporting(_epochId + _beaconSpec.epochsPerFrame);
 
         IRiverOracleInput riverAddress = IRiverOracleInput(RiverAddress.get());
         uint256 prevTotalEth = riverAddress.totalSupply();

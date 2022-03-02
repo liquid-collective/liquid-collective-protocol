@@ -84,6 +84,10 @@ contract OracleV1Tests {
         vm.stopPrank();
     }
 
+    function testGetAdmin() public view {
+        assert(oracle.getAdministrator() == admin);
+    }
+
     function testGetTime(uint256 time) public {
         vm.warp(time);
         assert(oracle.getTime() == time);
@@ -219,9 +223,13 @@ contract OracleV1Tests {
         if (frameFirstEpochId > 0) {
             vm.startPrank(oracleMember);
             oracle.reportBeacon(frameFirstEpochId, 0, 0);
-            uint256 oldFrameFirstEpochId = oracle.getFrameFirstEpochId(frameFirstEpochId - 1);
+            uint256 oldFrameFirstEpochId = oracle.getFrameFirstEpochId(frameFirstEpochId + EPOCHS_PER_FRAME - 1);
             vm.expectRevert(
-                abi.encodeWithSignature("EpochTooOld(uint256,uint256)", oldFrameFirstEpochId, frameFirstEpochId)
+                abi.encodeWithSignature(
+                    "EpochTooOld(uint256,uint256)",
+                    oldFrameFirstEpochId,
+                    frameFirstEpochId + EPOCHS_PER_FRAME
+                )
             );
             oracle.reportBeacon(oldFrameFirstEpochId, 0, 0);
         }
@@ -325,7 +333,7 @@ contract OracleV1Tests {
 
             assert(RiverMock(address(oracleInput)).validatorBalanceSum() == uint256(balanceSum) * 1e9);
             assert(RiverMock(address(oracleInput)).validatorCount() == validatorCount);
-            assert(oracle.getExpectedEpochId() == frameFirstEpochId);
+            assert(oracle.getExpectedEpochId() == frameFirstEpochId + EPOCHS_PER_FRAME);
             assert(oracle.getMemberReportStatus(oracleOne) == false);
             assert(oracle.getMemberReportStatus(oracleTwo) == false);
         }
@@ -401,8 +409,9 @@ contract OracleV1Tests {
 
             uint256 oneEpochAway = uint256(GENESIS_TIME) +
                 uint256(timeFromGenesis) +
-                SLOTS_PER_EPOCH +
-                SECONDS_PER_SLOT;
+                SLOTS_PER_EPOCH *
+                SECONDS_PER_SLOT *
+                EPOCHS_PER_FRAME;
             vm.warp(oneEpochAway);
             uint256 futureEpochId = oracle.getFrameFirstEpochId(oracle.getCurrentEpochId());
             BeaconReportBounds.BeaconReportBoundsStruct memory bounds = oracle.getBeaconBounds();
