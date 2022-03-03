@@ -256,7 +256,7 @@ contract OperatorsManagerV1 {
         )
     {
         (publicKey, signature) = ValidatorKeys.get(_operatorIndex, _validatorIndex);
-        funded = _validatorIndex <= Operators.getByIndex(_operatorIndex).funded;
+        funded = _validatorIndex < Operators.getByIndex(_operatorIndex).funded;
     }
 
     /// @notice Internal utility to concatenate bytes arrays together
