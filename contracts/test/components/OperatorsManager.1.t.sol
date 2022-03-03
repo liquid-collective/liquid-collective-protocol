@@ -257,6 +257,18 @@ contract OperatorsManagerV1MemberManagementTests {
 
         Operators.Operator memory operator = operatorsManager.getOperator(index);
         assert(operator.keys == 10);
+
+        (, , bool funded) = operatorsManager.getValidator(index, 0);
+        assert(funded == false);
+        (, , funded) = operatorsManager.getValidator(index, 1);
+        assert(funded == false);
+
+        OperatorsManagerInitializableV1(address(operatorsManager)).sudoSetFunded(string(abi.encodePacked(_name)), 1);
+
+        (, , funded) = operatorsManager.getValidator(index, 0);
+        assert(funded == true);
+        (, , funded) = operatorsManager.getValidator(index, 1);
+        assert(funded == false);
     }
 
     function testAddValidatorsAsAdmin(bytes32 _name, address _firstAddress) public {
