@@ -36,6 +36,11 @@ abstract contract DepositManagerV1 {
         WithdrawalCredentials.set(_withdrawalCredentials);
     }
 
+    /// @notice Retrieve the withdrawal credentials
+    function getWithdrawalCredentials() external view returns (bytes32) {
+        return WithdrawalCredentials.get();
+    }
+
     /// @notice Internal helper to retrieve validator keys ready to be funded
     /// @dev Must be overriden with an implementation that provides keyCount or less keys upon call
     /// @param _keyCount The amount of keys (or less) to return.

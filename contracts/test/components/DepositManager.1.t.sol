@@ -90,6 +90,10 @@ contract DepositManagerV1Tests {
         );
     }
 
+    function testRetrieveWithdrawalCredentials() public view {
+        assert(depositManager.getWithdrawalCredentials() == withdrawalCredentials);
+    }
+
     function testDepositNotEnoughFunds() public {
         vm.deal(address(depositManager), 31.9 ether);
         vm.expectRevert(abi.encodeWithSignature("NotEnoughFunds()"));

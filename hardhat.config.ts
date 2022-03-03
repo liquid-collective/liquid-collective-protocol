@@ -56,7 +56,7 @@ const config: HardhatUserConfig = {
     },
     depositContract: {
       default: "0x00000000219ab540356cBB839Cbe05303d7705Fa",
-      goerli: "0x8c5fecdC472E27Bc447696F431E425D02dd46a8c",
+      goerli: "0xff50ed3d0ec03ac01d4c79aad74928bff48a7b2b", // prater deposit contract
     },
     systemAdministrator: {
       default: 1,
