@@ -1,4 +1,4 @@
-name: River Contracts CI
+name: Tests
 
 on:
   push:
@@ -38,10 +38,6 @@ jobs:
 
       - name: install node dependencies
         run: yarn
-      - name: run formatting checks
-        run: yarn format:check
-      - name: run linting checks
-        run: yarn lint:check
       - name: run tests
         run: yarn test
         env:

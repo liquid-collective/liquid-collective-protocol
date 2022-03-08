@@ -1,4 +1,8 @@
 # 🌊
+![format](https://github.com/River-Protocol/river-contracts/actions/workflows/Format.yaml/badge.svg)
+![lint](https://github.com/River-Protocol/river-contracts/actions/workflows/Lint.yaml/badge.svg)
+![mythril](https://github.com/River-Protocol/river-contracts/actions/workflows/Mythril.yaml/badge.svg)
+![Tests](https://github.com/River-Protocol/river-contracts/actions/workflows/Tests.yaml/badge.svg)
 
 ## Deployments
 

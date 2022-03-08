@@ -1,0 +1,36 @@
+name: Format Checks
+
+on:
+  push:
+  schedule:
+    - cron:  '0 */4 * * *' # every 4 hours, perpetual fuzz testing
+
+jobs:
+  run-format:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: add node toolchain
+        uses: actions/setup-node@v2.1.2
+        with:
+          node-version: 16.x
+
+      - name: add rust toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+
+      - name: cache node_modules
+        uses: actions/cache@v2
+        with:
+          path: |
+            ./node_modules
+          key: ${{ runner.os }}-${{ hashFiles('yarn.lock') }}
+
+      - name: install node dependencies
+        run: yarn
+
+      - name: run formatting checks
+        run: yarn format:check

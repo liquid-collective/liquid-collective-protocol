@@ -1,0 +1,30 @@
+name: Mythril Checks
+on:
+  push:
+  pull_request:
+
+jobs:
+  run-mythril:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          submodules: recursive
+
+      - name: RiverV1
+        uses: ./actions/mythril
+        id: mythril-riverv1
+        with:
+          contract: './contracts/src/River.1.sol'
+
+      - name: OracleV1
+        uses: ./actions/mythril
+        id: mythril-oraclev1
+        with:
+          contract: './contracts/src/Oracle.1.sol'
+
+      - name: WithdrawV2
+        uses: ./actions/mythril
+        id: mythril-withdrawv1
+        with:
+          contract: './contracts/src/Withdraw.1.sol'

@@ -1,0 +1,18 @@
+
+# action.yml
+name: 'Mythril'
+description: 'Run Mythril'
+inputs:
+  contract:
+    description: 'Contract to test'
+    required: true
+runs:
+  using: 'docker'
+  image: 'mythril/myth'
+  args:
+    - '-v'
+    - '4'
+    - 'analyze'
+    - ${{ inputs.contract }}
+    - '--max-depth'
+    - '15'
