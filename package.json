@@ -6,7 +6,8 @@
     "format": "prettier --write ./contracts",
     "format:check": "prettier --check ./contracts",
     "lint:check": "hardhat check",
-    "compile": "hardhat compile"
+    "compile": "hardhat compile",
+    "hh": "hardhat"
   },
   "dependencies": {
     "@nomiclabs/hardhat-ethers": "^2.0.4",
