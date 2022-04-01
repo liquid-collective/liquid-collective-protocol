@@ -7,18 +7,20 @@
 Ethereum Liquid Staking. Documentation available at https://river-protocol.gitbook.io.
 
 ## Field Guide
-Users interact with this contract through an upgradeable proxy, defined at `contracts/src/TUPProxy.sol`. This requires us to use [unstructured storage](https://blog.openzeppelin.com/upgradeability-using-unstructured-storage/), a Solidity pattern in which we save state variables in their own contract rather than as in-line variables in the contract manipulating those variables. This lets a future version of the contract access the same values that the old version was relying on. River, as an upgradeable protocol, must also use an Initializer (`contracts/src/Initializer.sol`) to prevent reentrancy attacks. [See here](https://docs.openzeppelin.com/upgrades-plugins/1.x/writing-upgradeable#initializers).
+Users interact with this contract through an upgradeable proxy, defined at `contracts/src/TUPProxy.sol`. This requires us to use [unstructured storage](https://blog.openzeppelin.com/upgradeability-using-unstructured-storage/), a Solidity pattern in which we save state variables in their own library rather than as in-line variables in the contract manipulating those variables. Each variable's libary comes with its own getters and setters for the variable value. This lets a future version of the contract access the same values that the old version was relying on. River, as an upgradeable protocol, must also use an Initializer (`contracts/src/Initializer.sol`) to mimic a constructor, since a proxy cannot call that constructor. [See here](https://docs.openzeppelin.com/upgrades-plugins/1.x/writing-upgradeable#initializers).
 
 `TUPProxy.sol` points to the logic at `River.{VERSION_NUMBER}.sol`. In turn, `River.sol` uses the managers in `contracts/src/components/` to accomplish the following logic:
 
 - `TransferManager` to handle incoming ETH from stakers
 - `DepositManager` to take deposited ETH and allocate it to validators
-- `OperatorsManager` and `AllowlistManager` to define & control roles in River, including who can stake and who can modify roles
-- `OracleManager` to receive input from `Oracle.sol`, and `SharesManager` to take that input & reflect it in rETH balances as a result
+- `OperatorsManager` to handle the node operators
+- `AllowlistManager` to handle the list of recipients allowed to interact with River
+- `OracleManager` to receive input from `Oracle.sol`
+- `SharesManager` as the ERC20 implementation to credit initial deposits, & reflect earnings reported by the oracle in rebased rETH balances
 
-`River.sol`, as well as the managers it uses, leverages the state contracts in `contracts/src/state/` to read & set the variables in unstructured storage.
+`River.sol`, as well as the managers it uses, leverages the state libraries in `contracts/src/state/` to read & set the variables in unstructured storage.
 
-`River.sol` gets its withdrawal logic from `contracts/src/Withdraw.sol`. Since the actual protocol for moving ETH off of a validator post-merge has not yet been defined, there is no real logic in that contract.
+`River.sol` will get its withdrawal logic from `contracts/src/Withdraw.sol`. Since the actual protocol for moving ETH off of a validator post-merge has not yet been defined, this contract is a temporary stub contract, which will be upgraded post-merge.
 
 `Oracle.sol` receives reports of staking rewards from designated reporters, and pushes the data to `River.sol` to modify rETH balances.
 
