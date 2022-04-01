@@ -2,7 +2,9 @@
 pragma solidity 0.8.10;
 
 library OracleMembers {
-    bytes32 public constant ORACLE_MEMBERS_SLOT = bytes32(uint256(keccak256("river.state.oracleMembers")) - 1);
+    /* Hardcoded hex is: bytes32(uint256(keccak256("river.state.oracleMembers")) - 1) */
+    bytes32 internal constant ORACLE_MEMBERS_SLOT =
+        hex"c4aba040293e5848600dd7b64a390db880c4a70937c23383e6c5b6619689863a";
 
     struct Slot {
         address[] value;
