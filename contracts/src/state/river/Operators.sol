@@ -3,8 +3,7 @@ pragma solidity 0.8.10;
 
 library Operators {
     /* Hardcoded hex is: bytes32(uint256(keccak256("river.state.operators")) - 1) */
-    bytes32 internal constant OPERATORS_SLOT =
-        hex"794c962401f2e1bb68ba8627fb26fd4eea0439023c691c35b68bb144bfe10112";
+    bytes32 internal constant OPERATORS_SLOT = hex"794c962401f2e1bb68ba8627fb26fd4eea0439023c691c35b68bb144bfe10112";
 
     /* Hardcoded hex is: bytes32(uint256(keccak256("river.state.operatorsMapping")) - 1) */
     bytes32 internal constant OPERATORS_MAPPING_SLOT =
