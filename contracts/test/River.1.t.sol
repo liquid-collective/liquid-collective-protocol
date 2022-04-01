@@ -98,6 +98,7 @@ contract RiverV1SetupOneTests {
 
         river.addValidators(operatorTwoIndex, 100, op2PublicKeys, op2Signatures);
         river.setOperatorLimit(operatorTwoIndex, 100);
+        vm.stopPrank();
     }
 
     function testAdditionalInit() public {

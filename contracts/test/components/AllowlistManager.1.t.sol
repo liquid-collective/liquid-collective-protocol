@@ -22,6 +22,7 @@ contract AllowlistManagerV1Tests {
 
     bytes32 internal withdrawalCredentials = bytes32(uint256(1));
 
+    address internal testAdmin = address(0xFA674fDde714fD979DE3EdF0f56aa9716b898eC8);
     address internal allower = address(0xEA674fdDe714fd979de3EdF0F56AA9716B898ec8);
 
     AllowlistManagerV1 internal allowlistManager;
@@ -29,6 +30,7 @@ contract AllowlistManagerV1Tests {
     function setUp() public {
         allowlistManager = new AllowlistManagerV1ExposeInitializer();
         AllowlistManagerV1ExposeInitializer(address(allowlistManager)).publicAllowlistManagerInitializeV1(allower);
+        AllowlistManagerV1ExposeInitializer(address(allowlistManager)).sudoSetAdmin(testAdmin);
     }
 
     function testSetAllowlistStatus(address user) public {
@@ -40,6 +42,7 @@ contract AllowlistManagerV1Tests {
 
     function testSetAllowlistStatusUnauthorized(address user) public {
         vm.startPrank(user);
+        assert(user != allower);
         vm.expectRevert(abi.encodeWithSignature("Unauthorized(address)", user));
         allowlistManager.allow(user, true);
     }
@@ -54,6 +57,7 @@ contract AllowlistManagerV1Tests {
 
     function testSetAllowerUnauthorized(address nonAdmin, address newAllower) public {
         vm.startPrank(nonAdmin);
+        assert(nonAdmin != testAdmin);
         vm.expectRevert(abi.encodeWithSignature("Unauthorized(address)", nonAdmin));
         allowlistManager.setAllower(newAllower);
     }
