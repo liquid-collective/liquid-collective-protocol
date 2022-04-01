@@ -4,13 +4,14 @@ pragma solidity 0.8.10;
 import "../../libraries/BytesLib.sol";
 
 library ValidatorKeys {
-    uint256 public constant PUBLIC_KEY_LENGTH = 48;
-    uint256 public constant SIGNATURE_LENGTH = 96;
+    uint256 internal constant PUBLIC_KEY_LENGTH = 48;
+    uint256 internal constant SIGNATURE_LENGTH = 96;
 
     error InvalidPublicKey();
     error InvalidSignature();
 
-    bytes32 public constant VALIDATOR_KEYS_SLOT = bytes32(uint256(keccak256("river.state.validatorKeys")) - 1);
+    /* Hardcoded hex is: bytes32(uint256(keccak256("river.state.validatorKeys")) - 1) */
+    bytes32 internal constant VALIDATOR_KEYS_SLOT = hex"6018b2d18c7378174a403e179ce41a2df430338a150b2bcec4b7a08291285573";
 
     struct Slot {
         mapping(uint256 => mapping(uint256 => bytes)) value;

@@ -4,7 +4,9 @@ pragma solidity 0.8.10;
 library ReportsVariants {
     uint256 internal constant COUNT_OUTMASK = 0xFFFFFFFFFFFFFFFFFFFFFFFF0000;
 
-    bytes32 public constant REPORTS_VARIANTS_SLOT = bytes32(uint256(keccak256("river.state.reportsVariants")) - 1);
+    /* Hardcoded hex is: bytes32(uint256(keccak256("river.state.reportsVariants")) - 1) */
+    bytes32 internal constant REPORTS_VARIANTS_SLOT =
+        hex"f1827321f6d023724a23b4e28f3ef67f741d185cff4e224f6dcbb56935784fcc";
 
     struct Slot {
         uint256[] value;
