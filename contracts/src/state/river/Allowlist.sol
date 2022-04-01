@@ -2,7 +2,8 @@
 pragma solidity 0.8.10;
 
 library Allowlist {
-    bytes32 public constant ALLOWLIST_SLOT = bytes32(uint256(keccak256("river.state.allowlist")) - 1);
+    /* Hardcoded hex is: bytes32(uint256(keccak256("river.state.allowlist")) - 1) */
+    bytes32 internal constant ALLOWLIST_SLOT = hex"f13551d5cf1b23afc8669eb5ef15070e351923179334eb1a5aa569477f4a4134";
 
     struct Slot {
         mapping(address => bool) value;
