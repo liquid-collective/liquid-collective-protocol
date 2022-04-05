@@ -107,6 +107,7 @@ contract SharesManagerV1Tests {
         (bool sent, ) = payable(address(sharesManager)).call{value: depositSize}("");
         assert(sent == true);
         assert(sharesManager.totalSupply() == uint256(validatorBalanceSum) + uint256(depositSize));
+        vm.stopPrank();
     }
 
     function testApprove(
@@ -119,6 +120,7 @@ contract SharesManagerV1Tests {
         assert(0 == sharesManager.allowance(_userOne, _userTwo));
         sharesManager.approve(_userTwo, _allowance);
         assert(_allowance == sharesManager.allowance(_userOne, _userTwo));
+        vm.stopPrank();
     }
 
     function testApproveAndTransferPartial(address _userOne, uint128 _allowance) public {
@@ -133,6 +135,7 @@ contract SharesManagerV1Tests {
         assert(totalAllowance == sharesManager.balanceOf(_userOne));
         assert(0 == sharesManager.balanceOf(_userTwo));
         uint256 transferValue = totalAllowance / 2;
+        vm.stopPrank();
         if (transferValue > 0) {
             vm.startPrank(_userTwo);
             sharesManager.transferFrom(_userOne, _userTwo, transferValue);
@@ -144,6 +147,7 @@ contract SharesManagerV1Tests {
             assert(newBalanceUserOne == sharesManager.balanceOf(_userOne));
             assert(newBalanceUserTwo == sharesManager.balanceOf(_userTwo));
             assert(newBalanceUserOne + newBalanceUserTwo == totalAllowance);
+            vm.stopPrank();
         }
     }
 
@@ -155,6 +159,7 @@ contract SharesManagerV1Tests {
         uint256 totalAllowance = sharesManager.balanceOf(_userOne);
         assert(0 == sharesManager.allowance(_userOne, _userTwo));
         sharesManager.approve(_userTwo, totalAllowance);
+        vm.stopPrank();
         assert(totalAllowance == sharesManager.allowance(_userOne, _userTwo));
         assert(totalAllowance == sharesManager.balanceOf(_userOne));
         assert(0 == sharesManager.balanceOf(_userTwo));
@@ -168,6 +173,7 @@ contract SharesManagerV1Tests {
             assert(newBalanceUserOne == sharesManager.balanceOf(_userOne));
             assert(newBalanceUserTwo == sharesManager.balanceOf(_userTwo));
             assert(newBalanceUserOne + newBalanceUserTwo == totalAllowance);
+            vm.stopPrank();
         }
     }
 
@@ -178,9 +184,11 @@ contract SharesManagerV1Tests {
         vm.startPrank(_userOne);
         uint256 totalAllowance = sharesManager.balanceOf(_userOne);
         sharesManager.approve(_userTwo, totalAllowance);
+        vm.stopPrank();
         vm.startPrank(_userTwo);
         vm.expectRevert(abi.encodeWithSignature("NullTransfer()"));
         sharesManager.transferFrom(_userOne, _userTwo, 0);
+        vm.stopPrank();
     }
 
     function testApproveAndTransferAboveAllowance(address _userOne, uint128 _allowance) public {
@@ -190,6 +198,7 @@ contract SharesManagerV1Tests {
         vm.startPrank(_userOne);
         uint256 totalAllowance = sharesManager.balanceOf(_userOne);
         sharesManager.approve(_userTwo, totalAllowance / 2);
+        vm.stopPrank();
         if (totalAllowance > 0) {
             vm.startPrank(_userTwo);
             vm.expectRevert(
@@ -202,6 +211,7 @@ contract SharesManagerV1Tests {
                 )
             );
             sharesManager.transferFrom(_userOne, _userTwo, totalAllowance);
+            vm.stopPrank();
         }
     }
 
@@ -211,10 +221,12 @@ contract SharesManagerV1Tests {
         SharesManagerPublicDeal(payable(address(sharesManager))).setValidatorBalance(_allowance / 2);
         vm.startPrank(_userOne);
         sharesManager.approve(_userTwo, _allowance);
+        vm.stopPrank();
         if (_allowance > 0) {
             vm.startPrank(_userTwo);
             vm.expectRevert(abi.encodeWithSignature("BalanceTooLow()"));
             sharesManager.transferFrom(_userOne, _userTwo, _allowance);
+            vm.stopPrank();
         }
     }
 
@@ -234,6 +246,7 @@ contract SharesManagerV1Tests {
                 )
             );
             sharesManager.transferFrom(_userOne, _userTwo, _allowance);
+            vm.stopPrank();
         }
     }
 
@@ -255,6 +268,7 @@ contract SharesManagerV1Tests {
             assert(newBalanceUserTwo == sharesManager.balanceOf(_userTwo));
             assert(newBalanceUserOne + newBalanceUserTwo == totalAllowance);
         }
+        vm.stopPrank();
     }
 
     function testTransferTotal(address _userOne, uint128 _allowance) public {
@@ -273,6 +287,7 @@ contract SharesManagerV1Tests {
             assert(newBalanceUserTwo == sharesManager.balanceOf(_userTwo));
             assert(newBalanceUserOne + newBalanceUserTwo == totalAllowance);
         }
+        vm.stopPrank();
     }
 
     function testTransferTransferZero(address _userOne, uint128 _allowance) public {
@@ -283,6 +298,7 @@ contract SharesManagerV1Tests {
         assert(0 == sharesManager.balanceOf(_userTwo));
         vm.expectRevert(abi.encodeWithSignature("NullTransfer()"));
         sharesManager.transfer(_userTwo, 0);
+        vm.stopPrank();
     }
 
     function testTransferTransferBalanceTooLow(address _userOne) public {
@@ -291,5 +307,6 @@ contract SharesManagerV1Tests {
         assert(0 == sharesManager.balanceOf(_userTwo));
         vm.expectRevert(abi.encodeWithSignature("BalanceTooLow()"));
         sharesManager.transfer(_userTwo, 1);
+        vm.stopPrank();
     }
 }

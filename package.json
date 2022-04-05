@@ -2,7 +2,8 @@
   "name": "river",
   "version": "0.0.1",
   "scripts": {
-    "test": "hardhat forge-test",
+    "test": "forge test -vvv --gas-report",
+    "test:force": "forge test --force -vvv --gas-report",
     "format": "prettier --write ./contracts",
     "format:check": "prettier --check ./contracts",
     "lint:check": "hardhat check",
@@ -32,7 +33,6 @@
     "ethereum-waffle": "^3.4.0",
     "ethers": "^5.5.3",
     "hardhat": "^2.8.2",
-    "hardhat-foundry": "0.0.5",
     "hardhat-gas-reporter": "^1.0.7",
     "prettier": "^2.5.1",
     "prettier-plugin-solidity": "^1.0.0-beta.13",

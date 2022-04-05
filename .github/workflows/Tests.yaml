@@ -12,15 +12,10 @@ jobs:
     steps:
       - uses: actions/checkout@v2
 
-      - name: add node toolchain
-        uses: actions/setup-node@v2.1.2
+      - name: install foundry
+        uses: onbjerg/foundry-toolchain@v1
         with:
-          node-version: 16.x
-
-      - name: add rust toolchain
-        uses: actions-rs/toolchain@v1
-        with:
-          toolchain: stable
+          version: nightly
 
       - name: cache node_modules
         uses: actions/cache@v2
@@ -29,16 +24,10 @@ jobs:
             ./node_modules
           key: ${{ runner.os }}-${{ hashFiles('yarn.lock') }}
 
-      - name: cache cargo root
-        uses: actions/cache@v2
-        with:
-          path: |
-            ~/.cargo
-          key: ${{ runner.os }}-${{ hashFiles('hardhat.config.ts') }}-${{ hashFiles('yarn.lock') }}
-
       - name: install node dependencies
         run: yarn
+
       - name: run tests
-        run: yarn test
+        run: forge test --force -vvvvv --gas-report
         env:
           FOUNDRY_FUZZ_RUNS: 5000

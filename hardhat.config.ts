@@ -2,7 +2,6 @@ import * as dotenv from "dotenv";
 
 import "hardhat-deploy";
 import { HardhatUserConfig } from "hardhat/config";
-import "hardhat-foundry";
 import "@nomiclabs/hardhat-etherscan";
 import "@nomiclabs/hardhat-waffle";
 import "@typechain/hardhat";
@@ -45,10 +44,6 @@ const config: HardhatUserConfig = {
         accountsBalance: "10000000000000000000",
       },
     },
-  },
-  forge: {
-    version: "f137539944ac554d62d357a689e21308a4fa73f8",
-    verbosity: 3,
   },
   namedAccounts: {
     deployer: {
