@@ -10,8 +10,7 @@ library BeaconSpec {
         uint64 genesisTime;
     }
 
-    /* Hardcoded hex is: bytes32(uint256(keccak256("river.state.beaconSpec")) - 1) */
-    bytes32 internal constant BEACON_SPEC_SLOT = hex"910cad6638f0b06b72ead1455bffc33be6e9b1c24417cc3f692aaaf0bef75a15";
+    bytes32 internal constant BEACON_SPEC_SLOT = bytes32(uint256(keccak256("river.state.beaconSpec")) - 1);
 
     struct Slot {
         BeaconSpecStruct value;

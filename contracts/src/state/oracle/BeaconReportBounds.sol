@@ -10,9 +10,8 @@ library BeaconReportBounds {
 
     uint256 public constant DELTA_BASE = 10_000;
 
-    /* Hardcoded hex is: bytes32(uint256(keccak256("river.state.beaconReportBounds")) - 1) */
     bytes32 internal constant BEACON_REPORT_BOUNDS_SLOT =
-        hex"8a8a043b81dd88a581f2aa1faf076f45266d72ec8307cdf217c10a967969249e";
+        bytes32(uint256(keccak256("river.state.beaconReportBounds")) - 1);
 
     struct Slot {
         BeaconReportBoundsStruct value;
