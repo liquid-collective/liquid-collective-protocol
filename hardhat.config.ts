@@ -2,7 +2,6 @@ import * as dotenv from "dotenv";
 
 import "hardhat-deploy";
 import { HardhatUserConfig } from "hardhat/config";
-import "hardhat-foundry";
 import "@nomiclabs/hardhat-etherscan";
 import "@nomiclabs/hardhat-waffle";
 import "@typechain/hardhat";
