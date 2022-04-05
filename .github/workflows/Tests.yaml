@@ -12,11 +12,22 @@ jobs:
     steps:
       - uses: actions/checkout@v2
 
-      - name: Install Foundry
+      - name: install foundry
         uses: onbjerg/foundry-toolchain@v1
         with:
           version: nightly
 
-      - run: forge test --force -vvvvv --gas-report
+      - name: cache node_modules
+        uses: actions/cache@v2
+        with:
+          path: |
+            ./node_modules
+          key: ${{ runner.os }}-${{ hashFiles('yarn.lock') }}
+
+      - name: install node dependencies
+        run: yarn
+
+      - name: run tests
+        run: forge test --force -vvvvv --gas-report
         env:
           FOUNDRY_FUZZ_RUNS: 5000
