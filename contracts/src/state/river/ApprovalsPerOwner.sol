@@ -2,9 +2,8 @@
 pragma solidity 0.8.10;
 
 library ApprovalsPerOwner {
-    /* Hardcoded hex is: bytes32(uint256(keccak256("river.state.approvalsPerOwner")) - 1) */
     bytes32 internal constant APPROVALS_PER_OWNER_SLOT =
-        hex"c852254d5b703a16bb13b3e233a335d6459c5da5db0ca732d7a684ee05407846";
+        bytes32(uint256(keccak256("river.state.approvalsPerOwner")) - 1);
 
     struct Slot {
         mapping(address => mapping(address => uint256)) value;
