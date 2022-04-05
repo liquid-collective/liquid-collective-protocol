@@ -46,10 +46,6 @@ const config: HardhatUserConfig = {
       },
     },
   },
-  forge: {
-    version: "f137539944ac554d62d357a689e21308a4fa73f8",
-    verbosity: 3,
-  },
   namedAccounts: {
     deployer: {
       default: 0,
