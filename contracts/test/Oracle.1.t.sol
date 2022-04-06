@@ -8,6 +8,7 @@ import "../src/libraries/Errors.sol";
 import "../src/interfaces/IRiverOracleInput.sol";
 import "../src/Withdraw.1.sol";
 import "./utils/River.setup1.sol";
+import "./utils/User.sol";
 
 contract RiverMock is IRiverOracleInput {
     event DebugReceivedBeaconData(uint256 _validatorCount, uint256 _validatorBalanceSum, bytes32 _roundId);
@@ -51,6 +52,7 @@ contract OracleV1Tests {
 
     IRiverOracleInput internal oracleInput;
     Vm internal vm = Vm(0x7109709ECfa91a80626fF3989D68f67F5b1DD12D);
+    UserFactory internal uf = new UserFactory();
 
     address internal admin = address(0xEA674fdDe714fd979de3EdF0F56AA9716B898ec8);
 
@@ -104,27 +106,31 @@ contract OracleV1Tests {
         assert(oracle.getFrameFirstEpochId(epochId) == frameFirst);
     }
 
-    function testAddMember(address newMember) public {
+    function testAddMember(uint256 newMemberSalt) public {
+        address newMember = uf._new(newMemberSalt);
         vm.startPrank(admin);
         assert(oracle.isMember(newMember) == false);
         oracle.addMember(newMember);
         assert(oracle.isMember(newMember) == true);
     }
 
-    function testAddMemberUnauthorized(address newMember) public {
+    function testAddMemberUnauthorized(uint256 newMemberSalt) public {
+        address newMember = uf._new(newMemberSalt);
         vm.startPrank(newMember);
         vm.expectRevert(abi.encodeWithSignature("Unauthorized(address)", newMember));
         oracle.addMember(newMember);
     }
 
-    function testAddMemberExisting(address newMember) public {
+    function testAddMemberExisting(uint256 newMemberSalt) public {
+        address newMember = uf._new(newMemberSalt);
         vm.startPrank(admin);
         oracle.addMember(newMember);
         vm.expectRevert(abi.encodeWithSignature("InvalidCall()"));
         oracle.addMember(newMember);
     }
 
-    function testRemoveMember(address newMember) public {
+    function testRemoveMember(uint256 newMemberSalt) public {
+        address newMember = uf._new(newMemberSalt);
         vm.startPrank(admin);
         assert(oracle.isMember(newMember) == false);
         oracle.addMember(newMember);
@@ -133,7 +139,8 @@ contract OracleV1Tests {
         assert(oracle.isMember(newMember) == false);
     }
 
-    function testRemoveMemberUnauthorized(address newMember) public {
+    function testRemoveMemberUnauthorized(uint256 newMemberSalt) public {
+        address newMember = uf._new(newMemberSalt);
         vm.startPrank(admin);
         assert(oracle.isMember(newMember) == false);
         oracle.addMember(newMember);
@@ -167,12 +174,13 @@ contract OracleV1Tests {
     }
 
     function testSetBeaconSpecUnauthorized(
-        address _intruder,
+        uint256 _intruderSalt,
         uint64 _epochsPerFrame,
         uint64 _slotsPerEpoch,
         uint64 _secondsPerSlot,
         uint64 _genesisTime
     ) public {
+        address _intruder = uf._new(_intruderSalt);
         BeaconSpec.BeaconSpecStruct memory bs = oracle.getBeaconSpec();
         assert(bs.epochsPerFrame == EPOCHS_PER_FRAME);
         assert(bs.slotsPerEpoch == SLOTS_PER_EPOCH);
@@ -197,10 +205,11 @@ contract OracleV1Tests {
     }
 
     function testSetBeaconBoundsUnauthorized(
-        address _intruder,
+        uint256 _intruderSalt,
         uint256 _up,
         uint64 _down
     ) public {
+        address _intruder = uf._new(_intruderSalt);
         BeaconReportBounds.BeaconReportBoundsStruct memory bounds = oracle.getBeaconBounds();
         assert(bounds.annualAprUpperBound == UPPER_BOUND);
         assert(bounds.relativeLowerBound == LOWER_BOUND);
@@ -210,7 +219,8 @@ contract OracleV1Tests {
         oracle.setBeaconBounds(_up, _down);
     }
 
-    function testReportBeaconEpochTooOld(address oracleMember, uint64 timeFromGenesis) public {
+    function testReportBeaconEpochTooOld(uint256 oracleMemberSalt, uint64 timeFromGenesis) public {
+        address oracleMember = uf._new(oracleMemberSalt);
         vm.warp(uint256(GENESIS_TIME) + uint256(timeFromGenesis));
         vm.startPrank(admin);
         oracle.addMember(oracleMember);
@@ -235,7 +245,8 @@ contract OracleV1Tests {
         }
     }
 
-    function testReportBeaconNotFrameFirst(address oracleMember, uint64 timeFromGenesis) public {
+    function testReportBeaconNotFrameFirst(uint256 oracleMemberSalt, uint64 timeFromGenesis) public {
+        address oracleMember = uf._new(oracleMemberSalt);
         vm.warp(uint256(GENESIS_TIME) + uint256(timeFromGenesis));
         vm.startPrank(admin);
         oracle.addMember(oracleMember);
@@ -258,7 +269,8 @@ contract OracleV1Tests {
         }
     }
 
-    function testReportBeaconUnauthorized(address oracleMember, uint64 timeFromGenesis) public {
+    function testReportBeaconUnauthorized(uint256 oracleMemberSalt, uint64 timeFromGenesis) public {
+        address oracleMember = uf._new(oracleMemberSalt);
         vm.warp(uint256(GENESIS_TIME) + uint256(timeFromGenesis));
         vm.startPrank(admin);
         oracle.setQuorum(1);
@@ -274,7 +286,8 @@ contract OracleV1Tests {
         }
     }
 
-    function testReportBeaconTwice(address oracleMember, uint64 timeFromGenesis) public {
+    function testReportBeaconTwice(uint256 oracleMemberSalt, uint64 timeFromGenesis) public {
+        address oracleMember = uf._new(oracleMemberSalt);
         vm.warp(uint256(GENESIS_TIME) + uint256(timeFromGenesis));
         vm.startPrank(admin);
         oracle.addMember(oracleMember);

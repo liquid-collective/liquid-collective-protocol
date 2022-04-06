@@ -6,6 +6,7 @@ import "../Vm.sol";
 import "../../src/components/AllowlistManager.1.sol";
 import "../../src/libraries/Errors.sol";
 import "../../src/libraries/LibOwnable.sol";
+import "../utils/User.sol";
 
 contract AllowlistManagerV1ExposeInitializer is AllowlistManagerV1 {
     function publicAllowlistManagerInitializeV1(address _AllowlistorAddress) external {
@@ -19,6 +20,7 @@ contract AllowlistManagerV1ExposeInitializer is AllowlistManagerV1 {
 
 contract AllowlistManagerV1Tests {
     Vm internal vm = Vm(0x7109709ECfa91a80626fF3989D68f67F5b1DD12D);
+    UserFactory internal uf = new UserFactory();
 
     bytes32 internal withdrawalCredentials = bytes32(uint256(1));
 
@@ -33,21 +35,25 @@ contract AllowlistManagerV1Tests {
         AllowlistManagerV1ExposeInitializer(address(allowlistManager)).sudoSetAdmin(testAdmin);
     }
 
-    function testSetAllowlistStatus(address user) public {
+    function testSetAllowlistStatus(uint256 userSalt) public {
+        address user = uf._new(userSalt);
         vm.startPrank(allower);
         assert(allowlistManager.isAllowed(user) == false);
         allowlistManager.allow(user, true);
         assert(allowlistManager.isAllowed(user) == true);
     }
 
-    function testSetAllowlistStatusUnauthorized(address user) public {
+    function testSetAllowlistStatusUnauthorized(uint256 userSalt) public {
+        address user = uf._new(userSalt);
         vm.startPrank(user);
         assert(user != allower);
         vm.expectRevert(abi.encodeWithSignature("Unauthorized(address)", user));
         allowlistManager.allow(user, true);
     }
 
-    function testSetAllower(address admin, address newAllower) public {
+    function testSetAllower(uint256 adminSalt, uint256 newAllowerSalt) public {
+        address admin = uf._new(adminSalt);
+        address newAllower = uf._new(newAllowerSalt);
         AllowlistManagerV1ExposeInitializer(address(allowlistManager)).sudoSetAdmin(admin);
         assert(allowlistManager.getAllower() == allower);
         vm.startPrank(admin);
@@ -55,7 +61,9 @@ contract AllowlistManagerV1Tests {
         assert(allowlistManager.getAllower() == newAllower);
     }
 
-    function testSetAllowerUnauthorized(address nonAdmin, address newAllower) public {
+    function testSetAllowerUnauthorized(uint256 nonAdminSalt, uint256 newAllowerSalt) public {
+        address nonAdmin = uf._new(nonAdminSalt);
+        address newAllower = uf._new(newAllowerSalt);
         vm.startPrank(nonAdmin);
         assert(nonAdmin != testAdmin);
         vm.expectRevert(abi.encodeWithSignature("Unauthorized(address)", nonAdmin));
