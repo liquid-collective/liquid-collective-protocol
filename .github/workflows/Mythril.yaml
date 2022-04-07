@@ -1,7 +1,6 @@
 name: Mythril Checks
 on:
   push:
-  pull_request:
 
 jobs:
   run-mythril:

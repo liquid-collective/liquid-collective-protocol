@@ -5,6 +5,7 @@ pragma solidity 0.8.10;
 import "../Vm.sol";
 import "../../src/components/OperatorsManager.1.sol";
 import "../../src/state/shared/AdministratorAddress.sol";
+import "../utils/UserFactory.sol";
 
 contract OperatorsManagerInitializableV1 is OperatorsManagerV1 {
     function publicOperatorsManagerInitializeV1(address _admin) external {
@@ -26,6 +27,7 @@ contract OperatorsManagerInitializableV1 is OperatorsManagerV1 {
 
 contract OperatorsManagerV1MemberManagementTests {
     Vm internal vm = Vm(0x7109709ECfa91a80626fF3989D68f67F5b1DD12D);
+    UserFactory internal uf = new UserFactory();
 
     OperatorsManagerV1 internal operatorsManager;
     address internal admin = address(0xEA674fdDe714fd979de3EdF0F56AA9716B898ec8);
@@ -35,14 +37,16 @@ contract OperatorsManagerV1MemberManagementTests {
         OperatorsManagerInitializableV1(address(operatorsManager)).publicOperatorsManagerInitializeV1(admin);
     }
 
-    function testAddNodeOperator(address _nodeOperatorAddress, bytes32 _name) public {
+    function testAddNodeOperator(uint256 _nodeOperatorAddressSalt, bytes32 _name) public {
+        address _nodeOperatorAddress = uf._new(_nodeOperatorAddressSalt);
         vm.startPrank(admin);
         operatorsManager.addOperator(string(abi.encodePacked(_name)), _nodeOperatorAddress);
         Operators.Operator memory newOperator = operatorsManager.getOperatorByName(string(abi.encodePacked(_name)));
         assert(newOperator.operator == _nodeOperatorAddress);
     }
 
-    function testAddNodeWhileNotAdminOperator(address _nodeOperatorAddress, bytes32 _name) public {
+    function testAddNodeWhileNotAdminOperator(uint256 _nodeOperatorAddressSalt, bytes32 _name) public {
+        address _nodeOperatorAddress = uf._new(_nodeOperatorAddressSalt);
         vm.expectRevert(abi.encodeWithSignature("Unauthorized(address)", address(this)));
         operatorsManager.addOperator(string(abi.encodePacked(_name)), _nodeOperatorAddress);
     }
@@ -55,9 +59,11 @@ contract OperatorsManagerV1MemberManagementTests {
 
     function testSetOperatorAddressAsAdmin(
         bytes32 _name,
-        address _firstAddress,
-        address _secondAddress
+        uint256 _firstAddressSalt,
+        uint256 _secondAddressSalt
     ) public {
+        address _firstAddress = uf._new(_firstAddressSalt);
+        address _secondAddress = uf._new(_secondAddressSalt);
         vm.startPrank(admin);
         operatorsManager.addOperator(string(abi.encodePacked(_name)), _firstAddress);
         (int256 _index, ) = operatorsManager.getOperatorDetails(string(abi.encodePacked(_name)));
@@ -72,9 +78,11 @@ contract OperatorsManagerV1MemberManagementTests {
 
     function testSetOperatorAddressAsOperator(
         bytes32 _name,
-        address _firstAddress,
-        address _secondAddress
+        uint256 _firstAddressSalt,
+        uint256 _secondAddressSalt
     ) public {
+        address _firstAddress = uf._new(_firstAddressSalt);
+        address _secondAddress = uf._new(_secondAddressSalt);
         vm.startPrank(admin);
         operatorsManager.addOperator(string(abi.encodePacked(_name)), _firstAddress);
         (int256 _index, ) = operatorsManager.getOperatorDetails(string(abi.encodePacked(_name)));
@@ -91,9 +99,11 @@ contract OperatorsManagerV1MemberManagementTests {
 
     function testSetOperatorAddressAsUnauthorized(
         bytes32 _name,
-        address _firstAddress,
-        address _secondAddress
+        uint256 _firstAddressSalt,
+        uint256 _secondAddressSalt
     ) public {
+        address _firstAddress = uf._new(_firstAddressSalt);
+        address _secondAddress = uf._new(_secondAddressSalt);
         vm.startPrank(admin);
         operatorsManager.addOperator(string(abi.encodePacked(_name)), _firstAddress);
         (int256 _index, ) = operatorsManager.getOperatorDetails(string(abi.encodePacked(_name)));
@@ -107,7 +117,8 @@ contract OperatorsManagerV1MemberManagementTests {
         operatorsManager.setOperatorAddress(index, _secondAddress);
     }
 
-    function testSetOperatorStatusAsAdmin(bytes32 _name, address _firstAddress) public {
+    function testSetOperatorStatusAsAdmin(bytes32 _name, uint256 _firstAddressSalt) public {
+        address _firstAddress = uf._new(_firstAddressSalt);
         vm.startPrank(admin);
         operatorsManager.addOperator(string(abi.encodePacked(_name)), _firstAddress);
         (int256 _index, ) = operatorsManager.getOperatorDetails(string(abi.encodePacked(_name)));
@@ -123,7 +134,8 @@ contract OperatorsManagerV1MemberManagementTests {
         assert(newOperator.active == true);
     }
 
-    function testSetOperatorStatusAsUnauthorized(bytes32 _name, address _firstAddress) public {
+    function testSetOperatorStatusAsUnauthorized(bytes32 _name, uint256 _firstAddressSalt) public {
+        address _firstAddress = uf._new(_firstAddressSalt);
         vm.startPrank(admin);
         operatorsManager.addOperator(string(abi.encodePacked(_name)), _firstAddress);
         (int256 _index, ) = operatorsManager.getOperatorDetails(string(abi.encodePacked(_name)));
@@ -139,9 +151,10 @@ contract OperatorsManagerV1MemberManagementTests {
 
     function testSetOperatorStoppedValidatorCountWhileUnfunded(
         bytes32 _name,
-        address _firstAddress,
+        uint256 _firstAddressSalt,
         uint128 _stoppedCount
     ) public {
+        address _firstAddress = uf._new(_firstAddressSalt);
         vm.startPrank(admin);
         operatorsManager.addOperator(string(abi.encodePacked(_name)), _firstAddress);
         (int256 _index, ) = operatorsManager.getOperatorDetails(string(abi.encodePacked(_name)));
@@ -157,9 +170,10 @@ contract OperatorsManagerV1MemberManagementTests {
 
     function testSetOperatorStoppedValidatorCountAsAdmin(
         bytes32 _name,
-        address _firstAddress,
+        uint256 _firstAddressSalt,
         uint128 _stoppedCount
     ) public {
+        address _firstAddress = uf._new(_firstAddressSalt);
         vm.startPrank(admin);
         operatorsManager.addOperator(string(abi.encodePacked(_name)), _firstAddress);
         (int256 _index, ) = operatorsManager.getOperatorDetails(string(abi.encodePacked(_name)));
@@ -181,9 +195,10 @@ contract OperatorsManagerV1MemberManagementTests {
 
     function testSetOperatorStoppedValidatorCountAsUnauthorized(
         bytes32 _name,
-        address _firstAddress,
+        uint256 _firstAddressSalt,
         uint256 _stoppedCount
     ) public {
+        address _firstAddress = uf._new(_firstAddressSalt);
         vm.startPrank(admin);
         operatorsManager.addOperator(string(abi.encodePacked(_name)), _firstAddress);
         (int256 _index, ) = operatorsManager.getOperatorDetails(string(abi.encodePacked(_name)));
@@ -199,9 +214,10 @@ contract OperatorsManagerV1MemberManagementTests {
 
     function testSetOperatorLimitCountAsAdmin(
         bytes32 _name,
-        address _firstAddress,
+        uint256 _firstAddressSalt,
         uint256 _limit
     ) public {
+        address _firstAddress = uf._new(_firstAddressSalt);
         vm.startPrank(admin);
         operatorsManager.addOperator(string(abi.encodePacked(_name)), _firstAddress);
         (int256 _index, ) = operatorsManager.getOperatorDetails(string(abi.encodePacked(_name)));
@@ -219,9 +235,10 @@ contract OperatorsManagerV1MemberManagementTests {
 
     function testSetOperatorLimitCountAsUnauthorized(
         bytes32 _name,
-        address _firstAddress,
+        uint256 _firstAddressSalt,
         uint256 _limit
     ) public {
+        address _firstAddress = uf._new(_firstAddressSalt);
         vm.startPrank(admin);
         operatorsManager.addOperator(string(abi.encodePacked(_name)), _firstAddress);
         (int256 _index, ) = operatorsManager.getOperatorDetails(string(abi.encodePacked(_name)));
@@ -237,7 +254,8 @@ contract OperatorsManagerV1MemberManagementTests {
 
     event AddedValidatorKeys(uint256 indexed index, uint256 amount);
 
-    function testAddValidatorsAsOperator(bytes32 _name, address _firstAddress) public {
+    function testAddValidatorsAsOperator(bytes32 _name, uint256 _firstAddressSalt) public {
+        address _firstAddress = uf._new(_firstAddressSalt);
         vm.startPrank(admin);
         operatorsManager.addOperator(string(abi.encodePacked(_name)), _firstAddress);
         (int256 _index, ) = operatorsManager.getOperatorDetails(string(abi.encodePacked(_name)));
@@ -271,7 +289,8 @@ contract OperatorsManagerV1MemberManagementTests {
         assert(funded == false);
     }
 
-    function testAddValidatorsAsAdmin(bytes32 _name, address _firstAddress) public {
+    function testAddValidatorsAsAdmin(bytes32 _name, uint256 _firstAddressSalt) public {
+        address _firstAddress = uf._new(_firstAddressSalt);
         vm.startPrank(admin);
         operatorsManager.addOperator(string(abi.encodePacked(_name)), _firstAddress);
         (int256 _index, ) = operatorsManager.getOperatorDetails(string(abi.encodePacked(_name)));
@@ -303,7 +322,8 @@ contract OperatorsManagerV1MemberManagementTests {
         operatorsManager.addValidators(_index, 10, tenPublicKeys, tenSignatures);
     }
 
-    function testAddValidatorsAsUnauthorized(bytes32 _name, address _firstAddress) public {
+    function testAddValidatorsAsUnauthorized(bytes32 _name, uint256 _firstAddressSalt) public {
+        address _firstAddress = uf._new(_firstAddressSalt);
         vm.startPrank(admin);
         operatorsManager.addOperator(string(abi.encodePacked(_name)), _firstAddress);
         (int256 _index, ) = operatorsManager.getOperatorDetails(string(abi.encodePacked(_name)));
@@ -321,7 +341,8 @@ contract OperatorsManagerV1MemberManagementTests {
         operatorsManager.addValidators(index, 10, tenPublicKeys, tenSignatures);
     }
 
-    function testAddValidatorsInvalidPublicKeysSize(bytes32 _name, address _firstAddress) public {
+    function testAddValidatorsInvalidPublicKeysSize(bytes32 _name, uint256 _firstAddressSalt) public {
+        address _firstAddress = uf._new(_firstAddressSalt);
         vm.startPrank(admin);
         operatorsManager.addOperator(string(abi.encodePacked(_name)), _firstAddress);
         (int256 _index, ) = operatorsManager.getOperatorDetails(string(abi.encodePacked(_name)));
@@ -337,7 +358,8 @@ contract OperatorsManagerV1MemberManagementTests {
         operatorsManager.addValidators(index, 10, tenPublicKeys, tenSignatures);
     }
 
-    function testAddValidatorsInvalidSignaturesSize(bytes32 _name, address _firstAddress) public {
+    function testAddValidatorsInvalidSignaturesSize(bytes32 _name, uint256 _firstAddressSalt) public {
+        address _firstAddress = uf._new(_firstAddressSalt);
         vm.startPrank(admin);
         operatorsManager.addOperator(string(abi.encodePacked(_name)), _firstAddress);
         (int256 _index, ) = operatorsManager.getOperatorDetails(string(abi.encodePacked(_name)));
@@ -353,7 +375,8 @@ contract OperatorsManagerV1MemberManagementTests {
         operatorsManager.addValidators(index, 10, tenPublicKeys, tenSignatures);
     }
 
-    function testAddValidatorsInvalidCount(bytes32 _name, address _firstAddress) public {
+    function testAddValidatorsInvalidCount(bytes32 _name, uint256 _firstAddressSalt) public {
+        address _firstAddress = uf._new(_firstAddressSalt);
         vm.startPrank(admin);
         operatorsManager.addOperator(string(abi.encodePacked(_name)), _firstAddress);
         (int256 _index, ) = operatorsManager.getOperatorDetails(string(abi.encodePacked(_name)));
@@ -363,7 +386,8 @@ contract OperatorsManagerV1MemberManagementTests {
         operatorsManager.addValidators(index, 0, "", "");
     }
 
-    function testRemoveValidatorsAsOperator(bytes32 _name, address _firstAddress) public {
+    function testRemoveValidatorsAsOperator(bytes32 _name, uint256 _firstAddressSalt) public {
+        address _firstAddress = uf._new(_firstAddressSalt);
         vm.startPrank(admin);
         operatorsManager.addOperator(string(abi.encodePacked(_name)), _firstAddress);
         (int256 _index, ) = operatorsManager.getOperatorDetails(string(abi.encodePacked(_name)));
@@ -404,7 +428,8 @@ contract OperatorsManagerV1MemberManagementTests {
         assert(operator.keys == 10);
     }
 
-    function testRemoveValidatorsAsAdmin(bytes32 _name, address _firstAddress) public {
+    function testRemoveValidatorsAsAdmin(bytes32 _name, uint256 _firstAddressSalt) public {
+        address _firstAddress = uf._new(_firstAddressSalt);
         vm.startPrank(admin);
         operatorsManager.addOperator(string(abi.encodePacked(_name)), _firstAddress);
         (int256 _index, ) = operatorsManager.getOperatorDetails(string(abi.encodePacked(_name)));
@@ -443,7 +468,8 @@ contract OperatorsManagerV1MemberManagementTests {
         assert(operator.keys == 10);
     }
 
-    function testRemoveValidatorsUnauthorized(bytes32 _name, address _firstAddress) public {
+    function testRemoveValidatorsUnauthorized(bytes32 _name, uint256 _firstAddressSalt) public {
+        address _firstAddress = uf._new(_firstAddressSalt);
         vm.startPrank(admin);
         operatorsManager.addOperator(string(abi.encodePacked(_name)), _firstAddress);
         (int256 _index, ) = operatorsManager.getOperatorDetails(string(abi.encodePacked(_name)));
@@ -480,7 +506,8 @@ contract OperatorsManagerV1MemberManagementTests {
         operatorsManager.removeValidators(index, indexes);
     }
 
-    function testRemoveValidatorsAndRetrieveAsAdmin(bytes32 _name, address _firstAddress) public {
+    function testRemoveValidatorsAndRetrieveAsAdmin(bytes32 _name, uint256 _firstAddressSalt) public {
+        address _firstAddress = uf._new(_firstAddressSalt);
         vm.startPrank(admin);
         operatorsManager.addOperator(string(abi.encodePacked(_name)), _firstAddress);
         (int256 _index, ) = operatorsManager.getOperatorDetails(string(abi.encodePacked(_name)));
@@ -512,7 +539,8 @@ contract OperatorsManagerV1MemberManagementTests {
         assert(keccak256(sAfter) == keccak256(s));
     }
 
-    function testRemoveValidatorsFundedKeyRemovalAttempt(bytes32 _name, address _firstAddress) public {
+    function testRemoveValidatorsFundedKeyRemovalAttempt(bytes32 _name, uint256 _firstAddressSalt) public {
+        address _firstAddress = uf._new(_firstAddressSalt);
         vm.startPrank(admin);
         operatorsManager.addOperator(string(abi.encodePacked(_name)), _firstAddress);
         (int256 _index, ) = operatorsManager.getOperatorDetails(string(abi.encodePacked(_name)));
@@ -548,7 +576,8 @@ contract OperatorsManagerV1MemberManagementTests {
         operatorsManager.removeValidators(index, indexes);
     }
 
-    function testRemoveValidatorsKeyOutOfBounds(bytes32 _name, address _firstAddress) public {
+    function testRemoveValidatorsKeyOutOfBounds(bytes32 _name, uint256 _firstAddressSalt) public {
+        address _firstAddress = uf._new(_firstAddressSalt);
         vm.startPrank(admin);
         operatorsManager.addOperator(string(abi.encodePacked(_name)), _firstAddress);
         (int256 _index, ) = operatorsManager.getOperatorDetails(string(abi.encodePacked(_name)));
@@ -582,7 +611,8 @@ contract OperatorsManagerV1MemberManagementTests {
         operatorsManager.removeValidators(index, indexes);
     }
 
-    function testRemoveValidatorsUnsortedIndexes(bytes32 _name, address _firstAddress) public {
+    function testRemoveValidatorsUnsortedIndexes(bytes32 _name, uint256 _firstAddressSalt) public {
+        address _firstAddress = uf._new(_firstAddressSalt);
         vm.startPrank(admin);
         operatorsManager.addOperator(string(abi.encodePacked(_name)), _firstAddress);
         (int256 _index, ) = operatorsManager.getOperatorDetails(string(abi.encodePacked(_name)));
@@ -616,7 +646,8 @@ contract OperatorsManagerV1MemberManagementTests {
         operatorsManager.removeValidators(index, indexes);
     }
 
-    function testGetOperatorByName(bytes32 _name, address _firstAddress) public {
+    function testGetOperatorByName(bytes32 _name, uint256 _firstAddressSalt) public {
+        address _firstAddress = uf._new(_firstAddressSalt);
         vm.startPrank(admin);
         operatorsManager.addOperator(string(abi.encodePacked(_name)), _firstAddress);
 
@@ -624,7 +655,8 @@ contract OperatorsManagerV1MemberManagementTests {
         assert(operator.active == true);
     }
 
-    function testGetOperatorByIndex(bytes32 _name, address _firstAddress) public {
+    function testGetOperatorByIndex(bytes32 _name, uint256 _firstAddressSalt) public {
+        address _firstAddress = uf._new(_firstAddressSalt);
         vm.startPrank(admin);
         operatorsManager.addOperator(string(abi.encodePacked(_name)), _firstAddress);
 
@@ -634,7 +666,8 @@ contract OperatorsManagerV1MemberManagementTests {
         assert(keccak256(bytes(operatorByIndex.name)) == keccak256(bytes(operator.name)));
     }
 
-    function testGetOperatorCount(bytes32 _name, address _firstAddress) public {
+    function testGetOperatorCount(bytes32 _name, uint256 _firstAddressSalt) public {
+        address _firstAddress = uf._new(_firstAddressSalt);
         vm.startPrank(admin);
         assert(operatorsManager.getOperatorCount() == 0);
         operatorsManager.addOperator(string(abi.encodePacked(_name)), _firstAddress);
