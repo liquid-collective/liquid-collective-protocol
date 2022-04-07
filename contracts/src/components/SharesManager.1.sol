@@ -120,16 +120,6 @@ abstract contract SharesManagerV1 is IERC20 {
         return ((shares * _assetBalance())) / _totalSharesValue;
     }
 
-    function _sharesFromBalance(uint256 balance) internal view returns (uint256) {
-        uint256 assetBalance = _assetBalance();
-
-        if (assetBalance == 0) {
-            return 0;
-        }
-
-        return (balance * Shares.get()) / assetBalance;
-    }
-
     // assuming funds are received, _assetBalance should have taken _value into account
     function _mintShares(address _owner, uint256 _value) internal {
         uint256 assetBalance = _assetBalance();
