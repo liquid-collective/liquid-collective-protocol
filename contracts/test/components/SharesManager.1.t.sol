@@ -48,7 +48,7 @@ contract SharesManagerV1Tests {
         sharesManager = new SharesManagerPublicDeal();
     }
 
-    function testBalanceOf(address _user) public {
+    function testBalanceOfUnderlying(address _user) public {
         SharesManagerPublicDeal(payable(address(sharesManager))).setValidatorBalance(3200 ether);
         assert(sharesManager.balanceOf(_user) == 0);
 
@@ -59,7 +59,13 @@ contract SharesManagerV1Tests {
 
         uint256 expectedBalance = (supply * 10 ether) / (shares + 10 ether);
 
-        assert(sharesManager.balanceOf(_user) == expectedBalance);
+        assert(sharesManager.balanceOfUnderlying(_user) == expectedBalance);
+    }
+
+    function testBalanceOf(address _user) public {
+        assert(sharesManager.balanceOf(_user) == 0);
+        SharesManagerPublicDeal(payable(address(sharesManager))).deal(_user, 10 ether);
+        assert(sharesManager.balanceOf(_user) == 10 ether);
     }
 
     function testSharesOf(address _user, address _anotherUser) public {
@@ -79,8 +85,8 @@ contract SharesManagerV1Tests {
         assert(sharesManager.sharesOf(_user) == 300 ether);
         assert(sharesManager.sharesOf(_anotherUser) == 88235294117647058823);
 
-        assert(sharesManager.balanceOf(_user) == 340 ether);
-        assert(sharesManager.balanceOf(_anotherUser) == 99999999999999999999); // rounding issues with solidity, diff is negligible
+        assert(sharesManager.balanceOfUnderlying(_user) == 340 ether);
+        assert(sharesManager.balanceOfUnderlying(_anotherUser) == 99999999999999999999); // rounding issues with solidity, diff is negligible
     }
 
     function testName() public view {
