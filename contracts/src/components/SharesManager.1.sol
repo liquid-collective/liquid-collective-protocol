@@ -46,6 +46,10 @@ abstract contract SharesManagerV1 is IERC20 {
         return _balanceOf(_owner);
     }
 
+    function balanceOfUnderlying(address _owner) public view returns (uint256 balance) {
+        return _balanceFromShares(SharesPerOwner.get(_owner));
+    }
+
     function allowance(address _owner, address _spender) external view returns (uint256 remaining) {
         return ApprovalsPerOwner.get(_owner, _spender);
     }
@@ -151,7 +155,7 @@ abstract contract SharesManagerV1 is IERC20 {
     }
 
     function _balanceOf(address _owner) internal view returns (uint256 balance) {
-        return _balanceFromShares(SharesPerOwner.get(_owner));
+        return SharesPerOwner.get(_owner);
     }
 
     function _totalShares() internal view returns (uint256) {
