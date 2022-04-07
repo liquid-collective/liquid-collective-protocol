@@ -94,10 +94,8 @@ abstract contract SharesManagerV1 is IERC20 {
             revert BalanceTooLow();
         }
 
-        uint256 shares = _sharesFromBalance(_value);
-
-        SharesPerOwner.set(_from, SharesPerOwner.get(_from) - shares);
-        SharesPerOwner.set(_to, SharesPerOwner.get(_to) + shares);
+        SharesPerOwner.set(_from, SharesPerOwner.get(_from) - _value);
+        SharesPerOwner.set(_to, SharesPerOwner.get(_to) + _value);
 
         emit Transfer(_from, _to, _value);
 
