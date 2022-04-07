@@ -4,6 +4,7 @@ pragma solidity 0.8.10;
 
 import "../Vm.sol";
 import "../../src/components/TransferManager.1.sol";
+import "../utils/UserFactory.sol";
 
 contract TransferManagerV1EmptyDeposit is TransferManagerV1 {
     function _onDeposit(address, uint256) internal view override {
@@ -14,6 +15,7 @@ contract TransferManagerV1EmptyDeposit is TransferManagerV1 {
 contract TransferManagerV1DepositTests {
     Vm internal vm = Vm(0x7109709ECfa91a80626fF3989D68f67F5b1DD12D);
     TransferManagerV1 internal transferManager;
+    UserFactory internal uf = new UserFactory();
 
     error InvalidCall();
 
@@ -23,7 +25,8 @@ contract TransferManagerV1DepositTests {
         transferManager = new TransferManagerV1EmptyDeposit();
     }
 
-    function testDepositWithDedicatedMethod(address _user, uint256 _amount) public {
+    function testDepositWithDedicatedMethod(uint256 _userSalt, uint256 _amount) public {
+        address _user = uf._new(_userSalt);
         vm.deal(_user, _amount);
         vm.deal(address(transferManager), 0);
         vm.startPrank(_user);
@@ -44,10 +47,12 @@ contract TransferManagerV1DepositTests {
     }
 
     function testDepositWithDedicatedMethodAndReferral(
-        address _user,
-        address _referral,
+        uint256 _userSalt,
+        uint256 _referralSalt,
         uint256 _amount
     ) public {
+        address _user = uf._new(_userSalt);
+        address _referral = uf._new(_referralSalt);
         vm.deal(_user, _amount);
         vm.deal(address(transferManager), 0);
         vm.startPrank(_user);
@@ -67,7 +72,8 @@ contract TransferManagerV1DepositTests {
         assert(address(transferManager).balance == _amount);
     }
 
-    function testDepositWithReceiveFallback(address _user, uint256 _amount) public {
+    function testDepositWithReceiveFallback(uint256 _userSalt, uint256 _amount) public {
+        address _user = uf._new(_userSalt);
         vm.deal(_user, _amount);
         vm.deal(address(transferManager), 0);
         vm.startPrank(_user);
@@ -88,7 +94,8 @@ contract TransferManagerV1DepositTests {
         assert(address(transferManager).balance == _amount);
     }
 
-    function testDepositWithCalldataFallback(address _user, uint256 _amount) public {
+    function testDepositWithCalldataFallback(uint256 _userSalt, uint256 _amount) public {
+        address _user = uf._new(_userSalt);
         vm.deal(_user, _amount);
         vm.startPrank(_user);
 
@@ -109,6 +116,7 @@ contract TransferManagerV1CatchableDeposit is TransferManagerV1 {
 contract TransferManagerV1CallbackTests {
     Vm internal vm = Vm(0x7109709ECfa91a80626fF3989D68f67F5b1DD12D);
     TransferManagerV1 internal transferManager;
+    UserFactory internal uf = new UserFactory();
 
     event InternalCallbackCalled(address user, uint256 amount);
 
@@ -116,7 +124,8 @@ contract TransferManagerV1CallbackTests {
         transferManager = new TransferManagerV1CatchableDeposit();
     }
 
-    function testInternalCallback(address _user, uint256 _amount) public {
+    function testInternalCallback(uint256 _userSalt, uint256 _amount) public {
+        address _user = uf._new(_userSalt);
         vm.deal(_user, _amount);
         vm.startPrank(_user);
 

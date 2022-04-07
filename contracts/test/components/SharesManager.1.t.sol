@@ -5,6 +5,7 @@ pragma solidity 0.8.10;
 import "../Vm.sol";
 import "../console.sol";
 import "../../src/components/SharesManager.1.sol";
+import "../utils/UserFactory.sol";
 
 contract SharesManagerPublicDeal is SharesManagerV1 {
     uint256 public balanceSum;
@@ -41,6 +42,7 @@ contract SharesManagerPublicDeal is SharesManagerV1 {
 
 contract SharesManagerV1Tests {
     Vm internal vm = Vm(0x7109709ECfa91a80626fF3989D68f67F5b1DD12D);
+    UserFactory internal uf = new UserFactory();
 
     SharesManagerV1 internal sharesManager;
 
@@ -48,7 +50,8 @@ contract SharesManagerV1Tests {
         sharesManager = new SharesManagerPublicDeal();
     }
 
-    function testBalanceOfUnderlying(address _user) public {
+    function testBalanceOfUnderlying(uint256 _userSalt) public {
+        address _user = uf._new(_userSalt);
         SharesManagerPublicDeal(payable(address(sharesManager))).setValidatorBalance(3200 ether);
         assert(sharesManager.balanceOf(_user) == 0);
 
@@ -62,22 +65,26 @@ contract SharesManagerV1Tests {
         assert(sharesManager.balanceOfUnderlying(_user) == expectedBalance);
     }
 
-    function testBalanceOf(address _userOne, address _userTwo) public {
-        assert(sharesManager.balanceOf(_userOne) == 0);
-        SharesManagerPublicDeal(payable(address(sharesManager))).deal(_userOne, 10 ether);
-        assert(sharesManager.balanceOf(_userOne) == 10 ether);
+    function testBalanceOf(uint256 _userSalt, uint256 _anotherUserSalt) public {
+        address _user = uf._new(_userSalt);
+        address _anotherUser = uf._new(_anotherUserSalt);
+        assert(sharesManager.balanceOf(_user) == 0);
+        SharesManagerPublicDeal(payable(address(sharesManager))).deal(_user, 10 ether);
+        assert(sharesManager.balanceOf(_user) == 10 ether);
 
         SharesManagerPublicDeal(payable(address(sharesManager))).setValidatorBalance(300 ether);
-        assert(sharesManager.balanceOf(_userOne) == 10 ether);
+        assert(sharesManager.balanceOf(_user) == 10 ether);
 
-        assert(sharesManager.balanceOf(_userTwo) == 0 ether);
-        vm.startPrank(_userOne);
-        sharesManager.transfer(_userTwo, 10 ether);
-        assert(sharesManager.balanceOf(_userTwo) == 10 ether);
-        assert(sharesManager.balanceOf(_userOne) == 0 ether);
+        assert(sharesManager.balanceOf(_anotherUser) == 0 ether);
+        vm.startPrank(_user);
+        sharesManager.transfer(_anotherUser, 10 ether);
+        assert(sharesManager.balanceOf(_anotherUser) == 10 ether);
+        assert(sharesManager.balanceOf(_user) == 0 ether);
     }
 
-    function testSharesOf(address _user, address _anotherUser) public {
+    function testSharesOf(uint256 _userSalt, uint256 _anotherUserSalt) public {
+        address _user = uf._new(_userSalt);
+        address _anotherUser = uf._new(_anotherUserSalt);
         _anotherUser = address(uint160(_user) + 1);
         SharesManagerPublicDeal(payable(address(sharesManager))).setValidatorBalance(0 ether);
 
@@ -111,10 +118,11 @@ contract SharesManagerV1Tests {
     }
 
     function testTotalSupply(
-        address _user,
+        uint256 _userSalt,
         uint128 validatorBalanceSum,
         uint128 depositSize
     ) public {
+        address _user = uf._new(_userSalt);
         vm.deal(_user, depositSize);
         vm.startPrank(_user);
         assert(sharesManager.totalSupply() == 0);
@@ -126,10 +134,12 @@ contract SharesManagerV1Tests {
     }
 
     function testApprove(
-        address _userOne,
-        address _userTwo,
+        uint256 _userOneSalt,
+        uint256 _userTwoSalt,
         uint256 _allowance
     ) public {
+        address _userOne = uf._new(_userOneSalt);
+        address _userTwo = uf._new(_userTwoSalt);
         SharesManagerPublicDeal(payable(address(sharesManager))).deal(_userOne, _allowance);
         vm.startPrank(_userOne);
         assert(0 == sharesManager.allowance(_userOne, _userTwo));
@@ -138,8 +148,13 @@ contract SharesManagerV1Tests {
         vm.stopPrank();
     }
 
-    function testApproveAndTransferPartial(address _userOne, uint128 _allowance) public {
-        address _userTwo = address(uint160(_userOne) + 1);
+    function testApproveAndTransferPartial(
+        uint256 _userOneSalt,
+        uint256 _userTwoSalt,
+        uint128 _allowance
+    ) public {
+        address _userOne = uf._new(_userOneSalt);
+        address _userTwo = uf._new(_userTwoSalt);
         SharesManagerPublicDeal(payable(address(sharesManager))).deal(_userOne, _allowance);
         SharesManagerPublicDeal(payable(address(sharesManager))).setValidatorBalance(uint256(_allowance));
         vm.startPrank(_userOne);
@@ -166,8 +181,13 @@ contract SharesManagerV1Tests {
         }
     }
 
-    function testApproveAndTransferTotal(address _userOne, uint128 _allowance) public {
-        address _userTwo = address(uint160(_userOne) + 1);
+    function testApproveAndTransferTotal(
+        uint256 _userOneSalt,
+        uint256 _userTwoSalt,
+        uint128 _allowance
+    ) public {
+        address _userOne = uf._new(_userOneSalt);
+        address _userTwo = uf._new(_userTwoSalt);
         SharesManagerPublicDeal(payable(address(sharesManager))).deal(_userOne, _allowance);
         SharesManagerPublicDeal(payable(address(sharesManager))).setValidatorBalance(uint256(_allowance));
         vm.startPrank(_userOne);
@@ -192,8 +212,13 @@ contract SharesManagerV1Tests {
         }
     }
 
-    function testApproveAndTransferZero(address _userOne, uint128 _allowance) public {
-        address _userTwo = address(uint160(_userOne) + 1);
+    function testApproveAndTransferZero(
+        uint256 _userOneSalt,
+        uint256 _userTwoSalt,
+        uint128 _allowance
+    ) public {
+        address _userOne = uf._new(_userOneSalt);
+        address _userTwo = uf._new(_userTwoSalt);
         SharesManagerPublicDeal(payable(address(sharesManager))).deal(_userOne, _allowance);
         SharesManagerPublicDeal(payable(address(sharesManager))).setValidatorBalance(uint256(_allowance));
         vm.startPrank(_userOne);
@@ -206,8 +231,13 @@ contract SharesManagerV1Tests {
         vm.stopPrank();
     }
 
-    function testApproveAndTransferAboveAllowance(address _userOne, uint128 _allowance) public {
-        address _userTwo = address(uint160(_userOne) + 1);
+    function testApproveAndTransferAboveAllowance(
+        uint256 _userOneSalt,
+        uint256 _userTwoSalt,
+        uint128 _allowance
+    ) public {
+        address _userOne = uf._new(_userOneSalt);
+        address _userTwo = uf._new(_userTwoSalt);
         SharesManagerPublicDeal(payable(address(sharesManager))).deal(_userOne, _allowance);
         SharesManagerPublicDeal(payable(address(sharesManager))).setValidatorBalance(uint256(_allowance));
         vm.startPrank(_userOne);
@@ -230,8 +260,13 @@ contract SharesManagerV1Tests {
         }
     }
 
-    function testApproveAndTransferAboveBalance(address _userOne, uint128 _allowance) public {
-        address _userTwo = address(uint160(_userOne) + 1);
+    function testApproveAndTransferAboveBalance(
+        uint256 _userOneSalt,
+        uint256 _userTwoSalt,
+        uint128 _allowance
+    ) public {
+        address _userOne = uf._new(_userOneSalt);
+        address _userTwo = uf._new(_userTwoSalt);
         SharesManagerPublicDeal(payable(address(sharesManager))).deal(_userOne, _allowance / 2);
         SharesManagerPublicDeal(payable(address(sharesManager))).setValidatorBalance(_allowance / 2);
         vm.startPrank(_userOne);
@@ -245,8 +280,13 @@ contract SharesManagerV1Tests {
         }
     }
 
-    function testApproveAndTransferUnauthorized(address _userOne, uint128 _allowance) public {
-        address _userTwo = address(uint160(_userOne) + 1);
+    function testApproveAndTransferUnauthorized(
+        uint256 _userOneSalt,
+        uint256 _userTwoSalt,
+        uint128 _allowance
+    ) public {
+        address _userOne = uf._new(_userOneSalt);
+        address _userTwo = uf._new(_userTwoSalt);
         SharesManagerPublicDeal(payable(address(sharesManager))).deal(_userOne, _allowance);
         SharesManagerPublicDeal(payable(address(sharesManager))).setValidatorBalance(uint256(_allowance));
         if (_allowance > 0) {
@@ -265,8 +305,13 @@ contract SharesManagerV1Tests {
         }
     }
 
-    function testTransferPartial(address _userOne, uint128 _allowance) public {
-        address _userTwo = address(uint160(_userOne) + 1);
+    function testTransferPartial(
+        uint256 _userOneSalt,
+        uint256 _userTwoSalt,
+        uint128 _allowance
+    ) public {
+        address _userOne = uf._new(_userOneSalt);
+        address _userTwo = uf._new(_userTwoSalt);
         SharesManagerPublicDeal(payable(address(sharesManager))).deal(_userOne, _allowance);
         SharesManagerPublicDeal(payable(address(sharesManager))).setValidatorBalance(uint256(_allowance));
         vm.startPrank(_userOne);
@@ -286,8 +331,13 @@ contract SharesManagerV1Tests {
         vm.stopPrank();
     }
 
-    function testTransferTotal(address _userOne, uint128 _allowance) public {
-        address _userTwo = address(uint160(_userOne) + 1);
+    function testTransferTotal(
+        uint256 _userOneSalt,
+        uint256 _userTwoSalt,
+        uint128 _allowance
+    ) public {
+        address _userOne = uf._new(_userOneSalt);
+        address _userTwo = uf._new(_userTwoSalt);
         SharesManagerPublicDeal(payable(address(sharesManager))).deal(_userOne, _allowance);
         SharesManagerPublicDeal(payable(address(sharesManager))).setValidatorBalance(uint256(_allowance));
         vm.startPrank(_userOne);
@@ -305,8 +355,13 @@ contract SharesManagerV1Tests {
         vm.stopPrank();
     }
 
-    function testTransferTransferZero(address _userOne, uint128 _allowance) public {
-        address _userTwo = address(uint160(_userOne) + 1);
+    function testTransferTransferZero(
+        uint256 _userOneSalt,
+        uint256 _userTwoSalt,
+        uint128 _allowance
+    ) public {
+        address _userOne = uf._new(_userOneSalt);
+        address _userTwo = uf._new(_userTwoSalt);
         SharesManagerPublicDeal(payable(address(sharesManager))).deal(_userOne, _allowance);
         SharesManagerPublicDeal(payable(address(sharesManager))).setValidatorBalance(uint256(_allowance));
         vm.startPrank(_userOne);
@@ -316,8 +371,9 @@ contract SharesManagerV1Tests {
         vm.stopPrank();
     }
 
-    function testTransferTransferBalanceTooLow(address _userOne) public {
-        address _userTwo = address(uint160(_userOne) + 1);
+    function testTransferTransferBalanceTooLow(uint256 _userOneSalt, uint256 _userTwoSalt) public {
+        address _userOne = uf._new(_userOneSalt);
+        address _userTwo = uf._new(_userTwoSalt);
         vm.startPrank(_userOne);
         assert(0 == sharesManager.balanceOf(_userTwo));
         vm.expectRevert(abi.encodeWithSignature("BalanceTooLow()"));

@@ -6,6 +6,7 @@ import "../Vm.sol";
 import "../../src/components/OracleManager.1.sol";
 import "../../src/libraries/Errors.sol";
 import "../../src/state/shared/AdministratorAddress.sol";
+import "../utils/UserFactory.sol";
 
 contract OracleManagerV1ExposeInitializer is OracleManagerV1 {
     uint256 public lastReceived;
@@ -34,6 +35,7 @@ contract OracleManagerV1ExposeInitializer is OracleManagerV1 {
 
 contract OracleManagerV1Tests {
     Vm internal vm = Vm(0x7109709ECfa91a80626fF3989D68f67F5b1DD12D);
+    UserFactory internal uf = new UserFactory();
 
     address internal oracle = address(0xEA674fdDe714fd979de3EdF0F56AA9716B898ec8);
 
@@ -62,10 +64,11 @@ contract OracleManagerV1Tests {
     }
 
     function testSetBeaconDataUnauthorized(
-        address user,
+        uint256 userSalt,
         uint64 val1,
         bytes32 roundId
     ) public {
+        address user = uf._new(userSalt);
         vm.startPrank(user);
         OracleManagerV1ExposeInitializer(address(oracleManager)).supersedeAllValidatorCount(1);
         vm.expectRevert(abi.encodeWithSignature("Unauthorized(address)", user));
