@@ -62,19 +62,19 @@ contract SharesManagerV1Tests {
         assert(sharesManager.balanceOfUnderlying(_user) == expectedBalance);
     }
 
-    function testBalanceOf(address _user1, address _user2) public {
-        assert(sharesManager.balanceOf(_user1) == 0);
-        SharesManagerPublicDeal(payable(address(sharesManager))).deal(_user1, 10 ether);
-        assert(sharesManager.balanceOf(_user1) == 10 ether);
+    function testBalanceOf(address _userOne, address _userTwo) public {
+        assert(sharesManager.balanceOf(_userOne) == 0);
+        SharesManagerPublicDeal(payable(address(sharesManager))).deal(_userOne, 10 ether);
+        assert(sharesManager.balanceOf(_userOne) == 10 ether);
 
         SharesManagerPublicDeal(payable(address(sharesManager))).setValidatorBalance(300 ether);
-        assert(sharesManager.balanceOf(_user1) == 10 ether);
+        assert(sharesManager.balanceOf(_userOne) == 10 ether);
 
-        assert(sharesManager.balanceOf(_user2) == 0 ether);
-        vm.startPrank(_user1);
-        sharesManager.transfer(_user2, 10 ether);
-        assert(sharesManager.balanceOf(_user2) == 10 ether);
-        assert(sharesManager.balanceOf(_user1) == 0 ether);
+        assert(sharesManager.balanceOf(_userTwo) == 0 ether);
+        vm.startPrank(_userOne);
+        sharesManager.transfer(_userTwo, 10 ether);
+        assert(sharesManager.balanceOf(_userTwo) == 10 ether);
+        assert(sharesManager.balanceOf(_userOne) == 0 ether);
     }
 
     function testSharesOf(address _user, address _anotherUser) public {
