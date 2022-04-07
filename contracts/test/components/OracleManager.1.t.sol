@@ -6,7 +6,7 @@ import "../Vm.sol";
 import "../../src/components/OracleManager.1.sol";
 import "../../src/libraries/Errors.sol";
 import "../../src/state/shared/AdministratorAddress.sol";
-import "../utils/User.sol";
+import "../utils/UserFactory.sol";
 
 contract OracleManagerV1ExposeInitializer is OracleManagerV1 {
     uint256 public lastReceived;

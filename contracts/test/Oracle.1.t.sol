@@ -8,7 +8,7 @@ import "../src/libraries/Errors.sol";
 import "../src/interfaces/IRiverOracleInput.sol";
 import "../src/Withdraw.1.sol";
 import "./utils/River.setup1.sol";
-import "./utils/User.sol";
+import "./utils/UserFactory.sol";
 
 contract RiverMock is IRiverOracleInput {
     event DebugReceivedBeaconData(uint256 _validatorCount, uint256 _validatorBalanceSum, bytes32 _roundId);

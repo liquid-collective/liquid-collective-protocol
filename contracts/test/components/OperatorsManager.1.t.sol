@@ -5,7 +5,7 @@ pragma solidity 0.8.10;
 import "../Vm.sol";
 import "../../src/components/OperatorsManager.1.sol";
 import "../../src/state/shared/AdministratorAddress.sol";
-import "../utils/User.sol";
+import "../utils/UserFactory.sol";
 
 contract OperatorsManagerInitializableV1 is OperatorsManagerV1 {
     function publicOperatorsManagerInitializeV1(address _admin) external {

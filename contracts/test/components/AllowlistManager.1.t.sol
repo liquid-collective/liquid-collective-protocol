@@ -6,7 +6,7 @@ import "../Vm.sol";
 import "../../src/components/AllowlistManager.1.sol";
 import "../../src/libraries/Errors.sol";
 import "../../src/libraries/LibOwnable.sol";
-import "../utils/User.sol";
+import "../utils/UserFactory.sol";
 
 contract AllowlistManagerV1ExposeInitializer is AllowlistManagerV1 {
     function publicAllowlistManagerInitializeV1(address _AllowlistorAddress) external {
