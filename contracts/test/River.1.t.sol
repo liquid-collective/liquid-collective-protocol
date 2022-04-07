@@ -153,8 +153,8 @@ contract RiverV1SetupOneTests {
         vm.startPrank(bob);
         river.deposit{value: 1000 ether}(address(0));
         vm.stopPrank();
-        assert(river.balanceOf(joe) == 100 ether);
-        assert(river.balanceOf(bob) == 1000 ether);
+        assert(river.balanceOfUnderlying(joe) == 100 ether);
+        assert(river.balanceOfUnderlying(bob) == 1000 ether);
         assert(river.getDepositedValidatorCount() == 0);
         assert(river.totalSupply() == 1100 ether);
 
@@ -170,29 +170,29 @@ contract RiverV1SetupOneTests {
         assert(river.getDepositedValidatorCount() == 34);
         assert(river.totalSupply() == 1100 ether);
         assert(address(river).balance == (1000 ether + 100 ether) - (32 ether * 34));
-        assert(river.balanceOf(joe) == 100 ether);
-        assert(river.balanceOf(bob) == 1000 ether);
+        assert(river.balanceOfUnderlying(joe) == 100 ether);
+        assert(river.balanceOfUnderlying(bob) == 1000 ether);
 
         vm.startPrank(oracle);
         river.setBeaconData(34, 33 ether * 34, bytes32(0));
         vm.stopPrank();
 
         assert(river.totalSupply() == 1100 ether - (34 * 32 ether) + (34 * 33 ether));
-        assert(river.balanceOf(joe) == 102936363636363636365);
-        assert(river.balanceOf(bob) == 1029363636363636363659);
-        assert(river.balanceOf(operatorOne) == 424999999999999987);
-        assert(river.balanceOf(operatorTwo) == 424999999999999987);
-        assert(river.balanceOf(treasury) == 850000000000000000);
+        assert(river.balanceOfUnderlying(joe) == 102936363636363636365);
+        assert(river.balanceOfUnderlying(bob) == 1029363636363636363659);
+        assert(river.balanceOfUnderlying(operatorOne) == 424999999999999987);
+        assert(river.balanceOfUnderlying(operatorTwo) == 424999999999999987);
+        assert(river.balanceOfUnderlying(treasury) == 850000000000000000);
 
         vm.startPrank(joe);
-        river.transfer(bob, 102936363636363636365);
+        river.transfer(bob, 100 ether);
         vm.stopPrank();
 
-        assert(river.balanceOf(joe) == 1);
-        assert(river.balanceOf(bob) == 1132300000000000000023);
-        assert(river.balanceOf(operatorOne) == 424999999999999987);
-        assert(river.balanceOf(operatorTwo) == 424999999999999987);
-        assert(river.balanceOf(treasury) == 850000000000000000);
+        assert(river.balanceOfUnderlying(joe) == 0);
+        assert(river.balanceOfUnderlying(bob) == 1132300000000000000024);
+        assert(river.balanceOfUnderlying(operatorOne) == 424999999999999987);
+        assert(river.balanceOfUnderlying(operatorTwo) == 424999999999999987);
+        assert(river.balanceOfUnderlying(treasury) == 850000000000000000);
 
         assert(
             river.totalShares() ==
@@ -221,8 +221,8 @@ contract RiverV1SetupOneTests {
         vm.startPrank(bob);
         river.deposit{value: 1000 ether}(address(0));
         vm.stopPrank();
-        assert(river.balanceOf(joe) == 100 ether);
-        assert(river.balanceOf(bob) == 1000 ether);
+        assert(river.balanceOfUnderlying(joe) == 100 ether);
+        assert(river.balanceOfUnderlying(bob) == 1000 ether);
         assert(river.getDepositedValidatorCount() == 0);
         assert(river.totalSupply() == 1100 ether);
 
@@ -238,29 +238,29 @@ contract RiverV1SetupOneTests {
         assert(river.getDepositedValidatorCount() == 34);
         assert(river.totalSupply() == 1100 ether);
         assert(address(river).balance == (1000 ether + 100 ether) - (32 ether * 34));
-        assert(river.balanceOf(joe) == 100 ether);
-        assert(river.balanceOf(bob) == 1000 ether);
+        assert(river.balanceOfUnderlying(joe) == 100 ether);
+        assert(river.balanceOfUnderlying(bob) == 1000 ether);
 
         vm.startPrank(oracle);
         river.setBeaconData(34, 33 ether * 34, bytes32(0));
         vm.stopPrank();
 
         assert(river.totalSupply() == 1100 ether - (34 * 32 ether) + (34 * 33 ether));
-        assert(river.balanceOf(joe) == 102781818181818181818);
-        assert(river.balanceOf(bob) == 1027818181818181818181);
-        assert(river.balanceOf(operatorOne) == 849999999999999999);
-        assert(river.balanceOf(operatorTwo) == 849999999999999999);
-        assert(river.balanceOf(treasury) == 1700000000000000000);
+        assert(river.balanceOfUnderlying(joe) == 102781818181818181818);
+        assert(river.balanceOfUnderlying(bob) == 1027818181818181818181);
+        assert(river.balanceOfUnderlying(operatorOne) == 849999999999999999);
+        assert(river.balanceOfUnderlying(operatorTwo) == 849999999999999999);
+        assert(river.balanceOfUnderlying(treasury) == 1700000000000000000);
 
         vm.startPrank(joe);
-        river.transfer(bob, 102781818181818181818);
+        river.transfer(bob, 100 ether);
         vm.stopPrank();
 
-        assert(river.balanceOf(joe) == 1);
-        assert(river.balanceOf(bob) == 1130599999999999999999);
-        assert(river.balanceOf(operatorOne) == 849999999999999999);
-        assert(river.balanceOf(operatorTwo) == 849999999999999999);
-        assert(river.balanceOf(treasury) == 1700000000000000000);
+        assert(river.balanceOfUnderlying(joe) == 0);
+        assert(river.balanceOfUnderlying(bob) == 1130600000000000000000);
+        assert(river.balanceOfUnderlying(operatorOne) == 849999999999999999);
+        assert(river.balanceOfUnderlying(operatorTwo) == 849999999999999999);
+        assert(river.balanceOfUnderlying(treasury) == 1700000000000000000);
 
         assert(
             river.totalShares() ==
@@ -289,8 +289,8 @@ contract RiverV1SetupOneTests {
         vm.startPrank(bob);
         river.deposit{value: 1000 ether}(address(0));
         vm.stopPrank();
-        assert(river.balanceOf(joe) == 100 ether);
-        assert(river.balanceOf(bob) == 1000 ether);
+        assert(river.balanceOfUnderlying(joe) == 100 ether);
+        assert(river.balanceOfUnderlying(bob) == 1000 ether);
         assert(river.getDepositedValidatorCount() == 0);
         assert(river.totalSupply() == 1100 ether);
 
@@ -307,29 +307,29 @@ contract RiverV1SetupOneTests {
         assert(river.getDepositedValidatorCount() == 34);
         assert(river.totalSupply() == 1100 ether);
         assert(address(river).balance == (1000 ether + 100 ether) - (32 ether * 34));
-        assert(river.balanceOf(joe) == 100 ether);
-        assert(river.balanceOf(bob) == 1000 ether);
+        assert(river.balanceOfUnderlying(joe) == 100 ether);
+        assert(river.balanceOfUnderlying(bob) == 1000 ether);
 
         vm.startPrank(oracle);
         river.setBeaconData(34, 33 ether * 34, bytes32(0));
         vm.stopPrank();
 
         assert(river.totalSupply() == 1100 ether - (34 * 32 ether) + (34 * 33 ether));
-        assert(river.balanceOf(joe) == 102936363636363636365);
-        assert(river.balanceOf(bob) == 1029363636363636363659);
-        assert(river.balanceOf(operatorOne) == 799999999999999976);
-        assert(river.balanceOf(operatorTwo) == 49999999999999998);
-        assert(river.balanceOf(treasury) == 850000000000000000);
+        assert(river.balanceOfUnderlying(joe) == 102936363636363636365);
+        assert(river.balanceOfUnderlying(bob) == 1029363636363636363659);
+        assert(river.balanceOfUnderlying(operatorOne) == 799999999999999976);
+        assert(river.balanceOfUnderlying(operatorTwo) == 49999999999999998);
+        assert(river.balanceOfUnderlying(treasury) == 850000000000000000);
 
         vm.startPrank(joe);
-        river.transfer(bob, 102936363636363636365);
+        river.transfer(bob, 100 ether);
         vm.stopPrank();
 
-        assert(river.balanceOf(joe) == 1);
-        assert(river.balanceOf(bob) == 1132300000000000000023);
-        assert(river.balanceOf(operatorOne) == 799999999999999976);
-        assert(river.balanceOf(operatorTwo) == 49999999999999998);
-        assert(river.balanceOf(treasury) == 850000000000000000);
+        assert(river.balanceOfUnderlying(joe) == 0);
+        assert(river.balanceOfUnderlying(bob) == 1132300000000000000024);
+        assert(river.balanceOfUnderlying(operatorOne) == 799999999999999976);
+        assert(river.balanceOfUnderlying(operatorTwo) == 49999999999999998);
+        assert(river.balanceOfUnderlying(treasury) == 850000000000000000);
 
         assert(
             river.totalShares() ==
@@ -360,8 +360,8 @@ contract RiverV1SetupOneTests {
         vm.startPrank(bob);
         river.deposit{value: 1000 ether}(address(0));
         vm.stopPrank();
-        assert(river.balanceOf(joe) == 100 ether);
-        assert(river.balanceOf(bob) == 1000 ether);
+        assert(river.balanceOfUnderlying(joe) == 100 ether);
+        assert(river.balanceOfUnderlying(bob) == 1000 ether);
         assert(river.getDepositedValidatorCount() == 0);
         assert(river.totalSupply() == 1100 ether);
 
@@ -381,29 +381,29 @@ contract RiverV1SetupOneTests {
         assert(river.getDepositedValidatorCount() == 30);
         assert(river.totalSupply() == 1100 ether);
         assert(address(river).balance == (1000 ether + 100 ether) - (32 ether * 30));
-        assert(river.balanceOf(joe) == 100 ether);
-        assert(river.balanceOf(bob) == 1000 ether);
+        assert(river.balanceOfUnderlying(joe) == 100 ether);
+        assert(river.balanceOfUnderlying(bob) == 1000 ether);
 
         vm.startPrank(oracle);
         river.setBeaconData(30, 33 ether * 30, bytes32(0));
         vm.stopPrank();
 
         assert(river.totalSupply() == 1100 ether - (30 * 32 ether) + (30 * 33 ether));
-        assert(river.balanceOf(joe) == 102590909090909090910);
-        assert(river.balanceOf(bob) == 1025909090909090909105);
-        assert(river.balanceOf(operatorOne) == 374999999999999991);
-        assert(river.balanceOf(operatorTwo) == river.balanceOf(operatorOne));
-        assert(river.balanceOf(treasury) == 750000000000000000);
+        assert(river.balanceOfUnderlying(joe) == 102590909090909090910);
+        assert(river.balanceOfUnderlying(bob) == 1025909090909090909105);
+        assert(river.balanceOfUnderlying(operatorOne) == 374999999999999991);
+        assert(river.balanceOfUnderlying(operatorTwo) == river.balanceOfUnderlying(operatorOne));
+        assert(river.balanceOfUnderlying(treasury) == 750000000000000000);
 
         vm.startPrank(joe);
-        river.transfer(bob, 102590909090909090910);
+        river.transfer(bob, 100 ether);
         vm.stopPrank();
 
-        assert(river.balanceOf(joe) == 1);
-        assert(river.balanceOf(bob) == 1128500000000000000014);
-        assert(river.balanceOf(operatorOne) == 374999999999999991);
-        assert(river.balanceOf(operatorTwo) == river.balanceOf(operatorOne));
-        assert(river.balanceOf(treasury) == 750000000000000000);
+        assert(river.balanceOfUnderlying(joe) == 0);
+        assert(river.balanceOfUnderlying(bob) == 1128500000000000000015);
+        assert(river.balanceOfUnderlying(operatorOne) == 374999999999999991);
+        assert(river.balanceOfUnderlying(operatorTwo) == river.balanceOfUnderlying(operatorOne));
+        assert(river.balanceOfUnderlying(treasury) == 750000000000000000);
 
         assert(
             river.totalShares() ==
@@ -440,8 +440,8 @@ contract RiverV1SetupOneTests {
         }
         river.deposit{value: bobBalance}(address(0));
         vm.stopPrank();
-        assert(river.balanceOf(joe) == joeBalance);
-        assert(river.balanceOf(bob) == bobBalance);
+        assert(river.balanceOfUnderlying(joe) == joeBalance);
+        assert(river.balanceOfUnderlying(bob) == bobBalance);
         assert(river.getDepositedValidatorCount() == 0);
         assert(river.totalSupply() == uint256(joeBalance) + uint256(bobBalance));
 
@@ -468,8 +468,8 @@ contract RiverV1SetupOneTests {
             assert(river.getDepositedValidatorCount() == realValidatorCount);
             assert(river.totalSupply() == uint256(joeBalance) + uint256(bobBalance));
             assert(address(river).balance == river.totalSupply() - (32 ether * realValidatorCount));
-            assert(river.balanceOf(joe) == joeBalance);
-            assert(river.balanceOf(bob) == bobBalance);
+            assert(river.balanceOfUnderlying(joe) == joeBalance);
+            assert(river.balanceOfUnderlying(bob) == bobBalance);
 
             vm.startPrank(oracle);
             river.setBeaconData(
