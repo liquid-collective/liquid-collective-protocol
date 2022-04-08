@@ -50,10 +50,11 @@ contract AllowlistManagerV1Tests {
         address user = uf._new(userSalt);
         vm.startPrank(user);
         assert(user != allower);
-        vm.expectRevert(abi.encodeWithSignature("Unauthorized(address)", user));
         address[] memory allowees = new address[](1);
         allowees[0] = user;
-        allowlistManager.allow(allowees, AllowlistHelper.batchAllowees(allowees.length));
+        bool[] memory statuses = AllowlistHelper.batchAllowees(allowees.length);
+        vm.expectRevert(abi.encodeWithSignature("Unauthorized(address)", user));
+        allowlistManager.allow(allowees, statuses);
     }
 
     function testSetAllowlistStatusMultipleSame(
@@ -120,7 +121,7 @@ contract AllowlistManagerV1Tests {
         statuses[0] = false;
         statuses[1] = true;
         vm.startPrank(allower);
-        vm.expectRevert("MismatchedAlloweeAndStatusCount()");
+        vm.expectRevert(abi.encodeWithSignature("MismatchedAlloweeAndStatusCount()"));
         allowlistManager.allow(allowees, statuses);
     }
 
