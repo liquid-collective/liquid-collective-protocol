@@ -65,6 +65,9 @@ contract RiverV1SetupOneTests {
     address internal bob = address(0x34b4424f81AF11f8B8c261b339dd27e1Da796f11);
     address internal joe = address(0xA7206d878c5c3871826DfdB42191c49B1D11F466);
 
+    uint256 internal constant DEPOSIT_MASK = 0x1;
+    uint256 internal constant TRANSFER_MASK = 0x1 << 1;
+
     function setUp() public {
         deposit = new DepositContractMock();
         withdraw = new WithdrawV1();
@@ -143,8 +146,8 @@ contract RiverV1SetupOneTests {
         vm.deal(bob, 1000 ether);
 
         vm.startPrank(admin);
-        river.allow(joe, true);
-        river.allow(bob, true);
+        river.allow(joe, DEPOSIT_MASK + TRANSFER_MASK);
+        river.allow(bob, DEPOSIT_MASK + TRANSFER_MASK);
         vm.stopPrank();
 
         vm.startPrank(joe);
@@ -210,8 +213,8 @@ contract RiverV1SetupOneTests {
         vm.deal(bob, 1000 ether);
 
         vm.startPrank(admin);
-        river.allow(joe, true);
-        river.allow(bob, true);
+        river.allow(joe, DEPOSIT_MASK + TRANSFER_MASK);
+        river.allow(bob, DEPOSIT_MASK + TRANSFER_MASK);
         river.setGlobalFee(10000);
         vm.stopPrank();
 
@@ -279,8 +282,8 @@ contract RiverV1SetupOneTests {
         vm.deal(bob, 1000 ether);
 
         vm.startPrank(admin);
-        river.allow(joe, true);
-        river.allow(bob, true);
+        river.allow(joe, DEPOSIT_MASK + TRANSFER_MASK);
+        river.allow(bob, DEPOSIT_MASK + TRANSFER_MASK);
         vm.stopPrank();
 
         vm.startPrank(joe);
@@ -347,8 +350,8 @@ contract RiverV1SetupOneTests {
         vm.deal(bob, 1000 ether);
 
         vm.startPrank(admin);
-        river.allow(joe, true);
-        river.allow(bob, true);
+        river.allow(joe, DEPOSIT_MASK + TRANSFER_MASK);
+        river.allow(bob, DEPOSIT_MASK + TRANSFER_MASK);
         (int256 _operatorOneIndex, ) = river.getOperatorDetails(operatorOneName);
         assert(_operatorOneIndex >= 0);
         uint256 operatorOneIndex = uint256(_operatorOneIndex);
@@ -424,8 +427,8 @@ contract RiverV1SetupOneTests {
         vm.deal(bob, bobBalance);
 
         vm.startPrank(admin);
-        river.allow(joe, true);
-        river.allow(bob, true);
+        river.allow(joe, DEPOSIT_MASK + TRANSFER_MASK);
+        river.allow(bob, DEPOSIT_MASK + TRANSFER_MASK);
         vm.stopPrank();
 
         vm.startPrank(joe);

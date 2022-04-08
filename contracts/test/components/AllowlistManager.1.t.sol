@@ -38,9 +38,9 @@ contract AllowlistManagerV1Tests {
     function testSetAllowlistStatus(uint256 userSalt) public {
         address user = uf._new(userSalt);
         vm.startPrank(allower);
-        assert(allowlistManager.isAllowed(user) == false);
-        allowlistManager.allow(user, true);
-        assert(allowlistManager.isAllowed(user) == true);
+        assert(allowlistManager.isAllowed(user, 0x1) == false);
+        allowlistManager.allow(user, 0x1);
+        assert(allowlistManager.isAllowed(user, 0x1) == true);
     }
 
     function testSetAllowlistStatusUnauthorized(uint256 userSalt) public {
@@ -48,7 +48,7 @@ contract AllowlistManagerV1Tests {
         vm.startPrank(user);
         assert(user != allower);
         vm.expectRevert(abi.encodeWithSignature("Unauthorized(address)", user));
-        allowlistManager.allow(user, true);
+        allowlistManager.allow(user, 0x1);
     }
 
     function testSetAllower(uint256 adminSalt, uint256 newAllowerSalt) public {

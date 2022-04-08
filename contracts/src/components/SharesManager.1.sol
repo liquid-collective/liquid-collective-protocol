@@ -54,7 +54,7 @@ abstract contract SharesManagerV1 is IERC20 {
         return SharesPerOwner.get(_owner);
     }
 
-    function transfer(address _to, uint256 _value) external allowed(msg.sender) allowed(_to) returns (bool success) {
+    function transfer(address _to, uint256 _value) external allowed(msg.sender) returns (bool success) {
         if (_value == 0) {
             revert NullTransfer();
         }
@@ -76,7 +76,7 @@ abstract contract SharesManagerV1 is IERC20 {
         address _from,
         address _to,
         uint256 _value
-    ) external allowed(_from) allowed(_to) returns (bool success) {
+    ) external allowed(_from) returns (bool success) {
         if (_value == 0) {
             revert NullTransfer();
         }

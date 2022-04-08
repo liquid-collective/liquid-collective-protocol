@@ -12,7 +12,7 @@ import "../libraries/LibOwnable.sol";
 /// @author SkillZ
 /// @notice This contract handles the allowlist of accounts allowed to own shares
 abstract contract AllowlistManagerV1 {
-    event ChangedAllowlistStatus(address indexed account, bool status);
+    event ChangedAllowlistStatus(address indexed account, uint256 status);
 
     /// @notice Prevents unauthorized calls
     modifier onlyAdmin() virtual {
@@ -42,7 +42,7 @@ abstract contract AllowlistManagerV1 {
     /// @notice Sets the allowlisting status for an account
     /// @param _account Account status to edit
     /// @param _status Allowlist status
-    function allow(address _account, bool _status) external {
+    function allow(address _account, uint256 _status) external {
         if (msg.sender != AllowerAddress.get() && msg.sender != AdministratorAddress.get()) {
             revert Errors.Unauthorized(msg.sender);
         }
@@ -52,11 +52,11 @@ abstract contract AllowlistManagerV1 {
         emit ChangedAllowlistStatus(_account, _status);
     }
 
-    function _isAllowed(address _account) internal view returns (bool) {
-        return Allowlist.get(_account);
+    function _isAllowed(address _account, uint256 _mask) internal view returns (bool) {
+        return Allowlist.get(_account) & _mask == _mask;
     }
 
-    function isAllowed(address _account) external view returns (bool) {
-        return _isAllowed(_account);
+    function isAllowed(address _account, uint256 _mask) external view returns (bool) {
+        return _isAllowed(_account, _mask);
     }
 }
