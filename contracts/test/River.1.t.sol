@@ -7,6 +7,7 @@ import "../src/River.1.sol";
 import "../src/libraries/Errors.sol";
 import "../src/interfaces/IDepositContract.sol";
 import "../src/Withdraw.1.sol";
+import "./utils/AllowlistHelper.sol";
 import "./utils/River.setup1.sol";
 
 contract DepositContractMock is IDepositContract {
@@ -143,8 +144,10 @@ contract RiverV1SetupOneTests {
         vm.deal(bob, 1000 ether);
 
         vm.startPrank(admin);
-        river.allow(joe, true);
-        river.allow(bob, true);
+        address[] memory allowees = new address[](2);
+        allowees[0] = joe;
+        allowees[1] = bob;
+        river.allow(allowees, AllowlistHelper.batchAllowees(allowees.length));
         vm.stopPrank();
 
         vm.startPrank(joe);
@@ -210,8 +213,10 @@ contract RiverV1SetupOneTests {
         vm.deal(bob, 1000 ether);
 
         vm.startPrank(admin);
-        river.allow(joe, true);
-        river.allow(bob, true);
+        address[] memory allowees = new address[](2);
+        allowees[0] = joe;
+        allowees[1] = bob;
+        river.allow(allowees, AllowlistHelper.batchAllowees(allowees.length));
         river.setGlobalFee(10000);
         vm.stopPrank();
 
@@ -279,8 +284,10 @@ contract RiverV1SetupOneTests {
         vm.deal(bob, 1000 ether);
 
         vm.startPrank(admin);
-        river.allow(joe, true);
-        river.allow(bob, true);
+        address[] memory allowees = new address[](2);
+        allowees[0] = joe;
+        allowees[1] = bob;
+        river.allow(allowees, AllowlistHelper.batchAllowees(allowees.length));
         vm.stopPrank();
 
         vm.startPrank(joe);
@@ -347,8 +354,10 @@ contract RiverV1SetupOneTests {
         vm.deal(bob, 1000 ether);
 
         vm.startPrank(admin);
-        river.allow(joe, true);
-        river.allow(bob, true);
+        address[] memory allowees = new address[](2);
+        allowees[0] = joe;
+        allowees[1] = bob;
+        river.allow(allowees, AllowlistHelper.batchAllowees(allowees.length));
         (int256 _operatorOneIndex, ) = river.getOperatorDetails(operatorOneName);
         assert(_operatorOneIndex >= 0);
         uint256 operatorOneIndex = uint256(_operatorOneIndex);
@@ -424,8 +433,10 @@ contract RiverV1SetupOneTests {
         vm.deal(bob, bobBalance);
 
         vm.startPrank(admin);
-        river.allow(joe, true);
-        river.allow(bob, true);
+        address[] memory allowees = new address[](2);
+        allowees[0] = joe;
+        allowees[1] = bob;
+        river.allow(allowees, AllowlistHelper.batchAllowees(allowees.length));
         vm.stopPrank();
 
         vm.startPrank(joe);

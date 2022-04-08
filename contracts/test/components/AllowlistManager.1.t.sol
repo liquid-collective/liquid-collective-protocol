@@ -6,6 +6,7 @@ import "../Vm.sol";
 import "../../src/components/AllowlistManager.1.sol";
 import "../../src/libraries/Errors.sol";
 import "../../src/libraries/LibOwnable.sol";
+import "../utils/AllowlistHelper.sol";
 import "../utils/UserFactory.sol";
 
 contract AllowlistManagerV1ExposeInitializer is AllowlistManagerV1 {
@@ -39,7 +40,9 @@ contract AllowlistManagerV1Tests {
         address user = uf._new(userSalt);
         vm.startPrank(allower);
         assert(allowlistManager.isAllowed(user) == false);
-        allowlistManager.allow(user, true);
+        address[] memory allowees = new address[](1);
+        allowees[0] = user;
+        allowlistManager.allow(allowees, AllowlistHelper.batchAllowees(allowees.length));
         assert(allowlistManager.isAllowed(user) == true);
     }
 
@@ -47,8 +50,79 @@ contract AllowlistManagerV1Tests {
         address user = uf._new(userSalt);
         vm.startPrank(user);
         assert(user != allower);
+        address[] memory allowees = new address[](1);
+        allowees[0] = user;
+        bool[] memory statuses = AllowlistHelper.batchAllowees(allowees.length);
         vm.expectRevert(abi.encodeWithSignature("Unauthorized(address)", user));
-        allowlistManager.allow(user, true);
+        allowlistManager.allow(allowees, statuses);
+    }
+
+    function testSetAllowlistStatusMultipleSame(
+        uint256 userOneSalt,
+        uint256 userTwoSalt,
+        uint256 userThreeSalt
+    ) public {
+        address userOne = uf._new(userOneSalt);
+        address userTwo = uf._new(userTwoSalt);
+        address userThree = uf._new(userThreeSalt);
+        address[] memory allowees = new address[](3);
+        allowees[0] = userOne;
+        allowees[1] = userTwo;
+        allowees[2] = userThree;
+        vm.startPrank(allower);
+        assert(allowlistManager.isAllowed(userOne) == false);
+        assert(allowlistManager.isAllowed(userTwo) == false);
+        assert(allowlistManager.isAllowed(userThree) == false);
+        allowlistManager.allow(allowees, AllowlistHelper.batchAllowees(allowees.length));
+        assert(allowlistManager.isAllowed(userOne) == true);
+        assert(allowlistManager.isAllowed(userTwo) == true);
+        assert(allowlistManager.isAllowed(userThree) == true);
+    }
+
+    function testSetAllowlistStatusMultipleDifferent(
+        uint256 userOneSalt,
+        uint256 userTwoSalt,
+        uint256 userThreeSalt
+    ) public {
+        address userOne = uf._new(userOneSalt);
+        address userTwo = uf._new(userTwoSalt);
+        address userThree = uf._new(userThreeSalt);
+        address[] memory allowees = new address[](3);
+        allowees[0] = userOne;
+        allowees[1] = userTwo;
+        allowees[2] = userThree;
+        bool[] memory statuses = new bool[](3);
+        statuses[0] = false;
+        statuses[1] = true;
+        statuses[2] = false;
+        vm.startPrank(allower);
+        assert(allowlistManager.isAllowed(userOne) == false);
+        assert(allowlistManager.isAllowed(userTwo) == false);
+        assert(allowlistManager.isAllowed(userThree) == false);
+        allowlistManager.allow(allowees, statuses);
+        assert(allowlistManager.isAllowed(userOne) == false);
+        assert(allowlistManager.isAllowed(userTwo) == true);
+        assert(allowlistManager.isAllowed(userThree) == false);
+    }
+
+    function testSetAllowlistRevertForMismatch(
+        uint256 userOneSalt,
+        uint256 userTwoSalt,
+        uint256 userThreeSalt
+    ) public {
+        address userOne = uf._new(userOneSalt);
+        address userTwo = uf._new(userTwoSalt);
+        address userThree = uf._new(userThreeSalt);
+        address[] memory allowees = new address[](3);
+        allowees[0] = userOne;
+        allowees[1] = userTwo;
+        allowees[2] = userThree;
+        bool[] memory statuses = new bool[](2);
+        statuses[0] = false;
+        statuses[1] = true;
+        vm.startPrank(allower);
+        vm.expectRevert(abi.encodeWithSignature("MismatchedAlloweeAndStatusCount()"));
+        allowlistManager.allow(allowees, statuses);
     }
 
     function testSetAllower(uint256 adminSalt, uint256 newAllowerSalt) public {
