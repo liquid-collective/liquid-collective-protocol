@@ -43,6 +43,17 @@ contract AllowlistManagerV1Tests {
         assert(allowlistManager.isAllowed(user, 0x1) == true);
     }
 
+    function testSetAllowlistStatusComplicatedMask(uint256 userSalt) public {
+        address user = uf._new(userSalt);
+        vm.startPrank(allower);
+        assert(allowlistManager.isAllowed(user, 0x1 + (0x1 << 1)) == false);
+        allowlistManager.allow(user, 0x1 + (0x1 << 1));
+        assert(allowlistManager.isAllowed(user, 0x1 + (0x1 << 1)) == true);
+        assert(allowlistManager.isAllowed(user, 0x1) == true);
+        assert(allowlistManager.isAllowed(user, 0x1 << 1) == true);
+        assert(allowlistManager.isAllowed(user, 0x1 << 2) == false);
+    }
+
     function testSetAllowlistStatusUnauthorized(uint256 userSalt) public {
         address user = uf._new(userSalt);
         vm.startPrank(user);
