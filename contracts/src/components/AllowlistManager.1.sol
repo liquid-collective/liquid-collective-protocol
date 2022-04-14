@@ -12,7 +12,9 @@ import "../libraries/LibOwnable.sol";
 /// @author SkillZ
 /// @notice This contract handles the allowlist of accounts allowed to own shares
 abstract contract AllowlistManagerV1 {
-    event ChangedAllowlistStatus(address indexed account, uint256 status);
+    error InvalidAlloweeCount();
+    error MismatchedAlloweeAndStatusCount();
+    event ChangedAllowlistStatuses(address[] indexed accounts, uint256[] statuses);
 
     /// @notice Prevents unauthorized calls
     modifier onlyAdmin() virtual {
@@ -39,17 +41,30 @@ abstract contract AllowlistManagerV1 {
         return AllowerAddress.get();
     }
 
-    /// @notice Sets the allowlisting status for an account
-    /// @param _account Account status to edit
-    /// @param _status Allowlist status
-    function allow(address _account, uint256 _status) external {
+    /// @notice Sets the allowlisting status for one or more accounts
+    /// @param _accounts Accounts with statuses to edit
+    /// @param _statuses Allowlist statuses for each account, in the same order as _accounts
+    function allow(address[] calldata _accounts, uint256[] calldata _statuses) external {
         if (msg.sender != AllowerAddress.get() && msg.sender != AdministratorAddress.get()) {
             revert Errors.Unauthorized(msg.sender);
         }
 
-        Allowlist.set(_account, _status);
+        if (_accounts.length == 0) {
+            revert InvalidAlloweeCount();
+        }
 
-        emit ChangedAllowlistStatus(_account, _status);
+        if (_accounts.length != _statuses.length) {
+            revert MismatchedAlloweeAndStatusCount();
+        }
+
+        for (uint256 i = 0; i < _accounts.length; ) {
+            Allowlist.set(_accounts[i], _statuses[i]);
+            unchecked {
+                ++i;
+            }
+        }
+
+        emit ChangedAllowlistStatuses(_accounts, _statuses);
     }
 
     function _isAllowed(address _account, uint256 _mask) internal view returns (bool) {

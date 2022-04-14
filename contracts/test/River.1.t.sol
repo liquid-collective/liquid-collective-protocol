@@ -7,6 +7,7 @@ import "../src/River.1.sol";
 import "../src/libraries/Errors.sol";
 import "../src/interfaces/IDepositContract.sol";
 import "../src/Withdraw.1.sol";
+import "./utils/AllowlistHelper.sol";
 import "./utils/River.setup1.sol";
 
 contract DepositContractMock is IDepositContract {
@@ -132,11 +133,20 @@ contract RiverV1SetupOneTests {
         vm.stopPrank();
     }
 
-    function testUnauthorizedDeposit() public {
+    function _allow(address _who, uint256 _mask) internal {
+        address[] memory allowees = new address[](1);
+        allowees[0] = _who;
+        uint256[] memory statuses = new uint256[](1);
+        statuses[0] = _mask;
+
         vm.startPrank(admin);
-        river.allow(joe, TRANSFER_MASK);
+        river.allow(allowees, statuses);
         vm.stopPrank();
+    }
+
+    function testUnauthorizedDeposit() public {
         vm.deal(joe, 100 ether);
+        _allow(joe, TRANSFER_MASK);
 
         vm.startPrank(joe);
         vm.expectRevert(abi.encodeWithSignature("Unauthorized(address)", joe));
@@ -148,10 +158,8 @@ contract RiverV1SetupOneTests {
         vm.deal(joe, 100 ether);
         vm.deal(bob, 1000 ether);
 
-        vm.startPrank(admin);
-        river.allow(joe, DEPOSIT_MASK + TRANSFER_MASK);
-        river.allow(bob, DEPOSIT_MASK);
-        vm.stopPrank();
+        _allow(joe, DEPOSIT_MASK + TRANSFER_MASK);
+        _allow(bob, DEPOSIT_MASK);
 
         vm.startPrank(joe);
         river.deposit{value: 100 ether}(address(0));
@@ -215,10 +223,8 @@ contract RiverV1SetupOneTests {
         vm.deal(joe, 100 ether);
         vm.deal(bob, 1000 ether);
 
-        vm.startPrank(admin);
-        river.allow(joe, DEPOSIT_MASK + TRANSFER_MASK);
-        river.allow(bob, DEPOSIT_MASK + TRANSFER_MASK);
-        vm.stopPrank();
+        _allow(joe, DEPOSIT_MASK + TRANSFER_MASK);
+        _allow(bob, DEPOSIT_MASK + TRANSFER_MASK);
 
         vm.startPrank(joe);
         river.deposit{value: 100 ether}(address(0));
@@ -282,9 +288,10 @@ contract RiverV1SetupOneTests {
         vm.deal(joe, 100 ether);
         vm.deal(bob, 1000 ether);
 
+        _allow(joe, DEPOSIT_MASK + TRANSFER_MASK);
+        _allow(bob, DEPOSIT_MASK + TRANSFER_MASK);
+
         vm.startPrank(admin);
-        river.allow(joe, DEPOSIT_MASK + TRANSFER_MASK);
-        river.allow(bob, DEPOSIT_MASK + TRANSFER_MASK);
         river.setGlobalFee(10000);
         vm.stopPrank();
 
@@ -351,10 +358,8 @@ contract RiverV1SetupOneTests {
         vm.deal(joe, 100 ether);
         vm.deal(bob, 1000 ether);
 
-        vm.startPrank(admin);
-        river.allow(joe, DEPOSIT_MASK + TRANSFER_MASK);
-        river.allow(bob, DEPOSIT_MASK + TRANSFER_MASK);
-        vm.stopPrank();
+        _allow(joe, DEPOSIT_MASK + TRANSFER_MASK);
+        _allow(bob, DEPOSIT_MASK + TRANSFER_MASK);
 
         vm.startPrank(joe);
         river.deposit{value: 100 ether}(address(0));
@@ -419,9 +424,10 @@ contract RiverV1SetupOneTests {
         vm.deal(joe, 100 ether);
         vm.deal(bob, 1000 ether);
 
+        _allow(joe, DEPOSIT_MASK + TRANSFER_MASK);
+        _allow(bob, DEPOSIT_MASK + TRANSFER_MASK);
+
         vm.startPrank(admin);
-        river.allow(joe, DEPOSIT_MASK + TRANSFER_MASK);
-        river.allow(bob, DEPOSIT_MASK + TRANSFER_MASK);
         (int256 _operatorOneIndex, ) = river.getOperatorDetails(operatorOneName);
         assert(_operatorOneIndex >= 0);
         uint256 operatorOneIndex = uint256(_operatorOneIndex);
@@ -496,10 +502,8 @@ contract RiverV1SetupOneTests {
         vm.deal(joe, joeBalance);
         vm.deal(bob, bobBalance);
 
-        vm.startPrank(admin);
-        river.allow(joe, DEPOSIT_MASK + TRANSFER_MASK);
-        river.allow(bob, DEPOSIT_MASK + TRANSFER_MASK);
-        vm.stopPrank();
+        _allow(joe, DEPOSIT_MASK + TRANSFER_MASK);
+        _allow(bob, DEPOSIT_MASK + TRANSFER_MASK);
 
         vm.startPrank(joe);
         if (joeBalance == 0) {
