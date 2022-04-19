@@ -88,11 +88,14 @@ contract RiverV1 is
         return LibOwnable._getAdmin();
     }
 
+    uint256 internal constant DEPOSIT_MASK = 0x1;
+    uint256 internal constant TRANSFER_MASK = 0x1 << 1;
+
     /// @notice Handler called whenever a user deposits ETH to the system. Mints the adequate amount of shares.
     /// @param _depositor User address that made the deposit
     /// @param _amount Amount of ETH deposited
     function _onDeposit(address _depositor, uint256 _amount) internal override {
-        if (AllowlistManagerV1._isAllowed(_depositor) == false) {
+        if (AllowlistManagerV1._isAllowed(_depositor, DEPOSIT_MASK) == false) {
             revert Errors.Unauthorized(_depositor);
         }
         SharesManagerV1._mintShares(_depositor, _amount);
@@ -101,7 +104,7 @@ contract RiverV1 is
     /// @notice Handler called whenever an allowlist check is made for an address. Asks the Allowlist Manager component.
     /// @param _account Address to verify
     function _isAccountAllowed(address _account) internal view override returns (bool) {
-        return AllowlistManagerV1._isAllowed(_account);
+        return AllowlistManagerV1._isAllowed(_account, TRANSFER_MASK);
     }
 
     /// @notice Handler called whenever a deposit to the consensus layer is made. Should retrieve _requestedAmount or lower keys

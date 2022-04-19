@@ -14,8 +14,7 @@ import "../libraries/LibOwnable.sol";
 abstract contract AllowlistManagerV1 {
     error InvalidAlloweeCount();
     error MismatchedAlloweeAndStatusCount();
-
-    event ChangedAllowlistStatuses(address[] indexed accounts, bool[] statuses);
+    event ChangedAllowlistStatuses(address[] indexed accounts, uint256[] statuses);
 
     /// @notice Prevents unauthorized calls
     modifier onlyAdmin() virtual {
@@ -45,7 +44,7 @@ abstract contract AllowlistManagerV1 {
     /// @notice Sets the allowlisting status for one or more accounts
     /// @param _accounts Accounts with statuses to edit
     /// @param _statuses Allowlist statuses for each account, in the same order as _accounts
-    function allow(address[] calldata _accounts, bool[] calldata _statuses) external {
+    function allow(address[] calldata _accounts, uint256[] calldata _statuses) external {
         if (msg.sender != AllowerAddress.get() && msg.sender != AdministratorAddress.get()) {
             revert Errors.Unauthorized(msg.sender);
         }
@@ -68,11 +67,11 @@ abstract contract AllowlistManagerV1 {
         emit ChangedAllowlistStatuses(_accounts, _statuses);
     }
 
-    function _isAllowed(address _account) internal view returns (bool) {
-        return Allowlist.get(_account);
+    function _isAllowed(address _account, uint256 _mask) internal view returns (bool) {
+        return Allowlist.get(_account) & _mask == _mask;
     }
 
-    function isAllowed(address _account) external view returns (bool) {
-        return _isAllowed(_account);
+    function isAllowed(address _account, uint256 _mask) external view returns (bool) {
+        return _isAllowed(_account, _mask);
     }
 }

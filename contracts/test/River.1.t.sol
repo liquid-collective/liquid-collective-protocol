@@ -66,6 +66,9 @@ contract RiverV1SetupOneTests {
     address internal bob = address(0x34b4424f81AF11f8B8c261b339dd27e1Da796f11);
     address internal joe = address(0xA7206d878c5c3871826DfdB42191c49B1D11F466);
 
+    uint256 internal constant DEPOSIT_MASK = 0x1;
+    uint256 internal constant TRANSFER_MASK = 0x1 << 1;
+
     function setUp() public {
         deposit = new DepositContractMock();
         withdraw = new WithdrawV1();
@@ -130,8 +133,20 @@ contract RiverV1SetupOneTests {
         vm.stopPrank();
     }
 
+    function _allow(address _who, uint256 _mask) internal {
+        address[] memory allowees = new address[](1);
+        allowees[0] = _who;
+        uint256[] memory statuses = new uint256[](1);
+        statuses[0] = _mask;
+
+        vm.startPrank(admin);
+        river.allow(allowees, statuses);
+        vm.stopPrank();
+    }
+
     function testUnauthorizedDeposit() public {
         vm.deal(joe, 100 ether);
+        _allow(joe, TRANSFER_MASK);
 
         vm.startPrank(joe);
         vm.expectRevert(abi.encodeWithSignature("Unauthorized(address)", joe));
@@ -143,12 +158,124 @@ contract RiverV1SetupOneTests {
         vm.deal(joe, 100 ether);
         vm.deal(bob, 1000 ether);
 
-        vm.startPrank(admin);
-        address[] memory allowees = new address[](2);
-        allowees[0] = joe;
-        allowees[1] = bob;
-        river.allow(allowees, AllowlistHelper.batchAllowees(allowees.length));
+        _allow(joe, DEPOSIT_MASK + TRANSFER_MASK);
+        _allow(bob, DEPOSIT_MASK);
+
+        vm.startPrank(joe);
+        river.deposit{value: 100 ether}(address(0));
         vm.stopPrank();
+        vm.startPrank(bob);
+        river.deposit{value: 1000 ether}(address(0));
+        vm.stopPrank();
+        assert(river.balanceOf(joe) == 100 ether);
+        assert(river.balanceOf(bob) == 1000 ether);
+        assert(river.getDepositedValidatorCount() == 0);
+        assert(river.totalSupply() == 1100 ether);
+
+        river.depositToConsensusLayer(17);
+        river.depositToConsensusLayer(17);
+
+        Operators.Operator memory op1 = river.getOperatorByName(operatorOneName);
+        Operators.Operator memory op2 = river.getOperatorByName(operatorTwoName);
+
+        assert(op1.funded == 17);
+        assert(op2.funded == 17);
+
+        assert(river.getDepositedValidatorCount() == 34);
+        assert(river.totalSupply() == 1100 ether);
+        assert(address(river).balance == (1000 ether + 100 ether) - (32 ether * 34));
+        assert(river.balanceOf(joe) == 100 ether);
+        assert(river.balanceOf(bob) == 1000 ether);
+
+        vm.startPrank(oracle);
+        river.setBeaconData(34, 33 ether * 34, bytes32(0));
+        vm.stopPrank();
+
+        assert(river.totalSupply() == 1100 ether - (34 * 32 ether) + (34 * 33 ether));
+        assert(river.balanceOf(joe) == 102936363636363636365);
+        assert(river.balanceOf(bob) == 1029363636363636363659);
+        assert(river.balanceOf(operatorOne) == 424999999999999987);
+        assert(river.balanceOf(operatorTwo) == 424999999999999987);
+        assert(river.balanceOf(treasury) == 850000000000000000);
+
+        vm.startPrank(joe);
+        river.transfer(bob, 102936363636363636365);
+        vm.stopPrank();
+
+        assert(river.balanceOf(joe) == 1);
+        assert(river.balanceOf(bob) == 1132300000000000000023);
+        assert(river.balanceOf(operatorOne) == 424999999999999987);
+        assert(river.balanceOf(operatorTwo) == 424999999999999987);
+        assert(river.balanceOf(treasury) == 850000000000000000);
+
+        assert(
+            river.totalShares() ==
+                river.sharesOf(joe) +
+                    river.sharesOf(bob) +
+                    river.sharesOf(operatorOne) +
+                    river.sharesOf(operatorTwo) +
+                    river.sharesOf(treasury)
+        );
+    }
+
+    // Testing regular parameters
+    function testUserNoTransferRights() public {
+        vm.deal(joe, 100 ether);
+        vm.deal(bob, 1000 ether);
+
+        _allow(joe, DEPOSIT_MASK);
+        _allow(bob, DEPOSIT_MASK + TRANSFER_MASK);
+
+        vm.startPrank(joe);
+        river.deposit{value: 100 ether}(address(0));
+        vm.stopPrank();
+        vm.startPrank(bob);
+        river.deposit{value: 1000 ether}(address(0));
+        vm.stopPrank();
+        assert(river.balanceOf(joe) == 100 ether);
+        assert(river.balanceOf(bob) == 1000 ether);
+        assert(river.getDepositedValidatorCount() == 0);
+        assert(river.totalSupply() == 1100 ether);
+
+        river.depositToConsensusLayer(17);
+        river.depositToConsensusLayer(17);
+
+        Operators.Operator memory op1 = river.getOperatorByName(operatorOneName);
+        Operators.Operator memory op2 = river.getOperatorByName(operatorTwoName);
+
+        assert(op1.funded == 17);
+        assert(op2.funded == 17);
+
+        assert(river.getDepositedValidatorCount() == 34);
+        assert(river.totalSupply() == 1100 ether);
+        assert(address(river).balance == (1000 ether + 100 ether) - (32 ether * 34));
+        assert(river.balanceOf(joe) == 100 ether);
+        assert(river.balanceOf(bob) == 1000 ether);
+
+        vm.startPrank(oracle);
+        river.setBeaconData(34, 33 ether * 34, bytes32(0));
+        vm.stopPrank();
+
+        assert(river.totalSupply() == 1100 ether - (34 * 32 ether) + (34 * 33 ether));
+        assert(river.balanceOf(joe) == 102936363636363636365);
+        assert(river.balanceOf(bob) == 1029363636363636363659);
+        assert(river.balanceOf(operatorOne) == 424999999999999987);
+        assert(river.balanceOf(operatorTwo) == 424999999999999987);
+        assert(river.balanceOf(treasury) == 850000000000000000);
+
+        vm.startPrank(joe);
+        vm.expectRevert(abi.encodeWithSignature("Unauthorized(address)", joe));
+        river.transfer(bob, 102936363636363636365);
+        vm.stopPrank();
+    }
+
+    // Testing regular parameters
+    function testUserDepositsFullAllowance() public {
+        vm.deal(joe, 100 ether);
+        vm.deal(bob, 1000 ether);
+
+        _allow(joe, DEPOSIT_MASK + TRANSFER_MASK);
+        _allow(bob, DEPOSIT_MASK + TRANSFER_MASK);
 
         vm.startPrank(joe);
         river.deposit{value: 100 ether}(address(0));
@@ -212,11 +339,10 @@ contract RiverV1SetupOneTests {
         vm.deal(joe, 100 ether);
         vm.deal(bob, 1000 ether);
 
+        _allow(joe, DEPOSIT_MASK + TRANSFER_MASK);
+        _allow(bob, DEPOSIT_MASK + TRANSFER_MASK);
+
         vm.startPrank(admin);
-        address[] memory allowees = new address[](2);
-        allowees[0] = joe;
-        allowees[1] = bob;
-        river.allow(allowees, AllowlistHelper.batchAllowees(allowees.length));
         river.setGlobalFee(10000);
         vm.stopPrank();
 
@@ -283,12 +409,8 @@ contract RiverV1SetupOneTests {
         vm.deal(joe, 100 ether);
         vm.deal(bob, 1000 ether);
 
-        vm.startPrank(admin);
-        address[] memory allowees = new address[](2);
-        allowees[0] = joe;
-        allowees[1] = bob;
-        river.allow(allowees, AllowlistHelper.batchAllowees(allowees.length));
-        vm.stopPrank();
+        _allow(joe, DEPOSIT_MASK + TRANSFER_MASK);
+        _allow(bob, DEPOSIT_MASK + TRANSFER_MASK);
 
         vm.startPrank(joe);
         river.deposit{value: 100 ether}(address(0));
@@ -353,11 +475,10 @@ contract RiverV1SetupOneTests {
         vm.deal(joe, 100 ether);
         vm.deal(bob, 1000 ether);
 
+        _allow(joe, DEPOSIT_MASK + TRANSFER_MASK);
+        _allow(bob, DEPOSIT_MASK + TRANSFER_MASK);
+
         vm.startPrank(admin);
-        address[] memory allowees = new address[](2);
-        allowees[0] = joe;
-        allowees[1] = bob;
-        river.allow(allowees, AllowlistHelper.batchAllowees(allowees.length));
         (int256 _operatorOneIndex, ) = river.getOperatorDetails(operatorOneName);
         assert(_operatorOneIndex >= 0);
         uint256 operatorOneIndex = uint256(_operatorOneIndex);
@@ -432,12 +553,8 @@ contract RiverV1SetupOneTests {
         vm.deal(joe, joeBalance);
         vm.deal(bob, bobBalance);
 
-        vm.startPrank(admin);
-        address[] memory allowees = new address[](2);
-        allowees[0] = joe;
-        allowees[1] = bob;
-        river.allow(allowees, AllowlistHelper.batchAllowees(allowees.length));
-        vm.stopPrank();
+        _allow(joe, DEPOSIT_MASK + TRANSFER_MASK);
+        _allow(bob, DEPOSIT_MASK + TRANSFER_MASK);
 
         vm.startPrank(joe);
         if (joeBalance == 0) {
