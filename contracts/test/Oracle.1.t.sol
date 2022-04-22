@@ -73,6 +73,7 @@ contract OracleV1Tests {
         oracle.initOracleV1(
             address(oracleInput),
             admin,
+            admin,
             EPOCHS_PER_FRAME,
             SLOTS_PER_EPOCH,
             SECONDS_PER_SLOT,

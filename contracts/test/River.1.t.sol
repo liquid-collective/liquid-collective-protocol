@@ -74,7 +74,7 @@ contract RiverV1SetupOneTests {
         withdraw = new WithdrawV1();
         bytes32 withdrawalCredentials = withdraw.getCredentials();
         river = new RiverV1();
-        river.initRiverV1(address(deposit), withdrawalCredentials, admin, allower, treasury, 5000, 50000);
+        river.initRiverV1(address(deposit), withdrawalCredentials, admin, admin, allower, treasury, 5000, 50000);
         vm.startPrank(admin);
         river.setOracle(oracle);
 
@@ -109,7 +109,7 @@ contract RiverV1SetupOneTests {
         bytes32 withdrawalCredentials = withdraw.getCredentials();
         vm.startPrank(admin);
         vm.expectRevert(abi.encodeWithSignature("InvalidInitialization(uint256,uint256)", 0, 1));
-        river.initRiverV1(address(deposit), withdrawalCredentials, admin, allower, treasury, 5000, 50000);
+        river.initRiverV1(address(deposit), withdrawalCredentials, admin, admin, allower, treasury, 5000, 50000);
         vm.stopPrank();
     }
 

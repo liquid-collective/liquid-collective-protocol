@@ -10,11 +10,13 @@ import "../state/river/DepositContractAddress.sol";
 import "../state/river/WithdrawalCredentials.sol";
 import "../state/river/DepositedValidatorCount.sol";
 
+import "./FunctionPermissionsManager.1.sol";
+
 /// @title Deposit Manager (v1)
 /// @author SkillZ
 /// @notice This contract handles the interactions with the official deposit contract, funding all validators
 /// @dev _onValidatorKeyRequest must be overriden.
-abstract contract DepositManagerV1 {
+abstract contract DepositManagerV1 is FunctionPermissionsManagerV1 {
     error NotEnoughFunds();
     error InconsistentPublicKeys();
     error InconsistentSignatures();
@@ -52,6 +54,7 @@ abstract contract DepositManagerV1 {
     /// @notice Deposits current balance to the Consensus Layer by batches of 32 ETH
     /// @param _maxCount The maximum amount of validator keys to fund
     function depositToConsensusLayer(uint256 _maxCount) external {
+        checkPermissions(this.depositToConsensusLayer.selector);
         uint256 validatorsToDeposit = Uint256Lib.min(address(this).balance / DEPOSIT_SIZE, _maxCount);
 
         if (validatorsToDeposit == 0) {

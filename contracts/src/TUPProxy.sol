@@ -12,25 +12,40 @@ contract TUPProxy is TransparentUpgradeableProxy {
 
     error CallWhenPaused();
 
+    address public constant alluvium;
+
+    // admin_ here should be the DAO, which is confusing because in other places we call
+    // Alluvium the admin and the DAO the governor
     constructor(
         address _logic,
         address admin_,
-        bytes memory _data
-    ) payable TransparentUpgradeableProxy(_logic, admin_, _data) {}
+        bytes memory _data,
+        address alluvium_
+    ) payable TransparentUpgradeableProxy(_logic, admin_, _data) {
+        alluvium = alluvium_;
+    }
+
+    modifier ifAdminOrAlluvium() {
+        if (msg.sender == _getAdmin() || msg.sender == alluvium) {
+            _;
+        } else {
+            _fallback();
+        }
+    }
 
     /// @dev Retrieves Paused state
     /// @return Paused state
-    function isPaused() external ifAdmin returns (bool) {
+    function isPaused() external ifAdminOrAlluvium returns (bool) {
         return StorageSlot.getBooleanSlot(_PAUSE_SLOT).value;
     }
 
     /// @dev Pauses system
-    function pause() external ifAdmin {
+    function pause() external ifAdminOrAlluvium {
         StorageSlot.getBooleanSlot(_PAUSE_SLOT).value = true;
     }
 
     /// @dev Unpauses system
-    function unpause() external ifAdmin {
+    function unpause() external ifAdminOrAlluvium {
         StorageSlot.getBooleanSlot(_PAUSE_SLOT).value = false;
     }
 

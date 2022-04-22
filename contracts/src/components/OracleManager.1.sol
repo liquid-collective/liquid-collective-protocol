@@ -10,10 +10,12 @@ import "../state/river/BeaconValidatorBalanceSum.sol";
 import "../state/river/BeaconValidatorCount.sol";
 import "../state/river/DepositedValidatorCount.sol";
 
+import "./FunctionPermissionsManager.1.sol";
+
 /// @title Oracle Manager (v1)
 /// @author SkillZ
 /// @notice This contract handles the inputs provided by the oracle
-abstract contract OracleManagerV1 {
+abstract contract OracleManagerV1 is FunctionPermissionsManagerV1 {
     event BeaconDataUpdate(uint256 validatorCount, uint256 validatorBalanceSum, bytes32 roundId);
 
     error InvalidValidatorCountReport(uint256 _providedValidatorCount, uint256 _depositedValidatorCount);
@@ -22,14 +24,6 @@ abstract contract OracleManagerV1 {
     /// @dev Must be overriden
     /// @param _profits The positive increase in the validator balance sum (staking rewards)
     function _onEarnings(uint256 _profits) internal virtual;
-
-    /// @notice Prevents unauthorized calls
-    modifier onlyAdmin() virtual {
-        if (msg.sender != LibOwnable._getAdmin()) {
-            revert Errors.Unauthorized(msg.sender);
-        }
-        _;
-    }
 
     /// @notice Sets the validator count and validator balance sum reported by the oracle
     /// @dev Can only be called by the oracle address
@@ -70,7 +64,8 @@ abstract contract OracleManagerV1 {
 
     /// @notice Set Oracle address
     /// @param _oracleAddress Address of the oracle
-    function setOracle(address _oracleAddress) external onlyAdmin {
+    function setOracle(address _oracleAddress) external {
+        checkPermissions(this.setOracle.selector);
         OracleAddress.set(_oracleAddress);
     }
 

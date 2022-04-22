@@ -8,21 +8,15 @@ import "../state/river/AllowerAddress.sol";
 import "../state/river/Allowlist.sol";
 import "../libraries/LibOwnable.sol";
 
+import "./FunctionPermissionsManager.1.sol";
+
 /// @title Allowlist Manager (v1)
 /// @author SkillZ
 /// @notice This contract handles the allowlist of accounts allowed to own shares
-abstract contract AllowlistManagerV1 {
+abstract contract AllowlistManagerV1 is FunctionPermissionsManagerV1 {
     error InvalidAlloweeCount();
     error MismatchedAlloweeAndStatusCount();
     event ChangedAllowlistStatuses(address[] indexed accounts, uint256[] statuses);
-
-    /// @notice Prevents unauthorized calls
-    modifier onlyAdmin() virtual {
-        if (msg.sender != LibOwnable._getAdmin()) {
-            revert Errors.Unauthorized(msg.sender);
-        }
-        _;
-    }
 
     /// @notice Initializes the allower address
     /// @param _allowerAddress Address allowed to edit the allowlist
@@ -32,7 +26,8 @@ abstract contract AllowlistManagerV1 {
 
     /// @notice Changes the allower address
     /// @param _newAllowerAddress New address allowed to edit the allowlist
-    function setAllower(address _newAllowerAddress) external onlyAdmin {
+    function setAllower(address _newAllowerAddress) external {
+        checkPermissions(this.setAllower.selector);
         AllowerAddress.set(_newAllowerAddress);
     }
 
