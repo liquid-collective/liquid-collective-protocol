@@ -7,20 +7,21 @@ import "./components/SharesManager.1.sol";
 import "./components/OracleManager.1.sol";
 import "./components/OperatorsManager.1.sol";
 import "./components/AllowlistManager.1.sol";
-import "./components/FunctionPermissionsManager.1.sol";
 import "./Initializable.sol";
 import "./libraries/LibOwnable.sol";
 
+import "./state/shared/FunctionPermissionsContractAddress.sol";
 import "./state/shared/AdministratorAddress.sol";
 import "./state/river/TreasuryAddress.sol";
 import "./state/river/OperatorRewardsShare.sol";
 import "./state/river/GlobalFee.sol";
 
+import "./FunctionPermissions.1.sol";
+
 /// @title River (v1)
 /// @author SkillZ
 /// @notice This contract merges all the manager contracts and implements all the virtual methods stitching all components together
 contract RiverV1 is
-    FunctionPermissionsManagerV1,
     DepositManagerV1,
     TransferManagerV1,
     SharesManagerV1,
@@ -30,6 +31,9 @@ contract RiverV1 is
     Initializable
 {
     uint256 public constant BASE = 100000;
+    FunctionPermissionsV1 internal permissions;
+    uint256 internal constant GOVERNOR_ONLY_MASK = 0x1;
+    uint256 internal constant GOVERNOR_OR_ADMIN_MASK = 0x1 << 1;
 
     /// @notice Initializes the River system
     /// @param _depositContractAddress Address to make Consensus Layer deposits
@@ -47,34 +51,40 @@ contract RiverV1 is
         address _allowerAddress,
         address _treasuryAddress,
         uint256 _globalFee,
-        uint256 _operatorRewardsShare
+        uint256 _operatorRewardsShare,
+        address _functionPermissionsContractAddress
     ) external init(0) {
         LibOwnable._setAdmin(_systemAdministratorAddress);
         LibOwnable._setGovernor(_governorAddress);
         TreasuryAddress.set(_treasuryAddress);
         GlobalFee.set(_globalFee);
         OperatorRewardsShare.set(_operatorRewardsShare);
+        // TODO check its the right kind of contract here
+        FunctionPermissionsContractAddress.set(_functionPermissionsContractAddress);
+        permissions = FunctionPermissionsV1(_functionPermissionsContractAddress);
 
         DepositManagerV1.initDepositManagerV1(_depositContractAddress, _withdrawalCredentials);
         AllowlistManagerV1.initAllowlistManagerV1(_allowerAddress);
+        OperatorsManagerV1.initOperatorsManagerV1();
+        OracleManagerV1.initOracleManagerV1();
 
         // Set first pass at permissions between admin and governor according to the GSheet:
-        FunctionPermissionsManagerV1.set(this.setOperatorStatus.selector, GOVERNOR_OR_ADMIN_MASK);
-        FunctionPermissionsManagerV1.set(this.setOperatorStoppedValidatorCount.selector, GOVERNOR_OR_ADMIN_MASK);
-        FunctionPermissionsManagerV1.set(this.setOperatorLimit.selector, GOVERNOR_OR_ADMIN_MASK);
-        FunctionPermissionsManagerV1.set(this.setGlobalFee.selector, GOVERNOR_ONLY_MASK);
-        FunctionPermissionsManagerV1.set(this.setOperatorRewardsShare.selector, GOVERNOR_ONLY_MASK);
-        FunctionPermissionsManagerV1.set(this.depositToConsensusLayer.selector, GOVERNOR_OR_ADMIN_MASK);
-        FunctionPermissionsManagerV1.set(this.setOracle.selector, GOVERNOR_OR_ADMIN_MASK);
-        FunctionPermissionsManagerV1.set(this.setAllower.selector, GOVERNOR_OR_ADMIN_MASK);
-        FunctionPermissionsManagerV1.set(this.setOperatorStatus.selector, GOVERNOR_OR_ADMIN_MASK);
-        FunctionPermissionsManagerV1.set(this.setOperatorStatus.selector, GOVERNOR_OR_ADMIN_MASK);
+        permissions.set(this.setOperatorStatus.selector, GOVERNOR_OR_ADMIN_MASK);
+        permissions.set(this.setOperatorStoppedValidatorCount.selector, GOVERNOR_OR_ADMIN_MASK);
+        permissions.set(this.setOperatorLimit.selector, GOVERNOR_OR_ADMIN_MASK);
+        permissions.set(this.setGlobalFee.selector, GOVERNOR_ONLY_MASK);
+        permissions.set(this.setOperatorRewardsShare.selector, GOVERNOR_ONLY_MASK);
+        permissions.set(this.depositToConsensusLayer.selector, GOVERNOR_OR_ADMIN_MASK);
+        permissions.set(this.setOracle.selector, GOVERNOR_OR_ADMIN_MASK);
+        permissions.set(this.setAllower.selector, GOVERNOR_OR_ADMIN_MASK);
+        permissions.set(this.setOperatorStatus.selector, GOVERNOR_OR_ADMIN_MASK);
+        permissions.set(this.setOperatorStatus.selector, GOVERNOR_OR_ADMIN_MASK);
     }
 
     /// @notice Changes the global fee parameter
     /// @param newFee New fee value
     function setGlobalFee(uint256 newFee) external {
-        checkPermissions(this.setGlobalFee.selector);
+        permissions.checkPermissions(this.setGlobalFee.selector);
         if (newFee > BASE) {
             revert Errors.InvalidArgument();
         }
@@ -85,7 +95,7 @@ contract RiverV1 is
     /// @notice Changes the operator rewards share.
     /// @param newOperatorRewardsShare New share value
     function setOperatorRewardsShare(uint256 newOperatorRewardsShare) external {
-        checkPermissions(this.setOperatorRewardsShare.selector);
+        permissions.checkPermissions(this.setOperatorRewardsShare.selector);
         if (newOperatorRewardsShare > BASE) {
             revert Errors.InvalidArgument();
         }

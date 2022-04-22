@@ -7,6 +7,7 @@ import "../src/Oracle.1.sol";
 import "../src/libraries/Errors.sol";
 import "../src/interfaces/IRiverOracleInput.sol";
 import "../src/Withdraw.1.sol";
+import "../src/FunctionPermissions.1.sol";
 import "./utils/River.setup1.sol";
 import "./utils/UserFactory.sol";
 
@@ -70,6 +71,7 @@ contract OracleV1Tests {
     function setUp() public {
         oracleInput = new RiverMock();
         oracle = new OracleV1();
+        FunctionPermissionsV1 functionPermissions = new FunctionPermissionsV1();
         oracle.initOracleV1(
             address(oracleInput),
             admin,
@@ -79,7 +81,8 @@ contract OracleV1Tests {
             SECONDS_PER_SLOT,
             GENESIS_TIME,
             UPPER_BOUND,
-            LOWER_BOUND
+            LOWER_BOUND,
+            address(functionPermissions)
         );
 
         vm.startPrank(admin);

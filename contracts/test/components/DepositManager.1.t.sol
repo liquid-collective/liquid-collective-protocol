@@ -5,12 +5,16 @@ pragma solidity 0.8.10;
 import "../Vm.sol";
 import "../../src/components/DepositManager.1.sol";
 import "../../src/libraries/UnstructuredStorage.sol";
+import "../../src/state/shared/FunctionPermissionsContractAddress.sol";
+import "../../src/FunctionPermissions.1.sol";
 import "../utils/UserFactory.sol";
 
 contract DepositManagerV1ExposeInitializer is DepositManagerV1 {
     function publicDepositManagerInitializeV1(address _depositContractAddress, bytes32 _withdrawalCredentials)
         external
     {
+        FunctionPermissionsV1 functionPermissions = new FunctionPermissionsV1();
+        FunctionPermissionsContractAddress.set(address(functionPermissions));
         DepositManagerV1.initDepositManagerV1(_depositContractAddress, _withdrawalCredentials);
     }
 

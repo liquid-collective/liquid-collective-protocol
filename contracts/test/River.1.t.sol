@@ -6,7 +6,9 @@ import "./Vm.sol";
 import "../src/River.1.sol";
 import "../src/libraries/Errors.sol";
 import "../src/interfaces/IDepositContract.sol";
+import "../src/FunctionPermissions.1.sol";
 import "../src/Withdraw.1.sol";
+import "../src/FunctionPermissions.1.sol";
 import "./utils/AllowlistHelper.sol";
 import "./utils/River.setup1.sol";
 
@@ -72,9 +74,10 @@ contract RiverV1SetupOneTests {
     function setUp() public {
         deposit = new DepositContractMock();
         withdraw = new WithdrawV1();
+        FunctionPermissionsV1 functionPermissions = new FunctionPermissionsV1();
         bytes32 withdrawalCredentials = withdraw.getCredentials();
         river = new RiverV1();
-        river.initRiverV1(address(deposit), withdrawalCredentials, admin, admin, allower, treasury, 5000, 50000);
+        river.initRiverV1(address(deposit), withdrawalCredentials, admin, admin, allower, treasury, 5000, 50000, address(functionPermissions));
         vm.startPrank(admin);
         river.setOracle(oracle);
 
@@ -109,7 +112,8 @@ contract RiverV1SetupOneTests {
         bytes32 withdrawalCredentials = withdraw.getCredentials();
         vm.startPrank(admin);
         vm.expectRevert(abi.encodeWithSignature("InvalidInitialization(uint256,uint256)", 0, 1));
-        river.initRiverV1(address(deposit), withdrawalCredentials, admin, admin, allower, treasury, 5000, 50000);
+        FunctionPermissionsV1 functionPermissions = new FunctionPermissionsV1();
+        river.initRiverV1(address(deposit), withdrawalCredentials, admin, admin, allower, treasury, 5000, 50000, address(functionPermissions));
         vm.stopPrank();
     }
 

@@ -5,8 +5,7 @@ import "./Initializable.sol";
 import "./libraries/Errors.sol";
 import "./libraries/LibOwnable.sol";
 import "./interfaces/IRiverOracleInput.sol";
-
-import "./components/FunctionPermissionsManager.1.sol";
+import "./FunctionPermissions.1.sol";
 
 import "./state/shared/AdministratorAddress.sol";
 import "./state/oracle/RiverAddress.sol";
@@ -19,12 +18,16 @@ import "./state/oracle/LastEpochId.sol";
 import "./state/oracle/ReportsPositions.sol";
 import "./state/oracle/ReportsVariants.sol";
 
+
 /// @title Oracle (v1)
 /// @author SkillZ
 /// @notice This contract handles the input from the allowed oracle members. Highly inspired by Lido's implementation.
-contract OracleV1 is Initializable, FunctionPermissionsManagerV1 {
+contract OracleV1 is Initializable {
     /// @notice Received ETH input has only 9 decimals
     uint128 internal constant DENOMINATION_OFFSET = 1e9;
+    FunctionPermissionsV1 permissions;
+    uint256 internal constant GOVERNOR_ONLY_MASK = 0x1;
+    uint256 internal constant GOVERNOR_OR_ADMIN_MASK = 0x1 << 1;
 
     error EpochTooOld(uint256 _providedEpochId, uint256 _minExpectedEpochId);
     error NotFrameFirstEpochId(uint256 _providedEpochId, uint256 _expectedFrameFirstEpochId);
@@ -70,7 +73,8 @@ contract OracleV1 is Initializable, FunctionPermissionsManagerV1 {
         uint64 _secondsPerSlot,
         uint64 _genesisTime,
         uint256 _annualAprUpperBound,
-        uint256 _relativeLowerBound
+        uint256 _relativeLowerBound,
+        address _functionPermissionsContractAddress
     ) external init(0) {
         LibOwnable._setAdmin(_administratorAddress);
         LibOwnable._setGovernor(_governorAddress);
@@ -91,12 +95,15 @@ contract OracleV1 is Initializable, FunctionPermissionsManagerV1 {
         );
         Quorum.set(1);
 
+        // TODO check its the right kind of contract here
+        permissions = FunctionPermissionsV1(_functionPermissionsContractAddress);
+
         // Set first pass at permissions between admin and governor according to the GSheet:
-        FunctionPermissionsManagerV1.set(this.addMember.selector, GOVERNOR_OR_ADMIN_MASK);
-        FunctionPermissionsManagerV1.set(this.removeMember.selector, GOVERNOR_OR_ADMIN_MASK);
-        FunctionPermissionsManagerV1.set(this.setQuorum.selector, GOVERNOR_OR_ADMIN_MASK);
-        FunctionPermissionsManagerV1.set(this.setBeaconSpec.selector, GOVERNOR_OR_ADMIN_MASK);
-        FunctionPermissionsManagerV1.set(this.setBeaconBounds.selector, GOVERNOR_OR_ADMIN_MASK);
+        permissions.set(this.addMember.selector, GOVERNOR_OR_ADMIN_MASK);
+        permissions.set(this.removeMember.selector, GOVERNOR_OR_ADMIN_MASK);
+        permissions.set(this.setQuorum.selector, GOVERNOR_OR_ADMIN_MASK);
+        permissions.set(this.setBeaconSpec.selector, GOVERNOR_OR_ADMIN_MASK);
+        permissions.set(this.setBeaconBounds.selector, GOVERNOR_OR_ADMIN_MASK);
     }
 
     /// @notice Retrieve system administrator address
@@ -216,7 +223,7 @@ contract OracleV1 is Initializable, FunctionPermissionsManagerV1 {
     /// @dev Only callable by the adminstrator
     /// @param _newOracleMember Address of the new member
     function addMember(address _newOracleMember) external {
-        checkPermissions(this.addMember.selector);
+        permissions.checkPermissions(this.addMember.selector);
         int256 memberIdx = OracleMembers.indexOf(_newOracleMember);
         if (memberIdx >= 0) {
             revert Errors.InvalidCall();
@@ -228,7 +235,7 @@ contract OracleV1 is Initializable, FunctionPermissionsManagerV1 {
     /// @dev Only callable by the adminstrator
     /// @param _oracleMember Address to remove
     function removeMember(address _oracleMember) external {
-        checkPermissions(this.removeMember.selector);
+        permissions.checkPermissions(this.removeMember.selector);
         int256 memberIdx = OracleMembers.indexOf(_oracleMember);
         if (memberIdx < 0) {
             revert Errors.InvalidCall();
@@ -248,7 +255,7 @@ contract OracleV1 is Initializable, FunctionPermissionsManagerV1 {
         uint64 _secondsPerSlot,
         uint64 _genesisTime
     ) external {
-        checkPermissions(this.setBeaconSpec.selector);
+        permissions.checkPermissions(this.setBeaconSpec.selector);
         BeaconSpec.set(
             BeaconSpec.BeaconSpecStruct({
                 epochsPerFrame: _epochsPerFrame,
@@ -264,7 +271,7 @@ contract OracleV1 is Initializable, FunctionPermissionsManagerV1 {
     /// @param _annualAprUpperBound Maximum apr allowed for balance increase. Delta between updates is extrapolated on a year time frame.
     /// @param _relativeLowerBound Maximum relative balance decrease.
     function setBeaconBounds(uint256 _annualAprUpperBound, uint256 _relativeLowerBound) external {
-        checkPermissions(this.setBeaconSpec.selector);
+        permissions.checkPermissions(this.setBeaconSpec.selector);
         BeaconReportBounds.set(
             BeaconReportBounds.BeaconReportBoundsStruct({
                 annualAprUpperBound: _annualAprUpperBound,
@@ -277,7 +284,7 @@ contract OracleV1 is Initializable, FunctionPermissionsManagerV1 {
     /// @dev Only callable by the adminstrator
     /// @param _newQuorum New quorum parameter
     function setQuorum(uint256 _newQuorum) external {
-        checkPermissions(this.setQuorum.selector);
+        permissions.checkPermissions(this.setQuorum.selector);
         if (_newQuorum == 0) {
             revert Errors.InvalidArgument();
         }

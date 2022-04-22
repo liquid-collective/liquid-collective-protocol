@@ -5,14 +5,17 @@ import "../libraries/Errors.sol";
 import "../libraries/Uint256Lib.sol";
 import "../libraries/LibOwnable.sol";
 
+import "../state/shared/FunctionPermissionsContractAddress.sol";
 import "../state/river/Operators.sol";
 import "../state/river/ValidatorKeys.sol";
-import "./FunctionPermissionsManager.1.sol";
+import "../FunctionPermissions.1.sol";
+
+import "./FunctionPermissionConsumer.1.sol";
 
 /// @title Operators Manager (v1)
 /// @author SkillZ
 /// @notice This contract handles the operator and key list
-contract OperatorsManagerV1 is FunctionPermissionsManagerV1 {
+contract OperatorsManagerV1 is FunctionPermissionConsumer {
     error OperatorAlreadyExists(string name);
     error InactiveOperator(uint256 index);
     error InvalidFundedKeyDeletionAttempt();
@@ -57,6 +60,11 @@ contract OperatorsManagerV1 is FunctionPermissionsManagerV1 {
         _;
     }
 
+    /// @notice Initializer to set the function permissions contract address to use
+    function initOperatorsManagerV1() internal {
+        setFunctionPermissionsContract();
+    }
+
     function getOperatorDetails(string calldata _name) external view returns (int256 _index, address _operatorAddress) {
         _index = Operators.indexOf(_name);
         _operatorAddress = Operators.get(_name).operator;
@@ -70,7 +78,7 @@ contract OperatorsManagerV1 is FunctionPermissionsManagerV1 {
         if (Operators.exists(_name) == true) {
             revert OperatorAlreadyExists(_name);
         }
-        checkPermissions(this.addOperator.selector);
+        functionPermissions.checkPermissions(this.addOperator.selector);
 
         Operators.Operator memory newOperator = Operators.Operator({
             active: true,
@@ -104,7 +112,7 @@ contract OperatorsManagerV1 is FunctionPermissionsManagerV1 {
     /// @param _index The operator index
     /// @param _newStatus The new status of the operator
     function setOperatorStatus(uint256 _index, bool _newStatus) external {
-        checkPermissions(this.setOperatorStatus.selector);
+        functionPermissions.checkPermissions(this.setOperatorStatus.selector);
         Operators.Operator storage operator = Operators.getByIndex(_index);
 
         operator.active = _newStatus;
@@ -117,7 +125,7 @@ contract OperatorsManagerV1 is FunctionPermissionsManagerV1 {
     /// @param _index The operator index
     /// @param _newStoppedValidatorCount The new stopped validator count of the operator
     function setOperatorStoppedValidatorCount(uint256 _index, uint256 _newStoppedValidatorCount) external {
-        checkPermissions(this.setOperatorStoppedValidatorCount.selector);
+        functionPermissions.checkPermissions(this.setOperatorStoppedValidatorCount.selector);
         Operators.Operator storage operator = Operators.getByIndex(_index);
 
         if (_newStoppedValidatorCount > operator.funded) {
@@ -134,7 +142,7 @@ contract OperatorsManagerV1 is FunctionPermissionsManagerV1 {
     /// @param _index The operator index
     /// @param _newLimit The new staking limit of the operator
     function setOperatorLimit(uint256 _index, uint256 _newLimit) external {
-        checkPermissions(this.setOperatorLimit.selector);
+        functionPermissions.checkPermissions(this.setOperatorLimit.selector);
         Operators.Operator storage operator = Operators.getByIndex(_index);
 
         operator.limit = _newLimit;

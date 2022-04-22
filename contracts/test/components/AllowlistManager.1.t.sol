@@ -6,11 +6,15 @@ import "../Vm.sol";
 import "../../src/components/AllowlistManager.1.sol";
 import "../../src/libraries/Errors.sol";
 import "../../src/libraries/LibOwnable.sol";
+import "../../src/state/shared/FunctionPermissionsContractAddress.sol";
+import "../../src/FunctionPermissions.1.sol";
 import "../utils/AllowlistHelper.sol";
 import "../utils/UserFactory.sol";
 
 contract AllowlistManagerV1ExposeInitializer is AllowlistManagerV1 {
     function publicAllowlistManagerInitializeV1(address _AllowlistorAddress) external {
+        FunctionPermissionsV1 functionPermissions = new FunctionPermissionsV1();
+        FunctionPermissionsContractAddress.set(address(functionPermissions));
         AllowlistManagerV1.initAllowlistManagerV1(_AllowlistorAddress);
     }
 
