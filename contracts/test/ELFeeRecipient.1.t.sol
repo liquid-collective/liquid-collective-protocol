@@ -96,4 +96,17 @@ contract ELFeeRecipientV1Test {
         }
         feeRecipient.compound();
     }
+
+    function testReceiveBribeWithInflation(uint256 _bribeAmount) public {
+        vm.deal(address(feeRecipient), _bribeAmount);
+        assert(address(feeRecipient).balance == _bribeAmount);
+
+        if (_bribeAmount == 0) {
+            vm.expectRevert(abi.encodeWithSignature("EmptyDonation()"));
+        } else {
+            vm.expectEmit(true, true, true, true);
+            emit Donation(address(feeRecipient), _bribeAmount);
+        }
+        feeRecipient.compound();
+    }
 }
