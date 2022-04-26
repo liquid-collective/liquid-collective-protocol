@@ -103,6 +103,19 @@ contract TransferManagerV1DepositTests {
         assert(success == false);
         assert(keccak256(returnData) == keccak256(abi.encodeWithSignature("InvalidCall()")));
     }
+
+    function testDonation(uint256 _userSalt, uint256 _amount) public {
+        address _user = uf._new(_userSalt);
+        vm.deal(_user, _amount);
+        vm.startPrank(_user);
+        assert(address(transferManager).balance == 0);
+        if (_amount == 0) {
+            vm.expectRevert(abi.encodeWithSignature("EmptyDonation()"));
+        }
+        transferManager.donate{value: _amount}();
+        assert(address(transferManager).balance == _amount);
+        vm.stopPrank();
+    }
 }
 
 contract TransferManagerV1CatchableDeposit is TransferManagerV1 {

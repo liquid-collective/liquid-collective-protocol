@@ -8,8 +8,10 @@ import "../libraries/Errors.sol";
 /// @notice This contract handles the inbound transfers cases or the explicit submissions
 abstract contract TransferManagerV1 {
     event UserDeposit(address indexed user, address indexed referral, uint256 amount);
+    event Donation(address donator, uint256 amount);
 
     error EmptyDeposit();
+    error EmptyDonation();
 
     /// @notice Handler called whenever a user has sent funds to the contract
     /// @dev Must be overriden
@@ -33,6 +35,16 @@ abstract contract TransferManagerV1 {
     /// @param _referral Referral address, address(0) if none
     function deposit(address _referral) external payable {
         _deposit(_referral);
+    }
+
+    /// @notice Allows anyone to add ethers to river without minting new shares
+    /// @dev This method should be mainly used by the execution layer fee recipient to compound any collected fee
+    function donate() external payable {
+        if (msg.value == 0) {
+            revert EmptyDonation();
+        }
+
+        emit Donation(msg.sender, msg.value);
     }
 
     /// @notice Implicit deposit method, when the user performs a regular transfer to the contract
