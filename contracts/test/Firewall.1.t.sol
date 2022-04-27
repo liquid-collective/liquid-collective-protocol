@@ -46,11 +46,7 @@ contract FirewallV1Tests {
         withdraw = new WithdrawV1();
         bytes32 withdrawalCredentials = withdraw.getCredentials();
         river = new RiverV1();
-        riverFirewall = new FirewallV1(
-            riverGovernorDAO,
-            executor,
-            address(river)
-        );
+        riverFirewall = new FirewallV1(riverGovernorDAO, executor, address(river));
         firewalledRiver = RiverV1(payable(address(riverFirewall)));
         firewalledRiver.initRiverV1(
             address(deposit),
@@ -63,11 +59,7 @@ contract FirewallV1Tests {
         );
 
         oracle = new OracleV1();
-        oracleFirewall = new FirewallV1(
-            riverGovernorDAO,
-            executor,
-            address(oracle)
-        );
+        oracleFirewall = new FirewallV1(riverGovernorDAO, executor, address(oracle));
         firewalledOracle = OracleV1(address(oracleFirewall));
         oracleInput = new RiverMock();
         firewalledOracle.initOracleV1(
@@ -83,14 +75,14 @@ contract FirewallV1Tests {
     }
 
     function testGovernorOnlyRiverFunctions() public {
-        // Assert that the governor can call at least one governor-only function
+        // Assert that the governor can call at least one governorOnly function
         vm.startPrank(riverGovernorDAO);
         firewalledRiver.addOperator("bob", bob);
         (int256 _operatorBobIndex, ) = firewalledRiver.getOperatorDetails("bob");
         assert(_operatorBobIndex >= 0);
         vm.stopPrank();
 
-        // Assert that the executor cannot call any of the admin-only functions
+        // Assert that the executor cannot call any of the governorOnly functions
         vm.startPrank(executor);
         vm.expectRevert(unauthExecutor);
         firewalledRiver.addOperator("joe", joe);

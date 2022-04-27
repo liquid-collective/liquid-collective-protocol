@@ -8,8 +8,8 @@ import "./libraries/Errors.sol";
 /// @notice This contract protects calls to underlying target contracts by ensuring the caller holds
 ///         a proper role
 contract FirewallV1 {
-    mapping(bytes4=>bool) internal governorOnlySelector;
-    mapping(bytes4=>bool) internal governorOrExecutorSelector;
+    mapping(bytes4 => bool) internal governorOnlySelector;
+    mapping(bytes4 => bool) internal governorOrExecutorSelector;
 
     address public governor;
     address public executor;
@@ -17,7 +17,11 @@ contract FirewallV1 {
 
     // governor_ should be the most trustworthy entity in the underlying protocol - often, a DAO governor
     // executor_ should be a trustworthy entity that takes care of time-sensitive actions in the underlying protocol
-    constructor(address governor_, address executor_, address destination_) {
+    constructor(
+        address governor_,
+        address executor_,
+        address destination_
+    ) {
         governor = governor_;
         executor = executor_;
         destination = destination_;
@@ -101,7 +105,7 @@ contract FirewallV1 {
 
     /// @dev Forwards the current call to `destination`.
     ///      This function does not return to its internal call site, it will return directly to the external caller.
-    function _forward(address destination_, uint value) internal {
+    function _forward(address destination_, uint256 value) internal {
         assembly {
             // Copy msg.data. We take full control of memory in this inline assembly
             // block because it will not return to Solidity code. We overwrite the
