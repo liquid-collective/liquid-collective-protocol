@@ -19,6 +19,11 @@ abstract contract TransferManagerV1 {
     /// @param _amount Amount deposited
     function _onDeposit(address _depositor, uint256 _amount) internal virtual;
 
+    /// @notice Handler called whenever a donation is received by the contract
+    /// @dev Must be overriden
+    /// @param _amount Amount donated
+    function _onDonation(uint256 _amount) internal virtual;
+
     /// @notice Internal utility calling the deposit handler and emitting the deposit details and the referral address
     /// @param _referral Referral address, address(0) if none
     function _deposit(address _referral) internal {
@@ -43,6 +48,8 @@ abstract contract TransferManagerV1 {
         if (msg.value == 0) {
             revert EmptyDonation();
         }
+
+        _onDonation(msg.value);
 
         emit Donation(msg.sender, msg.value);
     }
