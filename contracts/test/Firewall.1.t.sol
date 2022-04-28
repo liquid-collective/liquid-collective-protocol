@@ -48,7 +48,7 @@ contract FirewallV1Tests {
         river = new RiverV1();
         riverFirewall = new FirewallV1(riverGovernorDAO, executor, address(river));
         firewalledRiver = RiverV1(payable(address(riverFirewall)));
-        firewalledRiver.initRiverV1(
+        river.initRiverV1(
             address(deposit),
             withdrawalCredentials,
             payable(address(riverFirewall)),
@@ -62,7 +62,7 @@ contract FirewallV1Tests {
         oracleFirewall = new FirewallV1(riverGovernorDAO, executor, address(oracle));
         firewalledOracle = OracleV1(address(oracleFirewall));
         oracleInput = new RiverMock();
-        firewalledOracle.initOracleV1(
+        oracle.initOracleV1(
             address(oracleInput),
             address(oracleFirewall),
             EPOCHS_PER_FRAME,
@@ -270,7 +270,7 @@ contract FirewallV1Tests {
         vm.stopPrank();
         vm.startPrank(joe);
         vm.expectRevert(unauthJoe);
-        riverFirewall.makeFreelyCallable(getSelector("setOperatorStatus(uint256,bool)"));
+        riverFirewall.makeGovernorOrExecutor(getSelector("setOperatorStatus(uint256,bool)"));
         vm.stopPrank();
 
         // 2. Assert that passing a governorOrExecutor function to makeGovernorOnly disables the
@@ -302,34 +302,7 @@ contract FirewallV1Tests {
         firewalledRiver.setOperatorStatus(operatorBobIndex, false);
         vm.stopPrank();
 
-        // 3. Assert that passing a freely callable function to makeGovernorOrExecutor disables a
-        // someone who is not the governor or executor from calling it
-        // Example: addValidators is normally callable if the operator we add to is the msg.sender
-        // First, add the operator
-        vm.startPrank(riverGovernorDAO);
-        firewalledRiver.addOperator("joe", joe);
-        (int256 _operatorJoeIndex, ) = firewalledRiver.getOperatorDetails("joe");
-        assert(_operatorJoeIndex >= 0);
-        uint256 operatorJoeIndex = uint256(_operatorJoeIndex);
-        firewalledRiver.setOperatorStatus(operatorJoeIndex, true);
-        vm.stopPrank();
-        // Assert that bob can currently call the function -
-        // expect a revert for too few keys, NOT Unauthorized()
-        vm.startPrank(joe);
-        vm.expectRevert(abi.encodeWithSignature("InvalidKeyCount()"));
-        bytes memory noData = "";
-        firewalledRiver.addValidators(operatorJoeIndex, 0, noData, noData);
-        vm.stopPrank();
-        // Then, make the function governorOrExecutor only, and now expect Unauthorized()
-        vm.startPrank(riverGovernorDAO);
-        riverFirewall.makeGovernorOrExecutor(getSelector("addValidators(uint256,uint256,bytes,bytes)"));
-        vm.stopPrank();
-        vm.startPrank(joe);
-        vm.expectRevert(abi.encodeWithSignature("Unauthorized(address)", joe));
-        firewalledRiver.addValidators(operatorJoeIndex, 0, noData, noData);
-        vm.stopPrank();
-
-        // 4. Assert that passing a governorOnly function to makeGovernorOrExecutor enables the
+        // 3. Assert that passing a governorOnly function to makeGovernorOrExecutor enables the
         //    executor to call it
         vm.startPrank(riverGovernorDAO);
         riverFirewall.makeGovernorOrExecutor(getSelector("setAllower(address)"));
@@ -338,16 +311,6 @@ contract FirewallV1Tests {
         firewalledRiver.setAllower(joe);
         assert(firewalledRiver.getAllower() == joe);
         vm.stopPrank();
-
-        // 5. Assert that passing a governorOnly function to makeFreelyCallable enables anyone to
-        //    call it
-        vm.startPrank(riverGovernorDAO);
-        riverFirewall.makeFreelyCallable(getSelector("addOperator(string,address)"));
-        vm.stopPrank();
-        vm.startPrank(joe);
-        firewalledRiver.addOperator("don", don);
-        (int256 _operatorDonIndex, ) = firewalledRiver.getOperatorDetails("don");
-        assert(_operatorDonIndex >= 0);
     }
 
     function testFirewallRoleChanging() public {
@@ -366,6 +329,7 @@ contract FirewallV1Tests {
         riverFirewall.changeExecutor(bob);
         vm.stopPrank();
         vm.startPrank(bob);
+        // TODO FOr some reason, this sig is not right in the Firewall constructor
         firewalledRiver.setOracle(don);
         assert(firewalledRiver.getOracle() == don);
 

@@ -8,8 +8,7 @@ import "./libraries/Errors.sol";
 /// @notice This contract protects calls to underlying target contracts by ensuring the caller holds
 ///         a proper role
 contract FirewallV1 {
-    mapping(bytes4 => bool) internal governorOnlySelector;
-    mapping(bytes4 => bool) internal governorOrExecutorSelector;
+    mapping(bytes4 => bool) internal executorCanCall;
 
     address public governor;
     address public executor;
@@ -26,21 +25,19 @@ contract FirewallV1 {
         executor = executor_;
         destination = destination_;
         // River methods
-        governorOnlySelector[getSelector("addOperator(string,address)")] = true;
-        governorOrExecutorSelector[getSelector("setOperatorStatus(uint256,bool)")] = true;
-        governorOrExecutorSelector[getSelector("setOperatorStoppedValidatorCount(uint256,uint256)")] = true;
-        governorOrExecutorSelector[getSelector("setOperatorLimit(uint256,uint256)")] = true;
-        governorOnlySelector[getSelector("setGlobalFee(uint256)")] = true;
-        governorOnlySelector[getSelector("setOperatorRewardsShare(uint256)")] = true;
-        governorOrExecutorSelector[getSelector("depositToConsensusLayer(uint256)")] = true;
-        governorOrExecutorSelector[getSelector("setOracle(address)")] = true;
-        governorOnlySelector[getSelector("setAllower(address)")] = true;
+        executorCanCall[getSelector("setOperatorStatus(uint256,bool)")] = true;
+        executorCanCall[getSelector("setOperatorStoppedValidatorCount(uint256,uint256)")] = true;
+        executorCanCall[getSelector("setOperatorLimit(uint256,uint256)")] = true;
+        executorCanCall[getSelector("depositToConsensusLayer(uint256)")] = true;
+        executorCanCall[getSelector("setOracle(address)")] = true;
         // Oracle methods
-        governorOrExecutorSelector[getSelector("addMember(address)")] = true;
-        governorOrExecutorSelector[getSelector("removeMember(address)")] = true;
-        governorOrExecutorSelector[getSelector("setQuorum(uint256)")] = true;
-        governorOrExecutorSelector[getSelector("setBeaconSpec(uint64,uint64,uint64,uint64)")] = true;
-        governorOrExecutorSelector[getSelector("setBeaconBounds(uint256,uint256)")] = true;
+        executorCanCall[getSelector("addMember(address)")] = true;
+        executorCanCall[getSelector("removeMember(address)")] = true;
+        executorCanCall[getSelector("setQuorum(uint256)")] = true;
+        executorCanCall[getSelector("setBeaconSpec(uint64,uint64,uint64,uint64)")] = true;
+        executorCanCall[getSelector("setBeaconBounds(uint256,uint256)")] = true;
+        // Firewall methods
+        executorCanCall[getSelector("changeExecutor(address)")] = true;
     }
 
     /// @dev convert function sig, of form "functionName(arg1Type,arg2Type)", to the 4 bytes used in
@@ -64,43 +61,25 @@ contract FirewallV1 {
 
     /// @dev Change the executor
     function changeExecutor(address newExecutor) external {
-        if (!(msg.sender == governor || msg.sender == executor)) {
-            revert Errors.Unauthorized(msg.sender);
-        }
         executor = newExecutor;
     }
 
-    /// @dev make a function only callable by the governor. Function may or may not already be
-    ///      governorOrExecutor; since we check governorOnly first in the _beforeFallback, it doesnt matter
+    /// @dev make a function only callable by the governor.
     function makeGovernorOnly(bytes4 functionSelector) external ifGovernor {
-        governorOnlySelector[functionSelector] = true;
+        executorCanCall[functionSelector] = false;
     }
 
     /// @dev make a function callable by the governor or executor
     function makeGovernorOrExecutor(bytes4 functionSelector) external ifGovernor {
-        if (governorOnlySelector[functionSelector]) {
-            governorOnlySelector[functionSelector] = false;
-        }
-        governorOrExecutorSelector[functionSelector] = true;
-    }
-
-    /// @dev make a function callable by anyone
-    function makeFreelyCallable(bytes4 functionSelector) external ifGovernor {
-        if (governorOnlySelector[functionSelector]) {
-            governorOnlySelector[functionSelector] = false;
-        }
-        if (governorOrExecutorSelector[functionSelector]) {
-            governorOrExecutorSelector[functionSelector] = false;
-        }
+        executorCanCall[functionSelector] = true;
     }
 
     /// @dev Validate that the caller is allowed to make the call in msg.sig
     function _checkCallerRole() internal view {
-        if (governorOnlySelector[msg.sig] && msg.sender != governor) {
-            revert Errors.Unauthorized(msg.sender);
-        } else if (governorOrExecutorSelector[msg.sig] && !(msg.sender == governor || msg.sender == executor)) {
-            revert Errors.Unauthorized(msg.sender);
+        if (msg.sender == governor || (executorCanCall[msg.sig] && msg.sender == executor)) {
+            return;
         }
+        revert Errors.Unauthorized(msg.sender);
     }
 
     /// @dev Forwards the current call to `destination`.
