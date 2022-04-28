@@ -26,6 +26,20 @@ abstract contract SharesManagerV1 is IERC20 {
         _;
     }
 
+    modifier isNotNull(uint256 _value) {
+        if (_value == 0) {
+            revert NullTransfer();
+        }
+        _;
+    }
+
+    modifier hasFunds(address _owner, uint256 _value) {
+        if (_balanceOf(_owner) < _value) {
+            revert BalanceTooLow();
+        }
+        _;
+    }
+
     function name() external pure returns (string memory) {
         return "River";
     }
@@ -58,30 +72,21 @@ abstract contract SharesManagerV1 is IERC20 {
         return SharesPerOwner.get(_owner);
     }
 
-    function transfer(address _to, uint256 _value) external allowed(msg.sender) allowed(_to) returns (bool success) {
-        if (_value == 0) {
-            revert NullTransfer();
-        }
-        if (_balanceOf(msg.sender) < _value) {
-            revert BalanceTooLow();
-        }
-
-        SharesPerOwner.set(msg.sender, SharesPerOwner.get(msg.sender) - _value);
-        SharesPerOwner.set(_to, SharesPerOwner.get(_to) + _value);
-
-        emit Transfer(msg.sender, _to, _value);
-
-        return true;
+    function transfer(address _to, uint256 _value)
+        external
+        allowed(msg.sender)
+        isNotNull(_value)
+        hasFunds(msg.sender, _value)
+        returns (bool)
+    {
+        return _transfer(msg.sender, _to, _value);
     }
 
     function transferFrom(
         address _from,
         address _to,
         uint256 _value
-    ) external allowed(_from) allowed(_to) returns (bool success) {
-        if (_value == 0) {
-            revert NullTransfer();
-        }
+    ) external allowed(_from) isNotNull(_value) hasFunds(_from, _value) returns (bool) {
         if (_from != msg.sender) {
             uint256 currentAllowance = ApprovalsPerOwner.get(_from, msg.sender);
             if (currentAllowance < _value) {
@@ -89,22 +94,25 @@ abstract contract SharesManagerV1 is IERC20 {
             }
             ApprovalsPerOwner.set(_from, msg.sender, currentAllowance - _value);
         }
-
-        if (_balanceOf(_from) < _value) {
-            revert BalanceTooLow();
-        }
-
-        SharesPerOwner.set(_from, SharesPerOwner.get(_from) - _value);
-        SharesPerOwner.set(_to, SharesPerOwner.get(_to) + _value);
-
-        emit Transfer(_from, _to, _value);
-
-        return true;
+        return _transfer(_from, _to, _value);
     }
 
     function approve(address _spender, uint256 _value) external allowed(msg.sender) returns (bool success) {
         ApprovalsPerOwner.set(msg.sender, _spender, _value);
         emit Approval(msg.sender, _spender, _value);
+        return true;
+    }
+
+    function _transfer(
+        address _from,
+        address _to,
+        uint256 _value
+    ) internal returns (bool) {
+        SharesPerOwner.set(_from, SharesPerOwner.get(_from) - _value);
+        SharesPerOwner.set(_to, SharesPerOwner.get(_to) + _value);
+
+        emit Transfer(_from, _to, _value);
+
         return true;
     }
 

@@ -5,10 +5,10 @@ library Allowlist {
     bytes32 internal constant ALLOWLIST_SLOT = bytes32(uint256(keccak256("river.state.allowlist")) - 1);
 
     struct Slot {
-        mapping(address => bool) value;
+        mapping(address => uint256) value;
     }
 
-    function get(address account) internal view returns (bool) {
+    function get(address account) internal view returns (uint256) {
         bytes32 slot = ALLOWLIST_SLOT;
 
         Slot storage r;
@@ -20,7 +20,7 @@ library Allowlist {
         return r.value[account];
     }
 
-    function set(address account, bool status) internal {
+    function set(address account, uint256 status) internal {
         bytes32 slot = ALLOWLIST_SLOT;
 
         Slot storage r;
