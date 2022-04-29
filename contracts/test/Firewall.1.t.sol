@@ -78,7 +78,7 @@ contract FirewallV1Tests {
         // Assert that the governor can call at least one governorOnly function
         vm.startPrank(riverGovernorDAO);
         firewalledRiver.addOperator("bob", bob);
-        (int256 _operatorBobIndex, ) = firewalledRiver.getOperatorDetails("bob");
+        (int256 _operatorBobIndex, ) = river.getOperatorDetails("bob");
         assert(_operatorBobIndex >= 0);
         vm.stopPrank();
 
@@ -108,16 +108,16 @@ contract FirewallV1Tests {
         // Assert that both admin and executor can setOperatorStatus, and a random caller cannot
         vm.startPrank(riverGovernorDAO);
         firewalledRiver.addOperator("bob", bob);
-        (int256 _operatorBobIndex, ) = firewalledRiver.getOperatorDetails("bob");
+        (int256 _operatorBobIndex, ) = river.getOperatorDetails("bob");
         assert(_operatorBobIndex >= 0);
         uint256 operatorBobIndex = uint256(_operatorBobIndex);
         firewalledRiver.setOperatorStatus(operatorBobIndex, true);
-        assert(firewalledRiver.getOperator(operatorBobIndex).active == true);
+        assert(river.getOperator(operatorBobIndex).active == true);
         vm.stopPrank();
 
         vm.startPrank(executor);
         firewalledRiver.setOperatorStatus(operatorBobIndex, false);
-        assert(firewalledRiver.getOperator(operatorBobIndex).active == false);
+        assert(river.getOperator(operatorBobIndex).active == false);
         vm.stopPrank();
 
         vm.startPrank(joe);
@@ -143,11 +143,11 @@ contract FirewallV1Tests {
         // Assert that both admin and executor can setOperatorLimit, and a random caller cannot
         vm.startPrank(riverGovernorDAO);
         firewalledRiver.setOperatorLimit(operatorBobIndex, 13);
-        assert(firewalledRiver.getOperator(operatorBobIndex).limit == 13);
+        assert(river.getOperator(operatorBobIndex).limit == 13);
         vm.stopPrank();
         vm.startPrank(executor);
         firewalledRiver.setOperatorLimit(operatorBobIndex, 17);
-        assert(firewalledRiver.getOperator(operatorBobIndex).limit == 17);
+        assert(river.getOperator(operatorBobIndex).limit == 17);
         vm.stopPrank();
         vm.startPrank(joe);
         vm.expectRevert(unauthJoe);
@@ -172,11 +172,11 @@ contract FirewallV1Tests {
         // Assert that both admin and executor can setOracle, and a random caller cannot
         vm.startPrank(riverGovernorDAO);
         firewalledRiver.setOracle(joe);
-        assert(firewalledRiver.getOracle() == joe);
+        assert(river.getOracle() == joe);
         vm.stopPrank();
         vm.startPrank(executor);
         firewalledRiver.setOracle(bob);
-        assert(firewalledRiver.getOracle() == bob);
+        assert(river.getOracle() == bob);
         vm.stopPrank();
         vm.startPrank(joe);
         vm.expectRevert(unauthJoe);
@@ -188,16 +188,16 @@ contract FirewallV1Tests {
         // Assert that both admin and executor can addMember and removeMember
         vm.startPrank(riverGovernorDAO);
         firewalledOracle.addMember(bob);
-        assert(firewalledOracle.isMember(bob));
+        assert(oracle.isMember(bob));
         firewalledOracle.removeMember(bob);
-        assert(!firewalledOracle.isMember(bob));
+        assert(!oracle.isMember(bob));
         vm.stopPrank();
 
         vm.startPrank(executor);
         firewalledOracle.addMember(bob);
-        assert(firewalledOracle.isMember(bob));
+        assert(oracle.isMember(bob));
         firewalledOracle.removeMember(bob);
-        assert(!firewalledOracle.isMember(bob));
+        assert(!oracle.isMember(bob));
         vm.stopPrank();
 
         // Assert that a random caller cannot addMember or removeMember
@@ -216,11 +216,11 @@ contract FirewallV1Tests {
         // Assert that both admin and executor can setQuorum, and a random caller cannot
         vm.startPrank(riverGovernorDAO);
         firewalledOracle.setQuorum(2);
-        assert(firewalledOracle.getQuorum() == 2);
+        assert(oracle.getQuorum() == 2);
         vm.stopPrank();
         vm.startPrank(executor);
         firewalledOracle.setQuorum(3);
-        assert(firewalledOracle.getQuorum() == 3);
+        assert(oracle.getQuorum() == 3);
         vm.stopPrank();
         vm.startPrank(joe);
         vm.expectRevert(unauthJoe);
@@ -230,11 +230,11 @@ contract FirewallV1Tests {
         // Assert that both admin and executor can setBeaconSpec, and a random caller cannot
         vm.startPrank(riverGovernorDAO);
         firewalledOracle.setBeaconSpec(2, 3, 4, 5);
-        assert(firewalledOracle.getBeaconSpec().epochsPerFrame == 2);
+        assert(oracle.getBeaconSpec().epochsPerFrame == 2);
         vm.stopPrank();
         vm.startPrank(executor);
         firewalledOracle.setBeaconSpec(6, 7, 8, 9);
-        assert(firewalledOracle.getBeaconSpec().epochsPerFrame == 6);
+        assert(oracle.getBeaconSpec().epochsPerFrame == 6);
         vm.stopPrank();
         vm.startPrank(joe);
         vm.expectRevert(unauthJoe);
@@ -244,11 +244,11 @@ contract FirewallV1Tests {
         // Assert that both admin and executor can setBeaconSpec, and a random caller cannot
         vm.startPrank(riverGovernorDAO);
         firewalledOracle.setBeaconBounds(2, 3);
-        assert(firewalledOracle.getBeaconBounds().annualAprUpperBound == 2);
+        assert(oracle.getBeaconBounds().annualAprUpperBound == 2);
         vm.stopPrank();
         vm.startPrank(executor);
         firewalledOracle.setBeaconBounds(4, 5);
-        assert(firewalledOracle.getBeaconBounds().annualAprUpperBound == 4);
+        assert(oracle.getBeaconBounds().annualAprUpperBound == 4);
         vm.stopPrank();
         vm.startPrank(joe);
         vm.expectRevert(unauthJoe);
@@ -282,12 +282,12 @@ contract FirewallV1Tests {
         assert(_operatorBobIndex >= 0);
         uint256 operatorBobIndex = uint256(_operatorBobIndex);
         firewalledRiver.setOperatorStatus(operatorBobIndex, true);
-        assert(firewalledRiver.getOperator(operatorBobIndex).active == true);
+        assert(river.getOperator(operatorBobIndex).active == true);
         vm.stopPrank();
 
         vm.startPrank(executor);
         firewalledRiver.setOperatorStatus(operatorBobIndex, false);
-        assert(firewalledRiver.getOperator(operatorBobIndex).active == false);
+        assert(river.getOperator(operatorBobIndex).active == false);
         vm.stopPrank();
 
         // Then we make it governorOnly.
@@ -295,7 +295,7 @@ contract FirewallV1Tests {
         vm.startPrank(riverGovernorDAO);
         riverFirewall.makeGovernorOnly(getSelector("setOperatorStatus(uint256,bool)"));
         firewalledRiver.setOperatorStatus(operatorBobIndex, true);
-        assert(firewalledRiver.getOperator(operatorBobIndex).active == true);
+        assert(river.getOperator(operatorBobIndex).active == true);
         vm.stopPrank();
         vm.expectRevert(unauthExecutor);
         vm.startPrank(executor);
@@ -309,7 +309,7 @@ contract FirewallV1Tests {
         vm.stopPrank();
         vm.startPrank(executor);
         firewalledRiver.setAllower(joe);
-        assert(firewalledRiver.getAllower() == joe);
+        assert(river.getAllower() == joe);
         vm.stopPrank();
     }
 
@@ -322,7 +322,7 @@ contract FirewallV1Tests {
         vm.stopPrank();
         vm.startPrank(newGovernorDAO);
         firewalledRiver.setAllower(joe);
-        assert(firewalledRiver.getAllower() == joe);
+        assert(river.getAllower() == joe);
 
         // 2. Assert that governor can changeExecutor and the new executor can
         //    setOracle, a governorOrExecutor action
@@ -331,7 +331,7 @@ contract FirewallV1Tests {
         vm.startPrank(bob);
         // TODO FOr some reason, this sig is not right in the Firewall constructor
         firewalledRiver.setOracle(don);
-        assert(firewalledRiver.getOracle() == don);
+        assert(river.getOracle() == don);
 
         // 3. Assert that executor can changeExecutor and the new executor can
         //    setOracle, a governorOrExecutor action
@@ -339,7 +339,7 @@ contract FirewallV1Tests {
         vm.stopPrank();
         vm.startPrank(joe);
         firewalledRiver.setOracle(joe);
-        assert(firewalledRiver.getOracle() == joe);
+        assert(river.getOracle() == joe);
         vm.stopPrank();
     }
 }
