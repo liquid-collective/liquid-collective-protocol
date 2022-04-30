@@ -7,7 +7,7 @@ import "./libraries/LibOwnable.sol";
 import "./interfaces/IRiverOracleInput.sol";
 
 import "./state/shared/AdministratorAddress.sol";
-import "./state/oracle/RiverAddress.sol";
+import "./state/shared/RiverAddress.sol";
 import "./state/oracle/OracleMembers.sol";
 import "./state/oracle/Quorum.sol";
 import "./state/oracle/BeaconSpec.sol";

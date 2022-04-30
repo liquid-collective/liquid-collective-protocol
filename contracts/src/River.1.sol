@@ -117,15 +117,9 @@ contract RiverV1 is
         return OperatorsManagerV1._getNextValidatorsFromActiveOperators(_requestedAmount);
     }
 
-    /// @notice Handler called whenever the balance of ETH handled by the system increases. Splits funds between operators and treasury.
-    /// @param _amount Additional eth received
-    function _onEarnings(uint256 _amount) internal override {
-        uint256 globalFee = GlobalFee.get();
-        uint256 sharesToMint = (_amount * _totalShares() * globalFee) /
-            ((_assetBalance() * BASE) - (_amount * globalFee));
-
-        uint256 operatorRewards = (sharesToMint * OperatorRewardsShare.get()) / BASE;
-
+    /// @notice Internal utility managing reward distribution amongst node operators
+    /// @param _reward Amount of shares to split between operators
+    function _rewardOperators(uint256 _reward) internal returns (uint256) {
         Operators.Operator[] memory operators = Operators.getAllActive();
         uint256[] memory validatorCounts = new uint256[](operators.length);
 
@@ -137,16 +131,36 @@ contract RiverV1 is
         }
 
         if (totalActiveValidators > 0) {
-            uint256 rewardsPerActiveValidator = operatorRewards / totalActiveValidators;
+            uint256 rewardsPerActiveValidator = _reward / totalActiveValidators;
 
             for (uint256 idx = 0; idx < validatorCounts.length; ++idx) {
                 _mintRawShares(operators[idx].operator, validatorCounts[idx] * rewardsPerActiveValidator);
             }
         } else {
-            operatorRewards = 0;
+            _reward = 0;
         }
 
-        _mintRawShares(TreasuryAddress.get(), sharesToMint - operatorRewards);
+        return _reward;
+    }
+
+    /// @notice Handler called whenever a donation of ETH has been made to the system. It calls the same logic as when revenues are earned.
+    /// @param _amount Additional eth donated
+    function _onDonation(uint256 _amount) internal override {
+        _onEarnings(_amount);
+    }
+
+    /// @notice Handler called whenever the balance of ETH handled by the system increases. Splits funds between operators and treasury.
+    /// @param _amount Additional eth received
+    function _onEarnings(uint256 _amount) internal override {
+        uint256 globalFee = GlobalFee.get();
+        uint256 sharesToMint = (_amount * _totalShares() * globalFee) /
+            ((_assetBalance() * BASE) - (_amount * globalFee));
+
+        uint256 operatorRewards = (sharesToMint * OperatorRewardsShare.get()) / BASE;
+
+        uint256 mintedRewards = _rewardOperators(operatorRewards);
+
+        _mintRawShares(TreasuryAddress.get(), sharesToMint - mintedRewards);
     }
 
     /// @notice Handler called whenever the total balance of ETH is requested

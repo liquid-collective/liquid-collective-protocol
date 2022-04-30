@@ -28,6 +28,6 @@ jobs:
         run: yarn
 
       - name: run tests
-        run: forge test --force -vvvvv --gas-report
+        run: forge test --force -vvv --gas-report
         env:
           FOUNDRY_FUZZ_RUNS: 5000
