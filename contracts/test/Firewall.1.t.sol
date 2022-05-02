@@ -75,33 +75,62 @@ contract FirewallV1Tests {
     }
 
     function testGovernorOnlyRiverFunctions() public {
-        // Assert that the governor can call at least one governorOnly function
+        // 1. Assert that the governor can addOperator, and an executor or random caller cannot
         vm.startPrank(riverGovernorDAO);
         firewalledRiver.addOperator("bob", bob);
         (int256 _operatorBobIndex, ) = river.getOperatorDetails("bob");
         assert(_operatorBobIndex >= 0);
         vm.stopPrank();
-
-        // Assert that the executor cannot call any of the governorOnly functions
         vm.startPrank(executor);
         vm.expectRevert(unauthExecutor);
         firewalledRiver.addOperator("joe", joe);
-
-        vm.expectRevert(unauthExecutor);
-        firewalledRiver.setGlobalFee(4);
-
-        vm.expectRevert(unauthExecutor);
-        firewalledRiver.setOperatorRewardsShare(4);
-
-        vm.expectRevert(unauthExecutor);
-        firewalledRiver.setAllower(joe);
-
         vm.stopPrank();
-
-        // Assert that a random caller cannot call at least one of the admin-only functions
         vm.startPrank(joe);
         vm.expectRevert(unauthJoe);
+        firewalledRiver.addOperator("joe", joe);
+        vm.stopPrank();
+
+        // 2. Assert that the governor can setGlobalFee, and an executor or random caller cannot
+        vm.startPrank(riverGovernorDAO);
+        firewalledRiver.setGlobalFee(5);
+        // no assert, just expect no revert - no easy way to check the actual fee value
+        vm.stopPrank();
+        vm.startPrank(executor);
+        vm.expectRevert(unauthExecutor);
         firewalledRiver.setGlobalFee(4);
+        vm.stopPrank();
+        vm.startPrank(joe);
+        vm.expectRevert(unauthJoe);
+        firewalledRiver.setGlobalFee(3);
+        vm.stopPrank();
+
+        // 3. setOperatorRewardsShare
+        vm.startPrank(riverGovernorDAO);
+        firewalledRiver.setOperatorRewardsShare(5);
+        // no assert, just expect no revert - no easy way to check the actual rewards share value
+        vm.stopPrank();
+        vm.startPrank(executor);
+        vm.expectRevert(unauthExecutor);
+        firewalledRiver.setOperatorRewardsShare(4);
+        vm.stopPrank();
+        vm.startPrank(joe);
+        vm.expectRevert(unauthJoe);
+        firewalledRiver.setOperatorRewardsShare(3);
+        vm.stopPrank();
+
+        // 4. setAllower
+        vm.startPrank(riverGovernorDAO);
+        firewalledRiver.setAllower(don);
+        assert(river.getAllower() == don);
+        vm.stopPrank();
+        vm.startPrank(executor);
+        vm.expectRevert(unauthExecutor);
+        firewalledRiver.setAllower(joe);
+        vm.stopPrank();
+        vm.startPrank(joe);
+        vm.expectRevert(unauthJoe);
+        firewalledRiver.setAllower(joe);
+        vm.stopPrank();
     }
 
     function testGovernorOrExecutorRiverFunctions() public {
