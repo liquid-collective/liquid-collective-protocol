@@ -266,14 +266,14 @@ contract FirewallV1Tests {
         // 1. Assert executor and random caller cannot change permissions
         vm.startPrank(executor);
         vm.expectRevert(unauthExecutor);
-        riverFirewall.makeGovernorOrExecutor(getSelector("setGlobalFee(uint256)"));
+        riverFirewall.permissionFunction(getSelector("setGlobalFee(uint256)"), true);
         vm.stopPrank();
         vm.startPrank(joe);
         vm.expectRevert(unauthJoe);
-        riverFirewall.makeGovernorOrExecutor(getSelector("setOperatorStatus(uint256,bool)"));
+        riverFirewall.permissionFunction(getSelector("setOperatorStatus(uint256,bool)"), true);
         vm.stopPrank();
 
-        // 2. Assert that passing a governorOrExecutor function to makeGovernorOnly disables the
+        // 2. Assert that making a governorOrExecutor function governorOnly disables the
         //    executor from calling the function
         // At first, both governor and executor can setOperatorStatus
         vm.startPrank(riverGovernorDAO);
@@ -293,7 +293,7 @@ contract FirewallV1Tests {
         // Then we make it governorOnly.
         // Assert governor can still call it, and executor now cannot.
         vm.startPrank(riverGovernorDAO);
-        riverFirewall.makeGovernorOnly(getSelector("setOperatorStatus(uint256,bool)"));
+        riverFirewall.permissionFunction(getSelector("setOperatorStatus(uint256,bool)"), false);
         firewalledRiver.setOperatorStatus(operatorBobIndex, true);
         assert(river.getOperator(operatorBobIndex).active == true);
         vm.stopPrank();
@@ -302,10 +302,10 @@ contract FirewallV1Tests {
         firewalledRiver.setOperatorStatus(operatorBobIndex, false);
         vm.stopPrank();
 
-        // 3. Assert that passing a governorOnly function to makeGovernorOrExecutor enables the
+        // 3. Assert that making a governorOnly function to governorOrExecutor enables the
         //    executor to call it
         vm.startPrank(riverGovernorDAO);
-        riverFirewall.makeGovernorOrExecutor(getSelector("setAllower(address)"));
+        riverFirewall.permissionFunction(getSelector("setAllower(address)"), true);
         vm.stopPrank();
         vm.startPrank(executor);
         firewalledRiver.setAllower(joe);
@@ -329,7 +329,6 @@ contract FirewallV1Tests {
         riverFirewall.changeExecutor(bob);
         vm.stopPrank();
         vm.startPrank(bob);
-        // TODO FOr some reason, this sig is not right in the Firewall constructor
         firewalledRiver.setOracle(don);
         assert(river.getOracle() == don);
 
@@ -340,6 +339,16 @@ contract FirewallV1Tests {
         vm.startPrank(joe);
         firewalledRiver.setOracle(joe);
         assert(river.getOracle() == joe);
+        vm.stopPrank();
+
+        // 4. Assert that a random caller cannot changeExecutor
+        vm.startPrank(don);
+        vm.expectRevert(abi.encodeWithSignature("Unauthorized(address)", don));
+        riverFirewall.changeExecutor(don);
+
+        // 5. Assert that a random caller cannot changeGovernor
+        vm.expectRevert(abi.encodeWithSignature("Unauthorized(address)", don));
+        riverFirewall.changeGovernor(don);
         vm.stopPrank();
     }
 }

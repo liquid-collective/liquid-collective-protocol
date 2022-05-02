@@ -36,8 +36,6 @@ contract FirewallV1 {
         executorCanCall[getSelector("setQuorum(uint256)")] = true;
         executorCanCall[getSelector("setBeaconSpec(uint64,uint64,uint64,uint64)")] = true;
         executorCanCall[getSelector("setBeaconBounds(uint256,uint256)")] = true;
-        // Firewall methods
-        executorCanCall[getSelector("changeExecutor(address)")] = true;
     }
 
     /// @dev convert function sig, of form "functionName(arg1Type,arg2Type)", to the 4 bytes used in
@@ -54,24 +52,27 @@ contract FirewallV1 {
         }
     }
 
+    modifier ifGovernorOrExecutor() {
+        if (msg.sender == governor || msg.sender == executor) {
+            _;
+        } else {
+            revert Errors.Unauthorized(msg.sender);
+        }
+    }
+
     /// @dev Change the governor
     function changeGovernor(address newGovernor) external ifGovernor {
         governor = newGovernor;
     }
 
     /// @dev Change the executor
-    function changeExecutor(address newExecutor) external {
+    function changeExecutor(address newExecutor) external ifGovernorOrExecutor {
         executor = newExecutor;
     }
 
-    /// @dev make a function only callable by the governor.
-    function makeGovernorOnly(bytes4 functionSelector) external ifGovernor {
-        executorCanCall[functionSelector] = false;
-    }
-
-    /// @dev make a function callable by the governor or executor
-    function makeGovernorOrExecutor(bytes4 functionSelector) external ifGovernor {
-        executorCanCall[functionSelector] = true;
+    /// @dev make a function either only callable by the governor, or callable by gov and executor.
+    function permissionFunction(bytes4 functionSelector, bool executorCanCall_) external ifGovernor {
+        executorCanCall[functionSelector] = executorCanCall_;
     }
 
     /// @dev Validate that the caller is allowed to make the call in msg.sig
