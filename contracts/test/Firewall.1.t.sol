@@ -74,214 +74,328 @@ contract FirewallV1Tests {
         );
     }
 
-    function testGovernorOnlyRiverFunctions() public {
-        // 1. Assert that the governor can addOperator, and an executor or random caller cannot
+    function testGovernorCanAddOperator() public {
         vm.startPrank(riverGovernorDAO);
         firewalledRiver.addOperator("bob", bob);
         (int256 _operatorBobIndex, ) = river.getOperatorDetails("bob");
         assert(_operatorBobIndex >= 0);
         vm.stopPrank();
+    }
+
+    function testExecutorCannotAddOperator() public {
         vm.startPrank(executor);
         vm.expectRevert(unauthExecutor);
         firewalledRiver.addOperator("joe", joe);
         vm.stopPrank();
+    }
+
+    function testRandomCallerCannotAddOperator() public {
         vm.startPrank(joe);
         vm.expectRevert(unauthJoe);
         firewalledRiver.addOperator("joe", joe);
         vm.stopPrank();
+    }
 
-        // 2. Assert that the governor can setGlobalFee, and an executor or random caller cannot
+    function testGovernorCanSetGlobalFee() public {
         vm.startPrank(riverGovernorDAO);
         firewalledRiver.setGlobalFee(5);
         // no assert, just expect no revert - no easy way to check the actual fee value
         vm.stopPrank();
+    }
+
+    function testExecutorCannotSetGlobalFee() public {
         vm.startPrank(executor);
         vm.expectRevert(unauthExecutor);
         firewalledRiver.setGlobalFee(4);
         vm.stopPrank();
+    }
+
+    function testRandomCallerCannotSetGlobalFee() public {
         vm.startPrank(joe);
         vm.expectRevert(unauthJoe);
         firewalledRiver.setGlobalFee(3);
         vm.stopPrank();
+    }
 
-        // 3. setOperatorRewardsShare
+    function testGovernorCanSetOperatorsRewardShare() public {
         vm.startPrank(riverGovernorDAO);
         firewalledRiver.setOperatorRewardsShare(5);
         // no assert, just expect no revert - no easy way to check the actual rewards share value
         vm.stopPrank();
+    }
+
+    function testExecutorCannotSetOperatorsRewardShare() public {
         vm.startPrank(executor);
         vm.expectRevert(unauthExecutor);
         firewalledRiver.setOperatorRewardsShare(4);
         vm.stopPrank();
+    }
+
+    function testRandomCallerCannotSetOperatorsRewardShare() public {
         vm.startPrank(joe);
         vm.expectRevert(unauthJoe);
         firewalledRiver.setOperatorRewardsShare(3);
         vm.stopPrank();
+    }
 
-        // 4. setAllower
+    function testGovernorCanSetAllower() public {
         vm.startPrank(riverGovernorDAO);
         firewalledRiver.setAllower(don);
         assert(river.getAllower() == don);
         vm.stopPrank();
+    }
+
+    function testExecutorCannotSetAllower() public {
         vm.startPrank(executor);
         vm.expectRevert(unauthExecutor);
         firewalledRiver.setAllower(joe);
         vm.stopPrank();
+    }
+
+    function testRandomCallerCannotSetAllower() public {
         vm.startPrank(joe);
         vm.expectRevert(unauthJoe);
         firewalledRiver.setAllower(joe);
         vm.stopPrank();
     }
 
-    function testGovernorOrExecutorRiverFunctions() public {
-        // Assert that both admin and executor can setOperatorStatus, and a random caller cannot
+    function haveGovernorAddOperatorBob() public returns (uint operatorBobIndex) {
         vm.startPrank(riverGovernorDAO);
         firewalledRiver.addOperator("bob", bob);
         (int256 _operatorBobIndex, ) = river.getOperatorDetails("bob");
         assert(_operatorBobIndex >= 0);
-        uint256 operatorBobIndex = uint256(_operatorBobIndex);
+        vm.stopPrank();
+        return(uint256(_operatorBobIndex));
+    }
+
+    function testGovernorCanSetOperatorStatus() public {
+        uint256 operatorBobIndex = haveGovernorAddOperatorBob();
+        vm.startPrank(riverGovernorDAO);
         firewalledRiver.setOperatorStatus(operatorBobIndex, true);
         assert(river.getOperator(operatorBobIndex).active == true);
         vm.stopPrank();
+    }
 
+    function testExecutorCanSetOperatorStatus() public {
+        uint256 operatorBobIndex = haveGovernorAddOperatorBob();
         vm.startPrank(executor);
         firewalledRiver.setOperatorStatus(operatorBobIndex, false);
         assert(river.getOperator(operatorBobIndex).active == false);
         vm.stopPrank();
+    }
 
+    function testRandomCallerCannotSetOperatorStatus() public {
+        uint256 operatorBobIndex = haveGovernorAddOperatorBob();
         vm.startPrank(joe);
         vm.expectRevert(unauthJoe);
         firewalledRiver.setOperatorStatus(operatorBobIndex, true);
         vm.stopPrank();
+    }
 
-        // Assert that both admin and executor can setOperatorStoppedValidatorCount, and a random caller cannot
+    function testGovernorCanSetOperatorStoppedValidatorCount() public {
+        uint256 operatorBobIndex = haveGovernorAddOperatorBob();
         // Assert this by expecting InvalidArgument, NOT Unauthorized
         vm.startPrank(riverGovernorDAO);
         vm.expectRevert(abi.encodeWithSignature("InvalidArgument()"));
         firewalledRiver.setOperatorStoppedValidatorCount(operatorBobIndex, 3);
         vm.stopPrank();
+    }
+
+    function testExecutorCanSetOperatorStoppedValidatorCount() public {
+        uint256 operatorBobIndex = haveGovernorAddOperatorBob();
+        // Assert this by expecting InvalidArgument, NOT Unauthorized
         vm.startPrank(executor);
         vm.expectRevert(abi.encodeWithSignature("InvalidArgument()"));
-        firewalledRiver.setOperatorStoppedValidatorCount(operatorBobIndex, 7);
+        firewalledRiver.setOperatorStoppedValidatorCount(operatorBobIndex, 3);
         vm.stopPrank();
+    }
+
+    function testRandomCallerCannotSetOperatorStoppedValidatorCount() public {
+        uint256 operatorBobIndex = haveGovernorAddOperatorBob();
         vm.startPrank(joe);
         vm.expectRevert(unauthJoe);
-        firewalledRiver.setOperatorStoppedValidatorCount(operatorBobIndex, 11);
+        firewalledRiver.setOperatorStoppedValidatorCount(operatorBobIndex, 3);
         vm.stopPrank();
+    }
 
-        // Assert that both admin and executor can setOperatorLimit, and a random caller cannot
+    function testGovernorCanSetOperatorLimit() public {
+        uint256 operatorBobIndex = haveGovernorAddOperatorBob();
         vm.startPrank(riverGovernorDAO);
         firewalledRiver.setOperatorLimit(operatorBobIndex, 13);
         assert(river.getOperator(operatorBobIndex).limit == 13);
         vm.stopPrank();
+    }
+
+    function testExecutorCanSetOperatorLimit() public {
+        uint256 operatorBobIndex = haveGovernorAddOperatorBob();
         vm.startPrank(executor);
-        firewalledRiver.setOperatorLimit(operatorBobIndex, 17);
-        assert(river.getOperator(operatorBobIndex).limit == 17);
+        firewalledRiver.setOperatorLimit(operatorBobIndex, 13);
+        assert(river.getOperator(operatorBobIndex).limit == 13);
         vm.stopPrank();
+    }
+
+    function testRandomCallerCannotSetOperatorLimit() public {
+        uint256 operatorBobIndex = haveGovernorAddOperatorBob();
         vm.startPrank(joe);
         vm.expectRevert(unauthJoe);
-        firewalledRiver.setOperatorLimit(operatorBobIndex, 19);
+        firewalledRiver.setOperatorLimit(operatorBobIndex, 13);
         vm.stopPrank();
+    }
 
-        // Assert that both admin and executor can depositToConsensusLayer, and a random caller cannot
+    function testGovernorCanDepositToConsensusLayer() public {
         // Assert this by expecting NotEnoughFunds, NOT Unauthorized
         vm.startPrank(riverGovernorDAO);
         vm.expectRevert(abi.encodeWithSignature("NotEnoughFunds()"));
         firewalledRiver.depositToConsensusLayer(10);
         vm.stopPrank();
+    }
+
+    function testExecutorCanDepositToConsensusLayer() public {
+        // Assert this by expecting NotEnoughFunds, NOT Unauthorized
         vm.startPrank(executor);
         vm.expectRevert(abi.encodeWithSignature("NotEnoughFunds()"));
         firewalledRiver.depositToConsensusLayer(10);
         vm.stopPrank();
+    }
+
+    function testRandomCallerCannotDepositToConsensusLayer() public {
         vm.startPrank(joe);
         vm.expectRevert(unauthJoe);
         firewalledRiver.depositToConsensusLayer(10);
         vm.stopPrank();
+    }
 
-        // Assert that both admin and executor can setOracle, and a random caller cannot
+    function testGovernorCanSetOracle() public {
         vm.startPrank(riverGovernorDAO);
-        firewalledRiver.setOracle(joe);
-        assert(river.getOracle() == joe);
-        vm.stopPrank();
-        vm.startPrank(executor);
-        firewalledRiver.setOracle(bob);
-        assert(river.getOracle() == bob);
-        vm.stopPrank();
-        vm.startPrank(joe);
-        vm.expectRevert(unauthJoe);
-        firewalledRiver.setOracle(riverGovernorDAO);
+        firewalledRiver.setOracle(don);
+        assert(river.getOracle() == don);
         vm.stopPrank();
     }
 
-    function testGovernorOrExecutorOracleFunctions() public {
-        // Assert that both admin and executor can addMember and removeMember
+    function testExecutorCanSetOracle() public {
+        vm.startPrank(executor);
+        firewalledRiver.setOracle(don);
+        assert(river.getOracle() == don);
+        vm.stopPrank();
+    }
+
+    function testRandomCallerCannotSetOracle() public {
+        vm.startPrank(joe);
+        vm.expectRevert(unauthJoe);
+        firewalledRiver.setOracle(don);
+        vm.stopPrank();
+    }
+
+    function testGovernorCanAddMember() public {
+        vm.startPrank(riverGovernorDAO);
+        firewalledOracle.addMember(bob);
+        assert(oracle.isMember(bob));
+        vm.stopPrank();
+    }
+
+    function testGovernorCanRemoveMember() public {
         vm.startPrank(riverGovernorDAO);
         firewalledOracle.addMember(bob);
         assert(oracle.isMember(bob));
         firewalledOracle.removeMember(bob);
         assert(!oracle.isMember(bob));
         vm.stopPrank();
+    }
 
+    function testExecutorCanAddMember() public {
+        vm.startPrank(executor);
+        firewalledOracle.addMember(bob);
+        assert(oracle.isMember(bob));
+        vm.stopPrank();
+    }
+
+    function testExecutorCanRemoveMember() public {
         vm.startPrank(executor);
         firewalledOracle.addMember(bob);
         assert(oracle.isMember(bob));
         firewalledOracle.removeMember(bob);
         assert(!oracle.isMember(bob));
         vm.stopPrank();
+    }
 
-        // Assert that a random caller cannot addMember or removeMember
+    function testRandomCallerCannotAddMember() public {
         vm.startPrank(joe);
         vm.expectRevert(unauthJoe);
         firewalledOracle.addMember(bob);
         vm.stopPrank();
+    }
+
+    function testRandomCallerCannotRemoveMember() public {
         vm.startPrank(riverGovernorDAO);
         firewalledOracle.addMember(bob);
+        assert(oracle.isMember(bob));
         vm.stopPrank();
         vm.startPrank(joe);
         vm.expectRevert(unauthJoe);
         firewalledOracle.removeMember(bob);
         vm.stopPrank();
+    }
 
-        // Assert that both admin and executor can setQuorum, and a random caller cannot
+    function testGovernorCanSetQuorum() public {
         vm.startPrank(riverGovernorDAO);
         firewalledOracle.setQuorum(2);
         assert(oracle.getQuorum() == 2);
         vm.stopPrank();
+    }
+
+    function testExecutorCanSetQuorum() public {
         vm.startPrank(executor);
-        firewalledOracle.setQuorum(3);
-        assert(oracle.getQuorum() == 3);
+        firewalledOracle.setQuorum(2);
+        assert(oracle.getQuorum() == 2);
         vm.stopPrank();
+    }
+
+    function testRandomCallerCannotSetQuorum() public {
         vm.startPrank(joe);
         vm.expectRevert(unauthJoe);
-        firewalledOracle.setQuorum(4);
+        firewalledOracle.setQuorum(2);
         vm.stopPrank();
+    }
 
-        // Assert that both admin and executor can setBeaconSpec, and a random caller cannot
+    function testGovernorCanSetBeaconSpec() public {
         vm.startPrank(riverGovernorDAO);
         firewalledOracle.setBeaconSpec(2, 3, 4, 5);
         assert(oracle.getBeaconSpec().epochsPerFrame == 2);
         vm.stopPrank();
+    }
+
+    function testExecutorCanSetBeaconSpec() public {
         vm.startPrank(executor);
-        firewalledOracle.setBeaconSpec(6, 7, 8, 9);
-        assert(oracle.getBeaconSpec().epochsPerFrame == 6);
+        firewalledOracle.setBeaconSpec(2, 3, 4, 5);
+        assert(oracle.getBeaconSpec().epochsPerFrame == 2);
         vm.stopPrank();
+    }
+
+    function testRandomCallerCannotSetBeaconSpec() public {
         vm.startPrank(joe);
         vm.expectRevert(unauthJoe);
-        firewalledOracle.setBeaconSpec(10, 11, 12, 13);
+        firewalledOracle.setBeaconSpec(2, 3, 4, 5);
         vm.stopPrank();
+    }
 
-        // Assert that both admin and executor can setBeaconSpec, and a random caller cannot
+    function testGovernorCanSetBeaconBounds() public {
         vm.startPrank(riverGovernorDAO);
         firewalledOracle.setBeaconBounds(2, 3);
         assert(oracle.getBeaconBounds().annualAprUpperBound == 2);
         vm.stopPrank();
+    }
+
+    function testExecutorCanSetBeaconBounds() public {
         vm.startPrank(executor);
-        firewalledOracle.setBeaconBounds(4, 5);
-        assert(oracle.getBeaconBounds().annualAprUpperBound == 4);
+        firewalledOracle.setBeaconBounds(2, 3);
+        assert(oracle.getBeaconBounds().annualAprUpperBound == 2);
         vm.stopPrank();
+    }
+
+    function testRandomCallerCannotSetBeaconBounds() public {
         vm.startPrank(joe);
         vm.expectRevert(unauthJoe);
-        firewalledOracle.setBeaconBounds(6, 7);
+        firewalledOracle.setBeaconBounds(2, 3);
         vm.stopPrank();
     }
 
@@ -291,19 +405,7 @@ contract FirewallV1Tests {
         return bytes4(keccak256(bytes(functionSig)));
     }
 
-    function testPermissionChanges() public {
-        // 1. Assert executor and random caller cannot change permissions
-        vm.startPrank(executor);
-        vm.expectRevert(unauthExecutor);
-        riverFirewall.permissionFunction(getSelector("setGlobalFee(uint256)"), true);
-        vm.stopPrank();
-        vm.startPrank(joe);
-        vm.expectRevert(unauthJoe);
-        riverFirewall.permissionFunction(getSelector("setOperatorStatus(uint256,bool)"), true);
-        vm.stopPrank();
-
-        // 2. Assert that making a governorOrExecutor function governorOnly disables the
-        //    executor from calling the function
+    function testMakingFunctionGovernorOnly() public {
         // At first, both governor and executor can setOperatorStatus
         vm.startPrank(riverGovernorDAO);
         firewalledRiver.addOperator("bob", bob);
@@ -330,9 +432,9 @@ contract FirewallV1Tests {
         vm.startPrank(executor);
         firewalledRiver.setOperatorStatus(operatorBobIndex, false);
         vm.stopPrank();
+    }
 
-        // 3. Assert that making a governorOnly function to governorOrExecutor enables the
-        //    executor to call it
+    function testMakingFunctionGovernorOrExecutor() public {
         vm.startPrank(riverGovernorDAO);
         riverFirewall.permissionFunction(getSelector("setAllower(address)"), true);
         vm.stopPrank();
@@ -342,9 +444,23 @@ contract FirewallV1Tests {
         vm.stopPrank();
     }
 
-    function testFirewallRoleChanging() public {
-        // 1. Assert that governor can changeGovernor, and the new governor can
-        //    setAllower, a governorOnly action
+    function testExecutorCannotChangePermissions() public {
+        vm.startPrank(executor);
+        vm.expectRevert(unauthExecutor);
+        riverFirewall.permissionFunction(getSelector("setGlobalFee(uint256)"), true);
+        vm.stopPrank();
+    }
+
+    function testRandomCallerCannotChangePermissions() public {
+        vm.startPrank(joe);
+        vm.expectRevert(unauthJoe);
+        riverFirewall.permissionFunction(getSelector("setOperatorStatus(uint256,bool)"), true);
+        vm.stopPrank();
+    }
+
+    function testGovernorCanChangeGovernor() public {
+        // Assert that governor can changeGovernor, and the new governor can
+        // setAllower, a governorOnly action
         address newGovernorDAO = address(0xdF2a01F10f86A7cdd2EE10cf35B8ab62723096a6);
         vm.startPrank(riverGovernorDAO);
         riverFirewall.changeGovernor(newGovernorDAO);
@@ -352,32 +468,53 @@ contract FirewallV1Tests {
         vm.startPrank(newGovernorDAO);
         firewalledRiver.setAllower(joe);
         assert(river.getAllower() == joe);
+        vm.stopPrank();
+    }
 
-        // 2. Assert that governor can changeExecutor and the new executor can
-        //    setOracle, a governorOrExecutor action
+    function testGovernorCanChangeExecutor() public {
+        // Assert that governor can changeExecutor and the new executor can
+        // setOracle, a governorOrExecutor action
+        vm.startPrank(riverGovernorDAO);
         riverFirewall.changeExecutor(bob);
         vm.stopPrank();
         vm.startPrank(bob);
         firewalledRiver.setOracle(don);
         assert(river.getOracle() == don);
+        vm.stopPrank();
+    }
 
-        // 3. Assert that executor can changeExecutor and the new executor can
-        //    setOracle, a governorOrExecutor action
+    function testExecutorCanChangeExecutor() public {
+        // Assert that executor can changeExecutor and the new executor can
+        // setOracle, a governorOrExecutor action
+        vm.startPrank(executor);
         riverFirewall.changeExecutor(joe);
         vm.stopPrank();
         vm.startPrank(joe);
-        firewalledRiver.setOracle(joe);
-        assert(river.getOracle() == joe);
+        firewalledRiver.setOracle(don);
+        assert(river.getOracle() == don);
         vm.stopPrank();
+    }
 
-        // 4. Assert that a random caller cannot changeExecutor
-        vm.startPrank(don);
-        vm.expectRevert(abi.encodeWithSignature("Unauthorized(address)", don));
-        riverFirewall.changeExecutor(don);
-
-        // 5. Assert that a random caller cannot changeGovernor
-        vm.expectRevert(abi.encodeWithSignature("Unauthorized(address)", don));
+    function testExecutorCannotChangeGovernor() public {
+        vm.startPrank(executor);
+        vm.expectRevert(unauthExecutor);
         riverFirewall.changeGovernor(don);
+        vm.stopPrank();
+    }
+
+
+    function testRandomCallerCannotChangeGovernor() public {
+        vm.startPrank(joe);
+        vm.expectRevert(unauthJoe);
+        riverFirewall.changeGovernor(don);
+        vm.stopPrank();
+    }
+
+
+    function testRandomCallerCannotChangeExecutor() public {
+        vm.startPrank(joe);
+        vm.expectRevert(unauthJoe);
+        riverFirewall.changeExecutor(don);
         vm.stopPrank();
     }
 }
