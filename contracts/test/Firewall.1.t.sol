@@ -159,13 +159,13 @@ contract FirewallV1Tests {
         vm.stopPrank();
     }
 
-    function haveGovernorAddOperatorBob() public returns (uint operatorBobIndex) {
+    function haveGovernorAddOperatorBob() public returns (uint256 operatorBobIndex) {
         vm.startPrank(riverGovernorDAO);
         firewalledRiver.addOperator("bob", bob);
         (int256 _operatorBobIndex, ) = river.getOperatorDetails("bob");
         assert(_operatorBobIndex >= 0);
         vm.stopPrank();
-        return(uint256(_operatorBobIndex));
+        return (uint256(_operatorBobIndex));
     }
 
     function testGovernorCanSetOperatorStatus() public {
@@ -502,14 +502,12 @@ contract FirewallV1Tests {
         vm.stopPrank();
     }
 
-
     function testRandomCallerCannotChangeGovernor() public {
         vm.startPrank(joe);
         vm.expectRevert(unauthJoe);
         riverFirewall.changeGovernor(don);
         vm.stopPrank();
     }
-
 
     function testRandomCallerCannotChangeExecutor() public {
         vm.startPrank(joe);
