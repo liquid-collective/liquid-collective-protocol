@@ -3,11 +3,13 @@ pragma solidity 0.8.10;
 
 import "./libraries/Errors.sol";
 
-/// @title FirewallV1
+/// @title Firewall
 /// @author Figment
-/// @notice This contract protects calls to underlying target contracts by ensuring the caller holds
-///         a proper role
-contract FirewallV1 {
+/// @notice This contract accepts calls to admin-level functions of an underlying contract, and
+///         ensures the caller holds an appropriate role for calling that function. It rejects calls
+///         to admin functions from non-admins, and rejects calls from anyone to non-admin functions.
+///         Calls to non-admin functions should be called from the underlying contract directly.
+contract Firewall {
     mapping(bytes4 => bool) internal executorCanCall;
 
     address public governor;
@@ -19,29 +21,18 @@ contract FirewallV1 {
     constructor(
         address governor_,
         address executor_,
-        address destination_
+        address destination_,
+        bytes4[] memory executorCallableSelectors_
     ) {
         governor = governor_;
         executor = executor_;
         destination = destination_;
-        // River methods
-        executorCanCall[getSelector("setOperatorStatus(uint256,bool)")] = true;
-        executorCanCall[getSelector("setOperatorStoppedValidatorCount(uint256,uint256)")] = true;
-        executorCanCall[getSelector("setOperatorLimit(uint256,uint256)")] = true;
-        executorCanCall[getSelector("depositToConsensusLayer(uint256)")] = true;
-        executorCanCall[getSelector("setOracle(address)")] = true;
-        // Oracle methods
-        executorCanCall[getSelector("addMember(address)")] = true;
-        executorCanCall[getSelector("removeMember(address)")] = true;
-        executorCanCall[getSelector("setQuorum(uint256)")] = true;
-        executorCanCall[getSelector("setBeaconSpec(uint64,uint64,uint64,uint64)")] = true;
-        executorCanCall[getSelector("setBeaconBounds(uint256,uint256)")] = true;
-    }
-
-    /// @dev convert function sig, of form "functionName(arg1Type,arg2Type)", to the 4 bytes used in
-    ///      a contract call, accessible at msg.sig
-    function getSelector(string memory functionSig) internal pure returns (bytes4) {
-        return bytes4(keccak256(bytes(functionSig)));
+        for (uint256 i; i < executorCallableSelectors_.length; ) {
+            executorCanCall[executorCallableSelectors_[i]] = true;
+            unchecked {
+                ++i;
+            }
+        }
     }
 
     modifier ifGovernor() {

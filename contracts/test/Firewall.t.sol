@@ -3,7 +3,7 @@
 pragma solidity 0.8.10;
 
 import "./Vm.sol";
-import "../src/Firewall.1.sol";
+import "../src/Firewall.sol";
 import "../src/River.1.sol";
 import "../src/interfaces/IDepositContract.sol";
 import "../src/Withdraw.1.sol";
@@ -11,9 +11,9 @@ import "../src/Oracle.1.sol";
 import "./mocks/DepositContractMock.sol";
 import "./mocks/RiverMock.sol";
 
-contract FirewallV1Tests {
+contract FirewallTests {
     RiverV1 internal river;
-    FirewallV1 internal riverFirewall;
+    Firewall internal riverFirewall;
     RiverV1 internal firewalledRiver;
     IDepositContract internal deposit;
     WithdrawV1 internal withdraw;
@@ -26,7 +26,7 @@ contract FirewallV1Tests {
     address internal treasury = address(0xC88F7666330b4b511358b7742dC2a3234710e7B1);
 
     OracleV1 internal oracle;
-    FirewallV1 internal oracleFirewall;
+    Firewall internal oracleFirewall;
     OracleV1 internal firewalledOracle;
     IRiverOracleInput internal oracleInput;
     uint64 internal constant EPOCHS_PER_FRAME = 225;
@@ -46,7 +46,13 @@ contract FirewallV1Tests {
         withdraw = new WithdrawV1();
         bytes32 withdrawalCredentials = withdraw.getCredentials();
         river = new RiverV1();
-        riverFirewall = new FirewallV1(riverGovernorDAO, executor, address(river));
+        bytes4[] memory executorCallableRiverSelectors = new bytes4[](5);
+        executorCallableRiverSelectors[0] = river.setOperatorStatus.selector;
+        executorCallableRiverSelectors[1] = river.setOperatorStoppedValidatorCount.selector;
+        executorCallableRiverSelectors[2] = river.setOperatorLimit.selector;
+        executorCallableRiverSelectors[3] = river.depositToConsensusLayer.selector;
+        executorCallableRiverSelectors[4] = river.setOracle.selector;
+        riverFirewall = new Firewall(riverGovernorDAO, executor, address(river), executorCallableRiverSelectors);
         firewalledRiver = RiverV1(payable(address(riverFirewall)));
         river.initRiverV1(
             address(deposit),
@@ -59,7 +65,13 @@ contract FirewallV1Tests {
         );
 
         oracle = new OracleV1();
-        oracleFirewall = new FirewallV1(riverGovernorDAO, executor, address(oracle));
+        bytes4[] memory executorCallableOracleSelectors = new bytes4[](5);
+        executorCallableOracleSelectors[0] = oracle.addMember.selector;
+        executorCallableOracleSelectors[1] = oracle.removeMember.selector;
+        executorCallableOracleSelectors[2] = oracle.setQuorum.selector;
+        executorCallableOracleSelectors[3] = oracle.setBeaconSpec.selector;
+        executorCallableOracleSelectors[4] = oracle.setBeaconBounds.selector;
+        oracleFirewall = new Firewall(riverGovernorDAO, executor, address(oracle), executorCallableOracleSelectors);
         firewalledOracle = OracleV1(address(oracleFirewall));
         oracleInput = new RiverMock();
         oracle.initOracleV1(
