@@ -6,11 +6,11 @@ import "./components/TransferManager.1.sol";
 import "./components/SharesManager.1.sol";
 import "./components/OracleManager.1.sol";
 import "./components/OperatorsManager.1.sol";
-import "./components/AllowlistManager.1.sol";
 import "./Initializable.sol";
 import "./libraries/LibOwnable.sol";
 
 import "./state/shared/AdministratorAddress.sol";
+import "./state/river/AllowlistAddress.sol";
 import "./state/river/TreasuryAddress.sol";
 import "./state/river/OperatorRewardsShare.sol";
 import "./state/river/GlobalFee.sol";
@@ -24,13 +24,12 @@ contract RiverV1 is
     SharesManagerV1,
     OracleManagerV1,
     OperatorsManagerV1,
-    AllowlistManagerV1,
     Initializable
 {
     uint256 public constant BASE = 100000;
 
     /// @notice Prevents unauthorized calls
-    modifier onlyAdmin() override(OperatorsManagerV1, OracleManagerV1, AllowlistManagerV1) {
+    modifier onlyAdmin() override(OperatorsManagerV1, OracleManagerV1) {
         if (msg.sender != LibOwnable._getAdmin()) {
             revert Errors.Unauthorized(msg.sender);
         }
@@ -41,7 +40,7 @@ contract RiverV1 is
     /// @param _depositContractAddress Address to make Consensus Layer deposits
     /// @param _withdrawalCredentials Credentials to use for every validator deposit
     /// @param _systemAdministratorAddress Administrator address
-    /// @param _allowerAddress Address able to manage the allowlist
+    /// @param _allowlistAddress Address able to manage the allowlist
     /// @param _treasuryAddress Address receiving the fee minus the operator share
     /// @param _globalFee Amount retained when the eth balance increases, splitted between the treasury and the operators
     /// @param _operatorRewardsShare Share of the global fee used to reward node operators
@@ -49,7 +48,7 @@ contract RiverV1 is
         address _depositContractAddress,
         bytes32 _withdrawalCredentials,
         address _systemAdministratorAddress,
-        address _allowerAddress,
+        address _allowlistAddress,
         address _treasuryAddress,
         uint256 _globalFee,
         uint256 _operatorRewardsShare
@@ -60,7 +59,7 @@ contract RiverV1 is
         OperatorRewardsShare.set(_operatorRewardsShare);
 
         DepositManagerV1.initDepositManagerV1(_depositContractAddress, _withdrawalCredentials);
-        AllowlistManagerV1.initAllowlistManagerV1(_allowerAddress);
+        AllowlistAddress.set(_allowlistAddress);
     }
 
     /// @notice Changes the global fee parameter
@@ -95,7 +94,7 @@ contract RiverV1 is
     /// @param _depositor User address that made the deposit
     /// @param _amount Amount of ETH deposited
     function _onDeposit(address _depositor, uint256 _amount) internal override {
-        if (AllowlistManagerV1._isAllowed(_depositor, DEPOSIT_MASK) == false) {
+        if ((AllowlistAddress.get()).isAllowed(_depositor, DEPOSIT_MASK) == false) {
             revert Errors.Unauthorized(_depositor);
         }
         SharesManagerV1._mintShares(_depositor, _amount);
@@ -104,7 +103,7 @@ contract RiverV1 is
     /// @notice Handler called whenever an allowlist check is made for an address. Asks the Allowlist Manager component.
     /// @param _account Address to verify
     function _isAccountAllowed(address _account) internal view override returns (bool) {
-        return AllowlistManagerV1._isAllowed(_account, TRANSFER_MASK);
+        return (AllowlistAddress.get()).isAllowed(_account, TRANSFER_MASK);
     }
 
     /// @notice Handler called whenever a deposit to the consensus layer is made. Should retrieve _requestedAmount or lower keys
