@@ -40,7 +40,7 @@ contract RiverV1 is
     /// @param _depositContractAddress Address to make Consensus Layer deposits
     /// @param _withdrawalCredentials Credentials to use for every validator deposit
     /// @param _systemAdministratorAddress Administrator address
-    /// @param _allowlistAddress Address able to manage the allowlist
+    /// @param _allowlistAddress Address of the allowlist contract
     /// @param _treasuryAddress Address receiving the fee minus the operator share
     /// @param _globalFee Amount retained when the eth balance increases, splitted between the treasury and the operators
     /// @param _operatorRewardsShare Share of the global fee used to reward node operators
