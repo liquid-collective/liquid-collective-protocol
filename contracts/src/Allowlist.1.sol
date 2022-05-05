@@ -70,11 +70,10 @@ contract AllowlistV1 is Initializable {
         emit ChangedAllowlistStatuses(_accounts, _statuses);
     }
 
-    function _isAllowed(address _account, uint256 _mask) internal view returns (bool) {
-        return Allowlist.get(_account) & _mask == _mask;
-    }
-
+    /// @notice Verify if a user has a specific right
+    /// @param _account Address to verify
+    /// @param _mask Right represented as a bit mask
     function isAllowed(address _account, uint256 _mask) external view returns (bool) {
-        return _isAllowed(_account, _mask);
+        return Allowlist.get(_account) & _mask == _mask;
     }
 }
