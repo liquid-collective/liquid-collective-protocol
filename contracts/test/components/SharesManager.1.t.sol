@@ -93,7 +93,7 @@ contract SharesManagerV1Tests {
     }
 
     function testSymbol() public view {
-        assert(keccak256("rETH") == keccak256(bytes(sharesManager.symbol())));
+        assert(keccak256("lsETH") == keccak256(bytes(sharesManager.symbol())));
     }
 
     function testDecimals() public view {
