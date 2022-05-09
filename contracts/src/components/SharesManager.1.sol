@@ -60,6 +60,10 @@ abstract contract SharesManagerV1 is IERC20 {
         return _balanceOf(_owner);
     }
 
+    function balanceOfUnderlying(address _owner) public view returns (uint256 balance) {
+        return _balanceFromShares(SharesPerOwner.get(_owner));
+    }
+
     function allowance(address _owner, address _spender) external view returns (uint256 remaining) {
         return ApprovalsPerOwner.get(_owner, _spender);
     }
@@ -75,7 +79,7 @@ abstract contract SharesManagerV1 is IERC20 {
         hasFunds(msg.sender, _value)
         returns (bool)
     {
-        return _transfer(msg.sender, _to, _sharesFromBalance(_value));
+        return _transfer(msg.sender, _to, _value);
     }
 
     function transferFrom(
@@ -90,8 +94,7 @@ abstract contract SharesManagerV1 is IERC20 {
             }
             ApprovalsPerOwner.set(_from, msg.sender, currentAllowance - _value);
         }
-
-        return _transfer(_from, _to, _sharesFromBalance(_value));
+        return _transfer(_from, _to, _value);
     }
 
     function approve(address _spender, uint256 _value) external allowed(msg.sender) returns (bool success) {
@@ -125,16 +128,6 @@ abstract contract SharesManagerV1 is IERC20 {
         return ((shares * _assetBalance())) / _totalSharesValue;
     }
 
-    function _sharesFromBalance(uint256 balance) internal view returns (uint256) {
-        uint256 assetBalance = _assetBalance();
-
-        if (assetBalance == 0) {
-            return 0;
-        }
-
-        return (balance * Shares.get()) / assetBalance;
-    }
-
     // assuming funds are received, _assetBalance should have taken _value into account
     function _mintShares(address _owner, uint256 _value) internal {
         uint256 assetBalance = _assetBalance();
@@ -156,7 +149,7 @@ abstract contract SharesManagerV1 is IERC20 {
     }
 
     function _balanceOf(address _owner) internal view returns (uint256 balance) {
-        return _balanceFromShares(SharesPerOwner.get(_owner));
+        return SharesPerOwner.get(_owner);
     }
 
     function _totalShares() internal view returns (uint256) {

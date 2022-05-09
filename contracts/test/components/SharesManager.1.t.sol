@@ -50,7 +50,7 @@ contract SharesManagerV1Tests {
         sharesManager = new SharesManagerPublicDeal();
     }
 
-    function testBalanceOf(uint256 _userSalt) public {
+    function testBalanceOfUnderlying(uint256 _userSalt) public {
         address _user = uf._new(_userSalt);
         SharesManagerPublicDeal(payable(address(sharesManager))).setValidatorBalance(3200 ether);
         assert(sharesManager.balanceOf(_user) == 0);
@@ -62,7 +62,24 @@ contract SharesManagerV1Tests {
 
         uint256 expectedBalance = (supply * 10 ether) / (shares + 10 ether);
 
-        assert(sharesManager.balanceOf(_user) == expectedBalance);
+        assert(sharesManager.balanceOfUnderlying(_user) == expectedBalance);
+    }
+
+    function testBalanceOf(uint256 _userSalt, uint256 _anotherUserSalt) public {
+        address _user = uf._new(_userSalt);
+        address _anotherUser = uf._new(_anotherUserSalt);
+        assert(sharesManager.balanceOf(_user) == 0);
+        SharesManagerPublicDeal(payable(address(sharesManager))).deal(_user, 10 ether);
+        assert(sharesManager.balanceOf(_user) == 10 ether);
+
+        SharesManagerPublicDeal(payable(address(sharesManager))).setValidatorBalance(300 ether);
+        assert(sharesManager.balanceOf(_user) == 10 ether);
+
+        assert(sharesManager.balanceOf(_anotherUser) == 0 ether);
+        vm.startPrank(_user);
+        sharesManager.transfer(_anotherUser, 10 ether);
+        assert(sharesManager.balanceOf(_anotherUser) == 10 ether);
+        assert(sharesManager.balanceOf(_user) == 0 ether);
     }
 
     function testSharesOf(uint256 _userSalt, uint256 _anotherUserSalt) public {
@@ -84,8 +101,8 @@ contract SharesManagerV1Tests {
         assert(sharesManager.sharesOf(_user) == 300 ether);
         assert(sharesManager.sharesOf(_anotherUser) == 88235294117647058823);
 
-        assert(sharesManager.balanceOf(_user) == 340 ether);
-        assert(sharesManager.balanceOf(_anotherUser) == 99999999999999999999); // rounding issues with solidity, diff is negligible
+        assert(sharesManager.balanceOfUnderlying(_user) == 340 ether);
+        assert(sharesManager.balanceOfUnderlying(_anotherUser) == 99999999999999999999); // rounding issues with solidity, diff is negligible
     }
 
     function testName() public view {
