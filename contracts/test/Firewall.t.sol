@@ -52,9 +52,8 @@ contract FirewallTests {
         bytes32 withdrawalCredentials = withdraw.getCredentials();
         river = new RiverV1();
         allowlist = new AllowlistV1();
-        bytes4[] memory executorCallableAllowlistSelectors = new bytes4[](2);
-        executorCallableAllowlistSelectors[0] = allowlist.setAllower.selector;
-        executorCallableAllowlistSelectors[1] = allowlist.allow.selector;
+        bytes4[] memory executorCallableAllowlistSelectors = new bytes4[](1);
+        executorCallableAllowlistSelectors[0] = allowlist.allow.selector;
         allowlistFirewall = new Firewall(
             riverGovernorDAO,
             executor,
@@ -466,7 +465,7 @@ contract FirewallTests {
 
     function testMakingFunctionGovernorOrExecutor() public {
         vm.startPrank(riverGovernorDAO);
-        riverFirewall.permissionFunction(getSelector("setAllower(address)"), true);
+        allowlistFirewall.permissionFunction(getSelector("setAllower(address)"), true);
         vm.stopPrank();
         vm.startPrank(executor);
         firewalledAllowlist.setAllower(joe);
