@@ -11,7 +11,7 @@ import "./state/allowlist/Allowlist.sol";
 
 /// @title Allowlist (v1)
 /// @author SkillZ
-/// @notice This contract handles the input from the allowed oracle members. Highly inspired by Lido's implementation.
+/// @notice This contract handles the list of allowed recipients.
 contract AllowlistV1 is Initializable {
     error InvalidAlloweeCount();
     error MismatchedAlloweeAndStatusCount();
