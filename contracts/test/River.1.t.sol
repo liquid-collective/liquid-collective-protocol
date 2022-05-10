@@ -3,6 +3,7 @@
 pragma solidity 0.8.10;
 
 import "./Vm.sol";
+import "../src/Allowlist.1.sol";
 import "../src/River.1.sol";
 import "../src/libraries/Errors.sol";
 import "../src/interfaces/IDepositContract.sol";
@@ -23,6 +24,8 @@ contract RiverV1SetupOneTests {
     address internal oracle = address(0xD97bF0222C8F4b21A4cedd9d6aC8e3269b099Eba);
     address internal allower = address(0x363ED97eebe06690625bf7b4e21c5B6540016366);
 
+    AllowlistV1 internal allowlist;
+
     address internal operatorOne = address(0x7fe52bbF4D779cA115231b604637d5f80bab2C40);
     string internal operatorOneName = "NodeMasters";
     address internal operatorTwo = address(0xb479DE67E0827Cc72bf5c1727e3bf6fe15007554);
@@ -35,11 +38,13 @@ contract RiverV1SetupOneTests {
     uint256 internal constant TRANSFER_MASK = 0x1 << 1;
 
     function setUp() public {
+        allowlist = new AllowlistV1();
+        allowlist.initAllowlistV1(admin, allower);
         deposit = new DepositContractMock();
         withdraw = new WithdrawV1();
         bytes32 withdrawalCredentials = withdraw.getCredentials();
         river = new RiverV1();
-        river.initRiverV1(address(deposit), withdrawalCredentials, admin, allower, treasury, 5000, 50000);
+        river.initRiverV1(address(deposit), withdrawalCredentials, admin, address(allowlist), treasury, 5000, 50000);
         vm.startPrank(admin);
         river.setOracle(oracle);
 
@@ -105,7 +110,7 @@ contract RiverV1SetupOneTests {
         statuses[0] = _mask;
 
         vm.startPrank(admin);
-        river.allow(allowees, statuses);
+        allowlist.allow(allowees, statuses);
         vm.stopPrank();
     }
 

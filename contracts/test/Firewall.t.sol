@@ -4,6 +4,7 @@ pragma solidity 0.8.10;
 
 import "./Vm.sol";
 import "../src/Firewall.sol";
+import "../src/Allowlist.1.sol";
 import "../src/River.1.sol";
 import "../src/interfaces/IDepositContract.sol";
 import "../src/Withdraw.1.sol";
@@ -12,6 +13,10 @@ import "./mocks/DepositContractMock.sol";
 import "./mocks/RiverMock.sol";
 
 contract FirewallTests {
+    AllowlistV1 internal allowlist;
+    AllowlistV1 internal firewalledAllowlist;
+    Firewall internal allowlistFirewall;
+
     RiverV1 internal river;
     Firewall internal riverFirewall;
     RiverV1 internal firewalledRiver;
@@ -46,6 +51,18 @@ contract FirewallTests {
         withdraw = new WithdrawV1();
         bytes32 withdrawalCredentials = withdraw.getCredentials();
         river = new RiverV1();
+        allowlist = new AllowlistV1();
+        bytes4[] memory executorCallableAllowlistSelectors = new bytes4[](1);
+        executorCallableAllowlistSelectors[0] = allowlist.allow.selector;
+        allowlistFirewall = new Firewall(
+            riverGovernorDAO,
+            executor,
+            address(allowlist),
+            executorCallableAllowlistSelectors
+        );
+        firewalledAllowlist = AllowlistV1(payable(address(allowlistFirewall)));
+        allowlist.initAllowlistV1(payable(address(allowlistFirewall)), payable(address(allowlistFirewall)));
+
         bytes4[] memory executorCallableRiverSelectors = new bytes4[](5);
         executorCallableRiverSelectors[0] = river.setOperatorStatus.selector;
         executorCallableRiverSelectors[1] = river.setOperatorStoppedValidatorCount.selector;
@@ -58,7 +75,7 @@ contract FirewallTests {
             address(deposit),
             withdrawalCredentials,
             payable(address(riverFirewall)),
-            payable(address(riverFirewall)),
+            payable(address(allowlist)),
             treasury,
             5000,
             50000
@@ -152,22 +169,22 @@ contract FirewallTests {
 
     function testGovernorCanSetAllower() public {
         vm.startPrank(riverGovernorDAO);
-        firewalledRiver.setAllower(don);
-        assert(river.getAllower() == don);
+        firewalledAllowlist.setAllower(don);
+        assert(allowlist.getAllower() == don);
         vm.stopPrank();
     }
 
     function testExecutorCannotSetAllower() public {
         vm.startPrank(executor);
         vm.expectRevert(unauthExecutor);
-        firewalledRiver.setAllower(joe);
+        allowlist.setAllower(joe);
         vm.stopPrank();
     }
 
     function testRandomCallerCannotSetAllower() public {
         vm.startPrank(joe);
         vm.expectRevert(unauthJoe);
-        firewalledRiver.setAllower(joe);
+        allowlist.setAllower(joe);
         vm.stopPrank();
     }
 
@@ -448,11 +465,11 @@ contract FirewallTests {
 
     function testMakingFunctionGovernorOrExecutor() public {
         vm.startPrank(riverGovernorDAO);
-        riverFirewall.permissionFunction(getSelector("setAllower(address)"), true);
+        allowlistFirewall.permissionFunction(getSelector("setAllower(address)"), true);
         vm.stopPrank();
         vm.startPrank(executor);
-        firewalledRiver.setAllower(joe);
-        assert(river.getAllower() == joe);
+        firewalledAllowlist.setAllower(joe);
+        assert(allowlist.getAllower() == joe);
         vm.stopPrank();
     }
 
@@ -475,11 +492,11 @@ contract FirewallTests {
         // setAllower, a governorOnly action
         address newGovernorDAO = address(0xdF2a01F10f86A7cdd2EE10cf35B8ab62723096a6);
         vm.startPrank(riverGovernorDAO);
-        riverFirewall.changeGovernor(newGovernorDAO);
+        allowlistFirewall.changeGovernor(newGovernorDAO);
         vm.stopPrank();
         vm.startPrank(newGovernorDAO);
-        firewalledRiver.setAllower(joe);
-        assert(river.getAllower() == joe);
+        firewalledAllowlist.setAllower(joe);
+        assert(allowlist.getAllower() == joe);
         vm.stopPrank();
     }
 
