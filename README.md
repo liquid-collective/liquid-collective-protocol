@@ -14,7 +14,6 @@ Users interact with this contract through an upgradeable proxy, defined at `cont
 - `TransferManager` to handle incoming ETH from stakers
 - `DepositManager` to take deposited ETH and allocate it to validators
 - `OperatorsManager` to handle the node operators
-- `AllowlistManager` to handle the list of recipients allowed to interact with River
 - `OracleManager` to receive input from `Oracle.sol`
 - `SharesManager` as the ERC20 implementation to credit initial deposits, & reflect earnings reported by the oracle in rebased lsETH balances
 
@@ -23,6 +22,10 @@ Users interact with this contract through an upgradeable proxy, defined at `cont
 `River.sol` will get its withdrawal logic from `contracts/src/Withdraw.sol`. Since the actual protocol for moving ETH off of a validator post-merge has not yet been defined, this contract is a temporary stub contract, which will be upgraded post-merge.
 
 `Oracle.sol` receives reports of staking rewards from designated reporters, and pushes the data to `River.sol` to modify lsETH balances.
+
+`AllowList.sol` handles the list of recipients allowed to interact with River. `River.sol` reads from it.
+
+We wrap `AllowList`, `Oracle` and `River` in a `Firewall.sol`, through which administrators can make onlyAdmin function calls.
 
 ## Scripts
 
