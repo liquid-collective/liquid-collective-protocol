@@ -1,3 +1,4 @@
+import { getContractAddress } from "ethers/lib/utils";
 import { DeployFunction } from "hardhat-deploy/dist/types";
 import { HardhatRuntimeEnvironment } from "hardhat/types";
 
@@ -44,7 +45,38 @@ const func: DeployFunction = async function ({
     depositContract = mockedDepositContractDeployment.address;
   }
 
-  await deployments.deploy("RiverV1", {
+  const signer = await ethers.getSigner(deployer);
+
+  const txCount = await signer.getTransactionCount();
+
+  const futureRiverAddress = getContractAddress({
+	  from: deployer,
+	  nonce: txCount + 2 // proxy is in 3 txs
+  });
+
+  const riverArtifact = await deployments.getArtifact("RiverV1")
+  const riverInterface = new ethers.utils.Interface(riverArtifact.abi);
+
+  const firewallDeployment = await deployments.deploy("Firewall", {
+    from: deployer,
+    log: true,
+	args: [
+		systemAdministrator,
+		proxyAdministrator,
+		futureRiverAddress,
+		[
+      riverInterface.getSighash("setOperatorStatus"),
+      riverInterface.getSighash("setOperatorStoppedValidatorCount"),
+      riverInterface.getSighash("setOperatorLimit"),
+      riverInterface.getSighash("depositToConsensusLayer"),
+      riverInterface.getSighash("setOracle"),
+		]
+	]
+  });
+
+  const allowlistDeployment = await deployments.get("AllowlistV1")
+
+  const riverDeployment = await deployments.deploy("RiverV1", {
     from: deployer,
     log: true,
     proxy: {
@@ -55,8 +87,8 @@ const func: DeployFunction = async function ({
         args: [
           depositContract,
           withdrawalCredentials,
-          systemAdministrator,
-          systemAdministrator,
+          firewallDeployment.address,
+          allowlistDeployment.address,
           treasury,
           500,
           50000,
@@ -64,6 +96,10 @@ const func: DeployFunction = async function ({
       },
     },
   });
+
+  if (riverDeployment.address !== futureRiverAddress) {
+	  throw new Error(`Invalid future address computation ${futureRiverAddress} != ${riverDeployment.address}`)
+  }
 
   logStepEnd();
 };

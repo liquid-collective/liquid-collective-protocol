@@ -38,9 +38,10 @@ const func: DeployFunction = async function ({
   const oracleDeployment = await deployments.get("OracleV1");
 
   const river = await ethers.getContractAt("RiverV1", riverDeployment.address);
+  const administratorAddress = await river.getAdministrator()
   let oracleAddress = await river.getOracle();
   if (oracleAddress.toLowerCase() !== oracleDeployment.address.toLowerCase()) {
-    administratorCallHint(await river.getAdministrator(), river.address, 'setOracle(address)', [oracleDeployment.address])
+    administratorCallHint(await river.getAdministrator(), administratorAddress, 'setOracle(address)', [oracleDeployment.address])
   }
   let round = 0;
   do {
