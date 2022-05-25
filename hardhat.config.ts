@@ -37,6 +37,7 @@ const config: HardhatUserConfig = {
       accounts: {
         mnemonic: process.env.MNEMONIC || "",
       },
+      gas: 5000000,
     },
     hardhat: {
       accounts: {
