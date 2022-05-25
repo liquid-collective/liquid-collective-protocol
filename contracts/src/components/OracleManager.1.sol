@@ -31,6 +31,12 @@ abstract contract OracleManagerV1 {
         _;
     }
 
+    /// @notice Set the initial oracle address
+    /// @param _oracle Address of the oracle
+    function initOracleManagerV1(address _oracle) internal {
+        OracleAddress.set(_oracle);
+    }
+
     /// @notice Sets the validator count and validator balance sum reported by the oracle
     /// @dev Can only be called by the oracle address
     /// @param _validatorCount The number of active validators on the consensus layer

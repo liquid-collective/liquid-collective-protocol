@@ -11,12 +11,7 @@ const logStepEnd = () => {
   console.log(`=== ${__filename} END`);
 };
 
-const func: DeployFunction = async function ({
-  deployments,
-  getNamedAccounts,
-  ethers,
-  artifacts,
-}: HardhatRuntimeEnvironment) {
+const func: DeployFunction = async function ({ deployments, getNamedAccounts }: HardhatRuntimeEnvironment) {
   logStep();
 
   const { deployer, proxyAdministrator } = await getNamedAccounts();
