@@ -44,7 +44,16 @@ contract RiverV1SetupOneTests {
         withdraw = new WithdrawV1();
         bytes32 withdrawalCredentials = withdraw.getCredentials();
         river = new RiverV1();
-        river.initRiverV1(address(deposit), withdrawalCredentials, oracle, admin, address(allowlist), treasury, 5000, 50000);
+        river.initRiverV1(
+            address(deposit),
+            withdrawalCredentials,
+            oracle,
+            admin,
+            address(allowlist),
+            treasury,
+            5000,
+            50000
+        );
         vm.startPrank(admin);
 
         // ===================

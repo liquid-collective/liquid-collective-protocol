@@ -33,9 +33,7 @@ abstract contract OracleManagerV1 {
 
     /// @notice Set the initial oracle address
     /// @param _oracle Address of the oracle
-    function initOracleManagerV1(
-        address _oracle
-    ) internal {
+    function initOracleManagerV1(address _oracle) internal {
         OracleAddress.set(_oracle);
     }
 
