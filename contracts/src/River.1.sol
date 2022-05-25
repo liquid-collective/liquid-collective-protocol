@@ -47,6 +47,7 @@ contract RiverV1 is
     function initRiverV1(
         address _depositContractAddress,
         bytes32 _withdrawalCredentials,
+        address _oracleAddress,
         address _systemAdministratorAddress,
         address _allowlistAddress,
         address _treasuryAddress,
@@ -59,6 +60,7 @@ contract RiverV1 is
         OperatorRewardsShare.set(_operatorRewardsShare);
 
         DepositManagerV1.initDepositManagerV1(_depositContractAddress, _withdrawalCredentials);
+        OracleManagerV1.initOracleManagerV1(_oracleAddress);
         AllowlistAddress.set(_allowlistAddress);
     }
 

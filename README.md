@@ -51,6 +51,14 @@ yarn lint:check && yarn format:check
 
 You need to define the `MNEMONIC` env variable before running these scripts. The mnemonic should unlock an account with enough ETH to cover deployment fees. The deployment account has no ownership on the contracts deployed. Core components addresses are configured in `hardhat.config.ts` in the `namedAccounts` section.
 
+#### Local
+
+To deploy the contracts in an ephemeral EVM instance, run
+
+```
+yarn hh deploy
+```
+
 #### Goerli
 
 Deployment on the goerli test network using the Prater Beacon test chain.

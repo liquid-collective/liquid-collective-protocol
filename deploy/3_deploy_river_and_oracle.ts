@@ -49,6 +49,11 @@ const func: DeployFunction = async function ({
 
   const txCount = await signer.getTransactionCount();
 
+  const futureOracleAddress = getContractAddress({
+	  from: deployer,
+	  nonce: txCount + 5 // proxy is
+  });
+
   const futureRiverAddress = getContractAddress({
 	  from: deployer,
 	  nonce: txCount + 2 // proxy is in 3 txs
@@ -57,12 +62,12 @@ const func: DeployFunction = async function ({
   const riverArtifact = await deployments.getArtifact("RiverV1")
   const riverInterface = new ethers.utils.Interface(riverArtifact.abi);
 
-  const firewallDeployment = await deployments.deploy("Firewall", {
+  const riverFirewallDeployment = await deployments.deploy("Firewall", {
     from: deployer,
     log: true,
 	args: [
 		systemAdministrator,
-		proxyAdministrator,
+		systemAdministrator,
 		futureRiverAddress,
 		[
       riverInterface.getSighash("setOperatorStatus"),
@@ -87,7 +92,8 @@ const func: DeployFunction = async function ({
         args: [
           depositContract,
           withdrawalCredentials,
-          firewallDeployment.address,
+          futureOracleAddress,
+          riverFirewallDeployment.address,
           allowlistDeployment.address,
           treasury,
           500,
@@ -97,8 +103,54 @@ const func: DeployFunction = async function ({
     },
   });
 
+  const oracleArtifact = await deployments.getArtifact("OracleV1")
+  const oracleInterface = new ethers.utils.Interface(oracleArtifact.abi);
+
+  const oracleFirewallDeployment = await deployments.deploy("Firewall", {
+    from: deployer,
+    log: true,
+	args: [
+		systemAdministrator,
+		systemAdministrator,
+    futureOracleAddress,
+		[
+      oracleInterface.getSighash("addMember"),
+      oracleInterface.getSighash("removeMember"),
+      oracleInterface.getSighash("setQuorum"),
+      oracleInterface.getSighash("setBeaconSpec"),
+      oracleInterface.getSighash("setBeaconBounds"),
+		]
+	]
+  });
+
+  const oracleDeployment = await deployments.deploy("OracleV1", {
+    from: deployer,
+    log: true,
+    proxy: {
+      owner: proxyAdministrator,
+      proxyContract: "TUPProxy",
+      execute: {
+        methodName: "initOracleV1",
+        args: [
+          riverDeployment.address,
+          oracleFirewallDeployment.address,
+          225,
+          32,
+          12,
+          1606824023,
+          1000,
+          500,
+        ],
+      },
+    },
+  });
+
   if (riverDeployment.address !== futureRiverAddress) {
-	  throw new Error(`Invalid future address computation ${futureRiverAddress} != ${riverDeployment.address}`)
+	  throw new Error(`Invalid future river address computation ${futureRiverAddress} != ${riverDeployment.address}`)
+  }
+
+  if (oracleDeployment.address !== futureOracleAddress) {
+	  throw new Error(`Invalid future oracle address computation ${futureRiverAddress} != ${riverDeployment.address}`)
   }
 
   logStepEnd();

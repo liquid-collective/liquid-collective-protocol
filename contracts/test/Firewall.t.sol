@@ -63,6 +63,8 @@ contract FirewallTests {
         firewalledAllowlist = AllowlistV1(payable(address(allowlistFirewall)));
         allowlist.initAllowlistV1(payable(address(allowlistFirewall)), payable(address(allowlistFirewall)));
 
+        oracle = new OracleV1();
+
         bytes4[] memory executorCallableRiverSelectors = new bytes4[](5);
         executorCallableRiverSelectors[0] = river.setOperatorStatus.selector;
         executorCallableRiverSelectors[1] = river.setOperatorStoppedValidatorCount.selector;
@@ -74,6 +76,7 @@ contract FirewallTests {
         river.initRiverV1(
             address(deposit),
             withdrawalCredentials,
+            address(oracle),
             payable(address(riverFirewall)),
             payable(address(allowlist)),
             treasury,
@@ -81,7 +84,6 @@ contract FirewallTests {
             50000
         );
 
-        oracle = new OracleV1();
         bytes4[] memory executorCallableOracleSelectors = new bytes4[](5);
         executorCallableOracleSelectors[0] = oracle.addMember.selector;
         executorCallableOracleSelectors[1] = oracle.removeMember.selector;
