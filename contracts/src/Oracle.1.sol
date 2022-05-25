@@ -93,6 +93,11 @@ contract OracleV1 is Initializable {
         return LibOwnable._getAdmin();
     }
 
+    /// @notice Retrieve River address
+    function getRiver() external view returns (address) {
+        return RiverAddress.get();
+    }
+
     /// @notice Prevents unauthorized calls
     modifier onlyAdmin() {
         if (msg.sender != LibOwnable._getAdmin()) {

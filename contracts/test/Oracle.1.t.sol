@@ -54,6 +54,10 @@ contract OracleV1Tests {
         assert(oracle.getAdministrator() == admin);
     }
 
+    function testGetRiver() public view {
+        assert(oracle.getRiver() == address(oracleInput));
+    }
+
     function testGetTime(uint256 time) public {
         vm.warp(time);
         assert(oracle.getTime() == time);

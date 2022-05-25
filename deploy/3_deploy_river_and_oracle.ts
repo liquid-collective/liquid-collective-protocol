@@ -153,6 +153,18 @@ const func: DeployFunction = async function ({
 	  throw new Error(`Invalid future oracle address computation ${futureRiverAddress} != ${riverDeployment.address}`)
   }
 
+  const riverInstance = new ethers.Contract(riverDeployment.address, riverDeployment.abi, ethers.provider)
+
+  if ((await riverInstance.getOracle()).toLowerCase() !== oracleDeployment.address.toLowerCase()) {
+    throw new Error(`Invalid oracle address provided by River`) 
+  }
+
+  const oracleInstance = new ethers.Contract(oracleDeployment.address, oracleDeployment.abi, ethers.provider)
+
+  if ((await oracleInstance.getRiver()).toLowerCase() !== riverDeployment.address.toLowerCase()) {
+    throw new Error(`Invalid river address provided by Oracle`) 
+  }
+
   logStepEnd();
 };
 export default func;
