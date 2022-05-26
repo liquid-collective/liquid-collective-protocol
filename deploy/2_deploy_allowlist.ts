@@ -32,7 +32,7 @@ const func: DeployFunction = async function ({ deployments, getNamedAccounts, et
   const firewallDeployment = await deployments.deploy("Firewall", {
     from: deployer,
     log: true,
-    args: [systemAdministrator, proxyAdministrator, futureAllowlistAddress, [allowlistInterface.getSighash("allow")]],
+    args: [systemAdministrator, systemAdministrator, futureAllowlistAddress, [allowlistInterface.getSighash("allow")]],
   });
 
   const allowlistDeployment = await deployments.deploy("AllowlistV1", {
