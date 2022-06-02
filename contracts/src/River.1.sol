@@ -16,7 +16,7 @@ import "./state/river/OperatorRewardsShare.sol";
 import "./state/river/GlobalFee.sol";
 
 /// @title River (v1)
-/// @author SkillZ
+/// @author Kiln
 /// @notice This contract merges all the manager contracts and implements all the virtual methods stitching all components together
 contract RiverV1 is
     DepositManagerV1,

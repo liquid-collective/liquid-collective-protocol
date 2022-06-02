@@ -4,7 +4,7 @@ pragma solidity 0.8.10;
 import "../libraries/Errors.sol";
 
 /// @title Transfer Manager (v1)
-/// @author SkillZ
+/// @author Kiln
 /// @notice This contract handles the inbound transfers cases or the explicit submissions
 abstract contract TransferManagerV1 {
     event UserDeposit(address indexed user, address indexed referral, uint256 amount);

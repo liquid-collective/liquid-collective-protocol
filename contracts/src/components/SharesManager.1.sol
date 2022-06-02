@@ -9,7 +9,7 @@ import "../state/river/SharesPerOwner.sol";
 import "../state/shared/ApprovalsPerOwner.sol";
 
 /// @title Shares Manager (v1)
-/// @author SkillZ
+/// @author Kiln
 /// @notice This contract handles the shares of the depositor and the rebasing effect depending on the oracle data
 abstract contract SharesManagerV1 is IERC20 {
     error BalanceTooLow();

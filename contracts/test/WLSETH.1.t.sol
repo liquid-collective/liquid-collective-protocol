@@ -456,6 +456,37 @@ contract WLSETHV1Tests {
         }
     }
 
+    function testBurnWrappedTokensWithRebase(uint256 _guySalt, uint32 _sum) external {
+        address _guy = uf._new(_guySalt);
+        RiverTokenMock(address(river)).sudoSetBalance(_guy, _sum);
+        uint256 balance = river.balanceOfUnderlying(_guy);
+        if (_sum > 0) {
+            assert(balance == 100 ether);
+            balance = RiverTokenMock(address(river)).balanceOf(_guy);
+            assert(balance == _sum);
+            vm.startPrank(_guy);
+            RiverTokenMock(address(river)).approve(address(wlseth), _sum);
+            wlseth.mint(_guy, balance);
+            vm.stopPrank();
+            balance = RiverTokenMock(address(river)).balanceOf(_guy);
+            assert(balance == 0);
+            balance = wlseth.balanceOf(_guy);
+            assert(balance == 100 ether);
+            RiverTokenMock(address(river)).sudoSetUnderlyingTotal(200 ether);
+            balance = wlseth.balanceOf(_guy);
+            assert(balance == 200 ether);
+            vm.startPrank(_guy);
+            wlseth.burn(_guy, balance);
+            balance = wlseth.balanceOf(_guy);
+            assert(balance == 0);
+            balance = RiverTokenMock(address(river)).balanceOf(_guy);
+            assert(balance == _sum);
+            vm.stopPrank();
+        } else {
+            assert(balance == 0 ether);
+        }
+    }
+
     function testMintWrappedTokensTooMuch(uint256 _guySalt, uint32 _sum) external {
         address _guy = uf._new(_guySalt);
         RiverTokenMock(address(river)).sudoSetBalance(_guy, _sum);

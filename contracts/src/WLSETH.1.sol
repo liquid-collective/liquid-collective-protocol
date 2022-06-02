@@ -8,9 +8,10 @@ import "./state/shared/RiverAddress.sol";
 import "./state/shared/ApprovalsPerOwner.sol";
 import "./state/wlseth/BalanceOf.sol";
 
-/// @title Oracle Manager (v1)
-/// @author SkillZ
-/// @notice This contract handles the inputs provided by the oracle
+/// @title Wrapped lsETH v1
+/// @author Kiln
+/// @notice This contract wraps the lsETH token into a rebase token, more suitable for some DeFi use-cases
+///         like stable swaps.
 contract WLSETHV1 is Initializable {
     event Transfer(address indexed _from, address indexed _to, uint256 _value);
     event Approval(address indexed _owner, address indexed _spender, uint256 _value);
@@ -19,38 +20,6 @@ contract WLSETHV1 is Initializable {
     error UnauthorizedOperation();
     error AllowanceTooLow(address _from, address _operator, uint256 _allowance, uint256 _value);
     error NullTransfer();
-
-    function initWLSETHV1(address _river) external init(0) {
-        RiverAddress.set(_river);
-    }
-
-    function name() external pure returns (string memory) {
-        return "Wrapped River";
-    }
-
-    function symbol() external pure returns (string memory) {
-        return "wlsETH";
-    }
-
-    function decimals() external pure returns (uint8) {
-        return 18;
-    }
-
-    function totalSupply() external view returns (uint256) {
-        return IRiverToken(RiverAddress.get()).balanceOfUnderlying(address(this));
-    }
-
-    function balanceOf(address _owner) external view returns (uint256 balance) {
-        return _balanceOf(_owner);
-    }
-
-    function _balanceOf(address _owner) internal view returns (uint256 balance) {
-        return IRiverToken(RiverAddress.get()).underlyingBalanceFromShares(BalanceOf.get(_owner));
-    }
-
-    function allowance(address _owner, address _spender) external view returns (uint256 remaining) {
-        return ApprovalsPerOwner.get(_owner, _spender);
-    }
 
     modifier isNotNull(uint256 _value) {
         if (_value == 0) {
@@ -66,6 +35,48 @@ contract WLSETHV1 is Initializable {
         _;
     }
 
+    /// @notice Initializes the wrapped token contract
+    /// @param _river Address of the River contract
+    function initWLSETHV1(address _river) external init(0) {
+        RiverAddress.set(_river);
+    }
+
+    /// @notice Retrieves the token full name
+    function name() external pure returns (string memory) {
+        return "Wrapped River";
+    }
+
+    /// @notice Retrieves the token ticker
+    function symbol() external pure returns (string memory) {
+        return "wlsETH";
+    }
+
+    /// @notice Retrieves the token decimal count
+    function decimals() external pure returns (uint8) {
+        return 18;
+    }
+
+    /// @notice Retrieves the token total supply
+    function totalSupply() external view returns (uint256) {
+        return IRiverToken(RiverAddress.get()).balanceOfUnderlying(address(this));
+    }
+
+    /// @notice Retrieves the token balance of the speicified user
+    /// @param _owner Owner to check the balance
+    function balanceOf(address _owner) external view returns (uint256 balance) {
+        return _balanceOf(_owner);
+    }
+
+    /// @notice Retrieves the token allowance given from one address to another
+    /// @param _owner Owner that gave the allowance
+    /// @param _spender Spender that received the allowance
+    function allowance(address _owner, address _spender) external view returns (uint256 remaining) {
+        return ApprovalsPerOwner.get(_owner, _spender);
+    }
+
+    /// @notice Transfers tokens between the message sender and a recipient
+    /// @param _to Recipient of the transfer
+    /// @param _value Amount to transfer
     function transfer(address _to, uint256 _value)
         external
         isNotNull(_value)
@@ -75,6 +86,11 @@ contract WLSETHV1 is Initializable {
         return _transfer(msg.sender, _to, _value);
     }
 
+    /// @notice Transfers tokens between two accounts
+    /// @dev If _from is not the message sender, then it is expected that _from has given at leave _value allowance to msg.sender
+    /// @param _from Sender account
+    /// @param _to Recipient of the transfer
+    /// @param _value Amount to transfer
     function transferFrom(
         address _from,
         address _to,
@@ -90,10 +106,45 @@ contract WLSETHV1 is Initializable {
         return _transfer(_from, _to, _value);
     }
 
+    /// @notice Approves another account to transfer tokens
+    /// @param _spender Spender that receives the allowance
+    /// @param _value Amount to allow
     function approve(address _spender, uint256 _value) external returns (bool success) {
         ApprovalsPerOwner.set(msg.sender, _spender, _value);
         emit Approval(msg.sender, _spender, _value);
         return true;
+    }
+
+    /// @notice Mint tokens by providing River tokens
+    /// @dev Minted tokens are sent to recipient but are minted from the message sender balance
+    /// @dev It is expected that the message sender approves _value amount of River token to
+    /// @dev this contract before calling
+    /// @param _recipient Spender that receives the allowance
+    /// @param _value Amount of river token to give to the mint
+    function mint(address _recipient, uint256 _value) external {
+        BalanceOf.set(_recipient, BalanceOf.get(_recipient) + _value);
+        IRiverToken(RiverAddress.get()).transferFrom(msg.sender, address(this), _value);
+    }
+
+    /// @notice Burn tokens and retrieve underlying River tokens
+    /// @dev Burned tokens are sent to recipient but are minted from the message sender balance
+    /// @dev No approval required from the message sender
+    /// @param _recipient Spender that receives the allowance
+    /// @param _value Amount of wrapped token to give to the burn
+    function burn(address _recipient, uint256 _value) external {
+        uint256 callerUnderlyingBalance = IRiverToken(RiverAddress.get()).underlyingBalanceFromShares(
+            BalanceOf.get(msg.sender)
+        );
+        if (_value > callerUnderlyingBalance) {
+            revert BalanceTooLow();
+        }
+        uint256 sharesAmount = IRiverToken(RiverAddress.get()).sharesFromUnderlyingBalance(_value);
+        BalanceOf.set(msg.sender, BalanceOf.get(msg.sender) - sharesAmount);
+        IRiverToken(RiverAddress.get()).transfer(_recipient, sharesAmount);
+    }
+
+    function _balanceOf(address _owner) internal view returns (uint256 balance) {
+        return IRiverToken(RiverAddress.get()).underlyingBalanceFromShares(BalanceOf.get(_owner));
     }
 
     function _transfer(
@@ -108,22 +159,5 @@ contract WLSETHV1 is Initializable {
         emit Transfer(_from, _to, _value);
 
         return true;
-    }
-
-    function mint(address _recipient, uint256 _value) external {
-        BalanceOf.set(_recipient, BalanceOf.get(_recipient) + _value);
-        IRiverToken(RiverAddress.get()).transferFrom(msg.sender, address(this), _value);
-    }
-
-    function burn(address _recipient, uint256 _value) external {
-        uint256 callerUnderlyingBalance = IRiverToken(RiverAddress.get()).underlyingBalanceFromShares(
-            BalanceOf.get(msg.sender)
-        );
-        if (_value > callerUnderlyingBalance) {
-            revert BalanceTooLow();
-        }
-        uint256 sharesAmount = IRiverToken(RiverAddress.get()).sharesFromUnderlyingBalance(_value);
-        BalanceOf.set(msg.sender, BalanceOf.get(msg.sender) - sharesAmount);
-        IRiverToken(RiverAddress.get()).transfer(_recipient, sharesAmount);
     }
 }
