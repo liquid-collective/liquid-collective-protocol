@@ -17,15 +17,6 @@ abstract contract SharesManagerV1 is IERC20 {
     error AllowanceTooLow(address _from, address _operator, uint256 _allowance, uint256 _value);
     error NullTransfer();
 
-    function _isAccountAllowed(address _account) internal view virtual returns (bool);
-
-    modifier allowed(address _account) {
-        if (!_isAccountAllowed(_account)) {
-            revert Errors.Unauthorized(_account);
-        }
-        _;
-    }
-
     modifier isNotNull(uint256 _value) {
         if (_value == 0) {
             revert NullTransfer();
@@ -74,7 +65,6 @@ abstract contract SharesManagerV1 is IERC20 {
 
     function transfer(address _to, uint256 _value)
         external
-        allowed(msg.sender)
         isNotNull(_value)
         hasFunds(msg.sender, _value)
         returns (bool)
@@ -86,7 +76,7 @@ abstract contract SharesManagerV1 is IERC20 {
         address _from,
         address _to,
         uint256 _value
-    ) external allowed(_from) isNotNull(_value) hasFunds(_from, _value) returns (bool) {
+    ) external isNotNull(_value) hasFunds(_from, _value) returns (bool) {
         if (_from != msg.sender) {
             uint256 currentAllowance = ApprovalsPerOwner.get(_from, msg.sender);
             if (currentAllowance < _value) {
@@ -97,7 +87,7 @@ abstract contract SharesManagerV1 is IERC20 {
         return _transfer(_from, _to, _value);
     }
 
-    function approve(address _spender, uint256 _value) external allowed(msg.sender) returns (bool success) {
+    function approve(address _spender, uint256 _value) external returns (bool success) {
         ApprovalsPerOwner.set(msg.sender, _spender, _value);
         emit Approval(msg.sender, _spender, _value);
         return true;

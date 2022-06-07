@@ -18,10 +18,6 @@ contract SharesManagerPublicDeal is SharesManagerV1 {
         return balanceSum + address(this).balance;
     }
 
-    function _isAccountAllowed(address) internal pure override returns (bool) {
-        return true;
-    }
-
     function deal(address _owner, uint256 _amount) external {
         uint256 shares = SharesPerOwner.get(_owner);
         Shares.set(Shares.get() - shares);
