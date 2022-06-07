@@ -8,7 +8,6 @@ typechain
 #Hardhat files
 hardhat-cache
 artifacts
-docs
 docgen
 
 # Forge files

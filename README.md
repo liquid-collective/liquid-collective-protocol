@@ -75,15 +75,22 @@ Deployment on the goerli test network using a mocked DepositContract that emits 
 yarn hh --network mockedGoerli
 ```
 
+## Components Overview
+
+![Components](./docs/components.svg)
+
+Generate by running `yarn uml`
+
 ## Live Deployments
 
 ### Goerli (`goerli`)
 
 | Contract | Address | Artifact |
 |---|---|---|
-| RiverV1  | [`0x2E83624ef8737B5e26F567F7310202e5D4252578`](https://goerli.etherscan.io/address/0x2E83624ef8737B5e26F567F7310202e5D4252578) | [📜](./deployments/goerli/RiverV1.json) |
-| OracleV1  | [`0x04895E3052C0e7BCffE0138FF5e4902449481878`](https://goerli.etherscan.io/address/0x04895E3052C0e7BCffE0138FF5e4902449481878)  | [📜](./deployments/goerli/OracleV1.json) |
-|  WithdrawV1 | [`0xB5EC5a8c3034f66A6d22a79149816C24Db633C00`](https://goerli.etherscan.io/address/0xB5EC5a8c3034f66A6d22a79149816C24Db633C00)  | [📜](./deployments/goerli/WithdrawV1.json) |
+| RiverV1  | [`0x96f63FB35ECBdd739c7E901968Eac5bc3a36D308`](https://goerli.etherscan.io/address/0x96f63FB35ECBdd739c7E901968Eac5bc3a36D308) | [📜](./deployments/goerli/RiverV1.json) |
+| OracleV1  | [`0x507b8e603485A0DCf0C59DB810Dc0BdD790a783d`](https://goerli.etherscan.io/address/0x507b8e603485A0DCf0C59DB810Dc0BdD790a783d)  | [📜](./deployments/goerli/OracleV1.json) |
+|  WithdrawV1 | [`0xc9716693Ab7BF082b676129850bA749EFD25ea7b`](https://goerli.etherscan.io/address/0xc9716693Ab7BF082b676129850bA749EFD25ea7b)  | [📜](./deployments/goerli/WithdrawV1.json) |
+| AllowlistV1 | [`0x961685E8a85Ee24669d808612dA305a7330689FD`](https://goerli.etherscan.io/address/0x961685E8a85Ee24669d808612dA305a7330689FD) | [📜](./deployments/goerli/AllowlistV1.json) |
 
 ### Goerli with mocked deposit contract (`mockedGoerli`)
 
