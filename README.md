@@ -81,6 +81,15 @@ yarn hh --network mockedGoerli
 
 Generate by running `yarn uml`
 
+### Interfaces
+
+| Contract | Documentation |
+|---|---|
+| `RiverV1` | [📜](./natspec/RiverV1.md)
+| `OracleV1` | [📜](./natspec/OracleV1.md)
+| `AllowlistV1` | [📜](./natspec/AllowlistV1.md)
+| `WithdrawV1` | [📜](./natspec/WithdrawV1.md)
+
 ## Live Deployments
 
 ### Goerli (`goerli`)

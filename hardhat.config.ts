@@ -9,6 +9,7 @@ import "hardhat-gas-reporter";
 import "solidity-coverage";
 import "hardhat-docgen";
 import "hardhat-contract-sizer";
+import "@primitivefi/hardhat-dodoc";
 
 dotenv.config();
 
@@ -21,6 +22,10 @@ const config: HardhatUserConfig = {
         runs: 1000,
       },
     },
+  },
+  dodoc: {
+    include: ["RiverV1", "OracleV1", "AllowlistV1", "WithdrawV1"],
+    outputDir: "natspec",
   },
   contractSizer: {
     runOnCompile: true,
