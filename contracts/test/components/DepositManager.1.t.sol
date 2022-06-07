@@ -39,6 +39,7 @@ contract DepositManagerV1ExposeInitializer is DepositManagerV1 {
 }
 
 contract DepositManagerV1Tests {
+    event DepositToConsensusLayer(uint256 validatorCount, uint256 depositedAmount);
     Vm internal vm = Vm(0x7109709ECfa91a80626fF3989D68f67F5b1DD12D);
 
     bytes32 internal withdrawalCredentials = bytes32(uint256(1));
@@ -69,6 +70,8 @@ contract DepositManagerV1Tests {
     function testDepositTenValidators() public {
         vm.deal(address(depositManager), 320 ether);
         assert(address(depositManager).balance == 320 ether);
+        vm.expectEmit(true, true, true, true);
+        emit DepositToConsensusLayer(10, 320 ether);
         depositManager.depositToConsensusLayer(10);
         assert(address(depositManager).balance == 0);
     }
@@ -76,6 +79,8 @@ contract DepositManagerV1Tests {
     function testDepositTwentyValidators() public {
         vm.deal(address(depositManager), 640 ether);
         assert(address(depositManager).balance == 640 ether);
+        vm.expectEmit(true, true, true, true);
+        emit DepositToConsensusLayer(10, 320 ether);
         depositManager.depositToConsensusLayer(20);
         assert(address(depositManager).balance == 320 ether);
     }

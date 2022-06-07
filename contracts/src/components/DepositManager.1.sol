@@ -23,6 +23,8 @@ abstract contract DepositManagerV1 {
     error InvalidSignatureCount();
     error InvalidWithdrawalCredentials();
 
+    event DepositToConsensusLayer(uint256 validatorCount, uint256 depositedAmount);
+
     uint256 public constant PUBLIC_KEY_LENGTH = 48;
     uint256 public constant SIGNATURE_LENGTH = 96;
     uint256 public constant DEPOSIT_SIZE = 32 ether;
@@ -87,6 +89,7 @@ abstract contract DepositManagerV1 {
         }
 
         DepositedValidatorCount.set(DepositedValidatorCount.get() + receivedPublicKeyCount);
+        emit DepositToConsensusLayer(receivedPublicKeyCount, DEPOSIT_SIZE * receivedPublicKeyCount);
     }
 
     /// @notice Deposits 32 ETH to the official Deposit contract
