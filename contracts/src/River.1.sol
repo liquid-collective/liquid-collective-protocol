@@ -154,7 +154,7 @@ contract RiverV1 is
     /// @param _amount Additional eth received
     function _onEarnings(uint256 _amount) internal override {
         uint256 globalFee = GlobalFee.get();
-        uint256 sharesToMint = (_amount * _totalShares() * globalFee) /
+        uint256 sharesToMint = (_amount * _totalSupply() * globalFee) /
             ((_assetBalance() * BASE) - (_amount * globalFee));
 
         uint256 operatorRewards = (sharesToMint * OperatorRewardsShare.get()) / BASE;

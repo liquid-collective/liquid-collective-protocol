@@ -55,8 +55,8 @@ contract SharesManagerV1Tests {
         SharesManagerPublicDeal(payable(address(sharesManager))).setValidatorBalance(3200 ether);
         assert(sharesManager.balanceOf(_user) == 0);
 
-        uint256 shares = sharesManager.totalShares();
-        uint256 supply = sharesManager.totalSupply();
+        uint256 shares = sharesManager.totalSupply();
+        uint256 supply = sharesManager.totalUnderlyingSupply();
 
         SharesManagerPublicDeal(payable(address(sharesManager))).deal(_user, 10 ether);
 
@@ -82,24 +82,24 @@ contract SharesManagerV1Tests {
         assert(sharesManager.balanceOf(_user) == 0 ether);
     }
 
-    function testSharesOf(uint256 _userSalt, uint256 _anotherUserSalt) public {
+    function testbalanceOf(uint256 _userSalt, uint256 _anotherUserSalt) public {
         address _user = uf._new(_userSalt);
         address _anotherUser = uf._new(_anotherUserSalt);
         _anotherUser = address(uint160(_user) + 1);
         SharesManagerPublicDeal(payable(address(sharesManager))).setValidatorBalance(0 ether);
 
-        assert(sharesManager.sharesOf(_user) == 0);
+        assert(sharesManager.balanceOf(_user) == 0);
 
         SharesManagerPublicDeal(payable(address(sharesManager))).setValidatorBalance(300 ether);
         SharesManagerPublicDeal(payable(address(sharesManager))).mint(_user, 300 ether);
 
-        assert(sharesManager.sharesOf(_user) == 300 ether);
+        assert(sharesManager.balanceOf(_user) == 300 ether);
 
         SharesManagerPublicDeal(payable(address(sharesManager))).setValidatorBalance(440 ether);
         SharesManagerPublicDeal(payable(address(sharesManager))).mint(_anotherUser, 100 ether);
 
-        assert(sharesManager.sharesOf(_user) == 300 ether);
-        assert(sharesManager.sharesOf(_anotherUser) == 88235294117647058823);
+        assert(sharesManager.balanceOf(_user) == 300 ether);
+        assert(sharesManager.balanceOf(_anotherUser) == 88235294117647058823);
 
         assert(sharesManager.balanceOfUnderlying(_user) == 340 ether);
         assert(sharesManager.balanceOfUnderlying(_anotherUser) == 99999999999999999999); // rounding issues with solidity, diff is negligible
@@ -125,11 +125,11 @@ contract SharesManagerV1Tests {
         address _user = uf._new(_userSalt);
         vm.deal(_user, depositSize);
         vm.startPrank(_user);
-        assert(sharesManager.totalSupply() == 0);
+        assert(sharesManager.totalUnderlyingSupply() == 0);
         SharesManagerPublicDeal(payable(address(sharesManager))).setValidatorBalance(validatorBalanceSum);
         (bool sent, ) = payable(address(sharesManager)).call{value: depositSize}("");
         assert(sent == true);
-        assert(sharesManager.totalSupply() == uint256(validatorBalanceSum) + uint256(depositSize));
+        assert(sharesManager.totalUnderlyingSupply() == uint256(validatorBalanceSum) + uint256(depositSize));
         vm.stopPrank();
     }
 
@@ -169,10 +169,10 @@ contract SharesManagerV1Tests {
         if (transferValue > 0) {
             vm.startPrank(_userTwo);
             sharesManager.transferFrom(_userOne, _userTwo, transferValue);
-            uint256 newBalanceUserOne = (sharesManager.sharesOf(_userOne) * sharesManager.totalSupply()) /
-                sharesManager.totalShares();
-            uint256 newBalanceUserTwo = (sharesManager.sharesOf(_userTwo) * sharesManager.totalSupply()) /
-                sharesManager.totalShares();
+            uint256 newBalanceUserOne = (sharesManager.balanceOf(_userOne) * sharesManager.totalUnderlyingSupply()) /
+                sharesManager.totalSupply();
+            uint256 newBalanceUserTwo = (sharesManager.balanceOf(_userTwo) * sharesManager.totalUnderlyingSupply()) /
+                sharesManager.totalSupply();
             assert(totalAllowance - transferValue == sharesManager.allowance(_userOne, _userTwo));
             assert(newBalanceUserOne == sharesManager.balanceOf(_userOne));
             assert(newBalanceUserTwo == sharesManager.balanceOf(_userTwo));
@@ -203,7 +203,7 @@ contract SharesManagerV1Tests {
             vm.startPrank(_userTwo);
             sharesManager.transferFrom(_userOne, _userTwo, transferValue);
             uint256 newBalanceUserOne = 0;
-            uint256 newBalanceUserTwo = sharesManager.totalSupply();
+            uint256 newBalanceUserTwo = sharesManager.totalUnderlyingSupply();
             assert(0 == sharesManager.allowance(_userOne, _userTwo));
             assert(newBalanceUserOne == sharesManager.balanceOf(_userOne));
             assert(newBalanceUserTwo == sharesManager.balanceOf(_userTwo));
@@ -320,10 +320,10 @@ contract SharesManagerV1Tests {
         uint256 transferValue = totalAllowance / 2;
         if (transferValue > 0) {
             sharesManager.transfer(_userTwo, transferValue);
-            uint256 newBalanceUserOne = (sharesManager.sharesOf(_userOne) * sharesManager.totalSupply()) /
-                sharesManager.totalShares();
-            uint256 newBalanceUserTwo = (sharesManager.sharesOf(_userTwo) * sharesManager.totalSupply()) /
-                sharesManager.totalShares();
+            uint256 newBalanceUserOne = (sharesManager.balanceOf(_userOne) * sharesManager.totalUnderlyingSupply()) /
+                sharesManager.totalSupply();
+            uint256 newBalanceUserTwo = (sharesManager.balanceOf(_userTwo) * sharesManager.totalUnderlyingSupply()) /
+                sharesManager.totalSupply();
             assert(newBalanceUserOne == sharesManager.balanceOf(_userOne));
             assert(newBalanceUserTwo == sharesManager.balanceOf(_userTwo));
             assert(newBalanceUserOne + newBalanceUserTwo == totalAllowance);
