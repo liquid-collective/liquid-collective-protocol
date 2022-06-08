@@ -36,6 +36,11 @@ abstract contract TransferManagerV1 {
         emit UserDeposit(msg.sender, _referral, msg.value);
     }
 
+    /// @notice Returns the amount of pending ETH
+    function getPendingEth() external view returns (uint256) {
+        return address(this).balance;
+    }
+
     /// @notice Explicit deposit method
     /// @param _referral Referral address, address(0) if none
     function deposit(address _referral) external payable {

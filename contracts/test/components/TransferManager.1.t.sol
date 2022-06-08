@@ -48,6 +48,7 @@ contract TransferManagerV1DepositTests {
 
         assert(_user.balance == 0);
         assert(address(transferManager).balance == _amount);
+        assert(transferManager.getPendingEth() == _amount);
     }
 
     function testDepositWithDedicatedMethodAndReferral(
@@ -74,6 +75,7 @@ contract TransferManagerV1DepositTests {
 
         assert(_user.balance == 0);
         assert(address(transferManager).balance == _amount);
+        assert(transferManager.getPendingEth() == _amount);
     }
 
     function testDepositWithReceiveFallback(uint256 _userSalt, uint256 _amount) public {
@@ -96,6 +98,7 @@ contract TransferManagerV1DepositTests {
 
         assert(_user.balance == 0);
         assert(address(transferManager).balance == _amount);
+        assert(transferManager.getPendingEth() == _amount);
     }
 
     function testDepositWithCalldataFallback(uint256 _userSalt, uint256 _amount) public {
@@ -118,6 +121,7 @@ contract TransferManagerV1DepositTests {
         }
         transferManager.donate{value: _amount}();
         assert(address(transferManager).balance == _amount);
+        assert(transferManager.getPendingEth() == _amount);
         vm.stopPrank();
     }
 }
@@ -176,6 +180,7 @@ contract TransferManagerV1CallbackTests {
         }
         transferManager.donate{value: _amount}();
         assert(address(transferManager).balance == _amount);
+        assert(transferManager.getPendingEth() == _amount);
         vm.stopPrank();
     }
 }
