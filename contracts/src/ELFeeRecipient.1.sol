@@ -9,7 +9,7 @@ import "./interfaces/IRiverDonationInput.sol";
 import "./state/shared/RiverAddress.sol";
 
 /// @title Execution Layer Fee Recipient
-/// @author SkillZ
+/// @author Kiln
 /// @notice This contract receives all the execution layer fees from the proposed blocks + bribes
 contract ELFeeRecipientV1 is Initializable {
     error InvalidCall();
