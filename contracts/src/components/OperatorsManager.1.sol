@@ -9,7 +9,7 @@ import "../state/river/Operators.sol";
 import "../state/river/ValidatorKeys.sol";
 
 /// @title Operators Manager (v1)
-/// @author Kiln
+/// @author SkillZ
 /// @notice This contract handles the operator and key list
 contract OperatorsManagerV1 {
     error OperatorAlreadyExists(string name);

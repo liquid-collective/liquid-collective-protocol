@@ -18,7 +18,7 @@ import "./state/oracle/ReportsPositions.sol";
 import "./state/oracle/ReportsVariants.sol";
 
 /// @title Oracle (v1)
-/// @author Kiln
+/// @author SkillZ
 /// @notice This contract handles the input from the allowed oracle members. Highly inspired by Lido's implementation.
 contract OracleV1 is Initializable {
     /// @notice Received ETH input has only 9 decimals
