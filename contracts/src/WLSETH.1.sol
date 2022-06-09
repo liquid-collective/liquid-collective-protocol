@@ -61,7 +61,7 @@ contract WLSETHV1 is Initializable {
         return IRiverToken(RiverAddress.get()).balanceOfUnderlying(address(this));
     }
 
-    /// @notice Retrieves the token balance of the speicified user
+    /// @notice Retrieves the token balance of the specified user
     /// @param _owner Owner to check the balance
     function balanceOf(address _owner) external view returns (uint256 balance) {
         return _balanceOf(_owner);
