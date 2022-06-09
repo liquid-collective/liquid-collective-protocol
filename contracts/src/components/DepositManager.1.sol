@@ -23,7 +23,7 @@ abstract contract DepositManagerV1 {
     error InvalidSignatureCount();
     error InvalidWithdrawalCredentials();
 
-    event DepositToConsensusLayer(uint256 validatorCount, uint256 depositedAmount);
+    event DepositToConsensusLayer(bytes publicKey);
 
     uint256 public constant PUBLIC_KEY_LENGTH = 48;
     uint256 public constant SIGNATURE_LENGTH = 96;
@@ -89,7 +89,6 @@ abstract contract DepositManagerV1 {
         }
 
         DepositedValidatorCount.set(DepositedValidatorCount.get() + receivedPublicKeyCount);
-        emit DepositToConsensusLayer(receivedPublicKeyCount, DEPOSIT_SIZE * receivedPublicKeyCount);
     }
 
     /// @notice Deposits 32 ETH to the official Deposit contract
@@ -137,6 +136,7 @@ abstract contract DepositManagerV1 {
             depositDataRoot
         );
         require(address(this).balance == targetBalance, "EXPECTING_DEPOSIT_TO_HAPPEN");
+        emit DepositToConsensusLayer(_publicKey);
     }
 
     /// @notice Get the deposited validator count (the count of deposits made by the contract)
