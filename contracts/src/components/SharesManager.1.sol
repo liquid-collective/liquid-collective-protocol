@@ -53,6 +53,10 @@ abstract contract SharesManagerV1 is IERC20 {
     }
 
     function totalSupply() external view returns (uint256) {
+        return _totalSupply();
+    }
+
+    function totalUnderlyingSupply() external view returns (uint256) {
         return _assetBalance();
     }
 
@@ -66,10 +70,6 @@ abstract contract SharesManagerV1 is IERC20 {
 
     function allowance(address _owner, address _spender) external view returns (uint256 remaining) {
         return ApprovalsPerOwner.get(_owner, _spender);
-    }
-
-    function sharesOf(address _owner) external view returns (uint256 shares) {
-        return SharesPerOwner.get(_owner);
     }
 
     function transfer(address _to, uint256 _value)
@@ -101,6 +101,10 @@ abstract contract SharesManagerV1 is IERC20 {
         ApprovalsPerOwner.set(msg.sender, _spender, _value);
         emit Approval(msg.sender, _spender, _value);
         return true;
+    }
+
+    function _totalSupply() internal view returns (uint256) {
+        return Shares.get();
     }
 
     function _transfer(
@@ -136,7 +140,7 @@ abstract contract SharesManagerV1 is IERC20 {
         if (oldTotalAssetBalance == 0) {
             _mintRawShares(_owner, assetBalance);
         } else {
-            uint256 sharesToMint = (_value * _totalShares()) / oldTotalAssetBalance;
+            uint256 sharesToMint = (_value * _totalSupply()) / oldTotalAssetBalance;
             _mintRawShares(_owner, sharesToMint);
         }
     }
@@ -150,13 +154,5 @@ abstract contract SharesManagerV1 is IERC20 {
 
     function _balanceOf(address _owner) internal view returns (uint256 balance) {
         return SharesPerOwner.get(_owner);
-    }
-
-    function _totalShares() internal view returns (uint256) {
-        return Shares.get();
-    }
-
-    function totalShares() external view returns (uint256) {
-        return _totalShares();
     }
 }
