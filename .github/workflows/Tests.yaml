@@ -28,7 +28,7 @@ jobs:
         run: yarn
 
       - name: run tests
-        run: forge test --force -vvv --gas-report > OUTPUT && cat OUTPUT
+        run: forge test --force -vvv --gas-report | tee test-and-gas-report.txt
         env:
           FOUNDRY_FUZZ_RUNS: 5000
 
@@ -37,4 +37,4 @@ jobs:
         with:
           name: test-and-gas-usage
           path: |
-            OUTPUT
+            test-and-gas-report.txt
