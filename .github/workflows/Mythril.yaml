@@ -22,8 +22,20 @@ jobs:
         with:
           contract: './contracts/src/Oracle.1.sol'
 
-      - name: WithdrawV2
+      - name: WithdrawV1
         uses: ./actions/mythril
         id: mythril-withdrawv1
         with:
           contract: './contracts/src/Withdraw.1.sol'
+
+      - name: AllowlistV1
+        uses: ./actions/mythril
+        id: mythril-allowlistv1
+        with:
+          contract: './contracts/src/Allowlist.1.sol'
+
+      - name: Firewall
+        uses: ./actions/mythril
+        id: mythril-firewall
+        with:
+          contract: './contracts/src/Firewall.sol'

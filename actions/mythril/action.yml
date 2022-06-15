@@ -16,3 +16,5 @@ runs:
     - ${{ inputs.contract }}
     - '--max-depth'
     - '15'
+    - '-o'
+    - 'markdown'
