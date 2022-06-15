@@ -12,7 +12,7 @@ jobs:
           - ./contracts/src/Oracle.1.sol
           - ./contracts/src/Withdraw.1.sol
           - ./contracts/src/Allowlist.1.sol
-          - ./contracts/src/Firewall.1.sol
+          - ./contracts/src/Firewall.sol
     steps:
       - uses: actions/checkout@v2
         with:
@@ -20,6 +20,8 @@ jobs:
 
       - name: Mythril analysis
         uses: ./actions/mythril
-        id: mythril-riverv1
         with:
           contract: ${{matrix.contract}}
+        
+      - name: Log output
+        run: cat mythril_output.md
