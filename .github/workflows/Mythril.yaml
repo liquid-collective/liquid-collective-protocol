@@ -8,11 +8,11 @@ jobs:
     strategy:
       matrix:
         contract:
-          - ./contracts/src/River.1.sol
-          - ./contracts/src/Oracle.1.sol
-          - ./contracts/src/Withdraw.1.sol
-          - ./contracts/src/Allowlist.1.sol
-          - ./contracts/src/Firewall.sol
+          - River.1.sol
+          - Oracle.1.sol
+          - Withdraw.1.sol
+          - Allowlist.1.sol
+          - Firewall.sol
     steps:
       - uses: actions/checkout@v2
         with:
@@ -21,7 +21,13 @@ jobs:
       - name: Mythril analysis
         uses: ./actions/mythril
         with:
-          contract: ${{matrix.contract}}
+          contract: ./contracts/src/${{matrix.contract}}
         
       - name: Log output
         run: cat mythril_output.md
+
+      - name: Archive myth output
+        uses: actions/upload-artifact@v3
+        with:
+          name: mythril-output-${{ matrix.contract }}
+          path: mythril_output.md
