@@ -10,11 +10,9 @@ runs:
   using: 'docker'
   image: 'mythril/myth'
   args:
-    - '-v'
-    - '4'
     - 'analyze'
     - ${{ inputs.contract }}
-    - '--max-depth'
-    - '15'
+    - '--execution-timeout'
+    - '300'
     - '-o'
     - 'markdown'
