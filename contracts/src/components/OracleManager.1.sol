@@ -11,7 +11,7 @@ import "../state/river/BeaconValidatorCount.sol";
 import "../state/river/DepositedValidatorCount.sol";
 
 /// @title Oracle Manager (v1)
-/// @author SkillZ
+/// @author Kiln
 /// @notice This contract handles the inputs provided by the oracle
 abstract contract OracleManagerV1 {
     event BeaconDataUpdate(uint256 validatorCount, uint256 validatorBalanceSum, bytes32 roundId);

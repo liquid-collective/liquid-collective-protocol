@@ -10,7 +10,7 @@ import "./state/allowlist/AllowerAddress.sol";
 import "./state/allowlist/Allowlist.sol";
 
 /// @title Allowlist (v1)
-/// @author SkillZ
+/// @author Kiln
 /// @notice This contract handles the list of allowed recipients.
 contract AllowlistV1 is Initializable {
     error InvalidAlloweeCount();
