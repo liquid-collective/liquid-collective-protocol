@@ -5,37 +5,21 @@ on:
 jobs:
   run-mythril:
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        contract:
+          - ./contracts/src/River.1.sol
+          - ./contracts/src/Oracle.1.sol
+          - ./contracts/src/Withdraw.1.sol
+          - ./contracts/src/Allowlist.1.sol
+          - ./contracts/src/Firewall.1.sol
     steps:
       - uses: actions/checkout@v2
         with:
           submodules: recursive
 
-      - name: RiverV1
+      - name: Mythril analysis
         uses: ./actions/mythril
         id: mythril-riverv1
         with:
-          contract: './contracts/src/River.1.sol'
-
-      - name: OracleV1
-        uses: ./actions/mythril
-        id: mythril-oraclev1
-        with:
-          contract: './contracts/src/Oracle.1.sol'
-
-      - name: WithdrawV1
-        uses: ./actions/mythril
-        id: mythril-withdrawv1
-        with:
-          contract: './contracts/src/Withdraw.1.sol'
-
-      - name: AllowlistV1
-        uses: ./actions/mythril
-        id: mythril-allowlistv1
-        with:
-          contract: './contracts/src/Allowlist.1.sol'
-
-      - name: Firewall
-        uses: ./actions/mythril
-        id: mythril-firewall
-        with:
-          contract: './contracts/src/Firewall.sol'
+          contract: ${{matrix.contract}}
