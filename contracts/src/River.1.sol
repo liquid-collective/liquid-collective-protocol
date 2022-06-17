@@ -27,6 +27,8 @@ contract RiverV1 is
     Initializable
 {
     uint256 public constant BASE = 100000;
+    uint256 internal constant DEPOSIT_MASK = 0x1;
+    uint256 internal constant TRANSFER_MASK = 0;
 
     /// @notice Prevents unauthorized calls
     modifier onlyAdmin() override(OperatorsManagerV1, OracleManagerV1) {
@@ -89,15 +91,19 @@ contract RiverV1 is
         return LibOwnable._getAdmin();
     }
 
-    uint256 internal constant DEPOSIT_MASK = 0x1;
+    /// @notice Handler called whenever a token transfer is triggered
+    /// @param _from Token sender
+    /// @param _to Token receiver
+    function _onTransfer(address _from, address _to) internal view override {
+        (AllowlistAddress.get()).onlyAllowed(_from, TRANSFER_MASK); // this call reverts if unauthorized or denied
+        (AllowlistAddress.get()).onlyAllowed(_to, TRANSFER_MASK); // this call reverts if unauthorized or denied
+    }
 
     /// @notice Handler called whenever a user deposits ETH to the system. Mints the adequate amount of shares.
     /// @param _depositor User address that made the deposit
     /// @param _amount Amount of ETH deposited
     function _onDeposit(address _depositor, uint256 _amount) internal override {
-        if ((AllowlistAddress.get()).isAllowed(_depositor, DEPOSIT_MASK) == false) {
-            revert Errors.Unauthorized(_depositor);
-        }
+        (AllowlistAddress.get()).onlyAllowed(_depositor, DEPOSIT_MASK); // this call reverts if unauthorized or denied
         SharesManagerV1._mintShares(_depositor, _amount);
     }
 

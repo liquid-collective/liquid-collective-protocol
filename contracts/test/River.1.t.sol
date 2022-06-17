@@ -121,6 +121,17 @@ contract RiverV1SetupOneTests {
         vm.stopPrank();
     }
 
+    function _deny(address _who) internal {
+        address[] memory allowees = new address[](1);
+        allowees[0] = _who;
+        uint256[] memory statuses = new uint256[](1);
+        statuses[0] = 0x1 << 255; // DENY_MASK
+
+        vm.startPrank(admin);
+        allowlist.allow(allowees, statuses);
+        vm.stopPrank();
+    }
+
     function testUnauthorizedDeposit() public {
         vm.deal(joe, 100 ether);
 
@@ -192,6 +203,65 @@ contract RiverV1SetupOneTests {
                     river.balanceOf(operatorTwo) +
                     river.balanceOf(treasury)
         );
+    }
+
+    // Testing regular parameters
+    function testDeniedUser() public {
+        vm.deal(joe, 200 ether);
+        vm.deal(bob, 1000 ether);
+
+        _allow(joe, DEPOSIT_MASK);
+        _allow(bob, DEPOSIT_MASK);
+
+        vm.startPrank(joe);
+        river.deposit{value: 100 ether}(address(0));
+        vm.stopPrank();
+        vm.startPrank(bob);
+        river.deposit{value: 1000 ether}(address(0));
+        vm.stopPrank();
+
+        _deny(joe);
+        vm.startPrank(joe);
+        vm.expectRevert(abi.encodeWithSignature("Denied(address)", joe));
+        river.deposit{value: 100 ether}(address(0));
+        vm.stopPrank();
+
+        assert(river.balanceOfUnderlying(joe) == 100 ether);
+        assert(river.balanceOfUnderlying(bob) == 1000 ether);
+        assert(river.getDepositedValidatorCount() == 0);
+        assert(river.totalUnderlyingSupply() == 1100 ether);
+
+        river.depositToConsensusLayer(17);
+        river.depositToConsensusLayer(17);
+
+        Operators.Operator memory op1 = river.getOperatorByName(operatorOneName);
+        Operators.Operator memory op2 = river.getOperatorByName(operatorTwoName);
+
+        assert(op1.funded == 17);
+        assert(op2.funded == 17);
+
+        assert(river.getDepositedValidatorCount() == 34);
+        assert(river.totalUnderlyingSupply() == 1100 ether);
+        assert(address(river).balance == (1000 ether + 100 ether) - (32 ether * 34));
+        assert(river.balanceOfUnderlying(joe) == 100 ether);
+        assert(river.balanceOfUnderlying(bob) == 1000 ether);
+
+        vm.startPrank(oracle);
+        river.setBeaconData(34, 33 ether * 34, bytes32(0));
+        vm.stopPrank();
+
+        assert(river.totalUnderlyingSupply() == 1100 ether - (34 * 32 ether) + (34 * 33 ether));
+        assert(river.balanceOfUnderlying(joe) == 102936363636363636365);
+        assert(river.balanceOfUnderlying(bob) == 1029363636363636363659);
+        assert(river.balanceOfUnderlying(operatorOne) == 424999999999999987);
+        assert(river.balanceOfUnderlying(operatorTwo) == 424999999999999987);
+        assert(river.balanceOfUnderlying(treasury) == 850000000000000000);
+
+        vm.startPrank(joe);
+        uint256 joeBalance = river.balanceOf(joe);
+        vm.expectRevert(abi.encodeWithSignature("Denied(address)", joe));
+        river.transfer(bob, joeBalance - 1);
+        vm.stopPrank();
     }
 
     // Testing regular parameters

@@ -14,8 +14,13 @@ import "./state/allowlist/Allowlist.sol";
 /// @notice This contract handles the list of allowed recipients.
 contract AllowlistV1 is Initializable {
     error InvalidAlloweeCount();
+    error Denied(address _account);
+    error Unauthorized(address _account);
     error MismatchedAlloweeAndStatusCount();
+
     event ChangedAllowlistStatuses(address[] indexed accounts, uint256[] statuses);
+
+    uint256 internal constant DENY_MASK = 0x1 << 255;
 
     /// @notice Initializes the allowlist
     /// @param _admin Address of the Allowlist administrator
@@ -70,10 +75,50 @@ contract AllowlistV1 is Initializable {
         emit ChangedAllowlistStatuses(_accounts, _statuses);
     }
 
-    /// @notice Verify if a user has a specific right
-    /// @param _account Address to verify
-    /// @param _mask Right represented as a bit mask
+    /// @notice This method should be used as a modifier and is expected to revert
+    ///         if the user hasn't got the required permission or if the user is
+    ///         in the deny list.
+    /// @param _account Recipient to verify
+    /// @param _mask Combination of permissions to verify
+    function onlyAllowed(address _account, uint256 _mask) external view {
+        uint256 userPermissions = Allowlist.get(_account);
+        if (userPermissions & DENY_MASK == DENY_MASK) {
+            revert Denied(_account);
+        }
+        if (userPermissions & _mask != _mask) {
+            revert Unauthorized(_account);
+        }
+    }
+
+    /// @notice This method returns true if the user has the expected permission and
+    ///         is not in the deny list
+    /// @param _account Recipient to verify
+    /// @param _mask Combination of permissions to verify
     function isAllowed(address _account, uint256 _mask) external view returns (bool) {
+        uint256 userPermissions = Allowlist.get(_account);
+        if (userPermissions & DENY_MASK == DENY_MASK) {
+            return false;
+        }
+        return userPermissions & _mask == _mask;
+    }
+
+    /// @notice This method returns true if the user is in the deny list
+    /// @param _account Recipient to verify
+    function isDenied(address _account) external view returns (bool) {
+        return Allowlist.get(_account) & DENY_MASK == DENY_MASK;
+    }
+
+    /// @notice This method returns true if the user has the expected permission
+    ///         ignoring any deny list membership
+    /// @param _account Recipient to verify
+    /// @param _mask Combination of permissions to verify
+    function hasPermission(address _account, uint256 _mask) external view returns (bool) {
         return Allowlist.get(_account) & _mask == _mask;
+    }
+
+    /// @notice This method retrieves the raw permission value
+    /// @param _account Recipient to verify
+    function getPermissions(address _account) external view returns (uint256) {
+        return Allowlist.get(_account);
     }
 }

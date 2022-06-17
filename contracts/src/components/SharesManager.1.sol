@@ -13,9 +13,15 @@ import "../state/river/ApprovalsPerOwner.sol";
 /// @notice This contract handles the shares of the depositor and the rebasing effect depending on the oracle data
 abstract contract SharesManagerV1 is IERC20 {
     error BalanceTooLow();
-    error UnauthorizedOperation();
     error AllowanceTooLow(address _from, address _operator, uint256 _allowance, uint256 _value);
     error NullTransfer();
+
+    function _onTransfer(address _from, address _to) internal view virtual;
+
+    modifier transferAllowed(address _from, address _to) {
+        _onTransfer(_from, _to);
+        _;
+    }
 
     modifier isNotNull(uint256 _value) {
         if (_value == 0) {
@@ -65,6 +71,7 @@ abstract contract SharesManagerV1 is IERC20 {
 
     function transfer(address _to, uint256 _value)
         external
+        transferAllowed(msg.sender, _to)
         isNotNull(_value)
         hasFunds(msg.sender, _value)
         returns (bool)
@@ -76,7 +83,7 @@ abstract contract SharesManagerV1 is IERC20 {
         address _from,
         address _to,
         uint256 _value
-    ) external isNotNull(_value) hasFunds(_from, _value) returns (bool) {
+    ) external transferAllowed(_from, _to) isNotNull(_value) hasFunds(_from, _value) returns (bool) {
         if (_from != msg.sender) {
             uint256 currentAllowance = ApprovalsPerOwner.get(_from, msg.sender);
             if (currentAllowance < _value) {
