@@ -5,25 +5,29 @@ on:
 jobs:
   run-mythril:
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        contract:
+          - { file: River.1.sol, name: RiverV1}
+          - { file: Oracle.1.sol, name: OracleV1 }
+          - { file: Withdraw.1.sol, name: WithdrawV1}
+          - { file: Allowlist.1.sol, name: AllowlistV1}
+          - { file: Firewall.sol, name: Firewall}
     steps:
       - uses: actions/checkout@v2
         with:
           submodules: recursive
 
-      - name: RiverV1
+      - name: Mythril analysis
         uses: ./actions/mythril
-        id: mythril-riverv1
         with:
-          contract: './contracts/src/River.1.sol'
+          contract: "./contracts/src/${{ matrix.contract.file }}:${{ matrix.contract.name }}"
 
-      - name: OracleV1
-        uses: ./actions/mythril
-        id: mythril-oraclev1
+      - name: Rename output artifact
+        run: mv mythril_output.md ${{ matrix.contract.name }}.mythril.md
+        
+      - name: Upload output artifact
+        uses: actions/upload-artifact@v3
         with:
-          contract: './contracts/src/Oracle.1.sol'
-
-      - name: WithdrawV2
-        uses: ./actions/mythril
-        id: mythril-withdrawv1
-        with:
-          contract: './contracts/src/Withdraw.1.sol'
+          name: ${{ matrix.contract.name }}.mythril.md
+          path: ${{ matrix.contract.name }}.mythril.md

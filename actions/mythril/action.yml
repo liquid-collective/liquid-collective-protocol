@@ -9,10 +9,9 @@ inputs:
 runs:
   using: 'docker'
   image: 'mythril/myth'
+  entrypoint: './mythril_entrypoint.sh'
   args:
-    - '-v'
-    - '4'
     - 'analyze'
     - ${{ inputs.contract }}
-    - '--max-depth'
-    - '15'
+    - '--execution-timeout'
+    - '300'
