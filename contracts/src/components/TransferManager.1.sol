@@ -7,7 +7,7 @@ import "../libraries/Errors.sol";
 /// @author Kiln
 /// @notice This contract handles the inbound transfers cases or the explicit submissions
 abstract contract TransferManagerV1 {
-    event UserDeposit(address indexed user, address indexed referral, uint256 amount);
+    event UserDeposit(address indexed user, uint256 amount);
     event Donation(address donator, uint256 amount);
 
     error EmptyDeposit();
@@ -24,16 +24,15 @@ abstract contract TransferManagerV1 {
     /// @param _amount Amount donated
     function _onDonation(uint256 _amount) internal virtual;
 
-    /// @notice Internal utility calling the deposit handler and emitting the deposit details and the referral address
-    /// @param _referral Referral address, address(0) if none
-    function _deposit(address _referral) internal {
+    /// @notice Internal utility calling the deposit handler and emitting the deposit details
+    function _deposit() internal {
         if (msg.value == 0) {
             revert EmptyDeposit();
         }
 
         _onDeposit(msg.sender, msg.value);
 
-        emit UserDeposit(msg.sender, _referral, msg.value);
+        emit UserDeposit(msg.sender, msg.value);
     }
 
     /// @notice Returns the amount of pending ETH
@@ -42,9 +41,8 @@ abstract contract TransferManagerV1 {
     }
 
     /// @notice Explicit deposit method
-    /// @param _referral Referral address, address(0) if none
-    function deposit(address _referral) external payable {
-        _deposit(_referral);
+    function deposit() external payable {
+        _deposit();
     }
 
     /// @notice Allows anyone to add ethers to river without minting new shares
@@ -61,7 +59,7 @@ abstract contract TransferManagerV1 {
 
     /// @notice Implicit deposit method, when the user performs a regular transfer to the contract
     receive() external payable {
-        _deposit(address(0));
+        _deposit();
     }
 
     /// @notice Invalid call, when the user sends a transaction with a data payload but no method matched

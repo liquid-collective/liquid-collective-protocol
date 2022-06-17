@@ -128,7 +128,7 @@ contract RiverV1SetupOneTests {
 
         vm.startPrank(joe);
         vm.expectRevert(abi.encodeWithSignature("Unauthorized(address)", joe));
-        river.deposit{value: 100 ether}(address(0));
+        river.deposit{value: 100 ether}();
     }
 
     // Testing regular parameters
@@ -140,10 +140,10 @@ contract RiverV1SetupOneTests {
         _allow(bob, DEPOSIT_MASK);
 
         vm.startPrank(joe);
-        river.deposit{value: 100 ether}(address(0));
+        river.deposit{value: 100 ether}();
         vm.stopPrank();
         vm.startPrank(bob);
-        river.deposit{value: 1000 ether}(address(0));
+        river.deposit{value: 1000 ether}();
         vm.stopPrank();
         assert(river.balanceOfUnderlying(joe) == 100 ether);
         assert(river.balanceOfUnderlying(bob) == 1000 ether);
@@ -205,10 +205,10 @@ contract RiverV1SetupOneTests {
         _allow(bob, DEPOSIT_MASK + TRANSFER_MASK);
 
         vm.startPrank(joe);
-        river.deposit{value: 100 ether}(address(0));
+        river.deposit{value: 100 ether}();
         vm.stopPrank();
         vm.startPrank(bob);
-        river.deposit{value: 1000 ether}(address(0));
+        river.deposit{value: 1000 ether}();
         vm.stopPrank();
         assert(river.balanceOfUnderlying(joe) == 100 ether);
         assert(river.balanceOfUnderlying(bob) == 1000 ether);
@@ -256,10 +256,10 @@ contract RiverV1SetupOneTests {
         _allow(bob, DEPOSIT_MASK + TRANSFER_MASK);
 
         vm.startPrank(joe);
-        river.deposit{value: 100 ether}(address(0));
+        river.deposit{value: 100 ether}();
         vm.stopPrank();
         vm.startPrank(bob);
-        river.deposit{value: 1000 ether}(address(0));
+        river.deposit{value: 1000 ether}();
         vm.stopPrank();
         assert(river.balanceOfUnderlying(joe) == 100 ether);
         assert(river.balanceOfUnderlying(bob) == 1000 ether);
@@ -325,10 +325,10 @@ contract RiverV1SetupOneTests {
         vm.stopPrank();
 
         vm.startPrank(joe);
-        river.deposit{value: 100 ether}(address(0));
+        river.deposit{value: 100 ether}();
         vm.stopPrank();
         vm.startPrank(bob);
-        river.deposit{value: 1000 ether}(address(0));
+        river.deposit{value: 1000 ether}();
         vm.stopPrank();
         assert(river.balanceOfUnderlying(joe) == 100 ether);
         assert(river.balanceOfUnderlying(bob) == 1000 ether);
@@ -391,10 +391,10 @@ contract RiverV1SetupOneTests {
         _allow(bob, DEPOSIT_MASK + TRANSFER_MASK);
 
         vm.startPrank(joe);
-        river.deposit{value: 100 ether}(address(0));
+        river.deposit{value: 100 ether}();
         vm.stopPrank();
         vm.startPrank(bob);
-        river.deposit{value: 1000 ether}(address(0));
+        river.deposit{value: 1000 ether}();
         vm.stopPrank();
         assert(river.balanceOfUnderlying(joe) == 100 ether);
         assert(river.balanceOfUnderlying(bob) == 1000 ether);
@@ -463,10 +463,10 @@ contract RiverV1SetupOneTests {
         vm.stopPrank();
 
         vm.startPrank(joe);
-        river.deposit{value: 100 ether}(address(0));
+        river.deposit{value: 100 ether}();
         vm.stopPrank();
         vm.startPrank(bob);
-        river.deposit{value: 1000 ether}(address(0));
+        river.deposit{value: 1000 ether}();
         vm.stopPrank();
         assert(river.balanceOfUnderlying(joe) == 100 ether);
         assert(river.balanceOfUnderlying(bob) == 1000 ether);
@@ -538,13 +538,13 @@ contract RiverV1SetupOneTests {
         if (joeBalance == 0) {
             vm.expectRevert(abi.encodeWithSignature("EmptyDeposit()"));
         }
-        river.deposit{value: joeBalance}(address(0));
+        river.deposit{value: joeBalance}();
         vm.stopPrank();
         vm.startPrank(bob);
         if (bobBalance == 0) {
             vm.expectRevert(abi.encodeWithSignature("EmptyDeposit()"));
         }
-        river.deposit{value: bobBalance}(address(0));
+        river.deposit{value: bobBalance}();
         vm.stopPrank();
         assert(river.balanceOfUnderlying(joe) == joeBalance);
         assert(river.balanceOfUnderlying(bob) == bobBalance);
