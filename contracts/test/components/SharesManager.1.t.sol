@@ -9,6 +9,22 @@ import "../utils/UserFactory.sol";
 
 contract SharesManagerPublicDeal is SharesManagerV1 {
     uint256 public balanceSum;
+    error Denied(address _account);
+
+    mapping(address => bool) internal denied;
+
+    function setDenied(address _account) external {
+        denied[_account] = true;
+    }
+
+    function _onTransfer(address _from, address _to) internal view override {
+        if (denied[_from]) {
+            revert Denied(_from);
+        }
+        if (denied[_to]) {
+            revert Denied(_to);
+        }
+    }
 
     function setValidatorBalance(uint256 _amount) external {
         balanceSum = _amount;
@@ -16,10 +32,6 @@ contract SharesManagerPublicDeal is SharesManagerV1 {
 
     function _assetBalance() internal view override returns (uint256) {
         return balanceSum + address(this).balance;
-    }
-
-    function _isAccountAllowed(address) internal pure override returns (bool) {
-        return true;
     }
 
     function deal(address _owner, uint256 _amount) external {
@@ -45,6 +57,8 @@ contract SharesManagerV1Tests {
     UserFactory internal uf = new UserFactory();
 
     SharesManagerV1 internal sharesManager;
+
+    error Denied(address _account);
 
     function setUp() public {
         sharesManager = new SharesManagerPublicDeal();
@@ -351,6 +365,104 @@ contract SharesManagerV1Tests {
             assert(newBalanceUserOne == sharesManager.balanceOf(_userOne));
             assert(newBalanceUserTwo == sharesManager.balanceOf(_userTwo));
             assert(newBalanceUserOne + newBalanceUserTwo == totalAllowance);
+        }
+        vm.stopPrank();
+    }
+
+    function testApproveAndTransferUnauthorizedSender(
+        uint256 _userOneSalt,
+        uint256 _userTwoSalt,
+        uint128 _allowance
+    ) public {
+        address _userOne = uf._new(_userOneSalt);
+        address _userTwo = uf._new(_userTwoSalt);
+        SharesManagerPublicDeal(payable(address(sharesManager))).deal(_userOne, _allowance);
+        SharesManagerPublicDeal(payable(address(sharesManager))).setValidatorBalance(uint256(_allowance));
+        SharesManagerPublicDeal(payable(address(sharesManager))).setDenied(_userOne);
+        vm.startPrank(_userOne);
+        uint256 totalAllowance = sharesManager.balanceOf(_userOne);
+        assert(0 == sharesManager.allowance(_userOne, _userTwo));
+        sharesManager.approve(_userTwo, totalAllowance);
+        vm.stopPrank();
+        assert(totalAllowance == sharesManager.allowance(_userOne, _userTwo));
+        assert(totalAllowance == sharesManager.balanceOf(_userOne));
+        assert(0 == sharesManager.balanceOf(_userTwo));
+        uint256 transferValue = totalAllowance;
+        if (transferValue > 0) {
+            vm.startPrank(_userTwo);
+            vm.expectRevert(abi.encodeWithSignature("Denied(address)", _userOne));
+            sharesManager.transferFrom(_userOne, _userTwo, transferValue);
+            vm.stopPrank();
+        }
+    }
+
+    function testApproveAndTransferUnauthorizedReceiver(
+        uint256 _userOneSalt,
+        uint256 _userTwoSalt,
+        uint128 _allowance
+    ) public {
+        address _userOne = uf._new(_userOneSalt);
+        address _userTwo = uf._new(_userTwoSalt);
+        SharesManagerPublicDeal(payable(address(sharesManager))).deal(_userOne, _allowance);
+        SharesManagerPublicDeal(payable(address(sharesManager))).setValidatorBalance(uint256(_allowance));
+        SharesManagerPublicDeal(payable(address(sharesManager))).setDenied(_userTwo);
+        vm.startPrank(_userOne);
+        uint256 totalAllowance = sharesManager.balanceOf(_userOne);
+        assert(0 == sharesManager.allowance(_userOne, _userTwo));
+        sharesManager.approve(_userTwo, totalAllowance);
+        vm.stopPrank();
+        assert(totalAllowance == sharesManager.allowance(_userOne, _userTwo));
+        assert(totalAllowance == sharesManager.balanceOf(_userOne));
+        assert(0 == sharesManager.balanceOf(_userTwo));
+        uint256 transferValue = totalAllowance;
+        if (transferValue > 0) {
+            vm.startPrank(_userTwo);
+            vm.expectRevert(abi.encodeWithSignature("Denied(address)", _userTwo));
+            sharesManager.transferFrom(_userOne, _userTwo, transferValue);
+            vm.stopPrank();
+        }
+    }
+
+    function testTransferUnauthorizedSender(
+        uint256 _userOneSalt,
+        uint256 _userTwoSalt,
+        uint128 _allowance
+    ) public {
+        address _userOne = uf._new(_userOneSalt);
+        address _userTwo = uf._new(_userTwoSalt);
+        SharesManagerPublicDeal(payable(address(sharesManager))).deal(_userOne, _allowance);
+        SharesManagerPublicDeal(payable(address(sharesManager))).setValidatorBalance(uint256(_allowance));
+        SharesManagerPublicDeal(payable(address(sharesManager))).setDenied(_userOne);
+
+        vm.startPrank(_userOne);
+        uint256 totalAllowance = sharesManager.balanceOf(_userOne);
+        assert(0 == sharesManager.balanceOf(_userTwo));
+        uint256 transferValue = totalAllowance;
+        if (transferValue > 0) {
+            vm.expectRevert(abi.encodeWithSignature("Denied(address)", _userOne));
+            sharesManager.transfer(_userTwo, transferValue);
+        }
+        vm.stopPrank();
+    }
+
+    function testTransferUnauthorizedReceiver(
+        uint256 _userOneSalt,
+        uint256 _userTwoSalt,
+        uint128 _allowance
+    ) public {
+        address _userOne = uf._new(_userOneSalt);
+        address _userTwo = uf._new(_userTwoSalt);
+        SharesManagerPublicDeal(payable(address(sharesManager))).deal(_userOne, _allowance);
+        SharesManagerPublicDeal(payable(address(sharesManager))).setValidatorBalance(uint256(_allowance));
+        SharesManagerPublicDeal(payable(address(sharesManager))).setDenied(_userTwo);
+
+        vm.startPrank(_userOne);
+        uint256 totalAllowance = sharesManager.balanceOf(_userOne);
+        assert(0 == sharesManager.balanceOf(_userTwo));
+        uint256 transferValue = totalAllowance;
+        if (transferValue > 0) {
+            vm.expectRevert(abi.encodeWithSignature("Denied(address)", _userTwo));
+            sharesManager.transfer(_userTwo, transferValue);
         }
         vm.stopPrank();
     }
