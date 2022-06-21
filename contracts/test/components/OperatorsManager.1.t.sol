@@ -33,7 +33,7 @@ contract OperatorsManagerV1MemberManagementTests {
     address internal admin = address(0xEA674fdDe714fd979de3EdF0F56AA9716B898ec8);
 
     event AddedValidatorKeys(uint256 indexed index, uint256 amount, bytes publicKeys);
-    event RemovedValidatorKeys(uint256 indexed index, uint256 keyCount, uint256[] indexes);
+    event RemovedValidatorKey(uint256 indexed index, uint256 keyCount, bytes publicKey);
 
     function setUp() public {
         operatorsManager = new OperatorsManagerInitializableV1();
@@ -421,7 +421,11 @@ contract OperatorsManagerV1MemberManagementTests {
         indexes[9] = 0;
 
         vm.expectEmit(true, true, true, true);
-        emit RemovedValidatorKeys(index, 0, indexes);
+        emit RemovedValidatorKey(
+            index,
+            9,
+            hex"a6ee5b0bacf6f30bf456afadef451a1c503e428fcd295b5d20ad9e065e1684dced5487fd33270bb68b783a6963eab250"
+        );
         operatorsManager.removeValidators(index, indexes);
         operator = operatorsManager.getOperator(index);
         assert(operator.keys == 0);
