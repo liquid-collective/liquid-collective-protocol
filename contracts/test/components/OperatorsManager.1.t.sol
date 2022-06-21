@@ -32,8 +32,8 @@ contract OperatorsManagerV1MemberManagementTests {
     OperatorsManagerV1 internal operatorsManager;
     address internal admin = address(0xEA674fdDe714fd979de3EdF0F56AA9716B898ec8);
 
-    event AddedValidatorKeys(uint256 indexed index, uint256 amount, bytes publicKeys);
-    event RemovedValidatorKey(uint256 indexed index, uint256 keyCount, bytes publicKey);
+    event AddedValidatorKeys(uint256 indexed index, bytes publicKeys);
+    event RemovedValidatorKey(uint256 indexed index, bytes publicKey);
 
     function setUp() public {
         operatorsManager = new OperatorsManagerInitializableV1();
@@ -271,7 +271,7 @@ contract OperatorsManagerV1MemberManagementTests {
         vm.stopPrank();
         vm.startPrank(_firstAddress);
         vm.expectEmit(true, true, true, true);
-        emit AddedValidatorKeys(index, 10, tenPublicKeys);
+        emit AddedValidatorKeys(index, tenPublicKeys);
         operatorsManager.addValidators(index, 10, tenPublicKeys, tenSignatures);
 
         Operators.Operator memory operator = operatorsManager.getOperator(index);
@@ -304,7 +304,7 @@ contract OperatorsManagerV1MemberManagementTests {
             memory tenSignatures = hex"1d40e9c75a57997aa60105f21d0c68c3be0435f1f68f755c33015110e38ef97b4b5e2008096e75b906ae4d1f5aec6ad505920c58758631a06ac8c7666b582c9b3fa70a67e39a5aec2a6a11756eb2c0dd74c33beafce3ce8396e86671e00528c0f4c6e9ccef87d852ac23e38f3a1585b710e4eeaa919b7040e49a55583b250801f4f54a7fc1d514ee4a89f2a0a31b500065ea383c4ff0d2981da1fc7e047239d1743c2ce0412a424fe7d32628d656c57d56a6f322d696b6099f44f5257e051cbfed1497e89d637a05b2063a30f232ceba1677e571b08c3c8bb84979d5fcab1652ae40c0840e29a32725d9b45fea996edce566ffff5be6d38d056c6a1827fb7b0ba69f1923a0384e8da72dced43b0e83714d2eda54916252859962b659e0a081fcb4ea39240afef5b8ae854eb4a159d1bdd9eed58aa368c690fe816052fd3f270215dd0ec0cc55e386ea43cb52849d00cc6a2efbec1d693619f9dcf64bfbc9c1982d1acc877b898f48d8337b372a338907dc7af4d8d58e08e1302313721fef9d9c1697256b3dc113bfc7860bccf01dc4d28d3ef09e43db4ecdd78c41bdc89ed50130b1b87ba137c33928f9aff8481e204d8ccd86938da666357cbf4d7253ce56eed980dc7ec2d4a610f541d8f7c830592bb39b8048848203ce74db2f585a7b8cd1ae6b47192b1983efddfb42c1ad65a0c9ceae3548565829c1bcd1a06da7ed4e10698fd2e5b2715a3cbae861909d8364f622882e080f0a07e153fb29c7c3abcc27f2011e76d09d013a5b511b0de51cbefc206c58cb9c09e405b5db80f1c98ea414ae2705de213715e01b81cda31c4ec814e50b341723dc4be0a81268cd04be2d306347540be98c2a3192a968dbad68ba2b5c066c684d18bdcb7345f1d2b643f2ff7bb8494c093eaaf31ee192c9a1486b387701c3bda0ed55af872665fcb0267e3e0b9e7d55e13555ec0f8742229898693ca26ddbb8cae390e9ec35fc3e07c21236fa8264974f9d3aea67a059d6e88111f48341ffdfa911ad89a2a2fbb2a790d69f3fc7646c0071b0c1ca25567f8e2b09d3177abb3e0ec38e4ebe0da06dd6cd03551682fd7ab3a772f5fbc5cba2afbd17d1ed064cae8db36b6bc6ab33b803a40fc7bc9fc7eb0327ee6486803672f653659cea6cc55212db194b9f7ecf1e0996117a489c5caf861425743681184ed3dbe5f8de71b5e7479ce13b6e1b5f6368b187185e9e14967ec04bb67d3797e4b0b2f00ee0cc61a7e2b2feff0a5ed98d503de0e8e3f445e328e8e8d45dc4453e10f49a6d642cbd90c06d7e81e64cf8d8562f6ef708a5761f1503e221ffa15a5318a880e25f8e3a7e79ce4bd263fdc6f683fb2cd1";
 
         vm.expectEmit(true, true, true, true);
-        emit AddedValidatorKeys(index, 10, tenPublicKeys);
+        emit AddedValidatorKeys(index, tenPublicKeys);
         operatorsManager.addValidators(index, 10, tenPublicKeys, tenSignatures);
 
         Operators.Operator memory operator = operatorsManager.getOperator(index);
@@ -423,7 +423,6 @@ contract OperatorsManagerV1MemberManagementTests {
         vm.expectEmit(true, true, true, true);
         emit RemovedValidatorKey(
             index,
-            9,
             hex"a6ee5b0bacf6f30bf456afadef451a1c503e428fcd295b5d20ad9e065e1684dced5487fd33270bb68b783a6963eab250"
         );
         operatorsManager.removeValidators(index, indexes);

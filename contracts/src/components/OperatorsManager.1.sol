@@ -26,8 +26,8 @@ contract OperatorsManagerV1 {
     event SetOperatorLimit(uint256 indexed index, uint256 newLimit);
     event SetOperatorStoppedValidatorCount(uint256 indexed index, uint256 newStoppedValidatorCount);
     event SetOperatorAddress(uint256 indexed index, address newOperatorAddress);
-    event AddedValidatorKeys(uint256 indexed index, uint256 totalKeyCount, bytes publicKeys);
-    event RemovedValidatorKey(uint256 indexed index, uint256 totalKeyCount, bytes publicKey);
+    event AddedValidatorKeys(uint256 indexed index, bytes publicKeys);
+    event RemovedValidatorKey(uint256 indexed index, bytes publicKey);
 
     /// @notice Prevents unauthorized calls
     modifier onlyAdmin() virtual {
@@ -186,7 +186,7 @@ contract OperatorsManagerV1 {
 
         operator.keys += _keyCount;
 
-        emit AddedValidatorKeys(_index, operator.keys, _publicKeys);
+        emit AddedValidatorKeys(_index, _publicKeys);
     }
 
     /// @notice Remove validator keys
@@ -222,7 +222,7 @@ contract OperatorsManagerV1 {
             ValidatorKeys.set(_index, keyIndex, lastPublicKey, lastSignature);
             ValidatorKeys.set(_index, lastKeyIndex, new bytes(0), new bytes(0));
             operator.keys -= 1;
-            emit RemovedValidatorKey(_index, operator.keys, removedPublicKey);
+            emit RemovedValidatorKey(_index, removedPublicKey);
         }
     }
 
