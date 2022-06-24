@@ -134,7 +134,7 @@ contract RiverV1 is
             uint256 rewardsPerActiveValidator = _reward / totalActiveValidators;
 
             for (uint256 idx = 0; idx < validatorCounts.length; ++idx) {
-                _mintRawShares(operators[idx].operator, validatorCounts[idx] * rewardsPerActiveValidator);
+                _mintRawShares(operators[idx].feeRecipient, validatorCounts[idx] * rewardsPerActiveValidator);
             }
         } else {
             _reward = 0;

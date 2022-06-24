@@ -49,6 +49,23 @@ contract OperatorsManagerV1 {
         _;
     }
 
+    /// @notice Prevents anyone except the admin or the given operator fee recipient to make the call. Also checks if operator is active
+    /// @param _index The name identifying the operator
+    modifier operatorFeeRecipientOrAdmin(uint256 _index) {
+        if (msg.sender == LibOwnable._getAdmin()) {
+            _;
+            return;
+        }
+        Operators.Operator storage operator = Operators.getByIndex(_index);
+        if (operator.active == false) {
+            revert InactiveOperator(_index);
+        }
+        if (msg.sender != operator.feeRecipient) {
+            revert Errors.Unauthorized(msg.sender);
+        }
+        _;
+    }
+
     /// @notice Prevents anyone except the admin or the given operator to make the call. Also checks if operator is active
     /// @param _index The name identifying the operator
     modifier operatorOrAdmin(uint256 _index) {
@@ -75,7 +92,12 @@ contract OperatorsManagerV1 {
     /// @dev Only callable by the administrator
     /// @param _name The name identifying the operator
     /// @param _operator The address representing the operator, receiving the rewards
-    function addOperator(string calldata _name, address _operator) external onlyAdmin {
+    /// @param _feeRecipient The address where the rewards are sent
+    function addOperator(
+        string calldata _name,
+        address _operator,
+        address _feeRecipient
+    ) external onlyAdmin {
         if (Operators.exists(_name) == true) {
             revert OperatorAlreadyExists(_name);
         }
@@ -83,6 +105,7 @@ contract OperatorsManagerV1 {
         Operators.Operator memory newOperator = Operators.Operator({
             active: true,
             operator: _operator,
+            feeRecipient: _feeRecipient,
             name: _name,
             limit: 0,
             funded: 0,
@@ -99,10 +122,15 @@ contract OperatorsManagerV1 {
     /// @dev Only callable by the administrator or the previous operator address
     /// @param _index The operator index
     /// @param _newOperatorAddress The new address representing the operator
-    function setOperatorAddress(uint256 _index, address _newOperatorAddress) external operatorOrAdmin(_index) {
+    function setOperatorAddresses(
+        uint256 _index,
+        address _newOperatorAddress,
+        address _newOperatorFeeRecipient
+    ) external operatorFeeRecipientOrAdmin(_index) {
         Operators.Operator storage operator = Operators.getByIndex(_index);
 
         operator.operator = _newOperatorAddress;
+        operator.feeRecipient = _newOperatorFeeRecipient;
 
         emit SetOperatorAddress(_index, operator.operator);
     }

@@ -27,6 +27,8 @@ contract FirewallTests {
     address internal executor = address(0xa22c003A45554Ce90E7F97a3f613F16905440468);
     address internal bob = address(0x34b4424f81AF11f8B8c261b339dd27e1Da796f11);
     address internal joe = address(0xA7206d878c5c3871826DfdB42191c49B1D11F466);
+    address internal bobFeeRecipient = address(0x4960b82Ab2fCD4Fa0ab0E52F72C06e95EDCd7360);
+    address internal joeFeeRecipient = address(0x892A5d1166C33a3571f01d7F407D678eb4E45805);
     address internal don = address(0xc99b2dBB74607A04B458Ea740F3906C4851C6531);
     address internal treasury = address(0xC88F7666330b4b511358b7742dC2a3234710e7B1);
 
@@ -107,7 +109,7 @@ contract FirewallTests {
 
     function testGovernorCanAddOperator() public {
         vm.startPrank(riverGovernorDAO);
-        firewalledRiver.addOperator("bob", bob);
+        firewalledRiver.addOperator("bob", bob, bobFeeRecipient);
         (int256 _operatorBobIndex, ) = river.getOperatorDetails("bob");
         assert(_operatorBobIndex >= 0);
         vm.stopPrank();
@@ -116,14 +118,14 @@ contract FirewallTests {
     function testExecutorCannotAddOperator() public {
         vm.startPrank(executor);
         vm.expectRevert(unauthExecutor);
-        firewalledRiver.addOperator("joe", joe);
+        firewalledRiver.addOperator("joe", joe, joeFeeRecipient);
         vm.stopPrank();
     }
 
     function testRandomCallerCannotAddOperator() public {
         vm.startPrank(joe);
         vm.expectRevert(unauthJoe);
-        firewalledRiver.addOperator("joe", joe);
+        firewalledRiver.addOperator("joe", joe, joeFeeRecipient);
         vm.stopPrank();
     }
 
@@ -192,7 +194,7 @@ contract FirewallTests {
 
     function haveGovernorAddOperatorBob() public returns (uint256 operatorBobIndex) {
         vm.startPrank(riverGovernorDAO);
-        firewalledRiver.addOperator("bob", bob);
+        firewalledRiver.addOperator("bob", bob, bobFeeRecipient);
         (int256 _operatorBobIndex, ) = river.getOperatorDetails("bob");
         assert(_operatorBobIndex >= 0);
         vm.stopPrank();
@@ -469,7 +471,7 @@ contract FirewallTests {
     function testMakingFunctionGovernorOnly() public {
         // At first, both governor and executor can setOperatorStatus
         vm.startPrank(riverGovernorDAO);
-        firewalledRiver.addOperator("bob", bob);
+        firewalledRiver.addOperator("bob", bob, bobFeeRecipient);
         (int256 _operatorBobIndex, ) = firewalledRiver.getOperatorDetails("bob");
         assert(_operatorBobIndex >= 0);
         uint256 operatorBobIndex = uint256(_operatorBobIndex);

@@ -10,6 +10,7 @@ library Operators {
         bool active;
         string name;
         address operator;
+        address feeRecipient;
         uint256 limit;
         uint256 funded;
         uint256 keys;
@@ -20,6 +21,7 @@ library Operators {
         bool active;
         string name;
         address operator;
+        address feeRecipient;
         uint256 limit;
         uint256 funded;
         uint256 keys;
@@ -209,6 +211,7 @@ library Operators {
                     active: op.active,
                     name: op.name,
                     operator: op.operator,
+                    feeRecipient: op.feeRecipient,
                     limit: op.limit,
                     funded: op.funded,
                     keys: op.keys,
