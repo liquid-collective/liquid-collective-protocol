@@ -108,7 +108,7 @@ contract RiverV1 is
         uint256 _amount
     ) internal override {
         (AllowlistAddress.get()).onlyAllowed(_depositor, DEPOSIT_MASK); // this call reverts if unauthorized or denied
-        (AllowlistAddress.get()).onlyAllowed(_recipient, DEPOSIT_MASK);
+        (AllowlistAddress.get()).onlyAllowed(_recipient, TRANSFER_MASK);
         SharesManagerV1._mintShares(_recipient, _amount);
     }
 
