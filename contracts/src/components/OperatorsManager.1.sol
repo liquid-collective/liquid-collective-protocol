@@ -20,6 +20,7 @@ contract OperatorsManagerV1 {
     error InvalidPublicKeysLength();
     error InvalidSignatureLength();
     error InvalidIndexOutOfBounds();
+    error OperatorLimitTooHigh(uint256 limit, uint256 keyCount);
 
     event AddedOperator(uint256 indexed index, string name, address operatorAddress);
     event SetOperatorStatus(uint256 indexed index, bool active);
@@ -138,6 +139,9 @@ contract OperatorsManagerV1 {
     /// @param _newLimit The new staking limit of the operator
     function setOperatorLimit(uint256 _index, uint256 _newLimit) external onlyAdmin {
         Operators.Operator storage operator = Operators.getByIndex(_index);
+        if (_newLimit > operator.keys) {
+            revert OperatorLimitTooHigh(_newLimit, operator.keys);
+        }
 
         operator.limit = _newLimit;
 
@@ -224,6 +228,11 @@ contract OperatorsManagerV1 {
             operator.keys -= 1;
             emit RemovedValidatorKey(_index, removedPublicKey);
         }
+
+        if (_indexes[_indexes.length - 1] < operator.limit) {
+            operator.limit = _indexes[_indexes.length - 1];
+        }
+
     }
 
     /// @notice Get operator details by name
