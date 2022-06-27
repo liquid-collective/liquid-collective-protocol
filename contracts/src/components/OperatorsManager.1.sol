@@ -135,6 +135,7 @@ contract OperatorsManagerV1 {
 
     /// @notice Changes the operator staking limit
     /// @dev Only callable by the administrator
+    /// @dev The limit cannot exceed the total key count of the operator
     /// @param _index The operator index
     /// @param _newLimit The new staking limit of the operator
     function setOperatorLimit(uint256 _index, uint256 _newLimit) external onlyAdmin {
@@ -196,6 +197,7 @@ contract OperatorsManagerV1 {
     /// @notice Remove validator keys
     /// @dev Only callable by the administrator or the operator address
     /// @dev The indexes must be provided sorted in decreasing order, otherwise the method will revert
+    /// @dev The operator limit will be set to the lowest deleted key index
     /// @param _index The operator index
     /// @param _indexes The indexes of the keys to remove
     function removeValidators(uint256 _index, uint256[] calldata _indexes) external operatorOrAdmin(_index) {
@@ -232,7 +234,6 @@ contract OperatorsManagerV1 {
         if (_indexes[_indexes.length - 1] < operator.limit) {
             operator.limit = _indexes[_indexes.length - 1];
         }
-
     }
 
     /// @notice Get operator details by name
