@@ -107,9 +107,14 @@ contract RiverV1 is
         address _recipient,
         uint256 _amount
     ) internal override {
-        (AllowlistAddress.get()).onlyAllowed(_depositor, DEPOSIT_MASK); // this call reverts if unauthorized or denied
-        (AllowlistAddress.get()).onlyAllowed(_recipient, TRANSFER_MASK);
-        SharesManagerV1._mintShares(_recipient, _amount);
+        SharesManagerV1._mintShares(_depositor, _amount);
+        if (_depositor == _recipient) {
+            (AllowlistAddress.get()).onlyAllowed(_depositor, DEPOSIT_MASK); // this call reverts if unauthorized or denied
+        } else {
+            (AllowlistAddress.get()).onlyAllowed(_depositor, DEPOSIT_MASK + TRANSFER_MASK); // this call reverts if unauthorized or denied
+            (AllowlistAddress.get()).onlyAllowed(_recipient, TRANSFER_MASK);
+            _transfer(_depositor, _recipient, _amount);
+        }
     }
 
     /// @notice Handler called whenever a deposit to the consensus layer is made. Should retrieve _requestedAmount or lower keys

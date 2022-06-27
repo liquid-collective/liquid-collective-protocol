@@ -48,7 +48,7 @@ contract TransferManagerV1DepositTests {
         } else {
             vm.expectRevert(abi.encodeWithSignature("EmptyDeposit()"));
         }
-        transferManager.deposit{value: _amount}(_user);
+        transferManager.deposit{value: _amount}();
 
         assert(_user.balance == 0);
         assert(address(transferManager).balance == _amount);
@@ -75,7 +75,7 @@ contract TransferManagerV1DepositTests {
         } else {
             vm.expectRevert(abi.encodeWithSignature("EmptyDeposit()"));
         }
-        transferManager.deposit{value: _amount}(_anotherUser);
+        transferManager.depositAndTransfer{value: _amount}(_anotherUser);
 
         assert(_user.balance == 0);
         assert(address(transferManager).balance == _amount);
@@ -170,7 +170,7 @@ contract TransferManagerV1CallbackTests {
         } else {
             vm.expectRevert(abi.encodeWithSignature("EmptyDeposit()"));
         }
-        transferManager.deposit{value: _amount}(_user);
+        transferManager.deposit{value: _amount}();
 
         assert(_user.balance == 0);
     }
@@ -193,7 +193,7 @@ contract TransferManagerV1CallbackTests {
         } else {
             vm.expectRevert(abi.encodeWithSignature("EmptyDeposit()"));
         }
-        transferManager.deposit{value: _amount}(_anotherUser);
+        transferManager.depositAndTransfer{value: _amount}(_anotherUser);
 
         assert(_user.balance == 0);
     }

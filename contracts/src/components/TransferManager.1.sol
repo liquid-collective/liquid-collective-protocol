@@ -45,9 +45,14 @@ abstract contract TransferManagerV1 {
         return address(this).balance;
     }
 
-    /// @notice Explicit deposit method
+    /// @notice Explicit deposit method to mint on msg.sender
+    function deposit() external payable {
+        _deposit(msg.sender);
+    }
+
+    /// @notice Explicit deposit method to mint on msg.sender and transfer to _recipient
     /// @param _recipient Address receiving the minted lsETH
-    function deposit(address _recipient) external payable {
+    function depositAndTransfer(address _recipient) external payable {
         _deposit(_recipient);
     }
 
