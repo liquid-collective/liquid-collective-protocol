@@ -23,6 +23,8 @@ abstract contract DepositManagerV1 {
     error InvalidSignatureCount();
     error InvalidWithdrawalCredentials();
 
+    event FundedValidatorKey(bytes publicKey);
+
     uint256 public constant PUBLIC_KEY_LENGTH = 48;
     uint256 public constant SIGNATURE_LENGTH = 96;
     uint256 public constant DEPOSIT_SIZE = 32 ether;
@@ -134,6 +136,7 @@ abstract contract DepositManagerV1 {
             depositDataRoot
         );
         require(address(this).balance == targetBalance, "EXPECTING_DEPOSIT_TO_HAPPEN");
+        emit FundedValidatorKey(_publicKey);
     }
 
     /// @notice Get the deposited validator count (the count of deposits made by the contract)
