@@ -20,6 +20,7 @@ contract OperatorsManagerV1 {
     error InvalidPublicKeysLength();
     error InvalidSignatureLength();
     error InvalidIndexOutOfBounds();
+    error OperatorLimitTooHigh(uint256 limit, uint256 keyCount);
 
     event AddedOperator(uint256 indexed index, string name, address operatorAddress);
     event SetOperatorStatus(uint256 indexed index, bool active);
@@ -134,10 +135,14 @@ contract OperatorsManagerV1 {
 
     /// @notice Changes the operator staking limit
     /// @dev Only callable by the administrator
+    /// @dev The limit cannot exceed the total key count of the operator
     /// @param _index The operator index
     /// @param _newLimit The new staking limit of the operator
     function setOperatorLimit(uint256 _index, uint256 _newLimit) external onlyAdmin {
         Operators.Operator storage operator = Operators.getByIndex(_index);
+        if (_newLimit > operator.keys) {
+            revert OperatorLimitTooHigh(_newLimit, operator.keys);
+        }
 
         operator.limit = _newLimit;
 
@@ -192,6 +197,7 @@ contract OperatorsManagerV1 {
     /// @notice Remove validator keys
     /// @dev Only callable by the administrator or the operator address
     /// @dev The indexes must be provided sorted in decreasing order, otherwise the method will revert
+    /// @dev The operator limit will be set to the lowest deleted key index
     /// @param _index The operator index
     /// @param _indexes The indexes of the keys to remove
     function removeValidators(uint256 _index, uint256[] calldata _indexes) external operatorOrAdmin(_index) {
@@ -223,6 +229,10 @@ contract OperatorsManagerV1 {
             ValidatorKeys.set(_index, lastKeyIndex, new bytes(0), new bytes(0));
             operator.keys -= 1;
             emit RemovedValidatorKey(_index, removedPublicKey);
+        }
+
+        if (_indexes[_indexes.length - 1] < operator.limit) {
+            operator.limit = _indexes[_indexes.length - 1];
         }
     }
 

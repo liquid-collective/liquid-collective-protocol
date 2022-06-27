@@ -223,7 +223,7 @@ contract RiverV1SetupOneTests {
         _deny(joe);
         vm.startPrank(joe);
         vm.expectRevert(abi.encodeWithSignature("Denied(address)", joe));
-        river.deposit{value: 100 ether}(address(0));
+        river.deposit{value: 100 ether}();
         vm.stopPrank();
 
         assert(river.balanceOfUnderlying(joe) == 100 ether);
