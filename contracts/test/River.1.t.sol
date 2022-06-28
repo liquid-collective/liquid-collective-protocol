@@ -72,13 +72,20 @@ contract RiverV1SetupOneTests {
         bytes memory op1Signatures = RiverSetupOne.getOperatorOneSignatures();
 
         river.addValidators(operatorOneIndex, 100, op1PublicKeys, op1Signatures);
-        river.setOperatorLimit(operatorOneIndex, 100);
 
         bytes memory op2PublicKeys = RiverSetupOne.getOperatorTwoPublicKeys();
         bytes memory op2Signatures = RiverSetupOne.getOperatorTwoSignatures();
 
         river.addValidators(operatorTwoIndex, 100, op2PublicKeys, op2Signatures);
-        river.setOperatorLimit(operatorTwoIndex, 100);
+
+        uint256[] memory operatorIndexes = new uint256[](2);
+        operatorIndexes[0] = operatorOneIndex;
+        operatorIndexes[1] = operatorTwoIndex;
+        uint256[] memory operatorLimits = new uint256[](2);
+        operatorLimits[0] = 100;
+        operatorLimits[1] = 100;
+
+        river.setOperatorLimits(operatorIndexes, operatorLimits);
         vm.stopPrank();
     }
 
