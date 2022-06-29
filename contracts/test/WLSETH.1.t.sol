@@ -95,7 +95,7 @@ contract WLSETHV1Tests {
     }
 
     function testTokenName() external view {
-        assert(keccak256(bytes(wlseth.name())) == keccak256("Wrapped River"));
+        assert(keccak256(bytes(wlseth.name())) == keccak256("Wrapped Alluvial Ether"));
     }
 
     function testTokenSymbol() external view {

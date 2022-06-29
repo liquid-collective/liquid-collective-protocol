@@ -43,7 +43,7 @@ contract WLSETHV1 is Initializable {
 
     /// @notice Retrieves the token full name
     function name() external pure returns (string memory) {
-        return "Wrapped River";
+        return "Wrapped Alluvial Ether";
     }
 
     /// @notice Retrieves the token ticker
