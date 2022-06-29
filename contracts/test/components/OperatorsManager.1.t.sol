@@ -281,18 +281,18 @@ contract OperatorsManagerV1MemberManagementTests {
         operatorIndexes[1] = secondIndex;
         uint256[] memory operatorLimits = new uint256[](2);
         operatorLimits[0] = 10;
-        operatorLimits[1] = 10;
+        operatorLimits[1] = 5;
         operatorsManager.setOperatorLimits(operatorIndexes, operatorLimits);
         newOperator = operatorsManager.getOperator(index);
         assert(newOperator.limit == 10);
         secondNewOperator = operatorsManager.getOperator(secondIndex);
-        assert(secondNewOperator.limit == 10);
+        assert(secondNewOperator.limit == 5);
         operatorLimits[0] = 0;
         operatorsManager.setOperatorLimits(operatorIndexes, operatorLimits);
         newOperator = operatorsManager.getOperator(index);
         assert(newOperator.limit == 0);
         secondNewOperator = operatorsManager.getOperator(secondIndex);
-        assert(secondNewOperator.limit == 10);
+        assert(secondNewOperator.limit == 5);
     }
 
     function testSetMultipleOperatorsLimitInvalidArguments(uint256 _firstAddressSalt, uint256 _secondAddressSalt)
@@ -331,7 +331,7 @@ contract OperatorsManagerV1MemberManagementTests {
         operatorIndexes[1] = secondIndex;
         uint256[] memory operatorLimits = new uint256[](1);
         operatorLimits[0] = 10;
-        vm.expectRevert(abi.encodeWithSignature("InvalidArgument()"));
+        vm.expectRevert(abi.encodeWithSignature("InvalidArrayLengths()"));
         operatorsManager.setOperatorLimits(operatorIndexes, operatorLimits);
     }
 
@@ -366,7 +366,7 @@ contract OperatorsManagerV1MemberManagementTests {
         assert(secondNewOperator.limit == 0);
         uint256[] memory operatorIndexes = new uint256[](0);
         uint256[] memory operatorLimits = new uint256[](0);
-        vm.expectRevert(abi.encodeWithSignature("InvalidArgument()"));
+        vm.expectRevert(abi.encodeWithSignature("InvalidEmptyArray()"));
         operatorsManager.setOperatorLimits(operatorIndexes, operatorLimits);
     }
 

@@ -16,7 +16,8 @@ contract OperatorsManagerV1 {
     error InactiveOperator(uint256 index);
     error InvalidFundedKeyDeletionAttempt();
     error InvalidUnsortedIndexes();
-    error InvalidArgument();
+    error InvalidArrayLengths();
+    error InvalidEmptyArray();
     error InvalidKeyCount();
     error InvalidPublicKeysLength();
     error InvalidSignatureLength();
@@ -142,8 +143,11 @@ contract OperatorsManagerV1 {
     /// @param _operatorIndexes The operator indexes
     /// @param _newLimits The new staking limit of the operators
     function setOperatorLimits(uint256[] calldata _operatorIndexes, uint256[] calldata _newLimits) external onlyAdmin {
-        if (_operatorIndexes.length != _newLimits.length || _operatorIndexes.length == 0) {
-            revert InvalidArgument();
+        if (_operatorIndexes.length != _newLimits.length) {
+            revert InvalidArrayLengths();
+        }
+        if (_operatorIndexes.length == 0) {
+            revert InvalidEmptyArray();
         }
         for (uint256 idx = 0; idx < _operatorIndexes.length; ) {
             Operators.Operator storage operator = Operators.getByIndex(_operatorIndexes[idx]);
