@@ -15,6 +15,8 @@ import "../state/river/DepositedValidatorCount.sol";
 /// @notice This contract handles the interactions with the official deposit contract, funding all validators
 /// @dev _onValidatorKeyRequest must be overriden.
 abstract contract DepositManagerV1 {
+    event FundedValidatorKey(bytes publicKey);
+
     error NotEnoughFunds();
     error InconsistentPublicKeys();
     error InconsistentSignatures();
@@ -22,8 +24,6 @@ abstract contract DepositManagerV1 {
     error InvalidPublicKeyCount();
     error InvalidSignatureCount();
     error InvalidWithdrawalCredentials();
-
-    event FundedValidatorKey(bytes publicKey);
 
     uint256 public constant PUBLIC_KEY_LENGTH = 48;
     uint256 public constant SIGNATURE_LENGTH = 96;
