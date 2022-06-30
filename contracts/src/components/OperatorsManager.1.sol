@@ -84,6 +84,8 @@ contract OperatorsManagerV1 {
         _;
     }
 
+    /// @notice Retrieve the operator details from the operator name
+    /// @param _name Name of the operator
     function getOperatorDetails(string calldata _name) external view returns (int256 _index, address _operatorAddress) {
         _index = Operators.indexOf(_name);
         _operatorAddress = Operators.get(_name).operator;

@@ -13,12 +13,12 @@ import "./state/allowlist/Allowlist.sol";
 /// @author Kiln
 /// @notice This contract handles the list of allowed recipients.
 contract AllowlistV1 is Initializable {
+    event ChangedAllowlistStatuses(address[] indexed accounts, uint256[] statuses);
+
     error InvalidAlloweeCount();
     error Denied(address _account);
     error Unauthorized(address _account);
     error MismatchedAlloweeAndStatusCount();
-
-    event ChangedAllowlistStatuses(address[] indexed accounts, uint256[] statuses);
 
     uint256 internal constant DENY_MASK = 0x1 << 255;
 

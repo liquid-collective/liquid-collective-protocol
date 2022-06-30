@@ -21,8 +21,15 @@ import "./state/oracle/ReportsVariants.sol";
 /// @author Kiln
 /// @notice This contract handles the input from the allowed oracle members. Highly inspired by Lido's implementation.
 contract OracleV1 is Initializable {
-    /// @notice Received ETH input has only 9 decimals
-    uint128 internal constant DENOMINATION_OFFSET = 1e9;
+    event QuorumChanged(uint256 _newQuorum);
+    event ExpectedEpochIdUpdated(uint256 _epochId);
+    event BeaconReported(
+        uint256 _epochId,
+        uint128 _newBeaconBalance,
+        uint32 _newBeaconValidatorCount,
+        address _oracleMember
+    );
+    event PostTotalShares(uint256 _postTotalEth, uint256 _prevTotalEth, uint256 _timeElapsed, uint256 _totalShares);
 
     error EpochTooOld(uint256 _providedEpochId, uint256 _minExpectedEpochId);
     error NotFrameFirstEpochId(uint256 _providedEpochId, uint256 _expectedFrameFirstEpochId);
@@ -40,15 +47,8 @@ contract OracleV1 is Initializable {
         uint256 _relativeLowerBound
     );
 
-    event QuorumChanged(uint256 _newQuorum);
-    event ExpectedEpochIdUpdated(uint256 _epochId);
-    event BeaconReported(
-        uint256 _epochId,
-        uint128 _newBeaconBalance,
-        uint32 _newBeaconValidatorCount,
-        address _oracleMember
-    );
-    event PostTotalShares(uint256 _postTotalEth, uint256 _prevTotalEth, uint256 _timeElapsed, uint256 _totalShares);
+    /// @notice Received ETH input has only 9 decimals
+    uint128 internal constant DENOMINATION_OFFSET = 1e9;
 
     /// @notice Initializes the oracle
     /// @param _riverContractAddress Address of the River contract, able to receive oracle input data after quorum is met
