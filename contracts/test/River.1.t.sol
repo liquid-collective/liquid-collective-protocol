@@ -20,7 +20,9 @@ contract RiverV1SetupOneTests {
     Vm internal vm = Vm(0x7109709ECfa91a80626fF3989D68f67F5b1DD12D);
 
     address internal admin = address(0xEA674fdDe714fd979de3EdF0F56AA9716B898ec8);
+    address internal newAdmin = address(0x52bc44d5378309EE2abF1539BF71dE1b7d7bE3b5);
     address internal treasury = address(0xC88F7666330b4b511358b7742dC2a3234710e7B1);
+    address internal newTreasury = address(0x856D51b27701DB7d863264c9f2262327Ee3eD2d9);
     address internal oracle = address(0xD97bF0222C8F4b21A4cedd9d6aC8e3269b099Eba);
     address internal allower = address(0x363ED97eebe06690625bf7b4e21c5B6540016366);
 
@@ -97,6 +99,32 @@ contract RiverV1SetupOneTests {
         vm.expectRevert(abi.encodeWithSignature("InvalidInitialization(uint256,uint256)", 0, 1));
         river.initRiverV1(address(deposit), withdrawalCredentials, oracle, admin, allower, treasury, 5000, 50000);
         vm.stopPrank();
+    }
+
+    function testSetAdmin() public {
+        vm.startPrank(admin);
+        assert(river.getAdministrator() == admin);
+        river.setAdministrator(newAdmin);
+        assert(river.getAdministrator() == newAdmin);
+        vm.stopPrank();
+    }
+
+    function testSetAdminUnauthorized() public {
+        vm.expectRevert(abi.encodeWithSignature("Unauthorized(address)", address(this)));
+        river.setAdministrator(newAdmin);
+    }
+
+    function testSetTreasury() public {
+        vm.startPrank(admin);
+        assert(river.getTreasury() == treasury);
+        river.setTreasury(newTreasury);
+        assert(river.getTreasury() == newTreasury);
+        vm.stopPrank();
+    }
+
+    function testSetTreasuryUnauthorized() public {
+        vm.expectRevert(abi.encodeWithSignature("Unauthorized(address)", address(this)));
+        river.setTreasury(newTreasury);
     }
 
     function testSetGlobalFeeHigherThanBase() public {
