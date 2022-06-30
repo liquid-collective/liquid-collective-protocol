@@ -16,6 +16,8 @@ contract OperatorsManagerV1 {
     error InactiveOperator(uint256 index);
     error InvalidFundedKeyDeletionAttempt();
     error InvalidUnsortedIndexes();
+    error InvalidArrayLengths();
+    error InvalidEmptyArray();
     error InvalidKeyCount();
     error InvalidPublicKeysLength();
     error InvalidSignatureLength();
@@ -136,17 +138,31 @@ contract OperatorsManagerV1 {
     /// @notice Changes the operator staking limit
     /// @dev Only callable by the administrator
     /// @dev The limit cannot exceed the total key count of the operator
-    /// @param _index The operator index
-    /// @param _newLimit The new staking limit of the operator
-    function setOperatorLimit(uint256 _index, uint256 _newLimit) external onlyAdmin {
-        Operators.Operator storage operator = Operators.getByIndex(_index);
-        if (_newLimit > operator.keys) {
-            revert OperatorLimitTooHigh(_newLimit, operator.keys);
+    /// @dev The _indexes and _newLimits must have the same length.
+    /// @dev Each limit value is applied to the operator index at the same index in the _indexes array.
+    /// @param _operatorIndexes The operator indexes
+    /// @param _newLimits The new staking limit of the operators
+    function setOperatorLimits(uint256[] calldata _operatorIndexes, uint256[] calldata _newLimits) external onlyAdmin {
+        if (_operatorIndexes.length != _newLimits.length) {
+            revert InvalidArrayLengths();
         }
+        if (_operatorIndexes.length == 0) {
+            revert InvalidEmptyArray();
+        }
+        for (uint256 idx = 0; idx < _operatorIndexes.length; ) {
+            Operators.Operator storage operator = Operators.getByIndex(_operatorIndexes[idx]);
+            if (_newLimits[idx] > operator.keys) {
+                revert OperatorLimitTooHigh(_newLimits[idx], operator.keys);
+            }
 
-        operator.limit = _newLimit;
+            operator.limit = _newLimits[idx];
 
-        emit SetOperatorLimit(_index, operator.limit);
+            emit SetOperatorLimit(_operatorIndexes[idx], operator.limit);
+
+            unchecked {
+                ++idx;
+            }
+        }
     }
 
     /// @notice Adds new keys for an operator

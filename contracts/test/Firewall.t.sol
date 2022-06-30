@@ -68,7 +68,7 @@ contract FirewallTests {
         bytes4[] memory executorCallableRiverSelectors = new bytes4[](5);
         executorCallableRiverSelectors[0] = river.setOperatorStatus.selector;
         executorCallableRiverSelectors[1] = river.setOperatorStoppedValidatorCount.selector;
-        executorCallableRiverSelectors[2] = river.setOperatorLimit.selector;
+        executorCallableRiverSelectors[2] = river.setOperatorLimits.selector;
         executorCallableRiverSelectors[3] = river.depositToConsensusLayer.selector;
         executorCallableRiverSelectors[4] = river.setOracle.selector;
         riverFirewall = new Firewall(riverGovernorDAO, executor, address(river), executorCallableRiverSelectors);
@@ -261,7 +261,11 @@ contract FirewallTests {
         river.addValidators(operatorBobIndex, 10, tenPublicKeys, tenSignatures);
         vm.stopPrank();
         vm.startPrank(riverGovernorDAO);
-        firewalledRiver.setOperatorLimit(operatorBobIndex, 10);
+        uint256[] memory operatorIndexes = new uint256[](1);
+        operatorIndexes[0] = operatorBobIndex;
+        uint256[] memory operatorLimits = new uint256[](1);
+        operatorLimits[0] = 10;
+        firewalledRiver.setOperatorLimits(operatorIndexes, operatorLimits);
         assert(river.getOperator(operatorBobIndex).limit == 10);
         vm.stopPrank();
     }
@@ -278,7 +282,11 @@ contract FirewallTests {
         river.addValidators(operatorBobIndex, 10, tenPublicKeys, tenSignatures);
         vm.stopPrank();
         vm.startPrank(executor);
-        firewalledRiver.setOperatorLimit(operatorBobIndex, 10);
+        uint256[] memory operatorIndexes = new uint256[](1);
+        operatorIndexes[0] = operatorBobIndex;
+        uint256[] memory operatorLimits = new uint256[](1);
+        operatorLimits[0] = 10;
+        firewalledRiver.setOperatorLimits(operatorIndexes, operatorLimits);
         assert(river.getOperator(operatorBobIndex).limit == 10);
         vm.stopPrank();
     }
@@ -287,7 +295,11 @@ contract FirewallTests {
         uint256 operatorBobIndex = haveGovernorAddOperatorBob();
         vm.startPrank(joe);
         vm.expectRevert(unauthJoe);
-        firewalledRiver.setOperatorLimit(operatorBobIndex, 13);
+        uint256[] memory operatorIndexes = new uint256[](1);
+        operatorIndexes[0] = operatorBobIndex;
+        uint256[] memory operatorLimits = new uint256[](1);
+        operatorLimits[0] = 10;
+        firewalledRiver.setOperatorLimits(operatorIndexes, operatorLimits);
         vm.stopPrank();
     }
 
