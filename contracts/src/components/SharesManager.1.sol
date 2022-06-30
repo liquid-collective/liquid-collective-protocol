@@ -181,14 +181,16 @@ abstract contract SharesManagerV1 is IERC20 {
         return ((_shares * _assetBalance())) / _totalSharesValue;
     }
 
-    function _sharesFromBalance(uint256 balance) internal view returns (uint256) {
+    /// @notice Internal utility to retrieve the shares count for a given underlying asset amount
+    /// @param _balance Amount of underlying asset balance to convert
+    function _sharesFromBalance(uint256 _balance) internal view returns (uint256) {
         uint256 _totalSharesValue = Shares.get();
 
         if (_totalSharesValue == 0) {
             return 0;
         }
 
-        return (balance * _totalSharesValue) / _assetBalance();
+        return (_balance * _totalSharesValue) / _assetBalance();
     }
 
     /// @notice Internal utility to mint shares for the specified user
