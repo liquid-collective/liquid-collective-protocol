@@ -27,6 +27,7 @@ contract RiverV1SetupOneTests {
     address internal allower = address(0x363ED97eebe06690625bf7b4e21c5B6540016366);
 
     AllowlistV1 internal allowlist;
+    address internal newAllowlist = address(0x00192Fb10dF37c9FB26829eb2CC623cd1BF599E8);
 
     address internal operatorOne = address(0x7fe52bbF4D779cA115231b604637d5f80bab2C40);
     address internal operatorOneFeeRecipient = address(0x4960b82Ab2fCD4Fa0ab0E52F72C06e95EDCd7360);
@@ -125,6 +126,19 @@ contract RiverV1SetupOneTests {
     function testSetTreasuryUnauthorized() public {
         vm.expectRevert(abi.encodeWithSignature("Unauthorized(address)", address(this)));
         river.setTreasury(newTreasury);
+    }
+
+    function testSetAllowlist() public {
+        vm.startPrank(admin);
+        assert(river.getAllowlist() == address(allowlist));
+        river.setAllowlist(newAllowlist);
+        assert(river.getAllowlist() == newAllowlist);
+        vm.stopPrank();
+    }
+
+    function testSetAllowlistUnauthorized() public {
+        vm.expectRevert(abi.encodeWithSignature("Unauthorized(address)", address(this)));
+        river.setAllowlist(newAllowlist);
     }
 
     function testSetGlobalFeeHigherThanBase() public {

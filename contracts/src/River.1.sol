@@ -86,6 +86,17 @@ contract RiverV1 is
         OperatorRewardsShare.set(newOperatorRewardsShare);
     }
 
+    /// @notice Changes the allowlist address
+    /// @param _newAllowlist New address for the allowlist
+    function setAllowlist(address _newAllowlist) external onlyAdmin {
+        AllowlistAddress.set(_newAllowlist);
+    }
+
+    /// @notice Retrieve the allowlist address
+    function getAllowlist() external view returns (address) {
+        return address(AllowlistAddress.get());
+    }
+
     /// @notice Changes the treasury address
     /// @param _newTreasury New address for the treasury
     function setTreasury(address _newTreasury) external onlyAdmin {
