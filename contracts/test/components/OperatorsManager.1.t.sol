@@ -91,10 +91,12 @@ contract OperatorsManagerV1MemberManagementTests {
         Operators.Operator memory newOperator = operatorsManager.getOperator(index);
         assert(newOperator.operator == _firstAddress);
         assert(newOperator.feeRecipient == _firstFeeRecipient);
-        operatorsManager.setOperatorAddresses(index, _secondAddress, _secondFeeRecipient);
+        operatorsManager.setOperatorAddress(index, _secondAddress);
+        operatorsManager.setOperatorFeeRecipientAddress(index, _secondFeeRecipient);
         newOperator = operatorsManager.getOperatorByName(string(abi.encodePacked(_name)));
         assert(newOperator.operator == _secondAddress);
         assert(newOperator.feeRecipient == _secondFeeRecipient);
+        vm.stopPrank();
     }
 
     function testSetOperatorAddressAsOperator(
@@ -117,8 +119,12 @@ contract OperatorsManagerV1MemberManagementTests {
         assert(newOperator.operator == _firstAddress);
         assert(newOperator.feeRecipient == _firstFeeRecipient);
         vm.stopPrank();
+        vm.startPrank(_firstAddress);
+        operatorsManager.setOperatorAddress(index, _secondAddress);
+        vm.stopPrank();
         vm.startPrank(_firstFeeRecipient);
-        operatorsManager.setOperatorAddresses(index, _secondAddress, _secondFeeRecipient);
+        operatorsManager.setOperatorFeeRecipientAddress(index, _secondFeeRecipient);
+        vm.stopPrank();
         newOperator = operatorsManager.getOperatorByName(string(abi.encodePacked(_name)));
         assert(newOperator.operator == _secondAddress);
         assert(newOperator.feeRecipient == _secondFeeRecipient);
@@ -144,9 +150,14 @@ contract OperatorsManagerV1MemberManagementTests {
         assert(newOperator.operator == _firstAddress);
         assert(newOperator.feeRecipient == _firstFeeRecipient);
         vm.stopPrank();
+        vm.startPrank(_firstFeeRecipient);
+        vm.expectRevert(abi.encodeWithSignature("Unauthorized(address)", _firstFeeRecipient));
+        operatorsManager.setOperatorAddress(index, _secondAddress);
+        vm.stopPrank();
         vm.startPrank(_firstAddress);
         vm.expectRevert(abi.encodeWithSignature("Unauthorized(address)", _firstAddress));
-        operatorsManager.setOperatorAddresses(index, _secondAddress, _secondFeeRecipient);
+        operatorsManager.setOperatorFeeRecipientAddress(index, _secondFeeRecipient);
+        vm.stopPrank();
     }
 
     function testSetOperatorAddressAsUnauthorized(
@@ -171,7 +182,10 @@ contract OperatorsManagerV1MemberManagementTests {
         vm.stopPrank();
         vm.startPrank(address(this));
         vm.expectRevert(abi.encodeWithSignature("Unauthorized(address)", address(this)));
-        operatorsManager.setOperatorAddresses(index, _secondAddress, _secondFeeRecipient);
+        operatorsManager.setOperatorAddress(index, _secondAddress);
+        vm.expectRevert(abi.encodeWithSignature("Unauthorized(address)", address(this)));
+        operatorsManager.setOperatorFeeRecipientAddress(index, _secondFeeRecipient);
+        vm.stopPrank();
     }
 
     function testSetOperatorStatusAsAdmin(

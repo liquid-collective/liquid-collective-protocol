@@ -24,10 +24,11 @@ contract OperatorsManagerV1 {
     error InvalidIndexOutOfBounds();
     error OperatorLimitTooHigh(uint256 limit, uint256 keyCount);
 
-    event AddedOperator(uint256 indexed index, string name, address operatorAddress);
+    event AddedOperator(uint256 indexed index, string name, address operatorAddress, address feeRecipientAddress);
     event SetOperatorStatus(uint256 indexed index, bool active);
     event SetOperatorLimit(uint256 indexed index, uint256 newLimit);
     event SetOperatorStoppedValidatorCount(uint256 indexed index, uint256 newStoppedValidatorCount);
+    event SetOperatorFeeRecipientAddress(uint256 indexed index, address newOperatorAddress);
     event SetOperatorAddress(uint256 indexed index, address newOperatorAddress);
     event AddedValidatorKeys(uint256 indexed index, bytes publicKeys);
     event RemovedValidatorKey(uint256 indexed index, bytes publicKey);
@@ -115,24 +116,34 @@ contract OperatorsManagerV1 {
 
         uint256 operatorIndex = Operators.set(_name, newOperator);
 
-        emit AddedOperator(operatorIndex, newOperator.name, newOperator.operator);
+        emit AddedOperator(operatorIndex, newOperator.name, newOperator.operator, newOperator.feeRecipient);
     }
 
     /// @notice Changes the operator address of an operator
     /// @dev Only callable by the administrator or the previous operator address
     /// @param _index The operator index
-    /// @param _newOperatorAddress The new address representing the operator
-    function setOperatorAddresses(
-        uint256 _index,
-        address _newOperatorAddress,
-        address _newOperatorFeeRecipient
-    ) external operatorFeeRecipientOrAdmin(_index) {
+    /// @param _newOperatorAddress The new address of the operator
+    function setOperatorAddress(uint256 _index, address _newOperatorAddress) external operatorOrAdmin(_index) {
         Operators.Operator storage operator = Operators.getByIndex(_index);
 
         operator.operator = _newOperatorAddress;
-        operator.feeRecipient = _newOperatorFeeRecipient;
 
-        emit SetOperatorAddress(_index, operator.operator);
+        emit SetOperatorAddress(_index, _newOperatorAddress);
+    }
+
+    /// @notice Changes the operator fee recipient address
+    /// @dev Only callable by the administrator or the previous operator fee recipient address
+    /// @param _index The operator index
+    /// @param _newOperatorFeeRecipientAddress The new fee recipient address of the operator
+    function setOperatorFeeRecipientAddress(uint256 _index, address _newOperatorFeeRecipientAddress)
+        external
+        operatorFeeRecipientOrAdmin(_index)
+    {
+        Operators.Operator storage operator = Operators.getByIndex(_index);
+
+        operator.feeRecipient = _newOperatorFeeRecipientAddress;
+
+        emit SetOperatorFeeRecipientAddress(_index, _newOperatorFeeRecipientAddress);
     }
 
     /// @notice Changes the operator status
