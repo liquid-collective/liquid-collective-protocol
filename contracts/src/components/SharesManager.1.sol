@@ -34,7 +34,7 @@ abstract contract SharesManagerV1 is IERC20 {
 
     /// @notice Modifier used to ensure the amount transferred is not 0
     /// @param _value Amount to check
-    modifier isNotNull(uint256 _value) {
+    modifier isNotZero(uint256 _value) {
         if (_value == 0) {
             revert NullTransfer();
         }
@@ -104,13 +104,12 @@ abstract contract SharesManagerV1 is IERC20 {
     }
 
     /// @notice Performs a transfer from the message sender to the provided account
-    /// @dev This method calls the internal _onTransfer hook
     /// @param _to Address receiving the tokens
     /// @param _value Amount to be sent
     function transfer(address _to, uint256 _value)
         external
         transferAllowed(msg.sender, _to)
-        isNotNull(_value)
+        isNotZero(_value)
         hasFunds(msg.sender, _value)
         returns (bool)
     {
@@ -119,8 +118,7 @@ abstract contract SharesManagerV1 is IERC20 {
 
     /// @notice Performs a transfer between two recipients
     /// @dev If the specified _from argument is the message sender, behaves like a regular transfer
-    /// @dev If the specified _from argument is not the message sender, checks that the message sender has been given enoiugh allowance
-    /// @dev This method calls the internal _onTransfer hook
+    /// @dev If the specified _from argument is not the message sender, checks that the message sender has been given enough allowance
     /// @param _from Address sending the tokens
     /// @param _to Address receiving the tokens
     /// @param _value Amount to be sent
@@ -128,7 +126,7 @@ abstract contract SharesManagerV1 is IERC20 {
         address _from,
         address _to,
         uint256 _value
-    ) external transferAllowed(_from, _to) isNotNull(_value) hasFunds(_from, _value) returns (bool) {
+    ) external transferAllowed(_from, _to) isNotZero(_value) hasFunds(_from, _value) returns (bool) {
         if (_from != msg.sender) {
             uint256 currentAllowance = ApprovalsPerOwner.get(_from, msg.sender);
             if (currentAllowance < _value) {
@@ -193,7 +191,7 @@ abstract contract SharesManagerV1 is IERC20 {
         return (balance * _totalSharesValue) / _assetBalance();
     }
 
-    /// @notice Internal uitlity to mint shares for the speicified user
+    /// @notice Internal utility to mint shares for the specified user
     /// @dev This method assumes that funds received are now part of the _assetBalance()
     /// @param _owner Account that should receive the new shares
     /// @param _underlyingAssetValue Value of underlying asset received, to convert into shares
@@ -209,7 +207,7 @@ abstract contract SharesManagerV1 is IERC20 {
         }
     }
 
-    /// @notice Internal utiltiy to mint shares without any convertion, and emits a mint Transfer event
+    /// @notice Internal utility to mint shares without any conversion, and emits a mint Transfer event
     /// @param _owner Account that should receive the new shares
     /// @param _value Amount of shares to mint
     function _mintRawShares(address _owner, uint256 _value) internal {

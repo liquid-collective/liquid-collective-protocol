@@ -3,7 +3,7 @@ pragma solidity 0.8.10;
 
 /// @title Withdraw (v1)
 /// @author Kiln
-/// @notice This contract is a stub contract tht should be upgradeable to be adapted with future withdrawal specs
+/// @notice This contract is a stub contract that should be upgradeable to be adapted with future withdrawal specs
 contract WithdrawV1 {
     function getCredentials() external view returns (bytes32) {
         return
