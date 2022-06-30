@@ -120,7 +120,7 @@ contract SharesManagerV1Tests {
     }
 
     function testName() public view {
-        assert(keccak256("Alluvial Ether") == keccak256(bytes(sharesManager.name())));
+        assert(keccak256("River Ether") == keccak256(bytes(sharesManager.name())));
     }
 
     function testSymbol() public view {

@@ -53,7 +53,7 @@ abstract contract SharesManagerV1 is IERC20 {
 
     /// @notice Retrieve the token name
     function name() external pure returns (string memory) {
-        return "Alluvial Ether";
+        return "River Ether";
     }
 
     /// @notice Retrieve the token symbol
