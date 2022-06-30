@@ -7,7 +7,7 @@ import "../libraries/Errors.sol";
 /// @author Kiln
 /// @notice This contract handles the inbound transfers cases or the explicit submissions
 abstract contract TransferManagerV1 {
-    event UserDeposit(address indexed user, uint256 amount);
+    event UserDeposit(address indexed depositor, address indexed recipient, uint256 amount);
     event Donation(address donator, uint256 amount);
 
     error EmptyDeposit();
@@ -16,8 +16,13 @@ abstract contract TransferManagerV1 {
     /// @notice Handler called whenever a user has sent funds to the contract
     /// @dev Must be overriden
     /// @param _depositor Address that made the deposit
+    /// @param _recipient Address that receives the minted shares
     /// @param _amount Amount deposited
-    function _onDeposit(address _depositor, uint256 _amount) internal virtual;
+    function _onDeposit(
+        address _depositor,
+        address _recipient,
+        uint256 _amount
+    ) internal virtual;
 
     /// @notice Handler called whenever a donation is received by the contract
     /// @dev Must be overriden
@@ -25,14 +30,14 @@ abstract contract TransferManagerV1 {
     function _onDonation(uint256 _amount) internal virtual;
 
     /// @notice Internal utility calling the deposit handler and emitting the deposit details
-    function _deposit() internal {
+    function _deposit(address _recipient) internal {
         if (msg.value == 0) {
             revert EmptyDeposit();
         }
 
-        _onDeposit(msg.sender, msg.value);
+        _onDeposit(msg.sender, _recipient, msg.value);
 
-        emit UserDeposit(msg.sender, msg.value);
+        emit UserDeposit(msg.sender, _recipient, msg.value);
     }
 
     /// @notice Returns the amount of pending ETH
@@ -40,9 +45,15 @@ abstract contract TransferManagerV1 {
         return address(this).balance;
     }
 
-    /// @notice Explicit deposit method
+    /// @notice Explicit deposit method to mint on msg.sender
     function deposit() external payable {
-        _deposit();
+        _deposit(msg.sender);
+    }
+
+    /// @notice Explicit deposit method to mint on msg.sender and transfer to _recipient
+    /// @param _recipient Address receiving the minted lsETH
+    function depositAndTransfer(address _recipient) external payable {
+        _deposit(_recipient);
     }
 
     /// @notice Allows anyone to add ethers to river without minting new shares
@@ -59,7 +70,7 @@ abstract contract TransferManagerV1 {
 
     /// @notice Implicit deposit method, when the user performs a regular transfer to the contract
     receive() external payable {
-        _deposit();
+        _deposit(msg.sender);
     }
 
     /// @notice Invalid call, when the user sends a transaction with a data payload but no method matched
