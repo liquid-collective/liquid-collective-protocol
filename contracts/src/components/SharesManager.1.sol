@@ -6,7 +6,7 @@ import "../libraries/Errors.sol";
 
 import "../state/river/Shares.sol";
 import "../state/river/SharesPerOwner.sol";
-import "../state/river/ApprovalsPerOwner.sol";
+import "../state/shared/ApprovalsPerOwner.sol";
 
 /// @title Shares Manager (v1)
 /// @author Kiln
@@ -61,8 +61,16 @@ abstract contract SharesManagerV1 is IERC20 {
         return _balanceOf(_owner);
     }
 
-    function balanceOfUnderlying(address _owner) public view returns (uint256 balance) {
+    function balanceOfUnderlying(address _owner) external view returns (uint256 balance) {
         return _balanceFromShares(SharesPerOwner.get(_owner));
+    }
+
+    function underlyingBalanceFromShares(uint256 shares) external view returns (uint256) {
+        return _balanceFromShares(shares);
+    }
+
+    function sharesFromUnderlyingBalance(uint256 underlyingBalance) external view returns (uint256) {
+        return _sharesFromBalance(underlyingBalance);
     }
 
     function allowance(address _owner, address _spender) external view returns (uint256 remaining) {
@@ -127,6 +135,16 @@ abstract contract SharesManagerV1 is IERC20 {
         }
 
         return ((shares * _assetBalance())) / _totalSharesValue;
+    }
+
+    function _sharesFromBalance(uint256 balance) internal view returns (uint256) {
+        uint256 _totalSharesValue = Shares.get();
+
+        if (_totalSharesValue == 0) {
+            return 0;
+        }
+
+        return (balance * _totalSharesValue) / _assetBalance();
     }
 
     // assuming funds are received, _assetBalance should have taken _value into account
