@@ -1,6 +1,6 @@
 # AllowlistV1
 
-*SkillZ*
+*Kiln*
 
 > Allowlist (v1)
 
@@ -44,6 +44,51 @@ Retrieves the allower address
 |---|---|---|
 | _0 | address | undefined |
 
+### getPermissions
+
+```solidity
+function getPermissions(address _account) external view returns (uint256)
+```
+
+This method retrieves the raw permission value
+
+
+
+#### Parameters
+
+| Name | Type | Description |
+|---|---|---|
+| _account | address | Recipient to verify |
+
+#### Returns
+
+| Name | Type | Description |
+|---|---|---|
+| _0 | uint256 | undefined |
+
+### hasPermission
+
+```solidity
+function hasPermission(address _account, uint256 _mask) external view returns (bool)
+```
+
+This method returns true if the user has the expected permission         ignoring any deny list membership
+
+
+
+#### Parameters
+
+| Name | Type | Description |
+|---|---|---|
+| _account | address | Recipient to verify |
+| _mask | uint256 | Combination of permissions to verify |
+
+#### Returns
+
+| Name | Type | Description |
+|---|---|---|
+| _0 | bool | undefined |
+
 ### initAllowlistV1
 
 ```solidity
@@ -67,7 +112,7 @@ Initializes the allowlist
 function isAllowed(address _account, uint256 _mask) external view returns (bool)
 ```
 
-Verify if a user has a specific right
+This method returns true if the user has the expected permission and         is not in the deny list
 
 
 
@@ -75,14 +120,53 @@ Verify if a user has a specific right
 
 | Name | Type | Description |
 |---|---|---|
-| _account | address | Address to verify |
-| _mask | uint256 | Right represented as a bit mask |
+| _account | address | Recipient to verify |
+| _mask | uint256 | Combination of permissions to verify |
 
 #### Returns
 
 | Name | Type | Description |
 |---|---|---|
 | _0 | bool | undefined |
+
+### isDenied
+
+```solidity
+function isDenied(address _account) external view returns (bool)
+```
+
+This method returns true if the user is in the deny list
+
+
+
+#### Parameters
+
+| Name | Type | Description |
+|---|---|---|
+| _account | address | Recipient to verify |
+
+#### Returns
+
+| Name | Type | Description |
+|---|---|---|
+| _0 | bool | undefined |
+
+### onlyAllowed
+
+```solidity
+function onlyAllowed(address _account, uint256 _mask) external view
+```
+
+This method should be used as a modifier and is expected to revert         if the user hasn&#39;t got the required permission or if the user is         in the deny list.
+
+
+
+#### Parameters
+
+| Name | Type | Description |
+|---|---|---|
+| _account | address | Recipient to verify |
+| _mask | uint256 | Combination of permissions to verify |
 
 ### setAllower
 
@@ -124,6 +208,22 @@ event ChangedAllowlistStatuses(address[] indexed accounts, uint256[] statuses)
 
 
 ## Errors
+
+### Denied
+
+```solidity
+error Denied(address _account)
+```
+
+
+
+
+
+#### Parameters
+
+| Name | Type | Description |
+|---|---|---|
+| _account | address | undefined |
 
 ### InvalidAlloweeCount
 

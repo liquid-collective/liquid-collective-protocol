@@ -66,7 +66,7 @@ const func: DeployFunction = async function ({
       [
         riverInterface.getSighash("setOperatorStatus"),
         riverInterface.getSighash("setOperatorStoppedValidatorCount"),
-        riverInterface.getSighash("setOperatorLimit"),
+        riverInterface.getSighash("setOperatorLimits"),
         riverInterface.getSighash("depositToConsensusLayer"),
         riverInterface.getSighash("setOracle"),
       ],
