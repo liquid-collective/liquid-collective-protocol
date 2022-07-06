@@ -1,10 +1,10 @@
 # WithdrawV1
 
+*Kiln*
 
+> Withdraw (v1)
 
-
-
-
+This contract is a stub contract that should be upgradeable to be adapted with future withdrawal specs
 
 
 

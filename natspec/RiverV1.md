@@ -1,6 +1,6 @@
 # RiverV1
 
-*SkillZ*
+*Kiln*
 
 > River (v1)
 
@@ -81,7 +81,7 @@ function SIGNATURE_LENGTH() external view returns (uint256)
 ### addOperator
 
 ```solidity
-function addOperator(string _name, address _operator) external nonpayable
+function addOperator(string _name, address _operator, address _feeRecipient) external nonpayable
 ```
 
 Adds an operator to the registry
@@ -94,6 +94,7 @@ Adds an operator to the registry
 |---|---|---|
 | _name | string | The name identifying the operator |
 | _operator | address | The address representing the operator, receiving the rewards |
+| _feeRecipient | address | The address where the rewards are sent |
 
 ### addValidators
 
@@ -120,7 +121,7 @@ Adds new keys for an operator
 function allowance(address _owner, address _spender) external view returns (uint256 remaining)
 ```
 
-
+Retrieve the allowance value for a spender_owner Address that issued the allowance_spender Address that received the allowance
 
 
 
@@ -143,16 +144,16 @@ function allowance(address _owner, address _spender) external view returns (uint
 function approve(address _spender, uint256 _value) external nonpayable returns (bool success)
 ```
 
+Approves an account for future spendings
 
-
-
+*An approved account can use transferFrom to transfer funds on behalf of the token owner*
 
 #### Parameters
 
 | Name | Type | Description |
 |---|---|---|
-| _spender | address | undefined |
-| _value | uint256 | undefined |
+| _spender | address | Address that is allowed to spend the tokens |
+| _value | uint256 | The allowed amount, will override previous value |
 
 #### Returns
 
@@ -166,7 +167,7 @@ function approve(address _spender, uint256 _value) external nonpayable returns (
 function balanceOf(address _owner) external view returns (uint256 balance)
 ```
 
-
+Retrieve the balance of an account
 
 
 
@@ -174,7 +175,7 @@ function balanceOf(address _owner) external view returns (uint256 balance)
 
 | Name | Type | Description |
 |---|---|---|
-| _owner | address | undefined |
+| _owner | address | Address to be checked |
 
 #### Returns
 
@@ -188,7 +189,7 @@ function balanceOf(address _owner) external view returns (uint256 balance)
 function balanceOfUnderlying(address _owner) external view returns (uint256 balance)
 ```
 
-
+Retrieve the underlying asset balance of an account
 
 
 
@@ -196,7 +197,7 @@ function balanceOfUnderlying(address _owner) external view returns (uint256 bala
 
 | Name | Type | Description |
 |---|---|---|
-| _owner | address | undefined |
+| _owner | address | Address to be checked |
 
 #### Returns
 
@@ -210,7 +211,7 @@ function balanceOfUnderlying(address _owner) external view returns (uint256 bala
 function decimals() external pure returns (uint8)
 ```
 
-
+Retrieve the decimal count
 
 
 
@@ -224,10 +225,21 @@ function decimals() external pure returns (uint8)
 ### deposit
 
 ```solidity
-function deposit(address _referral) external payable
+function deposit() external payable
 ```
 
-Explicit deposit method
+Explicit deposit method to mint on msg.sender
+
+
+
+
+### depositAndTransfer
+
+```solidity
+function depositAndTransfer(address _recipient) external payable
+```
+
+Explicit deposit method to mint on msg.sender and transfer to _recipient
 
 
 
@@ -235,7 +247,7 @@ Explicit deposit method
 
 | Name | Type | Description |
 |---|---|---|
-| _referral | address | Referral address, address(0) if none |
+| _recipient | address | Address receiving the minted lsETH |
 
 ### depositToConsensusLayer
 
@@ -271,6 +283,23 @@ function getAdministrator() external view returns (address)
 ```
 
 Retrieve system administrator address
+
+
+
+
+#### Returns
+
+| Name | Type | Description |
+|---|---|---|
+| _0 | address | undefined |
+
+### getAllowlist
+
+```solidity
+function getAllowlist() external view returns (address)
+```
+
+Retrieve the allowlist address
 
 
 
@@ -399,7 +428,7 @@ Get operator count
 function getOperatorDetails(string _name) external view returns (int256 _index, address _operatorAddress)
 ```
 
-
+Retrieve the operator details from the operator name
 
 
 
@@ -407,7 +436,7 @@ function getOperatorDetails(string _name) external view returns (int256 _index, 
 
 | Name | Type | Description |
 |---|---|---|
-| _name | string | undefined |
+| _name | string | Name of the operator |
 
 #### Returns
 
@@ -432,6 +461,40 @@ Get Oracle address
 | Name | Type | Description |
 |---|---|---|
 | oracle | address | undefined |
+
+### getPendingEth
+
+```solidity
+function getPendingEth() external view returns (uint256)
+```
+
+Returns the amount of pending ETH
+
+
+
+
+#### Returns
+
+| Name | Type | Description |
+|---|---|---|
+| _0 | uint256 | undefined |
+
+### getTreasury
+
+```solidity
+function getTreasury() external view returns (address)
+```
+
+Retrieve the treasury address
+
+
+
+
+#### Returns
+
+| Name | Type | Description |
+|---|---|---|
+| _0 | address | undefined |
 
 ### getValidator
 
@@ -504,7 +567,7 @@ Initializes the River system
 function name() external pure returns (string)
 ```
 
-
+Retrieve the token name
 
 
 
@@ -523,7 +586,7 @@ function removeValidators(uint256 _index, uint256[] _indexes) external nonpayabl
 
 Remove validator keys
 
-*Only callable by the administrator or the operator addressThe indexes must be provided sorted in decreasing order, otherwise the method will revert*
+*Only callable by the administrator or the operator addressThe indexes must be provided sorted in decreasing order, otherwise the method will revertThe operator limit will be set to the lowest deleted key index*
 
 #### Parameters
 
@@ -531,6 +594,38 @@ Remove validator keys
 |---|---|---|
 | _index | uint256 | The operator index |
 | _indexes | uint256[] | The indexes of the keys to remove |
+
+### setAdministrator
+
+```solidity
+function setAdministrator(address _newAdmin) external nonpayable
+```
+
+Changes the admin
+
+
+
+#### Parameters
+
+| Name | Type | Description |
+|---|---|---|
+| _newAdmin | address | New address for the admin |
+
+### setAllowlist
+
+```solidity
+function setAllowlist(address _newAllowlist) external nonpayable
+```
+
+Changes the allowlist address
+
+
+
+#### Parameters
+
+| Name | Type | Description |
+|---|---|---|
+| _newAllowlist | address | New address for the allowlist |
 
 ### setBeaconData
 
@@ -581,24 +676,41 @@ Changes the operator address of an operator
 | Name | Type | Description |
 |---|---|---|
 | _index | uint256 | The operator index |
-| _newOperatorAddress | address | The new address representing the operator |
+| _newOperatorAddress | address | The new address of the operator |
 
-### setOperatorLimit
+### setOperatorFeeRecipientAddress
 
 ```solidity
-function setOperatorLimit(uint256 _index, uint256 _newLimit) external nonpayable
+function setOperatorFeeRecipientAddress(uint256 _index, address _newOperatorFeeRecipientAddress) external nonpayable
 ```
 
-Changes the operator staking limit
+Changes the operator fee recipient address
 
-*Only callable by the administrator*
+*Only callable by the administrator or the previous operator fee recipient address*
 
 #### Parameters
 
 | Name | Type | Description |
 |---|---|---|
 | _index | uint256 | The operator index |
-| _newLimit | uint256 | The new staking limit of the operator |
+| _newOperatorFeeRecipientAddress | address | The new fee recipient address of the operator |
+
+### setOperatorLimits
+
+```solidity
+function setOperatorLimits(uint256[] _operatorIndexes, uint256[] _newLimits) external nonpayable
+```
+
+Changes the operator staking limit
+
+*Only callable by the administratorThe limit cannot exceed the total key count of the operatorThe _indexes and _newLimits must have the same length.Each limit value is applied to the operator index at the same index in the _indexes array.*
+
+#### Parameters
+
+| Name | Type | Description |
+|---|---|---|
+| _operatorIndexes | uint256[] | The operator indexes |
+| _newLimits | uint256[] | The new staking limit of the operators |
 
 ### setOperatorRewardsShare
 
@@ -666,10 +778,26 @@ Set Oracle address
 |---|---|---|
 | _oracleAddress | address | Address of the oracle |
 
-### sharesOf
+### setTreasury
 
 ```solidity
-function sharesOf(address _owner) external view returns (uint256 shares)
+function setTreasury(address _newTreasury) external nonpayable
+```
+
+Changes the treasury address
+
+
+
+#### Parameters
+
+| Name | Type | Description |
+|---|---|---|
+| _newTreasury | address | New address for the treasury |
+
+### sharesFromUnderlyingBalance
+
+```solidity
+function sharesFromUnderlyingBalance(uint256 underlyingBalance) external view returns (uint256)
 ```
 
 
@@ -680,13 +808,13 @@ function sharesOf(address _owner) external view returns (uint256 shares)
 
 | Name | Type | Description |
 |---|---|---|
-| _owner | address | undefined |
+| underlyingBalance | uint256 | undefined |
 
 #### Returns
 
 | Name | Type | Description |
 |---|---|---|
-| shares | uint256 | undefined |
+| _0 | uint256 | undefined |
 
 ### symbol
 
@@ -694,7 +822,7 @@ function sharesOf(address _owner) external view returns (uint256 shares)
 function symbol() external pure returns (string)
 ```
 
-
+Retrieve the token symbol
 
 
 
@@ -705,13 +833,13 @@ function symbol() external pure returns (string)
 |---|---|---|
 | _0 | string | undefined |
 
-### totalShares
+### totalSupply
 
 ```solidity
-function totalShares() external view returns (uint256)
+function totalSupply() external view returns (uint256)
 ```
 
-
+Retrieve the total token supply
 
 
 
@@ -722,13 +850,13 @@ function totalShares() external view returns (uint256)
 |---|---|---|
 | _0 | uint256 | undefined |
 
-### totalSupply
+### totalUnderlyingSupply
 
 ```solidity
-function totalSupply() external view returns (uint256)
+function totalUnderlyingSupply() external view returns (uint256)
 ```
 
-
+Retrieve the total underlying asset supply
 
 
 
@@ -745,7 +873,7 @@ function totalSupply() external view returns (uint256)
 function transfer(address _to, uint256 _value) external nonpayable returns (bool)
 ```
 
-
+Performs a transfer from the message sender to the provided account
 
 
 
@@ -753,8 +881,8 @@ function transfer(address _to, uint256 _value) external nonpayable returns (bool
 
 | Name | Type | Description |
 |---|---|---|
-| _to | address | undefined |
-| _value | uint256 | undefined |
+| _to | address | Address receiving the tokens |
+| _value | uint256 | Amount to be sent |
 
 #### Returns
 
@@ -768,6 +896,30 @@ function transfer(address _to, uint256 _value) external nonpayable returns (bool
 function transferFrom(address _from, address _to, uint256 _value) external nonpayable returns (bool)
 ```
 
+Performs a transfer between two recipients
+
+*If the specified _from argument is the message sender, behaves like a regular transferIf the specified _from argument is not the message sender, checks that the message sender has been given enough allowance*
+
+#### Parameters
+
+| Name | Type | Description |
+|---|---|---|
+| _from | address | Address sending the tokens |
+| _to | address | Address receiving the tokens |
+| _value | uint256 | Amount to be sent |
+
+#### Returns
+
+| Name | Type | Description |
+|---|---|---|
+| _0 | bool | undefined |
+
+### underlyingBalanceFromShares
+
+```solidity
+function underlyingBalanceFromShares(uint256 shares) external view returns (uint256)
+```
+
 
 
 
@@ -776,15 +928,13 @@ function transferFrom(address _from, address _to, uint256 _value) external nonpa
 
 | Name | Type | Description |
 |---|---|---|
-| _from | address | undefined |
-| _to | address | undefined |
-| _value | uint256 | undefined |
+| shares | uint256 | undefined |
 
 #### Returns
 
 | Name | Type | Description |
 |---|---|---|
-| _0 | bool | undefined |
+| _0 | uint256 | undefined |
 
 
 
@@ -793,7 +943,7 @@ function transferFrom(address _from, address _to, uint256 _value) external nonpa
 ### AddedOperator
 
 ```solidity
-event AddedOperator(uint256 indexed index, string name, address operatorAddress)
+event AddedOperator(uint256 indexed index, string name, address operatorAddress, address feeRecipientAddress)
 ```
 
 
@@ -807,11 +957,12 @@ event AddedOperator(uint256 indexed index, string name, address operatorAddress)
 | index `indexed` | uint256 | undefined |
 | name  | string | undefined |
 | operatorAddress  | address | undefined |
+| feeRecipientAddress  | address | undefined |
 
 ### AddedValidatorKeys
 
 ```solidity
-event AddedValidatorKeys(uint256 indexed index, uint256 totalKeyCount)
+event AddedValidatorKeys(uint256 indexed index, bytes publicKeys)
 ```
 
 
@@ -823,7 +974,7 @@ event AddedValidatorKeys(uint256 indexed index, uint256 totalKeyCount)
 | Name | Type | Description |
 |---|---|---|
 | index `indexed` | uint256 | undefined |
-| totalKeyCount  | uint256 | undefined |
+| publicKeys  | bytes | undefined |
 
 ### Approval
 
@@ -878,10 +1029,26 @@ event Donation(address donator, uint256 amount)
 | donator  | address | undefined |
 | amount  | uint256 | undefined |
 
-### RemovedValidatorKeys
+### FundedValidatorKey
 
 ```solidity
-event RemovedValidatorKeys(uint256 indexed index, uint256 keyCount)
+event FundedValidatorKey(bytes publicKey)
+```
+
+
+
+
+
+#### Parameters
+
+| Name | Type | Description |
+|---|---|---|
+| publicKey  | bytes | undefined |
+
+### RemovedValidatorKey
+
+```solidity
+event RemovedValidatorKey(uint256 indexed index, bytes publicKey)
 ```
 
 
@@ -893,12 +1060,29 @@ event RemovedValidatorKeys(uint256 indexed index, uint256 keyCount)
 | Name | Type | Description |
 |---|---|---|
 | index `indexed` | uint256 | undefined |
-| keyCount  | uint256 | undefined |
+| publicKey  | bytes | undefined |
 
 ### SetOperatorAddress
 
 ```solidity
 event SetOperatorAddress(uint256 indexed index, address newOperatorAddress)
+```
+
+
+
+
+
+#### Parameters
+
+| Name | Type | Description |
+|---|---|---|
+| index `indexed` | uint256 | undefined |
+| newOperatorAddress  | address | undefined |
+
+### SetOperatorFeeRecipientAddress
+
+```solidity
+event SetOperatorFeeRecipientAddress(uint256 indexed index, address newOperatorAddress)
 ```
 
 
@@ -984,7 +1168,7 @@ event Transfer(address indexed _from, address indexed _to, uint256 _value)
 ### UserDeposit
 
 ```solidity
-event UserDeposit(address indexed user, address indexed referral, uint256 amount)
+event UserDeposit(address indexed depositor, address indexed recipient, uint256 amount)
 ```
 
 
@@ -995,8 +1179,8 @@ event UserDeposit(address indexed user, address indexed referral, uint256 amount
 
 | Name | Type | Description |
 |---|---|---|
-| user `indexed` | address | undefined |
-| referral `indexed` | address | undefined |
+| depositor `indexed` | address | undefined |
+| recipient `indexed` | address | undefined |
 | amount  | uint256 | undefined |
 
 
@@ -1104,10 +1288,32 @@ error InvalidArgument()
 
 
 
+### InvalidArrayLengths
+
+```solidity
+error InvalidArrayLengths()
+```
+
+
+
+
+
+
 ### InvalidCall
 
 ```solidity
 error InvalidCall()
+```
+
+
+
+
+
+
+### InvalidEmptyArray
+
+```solidity
+error InvalidEmptyArray()
 ```
 
 
@@ -1297,6 +1503,23 @@ error OperatorAlreadyExists(string name)
 |---|---|---|
 | name | string | undefined |
 
+### OperatorLimitTooHigh
+
+```solidity
+error OperatorLimitTooHigh(uint256 limit, uint256 keyCount)
+```
+
+
+
+
+
+#### Parameters
+
+| Name | Type | Description |
+|---|---|---|
+| limit | uint256 | undefined |
+| keyCount | uint256 | undefined |
+
 ### OperatorNotFound
 
 ```solidity
@@ -1344,16 +1567,5 @@ error Unauthorized(address caller)
 | Name | Type | Description |
 |---|---|---|
 | caller | address | undefined |
-
-### UnauthorizedOperation
-
-```solidity
-error UnauthorizedOperation()
-```
-
-
-
-
-
 
 

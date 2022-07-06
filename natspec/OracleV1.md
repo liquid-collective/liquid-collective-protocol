@@ -1,6 +1,6 @@
 # OracleV1
 
-*SkillZ*
+*Kiln*
 
 > Oracle (v1)
 

@@ -1,0 +1,460 @@
+{
+  "address": "0xE7639715bc9E85D8C5f27541904A245a3e7EfA2c",
+  "abi": [
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "_from",
+          "type": "address"
+        },
+        {
+          "internalType": "address",
+          "name": "_operator",
+          "type": "address"
+        },
+        {
+          "internalType": "uint256",
+          "name": "_allowance",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint256",
+          "name": "_value",
+          "type": "uint256"
+        }
+      ],
+      "name": "AllowanceTooLow",
+      "type": "error"
+    },
+    {
+      "inputs": [],
+      "name": "BalanceTooLow",
+      "type": "error"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "version",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint256",
+          "name": "expectedVersion",
+          "type": "uint256"
+        }
+      ],
+      "name": "InvalidInitialization",
+      "type": "error"
+    },
+    {
+      "inputs": [],
+      "name": "NullTransfer",
+      "type": "error"
+    },
+    {
+      "inputs": [],
+      "name": "UnauthorizedOperation",
+      "type": "error"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "_owner",
+          "type": "address"
+        },
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "_spender",
+          "type": "address"
+        },
+        {
+          "indexed": false,
+          "internalType": "uint256",
+          "name": "_value",
+          "type": "uint256"
+        }
+      ],
+      "name": "Approval",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "_from",
+          "type": "address"
+        },
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "_to",
+          "type": "address"
+        },
+        {
+          "indexed": false,
+          "internalType": "uint256",
+          "name": "_value",
+          "type": "uint256"
+        }
+      ],
+      "name": "Transfer",
+      "type": "event"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "_owner",
+          "type": "address"
+        },
+        {
+          "internalType": "address",
+          "name": "_spender",
+          "type": "address"
+        }
+      ],
+      "name": "allowance",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "remaining",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "_spender",
+          "type": "address"
+        },
+        {
+          "internalType": "uint256",
+          "name": "_value",
+          "type": "uint256"
+        }
+      ],
+      "name": "approve",
+      "outputs": [
+        {
+          "internalType": "bool",
+          "name": "success",
+          "type": "bool"
+        }
+      ],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "_owner",
+          "type": "address"
+        }
+      ],
+      "name": "balanceOf",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "balance",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "_recipient",
+          "type": "address"
+        },
+        {
+          "internalType": "uint256",
+          "name": "_value",
+          "type": "uint256"
+        }
+      ],
+      "name": "burn",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "decimals",
+      "outputs": [
+        {
+          "internalType": "uint8",
+          "name": "",
+          "type": "uint8"
+        }
+      ],
+      "stateMutability": "pure",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "_river",
+          "type": "address"
+        }
+      ],
+      "name": "initWLSETHV1",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "_recipient",
+          "type": "address"
+        },
+        {
+          "internalType": "uint256",
+          "name": "_value",
+          "type": "uint256"
+        }
+      ],
+      "name": "mint",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "name",
+      "outputs": [
+        {
+          "internalType": "string",
+          "name": "",
+          "type": "string"
+        }
+      ],
+      "stateMutability": "pure",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "symbol",
+      "outputs": [
+        {
+          "internalType": "string",
+          "name": "",
+          "type": "string"
+        }
+      ],
+      "stateMutability": "pure",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "totalSupply",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "_to",
+          "type": "address"
+        },
+        {
+          "internalType": "uint256",
+          "name": "_value",
+          "type": "uint256"
+        }
+      ],
+      "name": "transfer",
+      "outputs": [
+        {
+          "internalType": "bool",
+          "name": "",
+          "type": "bool"
+        }
+      ],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "_from",
+          "type": "address"
+        },
+        {
+          "internalType": "address",
+          "name": "_to",
+          "type": "address"
+        },
+        {
+          "internalType": "uint256",
+          "name": "_value",
+          "type": "uint256"
+        }
+      ],
+      "name": "transferFrom",
+      "outputs": [
+        {
+          "internalType": "bool",
+          "name": "",
+          "type": "bool"
+        }
+      ],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    }
+  ],
+  "transactionHash": "0xfa9a41069eafd063c2b477123e62d7fafe80dc45343bc3973a90d7131b13d801",
+  "receipt": {
+    "to": null,
+    "from": "0x92D7d6DADe15fcF369534cEb8CD1A27f97185ab3",
+    "contractAddress": "0xE7639715bc9E85D8C5f27541904A245a3e7EfA2c",
+    "transactionIndex": 0,
+    "gasUsed": "770302",
+    "logsBloom": "0x00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+    "blockHash": "0x97f1c71b005578f1b07e6bb1d109084ff21efbfa827b6d3638b43530abfc1649",
+    "transactionHash": "0xfa9a41069eafd063c2b477123e62d7fafe80dc45343bc3973a90d7131b13d801",
+    "logs": [],
+    "blockNumber": 7180623,
+    "cumulativeGasUsed": "770302",
+    "status": 1,
+    "byzantium": true
+  },
+  "args": [],
+  "numDeployments": 1,
+  "solcInputHash": "dffe9829564a0f6301b4e81b73aebcc5",
+  "metadata": "{\"compiler\":{\"version\":\"0.8.10+commit.fc410830\"},\"language\":\"Solidity\",\"output\":{\"abi\":[{\"inputs\":[{\"internalType\":\"address\",\"name\":\"_from\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"_operator\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"_allowance\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"_value\",\"type\":\"uint256\"}],\"name\":\"AllowanceTooLow\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"BalanceTooLow\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"version\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"expectedVersion\",\"type\":\"uint256\"}],\"name\":\"InvalidInitialization\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"NullTransfer\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"UnauthorizedOperation\",\"type\":\"error\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"_owner\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"_spender\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"_value\",\"type\":\"uint256\"}],\"name\":\"Approval\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"_from\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"_to\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"_value\",\"type\":\"uint256\"}],\"name\":\"Transfer\",\"type\":\"event\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"_owner\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"_spender\",\"type\":\"address\"}],\"name\":\"allowance\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"remaining\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"_spender\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"_value\",\"type\":\"uint256\"}],\"name\":\"approve\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"success\",\"type\":\"bool\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"_owner\",\"type\":\"address\"}],\"name\":\"balanceOf\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"balance\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"_recipient\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"_value\",\"type\":\"uint256\"}],\"name\":\"burn\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"decimals\",\"outputs\":[{\"internalType\":\"uint8\",\"name\":\"\",\"type\":\"uint8\"}],\"stateMutability\":\"pure\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"_river\",\"type\":\"address\"}],\"name\":\"initWLSETHV1\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"_recipient\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"_value\",\"type\":\"uint256\"}],\"name\":\"mint\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"name\",\"outputs\":[{\"internalType\":\"string\",\"name\":\"\",\"type\":\"string\"}],\"stateMutability\":\"pure\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"symbol\",\"outputs\":[{\"internalType\":\"string\",\"name\":\"\",\"type\":\"string\"}],\"stateMutability\":\"pure\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"totalSupply\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"_to\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"_value\",\"type\":\"uint256\"}],\"name\":\"transfer\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"_from\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"_to\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"_value\",\"type\":\"uint256\"}],\"name\":\"transferFrom\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"}],\"devdoc\":{\"author\":\"Kiln\",\"kind\":\"dev\",\"methods\":{\"allowance(address,address)\":{\"params\":{\"_owner\":\"Owner that gave the allowance\",\"_spender\":\"Spender that received the allowance\"}},\"approve(address,uint256)\":{\"params\":{\"_spender\":\"Spender that receives the allowance\",\"_value\":\"Amount to allow\"}},\"balanceOf(address)\":{\"params\":{\"_owner\":\"Owner to check the balance\"}},\"burn(address,uint256)\":{\"details\":\"Burned tokens are sent to recipient but are minted from the message sender balanceNo approval required from the message sender\",\"params\":{\"_recipient\":\"Spender that receives the allowance\",\"_value\":\"Amount of wrapped token to give to the burn\"}},\"initWLSETHV1(address)\":{\"params\":{\"_river\":\"Address of the River contract\"}},\"mint(address,uint256)\":{\"details\":\"Minted tokens are sent to recipient but are minted from the message sender balanceIt is expected that the message sender approves _value amount of River token tothis contract before calling\",\"params\":{\"_recipient\":\"Spender that receives the allowance\",\"_value\":\"Amount of river token to give to the mint\"}},\"transfer(address,uint256)\":{\"params\":{\"_to\":\"Recipient of the transfer\",\"_value\":\"Amount to transfer\"}},\"transferFrom(address,address,uint256)\":{\"details\":\"If _from is not the message sender, then it is expected that _from has given at leave _value allowance to msg.sender\",\"params\":{\"_from\":\"Sender account\",\"_to\":\"Recipient of the transfer\",\"_value\":\"Amount to transfer\"}}},\"title\":\"Wrapped lsETH v1\",\"version\":1},\"userdoc\":{\"kind\":\"user\",\"methods\":{\"allowance(address,address)\":{\"notice\":\"Retrieves the token allowance given from one address to another\"},\"approve(address,uint256)\":{\"notice\":\"Approves another account to transfer tokens\"},\"balanceOf(address)\":{\"notice\":\"Retrieves the token balance of the specified user\"},\"burn(address,uint256)\":{\"notice\":\"Burn tokens and retrieve underlying River tokens\"},\"decimals()\":{\"notice\":\"Retrieves the token decimal count\"},\"initWLSETHV1(address)\":{\"notice\":\"Initializes the wrapped token contract\"},\"mint(address,uint256)\":{\"notice\":\"Mint tokens by providing River tokens\"},\"name()\":{\"notice\":\"Retrieves the token full name\"},\"symbol()\":{\"notice\":\"Retrieves the token ticker\"},\"totalSupply()\":{\"notice\":\"Retrieves the token total supply\"},\"transfer(address,uint256)\":{\"notice\":\"Transfers tokens between the message sender and a recipient\"},\"transferFrom(address,address,uint256)\":{\"notice\":\"Transfers tokens between two accounts\"}},\"notice\":\"This contract wraps the lsETH token into a rebase token, more suitable for some DeFi use-cases         like stable swaps.\",\"version\":1}},\"settings\":{\"compilationTarget\":{\"contracts/src/WLSETH.1.sol\":\"WLSETHV1\"},\"evmVersion\":\"london\",\"libraries\":{},\"metadata\":{\"bytecodeHash\":\"ipfs\",\"useLiteralContent\":true},\"optimizer\":{\"enabled\":true,\"runs\":1000},\"remappings\":[]},\"sources\":{\"contracts/src/Initializable.sol\":{\"content\":\"//SPDX-License-Identifier: BUSL-1.1\\npragma solidity 0.8.10;\\n\\nimport \\\"./state/shared/Version.sol\\\";\\n\\ncontract Initializable {\\n    error InvalidInitialization(uint256 version, uint256 expectedVersion);\\n\\n    modifier init(uint256 version) {\\n        if (version != Version.get()) {\\n            revert InvalidInitialization(version, Version.get());\\n        }\\n        Version.set(version + 1); // prevents reentrency on the called method\\n        _;\\n    }\\n}\\n\",\"keccak256\":\"0xc93555f4bd660f91e565f20753e0d3a01e783e673bc0209d0d1e33c7b6941053\",\"license\":\"BUSL-1.1\"},\"contracts/src/WLSETH.1.sol\":{\"content\":\"//SPDX-License-Identifier: BUSL-1.1\\npragma solidity 0.8.10;\\n\\nimport \\\"./Initializable.sol\\\";\\nimport \\\"./interfaces/IRiverToken.sol\\\";\\n\\nimport \\\"./state/shared/RiverAddress.sol\\\";\\nimport \\\"./state/shared/ApprovalsPerOwner.sol\\\";\\nimport \\\"./state/wlseth/BalanceOf.sol\\\";\\n\\n/// @title Wrapped lsETH v1\\n/// @author Kiln\\n/// @notice This contract wraps the lsETH token into a rebase token, more suitable for some DeFi use-cases\\n///         like stable swaps.\\ncontract WLSETHV1 is Initializable {\\n    event Transfer(address indexed _from, address indexed _to, uint256 _value);\\n    event Approval(address indexed _owner, address indexed _spender, uint256 _value);\\n\\n    error BalanceTooLow();\\n    error UnauthorizedOperation();\\n    error AllowanceTooLow(address _from, address _operator, uint256 _allowance, uint256 _value);\\n    error NullTransfer();\\n\\n    modifier isNotNull(uint256 _value) {\\n        if (_value == 0) {\\n            revert NullTransfer();\\n        }\\n        _;\\n    }\\n\\n    modifier hasFunds(address _owner, uint256 _value) {\\n        if (_balanceOf(_owner) < _value) {\\n            revert BalanceTooLow();\\n        }\\n        _;\\n    }\\n\\n    /// @notice Initializes the wrapped token contract\\n    /// @param _river Address of the River contract\\n    function initWLSETHV1(address _river) external init(0) {\\n        RiverAddress.set(_river);\\n    }\\n\\n    /// @notice Retrieves the token full name\\n    function name() external pure returns (string memory) {\\n        return \\\"Wrapped Alluvial Ether\\\";\\n    }\\n\\n    /// @notice Retrieves the token ticker\\n    function symbol() external pure returns (string memory) {\\n        return \\\"wlsETH\\\";\\n    }\\n\\n    /// @notice Retrieves the token decimal count\\n    function decimals() external pure returns (uint8) {\\n        return 18;\\n    }\\n\\n    /// @notice Retrieves the token total supply\\n    function totalSupply() external view returns (uint256) {\\n        return IRiverToken(RiverAddress.get()).balanceOfUnderlying(address(this));\\n    }\\n\\n    /// @notice Retrieves the token balance of the specified user\\n    /// @param _owner Owner to check the balance\\n    function balanceOf(address _owner) external view returns (uint256 balance) {\\n        return _balanceOf(_owner);\\n    }\\n\\n    /// @notice Retrieves the token allowance given from one address to another\\n    /// @param _owner Owner that gave the allowance\\n    /// @param _spender Spender that received the allowance\\n    function allowance(address _owner, address _spender) external view returns (uint256 remaining) {\\n        return ApprovalsPerOwner.get(_owner, _spender);\\n    }\\n\\n    /// @notice Transfers tokens between the message sender and a recipient\\n    /// @param _to Recipient of the transfer\\n    /// @param _value Amount to transfer\\n    function transfer(address _to, uint256 _value)\\n        external\\n        isNotNull(_value)\\n        hasFunds(msg.sender, _value)\\n        returns (bool)\\n    {\\n        return _transfer(msg.sender, _to, _value);\\n    }\\n\\n    /// @notice Transfers tokens between two accounts\\n    /// @dev If _from is not the message sender, then it is expected that _from has given at leave _value allowance to msg.sender\\n    /// @param _from Sender account\\n    /// @param _to Recipient of the transfer\\n    /// @param _value Amount to transfer\\n    function transferFrom(\\n        address _from,\\n        address _to,\\n        uint256 _value\\n    ) external isNotNull(_value) hasFunds(_from, _value) returns (bool) {\\n        if (_from != msg.sender) {\\n            uint256 currentAllowance = ApprovalsPerOwner.get(_from, msg.sender);\\n            if (currentAllowance < _value) {\\n                revert AllowanceTooLow(_from, msg.sender, currentAllowance, _value);\\n            }\\n            ApprovalsPerOwner.set(_from, msg.sender, currentAllowance - _value);\\n        }\\n        return _transfer(_from, _to, _value);\\n    }\\n\\n    /// @notice Approves another account to transfer tokens\\n    /// @param _spender Spender that receives the allowance\\n    /// @param _value Amount to allow\\n    function approve(address _spender, uint256 _value) external returns (bool success) {\\n        ApprovalsPerOwner.set(msg.sender, _spender, _value);\\n        emit Approval(msg.sender, _spender, _value);\\n        return true;\\n    }\\n\\n    /// @notice Mint tokens by providing River tokens\\n    /// @dev Minted tokens are sent to recipient but are minted from the message sender balance\\n    /// @dev It is expected that the message sender approves _value amount of River token to\\n    /// @dev this contract before calling\\n    /// @param _recipient Spender that receives the allowance\\n    /// @param _value Amount of river token to give to the mint\\n    function mint(address _recipient, uint256 _value) external {\\n        BalanceOf.set(_recipient, BalanceOf.get(_recipient) + _value);\\n        IRiverToken(RiverAddress.get()).transferFrom(msg.sender, address(this), _value);\\n    }\\n\\n    /// @notice Burn tokens and retrieve underlying River tokens\\n    /// @dev Burned tokens are sent to recipient but are minted from the message sender balance\\n    /// @dev No approval required from the message sender\\n    /// @param _recipient Spender that receives the allowance\\n    /// @param _value Amount of wrapped token to give to the burn\\n    function burn(address _recipient, uint256 _value) external {\\n        uint256 callerUnderlyingBalance = IRiverToken(RiverAddress.get()).underlyingBalanceFromShares(\\n            BalanceOf.get(msg.sender)\\n        );\\n        if (_value > callerUnderlyingBalance) {\\n            revert BalanceTooLow();\\n        }\\n        uint256 sharesAmount = IRiverToken(RiverAddress.get()).sharesFromUnderlyingBalance(_value);\\n        BalanceOf.set(msg.sender, BalanceOf.get(msg.sender) - sharesAmount);\\n        IRiverToken(RiverAddress.get()).transfer(_recipient, sharesAmount);\\n    }\\n\\n    function _balanceOf(address _owner) internal view returns (uint256 balance) {\\n        return IRiverToken(RiverAddress.get()).underlyingBalanceFromShares(BalanceOf.get(_owner));\\n    }\\n\\n    function _transfer(\\n        address _from,\\n        address _to,\\n        uint256 _value\\n    ) internal returns (bool) {\\n        uint256 valueToShares = IRiverToken(RiverAddress.get()).sharesFromUnderlyingBalance(_value);\\n        BalanceOf.set(_from, BalanceOf.get(_from) - valueToShares);\\n        BalanceOf.set(_to, BalanceOf.get(_to) + valueToShares);\\n\\n        emit Transfer(_from, _to, _value);\\n\\n        return true;\\n    }\\n}\\n\",\"keccak256\":\"0xa87b63a87841a2b9d9ceb4e8c48ac78affd6033d089adf4778114c1a33adc00b\",\"license\":\"BUSL-1.1\"},\"contracts/src/interfaces/IRiverToken.sol\":{\"content\":\"//SPDX-License-Identifier: BUSL-1.1\\npragma solidity 0.8.10;\\n\\ninterface IRiverToken {\\n    function balanceOfUnderlying(address _owner) external view returns (uint256 balance);\\n\\n    function underlyingBalanceFromShares(uint256 shares) external view returns (uint256);\\n\\n    function sharesFromUnderlyingBalance(uint256 underlyingBalance) external view returns (uint256);\\n\\n    function transferFrom(\\n        address _from,\\n        address _to,\\n        uint256 _value\\n    ) external returns (bool);\\n\\n    function transfer(address _to, uint256 _value) external returns (bool);\\n}\\n\",\"keccak256\":\"0xfb04dd0d3608af330b31e15682f362162b0885a3337edc7fb1eeb9778263818a\",\"license\":\"BUSL-1.1\"},\"contracts/src/libraries/UnstructuredStorage.sol\":{\"content\":\"/*\\n * SPDX-License-Identifier:    MIT\\n */\\n\\npragma solidity 0.8.10;\\n\\nlibrary UnstructuredStorage {\\n    function getStorageBool(bytes32 position) internal view returns (bool data) {\\n        assembly {\\n            data := sload(position)\\n        }\\n    }\\n\\n    function getStorageAddress(bytes32 position) internal view returns (address data) {\\n        assembly {\\n            data := sload(position)\\n        }\\n    }\\n\\n    function getStorageBytes32(bytes32 position) internal view returns (bytes32 data) {\\n        assembly {\\n            data := sload(position)\\n        }\\n    }\\n\\n    function getStorageUint256(bytes32 position) internal view returns (uint256 data) {\\n        assembly {\\n            data := sload(position)\\n        }\\n    }\\n\\n    function setStorageBool(bytes32 position, bool data) internal {\\n        assembly {\\n            sstore(position, data)\\n        }\\n    }\\n\\n    function setStorageAddress(bytes32 position, address data) internal {\\n        assembly {\\n            sstore(position, data)\\n        }\\n    }\\n\\n    function setStorageBytes32(bytes32 position, bytes32 data) internal {\\n        assembly {\\n            sstore(position, data)\\n        }\\n    }\\n\\n    function setStorageUint256(bytes32 position, uint256 data) internal {\\n        assembly {\\n            sstore(position, data)\\n        }\\n    }\\n}\\n\",\"keccak256\":\"0x52ccf1daa33de9c72831e0d7458928c37ca7b5f8d8f732114095edeb81339920\",\"license\":\"MIT\"},\"contracts/src/state/shared/ApprovalsPerOwner.sol\":{\"content\":\"//SPDX-License-Identifier: BUSL-1.1\\npragma solidity 0.8.10;\\n\\nlibrary ApprovalsPerOwner {\\n    bytes32 internal constant APPROVALS_PER_OWNER_SLOT =\\n        bytes32(uint256(keccak256(\\\"river.state.approvalsPerOwner\\\")) - 1);\\n\\n    struct Slot {\\n        mapping(address => mapping(address => uint256)) value;\\n    }\\n\\n    function get(address owner, address operator) internal view returns (uint256) {\\n        bytes32 slot = APPROVALS_PER_OWNER_SLOT;\\n\\n        Slot storage r;\\n\\n        assembly {\\n            r.slot := slot\\n        }\\n\\n        return r.value[owner][operator];\\n    }\\n\\n    function set(\\n        address owner,\\n        address operator,\\n        uint256 newValue\\n    ) internal {\\n        bytes32 slot = APPROVALS_PER_OWNER_SLOT;\\n\\n        Slot storage r;\\n\\n        assembly {\\n            r.slot := slot\\n        }\\n\\n        r.value[owner][operator] = newValue;\\n    }\\n}\\n\",\"keccak256\":\"0xcf3ab7ba843246663850deb26b5f6aeabc3b7133d0b0ab26d1578db9811034ef\",\"license\":\"BUSL-1.1\"},\"contracts/src/state/shared/RiverAddress.sol\":{\"content\":\"//SPDX-License-Identifier: BUSL-1.1\\npragma solidity 0.8.10;\\n\\nimport \\\"../../libraries/UnstructuredStorage.sol\\\";\\n\\nlibrary RiverAddress {\\n    bytes32 internal constant RIVER_ADDRESS_SLOT = bytes32(uint256(keccak256(\\\"river.state.riverAddress\\\")) - 1);\\n\\n    function get() internal view returns (address) {\\n        return UnstructuredStorage.getStorageAddress(RIVER_ADDRESS_SLOT);\\n    }\\n\\n    function set(address newValue) internal {\\n        UnstructuredStorage.setStorageAddress(RIVER_ADDRESS_SLOT, newValue);\\n    }\\n}\\n\",\"keccak256\":\"0x2fff0ef976b74cb3ec973968d6ebae2aa1796c8bf6f1c45cb5478bd980785d1c\",\"license\":\"BUSL-1.1\"},\"contracts/src/state/shared/Version.sol\":{\"content\":\"//SPDX-License-Identifier: BUSL-1.1\\npragma solidity 0.8.10;\\n\\nimport \\\"../../libraries/UnstructuredStorage.sol\\\";\\n\\nlibrary Version {\\n    bytes32 public constant VERSION_SLOT = bytes32(uint256(keccak256(\\\"river.state.version\\\")) - 1);\\n\\n    function get() internal view returns (uint256) {\\n        return UnstructuredStorage.getStorageUint256(VERSION_SLOT);\\n    }\\n\\n    function set(uint256 newValue) internal {\\n        UnstructuredStorage.setStorageUint256(VERSION_SLOT, newValue);\\n    }\\n}\\n\",\"keccak256\":\"0xf90d1ecf583061aa70dc464ec1fde21da6e9309601bcbba38f47d26257a1c656\",\"license\":\"BUSL-1.1\"},\"contracts/src/state/wlseth/BalanceOf.sol\":{\"content\":\"//SPDX-License-Identifier: BUSL-1.1\\npragma solidity 0.8.10;\\n\\nlibrary BalanceOf {\\n    bytes32 internal constant BALANCE_OF_SLOT = bytes32(uint256(keccak256(\\\"river.state.balanceOf\\\")) - 1);\\n\\n    struct Slot {\\n        mapping(address => uint256) value;\\n    }\\n\\n    function get(address owner) internal view returns (uint256) {\\n        bytes32 slot = BALANCE_OF_SLOT;\\n\\n        Slot storage r;\\n\\n        assembly {\\n            r.slot := slot\\n        }\\n\\n        return r.value[owner];\\n    }\\n\\n    function set(address owner, uint256 newValue) internal {\\n        bytes32 slot = BALANCE_OF_SLOT;\\n\\n        Slot storage r;\\n\\n        assembly {\\n            r.slot := slot\\n        }\\n\\n        r.value[owner] = newValue;\\n    }\\n}\\n\",\"keccak256\":\"0xbebead087877f34fffdb0fa5a634654b701d02d60b7c004f93fcab3601243c0e\",\"license\":\"BUSL-1.1\"}},\"version\":1}",
+  "bytecode": "0x608060405234801561001057600080fd5b50610d03806100206000396000f3fe608060405234801561001057600080fd5b50600436106100d45760003560e01c806340c10f19116100815780639dc29fac1161005b5780639dc29fac146101f3578063a9059cbb14610206578063dd62ed3e1461021957600080fd5b806340c10f191461019457806370a08231146101a757806395d89b41146101ba57600080fd5b806318160ddd116100b257806318160ddd1461015c57806323b872dd14610172578063313ce5671461018557600080fd5b806306fdde03146100d9578063095ea7b3146101245780630fa74a1014610147575b600080fd5b60408051808201909152601681527f5772617070656420416c6c757669616c2045746865720000000000000000000060208201525b60405161011b9190610b0f565b60405180910390f35b610137610132366004610b80565b61022c565b604051901515815260200161011b565b61015a610155366004610baa565b610282565b005b6101646102fb565b60405190815260200161011b565b610137610180366004610bc5565b61038d565b6040516012815260200161011b565b61015a6101a2366004610b80565b61047c565b6101646101b5366004610baa565b610538565b60408051808201909152600681527f776c734554480000000000000000000000000000000000000000000000000000602082015261010e565b61015a610201366004610b80565b610549565b610137610214366004610b80565b61071b565b610164610227366004610c01565b61077c565b600061023933848461078f565b6040518281526001600160a01b0384169033907f8c5be1e5ebec7d5bd14f71427d1e84f3dd0314c0f7b2291e5b200ac8c7c3b9259060200160405180910390a350600192915050565b600061028c6107e6565b81146102db578061029b6107e6565b6040517fe7e93b38000000000000000000000000000000000000000000000000000000008152600481019290925260248201526044015b60405180910390fd5b6102ee6102e9826001610c63565b61081a565b6102f782610850565b5050565b600061030561087e565b6040517f3af9e6690000000000000000000000000000000000000000000000000000000081523060048201526001600160a01b039190911690633af9e66990602401602060405180830381865afa158015610364573d6000803e3d6000fd5b505050506040513d601f19601f820116820180604052508101906103889190610c7b565b905090565b600081806103ae576040516336b216db60e21b815260040160405180910390fd5b8483806103ba836108ae565b10156103d9576040516351940b3960e11b815260040160405180910390fd5b6001600160a01b03871633146104665760006103f5883361092e565b905085811015610450576040517f7b936de30000000000000000000000000000000000000000000000000000000081526001600160a01b038916600482015233602482015260448101829052606481018790526084016102d2565b610464883361045f8985610c94565b61078f565b505b610471878787610986565b979650505050505050565b610499828261048a85610a75565b6104949190610c63565b610ac3565b6104a161087e565b6040517f23b872dd000000000000000000000000000000000000000000000000000000008152336004820152306024820152604481018390526001600160a01b0391909116906323b872dd906064016020604051808303816000875af115801561050f573d6000803e3d6000fd5b505050506040513d601f19601f820116820180604052508101906105339190610cab565b505050565b6000610543826108ae565b92915050565b600061055361087e565b6001600160a01b031663f79c3f0261056a33610a75565b6040518263ffffffff1660e01b815260040161058891815260200190565b602060405180830381865afa1580156105a5573d6000803e3d6000fd5b505050506040513d601f19601f820116820180604052508101906105c99190610c7b565b9050808211156105ec576040516351940b3960e11b815260040160405180910390fd5b60006105f661087e565b6001600160a01b031663799a1954846040518263ffffffff1660e01b815260040161062391815260200190565b602060405180830381865afa158015610640573d6000803e3d6000fd5b505050506040513d601f19601f820116820180604052508101906106649190610c7b565b905061067e338261067433610a75565b6104949190610c94565b61068661087e565b6040517fa9059cbb0000000000000000000000000000000000000000000000000000000081526001600160a01b03868116600483015260248201849052919091169063a9059cbb906044016020604051808303816000875af11580156106f0573d6000803e3d6000fd5b505050506040513d601f19601f820116820180604052508101906107149190610cab565b5050505050565b6000818061073c576040516336b216db60e21b815260040160405180910390fd5b338380610748836108ae565b1015610767576040516351940b3960e11b815260040160405180910390fd5b610772338787610986565b9695505050505050565b6000610788838361092e565b9392505050565b60006107bc60017fc852254d5b703a16bb13b3e233a335d6459c5da5db0ca732d7a684ee05407847610c94565b6001600160a01b039485166000908152602091825260408082209590961681529390525091902055565b600061038861081660017f82055909238c0f5e63d6f174068ebb8f51bcec9bd37de63bb68f6551feec0cfd610c94565b5490565b61084d61084860017f82055909238c0f5e63d6f174068ebb8f51bcec9bd37de63bb68f6551feec0cfd610c94565b829055565b50565b61084d61084860017f1ec4138404500a2a0be2c2f9b103581c2a7fa783a934f91a6cc5cc924404973c610c94565b600061038861081660017f1ec4138404500a2a0be2c2f9b103581c2a7fa783a934f91a6cc5cc924404973c610c94565b60006108b861087e565b6001600160a01b031663f79c3f026108cf84610a75565b6040518263ffffffff1660e01b81526004016108ed91815260200190565b602060405180830381865afa15801561090a573d6000803e3d6000fd5b505050506040513d601f19601f820116820180604052508101906105439190610c7b565b60008061095c60017fc852254d5b703a16bb13b3e233a335d6459c5da5db0ca732d7a684ee05407847610c94565b6001600160a01b039485166000908152602091825260408082209590961681529390525050205490565b60008061099161087e565b6001600160a01b031663799a1954846040518263ffffffff1660e01b81526004016109be91815260200190565b602060405180830381865afa1580156109db573d6000803e3d6000fd5b505050506040513d601f19601f820116820180604052508101906109ff9190610c7b565b9050610a0f858261067488610a75565b610a1d848261048a87610a75565b836001600160a01b0316856001600160a01b03167fddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef85604051610a6291815260200190565b60405180910390a3506001949350505050565b600080610aa360017fce1633dc2255491f780d2d58eb35f53cb7635f8ce2320aa44b03b0e6ae6fdead610c94565b6001600160a01b0390931660009081526020939093525050604090205490565b6000610af060017fce1633dc2255491f780d2d58eb35f53cb7635f8ce2320aa44b03b0e6ae6fdead610c94565b6001600160a01b03909316600090815260209390935250604090912055565b600060208083528351808285015260005b81811015610b3c57858101830151858201604001528201610b20565b81811115610b4e576000604083870101525b50601f01601f1916929092016040019392505050565b80356001600160a01b0381168114610b7b57600080fd5b919050565b60008060408385031215610b9357600080fd5b610b9c83610b64565b946020939093013593505050565b600060208284031215610bbc57600080fd5b61078882610b64565b600080600060608486031215610bda57600080fd5b610be384610b64565b9250610bf160208501610b64565b9150604084013590509250925092565b60008060408385031215610c1457600080fd5b610c1d83610b64565b9150610c2b60208401610b64565b90509250929050565b7f4e487b7100000000000000000000000000000000000000000000000000000000600052601160045260246000fd5b60008219821115610c7657610c76610c34565b500190565b600060208284031215610c8d57600080fd5b5051919050565b600082821015610ca657610ca6610c34565b500390565b600060208284031215610cbd57600080fd5b8151801515811461078857600080fdfea264697066735822122063ea78dc4dd1c0402974bcaedf4bc9810eccdb100c2139a465f8b5db1064319a64736f6c634300080a0033",
+  "deployedBytecode": "0x608060405234801561001057600080fd5b50600436106100d45760003560e01c806340c10f19116100815780639dc29fac1161005b5780639dc29fac146101f3578063a9059cbb14610206578063dd62ed3e1461021957600080fd5b806340c10f191461019457806370a08231146101a757806395d89b41146101ba57600080fd5b806318160ddd116100b257806318160ddd1461015c57806323b872dd14610172578063313ce5671461018557600080fd5b806306fdde03146100d9578063095ea7b3146101245780630fa74a1014610147575b600080fd5b60408051808201909152601681527f5772617070656420416c6c757669616c2045746865720000000000000000000060208201525b60405161011b9190610b0f565b60405180910390f35b610137610132366004610b80565b61022c565b604051901515815260200161011b565b61015a610155366004610baa565b610282565b005b6101646102fb565b60405190815260200161011b565b610137610180366004610bc5565b61038d565b6040516012815260200161011b565b61015a6101a2366004610b80565b61047c565b6101646101b5366004610baa565b610538565b60408051808201909152600681527f776c734554480000000000000000000000000000000000000000000000000000602082015261010e565b61015a610201366004610b80565b610549565b610137610214366004610b80565b61071b565b610164610227366004610c01565b61077c565b600061023933848461078f565b6040518281526001600160a01b0384169033907f8c5be1e5ebec7d5bd14f71427d1e84f3dd0314c0f7b2291e5b200ac8c7c3b9259060200160405180910390a350600192915050565b600061028c6107e6565b81146102db578061029b6107e6565b6040517fe7e93b38000000000000000000000000000000000000000000000000000000008152600481019290925260248201526044015b60405180910390fd5b6102ee6102e9826001610c63565b61081a565b6102f782610850565b5050565b600061030561087e565b6040517f3af9e6690000000000000000000000000000000000000000000000000000000081523060048201526001600160a01b039190911690633af9e66990602401602060405180830381865afa158015610364573d6000803e3d6000fd5b505050506040513d601f19601f820116820180604052508101906103889190610c7b565b905090565b600081806103ae576040516336b216db60e21b815260040160405180910390fd5b8483806103ba836108ae565b10156103d9576040516351940b3960e11b815260040160405180910390fd5b6001600160a01b03871633146104665760006103f5883361092e565b905085811015610450576040517f7b936de30000000000000000000000000000000000000000000000000000000081526001600160a01b038916600482015233602482015260448101829052606481018790526084016102d2565b610464883361045f8985610c94565b61078f565b505b610471878787610986565b979650505050505050565b610499828261048a85610a75565b6104949190610c63565b610ac3565b6104a161087e565b6040517f23b872dd000000000000000000000000000000000000000000000000000000008152336004820152306024820152604481018390526001600160a01b0391909116906323b872dd906064016020604051808303816000875af115801561050f573d6000803e3d6000fd5b505050506040513d601f19601f820116820180604052508101906105339190610cab565b505050565b6000610543826108ae565b92915050565b600061055361087e565b6001600160a01b031663f79c3f0261056a33610a75565b6040518263ffffffff1660e01b815260040161058891815260200190565b602060405180830381865afa1580156105a5573d6000803e3d6000fd5b505050506040513d601f19601f820116820180604052508101906105c99190610c7b565b9050808211156105ec576040516351940b3960e11b815260040160405180910390fd5b60006105f661087e565b6001600160a01b031663799a1954846040518263ffffffff1660e01b815260040161062391815260200190565b602060405180830381865afa158015610640573d6000803e3d6000fd5b505050506040513d601f19601f820116820180604052508101906106649190610c7b565b905061067e338261067433610a75565b6104949190610c94565b61068661087e565b6040517fa9059cbb0000000000000000000000000000000000000000000000000000000081526001600160a01b03868116600483015260248201849052919091169063a9059cbb906044016020604051808303816000875af11580156106f0573d6000803e3d6000fd5b505050506040513d601f19601f820116820180604052508101906107149190610cab565b5050505050565b6000818061073c576040516336b216db60e21b815260040160405180910390fd5b338380610748836108ae565b1015610767576040516351940b3960e11b815260040160405180910390fd5b610772338787610986565b9695505050505050565b6000610788838361092e565b9392505050565b60006107bc60017fc852254d5b703a16bb13b3e233a335d6459c5da5db0ca732d7a684ee05407847610c94565b6001600160a01b039485166000908152602091825260408082209590961681529390525091902055565b600061038861081660017f82055909238c0f5e63d6f174068ebb8f51bcec9bd37de63bb68f6551feec0cfd610c94565b5490565b61084d61084860017f82055909238c0f5e63d6f174068ebb8f51bcec9bd37de63bb68f6551feec0cfd610c94565b829055565b50565b61084d61084860017f1ec4138404500a2a0be2c2f9b103581c2a7fa783a934f91a6cc5cc924404973c610c94565b600061038861081660017f1ec4138404500a2a0be2c2f9b103581c2a7fa783a934f91a6cc5cc924404973c610c94565b60006108b861087e565b6001600160a01b031663f79c3f026108cf84610a75565b6040518263ffffffff1660e01b81526004016108ed91815260200190565b602060405180830381865afa15801561090a573d6000803e3d6000fd5b505050506040513d601f19601f820116820180604052508101906105439190610c7b565b60008061095c60017fc852254d5b703a16bb13b3e233a335d6459c5da5db0ca732d7a684ee05407847610c94565b6001600160a01b039485166000908152602091825260408082209590961681529390525050205490565b60008061099161087e565b6001600160a01b031663799a1954846040518263ffffffff1660e01b81526004016109be91815260200190565b602060405180830381865afa1580156109db573d6000803e3d6000fd5b505050506040513d601f19601f820116820180604052508101906109ff9190610c7b565b9050610a0f858261067488610a75565b610a1d848261048a87610a75565b836001600160a01b0316856001600160a01b03167fddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef85604051610a6291815260200190565b60405180910390a3506001949350505050565b600080610aa360017fce1633dc2255491f780d2d58eb35f53cb7635f8ce2320aa44b03b0e6ae6fdead610c94565b6001600160a01b0390931660009081526020939093525050604090205490565b6000610af060017fce1633dc2255491f780d2d58eb35f53cb7635f8ce2320aa44b03b0e6ae6fdead610c94565b6001600160a01b03909316600090815260209390935250604090912055565b600060208083528351808285015260005b81811015610b3c57858101830151858201604001528201610b20565b81811115610b4e576000604083870101525b50601f01601f1916929092016040019392505050565b80356001600160a01b0381168114610b7b57600080fd5b919050565b60008060408385031215610b9357600080fd5b610b9c83610b64565b946020939093013593505050565b600060208284031215610bbc57600080fd5b61078882610b64565b600080600060608486031215610bda57600080fd5b610be384610b64565b9250610bf160208501610b64565b9150604084013590509250925092565b60008060408385031215610c1457600080fd5b610c1d83610b64565b9150610c2b60208401610b64565b90509250929050565b7f4e487b7100000000000000000000000000000000000000000000000000000000600052601160045260246000fd5b60008219821115610c7657610c76610c34565b500190565b600060208284031215610c8d57600080fd5b5051919050565b600082821015610ca657610ca6610c34565b500390565b600060208284031215610cbd57600080fd5b8151801515811461078857600080fdfea264697066735822122063ea78dc4dd1c0402974bcaedf4bc9810eccdb100c2139a465f8b5db1064319a64736f6c634300080a0033",
+  "devdoc": {
+    "author": "Kiln",
+    "kind": "dev",
+    "methods": {
+      "allowance(address,address)": {
+        "params": {
+          "_owner": "Owner that gave the allowance",
+          "_spender": "Spender that received the allowance"
+        }
+      },
+      "approve(address,uint256)": {
+        "params": {
+          "_spender": "Spender that receives the allowance",
+          "_value": "Amount to allow"
+        }
+      },
+      "balanceOf(address)": {
+        "params": {
+          "_owner": "Owner to check the balance"
+        }
+      },
+      "burn(address,uint256)": {
+        "details": "Burned tokens are sent to recipient but are minted from the message sender balanceNo approval required from the message sender",
+        "params": {
+          "_recipient": "Spender that receives the allowance",
+          "_value": "Amount of wrapped token to give to the burn"
+        }
+      },
+      "initWLSETHV1(address)": {
+        "params": {
+          "_river": "Address of the River contract"
+        }
+      },
+      "mint(address,uint256)": {
+        "details": "Minted tokens are sent to recipient but are minted from the message sender balanceIt is expected that the message sender approves _value amount of River token tothis contract before calling",
+        "params": {
+          "_recipient": "Spender that receives the allowance",
+          "_value": "Amount of river token to give to the mint"
+        }
+      },
+      "transfer(address,uint256)": {
+        "params": {
+          "_to": "Recipient of the transfer",
+          "_value": "Amount to transfer"
+        }
+      },
+      "transferFrom(address,address,uint256)": {
+        "details": "If _from is not the message sender, then it is expected that _from has given at leave _value allowance to msg.sender",
+        "params": {
+          "_from": "Sender account",
+          "_to": "Recipient of the transfer",
+          "_value": "Amount to transfer"
+        }
+      }
+    },
+    "title": "Wrapped lsETH v1",
+    "version": 1
+  },
+  "userdoc": {
+    "kind": "user",
+    "methods": {
+      "allowance(address,address)": {
+        "notice": "Retrieves the token allowance given from one address to another"
+      },
+      "approve(address,uint256)": {
+        "notice": "Approves another account to transfer tokens"
+      },
+      "balanceOf(address)": {
+        "notice": "Retrieves the token balance of the specified user"
+      },
+      "burn(address,uint256)": {
+        "notice": "Burn tokens and retrieve underlying River tokens"
+      },
+      "decimals()": {
+        "notice": "Retrieves the token decimal count"
+      },
+      "initWLSETHV1(address)": {
+        "notice": "Initializes the wrapped token contract"
+      },
+      "mint(address,uint256)": {
+        "notice": "Mint tokens by providing River tokens"
+      },
+      "name()": {
+        "notice": "Retrieves the token full name"
+      },
+      "symbol()": {
+        "notice": "Retrieves the token ticker"
+      },
+      "totalSupply()": {
+        "notice": "Retrieves the token total supply"
+      },
+      "transfer(address,uint256)": {
+        "notice": "Transfers tokens between the message sender and a recipient"
+      },
+      "transferFrom(address,address,uint256)": {
+        "notice": "Transfers tokens between two accounts"
+      }
+    },
+    "notice": "This contract wraps the lsETH token into a rebase token, more suitable for some DeFi use-cases         like stable swaps.",
+    "version": 1
+  },
+  "storageLayout": {
+    "storage": [],
+    "types": null
+  }
+}
