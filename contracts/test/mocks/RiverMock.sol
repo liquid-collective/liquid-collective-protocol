@@ -31,11 +31,11 @@ contract RiverMock is IRiverOracleInput {
         _totalShares = _newTotalShares;
     }
 
-    function totalSupply() external view returns (uint256) {
+    function totalUnderlyingSupply() external view returns (uint256) {
         return _totalSupply;
     }
 
-    function totalShares() external view returns (uint256) {
+    function totalSupply() external view returns (uint256) {
         return _totalShares;
     }
 }

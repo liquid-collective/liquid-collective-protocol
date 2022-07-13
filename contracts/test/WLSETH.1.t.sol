@@ -11,31 +11,39 @@ contract RiverTokenMock is IRiverToken {
     mapping(address => uint256) internal balances;
     mapping(address => mapping(address => uint256)) internal approvals;
     uint256 internal underlyingAssetTotal;
-    uint256 internal totalSupply;
+    uint256 internal _totalSupply;
+
+    function totalSupply() external view returns (uint256) {
+        return _totalSupply;
+    }
+
+    function totalUnderlyingSupply() external view returns (uint256) {
+        return underlyingAssetTotal;
+    }
 
     function balanceOf(address _owner) external view returns (uint256 balance) {
         return balances[_owner];
     }
 
     function balanceOfUnderlying(address _owner) external view returns (uint256 balance) {
-        if (totalSupply == 0) {
+        if (_totalSupply == 0) {
             return 0;
         }
-        return (balances[_owner] * underlyingAssetTotal) / totalSupply;
+        return (balances[_owner] * underlyingAssetTotal) / _totalSupply;
     }
 
     function underlyingBalanceFromShares(uint256 shares) external view returns (uint256) {
-        if (totalSupply == 0) {
+        if (_totalSupply == 0) {
             return 0;
         }
-        return (shares * underlyingAssetTotal) / totalSupply;
+        return (shares * underlyingAssetTotal) / _totalSupply;
     }
 
     function sharesFromUnderlyingBalance(uint256 underlyingBalance) external view returns (uint256) {
         if (underlyingAssetTotal == 0) {
             return 0;
         }
-        return (underlyingBalance * totalSupply) / underlyingAssetTotal;
+        return (underlyingBalance * _totalSupply) / underlyingAssetTotal;
     }
 
     function transferFrom(
@@ -68,9 +76,9 @@ contract RiverTokenMock is IRiverToken {
 
     function sudoSetBalance(address _who, uint256 _amount) external {
         if (balances[_who] > _amount) {
-            totalSupply -= (balances[_who] - _amount);
+            _totalSupply -= (balances[_who] - _amount);
         } else {
-            totalSupply += (_amount - balances[_who]);
+            _totalSupply += (_amount - balances[_who]);
         }
         balances[_who] = _amount;
     }
