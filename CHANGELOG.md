@@ -1,5 +1,11 @@
 # Staking Contracts changelog
 
+## v0.2.1 (July 15th 2021)
+
+### :hammer_and_wrench: Bug Fixes
+
+- [[contracts] fix oracle river interface + add oracle to river tests](https://github.com/River-Protocol/river-contracts/pull/79)
+
 ## v0.2.0 (July 6th 2021)
 
 ### :dizzy: Features
