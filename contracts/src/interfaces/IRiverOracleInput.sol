@@ -7,8 +7,4 @@ interface IRiverOracleInput {
         uint256 _validatorBalanceSum,
         bytes32 _roundId
     ) external;
-
-    function totalSupply() external returns (uint256);
-
-    function totalShares() external returns (uint256);
 }

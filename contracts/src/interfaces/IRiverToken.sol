@@ -15,4 +15,8 @@ interface IRiverToken {
     ) external returns (bool);
 
     function transfer(address _to, uint256 _value) external returns (bool);
+
+    function totalSupply() external returns (uint256);
+
+    function totalUnderlyingSupply() external returns (uint256);
 }

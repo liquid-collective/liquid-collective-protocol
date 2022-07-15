@@ -5,6 +5,7 @@ import "./Initializable.sol";
 import "./libraries/Errors.sol";
 import "./libraries/LibOwnable.sol";
 import "./interfaces/IRiverOracleInput.sol";
+import "./interfaces/IRiverToken.sol";
 
 import "./state/shared/AdministratorAddress.sol";
 import "./state/shared/RiverAddress.sol";
@@ -489,15 +490,15 @@ contract OracleV1 is Initializable {
         _clearReporting(_epochId + _beaconSpec.epochsPerFrame);
 
         IRiverOracleInput riverAddress = IRiverOracleInput(RiverAddress.get());
-        uint256 prevTotalEth = riverAddress.totalSupply();
+        uint256 prevTotalEth = IRiverToken(address(riverAddress)).totalUnderlyingSupply();
         riverAddress.setBeaconData(_validatorCount, _balanceSum, bytes32(_epochId));
-        uint256 postTotalEth = riverAddress.totalSupply();
+        uint256 postTotalEth = IRiverToken(address(riverAddress)).totalUnderlyingSupply();
 
         uint256 timeElapsed = (_epochId - LastEpochId.get()) * _beaconSpec.slotsPerEpoch * _beaconSpec.secondsPerSlot;
 
         _sanityChecks(postTotalEth, prevTotalEth, timeElapsed);
         LastEpochId.set(_epochId);
 
-        emit PostTotalShares(postTotalEth, prevTotalEth, timeElapsed, riverAddress.totalShares());
+        emit PostTotalShares(postTotalEth, prevTotalEth, timeElapsed, IRiverToken(address(riverAddress)).totalSupply());
     }
 }

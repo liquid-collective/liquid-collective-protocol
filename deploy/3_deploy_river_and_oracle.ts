@@ -20,6 +20,19 @@ const func: DeployFunction = async function ({
 }: HardhatRuntimeEnvironment) {
   logStep();
 
+  let genesisTimestamp = 0;
+  switch (network.name) {
+    case "goerli":
+    case "mockedGoerli": {
+      genesisTimestamp = 1616508000;
+      break;
+    }
+    case "mainnet": {
+      genesisTimestamp = 1606824023;
+      break;
+    }
+  }
+
   const { deployer, proxyAdministrator, systemAdministrator, treasury } = await getNamedAccounts();
 
   let depositContract = (await getNamedAccounts()).depositContract;
@@ -125,7 +138,7 @@ const func: DeployFunction = async function ({
       proxyContract: "TUPProxy",
       execute: {
         methodName: "initOracleV1",
-        args: [riverDeployment.address, oracleFirewallDeployment.address, 225, 32, 12, 1606824023, 1000, 500],
+        args: [riverDeployment.address, oracleFirewallDeployment.address, 225, 32, 12, genesisTimestamp, 1000, 500],
       },
     },
   });
