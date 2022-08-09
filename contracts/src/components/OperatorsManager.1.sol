@@ -45,7 +45,7 @@ contract OperatorsManagerV1 {
     /// @notice Prevents the call from working if the operator is not active
     /// @param _index The name identifying the operator
     modifier active(uint256 _index) {
-        if (Operators.getByIndex(_index).active == false) {
+        if (!Operators.getByIndex(_index).active) {
             revert InactiveOperator(_index);
         }
         _;
@@ -59,7 +59,7 @@ contract OperatorsManagerV1 {
             return;
         }
         Operators.Operator storage operator = Operators.getByIndex(_index);
-        if (operator.active == false) {
+        if (!operator.active) {
             revert InactiveOperator(_index);
         }
         if (msg.sender != operator.feeRecipient) {
@@ -76,7 +76,7 @@ contract OperatorsManagerV1 {
             return;
         }
         Operators.Operator storage operator = Operators.getByIndex(_index);
-        if (operator.active == false) {
+        if (!operator.active) {
             revert InactiveOperator(_index);
         }
         if (msg.sender != operator.operator) {
@@ -102,7 +102,7 @@ contract OperatorsManagerV1 {
         address _operator,
         address _feeRecipient
     ) external onlyAdmin {
-        if (Operators.exists(_name) == true) {
+        if (Operators.exists(_name)) {
             revert OperatorAlreadyExists(_name);
         }
 
