@@ -208,6 +208,26 @@ contract RiverV1SetupOneTests {
         vm.stopPrank();
     }
 
+    function testDonateWhenNoMintedShares() public {
+        vm.deal(joe, 100 ether);
+
+        vm.startPrank(joe);
+        vm.expectRevert(abi.encodeWithSignature("ZeroMintedShares()"));
+        river.donate{value: 100 ether}();
+        vm.stopPrank();
+    }
+
+    function testDonateWhenMintedShares() public {
+        vm.deal(joe, 100 ether);
+
+        _allow(joe, DEPOSIT_MASK);
+
+        vm.startPrank(joe);
+        river.deposit{value: 50 ether}();
+        river.donate{value: 50 ether}();
+        vm.stopPrank();
+    }
+
     // Testing regular parameters
     function testUserDeposits() public {
         vm.deal(joe, 100 ether);

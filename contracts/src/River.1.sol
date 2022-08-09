@@ -26,6 +26,8 @@ contract RiverV1 is
     OperatorsManagerV1,
     Initializable
 {
+    error ZeroMintedShares();
+
     uint256 public constant BASE = 100000;
     uint256 internal constant DEPOSIT_MASK = 0x1;
     uint256 internal constant TRANSFER_MASK = 0;
@@ -190,8 +192,12 @@ contract RiverV1 is
     /// @notice Handler called whenever the balance of ETH handled by the system increases. Splits funds between operators and treasury.
     /// @param _amount Additional eth received
     function _onEarnings(uint256 _amount) internal override {
+        uint256 currentTotalSupply = _totalSupply();
+        if (currentTotalSupply == 0) {
+            revert ZeroMintedShares();
+        }
         uint256 globalFee = GlobalFee.get();
-        uint256 sharesToMint = (_amount * _totalSupply() * globalFee) /
+        uint256 sharesToMint = (_amount * currentTotalSupply * globalFee) /
             ((_assetBalance() * BASE) - (_amount * globalFee));
 
         uint256 operatorRewards = (sharesToMint * OperatorRewardsShare.get()) / BASE;
