@@ -8,11 +8,13 @@ import "./state/shared/RiverAddress.sol";
 import "./state/shared/ApprovalsPerOwner.sol";
 import "./state/wlseth/BalanceOf.sol";
 
+import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
+
 /// @title Wrapped lsETH v1
 /// @author Kiln
 /// @notice This contract wraps the lsETH token into a rebase token, more suitable for some DeFi use-cases
 ///         like stable swaps.
-contract WLSETHV1 is Initializable {
+contract WLSETHV1 is Initializable, ReentrancyGuard {
     event Transfer(address indexed _from, address indexed _to, uint256 _value);
     event Approval(address indexed _owner, address indexed _spender, uint256 _value);
 
@@ -121,7 +123,7 @@ contract WLSETHV1 is Initializable {
     /// @dev this contract before calling
     /// @param _recipient Spender that receives the allowance
     /// @param _value Amount of river token to give to the mint
-    function mint(address _recipient, uint256 _value) external {
+    function mint(address _recipient, uint256 _value) external nonReentrant {
         BalanceOf.set(_recipient, BalanceOf.get(_recipient) + _value);
         IRiverToken(RiverAddress.get()).transferFrom(msg.sender, address(this), _value);
     }
@@ -131,7 +133,7 @@ contract WLSETHV1 is Initializable {
     /// @dev No approval required from the message sender
     /// @param _recipient Spender that receives the allowance
     /// @param _value Amount of wrapped token to give to the burn
-    function burn(address _recipient, uint256 _value) external {
+    function burn(address _recipient, uint256 _value) external nonReentrant {
         uint256 callerUnderlyingBalance = IRiverToken(RiverAddress.get()).underlyingBalanceFromShares(
             BalanceOf.get(msg.sender)
         );
