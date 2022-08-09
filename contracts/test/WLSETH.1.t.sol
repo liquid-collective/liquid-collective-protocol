@@ -12,6 +12,7 @@ contract RiverTokenMock is IRiverToken {
     mapping(address => mapping(address => uint256)) internal approvals;
     uint256 internal underlyingAssetTotal;
     uint256 internal _totalSupply;
+    bool internal retVal = true;
 
     function totalSupply() external view returns (uint256) {
         return _totalSupply;
@@ -57,13 +58,13 @@ contract RiverTokenMock is IRiverToken {
         if (_from != msg.sender) {
             approvals[_from][msg.sender] -= _value;
         }
-        return true;
+        return retVal;
     }
 
     function transfer(address _to, uint256 _value) external returns (bool) {
         balances[msg.sender] -= _value;
         balances[_to] += _value;
-        return true;
+        return retVal;
     }
 
     function approve(address _spender, uint256 _value) external {
@@ -81,6 +82,10 @@ contract RiverTokenMock is IRiverToken {
             _totalSupply += (_amount - balances[_who]);
         }
         balances[_who] = _amount;
+    }
+
+    function sudoSetRetVal(bool _newVal) external {
+        retVal = _newVal;
     }
 }
 
@@ -291,6 +296,27 @@ contract WLSETHV1Tests {
         }
     }
 
+    function testMintWrappedTokensInvalidTransfer(uint256 _guySalt, uint32 _sum) external {
+        address _guy = uf._new(_guySalt);
+        RiverTokenMock(address(river)).sudoSetBalance(_guy, _sum);
+        uint256 balance = river.balanceOfUnderlying(_guy);
+        if (_sum > 0) {
+            assert(balance == 100 ether);
+            balance = RiverTokenMock(address(river)).balanceOf(_guy);
+            assert(balance == _sum);
+            vm.startPrank(_guy);
+            RiverTokenMock(address(river)).approve(address(wlseth), _sum);
+            RiverTokenMock(address(river)).sudoSetRetVal(false);
+            vm.expectRevert(abi.encodeWithSignature("TokenTransferError()"));
+            wlseth.mint(_guy, balance);
+            vm.stopPrank();
+            balance = wlseth.balanceOf(_guy);
+            assert(balance == 0 ether);
+        } else {
+            assert(balance == 0 ether);
+        }
+    }
+
     function _mint(address _who, uint256 _sum) internal {
         RiverTokenMock(address(river)).sudoSetBalance(_who, RiverTokenMock(address(river)).balanceOf(_who) + _sum);
         vm.startPrank(_who);
@@ -433,6 +459,32 @@ contract WLSETHV1Tests {
             );
             wlseth.transferFrom(_from, _recipient, 100 ether);
             vm.stopPrank();
+        }
+    }
+
+    function testBurnWrappedTokensInvalidTransfer(uint256 _guySalt, uint32 _sum) external {
+        address _guy = uf._new(_guySalt);
+        RiverTokenMock(address(river)).sudoSetBalance(_guy, _sum);
+        uint256 balance = river.balanceOfUnderlying(_guy);
+        if (_sum > 0) {
+            assert(balance == 100 ether);
+            balance = RiverTokenMock(address(river)).balanceOf(_guy);
+            assert(balance == _sum);
+            vm.startPrank(_guy);
+            RiverTokenMock(address(river)).approve(address(wlseth), _sum);
+            wlseth.mint(_guy, balance);
+            vm.stopPrank();
+            balance = RiverTokenMock(address(river)).balanceOf(_guy);
+            assert(balance == 0);
+            balance = wlseth.balanceOf(_guy);
+            assert(balance == 100 ether);
+            RiverTokenMock(address(river)).sudoSetRetVal(false);
+            vm.startPrank(_guy);
+            vm.expectRevert(abi.encodeWithSignature("TokenTransferError()"));
+            wlseth.burn(_guy, balance);
+            vm.stopPrank();
+        } else {
+            assert(balance == 0 ether);
         }
     }
 

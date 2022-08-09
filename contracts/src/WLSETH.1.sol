@@ -20,6 +20,7 @@ contract WLSETHV1 is Initializable {
     error UnauthorizedOperation();
     error AllowanceTooLow(address _from, address _operator, uint256 _allowance, uint256 _value);
     error NullTransfer();
+    error TokenTransferError();
 
     modifier isNotNull(uint256 _value) {
         if (_value == 0) {
@@ -123,7 +124,9 @@ contract WLSETHV1 is Initializable {
     /// @param _value Amount of river token to give to the mint
     function mint(address _recipient, uint256 _value) external {
         BalanceOf.set(_recipient, BalanceOf.get(_recipient) + _value);
-        IRiverToken(RiverAddress.get()).transferFrom(msg.sender, address(this), _value);
+        if (!IRiverToken(RiverAddress.get()).transferFrom(msg.sender, address(this), _value)) {
+            revert TokenTransferError();
+        }
     }
 
     /// @notice Burn tokens and retrieve underlying River tokens
@@ -140,7 +143,9 @@ contract WLSETHV1 is Initializable {
         }
         uint256 sharesAmount = IRiverToken(RiverAddress.get()).sharesFromUnderlyingBalance(_value);
         BalanceOf.set(msg.sender, BalanceOf.get(msg.sender) - sharesAmount);
-        IRiverToken(RiverAddress.get()).transfer(_recipient, sharesAmount);
+        if (!IRiverToken(RiverAddress.get()).transfer(_recipient, sharesAmount)) {
+            revert TokenTransferError();
+        }
     }
 
     function _balanceOf(address _owner) internal view returns (uint256 balance) {
