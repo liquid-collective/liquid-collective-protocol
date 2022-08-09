@@ -118,17 +118,35 @@ contract RiverV1SetupOneTests {
         vm.stopPrank();
     }
 
-    function testSetAdmin() public {
-        vm.startPrank(admin);
+    function testAcceptOwnerhshipUnauthorized() public {
         assert(river.getAdministrator() == admin);
-        river.setAdministrator(newAdmin);
-        assert(river.getAdministrator() == newAdmin);
+        assert(river.getPendingAdministrator() == address(0));
+        vm.startPrank(newAdmin);
+        vm.expectRevert(abi.encodeWithSignature("Unauthorized(address)", newAdmin));
+        river.acceptOwnership();
         vm.stopPrank();
     }
 
-    function testSetAdminUnauthorized() public {
-        vm.expectRevert(abi.encodeWithSignature("Unauthorized(address)", address(this)));
-        river.setAdministrator(newAdmin);
+    function testTransferAndAcceptOwnerhship() public {
+        assert(river.getAdministrator() == admin);
+        assert(river.getPendingAdministrator() == address(0));
+        vm.startPrank(admin);
+        river.transferOwnership(newAdmin);
+        vm.stopPrank();
+        assert(river.getAdministrator() == admin);
+        assert(river.getPendingAdministrator() == newAdmin);
+        vm.startPrank(newAdmin);
+        river.acceptOwnership();
+        vm.stopPrank();
+        assert(river.getAdministrator() == newAdmin);
+        assert(river.getPendingAdministrator() == address(0));
+    }
+
+    function testTransferAndAcceptOwnerhshipUnauthorized() public {
+        vm.startPrank(newAdmin);
+        vm.expectRevert(abi.encodeWithSignature("Unauthorized(address)", newAdmin));
+        river.transferOwnership(newAdmin);
+        vm.stopPrank();
     }
 
     function testSetTreasury() public {

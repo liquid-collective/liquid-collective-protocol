@@ -110,15 +110,29 @@ contract RiverV1 is
         return TreasuryAddress.get();
     }
 
-    /// @notice Changes the admin
+    /// @notice Changes the admin but waits for new admin approval
     /// @param _newAdmin New address for the admin
-    function setAdministrator(address _newAdmin) external onlyAdmin {
-        LibOwnable._setAdmin(_newAdmin);
+    function transferOwnership(address _newAdmin) external onlyAdmin {
+        LibOwnable._setPendingAdmin(_newAdmin);
+    }
+
+    /// @notice Accepts the ownership of the system
+    function acceptOwnership() external {
+        if (msg.sender != LibOwnable._getPendingAdmin()) {
+            revert Errors.Unauthorized(msg.sender);
+        }
+        LibOwnable._setAdmin(msg.sender);
+        LibOwnable._setPendingAdmin(address(0));
     }
 
     /// @notice Retrieve system administrator address
     function getAdministrator() external view returns (address) {
         return LibOwnable._getAdmin();
+    }
+
+    /// @notice Retrieve system pending administrator address
+    function getPendingAdministrator() external view returns (address) {
+        return LibOwnable._getPendingAdmin();
     }
 
     /// @notice Handler called whenever a token transfer is triggered
