@@ -249,4 +249,20 @@ library Operators {
             return (index);
         }
     }
+
+    function setOperatorName(uint256 index, string memory newName) internal {
+        bytes32 slot = OPERATORS_SLOT;
+
+        SlotOperator storage r;
+
+        assembly {
+            r.slot := slot
+        }
+
+        string memory oldName = r.value[index].name;
+        r.value[index].name = newName;
+
+        _setOperatorIndex(oldName, false, 0); // set storage to 0
+        _setOperatorIndex(newName, true, index);
+    }
 }

@@ -13,6 +13,7 @@ import "../state/river/ValidatorKeys.sol";
 /// @notice This contract handles the operator and key list
 contract OperatorsManagerV1 {
     error OperatorAlreadyExists(string name);
+    error OperatorNameAlreadyTaken(string name);
     error InactiveOperator(uint256 index);
     error InvalidFundedKeyDeletionAttempt();
     error InvalidUnsortedIndexes();
@@ -30,6 +31,7 @@ contract OperatorsManagerV1 {
     event SetOperatorStoppedValidatorCount(uint256 indexed index, uint256 newStoppedValidatorCount);
     event SetOperatorFeeRecipientAddress(uint256 indexed index, address newOperatorAddress);
     event SetOperatorAddress(uint256 indexed index, address newOperatorAddress);
+    event SetOperatorName(uint256 indexed name, string newName);
     event AddedValidatorKeys(uint256 indexed index, bytes publicKeys);
     event RemovedValidatorKey(uint256 indexed index, bytes publicKey);
 
@@ -146,6 +148,21 @@ contract OperatorsManagerV1 {
         operator.feeRecipient = _newOperatorFeeRecipientAddress;
 
         emit SetOperatorFeeRecipientAddress(_index, _newOperatorFeeRecipientAddress);
+    }
+
+    /// @notice Changes the operator name
+    /// @dev Only callable by the administrator or the operator
+    /// @dev No name conflict can exist
+    /// @param _index The operator index
+    /// @param _newName The new operator name
+    function setOperatorName(uint256 _index, string calldata _newName) external operatorOrAdmin(_index) {
+        if (Operators.exists(_newName) == true) {
+            revert OperatorNameAlreadyTaken(_newName);
+        }
+
+        Operators.setOperatorName(_index, _newName);
+
+        emit SetOperatorName(_index, _newName);
     }
 
     /// @notice Changes the operator status

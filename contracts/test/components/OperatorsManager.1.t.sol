@@ -188,6 +188,94 @@ contract OperatorsManagerV1MemberManagementTests {
         vm.stopPrank();
     }
 
+    function testSetOperatorNameAsAdmin(
+        bytes32 _name,
+        uint256 _addressSalt,
+        uint256 _feeRecipientSalt
+    ) public {
+        address _address = uf._new(_addressSalt);
+        address _feeRecipient = uf._new(_feeRecipientSalt);
+        bytes32 _nextName = keccak256(abi.encodePacked(_name));
+        vm.startPrank(admin);
+        operatorsManager.addOperator(string(abi.encodePacked(_name)), _address, _feeRecipient);
+        (int256 _index, ) = operatorsManager.getOperatorDetails(string(abi.encodePacked(_name)));
+        assert(_index >= 0);
+        uint256 index = uint256(_index);
+        Operators.Operator memory newOperator = operatorsManager.getOperator(index);
+        assert(keccak256(bytes(newOperator.name)) == keccak256(bytes(string(abi.encodePacked(_name)))));
+        operatorsManager.setOperatorName(index, string(abi.encodePacked(_nextName)));
+        newOperator = operatorsManager.getOperatorByName(string(abi.encodePacked(_nextName)));
+        assert(keccak256(bytes(newOperator.name)) == keccak256(bytes(string(abi.encodePacked(_nextName)))));
+        vm.stopPrank();
+    }
+
+    function testSetOperatorNameAsOperator(
+        bytes32 _name,
+        uint256 _addressSalt,
+        uint256 _feeRecipientSalt
+    ) public {
+        address _address = uf._new(_addressSalt);
+        address _feeRecipient = uf._new(_feeRecipientSalt);
+        bytes32 _nextName = keccak256(abi.encodePacked(_name));
+        vm.startPrank(admin);
+        operatorsManager.addOperator(string(abi.encodePacked(_name)), _address, _feeRecipient);
+        vm.stopPrank();
+        (int256 _index, ) = operatorsManager.getOperatorDetails(string(abi.encodePacked(_name)));
+        assert(_index >= 0);
+        uint256 index = uint256(_index);
+        Operators.Operator memory newOperator = operatorsManager.getOperator(index);
+        assert(keccak256(bytes(newOperator.name)) == keccak256(bytes(string(abi.encodePacked(_name)))));
+        vm.startPrank(_address);
+        operatorsManager.setOperatorName(index, string(abi.encodePacked(_nextName)));
+        vm.stopPrank();
+        newOperator = operatorsManager.getOperatorByName(string(abi.encodePacked(_nextName)));
+        assert(keccak256(bytes(newOperator.name)) == keccak256(bytes(string(abi.encodePacked(_nextName)))));
+    }
+
+    function testSetOperatorNameAsUnauthorized(
+        bytes32 _name,
+        uint256 _addressSalt,
+        uint256 _feeRecipientSalt
+    ) public {
+        address _address = uf._new(_addressSalt);
+        address _feeRecipient = uf._new(_feeRecipientSalt);
+        bytes32 _nextName = keccak256(abi.encodePacked(_name));
+        vm.startPrank(admin);
+        operatorsManager.addOperator(string(abi.encodePacked(_name)), _address, _feeRecipient);
+        vm.stopPrank();
+        (int256 _index, ) = operatorsManager.getOperatorDetails(string(abi.encodePacked(_name)));
+        assert(_index >= 0);
+        uint256 index = uint256(_index);
+        Operators.Operator memory newOperator = operatorsManager.getOperator(index);
+        assert(keccak256(bytes(newOperator.name)) == keccak256(bytes(string(abi.encodePacked(_name)))));
+        vm.startPrank(_feeRecipient);
+        vm.expectRevert(abi.encodeWithSignature("Unauthorized(address)", _feeRecipient));
+        operatorsManager.setOperatorName(index, string(abi.encodePacked(_nextName)));
+        vm.stopPrank();
+    }
+
+    function testSetOperatorNameAlreadyTaken(
+        bytes32 _name,
+        uint256 _addressSalt,
+        uint256 _feeRecipientSalt
+    ) public {
+        address _address = uf._new(_addressSalt);
+        address _feeRecipient = uf._new(_feeRecipientSalt);
+        bytes32 _nextName = _name;
+        vm.startPrank(admin);
+        operatorsManager.addOperator(string(abi.encodePacked(_name)), _address, _feeRecipient);
+        (int256 _index, ) = operatorsManager.getOperatorDetails(string(abi.encodePacked(_name)));
+        assert(_index >= 0);
+        uint256 index = uint256(_index);
+        Operators.Operator memory newOperator = operatorsManager.getOperator(index);
+        assert(keccak256(bytes(newOperator.name)) == keccak256(bytes(string(abi.encodePacked(_name)))));
+        vm.expectRevert(
+            abi.encodeWithSignature("OperatorNameAlreadyTaken(string)", string(abi.encodePacked(_nextName)))
+        );
+        operatorsManager.setOperatorName(index, string(abi.encodePacked(_nextName)));
+        vm.stopPrank();
+    }
+
     function testSetOperatorStatusAsAdmin(
         bytes32 _name,
         uint256 _firstAddressSalt,
@@ -302,8 +390,7 @@ contract OperatorsManagerV1MemberManagementTests {
     function testSetOperatorLimitCountAsAdmin(
         bytes32 _name,
         uint256 _firstAddressSalt,
-        uint256 _firstFeeRecipientSalt,
-        uint256 _limit
+        uint256 _firstFeeRecipientSalt
     ) public {
         address _firstAddress = uf._new(_firstAddressSalt);
         address _firstFeeRecipient = uf._new(_firstFeeRecipientSalt);
@@ -338,8 +425,7 @@ contract OperatorsManagerV1MemberManagementTests {
     function testSetOperatorLimitCountAsUnauthorized(
         bytes32 _name,
         uint256 _firstAddressSalt,
-        uint256 _firstFeeRecipientSalt,
-        uint256 _limit
+        uint256 _firstFeeRecipientSalt
     ) public {
         address _firstAddress = uf._new(_firstAddressSalt);
         address _firstFeeRecipient = uf._new(_firstFeeRecipientSalt);
