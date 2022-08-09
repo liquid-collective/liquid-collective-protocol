@@ -51,10 +51,13 @@ library ValidatorKeys {
             r.slot := slot
         }
 
-        for (uint256 idx = startIdx; idx < startIdx + amount; ++idx) {
+        for (uint256 idx = startIdx; idx < startIdx + amount; ) {
             bytes memory rawCredentials = r.value[operatorIndex][idx];
             publicKey[idx - startIdx] = BytesLib.slice(rawCredentials, 0, PUBLIC_KEY_LENGTH);
             signatures[idx - startIdx] = BytesLib.slice(rawCredentials, PUBLIC_KEY_LENGTH, SIGNATURE_LENGTH);
+            unchecked {
+                ++idx;
+            }
         }
     }
 

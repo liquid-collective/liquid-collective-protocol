@@ -84,8 +84,11 @@ abstract contract DepositManagerV1 {
             revert InvalidWithdrawalCredentials();
         }
 
-        for (uint256 idx = 0; idx < receivedPublicKeyCount; idx += 1) {
+        for (uint256 idx = 0; idx < receivedPublicKeyCount; ) {
             _depositValidator(publicKeys[idx], signatures[idx], withdrawalCredentials);
+            unchecked {
+                ++idx;
+            }
         }
 
         DepositedValidatorCount.set(DepositedValidatorCount.get() + receivedPublicKeyCount);
