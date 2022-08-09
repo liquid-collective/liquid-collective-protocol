@@ -56,6 +56,10 @@ contract RiverV1 is
         uint256 _globalFee,
         uint256 _operatorRewardsShare
     ) external init(0) {
+        if (_systemAdministratorAddress == address(0)) {
+            // only check on initialization
+            revert Errors.InvalidZeroAddress();
+        }
         LibOwnable._setAdmin(_systemAdministratorAddress);
         TreasuryAddress.set(_treasuryAddress);
         GlobalFee.set(_globalFee);

@@ -2,6 +2,7 @@
 pragma solidity 0.8.10;
 
 import "../../interfaces/IDepositContract.sol";
+import "../../libraries/Errors.sol";
 import "../../libraries/UnstructuredStorage.sol";
 
 library DepositContractAddress {
@@ -13,6 +14,9 @@ library DepositContractAddress {
     }
 
     function set(IDepositContract newValue) internal {
+        if (address(newValue) == address(0)) {
+            revert Errors.InvalidZeroAddress();
+        }
         return UnstructuredStorage.setStorageAddress(DEPOSIT_CONTRACT_ADDRESS_SLOT, address(newValue));
     }
 }
