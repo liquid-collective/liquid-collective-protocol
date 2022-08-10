@@ -13,7 +13,6 @@ import "../state/river/ValidatorKeys.sol";
 /// @notice This contract handles the operator and key list
 contract OperatorsManagerV1 {
     error OperatorAlreadyExists(string name);
-    error OperatorNameAlreadyTaken(string name);
     error InactiveOperator(uint256 index);
     error InvalidFundedKeyDeletionAttempt();
     error InvalidUnsortedIndexes();
@@ -157,7 +156,7 @@ contract OperatorsManagerV1 {
     /// @param _newName The new operator name
     function setOperatorName(uint256 _index, string calldata _newName) external operatorOrAdmin(_index) {
         if (Operators.exists(_newName) == true) {
-            revert OperatorNameAlreadyTaken(_newName);
+            revert OperatorAlreadyExists(_newName);
         }
 
         Operators.setOperatorName(_index, _newName);

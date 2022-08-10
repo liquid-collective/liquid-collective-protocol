@@ -269,9 +269,7 @@ contract OperatorsManagerV1MemberManagementTests {
         uint256 index = uint256(_index);
         Operators.Operator memory newOperator = operatorsManager.getOperator(index);
         assert(keccak256(bytes(newOperator.name)) == keccak256(bytes(string(abi.encodePacked(_name)))));
-        vm.expectRevert(
-            abi.encodeWithSignature("OperatorNameAlreadyTaken(string)", string(abi.encodePacked(_nextName)))
-        );
+        vm.expectRevert(abi.encodeWithSignature("OperatorAlreadyExists(string)", string(abi.encodePacked(_nextName))));
         operatorsManager.setOperatorName(index, string(abi.encodePacked(_nextName)));
         vm.stopPrank();
     }
