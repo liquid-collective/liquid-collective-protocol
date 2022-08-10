@@ -56,7 +56,7 @@ library Operators {
             opm.slot := slot
         }
 
-        if (opm.value[name].active == false) {
+        if (!opm.value[name].active) {
             revert OperatorNotFound(name);
         }
 
@@ -102,7 +102,7 @@ library Operators {
             opm.slot := slot
         }
 
-        if (opm.value[name].active == false) {
+        if (!opm.value[name].active) {
             return -1;
         }
 
@@ -168,7 +168,7 @@ library Operators {
         uint256 activeCount = 0;
 
         for (uint256 idx = 0; idx < r.value.length; ) {
-            if (r.value[idx].active == true) {
+            if (r.value[idx].active) {
                 unchecked {
                     ++activeCount;
                 }
@@ -182,7 +182,7 @@ library Operators {
 
         uint256 activeIdx = 0;
         for (uint256 idx = 0; idx < r.value.length; ) {
-            if (r.value[idx].active == true) {
+            if (r.value[idx].active) {
                 activeOperators[activeIdx] = r.value[idx];
                 unchecked {
                     ++activeIdx;
@@ -261,7 +261,7 @@ library Operators {
             r.slot := slot
         }
 
-        if (opExists == false) {
+        if (!opExists) {
             r.value.push(newValue);
             _setOperatorIndex(name, newValue.active, r.value.length - 1);
             return (r.value.length - 1);
