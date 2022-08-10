@@ -388,10 +388,12 @@ contract OperatorsManagerV1MemberManagementTests {
     function testSetOperatorLimitCountAsAdmin(
         bytes32 _name,
         uint256 _firstAddressSalt,
-        uint256 _firstFeeRecipientSalt
+        uint256 _firstFeeRecipientSalt,
+        uint256 _limit
     ) public {
         address _firstAddress = uf._new(_firstAddressSalt);
         address _firstFeeRecipient = uf._new(_firstFeeRecipientSalt);
+        _limit = _limit % 11; // 10 is max
         vm.startPrank(admin);
         operatorsManager.addOperator(string(abi.encodePacked(_name)), _firstAddress, _firstFeeRecipient);
         (int256 _index, ) = operatorsManager.getOperatorDetails(string(abi.encodePacked(_name)));
@@ -410,10 +412,10 @@ contract OperatorsManagerV1MemberManagementTests {
         uint256[] memory operatorIndexes = new uint256[](1);
         operatorIndexes[0] = index;
         uint256[] memory operatorLimits = new uint256[](1);
-        operatorLimits[0] = 10;
+        operatorLimits[0] = _limit;
         operatorsManager.setOperatorLimits(operatorIndexes, operatorLimits);
         newOperator = operatorsManager.getOperator(index);
-        assert(newOperator.limit == 10);
+        assert(newOperator.limit == _limit);
         operatorLimits[0] = 0;
         operatorsManager.setOperatorLimits(operatorIndexes, operatorLimits);
         newOperator = operatorsManager.getOperator(index);
@@ -423,7 +425,8 @@ contract OperatorsManagerV1MemberManagementTests {
     function testSetOperatorLimitCountAsUnauthorized(
         bytes32 _name,
         uint256 _firstAddressSalt,
-        uint256 _firstFeeRecipientSalt
+        uint256 _firstFeeRecipientSalt,
+        uint256 _limit
     ) public {
         address _firstAddress = uf._new(_firstAddressSalt);
         address _firstFeeRecipient = uf._new(_firstFeeRecipientSalt);
@@ -439,7 +442,7 @@ contract OperatorsManagerV1MemberManagementTests {
         uint256[] memory operatorIndexes = new uint256[](1);
         operatorIndexes[0] = index;
         uint256[] memory operatorLimits = new uint256[](1);
-        operatorLimits[0] = 10;
+        operatorLimits[0] = _limit;
         vm.expectRevert(abi.encodeWithSignature("Unauthorized(address)", address(this)));
         operatorsManager.setOperatorLimits(operatorIndexes, operatorLimits);
     }
