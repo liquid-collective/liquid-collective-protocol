@@ -101,6 +101,23 @@ contract RiverV1SetupOneTests {
         vm.stopPrank();
     }
 
+    function testInitWithZeroAddressValue() public {
+        withdraw = new WithdrawV1();
+        bytes32 withdrawalCredentials = withdraw.getCredentials();
+        river = new RiverV1();
+        vm.expectRevert(abi.encodeWithSignature("InvalidZeroAddress()"));
+        river.initRiverV1(
+            address(0),
+            withdrawalCredentials,
+            address(0),
+            address(0),
+            address(0),
+            address(0),
+            5000,
+            50000
+        );
+    }
+
     function testAdditionalInit() public {
         bytes32 withdrawalCredentials = withdraw.getCredentials();
         vm.startPrank(admin);
