@@ -2,6 +2,7 @@
 pragma solidity 0.8.10;
 
 import "../../libraries/UnstructuredStorage.sol";
+import "../../libraries/Errors.sol";
 import "../../interfaces/IAllowlist.sol";
 
 library AllowlistAddress {
@@ -12,6 +13,9 @@ library AllowlistAddress {
     }
 
     function set(address newValue) internal {
+        if (newValue == address(0)) {
+            revert Errors.InvalidZeroAddress();
+        }
         UnstructuredStorage.setStorageAddress(ALLOWLIST_ADDRESS_SLOT, newValue);
     }
 }

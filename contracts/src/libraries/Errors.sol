@@ -5,4 +5,5 @@ library Errors {
     error Unauthorized(address caller);
     error InvalidCall();
     error InvalidArgument();
+    error InvalidZeroAddress();
 }
