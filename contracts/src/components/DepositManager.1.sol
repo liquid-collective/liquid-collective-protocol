@@ -113,7 +113,6 @@ abstract contract DepositManagerV1 {
         uint256 value = DEPOSIT_SIZE;
 
         uint256 depositAmount = value / 1000000000 wei;
-        assert(depositAmount * 1000000000 wei == value);
 
         bytes32 pubkeyRoot = sha256(BytesLib.pad64(_publicKey));
         bytes32 signatureRoot = sha256(
