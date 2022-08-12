@@ -374,7 +374,7 @@ contract OracleV1 is Initializable {
         uint256 repeat = 0;
         uint16 maxval = 0;
         uint16 cur = 0;
-        for (uint256 i = 0; i < variants.length; ++i) {
+        for (uint256 i = 0; i < variants.length; ) {
             cur = _getReportCount(variants[i]);
             if (cur >= maxval) {
                 if (cur == maxval) {
@@ -386,6 +386,9 @@ contract OracleV1 is Initializable {
                     maxval = cur;
                     repeat = 0;
                 }
+            }
+            unchecked {
+                ++i;
             }
         }
         return (maxval >= _quorum && repeat == 0, variants[maxind]);
