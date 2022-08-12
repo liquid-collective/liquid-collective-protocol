@@ -50,6 +50,8 @@ contract OracleManagerV1Tests {
 
     OracleManagerV1 internal oracleManager;
 
+    event PulledELFees(uint256 amount);
+
     function setUp() public {
         oracleManager = new OracleManagerV1ExposeInitializer(address(this));
         oracleManager.setOracle(oracle);
@@ -72,6 +74,8 @@ contract OracleManagerV1Tests {
         OracleManagerV1ExposeInitializer(address(oracleManager)).supersedeBalanceSum(32 ether);
         OracleManagerV1ExposeInitializer(address(oracleManager)).supersedeAllValidatorCount(1);
         OracleManagerV1ExposeInitializer(address(oracleManager)).supersedeExtraAmount(val3);
+        vm.expectEmit(true, true, true, true);
+        emit PulledELFees(val3);
         oracleManager.setBeaconData(1, val2 + 32 ether, roundId);
         assert(
             OracleManagerV1ExposeInitializer(address(oracleManager)).lastReceived() == uint256(val2) + uint256(val3)
