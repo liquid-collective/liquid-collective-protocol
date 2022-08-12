@@ -158,7 +158,7 @@ contract RiverV1 is
     }
 
     /// @notice Input for execution layer fee earnings
-    function sendELEarnings() external payable {
+    function sendELFees() external payable {
         if (msg.sender != ELFeeRecipientAddress.get()) {
             revert Errors.Unauthorized(msg.sender);
         }
@@ -233,9 +233,13 @@ contract RiverV1 is
     }
 
     /// @notice Internal utility to pull funds from the execution layer fee recipient to River and return the delta in the balance
-    function _pullELEarningsToRiver(address _elFeeRecipient) internal returns (uint256) {
+    function _pullELFees() internal override returns (uint256) {
+        address elFeeRecipient = ELFeeRecipientAddress.get();
+        if (elFeeRecipient == address(0)) {
+            return 0;
+        }
         uint256 initialBalance = address(this).balance;
-        IELFeeRecipient(_elFeeRecipient).pullELEarnings();
+        IELFeeRecipient(elFeeRecipient).pullELFees();
         return address(this).balance - initialBalance;
     }
 
@@ -245,10 +249,6 @@ contract RiverV1 is
         uint256 currentTotalSupply = _totalSupply();
         if (currentTotalSupply == 0) {
             revert ZeroMintedShares();
-        }
-        address elFeeRecipient = address(ELFeeRecipientAddress.get());
-        if (elFeeRecipient != address(0)) {
-            _amount += _pullELEarningsToRiver(elFeeRecipient);
         }
         uint256 globalFee = GlobalFee.get();
         uint256 numerator = _amount * currentTotalSupply * globalFee;

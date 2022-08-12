@@ -10,9 +10,18 @@ import "../utils/UserFactory.sol";
 
 contract OracleManagerV1ExposeInitializer is OracleManagerV1 {
     uint256 public lastReceived;
+    uint256 public extraAmount;
 
     function _onEarnings(uint256 amount) internal override {
         lastReceived = amount;
+    }
+
+    function _pullELFees() internal override returns (uint256) {
+        return extraAmount;
+    }
+
+    function supersedeExtraAmount(uint256 amount) external {
+        extraAmount = amount;
     }
 
     function supersedeBalanceSum(uint256 amount) external {
@@ -52,6 +61,21 @@ contract OracleManagerV1Tests {
         OracleManagerV1ExposeInitializer(address(oracleManager)).supersedeAllValidatorCount(1);
         oracleManager.setBeaconData(1, val2 + 32 ether, roundId);
         assert(OracleManagerV1ExposeInitializer(address(oracleManager)).lastReceived() == val2);
+    }
+
+    function testSetBeaconDataWithELFeesPulling(
+        uint64 val2,
+        uint64 val3,
+        bytes32 roundId
+    ) public {
+        vm.startPrank(oracle);
+        OracleManagerV1ExposeInitializer(address(oracleManager)).supersedeBalanceSum(32 ether);
+        OracleManagerV1ExposeInitializer(address(oracleManager)).supersedeAllValidatorCount(1);
+        OracleManagerV1ExposeInitializer(address(oracleManager)).supersedeExtraAmount(val3);
+        oracleManager.setBeaconData(1, val2 + 32 ether, roundId);
+        assert(
+            OracleManagerV1ExposeInitializer(address(oracleManager)).lastReceived() == uint256(val2) + uint256(val3)
+        );
     }
 
     function testSetBeaconDataWithValidatorCountDelta(uint64 val2, bytes32 roundId) public {

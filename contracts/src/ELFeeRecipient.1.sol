@@ -23,13 +23,13 @@ contract ELFeeRecipientV1 is Initializable, IELFeeRecipient {
 
     /// @notice Pulls all the ETH to the River contract
     /// @dev Only callable by the River contract
-    function pullELEarnings() external {
+    function pullELFees() external {
         address river = RiverAddress.get();
         if (msg.sender != river) {
             revert Errors.Unauthorized(msg.sender);
         }
 
-        IRiverELFeeInput(river).sendELEarnings{value: address(this).balance}();
+        IRiverELFeeInput(river).sendELFees{value: address(this).balance}();
     }
 
     /// @notice Ether receiver

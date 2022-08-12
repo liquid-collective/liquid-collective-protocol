@@ -2,5 +2,5 @@
 pragma solidity 0.8.10;
 
 interface IRiverELFeeInput {
-    function sendELEarnings() external payable;
+    function sendELFees() external payable;
 }

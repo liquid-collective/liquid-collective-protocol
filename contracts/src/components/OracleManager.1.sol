@@ -10,6 +10,8 @@ import "../state/river/BeaconValidatorBalanceSum.sol";
 import "../state/river/BeaconValidatorCount.sol";
 import "../state/river/DepositedValidatorCount.sol";
 
+import "../../test/console.sol";
+
 /// @title Oracle Manager (v1)
 /// @author Kiln
 /// @notice This contract handles the inputs provided by the oracle
@@ -22,6 +24,8 @@ abstract contract OracleManagerV1 {
     /// @dev Must be overriden
     /// @param _profits The positive increase in the validator balance sum (staking rewards)
     function _onEarnings(uint256 _profits) internal virtual;
+
+    function _pullELFees() internal virtual returns (uint256);
 
     /// @notice Prevents unauthorized calls
     modifier onlyAdmin() virtual {
@@ -55,15 +59,17 @@ abstract contract OracleManagerV1 {
             revert InvalidValidatorCountReport(_validatorCount, DepositedValidatorCount.get());
         }
 
-        uint256 previousValidatorBalanceSum = BeaconValidatorBalanceSum.get();
         uint256 newValidators = _validatorCount - BeaconValidatorCount.get();
+        uint256 previousValidatorBalanceSum = BeaconValidatorBalanceSum.get() + (newValidators * 32 ether);
 
         BeaconValidatorBalanceSum.set(_validatorBalanceSum);
         BeaconValidatorCount.set(_validatorCount);
         LastOracleRoundId.set(_roundId);
 
-        if (previousValidatorBalanceSum < _validatorBalanceSum) {
-            _onEarnings(_validatorBalanceSum - previousValidatorBalanceSum - newValidators * 32 ether);
+        uint256 executionLayerFees = _pullELFees();
+
+        if (previousValidatorBalanceSum < _validatorBalanceSum + executionLayerFees) {
+            _onEarnings((_validatorBalanceSum + executionLayerFees) - previousValidatorBalanceSum);
         }
 
         emit BeaconDataUpdate(_validatorCount, _validatorBalanceSum, _roundId);

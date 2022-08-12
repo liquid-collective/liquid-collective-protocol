@@ -14,12 +14,12 @@ import "./utils/UserFactory.sol";
 contract RiverDonationMock is IRiverELFeeInput {
     event BalanceUpdated(uint256 amount);
 
-    function sendELEarnings() external payable {
+    function sendELFees() external payable {
         emit BalanceUpdated(address(this).balance);
     }
 
-    function pullELEarnings(address feeRecipient) external {
-        IELFeeRecipient(feeRecipient).pullELEarnings();
+    function pullELFees(address feeRecipient) external {
+        IELFeeRecipient(feeRecipient).pullELFees();
     }
 }
 
@@ -48,7 +48,7 @@ contract ELFeeRecipientV1Test {
 
         vm.expectEmit(true, true, true, true);
         emit BalanceUpdated(_amount);
-        river.pullELEarnings(address(feeRecipient));
+        river.pullELFees(address(feeRecipient));
     }
 
     function testPullFundsFromSend(uint256 _senderSalt, uint256 _amount) external {
@@ -61,7 +61,7 @@ contract ELFeeRecipientV1Test {
 
         vm.expectEmit(true, true, true, true);
         emit BalanceUpdated(_amount);
-        river.pullELEarnings(address(feeRecipient));
+        river.pullELFees(address(feeRecipient));
     }
 
     function testPullFundsFromCall(uint256 _senderSalt, uint256 _amount) external {
@@ -75,7 +75,7 @@ contract ELFeeRecipientV1Test {
 
         vm.expectEmit(true, true, true, true);
         emit BalanceUpdated(_amount);
-        river.pullELEarnings(address(feeRecipient));
+        river.pullELFees(address(feeRecipient));
     }
 
     function testPullFundsUnauthorized(uint256 _senderSalt, uint256 _amount) external {
@@ -86,7 +86,7 @@ contract ELFeeRecipientV1Test {
         payable(address(feeRecipient)).transfer(_amount);
 
         vm.expectRevert(abi.encodeWithSignature("Unauthorized(address)", sender));
-        feeRecipient.pullELEarnings();
+        feeRecipient.pullELFees();
         vm.stopPrank();
     }
 }

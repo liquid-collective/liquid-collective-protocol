@@ -2,5 +2,5 @@
 pragma solidity 0.8.10;
 
 interface IELFeeRecipient {
-    function pullELEarnings() external;
+    function pullELFees() external;
 }
