@@ -41,9 +41,12 @@ library OracleMembers {
             r.slot := slot
         }
 
-        for (uint256 idx = 0; idx < r.value.length; ++idx) {
+        for (uint256 idx = 0; idx < r.value.length; ) {
             if (r.value[idx] == memberAddress) {
                 return int256(idx);
+            }
+            unchecked {
+                ++idx;
             }
         }
 

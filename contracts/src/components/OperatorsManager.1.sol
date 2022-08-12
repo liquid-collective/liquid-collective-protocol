@@ -248,7 +248,7 @@ contract OperatorsManagerV1 {
 
         Operators.Operator storage operator = Operators.getByIndex(_index);
 
-        for (uint256 idx = 0; idx < _keyCount; ++idx) {
+        for (uint256 idx = 0; idx < _keyCount; ) {
             bytes memory publicKey = BytesLib.slice(
                 _publicKeys,
                 idx * ValidatorKeys.PUBLIC_KEY_LENGTH,
@@ -260,6 +260,9 @@ contract OperatorsManagerV1 {
                 ValidatorKeys.SIGNATURE_LENGTH
             );
             ValidatorKeys.set(_index, operator.keys + idx, publicKey, signature);
+            unchecked {
+                ++idx;
+            }
         }
 
         operator.keys += _keyCount;
@@ -280,7 +283,7 @@ contract OperatorsManagerV1 {
             revert InvalidKeyCount();
         }
 
-        for (uint256 idx = 0; idx < _indexes.length; ++idx) {
+        for (uint256 idx = 0; idx < _indexes.length; ) {
             uint256 keyIndex = _indexes[idx];
 
             if (keyIndex < operator.funded) {
@@ -302,6 +305,9 @@ contract OperatorsManagerV1 {
             ValidatorKeys.set(_index, lastKeyIndex, new bytes(0), new bytes(0));
             operator.keys -= 1;
             emit RemovedValidatorKey(_index, removedPublicKey);
+            unchecked {
+                ++idx;
+            }
         }
 
         if (_indexes[_indexes.length - 1] < operator.limit) {
@@ -349,11 +355,17 @@ contract OperatorsManagerV1 {
         returns (bytes[] memory res)
     {
         res = new bytes[](arr1.length + arr2.length);
-        for (uint256 idx = 0; idx < arr1.length; ++idx) {
+        for (uint256 idx = 0; idx < arr1.length; ) {
             res[idx] = arr1[idx];
+            unchecked {
+                ++idx;
+            }
         }
-        for (uint256 idx = 0; idx < arr2.length; ++idx) {
+        for (uint256 idx = 0; idx < arr2.length; ) {
             res[idx + arr1.length] = arr2[idx];
+            unchecked {
+                ++idx;
+            }
         }
     }
 
@@ -370,12 +382,15 @@ contract OperatorsManagerV1 {
         }
 
         uint256 selectedOperatorIndex = 0;
-        for (uint256 idx = 1; idx < operators.length; ++idx) {
+        for (uint256 idx = 1; idx < operators.length; ) {
             if (
                 operators[idx].funded - operators[idx].stopped <
                 operators[selectedOperatorIndex].funded - operators[selectedOperatorIndex].stopped
             ) {
                 selectedOperatorIndex = idx;
+            }
+            unchecked {
+                ++idx;
             }
         }
 

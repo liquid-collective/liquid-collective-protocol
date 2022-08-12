@@ -182,17 +182,23 @@ contract RiverV1 is
         uint256[] memory validatorCounts = new uint256[](operators.length);
 
         uint256 totalActiveValidators = 0;
-        for (uint256 idx = 0; idx < operators.length; ++idx) {
+        for (uint256 idx = 0; idx < operators.length; ) {
             uint256 operatorActiveValidatorCount = operators[idx].funded - operators[idx].stopped;
             totalActiveValidators += operatorActiveValidatorCount;
             validatorCounts[idx] = operatorActiveValidatorCount;
+            unchecked {
+                ++idx;
+            }
         }
 
         if (totalActiveValidators > 0) {
             uint256 rewardsPerActiveValidator = _reward / totalActiveValidators;
 
-            for (uint256 idx = 0; idx < validatorCounts.length; ++idx) {
+            for (uint256 idx = 0; idx < validatorCounts.length; ) {
                 _mintRawShares(operators[idx].feeRecipient, validatorCounts[idx] * rewardsPerActiveValidator);
+                unchecked {
+                    ++idx;
+                }
             }
         } else {
             _reward = 0;

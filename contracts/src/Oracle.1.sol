@@ -207,9 +207,12 @@ contract OracleV1 is Initializable {
     /// @param _memberAddress Address of the member
     function isMember(address _memberAddress) external view returns (bool) {
         address[] memory members = OracleMembers.get();
-        for (uint256 idx = 0; idx < members.length; ++idx) {
+        for (uint256 idx = 0; idx < members.length; ) {
             if (members[idx] == _memberAddress) {
                 return true;
+            }
+            unchecked {
+                ++idx;
             }
         }
         return false;
@@ -371,16 +374,21 @@ contract OracleV1 is Initializable {
         uint256 repeat = 0;
         uint16 maxval = 0;
         uint16 cur = 0;
-        for (uint256 i = 0; i < variants.length; ++i) {
+        for (uint256 i = 0; i < variants.length; ) {
             cur = _getReportCount(variants[i]);
             if (cur >= maxval) {
                 if (cur == maxval) {
-                    ++repeat;
+                    unchecked {
+                        ++repeat;
+                    }
                 } else {
                     maxind = i;
                     maxval = cur;
                     repeat = 0;
                 }
+            }
+            unchecked {
+                ++i;
             }
         }
         return (maxval >= _quorum && repeat == 0, variants[maxind]);

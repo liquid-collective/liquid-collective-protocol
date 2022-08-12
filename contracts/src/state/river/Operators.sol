@@ -167,19 +167,29 @@ library Operators {
 
         uint256 activeCount = 0;
 
-        for (uint256 idx = 0; idx < r.value.length; ++idx) {
+        for (uint256 idx = 0; idx < r.value.length; ) {
             if (r.value[idx].active == true) {
-                ++activeCount;
+                unchecked {
+                    ++activeCount;
+                }
+            }
+            unchecked {
+                ++idx;
             }
         }
 
         Operator[] memory activeOperators = new Operator[](activeCount);
 
         uint256 activeIdx = 0;
-        for (uint256 idx = 0; idx < r.value.length; ++idx) {
+        for (uint256 idx = 0; idx < r.value.length; ) {
             if (r.value[idx].active == true) {
                 activeOperators[activeIdx] = r.value[idx];
-                ++activeIdx;
+                unchecked {
+                    ++activeIdx;
+                }
+            }
+            unchecked {
+                ++idx;
             }
         }
 
@@ -197,16 +207,21 @@ library Operators {
 
         uint256 activeCount = 0;
 
-        for (uint256 idx = 0; idx < r.value.length; ++idx) {
+        for (uint256 idx = 0; idx < r.value.length; ) {
             if (_hasFundableKeys(r.value[idx])) {
-                ++activeCount;
+                unchecked {
+                    ++activeCount;
+                }
+            }
+            unchecked {
+                ++idx;
             }
         }
 
         CachedOperator[] memory activeOperators = new CachedOperator[](activeCount);
 
         uint256 activeIdx = 0;
-        for (uint256 idx = 0; idx < r.value.length; ++idx) {
+        for (uint256 idx = 0; idx < r.value.length; ) {
             Operator memory op = r.value[idx];
             if (_hasFundableKeys(op)) {
                 activeOperators[activeIdx] = CachedOperator({
@@ -220,7 +235,12 @@ library Operators {
                     stopped: op.stopped,
                     index: idx
                 });
-                ++activeIdx;
+                unchecked {
+                    ++activeIdx;
+                }
+            }
+            unchecked {
+                ++idx;
             }
         }
 
