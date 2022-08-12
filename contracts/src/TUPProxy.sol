@@ -39,7 +39,7 @@ contract TUPProxy is TransparentUpgradeableProxy {
     /// view functions to be called when the system is paused as rpc providers can easily
     /// set the sender address to zero.
     function _beforeFallback() internal override {
-        if (StorageSlot.getBooleanSlot(_PAUSE_SLOT).value == false || msg.sender == address(0)) {
+        if (!StorageSlot.getBooleanSlot(_PAUSE_SLOT).value || msg.sender == address(0)) {
             super._beforeFallback();
         } else {
             revert CallWhenPaused();
