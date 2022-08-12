@@ -17,7 +17,6 @@ import "../../test/console.sol";
 /// @notice This contract handles the inputs provided by the oracle
 abstract contract OracleManagerV1 {
     event BeaconDataUpdate(uint256 validatorCount, uint256 validatorBalanceSum, bytes32 roundId);
-    event PulledELFees(uint256 amount);
 
     error InvalidValidatorCountReport(uint256 _providedValidatorCount, uint256 _depositedValidatorCount);
 
@@ -68,8 +67,6 @@ abstract contract OracleManagerV1 {
         LastOracleRoundId.set(_roundId);
 
         uint256 executionLayerFees = _pullELFees();
-
-        emit PulledELFees(executionLayerFees);
 
         if (previousValidatorBalanceSum < _validatorBalanceSum + executionLayerFees) {
             _onEarnings((_validatorBalanceSum + executionLayerFees) - previousValidatorBalanceSum);

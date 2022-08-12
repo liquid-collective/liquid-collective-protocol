@@ -48,6 +48,8 @@ contract RiverV1SetupOneTests {
 
     uint256 internal constant DEPOSIT_MASK = 0x1;
 
+    event PulledELFees(uint256 amount);
+
     function setUp() public {
         vm.warp(857034746);
         elFeeRecipient = new ELFeeRecipientV1();
@@ -454,6 +456,8 @@ contract RiverV1SetupOneTests {
 
         vm.startPrank(oracleMember);
         (uint256 epoch, , ) = oracle.getCurrentFrame();
+        vm.expectEmit(true, true, true, true);
+        emit PulledELFees(34 * 1 ether);
         oracle.reportBeacon(epoch, 31 * 1e9 * 34, 34);
         vm.stopPrank();
 

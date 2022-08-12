@@ -31,11 +31,11 @@ contract RiverV1 is
     IRiverELFeeInput
 {
     error ZeroMintedShares();
+    event PulledELFees(uint256 amount);
 
     uint256 public constant BASE = 100000;
     uint256 internal constant DEPOSIT_MASK = 0x1;
     uint256 internal constant TRANSFER_MASK = 0;
-
     /// @notice Prevents unauthorized calls
     modifier onlyAdmin() override(OperatorsManagerV1, OracleManagerV1) {
         if (msg.sender != LibOwnable._getAdmin()) {
@@ -240,7 +240,9 @@ contract RiverV1 is
         }
         uint256 initialBalance = address(this).balance;
         IELFeeRecipient(elFeeRecipient).pullELFees();
-        return address(this).balance - initialBalance;
+        uint256 collectedELFees = address(this).balance - initialBalance;
+        emit PulledELFees(collectedELFees);
+        return collectedELFees;
     }
 
     /// @notice Handler called whenever the balance of ETH handled by the system increases. Splits funds between operators and treasury.
