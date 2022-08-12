@@ -142,7 +142,7 @@ contract RiverV1SetupOneTests {
         assert(river.getPendingAdministrator() == address(0));
     }
 
-    function testTransferAndAcceptOwnerhshipUnauthorized() public {
+    function testTransferOwnershipUnauthorized() public {
         vm.startPrank(newAdmin);
         vm.expectRevert(abi.encodeWithSignature("Unauthorized(address)", newAdmin));
         river.transferOwnership(newAdmin);
