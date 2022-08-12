@@ -9,6 +9,7 @@ import "./components/OperatorsManager.1.sol";
 import "./Initializable.sol";
 import "./libraries/LibOwnable.sol";
 import "./interfaces/IRiverELFeeInput.sol";
+import "./interfaces/IELFeeRecipient.sol";
 
 import "./state/shared/AdministratorAddress.sol";
 import "./state/river/AllowlistAddress.sol";
@@ -153,12 +154,12 @@ contract RiverV1 is
 
     /// @notice Retrieve the execution layer fee recipient
     function getELFeeRecipient() external view returns (address) {
-        return address(ELFeeRecipientAddress.get());
+        return ELFeeRecipientAddress.get();
     }
 
     /// @notice Input for execution layer fee earnings
     function sendELEarnings() external payable {
-        if (msg.sender != address(ELFeeRecipientAddress.get())) {
+        if (msg.sender != ELFeeRecipientAddress.get()) {
             revert Errors.Unauthorized(msg.sender);
         }
     }
@@ -232,9 +233,9 @@ contract RiverV1 is
     }
 
     /// @notice Internal utility to pull funds from the execution layer fee recipient to River and return the delta in the balance
-    function _pullELEarningsToRiver() internal returns (uint256) {
+    function _pullELEarningsToRiver(address _elFeeRecipient) internal returns (uint256) {
         uint256 initialBalance = address(this).balance;
-        ELFeeRecipientAddress.get().pullELEarnings();
+        IELFeeRecipient(_elFeeRecipient).pullELEarnings();
         return address(this).balance - initialBalance;
     }
 
@@ -245,7 +246,10 @@ contract RiverV1 is
         if (currentTotalSupply == 0) {
             revert ZeroMintedShares();
         }
-        _amount += _pullELEarningsToRiver();
+        address elFeeRecipient = address(ELFeeRecipientAddress.get());
+        if (elFeeRecipient != address(0)) {
+            _amount += _pullELEarningsToRiver(elFeeRecipient);
+        }
         uint256 globalFee = GlobalFee.get();
         uint256 numerator = _amount * currentTotalSupply * globalFee;
         uint256 denominator = (_assetBalance() * BASE) - (_amount * globalFee);
