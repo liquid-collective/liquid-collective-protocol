@@ -9,8 +9,10 @@ import "../src/libraries/Errors.sol";
 import "../src/interfaces/IDepositContract.sol";
 import "../src/Withdraw.1.sol";
 import "../src/Oracle.1.sol";
+import "../src/ELFeeRecipient.1.sol";
 import "./utils/AllowlistHelper.sol";
 import "./utils/River.setup1.sol";
+import "./utils/UserFactory.sol";
 import "./mocks/DepositContractMock.sol";
 
 contract RiverV1SetupOneTests {
@@ -27,6 +29,7 @@ contract RiverV1SetupOneTests {
     address internal allower = address(0x363ED97eebe06690625bf7b4e21c5B6540016366);
     address internal oracleMember = address(0xa3eCC095B592e88ebF1A9EC90817D3E2F362D7E3);
     OracleV1 internal oracle;
+    ELFeeRecipientV1 internal elFeeRecipient;
 
     AllowlistV1 internal allowlist;
     address internal newAllowlist = address(0x00192Fb10dF37c9FB26829eb2CC623cd1BF599E8);
@@ -41,10 +44,13 @@ contract RiverV1SetupOneTests {
     address internal bob = address(0x34b4424f81AF11f8B8c261b339dd27e1Da796f11);
     address internal joe = address(0xA7206d878c5c3871826DfdB42191c49B1D11F466);
 
+    UserFactory internal uf = new UserFactory();
+
     uint256 internal constant DEPOSIT_MASK = 0x1;
 
     function setUp() public {
         vm.warp(857034746);
+        elFeeRecipient = new ELFeeRecipientV1();
         oracle = new OracleV1();
         allowlist = new AllowlistV1();
         allowlist.initAllowlistV1(admin, allower);
@@ -52,8 +58,10 @@ contract RiverV1SetupOneTests {
         withdraw = new WithdrawV1();
         bytes32 withdrawalCredentials = withdraw.getCredentials();
         river = new RiverV1();
+        elFeeRecipient.initELFeeRecipientV1(address(river));
         river.initRiverV1(
             address(deposit),
+            address(elFeeRecipient),
             withdrawalCredentials,
             address(oracle),
             admin,
@@ -124,6 +132,7 @@ contract RiverV1SetupOneTests {
         vm.expectRevert(abi.encodeWithSignature("InvalidInitialization(uint256,uint256)", 0, 1));
         river.initRiverV1(
             address(deposit),
+            address(elFeeRecipient),
             withdrawalCredentials,
             address(oracle),
             admin,
@@ -163,6 +172,30 @@ contract RiverV1SetupOneTests {
         vm.startPrank(newAdmin);
         vm.expectRevert(abi.encodeWithSignature("Unauthorized(address)", newAdmin));
         river.transferOwnership(newAdmin);
+        vm.stopPrank();
+    }
+
+    function testSetELFeeRecipient(uint256 _newELFeeRecipientSalt) public {
+        address newELFeeRecipient = uf._new(_newELFeeRecipientSalt);
+        vm.startPrank(admin);
+        assert(river.getELFeeRecipient() == address(elFeeRecipient));
+        river.setELFeeRecipient(newELFeeRecipient);
+        assert(river.getELFeeRecipient() == newELFeeRecipient);
+        vm.stopPrank();
+    }
+
+    function testSetELFeeRecipientUnauthorized(uint256 _newELFeeRecipientSalt) public {
+        address newELFeeRecipient = uf._new(_newELFeeRecipientSalt);
+        assert(river.getELFeeRecipient() == address(elFeeRecipient));
+        vm.expectRevert(abi.encodeWithSignature("Unauthorized(address)", address(this)));
+        river.setELFeeRecipient(newELFeeRecipient);
+    }
+
+    function testSendELFundsUnauthorized(uint256 _invalidAddressSalt) public {
+        address invalidAddress = uf._new(_invalidAddressSalt);
+        vm.startPrank(invalidAddress);
+        vm.expectRevert(abi.encodeWithSignature("Unauthorized(address)", invalidAddress));
+        river.sendELEarnings();
         vm.stopPrank();
     }
 
@@ -318,6 +351,75 @@ contract RiverV1SetupOneTests {
         assert(river.balanceOfUnderlying(operatorOneFeeRecipient) == 424999999999999987);
         assert(river.balanceOfUnderlying(operatorTwoFeeRecipient) == 424999999999999987);
         assert(river.balanceOfUnderlying(treasury) == 850000000000000000);
+
+        assert(
+            river.totalSupply() ==
+                river.balanceOf(joe) +
+                    river.balanceOf(bob) +
+                    river.balanceOf(operatorOneFeeRecipient) +
+                    river.balanceOf(operatorTwoFeeRecipient) +
+                    river.balanceOf(treasury)
+        );
+    }
+
+    function testELFeeRecipientPullFunds() public {
+        vm.deal(joe, 100 ether);
+        vm.deal(bob, 1000 ether);
+
+        _allow(joe, DEPOSIT_MASK);
+        _allow(bob, DEPOSIT_MASK);
+
+        vm.startPrank(joe);
+        river.deposit{value: 100 ether}();
+        vm.stopPrank();
+        vm.startPrank(bob);
+        river.deposit{value: 1000 ether}();
+        vm.stopPrank();
+        assert(river.balanceOfUnderlying(joe) == 100 ether);
+        assert(river.balanceOfUnderlying(bob) == 1000 ether);
+        assert(river.getDepositedValidatorCount() == 0);
+        assert(river.totalUnderlyingSupply() == 1100 ether);
+
+        river.depositToConsensusLayer(17);
+        river.depositToConsensusLayer(17);
+
+        Operators.Operator memory op1 = river.getOperatorByName(operatorOneName);
+        Operators.Operator memory op2 = river.getOperatorByName(operatorTwoName);
+
+        assert(op1.funded == 17);
+        assert(op2.funded == 17);
+
+        assert(river.getDepositedValidatorCount() == 34);
+        assert(river.totalUnderlyingSupply() == 1100 ether);
+        assert(address(river).balance == (1000 ether + 100 ether) - (32 ether * 34));
+        assert(river.balanceOfUnderlying(joe) == 100 ether);
+        assert(river.balanceOfUnderlying(bob) == 1000 ether);
+
+        vm.deal(address(elFeeRecipient), 100 ether);
+
+        vm.startPrank(oracleMember);
+        (uint256 epoch, , ) = oracle.getCurrentFrame();
+        oracle.reportBeacon(epoch, 33 * 1e9 * 34, 34);
+        vm.stopPrank();
+
+        assert(address(elFeeRecipient).balance == 0);
+
+        assert(river.totalUnderlyingSupply() == 1100 ether - (34 * 32 ether) + (34 * 33 ether) + 100 ether);
+        assert(river.balanceOfUnderlying(joe) == 111572727272727272727);
+        assert(river.balanceOfUnderlying(bob) == 1115727272727272727273);
+        assert(river.balanceOfUnderlying(operatorOneFeeRecipient) == 1674999999999999999);
+        assert(river.balanceOfUnderlying(operatorTwoFeeRecipient) == 1674999999999999999);
+        assert(river.balanceOfUnderlying(treasury) == 3349999999999999999);
+
+        vm.startPrank(joe);
+        river.transfer(bob, river.balanceOf(joe) - 1);
+        vm.stopPrank();
+
+        assert(river.balanceOfUnderlying(joe) == 1);
+        assert(river.balanceOfUnderlying(bob) == 1227299999999999999999);
+        assert(river.balanceOfUnderlying(operatorOneFeeRecipient) == 1674999999999999999);
+        assert(river.balanceOfUnderlying(operatorTwoFeeRecipient) == 1674999999999999999);
+        assert(river.balanceOfUnderlying(treasury) == 3349999999999999999);
 
         assert(
             river.totalSupply() ==

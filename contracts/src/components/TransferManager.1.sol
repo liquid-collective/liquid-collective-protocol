@@ -8,7 +8,6 @@ import "../libraries/Errors.sol";
 /// @notice This contract handles the inbound transfers cases or the explicit submissions
 abstract contract TransferManagerV1 {
     event UserDeposit(address indexed depositor, address indexed recipient, uint256 amount);
-    event Donation(address donator, uint256 amount);
 
     error EmptyDeposit();
     error EmptyDonation();
@@ -23,11 +22,6 @@ abstract contract TransferManagerV1 {
         address _recipient,
         uint256 _amount
     ) internal virtual;
-
-    /// @notice Handler called whenever a donation is received by the contract
-    /// @dev Must be overriden
-    /// @param _amount Amount donated
-    function _onDonation(uint256 _amount) internal virtual;
 
     /// @notice Internal utility calling the deposit handler and emitting the deposit details
     function _deposit(address _recipient) internal {
@@ -54,18 +48,6 @@ abstract contract TransferManagerV1 {
     /// @param _recipient Address receiving the minted lsETH
     function depositAndTransfer(address _recipient) external payable {
         _deposit(_recipient);
-    }
-
-    /// @notice Allows anyone to add ethers to river without minting new shares
-    /// @dev This method should be mainly used by the execution layer fee recipient to compound any collected fee
-    function donate() external payable {
-        if (msg.value == 0) {
-            revert EmptyDonation();
-        }
-
-        _onDonation(msg.value);
-
-        emit Donation(msg.sender, msg.value);
     }
 
     /// @notice Implicit deposit method, when the user performs a regular transfer to the contract

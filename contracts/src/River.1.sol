@@ -8,12 +8,14 @@ import "./components/OracleManager.1.sol";
 import "./components/OperatorsManager.1.sol";
 import "./Initializable.sol";
 import "./libraries/LibOwnable.sol";
+import "./interfaces/IRiverELFeeInput.sol";
 
 import "./state/shared/AdministratorAddress.sol";
 import "./state/river/AllowlistAddress.sol";
 import "./state/river/TreasuryAddress.sol";
 import "./state/river/OperatorRewardsShare.sol";
 import "./state/river/GlobalFee.sol";
+import "./state/river/ELFeeRecipientAddress.sol";
 
 /// @title River (v1)
 /// @author Kiln
@@ -24,7 +26,8 @@ contract RiverV1 is
     SharesManagerV1,
     OracleManagerV1,
     OperatorsManagerV1,
-    Initializable
+    Initializable,
+    IRiverELFeeInput
 {
     error ZeroMintedShares();
 
@@ -42,6 +45,7 @@ contract RiverV1 is
 
     /// @notice Initializes the River system
     /// @param _depositContractAddress Address to make Consensus Layer deposits
+    /// @param _elFeeRecipientAddress Address that receives the execution layer fees
     /// @param _withdrawalCredentials Credentials to use for every validator deposit
     /// @param _systemAdministratorAddress Administrator address
     /// @param _allowlistAddress Address of the allowlist contract
@@ -50,6 +54,7 @@ contract RiverV1 is
     /// @param _operatorRewardsShare Share of the global fee used to reward node operators
     function initRiverV1(
         address _depositContractAddress,
+        address _elFeeRecipientAddress,
         bytes32 _withdrawalCredentials,
         address _oracleAddress,
         address _systemAdministratorAddress,
@@ -66,6 +71,7 @@ contract RiverV1 is
         TreasuryAddress.set(_treasuryAddress);
         GlobalFee.set(_globalFee);
         OperatorRewardsShare.set(_operatorRewardsShare);
+        ELFeeRecipientAddress.set(_elFeeRecipientAddress);
 
         DepositManagerV1.initDepositManagerV1(_depositContractAddress, _withdrawalCredentials);
         OracleManagerV1.initOracleManagerV1(_oracleAddress);
@@ -139,6 +145,24 @@ contract RiverV1 is
         return LibOwnable._getPendingAdmin();
     }
 
+    /// @notice Changes the execution layer fee recipient
+    /// @param _newELFeeRecipient New address for the recipient
+    function setELFeeRecipient(address _newELFeeRecipient) external onlyAdmin {
+        ELFeeRecipientAddress.set(_newELFeeRecipient);
+    }
+
+    /// @notice Retrieve the execution layer fee recipient
+    function getELFeeRecipient() external view returns (address) {
+        return address(ELFeeRecipientAddress.get());
+    }
+
+    /// @notice Input for execution layer fee earnings
+    function sendELEarnings() external payable {
+        if (msg.sender != address(ELFeeRecipientAddress.get())) {
+            revert Errors.Unauthorized(msg.sender);
+        }
+    }
+
     /// @notice Handler called whenever a token transfer is triggered
     /// @param _from Token sender
     /// @param _to Token receiver
@@ -207,10 +231,11 @@ contract RiverV1 is
         return _reward;
     }
 
-    /// @notice Handler called whenever a donation of ETH has been made to the system. It calls the same logic as when revenues are earned.
-    /// @param _amount Additional eth donated
-    function _onDonation(uint256 _amount) internal override {
-        _onEarnings(_amount);
+    /// @notice Internal utility to pull funds from the execution layer fee recipient to River and return the delta in the balance
+    function _pullELEarningsToRiver() internal returns (uint256) {
+        uint256 initialBalance = address(this).balance;
+        ELFeeRecipientAddress.get().pullELEarnings();
+        return address(this).balance - initialBalance;
     }
 
     /// @notice Handler called whenever the balance of ETH handled by the system increases. Splits funds between operators and treasury.
@@ -220,6 +245,7 @@ contract RiverV1 is
         if (currentTotalSupply == 0) {
             revert ZeroMintedShares();
         }
+        _amount += _pullELEarningsToRiver();
         uint256 globalFee = GlobalFee.get();
         uint256 numerator = _amount * currentTotalSupply * globalFee;
         uint256 denominator = (_assetBalance() * BASE) - (_amount * globalFee);

@@ -4,14 +4,15 @@ pragma solidity 0.8.10;
 import "./Initializable.sol";
 import "./libraries/Errors.sol";
 import "./libraries/LibOwnable.sol";
-import "./interfaces/IRiverDonationInput.sol";
+import "./interfaces/IRiverELFeeInput.sol";
+import "./interfaces/IELFeeRecipient.sol";
 
 import "./state/shared/RiverAddress.sol";
 
 /// @title Execution Layer Fee Recipient
 /// @author Kiln
 /// @notice This contract receives all the execution layer fees from the proposed blocks + bribes
-contract ELFeeRecipientV1 is Initializable {
+contract ELFeeRecipientV1 is Initializable, IELFeeRecipient {
     error InvalidCall();
 
     /// @notice Initialize the fee recipient with the required arguments
@@ -20,10 +21,15 @@ contract ELFeeRecipientV1 is Initializable {
         RiverAddress.set(_riverAddress);
     }
 
-    /// @notice Counpounds all the current balance inside river
-    function compound() external {
-        IRiverDonationInput river = IRiverDonationInput(RiverAddress.get());
-        river.donate{value: address(this).balance}();
+    /// @notice Pulls all the ETH to the River contract
+    /// @dev Only callable by the River contract
+    function pullELEarnings() external {
+        address river = RiverAddress.get();
+        if (msg.sender != river) {
+            revert Errors.Unauthorized(msg.sender);
+        }
+
+        IRiverELFeeInput(river).sendELEarnings{value: address(this).balance}();
     }
 
     /// @notice Ether receiver
