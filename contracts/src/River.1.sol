@@ -197,8 +197,9 @@ contract RiverV1 is
             revert ZeroMintedShares();
         }
         uint256 globalFee = GlobalFee.get();
-        uint256 sharesToMint = (_amount * currentTotalSupply * globalFee) /
-            ((_assetBalance() * BASE) - (_amount * globalFee));
+        uint256 numerator = _amount * currentTotalSupply * globalFee;
+        uint256 denominator = (_assetBalance() * BASE) - (_amount * globalFee);
+        uint256 sharesToMint = denominator == 0 ? 0 : (numerator / denominator);
 
         uint256 operatorRewards = (sharesToMint * OperatorRewardsShare.get()) / BASE;
 
