@@ -9,6 +9,7 @@ import "../src/River.1.sol";
 import "../src/interfaces/IDepositContract.sol";
 import "../src/Withdraw.1.sol";
 import "../src/Oracle.1.sol";
+import "../src/ELFeeRecipient.1.sol";
 import "./mocks/DepositContractMock.sol";
 import "./mocks/RiverMock.sol";
 
@@ -17,6 +18,7 @@ contract FirewallTests {
     AllowlistV1 internal firewalledAllowlist;
     Firewall internal allowlistFirewall;
 
+    ELFeeRecipientV1 internal elFeeRecipient;
     RiverV1 internal river;
     Firewall internal riverFirewall;
     RiverV1 internal firewalledRiver;
@@ -50,6 +52,7 @@ contract FirewallTests {
 
     function setUp() public {
         deposit = new DepositContractMock();
+        elFeeRecipient = new ELFeeRecipientV1();
         withdraw = new WithdrawV1();
         bytes32 withdrawalCredentials = withdraw.getCredentials();
         river = new RiverV1();
@@ -64,6 +67,7 @@ contract FirewallTests {
         );
         firewalledAllowlist = AllowlistV1(payable(address(allowlistFirewall)));
         allowlist.initAllowlistV1(payable(address(allowlistFirewall)), payable(address(allowlistFirewall)));
+        elFeeRecipient.initELFeeRecipientV1(address(river));
 
         oracle = new OracleV1();
 
@@ -77,6 +81,7 @@ contract FirewallTests {
         firewalledRiver = RiverV1(payable(address(riverFirewall)));
         river.initRiverV1(
             address(deposit),
+            address(elFeeRecipient),
             withdrawalCredentials,
             address(oracle),
             payable(address(riverFirewall)),

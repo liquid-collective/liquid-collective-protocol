@@ -14,10 +14,6 @@ contract TransferManagerV1EmptyDeposit is TransferManagerV1 {
     ) internal view override {
         this;
     }
-
-    function _onDonation(uint256) internal view override {
-        this;
-    }
 }
 
 contract TransferManagerV1DepositTests {
@@ -114,20 +110,6 @@ contract TransferManagerV1DepositTests {
         assert(success == false);
         assert(keccak256(returnData) == keccak256(abi.encodeWithSignature("InvalidCall()")));
     }
-
-    function testDonation(uint256 _userSalt, uint256 _amount) public {
-        address _user = uf._new(_userSalt);
-        vm.deal(_user, _amount);
-        vm.startPrank(_user);
-        assert(address(transferManager).balance == 0);
-        if (_amount == 0) {
-            vm.expectRevert(abi.encodeWithSignature("EmptyDonation()"));
-        }
-        transferManager.donate{value: _amount}();
-        assert(address(transferManager).balance == _amount);
-        assert(transferManager.getPendingEth() == _amount);
-        vm.stopPrank();
-    }
 }
 
 contract TransferManagerV1CatchableDeposit is TransferManagerV1 {
@@ -139,10 +121,6 @@ contract TransferManagerV1CatchableDeposit is TransferManagerV1 {
         uint256 amount
     ) internal override {
         emit InternalCallbackCalled(depositor, recipient, amount);
-    }
-
-    function _onDonation(uint256 amount) internal override {
-        emit InternalCallbackCalled(msg.sender, msg.sender, amount);
     }
 }
 
@@ -196,22 +174,5 @@ contract TransferManagerV1CallbackTests {
         transferManager.depositAndTransfer{value: _amount}(_anotherUser);
 
         assert(_user.balance == 0);
-    }
-
-    function testDonationInternalCallback(uint256 _userSalt, uint256 _amount) public {
-        address _user = uf._new(_userSalt);
-        vm.deal(_user, _amount);
-        vm.startPrank(_user);
-        assert(address(transferManager).balance == 0);
-        if (_amount == 0) {
-            vm.expectRevert(abi.encodeWithSignature("EmptyDonation()"));
-        } else {
-            vm.expectEmit(true, true, true, true);
-            emit InternalCallbackCalled(_user, _user, _amount);
-        }
-        transferManager.donate{value: _amount}();
-        assert(address(transferManager).balance == _amount);
-        assert(transferManager.getPendingEth() == _amount);
-        vm.stopPrank();
     }
 }

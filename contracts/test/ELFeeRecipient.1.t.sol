@@ -5,108 +5,88 @@ pragma solidity 0.8.10;
 import "./Vm.sol";
 import "../src/ELFeeRecipient.1.sol";
 import "../src/libraries/Errors.sol";
-import "../src/interfaces/IRiverDonationInput.sol";
+import "../src/interfaces/IRiverELFeeInput.sol";
+import "../src/interfaces/IELFeeRecipient.sol";
 import "../src/Withdraw.1.sol";
 import "./utils/River.setup1.sol";
 import "./utils/UserFactory.sol";
 
-contract RiverDonationMock is IRiverDonationInput {
-    event Donation(address donator, uint256 amount);
+contract RiverDonationMock is IRiverELFeeInput {
+    event BalanceUpdated(uint256 amount);
 
-    error EmptyDonation();
+    function sendELFees() external payable {
+        emit BalanceUpdated(address(this).balance);
+    }
 
-    function donate() external payable {
-        if (msg.value == 0) {
-            revert EmptyDonation();
-        }
-
-        emit Donation(msg.sender, msg.value);
+    function pullELFees(address feeRecipient) external {
+        IELFeeRecipient(feeRecipient).pullELFees();
     }
 }
 
 contract ELFeeRecipientV1Test {
     ELFeeRecipientV1 internal feeRecipient;
 
-    IRiverDonationInput internal donationInput;
+    RiverDonationMock internal river;
     Vm internal vm = Vm(0x7109709ECfa91a80626fF3989D68f67F5b1DD12D);
     UserFactory internal uf = new UserFactory();
 
-    event Donation(address donator, uint256 amount);
+    event BalanceUpdated(uint256 amount);
 
     function setUp() public {
-        donationInput = new RiverDonationMock();
+        river = new RiverDonationMock();
         feeRecipient = new ELFeeRecipientV1();
-        feeRecipient.initELFeeRecipientV1(address(donationInput));
+        feeRecipient.initELFeeRecipientV1(address(river));
     }
 
-    function testReceiveBribeWithTransfer(uint256 _userSalt, uint256 _bribeAmount) public {
-        address user = uf._new(_userSalt);
-        vm.deal(user, _bribeAmount);
+    function testPullFundsFromTransfer(uint256 _senderSalt, uint256 _amount) external {
+        address sender = uf._new(_senderSalt);
+        vm.deal(sender, _amount);
 
-        vm.startPrank(user);
-        assert(address(feeRecipient).balance == 0);
-        payable(address(feeRecipient)).transfer(_bribeAmount);
-        assert(address(feeRecipient).balance == _bribeAmount);
+        vm.startPrank(sender);
+        payable(address(feeRecipient)).transfer(_amount);
         vm.stopPrank();
 
-        if (_bribeAmount == 0) {
-            vm.expectRevert(abi.encodeWithSignature("EmptyDonation()"));
-        } else {
-            vm.expectEmit(true, true, true, true);
-            emit Donation(address(feeRecipient), _bribeAmount);
-        }
-        feeRecipient.compound();
+        vm.expectEmit(true, true, true, true);
+        emit BalanceUpdated(_amount);
+        river.pullELFees(address(feeRecipient));
     }
 
-    function testReceiveBribeWithSend(uint256 _userSalt, uint256 _bribeAmount) public {
-        address user = uf._new(_userSalt);
-        vm.deal(user, _bribeAmount);
+    function testPullFundsFromSend(uint256 _senderSalt, uint256 _amount) external {
+        address sender = uf._new(_senderSalt);
+        vm.deal(sender, _amount);
 
-        vm.startPrank(user);
-        assert(address(feeRecipient).balance == 0);
-        assert(payable(address(feeRecipient)).send(_bribeAmount) == true);
-        assert(address(feeRecipient).balance == _bribeAmount);
+        vm.startPrank(sender);
+        assert(payable(address(feeRecipient)).send(_amount) == true);
         vm.stopPrank();
 
-        if (_bribeAmount == 0) {
-            vm.expectRevert(abi.encodeWithSignature("EmptyDonation()"));
-        } else {
-            vm.expectEmit(true, true, true, true);
-            emit Donation(address(feeRecipient), _bribeAmount);
-        }
-        feeRecipient.compound();
+        vm.expectEmit(true, true, true, true);
+        emit BalanceUpdated(_amount);
+        river.pullELFees(address(feeRecipient));
     }
 
-    function testReceiveBribeWithCall(uint256 _userSalt, uint256 _bribeAmount) public {
-        address user = uf._new(_userSalt);
-        vm.deal(user, _bribeAmount);
+    function testPullFundsFromCall(uint256 _senderSalt, uint256 _amount) external {
+        address sender = uf._new(_senderSalt);
+        vm.deal(sender, _amount);
 
-        vm.startPrank(user);
-        assert(address(feeRecipient).balance == 0);
-        (bool status, ) = address(feeRecipient).call{value: _bribeAmount}("");
-        assert(status == true);
-        assert(address(feeRecipient).balance == _bribeAmount);
+        vm.startPrank(sender);
+        (bool ok, ) = payable(address(feeRecipient)).call{value: _amount}("");
+        assert(ok == true);
         vm.stopPrank();
 
-        if (_bribeAmount == 0) {
-            vm.expectRevert(abi.encodeWithSignature("EmptyDonation()"));
-        } else {
-            vm.expectEmit(true, true, true, true);
-            emit Donation(address(feeRecipient), _bribeAmount);
-        }
-        feeRecipient.compound();
+        vm.expectEmit(true, true, true, true);
+        emit BalanceUpdated(_amount);
+        river.pullELFees(address(feeRecipient));
     }
 
-    function testReceiveBribeWithInflation(uint256 _bribeAmount) public {
-        vm.deal(address(feeRecipient), _bribeAmount);
-        assert(address(feeRecipient).balance == _bribeAmount);
+    function testPullFundsUnauthorized(uint256 _senderSalt, uint256 _amount) external {
+        address sender = uf._new(_senderSalt);
+        vm.deal(sender, _amount);
 
-        if (_bribeAmount == 0) {
-            vm.expectRevert(abi.encodeWithSignature("EmptyDonation()"));
-        } else {
-            vm.expectEmit(true, true, true, true);
-            emit Donation(address(feeRecipient), _bribeAmount);
-        }
-        feeRecipient.compound();
+        vm.startPrank(sender);
+        payable(address(feeRecipient)).transfer(_amount);
+
+        vm.expectRevert(abi.encodeWithSignature("Unauthorized(address)", sender));
+        feeRecipient.pullELFees();
+        vm.stopPrank();
     }
 }
