@@ -118,6 +118,7 @@ contract RiverV1SetupOneTests {
         vm.expectRevert(abi.encodeWithSignature("InvalidZeroAddress()"));
         river.initRiverV1(
             address(0),
+            address(0),
             withdrawalCredentials,
             address(0),
             address(0),
@@ -275,26 +276,6 @@ contract RiverV1SetupOneTests {
         vm.startPrank(joe);
         vm.expectRevert(abi.encodeWithSignature("Unauthorized(address)", joe));
         river.deposit{value: 100 ether}();
-        vm.stopPrank();
-    }
-
-    function testDonateWhenNoMintedShares() public {
-        vm.deal(joe, 100 ether);
-
-        vm.startPrank(joe);
-        vm.expectRevert(abi.encodeWithSignature("ZeroMintedShares()"));
-        river.donate{value: 100 ether}();
-        vm.stopPrank();
-    }
-
-    function testDonateWhenMintedShares() public {
-        vm.deal(joe, 100 ether);
-
-        _allow(joe, DEPOSIT_MASK);
-
-        vm.startPrank(joe);
-        river.deposit{value: 50 ether}();
-        river.donate{value: 50 ether}();
         vm.stopPrank();
     }
 
