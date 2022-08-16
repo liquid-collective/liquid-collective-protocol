@@ -10,8 +10,6 @@ import "../state/river/BeaconValidatorBalanceSum.sol";
 import "../state/river/BeaconValidatorCount.sol";
 import "../state/river/DepositedValidatorCount.sol";
 
-import "../../test/console.sol";
-
 /// @title Oracle Manager (v1)
 /// @author Kiln
 /// @notice This contract handles the inputs provided by the oracle
