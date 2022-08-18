@@ -1,0 +1,3 @@
+[profile.default]
+optimizer = true
+optimizer_runs = 100
