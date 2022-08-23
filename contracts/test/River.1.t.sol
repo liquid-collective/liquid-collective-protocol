@@ -607,6 +607,7 @@ contract RiverV1SetupOneTests {
     // Testing regular parameters
     function testUserDepositsForAnotherUser() public {
         vm.deal(bob, 1100 ether);
+        vm.deal(joe, 100 ether);
 
         _allow(joe, DEPOSIT_MASK);
         _allow(bob, DEPOSIT_MASK);
@@ -658,6 +659,11 @@ contract RiverV1SetupOneTests {
         assert(river.balanceOfUnderlying(operatorOneFeeRecipient) == 424999999999999987);
         assert(river.balanceOfUnderlying(operatorTwoFeeRecipient) == 424999999999999987);
         assert(river.balanceOfUnderlying(treasury) == 850000000000000000);
+
+        vm.startPrank(joe);
+        river.transfer(bob, river.balanceOf(joe));
+        river.depositAndTransfer{value: 100 ether}(bob);
+        vm.stopPrank();
 
         assert(
             river.totalSupply() ==

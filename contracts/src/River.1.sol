@@ -180,13 +180,13 @@ contract RiverV1 is
         address _recipient,
         uint256 _amount
     ) internal override {
-        SharesManagerV1._mintShares(_depositor, _amount);
+        uint256 mintedShares = SharesManagerV1._mintShares(_depositor, _amount);
         if (_depositor == _recipient) {
             (AllowlistAddress.get()).onlyAllowed(_depositor, DEPOSIT_MASK); // this call reverts if unauthorized or denied
         } else {
             (AllowlistAddress.get()).onlyAllowed(_depositor, DEPOSIT_MASK + TRANSFER_MASK); // this call reverts if unauthorized or denied
             (AllowlistAddress.get()).onlyAllowed(_recipient, TRANSFER_MASK);
-            _transfer(_depositor, _recipient, _amount);
+            _transfer(_depositor, _recipient, mintedShares);
         }
     }
 
