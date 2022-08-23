@@ -197,15 +197,16 @@ abstract contract SharesManagerV1 is IERC20 {
     /// @dev This method assumes that funds received are now part of the _assetBalance()
     /// @param _owner Account that should receive the new shares
     /// @param _underlyingAssetValue Value of underlying asset received, to convert into shares
-    function _mintShares(address _owner, uint256 _underlyingAssetValue) internal {
-        uint256 assetBalance = _assetBalance();
+    function _mintShares(address _owner, uint256 _underlyingAssetValue) internal returns (uint256) {
         uint256 oldTotalAssetBalance = _assetBalance() - _underlyingAssetValue;
 
         if (oldTotalAssetBalance == 0) {
-            _mintRawShares(_owner, assetBalance);
+            _mintRawShares(_owner, _underlyingAssetValue);
+            return _underlyingAssetValue;
         } else {
             uint256 sharesToMint = (_underlyingAssetValue * _totalSupply()) / oldTotalAssetBalance;
             _mintRawShares(_owner, sharesToMint);
+            return sharesToMint;
         }
     }
 
