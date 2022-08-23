@@ -23,7 +23,7 @@
         "WithdrawV1_Implementation": "0xE93b0730C23E9586C8cD2dD62582141bd356AA7B",
         "WithdrawV1_Proxy": "0xf14380F73Da93D23bAF5AaBeEa41AE4aACC6a618"
     },
-    "namedAccount": {
+    "namedAccounts": {
         "deployer": "0x959FD7Ef9089B7142B6B908Dc3A8af7Aa8ff0FA1",
         "depositContract": "0x00000000219ab540356cBB839Cbe05303d7705Fa",
         "systemAdministrator": "0x71c9DAb681C209bb82270906e3B49388b2C15404",

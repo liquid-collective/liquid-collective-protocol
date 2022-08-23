@@ -15,7 +15,7 @@ async function main() {
   for (const contractName of contractNames) {
     artifactContent.contracts[contractName] = artifactContent.contracts[contractName].address;
   }
-  artifactContent.namedAccount = namedAccounts;
+  artifactContent.namedAccounts = namedAccounts;
   writeFileSync(artifactName, JSON.stringify(artifactContent, null, 4));
 }
 
