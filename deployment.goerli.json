@@ -1,0 +1,26 @@
+{
+    "name": "goerli",
+    "chainId": "5",
+    "contracts": {
+        "AllowlistV1": "0x961685E8a85Ee24669d808612dA305a7330689FD",
+        "AllowlistV1_Implementation": "0x59E54c65307Dcd0A5C59cD6361bF225660dD89A4",
+        "AllowlistV1_Proxy": "0x961685E8a85Ee24669d808612dA305a7330689FD",
+        "Firewall": "0xB4669c8B41591BB20566a35Bc579C37EbE5837b9",
+        "OracleV1": "0x507b8e603485A0DCf0C59DB810Dc0BdD790a783d",
+        "OracleV1_Implementation": "0x7a89ec1932Fd5082bF05deaaE1E75f72FbbDEe83",
+        "OracleV1_Proxy": "0x507b8e603485A0DCf0C59DB810Dc0BdD790a783d",
+        "RiverV1": "0x96f63FB35ECBdd739c7E901968Eac5bc3a36D308",
+        "RiverV1_Implementation": "0x66a191Be5733c2a824c53C4c32d298bF1bB549A5",
+        "RiverV1_Proxy": "0x96f63FB35ECBdd739c7E901968Eac5bc3a36D308",
+        "WithdrawV1": "0xc9716693Ab7BF082b676129850bA749EFD25ea7b",
+        "WithdrawV1_Implementation": "0x77c7d451D50529F858186D31f88734E971FE03EC",
+        "WithdrawV1_Proxy": "0xc9716693Ab7BF082b676129850bA749EFD25ea7b"
+    },
+    "namedAccount": {
+        "deployer": "0x959FD7Ef9089B7142B6B908Dc3A8af7Aa8ff0FA1",
+        "depositContract": "0xff50ed3d0ec03aC01D4C79aAd74928BFF48a7b2b",
+        "systemAdministrator": "0x71c9DAb681C209bb82270906e3B49388b2C15404",
+        "treasury": "0x774c51712F2f1eAFA73681403414D5EE419f2c73",
+        "proxyAdministrator": "0x07706A7D768054c10eB4FC9103Ea322f62831cb9"
+    }
+}

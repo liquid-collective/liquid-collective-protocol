@@ -637,6 +637,17 @@ error InvalidInitialization(uint256 version, uint256 expectedVersion)
 | version | uint256 | undefined |
 | expectedVersion | uint256 | undefined |
 
+### InvalidZeroAddress
+
+```solidity
+error InvalidZeroAddress()
+```
+
+
+
+
+
+
 ### NotFrameFirstEpochId
 
 ```solidity

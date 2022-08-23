@@ -2,6 +2,7 @@
   "name": "river",
   "version": "0.0.1",
   "scripts": {
+    "artifacts": "ts-node gen_artifacts.ts",
     "test": "forge test -vvv --gas-report",
     "test:force": "forge test --force -vvv --gas-report",
     "format": "prettier --write ./contracts && prettier --write ./deploy",
