@@ -8,27 +8,23 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v2
-
-      - name: add node toolchain
-        uses: actions/setup-node@v2.1.2
+      - uses: actions/checkout@v3
         with:
-          node-version: 16.x
+          submodules: recursive
 
-      - name: add rust toolchain
-        uses: actions-rs/toolchain@v1
+      - name: install foundry
+        uses: onbjerg/foundry-toolchain@v1
         with:
-          toolchain: stable
-
-      - name: cache node_modules
-        uses: actions/cache@v2
-        with:
-          path: |
-            ./node_modules
-          key: ${{ runner.os }}-${{ hashFiles('yarn.lock') }}
-
-      - name: install node dependencies
-        run: yarn
+          version: nightly
 
       - name: run formatting checks
-        run: yarn format:check
+        run: forge fmt --check 
+        env:
+          FOUNDRY_FUZZ_RUNS: 5000
+
+      - name: archive test and gas usage artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: test-and-gas-usage
+          path: |
+            test-and-gas-report.txt

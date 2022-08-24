@@ -21,11 +21,7 @@ library ApprovalsPerOwner {
         return r.value[owner][operator];
     }
 
-    function set(
-        address owner,
-        address operator,
-        uint256 newValue
-    ) internal {
+    function set(address owner, address operator, uint256 newValue) internal {
         bytes32 slot = APPROVALS_PER_OWNER_SLOT;
 
         Slot storage r;

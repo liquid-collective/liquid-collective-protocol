@@ -9,11 +9,7 @@ contract RiverMock is IRiverOracleInput {
     uint256 public validatorCount;
     uint256 public validatorBalanceSum;
 
-    function setBeaconData(
-        uint256 _validatorCount,
-        uint256 _validatorBalanceSum,
-        bytes32 _roundId
-    ) external {
+    function setBeaconData(uint256 _validatorCount, uint256 _validatorBalanceSum, bytes32 _roundId) external {
         emit DebugReceivedBeaconData(_validatorCount, _validatorBalanceSum, _roundId);
         validatorCount = _validatorCount;
         validatorBalanceSum = _validatorBalanceSum;

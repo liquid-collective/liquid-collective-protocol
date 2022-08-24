@@ -1,7 +1,7 @@
 //SPDX-License-Identifier: BUSL-1.1
 pragma solidity 0.8.10;
 
-import "@openzeppelin/contracts/proxy/transparent/TransparentUpgradeableProxy.sol";
+import "openzeppelin-contracts/contracts/proxy/transparent/TransparentUpgradeableProxy.sol";
 
 /// @title TUPProxy (Transparent Upgradeable Pausable Proxy)
 /// @author Kiln
@@ -12,11 +12,10 @@ contract TUPProxy is TransparentUpgradeableProxy {
 
     error CallWhenPaused();
 
-    constructor(
-        address _logic,
-        address admin_,
-        bytes memory _data
-    ) payable TransparentUpgradeableProxy(_logic, admin_, _data) {}
+    constructor(address _logic, address admin_, bytes memory _data)
+        payable
+        TransparentUpgradeableProxy(_logic, admin_, _data)
+    {}
 
     /// @dev Retrieves Paused state
     /// @return Paused state

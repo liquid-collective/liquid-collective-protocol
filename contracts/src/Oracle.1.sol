@@ -25,10 +25,7 @@ contract OracleV1 is Initializable {
     event QuorumChanged(uint256 _newQuorum);
     event ExpectedEpochIdUpdated(uint256 _epochId);
     event BeaconReported(
-        uint256 _epochId,
-        uint128 _newBeaconBalance,
-        uint32 _newBeaconValidatorCount,
-        address _oracleMember
+        uint256 _epochId, uint128 _newBeaconBalance, uint32 _newBeaconValidatorCount, address _oracleMember
     );
     event PostTotalShares(uint256 _postTotalEth, uint256 _prevTotalEth, uint256 _timeElapsed, uint256 _totalShares);
 
@@ -36,16 +33,10 @@ contract OracleV1 is Initializable {
     error NotFrameFirstEpochId(uint256 _providedEpochId, uint256 _expectedFrameFirstEpochId);
     error AlreadyReported(uint256 _epochId, address _member);
     error BeaconBalanceIncreaseOutOfBounds(
-        uint256 _prevTotalEth,
-        uint256 _postTotalEth,
-        uint256 _timeElapsed,
-        uint256 _annualAprUpperBound
+        uint256 _prevTotalEth, uint256 _postTotalEth, uint256 _timeElapsed, uint256 _annualAprUpperBound
     );
     error BeaconBalanceDecreaseOutOfBounds(
-        uint256 _prevTotalEth,
-        uint256 _postTotalEth,
-        uint256 _timeElapsed,
-        uint256 _relativeLowerBound
+        uint256 _prevTotalEth, uint256 _postTotalEth, uint256 _timeElapsed, uint256 _relativeLowerBound
     );
 
     /// @notice Received ETH input has only 9 decimals
@@ -69,7 +60,10 @@ contract OracleV1 is Initializable {
         uint64 _genesisTime,
         uint256 _annualAprUpperBound,
         uint256 _relativeLowerBound
-    ) external init(0) {
+    )
+        external
+        init(0)
+    {
         LibOwnable._setAdmin(_administratorAddress);
         RiverAddress.set(_riverContractAddress);
         BeaconSpec.set(
@@ -139,11 +133,7 @@ contract OracleV1 is Initializable {
     function getReportVariant(uint256 _idx)
         external
         view
-        returns (
-            uint64 _beaconBalance,
-            uint32 _beaconValidators,
-            uint16 _reportCount
-        )
+        returns (uint64 _beaconBalance, uint32 _beaconValidators, uint16 _reportCount)
     {
         uint256 report = ReportsVariants.get()[_idx];
         (_beaconBalance, _beaconValidators) = _decodeReport(report);
@@ -172,15 +162,7 @@ contract OracleV1 is Initializable {
     }
 
     /// @notice Retrieve the current frame details
-    function getCurrentFrame()
-        external
-        view
-        returns (
-            uint256 _startEpochId,
-            uint256 _startTime,
-            uint256 _endTime
-        )
-    {
+    function getCurrentFrame() external view returns (uint256 _startEpochId, uint256 _startTime, uint256 _endTime) {
         BeaconSpec.BeaconSpecStruct memory beaconSpec = BeaconSpec.get();
         _startEpochId = _getFrameFirstEpochId(_getCurrentEpochId(beaconSpec), beaconSpec);
         _startTime = beaconSpec.genesisTime + _startEpochId * beaconSpec.secondsPerSlot * beaconSpec.slotsPerEpoch;
@@ -207,7 +189,7 @@ contract OracleV1 is Initializable {
     /// @param _memberAddress Address of the member
     function isMember(address _memberAddress) external view returns (bool) {
         address[] memory members = OracleMembers.get();
-        for (uint256 idx = 0; idx < members.length; ) {
+        for (uint256 idx = 0; idx < members.length;) {
             if (members[idx] == _memberAddress) {
                 return true;
             }
@@ -246,12 +228,10 @@ contract OracleV1 is Initializable {
     /// @param _slotsPerEpoch Number of slots in one epoch.
     /// @param _secondsPerSlot Number of seconds between slots.
     /// @param _genesisTime Timestamp of the genesis slot.
-    function setBeaconSpec(
-        uint64 _epochsPerFrame,
-        uint64 _slotsPerEpoch,
-        uint64 _secondsPerSlot,
-        uint64 _genesisTime
-    ) external onlyAdmin {
+    function setBeaconSpec(uint64 _epochsPerFrame, uint64 _slotsPerEpoch, uint64 _secondsPerSlot, uint64 _genesisTime)
+        external
+        onlyAdmin
+    {
         BeaconSpec.set(
             BeaconSpec.BeaconSpecStruct({
                 epochsPerFrame: _epochsPerFrame,
@@ -307,11 +287,7 @@ contract OracleV1 is Initializable {
     /// @param _epochId Epoch where the balance and validator count has been computed
     /// @param _beaconBalance Total balance of River validators
     /// @param _beaconValidators Total River validator count
-    function reportBeacon(
-        uint256 _epochId,
-        uint64 _beaconBalance,
-        uint32 _beaconValidators
-    ) external {
+    function reportBeacon(uint256 _epochId, uint64 _beaconBalance, uint32 _beaconValidators) external {
         BeaconSpec.BeaconSpecStruct memory beaconSpec = BeaconSpec.get();
         uint256 expectedEpochId = ExpectedEpochId.get();
         if (_epochId < expectedEpochId) {
@@ -374,7 +350,7 @@ contract OracleV1 is Initializable {
         uint256 repeat = 0;
         uint16 maxval = 0;
         uint16 cur = 0;
-        for (uint256 i = 0; i < variants.length; ) {
+        for (uint256 i = 0; i < variants.length;) {
             cur = _getReportCount(variants[i]);
             if (cur >= maxval) {
                 if (cur == maxval) {
@@ -449,11 +425,7 @@ contract OracleV1 is Initializable {
     /// @param _postTotalEth Total validator balance after update
     /// @param _prevTotalEth Total validator balance before update
     /// @param _timeElapsed Time since last update
-    function _sanityChecks(
-        uint256 _postTotalEth,
-        uint256 _prevTotalEth,
-        uint256 _timeElapsed
-    ) internal view {
+    function _sanityChecks(uint256 _postTotalEth, uint256 _prevTotalEth, uint256 _timeElapsed) internal view {
         if (_postTotalEth >= _prevTotalEth) {
             // increase                 = _postTotalPooledEther - _preTotalPooledEther,
             // relativeIncrease         = increase / _preTotalPooledEther,
@@ -462,15 +434,10 @@ contract OracleV1 is Initializable {
             uint256 annualAprUpperBound = BeaconReportBounds.get().annualAprUpperBound;
             // check that annualRelativeIncreaseBp <= allowedAnnualRelativeIncreaseBp
             if (
-                uint256(10000 * 365 days) * (_postTotalEth - _prevTotalEth) >
-                annualAprUpperBound * _prevTotalEth * _timeElapsed
+                uint256(10000 * 365 days) * (_postTotalEth - _prevTotalEth)
+                    > annualAprUpperBound * _prevTotalEth * _timeElapsed
             ) {
-                revert BeaconBalanceIncreaseOutOfBounds(
-                    _prevTotalEth,
-                    _postTotalEth,
-                    _timeElapsed,
-                    annualAprUpperBound
-                );
+                revert BeaconBalanceIncreaseOutOfBounds(_prevTotalEth, _postTotalEth, _timeElapsed, annualAprUpperBound);
             }
         } else {
             // decrease           = _preTotalPooledEther - _postTotalPooledEther
@@ -494,7 +461,9 @@ contract OracleV1 is Initializable {
         uint128 _balanceSum,
         uint32 _validatorCount,
         BeaconSpec.BeaconSpecStruct memory _beaconSpec
-    ) internal {
+    )
+        internal
+    {
         _clearReporting(_epochId + _beaconSpec.epochsPerFrame);
 
         IRiverOracleInput riverAddress = IRiverOracleInput(RiverAddress.get());
