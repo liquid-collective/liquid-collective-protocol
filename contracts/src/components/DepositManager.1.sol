@@ -84,7 +84,7 @@ abstract contract DepositManagerV1 {
             revert InvalidWithdrawalCredentials();
         }
 
-        for (uint256 idx = 0; idx < receivedPublicKeyCount;) {
+        for (uint256 idx = 0; idx < receivedPublicKeyCount; ) {
             _depositValidator(publicKeys[idx], signatures[idx], withdrawalCredentials);
             unchecked {
                 ++idx;
@@ -98,9 +98,11 @@ abstract contract DepositManagerV1 {
     /// @param _publicKey The public key of the validator
     /// @param _signature The signature provided by the operator
     /// @param _withdrawalCredentials The withdrawal credentials provided by River
-    function _depositValidator(bytes memory _publicKey, bytes memory _signature, bytes32 _withdrawalCredentials)
-        internal
-    {
+    function _depositValidator(
+        bytes memory _publicKey,
+        bytes memory _signature,
+        bytes32 _withdrawalCredentials
+    ) internal {
         if (_publicKey.length != PUBLIC_KEY_LENGTH) {
             revert InconsistentPublicKeys();
         }
@@ -130,7 +132,10 @@ abstract contract DepositManagerV1 {
         uint256 targetBalance = address(this).balance - value;
 
         DepositContractAddress.get().deposit{value: value}(
-            _publicKey, abi.encodePacked(_withdrawalCredentials), _signature, depositDataRoot
+            _publicKey,
+            abi.encodePacked(_withdrawalCredentials),
+            _signature,
+            depositDataRoot
         );
         require(address(this).balance == targetBalance, "EXPECTING_DEPOSIT_TO_HAPPEN");
         emit FundedValidatorKey(_publicKey);

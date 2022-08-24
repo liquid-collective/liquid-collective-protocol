@@ -122,13 +122,11 @@ abstract contract SharesManagerV1 is IERC20 {
     /// @param _from Address sending the tokens
     /// @param _to Address receiving the tokens
     /// @param _value Amount to be sent
-    function transferFrom(address _from, address _to, uint256 _value)
-        external
-        transferAllowed(_from, _to)
-        isNotZero(_value)
-        hasFunds(_from, _value)
-        returns (bool)
-    {
+    function transferFrom(
+        address _from,
+        address _to,
+        uint256 _value
+    ) external transferAllowed(_from, _to) isNotZero(_value) hasFunds(_from, _value) returns (bool) {
         if (_from != msg.sender) {
             uint256 currentAllowance = ApprovalsPerOwner.get(_from, msg.sender);
             if (currentAllowance < _value) {
@@ -158,7 +156,11 @@ abstract contract SharesManagerV1 is IERC20 {
     /// @param _from Address sending the tokens
     /// @param _to Address receiving the tokens
     /// @param _value Amount to be sent
-    function _transfer(address _from, address _to, uint256 _value) internal returns (bool) {
+    function _transfer(
+        address _from,
+        address _to,
+        uint256 _value
+    ) internal returns (bool) {
         SharesPerOwner.set(_from, SharesPerOwner.get(_from) - _value);
         SharesPerOwner.set(_to, SharesPerOwner.get(_to) + _value);
 

@@ -55,7 +55,7 @@ library ReportsVariants {
             r.slot := slot
         }
 
-        for (uint256 idx = 0; idx < r.value.length;) {
+        for (uint256 idx = 0; idx < r.value.length; ) {
             if (r.value[idx] & COUNT_OUTMASK == variant) {
                 return int256(idx);
             }

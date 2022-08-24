@@ -7,7 +7,11 @@ import "../../src/components/TransferManager.1.sol";
 import "../utils/UserFactory.sol";
 
 contract TransferManagerV1EmptyDeposit is TransferManagerV1 {
-    function _onDeposit(address, address, uint256) internal view override {
+    function _onDeposit(
+        address,
+        address,
+        uint256
+    ) internal view override {
         this;
     }
 }
@@ -47,9 +51,11 @@ contract TransferManagerV1DepositTests {
         assert(transferManager.getPendingEth() == _amount);
     }
 
-    function testDepositToAnotherUserWithDedicatedMethod(uint256 _userSalt, uint256 _anotherUserSalt, uint256 _amount)
-        public
-    {
+    function testDepositToAnotherUserWithDedicatedMethod(
+        uint256 _userSalt,
+        uint256 _anotherUserSalt,
+        uint256 _amount
+    ) public {
         address _user = uf._new(_userSalt);
         address _anotherUser = uf._new(_anotherUserSalt);
         vm.deal(_user, _amount);
@@ -87,7 +93,7 @@ contract TransferManagerV1DepositTests {
         } else {
             vm.expectRevert(abi.encodeWithSignature("EmptyDeposit()"));
         }
-        (bool success,) = address(transferManager).call{value: _amount}("");
+        (bool success, ) = address(transferManager).call{value: _amount}("");
         assert(success == true);
 
         assert(_user.balance == 0);
@@ -109,7 +115,11 @@ contract TransferManagerV1DepositTests {
 contract TransferManagerV1CatchableDeposit is TransferManagerV1 {
     event InternalCallbackCalled(address depositor, address recipient, uint256 amount);
 
-    function _onDeposit(address depositor, address recipient, uint256 amount) internal override {
+    function _onDeposit(
+        address depositor,
+        address recipient,
+        uint256 amount
+    ) internal override {
         emit InternalCallbackCalled(depositor, recipient, amount);
     }
 }
@@ -143,9 +153,11 @@ contract TransferManagerV1CallbackTests {
         assert(_user.balance == 0);
     }
 
-    function testDepositToAnotherUserInternalCallback(uint256 _userSalt, uint256 _anotherUserSalt, uint256 _amount)
-        public
-    {
+    function testDepositToAnotherUserInternalCallback(
+        uint256 _userSalt,
+        uint256 _anotherUserSalt,
+        uint256 _amount
+    ) public {
         address _user = uf._new(_userSalt);
         address _anotherUser = uf._new(_anotherUserSalt);
         vm.deal(_user, _amount);

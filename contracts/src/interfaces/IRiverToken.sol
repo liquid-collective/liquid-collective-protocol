@@ -8,7 +8,11 @@ interface IRiverToken {
 
     function sharesFromUnderlyingBalance(uint256 underlyingBalance) external view returns (uint256);
 
-    function transferFrom(address _from, address _to, uint256 _value) external returns (bool);
+    function transferFrom(
+        address _from,
+        address _to,
+        uint256 _value
+    ) external returns (bool);
 
     function transfer(address _to, uint256 _value) external returns (bool);
 

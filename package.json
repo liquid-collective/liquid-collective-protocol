@@ -4,6 +4,7 @@
   "scripts": {
     "test": "forge test -vvv --gas-report",
     "test:force": "forge test --force -vvv --gas-report",
+    "format": "prettier --write ./contracts && prettier --write ./deploy",
     "format:check": "prettier --check ./contracts",
     "lint:check": "hardhat check",
     "compile": "hardhat compile",

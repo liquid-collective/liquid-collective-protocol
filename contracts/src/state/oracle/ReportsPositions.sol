@@ -17,9 +17,11 @@ library ReportsPositions {
 
     function register(uint256 idx) internal {
         uint256 mask = 1 << idx;
-        return UnstructuredStorage.setStorageUint256(
-            REPORTS_POSITIONS_SLOT, UnstructuredStorage.getStorageUint256(REPORTS_POSITIONS_SLOT) | mask
-        );
+        return
+            UnstructuredStorage.setStorageUint256(
+                REPORTS_POSITIONS_SLOT,
+                UnstructuredStorage.getStorageUint256(REPORTS_POSITIONS_SLOT) | mask
+            );
     }
 
     function clear() internal {

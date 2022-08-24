@@ -24,17 +24,19 @@ contract DepositContractMock is IDepositContract {
         ret[7] = bytesValue[0];
     }
 
-    function deposit(bytes calldata pubkey, bytes calldata withdrawalCredentials, bytes calldata signature, bytes32)
-        external
-        payable
-    {
+    function deposit(
+        bytes calldata pubkey,
+        bytes calldata withdrawalCredentials,
+        bytes calldata signature,
+        bytes32
+    ) external payable {
         emit DepositEvent(
             pubkey,
             withdrawalCredentials,
             to_little_endian_64(uint64(msg.value / 1 gwei)),
             signature,
             to_little_endian_64(uint64(counter))
-            );
+        );
         counter += 1;
     }
 }

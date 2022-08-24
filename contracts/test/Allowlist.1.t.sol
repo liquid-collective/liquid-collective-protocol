@@ -79,9 +79,11 @@ contract AllowlistV1Tests {
         allowlist.allow(allowees, statuses);
     }
 
-    function testSetAllowlistStatusMultipleSame(uint256 userOneSalt, uint256 userTwoSalt, uint256 userThreeSalt)
-        public
-    {
+    function testSetAllowlistStatusMultipleSame(
+        uint256 userOneSalt,
+        uint256 userTwoSalt,
+        uint256 userThreeSalt
+    ) public {
         address userOne = uf._new(userOneSalt);
         address userTwo = uf._new(userTwoSalt);
         address userThree = uf._new(userThreeSalt);
@@ -99,9 +101,11 @@ contract AllowlistV1Tests {
         assert(allowlist.isAllowed(userThree, TEST_ONE_MASK) == true);
     }
 
-    function testSetAllowlistStatusMultipleDifferent(uint256 userOneSalt, uint256 userTwoSalt, uint256 userThreeSalt)
-        public
-    {
+    function testSetAllowlistStatusMultipleDifferent(
+        uint256 userOneSalt,
+        uint256 userTwoSalt,
+        uint256 userThreeSalt
+    ) public {
         address userOne = uf._new(userOneSalt);
         address userTwo = uf._new(userTwoSalt);
         address userThree = uf._new(userThreeSalt);
@@ -123,9 +127,11 @@ contract AllowlistV1Tests {
         assert(allowlist.isAllowed(userThree, TEST_ONE_MASK) == false);
     }
 
-    function testSetAllowlistRevertForMismatch(uint256 userOneSalt, uint256 userTwoSalt, uint256 userThreeSalt)
-        public
-    {
+    function testSetAllowlistRevertForMismatch(
+        uint256 userOneSalt,
+        uint256 userTwoSalt,
+        uint256 userThreeSalt
+    ) public {
         address userOne = uf._new(userOneSalt);
         address userTwo = uf._new(userTwoSalt);
         address userThree = uf._new(userThreeSalt);
@@ -202,8 +208,10 @@ contract AllowlistV1Tests {
         {
             address[] memory allowees = new address[](1);
             allowees[0] = user;
-            uint256[] memory statuses =
-                AllowlistHelper.batchAllowees(allowees.length, TEST_ONE_MASK + TEST_TWO_MASK + DENIED_MASK);
+            uint256[] memory statuses = AllowlistHelper.batchAllowees(
+                allowees.length,
+                TEST_ONE_MASK + TEST_TWO_MASK + DENIED_MASK
+            );
             allowlist.allow(allowees, statuses);
             assert(allowlist.isAllowed(user, TEST_ONE_MASK) == false);
             assert(allowlist.hasPermission(user, TEST_ONE_MASK) == true);

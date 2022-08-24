@@ -16,7 +16,12 @@ interface Vm {
 
     function expectRevert(bytes calldata) external;
 
-    function expectEmit(bool, bool, bool, bool) external;
+    function expectEmit(
+        bool,
+        bool,
+        bool,
+        bool
+    ) external;
 
     function ffi(string[] calldata) external returns (bytes memory);
 }

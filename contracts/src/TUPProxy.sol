@@ -12,10 +12,11 @@ contract TUPProxy is TransparentUpgradeableProxy {
 
     error CallWhenPaused();
 
-    constructor(address _logic, address admin_, bytes memory _data)
-        payable
-        TransparentUpgradeableProxy(_logic, admin_, _data)
-    {}
+    constructor(
+        address _logic,
+        address admin_,
+        bytes memory _data
+    ) payable TransparentUpgradeableProxy(_logic, admin_, _data) {}
 
     /// @dev Retrieves Paused state
     /// @return Paused state

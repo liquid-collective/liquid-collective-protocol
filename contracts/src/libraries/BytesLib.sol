@@ -68,10 +68,14 @@ library BytesLib {
             // length of the arrays.
             end := add(mc, length)
 
-            for { let cc := add(_postBytes, 0x20) } lt(mc, end) {
+            for {
+                let cc := add(_postBytes, 0x20)
+            } lt(mc, end) {
                 mc := add(mc, 0x20)
                 cc := add(cc, 0x20)
-            } { mstore(mc, mload(cc)) }
+            } {
+                mstore(mc, mload(cc))
+            }
 
             // Update the free-memory pointer by padding our last write location
             // to 32 bytes: add 31 bytes to the end of tempBytes to move to the
@@ -90,7 +94,11 @@ library BytesLib {
         return tempBytes;
     }
 
-    function slice(bytes memory _bytes, uint256 _start, uint256 _length) internal pure returns (bytes memory) {
+    function slice(
+        bytes memory _bytes,
+        uint256 _start,
+        uint256 _length
+    ) internal pure returns (bytes memory) {
         require(_length + 31 >= _length, "slice_overflow");
         require(_bytes.length >= _start + _length, "slice_outOfBounds");
 
@@ -127,7 +135,9 @@ library BytesLib {
                 } lt(mc, end) {
                     mc := add(mc, 0x20)
                     cc := add(cc, 0x20)
-                } { mstore(mc, mload(cc)) }
+                } {
+                    mstore(mc, mload(cc))
+                }
 
                 mstore(tempBytes, _length)
 

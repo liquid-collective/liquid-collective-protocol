@@ -44,7 +44,11 @@ abstract contract OracleManagerV1 {
     /// @param _validatorCount The number of active validators on the consensus layer
     /// @param _validatorBalanceSum The validator balance sum of the active validators on the consensus layer
     /// @param _roundId An identifier for this update
-    function setBeaconData(uint256 _validatorCount, uint256 _validatorBalanceSum, bytes32 _roundId) external {
+    function setBeaconData(
+        uint256 _validatorCount,
+        uint256 _validatorBalanceSum,
+        bytes32 _roundId
+    ) external {
         if (msg.sender != OracleAddress.get()) {
             revert Errors.Unauthorized(msg.sender);
         }
