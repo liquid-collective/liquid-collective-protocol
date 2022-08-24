@@ -74,11 +74,7 @@ library Operators {
         return opm.value[name].active;
     }
 
-    function _setOperatorIndex(
-        string memory name,
-        bool active,
-        uint256 index
-    ) internal {
+    function _setOperatorIndex(string memory name, bool active, uint256 index) internal {
         bytes32 slot = OPERATORS_MAPPING_SLOT;
 
         SlotOperatorMapping storage opm;
@@ -151,9 +147,10 @@ library Operators {
     }
 
     function _hasFundableKeys(Operators.Operator memory operator) internal pure returns (bool) {
-        return (operator.active &&
-            operator.keys > operator.funded - operator.stopped &&
-            operator.limit > operator.funded - operator.stopped);
+        return (
+            operator.active && operator.keys > operator.funded - operator.stopped
+                && operator.limit > operator.funded - operator.stopped
+        );
     }
 
     function getAllActive() internal view returns (Operator[] memory) {
@@ -167,7 +164,7 @@ library Operators {
 
         uint256 activeCount = 0;
 
-        for (uint256 idx = 0; idx < r.value.length; ) {
+        for (uint256 idx = 0; idx < r.value.length;) {
             if (r.value[idx].active) {
                 unchecked {
                     ++activeCount;
@@ -181,7 +178,7 @@ library Operators {
         Operator[] memory activeOperators = new Operator[](activeCount);
 
         uint256 activeIdx = 0;
-        for (uint256 idx = 0; idx < r.value.length; ) {
+        for (uint256 idx = 0; idx < r.value.length;) {
             if (r.value[idx].active) {
                 activeOperators[activeIdx] = r.value[idx];
                 unchecked {
@@ -207,7 +204,7 @@ library Operators {
 
         uint256 activeCount = 0;
 
-        for (uint256 idx = 0; idx < r.value.length; ) {
+        for (uint256 idx = 0; idx < r.value.length;) {
             if (_hasFundableKeys(r.value[idx])) {
                 unchecked {
                     ++activeCount;
@@ -221,7 +218,7 @@ library Operators {
         CachedOperator[] memory activeOperators = new CachedOperator[](activeCount);
 
         uint256 activeIdx = 0;
-        for (uint256 idx = 0; idx < r.value.length; ) {
+        for (uint256 idx = 0; idx < r.value.length;) {
             Operator memory op = r.value[idx];
             if (_hasFundableKeys(op)) {
                 activeOperators[activeIdx] = CachedOperator({

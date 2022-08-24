@@ -63,19 +63,13 @@ contract OracleManagerV1Tests {
         assert(OracleManagerV1ExposeInitializer(address(oracleManager)).lastReceived() == val2);
     }
 
-    function testSetBeaconDataWithELFeesPulling(
-        uint64 val2,
-        uint64 val3,
-        bytes32 roundId
-    ) public {
+    function testSetBeaconDataWithELFeesPulling(uint64 val2, uint64 val3, bytes32 roundId) public {
         vm.startPrank(oracle);
         OracleManagerV1ExposeInitializer(address(oracleManager)).supersedeBalanceSum(32 ether);
         OracleManagerV1ExposeInitializer(address(oracleManager)).supersedeAllValidatorCount(1);
         OracleManagerV1ExposeInitializer(address(oracleManager)).supersedeExtraAmount(val3);
         oracleManager.setBeaconData(1, val2 + 32 ether, roundId);
-        assert(
-            OracleManagerV1ExposeInitializer(address(oracleManager)).lastReceived() == uint256(val2) + uint256(val3)
-        );
+        assert(OracleManagerV1ExposeInitializer(address(oracleManager)).lastReceived() == uint256(val2) + uint256(val3));
     }
 
     function testSetBeaconDataWithValidatorCountDelta(uint64 val2, bytes32 roundId) public {
@@ -87,11 +81,7 @@ contract OracleManagerV1Tests {
         assert(OracleManagerV1ExposeInitializer(address(oracleManager)).lastReceived() == val2);
     }
 
-    function testSetBeaconDataUnauthorized(
-        uint256 userSalt,
-        uint64 val1,
-        bytes32 roundId
-    ) public {
+    function testSetBeaconDataUnauthorized(uint256 userSalt, uint64 val1, bytes32 roundId) public {
         address user = uf._new(userSalt);
         vm.startPrank(user);
         OracleManagerV1ExposeInitializer(address(oracleManager)).supersedeAllValidatorCount(1);

@@ -65,7 +65,7 @@ contract AllowlistV1 is Initializable {
             revert MismatchedAlloweeAndStatusCount();
         }
 
-        for (uint256 i = 0; i < _accounts.length; ) {
+        for (uint256 i = 0; i < _accounts.length;) {
             Allowlist.set(_accounts[i], _statuses[i]);
             unchecked {
                 ++i;

@@ -53,8 +53,7 @@ contract DepositManagerV1Tests {
 
         depositManager = new DepositManagerV1ExposeInitializer();
         DepositManagerV1ExposeInitializer(address(depositManager)).publicDepositManagerInitializeV1(
-            address(depositContract),
-            withdrawalCredentials
+            address(depositContract), withdrawalCredentials
         );
     }
 
@@ -74,7 +73,7 @@ contract DepositManagerV1Tests {
         vm.expectEmit(true, true, true, true);
         emit FundedValidatorKey(
             hex"4681ddeb7bad423182704048f3fb9fe82bded37429b0643af12c730b0f0851815a6ef1a563fdcef7c05512b33278218c"
-        );
+            );
         depositManager.depositToConsensusLayer(10);
         assert(address(depositManager).balance == 0);
     }
@@ -85,7 +84,7 @@ contract DepositManagerV1Tests {
         vm.expectEmit(true, true, true, true);
         emit FundedValidatorKey(
             hex"4681ddeb7bad423182704048f3fb9fe82bded37429b0643af12c730b0f0851815a6ef1a563fdcef7c05512b33278218c"
-        );
+            );
         depositManager.depositToConsensusLayer(20);
         assert(address(depositManager).balance == 320 ether);
     }
@@ -184,8 +183,7 @@ contract DepositManagerV1ErrorTests {
 
         depositManager = new DepositManagerV1ControllableValidatorKeyRequest();
         DepositManagerV1ControllableValidatorKeyRequest(address(depositManager)).publicDepositManagerInitializeV1(
-            address(depositContract),
-            withdrawalCredentials
+            address(depositContract), withdrawalCredentials
         );
     }
 

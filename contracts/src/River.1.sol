@@ -39,7 +39,7 @@ contract RiverV1 is
     uint256 internal constant TRANSFER_MASK = 0;
     /// @notice Prevents unauthorized calls
 
-    modifier onlyAdmin() override(OperatorsManagerV1, OracleManagerV1) {
+    modifier onlyAdmin() override (OperatorsManagerV1, OracleManagerV1) {
         if (msg.sender != LibOwnable._getAdmin()) {
             revert Errors.Unauthorized(msg.sender);
         }
@@ -65,7 +65,10 @@ contract RiverV1 is
         address _treasuryAddress,
         uint256 _globalFee,
         uint256 _operatorRewardsShare
-    ) external init(0) {
+    )
+        external
+        init(0)
+    {
         if (_systemAdministratorAddress == address(0)) {
             // only check on initialization
             revert Errors.InvalidZeroAddress();
@@ -177,11 +180,7 @@ contract RiverV1 is
     /// @notice Handler called whenever a user deposits ETH to the system. Mints the adequate amount of shares.
     /// @param _depositor User address that made the deposit
     /// @param _amount Amount of ETH deposited
-    function _onDeposit(
-        address _depositor,
-        address _recipient,
-        uint256 _amount
-    ) internal override {
+    function _onDeposit(address _depositor, address _recipient, uint256 _amount) internal override {
         uint256 mintedShares = SharesManagerV1._mintShares(_depositor, _amount);
         if (_depositor == _recipient) {
             (AllowlistAddress.get()).onlyAllowed(_depositor, DEPOSIT_MASK); // this call reverts if unauthorized or denied
@@ -209,7 +208,7 @@ contract RiverV1 is
         uint256[] memory validatorCounts = new uint256[](operators.length);
 
         uint256 totalActiveValidators = 0;
-        for (uint256 idx = 0; idx < operators.length; ) {
+        for (uint256 idx = 0; idx < operators.length;) {
             uint256 operatorActiveValidatorCount = operators[idx].funded - operators[idx].stopped;
             totalActiveValidators += operatorActiveValidatorCount;
             validatorCounts[idx] = operatorActiveValidatorCount;
@@ -221,7 +220,7 @@ contract RiverV1 is
         if (totalActiveValidators > 0) {
             uint256 rewardsPerActiveValidator = _reward / totalActiveValidators;
 
-            for (uint256 idx = 0; idx < validatorCounts.length; ) {
+            for (uint256 idx = 0; idx < validatorCounts.length;) {
                 _mintRawShares(operators[idx].feeRecipient, validatorCounts[idx] * rewardsPerActiveValidator);
                 unchecked {
                     ++idx;
@@ -271,11 +270,8 @@ contract RiverV1 is
         uint256 beaconValidatorCount = BeaconValidatorCount.get();
         uint256 depositedValidatorCount = DepositedValidatorCount.get();
         if (beaconValidatorCount < depositedValidatorCount) {
-            return
-                BeaconValidatorBalanceSum.get() +
-                address(this).balance +
-                (depositedValidatorCount - beaconValidatorCount) *
-                DepositManagerV1.DEPOSIT_SIZE;
+            return BeaconValidatorBalanceSum.get() + address(this).balance
+                + (depositedValidatorCount - beaconValidatorCount) * DepositManagerV1.DEPOSIT_SIZE;
         } else {
             return BeaconValidatorBalanceSum.get() + address(this).balance;
         }

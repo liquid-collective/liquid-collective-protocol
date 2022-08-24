@@ -47,11 +47,7 @@ contract RiverTokenMock is IRiverToken {
         return (underlyingBalance * _totalSupply) / underlyingAssetTotal;
     }
 
-    function transferFrom(
-        address _from,
-        address _to,
-        uint256 _value
-    ) external returns (bool) {
+    function transferFrom(address _from, address _to, uint256 _value) external returns (bool) {
         require(_from == msg.sender || approvals[_from][msg.sender] >= _value, "unauthorized");
         balances[_from] -= _value;
         balances[_to] += _value;
@@ -325,11 +321,7 @@ contract WLSETHV1Tests {
         vm.stopPrank();
     }
 
-    function testTransfer(
-        uint256 _guySalt,
-        uint256 _recipientSalt,
-        uint32 _sum
-    ) external {
+    function testTransfer(uint256 _guySalt, uint256 _recipientSalt, uint32 _sum) external {
         address _guy = uf._new(_guySalt);
         address _recipient = uf._new(_recipientSalt);
         if (_sum > 0) {
@@ -353,11 +345,7 @@ contract WLSETHV1Tests {
         }
     }
 
-    function testTransferTooMuch(
-        uint256 _guySalt,
-        uint256 _recipientSalt,
-        uint32 _sum
-    ) external {
+    function testTransferTooMuch(uint256 _guySalt, uint256 _recipientSalt, uint32 _sum) external {
         address _guy = uf._new(_guySalt);
         address _recipient = uf._new(_recipientSalt);
         if (_sum > 0) {
@@ -369,12 +357,7 @@ contract WLSETHV1Tests {
         }
     }
 
-    function testTransferFrom(
-        uint256 _fromSalt,
-        uint256 _approvedSalt,
-        uint256 _recipientSalt,
-        uint32 _sum
-    ) external {
+    function testTransferFrom(uint256 _fromSalt, uint256 _approvedSalt, uint256 _recipientSalt, uint32 _sum) external {
         address _from = uf._new(_fromSalt);
         address _approved = uf._new(_approvedSalt);
         address _recipient = uf._new(_recipientSalt);
@@ -404,12 +387,9 @@ contract WLSETHV1Tests {
         }
     }
 
-    function testTransferFromTooMuch(
-        uint256 _fromSalt,
-        uint256 _approvedSalt,
-        uint256 _recipientSalt,
-        uint32 _sum
-    ) external {
+    function testTransferFromTooMuch(uint256 _fromSalt, uint256 _approvedSalt, uint256 _recipientSalt, uint32 _sum)
+        external
+    {
         address _from = uf._new(_fromSalt);
         address _approved = uf._new(_approvedSalt);
         address _recipient = uf._new(_recipientSalt);
@@ -434,7 +414,9 @@ contract WLSETHV1Tests {
         uint256 _approvedSalt,
         uint256 _recipientSalt,
         uint32 _sum
-    ) external {
+    )
+        external
+    {
         address _from = uf._new(_fromSalt);
         address _approved = uf._new(_approvedSalt);
         address _recipient = uf._new(_recipientSalt);
@@ -449,13 +431,7 @@ contract WLSETHV1Tests {
             assert(recipientBalance == 0);
             vm.startPrank(_approved);
             vm.expectRevert(
-                abi.encodeWithSignature(
-                    "AllowanceTooLow(address,address,uint256,uint256)",
-                    _from,
-                    _approved,
-                    100 ether - 1,
-                    100 ether
-                )
+                abi.encodeWithSignature("AllowanceTooLow(address,address,uint256,uint256)", _from, _approved, 100 ether - 1, 100 ether)
             );
             wlseth.transferFrom(_from, _recipient, 100 ether);
             vm.stopPrank();

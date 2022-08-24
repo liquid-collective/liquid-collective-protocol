@@ -94,11 +94,12 @@ contract WLSETHV1 is Initializable, ReentrancyGuard {
     /// @param _from Sender account
     /// @param _to Recipient of the transfer
     /// @param _value Amount to transfer
-    function transferFrom(
-        address _from,
-        address _to,
-        uint256 _value
-    ) external isNotNull(_value) hasFunds(_from, _value) returns (bool) {
+    function transferFrom(address _from, address _to, uint256 _value)
+        external
+        isNotNull(_value)
+        hasFunds(_from, _value)
+        returns (bool)
+    {
         if (_from != msg.sender) {
             uint256 currentAllowance = ApprovalsPerOwner.get(_from, msg.sender);
             if (currentAllowance < _value) {
@@ -137,9 +138,8 @@ contract WLSETHV1 is Initializable, ReentrancyGuard {
     /// @param _recipient Spender that receives the allowance
     /// @param _value Amount of wrapped token to give to the burn
     function burn(address _recipient, uint256 _value) external nonReentrant {
-        uint256 callerUnderlyingBalance = IRiverToken(RiverAddress.get()).underlyingBalanceFromShares(
-            BalanceOf.get(msg.sender)
-        );
+        uint256 callerUnderlyingBalance =
+            IRiverToken(RiverAddress.get()).underlyingBalanceFromShares(BalanceOf.get(msg.sender));
         if (_value > callerUnderlyingBalance) {
             revert BalanceTooLow();
         }
@@ -154,11 +154,7 @@ contract WLSETHV1 is Initializable, ReentrancyGuard {
         return IRiverToken(RiverAddress.get()).underlyingBalanceFromShares(BalanceOf.get(_owner));
     }
 
-    function _transfer(
-        address _from,
-        address _to,
-        uint256 _value
-    ) internal returns (bool) {
+    function _transfer(address _from, address _to, uint256 _value) internal returns (bool) {
         uint256 valueToShares = IRiverToken(RiverAddress.get()).sharesFromUnderlyingBalance(_value);
         BalanceOf.set(_from, BalanceOf.get(_from) - valueToShares);
         BalanceOf.set(_to, BalanceOf.get(_to) + valueToShares);

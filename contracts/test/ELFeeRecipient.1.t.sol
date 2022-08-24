@@ -69,7 +69,7 @@ contract ELFeeRecipientV1Test {
         vm.deal(sender, _amount);
 
         vm.startPrank(sender);
-        (bool ok, ) = payable(address(feeRecipient)).call{value: _amount}("");
+        (bool ok,) = payable(address(feeRecipient)).call{value: _amount}("");
         assert(ok == true);
         vm.stopPrank();
 
