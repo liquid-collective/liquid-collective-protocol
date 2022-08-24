@@ -82,11 +82,11 @@ contract RiverV1SetupOneTests {
         river.addOperator(operatorOneName, operatorOne, operatorOneFeeRecipient);
         river.addOperator(operatorTwoName, operatorTwo, operatorTwoFeeRecipient);
 
-        (int256 _operatorOneIndex, ) = river.getOperatorDetails(operatorOneName);
+        (int256 _operatorOneIndex,) = river.getOperatorDetails(operatorOneName);
         assert(_operatorOneIndex >= 0);
         uint256 operatorOneIndex = uint256(_operatorOneIndex);
 
-        (int256 _operatorTwoIndex, ) = river.getOperatorDetails(operatorTwoName);
+        (int256 _operatorTwoIndex,) = river.getOperatorDetails(operatorTwoName);
         assert(_operatorTwoIndex >= 0);
         uint256 operatorTwoIndex = uint256(_operatorTwoIndex);
 
@@ -117,15 +117,7 @@ contract RiverV1SetupOneTests {
         river = new RiverV1();
         vm.expectRevert(abi.encodeWithSignature("InvalidZeroAddress()"));
         river.initRiverV1(
-            address(0),
-            address(0),
-            withdrawalCredentials,
-            address(0),
-            address(0),
-            address(0),
-            address(0),
-            5000,
-            50000
+            address(0), address(0), withdrawalCredentials, address(0), address(0), address(0), address(0), 5000, 50000
         );
     }
 
@@ -314,7 +306,7 @@ contract RiverV1SetupOneTests {
         assert(river.balanceOfUnderlying(bob) == 1000 ether);
 
         vm.startPrank(oracleMember);
-        (uint256 epoch, , ) = oracle.getCurrentFrame();
+        (uint256 epoch,,) = oracle.getCurrentFrame();
         oracle.reportBeacon(epoch, 33 * 1e9 * 34, 34);
         vm.stopPrank();
 
@@ -336,12 +328,9 @@ contract RiverV1SetupOneTests {
         assert(river.balanceOfUnderlying(treasury) == 850000000000000000);
 
         assert(
-            river.totalSupply() ==
-                river.balanceOf(joe) +
-                    river.balanceOf(bob) +
-                    river.balanceOf(operatorOneFeeRecipient) +
-                    river.balanceOf(operatorTwoFeeRecipient) +
-                    river.balanceOf(treasury)
+            river.totalSupply()
+                == river.balanceOf(joe) + river.balanceOf(bob) + river.balanceOf(operatorOneFeeRecipient)
+                    + river.balanceOf(operatorTwoFeeRecipient) + river.balanceOf(treasury)
         );
     }
 
@@ -379,7 +368,7 @@ contract RiverV1SetupOneTests {
         assert(river.balanceOfUnderlying(bob) == 1000 ether);
 
         vm.startPrank(oracleMember);
-        (uint256 epoch, , ) = oracle.getCurrentFrame();
+        (uint256 epoch,,) = oracle.getCurrentFrame();
         oracle.reportBeacon(epoch, 31 * 1e9 * 34, 34);
         vm.stopPrank();
 
@@ -391,12 +380,9 @@ contract RiverV1SetupOneTests {
         assert(river.balanceOfUnderlying(treasury) == 0);
 
         assert(
-            river.totalSupply() ==
-                river.balanceOf(joe) +
-                    river.balanceOf(bob) +
-                    river.balanceOf(operatorOneFeeRecipient) +
-                    river.balanceOf(operatorTwoFeeRecipient) +
-                    river.balanceOf(treasury)
+            river.totalSupply()
+                == river.balanceOf(joe) + river.balanceOf(bob) + river.balanceOf(operatorOneFeeRecipient)
+                    + river.balanceOf(operatorTwoFeeRecipient) + river.balanceOf(treasury)
         );
     }
 
@@ -436,7 +422,7 @@ contract RiverV1SetupOneTests {
         vm.deal(address(elFeeRecipient), 34 * 1 ether);
 
         vm.startPrank(oracleMember);
-        (uint256 epoch, , ) = oracle.getCurrentFrame();
+        (uint256 epoch,,) = oracle.getCurrentFrame();
         vm.expectEmit(true, true, true, true);
         emit PulledELFees(34 * 1 ether);
         oracle.reportBeacon(epoch, 31 * 1e9 * 34, 34);
@@ -452,12 +438,9 @@ contract RiverV1SetupOneTests {
         assert(river.balanceOfUnderlying(treasury) == 0);
 
         assert(
-            river.totalSupply() ==
-                river.balanceOf(joe) +
-                    river.balanceOf(bob) +
-                    river.balanceOf(operatorOneFeeRecipient) +
-                    river.balanceOf(operatorTwoFeeRecipient) +
-                    river.balanceOf(treasury)
+            river.totalSupply()
+                == river.balanceOf(joe) + river.balanceOf(bob) + river.balanceOf(operatorOneFeeRecipient)
+                    + river.balanceOf(operatorTwoFeeRecipient) + river.balanceOf(treasury)
         );
     }
 
@@ -497,7 +480,7 @@ contract RiverV1SetupOneTests {
         vm.deal(address(elFeeRecipient), 100 ether);
 
         vm.startPrank(oracleMember);
-        (uint256 epoch, , ) = oracle.getCurrentFrame();
+        (uint256 epoch,,) = oracle.getCurrentFrame();
         oracle.reportBeacon(epoch, 33 * 1e9 * 34, 34);
         vm.stopPrank();
 
@@ -521,12 +504,9 @@ contract RiverV1SetupOneTests {
         assert(river.balanceOfUnderlying(treasury) == 3349999999999999999);
 
         assert(
-            river.totalSupply() ==
-                river.balanceOf(joe) +
-                    river.balanceOf(bob) +
-                    river.balanceOf(operatorOneFeeRecipient) +
-                    river.balanceOf(operatorTwoFeeRecipient) +
-                    river.balanceOf(treasury)
+            river.totalSupply()
+                == river.balanceOf(joe) + river.balanceOf(bob) + river.balanceOf(operatorOneFeeRecipient)
+                    + river.balanceOf(operatorTwoFeeRecipient) + river.balanceOf(treasury)
         );
     }
 
@@ -571,7 +551,7 @@ contract RiverV1SetupOneTests {
         vm.stopPrank();
 
         vm.startPrank(oracleMember);
-        (uint256 epoch, , ) = oracle.getCurrentFrame();
+        (uint256 epoch,,) = oracle.getCurrentFrame();
         oracle.reportBeacon(epoch, 33 * 1e9 * 34, 34);
         vm.stopPrank();
 
@@ -595,12 +575,9 @@ contract RiverV1SetupOneTests {
         assert(river.balanceOfUnderlying(treasury) == 850000000000000000);
 
         assert(
-            river.totalSupply() ==
-                river.balanceOf(joe) +
-                    river.balanceOf(bob) +
-                    river.balanceOf(operatorOneFeeRecipient) +
-                    river.balanceOf(operatorTwoFeeRecipient) +
-                    river.balanceOf(treasury)
+            river.totalSupply()
+                == river.balanceOf(joe) + river.balanceOf(bob) + river.balanceOf(operatorOneFeeRecipient)
+                    + river.balanceOf(operatorTwoFeeRecipient) + river.balanceOf(treasury)
         );
     }
 
@@ -639,7 +616,7 @@ contract RiverV1SetupOneTests {
         assert(river.balanceOfUnderlying(bob) == 1000 ether);
 
         vm.startPrank(oracleMember);
-        (uint256 epoch, , ) = oracle.getCurrentFrame();
+        (uint256 epoch,,) = oracle.getCurrentFrame();
         oracle.reportBeacon(epoch, 33 * 1e9 * 34, 34);
         vm.stopPrank();
 
@@ -666,12 +643,9 @@ contract RiverV1SetupOneTests {
         vm.stopPrank();
 
         assert(
-            river.totalSupply() ==
-                river.balanceOf(joe) +
-                    river.balanceOf(bob) +
-                    river.balanceOf(operatorOneFeeRecipient) +
-                    river.balanceOf(operatorTwoFeeRecipient) +
-                    river.balanceOf(treasury)
+            river.totalSupply()
+                == river.balanceOf(joe) + river.balanceOf(bob) + river.balanceOf(operatorOneFeeRecipient)
+                    + river.balanceOf(operatorTwoFeeRecipient) + river.balanceOf(treasury)
         );
     }
 
@@ -722,7 +696,7 @@ contract RiverV1SetupOneTests {
         assert(river.balanceOfUnderlying(bob) == 1000 ether);
 
         vm.startPrank(oracleMember);
-        (uint256 epoch, , ) = oracle.getCurrentFrame();
+        (uint256 epoch,,) = oracle.getCurrentFrame();
         oracle.reportBeacon(epoch, 33 * 1e9 * 34, 34);
         vm.stopPrank();
 
@@ -775,7 +749,7 @@ contract RiverV1SetupOneTests {
         assert(river.balanceOfUnderlying(bob) == 1000 ether);
 
         vm.startPrank(oracleMember);
-        (uint256 epoch, , ) = oracle.getCurrentFrame();
+        (uint256 epoch,,) = oracle.getCurrentFrame();
         oracle.reportBeacon(epoch, 33 * 1e9 * 34, 34);
         vm.stopPrank();
 
@@ -797,12 +771,9 @@ contract RiverV1SetupOneTests {
         assert(river.balanceOfUnderlying(treasury) == 850000000000000000);
 
         assert(
-            river.totalSupply() ==
-                river.balanceOf(joe) +
-                    river.balanceOf(bob) +
-                    river.balanceOf(operatorOneFeeRecipient) +
-                    river.balanceOf(operatorTwoFeeRecipient) +
-                    river.balanceOf(treasury)
+            river.totalSupply()
+                == river.balanceOf(joe) + river.balanceOf(bob) + river.balanceOf(operatorOneFeeRecipient)
+                    + river.balanceOf(operatorTwoFeeRecipient) + river.balanceOf(treasury)
         );
     }
 
@@ -845,7 +816,7 @@ contract RiverV1SetupOneTests {
         assert(river.balanceOfUnderlying(bob) == 1000 ether);
 
         vm.startPrank(oracleMember);
-        (uint256 epoch, , ) = oracle.getCurrentFrame();
+        (uint256 epoch,,) = oracle.getCurrentFrame();
         oracle.reportBeacon(epoch, 33 * 1e9 * 34, 34);
         vm.stopPrank();
 
@@ -867,12 +838,9 @@ contract RiverV1SetupOneTests {
         assert(river.balanceOfUnderlying(treasury) == 1700000000000000000);
 
         assert(
-            river.totalSupply() ==
-                river.balanceOf(joe) +
-                    river.balanceOf(bob) +
-                    river.balanceOf(operatorOneFeeRecipient) +
-                    river.balanceOf(operatorTwoFeeRecipient) +
-                    river.balanceOf(treasury)
+            river.totalSupply()
+                == river.balanceOf(joe) + river.balanceOf(bob) + river.balanceOf(operatorOneFeeRecipient)
+                    + river.balanceOf(operatorTwoFeeRecipient) + river.balanceOf(treasury)
         );
     }
 
@@ -913,7 +881,7 @@ contract RiverV1SetupOneTests {
         assert(river.balanceOfUnderlying(bob) == 1000 ether);
 
         vm.startPrank(oracleMember);
-        (uint256 epoch, , ) = oracle.getCurrentFrame();
+        (uint256 epoch,,) = oracle.getCurrentFrame();
         oracle.reportBeacon(epoch, 33 * 1e9 * 34, 34);
         vm.stopPrank();
 
@@ -935,12 +903,9 @@ contract RiverV1SetupOneTests {
         assert(river.balanceOfUnderlying(treasury) == 850000000000000000);
 
         assert(
-            river.totalSupply() ==
-                river.balanceOf(joe) +
-                    river.balanceOf(bob) +
-                    river.balanceOf(operatorOneFeeRecipient) +
-                    river.balanceOf(operatorTwoFeeRecipient) +
-                    river.balanceOf(treasury)
+            river.totalSupply()
+                == river.balanceOf(joe) + river.balanceOf(bob) + river.balanceOf(operatorOneFeeRecipient)
+                    + river.balanceOf(operatorTwoFeeRecipient) + river.balanceOf(treasury)
         );
     }
 
@@ -953,7 +918,7 @@ contract RiverV1SetupOneTests {
         _allow(bob, DEPOSIT_MASK);
 
         vm.startPrank(admin);
-        (int256 _operatorOneIndex, ) = river.getOperatorDetails(operatorOneName);
+        (int256 _operatorOneIndex,) = river.getOperatorDetails(operatorOneName);
         assert(_operatorOneIndex >= 0);
         uint256 operatorOneIndex = uint256(_operatorOneIndex);
         vm.stopPrank();
@@ -989,7 +954,7 @@ contract RiverV1SetupOneTests {
         assert(river.balanceOfUnderlying(bob) == 1000 ether);
 
         vm.startPrank(oracleMember);
-        (uint256 epoch, , ) = oracle.getCurrentFrame();
+        (uint256 epoch,,) = oracle.getCurrentFrame();
         oracle.reportBeacon(epoch, 33 * 1e9 * 30, 30);
         vm.stopPrank();
 
@@ -997,9 +962,7 @@ contract RiverV1SetupOneTests {
         assert(river.balanceOfUnderlying(joe) == 102590909090909090910);
         assert(river.balanceOfUnderlying(bob) == 1025909090909090909105);
         assert(river.balanceOfUnderlying(operatorOneFeeRecipient) == 374999999999999991);
-        assert(
-            river.balanceOfUnderlying(operatorTwoFeeRecipient) == river.balanceOfUnderlying(operatorOneFeeRecipient)
-        );
+        assert(river.balanceOfUnderlying(operatorTwoFeeRecipient) == river.balanceOfUnderlying(operatorOneFeeRecipient));
         assert(river.balanceOfUnderlying(treasury) == 750000000000000000);
 
         vm.startPrank(joe);
@@ -1009,26 +972,17 @@ contract RiverV1SetupOneTests {
         assert(river.balanceOfUnderlying(joe) == 0);
         assert(river.balanceOfUnderlying(bob) == 1128500000000000000015);
         assert(river.balanceOfUnderlying(operatorOneFeeRecipient) == 374999999999999991);
-        assert(
-            river.balanceOfUnderlying(operatorTwoFeeRecipient) == river.balanceOfUnderlying(operatorOneFeeRecipient)
-        );
+        assert(river.balanceOfUnderlying(operatorTwoFeeRecipient) == river.balanceOfUnderlying(operatorOneFeeRecipient));
         assert(river.balanceOfUnderlying(treasury) == 750000000000000000);
 
         assert(
-            river.totalSupply() ==
-                river.balanceOf(joe) +
-                    river.balanceOf(bob) +
-                    river.balanceOf(operatorOneFeeRecipient) +
-                    river.balanceOf(operatorTwoFeeRecipient) +
-                    river.balanceOf(treasury)
+            river.totalSupply()
+                == river.balanceOf(joe) + river.balanceOf(bob) + river.balanceOf(operatorOneFeeRecipient)
+                    + river.balanceOf(operatorTwoFeeRecipient) + river.balanceOf(treasury)
         );
     }
 
-    function testRiverFuzzing(
-        uint96 joeBalance,
-        uint96 bobBalance,
-        uint32 increasePerValidator
-    ) public {
+    function testRiverFuzzing(uint96 joeBalance, uint96 bobBalance, uint32 increasePerValidator) public {
         vm.deal(joe, joeBalance);
         vm.deal(bob, bobBalance);
 
@@ -1079,17 +1033,15 @@ contract RiverV1SetupOneTests {
             assert(river.balanceOfUnderlying(bob) == bobBalance);
 
             vm.startPrank(oracleMember);
-            (uint256 epoch, , ) = oracle.getCurrentFrame();
+            (uint256 epoch,,) = oracle.getCurrentFrame();
             oracle.reportBeacon(
-                epoch,
-                uint64(realValidatorCount) * (32 * 1e9 + uint64(increasePerValidator)),
-                uint32(realValidatorCount)
+                epoch, uint64(realValidatorCount) * (32 * 1e9 + uint64(increasePerValidator)), uint32(realValidatorCount)
             );
             vm.stopPrank();
 
             assert(
-                river.totalUnderlyingSupply() ==
-                    uint256(joeBalance) + uint256(bobBalance) + (realValidatorCount * increasePerValidator * 1e9)
+                river.totalUnderlyingSupply()
+                    == uint256(joeBalance) + uint256(bobBalance) + (realValidatorCount * increasePerValidator * 1e9)
             );
         } else {
             vm.expectRevert(abi.encodeWithSignature("NotEnoughFunds()"));

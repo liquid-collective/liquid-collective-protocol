@@ -30,7 +30,7 @@ contract Firewall {
         governor = governor_;
         executor = executor_;
         destination = destination_;
-        for (uint256 i; i < executorCallableSelectors_.length; ) {
+        for (uint256 i; i < executorCallableSelectors_.length;) {
             executorCanCall[executorCallableSelectors_[i]] = true;
             unchecked {
                 ++i;
@@ -95,12 +95,8 @@ contract Firewall {
 
             switch result
             // call returns 0 on error.
-            case 0 {
-                revert(0, returndatasize())
-            }
-            default {
-                return(0, returndatasize())
-            }
+            case 0 { revert(0, returndatasize()) }
+            default { return(0, returndatasize()) }
         }
     }
 

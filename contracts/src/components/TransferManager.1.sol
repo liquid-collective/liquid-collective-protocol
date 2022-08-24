@@ -17,11 +17,7 @@ abstract contract TransferManagerV1 {
     /// @param _depositor Address that made the deposit
     /// @param _recipient Address that receives the minted shares
     /// @param _amount Amount deposited
-    function _onDeposit(
-        address _depositor,
-        address _recipient,
-        uint256 _amount
-    ) internal virtual;
+    function _onDeposit(address _depositor, address _recipient, uint256 _amount) internal virtual;
 
     /// @notice Internal utility calling the deposit handler and emitting the deposit details
     function _deposit(address _recipient) internal {

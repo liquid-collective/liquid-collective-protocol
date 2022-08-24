@@ -7,5 +7,7 @@ interface IDepositContract {
         bytes calldata withdrawalCredentials,
         bytes calldata signature,
         bytes32 depositDataRoot
-    ) external payable;
+    )
+        external
+        payable;
 }

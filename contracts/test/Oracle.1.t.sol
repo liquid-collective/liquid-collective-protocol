@@ -124,7 +124,9 @@ contract OracleV1Tests {
         uint64 _slotsPerEpoch,
         uint64 _secondsPerSlot,
         uint64 _genesisTime
-    ) public {
+    )
+        public
+    {
         BeaconSpec.BeaconSpecStruct memory bs = oracle.getBeaconSpec();
         assert(bs.epochsPerFrame == EPOCHS_PER_FRAME);
         assert(bs.slotsPerEpoch == SLOTS_PER_EPOCH);
@@ -147,7 +149,9 @@ contract OracleV1Tests {
         uint64 _slotsPerEpoch,
         uint64 _secondsPerSlot,
         uint64 _genesisTime
-    ) public {
+    )
+        public
+    {
         address _intruder = uf._new(_intruderSalt);
         BeaconSpec.BeaconSpecStruct memory bs = oracle.getBeaconSpec();
         assert(bs.epochsPerFrame == EPOCHS_PER_FRAME);
@@ -172,11 +176,7 @@ contract OracleV1Tests {
         assert(bounds.relativeLowerBound == _down);
     }
 
-    function testSetBeaconBoundsUnauthorized(
-        uint256 _intruderSalt,
-        uint256 _up,
-        uint64 _down
-    ) public {
+    function testSetBeaconBoundsUnauthorized(uint256 _intruderSalt, uint256 _up, uint64 _down) public {
         address _intruder = uf._new(_intruderSalt);
         BeaconReportBounds.BeaconReportBoundsStruct memory bounds = oracle.getBeaconBounds();
         assert(bounds.annualAprUpperBound == UPPER_BOUND);
@@ -203,11 +203,7 @@ contract OracleV1Tests {
             oracle.reportBeacon(frameFirstEpochId, 0, 0);
             uint256 oldFrameFirstEpochId = oracle.getFrameFirstEpochId(frameFirstEpochId + EPOCHS_PER_FRAME - 1);
             vm.expectRevert(
-                abi.encodeWithSignature(
-                    "EpochTooOld(uint256,uint256)",
-                    oldFrameFirstEpochId,
-                    frameFirstEpochId + EPOCHS_PER_FRAME
-                )
+                abi.encodeWithSignature("EpochTooOld(uint256,uint256)", oldFrameFirstEpochId, frameFirstEpochId + EPOCHS_PER_FRAME)
             );
             oracle.reportBeacon(oldFrameFirstEpochId, 0, 0);
         }
@@ -227,11 +223,7 @@ contract OracleV1Tests {
         if (frameFirstEpochId > 0) {
             vm.startPrank(oracleMember);
             vm.expectRevert(
-                abi.encodeWithSignature(
-                    "NotFrameFirstEpochId(uint256,uint256)",
-                    frameFirstEpochId - 1,
-                    frameFirstEpochId
-                )
+                abi.encodeWithSignature("NotFrameFirstEpochId(uint256,uint256)", frameFirstEpochId - 1, frameFirstEpochId)
             );
             oracle.reportBeacon(frameFirstEpochId - 1, 0, 0);
         }
@@ -288,11 +280,7 @@ contract OracleV1Tests {
         }
     }
 
-    function testReportBeacon(
-        uint64 timeFromGenesis,
-        uint64 balanceSum,
-        uint32 validatorCount
-    ) public {
+    function testReportBeacon(uint64 timeFromGenesis, uint64 balanceSum, uint32 validatorCount) public {
         RiverMock(address(oracleInput)).sudoSetTotalShares(1e9 * uint256(balanceSum));
         RiverMock(address(oracleInput)).sudoSetTotalSupply(1e9 * uint256(balanceSum));
 
@@ -334,11 +322,7 @@ contract OracleV1Tests {
         }
     }
 
-    function testBreakingUpperBoundLimit(
-        uint64 timeFromGenesis,
-        uint64 balanceSum,
-        uint32 validatorCount
-    ) public {
+    function testBreakingUpperBoundLimit(uint64 timeFromGenesis, uint64 balanceSum, uint32 validatorCount) public {
         RiverMock(address(oracleInput)).sudoSetTotalShares(1e9 * uint256(balanceSum));
         RiverMock(address(oracleInput)).sudoSetTotalSupply(1e9 * uint256(balanceSum));
 
@@ -380,11 +364,7 @@ contract OracleV1Tests {
         }
     }
 
-    function testBreakingLowerBoundLimit(
-        uint64 timeFromGenesis,
-        uint64 balanceSum,
-        uint32 validatorCount
-    ) public {
+    function testBreakingLowerBoundLimit(uint64 timeFromGenesis, uint64 balanceSum, uint32 validatorCount) public {
         RiverMock(address(oracleInput)).sudoSetTotalShares(1e9 * uint256(balanceSum));
         RiverMock(address(oracleInput)).sudoSetTotalSupply(1e9 * uint256(balanceSum));
 
@@ -402,11 +382,8 @@ contract OracleV1Tests {
             oracle.reportBeacon(frameFirstEpochId, balanceSum, validatorCount);
             vm.stopPrank();
 
-            uint256 oneEpochAway = uint256(GENESIS_TIME) +
-                uint256(timeFromGenesis) +
-                SLOTS_PER_EPOCH *
-                SECONDS_PER_SLOT *
-                EPOCHS_PER_FRAME;
+            uint256 oneEpochAway =
+                uint256(GENESIS_TIME) + uint256(timeFromGenesis) + SLOTS_PER_EPOCH * SECONDS_PER_SLOT * EPOCHS_PER_FRAME;
             vm.warp(oneEpochAway);
             uint256 futureEpochId = oracle.getFrameFirstEpochId(oracle.getCurrentEpochId());
             BeaconReportBounds.BeaconReportBoundsStruct memory bounds = oracle.getBeaconBounds();
