@@ -32,7 +32,7 @@ We wrap `AllowList`, `Oracle` and `River` in a `Firewall.sol`, through which adm
 ### Install dependencies
 
 ```
-yarn
+yarn && yarn link_contracts
 ```
 
 ### Run tests

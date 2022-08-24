@@ -2,7 +2,6 @@
   "name": "river",
   "version": "0.0.1",
   "scripts": {
-    "artifacts": "ts-node gen_artifacts.ts",
     "test": "forge test -vvv --gas-report",
     "test:force": "forge test --force -vvv --gas-report",
     "format": "prettier --write ./contracts && prettier --write ./deploy",
@@ -10,7 +9,8 @@
     "lint:check": "hardhat check",
     "compile": "hardhat compile",
     "hh": "hardhat",
-    "uml": "sol2uml ./contracts/src -o ./docs/components.svg"
+    "uml": "sol2uml ./contracts/src -o ./docs/components.svg",
+    "link_contracts": "cd node_modules && ln -s ../lib/openzeppelin-contracts"
   },
   "dependencies": {
     "@nomiclabs/hardhat-ethers": "^2.0.4",

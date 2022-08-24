@@ -12,15 +12,10 @@ jobs:
         with:
           submodules: recursive
 
-      - name: add node toolchain
-        uses: actions/setup-node@v2.1.2
+      - name: install foundry
+        uses: onbjerg/foundry-toolchain@v1
         with:
-          node-version: 16.x
-
-      - name: add rust toolchain
-        uses: actions-rs/toolchain@v1
-        with:
-          toolchain: stable
+          version: nightly
 
       - name: cache node_modules
         uses: actions/cache@v2
@@ -32,5 +27,5 @@ jobs:
       - name: install node dependencies
         run: yarn
 
-      - name: run linting checks
-        run: yarn lint:check
+      - name: run formatting check
+        run: forge fmt --check

@@ -1,6 +1,7 @@
 import { getContractAddress } from "ethers/lib/utils";
 import { DeployFunction } from "hardhat-deploy/dist/types";
 import { HardhatRuntimeEnvironment } from "hardhat/types";
+import { ELFeeRecipientV1 } from "../typechain/ELFeeRecipientV1";
 
 const logStep = () => {
   console.log(`=== ${__filename} START`);
@@ -56,6 +57,11 @@ const func: DeployFunction = async function ({
 
   const txCount = await signer.getTransactionCount();
 
+  const futureELFeeRecipientAddress = getContractAddress({
+    from: deployer,
+    nonce: txCount + 7, // proxy is in 8 txs
+  });
+
   const futureOracleAddress = getContractAddress({
     from: deployer,
     nonce: txCount + 5, // proxy is in 6 txs
@@ -98,6 +104,7 @@ const func: DeployFunction = async function ({
         methodName: "initRiverV1",
         args: [
           depositContract,
+          futureELFeeRecipientAddress,
           withdrawalCredentials,
           futureOracleAddress,
           riverFirewallDeployment.address,
@@ -143,12 +150,31 @@ const func: DeployFunction = async function ({
     },
   });
 
+  const elFeeRecipientDeployment = await deployments.deploy("ELFeeRecipientV1", {
+    from: deployer,
+    log: true,
+    proxy: {
+      owner: proxyAdministrator,
+      proxyContract: "TUPProxy",
+      execute: {
+        methodName: "initELFeeRecipientV1",
+        args: [riverDeployment.address],
+      },
+    },
+  });
+
   if (riverDeployment.address !== futureRiverAddress) {
     throw new Error(`Invalid future river address computation ${futureRiverAddress} != ${riverDeployment.address}`);
   }
 
   if (oracleDeployment.address !== futureOracleAddress) {
     throw new Error(`Invalid future oracle address computation ${futureRiverAddress} != ${riverDeployment.address}`);
+  }
+
+  if (elFeeRecipientDeployment.address !== futureELFeeRecipientAddress) {
+    throw new Error(
+      `Invalid future EL Fee Recipient address computation ${futureELFeeRecipientAddress} != ${elFeeRecipientDeployment.address}`
+    );
   }
 
   const riverInstance = new ethers.Contract(riverDeployment.address, riverDeployment.abi, ethers.provider);

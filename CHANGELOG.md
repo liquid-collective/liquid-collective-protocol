@@ -1,12 +1,38 @@
 # Staking Contracts changelog
 
-## v0.2.1 (July 15th 2021)
+## v0.2.2 (August 18th 2022)
+
+### :dizzy: Features
+
+- [contracts] New `goerli` deployment
+- [contracts] New `mockedGoerli` deployment
+
+### :hammer_and_wrench: Bug Fixes
+
+- [[contracts] feat: revamp the execution layer fee recipient](https://github.com/River-Protocol/river-contracts/pull/104)
+- [[contracts] HAL-01: DONATE CALL BEFORE DEPOSIT LEADS LOSS OF POSSIBLE REWARDS](https://github.com/River-Protocol/river-contracts/pull/93)
+- [[contracts] HAL-03: DIVISION BY ZERO](https://github.com/River-Protocol/river-contracts/pull/103)
+- [[contracts] HAL-04: MALICIOUS OWNER CAN ADD AN OPERATOR WITH EXISTING NAME](https://github.com/River-Protocol/river-contracts/pull/95)
+- [[contracts] HAL-05: SINGLE-STEP OWNERSHIP CHANGE](https://github.com/River-Protocol/river-contracts/pull/96)
+- [[contracts] HAL-07: MISSING REENTRANCY GUARD](https://github.com/River-Protocol/river-contracts/pull/97)
+- [[contracts] HAL-08: IGNORED RETURN VALUES](https://github.com/River-Protocol/river-contracts/pull/98)
+- [[contracts] HAL-09: LACK OF ZERO ADDRESS CHECKS](https://github.com/River-Protocol/river-contracts/pull/99)
+- [[contracts] HAL-11: USE UNCHECKED KEYWORD FOR GAS OPTIMISATION](https://github.com/River-Protocol/river-contracts/pull/100)
+- [[contracts] HAL-12: USE OF POST-FIX INCREMENT ON FOR LOOPS](https://github.com/River-Protocol/river-contracts/pull/100)
+- [[contracts] [HAL-13] Remove assert() on depositAmount, since it is derived from constants](https://github.com/River-Protocol/river-contracts/pull/101)
+- [[contracts] [HAL-14] Remove comparison to true or false](https://github.com/River-Protocol/river-contracts/pull/102)
+
+### 🕹️ Others
+
+- [ci] update formatter to use foundry formatting
+
+## v0.2.1 (July 15th 2022)
 
 ### :hammer_and_wrench: Bug Fixes
 
 - [[contracts] fix oracle river interface + add oracle to river tests](https://github.com/River-Protocol/river-contracts/pull/79)
 
-## v0.2.0 (July 6th 2021)
+## v0.2.0 (July 6th 2022)
 
 ### :dizzy: Features
 

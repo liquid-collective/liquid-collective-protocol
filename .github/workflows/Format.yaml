@@ -19,12 +19,3 @@ jobs:
 
       - name: run formatting checks
         run: forge fmt --check 
-        env:
-          FOUNDRY_FUZZ_RUNS: 5000
-
-      - name: archive test and gas usage artifact
-        uses: actions/upload-artifact@v3
-        with:
-          name: test-and-gas-usage
-          path: |
-            test-and-gas-report.txt
