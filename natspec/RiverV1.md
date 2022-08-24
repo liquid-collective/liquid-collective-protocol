@@ -78,6 +78,17 @@ function SIGNATURE_LENGTH() external view returns (uint256)
 |---|---|---|
 | _0 | uint256 | undefined |
 
+### acceptOwnership
+
+```solidity
+function acceptOwnership() external nonpayable
+```
+
+Accepts the ownership of the system
+
+
+
+
 ### addOperator
 
 ```solidity
@@ -265,17 +276,6 @@ Deposits current balance to the Consensus Layer by batches of 32 ETH
 |---|---|---|
 | _maxCount | uint256 | The maximum amount of validator keys to fund |
 
-### donate
-
-```solidity
-function donate() external payable
-```
-
-Allows anyone to add ethers to river without minting new shares
-
-*This method should be mainly used by the execution layer fee recipient to compound any collected fee*
-
-
 ### getAdministrator
 
 ```solidity
@@ -360,6 +360,23 @@ Get the deposited validator count (the count of deposits made by the contract)
 | Name | Type | Description |
 |---|---|---|
 | depositedValidatorCount | uint256 | undefined |
+
+### getELFeeRecipient
+
+```solidity
+function getELFeeRecipient() external view returns (address)
+```
+
+Retrieve the execution layer fee recipient
+
+
+
+
+#### Returns
+
+| Name | Type | Description |
+|---|---|---|
+| _0 | address | undefined |
 
 ### getOperator
 
@@ -462,6 +479,23 @@ Get Oracle address
 |---|---|---|
 | oracle | address | undefined |
 
+### getPendingAdministrator
+
+```solidity
+function getPendingAdministrator() external view returns (address)
+```
+
+Retrieve system pending administrator address
+
+
+
+
+#### Returns
+
+| Name | Type | Description |
+|---|---|---|
+| _0 | address | undefined |
+
 ### getPendingEth
 
 ```solidity
@@ -541,7 +575,7 @@ Retrieve the withdrawal credentials
 ### initRiverV1
 
 ```solidity
-function initRiverV1(address _depositContractAddress, bytes32 _withdrawalCredentials, address _oracleAddress, address _systemAdministratorAddress, address _allowlistAddress, address _treasuryAddress, uint256 _globalFee, uint256 _operatorRewardsShare) external nonpayable
+function initRiverV1(address _depositContractAddress, address _elFeeRecipientAddress, bytes32 _withdrawalCredentials, address _oracleAddress, address _systemAdministratorAddress, address _allowlistAddress, address _treasuryAddress, uint256 _globalFee, uint256 _operatorRewardsShare) external nonpayable
 ```
 
 Initializes the River system
@@ -553,6 +587,7 @@ Initializes the River system
 | Name | Type | Description |
 |---|---|---|
 | _depositContractAddress | address | Address to make Consensus Layer deposits |
+| _elFeeRecipientAddress | address | Address that receives the execution layer fees |
 | _withdrawalCredentials | bytes32 | Credentials to use for every validator deposit |
 | _oracleAddress | address | undefined |
 | _systemAdministratorAddress | address | Administrator address |
@@ -595,21 +630,16 @@ Remove validator keys
 | _index | uint256 | The operator index |
 | _indexes | uint256[] | The indexes of the keys to remove |
 
-### setAdministrator
+### sendELFees
 
 ```solidity
-function setAdministrator(address _newAdmin) external nonpayable
+function sendELFees() external payable
 ```
 
-Changes the admin
+Input for execution layer fee earnings
 
 
 
-#### Parameters
-
-| Name | Type | Description |
-|---|---|---|
-| _newAdmin | address | New address for the admin |
 
 ### setAllowlist
 
@@ -644,6 +674,22 @@ Sets the validator count and validator balance sum reported by the oracle
 | _validatorCount | uint256 | The number of active validators on the consensus layer |
 | _validatorBalanceSum | uint256 | The validator balance sum of the active validators on the consensus layer |
 | _roundId | bytes32 | An identifier for this update |
+
+### setELFeeRecipient
+
+```solidity
+function setELFeeRecipient(address _newELFeeRecipient) external nonpayable
+```
+
+Changes the execution layer fee recipient
+
+
+
+#### Parameters
+
+| Name | Type | Description |
+|---|---|---|
+| _newELFeeRecipient | address | New address for the recipient |
 
 ### setGlobalFee
 
@@ -711,6 +757,23 @@ Changes the operator staking limit
 |---|---|---|
 | _operatorIndexes | uint256[] | The operator indexes |
 | _newLimits | uint256[] | The new staking limit of the operators |
+
+### setOperatorName
+
+```solidity
+function setOperatorName(uint256 _index, string _newName) external nonpayable
+```
+
+Changes the operator name
+
+*Only callable by the administrator or the operatorNo name conflict can exist*
+
+#### Parameters
+
+| Name | Type | Description |
+|---|---|---|
+| _index | uint256 | The operator index |
+| _newName | string | The new operator name |
 
 ### setOperatorRewardsShare
 
@@ -914,6 +977,22 @@ Performs a transfer between two recipients
 |---|---|---|
 | _0 | bool | undefined |
 
+### transferOwnership
+
+```solidity
+function transferOwnership(address _newAdmin) external nonpayable
+```
+
+Changes the admin but waits for new admin approval
+
+
+
+#### Parameters
+
+| Name | Type | Description |
+|---|---|---|
+| _newAdmin | address | New address for the admin |
+
 ### underlyingBalanceFromShares
 
 ```solidity
@@ -1012,23 +1091,6 @@ event BeaconDataUpdate(uint256 validatorCount, uint256 validatorBalanceSum, byte
 | validatorBalanceSum  | uint256 | undefined |
 | roundId  | bytes32 | undefined |
 
-### Donation
-
-```solidity
-event Donation(address donator, uint256 amount)
-```
-
-
-
-
-
-#### Parameters
-
-| Name | Type | Description |
-|---|---|---|
-| donator  | address | undefined |
-| amount  | uint256 | undefined |
-
 ### FundedValidatorKey
 
 ```solidity
@@ -1044,6 +1106,22 @@ event FundedValidatorKey(bytes publicKey)
 | Name | Type | Description |
 |---|---|---|
 | publicKey  | bytes | undefined |
+
+### PulledELFees
+
+```solidity
+event PulledELFees(uint256 amount)
+```
+
+
+
+
+
+#### Parameters
+
+| Name | Type | Description |
+|---|---|---|
+| amount  | uint256 | undefined |
 
 ### RemovedValidatorKey
 
@@ -1112,6 +1190,23 @@ event SetOperatorLimit(uint256 indexed index, uint256 newLimit)
 |---|---|---|
 | index `indexed` | uint256 | undefined |
 | newLimit  | uint256 | undefined |
+
+### SetOperatorName
+
+```solidity
+event SetOperatorName(uint256 indexed name, string newName)
+```
+
+
+
+
+
+#### Parameters
+
+| Name | Type | Description |
+|---|---|---|
+| name `indexed` | uint256 | undefined |
+| newName  | string | undefined |
 
 ### SetOperatorStatus
 
@@ -1454,6 +1549,17 @@ error InvalidWithdrawalCredentials()
 
 
 
+### InvalidZeroAddress
+
+```solidity
+error InvalidZeroAddress()
+```
+
+
+
+
+
+
 ### NoAvailableValidatorKeys
 
 ```solidity
@@ -1567,5 +1673,16 @@ error Unauthorized(address caller)
 | Name | Type | Description |
 |---|---|---|
 | caller | address | undefined |
+
+### ZeroMintedShares
+
+```solidity
+error ZeroMintedShares()
+```
+
+
+
+
+
 
 

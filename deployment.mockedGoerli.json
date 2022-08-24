@@ -1,0 +1,33 @@
+{
+    "name": "mockedGoerli",
+    "chainId": "5",
+    "contracts": {
+        "AllowlistV1": "0xfdEb8F59Bea56B046A233B43387F03976b239Fbd",
+        "AllowlistV1_Implementation": "0x44A7f58bcAC9062027Bee302Dd2a97F5a13A2eE8",
+        "AllowlistV1_Proxy": "0xfdEb8F59Bea56B046A233B43387F03976b239Fbd",
+        "DepositContractMock": "0x4727Ff150500d40F39b4229f983C1C26dB9e044D",
+        "ELFeeRecipientV1": "0x6D00705cd5eB0cb5926B81C08Ed332f74c1B41D0",
+        "ELFeeRecipientV1_Implementation": "0xF3b4DFF27cF4665f7373DCD2A28E60B59B88e53c",
+        "ELFeeRecipientV1_Proxy": "0x6D00705cd5eB0cb5926B81C08Ed332f74c1B41D0",
+        "Firewall": "0x2977AE85F477Cd49E3C2a59eC1B5E10bcdB5a6ed",
+        "OracleV1": "0x1C90972329aF57dF9C9E27D6D682879441854340",
+        "OracleV1_Implementation": "0x09b4A4759b431A19c4e6Ca9dADabd32ee6735f77",
+        "OracleV1_Proxy": "0x1C90972329aF57dF9C9E27D6D682879441854340",
+        "RiverV1": "0x68e381FD29e7143230b85aed4E5155ac868281a8",
+        "RiverV1_Implementation": "0x1e69Fa8225BCf9fbA38113Ff15965Cf8f52B6e38",
+        "RiverV1_Proxy": "0x68e381FD29e7143230b85aed4E5155ac868281a8",
+        "WLSETHV1": "0xCEe84eec899A198d39aC4C10D3ae7E1C6e259966",
+        "WLSETHV1_Implementation": "0x61778c989763B82f756bf29FBd7BE980f6b85d32",
+        "WLSETHV1_Proxy": "0xCEe84eec899A198d39aC4C10D3ae7E1C6e259966",
+        "WithdrawV1": "0xf14380F73Da93D23bAF5AaBeEa41AE4aACC6a618",
+        "WithdrawV1_Implementation": "0xE93b0730C23E9586C8cD2dD62582141bd356AA7B",
+        "WithdrawV1_Proxy": "0xf14380F73Da93D23bAF5AaBeEa41AE4aACC6a618"
+    },
+    "namedAccounts": {
+        "deployer": "0x959FD7Ef9089B7142B6B908Dc3A8af7Aa8ff0FA1",
+        "depositContract": "0x00000000219ab540356cBB839Cbe05303d7705Fa",
+        "systemAdministrator": "0x71c9DAb681C209bb82270906e3B49388b2C15404",
+        "treasury": "0x774c51712F2f1eAFA73681403414D5EE419f2c73",
+        "proxyAdministrator": "0x07706A7D768054c10eB4FC9103Ea322f62831cb9"
+    }
+}

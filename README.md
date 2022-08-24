@@ -92,19 +92,4 @@ Generate by running `yarn uml`
 
 ## Live Deployments
 
-### Goerli (`goerli`)
-
-| Contract | Address | Artifact |
-|---|---|---|
-| RiverV1  | [`0x96f63FB35ECBdd739c7E901968Eac5bc3a36D308`](https://goerli.etherscan.io/address/0x96f63FB35ECBdd739c7E901968Eac5bc3a36D308) | [📜](./deployments/goerli/RiverV1.json) |
-| OracleV1  | [`0x507b8e603485A0DCf0C59DB810Dc0BdD790a783d`](https://goerli.etherscan.io/address/0x507b8e603485A0DCf0C59DB810Dc0BdD790a783d)  | [📜](./deployments/goerli/OracleV1.json) |
-|  WithdrawV1 | [`0xc9716693Ab7BF082b676129850bA749EFD25ea7b`](https://goerli.etherscan.io/address/0xc9716693Ab7BF082b676129850bA749EFD25ea7b)  | [📜](./deployments/goerli/WithdrawV1.json) |
-| AllowlistV1 | [`0x961685E8a85Ee24669d808612dA305a7330689FD`](https://goerli.etherscan.io/address/0x961685E8a85Ee24669d808612dA305a7330689FD) | [📜](./deployments/goerli/AllowlistV1.json) |
-
-### Goerli with mocked deposit contract (`mockedGoerli`)
-
-| Contract | Address | Artifact |
-|---|---|---|
-| RiverV1  | [`0x50f89c88C3C80D8CcB88036fdcba5cC3480456b2`](https://goerli.etherscan.io/address/0x50f89c88C3C80D8CcB88036fdcba5cC3480456b2) | [📜](./deployments/mockedGoerli/RiverV1.json) |
-| OracleV1  | [`0x4C1bd8176C729d37A270FF36CDFCf547c9F84676`](https://goerli.etherscan.io/address/0x4C1bd8176C729d37A270FF36CDFCf547c9F84676)  | [📜](./deployments/mockedGoerli/OracleV1.json) |
-|  WithdrawV1 | [`0x3C7CF2e9597d18B08353e7734F958B707350121E`](https://goerli.etherscan.io/address/0x3C7CF2e9597d18B08353e7734F958B707350121E)  | [📜](./deployments/mockedGoerli/WithdrawV1.json) |
+All addresses can be found inside the `deployment.NETWORK.json` files
