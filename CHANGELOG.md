@@ -22,6 +22,9 @@
 - [[contracts] [HAL-13] Remove assert() on depositAmount, since it is derived from constants](https://github.com/River-Protocol/river-contracts/pull/101)
 - [[contracts] [HAL-14] Remove comparison to true or false](https://github.com/River-Protocol/river-contracts/pull/102)
 
+### 🕹️ Others
+
+- [ci] update formatter to use foundry formatting
 
 ## v0.2.1 (July 15th 2022)
 
