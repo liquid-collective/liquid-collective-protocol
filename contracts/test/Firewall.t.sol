@@ -514,7 +514,7 @@ contract FirewallTests {
         // Then we make it governorOnly.
         // Assert governor can still call it, and executor now cannot.
         vm.startPrank(riverGovernorDAO);
-        operatorsRegistryFirewall.permissionFunction(getSelector("setOperatorStatus(uint256,bool)"), false);
+        operatorsRegistryFirewall.allowExecutor(getSelector("setOperatorStatus(uint256,bool)"), false);
         firewalledOperatorsRegistry.setOperatorStatus(operatorBobIndex, true);
         assert(operatorsRegistry.getOperator(operatorBobIndex).active == true);
         vm.stopPrank();
@@ -526,7 +526,7 @@ contract FirewallTests {
 
     function testMakingFunctionGovernorOrExecutor() public {
         vm.startPrank(riverGovernorDAO);
-        allowlistFirewall.permissionFunction(getSelector("setAllower(address)"), true);
+        allowlistFirewall.allowExecutor(getSelector("setAllower(address)"), true);
         vm.stopPrank();
         vm.startPrank(executor);
         firewalledAllowlist.setAllower(joe);
@@ -537,23 +537,23 @@ contract FirewallTests {
     function testExecutorCannotChangePermissions() public {
         vm.startPrank(executor);
         vm.expectRevert(unauthExecutor);
-        riverFirewall.permissionFunction(getSelector("setGlobalFee(uint256)"), true);
+        riverFirewall.allowExecutor(getSelector("setGlobalFee(uint256)"), true);
         vm.stopPrank();
     }
 
     function testRandomCallerCannotChangePermissions() public {
         vm.startPrank(joe);
         vm.expectRevert(unauthJoe);
-        riverFirewall.permissionFunction(getSelector("setOperatorStatus(uint256,bool)"), true);
+        riverFirewall.allowExecutor(getSelector("setOperatorStatus(uint256,bool)"), true);
         vm.stopPrank();
     }
 
     function testGovernorCanChangeGovernor() public {
-        // Assert that governor can changeGovernor, and the new governor can
+        // Assert that governor can setGovernor, and the new governor can
         // setAllower, a governorOnly action
         address newGovernorDAO = address(0xdF2a01F10f86A7cdd2EE10cf35B8ab62723096a6);
         vm.startPrank(riverGovernorDAO);
-        allowlistFirewall.changeGovernor(newGovernorDAO);
+        allowlistFirewall.setGovernor(newGovernorDAO);
         vm.stopPrank();
         vm.startPrank(newGovernorDAO);
         firewalledAllowlist.setAllower(joe);
@@ -562,10 +562,10 @@ contract FirewallTests {
     }
 
     function testGovernorCanChangeExecutor() public {
-        // Assert that governor can changeExecutor and the new executor can
+        // Assert that governor can setExecutor and the new executor can
         // setOracle, a governorOrExecutor action
         vm.startPrank(riverGovernorDAO);
-        riverFirewall.changeExecutor(bob);
+        riverFirewall.setExecutor(bob);
         vm.stopPrank();
         vm.startPrank(bob);
         firewalledRiver.setOracle(don);
@@ -574,10 +574,10 @@ contract FirewallTests {
     }
 
     function testExecutorCanChangeExecutor() public {
-        // Assert that executor can changeExecutor and the new executor can
+        // Assert that executor can setExecutor and the new executor can
         // setOracle, a governorOrExecutor action
         vm.startPrank(executor);
-        riverFirewall.changeExecutor(joe);
+        riverFirewall.setExecutor(joe);
         vm.stopPrank();
         vm.startPrank(joe);
         firewalledRiver.setOracle(don);
@@ -588,21 +588,21 @@ contract FirewallTests {
     function testExecutorCannotChangeGovernor() public {
         vm.startPrank(executor);
         vm.expectRevert(unauthExecutor);
-        riverFirewall.changeGovernor(don);
+        riverFirewall.setGovernor(don);
         vm.stopPrank();
     }
 
     function testRandomCallerCannotChangeGovernor() public {
         vm.startPrank(joe);
         vm.expectRevert(unauthJoe);
-        riverFirewall.changeGovernor(don);
+        riverFirewall.setGovernor(don);
         vm.stopPrank();
     }
 
     function testRandomCallerCannotChangeExecutor() public {
         vm.startPrank(joe);
         vm.expectRevert(unauthJoe);
-        riverFirewall.changeExecutor(don);
+        riverFirewall.setExecutor(don);
         vm.stopPrank();
     }
 }

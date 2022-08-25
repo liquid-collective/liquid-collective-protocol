@@ -97,6 +97,11 @@ contract RiverV1 is
         GlobalFee.set(newFee);
     }
 
+    /// @notice Get the current global fee
+    function getGlobalFee() external view returns (uint256) {
+        return GlobalFee.get();
+    }
+
     /// @notice Changes the operator rewards share.
     /// @param newOperatorRewardsShare New share value
     function setOperatorRewardsShare(uint256 newOperatorRewardsShare) external onlyAdmin {
@@ -105,6 +110,11 @@ contract RiverV1 is
         }
 
         OperatorRewardsShare.set(newOperatorRewardsShare);
+    }
+
+    /// @notice Get the current operator rewards share
+    function getOperatorRewardsShare() external view returns (uint256) {
+        return OperatorRewardsShare.get();
     }
 
     /// @notice Changes the allowlist address

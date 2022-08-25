@@ -56,17 +56,17 @@ contract Firewall is IFirewall {
     }
 
     /// @dev Change the governor
-    function changeGovernor(address newGovernor) external ifGovernor {
+    function setGovernor(address newGovernor) external ifGovernor {
         governor = newGovernor;
     }
 
     /// @dev Change the executor
-    function changeExecutor(address newExecutor) external ifGovernorOrExecutor {
+    function setExecutor(address newExecutor) external ifGovernorOrExecutor {
         executor = newExecutor;
     }
 
     /// @dev make a function either only callable by the governor, or callable by gov and executor.
-    function permissionFunction(bytes4 functionSelector, bool executorCanCall_) external ifGovernor {
+    function allowExecutor(bytes4 functionSelector, bool executorCanCall_) external ifGovernor {
         executorCanCall[functionSelector] = executorCanCall_;
     }
 

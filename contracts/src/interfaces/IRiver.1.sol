@@ -24,7 +24,11 @@ interface IRiverV1 is IConsensusLayerDepositManagerV1, IUserDepositManagerV1, IS
         uint256 _operatorRewardsShare
     )
         external;
+
+    function setGlobalFee(uint256 newFee) external;
+    function getGlobalFee() external view returns (uint256);
     function setOperatorRewardsShare(uint256 newOperatorRewardsShare) external;
+    function getOperatorRewardsShare() external view returns (uint256);
     function setAllowlist(address _newAllowlist) external;
     function getAllowlist() external view returns (address);
     function setTreasury(address _newTreasury) external;
