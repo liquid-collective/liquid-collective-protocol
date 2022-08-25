@@ -6,8 +6,8 @@ import "./interfaces/IOperatorRegistry.1.sol";
 import "./interfaces/IRiver.1.sol";
 import "./interfaces/IELFeeRecipient.1.sol";
 
-import "./components/DepositManager.1.sol";
-import "./components/TransferManager.1.sol";
+import "./components/ConsensusLayerDepositManager.1.sol";
+import "./components/UserDepositManager.1.sol";
 import "./components/SharesManager.1.sol";
 import "./components/OracleManager.1.sol";
 import "./Initializable.sol";
@@ -24,7 +24,14 @@ import "./state/river/ELFeeRecipientAddress.sol";
 /// @title River (v1)
 /// @author Kiln
 /// @notice This contract merges all the manager contracts and implements all the virtual methods stitching all components together
-contract RiverV1 is DepositManagerV1, TransferManagerV1, SharesManagerV1, OracleManagerV1, Initializable, IRiverV1 {
+contract RiverV1 is
+    ConsensusLayerDepositManagerV1,
+    UserDepositManagerV1,
+    SharesManagerV1,
+    OracleManagerV1,
+    Initializable,
+    IRiverV1
+{
     uint256 public constant BASE = 100000;
     uint256 internal constant DEPOSIT_MASK = 0x1;
     uint256 internal constant TRANSFER_MASK = 0;
@@ -72,7 +79,9 @@ contract RiverV1 is DepositManagerV1, TransferManagerV1, SharesManagerV1, Oracle
         OperatorRewardsShare.set(_operatorRewardsShare);
         ELFeeRecipientAddress.set(_elFeeRecipientAddress);
 
-        DepositManagerV1.initDepositManagerV1(_depositContractAddress, _withdrawalCredentials);
+        ConsensusLayerDepositManagerV1.initConsensusLayerDepositManagerV1(
+            _depositContractAddress, _withdrawalCredentials
+        );
         OracleManagerV1.initOracleManagerV1(_oracleAddress);
         AllowlistAddress.set(_allowlistAddress);
         OperatorsRegistryAddress.set(_operatorRegistryAddress);
@@ -192,14 +201,14 @@ contract RiverV1 is DepositManagerV1, TransferManagerV1, SharesManagerV1, Oracle
         override
         returns (bytes[] memory publicKeys, bytes[] memory signatures)
     {
-        return IOperatorsRegistryV1(OperatorsRegistryAddress.get()).getNextValidators(_requestedAmount);
+        return IOperatorsRegistryV1(OperatorsRegistryAddress.get()).pickNextValidators(_requestedAmount);
     }
 
     /// @notice Internal utility managing reward distribution amongst node operators
     /// @param _reward Amount of shares to split between operators
     function _rewardOperators(uint256 _reward) internal returns (uint256) {
         Operators.Operator[] memory operators =
-            IOperatorsRegistryV1(OperatorsRegistryAddress.get()).getAllActiveOperators();
+            IOperatorsRegistryV1(OperatorsRegistryAddress.get()).listActiveOperators();
         uint256[] memory validatorCounts = new uint256[](operators.length);
 
         uint256 totalActiveValidators = 0;
@@ -266,7 +275,7 @@ contract RiverV1 is DepositManagerV1, TransferManagerV1, SharesManagerV1, Oracle
         uint256 depositedValidatorCount = DepositedValidatorCount.get();
         if (beaconValidatorCount < depositedValidatorCount) {
             return BeaconValidatorBalanceSum.get() + address(this).balance
-                + (depositedValidatorCount - beaconValidatorCount) * DepositManagerV1.DEPOSIT_SIZE;
+                + (depositedValidatorCount - beaconValidatorCount) * ConsensusLayerDepositManagerV1.DEPOSIT_SIZE;
         } else {
             return BeaconValidatorBalanceSum.get() + address(this).balance;
         }

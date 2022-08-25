@@ -3,18 +3,18 @@
 pragma solidity 0.8.10;
 
 import "../Vm.sol";
-import "../../src/components/TransferManager.1.sol";
+import "../../src/components/UserDepositManager.1.sol";
 import "../utils/UserFactory.sol";
 
-contract TransferManagerV1EmptyDeposit is TransferManagerV1 {
+contract UserDepositManagerV1EmptyDeposit is UserDepositManagerV1 {
     function _onDeposit(address, address, uint256) internal view override {
         this;
     }
 }
 
-contract TransferManagerV1DepositTests {
+contract UserDepositManagerV1DepositTests {
     Vm internal vm = Vm(0x7109709ECfa91a80626fF3989D68f67F5b1DD12D);
-    TransferManagerV1 internal transferManager;
+    UserDepositManagerV1 internal transferManager;
     UserFactory internal uf = new UserFactory();
 
     error InvalidCall();
@@ -22,7 +22,7 @@ contract TransferManagerV1DepositTests {
     event UserDeposit(address indexed depositor, address indexed recipient, uint256 amount);
 
     function setUp() public {
-        transferManager = new TransferManagerV1EmptyDeposit();
+        transferManager = new UserDepositManagerV1EmptyDeposit();
     }
 
     function testDepositWithDedicatedMethod(uint256 _userSalt, uint256 _amount) public {
@@ -106,7 +106,7 @@ contract TransferManagerV1DepositTests {
     }
 }
 
-contract TransferManagerV1CatchableDeposit is TransferManagerV1 {
+contract UserDepositManagerV1CatchableDeposit is UserDepositManagerV1 {
     event InternalCallbackCalled(address depositor, address recipient, uint256 amount);
 
     function _onDeposit(address depositor, address recipient, uint256 amount) internal override {
@@ -114,15 +114,15 @@ contract TransferManagerV1CatchableDeposit is TransferManagerV1 {
     }
 }
 
-contract TransferManagerV1CallbackTests {
+contract UserDepositManagerV1CallbackTests {
     Vm internal vm = Vm(0x7109709ECfa91a80626fF3989D68f67F5b1DD12D);
-    TransferManagerV1 internal transferManager;
+    UserDepositManagerV1 internal transferManager;
     UserFactory internal uf = new UserFactory();
 
     event InternalCallbackCalled(address depositor, address recipient, uint256 amount);
 
     function setUp() public {
-        transferManager = new TransferManagerV1CatchableDeposit();
+        transferManager = new UserDepositManagerV1CatchableDeposit();
     }
 
     function testDepositInternalCallback(uint256 _userSalt, uint256 _amount) public {

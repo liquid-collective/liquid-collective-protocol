@@ -1,12 +1,12 @@
 //SPDX-License-Identifier: BUSL-1.1
 pragma solidity 0.8.10;
 
-import "./components/IDepositManager.1.sol";
+import "./components/IConsensusLayerDepositManager.1.sol";
 import "./components/IOracleManager.1.sol";
 import "./components/ISharesManager.1.sol";
-import "./components/ITransferManager.1.sol";
+import "./components/IUserDepositManager.1.sol";
 
-interface IRiverV1 is IDepositManagerV1, ITransferManagerV1, ISharesManagerV1, IOracleManagerV1 {
+interface IRiverV1 is IConsensusLayerDepositManagerV1, IUserDepositManagerV1, ISharesManagerV1, IOracleManagerV1 {
     error ZeroMintedShares();
 
     event PulledELFees(uint256 amount);

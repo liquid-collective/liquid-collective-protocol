@@ -10,13 +10,13 @@ import "../state/river/DepositContractAddress.sol";
 import "../state/river/WithdrawalCredentials.sol";
 import "../state/river/DepositedValidatorCount.sol";
 
-import "../interfaces/components/IDepositManager.1.sol";
+import "../interfaces/components/IConsensusLayerDepositManager.1.sol";
 
-/// @title Deposit Manager (v1)
+/// @title Consensus Layer Deposit Manager (v1)
 /// @author Kiln
 /// @notice This contract handles the interactions with the official deposit contract, funding all validators
 /// @dev _onValidatorKeyRequest must be overriden.
-abstract contract DepositManagerV1 is IDepositManagerV1 {
+abstract contract ConsensusLayerDepositManagerV1 is IConsensusLayerDepositManagerV1 {
     uint256 public constant PUBLIC_KEY_LENGTH = 48;
     uint256 public constant SIGNATURE_LENGTH = 96;
     uint256 public constant DEPOSIT_SIZE = 32 ether;
@@ -24,7 +24,9 @@ abstract contract DepositManagerV1 is IDepositManagerV1 {
     /// @notice Initializer to set the deposit contract address and the withdrawal credentials to use
     /// @param _depositContractAddress The address of the deposit contract
     /// @param _withdrawalCredentials The withdrawal credentials to apply to all deposits
-    function initDepositManagerV1(address _depositContractAddress, bytes32 _withdrawalCredentials) internal {
+    function initConsensusLayerDepositManagerV1(address _depositContractAddress, bytes32 _withdrawalCredentials)
+        internal
+    {
         DepositContractAddress.set(IDepositContract(_depositContractAddress));
 
         WithdrawalCredentials.set(_withdrawalCredentials);

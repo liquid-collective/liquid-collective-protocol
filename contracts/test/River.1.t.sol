@@ -128,6 +128,11 @@ contract RiverV1SetupOneTests is Test {
         vm.stopPrank();
     }
 
+    function _getOperatorByName(string memory name) internal view returns (Operators.Operator memory) {
+        (int256 index,) = operatorsRegistry.getOperatorDetails(name);
+        return operatorsRegistry.getOperator(uint256(index));
+    }
+
     function testInitWithZeroAddressValue() public {
         withdraw = new WithdrawV1();
         bytes32 withdrawalCredentials = withdraw.getCredentials();
@@ -320,8 +325,8 @@ contract RiverV1SetupOneTests is Test {
         river.depositToConsensusLayer(17);
         river.depositToConsensusLayer(17);
 
-        Operators.Operator memory op1 = operatorsRegistry.getOperatorByName(operatorOneName);
-        Operators.Operator memory op2 = operatorsRegistry.getOperatorByName(operatorTwoName);
+        Operators.Operator memory op1 = _getOperatorByName(operatorOneName);
+        Operators.Operator memory op2 = _getOperatorByName(operatorTwoName);
 
         assert(op1.funded == 17);
         assert(op2.funded == 17);
@@ -382,8 +387,8 @@ contract RiverV1SetupOneTests is Test {
         river.depositToConsensusLayer(17);
         river.depositToConsensusLayer(17);
 
-        Operators.Operator memory op1 = operatorsRegistry.getOperatorByName(operatorOneName);
-        Operators.Operator memory op2 = operatorsRegistry.getOperatorByName(operatorTwoName);
+        Operators.Operator memory op1 = _getOperatorByName(operatorOneName);
+        Operators.Operator memory op2 = _getOperatorByName(operatorTwoName);
 
         assert(op1.funded == 17);
         assert(op2.funded == 17);
@@ -434,8 +439,8 @@ contract RiverV1SetupOneTests is Test {
         river.depositToConsensusLayer(17);
         river.depositToConsensusLayer(17);
 
-        Operators.Operator memory op1 = operatorsRegistry.getOperatorByName(operatorOneName);
-        Operators.Operator memory op2 = operatorsRegistry.getOperatorByName(operatorTwoName);
+        Operators.Operator memory op1 = _getOperatorByName(operatorOneName);
+        Operators.Operator memory op2 = _getOperatorByName(operatorTwoName);
 
         assert(op1.funded == 17);
         assert(op2.funded == 17);
@@ -492,8 +497,8 @@ contract RiverV1SetupOneTests is Test {
         river.depositToConsensusLayer(17);
         river.depositToConsensusLayer(17);
 
-        Operators.Operator memory op1 = operatorsRegistry.getOperatorByName(operatorOneName);
-        Operators.Operator memory op2 = operatorsRegistry.getOperatorByName(operatorTwoName);
+        Operators.Operator memory op1 = _getOperatorByName(operatorOneName);
+        Operators.Operator memory op2 = _getOperatorByName(operatorTwoName);
 
         assert(op1.funded == 17);
         assert(op2.funded == 17);
@@ -559,8 +564,8 @@ contract RiverV1SetupOneTests is Test {
         river.depositToConsensusLayer(17);
         river.depositToConsensusLayer(17);
 
-        Operators.Operator memory op1 = operatorsRegistry.getOperatorByName(operatorOneName);
-        Operators.Operator memory op2 = operatorsRegistry.getOperatorByName(operatorTwoName);
+        Operators.Operator memory op1 = _getOperatorByName(operatorOneName);
+        Operators.Operator memory op2 = _getOperatorByName(operatorTwoName);
 
         assert(op1.funded == 17);
         assert(op2.funded == 17);
@@ -630,8 +635,8 @@ contract RiverV1SetupOneTests is Test {
         river.depositToConsensusLayer(17);
         river.depositToConsensusLayer(17);
 
-        Operators.Operator memory op1 = operatorsRegistry.getOperatorByName(operatorOneName);
-        Operators.Operator memory op2 = operatorsRegistry.getOperatorByName(operatorTwoName);
+        Operators.Operator memory op1 = _getOperatorByName(operatorOneName);
+        Operators.Operator memory op2 = _getOperatorByName(operatorTwoName);
 
         assert(op1.funded == 17);
         assert(op2.funded == 17);
@@ -710,8 +715,8 @@ contract RiverV1SetupOneTests is Test {
         river.depositToConsensusLayer(17);
         river.depositToConsensusLayer(17);
 
-        Operators.Operator memory op1 = operatorsRegistry.getOperatorByName(operatorOneName);
-        Operators.Operator memory op2 = operatorsRegistry.getOperatorByName(operatorTwoName);
+        Operators.Operator memory op1 = _getOperatorByName(operatorOneName);
+        Operators.Operator memory op2 = _getOperatorByName(operatorTwoName);
 
         assert(op1.funded == 17);
         assert(op2.funded == 17);
@@ -763,8 +768,8 @@ contract RiverV1SetupOneTests is Test {
         river.depositToConsensusLayer(17);
         river.depositToConsensusLayer(17);
 
-        Operators.Operator memory op1 = operatorsRegistry.getOperatorByName(operatorOneName);
-        Operators.Operator memory op2 = operatorsRegistry.getOperatorByName(operatorTwoName);
+        Operators.Operator memory op1 = _getOperatorByName(operatorOneName);
+        Operators.Operator memory op2 = _getOperatorByName(operatorTwoName);
 
         assert(op1.funded == 17);
         assert(op2.funded == 17);
@@ -830,8 +835,8 @@ contract RiverV1SetupOneTests is Test {
         river.depositToConsensusLayer(17);
         river.depositToConsensusLayer(17);
 
-        Operators.Operator memory op1 = operatorsRegistry.getOperatorByName(operatorOneName);
-        Operators.Operator memory op2 = operatorsRegistry.getOperatorByName(operatorTwoName);
+        Operators.Operator memory op1 = _getOperatorByName(operatorOneName);
+        Operators.Operator memory op2 = _getOperatorByName(operatorTwoName);
 
         assert(op1.funded == 17);
         assert(op2.funded == 17);
@@ -895,8 +900,8 @@ contract RiverV1SetupOneTests is Test {
         river.depositToConsensusLayer(2);
         river.depositToConsensusLayer(31);
 
-        Operators.Operator memory op1 = operatorsRegistry.getOperatorByName(operatorOneName);
-        Operators.Operator memory op2 = operatorsRegistry.getOperatorByName(operatorTwoName);
+        Operators.Operator memory op1 = _getOperatorByName(operatorOneName);
+        Operators.Operator memory op2 = _getOperatorByName(operatorTwoName);
 
         assert(op1.funded == 32);
         assert(op2.funded == 2);
@@ -967,8 +972,8 @@ contract RiverV1SetupOneTests is Test {
         vm.stopPrank();
         river.depositToConsensusLayer(10);
 
-        Operators.Operator memory op1 = operatorsRegistry.getOperatorByName(operatorOneName);
-        Operators.Operator memory op2 = operatorsRegistry.getOperatorByName(operatorTwoName);
+        Operators.Operator memory op1 = _getOperatorByName(operatorOneName);
+        Operators.Operator memory op2 = _getOperatorByName(operatorTwoName);
 
         assert(op1.funded == 20);
         assert(op1.stopped == 10);
@@ -1047,8 +1052,8 @@ contract RiverV1SetupOneTests is Test {
                 river.depositToConsensusLayer(op2Validator);
             }
 
-            Operators.Operator memory op1 = operatorsRegistry.getOperatorByName(operatorOneName);
-            Operators.Operator memory op2 = operatorsRegistry.getOperatorByName(operatorTwoName);
+            Operators.Operator memory op1 = _getOperatorByName(operatorOneName);
+            Operators.Operator memory op2 = _getOperatorByName(operatorTwoName);
 
             assert(op1.funded == op1Validator);
             assert(op2.funded == op2Validator);

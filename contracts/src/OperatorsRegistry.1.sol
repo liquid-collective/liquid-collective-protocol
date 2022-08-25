@@ -131,7 +131,7 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable {
     }
 
     /// @notice Retrieve the active operator set
-    function getAllActiveOperators() external view returns (Operators.Operator[] memory) {
+    function listActiveOperators() external view returns (Operators.Operator[] memory) {
         return Operators.getAllActive();
     }
 
@@ -346,12 +346,6 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable {
         }
     }
 
-    /// @notice Get operator details by name
-    /// @param _name The name identifying the operator
-    function getOperatorByName(string calldata _name) external view returns (Operators.Operator memory) {
-        return Operators.get(_name);
-    }
-
     /// @notice Get operator details
     /// @param _index The index of the operator
     function getOperator(uint256 _index) external view returns (Operators.Operator memory) {
@@ -377,7 +371,7 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable {
 
     /// @notice Retrieve validator keys based on operator statuses
     /// @param _requestedAmount Max amount of keys requested
-    function getNextValidators(uint256 _requestedAmount)
+    function pickNextValidators(uint256 _requestedAmount)
         external
         onlyRiver
         returns (bytes[] memory publicKeys, bytes[] memory signatures)

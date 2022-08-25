@@ -1,7 +1,7 @@
 //SPDX-License-Identifier: BUSL-1.1
 pragma solidity 0.8.10;
 
-interface ITransferManagerV1 {
+interface IUserDepositManagerV1 {
     event UserDeposit(address indexed depositor, address indexed recipient, uint256 amount);
 
     error EmptyDeposit();

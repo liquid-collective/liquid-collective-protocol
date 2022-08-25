@@ -1,7 +1,7 @@
 //SPDX-License-Identifier: BUSL-1.1
 pragma solidity 0.8.10;
 
-interface IDepositManagerV1 {
+interface IConsensusLayerDepositManagerV1 {
     event FundedValidatorKey(bytes publicKey);
 
     error NotEnoughFunds();

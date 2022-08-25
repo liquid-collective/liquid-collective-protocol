@@ -3,16 +3,21 @@
 pragma solidity 0.8.10;
 
 import "../Vm.sol";
-import "../../src/components/DepositManager.1.sol";
+import "../../src/components/ConsensusLayerDepositManager.1.sol";
 import "../../src/libraries/UnstructuredStorage.sol";
 import "../utils/UserFactory.sol";
 import "../mocks/DepositContractMock.sol";
 
-contract DepositManagerV1ExposeInitializer is DepositManagerV1 {
-    function publicDepositManagerInitializeV1(address _depositContractAddress, bytes32 _withdrawalCredentials)
+contract ConsensusLayerDepositManagerV1ExposeInitializer is ConsensusLayerDepositManagerV1 {
+    function publicConsensusLayerDepositManagerInitializeV1(
+        address _depositContractAddress,
+        bytes32 _withdrawalCredentials
+    )
         external
     {
-        DepositManagerV1.initDepositManagerV1(_depositContractAddress, _withdrawalCredentials);
+        ConsensusLayerDepositManagerV1.initConsensusLayerDepositManagerV1(
+            _depositContractAddress, _withdrawalCredentials
+        );
     }
 
     bytes public _publicKeys =
@@ -38,23 +43,22 @@ contract DepositManagerV1ExposeInitializer is DepositManagerV1 {
     }
 }
 
-contract DepositManagerV1Tests {
+contract ConsensusLayerDepositManagerV1Tests {
     event FundedValidatorKey(bytes publicKey);
 
     Vm internal vm = Vm(0x7109709ECfa91a80626fF3989D68f67F5b1DD12D);
 
     bytes32 internal withdrawalCredentials = bytes32(uint256(1));
 
-    DepositManagerV1 internal depositManager;
+    ConsensusLayerDepositManagerV1 internal depositManager;
     IDepositContract internal depositContract;
 
     function setUp() public {
         depositContract = new DepositContractMock();
 
-        depositManager = new DepositManagerV1ExposeInitializer();
-        DepositManagerV1ExposeInitializer(address(depositManager)).publicDepositManagerInitializeV1(
-            address(depositContract), withdrawalCredentials
-        );
+        depositManager = new ConsensusLayerDepositManagerV1ExposeInitializer();
+        ConsensusLayerDepositManagerV1ExposeInitializer(address(depositManager))
+            .publicConsensusLayerDepositManagerInitializeV1(address(depositContract), withdrawalCredentials);
     }
 
     function testRetrieveWithdrawalCredentials() public view {
@@ -90,11 +94,16 @@ contract DepositManagerV1Tests {
     }
 }
 
-contract DepositManagerV1ControllableValidatorKeyRequest is DepositManagerV1 {
-    function publicDepositManagerInitializeV1(address _depositContractAddress, bytes32 _withdrawalCredentials)
+contract ConsensusLayerDepositManagerV1ControllableValidatorKeyRequest is ConsensusLayerDepositManagerV1 {
+    function publicConsensusLayerDepositManagerInitializeV1(
+        address _depositContractAddress,
+        bytes32 _withdrawalCredentials
+    )
         external
     {
-        DepositManagerV1.initDepositManagerV1(_depositContractAddress, _withdrawalCredentials);
+        ConsensusLayerDepositManagerV1.initConsensusLayerDepositManagerV1(
+            _depositContractAddress, _withdrawalCredentials
+        );
     }
 
     bytes public _publicKeys =
@@ -170,66 +179,66 @@ contract DepositManagerV1ControllableValidatorKeyRequest is DepositManagerV1 {
     }
 }
 
-contract DepositManagerV1ErrorTests {
+contract ConsensusLayerDepositManagerV1ErrorTests {
     Vm internal vm = Vm(0x7109709ECfa91a80626fF3989D68f67F5b1DD12D);
 
     bytes32 internal withdrawalCredentials = bytes32(uint256(1));
 
-    DepositManagerV1 internal depositManager;
+    ConsensusLayerDepositManagerV1 internal depositManager;
     IDepositContract internal depositContract;
 
     function setUp() public {
         depositContract = new DepositContractMock();
 
-        depositManager = new DepositManagerV1ControllableValidatorKeyRequest();
-        DepositManagerV1ControllableValidatorKeyRequest(address(depositManager)).publicDepositManagerInitializeV1(
-            address(depositContract), withdrawalCredentials
-        );
+        depositManager = new ConsensusLayerDepositManagerV1ControllableValidatorKeyRequest();
+        ConsensusLayerDepositManagerV1ControllableValidatorKeyRequest(address(depositManager))
+            .publicConsensusLayerDepositManagerInitializeV1(address(depositContract), withdrawalCredentials);
     }
 
     function testInconsistentPublicKey() public {
         vm.deal(address(depositManager), 32 ether);
-        DepositManagerV1ControllableValidatorKeyRequest(address(depositManager)).setScenario(1);
+        ConsensusLayerDepositManagerV1ControllableValidatorKeyRequest(address(depositManager)).setScenario(1);
         vm.expectRevert(abi.encodeWithSignature("InconsistentPublicKeys()"));
         depositManager.depositToConsensusLayer(5);
     }
 
     function testInconsistentSignature() public {
         vm.deal(address(depositManager), 32 ether);
-        DepositManagerV1ControllableValidatorKeyRequest(address(depositManager)).setScenario(2);
+        ConsensusLayerDepositManagerV1ControllableValidatorKeyRequest(address(depositManager)).setScenario(2);
         vm.expectRevert(abi.encodeWithSignature("InconsistentSignatures()"));
         depositManager.depositToConsensusLayer(5);
     }
 
     function testUnavailableKeys() public {
         vm.deal(address(depositManager), 32 ether);
-        DepositManagerV1ControllableValidatorKeyRequest(address(depositManager)).setScenario(3);
+        ConsensusLayerDepositManagerV1ControllableValidatorKeyRequest(address(depositManager)).setScenario(3);
         vm.expectRevert(abi.encodeWithSignature("NoAvailableValidatorKeys()"));
         depositManager.depositToConsensusLayer(5);
     }
 
     function testInvalidPublicKeyCount() public {
         vm.deal(address(depositManager), 32 ether);
-        DepositManagerV1ControllableValidatorKeyRequest(address(depositManager)).setScenario(4);
+        ConsensusLayerDepositManagerV1ControllableValidatorKeyRequest(address(depositManager)).setScenario(4);
         vm.expectRevert(abi.encodeWithSignature("InvalidPublicKeyCount()"));
         depositManager.depositToConsensusLayer(5);
     }
 
     function testInvalidSignatureCount() public {
         vm.deal(address(depositManager), 32 ether);
-        DepositManagerV1ControllableValidatorKeyRequest(address(depositManager)).setScenario(5);
+        ConsensusLayerDepositManagerV1ControllableValidatorKeyRequest(address(depositManager)).setScenario(5);
         vm.expectRevert(abi.encodeWithSignature("InvalidSignatureCount()"));
         depositManager.depositToConsensusLayer(5);
     }
 
     function testInvalidWithdrawalCredential() public {
         vm.deal(address(depositManager), 32 ether);
-        DepositManagerV1ControllableValidatorKeyRequest(address(depositManager)).setScenario(0);
-        DepositManagerV1ControllableValidatorKeyRequest(address(depositManager)).sudoSetWithdrawalCredentials(
-            bytes32(0)
-        );
+        ConsensusLayerDepositManagerV1ControllableValidatorKeyRequest(address(depositManager)).setScenario(0);
+        ConsensusLayerDepositManagerV1ControllableValidatorKeyRequest(address(depositManager))
+            .sudoSetWithdrawalCredentials(bytes32(0));
         vm.expectRevert(abi.encodeWithSignature("InvalidWithdrawalCredentials()"));
         depositManager.depositToConsensusLayer(5);
-        DepositManagerV1ExposeInitializer(address(depositManager)).sudoSetWithdrawalCredentials(withdrawalCredentials);
+        ConsensusLayerDepositManagerV1ExposeInitializer(address(depositManager)).sudoSetWithdrawalCredentials(
+            withdrawalCredentials
+        );
     }
 }

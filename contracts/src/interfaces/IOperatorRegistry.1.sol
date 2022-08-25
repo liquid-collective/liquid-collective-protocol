@@ -27,7 +27,7 @@ interface IOperatorsRegistryV1 {
     event RemovedValidatorKey(uint256 indexed index, bytes publicKey);
 
     function initOperatorsRegistryV1(address _admin, address _river) external;
-    function getAllActiveOperators() external view returns (Operators.Operator[] memory);
+    function listActiveOperators() external view returns (Operators.Operator[] memory);
     function getRiver() external view returns (address);
     function setRiver(address _newRiver) external;
     function getOperatorDetails(string calldata _name)
@@ -44,14 +44,13 @@ interface IOperatorsRegistryV1 {
     function addValidators(uint256 _index, uint256 _keyCount, bytes calldata _publicKeys, bytes calldata _signatures)
         external;
     function removeValidators(uint256 _index, uint256[] calldata _indexes) external;
-    function getOperatorByName(string calldata _name) external view returns (Operators.Operator memory);
     function getOperator(uint256 _index) external view returns (Operators.Operator memory);
     function getOperatorCount() external view returns (uint256);
     function getValidator(uint256 _operatorIndex, uint256 _validatorIndex)
         external
         view
         returns (bytes memory publicKey, bytes memory signature, bool funded);
-    function getNextValidators(uint256 _requestedAmount)
+    function pickNextValidators(uint256 _requestedAmount)
         external
         returns (bytes[] memory publicKeys, bytes[] memory signatures);
 }

@@ -40,6 +40,11 @@ contract OperatorsRegistryV1Tests is Test {
         operatorsRegistry.initOperatorsRegistryV1(admin, river);
     }
 
+    function _getOperatorByName(string memory name) internal view returns (Operators.Operator memory) {
+        (int256 index,) = operatorsRegistry.getOperatorDetails(name);
+        return operatorsRegistry.getOperator(uint256(index));
+    }
+
     function testInitializeTwice() public {
         vm.expectRevert(abi.encodeWithSignature("InvalidInitialization(uint256,uint256)", 0, 1));
         operatorsRegistry.initOperatorsRegistryV1(admin, river);
@@ -112,7 +117,7 @@ contract OperatorsRegistryV1Tests is Test {
         address _nodeOperatorFeeRecipient = uf._new(_nodeOperatorFeeRecipientSalt);
         vm.startPrank(admin);
         operatorsRegistry.addOperator(string(abi.encodePacked(_name)), _nodeOperatorAddress, _nodeOperatorFeeRecipient);
-        Operators.Operator memory newOperator = operatorsRegistry.getOperatorByName(string(abi.encodePacked(_name)));
+        Operators.Operator memory newOperator = _getOperatorByName(string(abi.encodePacked(_name)));
         assert(newOperator.operator == _nodeOperatorAddress);
     }
 
@@ -127,12 +132,6 @@ contract OperatorsRegistryV1Tests is Test {
         address _nodeOperatorFeeRecipient = uf._new(_nodeOperatorFeeRecipientSalt);
         vm.expectRevert(abi.encodeWithSignature("Unauthorized(address)", address(this)));
         operatorsRegistry.addOperator(string(abi.encodePacked(_name)), _nodeOperatorAddress, _nodeOperatorFeeRecipient);
-    }
-
-    function testGetInexistingNodeOperator(bytes32 _name) public {
-        vm.startPrank(admin);
-        vm.expectRevert(abi.encodeWithSignature("OperatorNotFound(string)", string(abi.encodePacked(_name))));
-        operatorsRegistry.getOperatorByName(string(abi.encodePacked(_name)));
     }
 
     function testSetOperatorAddressesAsAdmin(
@@ -158,7 +157,7 @@ contract OperatorsRegistryV1Tests is Test {
         assert(newOperator.feeRecipient == _firstFeeRecipient);
         operatorsRegistry.setOperatorAddress(index, _secondAddress);
         operatorsRegistry.setOperatorFeeRecipientAddress(index, _secondFeeRecipient);
-        newOperator = operatorsRegistry.getOperatorByName(string(abi.encodePacked(_name)));
+        newOperator = _getOperatorByName(string(abi.encodePacked(_name)));
         assert(newOperator.operator == _secondAddress);
         assert(newOperator.feeRecipient == _secondFeeRecipient);
         vm.stopPrank();
@@ -192,7 +191,7 @@ contract OperatorsRegistryV1Tests is Test {
         vm.startPrank(_firstFeeRecipient);
         operatorsRegistry.setOperatorFeeRecipientAddress(index, _secondFeeRecipient);
         vm.stopPrank();
-        newOperator = operatorsRegistry.getOperatorByName(string(abi.encodePacked(_name)));
+        newOperator = _getOperatorByName(string(abi.encodePacked(_name)));
         assert(newOperator.operator == _secondAddress);
         assert(newOperator.feeRecipient == _secondFeeRecipient);
     }
@@ -271,7 +270,7 @@ contract OperatorsRegistryV1Tests is Test {
         Operators.Operator memory newOperator = operatorsRegistry.getOperator(index);
         assert(keccak256(bytes(newOperator.name)) == keccak256(bytes(string(abi.encodePacked(_name)))));
         operatorsRegistry.setOperatorName(index, string(abi.encodePacked(_nextName)));
-        newOperator = operatorsRegistry.getOperatorByName(string(abi.encodePacked(_nextName)));
+        newOperator = _getOperatorByName(string(abi.encodePacked(_nextName)));
         assert(keccak256(bytes(newOperator.name)) == keccak256(bytes(string(abi.encodePacked(_nextName)))));
         vm.stopPrank();
     }
@@ -291,7 +290,7 @@ contract OperatorsRegistryV1Tests is Test {
         vm.startPrank(_address);
         operatorsRegistry.setOperatorName(index, string(abi.encodePacked(_nextName)));
         vm.stopPrank();
-        newOperator = operatorsRegistry.getOperatorByName(string(abi.encodePacked(_nextName)));
+        newOperator = _getOperatorByName(string(abi.encodePacked(_nextName)));
         assert(keccak256(bytes(newOperator.name)) == keccak256(bytes(string(abi.encodePacked(_nextName)))));
     }
 
@@ -579,7 +578,7 @@ contract OperatorsRegistryV1Tests is Test {
         vm.stopPrank();
 
         vm.startPrank(river);
-        (bytes[] memory publicKeys, bytes[] memory signatures) = operatorsRegistry.getNextValidators(10);
+        (bytes[] memory publicKeys, bytes[] memory signatures) = operatorsRegistry.pickNextValidators(10);
         vm.stopPrank();
         assert(publicKeys.length == 10);
         assert(
@@ -624,7 +623,7 @@ contract OperatorsRegistryV1Tests is Test {
         vm.stopPrank();
 
         vm.startPrank(river);
-        (bytes[] memory publicKeys, bytes[] memory signatures) = operatorsRegistry.getNextValidators(10);
+        (bytes[] memory publicKeys, bytes[] memory signatures) = operatorsRegistry.pickNextValidators(10);
         vm.stopPrank();
         assert(publicKeys.length == 5);
         assert(
@@ -649,7 +648,7 @@ contract OperatorsRegistryV1Tests is Test {
         (int256 _index,) = operatorsRegistry.getOperatorDetails(string(abi.encodePacked(_name)));
         assert(_index >= 0);
 
-        Operators.Operator[] memory operators = operatorsRegistry.getAllActiveOperators();
+        Operators.Operator[] memory operators = operatorsRegistry.listActiveOperators();
 
         assert(operators.length == 1);
         assert(keccak256(bytes(operators[0].name)) == keccak256(abi.encodePacked(_name)));
@@ -674,21 +673,21 @@ contract OperatorsRegistryV1Tests is Test {
 
         operatorsRegistry.setOperatorStatus(index, false);
 
-        Operators.Operator[] memory operators = operatorsRegistry.getAllActiveOperators();
+        Operators.Operator[] memory operators = operatorsRegistry.listActiveOperators();
 
         assert(operators.length == 0);
     }
 
     function testGetKeysAsRiverNoKeys() public {
         vm.startPrank(river);
-        (bytes[] memory publicKeys,) = operatorsRegistry.getNextValidators(10);
+        (bytes[] memory publicKeys,) = operatorsRegistry.pickNextValidators(10);
         vm.stopPrank();
         assert(publicKeys.length == 0);
     }
 
     function testGetKeysAsUnauthorized() public {
         vm.expectRevert(abi.encodeWithSignature("Unauthorized(address)", address(this)));
-        operatorsRegistry.getNextValidators(10);
+        operatorsRegistry.pickNextValidators(10);
     }
 
     function testAddValidatorsAsAdmin(bytes32 _name, uint256 _firstAddressSalt, uint256 _firstFeeRecipientSalt)
@@ -1119,7 +1118,7 @@ contract OperatorsRegistryV1Tests is Test {
         vm.startPrank(admin);
         operatorsRegistry.addOperator(string(abi.encodePacked(_name)), _firstAddress, _firstFeeRecipient);
 
-        Operators.Operator memory operator = operatorsRegistry.getOperatorByName(string(abi.encodePacked(_name)));
+        Operators.Operator memory operator = _getOperatorByName(string(abi.encodePacked(_name)));
         assert(operator.active == true);
     }
 
@@ -1129,7 +1128,7 @@ contract OperatorsRegistryV1Tests is Test {
         vm.startPrank(admin);
         operatorsRegistry.addOperator(string(abi.encodePacked(_name)), _firstAddress, _firstFeeRecipient);
 
-        Operators.Operator memory operator = operatorsRegistry.getOperatorByName(string(abi.encodePacked(_name)));
+        Operators.Operator memory operator = _getOperatorByName(string(abi.encodePacked(_name)));
         Operators.Operator memory operatorByIndex = operatorsRegistry.getOperator(0);
         assert(operator.active == true);
         assert(keccak256(bytes(operatorByIndex.name)) == keccak256(bytes(operator.name)));

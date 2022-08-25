@@ -3,12 +3,12 @@ pragma solidity 0.8.10;
 
 import "../libraries/Errors.sol";
 
-import "../interfaces/components/ITransferManager.1.sol";
+import "../interfaces/components/IUserDepositManager.1.sol";
 
-/// @title Transfer Manager (v1)
+/// @title User Deposit Manager (v1)
 /// @author Kiln
 /// @notice This contract handles the inbound transfers cases or the explicit submissions
-abstract contract TransferManagerV1 is ITransferManagerV1 {
+abstract contract UserDepositManagerV1 is IUserDepositManagerV1 {
     /// @notice Handler called whenever a user has sent funds to the contract
     /// @dev Must be overriden
     /// @param _depositor Address that made the deposit
