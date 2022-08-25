@@ -5,13 +5,12 @@ pragma solidity 0.8.10;
 import "./Vm.sol";
 import "../src/ELFeeRecipient.1.sol";
 import "../src/libraries/Errors.sol";
-import "../src/interfaces/IRiverELFeeInput.sol";
-import "../src/interfaces/IELFeeRecipient.sol";
+import "../src/interfaces/IELFeeRecipient.1.sol";
 import "../src/Withdraw.1.sol";
 import "./utils/River.setup1.sol";
 import "./utils/UserFactory.sol";
 
-contract RiverDonationMock is IRiverELFeeInput {
+contract RiverDonationMock {
     event BalanceUpdated(uint256 amount);
 
     function sendELFees() external payable {
@@ -19,7 +18,7 @@ contract RiverDonationMock is IRiverELFeeInput {
     }
 
     function pullELFees(address feeRecipient) external {
-        IELFeeRecipient(feeRecipient).pullELFees();
+        IELFeeRecipientV1(payable(feeRecipient)).pullELFees();
     }
 }
 

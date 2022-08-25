@@ -16,7 +16,7 @@ contract OracleManagerV1ExposeInitializer is OracleManagerV1 {
         lastReceived = amount;
     }
 
-    function _pullELFees() internal override returns (uint256) {
+    function _pullELFees() internal view override returns (uint256) {
         return extraAmount;
     }
 

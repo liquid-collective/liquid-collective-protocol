@@ -24,7 +24,6 @@ const config: HardhatUserConfig = {
     },
   },
   dodoc: {
-    include: ["RiverV1", "OracleV1", "AllowlistV1", "WithdrawV1"],
     outputDir: "natspec",
   },
   contractSizer: {

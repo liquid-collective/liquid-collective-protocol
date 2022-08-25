@@ -2,6 +2,7 @@
 pragma solidity 0.8.10;
 
 import "./libraries/Errors.sol";
+import "./interfaces/IFirewall.sol";
 
 /// @title Firewall
 /// @author Figment
@@ -12,7 +13,7 @@ import "./libraries/Errors.sol";
 ///         Random callers cannot call anything through this contract, even if the underlying function
 ///         is unpermissioned in the underlying contract.
 ///         Calls to non-admin functions should be called at the underlying contract directly.
-contract Firewall {
+contract Firewall is IFirewall {
     mapping(bytes4 => bool) internal executorCanCall;
 
     address public governor;

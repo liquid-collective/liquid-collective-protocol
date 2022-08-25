@@ -1,21 +1,18 @@
 //SPDX-License-Identifier: BUSL-1.1
 pragma solidity 0.8.10;
 
-import "../interfaces/IERC20.sol";
 import "../libraries/Errors.sol";
 
 import "../state/river/Shares.sol";
 import "../state/river/SharesPerOwner.sol";
 import "../state/shared/ApprovalsPerOwner.sol";
 
+import "../interfaces/components/ISharesManager.1.sol";
+
 /// @title Shares Manager (v1)
 /// @author Kiln
 /// @notice This contract handles the shares of the depositor and the rebasing effect depending on the oracle data
-abstract contract SharesManagerV1 is IERC20 {
-    error BalanceTooLow();
-    error AllowanceTooLow(address _from, address _operator, uint256 _allowance, uint256 _value);
-    error NullTransfer();
-
+abstract contract SharesManagerV1 is ISharesManagerV1 {
     /// @notice Internal hook triggered on the external transfer call
     /// @param _from Address of the sender
     /// @param _to Address of the recipient

@@ -1,38 +1,29 @@
 //SPDX-License-Identifier: BUSL-1.1
 pragma solidity 0.8.10;
 
-import "../libraries/Errors.sol";
-import "../libraries/Uint256Lib.sol";
-import "../libraries/LibOwnable.sol";
+import "./Initializable.sol";
 
-import "../state/river/Operators.sol";
-import "../state/river/ValidatorKeys.sol";
+import "./libraries/Errors.sol";
+import "./libraries/Uint256Lib.sol";
+import "./libraries/LibOwnable.sol";
 
-/// @title Operators Manager (v1)
+import "./state/operatorsRegistry/Operators.sol";
+import "./state/operatorsRegistry/ValidatorKeys.sol";
+import "./state/shared/RiverAddress.sol";
+
+import "./interfaces/IOperatorRegistry.1.sol";
+
+/// @title OperatorsRegistry (v1)
 /// @author Kiln
-/// @notice This contract handles the operator and key list
-contract OperatorsManagerV1 {
-    error OperatorAlreadyExists(string name);
-    error InactiveOperator(uint256 index);
-    error InvalidFundedKeyDeletionAttempt();
-    error InvalidUnsortedIndexes();
-    error InvalidArrayLengths();
-    error InvalidEmptyArray();
-    error InvalidKeyCount();
-    error InvalidPublicKeysLength();
-    error InvalidSignatureLength();
-    error InvalidIndexOutOfBounds();
-    error OperatorLimitTooHigh(uint256 limit, uint256 keyCount);
-
-    event AddedOperator(uint256 indexed index, string name, address operatorAddress, address feeRecipientAddress);
-    event SetOperatorStatus(uint256 indexed index, bool active);
-    event SetOperatorLimit(uint256 indexed index, uint256 newLimit);
-    event SetOperatorStoppedValidatorCount(uint256 indexed index, uint256 newStoppedValidatorCount);
-    event SetOperatorFeeRecipientAddress(uint256 indexed index, address newOperatorAddress);
-    event SetOperatorAddress(uint256 indexed index, address newOperatorAddress);
-    event SetOperatorName(uint256 indexed name, string newName);
-    event AddedValidatorKeys(uint256 indexed index, bytes publicKeys);
-    event RemovedValidatorKey(uint256 indexed index, bytes publicKey);
+/// @notice This contract handles the list of operators and their keys
+contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable {
+    /// @notice Initializes the operators registry
+    /// @param _admin Admin in charge of managing operators
+    /// @param _river Address of River system
+    function initOperatorsRegistryV1(address _admin, address _river) external init(0) {
+        LibOwnable._setAdmin(_admin);
+        RiverAddress.set(_river);
+    }
 
     /// @notice Prevents unauthorized calls
     modifier onlyAdmin() virtual {
@@ -42,11 +33,9 @@ contract OperatorsManagerV1 {
         _;
     }
 
-    /// @notice Prevents the call from working if the operator is not active
-    /// @param _index The name identifying the operator
-    modifier active(uint256 _index) {
-        if (!Operators.getByIndex(_index).active) {
-            revert InactiveOperator(_index);
+    modifier onlyRiver() virtual {
+        if (msg.sender != RiverAddress.get()) {
+            revert Errors.Unauthorized(msg.sender);
         }
         _;
     }
@@ -85,6 +74,51 @@ contract OperatorsManagerV1 {
         _;
     }
 
+    /// @notice Retrieve the River address
+    function getRiver() external view returns (address) {
+        return RiverAddress.get();
+    }
+
+    /// @notice Change the River address
+    /// @param _newRiver New address for the river system
+    function setRiver(address _newRiver) external onlyAdmin {
+        RiverAddress.set(_newRiver);
+    }
+
+    /// @notice Changes the admin but waits for new admin approval
+    /// @param _newAdmin New address for the admin
+    function transferOwnership(address _newAdmin) external onlyAdmin {
+        LibOwnable._setPendingAdmin(_newAdmin);
+    }
+
+    /// @notice Accepts the ownership of the system
+    function acceptOwnership() external {
+        if (msg.sender != LibOwnable._getPendingAdmin()) {
+            revert Errors.Unauthorized(msg.sender);
+        }
+        LibOwnable._setAdmin(msg.sender);
+        LibOwnable._setPendingAdmin(address(0));
+    }
+
+    /// @notice Retrieve system administrator address
+    function getAdministrator() external view returns (address) {
+        return LibOwnable._getAdmin();
+    }
+
+    /// @notice Retrieve system pending administrator address
+    function getPendingAdministrator() external view returns (address) {
+        return LibOwnable._getPendingAdmin();
+    }
+
+    /// @notice Prevents the call from working if the operator is not active
+    /// @param _index The name identifying the operator
+    modifier active(uint256 _index) {
+        if (!Operators.getByIndex(_index).active) {
+            revert InactiveOperator(_index);
+        }
+        _;
+    }
+
     /// @notice Retrieve the operator details from the operator name
     /// @param _name Name of the operator
     function getOperatorDetails(string calldata _name)
@@ -94,6 +128,11 @@ contract OperatorsManagerV1 {
     {
         _index = Operators.indexOf(_name);
         _operatorAddress = Operators.get(_name).operator;
+    }
+
+    /// @notice Retrieve the active operator set
+    function getAllActiveOperators() external view returns (Operators.Operator[] memory) {
+        return Operators.getAllActive();
     }
 
     /// @notice Adds an operator to the registry
@@ -334,6 +373,16 @@ contract OperatorsManagerV1 {
     {
         (publicKey, signature) = ValidatorKeys.get(_operatorIndex, _validatorIndex);
         funded = _validatorIndex < Operators.getByIndex(_operatorIndex).funded;
+    }
+
+    /// @notice Retrieve validator keys based on operator statuses
+    /// @param _requestedAmount Max amount of keys requested
+    function getNextValidators(uint256 _requestedAmount)
+        external
+        onlyRiver
+        returns (bytes[] memory publicKeys, bytes[] memory signatures)
+    {
+        return _getNextValidatorsFromActiveOperators(_requestedAmount);
     }
 
     /// @notice Internal utility to concatenate bytes arrays together

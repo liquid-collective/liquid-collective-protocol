@@ -10,21 +10,13 @@ import "../state/river/DepositContractAddress.sol";
 import "../state/river/WithdrawalCredentials.sol";
 import "../state/river/DepositedValidatorCount.sol";
 
+import "../interfaces/components/IDepositManager.1.sol";
+
 /// @title Deposit Manager (v1)
 /// @author Kiln
 /// @notice This contract handles the interactions with the official deposit contract, funding all validators
 /// @dev _onValidatorKeyRequest must be overriden.
-abstract contract DepositManagerV1 {
-    event FundedValidatorKey(bytes publicKey);
-
-    error NotEnoughFunds();
-    error InconsistentPublicKeys();
-    error InconsistentSignatures();
-    error NoAvailableValidatorKeys();
-    error InvalidPublicKeyCount();
-    error InvalidSignatureCount();
-    error InvalidWithdrawalCredentials();
-
+abstract contract DepositManagerV1 is IDepositManagerV1 {
     uint256 public constant PUBLIC_KEY_LENGTH = 48;
     uint256 public constant SIGNATURE_LENGTH = 96;
     uint256 public constant DEPOSIT_SIZE = 32 ether;

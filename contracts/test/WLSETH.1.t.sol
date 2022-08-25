@@ -2,12 +2,12 @@
 
 pragma solidity 0.8.10;
 
-import "../src/interfaces/IRiverToken.sol";
 import "../src/WLSETH.1.sol";
 import "./Vm.sol";
 import "./utils/UserFactory.sol";
+import "../src/interfaces/IRiver.1.sol";
 
-contract RiverTokenMock is IRiverToken {
+contract RiverTokenMock {
     mapping(address => uint256) internal balances;
     mapping(address => mapping(address => uint256)) internal approvals;
     uint256 internal underlyingAssetTotal;
@@ -86,13 +86,13 @@ contract RiverTokenMock is IRiverToken {
 }
 
 contract WLSETHV1Tests {
-    IRiverToken internal river;
+    IRiverV1 internal river;
     WLSETHV1 internal wlseth;
     Vm internal vm = Vm(0x7109709ECfa91a80626fF3989D68f67F5b1DD12D);
     UserFactory internal uf = new UserFactory();
 
     function setUp() external {
-        river = new RiverTokenMock();
+        river = IRiverV1(payable(address(new RiverTokenMock())));
         wlseth = new WLSETHV1();
         wlseth.initWLSETHV1(address(river));
         RiverTokenMock(address(river)).sudoSetUnderlyingTotal(100 ether);

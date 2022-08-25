@@ -59,7 +59,12 @@ const func: DeployFunction = async function ({
 
   const futureELFeeRecipientAddress = getContractAddress({
     from: deployer,
-    nonce: txCount + 7, // proxy is in 8 txs
+    nonce: txCount + 10, // proxy is in 8 txs
+  });
+
+  const futureOperatorsRegistryAddress = getContractAddress({
+    from: deployer,
+    nonce: txCount + 8, // proxy is in 8 txs
   });
 
   const futureOracleAddress = getContractAddress({
@@ -82,13 +87,7 @@ const func: DeployFunction = async function ({
       systemAdministrator,
       systemAdministrator,
       futureRiverAddress,
-      [
-        riverInterface.getSighash("setOperatorStatus"),
-        riverInterface.getSighash("setOperatorStoppedValidatorCount"),
-        riverInterface.getSighash("setOperatorLimits"),
-        riverInterface.getSighash("depositToConsensusLayer"),
-        riverInterface.getSighash("setOracle"),
-      ],
+      [riverInterface.getSighash("depositToConsensusLayer"), riverInterface.getSighash("setOracle")],
     ],
   });
 
@@ -109,6 +108,7 @@ const func: DeployFunction = async function ({
           futureOracleAddress,
           riverFirewallDeployment.address,
           allowlistDeployment.address,
+          futureOperatorsRegistryAddress,
           treasury,
           500,
           50000,
@@ -150,6 +150,37 @@ const func: DeployFunction = async function ({
     },
   });
 
+  const operatorsRegistryArtifact = await deployments.getArtifact("OperatorsRegistryV1");
+  const operatorsRegsitryInterface = new ethers.utils.Interface(operatorsRegistryArtifact.abi);
+
+  const operatorsRegistryFirewallDeployment = await deployments.deploy("Firewall", {
+    from: deployer,
+    log: true,
+    args: [
+      systemAdministrator,
+      systemAdministrator,
+      futureOperatorsRegistryAddress,
+      [
+        operatorsRegsitryInterface.getSighash("setOperatorStatus"),
+        operatorsRegsitryInterface.getSighash("setOperatorStoppedValidatorCount"),
+        operatorsRegsitryInterface.getSighash("setOperatorLimits"),
+      ],
+    ],
+  });
+
+  const operatorsRegistryDeployment = await deployments.deploy("OperatorsRegistryV1", {
+    from: deployer,
+    log: true,
+    proxy: {
+      owner: proxyAdministrator,
+      proxyContract: "TUPProxy",
+      execute: {
+        methodName: "initOperatorsRegistryV1",
+        args: [operatorsRegistryFirewallDeployment.address, futureRiverAddress],
+      },
+    },
+  });
+
   const elFeeRecipientDeployment = await deployments.deploy("ELFeeRecipientV1", {
     from: deployer,
     log: true,
@@ -174,6 +205,12 @@ const func: DeployFunction = async function ({
   if (elFeeRecipientDeployment.address !== futureELFeeRecipientAddress) {
     throw new Error(
       `Invalid future EL Fee Recipient address computation ${futureELFeeRecipientAddress} != ${elFeeRecipientDeployment.address}`
+    );
+  }
+
+  if (operatorsRegistryDeployment.address !== futureOperatorsRegistryAddress) {
+    throw new Error(
+      `Invalid future Operators Registry address computation ${futureOperatorsRegistryAddress} != ${operatorsRegistryDeployment.address}`
     );
   }
 

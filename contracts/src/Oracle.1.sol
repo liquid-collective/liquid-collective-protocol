@@ -4,8 +4,7 @@ pragma solidity 0.8.10;
 import "./Initializable.sol";
 import "./libraries/Errors.sol";
 import "./libraries/LibOwnable.sol";
-import "./interfaces/IRiverOracleInput.sol";
-import "./interfaces/IRiverToken.sol";
+import "./interfaces/IRiver.1.sol";
 
 import "./state/shared/AdministratorAddress.sol";
 import "./state/shared/RiverAddress.sol";
@@ -466,16 +465,18 @@ contract OracleV1 is Initializable {
     {
         _clearReporting(_epochId + _beaconSpec.epochsPerFrame);
 
-        IRiverOracleInput riverAddress = IRiverOracleInput(RiverAddress.get());
-        uint256 prevTotalEth = IRiverToken(address(riverAddress)).totalUnderlyingSupply();
+        IRiverV1 riverAddress = IRiverV1(payable(RiverAddress.get()));
+        uint256 prevTotalEth = IRiverV1(payable(address(riverAddress))).totalUnderlyingSupply();
         riverAddress.setBeaconData(_validatorCount, _balanceSum, bytes32(_epochId));
-        uint256 postTotalEth = IRiverToken(address(riverAddress)).totalUnderlyingSupply();
+        uint256 postTotalEth = IRiverV1(payable(address(riverAddress))).totalUnderlyingSupply();
 
         uint256 timeElapsed = (_epochId - LastEpochId.get()) * _beaconSpec.slotsPerEpoch * _beaconSpec.secondsPerSlot;
 
         _sanityChecks(postTotalEth, prevTotalEth, timeElapsed);
         LastEpochId.set(_epochId);
 
-        emit PostTotalShares(postTotalEth, prevTotalEth, timeElapsed, IRiverToken(address(riverAddress)).totalSupply());
+        emit PostTotalShares(
+            postTotalEth, prevTotalEth, timeElapsed, IRiverV1(payable(address(riverAddress))).totalSupply()
+            );
     }
 }
