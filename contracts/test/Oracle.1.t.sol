@@ -5,16 +5,16 @@ pragma solidity 0.8.10;
 import "./Vm.sol";
 import "../src/Oracle.1.sol";
 import "../src/libraries/Errors.sol";
-import "../src/interfaces/IRiverOracleInput.sol";
 import "../src/Withdraw.1.sol";
 import "./utils/River.setup1.sol";
 import "./utils/UserFactory.sol";
 import "./mocks/RiverMock.sol";
+import "../src/interfaces/IRiver.1.sol";
 
 contract OracleV1Tests {
     OracleV1 internal oracle;
 
-    IRiverOracleInput internal oracleInput;
+    IRiverV1 internal oracleInput;
     Vm internal vm = Vm(0x7109709ECfa91a80626fF3989D68f67F5b1DD12D);
     UserFactory internal uf = new UserFactory();
 
@@ -32,7 +32,7 @@ contract OracleV1Tests {
     uint256 internal constant LOWER_BOUND = 500;
 
     function setUp() public {
-        oracleInput = new RiverMock();
+        oracleInput = IRiverV1(payable(address(new RiverMock())));
         oracle = new OracleV1();
         oracle.initOracleV1(
             address(oracleInput),

@@ -2,7 +2,7 @@
 pragma solidity 0.8.10;
 
 import "./Initializable.sol";
-import "./interfaces/IRiverToken.sol";
+import "./interfaces/IRiver.1.sol";
 
 import "./state/shared/RiverAddress.sol";
 import "./state/shared/ApprovalsPerOwner.sol";
@@ -61,7 +61,7 @@ contract WLSETHV1 is Initializable, ReentrancyGuard {
 
     /// @notice Retrieves the token total supply
     function totalSupply() external view returns (uint256) {
-        return IRiverToken(RiverAddress.get()).balanceOfUnderlying(address(this));
+        return IRiverV1(payable(RiverAddress.get())).balanceOfUnderlying(address(this));
     }
 
     /// @notice Retrieves the token balance of the specified user
@@ -127,7 +127,7 @@ contract WLSETHV1 is Initializable, ReentrancyGuard {
     /// @param _value Amount of river token to give to the mint
     function mint(address _recipient, uint256 _value) external nonReentrant {
         BalanceOf.set(_recipient, BalanceOf.get(_recipient) + _value);
-        if (!IRiverToken(RiverAddress.get()).transferFrom(msg.sender, address(this), _value)) {
+        if (!IRiverV1(payable(RiverAddress.get())).transferFrom(msg.sender, address(this), _value)) {
             revert TokenTransferError();
         }
     }
@@ -139,23 +139,23 @@ contract WLSETHV1 is Initializable, ReentrancyGuard {
     /// @param _value Amount of wrapped token to give to the burn
     function burn(address _recipient, uint256 _value) external nonReentrant {
         uint256 callerUnderlyingBalance =
-            IRiverToken(RiverAddress.get()).underlyingBalanceFromShares(BalanceOf.get(msg.sender));
+            IRiverV1(payable(RiverAddress.get())).underlyingBalanceFromShares(BalanceOf.get(msg.sender));
         if (_value > callerUnderlyingBalance) {
             revert BalanceTooLow();
         }
-        uint256 sharesAmount = IRiverToken(RiverAddress.get()).sharesFromUnderlyingBalance(_value);
+        uint256 sharesAmount = IRiverV1(payable(RiverAddress.get())).sharesFromUnderlyingBalance(_value);
         BalanceOf.set(msg.sender, BalanceOf.get(msg.sender) - sharesAmount);
-        if (!IRiverToken(RiverAddress.get()).transfer(_recipient, sharesAmount)) {
+        if (!IRiverV1(payable(RiverAddress.get())).transfer(_recipient, sharesAmount)) {
             revert TokenTransferError();
         }
     }
 
     function _balanceOf(address _owner) internal view returns (uint256 balance) {
-        return IRiverToken(RiverAddress.get()).underlyingBalanceFromShares(BalanceOf.get(_owner));
+        return IRiverV1(payable(RiverAddress.get())).underlyingBalanceFromShares(BalanceOf.get(_owner));
     }
 
     function _transfer(address _from, address _to, uint256 _value) internal returns (bool) {
-        uint256 valueToShares = IRiverToken(RiverAddress.get()).sharesFromUnderlyingBalance(_value);
+        uint256 valueToShares = IRiverV1(payable(RiverAddress.get())).sharesFromUnderlyingBalance(_value);
         BalanceOf.set(_from, BalanceOf.get(_from) - valueToShares);
         BalanceOf.set(_to, BalanceOf.get(_to) + valueToShares);
 

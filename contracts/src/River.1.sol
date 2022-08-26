@@ -1,18 +1,21 @@
 //SPDX-License-Identifier: BUSL-1.1
 pragma solidity 0.8.10;
 
-import "./components/DepositManager.1.sol";
-import "./components/TransferManager.1.sol";
+import "./interfaces/IAllowlist.1.sol";
+import "./interfaces/IOperatorRegistry.1.sol";
+import "./interfaces/IRiver.1.sol";
+import "./interfaces/IELFeeRecipient.1.sol";
+
+import "./components/ConsensusLayerDepositManager.1.sol";
+import "./components/UserDepositManager.1.sol";
 import "./components/SharesManager.1.sol";
 import "./components/OracleManager.1.sol";
-import "./components/OperatorsManager.1.sol";
 import "./Initializable.sol";
 import "./libraries/LibOwnable.sol";
-import "./interfaces/IRiverELFeeInput.sol";
-import "./interfaces/IELFeeRecipient.sol";
 
 import "./state/shared/AdministratorAddress.sol";
 import "./state/river/AllowlistAddress.sol";
+import "./state/river/OperatorsRegistryAddress.sol";
 import "./state/river/TreasuryAddress.sol";
 import "./state/river/OperatorRewardsShare.sol";
 import "./state/river/GlobalFee.sol";
@@ -22,24 +25,19 @@ import "./state/river/ELFeeRecipientAddress.sol";
 /// @author Kiln
 /// @notice This contract merges all the manager contracts and implements all the virtual methods stitching all components together
 contract RiverV1 is
-    DepositManagerV1,
-    TransferManagerV1,
+    ConsensusLayerDepositManagerV1,
+    UserDepositManagerV1,
     SharesManagerV1,
     OracleManagerV1,
-    OperatorsManagerV1,
     Initializable,
-    IRiverELFeeInput
+    IRiverV1
 {
-    error ZeroMintedShares();
-
-    event PulledELFees(uint256 amount);
-
     uint256 public constant BASE = 100000;
     uint256 internal constant DEPOSIT_MASK = 0x1;
     uint256 internal constant TRANSFER_MASK = 0;
     /// @notice Prevents unauthorized calls
 
-    modifier onlyAdmin() override (OperatorsManagerV1, OracleManagerV1) {
+    modifier onlyAdmin() override (OracleManagerV1) {
         if (msg.sender != LibOwnable._getAdmin()) {
             revert Errors.Unauthorized(msg.sender);
         }
@@ -52,6 +50,7 @@ contract RiverV1 is
     /// @param _withdrawalCredentials Credentials to use for every validator deposit
     /// @param _systemAdministratorAddress Administrator address
     /// @param _allowlistAddress Address of the allowlist contract
+    /// @param _operatorRegistryAddress Address of the operator registry
     /// @param _treasuryAddress Address receiving the fee minus the operator share
     /// @param _globalFee Amount retained when the eth balance increases, splitted between the treasury and the operators
     /// @param _operatorRewardsShare Share of the global fee used to reward node operators
@@ -62,6 +61,7 @@ contract RiverV1 is
         address _oracleAddress,
         address _systemAdministratorAddress,
         address _allowlistAddress,
+        address _operatorRegistryAddress,
         address _treasuryAddress,
         uint256 _globalFee,
         uint256 _operatorRewardsShare
@@ -79,9 +79,12 @@ contract RiverV1 is
         OperatorRewardsShare.set(_operatorRewardsShare);
         ELFeeRecipientAddress.set(_elFeeRecipientAddress);
 
-        DepositManagerV1.initDepositManagerV1(_depositContractAddress, _withdrawalCredentials);
+        ConsensusLayerDepositManagerV1.initConsensusLayerDepositManagerV1(
+            _depositContractAddress, _withdrawalCredentials
+        );
         OracleManagerV1.initOracleManagerV1(_oracleAddress);
         AllowlistAddress.set(_allowlistAddress);
+        OperatorsRegistryAddress.set(_operatorRegistryAddress);
     }
 
     /// @notice Changes the global fee parameter
@@ -94,6 +97,11 @@ contract RiverV1 is
         GlobalFee.set(newFee);
     }
 
+    /// @notice Get the current global fee
+    function getGlobalFee() external view returns (uint256) {
+        return GlobalFee.get();
+    }
+
     /// @notice Changes the operator rewards share.
     /// @param newOperatorRewardsShare New share value
     function setOperatorRewardsShare(uint256 newOperatorRewardsShare) external onlyAdmin {
@@ -102,6 +110,11 @@ contract RiverV1 is
         }
 
         OperatorRewardsShare.set(newOperatorRewardsShare);
+    }
+
+    /// @notice Get the current operator rewards share
+    function getOperatorRewardsShare() external view returns (uint256) {
+        return OperatorRewardsShare.get();
     }
 
     /// @notice Changes the allowlist address
@@ -173,8 +186,8 @@ contract RiverV1 is
     /// @param _from Token sender
     /// @param _to Token receiver
     function _onTransfer(address _from, address _to) internal view override {
-        (AllowlistAddress.get()).onlyAllowed(_from, TRANSFER_MASK); // this call reverts if unauthorized or denied
-        (AllowlistAddress.get()).onlyAllowed(_to, TRANSFER_MASK); // this call reverts if unauthorized or denied
+        IAllowlistV1(AllowlistAddress.get()).onlyAllowed(_from, TRANSFER_MASK); // this call reverts if unauthorized or denied
+        IAllowlistV1(AllowlistAddress.get()).onlyAllowed(_to, TRANSFER_MASK); // this call reverts if unauthorized or denied
     }
 
     /// @notice Handler called whenever a user deposits ETH to the system. Mints the adequate amount of shares.
@@ -183,10 +196,10 @@ contract RiverV1 is
     function _onDeposit(address _depositor, address _recipient, uint256 _amount) internal override {
         uint256 mintedShares = SharesManagerV1._mintShares(_depositor, _amount);
         if (_depositor == _recipient) {
-            (AllowlistAddress.get()).onlyAllowed(_depositor, DEPOSIT_MASK); // this call reverts if unauthorized or denied
+            IAllowlistV1(AllowlistAddress.get()).onlyAllowed(_depositor, DEPOSIT_MASK); // this call reverts if unauthorized or denied
         } else {
-            (AllowlistAddress.get()).onlyAllowed(_depositor, DEPOSIT_MASK + TRANSFER_MASK); // this call reverts if unauthorized or denied
-            (AllowlistAddress.get()).onlyAllowed(_recipient, TRANSFER_MASK);
+            IAllowlistV1(AllowlistAddress.get()).onlyAllowed(_depositor, DEPOSIT_MASK + TRANSFER_MASK); // this call reverts if unauthorized or denied
+            IAllowlistV1(AllowlistAddress.get()).onlyAllowed(_recipient, TRANSFER_MASK);
             _transfer(_depositor, _recipient, mintedShares);
         }
     }
@@ -198,13 +211,14 @@ contract RiverV1 is
         override
         returns (bytes[] memory publicKeys, bytes[] memory signatures)
     {
-        return OperatorsManagerV1._getNextValidatorsFromActiveOperators(_requestedAmount);
+        return IOperatorsRegistryV1(OperatorsRegistryAddress.get()).pickNextValidators(_requestedAmount);
     }
 
     /// @notice Internal utility managing reward distribution amongst node operators
     /// @param _reward Amount of shares to split between operators
     function _rewardOperators(uint256 _reward) internal returns (uint256) {
-        Operators.Operator[] memory operators = Operators.getAllActive();
+        Operators.Operator[] memory operators =
+            IOperatorsRegistryV1(OperatorsRegistryAddress.get()).listActiveOperators();
         uint256[] memory validatorCounts = new uint256[](operators.length);
 
         uint256 totalActiveValidators = 0;
@@ -240,7 +254,7 @@ contract RiverV1 is
             return 0;
         }
         uint256 initialBalance = address(this).balance;
-        IELFeeRecipient(elFeeRecipient).pullELFees();
+        IELFeeRecipientV1(payable(elFeeRecipient)).pullELFees();
         uint256 collectedELFees = address(this).balance - initialBalance;
         emit PulledELFees(collectedELFees);
         return collectedELFees;
@@ -271,7 +285,7 @@ contract RiverV1 is
         uint256 depositedValidatorCount = DepositedValidatorCount.get();
         if (beaconValidatorCount < depositedValidatorCount) {
             return BeaconValidatorBalanceSum.get() + address(this).balance
-                + (depositedValidatorCount - beaconValidatorCount) * DepositManagerV1.DEPOSIT_SIZE;
+                + (depositedValidatorCount - beaconValidatorCount) * ConsensusLayerDepositManagerV1.DEPOSIT_SIZE;
         } else {
             return BeaconValidatorBalanceSum.get() + address(this).balance;
         }

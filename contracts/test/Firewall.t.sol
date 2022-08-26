@@ -9,19 +9,16 @@ import "../src/River.1.sol";
 import "../src/interfaces/IDepositContract.sol";
 import "../src/Withdraw.1.sol";
 import "../src/Oracle.1.sol";
+import "../src/OperatorsRegistry.1.sol";
 import "../src/ELFeeRecipient.1.sol";
 import "./mocks/DepositContractMock.sol";
 import "./mocks/RiverMock.sol";
 
 contract FirewallTests {
     AllowlistV1 internal allowlist;
-    AllowlistV1 internal firewalledAllowlist;
-    Firewall internal allowlistFirewall;
 
     ELFeeRecipientV1 internal elFeeRecipient;
-    RiverV1 internal river;
-    Firewall internal riverFirewall;
-    RiverV1 internal firewalledRiver;
+
     IDepositContract internal deposit;
     WithdrawV1 internal withdraw;
     address internal proxyUpgraderDAO = address(0x484bCd65393c9E835a245Bfa3a299FA02fD1cb18);
@@ -34,10 +31,22 @@ contract FirewallTests {
     address internal don = address(0xc99b2dBB74607A04B458Ea740F3906C4851C6531);
     address internal treasury = address(0xC88F7666330b4b511358b7742dC2a3234710e7B1);
 
+    RiverV1 internal river;
     OracleV1 internal oracle;
     Firewall internal oracleFirewall;
     OracleV1 internal firewalledOracle;
-    IRiverOracleInput internal oracleInput;
+    IRiverV1 internal oracleInput;
+
+    AllowlistV1 internal firewalledAllowlist;
+    Firewall internal allowlistFirewall;
+
+    RiverV1 internal firewalledRiver;
+    Firewall internal riverFirewall;
+
+    OperatorsRegistryV1 internal firewalledOperatorsRegistry;
+    Firewall internal operatorsRegistryFirewall;
+
+    OperatorsRegistryV1 internal operatorsRegistry;
     uint64 internal constant EPOCHS_PER_FRAME = 225;
     uint64 internal constant SLOTS_PER_EPOCH = 32;
     uint64 internal constant SECONDS_PER_SLOT = 12;
@@ -54,9 +63,13 @@ contract FirewallTests {
         deposit = new DepositContractMock();
         elFeeRecipient = new ELFeeRecipientV1();
         withdraw = new WithdrawV1();
-        bytes32 withdrawalCredentials = withdraw.getCredentials();
         river = new RiverV1();
         allowlist = new AllowlistV1();
+        operatorsRegistry = new OperatorsRegistryV1();
+        oracle = new OracleV1();
+
+        elFeeRecipient.initELFeeRecipientV1(address(river));
+
         bytes4[] memory executorCallableAllowlistSelectors = new bytes4[](1);
         executorCallableAllowlistSelectors[0] = allowlist.allow.selector;
         allowlistFirewall = new Firewall(
@@ -67,16 +80,24 @@ contract FirewallTests {
         );
         firewalledAllowlist = AllowlistV1(payable(address(allowlistFirewall)));
         allowlist.initAllowlistV1(payable(address(allowlistFirewall)), payable(address(allowlistFirewall)));
-        elFeeRecipient.initELFeeRecipientV1(address(river));
 
-        oracle = new OracleV1();
+        bytes4[] memory executorCallableOperatorsRegistrySelectors = new bytes4[](3);
+        executorCallableOperatorsRegistrySelectors[0] = operatorsRegistry.setOperatorStatus.selector;
+        executorCallableOperatorsRegistrySelectors[1] = operatorsRegistry.setOperatorStoppedValidatorCount.selector;
+        executorCallableOperatorsRegistrySelectors[2] = operatorsRegistry.setOperatorLimits.selector;
+        operatorsRegistryFirewall = new Firewall(
+            riverGovernorDAO,
+            executor,
+            address(operatorsRegistry),
+            executorCallableOperatorsRegistrySelectors
+        );
+        firewalledOperatorsRegistry = OperatorsRegistryV1(payable(address(operatorsRegistryFirewall)));
+        operatorsRegistry.initOperatorsRegistryV1(address(operatorsRegistryFirewall), address(river));
 
-        bytes4[] memory executorCallableRiverSelectors = new bytes4[](5);
-        executorCallableRiverSelectors[0] = river.setOperatorStatus.selector;
-        executorCallableRiverSelectors[1] = river.setOperatorStoppedValidatorCount.selector;
-        executorCallableRiverSelectors[2] = river.setOperatorLimits.selector;
-        executorCallableRiverSelectors[3] = river.depositToConsensusLayer.selector;
-        executorCallableRiverSelectors[4] = river.setOracle.selector;
+        bytes32 withdrawalCredentials = withdraw.getCredentials();
+        bytes4[] memory executorCallableRiverSelectors = new bytes4[](2);
+        executorCallableRiverSelectors[0] = river.depositToConsensusLayer.selector;
+        executorCallableRiverSelectors[1] = river.setOracle.selector;
         riverFirewall = new Firewall(riverGovernorDAO, executor, address(river), executorCallableRiverSelectors);
         firewalledRiver = RiverV1(payable(address(riverFirewall)));
         river.initRiverV1(
@@ -86,6 +107,7 @@ contract FirewallTests {
             address(oracle),
             payable(address(riverFirewall)),
             payable(address(allowlist)),
+            payable(address(operatorsRegistry)),
             treasury,
             5000,
             50000
@@ -99,7 +121,7 @@ contract FirewallTests {
         executorCallableOracleSelectors[4] = oracle.setBeaconBounds.selector;
         oracleFirewall = new Firewall(riverGovernorDAO, executor, address(oracle), executorCallableOracleSelectors);
         firewalledOracle = OracleV1(address(oracleFirewall));
-        oracleInput = new RiverMock();
+        oracleInput = IRiverV1(payable(address(new RiverMock())));
         oracle.initOracleV1(
             address(oracleInput),
             address(oracleFirewall),
@@ -114,8 +136,8 @@ contract FirewallTests {
 
     function testGovernorCanAddOperator() public {
         vm.startPrank(riverGovernorDAO);
-        firewalledRiver.addOperator("bob", bob, bobFeeRecipient);
-        (int256 _operatorBobIndex,) = river.getOperatorDetails("bob");
+        firewalledOperatorsRegistry.addOperator("bob", bob, bobFeeRecipient);
+        (int256 _operatorBobIndex,) = operatorsRegistry.getOperatorDetails("bob");
         assert(_operatorBobIndex >= 0);
         vm.stopPrank();
     }
@@ -123,14 +145,14 @@ contract FirewallTests {
     function testExecutorCannotAddOperator() public {
         vm.startPrank(executor);
         vm.expectRevert(unauthExecutor);
-        firewalledRiver.addOperator("joe", joe, joeFeeRecipient);
+        firewalledOperatorsRegistry.addOperator("joe", joe, joeFeeRecipient);
         vm.stopPrank();
     }
 
     function testRandomCallerCannotAddOperator() public {
         vm.startPrank(joe);
         vm.expectRevert(unauthJoe);
-        firewalledRiver.addOperator("joe", joe, joeFeeRecipient);
+        firewalledOperatorsRegistry.addOperator("joe", joe, joeFeeRecipient);
         vm.stopPrank();
     }
 
@@ -199,8 +221,8 @@ contract FirewallTests {
 
     function haveGovernorAddOperatorBob() public returns (uint256 operatorBobIndex) {
         vm.startPrank(riverGovernorDAO);
-        firewalledRiver.addOperator("bob", bob, bobFeeRecipient);
-        (int256 _operatorBobIndex,) = river.getOperatorDetails("bob");
+        firewalledOperatorsRegistry.addOperator("bob", bob, bobFeeRecipient);
+        (int256 _operatorBobIndex,) = operatorsRegistry.getOperatorDetails("bob");
         assert(_operatorBobIndex >= 0);
         vm.stopPrank();
         return (uint256(_operatorBobIndex));
@@ -209,16 +231,16 @@ contract FirewallTests {
     function testGovernorCanSetOperatorStatus() public {
         uint256 operatorBobIndex = haveGovernorAddOperatorBob();
         vm.startPrank(riverGovernorDAO);
-        firewalledRiver.setOperatorStatus(operatorBobIndex, true);
-        assert(river.getOperator(operatorBobIndex).active == true);
+        firewalledOperatorsRegistry.setOperatorStatus(operatorBobIndex, true);
+        assert(operatorsRegistry.getOperator(operatorBobIndex).active == true);
         vm.stopPrank();
     }
 
     function testExecutorCanSetOperatorStatus() public {
         uint256 operatorBobIndex = haveGovernorAddOperatorBob();
         vm.startPrank(executor);
-        firewalledRiver.setOperatorStatus(operatorBobIndex, false);
-        assert(river.getOperator(operatorBobIndex).active == false);
+        firewalledOperatorsRegistry.setOperatorStatus(operatorBobIndex, false);
+        assert(operatorsRegistry.getOperator(operatorBobIndex).active == false);
         vm.stopPrank();
     }
 
@@ -226,7 +248,7 @@ contract FirewallTests {
         uint256 operatorBobIndex = haveGovernorAddOperatorBob();
         vm.startPrank(joe);
         vm.expectRevert(unauthJoe);
-        firewalledRiver.setOperatorStatus(operatorBobIndex, true);
+        firewalledOperatorsRegistry.setOperatorStatus(operatorBobIndex, true);
         vm.stopPrank();
     }
 
@@ -235,7 +257,7 @@ contract FirewallTests {
         // Assert this by expecting InvalidArgument, NOT Unauthorized
         vm.startPrank(riverGovernorDAO);
         vm.expectRevert(abi.encodeWithSignature("InvalidArgument()"));
-        firewalledRiver.setOperatorStoppedValidatorCount(operatorBobIndex, 3);
+        firewalledOperatorsRegistry.setOperatorStoppedValidatorCount(operatorBobIndex, 3);
         vm.stopPrank();
     }
 
@@ -244,7 +266,7 @@ contract FirewallTests {
         // Assert this by expecting InvalidArgument, NOT Unauthorized
         vm.startPrank(executor);
         vm.expectRevert(abi.encodeWithSignature("InvalidArgument()"));
-        firewalledRiver.setOperatorStoppedValidatorCount(operatorBobIndex, 3);
+        firewalledOperatorsRegistry.setOperatorStoppedValidatorCount(operatorBobIndex, 3);
         vm.stopPrank();
     }
 
@@ -252,7 +274,7 @@ contract FirewallTests {
         uint256 operatorBobIndex = haveGovernorAddOperatorBob();
         vm.startPrank(joe);
         vm.expectRevert(unauthJoe);
-        firewalledRiver.setOperatorStoppedValidatorCount(operatorBobIndex, 3);
+        firewalledOperatorsRegistry.setOperatorStoppedValidatorCount(operatorBobIndex, 3);
         vm.stopPrank();
     }
 
@@ -265,15 +287,15 @@ contract FirewallTests {
         bytes memory tenSignatures =
             hex"1d40e9c75a57997aa60105f21d0c68c3be0435f1f68f755c33015110e38ef97b4b5e2008096e75b906ae4d1f5aec6ad505920c58758631a06ac8c7666b582c9b3fa70a67e39a5aec2a6a11756eb2c0dd74c33beafce3ce8396e86671e00528c0f4c6e9ccef87d852ac23e38f3a1585b710e4eeaa919b7040e49a55583b250801f4f54a7fc1d514ee4a89f2a0a31b500065ea383c4ff0d2981da1fc7e047239d1743c2ce0412a424fe7d32628d656c57d56a6f322d696b6099f44f5257e051cbfed1497e89d637a05b2063a30f232ceba1677e571b08c3c8bb84979d5fcab1652ae40c0840e29a32725d9b45fea996edce566ffff5be6d38d056c6a1827fb7b0ba69f1923a0384e8da72dced43b0e83714d2eda54916252859962b659e0a081fcb4ea39240afef5b8ae854eb4a159d1bdd9eed58aa368c690fe816052fd3f270215dd0ec0cc55e386ea43cb52849d00cc6a2efbec1d693619f9dcf64bfbc9c1982d1acc877b898f48d8337b372a338907dc7af4d8d58e08e1302313721fef9d9c1697256b3dc113bfc7860bccf01dc4d28d3ef09e43db4ecdd78c41bdc89ed50130b1b87ba137c33928f9aff8481e204d8ccd86938da666357cbf4d7253ce56eed980dc7ec2d4a610f541d8f7c830592bb39b8048848203ce74db2f585a7b8cd1ae6b47192b1983efddfb42c1ad65a0c9ceae3548565829c1bcd1a06da7ed4e10698fd2e5b2715a3cbae861909d8364f622882e080f0a07e153fb29c7c3abcc27f2011e76d09d013a5b511b0de51cbefc206c58cb9c09e405b5db80f1c98ea414ae2705de213715e01b81cda31c4ec814e50b341723dc4be0a81268cd04be2d306347540be98c2a3192a968dbad68ba2b5c066c684d18bdcb7345f1d2b643f2ff7bb8494c093eaaf31ee192c9a1486b387701c3bda0ed55af872665fcb0267e3e0b9e7d55e13555ec0f8742229898693ca26ddbb8cae390e9ec35fc3e07c21236fa8264974f9d3aea67a059d6e88111f48341ffdfa911ad89a2a2fbb2a790d69f3fc7646c0071b0c1ca25567f8e2b09d3177abb3e0ec38e4ebe0da06dd6cd03551682fd7ab3a772f5fbc5cba2afbd17d1ed064cae8db36b6bc6ab33b803a40fc7bc9fc7eb0327ee6486803672f653659cea6cc55212db194b9f7ecf1e0996117a489c5caf861425743681184ed3dbe5f8de71b5e7479ce13b6e1b5f6368b187185e9e14967ec04bb67d3797e4b0b2f00ee0cc61a7e2b2feff0a5ed98d503de0e8e3f445e328e8e8d45dc4453e10f49a6d642cbd90c06d7e81e64cf8d8562f6ef708a5761f1503e221ffa15a5318a880e25f8e3a7e79ce4bd263fdc6f683fb2cd1";
 
-        river.addValidators(operatorBobIndex, 10, tenPublicKeys, tenSignatures);
+        operatorsRegistry.addValidators(operatorBobIndex, 10, tenPublicKeys, tenSignatures);
         vm.stopPrank();
         vm.startPrank(riverGovernorDAO);
         uint256[] memory operatorIndexes = new uint256[](1);
         operatorIndexes[0] = operatorBobIndex;
         uint256[] memory operatorLimits = new uint256[](1);
         operatorLimits[0] = 10;
-        firewalledRiver.setOperatorLimits(operatorIndexes, operatorLimits);
-        assert(river.getOperator(operatorBobIndex).limit == 10);
+        firewalledOperatorsRegistry.setOperatorLimits(operatorIndexes, operatorLimits);
+        assert(operatorsRegistry.getOperator(operatorBobIndex).limit == 10);
         vm.stopPrank();
     }
 
@@ -286,15 +308,15 @@ contract FirewallTests {
         bytes memory tenSignatures =
             hex"1d40e9c75a57997aa60105f21d0c68c3be0435f1f68f755c33015110e38ef97b4b5e2008096e75b906ae4d1f5aec6ad505920c58758631a06ac8c7666b582c9b3fa70a67e39a5aec2a6a11756eb2c0dd74c33beafce3ce8396e86671e00528c0f4c6e9ccef87d852ac23e38f3a1585b710e4eeaa919b7040e49a55583b250801f4f54a7fc1d514ee4a89f2a0a31b500065ea383c4ff0d2981da1fc7e047239d1743c2ce0412a424fe7d32628d656c57d56a6f322d696b6099f44f5257e051cbfed1497e89d637a05b2063a30f232ceba1677e571b08c3c8bb84979d5fcab1652ae40c0840e29a32725d9b45fea996edce566ffff5be6d38d056c6a1827fb7b0ba69f1923a0384e8da72dced43b0e83714d2eda54916252859962b659e0a081fcb4ea39240afef5b8ae854eb4a159d1bdd9eed58aa368c690fe816052fd3f270215dd0ec0cc55e386ea43cb52849d00cc6a2efbec1d693619f9dcf64bfbc9c1982d1acc877b898f48d8337b372a338907dc7af4d8d58e08e1302313721fef9d9c1697256b3dc113bfc7860bccf01dc4d28d3ef09e43db4ecdd78c41bdc89ed50130b1b87ba137c33928f9aff8481e204d8ccd86938da666357cbf4d7253ce56eed980dc7ec2d4a610f541d8f7c830592bb39b8048848203ce74db2f585a7b8cd1ae6b47192b1983efddfb42c1ad65a0c9ceae3548565829c1bcd1a06da7ed4e10698fd2e5b2715a3cbae861909d8364f622882e080f0a07e153fb29c7c3abcc27f2011e76d09d013a5b511b0de51cbefc206c58cb9c09e405b5db80f1c98ea414ae2705de213715e01b81cda31c4ec814e50b341723dc4be0a81268cd04be2d306347540be98c2a3192a968dbad68ba2b5c066c684d18bdcb7345f1d2b643f2ff7bb8494c093eaaf31ee192c9a1486b387701c3bda0ed55af872665fcb0267e3e0b9e7d55e13555ec0f8742229898693ca26ddbb8cae390e9ec35fc3e07c21236fa8264974f9d3aea67a059d6e88111f48341ffdfa911ad89a2a2fbb2a790d69f3fc7646c0071b0c1ca25567f8e2b09d3177abb3e0ec38e4ebe0da06dd6cd03551682fd7ab3a772f5fbc5cba2afbd17d1ed064cae8db36b6bc6ab33b803a40fc7bc9fc7eb0327ee6486803672f653659cea6cc55212db194b9f7ecf1e0996117a489c5caf861425743681184ed3dbe5f8de71b5e7479ce13b6e1b5f6368b187185e9e14967ec04bb67d3797e4b0b2f00ee0cc61a7e2b2feff0a5ed98d503de0e8e3f445e328e8e8d45dc4453e10f49a6d642cbd90c06d7e81e64cf8d8562f6ef708a5761f1503e221ffa15a5318a880e25f8e3a7e79ce4bd263fdc6f683fb2cd1";
 
-        river.addValidators(operatorBobIndex, 10, tenPublicKeys, tenSignatures);
+        operatorsRegistry.addValidators(operatorBobIndex, 10, tenPublicKeys, tenSignatures);
         vm.stopPrank();
         vm.startPrank(executor);
         uint256[] memory operatorIndexes = new uint256[](1);
         operatorIndexes[0] = operatorBobIndex;
         uint256[] memory operatorLimits = new uint256[](1);
         operatorLimits[0] = 10;
-        firewalledRiver.setOperatorLimits(operatorIndexes, operatorLimits);
-        assert(river.getOperator(operatorBobIndex).limit == 10);
+        firewalledOperatorsRegistry.setOperatorLimits(operatorIndexes, operatorLimits);
+        assert(operatorsRegistry.getOperator(operatorBobIndex).limit == 10);
         vm.stopPrank();
     }
 
@@ -306,7 +328,7 @@ contract FirewallTests {
         operatorIndexes[0] = operatorBobIndex;
         uint256[] memory operatorLimits = new uint256[](1);
         operatorLimits[0] = 10;
-        firewalledRiver.setOperatorLimits(operatorIndexes, operatorLimits);
+        firewalledOperatorsRegistry.setOperatorLimits(operatorIndexes, operatorLimits);
         vm.stopPrank();
     }
 
@@ -476,35 +498,35 @@ contract FirewallTests {
     function testMakingFunctionGovernorOnly() public {
         // At first, both governor and executor can setOperatorStatus
         vm.startPrank(riverGovernorDAO);
-        firewalledRiver.addOperator("bob", bob, bobFeeRecipient);
-        (int256 _operatorBobIndex,) = firewalledRiver.getOperatorDetails("bob");
+        firewalledOperatorsRegistry.addOperator("bob", bob, bobFeeRecipient);
+        (int256 _operatorBobIndex,) = operatorsRegistry.getOperatorDetails("bob");
         assert(_operatorBobIndex >= 0);
         uint256 operatorBobIndex = uint256(_operatorBobIndex);
-        firewalledRiver.setOperatorStatus(operatorBobIndex, true);
-        assert(river.getOperator(operatorBobIndex).active == true);
+        firewalledOperatorsRegistry.setOperatorStatus(operatorBobIndex, true);
+        assert(operatorsRegistry.getOperator(operatorBobIndex).active == true);
         vm.stopPrank();
 
         vm.startPrank(executor);
-        firewalledRiver.setOperatorStatus(operatorBobIndex, false);
-        assert(river.getOperator(operatorBobIndex).active == false);
+        firewalledOperatorsRegistry.setOperatorStatus(operatorBobIndex, false);
+        assert(operatorsRegistry.getOperator(operatorBobIndex).active == false);
         vm.stopPrank();
 
         // Then we make it governorOnly.
         // Assert governor can still call it, and executor now cannot.
         vm.startPrank(riverGovernorDAO);
-        riverFirewall.permissionFunction(getSelector("setOperatorStatus(uint256,bool)"), false);
-        firewalledRiver.setOperatorStatus(operatorBobIndex, true);
-        assert(river.getOperator(operatorBobIndex).active == true);
+        operatorsRegistryFirewall.allowExecutor(getSelector("setOperatorStatus(uint256,bool)"), false);
+        firewalledOperatorsRegistry.setOperatorStatus(operatorBobIndex, true);
+        assert(operatorsRegistry.getOperator(operatorBobIndex).active == true);
         vm.stopPrank();
         vm.expectRevert(unauthExecutor);
         vm.startPrank(executor);
-        firewalledRiver.setOperatorStatus(operatorBobIndex, false);
+        firewalledOperatorsRegistry.setOperatorStatus(operatorBobIndex, false);
         vm.stopPrank();
     }
 
     function testMakingFunctionGovernorOrExecutor() public {
         vm.startPrank(riverGovernorDAO);
-        allowlistFirewall.permissionFunction(getSelector("setAllower(address)"), true);
+        allowlistFirewall.allowExecutor(getSelector("setAllower(address)"), true);
         vm.stopPrank();
         vm.startPrank(executor);
         firewalledAllowlist.setAllower(joe);
@@ -515,23 +537,23 @@ contract FirewallTests {
     function testExecutorCannotChangePermissions() public {
         vm.startPrank(executor);
         vm.expectRevert(unauthExecutor);
-        riverFirewall.permissionFunction(getSelector("setGlobalFee(uint256)"), true);
+        riverFirewall.allowExecutor(getSelector("setGlobalFee(uint256)"), true);
         vm.stopPrank();
     }
 
     function testRandomCallerCannotChangePermissions() public {
         vm.startPrank(joe);
         vm.expectRevert(unauthJoe);
-        riverFirewall.permissionFunction(getSelector("setOperatorStatus(uint256,bool)"), true);
+        riverFirewall.allowExecutor(getSelector("setOperatorStatus(uint256,bool)"), true);
         vm.stopPrank();
     }
 
     function testGovernorCanChangeGovernor() public {
-        // Assert that governor can changeGovernor, and the new governor can
+        // Assert that governor can setGovernor, and the new governor can
         // setAllower, a governorOnly action
         address newGovernorDAO = address(0xdF2a01F10f86A7cdd2EE10cf35B8ab62723096a6);
         vm.startPrank(riverGovernorDAO);
-        allowlistFirewall.changeGovernor(newGovernorDAO);
+        allowlistFirewall.setGovernor(newGovernorDAO);
         vm.stopPrank();
         vm.startPrank(newGovernorDAO);
         firewalledAllowlist.setAllower(joe);
@@ -540,10 +562,10 @@ contract FirewallTests {
     }
 
     function testGovernorCanChangeExecutor() public {
-        // Assert that governor can changeExecutor and the new executor can
+        // Assert that governor can setExecutor and the new executor can
         // setOracle, a governorOrExecutor action
         vm.startPrank(riverGovernorDAO);
-        riverFirewall.changeExecutor(bob);
+        riverFirewall.setExecutor(bob);
         vm.stopPrank();
         vm.startPrank(bob);
         firewalledRiver.setOracle(don);
@@ -552,10 +574,10 @@ contract FirewallTests {
     }
 
     function testExecutorCanChangeExecutor() public {
-        // Assert that executor can changeExecutor and the new executor can
+        // Assert that executor can setExecutor and the new executor can
         // setOracle, a governorOrExecutor action
         vm.startPrank(executor);
-        riverFirewall.changeExecutor(joe);
+        riverFirewall.setExecutor(joe);
         vm.stopPrank();
         vm.startPrank(joe);
         firewalledRiver.setOracle(don);
@@ -566,21 +588,21 @@ contract FirewallTests {
     function testExecutorCannotChangeGovernor() public {
         vm.startPrank(executor);
         vm.expectRevert(unauthExecutor);
-        riverFirewall.changeGovernor(don);
+        riverFirewall.setGovernor(don);
         vm.stopPrank();
     }
 
     function testRandomCallerCannotChangeGovernor() public {
         vm.startPrank(joe);
         vm.expectRevert(unauthJoe);
-        riverFirewall.changeGovernor(don);
+        riverFirewall.setGovernor(don);
         vm.stopPrank();
     }
 
     function testRandomCallerCannotChangeExecutor() public {
         vm.startPrank(joe);
         vm.expectRevert(unauthJoe);
-        riverFirewall.changeExecutor(don);
+        riverFirewall.setExecutor(don);
         vm.stopPrank();
     }
 }

@@ -2,6 +2,7 @@
 pragma solidity 0.8.10;
 
 import "./libraries/Errors.sol";
+import "./interfaces/IFirewall.sol";
 
 /// @title Firewall
 /// @author Figment
@@ -12,7 +13,7 @@ import "./libraries/Errors.sol";
 ///         Random callers cannot call anything through this contract, even if the underlying function
 ///         is unpermissioned in the underlying contract.
 ///         Calls to non-admin functions should be called at the underlying contract directly.
-contract Firewall {
+contract Firewall is IFirewall {
     mapping(bytes4 => bool) internal executorCanCall;
 
     address public governor;
@@ -55,17 +56,17 @@ contract Firewall {
     }
 
     /// @dev Change the governor
-    function changeGovernor(address newGovernor) external ifGovernor {
+    function setGovernor(address newGovernor) external ifGovernor {
         governor = newGovernor;
     }
 
     /// @dev Change the executor
-    function changeExecutor(address newExecutor) external ifGovernorOrExecutor {
+    function setExecutor(address newExecutor) external ifGovernorOrExecutor {
         executor = newExecutor;
     }
 
     /// @dev make a function either only callable by the governor, or callable by gov and executor.
-    function permissionFunction(bytes4 functionSelector, bool executorCanCall_) external ifGovernor {
+    function allowExecutor(bytes4 functionSelector, bool executorCanCall_) external ifGovernor {
         executorCanCall[functionSelector] = executorCanCall_;
     }
 

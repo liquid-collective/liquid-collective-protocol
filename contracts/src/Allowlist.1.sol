@@ -4,22 +4,16 @@ pragma solidity 0.8.10;
 import "./Initializable.sol";
 import "./libraries/Errors.sol";
 import "./libraries/LibOwnable.sol";
-import "./interfaces/IRiverOracleInput.sol";
 
 import "./state/allowlist/AllowerAddress.sol";
 import "./state/allowlist/Allowlist.sol";
 
+import "./interfaces/IAllowlist.1.sol";
+
 /// @title Allowlist (v1)
 /// @author Kiln
 /// @notice This contract handles the list of allowed recipients.
-contract AllowlistV1 is Initializable {
-    event ChangedAllowlistStatuses(address[] indexed accounts, uint256[] statuses);
-
-    error InvalidAlloweeCount();
-    error Denied(address _account);
-    error Unauthorized(address _account);
-    error MismatchedAlloweeAndStatusCount();
-
+contract AllowlistV1 is IAllowlistV1, Initializable {
     uint256 internal constant DENY_MASK = 0x1 << 255;
 
     /// @notice Initializes the allowlist

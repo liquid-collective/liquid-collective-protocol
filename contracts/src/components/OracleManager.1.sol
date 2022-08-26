@@ -10,14 +10,12 @@ import "../state/river/BeaconValidatorBalanceSum.sol";
 import "../state/river/BeaconValidatorCount.sol";
 import "../state/river/DepositedValidatorCount.sol";
 
+import "../interfaces/components/IOracleManager.1.sol";
+
 /// @title Oracle Manager (v1)
 /// @author Kiln
 /// @notice This contract handles the inputs provided by the oracle
-abstract contract OracleManagerV1 {
-    event BeaconDataUpdate(uint256 validatorCount, uint256 validatorBalanceSum, bytes32 roundId);
-
-    error InvalidValidatorCountReport(uint256 _providedValidatorCount, uint256 _depositedValidatorCount);
-
+abstract contract OracleManagerV1 is IOracleManagerV1 {
     /// @notice Handler called if the delta between the last and new validator balance sum is positive
     /// @dev Must be overriden
     /// @param _profits The positive increase in the validator balance sum (staking rewards)

@@ -1,9 +1,7 @@
 //SPDX-License-Identifier: MIT
 pragma solidity 0.8.10;
 
-import "../../src/interfaces/IRiverOracleInput.sol";
-
-contract RiverMock is IRiverOracleInput {
+contract RiverMock {
     event DebugReceivedBeaconData(uint256 _validatorCount, uint256 _validatorBalanceSum, bytes32 _roundId);
 
     uint256 public validatorCount;
