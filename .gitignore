@@ -14,3 +14,6 @@ docgen
 cache
 forge-artifacts
 out
+
+
+.DS_Store
