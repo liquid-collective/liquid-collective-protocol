@@ -7,6 +7,7 @@
 Ethereum Liquid Staking. Documentation available at https://river-protocol.gitbook.io.
 
 ## Field Guide
+
 Users interact with this contract through an upgradeable proxy, defined at `contracts/src/TUPProxy.sol`. This requires us to use [unstructured storage](https://blog.openzeppelin.com/upgradeability-using-unstructured-storage/), a Solidity pattern in which we save state variables in their own library rather than as in-line variables in the contract manipulating those variables. Each variable's libary comes with its own getters and setters for the variable value. This lets a future version of the contract access the same values that the old version was relying on. River, as an upgradeable protocol, must also use an Initializer (`contracts/src/Initializer.sol`) to mimic a constructor, since a proxy cannot call that constructor. [See here](https://docs.openzeppelin.com/upgrades-plugins/1.x/writing-upgradeable#initializers).
 
 `TUPProxy.sol` points to the logic at `River.{VERSION_NUMBER}.sol`. In turn, `River.sol` uses the managers in `contracts/src/components/` to accomplish the following logic:
@@ -26,6 +27,10 @@ Users interact with this contract through an upgradeable proxy, defined at `cont
 `AllowList.sol` handles the list of recipients allowed to interact with River. `River.sol` reads from it.
 
 We wrap `AllowList`, `Oracle` and `River` in a `Firewall.sol`, through which administrators can make onlyAdmin function calls.
+
+## Architecture
+
+![Architecture](./docs/Architecture.png)
 
 ## Scripts
 
