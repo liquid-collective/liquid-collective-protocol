@@ -1,5 +1,16 @@
 # Staking Contracts changelog
 
+## v0.2.3 (August 29th 2022)
+
+### :dizzy: Features
+
+- [[contracts] Operator Registry is now in its own contract](https://github.com/River-Protocol/river-contracts/pull/110)
+
+### 🕹️ Others
+
+- [[docs] Add architecture diagram in README](https://github.com/River-Protocol/river-contracts/pull/111)
+
+
 ## v0.2.2 (August 18th 2022)
 
 ### :dizzy: Features

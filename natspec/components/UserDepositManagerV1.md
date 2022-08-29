@@ -1,8 +1,8 @@
-# TransferManagerV1
+# UserDepositManagerV1
 
 *Kiln*
 
-> Transfer Manager (v1)
+> User Deposit Manager (v1)
 
 This contract handles the inbound transfers cases or the explicit submissions
 

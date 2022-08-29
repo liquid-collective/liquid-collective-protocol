@@ -1,5 +1,5 @@
 {
-  "address": "0x9D66509dD4A512b0D50FE9bf4f2D6baAd9400bbc",
+  "address": "0x918dC695CEe1e5c4c0079241365E968d7cC0A765",
   "abi": [
     {
       "inputs": [],
@@ -198,17 +198,6 @@
       "type": "error"
     },
     {
-      "inputs": [
-        {
-          "internalType": "uint256",
-          "name": "index",
-          "type": "uint256"
-        }
-      ],
-      "name": "InactiveOperator",
-      "type": "error"
-    },
-    {
       "inputs": [],
       "name": "InconsistentPublicKeys",
       "type": "error"
@@ -225,27 +214,7 @@
     },
     {
       "inputs": [],
-      "name": "InvalidArrayLengths",
-      "type": "error"
-    },
-    {
-      "inputs": [],
       "name": "InvalidCall",
-      "type": "error"
-    },
-    {
-      "inputs": [],
-      "name": "InvalidEmptyArray",
-      "type": "error"
-    },
-    {
-      "inputs": [],
-      "name": "InvalidFundedKeyDeletionAttempt",
-      "type": "error"
-    },
-    {
-      "inputs": [],
-      "name": "InvalidIndexOutOfBounds",
       "type": "error"
     },
     {
@@ -266,32 +235,12 @@
     },
     {
       "inputs": [],
-      "name": "InvalidKeyCount",
-      "type": "error"
-    },
-    {
-      "inputs": [],
       "name": "InvalidPublicKeyCount",
       "type": "error"
     },
     {
       "inputs": [],
-      "name": "InvalidPublicKeysLength",
-      "type": "error"
-    },
-    {
-      "inputs": [],
       "name": "InvalidSignatureCount",
-      "type": "error"
-    },
-    {
-      "inputs": [],
-      "name": "InvalidSignatureLength",
-      "type": "error"
-    },
-    {
-      "inputs": [],
-      "name": "InvalidUnsortedIndexes",
       "type": "error"
     },
     {
@@ -338,55 +287,6 @@
     {
       "inputs": [
         {
-          "internalType": "string",
-          "name": "name",
-          "type": "string"
-        }
-      ],
-      "name": "OperatorAlreadyExists",
-      "type": "error"
-    },
-    {
-      "inputs": [
-        {
-          "internalType": "uint256",
-          "name": "limit",
-          "type": "uint256"
-        },
-        {
-          "internalType": "uint256",
-          "name": "keyCount",
-          "type": "uint256"
-        }
-      ],
-      "name": "OperatorLimitTooHigh",
-      "type": "error"
-    },
-    {
-      "inputs": [
-        {
-          "internalType": "string",
-          "name": "name",
-          "type": "string"
-        }
-      ],
-      "name": "OperatorNotFound",
-      "type": "error"
-    },
-    {
-      "inputs": [
-        {
-          "internalType": "uint256",
-          "name": "index",
-          "type": "uint256"
-        }
-      ],
-      "name": "OperatorNotFoundAtIndex",
-      "type": "error"
-    },
-    {
-      "inputs": [
-        {
           "internalType": "address",
           "name": "caller",
           "type": "address"
@@ -405,70 +305,20 @@
       "inputs": [
         {
           "indexed": true,
-          "internalType": "uint256",
-          "name": "index",
-          "type": "uint256"
-        },
-        {
-          "indexed": false,
-          "internalType": "string",
-          "name": "name",
-          "type": "string"
-        },
-        {
-          "indexed": false,
           "internalType": "address",
-          "name": "operatorAddress",
-          "type": "address"
-        },
-        {
-          "indexed": false,
-          "internalType": "address",
-          "name": "feeRecipientAddress",
-          "type": "address"
-        }
-      ],
-      "name": "AddedOperator",
-      "type": "event"
-    },
-    {
-      "anonymous": false,
-      "inputs": [
-        {
-          "indexed": true,
-          "internalType": "uint256",
-          "name": "index",
-          "type": "uint256"
-        },
-        {
-          "indexed": false,
-          "internalType": "bytes",
-          "name": "publicKeys",
-          "type": "bytes"
-        }
-      ],
-      "name": "AddedValidatorKeys",
-      "type": "event"
-    },
-    {
-      "anonymous": false,
-      "inputs": [
-        {
-          "indexed": true,
-          "internalType": "address",
-          "name": "_owner",
+          "name": "owner",
           "type": "address"
         },
         {
           "indexed": true,
           "internalType": "address",
-          "name": "_spender",
+          "name": "spender",
           "type": "address"
         },
         {
           "indexed": false,
           "internalType": "uint256",
-          "name": "_value",
+          "name": "value",
           "type": "uint256"
         }
       ],
@@ -531,153 +381,20 @@
       "inputs": [
         {
           "indexed": true,
-          "internalType": "uint256",
-          "name": "index",
-          "type": "uint256"
-        },
-        {
-          "indexed": false,
-          "internalType": "bytes",
-          "name": "publicKey",
-          "type": "bytes"
-        }
-      ],
-      "name": "RemovedValidatorKey",
-      "type": "event"
-    },
-    {
-      "anonymous": false,
-      "inputs": [
-        {
-          "indexed": true,
-          "internalType": "uint256",
-          "name": "index",
-          "type": "uint256"
-        },
-        {
-          "indexed": false,
           "internalType": "address",
-          "name": "newOperatorAddress",
-          "type": "address"
-        }
-      ],
-      "name": "SetOperatorAddress",
-      "type": "event"
-    },
-    {
-      "anonymous": false,
-      "inputs": [
-        {
-          "indexed": true,
-          "internalType": "uint256",
-          "name": "index",
-          "type": "uint256"
-        },
-        {
-          "indexed": false,
-          "internalType": "address",
-          "name": "newOperatorAddress",
-          "type": "address"
-        }
-      ],
-      "name": "SetOperatorFeeRecipientAddress",
-      "type": "event"
-    },
-    {
-      "anonymous": false,
-      "inputs": [
-        {
-          "indexed": true,
-          "internalType": "uint256",
-          "name": "index",
-          "type": "uint256"
-        },
-        {
-          "indexed": false,
-          "internalType": "uint256",
-          "name": "newLimit",
-          "type": "uint256"
-        }
-      ],
-      "name": "SetOperatorLimit",
-      "type": "event"
-    },
-    {
-      "anonymous": false,
-      "inputs": [
-        {
-          "indexed": true,
-          "internalType": "uint256",
-          "name": "name",
-          "type": "uint256"
-        },
-        {
-          "indexed": false,
-          "internalType": "string",
-          "name": "newName",
-          "type": "string"
-        }
-      ],
-      "name": "SetOperatorName",
-      "type": "event"
-    },
-    {
-      "anonymous": false,
-      "inputs": [
-        {
-          "indexed": true,
-          "internalType": "uint256",
-          "name": "index",
-          "type": "uint256"
-        },
-        {
-          "indexed": false,
-          "internalType": "bool",
-          "name": "active",
-          "type": "bool"
-        }
-      ],
-      "name": "SetOperatorStatus",
-      "type": "event"
-    },
-    {
-      "anonymous": false,
-      "inputs": [
-        {
-          "indexed": true,
-          "internalType": "uint256",
-          "name": "index",
-          "type": "uint256"
-        },
-        {
-          "indexed": false,
-          "internalType": "uint256",
-          "name": "newStoppedValidatorCount",
-          "type": "uint256"
-        }
-      ],
-      "name": "SetOperatorStoppedValidatorCount",
-      "type": "event"
-    },
-    {
-      "anonymous": false,
-      "inputs": [
-        {
-          "indexed": true,
-          "internalType": "address",
-          "name": "_from",
+          "name": "from",
           "type": "address"
         },
         {
           "indexed": true,
           "internalType": "address",
-          "name": "_to",
+          "name": "to",
           "type": "address"
         },
         {
           "indexed": false,
           "internalType": "uint256",
-          "name": "_value",
+          "name": "value",
           "type": "uint256"
         }
       ],
@@ -764,57 +481,6 @@
     {
       "inputs": [],
       "name": "acceptOwnership",
-      "outputs": [],
-      "stateMutability": "nonpayable",
-      "type": "function"
-    },
-    {
-      "inputs": [
-        {
-          "internalType": "string",
-          "name": "_name",
-          "type": "string"
-        },
-        {
-          "internalType": "address",
-          "name": "_operator",
-          "type": "address"
-        },
-        {
-          "internalType": "address",
-          "name": "_feeRecipient",
-          "type": "address"
-        }
-      ],
-      "name": "addOperator",
-      "outputs": [],
-      "stateMutability": "nonpayable",
-      "type": "function"
-    },
-    {
-      "inputs": [
-        {
-          "internalType": "uint256",
-          "name": "_index",
-          "type": "uint256"
-        },
-        {
-          "internalType": "uint256",
-          "name": "_keyCount",
-          "type": "uint256"
-        },
-        {
-          "internalType": "bytes",
-          "name": "_publicKeys",
-          "type": "bytes"
-        },
-        {
-          "internalType": "bytes",
-          "name": "_signatures",
-          "type": "bytes"
-        }
-      ],
-      "name": "addValidators",
       "outputs": [],
       "stateMutability": "nonpayable",
       "type": "function"
@@ -1030,122 +696,13 @@
       "type": "function"
     },
     {
-      "inputs": [
+      "inputs": [],
+      "name": "getGlobalFee",
+      "outputs": [
         {
           "internalType": "uint256",
-          "name": "_index",
+          "name": "",
           "type": "uint256"
-        }
-      ],
-      "name": "getOperator",
-      "outputs": [
-        {
-          "components": [
-            {
-              "internalType": "bool",
-              "name": "active",
-              "type": "bool"
-            },
-            {
-              "internalType": "string",
-              "name": "name",
-              "type": "string"
-            },
-            {
-              "internalType": "address",
-              "name": "operator",
-              "type": "address"
-            },
-            {
-              "internalType": "address",
-              "name": "feeRecipient",
-              "type": "address"
-            },
-            {
-              "internalType": "uint256",
-              "name": "limit",
-              "type": "uint256"
-            },
-            {
-              "internalType": "uint256",
-              "name": "funded",
-              "type": "uint256"
-            },
-            {
-              "internalType": "uint256",
-              "name": "keys",
-              "type": "uint256"
-            },
-            {
-              "internalType": "uint256",
-              "name": "stopped",
-              "type": "uint256"
-            }
-          ],
-          "internalType": "struct Operators.Operator",
-          "name": "",
-          "type": "tuple"
-        }
-      ],
-      "stateMutability": "view",
-      "type": "function"
-    },
-    {
-      "inputs": [
-        {
-          "internalType": "string",
-          "name": "_name",
-          "type": "string"
-        }
-      ],
-      "name": "getOperatorByName",
-      "outputs": [
-        {
-          "components": [
-            {
-              "internalType": "bool",
-              "name": "active",
-              "type": "bool"
-            },
-            {
-              "internalType": "string",
-              "name": "name",
-              "type": "string"
-            },
-            {
-              "internalType": "address",
-              "name": "operator",
-              "type": "address"
-            },
-            {
-              "internalType": "address",
-              "name": "feeRecipient",
-              "type": "address"
-            },
-            {
-              "internalType": "uint256",
-              "name": "limit",
-              "type": "uint256"
-            },
-            {
-              "internalType": "uint256",
-              "name": "funded",
-              "type": "uint256"
-            },
-            {
-              "internalType": "uint256",
-              "name": "keys",
-              "type": "uint256"
-            },
-            {
-              "internalType": "uint256",
-              "name": "stopped",
-              "type": "uint256"
-            }
-          ],
-          "internalType": "struct Operators.Operator",
-          "name": "",
-          "type": "tuple"
         }
       ],
       "stateMutability": "view",
@@ -1153,36 +710,12 @@
     },
     {
       "inputs": [],
-      "name": "getOperatorCount",
+      "name": "getOperatorRewardsShare",
       "outputs": [
         {
           "internalType": "uint256",
           "name": "",
           "type": "uint256"
-        }
-      ],
-      "stateMutability": "view",
-      "type": "function"
-    },
-    {
-      "inputs": [
-        {
-          "internalType": "string",
-          "name": "_name",
-          "type": "string"
-        }
-      ],
-      "name": "getOperatorDetails",
-      "outputs": [
-        {
-          "internalType": "int256",
-          "name": "_index",
-          "type": "int256"
-        },
-        {
-          "internalType": "address",
-          "name": "_operatorAddress",
-          "type": "address"
         }
       ],
       "stateMutability": "view",
@@ -1241,40 +774,6 @@
       "type": "function"
     },
     {
-      "inputs": [
-        {
-          "internalType": "uint256",
-          "name": "_operatorIndex",
-          "type": "uint256"
-        },
-        {
-          "internalType": "uint256",
-          "name": "_validatorIndex",
-          "type": "uint256"
-        }
-      ],
-      "name": "getValidator",
-      "outputs": [
-        {
-          "internalType": "bytes",
-          "name": "publicKey",
-          "type": "bytes"
-        },
-        {
-          "internalType": "bytes",
-          "name": "signature",
-          "type": "bytes"
-        },
-        {
-          "internalType": "bool",
-          "name": "funded",
-          "type": "bool"
-        }
-      ],
-      "stateMutability": "view",
-      "type": "function"
-    },
-    {
       "inputs": [],
       "name": "getWithdrawalCredentials",
       "outputs": [
@@ -1321,6 +820,11 @@
         },
         {
           "internalType": "address",
+          "name": "_operatorRegistryAddress",
+          "type": "address"
+        },
+        {
+          "internalType": "address",
           "name": "_treasuryAddress",
           "type": "address"
         },
@@ -1351,24 +855,6 @@
         }
       ],
       "stateMutability": "pure",
-      "type": "function"
-    },
-    {
-      "inputs": [
-        {
-          "internalType": "uint256",
-          "name": "_index",
-          "type": "uint256"
-        },
-        {
-          "internalType": "uint256[]",
-          "name": "_indexes",
-          "type": "uint256[]"
-        }
-      ],
-      "name": "removeValidators",
-      "outputs": [],
-      "stateMutability": "nonpayable",
       "type": "function"
     },
     {
@@ -1444,119 +930,11 @@
       "inputs": [
         {
           "internalType": "uint256",
-          "name": "_index",
-          "type": "uint256"
-        },
-        {
-          "internalType": "address",
-          "name": "_newOperatorAddress",
-          "type": "address"
-        }
-      ],
-      "name": "setOperatorAddress",
-      "outputs": [],
-      "stateMutability": "nonpayable",
-      "type": "function"
-    },
-    {
-      "inputs": [
-        {
-          "internalType": "uint256",
-          "name": "_index",
-          "type": "uint256"
-        },
-        {
-          "internalType": "address",
-          "name": "_newOperatorFeeRecipientAddress",
-          "type": "address"
-        }
-      ],
-      "name": "setOperatorFeeRecipientAddress",
-      "outputs": [],
-      "stateMutability": "nonpayable",
-      "type": "function"
-    },
-    {
-      "inputs": [
-        {
-          "internalType": "uint256[]",
-          "name": "_operatorIndexes",
-          "type": "uint256[]"
-        },
-        {
-          "internalType": "uint256[]",
-          "name": "_newLimits",
-          "type": "uint256[]"
-        }
-      ],
-      "name": "setOperatorLimits",
-      "outputs": [],
-      "stateMutability": "nonpayable",
-      "type": "function"
-    },
-    {
-      "inputs": [
-        {
-          "internalType": "uint256",
-          "name": "_index",
-          "type": "uint256"
-        },
-        {
-          "internalType": "string",
-          "name": "_newName",
-          "type": "string"
-        }
-      ],
-      "name": "setOperatorName",
-      "outputs": [],
-      "stateMutability": "nonpayable",
-      "type": "function"
-    },
-    {
-      "inputs": [
-        {
-          "internalType": "uint256",
           "name": "newOperatorRewardsShare",
           "type": "uint256"
         }
       ],
       "name": "setOperatorRewardsShare",
-      "outputs": [],
-      "stateMutability": "nonpayable",
-      "type": "function"
-    },
-    {
-      "inputs": [
-        {
-          "internalType": "uint256",
-          "name": "_index",
-          "type": "uint256"
-        },
-        {
-          "internalType": "bool",
-          "name": "_newStatus",
-          "type": "bool"
-        }
-      ],
-      "name": "setOperatorStatus",
-      "outputs": [],
-      "stateMutability": "nonpayable",
-      "type": "function"
-    },
-    {
-      "inputs": [
-        {
-          "internalType": "uint256",
-          "name": "_index",
-          "type": "uint256"
-        },
-        {
-          "internalType": "uint256",
-          "name": "_newStoppedValidatorCount",
-          "type": "uint256"
-        }
-      ],
-      "name": "setOperatorStoppedValidatorCount",
       "outputs": [],
       "stateMutability": "nonpayable",
       "type": "function"
@@ -1752,52 +1130,52 @@
       "type": "constructor"
     }
   ],
-  "transactionHash": "0xd7a76fa51573df992f8cbac8800e833307f2552a1f2ab18d72ee2ab7059a35f5",
+  "transactionHash": "0x6bf6fe746f1ac8e3f7389a02b7724edddbdce7faa78d7ab26308d1a19130cf24",
   "receipt": {
     "to": null,
     "from": "0x92D7d6DADe15fcF369534cEb8CD1A27f97185ab3",
-    "contractAddress": "0x9D66509dD4A512b0D50FE9bf4f2D6baAd9400bbc",
-    "transactionIndex": 20,
-    "gasUsed": "925251",
-    "logsBloom": "0x00000000000000000000000000000000400000000020000000000000000000000000000000000000000000000000000000000000000000000000000000000000040000000000000000000000000002000000000000000000000000000000000000000000000000000000000000000000000000808000000000000000000000000000000000000000000000200000000000000000000000000000000000800000000000000000000000000000000000000020000000000000000000000000000000000020000080000000000000000000000000000400000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
-    "blockHash": "0xecbfae0f5b305e4cb628f2edcf649a5c5a54e568579b2b5365d4c9dbdd7ef1bf",
-    "transactionHash": "0xd7a76fa51573df992f8cbac8800e833307f2552a1f2ab18d72ee2ab7059a35f5",
+    "contractAddress": "0x918dC695CEe1e5c4c0079241365E968d7cC0A765",
+    "transactionIndex": 39,
+    "gasUsed": "948171",
+    "logsBloom": "0x00000000000000000000000000000000400000000000000000000000000000000000000000000000000000000000000000000400000000000000000000000000000000000000000000000000000002000000000000000000000000000000400000000000000000000000000000000000400000800000000000000000000000000000000000000000000000000000000000000000000000000000000000800000000000000000000000000000000000000000000000000000000000000000000000000020000000000000000000000000000000000400000000000000000000000000000000000000000000000400800000000000400000000000000000000000",
+    "blockHash": "0xbb4add6f462b867d17dd4841511f80185c2343fc5f55f95136a31ba6612d0e26",
+    "transactionHash": "0x6bf6fe746f1ac8e3f7389a02b7724edddbdce7faa78d7ab26308d1a19130cf24",
     "logs": [
       {
-        "transactionIndex": 20,
-        "blockNumber": 7463594,
-        "transactionHash": "0xd7a76fa51573df992f8cbac8800e833307f2552a1f2ab18d72ee2ab7059a35f5",
-        "address": "0x9D66509dD4A512b0D50FE9bf4f2D6baAd9400bbc",
+        "transactionIndex": 39,
+        "blockNumber": 7491644,
+        "transactionHash": "0x6bf6fe746f1ac8e3f7389a02b7724edddbdce7faa78d7ab26308d1a19130cf24",
+        "address": "0x918dC695CEe1e5c4c0079241365E968d7cC0A765",
         "topics": [
           "0xbc7cd75a20ee27fd9adebab32041f755214dbc6bffa90cc0225b39da2e5c2d3b",
-          "0x000000000000000000000000eaff243d2c3b2df9916fe34ff5fadca39244b3a6"
+          "0x00000000000000000000000012a30b4399f1c5dac8c014dc337002573084e057"
         ],
         "data": "0x",
-        "logIndex": 58,
-        "blockHash": "0xecbfae0f5b305e4cb628f2edcf649a5c5a54e568579b2b5365d4c9dbdd7ef1bf"
+        "logIndex": 48,
+        "blockHash": "0xbb4add6f462b867d17dd4841511f80185c2343fc5f55f95136a31ba6612d0e26"
       },
       {
-        "transactionIndex": 20,
-        "blockNumber": 7463594,
-        "transactionHash": "0xd7a76fa51573df992f8cbac8800e833307f2552a1f2ab18d72ee2ab7059a35f5",
-        "address": "0x9D66509dD4A512b0D50FE9bf4f2D6baAd9400bbc",
+        "transactionIndex": 39,
+        "blockNumber": 7491644,
+        "transactionHash": "0x6bf6fe746f1ac8e3f7389a02b7724edddbdce7faa78d7ab26308d1a19130cf24",
+        "address": "0x918dC695CEe1e5c4c0079241365E968d7cC0A765",
         "topics": [
           "0x7e644d79422f17c01e4894b5f4f588d331ebfa28653d42ae832dc59e38c9798f"
         ],
         "data": "0x000000000000000000000000000000000000000000000000000000000000000000000000000000000000000007706a7d768054c10eb4fc9103ea322f62831cb9",
-        "logIndex": 59,
-        "blockHash": "0xecbfae0f5b305e4cb628f2edcf649a5c5a54e568579b2b5365d4c9dbdd7ef1bf"
+        "logIndex": 49,
+        "blockHash": "0xbb4add6f462b867d17dd4841511f80185c2343fc5f55f95136a31ba6612d0e26"
       }
     ],
-    "blockNumber": 7463594,
-    "cumulativeGasUsed": "9066353",
+    "blockNumber": 7491644,
+    "cumulativeGasUsed": "7314880",
     "status": 1,
     "byzantium": true
   },
   "args": [
-    "0xeAfF243d2C3B2dF9916fE34FF5FaDcA39244b3a6",
+    "0x12a30b4399F1C5dAC8C014Dc337002573084e057",
     "0x07706A7D768054c10eB4FC9103Ea322f62831cb9",
-    "0x4e9329d90000000000000000000000002bed275cae50e23963ac2ee4f3032b1b4ce71782000000000000000000000000f6390066840a7cf13e0d694d08bb8d3bf31aea140100000000000000000000004751f6e99e5ef2c3e84353e1d3a114f8fd706cf20000000000000000000000009b8b84ce63df418e251744496e2377318f76848c00000000000000000000000084052d5b9b47565ccf4b5932d3b7fcfe0393041c000000000000000000000000ac1835e6a0ed10ee982d31ac0520fa6fde3c4915000000000000000000000000774c51712f2f1eafa73681403414d5ee419f2c7300000000000000000000000000000000000000000000000000000000000001f4000000000000000000000000000000000000000000000000000000000000c350"
+    "0xf9e0185700000000000000000000000098a08cbf6b6f57742c8dfcb64208997b28ff8ac500000000000000000000000084d90a89d96b884f49122e7f46a4604148b853160100000000000000000000007aad6b06d7a9e40f43670ce30afbeb8d5b3888220000000000000000000000005f93d0e47d805a5493ce36cc58058f1789cf58660000000000000000000000008468832d0ff3d6b0fe0f1d657d3491b261455ad700000000000000000000000094adee410d67e7b9282b07d7d4793e66bba40fdd00000000000000000000000075b196bea39c97a6605c86ec2e1f7fbe7e982968000000000000000000000000774c51712f2f1eafa73681403414d5ee419f2c7300000000000000000000000000000000000000000000000000000000000001f4000000000000000000000000000000000000000000000000000000000000c350"
   ],
   "numDeployments": 1,
   "solcInputHash": "dca9819c3b048674cfda28f4dcab753f",
@@ -1807,18 +1185,19 @@
   "execute": {
     "methodName": "initRiverV1",
     "args": [
-      "0x2Bed275CAe50e23963aC2Ee4F3032b1B4CE71782",
-      "0xF6390066840a7CF13e0d694d08BB8d3bf31AEa14",
-      "0x0100000000000000000000004751f6e99e5ef2c3e84353e1d3a114f8fd706cf2",
-      "0x9B8B84CE63DF418e251744496E2377318F76848C",
-      "0x84052D5b9B47565cCF4b5932d3b7FcFe0393041C",
-      "0xaC1835e6a0eD10eE982d31ac0520fa6FDE3c4915",
+      "0x98A08cbf6b6F57742C8dFcB64208997b28ff8Ac5",
+      "0x84D90A89d96B884f49122E7f46A4604148B85316",
+      "0x0100000000000000000000007aad6b06d7a9e40f43670ce30afbeb8d5b388822",
+      "0x5F93D0E47D805A5493Ce36cC58058f1789cf5866",
+      "0x8468832d0ff3d6B0fE0F1D657d3491b261455aD7",
+      "0x94adeE410d67e7b9282b07d7d4793e66Bba40fDd",
+      "0x75B196BeA39c97A6605c86EC2E1f7FBe7E982968",
       "0x774c51712F2f1eAFA73681403414D5EE419f2c73",
       500,
       50000
     ]
   },
-  "implementation": "0xeAfF243d2C3B2dF9916fE34FF5FaDcA39244b3a6",
+  "implementation": "0x12a30b4399F1C5dAC8C014Dc337002573084e057",
   "devdoc": {
     "author": "Kiln",
     "kind": "dev",
