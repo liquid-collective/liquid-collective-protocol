@@ -10,42 +10,10 @@
 
 ## Methods
 
-### changeExecutor
+### allowExecutor
 
 ```solidity
-function changeExecutor(address newExecutor) external nonpayable
-```
-
-
-
-
-
-#### Parameters
-
-| Name | Type | Description |
-|---|---|---|
-| newExecutor | address | undefined |
-
-### changeGovernor
-
-```solidity
-function changeGovernor(address newGovernor) external nonpayable
-```
-
-
-
-
-
-#### Parameters
-
-| Name | Type | Description |
-|---|---|---|
-| newGovernor | address | undefined |
-
-### permissionFunction
-
-```solidity
-function permissionFunction(bytes4 functionSelector, bool executorCanCall_) external nonpayable
+function allowExecutor(bytes4 functionSelector, bool executorCanCall_) external nonpayable
 ```
 
 
@@ -58,6 +26,38 @@ function permissionFunction(bytes4 functionSelector, bool executorCanCall_) exte
 |---|---|---|
 | functionSelector | bytes4 | undefined |
 | executorCanCall_ | bool | undefined |
+
+### setExecutor
+
+```solidity
+function setExecutor(address newExecutor) external nonpayable
+```
+
+
+
+
+
+#### Parameters
+
+| Name | Type | Description |
+|---|---|---|
+| newExecutor | address | undefined |
+
+### setGovernor
+
+```solidity
+function setGovernor(address newGovernor) external nonpayable
+```
+
+
+
+
+
+#### Parameters
+
+| Name | Type | Description |
+|---|---|---|
+| newGovernor | address | undefined |
 
 
 

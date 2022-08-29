@@ -75,46 +75,6 @@ Retrieve system administrator address
 |---|---|---|
 | _0 | address | undefined |
 
-### getAllActiveOperators
-
-```solidity
-function getAllActiveOperators() external view returns (struct Operators.Operator[])
-```
-
-Retrieve the active operator set
-
-
-
-
-#### Returns
-
-| Name | Type | Description |
-|---|---|---|
-| _0 | Operators.Operator[] | undefined |
-
-### getNextValidators
-
-```solidity
-function getNextValidators(uint256 _requestedAmount) external nonpayable returns (bytes[] publicKeys, bytes[] signatures)
-```
-
-Retrieve validator keys based on operator statuses
-
-
-
-#### Parameters
-
-| Name | Type | Description |
-|---|---|---|
-| _requestedAmount | uint256 | Max amount of keys requested |
-
-#### Returns
-
-| Name | Type | Description |
-|---|---|---|
-| publicKeys | bytes[] | undefined |
-| signatures | bytes[] | undefined |
-
 ### getOperator
 
 ```solidity
@@ -130,28 +90,6 @@ Get operator details
 | Name | Type | Description |
 |---|---|---|
 | _index | uint256 | The index of the operator |
-
-#### Returns
-
-| Name | Type | Description |
-|---|---|---|
-| _0 | Operators.Operator | undefined |
-
-### getOperatorByName
-
-```solidity
-function getOperatorByName(string _name) external view returns (struct Operators.Operator)
-```
-
-Get operator details by name
-
-
-
-#### Parameters
-
-| Name | Type | Description |
-|---|---|---|
-| _name | string | The name identifying the operator |
 
 #### Returns
 
@@ -274,6 +212,46 @@ Initializes the operators registry
 |---|---|---|
 | _admin | address | Admin in charge of managing operators |
 | _river | address | Address of River system |
+
+### listActiveOperators
+
+```solidity
+function listActiveOperators() external view returns (struct Operators.Operator[])
+```
+
+Retrieve the active operator set
+
+
+
+
+#### Returns
+
+| Name | Type | Description |
+|---|---|---|
+| _0 | Operators.Operator[] | undefined |
+
+### pickNextValidators
+
+```solidity
+function pickNextValidators(uint256 _requestedAmount) external nonpayable returns (bytes[] publicKeys, bytes[] signatures)
+```
+
+Retrieve validator keys based on operator statuses
+
+
+
+#### Parameters
+
+| Name | Type | Description |
+|---|---|---|
+| _requestedAmount | uint256 | Max amount of keys requested |
+
+#### Returns
+
+| Name | Type | Description |
+|---|---|---|
+| publicKeys | bytes[] | undefined |
+| signatures | bytes[] | undefined |
 
 ### removeValidators
 

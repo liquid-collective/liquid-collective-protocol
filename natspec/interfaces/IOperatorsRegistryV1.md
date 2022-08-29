@@ -47,46 +47,6 @@ function addValidators(uint256 _index, uint256 _keyCount, bytes _publicKeys, byt
 | _publicKeys | bytes | undefined |
 | _signatures | bytes | undefined |
 
-### getAllActiveOperators
-
-```solidity
-function getAllActiveOperators() external view returns (struct Operators.Operator[])
-```
-
-
-
-
-
-
-#### Returns
-
-| Name | Type | Description |
-|---|---|---|
-| _0 | Operators.Operator[] | undefined |
-
-### getNextValidators
-
-```solidity
-function getNextValidators(uint256 _requestedAmount) external nonpayable returns (bytes[] publicKeys, bytes[] signatures)
-```
-
-
-
-
-
-#### Parameters
-
-| Name | Type | Description |
-|---|---|---|
-| _requestedAmount | uint256 | undefined |
-
-#### Returns
-
-| Name | Type | Description |
-|---|---|---|
-| publicKeys | bytes[] | undefined |
-| signatures | bytes[] | undefined |
-
 ### getOperator
 
 ```solidity
@@ -102,28 +62,6 @@ function getOperator(uint256 _index) external view returns (struct Operators.Ope
 | Name | Type | Description |
 |---|---|---|
 | _index | uint256 | undefined |
-
-#### Returns
-
-| Name | Type | Description |
-|---|---|---|
-| _0 | Operators.Operator | undefined |
-
-### getOperatorByName
-
-```solidity
-function getOperatorByName(string _name) external view returns (struct Operators.Operator)
-```
-
-
-
-
-
-#### Parameters
-
-| Name | Type | Description |
-|---|---|---|
-| _name | string | undefined |
 
 #### Returns
 
@@ -229,6 +167,46 @@ function initOperatorsRegistryV1(address _admin, address _river) external nonpay
 |---|---|---|
 | _admin | address | undefined |
 | _river | address | undefined |
+
+### listActiveOperators
+
+```solidity
+function listActiveOperators() external view returns (struct Operators.Operator[])
+```
+
+
+
+
+
+
+#### Returns
+
+| Name | Type | Description |
+|---|---|---|
+| _0 | Operators.Operator[] | undefined |
+
+### pickNextValidators
+
+```solidity
+function pickNextValidators(uint256 _requestedAmount) external nonpayable returns (bytes[] publicKeys, bytes[] signatures)
+```
+
+
+
+
+
+#### Parameters
+
+| Name | Type | Description |
+|---|---|---|
+| _requestedAmount | uint256 | undefined |
+
+#### Returns
+
+| Name | Type | Description |
+|---|---|---|
+| publicKeys | bytes[] | undefined |
+| signatures | bytes[] | undefined |
 
 ### removeValidators
 

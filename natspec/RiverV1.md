@@ -341,6 +341,40 @@ Retrieve the execution layer fee recipient
 |---|---|---|
 | _0 | address | undefined |
 
+### getGlobalFee
+
+```solidity
+function getGlobalFee() external view returns (uint256)
+```
+
+Get the current global fee
+
+
+
+
+#### Returns
+
+| Name | Type | Description |
+|---|---|---|
+| _0 | uint256 | undefined |
+
+### getOperatorRewardsShare
+
+```solidity
+function getOperatorRewardsShare() external view returns (uint256)
+```
+
+Get the current operator rewards share
+
+
+
+
+#### Returns
+
+| Name | Type | Description |
+|---|---|---|
+| _0 | uint256 | undefined |
+
 ### getOracle
 
 ```solidity

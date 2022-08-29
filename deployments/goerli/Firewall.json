@@ -1,5 +1,5 @@
 {
-  "address": "0x25be6a44878Ca197cAc8e738D3720B9a5D1Df2Ab",
+  "address": "0xC95Fd1AadCE00a234cab95796ec04d7A86C6c9e5",
   "abi": [
     {
       "inputs": [
@@ -45,25 +45,17 @@
     {
       "inputs": [
         {
-          "internalType": "address",
-          "name": "newExecutor",
-          "type": "address"
-        }
-      ],
-      "name": "changeExecutor",
-      "outputs": [],
-      "stateMutability": "nonpayable",
-      "type": "function"
-    },
-    {
-      "inputs": [
+          "internalType": "bytes4",
+          "name": "functionSelector",
+          "type": "bytes4"
+        },
         {
-          "internalType": "address",
-          "name": "newGovernor",
-          "type": "address"
+          "internalType": "bool",
+          "name": "executorCanCall_",
+          "type": "bool"
         }
       ],
-      "name": "changeGovernor",
+      "name": "allowExecutor",
       "outputs": [],
       "stateMutability": "nonpayable",
       "type": "function"
@@ -97,17 +89,25 @@
     {
       "inputs": [
         {
-          "internalType": "bytes4",
-          "name": "functionSelector",
-          "type": "bytes4"
-        },
-        {
-          "internalType": "bool",
-          "name": "executorCanCall_",
-          "type": "bool"
+          "internalType": "address",
+          "name": "newExecutor",
+          "type": "address"
         }
       ],
-      "name": "permissionFunction",
+      "name": "setExecutor",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "newGovernor",
+          "type": "address"
+        }
+      ],
+      "name": "setGovernor",
       "outputs": [],
       "stateMutability": "nonpayable",
       "type": "function"
@@ -117,51 +117,49 @@
       "type": "receive"
     }
   ],
-  "transactionHash": "0x38e4b81facb3413693f4c5c72f8a91f3034d786a504aa9b2ed96b51fd2c7576e",
+  "transactionHash": "0x698937860d8500c0d71032ca9f7b5b83857ca2be8578e1618d1b6d2fb31a6622",
   "receipt": {
     "to": null,
     "from": "0x92D7d6DADe15fcF369534cEb8CD1A27f97185ab3",
-    "contractAddress": "0x25be6a44878Ca197cAc8e738D3720B9a5D1Df2Ab",
-    "transactionIndex": 59,
-    "gasUsed": "422530",
+    "contractAddress": "0xC95Fd1AadCE00a234cab95796ec04d7A86C6c9e5",
+    "transactionIndex": 19,
+    "gasUsed": "377172",
     "logsBloom": "0x00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
-    "blockHash": "0x66427ba2cee62445aae97e07491abd6e08b5d109e5424c71a91a3f3a6278cc97",
-    "transactionHash": "0x38e4b81facb3413693f4c5c72f8a91f3034d786a504aa9b2ed96b51fd2c7576e",
+    "blockHash": "0x6b7766a4d4e31ef2332293d9025e83e88a9632ebc042e595a209c052a6594f0c",
+    "transactionHash": "0x698937860d8500c0d71032ca9f7b5b83857ca2be8578e1618d1b6d2fb31a6622",
     "logs": [],
-    "blockNumber": 7463565,
-    "cumulativeGasUsed": "22927325",
+    "blockNumber": 7491596,
+    "cumulativeGasUsed": "4916062",
     "status": 1,
     "byzantium": true
   },
   "args": [
     "0x71c9DAb681C209bb82270906e3B49388b2C15404",
     "0x71c9DAb681C209bb82270906e3B49388b2C15404",
-    "0x546370F88537ADa167ddF5C6597C50b17ab981a2",
+    "0x17F4a77c9b1e5A6A8ee8964255F51321B6a41418",
     [
-      "0xca6d56dc",
-      "0x0b1ca49a",
-      "0xc1ba4e59",
-      "0xe90b2da1",
-      "0x91f10da0"
+      "0x5a16f135",
+      "0x5f41a0c4",
+      "0x98548cac"
     ]
   ],
-  "numDeployments": 3,
-  "solcInputHash": "34fe570511577a99672ba6468afacb98",
-  "metadata": "{\"compiler\":{\"version\":\"0.8.10+commit.fc410830\"},\"language\":\"Solidity\",\"output\":{\"abi\":[{\"inputs\":[{\"internalType\":\"address\",\"name\":\"governor_\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"executor_\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"destination_\",\"type\":\"address\"},{\"internalType\":\"bytes4[]\",\"name\":\"executorCallableSelectors_\",\"type\":\"bytes4[]\"}],\"stateMutability\":\"nonpayable\",\"type\":\"constructor\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"caller\",\"type\":\"address\"}],\"name\":\"Unauthorized\",\"type\":\"error\"},{\"stateMutability\":\"payable\",\"type\":\"fallback\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"newExecutor\",\"type\":\"address\"}],\"name\":\"changeExecutor\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"newGovernor\",\"type\":\"address\"}],\"name\":\"changeGovernor\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"executor\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"governor\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes4\",\"name\":\"functionSelector\",\"type\":\"bytes4\"},{\"internalType\":\"bool\",\"name\":\"executorCanCall_\",\"type\":\"bool\"}],\"name\":\"permissionFunction\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"stateMutability\":\"payable\",\"type\":\"receive\"}],\"devdoc\":{\"author\":\"Figment\",\"kind\":\"dev\",\"methods\":{\"changeExecutor(address)\":{\"details\":\"Change the executor\"},\"changeGovernor(address)\":{\"details\":\"Change the governor\"},\"permissionFunction(bytes4,bool)\":{\"details\":\"make a function either only callable by the governor, or callable by gov and executor.\"}},\"title\":\"Firewall\",\"version\":1},\"userdoc\":{\"kind\":\"user\",\"methods\":{},\"notice\":\"This contract accepts calls to admin-level functions of an underlying contract, and         ensures the caller holds an appropriate role for calling that function. There are two roles:          - A Governor can call anything          - An Executor can call specific functions specified at construction         Random callers cannot call anything through this contract, even if the underlying function         is unpermissioned in the underlying contract.         Calls to non-admin functions should be called at the underlying contract directly.\",\"version\":1}},\"settings\":{\"compilationTarget\":{\"contracts/src/Firewall.sol\":\"Firewall\"},\"evmVersion\":\"london\",\"libraries\":{},\"metadata\":{\"bytecodeHash\":\"ipfs\",\"useLiteralContent\":true},\"optimizer\":{\"enabled\":true,\"runs\":100},\"remappings\":[]},\"sources\":{\"contracts/src/Firewall.sol\":{\"content\":\"//SPDX-License-Identifier: BUSL-1.1\\npragma solidity 0.8.10;\\n\\nimport \\\"./libraries/Errors.sol\\\";\\n\\n/// @title Firewall\\n/// @author Figment\\n/// @notice This contract accepts calls to admin-level functions of an underlying contract, and\\n///         ensures the caller holds an appropriate role for calling that function. There are two roles:\\n///          - A Governor can call anything\\n///          - An Executor can call specific functions specified at construction\\n///         Random callers cannot call anything through this contract, even if the underlying function\\n///         is unpermissioned in the underlying contract.\\n///         Calls to non-admin functions should be called at the underlying contract directly.\\ncontract Firewall {\\n    mapping(bytes4 => bool) internal executorCanCall;\\n\\n    address public governor;\\n    address public executor;\\n    address internal destination;\\n\\n    // governor_ should be the most trustworthy entity in the underlying protocol - often, a DAO governor\\n    // executor_ should be a trustworthy entity that takes care of time-sensitive actions in the underlying protocol\\n    constructor(\\n        address governor_,\\n        address executor_,\\n        address destination_,\\n        bytes4[] memory executorCallableSelectors_\\n    ) {\\n        governor = governor_;\\n        executor = executor_;\\n        destination = destination_;\\n        for (uint256 i; i < executorCallableSelectors_.length;) {\\n            executorCanCall[executorCallableSelectors_[i]] = true;\\n            unchecked {\\n                ++i;\\n            }\\n        }\\n    }\\n\\n    modifier ifGovernor() {\\n        if (msg.sender == governor) {\\n            _;\\n        } else {\\n            revert Errors.Unauthorized(msg.sender);\\n        }\\n    }\\n\\n    modifier ifGovernorOrExecutor() {\\n        if (msg.sender == governor || msg.sender == executor) {\\n            _;\\n        } else {\\n            revert Errors.Unauthorized(msg.sender);\\n        }\\n    }\\n\\n    /// @dev Change the governor\\n    function changeGovernor(address newGovernor) external ifGovernor {\\n        governor = newGovernor;\\n    }\\n\\n    /// @dev Change the executor\\n    function changeExecutor(address newExecutor) external ifGovernorOrExecutor {\\n        executor = newExecutor;\\n    }\\n\\n    /// @dev make a function either only callable by the governor, or callable by gov and executor.\\n    function permissionFunction(bytes4 functionSelector, bool executorCanCall_) external ifGovernor {\\n        executorCanCall[functionSelector] = executorCanCall_;\\n    }\\n\\n    /// @dev Validate that the caller is allowed to make the call in msg.sig\\n    function _checkCallerRole() internal view {\\n        if (msg.sender == governor || (executorCanCall[msg.sig] && msg.sender == executor)) {\\n            return;\\n        }\\n        revert Errors.Unauthorized(msg.sender);\\n    }\\n\\n    /// @dev Forwards the current call to `destination`.\\n    ///      This function does not return to its internal call site, it will return directly to the external caller.\\n    function _forward(address destination_, uint256 value) internal {\\n        assembly {\\n            // Copy msg.data. We take full control of memory in this inline assembly\\n            // block because it will not return to Solidity code. We overwrite the\\n            // Solidity scratch pad at memory position 0.\\n            calldatacopy(0, 0, calldatasize())\\n\\n            // Call the destination.\\n            // out and outsize are 0 because we don't know the size yet.\\n            let result := call(gas(), destination_, value, 0, calldatasize(), 0, 0)\\n\\n            // Copy the returned data.\\n            returndatacopy(0, 0, returndatasize())\\n\\n            switch result\\n            // call returns 0 on error.\\n            case 0 { revert(0, returndatasize()) }\\n            default { return(0, returndatasize()) }\\n        }\\n    }\\n\\n    function _fallback() internal virtual {\\n        _checkCallerRole();\\n        _forward(destination, msg.value);\\n    }\\n\\n    fallback() external payable virtual {\\n        _fallback();\\n    }\\n\\n    receive() external payable virtual {\\n        _fallback();\\n    }\\n}\\n\",\"keccak256\":\"0x0d42461a8021d29e70a365279aedf3fd918980d42430f520fccbb39a945f77a6\",\"license\":\"BUSL-1.1\"},\"contracts/src/libraries/Errors.sol\":{\"content\":\"//SPDX-License-Identifier: BUSL-1.1\\npragma solidity 0.8.10;\\n\\nlibrary Errors {\\n    error Unauthorized(address caller);\\n    error InvalidCall();\\n    error InvalidArgument();\\n    error InvalidZeroAddress();\\n}\\n\",\"keccak256\":\"0xb212763b0c7e4f4addfb85d863c616469be04e2d43e2431e9ef6da5d47f07436\",\"license\":\"BUSL-1.1\"}},\"version\":1}",
-  "bytecode": "0x608060405234801561001057600080fd5b5060405161057738038061057783398101604081905261002f9161011e565b600180546001600160a01b038087166001600160a01b03199283161790925560028054868416908316179055600380549285169290911691909117905560005b81518110156100ca57600160008084848151811061008f5761008f610215565b6020908102919091018101516001600160e01b0319168252810191909152604001600020805460ff191691151591909117905560010161006f565b505050505061022b565b80516001600160a01b03811681146100eb57600080fd5b919050565b634e487b7160e01b600052604160045260246000fd5b80516001600160e01b0319811681146100eb57600080fd5b6000806000806080858703121561013457600080fd5b61013d856100d4565b9350602061014c8187016100d4565b935061015a604087016100d4565b60608701519093506001600160401b038082111561017757600080fd5b818801915088601f83011261018b57600080fd5b81518181111561019d5761019d6100f0565b8060051b604051601f19603f830116810181811085821117156101c2576101c26100f0565b60405291825284820192508381018501918b8311156101e057600080fd5b938501935b82851015610205576101f685610106565b845293850193928501926101e5565b989b979a50959850505050505050565b634e487b7160e01b600052603260045260246000fd5b61033d8061023a6000396000f3fe60806040526004361061004e5760003560e01c80630c340a2414610065578063960d3ac3146100a15780639665b658146100c1578063c34c08e5146100e1578063e4c0aaf4146101015761005d565b3661005d5761005b610121565b005b61005b610121565b34801561007157600080fd5b50600154610085906001600160a01b031681565b6040516001600160a01b03909116815260200160405180910390f35b3480156100ad57600080fd5b5061005b6100bc36600461028c565b610141565b3480156100cd57600080fd5b5061005b6100dc3660046102d7565b61019e565b3480156100ed57600080fd5b50600254610085906001600160a01b031681565b34801561010d57600080fd5b5061005b61011c3660046102d7565b6101e6565b610129610219565b60035461013f906001600160a01b031634610267565b565b6001546001600160a01b031633141561017f576001600160e01b031982166000908152602081905260409020805482151560ff199091161790555050565b60405163472511eb60e11b815233600482015260240160405180910390fd5b6001546001600160a01b03163314806101c157506002546001600160a01b031633145b1561017f57600280546001600160a01b0383166001600160a01b031990911617905550565b6001546001600160a01b031633141561017f57600180546001600160a01b0383166001600160a01b031990911617905550565b6001546001600160a01b03163314806102605750600080356001600160e01b03191681526020819052604090205460ff16801561026057506002546001600160a01b031633145b1561017f57565b366000803760008036600084865af13d6000803e808015610287573d6000f35b3d6000fd5b6000806040838503121561029f57600080fd5b82356001600160e01b0319811681146102b757600080fd5b9150602083013580151581146102cc57600080fd5b809150509250929050565b6000602082840312156102e957600080fd5b81356001600160a01b038116811461030057600080fd5b939250505056fea2646970667358221220d44a61b937cf189112f9dd3ca9c1d42fe600c5a5380e5effe22a9ffb5296cc7c64736f6c634300080a0033",
-  "deployedBytecode": "0x60806040526004361061004e5760003560e01c80630c340a2414610065578063960d3ac3146100a15780639665b658146100c1578063c34c08e5146100e1578063e4c0aaf4146101015761005d565b3661005d5761005b610121565b005b61005b610121565b34801561007157600080fd5b50600154610085906001600160a01b031681565b6040516001600160a01b03909116815260200160405180910390f35b3480156100ad57600080fd5b5061005b6100bc36600461028c565b610141565b3480156100cd57600080fd5b5061005b6100dc3660046102d7565b61019e565b3480156100ed57600080fd5b50600254610085906001600160a01b031681565b34801561010d57600080fd5b5061005b61011c3660046102d7565b6101e6565b610129610219565b60035461013f906001600160a01b031634610267565b565b6001546001600160a01b031633141561017f576001600160e01b031982166000908152602081905260409020805482151560ff199091161790555050565b60405163472511eb60e11b815233600482015260240160405180910390fd5b6001546001600160a01b03163314806101c157506002546001600160a01b031633145b1561017f57600280546001600160a01b0383166001600160a01b031990911617905550565b6001546001600160a01b031633141561017f57600180546001600160a01b0383166001600160a01b031990911617905550565b6001546001600160a01b03163314806102605750600080356001600160e01b03191681526020819052604090205460ff16801561026057506002546001600160a01b031633145b1561017f57565b366000803760008036600084865af13d6000803e808015610287573d6000f35b3d6000fd5b6000806040838503121561029f57600080fd5b82356001600160e01b0319811681146102b757600080fd5b9150602083013580151581146102cc57600080fd5b809150509250929050565b6000602082840312156102e957600080fd5b81356001600160a01b038116811461030057600080fd5b939250505056fea2646970667358221220d44a61b937cf189112f9dd3ca9c1d42fe600c5a5380e5effe22a9ffb5296cc7c64736f6c634300080a0033",
+  "numDeployments": 4,
+  "solcInputHash": "e0747c9f458a392de0f02a251cd18ac6",
+  "metadata": "{\"compiler\":{\"version\":\"0.8.10+commit.fc410830\"},\"language\":\"Solidity\",\"output\":{\"abi\":[{\"inputs\":[{\"internalType\":\"address\",\"name\":\"governor_\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"executor_\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"destination_\",\"type\":\"address\"},{\"internalType\":\"bytes4[]\",\"name\":\"executorCallableSelectors_\",\"type\":\"bytes4[]\"}],\"stateMutability\":\"nonpayable\",\"type\":\"constructor\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"caller\",\"type\":\"address\"}],\"name\":\"Unauthorized\",\"type\":\"error\"},{\"stateMutability\":\"payable\",\"type\":\"fallback\"},{\"inputs\":[{\"internalType\":\"bytes4\",\"name\":\"functionSelector\",\"type\":\"bytes4\"},{\"internalType\":\"bool\",\"name\":\"executorCanCall_\",\"type\":\"bool\"}],\"name\":\"allowExecutor\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"executor\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"governor\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"newExecutor\",\"type\":\"address\"}],\"name\":\"setExecutor\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"newGovernor\",\"type\":\"address\"}],\"name\":\"setGovernor\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"stateMutability\":\"payable\",\"type\":\"receive\"}],\"devdoc\":{\"author\":\"Figment\",\"kind\":\"dev\",\"methods\":{\"allowExecutor(bytes4,bool)\":{\"details\":\"make a function either only callable by the governor, or callable by gov and executor.\"},\"setExecutor(address)\":{\"details\":\"Change the executor\"},\"setGovernor(address)\":{\"details\":\"Change the governor\"}},\"title\":\"Firewall\",\"version\":1},\"userdoc\":{\"kind\":\"user\",\"methods\":{},\"notice\":\"This contract accepts calls to admin-level functions of an underlying contract, and         ensures the caller holds an appropriate role for calling that function. There are two roles:          - A Governor can call anything          - An Executor can call specific functions specified at construction         Random callers cannot call anything through this contract, even if the underlying function         is unpermissioned in the underlying contract.         Calls to non-admin functions should be called at the underlying contract directly.\",\"version\":1}},\"settings\":{\"compilationTarget\":{\"contracts/src/Firewall.sol\":\"Firewall\"},\"evmVersion\":\"london\",\"libraries\":{},\"metadata\":{\"bytecodeHash\":\"ipfs\",\"useLiteralContent\":true},\"optimizer\":{\"enabled\":true,\"runs\":100},\"remappings\":[]},\"sources\":{\"contracts/src/Firewall.sol\":{\"content\":\"//SPDX-License-Identifier: BUSL-1.1\\npragma solidity 0.8.10;\\n\\nimport \\\"./libraries/Errors.sol\\\";\\nimport \\\"./interfaces/IFirewall.sol\\\";\\n\\n/// @title Firewall\\n/// @author Figment\\n/// @notice This contract accepts calls to admin-level functions of an underlying contract, and\\n///         ensures the caller holds an appropriate role for calling that function. There are two roles:\\n///          - A Governor can call anything\\n///          - An Executor can call specific functions specified at construction\\n///         Random callers cannot call anything through this contract, even if the underlying function\\n///         is unpermissioned in the underlying contract.\\n///         Calls to non-admin functions should be called at the underlying contract directly.\\ncontract Firewall is IFirewall {\\n    mapping(bytes4 => bool) internal executorCanCall;\\n\\n    address public governor;\\n    address public executor;\\n    address internal destination;\\n\\n    // governor_ should be the most trustworthy entity in the underlying protocol - often, a DAO governor\\n    // executor_ should be a trustworthy entity that takes care of time-sensitive actions in the underlying protocol\\n    constructor(\\n        address governor_,\\n        address executor_,\\n        address destination_,\\n        bytes4[] memory executorCallableSelectors_\\n    ) {\\n        governor = governor_;\\n        executor = executor_;\\n        destination = destination_;\\n        for (uint256 i; i < executorCallableSelectors_.length;) {\\n            executorCanCall[executorCallableSelectors_[i]] = true;\\n            unchecked {\\n                ++i;\\n            }\\n        }\\n    }\\n\\n    modifier ifGovernor() {\\n        if (msg.sender == governor) {\\n            _;\\n        } else {\\n            revert Errors.Unauthorized(msg.sender);\\n        }\\n    }\\n\\n    modifier ifGovernorOrExecutor() {\\n        if (msg.sender == governor || msg.sender == executor) {\\n            _;\\n        } else {\\n            revert Errors.Unauthorized(msg.sender);\\n        }\\n    }\\n\\n    /// @dev Change the governor\\n    function setGovernor(address newGovernor) external ifGovernor {\\n        governor = newGovernor;\\n    }\\n\\n    /// @dev Change the executor\\n    function setExecutor(address newExecutor) external ifGovernorOrExecutor {\\n        executor = newExecutor;\\n    }\\n\\n    /// @dev make a function either only callable by the governor, or callable by gov and executor.\\n    function allowExecutor(bytes4 functionSelector, bool executorCanCall_) external ifGovernor {\\n        executorCanCall[functionSelector] = executorCanCall_;\\n    }\\n\\n    /// @dev Validate that the caller is allowed to make the call in msg.sig\\n    function _checkCallerRole() internal view {\\n        if (msg.sender == governor || (executorCanCall[msg.sig] && msg.sender == executor)) {\\n            return;\\n        }\\n        revert Errors.Unauthorized(msg.sender);\\n    }\\n\\n    /// @dev Forwards the current call to `destination`.\\n    ///      This function does not return to its internal call site, it will return directly to the external caller.\\n    function _forward(address destination_, uint256 value) internal {\\n        assembly {\\n            // Copy msg.data. We take full control of memory in this inline assembly\\n            // block because it will not return to Solidity code. We overwrite the\\n            // Solidity scratch pad at memory position 0.\\n            calldatacopy(0, 0, calldatasize())\\n\\n            // Call the destination.\\n            // out and outsize are 0 because we don't know the size yet.\\n            let result := call(gas(), destination_, value, 0, calldatasize(), 0, 0)\\n\\n            // Copy the returned data.\\n            returndatacopy(0, 0, returndatasize())\\n\\n            switch result\\n            // call returns 0 on error.\\n            case 0 { revert(0, returndatasize()) }\\n            default { return(0, returndatasize()) }\\n        }\\n    }\\n\\n    function _fallback() internal virtual {\\n        _checkCallerRole();\\n        _forward(destination, msg.value);\\n    }\\n\\n    fallback() external payable virtual {\\n        _fallback();\\n    }\\n\\n    receive() external payable virtual {\\n        _fallback();\\n    }\\n}\\n\",\"keccak256\":\"0x71bf5c69d50f7b02de4de3f4212c32d42d70d9f695dc3d972bb9284f750ecbad\",\"license\":\"BUSL-1.1\"},\"contracts/src/interfaces/IFirewall.sol\":{\"content\":\"//SPDX-License-Identifier: BUSL-1.1\\npragma solidity 0.8.10;\\n\\ninterface IFirewall {\\n    function setGovernor(address newGovernor) external;\\n    function setExecutor(address newExecutor) external;\\n    function allowExecutor(bytes4 functionSelector, bool executorCanCall_) external;\\n    fallback() external payable;\\n    receive() external payable;\\n}\\n\",\"keccak256\":\"0xfe06cab99df61e40635b89b194b929c455586eb930d708f2477f1c57dcbc97c1\",\"license\":\"BUSL-1.1\"},\"contracts/src/libraries/Errors.sol\":{\"content\":\"//SPDX-License-Identifier: BUSL-1.1\\npragma solidity 0.8.10;\\n\\nlibrary Errors {\\n    error Unauthorized(address caller);\\n    error InvalidCall();\\n    error InvalidArgument();\\n    error InvalidZeroAddress();\\n}\\n\",\"keccak256\":\"0xb212763b0c7e4f4addfb85d863c616469be04e2d43e2431e9ef6da5d47f07436\",\"license\":\"BUSL-1.1\"}},\"version\":1}",
+  "bytecode": "0x608060405234801561001057600080fd5b5060405161057738038061057783398101604081905261002f9161011e565b600180546001600160a01b038087166001600160a01b03199283161790925560028054868416908316179055600380549285169290911691909117905560005b81518110156100ca57600160008084848151811061008f5761008f610215565b6020908102919091018101516001600160e01b0319168252810191909152604001600020805460ff191691151591909117905560010161006f565b505050505061022b565b80516001600160a01b03811681146100eb57600080fd5b919050565b634e487b7160e01b600052604160045260246000fd5b80516001600160e01b0319811681146100eb57600080fd5b6000806000806080858703121561013457600080fd5b61013d856100d4565b9350602061014c8187016100d4565b935061015a604087016100d4565b60608701519093506001600160401b038082111561017757600080fd5b818801915088601f83011261018b57600080fd5b81518181111561019d5761019d6100f0565b8060051b604051601f19603f830116810181811085821117156101c2576101c26100f0565b60405291825284820192508381018501918b8311156101e057600080fd5b938501935b82851015610205576101f685610106565b845293850193928501926101e5565b989b979a50959850505050505050565b634e487b7160e01b600052603260045260246000fd5b61033d8061023a6000396000f3fe60806040526004361061004e5760003560e01c806302aaa9cc146100655780630c340a24146100855780631c3c0ea8146100c1578063c34c08e5146100e1578063c42cf535146101015761005d565b3661005d5761005b610121565b005b61005b610121565b34801561007157600080fd5b5061005b61008036600461028c565b610141565b34801561009157600080fd5b506001546100a5906001600160a01b031681565b6040516001600160a01b03909116815260200160405180910390f35b3480156100cd57600080fd5b5061005b6100dc3660046102d7565b61019e565b3480156100ed57600080fd5b506002546100a5906001600160a01b031681565b34801561010d57600080fd5b5061005b61011c3660046102d7565b6101e6565b610129610219565b60035461013f906001600160a01b031634610267565b565b6001546001600160a01b031633141561017f576001600160e01b031982166000908152602081905260409020805482151560ff199091161790555050565b60405163472511eb60e11b815233600482015260240160405180910390fd5b6001546001600160a01b03163314806101c157506002546001600160a01b031633145b1561017f57600280546001600160a01b0383166001600160a01b031990911617905550565b6001546001600160a01b031633141561017f57600180546001600160a01b0383166001600160a01b031990911617905550565b6001546001600160a01b03163314806102605750600080356001600160e01b03191681526020819052604090205460ff16801561026057506002546001600160a01b031633145b1561017f57565b366000803760008036600084865af13d6000803e808015610287573d6000f35b3d6000fd5b6000806040838503121561029f57600080fd5b82356001600160e01b0319811681146102b757600080fd5b9150602083013580151581146102cc57600080fd5b809150509250929050565b6000602082840312156102e957600080fd5b81356001600160a01b038116811461030057600080fd5b939250505056fea26469706673582212206a9fab756036550a85078fdbd6adc13e443e28716591a3170b0857d72a7f9b0c64736f6c634300080a0033",
+  "deployedBytecode": "0x60806040526004361061004e5760003560e01c806302aaa9cc146100655780630c340a24146100855780631c3c0ea8146100c1578063c34c08e5146100e1578063c42cf535146101015761005d565b3661005d5761005b610121565b005b61005b610121565b34801561007157600080fd5b5061005b61008036600461028c565b610141565b34801561009157600080fd5b506001546100a5906001600160a01b031681565b6040516001600160a01b03909116815260200160405180910390f35b3480156100cd57600080fd5b5061005b6100dc3660046102d7565b61019e565b3480156100ed57600080fd5b506002546100a5906001600160a01b031681565b34801561010d57600080fd5b5061005b61011c3660046102d7565b6101e6565b610129610219565b60035461013f906001600160a01b031634610267565b565b6001546001600160a01b031633141561017f576001600160e01b031982166000908152602081905260409020805482151560ff199091161790555050565b60405163472511eb60e11b815233600482015260240160405180910390fd5b6001546001600160a01b03163314806101c157506002546001600160a01b031633145b1561017f57600280546001600160a01b0383166001600160a01b031990911617905550565b6001546001600160a01b031633141561017f57600180546001600160a01b0383166001600160a01b031990911617905550565b6001546001600160a01b03163314806102605750600080356001600160e01b03191681526020819052604090205460ff16801561026057506002546001600160a01b031633145b1561017f57565b366000803760008036600084865af13d6000803e808015610287573d6000f35b3d6000fd5b6000806040838503121561029f57600080fd5b82356001600160e01b0319811681146102b757600080fd5b9150602083013580151581146102cc57600080fd5b809150509250929050565b6000602082840312156102e957600080fd5b81356001600160a01b038116811461030057600080fd5b939250505056fea26469706673582212206a9fab756036550a85078fdbd6adc13e443e28716591a3170b0857d72a7f9b0c64736f6c634300080a0033",
   "devdoc": {
     "author": "Figment",
     "kind": "dev",
     "methods": {
-      "changeExecutor(address)": {
+      "allowExecutor(bytes4,bool)": {
+        "details": "make a function either only callable by the governor, or callable by gov and executor."
+      },
+      "setExecutor(address)": {
         "details": "Change the executor"
       },
-      "changeGovernor(address)": {
+      "setGovernor(address)": {
         "details": "Change the governor"
-      },
-      "permissionFunction(bytes4,bool)": {
-        "details": "make a function either only callable by the governor, or callable by gov and executor."
       }
     },
     "title": "Firewall",
@@ -176,7 +174,7 @@
   "storageLayout": {
     "storage": [
       {
-        "astId": 402,
+        "astId": 388,
         "contract": "contracts/src/Firewall.sol:Firewall",
         "label": "executorCanCall",
         "offset": 0,
@@ -184,7 +182,7 @@
         "type": "t_mapping(t_bytes4,t_bool)"
       },
       {
-        "astId": 404,
+        "astId": 390,
         "contract": "contracts/src/Firewall.sol:Firewall",
         "label": "governor",
         "offset": 0,
@@ -192,7 +190,7 @@
         "type": "t_address"
       },
       {
-        "astId": 406,
+        "astId": 392,
         "contract": "contracts/src/Firewall.sol:Firewall",
         "label": "executor",
         "offset": 0,
@@ -200,7 +198,7 @@
         "type": "t_address"
       },
       {
-        "astId": 408,
+        "astId": 394,
         "contract": "contracts/src/Firewall.sol:Firewall",
         "label": "destination",
         "offset": 0,

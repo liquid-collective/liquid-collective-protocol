@@ -10,37 +10,22 @@ This contract accepts calls to admin-level functions of an underlying contract, 
 
 ## Methods
 
-### changeExecutor
+### allowExecutor
 
 ```solidity
-function changeExecutor(address newExecutor) external nonpayable
+function allowExecutor(bytes4 functionSelector, bool executorCanCall_) external nonpayable
 ```
 
 
 
-*Change the executor*
+*make a function either only callable by the governor, or callable by gov and executor.*
 
 #### Parameters
 
 | Name | Type | Description |
 |---|---|---|
-| newExecutor | address | undefined |
-
-### changeGovernor
-
-```solidity
-function changeGovernor(address newGovernor) external nonpayable
-```
-
-
-
-*Change the governor*
-
-#### Parameters
-
-| Name | Type | Description |
-|---|---|---|
-| newGovernor | address | undefined |
+| functionSelector | bytes4 | undefined |
+| executorCanCall_ | bool | undefined |
 
 ### executor
 
@@ -76,22 +61,37 @@ function governor() external view returns (address)
 |---|---|---|
 | _0 | address | undefined |
 
-### permissionFunction
+### setExecutor
 
 ```solidity
-function permissionFunction(bytes4 functionSelector, bool executorCanCall_) external nonpayable
+function setExecutor(address newExecutor) external nonpayable
 ```
 
 
 
-*make a function either only callable by the governor, or callable by gov and executor.*
+*Change the executor*
 
 #### Parameters
 
 | Name | Type | Description |
 |---|---|---|
-| functionSelector | bytes4 | undefined |
-| executorCanCall_ | bool | undefined |
+| newExecutor | address | undefined |
+
+### setGovernor
+
+```solidity
+function setGovernor(address newGovernor) external nonpayable
+```
+
+
+
+*Change the governor*
+
+#### Parameters
+
+| Name | Type | Description |
+|---|---|---|
+| newGovernor | address | undefined |
 
 
 

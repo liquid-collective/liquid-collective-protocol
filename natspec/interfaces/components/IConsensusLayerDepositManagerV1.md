@@ -1,65 +1,14 @@
-# DepositManagerV1
+# IConsensusLayerDepositManagerV1
 
-*Kiln*
 
-> Deposit Manager (v1)
 
-This contract handles the interactions with the official deposit contract, funding all validators
 
-*_onValidatorKeyRequest must be overriden.*
+
+
+
+
 
 ## Methods
-
-### DEPOSIT_SIZE
-
-```solidity
-function DEPOSIT_SIZE() external view returns (uint256)
-```
-
-
-
-
-
-
-#### Returns
-
-| Name | Type | Description |
-|---|---|---|
-| _0 | uint256 | undefined |
-
-### PUBLIC_KEY_LENGTH
-
-```solidity
-function PUBLIC_KEY_LENGTH() external view returns (uint256)
-```
-
-
-
-
-
-
-#### Returns
-
-| Name | Type | Description |
-|---|---|---|
-| _0 | uint256 | undefined |
-
-### SIGNATURE_LENGTH
-
-```solidity
-function SIGNATURE_LENGTH() external view returns (uint256)
-```
-
-
-
-
-
-
-#### Returns
-
-| Name | Type | Description |
-|---|---|---|
-| _0 | uint256 | undefined |
 
 ### depositToConsensusLayer
 
@@ -67,7 +16,7 @@ function SIGNATURE_LENGTH() external view returns (uint256)
 function depositToConsensusLayer(uint256 _maxCount) external nonpayable
 ```
 
-Deposits current balance to the Consensus Layer by batches of 32 ETH
+
 
 
 
@@ -75,7 +24,7 @@ Deposits current balance to the Consensus Layer by batches of 32 ETH
 
 | Name | Type | Description |
 |---|---|---|
-| _maxCount | uint256 | The maximum amount of validator keys to fund |
+| _maxCount | uint256 | undefined |
 
 ### getDepositedValidatorCount
 
@@ -83,7 +32,7 @@ Deposits current balance to the Consensus Layer by batches of 32 ETH
 function getDepositedValidatorCount() external view returns (uint256 depositedValidatorCount)
 ```
 
-Get the deposited validator count (the count of deposits made by the contract)
+
 
 
 
@@ -100,7 +49,7 @@ Get the deposited validator count (the count of deposits made by the contract)
 function getWithdrawalCredentials() external view returns (bytes32)
 ```
 
-Retrieve the withdrawal credentials
+
 
 
 

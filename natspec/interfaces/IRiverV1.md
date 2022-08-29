@@ -273,6 +273,40 @@ function getELFeeRecipient() external view returns (address)
 |---|---|---|
 | _0 | address | undefined |
 
+### getGlobalFee
+
+```solidity
+function getGlobalFee() external view returns (uint256)
+```
+
+
+
+
+
+
+#### Returns
+
+| Name | Type | Description |
+|---|---|---|
+| _0 | uint256 | undefined |
+
+### getOperatorRewardsShare
+
+```solidity
+function getOperatorRewardsShare() external view returns (uint256)
+```
+
+
+
+
+
+
+#### Returns
+
+| Name | Type | Description |
+|---|---|---|
+| _0 | uint256 | undefined |
+
 ### getOracle
 
 ```solidity
@@ -460,6 +494,22 @@ function setELFeeRecipient(address _newELFeeRecipient) external nonpayable
 | Name | Type | Description |
 |---|---|---|
 | _newELFeeRecipient | address | undefined |
+
+### setGlobalFee
+
+```solidity
+function setGlobalFee(uint256 newFee) external nonpayable
+```
+
+
+
+
+
+#### Parameters
+
+| Name | Type | Description |
+|---|---|---|
+| newFee | uint256 | undefined |
 
 ### setOperatorRewardsShare
 
