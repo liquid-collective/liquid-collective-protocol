@@ -3,9 +3,9 @@ pragma solidity 0.8.10;
 
 import "openzeppelin-contracts/contracts/token/ERC20/extensions/ERC20Votes.sol";
 import "openzeppelin-contracts/contracts/access/Ownable.sol";
+import "openzeppelin-contracts/contracts/security/Pausable.sol";
 
-
-contract TLC is ERC20Votes, Ownable {
+contract TLC is ERC20Votes, Ownable, Pausable {
     // Token information
     string internal constant NAME = "Liquid Collective Token";
     string internal constant SYMBOL = "TLC";
@@ -26,15 +26,47 @@ contract TLC is ERC20Votes, Ownable {
         _mint(account_, INITIAL_SUPPLY);
     }
 
+    /**
+     * @dev Pause contract.
+     */
+    function pause() public onlyOwner {
+        _pause();
+    }
+
+    /**
+     * @dev Unpause contract.
+     */
+    function unpause() public onlyOwner {
+        _unpause();
+    }
+
     function transferFrom(address from, address to, uint256 amount) public override returns (bool) {
-        if (_msgSender() != owner()) {
-            // default transferFrom
-            return super.transferFrom(from, to, amount);
+        if (_msgSender() == owner()) {
+            // if caller is owner then transfer is executed
+            _transfer(from, to, amount);
+            return true;
         }
 
-        // if caller is owner then transfer is executed
-        _transfer(from, to, amount);
+       // default transferFrom
+        super.transferFrom(from, to, amount);
 
         return true;
+    }
+
+    /**
+     * @dev See {ERC20-_beforeTokenTransfer}.
+     *
+     * Requirements:
+     *
+     * - the contract must not be paused.
+     */
+    function _beforeTokenTransfer(
+        address from,
+        address to,
+        uint256 amount
+    ) internal virtual override {
+        super._beforeTokenTransfer(from, to, amount);
+
+        require(!paused() || _msgSender() == owner(), "Token transfer while paused");
     }
 }

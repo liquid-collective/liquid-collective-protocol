@@ -190,4 +190,59 @@ contract TLCTestTests is Test {
         assert(tlc.getVotes(joe) == 1_500e18);
         assert(tlc.getVotes(bob) == 3_500e18);
     }
+
+    function pause() public {
+        vm.startPrank(owner);
+        tlc.pause();
+        vm.stopPrank();
+    }
+
+    function testPauseAsOwner() public {
+        pause();
+        assert(tlc.paused());
+    }
+
+    function testUnpauseAsOwner() public {
+        pause();
+
+        vm.startPrank(owner);
+        tlc.unpause();
+        vm.stopPrank();
+
+        assert(!tlc.paused());
+    }
+
+    function testPauseAsNonOwner() public {
+        vm.startPrank(joe);
+        vm.expectRevert("Ownable: caller is not the owner");
+        tlc.pause();
+        vm.stopPrank();
+    }
+
+    function testUnpauseAsNonOwner() public {
+        pause();
+
+        vm.startPrank(joe);
+        vm.expectRevert("Ownable: caller is not the owner");
+        tlc.unpause();
+        vm.stopPrank();
+    }
+
+    function testTransferFromAsOwnerWhenPaused() public {
+        pause();
+    
+        vm.startPrank(owner);
+        tlc.transferFrom(initAccount, joe, 5_000e18);
+        vm.stopPrank();
+        assert(tlc.balanceOf(joe) == 5_000e18);
+    }
+
+    function testTransferAsNonOwnerWhenPaused() public {
+        pause();
+        
+        vm.startPrank(initAccount);
+        vm.expectRevert("Token transfer while paused");
+        tlc.transfer(joe, 5_000e18);
+        vm.stopPrank();
+    }
 }
