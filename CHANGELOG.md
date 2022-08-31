@@ -1,6 +1,6 @@
 # Staking Contracts changelog
 
-## v0.2.3 (August 29th 2022)
+## v0.3.0 (August 31st 2022)
 
 ### :dizzy: Features
 
