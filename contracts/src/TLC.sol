@@ -27,14 +27,14 @@ contract TLC is ERC20Votes, Ownable, Pausable {
     }
 
     /**
-     * @dev Pause contract.
+     * @dev Pause transfers and delegation.
      */
     function pause() public onlyOwner {
         _pause();
     }
 
     /**
-     * @dev Unpause contract.
+     * @dev Unpause transfers and delegation.
      */
     function unpause() public onlyOwner {
         _unpause();
@@ -54,11 +54,11 @@ contract TLC is ERC20Votes, Ownable, Pausable {
     }
 
     /**
-     * @dev See {ERC20-_beforeTokenTransfer}.
+     * @dev Hook part of Open-Zeppelin ERC20 interface
      *
      * Requirements:
      *
-     * - the contract must not be paused.
+     * - the contract must not be paused or caller must be owner
      */
     function _beforeTokenTransfer(
         address from,
@@ -68,5 +68,11 @@ contract TLC is ERC20Votes, Ownable, Pausable {
         super._beforeTokenTransfer(from, to, amount);
 
         require(!paused() || _msgSender() == owner(), "Token transfer while paused");
+    }
+
+    function _delegate(address delegator, address delegatee) internal virtual override {
+        require(!paused(), "Delegate while paused");
+
+        super._delegate(delegator, delegatee);
     }
 }

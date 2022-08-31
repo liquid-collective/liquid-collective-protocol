@@ -238,11 +238,19 @@ contract TLCTestTests is Test {
     }
 
     function testTransferAsNonOwnerWhenPaused() public {
-        pause();
-        
+        pause(); 
         vm.startPrank(initAccount);
         vm.expectRevert("Token transfer while paused");
         tlc.transfer(joe, 5_000e18);
+        vm.stopPrank();
+    }
+
+    function testDelegateWhenPaused() public {
+        pause();
+
+        vm.startPrank(initAccount);
+         vm.expectRevert("Delegate while paused");
+        tlc.delegate(initAccount);
         vm.stopPrank();
     }
 }
