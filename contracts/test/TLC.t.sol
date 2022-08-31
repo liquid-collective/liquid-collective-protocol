@@ -8,16 +8,19 @@ import "forge-std/Test.sol";
 contract TLCTestTests is Test {
     TLC internal tlc;
 
+    address internal owner;
     address internal initAccount; 
+
     address internal bob;
     address internal joe;
 
     function setUp() public {
+        owner = makeAddr("owner");
         initAccount = makeAddr("init");
         bob = makeAddr("bob");
         joe = makeAddr("joe");
 
-        tlc = new TLC(initAccount);
+        tlc = new TLC(owner, initAccount);
     }
 
     function testName() public view {
@@ -28,9 +31,21 @@ contract TLCTestTests is Test {
          assert(keccak256(bytes(tlc.symbol())) == keccak256("TLC"));
     }
 
+    function testOwner() public view {
+        assert(tlc.owner() == owner);
+    }
+
     function testInitialSupplyAndBalance() public view {
         assert(tlc.totalSupply() == 1_000_000_000e18);
         assert(tlc.balanceOf(initAccount) == tlc.totalSupply());
+    }
+
+    function testTransferOwnership() public {
+        vm.startPrank(owner);
+        tlc.transferOwnership(joe);
+        vm.stopPrank();
+
+        assert(tlc.owner() == joe);
     }
 
     function testTransfer() public {
@@ -40,6 +55,41 @@ contract TLCTestTests is Test {
 
         assert(tlc.balanceOf(joe) == 5_000e18);
         assert(tlc.balanceOf(initAccount) ==  999_995_000e18);
+    }
+
+    function testTransferFrom() public {
+        vm.startPrank(initAccount);
+        tlc.transfer(joe, 5_000e18);
+        vm.stopPrank();
+
+        assert(tlc.balanceOf(joe) == 5_000e18);
+
+        vm.startPrank(joe);
+        tlc.increaseAllowance(bob, 1_000e18);
+        vm.stopPrank();
+
+        vm.startPrank(bob);
+        tlc.transferFrom(joe, bob, 1_000e18);
+        vm.stopPrank();
+
+        assert(tlc.balanceOf(joe) == 4_000e18);
+        assert(tlc.balanceOf(bob) == 1_000e18);
+        assert(tlc.allowance(joe, bob) == 0);
+    }
+
+    function testTransferFromAsOwner() public {
+        vm.startPrank(initAccount);
+        tlc.transfer(joe, 5_000e18);
+        vm.stopPrank();
+
+        assert(tlc.balanceOf(joe) == 5_000e18);
+
+        vm.startPrank(owner);
+        tlc.transferFrom(joe, bob, 1_000e18);
+        vm.stopPrank();
+
+        assert(tlc.balanceOf(joe) == 4_000e18);
+        assert(tlc.balanceOf(bob) == 1_000e18);
     }
 
     function testDelegate() public {
