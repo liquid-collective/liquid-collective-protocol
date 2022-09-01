@@ -14,7 +14,7 @@ contract TLC is ERC20Votes, Ownable, Pausable {
     uint256 internal constant INITIAL_SUPPLY = 1_000_000_000e18; // 1 billion TLC
 
     /// @notice Timestamp before which minting is forbidden
-    uint public noMintBefore;
+    uint256 public noMintBefore;
 
     /// @notice Minimum time between mints
     uint32 public constant minIntervalBetweenMints = 1 days * 365;
@@ -25,12 +25,11 @@ contract TLC is ERC20Votes, Ownable, Pausable {
      * @param account_ The initial account to grant all the tokens
      * @param noMintBefore_ Date before which no new token can be minted
      */
-    constructor(
-        address owner_,
-        address account_,
-        uint noMintBefore_
-    ) ERC20Permit(NAME) ERC20(NAME, SYMBOL) {
-        require(noMintBefore_ >= block.timestamp + minIntervalBetweenMints, "TLC: minting can only begin after deployment + mint interval");
+    constructor(address owner_, address account_, uint256 noMintBefore_) ERC20Permit(NAME) ERC20(NAME, SYMBOL) {
+        require(
+            noMintBefore_ >= block.timestamp + minIntervalBetweenMints,
+            "TLC: minting can only begin after deployment + mint interval"
+        );
 
         transferOwnership(owner_);
         _mint(account_, INITIAL_SUPPLY);
@@ -59,7 +58,7 @@ contract TLC is ERC20Votes, Ownable, Pausable {
             return true;
         }
 
-       // default transferFrom
+        // default transferFrom
         super.transferFrom(from, to, amount);
 
         return true;
@@ -95,11 +94,7 @@ contract TLC is ERC20Votes, Ownable, Pausable {
      *
      * - the contract must not be paused or caller must be owner
      */
-    function _beforeTokenTransfer(
-        address from,
-        address to,
-        uint256 amount
-    ) internal virtual override {
+    function _beforeTokenTransfer(address from, address to, uint256 amount) internal virtual override {
         super._beforeTokenTransfer(from, to, amount);
 
         require(!paused() || _msgSender() == owner(), "TLC: transfer while paused");

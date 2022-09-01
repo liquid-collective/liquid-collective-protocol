@@ -9,7 +9,7 @@ contract TLCTestTests is Test {
     TLC internal tlc;
 
     address internal owner;
-    address internal initAccount; 
+    address internal initAccount;
 
     address internal bob;
     address internal joe;
@@ -24,11 +24,11 @@ contract TLCTestTests is Test {
     }
 
     function testName() public view {
-         assert(keccak256(bytes(tlc.name())) == keccak256("Liquid Collective Token"));
+        assert(keccak256(bytes(tlc.name())) == keccak256("Liquid Collective Token"));
     }
 
     function testSymbol() public view {
-         assert(keccak256(bytes(tlc.symbol())) == keccak256("TLC"));
+        assert(keccak256(bytes(tlc.symbol())) == keccak256("TLC"));
     }
 
     function testOwner() public view {
@@ -54,7 +54,7 @@ contract TLCTestTests is Test {
         vm.stopPrank();
 
         assert(tlc.balanceOf(joe) == 5_000e18);
-        assert(tlc.balanceOf(initAccount) ==  999_995_000e18);
+        assert(tlc.balanceOf(initAccount) == 999_995_000e18);
     }
 
     function testTransferFrom() public {
@@ -105,7 +105,7 @@ contract TLCTestTests is Test {
         vm.startPrank(joe);
         tlc.delegate(joe);
         vm.stopPrank();
-        
+
         assert(tlc.balanceOf(joe) == 5_000e18);
         assert(tlc.getVotes(joe) == 5_000e18);
     }
@@ -123,7 +123,7 @@ contract TLCTestTests is Test {
 
         assert(tlc.balanceOf(joe) == 5_000e18);
         assert(tlc.getVotes(joe) == 5_000e18);
-        
+
         vm.roll(1010);
         assert(tlc.getPastVotes(joe, 999) == 0);
         assert(tlc.getPastVotes(joe, 1005) == 5_000e18);
@@ -150,14 +150,14 @@ contract TLCTestTests is Test {
         vm.stopPrank();
         assert(tlc.balanceOf(joe) == 5_000e18);
 
-        // before self delegating voting power is zero 
+        // before self delegating voting power is zero
         // (this is an implementation choice from open zeppelin to optimize gas)
         assert(tlc.getVotes(joe) == 0);
 
         vm.startPrank(joe);
         tlc.delegate(joe);
         vm.stopPrank();
-        
+
         assert(tlc.balanceOf(joe) == 5_000e18);
         assert(tlc.getVotes(joe) == 5_000e18);
 
@@ -230,7 +230,7 @@ contract TLCTestTests is Test {
 
     function testTransferFromAsOwnerWhenPaused() public {
         pause();
-    
+
         vm.startPrank(owner);
         tlc.transferFrom(initAccount, joe, 5_000e18);
         vm.stopPrank();
@@ -238,7 +238,7 @@ contract TLCTestTests is Test {
     }
 
     function testTransferAsNonOwnerWhenPaused() public {
-        pause(); 
+        pause();
         vm.startPrank(initAccount);
         vm.expectRevert("TLC: transfer while paused");
         tlc.transfer(joe, 5_000e18);
@@ -286,7 +286,7 @@ contract TLCTestTests is Test {
         vm.stopPrank();
 
         vm.warp(block.timestamp + 1 days * 10);
-        
+
         vm.startPrank(owner);
         vm.expectRevert("TLC: minting is not allowed yet");
         tlc.mint(joe, 1_000e18);
