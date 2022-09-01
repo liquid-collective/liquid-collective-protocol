@@ -20,7 +20,7 @@ contract TLCTestTests is Test {
         bob = makeAddr("bob");
         joe = makeAddr("joe");
 
-        tlc = new TLC(owner, initAccount);
+        tlc = new TLC(owner, initAccount, block.timestamp + 1 days * 366);
     }
 
     function testName() public view {
@@ -240,7 +240,7 @@ contract TLCTestTests is Test {
     function testTransferAsNonOwnerWhenPaused() public {
         pause(); 
         vm.startPrank(initAccount);
-        vm.expectRevert("Token transfer while paused");
+        vm.expectRevert("TLC: transfer while paused");
         tlc.transfer(joe, 5_000e18);
         vm.stopPrank();
     }
@@ -249,8 +249,47 @@ contract TLCTestTests is Test {
         pause();
 
         vm.startPrank(initAccount);
-         vm.expectRevert("Delegate while paused");
+        vm.expectRevert("TLC: delegate while paused");
         tlc.delegate(initAccount);
+        vm.stopPrank();
+    }
+
+    function testMintBeforeNoMintDateAsOwner() public {
+        vm.warp(block.timestamp + 1 days * 365);
+        vm.startPrank(owner);
+        vm.expectRevert("TLC: minting is not allowed yet");
+        tlc.mint(joe, 1_000e18);
+        vm.stopPrank();
+    }
+
+    function testMintAfterMintDateAsOwner() public {
+        vm.warp(block.timestamp + 1 days * 367);
+        vm.startPrank(owner);
+        tlc.mint(joe, 1_000e18);
+        vm.stopPrank();
+
+        assert(tlc.balanceOf(joe) == 1_000e18);
+    }
+
+    function testMintAfterMintDateAsNonOwner() public {
+        vm.warp(block.timestamp + 1 days * 367);
+        vm.startPrank(joe);
+        vm.expectRevert("TLC: only owner can mint");
+        tlc.mint(joe, 1_000e18);
+        vm.stopPrank();
+    }
+
+    function testDoubleMintAsOwner() public {
+        vm.warp(block.timestamp + 1 days * 367);
+        vm.startPrank(owner);
+        tlc.mint(joe, 1_000e18);
+        vm.stopPrank();
+
+        vm.warp(block.timestamp + 1 days * 10);
+        
+        vm.startPrank(owner);
+        vm.expectRevert("TLC: minting is not allowed yet");
+        tlc.mint(joe, 1_000e18);
         vm.stopPrank();
     }
 }

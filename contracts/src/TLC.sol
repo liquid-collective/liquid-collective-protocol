@@ -13,17 +13,29 @@ contract TLC is ERC20Votes, Ownable, Pausable {
     // Initial supply of token minted
     uint256 internal constant INITIAL_SUPPLY = 1_000_000_000e18; // 1 billion TLC
 
+    /// @notice Timestamp before which minting is forbidden
+    uint public noMintBefore;
+
+    /// @notice Minimum time between mints
+    uint32 public constant minIntervalBetweenMints = 1 days * 365;
+
     /**
      * @notice Construct a new TLC token
      * @param owner_ Account owner of the token contract
      * @param account_ The initial account to grant all the tokens
+     * @param noMintBefore_ Date before which no new token can be minted
      */
     constructor(
         address owner_,
-        address account_
+        address account_,
+        uint noMintBefore_
     ) ERC20Permit(NAME) ERC20(NAME, SYMBOL) {
+        require(noMintBefore_ >= block.timestamp + minIntervalBetweenMints, "TLC: minting can only begin after deployment + mint interval");
+
         transferOwnership(owner_);
         _mint(account_, INITIAL_SUPPLY);
+
+        noMintBefore = noMintBefore_;
     }
 
     /**
@@ -54,6 +66,29 @@ contract TLC is ERC20Votes, Ownable, Pausable {
     }
 
     /**
+     * @notice Mint new tokens
+     * @param dst The address of the destination account
+     * @param amount The number of tokens to be minted
+     *
+     * Requirements:
+     *
+     * - only owner can mint
+     * - minting should happen after mint date
+     */
+    function mint(address dst, uint256 amount) external returns (bool) {
+        require(block.timestamp >= noMintBefore, "TLC: minting is not allowed yet");
+        require(_msgSender() == owner(), "TLC: only owner can mint");
+        require(dst != address(0), "TLC: cannot mint to the zero address");
+
+        // record the mint
+        noMintBefore = block.timestamp + minIntervalBetweenMints;
+
+        _mint(dst, amount);
+
+        return true;
+    }
+
+    /**
      * @dev Hook part of Open-Zeppelin ERC20 interface
      *
      * Requirements:
@@ -67,11 +102,11 @@ contract TLC is ERC20Votes, Ownable, Pausable {
     ) internal virtual override {
         super._beforeTokenTransfer(from, to, amount);
 
-        require(!paused() || _msgSender() == owner(), "Token transfer while paused");
+        require(!paused() || _msgSender() == owner(), "TLC: transfer while paused");
     }
 
     function _delegate(address delegator, address delegatee) internal virtual override {
-        require(!paused(), "Delegate while paused");
+        require(!paused(), "TLC: delegate while paused");
 
         super._delegate(delegator, delegatee);
     }
