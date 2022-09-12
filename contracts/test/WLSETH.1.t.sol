@@ -431,7 +431,9 @@ contract WLSETHV1Tests {
             assert(recipientBalance == 0);
             vm.startPrank(_approved);
             vm.expectRevert(
-                abi.encodeWithSignature("AllowanceTooLow(address,address,uint256,uint256)", _from, _approved, 100 ether - 1, 100 ether)
+                abi.encodeWithSignature(
+                    "AllowanceTooLow(address,address,uint256,uint256)", _from, _approved, 100 ether - 1, 100 ether
+                )
             );
             wlseth.transferFrom(_from, _recipient, 100 ether);
             vm.stopPrank();

@@ -583,7 +583,9 @@ contract OperatorsRegistryV1Tests is Test {
         assert(publicKeys.length == 10);
         assert(
             keccak256(publicKeys[0])
-                == keccak256(hex"e18e2e0fff999e38c547fb921bd915a1fef6a46e07db2705a57d17542f0acc6be99fee18fb2c17a7f247fc05edd722b9")
+                == keccak256(
+                    hex"e18e2e0fff999e38c547fb921bd915a1fef6a46e07db2705a57d17542f0acc6be99fee18fb2c17a7f247fc05edd722b9"
+                )
         );
         assert(
             keccak256(signatures[0])
@@ -628,7 +630,9 @@ contract OperatorsRegistryV1Tests is Test {
         assert(publicKeys.length == 5);
         assert(
             keccak256(publicKeys[0])
-                == keccak256(hex"e18e2e0fff999e38c547fb921bd915a1fef6a46e07db2705a57d17542f0acc6be99fee18fb2c17a7f247fc05edd722b9")
+                == keccak256(
+                    hex"e18e2e0fff999e38c547fb921bd915a1fef6a46e07db2705a57d17542f0acc6be99fee18fb2c17a7f247fc05edd722b9"
+                )
         );
         assert(
             keccak256(signatures[0])

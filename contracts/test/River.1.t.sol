@@ -1067,7 +1067,9 @@ contract RiverV1SetupOneTests is Test {
             vm.startPrank(oracleMember);
             (uint256 epoch,,) = oracle.getCurrentFrame();
             oracle.reportBeacon(
-                epoch, uint64(realValidatorCount) * (32 * 1e9 + uint64(increasePerValidator)), uint32(realValidatorCount)
+                epoch,
+                uint64(realValidatorCount) * (32 * 1e9 + uint64(increasePerValidator)),
+                uint32(realValidatorCount)
             );
             vm.stopPrank();
 
