@@ -27,5 +27,5 @@ jobs:
       - name: install node dependencies
         run: yarn
 
-      - name: run formatting check
-        run: forge fmt --check
+      - name: run lint checks
+        run: yarn lint:check
