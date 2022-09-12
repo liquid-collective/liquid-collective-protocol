@@ -1,5 +1,6 @@
-import { writeFileSync } from "fs";
+import { existsSync, mkdirSync, writeFileSync } from "fs";
 import hre from "hardhat";
+import { join } from "path";
 
 const firewalledContract = ["RiverV1", "AllowlistV1", "OracleV1", "OperatorsRegistryV1"];
 
@@ -26,7 +27,6 @@ async function main() {
     artifactContent.contracts[contractName] = artifactContent.contracts[contractName].address;
   }
   const firewalledContractNames = Object.keys(contractsAbis);
-  const firewallAbisFileContent = {};
   for (const firewalled of firewalledContractNames) {
     let baseAbi = [...firewallAbi];
     for (const element of contractsAbis[firewalled]) {
@@ -34,11 +34,15 @@ async function main() {
         baseAbi = [...baseAbi, element];
       }
     }
-    firewallAbisFileContent[firewalled] = baseAbi;
+    const dirName = `deployments/${network.name}/firewallAbis`;
+    if (!existsSync(dirName)) {
+      mkdirSync(dirName);
+    }
+    const fileName = join(dirName, `${firewalled}.abi.json`);
+    writeFileSync(fileName, JSON.stringify(baseAbi, null, 4));
   }
   artifactContent.namedAccounts = namedAccounts;
   writeFileSync(artifactName, JSON.stringify(artifactContent, null, 4));
-  writeFileSync(`firewall_abis.${network.name}.json`, JSON.stringify(firewallAbisFileContent, null, 4));
 }
 
 // We recommend this pattern to be able to use async/await everywhere
