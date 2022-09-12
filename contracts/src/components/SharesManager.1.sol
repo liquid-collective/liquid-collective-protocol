@@ -13,6 +13,9 @@ import "../interfaces/components/ISharesManager.1.sol";
 /// @author Kiln
 /// @notice This contract handles the shares of the depositor and the rebasing effect depending on the oracle data
 abstract contract SharesManagerV1 is ISharesManagerV1 {
+    /// @notice Minimum amount of shares to mint before share calculation is enabled
+    uint256 internal constant INITIAL_MINIMUM_SHARES = 32 ether;
+
     /// @notice Internal hook triggered on the external transfer call
     /// @param _from Address of the sender
     /// @param _to Address of the recipient
@@ -194,8 +197,9 @@ abstract contract SharesManagerV1 is ISharesManagerV1 {
     /// @param _underlyingAssetValue Value of underlying asset received, to convert into shares
     function _mintShares(address _owner, uint256 _underlyingAssetValue) internal returns (uint256) {
         uint256 oldTotalAssetBalance = _assetBalance() - _underlyingAssetValue;
+        uint256 currentTotalSupply = _totalSupply();
 
-        if (oldTotalAssetBalance == 0) {
+        if (currentTotalSupply < INITIAL_MINIMUM_SHARES) {
             _mintRawShares(_owner, _underlyingAssetValue);
             return _underlyingAssetValue;
         } else {

@@ -64,6 +64,20 @@ contract SharesManagerV1Tests {
         sharesManager = new SharesManagerPublicDeal();
     }
 
+    function testInitialMint(uint256 _userSalt) public {
+        address _user = uf._new(_userSalt);
+        SharesManagerPublicDeal(payable(address(sharesManager))).setValidatorBalance(32 ether);
+        SharesManagerPublicDeal(payable(address(sharesManager))).mint(_user, 32 ether);
+
+        assert(sharesManager.balanceOf(_user) == 32 ether);
+        assert(sharesManager.balanceOfUnderlying(_user) == 32 ether);
+
+        SharesManagerPublicDeal(payable(address(sharesManager))).setValidatorBalance(96 ether);
+        SharesManagerPublicDeal(payable(address(sharesManager))).mint(_user, 32 ether); // price per share has doubled here
+        assert(sharesManager.balanceOf(_user) == 48 ether);
+        assert(sharesManager.balanceOfUnderlying(_user) == 96 ether);
+    }
+
     function testBalanceOfUnderlying(uint256 _userSalt) public {
         address _user = uf._new(_userSalt);
         SharesManagerPublicDeal(payable(address(sharesManager))).setValidatorBalance(3200 ether);
