@@ -171,10 +171,10 @@ contract SharesManagerV1Tests {
         if (transferValue > 0) {
             vm.startPrank(_userTwo);
             sharesManager.transferFrom(_userOne, _userTwo, transferValue);
-            uint256 newBalanceUserOne =
-                (sharesManager.balanceOf(_userOne) * sharesManager.totalUnderlyingSupply()) / sharesManager.totalSupply();
-            uint256 newBalanceUserTwo =
-                (sharesManager.balanceOf(_userTwo) * sharesManager.totalUnderlyingSupply()) / sharesManager.totalSupply();
+            uint256 newBalanceUserOne = (sharesManager.balanceOf(_userOne) * sharesManager.totalUnderlyingSupply())
+                / sharesManager.totalSupply();
+            uint256 newBalanceUserTwo = (sharesManager.balanceOf(_userTwo) * sharesManager.totalUnderlyingSupply())
+                / sharesManager.totalSupply();
             assert(totalAllowance - transferValue == sharesManager.allowance(_userOne, _userTwo));
             assert(newBalanceUserOne == sharesManager.balanceOf(_userOne));
             assert(newBalanceUserTwo == sharesManager.balanceOf(_userTwo));
@@ -240,7 +240,11 @@ contract SharesManagerV1Tests {
             vm.startPrank(_userTwo);
             vm.expectRevert(
                 abi.encodeWithSignature(
-                    "AllowanceTooLow(address,address,uint256,uint256)", _userOne, _userTwo, totalAllowance / 2, totalAllowance
+                    "AllowanceTooLow(address,address,uint256,uint256)",
+                    _userOne,
+                    _userTwo,
+                    totalAllowance / 2,
+                    totalAllowance
                 )
             );
             sharesManager.transferFrom(_userOne, _userTwo, totalAllowance);
@@ -276,7 +280,9 @@ contract SharesManagerV1Tests {
         if (_allowance > 0) {
             vm.startPrank(_userTwo);
             vm.expectRevert(
-                abi.encodeWithSignature("AllowanceTooLow(address,address,uint256,uint256)", _userOne, _userTwo, 0, _allowance)
+                abi.encodeWithSignature(
+                    "AllowanceTooLow(address,address,uint256,uint256)", _userOne, _userTwo, 0, _allowance
+                )
             );
             sharesManager.transferFrom(_userOne, _userTwo, _allowance);
             vm.stopPrank();
@@ -294,10 +300,10 @@ contract SharesManagerV1Tests {
         uint256 transferValue = totalAllowance / 2;
         if (transferValue > 0) {
             sharesManager.transfer(_userTwo, transferValue);
-            uint256 newBalanceUserOne =
-                (sharesManager.balanceOf(_userOne) * sharesManager.totalUnderlyingSupply()) / sharesManager.totalSupply();
-            uint256 newBalanceUserTwo =
-                (sharesManager.balanceOf(_userTwo) * sharesManager.totalUnderlyingSupply()) / sharesManager.totalSupply();
+            uint256 newBalanceUserOne = (sharesManager.balanceOf(_userOne) * sharesManager.totalUnderlyingSupply())
+                / sharesManager.totalSupply();
+            uint256 newBalanceUserTwo = (sharesManager.balanceOf(_userTwo) * sharesManager.totalUnderlyingSupply())
+                / sharesManager.totalSupply();
             assert(newBalanceUserOne == sharesManager.balanceOf(_userOne));
             assert(newBalanceUserTwo == sharesManager.balanceOf(_userTwo));
             assert(newBalanceUserOne + newBalanceUserTwo == totalAllowance);

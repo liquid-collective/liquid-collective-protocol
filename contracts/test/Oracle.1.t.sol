@@ -203,7 +203,9 @@ contract OracleV1Tests {
             oracle.reportBeacon(frameFirstEpochId, 0, 0);
             uint256 oldFrameFirstEpochId = oracle.getFrameFirstEpochId(frameFirstEpochId + EPOCHS_PER_FRAME - 1);
             vm.expectRevert(
-                abi.encodeWithSignature("EpochTooOld(uint256,uint256)", oldFrameFirstEpochId, frameFirstEpochId + EPOCHS_PER_FRAME)
+                abi.encodeWithSignature(
+                    "EpochTooOld(uint256,uint256)", oldFrameFirstEpochId, frameFirstEpochId + EPOCHS_PER_FRAME
+                )
             );
             oracle.reportBeacon(oldFrameFirstEpochId, 0, 0);
         }
@@ -223,7 +225,9 @@ contract OracleV1Tests {
         if (frameFirstEpochId > 0) {
             vm.startPrank(oracleMember);
             vm.expectRevert(
-                abi.encodeWithSignature("NotFrameFirstEpochId(uint256,uint256)", frameFirstEpochId - 1, frameFirstEpochId)
+                abi.encodeWithSignature(
+                    "NotFrameFirstEpochId(uint256,uint256)", frameFirstEpochId - 1, frameFirstEpochId
+                )
             );
             oracle.reportBeacon(frameFirstEpochId - 1, 0, 0);
         }
