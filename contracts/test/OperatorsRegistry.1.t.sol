@@ -17,7 +17,7 @@ contract OperatorsRegistryInitializableV1 is OperatorsRegistryV1 {
         external
         returns (bytes[] memory publicKeys, bytes[] memory signatures)
     {
-        return _getNextValidatorsFromActiveOperators(_requestedAmount);
+        return _pickNextValidatorsFromActiveOperators(_requestedAmount);
     }
 }
 
@@ -370,7 +370,172 @@ contract OperatorsRegistryV1Tests is Test, BytesGenerator {
         assert(keccak256(signatures[0]) == keccak256(BytesLib.slice(tenKeys, 48, 96)));
     }
 
-    function testGetAllActiveOperators(bytes32 _name, uint256 _firstAddressSalt) public {
+    function testGetKeysDistribution(uint256 _operatorOneSalt, uint256 _operatorTwoSalt, uint256 _operatorThreeSalt)
+        external
+    {
+        address _operatorOne = uf._new(_operatorOneSalt);
+        address _operatorTwo = uf._new(_operatorTwoSalt);
+        address _operatorThree = uf._new(_operatorThreeSalt);
+        vm.startPrank(admin);
+        operatorsRegistry.addOperator(string(abi.encodePacked(_operatorOne)), _operatorOne);
+        operatorsRegistry.addOperator(string(abi.encodePacked(_operatorTwo)), _operatorTwo);
+        operatorsRegistry.addOperator(string(abi.encodePacked(_operatorThree)), _operatorThree);
+        vm.stopPrank();
+
+        assert(operatorsRegistry.getOperatorCount() == 3);
+
+        {
+            bytes memory fiftyKeys = genBytes(50 * (48 + 96));
+
+            vm.prank(_operatorOne);
+            operatorsRegistry.addValidators(0, 50, fiftyKeys);
+        }
+        {
+            bytes memory fiftyKeys = genBytes(50 * (48 + 96));
+
+            vm.prank(_operatorTwo);
+            operatorsRegistry.addValidators(1, 50, fiftyKeys);
+        }
+        {
+            bytes memory fiftyKeys = genBytes(50 * (48 + 96));
+
+            vm.prank(_operatorThree);
+            operatorsRegistry.addValidators(2, 50, fiftyKeys);
+        }
+
+        uint256[] memory indexes = new uint256[](3);
+        indexes[0] = 0;
+        indexes[1] = 1;
+        indexes[2] = 2;
+        uint256[] memory limits = new uint256[](3);
+        limits[0] = 50;
+        limits[1] = 50;
+        limits[2] = 50;
+        vm.prank(admin);
+        operatorsRegistry.setOperatorLimits(indexes, limits);
+        vm.prank(river);
+        (bytes[] memory publicKeys, bytes[] memory signatures) = operatorsRegistry.pickNextValidators(11);
+
+        assert(publicKeys.length == 11);
+        assert(signatures.length == 11);
+
+        {
+            Operators.Operator memory op = operatorsRegistry.getOperator(0);
+            assert(op.limit == 50);
+            assert(op.funded == 10);
+            assert(op.keys == 50);
+            assert(op.stopped == 0);
+        }
+
+        {
+            Operators.Operator memory op = operatorsRegistry.getOperator(1);
+            assert(op.limit == 50);
+            assert(op.funded == 1);
+            assert(op.keys == 50);
+            assert(op.stopped == 0);
+        }
+
+        {
+            Operators.Operator memory op = operatorsRegistry.getOperator(2);
+            assert(op.limit == 50);
+            assert(op.funded == 0);
+            assert(op.keys == 50);
+            assert(op.stopped == 0);
+        }
+        vm.prank(river);
+        (publicKeys, signatures) = operatorsRegistry.pickNextValidators(11);
+
+        assert(publicKeys.length == 11);
+        assert(signatures.length == 11);
+
+        {
+            Operators.Operator memory op = operatorsRegistry.getOperator(0);
+            assert(op.limit == 50);
+            assert(op.funded == 10);
+            assert(op.keys == 50);
+            assert(op.stopped == 0);
+        }
+
+        {
+            Operators.Operator memory op = operatorsRegistry.getOperator(1);
+            assert(op.limit == 50);
+            assert(op.funded == 2);
+            assert(op.keys == 50);
+            assert(op.stopped == 0);
+        }
+
+        {
+            Operators.Operator memory op = operatorsRegistry.getOperator(2);
+            assert(op.limit == 50);
+            assert(op.funded == 10);
+            assert(op.keys == 50);
+            assert(op.stopped == 0);
+        }
+
+        vm.prank(river);
+        (publicKeys, signatures) = operatorsRegistry.pickNextValidators(64);
+
+        assert(publicKeys.length == 64);
+        assert(signatures.length == 64);
+
+        {
+            Operators.Operator memory op = operatorsRegistry.getOperator(0);
+            assert(op.limit == 50);
+            assert(op.funded == 30);
+            assert(op.keys == 50);
+            assert(op.stopped == 0);
+        }
+
+        {
+            Operators.Operator memory op = operatorsRegistry.getOperator(1);
+            assert(op.limit == 50);
+            assert(op.funded == 26);
+            assert(op.keys == 50);
+            assert(op.stopped == 0);
+        }
+
+        {
+            Operators.Operator memory op = operatorsRegistry.getOperator(2);
+            assert(op.limit == 50);
+            assert(op.funded == 30);
+            assert(op.keys == 50);
+            assert(op.stopped == 0);
+        }
+
+        vm.prank(river);
+        (publicKeys, signatures) = operatorsRegistry.pickNextValidators(64);
+
+        assert(publicKeys.length == 64);
+        assert(signatures.length == 64);
+
+        {
+            Operators.Operator memory op = operatorsRegistry.getOperator(0);
+            assert(op.limit == 50);
+            assert(op.funded == 50);
+            assert(op.keys == 50);
+            assert(op.stopped == 0);
+        }
+
+        {
+            Operators.Operator memory op = operatorsRegistry.getOperator(1);
+            assert(op.limit == 50);
+            assert(op.funded == 50);
+            assert(op.keys == 50);
+            assert(op.stopped == 0);
+        }
+
+        {
+            Operators.Operator memory op = operatorsRegistry.getOperator(2);
+            assert(op.limit == 50);
+            assert(op.funded == 50);
+            assert(op.keys == 50);
+            assert(op.stopped == 0);
+        }
+    }
+
+    function testGetAllActiveOperators(bytes32 _name, uint256 _firstAddressSalt)
+        public
+    {
         address _firstAddress = uf._new(_firstAddressSalt);
         vm.startPrank(admin);
         operatorsRegistry.addOperator(string(abi.encodePacked(_name)), _firstAddress);

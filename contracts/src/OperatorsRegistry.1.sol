@@ -169,7 +169,11 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
                 revert OperatorLimitTooHigh(_newLimits[idx], operator.keys);
             }
 
-            operator.limit = _newLimits[idx];
+            if (_newLimits[idx] < operator.funded) {
+                operator.limit = operator.funded;
+            } else {
+                operator.limit = _newLimits[idx];
+            }
 
             emit SetOperatorLimit(_operatorIndexes[idx], operator.limit);
 
@@ -308,7 +312,7 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
         onlyRiver
         returns (bytes[] memory publicKeys, bytes[] memory signatures)
     {
-        return _getNextValidatorsFromActiveOperators(_requestedAmount);
+        return _pickNextValidatorsFromActiveOperators(_requestedAmount);
     }
 
     /// @notice Internal utility to concatenate bytes arrays together
@@ -332,9 +336,11 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
         }
     }
 
+    uint256 internal constant MAX_VALIDATOR_ATTRIBUTION_PER_ROUND = 10;
+
     /// @notice Handler called whenever a deposit to the consensus layer is made. Should retrieve _requestedAmount or lower keys
     /// @param _requestedAmount Amount of keys required. Contract is expected to send _requestedAmount or lower.
-    function _getNextValidatorsFromActiveOperators(uint256 _requestedAmount)
+    function _pickNextValidatorsFromActiveOperators(uint256 _requestedAmount)
         internal
         returns (bytes[] memory publicKeys, bytes[] memory signatures)
     {
@@ -344,44 +350,70 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
             return (new bytes[](0), new bytes[](0));
         }
 
-        uint256 selectedOperatorIndex = 0;
-        for (uint256 idx = 1; idx < operators.length;) {
-            if (
-                operators[idx].funded - operators[idx].stopped
-                    < operators[selectedOperatorIndex].funded - operators[selectedOperatorIndex].stopped
-            ) {
-                selectedOperatorIndex = idx;
+        while (_requestedAmount > 0) {
+            // loop on operators to find the first that has fundable keys, taking into account previous loop round attributions
+            uint256 selectedOperatorIndex = 0;
+            for (; selectedOperatorIndex < operators.length;) {
+                if (
+                    (operators[selectedOperatorIndex].funded + operators[selectedOperatorIndex].picked)
+                        < operators[selectedOperatorIndex].limit
+                ) {
+                    break;
+                }
+                unchecked {
+                    ++selectedOperatorIndex;
+                }
             }
-            unchecked {
-                ++idx;
+
+            // if we reach the end, we have allocated all keys
+            if (selectedOperatorIndex == operators.length) {
+                break;
             }
+
+            // we start from the next operator and we try to find one that has fundable keys but a lower (funded + picked) - stopped value
+            for (uint256 idx = selectedOperatorIndex + 1; idx < operators.length;) {
+                if (
+                    (
+                        (operators[idx].funded + operators[idx].picked) - operators[idx].stopped
+                            < (operators[selectedOperatorIndex].funded + operators[selectedOperatorIndex].picked)
+                                - operators[selectedOperatorIndex].stopped
+                    ) && (operators[idx].funded + operators[idx].picked) < operators[idx].limit
+                ) {
+                    selectedOperatorIndex = idx;
+                }
+                unchecked {
+                    ++idx;
+                }
+            }
+
+            // we take the smallest value between limit - (funded + picked), _requestedAmount and MAX_VALIDATOR_ATTRIBUTION_PER_ROUND
+            uint256 selectedOperatorAvailableKeys = Uint256Lib.min(
+                Uint256Lib.min(
+                    operators[selectedOperatorIndex].limit
+                        - (operators[selectedOperatorIndex].funded + operators[selectedOperatorIndex].picked),
+                    MAX_VALIDATOR_ATTRIBUTION_PER_ROUND
+                ),
+                _requestedAmount
+            );
+
+            // we update the cached picked amount
+            operators[selectedOperatorIndex].picked += selectedOperatorAvailableKeys;
+
+            // we update the requested amount count
+            _requestedAmount -= selectedOperatorAvailableKeys;
         }
 
-        uint256 selectedOperatorAvailableKeys = Uint256Lib.min(
-            operators[selectedOperatorIndex].keys, operators[selectedOperatorIndex].limit
-        ) - operators[selectedOperatorIndex].funded;
-
-        if (selectedOperatorAvailableKeys == 0) {
-            return (new bytes[](0), new bytes[](0));
-        }
-
-        Operators.Operator storage operator = Operators.get(operators[selectedOperatorIndex].index);
-        if (selectedOperatorAvailableKeys >= _requestedAmount) {
-            (publicKeys, signatures) = ValidatorKeys.getKeys(
-                operators[selectedOperatorIndex].index, operators[selectedOperatorIndex].funded, _requestedAmount
-            );
-            operator.funded += _requestedAmount;
-        } else {
-            (publicKeys, signatures) = ValidatorKeys.getKeys(
-                operators[selectedOperatorIndex].index,
-                operators[selectedOperatorIndex].funded,
-                selectedOperatorAvailableKeys
-            );
-            operator.funded += selectedOperatorAvailableKeys;
-            (bytes[] memory additionalPublicKeys, bytes[] memory additionalSignatures) =
-                _getNextValidatorsFromActiveOperators(_requestedAmount - selectedOperatorAvailableKeys);
-            publicKeys = _concatenateByteArrays(publicKeys, additionalPublicKeys);
-            signatures = _concatenateByteArrays(signatures, additionalSignatures);
+        // we loop on all operators
+        for (uint256 idx = 0; idx < operators.length; ++idx) {
+            // if we picked keys on any operator, we extract the keys from storage and concatenate them in the result
+            // we then update the funded value
+            if (operators[idx].picked > 0) {
+                (bytes[] memory _publicKeys, bytes[] memory _signatures) =
+                    ValidatorKeys.getKeys(operators[idx].index, operators[idx].funded, operators[idx].picked);
+                publicKeys = _concatenateByteArrays(publicKeys, _publicKeys);
+                signatures = _concatenateByteArrays(signatures, _signatures);
+                (Operators.get(idx)).funded += operators[idx].picked;
+            }
         }
     }
 }
