@@ -70,6 +70,12 @@ contract WLSETHV1 is Initializable, ReentrancyGuard {
         return _balanceOf(_owner);
     }
 
+    /// @notice Retrieves the raw shares count of the user
+    /// @param _owner Owner to check the shares balance
+    function sharesOf(address _owner) external view returns (uint256 shares) {
+        return BalanceOf.get(_owner);
+    }
+
     /// @notice Retrieves the token allowance given from one address to another
     /// @param _owner Owner that gave the allowance
     /// @param _spender Spender that received the allowance
@@ -136,16 +142,14 @@ contract WLSETHV1 is Initializable, ReentrancyGuard {
     /// @dev Burned tokens are sent to recipient but are minted from the message sender balance
     /// @dev No approval required from the message sender
     /// @param _recipient Spender that receives the allowance
-    /// @param _value Amount of wrapped token to give to the burn
-    function burn(address _recipient, uint256 _value) external nonReentrant {
-        uint256 callerUnderlyingBalance =
-            IRiverV1(payable(RiverAddress.get())).underlyingBalanceFromShares(BalanceOf.get(msg.sender));
-        if (_value > callerUnderlyingBalance) {
+    /// @param _shares Amount of shares to burn
+    function burn(address _recipient, uint256 _shares) external nonReentrant {
+        uint256 shares = BalanceOf.get(msg.sender);
+        if (_shares > shares) {
             revert BalanceTooLow();
         }
-        uint256 sharesAmount = IRiverV1(payable(RiverAddress.get())).sharesFromUnderlyingBalance(_value);
-        BalanceOf.set(msg.sender, BalanceOf.get(msg.sender) - sharesAmount);
-        if (!IRiverV1(payable(RiverAddress.get())).transfer(_recipient, sharesAmount)) {
+        BalanceOf.set(msg.sender, BalanceOf.get(msg.sender) - _shares);
+        if (!IRiverV1(payable(RiverAddress.get())).transfer(_recipient, _shares)) {
             revert TokenTransferError();
         }
     }
