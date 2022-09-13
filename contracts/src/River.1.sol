@@ -17,7 +17,6 @@ import "./state/shared/AdministratorAddress.sol";
 import "./state/river/AllowlistAddress.sol";
 import "./state/river/OperatorsRegistryAddress.sol";
 import "./state/river/TreasuryAddress.sol";
-import "./state/river/OperatorRewardsShare.sol";
 import "./state/river/GlobalFee.sol";
 import "./state/river/ELFeeRecipientAddress.sol";
 
@@ -53,7 +52,6 @@ contract RiverV1 is
     /// @param _operatorRegistryAddress Address of the operator registry
     /// @param _treasuryAddress Address receiving the fee minus the operator share
     /// @param _globalFee Amount retained when the eth balance increases, splitted between the treasury and the operators
-    /// @param _operatorRewardsShare Share of the global fee used to reward node operators
     function initRiverV1(
         address _depositContractAddress,
         address _elFeeRecipientAddress,
@@ -63,9 +61,11 @@ contract RiverV1 is
         address _allowlistAddress,
         address _operatorRegistryAddress,
         address _treasuryAddress,
-        uint256 _globalFee,
-        uint256 _operatorRewardsShare
-    ) external init(0) {
+        uint256 _globalFee
+    )
+        external
+        init(0)
+    {
         if (_systemAdministratorAddress == address(0)) {
             // only check on initialization
             revert Errors.InvalidZeroAddress();
@@ -73,7 +73,6 @@ contract RiverV1 is
         LibOwnable._setAdmin(_systemAdministratorAddress);
         TreasuryAddress.set(_treasuryAddress);
         GlobalFee.set(_globalFee);
-        OperatorRewardsShare.set(_operatorRewardsShare);
         ELFeeRecipientAddress.set(_elFeeRecipientAddress);
 
         ConsensusLayerDepositManagerV1.initConsensusLayerDepositManagerV1(
@@ -97,21 +96,6 @@ contract RiverV1 is
     /// @notice Get the current global fee
     function getGlobalFee() external view returns (uint256) {
         return GlobalFee.get();
-    }
-
-    /// @notice Changes the operator rewards share.
-    /// @param newOperatorRewardsShare New share value
-    function setOperatorRewardsShare(uint256 newOperatorRewardsShare) external onlyAdmin {
-        if (newOperatorRewardsShare > BASE) {
-            revert Errors.InvalidArgument();
-        }
-
-        OperatorRewardsShare.set(newOperatorRewardsShare);
-    }
-
-    /// @notice Get the current operator rewards share
-    function getOperatorRewardsShare() external view returns (uint256) {
-        return OperatorRewardsShare.get();
     }
 
     /// @notice Changes the allowlist address
@@ -211,39 +195,6 @@ contract RiverV1 is
         return IOperatorsRegistryV1(OperatorsRegistryAddress.get()).pickNextValidators(_requestedAmount);
     }
 
-    /// @notice Internal utility managing reward distribution amongst node operators
-    /// @param _reward Amount of shares to split between operators
-    function _rewardOperators(uint256 _reward) internal returns (uint256) {
-        Operators.Operator[] memory operators =
-            IOperatorsRegistryV1(OperatorsRegistryAddress.get()).listActiveOperators();
-        uint256[] memory validatorCounts = new uint256[](operators.length);
-
-        uint256 totalActiveValidators = 0;
-        for (uint256 idx = 0; idx < operators.length;) {
-            uint256 operatorActiveValidatorCount = operators[idx].funded - operators[idx].stopped;
-            totalActiveValidators += operatorActiveValidatorCount;
-            validatorCounts[idx] = operatorActiveValidatorCount;
-            unchecked {
-                ++idx;
-            }
-        }
-
-        if (totalActiveValidators > 0) {
-            uint256 rewardsPerActiveValidator = _reward / totalActiveValidators;
-
-            for (uint256 idx = 0; idx < validatorCounts.length;) {
-                _mintRawShares(operators[idx].feeRecipient, validatorCounts[idx] * rewardsPerActiveValidator);
-                unchecked {
-                    ++idx;
-                }
-            }
-        } else {
-            _reward = 0;
-        }
-
-        return _reward;
-    }
-
     /// @notice Internal utility to pull funds from the execution layer fee recipient to River and return the delta in the balance
     function _pullELFees() internal override returns (uint256) {
         address elFeeRecipient = ELFeeRecipientAddress.get();
@@ -269,11 +220,7 @@ contract RiverV1 is
         uint256 denominator = (_assetBalance() * BASE) - (_amount * globalFee);
         uint256 sharesToMint = denominator == 0 ? 0 : (numerator / denominator);
 
-        uint256 operatorRewards = (sharesToMint * OperatorRewardsShare.get()) / BASE;
-
-        uint256 mintedRewards = _rewardOperators(operatorRewards);
-
-        _mintRawShares(TreasuryAddress.get(), sharesToMint - mintedRewards);
+        _mintRawShares(TreasuryAddress.get(), sharesToMint);
     }
 
     /// @notice Handler called whenever the total balance of ETH is requested

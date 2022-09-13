@@ -109,8 +109,7 @@ contract FirewallTests {
             payable(address(allowlist)),
             payable(address(operatorsRegistry)),
             treasury,
-            5000,
-            50000
+            5000
         );
 
         bytes4[] memory executorCallableOracleSelectors = new bytes4[](5);
@@ -174,27 +173,6 @@ contract FirewallTests {
         vm.startPrank(joe);
         vm.expectRevert(unauthJoe);
         firewalledRiver.setGlobalFee(3);
-        vm.stopPrank();
-    }
-
-    function testGovernorCanSetOperatorsRewardShare() public {
-        vm.startPrank(riverGovernorDAO);
-        firewalledRiver.setOperatorRewardsShare(5);
-        // no assert, just expect no revert - no easy way to check the actual rewards share value
-        vm.stopPrank();
-    }
-
-    function testExecutorCannotSetOperatorsRewardShare() public {
-        vm.startPrank(executor);
-        vm.expectRevert(unauthExecutor);
-        firewalledRiver.setOperatorRewardsShare(4);
-        vm.stopPrank();
-    }
-
-    function testRandomCallerCannotSetOperatorsRewardShare() public {
-        vm.startPrank(joe);
-        vm.expectRevert(unauthJoe);
-        firewalledRiver.setOperatorRewardsShare(3);
         vm.stopPrank();
     }
 
