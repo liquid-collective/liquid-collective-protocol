@@ -188,6 +188,7 @@ contract RiverV1 is
         uint256 initialBalance = address(this).balance;
         IELFeeRecipientV1(payable(elFeeRecipient)).pullELFees();
         uint256 collectedELFees = address(this).balance - initialBalance;
+        EthToDeposit.set(EthToDeposit.get() + collectedELFees);
         emit PulledELFees(collectedELFees);
         return collectedELFees;
     }
@@ -214,10 +215,10 @@ contract RiverV1 is
         uint256 clValidatorCount = CLValidatorCount.get();
         uint256 depositedValidatorCount = DepositedValidatorCount.get();
         if (clValidatorCount < depositedValidatorCount) {
-            return CLValidatorTotalBalance.get() + address(this).balance
+            return CLValidatorTotalBalance.get() + EthToDeposit.get()
                 + (depositedValidatorCount - clValidatorCount) * ConsensusLayerDepositManagerV1.DEPOSIT_SIZE;
         } else {
-            return CLValidatorTotalBalance.get() + address(this).balance;
+            return CLValidatorTotalBalance.get() + EthToDeposit.get();
         }
     }
 }
