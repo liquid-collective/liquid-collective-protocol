@@ -166,37 +166,6 @@ contract RiverV1SetupOneTests is Test {
         vm.stopPrank();
     }
 
-    function testAcceptOwnerhshipUnauthorized() public {
-        assert(river.getAdministrator() == admin);
-        assert(river.getPendingAdministrator() == address(0));
-        vm.startPrank(newAdmin);
-        vm.expectRevert(abi.encodeWithSignature("Unauthorized(address)", newAdmin));
-        river.acceptOwnership();
-        vm.stopPrank();
-    }
-
-    function testTransferAndAcceptOwnerhship() public {
-        assert(river.getAdministrator() == admin);
-        assert(river.getPendingAdministrator() == address(0));
-        vm.startPrank(admin);
-        river.transferOwnership(newAdmin);
-        vm.stopPrank();
-        assert(river.getAdministrator() == admin);
-        assert(river.getPendingAdministrator() == newAdmin);
-        vm.startPrank(newAdmin);
-        river.acceptOwnership();
-        vm.stopPrank();
-        assert(river.getAdministrator() == newAdmin);
-        assert(river.getPendingAdministrator() == address(0));
-    }
-
-    function testTransferOwnershipUnauthorized() public {
-        vm.startPrank(newAdmin);
-        vm.expectRevert(abi.encodeWithSignature("Unauthorized(address)", newAdmin));
-        river.transferOwnership(newAdmin);
-        vm.stopPrank();
-    }
-
     function testSetELFeeRecipient(uint256 _newELFeeRecipientSalt) public {
         address newELFeeRecipient = uf._new(_newELFeeRecipientSalt);
         vm.startPrank(admin);

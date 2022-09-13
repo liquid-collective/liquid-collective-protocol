@@ -3,7 +3,7 @@ pragma solidity 0.8.10;
 
 import "./Initializable.sol";
 import "./libraries/Errors.sol";
-import "./libraries/LibOwnable.sol";
+import "./libraries/LibAdministrable.sol";
 import "./interfaces/IRiver.1.sol";
 
 import "./state/shared/AdministratorAddress.sol";
@@ -16,11 +16,12 @@ import "./state/oracle/ExpectedEpochId.sol";
 import "./state/oracle/LastEpochId.sol";
 import "./state/oracle/ReportsPositions.sol";
 import "./state/oracle/ReportsVariants.sol";
+import "./Administrable.sol";
 
 /// @title Oracle (v1)
 /// @author Kiln
 /// @notice This contract handles the input from the allowed oracle members. Highly inspired by Lido's implementation.
-contract OracleV1 is Initializable {
+contract OracleV1 is Initializable, Administrable {
     event QuorumChanged(uint256 _newQuorum);
     event ExpectedEpochIdUpdated(uint256 _epochId);
     event BeaconReported(
@@ -60,8 +61,11 @@ contract OracleV1 is Initializable {
         uint64 _genesisTime,
         uint256 _annualAprUpperBound,
         uint256 _relativeLowerBound
-    ) external init(0) {
-        LibOwnable._setAdmin(_administratorAddress);
+    )
+        external
+        init(0)
+    {
+        _setAdmin(_administratorAddress);
         RiverAddress.set(_riverContractAddress);
         BeaconSpec.set(
             BeaconSpec.BeaconSpecStruct({
@@ -80,25 +84,12 @@ contract OracleV1 is Initializable {
         Quorum.set(1);
     }
 
-    /// @notice Retrieve system administrator address
-    function getAdministrator() external view returns (address) {
-        return LibOwnable._getAdmin();
-    }
-
     /// @notice Retrieve River address
     function getRiver() external view returns (address) {
         return RiverAddress.get();
     }
-
-    /// @notice Prevents unauthorized calls
-    modifier onlyAdmin() {
-        if (msg.sender != LibOwnable._getAdmin()) {
-            revert Errors.Unauthorized(msg.sender);
-        }
-        _;
-    }
-
     /// @notice Retrieve the block timestamp
+
     function getTime() external view returns (uint256) {
         return _getTime();
     }
@@ -229,7 +220,7 @@ contract OracleV1 is Initializable {
 
     function setMember(address _oracleMember, address _newAddress) external {
         LibSanitize._notZeroAddress(_newAddress);
-        if (msg.sender != LibOwnable._getAdmin()) {
+        if (msg.sender != LibAdministrable._getAdmin()) {
             revert Errors.Unauthorized(msg.sender);
         }
         if (OracleMembers.indexOf(_newAddress) >= 0) {

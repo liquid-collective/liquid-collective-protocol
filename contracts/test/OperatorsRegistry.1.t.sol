@@ -66,51 +66,9 @@ contract OperatorsRegistryV1Tests is Test {
         operatorsRegistry.setRiver(_newRiverAddress);
     }
 
-    function testTransferOwnership(uint256 _newAdminSalt) public {
-        address _newAdminAddress = uf._new(_newAdminSalt);
-        assert(operatorsRegistry.getAdministrator() == admin);
-        assert(operatorsRegistry.getPendingAdministrator() == address(0));
-        vm.startPrank(admin);
-        operatorsRegistry.transferOwnership(_newAdminAddress);
-        vm.stopPrank();
-        assert(operatorsRegistry.getAdministrator() == admin);
-        assert(operatorsRegistry.getPendingAdministrator() == _newAdminAddress);
-    }
-
-    function testTransferOwnershipUnauthorized(uint256 _newAdminSalt) public {
-        address _newAdminAddress = uf._new(_newAdminSalt);
-        assert(operatorsRegistry.getAdministrator() == admin);
-        assert(operatorsRegistry.getPendingAdministrator() == address(0));
-        vm.expectRevert(abi.encodeWithSignature("Unauthorized(address)", address(this)));
-        operatorsRegistry.transferOwnership(_newAdminAddress);
-    }
-
-    function testAcceptOwnership(uint256 _newAdminSalt) public {
-        address _newAdminAddress = uf._new(_newAdminSalt);
-        assert(operatorsRegistry.getAdministrator() == admin);
-        assert(operatorsRegistry.getPendingAdministrator() == address(0));
-        vm.startPrank(admin);
-        operatorsRegistry.transferOwnership(_newAdminAddress);
-        vm.stopPrank();
-        vm.startPrank(_newAdminAddress);
-        operatorsRegistry.acceptOwnership();
-        vm.stopPrank();
-        assert(operatorsRegistry.getAdministrator() == _newAdminAddress);
-        assert(operatorsRegistry.getPendingAdministrator() == address(0));
-    }
-
-    function testAcceptOwnershipUnauthorized(uint256 _newAdminSalt) public {
-        address _newAdminAddress = uf._new(_newAdminSalt);
-        assert(operatorsRegistry.getAdministrator() == admin);
-        assert(operatorsRegistry.getPendingAdministrator() == address(0));
-        vm.startPrank(admin);
-        operatorsRegistry.transferOwnership(_newAdminAddress);
-        vm.stopPrank();
-        vm.expectRevert(abi.encodeWithSignature("Unauthorized(address)", address(this)));
-        operatorsRegistry.acceptOwnership();
-    }
-
-    function testAddNodeOperator(uint256 _nodeOperatorAddressSalt, bytes32 _name) public {
+    function testAddNodeOperator(uint256 _nodeOperatorAddressSalt, bytes32 _name)
+        public
+    {
         address _nodeOperatorAddress = uf._new(_nodeOperatorAddressSalt);
         vm.startPrank(admin);
         operatorsRegistry.addOperator(string(abi.encodePacked(_name)), _nodeOperatorAddress);

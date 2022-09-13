@@ -5,7 +5,7 @@ import "./Initializable.sol";
 
 import "./libraries/Errors.sol";
 import "./libraries/Uint256Lib.sol";
-import "./libraries/LibOwnable.sol";
+import "./libraries/LibAdministrable.sol";
 import "./libraries/LibSanitize.sol";
 
 import "./state/operatorsRegistry/Operators.sol";
@@ -14,24 +14,18 @@ import "./state/shared/RiverAddress.sol";
 
 import "./interfaces/IOperatorRegistry.1.sol";
 
+import "./Administrable.sol";
+
 /// @title OperatorsRegistry (v1)
 /// @author Kiln
 /// @notice This contract handles the list of operators and their keys
-contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable {
+contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrable {
     /// @notice Initializes the operators registry
     /// @param _admin Admin in charge of managing operators
     /// @param _river Address of River system
     function initOperatorsRegistryV1(address _admin, address _river) external init(0) {
-        LibOwnable._setAdmin(_admin);
+        _setAdmin(_admin);
         RiverAddress.set(_river);
-    }
-
-    /// @notice Prevents unauthorized calls
-    modifier onlyAdmin() virtual {
-        if (msg.sender != LibOwnable._getAdmin()) {
-            revert Errors.Unauthorized(msg.sender);
-        }
-        _;
     }
 
     modifier onlyRiver() virtual {
@@ -44,7 +38,7 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable {
     /// @notice Prevents anyone except the admin or the given operator to make the call. Also checks if operator is active
     /// @param _index The name identifying the operator
     modifier operatorOrAdmin(uint256 _index) {
-        if (msg.sender == LibOwnable._getAdmin()) {
+        if (msg.sender == LibAdministrable._getAdmin()) {
             _;
             return;
         }
@@ -67,31 +61,6 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable {
     /// @param _newRiver New address for the river system
     function setRiver(address _newRiver) external onlyAdmin {
         RiverAddress.set(_newRiver);
-    }
-
-    /// @notice Changes the admin but waits for new admin approval
-    /// @param _newAdmin New address for the admin
-    function transferOwnership(address _newAdmin) external onlyAdmin {
-        LibOwnable._setPendingAdmin(_newAdmin);
-    }
-
-    /// @notice Accepts the ownership of the system
-    function acceptOwnership() external {
-        if (msg.sender != LibOwnable._getPendingAdmin()) {
-            revert Errors.Unauthorized(msg.sender);
-        }
-        LibOwnable._setAdmin(msg.sender);
-        LibOwnable._setPendingAdmin(address(0));
-    }
-
-    /// @notice Retrieve system administrator address
-    function getAdministrator() external view returns (address) {
-        return LibOwnable._getAdmin();
-    }
-
-    /// @notice Retrieve system pending administrator address
-    function getPendingAdministrator() external view returns (address) {
-        return LibOwnable._getPendingAdmin();
     }
 
     /// @notice Prevents the call from working if the operator is not active

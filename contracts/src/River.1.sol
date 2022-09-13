@@ -6,8 +6,6 @@ import "./interfaces/IOperatorRegistry.1.sol";
 import "./interfaces/IRiver.1.sol";
 import "./interfaces/IELFeeRecipient.1.sol";
 
-import "./libraries/LibOwnable.sol";
-
 import "./components/ConsensusLayerDepositManager.1.sol";
 import "./components/UserDepositManager.1.sol";
 import "./components/SharesManager.1.sol";
@@ -21,6 +19,8 @@ import "./state/river/TreasuryAddress.sol";
 import "./state/river/GlobalFee.sol";
 import "./state/river/ELFeeRecipientAddress.sol";
 
+import "./Administrable.sol";
+
 /// @title River (v1)
 /// @author Kiln
 /// @notice This contract merges all the manager contracts and implements all the virtual methods stitching all components together
@@ -30,18 +30,12 @@ contract RiverV1 is
     SharesManagerV1,
     OracleManagerV1,
     Initializable,
+    Administrable,
     IRiverV1
 {
     uint256 public constant BASE = 100000;
     uint256 internal constant DEPOSIT_MASK = 0x1;
     /// @notice Prevents unauthorized calls
-
-    modifier onlyAdmin() override (OracleManagerV1) {
-        if (msg.sender != LibOwnable._getAdmin()) {
-            revert Errors.Unauthorized(msg.sender);
-        }
-        _;
-    }
 
     /// @notice Initializes the River system
     /// @param _depositContractAddress Address to make Consensus Layer deposits
@@ -62,8 +56,15 @@ contract RiverV1 is
         address _operatorRegistryAddress,
         address _treasuryAddress,
         uint256 _globalFee
-    ) external init(0) {
-        LibOwnable._setAdmin(_systemAdministratorAddress);
+    )
+        external
+        init(0)
+    {
+        if (_systemAdministratorAddress == address(0)) {
+            // only check on initialization
+            revert Errors.InvalidZeroAddress();
+        }
+        _setAdmin(_systemAdministratorAddress);
         TreasuryAddress.set(_treasuryAddress);
         GlobalFee.set(_globalFee);
         ELFeeRecipientAddress.set(_elFeeRecipientAddress);
@@ -107,31 +108,6 @@ contract RiverV1 is
     /// @notice Retrieve the treasury address
     function getTreasury() external view returns (address) {
         return TreasuryAddress.get();
-    }
-
-    /// @notice Changes the admin but waits for new admin approval
-    /// @param _newAdmin New address for the admin
-    function transferOwnership(address _newAdmin) external onlyAdmin {
-        LibOwnable._setPendingAdmin(_newAdmin);
-    }
-
-    /// @notice Accepts the ownership of the system
-    function acceptOwnership() external {
-        if (msg.sender != LibOwnable._getPendingAdmin()) {
-            revert Errors.Unauthorized(msg.sender);
-        }
-        LibOwnable._setAdmin(msg.sender);
-        LibOwnable._setPendingAdmin(address(0));
-    }
-
-    /// @notice Retrieve system administrator address
-    function getAdministrator() external view returns (address) {
-        return LibOwnable._getAdmin();
-    }
-
-    /// @notice Retrieve system pending administrator address
-    function getPendingAdministrator() external view returns (address) {
-        return LibOwnable._getPendingAdmin();
     }
 
     /// @notice Changes the execution layer fee recipient

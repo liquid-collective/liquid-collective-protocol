@@ -3,34 +3,27 @@ pragma solidity 0.8.10;
 
 import "./Initializable.sol";
 import "./libraries/Errors.sol";
-import "./libraries/LibOwnable.sol";
+import "./libraries/LibAdministrable.sol";
 import "./libraries/LibSanitize.sol";
 
 import "./state/allowlist/AllowerAddress.sol";
 import "./state/allowlist/Allowlist.sol";
 
 import "./interfaces/IAllowlist.1.sol";
+import "./Administrable.sol";
 
 /// @title Allowlist (v1)
 /// @author Kiln
 /// @notice This contract handles the list of allowed recipients.
-contract AllowlistV1 is IAllowlistV1, Initializable {
+contract AllowlistV1 is IAllowlistV1, Initializable, Administrable {
     uint256 internal constant DENY_MASK = 0x1 << 255;
 
     /// @notice Initializes the allowlist
     /// @param _admin Address of the Allowlist administrator
     /// @param _allower Address of the allower
     function initAllowlistV1(address _admin, address _allower) external init(0) {
-        LibOwnable._setAdmin(_admin);
+        _setAdmin(_admin);
         AllowerAddress.set(_allower);
-    }
-
-    /// @notice Prevents unauthorized calls
-    modifier onlyAdmin() virtual {
-        if (msg.sender != LibOwnable._getAdmin()) {
-            revert Errors.Unauthorized(msg.sender);
-        }
-        _;
     }
 
     /// @notice Changes the allower address
