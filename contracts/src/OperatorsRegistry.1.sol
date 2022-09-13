@@ -12,15 +12,21 @@ import "./state/operatorsRegistry/ValidatorKeys.sol";
 import "./state/shared/RiverAddress.sol";
 
 import "./interfaces/IOperatorRegistry.1.sol";
+import "./Sanitize.sol";
 
 /// @title OperatorsRegistry (v1)
 /// @author Kiln
 /// @notice This contract handles the list of operators and their keys
-contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable {
+contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Sanitize {
     /// @notice Initializes the operators registry
     /// @param _admin Admin in charge of managing operators
     /// @param _river Address of River system
-    function initOperatorsRegistryV1(address _admin, address _river) external init(0) {
+    function initOperatorsRegistryV1(address _admin, address _river)
+        external
+        init(0)
+        notZeroAddress(_admin)
+        notZeroAddress(_river)
+    {
         LibOwnable._setAdmin(_admin);
         RiverAddress.set(_river);
     }
@@ -122,7 +128,12 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable {
     /// @dev Only callable by the administrator
     /// @param _name The name identifying the operator
     /// @param _operator The address representing the operator, receiving the rewards
-    function addOperator(string calldata _name, address _operator) external onlyAdmin {
+    function addOperator(string calldata _name, address _operator)
+        external
+        onlyAdmin
+        notEmptyString(_name)
+        notZeroAddress(_operator)
+    {
         if (Operators.exists(_name)) {
             revert OperatorAlreadyExists(_name);
         }
@@ -146,7 +157,11 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable {
     /// @dev Only callable by the administrator or the previous operator address
     /// @param _index The operator index
     /// @param _newOperatorAddress The new address of the operator
-    function setOperatorAddress(uint256 _index, address _newOperatorAddress) external operatorOrAdmin(_index) {
+    function setOperatorAddress(uint256 _index, address _newOperatorAddress)
+        external
+        operatorOrAdmin(_index)
+        notZeroAddress(_newOperatorAddress)
+    {
         Operators.Operator storage operator = Operators.getByIndex(_index);
 
         operator.operator = _newOperatorAddress;
@@ -159,7 +174,11 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable {
     /// @dev No name conflict can exist
     /// @param _index The operator index
     /// @param _newName The new operator name
-    function setOperatorName(uint256 _index, string calldata _newName) external operatorOrAdmin(_index) {
+    function setOperatorName(uint256 _index, string calldata _newName)
+        external
+        operatorOrAdmin(_index)
+        notEmptyString(_newName)
+    {
         if (Operators.exists(_newName) == true) {
             revert OperatorAlreadyExists(_newName);
         }

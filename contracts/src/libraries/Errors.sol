@@ -6,4 +6,6 @@ library Errors {
     error InvalidCall();
     error InvalidArgument();
     error InvalidZeroAddress();
+    error InvalidEmptyString();
+    error InvalidFee();
 }

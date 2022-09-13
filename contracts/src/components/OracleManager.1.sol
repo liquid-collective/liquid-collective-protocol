@@ -12,6 +12,8 @@ import "../state/river/DepositedValidatorCount.sol";
 
 import "../interfaces/components/IOracleManager.1.sol";
 
+import "../Sanitize.sol";
+
 /// @title Oracle Manager (v1)
 /// @author Kiln
 /// @notice This contract handles the inputs provided by the oracle
@@ -75,6 +77,9 @@ abstract contract OracleManagerV1 is IOracleManagerV1 {
     /// @notice Set Oracle address
     /// @param _oracleAddress Address of the oracle
     function setOracle(address _oracleAddress) external onlyAdmin {
+        if (_oracleAddress == address(0)) {
+            revert Errors.InvalidZeroAddress();
+        }
         OracleAddress.set(_oracleAddress);
     }
 
