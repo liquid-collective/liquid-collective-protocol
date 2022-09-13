@@ -107,6 +107,25 @@ contract OracleV1Tests {
         assert(oracle.isMember(newMember) == false);
     }
 
+    function testRemoveMemberAfterReport(uint256 newMemberSalt) public {
+        address newMember = uf._new(newMemberSalt);
+        assert(oracle.isMember(newMember) == false);
+        vm.prank(admin);
+        oracle.addMember(newMember);
+        assert(oracle.isMember(newMember) == true);
+        assert(oracle.getReportVariantsCount() == 0);
+        assert(oracle.getGlobalReportStatus() == 0);
+        vm.prank(newMember);
+        oracle.reportBeacon(0, 32 ether / 1e9, 1);
+        assert(oracle.getReportVariantsCount() == 1);
+        assert(oracle.getGlobalReportStatus() != 0);
+        vm.prank(admin);
+        oracle.removeMember(newMember);
+        assert(oracle.isMember(newMember) == false);
+        assert(oracle.getReportVariantsCount() == 0);
+        assert(oracle.getGlobalReportStatus() == 0);
+    }
+
     function testRemoveMemberUnauthorized(uint256 newMemberSalt) public {
         address newMember = uf._new(newMemberSalt);
         vm.startPrank(admin);
