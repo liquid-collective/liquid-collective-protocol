@@ -311,6 +311,22 @@ contract SharesManagerV1Tests {
         vm.stopPrank();
     }
 
+    function testTransferZeroAddress(uint256 _userOneSalt, uint256 _userTwoSalt, uint128 _allowance) public {
+        address _userOne = uf._new(_userOneSalt);
+        address _userTwo = uf._new(_userTwoSalt);
+        SharesManagerPublicDeal(payable(address(sharesManager))).deal(_userOne, _allowance);
+        SharesManagerPublicDeal(payable(address(sharesManager))).setValidatorBalance(uint256(_allowance));
+        vm.startPrank(_userOne);
+        uint256 totalAllowance = sharesManager.balanceOf(_userOne);
+        assert(0 == sharesManager.balanceOf(_userTwo));
+        uint256 transferValue = totalAllowance / 2;
+        if (transferValue > 0) {
+            vm.expectRevert(abi.encodeWithSignature("UnauthorizedTransfer(address,address)", _userOne, address(0)));
+            sharesManager.transfer(address(0), transferValue);
+        }
+        vm.stopPrank();
+    }
+
     function testTransferTotal(uint256 _userOneSalt, uint256 _userTwoSalt, uint128 _allowance) public {
         address _userOne = uf._new(_userOneSalt);
         address _userTwo = uf._new(_userTwoSalt);
@@ -329,6 +345,60 @@ contract SharesManagerV1Tests {
             assert(newBalanceUserOne + newBalanceUserTwo == totalAllowance);
         }
         vm.stopPrank();
+    }
+
+    function testApproveAndTransferMsgSender(uint256 _userOneSalt, uint256 _userTwoSalt, uint128 _allowance) public {
+        address _userOne = uf._new(_userOneSalt);
+        address _userTwo = uf._new(_userTwoSalt);
+        SharesManagerPublicDeal(payable(address(sharesManager))).deal(_userOne, _allowance);
+        if (_allowance > 0) {
+            vm.startPrank(_userOne);
+            vm.expectRevert(
+                abi.encodeWithSignature(
+                    "AllowanceTooLow(address,address,uint256,uint256)", _userOne, _userOne, 0, _allowance
+                )
+            );
+            sharesManager.transferFrom(_userOne, _userTwo, _allowance);
+            vm.stopPrank();
+        }
+    }
+
+    function testIncreaseAllowanceAndTransferFrom(uint256 _userOneSalt, uint256 _userTwoSalt, uint128 _allowance)
+        public
+    {
+        address _userOne = uf._new(_userOneSalt);
+        address _userTwo = uf._new(_userTwoSalt);
+        SharesManagerPublicDeal(payable(address(sharesManager))).deal(_userOne, _allowance);
+        vm.prank(_userOne);
+        sharesManager.increaseAllowance(_userTwo, _allowance);
+        if (_allowance > 0) {
+            vm.startPrank(_userTwo);
+            sharesManager.transferFrom(_userOne, _userTwo, _allowance);
+            vm.stopPrank();
+            assert(sharesManager.balanceOf(_userTwo) == _allowance);
+        }
+    }
+
+    function testIncreaseDecreaseAllowanceAndTransferFrom(
+        uint256 _userOneSalt,
+        uint256 _userTwoSalt,
+        uint128 _allowance
+    )
+        public
+    {
+        address _userOne = uf._new(_userOneSalt);
+        address _userTwo = uf._new(_userTwoSalt);
+        SharesManagerPublicDeal(payable(address(sharesManager))).deal(_userOne, _allowance);
+        vm.prank(_userOne);
+        sharesManager.increaseAllowance(_userTwo, uint256(_allowance) * 2);
+        vm.prank(_userOne);
+        sharesManager.decreaseAllowance(_userTwo, _allowance);
+        if (_allowance > 0) {
+            vm.startPrank(_userTwo);
+            sharesManager.transferFrom(_userOne, _userTwo, _allowance);
+            vm.stopPrank();
+            assert(sharesManager.balanceOf(_userTwo) == _allowance);
+        }
     }
 
     function testApproveAndTransferUnauthorizedSender(uint256 _userOneSalt, uint256 _userTwoSalt, uint128 _allowance)

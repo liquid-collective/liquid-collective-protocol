@@ -3,6 +3,7 @@ pragma solidity 0.8.10;
 
 import "./Initializable.sol";
 import "./interfaces/IRiver.1.sol";
+import "./interfaces/IWLSETH.1.sol";
 
 import "./state/shared/RiverAddress.sol";
 import "./state/shared/ApprovalsPerOwner.sol";
@@ -14,16 +15,7 @@ import "openzeppelin-contracts/contracts/security/ReentrancyGuard.sol";
 /// @author Kiln
 /// @notice This contract wraps the lsETH token into a rebase token, more suitable for some DeFi use-cases
 ///         like stable swaps.
-contract WLSETHV1 is Initializable, ReentrancyGuard {
-    event Transfer(address indexed _from, address indexed _to, uint256 _value);
-    event Approval(address indexed _owner, address indexed _spender, uint256 _value);
-
-    error BalanceTooLow();
-    error UnauthorizedOperation();
-    error AllowanceTooLow(address _from, address _operator, uint256 _allowance, uint256 _value);
-    error NullTransfer();
-    error TokenTransferError();
-
+contract WLSETHV1 is IWLSETHV1, Initializable, ReentrancyGuard {
     modifier isNotNull(uint256 _value) {
         if (_value == 0) {
             revert NullTransfer();
@@ -92,6 +84,9 @@ contract WLSETHV1 is Initializable, ReentrancyGuard {
         hasFunds(msg.sender, _value)
         returns (bool)
     {
+        if (_to == address(0)) {
+            revert UnauthorizedTransfer(msg.sender, address(0));
+        }
         return _transfer(msg.sender, _to, _value);
     }
 
@@ -106,11 +101,14 @@ contract WLSETHV1 is Initializable, ReentrancyGuard {
         hasFunds(_from, _value)
         returns (bool)
     {
-        if (_from != msg.sender) {
-            uint256 currentAllowance = ApprovalsPerOwner.get(_from, msg.sender);
-            if (currentAllowance < _value) {
-                revert AllowanceTooLow(_from, msg.sender, currentAllowance, _value);
-            }
+        if (_to == address(0)) {
+            revert UnauthorizedTransfer(msg.sender, address(0));
+        }
+        uint256 currentAllowance = ApprovalsPerOwner.get(_from, msg.sender);
+        if (currentAllowance < _value) {
+            revert AllowanceTooLow(_from, msg.sender, currentAllowance, _value);
+        }
+        if (currentAllowance != type(uint256).max) {
             ApprovalsPerOwner.set(_from, msg.sender, currentAllowance - _value);
         }
         return _transfer(_from, _to, _value);
@@ -122,6 +120,26 @@ contract WLSETHV1 is Initializable, ReentrancyGuard {
     function approve(address _spender, uint256 _value) external returns (bool success) {
         ApprovalsPerOwner.set(msg.sender, _spender, _value);
         emit Approval(msg.sender, _spender, _value);
+        return true;
+    }
+
+    /// @notice Increase allowance to another account
+    /// @param _spender Spender that receives the allowance
+    /// @param _additionalValue Amount to add
+    function increaseAllowance(address _spender, uint256 _additionalValue) external returns (bool success) {
+        uint256 newApprovalValue = ApprovalsPerOwner.get(msg.sender, _spender) + _additionalValue;
+        ApprovalsPerOwner.set(msg.sender, _spender, newApprovalValue);
+        emit Approval(msg.sender, _spender, newApprovalValue);
+        return true;
+    }
+
+    /// @notice Decrease allowance to another account
+    /// @param _spender Spender that receives the allowance
+    /// @param _subtractableValue Amount to add
+    function decreaseAllowance(address _spender, uint256 _subtractableValue) external returns (bool success) {
+        uint256 newApprovalValue = ApprovalsPerOwner.get(msg.sender, _spender) - _subtractableValue;
+        ApprovalsPerOwner.set(msg.sender, _spender, newApprovalValue);
+        emit Approval(msg.sender, _spender, newApprovalValue);
         return true;
     }
 
