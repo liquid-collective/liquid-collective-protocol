@@ -37,6 +37,10 @@ contract OracleManagerV1ExposeInitializer is OracleManagerV1 {
         DepositedValidatorCount.set(amount);
     }
 
+    function _getRiverAdmin() internal view override returns (address) {
+        return AdministratorAddress.get();
+    }
+
     constructor(address admin) {
         AdministratorAddress.set(admin);
     }

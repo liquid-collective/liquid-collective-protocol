@@ -5,7 +5,6 @@ import "./Initializable.sol";
 
 import "./libraries/Errors.sol";
 import "./libraries/Uint256Lib.sol";
-import "./libraries/LibAdministrable.sol";
 import "./libraries/LibSanitize.sol";
 
 import "./state/operatorsRegistry/Operators.sol";
@@ -38,7 +37,7 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
     /// @notice Prevents anyone except the admin or the given operator to make the call. Also checks if operator is active
     /// @param _index The name identifying the operator
     modifier operatorOrAdmin(uint256 _index) {
-        if (msg.sender == LibAdministrable._getAdmin()) {
+        if (msg.sender == _getAdmin()) {
             _;
             return;
         }

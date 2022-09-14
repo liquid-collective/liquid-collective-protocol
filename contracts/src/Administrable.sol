@@ -23,6 +23,10 @@ contract Administrable {
         LibAdministrable._setAdmin(_admin);
     }
 
+    function _getAdmin() internal view returns (address) {
+        return LibAdministrable._getAdmin();
+    }
+
     function proposeAdmin(address _newOwner) external onlyAdmin {
         if (_newOwner == address(0)) {
             revert Errors.InvalidZeroAddress();

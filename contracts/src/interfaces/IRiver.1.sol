@@ -5,7 +5,6 @@ import "./components/IConsensusLayerDepositManager.1.sol";
 import "./components/IOracleManager.1.sol";
 import "./components/ISharesManager.1.sol";
 import "./components/IUserDepositManager.1.sol";
-import "./IAdministrable.sol";
 
 interface IRiverV1 is IConsensusLayerDepositManagerV1, IUserDepositManagerV1, ISharesManagerV1, IOracleManagerV1 {
     error ZeroMintedShares();

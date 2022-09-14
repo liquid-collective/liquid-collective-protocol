@@ -11,6 +11,7 @@ import "./components/UserDepositManager.1.sol";
 import "./components/SharesManager.1.sol";
 import "./components/OracleManager.1.sol";
 import "./Initializable.sol";
+import "./Administrable.sol";
 
 import "./state/shared/AdministratorAddress.sol";
 import "./state/river/AllowlistAddress.sol";
@@ -18,8 +19,6 @@ import "./state/river/OperatorsRegistryAddress.sol";
 import "./state/river/TreasuryAddress.sol";
 import "./state/river/GlobalFee.sol";
 import "./state/river/ELFeeRecipientAddress.sol";
-
-import "./Administrable.sol";
 
 /// @title River (v1)
 /// @author Kiln
@@ -126,6 +125,10 @@ contract RiverV1 is
         if (msg.sender != ELFeeRecipientAddress.get()) {
             revert Errors.Unauthorized(msg.sender);
         }
+    }
+
+    function _getRiverAdmin() internal view override (OracleManagerV1) returns (address) {
+        return Administrable._getAdmin();
     }
 
     /// @notice Handler called whenever a token transfer is triggered

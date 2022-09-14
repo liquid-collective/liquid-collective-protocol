@@ -43,7 +43,7 @@ contract Firewall is IFirewall, Administrable {
     }
 
     modifier onlyAdminOrExecutor() {
-        if (LibAdministrable._getAdmin() == msg.sender || msg.sender == executor) {
+        if (_getAdmin() == msg.sender || msg.sender == executor) {
             _;
         } else {
             revert Errors.Unauthorized(msg.sender);
@@ -63,7 +63,7 @@ contract Firewall is IFirewall, Administrable {
 
     /// @dev Validate that the caller is allowed to make the call in msg.sig
     function _checkCallerRole() internal view {
-        if (msg.sender == LibAdministrable._getAdmin() || (executorCanCall[msg.sig] && msg.sender == executor)) {
+        if (msg.sender == _getAdmin() || (executorCanCall[msg.sig] && msg.sender == executor)) {
             return;
         }
         revert Errors.Unauthorized(msg.sender);
