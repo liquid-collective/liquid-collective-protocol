@@ -7,7 +7,12 @@ interface IOracleManagerV1 {
 
     error InvalidValidatorCountReport(uint256 _providedValidatorCount, uint256 _depositedValidatorCount);
 
-    function setConsensusLayerData(uint256 _validatorCount, uint256 _validatorTotalBalance, bytes32 _roundId)
+    function setConsensusLayerData(
+        uint256 _validatorCount,
+        uint256 _validatorBalanceSum,
+        bytes32 _roundId,
+        uint256 _balanceIncreaseUpperBound
+    )
         external;
     function getOracle() external view returns (address);
     function setOracle(address _oracleAddress) external;

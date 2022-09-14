@@ -95,7 +95,8 @@ contract RiverV1SetupOneTests is Test, BytesGenerator {
             address(allowlist),
             address(operatorsRegistry),
             collector,
-            5000
+            5000,
+            50000
         );
         oracle.initOracleV1(address(river), admin, 225, 32, 12, 0, 1000, 500);
         vm.startPrank(admin);
@@ -140,7 +141,8 @@ contract RiverV1SetupOneTests is Test, BytesGenerator {
             address(0),
             address(0),
             address(0),
-            5000
+            5000,
+            50000
         );
     }
 
@@ -157,7 +159,8 @@ contract RiverV1SetupOneTests is Test, BytesGenerator {
             allower,
             address(operatorsRegistry),
             collector,
-            5000
+            5000,
+            50000
         );
         vm.stopPrank();
     }
@@ -491,7 +494,7 @@ contract RiverV1SetupOneTests is Test, BytesGenerator {
         oracle.reportConsensusLayerData(epoch, 33 * 1e9 * 34, 34);
         vm.stopPrank();
 
-        assert(address(elFeeRecipient).balance == 0);
+        assert(address(elFeeRecipient).balance == 0); // first ever report allows big balance delta
 
         assert(river.totalUnderlyingSupply() == 1100 ether - (34 * 32 ether) + (34 * 33 ether) + 100 ether);
         assert(river.balanceOfUnderlying(joe) == 111572727272727272727);
@@ -509,6 +512,147 @@ contract RiverV1SetupOneTests is Test, BytesGenerator {
         assert(river.balanceOfUnderlying(operatorOneFeeRecipient) == 0);
         assert(river.balanceOfUnderlying(operatorTwoFeeRecipient) == 0);
         assert(river.balanceOfUnderlying(collector) == 6699999999999999999);
+
+        assert(
+            river.totalSupply()
+                == river.balanceOf(joe) + river.balanceOf(bob) + river.balanceOf(operatorOneFeeRecipient)
+                    + river.balanceOf(operatorTwoFeeRecipient) + river.balanceOf(collector)
+        );
+    }
+
+    function testELFeeRecipientPullFundsAfterFirstReport() public {
+        vm.deal(joe, 100 ether);
+        vm.deal(bob, 1000 ether);
+
+        _allow(joe, DEPOSIT_MASK);
+        _allow(bob, DEPOSIT_MASK);
+
+        vm.startPrank(joe);
+        river.deposit{value: 100 ether}();
+        vm.stopPrank();
+        vm.startPrank(bob);
+        river.deposit{value: 1000 ether}();
+        vm.stopPrank();
+        assert(river.balanceOfUnderlying(joe) == 100 ether);
+        assert(river.balanceOfUnderlying(bob) == 1000 ether);
+        assert(river.getDepositedValidatorCount() == 0);
+        assert(river.totalUnderlyingSupply() == 1100 ether);
+
+        river.depositToConsensusLayer(17);
+        river.depositToConsensusLayer(17);
+
+        Operators.Operator memory op1 = operatorsRegistry.getOperator(operatorOneIndex);
+        Operators.Operator memory op2 = operatorsRegistry.getOperator(operatorTwoIndex);
+
+        assert(op1.funded == 17);
+        assert(op2.funded == 17);
+
+        assert(river.getDepositedValidatorCount() == 34);
+        assert(river.totalUnderlyingSupply() == 1100 ether);
+        assert(address(river).balance == (1000 ether + 100 ether) - (32 ether * 34));
+        assert(river.balanceOfUnderlying(joe) == 100 ether);
+        assert(river.balanceOfUnderlying(bob) == 1000 ether);
+
+        vm.startPrank(oracleMember);
+        (uint256 epoch,,) = oracle.getCurrentFrame();
+        oracle.reportConsensusLayerData(epoch, 32 * 1e9 * 34, 34);
+        vm.stopPrank();
+
+        assert(river.getDepositedValidatorCount() == 34);
+        assert(river.totalUnderlyingSupply() == 1100 ether);
+        assert(address(river).balance == (1000 ether + 100 ether) - (32 ether * 34));
+        assert(river.balanceOfUnderlying(joe) == 100 ether);
+        assert(river.balanceOfUnderlying(bob) == 1000 ether);
+
+        vm.warp(block.timestamp + 1 days);
+
+        uint256 maxPulledFees = (1100 ether * 10 * 1 days) / uint256(100 * 365 days);
+        vm.deal(address(elFeeRecipient), maxPulledFees);
+
+        vm.startPrank(oracleMember);
+        (epoch,,) = oracle.getCurrentFrame();
+        oracle.reportConsensusLayerData(epoch, 32 * 1e9 * 34, 34);
+        vm.stopPrank();
+
+        assert(address(elFeeRecipient).balance == 0); //not first report, so upperBound is sane
+
+        assert(river.totalUnderlyingSupply() == 1100 ether + maxPulledFees);
+        assert(river.balanceOfUnderlying(joe) == 100026027397260273972);
+        assert(river.balanceOfUnderlying(bob) == 1000260273972602739725);
+        assert(river.balanceOfUnderlying(operatorOneFeeRecipient) == 0);
+        assert(river.balanceOfUnderlying(operatorTwoFeeRecipient) == 0);
+        assert(river.balanceOfUnderlying(collector) == 15068493150684931);
+
+        assert(
+            river.totalSupply()
+                == river.balanceOf(joe) + river.balanceOf(bob) + river.balanceOf(operatorOneFeeRecipient)
+                    + river.balanceOf(operatorTwoFeeRecipient) + river.balanceOf(collector)
+        );
+    }
+
+    function testELFeeRecipientPullSomeELFundsAfterFirstReport() public {
+        vm.deal(joe, 100 ether);
+        vm.deal(bob, 1000 ether);
+
+        _allow(joe, DEPOSIT_MASK);
+        _allow(bob, DEPOSIT_MASK);
+
+        vm.startPrank(joe);
+        river.deposit{value: 100 ether}();
+        vm.stopPrank();
+        vm.startPrank(bob);
+        river.deposit{value: 1000 ether}();
+        vm.stopPrank();
+        assert(river.balanceOfUnderlying(joe) == 100 ether);
+        assert(river.balanceOfUnderlying(bob) == 1000 ether);
+        assert(river.getDepositedValidatorCount() == 0);
+        assert(river.totalUnderlyingSupply() == 1100 ether);
+
+        river.depositToConsensusLayer(17);
+        river.depositToConsensusLayer(17);
+
+        Operators.Operator memory op1 = operatorsRegistry.getOperator(operatorOneIndex);
+        Operators.Operator memory op2 = operatorsRegistry.getOperator(operatorTwoIndex);
+
+        assert(op1.funded == 17);
+        assert(op2.funded == 17);
+
+        assert(river.getDepositedValidatorCount() == 34);
+        assert(river.totalUnderlyingSupply() == 1100 ether);
+        assert(address(river).balance == (1000 ether + 100 ether) - (32 ether * 34));
+        assert(river.balanceOfUnderlying(joe) == 100 ether);
+        assert(river.balanceOfUnderlying(bob) == 1000 ether);
+
+        vm.startPrank(oracleMember);
+        (uint256 epoch,,) = oracle.getCurrentFrame();
+        oracle.reportConsensusLayerData(epoch, 32 * 1e9 * 34, 34);
+        vm.stopPrank();
+
+        assert(river.getDepositedValidatorCount() == 34);
+        assert(river.totalUnderlyingSupply() == 1100 ether);
+        assert(address(river).balance == (1000 ether + 100 ether) - (32 ether * 34));
+        assert(river.balanceOfUnderlying(joe) == 100 ether);
+        assert(river.balanceOfUnderlying(bob) == 1000 ether);
+
+        vm.warp(block.timestamp + 1 days);
+
+        uint256 maxPulledFees = (1100 ether * 10 * 1 days) / uint256(100 * 365 days);
+        uint256 netAmountPulled = maxPulledFees - (maxPulledFees / (2 * 1e9)) * 1e9;
+        vm.deal(address(elFeeRecipient), netAmountPulled);
+
+        vm.startPrank(oracleMember);
+        (epoch,,) = oracle.getCurrentFrame();
+        oracle.reportConsensusLayerData(epoch, 32 * 1e9 * 34 + uint64(maxPulledFees / (2 * 1e9)), 34);
+        vm.stopPrank();
+
+        assert(address(elFeeRecipient).balance == 0); //not first report, so upperBound is sane
+
+        assert(river.totalUnderlyingSupply() == 1100 ether + maxPulledFees);
+        assert(river.balanceOfUnderlying(joe) == 100026027397260273972);
+        assert(river.balanceOfUnderlying(bob) == 1000260273972602739725);
+        assert(river.balanceOfUnderlying(operatorOneFeeRecipient) == 0);
+        assert(river.balanceOfUnderlying(operatorTwoFeeRecipient) == 0);
+        assert(river.balanceOfUnderlying(collector) == 15068493150684931);
 
         assert(
             river.totalSupply()

@@ -20,7 +20,7 @@ abstract contract OracleManagerV1 is IOracleManagerV1 {
     /// @param _profits The positive increase in the validator balance sum (staking rewards)
     function _onEarnings(uint256 _profits) internal virtual;
 
-    function _pullELFees() internal virtual returns (uint256);
+    function _pullELFees(uint256 _max) internal virtual returns (uint256);
 
     function _getRiverAdmin() internal view virtual returns (address);
 
@@ -44,7 +44,12 @@ abstract contract OracleManagerV1 is IOracleManagerV1 {
     /// @param _validatorCount The number of active validators on the consensus layer
     /// @param _validatorTotalBalance The validator balance sum of the active validators on the consensus layer
     /// @param _roundId An identifier for this update
-    function setConsensusLayerData(uint256 _validatorCount, uint256 _validatorTotalBalance, bytes32 _roundId)
+    function setConsensusLayerData(
+        uint256 _validatorCount,
+        uint256 _validatorTotalBalance,
+        bytes32 _roundId,
+        uint256 _balanceIncreaseUpperBound
+    )
         external
     {
         if (msg.sender != OracleAddress.get()) {
@@ -62,7 +67,18 @@ abstract contract OracleManagerV1 is IOracleManagerV1 {
         CLValidatorCount.set(_validatorCount);
         LastOracleRoundId.set(_roundId);
 
-        uint256 executionLayerFees = _pullELFees();
+        uint256 executionLayerFees;
+
+        if (
+            previousValidatorTotalBalance <= _validatorTotalBalance
+                && _validatorTotalBalance - previousValidatorTotalBalance < _balanceIncreaseUpperBound
+        ) {
+            executionLayerFees =
+                _pullELFees(_balanceIncreaseUpperBound - (_validatorTotalBalance - previousValidatorTotalBalance));
+        } else if (previousValidatorTotalBalance > _validatorTotalBalance) {
+            executionLayerFees =
+                _pullELFees((previousValidatorTotalBalance - _validatorTotalBalance) + _balanceIncreaseUpperBound);
+        }
 
         if (previousValidatorTotalBalance < _validatorTotalBalance + executionLayerFees) {
             _onEarnings((_validatorTotalBalance + executionLayerFees) - previousValidatorTotalBalance);

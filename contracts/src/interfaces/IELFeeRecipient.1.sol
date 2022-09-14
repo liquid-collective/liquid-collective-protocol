@@ -7,7 +7,7 @@ interface IELFeeRecipientV1 {
     error InvalidCall();
 
     function initELFeeRecipientV1(address _riverAddress) external;
-    function pullELFees() external;
+    function pullELFees(uint256 _maxAmount) external;
     receive() external payable;
     fallback() external payable;
 }

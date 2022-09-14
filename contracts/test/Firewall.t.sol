@@ -114,7 +114,8 @@ contract FirewallTests is BytesGenerator {
             payable(address(allowlist)),
             payable(address(operatorsRegistry)),
             collector,
-            5000
+            5000,
+            50000
         );
 
         bytes4[] memory executorCallableOracleSelectors = new bytes4[](5);
