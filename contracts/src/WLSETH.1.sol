@@ -148,7 +148,7 @@ contract WLSETHV1 is Initializable, ReentrancyGuard {
         if (_shares > shares) {
             revert BalanceTooLow();
         }
-        BalanceOf.set(msg.sender, BalanceOf.get(msg.sender) - _shares);
+        BalanceOf.set(msg.sender, shares - _shares);
         if (!IRiverV1(payable(RiverAddress.get())).transfer(_recipient, _shares)) {
             revert TokenTransferError();
         }
