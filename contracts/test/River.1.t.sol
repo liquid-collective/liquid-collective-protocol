@@ -590,6 +590,77 @@ contract RiverV1SetupOneTests is Test, BytesGenerator {
         );
     }
 
+    function testELFeeRecipientPullFundsAfterFirstReportNegativeDelta() public {
+        vm.deal(joe, 100 ether);
+        vm.deal(bob, 1000 ether);
+
+        _allow(joe, DEPOSIT_MASK);
+        _allow(bob, DEPOSIT_MASK);
+
+        vm.startPrank(joe);
+        river.deposit{value: 100 ether}();
+        vm.stopPrank();
+        vm.startPrank(bob);
+        river.deposit{value: 1000 ether}();
+        vm.stopPrank();
+        assert(river.balanceOfUnderlying(joe) == 100 ether);
+        assert(river.balanceOfUnderlying(bob) == 1000 ether);
+        assert(river.getDepositedValidatorCount() == 0);
+        assert(river.totalUnderlyingSupply() == 1100 ether);
+
+        river.depositToConsensusLayer(17);
+        river.depositToConsensusLayer(17);
+
+        Operators.Operator memory op1 = _getOperatorByName(operatorOneName);
+        Operators.Operator memory op2 = _getOperatorByName(operatorTwoName);
+
+        assert(op1.funded == 17);
+        assert(op2.funded == 17);
+
+        assert(river.getDepositedValidatorCount() == 34);
+        assert(river.totalUnderlyingSupply() == 1100 ether);
+        assert(address(river).balance == (1000 ether + 100 ether) - (32 ether * 34));
+        assert(river.balanceOfUnderlying(joe) == 100 ether);
+        assert(river.balanceOfUnderlying(bob) == 1000 ether);
+
+        vm.startPrank(oracleMember);
+        (uint256 epoch,,) = oracle.getCurrentFrame();
+        oracle.reportBeacon(epoch, 32 * 1e9 * 34, 34);
+        vm.stopPrank();
+
+        assert(river.getDepositedValidatorCount() == 34);
+        assert(river.totalUnderlyingSupply() == 1100 ether);
+        assert(address(river).balance == (1000 ether + 100 ether) - (32 ether * 34));
+        assert(river.balanceOfUnderlying(joe) == 100 ether);
+        assert(river.balanceOfUnderlying(bob) == 1000 ether);
+
+        vm.warp(block.timestamp + 1 days);
+
+        uint256 maxPulledFees = ((1100 ether * 10 * 1 days) / uint256(100 * 365 days));
+        uint256 loss = 34 ether;
+        vm.deal(address(elFeeRecipient), maxPulledFees + loss);
+
+        vm.startPrank(oracleMember);
+        (epoch,,) = oracle.getCurrentFrame();
+        oracle.reportBeacon(epoch, 31 * 1e9 * 34, 34);
+        vm.stopPrank();
+
+        assert(address(elFeeRecipient).balance == 0); //not first report, so upperBound is sane
+
+        assert(river.totalUnderlyingSupply() == 1100 ether + maxPulledFees);
+        assert(river.balanceOfUnderlying(joe) == 100026027397260273974);
+        assert(river.balanceOfUnderlying(bob) == 1000260273972602739747);
+        assert(river.balanceOfUnderlying(operatorOneFeeRecipient) == 3767123287671220);
+        assert(river.balanceOfUnderlying(operatorTwoFeeRecipient) == 3767123287671220);
+        assert(river.balanceOfUnderlying(treasury) == 7534246575342466);
+
+        assert(
+            river.totalSupply()
+                == river.balanceOf(joe) + river.balanceOf(bob) + river.balanceOf(operatorOneFeeRecipient)
+                    + river.balanceOf(operatorTwoFeeRecipient) + river.balanceOf(treasury)
+        );
+    }
+
     function testELFeeRecipientPullSomeELFundsAfterFirstReport() public {
         vm.deal(joe, 100 ether);
         vm.deal(bob, 1000 ether);
