@@ -4,18 +4,19 @@ pragma solidity 0.8.10;
 import "./Initializable.sol";
 import "./libraries/Errors.sol";
 import "./libraries/LibOwnable.sol";
+import "./libraries/LibSanitize.sol";
 import "./interfaces/IRiver.1.sol";
 import "./interfaces/IELFeeRecipient.1.sol";
 import "./state/shared/RiverAddress.sol";
-import "./Sanitize.sol";
 
 /// @title Execution Layer Fee Recipient
 /// @author Kiln
 /// @notice This contract receives all the execution layer fees from the proposed blocks + bribes
-contract ELFeeRecipientV1 is Initializable, IELFeeRecipientV1, Sanitize {
+contract ELFeeRecipientV1 is Initializable, IELFeeRecipientV1 {
     /// @notice Initialize the fee recipient with the required arguments
     /// @param _riverAddress Address of River
-    function initELFeeRecipientV1(address _riverAddress) external init(0) notZeroAddress(_riverAddress) {
+    function initELFeeRecipientV1(address _riverAddress) external init(0) {
+        LibSanitize._notZeroAddress(_riverAddress);
         RiverAddress.set(_riverAddress);
     }
 

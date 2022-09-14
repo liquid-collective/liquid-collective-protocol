@@ -3,6 +3,7 @@ pragma solidity 0.8.10;
 
 import "../libraries/Errors.sol";
 import "../libraries/LibOwnable.sol";
+import "../libraries/LibSanitize.sol";
 
 import "../state/river/OracleAddress.sol";
 import "../state/river/LastOracleRoundId.sol";
@@ -11,8 +12,6 @@ import "../state/river/BeaconValidatorCount.sol";
 import "../state/river/DepositedValidatorCount.sol";
 
 import "../interfaces/components/IOracleManager.1.sol";
-
-import "../Sanitize.sol";
 
 /// @title Oracle Manager (v1)
 /// @author Kiln
@@ -77,9 +76,7 @@ abstract contract OracleManagerV1 is IOracleManagerV1 {
     /// @notice Set Oracle address
     /// @param _oracleAddress Address of the oracle
     function setOracle(address _oracleAddress) external onlyAdmin {
-        if (_oracleAddress == address(0)) {
-            revert Errors.InvalidZeroAddress();
-        }
+        LibSanitize._notZeroAddress(_oracleAddress);
         OracleAddress.set(_oracleAddress);
     }
 

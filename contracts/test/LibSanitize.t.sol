@@ -2,14 +2,22 @@
 
 pragma solidity 0.8.10;
 
-import "../src/Sanitize.sol";
+import "../src/libraries/LibSanitize.sol";
 
 import "forge-std/Test.sol";
 
-contract SanitizedInputs is Sanitize {
-    function setAddress(address _address) external notZeroAddress(_address) {}
-    function setString(string calldata _string) external notEmptyString(_string) {}
-    function setFee(uint256 _fee) external validFee(_fee) {}
+contract SanitizedInputs {
+    function setAddress(address _address) external pure {
+        LibSanitize._notZeroAddress(_address);
+    }
+
+    function setString(string calldata _string) external pure {
+        LibSanitize._notEmptyString(_string);
+    }
+
+    function setFee(uint256 _fee) external pure {
+        LibSanitize._validFee(_fee);
+    }
 }
 
 contract SanitizeTest is Test {

@@ -6,13 +6,14 @@ import "./interfaces/IOperatorRegistry.1.sol";
 import "./interfaces/IRiver.1.sol";
 import "./interfaces/IELFeeRecipient.1.sol";
 
+import "./libraries/LibOwnable.sol";
+import "./libraries/LibSanitize.sol";
+
 import "./components/ConsensusLayerDepositManager.1.sol";
 import "./components/UserDepositManager.1.sol";
 import "./components/SharesManager.1.sol";
 import "./components/OracleManager.1.sol";
 import "./Initializable.sol";
-import "./Sanitize.sol";
-import "./libraries/LibOwnable.sol";
 
 import "./state/shared/AdministratorAddress.sol";
 import "./state/river/AllowlistAddress.sol";
@@ -30,7 +31,6 @@ contract RiverV1 is
     SharesManagerV1,
     OracleManagerV1,
     Initializable,
-    Sanitize,
     IRiverV1
 {
     uint256 public constant BASE = 100000;
@@ -68,16 +68,13 @@ contract RiverV1 is
         external
         init(0)
     {
-        if (
-            _depositContractAddress == address(0) || _oracleAddress == address(0)
-                || _systemAdministratorAddress == address(0) || _allowlistAddress == address(0)
-                || _operatorRegistryAddress == address(0) || _treasuryAddress == address(0)
-        ) {
-            revert Errors.InvalidZeroAddress();
-        }
-        if (_globalFee > BASE) {
-            revert Errors.InvalidFee();
-        }
+        LibSanitize._notZeroAddress(_depositContractAddress);
+        LibSanitize._notZeroAddress(_oracleAddress);
+        LibSanitize._notZeroAddress(_systemAdministratorAddress);
+        LibSanitize._notZeroAddress(_allowlistAddress);
+        LibSanitize._notZeroAddress(_operatorRegistryAddress);
+        LibSanitize._notZeroAddress(_treasuryAddress);
+        LibSanitize._validFee(_globalFee);
         if (_withdrawalCredentials == bytes32(0)) {
             revert Errors.InvalidArgument();
         }
@@ -96,7 +93,8 @@ contract RiverV1 is
 
     /// @notice Changes the global fee parameter
     /// @param newFee New fee value
-    function setGlobalFee(uint256 newFee) external onlyAdmin validFee(newFee) {
+    function setGlobalFee(uint256 newFee) external onlyAdmin {
+        LibSanitize._validFee(newFee);
         GlobalFee.set(newFee);
     }
 
@@ -107,7 +105,8 @@ contract RiverV1 is
 
     /// @notice Changes the allowlist address
     /// @param _newAllowlist New address for the allowlist
-    function setAllowlist(address _newAllowlist) external onlyAdmin notZeroAddress(_newAllowlist) {
+    function setAllowlist(address _newAllowlist) external onlyAdmin {
+        LibSanitize._notZeroAddress(_newAllowlist);
         AllowlistAddress.set(_newAllowlist);
     }
 
@@ -118,7 +117,8 @@ contract RiverV1 is
 
     /// @notice Changes the treasury address
     /// @param _newTreasury New address for the treasury
-    function setTreasury(address _newTreasury) external onlyAdmin notZeroAddress(_newTreasury) {
+    function setTreasury(address _newTreasury) external onlyAdmin {
+        LibSanitize._notZeroAddress(_newTreasury);
         TreasuryAddress.set(_newTreasury);
     }
 
@@ -129,7 +129,8 @@ contract RiverV1 is
 
     /// @notice Changes the admin but waits for new admin approval
     /// @param _newAdmin New address for the admin
-    function transferOwnership(address _newAdmin) external onlyAdmin notZeroAddress(_newAdmin) {
+    function transferOwnership(address _newAdmin) external onlyAdmin {
+        LibSanitize._notZeroAddress(_newAdmin);
         LibOwnable._setPendingAdmin(_newAdmin);
     }
 

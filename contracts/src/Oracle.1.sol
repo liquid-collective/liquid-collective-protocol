@@ -4,6 +4,7 @@ pragma solidity 0.8.10;
 import "./Initializable.sol";
 import "./libraries/Errors.sol";
 import "./libraries/LibOwnable.sol";
+import "./libraries/LibSanitize.sol";
 import "./interfaces/IRiver.1.sol";
 
 import "./state/shared/AdministratorAddress.sol";
@@ -17,12 +18,10 @@ import "./state/oracle/LastEpochId.sol";
 import "./state/oracle/ReportsPositions.sol";
 import "./state/oracle/ReportsVariants.sol";
 
-import "./Sanitize.sol";
-
 /// @title Oracle (v1)
 /// @author Kiln
 /// @notice This contract handles the input from the allowed oracle members. Highly inspired by Lido's implementation.
-contract OracleV1 is Initializable, Sanitize {
+contract OracleV1 is Initializable {
     event QuorumChanged(uint256 _newQuorum);
     event ExpectedEpochIdUpdated(uint256 _epochId);
     event BeaconReported(
@@ -64,9 +63,9 @@ contract OracleV1 is Initializable, Sanitize {
     )
         external
         init(0)
-        notZeroAddress(_riverContractAddress)
-        notZeroAddress(_administratorAddress)
     {
+        LibSanitize._notZeroAddress(_riverContractAddress);
+        LibSanitize._notZeroAddress(_administratorAddress);
         LibOwnable._setAdmin(_administratorAddress);
         RiverAddress.set(_riverContractAddress);
         BeaconSpec.set(
@@ -206,7 +205,8 @@ contract OracleV1 is Initializable, Sanitize {
     /// @notice Adds new address as oracle member, giving the ability to push beacon reports.
     /// @dev Only callable by the adminstrator
     /// @param _newOracleMember Address of the new member
-    function addMember(address _newOracleMember) external onlyAdmin notZeroAddress(_newOracleMember) {
+    function addMember(address _newOracleMember) external onlyAdmin {
+        LibSanitize._notZeroAddress(_newOracleMember);
         int256 memberIdx = OracleMembers.indexOf(_newOracleMember);
         if (memberIdx >= 0) {
             revert Errors.InvalidCall();

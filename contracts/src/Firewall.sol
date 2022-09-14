@@ -3,7 +3,7 @@ pragma solidity 0.8.10;
 
 import "./libraries/Errors.sol";
 import "./interfaces/IFirewall.sol";
-import "./Sanitize.sol";
+import "./libraries/LibSanitize.sol";
 
 /// @title Firewall
 /// @author Figment
@@ -14,7 +14,7 @@ import "./Sanitize.sol";
 ///         Random callers cannot call anything through this contract, even if the underlying function
 ///         is unpermissioned in the underlying contract.
 ///         Calls to non-admin functions should be called at the underlying contract directly.
-contract Firewall is IFirewall, Sanitize {
+contract Firewall is IFirewall {
     mapping(bytes4 => bool) internal executorCanCall;
 
     address public governor;
@@ -23,11 +23,15 @@ contract Firewall is IFirewall, Sanitize {
 
     // governor_ should be the most trustworthy entity in the underlying protocol - often, a DAO governor
     // executor_ should be a trustworthy entity that takes care of time-sensitive actions in the underlying protocol
-    constructor(address governor_, address executor_, address destination_, bytes4[] memory executorCallableSelectors_)
-        notZeroAddress(governor_)
-        notZeroAddress(executor_)
-        notZeroAddress(destination_)
-    {
+    constructor(
+        address governor_,
+        address executor_,
+        address destination_,
+        bytes4[] memory executorCallableSelectors_
+    ) {
+        LibSanitize._notZeroAddress(governor_);
+        LibSanitize._notZeroAddress(executor_);
+        LibSanitize._notZeroAddress(destination_);
         governor = governor_;
         executor = executor_;
         destination = destination_;

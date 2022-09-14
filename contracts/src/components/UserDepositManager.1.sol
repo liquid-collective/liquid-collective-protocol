@@ -2,6 +2,7 @@
 pragma solidity 0.8.10;
 
 import "../libraries/Errors.sol";
+import "../libraries/LibSanitize.sol";
 
 import "../interfaces/components/IUserDepositManager.1.sol";
 
@@ -40,9 +41,7 @@ abstract contract UserDepositManagerV1 is IUserDepositManagerV1 {
     /// @notice Explicit deposit method to mint on msg.sender and transfer to _recipient
     /// @param _recipient Address receiving the minted lsETH
     function depositAndTransfer(address _recipient) external payable {
-        if (_recipient == address(0)) {
-            revert Errors.InvalidZeroAddress();
-        }
+        LibSanitize._notZeroAddress(_recipient);
         _deposit(_recipient);
     }
 
