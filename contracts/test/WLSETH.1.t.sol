@@ -104,11 +104,11 @@ contract WLSETHV1Tests {
     }
 
     function testTokenName() external view {
-        assert(keccak256(bytes(wlseth.name())) == keccak256("Wrapped Alluvial Ether"));
+        assert(keccak256(bytes(wlseth.name())) == keccak256("Wrapped Liquid Staked ETH"));
     }
 
     function testTokenSymbol() external view {
-        assert(keccak256(bytes(wlseth.symbol())) == keccak256("wlsETH"));
+        assert(keccak256(bytes(wlseth.symbol())) == keccak256("wLsETH"));
     }
 
     function testTokenDecimals() external view {

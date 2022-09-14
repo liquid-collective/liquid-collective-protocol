@@ -120,11 +120,11 @@ contract SharesManagerV1Tests {
     }
 
     function testName() public view {
-        assert(keccak256("River Ether") == keccak256(bytes(sharesManager.name())));
+        assert(keccak256("Liquid Staked ETH") == keccak256(bytes(sharesManager.name())));
     }
 
     function testSymbol() public view {
-        assert(keccak256("lsETH") == keccak256(bytes(sharesManager.symbol())));
+        assert(keccak256("LsETH") == keccak256(bytes(sharesManager.symbol())));
     }
 
     function testDecimals() public view {
