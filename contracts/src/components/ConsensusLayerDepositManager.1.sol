@@ -104,7 +104,7 @@ abstract contract ConsensusLayerDepositManagerV1 is IConsensusLayerDepositManage
         }
         uint256 value = DEPOSIT_SIZE;
 
-        uint256 depositAmount = value / 1000000000 wei;
+        uint256 depositAmount = value / 1 gwei;
 
         bytes32 pubkeyRoot = sha256(bytes.concat(_publicKey, bytes16(0)));
         bytes32 signatureRoot = sha256(

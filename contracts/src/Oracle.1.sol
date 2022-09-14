@@ -21,6 +21,9 @@ import "./Administrable.sol";
 /// @author Kiln
 /// @notice This contract handles the input from the allowed oracle members. Highly inspired by Lido's implementation.
 contract OracleV1 is Initializable, Administrable {
+    uint256 internal constant BPS_MAX = 10_000;
+    uint256 internal constant ONE_YEAR = 365 days;
+
     event QuorumChanged(uint256 _newQuorum);
     event ExpectedEpochIdUpdated(uint256 _epochId);
     event BeaconReported(
@@ -447,7 +450,7 @@ contract OracleV1 is Initializable, Administrable {
             uint256 annualAprUpperBound = BeaconReportBounds.get().annualAprUpperBound;
             // check that annualRelativeIncreaseBp <= allowedAnnualRelativeIncreaseBp
             if (
-                uint256(10000 * 365 days) * (_postTotalEth - _prevTotalEth)
+                uint256(BPS_MAX * ONE_YEAR) * (_postTotalEth - _prevTotalEth)
                     > annualAprUpperBound * _prevTotalEth * _timeElapsed
             ) {
                 revert BeaconBalanceIncreaseOutOfBounds(_prevTotalEth, _postTotalEth, _timeElapsed, annualAprUpperBound);
@@ -458,7 +461,7 @@ contract OracleV1 is Initializable, Administrable {
             // relativeDecreaseBp = relativeDecrease * 10000, in basis points 0.01% (1e-4)
             uint256 relativeLowerBound = BeaconReportBounds.get().relativeLowerBound;
             // check that relativeDecreaseBp <= allowedRelativeDecreaseBp
-            if (uint256(10000) * (_prevTotalEth - _postTotalEth) > relativeLowerBound * _prevTotalEth) {
+            if (uint256(BPS_MAX) * (_prevTotalEth - _postTotalEth) > relativeLowerBound * _prevTotalEth) {
                 revert BeaconBalanceDecreaseOutOfBounds(_prevTotalEth, _postTotalEth, _timeElapsed, relativeLowerBound);
             }
         }
