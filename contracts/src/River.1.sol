@@ -34,7 +34,6 @@ contract RiverV1 is
 {
     uint256 public constant BASE = 100000;
     uint256 internal constant DEPOSIT_MASK = 0x1;
-    uint256 internal constant TRANSFER_MASK = 0;
     /// @notice Prevents unauthorized calls
 
     modifier onlyAdmin() override (OracleManagerV1) {
@@ -157,8 +156,8 @@ contract RiverV1 is
     /// @param _from Token sender
     /// @param _to Token receiver
     function _onTransfer(address _from, address _to) internal view override {
-        IAllowlistV1(AllowlistAddress.get()).onlyAllowed(_from, TRANSFER_MASK); // this call reverts if unauthorized or denied
-        IAllowlistV1(AllowlistAddress.get()).onlyAllowed(_to, TRANSFER_MASK); // this call reverts if unauthorized or denied
+        IAllowlistV1(AllowlistAddress.get()).onlyAllowed(_from, 0); // this call reverts if unauthorized or denied
+        IAllowlistV1(AllowlistAddress.get()).onlyAllowed(_to, 0); // this call reverts if unauthorized or denied
     }
 
     /// @notice Handler called whenever a user deposits ETH to the system. Mints the adequate amount of shares.
@@ -169,8 +168,8 @@ contract RiverV1 is
         if (_depositor == _recipient) {
             IAllowlistV1(AllowlistAddress.get()).onlyAllowed(_depositor, DEPOSIT_MASK); // this call reverts if unauthorized or denied
         } else {
-            IAllowlistV1(AllowlistAddress.get()).onlyAllowed(_depositor, DEPOSIT_MASK + TRANSFER_MASK); // this call reverts if unauthorized or denied
-            IAllowlistV1(AllowlistAddress.get()).onlyAllowed(_recipient, TRANSFER_MASK);
+            IAllowlistV1(AllowlistAddress.get()).onlyAllowed(_depositor, DEPOSIT_MASK); // this call reverts if unauthorized or denied
+            IAllowlistV1(AllowlistAddress.get()).onlyAllowed(_recipient, 0);
             _transfer(_depositor, _recipient, mintedShares);
         }
     }
