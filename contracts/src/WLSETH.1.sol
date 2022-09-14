@@ -104,13 +104,7 @@ contract WLSETHV1 is IWLSETHV1, Initializable, ReentrancyGuard {
         if (_to == address(0)) {
             revert UnauthorizedTransfer(msg.sender, address(0));
         }
-        uint256 currentAllowance = ApprovalsPerOwner.get(_from, msg.sender);
-        if (currentAllowance < _value) {
-            revert AllowanceTooLow(_from, msg.sender, currentAllowance, _value);
-        }
-        if (currentAllowance != type(uint256).max) {
-            ApprovalsPerOwner.set(_from, msg.sender, currentAllowance - _value);
-        }
+        _spendAllowance(_from, _value);
         return _transfer(_from, _to, _value);
     }
 
@@ -169,6 +163,16 @@ contract WLSETHV1 is IWLSETHV1, Initializable, ReentrancyGuard {
         BalanceOf.set(msg.sender, shares - _shares);
         if (!IRiverV1(payable(RiverAddress.get())).transfer(_recipient, _shares)) {
             revert TokenTransferError();
+        }
+    }
+
+    function _spendAllowance(address _from, uint256 _value) internal {
+        uint256 currentAllowance = ApprovalsPerOwner.get(_from, msg.sender);
+        if (currentAllowance < _value) {
+            revert AllowanceTooLow(_from, msg.sender, currentAllowance, _value);
+        }
+        if (currentAllowance != type(uint256).max) {
+            ApprovalsPerOwner.set(_from, msg.sender, currentAllowance - _value);
         }
     }
 

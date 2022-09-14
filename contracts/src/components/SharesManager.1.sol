@@ -132,13 +132,7 @@ abstract contract SharesManagerV1 is ISharesManagerV1 {
         if (_to == address(0)) {
             revert UnauthorizedTransfer(_from, address(0));
         }
-        uint256 currentAllowance = ApprovalsPerOwner.get(_from, msg.sender);
-        if (currentAllowance < _value) {
-            revert AllowanceTooLow(_from, msg.sender, currentAllowance, _value);
-        }
-        if (currentAllowance != type(uint256).max) {
-            ApprovalsPerOwner.set(_from, msg.sender, currentAllowance - _value);
-        }
+        _spendAllowance(_from, _value);
         return _transfer(_from, _to, _value);
     }
 
@@ -170,6 +164,16 @@ abstract contract SharesManagerV1 is ISharesManagerV1 {
         ApprovalsPerOwner.set(msg.sender, _spender, newApprovalValue);
         emit Approval(msg.sender, _spender, newApprovalValue);
         return true;
+    }
+
+    function _spendAllowance(address _from, uint256 _value) internal {
+        uint256 currentAllowance = ApprovalsPerOwner.get(_from, msg.sender);
+        if (currentAllowance < _value) {
+            revert AllowanceTooLow(_from, msg.sender, currentAllowance, _value);
+        }
+        if (currentAllowance != type(uint256).max) {
+            ApprovalsPerOwner.set(_from, msg.sender, currentAllowance - _value);
+        }
     }
 
     /// @notice Internal utility to retrieve the total supply of tokens
