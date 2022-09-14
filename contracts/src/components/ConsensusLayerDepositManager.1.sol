@@ -51,7 +51,7 @@ abstract contract ConsensusLayerDepositManagerV1 is IConsensusLayerDepositManage
     /// @notice Deposits current balance to the Consensus Layer by batches of 32 ETH
     /// @param _maxCount The maximum amount of validator keys to fund
     function depositToConsensusLayer(uint256 _maxCount) external {
-        uint256 currentBalance = address(this).balance; // merge unseen funds with active funds
+        uint256 currentBalance = EthToDeposit.get();
         uint256 validatorsToDeposit = LibUint256.min(currentBalance / DEPOSIT_SIZE, _maxCount);
 
         if (validatorsToDeposit == 0) {
