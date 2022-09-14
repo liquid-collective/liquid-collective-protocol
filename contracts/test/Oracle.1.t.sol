@@ -44,10 +44,6 @@ contract OracleV1Tests {
             UPPER_BOUND,
             LOWER_BOUND
         );
-
-        vm.startPrank(admin);
-        oracle.setQuorum(2);
-        vm.stopPrank();
     }
 
     function testGetAdmin() public view {
@@ -78,7 +74,7 @@ contract OracleV1Tests {
         address newMember = uf._new(newMemberSalt);
         vm.startPrank(admin);
         assert(oracle.isMember(newMember) == false);
-        oracle.addMember(newMember);
+        oracle.addMember(newMember, 1);
         assert(oracle.isMember(newMember) == true);
     }
 
@@ -86,32 +82,35 @@ contract OracleV1Tests {
         address newMember = uf._new(newMemberSalt);
         vm.startPrank(newMember);
         vm.expectRevert(abi.encodeWithSignature("Unauthorized(address)", newMember));
-        oracle.addMember(newMember);
+        oracle.addMember(newMember, 1);
     }
 
     function testAddMemberExisting(uint256 newMemberSalt) public {
         address newMember = uf._new(newMemberSalt);
         vm.startPrank(admin);
-        oracle.addMember(newMember);
+        oracle.addMember(newMember, 1);
         vm.expectRevert(abi.encodeWithSignature("InvalidCall()"));
-        oracle.addMember(newMember);
+        oracle.addMember(newMember, 1);
     }
 
     function testRemoveMember(uint256 newMemberSalt) public {
         address newMember = uf._new(newMemberSalt);
         vm.startPrank(admin);
         assert(oracle.isMember(newMember) == false);
-        oracle.addMember(newMember);
+        oracle.addMember(newMember, 1);
         assert(oracle.isMember(newMember) == true);
         oracle.removeMember(newMember);
         assert(oracle.isMember(newMember) == false);
     }
 
-    function testRemoveMemberAfterReport(uint256 newMemberSalt) public {
+    function testRemoveMemberAfterReport(uint256 newMemberSalt, uint256 otherNewMemberSalt) public {
         address newMember = uf._new(newMemberSalt);
+        address otherNewMember = uf._new(otherNewMemberSalt);
         assert(oracle.isMember(newMember) == false);
         vm.prank(admin);
-        oracle.addMember(newMember);
+        oracle.addMember(newMember, 1);
+        vm.prank(admin);
+        oracle.addMember(otherNewMember, 2);
         assert(oracle.isMember(newMember) == true);
         assert(oracle.getReportVariantsCount() == 0);
         assert(oracle.getGlobalReportStatus() == 0);
@@ -130,7 +129,7 @@ contract OracleV1Tests {
         address newMember = uf._new(newMemberSalt);
         vm.startPrank(admin);
         assert(oracle.isMember(newMember) == false);
-        oracle.addMember(newMember);
+        oracle.addMember(newMember, 1);
         assert(oracle.isMember(newMember) == true);
         vm.stopPrank();
         vm.startPrank(newMember);
@@ -158,6 +157,22 @@ contract OracleV1Tests {
         assert(bs.slotsPerEpoch == _slotsPerEpoch);
         assert(bs.secondsPerSlot == _secondsPerSlot);
         assert(bs.genesisTime == _genesisTime);
+    }
+
+    function testSetQuorumRedundant(uint256 oracleMemberSalt) public {
+        address oracleMember = uf._new(oracleMemberSalt);
+        vm.startPrank(admin);
+        oracle.addMember(oracleMember, 1);
+        vm.expectRevert(abi.encodeWithSignature("InvalidCall()"));
+        oracle.setQuorum(1);
+        vm.stopPrank();
+    }
+
+    function testSetQuorumTooHigh() public {
+        vm.startPrank(admin);
+        vm.expectRevert(abi.encodeWithSignature("InvalidArgument()"));
+        oracle.setQuorum(1);
+        vm.stopPrank();
     }
 
     function testSetBeaconSpecUnauthorized(
@@ -206,8 +221,7 @@ contract OracleV1Tests {
         address oracleMember = uf._new(oracleMemberSalt);
         vm.warp(uint256(GENESIS_TIME) + uint256(timeFromGenesis));
         vm.startPrank(admin);
-        oracle.addMember(oracleMember);
-        oracle.setQuorum(1);
+        oracle.addMember(oracleMember, 1);
         vm.stopPrank();
 
         uint256 epochId = oracle.getCurrentEpochId();
@@ -230,8 +244,7 @@ contract OracleV1Tests {
         address oracleMember = uf._new(oracleMemberSalt);
         vm.warp(uint256(GENESIS_TIME) + uint256(timeFromGenesis));
         vm.startPrank(admin);
-        oracle.addMember(oracleMember);
-        oracle.setQuorum(1);
+        oracle.addMember(oracleMember, 1);
         vm.stopPrank();
 
         uint256 epochId = oracle.getCurrentEpochId();
@@ -251,9 +264,6 @@ contract OracleV1Tests {
     function testReportBeaconUnauthorized(uint256 oracleMemberSalt, uint64 timeFromGenesis) public {
         address oracleMember = uf._new(oracleMemberSalt);
         vm.warp(uint256(GENESIS_TIME) + uint256(timeFromGenesis));
-        vm.startPrank(admin);
-        oracle.setQuorum(1);
-        vm.stopPrank();
 
         uint256 epochId = oracle.getCurrentEpochId();
 
@@ -269,13 +279,12 @@ contract OracleV1Tests {
         address oracleMember = uf._new(oracleMemberSalt);
         vm.warp(uint256(GENESIS_TIME) + uint256(timeFromGenesis));
         vm.startPrank(admin);
-        oracle.addMember(oracleMember);
+        oracle.addMember(oracleMember, 1);
         address secondOracleMember;
         unchecked {
             secondOracleMember = address(uint160(oracleMember) + 1);
         }
-        oracle.addMember(secondOracleMember);
-        oracle.setQuorum(3);
+        oracle.addMember(secondOracleMember, 2);
         vm.stopPrank();
 
         uint256 epochId = oracle.getCurrentEpochId();
@@ -289,13 +298,6 @@ contract OracleV1Tests {
             );
             oracle.reportBeacon(frameFirstEpochId, 0, 0);
             vm.stopPrank();
-            vm.startPrank(secondOracleMember);
-            oracle.reportBeacon(frameFirstEpochId, 0, 0);
-            vm.expectRevert(
-                abi.encodeWithSignature("AlreadyReported(uint256,address)", frameFirstEpochId, secondOracleMember)
-            );
-            oracle.reportBeacon(frameFirstEpochId, 0, 0);
-            vm.stopPrank();
         }
     }
 
@@ -305,8 +307,8 @@ contract OracleV1Tests {
 
         vm.warp(uint256(GENESIS_TIME) + uint256(timeFromGenesis));
         vm.startPrank(admin);
-        oracle.addMember(oracleOne);
-        oracle.addMember(oracleTwo);
+        oracle.addMember(oracleOne, 1);
+        oracle.addMember(oracleTwo, 2);
         vm.stopPrank();
 
         uint256 epochId = oracle.getCurrentEpochId();
@@ -347,8 +349,7 @@ contract OracleV1Tests {
 
         vm.warp(uint256(GENESIS_TIME) + uint256(timeFromGenesis));
         vm.startPrank(admin);
-        oracle.addMember(oracleOne);
-        oracle.setQuorum(1);
+        oracle.addMember(oracleOne, 1);
         vm.stopPrank();
 
         uint256 epochId = oracle.getCurrentEpochId();
@@ -389,8 +390,7 @@ contract OracleV1Tests {
 
         vm.warp(uint256(GENESIS_TIME) + uint256(timeFromGenesis));
         vm.startPrank(admin);
-        oracle.addMember(oracleOne);
-        oracle.setQuorum(1);
+        oracle.addMember(oracleOne, 1);
         vm.stopPrank();
 
         uint256 epochId = oracle.getCurrentEpochId();

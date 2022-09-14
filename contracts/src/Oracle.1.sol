@@ -199,12 +199,16 @@ contract OracleV1 is Initializable {
     /// @notice Adds new address as oracle member, giving the ability to push beacon reports.
     /// @dev Only callable by the adminstrator
     /// @param _newOracleMember Address of the new member
-    function addMember(address _newOracleMember) external onlyAdmin {
+    function addMember(address _newOracleMember, uint256 _newQuorum) external onlyAdmin {
+        if (_newQuorum > OracleMembers.get().length + 1) {
+            revert Errors.InvalidArgument();
+        }
         int256 memberIdx = OracleMembers.indexOf(_newOracleMember);
         if (memberIdx >= 0) {
             revert Errors.InvalidCall();
         }
         OracleMembers.push(_newOracleMember);
+        Quorum.set(_newQuorum);
     }
 
     /// @notice Removes an address from the oracle members.
@@ -218,6 +222,10 @@ contract OracleV1 is Initializable {
         OracleMembers.deleteItem(uint256(memberIdx));
         ReportsPositions.clear();
         ReportsVariants.clear();
+        uint256 quorum = Quorum.get();
+        if (quorum > OracleMembers.get().length) {
+            Quorum.set(quorum - 1);
+        }
     }
 
     /// @notice Edits the beacon spec parameters
@@ -257,7 +265,7 @@ contract OracleV1 is Initializable {
     /// @dev Only callable by the adminstrator
     /// @param _newQuorum New quorum parameter
     function setQuorum(uint256 _newQuorum) external onlyAdmin {
-        if (_newQuorum == 0) {
+        if (_newQuorum == 0 || _newQuorum > OracleMembers.get().length) {
             revert Errors.InvalidArgument();
         }
         uint256 previousQuorum = Quorum.get();
