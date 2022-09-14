@@ -82,7 +82,9 @@ library Operators {
 
         uint256 activeCount = 0;
 
-        for (uint256 idx = 0; idx < r.value.length;) {
+        uint256 operatorCount = r.value.length;
+
+        for (uint256 idx = 0; idx < operatorCount;) {
             if (r.value[idx].active) {
                 unchecked {
                     ++activeCount;
@@ -96,7 +98,7 @@ library Operators {
         Operator[] memory activeOperators = new Operator[](activeCount);
 
         uint256 activeIdx = 0;
-        for (uint256 idx = 0; idx < r.value.length;) {
+        for (uint256 idx = 0; idx < operatorCount;) {
             if (r.value[idx].active) {
                 activeOperators[activeIdx] = r.value[idx];
                 unchecked {
@@ -121,8 +123,9 @@ library Operators {
         }
 
         uint256 activeCount = 0;
+        uint256 operatorCount = r.value.length;
 
-        for (uint256 idx = 0; idx < r.value.length;) {
+        for (uint256 idx = 0; idx < operatorCount;) {
             if (_hasFundableKeys(r.value[idx])) {
                 unchecked {
                     ++activeCount;
@@ -136,7 +139,7 @@ library Operators {
         CachedOperator[] memory activeOperators = new CachedOperator[](activeCount);
 
         uint256 activeIdx = 0;
-        for (uint256 idx = 0; idx < r.value.length;) {
+        for (uint256 idx = 0; idx < operatorCount;) {
             Operator memory op = r.value[idx];
             if (_hasFundableKeys(op)) {
                 activeOperators[activeIdx] = CachedOperator({
