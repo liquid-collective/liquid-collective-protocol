@@ -26,8 +26,7 @@ interface IRiverV1 is IConsensusLayerDepositManagerV1, IUserDepositManagerV1, IS
         address _allowlistAddress,
         address _operatorRegistryAddress,
         address _collectorAddress,
-        uint256 _globalFee,
-        uint256 _elFeeMaxPullBps
+        uint256 _globalFee
     ) external;
 
     function setGlobalFee(uint256 newFee) external;

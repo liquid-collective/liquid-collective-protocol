@@ -19,7 +19,6 @@ import "./state/river/OperatorsRegistryAddress.sol";
 import "./state/river/CollectorAddress.sol";
 import "./state/river/GlobalFee.sol";
 import "./state/river/ELFeeRecipientAddress.sol";
-import "./state/river/ELFeeMaxPullBps.sol";
 
 /// @title River (v1)
 /// @author Kiln
@@ -55,8 +54,7 @@ contract RiverV1 is
         address _allowlistAddress,
         address _operatorRegistryAddress,
         address _collectorAddress,
-        uint256 _globalFee,
-        uint256 _elFeeMaxPullBps
+        uint256 _globalFee
     ) external init(0) {
         _setAdmin(_systemAdministratorAddress);
 
@@ -80,8 +78,6 @@ contract RiverV1 is
         );
 
         OracleManagerV1.initOracleManagerV1(_oracleAddress);
-
-        ELFeeMaxPullBps.set(_elFeeMaxPullBps);
     }
 
     /// @notice Changes the global fee parameter
@@ -94,21 +90,6 @@ contract RiverV1 is
     /// @notice Get the current global fee
     function getGlobalFee() external view returns (uint256) {
         return GlobalFee.get();
-    }
-
-    /// @notice Changes the max el fee pulled per beacon report
-    /// @param newValue New fee value
-    function setELFeeMaxPullBps(uint256 newValue) external onlyAdmin {
-        if (newValue > BASE) {
-            revert LibErrors.InvalidArgument();
-        }
-
-        ELFeeMaxPullBps.set(newValue);
-    }
-
-    /// @notice Get the current global fee
-    function getELFeeMaxPullBps() external view returns (uint256) {
-        return ELFeeMaxPullBps.get();
     }
 
     /// @notice Changes the allowlist address

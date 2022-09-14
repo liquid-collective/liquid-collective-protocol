@@ -420,11 +420,7 @@ contract OracleV1 is IOracleV1, Initializable, Administrable {
         return uint16(_report);
     }
 
-    function _getBalanceIncreaseUpperBound(uint256 _prevTotalEth, uint256 _timeElapsed)
-        internal
-        view
-        returns (uint256)
-    {
+    function _maxIncrease(uint256 _prevTotalEth, uint256 _timeElapsed) internal view returns (uint256) {
         uint256 annualAprUpperBound = ReportBounds.get().annualAprUpperBound;
         return (_prevTotalEth * annualAprUpperBound * _timeElapsed) / uint256(10000 * 365 days);
     }
@@ -479,7 +475,7 @@ contract OracleV1 is IOracleV1, Initializable, Administrable {
         IRiverV1 river = IRiverV1(payable(RiverAddress.get()));
         uint256 prevTotalEth = river.totalUnderlyingSupply();
         uint256 timeElapsed = (_epochId - LastEpochId.get()) * _clSpec.slotsPerEpoch * _clSpec.secondsPerSlot;
-        uint256 balanceIncreaseUpperBound = _getBalanceIncreaseUpperBound(prevTotalEth, timeElapsed);
+        uint256 balanceIncreaseUpperBound = _maxIncrease(prevTotalEth, timeElapsed);
         river.setConsensusLayerData(_validatorCount, _totalBalance, bytes32(_epochId), balanceIncreaseUpperBound);
         uint256 postTotalEth = river.totalUnderlyingSupply();
 

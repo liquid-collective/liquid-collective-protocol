@@ -48,7 +48,7 @@ abstract contract OracleManagerV1 is IOracleManagerV1 {
         uint256 _validatorCount,
         uint256 _validatorTotalBalance,
         bytes32 _roundId,
-        uint256 _balanceIncreaseUpperBound
+        uint256 _maxIncrease
     )
         external
     {
@@ -69,15 +69,18 @@ abstract contract OracleManagerV1 is IOracleManagerV1 {
 
         uint256 executionLayerFees;
 
+        // if the validator balance sum has increased but there is some margin to
+        // reach the allowed upper bound, we attempt to pull funds to reach that
+        // upper bound
         if (
             previousValidatorTotalBalance <= _validatorTotalBalance
-                && _validatorTotalBalance - previousValidatorTotalBalance < _balanceIncreaseUpperBound
+                && _validatorTotalBalance - previousValidatorTotalBalance < _maxIncrease
         ) {
             executionLayerFees =
-                _pullELFees(_balanceIncreaseUpperBound - (_validatorTotalBalance - previousValidatorTotalBalance));
+                _pullELFees(_maxIncrease - (_validatorTotalBalance - previousValidatorTotalBalance));
         } else if (previousValidatorTotalBalance > _validatorTotalBalance) {
             executionLayerFees =
-                _pullELFees((previousValidatorTotalBalance - _validatorTotalBalance) + _balanceIncreaseUpperBound);
+                _pullELFees((previousValidatorTotalBalance - _validatorTotalBalance) + _maxIncrease);
         }
 
         if (previousValidatorTotalBalance < _validatorTotalBalance + executionLayerFees) {
