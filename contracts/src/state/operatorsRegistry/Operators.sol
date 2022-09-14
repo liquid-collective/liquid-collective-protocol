@@ -30,94 +30,13 @@ library Operators {
         uint256 index;
     }
 
-    struct OperatorResolution {
-        bool active;
-        uint256 index;
-    }
-
     struct SlotOperator {
         Operator[] value;
     }
 
-    struct SlotOperatorMapping {
-        mapping(string => OperatorResolution) value;
-    }
+    error OperatorNotFound(uint256 index);
 
-    error OperatorNotFound(string name);
-    error OperatorNotFoundAtIndex(uint256 index);
-
-    function _getOperatorIndex(string memory name) internal view returns (uint256) {
-        bytes32 slot = OPERATORS_MAPPING_SLOT;
-
-        SlotOperatorMapping storage opm;
-
-        assembly {
-            opm.slot := slot
-        }
-
-        if (!opm.value[name].active) {
-            revert OperatorNotFound(name);
-        }
-
-        return opm.value[name].index;
-    }
-
-    function _getOperatorActive(string memory name) internal view returns (bool) {
-        bytes32 slot = OPERATORS_MAPPING_SLOT;
-
-        SlotOperatorMapping storage opm;
-
-        assembly {
-            opm.slot := slot
-        }
-        return opm.value[name].active;
-    }
-
-    function _setOperatorIndex(string memory name, bool active, uint256 index) internal {
-        bytes32 slot = OPERATORS_MAPPING_SLOT;
-
-        SlotOperatorMapping storage opm;
-
-        assembly {
-            opm.slot := slot
-        }
-        opm.value[name] = OperatorResolution({active: active, index: index});
-    }
-
-    function exists(string memory name) internal view returns (bool) {
-        return _getOperatorActive(name);
-    }
-
-    function indexOf(string memory name) internal view returns (int256) {
-        bytes32 slot = OPERATORS_MAPPING_SLOT;
-
-        SlotOperatorMapping storage opm;
-
-        assembly {
-            opm.slot := slot
-        }
-
-        if (!opm.value[name].active) {
-            return -1;
-        }
-
-        return int256(opm.value[name].index);
-    }
-
-    function get(string memory name) internal view returns (Operator storage) {
-        bytes32 slot = OPERATORS_SLOT;
-        uint256 index = _getOperatorIndex(name);
-
-        SlotOperator storage r;
-
-        assembly {
-            r.slot := slot
-        }
-
-        return r.value[index];
-    }
-
-    function getByIndex(uint256 index) internal view returns (Operator storage) {
+    function get(uint256 index) internal view returns (Operator storage) {
         bytes32 slot = OPERATORS_SLOT;
 
         SlotOperator storage r;
@@ -127,7 +46,7 @@ library Operators {
         }
 
         if (r.value.length <= index) {
-            revert OperatorNotFoundAtIndex(index);
+            revert OperatorNotFound(index);
         }
 
         return r.value[index];
@@ -242,11 +161,9 @@ library Operators {
         return activeOperators;
     }
 
-    function set(string memory name, Operator memory newValue) internal returns (uint256) {
+    function push(Operator memory newValue) internal returns (uint256) {
         LibSanitize._notZeroAddress(newValue.operator);
         LibSanitize._notEmptyString(newValue.name);
-        bool opExists = _getOperatorActive(name);
-
         bytes32 slot = OPERATORS_SLOT;
 
         SlotOperator storage r;
@@ -255,34 +172,8 @@ library Operators {
             r.slot := slot
         }
 
-        if (!opExists) {
-            r.value.push(newValue);
-            _setOperatorIndex(name, newValue.active, r.value.length - 1);
-            return (r.value.length - 1);
-        } else {
-            uint256 index = _getOperatorIndex(name);
-            r.value[index] = newValue;
-            if (opExists != newValue.active) {
-                _setOperatorIndex(name, newValue.active, index);
-            }
-            return (index);
-        }
-    }
+        r.value.push(newValue);
 
-    function setOperatorName(uint256 index, string memory newName) internal {
-        LibSanitize._notEmptyString(newName);
-        bytes32 slot = OPERATORS_SLOT;
-
-        SlotOperator storage r;
-
-        assembly {
-            r.slot := slot
-        }
-
-        string memory oldName = r.value[index].name;
-        r.value[index].name = newName;
-
-        _setOperatorIndex(oldName, false, 0); // set storage to 0
-        _setOperatorIndex(newName, true, index);
+        return r.value.length;
     }
 }

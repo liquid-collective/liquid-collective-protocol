@@ -29,11 +29,7 @@ interface IOperatorsRegistryV1 {
     function listActiveOperators() external view returns (Operators.Operator[] memory);
     function getRiver() external view returns (address);
     function setRiver(address _newRiver) external;
-    function getOperatorDetails(string calldata _name)
-        external
-        view
-        returns (int256 _index, address _operatorAddress);
-    function addOperator(string calldata _name, address _operator) external;
+    function addOperator(string calldata _name, address _operator) external returns (uint256);
     function setOperatorAddress(uint256 _index, address _newOperatorAddress) external;
     function setOperatorName(uint256 _index, string calldata _newName) external;
     function setOperatorStatus(uint256 _index, bool _newStatus) external;

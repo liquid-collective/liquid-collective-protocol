@@ -40,7 +40,7 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
             _;
             return;
         }
-        Operators.Operator storage operator = Operators.getByIndex(_index);
+        Operators.Operator storage operator = Operators.get(_index);
         if (!operator.active) {
             revert InactiveOperator(_index);
         }
@@ -64,21 +64,10 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
     /// @notice Prevents the call from working if the operator is not active
     /// @param _index The name identifying the operator
     modifier active(uint256 _index) {
-        if (!Operators.getByIndex(_index).active) {
+        if (!Operators.get(_index).active) {
             revert InactiveOperator(_index);
         }
         _;
-    }
-
-    /// @notice Retrieve the operator details from the operator name
-    /// @param _name Name of the operator
-    function getOperatorDetails(string calldata _name)
-        external
-        view
-        returns (int256 _index, address _operatorAddress)
-    {
-        _index = Operators.indexOf(_name);
-        _operatorAddress = Operators.get(_name).operator;
     }
 
     /// @notice Retrieve the active operator set
@@ -90,10 +79,7 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
     /// @dev Only callable by the administrator
     /// @param _name The name identifying the operator
     /// @param _operator The address representing the operator, receiving the rewards
-    function addOperator(string calldata _name, address _operator) external onlyAdmin {
-        if (Operators.exists(_name)) {
-            revert OperatorAlreadyExists(_name);
-        }
+    function addOperator(string calldata _name, address _operator) external onlyAdmin returns (uint256) {
 
         Operators.Operator memory newOperator = Operators.Operator({
             active: true,
@@ -105,9 +91,10 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
             stopped: 0
         });
 
-        uint256 operatorIndex = Operators.set(_name, newOperator);
+        uint256 operatorIndex = Operators.push(newOperator) - 1;
 
         emit AddedOperator(operatorIndex, newOperator.name, newOperator.operator);
+        return operatorIndex;
     }
 
     /// @notice Changes the operator address of an operator
@@ -116,7 +103,7 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
     /// @param _newOperatorAddress The new address of the operator
     function setOperatorAddress(uint256 _index, address _newOperatorAddress) external operatorOrAdmin(_index) {
         LibSanitize._notZeroAddress(_newOperatorAddress);
-        Operators.Operator storage operator = Operators.getByIndex(_index);
+        Operators.Operator storage operator = Operators.get(_index);
 
         operator.operator = _newOperatorAddress;
 
@@ -129,11 +116,8 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
     /// @param _index The operator index
     /// @param _newName The new operator name
     function setOperatorName(uint256 _index, string calldata _newName) external operatorOrAdmin(_index) {
-        if (Operators.exists(_newName) == true) {
-            revert OperatorAlreadyExists(_newName);
-        }
-
-        Operators.setOperatorName(_index, _newName);
+        Operators.Operator storage operator = Operators.get(_index);
+        operator.name = _newName;
 
         emit SetOperatorName(_index, _newName);
     }
@@ -143,8 +127,7 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
     /// @param _index The operator index
     /// @param _newStatus The new status of the operator
     function setOperatorStatus(uint256 _index, bool _newStatus) external onlyAdmin {
-        Operators.Operator storage operator = Operators.getByIndex(_index);
-
+        Operators.Operator storage operator = Operators.get(_index);
         operator.active = _newStatus;
 
         emit SetOperatorStatus(_index, _newStatus);
@@ -155,7 +138,7 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
     /// @param _index The operator index
     /// @param _newStoppedValidatorCount The new stopped validator count of the operator
     function setOperatorStoppedValidatorCount(uint256 _index, uint256 _newStoppedValidatorCount) external onlyAdmin {
-        Operators.Operator storage operator = Operators.getByIndex(_index);
+        Operators.Operator storage operator = Operators.get(_index);
 
         if (_newStoppedValidatorCount > operator.funded) {
             revert Errors.InvalidArgument();
@@ -181,7 +164,7 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
             revert InvalidEmptyArray();
         }
         for (uint256 idx = 0; idx < _operatorIndexes.length;) {
-            Operators.Operator storage operator = Operators.getByIndex(_operatorIndexes[idx]);
+            Operators.Operator storage operator = Operators.get(_operatorIndexes[idx]);
             if (_newLimits[idx] > operator.keys) {
                 revert OperatorLimitTooHigh(_newLimits[idx], operator.keys);
             }
@@ -218,7 +201,7 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
             revert InvalidSignatureLength();
         }
 
-        Operators.Operator storage operator = Operators.getByIndex(_index);
+        Operators.Operator storage operator = Operators.get(_index);
 
         for (uint256 idx = 0; idx < _keyCount;) {
             bytes memory publicKey =
@@ -243,7 +226,7 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
     /// @param _index The operator index
     /// @param _indexes The indexes of the keys to remove
     function removeValidators(uint256 _index, uint256[] calldata _indexes) external operatorOrAdmin(_index) {
-        Operators.Operator storage operator = Operators.getByIndex(_index);
+        Operators.Operator storage operator = Operators.get(_index);
 
         if (_indexes.length == 0) {
             revert InvalidKeyCount();
@@ -288,7 +271,7 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
     /// @notice Get operator details
     /// @param _index The index of the operator
     function getOperator(uint256 _index) external view returns (Operators.Operator memory) {
-        return Operators.getByIndex(_index);
+        return Operators.get(_index);
     }
 
     /// @notice Get operator count
@@ -305,7 +288,7 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
         returns (bytes memory publicKey, bytes memory signature, bool funded)
     {
         (publicKey, signature) = ValidatorKeys.get(_operatorIndex, _validatorIndex);
-        funded = _validatorIndex < Operators.getByIndex(_operatorIndex).funded;
+        funded = _validatorIndex < Operators.get(_operatorIndex).funded;
     }
 
     /// @notice Retrieve validator keys based on operator statuses
@@ -372,7 +355,7 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
             return (new bytes[](0), new bytes[](0));
         }
 
-        Operators.Operator storage operator = Operators.get(operators[selectedOperatorIndex].name);
+        Operators.Operator storage operator = Operators.get(operators[selectedOperatorIndex].index);
         if (selectedOperatorAvailableKeys >= _requestedAmount) {
             (publicKeys, signatures) = ValidatorKeys.getKeys(
                 operators[selectedOperatorIndex].index, operators[selectedOperatorIndex].funded, _requestedAmount
