@@ -152,8 +152,9 @@ contract OracleV1 is Initializable, Administrable {
     function getCurrentFrame() external view returns (uint256 _startEpochId, uint256 _startTime, uint256 _endTime) {
         BeaconSpec.BeaconSpecStruct memory beaconSpec = BeaconSpec.get();
         _startEpochId = _getFrameFirstEpochId(_getCurrentEpochId(beaconSpec), beaconSpec);
-        _startTime = beaconSpec.genesisTime + _startEpochId * beaconSpec.secondsPerSlot * beaconSpec.slotsPerEpoch;
-        _endTime = _startTime + beaconSpec.secondsPerSlot * beaconSpec.slotsPerEpoch * beaconSpec.epochsPerFrame - 1;
+        uint256 secondsPerEpoch = beaconSpec.secondsPerSlot * beaconSpec.slotsPerEpoch;
+        _startTime = beaconSpec.genesisTime + _startEpochId * secondsPerEpoch;
+        _endTime = _startTime + secondsPerEpoch * beaconSpec.epochsPerFrame - 1;
     }
 
     /// @notice Retrieve the first epoch id of the frame of the provided epoch id
@@ -175,16 +176,7 @@ contract OracleV1 is Initializable, Administrable {
     /// @dev Performs a naive search, do not call this on-chain, used as an off-chain helper
     /// @param _memberAddress Address of the member
     function isMember(address _memberAddress) external view returns (bool) {
-        address[] memory members = OracleMembers.get();
-        for (uint256 idx = 0; idx < members.length;) {
-            if (members[idx] == _memberAddress) {
-                return true;
-            }
-            unchecked {
-                ++idx;
-            }
-        }
-        return false;
+        return OracleMembers.indexOf(_memberAddress) >= 0;
     }
 
     /// @notice Adds new address as oracle member, giving the ability to push beacon reports.
@@ -318,9 +310,6 @@ contract OracleV1 is Initializable, Administrable {
             _clearReporting(_epochId);
         }
 
-        uint128 beaconBalanceEth1 = DENOMINATION_OFFSET * uint128(_beaconBalance);
-        emit BeaconReported(_epochId, beaconBalanceEth1, _beaconValidators, msg.sender);
-
         int256 memberIndex = OracleMembers.indexOf(msg.sender);
         if (memberIndex == -1) {
             revert Errors.Unauthorized(msg.sender);
@@ -329,6 +318,9 @@ contract OracleV1 is Initializable, Administrable {
             revert AlreadyReported(_epochId, msg.sender);
         }
         ReportsPositions.register(uint256(memberIndex));
+
+        uint128 beaconBalanceEth1 = DENOMINATION_OFFSET * uint128(_beaconBalance);
+        emit BeaconReported(_epochId, beaconBalanceEth1, _beaconValidators, msg.sender);
 
         uint256 report = _encodeReport(_beaconBalance, _beaconValidators);
         int256 reportIndex = ReportsVariants.indexOfReport(report);
