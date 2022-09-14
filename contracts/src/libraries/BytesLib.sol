@@ -2,24 +2,6 @@
 pragma solidity 0.8.10;
 
 library BytesLib {
-    function pad64(bytes memory _b) internal pure returns (bytes memory) {
-        assert(_b.length >= 32 && _b.length <= 64);
-        if (64 == _b.length) {
-            return _b;
-        }
-
-        bytes memory zero32 = new bytes(32);
-        assembly {
-            mstore(add(zero32, 0x20), 0)
-        }
-
-        if (32 == _b.length) {
-            return bytes.concat(_b, zero32);
-        } else {
-            return bytes.concat(_b, BytesLib.slice(zero32, 0, uint256(64) - _b.length));
-        }
-    }
-
     function slice(bytes memory _bytes, uint256 _start, uint256 _length) internal pure returns (bytes memory) {
         require(_length + 31 >= _length, "slice_overflow");
         require(_bytes.length >= _start + _length, "slice_outOfBounds");
