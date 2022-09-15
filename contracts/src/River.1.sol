@@ -220,7 +220,9 @@ contract RiverV1 is
         uint256 denominator = (_assetBalance() * BASE) - (_amount * globalFee);
         uint256 sharesToMint = denominator == 0 ? 0 : (numerator / denominator);
 
-        _mintRawShares(TreasuryAddress.get(), sharesToMint);
+        if (sharesToMint > 0) {
+            _mintRawShares(TreasuryAddress.get(), sharesToMint);
+        }
     }
 
     /// @notice Handler called whenever the total balance of ETH is requested
