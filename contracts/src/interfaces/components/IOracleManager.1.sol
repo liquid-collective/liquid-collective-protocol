@@ -11,7 +11,7 @@ interface IOracleManagerV1 {
         uint256 _validatorCount,
         uint256 _validatorBalanceSum,
         bytes32 _roundId,
-        uint256 _balanceIncreaseUpperBound
+        uint256 _maxIncrease
     )
         external;
     function getOracle() external view returns (address);

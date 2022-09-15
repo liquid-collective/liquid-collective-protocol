@@ -475,8 +475,8 @@ contract OracleV1 is IOracleV1, Initializable, Administrable {
         IRiverV1 river = IRiverV1(payable(RiverAddress.get()));
         uint256 prevTotalEth = river.totalUnderlyingSupply();
         uint256 timeElapsed = (_epochId - LastEpochId.get()) * _clSpec.slotsPerEpoch * _clSpec.secondsPerSlot;
-        uint256 balanceIncreaseUpperBound = _maxIncrease(prevTotalEth, timeElapsed);
-        river.setConsensusLayerData(_validatorCount, _totalBalance, bytes32(_epochId), balanceIncreaseUpperBound);
+        uint256 maxIncrease = _maxIncrease(prevTotalEth, timeElapsed);
+        river.setConsensusLayerData(_validatorCount, _totalBalance, bytes32(_epochId), maxIncrease);
         uint256 postTotalEth = river.totalUnderlyingSupply();
 
         _sanityChecks(postTotalEth, prevTotalEth, timeElapsed);
