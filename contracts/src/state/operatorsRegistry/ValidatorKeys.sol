@@ -62,11 +62,11 @@ library ValidatorKeys {
         assembly {
             r.slot := slot
         }
-
-        for (uint256 idx = startIdx; idx < startIdx + amount;) {
-            bytes memory rawCredentials = r.value[operatorIndex][idx];
-            publicKey[idx - startIdx] = BytesLib.slice(rawCredentials, 0, PUBLIC_KEY_LENGTH);
-            signatures[idx - startIdx] = BytesLib.slice(rawCredentials, PUBLIC_KEY_LENGTH, SIGNATURE_LENGTH);
+        uint256 idx;
+        for (; idx < amount;) {
+            bytes memory rawCredentials = r.value[operatorIndex][idx + startIdx];
+            publicKey[idx] = BytesLib.slice(rawCredentials, 0, PUBLIC_KEY_LENGTH);
+            signatures[idx] = BytesLib.slice(rawCredentials, PUBLIC_KEY_LENGTH, SIGNATURE_LENGTH);
             unchecked {
                 ++idx;
             }
