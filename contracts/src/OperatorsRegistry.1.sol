@@ -282,9 +282,9 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable {
             revert InvalidKeyCount();
         }
 
-        uint256 validatorRemoveCount = _indexes.length;
+        uint256 keyToRemoveCount = _indexes.length;
 
-        for (uint256 idx = 0; idx < validatorRemoveCount;) {
+        for (uint256 idx = 0; idx < keyToRemoveCount;) {
             uint256 keyIndex = _indexes[idx];
 
             if (keyIndex < operator.funded) {
@@ -311,10 +311,10 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable {
             }
         }
         uint256 limit = operator.limit;
-        if (operator.keys + validatorRemoveCount == limit) {
-            operator.limit -= validatorRemoveCount;
-        } else if (_indexes[validatorRemoveCount - 1] < limit) {
-            operator.limit = _indexes[validatorRemoveCount - 1];
+        if (operator.keys + keyToRemoveCount == limit) {
+            operator.limit = operator.keys;
+        } else if (_indexes[keyToRemoveCount - 1] < limit) {
+            operator.limit = _indexes[keyToRemoveCount - 1];
         }
     }
 
