@@ -99,7 +99,7 @@ contract OracleV1Tests {
         assert(oracle.isMember(newMember) == false);
         oracle.addMember(newMember, 1);
         assert(oracle.isMember(newMember) == true);
-        oracle.removeMember(newMember);
+        oracle.removeMember(newMember, 0);
         assert(oracle.isMember(newMember) == false);
     }
 
@@ -119,10 +119,70 @@ contract OracleV1Tests {
         assert(oracle.getReportVariantsCount() == 1);
         assert(oracle.getGlobalReportStatus() != 0);
         vm.prank(admin);
-        oracle.removeMember(newMember);
+        oracle.removeMember(newMember, 1);
         assert(oracle.isMember(newMember) == false);
         assert(oracle.getReportVariantsCount() == 0);
         assert(oracle.getGlobalReportStatus() == 0);
+    }
+
+    function testEditMember(uint256 newMemberSalt, uint256 newAddressSalt) public {
+        address newMember = uf._new(newMemberSalt);
+        address newAddress = uf._new(newAddressSalt);
+        vm.startPrank(admin);
+        assert(oracle.isMember(newMember) == false);
+        assert(oracle.isMember(newAddress) == false);
+        oracle.addMember(newMember, 1);
+        assert(oracle.isMember(newMember) == true);
+        assert(oracle.isMember(newAddress) == false);
+        vm.stopPrank();
+        vm.startPrank(newMember);
+        oracle.editMember(newMember, newAddress);
+        vm.stopPrank();
+        assert(oracle.isMember(newMember) == false);
+        assert(oracle.isMember(newAddress) == true);
+    }
+
+    function testEditMemberAsAdmin(uint256 newMemberSalt, uint256 newAddressSalt) public {
+        address newMember = uf._new(newMemberSalt);
+        address newAddress = uf._new(newAddressSalt);
+        vm.startPrank(admin);
+        assert(oracle.isMember(newMember) == false);
+        assert(oracle.isMember(newAddress) == false);
+        oracle.addMember(newMember, 1);
+        assert(oracle.isMember(newMember) == true);
+        assert(oracle.isMember(newAddress) == false);
+        oracle.editMember(newMember, newAddress);
+        vm.stopPrank();
+        assert(oracle.isMember(newMember) == false);
+        assert(oracle.isMember(newAddress) == true);
+    }
+
+    function testEditMemberUnauthorized(uint256 newMemberSalt, uint256 newAddressSalt) public {
+        address newMember = uf._new(newMemberSalt);
+        address newAddress = uf._new(newAddressSalt);
+        vm.startPrank(admin);
+        assert(oracle.isMember(newMember) == false);
+        assert(oracle.isMember(newAddress) == false);
+        oracle.addMember(newMember, 1);
+        assert(oracle.isMember(newMember) == true);
+        assert(oracle.isMember(newAddress) == false);
+        vm.stopPrank();
+        vm.expectRevert(abi.encodeWithSignature("Unauthorized(address)", address(this)));
+        oracle.editMember(newMember, newAddress);
+    }
+
+    function testEditMemberNotFound(uint256 newMemberSalt, uint256 newAddressSalt) public {
+        address newMember = uf._new(newMemberSalt);
+        address newAddress = uf._new(newAddressSalt);
+        vm.startPrank(admin);
+        assert(oracle.isMember(newMember) == false);
+        assert(oracle.isMember(newAddress) == false);
+        oracle.addMember(newMember, 1);
+        assert(oracle.isMember(newMember) == true);
+        assert(oracle.isMember(newAddress) == false);
+        vm.expectRevert(abi.encodeWithSignature("InvalidCall()"));
+        oracle.editMember(newAddress, newAddress);
+        vm.stopPrank();
     }
 
     function testRemoveMemberUnauthorized(uint256 newMemberSalt) public {
@@ -134,7 +194,7 @@ contract OracleV1Tests {
         vm.stopPrank();
         vm.startPrank(newMember);
         vm.expectRevert(abi.encodeWithSignature("Unauthorized(address)", newMember));
-        oracle.removeMember(newMember);
+        oracle.removeMember(newMember, 0);
     }
 
     function testSetBeaconSpec(

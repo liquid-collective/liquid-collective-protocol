@@ -363,7 +363,7 @@ contract FirewallTests {
         vm.startPrank(riverGovernorDAO);
         firewalledOracle.addMember(bob, 1);
         assert(oracle.isMember(bob));
-        firewalledOracle.removeMember(bob);
+        firewalledOracle.removeMember(bob, 0);
         assert(!oracle.isMember(bob));
         vm.stopPrank();
     }
@@ -379,7 +379,7 @@ contract FirewallTests {
         vm.startPrank(executor);
         firewalledOracle.addMember(bob, 1);
         assert(oracle.isMember(bob));
-        firewalledOracle.removeMember(bob);
+        firewalledOracle.removeMember(bob, 0);
         assert(!oracle.isMember(bob));
         vm.stopPrank();
     }
@@ -398,7 +398,7 @@ contract FirewallTests {
         vm.stopPrank();
         vm.startPrank(joe);
         vm.expectRevert(unauthJoe);
-        firewalledOracle.removeMember(bob);
+        firewalledOracle.removeMember(bob, 0);
         vm.stopPrank();
     }
 

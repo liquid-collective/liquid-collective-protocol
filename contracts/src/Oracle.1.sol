@@ -214,10 +214,13 @@ contract OracleV1 is Initializable {
     /// @notice Removes an address from the oracle members.
     /// @dev Only callable by the adminstrator
     /// @param _oracleMember Address to remove
-    function removeMember(address _oracleMember) external onlyAdmin {
+    function removeMember(address _oracleMember, uint256 _newQuorum) external onlyAdmin {
         int256 memberIdx = OracleMembers.indexOf(_oracleMember);
         if (memberIdx < 0) {
             revert Errors.InvalidCall();
+        }
+        if (_newQuorum > OracleMembers.get().length - 1) {
+            revert Errors.InvalidArgument();
         }
         OracleMembers.deleteItem(uint256(memberIdx));
         ReportsPositions.clear();
@@ -226,6 +229,17 @@ contract OracleV1 is Initializable {
         if (quorum > OracleMembers.get().length) {
             Quorum.set(quorum - 1);
         }
+    }
+
+    function editMember(address _oracleMember, address _newAddress) external {
+        if (msg.sender != LibOwnable._getAdmin() && msg.sender != _oracleMember) {
+            revert Errors.Unauthorized(msg.sender);
+        }
+        int256 memberIdx = OracleMembers.indexOf(_oracleMember);
+        if (memberIdx < 0) {
+            revert Errors.InvalidCall();
+        }
+        OracleMembers.set(uint256(memberIdx), _newAddress);
     }
 
     /// @notice Edits the beacon spec parameters

@@ -36,6 +36,18 @@ library OracleMembers {
         r.value.push(newOracleMember);
     }
 
+    function set(uint256 index, address _newOracleAddress) internal {
+        bytes32 slot = ORACLE_MEMBERS_SLOT;
+
+        Slot storage r;
+
+        assembly {
+            r.slot := slot
+        }
+
+        r.value[index] = _newOracleAddress;
+    }
+
     function indexOf(address memberAddress) internal view returns (int256) {
         bytes32 slot = ORACLE_MEMBERS_SLOT;
 
