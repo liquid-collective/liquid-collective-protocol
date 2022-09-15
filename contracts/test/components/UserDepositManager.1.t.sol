@@ -44,7 +44,6 @@ contract UserDepositManagerV1DepositTests {
 
         assert(_user.balance == 0);
         assert(address(transferManager).balance == _amount);
-        assert(transferManager.getEthToDeposit() == _amount);
     }
 
     function testDepositToAnotherUserWithDedicatedMethod(uint256 _userSalt, uint256 _anotherUserSalt, uint256 _amount)
@@ -69,7 +68,6 @@ contract UserDepositManagerV1DepositTests {
 
         assert(_user.balance == 0);
         assert(address(transferManager).balance == _amount);
-        assert(transferManager.getEthToDeposit() == _amount);
     }
 
     function testDepositWithReceiveFallback(uint256 _userSalt, uint256 _amount) public {
@@ -92,7 +90,6 @@ contract UserDepositManagerV1DepositTests {
 
         assert(_user.balance == 0);
         assert(address(transferManager).balance == _amount);
-        assert(transferManager.getEthToDeposit() == _amount);
     }
 
     function testDepositWithCalldataFallback(uint256 _userSalt, uint256 _amount) public {

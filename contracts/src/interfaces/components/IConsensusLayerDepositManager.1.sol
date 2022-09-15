@@ -18,4 +18,5 @@ interface IConsensusLayerDepositManagerV1 {
     function getWithdrawalCredentials() external view returns (bytes32);
     function depositToConsensusLayer(uint256 _maxCount) external;
     function getDepositedValidatorCount() external view returns (uint256 depositedValidatorCount);
+    function getBalanceToDeposit() external view returns (uint256);
 }

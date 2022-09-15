@@ -42,7 +42,7 @@ contract ConsensusLayerDepositManagerV1ExposeInitializer is ConsensusLayerDeposi
     }
 
     function sudoSyncBalance() external {
-        EthToDeposit.set(address(this).balance);
+        BalanceToDeposit.set(address(this).balance);
     }
 }
 
@@ -216,7 +216,7 @@ contract ConsensusLayerDepositManagerV1ControllableValidatorKeyRequest is Consen
     }
 
     function sudoSyncBalance() external {
-        EthToDeposit.set(address(this).balance);
+        BalanceToDeposit.set(address(this).balance);
     }
 }
 
@@ -337,7 +337,7 @@ contract ConsensusLayerDepositManagerV1ValidKeys is ConsensusLayerDepositManager
     }
 
     function sudoSyncBalance() external {
-        EthToDeposit.set(address(this).balance);
+        BalanceToDeposit.set(address(this).balance);
     }
 }
 
