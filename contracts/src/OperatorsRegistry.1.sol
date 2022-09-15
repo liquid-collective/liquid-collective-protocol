@@ -170,10 +170,10 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
             }
 
             if (_newLimits[idx] < operator.funded) {
-                operator.limit = operator.funded;
-            } else {
-                operator.limit = _newLimits[idx];
+                revert OperatorLimitTooLow(_newLimits[idx], operator.funded);
             }
+
+            operator.limit = _newLimits[idx];
 
             emit SetOperatorLimit(_operatorIndexes[idx], operator.limit);
 
@@ -338,9 +338,17 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
 
     uint256 internal constant MAX_VALIDATOR_ATTRIBUTION_PER_ROUND = 10;
 
+    function _hasFundableKeys(Operators.CachedOperator memory _operator) internal pure returns (bool) {
+        return (_operator.funded + _operator.picked) < _operator.limit;
+    }
+
+    function _getActiveKeyCount(Operators.CachedOperator memory _operator) internal pure returns (uint256) {
+        return (_operator.funded + _operator.picked) - _operator.stopped;
+    }
+
     /// @notice Handler called whenever a deposit to the consensus layer is made. Should retrieve _requestedAmount or lower keys
-    /// @param _requestedAmount Amount of keys required. Contract is expected to send _requestedAmount or lower.
-    function _pickNextValidatorsFromActiveOperators(uint256 _requestedAmount)
+    /// @param _count Amount of keys required. Contract is expected to send _requestedAmount or lower.
+    function _pickNextValidatorsFromActiveOperators(uint256 _count)
         internal
         returns (bytes[] memory publicKeys, bytes[] memory signatures)
     {
@@ -350,14 +358,11 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
             return (new bytes[](0), new bytes[](0));
         }
 
-        while (_requestedAmount > 0) {
+        while (_count > 0) {
             // loop on operators to find the first that has fundable keys, taking into account previous loop round attributions
             uint256 selectedOperatorIndex = 0;
             for (; selectedOperatorIndex < operators.length;) {
-                if (
-                    (operators[selectedOperatorIndex].funded + operators[selectedOperatorIndex].picked)
-                        < operators[selectedOperatorIndex].limit
-                ) {
+                if (_hasFundableKeys(operators[selectedOperatorIndex])) {
                     break;
                 }
                 unchecked {
@@ -373,11 +378,8 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
             // we start from the next operator and we try to find one that has fundable keys but a lower (funded + picked) - stopped value
             for (uint256 idx = selectedOperatorIndex + 1; idx < operators.length;) {
                 if (
-                    (
-                        (operators[idx].funded + operators[idx].picked) - operators[idx].stopped
-                            < (operators[selectedOperatorIndex].funded + operators[selectedOperatorIndex].picked)
-                                - operators[selectedOperatorIndex].stopped
-                    ) && (operators[idx].funded + operators[idx].picked) < operators[idx].limit
+                    _getActiveKeyCount(operators[idx]) < _getActiveKeyCount(operators[selectedOperatorIndex])
+                        && _hasFundableKeys(operators[idx])
                 ) {
                     selectedOperatorIndex = idx;
                 }
@@ -387,20 +389,20 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
             }
 
             // we take the smallest value between limit - (funded + picked), _requestedAmount and MAX_VALIDATOR_ATTRIBUTION_PER_ROUND
-            uint256 selectedOperatorAvailableKeys = Uint256Lib.min(
+            uint256 pickedKeyCount = Uint256Lib.min(
                 Uint256Lib.min(
                     operators[selectedOperatorIndex].limit
                         - (operators[selectedOperatorIndex].funded + operators[selectedOperatorIndex].picked),
                     MAX_VALIDATOR_ATTRIBUTION_PER_ROUND
                 ),
-                _requestedAmount
+                _count
             );
 
             // we update the cached picked amount
-            operators[selectedOperatorIndex].picked += selectedOperatorAvailableKeys;
+            operators[selectedOperatorIndex].picked += pickedKeyCount;
 
             // we update the requested amount count
-            _requestedAmount -= selectedOperatorAvailableKeys;
+            _count -= pickedKeyCount;
         }
 
         // we loop on all operators

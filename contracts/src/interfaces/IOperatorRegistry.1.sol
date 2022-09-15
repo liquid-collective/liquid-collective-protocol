@@ -15,6 +15,7 @@ interface IOperatorsRegistryV1 {
     error InvalidSignatureLength();
     error InvalidIndexOutOfBounds();
     error OperatorLimitTooHigh(uint256 limit, uint256 keyCount);
+    error OperatorLimitTooLow(uint256 limit, uint256 fundedKeyCount);
 
     event AddedOperator(uint256 indexed index, string name, address operatorAddress);
     event SetOperatorStatus(uint256 indexed index, bool active);
