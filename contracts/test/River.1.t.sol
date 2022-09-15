@@ -12,11 +12,12 @@ import "../src/ELFeeRecipient.1.sol";
 import "./utils/AllowlistHelper.sol";
 import "./utils/River.setup1.sol";
 import "./utils/UserFactory.sol";
+import "./utils/BytesGenerator.sol";
 import "./mocks/DepositContractMock.sol";
 import "../src/OperatorsRegistry.1.sol";
 import "forge-std/Test.sol";
 
-contract RiverV1SetupOneTests is Test {
+contract RiverV1SetupOneTests is Test, BytesGenerator {
     UserFactory internal uf = new UserFactory();
 
     RiverV1 internal river;
@@ -99,15 +100,13 @@ contract RiverV1SetupOneTests is Test {
         operatorOneIndex = operatorsRegistry.addOperator(operatorOneName, operatorOne);
         operatorTwoIndex = operatorsRegistry.addOperator(operatorTwoName, operatorTwo);
 
-        bytes memory op1PublicKeys = RiverSetupOne.getOperatorOnePublicKeys();
-        bytes memory op1Signatures = RiverSetupOne.getOperatorOneSignatures();
+        bytes memory hundredKeysOp1 = genBytes((48 + 96) * 100);
 
-        operatorsRegistry.addValidators(operatorOneIndex, 100, op1PublicKeys, op1Signatures);
+        operatorsRegistry.addValidators(operatorOneIndex, 100, hundredKeysOp1);
 
-        bytes memory op2PublicKeys = RiverSetupOne.getOperatorTwoPublicKeys();
-        bytes memory op2Signatures = RiverSetupOne.getOperatorTwoSignatures();
+        bytes memory hundredKeysOp2 = genBytes((48 + 96) * 100);
 
-        operatorsRegistry.addValidators(operatorTwoIndex, 100, op2PublicKeys, op2Signatures);
+        operatorsRegistry.addValidators(operatorTwoIndex, 100, hundredKeysOp2);
 
         uint256[] memory operatorIndexes = new uint256[](2);
         operatorIndexes[0] = operatorOneIndex;

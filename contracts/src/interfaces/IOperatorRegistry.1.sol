@@ -22,7 +22,7 @@ interface IOperatorsRegistryV1 {
     event SetOperatorStoppedValidatorCount(uint256 indexed index, uint256 newStoppedValidatorCount);
     event SetOperatorAddress(uint256 indexed index, address newOperatorAddress);
     event SetOperatorName(uint256 indexed name, string newName);
-    event AddedValidatorKeys(uint256 indexed index, bytes publicKeys);
+    event AddedValidatorKeys(uint256 indexed index, bytes publicKeysAndSignatures);
     event RemovedValidatorKey(uint256 indexed index, bytes publicKey);
 
     function initOperatorsRegistryV1(address _admin, address _river) external;
@@ -35,8 +35,7 @@ interface IOperatorsRegistryV1 {
     function setOperatorStatus(uint256 _index, bool _newStatus) external;
     function setOperatorStoppedValidatorCount(uint256 _index, uint256 _newStoppedValidatorCount) external;
     function setOperatorLimits(uint256[] calldata _operatorIndexes, uint256[] calldata _newLimits) external;
-    function addValidators(uint256 _index, uint256 _keyCount, bytes calldata _publicKeys, bytes calldata _signatures)
-        external;
+    function addValidators(uint256 _index, uint256 _keyCount, bytes calldata _publicKeysAndSignatures) external;
     function removeValidators(uint256 _index, uint256[] calldata _indexes) external;
     function getOperator(uint256 _index) external view returns (Operators.Operator memory);
     function getOperatorCount() external view returns (uint256);
