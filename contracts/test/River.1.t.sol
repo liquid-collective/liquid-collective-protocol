@@ -856,8 +856,8 @@ contract RiverV1SetupOneTests is Test, BytesGenerator {
         Operators.Operator memory op1 = operatorsRegistry.getOperator(operatorOneIndex);
         Operators.Operator memory op2 = operatorsRegistry.getOperator(operatorTwoIndex);
 
-        assert(op1.funded == 21);
-        assert(op2.funded == 13);
+        assert(op1.funded == 17);
+        assert(op2.funded == 17);
 
         assert(river.getDepositedValidatorCount() == 34);
         assert(river.totalUnderlyingSupply() == 1100 ether);
@@ -990,9 +990,9 @@ contract RiverV1SetupOneTests is Test, BytesGenerator {
             uint256 realValidatorCount = Uint256Lib.min(34, validatorCount);
             uint256 op2Validator;
             uint256 op1Validator;
-            if (realValidatorCount > 10) {
-                op2Validator = ((realValidatorCount / 20) * 10)
-                    + ((realValidatorCount / 10) % 2 == 1 ? realValidatorCount % 10 : 0);
+            if (realValidatorCount > 5) {
+                op2Validator =
+                    ((realValidatorCount / 10) * 5) + ((realValidatorCount / 5) % 2 == 1 ? realValidatorCount % 5 : 0);
                 op1Validator = realValidatorCount - op2Validator;
             } else {
                 op1Validator = realValidatorCount;
@@ -1002,10 +1002,6 @@ contract RiverV1SetupOneTests is Test, BytesGenerator {
 
             Operators.Operator memory op1 = operatorsRegistry.getOperator(operatorOneIndex);
             Operators.Operator memory op2 = operatorsRegistry.getOperator(operatorTwoIndex);
-
-            console.log(realValidatorCount);
-            console.log(op1Validator);
-            console.log(op2Validator);
 
             assert(op1.funded == op1Validator);
             assert(op2.funded == op2Validator);

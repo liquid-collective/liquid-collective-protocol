@@ -336,7 +336,7 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
         }
     }
 
-    uint256 internal constant MAX_VALIDATOR_ATTRIBUTION_PER_ROUND = 10;
+    uint256 internal constant MAX_VALIDATOR_ATTRIBUTION_PER_ROUND = 5;
 
     function _hasFundableKeys(Operators.CachedOperator memory _operator) internal pure returns (bool) {
         return (_operator.funded + _operator.picked) < _operator.limit;

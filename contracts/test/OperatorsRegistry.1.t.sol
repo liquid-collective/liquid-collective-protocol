@@ -458,15 +458,15 @@ contract OperatorsRegistryV1Tests is Test, BytesGenerator {
         vm.prank(admin);
         operatorsRegistry.setOperatorLimits(indexes, limits);
         vm.prank(river);
-        (bytes[] memory publicKeys, bytes[] memory signatures) = operatorsRegistry.pickNextValidators(11);
+        (bytes[] memory publicKeys, bytes[] memory signatures) = operatorsRegistry.pickNextValidators(6);
 
-        assert(publicKeys.length == 11);
-        assert(signatures.length == 11);
+        assert(publicKeys.length == 6);
+        assert(signatures.length == 6);
 
         {
             Operators.Operator memory op = operatorsRegistry.getOperator(0);
             assert(op.limit == 50);
-            assert(op.funded == 10);
+            assert(op.funded == 5);
             assert(op.keys == 50);
             assert(op.stopped == 0);
         }
@@ -487,15 +487,15 @@ contract OperatorsRegistryV1Tests is Test, BytesGenerator {
             assert(op.stopped == 0);
         }
         vm.prank(river);
-        (publicKeys, signatures) = operatorsRegistry.pickNextValidators(11);
+        (publicKeys, signatures) = operatorsRegistry.pickNextValidators(6);
 
-        assert(publicKeys.length == 11);
-        assert(signatures.length == 11);
+        assert(publicKeys.length == 6);
+        assert(signatures.length == 6);
 
         {
             Operators.Operator memory op = operatorsRegistry.getOperator(0);
             assert(op.limit == 50);
-            assert(op.funded == 10);
+            assert(op.funded == 5);
             assert(op.keys == 50);
             assert(op.stopped == 0);
         }
@@ -511,7 +511,7 @@ contract OperatorsRegistryV1Tests is Test, BytesGenerator {
         {
             Operators.Operator memory op = operatorsRegistry.getOperator(2);
             assert(op.limit == 50);
-            assert(op.funded == 10);
+            assert(op.funded == 5);
             assert(op.keys == 50);
             assert(op.stopped == 0);
         }
@@ -525,7 +525,7 @@ contract OperatorsRegistryV1Tests is Test, BytesGenerator {
         {
             Operators.Operator memory op = operatorsRegistry.getOperator(0);
             assert(op.limit == 50);
-            assert(op.funded == 30);
+            assert(op.funded == 25);
             assert(op.keys == 50);
             assert(op.stopped == 0);
         }
@@ -541,16 +541,16 @@ contract OperatorsRegistryV1Tests is Test, BytesGenerator {
         {
             Operators.Operator memory op = operatorsRegistry.getOperator(2);
             assert(op.limit == 50);
-            assert(op.funded == 30);
+            assert(op.funded == 25);
             assert(op.keys == 50);
             assert(op.stopped == 0);
         }
 
         vm.prank(river);
-        (publicKeys, signatures) = operatorsRegistry.pickNextValidators(64);
+        (publicKeys, signatures) = operatorsRegistry.pickNextValidators(74);
 
-        assert(publicKeys.length == 64);
-        assert(signatures.length == 64);
+        assert(publicKeys.length == 74);
+        assert(signatures.length == 74);
 
         {
             Operators.Operator memory op = operatorsRegistry.getOperator(0);
