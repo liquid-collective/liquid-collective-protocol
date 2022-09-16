@@ -5,19 +5,19 @@ import "../state/shared/AdministratorAddress.sol";
 import "../state/shared/PendingAdministratorAddress.sol";
 
 library LibAdministrable {
-    function _setAdministrator(address newAdmin) internal {
+    function _setAdmin(address newAdmin) internal {
         AdministratorAddress.set(newAdmin);
     }
 
-    function _getAdministrator() internal view returns (address) {
+    function _getAdmin() internal view returns (address) {
         return AdministratorAddress.get();
     }
 
-    function _setPendingAdministrator(address newAdmin) internal {
+    function _setPendingAdmin(address newAdmin) internal {
         PendingAdministratorAddress.set(newAdmin);
     }
 
-    function _getPendingAdministrator() internal view returns (address) {
+    function _getPendingAdmin() internal view returns (address) {
         return PendingAdministratorAddress.get();
     }
 }

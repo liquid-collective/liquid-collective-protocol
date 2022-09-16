@@ -21,17 +21,17 @@ contract AdministrableTest is Test {
     }
 
     function testGetAdmin() external {
-        assertEq(wa.getAdministrator(), admin);
+        assertEq(wa.getAdmin(), admin);
     }
 
     function testProposeAdmin() external {
-        assertEq(wa.getAdministrator(), admin);
-        assertEq(wa.getPendingAdministrator(), address(0));
+        assertEq(wa.getAdmin(), admin);
+        assertEq(wa.getPendingAdmin(), address(0));
         address newAdmin = makeAddr("newAdmin");
         vm.prank(admin);
         wa.proposeAdmin(newAdmin);
-        assertEq(wa.getAdministrator(), admin);
-        assertEq(wa.getPendingAdministrator(), newAdmin);
+        assertEq(wa.getAdmin(), admin);
+        assertEq(wa.getPendingAdmin(), newAdmin);
     }
 
     function testProposeAdminUnauthorized() external {
@@ -41,17 +41,17 @@ contract AdministrableTest is Test {
     }
 
     function testAcceptAdmin() external {
-        assertEq(wa.getAdministrator(), admin);
-        assertEq(wa.getPendingAdministrator(), address(0));
+        assertEq(wa.getAdmin(), admin);
+        assertEq(wa.getPendingAdmin(), address(0));
         address newAdmin = makeAddr("newAdmin");
         vm.prank(admin);
         wa.proposeAdmin(newAdmin);
-        assertEq(wa.getAdministrator(), admin);
-        assertEq(wa.getPendingAdministrator(), newAdmin);
+        assertEq(wa.getAdmin(), admin);
+        assertEq(wa.getPendingAdmin(), newAdmin);
         vm.prank(newAdmin);
         wa.acceptAdmin();
-        assertEq(wa.getAdministrator(), newAdmin);
-        assertEq(wa.getPendingAdministrator(), address(0));
+        assertEq(wa.getAdmin(), newAdmin);
+        assertEq(wa.getPendingAdmin(), address(0));
     }
 
     function testAcceptAdminUnauthorized() external {
@@ -60,5 +60,19 @@ contract AdministrableTest is Test {
         wa.proposeAdmin(newAdmin);
         vm.expectRevert(abi.encodeWithSignature("Unauthorized(address)", address(this)));
         wa.acceptAdmin();
+    }
+
+    function testCancelTransferAdmin() external {
+        assertEq(wa.getAdmin(), admin);
+        assertEq(wa.getPendingAdmin(), address(0));
+        address newAdmin = makeAddr("newAdmin");
+        vm.prank(admin);
+        wa.proposeAdmin(newAdmin);
+        assertEq(wa.getAdmin(), admin);
+        assertEq(wa.getPendingAdmin(), newAdmin);
+        vm.prank(admin);
+        wa.proposeAdmin(address(0));
+        assertEq(wa.getAdmin(), admin);
+        assertEq(wa.getPendingAdmin(), address(0));
     }
 }

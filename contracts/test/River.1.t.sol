@@ -232,7 +232,7 @@ contract RiverV1SetupOneTests is Test {
 
     function testGetAdministrator() public {
         vm.startPrank(bob);
-        assert(river.getAdministrator() == admin);
+        assert(river.getAdmin() == admin);
         vm.stopPrank();
     }
 

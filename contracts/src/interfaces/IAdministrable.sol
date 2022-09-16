@@ -2,8 +2,8 @@
 pragma solidity 0.8.10;
 
 interface IAdministrable {
-    function proposeAdmin(address _newOwner) external;
+    function proposeAdmin(address _newAdmin) external;
     function acceptAdmin() external;
-    function getAdministrator() external view returns (address);
-    function getPendingAdministrator() external view returns (address);
+    function getAdmin() external view returns (address);
+    function getPendingAdmin() external view returns (address);
 }

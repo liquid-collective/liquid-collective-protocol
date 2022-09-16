@@ -7,41 +7,41 @@ import "./interfaces/IAdministrable.sol";
 
 contract Administrable is IAdministrable {
     modifier onlyAdmin() {
-        if (msg.sender != LibAdministrable._getAdministrator()) {
+        if (msg.sender != LibAdministrable._getAdmin()) {
             revert Errors.Unauthorized(msg.sender);
         }
         _;
     }
 
     modifier onlyPendingAdmin() {
-        if (msg.sender != LibAdministrable._getPendingAdministrator()) {
+        if (msg.sender != LibAdministrable._getPendingAdmin()) {
             revert Errors.Unauthorized(msg.sender);
         }
         _;
     }
 
     function _setAdmin(address _admin) internal {
-        LibAdministrable._setAdministrator(_admin);
+        LibAdministrable._setAdmin(_admin);
     }
 
     function _getAdmin() internal view returns (address) {
-        return LibAdministrable._getAdministrator();
+        return LibAdministrable._getAdmin();
     }
 
-    function proposeAdmin(address _newOwner) external onlyAdmin {
-        LibAdministrable._setPendingAdministrator(_newOwner);
+    function proposeAdmin(address _newAdmin) external onlyAdmin {
+        LibAdministrable._setPendingAdmin(_newAdmin);
     }
 
     function acceptAdmin() external onlyPendingAdmin {
-        LibAdministrable._setAdministrator(LibAdministrable._getPendingAdministrator());
-        LibAdministrable._setPendingAdministrator(address(0));
+        LibAdministrable._setAdmin(LibAdministrable._getPendingAdmin());
+        LibAdministrable._setPendingAdmin(address(0));
     }
 
-    function getAdministrator() external view returns (address) {
-        return LibAdministrable._getAdministrator();
+    function getAdmin() external view returns (address) {
+        return LibAdministrable._getAdmin();
     }
 
-    function getPendingAdministrator() external view returns (address) {
-        return LibAdministrable._getPendingAdministrator();
+    function getPendingAdmin() external view returns (address) {
+        return LibAdministrable._getPendingAdmin();
     }
 }
