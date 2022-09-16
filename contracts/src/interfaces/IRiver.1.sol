@@ -8,6 +8,7 @@ import "./components/IUserDepositManager.1.sol";
 
 interface IRiverV1 is IConsensusLayerDepositManagerV1, IUserDepositManagerV1, ISharesManagerV1, IOracleManagerV1 {
     error ZeroMintedShares();
+    error Denied(address _account);
 
     event PulledELFees(uint256 amount);
 
