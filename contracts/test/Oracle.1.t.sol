@@ -136,7 +136,7 @@ contract OracleV1Tests {
         assert(oracle.isMember(newAddress) == false);
         vm.stopPrank();
         vm.startPrank(newMember);
-        oracle.editMember(newMember, newAddress);
+        oracle.setMember(newMember, newAddress);
         vm.stopPrank();
         assert(oracle.isMember(newMember) == false);
         assert(oracle.isMember(newAddress) == true);
@@ -151,7 +151,7 @@ contract OracleV1Tests {
         oracle.addMember(newMember, 1);
         assert(oracle.isMember(newMember) == true);
         assert(oracle.isMember(newAddress) == false);
-        oracle.editMember(newMember, newAddress);
+        oracle.setMember(newMember, newAddress);
         vm.stopPrank();
         assert(oracle.isMember(newMember) == false);
         assert(oracle.isMember(newAddress) == true);
@@ -168,7 +168,7 @@ contract OracleV1Tests {
         assert(oracle.isMember(newAddress) == false);
         vm.stopPrank();
         vm.expectRevert(abi.encodeWithSignature("Unauthorized(address)", address(this)));
-        oracle.editMember(newMember, newAddress);
+        oracle.setMember(newMember, newAddress);
     }
 
     function testEditMemberNotFound(uint256 newMemberSalt, uint256 newAddressSalt) public {
@@ -181,7 +181,7 @@ contract OracleV1Tests {
         assert(oracle.isMember(newMember) == true);
         assert(oracle.isMember(newAddress) == false);
         vm.expectRevert(abi.encodeWithSignature("InvalidCall()"));
-        oracle.editMember(newAddress, newAddress);
+        oracle.setMember(newAddress, newAddress);
         vm.stopPrank();
     }
 

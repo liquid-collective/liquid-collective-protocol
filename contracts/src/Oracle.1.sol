@@ -231,7 +231,7 @@ contract OracleV1 is Initializable {
         }
     }
 
-    function editMember(address _oracleMember, address _newAddress) external {
+    function setMember(address _oracleMember, address _newAddress) external {
         if (msg.sender != LibOwnable._getAdmin() && msg.sender != _oracleMember) {
             revert Errors.Unauthorized(msg.sender);
         }
