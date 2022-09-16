@@ -11,7 +11,7 @@ import "./utils/UserFactory.sol";
 
 contract AllowlistV1Sudo is AllowlistV1 {
     function sudoSetAdmin(address admin) external {
-        LibAdministrable._setAdmin(admin);
+        LibAdministrable._setAdministrator(admin);
     }
 }
 
