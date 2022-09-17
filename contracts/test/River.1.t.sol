@@ -57,9 +57,7 @@ contract RiverV1SetupOneTests is Test {
         oracleMember = makeAddr("oracleMember");
         newAllowlist = makeAddr("newAllowlist");
         operatorOne = makeAddr("operatorOne");
-        operatorOneFeeRecipient = makeAddr("operatorOneFeeRecipient");
         operatorTwo = makeAddr("operatorTwo");
-        operatorTwoFeeRecipient = makeAddr("operatorTwoFeeRecipient");
         bob = makeAddr("bob");
         joe = makeAddr("joe");
 
@@ -95,8 +93,8 @@ contract RiverV1SetupOneTests is Test {
 
         oracle.addMember(oracleMember);
 
-        operatorsRegistry.addOperator(operatorOneName, operatorOne, operatorOneFeeRecipient);
-        operatorsRegistry.addOperator(operatorTwoName, operatorTwo, operatorTwoFeeRecipient);
+        operatorsRegistry.addOperator(operatorOneName, operatorOne);
+        operatorsRegistry.addOperator(operatorTwoName, operatorTwo);
 
         (int256 _operatorOneIndex,) = operatorsRegistry.getOperatorDetails(operatorOneName);
         assert(_operatorOneIndex >= 0);

@@ -40,23 +40,6 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable {
         _;
     }
 
-    /// @notice Prevents anyone except the admin or the given operator fee recipient to make the call. Also checks if operator is active
-    /// @param _index The name identifying the operator
-    modifier operatorFeeRecipientOrAdmin(uint256 _index) {
-        if (msg.sender == LibOwnable._getAdmin()) {
-            _;
-            return;
-        }
-        Operators.Operator storage operator = Operators.getByIndex(_index);
-        if (!operator.active) {
-            revert InactiveOperator(_index);
-        }
-        if (msg.sender != operator.feeRecipient) {
-            revert Errors.Unauthorized(msg.sender);
-        }
-        _;
-    }
-
     /// @notice Prevents anyone except the admin or the given operator to make the call. Also checks if operator is active
     /// @param _index The name identifying the operator
     modifier operatorOrAdmin(uint256 _index) {
@@ -139,8 +122,7 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable {
     /// @dev Only callable by the administrator
     /// @param _name The name identifying the operator
     /// @param _operator The address representing the operator, receiving the rewards
-    /// @param _feeRecipient The address where the rewards are sent
-    function addOperator(string calldata _name, address _operator, address _feeRecipient) external onlyAdmin {
+    function addOperator(string calldata _name, address _operator) external onlyAdmin {
         if (Operators.exists(_name)) {
             revert OperatorAlreadyExists(_name);
         }
@@ -148,7 +130,6 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable {
         Operators.Operator memory newOperator = Operators.Operator({
             active: true,
             operator: _operator,
-            feeRecipient: _feeRecipient,
             name: _name,
             limit: 0,
             funded: 0,
@@ -158,7 +139,7 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable {
 
         uint256 operatorIndex = Operators.set(_name, newOperator);
 
-        emit AddedOperator(operatorIndex, newOperator.name, newOperator.operator, newOperator.feeRecipient);
+        emit AddedOperator(operatorIndex, newOperator.name, newOperator.operator);
     }
 
     /// @notice Changes the operator address of an operator
@@ -171,21 +152,6 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable {
         operator.operator = _newOperatorAddress;
 
         emit SetOperatorAddress(_index, _newOperatorAddress);
-    }
-
-    /// @notice Changes the operator fee recipient address
-    /// @dev Only callable by the administrator or the previous operator fee recipient address
-    /// @param _index The operator index
-    /// @param _newOperatorFeeRecipientAddress The new fee recipient address of the operator
-    function setOperatorFeeRecipientAddress(uint256 _index, address _newOperatorFeeRecipientAddress)
-        external
-        operatorFeeRecipientOrAdmin(_index)
-    {
-        Operators.Operator storage operator = Operators.getByIndex(_index);
-
-        operator.feeRecipient = _newOperatorFeeRecipientAddress;
-
-        emit SetOperatorFeeRecipientAddress(_index, _newOperatorFeeRecipientAddress);
     }
 
     /// @notice Changes the operator name
