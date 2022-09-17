@@ -283,6 +283,7 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable {
         }
 
         uint256 keyToRemoveCount = _indexes.length;
+        bool limitEqualsKeyCount = operator.keys == operator.limit;
 
         for (uint256 idx = 0; idx < keyToRemoveCount;) {
             uint256 keyIndex = _indexes[idx];
@@ -310,10 +311,9 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable {
                 ++idx;
             }
         }
-        uint256 limit = operator.limit;
-        if (operator.keys + keyToRemoveCount == limit) {
+        if (limitEqualsKeyCount) {
             operator.limit = operator.keys;
-        } else if (_indexes[keyToRemoveCount - 1] < limit) {
+        } else if (_indexes[keyToRemoveCount - 1] < operator.limit) {
             operator.limit = _indexes[keyToRemoveCount - 1];
         }
     }
