@@ -30,11 +30,13 @@ contract Administrable is IAdministrable {
 
     function proposeAdmin(address _newAdmin) external onlyAdmin {
         LibAdministrable._setPendingAdmin(_newAdmin);
+        emit ProposedAdmin(_newAdmin);
     }
 
     function acceptAdmin() external onlyPendingAdmin {
         LibAdministrable._setAdmin(LibAdministrable._getPendingAdmin());
         LibAdministrable._setPendingAdmin(address(0));
+        emit AcceptedAdmin(msg.sender);
     }
 
     function getAdmin() external view returns (address) {

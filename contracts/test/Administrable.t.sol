@@ -15,6 +15,9 @@ contract AdministrableTest is Test {
     WithAdmin internal wa;
     address internal admin;
 
+    event ProposedAdmin(address newPendingAdmin);
+    event AcceptedAdmin(address newAdmin);
+
     function setUp() external {
         admin = makeAddr("admin");
         wa = new WithAdmin(admin);
@@ -29,6 +32,8 @@ contract AdministrableTest is Test {
         assertEq(wa.getPendingAdmin(), address(0));
         address newAdmin = makeAddr("newAdmin");
         vm.prank(admin);
+        vm.expectEmit(true, true, true, true);
+        emit ProposedAdmin(newAdmin);
         wa.proposeAdmin(newAdmin);
         assertEq(wa.getAdmin(), admin);
         assertEq(wa.getPendingAdmin(), newAdmin);
@@ -49,6 +54,8 @@ contract AdministrableTest is Test {
         assertEq(wa.getAdmin(), admin);
         assertEq(wa.getPendingAdmin(), newAdmin);
         vm.prank(newAdmin);
+        vm.expectEmit(true, true, true, true);
+        emit AcceptedAdmin(newAdmin);
         wa.acceptAdmin();
         assertEq(wa.getAdmin(), newAdmin);
         assertEq(wa.getPendingAdmin(), address(0));
