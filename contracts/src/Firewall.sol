@@ -56,7 +56,7 @@ contract Firewall is IFirewall, Administrable {
         executor = newExecutor;
     }
 
-    /// @dev make a function either only callable by the governor, or callable by gov and executor.
+    /// @dev make a function either only callable by the admin, or callable by admin and executor.
     function allowExecutor(bytes4 functionSelector, bool executorCanCall_) external onlyAdmin {
         executorCanCall[functionSelector] = executorCanCall_;
     }
