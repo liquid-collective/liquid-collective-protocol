@@ -3,7 +3,6 @@
 pragma solidity 0.8.10;
 
 import "../src/OperatorsRegistry.1.sol";
-import "../src/state/shared/AdministratorAddress.sol";
 import "./utils/UserFactory.sol";
 import "forge-std/Test.sol";
 
