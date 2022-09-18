@@ -25,7 +25,7 @@ abstract contract OracleManagerV1 is IOracleManagerV1 {
     function _getRiverAdmin() internal view virtual returns (address);
 
     /// @notice Prevents unauthorized calls
-    modifier _onlyAdmin() virtual {
+    modifier _onlyAdmin() {
         if (msg.sender != _getRiverAdmin()) {
             revert Errors.Unauthorized(msg.sender);
         }
