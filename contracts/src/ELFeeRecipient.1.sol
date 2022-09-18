@@ -16,7 +16,6 @@ contract ELFeeRecipientV1 is Initializable, IELFeeRecipientV1 {
     /// @notice Initialize the fee recipient with the required arguments
     /// @param _riverAddress Address of River
     function initELFeeRecipientV1(address _riverAddress) external init(0) {
-        LibSanitize._notZeroAddress(_riverAddress);
         RiverAddress.set(_riverAddress);
     }
 

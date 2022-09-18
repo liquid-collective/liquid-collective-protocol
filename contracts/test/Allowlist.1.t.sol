@@ -46,6 +46,15 @@ contract AllowlistV1Tests {
         assert(allowlist.isAllowed(user, TEST_ONE_MASK) == true);
     }
 
+    function testSetAllowlistStatusZeroAddress() public {
+        vm.startPrank(allower);
+        address[] memory allowees = new address[](1);
+        allowees[0] = address(0);
+        uint256[] memory statuses = AllowlistHelper.batchAllowees(allowees.length, TEST_ONE_MASK);
+        vm.expectRevert(abi.encodeWithSignature("InvalidZeroAddress()"));
+        allowlist.allow(allowees, statuses);
+    }
+
     function testSetAllowlistStatusComplicatedMask(uint256 userOneSalt, uint256 userTwoSalt) public {
         address userOne = uf._new(userOneSalt);
         address userTwo = uf._new(userTwoSalt);

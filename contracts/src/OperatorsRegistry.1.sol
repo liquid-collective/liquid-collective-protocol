@@ -22,8 +22,6 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable {
     /// @param _admin Admin in charge of managing operators
     /// @param _river Address of River system
     function initOperatorsRegistryV1(address _admin, address _river) external init(0) {
-        LibSanitize._notZeroAddress(_admin);
-        LibSanitize._notZeroAddress(_river);
         LibOwnable._setAdmin(_admin);
         RiverAddress.set(_river);
     }
@@ -125,9 +123,8 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable {
     /// @dev Only callable by the administrator
     /// @param _name The name identifying the operator
     /// @param _operator The address representing the operator, receiving the rewards
+    /// @param _feeRecipient The address where the rewards are sent
     function addOperator(string calldata _name, address _operator) external onlyAdmin {
-        LibSanitize._notZeroAddress(_operator);
-        LibSanitize._notEmptyString(_name);
         if (Operators.exists(_name)) {
             revert OperatorAlreadyExists(_name);
         }
@@ -166,7 +163,6 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable {
     /// @param _index The operator index
     /// @param _newName The new operator name
     function setOperatorName(uint256 _index, string calldata _newName) external operatorOrAdmin(_index) {
-        LibSanitize._notEmptyString(_newName);
         if (Operators.exists(_newName) == true) {
             revert OperatorAlreadyExists(_newName);
         }

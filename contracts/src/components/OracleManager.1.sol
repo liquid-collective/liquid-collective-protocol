@@ -3,7 +3,6 @@ pragma solidity 0.8.10;
 
 import "../libraries/Errors.sol";
 import "../libraries/LibOwnable.sol";
-import "../libraries/LibSanitize.sol";
 
 import "../state/river/OracleAddress.sol";
 import "../state/river/LastOracleRoundId.sol";
@@ -76,7 +75,6 @@ abstract contract OracleManagerV1 is IOracleManagerV1 {
     /// @notice Set Oracle address
     /// @param _oracleAddress Address of the oracle
     function setOracle(address _oracleAddress) external onlyAdmin {
-        LibSanitize._notZeroAddress(_oracleAddress);
         OracleAddress.set(_oracleAddress);
     }
 

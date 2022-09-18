@@ -7,7 +7,6 @@ import "./interfaces/IRiver.1.sol";
 import "./interfaces/IELFeeRecipient.1.sol";
 
 import "./libraries/LibOwnable.sol";
-import "./libraries/LibSanitize.sol";
 
 import "./components/ConsensusLayerDepositManager.1.sol";
 import "./components/UserDepositManager.1.sol";
@@ -68,16 +67,6 @@ contract RiverV1 is
         external
         init(0)
     {
-        LibSanitize._notZeroAddress(_depositContractAddress);
-        LibSanitize._notZeroAddress(_oracleAddress);
-        LibSanitize._notZeroAddress(_systemAdministratorAddress);
-        LibSanitize._notZeroAddress(_allowlistAddress);
-        LibSanitize._notZeroAddress(_operatorRegistryAddress);
-        LibSanitize._notZeroAddress(_treasuryAddress);
-        LibSanitize._validFee(_globalFee);
-        if (_withdrawalCredentials == bytes32(0)) {
-            revert Errors.InvalidArgument();
-        }
         LibOwnable._setAdmin(_systemAdministratorAddress);
         TreasuryAddress.set(_treasuryAddress);
         GlobalFee.set(_globalFee);
@@ -94,7 +83,6 @@ contract RiverV1 is
     /// @notice Changes the global fee parameter
     /// @param newFee New fee value
     function setGlobalFee(uint256 newFee) external onlyAdmin {
-        LibSanitize._validFee(newFee);
         GlobalFee.set(newFee);
     }
 
@@ -106,7 +94,6 @@ contract RiverV1 is
     /// @notice Changes the allowlist address
     /// @param _newAllowlist New address for the allowlist
     function setAllowlist(address _newAllowlist) external onlyAdmin {
-        LibSanitize._notZeroAddress(_newAllowlist);
         AllowlistAddress.set(_newAllowlist);
     }
 
@@ -118,7 +105,6 @@ contract RiverV1 is
     /// @notice Changes the treasury address
     /// @param _newTreasury New address for the treasury
     function setTreasury(address _newTreasury) external onlyAdmin {
-        LibSanitize._notZeroAddress(_newTreasury);
         TreasuryAddress.set(_newTreasury);
     }
 
@@ -130,7 +116,6 @@ contract RiverV1 is
     /// @notice Changes the admin but waits for new admin approval
     /// @param _newAdmin New address for the admin
     function transferOwnership(address _newAdmin) external onlyAdmin {
-        LibSanitize._notZeroAddress(_newAdmin);
         LibOwnable._setPendingAdmin(_newAdmin);
     }
 

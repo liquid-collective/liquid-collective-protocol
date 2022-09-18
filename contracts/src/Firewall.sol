@@ -61,17 +61,13 @@ contract Firewall is IFirewall {
 
     /// @dev Change the governor
     function setGovernor(address newGovernor) external ifGovernor {
-        if (newGovernor == address(0)) {
-            revert Errors.InvalidZeroAddress();
-        }
+        LibSanitize._notZeroAddress(newGovernor);
         governor = newGovernor;
     }
 
     /// @dev Change the executor
     function setExecutor(address newExecutor) external ifGovernorOrExecutor {
-        if (newExecutor == address(0)) {
-            revert Errors.InvalidZeroAddress();
-        }
+        LibSanitize._notZeroAddress(newExecutor);
         executor = newExecutor;
     }
 

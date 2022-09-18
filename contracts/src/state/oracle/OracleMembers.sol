@@ -1,6 +1,8 @@
 //SPDX-License-Identifier: BUSL-1.1
 pragma solidity 0.8.10;
 
+import "../../libraries/LibSanitize.sol";
+
 library OracleMembers {
     bytes32 internal constant ORACLE_MEMBERS_SLOT = bytes32(uint256(keccak256("river.state.oracleMembers")) - 1);
 
@@ -21,6 +23,8 @@ library OracleMembers {
     }
 
     function push(address newOracleMember) internal {
+        LibSanitize._notZeroAddress(newOracleMember);
+
         bytes32 slot = ORACLE_MEMBERS_SLOT;
 
         Slot storage r;

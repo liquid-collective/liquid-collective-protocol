@@ -21,7 +21,6 @@ contract AllowlistV1 is IAllowlistV1, Initializable {
     /// @param _admin Address of the Allowlist administrator
     /// @param _allower Address of the allower
     function initAllowlistV1(address _admin, address _allower) external init(0) {
-        LibSanitize._notZeroAddress(_admin);
         LibOwnable._setAdmin(_admin);
         AllowerAddress.set(_allower);
     }
@@ -62,9 +61,7 @@ contract AllowlistV1 is IAllowlistV1, Initializable {
         }
 
         for (uint256 i = 0; i < _accounts.length;) {
-            if (_accounts[i] == address(0)) {
-                revert Errors.InvalidZeroAddress();
-            }
+            LibSanitize._notZeroAddress(_accounts[i]);
             Allowlist.set(_accounts[i], _statuses[i]);
             unchecked {
                 ++i;

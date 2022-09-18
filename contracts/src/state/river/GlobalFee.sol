@@ -1,6 +1,7 @@
 //SPDX-License-Identifier: BUSL-1.1
 pragma solidity 0.8.10;
 
+import "../../libraries/LibSanitize.sol";
 import "../../libraries/UnstructuredStorage.sol";
 
 library GlobalFee {
@@ -11,6 +12,7 @@ library GlobalFee {
     }
 
     function set(uint256 newValue) internal {
+        LibSanitize._validFee(newValue);
         UnstructuredStorage.setStorageUint256(GLOBAL_FEE_SLOT, newValue);
     }
 }

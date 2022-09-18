@@ -225,12 +225,25 @@ contract ConsensusLayerDepositManagerV1ErrorTests {
         vm.expectRevert(abi.encodeWithSignature("InvalidSignatureCount()"));
         depositManager.depositToConsensusLayer(5);
     }
+}
+
+contract ConsensusLayerDepositManagerV1WithdrawalCredentialError {
+    Vm internal vm = Vm(0x7109709ECfa91a80626fF3989D68f67F5b1DD12D);
+
+    bytes32 internal withdrawalCredentials = bytes32(uint256(1));
+
+    ConsensusLayerDepositManagerV1 internal depositManager;
+    IDepositContract internal depositContract;
+
+    function setUp() public {
+        depositContract = new DepositContractMock();
+
+        depositManager = new ConsensusLayerDepositManagerV1ControllableValidatorKeyRequest();
+    }
 
     function testInvalidWithdrawalCredential() public {
         vm.deal(address(depositManager), 32 ether);
         ConsensusLayerDepositManagerV1ControllableValidatorKeyRequest(address(depositManager)).setScenario(0);
-        ConsensusLayerDepositManagerV1ControllableValidatorKeyRequest(address(depositManager))
-            .sudoSetWithdrawalCredentials(bytes32(0));
         vm.expectRevert(abi.encodeWithSignature("InvalidWithdrawalCredentials()"));
         depositManager.depositToConsensusLayer(5);
         ConsensusLayerDepositManagerV1ExposeInitializer(address(depositManager)).sudoSetWithdrawalCredentials(

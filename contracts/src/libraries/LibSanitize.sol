@@ -10,7 +10,7 @@ library LibSanitize {
         }
     }
 
-    function _notEmptyString(string calldata _string) internal pure {
+    function _notEmptyString(string memory _string) internal pure {
         if (bytes(_string).length == 0) {
             revert Errors.InvalidEmptyString();
         }

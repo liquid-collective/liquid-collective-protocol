@@ -4,7 +4,6 @@ pragma solidity 0.8.10;
 import "./Initializable.sol";
 import "./libraries/Errors.sol";
 import "./libraries/LibOwnable.sol";
-import "./libraries/LibSanitize.sol";
 import "./interfaces/IRiver.1.sol";
 
 import "./state/shared/AdministratorAddress.sol";
@@ -64,8 +63,6 @@ contract OracleV1 is Initializable {
         external
         init(0)
     {
-        LibSanitize._notZeroAddress(_riverContractAddress);
-        LibSanitize._notZeroAddress(_administratorAddress);
         LibOwnable._setAdmin(_administratorAddress);
         RiverAddress.set(_riverContractAddress);
         BeaconSpec.set(
@@ -206,7 +203,6 @@ contract OracleV1 is Initializable {
     /// @dev Only callable by the adminstrator
     /// @param _newOracleMember Address of the new member
     function addMember(address _newOracleMember) external onlyAdmin {
-        LibSanitize._notZeroAddress(_newOracleMember);
         int256 memberIdx = OracleMembers.indexOf(_newOracleMember);
         if (memberIdx >= 0) {
             revert Errors.InvalidCall();
