@@ -220,7 +220,7 @@ contract OracleV1 is Initializable, Administrable {
 
     function setMember(address _oracleMember, address _newAddress) external {
         LibSanitize._notZeroAddress(_newAddress);
-        if (msg.sender != LibAdministrable._getAdmin()) {
+        if (msg.sender != _getAdmin()) {
             revert Errors.Unauthorized(msg.sender);
         }
         if (OracleMembers.indexOf(_newAddress) >= 0) {
