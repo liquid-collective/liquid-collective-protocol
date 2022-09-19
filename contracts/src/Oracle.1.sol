@@ -225,10 +225,7 @@ contract OracleV1 is Initializable {
         OracleMembers.deleteItem(uint256(memberIdx));
         ReportsPositions.clear();
         ReportsVariants.clear();
-        uint256 quorum = Quorum.get();
-        if (quorum > OracleMembers.get().length) {
-            Quorum.set(quorum - 1);
-        }
+        Quorum.set(_newQuorum);
     }
 
     function setMember(address _oracleMember, address _newAddress) external {
