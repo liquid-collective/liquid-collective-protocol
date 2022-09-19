@@ -306,13 +306,13 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
     }
 
     /// @notice Retrieve validator keys based on operator statuses
-    /// @param _requestedAmount Max amount of keys requested
-    function pickNextValidators(uint256 _requestedAmount)
+    /// @param _count Max amount of keys requested
+    function pickNextValidators(uint256 _count)
         external
         onlyRiver
         returns (bytes[] memory publicKeys, bytes[] memory signatures)
     {
-        return _pickNextValidatorsFromActiveOperators(_requestedAmount);
+        return _pickNextValidatorsFromActiveOperators(_count);
     }
 
     /// @notice Internal utility to concatenate bytes arrays together
@@ -347,7 +347,7 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
     }
 
     /// @notice Handler called whenever a deposit to the consensus layer is made. Should retrieve _requestedAmount or lower keys
-    /// @param _count Amount of keys required. Contract is expected to send _requestedAmount or lower.
+    /// @param _count Amount of keys required. Contract is expected to send _count or lower.
     function _pickNextValidatorsFromActiveOperators(uint256 _count)
         internal
         returns (bytes[] memory publicKeys, bytes[] memory signatures)

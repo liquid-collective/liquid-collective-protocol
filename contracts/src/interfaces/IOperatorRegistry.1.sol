@@ -44,7 +44,7 @@ interface IOperatorsRegistryV1 {
         external
         view
         returns (bytes memory publicKey, bytes memory signature, bool funded);
-    function pickNextValidators(uint256 _requestedAmount)
+    function pickNextValidators(uint256 _count)
         external
         returns (bytes[] memory publicKeys, bytes[] memory signatures);
 }
