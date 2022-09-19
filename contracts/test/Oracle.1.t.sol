@@ -31,6 +31,8 @@ contract OracleV1Tests {
     uint256 internal constant UPPER_BOUND = 1000;
     uint256 internal constant LOWER_BOUND = 500;
 
+    event QuorumChanged(uint256 _newQuorum);
+
     function setUp() public {
         oracleInput = IRiverV1(payable(address(new RiverMock())));
         oracle = new OracleV1();
@@ -70,10 +72,34 @@ contract OracleV1Tests {
         assert(oracle.getFrameFirstEpochId(epochId) == frameFirst);
     }
 
+    function testSetQuorum(uint256 newMemberSalt, uint256 anotherMemberSalt) public {
+        address newMember = uf._new(newMemberSalt);
+        address anotherMember = uf._new(anotherMemberSalt);
+        vm.startPrank(admin);
+        oracle.addMember(newMember, 1);
+        oracle.addMember(anotherMember, 2);
+        vm.expectEmit(true, true, true, true);
+        emit QuorumChanged(1);
+        oracle.setQuorum(1);
+    }
+
+    function testSetQuorumUnauthorized(uint256 newMemberSalt, uint256 anotherMemberSalt) public {
+        address newMember = uf._new(newMemberSalt);
+        address anotherMember = uf._new(anotherMemberSalt);
+        vm.startPrank(admin);
+        oracle.addMember(newMember, 1);
+        oracle.addMember(anotherMember, 2);
+        vm.stopPrank();
+        vm.expectRevert(abi.encodeWithSignature("Unauthorized(address)", address(this)));
+        oracle.setQuorum(1);
+    }
+
     function testAddMember(uint256 newMemberSalt) public {
         address newMember = uf._new(newMemberSalt);
         vm.startPrank(admin);
         assert(oracle.isMember(newMember) == false);
+        vm.expectEmit(true, true, true, true);
+        emit QuorumChanged(1);
         oracle.addMember(newMember, 1);
         assert(oracle.isMember(newMember) == true);
     }
@@ -99,6 +125,8 @@ contract OracleV1Tests {
         assert(oracle.isMember(newMember) == false);
         oracle.addMember(newMember, 1);
         assert(oracle.isMember(newMember) == true);
+        vm.expectEmit(true, true, true, true);
+        emit QuorumChanged(0);
         oracle.removeMember(newMember, 0);
         assert(oracle.isMember(newMember) == false);
     }
