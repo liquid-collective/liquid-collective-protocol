@@ -102,7 +102,7 @@ contract WLSETHV1 is IWLSETHV1, Initializable, ReentrancyGuard {
         returns (bool)
     {
         if (_to == address(0)) {
-            revert UnauthorizedTransfer(msg.sender, address(0));
+            revert UnauthorizedTransfer(_from, address(0));
         }
         _spendAllowance(_from, _value);
         return _transfer(_from, _to, _value);

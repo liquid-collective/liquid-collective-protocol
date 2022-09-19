@@ -413,6 +413,27 @@ contract WLSETHV1Tests {
         }
     }
 
+    function testTransferFromToZeroAddress(uint256 _fromSalt, uint256 _approvedSalt, uint256 _recipientSalt, uint32 _sum) external {
+        address _from = uf._new(_fromSalt);
+        address _approved = uf._new(_approvedSalt);
+        address _recipient = uf._new(_recipientSalt);
+        if (_sum > 0) {
+            _mint(_from, _sum);
+            vm.startPrank(_from);
+            wlseth.approve(_approved, 100 ether);
+            vm.stopPrank();
+            assert(wlseth.allowance(_from, _approved) == 100 ether);
+            uint256 guyBalance = wlseth.balanceOf(_from);
+            uint256 recipientBalance = wlseth.balanceOf(_recipient);
+            assert(guyBalance == 100 ether);
+            assert(recipientBalance == 0);
+            vm.startPrank(_approved);
+            vm.expectRevert(abi.encodeWithSignature("UnauthorizedTransfer(address,address)", _from, address(0)));
+            wlseth.transferFrom(_from, address(0), 100 ether);
+            vm.stopPrank();
+        }
+    }
+
     function testTransferFromUnlimitedAllowance(
         uint256 _fromSalt,
         uint256 _approvedSalt,

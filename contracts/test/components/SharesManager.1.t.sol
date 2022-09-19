@@ -363,6 +363,24 @@ contract SharesManagerV1Tests {
         }
     }
 
+    function testApproveAndTransferZeroAddress(uint256 _userOneSalt, uint256 _userTwoSalt, uint128 _allowance) public {
+        address _userOne = uf._new(_userOneSalt);
+        address _userTwo = uf._new(_userTwoSalt);
+        SharesManagerPublicDeal(payable(address(sharesManager))).deal(_userOne, _allowance);
+        if (_allowance > 0) {
+            vm.prank(_userOne);
+            sharesManager.approve(_userTwo, _allowance);
+            vm.prank(_userTwo);
+            vm.expectRevert(
+                abi.encodeWithSignature(
+                    "UnauthorizedTransfer(address,address)", _userOne, address(0)
+                )
+            );
+            sharesManager.transferFrom(_userOne, address(0), _allowance);
+            vm.stopPrank();
+        }
+    }
+
     function testIncreaseAllowanceAndTransferFrom(uint256 _userOneSalt, uint256 _userTwoSalt, uint128 _allowance)
         public
     {
