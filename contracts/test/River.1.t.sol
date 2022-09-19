@@ -121,7 +121,7 @@ contract RiverV1SetupOneTests is Test, BytesGenerator {
         operatorLimits[0] = 100;
         operatorLimits[1] = 100;
 
-        operatorsRegistry.setOperatorLimits(operatorIndexes, operatorLimits);
+        operatorsRegistry.setOperatorLimits(operatorIndexes, operatorLimits, block.number);
         vm.stopPrank();
     }
 

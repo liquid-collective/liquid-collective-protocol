@@ -71,7 +71,8 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
             limit: 0,
             funded: 0,
             keys: 0,
-            stopped: 0
+            stopped: 0,
+            lastEdit: block.number
         });
 
         uint256 operatorIndex = Operators.push(newOperator) - 1;
@@ -140,7 +141,11 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
     /// @dev Each limit value is applied to the operator index at the same index in the _indexes array.
     /// @param _operatorIndexes The operator indexes
     /// @param _newLimits The new staking limit of the operators
-    function setOperatorLimits(uint256[] calldata _operatorIndexes, uint256[] calldata _newLimits) external onlyAdmin {
+    function setOperatorLimits(
+        uint256[] calldata _operatorIndexes,
+        uint256[] calldata _newLimits,
+        uint256 _snapshotBlock
+    ) external onlyAdmin {
         if (_operatorIndexes.length != _newLimits.length) {
             revert InvalidArrayLengths();
         }
@@ -157,9 +162,12 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
                 revert OperatorLimitTooLow(_newLimits[idx], operator.funded);
             }
 
-            operator.limit = _newLimits[idx];
-
-            emit SetOperatorLimit(_operatorIndexes[idx], operator.limit);
+            if (_snapshotBlock < operator.lastEdit) {
+                emit LastEditAfterSnapshot(_operatorIndexes[idx], operator.lastEdit, _snapshotBlock);
+            } else {
+                operator.limit = _newLimits[idx];
+                emit SetOperatorLimit(_operatorIndexes[idx], operator.limit);
+            }
 
             unchecked {
                 ++idx;
@@ -204,6 +212,7 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
         }
 
         operator.keys += _keyCount;
+        operator.lastEdit = block.number;
 
         emit AddedValidatorKeys(_index, _publicKeysAndSignatures);
     }
@@ -264,6 +273,8 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
         } else if (lastIndex < operator.limit) {
             operator.limit = lastIndex;
         }
+
+        operator.lastEdit = block.number;
     }
 
     /// @notice Get operator details

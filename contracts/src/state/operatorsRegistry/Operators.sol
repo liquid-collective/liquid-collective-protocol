@@ -16,6 +16,7 @@ library Operators {
         uint256 funded;
         uint256 keys;
         uint256 stopped;
+        uint256 lastEdit;
     }
 
     struct CachedOperator {
@@ -26,6 +27,7 @@ library Operators {
         uint256 funded;
         uint256 keys;
         uint256 stopped;
+        uint256 lastEdit;
         uint256 index;
         uint256 picked;
     }
@@ -146,6 +148,7 @@ library Operators {
                     funded: op.funded,
                     keys: op.keys,
                     stopped: op.stopped,
+                    lastEdit: op.lastEdit,
                     index: idx,
                     picked: 0
                 });

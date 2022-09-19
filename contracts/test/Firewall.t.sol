@@ -272,7 +272,7 @@ contract FirewallTests is BytesGenerator, Test {
         operatorIndexes[0] = operatorBobIndex;
         uint256[] memory operatorLimits = new uint256[](1);
         operatorLimits[0] = 10;
-        firewalledOperatorsRegistry.setOperatorLimits(operatorIndexes, operatorLimits);
+        firewalledOperatorsRegistry.setOperatorLimits(operatorIndexes, operatorLimits, block.number);
         assert(operatorsRegistry.getOperator(operatorBobIndex).limit == 10);
         vm.stopPrank();
     }
@@ -290,7 +290,7 @@ contract FirewallTests is BytesGenerator, Test {
         operatorIndexes[0] = operatorBobIndex;
         uint256[] memory operatorLimits = new uint256[](1);
         operatorLimits[0] = 10;
-        firewalledOperatorsRegistry.setOperatorLimits(operatorIndexes, operatorLimits);
+        firewalledOperatorsRegistry.setOperatorLimits(operatorIndexes, operatorLimits, block.number);
         assert(operatorsRegistry.getOperator(operatorBobIndex).limit == 10);
         vm.stopPrank();
     }
@@ -303,7 +303,7 @@ contract FirewallTests is BytesGenerator, Test {
         operatorIndexes[0] = operatorBobIndex;
         uint256[] memory operatorLimits = new uint256[](1);
         operatorLimits[0] = 10;
-        firewalledOperatorsRegistry.setOperatorLimits(operatorIndexes, operatorLimits);
+        firewalledOperatorsRegistry.setOperatorLimits(operatorIndexes, operatorLimits, block.number);
         vm.stopPrank();
     }
 
