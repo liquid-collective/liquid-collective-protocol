@@ -37,6 +37,7 @@ contract OracleV1 is Initializable {
     error BeaconBalanceDecreaseOutOfBounds(
         uint256 _prevTotalEth, uint256 _postTotalEth, uint256 _timeElapsed, uint256 _relativeLowerBound
     );
+    error AddressAlreadyInUse(address _newAddress);
 
     /// @notice Received ETH input has only 9 decimals
     uint128 internal constant DENOMINATION_OFFSET = 1e9;
@@ -200,15 +201,13 @@ contract OracleV1 is Initializable {
     /// @dev Only callable by the adminstrator
     /// @param _newOracleMember Address of the new member
     function addMember(address _newOracleMember, uint256 _newQuorum) external onlyAdmin {
-        if (_newQuorum > OracleMembers.get().length + 1) {
-            revert Errors.InvalidArgument();
-        }
         int256 memberIdx = OracleMembers.indexOf(_newOracleMember);
         if (memberIdx >= 0) {
             revert Errors.InvalidCall();
         }
         OracleMembers.push(_newOracleMember);
-        Quorum.set(_newQuorum);
+        uint256 previousQuorum = Quorum.get();
+        _setQuorum(_newQuorum, previousQuorum);
     }
 
     /// @notice Removes an address from the oracle members.
@@ -219,16 +218,21 @@ contract OracleV1 is Initializable {
         if (memberIdx < 0) {
             revert Errors.InvalidCall();
         }
-        if (_newQuorum > OracleMembers.get().length - 1) {
-            revert Errors.InvalidArgument();
-        }
         OracleMembers.deleteItem(uint256(memberIdx));
         ReportsPositions.clear();
         ReportsVariants.clear();
-        Quorum.set(_newQuorum);
+        uint256 previousQuorum = Quorum.get();
+        _setQuorum(_newQuorum, previousQuorum);
     }
 
     function setMember(address _oracleMember, address _newAddress) external {
+        // TODO use LibSanitize
+        if (_newAddress == address(0)) {
+            revert Errors.InvalidZeroAddress();
+        }
+        if (OracleMembers.indexOf(_newAddress) >= 0) {
+            revert AddressAlreadyInUse(_newAddress);
+        }
         if (msg.sender != LibOwnable._getAdmin() && msg.sender != _oracleMember) {
             revert Errors.Unauthorized(msg.sender);
         }
@@ -276,16 +280,20 @@ contract OracleV1 is Initializable {
     /// @dev Only callable by the adminstrator
     /// @param _newQuorum New quorum parameter
     function setQuorum(uint256 _newQuorum) external onlyAdmin {
-        if (_newQuorum == 0 || _newQuorum > OracleMembers.get().length) {
+        uint256 previousQuorum = Quorum.get();
+        if (previousQuorum == _newQuorum) {
             revert Errors.InvalidArgument();
         }
-        uint256 previousQuorum = Quorum.get();
-        if (_newQuorum == previousQuorum) {
-            revert Errors.InvalidCall();
+        _setQuorum(_newQuorum, previousQuorum);
+    }
+
+    // TODO write natspec
+    function _setQuorum(uint256 _newQuorum, uint256 _previousQuorum) internal {
+        uint256 memberCount = OracleMembers.get().length;
+        if ((_newQuorum == 0 && memberCount > 0)  || _newQuorum > memberCount) {
+            revert Errors.InvalidArgument();
         }
-        Quorum.set(_newQuorum);
-        emit QuorumChanged(_newQuorum);
-        if (previousQuorum > _newQuorum) {
+        if (_previousQuorum > _newQuorum) {
             (bool isQuorum, uint256 report) = _getQuorumReport(_newQuorum);
             if (isQuorum) {
                 (uint64 beaconBalance, uint32 beaconValidators) = _decodeReport(report);
@@ -297,6 +305,8 @@ contract OracleV1 is Initializable {
                 );
             }
         }
+        Quorum.set(_newQuorum);
+        emit QuorumChanged(_newQuorum);
     }
 
     /// @notice Report beacon chain data

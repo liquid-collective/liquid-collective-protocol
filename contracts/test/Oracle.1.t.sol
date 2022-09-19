@@ -223,7 +223,7 @@ contract OracleV1Tests {
         address oracleMember = uf._new(oracleMemberSalt);
         vm.startPrank(admin);
         oracle.addMember(oracleMember, 1);
-        vm.expectRevert(abi.encodeWithSignature("InvalidCall()"));
+        vm.expectRevert(abi.encodeWithSignature("InvalidArgument()"));
         oracle.setQuorum(1);
         vm.stopPrank();
     }
