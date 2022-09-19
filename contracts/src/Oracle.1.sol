@@ -233,7 +233,7 @@ contract OracleV1 is Initializable {
         if (OracleMembers.indexOf(_newAddress) >= 0) {
             revert AddressAlreadyInUse(_newAddress);
         }
-        if (msg.sender != LibOwnable._getAdmin() && msg.sender != _oracleMember) {
+        if (msg.sender != LibOwnable._getAdmin()) {
             revert Errors.Unauthorized(msg.sender);
         }
         int256 memberIdx = OracleMembers.indexOf(_oracleMember);

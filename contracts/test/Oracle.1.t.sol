@@ -184,7 +184,7 @@ contract OracleV1Tests {
         assert(oracle.isMember(newMember) == true);
         assert(oracle.isMember(newAddress) == false);
         vm.stopPrank();
-        vm.startPrank(newMember);
+        vm.startPrank(admin);
         oracle.setMember(newMember, newAddress);
         vm.stopPrank();
         assert(oracle.isMember(newMember) == false);
@@ -196,7 +196,7 @@ contract OracleV1Tests {
         vm.startPrank(admin);
         oracle.addMember(newMember, 1);
         vm.stopPrank();
-        vm.startPrank(newMember);
+        vm.startPrank(admin);
         vm.expectRevert(abi.encodeWithSignature("InvalidZeroAddress()"));
         oracle.setMember(newMember, address(0));
         vm.stopPrank();
@@ -213,21 +213,6 @@ contract OracleV1Tests {
         vm.stopPrank();
     }
 
-    function testEditMemberAsAdmin(uint256 newMemberSalt, uint256 newAddressSalt) public {
-        address newMember = uf._new(newMemberSalt);
-        address newAddress = uf._new(newAddressSalt);
-        vm.startPrank(admin);
-        assert(oracle.isMember(newMember) == false);
-        assert(oracle.isMember(newAddress) == false);
-        oracle.addMember(newMember, 1);
-        assert(oracle.isMember(newMember) == true);
-        assert(oracle.isMember(newAddress) == false);
-        oracle.setMember(newMember, newAddress);
-        vm.stopPrank();
-        assert(oracle.isMember(newMember) == false);
-        assert(oracle.isMember(newAddress) == true);
-    }
-
     function testEditMemberUnauthorized(uint256 newMemberSalt, uint256 newAddressSalt) public {
         address newMember = uf._new(newMemberSalt);
         address newAddress = uf._new(newAddressSalt);
@@ -238,8 +223,10 @@ contract OracleV1Tests {
         assert(oracle.isMember(newMember) == true);
         assert(oracle.isMember(newAddress) == false);
         vm.stopPrank();
-        vm.expectRevert(abi.encodeWithSignature("Unauthorized(address)", address(this)));
+        vm.startPrank(newMember);
+        vm.expectRevert(abi.encodeWithSignature("Unauthorized(address)", newMember));
         oracle.setMember(newMember, newAddress);
+        vm.stopPrank();
     }
 
     function testEditMemberNotFound(uint256 newMemberSalt, uint256 newAddressSalt) public {
