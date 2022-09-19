@@ -129,7 +129,7 @@ contract WLSETHV1 is IWLSETHV1, Initializable, ReentrancyGuard {
 
     /// @notice Decrease allowance to another account
     /// @param _spender Spender that receives the allowance
-    /// @param _subtractableValue Amount to add
+    /// @param _subtractableValue Amount to subtract
     function decreaseAllowance(address _spender, uint256 _subtractableValue) external returns (bool success) {
         uint256 newApprovalValue = ApprovalsPerOwner.get(msg.sender, _spender) - _subtractableValue;
         ApprovalsPerOwner.set(msg.sender, _spender, newApprovalValue);
