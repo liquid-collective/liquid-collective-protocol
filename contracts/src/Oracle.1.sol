@@ -219,6 +219,8 @@ contract OracleV1 is Initializable {
             revert Errors.InvalidCall();
         }
         OracleMembers.deleteItem(uint256(memberIdx));
+        ReportsPositions.clear();
+        ReportsVariants.clear();
     }
 
     /// @notice Edits the beacon spec parameters
