@@ -94,6 +94,27 @@ contract OracleV1Tests {
         oracle.setQuorum(1);
     }
 
+    function testAddMemberQuorumZero() public {
+
+        address newMember = uf._new(1);
+        vm.prank(admin);
+        vm.expectRevert(abi.encodeWithSignature("InvalidArgument()"));
+        oracle.addMember(newMember, 0);
+    }
+
+    function testRemoveMemberQuorumZero() public {
+        address newMemberOne = uf._new(1);
+        address newMemberTwo = uf._new(2);
+        vm.prank(admin);
+        oracle.addMember(newMemberOne, 1);
+        vm.prank(admin);
+        oracle.addMember(newMemberTwo, 2);
+
+        vm.prank(admin);
+        vm.expectRevert(abi.encodeWithSignature("InvalidArgument()"));
+        oracle.removeMember(newMemberOne, 0);
+    }
+
     function testAddMember(uint256 newMemberSalt) public {
         address newMember = uf._new(newMemberSalt);
         vm.startPrank(admin);
@@ -168,6 +189,28 @@ contract OracleV1Tests {
         vm.stopPrank();
         assert(oracle.isMember(newMember) == false);
         assert(oracle.isMember(newAddress) == true);
+    }
+
+    function testEditMemberZero(uint256 newMemberSalt) public {
+        address newMember = uf._new(newMemberSalt);
+        vm.startPrank(admin);
+        oracle.addMember(newMember, 1);
+        vm.stopPrank();
+        vm.startPrank(newMember);
+        vm.expectRevert(abi.encodeWithSignature("InvalidZeroAddress()"));
+        oracle.setMember(newMember, address(0));
+        vm.stopPrank();
+    }
+
+    function testEditMemberAlreadyInUse(uint256 newMemberSalt) public {
+        address newMember = uf._new(newMemberSalt);
+        vm.startPrank(admin);
+        oracle.addMember(newMember, 1);
+        vm.stopPrank();
+        vm.startPrank(newMember);
+        vm.expectRevert(abi.encodeWithSignature("AddressAlreadyInUse(address)", newMember));
+        oracle.setMember(newMember, newMember);
+        vm.stopPrank();
     }
 
     function testEditMemberAsAdmin(uint256 newMemberSalt, uint256 newAddressSalt) public {
