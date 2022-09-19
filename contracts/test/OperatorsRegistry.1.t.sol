@@ -995,3 +995,225 @@ contract OperatorsRegistryV1Tests is Test, BytesGenerator {
         assert(operatorsRegistry.getOperatorCount() == 1);
     }
 }
+
+contract OperatorsRegistryV1TestDistribution is Test {
+    UserFactory internal uf = new UserFactory();
+
+    OperatorsRegistryV1 internal operatorsRegistry;
+    address internal admin;
+    address internal river;
+    string internal firstName = "Operator One";
+    string internal secondName = "Operator Two";
+
+    address internal operatorOne;
+    address internal operatorTwo;
+    address internal operatorThree;
+    address internal operatorFour;
+    address internal operatorFive;
+
+    event AddedValidatorKeys(uint256 indexed index, bytes publicKeys);
+    event RemovedValidatorKey(uint256 indexed index, bytes publicKey);
+
+    bytes32 salt = bytes32(0);
+
+    function genBytes(uint256 len) internal returns (bytes memory) {
+        bytes memory res = "";
+        while (res.length < len) {
+            salt = keccak256(abi.encodePacked(salt));
+            if (len - res.length >= 32) {
+                res = bytes.concat(res, abi.encode(salt));
+            } else {
+                res = bytes.concat(res, BytesLib.slice(abi.encode(salt), 0, len - res.length));
+            }
+        }
+        return res;
+    }
+
+    function setUp() public {
+        admin = makeAddr("admin");
+        river = makeAddr("river");
+
+        operatorOne = makeAddr("operatorOne");
+        operatorTwo = makeAddr("operatorTwo");
+        operatorThree = makeAddr("operatorThree");
+        operatorFour = makeAddr("operatorFour");
+        operatorFive = makeAddr("operatorFive");
+
+        operatorsRegistry = new OperatorsRegistryInitializableV1();
+        operatorsRegistry.initOperatorsRegistryV1(admin, river);
+
+        vm.startPrank(admin);
+        operatorsRegistry.addOperator("operatorOne", operatorOne);
+        operatorsRegistry.addOperator("operatorTwo", operatorTwo);
+        operatorsRegistry.addOperator("operatorThree", operatorThree);
+        operatorsRegistry.addOperator("operatorFour", operatorFour);
+        operatorsRegistry.addOperator("operatorFive", operatorFive);
+        vm.stopPrank();
+    }
+
+    function testRegularDistribution() external {
+        vm.startPrank(admin);
+        operatorsRegistry.addValidators(0, 50, genBytes((48 + 96) * 50));
+        operatorsRegistry.addValidators(1, 50, genBytes((48 + 96) * 50));
+        operatorsRegistry.addValidators(2, 50, genBytes((48 + 96) * 50));
+        operatorsRegistry.addValidators(3, 50, genBytes((48 + 96) * 50));
+        operatorsRegistry.addValidators(4, 50, genBytes((48 + 96) * 50));
+        vm.stopPrank();
+
+        uint256[] memory limits = new uint256[](5);
+        limits[0] = 50;
+        limits[1] = 50;
+        limits[2] = 50;
+        limits[3] = 50;
+        limits[4] = 50;
+
+        uint256[] memory operators = new uint256[](5);
+        operators[0] = 0;
+        operators[1] = 1;
+        operators[2] = 2;
+        operators[3] = 3;
+        operators[4] = 4;
+
+        vm.prank(admin);
+        operatorsRegistry.setOperatorLimits(operators, limits);
+
+        {
+            (bytes[] memory publicKeys, bytes[] memory signatures) = OperatorsRegistryInitializableV1(
+                address(operatorsRegistry)
+            ).debugGetNextValidatorsFromActiveOperators(50);
+
+            assert(publicKeys.length == 50);
+            assert(signatures.length == 50);
+
+            assert(operatorsRegistry.getOperator(0).funded == 10);
+            assert(operatorsRegistry.getOperator(1).funded == 10);
+            assert(operatorsRegistry.getOperator(2).funded == 10);
+            assert(operatorsRegistry.getOperator(3).funded == 10);
+            assert(operatorsRegistry.getOperator(4).funded == 10);
+        }
+        {
+            (bytes[] memory publicKeys, bytes[] memory signatures) = OperatorsRegistryInitializableV1(
+                address(operatorsRegistry)
+            ).debugGetNextValidatorsFromActiveOperators(200);
+
+            assert(publicKeys.length == 200);
+            assert(signatures.length == 200);
+
+            assert(operatorsRegistry.getOperator(0).funded == 50);
+            assert(operatorsRegistry.getOperator(1).funded == 50);
+            assert(operatorsRegistry.getOperator(2).funded == 50);
+            assert(operatorsRegistry.getOperator(3).funded == 50);
+            assert(operatorsRegistry.getOperator(4).funded == 50);
+        }
+    }
+
+    function testInactiveDistribution() external {
+        vm.startPrank(admin);
+        operatorsRegistry.addValidators(0, 50, genBytes((48 + 96) * 50));
+        operatorsRegistry.addValidators(1, 50, genBytes((48 + 96) * 50));
+        operatorsRegistry.addValidators(2, 50, genBytes((48 + 96) * 50));
+        operatorsRegistry.addValidators(3, 50, genBytes((48 + 96) * 50));
+        operatorsRegistry.addValidators(4, 50, genBytes((48 + 96) * 50));
+
+        vm.stopPrank();
+
+        uint256[] memory limits = new uint256[](5);
+        limits[0] = 50;
+        limits[1] = 50;
+        limits[2] = 50;
+        limits[3] = 50;
+        limits[4] = 50;
+
+        uint256[] memory operators = new uint256[](5);
+        operators[0] = 0;
+        operators[1] = 1;
+        operators[2] = 2;
+        operators[3] = 3;
+        operators[4] = 4;
+
+        vm.startPrank(admin);
+        operatorsRegistry.setOperatorLimits(operators, limits);
+        operatorsRegistry.setOperatorStatus(1, false);
+        operatorsRegistry.setOperatorStatus(3, false);
+        vm.stopPrank();
+
+        {
+            (bytes[] memory publicKeys, bytes[] memory signatures) = OperatorsRegistryInitializableV1(
+                address(operatorsRegistry)
+            ).debugGetNextValidatorsFromActiveOperators(250);
+
+            assert(publicKeys.length == 150);
+            assert(signatures.length == 150);
+
+            assert(operatorsRegistry.getOperator(0).funded == 50);
+            assert(operatorsRegistry.getOperator(1).funded == 0);
+            assert(operatorsRegistry.getOperator(2).funded == 50);
+            assert(operatorsRegistry.getOperator(3).funded == 0);
+            assert(operatorsRegistry.getOperator(4).funded == 50);
+        }
+    }
+
+    function testStoppedDistribution() external {
+        vm.startPrank(admin);
+        operatorsRegistry.addValidators(0, 50, genBytes((48 + 96) * 50));
+        operatorsRegistry.addValidators(1, 50, genBytes((48 + 96) * 50));
+        operatorsRegistry.addValidators(2, 50, genBytes((48 + 96) * 50));
+        operatorsRegistry.addValidators(3, 50, genBytes((48 + 96) * 50));
+        operatorsRegistry.addValidators(4, 50, genBytes((48 + 96) * 50));
+
+        vm.stopPrank();
+
+        uint256[] memory limits = new uint256[](3);
+        limits[0] = 50;
+        limits[1] = 50;
+        limits[2] = 50;
+
+        uint256[] memory operators = new uint256[](3);
+        operators[0] = 0;
+        operators[1] = 2;
+        operators[2] = 4;
+
+        vm.startPrank(admin);
+        operatorsRegistry.setOperatorLimits(operators, limits);
+        vm.stopPrank();
+
+        OperatorsRegistryInitializableV1(address(operatorsRegistry)).debugGetNextValidatorsFromActiveOperators(75);
+        assert(operatorsRegistry.getOperator(0).funded == 25);
+        assert(operatorsRegistry.getOperator(1).funded == 0);
+        assert(operatorsRegistry.getOperator(2).funded == 25);
+        assert(operatorsRegistry.getOperator(3).funded == 0);
+        assert(operatorsRegistry.getOperator(4).funded == 25);
+
+        vm.startPrank(admin);
+        operatorsRegistry.setOperatorStoppedValidatorCount(0, 25);
+        operatorsRegistry.setOperatorStoppedValidatorCount(2, 25);
+        operatorsRegistry.setOperatorStoppedValidatorCount(4, 25);
+
+        limits = new uint256[](2);
+        limits[0] = 50;
+        limits[1] = 50;
+
+        operators = new uint256[](2);
+        operators[0] = 1;
+        operators[1] = 3;
+
+        operatorsRegistry.setOperatorLimits(operators, limits);
+
+        vm.stopPrank();
+
+        {
+            (bytes[] memory publicKeys, bytes[] memory signatures) = OperatorsRegistryInitializableV1(
+                address(operatorsRegistry)
+            ).debugGetNextValidatorsFromActiveOperators(50);
+
+            assert(publicKeys.length == 50);
+            assert(signatures.length == 50);
+
+            assert(operatorsRegistry.getOperator(0).funded == 35);
+            assert(operatorsRegistry.getOperator(1).funded == 10);
+            assert(operatorsRegistry.getOperator(2).funded == 35);
+            assert(operatorsRegistry.getOperator(3).funded == 10);
+            assert(operatorsRegistry.getOperator(4).funded == 35);
+        }
+    }
+}

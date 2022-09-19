@@ -414,7 +414,7 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
                     ValidatorKeys.getKeys(operators[idx].index, operators[idx].funded, operators[idx].picked);
                 publicKeys = _concatenateByteArrays(publicKeys, _publicKeys);
                 signatures = _concatenateByteArrays(signatures, _signatures);
-                (Operators.get(idx)).funded += operators[idx].picked;
+                (Operators.get(operators[idx].index)).funded += operators[idx].picked;
             }
         }
     }
