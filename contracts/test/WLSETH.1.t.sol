@@ -413,7 +413,12 @@ contract WLSETHV1Tests {
         }
     }
 
-    function testTransferFromToZeroAddress(uint256 _fromSalt, uint256 _approvedSalt, uint256 _recipientSalt, uint32 _sum) external {
+    function testTransferFromToZeroAddress(
+        uint256 _fromSalt,
+        uint256 _approvedSalt,
+        uint256 _recipientSalt,
+        uint32 _sum
+    ) external {
         address _from = uf._new(_fromSalt);
         address _approved = uf._new(_approvedSalt);
         address _recipient = uf._new(_recipientSalt);
@@ -439,9 +444,7 @@ contract WLSETHV1Tests {
         uint256 _approvedSalt,
         uint256 _recipientSalt,
         uint32 _sum
-    )
-        external
-    {
+    ) external {
         address _from = uf._new(_fromSalt);
         address _approved = uf._new(_approvedSalt);
         address _recipient = uf._new(_recipientSalt);
@@ -476,9 +479,7 @@ contract WLSETHV1Tests {
         uint256 _approvedSalt,
         uint256 _recipientSalt,
         uint32 _sum
-    )
-        external
-    {
+    ) external {
         address _from = uf._new(_fromSalt);
         address _approved = uf._new(_approvedSalt);
         address _recipient = uf._new(_recipientSalt);
@@ -513,9 +514,7 @@ contract WLSETHV1Tests {
         uint256 _approvedSalt,
         uint256 _recipientSalt,
         uint32 _sum
-    )
-        external
-    {
+    ) external {
         address _from = uf._new(_fromSalt);
         address _approved = uf._new(_approvedSalt);
         address _recipient = uf._new(_recipientSalt);

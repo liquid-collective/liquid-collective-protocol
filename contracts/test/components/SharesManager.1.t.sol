@@ -371,11 +371,7 @@ contract SharesManagerV1Tests {
             vm.prank(_userOne);
             sharesManager.approve(_userTwo, _allowance);
             vm.prank(_userTwo);
-            vm.expectRevert(
-                abi.encodeWithSignature(
-                    "UnauthorizedTransfer(address,address)", _userOne, address(0)
-                )
-            );
+            vm.expectRevert(abi.encodeWithSignature("UnauthorizedTransfer(address,address)", _userOne, address(0)));
             sharesManager.transferFrom(_userOne, address(0), _allowance);
             vm.stopPrank();
         }
@@ -401,9 +397,7 @@ contract SharesManagerV1Tests {
         uint256 _userOneSalt,
         uint256 _userTwoSalt,
         uint128 _allowance
-    )
-        public
-    {
+    ) public {
         address _userOne = uf._new(_userOneSalt);
         address _userTwo = uf._new(_userTwoSalt);
         SharesManagerPublicDeal(payable(address(sharesManager))).deal(_userOne, _allowance);
