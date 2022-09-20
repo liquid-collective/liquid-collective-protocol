@@ -701,12 +701,7 @@ contract OperatorsRegistryV1Tests is Test {
         assert(operator.keys == 10);
     }
 
-    function testRemoveHalfValidatorsEvenCaseAsOperator(
-        bytes32 _name,
-        uint256 _firstAddressSalt
-    )
-        public
-    {
+    function testRemoveHalfValidatorsEvenCaseAsOperator(bytes32 _name, uint256 _firstAddressSalt) public {
         address _firstAddress = uf._new(_firstAddressSalt);
         vm.startPrank(admin);
         operatorsRegistry.addOperator(string(abi.encodePacked(_name)), _firstAddress);
@@ -757,12 +752,7 @@ contract OperatorsRegistryV1Tests is Test {
         assert(operator.keys == 15);
     }
 
-    function testRemoveHalfValidatorsConservativeCaseAsOperator(
-        bytes32 _name,
-        uint256 _firstAddressSalt
-    )
-        public
-    {
+    function testRemoveHalfValidatorsConservativeCaseAsOperator(bytes32 _name, uint256 _firstAddressSalt) public {
         address _firstAddress = uf._new(_firstAddressSalt);
         vm.startPrank(admin);
         operatorsRegistry.addOperator(string(abi.encodePacked(_name)), _firstAddress);
@@ -813,9 +803,7 @@ contract OperatorsRegistryV1Tests is Test {
         assert(operator.keys == 15);
     }
 
-    function testRemoveValidatorsAsAdmin(bytes32 _name, uint256 _firstAddressSalt)
-        public
-    {
+    function testRemoveValidatorsAsAdmin(bytes32 _name, uint256 _firstAddressSalt) public {
         address _firstAddress = uf._new(_firstAddressSalt);
         vm.startPrank(admin);
         operatorsRegistry.addOperator(string(abi.encodePacked(_name)), _firstAddress);
