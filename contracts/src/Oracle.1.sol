@@ -228,10 +228,7 @@ contract OracleV1 is Initializable {
     }
 
     function setMember(address _oracleMember, address _newAddress) external {
-        // TODO use LibSanitize
-        if (_newAddress == address(0)) {
-            revert Errors.InvalidZeroAddress();
-        }
+        LibSanitize._notZeroAddress(_newAddress);
         if (msg.sender != LibOwnable._getAdmin()) {
             revert Errors.Unauthorized(msg.sender);
         }
