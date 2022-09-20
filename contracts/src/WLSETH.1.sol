@@ -46,12 +46,12 @@ contract WLSETHV1 is Initializable, ReentrancyGuard {
 
     /// @notice Retrieves the token full name
     function name() external pure returns (string memory) {
-        return "Wrapped Alluvial Ether";
+        return "Wrapped Liquid Staked ETH";
     }
 
     /// @notice Retrieves the token ticker
     function symbol() external pure returns (string memory) {
-        return "wlsETH";
+        return "wLsETH";
     }
 
     /// @notice Retrieves the token decimal count

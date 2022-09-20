@@ -104,11 +104,11 @@ contract WLSETHV1Tests {
     }
 
     function testTokenName() external view {
-        assert(keccak256(bytes(wlseth.name())) == keccak256("Wrapped Alluvial Ether"));
+        assert(keccak256(bytes(wlseth.name())) == keccak256("Wrapped Liquid Staked ETH"));
     }
 
     function testTokenSymbol() external view {
-        assert(keccak256(bytes(wlseth.symbol())) == keccak256("wlsETH"));
+        assert(keccak256(bytes(wlseth.symbol())) == keccak256("wLsETH"));
     }
 
     function testTokenDecimals() external view {
@@ -414,9 +414,7 @@ contract WLSETHV1Tests {
         uint256 _approvedSalt,
         uint256 _recipientSalt,
         uint32 _sum
-    )
-        external
-    {
+    ) external {
         address _from = uf._new(_fromSalt);
         address _approved = uf._new(_approvedSalt);
         address _recipient = uf._new(_recipientSalt);

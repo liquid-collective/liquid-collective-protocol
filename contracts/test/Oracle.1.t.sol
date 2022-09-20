@@ -143,9 +143,7 @@ contract OracleV1Tests {
         uint64 _slotsPerEpoch,
         uint64 _secondsPerSlot,
         uint64 _genesisTime
-    )
-        public
-    {
+    ) public {
         BeaconSpec.BeaconSpecStruct memory bs = oracle.getBeaconSpec();
         assert(bs.epochsPerFrame == EPOCHS_PER_FRAME);
         assert(bs.slotsPerEpoch == SLOTS_PER_EPOCH);
@@ -168,9 +166,7 @@ contract OracleV1Tests {
         uint64 _slotsPerEpoch,
         uint64 _secondsPerSlot,
         uint64 _genesisTime
-    )
-        public
-    {
+    ) public {
         address _intruder = uf._new(_intruderSalt);
         BeaconSpec.BeaconSpecStruct memory bs = oracle.getBeaconSpec();
         assert(bs.epochsPerFrame == EPOCHS_PER_FRAME);

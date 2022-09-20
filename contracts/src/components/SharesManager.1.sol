@@ -50,12 +50,12 @@ abstract contract SharesManagerV1 is ISharesManagerV1 {
 
     /// @notice Retrieve the token name
     function name() external pure returns (string memory) {
-        return "River Ether";
+        return "Liquid Staked ETH";
     }
 
     /// @notice Retrieve the token symbol
     function symbol() external pure returns (string memory) {
-        return "lsETH";
+        return "LsETH";
     }
 
     /// @notice Retrieve the decimal count

@@ -59,10 +59,7 @@ contract OracleV1 is Initializable {
         uint64 _genesisTime,
         uint256 _annualAprUpperBound,
         uint256 _relativeLowerBound
-    )
-        external
-        init(0)
-    {
+    ) external init(0) {
         LibOwnable._setAdmin(_administratorAddress);
         RiverAddress.set(_riverContractAddress);
         BeaconSpec.set(
@@ -462,9 +459,7 @@ contract OracleV1 is Initializable {
         uint128 _balanceSum,
         uint32 _validatorCount,
         BeaconSpec.BeaconSpecStruct memory _beaconSpec
-    )
-        internal
-    {
+    ) internal {
         _clearReporting(_epochId + _beaconSpec.epochsPerFrame);
 
         IRiverV1 riverAddress = IRiverV1(payable(RiverAddress.get()));
