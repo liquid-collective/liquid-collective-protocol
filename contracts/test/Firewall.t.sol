@@ -354,32 +354,32 @@ contract FirewallTests {
 
     function testGovernorCanAddMember() public {
         vm.startPrank(riverGovernorDAO);
-        firewalledOracle.addMember(bob);
+        firewalledOracle.addMember(bob, 1);
         assert(oracle.isMember(bob));
         vm.stopPrank();
     }
 
     function testGovernorCanRemoveMember() public {
         vm.startPrank(riverGovernorDAO);
-        firewalledOracle.addMember(bob);
+        firewalledOracle.addMember(bob, 1);
         assert(oracle.isMember(bob));
-        firewalledOracle.removeMember(bob);
+        firewalledOracle.removeMember(bob, 0);
         assert(!oracle.isMember(bob));
         vm.stopPrank();
     }
 
     function testExecutorCanAddMember() public {
         vm.startPrank(executor);
-        firewalledOracle.addMember(bob);
+        firewalledOracle.addMember(bob, 1);
         assert(oracle.isMember(bob));
         vm.stopPrank();
     }
 
     function testExecutorCanRemoveMember() public {
         vm.startPrank(executor);
-        firewalledOracle.addMember(bob);
+        firewalledOracle.addMember(bob, 1);
         assert(oracle.isMember(bob));
-        firewalledOracle.removeMember(bob);
+        firewalledOracle.removeMember(bob, 0);
         assert(!oracle.isMember(bob));
         vm.stopPrank();
     }
@@ -387,29 +387,35 @@ contract FirewallTests {
     function testRandomCallerCannotAddMember() public {
         vm.startPrank(joe);
         vm.expectRevert(unauthJoe);
-        firewalledOracle.addMember(bob);
+        firewalledOracle.addMember(bob, 1);
         vm.stopPrank();
     }
 
     function testRandomCallerCannotRemoveMember() public {
         vm.startPrank(riverGovernorDAO);
-        firewalledOracle.addMember(bob);
+        firewalledOracle.addMember(bob, 1);
         assert(oracle.isMember(bob));
         vm.stopPrank();
         vm.startPrank(joe);
         vm.expectRevert(unauthJoe);
-        firewalledOracle.removeMember(bob);
+        firewalledOracle.removeMember(bob, 0);
         vm.stopPrank();
     }
 
     function testGovernorCanSetQuorum() public {
         vm.startPrank(riverGovernorDAO);
+        firewalledOracle.addMember(bob, 1);
+        firewalledOracle.addMember(joe, 1);
         firewalledOracle.setQuorum(2);
         assert(oracle.getQuorum() == 2);
         vm.stopPrank();
     }
 
     function testExecutorCanSetQuorum() public {
+        vm.startPrank(riverGovernorDAO);
+        firewalledOracle.addMember(bob, 1);
+        firewalledOracle.addMember(joe, 1);
+        vm.stopPrank();
         vm.startPrank(executor);
         firewalledOracle.setQuorum(2);
         assert(oracle.getQuorum() == 2);
@@ -417,6 +423,10 @@ contract FirewallTests {
     }
 
     function testRandomCallerCannotSetQuorum() public {
+        vm.startPrank(riverGovernorDAO);
+        firewalledOracle.addMember(bob, 1);
+        firewalledOracle.addMember(joe, 1);
+        vm.stopPrank();
         vm.startPrank(joe);
         vm.expectRevert(unauthJoe);
         firewalledOracle.setQuorum(2);

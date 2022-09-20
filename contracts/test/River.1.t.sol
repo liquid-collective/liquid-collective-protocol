@@ -91,7 +91,7 @@ contract RiverV1SetupOneTests is Test {
 
         // ===================
 
-        oracle.addMember(oracleMember);
+        oracle.addMember(oracleMember, 1);
 
         operatorsRegistry.addOperator(operatorOneName, operatorOne);
         operatorsRegistry.addOperator(operatorTwoName, operatorTwo);
