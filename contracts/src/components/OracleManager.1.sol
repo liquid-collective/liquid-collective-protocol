@@ -69,18 +69,11 @@ abstract contract OracleManagerV1 is IOracleManagerV1 {
 
         uint256 executionLayerFees;
 
-        // if the validator balance sum has increased but there is some margin to
-        // reach the allowed upper bound, we attempt to pull funds to reach that
-        // upper bound
-        if (
-            previousValidatorTotalBalance <= _validatorTotalBalance
-                && _validatorTotalBalance - previousValidatorTotalBalance < _maxIncrease
-        ) {
-            executionLayerFees =
-                _pullELFees(_maxIncrease - (_validatorTotalBalance - previousValidatorTotalBalance));
-        } else if (previousValidatorTotalBalance > _validatorTotalBalance) {
-            executionLayerFees =
-                _pullELFees((previousValidatorTotalBalance - _validatorTotalBalance) + _maxIncrease);
+        // if there's a margin left for pulling the elFees that would leave our delta under the allowed maxIncrease value, do it
+        if ((_maxIncrease + previousValidatorTotalBalance) > _validatorTotalBalance) {
+            executionLayerFees = _pullELFees(
+                (_maxIncrease + previousValidatorTotalBalance) - _validatorTotalBalance
+            );
         }
 
         if (previousValidatorTotalBalance < _validatorTotalBalance + executionLayerFees) {
