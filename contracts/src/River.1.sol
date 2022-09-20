@@ -34,7 +34,6 @@ contract RiverV1 is
 {
     uint256 public constant BASE = 100000;
     uint256 internal constant DEPOSIT_MASK = 0x1;
-    uint256 internal constant TRANSFER_MASK = 0;
     /// @notice Prevents unauthorized calls
 
     modifier onlyAdmin() override (OracleManagerV1) {
@@ -157,8 +156,13 @@ contract RiverV1 is
     /// @param _from Token sender
     /// @param _to Token receiver
     function _onTransfer(address _from, address _to) internal view override {
-        IAllowlistV1(AllowlistAddress.get()).onlyAllowed(_from, TRANSFER_MASK); // this call reverts if unauthorized or denied
-        IAllowlistV1(AllowlistAddress.get()).onlyAllowed(_to, TRANSFER_MASK); // this call reverts if unauthorized or denied
+        IAllowlistV1 allowlist = IAllowlistV1(AllowlistAddress.get());
+        if (allowlist.isDenied(_from)) {
+            revert Denied(_from);
+        }
+        if (allowlist.isDenied(_to)) {
+            revert Denied(_to);
+        }
     }
 
     /// @notice Handler called whenever a user deposits ETH to the system. Mints the adequate amount of shares.
@@ -166,11 +170,14 @@ contract RiverV1 is
     /// @param _amount Amount of ETH deposited
     function _onDeposit(address _depositor, address _recipient, uint256 _amount) internal override {
         uint256 mintedShares = SharesManagerV1._mintShares(_depositor, _amount);
+        IAllowlistV1 allowlist = IAllowlistV1(AllowlistAddress.get());
         if (_depositor == _recipient) {
-            IAllowlistV1(AllowlistAddress.get()).onlyAllowed(_depositor, DEPOSIT_MASK); // this call reverts if unauthorized or denied
+            allowlist.onlyAllowed(_depositor, DEPOSIT_MASK); // this call reverts if unauthorized or denied
         } else {
-            IAllowlistV1(AllowlistAddress.get()).onlyAllowed(_depositor, DEPOSIT_MASK + TRANSFER_MASK); // this call reverts if unauthorized or denied
-            IAllowlistV1(AllowlistAddress.get()).onlyAllowed(_recipient, TRANSFER_MASK);
+            allowlist.onlyAllowed(_depositor, DEPOSIT_MASK); // this call reverts if unauthorized or denied
+            if (allowlist.isDenied(_recipient)) {
+                revert Denied(_recipient);
+            }
             _transfer(_depositor, _recipient, mintedShares);
         }
     }
