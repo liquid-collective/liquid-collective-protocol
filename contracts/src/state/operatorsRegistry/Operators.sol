@@ -12,7 +12,6 @@ library Operators {
         bool active;
         string name;
         address operator;
-        address feeRecipient;
         uint256 limit;
         uint256 funded;
         uint256 keys;
@@ -23,7 +22,6 @@ library Operators {
         bool active;
         string name;
         address operator;
-        address feeRecipient;
         uint256 limit;
         uint256 funded;
         uint256 keys;
@@ -225,7 +223,6 @@ library Operators {
                     active: op.active,
                     name: op.name,
                     operator: op.operator,
-                    feeRecipient: op.feeRecipient,
                     limit: op.limit,
                     funded: op.funded,
                     keys: op.keys,
@@ -245,7 +242,7 @@ library Operators {
     }
 
     function set(string memory name, Operator memory newValue) internal returns (uint256) {
-        if (newValue.operator == address(0) || newValue.feeRecipient == address(0)) {
+        if (newValue.operator == address(0)) {
             revert Errors.InvalidZeroAddress();
         }
         bool opExists = _getOperatorActive(name);

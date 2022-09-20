@@ -16,11 +16,10 @@ interface IOperatorsRegistryV1 {
     error InvalidIndexOutOfBounds();
     error OperatorLimitTooHigh(uint256 limit, uint256 keyCount);
 
-    event AddedOperator(uint256 indexed index, string name, address operatorAddress, address feeRecipientAddress);
+    event AddedOperator(uint256 indexed index, string name, address operatorAddress);
     event SetOperatorStatus(uint256 indexed index, bool active);
     event SetOperatorLimit(uint256 indexed index, uint256 newLimit);
     event SetOperatorStoppedValidatorCount(uint256 indexed index, uint256 newStoppedValidatorCount);
-    event SetOperatorFeeRecipientAddress(uint256 indexed index, address newOperatorAddress);
     event SetOperatorAddress(uint256 indexed index, address newOperatorAddress);
     event SetOperatorName(uint256 indexed name, string newName);
     event AddedValidatorKeys(uint256 indexed index, bytes publicKeys);
@@ -34,9 +33,8 @@ interface IOperatorsRegistryV1 {
         external
         view
         returns (int256 _index, address _operatorAddress);
-    function addOperator(string calldata _name, address _operator, address _feeRecipient) external;
+    function addOperator(string calldata _name, address _operator) external;
     function setOperatorAddress(uint256 _index, address _newOperatorAddress) external;
-    function setOperatorFeeRecipientAddress(uint256 _index, address _newOperatorFeeRecipientAddress) external;
     function setOperatorName(uint256 _index, string calldata _newName) external;
     function setOperatorStatus(uint256 _index, bool _newStatus) external;
     function setOperatorStoppedValidatorCount(uint256 _index, uint256 _newStoppedValidatorCount) external;

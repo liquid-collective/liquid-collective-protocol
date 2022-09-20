@@ -57,9 +57,7 @@ contract RiverV1SetupOneTests is Test {
         oracleMember = makeAddr("oracleMember");
         newAllowlist = makeAddr("newAllowlist");
         operatorOne = makeAddr("operatorOne");
-        operatorOneFeeRecipient = makeAddr("operatorOneFeeRecipient");
         operatorTwo = makeAddr("operatorTwo");
-        operatorTwoFeeRecipient = makeAddr("operatorTwoFeeRecipient");
         bob = makeAddr("bob");
         joe = makeAddr("joe");
 
@@ -86,8 +84,7 @@ contract RiverV1SetupOneTests is Test {
             address(allowlist),
             address(operatorsRegistry),
             treasury,
-            5000,
-            50000
+            5000
         );
         oracle.initOracleV1(address(river), admin, 225, 32, 12, 0, 1000, 500);
         vm.startPrank(admin);
@@ -96,8 +93,8 @@ contract RiverV1SetupOneTests is Test {
 
         oracle.addMember(oracleMember);
 
-        operatorsRegistry.addOperator(operatorOneName, operatorOne, operatorOneFeeRecipient);
-        operatorsRegistry.addOperator(operatorTwoName, operatorTwo, operatorTwoFeeRecipient);
+        operatorsRegistry.addOperator(operatorOneName, operatorOne);
+        operatorsRegistry.addOperator(operatorTwoName, operatorTwo);
 
         (int256 _operatorOneIndex,) = operatorsRegistry.getOperatorDetails(operatorOneName);
         assert(_operatorOneIndex >= 0);
@@ -147,8 +144,7 @@ contract RiverV1SetupOneTests is Test {
             address(0),
             address(0),
             address(0),
-            5000,
-            50000
+            5000
         );
     }
 
@@ -165,8 +161,7 @@ contract RiverV1SetupOneTests is Test {
             allower,
             address(operatorsRegistry),
             treasury,
-            5000,
-            50000
+            5000
         );
         vm.stopPrank();
     }
@@ -343,21 +338,21 @@ contract RiverV1SetupOneTests is Test {
         vm.stopPrank();
 
         assert(river.totalUnderlyingSupply() == 1100 ether - (34 * 32 ether) + (34 * 33 ether));
-        assert(river.balanceOfUnderlying(joe) == 102936363636363636365);
-        assert(river.balanceOfUnderlying(bob) == 1029363636363636363659);
-        assert(river.balanceOfUnderlying(operatorOneFeeRecipient) == 424999999999999987);
-        assert(river.balanceOfUnderlying(operatorTwoFeeRecipient) == 424999999999999987);
-        assert(river.balanceOfUnderlying(treasury) == 850000000000000000);
+        assert(river.balanceOfUnderlying(joe) == 102936363636363636363);
+        assert(river.balanceOfUnderlying(bob) == 1029363636363636363636);
+        assert(river.balanceOfUnderlying(operatorOneFeeRecipient) == 0);
+        assert(river.balanceOfUnderlying(operatorTwoFeeRecipient) == 0);
+        assert(river.balanceOfUnderlying(treasury) == 1699999999999999999);
 
         vm.startPrank(joe);
         river.transfer(bob, river.balanceOf(joe) - 1);
         vm.stopPrank();
 
         assert(river.balanceOfUnderlying(joe) == 1);
-        assert(river.balanceOfUnderlying(bob) == 1132300000000000000023);
-        assert(river.balanceOfUnderlying(operatorOneFeeRecipient) == 424999999999999987);
-        assert(river.balanceOfUnderlying(operatorTwoFeeRecipient) == 424999999999999987);
-        assert(river.balanceOfUnderlying(treasury) == 850000000000000000);
+        assert(river.balanceOfUnderlying(bob) == 1132299999999999999999);
+        assert(river.balanceOfUnderlying(operatorOneFeeRecipient) == 0);
+        assert(river.balanceOfUnderlying(operatorTwoFeeRecipient) == 0);
+        assert(river.balanceOfUnderlying(treasury) == 1699999999999999999);
 
         assert(
             river.totalSupply()
@@ -521,9 +516,9 @@ contract RiverV1SetupOneTests is Test {
         assert(river.totalUnderlyingSupply() == 1100 ether - (34 * 32 ether) + (34 * 33 ether) + 100 ether);
         assert(river.balanceOfUnderlying(joe) == 111572727272727272727);
         assert(river.balanceOfUnderlying(bob) == 1115727272727272727273);
-        assert(river.balanceOfUnderlying(operatorOneFeeRecipient) == 1674999999999999999);
-        assert(river.balanceOfUnderlying(operatorTwoFeeRecipient) == 1674999999999999999);
-        assert(river.balanceOfUnderlying(treasury) == 3349999999999999999);
+        assert(river.balanceOfUnderlying(operatorOneFeeRecipient) == 0);
+        assert(river.balanceOfUnderlying(operatorTwoFeeRecipient) == 0);
+        assert(river.balanceOfUnderlying(treasury) == 6699999999999999999);
 
         vm.startPrank(joe);
         river.transfer(bob, river.balanceOf(joe) - 1);
@@ -531,9 +526,9 @@ contract RiverV1SetupOneTests is Test {
 
         assert(river.balanceOfUnderlying(joe) == 1);
         assert(river.balanceOfUnderlying(bob) == 1227299999999999999999);
-        assert(river.balanceOfUnderlying(operatorOneFeeRecipient) == 1674999999999999999);
-        assert(river.balanceOfUnderlying(operatorTwoFeeRecipient) == 1674999999999999999);
-        assert(river.balanceOfUnderlying(treasury) == 3349999999999999999);
+        assert(river.balanceOfUnderlying(operatorOneFeeRecipient) == 0);
+        assert(river.balanceOfUnderlying(operatorTwoFeeRecipient) == 0);
+        assert(river.balanceOfUnderlying(treasury) == 6699999999999999999);
 
         assert(
             river.totalSupply()
@@ -590,21 +585,21 @@ contract RiverV1SetupOneTests is Test {
         assert(address(elFeeRecipient).balance == 100 ether);
 
         assert(river.totalUnderlyingSupply() == 1100 ether - (34 * 32 ether) + (34 * 33 ether));
-        assert(river.balanceOfUnderlying(joe) == 102936363636363636365);
-        assert(river.balanceOfUnderlying(bob) == 1029363636363636363659);
-        assert(river.balanceOfUnderlying(operatorOneFeeRecipient) == 424999999999999987);
-        assert(river.balanceOfUnderlying(operatorTwoFeeRecipient) == 424999999999999987);
-        assert(river.balanceOfUnderlying(treasury) == 850000000000000000);
+        assert(river.balanceOfUnderlying(joe) == 102936363636363636363);
+        assert(river.balanceOfUnderlying(bob) == 1029363636363636363636);
+        assert(river.balanceOfUnderlying(operatorOneFeeRecipient) == 0);
+        assert(river.balanceOfUnderlying(operatorTwoFeeRecipient) == 0);
+        assert(river.balanceOfUnderlying(treasury) == 1699999999999999999);
 
         vm.startPrank(joe);
         river.transfer(bob, river.balanceOf(joe) - 1);
         vm.stopPrank();
 
         assert(river.balanceOfUnderlying(joe) == 1);
-        assert(river.balanceOfUnderlying(bob) == 1132300000000000000023);
-        assert(river.balanceOfUnderlying(operatorOneFeeRecipient) == 424999999999999987);
-        assert(river.balanceOfUnderlying(operatorTwoFeeRecipient) == 424999999999999987);
-        assert(river.balanceOfUnderlying(treasury) == 850000000000000000);
+        assert(river.balanceOfUnderlying(bob) == 1132299999999999999999);
+        assert(river.balanceOfUnderlying(operatorOneFeeRecipient) == 0);
+        assert(river.balanceOfUnderlying(operatorTwoFeeRecipient) == 0);
+        assert(river.balanceOfUnderlying(treasury) == 1699999999999999999);
 
         assert(
             river.totalSupply()
@@ -653,21 +648,21 @@ contract RiverV1SetupOneTests is Test {
         vm.stopPrank();
 
         assert(river.totalUnderlyingSupply() == 1100 ether - (34 * 32 ether) + (34 * 33 ether));
-        assert(river.balanceOfUnderlying(joe) == 102936363636363636365);
-        assert(river.balanceOfUnderlying(bob) == 1029363636363636363659);
-        assert(river.balanceOfUnderlying(treasury) == 850000000000000000);
-        assert(river.balanceOfUnderlying(operatorOneFeeRecipient) == 424999999999999987);
-        assert(river.balanceOfUnderlying(operatorTwoFeeRecipient) == 424999999999999987);
+        assert(river.balanceOfUnderlying(joe) == 102936363636363636363);
+        assert(river.balanceOfUnderlying(bob) == 1029363636363636363636);
+        assert(river.balanceOfUnderlying(treasury) == 1699999999999999999);
+        assert(river.balanceOfUnderlying(operatorOneFeeRecipient) == 0);
+        assert(river.balanceOfUnderlying(operatorTwoFeeRecipient) == 0);
 
         vm.startPrank(joe);
         river.transfer(bob, river.balanceOf(joe) - 1);
         vm.stopPrank();
 
         assert(river.balanceOfUnderlying(joe) == 1);
-        assert(river.balanceOfUnderlying(bob) == 1132300000000000000023);
-        assert(river.balanceOfUnderlying(operatorOneFeeRecipient) == 424999999999999987);
-        assert(river.balanceOfUnderlying(operatorTwoFeeRecipient) == 424999999999999987);
-        assert(river.balanceOfUnderlying(treasury) == 850000000000000000);
+        assert(river.balanceOfUnderlying(bob) == 1132299999999999999999);
+        assert(river.balanceOfUnderlying(operatorOneFeeRecipient) == 0);
+        assert(river.balanceOfUnderlying(operatorTwoFeeRecipient) == 0);
+        assert(river.balanceOfUnderlying(treasury) == 1699999999999999999);
 
         vm.startPrank(joe);
         river.transfer(bob, river.balanceOf(joe));
@@ -733,11 +728,11 @@ contract RiverV1SetupOneTests is Test {
         vm.stopPrank();
 
         assert(river.totalUnderlyingSupply() == 1100 ether - (34 * 32 ether) + (34 * 33 ether));
-        assert(river.balanceOfUnderlying(joe) == 102936363636363636365);
-        assert(river.balanceOfUnderlying(bob) == 1029363636363636363659);
-        assert(river.balanceOfUnderlying(operatorOneFeeRecipient) == 424999999999999987);
-        assert(river.balanceOfUnderlying(operatorTwoFeeRecipient) == 424999999999999987);
-        assert(river.balanceOfUnderlying(treasury) == 850000000000000000);
+        assert(river.balanceOfUnderlying(joe) == 102936363636363636363);
+        assert(river.balanceOfUnderlying(bob) == 1029363636363636363636);
+        assert(river.balanceOfUnderlying(operatorOneFeeRecipient) == 0);
+        assert(river.balanceOfUnderlying(operatorTwoFeeRecipient) == 0);
+        assert(river.balanceOfUnderlying(treasury) == 1699999999999999999);
 
         vm.startPrank(joe);
         uint256 joeBalance = river.balanceOf(joe);
@@ -786,21 +781,21 @@ contract RiverV1SetupOneTests is Test {
         vm.stopPrank();
 
         assert(river.totalUnderlyingSupply() == 1100 ether - (34 * 32 ether) + (34 * 33 ether));
-        assert(river.balanceOfUnderlying(joe) == 102936363636363636365);
-        assert(river.balanceOfUnderlying(bob) == 1029363636363636363659);
-        assert(river.balanceOfUnderlying(operatorOneFeeRecipient) == 424999999999999987);
-        assert(river.balanceOfUnderlying(operatorTwoFeeRecipient) == 424999999999999987);
-        assert(river.balanceOfUnderlying(treasury) == 850000000000000000);
+        assert(river.balanceOfUnderlying(joe) == 102936363636363636363);
+        assert(river.balanceOfUnderlying(bob) == 1029363636363636363636);
+        assert(river.balanceOfUnderlying(operatorOneFeeRecipient) == 0);
+        assert(river.balanceOfUnderlying(operatorTwoFeeRecipient) == 0);
+        assert(river.balanceOfUnderlying(treasury) == 1699999999999999999);
 
         vm.startPrank(joe);
         river.transfer(bob, 100 ether);
         vm.stopPrank();
 
         assert(river.balanceOfUnderlying(joe) == 0);
-        assert(river.balanceOfUnderlying(bob) == 1132300000000000000024);
-        assert(river.balanceOfUnderlying(operatorOneFeeRecipient) == 424999999999999987);
-        assert(river.balanceOfUnderlying(operatorTwoFeeRecipient) == 424999999999999987);
-        assert(river.balanceOfUnderlying(treasury) == 850000000000000000);
+        assert(river.balanceOfUnderlying(bob) == 1132300000000000000000);
+        assert(river.balanceOfUnderlying(operatorOneFeeRecipient) == 0);
+        assert(river.balanceOfUnderlying(operatorTwoFeeRecipient) == 0);
+        assert(river.balanceOfUnderlying(treasury) == 1699999999999999999);
 
         assert(
             river.totalSupply()
@@ -855,9 +850,9 @@ contract RiverV1SetupOneTests is Test {
         assert(river.totalUnderlyingSupply() == 1100 ether - (34 * 32 ether) + (34 * 33 ether));
         assert(river.balanceOfUnderlying(joe) == 102781818181818181818);
         assert(river.balanceOfUnderlying(bob) == 1027818181818181818181);
-        assert(river.balanceOfUnderlying(operatorOneFeeRecipient) == 849999999999999999);
-        assert(river.balanceOfUnderlying(operatorTwoFeeRecipient) == 849999999999999999);
-        assert(river.balanceOfUnderlying(treasury) == 1700000000000000000);
+        assert(river.balanceOfUnderlying(operatorOneFeeRecipient) == 0);
+        assert(river.balanceOfUnderlying(operatorTwoFeeRecipient) == 0);
+        assert(river.balanceOfUnderlying(treasury) == 3399999999999999999);
 
         vm.startPrank(joe);
         river.transfer(bob, 100 ether);
@@ -865,9 +860,9 @@ contract RiverV1SetupOneTests is Test {
 
         assert(river.balanceOfUnderlying(joe) == 0);
         assert(river.balanceOfUnderlying(bob) == 1130600000000000000000);
-        assert(river.balanceOfUnderlying(operatorOneFeeRecipient) == 849999999999999999);
-        assert(river.balanceOfUnderlying(operatorTwoFeeRecipient) == 849999999999999999);
-        assert(river.balanceOfUnderlying(treasury) == 1700000000000000000);
+        assert(river.balanceOfUnderlying(operatorOneFeeRecipient) == 0);
+        assert(river.balanceOfUnderlying(operatorTwoFeeRecipient) == 0);
+        assert(river.balanceOfUnderlying(treasury) == 3399999999999999999);
 
         assert(
             river.totalSupply()
@@ -918,21 +913,21 @@ contract RiverV1SetupOneTests is Test {
         vm.stopPrank();
 
         assert(river.totalUnderlyingSupply() == 1100 ether - (34 * 32 ether) + (34 * 33 ether));
-        assert(river.balanceOfUnderlying(joe) == 102936363636363636365);
-        assert(river.balanceOfUnderlying(bob) == 1029363636363636363659);
-        assert(river.balanceOfUnderlying(operatorOneFeeRecipient) == 799999999999999976);
-        assert(river.balanceOfUnderlying(operatorTwoFeeRecipient) == 49999999999999998);
-        assert(river.balanceOfUnderlying(treasury) == 850000000000000000);
+        assert(river.balanceOfUnderlying(joe) == 102936363636363636363);
+        assert(river.balanceOfUnderlying(bob) == 1029363636363636363636);
+        assert(river.balanceOfUnderlying(operatorOneFeeRecipient) == 0);
+        assert(river.balanceOfUnderlying(operatorTwoFeeRecipient) == 0);
+        assert(river.balanceOfUnderlying(treasury) == 1699999999999999999);
 
         vm.startPrank(joe);
         river.transfer(bob, 100 ether);
         vm.stopPrank();
 
         assert(river.balanceOfUnderlying(joe) == 0);
-        assert(river.balanceOfUnderlying(bob) == 1132300000000000000024);
-        assert(river.balanceOfUnderlying(operatorOneFeeRecipient) == 799999999999999976);
-        assert(river.balanceOfUnderlying(operatorTwoFeeRecipient) == 49999999999999998);
-        assert(river.balanceOfUnderlying(treasury) == 850000000000000000);
+        assert(river.balanceOfUnderlying(bob) == 1132300000000000000000);
+        assert(river.balanceOfUnderlying(operatorOneFeeRecipient) == 0);
+        assert(river.balanceOfUnderlying(operatorTwoFeeRecipient) == 0);
+        assert(river.balanceOfUnderlying(treasury) == 1699999999999999999);
 
         assert(
             river.totalSupply()
@@ -942,7 +937,7 @@ contract RiverV1SetupOneTests is Test {
     }
 
     // Testing operator fee split when one operator has stopped validators
-    function testUserDepositsOperatorWithStoppedValiadtors() public {
+    function testUserDepositsOperatorWithStoppedValidators() public {
         vm.deal(joe, 100 ether);
         vm.deal(bob, 1000 ether);
 
@@ -991,21 +986,21 @@ contract RiverV1SetupOneTests is Test {
         vm.stopPrank();
 
         assert(river.totalUnderlyingSupply() == 1100 ether - (30 * 32 ether) + (30 * 33 ether));
-        assert(river.balanceOfUnderlying(joe) == 102590909090909090910);
-        assert(river.balanceOfUnderlying(bob) == 1025909090909090909105);
-        assert(river.balanceOfUnderlying(operatorOneFeeRecipient) == 374999999999999991);
-        assert(river.balanceOfUnderlying(operatorTwoFeeRecipient) == river.balanceOfUnderlying(operatorOneFeeRecipient));
-        assert(river.balanceOfUnderlying(treasury) == 750000000000000000);
+        assert(river.balanceOfUnderlying(joe) == 102590909090909090909);
+        assert(river.balanceOfUnderlying(bob) == 1025909090909090909091);
+        assert(river.balanceOfUnderlying(operatorOneFeeRecipient) == 0);
+        assert(river.balanceOfUnderlying(operatorTwoFeeRecipient) == 0);
+        assert(river.balanceOfUnderlying(treasury) == 1499999999999999999);
 
         vm.startPrank(joe);
         river.transfer(bob, 100 ether);
         vm.stopPrank();
 
         assert(river.balanceOfUnderlying(joe) == 0);
-        assert(river.balanceOfUnderlying(bob) == 1128500000000000000015);
-        assert(river.balanceOfUnderlying(operatorOneFeeRecipient) == 374999999999999991);
-        assert(river.balanceOfUnderlying(operatorTwoFeeRecipient) == river.balanceOfUnderlying(operatorOneFeeRecipient));
-        assert(river.balanceOfUnderlying(treasury) == 750000000000000000);
+        assert(river.balanceOfUnderlying(bob) == 1128500000000000000000);
+        assert(river.balanceOfUnderlying(operatorOneFeeRecipient) == 0);
+        assert(river.balanceOfUnderlying(operatorTwoFeeRecipient) == 0);
+        assert(river.balanceOfUnderlying(treasury) == 1499999999999999999);
 
         assert(
             river.totalSupply()

@@ -110,150 +110,82 @@ contract OperatorsRegistryV1Tests is Test {
         operatorsRegistry.acceptOwnership();
     }
 
-    function testAddNodeOperator(uint256 _nodeOperatorAddressSalt, uint256 _nodeOperatorFeeRecipientSalt, bytes32 _name)
-        public
-    {
+    function testAddNodeOperator(uint256 _nodeOperatorAddressSalt, bytes32 _name) public {
         address _nodeOperatorAddress = uf._new(_nodeOperatorAddressSalt);
-        address _nodeOperatorFeeRecipient = uf._new(_nodeOperatorFeeRecipientSalt);
         vm.startPrank(admin);
-        operatorsRegistry.addOperator(string(abi.encodePacked(_name)), _nodeOperatorAddress, _nodeOperatorFeeRecipient);
+        operatorsRegistry.addOperator(string(abi.encodePacked(_name)), _nodeOperatorAddress);
         Operators.Operator memory newOperator = _getOperatorByName(string(abi.encodePacked(_name)));
         assert(newOperator.operator == _nodeOperatorAddress);
     }
 
-    function testAddNodeWhileNotAdminOperator(
-        uint256 _nodeOperatorAddressSalt,
-        uint256 _nodeOperatorFeeRecipientSalt,
-        bytes32 _name
-    ) public {
+    function testAddNodeWhileNotAdminOperator(uint256 _nodeOperatorAddressSalt, bytes32 _name) public {
         address _nodeOperatorAddress = uf._new(_nodeOperatorAddressSalt);
-        address _nodeOperatorFeeRecipient = uf._new(_nodeOperatorFeeRecipientSalt);
         vm.expectRevert(abi.encodeWithSignature("Unauthorized(address)", address(this)));
-        operatorsRegistry.addOperator(string(abi.encodePacked(_name)), _nodeOperatorAddress, _nodeOperatorFeeRecipient);
+        operatorsRegistry.addOperator(string(abi.encodePacked(_name)), _nodeOperatorAddress);
     }
 
-    function testSetOperatorAddressesAsAdmin(
-        bytes32 _name,
-        uint256 _firstAddressSalt,
-        uint256 _secondAddressSalt,
-        uint256 _firstFeeRecipientSalt,
-        uint256 _secondFeeRecipientSalt
-    ) public {
+    function testSetOperatorAddressesAsAdmin(bytes32 _name, uint256 _firstAddressSalt, uint256 _secondAddressSalt)
+        public
+    {
         address _firstAddress = uf._new(_firstAddressSalt);
         address _secondAddress = uf._new(_secondAddressSalt);
-        address _firstFeeRecipient = uf._new(_firstFeeRecipientSalt);
-        address _secondFeeRecipient = uf._new(_secondFeeRecipientSalt);
         vm.startPrank(admin);
-        operatorsRegistry.addOperator(string(abi.encodePacked(_name)), _firstAddress, _firstFeeRecipient);
+        operatorsRegistry.addOperator(string(abi.encodePacked(_name)), _firstAddress);
         (int256 _index,) = operatorsRegistry.getOperatorDetails(string(abi.encodePacked(_name)));
         assert(_index >= 0);
         uint256 index = uint256(_index);
         Operators.Operator memory newOperator = operatorsRegistry.getOperator(index);
         assert(newOperator.operator == _firstAddress);
-        assert(newOperator.feeRecipient == _firstFeeRecipient);
         operatorsRegistry.setOperatorAddress(index, _secondAddress);
-        operatorsRegistry.setOperatorFeeRecipientAddress(index, _secondFeeRecipient);
         newOperator = _getOperatorByName(string(abi.encodePacked(_name)));
         assert(newOperator.operator == _secondAddress);
-        assert(newOperator.feeRecipient == _secondFeeRecipient);
         vm.stopPrank();
     }
 
-    function testSetOperatorAddressAsOperator(
-        bytes32 _name,
-        uint256 _firstAddressSalt,
-        uint256 _secondAddressSalt,
-        uint256 _firstFeeRecipientSalt,
-        uint256 _secondFeeRecipientSalt
-    ) public {
+    function testSetOperatorAddressAsOperator(bytes32 _name, uint256 _firstAddressSalt, uint256 _secondAddressSalt)
+        public
+    {
         address _firstAddress = uf._new(_firstAddressSalt);
         address _secondAddress = uf._new(_secondAddressSalt);
-        address _firstFeeRecipient = uf._new(_firstFeeRecipientSalt);
-        address _secondFeeRecipient = uf._new(_secondFeeRecipientSalt);
         vm.startPrank(admin);
-        operatorsRegistry.addOperator(string(abi.encodePacked(_name)), _firstAddress, _firstFeeRecipient);
+        operatorsRegistry.addOperator(string(abi.encodePacked(_name)), _firstAddress);
         (int256 _index,) = operatorsRegistry.getOperatorDetails(string(abi.encodePacked(_name)));
         assert(_index >= 0);
         uint256 index = uint256(_index);
         Operators.Operator memory newOperator = operatorsRegistry.getOperator(index);
         assert(newOperator.operator == _firstAddress);
-        assert(newOperator.feeRecipient == _firstFeeRecipient);
         vm.stopPrank();
         vm.startPrank(_firstAddress);
         operatorsRegistry.setOperatorAddress(index, _secondAddress);
         vm.stopPrank();
-        vm.startPrank(_firstFeeRecipient);
-        operatorsRegistry.setOperatorFeeRecipientAddress(index, _secondFeeRecipient);
-        vm.stopPrank();
         newOperator = _getOperatorByName(string(abi.encodePacked(_name)));
         assert(newOperator.operator == _secondAddress);
-        assert(newOperator.feeRecipient == _secondFeeRecipient);
     }
 
-    function testSetOperatorAddressAsOperatorWrongAddress(
-        bytes32 _name,
-        uint256 _firstAddressSalt,
-        uint256 _secondAddressSalt,
-        uint256 _firstFeeRecipientSalt,
-        uint256 _secondFeeRecipientSalt
-    ) public {
+    function testSetOperatorAddressAsUnauthorized(bytes32 _name, uint256 _firstAddressSalt, uint256 _secondAddressSalt)
+        public
+    {
         address _firstAddress = uf._new(_firstAddressSalt);
         address _secondAddress = uf._new(_secondAddressSalt);
-        address _firstFeeRecipient = uf._new(_firstFeeRecipientSalt);
-        address _secondFeeRecipient = uf._new(_secondFeeRecipientSalt);
         vm.startPrank(admin);
-        operatorsRegistry.addOperator(string(abi.encodePacked(_name)), _firstAddress, _firstFeeRecipient);
+        operatorsRegistry.addOperator(string(abi.encodePacked(_name)), _firstAddress);
         (int256 _index,) = operatorsRegistry.getOperatorDetails(string(abi.encodePacked(_name)));
         assert(_index >= 0);
         uint256 index = uint256(_index);
         Operators.Operator memory newOperator = operatorsRegistry.getOperator(index);
         assert(newOperator.operator == _firstAddress);
-        assert(newOperator.feeRecipient == _firstFeeRecipient);
-        vm.stopPrank();
-        vm.startPrank(_firstFeeRecipient);
-        vm.expectRevert(abi.encodeWithSignature("Unauthorized(address)", _firstFeeRecipient));
-        operatorsRegistry.setOperatorAddress(index, _secondAddress);
-        vm.stopPrank();
-        vm.startPrank(_firstAddress);
-        vm.expectRevert(abi.encodeWithSignature("Unauthorized(address)", _firstAddress));
-        operatorsRegistry.setOperatorFeeRecipientAddress(index, _secondFeeRecipient);
-        vm.stopPrank();
-    }
-
-    function testSetOperatorAddressAsUnauthorized(
-        bytes32 _name,
-        uint256 _firstAddressSalt,
-        uint256 _secondAddressSalt,
-        uint256 _firstFeeRecipientSalt,
-        uint256 _secondFeeRecipientSalt
-    ) public {
-        address _firstAddress = uf._new(_firstAddressSalt);
-        address _secondAddress = uf._new(_secondAddressSalt);
-        address _firstFeeRecipient = uf._new(_firstFeeRecipientSalt);
-        address _secondFeeRecipient = uf._new(_secondFeeRecipientSalt);
-        vm.startPrank(admin);
-        operatorsRegistry.addOperator(string(abi.encodePacked(_name)), _firstAddress, _firstFeeRecipient);
-        (int256 _index,) = operatorsRegistry.getOperatorDetails(string(abi.encodePacked(_name)));
-        assert(_index >= 0);
-        uint256 index = uint256(_index);
-        Operators.Operator memory newOperator = operatorsRegistry.getOperator(index);
-        assert(newOperator.operator == _firstAddress);
-        assert(newOperator.feeRecipient == _firstFeeRecipient);
         vm.stopPrank();
         vm.startPrank(address(this));
         vm.expectRevert(abi.encodeWithSignature("Unauthorized(address)", address(this)));
         operatorsRegistry.setOperatorAddress(index, _secondAddress);
-        vm.expectRevert(abi.encodeWithSignature("Unauthorized(address)", address(this)));
-        operatorsRegistry.setOperatorFeeRecipientAddress(index, _secondFeeRecipient);
         vm.stopPrank();
     }
 
-    function testSetOperatorNameAsAdmin(bytes32 _name, uint256 _addressSalt, uint256 _feeRecipientSalt) public {
+    function testSetOperatorNameAsAdmin(bytes32 _name, uint256 _addressSalt) public {
         address _address = uf._new(_addressSalt);
-        address _feeRecipient = uf._new(_feeRecipientSalt);
         bytes32 _nextName = keccak256(abi.encodePacked(_name));
         vm.startPrank(admin);
-        operatorsRegistry.addOperator(string(abi.encodePacked(_name)), _address, _feeRecipient);
+        operatorsRegistry.addOperator(string(abi.encodePacked(_name)), _address);
         (int256 _index,) = operatorsRegistry.getOperatorDetails(string(abi.encodePacked(_name)));
         assert(_index >= 0);
         uint256 index = uint256(_index);
@@ -265,12 +197,11 @@ contract OperatorsRegistryV1Tests is Test {
         vm.stopPrank();
     }
 
-    function testSetOperatorNameAsOperator(bytes32 _name, uint256 _addressSalt, uint256 _feeRecipientSalt) public {
+    function testSetOperatorNameAsOperator(bytes32 _name, uint256 _addressSalt) public {
         address _address = uf._new(_addressSalt);
-        address _feeRecipient = uf._new(_feeRecipientSalt);
         bytes32 _nextName = keccak256(abi.encodePacked(_name));
         vm.startPrank(admin);
-        operatorsRegistry.addOperator(string(abi.encodePacked(_name)), _address, _feeRecipient);
+        operatorsRegistry.addOperator(string(abi.encodePacked(_name)), _address);
         vm.stopPrank();
         (int256 _index,) = operatorsRegistry.getOperatorDetails(string(abi.encodePacked(_name)));
         assert(_index >= 0);
@@ -284,30 +215,28 @@ contract OperatorsRegistryV1Tests is Test {
         assert(keccak256(bytes(newOperator.name)) == keccak256(bytes(string(abi.encodePacked(_nextName)))));
     }
 
-    function testSetOperatorNameAsUnauthorized(bytes32 _name, uint256 _addressSalt, uint256 _feeRecipientSalt) public {
+    function testSetOperatorNameAsUnauthorized(bytes32 _name, uint256 _addressSalt) public {
         address _address = uf._new(_addressSalt);
-        address _feeRecipient = uf._new(_feeRecipientSalt);
         bytes32 _nextName = keccak256(abi.encodePacked(_name));
         vm.startPrank(admin);
-        operatorsRegistry.addOperator(string(abi.encodePacked(_name)), _address, _feeRecipient);
+        operatorsRegistry.addOperator(string(abi.encodePacked(_name)), _address);
         vm.stopPrank();
         (int256 _index,) = operatorsRegistry.getOperatorDetails(string(abi.encodePacked(_name)));
         assert(_index >= 0);
         uint256 index = uint256(_index);
         Operators.Operator memory newOperator = operatorsRegistry.getOperator(index);
         assert(keccak256(bytes(newOperator.name)) == keccak256(bytes(string(abi.encodePacked(_name)))));
-        vm.startPrank(_feeRecipient);
-        vm.expectRevert(abi.encodeWithSignature("Unauthorized(address)", _feeRecipient));
+        vm.startPrank(address(this));
+        vm.expectRevert(abi.encodeWithSignature("Unauthorized(address)", address(this)));
         operatorsRegistry.setOperatorName(index, string(abi.encodePacked(_nextName)));
         vm.stopPrank();
     }
 
-    function testSetOperatorNameAlreadyTaken(bytes32 _name, uint256 _addressSalt, uint256 _feeRecipientSalt) public {
+    function testSetOperatorNameAlreadyTaken(bytes32 _name, uint256 _addressSalt) public {
         address _address = uf._new(_addressSalt);
-        address _feeRecipient = uf._new(_feeRecipientSalt);
         bytes32 _nextName = _name;
         vm.startPrank(admin);
-        operatorsRegistry.addOperator(string(abi.encodePacked(_name)), _address, _feeRecipient);
+        operatorsRegistry.addOperator(string(abi.encodePacked(_name)), _address);
         (int256 _index,) = operatorsRegistry.getOperatorDetails(string(abi.encodePacked(_name)));
         assert(_index >= 0);
         uint256 index = uint256(_index);
@@ -318,13 +247,10 @@ contract OperatorsRegistryV1Tests is Test {
         vm.stopPrank();
     }
 
-    function testSetOperatorStatusAsAdmin(bytes32 _name, uint256 _firstAddressSalt, uint256 _firstFeeRecipientSalt)
-        public
-    {
+    function testSetOperatorStatusAsAdmin(bytes32 _name, uint256 _firstAddressSalt) public {
         address _firstAddress = uf._new(_firstAddressSalt);
-        address _firstFeeRecipient = uf._new(_firstFeeRecipientSalt);
         vm.startPrank(admin);
-        operatorsRegistry.addOperator(string(abi.encodePacked(_name)), _firstAddress, _firstFeeRecipient);
+        operatorsRegistry.addOperator(string(abi.encodePacked(_name)), _firstAddress);
         (int256 _index,) = operatorsRegistry.getOperatorDetails(string(abi.encodePacked(_name)));
         assert(_index >= 0);
         uint256 index = uint256(_index);
@@ -338,15 +264,10 @@ contract OperatorsRegistryV1Tests is Test {
         assert(newOperator.active == true);
     }
 
-    function testSetOperatorStatusAsUnauthorized(
-        bytes32 _name,
-        uint256 _firstAddressSalt,
-        uint256 _firstFeeRecipientSalt
-    ) public {
+    function testSetOperatorStatusAsUnauthorized(bytes32 _name, uint256 _firstAddressSalt) public {
         address _firstAddress = uf._new(_firstAddressSalt);
-        address _firstFeeRecipient = uf._new(_firstFeeRecipientSalt);
         vm.startPrank(admin);
-        operatorsRegistry.addOperator(string(abi.encodePacked(_name)), _firstAddress, _firstFeeRecipient);
+        operatorsRegistry.addOperator(string(abi.encodePacked(_name)), _firstAddress);
         (int256 _index,) = operatorsRegistry.getOperatorDetails(string(abi.encodePacked(_name)));
         assert(_index >= 0);
         uint256 index = uint256(_index);
@@ -361,13 +282,11 @@ contract OperatorsRegistryV1Tests is Test {
     function testSetOperatorStoppedValidatorCountWhileUnfunded(
         bytes32 _name,
         uint256 _firstAddressSalt,
-        uint256 _firstFeeRecipientSalt,
         uint128 _stoppedCount
     ) public {
         address _firstAddress = uf._new(_firstAddressSalt);
-        address _firstFeeRecipient = uf._new(_firstFeeRecipientSalt);
         vm.startPrank(admin);
-        operatorsRegistry.addOperator(string(abi.encodePacked(_name)), _firstAddress, _firstFeeRecipient);
+        operatorsRegistry.addOperator(string(abi.encodePacked(_name)), _firstAddress);
         (int256 _index,) = operatorsRegistry.getOperatorDetails(string(abi.encodePacked(_name)));
         assert(_index >= 0);
         uint256 index = uint256(_index);
@@ -382,13 +301,11 @@ contract OperatorsRegistryV1Tests is Test {
     function testSetOperatorStoppedValidatorCountAsAdmin(
         bytes32 _name,
         uint256 _firstAddressSalt,
-        uint256 _firstFeeRecipientSalt,
         uint128 _stoppedCount
     ) public {
         address _firstAddress = uf._new(_firstAddressSalt);
-        address _firstFeeRecipient = uf._new(_firstFeeRecipientSalt);
         vm.startPrank(admin);
-        operatorsRegistry.addOperator(string(abi.encodePacked(_name)), _firstAddress, _firstFeeRecipient);
+        operatorsRegistry.addOperator(string(abi.encodePacked(_name)), _firstAddress);
         (int256 _index,) = operatorsRegistry.getOperatorDetails(string(abi.encodePacked(_name)));
         assert(_index >= 0);
         uint256 index = uint256(_index);
@@ -408,13 +325,11 @@ contract OperatorsRegistryV1Tests is Test {
     function testSetOperatorStoppedValidatorCountAsUnauthorized(
         bytes32 _name,
         uint256 _firstAddressSalt,
-        uint256 _firstFeeRecipientSalt,
         uint256 _stoppedCount
     ) public {
         address _firstAddress = uf._new(_firstAddressSalt);
-        address _firstFeeRecipient = uf._new(_firstFeeRecipientSalt);
         vm.startPrank(admin);
-        operatorsRegistry.addOperator(string(abi.encodePacked(_name)), _firstAddress, _firstFeeRecipient);
+        operatorsRegistry.addOperator(string(abi.encodePacked(_name)), _firstAddress);
         (int256 _index,) = operatorsRegistry.getOperatorDetails(string(abi.encodePacked(_name)));
         assert(_index >= 0);
         uint256 index = uint256(_index);
@@ -426,17 +341,11 @@ contract OperatorsRegistryV1Tests is Test {
         operatorsRegistry.setOperatorStoppedValidatorCount(index, _stoppedCount);
     }
 
-    function testSetOperatorLimitCountAsAdmin(
-        bytes32 _name,
-        uint256 _firstAddressSalt,
-        uint256 _firstFeeRecipientSalt,
-        uint256 _limit
-    ) public {
+    function testSetOperatorLimitCountAsAdmin(bytes32 _name, uint256 _firstAddressSalt, uint256 _limit) public {
         address _firstAddress = uf._new(_firstAddressSalt);
-        address _firstFeeRecipient = uf._new(_firstFeeRecipientSalt);
         _limit = _limit % 11; // 10 is max
         vm.startPrank(admin);
-        operatorsRegistry.addOperator(string(abi.encodePacked(_name)), _firstAddress, _firstFeeRecipient);
+        operatorsRegistry.addOperator(string(abi.encodePacked(_name)), _firstAddress);
         (int256 _index,) = operatorsRegistry.getOperatorDetails(string(abi.encodePacked(_name)));
         assert(_index >= 0);
         uint256 index = uint256(_index);
@@ -463,16 +372,10 @@ contract OperatorsRegistryV1Tests is Test {
         assert(newOperator.limit == 0);
     }
 
-    function testSetOperatorLimitCountAsUnauthorized(
-        bytes32 _name,
-        uint256 _firstAddressSalt,
-        uint256 _firstFeeRecipientSalt,
-        uint256 _limit
-    ) public {
+    function testSetOperatorLimitCountAsUnauthorized(bytes32 _name, uint256 _firstAddressSalt, uint256 _limit) public {
         address _firstAddress = uf._new(_firstAddressSalt);
-        address _firstFeeRecipient = uf._new(_firstFeeRecipientSalt);
         vm.startPrank(admin);
-        operatorsRegistry.addOperator(string(abi.encodePacked(_name)), _firstAddress, _firstFeeRecipient);
+        operatorsRegistry.addOperator(string(abi.encodePacked(_name)), _firstAddress);
         (int256 _index,) = operatorsRegistry.getOperatorDetails(string(abi.encodePacked(_name)));
         assert(_index >= 0);
         uint256 index = uint256(_index);
@@ -490,13 +393,10 @@ contract OperatorsRegistryV1Tests is Test {
 
     event AddedValidatorKeys(uint256 indexed index, uint256 amount);
 
-    function testAddValidatorsAsOperator(bytes32 _name, uint256 _firstAddressSalt, uint256 _firstFeeRecipientSalt)
-        public
-    {
+    function testAddValidatorsAsOperator(bytes32 _name, uint256 _firstAddressSalt) public {
         address _firstAddress = uf._new(_firstAddressSalt);
-        address _firstFeeRecipient = uf._new(_firstFeeRecipientSalt);
         vm.startPrank(admin);
-        operatorsRegistry.addOperator(string(abi.encodePacked(_name)), _firstAddress, _firstFeeRecipient);
+        operatorsRegistry.addOperator(string(abi.encodePacked(_name)), _firstAddress);
         (int256 _index,) = operatorsRegistry.getOperatorDetails(string(abi.encodePacked(_name)));
         assert(_index >= 0);
         uint256 index = uint256(_index);
@@ -528,11 +428,10 @@ contract OperatorsRegistryV1Tests is Test {
         assert(funded == false);
     }
 
-    function testGetKeysAsRiver(bytes32 _name, uint256 _firstAddressSalt, uint256 _firstFeeRecipientSalt) public {
+    function testGetKeysAsRiver(bytes32 _name, uint256 _firstAddressSalt) public {
         address _firstAddress = uf._new(_firstAddressSalt);
-        address _firstFeeRecipient = uf._new(_firstFeeRecipientSalt);
         vm.startPrank(admin);
-        operatorsRegistry.addOperator(string(abi.encodePacked(_name)), _firstAddress, _firstFeeRecipient);
+        operatorsRegistry.addOperator(string(abi.encodePacked(_name)), _firstAddress);
         (int256 _index,) = operatorsRegistry.getOperatorDetails(string(abi.encodePacked(_name)));
         assert(_index >= 0);
         uint256 index = uint256(_index);
@@ -573,13 +472,10 @@ contract OperatorsRegistryV1Tests is Test {
         );
     }
 
-    function testGetKeysAsRiverLimitTest(bytes32 _name, uint256 _firstAddressSalt, uint256 _firstFeeRecipientSalt)
-        public
-    {
+    function testGetKeysAsRiverLimitTest(bytes32 _name, uint256 _firstAddressSalt) public {
         address _firstAddress = uf._new(_firstAddressSalt);
-        address _firstFeeRecipient = uf._new(_firstFeeRecipientSalt);
         vm.startPrank(admin);
-        operatorsRegistry.addOperator(string(abi.encodePacked(_name)), _firstAddress, _firstFeeRecipient);
+        operatorsRegistry.addOperator(string(abi.encodePacked(_name)), _firstAddress);
         (int256 _index,) = operatorsRegistry.getOperatorDetails(string(abi.encodePacked(_name)));
         assert(_index >= 0);
         uint256 index = uint256(_index);
@@ -620,13 +516,10 @@ contract OperatorsRegistryV1Tests is Test {
         );
     }
 
-    function testGetAllActiveOperators(bytes32 _name, uint256 _firstAddressSalt, uint256 _firstFeeRecipientSalt)
-        public
-    {
+    function testGetAllActiveOperators(bytes32 _name, uint256 _firstAddressSalt) public {
         address _firstAddress = uf._new(_firstAddressSalt);
-        address _firstFeeRecipient = uf._new(_firstFeeRecipientSalt);
         vm.startPrank(admin);
-        operatorsRegistry.addOperator(string(abi.encodePacked(_name)), _firstAddress, _firstFeeRecipient);
+        operatorsRegistry.addOperator(string(abi.encodePacked(_name)), _firstAddress);
         (int256 _index,) = operatorsRegistry.getOperatorDetails(string(abi.encodePacked(_name)));
         assert(_index >= 0);
 
@@ -635,18 +528,12 @@ contract OperatorsRegistryV1Tests is Test {
         assert(operators.length == 1);
         assert(keccak256(bytes(operators[0].name)) == keccak256(abi.encodePacked(_name)));
         assert(operators[0].operator == _firstAddress);
-        assert(operators[0].feeRecipient == _firstFeeRecipient);
     }
 
-    function testGetAllActiveOperatorsWithInactiveOnes(
-        bytes32 _name,
-        uint256 _firstAddressSalt,
-        uint256 _firstFeeRecipientSalt
-    ) public {
+    function testGetAllActiveOperatorsWithInactiveOnes(bytes32 _name, uint256 _firstAddressSalt) public {
         address _firstAddress = uf._new(_firstAddressSalt);
-        address _firstFeeRecipient = uf._new(_firstFeeRecipientSalt);
         vm.startPrank(admin);
-        operatorsRegistry.addOperator(string(abi.encodePacked(_name)), _firstAddress, _firstFeeRecipient);
+        operatorsRegistry.addOperator(string(abi.encodePacked(_name)), _firstAddress);
         (int256 _index,) = operatorsRegistry.getOperatorDetails(string(abi.encodePacked(_name)));
         assert(_index >= 0);
         uint256 index = uint256(_index);
@@ -670,13 +557,10 @@ contract OperatorsRegistryV1Tests is Test {
         operatorsRegistry.pickNextValidators(10);
     }
 
-    function testAddValidatorsAsAdmin(bytes32 _name, uint256 _firstAddressSalt, uint256 _firstFeeRecipientSalt)
-        public
-    {
+    function testAddValidatorsAsAdmin(bytes32 _name, uint256 _firstAddressSalt) public {
         address _firstAddress = uf._new(_firstAddressSalt);
-        address _firstFeeRecipient = uf._new(_firstFeeRecipientSalt);
         vm.startPrank(admin);
-        operatorsRegistry.addOperator(string(abi.encodePacked(_name)), _firstAddress, _firstFeeRecipient);
+        operatorsRegistry.addOperator(string(abi.encodePacked(_name)), _firstAddress);
         (int256 _index,) = operatorsRegistry.getOperatorDetails(string(abi.encodePacked(_name)));
         assert(_index >= 0);
         uint256 index = uint256(_index);
@@ -706,13 +590,10 @@ contract OperatorsRegistryV1Tests is Test {
         operatorsRegistry.addValidators(_index, 10, tenPublicKeys, tenSignatures);
     }
 
-    function testAddValidatorsAsUnauthorized(bytes32 _name, uint256 _firstAddressSalt, uint256 _firstFeeRecipientSalt)
-        public
-    {
+    function testAddValidatorsAsUnauthorized(bytes32 _name, uint256 _firstAddressSalt) public {
         address _firstAddress = uf._new(_firstAddressSalt);
-        address _firstFeeRecipient = uf._new(_firstFeeRecipientSalt);
         vm.startPrank(admin);
-        operatorsRegistry.addOperator(string(abi.encodePacked(_name)), _firstAddress, _firstFeeRecipient);
+        operatorsRegistry.addOperator(string(abi.encodePacked(_name)), _firstAddress);
         (int256 _index,) = operatorsRegistry.getOperatorDetails(string(abi.encodePacked(_name)));
         assert(_index >= 0);
         uint256 index = uint256(_index);
@@ -728,15 +609,10 @@ contract OperatorsRegistryV1Tests is Test {
         operatorsRegistry.addValidators(index, 10, tenPublicKeys, tenSignatures);
     }
 
-    function testAddValidatorsInvalidPublicKeysSize(
-        bytes32 _name,
-        uint256 _firstAddressSalt,
-        uint256 _firstFeeRecipientSalt
-    ) public {
+    function testAddValidatorsInvalidPublicKeysSize(bytes32 _name, uint256 _firstAddressSalt) public {
         address _firstAddress = uf._new(_firstAddressSalt);
-        address _firstFeeRecipient = uf._new(_firstFeeRecipientSalt);
         vm.startPrank(admin);
-        operatorsRegistry.addOperator(string(abi.encodePacked(_name)), _firstAddress, _firstFeeRecipient);
+        operatorsRegistry.addOperator(string(abi.encodePacked(_name)), _firstAddress);
         (int256 _index,) = operatorsRegistry.getOperatorDetails(string(abi.encodePacked(_name)));
         assert(_index >= 0);
         uint256 index = uint256(_index);
@@ -750,15 +626,10 @@ contract OperatorsRegistryV1Tests is Test {
         operatorsRegistry.addValidators(index, 10, tenPublicKeys, tenSignatures);
     }
 
-    function testAddValidatorsInvalidSignaturesSize(
-        bytes32 _name,
-        uint256 _firstAddressSalt,
-        uint256 _firstFeeRecipientSalt
-    ) public {
+    function testAddValidatorsInvalidSignaturesSize(bytes32 _name, uint256 _firstAddressSalt) public {
         address _firstAddress = uf._new(_firstAddressSalt);
-        address _firstFeeRecipient = uf._new(_firstFeeRecipientSalt);
         vm.startPrank(admin);
-        operatorsRegistry.addOperator(string(abi.encodePacked(_name)), _firstAddress, _firstFeeRecipient);
+        operatorsRegistry.addOperator(string(abi.encodePacked(_name)), _firstAddress);
         (int256 _index,) = operatorsRegistry.getOperatorDetails(string(abi.encodePacked(_name)));
         assert(_index >= 0);
         uint256 index = uint256(_index);
@@ -772,13 +643,10 @@ contract OperatorsRegistryV1Tests is Test {
         operatorsRegistry.addValidators(index, 10, tenPublicKeys, tenSignatures);
     }
 
-    function testAddValidatorsInvalidCount(bytes32 _name, uint256 _firstAddressSalt, uint256 _firstFeeRecipientSalt)
-        public
-    {
+    function testAddValidatorsInvalidCount(bytes32 _name, uint256 _firstAddressSalt) public {
         address _firstAddress = uf._new(_firstAddressSalt);
-        address _firstFeeRecipient = uf._new(_firstFeeRecipientSalt);
         vm.startPrank(admin);
-        operatorsRegistry.addOperator(string(abi.encodePacked(_name)), _firstAddress, _firstFeeRecipient);
+        operatorsRegistry.addOperator(string(abi.encodePacked(_name)), _firstAddress);
         (int256 _index,) = operatorsRegistry.getOperatorDetails(string(abi.encodePacked(_name)));
         assert(_index >= 0);
         uint256 index = uint256(_index);
@@ -786,13 +654,10 @@ contract OperatorsRegistryV1Tests is Test {
         operatorsRegistry.addValidators(index, 0, "", "");
     }
 
-    function testRemoveValidatorsAsOperator(bytes32 _name, uint256 _firstAddressSalt, uint256 _firstFeeRecipientSalt)
-        public
-    {
+    function testRemoveValidatorsAsOperator(bytes32 _name, uint256 _firstAddressSalt) public {
         address _firstAddress = uf._new(_firstAddressSalt);
-        address _firstFeeRecipient = uf._new(_firstFeeRecipientSalt);
         vm.startPrank(admin);
-        operatorsRegistry.addOperator(string(abi.encodePacked(_name)), _firstAddress, _firstFeeRecipient);
+        operatorsRegistry.addOperator(string(abi.encodePacked(_name)), _firstAddress);
         (int256 _index,) = operatorsRegistry.getOperatorDetails(string(abi.encodePacked(_name)));
         assert(_index >= 0);
         uint256 index = uint256(_index);
@@ -836,13 +701,10 @@ contract OperatorsRegistryV1Tests is Test {
         assert(operator.keys == 10);
     }
 
-    function testRemoveValidatorsAsAdmin(bytes32 _name, uint256 _firstAddressSalt, uint256 _firstFeeRecipientSalt)
-        public
-    {
+    function testRemoveValidatorsAsAdmin(bytes32 _name, uint256 _firstAddressSalt) public {
         address _firstAddress = uf._new(_firstAddressSalt);
-        address _firstFeeRecipient = uf._new(_firstFeeRecipientSalt);
         vm.startPrank(admin);
-        operatorsRegistry.addOperator(string(abi.encodePacked(_name)), _firstAddress, _firstFeeRecipient);
+        operatorsRegistry.addOperator(string(abi.encodePacked(_name)), _firstAddress);
         (int256 _index,) = operatorsRegistry.getOperatorDetails(string(abi.encodePacked(_name)));
         assert(_index >= 0);
         uint256 index = uint256(_index);
@@ -879,13 +741,10 @@ contract OperatorsRegistryV1Tests is Test {
         assert(operator.keys == 10);
     }
 
-    function testRemoveValidatorsUnauthorized(bytes32 _name, uint256 _firstAddressSalt, uint256 _firstFeeRecipientSalt)
-        public
-    {
+    function testRemoveValidatorsUnauthorized(bytes32 _name, uint256 _firstAddressSalt) public {
         address _firstAddress = uf._new(_firstAddressSalt);
-        address _firstFeeRecipient = uf._new(_firstFeeRecipientSalt);
         vm.startPrank(admin);
-        operatorsRegistry.addOperator(string(abi.encodePacked(_name)), _firstAddress, _firstFeeRecipient);
+        operatorsRegistry.addOperator(string(abi.encodePacked(_name)), _firstAddress);
         (int256 _index,) = operatorsRegistry.getOperatorDetails(string(abi.encodePacked(_name)));
         assert(_index >= 0);
         uint256 index = uint256(_index);
@@ -920,15 +779,10 @@ contract OperatorsRegistryV1Tests is Test {
         operatorsRegistry.removeValidators(index, indexes);
     }
 
-    function testRemoveValidatorsAndRetrieveAsAdmin(
-        bytes32 _name,
-        uint256 _firstAddressSalt,
-        uint256 _firstFeeRecipientSalt
-    ) public {
+    function testRemoveValidatorsAndRetrieveAsAdmin(bytes32 _name, uint256 _firstAddressSalt) public {
         address _firstAddress = uf._new(_firstAddressSalt);
-        address _firstFeeRecipient = uf._new(_firstFeeRecipientSalt);
         vm.startPrank(admin);
-        operatorsRegistry.addOperator(string(abi.encodePacked(_name)), _firstAddress, _firstFeeRecipient);
+        operatorsRegistry.addOperator(string(abi.encodePacked(_name)), _firstAddress);
         (int256 _index,) = operatorsRegistry.getOperatorDetails(string(abi.encodePacked(_name)));
         assert(_index >= 0);
         uint256 index = uint256(_index);
@@ -958,15 +812,10 @@ contract OperatorsRegistryV1Tests is Test {
         assert(keccak256(sAfter) == keccak256(s));
     }
 
-    function testRemoveValidatorsFundedKeyRemovalAttempt(
-        bytes32 _name,
-        uint256 _firstAddressSalt,
-        uint256 _firstFeeRecipientSalt
-    ) public {
+    function testRemoveValidatorsFundedKeyRemovalAttempt(bytes32 _name, uint256 _firstAddressSalt) public {
         address _firstAddress = uf._new(_firstAddressSalt);
-        address _firstFeeRecipient = uf._new(_firstFeeRecipientSalt);
         vm.startPrank(admin);
-        operatorsRegistry.addOperator(string(abi.encodePacked(_name)), _firstAddress, _firstFeeRecipient);
+        operatorsRegistry.addOperator(string(abi.encodePacked(_name)), _firstAddress);
         (int256 _index,) = operatorsRegistry.getOperatorDetails(string(abi.encodePacked(_name)));
         assert(_index >= 0);
         uint256 index = uint256(_index);
@@ -1000,15 +849,10 @@ contract OperatorsRegistryV1Tests is Test {
         operatorsRegistry.removeValidators(index, indexes);
     }
 
-    function testRemoveValidatorsKeyOutOfBounds(
-        bytes32 _name,
-        uint256 _firstAddressSalt,
-        uint256 _firstFeeRecipientSalt
-    ) public {
+    function testRemoveValidatorsKeyOutOfBounds(bytes32 _name, uint256 _firstAddressSalt) public {
         address _firstAddress = uf._new(_firstAddressSalt);
-        address _firstFeeRecipient = uf._new(_firstFeeRecipientSalt);
         vm.startPrank(admin);
-        operatorsRegistry.addOperator(string(abi.encodePacked(_name)), _firstAddress, _firstFeeRecipient);
+        operatorsRegistry.addOperator(string(abi.encodePacked(_name)), _firstAddress);
         (int256 _index,) = operatorsRegistry.getOperatorDetails(string(abi.encodePacked(_name)));
         assert(_index >= 0);
         uint256 index = uint256(_index);
@@ -1040,15 +884,10 @@ contract OperatorsRegistryV1Tests is Test {
         operatorsRegistry.removeValidators(index, indexes);
     }
 
-    function testRemoveValidatorsUnsortedIndexes(
-        bytes32 _name,
-        uint256 _firstAddressSalt,
-        uint256 _firstFeeRecipientSalt
-    ) public {
+    function testRemoveValidatorsUnsortedIndexes(bytes32 _name, uint256 _firstAddressSalt) public {
         address _firstAddress = uf._new(_firstAddressSalt);
-        address _firstFeeRecipient = uf._new(_firstFeeRecipientSalt);
         vm.startPrank(admin);
-        operatorsRegistry.addOperator(string(abi.encodePacked(_name)), _firstAddress, _firstFeeRecipient);
+        operatorsRegistry.addOperator(string(abi.encodePacked(_name)), _firstAddress);
         (int256 _index,) = operatorsRegistry.getOperatorDetails(string(abi.encodePacked(_name)));
         assert(_index >= 0);
         uint256 index = uint256(_index);
@@ -1080,21 +919,19 @@ contract OperatorsRegistryV1Tests is Test {
         operatorsRegistry.removeValidators(index, indexes);
     }
 
-    function testGetOperatorByName(bytes32 _name, uint256 _firstAddressSalt, uint256 _firstFeeRecipientSalt) public {
+    function testGetOperatorByName(bytes32 _name, uint256 _firstAddressSalt) public {
         address _firstAddress = uf._new(_firstAddressSalt);
-        address _firstFeeRecipient = uf._new(_firstFeeRecipientSalt);
         vm.startPrank(admin);
-        operatorsRegistry.addOperator(string(abi.encodePacked(_name)), _firstAddress, _firstFeeRecipient);
+        operatorsRegistry.addOperator(string(abi.encodePacked(_name)), _firstAddress);
 
         Operators.Operator memory operator = _getOperatorByName(string(abi.encodePacked(_name)));
         assert(operator.active == true);
     }
 
-    function testGetOperatorByIndex(bytes32 _name, uint256 _firstAddressSalt, uint256 _firstFeeRecipientSalt) public {
+    function testGetOperatorByIndex(bytes32 _name, uint256 _firstAddressSalt) public {
         address _firstAddress = uf._new(_firstAddressSalt);
-        address _firstFeeRecipient = uf._new(_firstFeeRecipientSalt);
         vm.startPrank(admin);
-        operatorsRegistry.addOperator(string(abi.encodePacked(_name)), _firstAddress, _firstFeeRecipient);
+        operatorsRegistry.addOperator(string(abi.encodePacked(_name)), _firstAddress);
 
         Operators.Operator memory operator = _getOperatorByName(string(abi.encodePacked(_name)));
         Operators.Operator memory operatorByIndex = operatorsRegistry.getOperator(0);
@@ -1102,12 +939,11 @@ contract OperatorsRegistryV1Tests is Test {
         assert(keccak256(bytes(operatorByIndex.name)) == keccak256(bytes(operator.name)));
     }
 
-    function testGetOperatorCount(bytes32 _name, uint256 _firstAddressSalt, uint256 _firstFeeRecipientSalt) public {
+    function testGetOperatorCount(bytes32 _name, uint256 _firstAddressSalt) public {
         address _firstAddress = uf._new(_firstAddressSalt);
-        address _firstFeeRecipient = uf._new(_firstFeeRecipientSalt);
         vm.startPrank(admin);
         assert(operatorsRegistry.getOperatorCount() == 0);
-        operatorsRegistry.addOperator(string(abi.encodePacked(_name)), _firstAddress, _firstFeeRecipient);
+        operatorsRegistry.addOperator(string(abi.encodePacked(_name)), _firstAddress);
         assert(operatorsRegistry.getOperatorCount() == 1);
     }
 }

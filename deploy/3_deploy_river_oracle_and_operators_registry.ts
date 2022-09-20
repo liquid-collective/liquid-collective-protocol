@@ -111,7 +111,6 @@ const func: DeployFunction = async function ({
           futureOperatorsRegistryAddress,
           treasury,
           500,
-          50000,
         ],
       },
     },
