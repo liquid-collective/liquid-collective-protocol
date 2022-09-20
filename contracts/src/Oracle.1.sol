@@ -296,6 +296,11 @@ contract OracleV1 is Initializable, Administrable {
     /// @param _beaconBalance Total balance of River validators
     /// @param _beaconValidators Total River validator count
     function reportBeacon(uint256 _epochId, uint64 _beaconBalance, uint32 _beaconValidators) external {
+        int256 memberIndex = OracleMembers.indexOf(msg.sender);
+        if (memberIndex == -1) {
+            revert Errors.Unauthorized(msg.sender);
+        }
+
         BeaconSpec.BeaconSpecStruct memory beaconSpec = BeaconSpec.get();
         uint256 expectedEpochId = ExpectedEpochId.get();
         if (_epochId < expectedEpochId) {
@@ -310,10 +315,6 @@ contract OracleV1 is Initializable, Administrable {
             _clearReporting(_epochId);
         }
 
-        int256 memberIndex = OracleMembers.indexOf(msg.sender);
-        if (memberIndex == -1) {
-            revert Errors.Unauthorized(msg.sender);
-        }
         if (ReportsPositions.get(uint256(memberIndex))) {
             revert AlreadyReported(_epochId, msg.sender);
         }
