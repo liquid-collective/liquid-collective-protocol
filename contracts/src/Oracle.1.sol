@@ -59,10 +59,7 @@ contract OracleV1 is Initializable {
         uint64 _genesisTime,
         uint256 _annualAprUpperBound,
         uint256 _relativeLowerBound
-    )
-        external
-        init(0)
-    {
+    ) external init(0) {
         LibOwnable._setAdmin(_administratorAddress);
         RiverAddress.set(_riverContractAddress);
         BeaconSpec.set(

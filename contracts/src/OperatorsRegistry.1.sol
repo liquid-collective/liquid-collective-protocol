@@ -123,7 +123,6 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable {
     /// @dev Only callable by the administrator
     /// @param _name The name identifying the operator
     /// @param _operator The address representing the operator, receiving the rewards
-    /// @param _feeRecipient The address where the rewards are sent
     function addOperator(string calldata _name, address _operator) external onlyAdmin {
         if (Operators.exists(_name)) {
             revert OperatorAlreadyExists(_name);

@@ -63,10 +63,7 @@ contract RiverV1 is
         address _operatorRegistryAddress,
         address _treasuryAddress,
         uint256 _globalFee
-    )
-        external
-        init(0)
-    {
+    ) external init(0) {
         LibOwnable._setAdmin(_systemAdministratorAddress);
         TreasuryAddress.set(_treasuryAddress);
         GlobalFee.set(_globalFee);
