@@ -200,6 +200,7 @@ contract OracleV1 is Initializable {
     /// @notice Adds new address as oracle member, giving the ability to push beacon reports.
     /// @dev Only callable by the adminstrator
     /// @param _newOracleMember Address of the new member
+    /// @param _newQuorum New quorum value
     function addMember(address _newOracleMember, uint256 _newQuorum) external onlyAdmin {
         int256 memberIdx = OracleMembers.indexOf(_newOracleMember);
         if (memberIdx >= 0) {
@@ -213,6 +214,7 @@ contract OracleV1 is Initializable {
     /// @notice Removes an address from the oracle members.
     /// @dev Only callable by the adminstrator
     /// @param _oracleMember Address to remove
+    /// @param _newQuorum New quorum value
     function removeMember(address _oracleMember, uint256 _newQuorum) external onlyAdmin {
         int256 memberIdx = OracleMembers.indexOf(_oracleMember);
         if (memberIdx < 0) {
@@ -230,11 +232,11 @@ contract OracleV1 is Initializable {
         if (_newAddress == address(0)) {
             revert Errors.InvalidZeroAddress();
         }
-        if (OracleMembers.indexOf(_newAddress) >= 0) {
-            revert AddressAlreadyInUse(_newAddress);
-        }
         if (msg.sender != LibOwnable._getAdmin()) {
             revert Errors.Unauthorized(msg.sender);
+        }
+        if (OracleMembers.indexOf(_newAddress) >= 0) {
+            revert AddressAlreadyInUse(_newAddress);
         }
         int256 memberIdx = OracleMembers.indexOf(_oracleMember);
         if (memberIdx < 0) {
