@@ -5,7 +5,7 @@ import "./libraries/LibAdministrable.sol";
 import "./libraries/Errors.sol";
 import "./interfaces/IAdministrable.sol";
 
-contract Administrable is IAdministrable {
+abstract contract Administrable is IAdministrable {
     modifier onlyAdmin() {
         if (msg.sender != LibAdministrable._getAdmin()) {
             revert Errors.Unauthorized(msg.sender);
