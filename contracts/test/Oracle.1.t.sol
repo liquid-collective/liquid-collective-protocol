@@ -95,7 +95,6 @@ contract OracleV1Tests {
     }
 
     function testAddMemberQuorumZero() public {
-
         address newMember = uf._new(1);
         vm.prank(admin);
         vm.expectRevert(abi.encodeWithSignature("InvalidArgument()"));
@@ -206,8 +205,6 @@ contract OracleV1Tests {
         address newMember = uf._new(newMemberSalt);
         vm.startPrank(admin);
         oracle.addMember(newMember, 1);
-        vm.stopPrank();
-        vm.startPrank(newMember);
         vm.expectRevert(abi.encodeWithSignature("AddressAlreadyInUse(address)", newMember));
         oracle.setMember(newMember, newMember);
         vm.stopPrank();

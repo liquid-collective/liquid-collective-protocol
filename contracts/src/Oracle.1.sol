@@ -292,7 +292,7 @@ contract OracleV1 is Initializable {
     // TODO write natspec
     function _setQuorum(uint256 _newQuorum, uint256 _previousQuorum) internal {
         uint256 memberCount = OracleMembers.get().length;
-        if ((_newQuorum == 0 && memberCount > 0)  || _newQuorum > memberCount) {
+        if ((_newQuorum == 0 && memberCount > 0) || _newQuorum > memberCount) {
             revert Errors.InvalidArgument();
         }
         if (_previousQuorum > _newQuorum) {
