@@ -42,7 +42,7 @@ contract SanitizeTest is Test {
         si.setString("");
     }
 
-    function testSetNonEmptyString() external {
+    function testSetNonEmptyString() external view {
         string memory _string = "valid string";
         si.setString(_string);
     }
@@ -52,7 +52,7 @@ contract SanitizeTest is Test {
         si.setFee(100001);
     }
 
-    function testSetValidFee() external {
+    function testSetValidFee() external view {
         uint256 validFee = 100000;
         si.setFee(validFee);
     }
