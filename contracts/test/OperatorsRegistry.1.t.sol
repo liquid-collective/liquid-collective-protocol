@@ -125,9 +125,7 @@ contract OperatorsRegistryV1Tests is Test {
         uint256 _nodeOperatorAddressSalt,
         uint256 _nodeOperatorFeeRecipientSalt,
         bytes32 _name
-    )
-        public
-    {
+    ) public {
         address _nodeOperatorAddress = uf._new(_nodeOperatorAddressSalt);
         address _nodeOperatorFeeRecipient = uf._new(_nodeOperatorFeeRecipientSalt);
         vm.expectRevert(abi.encodeWithSignature("Unauthorized(address)", address(this)));
@@ -140,9 +138,7 @@ contract OperatorsRegistryV1Tests is Test {
         uint256 _secondAddressSalt,
         uint256 _firstFeeRecipientSalt,
         uint256 _secondFeeRecipientSalt
-    )
-        public
-    {
+    ) public {
         address _firstAddress = uf._new(_firstAddressSalt);
         address _secondAddress = uf._new(_secondAddressSalt);
         address _firstFeeRecipient = uf._new(_firstFeeRecipientSalt);
@@ -169,9 +165,7 @@ contract OperatorsRegistryV1Tests is Test {
         uint256 _secondAddressSalt,
         uint256 _firstFeeRecipientSalt,
         uint256 _secondFeeRecipientSalt
-    )
-        public
-    {
+    ) public {
         address _firstAddress = uf._new(_firstAddressSalt);
         address _secondAddress = uf._new(_secondAddressSalt);
         address _firstFeeRecipient = uf._new(_firstFeeRecipientSalt);
@@ -202,9 +196,7 @@ contract OperatorsRegistryV1Tests is Test {
         uint256 _secondAddressSalt,
         uint256 _firstFeeRecipientSalt,
         uint256 _secondFeeRecipientSalt
-    )
-        public
-    {
+    ) public {
         address _firstAddress = uf._new(_firstAddressSalt);
         address _secondAddress = uf._new(_secondAddressSalt);
         address _firstFeeRecipient = uf._new(_firstFeeRecipientSalt);
@@ -234,9 +226,7 @@ contract OperatorsRegistryV1Tests is Test {
         uint256 _secondAddressSalt,
         uint256 _firstFeeRecipientSalt,
         uint256 _secondFeeRecipientSalt
-    )
-        public
-    {
+    ) public {
         address _firstAddress = uf._new(_firstAddressSalt);
         address _secondAddress = uf._new(_secondAddressSalt);
         address _firstFeeRecipient = uf._new(_firstFeeRecipientSalt);
@@ -352,9 +342,7 @@ contract OperatorsRegistryV1Tests is Test {
         bytes32 _name,
         uint256 _firstAddressSalt,
         uint256 _firstFeeRecipientSalt
-    )
-        public
-    {
+    ) public {
         address _firstAddress = uf._new(_firstAddressSalt);
         address _firstFeeRecipient = uf._new(_firstFeeRecipientSalt);
         vm.startPrank(admin);
@@ -375,9 +363,7 @@ contract OperatorsRegistryV1Tests is Test {
         uint256 _firstAddressSalt,
         uint256 _firstFeeRecipientSalt,
         uint128 _stoppedCount
-    )
-        public
-    {
+    ) public {
         address _firstAddress = uf._new(_firstAddressSalt);
         address _firstFeeRecipient = uf._new(_firstFeeRecipientSalt);
         vm.startPrank(admin);
@@ -398,9 +384,7 @@ contract OperatorsRegistryV1Tests is Test {
         uint256 _firstAddressSalt,
         uint256 _firstFeeRecipientSalt,
         uint128 _stoppedCount
-    )
-        public
-    {
+    ) public {
         address _firstAddress = uf._new(_firstAddressSalt);
         address _firstFeeRecipient = uf._new(_firstFeeRecipientSalt);
         vm.startPrank(admin);
@@ -426,9 +410,7 @@ contract OperatorsRegistryV1Tests is Test {
         uint256 _firstAddressSalt,
         uint256 _firstFeeRecipientSalt,
         uint256 _stoppedCount
-    )
-        public
-    {
+    ) public {
         address _firstAddress = uf._new(_firstAddressSalt);
         address _firstFeeRecipient = uf._new(_firstFeeRecipientSalt);
         vm.startPrank(admin);
@@ -449,9 +431,7 @@ contract OperatorsRegistryV1Tests is Test {
         uint256 _firstAddressSalt,
         uint256 _firstFeeRecipientSalt,
         uint256 _limit
-    )
-        public
-    {
+    ) public {
         address _firstAddress = uf._new(_firstAddressSalt);
         address _firstFeeRecipient = uf._new(_firstFeeRecipientSalt);
         _limit = _limit % 11; // 10 is max
@@ -488,9 +468,7 @@ contract OperatorsRegistryV1Tests is Test {
         uint256 _firstAddressSalt,
         uint256 _firstFeeRecipientSalt,
         uint256 _limit
-    )
-        public
-    {
+    ) public {
         address _firstAddress = uf._new(_firstAddressSalt);
         address _firstFeeRecipient = uf._new(_firstFeeRecipientSalt);
         vm.startPrank(admin);
@@ -664,9 +642,7 @@ contract OperatorsRegistryV1Tests is Test {
         bytes32 _name,
         uint256 _firstAddressSalt,
         uint256 _firstFeeRecipientSalt
-    )
-        public
-    {
+    ) public {
         address _firstAddress = uf._new(_firstAddressSalt);
         address _firstFeeRecipient = uf._new(_firstFeeRecipientSalt);
         vm.startPrank(admin);
@@ -756,9 +732,7 @@ contract OperatorsRegistryV1Tests is Test {
         bytes32 _name,
         uint256 _firstAddressSalt,
         uint256 _firstFeeRecipientSalt
-    )
-        public
-    {
+    ) public {
         address _firstAddress = uf._new(_firstAddressSalt);
         address _firstFeeRecipient = uf._new(_firstFeeRecipientSalt);
         vm.startPrank(admin);
@@ -780,9 +754,7 @@ contract OperatorsRegistryV1Tests is Test {
         bytes32 _name,
         uint256 _firstAddressSalt,
         uint256 _firstFeeRecipientSalt
-    )
-        public
-    {
+    ) public {
         address _firstAddress = uf._new(_firstAddressSalt);
         address _firstFeeRecipient = uf._new(_firstFeeRecipientSalt);
         vm.startPrank(admin);
@@ -952,9 +924,7 @@ contract OperatorsRegistryV1Tests is Test {
         bytes32 _name,
         uint256 _firstAddressSalt,
         uint256 _firstFeeRecipientSalt
-    )
-        public
-    {
+    ) public {
         address _firstAddress = uf._new(_firstAddressSalt);
         address _firstFeeRecipient = uf._new(_firstFeeRecipientSalt);
         vm.startPrank(admin);
@@ -992,9 +962,7 @@ contract OperatorsRegistryV1Tests is Test {
         bytes32 _name,
         uint256 _firstAddressSalt,
         uint256 _firstFeeRecipientSalt
-    )
-        public
-    {
+    ) public {
         address _firstAddress = uf._new(_firstAddressSalt);
         address _firstFeeRecipient = uf._new(_firstFeeRecipientSalt);
         vm.startPrank(admin);
@@ -1036,9 +1004,7 @@ contract OperatorsRegistryV1Tests is Test {
         bytes32 _name,
         uint256 _firstAddressSalt,
         uint256 _firstFeeRecipientSalt
-    )
-        public
-    {
+    ) public {
         address _firstAddress = uf._new(_firstAddressSalt);
         address _firstFeeRecipient = uf._new(_firstFeeRecipientSalt);
         vm.startPrank(admin);
@@ -1078,9 +1044,7 @@ contract OperatorsRegistryV1Tests is Test {
         bytes32 _name,
         uint256 _firstAddressSalt,
         uint256 _firstFeeRecipientSalt
-    )
-        public
-    {
+    ) public {
         address _firstAddress = uf._new(_firstAddressSalt);
         address _firstFeeRecipient = uf._new(_firstFeeRecipientSalt);
         vm.startPrank(admin);

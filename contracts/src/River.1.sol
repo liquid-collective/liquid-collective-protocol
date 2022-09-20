@@ -65,10 +65,7 @@ contract RiverV1 is
         address _treasuryAddress,
         uint256 _globalFee,
         uint256 _operatorRewardsShare
-    )
-        external
-        init(0)
-    {
+    ) external init(0) {
         if (_systemAdministratorAddress == address(0)) {
             // only check on initialization
             revert Errors.InvalidZeroAddress();

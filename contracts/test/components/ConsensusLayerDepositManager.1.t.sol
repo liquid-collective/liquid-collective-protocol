@@ -12,9 +12,7 @@ contract ConsensusLayerDepositManagerV1ExposeInitializer is ConsensusLayerDeposi
     function publicConsensusLayerDepositManagerInitializeV1(
         address _depositContractAddress,
         bytes32 _withdrawalCredentials
-    )
-        external
-    {
+    ) external {
         ConsensusLayerDepositManagerV1.initConsensusLayerDepositManagerV1(
             _depositContractAddress, _withdrawalCredentials
         );
@@ -98,9 +96,7 @@ contract ConsensusLayerDepositManagerV1ControllableValidatorKeyRequest is Consen
     function publicConsensusLayerDepositManagerInitializeV1(
         address _depositContractAddress,
         bytes32 _withdrawalCredentials
-    )
-        external
-    {
+    ) external {
         ConsensusLayerDepositManagerV1.initConsensusLayerDepositManagerV1(
             _depositContractAddress, _withdrawalCredentials
         );
