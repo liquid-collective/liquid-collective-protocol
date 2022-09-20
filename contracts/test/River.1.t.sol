@@ -249,7 +249,7 @@ contract RiverV1SetupOneTests is Test {
 
     function testSetGlobalFeeHigherThanBase() public {
         vm.startPrank(admin);
-        vm.expectRevert(abi.encodeWithSignature("InvalidArgument()"));
+        vm.expectRevert(abi.encodeWithSignature("InvalidFee()"));
         river.setGlobalFee(100001);
         vm.stopPrank();
     }

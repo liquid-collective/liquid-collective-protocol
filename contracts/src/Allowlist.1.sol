@@ -4,6 +4,7 @@ pragma solidity 0.8.10;
 import "./Initializable.sol";
 import "./libraries/Errors.sol";
 import "./libraries/LibOwnable.sol";
+import "./libraries/LibSanitize.sol";
 
 import "./state/allowlist/AllowerAddress.sol";
 import "./state/allowlist/Allowlist.sol";
@@ -60,6 +61,7 @@ contract AllowlistV1 is IAllowlistV1, Initializable {
         }
 
         for (uint256 i = 0; i < _accounts.length;) {
+            LibSanitize._notZeroAddress(_accounts[i]);
             Allowlist.set(_accounts[i], _statuses[i]);
             unchecked {
                 ++i;

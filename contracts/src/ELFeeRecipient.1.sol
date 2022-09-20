@@ -6,7 +6,6 @@ import "./libraries/Errors.sol";
 import "./libraries/LibOwnable.sol";
 import "./interfaces/IRiver.1.sol";
 import "./interfaces/IELFeeRecipient.1.sol";
-
 import "./state/shared/RiverAddress.sol";
 
 /// @title Execution Layer Fee Recipient

@@ -2,6 +2,7 @@
 pragma solidity 0.8.10;
 
 import "../../libraries/Errors.sol";
+import "../../libraries/LibSanitize.sol";
 
 library Operators {
     bytes32 internal constant OPERATORS_SLOT = bytes32(uint256(keccak256("river.state.operators")) - 1);
@@ -242,9 +243,8 @@ library Operators {
     }
 
     function set(string memory name, Operator memory newValue) internal returns (uint256) {
-        if (newValue.operator == address(0)) {
-            revert Errors.InvalidZeroAddress();
-        }
+        LibSanitize._notZeroAddress(newValue.operator);
+        LibSanitize._notEmptyString(newValue.name);
         bool opExists = _getOperatorActive(name);
 
         bytes32 slot = OPERATORS_SLOT;
@@ -270,6 +270,7 @@ library Operators {
     }
 
     function setOperatorName(uint256 index, string memory newName) internal {
+        LibSanitize._notEmptyString(newName);
         bytes32 slot = OPERATORS_SLOT;
 
         SlotOperator storage r;

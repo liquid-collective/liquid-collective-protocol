@@ -2,6 +2,7 @@
 pragma solidity 0.8.10;
 
 import "../../libraries/UnstructuredStorage.sol";
+import "../../libraries/LibSanitize.sol";
 
 library AdministratorAddress {
     bytes32 public constant ADMINISTRATOR_ADDRESS_SLOT =
@@ -12,6 +13,7 @@ library AdministratorAddress {
     }
 
     function set(address newValue) internal {
+        LibSanitize._notZeroAddress(newValue);
         UnstructuredStorage.setStorageAddress(ADMINISTRATOR_ADDRESS_SLOT, newValue);
     }
 }

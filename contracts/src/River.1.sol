@@ -6,12 +6,13 @@ import "./interfaces/IOperatorRegistry.1.sol";
 import "./interfaces/IRiver.1.sol";
 import "./interfaces/IELFeeRecipient.1.sol";
 
+import "./libraries/LibOwnable.sol";
+
 import "./components/ConsensusLayerDepositManager.1.sol";
 import "./components/UserDepositManager.1.sol";
 import "./components/SharesManager.1.sol";
 import "./components/OracleManager.1.sol";
 import "./Initializable.sol";
-import "./libraries/LibOwnable.sol";
 
 import "./state/shared/AdministratorAddress.sol";
 import "./state/river/AllowlistAddress.sol";
@@ -63,10 +64,6 @@ contract RiverV1 is
         address _treasuryAddress,
         uint256 _globalFee
     ) external init(0) {
-        if (_systemAdministratorAddress == address(0)) {
-            // only check on initialization
-            revert Errors.InvalidZeroAddress();
-        }
         LibOwnable._setAdmin(_systemAdministratorAddress);
         TreasuryAddress.set(_treasuryAddress);
         GlobalFee.set(_globalFee);
@@ -83,10 +80,6 @@ contract RiverV1 is
     /// @notice Changes the global fee parameter
     /// @param newFee New fee value
     function setGlobalFee(uint256 newFee) external onlyAdmin {
-        if (newFee > BASE) {
-            revert Errors.InvalidArgument();
-        }
-
         GlobalFee.set(newFee);
     }
 

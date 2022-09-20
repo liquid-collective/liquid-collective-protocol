@@ -2,6 +2,7 @@
 pragma solidity 0.8.10;
 
 import "../../libraries/UnstructuredStorage.sol";
+import "../../libraries/LibSanitize.sol";
 import "../../libraries/Errors.sol";
 
 library AllowerAddress {
@@ -12,9 +13,7 @@ library AllowerAddress {
     }
 
     function set(address newValue) internal {
-        if (newValue == address(0)) {
-            revert Errors.InvalidZeroAddress();
-        }
+        LibSanitize._notZeroAddress(newValue);
         UnstructuredStorage.setStorageAddress(ALLOWER_ADDRESS_SLOT, newValue);
     }
 }

@@ -466,8 +466,9 @@ contract WLSETHV1Tests {
             recipientBalance = wlseth.balanceOf(_recipient);
             assert(guyBalance == 0);
             assert(recipientBalance == 100 ether);
+            uint256 recipientShares = wlseth.sharesOf(_recipient);
             vm.startPrank(_recipient);
-            wlseth.burn(_recipient, 100 ether);
+            wlseth.burn(_recipient, recipientShares);
             vm.stopPrank();
             recipientBalance = RiverTokenMock(address(river)).balanceOf(_recipient);
             assert(recipientBalance == _sum);
@@ -501,8 +502,9 @@ contract WLSETHV1Tests {
             recipientBalance = wlseth.balanceOf(_recipient);
             assert(guyBalance == 0);
             assert(recipientBalance == 100 ether);
+            uint256 recipientShares = wlseth.sharesOf(_recipient);
             vm.startPrank(_recipient);
-            wlseth.burn(_recipient, 100 ether);
+            wlseth.burn(_recipient, recipientShares);
             vm.stopPrank();
             recipientBalance = RiverTokenMock(address(river)).balanceOf(_recipient);
             assert(recipientBalance == _sum);
@@ -538,8 +540,9 @@ contract WLSETHV1Tests {
             recipientBalance = wlseth.balanceOf(_recipient);
             assert(guyBalance == 0);
             assert(recipientBalance == 100 ether);
+            uint256 recipientShares = wlseth.sharesOf(_recipient);
             vm.startPrank(_recipient);
-            wlseth.burn(_recipient, 100 ether);
+            wlseth.burn(_recipient, recipientShares);
             vm.stopPrank();
             recipientBalance = RiverTokenMock(address(river)).balanceOf(_recipient);
             assert(recipientBalance == _sum);

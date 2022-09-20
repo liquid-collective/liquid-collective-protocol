@@ -3,6 +3,7 @@ pragma solidity 0.8.10;
 
 import "./libraries/Errors.sol";
 import "./interfaces/IFirewall.sol";
+import "./libraries/LibSanitize.sol";
 
 /// @title Firewall
 /// @author Figment
@@ -28,6 +29,9 @@ contract Firewall is IFirewall {
         address destination_,
         bytes4[] memory executorCallableSelectors_
     ) {
+        LibSanitize._notZeroAddress(governor_);
+        LibSanitize._notZeroAddress(executor_);
+        LibSanitize._notZeroAddress(destination_);
         governor = governor_;
         executor = executor_;
         destination = destination_;
@@ -57,11 +61,13 @@ contract Firewall is IFirewall {
 
     /// @dev Change the governor
     function setGovernor(address newGovernor) external ifGovernor {
+        LibSanitize._notZeroAddress(newGovernor);
         governor = newGovernor;
     }
 
     /// @dev Change the executor
     function setExecutor(address newExecutor) external ifGovernorOrExecutor {
+        LibSanitize._notZeroAddress(newExecutor);
         executor = newExecutor;
     }
 

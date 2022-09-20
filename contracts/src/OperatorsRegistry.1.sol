@@ -6,6 +6,7 @@ import "./Initializable.sol";
 import "./libraries/Errors.sol";
 import "./libraries/Uint256Lib.sol";
 import "./libraries/LibOwnable.sol";
+import "./libraries/LibSanitize.sol";
 
 import "./state/operatorsRegistry/Operators.sol";
 import "./state/operatorsRegistry/ValidatorKeys.sol";
@@ -147,6 +148,7 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable {
     /// @param _index The operator index
     /// @param _newOperatorAddress The new address of the operator
     function setOperatorAddress(uint256 _index, address _newOperatorAddress) external operatorOrAdmin(_index) {
+        LibSanitize._notZeroAddress(_newOperatorAddress);
         Operators.Operator storage operator = Operators.getByIndex(_index);
 
         operator.operator = _newOperatorAddress;
