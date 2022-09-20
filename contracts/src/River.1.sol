@@ -180,6 +180,7 @@ contract RiverV1 is
     }
 
     /// @notice Internal utility to pull funds from the execution layer fee recipient to River and return the delta in the balance
+    /// @param _max Maximum value to extract from the el fee recipient
     function _pullELFees(uint256 _max) internal override returns (uint256) {
         address elFeeRecipient = ELFeeRecipientAddress.get();
         if (elFeeRecipient == address(0)) {

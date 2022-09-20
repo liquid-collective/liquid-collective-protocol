@@ -44,6 +44,7 @@ abstract contract OracleManagerV1 is IOracleManagerV1 {
     /// @param _validatorCount The number of active validators on the consensus layer
     /// @param _validatorTotalBalance The validator balance sum of the active validators on the consensus layer
     /// @param _roundId An identifier for this update
+    /// @param _maxIncrease Maximum positive delta allowed to the total underlying balance
     function setConsensusLayerData(
         uint256 _validatorCount,
         uint256 _validatorTotalBalance,

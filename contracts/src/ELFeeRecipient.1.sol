@@ -21,6 +21,7 @@ contract ELFeeRecipientV1 is Initializable, IELFeeRecipientV1 {
 
     /// @notice Pulls all the ETH to the River contract
     /// @dev Only callable by the River contract
+    /// @param _maxAmount Maximum value to extract from the recipient
     function pullELFees(uint256 _maxAmount) external {
         address river = RiverAddress.get();
         if (msg.sender != river) {
