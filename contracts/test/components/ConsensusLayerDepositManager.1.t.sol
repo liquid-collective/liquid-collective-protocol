@@ -7,6 +7,7 @@ import "../../src/components/ConsensusLayerDepositManager.1.sol";
 import "../../src/libraries/UnstructuredStorage.sol";
 import "../utils/UserFactory.sol";
 import "../mocks/DepositContractMock.sol";
+import "../mocks/DepositContractEnhancedMock.sol";
 
 contract ConsensusLayerDepositManagerV1ExposeInitializer is ConsensusLayerDepositManagerV1 {
     function publicConsensusLayerDepositManagerInitializeV1(
@@ -249,5 +250,68 @@ contract ConsensusLayerDepositManagerV1WithdrawalCredentialError {
         ConsensusLayerDepositManagerV1ExposeInitializer(address(depositManager)).sudoSetWithdrawalCredentials(
             withdrawalCredentials
         );
+    }
+}
+
+// values are coming from this tx https://etherscan.io/tx/0x87eb1df9b26c7e655c9eb568e38009c7c2b0e10b397708ea63dffccd93c6626a that was picked randomly
+contract ConsensusLayerDepositManagerV1ValidKeys is ConsensusLayerDepositManagerV1 {
+    function publicConsensusLayerDepositManagerInitializeV1(
+        address _depositContractAddress,
+        bytes32 _withdrawalCredentials
+    )
+        external
+    {
+        ConsensusLayerDepositManagerV1.initConsensusLayerDepositManagerV1(
+            _depositContractAddress, _withdrawalCredentials
+        );
+    }
+
+    bytes public _publicKeys =
+        hex"84B379476E22EE78F2767AECF6D4832E3C3B77BCF068E08A931FEA69C406753378FF1215F0D2077211126A7D7C54F83B";
+    bytes public _signatures =
+        hex"8A1979CC3E8D2897044AA18F99F78569AFC0EF9CF5CA5F9545070CF2D2A2CCD5C328B2B2280A8BA80CC810A46470BFC80D2EAAC53E533E43BA054A00587027BA0BCBA5FAD22355257CEB96B23E45D5746022312FBB7E7EFA8C3AE17C0713B426";
+
+    function _getNextValidators(uint256 _amount) internal view override returns (bytes[] memory, bytes[] memory) {
+        uint256 amount = _amount > 1 ? 1 : _amount;
+        bytes[] memory publicKeys = new bytes[](amount);
+        bytes[] memory signatures = new bytes[](amount);
+
+        for (uint256 idx = 0; idx < amount; ++idx) {
+            publicKeys[idx] = BytesLib.slice(_publicKeys, idx * 48, 48);
+            signatures[idx] = BytesLib.slice(_signatures, idx * 96, 96);
+        }
+
+        return (publicKeys, signatures);
+    }
+
+    function sudoSetWithdrawalCredentials(bytes32 _withdrawalCredentials) external {
+        WithdrawalCredentials.set(_withdrawalCredentials);
+    }
+}
+contract ConsensusLayerDepositManagerV1ValidKeysTest {
+    Vm internal vm = Vm(0x7109709ECfa91a80626fF3989D68f67F5b1DD12D);
+
+    ConsensusLayerDepositManagerV1 internal depositManager;
+    IDepositContract internal depositContract;
+
+    bytes32 internal withdrawalCredentials = bytes32(
+            uint256(uint160(0xd74E967a7D771D7C6757eDb129229C3C8364A584)) + 0x0100000000000000000000000000000000000000000000000000000000000000
+        );
+
+    // value is coming from this tx https://etherscan.io/tx/0x87eb1df9b26c7e655c9eb568e38009c7c2b0e10b397708ea63dffccd93c6626a that was picked randomly
+    bytes32 internal depositDataRoot = 0x306fbdcbdbb43ac873b85aea54b2035b10b3b28d55d3869fb499f0b7f7811247;
+
+    function setUp() public {
+        depositContract = IDepositContract(address(new DepositContractEnhancedMock()));
+
+        depositManager = new ConsensusLayerDepositManagerV1ValidKeys();
+        ConsensusLayerDepositManagerV1ValidKeys(address(depositManager))
+            .publicConsensusLayerDepositManagerInitializeV1(address(depositContract), withdrawalCredentials);
+    }
+
+    function testDepositValidKey() external {
+        vm.deal(address(depositManager), 32 ether);
+        depositManager.depositToConsensusLayer(1);
+        assert(DepositContractEnhancedMock(address(depositContract)).debug_getLastDepositDataRoot() == depositDataRoot);
     }
 }
