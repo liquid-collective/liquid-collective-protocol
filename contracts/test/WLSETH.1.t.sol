@@ -346,6 +346,30 @@ contract WLSETHV1Tests {
         }
     }
 
+    function testTransferFromMsgSender(uint256 _guySalt, uint256 _recipientSalt, uint32 _sum) external {
+        address _guy = uf._new(_guySalt);
+        address _recipient = uf._new(_recipientSalt);
+        if (_sum > 0) {
+            _mint(_guy, _sum);
+            vm.startPrank(_guy);
+            vm.expectRevert(
+                abi.encodeWithSignature("AllowanceTooLow(address,address,uint256,uint256)", _guy, _guy, 0, 100 ether)
+            );
+            wlseth.transferFrom(_guy, _recipient, 100 ether);
+        }
+    }
+
+    function testTransferZero(uint256 _guySalt, uint32 _sum) external {
+        address _guy = uf._new(_guySalt);
+        if (_sum > 0) {
+            _mint(_guy, _sum);
+            uint256 guyBalance = wlseth.balanceOf(_guy);
+            vm.expectRevert(abi.encodeWithSignature("UnauthorizedTransfer(address,address)", _guy, address(0)));
+            vm.prank(_guy);
+            wlseth.transfer(address(0), guyBalance);
+        }
+    }
+
     function testTransferTooMuch(uint256 _guySalt, uint256 _recipientSalt, uint32 _sum) external {
         address _guy = uf._new(_guySalt);
         address _recipient = uf._new(_recipientSalt);
@@ -383,6 +407,139 @@ contract WLSETHV1Tests {
             recipientBalance = wlseth.sharesOf(_recipient);
             vm.startPrank(_recipient);
             wlseth.burn(_recipient, recipientBalance);
+            vm.stopPrank();
+            recipientBalance = RiverTokenMock(address(river)).balanceOf(_recipient);
+            assert(recipientBalance == _sum);
+        }
+    }
+
+    function testTransferFromToZeroAddress(
+        uint256 _fromSalt,
+        uint256 _approvedSalt,
+        uint256 _recipientSalt,
+        uint32 _sum
+    ) external {
+        address _from = uf._new(_fromSalt);
+        address _approved = uf._new(_approvedSalt);
+        address _recipient = uf._new(_recipientSalt);
+        if (_sum > 0) {
+            _mint(_from, _sum);
+            vm.startPrank(_from);
+            wlseth.approve(_approved, 100 ether);
+            vm.stopPrank();
+            assert(wlseth.allowance(_from, _approved) == 100 ether);
+            uint256 guyBalance = wlseth.balanceOf(_from);
+            uint256 recipientBalance = wlseth.balanceOf(_recipient);
+            assert(guyBalance == 100 ether);
+            assert(recipientBalance == 0);
+            vm.startPrank(_approved);
+            vm.expectRevert(abi.encodeWithSignature("UnauthorizedTransfer(address,address)", _from, address(0)));
+            wlseth.transferFrom(_from, address(0), 100 ether);
+            vm.stopPrank();
+        }
+    }
+
+    function testTransferFromUnlimitedAllowance(
+        uint256 _fromSalt,
+        uint256 _approvedSalt,
+        uint256 _recipientSalt,
+        uint32 _sum
+    ) external {
+        address _from = uf._new(_fromSalt);
+        address _approved = uf._new(_approvedSalt);
+        address _recipient = uf._new(_recipientSalt);
+        if (_sum > 0) {
+            _mint(_from, _sum);
+            vm.startPrank(_from);
+            wlseth.approve(_approved, type(uint256).max);
+            vm.stopPrank();
+            assert(wlseth.allowance(_from, _approved) == type(uint256).max);
+            uint256 guyBalance = wlseth.balanceOf(_from);
+            uint256 recipientBalance = wlseth.balanceOf(_recipient);
+            assert(guyBalance == 100 ether);
+            assert(recipientBalance == 0);
+            vm.startPrank(_approved);
+            wlseth.transferFrom(_from, _recipient, 100 ether);
+            vm.stopPrank();
+            assert(wlseth.allowance(_from, _approved) == type(uint256).max);
+            guyBalance = wlseth.balanceOf(_from);
+            recipientBalance = wlseth.balanceOf(_recipient);
+            assert(guyBalance == 0);
+            assert(recipientBalance == 100 ether);
+            vm.startPrank(_recipient);
+            wlseth.burn(_recipient, 100 ether);
+            vm.stopPrank();
+            recipientBalance = RiverTokenMock(address(river)).balanceOf(_recipient);
+            assert(recipientBalance == _sum);
+        }
+    }
+
+    function testTransferFromAfterIncreasedAllowance(
+        uint256 _fromSalt,
+        uint256 _approvedSalt,
+        uint256 _recipientSalt,
+        uint32 _sum
+    ) external {
+        address _from = uf._new(_fromSalt);
+        address _approved = uf._new(_approvedSalt);
+        address _recipient = uf._new(_recipientSalt);
+        if (_sum > 0) {
+            _mint(_from, _sum);
+            vm.startPrank(_from);
+            wlseth.increaseAllowance(_approved, 100 ether);
+            vm.stopPrank();
+            assert(wlseth.allowance(_from, _approved) == 100 ether);
+            uint256 guyBalance = wlseth.balanceOf(_from);
+            uint256 recipientBalance = wlseth.balanceOf(_recipient);
+            assert(guyBalance == 100 ether);
+            assert(recipientBalance == 0);
+            vm.startPrank(_approved);
+            wlseth.transferFrom(_from, _recipient, 100 ether);
+            vm.stopPrank();
+            assert(wlseth.allowance(_from, _approved) == 0);
+            guyBalance = wlseth.balanceOf(_from);
+            recipientBalance = wlseth.balanceOf(_recipient);
+            assert(guyBalance == 0);
+            assert(recipientBalance == 100 ether);
+            vm.startPrank(_recipient);
+            wlseth.burn(_recipient, 100 ether);
+            vm.stopPrank();
+            recipientBalance = RiverTokenMock(address(river)).balanceOf(_recipient);
+            assert(recipientBalance == _sum);
+        }
+    }
+
+    function testTransferFromAfterIncreasedAndDecreasedAllowance(
+        uint256 _fromSalt,
+        uint256 _approvedSalt,
+        uint256 _recipientSalt,
+        uint32 _sum
+    ) external {
+        address _from = uf._new(_fromSalt);
+        address _approved = uf._new(_approvedSalt);
+        address _recipient = uf._new(_recipientSalt);
+        if (_sum > 0) {
+            _mint(_from, _sum);
+            vm.startPrank(_from);
+            wlseth.increaseAllowance(_approved, 50 ether);
+            wlseth.increaseAllowance(_approved, 200 ether);
+            wlseth.decreaseAllowance(_approved, 150 ether);
+            vm.stopPrank();
+            assert(wlseth.allowance(_from, _approved) == 100 ether);
+            uint256 guyBalance = wlseth.balanceOf(_from);
+            uint256 recipientBalance = wlseth.balanceOf(_recipient);
+            assert(guyBalance == 100 ether);
+            assert(recipientBalance == 0);
+            vm.startPrank(_approved);
+            wlseth.transferFrom(_from, _recipient, 100 ether);
+            vm.stopPrank();
+            assert(wlseth.allowance(_from, _approved) == 0);
+            guyBalance = wlseth.balanceOf(_from);
+            recipientBalance = wlseth.balanceOf(_recipient);
+            assert(guyBalance == 0);
+            assert(recipientBalance == 100 ether);
+            vm.startPrank(_recipient);
+            wlseth.burn(_recipient, 100 ether);
             vm.stopPrank();
             recipientBalance = RiverTokenMock(address(river)).balanceOf(_recipient);
             assert(recipientBalance == _sum);
