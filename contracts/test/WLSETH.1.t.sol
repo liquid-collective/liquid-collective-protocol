@@ -127,12 +127,12 @@ contract WLSETHV1Tests {
             wlseth.mint(_guy, balance);
             assert(wlseth.totalSupply() == 100 ether);
             vm.stopPrank();
-            balance = wlseth.balanceOf(_guy);
+            balance = wlseth.sharesOf(_guy);
             vm.startPrank(_guy);
             wlseth.burn(_guy, balance);
             assert(wlseth.totalSupply() == 0 ether);
             balance = wlseth.balanceOf(_guy);
-            balance = RiverTokenMock(address(river)).balanceOf(_guy);
+            assert(balance == 0);
             vm.stopPrank();
         } else {
             assert(balance == 0 ether);
@@ -151,7 +151,7 @@ contract WLSETHV1Tests {
         wlseth.mint(_guy, balance);
         assert(wlseth.totalSupply() == 100 ether);
         vm.stopPrank();
-        balance = wlseth.balanceOf(_guy);
+        balance = wlseth.sharesOf(_guy);
         vm.startPrank(_guy);
         wlseth.burn(_guy, balance / 2);
         assert(wlseth.totalSupply() == 50 ether);
@@ -163,9 +163,9 @@ contract WLSETHV1Tests {
         assert(wlseth.totalSupply() == 6.25 ether);
         RiverTokenMock(address(river)).sudoSetUnderlyingTotal(200 ether);
         assert(wlseth.totalSupply() == 12.5 ether);
-        wlseth.burn(_guy, balance / 16);
+        wlseth.burn(_guy, balance / 32);
         assert(wlseth.totalSupply() == 6.25 ether);
-        wlseth.burn(_guy, balance / 16);
+        wlseth.burn(_guy, balance / 32);
         assert(wlseth.totalSupply() == 0);
         balance = wlseth.balanceOf(_guy);
         balance = RiverTokenMock(address(river)).balanceOf(_guy);
@@ -184,7 +184,7 @@ contract WLSETHV1Tests {
             wlseth.mint(_guy, balance);
             assert(wlseth.balanceOf(_guy) == 100 ether);
             vm.stopPrank();
-            balance = wlseth.balanceOf(_guy);
+            balance = wlseth.sharesOf(_guy);
             vm.startPrank(_guy);
             wlseth.burn(_guy, balance);
             assert(wlseth.balanceOf(_guy) == 0 ether);
@@ -208,7 +208,7 @@ contract WLSETHV1Tests {
         wlseth.mint(_guy, balance);
         assert(wlseth.balanceOf(_guy) == 100 ether);
         vm.stopPrank();
-        balance = wlseth.balanceOf(_guy);
+        balance = wlseth.sharesOf(_guy);
         vm.startPrank(_guy);
         wlseth.burn(_guy, balance / 2);
         assert(wlseth.balanceOf(_guy) == 50 ether);
@@ -220,9 +220,9 @@ contract WLSETHV1Tests {
         assert(wlseth.balanceOf(_guy) == 6.25 ether);
         RiverTokenMock(address(river)).sudoSetUnderlyingTotal(200 ether);
         assert(wlseth.balanceOf(_guy) == 12.5 ether);
-        wlseth.burn(_guy, balance / 16);
+        wlseth.burn(_guy, balance / 32);
         assert(wlseth.balanceOf(_guy) == 6.25 ether);
-        wlseth.burn(_guy, balance / 16);
+        wlseth.burn(_guy, balance / 32);
         assert(wlseth.balanceOf(_guy) == 0);
         balance = wlseth.balanceOf(_guy);
         balance = RiverTokenMock(address(river)).balanceOf(_guy);
@@ -252,7 +252,7 @@ contract WLSETHV1Tests {
         assert(wlseth.balanceOf(_guy) == 50 ether);
         vm.stopPrank();
 
-        balance = wlseth.balanceOf(_guy);
+        balance = wlseth.sharesOf(_guy);
         vm.startPrank(_guy);
         wlseth.burn(_guy, balance / 2);
         assert(wlseth.balanceOf(_guy) == 25 ether);
@@ -264,9 +264,9 @@ contract WLSETHV1Tests {
         assert(wlseth.balanceOf(_guy) == 3.125 ether);
         RiverTokenMock(address(river)).sudoSetUnderlyingTotal(200 ether);
         assert(wlseth.balanceOf(_guy) == 6.25 ether);
-        wlseth.burn(_guy, balance / 16);
+        wlseth.burn(_guy, balance / 32);
         assert(wlseth.balanceOf(_guy) == 3.125 ether);
-        wlseth.burn(_guy, balance / 16);
+        wlseth.burn(_guy, balance / 32);
         assert(wlseth.balanceOf(_guy) == 0);
         balance = wlseth.balanceOf(_guy);
         balance = RiverTokenMock(address(river)).balanceOf(_guy);
@@ -337,8 +337,9 @@ contract WLSETHV1Tests {
             recipientBalance = wlseth.balanceOf(_recipient);
             assert(guyBalance == 0);
             assert(recipientBalance == 100 ether);
+            recipientBalance = wlseth.sharesOf(_recipient);
             vm.startPrank(_recipient);
-            wlseth.burn(_recipient, 100 ether);
+            wlseth.burn(_recipient, recipientBalance);
             vm.stopPrank();
             recipientBalance = RiverTokenMock(address(river)).balanceOf(_recipient);
             assert(recipientBalance == _sum);
@@ -379,8 +380,9 @@ contract WLSETHV1Tests {
             recipientBalance = wlseth.balanceOf(_recipient);
             assert(guyBalance == 0);
             assert(recipientBalance == 100 ether);
+            recipientBalance = wlseth.sharesOf(_recipient);
             vm.startPrank(_recipient);
-            wlseth.burn(_recipient, 100 ether);
+            wlseth.burn(_recipient, recipientBalance);
             vm.stopPrank();
             recipientBalance = RiverTokenMock(address(river)).balanceOf(_recipient);
             assert(recipientBalance == _sum);
@@ -454,6 +456,7 @@ contract WLSETHV1Tests {
             assert(balance == 0);
             balance = wlseth.balanceOf(_guy);
             assert(balance == 100 ether);
+            balance = wlseth.sharesOf(_guy);
             RiverTokenMock(address(river)).sudoSetRetVal(false);
             vm.startPrank(_guy);
             vm.expectRevert(abi.encodeWithSignature("TokenTransferError()"));
@@ -480,6 +483,7 @@ contract WLSETHV1Tests {
             assert(balance == 0);
             balance = wlseth.balanceOf(_guy);
             assert(balance == 100 ether);
+            balance = wlseth.sharesOf(_guy);
             vm.startPrank(_guy);
             wlseth.burn(_guy, balance);
             balance = wlseth.balanceOf(_guy);
@@ -511,6 +515,7 @@ contract WLSETHV1Tests {
             RiverTokenMock(address(river)).sudoSetUnderlyingTotal(200 ether);
             balance = wlseth.balanceOf(_guy);
             assert(balance == 200 ether);
+            balance = wlseth.sharesOf(_guy);
             vm.startPrank(_guy);
             wlseth.burn(_guy, balance);
             balance = wlseth.balanceOf(_guy);
