@@ -450,7 +450,7 @@ contract OracleV1 is Initializable, Administrable {
             uint256 annualAprUpperBound = BeaconReportBounds.get().annualAprUpperBound;
             // check that annualRelativeIncreaseBp <= allowedAnnualRelativeIncreaseBp
             if (
-                uint256(BPS_MAX * ONE_YEAR) * (_postTotalEth - _prevTotalEth)
+                BPS_MAX * ONE_YEAR * (_postTotalEth - _prevTotalEth)
                     > annualAprUpperBound * _prevTotalEth * _timeElapsed
             ) {
                 revert BeaconBalanceIncreaseOutOfBounds(_prevTotalEth, _postTotalEth, _timeElapsed, annualAprUpperBound);
@@ -461,7 +461,7 @@ contract OracleV1 is Initializable, Administrable {
             // relativeDecreaseBp = relativeDecrease * 10000, in basis points 0.01% (1e-4)
             uint256 relativeLowerBound = BeaconReportBounds.get().relativeLowerBound;
             // check that relativeDecreaseBp <= allowedRelativeDecreaseBp
-            if (uint256(BPS_MAX) * (_prevTotalEth - _postTotalEth) > relativeLowerBound * _prevTotalEth) {
+            if (BPS_MAX * (_prevTotalEth - _postTotalEth) > relativeLowerBound * _prevTotalEth) {
                 revert BeaconBalanceDecreaseOutOfBounds(_prevTotalEth, _postTotalEth, _timeElapsed, relativeLowerBound);
             }
         }
