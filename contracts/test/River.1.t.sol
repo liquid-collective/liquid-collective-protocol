@@ -94,7 +94,7 @@ contract RiverV1SetupOneTests is Test, BytesGenerator {
             address(allowlist),
             address(operatorsRegistry),
             collector,
-            5000
+            500
         );
         oracle.initOracleV1(address(river), admin, 225, 32, 12, 0, 1000, 500);
         vm.startPrank(admin);
@@ -1004,7 +1004,7 @@ contract RiverV1SetupOneTests is Test, BytesGenerator {
         _allow(bob, DEPOSIT_MASK);
 
         vm.startPrank(admin);
-        river.setGlobalFee(10000);
+        river.setGlobalFee(1000);
         vm.stopPrank();
 
         vm.startPrank(joe);

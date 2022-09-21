@@ -31,7 +31,7 @@ contract RiverV1 is
     Administrable,
     IRiverV1
 {
-    uint256 public constant BASE = 100_000;
+    uint256 public constant BASIS_POINTS_MAX = 10_000;
     uint256 internal constant DEPOSIT_MASK = 0x1;
     /// @notice Prevents unauthorized calls
 
@@ -202,7 +202,7 @@ contract RiverV1 is
         }
         uint256 globalFee = GlobalFee.get();
         uint256 numerator = _amount * currentTotalSupply * globalFee;
-        uint256 denominator = (_assetBalance() * BASE) - (_amount * globalFee);
+        uint256 denominator = (_assetBalance() * BASIS_POINTS_MAX) - (_amount * globalFee);
         uint256 sharesToMint = denominator == 0 ? 0 : (numerator / denominator);
 
         if (sharesToMint > 0) {
