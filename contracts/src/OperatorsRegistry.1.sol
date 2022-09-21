@@ -163,7 +163,7 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
             }
 
             if (_snapshotBlock < operator.lastEdit) {
-                emit LastEditAfterSnapshot(_operatorIndexes[idx], operator.lastEdit, _snapshotBlock);
+                emit FailedSetOperatorLimit(_operatorIndexes[idx], _newLimits[idx], operator.lastEdit, _snapshotBlock);
             } else {
                 operator.limit = _newLimits[idx];
                 emit SetOperatorLimit(_operatorIndexes[idx], operator.limit);
