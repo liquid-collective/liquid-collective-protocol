@@ -17,7 +17,8 @@ contract TLCTestTests is Test {
         bob = makeAddr("bob");
         joe = makeAddr("joe");
 
-        tlc = new TLC(initAccount);
+        tlc = new TLC();
+        tlc.initTLCV1(initAccount);
     }
 
     function testName() public view {
