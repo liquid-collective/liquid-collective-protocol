@@ -133,8 +133,7 @@ contract FirewallTests {
 
     function testGovernorCanAddOperator() public {
         vm.startPrank(riverGovernorDAO);
-        firewalledOperatorsRegistry.addOperator("bob", bob);
-        (int256 _operatorBobIndex,) = operatorsRegistry.getOperatorDetails("bob");
+        uint256 _operatorBobIndex = firewalledOperatorsRegistry.addOperator("bob", bob);
         assert(_operatorBobIndex >= 0);
         vm.stopPrank();
     }
@@ -197,8 +196,7 @@ contract FirewallTests {
 
     function haveGovernorAddOperatorBob() public returns (uint256 operatorBobIndex) {
         vm.startPrank(riverGovernorDAO);
-        firewalledOperatorsRegistry.addOperator("bob", bob);
-        (int256 _operatorBobIndex,) = operatorsRegistry.getOperatorDetails("bob");
+        uint256 _operatorBobIndex = firewalledOperatorsRegistry.addOperator("bob", bob);
         assert(_operatorBobIndex >= 0);
         vm.stopPrank();
         return (uint256(_operatorBobIndex));
@@ -484,8 +482,7 @@ contract FirewallTests {
     function testMakingFunctionGovernorOnly() public {
         // At first, both governor and executor can setOperatorStatus
         vm.startPrank(riverGovernorDAO);
-        firewalledOperatorsRegistry.addOperator("bob", bob);
-        (int256 _operatorBobIndex,) = operatorsRegistry.getOperatorDetails("bob");
+        uint256 _operatorBobIndex = firewalledOperatorsRegistry.addOperator("bob", bob);
         assert(_operatorBobIndex >= 0);
         uint256 operatorBobIndex = uint256(_operatorBobIndex);
         firewalledOperatorsRegistry.setOperatorStatus(operatorBobIndex, true);
