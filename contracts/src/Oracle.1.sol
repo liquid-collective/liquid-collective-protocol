@@ -29,7 +29,7 @@ contract OracleV1 is IOracleV1, Initializable, Administrable {
     uint128 internal constant DENOMINATION_OFFSET = 1e9;
 
     /// @notice Initializes the oracle
-    /// @param _riverContractAddress Address of the River contract, able to receive oracle input data after quorum is met
+    /// @param _river Address of the River contract, able to receive oracle input data after quorum is met
     /// @param _administratorAddress Address able to call administrative methods
     /// @param _epochsPerFrame CL spec parameter. Number of epochs in a frame.
     /// @param _slotsPerEpoch CL spec parameter. Number of slots in one epoch.
@@ -38,7 +38,7 @@ contract OracleV1 is IOracleV1, Initializable, Administrable {
     /// @param _annualAprUpperBound CL bound parameter. Maximum apr allowed for balance increase. Delta between updates is extrapolated on a year time frame.
     /// @param _relativeLowerBound CL bound parameter. Maximum relative balance decrease.
     function initOracleV1(
-        address _riverContractAddress,
+        address _river,
         address _administratorAddress,
         uint64 _epochsPerFrame,
         uint64 _slotsPerEpoch,
@@ -48,7 +48,7 @@ contract OracleV1 is IOracleV1, Initializable, Administrable {
         uint256 _relativeLowerBound
     ) external init(0) {
         _setAdmin(_administratorAddress);
-        RiverAddress.set(_riverContractAddress);
+        RiverAddress.set(_river);
         CLSpec.set(
             CLSpec.CLSpecStruct({
                 epochsPerFrame: _epochsPerFrame,
@@ -461,18 +461,16 @@ contract OracleV1 is IOracleV1, Initializable, Administrable {
     ) internal {
         _clearReporting(_epochId + _clSpec.epochsPerFrame);
 
-        IRiverV1 riverAddress = IRiverV1(payable(RiverAddress.get()));
-        uint256 prevTotalEth = IRiverV1(payable(address(riverAddress))).totalUnderlyingSupply();
-        riverAddress.setConsensusLayerData(_validatorCount, _balanceSum, bytes32(_epochId));
-        uint256 postTotalEth = IRiverV1(payable(address(riverAddress))).totalUnderlyingSupply();
+        IRiverV1 river = IRiverV1(payable(RiverAddress.get()));
+        uint256 prevTotalEth = river.totalUnderlyingSupply();
+        river.setConsensusLayerData(_validatorCount, _balanceSum, bytes32(_epochId));
+        uint256 postTotalEth = river.totalUnderlyingSupply();
 
         uint256 timeElapsed = (_epochId - LastEpochId.get()) * _clSpec.slotsPerEpoch * _clSpec.secondsPerSlot;
 
         _sanityChecks(postTotalEth, prevTotalEth, timeElapsed);
         LastEpochId.set(_epochId);
 
-        emit PostTotalShares(
-            postTotalEth, prevTotalEth, timeElapsed, IRiverV1(payable(address(riverAddress))).totalSupply()
-            );
+        emit PostTotalShares(postTotalEth, prevTotalEth, timeElapsed, river.totalSupply());
     }
 }
