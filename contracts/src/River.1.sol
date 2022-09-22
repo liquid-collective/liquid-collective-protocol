@@ -32,7 +32,7 @@ contract RiverV1 is
     Administrable,
     IRiverV1
 {
-    uint256 public constant BASE = 100000;
+    uint256 public constant BASE = 100_000;
     uint256 internal constant DEPOSIT_MASK = 0x1;
     /// @notice Prevents unauthorized calls
 
