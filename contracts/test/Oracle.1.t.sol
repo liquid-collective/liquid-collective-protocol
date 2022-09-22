@@ -114,6 +114,11 @@ contract OracleV1Tests {
         oracle.removeMember(newMemberOne, 0);
     }
 
+    function testGetMemberStatusRandomAddress(uint256 newMemberSalt) public {
+        address newMember = uf._new(newMemberSalt);
+        assert(oracle.getMemberReportStatus(newMember) == false);
+    }
+
     function testAddMember(uint256 newMemberSalt) public {
         address newMember = uf._new(newMemberSalt);
         vm.startPrank(admin);

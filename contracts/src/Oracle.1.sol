@@ -99,7 +99,7 @@ contract OracleV1 is Initializable, Administrable {
     /// @param _oracleMember Address of member to check
     function getMemberReportStatus(address _oracleMember) external view returns (bool) {
         int256 memberIndex = OracleMembers.indexOf(_oracleMember);
-        return ReportsPositions.get(uint256(memberIndex));
+        return memberIndex != -1 && ReportsPositions.get(uint256(memberIndex));
     }
 
     /// @notice Retrieve member report status
