@@ -11,6 +11,7 @@ interface IConsensusLayerDepositManagerV1 {
     error InvalidPublicKeyCount();
     error InvalidSignatureCount();
     error InvalidWithdrawalCredentials();
+    error ErrorOnDeposit();
 
     function getWithdrawalCredentials() external view returns (bytes32);
     function depositToConsensusLayer(uint256 _maxCount) external;

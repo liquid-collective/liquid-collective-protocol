@@ -2,9 +2,16 @@
 pragma solidity 0.8.10;
 
 library BytesLib {
+    error SliceOverflow();
+    error SliceOutOfBounds();
+
     function slice(bytes memory _bytes, uint256 _start, uint256 _length) internal pure returns (bytes memory) {
-        require(_length + 31 >= _length, "slice_overflow");
-        require(_bytes.length >= _start + _length, "slice_outOfBounds");
+        if (_length + 31 < _length) {
+            revert SliceOverflow();
+        }
+        if (_bytes.length < _start + _length) {
+            revert SliceOutOfBounds();
+        }
 
         bytes memory tempBytes;
 

@@ -126,7 +126,9 @@ abstract contract ConsensusLayerDepositManagerV1 is IConsensusLayerDepositManage
         DepositContractAddress.get().deposit{value: value}(
             _publicKey, abi.encodePacked(_withdrawalCredentials), _signature, depositDataRoot
         );
-        require(address(this).balance == targetBalance, "EXPECTING_DEPOSIT_TO_HAPPEN");
+        if (address(this).balance != targetBalance) {
+            revert ErrorOnDeposit();
+        }
         emit FundedValidatorKey(_publicKey);
     }
 
