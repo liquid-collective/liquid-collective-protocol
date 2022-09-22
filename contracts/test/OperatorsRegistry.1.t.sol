@@ -3,7 +3,6 @@
 pragma solidity 0.8.10;
 
 import "../src/OperatorsRegistry.1.sol";
-import "../src/state/shared/AdministratorAddress.sol";
 import "./utils/UserFactory.sol";
 import "forge-std/Test.sol";
 
@@ -64,50 +63,6 @@ contract OperatorsRegistryV1Tests is Test {
         assert(operatorsRegistry.getRiver() == river);
         vm.expectRevert(abi.encodeWithSignature("Unauthorized(address)", address(this)));
         operatorsRegistry.setRiver(_newRiverAddress);
-    }
-
-    function testTransferOwnership(uint256 _newAdminSalt) public {
-        address _newAdminAddress = uf._new(_newAdminSalt);
-        assert(operatorsRegistry.getAdministrator() == admin);
-        assert(operatorsRegistry.getPendingAdministrator() == address(0));
-        vm.startPrank(admin);
-        operatorsRegistry.transferOwnership(_newAdminAddress);
-        vm.stopPrank();
-        assert(operatorsRegistry.getAdministrator() == admin);
-        assert(operatorsRegistry.getPendingAdministrator() == _newAdminAddress);
-    }
-
-    function testTransferOwnershipUnauthorized(uint256 _newAdminSalt) public {
-        address _newAdminAddress = uf._new(_newAdminSalt);
-        assert(operatorsRegistry.getAdministrator() == admin);
-        assert(operatorsRegistry.getPendingAdministrator() == address(0));
-        vm.expectRevert(abi.encodeWithSignature("Unauthorized(address)", address(this)));
-        operatorsRegistry.transferOwnership(_newAdminAddress);
-    }
-
-    function testAcceptOwnership(uint256 _newAdminSalt) public {
-        address _newAdminAddress = uf._new(_newAdminSalt);
-        assert(operatorsRegistry.getAdministrator() == admin);
-        assert(operatorsRegistry.getPendingAdministrator() == address(0));
-        vm.startPrank(admin);
-        operatorsRegistry.transferOwnership(_newAdminAddress);
-        vm.stopPrank();
-        vm.startPrank(_newAdminAddress);
-        operatorsRegistry.acceptOwnership();
-        vm.stopPrank();
-        assert(operatorsRegistry.getAdministrator() == _newAdminAddress);
-        assert(operatorsRegistry.getPendingAdministrator() == address(0));
-    }
-
-    function testAcceptOwnershipUnauthorized(uint256 _newAdminSalt) public {
-        address _newAdminAddress = uf._new(_newAdminSalt);
-        assert(operatorsRegistry.getAdministrator() == admin);
-        assert(operatorsRegistry.getPendingAdministrator() == address(0));
-        vm.startPrank(admin);
-        operatorsRegistry.transferOwnership(_newAdminAddress);
-        vm.stopPrank();
-        vm.expectRevert(abi.encodeWithSignature("Unauthorized(address)", address(this)));
-        operatorsRegistry.acceptOwnership();
     }
 
     function testAddNodeOperator(uint256 _nodeOperatorAddressSalt, bytes32 _name) public {

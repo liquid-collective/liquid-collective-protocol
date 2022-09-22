@@ -30,10 +30,6 @@ interface IRiverV1 is IConsensusLayerDepositManagerV1, IUserDepositManagerV1, IS
     function getAllowlist() external view returns (address);
     function setTreasury(address _newTreasury) external;
     function getTreasury() external view returns (address);
-    function transferOwnership(address _newAdmin) external;
-    function acceptOwnership() external;
-    function getAdministrator() external view returns (address);
-    function getPendingAdministrator() external view returns (address);
     function setELFeeRecipient(address _newELFeeRecipient) external;
     function getELFeeRecipient() external view returns (address);
     function sendELFees() external payable;

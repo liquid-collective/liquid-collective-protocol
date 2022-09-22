@@ -2,7 +2,6 @@
 pragma solidity 0.8.10;
 
 import "../libraries/Errors.sol";
-import "../libraries/LibOwnable.sol";
 
 import "../state/river/OracleAddress.sol";
 import "../state/river/LastOracleRoundId.sol";
@@ -23,9 +22,11 @@ abstract contract OracleManagerV1 is IOracleManagerV1 {
 
     function _pullELFees() internal virtual returns (uint256);
 
+    function _getRiverAdmin() internal view virtual returns (address);
+
     /// @notice Prevents unauthorized calls
-    modifier onlyAdmin() virtual {
-        if (msg.sender != LibOwnable._getAdmin()) {
+    modifier _onlyAdmin() {
+        if (msg.sender != _getRiverAdmin()) {
             revert Errors.Unauthorized(msg.sender);
         }
         _;
@@ -74,7 +75,7 @@ abstract contract OracleManagerV1 is IOracleManagerV1 {
 
     /// @notice Set Oracle address
     /// @param _oracleAddress Address of the oracle
-    function setOracle(address _oracleAddress) external onlyAdmin {
+    function setOracle(address _oracleAddress) external _onlyAdmin {
         OracleAddress.set(_oracleAddress);
     }
 

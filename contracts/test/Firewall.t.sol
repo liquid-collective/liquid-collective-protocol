@@ -534,19 +534,6 @@ contract FirewallTests {
         vm.stopPrank();
     }
 
-    function testGovernorCanChangeGovernor() public {
-        // Assert that governor can setGovernor, and the new governor can
-        // setAllower, a governorOnly action
-        address newGovernorDAO = address(0xdF2a01F10f86A7cdd2EE10cf35B8ab62723096a6);
-        vm.startPrank(riverGovernorDAO);
-        allowlistFirewall.setGovernor(newGovernorDAO);
-        vm.stopPrank();
-        vm.startPrank(newGovernorDAO);
-        firewalledAllowlist.setAllower(joe);
-        assert(allowlist.getAllower() == joe);
-        vm.stopPrank();
-    }
-
     function testGovernorCanChangeExecutor() public {
         // Assert that governor can setExecutor and the new executor can
         // setOracle, a governorOrExecutor action
@@ -568,20 +555,6 @@ contract FirewallTests {
         vm.startPrank(joe);
         firewalledRiver.setOracle(don);
         assert(river.getOracle() == don);
-        vm.stopPrank();
-    }
-
-    function testExecutorCannotChangeGovernor() public {
-        vm.startPrank(executor);
-        vm.expectRevert(unauthExecutor);
-        riverFirewall.setGovernor(don);
-        vm.stopPrank();
-    }
-
-    function testRandomCallerCannotChangeGovernor() public {
-        vm.startPrank(joe);
-        vm.expectRevert(unauthJoe);
-        riverFirewall.setGovernor(don);
         vm.stopPrank();
     }
 

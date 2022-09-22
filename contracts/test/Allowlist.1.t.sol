@@ -5,13 +5,13 @@ pragma solidity 0.8.10;
 import "./Vm.sol";
 import "../src/Allowlist.1.sol";
 import "../src/libraries/Errors.sol";
-import "../src/libraries/LibOwnable.sol";
+import "../src/libraries/LibAdministrable.sol";
 import "./utils/AllowlistHelper.sol";
 import "./utils/UserFactory.sol";
 
 contract AllowlistV1Sudo is AllowlistV1 {
     function sudoSetAdmin(address admin) external {
-        LibOwnable._setAdmin(admin);
+        LibAdministrable._setAdmin(admin);
     }
 }
 

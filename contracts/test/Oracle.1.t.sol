@@ -49,7 +49,7 @@ contract OracleV1Tests {
     }
 
     function testGetAdmin() public view {
-        assert(oracle.getAdministrator() == admin);
+        assert(oracle.getAdmin() == admin);
     }
 
     function testGetRiver() public view {
