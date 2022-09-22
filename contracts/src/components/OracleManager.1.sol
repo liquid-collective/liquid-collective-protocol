@@ -5,8 +5,8 @@ import "../libraries/Errors.sol";
 
 import "../state/river/OracleAddress.sol";
 import "../state/river/LastOracleRoundId.sol";
-import "../state/river/BeaconValidatorBalanceSum.sol";
-import "../state/river/BeaconValidatorCount.sol";
+import "../state/river/CLValidatorBalanceSum.sol";
+import "../state/river/CLValidatorCount.sol";
 import "../state/river/DepositedValidatorCount.sol";
 
 import "../interfaces/components/IOracleManager.1.sol";
@@ -44,7 +44,7 @@ abstract contract OracleManagerV1 is IOracleManagerV1 {
     /// @param _validatorCount The number of active validators on the consensus layer
     /// @param _validatorBalanceSum The validator balance sum of the active validators on the consensus layer
     /// @param _roundId An identifier for this update
-    function setBeaconData(uint256 _validatorCount, uint256 _validatorBalanceSum, bytes32 _roundId) external {
+    function setConsensusLayerData(uint256 _validatorCount, uint256 _validatorBalanceSum, bytes32 _roundId) external {
         if (msg.sender != OracleAddress.get()) {
             revert Errors.Unauthorized(msg.sender);
         }
@@ -53,11 +53,11 @@ abstract contract OracleManagerV1 is IOracleManagerV1 {
             revert InvalidValidatorCountReport(_validatorCount, DepositedValidatorCount.get());
         }
 
-        uint256 newValidators = _validatorCount - BeaconValidatorCount.get();
-        uint256 previousValidatorBalanceSum = BeaconValidatorBalanceSum.get() + (newValidators * 32 ether);
+        uint256 newValidators = _validatorCount - CLValidatorCount.get();
+        uint256 previousValidatorBalanceSum = CLValidatorBalanceSum.get() + (newValidators * 32 ether);
 
-        BeaconValidatorBalanceSum.set(_validatorBalanceSum);
-        BeaconValidatorCount.set(_validatorCount);
+        CLValidatorBalanceSum.set(_validatorBalanceSum);
+        CLValidatorCount.set(_validatorCount);
         LastOracleRoundId.set(_roundId);
 
         uint256 executionLayerFees = _pullELFees();
@@ -66,7 +66,7 @@ abstract contract OracleManagerV1 is IOracleManagerV1 {
             _onEarnings((_validatorBalanceSum + executionLayerFees) - previousValidatorBalanceSum);
         }
 
-        emit BeaconDataUpdate(_validatorCount, _validatorBalanceSum, _roundId);
+        emit ConsensusLayerDataUpdate(_validatorCount, _validatorBalanceSum, _roundId);
     }
 
     /// @notice Get Oracle address
@@ -81,13 +81,13 @@ abstract contract OracleManagerV1 is IOracleManagerV1 {
         emit SetOracle(_oracleAddress);
     }
 
-    /// @notice Get Beacon validator balance sum
-    function getBeaconValidatorBalanceSum() external view returns (uint256 beaconValidatorBalanceSum) {
-        beaconValidatorBalanceSum = BeaconValidatorBalanceSum.get();
+    /// @notice Get CL validator balance sum
+    function getCLValidatorBalanceSum() external view returns (uint256 clValidatorBalanceSum) {
+        clValidatorBalanceSum = CLValidatorBalanceSum.get();
     }
 
-    /// @notice Get Beacon validator count (the amount of validator reported by the oracles)
-    function getBeaconValidatorCount() external view returns (uint256 beaconValidatorCount) {
-        beaconValidatorCount = BeaconValidatorCount.get();
+    /// @notice Get CL validator count (the amount of validator reported by the oracles)
+    function getCLValidatorCount() external view returns (uint256 clValidatorCount) {
+        clValidatorCount = CLValidatorCount.get();
     }
 }

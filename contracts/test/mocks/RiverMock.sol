@@ -2,13 +2,13 @@
 pragma solidity 0.8.10;
 
 contract RiverMock {
-    event DebugReceivedBeaconData(uint256 _validatorCount, uint256 _validatorBalanceSum, bytes32 _roundId);
+    event DebugReceivedCLData(uint256 _validatorCount, uint256 _validatorBalanceSum, bytes32 _roundId);
 
     uint256 public validatorCount;
     uint256 public validatorBalanceSum;
 
-    function setBeaconData(uint256 _validatorCount, uint256 _validatorBalanceSum, bytes32 _roundId) external {
-        emit DebugReceivedBeaconData(_validatorCount, _validatorBalanceSum, _roundId);
+    function setConsensusLayerData(uint256 _validatorCount, uint256 _validatorBalanceSum, bytes32 _roundId) external {
+        emit DebugReceivedCLData(_validatorCount, _validatorBalanceSum, _roundId);
         validatorCount = _validatorCount;
         validatorBalanceSum = _validatorBalanceSum;
         _totalSupply = _validatorBalanceSum;

@@ -195,7 +195,7 @@ contract OracleV1Tests {
         assert(oracle.getReportVariantsCount() == 0);
         assert(oracle.getGlobalReportStatus() == 0);
         vm.prank(newMember);
-        oracle.reportBeacon(0, 32 ether / 1e9, 1);
+        oracle.reportConsensusLayerData(0, 32 ether / 1e9, 1);
         assert(oracle.getReportVariantsCount() == 1);
         assert(oracle.getGlobalReportStatus() != 0);
         vm.prank(admin);
@@ -286,13 +286,10 @@ contract OracleV1Tests {
         oracle.removeMember(newMember, 0);
     }
 
-    function testSetBeaconSpec(
-        uint64 _epochsPerFrame,
-        uint64 _slotsPerEpoch,
-        uint64 _secondsPerSlot,
-        uint64 _genesisTime
-    ) public {
-        BeaconSpec.BeaconSpecStruct memory bs = oracle.getBeaconSpec();
+    function testSetCLSpec(uint64 _epochsPerFrame, uint64 _slotsPerEpoch, uint64 _secondsPerSlot, uint64 _genesisTime)
+        public
+    {
+        CLSpec.CLSpecStruct memory bs = oracle.getCLSpec();
         assert(bs.epochsPerFrame == EPOCHS_PER_FRAME);
         assert(bs.slotsPerEpoch == SLOTS_PER_EPOCH);
         assert(bs.secondsPerSlot == SECONDS_PER_SLOT);
@@ -301,9 +298,9 @@ contract OracleV1Tests {
         vm.startPrank(admin);
         vm.expectEmit(true, true, true, true);
         emit SetSpec(_epochsPerFrame, _slotsPerEpoch, _secondsPerSlot, _genesisTime);
-        oracle.setBeaconSpec(_epochsPerFrame, _slotsPerEpoch, _secondsPerSlot, _genesisTime);
+        oracle.setCLSpec(_epochsPerFrame, _slotsPerEpoch, _secondsPerSlot, _genesisTime);
 
-        bs = oracle.getBeaconSpec();
+        bs = oracle.getCLSpec();
         assert(bs.epochsPerFrame == _epochsPerFrame);
         assert(bs.slotsPerEpoch == _slotsPerEpoch);
         assert(bs.secondsPerSlot == _secondsPerSlot);
@@ -326,7 +323,7 @@ contract OracleV1Tests {
         vm.stopPrank();
     }
 
-    function testSetBeaconSpecUnauthorized(
+    function testSetCLSpecUnauthorized(
         uint256 _intruderSalt,
         uint64 _epochsPerFrame,
         uint64 _slotsPerEpoch,
@@ -334,7 +331,7 @@ contract OracleV1Tests {
         uint64 _genesisTime
     ) public {
         address _intruder = uf._new(_intruderSalt);
-        BeaconSpec.BeaconSpecStruct memory bs = oracle.getBeaconSpec();
+        CLSpec.CLSpecStruct memory bs = oracle.getCLSpec();
         assert(bs.epochsPerFrame == EPOCHS_PER_FRAME);
         assert(bs.slotsPerEpoch == SLOTS_PER_EPOCH);
         assert(bs.secondsPerSlot == SECONDS_PER_SLOT);
@@ -342,35 +339,35 @@ contract OracleV1Tests {
 
         vm.startPrank(_intruder);
         vm.expectRevert(abi.encodeWithSignature("Unauthorized(address)", _intruder));
-        oracle.setBeaconSpec(_epochsPerFrame, _slotsPerEpoch, _secondsPerSlot, _genesisTime);
+        oracle.setCLSpec(_epochsPerFrame, _slotsPerEpoch, _secondsPerSlot, _genesisTime);
     }
 
-    function testSetBeaconBounds(uint256 _up, uint64 _down) public {
-        BeaconReportBounds.BeaconReportBoundsStruct memory bounds = oracle.getBeaconBounds();
+    function testSetCLBounds(uint256 _up, uint64 _down) public {
+        CLReportBounds.CLReportBoundsStruct memory bounds = oracle.getCLBounds();
         assert(bounds.annualAprUpperBound == UPPER_BOUND);
         assert(bounds.relativeLowerBound == LOWER_BOUND);
         vm.startPrank(admin);
         vm.expectEmit(true, true, true, true);
         emit SetBounds(_up, _down);
-        oracle.setBeaconBounds(_up, _down);
+        oracle.setCLBounds(_up, _down);
 
-        bounds = oracle.getBeaconBounds();
+        bounds = oracle.getCLBounds();
         assert(bounds.annualAprUpperBound == _up);
         assert(bounds.relativeLowerBound == _down);
     }
 
-    function testSetBeaconBoundsUnauthorized(uint256 _intruderSalt, uint256 _up, uint64 _down) public {
+    function testSetCLBoundsUnauthorized(uint256 _intruderSalt, uint256 _up, uint64 _down) public {
         address _intruder = uf._new(_intruderSalt);
-        BeaconReportBounds.BeaconReportBoundsStruct memory bounds = oracle.getBeaconBounds();
+        CLReportBounds.CLReportBoundsStruct memory bounds = oracle.getCLBounds();
         assert(bounds.annualAprUpperBound == UPPER_BOUND);
         assert(bounds.relativeLowerBound == LOWER_BOUND);
 
         vm.startPrank(_intruder);
         vm.expectRevert(abi.encodeWithSignature("Unauthorized(address)", _intruder));
-        oracle.setBeaconBounds(_up, _down);
+        oracle.setCLBounds(_up, _down);
     }
 
-    function testReportBeaconEpochTooOld(uint256 oracleMemberSalt, uint64 timeFromGenesis) public {
+    function testReportCLEpochTooOld(uint256 oracleMemberSalt, uint64 timeFromGenesis) public {
         address oracleMember = uf._new(oracleMemberSalt);
         vm.warp(uint256(GENESIS_TIME) + uint256(timeFromGenesis));
         vm.startPrank(admin);
@@ -382,18 +379,18 @@ contract OracleV1Tests {
         uint256 frameFirstEpochId = oracle.getFrameFirstEpochId(epochId);
         if (frameFirstEpochId > 0) {
             vm.startPrank(oracleMember);
-            oracle.reportBeacon(frameFirstEpochId, 0, 0);
+            oracle.reportConsensusLayerData(frameFirstEpochId, 0, 0);
             uint256 oldFrameFirstEpochId = oracle.getFrameFirstEpochId(frameFirstEpochId + EPOCHS_PER_FRAME - 1);
             vm.expectRevert(
                 abi.encodeWithSignature(
                     "EpochTooOld(uint256,uint256)", oldFrameFirstEpochId, frameFirstEpochId + EPOCHS_PER_FRAME
                 )
             );
-            oracle.reportBeacon(oldFrameFirstEpochId, 0, 0);
+            oracle.reportConsensusLayerData(oldFrameFirstEpochId, 0, 0);
         }
     }
 
-    function testReportBeaconNotFrameFirst(uint256 oracleMemberSalt, uint64 timeFromGenesis) public {
+    function testReportCLNotFrameFirst(uint256 oracleMemberSalt, uint64 timeFromGenesis) public {
         address oracleMember = uf._new(oracleMemberSalt);
         vm.warp(uint256(GENESIS_TIME) + uint256(timeFromGenesis));
         vm.startPrank(admin);
@@ -410,11 +407,11 @@ contract OracleV1Tests {
                     "NotFrameFirstEpochId(uint256,uint256)", frameFirstEpochId - 1, frameFirstEpochId
                 )
             );
-            oracle.reportBeacon(frameFirstEpochId - 1, 0, 0);
+            oracle.reportConsensusLayerData(frameFirstEpochId - 1, 0, 0);
         }
     }
 
-    function testReportBeaconUnauthorized(uint256 oracleMemberSalt, uint64 timeFromGenesis) public {
+    function testReportCLUnauthorized(uint256 oracleMemberSalt, uint64 timeFromGenesis) public {
         address oracleMember = uf._new(oracleMemberSalt);
         vm.warp(uint256(GENESIS_TIME) + uint256(timeFromGenesis));
 
@@ -424,11 +421,11 @@ contract OracleV1Tests {
         if (frameFirstEpochId > 0) {
             vm.startPrank(oracleMember);
             vm.expectRevert(abi.encodeWithSignature("Unauthorized(address)", oracleMember));
-            oracle.reportBeacon(frameFirstEpochId, 0, 0);
+            oracle.reportConsensusLayerData(frameFirstEpochId, 0, 0);
         }
     }
 
-    function testReportBeaconTwice(uint256 oracleMemberSalt, uint64 timeFromGenesis) public {
+    function testReportCLTwice(uint256 oracleMemberSalt, uint64 timeFromGenesis) public {
         address oracleMember = uf._new(oracleMemberSalt);
         vm.warp(uint256(GENESIS_TIME) + uint256(timeFromGenesis));
         vm.startPrank(admin);
@@ -445,16 +442,16 @@ contract OracleV1Tests {
         uint256 frameFirstEpochId = oracle.getFrameFirstEpochId(epochId);
         if (frameFirstEpochId > 0) {
             vm.startPrank(oracleMember);
-            oracle.reportBeacon(frameFirstEpochId, 0, 0);
+            oracle.reportConsensusLayerData(frameFirstEpochId, 0, 0);
             vm.expectRevert(
                 abi.encodeWithSignature("AlreadyReported(uint256,address)", frameFirstEpochId, oracleMember)
             );
-            oracle.reportBeacon(frameFirstEpochId, 0, 0);
+            oracle.reportConsensusLayerData(frameFirstEpochId, 0, 0);
             vm.stopPrank();
         }
     }
 
-    function testReportBeacon(uint64 timeFromGenesis, uint64 balanceSum, uint32 validatorCount) public {
+    function testReportCL(uint64 timeFromGenesis, uint64 balanceSum, uint32 validatorCount) public {
         RiverMock(address(oracleInput)).sudoSetTotalShares(1e9 * uint256(balanceSum));
         RiverMock(address(oracleInput)).sudoSetTotalSupply(1e9 * uint256(balanceSum));
 
@@ -475,7 +472,7 @@ contract OracleV1Tests {
             assert(oracle.getMemberReportStatus(oracleTwo) == false);
 
             vm.startPrank(oracleOne);
-            oracle.reportBeacon(frameFirstEpochId, balanceSum, validatorCount);
+            oracle.reportConsensusLayerData(frameFirstEpochId, balanceSum, validatorCount);
             vm.stopPrank();
 
             assert(RiverMock(address(oracleInput)).validatorBalanceSum() == 0);
@@ -485,7 +482,7 @@ contract OracleV1Tests {
             assert(oracle.getMemberReportStatus(oracleTwo) == false);
 
             vm.startPrank(oracleTwo);
-            oracle.reportBeacon(frameFirstEpochId, balanceSum, validatorCount);
+            oracle.reportConsensusLayerData(frameFirstEpochId, balanceSum, validatorCount);
             vm.stopPrank();
 
             assert(RiverMock(address(oracleInput)).validatorBalanceSum() == uint256(balanceSum) * 1e9);
@@ -510,13 +507,13 @@ contract OracleV1Tests {
         uint256 frameFirstEpochId = oracle.getFrameFirstEpochId(epochId);
         if (frameFirstEpochId > 0) {
             vm.startPrank(oracleOne);
-            oracle.reportBeacon(frameFirstEpochId, balanceSum, validatorCount);
+            oracle.reportConsensusLayerData(frameFirstEpochId, balanceSum, validatorCount);
             vm.stopPrank();
 
             uint256 oneYearAway = uint256(GENESIS_TIME) + uint256(timeFromGenesis) + 364.9 days;
             vm.warp(oneYearAway);
             uint256 futureEpochId = oracle.getFrameFirstEpochId(oracle.getCurrentEpochId());
-            BeaconReportBounds.BeaconReportBoundsStruct memory bounds = oracle.getBeaconBounds();
+            CLReportBounds.CLReportBoundsStruct memory bounds = oracle.getCLBounds();
 
             uint256 balanceSumIncrease = ((balanceSum * bounds.annualAprUpperBound) / 10000) + 1;
 
@@ -524,14 +521,14 @@ contract OracleV1Tests {
                 vm.startPrank(oracleOne);
                 vm.expectRevert(
                     abi.encodeWithSignature(
-                        "BeaconBalanceIncreaseOutOfBounds(uint256,uint256,uint256,uint256)",
+                        "CLBalanceIncreaseOutOfBounds(uint256,uint256,uint256,uint256)",
                         1e9 * uint256(balanceSum),
                         (uint256(balanceSum) + uint256(balanceSumIncrease)) * 1e9,
                         (futureEpochId - frameFirstEpochId) * SLOTS_PER_EPOCH * SECONDS_PER_SLOT,
                         UPPER_BOUND
                     )
                 );
-                oracle.reportBeacon(futureEpochId, balanceSum + uint64(balanceSumIncrease), validatorCount);
+                oracle.reportConsensusLayerData(futureEpochId, balanceSum + uint64(balanceSumIncrease), validatorCount);
                 vm.stopPrank();
             }
         }
@@ -551,28 +548,28 @@ contract OracleV1Tests {
         uint256 frameFirstEpochId = oracle.getFrameFirstEpochId(epochId);
         if (balanceSum > 0) {
             vm.startPrank(oracleOne);
-            oracle.reportBeacon(frameFirstEpochId, balanceSum, validatorCount);
+            oracle.reportConsensusLayerData(frameFirstEpochId, balanceSum, validatorCount);
             vm.stopPrank();
 
             uint256 oneEpochAway =
                 uint256(GENESIS_TIME) + uint256(timeFromGenesis) + SLOTS_PER_EPOCH * SECONDS_PER_SLOT * EPOCHS_PER_FRAME;
             vm.warp(oneEpochAway);
             uint256 futureEpochId = oracle.getFrameFirstEpochId(oracle.getCurrentEpochId());
-            BeaconReportBounds.BeaconReportBoundsStruct memory bounds = oracle.getBeaconBounds();
+            CLReportBounds.CLReportBoundsStruct memory bounds = oracle.getCLBounds();
 
             uint256 balanceSumDecrease = ((balanceSum * bounds.relativeLowerBound) / 10000) + 1;
 
             vm.startPrank(oracleOne);
             vm.expectRevert(
                 abi.encodeWithSignature(
-                    "BeaconBalanceDecreaseOutOfBounds(uint256,uint256,uint256,uint256)",
+                    "CLBalanceDecreaseOutOfBounds(uint256,uint256,uint256,uint256)",
                     1e9 * uint256(balanceSum),
                     (uint256(balanceSum) - uint256(balanceSumDecrease)) * 1e9,
                     (futureEpochId - frameFirstEpochId) * SLOTS_PER_EPOCH * SECONDS_PER_SLOT,
                     LOWER_BOUND
                 )
             );
-            oracle.reportBeacon(futureEpochId, balanceSum - uint64(balanceSumDecrease), validatorCount);
+            oracle.reportConsensusLayerData(futureEpochId, balanceSum - uint64(balanceSumDecrease), validatorCount);
             vm.stopPrank();
         }
     }

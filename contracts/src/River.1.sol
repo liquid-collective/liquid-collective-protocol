@@ -211,13 +211,13 @@ contract RiverV1 is
 
     /// @notice Handler called whenever the total balance of ETH is requested
     function _assetBalance() internal view override returns (uint256) {
-        uint256 beaconValidatorCount = BeaconValidatorCount.get();
+        uint256 clValidatorCount = CLValidatorCount.get();
         uint256 depositedValidatorCount = DepositedValidatorCount.get();
-        if (beaconValidatorCount < depositedValidatorCount) {
-            return BeaconValidatorBalanceSum.get() + address(this).balance
-                + (depositedValidatorCount - beaconValidatorCount) * ConsensusLayerDepositManagerV1.DEPOSIT_SIZE;
+        if (clValidatorCount < depositedValidatorCount) {
+            return CLValidatorBalanceSum.get() + address(this).balance
+                + (depositedValidatorCount - clValidatorCount) * ConsensusLayerDepositManagerV1.DEPOSIT_SIZE;
         } else {
-            return BeaconValidatorBalanceSum.get() + address(this).balance;
+            return CLValidatorBalanceSum.get() + address(this).balance;
         }
     }
 }

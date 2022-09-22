@@ -314,7 +314,7 @@ contract RiverV1SetupOneTests is Test, BytesGenerator {
 
         vm.startPrank(oracleMember);
         (uint256 epoch,,) = oracle.getCurrentFrame();
-        oracle.reportBeacon(epoch, 33 * 1e9 * 34, 34);
+        oracle.reportConsensusLayerData(epoch, 33 * 1e9 * 34, 34);
         vm.stopPrank();
 
         assert(river.totalUnderlyingSupply() == 1100 ether - (34 * 32 ether) + (34 * 33 ether));
@@ -376,7 +376,7 @@ contract RiverV1SetupOneTests is Test, BytesGenerator {
 
         vm.startPrank(oracleMember);
         (uint256 epoch,,) = oracle.getCurrentFrame();
-        oracle.reportBeacon(epoch, 31 * 1e9 * 34, 34);
+        oracle.reportConsensusLayerData(epoch, 31 * 1e9 * 34, 34);
         vm.stopPrank();
 
         assert(river.totalUnderlyingSupply() == 1100 ether - (34 * 32 ether) + (34 * 31 ether));
@@ -432,7 +432,7 @@ contract RiverV1SetupOneTests is Test, BytesGenerator {
         (uint256 epoch,,) = oracle.getCurrentFrame();
         vm.expectEmit(true, true, true, true);
         emit PulledELFees(34 * 1 ether);
-        oracle.reportBeacon(epoch, 31 * 1e9 * 34, 34);
+        oracle.reportConsensusLayerData(epoch, 31 * 1e9 * 34, 34);
         vm.stopPrank();
 
         assert(address(elFeeRecipient).balance == 0);
@@ -488,7 +488,7 @@ contract RiverV1SetupOneTests is Test, BytesGenerator {
 
         vm.startPrank(oracleMember);
         (uint256 epoch,,) = oracle.getCurrentFrame();
-        oracle.reportBeacon(epoch, 33 * 1e9 * 34, 34);
+        oracle.reportConsensusLayerData(epoch, 33 * 1e9 * 34, 34);
         vm.stopPrank();
 
         assert(address(elFeeRecipient).balance == 0);
@@ -559,7 +559,7 @@ contract RiverV1SetupOneTests is Test, BytesGenerator {
 
         vm.startPrank(oracleMember);
         (uint256 epoch,,) = oracle.getCurrentFrame();
-        oracle.reportBeacon(epoch, 33 * 1e9 * 34, 34);
+        oracle.reportConsensusLayerData(epoch, 33 * 1e9 * 34, 34);
         vm.stopPrank();
 
         assert(address(elFeeRecipient).balance == 100 ether);
@@ -624,7 +624,7 @@ contract RiverV1SetupOneTests is Test, BytesGenerator {
 
         vm.startPrank(oracleMember);
         (uint256 epoch,,) = oracle.getCurrentFrame();
-        oracle.reportBeacon(epoch, 33 * 1e9 * 34, 34);
+        oracle.reportConsensusLayerData(epoch, 33 * 1e9 * 34, 34);
         vm.stopPrank();
 
         assert(river.totalUnderlyingSupply() == 1100 ether - (34 * 32 ether) + (34 * 33 ether));
@@ -704,7 +704,7 @@ contract RiverV1SetupOneTests is Test, BytesGenerator {
 
         vm.startPrank(oracleMember);
         (uint256 epoch,,) = oracle.getCurrentFrame();
-        oracle.reportBeacon(epoch, 33 * 1e9 * 34, 34);
+        oracle.reportConsensusLayerData(epoch, 33 * 1e9 * 34, 34);
         vm.stopPrank();
 
         assert(river.totalUnderlyingSupply() == 1100 ether - (34 * 32 ether) + (34 * 33 ether));
@@ -757,7 +757,7 @@ contract RiverV1SetupOneTests is Test, BytesGenerator {
 
         vm.startPrank(oracleMember);
         (uint256 epoch,,) = oracle.getCurrentFrame();
-        oracle.reportBeacon(epoch, 33 * 1e9 * 34, 34);
+        oracle.reportConsensusLayerData(epoch, 33 * 1e9 * 34, 34);
         vm.stopPrank();
 
         assert(river.totalUnderlyingSupply() == 1100 ether - (34 * 32 ether) + (34 * 33 ether));
@@ -824,7 +824,7 @@ contract RiverV1SetupOneTests is Test, BytesGenerator {
 
         vm.startPrank(oracleMember);
         (uint256 epoch,,) = oracle.getCurrentFrame();
-        oracle.reportBeacon(epoch, 33 * 1e9 * 34, 34);
+        oracle.reportConsensusLayerData(epoch, 33 * 1e9 * 34, 34);
         vm.stopPrank();
 
         assert(river.totalUnderlyingSupply() == 1100 ether - (34 * 32 ether) + (34 * 33 ether));
@@ -889,7 +889,7 @@ contract RiverV1SetupOneTests is Test, BytesGenerator {
 
         vm.startPrank(oracleMember);
         (uint256 epoch,,) = oracle.getCurrentFrame();
-        oracle.reportBeacon(epoch, 33 * 1e9 * 34, 34);
+        oracle.reportConsensusLayerData(epoch, 33 * 1e9 * 34, 34);
         vm.stopPrank();
 
         assert(river.totalUnderlyingSupply() == 1100 ether - (34 * 32 ether) + (34 * 33 ether));
@@ -956,7 +956,7 @@ contract RiverV1SetupOneTests is Test, BytesGenerator {
 
         vm.startPrank(oracleMember);
         (uint256 epoch,,) = oracle.getCurrentFrame();
-        oracle.reportBeacon(epoch, 33 * 1e9 * 30, 30);
+        oracle.reportConsensusLayerData(epoch, 33 * 1e9 * 30, 30);
         vm.stopPrank();
 
         assert(river.totalUnderlyingSupply() == 1100 ether - (30 * 32 ether) + (30 * 33 ether));
@@ -1036,7 +1036,7 @@ contract RiverV1SetupOneTests is Test, BytesGenerator {
 
             vm.startPrank(oracleMember);
             (uint256 epoch,,) = oracle.getCurrentFrame();
-            oracle.reportBeacon(
+            oracle.reportConsensusLayerData(
                 epoch,
                 uint64(realValidatorCount) * (32 * 1e9 + uint64(increasePerValidator)),
                 uint32(realValidatorCount)
