@@ -80,7 +80,6 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
     /// @param _name The name identifying the operator
     /// @param _operator The address representing the operator, receiving the rewards
     function addOperator(string calldata _name, address _operator) external onlyAdmin returns (uint256) {
-
         Operators.Operator memory newOperator = Operators.Operator({
             active: true,
             operator: _operator,

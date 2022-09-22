@@ -63,9 +63,7 @@ contract OperatorsRegistryV1Tests is Test {
     function testAddNodeOperator(uint256 _nodeOperatorAddressSalt, bytes32 _name) public {
         address _nodeOperatorAddress = uf._new(_nodeOperatorAddressSalt);
         vm.startPrank(admin);
-        uint256 operatorIndex = operatorsRegistry.addOperator(
-            string(abi.encodePacked(_name)), _nodeOperatorAddress
-        );
+        uint256 operatorIndex = operatorsRegistry.addOperator(string(abi.encodePacked(_name)), _nodeOperatorAddress);
         Operators.Operator memory newOperator = operatorsRegistry.getOperator(operatorIndex);
         assert(newOperator.operator == _nodeOperatorAddress);
     }
@@ -82,8 +80,7 @@ contract OperatorsRegistryV1Tests is Test {
         address _firstAddress = uf._new(_firstAddressSalt);
         address _secondAddress = uf._new(_secondAddressSalt);
         vm.startPrank(admin);
-        uint256 index =
-            operatorsRegistry.addOperator(string(abi.encodePacked(_name)), _firstAddress);
+        uint256 index = operatorsRegistry.addOperator(string(abi.encodePacked(_name)), _firstAddress);
         Operators.Operator memory newOperator = operatorsRegistry.getOperator(index);
         assert(newOperator.operator == _firstAddress);
         operatorsRegistry.setOperatorAddress(index, _secondAddress);
@@ -98,8 +95,7 @@ contract OperatorsRegistryV1Tests is Test {
         address _firstAddress = uf._new(_firstAddressSalt);
         address _secondAddress = uf._new(_secondAddressSalt);
         vm.startPrank(admin);
-        uint256 index =
-            operatorsRegistry.addOperator(string(abi.encodePacked(_name)), _firstAddress);
+        uint256 index = operatorsRegistry.addOperator(string(abi.encodePacked(_name)), _firstAddress);
         Operators.Operator memory newOperator = operatorsRegistry.getOperator(index);
         assert(newOperator.operator == _firstAddress);
         vm.stopPrank();
@@ -110,18 +106,13 @@ contract OperatorsRegistryV1Tests is Test {
         assert(newOperator.operator == _secondAddress);
     }
 
-    function testSetOperatorAddressAsUnauthorized(
-        bytes32 _name,
-        uint256 _firstAddressSalt,
-        uint256 _secondAddressSalt
-    )
+    function testSetOperatorAddressAsUnauthorized(bytes32 _name, uint256 _firstAddressSalt, uint256 _secondAddressSalt)
         public
     {
         address _firstAddress = uf._new(_firstAddressSalt);
         address _secondAddress = uf._new(_secondAddressSalt);
         vm.startPrank(admin);
-        uint256 index =
-            operatorsRegistry.addOperator(string(abi.encodePacked(_name)), _firstAddress);
+        uint256 index = operatorsRegistry.addOperator(string(abi.encodePacked(_name)), _firstAddress);
         Operators.Operator memory newOperator = operatorsRegistry.getOperator(index);
         assert(newOperator.operator == _firstAddress);
         vm.stopPrank();
@@ -173,13 +164,10 @@ contract OperatorsRegistryV1Tests is Test {
         vm.stopPrank();
     }
 
-    function testSetOperatorStatusAsAdmin(bytes32 _name, uint256 _firstAddressSalt)
-        public
-    {
+    function testSetOperatorStatusAsAdmin(bytes32 _name, uint256 _firstAddressSalt) public {
         address _firstAddress = uf._new(_firstAddressSalt);
         vm.startPrank(admin);
-        uint256 index =
-            operatorsRegistry.addOperator(string(abi.encodePacked(_name)), _firstAddress);
+        uint256 index = operatorsRegistry.addOperator(string(abi.encodePacked(_name)), _firstAddress);
         Operators.Operator memory newOperator = operatorsRegistry.getOperator(index);
         assert(newOperator.active == true);
         operatorsRegistry.setOperatorStatus(index, false);
@@ -193,8 +181,7 @@ contract OperatorsRegistryV1Tests is Test {
     function testSetOperatorStatusAsUnauthorized(bytes32 _name, uint256 _firstAddressSalt) public {
         address _firstAddress = uf._new(_firstAddressSalt);
         vm.startPrank(admin);
-        uint256 index =
-            operatorsRegistry.addOperator(string(abi.encodePacked(_name)), _firstAddress);
+        uint256 index = operatorsRegistry.addOperator(string(abi.encodePacked(_name)), _firstAddress);
         Operators.Operator memory newOperator = operatorsRegistry.getOperator(index);
         assert(newOperator.active == true);
         vm.stopPrank();
@@ -210,8 +197,7 @@ contract OperatorsRegistryV1Tests is Test {
     ) public {
         address _firstAddress = uf._new(_firstAddressSalt);
         vm.startPrank(admin);
-        uint256 index =
-            operatorsRegistry.addOperator(string(abi.encodePacked(_name)), _firstAddress);
+        uint256 index = operatorsRegistry.addOperator(string(abi.encodePacked(_name)), _firstAddress);
         Operators.Operator memory newOperator = operatorsRegistry.getOperator(index);
         assert(newOperator.stopped == 0);
         if (_stoppedCount > 0) {
@@ -227,8 +213,7 @@ contract OperatorsRegistryV1Tests is Test {
     ) public {
         address _firstAddress = uf._new(_firstAddressSalt);
         vm.startPrank(admin);
-        uint256 index =
-            operatorsRegistry.addOperator(string(abi.encodePacked(_name)), _firstAddress);
+        uint256 index = operatorsRegistry.addOperator(string(abi.encodePacked(_name)), _firstAddress);
         Operators.Operator memory newOperator = operatorsRegistry.getOperator(index);
         assert(newOperator.stopped == 0);
         OperatorsRegistryInitializableV1(address(operatorsRegistry)).sudoSetFunded(index, uint256(_stoppedCount) + 1);
@@ -247,8 +232,7 @@ contract OperatorsRegistryV1Tests is Test {
     ) public {
         address _firstAddress = uf._new(_firstAddressSalt);
         vm.startPrank(admin);
-        uint256 index =
-            operatorsRegistry.addOperator(string(abi.encodePacked(_name)), _firstAddress);
+        uint256 index = operatorsRegistry.addOperator(string(abi.encodePacked(_name)), _firstAddress);
         Operators.Operator memory newOperator = operatorsRegistry.getOperator(index);
         assert(newOperator.stopped == 0);
         vm.stopPrank();
@@ -261,8 +245,7 @@ contract OperatorsRegistryV1Tests is Test {
         address _firstAddress = uf._new(_firstAddressSalt);
         _limit = _limit % 11; // 10 is max
         vm.startPrank(admin);
-        uint256 index =
-            operatorsRegistry.addOperator(string(abi.encodePacked(_name)), _firstAddress);
+        uint256 index = operatorsRegistry.addOperator(string(abi.encodePacked(_name)), _firstAddress);
 
         bytes memory tenPublicKeys =
             hex"e18e2e0fff999e38c547fb921bd915a1fef6a46e07db2705a57d17542f0acc6be99fee18fb2c17a7f247fc05edd722b9e95f700adf12dd6f20d65c2e411a6a447cb6f4f7c84b8b6673099385d5dcf964e479a9167c802d977ba0a0a22df2336f83182e83bc198c34c301482f189475209fb93d362704e317709fec266f14b3383e7bac3e0e306b1ac8228482c31d7ffbc7e0f865bd4648c7c45c1361f9cd0f4ccab693068a55e6823a4edd8ef4ced9faa64343866ad7357d488bff347a36f2476cc7b4eaf397c832968548ea70e1de2b2691628399d9f59fdd21a62dd3da50d0255790ec1c15949850a869a37595f8f52cc9d681f2b78748254ba36456f7e65d3c7ed2b64ef502cbd3c2f48d789924a99aedfbd097f4ff5829e787ef29b0b79c817337c08ff68c454a1ddc6359d09c0d48a9298a96691c3558812ca13239d9324f146a6b3bfb7bd3f2b1877929ceb74fa1ed590351801935d1e61c875c7772e74d037b26f972f2dfa0569ae9bf8cc32dee87e980497cd79492bf91edeafacfbd6ad32c642a6564ffc9a5d921d0cc35740314c88986547d8f94e60f5d3a2e0a0b1723d20546beaf064adfd78e5f63b600a6ee5b0bacf6f30bf456afadef451a1c503e428fcd295b5d20ad9e065e1684dced5487fd33270bb68b783a6963eab250";
@@ -289,8 +272,7 @@ contract OperatorsRegistryV1Tests is Test {
     function testSetOperatorLimitCountAsUnauthorized(bytes32 _name, uint256 _firstAddressSalt, uint256 _limit) public {
         address _firstAddress = uf._new(_firstAddressSalt);
         vm.startPrank(admin);
-        uint256 index =
-            operatorsRegistry.addOperator(string(abi.encodePacked(_name)), _firstAddress);
+        uint256 index = operatorsRegistry.addOperator(string(abi.encodePacked(_name)), _firstAddress);
         Operators.Operator memory newOperator = operatorsRegistry.getOperator(index);
         assert(newOperator.limit == 0);
         vm.stopPrank();
@@ -308,8 +290,7 @@ contract OperatorsRegistryV1Tests is Test {
     function testAddValidatorsAsOperator(bytes32 _name, uint256 _firstAddressSalt) public {
         address _firstAddress = uf._new(_firstAddressSalt);
         vm.startPrank(admin);
-        uint256 index =
-            operatorsRegistry.addOperator(string(abi.encodePacked(_name)), _firstAddress);
+        uint256 index = operatorsRegistry.addOperator(string(abi.encodePacked(_name)), _firstAddress);
 
         bytes memory tenPublicKeys =
             hex"e18e2e0fff999e38c547fb921bd915a1fef6a46e07db2705a57d17542f0acc6be99fee18fb2c17a7f247fc05edd722b9e95f700adf12dd6f20d65c2e411a6a447cb6f4f7c84b8b6673099385d5dcf964e479a9167c802d977ba0a0a22df2336f83182e83bc198c34c301482f189475209fb93d362704e317709fec266f14b3383e7bac3e0e306b1ac8228482c31d7ffbc7e0f865bd4648c7c45c1361f9cd0f4ccab693068a55e6823a4edd8ef4ced9faa64343866ad7357d488bff347a36f2476cc7b4eaf397c832968548ea70e1de2b2691628399d9f59fdd21a62dd3da50d0255790ec1c15949850a869a37595f8f52cc9d681f2b78748254ba36456f7e65d3c7ed2b64ef502cbd3c2f48d789924a99aedfbd097f4ff5829e787ef29b0b79c817337c08ff68c454a1ddc6359d09c0d48a9298a96691c3558812ca13239d9324f146a6b3bfb7bd3f2b1877929ceb74fa1ed590351801935d1e61c875c7772e74d037b26f972f2dfa0569ae9bf8cc32dee87e980497cd79492bf91edeafacfbd6ad32c642a6564ffc9a5d921d0cc35740314c88986547d8f94e60f5d3a2e0a0b1723d20546beaf064adfd78e5f63b600a6ee5b0bacf6f30bf456afadef451a1c503e428fcd295b5d20ad9e065e1684dced5487fd33270bb68b783a6963eab250";
@@ -341,8 +322,7 @@ contract OperatorsRegistryV1Tests is Test {
     function testGetKeysAsRiver(bytes32 _name, uint256 _firstAddressSalt) public {
         address _firstAddress = uf._new(_firstAddressSalt);
         vm.startPrank(admin);
-        uint256 index =
-            operatorsRegistry.addOperator(string(abi.encodePacked(_name)), _firstAddress);
+        uint256 index = operatorsRegistry.addOperator(string(abi.encodePacked(_name)), _firstAddress);
 
         bytes memory tenPublicKeys =
             hex"e18e2e0fff999e38c547fb921bd915a1fef6a46e07db2705a57d17542f0acc6be99fee18fb2c17a7f247fc05edd722b9e95f700adf12dd6f20d65c2e411a6a447cb6f4f7c84b8b6673099385d5dcf964e479a9167c802d977ba0a0a22df2336f83182e83bc198c34c301482f189475209fb93d362704e317709fec266f14b3383e7bac3e0e306b1ac8228482c31d7ffbc7e0f865bd4648c7c45c1361f9cd0f4ccab693068a55e6823a4edd8ef4ced9faa64343866ad7357d488bff347a36f2476cc7b4eaf397c832968548ea70e1de2b2691628399d9f59fdd21a62dd3da50d0255790ec1c15949850a869a37595f8f52cc9d681f2b78748254ba36456f7e65d3c7ed2b64ef502cbd3c2f48d789924a99aedfbd097f4ff5829e787ef29b0b79c817337c08ff68c454a1ddc6359d09c0d48a9298a96691c3558812ca13239d9324f146a6b3bfb7bd3f2b1877929ceb74fa1ed590351801935d1e61c875c7772e74d037b26f972f2dfa0569ae9bf8cc32dee87e980497cd79492bf91edeafacfbd6ad32c642a6564ffc9a5d921d0cc35740314c88986547d8f94e60f5d3a2e0a0b1723d20546beaf064adfd78e5f63b600a6ee5b0bacf6f30bf456afadef451a1c503e428fcd295b5d20ad9e065e1684dced5487fd33270bb68b783a6963eab250";
@@ -383,8 +363,7 @@ contract OperatorsRegistryV1Tests is Test {
     function testGetKeysAsRiverLimitTest(bytes32 _name, uint256 _firstAddressSalt) public {
         address _firstAddress = uf._new(_firstAddressSalt);
         vm.startPrank(admin);
-        uint256 index =
-            operatorsRegistry.addOperator(string(abi.encodePacked(_name)), _firstAddress);
+        uint256 index = operatorsRegistry.addOperator(string(abi.encodePacked(_name)), _firstAddress);
 
         bytes memory tenPublicKeys =
             hex"e18e2e0fff999e38c547fb921bd915a1fef6a46e07db2705a57d17542f0acc6be99fee18fb2c17a7f247fc05edd722b9e95f700adf12dd6f20d65c2e411a6a447cb6f4f7c84b8b6673099385d5dcf964e479a9167c802d977ba0a0a22df2336f83182e83bc198c34c301482f189475209fb93d362704e317709fec266f14b3383e7bac3e0e306b1ac8228482c31d7ffbc7e0f865bd4648c7c45c1361f9cd0f4ccab693068a55e6823a4edd8ef4ced9faa64343866ad7357d488bff347a36f2476cc7b4eaf397c832968548ea70e1de2b2691628399d9f59fdd21a62dd3da50d0255790ec1c15949850a869a37595f8f52cc9d681f2b78748254ba36456f7e65d3c7ed2b64ef502cbd3c2f48d789924a99aedfbd097f4ff5829e787ef29b0b79c817337c08ff68c454a1ddc6359d09c0d48a9298a96691c3558812ca13239d9324f146a6b3bfb7bd3f2b1877929ceb74fa1ed590351801935d1e61c875c7772e74d037b26f972f2dfa0569ae9bf8cc32dee87e980497cd79492bf91edeafacfbd6ad32c642a6564ffc9a5d921d0cc35740314c88986547d8f94e60f5d3a2e0a0b1723d20546beaf064adfd78e5f63b600a6ee5b0bacf6f30bf456afadef451a1c503e428fcd295b5d20ad9e065e1684dced5487fd33270bb68b783a6963eab250";
@@ -437,8 +416,7 @@ contract OperatorsRegistryV1Tests is Test {
     function testGetAllActiveOperatorsWithInactiveOnes(bytes32 _name, uint256 _firstAddressSalt) public {
         address _firstAddress = uf._new(_firstAddressSalt);
         vm.startPrank(admin);
-        uint256 index =
-            operatorsRegistry.addOperator(string(abi.encodePacked(_name)), _firstAddress);
+        uint256 index = operatorsRegistry.addOperator(string(abi.encodePacked(_name)), _firstAddress);
 
         operatorsRegistry.setOperatorStatus(index, false);
 
@@ -462,8 +440,7 @@ contract OperatorsRegistryV1Tests is Test {
     function testAddValidatorsAsAdmin(bytes32 _name, uint256 _firstAddressSalt) public {
         address _firstAddress = uf._new(_firstAddressSalt);
         vm.startPrank(admin);
-        uint256 index =
-            operatorsRegistry.addOperator(string(abi.encodePacked(_name)), _firstAddress);
+        uint256 index = operatorsRegistry.addOperator(string(abi.encodePacked(_name)), _firstAddress);
 
         bytes memory tenPublicKeys =
             hex"e18e2e0fff999e38c547fb921bd915a1fef6a46e07db2705a57d17542f0acc6be99fee18fb2c17a7f247fc05edd722b9e95f700adf12dd6f20d65c2e411a6a447cb6f4f7c84b8b6673099385d5dcf964e479a9167c802d977ba0a0a22df2336f83182e83bc198c34c301482f189475209fb93d362704e317709fec266f14b3383e7bac3e0e306b1ac8228482c31d7ffbc7e0f865bd4648c7c45c1361f9cd0f4ccab693068a55e6823a4edd8ef4ced9faa64343866ad7357d488bff347a36f2476cc7b4eaf397c832968548ea70e1de2b2691628399d9f59fdd21a62dd3da50d0255790ec1c15949850a869a37595f8f52cc9d681f2b78748254ba36456f7e65d3c7ed2b64ef502cbd3c2f48d789924a99aedfbd097f4ff5829e787ef29b0b79c817337c08ff68c454a1ddc6359d09c0d48a9298a96691c3558812ca13239d9324f146a6b3bfb7bd3f2b1877929ceb74fa1ed590351801935d1e61c875c7772e74d037b26f972f2dfa0569ae9bf8cc32dee87e980497cd79492bf91edeafacfbd6ad32c642a6564ffc9a5d921d0cc35740314c88986547d8f94e60f5d3a2e0a0b1723d20546beaf064adfd78e5f63b600a6ee5b0bacf6f30bf456afadef451a1c503e428fcd295b5d20ad9e065e1684dced5487fd33270bb68b783a6963eab250";
@@ -493,8 +470,7 @@ contract OperatorsRegistryV1Tests is Test {
     function testAddValidatorsAsUnauthorized(bytes32 _name, uint256 _firstAddressSalt) public {
         address _firstAddress = uf._new(_firstAddressSalt);
         vm.startPrank(admin);
-        uint256 index =
-            operatorsRegistry.addOperator(string(abi.encodePacked(_name)), _firstAddress);
+        uint256 index = operatorsRegistry.addOperator(string(abi.encodePacked(_name)), _firstAddress);
 
         bytes memory tenPublicKeys =
             hex"e18e2e0fff999e38c547fb921bd915a1fef6a46e07db2705a57d17542f0acc6be99fee18fb2c17a7f247fc05edd722b9e95f700adf12dd6f20d65c2e411a6a447cb6f4f7c84b8b6673099385d5dcf964e479a9167c802d977ba0a0a22df2336f83182e83bc198c34c301482f189475209fb93d362704e317709fec266f14b3383e7bac3e0e306b1ac8228482c31d7ffbc7e0f865bd4648c7c45c1361f9cd0f4ccab693068a55e6823a4edd8ef4ced9faa64343866ad7357d488bff347a36f2476cc7b4eaf397c832968548ea70e1de2b2691628399d9f59fdd21a62dd3da50d0255790ec1c15949850a869a37595f8f52cc9d681f2b78748254ba36456f7e65d3c7ed2b64ef502cbd3c2f48d789924a99aedfbd097f4ff5829e787ef29b0b79c817337c08ff68c454a1ddc6359d09c0d48a9298a96691c3558812ca13239d9324f146a6b3bfb7bd3f2b1877929ceb74fa1ed590351801935d1e61c875c7772e74d037b26f972f2dfa0569ae9bf8cc32dee87e980497cd79492bf91edeafacfbd6ad32c642a6564ffc9a5d921d0cc35740314c88986547d8f94e60f5d3a2e0a0b1723d20546beaf064adfd78e5f63b600a6ee5b0bacf6f30bf456afadef451a1c503e428fcd295b5d20ad9e065e1684dced5487fd33270bb68b783a6963eab250";
@@ -510,8 +486,7 @@ contract OperatorsRegistryV1Tests is Test {
     function testAddValidatorsInvalidPublicKeysSize(bytes32 _name, uint256 _firstAddressSalt) public {
         address _firstAddress = uf._new(_firstAddressSalt);
         vm.startPrank(admin);
-        uint256 index =
-            operatorsRegistry.addOperator(string(abi.encodePacked(_name)), _firstAddress);
+        uint256 index = operatorsRegistry.addOperator(string(abi.encodePacked(_name)), _firstAddress);
 
         bytes memory tenPublicKeys =
             hex"e18e2e0fff999e38c547fb921bd915a1fef6a46e07db2705a57d17542f0acc6be99fee18fb2c17a7f247fc05edd722b9e95f700adf12dd6f20d65c2e411a6a447cb6f4f7c84b8b6673099385d5dcf964e479a9167c802d977ba0a0a22df2336f83182e83bc198c34c301482f189475209fb93d362704e317709fec266f14b3383e7bac3e0e306b1ac8228482c31d7ffbc7e0f865bd4648c7c45c1361f9cd0f4ccab693068a55e6823a4edd8ef4ced9faa64343866ad7357d488bff347a36f2476cc7b4eaf397c832968548ea70e1de2b2691628399d9f59fdd21a62dd3da50d0255790ec1c15949850a869a37595f8f52cc9d681f2b78748254ba36456f7e65d3c7ed2b64ef502cbd3c2f48d789924a99aedfbd097f4ff5829e787ef29b0b79c817337c08ff68c454a1ddc6359d09c0d48a9298a96691c3558812ca13239d9324f146a6b3bfb7bd3f2b1877929ceb74fa1ed590351801935d1e61c875c7772e74d037b26f972f2dfa0569ae9bf8cc32dee87e980497cd79492bf91edeafacfbd6ad32c642a6564ffc9a5d921d0cc35740314c88986547d8f94e60f5d3a2e0a0b1723d20546beaf064adfd78e5f63b600a6ee5b0bacf6f30bf456afadef451a1c503e428fcd295b5d20ad9e065e1684dced5487fd33270bb68b783a6963eab2";
@@ -525,8 +500,7 @@ contract OperatorsRegistryV1Tests is Test {
     function testAddValidatorsInvalidSignaturesSize(bytes32 _name, uint256 _firstAddressSalt) public {
         address _firstAddress = uf._new(_firstAddressSalt);
         vm.startPrank(admin);
-        uint256 index =
-            operatorsRegistry.addOperator(string(abi.encodePacked(_name)), _firstAddress);
+        uint256 index = operatorsRegistry.addOperator(string(abi.encodePacked(_name)), _firstAddress);
 
         bytes memory tenPublicKeys =
             hex"e18e2e0fff999e38c547fb921bd915a1fef6a46e07db2705a57d17542f0acc6be99fee18fb2c17a7f247fc05edd722b9e95f700adf12dd6f20d65c2e411a6a447cb6f4f7c84b8b6673099385d5dcf964e479a9167c802d977ba0a0a22df2336f83182e83bc198c34c301482f189475209fb93d362704e317709fec266f14b3383e7bac3e0e306b1ac8228482c31d7ffbc7e0f865bd4648c7c45c1361f9cd0f4ccab693068a55e6823a4edd8ef4ced9faa64343866ad7357d488bff347a36f2476cc7b4eaf397c832968548ea70e1de2b2691628399d9f59fdd21a62dd3da50d0255790ec1c15949850a869a37595f8f52cc9d681f2b78748254ba36456f7e65d3c7ed2b64ef502cbd3c2f48d789924a99aedfbd097f4ff5829e787ef29b0b79c817337c08ff68c454a1ddc6359d09c0d48a9298a96691c3558812ca13239d9324f146a6b3bfb7bd3f2b1877929ceb74fa1ed590351801935d1e61c875c7772e74d037b26f972f2dfa0569ae9bf8cc32dee87e980497cd79492bf91edeafacfbd6ad32c642a6564ffc9a5d921d0cc35740314c88986547d8f94e60f5d3a2e0a0b1723d20546beaf064adfd78e5f63b600a6ee5b0bacf6f30bf456afadef451a1c503e428fcd295b5d20ad9e065e1684dced5487fd33270bb68b783a6963eab250";
@@ -540,8 +514,7 @@ contract OperatorsRegistryV1Tests is Test {
     function testAddValidatorsInvalidCount(bytes32 _name, uint256 _firstAddressSalt) public {
         address _firstAddress = uf._new(_firstAddressSalt);
         vm.startPrank(admin);
-        uint256 index =
-            operatorsRegistry.addOperator(string(abi.encodePacked(_name)), _firstAddress);
+        uint256 index = operatorsRegistry.addOperator(string(abi.encodePacked(_name)), _firstAddress);
         vm.expectRevert(abi.encodeWithSignature("InvalidKeyCount()"));
         operatorsRegistry.addValidators(index, 0, "", "");
     }
@@ -549,8 +522,7 @@ contract OperatorsRegistryV1Tests is Test {
     function testRemoveValidatorsAsOperator(bytes32 _name, uint256 _firstAddressSalt) public {
         address _firstAddress = uf._new(_firstAddressSalt);
         vm.startPrank(admin);
-        uint256 index =
-            operatorsRegistry.addOperator(string(abi.encodePacked(_name)), _firstAddress);
+        uint256 index = operatorsRegistry.addOperator(string(abi.encodePacked(_name)), _firstAddress);
 
         bytes memory tenPublicKeys =
             hex"e18e2e0fff999e38c547fb921bd915a1fef6a46e07db2705a57d17542f0acc6be99fee18fb2c17a7f247fc05edd722b9e95f700adf12dd6f20d65c2e411a6a447cb6f4f7c84b8b6673099385d5dcf964e479a9167c802d977ba0a0a22df2336f83182e83bc198c34c301482f189475209fb93d362704e317709fec266f14b3383e7bac3e0e306b1ac8228482c31d7ffbc7e0f865bd4648c7c45c1361f9cd0f4ccab693068a55e6823a4edd8ef4ced9faa64343866ad7357d488bff347a36f2476cc7b4eaf397c832968548ea70e1de2b2691628399d9f59fdd21a62dd3da50d0255790ec1c15949850a869a37595f8f52cc9d681f2b78748254ba36456f7e65d3c7ed2b64ef502cbd3c2f48d789924a99aedfbd097f4ff5829e787ef29b0b79c817337c08ff68c454a1ddc6359d09c0d48a9298a96691c3558812ca13239d9324f146a6b3bfb7bd3f2b1877929ceb74fa1ed590351801935d1e61c875c7772e74d037b26f972f2dfa0569ae9bf8cc32dee87e980497cd79492bf91edeafacfbd6ad32c642a6564ffc9a5d921d0cc35740314c88986547d8f94e60f5d3a2e0a0b1723d20546beaf064adfd78e5f63b600a6ee5b0bacf6f30bf456afadef451a1c503e428fcd295b5d20ad9e065e1684dced5487fd33270bb68b783a6963eab250";
@@ -594,8 +566,7 @@ contract OperatorsRegistryV1Tests is Test {
     function testRemoveHalfValidatorsEvenCaseAsOperator(bytes32 _name, uint256 _firstAddressSalt) public {
         address _firstAddress = uf._new(_firstAddressSalt);
         vm.startPrank(admin);
-        uint256 index =
-            operatorsRegistry.addOperator(string(abi.encodePacked(_name)), _firstAddress);
+        uint256 index = operatorsRegistry.addOperator(string(abi.encodePacked(_name)), _firstAddress);
 
         bytes memory tenPublicKeys =
             hex"e18e2e0fff999e38c547fb921bd915a1fef6a46e07db2705a57d17542f0acc6be99fee18fb2c17a7f247fc05edd722b9e95f700adf12dd6f20d65c2e411a6a447cb6f4f7c84b8b6673099385d5dcf964e479a9167c802d977ba0a0a22df2336f83182e83bc198c34c301482f189475209fb93d362704e317709fec266f14b3383e7bac3e0e306b1ac8228482c31d7ffbc7e0f865bd4648c7c45c1361f9cd0f4ccab693068a55e6823a4edd8ef4ced9faa64343866ad7357d488bff347a36f2476cc7b4eaf397c832968548ea70e1de2b2691628399d9f59fdd21a62dd3da50d0255790ec1c15949850a869a37595f8f52cc9d681f2b78748254ba36456f7e65d3c7ed2b64ef502cbd3c2f48d789924a99aedfbd097f4ff5829e787ef29b0b79c817337c08ff68c454a1ddc6359d09c0d48a9298a96691c3558812ca13239d9324f146a6b3bfb7bd3f2b1877929ceb74fa1ed590351801935d1e61c875c7772e74d037b26f972f2dfa0569ae9bf8cc32dee87e980497cd79492bf91edeafacfbd6ad32c642a6564ffc9a5d921d0cc35740314c88986547d8f94e60f5d3a2e0a0b1723d20546beaf064adfd78e5f63b600a6ee5b0bacf6f30bf456afadef451a1c503e428fcd295b5d20ad9e065e1684dced5487fd33270bb68b783a6963eab250";
@@ -643,8 +614,7 @@ contract OperatorsRegistryV1Tests is Test {
     function testRemoveHalfValidatorsConservativeCaseAsOperator(bytes32 _name, uint256 _firstAddressSalt) public {
         address _firstAddress = uf._new(_firstAddressSalt);
         vm.startPrank(admin);
-        uint256 index =
-            operatorsRegistry.addOperator(string(abi.encodePacked(_name)), _firstAddress);
+        uint256 index = operatorsRegistry.addOperator(string(abi.encodePacked(_name)), _firstAddress);
 
         bytes memory tenPublicKeys =
             hex"e18e2e0fff999e38c547fb921bd915a1fef6a46e07db2705a57d17542f0acc6be99fee18fb2c17a7f247fc05edd722b9e95f700adf12dd6f20d65c2e411a6a447cb6f4f7c84b8b6673099385d5dcf964e479a9167c802d977ba0a0a22df2336f83182e83bc198c34c301482f189475209fb93d362704e317709fec266f14b3383e7bac3e0e306b1ac8228482c31d7ffbc7e0f865bd4648c7c45c1361f9cd0f4ccab693068a55e6823a4edd8ef4ced9faa64343866ad7357d488bff347a36f2476cc7b4eaf397c832968548ea70e1de2b2691628399d9f59fdd21a62dd3da50d0255790ec1c15949850a869a37595f8f52cc9d681f2b78748254ba36456f7e65d3c7ed2b64ef502cbd3c2f48d789924a99aedfbd097f4ff5829e787ef29b0b79c817337c08ff68c454a1ddc6359d09c0d48a9298a96691c3558812ca13239d9324f146a6b3bfb7bd3f2b1877929ceb74fa1ed590351801935d1e61c875c7772e74d037b26f972f2dfa0569ae9bf8cc32dee87e980497cd79492bf91edeafacfbd6ad32c642a6564ffc9a5d921d0cc35740314c88986547d8f94e60f5d3a2e0a0b1723d20546beaf064adfd78e5f63b600a6ee5b0bacf6f30bf456afadef451a1c503e428fcd295b5d20ad9e065e1684dced5487fd33270bb68b783a6963eab250";
@@ -692,8 +662,7 @@ contract OperatorsRegistryV1Tests is Test {
     function testRemoveValidatorsAsAdmin(bytes32 _name, uint256 _firstAddressSalt) public {
         address _firstAddress = uf._new(_firstAddressSalt);
         vm.startPrank(admin);
-        uint256 index =
-            operatorsRegistry.addOperator(string(abi.encodePacked(_name)), _firstAddress);
+        uint256 index = operatorsRegistry.addOperator(string(abi.encodePacked(_name)), _firstAddress);
 
         bytes memory tenPublicKeys =
             hex"e18e2e0fff999e38c547fb921bd915a1fef6a46e07db2705a57d17542f0acc6be99fee18fb2c17a7f247fc05edd722b9e95f700adf12dd6f20d65c2e411a6a447cb6f4f7c84b8b6673099385d5dcf964e479a9167c802d977ba0a0a22df2336f83182e83bc198c34c301482f189475209fb93d362704e317709fec266f14b3383e7bac3e0e306b1ac8228482c31d7ffbc7e0f865bd4648c7c45c1361f9cd0f4ccab693068a55e6823a4edd8ef4ced9faa64343866ad7357d488bff347a36f2476cc7b4eaf397c832968548ea70e1de2b2691628399d9f59fdd21a62dd3da50d0255790ec1c15949850a869a37595f8f52cc9d681f2b78748254ba36456f7e65d3c7ed2b64ef502cbd3c2f48d789924a99aedfbd097f4ff5829e787ef29b0b79c817337c08ff68c454a1ddc6359d09c0d48a9298a96691c3558812ca13239d9324f146a6b3bfb7bd3f2b1877929ceb74fa1ed590351801935d1e61c875c7772e74d037b26f972f2dfa0569ae9bf8cc32dee87e980497cd79492bf91edeafacfbd6ad32c642a6564ffc9a5d921d0cc35740314c88986547d8f94e60f5d3a2e0a0b1723d20546beaf064adfd78e5f63b600a6ee5b0bacf6f30bf456afadef451a1c503e428fcd295b5d20ad9e065e1684dced5487fd33270bb68b783a6963eab250";
@@ -730,8 +699,7 @@ contract OperatorsRegistryV1Tests is Test {
     function testRemoveValidatorsUnauthorized(bytes32 _name, uint256 _firstAddressSalt) public {
         address _firstAddress = uf._new(_firstAddressSalt);
         vm.startPrank(admin);
-        uint256 index =
-            operatorsRegistry.addOperator(string(abi.encodePacked(_name)), _firstAddress);
+        uint256 index = operatorsRegistry.addOperator(string(abi.encodePacked(_name)), _firstAddress);
 
         bytes memory tenPublicKeys =
             hex"e18e2e0fff999e38c547fb921bd915a1fef6a46e07db2705a57d17542f0acc6be99fee18fb2c17a7f247fc05edd722b9e95f700adf12dd6f20d65c2e411a6a447cb6f4f7c84b8b6673099385d5dcf964e479a9167c802d977ba0a0a22df2336f83182e83bc198c34c301482f189475209fb93d362704e317709fec266f14b3383e7bac3e0e306b1ac8228482c31d7ffbc7e0f865bd4648c7c45c1361f9cd0f4ccab693068a55e6823a4edd8ef4ced9faa64343866ad7357d488bff347a36f2476cc7b4eaf397c832968548ea70e1de2b2691628399d9f59fdd21a62dd3da50d0255790ec1c15949850a869a37595f8f52cc9d681f2b78748254ba36456f7e65d3c7ed2b64ef502cbd3c2f48d789924a99aedfbd097f4ff5829e787ef29b0b79c817337c08ff68c454a1ddc6359d09c0d48a9298a96691c3558812ca13239d9324f146a6b3bfb7bd3f2b1877929ceb74fa1ed590351801935d1e61c875c7772e74d037b26f972f2dfa0569ae9bf8cc32dee87e980497cd79492bf91edeafacfbd6ad32c642a6564ffc9a5d921d0cc35740314c88986547d8f94e60f5d3a2e0a0b1723d20546beaf064adfd78e5f63b600a6ee5b0bacf6f30bf456afadef451a1c503e428fcd295b5d20ad9e065e1684dced5487fd33270bb68b783a6963eab250";
@@ -766,8 +734,7 @@ contract OperatorsRegistryV1Tests is Test {
     function testRemoveValidatorsAndRetrieveAsAdmin(bytes32 _name, uint256 _firstAddressSalt) public {
         address _firstAddress = uf._new(_firstAddressSalt);
         vm.startPrank(admin);
-        uint256 index =
-            operatorsRegistry.addOperator(string(abi.encodePacked(_name)), _firstAddress);
+        uint256 index = operatorsRegistry.addOperator(string(abi.encodePacked(_name)), _firstAddress);
 
         bytes memory tenPublicKeys =
             hex"e18e2e0fff999e38c547fb921bd915a1fef6a46e07db2705a57d17542f0acc6be99fee18fb2c17a7f247fc05edd722b9e95f700adf12dd6f20d65c2e411a6a447cb6f4f7c84b8b6673099385d5dcf964e479a9167c802d977ba0a0a22df2336f83182e83bc198c34c301482f189475209fb93d362704e317709fec266f14b3383e7bac3e0e306b1ac8228482c31d7ffbc7e0f865bd4648c7c45c1361f9cd0f4ccab693068a55e6823a4edd8ef4ced9faa64343866ad7357d488bff347a36f2476cc7b4eaf397c832968548ea70e1de2b2691628399d9f59fdd21a62dd3da50d0255790ec1c15949850a869a37595f8f52cc9d681f2b78748254ba36456f7e65d3c7ed2b64ef502cbd3c2f48d789924a99aedfbd097f4ff5829e787ef29b0b79c817337c08ff68c454a1ddc6359d09c0d48a9298a96691c3558812ca13239d9324f146a6b3bfb7bd3f2b1877929ceb74fa1ed590351801935d1e61c875c7772e74d037b26f972f2dfa0569ae9bf8cc32dee87e980497cd79492bf91edeafacfbd6ad32c642a6564ffc9a5d921d0cc35740314c88986547d8f94e60f5d3a2e0a0b1723d20546beaf064adfd78e5f63b600a6ee5b0bacf6f30bf456afadef451a1c503e428fcd295b5d20ad9e065e1684dced5487fd33270bb68b783a6963eab250";
@@ -797,8 +764,7 @@ contract OperatorsRegistryV1Tests is Test {
     function testRemoveValidatorsFundedKeyRemovalAttempt(bytes32 _name, uint256 _firstAddressSalt) public {
         address _firstAddress = uf._new(_firstAddressSalt);
         vm.startPrank(admin);
-        uint256 index =
-            operatorsRegistry.addOperator(string(abi.encodePacked(_name)), _firstAddress);
+        uint256 index = operatorsRegistry.addOperator(string(abi.encodePacked(_name)), _firstAddress);
 
         bytes memory tenPublicKeys =
             hex"e18e2e0fff999e38c547fb921bd915a1fef6a46e07db2705a57d17542f0acc6be99fee18fb2c17a7f247fc05edd722b9e95f700adf12dd6f20d65c2e411a6a447cb6f4f7c84b8b6673099385d5dcf964e479a9167c802d977ba0a0a22df2336f83182e83bc198c34c301482f189475209fb93d362704e317709fec266f14b3383e7bac3e0e306b1ac8228482c31d7ffbc7e0f865bd4648c7c45c1361f9cd0f4ccab693068a55e6823a4edd8ef4ced9faa64343866ad7357d488bff347a36f2476cc7b4eaf397c832968548ea70e1de2b2691628399d9f59fdd21a62dd3da50d0255790ec1c15949850a869a37595f8f52cc9d681f2b78748254ba36456f7e65d3c7ed2b64ef502cbd3c2f48d789924a99aedfbd097f4ff5829e787ef29b0b79c817337c08ff68c454a1ddc6359d09c0d48a9298a96691c3558812ca13239d9324f146a6b3bfb7bd3f2b1877929ceb74fa1ed590351801935d1e61c875c7772e74d037b26f972f2dfa0569ae9bf8cc32dee87e980497cd79492bf91edeafacfbd6ad32c642a6564ffc9a5d921d0cc35740314c88986547d8f94e60f5d3a2e0a0b1723d20546beaf064adfd78e5f63b600a6ee5b0bacf6f30bf456afadef451a1c503e428fcd295b5d20ad9e065e1684dced5487fd33270bb68b783a6963eab250";
@@ -832,8 +798,7 @@ contract OperatorsRegistryV1Tests is Test {
     function testRemoveValidatorsKeyOutOfBounds(bytes32 _name, uint256 _firstAddressSalt) public {
         address _firstAddress = uf._new(_firstAddressSalt);
         vm.startPrank(admin);
-        uint256 index =
-            operatorsRegistry.addOperator(string(abi.encodePacked(_name)), _firstAddress);
+        uint256 index = operatorsRegistry.addOperator(string(abi.encodePacked(_name)), _firstAddress);
 
         bytes memory tenPublicKeys =
             hex"e18e2e0fff999e38c547fb921bd915a1fef6a46e07db2705a57d17542f0acc6be99fee18fb2c17a7f247fc05edd722b9e95f700adf12dd6f20d65c2e411a6a447cb6f4f7c84b8b6673099385d5dcf964e479a9167c802d977ba0a0a22df2336f83182e83bc198c34c301482f189475209fb93d362704e317709fec266f14b3383e7bac3e0e306b1ac8228482c31d7ffbc7e0f865bd4648c7c45c1361f9cd0f4ccab693068a55e6823a4edd8ef4ced9faa64343866ad7357d488bff347a36f2476cc7b4eaf397c832968548ea70e1de2b2691628399d9f59fdd21a62dd3da50d0255790ec1c15949850a869a37595f8f52cc9d681f2b78748254ba36456f7e65d3c7ed2b64ef502cbd3c2f48d789924a99aedfbd097f4ff5829e787ef29b0b79c817337c08ff68c454a1ddc6359d09c0d48a9298a96691c3558812ca13239d9324f146a6b3bfb7bd3f2b1877929ceb74fa1ed590351801935d1e61c875c7772e74d037b26f972f2dfa0569ae9bf8cc32dee87e980497cd79492bf91edeafacfbd6ad32c642a6564ffc9a5d921d0cc35740314c88986547d8f94e60f5d3a2e0a0b1723d20546beaf064adfd78e5f63b600a6ee5b0bacf6f30bf456afadef451a1c503e428fcd295b5d20ad9e065e1684dced5487fd33270bb68b783a6963eab250";
@@ -865,8 +830,7 @@ contract OperatorsRegistryV1Tests is Test {
     function testRemoveValidatorsUnsortedIndexes(bytes32 _name, uint256 _firstAddressSalt) public {
         address _firstAddress = uf._new(_firstAddressSalt);
         vm.startPrank(admin);
-        uint256 index =
-            operatorsRegistry.addOperator(string(abi.encodePacked(_name)), _firstAddress);
+        uint256 index = operatorsRegistry.addOperator(string(abi.encodePacked(_name)), _firstAddress);
 
         bytes memory tenPublicKeys =
             hex"e18e2e0fff999e38c547fb921bd915a1fef6a46e07db2705a57d17542f0acc6be99fee18fb2c17a7f247fc05edd722b9e95f700adf12dd6f20d65c2e411a6a447cb6f4f7c84b8b6673099385d5dcf964e479a9167c802d977ba0a0a22df2336f83182e83bc198c34c301482f189475209fb93d362704e317709fec266f14b3383e7bac3e0e306b1ac8228482c31d7ffbc7e0f865bd4648c7c45c1361f9cd0f4ccab693068a55e6823a4edd8ef4ced9faa64343866ad7357d488bff347a36f2476cc7b4eaf397c832968548ea70e1de2b2691628399d9f59fdd21a62dd3da50d0255790ec1c15949850a869a37595f8f52cc9d681f2b78748254ba36456f7e65d3c7ed2b64ef502cbd3c2f48d789924a99aedfbd097f4ff5829e787ef29b0b79c817337c08ff68c454a1ddc6359d09c0d48a9298a96691c3558812ca13239d9324f146a6b3bfb7bd3f2b1877929ceb74fa1ed590351801935d1e61c875c7772e74d037b26f972f2dfa0569ae9bf8cc32dee87e980497cd79492bf91edeafacfbd6ad32c642a6564ffc9a5d921d0cc35740314c88986547d8f94e60f5d3a2e0a0b1723d20546beaf064adfd78e5f63b600a6ee5b0bacf6f30bf456afadef451a1c503e428fcd295b5d20ad9e065e1684dced5487fd33270bb68b783a6963eab250";
@@ -898,8 +862,7 @@ contract OperatorsRegistryV1Tests is Test {
     function testGetOperator(bytes32 _name, uint256 _firstAddressSalt) public {
         address _firstAddress = uf._new(_firstAddressSalt);
         vm.startPrank(admin);
-        uint256 index =
-            operatorsRegistry.addOperator(string(abi.encodePacked(_name)), _firstAddress);
+        uint256 index = operatorsRegistry.addOperator(string(abi.encodePacked(_name)), _firstAddress);
 
         Operators.Operator memory operator = operatorsRegistry.getOperator(index);
         assert(operator.active == true);
