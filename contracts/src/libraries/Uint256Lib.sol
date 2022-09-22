@@ -33,7 +33,7 @@ library Uint256Lib {
         result <<= (24 * 8);
     }
 
-    function min(uint256 a, uint256 b) internal pure returns (uint256 max) {
+    function min(uint256 a, uint256 b) internal pure returns (uint256) {
         return (a > b ? b : a);
     }
 }
