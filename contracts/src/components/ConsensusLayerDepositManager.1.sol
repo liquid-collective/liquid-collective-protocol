@@ -106,18 +106,18 @@ abstract contract ConsensusLayerDepositManagerV1 is IConsensusLayerDepositManage
 
         uint256 depositAmount = value / 1000000000 wei;
 
-        bytes32 pubkeyRoot = sha256(BytesLib.pad64(_publicKey));
+        bytes32 pubkeyRoot = sha256(bytes.concat(_publicKey, bytes16(0)));
         bytes32 signatureRoot = sha256(
-            abi.encodePacked(
+            bytes.concat(
                 sha256(BytesLib.slice(_signature, 0, 64)),
-                sha256(BytesLib.pad64(BytesLib.slice(_signature, 64, SIGNATURE_LENGTH - 64)))
+                sha256(bytes.concat(BytesLib.slice(_signature, 64, SIGNATURE_LENGTH - 64), bytes32(0)))
             )
         );
 
         bytes32 depositDataRoot = sha256(
-            abi.encodePacked(
-                sha256(abi.encodePacked(pubkeyRoot, _withdrawalCredentials)),
-                sha256(abi.encodePacked(Uint256Lib.toLittleEndian64(depositAmount), signatureRoot))
+            bytes.concat(
+                sha256(bytes.concat(pubkeyRoot, _withdrawalCredentials)),
+                sha256(bytes.concat(bytes32(Uint256Lib.toLittleEndian64(depositAmount)), signatureRoot))
             )
         );
 

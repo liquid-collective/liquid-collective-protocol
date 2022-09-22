@@ -62,7 +62,7 @@ library ValidatorKeys {
     }
 
     function set(uint256 operatorIndex, uint256 idx, bytes memory publicKey, bytes memory signature) internal {
-        bytes memory concatenatedKeys = BytesLib.concat(publicKey, signature);
+        bytes memory concatenatedKeys = bytes.concat(publicKey, signature);
 
         bytes32 slot = VALIDATOR_KEYS_SLOT;
 
