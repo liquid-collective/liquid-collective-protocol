@@ -115,6 +115,7 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
     /// @param _index The operator index
     /// @param _newName The new operator name
     function setOperatorName(uint256 _index, string calldata _newName) external operatorOrAdmin(_index) {
+        LibSanitize._notEmptyString(_newName);
         Operators.Operator storage operator = Operators.get(_index);
         operator.name = _newName;
 
@@ -178,13 +179,14 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
         }
     }
 
+    error InvalidKeysLength();
+
     /// @notice Adds new keys for an operator
     /// @dev Only callable by the administrator or the operator address
     /// @param _index The operator index
     /// @param _keyCount The amount of keys provided
-    /// @param _publicKeys Public keys of the validator, concatenated
-    /// @param _signatures Signatures of the validator keys, concatenated
-    function addValidators(uint256 _index, uint256 _keyCount, bytes calldata _publicKeys, bytes calldata _signatures)
+    /// @param _publicKeysAndSignatures Public keys of the validator, concatenated
+    function addValidators(uint256 _index, uint256 _keyCount, bytes calldata _publicKeysAndSignatures)
         external
         operatorOrAdmin(_index)
     {
@@ -192,22 +194,22 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
             revert InvalidKeyCount();
         }
 
-        if (_publicKeys.length != _keyCount * ValidatorKeys.PUBLIC_KEY_LENGTH) {
-            revert InvalidPublicKeysLength();
-        }
-
-        if (_signatures.length != _keyCount * ValidatorKeys.SIGNATURE_LENGTH) {
-            revert InvalidSignatureLength();
+        if (
+            _publicKeysAndSignatures.length
+                != _keyCount * (ValidatorKeys.PUBLIC_KEY_LENGTH + ValidatorKeys.SIGNATURE_LENGTH)
+        ) {
+            revert InvalidKeysLength();
         }
 
         Operators.Operator storage operator = Operators.get(_index);
 
         for (uint256 idx = 0; idx < _keyCount;) {
-            bytes memory publicKey =
-                BytesLib.slice(_publicKeys, idx * ValidatorKeys.PUBLIC_KEY_LENGTH, ValidatorKeys.PUBLIC_KEY_LENGTH);
-            bytes memory signature =
-                BytesLib.slice(_signatures, idx * ValidatorKeys.SIGNATURE_LENGTH, ValidatorKeys.SIGNATURE_LENGTH);
-            ValidatorKeys.set(_index, operator.keys + idx, publicKey, signature);
+            bytes memory publicKeyAndSignature = BytesLib.slice(
+                _publicKeysAndSignatures,
+                idx * (ValidatorKeys.PUBLIC_KEY_LENGTH + ValidatorKeys.SIGNATURE_LENGTH),
+                ValidatorKeys.PUBLIC_KEY_LENGTH + ValidatorKeys.SIGNATURE_LENGTH
+            );
+            ValidatorKeys.set(_index, operator.keys + idx, publicKeyAndSignature);
             unchecked {
                 ++idx;
             }
@@ -215,7 +217,7 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
 
         operator.keys += _keyCount;
 
-        emit AddedValidatorKeys(_index, _publicKeys);
+        emit AddedValidatorKeys(_index, _publicKeysAndSignatures);
     }
 
     /// @notice Remove validator keys
@@ -225,45 +227,54 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
     /// @param _index The operator index
     /// @param _indexes The indexes of the keys to remove
     function removeValidators(uint256 _index, uint256[] calldata _indexes) external operatorOrAdmin(_index) {
-        Operators.Operator storage operator = Operators.get(_index);
-
-        if (_indexes.length == 0) {
+        uint256 indexesLength = _indexes.length;
+        if (indexesLength == 0) {
             revert InvalidKeyCount();
         }
 
-        uint256 keyToRemoveCount = _indexes.length;
-        bool limitEqualsKeyCount = operator.keys == operator.limit;
+        Operators.Operator storage operator = Operators.get(_index);
 
-        for (uint256 idx = 0; idx < keyToRemoveCount;) {
+        uint256 totalKeys = operator.keys;
+
+        if (!(_indexes[0] < totalKeys)) {
+            revert InvalidIndexOutOfBounds();
+        }
+
+        uint256 lastIndex = _indexes[indexesLength - 1];
+
+        if (lastIndex < operator.funded) {
+            revert InvalidFundedKeyDeletionAttempt();
+        }
+
+        bool limitEqualsKeyCount = operator.keys == operator.limit;
+        operator.keys = totalKeys - indexesLength;
+
+        uint256 idx;
+        for (; idx < indexesLength;) {
             uint256 keyIndex = _indexes[idx];
 
-            if (keyIndex < operator.funded) {
-                revert InvalidFundedKeyDeletionAttempt();
-            }
-
-            if (keyIndex >= operator.keys) {
-                revert InvalidIndexOutOfBounds();
-            }
-
-            if (idx > 0 && _indexes[idx] >= _indexes[idx - 1]) {
+            if (idx > 0 && !(keyIndex < _indexes[idx - 1])) {
                 revert InvalidUnsortedIndexes();
             }
 
-            uint256 lastKeyIndex = operator.keys - 1;
-            (bytes memory removedPublicKey,) = ValidatorKeys.get(_index, keyIndex);
-            (bytes memory lastPublicKey, bytes memory lastSignature) = ValidatorKeys.get(_index, lastKeyIndex);
-            ValidatorKeys.set(_index, keyIndex, lastPublicKey, lastSignature);
-            ValidatorKeys.set(_index, lastKeyIndex, new bytes(0), new bytes(0));
-            operator.keys -= 1;
-            emit RemovedValidatorKey(_index, removedPublicKey);
             unchecked {
                 ++idx;
             }
+
+            uint256 lastKeyIndex = totalKeys - idx;
+
+            (bytes memory removedPublicKey,) = ValidatorKeys.get(_index, keyIndex);
+            (bytes memory lastPublicKeyAndSignature) = ValidatorKeys.getRaw(_index, lastKeyIndex);
+            ValidatorKeys.set(_index, keyIndex, lastPublicKeyAndSignature);
+            ValidatorKeys.set(_index, lastKeyIndex, new bytes(0));
+
+            emit RemovedValidatorKey(_index, removedPublicKey);
         }
+
         if (limitEqualsKeyCount) {
             operator.limit = operator.keys;
-        } else if (_indexes[keyToRemoveCount - 1] < operator.limit) {
-            operator.limit = _indexes[keyToRemoveCount - 1];
+        } else if (lastIndex < operator.limit) {
+            operator.limit = lastIndex;
         }
     }
 

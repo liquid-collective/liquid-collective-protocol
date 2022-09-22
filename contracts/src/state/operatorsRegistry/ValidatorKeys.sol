@@ -35,6 +35,18 @@ library ValidatorKeys {
         signature = BytesLib.slice(entry, PUBLIC_KEY_LENGTH, SIGNATURE_LENGTH);
     }
 
+    function getRaw(uint256 operatorIndex, uint256 idx) internal view returns (bytes memory publicKeyAndSignature) {
+        bytes32 slot = VALIDATOR_KEYS_SLOT;
+
+        Slot storage r;
+
+        assembly {
+            r.slot := slot
+        }
+
+        return r.value[operatorIndex][idx];
+    }
+
     function getKeys(uint256 operatorIndex, uint256 startIdx, uint256 amount)
         internal
         view
@@ -50,20 +62,18 @@ library ValidatorKeys {
         assembly {
             r.slot := slot
         }
-
-        for (uint256 idx = startIdx; idx < startIdx + amount;) {
-            bytes memory rawCredentials = r.value[operatorIndex][idx];
-            publicKey[idx - startIdx] = BytesLib.slice(rawCredentials, 0, PUBLIC_KEY_LENGTH);
-            signatures[idx - startIdx] = BytesLib.slice(rawCredentials, PUBLIC_KEY_LENGTH, SIGNATURE_LENGTH);
+        uint256 idx;
+        for (; idx < amount;) {
+            bytes memory rawCredentials = r.value[operatorIndex][idx + startIdx];
+            publicKey[idx] = BytesLib.slice(rawCredentials, 0, PUBLIC_KEY_LENGTH);
+            signatures[idx] = BytesLib.slice(rawCredentials, PUBLIC_KEY_LENGTH, SIGNATURE_LENGTH);
             unchecked {
                 ++idx;
             }
         }
     }
 
-    function set(uint256 operatorIndex, uint256 idx, bytes memory publicKey, bytes memory signature) internal {
-        bytes memory concatenatedKeys = bytes.concat(publicKey, signature);
-
+    function set(uint256 operatorIndex, uint256 idx, bytes memory publicKeyAndSignature) internal {
         bytes32 slot = VALIDATOR_KEYS_SLOT;
 
         Slot storage r;
@@ -72,6 +82,6 @@ library ValidatorKeys {
             r.slot := slot
         }
 
-        r.value[operatorIndex][idx] = concatenatedKeys;
+        r.value[operatorIndex][idx] = publicKeyAndSignature;
     }
 }
