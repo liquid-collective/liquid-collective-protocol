@@ -3,7 +3,6 @@ pragma solidity 0.8.10;
 
 import "./libraries/Errors.sol";
 import "./interfaces/IFirewall.sol";
-import "./libraries/LibSanitize.sol";
 import "./Administrable.sol";
 
 /// @title Firewall
@@ -22,12 +21,7 @@ contract Firewall is IFirewall, Administrable {
 
     // admin_ should be the most trustworthy entity in the underlying protocol - often, a DAO admin
     // executor_ should be a trustworthy entity that takes care of time-sensitive actions in the underlying protocol
-    constructor(
-        address admin_,
-        address executor_,
-        address destination_,
-        bytes4[] memory executorCallableSelectors_
-    ) {
+    constructor(address admin_, address executor_, address destination_, bytes4[] memory executorCallableSelectors_) {
         LibSanitize._notZeroAddress(admin_);
         LibSanitize._notZeroAddress(executor_);
         LibSanitize._notZeroAddress(destination_);

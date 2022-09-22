@@ -4,6 +4,7 @@ pragma solidity 0.8.10;
 import "./libraries/LibAdministrable.sol";
 import "./libraries/Errors.sol";
 import "./interfaces/IAdministrable.sol";
+import "./libraries/LibSanitize.sol";
 
 abstract contract Administrable is IAdministrable {
     modifier onlyAdmin() {
@@ -21,6 +22,7 @@ abstract contract Administrable is IAdministrable {
     }
 
     function _setAdmin(address _admin) internal {
+        LibSanitize._notZeroAddress(_admin);
         LibAdministrable._setAdmin(_admin);
     }
 

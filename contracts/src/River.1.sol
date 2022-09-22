@@ -55,14 +55,7 @@ contract RiverV1 is
         address _operatorRegistryAddress,
         address _treasuryAddress,
         uint256 _globalFee
-    )
-        external
-        init(0)
-    {
-        if (_systemAdministratorAddress == address(0)) {
-            // only check on initialization
-            revert Errors.InvalidZeroAddress();
-        }
+    ) external init(0) {
         _setAdmin(_systemAdministratorAddress);
         TreasuryAddress.set(_treasuryAddress);
         GlobalFee.set(_globalFee);

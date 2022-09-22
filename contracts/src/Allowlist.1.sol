@@ -3,7 +3,6 @@ pragma solidity 0.8.10;
 
 import "./Initializable.sol";
 import "./libraries/Errors.sol";
-import "./libraries/LibSanitize.sol";
 
 import "./state/allowlist/AllowerAddress.sol";
 import "./state/allowlist/Allowlist.sol";

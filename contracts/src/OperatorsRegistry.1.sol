@@ -5,7 +5,6 @@ import "./Initializable.sol";
 
 import "./libraries/Errors.sol";
 import "./libraries/Uint256Lib.sol";
-import "./libraries/LibSanitize.sol";
 
 import "./state/operatorsRegistry/Operators.sol";
 import "./state/operatorsRegistry/ValidatorKeys.sol";

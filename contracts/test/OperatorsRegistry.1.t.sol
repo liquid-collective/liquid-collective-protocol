@@ -65,9 +65,7 @@ contract OperatorsRegistryV1Tests is Test {
         operatorsRegistry.setRiver(_newRiverAddress);
     }
 
-    function testAddNodeOperator(uint256 _nodeOperatorAddressSalt, bytes32 _name)
-        public
-    {
+    function testAddNodeOperator(uint256 _nodeOperatorAddressSalt, bytes32 _name) public {
         address _nodeOperatorAddress = uf._new(_nodeOperatorAddressSalt);
         vm.startPrank(admin);
         operatorsRegistry.addOperator(string(abi.encodePacked(_name)), _nodeOperatorAddress);
