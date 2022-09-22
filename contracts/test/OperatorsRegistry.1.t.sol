@@ -1014,7 +1014,7 @@ contract OperatorsRegistryV1TestDistribution is Test {
             if (len - res.length >= 32) {
                 res = bytes.concat(res, abi.encode(salt));
             } else {
-                res = bytes.concat(res, BytesLib.slice(abi.encode(salt), 0, len - res.length));
+                res = bytes.concat(res, LibBytes.slice(abi.encode(salt), 0, len - res.length));
             }
         }
         return res;

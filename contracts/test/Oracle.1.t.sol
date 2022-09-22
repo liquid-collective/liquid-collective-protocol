@@ -343,28 +343,28 @@ contract OracleV1Tests {
     }
 
     function testSetCLBounds(uint256 _up, uint64 _down) public {
-        CLReportBounds.CLReportBoundsStruct memory bounds = oracle.getCLBounds();
+        ReportBounds.ReportBoundsStruct memory bounds = oracle.getReportBounds();
         assert(bounds.annualAprUpperBound == UPPER_BOUND);
         assert(bounds.relativeLowerBound == LOWER_BOUND);
         vm.startPrank(admin);
         vm.expectEmit(true, true, true, true);
         emit SetBounds(_up, _down);
-        oracle.setCLBounds(_up, _down);
+        oracle.setReportBounds(_up, _down);
 
-        bounds = oracle.getCLBounds();
+        bounds = oracle.getReportBounds();
         assert(bounds.annualAprUpperBound == _up);
         assert(bounds.relativeLowerBound == _down);
     }
 
     function testSetCLBoundsUnauthorized(uint256 _intruderSalt, uint256 _up, uint64 _down) public {
         address _intruder = uf._new(_intruderSalt);
-        CLReportBounds.CLReportBoundsStruct memory bounds = oracle.getCLBounds();
+        ReportBounds.ReportBoundsStruct memory bounds = oracle.getReportBounds();
         assert(bounds.annualAprUpperBound == UPPER_BOUND);
         assert(bounds.relativeLowerBound == LOWER_BOUND);
 
         vm.startPrank(_intruder);
         vm.expectRevert(abi.encodeWithSignature("Unauthorized(address)", _intruder));
-        oracle.setCLBounds(_up, _down);
+        oracle.setReportBounds(_up, _down);
     }
 
     function testReportCLEpochTooOld(uint256 oracleMemberSalt, uint64 timeFromGenesis) public {
@@ -513,7 +513,7 @@ contract OracleV1Tests {
             uint256 oneYearAway = uint256(GENESIS_TIME) + uint256(timeFromGenesis) + 364.9 days;
             vm.warp(oneYearAway);
             uint256 futureEpochId = oracle.getFrameFirstEpochId(oracle.getCurrentEpochId());
-            CLReportBounds.CLReportBoundsStruct memory bounds = oracle.getCLBounds();
+            ReportBounds.ReportBoundsStruct memory bounds = oracle.getReportBounds();
 
             uint256 balanceSumIncrease = ((balanceSum * bounds.annualAprUpperBound) / 10000) + 1;
 
@@ -521,7 +521,7 @@ contract OracleV1Tests {
                 vm.startPrank(oracleOne);
                 vm.expectRevert(
                     abi.encodeWithSignature(
-                        "CLBalanceIncreaseOutOfBounds(uint256,uint256,uint256,uint256)",
+                        "TotalValidatorBalanceIncreaseOutOfBound(uint256,uint256,uint256,uint256)",
                         1e9 * uint256(balanceSum),
                         (uint256(balanceSum) + uint256(balanceSumIncrease)) * 1e9,
                         (futureEpochId - frameFirstEpochId) * SLOTS_PER_EPOCH * SECONDS_PER_SLOT,
@@ -555,14 +555,14 @@ contract OracleV1Tests {
                 uint256(GENESIS_TIME) + uint256(timeFromGenesis) + SLOTS_PER_EPOCH * SECONDS_PER_SLOT * EPOCHS_PER_FRAME;
             vm.warp(oneEpochAway);
             uint256 futureEpochId = oracle.getFrameFirstEpochId(oracle.getCurrentEpochId());
-            CLReportBounds.CLReportBoundsStruct memory bounds = oracle.getCLBounds();
+            ReportBounds.ReportBoundsStruct memory bounds = oracle.getReportBounds();
 
             uint256 balanceSumDecrease = ((balanceSum * bounds.relativeLowerBound) / 10000) + 1;
 
             vm.startPrank(oracleOne);
             vm.expectRevert(
                 abi.encodeWithSignature(
-                    "CLBalanceDecreaseOutOfBounds(uint256,uint256,uint256,uint256)",
+                    "TotalValidatorBalanceDecreaseOutOfBound(uint256,uint256,uint256,uint256)",
                     1e9 * uint256(balanceSum),
                     (uint256(balanceSum) - uint256(balanceSumDecrease)) * 1e9,
                     (futureEpochId - frameFirstEpochId) * SLOTS_PER_EPOCH * SECONDS_PER_SLOT,

@@ -2,7 +2,7 @@
 pragma solidity 0.8.10;
 
 import "../state/oracle/CLSpec.sol";
-import "../state/oracle/CLReportBounds.sol";
+import "../state/oracle/ReportBounds.sol";
 
 /// @title Oracle (v1)
 /// @author Kiln
@@ -25,10 +25,10 @@ interface IOracleV1 {
     error EpochTooOld(uint256 _providedEpochId, uint256 _minExpectedEpochId);
     error NotFrameFirstEpochId(uint256 _providedEpochId, uint256 _expectedFrameFirstEpochId);
     error AlreadyReported(uint256 _epochId, address _member);
-    error CLBalanceIncreaseOutOfBounds(
+    error TotalValidatorBalanceIncreaseOutOfBound(
         uint256 _prevTotalEth, uint256 _postTotalEth, uint256 _timeElapsed, uint256 _annualAprUpperBound
     );
-    error CLBalanceDecreaseOutOfBounds(
+    error TotalValidatorBalanceDecreaseOutOfBound(
         uint256 _prevTotalEth, uint256 _postTotalEth, uint256 _timeElapsed, uint256 _relativeLowerBound
     );
     error AddressAlreadyInUse(address _newAddress);
@@ -60,7 +60,7 @@ interface IOracleV1 {
     function getCLSpec() external view returns (CLSpec.CLSpecStruct memory);
     function getCurrentFrame() external view returns (uint256 _startEpochId, uint256 _startTime, uint256 _endTime);
     function getFrameFirstEpochId(uint256 _epochId) external view returns (uint256);
-    function getCLBounds() external view returns (CLReportBounds.CLReportBoundsStruct memory);
+    function getReportBounds() external view returns (ReportBounds.ReportBoundsStruct memory);
     function getOracleMembers() external view returns (address[] memory);
     function isMember(address _memberAddress) external view returns (bool);
     function addMember(address _newOracleMember, uint256 _newQuorum) external;
@@ -68,7 +68,7 @@ interface IOracleV1 {
     function setMember(address _oracleMember, address _newAddress) external;
     function setCLSpec(uint64 _epochsPerFrame, uint64 _slotsPerEpoch, uint64 _secondsPerSlot, uint64 _genesisTime)
         external;
-    function setCLBounds(uint256 _annualAprUpperBound, uint256 _relativeLowerBound) external;
+    function setReportBounds(uint256 _annualAprUpperBound, uint256 _relativeLowerBound) external;
     function setQuorum(uint256 _newQuorum) external;
     function reportConsensusLayerData(uint256 _epochId, uint64 _clBalance, uint32 _clValidators) external;
 }

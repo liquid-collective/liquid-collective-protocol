@@ -25,7 +25,7 @@ contract OracleManagerV1ExposeInitializer is OracleManagerV1 {
     }
 
     function supersedeBalanceSum(uint256 amount) external {
-        CLValidatorBalanceSum.set(amount);
+        CLValidatorTotalBalance.set(amount);
     }
 
     function supersedeAllValidatorCount(uint256 amount) external {

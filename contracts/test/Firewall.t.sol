@@ -122,7 +122,7 @@ contract FirewallTests is BytesGenerator {
         executorCallableOracleSelectors[1] = oracle.removeMember.selector;
         executorCallableOracleSelectors[2] = oracle.setQuorum.selector;
         executorCallableOracleSelectors[3] = oracle.setCLSpec.selector;
-        executorCallableOracleSelectors[4] = oracle.setCLBounds.selector;
+        executorCallableOracleSelectors[4] = oracle.setReportBounds.selector;
         oracleFirewall = new Firewall(riverGovernorDAO, executor, address(oracle), executorCallableOracleSelectors);
         firewalledOracle = OracleV1(address(oracleFirewall));
         oracleInput = IRiverV1(payable(address(new RiverMock())));
@@ -455,22 +455,22 @@ contract FirewallTests is BytesGenerator {
 
     function testGovernorCanSetCLBounds() public {
         vm.startPrank(riverGovernorDAO);
-        firewalledOracle.setCLBounds(2, 3);
-        assert(oracle.getCLBounds().annualAprUpperBound == 2);
+        firewalledOracle.setReportBounds(2, 3);
+        assert(oracle.getReportBounds().annualAprUpperBound == 2);
         vm.stopPrank();
     }
 
     function testExecutorCanSetCLBounds() public {
         vm.startPrank(executor);
-        firewalledOracle.setCLBounds(2, 3);
-        assert(oracle.getCLBounds().annualAprUpperBound == 2);
+        firewalledOracle.setReportBounds(2, 3);
+        assert(oracle.getReportBounds().annualAprUpperBound == 2);
         vm.stopPrank();
     }
 
     function testRandomCallerCannotSetCLBounds() public {
         vm.startPrank(joe);
         vm.expectRevert(unauthJoe);
-        firewalledOracle.setCLBounds(2, 3);
+        firewalledOracle.setReportBounds(2, 3);
         vm.stopPrank();
     }
 

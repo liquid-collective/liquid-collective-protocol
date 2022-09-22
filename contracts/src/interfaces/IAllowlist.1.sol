@@ -2,7 +2,7 @@
 pragma solidity 0.8.10;
 
 interface IAllowlistV1 {
-    event ChangedAllowlistPermissions(address[] indexed accounts, uint256[] statuses);
+    event SetAllowlistPermissions(address[] indexed accounts, uint256[] permiossions);
     event SetAllower(address indexed allower);
 
     error InvalidAlloweeCount();

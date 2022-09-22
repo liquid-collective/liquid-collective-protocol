@@ -131,7 +131,7 @@ const func: DeployFunction = async function ({
         oracleInterface.getSighash("removeMember"),
         oracleInterface.getSighash("setQuorum"),
         oracleInterface.getSighash("setCLSpec"),
-        oracleInterface.getSighash("setCLBounds"),
+        oracleInterface.getSighash("setReportBounds"),
       ],
     ],
   });

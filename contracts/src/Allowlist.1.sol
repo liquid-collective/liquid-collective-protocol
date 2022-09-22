@@ -61,7 +61,7 @@ contract AllowlistV1 is IAllowlistV1, Initializable, Administrable {
             }
         }
 
-        emit ChangedAllowlistPermissions(_accounts, _permissions);
+        emit SetAllowlistPermissions(_accounts, _permissions);
     }
 
     /// @notice This method should be used as a modifier and is expected to revert

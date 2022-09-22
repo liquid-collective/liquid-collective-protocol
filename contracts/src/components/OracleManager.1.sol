@@ -5,7 +5,7 @@ import "../libraries/LibErrors.sol";
 
 import "../state/river/OracleAddress.sol";
 import "../state/river/LastOracleRoundId.sol";
-import "../state/river/CLValidatorBalanceSum.sol";
+import "../state/river/CLValidatorTotalBalance.sol";
 import "../state/river/CLValidatorCount.sol";
 import "../state/river/DepositedValidatorCount.sol";
 
@@ -54,9 +54,9 @@ abstract contract OracleManagerV1 is IOracleManagerV1 {
         }
 
         uint256 newValidators = _validatorCount - CLValidatorCount.get();
-        uint256 previousValidatorBalanceSum = CLValidatorBalanceSum.get() + (newValidators * 32 ether);
+        uint256 previousValidatorBalanceSum = CLValidatorTotalBalance.get() + (newValidators * 32 ether);
 
-        CLValidatorBalanceSum.set(_validatorBalanceSum);
+        CLValidatorTotalBalance.set(_validatorBalanceSum);
         CLValidatorCount.set(_validatorCount);
         LastOracleRoundId.set(_roundId);
 
@@ -70,8 +70,8 @@ abstract contract OracleManagerV1 is IOracleManagerV1 {
     }
 
     /// @notice Get Oracle address
-    function getOracle() external view returns (address oracle) {
-        oracle = OracleAddress.get();
+    function getOracle() external view returns (address) {
+        return OracleAddress.get();
     }
 
     /// @notice Set Oracle address
@@ -82,12 +82,12 @@ abstract contract OracleManagerV1 is IOracleManagerV1 {
     }
 
     /// @notice Get CL validator balance sum
-    function getCLValidatorBalanceSum() external view returns (uint256 clValidatorBalanceSum) {
-        clValidatorBalanceSum = CLValidatorBalanceSum.get();
+    function getCLValidatorTotalBalance() external view returns (uint256) {
+        return CLValidatorTotalBalance.get();
     }
 
     /// @notice Get CL validator count (the amount of validator reported by the oracles)
-    function getCLValidatorCount() external view returns (uint256 clValidatorCount) {
-        clValidatorCount = CLValidatorCount.get();
+    function getCLValidatorCount() external view returns (uint256) {
+        return CLValidatorCount.get();
     }
 }

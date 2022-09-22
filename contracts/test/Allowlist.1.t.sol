@@ -27,6 +27,7 @@ contract AllowlistV1Tests {
     AllowlistV1 internal allowlist;
 
     event SetAllower(address indexed allower);
+    event SetAllowlistPermissions(address[] indexed accounts, uint256[] permissions);
 
     function setUp() public {
         allowlist = new AllowlistV1Sudo();
@@ -44,6 +45,8 @@ contract AllowlistV1Tests {
         address[] memory allowees = new address[](1);
         allowees[0] = user;
         uint256[] memory permissions = AllowlistHelper.batchAllowees(allowees.length, TEST_ONE_MASK);
+        vm.expectEmit(true, true, true, true);
+        emit SetAllowlistPermissions(allowees, permissions);
         allowlist.allow(allowees, permissions);
         assert(allowlist.isAllowed(user, TEST_ONE_MASK) == true);
     }

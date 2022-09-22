@@ -214,10 +214,10 @@ contract RiverV1 is
         uint256 clValidatorCount = CLValidatorCount.get();
         uint256 depositedValidatorCount = DepositedValidatorCount.get();
         if (clValidatorCount < depositedValidatorCount) {
-            return CLValidatorBalanceSum.get() + address(this).balance
+            return CLValidatorTotalBalance.get() + address(this).balance
                 + (depositedValidatorCount - clValidatorCount) * ConsensusLayerDepositManagerV1.DEPOSIT_SIZE;
         } else {
-            return CLValidatorBalanceSum.get() + address(this).balance;
+            return CLValidatorTotalBalance.get() + address(this).balance;
         }
     }
 }

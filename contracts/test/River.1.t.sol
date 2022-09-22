@@ -1009,7 +1009,7 @@ contract RiverV1SetupOneTests is Test, BytesGenerator {
 
         uint256 validatorCount = river.totalUnderlyingSupply() / 32 ether;
         if (validatorCount > 0) {
-            uint256 realValidatorCount = Uint256Lib.min(34, validatorCount);
+            uint256 realValidatorCount = LibUint256.min(34, validatorCount);
             uint256 op2Validator;
             uint256 op1Validator;
             if (realValidatorCount > 5) {

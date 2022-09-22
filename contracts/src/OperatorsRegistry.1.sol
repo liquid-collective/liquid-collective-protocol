@@ -382,8 +382,8 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
             }
 
             // we take the smallest value between limit - (funded + picked), _requestedAmount and MAX_VALIDATOR_ATTRIBUTION_PER_ROUND
-            uint256 pickedKeyCount = Uint256Lib.min(
-                Uint256Lib.min(
+            uint256 pickedKeyCount = LibUint256.min(
+                LibUint256.min(
                     operators[selectedOperatorIndex].limit
                         - (operators[selectedOperatorIndex].funded + operators[selectedOperatorIndex].picked),
                     MAX_VALIDATOR_ATTRIBUTION_PER_ROUND

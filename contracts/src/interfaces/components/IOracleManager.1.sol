@@ -8,8 +8,8 @@ interface IOracleManagerV1 {
     error InvalidValidatorCountReport(uint256 _providedValidatorCount, uint256 _depositedValidatorCount);
 
     function setConsensusLayerData(uint256 _validatorCount, uint256 _validatorBalanceSum, bytes32 _roundId) external;
-    function getOracle() external view returns (address oracle);
+    function getOracle() external view returns (address);
     function setOracle(address _oracleAddress) external;
-    function getCLValidatorBalanceSum() external view returns (uint256 clValidatorBalanceSum);
-    function getCLValidatorCount() external view returns (uint256 clValidatorCount);
+    function getCLValidatorTotalBalance() external view returns (uint256);
+    function getCLValidatorCount() external view returns (uint256);
 }

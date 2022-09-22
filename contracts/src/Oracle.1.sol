@@ -11,7 +11,7 @@ import "./state/shared/RiverAddress.sol";
 import "./state/oracle/OracleMembers.sol";
 import "./state/oracle/Quorum.sol";
 import "./state/oracle/CLSpec.sol";
-import "./state/oracle/CLReportBounds.sol";
+import "./state/oracle/ReportBounds.sol";
 import "./state/oracle/ExpectedEpochId.sol";
 import "./state/oracle/LastEpochId.sol";
 import "./state/oracle/ReportsPositions.sol";
@@ -24,6 +24,7 @@ import "./Administrable.sol";
 contract OracleV1 is IOracleV1, Initializable, Administrable {
     uint256 internal constant BASIS_POINTS_MAX = 10_000;
     uint256 internal constant ONE_YEAR = 365 days;
+
 
     /// @notice Received ETH input has only 9 decimals
     uint128 internal constant DENOMINATION_OFFSET = 1e9;
@@ -58,8 +59,8 @@ contract OracleV1 is IOracleV1, Initializable, Administrable {
             })
         );
         emit SetSpec(_epochsPerFrame, _slotsPerEpoch, _secondsPerSlot, _genesisTime);
-        CLReportBounds.set(
-            CLReportBounds.CLReportBoundsStruct({
+        ReportBounds.set(
+            ReportBounds.ReportBoundsStruct({
                 annualAprUpperBound: _annualAprUpperBound,
                 relativeLowerBound: _relativeLowerBound
             })
@@ -150,8 +151,8 @@ contract OracleV1 is IOracleV1, Initializable, Administrable {
         return _getFrameFirstEpochId(_epochId, clSpec);
     }
 
-    function getCLBounds() external view returns (CLReportBounds.CLReportBoundsStruct memory) {
-        return CLReportBounds.get();
+    function getReportBounds() external view returns (ReportBounds.ReportBoundsStruct memory) {
+        return ReportBounds.get();
     }
 
     function getOracleMembers() external view returns (address[] memory) {
@@ -238,9 +239,9 @@ contract OracleV1 is IOracleV1, Initializable, Administrable {
     /// @dev Only callable by the adminstrator
     /// @param _annualAprUpperBound Maximum apr allowed for balance increase. Delta between updates is extrapolated on a year time frame.
     /// @param _relativeLowerBound Maximum relative balance decrease.
-    function setCLBounds(uint256 _annualAprUpperBound, uint256 _relativeLowerBound) external onlyAdmin {
-        CLReportBounds.set(
-            CLReportBounds.CLReportBoundsStruct({
+    function setReportBounds(uint256 _annualAprUpperBound, uint256 _relativeLowerBound) external onlyAdmin {
+        ReportBounds.set(
+            ReportBounds.ReportBoundsStruct({
                 annualAprUpperBound: _annualAprUpperBound,
                 relativeLowerBound: _relativeLowerBound
             })
@@ -281,9 +282,11 @@ contract OracleV1 is IOracleV1, Initializable, Administrable {
     /// @notice Report cl chain data
     /// @dev Only callable by an oracle member
     /// @param _epochId Epoch where the balance and validator count has been computed
-    /// @param _clBalance Total balance of River validators
-    /// @param _clValidators Total River validator count
-    function reportConsensusLayerData(uint256 _epochId, uint64 _clBalance, uint32 _clValidators) external {
+    /// @param _clValidatorsBalance Total balance of River validators
+    /// @param _clValidatorCount Total River validator count
+    function reportConsensusLayerData(uint256 _epochId, uint64 _clValidatorsBalance, uint32 _clValidatorCount)
+        external
+    {
         int256 memberIndex = OracleMembers.indexOf(msg.sender);
         if (memberIndex == -1) {
             revert LibErrors.Unauthorized(msg.sender);
@@ -308,23 +311,23 @@ contract OracleV1 is IOracleV1, Initializable, Administrable {
         }
         ReportsPositions.register(uint256(memberIndex));
 
-        uint128 clBalanceEth1 = DENOMINATION_OFFSET * uint128(_clBalance);
-        emit CLReported(_epochId, clBalanceEth1, _clValidators, msg.sender);
+        uint128 clBalanceEth1 = DENOMINATION_OFFSET * uint128(_clValidatorsBalance);
+        emit CLReported(_epochId, clBalanceEth1, _clValidatorCount, msg.sender);
 
-        uint256 report = _encodeReport(_clBalance, _clValidators);
+        uint256 report = _encodeReport(_clValidatorsBalance, _clValidatorCount);
         int256 reportIndex = ReportsVariants.indexOfReport(report);
         uint256 quorum = Quorum.get();
 
         if (reportIndex >= 0) {
             uint256 registeredReport = ReportsVariants.get()[uint256(reportIndex)];
             if (_getReportCount(registeredReport) + 1 >= quorum) {
-                _pushToRiver(_epochId, clBalanceEth1, _clValidators, clSpec);
+                _pushToRiver(_epochId, clBalanceEth1, _clValidatorCount, clSpec);
             } else {
                 ReportsVariants.set(uint256(reportIndex), registeredReport + 1);
             }
         } else {
             if (quorum == 1) {
-                _pushToRiver(_epochId, clBalanceEth1, _clValidators, clSpec);
+                _pushToRiver(_epochId, clBalanceEth1, _clValidatorCount, clSpec);
             } else {
                 ReportsVariants.push(report + 1);
             }
@@ -428,22 +431,26 @@ contract OracleV1 is IOracleV1, Initializable, Administrable {
             // relativeIncrease         = increase / _preTotalPooledEther,
             // annualRelativeIncrease   = relativeIncrease / (timeElapsed / 365 days),
             // annualRelativeIncreaseBp = annualRelativeIncrease * 10000, in basis points 0.01% (1e-4)
-            uint256 annualAprUpperBound = CLReportBounds.get().annualAprUpperBound;
+            uint256 annualAprUpperBound = ReportBounds.get().annualAprUpperBound;
             // check that annualRelativeIncreaseBp <= allowedAnnualRelativeIncreaseBp
             if (
                 BASIS_POINTS_MAX * ONE_YEAR * (_postTotalEth - _prevTotalEth)
                     > annualAprUpperBound * _prevTotalEth * _timeElapsed
             ) {
-                revert CLBalanceIncreaseOutOfBounds(_prevTotalEth, _postTotalEth, _timeElapsed, annualAprUpperBound);
+                revert TotalValidatorBalanceIncreaseOutOfBound(
+                    _prevTotalEth, _postTotalEth, _timeElapsed, annualAprUpperBound
+                );
             }
         } else {
             // decrease           = _preTotalPooledEther - _postTotalPooledEther
             // relativeDecrease   = decrease / _preTotalPooledEther
             // relativeDecreaseBp = relativeDecrease * 10000, in basis points 0.01% (1e-4)
-            uint256 relativeLowerBound = CLReportBounds.get().relativeLowerBound;
+            uint256 relativeLowerBound = ReportBounds.get().relativeLowerBound;
             // check that relativeDecreaseBp <= allowedRelativeDecreaseBp
             if (BASIS_POINTS_MAX * (_prevTotalEth - _postTotalEth) > relativeLowerBound * _prevTotalEth) {
-                revert CLBalanceDecreaseOutOfBounds(_prevTotalEth, _postTotalEth, _timeElapsed, relativeLowerBound);
+                revert TotalValidatorBalanceDecreaseOutOfBound(
+                    _prevTotalEth, _postTotalEth, _timeElapsed, relativeLowerBound
+                );
             }
         }
     }
