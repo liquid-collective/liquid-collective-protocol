@@ -42,9 +42,11 @@ abstract contract OracleManagerV1 is IOracleManagerV1 {
     /// @notice Sets the validator count and validator balance sum reported by the oracle
     /// @dev Can only be called by the oracle address
     /// @param _validatorCount The number of active validators on the consensus layer
-    /// @param _validatorBalanceSum The validator balance sum of the active validators on the consensus layer
+    /// @param _validatorTotalBalance The validator balance sum of the active validators on the consensus layer
     /// @param _roundId An identifier for this update
-    function setConsensusLayerData(uint256 _validatorCount, uint256 _validatorBalanceSum, bytes32 _roundId) external {
+    function setConsensusLayerData(uint256 _validatorCount, uint256 _validatorTotalBalance, bytes32 _roundId)
+        external
+    {
         if (msg.sender != OracleAddress.get()) {
             revert LibErrors.Unauthorized(msg.sender);
         }
@@ -54,19 +56,19 @@ abstract contract OracleManagerV1 is IOracleManagerV1 {
         }
 
         uint256 newValidators = _validatorCount - CLValidatorCount.get();
-        uint256 previousValidatorBalanceSum = CLValidatorTotalBalance.get() + (newValidators * 32 ether);
+        uint256 previousValidatorTotalBalance = CLValidatorTotalBalance.get() + (newValidators * 32 ether);
 
-        CLValidatorTotalBalance.set(_validatorBalanceSum);
+        CLValidatorTotalBalance.set(_validatorTotalBalance);
         CLValidatorCount.set(_validatorCount);
         LastOracleRoundId.set(_roundId);
 
         uint256 executionLayerFees = _pullELFees();
 
-        if (previousValidatorBalanceSum < _validatorBalanceSum + executionLayerFees) {
-            _onEarnings((_validatorBalanceSum + executionLayerFees) - previousValidatorBalanceSum);
+        if (previousValidatorTotalBalance < _validatorTotalBalance + executionLayerFees) {
+            _onEarnings((_validatorTotalBalance + executionLayerFees) - previousValidatorTotalBalance);
         }
 
-        emit ConsensusLayerDataUpdate(_validatorCount, _validatorBalanceSum, _roundId);
+        emit ConsensusLayerDataUpdate(_validatorCount, _validatorTotalBalance, _roundId);
     }
 
     /// @notice Get Oracle address

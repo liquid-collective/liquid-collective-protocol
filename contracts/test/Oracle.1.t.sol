@@ -451,9 +451,9 @@ contract OracleV1Tests {
         }
     }
 
-    function testReportCL(uint64 timeFromGenesis, uint64 balanceSum, uint32 validatorCount) public {
-        RiverMock(address(oracleInput)).sudoSetTotalShares(1e9 * uint256(balanceSum));
-        RiverMock(address(oracleInput)).sudoSetTotalSupply(1e9 * uint256(balanceSum));
+    function testReportCL(uint64 timeFromGenesis, uint64 totalBalance, uint32 validatorCount) public {
+        RiverMock(address(oracleInput)).sudoSetTotalShares(1e9 * uint256(totalBalance));
+        RiverMock(address(oracleInput)).sudoSetTotalSupply(1e9 * uint256(totalBalance));
 
         vm.warp(uint256(GENESIS_TIME) + uint256(timeFromGenesis));
         vm.startPrank(admin);
@@ -472,7 +472,7 @@ contract OracleV1Tests {
             assert(oracle.getMemberReportStatus(oracleTwo) == false);
 
             vm.startPrank(oracleOne);
-            oracle.reportConsensusLayerData(frameFirstEpochId, balanceSum, validatorCount);
+            oracle.reportConsensusLayerData(frameFirstEpochId, totalBalance, validatorCount);
             vm.stopPrank();
 
             assert(RiverMock(address(oracleInput)).validatorBalanceSum() == 0);
@@ -482,10 +482,10 @@ contract OracleV1Tests {
             assert(oracle.getMemberReportStatus(oracleTwo) == false);
 
             vm.startPrank(oracleTwo);
-            oracle.reportConsensusLayerData(frameFirstEpochId, balanceSum, validatorCount);
+            oracle.reportConsensusLayerData(frameFirstEpochId, totalBalance, validatorCount);
             vm.stopPrank();
 
-            assert(RiverMock(address(oracleInput)).validatorBalanceSum() == uint256(balanceSum) * 1e9);
+            assert(RiverMock(address(oracleInput)).validatorBalanceSum() == uint256(totalBalance) * 1e9);
             assert(RiverMock(address(oracleInput)).validatorCount() == validatorCount);
             assert(oracle.getExpectedEpochId() == frameFirstEpochId + EPOCHS_PER_FRAME);
             assert(oracle.getMemberReportStatus(oracleOne) == false);
@@ -493,9 +493,9 @@ contract OracleV1Tests {
         }
     }
 
-    function testBreakingUpperBoundLimit(uint64 timeFromGenesis, uint64 balanceSum, uint32 validatorCount) public {
-        RiverMock(address(oracleInput)).sudoSetTotalShares(1e9 * uint256(balanceSum));
-        RiverMock(address(oracleInput)).sudoSetTotalSupply(1e9 * uint256(balanceSum));
+    function testBreakingUpperBoundLimit(uint64 timeFromGenesis, uint64 totalBalance, uint32 validatorCount) public {
+        RiverMock(address(oracleInput)).sudoSetTotalShares(1e9 * uint256(totalBalance));
+        RiverMock(address(oracleInput)).sudoSetTotalSupply(1e9 * uint256(totalBalance));
 
         vm.warp(uint256(GENESIS_TIME) + uint256(timeFromGenesis));
         vm.startPrank(admin);
@@ -507,7 +507,7 @@ contract OracleV1Tests {
         uint256 frameFirstEpochId = oracle.getFrameFirstEpochId(epochId);
         if (frameFirstEpochId > 0) {
             vm.startPrank(oracleOne);
-            oracle.reportConsensusLayerData(frameFirstEpochId, balanceSum, validatorCount);
+            oracle.reportConsensusLayerData(frameFirstEpochId, totalBalance, validatorCount);
             vm.stopPrank();
 
             uint256 oneYearAway = uint256(GENESIS_TIME) + uint256(timeFromGenesis) + 364.9 days;
@@ -515,28 +515,30 @@ contract OracleV1Tests {
             uint256 futureEpochId = oracle.getFrameFirstEpochId(oracle.getCurrentEpochId());
             ReportBounds.ReportBoundsStruct memory bounds = oracle.getReportBounds();
 
-            uint256 balanceSumIncrease = ((balanceSum * bounds.annualAprUpperBound) / 10000) + 1;
+            uint256 totalBalanceIncrease = ((totalBalance * bounds.annualAprUpperBound) / 10000) + 1;
 
-            if (uint256(balanceSum) + balanceSumIncrease <= type(uint64).max) {
+            if (uint256(totalBalance) + totalBalanceIncrease <= type(uint64).max) {
                 vm.startPrank(oracleOne);
                 vm.expectRevert(
                     abi.encodeWithSignature(
                         "TotalValidatorBalanceIncreaseOutOfBound(uint256,uint256,uint256,uint256)",
-                        1e9 * uint256(balanceSum),
-                        (uint256(balanceSum) + uint256(balanceSumIncrease)) * 1e9,
+                        1e9 * uint256(totalBalance),
+                        (uint256(totalBalance) + uint256(totalBalanceIncrease)) * 1e9,
                         (futureEpochId - frameFirstEpochId) * SLOTS_PER_EPOCH * SECONDS_PER_SLOT,
                         UPPER_BOUND
                     )
                 );
-                oracle.reportConsensusLayerData(futureEpochId, balanceSum + uint64(balanceSumIncrease), validatorCount);
+                oracle.reportConsensusLayerData(
+                    futureEpochId, totalBalance + uint64(totalBalanceIncrease), validatorCount
+                );
                 vm.stopPrank();
             }
         }
     }
 
-    function testBreakingLowerBoundLimit(uint64 timeFromGenesis, uint64 balanceSum, uint32 validatorCount) public {
-        RiverMock(address(oracleInput)).sudoSetTotalShares(1e9 * uint256(balanceSum));
-        RiverMock(address(oracleInput)).sudoSetTotalSupply(1e9 * uint256(balanceSum));
+    function testBreakingLowerBoundLimit(uint64 timeFromGenesis, uint64 totalBalance, uint32 validatorCount) public {
+        RiverMock(address(oracleInput)).sudoSetTotalShares(1e9 * uint256(totalBalance));
+        RiverMock(address(oracleInput)).sudoSetTotalSupply(1e9 * uint256(totalBalance));
 
         vm.warp(uint256(GENESIS_TIME) + uint256(timeFromGenesis));
         vm.startPrank(admin);
@@ -546,9 +548,9 @@ contract OracleV1Tests {
         uint256 epochId = oracle.getCurrentEpochId();
 
         uint256 frameFirstEpochId = oracle.getFrameFirstEpochId(epochId);
-        if (balanceSum > 0) {
+        if (totalBalance > 0) {
             vm.startPrank(oracleOne);
-            oracle.reportConsensusLayerData(frameFirstEpochId, balanceSum, validatorCount);
+            oracle.reportConsensusLayerData(frameFirstEpochId, totalBalance, validatorCount);
             vm.stopPrank();
 
             uint256 oneEpochAway =
@@ -557,19 +559,19 @@ contract OracleV1Tests {
             uint256 futureEpochId = oracle.getFrameFirstEpochId(oracle.getCurrentEpochId());
             ReportBounds.ReportBoundsStruct memory bounds = oracle.getReportBounds();
 
-            uint256 balanceSumDecrease = ((balanceSum * bounds.relativeLowerBound) / 10000) + 1;
+            uint256 totalBalanceDecrease = ((totalBalance * bounds.relativeLowerBound) / 10000) + 1;
 
             vm.startPrank(oracleOne);
             vm.expectRevert(
                 abi.encodeWithSignature(
                     "TotalValidatorBalanceDecreaseOutOfBound(uint256,uint256,uint256,uint256)",
-                    1e9 * uint256(balanceSum),
-                    (uint256(balanceSum) - uint256(balanceSumDecrease)) * 1e9,
+                    1e9 * uint256(totalBalance),
+                    (uint256(totalBalance) - uint256(totalBalanceDecrease)) * 1e9,
                     (futureEpochId - frameFirstEpochId) * SLOTS_PER_EPOCH * SECONDS_PER_SLOT,
                     LOWER_BOUND
                 )
             );
-            oracle.reportConsensusLayerData(futureEpochId, balanceSum - uint64(balanceSumDecrease), validatorCount);
+            oracle.reportConsensusLayerData(futureEpochId, totalBalance - uint64(totalBalanceDecrease), validatorCount);
             vm.stopPrank();
         }
     }

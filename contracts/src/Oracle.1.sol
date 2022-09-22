@@ -457,12 +457,12 @@ contract OracleV1 is IOracleV1, Initializable, Administrable {
 
     /// @notice Push the new cl data to the river system and performs sanity checks
     /// @param _epochId Id of the epoch
-    /// @param _balanceSum Total validator balance
+    /// @param _totalBalance Total validator balance
     /// @param _validatorCount Total validator count
     /// @param _clSpec CL spec parameters
     function _pushToRiver(
         uint256 _epochId,
-        uint128 _balanceSum,
+        uint128 _totalBalance,
         uint32 _validatorCount,
         CLSpec.CLSpecStruct memory _clSpec
     ) internal {
@@ -470,7 +470,7 @@ contract OracleV1 is IOracleV1, Initializable, Administrable {
 
         IRiverV1 river = IRiverV1(payable(RiverAddress.get()));
         uint256 prevTotalEth = river.totalUnderlyingSupply();
-        river.setConsensusLayerData(_validatorCount, _balanceSum, bytes32(_epochId));
+        river.setConsensusLayerData(_validatorCount, _totalBalance, bytes32(_epochId));
         uint256 postTotalEth = river.totalUnderlyingSupply();
 
         uint256 timeElapsed = (_epochId - LastEpochId.get()) * _clSpec.slotsPerEpoch * _clSpec.secondsPerSlot;
