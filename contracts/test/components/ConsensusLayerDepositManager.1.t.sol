@@ -258,9 +258,7 @@ contract ConsensusLayerDepositManagerV1ValidKeys is ConsensusLayerDepositManager
     function publicConsensusLayerDepositManagerInitializeV1(
         address _depositContractAddress,
         bytes32 _withdrawalCredentials
-    )
-        external
-    {
+    ) external {
         ConsensusLayerDepositManagerV1.initConsensusLayerDepositManagerV1(
             _depositContractAddress, _withdrawalCredentials
         );
@@ -288,6 +286,7 @@ contract ConsensusLayerDepositManagerV1ValidKeys is ConsensusLayerDepositManager
         WithdrawalCredentials.set(_withdrawalCredentials);
     }
 }
+
 contract ConsensusLayerDepositManagerV1ValidKeysTest {
     Vm internal vm = Vm(0x7109709ECfa91a80626fF3989D68f67F5b1DD12D);
 
@@ -295,8 +294,9 @@ contract ConsensusLayerDepositManagerV1ValidKeysTest {
     IDepositContract internal depositContract;
 
     bytes32 internal withdrawalCredentials = bytes32(
-            uint256(uint160(0xd74E967a7D771D7C6757eDb129229C3C8364A584)) + 0x0100000000000000000000000000000000000000000000000000000000000000
-        );
+        uint256(uint160(0xd74E967a7D771D7C6757eDb129229C3C8364A584))
+            + 0x0100000000000000000000000000000000000000000000000000000000000000
+    );
 
     // value is coming from this tx https://etherscan.io/tx/0x87eb1df9b26c7e655c9eb568e38009c7c2b0e10b397708ea63dffccd93c6626a that was picked randomly
     bytes32 internal depositDataRoot = 0x306fbdcbdbb43ac873b85aea54b2035b10b3b28d55d3869fb499f0b7f7811247;
@@ -305,8 +305,9 @@ contract ConsensusLayerDepositManagerV1ValidKeysTest {
         depositContract = IDepositContract(address(new DepositContractEnhancedMock()));
 
         depositManager = new ConsensusLayerDepositManagerV1ValidKeys();
-        ConsensusLayerDepositManagerV1ValidKeys(address(depositManager))
-            .publicConsensusLayerDepositManagerInitializeV1(address(depositContract), withdrawalCredentials);
+        ConsensusLayerDepositManagerV1ValidKeys(address(depositManager)).publicConsensusLayerDepositManagerInitializeV1(
+            address(depositContract), withdrawalCredentials
+        );
     }
 
     function testDepositValidKey() external {
