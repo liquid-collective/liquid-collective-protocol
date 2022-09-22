@@ -1,7 +1,7 @@
 //SPDX-License-Identifier: BUSL-1.1
 pragma solidity 0.8.10;
 
-import "../libraries/Errors.sol";
+import "../libraries/LibErrors.sol";
 
 import "../state/river/OracleAddress.sol";
 import "../state/river/LastOracleRoundId.sol";
@@ -27,7 +27,7 @@ abstract contract OracleManagerV1 is IOracleManagerV1 {
     /// @notice Prevents unauthorized calls
     modifier _onlyAdmin() {
         if (msg.sender != _getRiverAdmin()) {
-            revert Errors.Unauthorized(msg.sender);
+            revert LibErrors.Unauthorized(msg.sender);
         }
         _;
     }
@@ -46,7 +46,7 @@ abstract contract OracleManagerV1 is IOracleManagerV1 {
     /// @param _roundId An identifier for this update
     function setConsensusLayerData(uint256 _validatorCount, uint256 _validatorBalanceSum, bytes32 _roundId) external {
         if (msg.sender != OracleAddress.get()) {
-            revert Errors.Unauthorized(msg.sender);
+            revert LibErrors.Unauthorized(msg.sender);
         }
 
         if (_validatorCount > DepositedValidatorCount.get()) {

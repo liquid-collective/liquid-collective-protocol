@@ -2,7 +2,7 @@
 pragma solidity 0.8.10;
 
 import "./Initializable.sol";
-import "./libraries/Errors.sol";
+import "./libraries/LibErrors.sol";
 import "./interfaces/IRiver.1.sol";
 import "./interfaces/IOracle.1.sol";
 
@@ -172,7 +172,7 @@ contract OracleV1 is IOracleV1, Initializable, Administrable {
     function addMember(address _newOracleMember, uint256 _newQuorum) external onlyAdmin {
         int256 memberIdx = OracleMembers.indexOf(_newOracleMember);
         if (memberIdx >= 0) {
-            revert Errors.InvalidCall();
+            revert LibErrors.InvalidCall();
         }
         OracleMembers.push(_newOracleMember);
         uint256 previousQuorum = Quorum.get();
@@ -187,7 +187,7 @@ contract OracleV1 is IOracleV1, Initializable, Administrable {
     function removeMember(address _oracleMember, uint256 _newQuorum) external onlyAdmin {
         int256 memberIdx = OracleMembers.indexOf(_oracleMember);
         if (memberIdx < 0) {
-            revert Errors.InvalidCall();
+            revert LibErrors.InvalidCall();
         }
         OracleMembers.deleteItem(uint256(memberIdx));
         ReportsPositions.clear();
@@ -200,14 +200,14 @@ contract OracleV1 is IOracleV1, Initializable, Administrable {
     function setMember(address _oracleMember, address _newAddress) external {
         LibSanitize._notZeroAddress(_newAddress);
         if (msg.sender != _getAdmin()) {
-            revert Errors.Unauthorized(msg.sender);
+            revert LibErrors.Unauthorized(msg.sender);
         }
         if (OracleMembers.indexOf(_newAddress) >= 0) {
             revert AddressAlreadyInUse(_newAddress);
         }
         int256 memberIdx = OracleMembers.indexOf(_oracleMember);
         if (memberIdx < 0) {
-            revert Errors.InvalidCall();
+            revert LibErrors.InvalidCall();
         }
         OracleMembers.set(uint256(memberIdx), _newAddress);
         emit SetMember(_oracleMember, _newAddress);
@@ -254,7 +254,7 @@ contract OracleV1 is IOracleV1, Initializable, Administrable {
     function setQuorum(uint256 _newQuorum) external onlyAdmin {
         uint256 previousQuorum = Quorum.get();
         if (previousQuorum == _newQuorum) {
-            revert Errors.InvalidArgument();
+            revert LibErrors.InvalidArgument();
         }
         _setQuorum(_newQuorum, previousQuorum);
     }
@@ -263,7 +263,7 @@ contract OracleV1 is IOracleV1, Initializable, Administrable {
     function _setQuorum(uint256 _newQuorum, uint256 _previousQuorum) internal {
         uint256 memberCount = OracleMembers.get().length;
         if ((_newQuorum == 0 && memberCount > 0) || _newQuorum > memberCount) {
-            revert Errors.InvalidArgument();
+            revert LibErrors.InvalidArgument();
         }
         if (_previousQuorum > _newQuorum) {
             (bool isQuorum, uint256 report) = _getQuorumReport(_newQuorum);
@@ -286,7 +286,7 @@ contract OracleV1 is IOracleV1, Initializable, Administrable {
     function reportConsensusLayerData(uint256 _epochId, uint64 _clBalance, uint32 _clValidators) external {
         int256 memberIndex = OracleMembers.indexOf(msg.sender);
         if (memberIndex == -1) {
-            revert Errors.Unauthorized(msg.sender);
+            revert LibErrors.Unauthorized(msg.sender);
         }
 
         CLSpec.CLSpecStruct memory clSpec = CLSpec.get();

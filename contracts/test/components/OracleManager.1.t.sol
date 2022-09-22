@@ -4,7 +4,7 @@ pragma solidity 0.8.10;
 
 import "../Vm.sol";
 import "../../src/components/OracleManager.1.sol";
-import "../../src/libraries/Errors.sol";
+import "../../src/libraries/LibErrors.sol";
 import "../../src/state/shared/AdministratorAddress.sol";
 import "../utils/UserFactory.sol";
 

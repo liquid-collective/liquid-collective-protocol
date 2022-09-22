@@ -3,8 +3,8 @@ pragma solidity 0.8.10;
 
 import "./Initializable.sol";
 
-import "./libraries/Errors.sol";
-import "./libraries/Uint256Lib.sol";
+import "./libraries/LibErrors.sol";
+import "./libraries/LibUint256.sol";
 
 import "./state/operatorsRegistry/Operators.sol";
 import "./state/operatorsRegistry/ValidatorKeys.sol";
@@ -29,7 +29,7 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
 
     modifier onlyRiver() virtual {
         if (msg.sender != RiverAddress.get()) {
-            revert Errors.Unauthorized(msg.sender);
+            revert LibErrors.Unauthorized(msg.sender);
         }
         _;
     }
@@ -46,7 +46,7 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
             revert InactiveOperator(_index);
         }
         if (msg.sender != operator.operator) {
-            revert Errors.Unauthorized(msg.sender);
+            revert LibErrors.Unauthorized(msg.sender);
         }
         _;
     }
@@ -134,7 +134,7 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
         Operators.Operator storage operator = Operators.get(_index);
 
         if (_newStoppedValidatorCount > operator.funded) {
-            revert Errors.InvalidArgument();
+            revert LibErrors.InvalidArgument();
         }
 
         operator.stopped = _newStoppedValidatorCount;
@@ -201,7 +201,7 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
         Operators.Operator storage operator = Operators.get(_index);
 
         for (uint256 idx = 0; idx < _keyCount;) {
-            bytes memory publicKeyAndSignature = BytesLib.slice(
+            bytes memory publicKeyAndSignature = LibBytes.slice(
                 _publicKeysAndSignatures,
                 idx * (ValidatorKeys.PUBLIC_KEY_LENGTH + ValidatorKeys.SIGNATURE_LENGTH),
                 ValidatorKeys.PUBLIC_KEY_LENGTH + ValidatorKeys.SIGNATURE_LENGTH

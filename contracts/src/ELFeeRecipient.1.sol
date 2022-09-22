@@ -2,7 +2,7 @@
 pragma solidity 0.8.10;
 
 import "./Initializable.sol";
-import "./libraries/Errors.sol";
+import "./libraries/LibErrors.sol";
 import "./interfaces/IRiver.1.sol";
 import "./interfaces/IELFeeRecipient.1.sol";
 import "./state/shared/RiverAddress.sol";
@@ -23,7 +23,7 @@ contract ELFeeRecipientV1 is Initializable, IELFeeRecipientV1 {
     function pullELFees() external {
         address river = RiverAddress.get();
         if (msg.sender != river) {
-            revert Errors.Unauthorized(msg.sender);
+            revert LibErrors.Unauthorized(msg.sender);
         }
 
         IRiverV1(payable(river)).sendELFees{value: address(this).balance}();

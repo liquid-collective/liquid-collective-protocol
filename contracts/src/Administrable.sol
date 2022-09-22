@@ -2,21 +2,21 @@
 pragma solidity 0.8.10;
 
 import "./libraries/LibAdministrable.sol";
-import "./libraries/Errors.sol";
+import "./libraries/LibErrors.sol";
 import "./interfaces/IAdministrable.sol";
 import "./libraries/LibSanitize.sol";
 
 abstract contract Administrable is IAdministrable {
     modifier onlyAdmin() {
         if (msg.sender != LibAdministrable._getAdmin()) {
-            revert Errors.Unauthorized(msg.sender);
+            revert LibErrors.Unauthorized(msg.sender);
         }
         _;
     }
 
     modifier onlyPendingAdmin() {
         if (msg.sender != LibAdministrable._getPendingAdmin()) {
-            revert Errors.Unauthorized(msg.sender);
+            revert LibErrors.Unauthorized(msg.sender);
         }
         _;
     }

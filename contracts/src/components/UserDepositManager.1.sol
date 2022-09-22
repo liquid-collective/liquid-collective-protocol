@@ -1,7 +1,7 @@
 //SPDX-License-Identifier: BUSL-1.1
 pragma solidity 0.8.10;
 
-import "../libraries/Errors.sol";
+import "../libraries/LibErrors.sol";
 import "../libraries/LibSanitize.sol";
 
 import "../interfaces/components/IUserDepositManager.1.sol";
@@ -52,6 +52,6 @@ abstract contract UserDepositManagerV1 is IUserDepositManagerV1 {
 
     /// @notice Invalid call, when the user sends a transaction with a data payload but no method matched
     fallback() external payable {
-        revert Errors.InvalidCall();
+        revert LibErrors.InvalidCall();
     }
 }

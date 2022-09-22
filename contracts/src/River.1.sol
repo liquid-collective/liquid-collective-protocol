@@ -131,7 +131,7 @@ contract RiverV1 is
     /// @notice Input for execution layer fee earnings
     function sendELFees() external payable {
         if (msg.sender != ELFeeRecipientAddress.get()) {
-            revert Errors.Unauthorized(msg.sender);
+            revert LibErrors.Unauthorized(msg.sender);
         }
     }
 

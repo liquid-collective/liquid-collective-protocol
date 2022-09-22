@@ -2,7 +2,7 @@
 pragma solidity 0.8.10;
 
 import "./Initializable.sol";
-import "./libraries/Errors.sol";
+import "./libraries/LibErrors.sol";
 
 import "./state/allowlist/AllowerAddress.sol";
 import "./state/allowlist/Allowlist.sol";
@@ -42,7 +42,7 @@ contract AllowlistV1 is IAllowlistV1, Initializable, Administrable {
     /// @param _permissions Allowlist permissions for each account, in the same order as _accounts
     function allow(address[] calldata _accounts, uint256[] calldata _permissions) external {
         if (msg.sender != AllowerAddress.get() && msg.sender != _getAdmin()) {
-            revert Errors.Unauthorized(msg.sender);
+            revert LibErrors.Unauthorized(msg.sender);
         }
 
         if (_accounts.length == 0) {
