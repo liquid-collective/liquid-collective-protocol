@@ -443,9 +443,7 @@ contract OperatorsRegistryV1Tests is Test, BytesGenerator {
         operatorsRegistry.addValidators(index, 10, tenKeys);
     }
 
-    function testAddValidatorsInvalidKeySize(bytes32 _name, uint256 _firstAddressSalt)
-        public
-    {
+    function testAddValidatorsInvalidKeySize(bytes32 _name, uint256 _firstAddressSalt) public {
         address _firstAddress = uf._new(_firstAddressSalt);
         vm.startPrank(admin);
         uint256 index = operatorsRegistry.addOperator(string(abi.encodePacked(_name)), _firstAddress);
@@ -535,9 +533,7 @@ contract OperatorsRegistryV1Tests is Test, BytesGenerator {
         indexes[4] = 0;
 
         vm.expectEmit(true, true, true, true);
-        emit RemovedValidatorKey(
-            index, BytesLib.slice(tenKeys, 0, 48)
-            );
+        emit RemovedValidatorKey(index, BytesLib.slice(tenKeys, 0, 48));
         operatorsRegistry.removeValidators(index, indexes);
         operator = operatorsRegistry.getOperator(index);
         assert(operator.keys == 5);
@@ -580,9 +576,7 @@ contract OperatorsRegistryV1Tests is Test, BytesGenerator {
         indexes[4] = 0;
 
         vm.expectEmit(true, true, true, true);
-        emit RemovedValidatorKey(
-            index, BytesLib.slice(tenKeys, 0, 48)
-            );
+        emit RemovedValidatorKey(index, BytesLib.slice(tenKeys, 0, 48));
         operatorsRegistry.removeValidators(index, indexes);
         operator = operatorsRegistry.getOperator(index);
         assert(operator.keys == 5);

@@ -115,6 +115,7 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
     /// @param _index The operator index
     /// @param _newName The new operator name
     function setOperatorName(uint256 _index, string calldata _newName) external operatorOrAdmin(_index) {
+        LibSanitize._notEmptyString(_newName);
         Operators.Operator storage operator = Operators.get(_index);
         operator.name = _newName;
 
