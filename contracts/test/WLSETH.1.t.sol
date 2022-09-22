@@ -91,6 +91,9 @@ contract WLSETHV1Tests {
     Vm internal vm = Vm(0x7109709ECfa91a80626fF3989D68f67F5b1DD12D);
     UserFactory internal uf = new UserFactory();
 
+    event Mint(address _recipient, uint256 _value);
+    event Burn(address _recipient, uint256 _value);
+
     function setUp() external {
         river = IRiverV1(payable(address(new RiverTokenMock())));
         wlseth = new WLSETHV1();
@@ -283,6 +286,8 @@ contract WLSETHV1Tests {
             assert(balance == _sum);
             vm.startPrank(_guy);
             RiverTokenMock(address(river)).approve(address(wlseth), _sum);
+            vm.expectEmit(true, true, true, true);
+            emit Mint(_guy, balance);
             wlseth.mint(_guy, balance);
             vm.stopPrank();
             balance = wlseth.balanceOf(_guy);
@@ -645,6 +650,8 @@ contract WLSETHV1Tests {
             assert(balance == 100 ether);
             balance = wlseth.sharesOf(_guy);
             vm.startPrank(_guy);
+            vm.expectEmit(true, true, true, true);
+            emit Burn(_guy, balance);
             wlseth.burn(_guy, balance);
             balance = wlseth.balanceOf(_guy);
             assert(balance == 0);

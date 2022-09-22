@@ -57,22 +57,33 @@ contract RiverV1 is
         uint256 _globalFee
     ) external init(0) {
         _setAdmin(_systemAdministratorAddress);
+
         TreasuryAddress.set(_treasuryAddress);
+        emit SetCollector(_treasuryAddress);
+
         GlobalFee.set(_globalFee);
+        emit SetGlobalFee(_globalFee);
+
         ELFeeRecipientAddress.set(_elFeeRecipientAddress);
+        emit SetELFeeRecipient(_elFeeRecipientAddress);
+
+        AllowlistAddress.set(_allowlistAddress);
+        emit SetAllowlist(_allowlistAddress);
+
+        OperatorsRegistryAddress.set(_operatorRegistryAddress);
 
         ConsensusLayerDepositManagerV1.initConsensusLayerDepositManagerV1(
             _depositContractAddress, _withdrawalCredentials
         );
+
         OracleManagerV1.initOracleManagerV1(_oracleAddress);
-        AllowlistAddress.set(_allowlistAddress);
-        OperatorsRegistryAddress.set(_operatorRegistryAddress);
     }
 
     /// @notice Changes the global fee parameter
     /// @param newFee New fee value
     function setGlobalFee(uint256 newFee) external onlyAdmin {
         GlobalFee.set(newFee);
+        emit SetGlobalFee(newFee);
     }
 
     /// @notice Get the current global fee
@@ -84,6 +95,7 @@ contract RiverV1 is
     /// @param _newAllowlist New address for the allowlist
     function setAllowlist(address _newAllowlist) external onlyAdmin {
         AllowlistAddress.set(_newAllowlist);
+        emit SetAllowlist(_newAllowlist);
     }
 
     /// @notice Retrieve the allowlist address
@@ -95,6 +107,7 @@ contract RiverV1 is
     /// @param _newTreasury New address for the treasury
     function setTreasury(address _newTreasury) external onlyAdmin {
         TreasuryAddress.set(_newTreasury);
+        emit SetCollector(_newTreasury);
     }
 
     /// @notice Retrieve the treasury address
@@ -106,6 +119,7 @@ contract RiverV1 is
     /// @param _newELFeeRecipient New address for the recipient
     function setELFeeRecipient(address _newELFeeRecipient) external onlyAdmin {
         ELFeeRecipientAddress.set(_newELFeeRecipient);
+        emit SetELFeeRecipient(_newELFeeRecipient);
     }
 
     /// @notice Retrieve the execution layer fee recipient

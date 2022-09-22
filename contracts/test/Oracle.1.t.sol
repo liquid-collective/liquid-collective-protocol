@@ -32,6 +32,11 @@ contract OracleV1Tests {
     uint256 internal constant LOWER_BOUND = 500;
 
     event QuorumChanged(uint256 _newQuorum);
+    event AddMember(address member);
+    event RemoveMember(address member);
+    event SetMember(address oldAddress, address newAddress);
+    event SetSpec(uint64 _epochsPerFrame, uint64 _slotsPerEpoch, uint64 _secondsPerSlot, uint64 _genesisTime);
+    event SetBounds(uint256 _annualAprUpperBound, uint256 _relativeLowerBound);
 
     function setUp() public {
         oracleInput = IRiverV1(payable(address(new RiverMock())));
@@ -124,6 +129,16 @@ contract OracleV1Tests {
         vm.startPrank(admin);
         assert(oracle.isMember(newMember) == false);
         vm.expectEmit(true, true, true, true);
+        emit AddMember(newMember);
+        oracle.addMember(newMember, 1);
+        assert(oracle.isMember(newMember) == true);
+    }
+
+    function testAddMemberQuorumEvent(uint256 newMemberSalt) public {
+        address newMember = uf._new(newMemberSalt);
+        vm.startPrank(admin);
+        assert(oracle.isMember(newMember) == false);
+        vm.expectEmit(true, true, true, true);
         emit QuorumChanged(1);
         oracle.addMember(newMember, 1);
         assert(oracle.isMember(newMember) == true);
@@ -145,6 +160,18 @@ contract OracleV1Tests {
     }
 
     function testRemoveMember(uint256 newMemberSalt) public {
+        address newMember = uf._new(newMemberSalt);
+        vm.startPrank(admin);
+        assert(oracle.isMember(newMember) == false);
+        oracle.addMember(newMember, 1);
+        assert(oracle.isMember(newMember) == true);
+        vm.expectEmit(true, true, true, true);
+        emit RemoveMember(newMember);
+        oracle.removeMember(newMember, 0);
+        assert(oracle.isMember(newMember) == false);
+    }
+
+    function testRemoveMemberQuorumEvent(uint256 newMemberSalt) public {
         address newMember = uf._new(newMemberSalt);
         vm.startPrank(admin);
         assert(oracle.isMember(newMember) == false);
@@ -189,6 +216,8 @@ contract OracleV1Tests {
         assert(oracle.isMember(newAddress) == false);
         vm.stopPrank();
         vm.startPrank(admin);
+        vm.expectEmit(true, true, true, true);
+        emit SetMember(newMember, newAddress);
         oracle.setMember(newMember, newAddress);
         vm.stopPrank();
         assert(oracle.isMember(newMember) == false);
@@ -270,6 +299,8 @@ contract OracleV1Tests {
         assert(bs.genesisTime == GENESIS_TIME);
 
         vm.startPrank(admin);
+        vm.expectEmit(true, true, true, true);
+        emit SetSpec(_epochsPerFrame, _slotsPerEpoch, _secondsPerSlot, _genesisTime);
         oracle.setBeaconSpec(_epochsPerFrame, _slotsPerEpoch, _secondsPerSlot, _genesisTime);
 
         bs = oracle.getBeaconSpec();
@@ -319,6 +350,8 @@ contract OracleV1Tests {
         assert(bounds.annualAprUpperBound == UPPER_BOUND);
         assert(bounds.relativeLowerBound == LOWER_BOUND);
         vm.startPrank(admin);
+        vm.expectEmit(true, true, true, true);
+        emit SetBounds(_up, _down);
         oracle.setBeaconBounds(_up, _down);
 
         bounds = oracle.getBeaconBounds();

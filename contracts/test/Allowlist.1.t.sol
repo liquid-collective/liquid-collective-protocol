@@ -26,6 +26,8 @@ contract AllowlistV1Tests {
 
     AllowlistV1 internal allowlist;
 
+    event SetAllower(address allower);
+
     function setUp() public {
         allowlist = new AllowlistV1Sudo();
         allowlist.initAllowlistV1(testAdmin, allower);
@@ -156,6 +158,8 @@ contract AllowlistV1Tests {
         AllowlistV1Sudo(address(allowlist)).sudoSetAdmin(admin);
         assert(allowlist.getAllower() == allower);
         vm.startPrank(admin);
+        vm.expectEmit(true, true, true, true);
+        emit SetAllower(newAllower);
         allowlist.setAllower(newAllower);
         assert(allowlist.getAllower() == newAllower);
     }

@@ -4,6 +4,7 @@ pragma solidity 0.8.10;
 import "./Initializable.sol";
 import "./libraries/Errors.sol";
 import "./interfaces/IRiver.1.sol";
+import "./interfaces/IOracle.1.sol";
 
 import "./state/shared/AdministratorAddress.sol";
 import "./state/shared/RiverAddress.sol";
@@ -20,28 +21,9 @@ import "./Administrable.sol";
 /// @title Oracle (v1)
 /// @author Kiln
 /// @notice This contract handles the input from the allowed oracle members. Highly inspired by Lido's implementation.
-contract OracleV1 is Initializable, Administrable {
+contract OracleV1 is IOracleV1, Initializable, Administrable {
     uint256 internal constant BASIS_POINTS_MAX = 10_000;
     uint256 internal constant ONE_YEAR = 365 days;
-
-    event QuorumChanged(uint256 _newQuorum);
-    event ExpectedEpochIdUpdated(uint256 _epochId);
-    event BeaconReported(
-        uint256 _epochId, uint128 _newBeaconBalance, uint32 _newBeaconValidatorCount, address _oracleMember
-    );
-    event PostTotalShares(uint256 _postTotalEth, uint256 _prevTotalEth, uint256 _timeElapsed, uint256 _totalShares);
-
-    error EpochTooOld(uint256 _providedEpochId, uint256 _minExpectedEpochId);
-    error NotFrameFirstEpochId(uint256 _providedEpochId, uint256 _expectedFrameFirstEpochId);
-    error AlreadyReported(uint256 _epochId, address _member);
-    error BeaconBalanceIncreaseOutOfBounds(
-        uint256 _prevTotalEth, uint256 _postTotalEth, uint256 _timeElapsed, uint256 _annualAprUpperBound
-    );
-    error BeaconBalanceDecreaseOutOfBounds(
-        uint256 _prevTotalEth, uint256 _postTotalEth, uint256 _timeElapsed, uint256 _relativeLowerBound
-    );
-    error AddressAlreadyInUse(address _newAddress);
-
     /// @notice Received ETH input has only 9 decimals
     uint128 internal constant DENOMINATION_OFFSET = 1e9;
 
@@ -74,12 +56,14 @@ contract OracleV1 is Initializable, Administrable {
                 genesisTime: _genesisTime
             })
         );
+        emit SetSpec(_epochsPerFrame, _slotsPerEpoch, _secondsPerSlot, _genesisTime);
         BeaconReportBounds.set(
             BeaconReportBounds.BeaconReportBoundsStruct({
                 annualAprUpperBound: _annualAprUpperBound,
                 relativeLowerBound: _relativeLowerBound
             })
         );
+        emit SetBounds(_annualAprUpperBound, _relativeLowerBound);
         Quorum.set(1);
     }
 
@@ -191,6 +175,7 @@ contract OracleV1 is Initializable, Administrable {
         OracleMembers.push(_newOracleMember);
         uint256 previousQuorum = Quorum.get();
         _setQuorum(_newQuorum, previousQuorum);
+        emit AddMember(_newOracleMember);
     }
 
     /// @notice Removes an address from the oracle members.
@@ -207,6 +192,7 @@ contract OracleV1 is Initializable, Administrable {
         ReportsVariants.clear();
         uint256 previousQuorum = Quorum.get();
         _setQuorum(_newQuorum, previousQuorum);
+        emit RemoveMember(_oracleMember);
     }
 
     function setMember(address _oracleMember, address _newAddress) external {
@@ -222,6 +208,7 @@ contract OracleV1 is Initializable, Administrable {
             revert Errors.InvalidCall();
         }
         OracleMembers.set(uint256(memberIdx), _newAddress);
+        emit SetMember(_oracleMember, _newAddress);
     }
 
     /// @notice Edits the beacon spec parameters
@@ -242,6 +229,7 @@ contract OracleV1 is Initializable, Administrable {
                 genesisTime: _genesisTime
             })
         );
+        emit SetSpec(_epochsPerFrame, _slotsPerEpoch, _secondsPerSlot, _genesisTime);
     }
 
     /// @notice Edits the beacon bounds parameters
@@ -255,6 +243,7 @@ contract OracleV1 is Initializable, Administrable {
                 relativeLowerBound: _relativeLowerBound
             })
         );
+        emit SetBounds(_annualAprUpperBound, _relativeLowerBound);
     }
 
     /// @notice Edits the quorum required to forward beacon data to River

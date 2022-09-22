@@ -11,6 +11,10 @@ interface IRiverV1 is IConsensusLayerDepositManagerV1, IUserDepositManagerV1, IS
     error Denied(address _account);
 
     event PulledELFees(uint256 amount);
+    event SetELFeeRecipient(address elFeeRecipient);
+    event SetCollector(address collector);
+    event SetAllowlist(address allowlist);
+    event SetGlobalFee(uint256 fee);
 
     function initRiverV1(
         address _depositContractAddress,

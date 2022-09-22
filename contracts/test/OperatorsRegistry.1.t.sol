@@ -32,6 +32,7 @@ contract OperatorsRegistryV1Tests is Test, BytesGenerator {
 
     event AddedValidatorKeys(uint256 indexed index, bytes publicKeys);
     event RemovedValidatorKey(uint256 indexed index, bytes publicKey);
+    event SetRiver(address river);
 
     function setUp() public {
         admin = makeAddr("admin");
@@ -49,6 +50,8 @@ contract OperatorsRegistryV1Tests is Test, BytesGenerator {
         address _newRiverAddress = uf._new(_newRiverSalt);
         assert(operatorsRegistry.getRiver() == river);
         vm.startPrank(admin);
+        vm.expectEmit(true, true, true, true);
+        emit SetRiver(_newRiverAddress);
         operatorsRegistry.setRiver(_newRiverAddress);
         vm.stopPrank();
         assert(operatorsRegistry.getRiver() == _newRiverAddress);

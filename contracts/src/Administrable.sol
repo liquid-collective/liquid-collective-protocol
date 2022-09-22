@@ -24,6 +24,7 @@ abstract contract Administrable is IAdministrable {
     function _setAdmin(address _admin) internal {
         LibSanitize._notZeroAddress(_admin);
         LibAdministrable._setAdmin(_admin);
+        emit AcceptedAdmin(_admin);
     }
 
     function _getAdmin() internal view returns (address) {

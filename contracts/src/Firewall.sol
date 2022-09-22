@@ -27,8 +27,13 @@ contract Firewall is IFirewall, Administrable {
         _setAdmin(admin_);
         executor = executor_;
         destination = destination_;
+
+        emit SetExecutor(executor_);
+        emit SetDestination(destination_);
+
         for (uint256 i; i < executorCallableSelectors_.length;) {
             executorCanCall[executorCallableSelectors_[i]] = true;
+            emit SetExecutorPermissions(executorCallableSelectors_[i], true);
             unchecked {
                 ++i;
             }
@@ -47,11 +52,13 @@ contract Firewall is IFirewall, Administrable {
     function setExecutor(address newExecutor) external onlyAdminOrExecutor {
         LibSanitize._notZeroAddress(newExecutor);
         executor = newExecutor;
+        emit SetExecutor(newExecutor);
     }
 
     /// @dev make a function either only callable by the admin, or callable by admin and executor.
     function allowExecutor(bytes4 functionSelector, bool executorCanCall_) external onlyAdmin {
         executorCanCall[functionSelector] = executorCanCall_;
+        emit SetExecutorPermissions(functionSelector, executorCanCall_);
     }
 
     /// @dev Validate that the caller is allowed to make the call in msg.sig

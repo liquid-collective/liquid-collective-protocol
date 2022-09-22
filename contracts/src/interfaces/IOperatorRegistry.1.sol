@@ -25,6 +25,7 @@ interface IOperatorsRegistryV1 {
     event SetOperatorName(uint256 indexed name, string newName);
     event AddedValidatorKeys(uint256 indexed index, bytes publicKeysAndSignatures);
     event RemovedValidatorKey(uint256 indexed index, bytes publicKey);
+    event SetRiver(address river);
 
     function initOperatorsRegistryV1(address _admin, address _river) external;
     function listActiveOperators() external view returns (Operators.Operator[] memory);

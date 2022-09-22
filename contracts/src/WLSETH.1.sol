@@ -148,6 +148,7 @@ contract WLSETHV1 is IWLSETHV1, Initializable, ReentrancyGuard {
         if (!IRiverV1(payable(RiverAddress.get())).transferFrom(msg.sender, address(this), _value)) {
             revert TokenTransferError();
         }
+        emit Mint(_recipient, _value);
     }
 
     /// @notice Burn tokens and retrieve underlying River tokens
@@ -164,6 +165,7 @@ contract WLSETHV1 is IWLSETHV1, Initializable, ReentrancyGuard {
         if (!IRiverV1(payable(RiverAddress.get())).transfer(_recipient, _shares)) {
             revert TokenTransferError();
         }
+        emit Burn(_recipient, _shares);
     }
 
     function _spendAllowance(address _from, uint256 _value) internal {

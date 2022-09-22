@@ -77,6 +77,7 @@ abstract contract OracleManagerV1 is IOracleManagerV1 {
     /// @param _oracleAddress Address of the oracle
     function setOracle(address _oracleAddress) external _onlyAdmin {
         OracleAddress.set(_oracleAddress);
+        emit SetOracle(_oracleAddress);
     }
 
     /// @notice Get Beacon validator balance sum

@@ -2,6 +2,10 @@
 pragma solidity 0.8.10;
 
 interface IFirewall {
+    event SetExecutor(address executor);
+    event SetDestination(address destination);
+    event SetExecutorPermissions(bytes4 selector, bool status);
+
     function setExecutor(address newExecutor) external;
     function allowExecutor(bytes4 functionSelector, bool executorCanCall_) external;
     fallback() external payable;
