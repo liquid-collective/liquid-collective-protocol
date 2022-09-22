@@ -5,15 +5,15 @@ import "../../libraries/UnstructuredStorage.sol";
 import "../../libraries/LibSanitize.sol";
 import "../../libraries/Errors.sol";
 
-library TreasuryAddress {
-    bytes32 internal constant TREASURY_ADDRESS_SLOT = bytes32(uint256(keccak256("river.state.treasuryAddress")) - 1);
+library CollectorAddress {
+    bytes32 internal constant COLLECTOR_ADDRESS_SLOT = bytes32(uint256(keccak256("river.state.collectorAddress")) - 1);
 
     function get() internal view returns (address) {
-        return UnstructuredStorage.getStorageAddress(TREASURY_ADDRESS_SLOT);
+        return UnstructuredStorage.getStorageAddress(COLLECTOR_ADDRESS_SLOT);
     }
 
     function set(address newValue) internal {
         LibSanitize._notZeroAddress(newValue);
-        UnstructuredStorage.setStorageAddress(TREASURY_ADDRESS_SLOT, newValue);
+        UnstructuredStorage.setStorageAddress(COLLECTOR_ADDRESS_SLOT, newValue);
     }
 }

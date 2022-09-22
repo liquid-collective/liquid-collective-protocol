@@ -34,7 +34,7 @@ const func: DeployFunction = async function ({
     }
   }
 
-  const { deployer, proxyAdministrator, systemAdministrator, treasury } = await getNamedAccounts();
+  const { deployer, proxyAdministrator, systemAdministrator, collector } = await getNamedAccounts();
 
   let depositContract = (await getNamedAccounts()).depositContract;
 
@@ -47,7 +47,7 @@ const func: DeployFunction = async function ({
     await deployments.deploy("DepositContractMock", {
       from: deployer,
       log: true,
-      args: [treasury],
+      args: [collector],
     });
     const mockedDepositContractDeployment = await deployments.get("DepositContractMock");
     depositContract = mockedDepositContractDeployment.address;
@@ -109,7 +109,7 @@ const func: DeployFunction = async function ({
           riverFirewallDeployment.address,
           allowlistDeployment.address,
           futureOperatorsRegistryAddress,
-          treasury,
+          collector,
           500,
         ],
       },

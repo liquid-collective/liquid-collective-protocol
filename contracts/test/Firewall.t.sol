@@ -28,7 +28,7 @@ contract FirewallTests is BytesGenerator {
     address internal bob = address(0x34b4424f81AF11f8B8c261b339dd27e1Da796f11);
     address internal joe = address(0xA7206d878c5c3871826DfdB42191c49B1D11F466);
     address internal don = address(0xc99b2dBB74607A04B458Ea740F3906C4851C6531);
-    address internal treasury = address(0xC88F7666330b4b511358b7742dC2a3234710e7B1);
+    address internal collector = address(0xC88F7666330b4b511358b7742dC2a3234710e7B1);
 
     RiverV1 internal river;
     OracleV1 internal oracle;
@@ -113,7 +113,7 @@ contract FirewallTests is BytesGenerator {
             payable(address(riverFirewall)),
             payable(address(allowlist)),
             payable(address(operatorsRegistry)),
-            treasury,
+            collector,
             5000
         );
 

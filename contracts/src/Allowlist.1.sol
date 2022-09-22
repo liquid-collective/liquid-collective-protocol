@@ -39,8 +39,8 @@ contract AllowlistV1 is IAllowlistV1, Initializable, Administrable {
 
     /// @notice Sets the allowlisting status for one or more accounts
     /// @param _accounts Accounts with statuses to edit
-    /// @param _statuses Allowlist statuses for each account, in the same order as _accounts
-    function allow(address[] calldata _accounts, uint256[] calldata _statuses) external {
+    /// @param _permissions Allowlist permissions for each account, in the same order as _accounts
+    function allow(address[] calldata _accounts, uint256[] calldata _permissions) external {
         if (msg.sender != AllowerAddress.get() && msg.sender != _getAdmin()) {
             revert Errors.Unauthorized(msg.sender);
         }
@@ -49,19 +49,19 @@ contract AllowlistV1 is IAllowlistV1, Initializable, Administrable {
             revert InvalidAlloweeCount();
         }
 
-        if (_accounts.length != _statuses.length) {
+        if (_accounts.length != _permissions.length) {
             revert MismatchedAlloweeAndStatusCount();
         }
 
         for (uint256 i = 0; i < _accounts.length;) {
             LibSanitize._notZeroAddress(_accounts[i]);
-            Allowlist.set(_accounts[i], _statuses[i]);
+            Allowlist.set(_accounts[i], _permissions[i]);
             unchecked {
                 ++i;
             }
         }
 
-        emit ChangedAllowlistStatuses(_accounts, _statuses);
+        emit ChangedAllowlistPermissions(_accounts, _permissions);
     }
 
     /// @notice This method should be used as a modifier and is expected to revert
