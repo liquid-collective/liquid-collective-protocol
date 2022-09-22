@@ -215,7 +215,7 @@ contract RiverV1 is
             _mintRawShares(CollectorAddress.get(), sharesToMint);
             uint256 newTotalSupply = _totalSupply();
             uint256 oldTotalBalance = currentTotalBalance - _amount;
-            emit RewardsEarnt(oldTotalBalance, currentTotalSupply, currentTotalBalance, newTotalSupply);
+            emit RewardsEarned(oldTotalBalance, currentTotalSupply, currentTotalBalance, newTotalSupply);
         }
     }
 
