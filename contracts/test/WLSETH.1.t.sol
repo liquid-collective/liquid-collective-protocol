@@ -91,12 +91,15 @@ contract WLSETHV1Tests {
     Vm internal vm = Vm(0x7109709ECfa91a80626fF3989D68f67F5b1DD12D);
     UserFactory internal uf = new UserFactory();
 
-    event Mint(address _recipient, uint256 _value);
-    event Burn(address _recipient, uint256 _value);
+    event Mint(address indexed _recipient, uint256 _value);
+    event Burn(address indexed _recipient, uint256 _value);
+    event SetRiver(address indexed river);
 
     function setUp() external {
         river = IRiverV1(payable(address(new RiverTokenMock())));
         wlseth = new WLSETHV1();
+        vm.expectEmit(true, true, true, true);
+        emit SetRiver(address(river));
         wlseth.initWLSETHV1(address(river));
         RiverTokenMock(address(river)).sudoSetUnderlyingTotal(100 ether);
     }

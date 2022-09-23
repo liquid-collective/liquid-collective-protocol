@@ -17,15 +17,15 @@ interface IOperatorsRegistryV1 {
     error OperatorLimitTooHigh(uint256 limit, uint256 keyCount);
     error OperatorLimitTooLow(uint256 limit, uint256 fundedKeyCount);
 
-    event AddedOperator(uint256 indexed index, string name, address operatorAddress);
+    event AddedOperator(uint256 indexed index, string name, address indexed operatorAddress);
     event SetOperatorStatus(uint256 indexed index, bool active);
     event SetOperatorLimit(uint256 indexed index, uint256 newLimit);
     event SetOperatorStoppedValidatorCount(uint256 indexed index, uint256 newStoppedValidatorCount);
-    event SetOperatorAddress(uint256 indexed index, address newOperatorAddress);
+    event SetOperatorAddress(uint256 indexed index, address indexed newOperatorAddress);
     event SetOperatorName(uint256 indexed name, string newName);
     event AddedValidatorKeys(uint256 indexed index, bytes publicKeysAndSignatures);
     event RemovedValidatorKey(uint256 indexed index, bytes publicKey);
-    event SetRiver(address river);
+    event SetRiver(address indexed river);
 
     function initOperatorsRegistryV1(address _admin, address _river) external;
     function listActiveOperators() external view returns (Operators.Operator[] memory);

@@ -34,6 +34,7 @@ contract WLSETHV1 is IWLSETHV1, Initializable, ReentrancyGuard {
     /// @param _river Address of the River contract
     function initWLSETHV1(address _river) external init(0) {
         RiverAddress.set(_river);
+        emit SetRiver(_river);
     }
 
     /// @notice Retrieves the token full name

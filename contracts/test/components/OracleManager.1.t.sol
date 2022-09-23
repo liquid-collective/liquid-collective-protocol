@@ -54,10 +54,12 @@ contract OracleManagerV1Tests {
 
     OracleManagerV1 internal oracleManager;
 
-    event SetOracle(address oracleAddress);
+    event SetOracle(address indexed oracleAddress);
 
     function setUp() public {
         oracleManager = new OracleManagerV1ExposeInitializer(address(this));
+        vm.expectEmit(true, true, true, true);
+        emit SetOracle(oracle);
         oracleManager.setOracle(oracle);
     }
 

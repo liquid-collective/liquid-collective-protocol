@@ -28,8 +28,10 @@ abstract contract ConsensusLayerDepositManagerV1 is IConsensusLayerDepositManage
         internal
     {
         DepositContractAddress.set(IDepositContract(_depositContractAddress));
+        emit SetDepositContractAddress(_depositContractAddress);
 
         WithdrawalCredentials.set(_withdrawalCredentials);
+        emit SetWithdrawalCredentials(_withdrawalCredentials);
     }
 
     /// @notice Retrieve the withdrawal credentials

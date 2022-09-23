@@ -4,8 +4,9 @@ pragma solidity 0.8.10;
 interface IWLSETHV1 {
     event Transfer(address indexed _from, address indexed _to, uint256 _value);
     event Approval(address indexed _owner, address indexed _spender, uint256 _value);
-    event Mint(address _recipient, uint256 _value);
-    event Burn(address _recipient, uint256 _value);
+    event Mint(address indexed _recipient, uint256 _value);
+    event Burn(address indexed _recipient, uint256 _value);
+    event SetRiver(address indexed river);
 
     error BalanceTooLow();
     error UnauthorizedOperation();

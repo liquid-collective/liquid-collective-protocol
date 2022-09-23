@@ -45,16 +45,17 @@ contract RiverV1SetupOneTests is Test, BytesGenerator {
     string internal operatorOneName = "NodeMasters";
     string internal operatorTwoName = "StakePros";
 
-    uint256 operatorOneIndex;
-    uint256 operatorTwoIndex;
+    uint256 internal operatorOneIndex;
+    uint256 internal operatorTwoIndex;
 
     uint256 internal constant DEPOSIT_MASK = 0x1;
 
     event PulledELFees(uint256 amount);
-    event SetELFeeRecipient(address elFeeRecipient);
-    event SetCollector(address collector);
-    event SetAllowlist(address allowlist);
+    event SetELFeeRecipient(address indexed elFeeRecipient);
+    event SetCollector(address indexed collector);
+    event SetAllowlist(address indexed allowlist);
     event SetGlobalFee(uint256 fee);
+    event SetOperatorsRegistry(address indexed operatorsRegistry);
 
     function setUp() public {
         admin = makeAddr("admin");
@@ -83,6 +84,8 @@ contract RiverV1SetupOneTests is Test, BytesGenerator {
         allowlist.initAllowlistV1(admin, allower);
         operatorsRegistry.initOperatorsRegistryV1(admin, address(river));
         elFeeRecipient.initELFeeRecipientV1(address(river));
+        vm.expectEmit(true, true, true, true);
+        emit SetOperatorsRegistry(address(operatorsRegistry));
         river.initRiverV1(
             address(deposit),
             address(elFeeRecipient),

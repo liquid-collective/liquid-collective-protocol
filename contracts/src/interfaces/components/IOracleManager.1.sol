@@ -2,7 +2,7 @@
 pragma solidity 0.8.10;
 
 interface IOracleManagerV1 {
-    event SetOracle(address oracleAddress);
+    event SetOracle(address indexed oracleAddress);
     event BeaconDataUpdate(uint256 validatorCount, uint256 validatorBalanceSum, bytes32 roundId);
 
     error InvalidValidatorCountReport(uint256 _providedValidatorCount, uint256 _depositedValidatorCount);

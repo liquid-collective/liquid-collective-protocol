@@ -8,15 +8,15 @@ import "../state/oracle/BeaconReportBounds.sol";
 /// @author Kiln
 /// @notice This contract handles the input from the allowed oracle members. Highly inspired by Lido's implementation.
 interface IOracleV1 {
-    event QuorumChanged(uint256 _newQuorum);
+    event SetQuorum(uint256 _newQuorum);
     event ExpectedEpochIdUpdated(uint256 _epochId);
     event BeaconReported(
-        uint256 _epochId, uint128 _newBeaconBalance, uint32 _newBeaconValidatorCount, address _oracleMember
+        uint256 _epochId, uint128 _newBeaconBalance, uint32 _newBeaconValidatorCount, address indexed _oracleMember
     );
     event PostTotalShares(uint256 _postTotalEth, uint256 _prevTotalEth, uint256 _timeElapsed, uint256 _totalShares);
-    event AddMember(address member);
-    event RemoveMember(address member);
-    event SetMember(address oldAddress, address newAddress);
+    event AddMember(address indexed member);
+    event RemoveMember(address indexed member);
+    event SetMember(address indexed oldAddress, address indexed newAddress);
     event SetSpec(uint64 _epochsPerFrame, uint64 _slotsPerEpoch, uint64 _secondsPerSlot, uint64 _genesisTime);
     event SetBounds(uint256 _annualAprUpperBound, uint256 _relativeLowerBound);
 

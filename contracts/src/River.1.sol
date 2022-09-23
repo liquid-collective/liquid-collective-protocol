@@ -71,6 +71,7 @@ contract RiverV1 is
         emit SetAllowlist(_allowlistAddress);
 
         OperatorsRegistryAddress.set(_operatorRegistryAddress);
+        emit SetOperatorsRegistry(_operatorRegistryAddress);
 
         ConsensusLayerDepositManagerV1.initConsensusLayerDepositManagerV1(
             _depositContractAddress, _withdrawalCredentials

@@ -65,6 +65,7 @@ contract OracleV1 is IOracleV1, Initializable, Administrable {
         );
         emit SetBounds(_annualAprUpperBound, _relativeLowerBound);
         Quorum.set(1);
+        emit SetQuorum(1);
     }
 
     /// @notice Retrieve River address
@@ -276,7 +277,7 @@ contract OracleV1 is IOracleV1, Initializable, Administrable {
             }
         }
         Quorum.set(_newQuorum);
-        emit QuorumChanged(_newQuorum);
+        emit SetQuorum(_newQuorum);
     }
 
     /// @notice Report beacon chain data

@@ -58,8 +58,8 @@ contract FirewallTests is BytesGenerator {
     bytes internal unauthJoe = abi.encodeWithSignature("Unauthorized(address)", joe);
     bytes internal unauthExecutor = abi.encodeWithSignature("Unauthorized(address)", executor);
 
-    event SetExecutor(address executor);
-    event SetDestination(address destination);
+    event SetExecutor(address indexed executor);
+    event SetDestination(address indexed destination);
     event SetExecutorPermissions(bytes4 selector, bool status);
 
     function setUp() public {

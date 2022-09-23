@@ -31,10 +31,10 @@ contract OracleV1Tests {
     uint256 internal constant UPPER_BOUND = 1000;
     uint256 internal constant LOWER_BOUND = 500;
 
-    event QuorumChanged(uint256 _newQuorum);
-    event AddMember(address member);
-    event RemoveMember(address member);
-    event SetMember(address oldAddress, address newAddress);
+    event SetQuorum(uint256 _newQuorum);
+    event AddMember(address indexed member);
+    event RemoveMember(address indexed member);
+    event SetMember(address indexed oldAddress, address indexed newAddress);
     event SetSpec(uint64 _epochsPerFrame, uint64 _slotsPerEpoch, uint64 _secondsPerSlot, uint64 _genesisTime);
     event SetBounds(uint256 _annualAprUpperBound, uint256 _relativeLowerBound);
 
@@ -84,7 +84,7 @@ contract OracleV1Tests {
         oracle.addMember(newMember, 1);
         oracle.addMember(anotherMember, 2);
         vm.expectEmit(true, true, true, true);
-        emit QuorumChanged(1);
+        emit SetQuorum(1);
         oracle.setQuorum(1);
     }
 
@@ -139,7 +139,7 @@ contract OracleV1Tests {
         vm.startPrank(admin);
         assert(oracle.isMember(newMember) == false);
         vm.expectEmit(true, true, true, true);
-        emit QuorumChanged(1);
+        emit SetQuorum(1);
         oracle.addMember(newMember, 1);
         assert(oracle.isMember(newMember) == true);
     }
@@ -178,7 +178,7 @@ contract OracleV1Tests {
         oracle.addMember(newMember, 1);
         assert(oracle.isMember(newMember) == true);
         vm.expectEmit(true, true, true, true);
-        emit QuorumChanged(0);
+        emit SetQuorum(0);
         oracle.removeMember(newMember, 0);
         assert(oracle.isMember(newMember) == false);
     }

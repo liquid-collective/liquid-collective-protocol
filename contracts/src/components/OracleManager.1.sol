@@ -36,6 +36,7 @@ abstract contract OracleManagerV1 is IOracleManagerV1 {
     /// @param _oracle Address of the oracle
     function initOracleManagerV1(address _oracle) internal {
         OracleAddress.set(_oracle);
+        emit SetOracle(_oracle);
     }
 
     /// @notice Sets the validator count and validator balance sum reported by the oracle

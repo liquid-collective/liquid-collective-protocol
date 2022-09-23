@@ -32,7 +32,7 @@ contract OperatorsRegistryV1Tests is Test, BytesGenerator {
 
     event AddedValidatorKeys(uint256 indexed index, bytes publicKeys);
     event RemovedValidatorKey(uint256 indexed index, bytes publicKey);
-    event SetRiver(address river);
+    event SetRiver(address indexed river);
 
     function setUp() public {
         admin = makeAddr("admin");
