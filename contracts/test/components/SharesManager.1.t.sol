@@ -104,13 +104,14 @@ contract SharesManagerV1Tests {
 
         assert(sharesManager.balanceOf(_user) == 0);
 
-        SharesManagerPublicDeal(payable(address(sharesManager))).setValidatorBalance(300 ether);
         SharesManagerPublicDeal(payable(address(sharesManager))).mint(_user, 300 ether);
+        SharesManagerPublicDeal(payable(address(sharesManager))).setValidatorBalance(300 ether);
 
         assert(sharesManager.balanceOf(_user) == 300 ether);
 
-        SharesManagerPublicDeal(payable(address(sharesManager))).setValidatorBalance(440 ether);
+        SharesManagerPublicDeal(payable(address(sharesManager))).setValidatorBalance(340 ether);
         SharesManagerPublicDeal(payable(address(sharesManager))).mint(_anotherUser, 100 ether);
+        SharesManagerPublicDeal(payable(address(sharesManager))).setValidatorBalance(440 ether);
 
         assert(sharesManager.balanceOf(_user) == 300 ether);
         assert(sharesManager.balanceOf(_anotherUser) == 88235294117647058823);

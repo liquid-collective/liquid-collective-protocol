@@ -16,7 +16,7 @@ abstract contract UserDepositManagerV1 is IUserDepositManagerV1 {
     /// @param _depositor Address that made the deposit
     /// @param _recipient Address that receives the minted shares
     /// @param _amount Amount deposited
-    function _onDeposit(address _depositor, address _recipient, uint256 _amount) internal virtual;
+    function _onDeposit(address _depositor, address _recipient, uint256 _amount) internal virtual returns (uint256);
 
     /// @notice Internal utility calling the deposit handler and emitting the deposit details
     function _deposit(address _recipient) internal {
@@ -24,11 +24,11 @@ abstract contract UserDepositManagerV1 is IUserDepositManagerV1 {
             revert EmptyDeposit();
         }
 
-        BalanceToDeposit.set(BalanceToDeposit.get() + msg.value);
+        uint256 usedValue = _onDeposit(msg.sender, _recipient, msg.value);
 
-        _onDeposit(msg.sender, _recipient, msg.value);
+        BalanceToDeposit.set(BalanceToDeposit.get() + usedValue);
 
-        emit UserDeposit(msg.sender, _recipient, msg.value);
+        emit UserDeposit(msg.sender, _recipient, usedValue);
     }
 
     /// @notice Explicit deposit method to mint on msg.sender

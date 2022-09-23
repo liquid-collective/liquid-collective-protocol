@@ -155,8 +155,8 @@ contract RiverV1 is
     /// @notice Handler called whenever a user deposits ETH to the system. Mints the adequate amount of shares.
     /// @param _depositor User address that made the deposit
     /// @param _amount Amount of ETH deposited
-    function _onDeposit(address _depositor, address _recipient, uint256 _amount) internal override {
-        uint256 mintedShares = SharesManagerV1._mintShares(_depositor, _amount);
+    function _onDeposit(address _depositor, address _recipient, uint256 _amount) internal override returns (uint256) {
+        (uint256 mintedShares, uint256 sharesUnderlyingValue) = SharesManagerV1._mintShares(_depositor, _amount);
         IAllowlistV1 allowlist = IAllowlistV1(AllowlistAddress.get());
         if (_depositor == _recipient) {
             allowlist.onlyAllowed(_depositor, DEPOSIT_MASK); // this call reverts if unauthorized or denied
@@ -167,6 +167,7 @@ contract RiverV1 is
             }
             _transfer(_depositor, _recipient, mintedShares);
         }
+        return sharesUnderlyingValue;
     }
 
     /// @notice Handler called whenever a deposit to the consensus layer is made. Should retrieve _requestedAmount or lower keys
