@@ -856,8 +856,8 @@ contract RiverV1SetupOneTests is Test, BytesGenerator {
         Operators.Operator memory op1 = operatorsRegistry.getOperator(operatorOneIndex);
         Operators.Operator memory op2 = operatorsRegistry.getOperator(operatorTwoIndex);
 
-        assert(op1.funded == 32);
-        assert(op2.funded == 2);
+        assert(op1.funded == 17);
+        assert(op2.funded == 17);
 
         assert(river.getDepositedValidatorCount() == 34);
         assert(river.totalUnderlyingSupply() == 1100 ether);
@@ -988,16 +988,17 @@ contract RiverV1SetupOneTests is Test, BytesGenerator {
         uint256 validatorCount = river.totalUnderlyingSupply() / 32 ether;
         if (validatorCount > 0) {
             uint256 realValidatorCount = Uint256Lib.min(34, validatorCount);
-            uint256 op1Validator = realValidatorCount / 2;
-            uint256 op2Validator = op1Validator;
-            if (op1Validator + op2Validator != realValidatorCount) {
-                op1Validator += 1;
+            uint256 op2Validator;
+            uint256 op1Validator;
+            if (realValidatorCount > 5) {
+                op2Validator =
+                    ((realValidatorCount / 10) * 5) + ((realValidatorCount / 5) % 2 == 1 ? realValidatorCount % 5 : 0);
+                op1Validator = realValidatorCount - op2Validator;
+            } else {
+                op1Validator = realValidatorCount;
             }
 
-            river.depositToConsensusLayer(op1Validator);
-            if (op2Validator > 0) {
-                river.depositToConsensusLayer(op2Validator);
-            }
+            river.depositToConsensusLayer(realValidatorCount);
 
             Operators.Operator memory op1 = operatorsRegistry.getOperator(operatorOneIndex);
             Operators.Operator memory op2 = operatorsRegistry.getOperator(operatorTwoIndex);

@@ -2,7 +2,6 @@
 
 pragma solidity 0.8.10;
 
-import "./Vm.sol";
 import "../src/Firewall.sol";
 import "../src/Allowlist.1.sol";
 import "../src/River.1.sol";
@@ -14,6 +13,7 @@ import "../src/ELFeeRecipient.1.sol";
 import "./utils/BytesGenerator.sol";
 import "./mocks/DepositContractMock.sol";
 import "./mocks/RiverMock.sol";
+import "forge-std/Test.sol";
 
 contract FirewallTests is BytesGenerator {
     AllowlistV1 internal allowlist;

@@ -28,6 +28,7 @@ library Operators {
         uint256 keys;
         uint256 stopped;
         uint256 index;
+        uint256 picked;
     }
 
     struct SlotOperator {
@@ -65,10 +66,7 @@ library Operators {
     }
 
     function _hasFundableKeys(Operators.Operator memory operator) internal pure returns (bool) {
-        return (
-            operator.active && operator.keys > operator.funded - operator.stopped
-                && operator.limit > operator.funded - operator.stopped
-        );
+        return (operator.active && operator.limit > operator.funded);
     }
 
     function getAllActive() internal view returns (Operator[] memory) {
@@ -81,7 +79,6 @@ library Operators {
         }
 
         uint256 activeCount = 0;
-
         uint256 operatorCount = r.value.length;
 
         for (uint256 idx = 0; idx < operatorCount;) {
@@ -150,7 +147,8 @@ library Operators {
                     funded: op.funded,
                     keys: op.keys,
                     stopped: op.stopped,
-                    index: idx
+                    index: idx,
+                    picked: 0
                 });
                 unchecked {
                     ++activeIdx;
