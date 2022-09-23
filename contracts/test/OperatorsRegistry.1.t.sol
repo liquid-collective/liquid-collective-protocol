@@ -78,9 +78,7 @@ contract OperatorsRegistryV1Tests is Test, BytesGenerator {
     function testSetOperatorLimitTooHigh(uint256 _nodeOperatorAddressSalt) public {
         address _nodeOperatorAddress = uf._new(_nodeOperatorAddressSalt);
         vm.startPrank(admin);
-        operatorsRegistry.addOperator(
-            string(abi.encodePacked(_nodeOperatorAddress)), _nodeOperatorAddress
-        );
+        operatorsRegistry.addOperator(string(abi.encodePacked(_nodeOperatorAddress)), _nodeOperatorAddress);
         uint256[] memory indexes = new uint256[](1);
         indexes[0] = 0;
         uint256[] memory limits = new uint256[](1);
@@ -93,9 +91,7 @@ contract OperatorsRegistryV1Tests is Test, BytesGenerator {
     function testSetOperatorLimitTooLow(uint256 _nodeOperatorAddressSalt) public {
         address _nodeOperatorAddress = uf._new(_nodeOperatorAddressSalt);
         vm.startPrank(admin);
-        operatorsRegistry.addOperator(
-            string(abi.encodePacked(_nodeOperatorAddress)), _nodeOperatorAddress
-        );
+        operatorsRegistry.addOperator(string(abi.encodePacked(_nodeOperatorAddress)), _nodeOperatorAddress);
         vm.stopPrank();
         vm.startPrank(_nodeOperatorAddress);
         operatorsRegistry.addValidators(0, 1, genBytes(48 + 96));
@@ -106,20 +102,14 @@ contract OperatorsRegistryV1Tests is Test, BytesGenerator {
         uint256[] memory limits = new uint256[](1);
         limits[0] = 1;
         operatorsRegistry.setOperatorLimits(indexes, limits);
-        OperatorsRegistryInitializableV1(address(operatorsRegistry)).sudoSetFunded(
-            0, 1
-        );
+        OperatorsRegistryInitializableV1(address(operatorsRegistry)).sudoSetFunded(0, 1);
         limits[0] = 0;
         vm.expectRevert(abi.encodeWithSignature("OperatorLimitTooLow(uint256,uint256)", 0, 1));
         operatorsRegistry.setOperatorLimits(indexes, limits);
         vm.stopPrank();
     }
 
-    function testSetOperatorAddressesAsAdmin(
-        bytes32 _name,
-        uint256 _firstAddressSalt,
-        uint256 _secondAddressSalt
-    )
+    function testSetOperatorAddressesAsAdmin(bytes32 _name, uint256 _firstAddressSalt, uint256 _secondAddressSalt)
         public
     {
         address _firstAddress = uf._new(_firstAddressSalt);
@@ -577,9 +567,7 @@ contract OperatorsRegistryV1Tests is Test, BytesGenerator {
         }
     }
 
-    function testGetAllActiveOperators(bytes32 _name, uint256 _firstAddressSalt)
-        public
-    {
+    function testGetAllActiveOperators(bytes32 _name, uint256 _firstAddressSalt) public {
         address _firstAddress = uf._new(_firstAddressSalt);
         vm.startPrank(admin);
         operatorsRegistry.addOperator(string(abi.encodePacked(_name)), _firstAddress);
