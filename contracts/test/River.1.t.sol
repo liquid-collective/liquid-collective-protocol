@@ -344,7 +344,12 @@ contract RiverV1SetupOneTests is Test, BytesGenerator {
         );
     }
 
-    event RewardsEarned(uint256 _oldTotalUnderylyingBalance, uint256 _oldTotalSupply, uint256 _newTotalUnderlyingBalance, uint256 _newTotalSupply);
+    event RewardsEarned(
+        uint256 _oldTotalUnderylyingBalance,
+        uint256 _oldTotalSupply,
+        uint256 _newTotalUnderlyingBalance,
+        uint256 _newTotalSupply
+    );
 
     function testRewardsEarnedEventBroadcasting() public {
         vm.deal(joe, 100 ether);
