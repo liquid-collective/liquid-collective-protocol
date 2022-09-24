@@ -3,7 +3,7 @@
 pragma solidity 0.8.10;
 
 import "../../src/components/ConsensusLayerDepositManager.1.sol";
-import "../../src/libraries/UnstructuredStorage.sol";
+import "../../src/libraries/LibUnstructuredStorage.sol";
 
 library RiverSetupOne {
     function getOperatorOnePublicKeys() external pure returns (bytes memory) {

@@ -7,7 +7,7 @@ import "../../src/components/SharesManager.1.sol";
 import "../utils/UserFactory.sol";
 
 contract SharesManagerPublicDeal is SharesManagerV1 {
-    uint256 public balanceSum;
+    uint256 public totalBalance;
 
     error Denied(address _account);
 
@@ -27,11 +27,11 @@ contract SharesManagerPublicDeal is SharesManagerV1 {
     }
 
     function setValidatorBalance(uint256 _amount) external {
-        balanceSum = _amount;
+        totalBalance = _amount;
     }
 
     function _assetBalance() internal view override returns (uint256) {
-        return balanceSum + address(this).balance;
+        return totalBalance + address(this).balance;
     }
 
     function deal(address _owner, uint256 _amount) external {

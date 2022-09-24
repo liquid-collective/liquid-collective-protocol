@@ -25,7 +25,7 @@ interface IRiverV1 is IConsensusLayerDepositManagerV1, IUserDepositManagerV1, IS
         address _systemAdministratorAddress,
         address _allowlistAddress,
         address _operatorRegistryAddress,
-        address _treasuryAddress,
+        address _collectorAddress,
         uint256 _globalFee
     ) external;
 
@@ -33,8 +33,8 @@ interface IRiverV1 is IConsensusLayerDepositManagerV1, IUserDepositManagerV1, IS
     function getGlobalFee() external view returns (uint256);
     function setAllowlist(address _newAllowlist) external;
     function getAllowlist() external view returns (address);
-    function setTreasury(address _newTreasury) external;
-    function getTreasury() external view returns (address);
+    function setCollector(address _newCollector) external;
+    function getCollector() external view returns (address);
     function setELFeeRecipient(address _newELFeeRecipient) external;
     function getELFeeRecipient() external view returns (address);
     function sendELFees() external payable;

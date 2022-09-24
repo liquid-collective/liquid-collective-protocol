@@ -1,7 +1,7 @@
 //SPDX-License-Identifier: BUSL-1.1
 pragma solidity 0.8.10;
 
-import "../../libraries/UnstructuredStorage.sol";
+import "../../libraries/LibUnstructuredStorage.sol";
 import "../../libraries/LibSanitize.sol";
 
 library AdministratorAddress {
@@ -9,11 +9,11 @@ library AdministratorAddress {
         bytes32(uint256(keccak256("river.state.administratorAddress")) - 1);
 
     function get() internal view returns (address) {
-        return UnstructuredStorage.getStorageAddress(ADMINISTRATOR_ADDRESS_SLOT);
+        return LibUnstructuredStorage.getStorageAddress(ADMINISTRATOR_ADDRESS_SLOT);
     }
 
     function set(address newValue) internal {
         LibSanitize._notZeroAddress(newValue);
-        UnstructuredStorage.setStorageAddress(ADMINISTRATOR_ADDRESS_SLOT, newValue);
+        LibUnstructuredStorage.setStorageAddress(ADMINISTRATOR_ADDRESS_SLOT, newValue);
     }
 }

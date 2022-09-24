@@ -4,7 +4,7 @@ pragma solidity 0.8.10;
 
 import "../Vm.sol";
 import "../../src/components/OracleManager.1.sol";
-import "../../src/libraries/Errors.sol";
+import "../../src/libraries/LibErrors.sol";
 import "../../src/state/shared/AdministratorAddress.sol";
 import "../utils/UserFactory.sol";
 
@@ -25,12 +25,12 @@ contract OracleManagerV1ExposeInitializer is OracleManagerV1 {
     }
 
     function supersedeBalanceSum(uint256 amount) external {
-        BeaconValidatorBalanceSum.set(amount);
+        CLValidatorTotalBalance.set(amount);
     }
 
     function supersedeAllValidatorCount(uint256 amount) external {
         DepositedValidatorCount.set(amount);
-        BeaconValidatorCount.set(amount);
+        CLValidatorCount.set(amount);
     }
 
     function supersedeDepositedValidatorCount(uint256 amount) external {
@@ -63,45 +63,45 @@ contract OracleManagerV1Tests {
         oracleManager.setOracle(oracle);
     }
 
-    function testSetBeaconData(uint64 val2, bytes32 roundId) public {
+    function testSetCLData(uint64 val2, bytes32 roundId) public {
         vm.startPrank(oracle);
         OracleManagerV1ExposeInitializer(address(oracleManager)).supersedeBalanceSum(32 ether);
         OracleManagerV1ExposeInitializer(address(oracleManager)).supersedeAllValidatorCount(1);
-        oracleManager.setBeaconData(1, val2 + 32 ether, roundId);
+        oracleManager.setConsensusLayerData(1, val2 + 32 ether, roundId);
         assert(OracleManagerV1ExposeInitializer(address(oracleManager)).lastReceived() == val2);
     }
 
-    function testSetBeaconDataWithELFeesPulling(uint64 val2, uint64 val3, bytes32 roundId) public {
+    function testSetCLDataWithELFeesPulling(uint64 val2, uint64 val3, bytes32 roundId) public {
         vm.startPrank(oracle);
         OracleManagerV1ExposeInitializer(address(oracleManager)).supersedeBalanceSum(32 ether);
         OracleManagerV1ExposeInitializer(address(oracleManager)).supersedeAllValidatorCount(1);
         OracleManagerV1ExposeInitializer(address(oracleManager)).supersedeExtraAmount(val3);
-        oracleManager.setBeaconData(1, val2 + 32 ether, roundId);
+        oracleManager.setConsensusLayerData(1, val2 + 32 ether, roundId);
         assert(OracleManagerV1ExposeInitializer(address(oracleManager)).lastReceived() == uint256(val2) + uint256(val3));
     }
 
-    function testSetBeaconDataWithValidatorCountDelta(uint64 val2, bytes32 roundId) public {
+    function testSetCLDataWithValidatorCountDelta(uint64 val2, bytes32 roundId) public {
         vm.startPrank(oracle);
         OracleManagerV1ExposeInitializer(address(oracleManager)).supersedeBalanceSum(32 ether);
         OracleManagerV1ExposeInitializer(address(oracleManager)).supersedeAllValidatorCount(1);
         OracleManagerV1ExposeInitializer(address(oracleManager)).supersedeDepositedValidatorCount(2);
-        oracleManager.setBeaconData(2, val2 + 64 ether, roundId);
+        oracleManager.setConsensusLayerData(2, val2 + 64 ether, roundId);
         assert(OracleManagerV1ExposeInitializer(address(oracleManager)).lastReceived() == val2);
     }
 
-    function testSetBeaconDataUnauthorized(uint256 userSalt, uint64 val1, bytes32 roundId) public {
+    function testSetCLDataUnauthorized(uint256 userSalt, uint64 val1, bytes32 roundId) public {
         address user = uf._new(userSalt);
         vm.startPrank(user);
         OracleManagerV1ExposeInitializer(address(oracleManager)).supersedeAllValidatorCount(1);
         vm.expectRevert(abi.encodeWithSignature("Unauthorized(address)", user));
-        oracleManager.setBeaconData(1, val1 + 32 ether, roundId);
+        oracleManager.setConsensusLayerData(1, val1 + 32 ether, roundId);
     }
 
-    function testSetBeaconDataInvalidValidatorCount(uint64 val1, bytes32 roundId) public {
+    function testSetCLDataInvalidValidatorCount(uint64 val1, bytes32 roundId) public {
         vm.startPrank(oracle);
         OracleManagerV1ExposeInitializer(address(oracleManager)).supersedeAllValidatorCount(1);
         vm.expectRevert(abi.encodeWithSignature("InvalidValidatorCountReport(uint256,uint256)", 2, 1));
-        oracleManager.setBeaconData(2, val1 + 32 ether, roundId);
+        oracleManager.setConsensusLayerData(2, val1 + 32 ether, roundId);
     }
 
     function testSetOracle(uint256 _oracleSalt) public {

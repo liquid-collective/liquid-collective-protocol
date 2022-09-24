@@ -28,7 +28,7 @@ contract FirewallTests is BytesGenerator {
     address internal bob = address(0x34b4424f81AF11f8B8c261b339dd27e1Da796f11);
     address internal joe = address(0xA7206d878c5c3871826DfdB42191c49B1D11F466);
     address internal don = address(0xc99b2dBB74607A04B458Ea740F3906C4851C6531);
-    address internal treasury = address(0xC88F7666330b4b511358b7742dC2a3234710e7B1);
+    address internal collector = address(0xC88F7666330b4b511358b7742dC2a3234710e7B1);
 
     RiverV1 internal river;
     OracleV1 internal oracle;
@@ -113,7 +113,7 @@ contract FirewallTests is BytesGenerator {
             payable(address(riverFirewall)),
             payable(address(allowlist)),
             payable(address(operatorsRegistry)),
-            treasury,
+            collector,
             5000
         );
 
@@ -121,8 +121,8 @@ contract FirewallTests is BytesGenerator {
         executorCallableOracleSelectors[0] = oracle.addMember.selector;
         executorCallableOracleSelectors[1] = oracle.removeMember.selector;
         executorCallableOracleSelectors[2] = oracle.setQuorum.selector;
-        executorCallableOracleSelectors[3] = oracle.setBeaconSpec.selector;
-        executorCallableOracleSelectors[4] = oracle.setBeaconBounds.selector;
+        executorCallableOracleSelectors[3] = oracle.setCLSpec.selector;
+        executorCallableOracleSelectors[4] = oracle.setReportBounds.selector;
         oracleFirewall = new Firewall(riverGovernorDAO, executor, address(oracle), executorCallableOracleSelectors);
         firewalledOracle = OracleV1(address(oracleFirewall));
         oracleInput = IRiverV1(payable(address(new RiverMock())));
@@ -432,45 +432,45 @@ contract FirewallTests is BytesGenerator {
         vm.stopPrank();
     }
 
-    function testGovernorCanSetBeaconSpec() public {
+    function testGovernorCanSetCLSpec() public {
         vm.startPrank(riverGovernorDAO);
-        firewalledOracle.setBeaconSpec(2, 3, 4, 5);
-        assert(oracle.getBeaconSpec().epochsPerFrame == 2);
+        firewalledOracle.setCLSpec(2, 3, 4, 5);
+        assert(oracle.getCLSpec().epochsPerFrame == 2);
         vm.stopPrank();
     }
 
-    function testExecutorCanSetBeaconSpec() public {
+    function testExecutorCanSetCLSpec() public {
         vm.startPrank(executor);
-        firewalledOracle.setBeaconSpec(2, 3, 4, 5);
-        assert(oracle.getBeaconSpec().epochsPerFrame == 2);
+        firewalledOracle.setCLSpec(2, 3, 4, 5);
+        assert(oracle.getCLSpec().epochsPerFrame == 2);
         vm.stopPrank();
     }
 
-    function testRandomCallerCannotSetBeaconSpec() public {
+    function testRandomCallerCannotSetCLSpec() public {
         vm.startPrank(joe);
         vm.expectRevert(unauthJoe);
-        firewalledOracle.setBeaconSpec(2, 3, 4, 5);
+        firewalledOracle.setCLSpec(2, 3, 4, 5);
         vm.stopPrank();
     }
 
-    function testGovernorCanSetBeaconBounds() public {
+    function testGovernorCanSetCLBounds() public {
         vm.startPrank(riverGovernorDAO);
-        firewalledOracle.setBeaconBounds(2, 3);
-        assert(oracle.getBeaconBounds().annualAprUpperBound == 2);
+        firewalledOracle.setReportBounds(2, 3);
+        assert(oracle.getReportBounds().annualAprUpperBound == 2);
         vm.stopPrank();
     }
 
-    function testExecutorCanSetBeaconBounds() public {
+    function testExecutorCanSetCLBounds() public {
         vm.startPrank(executor);
-        firewalledOracle.setBeaconBounds(2, 3);
-        assert(oracle.getBeaconBounds().annualAprUpperBound == 2);
+        firewalledOracle.setReportBounds(2, 3);
+        assert(oracle.getReportBounds().annualAprUpperBound == 2);
         vm.stopPrank();
     }
 
-    function testRandomCallerCannotSetBeaconBounds() public {
+    function testRandomCallerCannotSetCLBounds() public {
         vm.startPrank(joe);
         vm.expectRevert(unauthJoe);
-        firewalledOracle.setBeaconBounds(2, 3);
+        firewalledOracle.setReportBounds(2, 3);
         vm.stopPrank();
     }
 

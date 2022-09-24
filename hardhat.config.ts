@@ -63,7 +63,7 @@ const config: HardhatUserConfig = {
       goerli: "0x71c9DAb681C209bb82270906e3B49388b2C15404",
       mockedGoerli: "0x71c9DAb681C209bb82270906e3B49388b2C15404",
     },
-    treasury: {
+    collector: {
       default: 1,
       goerli: "0x774c51712F2f1eAFA73681403414D5EE419f2c73",
       mockedGoerli: "0x774c51712F2f1eAFA73681403414D5EE419f2c73",

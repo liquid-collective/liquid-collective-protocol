@@ -4,7 +4,7 @@ pragma solidity 0.8.10;
 
 import "../Vm.sol";
 import "../../src/components/ConsensusLayerDepositManager.1.sol";
-import "../../src/libraries/UnstructuredStorage.sol";
+import "../../src/libraries/LibUnstructuredStorage.sol";
 import "../utils/UserFactory.sol";
 import "../mocks/DepositContractMock.sol";
 import "../mocks/DepositContractEnhancedMock.sol";
@@ -30,8 +30,8 @@ contract ConsensusLayerDepositManagerV1ExposeInitializer is ConsensusLayerDeposi
         bytes[] memory signatures = new bytes[](amount);
 
         for (uint256 idx = 0; idx < amount; ++idx) {
-            publicKeys[idx] = BytesLib.slice(_publicKeys, idx * 48, 48);
-            signatures[idx] = BytesLib.slice(_signatures, idx * 96, 96);
+            publicKeys[idx] = LibBytes.slice(_publicKeys, idx * 48, 48);
+            signatures[idx] = LibBytes.slice(_signatures, idx * 96, 96);
         }
 
         return (publicKeys, signatures);
@@ -154,8 +154,8 @@ contract ConsensusLayerDepositManagerV1ControllableValidatorKeyRequest is Consen
             bytes[] memory signatures = new bytes[](amount);
 
             for (uint256 idx = 0; idx < amount; ++idx) {
-                publicKeys[idx] = BytesLib.slice(_publicKeys, idx * 48, 48);
-                signatures[idx] = BytesLib.slice(_signatures, idx * 96, 96);
+                publicKeys[idx] = LibBytes.slice(_publicKeys, idx * 48, 48);
+                signatures[idx] = LibBytes.slice(_signatures, idx * 96, 96);
             }
 
             return (publicKeys, signatures);
@@ -164,16 +164,16 @@ contract ConsensusLayerDepositManagerV1ControllableValidatorKeyRequest is Consen
             bytes[] memory publicKeys = new bytes[](1);
             bytes[] memory signatures = new bytes[](1);
 
-            publicKeys[0] = BytesLib.slice(_publicKeys, 0, 49);
-            signatures[0] = BytesLib.slice(_signatures, 0, 96);
+            publicKeys[0] = LibBytes.slice(_publicKeys, 0, 49);
+            signatures[0] = LibBytes.slice(_signatures, 0, 96);
             return (publicKeys, signatures);
         } else if (scenario == 2) {
             // invalid signature length
             bytes[] memory publicKeys = new bytes[](1);
             bytes[] memory signatures = new bytes[](1);
 
-            publicKeys[0] = BytesLib.slice(_publicKeys, 0, 48);
-            signatures[0] = BytesLib.slice(_signatures, 0, 97);
+            publicKeys[0] = LibBytes.slice(_publicKeys, 0, 48);
+            signatures[0] = LibBytes.slice(_signatures, 0, 97);
             return (publicKeys, signatures);
         } else if (scenario == 3) {
             // no keys available
@@ -186,19 +186,19 @@ contract ConsensusLayerDepositManagerV1ControllableValidatorKeyRequest is Consen
             bytes[] memory publicKeys = new bytes[](2);
             bytes[] memory signatures = new bytes[](2);
 
-            publicKeys[0] = BytesLib.slice(_publicKeys, 0, 48);
-            signatures[0] = BytesLib.slice(_signatures, 0, 96);
-            publicKeys[1] = BytesLib.slice(_publicKeys, 48, 48);
-            signatures[1] = BytesLib.slice(_signatures, 96, 96);
+            publicKeys[0] = LibBytes.slice(_publicKeys, 0, 48);
+            signatures[0] = LibBytes.slice(_signatures, 0, 96);
+            publicKeys[1] = LibBytes.slice(_publicKeys, 48, 48);
+            signatures[1] = LibBytes.slice(_signatures, 96, 96);
             return (publicKeys, signatures);
         } else if (scenario == 5) {
             // 1 public key but 2 signatures
             bytes[] memory publicKeys = new bytes[](1);
             bytes[] memory signatures = new bytes[](2);
 
-            publicKeys[0] = BytesLib.slice(_publicKeys, 0, 48);
-            signatures[0] = BytesLib.slice(_signatures, 0, 96);
-            signatures[1] = BytesLib.slice(_signatures, 96, 96);
+            publicKeys[0] = LibBytes.slice(_publicKeys, 0, 48);
+            signatures[0] = LibBytes.slice(_signatures, 0, 96);
+            signatures[1] = LibBytes.slice(_signatures, 96, 96);
             return (publicKeys, signatures);
         }
         return (new bytes[](0), new bytes[](0));
@@ -308,8 +308,8 @@ contract ConsensusLayerDepositManagerV1ValidKeys is ConsensusLayerDepositManager
         bytes[] memory signatures = new bytes[](amount);
 
         for (uint256 idx = 0; idx < amount; ++idx) {
-            publicKeys[idx] = BytesLib.slice(_publicKeys, idx * 48, 48);
-            signatures[idx] = BytesLib.slice(_signatures, idx * 96, 96);
+            publicKeys[idx] = LibBytes.slice(_publicKeys, idx * 48, 48);
+            signatures[idx] = LibBytes.slice(_signatures, idx * 96, 96);
         }
 
         return (publicKeys, signatures);

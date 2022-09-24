@@ -3,8 +3,8 @@ pragma solidity 0.8.10;
 
 import "../interfaces/IDepositContract.sol";
 
-import "../libraries/BytesLib.sol";
-import "../libraries/Uint256Lib.sol";
+import "../libraries/LibBytes.sol";
+import "../libraries/LibUint256.sol";
 
 import "../state/river/DepositContractAddress.sol";
 import "../state/river/WithdrawalCredentials.sol";
@@ -50,7 +50,7 @@ abstract contract ConsensusLayerDepositManagerV1 is IConsensusLayerDepositManage
     /// @notice Deposits current balance to the Consensus Layer by batches of 32 ETH
     /// @param _maxCount The maximum amount of validator keys to fund
     function depositToConsensusLayer(uint256 _maxCount) external {
-        uint256 validatorsToDeposit = Uint256Lib.min(address(this).balance / DEPOSIT_SIZE, _maxCount);
+        uint256 validatorsToDeposit = LibUint256.min(address(this).balance / DEPOSIT_SIZE, _maxCount);
 
         if (validatorsToDeposit == 0) {
             revert NotEnoughFunds();
@@ -111,15 +111,15 @@ abstract contract ConsensusLayerDepositManagerV1 is IConsensusLayerDepositManage
         bytes32 pubkeyRoot = sha256(bytes.concat(_publicKey, bytes16(0)));
         bytes32 signatureRoot = sha256(
             bytes.concat(
-                sha256(BytesLib.slice(_signature, 0, 64)),
-                sha256(bytes.concat(BytesLib.slice(_signature, 64, SIGNATURE_LENGTH - 64), bytes32(0)))
+                sha256(LibBytes.slice(_signature, 0, 64)),
+                sha256(bytes.concat(LibBytes.slice(_signature, 64, SIGNATURE_LENGTH - 64), bytes32(0)))
             )
         );
 
         bytes32 depositDataRoot = sha256(
             bytes.concat(
                 sha256(bytes.concat(pubkeyRoot, _withdrawalCredentials)),
-                sha256(bytes.concat(bytes32(Uint256Lib.toLittleEndian64(depositAmount)), signatureRoot))
+                sha256(bytes.concat(bytes32(LibUint256.toLittleEndian64(depositAmount)), signatureRoot))
             )
         );
 

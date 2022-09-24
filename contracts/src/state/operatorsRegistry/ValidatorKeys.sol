@@ -1,7 +1,7 @@
 //SPDX-License-Identifier: BUSL-1.1
 pragma solidity 0.8.10;
 
-import "../../libraries/BytesLib.sol";
+import "../../libraries/LibBytes.sol";
 
 library ValidatorKeys {
     uint256 internal constant PUBLIC_KEY_LENGTH = 48;
@@ -31,8 +31,8 @@ library ValidatorKeys {
 
         bytes storage entry = r.value[operatorIndex][idx];
 
-        publicKey = BytesLib.slice(entry, 0, PUBLIC_KEY_LENGTH);
-        signature = BytesLib.slice(entry, PUBLIC_KEY_LENGTH, SIGNATURE_LENGTH);
+        publicKey = LibBytes.slice(entry, 0, PUBLIC_KEY_LENGTH);
+        signature = LibBytes.slice(entry, PUBLIC_KEY_LENGTH, SIGNATURE_LENGTH);
     }
 
     function getRaw(uint256 operatorIndex, uint256 idx) internal view returns (bytes memory publicKeyAndSignature) {
@@ -65,8 +65,8 @@ library ValidatorKeys {
         uint256 idx;
         for (; idx < amount;) {
             bytes memory rawCredentials = r.value[operatorIndex][idx + startIdx];
-            publicKey[idx] = BytesLib.slice(rawCredentials, 0, PUBLIC_KEY_LENGTH);
-            signatures[idx] = BytesLib.slice(rawCredentials, PUBLIC_KEY_LENGTH, SIGNATURE_LENGTH);
+            publicKey[idx] = LibBytes.slice(rawCredentials, 0, PUBLIC_KEY_LENGTH);
+            signatures[idx] = LibBytes.slice(rawCredentials, PUBLIC_KEY_LENGTH, SIGNATURE_LENGTH);
             unchecked {
                 ++idx;
             }

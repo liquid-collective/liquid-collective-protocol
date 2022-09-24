@@ -4,7 +4,7 @@ pragma solidity 0.8.10;
 
 import "./Vm.sol";
 import "../src/ELFeeRecipient.1.sol";
-import "../src/libraries/Errors.sol";
+import "../src/libraries/LibErrors.sol";
 import "../src/interfaces/IELFeeRecipient.1.sol";
 import "../src/Withdraw.1.sol";
 import "./utils/River.setup1.sol";

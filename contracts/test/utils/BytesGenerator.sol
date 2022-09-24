@@ -2,7 +2,7 @@
 
 pragma solidity 0.8.10;
 
-import "../../src/libraries/BytesLib.sol";
+import "../../src/libraries/LibBytes.sol";
 
 contract BytesGenerator {
     bytes32 internal salt = bytes32(0);
@@ -14,7 +14,7 @@ contract BytesGenerator {
             if (len - res.length >= 32) {
                 res = bytes.concat(res, abi.encode(salt));
             } else {
-                res = bytes.concat(res, BytesLib.slice(abi.encode(salt), 0, len - res.length));
+                res = bytes.concat(res, LibBytes.slice(abi.encode(salt), 0, len - res.length));
             }
         }
         return res;

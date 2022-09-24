@@ -2,7 +2,7 @@
 pragma solidity 0.8.10;
 
 interface IAllowlistV1 {
-    event ChangedAllowlistStatuses(address[] indexed accounts, uint256[] statuses);
+    event SetAllowlistPermissions(address[] indexed accounts, uint256[] permissions);
     event SetAllower(address indexed allower);
 
     error InvalidAlloweeCount();
@@ -13,7 +13,7 @@ interface IAllowlistV1 {
     function initAllowlistV1(address _admin, address _allower) external;
     function setAllower(address _newAllowerAddress) external;
     function getAllower() external view returns (address);
-    function allow(address[] calldata _accounts, uint256[] calldata _statuses) external;
+    function allow(address[] calldata _accounts, uint256[] calldata _permissions) external;
     function onlyAllowed(address _account, uint256 _mask) external view;
     function isAllowed(address _account, uint256 _mask) external view returns (bool);
     function isDenied(address _account) external view returns (bool);

@@ -375,8 +375,8 @@ contract OperatorsRegistryV1Tests is Test, BytesGenerator {
         (bytes[] memory publicKeys, bytes[] memory signatures) = operatorsRegistry.pickNextValidators(10);
         vm.stopPrank();
         assert(publicKeys.length == 10);
-        assert(keccak256(publicKeys[0]) == keccak256(BytesLib.slice(tenKeys, 0, 48)));
-        assert(keccak256(signatures[0]) == keccak256(BytesLib.slice(tenKeys, 48, 96)));
+        assert(keccak256(publicKeys[0]) == keccak256(LibBytes.slice(tenKeys, 0, 48)));
+        assert(keccak256(signatures[0]) == keccak256(LibBytes.slice(tenKeys, 48, 96)));
     }
 
     function testGetKeysAsRiverLimitTest(bytes32 _name, uint256 _firstAddressSalt) public {
@@ -403,8 +403,8 @@ contract OperatorsRegistryV1Tests is Test, BytesGenerator {
         (bytes[] memory publicKeys, bytes[] memory signatures) = operatorsRegistry.pickNextValidators(10);
         vm.stopPrank();
         assert(publicKeys.length == 5);
-        assert(keccak256(publicKeys[0]) == keccak256(BytesLib.slice(tenKeys, 0, 48)));
-        assert(keccak256(signatures[0]) == keccak256(BytesLib.slice(tenKeys, 48, 96)));
+        assert(keccak256(publicKeys[0]) == keccak256(LibBytes.slice(tenKeys, 0, 48)));
+        assert(keccak256(signatures[0]) == keccak256(LibBytes.slice(tenKeys, 48, 96)));
     }
 
     function testGetKeysDistribution(uint256 _operatorOneSalt, uint256 _operatorTwoSalt, uint256 _operatorThreeSalt)
@@ -690,7 +690,7 @@ contract OperatorsRegistryV1Tests is Test, BytesGenerator {
         indexes[9] = 0;
 
         vm.expectEmit(true, true, true, true);
-        emit RemovedValidatorKey(index, BytesLib.slice(tenKeys, 0, 48));
+        emit RemovedValidatorKey(index, LibBytes.slice(tenKeys, 0, 48));
         operatorsRegistry.removeValidators(index, indexes);
         operator = operatorsRegistry.getOperator(index);
         assert(operator.keys == 0);
@@ -733,7 +733,7 @@ contract OperatorsRegistryV1Tests is Test, BytesGenerator {
         indexes[4] = 0;
 
         vm.expectEmit(true, true, true, true);
-        emit RemovedValidatorKey(index, BytesLib.slice(tenKeys, 0, 48));
+        emit RemovedValidatorKey(index, LibBytes.slice(tenKeys, 0, 48));
         operatorsRegistry.removeValidators(index, indexes);
         operator = operatorsRegistry.getOperator(index);
         assert(operator.keys == 5);
@@ -776,7 +776,7 @@ contract OperatorsRegistryV1Tests is Test, BytesGenerator {
         indexes[4] = 0;
 
         vm.expectEmit(true, true, true, true);
-        emit RemovedValidatorKey(index, BytesLib.slice(tenKeys, 0, 48));
+        emit RemovedValidatorKey(index, LibBytes.slice(tenKeys, 0, 48));
         operatorsRegistry.removeValidators(index, indexes);
         operator = operatorsRegistry.getOperator(index);
         assert(operator.keys == 5);
@@ -1014,7 +1014,7 @@ contract OperatorsRegistryV1TestDistribution is Test {
             if (len - res.length >= 32) {
                 res = bytes.concat(res, abi.encode(salt));
             } else {
-                res = bytes.concat(res, BytesLib.slice(abi.encode(salt), 0, len - res.length));
+                res = bytes.concat(res, LibBytes.slice(abi.encode(salt), 0, len - res.length));
             }
         }
         return res;

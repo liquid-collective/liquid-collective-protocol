@@ -3,8 +3,8 @@ pragma solidity 0.8.10;
 
 import "./Initializable.sol";
 
-import "./libraries/Errors.sol";
-import "./libraries/Uint256Lib.sol";
+import "./libraries/LibErrors.sol";
+import "./libraries/LibUint256.sol";
 
 import "./state/operatorsRegistry/Operators.sol";
 import "./state/operatorsRegistry/ValidatorKeys.sol";
@@ -29,14 +29,14 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
 
     modifier onlyRiver() virtual {
         if (msg.sender != RiverAddress.get()) {
-            revert Errors.Unauthorized(msg.sender);
+            revert LibErrors.Unauthorized(msg.sender);
         }
         _;
     }
 
     /// @notice Prevents anyone except the admin or the given operator to make the call. Also checks if operator is active
     /// @param _index The name identifying the operator
-    modifier operatorOrAdmin(uint256 _index) {
+    modifier onlyOperatorOrAdmin(uint256 _index) {
         if (msg.sender == _getAdmin()) {
             _;
             return;
@@ -46,7 +46,7 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
             revert InactiveOperator(_index);
         }
         if (msg.sender != operator.operator) {
-            revert Errors.Unauthorized(msg.sender);
+            revert LibErrors.Unauthorized(msg.sender);
         }
         _;
     }
@@ -61,15 +61,6 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
     function setRiver(address _newRiver) external onlyAdmin {
         RiverAddress.set(_newRiver);
         emit SetRiver(_newRiver);
-    }
-
-    /// @notice Prevents the call from working if the operator is not active
-    /// @param _index The name identifying the operator
-    modifier active(uint256 _index) {
-        if (!Operators.get(_index).active) {
-            revert InactiveOperator(_index);
-        }
-        _;
     }
 
     /// @notice Retrieve the active operator set
@@ -102,7 +93,7 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
     /// @dev Only callable by the administrator or the previous operator address
     /// @param _index The operator index
     /// @param _newOperatorAddress The new address of the operator
-    function setOperatorAddress(uint256 _index, address _newOperatorAddress) external operatorOrAdmin(_index) {
+    function setOperatorAddress(uint256 _index, address _newOperatorAddress) external onlyOperatorOrAdmin(_index) {
         LibSanitize._notZeroAddress(_newOperatorAddress);
         Operators.Operator storage operator = Operators.get(_index);
 
@@ -116,7 +107,7 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
     /// @dev No name conflict can exist
     /// @param _index The operator index
     /// @param _newName The new operator name
-    function setOperatorName(uint256 _index, string calldata _newName) external operatorOrAdmin(_index) {
+    function setOperatorName(uint256 _index, string calldata _newName) external onlyOperatorOrAdmin(_index) {
         LibSanitize._notEmptyString(_newName);
         Operators.Operator storage operator = Operators.get(_index);
         operator.name = _newName;
@@ -143,7 +134,7 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
         Operators.Operator storage operator = Operators.get(_index);
 
         if (_newStoppedValidatorCount > operator.funded) {
-            revert Errors.InvalidArgument();
+            revert LibErrors.InvalidArgument();
         }
 
         operator.stopped = _newStoppedValidatorCount;
@@ -194,7 +185,7 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
     /// @param _publicKeysAndSignatures Public keys of the validator, concatenated
     function addValidators(uint256 _index, uint256 _keyCount, bytes calldata _publicKeysAndSignatures)
         external
-        operatorOrAdmin(_index)
+        onlyOperatorOrAdmin(_index)
     {
         if (_keyCount == 0) {
             revert InvalidKeyCount();
@@ -210,7 +201,7 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
         Operators.Operator storage operator = Operators.get(_index);
 
         for (uint256 idx = 0; idx < _keyCount;) {
-            bytes memory publicKeyAndSignature = BytesLib.slice(
+            bytes memory publicKeyAndSignature = LibBytes.slice(
                 _publicKeysAndSignatures,
                 idx * (ValidatorKeys.PUBLIC_KEY_LENGTH + ValidatorKeys.SIGNATURE_LENGTH),
                 ValidatorKeys.PUBLIC_KEY_LENGTH + ValidatorKeys.SIGNATURE_LENGTH
@@ -232,7 +223,7 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
     /// @dev The operator limit will be set to the lowest deleted key index
     /// @param _index The operator index
     /// @param _indexes The indexes of the keys to remove
-    function removeValidators(uint256 _index, uint256[] calldata _indexes) external operatorOrAdmin(_index) {
+    function removeValidators(uint256 _index, uint256[] calldata _indexes) external onlyOperatorOrAdmin(_index) {
         uint256 indexesLength = _indexes.length;
         if (indexesLength == 0) {
             revert InvalidKeyCount();
@@ -391,8 +382,8 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
             }
 
             // we take the smallest value between limit - (funded + picked), _requestedAmount and MAX_VALIDATOR_ATTRIBUTION_PER_ROUND
-            uint256 pickedKeyCount = Uint256Lib.min(
-                Uint256Lib.min(
+            uint256 pickedKeyCount = LibUint256.min(
+                LibUint256.min(
                     operators[selectedOperatorIndex].limit
                         - (operators[selectedOperatorIndex].funded + operators[selectedOperatorIndex].picked),
                     MAX_VALIDATOR_ATTRIBUTION_PER_ROUND

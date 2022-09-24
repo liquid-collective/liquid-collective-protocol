@@ -16,7 +16,7 @@ import "./Administrable.sol";
 import "./state/shared/AdministratorAddress.sol";
 import "./state/river/AllowlistAddress.sol";
 import "./state/river/OperatorsRegistryAddress.sol";
-import "./state/river/TreasuryAddress.sol";
+import "./state/river/CollectorAddress.sol";
 import "./state/river/GlobalFee.sol";
 import "./state/river/ELFeeRecipientAddress.sol";
 
@@ -43,8 +43,8 @@ contract RiverV1 is
     /// @param _systemAdministratorAddress Administrator address
     /// @param _allowlistAddress Address of the allowlist contract
     /// @param _operatorRegistryAddress Address of the operator registry
-    /// @param _treasuryAddress Address receiving the fee minus the operator share
-    /// @param _globalFee Amount retained when the eth balance increases, splitted between the treasury and the operators
+    /// @param _collectorAddress Address receiving the fee minus the operator share
+    /// @param _globalFee Amount retained when the eth balance increases, splitted between the collector and the operators
     function initRiverV1(
         address _depositContractAddress,
         address _elFeeRecipientAddress,
@@ -53,13 +53,13 @@ contract RiverV1 is
         address _systemAdministratorAddress,
         address _allowlistAddress,
         address _operatorRegistryAddress,
-        address _treasuryAddress,
+        address _collectorAddress,
         uint256 _globalFee
     ) external init(0) {
         _setAdmin(_systemAdministratorAddress);
 
-        TreasuryAddress.set(_treasuryAddress);
-        emit SetCollector(_treasuryAddress);
+        CollectorAddress.set(_collectorAddress);
+        emit SetCollector(_collectorAddress);
 
         GlobalFee.set(_globalFee);
         emit SetGlobalFee(_globalFee);
@@ -104,16 +104,16 @@ contract RiverV1 is
         return address(AllowlistAddress.get());
     }
 
-    /// @notice Changes the treasury address
-    /// @param _newTreasury New address for the treasury
-    function setTreasury(address _newTreasury) external onlyAdmin {
-        TreasuryAddress.set(_newTreasury);
-        emit SetCollector(_newTreasury);
+    /// @notice Changes the collector address
+    /// @param _newCollector New address for the collector
+    function setCollector(address _newCollector) external onlyAdmin {
+        CollectorAddress.set(_newCollector);
+        emit SetCollector(_newCollector);
     }
 
-    /// @notice Retrieve the treasury address
-    function getTreasury() external view returns (address) {
-        return TreasuryAddress.get();
+    /// @notice Retrieve the collector address
+    function getCollector() external view returns (address) {
+        return CollectorAddress.get();
     }
 
     /// @notice Changes the execution layer fee recipient
@@ -131,7 +131,7 @@ contract RiverV1 is
     /// @notice Input for execution layer fee earnings
     function sendELFees() external payable {
         if (msg.sender != ELFeeRecipientAddress.get()) {
-            revert Errors.Unauthorized(msg.sender);
+            revert LibErrors.Unauthorized(msg.sender);
         }
     }
 
@@ -192,7 +192,7 @@ contract RiverV1 is
         return collectedELFees;
     }
 
-    /// @notice Handler called whenever the balance of ETH handled by the system increases. Splits funds between operators and treasury.
+    /// @notice Handler called whenever the balance of ETH handled by the system increases. Splits funds between operators and collector.
     /// @param _amount Additional eth received
     function _onEarnings(uint256 _amount) internal override {
         uint256 currentTotalSupply = _totalSupply();
@@ -205,19 +205,19 @@ contract RiverV1 is
         uint256 sharesToMint = denominator == 0 ? 0 : (numerator / denominator);
 
         if (sharesToMint > 0) {
-            _mintRawShares(TreasuryAddress.get(), sharesToMint);
+            _mintRawShares(CollectorAddress.get(), sharesToMint);
         }
     }
 
     /// @notice Handler called whenever the total balance of ETH is requested
     function _assetBalance() internal view override returns (uint256) {
-        uint256 beaconValidatorCount = BeaconValidatorCount.get();
+        uint256 clValidatorCount = CLValidatorCount.get();
         uint256 depositedValidatorCount = DepositedValidatorCount.get();
-        if (beaconValidatorCount < depositedValidatorCount) {
-            return BeaconValidatorBalanceSum.get() + address(this).balance
-                + (depositedValidatorCount - beaconValidatorCount) * ConsensusLayerDepositManagerV1.DEPOSIT_SIZE;
+        if (clValidatorCount < depositedValidatorCount) {
+            return CLValidatorTotalBalance.get() + address(this).balance
+                + (depositedValidatorCount - clValidatorCount) * ConsensusLayerDepositManagerV1.DEPOSIT_SIZE;
         } else {
-            return BeaconValidatorBalanceSum.get() + address(this).balance;
+            return CLValidatorTotalBalance.get() + address(this).balance;
         }
     }
 }

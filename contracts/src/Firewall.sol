@@ -1,7 +1,7 @@
 //SPDX-License-Identifier: BUSL-1.1
 pragma solidity 0.8.10;
 
-import "./libraries/Errors.sol";
+import "./libraries/LibErrors.sol";
 import "./interfaces/IFirewall.sol";
 import "./Administrable.sol";
 
@@ -41,11 +41,10 @@ contract Firewall is IFirewall, Administrable {
     }
 
     modifier onlyAdminOrExecutor() {
-        if (_getAdmin() == msg.sender || msg.sender == executor) {
-            _;
-        } else {
-            revert Errors.Unauthorized(msg.sender);
+        if (_getAdmin() != msg.sender && msg.sender != executor) {
+            revert LibErrors.Unauthorized(msg.sender);
         }
+        _;
     }
 
     /// @dev Change the executor
@@ -66,7 +65,7 @@ contract Firewall is IFirewall, Administrable {
         if (msg.sender == _getAdmin() || (executorCanCall[msg.sig] && msg.sender == executor)) {
             return;
         }
-        revert Errors.Unauthorized(msg.sender);
+        revert LibErrors.Unauthorized(msg.sender);
     }
 
     /// @dev Forwards the current call to `destination`.
