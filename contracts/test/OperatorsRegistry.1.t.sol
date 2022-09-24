@@ -329,11 +329,7 @@ contract OperatorsRegistryV1Tests is Test, BytesGenerator {
 
     event FailedSetOperatorLimit(uint256 _operatorIndex, uint256 _limit, uint256 _lastEdit, uint256 _snapshotBlock);
 
-    function testSetOperatorLimitCountSnapshotTooLow(
-        bytes32 _name,
-        uint256 _firstAddressSalt,
-        uint256 _limit
-    ) public {
+    function testSetOperatorLimitCountSnapshotTooLow(bytes32 _name, uint256 _firstAddressSalt, uint256 _limit) public {
         address _firstAddress = uf._new(_firstAddressSalt);
         _limit = _limit % 11; // 10 is max
         vm.startPrank(admin);
