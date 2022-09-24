@@ -25,7 +25,6 @@ contract OracleV1 is IOracleV1, Initializable, Administrable {
     uint256 internal constant BASIS_POINTS_MAX = 10_000;
     uint256 internal constant ONE_YEAR = 365 days;
 
-
     /// @notice Received ETH input has only 9 decimals
     uint128 internal constant DENOMINATION_OFFSET = 1e9;
 

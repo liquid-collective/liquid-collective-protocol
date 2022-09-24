@@ -8,7 +8,6 @@ import "../state/oracle/ReportBounds.sol";
 /// @author Kiln
 /// @notice This contract handles the input from the allowed oracle members. Highly inspired by Lido's implementation.
 interface IOracleV1 {
-
     event CLReported(uint256 _epochId, uint128 _newCLBalance, uint32 _newCLValidatorCount, address _oracleMember);
     event SetQuorum(uint256 _newQuorum);
     event ExpectedEpochIdUpdated(uint256 _epochId);
