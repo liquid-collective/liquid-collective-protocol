@@ -126,6 +126,11 @@ contract RiverV1 is
         return ELFeeRecipientAddress.get();
     }
 
+    /// @notice Retrieve the operators registry address
+    function getOperatorsRegistry() external view returns (address) {
+        return OperatorsRegistryAddress.get();
+    }
+
     /// @notice Input for execution layer fee earnings
     function sendELFees() external payable {
         if (msg.sender != ELFeeRecipientAddress.get()) {

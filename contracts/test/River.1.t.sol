@@ -187,6 +187,10 @@ contract RiverV1SetupOneTests is Test, BytesGenerator {
         vm.stopPrank();
     }
 
+    function testGetOperatorsRegistry() public {
+        assert(river.getOperatorsRegistry() == address(operatorsRegistry));
+    }
+
     function testSetCollector() public {
         vm.startPrank(admin);
         assert(river.getCollector() == collector);
