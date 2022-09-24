@@ -58,6 +58,10 @@ contract FirewallTests is BytesGenerator {
     bytes internal unauthJoe = abi.encodeWithSignature("Unauthorized(address)", joe);
     bytes internal unauthExecutor = abi.encodeWithSignature("Unauthorized(address)", executor);
 
+    event SetExecutor(address indexed executor);
+    event SetDestination(address indexed destination);
+    event SetExecutorPermissions(bytes4 selector, bool status);
+
     function setUp() public {
         deposit = new DepositContractMock();
         elFeeRecipient = new ELFeeRecipientV1();
@@ -71,6 +75,8 @@ contract FirewallTests is BytesGenerator {
 
         bytes4[] memory executorCallableAllowlistSelectors = new bytes4[](1);
         executorCallableAllowlistSelectors[0] = allowlist.allow.selector;
+        vm.expectEmit(true, true, true, true);
+        emit SetDestination(address(allowlist));
         allowlistFirewall = new Firewall(
             riverGovernorDAO,
             executor,
@@ -492,6 +498,8 @@ contract FirewallTests is BytesGenerator {
         // Then we make it governorOnly.
         // Assert governor can still call it, and executor now cannot.
         vm.startPrank(riverGovernorDAO);
+        vm.expectEmit(true, true, true, true);
+        emit SetExecutorPermissions(getSelector("setOperatorStatus(uint256,bool)"), false);
         operatorsRegistryFirewall.allowExecutor(getSelector("setOperatorStatus(uint256,bool)"), false);
         firewalledOperatorsRegistry.setOperatorStatus(operatorBobIndex, true);
         assert(operatorsRegistry.getOperator(operatorBobIndex).active == true);
@@ -504,6 +512,8 @@ contract FirewallTests is BytesGenerator {
 
     function testMakingFunctionGovernorOrExecutor() public {
         vm.startPrank(riverGovernorDAO);
+        vm.expectEmit(true, true, true, true);
+        emit SetExecutorPermissions(getSelector("setAllower(address)"), true);
         allowlistFirewall.allowExecutor(getSelector("setAllower(address)"), true);
         vm.stopPrank();
         vm.startPrank(executor);
@@ -530,6 +540,8 @@ contract FirewallTests is BytesGenerator {
         // Assert that governor can setExecutor and the new executor can
         // setOracle, a governorOrExecutor action
         vm.startPrank(riverGovernorDAO);
+        vm.expectEmit(true, true, true, true);
+        emit SetExecutor(bob);
         riverFirewall.setExecutor(bob);
         vm.stopPrank();
         vm.startPrank(bob);
@@ -542,6 +554,8 @@ contract FirewallTests is BytesGenerator {
         // Assert that executor can setExecutor and the new executor can
         // setOracle, a governorOrExecutor action
         vm.startPrank(executor);
+        vm.expectEmit(true, true, true, true);
+        emit SetExecutor(joe);
         riverFirewall.setExecutor(joe);
         vm.stopPrank();
         vm.startPrank(joe);

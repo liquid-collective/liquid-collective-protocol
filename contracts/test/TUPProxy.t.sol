@@ -51,6 +51,9 @@ contract TUPProxyTest {
 
     address internal admin = address(1);
 
+    event Pause();
+    event Unpause();
+
     function setUp() public {
         implem = new DummyCounter();
         implemEvolved = new DummyCounterEvolved();
@@ -103,6 +106,8 @@ contract TUPProxyTest {
         DummyCounter(address(proxy)).inc();
         assert(DummyCounter(address(proxy)).i() == 1);
         vm.startPrank(admin);
+        vm.expectEmit(true, true, true, true);
+        emit Pause();
         proxy.pause();
         vm.stopPrank();
         vm.expectRevert(abi.encodeWithSignature("CallWhenPaused()"));
@@ -120,6 +125,8 @@ contract TUPProxyTest {
         vm.expectRevert(abi.encodeWithSignature("CallWhenPaused()"));
         DummyCounter(address(proxy)).inc();
         vm.startPrank(admin);
+        vm.expectEmit(true, true, true, true);
+        emit Unpause();
         proxy.unpause();
         assert(proxy.isPaused() == false);
         vm.stopPrank();

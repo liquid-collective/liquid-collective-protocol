@@ -54,8 +54,12 @@ contract OracleManagerV1Tests {
 
     OracleManagerV1 internal oracleManager;
 
+    event SetOracle(address indexed oracleAddress);
+
     function setUp() public {
         oracleManager = new OracleManagerV1ExposeInitializer(address(this));
+        vm.expectEmit(true, true, true, true);
+        emit SetOracle(oracle);
         oracleManager.setOracle(oracle);
     }
 
@@ -98,5 +102,14 @@ contract OracleManagerV1Tests {
         OracleManagerV1ExposeInitializer(address(oracleManager)).supersedeAllValidatorCount(1);
         vm.expectRevert(abi.encodeWithSignature("InvalidValidatorCountReport(uint256,uint256)", 2, 1));
         oracleManager.setBeaconData(2, val1 + 32 ether, roundId);
+    }
+
+    function testSetOracle(uint256 _oracleSalt) public {
+        address _oracle = uf._new(_oracleSalt);
+        assert(oracleManager.getOracle() == oracle);
+        vm.expectEmit(true, true, true, true);
+        emit SetOracle(_oracle);
+        oracleManager.setOracle(_oracle);
+        assert(oracleManager.getOracle() == _oracle);
     }
 }

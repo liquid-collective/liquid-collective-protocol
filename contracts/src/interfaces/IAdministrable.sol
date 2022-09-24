@@ -2,8 +2,8 @@
 pragma solidity 0.8.10;
 
 interface IAdministrable {
-    event ProposedAdmin(address newPendingAdmin);
-    event AcceptedAdmin(address newAdmin);
+    event SetPendingAdmin(address indexed pendingAdmin);
+    event SetAdmin(address indexed admin);
 
     function proposeAdmin(address _newAdmin) external;
     function acceptAdmin() external;

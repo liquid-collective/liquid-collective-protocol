@@ -30,10 +30,13 @@ contract ELFeeRecipientV1Test {
     UserFactory internal uf = new UserFactory();
 
     event BalanceUpdated(uint256 amount);
+    event SetRiver(address indexed river);
 
     function setUp() public {
         river = new RiverDonationMock();
         feeRecipient = new ELFeeRecipientV1();
+        vm.expectEmit(true, true, true, true);
+        emit SetRiver(address(river));
         feeRecipient.initELFeeRecipientV1(address(river));
     }
 

@@ -15,6 +15,7 @@ contract ELFeeRecipientV1 is Initializable, IELFeeRecipientV1 {
     /// @param _riverAddress Address of River
     function initELFeeRecipientV1(address _riverAddress) external init(0) {
         RiverAddress.set(_riverAddress);
+        emit SetRiver(_riverAddress);
     }
 
     /// @notice Pulls all the ETH to the River contract

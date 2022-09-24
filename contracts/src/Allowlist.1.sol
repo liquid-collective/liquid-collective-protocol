@@ -22,12 +22,14 @@ contract AllowlistV1 is IAllowlistV1, Initializable, Administrable {
     function initAllowlistV1(address _admin, address _allower) external init(0) {
         _setAdmin(_admin);
         AllowerAddress.set(_allower);
+        emit SetAllower(_allower);
     }
 
     /// @notice Changes the allower address
     /// @param _newAllowerAddress New address allowed to edit the allowlist
     function setAllower(address _newAllowerAddress) external onlyAdmin {
         AllowerAddress.set(_newAllowerAddress);
+        emit SetAllower(_newAllowerAddress);
     }
 
     /// @notice Retrieves the allower address

@@ -42,15 +42,48 @@ contract ConsensusLayerDepositManagerV1ExposeInitializer is ConsensusLayerDeposi
     }
 }
 
-contract ConsensusLayerDepositManagerV1Tests {
-    event FundedValidatorKey(bytes publicKey);
-
+contract ConsensusLayerDepositManagerV1InitTests {
     Vm internal vm = Vm(0x7109709ECfa91a80626fF3989D68f67F5b1DD12D);
 
     bytes32 internal withdrawalCredentials = bytes32(uint256(1));
 
     ConsensusLayerDepositManagerV1 internal depositManager;
     IDepositContract internal depositContract;
+
+    event FundedValidatorKey(bytes publicKey);
+    event SetDepositContractAddress(address indexed depositContract);
+    event SetWithdrawalCredentials(bytes32 withdrawalCredentials);
+
+    function testDepositContractEvent() public {
+        depositContract = new DepositContractMock();
+
+        depositManager = new ConsensusLayerDepositManagerV1ExposeInitializer();
+        vm.expectEmit(true, true, true, true);
+        emit SetDepositContractAddress(address(depositContract));
+        ConsensusLayerDepositManagerV1ExposeInitializer(address(depositManager))
+            .publicConsensusLayerDepositManagerInitializeV1(address(depositContract), withdrawalCredentials);
+    }
+
+    function testWithdrawalCredentialsEvent() public {
+        depositContract = new DepositContractMock();
+
+        depositManager = new ConsensusLayerDepositManagerV1ExposeInitializer();
+        vm.expectEmit(true, true, true, true);
+        emit SetWithdrawalCredentials(withdrawalCredentials);
+        ConsensusLayerDepositManagerV1ExposeInitializer(address(depositManager))
+            .publicConsensusLayerDepositManagerInitializeV1(address(depositContract), withdrawalCredentials);
+    }
+}
+
+contract ConsensusLayerDepositManagerV1Tests {
+    Vm internal vm = Vm(0x7109709ECfa91a80626fF3989D68f67F5b1DD12D);
+
+    bytes32 internal withdrawalCredentials = bytes32(uint256(1));
+
+    ConsensusLayerDepositManagerV1 internal depositManager;
+    IDepositContract internal depositContract;
+
+    event FundedValidatorKey(bytes publicKey);
 
     function setUp() public {
         depositContract = new DepositContractMock();

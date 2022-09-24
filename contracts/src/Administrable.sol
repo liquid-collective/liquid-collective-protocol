@@ -24,6 +24,12 @@ abstract contract Administrable is IAdministrable {
     function _setAdmin(address _admin) internal {
         LibSanitize._notZeroAddress(_admin);
         LibAdministrable._setAdmin(_admin);
+        emit SetAdmin(_admin);
+    }
+
+    function _setPendingAdmin(address _pendingAdmin) internal {
+        LibAdministrable._setPendingAdmin(_pendingAdmin);
+        emit SetPendingAdmin(_pendingAdmin);
     }
 
     function _getAdmin() internal view returns (address) {
@@ -31,14 +37,12 @@ abstract contract Administrable is IAdministrable {
     }
 
     function proposeAdmin(address _newAdmin) external onlyAdmin {
-        LibAdministrable._setPendingAdmin(_newAdmin);
-        emit ProposedAdmin(_newAdmin);
+        _setPendingAdmin(_newAdmin);
     }
 
     function acceptAdmin() external onlyPendingAdmin {
-        LibAdministrable._setAdmin(LibAdministrable._getPendingAdmin());
-        LibAdministrable._setPendingAdmin(address(0));
-        emit AcceptedAdmin(msg.sender);
+        _setAdmin(LibAdministrable._getPendingAdmin());
+        _setPendingAdmin(address(0));
     }
 
     function getAdmin() external view returns (address) {

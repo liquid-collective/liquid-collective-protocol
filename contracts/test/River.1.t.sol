@@ -45,12 +45,17 @@ contract RiverV1SetupOneTests is Test, BytesGenerator {
     string internal operatorOneName = "NodeMasters";
     string internal operatorTwoName = "StakePros";
 
-    uint256 operatorOneIndex;
-    uint256 operatorTwoIndex;
+    uint256 internal operatorOneIndex;
+    uint256 internal operatorTwoIndex;
 
     uint256 internal constant DEPOSIT_MASK = 0x1;
 
     event PulledELFees(uint256 amount);
+    event SetELFeeRecipient(address indexed elFeeRecipient);
+    event SetCollector(address indexed collector);
+    event SetAllowlist(address indexed allowlist);
+    event SetGlobalFee(uint256 fee);
+    event SetOperatorsRegistry(address indexed operatorsRegistry);
 
     function setUp() public {
         admin = makeAddr("admin");
@@ -79,6 +84,8 @@ contract RiverV1SetupOneTests is Test, BytesGenerator {
         allowlist.initAllowlistV1(admin, allower);
         operatorsRegistry.initOperatorsRegistryV1(admin, address(river));
         elFeeRecipient.initELFeeRecipientV1(address(river));
+        vm.expectEmit(true, true, true, true);
+        emit SetOperatorsRegistry(address(operatorsRegistry));
         river.initRiverV1(
             address(deposit),
             address(elFeeRecipient),
@@ -159,6 +166,8 @@ contract RiverV1SetupOneTests is Test, BytesGenerator {
         address newELFeeRecipient = uf._new(_newELFeeRecipientSalt);
         vm.startPrank(admin);
         assert(river.getELFeeRecipient() == address(elFeeRecipient));
+        vm.expectEmit(true, true, true, true);
+        emit SetELFeeRecipient(newELFeeRecipient);
         river.setELFeeRecipient(newELFeeRecipient);
         assert(river.getELFeeRecipient() == newELFeeRecipient);
         vm.stopPrank();
@@ -182,6 +191,8 @@ contract RiverV1SetupOneTests is Test, BytesGenerator {
     function testSetTreasury() public {
         vm.startPrank(admin);
         assert(river.getTreasury() == treasury);
+        vm.expectEmit(true, true, true, true);
+        emit SetCollector(newTreasury);
         river.setTreasury(newTreasury);
         assert(river.getTreasury() == newTreasury);
         vm.stopPrank();
@@ -195,6 +206,8 @@ contract RiverV1SetupOneTests is Test, BytesGenerator {
     function testSetAllowlist() public {
         vm.startPrank(admin);
         assert(river.getAllowlist() == address(allowlist));
+        vm.expectEmit(true, true, true, true);
+        emit SetAllowlist(newAllowlist);
         river.setAllowlist(newAllowlist);
         assert(river.getAllowlist() == newAllowlist);
         vm.stopPrank();
@@ -203,6 +216,15 @@ contract RiverV1SetupOneTests is Test, BytesGenerator {
     function testSetAllowlistUnauthorized() public {
         vm.expectRevert(abi.encodeWithSignature("Unauthorized(address)", address(this)));
         river.setAllowlist(newAllowlist);
+    }
+
+    function testSetGlobalFee() public {
+        vm.startPrank(admin);
+        vm.expectEmit(true, true, true, true);
+        emit SetGlobalFee(5000);
+        river.setGlobalFee(5000);
+        vm.stopPrank();
+        assert(river.getGlobalFee() == 5000);
     }
 
     function testSetGlobalFeeHigherThanBase() public {

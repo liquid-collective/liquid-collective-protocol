@@ -3,6 +3,8 @@ pragma solidity 0.8.10;
 
 interface IConsensusLayerDepositManagerV1 {
     event FundedValidatorKey(bytes publicKey);
+    event SetDepositContractAddress(address indexed depositContract);
+    event SetWithdrawalCredentials(bytes32 withdrawalCredentials);
 
     error NotEnoughFunds();
     error InconsistentPublicKeys();

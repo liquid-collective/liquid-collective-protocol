@@ -24,6 +24,7 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
     function initOperatorsRegistryV1(address _admin, address _river) external init(0) {
         _setAdmin(_admin);
         RiverAddress.set(_river);
+        emit SetRiver(_river);
     }
 
     modifier onlyRiver() virtual {
@@ -59,6 +60,7 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
     /// @param _newRiver New address for the river system
     function setRiver(address _newRiver) external onlyAdmin {
         RiverAddress.set(_newRiver);
+        emit SetRiver(_newRiver);
     }
 
     /// @notice Prevents the call from working if the operator is not active
