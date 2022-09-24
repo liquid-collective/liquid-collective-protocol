@@ -41,11 +41,10 @@ contract Firewall is IFirewall, Administrable {
     }
 
     modifier onlyAdminOrExecutor() {
-        if (_getAdmin() == msg.sender || msg.sender == executor) {
-            _;
-        } else {
+        if (_getAdmin() != msg.sender && msg.sender != executor) {
             revert LibErrors.Unauthorized(msg.sender);
         }
+        _;
     }
 
     /// @dev Change the executor
