@@ -2,12 +2,13 @@
 
 pragma solidity 0.8.10;
 
-import "../Vm.sol";
 import "../../src/components/ConsensusLayerDepositManager.1.sol";
 import "../../src/libraries/LibUnstructuredStorage.sol";
 import "../utils/UserFactory.sol";
 import "../mocks/DepositContractMock.sol";
 import "../mocks/DepositContractEnhancedMock.sol";
+import "../mocks/DepositContractInvalidMock.sol";
+import "forge-std/Test.sol";
 
 contract ConsensusLayerDepositManagerV1ExposeInitializer is ConsensusLayerDepositManagerV1 {
     function publicConsensusLayerDepositManagerInitializeV1(
@@ -46,9 +47,7 @@ contract ConsensusLayerDepositManagerV1ExposeInitializer is ConsensusLayerDeposi
     }
 }
 
-contract ConsensusLayerDepositManagerV1InitTests {
-    Vm internal vm = Vm(0x7109709ECfa91a80626fF3989D68f67F5b1DD12D);
-
+contract ConsensusLayerDepositManagerV1InitTests is Test {
     bytes32 internal withdrawalCredentials = bytes32(uint256(1));
 
     ConsensusLayerDepositManagerV1 internal depositManager;
@@ -79,9 +78,7 @@ contract ConsensusLayerDepositManagerV1InitTests {
     }
 }
 
-contract ConsensusLayerDepositManagerV1Tests {
-    Vm internal vm = Vm(0x7109709ECfa91a80626fF3989D68f67F5b1DD12D);
-
+contract ConsensusLayerDepositManagerV1Tests is Test {
     bytes32 internal withdrawalCredentials = bytes32(uint256(1));
 
     ConsensusLayerDepositManagerV1 internal depositManager;
@@ -220,9 +217,7 @@ contract ConsensusLayerDepositManagerV1ControllableValidatorKeyRequest is Consen
     }
 }
 
-contract ConsensusLayerDepositManagerV1ErrorTests {
-    Vm internal vm = Vm(0x7109709ECfa91a80626fF3989D68f67F5b1DD12D);
-
+contract ConsensusLayerDepositManagerV1ErrorTests is Test {
     bytes32 internal withdrawalCredentials = bytes32(uint256(1));
 
     ConsensusLayerDepositManagerV1 internal depositManager;
@@ -277,9 +272,7 @@ contract ConsensusLayerDepositManagerV1ErrorTests {
     }
 }
 
-contract ConsensusLayerDepositManagerV1WithdrawalCredentialError {
-    Vm internal vm = Vm(0x7109709ECfa91a80626fF3989D68f67F5b1DD12D);
-
+contract ConsensusLayerDepositManagerV1WithdrawalCredentialError is Test {
     bytes32 internal withdrawalCredentials = bytes32(uint256(1));
 
     ConsensusLayerDepositManagerV1 internal depositManager;
@@ -341,9 +334,7 @@ contract ConsensusLayerDepositManagerV1ValidKeys is ConsensusLayerDepositManager
     }
 }
 
-contract ConsensusLayerDepositManagerV1ValidKeysTest {
-    Vm internal vm = Vm(0x7109709ECfa91a80626fF3989D68f67F5b1DD12D);
-
+contract ConsensusLayerDepositManagerV1ValidKeysTest is Test {
     ConsensusLayerDepositManagerV1 internal depositManager;
     IDepositContract internal depositContract;
 
@@ -369,5 +360,27 @@ contract ConsensusLayerDepositManagerV1ValidKeysTest {
         ConsensusLayerDepositManagerV1ValidKeys(address(depositManager)).sudoSyncBalance();
         depositManager.depositToConsensusLayer(1);
         assert(DepositContractEnhancedMock(address(depositContract)).debug_getLastDepositDataRoot() == depositDataRoot);
+    }
+}
+
+contract ConsensusLayerDepositManagerV1InvalidDepositContract is Test {
+    ConsensusLayerDepositManagerV1 internal depositManager;
+    IDepositContract internal depositContract;
+
+    bytes32 internal withdrawalCredentials = bytes32(uint256(1));
+
+    function setUp() public {
+        depositContract = IDepositContract(address(new DepositContractInvalidMock()));
+
+        depositManager = new ConsensusLayerDepositManagerV1ValidKeys();
+        ConsensusLayerDepositManagerV1ValidKeys(address(depositManager)).publicConsensusLayerDepositManagerInitializeV1(
+            address(depositContract), withdrawalCredentials
+        );
+    }
+
+    function testDepositInvalidDepositContract() external {
+        vm.deal(address(depositManager), 32 ether);
+        vm.expectRevert(abi.encodeWithSignature("ErrorOnDeposit()"));
+        depositManager.depositToConsensusLayer(1);
     }
 }
