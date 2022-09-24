@@ -49,6 +49,7 @@ contract OracleV1 is IOracleV1, Initializable, Administrable {
     ) external init(0) {
         _setAdmin(_administratorAddress);
         RiverAddress.set(_river);
+        emit SetRiver(_river);
         CLSpec.set(
             CLSpec.CLSpecStruct({
                 epochsPerFrame: _epochsPerFrame,
