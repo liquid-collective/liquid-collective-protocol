@@ -14,9 +14,7 @@ contract RiverMock {
         uint256 _validatorBalanceSum,
         bytes32 _roundId,
         uint256 _maxIncrease
-    )
-        external
-    {
+    ) external {
         emit DebugReceivedCLData(_validatorCount, _validatorBalanceSum, _roundId, _maxIncrease);
         validatorCount = _validatorCount;
         validatorBalanceSum = _validatorBalanceSum;

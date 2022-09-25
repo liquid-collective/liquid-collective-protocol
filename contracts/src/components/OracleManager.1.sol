@@ -50,9 +50,7 @@ abstract contract OracleManagerV1 is IOracleManagerV1 {
         uint256 _validatorTotalBalance,
         bytes32 _roundId,
         uint256 _maxIncrease
-    )
-        external
-    {
+    ) external {
         if (msg.sender != OracleAddress.get()) {
             revert LibErrors.Unauthorized(msg.sender);
         }
@@ -72,9 +70,7 @@ abstract contract OracleManagerV1 is IOracleManagerV1 {
 
         // if there's a margin left for pulling the elFees that would leave our delta under the allowed maxIncrease value, do it
         if ((_maxIncrease + previousValidatorTotalBalance) > _validatorTotalBalance) {
-            executionLayerFees = _pullELFees(
-                (_maxIncrease + previousValidatorTotalBalance) - _validatorTotalBalance
-            );
+            executionLayerFees = _pullELFees((_maxIncrease + previousValidatorTotalBalance) - _validatorTotalBalance);
         }
 
         if (previousValidatorTotalBalance < _validatorTotalBalance + executionLayerFees) {

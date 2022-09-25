@@ -1265,11 +1265,20 @@ contract RiverV1SetupOneTests is Test, BytesGenerator {
         }
     }
 
-    function _debugMaxIncrease(uint256 annualAprUpperBound, uint256 _prevTotalEth, uint256 _timeElapsed) internal pure returns (uint256) {
+    function _debugMaxIncrease(uint256 annualAprUpperBound, uint256 _prevTotalEth, uint256 _timeElapsed)
+        internal
+        pure
+        returns (uint256)
+    {
         return (_prevTotalEth * annualAprUpperBound * _timeElapsed) / uint256(10000 * 365 days);
     }
 
-    function testRiverBoundsFuzzing(uint8 _initialValidatorCount, uint64 _delta, uint256 _upperBound, uint256 _lowerBound) external {
+    function testRiverBoundsFuzzing(
+        uint8 _initialValidatorCount,
+        uint64 _delta,
+        uint256 _upperBound,
+        uint256 _lowerBound
+    ) external {
         _initialValidatorCount = (_initialValidatorCount % 200) + 1;
         _upperBound = _upperBound % 10001;
         _lowerBound = _lowerBound % 5001;
@@ -1298,14 +1307,23 @@ contract RiverV1SetupOneTests is Test, BytesGenerator {
         uint256 middle = type(uint64).max / 2;
         uint256 prevTotalEth = river.totalUnderlyingSupply();
 
-        if (_delta > middle) { // balance increase
+        if (_delta > middle) {
+            // balance increase
             uint256 innerDelta = _delta - middle;
             uint256 maxIncrease = _debugMaxIncrease(_upperBound, prevTotalEth, 1 days);
             uint256 increase = maxIncrease * innerDelta / (middle / 2);
             (epoch,,) = oracle.getCurrentFrame();
 
             if (innerDelta > middle / 2 && _upperBound > 0) {
-                vm.expectRevert(abi.encodeWithSignature("BeaconBalanceIncreaseOutOfBounds(uint256,uint256,uint256,uint256)", prevTotalEth, prevTotalEth + (increase / 1 gwei) * 1 gwei, 1 days, _upperBound));
+                vm.expectRevert(
+                    abi.encodeWithSignature(
+                        "BeaconBalanceIncreaseOutOfBounds(uint256,uint256,uint256,uint256)",
+                        prevTotalEth,
+                        prevTotalEth + (increase / 1 gwei) * 1 gwei,
+                        1 days,
+                        _upperBound
+                    )
+                );
                 vm.prank(oracleMember);
                 oracle.reportBeacon(epoch, totalBalanceReported + uint64((increase / 1 gwei)), _initialValidatorCount);
             } else {
@@ -1315,9 +1333,8 @@ contract RiverV1SetupOneTests is Test, BytesGenerator {
                 oracle.reportBeacon(epoch, totalBalanceReported + uint64((increase / 1 gwei)), _initialValidatorCount);
                 assert(address(elFeeRecipient).balance == 0);
             }
-
-        } else { // balance decrease
-
+        } else {
+            // balance decrease
             uint256 maxDecrease = (prevTotalEth * _lowerBound) / 10000;
 
             uint256 decrease = maxDecrease * _delta / (middle / 2);
@@ -1325,7 +1342,15 @@ contract RiverV1SetupOneTests is Test, BytesGenerator {
             (epoch,,) = oracle.getCurrentFrame();
 
             if (_delta > middle / 2 && _lowerBound > 0) {
-                vm.expectRevert(abi.encodeWithSignature("BeaconBalanceDecreaseOutOfBounds(uint256,uint256,uint256,uint256)", prevTotalEth, prevTotalEth - (decrease / 1 gwei) * 1 gwei, 1 days, _lowerBound));
+                vm.expectRevert(
+                    abi.encodeWithSignature(
+                        "BeaconBalanceDecreaseOutOfBounds(uint256,uint256,uint256,uint256)",
+                        prevTotalEth,
+                        prevTotalEth - (decrease / 1 gwei) * 1 gwei,
+                        1 days,
+                        _lowerBound
+                    )
+                );
                 vm.prank(oracleMember);
                 oracle.reportBeacon(epoch, totalBalanceReported - uint64((decrease / 1 gwei)), _initialValidatorCount);
             } else {
@@ -1337,9 +1362,7 @@ contract RiverV1SetupOneTests is Test, BytesGenerator {
                 oracle.reportBeacon(epoch, totalBalanceReported - uint64((decrease / 1 gwei)), _initialValidatorCount);
                 assert(address(elFeeRecipient).balance == 0);
             }
-
         }
-
     }
 
     function testRiverUpperBoundsFuzzing(uint8 _initialValidatorCount, uint16 _upperBound) external {
