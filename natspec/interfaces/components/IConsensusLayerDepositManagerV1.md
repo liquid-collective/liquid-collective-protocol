@@ -80,9 +80,52 @@ event FundedValidatorKey(bytes publicKey)
 |---|---|---|
 | publicKey  | bytes | undefined |
 
+### SetDepositContractAddress
+
+```solidity
+event SetDepositContractAddress(address indexed depositContract)
+```
+
+
+
+
+
+#### Parameters
+
+| Name | Type | Description |
+|---|---|---|
+| depositContract `indexed` | address | undefined |
+
+### SetWithdrawalCredentials
+
+```solidity
+event SetWithdrawalCredentials(bytes32 withdrawalCredentials)
+```
+
+
+
+
+
+#### Parameters
+
+| Name | Type | Description |
+|---|---|---|
+| withdrawalCredentials  | bytes32 | undefined |
+
 
 
 ## Errors
+
+### ErrorOnDeposit
+
+```solidity
+error ErrorOnDeposit()
+```
+
+
+
+
+
 
 ### InconsistentPublicKeys
 

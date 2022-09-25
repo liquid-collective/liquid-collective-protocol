@@ -10,17 +10,6 @@
 
 ## Methods
 
-### acceptOwnership
-
-```solidity
-function acceptOwnership() external nonpayable
-```
-
-
-
-
-
-
 ### allowance
 
 ```solidity
@@ -128,6 +117,29 @@ function decimals() external pure returns (uint8)
 |---|---|---|
 | _0 | uint8 | undefined |
 
+### decreaseAllowance
+
+```solidity
+function decreaseAllowance(address _spender, uint256 _subtractableValue) external nonpayable returns (bool success)
+```
+
+
+
+
+
+#### Parameters
+
+| Name | Type | Description |
+|---|---|---|
+| _spender | address | undefined |
+| _subtractableValue | uint256 | undefined |
+
+#### Returns
+
+| Name | Type | Description |
+|---|---|---|
+| success | bool | undefined |
+
 ### deposit
 
 ```solidity
@@ -171,23 +183,6 @@ function depositToConsensusLayer(uint256 _maxCount) external nonpayable
 |---|---|---|
 | _maxCount | uint256 | undefined |
 
-### getAdministrator
-
-```solidity
-function getAdministrator() external view returns (address)
-```
-
-
-
-
-
-
-#### Returns
-
-| Name | Type | Description |
-|---|---|---|
-| _0 | address | undefined |
-
 ### getAllowlist
 
 ```solidity
@@ -205,10 +200,10 @@ function getAllowlist() external view returns (address)
 |---|---|---|
 | _0 | address | undefined |
 
-### getBeaconValidatorBalanceSum
+### getCLValidatorCount
 
 ```solidity
-function getBeaconValidatorBalanceSum() external view returns (uint256 beaconValidatorBalanceSum)
+function getCLValidatorCount() external view returns (uint256)
 ```
 
 
@@ -220,12 +215,12 @@ function getBeaconValidatorBalanceSum() external view returns (uint256 beaconVal
 
 | Name | Type | Description |
 |---|---|---|
-| beaconValidatorBalanceSum | uint256 | undefined |
+| _0 | uint256 | undefined |
 
-### getBeaconValidatorCount
+### getCLValidatorTotalBalance
 
 ```solidity
-function getBeaconValidatorCount() external view returns (uint256 beaconValidatorCount)
+function getCLValidatorTotalBalance() external view returns (uint256)
 ```
 
 
@@ -237,7 +232,24 @@ function getBeaconValidatorCount() external view returns (uint256 beaconValidato
 
 | Name | Type | Description |
 |---|---|---|
-| beaconValidatorCount | uint256 | undefined |
+| _0 | uint256 | undefined |
+
+### getCollector
+
+```solidity
+function getCollector() external view returns (address)
+```
+
+
+
+
+
+
+#### Returns
+
+| Name | Type | Description |
+|---|---|---|
+| _0 | address | undefined |
 
 ### getDepositedValidatorCount
 
@@ -290,44 +302,10 @@ function getGlobalFee() external view returns (uint256)
 |---|---|---|
 | _0 | uint256 | undefined |
 
-### getOperatorRewardsShare
-
-```solidity
-function getOperatorRewardsShare() external view returns (uint256)
-```
-
-
-
-
-
-
-#### Returns
-
-| Name | Type | Description |
-|---|---|---|
-| _0 | uint256 | undefined |
-
 ### getOracle
 
 ```solidity
-function getOracle() external view returns (address oracle)
-```
-
-
-
-
-
-
-#### Returns
-
-| Name | Type | Description |
-|---|---|---|
-| oracle | address | undefined |
-
-### getPendingAdministrator
-
-```solidity
-function getPendingAdministrator() external view returns (address)
+function getOracle() external view returns (address)
 ```
 
 
@@ -358,23 +336,6 @@ function getPendingEth() external view returns (uint256)
 |---|---|---|
 | _0 | uint256 | undefined |
 
-### getTreasury
-
-```solidity
-function getTreasury() external view returns (address)
-```
-
-
-
-
-
-
-#### Returns
-
-| Name | Type | Description |
-|---|---|---|
-| _0 | address | undefined |
-
 ### getWithdrawalCredentials
 
 ```solidity
@@ -392,10 +353,33 @@ function getWithdrawalCredentials() external view returns (bytes32)
 |---|---|---|
 | _0 | bytes32 | undefined |
 
+### increaseAllowance
+
+```solidity
+function increaseAllowance(address _spender, uint256 _additionalValue) external nonpayable returns (bool success)
+```
+
+
+
+
+
+#### Parameters
+
+| Name | Type | Description |
+|---|---|---|
+| _spender | address | undefined |
+| _additionalValue | uint256 | undefined |
+
+#### Returns
+
+| Name | Type | Description |
+|---|---|---|
+| success | bool | undefined |
+
 ### initRiverV1
 
 ```solidity
-function initRiverV1(address _depositContractAddress, address _elFeeRecipientAddress, bytes32 _withdrawalCredentials, address _oracleAddress, address _systemAdministratorAddress, address _allowlistAddress, address _operatorRegistryAddress, address _treasuryAddress, uint256 _globalFee, uint256 _operatorRewardsShare) external nonpayable
+function initRiverV1(address _depositContractAddress, address _elFeeRecipientAddress, bytes32 _withdrawalCredentials, address _oracleAddress, address _systemAdministratorAddress, address _allowlistAddress, address _operatorRegistryAddress, address _collectorAddress, uint256 _globalFee) external nonpayable
 ```
 
 
@@ -413,9 +397,8 @@ function initRiverV1(address _depositContractAddress, address _elFeeRecipientAdd
 | _systemAdministratorAddress | address | undefined |
 | _allowlistAddress | address | undefined |
 | _operatorRegistryAddress | address | undefined |
-| _treasuryAddress | address | undefined |
+| _collectorAddress | address | undefined |
 | _globalFee | uint256 | undefined |
-| _operatorRewardsShare | uint256 | undefined |
 
 ### name
 
@@ -461,10 +444,26 @@ function setAllowlist(address _newAllowlist) external nonpayable
 |---|---|---|
 | _newAllowlist | address | undefined |
 
-### setBeaconData
+### setCollector
 
 ```solidity
-function setBeaconData(uint256 _validatorCount, uint256 _validatorBalanceSum, bytes32 _roundId) external nonpayable
+function setCollector(address _newCollector) external nonpayable
+```
+
+
+
+
+
+#### Parameters
+
+| Name | Type | Description |
+|---|---|---|
+| _newCollector | address | undefined |
+
+### setConsensusLayerData
+
+```solidity
+function setConsensusLayerData(uint256 _validatorCount, uint256 _validatorTotalBalance, bytes32 _roundId) external nonpayable
 ```
 
 
@@ -476,7 +475,7 @@ function setBeaconData(uint256 _validatorCount, uint256 _validatorBalanceSum, by
 | Name | Type | Description |
 |---|---|---|
 | _validatorCount | uint256 | undefined |
-| _validatorBalanceSum | uint256 | undefined |
+| _validatorTotalBalance | uint256 | undefined |
 | _roundId | bytes32 | undefined |
 
 ### setELFeeRecipient
@@ -511,22 +510,6 @@ function setGlobalFee(uint256 newFee) external nonpayable
 |---|---|---|
 | newFee | uint256 | undefined |
 
-### setOperatorRewardsShare
-
-```solidity
-function setOperatorRewardsShare(uint256 newOperatorRewardsShare) external nonpayable
-```
-
-
-
-
-
-#### Parameters
-
-| Name | Type | Description |
-|---|---|---|
-| newOperatorRewardsShare | uint256 | undefined |
-
 ### setOracle
 
 ```solidity
@@ -542,22 +525,6 @@ function setOracle(address _oracleAddress) external nonpayable
 | Name | Type | Description |
 |---|---|---|
 | _oracleAddress | address | undefined |
-
-### setTreasury
-
-```solidity
-function setTreasury(address _newTreasury) external nonpayable
-```
-
-
-
-
-
-#### Parameters
-
-| Name | Type | Description |
-|---|---|---|
-| _newTreasury | address | undefined |
 
 ### sharesFromUnderlyingBalance
 
@@ -679,22 +646,6 @@ function transferFrom(address _from, address _to, uint256 _value) external nonpa
 |---|---|---|
 | _0 | bool | undefined |
 
-### transferOwnership
-
-```solidity
-function transferOwnership(address _newAdmin) external nonpayable
-```
-
-
-
-
-
-#### Parameters
-
-| Name | Type | Description |
-|---|---|---|
-| _newAdmin | address | undefined |
-
 ### underlyingBalanceFromShares
 
 ```solidity
@@ -739,10 +690,10 @@ event Approval(address indexed owner, address indexed spender, uint256 value)
 | spender `indexed` | address | undefined |
 | value  | uint256 | undefined |
 
-### BeaconDataUpdate
+### ConsensusLayerDataUpdate
 
 ```solidity
-event BeaconDataUpdate(uint256 validatorCount, uint256 validatorBalanceSum, bytes32 roundId)
+event ConsensusLayerDataUpdate(uint256 validatorCount, uint256 validatorTotalBalance, bytes32 roundId)
 ```
 
 
@@ -754,7 +705,7 @@ event BeaconDataUpdate(uint256 validatorCount, uint256 validatorBalanceSum, byte
 | Name | Type | Description |
 |---|---|---|
 | validatorCount  | uint256 | undefined |
-| validatorBalanceSum  | uint256 | undefined |
+| validatorTotalBalance  | uint256 | undefined |
 | roundId  | bytes32 | undefined |
 
 ### FundedValidatorKey
@@ -788,6 +739,134 @@ event PulledELFees(uint256 amount)
 | Name | Type | Description |
 |---|---|---|
 | amount  | uint256 | undefined |
+
+### SetAllowlist
+
+```solidity
+event SetAllowlist(address indexed allowlist)
+```
+
+
+
+
+
+#### Parameters
+
+| Name | Type | Description |
+|---|---|---|
+| allowlist `indexed` | address | undefined |
+
+### SetCollector
+
+```solidity
+event SetCollector(address indexed collector)
+```
+
+
+
+
+
+#### Parameters
+
+| Name | Type | Description |
+|---|---|---|
+| collector `indexed` | address | undefined |
+
+### SetDepositContractAddress
+
+```solidity
+event SetDepositContractAddress(address indexed depositContract)
+```
+
+
+
+
+
+#### Parameters
+
+| Name | Type | Description |
+|---|---|---|
+| depositContract `indexed` | address | undefined |
+
+### SetELFeeRecipient
+
+```solidity
+event SetELFeeRecipient(address indexed elFeeRecipient)
+```
+
+
+
+
+
+#### Parameters
+
+| Name | Type | Description |
+|---|---|---|
+| elFeeRecipient `indexed` | address | undefined |
+
+### SetGlobalFee
+
+```solidity
+event SetGlobalFee(uint256 fee)
+```
+
+
+
+
+
+#### Parameters
+
+| Name | Type | Description |
+|---|---|---|
+| fee  | uint256 | undefined |
+
+### SetOperatorsRegistry
+
+```solidity
+event SetOperatorsRegistry(address indexed operatorRegistry)
+```
+
+
+
+
+
+#### Parameters
+
+| Name | Type | Description |
+|---|---|---|
+| operatorRegistry `indexed` | address | undefined |
+
+### SetOracle
+
+```solidity
+event SetOracle(address indexed oracleAddress)
+```
+
+
+
+
+
+#### Parameters
+
+| Name | Type | Description |
+|---|---|---|
+| oracleAddress `indexed` | address | undefined |
+
+### SetWithdrawalCredentials
+
+```solidity
+event SetWithdrawalCredentials(bytes32 withdrawalCredentials)
+```
+
+
+
+
+
+#### Parameters
+
+| Name | Type | Description |
+|---|---|---|
+| withdrawalCredentials  | bytes32 | undefined |
 
 ### Transfer
 
@@ -859,6 +938,22 @@ error BalanceTooLow()
 
 
 
+### Denied
+
+```solidity
+error Denied(address _account)
+```
+
+
+
+
+
+#### Parameters
+
+| Name | Type | Description |
+|---|---|---|
+| _account | address | undefined |
+
 ### EmptyDeposit
 
 ```solidity
@@ -874,6 +969,17 @@ error EmptyDeposit()
 
 ```solidity
 error EmptyDonation()
+```
+
+
+
+
+
+
+### ErrorOnDeposit
+
+```solidity
+error ErrorOnDeposit()
 ```
 
 
@@ -985,6 +1091,23 @@ error NullTransfer()
 
 
 
+
+### UnauthorizedTransfer
+
+```solidity
+error UnauthorizedTransfer(address _from, address _to)
+```
+
+
+
+
+
+#### Parameters
+
+| Name | Type | Description |
+|---|---|---|
+| _from | address | undefined |
+| _to | address | undefined |
 
 ### ZeroMintedShares
 

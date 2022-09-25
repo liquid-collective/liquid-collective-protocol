@@ -18,19 +18,6 @@ abstract contract UserDepositManagerV1 is IUserDepositManagerV1 {
     /// @param _amount Amount deposited
     function _onDeposit(address _depositor, address _recipient, uint256 _amount) internal virtual;
 
-    /// @notice Internal utility calling the deposit handler and emitting the deposit details
-    function _deposit(address _recipient) internal {
-        if (msg.value == 0) {
-            revert EmptyDeposit();
-        }
-
-        BalanceToDeposit.set(BalanceToDeposit.get() + msg.value);
-
-        _onDeposit(msg.sender, _recipient, msg.value);
-
-        emit UserDeposit(msg.sender, _recipient, msg.value);
-    }
-
     /// @notice Explicit deposit method to mint on msg.sender
     function deposit() external payable {
         _deposit(msg.sender);
@@ -51,5 +38,18 @@ abstract contract UserDepositManagerV1 is IUserDepositManagerV1 {
     /// @notice Invalid call, when the user sends a transaction with a data payload but no method matched
     fallback() external payable {
         revert LibErrors.InvalidCall();
+    }
+
+    /// @notice Internal utility calling the deposit handler and emitting the deposit details
+    function _deposit(address _recipient) internal {
+        if (msg.value == 0) {
+            revert EmptyDeposit();
+        }
+
+        BalanceToDeposit.set(BalanceToDeposit.get() + msg.value);
+
+        _onDeposit(msg.sender, _recipient, msg.value);
+
+        emit UserDeposit(msg.sender, _recipient, msg.value);
     }
 }

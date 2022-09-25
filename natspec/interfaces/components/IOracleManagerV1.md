@@ -10,10 +10,10 @@
 
 ## Methods
 
-### getBeaconValidatorBalanceSum
+### getCLValidatorCount
 
 ```solidity
-function getBeaconValidatorBalanceSum() external view returns (uint256 beaconValidatorBalanceSum)
+function getCLValidatorCount() external view returns (uint256)
 ```
 
 
@@ -25,12 +25,12 @@ function getBeaconValidatorBalanceSum() external view returns (uint256 beaconVal
 
 | Name | Type | Description |
 |---|---|---|
-| beaconValidatorBalanceSum | uint256 | undefined |
+| _0 | uint256 | undefined |
 
-### getBeaconValidatorCount
+### getCLValidatorTotalBalance
 
 ```solidity
-function getBeaconValidatorCount() external view returns (uint256 beaconValidatorCount)
+function getCLValidatorTotalBalance() external view returns (uint256)
 ```
 
 
@@ -42,12 +42,12 @@ function getBeaconValidatorCount() external view returns (uint256 beaconValidato
 
 | Name | Type | Description |
 |---|---|---|
-| beaconValidatorCount | uint256 | undefined |
+| _0 | uint256 | undefined |
 
 ### getOracle
 
 ```solidity
-function getOracle() external view returns (address oracle)
+function getOracle() external view returns (address)
 ```
 
 
@@ -59,12 +59,12 @@ function getOracle() external view returns (address oracle)
 
 | Name | Type | Description |
 |---|---|---|
-| oracle | address | undefined |
+| _0 | address | undefined |
 
-### setBeaconData
+### setConsensusLayerData
 
 ```solidity
-function setBeaconData(uint256 _validatorCount, uint256 _validatorBalanceSum, bytes32 _roundId) external nonpayable
+function setConsensusLayerData(uint256 _validatorCount, uint256 _validatorTotalBalance, bytes32 _roundId) external nonpayable
 ```
 
 
@@ -76,7 +76,7 @@ function setBeaconData(uint256 _validatorCount, uint256 _validatorBalanceSum, by
 | Name | Type | Description |
 |---|---|---|
 | _validatorCount | uint256 | undefined |
-| _validatorBalanceSum | uint256 | undefined |
+| _validatorTotalBalance | uint256 | undefined |
 | _roundId | bytes32 | undefined |
 
 ### setOracle
@@ -99,10 +99,10 @@ function setOracle(address _oracleAddress) external nonpayable
 
 ## Events
 
-### BeaconDataUpdate
+### ConsensusLayerDataUpdate
 
 ```solidity
-event BeaconDataUpdate(uint256 validatorCount, uint256 validatorBalanceSum, bytes32 roundId)
+event ConsensusLayerDataUpdate(uint256 validatorCount, uint256 validatorTotalBalance, bytes32 roundId)
 ```
 
 
@@ -114,8 +114,24 @@ event BeaconDataUpdate(uint256 validatorCount, uint256 validatorBalanceSum, byte
 | Name | Type | Description |
 |---|---|---|
 | validatorCount  | uint256 | undefined |
-| validatorBalanceSum  | uint256 | undefined |
+| validatorTotalBalance  | uint256 | undefined |
 | roundId  | bytes32 | undefined |
+
+### SetOracle
+
+```solidity
+event SetOracle(address indexed oracleAddress)
+```
+
+
+
+
+
+#### Parameters
+
+| Name | Type | Description |
+|---|---|---|
+| oracleAddress `indexed` | address | undefined |
 
 
 

@@ -17,6 +17,8 @@ import "./state/wlseth/BalanceOf.sol";
 /// @notice This contract wraps the lsETH token into a rebase token, more suitable for some DeFi use-cases
 ///         like stable swaps.
 contract WLSETHV1 is IWLSETHV1, Initializable, ReentrancyGuard {
+    /// @notice Ensures that the value is not 0
+    /// @param _value Value that must be > 0
     modifier isNotNull(uint256 _value) {
         if (_value == 0) {
             revert NullTransfer();
@@ -24,6 +26,9 @@ contract WLSETHV1 is IWLSETHV1, Initializable, ReentrancyGuard {
         _;
     }
 
+    /// @notice Ensures that the owner has enough funds
+    /// @param _owner Balance to verify
+    /// @param _value Minimum required value
     modifier hasFunds(address _owner, uint256 _value) {
         if (_balanceOf(_owner) < _value) {
             revert BalanceTooLow();
@@ -39,47 +44,55 @@ contract WLSETHV1 is IWLSETHV1, Initializable, ReentrancyGuard {
     }
 
     /// @notice Retrieves the token full name
+    /// @return The name of the token
     function name() external pure returns (string memory) {
         return "Wrapped Liquid Staked ETH";
     }
 
-    /// @notice Retrieves the token ticker
+    /// @notice Retrieves the token symbol
+    /// @return The symbol of the token
     function symbol() external pure returns (string memory) {
         return "wLsETH";
     }
 
     /// @notice Retrieves the token decimal count
+    /// @return The decimal count
     function decimals() external pure returns (uint8) {
         return 18;
     }
 
     /// @notice Retrieves the token total supply
+    /// @return The total supply
     function totalSupply() external view returns (uint256) {
         return IRiverV1(payable(RiverAddress.get())).balanceOfUnderlying(address(this));
     }
 
     /// @notice Retrieves the token balance of the specified user
     /// @param _owner Owner to check the balance
-    function balanceOf(address _owner) external view returns (uint256 balance) {
+    /// @return The balance of the owner
+    function balanceOf(address _owner) external view returns (uint256) {
         return _balanceOf(_owner);
     }
 
     /// @notice Retrieves the raw shares count of the user
     /// @param _owner Owner to check the shares balance
-    function sharesOf(address _owner) external view returns (uint256 shares) {
+    /// @return The shares of the owner
+    function sharesOf(address _owner) external view returns (uint256) {
         return BalanceOf.get(_owner);
     }
 
     /// @notice Retrieves the token allowance given from one address to another
     /// @param _owner Owner that gave the allowance
     /// @param _spender Spender that received the allowance
-    function allowance(address _owner, address _spender) external view returns (uint256 remaining) {
+    /// @return The allowance of the owner to the spender
+    function allowance(address _owner, address _spender) external view returns (uint256) {
         return ApprovalsPerOwner.get(_owner, _spender);
     }
 
     /// @notice Transfers tokens between the message sender and a recipient
     /// @param _to Recipient of the transfer
     /// @param _value Amount to transfer
+    /// @return True if success
     function transfer(address _to, uint256 _value)
         external
         isNotNull(_value)
@@ -93,10 +106,11 @@ contract WLSETHV1 is IWLSETHV1, Initializable, ReentrancyGuard {
     }
 
     /// @notice Transfers tokens between two accounts
-    /// @dev If _from is not the message sender, then it is expected that _from has given at leave _value allowance to msg.sender
+    /// @dev It is expected that _from has given at least _value allowance to msg.sender
     /// @param _from Sender account
     /// @param _to Recipient of the transfer
     /// @param _value Amount to transfer
+    /// @return True if success
     function transferFrom(address _from, address _to, uint256 _value)
         external
         isNotNull(_value)
@@ -113,7 +127,8 @@ contract WLSETHV1 is IWLSETHV1, Initializable, ReentrancyGuard {
     /// @notice Approves another account to transfer tokens
     /// @param _spender Spender that receives the allowance
     /// @param _value Amount to allow
-    function approve(address _spender, uint256 _value) external returns (bool success) {
+    /// @return True if success
+    function approve(address _spender, uint256 _value) external returns (bool) {
         ApprovalsPerOwner.set(msg.sender, _spender, _value);
         emit Approval(msg.sender, _spender, _value);
         return true;
@@ -122,7 +137,8 @@ contract WLSETHV1 is IWLSETHV1, Initializable, ReentrancyGuard {
     /// @notice Increase allowance to another account
     /// @param _spender Spender that receives the allowance
     /// @param _additionalValue Amount to add
-    function increaseAllowance(address _spender, uint256 _additionalValue) external returns (bool success) {
+    /// @return True if success
+    function increaseAllowance(address _spender, uint256 _additionalValue) external returns (bool) {
         uint256 newApprovalValue = ApprovalsPerOwner.get(msg.sender, _spender) + _additionalValue;
         ApprovalsPerOwner.set(msg.sender, _spender, newApprovalValue);
         emit Approval(msg.sender, _spender, newApprovalValue);
@@ -132,7 +148,8 @@ contract WLSETHV1 is IWLSETHV1, Initializable, ReentrancyGuard {
     /// @notice Decrease allowance to another account
     /// @param _spender Spender that receives the allowance
     /// @param _subtractableValue Amount to subtract
-    function decreaseAllowance(address _spender, uint256 _subtractableValue) external returns (bool success) {
+    /// @return True if success
+    function decreaseAllowance(address _spender, uint256 _subtractableValue) external returns (bool) {
         uint256 newApprovalValue = ApprovalsPerOwner.get(msg.sender, _spender) - _subtractableValue;
         ApprovalsPerOwner.set(msg.sender, _spender, newApprovalValue);
         emit Approval(msg.sender, _spender, newApprovalValue);
@@ -170,6 +187,9 @@ contract WLSETHV1 is IWLSETHV1, Initializable, ReentrancyGuard {
         emit Burn(_recipient, _shares);
     }
 
+    /// @notice Internal utility to spend the allowance of an account from the message sender
+    /// @param _from Address owning the allowance
+    /// @param _value Amount of allowance to spend
     function _spendAllowance(address _from, uint256 _value) internal {
         uint256 currentAllowance = ApprovalsPerOwner.get(_from, msg.sender);
         if (currentAllowance < _value) {
@@ -180,10 +200,18 @@ contract WLSETHV1 is IWLSETHV1, Initializable, ReentrancyGuard {
         }
     }
 
-    function _balanceOf(address _owner) internal view returns (uint256 balance) {
+    /// @notice Internal utility to retrieve the amount of token per owner
+    /// @param _owner Account to be checked
+    /// @return The balance of the account
+    function _balanceOf(address _owner) internal view returns (uint256) {
         return IRiverV1(payable(RiverAddress.get())).underlyingBalanceFromShares(BalanceOf.get(_owner));
     }
 
+    /// @notice Internal utility to perform an unchecked transfer
+    /// @param _from Address sending the tokens
+    /// @param _to Address receiving the tokens
+    /// @param _value Amount to be sent
+    /// @return True if success
     function _transfer(address _from, address _to, uint256 _value) internal returns (bool) {
         uint256 valueToShares = IRiverV1(payable(RiverAddress.get())).sharesFromUnderlyingBalance(_value);
         BalanceOf.set(_from, BalanceOf.get(_from) - valueToShares);

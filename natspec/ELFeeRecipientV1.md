@@ -39,6 +39,42 @@ Pulls all the ETH to the River contract
 
 
 
+## Events
+
+### Initialize
+
+```solidity
+event Initialize(uint256 version, bytes cdata)
+```
+
+Emitted when the contract is properly initialized
+
+
+
+#### Parameters
+
+| Name | Type | Description |
+|---|---|---|
+| version  | uint256 | undefined |
+| cdata  | bytes | undefined |
+
+### SetRiver
+
+```solidity
+event SetRiver(address indexed river)
+```
+
+
+
+
+
+#### Parameters
+
+| Name | Type | Description |
+|---|---|---|
+| river `indexed` | address | undefined |
+
+
 
 ## Errors
 
@@ -59,7 +95,7 @@ error InvalidCall()
 error InvalidInitialization(uint256 version, uint256 expectedVersion)
 ```
 
-
+An error occured during the initialization
 
 
 
@@ -67,8 +103,8 @@ error InvalidInitialization(uint256 version, uint256 expectedVersion)
 
 | Name | Type | Description |
 |---|---|---|
-| version | uint256 | undefined |
-| expectedVersion | uint256 | undefined |
+| version | uint256 | The version that was attempting the be initialized |
+| expectedVersion | uint256 | The version that was expected |
 
 ### InvalidZeroAddress
 

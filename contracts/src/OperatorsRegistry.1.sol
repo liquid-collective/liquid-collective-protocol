@@ -16,6 +16,9 @@ import "./state/shared/RiverAddress.sol";
 /// @author Kiln
 /// @notice This contract handles the list of operators and their keys
 contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrable {
+    /// @notice Maximum validators given to an operator per selection loop round
+    uint256 internal constant MAX_VALIDATOR_ATTRIBUTION_PER_ROUND = 5;
+
     /// @notice Initializes the operators registry
     /// @param _admin Admin in charge of managing operators
     /// @param _river Address of River system
@@ -25,6 +28,7 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
         emit SetRiver(_river);
     }
 
+    /// @notice Prevent unauthorized calls
     modifier onlyRiver() virtual {
         if (msg.sender != RiverAddress.get()) {
             revert LibErrors.Unauthorized(msg.sender);
@@ -50,11 +54,41 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
     }
 
     /// @notice Retrieve the River address
+    /// @return The address of River
     function getRiver() external view returns (address) {
         return RiverAddress.get();
     }
 
+    /// @notice Get operator details
+    /// @param _index The index of the operator
+    /// @return The details of the operator
+    function getOperator(uint256 _index) external view returns (Operators.Operator memory) {
+        return Operators.get(_index);
+    }
+
+    /// @notice Get operator count
+    /// @return The operator count
+    function getOperatorCount() external view returns (uint256) {
+        return Operators.getCount();
+    }
+
+    /// @notice Get the details of a validator
+    /// @param _operatorIndex The index of the operator
+    /// @param _validatorIndex The index of the validator
+    /// @return publicKey The public key of the validator
+    /// @return signature The signature used during deposit
+    /// @return funded True if validator has been funded
+    function getValidator(uint256 _operatorIndex, uint256 _validatorIndex)
+        external
+        view
+        returns (bytes memory publicKey, bytes memory signature, bool funded)
+    {
+        (publicKey, signature) = ValidatorKeys.get(_operatorIndex, _validatorIndex);
+        funded = _validatorIndex < Operators.get(_operatorIndex).funded;
+    }
+
     /// @notice Retrieve the active operator set
+    /// @return The list of active operators and their details
     function listActiveOperators() external view returns (Operators.Operator[] memory) {
         return Operators.getAllActive();
     }
@@ -63,6 +97,7 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
     /// @dev Only callable by the administrator
     /// @param _name The name identifying the operator
     /// @param _operator The address representing the operator, receiving the rewards
+    /// @return The index of the new operator
     function addOperator(string calldata _name, address _operator) external onlyAdmin returns (uint256) {
         Operators.Operator memory newOperator = Operators.Operator({
             active: true,
@@ -96,7 +131,6 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
 
     /// @notice Changes the operator name
     /// @dev Only callable by the administrator or the operator
-    /// @dev No name conflict can exist
     /// @param _index The operator index
     /// @param _newName The new operator name
     function setOperatorName(uint256 _index, string calldata _newName) external onlyOperatorOrAdmin(_index) {
@@ -301,31 +335,10 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
         }
     }
 
-    /// @notice Get operator details
-    /// @param _index The index of the operator
-    function getOperator(uint256 _index) external view returns (Operators.Operator memory) {
-        return Operators.get(_index);
-    }
-
-    /// @notice Get operator count
-    function getOperatorCount() external view returns (uint256) {
-        return Operators.getCount();
-    }
-
-    /// @notice Get the details of a validator
-    /// @param _operatorIndex The index of the operator
-    /// @param _validatorIndex The index of the validator
-    function getValidator(uint256 _operatorIndex, uint256 _validatorIndex)
-        external
-        view
-        returns (bytes memory publicKey, bytes memory signature, bool funded)
-    {
-        (publicKey, signature) = ValidatorKeys.get(_operatorIndex, _validatorIndex);
-        funded = _validatorIndex < Operators.get(_operatorIndex).funded;
-    }
-
     /// @notice Retrieve validator keys based on operator statuses
     /// @param _count Max amount of keys requested
+    /// @return publicKeys An array of public keys
+    /// @return signatures An array of signatures linked to the public keys
     function pickNextValidators(uint256 _count)
         external
         onlyRiver
@@ -335,12 +348,9 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
     }
 
     /// @notice Internal utility to concatenate bytes arrays together
-    function _concatenateByteArrays(bytes[] memory arr1, bytes[] memory arr2)
-        internal
-        pure
-        returns (bytes[] memory res)
-    {
-        res = new bytes[](arr1.length + arr2.length);
+    /// @return The result of the concatenation
+    function _concatenateByteArrays(bytes[] memory arr1, bytes[] memory arr2) internal pure returns (bytes[] memory) {
+        bytes[] memory res = new bytes[](arr1.length + arr2.length);
         for (uint256 idx = 0; idx < arr1.length;) {
             res[idx] = arr1[idx];
             unchecked {
@@ -353,20 +363,43 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
                 ++idx;
             }
         }
+        return res;
     }
 
-    uint256 internal constant MAX_VALIDATOR_ATTRIBUTION_PER_ROUND = 5;
-
+    /// @notice Internal utility to verify if an operator has fundable keys during the selection process
+    /// @return True if at least one fundable key is available
     function _hasFundableKeys(Operators.CachedOperator memory _operator) internal pure returns (bool) {
         return (_operator.funded + _operator.picked) < _operator.limit;
     }
 
+    /// @notice Internal utility to get the count of active validators during the selection process
+    /// @return The count of active validators for the operator
     function _getActiveKeyCount(Operators.CachedOperator memory _operator) internal pure returns (uint256) {
         return (_operator.funded + _operator.picked) - _operator.stopped;
     }
 
-    /// @notice Handler called whenever a deposit to the consensus layer is made. Should retrieve _requestedAmount or lower keys
+    /// @notice Internal utility to retrieve _requestedAmount or lower fundable keys
+    /// @dev The selection process starts by retrieving the full list of active operators with at least one fundable key.
+    /// @dev
+    /// @dev An operator is considered to have at least one fundable key when their staking limit is higher than their funded key count.
+    /// @dev
+    /// @dev    isFundable = operator.active && operator.limit > operator.funded
+    /// @dev
+    /// @dev The internal utility will loop on all operators and select the operator with the lowest active validator count.
+    /// @dev The active validator count is computed by subtracting the stopped validator count to the funded validator count.
+    /// @dev
+    /// @dev    activeValidatorCount = operator.funded - operator.stopped
+    /// @dev
+    /// @dev During the selection process, we keep in memory all previously selected operators and the number of given validators inside a picked field.
+    /// @dev
+    /// @dev    isFundable = operator.active && operator.limit > (operator.funded + operator.picked)
+    /// @dev    activeValidatorCount = (operator.funded + operator.picked) - operator.stopped
+    /// @dev
+    /// @dev When we reach the requested key count or when all available keys are used, we perform a final loop on all the operators and extract keys
+    /// @dev if any operator has a positive picked count. We then update the storage counters and return the arrays with the public keys and signatures.
     /// @param _count Amount of keys required. Contract is expected to send _count or lower.
+    /// @return publicKeys An array of fundable public keys
+    /// @return signatures An array of signatures linked to the public keys
     function _pickNextValidatorsFromActiveOperators(uint256 _count)
         internal
         returns (bytes[] memory publicKeys, bytes[] memory signatures)

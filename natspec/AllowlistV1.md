@@ -4,16 +4,27 @@
 
 > Allowlist (v1)
 
-This contract handles the list of allowed recipients.
+This contract handles the list of allowed recipients.All accounts have an uitn256 value associated with their addresses whereeach bit represents a right in the system. The DENY_MASK defined the maskused to identify if the denied bit is on, preventing users from interactingwith the system
 
 
 
 ## Methods
 
+### acceptAdmin
+
+```solidity
+function acceptAdmin() external nonpayable
+```
+
+Accept the transfer of ownership
+
+*Only callable by the pending admin. Resets the pending admin if succesful.*
+
+
 ### allow
 
 ```solidity
-function allow(address[] _accounts, uint256[] _statuses) external nonpayable
+function allow(address[] _accounts, uint256[] _permissions) external nonpayable
 ```
 
 Sets the allowlisting status for one or more accounts
@@ -25,7 +36,24 @@ Sets the allowlisting status for one or more accounts
 | Name | Type | Description |
 |---|---|---|
 | _accounts | address[] | Accounts with statuses to edit |
-| _statuses | uint256[] | Allowlist statuses for each account, in the same order as _accounts |
+| _permissions | uint256[] | Allowlist permissions for each account, in the same order as _accounts |
+
+### getAdmin
+
+```solidity
+function getAdmin() external view returns (address)
+```
+
+Retrieves the current admin address
+
+
+
+
+#### Returns
+
+| Name | Type | Description |
+|---|---|---|
+| _0 | address | The admin address |
 
 ### getAllower
 
@@ -42,7 +70,24 @@ Retrieves the allower address
 
 | Name | Type | Description |
 |---|---|---|
-| _0 | address | undefined |
+| _0 | address | The address of the allower |
+
+### getPendingAdmin
+
+```solidity
+function getPendingAdmin() external view returns (address)
+```
+
+Retrieve the current pending admin address
+
+
+
+
+#### Returns
+
+| Name | Type | Description |
+|---|---|---|
+| _0 | address | The pending admin address |
 
 ### getPermissions
 
@@ -64,7 +109,7 @@ This method retrieves the raw permission value
 
 | Name | Type | Description |
 |---|---|---|
-| _0 | uint256 | undefined |
+| _0 | uint256 | The raw permissions value of the account |
 
 ### hasPermission
 
@@ -87,7 +132,7 @@ This method returns true if the user has the expected permission         ignorin
 
 | Name | Type | Description |
 |---|---|---|
-| _0 | bool | undefined |
+| _0 | bool | True if mask is respected |
 
 ### initAllowlistV1
 
@@ -127,7 +172,7 @@ This method returns true if the user has the expected permission and         is 
 
 | Name | Type | Description |
 |---|---|---|
-| _0 | bool | undefined |
+| _0 | bool | True if mask is respected and user is not allowed |
 
 ### isDenied
 
@@ -149,7 +194,7 @@ This method returns true if the user is in the deny list
 
 | Name | Type | Description |
 |---|---|---|
-| _0 | bool | undefined |
+| _0 | bool | True if user is denied access |
 
 ### onlyAllowed
 
@@ -167,6 +212,22 @@ This method should be used as a modifier and is expected to revert         if th
 |---|---|---|
 | _account | address | Recipient to verify |
 | _mask | uint256 | Combination of permissions to verify |
+
+### proposeAdmin
+
+```solidity
+function proposeAdmin(address _newAdmin) external nonpayable
+```
+
+Proposes a new address as admin
+
+*This security prevents setting and invalid address as an admin. The pendingadmin has to claim its ownership of the contract, and proves that the newaddress is able to perform regular transactions.*
+
+#### Parameters
+
+| Name | Type | Description |
+|---|---|---|
+| _newAdmin | address | New admin address |
 
 ### setAllower
 
@@ -188,10 +249,59 @@ Changes the allower address
 
 ## Events
 
-### ChangedAllowlistStatuses
+### Initialize
 
 ```solidity
-event ChangedAllowlistStatuses(address[] indexed accounts, uint256[] statuses)
+event Initialize(uint256 version, bytes cdata)
+```
+
+Emitted when the contract is properly initialized
+
+
+
+#### Parameters
+
+| Name | Type | Description |
+|---|---|---|
+| version  | uint256 | undefined |
+| cdata  | bytes | undefined |
+
+### SetAdmin
+
+```solidity
+event SetAdmin(address indexed admin)
+```
+
+
+
+
+
+#### Parameters
+
+| Name | Type | Description |
+|---|---|---|
+| admin `indexed` | address | undefined |
+
+### SetAllower
+
+```solidity
+event SetAllower(address indexed allower)
+```
+
+
+
+
+
+#### Parameters
+
+| Name | Type | Description |
+|---|---|---|
+| allower `indexed` | address | undefined |
+
+### SetAllowlistPermissions
+
+```solidity
+event SetAllowlistPermissions(address[] indexed accounts, uint256[] permissions)
 ```
 
 
@@ -203,7 +313,23 @@ event ChangedAllowlistStatuses(address[] indexed accounts, uint256[] statuses)
 | Name | Type | Description |
 |---|---|---|
 | accounts `indexed` | address[] | undefined |
-| statuses  | uint256[] | undefined |
+| permissions  | uint256[] | undefined |
+
+### SetPendingAdmin
+
+```solidity
+event SetPendingAdmin(address indexed pendingAdmin)
+```
+
+
+
+
+
+#### Parameters
+
+| Name | Type | Description |
+|---|---|---|
+| pendingAdmin `indexed` | address | undefined |
 
 
 
@@ -242,7 +368,7 @@ error InvalidAlloweeCount()
 error InvalidInitialization(uint256 version, uint256 expectedVersion)
 ```
 
-
+An error occured during the initialization
 
 
 
@@ -250,8 +376,8 @@ error InvalidInitialization(uint256 version, uint256 expectedVersion)
 
 | Name | Type | Description |
 |---|---|---|
-| version | uint256 | undefined |
-| expectedVersion | uint256 | undefined |
+| version | uint256 | The version that was attempting the be initialized |
+| expectedVersion | uint256 | The version that was expected |
 
 ### InvalidZeroAddress
 

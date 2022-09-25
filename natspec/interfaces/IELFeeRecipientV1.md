@@ -39,6 +39,25 @@ function pullELFees() external nonpayable
 
 
 
+## Events
+
+### SetRiver
+
+```solidity
+event SetRiver(address indexed river)
+```
+
+
+
+
+
+#### Parameters
+
+| Name | Type | Description |
+|---|---|---|
+| river `indexed` | address | undefined |
+
+
 
 ## Errors
 

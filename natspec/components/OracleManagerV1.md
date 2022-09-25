@@ -4,19 +4,19 @@
 
 > Oracle Manager (v1)
 
-This contract handles the inputs provided by the oracle
+This contract handles the inputs provided by the oracleThe Oracle contract is plugged to this contract and is in charge of pushingdata whenever a new report has been deemed valid. The report consists in twovalues: the sum of all balances of all deposited validators and the count of validators that have been activated on the consensus layer.
 
 
 
 ## Methods
 
-### getBeaconValidatorBalanceSum
+### getCLValidatorCount
 
 ```solidity
-function getBeaconValidatorBalanceSum() external view returns (uint256 beaconValidatorBalanceSum)
+function getCLValidatorCount() external view returns (uint256)
 ```
 
-Get Beacon validator balance sum
+Get CL validator count (the amount of validator reported by the oracles)
 
 
 
@@ -25,15 +25,15 @@ Get Beacon validator balance sum
 
 | Name | Type | Description |
 |---|---|---|
-| beaconValidatorBalanceSum | uint256 | undefined |
+| _0 | uint256 | The CL validator count |
 
-### getBeaconValidatorCount
+### getCLValidatorTotalBalance
 
 ```solidity
-function getBeaconValidatorCount() external view returns (uint256 beaconValidatorCount)
+function getCLValidatorTotalBalance() external view returns (uint256)
 ```
 
-Get Beacon validator count (the amount of validator reported by the oracles)
+Get CL validator total balance
 
 
 
@@ -42,15 +42,15 @@ Get Beacon validator count (the amount of validator reported by the oracles)
 
 | Name | Type | Description |
 |---|---|---|
-| beaconValidatorCount | uint256 | undefined |
+| _0 | uint256 | The CL Validator total balance |
 
 ### getOracle
 
 ```solidity
-function getOracle() external view returns (address oracle)
+function getOracle() external view returns (address)
 ```
 
-Get Oracle address
+Get oracle address
 
 
 
@@ -59,12 +59,12 @@ Get Oracle address
 
 | Name | Type | Description |
 |---|---|---|
-| oracle | address | undefined |
+| _0 | address | The oracle address |
 
-### setBeaconData
+### setConsensusLayerData
 
 ```solidity
-function setBeaconData(uint256 _validatorCount, uint256 _validatorBalanceSum, bytes32 _roundId) external nonpayable
+function setConsensusLayerData(uint256 _validatorCount, uint256 _validatorTotalBalance, bytes32 _roundId) external nonpayable
 ```
 
 Sets the validator count and validator balance sum reported by the oracle
@@ -76,7 +76,7 @@ Sets the validator count and validator balance sum reported by the oracle
 | Name | Type | Description |
 |---|---|---|
 | _validatorCount | uint256 | The number of active validators on the consensus layer |
-| _validatorBalanceSum | uint256 | The validator balance sum of the active validators on the consensus layer |
+| _validatorTotalBalance | uint256 | The validator balance sum of the active validators on the consensus layer |
 | _roundId | bytes32 | An identifier for this update |
 
 ### setOracle
@@ -85,7 +85,7 @@ Sets the validator count and validator balance sum reported by the oracle
 function setOracle(address _oracleAddress) external nonpayable
 ```
 
-Set Oracle address
+Set the oracle address
 
 
 
@@ -99,10 +99,10 @@ Set Oracle address
 
 ## Events
 
-### BeaconDataUpdate
+### ConsensusLayerDataUpdate
 
 ```solidity
-event BeaconDataUpdate(uint256 validatorCount, uint256 validatorBalanceSum, bytes32 roundId)
+event ConsensusLayerDataUpdate(uint256 validatorCount, uint256 validatorTotalBalance, bytes32 roundId)
 ```
 
 
@@ -114,8 +114,24 @@ event BeaconDataUpdate(uint256 validatorCount, uint256 validatorBalanceSum, byte
 | Name | Type | Description |
 |---|---|---|
 | validatorCount  | uint256 | undefined |
-| validatorBalanceSum  | uint256 | undefined |
+| validatorTotalBalance  | uint256 | undefined |
 | roundId  | bytes32 | undefined |
+
+### SetOracle
+
+```solidity
+event SetOracle(address indexed oracleAddress)
+```
+
+
+
+
+
+#### Parameters
+
+| Name | Type | Description |
+|---|---|---|
+| oracleAddress `indexed` | address | undefined |
 
 
 

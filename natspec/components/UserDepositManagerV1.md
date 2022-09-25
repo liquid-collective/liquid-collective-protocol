@@ -52,7 +52,7 @@ Returns the amount of pending ETH
 
 | Name | Type | Description |
 |---|---|---|
-| _0 | uint256 | undefined |
+| _0 | uint256 | The amount of pending eth |
 
 
 
@@ -106,6 +106,17 @@ error EmptyDonation()
 
 ```solidity
 error InvalidCall()
+```
+
+
+
+
+
+
+### InvalidZeroAddress
+
+```solidity
+error InvalidZeroAddress()
 ```
 
 

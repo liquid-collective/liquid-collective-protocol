@@ -13,7 +13,7 @@
 ### allow
 
 ```solidity
-function allow(address[] _accounts, uint256[] _statuses) external nonpayable
+function allow(address[] _accounts, uint256[] _permissions) external nonpayable
 ```
 
 
@@ -25,7 +25,7 @@ function allow(address[] _accounts, uint256[] _statuses) external nonpayable
 | Name | Type | Description |
 |---|---|---|
 | _accounts | address[] | undefined |
-| _statuses | uint256[] | undefined |
+| _permissions | uint256[] | undefined |
 
 ### getAllower
 
@@ -188,10 +188,26 @@ function setAllower(address _newAllowerAddress) external nonpayable
 
 ## Events
 
-### ChangedAllowlistStatuses
+### SetAllower
 
 ```solidity
-event ChangedAllowlistStatuses(address[] indexed accounts, uint256[] statuses)
+event SetAllower(address indexed allower)
+```
+
+
+
+
+
+#### Parameters
+
+| Name | Type | Description |
+|---|---|---|
+| allower `indexed` | address | undefined |
+
+### SetAllowlistPermissions
+
+```solidity
+event SetAllowlistPermissions(address[] indexed accounts, uint256[] permissions)
 ```
 
 
@@ -203,7 +219,7 @@ event ChangedAllowlistStatuses(address[] indexed accounts, uint256[] statuses)
 | Name | Type | Description |
 |---|---|---|
 | accounts `indexed` | address[] | undefined |
-| statuses  | uint256[] | undefined |
+| permissions  | uint256[] | undefined |
 
 
 

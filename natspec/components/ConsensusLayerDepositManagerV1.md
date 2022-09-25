@@ -4,9 +4,9 @@
 
 > Consensus Layer Deposit Manager (v1)
 
-This contract handles the interactions with the official deposit contract, funding all validators
+This contract handles the interactions with the official deposit contract, funding all validatorsWhenever a deposit to the consensus layer is requested, this contract computed the amount of keysthat could be deposited depending on the amount available in the contract. It then tried to retrievevalidator keys by callings its internal virtual method _getNextValidators. This method should beoverriden by the implementing contract to provide [0; _keyCount] keys when invoked.
 
-*_onValidatorKeyRequest must be overriden.*
+
 
 ## Methods
 
@@ -16,7 +16,7 @@ This contract handles the interactions with the official deposit contract, fundi
 function DEPOSIT_SIZE() external view returns (uint256)
 ```
 
-
+Size of a deposit in ETH
 
 
 
@@ -33,7 +33,7 @@ function DEPOSIT_SIZE() external view returns (uint256)
 function PUBLIC_KEY_LENGTH() external view returns (uint256)
 ```
 
-
+Size of a BLS Public key in bytes
 
 
 
@@ -50,7 +50,7 @@ function PUBLIC_KEY_LENGTH() external view returns (uint256)
 function SIGNATURE_LENGTH() external view returns (uint256)
 ```
 
-
+Size of a BLS Signature in bytes
 
 
 
@@ -80,7 +80,7 @@ Deposits current balance to the Consensus Layer by batches of 32 ETH
 ### getDepositedValidatorCount
 
 ```solidity
-function getDepositedValidatorCount() external view returns (uint256 depositedValidatorCount)
+function getDepositedValidatorCount() external view returns (uint256)
 ```
 
 Get the deposited validator count (the count of deposits made by the contract)
@@ -92,7 +92,7 @@ Get the deposited validator count (the count of deposits made by the contract)
 
 | Name | Type | Description |
 |---|---|---|
-| depositedValidatorCount | uint256 | undefined |
+| _0 | uint256 | The deposited validator count |
 
 ### getWithdrawalCredentials
 
@@ -109,7 +109,7 @@ Retrieve the withdrawal credentials
 
 | Name | Type | Description |
 |---|---|---|
-| _0 | bytes32 | undefined |
+| _0 | bytes32 | The withdrawal credentials |
 
 
 
@@ -131,9 +131,52 @@ event FundedValidatorKey(bytes publicKey)
 |---|---|---|
 | publicKey  | bytes | undefined |
 
+### SetDepositContractAddress
+
+```solidity
+event SetDepositContractAddress(address indexed depositContract)
+```
+
+
+
+
+
+#### Parameters
+
+| Name | Type | Description |
+|---|---|---|
+| depositContract `indexed` | address | undefined |
+
+### SetWithdrawalCredentials
+
+```solidity
+event SetWithdrawalCredentials(bytes32 withdrawalCredentials)
+```
+
+
+
+
+
+#### Parameters
+
+| Name | Type | Description |
+|---|---|---|
+| withdrawalCredentials  | bytes32 | undefined |
+
 
 
 ## Errors
+
+### ErrorOnDeposit
+
+```solidity
+error ErrorOnDeposit()
+```
+
+
+
+
+
 
 ### InconsistentPublicKeys
 
@@ -205,6 +248,28 @@ error NoAvailableValidatorKeys()
 
 ```solidity
 error NotEnoughFunds()
+```
+
+
+
+
+
+
+### SliceOutOfBounds
+
+```solidity
+error SliceOutOfBounds()
+```
+
+
+
+
+
+
+### SliceOverflow
+
+```solidity
+error SliceOverflow()
 ```
 
 

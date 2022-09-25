@@ -10,21 +10,21 @@ This contract handles the list of operators and their keys
 
 ## Methods
 
-### acceptOwnership
+### acceptAdmin
 
 ```solidity
-function acceptOwnership() external nonpayable
+function acceptAdmin() external nonpayable
 ```
 
-Accepts the ownership of the system
+Accept the transfer of ownership
 
-
+*Only callable by the pending admin. Resets the pending admin if succesful.*
 
 
 ### addOperator
 
 ```solidity
-function addOperator(string _name, address _operator, address _feeRecipient) external nonpayable
+function addOperator(string _name, address _operator) external nonpayable returns (uint256)
 ```
 
 Adds an operator to the registry
@@ -37,12 +37,17 @@ Adds an operator to the registry
 |---|---|---|
 | _name | string | The name identifying the operator |
 | _operator | address | The address representing the operator, receiving the rewards |
-| _feeRecipient | address | The address where the rewards are sent |
+
+#### Returns
+
+| Name | Type | Description |
+|---|---|---|
+| _0 | uint256 | The index of the new operator |
 
 ### addValidators
 
 ```solidity
-function addValidators(uint256 _index, uint256 _keyCount, bytes _publicKeys, bytes _signatures) external nonpayable
+function addValidators(uint256 _index, uint256 _keyCount, bytes _publicKeysAndSignatures) external nonpayable
 ```
 
 Adds new keys for an operator
@@ -55,16 +60,15 @@ Adds new keys for an operator
 |---|---|---|
 | _index | uint256 | The operator index |
 | _keyCount | uint256 | The amount of keys provided |
-| _publicKeys | bytes | Public keys of the validator, concatenated |
-| _signatures | bytes | Signatures of the validator keys, concatenated |
+| _publicKeysAndSignatures | bytes | Public keys of the validator, concatenated |
 
-### getAdministrator
+### getAdmin
 
 ```solidity
-function getAdministrator() external view returns (address)
+function getAdmin() external view returns (address)
 ```
 
-Retrieve system administrator address
+Retrieves the current admin address
 
 
 
@@ -73,7 +77,7 @@ Retrieve system administrator address
 
 | Name | Type | Description |
 |---|---|---|
-| _0 | address | undefined |
+| _0 | address | The admin address |
 
 ### getOperator
 
@@ -95,7 +99,7 @@ Get operator details
 
 | Name | Type | Description |
 |---|---|---|
-| _0 | Operators.Operator | undefined |
+| _0 | Operators.Operator | The details of the operator |
 
 ### getOperatorCount
 
@@ -112,38 +116,15 @@ Get operator count
 
 | Name | Type | Description |
 |---|---|---|
-| _0 | uint256 | undefined |
+| _0 | uint256 | The operator count |
 
-### getOperatorDetails
-
-```solidity
-function getOperatorDetails(string _name) external view returns (int256 _index, address _operatorAddress)
-```
-
-Retrieve the operator details from the operator name
-
-
-
-#### Parameters
-
-| Name | Type | Description |
-|---|---|---|
-| _name | string | Name of the operator |
-
-#### Returns
-
-| Name | Type | Description |
-|---|---|---|
-| _index | int256 | undefined |
-| _operatorAddress | address | undefined |
-
-### getPendingAdministrator
+### getPendingAdmin
 
 ```solidity
-function getPendingAdministrator() external view returns (address)
+function getPendingAdmin() external view returns (address)
 ```
 
-Retrieve system pending administrator address
+Retrieve the current pending admin address
 
 
 
@@ -152,7 +133,7 @@ Retrieve system pending administrator address
 
 | Name | Type | Description |
 |---|---|---|
-| _0 | address | undefined |
+| _0 | address | The pending admin address |
 
 ### getRiver
 
@@ -169,7 +150,7 @@ Retrieve the River address
 
 | Name | Type | Description |
 |---|---|---|
-| _0 | address | undefined |
+| _0 | address | The address of River |
 
 ### getValidator
 
@@ -192,9 +173,9 @@ Get the details of a validator
 
 | Name | Type | Description |
 |---|---|---|
-| publicKey | bytes | undefined |
-| signature | bytes | undefined |
-| funded | bool | undefined |
+| publicKey | bytes | The public key of the validator |
+| signature | bytes | The signature used during deposit |
+| funded | bool | True if validator has been funded |
 
 ### initOperatorsRegistryV1
 
@@ -228,12 +209,12 @@ Retrieve the active operator set
 
 | Name | Type | Description |
 |---|---|---|
-| _0 | Operators.Operator[] | undefined |
+| _0 | Operators.Operator[] | The list of active operators and their details |
 
 ### pickNextValidators
 
 ```solidity
-function pickNextValidators(uint256 _requestedAmount) external nonpayable returns (bytes[] publicKeys, bytes[] signatures)
+function pickNextValidators(uint256 _count) external nonpayable returns (bytes[] publicKeys, bytes[] signatures)
 ```
 
 Retrieve validator keys based on operator statuses
@@ -244,14 +225,30 @@ Retrieve validator keys based on operator statuses
 
 | Name | Type | Description |
 |---|---|---|
-| _requestedAmount | uint256 | Max amount of keys requested |
+| _count | uint256 | Max amount of keys requested |
 
 #### Returns
 
 | Name | Type | Description |
 |---|---|---|
-| publicKeys | bytes[] | undefined |
-| signatures | bytes[] | undefined |
+| publicKeys | bytes[] | An array of public keys |
+| signatures | bytes[] | An array of signatures linked to the public keys |
+
+### proposeAdmin
+
+```solidity
+function proposeAdmin(address _newAdmin) external nonpayable
+```
+
+Proposes a new address as admin
+
+*This security prevents setting and invalid address as an admin. The pendingadmin has to claim its ownership of the contract, and proves that the newaddress is able to perform regular transactions.*
+
+#### Parameters
+
+| Name | Type | Description |
+|---|---|---|
+| _newAdmin | address | New admin address |
 
 ### removeValidators
 
@@ -287,23 +284,6 @@ Changes the operator address of an operator
 | _index | uint256 | The operator index |
 | _newOperatorAddress | address | The new address of the operator |
 
-### setOperatorFeeRecipientAddress
-
-```solidity
-function setOperatorFeeRecipientAddress(uint256 _index, address _newOperatorFeeRecipientAddress) external nonpayable
-```
-
-Changes the operator fee recipient address
-
-*Only callable by the administrator or the previous operator fee recipient address*
-
-#### Parameters
-
-| Name | Type | Description |
-|---|---|---|
-| _index | uint256 | The operator index |
-| _newOperatorFeeRecipientAddress | address | The new fee recipient address of the operator |
-
 ### setOperatorLimits
 
 ```solidity
@@ -329,7 +309,7 @@ function setOperatorName(uint256 _index, string _newName) external nonpayable
 
 Changes the operator name
 
-*Only callable by the administrator or the operatorNo name conflict can exist*
+*Only callable by the administrator or the operator*
 
 #### Parameters
 
@@ -388,22 +368,6 @@ Change the River address
 |---|---|---|
 | _newRiver | address | New address for the river system |
 
-### transferOwnership
-
-```solidity
-function transferOwnership(address _newAdmin) external nonpayable
-```
-
-Changes the admin but waits for new admin approval
-
-
-
-#### Parameters
-
-| Name | Type | Description |
-|---|---|---|
-| _newAdmin | address | New address for the admin |
-
 
 
 ## Events
@@ -411,7 +375,7 @@ Changes the admin but waits for new admin approval
 ### AddedOperator
 
 ```solidity
-event AddedOperator(uint256 indexed index, string name, address operatorAddress, address feeRecipientAddress)
+event AddedOperator(uint256 indexed index, string name, address indexed operatorAddress)
 ```
 
 
@@ -424,13 +388,12 @@ event AddedOperator(uint256 indexed index, string name, address operatorAddress,
 |---|---|---|
 | index `indexed` | uint256 | undefined |
 | name  | string | undefined |
-| operatorAddress  | address | undefined |
-| feeRecipientAddress  | address | undefined |
+| operatorAddress `indexed` | address | undefined |
 
 ### AddedValidatorKeys
 
 ```solidity
-event AddedValidatorKeys(uint256 indexed index, bytes publicKeys)
+event AddedValidatorKeys(uint256 indexed index, bytes publicKeysAndSignatures)
 ```
 
 
@@ -442,7 +405,24 @@ event AddedValidatorKeys(uint256 indexed index, bytes publicKeys)
 | Name | Type | Description |
 |---|---|---|
 | index `indexed` | uint256 | undefined |
-| publicKeys  | bytes | undefined |
+| publicKeysAndSignatures  | bytes | undefined |
+
+### Initialize
+
+```solidity
+event Initialize(uint256 version, bytes cdata)
+```
+
+Emitted when the contract is properly initialized
+
+
+
+#### Parameters
+
+| Name | Type | Description |
+|---|---|---|
+| version  | uint256 | undefined |
+| cdata  | bytes | undefined |
 
 ### RemovedValidatorKey
 
@@ -461,10 +441,26 @@ event RemovedValidatorKey(uint256 indexed index, bytes publicKey)
 | index `indexed` | uint256 | undefined |
 | publicKey  | bytes | undefined |
 
+### SetAdmin
+
+```solidity
+event SetAdmin(address indexed admin)
+```
+
+
+
+
+
+#### Parameters
+
+| Name | Type | Description |
+|---|---|---|
+| admin `indexed` | address | undefined |
+
 ### SetOperatorAddress
 
 ```solidity
-event SetOperatorAddress(uint256 indexed index, address newOperatorAddress)
+event SetOperatorAddress(uint256 indexed index, address indexed newOperatorAddress)
 ```
 
 
@@ -476,24 +472,7 @@ event SetOperatorAddress(uint256 indexed index, address newOperatorAddress)
 | Name | Type | Description |
 |---|---|---|
 | index `indexed` | uint256 | undefined |
-| newOperatorAddress  | address | undefined |
-
-### SetOperatorFeeRecipientAddress
-
-```solidity
-event SetOperatorFeeRecipientAddress(uint256 indexed index, address newOperatorAddress)
-```
-
-
-
-
-
-#### Parameters
-
-| Name | Type | Description |
-|---|---|---|
-| index `indexed` | uint256 | undefined |
-| newOperatorAddress  | address | undefined |
+| newOperatorAddress `indexed` | address | undefined |
 
 ### SetOperatorLimit
 
@@ -563,6 +542,38 @@ event SetOperatorStoppedValidatorCount(uint256 indexed index, uint256 newStopped
 | index `indexed` | uint256 | undefined |
 | newStoppedValidatorCount  | uint256 | undefined |
 
+### SetPendingAdmin
+
+```solidity
+event SetPendingAdmin(address indexed pendingAdmin)
+```
+
+
+
+
+
+#### Parameters
+
+| Name | Type | Description |
+|---|---|---|
+| pendingAdmin `indexed` | address | undefined |
+
+### SetRiver
+
+```solidity
+event SetRiver(address indexed river)
+```
+
+
+
+
+
+#### Parameters
+
+| Name | Type | Description |
+|---|---|---|
+| river `indexed` | address | undefined |
+
 
 
 ## Errors
@@ -616,6 +627,17 @@ error InvalidEmptyArray()
 
 
 
+### InvalidEmptyString
+
+```solidity
+error InvalidEmptyString()
+```
+
+
+
+
+
+
 ### InvalidFundedKeyDeletionAttempt
 
 ```solidity
@@ -644,7 +666,7 @@ error InvalidIndexOutOfBounds()
 error InvalidInitialization(uint256 version, uint256 expectedVersion)
 ```
 
-
+An error occured during the initialization
 
 
 
@@ -652,13 +674,24 @@ error InvalidInitialization(uint256 version, uint256 expectedVersion)
 
 | Name | Type | Description |
 |---|---|---|
-| version | uint256 | undefined |
-| expectedVersion | uint256 | undefined |
+| version | uint256 | The version that was attempting the be initialized |
+| expectedVersion | uint256 | The version that was expected |
 
 ### InvalidKeyCount
 
 ```solidity
 error InvalidKeyCount()
+```
+
+
+
+
+
+
+### InvalidKeysLength
+
+```solidity
+error InvalidKeysLength()
 ```
 
 
@@ -743,10 +776,10 @@ error OperatorLimitTooHigh(uint256 limit, uint256 keyCount)
 | limit | uint256 | undefined |
 | keyCount | uint256 | undefined |
 
-### OperatorNotFound
+### OperatorLimitTooLow
 
 ```solidity
-error OperatorNotFound(string name)
+error OperatorLimitTooLow(uint256 limit, uint256 fundedKeyCount)
 ```
 
 
@@ -757,12 +790,13 @@ error OperatorNotFound(string name)
 
 | Name | Type | Description |
 |---|---|---|
-| name | string | undefined |
+| limit | uint256 | undefined |
+| fundedKeyCount | uint256 | undefined |
 
-### OperatorNotFoundAtIndex
+### OperatorNotFound
 
 ```solidity
-error OperatorNotFoundAtIndex(uint256 index)
+error OperatorNotFound(uint256 index)
 ```
 
 
@@ -774,6 +808,28 @@ error OperatorNotFoundAtIndex(uint256 index)
 | Name | Type | Description |
 |---|---|---|
 | index | uint256 | undefined |
+
+### SliceOutOfBounds
+
+```solidity
+error SliceOutOfBounds()
+```
+
+
+
+
+
+
+### SliceOverflow
+
+```solidity
+error SliceOverflow()
+```
+
+
+
+
+
 
 ### Unauthorized
 

@@ -13,7 +13,7 @@
 ### addOperator
 
 ```solidity
-function addOperator(string _name, address _operator, address _feeRecipient) external nonpayable
+function addOperator(string _name, address _operator) external nonpayable returns (uint256)
 ```
 
 
@@ -26,12 +26,17 @@ function addOperator(string _name, address _operator, address _feeRecipient) ext
 |---|---|---|
 | _name | string | undefined |
 | _operator | address | undefined |
-| _feeRecipient | address | undefined |
+
+#### Returns
+
+| Name | Type | Description |
+|---|---|---|
+| _0 | uint256 | undefined |
 
 ### addValidators
 
 ```solidity
-function addValidators(uint256 _index, uint256 _keyCount, bytes _publicKeys, bytes _signatures) external nonpayable
+function addValidators(uint256 _index, uint256 _keyCount, bytes _publicKeysAndSignatures) external nonpayable
 ```
 
 
@@ -44,8 +49,7 @@ function addValidators(uint256 _index, uint256 _keyCount, bytes _publicKeys, byt
 |---|---|---|
 | _index | uint256 | undefined |
 | _keyCount | uint256 | undefined |
-| _publicKeys | bytes | undefined |
-| _signatures | bytes | undefined |
+| _publicKeysAndSignatures | bytes | undefined |
 
 ### getOperator
 
@@ -85,29 +89,6 @@ function getOperatorCount() external view returns (uint256)
 | Name | Type | Description |
 |---|---|---|
 | _0 | uint256 | undefined |
-
-### getOperatorDetails
-
-```solidity
-function getOperatorDetails(string _name) external view returns (int256 _index, address _operatorAddress)
-```
-
-
-
-
-
-#### Parameters
-
-| Name | Type | Description |
-|---|---|---|
-| _name | string | undefined |
-
-#### Returns
-
-| Name | Type | Description |
-|---|---|---|
-| _index | int256 | undefined |
-| _operatorAddress | address | undefined |
 
 ### getRiver
 
@@ -188,7 +169,7 @@ function listActiveOperators() external view returns (struct Operators.Operator[
 ### pickNextValidators
 
 ```solidity
-function pickNextValidators(uint256 _requestedAmount) external nonpayable returns (bytes[] publicKeys, bytes[] signatures)
+function pickNextValidators(uint256 _count) external nonpayable returns (bytes[] publicKeys, bytes[] signatures)
 ```
 
 
@@ -199,7 +180,7 @@ function pickNextValidators(uint256 _requestedAmount) external nonpayable return
 
 | Name | Type | Description |
 |---|---|---|
-| _requestedAmount | uint256 | undefined |
+| _count | uint256 | undefined |
 
 #### Returns
 
@@ -241,23 +222,6 @@ function setOperatorAddress(uint256 _index, address _newOperatorAddress) externa
 |---|---|---|
 | _index | uint256 | undefined |
 | _newOperatorAddress | address | undefined |
-
-### setOperatorFeeRecipientAddress
-
-```solidity
-function setOperatorFeeRecipientAddress(uint256 _index, address _newOperatorFeeRecipientAddress) external nonpayable
-```
-
-
-
-
-
-#### Parameters
-
-| Name | Type | Description |
-|---|---|---|
-| _index | uint256 | undefined |
-| _newOperatorFeeRecipientAddress | address | undefined |
 
 ### setOperatorLimits
 
@@ -350,7 +314,7 @@ function setRiver(address _newRiver) external nonpayable
 ### AddedOperator
 
 ```solidity
-event AddedOperator(uint256 indexed index, string name, address operatorAddress, address feeRecipientAddress)
+event AddedOperator(uint256 indexed index, string name, address indexed operatorAddress)
 ```
 
 
@@ -363,13 +327,12 @@ event AddedOperator(uint256 indexed index, string name, address operatorAddress,
 |---|---|---|
 | index `indexed` | uint256 | undefined |
 | name  | string | undefined |
-| operatorAddress  | address | undefined |
-| feeRecipientAddress  | address | undefined |
+| operatorAddress `indexed` | address | undefined |
 
 ### AddedValidatorKeys
 
 ```solidity
-event AddedValidatorKeys(uint256 indexed index, bytes publicKeys)
+event AddedValidatorKeys(uint256 indexed index, bytes publicKeysAndSignatures)
 ```
 
 
@@ -381,7 +344,7 @@ event AddedValidatorKeys(uint256 indexed index, bytes publicKeys)
 | Name | Type | Description |
 |---|---|---|
 | index `indexed` | uint256 | undefined |
-| publicKeys  | bytes | undefined |
+| publicKeysAndSignatures  | bytes | undefined |
 
 ### RemovedValidatorKey
 
@@ -403,7 +366,7 @@ event RemovedValidatorKey(uint256 indexed index, bytes publicKey)
 ### SetOperatorAddress
 
 ```solidity
-event SetOperatorAddress(uint256 indexed index, address newOperatorAddress)
+event SetOperatorAddress(uint256 indexed index, address indexed newOperatorAddress)
 ```
 
 
@@ -415,24 +378,7 @@ event SetOperatorAddress(uint256 indexed index, address newOperatorAddress)
 | Name | Type | Description |
 |---|---|---|
 | index `indexed` | uint256 | undefined |
-| newOperatorAddress  | address | undefined |
-
-### SetOperatorFeeRecipientAddress
-
-```solidity
-event SetOperatorFeeRecipientAddress(uint256 indexed index, address newOperatorAddress)
-```
-
-
-
-
-
-#### Parameters
-
-| Name | Type | Description |
-|---|---|---|
-| index `indexed` | uint256 | undefined |
-| newOperatorAddress  | address | undefined |
+| newOperatorAddress `indexed` | address | undefined |
 
 ### SetOperatorLimit
 
@@ -501,6 +447,22 @@ event SetOperatorStoppedValidatorCount(uint256 indexed index, uint256 newStopped
 |---|---|---|
 | index `indexed` | uint256 | undefined |
 | newStoppedValidatorCount  | uint256 | undefined |
+
+### SetRiver
+
+```solidity
+event SetRiver(address indexed river)
+```
+
+
+
+
+
+#### Parameters
+
+| Name | Type | Description |
+|---|---|---|
+| river `indexed` | address | undefined |
 
 
 
@@ -577,6 +539,17 @@ error InvalidKeyCount()
 
 
 
+### InvalidKeysLength
+
+```solidity
+error InvalidKeysLength()
+```
+
+
+
+
+
+
 ### InvalidPublicKeysLength
 
 ```solidity
@@ -642,5 +615,22 @@ error OperatorLimitTooHigh(uint256 limit, uint256 keyCount)
 |---|---|---|
 | limit | uint256 | undefined |
 | keyCount | uint256 | undefined |
+
+### OperatorLimitTooLow
+
+```solidity
+error OperatorLimitTooLow(uint256 limit, uint256 fundedKeyCount)
+```
+
+
+
+
+
+#### Parameters
+
+| Name | Type | Description |
+|---|---|---|
+| limit | uint256 | undefined |
+| fundedKeyCount | uint256 | undefined |
 
 

@@ -19,27 +19,29 @@ contract Firewall is IFirewall, Administrable {
     address public executor;
     address internal destination;
 
-    // admin_ should be the most trustworthy entity in the underlying protocol - often, a DAO admin
-    // executor_ should be a trustworthy entity that takes care of time-sensitive actions in the underlying protocol
-    constructor(address admin_, address executor_, address destination_, bytes4[] memory executorCallableSelectors_) {
-        LibSanitize._notZeroAddress(executor_);
-        LibSanitize._notZeroAddress(destination_);
-        _setAdmin(admin_);
-        executor = executor_;
-        destination = destination_;
+    /// @param _admin Address of the administrator, that is able to perform all calls via the Firewall
+    /// @param _executor Address of the executor, that is able to perform only a subset of calls via the Firewall
+    /// @param _executorCallableSelectors Initial list of allowed selectors for the executor
+    constructor(address _admin, address _executor, address _destination, bytes4[] memory _executorCallableSelectors) {
+        LibSanitize._notZeroAddress(_executor);
+        LibSanitize._notZeroAddress(_destination);
+        _setAdmin(_admin);
+        executor = _executor;
+        destination = _destination;
 
-        emit SetExecutor(executor_);
-        emit SetDestination(destination_);
+        emit SetExecutor(_executor);
+        emit SetDestination(_destination);
 
-        for (uint256 i; i < executorCallableSelectors_.length;) {
-            executorCanCall[executorCallableSelectors_[i]] = true;
-            emit SetExecutorPermissions(executorCallableSelectors_[i], true);
+        for (uint256 i; i < _executorCallableSelectors.length;) {
+            executorCanCall[_executorCallableSelectors[i]] = true;
+            emit SetExecutorPermissions(_executorCallableSelectors[i], true);
             unchecked {
                 ++i;
             }
         }
     }
 
+    /// @notice Prevents unauthorized calls
     modifier onlyAdminOrExecutor() {
         if (_getAdmin() != msg.sender && msg.sender != executor) {
             revert LibErrors.Unauthorized(msg.sender);
@@ -47,20 +49,33 @@ contract Firewall is IFirewall, Administrable {
         _;
     }
 
-    /// @dev Change the executor
-    function setExecutor(address newExecutor) external onlyAdminOrExecutor {
-        LibSanitize._notZeroAddress(newExecutor);
-        executor = newExecutor;
-        emit SetExecutor(newExecutor);
+    /// @notice Sets the executor address
+    /// @param _newExecutor New address for the executor
+    function setExecutor(address _newExecutor) external onlyAdminOrExecutor {
+        LibSanitize._notZeroAddress(_newExecutor);
+        executor = _newExecutor;
+        emit SetExecutor(_newExecutor);
     }
 
-    /// @dev make a function either only callable by the admin, or callable by admin and executor.
-    function allowExecutor(bytes4 functionSelector, bool executorCanCall_) external onlyAdmin {
-        executorCanCall[functionSelector] = executorCanCall_;
-        emit SetExecutorPermissions(functionSelector, executorCanCall_);
+    /// @notice Sets the permission for a function selector
+    /// @param _functionSelector Method signature on which the permission is changed
+    /// @param _executorCanCall True if selector is callable by the executor
+    function allowExecutor(bytes4 _functionSelector, bool _executorCanCall) external onlyAdmin {
+        executorCanCall[_functionSelector] = _executorCanCall;
+        emit SetExecutorPermissions(_functionSelector, _executorCanCall);
     }
 
-    /// @dev Validate that the caller is allowed to make the call in msg.sig
+    /// @notice Fallback method. All its parameters are forwarded to the destination if caller is authorized
+    fallback() external payable virtual {
+        _fallback();
+    }
+
+    /// @notice Receive fallback method. All its parameters are forwarded to the destination if caller is authorized
+    receive() external payable virtual {
+        _fallback();
+    }
+
+    /// @notice Performs call checks to verify that the caller is able to perform the call
     function _checkCallerRole() internal view {
         if (msg.sender == _getAdmin() || (executorCanCall[msg.sig] && msg.sender == executor)) {
             return;
@@ -68,9 +83,10 @@ contract Firewall is IFirewall, Administrable {
         revert LibErrors.Unauthorized(msg.sender);
     }
 
-    /// @dev Forwards the current call to `destination`.
-    ///      This function does not return to its internal call site, it will return directly to the external caller.
-    function _forward(address destination_, uint256 value) internal {
+    /// @notice Forwards the current call parameters to the destination address
+    /// @param _destination Address on which the forwarded call is performed
+    /// @param _value Message value to attach to the call
+    function _forward(address _destination, uint256 _value) internal {
         assembly {
             // Copy msg.data. We take full control of memory in this inline assembly
             // block because it will not return to Solidity code. We overwrite the
@@ -79,7 +95,7 @@ contract Firewall is IFirewall, Administrable {
 
             // Call the destination.
             // out and outsize are 0 because we don't know the size yet.
-            let result := call(gas(), destination_, value, 0, calldatasize(), 0, 0)
+            let result := call(gas(), _destination, _value, 0, calldatasize(), 0, 0)
 
             // Copy the returned data.
             returndatacopy(0, 0, returndatasize())
@@ -91,16 +107,9 @@ contract Firewall is IFirewall, Administrable {
         }
     }
 
+    /// @notice Internal utility to perform authorization checks and forward a call
     function _fallback() internal virtual {
         _checkCallerRole();
         _forward(destination, msg.value);
-    }
-
-    fallback() external payable virtual {
-        _fallback();
-    }
-
-    receive() external payable virtual {
-        _fallback();
     }
 }

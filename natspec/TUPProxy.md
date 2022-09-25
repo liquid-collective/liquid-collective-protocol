@@ -169,6 +169,28 @@ event BeaconUpgraded(address indexed beacon)
 |---|---|---|
 | beacon `indexed` | address | undefined |
 
+### Pause
+
+```solidity
+event Pause()
+```
+
+The system is now paused
+
+
+
+
+### Unpause
+
+```solidity
+event Unpause()
+```
+
+The system is now unpaused
+
+
+
+
 ### Upgraded
 
 ```solidity
@@ -195,7 +217,7 @@ event Upgraded(address indexed implementation)
 error CallWhenPaused()
 ```
 
-
+A call happened while the system was paused
 
 
 

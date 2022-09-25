@@ -15,12 +15,20 @@ import "../state/river/BalanceToDeposit.sol";
 /// @title Consensus Layer Deposit Manager (v1)
 /// @author Kiln
 /// @notice This contract handles the interactions with the official deposit contract, funding all validators
-/// @dev _onValidatorKeyRequest must be overriden.
+/// @notice Whenever a deposit to the consensus layer is requested, this contract computed the amount of keys
+/// @notice that could be deposited depending on the amount available in the contract. It then tried to retrieve
+/// @notice validator keys by callings its internal virtual method _getNextValidators. This method should be
+/// @notice overriden by the implementing contract to provide [0; _keyCount] keys when invoked.
 abstract contract ConsensusLayerDepositManagerV1 is IConsensusLayerDepositManagerV1 {
+    /// @notice Size of a BLS Public key in bytes
     uint256 public constant PUBLIC_KEY_LENGTH = 48;
+    /// @notice Size of a BLS Signature in bytes
     uint256 public constant SIGNATURE_LENGTH = 96;
+    /// @notice Size of a deposit in ETH
     uint256 public constant DEPOSIT_SIZE = 32 ether;
 
+    /// @notice Handler called to retrieve the internal River admin address
+    /// @dev Must be overriden
     function _getRiverAdmin() internal view virtual returns (address);
 
     /// @notice Prevents unauthorized calls
@@ -30,6 +38,14 @@ abstract contract ConsensusLayerDepositManagerV1 is IConsensusLayerDepositManage
         }
         _;
     }
+
+    /// @notice Internal helper to retrieve validator keys ready to be funded
+    /// @dev Must be overriden
+    /// @param _keyCount The amount of keys (or less) to return.
+    function _getNextValidators(uint256 _keyCount)
+        internal
+        virtual
+        returns (bytes[] memory publicKeys, bytes[] memory signatures);
 
     /// @notice Initializer to set the deposit contract address and the withdrawal credentials to use
     /// @param _depositContractAddress The address of the deposit contract
@@ -44,18 +60,23 @@ abstract contract ConsensusLayerDepositManagerV1 is IConsensusLayerDepositManage
         emit SetWithdrawalCredentials(_withdrawalCredentials);
     }
 
+    /// @notice Returns the amount of pending ETH
+    /// @return The amount of pending eth
+    function getBalanceToDeposit() external view returns (uint256) {
+        return BalanceToDeposit.get();
+    }
+
     /// @notice Retrieve the withdrawal credentials
+    /// @return The withdrawal credentials
     function getWithdrawalCredentials() external view returns (bytes32) {
         return WithdrawalCredentials.get();
     }
 
-    /// @notice Internal helper to retrieve validator keys ready to be funded
-    /// @dev Must be overriden with an implementation that provides keyCount or less keys upon call
-    /// @param _keyCount The amount of keys (or less) to return.
-    function _getNextValidators(uint256 _keyCount)
-        internal
-        virtual
-        returns (bytes[] memory publicKeys, bytes[] memory signatures);
+    /// @notice Get the deposited validator count (the count of deposits made by the contract)
+    /// @return The deposited validator count
+    function getDepositedValidatorCount() external view returns (uint256) {
+        return DepositedValidatorCount.get();
+    }
 
     /// @notice Deposits current balance to the Consensus Layer by batches of 32 ETH
     /// @param _maxCount The maximum amount of validator keys to fund
@@ -143,15 +164,5 @@ abstract contract ConsensusLayerDepositManagerV1 is IConsensusLayerDepositManage
             revert ErrorOnDeposit();
         }
         emit FundedValidatorKey(_publicKey);
-    }
-
-    /// @notice Get the deposited validator count (the count of deposits made by the contract)
-    function getDepositedValidatorCount() external view returns (uint256 depositedValidatorCount) {
-        depositedValidatorCount = DepositedValidatorCount.get();
-    }
-
-    /// @notice Returns the amount of ETH pending for deposits
-    function getBalanceToDeposit() external view returns (uint256) {
-        return BalanceToDeposit.get();
     }
 }

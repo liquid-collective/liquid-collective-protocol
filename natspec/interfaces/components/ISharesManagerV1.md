@@ -117,6 +117,52 @@ function decimals() external pure returns (uint8)
 |---|---|---|
 | _0 | uint8 | undefined |
 
+### decreaseAllowance
+
+```solidity
+function decreaseAllowance(address _spender, uint256 _subtractableValue) external nonpayable returns (bool success)
+```
+
+
+
+
+
+#### Parameters
+
+| Name | Type | Description |
+|---|---|---|
+| _spender | address | undefined |
+| _subtractableValue | uint256 | undefined |
+
+#### Returns
+
+| Name | Type | Description |
+|---|---|---|
+| success | bool | undefined |
+
+### increaseAllowance
+
+```solidity
+function increaseAllowance(address _spender, uint256 _additionalValue) external nonpayable returns (bool success)
+```
+
+
+
+
+
+#### Parameters
+
+| Name | Type | Description |
+|---|---|---|
+| _spender | address | undefined |
+| _additionalValue | uint256 | undefined |
+
+#### Returns
+
+| Name | Type | Description |
+|---|---|---|
+| success | bool | undefined |
+
 ### name
 
 ```solidity
@@ -360,5 +406,22 @@ error NullTransfer()
 
 
 
+
+### UnauthorizedTransfer
+
+```solidity
+error UnauthorizedTransfer(address _from, address _to)
+```
+
+
+
+
+
+#### Parameters
+
+| Name | Type | Description |
+|---|---|---|
+| _from | address | undefined |
+| _to | address | undefined |
 
 

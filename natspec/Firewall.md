@@ -4,28 +4,39 @@
 
 > Firewall
 
-This contract accepts calls to admin-level functions of an underlying contract, and         ensures the caller holds an appropriate role for calling that function. There are two roles:          - A Governor can call anything          - An Executor can call specific functions specified at construction         Random callers cannot call anything through this contract, even if the underlying function         is unpermissioned in the underlying contract.         Calls to non-admin functions should be called at the underlying contract directly.
+This contract accepts calls to admin-level functions of an underlying contract, and         ensures the caller holds an appropriate role for calling that function. There are two roles:          - An Admin can call anything          - An Executor can call specific functions specified at construction         Random callers cannot call anything through this contract, even if the underlying function         is unpermissioned in the underlying contract.         Calls to non-admin functions should be called at the underlying contract directly.
 
 
 
 ## Methods
 
+### acceptAdmin
+
+```solidity
+function acceptAdmin() external nonpayable
+```
+
+Accept the transfer of ownership
+
+*Only callable by the pending admin. Resets the pending admin if succesful.*
+
+
 ### allowExecutor
 
 ```solidity
-function allowExecutor(bytes4 functionSelector, bool executorCanCall_) external nonpayable
+function allowExecutor(bytes4 _functionSelector, bool _executorCanCall) external nonpayable
 ```
 
+Sets the permission for a function selector
 
 
-*make a function either only callable by the governor, or callable by gov and executor.*
 
 #### Parameters
 
 | Name | Type | Description |
 |---|---|---|
-| functionSelector | bytes4 | undefined |
-| executorCanCall_ | bool | undefined |
+| _functionSelector | bytes4 | Method signature on which the permission is changed |
+| _executorCanCall | bool | True if selector is callable by the executor |
 
 ### executor
 
@@ -44,13 +55,13 @@ function executor() external view returns (address)
 |---|---|---|
 | _0 | address | undefined |
 
-### governor
+### getAdmin
 
 ```solidity
-function governor() external view returns (address)
+function getAdmin() external view returns (address)
 ```
 
-
+Retrieves the current admin address
 
 
 
@@ -59,44 +70,156 @@ function governor() external view returns (address)
 
 | Name | Type | Description |
 |---|---|---|
-| _0 | address | undefined |
+| _0 | address | The admin address |
+
+### getPendingAdmin
+
+```solidity
+function getPendingAdmin() external view returns (address)
+```
+
+Retrieve the current pending admin address
+
+
+
+
+#### Returns
+
+| Name | Type | Description |
+|---|---|---|
+| _0 | address | The pending admin address |
+
+### proposeAdmin
+
+```solidity
+function proposeAdmin(address _newAdmin) external nonpayable
+```
+
+Proposes a new address as admin
+
+*This security prevents setting and invalid address as an admin. The pendingadmin has to claim its ownership of the contract, and proves that the newaddress is able to perform regular transactions.*
+
+#### Parameters
+
+| Name | Type | Description |
+|---|---|---|
+| _newAdmin | address | New admin address |
 
 ### setExecutor
 
 ```solidity
-function setExecutor(address newExecutor) external nonpayable
+function setExecutor(address _newExecutor) external nonpayable
 ```
 
+Sets the executor address
 
 
-*Change the executor*
 
 #### Parameters
 
 | Name | Type | Description |
 |---|---|---|
-| newExecutor | address | undefined |
+| _newExecutor | address | New address for the executor |
 
-### setGovernor
+
+
+## Events
+
+### SetAdmin
 
 ```solidity
-function setGovernor(address newGovernor) external nonpayable
+event SetAdmin(address indexed admin)
 ```
 
 
 
-*Change the governor*
+
 
 #### Parameters
 
 | Name | Type | Description |
 |---|---|---|
-| newGovernor | address | undefined |
+| admin `indexed` | address | undefined |
 
+### SetDestination
+
+```solidity
+event SetDestination(address indexed destination)
+```
+
+
+
+
+
+#### Parameters
+
+| Name | Type | Description |
+|---|---|---|
+| destination `indexed` | address | undefined |
+
+### SetExecutor
+
+```solidity
+event SetExecutor(address indexed executor)
+```
+
+
+
+
+
+#### Parameters
+
+| Name | Type | Description |
+|---|---|---|
+| executor `indexed` | address | undefined |
+
+### SetExecutorPermissions
+
+```solidity
+event SetExecutorPermissions(bytes4 selector, bool status)
+```
+
+
+
+
+
+#### Parameters
+
+| Name | Type | Description |
+|---|---|---|
+| selector  | bytes4 | undefined |
+| status  | bool | undefined |
+
+### SetPendingAdmin
+
+```solidity
+event SetPendingAdmin(address indexed pendingAdmin)
+```
+
+
+
+
+
+#### Parameters
+
+| Name | Type | Description |
+|---|---|---|
+| pendingAdmin `indexed` | address | undefined |
 
 
 
 ## Errors
+
+### InvalidZeroAddress
+
+```solidity
+error InvalidZeroAddress()
+```
+
+
+
+
+
 
 ### Unauthorized
 

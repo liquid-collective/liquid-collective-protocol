@@ -43,10 +43,14 @@ function setExecutor(address newExecutor) external nonpayable
 |---|---|---|
 | newExecutor | address | undefined |
 
-### setGovernor
+
+
+## Events
+
+### SetDestination
 
 ```solidity
-function setGovernor(address newGovernor) external nonpayable
+event SetDestination(address indexed destination)
 ```
 
 
@@ -57,8 +61,40 @@ function setGovernor(address newGovernor) external nonpayable
 
 | Name | Type | Description |
 |---|---|---|
-| newGovernor | address | undefined |
+| destination `indexed` | address | undefined |
 
+### SetExecutor
+
+```solidity
+event SetExecutor(address indexed executor)
+```
+
+
+
+
+
+#### Parameters
+
+| Name | Type | Description |
+|---|---|---|
+| executor `indexed` | address | undefined |
+
+### SetExecutorPermissions
+
+```solidity
+event SetExecutorPermissions(bytes4 selector, bool status)
+```
+
+
+
+
+
+#### Parameters
+
+| Name | Type | Description |
+|---|---|---|
+| selector  | bytes4 | undefined |
+| status  | bool | undefined |
 
 
 

@@ -1,4 +1,4 @@
-# Errors
+# LibErrors
 
 
 
@@ -27,6 +27,28 @@ error InvalidArgument()
 
 ```solidity
 error InvalidCall()
+```
+
+
+
+
+
+
+### InvalidEmptyString
+
+```solidity
+error InvalidEmptyString()
+```
+
+
+
+
+
+
+### InvalidFee
+
+```solidity
+error InvalidFee()
 ```
 
 

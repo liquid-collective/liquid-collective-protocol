@@ -9,14 +9,17 @@ import "../state/shared/ApprovalsPerOwner.sol";
 
 /// @title Shares Manager (v1)
 /// @author Kiln
-/// @notice This contract handles the shares of the depositor and the rebasing effect depending on the oracle data
+/// @notice This contract handles the shares of the depositor and the ERC20 interface
 abstract contract SharesManagerV1 is ISharesManagerV1 {
     /// @notice Internal hook triggered on the external transfer call
+    /// @dev Must be overriden
     /// @param _from Address of the sender
     /// @param _to Address of the recipient
     function _onTransfer(address _from, address _to) internal view virtual;
 
     /// @notice Internal method to override to provide the total underlying asset balance
+    /// @dev Must be overriden
+    /// @return The total asset balance of the system
     function _assetBalance() internal view virtual returns (uint256);
 
     /// @notice Modifier used to ensure that the transfer is allowed by using the internal hook to perform internal checks
@@ -47,60 +50,75 @@ abstract contract SharesManagerV1 is ISharesManagerV1 {
     }
 
     /// @notice Retrieve the token name
+    /// @return The token name
     function name() external pure returns (string memory) {
         return "Liquid Staked ETH";
     }
 
     /// @notice Retrieve the token symbol
+    /// @return The token symbol
     function symbol() external pure returns (string memory) {
         return "LsETH";
     }
 
     /// @notice Retrieve the decimal count
+    /// @return The decimal count
     function decimals() external pure returns (uint8) {
         return 18;
     }
 
     /// @notice Retrieve the total token supply
+    /// @return The total supply
     function totalSupply() external view returns (uint256) {
         return _totalSupply();
     }
 
     /// @notice Retrieve the total underlying asset supply
+    /// @return The total underlying asset supply
     function totalUnderlyingSupply() external view returns (uint256) {
         return _assetBalance();
     }
 
     /// @notice Retrieve the balance of an account
     /// @param _owner Address to be checked
-    function balanceOf(address _owner) external view returns (uint256 balance) {
+    /// @return The balance of the account
+    function balanceOf(address _owner) external view returns (uint256) {
         return _balanceOf(_owner);
     }
 
     /// @notice Retrieve the underlying asset balance of an account
     /// @param _owner Address to be checked
-    function balanceOfUnderlying(address _owner) public view returns (uint256 balance) {
+    /// @return The underlying balance of the account
+    function balanceOfUnderlying(address _owner) public view returns (uint256) {
         return _balanceFromShares(SharesPerOwner.get(_owner));
     }
 
-    function underlyingBalanceFromShares(uint256 shares) external view returns (uint256) {
-        return _balanceFromShares(shares);
+    /// @notice Retrieve the underlying asset balance from an amount of shares
+    /// @param _shares Amount of shares to convert
+    /// @return The underlying asset balance represented by the shares
+    function underlyingBalanceFromShares(uint256 _shares) external view returns (uint256) {
+        return _balanceFromShares(_shares);
     }
 
-    function sharesFromUnderlyingBalance(uint256 underlyingBalance) external view returns (uint256) {
-        return _sharesFromBalance(underlyingBalance);
+    /// @notice Retrieve the shares count from an underlying asset amount
+    /// @param _underlyingAssetAmount Amount of underlying asset to convert
+    /// @return The amount of shares worth the underlying asset amopunt
+    function sharesFromUnderlyingBalance(uint256 _underlyingAssetAmount) external view returns (uint256) {
+        return _sharesFromBalance(_underlyingAssetAmount);
     }
 
     /// @notice Retrieve the allowance value for a spender
-    /// @notice _owner Address that issued the allowance
-    /// @notice _spender Address that received the allowance
-    function allowance(address _owner, address _spender) external view returns (uint256 remaining) {
+    /// @param _owner Address that issued the allowance
+    /// @param _spender Address that received the allowance
+    /// @return The allowance for a given spender
+    function allowance(address _owner, address _spender) external view returns (uint256) {
         return ApprovalsPerOwner.get(_owner, _spender);
     }
 
     /// @notice Performs a transfer from the message sender to the provided account
     /// @param _to Address receiving the tokens
     /// @param _value Amount to be sent
+    /// @return True if success
     function transfer(address _to, uint256 _value)
         external
         transferAllowed(msg.sender, _to)
@@ -115,11 +133,10 @@ abstract contract SharesManagerV1 is ISharesManagerV1 {
     }
 
     /// @notice Performs a transfer between two recipients
-    /// @dev If the specified _from argument is the message sender, behaves like a regular transfer
-    /// @dev If the specified _from argument is not the message sender, checks that the message sender has been given enough allowance
     /// @param _from Address sending the tokens
     /// @param _to Address receiving the tokens
     /// @param _value Amount to be sent
+    /// @return True if success
     function transferFrom(address _from, address _to, uint256 _value)
         external
         transferAllowed(_from, _to)
@@ -138,7 +155,8 @@ abstract contract SharesManagerV1 is ISharesManagerV1 {
     /// @dev An approved account can use transferFrom to transfer funds on behalf of the token owner
     /// @param _spender Address that is allowed to spend the tokens
     /// @param _value The allowed amount, will override previous value
-    function approve(address _spender, uint256 _value) external returns (bool success) {
+    /// @return True if success
+    function approve(address _spender, uint256 _value) external returns (bool) {
         ApprovalsPerOwner.set(msg.sender, _spender, _value);
         emit Approval(msg.sender, _spender, _value);
         return true;
@@ -147,7 +165,8 @@ abstract contract SharesManagerV1 is ISharesManagerV1 {
     /// @notice Increase allowance to another account
     /// @param _spender Spender that receives the allowance
     /// @param _additionalValue Amount to add
-    function increaseAllowance(address _spender, uint256 _additionalValue) external returns (bool success) {
+    /// @return True if success
+    function increaseAllowance(address _spender, uint256 _additionalValue) external returns (bool) {
         uint256 newApprovalValue = ApprovalsPerOwner.get(msg.sender, _spender) + _additionalValue;
         ApprovalsPerOwner.set(msg.sender, _spender, newApprovalValue);
         emit Approval(msg.sender, _spender, newApprovalValue);
@@ -157,13 +176,17 @@ abstract contract SharesManagerV1 is ISharesManagerV1 {
     /// @notice Decrease allowance to another account
     /// @param _spender Spender that receives the allowance
     /// @param _subtractableValue Amount to subtract
-    function decreaseAllowance(address _spender, uint256 _subtractableValue) external returns (bool success) {
+    /// @return True if success
+    function decreaseAllowance(address _spender, uint256 _subtractableValue) external returns (bool) {
         uint256 newApprovalValue = ApprovalsPerOwner.get(msg.sender, _spender) - _subtractableValue;
         ApprovalsPerOwner.set(msg.sender, _spender, newApprovalValue);
         emit Approval(msg.sender, _spender, newApprovalValue);
         return true;
     }
 
+    /// @notice Internal utility to spend the allowance of an account from the message sender
+    /// @param _from Address owning the allowance
+    /// @param _value Amount of allowance to spend
     function _spendAllowance(address _from, uint256 _value) internal {
         uint256 currentAllowance = ApprovalsPerOwner.get(_from, msg.sender);
         if (currentAllowance < _value) {
@@ -175,6 +198,7 @@ abstract contract SharesManagerV1 is ISharesManagerV1 {
     }
 
     /// @notice Internal utility to retrieve the total supply of tokens
+    /// @return The total supply
     function _totalSupply() internal view returns (uint256) {
         return Shares.get();
     }
@@ -183,6 +207,7 @@ abstract contract SharesManagerV1 is ISharesManagerV1 {
     /// @param _from Address sending the tokens
     /// @param _to Address receiving the tokens
     /// @param _value Amount to be sent
+    /// @return True if success
     function _transfer(address _from, address _to, uint256 _value) internal returns (bool) {
         SharesPerOwner.set(_from, SharesPerOwner.get(_from) - _value);
         SharesPerOwner.set(_to, SharesPerOwner.get(_to) + _value);
@@ -194,6 +219,7 @@ abstract contract SharesManagerV1 is ISharesManagerV1 {
 
     /// @notice Internal utility to retrieve the underlying asset balance for the given shares
     /// @param _shares Amount of shares to convert
+    /// @return The balance from the given shares
     function _balanceFromShares(uint256 _shares) internal view returns (uint256) {
         uint256 _totalSharesValue = Shares.get();
 
@@ -206,6 +232,7 @@ abstract contract SharesManagerV1 is ISharesManagerV1 {
 
     /// @notice Internal utility to retrieve the shares count for a given underlying asset amount
     /// @param _balance Amount of underlying asset balance to convert
+    /// @return The shares from the given balance
     function _sharesFromBalance(uint256 _balance) internal view returns (uint256) {
         uint256 _totalSharesValue = Shares.get();
 
@@ -220,6 +247,7 @@ abstract contract SharesManagerV1 is ISharesManagerV1 {
     /// @dev This method assumes that funds received are now part of the _assetBalance()
     /// @param _owner Account that should receive the new shares
     /// @param _underlyingAssetValue Value of underlying asset received, to convert into shares
+    /// @return sharesToMint The amnount of minted shares
     function _mintShares(address _owner, uint256 _underlyingAssetValue) internal returns (uint256 sharesToMint) {
         uint256 oldTotalAssetBalance = _assetBalance() - _underlyingAssetValue;
 
@@ -243,7 +271,8 @@ abstract contract SharesManagerV1 is ISharesManagerV1 {
 
     /// @notice Internal utility to retrieve the amount of shares per owner
     /// @param _owner Account to be checked
-    function _balanceOf(address _owner) internal view returns (uint256 balance) {
+    /// @return The balance of the account
+    function _balanceOf(address _owner) internal view returns (uint256) {
         return SharesPerOwner.get(_owner);
     }
 }
