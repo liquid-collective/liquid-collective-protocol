@@ -7,8 +7,8 @@ import "../../src/components/UserDepositManager.1.sol";
 import "../utils/UserFactory.sol";
 
 contract UserDepositManagerV1EmptyDeposit is UserDepositManagerV1 {
-    function _onDeposit(address, address, uint256 _amount) internal view override returns (uint256) {
-        return _amount;
+    function _onDeposit(address, address, uint256) internal view override {
+        this;
     }
 }
 
@@ -106,9 +106,8 @@ contract UserDepositManagerV1DepositTests {
 contract UserDepositManagerV1CatchableDeposit is UserDepositManagerV1 {
     event InternalCallbackCalled(address depositor, address recipient, uint256 amount);
 
-    function _onDeposit(address depositor, address recipient, uint256 amount) internal override returns (uint256) {
+    function _onDeposit(address depositor, address recipient, uint256 amount) internal override {
         emit InternalCallbackCalled(depositor, recipient, amount);
-        return amount;
     }
 }
 
