@@ -19,7 +19,7 @@ contract DummyCounter {
         revert BigError(i);
     }
 
-    function isPaused() external pure {
+    function paused() external pure {
         revert CallWentIn();
     }
 }
@@ -71,7 +71,7 @@ contract TUPProxyTest is Test {
 
     function testAdminFuncAsLambda() public {
         vm.expectRevert(abi.encodeWithSignature("CallWentIn()"));
-        proxy.isPaused();
+        proxy.paused();
     }
 
     function testFuncAsAdmin() public {
@@ -119,7 +119,7 @@ contract TUPProxyTest is Test {
         assert(DummyCounter(address(proxy)).i() == 1);
         vm.startPrank(admin);
         proxy.pause();
-        assert(proxy.isPaused() == true);
+        assert(proxy.paused() == true);
         vm.stopPrank();
         vm.expectRevert(abi.encodeWithSignature("CallWhenPaused()"));
         DummyCounter(address(proxy)).inc();
@@ -127,7 +127,7 @@ contract TUPProxyTest is Test {
         vm.expectEmit(true, true, true, true);
         emit Unpause();
         proxy.unpause();
-        assert(proxy.isPaused() == false);
+        assert(proxy.paused() == false);
         vm.stopPrank();
         DummyCounter(address(proxy)).inc();
         assert(DummyCounter(address(proxy)).i() == 2);
