@@ -20,6 +20,7 @@ interface IOracleV1 {
     event SetMember(address indexed oldAddress, address indexed newAddress);
     event SetSpec(uint64 _epochsPerFrame, uint64 _slotsPerEpoch, uint64 _secondsPerSlot, uint64 _genesisTime);
     event SetBounds(uint256 _annualAprUpperBound, uint256 _relativeLowerBound);
+    event SetRiver(address _river);
 
     error EpochTooOld(uint256 _providedEpochId, uint256 _minExpectedEpochId);
     error NotFrameFirstEpochId(uint256 _providedEpochId, uint256 _expectedFrameFirstEpochId);

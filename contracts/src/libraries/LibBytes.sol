@@ -6,8 +6,10 @@ library LibBytes {
     error SliceOutOfBounds();
 
     function slice(bytes memory _bytes, uint256 _start, uint256 _length) internal pure returns (bytes memory) {
-        if (_length + 31 < _length) {
-            revert SliceOverflow();
+        unchecked {
+            if (_length + 31 < _length) {
+                revert SliceOverflow();
+            }
         }
         if (_bytes.length < _start + _length) {
             revert SliceOutOfBounds();

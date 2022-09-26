@@ -72,6 +72,19 @@ contract OperatorsRegistryV1Tests is Test, BytesGenerator {
         assert(newOperator.operator == _nodeOperatorAddress);
     }
 
+    function testAddNodeOperatorInvalidAddress(bytes32 _name) public {
+        vm.startPrank(admin);
+        vm.expectRevert(abi.encodeWithSignature("InvalidZeroAddress()"));
+        operatorsRegistry.addOperator(string(abi.encodePacked(_name)), address(0));
+    }
+
+    function testAddNodeOperatorInvalidName(uint256 _nodeOperatorAddressSalt) public {
+        address _nodeOperatorAddress = uf._new(_nodeOperatorAddressSalt);
+        vm.startPrank(admin);
+        vm.expectRevert(abi.encodeWithSignature("InvalidEmptyString()"));
+        operatorsRegistry.addOperator("", _nodeOperatorAddress);
+    }
+
     function testAddNodeWhileNotAdminOperator(uint256 _nodeOperatorAddressSalt, bytes32 _name) public {
         address _nodeOperatorAddress = uf._new(_nodeOperatorAddressSalt);
         vm.expectRevert(abi.encodeWithSignature("Unauthorized(address)", address(this)));
@@ -144,6 +157,19 @@ contract OperatorsRegistryV1Tests is Test, BytesGenerator {
         assert(newOperator.operator == _secondAddress);
     }
 
+    function testSetOperatorAddressZeroAddr(bytes32 _name, uint256 _firstAddressSalt) public {
+        address _firstAddress = uf._new(_firstAddressSalt);
+        vm.startPrank(admin);
+        uint256 index = operatorsRegistry.addOperator(string(abi.encodePacked(_name)), _firstAddress);
+        Operators.Operator memory newOperator = operatorsRegistry.getOperator(index);
+        assert(newOperator.operator == _firstAddress);
+        vm.stopPrank();
+        vm.startPrank(_firstAddress);
+        vm.expectRevert(abi.encodeWithSignature("InvalidZeroAddress()"));
+        operatorsRegistry.setOperatorAddress(index, address(0));
+        vm.stopPrank();
+    }
+
     function testSetOperatorAddressAsUnauthorized(bytes32 _name, uint256 _firstAddressSalt, uint256 _secondAddressSalt)
         public
     {
@@ -186,6 +212,19 @@ contract OperatorsRegistryV1Tests is Test, BytesGenerator {
         vm.stopPrank();
         newOperator = operatorsRegistry.getOperator(index);
         assert(keccak256(bytes(newOperator.name)) == keccak256(bytes(string(abi.encodePacked(_nextName)))));
+    }
+
+    function testSetOperatorNameEmptyString(bytes32 _name, uint256 _addressSalt) public {
+        address _address = uf._new(_addressSalt);
+        vm.startPrank(admin);
+        uint256 index = operatorsRegistry.addOperator(string(abi.encodePacked(_name)), _address);
+        vm.stopPrank();
+        Operators.Operator memory newOperator = operatorsRegistry.getOperator(index);
+        assert(keccak256(bytes(newOperator.name)) == keccak256(bytes(string(abi.encodePacked(_name)))));
+        vm.startPrank(_address);
+        vm.expectRevert(abi.encodeWithSignature("InvalidEmptyString()"));
+        operatorsRegistry.setOperatorName(index, "");
+        vm.stopPrank();
     }
 
     function testSetOperatorNameAsUnauthorized(bytes32 _name, uint256 _addressSalt) public {

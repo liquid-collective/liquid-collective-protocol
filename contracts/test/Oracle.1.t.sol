@@ -37,10 +37,13 @@ contract OracleV1Tests {
     event SetMember(address indexed oldAddress, address indexed newAddress);
     event SetSpec(uint64 _epochsPerFrame, uint64 _slotsPerEpoch, uint64 _secondsPerSlot, uint64 _genesisTime);
     event SetBounds(uint256 _annualAprUpperBound, uint256 _relativeLowerBound);
+    event SetRiver(address _river);
 
     function setUp() public {
         oracleInput = IRiverV1(payable(address(new RiverMock())));
         oracle = new OracleV1();
+        vm.expectEmit(true, true, true, true);
+        emit SetRiver(address(oracleInput));
         oracle.initOracleV1(
             address(oracleInput),
             admin,
