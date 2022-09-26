@@ -156,7 +156,7 @@ interface IOperatorsRegistryV1 {
     /// @param _newStatus The new status of the operator
     function setOperatorStatus(uint256 _index, bool _newStatus) external;
 
-    /// @notice Changes the operator stopped validator cound
+    /// @notice Changes the operator stopped validator count
     /// @dev Only callable by the administrator
     /// @param _index The operator index
     /// @param _newStoppedValidatorCount The new stopped validator count of the operator
@@ -181,8 +181,8 @@ interface IOperatorsRegistryV1 {
 
     /// @notice Remove validator keys
     /// @dev Only callable by the administrator or the operator address
-    /// @dev The indexes must be provided sorted in decreasing order, otherwise the method will revert
-    /// @dev The operator limit will be set to the lowest deleted key index
+    /// @dev The indexes must be provided sorted in decreasing order and duplicate-free, otherwise the method will revert
+    /// @dev The operator limit will be set to the lowest deleted key index if the operator's limit wasn't equal to its total key count
     /// @param _index The operator index
     /// @param _indexes The indexes of the keys to remove
     function removeValidators(uint256 _index, uint256[] calldata _indexes) external;

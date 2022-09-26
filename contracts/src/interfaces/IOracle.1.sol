@@ -233,6 +233,8 @@ interface IOracleV1 {
 
     /// @notice Report cl chain data
     /// @dev Only callable by an oracle member
+    /// @dev The epoch id is expected to be >= to the expected epoch id stored in the contract
+    /// @dev The epoch id is expected to be the first epoch of its frame
     /// @param _epochId Epoch where the balance and validator count has been computed
     /// @param _clValidatorsBalance Total balance of River validators
     /// @param _clValidatorCount Total River validator count

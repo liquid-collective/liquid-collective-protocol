@@ -35,6 +35,7 @@ interface IOracleManagerV1 {
 
     /// @notice Sets the validator count and validator total balance sum reported by the oracle
     /// @dev Can only be called by the oracle address
+    /// @dev The round id is a blackbox value that should only be used to identify unique reports
     /// @param _validatorCount The number of active validators on the consensus layer
     /// @param _validatorTotalBalance The validator balance sum of the active validators on the consensus layer
     /// @param _roundId An identifier for this update

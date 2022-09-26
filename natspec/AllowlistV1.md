@@ -29,7 +29,7 @@ function allow(address[] _accounts, uint256[] _permissions) external nonpayable
 
 Sets the allowlisting status for one or more accounts
 
-
+*The permission value is overriden and not updated*
 
 #### Parameters
 

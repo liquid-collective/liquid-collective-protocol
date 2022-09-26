@@ -5,6 +5,7 @@ import "../../libraries/LibSanitize.sol";
 
 /// @title Oracle Members Storage
 /// @notice Utility to manage the Oracle Members in storage
+/// @dev There can only be up to 256 oracle members. This is due to how report statuses are stored in Reports Positions
 library OracleMembers {
     /// @notice Storage slot of the Oracle Members
     bytes32 internal constant ORACLE_MEMBERS_SLOT = bytes32(uint256(keccak256("river.state.oracleMembers")) - 1);

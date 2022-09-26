@@ -8,6 +8,16 @@ library ReportsVariants {
     bytes32 internal constant REPORTS_VARIANTS_SLOT = bytes32(uint256(keccak256("river.state.reportsVariants")) - 1);
 
     /// @notice Mask used to extra the report values from the variant
+    /// @notice This is the packing done inside the variant in storage
+    /// @notice
+    /// @notice [ 0,  16) : <voteCount>           oracle member's total vote count for the numbers below (uint16, 2 bytes)
+    /// @notice [16,  48) : <beaconValidators>    total number of beacon validators (uint32, 4 bytes)
+    /// @notice [48, 112) : <beaconBalance>       total balance of all the beacon validators (uint64, 6 bytes)
+    /// @notice
+    /// @notice So applying this mask, we can extra the voteCount out to perform comparisons on the report values
+    /// @notice
+    /// @notice xx...xx <beaconBalance> <beaconValidators> xxxx & COUNT_OUTMASK  ==
+    /// @notice 00...00 <beaconBalance> <beaconValidators> 0000
     uint256 internal constant COUNT_OUTMASK = 0xFFFFFFFFFFFFFFFFFFFFFFFF0000;
 
     /// @notice Structure in storage

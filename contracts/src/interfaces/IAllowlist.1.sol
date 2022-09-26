@@ -66,6 +66,7 @@ interface IAllowlistV1 {
     function setAllower(address _newAllowerAddress) external;
 
     /// @notice Sets the allowlisting status for one or more accounts
+    /// @dev The permission value is overriden and not updated
     /// @param _accounts Accounts with statuses to edit
     /// @param _permissions Allowlist permissions for each account, in the same order as _accounts
     function allow(address[] calldata _accounts, uint256[] calldata _permissions) external;

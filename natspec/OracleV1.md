@@ -432,7 +432,7 @@ function reportConsensusLayerData(uint256 _epochId, uint64 _clValidatorsBalance,
 
 Report cl chain data
 
-*Only callable by an oracle member*
+*Only callable by an oracle memberThe epoch id is expected to be &gt;= to the expected epoch id stored in the contractThe epoch id is expected to be the first epoch of its frame*
 
 #### Parameters
 

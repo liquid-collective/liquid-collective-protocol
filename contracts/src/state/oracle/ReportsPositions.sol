@@ -5,6 +5,7 @@ import "../../libraries/LibUnstructuredStorage.sol";
 
 /// @title Reports Positions Storage
 /// @notice Utility to manage the Reports Positions in storage
+/// @dev Each bit in the stored uint256 value tells if the member at a given index has reported
 library ReportsPositions {
     /// @notice Storage slot of the Reports Positions
     bytes32 internal constant REPORTS_POSITIONS_SLOT = bytes32(uint256(keccak256("river.state.reportsPositions")) - 1);

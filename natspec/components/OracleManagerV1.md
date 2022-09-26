@@ -69,7 +69,7 @@ function setConsensusLayerData(uint256 _validatorCount, uint256 _validatorTotalB
 
 Sets the validator count and validator balance sum reported by the oracle
 
-*Can only be called by the oracle address*
+*Can only be called by the oracle addressThe round id is a blackbox value that should only be used to identify unique reports*
 
 #### Parameters
 

@@ -197,7 +197,7 @@ function removeValidators(uint256 _index, uint256[] _indexes) external nonpayabl
 
 Remove validator keys
 
-*Only callable by the administrator or the operator addressThe indexes must be provided sorted in decreasing order, otherwise the method will revertThe operator limit will be set to the lowest deleted key index*
+*Only callable by the administrator or the operator addressThe indexes must be provided sorted in decreasing order and duplicate-free, otherwise the method will revertThe operator limit will be set to the lowest deleted key index if the operator&#39;s limit wasn&#39;t equal to its total key count*
 
 #### Parameters
 
@@ -280,7 +280,7 @@ Changes the operator status
 function setOperatorStoppedValidatorCount(uint256 _index, uint256 _newStoppedValidatorCount) external nonpayable
 ```
 
-Changes the operator stopped validator cound
+Changes the operator stopped validator count
 
 *Only callable by the administrator*
 

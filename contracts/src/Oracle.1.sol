@@ -435,6 +435,12 @@ contract OracleV1 is IOracleV1, Initializable, Administrable {
     }
 
     /// @notice Push the new cl data to the river system and performs sanity checks
+    /// @dev At this point, the maximum increase allowed to the previous total asset balance is computed and
+    /// @dev provided to River. It's then up to River to manager how extra funds are injected in the system
+    /// @dev and make sure the limit is not crossed. If the _totalBalance is already crossing this limit,
+    /// @dev then there is nothing River can do to prevent it.
+    /// @dev These extra funds are:
+    /// @dev - the execution layer fees
     /// @param _epochId Id of the epoch
     /// @param _totalBalance Total validator balance
     /// @param _validatorCount Total validator count
