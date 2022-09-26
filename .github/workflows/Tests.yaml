@@ -18,13 +18,6 @@ jobs:
           version: nightly
 
       - name: run tests
-        run: forge test --force -vvv --gas-report | tee test-and-gas-report.txt
+        run: forge test --force -vvv --gas-report 
         env:
           FOUNDRY_FUZZ_RUNS: 5000
-
-      - name: archive test and gas usage artifact
-        uses: actions/upload-artifact@v3
-        with:
-          name: test-and-gas-usage
-          path: |
-            test-and-gas-report.txt
