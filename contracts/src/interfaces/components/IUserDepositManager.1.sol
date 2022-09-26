@@ -7,7 +7,6 @@ interface IUserDepositManagerV1 {
     error EmptyDeposit();
     error EmptyDonation();
 
-    function getPendingEth() external view returns (uint256);
     function deposit() external payable;
     function depositAndTransfer(address _recipient) external payable;
     receive() external payable;

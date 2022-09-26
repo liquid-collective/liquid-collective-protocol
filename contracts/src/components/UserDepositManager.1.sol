@@ -3,6 +3,7 @@ pragma solidity 0.8.10;
 
 import "../libraries/LibErrors.sol";
 import "../libraries/LibSanitize.sol";
+import "../state/river/BalanceToDeposit.sol";
 
 import "../interfaces/components/IUserDepositManager.1.sol";
 
@@ -23,14 +24,11 @@ abstract contract UserDepositManagerV1 is IUserDepositManagerV1 {
             revert EmptyDeposit();
         }
 
+        BalanceToDeposit.set(BalanceToDeposit.get() + msg.value);
+
         _onDeposit(msg.sender, _recipient, msg.value);
 
         emit UserDeposit(msg.sender, _recipient, msg.value);
-    }
-
-    /// @notice Returns the amount of pending ETH
-    function getPendingEth() external view returns (uint256) {
-        return address(this).balance;
     }
 
     /// @notice Explicit deposit method to mint on msg.sender

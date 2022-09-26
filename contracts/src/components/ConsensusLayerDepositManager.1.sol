@@ -9,6 +9,7 @@ import "../libraries/LibUint256.sol";
 import "../state/river/DepositContractAddress.sol";
 import "../state/river/WithdrawalCredentials.sol";
 import "../state/river/DepositedValidatorCount.sol";
+import "../state/river/BalanceToDeposit.sol";
 
 import "../interfaces/components/IConsensusLayerDepositManager.1.sol";
 
@@ -50,13 +51,14 @@ abstract contract ConsensusLayerDepositManagerV1 is IConsensusLayerDepositManage
     /// @notice Deposits current balance to the Consensus Layer by batches of 32 ETH
     /// @param _maxCount The maximum amount of validator keys to fund
     function depositToConsensusLayer(uint256 _maxCount) external {
-        uint256 validatorsToDeposit = LibUint256.min(address(this).balance / DEPOSIT_SIZE, _maxCount);
+        uint256 balanceToDeposit = BalanceToDeposit.get();
+        uint256 keyToDepositCount = LibUint256.min(balanceToDeposit / DEPOSIT_SIZE, _maxCount);
 
-        if (validatorsToDeposit == 0) {
+        if (keyToDepositCount == 0) {
             revert NotEnoughFunds();
         }
 
-        (bytes[] memory publicKeys, bytes[] memory signatures) = _getNextValidators(validatorsToDeposit);
+        (bytes[] memory publicKeys, bytes[] memory signatures) = _getNextValidators(keyToDepositCount);
 
         uint256 receivedPublicKeyCount = publicKeys.length;
 
@@ -64,7 +66,7 @@ abstract contract ConsensusLayerDepositManagerV1 is IConsensusLayerDepositManage
             revert NoAvailableValidatorKeys();
         }
 
-        if (receivedPublicKeyCount > validatorsToDeposit) {
+        if (receivedPublicKeyCount > keyToDepositCount) {
             revert InvalidPublicKeyCount();
         }
 
@@ -86,7 +88,7 @@ abstract contract ConsensusLayerDepositManagerV1 is IConsensusLayerDepositManage
                 ++idx;
             }
         }
-
+        BalanceToDeposit.set(balanceToDeposit - DEPOSIT_SIZE * receivedPublicKeyCount);
         DepositedValidatorCount.set(DepositedValidatorCount.get() + receivedPublicKeyCount);
     }
 
@@ -137,5 +139,10 @@ abstract contract ConsensusLayerDepositManagerV1 is IConsensusLayerDepositManage
     /// @notice Get the deposited validator count (the count of deposits made by the contract)
     function getDepositedValidatorCount() external view returns (uint256 depositedValidatorCount) {
         depositedValidatorCount = DepositedValidatorCount.get();
+    }
+
+    /// @notice Returns the amount of ETH pending for deposits
+    function getBalanceToDeposit() external view returns (uint256) {
+        return BalanceToDeposit.get();
     }
 }

@@ -96,7 +96,7 @@ contract SharesManagerV1Tests {
         assert(sharesManager.balanceOf(_user) == 0 ether);
     }
 
-    function testbalanceOf(uint256 _userSalt, uint256 _anotherUserSalt) public {
+    function testBalanceOfMultiRebasings(uint256 _userSalt, uint256 _anotherUserSalt) public {
         address _user = uf._new(_userSalt);
         address _anotherUser = uf._new(_anotherUserSalt);
         _anotherUser = address(uint160(_user) + 1);
