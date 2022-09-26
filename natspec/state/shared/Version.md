@@ -2,9 +2,9 @@
 
 
 
+> Version Storage
 
-
-
+Utility to manage the Version in storage
 
 
 
@@ -16,7 +16,7 @@
 function VERSION_SLOT() external view returns (bytes32)
 ```
 
-
+Storage slot of the Version
 
 
 

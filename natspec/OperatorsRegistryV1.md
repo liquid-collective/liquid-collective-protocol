@@ -761,7 +761,7 @@ The value for the limit is too lowe
 error OperatorNotFound(uint256 index)
 ```
 
-
+The operator was not found
 
 
 
@@ -769,7 +769,7 @@ error OperatorNotFound(uint256 index)
 
 | Name | Type | Description |
 |---|---|---|
-| index | uint256 | undefined |
+| index | uint256 | The provided index |
 
 ### SliceOutOfBounds
 

@@ -3,11 +3,13 @@ pragma solidity 0.8.10;
 
 import "../../libraries/LibSanitize.sol";
 
+/// @title Operators Storage
+/// @notice Utility to manage the Operators in storage
 library Operators {
+    /// @notice Storage slot of the Operators
     bytes32 internal constant OPERATORS_SLOT = bytes32(uint256(keccak256("river.state.operators")) - 1);
 
-    bytes32 internal constant OPERATORS_MAPPING_SLOT = bytes32(uint256(keccak256("river.state.operatorsMapping")) - 1);
-
+    /// @notice The Operator structure in storage
     struct Operator {
         bool active;
         string name;
@@ -19,6 +21,7 @@ library Operators {
         uint256 latestKeysEditBlockNumber;
     }
 
+    /// @notice The Operator structure when loaded in memory
     struct CachedOperator {
         bool active;
         string name;
@@ -31,33 +34,43 @@ library Operators {
         uint256 picked;
     }
 
+    /// @notice The structure at the storage slot
     struct SlotOperator {
         Operator[] value;
     }
 
+    /// @notice The operator was not found
+    /// @param index The provided index
     error OperatorNotFound(uint256 index);
 
-    function get(uint256 index) internal view returns (Operator storage) {
+    /// @notice Retrieve the operator in storage
+    /// @param _index The index of the operator
+    /// @return The Operator structure
+    function get(uint256 _index) internal view returns (Operator storage) {
         bytes32 slot = OPERATORS_SLOT;
 
         SlotOperator storage r;
 
+        // solhint-disable-next-line no-inline-assembly
         assembly {
             r.slot := slot
         }
 
-        if (r.value.length <= index) {
-            revert OperatorNotFound(index);
+        if (r.value.length <= _index) {
+            revert OperatorNotFound(_index);
         }
 
-        return r.value[index];
+        return r.value[_index];
     }
 
+    /// @notice Retrieve the operator count in storage
+    /// @return The count of operators in storage
     function getCount() internal view returns (uint256) {
         bytes32 slot = OPERATORS_SLOT;
 
         SlotOperator storage r;
 
+        // solhint-disable-next-line no-inline-assembly
         assembly {
             r.slot := slot
         }
@@ -65,15 +78,14 @@ library Operators {
         return r.value.length;
     }
 
-    function _hasFundableKeys(Operators.Operator memory operator) internal pure returns (bool) {
-        return (operator.active && operator.limit > operator.funded);
-    }
-
+    /// @notice Retrieve all the active operators
+    /// @return The list of active operator structures
     function getAllActive() internal view returns (Operator[] memory) {
         bytes32 slot = OPERATORS_SLOT;
 
         SlotOperator storage r;
 
+        // solhint-disable-next-line no-inline-assembly
         assembly {
             r.slot := slot
         }
@@ -110,11 +122,14 @@ library Operators {
         return activeOperators;
     }
 
+    /// @notice Retrieve all the active and fundable operators
+    /// @return The list of active and fundable operators
     function getAllFundable() internal view returns (CachedOperator[] memory) {
         bytes32 slot = OPERATORS_SLOT;
 
         SlotOperator storage r;
 
+        // solhint-disable-next-line no-inline-assembly
         assembly {
             r.slot := slot
         }
@@ -162,26 +177,40 @@ library Operators {
         return activeOperators;
     }
 
-    function push(Operator memory newValue) internal returns (uint256) {
-        LibSanitize._notZeroAddress(newValue.operator);
-        LibSanitize._notEmptyString(newValue.name);
+    /// @notice Add a new operator in storage
+    /// @param _newOperator Value of the new operator
+    /// @return The size of the operator array after the operation
+    function push(Operator memory _newOperator) internal returns (uint256) {
+        LibSanitize._notZeroAddress(_newOperator.operator);
+        LibSanitize._notEmptyString(_newOperator.name);
         bytes32 slot = OPERATORS_SLOT;
 
         SlotOperator storage r;
 
+        // solhint-disable-next-line no-inline-assembly
         assembly {
             r.slot := slot
         }
 
-        r.value.push(newValue);
+        r.value.push(_newOperator);
 
         return r.value.length;
     }
 
-    function setKeys(uint256 opIndex, uint256 newKeys) internal {
-        Operator storage op = get(opIndex);
+    /// @notice Atomic operation to set the key count and update the latestKeysEditBlockNumber field at the same time
+    /// @param _index The operator index
+    /// @param _newKeys The new value for the key count
+    function setKeys(uint256 _index, uint256 _newKeys) internal {
+        Operator storage op = get(_index);
 
-        op.keys = newKeys;
+        op.keys = _newKeys;
         op.latestKeysEditBlockNumber = block.number;
+    }
+
+    /// @notice Checks if an operator is active and has fundable keys
+    /// @param _operator The operator details
+    /// @return True if active and fundable
+    function _hasFundableKeys(Operators.Operator memory _operator) internal pure returns (bool) {
+        return (_operator.active && _operator.limit > _operator.funded);
     }
 }

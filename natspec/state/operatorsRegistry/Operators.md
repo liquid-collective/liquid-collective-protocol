@@ -2,9 +2,9 @@
 
 
 
+> Operators Storage
 
-
-
+Utility to manage the Operators in storage
 
 
 
@@ -18,7 +18,7 @@
 error OperatorNotFound(uint256 index)
 ```
 
-
+The operator was not found
 
 
 
@@ -26,6 +26,6 @@ error OperatorNotFound(uint256 index)
 
 | Name | Type | Description |
 |---|---|---|
-| index | uint256 | undefined |
+| index | uint256 | The provided index |
 
 
