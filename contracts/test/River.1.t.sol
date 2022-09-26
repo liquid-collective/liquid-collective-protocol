@@ -1284,7 +1284,7 @@ contract RiverV1SetupOneTests is Test, BytesGenerator {
         _lowerBound = _lowerBound % 5001;
 
         vm.prank(admin);
-        oracle.setBeaconBounds(_upperBound, _lowerBound);
+        oracle.setReportBounds(_upperBound, _lowerBound);
 
         vm.deal(joe, 32 ether * uint256(_initialValidatorCount));
 
@@ -1299,7 +1299,7 @@ contract RiverV1SetupOneTests is Test, BytesGenerator {
 
         vm.startPrank(oracleMember);
         (uint256 epoch,,) = oracle.getCurrentFrame();
-        oracle.reportBeacon(epoch, totalBalanceReported, _initialValidatorCount);
+        oracle.reportConsensusLayerData(epoch, totalBalanceReported, _initialValidatorCount);
         vm.stopPrank();
 
         vm.warp(block.timestamp + 1 days);
@@ -1314,10 +1314,13 @@ contract RiverV1SetupOneTests is Test, BytesGenerator {
             uint256 increase = maxIncrease * innerDelta / (middle / 2);
             (epoch,,) = oracle.getCurrentFrame();
 
-            if (innerDelta > middle / 2 && _upperBound > 0) {
+            if (innerDelta > middle / 2) {
+                if (increase == 0) {
+                    increase = 1 gwei;
+                }
                 vm.expectRevert(
                     abi.encodeWithSignature(
-                        "BeaconBalanceIncreaseOutOfBounds(uint256,uint256,uint256,uint256)",
+                        "TotalValidatorBalanceIncreaseOutOfBound(uint256,uint256,uint256,uint256)",
                         prevTotalEth,
                         prevTotalEth + (increase / 1 gwei) * 1 gwei,
                         1 days,
@@ -1325,26 +1328,29 @@ contract RiverV1SetupOneTests is Test, BytesGenerator {
                     )
                 );
                 vm.prank(oracleMember);
-                oracle.reportBeacon(epoch, totalBalanceReported + uint64((increase / 1 gwei)), _initialValidatorCount);
+                oracle.reportConsensusLayerData(
+                    epoch, totalBalanceReported + uint64((increase / 1 gwei)), _initialValidatorCount
+                );
             } else {
                 uint256 elFeeRecipientBalance = maxIncrease - ((increase / 1 gwei) * 1 gwei);
                 vm.deal(address(elFeeRecipient), elFeeRecipientBalance);
                 vm.prank(oracleMember);
-                oracle.reportBeacon(epoch, totalBalanceReported + uint64((increase / 1 gwei)), _initialValidatorCount);
+                oracle.reportConsensusLayerData(
+                    epoch, totalBalanceReported + uint64((increase / 1 gwei)), _initialValidatorCount
+                );
                 assert(address(elFeeRecipient).balance == 0);
             }
         } else {
             // balance decrease
-            uint256 maxDecrease = (prevTotalEth * _lowerBound) / 10000;
-
-            uint256 decrease = maxDecrease * _delta / (middle / 2);
+            uint256 decrease = (prevTotalEth * _lowerBound) / 10000;
 
             (epoch,,) = oracle.getCurrentFrame();
 
-            if (_delta > middle / 2 && _lowerBound > 0) {
+            if (_delta % 2 == 0) {
+                decrease += 1 gwei; // we cross the max allowed decrease by the smallest possible amount
                 vm.expectRevert(
                     abi.encodeWithSignature(
-                        "BeaconBalanceDecreaseOutOfBounds(uint256,uint256,uint256,uint256)",
+                        "TotalValidatorBalanceDecreaseOutOfBound(uint256,uint256,uint256,uint256)",
                         prevTotalEth,
                         prevTotalEth - (decrease / 1 gwei) * 1 gwei,
                         1 days,
@@ -1352,14 +1358,18 @@ contract RiverV1SetupOneTests is Test, BytesGenerator {
                     )
                 );
                 vm.prank(oracleMember);
-                oracle.reportBeacon(epoch, totalBalanceReported - uint64((decrease / 1 gwei)), _initialValidatorCount);
+                oracle.reportConsensusLayerData(
+                    epoch, totalBalanceReported - uint64((decrease / 1 gwei)), _initialValidatorCount
+                );
             } else {
                 uint256 maxIncrease = _debugMaxIncrease(_upperBound, prevTotalEth, 1 days);
                 uint256 elFeeRecipientBalance = maxIncrease + (decrease / 1 gwei) * 1 gwei;
 
                 vm.deal(address(elFeeRecipient), elFeeRecipientBalance);
                 vm.prank(oracleMember);
-                oracle.reportBeacon(epoch, totalBalanceReported - uint64((decrease / 1 gwei)), _initialValidatorCount);
+                oracle.reportConsensusLayerData(
+                    epoch, totalBalanceReported - uint64((decrease / 1 gwei)), _initialValidatorCount
+                );
                 assert(address(elFeeRecipient).balance == 0);
             }
         }
@@ -1370,7 +1380,7 @@ contract RiverV1SetupOneTests is Test, BytesGenerator {
         _upperBound = _upperBound % 10001;
 
         vm.prank(admin);
-        oracle.setBeaconBounds(_upperBound, 500);
+        oracle.setReportBounds(_upperBound, 500);
 
         vm.deal(joe, 32 ether * uint256(_initialValidatorCount));
 
@@ -1389,7 +1399,7 @@ contract RiverV1SetupOneTests is Test, BytesGenerator {
 
         vm.startPrank(oracleMember);
         (uint256 epoch,,) = oracle.getCurrentFrame();
-        oracle.reportBeacon(epoch, totalBalanceReported, _initialValidatorCount);
+        oracle.reportConsensusLayerData(epoch, totalBalanceReported, _initialValidatorCount);
         vm.stopPrank();
 
         assert(address(elFeeRecipient).balance == 0);
