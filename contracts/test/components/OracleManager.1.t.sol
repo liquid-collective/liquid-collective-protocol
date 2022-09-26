@@ -5,6 +5,7 @@ pragma solidity 0.8.10;
 import "../Vm.sol";
 import "../../src/components/OracleManager.1.sol";
 import "../../src/libraries/LibErrors.sol";
+import "../../src/libraries/LibUint256.sol";
 import "../../src/state/shared/AdministratorAddress.sol";
 import "../utils/UserFactory.sol";
 
@@ -16,8 +17,8 @@ contract OracleManagerV1ExposeInitializer is OracleManagerV1 {
         lastReceived = amount;
     }
 
-    function _pullELFees() internal view override returns (uint256) {
-        return extraAmount;
+    function _pullELFees(uint256 _max) internal view override returns (uint256) {
+        return LibUint256.min(extraAmount, _max);
     }
 
     function supersedeExtraAmount(uint256 amount) external {
@@ -67,7 +68,7 @@ contract OracleManagerV1Tests {
         vm.startPrank(oracle);
         OracleManagerV1ExposeInitializer(address(oracleManager)).supersedeBalanceSum(32 ether);
         OracleManagerV1ExposeInitializer(address(oracleManager)).supersedeAllValidatorCount(1);
-        oracleManager.setConsensusLayerData(1, val2 + 32 ether, roundId);
+        oracleManager.setConsensusLayerData(1, val2 + 32 ether, roundId, val2 + 32 ether);
         assert(OracleManagerV1ExposeInitializer(address(oracleManager)).lastReceived() == val2);
     }
 
@@ -76,7 +77,7 @@ contract OracleManagerV1Tests {
         OracleManagerV1ExposeInitializer(address(oracleManager)).supersedeBalanceSum(32 ether);
         OracleManagerV1ExposeInitializer(address(oracleManager)).supersedeAllValidatorCount(1);
         OracleManagerV1ExposeInitializer(address(oracleManager)).supersedeExtraAmount(val3);
-        oracleManager.setConsensusLayerData(1, val2 + 32 ether, roundId);
+        oracleManager.setConsensusLayerData(1, val2 + 32 ether, roundId, val2 + 32 ether);
         assert(OracleManagerV1ExposeInitializer(address(oracleManager)).lastReceived() == uint256(val2) + uint256(val3));
     }
 
@@ -85,7 +86,7 @@ contract OracleManagerV1Tests {
         OracleManagerV1ExposeInitializer(address(oracleManager)).supersedeBalanceSum(32 ether);
         OracleManagerV1ExposeInitializer(address(oracleManager)).supersedeAllValidatorCount(1);
         OracleManagerV1ExposeInitializer(address(oracleManager)).supersedeDepositedValidatorCount(2);
-        oracleManager.setConsensusLayerData(2, val2 + 64 ether, roundId);
+        oracleManager.setConsensusLayerData(2, val2 + 64 ether, roundId, val2 + 64 ether);
         assert(OracleManagerV1ExposeInitializer(address(oracleManager)).lastReceived() == val2);
     }
 
@@ -94,14 +95,14 @@ contract OracleManagerV1Tests {
         vm.startPrank(user);
         OracleManagerV1ExposeInitializer(address(oracleManager)).supersedeAllValidatorCount(1);
         vm.expectRevert(abi.encodeWithSignature("Unauthorized(address)", user));
-        oracleManager.setConsensusLayerData(1, val1 + 32 ether, roundId);
+        oracleManager.setConsensusLayerData(1, val1 + 32 ether, roundId, val1 + 32 ether);
     }
 
     function testSetCLDataInvalidValidatorCount(uint64 val1, bytes32 roundId) public {
         vm.startPrank(oracle);
         OracleManagerV1ExposeInitializer(address(oracleManager)).supersedeAllValidatorCount(1);
         vm.expectRevert(abi.encodeWithSignature("InvalidValidatorCountReport(uint256,uint256)", 2, 1));
-        oracleManager.setConsensusLayerData(2, val1 + 32 ether, roundId);
+        oracleManager.setConsensusLayerData(2, val1 + 32 ether, roundId, val1 + 32 ether);
     }
 
     function testSetOracle(uint256 _oracleSalt) public {

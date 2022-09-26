@@ -420,6 +420,11 @@ contract OracleV1 is IOracleV1, Initializable, Administrable {
         return uint16(_report);
     }
 
+    function _maxIncrease(uint256 _prevTotalEth, uint256 _timeElapsed) internal view returns (uint256) {
+        uint256 annualAprUpperBound = ReportBounds.get().annualAprUpperBound;
+        return (_prevTotalEth * annualAprUpperBound * _timeElapsed) / uint256(10000 * 365 days);
+    }
+
     /// @notice Performs sanity checks to prevent an erroneous update to the River system
     /// @param _postTotalEth Total validator balance after update
     /// @param _prevTotalEth Total validator balance before update
@@ -469,10 +474,10 @@ contract OracleV1 is IOracleV1, Initializable, Administrable {
 
         IRiverV1 river = IRiverV1(payable(RiverAddress.get()));
         uint256 prevTotalEth = river.totalUnderlyingSupply();
-        river.setConsensusLayerData(_validatorCount, _totalBalance, bytes32(_epochId));
-        uint256 postTotalEth = river.totalUnderlyingSupply();
-
         uint256 timeElapsed = (_epochId - LastEpochId.get()) * _clSpec.slotsPerEpoch * _clSpec.secondsPerSlot;
+        uint256 maxIncrease = _maxIncrease(prevTotalEth, timeElapsed);
+        river.setConsensusLayerData(_validatorCount, _totalBalance, bytes32(_epochId), maxIncrease);
+        uint256 postTotalEth = river.totalUnderlyingSupply();
 
         _sanityChecks(postTotalEth, prevTotalEth, timeElapsed);
         LastEpochId.set(_epochId);

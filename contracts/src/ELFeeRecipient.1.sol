@@ -3,6 +3,7 @@ pragma solidity 0.8.10;
 
 import "./Initializable.sol";
 import "./libraries/LibErrors.sol";
+import "./libraries/LibUint256.sol";
 import "./interfaces/IRiver.1.sol";
 import "./interfaces/IELFeeRecipient.1.sol";
 import "./state/shared/RiverAddress.sol";
@@ -20,13 +21,15 @@ contract ELFeeRecipientV1 is Initializable, IELFeeRecipientV1 {
 
     /// @notice Pulls all the ETH to the River contract
     /// @dev Only callable by the River contract
-    function pullELFees() external {
+    /// @param _maxAmount Maximum value to extract from the recipient
+    function pullELFees(uint256 _maxAmount) external {
         address river = RiverAddress.get();
         if (msg.sender != river) {
             revert LibErrors.Unauthorized(msg.sender);
         }
+        uint256 amount = LibUint256.min(_maxAmount, address(this).balance);
 
-        IRiverV1(payable(river)).sendELFees{value: address(this).balance}();
+        IRiverV1(payable(river)).sendELFees{value: amount}();
     }
 
     /// @notice Ether receiver

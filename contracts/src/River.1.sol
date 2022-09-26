@@ -180,13 +180,14 @@ contract RiverV1 is
     }
 
     /// @notice Internal utility to pull funds from the execution layer fee recipient to River and return the delta in the balance
-    function _pullELFees() internal override returns (uint256) {
+    /// @param _max Maximum value to extract from the el fee recipient
+    function _pullELFees(uint256 _max) internal override returns (uint256) {
         address elFeeRecipient = ELFeeRecipientAddress.get();
         if (elFeeRecipient == address(0)) {
             return 0;
         }
         uint256 initialBalance = address(this).balance;
-        IELFeeRecipientV1(payable(elFeeRecipient)).pullELFees();
+        IELFeeRecipientV1(payable(elFeeRecipient)).pullELFees(_max);
         uint256 collectedELFees = address(this).balance - initialBalance;
         BalanceToDeposit.set(BalanceToDeposit.get() + collectedELFees);
         emit PulledELFees(collectedELFees);
