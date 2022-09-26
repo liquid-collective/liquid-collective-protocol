@@ -2,7 +2,6 @@
 pragma solidity 0.8.10;
 
 import "../../interfaces/IDepositContract.sol";
-import "../../libraries/LibErrors.sol";
 import "../../libraries/LibSanitize.sol";
 import "../../libraries/LibUnstructuredStorage.sol";
 

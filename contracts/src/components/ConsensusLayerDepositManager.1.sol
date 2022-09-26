@@ -1,6 +1,7 @@
 //SPDX-License-Identifier: BUSL-1.1
 pragma solidity 0.8.10;
 
+import "../interfaces/components/IConsensusLayerDepositManager.1.sol";
 import "../interfaces/IDepositContract.sol";
 
 import "../libraries/LibBytes.sol";
@@ -10,8 +11,6 @@ import "../state/river/DepositContractAddress.sol";
 import "../state/river/WithdrawalCredentials.sol";
 import "../state/river/DepositedValidatorCount.sol";
 import "../state/river/BalanceToDeposit.sol";
-
-import "../interfaces/components/IConsensusLayerDepositManager.1.sol";
 
 /// @title Consensus Layer Deposit Manager (v1)
 /// @author Kiln

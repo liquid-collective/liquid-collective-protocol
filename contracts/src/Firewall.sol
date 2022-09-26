@@ -1,8 +1,8 @@
 //SPDX-License-Identifier: BUSL-1.1
 pragma solidity 0.8.10;
 
-import "./libraries/LibErrors.sol";
 import "./interfaces/IFirewall.sol";
+
 import "./Administrable.sol";
 
 /// @title Firewall

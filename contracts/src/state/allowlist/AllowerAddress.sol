@@ -3,7 +3,6 @@ pragma solidity 0.8.10;
 
 import "../../libraries/LibUnstructuredStorage.sol";
 import "../../libraries/LibSanitize.sol";
-import "../../libraries/LibErrors.sol";
 
 library AllowerAddress {
     bytes32 internal constant ALLOWER_ADDRESS_SLOT = bytes32(uint256(keccak256("river.state.allowerAddress")) - 1);

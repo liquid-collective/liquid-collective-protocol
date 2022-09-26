@@ -2,12 +2,12 @@
 
 pragma solidity 0.8.10;
 
-import "./Vm.sol";
-import "../src/Allowlist.1.sol";
-import "../src/libraries/LibErrors.sol";
-import "../src/libraries/LibAdministrable.sol";
+import "forge-std/Test.sol";
+
 import "./utils/AllowlistHelper.sol";
 import "./utils/UserFactory.sol";
+
+import "../src/Allowlist.1.sol";
 
 contract AllowlistV1Sudo is AllowlistV1 {
     function sudoSetAdmin(address admin) external {
@@ -15,8 +15,7 @@ contract AllowlistV1Sudo is AllowlistV1 {
     }
 }
 
-contract AllowlistV1Tests {
-    Vm internal vm = Vm(0x7109709ECfa91a80626fF3989D68f67F5b1DD12D);
+contract AllowlistV1Tests is Test {
     UserFactory internal uf = new UserFactory();
 
     bytes32 internal withdrawalCredentials = bytes32(uint256(1));

@@ -2,10 +2,11 @@
 
 pragma solidity 0.8.10;
 
-import "../src/WLSETH.1.sol";
-import "./Vm.sol";
+import "forge-std/Test.sol";
+
 import "./utils/UserFactory.sol";
-import "../src/interfaces/IRiver.1.sol";
+
+import "../src/WLSETH.1.sol";
 
 contract RiverTokenMock {
     mapping(address => uint256) internal balances;
@@ -85,10 +86,9 @@ contract RiverTokenMock {
     }
 }
 
-contract WLSETHV1Tests {
+contract WLSETHV1Tests is Test {
     IRiverV1 internal river;
     WLSETHV1 internal wlseth;
-    Vm internal vm = Vm(0x7109709ECfa91a80626fF3989D68f67F5b1DD12D);
     UserFactory internal uf = new UserFactory();
 
     event Mint(address indexed _recipient, uint256 _value);

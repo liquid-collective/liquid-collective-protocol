@@ -1,8 +1,9 @@
 //SPDX-License-Identifier: BUSL-1.1
 pragma solidity >=0.8.10;
 
+import "forge-std/Test.sol";
+
 import "../src/TUPProxy.sol";
-import "./Vm.sol";
 
 contract DummyCounter {
     error BigError(uint256);
@@ -42,9 +43,7 @@ contract DummyCounterEvolved is DummyCounter {
     }
 }
 
-contract TUPProxyTest {
-    Vm internal vm = Vm(0x7109709ECfa91a80626fF3989D68f67F5b1DD12D);
-
+contract TUPProxyTest is Test {
     DummyCounter internal implem;
     DummyCounterEvolved internal implemEvolved;
     TUPProxy internal proxy;

@@ -13,7 +13,6 @@ import "./components/OracleManager.1.sol";
 import "./Initializable.sol";
 import "./Administrable.sol";
 
-import "./state/shared/AdministratorAddress.sol";
 import "./state/river/AllowlistAddress.sol";
 import "./state/river/OperatorsRegistryAddress.sol";
 import "./state/river/CollectorAddress.sol";

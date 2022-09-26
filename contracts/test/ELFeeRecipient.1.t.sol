@@ -2,13 +2,11 @@
 
 pragma solidity 0.8.10;
 
-import "./Vm.sol";
-import "../src/ELFeeRecipient.1.sol";
-import "../src/libraries/LibErrors.sol";
-import "../src/interfaces/IELFeeRecipient.1.sol";
-import "../src/Withdraw.1.sol";
-import "./utils/River.setup1.sol";
+import "forge-std/Test.sol";
+
 import "./utils/UserFactory.sol";
+
+import "../src/ELFeeRecipient.1.sol";
 
 contract RiverDonationMock {
     event BalanceUpdated(uint256 amount);
@@ -22,11 +20,10 @@ contract RiverDonationMock {
     }
 }
 
-contract ELFeeRecipientV1Test {
+contract ELFeeRecipientV1Test is Test {
     ELFeeRecipientV1 internal feeRecipient;
 
     RiverDonationMock internal river;
-    Vm internal vm = Vm(0x7109709ECfa91a80626fF3989D68f67F5b1DD12D);
     UserFactory internal uf = new UserFactory();
 
     event BalanceUpdated(uint256 amount);

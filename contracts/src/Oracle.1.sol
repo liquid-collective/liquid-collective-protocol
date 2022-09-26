@@ -1,22 +1,19 @@
 //SPDX-License-Identifier: BUSL-1.1
 pragma solidity 0.8.10;
 
-import "./Initializable.sol";
-import "./libraries/LibErrors.sol";
 import "./interfaces/IRiver.1.sol";
 import "./interfaces/IOracle.1.sol";
 
-import "./state/shared/AdministratorAddress.sol";
+import "./Administrable.sol";
+import "./Initializable.sol";
+
 import "./state/shared/RiverAddress.sol";
 import "./state/oracle/OracleMembers.sol";
 import "./state/oracle/Quorum.sol";
-import "./state/oracle/CLSpec.sol";
-import "./state/oracle/ReportBounds.sol";
 import "./state/oracle/ExpectedEpochId.sol";
 import "./state/oracle/LastEpochId.sol";
 import "./state/oracle/ReportsPositions.sol";
 import "./state/oracle/ReportsVariants.sol";
-import "./Administrable.sol";
 
 /// @title Oracle (v1)
 /// @author Kiln

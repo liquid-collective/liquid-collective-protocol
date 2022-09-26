@@ -1,15 +1,13 @@
 //SPDX-License-Identifier: BUSL-1.1
 pragma solidity 0.8.10;
 
-import "../libraries/LibErrors.sol";
+import "../interfaces/components/IOracleManager.1.sol";
 
 import "../state/river/OracleAddress.sol";
 import "../state/river/LastOracleRoundId.sol";
 import "../state/river/CLValidatorTotalBalance.sol";
 import "../state/river/CLValidatorCount.sol";
 import "../state/river/DepositedValidatorCount.sol";
-
-import "../interfaces/components/IOracleManager.1.sol";
 
 /// @title Oracle Manager (v1)
 /// @author Kiln

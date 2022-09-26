@@ -2,9 +2,11 @@
 
 pragma solidity 0.8.10;
 
-import "../Vm.sol";
-import "../../src/components/UserDepositManager.1.sol";
+import "forge-std/Test.sol";
+
 import "../utils/UserFactory.sol";
+
+import "../../src/components/UserDepositManager.1.sol";
 
 contract UserDepositManagerV1EmptyDeposit is UserDepositManagerV1 {
     function _onDeposit(address, address, uint256) internal view override {
@@ -12,8 +14,7 @@ contract UserDepositManagerV1EmptyDeposit is UserDepositManagerV1 {
     }
 }
 
-contract UserDepositManagerV1DepositTests {
-    Vm internal vm = Vm(0x7109709ECfa91a80626fF3989D68f67F5b1DD12D);
+contract UserDepositManagerV1DepositTests is Test {
     UserDepositManagerV1 internal transferManager;
     UserFactory internal uf = new UserFactory();
 
@@ -111,8 +112,7 @@ contract UserDepositManagerV1CatchableDeposit is UserDepositManagerV1 {
     }
 }
 
-contract UserDepositManagerV1CallbackTests {
-    Vm internal vm = Vm(0x7109709ECfa91a80626fF3989D68f67F5b1DD12D);
+contract UserDepositManagerV1CallbackTests is Test {
     UserDepositManagerV1 internal transferManager;
     UserFactory internal uf = new UserFactory();
 

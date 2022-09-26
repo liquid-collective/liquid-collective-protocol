@@ -2,20 +2,18 @@
 
 pragma solidity 0.8.10;
 
-import "./Vm.sol";
-import "../src/Oracle.1.sol";
-import "../src/libraries/LibErrors.sol";
-import "../src/Withdraw.1.sol";
-import "./utils/River.setup1.sol";
+import "forge-std/Test.sol";
+
 import "./utils/UserFactory.sol";
 import "./mocks/RiverMock.sol";
+
+import "../src/Oracle.1.sol";
 import "../src/interfaces/IRiver.1.sol";
 
-contract OracleV1Tests {
+contract OracleV1Tests is Test {
     OracleV1 internal oracle;
 
     IRiverV1 internal oracleInput;
-    Vm internal vm = Vm(0x7109709ECfa91a80626fF3989D68f67F5b1DD12D);
     UserFactory internal uf = new UserFactory();
 
     address internal admin = address(0xEA674fdDe714fd979de3EdF0F56AA9716B898ec8);

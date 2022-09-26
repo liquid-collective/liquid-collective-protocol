@@ -2,8 +2,9 @@
 
 pragma solidity 0.8.10;
 
-import "../src/Administrable.sol";
 import "forge-std/Test.sol";
+
+import "../src/Administrable.sol";
 
 contract WithAdmin is Administrable {
     constructor(address _admin) {

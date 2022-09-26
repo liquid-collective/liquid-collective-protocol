@@ -2,7 +2,6 @@
 pragma solidity 0.8.10;
 
 import "../../libraries/LibUnstructuredStorage.sol";
-import "../../libraries/LibErrors.sol";
 import "../../libraries/LibSanitize.sol";
 
 library AllowlistAddress {

@@ -1,18 +1,16 @@
 //SPDX-License-Identifier: BUSL-1.1
 pragma solidity 0.8.10;
 
-import "./Initializable.sol";
+import "./interfaces/IOperatorRegistry.1.sol";
 
-import "./libraries/LibErrors.sol";
 import "./libraries/LibUint256.sol";
+
+import "./Initializable.sol";
+import "./Administrable.sol";
 
 import "./state/operatorsRegistry/Operators.sol";
 import "./state/operatorsRegistry/ValidatorKeys.sol";
 import "./state/shared/RiverAddress.sol";
-
-import "./interfaces/IOperatorRegistry.1.sol";
-
-import "./Administrable.sol";
 
 /// @title OperatorsRegistry (v1)
 /// @author Kiln

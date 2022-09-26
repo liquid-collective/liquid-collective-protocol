@@ -1,14 +1,13 @@
 //SPDX-License-Identifier: BUSL-1.1
 pragma solidity 0.8.10;
 
+import "./interfaces/IAllowlist.1.sol";
+
 import "./Initializable.sol";
-import "./libraries/LibErrors.sol";
+import "./Administrable.sol";
 
 import "./state/allowlist/AllowerAddress.sol";
 import "./state/allowlist/Allowlist.sol";
-
-import "./interfaces/IAllowlist.1.sol";
-import "./Administrable.sol";
 
 /// @title Allowlist (v1)
 /// @author Kiln

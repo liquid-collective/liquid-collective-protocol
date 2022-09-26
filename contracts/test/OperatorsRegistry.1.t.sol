@@ -2,10 +2,12 @@
 
 pragma solidity 0.8.10;
 
-import "../src/OperatorsRegistry.1.sol";
+import "forge-std/Test.sol";
+
 import "./utils/UserFactory.sol";
 import "./utils/BytesGenerator.sol";
-import "forge-std/Test.sol";
+
+import "../src/OperatorsRegistry.1.sol";
 
 contract OperatorsRegistryInitializableV1 is OperatorsRegistryV1 {
     function sudoSetFunded(uint256 _index, uint256 _funded) external {
