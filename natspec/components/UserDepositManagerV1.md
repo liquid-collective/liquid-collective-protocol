@@ -97,7 +97,7 @@ And empty deposit attempt was made
 error InvalidCall()
 ```
 
-
+The call was invalid
 
 
 
@@ -108,7 +108,7 @@ error InvalidCall()
 error InvalidZeroAddress()
 ```
 
-
+The address is zero
 
 
 

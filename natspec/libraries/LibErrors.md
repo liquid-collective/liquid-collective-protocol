@@ -2,9 +2,9 @@
 
 
 
+> Lib Errors
 
-
-
+Library of common errors
 
 
 
@@ -18,7 +18,7 @@
 error InvalidArgument()
 ```
 
-
+The argument was invalid
 
 
 
@@ -29,7 +29,7 @@ error InvalidArgument()
 error InvalidCall()
 ```
 
-
+The call was invalid
 
 
 
@@ -40,7 +40,7 @@ error InvalidCall()
 error InvalidEmptyString()
 ```
 
-
+The string is empty
 
 
 
@@ -51,7 +51,7 @@ error InvalidEmptyString()
 error InvalidFee()
 ```
 
-
+The fee is invalid
 
 
 
@@ -62,7 +62,7 @@ error InvalidFee()
 error InvalidZeroAddress()
 ```
 
-
+The address is zero
 
 
 
@@ -73,7 +73,7 @@ error InvalidZeroAddress()
 error Unauthorized(address caller)
 ```
 
-
+The operator is unauthorized for the caller
 
 
 
@@ -81,6 +81,6 @@ error Unauthorized(address caller)
 
 | Name | Type | Description |
 |---|---|---|
-| caller | address | undefined |
+| caller | address | Addres performing the call |
 
 

@@ -1,10 +1,19 @@
-//SPDX-License-Identifier: BUSL-1.1
+//SPDX-License-Identifier: MIT
 pragma solidity 0.8.10;
 
+/// @title Lib Bytes
+/// @notice This library helps manipulating bytes
 library LibBytes {
+    /// @notice The length overflows an uint
     error SliceOverflow();
+
+    /// @notice The slice is outside of the initial bytes bounds
     error SliceOutOfBounds();
 
+    /// @notice Slices the provided bytes
+    /// @param _bytes Bytes to slice
+    /// @param _start The starting index of the slice
+    /// @param _length The length of the slice
     function slice(bytes memory _bytes, uint256 _start, uint256 _length) internal pure returns (bytes memory) {
         unchecked {
             if (_length + 31 < _length) {
@@ -17,6 +26,7 @@ library LibBytes {
 
         bytes memory tempBytes;
 
+        // solhint-disable-next-line no-inline-assembly
         assembly {
             switch iszero(_length)
             case 0 {

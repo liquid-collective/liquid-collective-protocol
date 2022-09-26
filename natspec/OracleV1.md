@@ -779,7 +779,7 @@ The provided epoch is too old compared to the expected epoch id
 error InvalidArgument()
 ```
 
-
+The argument was invalid
 
 
 
@@ -790,7 +790,7 @@ error InvalidArgument()
 error InvalidCall()
 ```
 
-
+The call was invalid
 
 
 
@@ -818,7 +818,7 @@ An error occured during the initialization
 error InvalidZeroAddress()
 ```
 
-
+The address is zero
 
 
 
@@ -884,7 +884,7 @@ The delta in balance is above the allowed upper bound
 error Unauthorized(address caller)
 ```
 
-
+The operator is unauthorized for the caller
 
 
 
@@ -892,6 +892,6 @@ error Unauthorized(address caller)
 
 | Name | Type | Description |
 |---|---|---|
-| caller | address | undefined |
+| caller | address | Addres performing the call |
 
 

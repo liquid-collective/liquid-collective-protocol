@@ -475,7 +475,7 @@ An error occured during the initialization
 error InvalidZeroAddress()
 ```
 
-
+The address is zero
 
 
 

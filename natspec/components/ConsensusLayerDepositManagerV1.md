@@ -261,7 +261,7 @@ Not enough funds to deposit one validator
 error SliceOutOfBounds()
 ```
 
-
+The slice is outside of the initial bytes bounds
 
 
 
@@ -272,7 +272,7 @@ error SliceOutOfBounds()
 error SliceOverflow()
 ```
 
-
+The length overflows an uint
 
 
 

@@ -600,7 +600,7 @@ The calling operator is inactive
 error InvalidArgument()
 ```
 
-
+The argument was invalid
 
 
 
@@ -633,7 +633,7 @@ The provided operator and limits array are empty
 error InvalidEmptyString()
 ```
 
-
+The string is empty
 
 
 
@@ -716,7 +716,7 @@ The index provided are not sorted properly (descending order)
 error InvalidZeroAddress()
 ```
 
-
+The address is zero
 
 
 
@@ -777,7 +777,7 @@ error OperatorNotFound(uint256 index)
 error SliceOutOfBounds()
 ```
 
-
+The slice is outside of the initial bytes bounds
 
 
 
@@ -788,7 +788,7 @@ error SliceOutOfBounds()
 error SliceOverflow()
 ```
 
-
+The length overflows an uint
 
 
 
@@ -799,7 +799,7 @@ error SliceOverflow()
 error Unauthorized(address caller)
 ```
 
-
+The operator is unauthorized for the caller
 
 
 
@@ -807,6 +807,6 @@ error Unauthorized(address caller)
 
 | Name | Type | Description |
 |---|---|---|
-| caller | address | undefined |
+| caller | address | Addres performing the call |
 
 

@@ -255,7 +255,7 @@ The pending admin address changed
 error InvalidZeroAddress()
 ```
 
-
+The address is zero
 
 
 
@@ -266,7 +266,7 @@ error InvalidZeroAddress()
 error Unauthorized(address caller)
 ```
 
-
+The operator is unauthorized for the caller
 
 
 
@@ -274,6 +274,6 @@ error Unauthorized(address caller)
 
 | Name | Type | Description |
 |---|---|---|
-| caller | address | undefined |
+| caller | address | Addres performing the call |
 
 

@@ -89,6 +89,7 @@ contract Firewall is IFirewall, Administrable {
     /// @param _destination Address on which the forwarded call is performed
     /// @param _value Message value to attach to the call
     function _forward(address _destination, uint256 _value) internal {
+        // solhint-disable-next-line no-inline-assembly
         assembly {
             // Copy msg.data. We take full control of memory in this inline assembly
             // block because it will not return to Solidity code. We overwrite the

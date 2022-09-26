@@ -1,23 +1,34 @@
-//SPDX-License-Identifier: BUSL-1.1
+//SPDX-License-Identifier: MIT
 pragma solidity 0.8.10;
 
 import "../state/shared/AdministratorAddress.sol";
 import "../state/shared/PendingAdministratorAddress.sol";
 
+/// @title Lib Administrable
+/// @author Kiln
+/// @notice This library handles the admin and pending admin storage vars
 library LibAdministrable {
-    function _setAdmin(address newAdmin) internal {
-        AdministratorAddress.set(newAdmin);
-    }
-
+    /// @notice Retrieve the system admin
+    /// @return The address of the system admin
     function _getAdmin() internal view returns (address) {
         return AdministratorAddress.get();
     }
 
-    function _setPendingAdmin(address newAdmin) internal {
-        PendingAdministratorAddress.set(newAdmin);
-    }
-
+    /// @notice Retrieve the pending system admin
+    /// @return The adress of the pending system admin
     function _getPendingAdmin() internal view returns (address) {
         return PendingAdministratorAddress.get();
+    }
+
+    /// @notice Sets the system administrator
+    /// @param _admin New system adminitrator
+    function _setAdmin(address _admin) internal {
+        AdministratorAddress.set(_admin);
+    }
+
+    /// @notice Sets the pending system administrator
+    /// @param _pendingAdmin New pending system adminitrator
+    function _setPendingAdmin(address _pendingAdmin) internal {
+        PendingAdministratorAddress.set(_pendingAdmin);
     }
 }

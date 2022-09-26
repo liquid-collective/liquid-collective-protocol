@@ -1182,7 +1182,7 @@ The length of the BLS Signature is invalid during deposit
 error InvalidArgument()
 ```
 
-
+The argument was invalid
 
 
 
@@ -1193,7 +1193,7 @@ error InvalidArgument()
 error InvalidCall()
 ```
 
-
+The call was invalid
 
 
 
@@ -1204,7 +1204,7 @@ error InvalidCall()
 error InvalidFee()
 ```
 
-
+The fee is invalid
 
 
 
@@ -1282,7 +1282,7 @@ The withdrawal credentials value is null
 error InvalidZeroAddress()
 ```
 
-
+The address is zero
 
 
 
@@ -1326,7 +1326,7 @@ Invalid empty transfer
 error SliceOutOfBounds()
 ```
 
-
+The slice is outside of the initial bytes bounds
 
 
 
@@ -1337,7 +1337,7 @@ error SliceOutOfBounds()
 error SliceOverflow()
 ```
 
-
+The length overflows an uint
 
 
 
@@ -1348,7 +1348,7 @@ error SliceOverflow()
 error Unauthorized(address caller)
 ```
 
-
+The operator is unauthorized for the caller
 
 
 
@@ -1356,7 +1356,7 @@ error Unauthorized(address caller)
 
 | Name | Type | Description |
 |---|---|---|
-| caller | address | undefined |
+| caller | address | Addres performing the call |
 
 ### UnauthorizedTransfer
 
