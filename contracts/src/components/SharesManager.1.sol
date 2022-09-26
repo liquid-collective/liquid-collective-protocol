@@ -49,76 +49,57 @@ abstract contract SharesManagerV1 is ISharesManagerV1 {
         _;
     }
 
-    /// @notice Retrieve the token name
-    /// @return The token name
+    /// @inheritdoc ISharesManagerV1
     function name() external pure returns (string memory) {
         return "Liquid Staked ETH";
     }
 
-    /// @notice Retrieve the token symbol
-    /// @return The token symbol
+    /// @inheritdoc ISharesManagerV1
     function symbol() external pure returns (string memory) {
         return "LsETH";
     }
 
-    /// @notice Retrieve the decimal count
-    /// @return The decimal count
+    /// @inheritdoc ISharesManagerV1
     function decimals() external pure returns (uint8) {
         return 18;
     }
 
-    /// @notice Retrieve the total token supply
-    /// @return The total supply
+    /// @inheritdoc ISharesManagerV1
     function totalSupply() external view returns (uint256) {
         return _totalSupply();
     }
 
-    /// @notice Retrieve the total underlying asset supply
-    /// @return The total underlying asset supply
+    /// @inheritdoc ISharesManagerV1
     function totalUnderlyingSupply() external view returns (uint256) {
         return _assetBalance();
     }
 
-    /// @notice Retrieve the balance of an account
-    /// @param _owner Address to be checked
-    /// @return The balance of the account
+    /// @inheritdoc ISharesManagerV1
     function balanceOf(address _owner) external view returns (uint256) {
         return _balanceOf(_owner);
     }
 
-    /// @notice Retrieve the underlying asset balance of an account
-    /// @param _owner Address to be checked
-    /// @return The underlying balance of the account
+    /// @inheritdoc ISharesManagerV1
     function balanceOfUnderlying(address _owner) public view returns (uint256) {
         return _balanceFromShares(SharesPerOwner.get(_owner));
     }
 
-    /// @notice Retrieve the underlying asset balance from an amount of shares
-    /// @param _shares Amount of shares to convert
-    /// @return The underlying asset balance represented by the shares
+    /// @inheritdoc ISharesManagerV1
     function underlyingBalanceFromShares(uint256 _shares) external view returns (uint256) {
         return _balanceFromShares(_shares);
     }
 
-    /// @notice Retrieve the shares count from an underlying asset amount
-    /// @param _underlyingAssetAmount Amount of underlying asset to convert
-    /// @return The amount of shares worth the underlying asset amopunt
+    /// @inheritdoc ISharesManagerV1
     function sharesFromUnderlyingBalance(uint256 _underlyingAssetAmount) external view returns (uint256) {
         return _sharesFromBalance(_underlyingAssetAmount);
     }
 
-    /// @notice Retrieve the allowance value for a spender
-    /// @param _owner Address that issued the allowance
-    /// @param _spender Address that received the allowance
-    /// @return The allowance for a given spender
+    /// @inheritdoc ISharesManagerV1
     function allowance(address _owner, address _spender) external view returns (uint256) {
         return ApprovalsPerOwner.get(_owner, _spender);
     }
 
-    /// @notice Performs a transfer from the message sender to the provided account
-    /// @param _to Address receiving the tokens
-    /// @param _value Amount to be sent
-    /// @return True if success
+    /// @inheritdoc ISharesManagerV1
     function transfer(address _to, uint256 _value)
         external
         transferAllowed(msg.sender, _to)
@@ -132,11 +113,7 @@ abstract contract SharesManagerV1 is ISharesManagerV1 {
         return _transfer(msg.sender, _to, _value);
     }
 
-    /// @notice Performs a transfer between two recipients
-    /// @param _from Address sending the tokens
-    /// @param _to Address receiving the tokens
-    /// @param _value Amount to be sent
-    /// @return True if success
+    /// @inheritdoc ISharesManagerV1
     function transferFrom(address _from, address _to, uint256 _value)
         external
         transferAllowed(_from, _to)
@@ -151,21 +128,14 @@ abstract contract SharesManagerV1 is ISharesManagerV1 {
         return _transfer(_from, _to, _value);
     }
 
-    /// @notice Approves an account for future spendings
-    /// @dev An approved account can use transferFrom to transfer funds on behalf of the token owner
-    /// @param _spender Address that is allowed to spend the tokens
-    /// @param _value The allowed amount, will override previous value
-    /// @return True if success
+    /// @inheritdoc ISharesManagerV1
     function approve(address _spender, uint256 _value) external returns (bool) {
         ApprovalsPerOwner.set(msg.sender, _spender, _value);
         emit Approval(msg.sender, _spender, _value);
         return true;
     }
 
-    /// @notice Increase allowance to another account
-    /// @param _spender Spender that receives the allowance
-    /// @param _additionalValue Amount to add
-    /// @return True if success
+    /// @inheritdoc ISharesManagerV1
     function increaseAllowance(address _spender, uint256 _additionalValue) external returns (bool) {
         uint256 newApprovalValue = ApprovalsPerOwner.get(msg.sender, _spender) + _additionalValue;
         ApprovalsPerOwner.set(msg.sender, _spender, newApprovalValue);
@@ -173,10 +143,7 @@ abstract contract SharesManagerV1 is ISharesManagerV1 {
         return true;
     }
 
-    /// @notice Decrease allowance to another account
-    /// @param _spender Spender that receives the allowance
-    /// @param _subtractableValue Amount to subtract
-    /// @return True if success
+    /// @inheritdoc ISharesManagerV1
     function decreaseAllowance(address _spender, uint256 _subtractableValue) external returns (bool) {
         uint256 newApprovalValue = ApprovalsPerOwner.get(msg.sender, _spender) - _subtractableValue;
         ApprovalsPerOwner.set(msg.sender, _spender, newApprovalValue);

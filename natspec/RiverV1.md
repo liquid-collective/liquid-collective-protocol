@@ -4,7 +4,7 @@
 
 > River (v1)
 
-This contract merges all the manager contracts and implements all the virtual methods stitching all components together@notice    +---------------------------------------------------------------------+                |                                                                     |                |                           Consensus Layer                           |                |                                                                     |                | +-------------------+  +-------------------+  +-------------------+ |                | |                   |  |                   |  |                   | |                | |  EL Fee Recipient |  |      Oracle       |  |  Deposit Contract | |                | |                   |  |                   |  |                   | |                | +---------|---------+  +---------|---------+  +---------|---------+ |                +---------------------------------------------------------------------+                |         7            |            5         |                            +-----------------|    |    |-----------------+                            |    |6   |                                              |    |    |                                              +---------+          +----|----|----|----+            +---------+                  |         |          |                   |     2      |         |                  |Operator |          |       River       --------------  User   |                  |         |          |                   |            |         |                  +----|----+          +----|---------|----+            +---------+                  |                    |         |                                              |             4      |         |       3                                      |1     +-------------|         |--------------+                               |      |                                      |                               |      |                                      |                               +------|------|------------+           +-------------|------------+                  |                          |           |                          |                  |    Operators Registry    |           |         Allowlist        |                  |                          |           |                          |                  +--------------------------+           +--------------------------+                  @notice      1. Operators are adding BLS Public Keys of validators running in theirinfrastructure.2. User deposit ETH to the system and get shares minted in exchange3. Upon deposit, the system verifies if the User is allowed to depositby querying the Allowlist4. When the system has enough funds to deposit validators, keys are pulledfrom the Operators Registry5. The deposit data is computed and the validators are funded via the officialdeposit contract6. Oracles report the total balance of the running validators and the total countof running validators7. The running validators propose blocks that reward the EL Fee Recipient. The fundsare pulled back in the system.
+This contract merges all the manager contracts and implements all the virtual methods stitching all components together@notice    +---------------------------------------------------------------------+|                                                                     ||                           Consensus Layer                           ||                                                                     || +-------------------+  +-------------------+  +-------------------+ || |                   |  |                   |  |                   | || |  EL Fee Recipient |  |      Oracle       |  |  Deposit Contract | || |                   |  |                   |  |                   | || +---------|---------+  +---------|---------+  +---------|---------+ |+---------------------------------------------------------------------+|         7            |            5         |+-----------------|    |    |-----------------+|    |6   ||    |    |+---------+          +----|----|----|----+            +---------+|         |          |                   |     2      |         ||Operator |          |       River       --------------  User   ||         |          |                   |            |         |+----|----+          +----|---------|----+            +---------+|                    |         ||             4      |         |       3|1     +-------------|         |--------------+|      |                                      ||      |                                      |+------|------|------------+           +-------------|------------+|                          |           |                          ||    Operators Registry    |           |         Allowlist        ||                          |           |                          |+--------------------------+           +--------------------------+@notice      1. Operators are adding BLS Public Keys of validators running in theirinfrastructure.2. User deposit ETH to the system and get shares minted in exchange3. Upon deposit, the system verifies if the User is allowed to depositby querying the Allowlist4. When the system has enough funds to deposit validators, keys are pulledfrom the Operators Registry5. The deposit data is computed and the validators are funded via the officialdeposit contract6. Oracles report the total balance of the running validators and the total countof running validators7. The running validators propose blocks that reward the EL Fee Recipient. The fundsare pulled back in the system.
 
 
 
@@ -825,7 +825,7 @@ event Approval(address indexed owner, address indexed spender, uint256 value)
 event ConsensusLayerDataUpdate(uint256 validatorCount, uint256 validatorTotalBalance, bytes32 roundId)
 ```
 
-
+The consensus layer data provided by the oracle has been updated
 
 
 
@@ -843,7 +843,7 @@ event ConsensusLayerDataUpdate(uint256 validatorCount, uint256 validatorTotalBal
 event FundedValidatorKey(bytes publicKey)
 ```
 
-
+A validator key got funded on the deposit contract
 
 
 
@@ -892,7 +892,7 @@ event PulledELFees(uint256 amount)
 event SetAdmin(address indexed admin)
 ```
 
-
+The admin address changed
 
 
 
@@ -940,7 +940,7 @@ event SetCollector(address indexed collector)
 event SetDepositContractAddress(address indexed depositContract)
 ```
 
-
+The stored deposit contract address changed
 
 
 
@@ -1004,7 +1004,7 @@ event SetOperatorsRegistry(address indexed operatorRegistry)
 event SetOracle(address indexed oracleAddress)
 ```
 
-
+The storage oracle address changed
 
 
 
@@ -1020,7 +1020,7 @@ event SetOracle(address indexed oracleAddress)
 event SetPendingAdmin(address indexed pendingAdmin)
 ```
 
-
+The pending admin address changed
 
 
 
@@ -1036,7 +1036,7 @@ event SetPendingAdmin(address indexed pendingAdmin)
 event SetWithdrawalCredentials(bytes32 withdrawalCredentials)
 ```
 
-
+The stored withdrawals credentials changed
 
 
 
@@ -1070,7 +1070,7 @@ event Transfer(address indexed from, address indexed to, uint256 value)
 event UserDeposit(address indexed depositor, address indexed recipient, uint256 amount)
 ```
 
-
+User deposited eth in the system
 
 
 
@@ -1092,7 +1092,7 @@ event UserDeposit(address indexed depositor, address indexed recipient, uint256 
 error AllowanceTooLow(address _from, address _operator, uint256 _allowance, uint256 _value)
 ```
 
-
+Allowance too low to perform operation
 
 
 
@@ -1100,10 +1100,10 @@ error AllowanceTooLow(address _from, address _operator, uint256 _allowance, uint
 
 | Name | Type | Description |
 |---|---|---|
-| _from | address | undefined |
-| _operator | address | undefined |
-| _allowance | uint256 | undefined |
-| _value | uint256 | undefined |
+| _from | address | Account where funds are sent from |
+| _operator | address | Account attempting the transfer |
+| _allowance | uint256 | Current allowance |
+| _value | uint256 | Requested transfer value |
 
 ### BalanceTooLow
 
@@ -1111,7 +1111,7 @@ error AllowanceTooLow(address _from, address _operator, uint256 _allowance, uint
 error BalanceTooLow()
 ```
 
-
+Balance too low to perform operation
 
 
 
@@ -1138,18 +1138,7 @@ error Denied(address _account)
 error EmptyDeposit()
 ```
 
-
-
-
-
-
-### EmptyDonation
-
-```solidity
-error EmptyDonation()
-```
-
-
+And empty deposit attempt was made
 
 
 
@@ -1160,7 +1149,7 @@ error EmptyDonation()
 error ErrorOnDeposit()
 ```
 
-
+An error occured during the deposit
 
 
 
@@ -1171,7 +1160,7 @@ error ErrorOnDeposit()
 error InconsistentPublicKeys()
 ```
 
-
+The length of the BLS Public key is invalid during deposit
 
 
 
@@ -1182,7 +1171,7 @@ error InconsistentPublicKeys()
 error InconsistentSignatures()
 ```
 
-
+The length of the BLS Signature is invalid during deposit
 
 
 
@@ -1243,7 +1232,7 @@ An error occured during the initialization
 error InvalidPublicKeyCount()
 ```
 
-
+The received count of public keys to deposit is invalid
 
 
 
@@ -1254,7 +1243,7 @@ error InvalidPublicKeyCount()
 error InvalidSignatureCount()
 ```
 
-
+The received count of signatures to deposit is invalid
 
 
 
@@ -1262,10 +1251,10 @@ error InvalidSignatureCount()
 ### InvalidValidatorCountReport
 
 ```solidity
-error InvalidValidatorCountReport(uint256 _providedValidatorCount, uint256 _depositedValidatorCount)
+error InvalidValidatorCountReport(uint256 providedValidatorCount, uint256 depositedValidatorCount)
 ```
 
-
+The reported validator count is invalid
 
 
 
@@ -1273,8 +1262,8 @@ error InvalidValidatorCountReport(uint256 _providedValidatorCount, uint256 _depo
 
 | Name | Type | Description |
 |---|---|---|
-| _providedValidatorCount | uint256 | undefined |
-| _depositedValidatorCount | uint256 | undefined |
+| providedValidatorCount | uint256 | The received validator count value |
+| depositedValidatorCount | uint256 | The number of deposits performed by the system |
 
 ### InvalidWithdrawalCredentials
 
@@ -1282,7 +1271,7 @@ error InvalidValidatorCountReport(uint256 _providedValidatorCount, uint256 _depo
 error InvalidWithdrawalCredentials()
 ```
 
-
+The withdrawal credentials value is null
 
 
 
@@ -1304,7 +1293,7 @@ error InvalidZeroAddress()
 error NoAvailableValidatorKeys()
 ```
 
-
+The internal key retrieval returned no keys
 
 
 
@@ -1315,7 +1304,7 @@ error NoAvailableValidatorKeys()
 error NotEnoughFunds()
 ```
 
-
+Not enough funds to deposit one validator
 
 
 
@@ -1326,7 +1315,7 @@ error NotEnoughFunds()
 error NullTransfer()
 ```
 
-
+Invalid empty transfer
 
 
 
@@ -1375,7 +1364,7 @@ error Unauthorized(address caller)
 error UnauthorizedTransfer(address _from, address _to)
 ```
 
-
+Invalid transfer recipients
 
 
 

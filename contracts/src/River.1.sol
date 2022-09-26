@@ -80,15 +80,7 @@ contract RiverV1 is
     /// @notice The mask for the deposit right
     uint256 internal constant DEPOSIT_MASK = 0x1;
 
-    /// @notice Initializes the River system
-    /// @param _depositContractAddress Address to make Consensus Layer deposits
-    /// @param _elFeeRecipientAddress Address that receives the execution layer fees
-    /// @param _withdrawalCredentials Credentials to use for every validator deposit
-    /// @param _systemAdministratorAddress Administrator address
-    /// @param _allowlistAddress Address of the allowlist contract
-    /// @param _operatorRegistryAddress Address of the operator registry
-    /// @param _collectorAddress Address receiving the fee minus the operator share
-    /// @param _globalFee Amount retained when the eth balance increases, splitted between the collector and the operators
+    /// @inheritdoc IRiverV1
     function initRiverV1(
         address _depositContractAddress,
         address _elFeeRecipientAddress,
@@ -124,65 +116,56 @@ contract RiverV1 is
         OracleManagerV1.initOracleManagerV1(_oracleAddress);
     }
 
-    /// @notice Get the current global fee
-    /// @return The global fee
+    /// @inheritdoc IRiverV1
     function getGlobalFee() external view returns (uint256) {
         return GlobalFee.get();
     }
 
-    /// @notice Retrieve the allowlist address
-    /// @return The allowlist address
+    /// @inheritdoc IRiverV1
     function getAllowlist() external view returns (address) {
         return address(AllowlistAddress.get());
     }
 
-    /// @notice Retrieve the collector address
-    /// @return The collector address
+    /// @inheritdoc IRiverV1
     function getCollector() external view returns (address) {
         return CollectorAddress.get();
     }
 
-    /// @notice Retrieve the execution layer fee recipient
-    /// @return The execution layer fee recipient address
+    /// @inheritdoc IRiverV1
     function getELFeeRecipient() external view returns (address) {
         return ELFeeRecipientAddress.get();
     }
 
-    /// @notice Changes the global fee parameter
-    /// @param newFee New fee value
+    /// @inheritdoc IRiverV1
     function setGlobalFee(uint256 newFee) external onlyAdmin {
         GlobalFee.set(newFee);
         emit SetGlobalFee(newFee);
     }
 
-    /// @notice Changes the allowlist address
-    /// @param _newAllowlist New address for the allowlist
+    /// @inheritdoc IRiverV1
     function setAllowlist(address _newAllowlist) external onlyAdmin {
         AllowlistAddress.set(_newAllowlist);
         emit SetAllowlist(_newAllowlist);
     }
 
-    /// @notice Changes the collector address
-    /// @param _newCollector New address for the collector
+    /// @inheritdoc IRiverV1
     function setCollector(address _newCollector) external onlyAdmin {
         CollectorAddress.set(_newCollector);
         emit SetCollector(_newCollector);
     }
 
-    /// @notice Changes the execution layer fee recipient
-    /// @param _newELFeeRecipient New address for the recipient
+    /// @inheritdoc IRiverV1
     function setELFeeRecipient(address _newELFeeRecipient) external onlyAdmin {
         ELFeeRecipientAddress.set(_newELFeeRecipient);
         emit SetELFeeRecipient(_newELFeeRecipient);
     }
 
-    /// @notice Retrieve the operators registry address
-    /// @return The operators registry address
+    /// @inheritdoc IRiverV1
     function getOperatorsRegistry() external view returns (address) {
         return OperatorsRegistryAddress.get();
     }
 
-    /// @notice Input for execution layer fee earnings
+    /// @inheritdoc IRiverV1
     function sendELFees() external payable {
         if (msg.sender != ELFeeRecipientAddress.get()) {
             revert LibErrors.Unauthorized(msg.sender);

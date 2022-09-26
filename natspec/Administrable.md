@@ -81,7 +81,7 @@ Proposes a new address as admin
 event SetAdmin(address indexed admin)
 ```
 
-
+The admin address changed
 
 
 
@@ -97,7 +97,7 @@ event SetAdmin(address indexed admin)
 event SetPendingAdmin(address indexed pendingAdmin)
 ```
 
-
+The pending admin address changed
 
 
 

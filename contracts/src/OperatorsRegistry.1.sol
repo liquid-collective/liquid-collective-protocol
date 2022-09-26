@@ -19,9 +19,7 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
     /// @notice Maximum validators given to an operator per selection loop round
     uint256 internal constant MAX_VALIDATOR_ATTRIBUTION_PER_ROUND = 5;
 
-    /// @notice Initializes the operators registry
-    /// @param _admin Admin in charge of managing operators
-    /// @param _river Address of River system
+    /// @inheritdoc IOperatorsRegistryV1
     function initOperatorsRegistryV1(address _admin, address _river) external init(0) {
         _setAdmin(_admin);
         RiverAddress.set(_river);
@@ -53,31 +51,22 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
         _;
     }
 
-    /// @notice Retrieve the River address
-    /// @return The address of River
+    /// @inheritdoc IOperatorsRegistryV1
     function getRiver() external view returns (address) {
         return RiverAddress.get();
     }
 
-    /// @notice Get operator details
-    /// @param _index The index of the operator
-    /// @return The details of the operator
+    /// @inheritdoc IOperatorsRegistryV1
     function getOperator(uint256 _index) external view returns (Operators.Operator memory) {
         return Operators.get(_index);
     }
 
-    /// @notice Get operator count
-    /// @return The operator count
+    /// @inheritdoc IOperatorsRegistryV1
     function getOperatorCount() external view returns (uint256) {
         return Operators.getCount();
     }
 
-    /// @notice Get the details of a validator
-    /// @param _operatorIndex The index of the operator
-    /// @param _validatorIndex The index of the validator
-    /// @return publicKey The public key of the validator
-    /// @return signature The signature used during deposit
-    /// @return funded True if validator has been funded
+    /// @inheritdoc IOperatorsRegistryV1
     function getValidator(uint256 _operatorIndex, uint256 _validatorIndex)
         external
         view
@@ -87,17 +76,12 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
         funded = _validatorIndex < Operators.get(_operatorIndex).funded;
     }
 
-    /// @notice Retrieve the active operator set
-    /// @return The list of active operators and their details
+    /// @inheritdoc IOperatorsRegistryV1
     function listActiveOperators() external view returns (Operators.Operator[] memory) {
         return Operators.getAllActive();
     }
 
-    /// @notice Adds an operator to the registry
-    /// @dev Only callable by the administrator
-    /// @param _name The name identifying the operator
-    /// @param _operator The address representing the operator, receiving the rewards
-    /// @return The index of the new operator
+    /// @inheritdoc IOperatorsRegistryV1
     function addOperator(string calldata _name, address _operator) external onlyAdmin returns (uint256) {
         Operators.Operator memory newOperator = Operators.Operator({
             active: true,
@@ -116,10 +100,7 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
         return operatorIndex;
     }
 
-    /// @notice Changes the operator address of an operator
-    /// @dev Only callable by the administrator or the previous operator address
-    /// @param _index The operator index
-    /// @param _newOperatorAddress The new address of the operator
+    /// @inheritdoc IOperatorsRegistryV1
     function setOperatorAddress(uint256 _index, address _newOperatorAddress) external onlyOperatorOrAdmin(_index) {
         LibSanitize._notZeroAddress(_newOperatorAddress);
         Operators.Operator storage operator = Operators.get(_index);
@@ -129,10 +110,7 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
         emit SetOperatorAddress(_index, _newOperatorAddress);
     }
 
-    /// @notice Changes the operator name
-    /// @dev Only callable by the administrator or the operator
-    /// @param _index The operator index
-    /// @param _newName The new operator name
+    /// @inheritdoc IOperatorsRegistryV1
     function setOperatorName(uint256 _index, string calldata _newName) external onlyOperatorOrAdmin(_index) {
         LibSanitize._notEmptyString(_newName);
         Operators.Operator storage operator = Operators.get(_index);
@@ -141,10 +119,7 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
         emit SetOperatorName(_index, _newName);
     }
 
-    /// @notice Changes the operator status
-    /// @dev Only callable by the administrator
-    /// @param _index The operator index
-    /// @param _newStatus The new status of the operator
+    /// @inheritdoc IOperatorsRegistryV1
     function setOperatorStatus(uint256 _index, bool _newStatus) external onlyAdmin {
         Operators.Operator storage operator = Operators.get(_index);
         operator.active = _newStatus;
@@ -152,10 +127,7 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
         emit SetOperatorStatus(_index, _newStatus);
     }
 
-    /// @notice Changes the operator stopped validator cound
-    /// @dev Only callable by the administrator
-    /// @param _index The operator index
-    /// @param _newStoppedValidatorCount The new stopped validator count of the operator
+    /// @inheritdoc IOperatorsRegistryV1
     function setOperatorStoppedValidatorCount(uint256 _index, uint256 _newStoppedValidatorCount) external onlyAdmin {
         Operators.Operator storage operator = Operators.get(_index);
 
@@ -239,11 +211,7 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
         }
     }
 
-    /// @notice Adds new keys for an operator
-    /// @dev Only callable by the administrator or the operator address
-    /// @param _index The operator index
-    /// @param _keyCount The amount of keys provided
-    /// @param _publicKeysAndSignatures Public keys of the validator, concatenated
+    /// @inheritdoc IOperatorsRegistryV1
     function addValidators(uint256 _index, uint256 _keyCount, bytes calldata _publicKeysAndSignatures)
         external
         onlyOperatorOrAdmin(_index)
@@ -277,12 +245,7 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
         emit AddedValidatorKeys(_index, _publicKeysAndSignatures);
     }
 
-    /// @notice Remove validator keys
-    /// @dev Only callable by the administrator or the operator address
-    /// @dev The indexes must be provided sorted in decreasing order, otherwise the method will revert
-    /// @dev The operator limit will be set to the lowest deleted key index
-    /// @param _index The operator index
-    /// @param _indexes The indexes of the keys to remove
+    /// @inheritdoc IOperatorsRegistryV1
     function removeValidators(uint256 _index, uint256[] calldata _indexes) external onlyOperatorOrAdmin(_index) {
         uint256 indexesLength = _indexes.length;
         if (indexesLength == 0) {
@@ -335,10 +298,7 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
         }
     }
 
-    /// @notice Retrieve validator keys based on operator statuses
-    /// @param _count Max amount of keys requested
-    /// @return publicKeys An array of public keys
-    /// @return signatures An array of signatures linked to the public keys
+    /// @inheritdoc IOperatorsRegistryV1
     function pickNextValidators(uint256 _count)
         external
         onlyRiver

@@ -2,13 +2,25 @@
 pragma solidity 0.8.10;
 
 interface IUserDepositManagerV1 {
+    /// @notice User deposited eth in the system
+    /// @param depositor Address performing the deposit
+    /// @param recipient Address receiving the minted shares
+    /// @param amount Amount in ETH deposited
     event UserDeposit(address indexed depositor, address indexed recipient, uint256 amount);
 
+    /// @notice And empty deposit attempt was made
     error EmptyDeposit();
-    error EmptyDonation();
 
+    /// @notice Explicit deposit method to mint on msg.sender
     function deposit() external payable;
+
+    /// @notice Explicit deposit method to mint on msg.sender and transfer to _recipient
+    /// @param _recipient Address receiving the minted lsETH
     function depositAndTransfer(address _recipient) external payable;
+
+    /// @notice Implicit deposit method, when the user performs a regular transfer to the contract
     receive() external payable;
+
+    /// @notice Invalid call, when the user sends a transaction with a data payload but no method matched
     fallback() external payable;
 }

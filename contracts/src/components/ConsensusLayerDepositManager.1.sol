@@ -60,26 +60,22 @@ abstract contract ConsensusLayerDepositManagerV1 is IConsensusLayerDepositManage
         emit SetWithdrawalCredentials(_withdrawalCredentials);
     }
 
-    /// @notice Returns the amount of pending ETH
-    /// @return The amount of pending eth
+    /// @inheritdoc IConsensusLayerDepositManagerV1
     function getBalanceToDeposit() external view returns (uint256) {
         return BalanceToDeposit.get();
     }
 
-    /// @notice Retrieve the withdrawal credentials
-    /// @return The withdrawal credentials
+    /// @inheritdoc IConsensusLayerDepositManagerV1
     function getWithdrawalCredentials() external view returns (bytes32) {
         return WithdrawalCredentials.get();
     }
 
-    /// @notice Get the deposited validator count (the count of deposits made by the contract)
-    /// @return The deposited validator count
+    /// @inheritdoc IConsensusLayerDepositManagerV1
     function getDepositedValidatorCount() external view returns (uint256) {
         return DepositedValidatorCount.get();
     }
 
-    /// @notice Deposits current balance to the Consensus Layer by batches of 32 ETH
-    /// @param _maxCount The maximum amount of validator keys to fund
+    /// @inheritdoc IConsensusLayerDepositManagerV1
     function depositToConsensusLayer(uint256 _maxCount) external onlyAdmin_CDMV1 {
         uint256 balanceToDeposit = BalanceToDeposit.get();
         uint256 keyToDepositCount = LibUint256.min(balanceToDeposit / DEPOSIT_SIZE, _maxCount);

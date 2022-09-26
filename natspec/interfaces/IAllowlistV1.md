@@ -16,7 +16,7 @@
 function allow(address[] _accounts, uint256[] _permissions) external nonpayable
 ```
 
-
+Sets the allowlisting status for one or more accounts
 
 
 
@@ -24,8 +24,8 @@ function allow(address[] _accounts, uint256[] _permissions) external nonpayable
 
 | Name | Type | Description |
 |---|---|---|
-| _accounts | address[] | undefined |
-| _permissions | uint256[] | undefined |
+| _accounts | address[] | Accounts with statuses to edit |
+| _permissions | uint256[] | Allowlist permissions for each account, in the same order as _accounts |
 
 ### getAllower
 
@@ -33,7 +33,7 @@ function allow(address[] _accounts, uint256[] _permissions) external nonpayable
 function getAllower() external view returns (address)
 ```
 
-
+Retrieves the allower address
 
 
 
@@ -42,7 +42,7 @@ function getAllower() external view returns (address)
 
 | Name | Type | Description |
 |---|---|---|
-| _0 | address | undefined |
+| _0 | address | The address of the allower |
 
 ### getPermissions
 
@@ -50,7 +50,7 @@ function getAllower() external view returns (address)
 function getPermissions(address _account) external view returns (uint256)
 ```
 
-
+This method retrieves the raw permission value
 
 
 
@@ -58,13 +58,13 @@ function getPermissions(address _account) external view returns (uint256)
 
 | Name | Type | Description |
 |---|---|---|
-| _account | address | undefined |
+| _account | address | Recipient to verify |
 
 #### Returns
 
 | Name | Type | Description |
 |---|---|---|
-| _0 | uint256 | undefined |
+| _0 | uint256 | The raw permissions value of the account |
 
 ### hasPermission
 
@@ -72,7 +72,7 @@ function getPermissions(address _account) external view returns (uint256)
 function hasPermission(address _account, uint256 _mask) external view returns (bool)
 ```
 
-
+This method returns true if the user has the expected permission         ignoring any deny list membership
 
 
 
@@ -80,14 +80,14 @@ function hasPermission(address _account, uint256 _mask) external view returns (b
 
 | Name | Type | Description |
 |---|---|---|
-| _account | address | undefined |
-| _mask | uint256 | undefined |
+| _account | address | Recipient to verify |
+| _mask | uint256 | Combination of permissions to verify |
 
 #### Returns
 
 | Name | Type | Description |
 |---|---|---|
-| _0 | bool | undefined |
+| _0 | bool | True if mask is respected |
 
 ### initAllowlistV1
 
@@ -95,7 +95,7 @@ function hasPermission(address _account, uint256 _mask) external view returns (b
 function initAllowlistV1(address _admin, address _allower) external nonpayable
 ```
 
-
+Initializes the allowlist
 
 
 
@@ -103,8 +103,8 @@ function initAllowlistV1(address _admin, address _allower) external nonpayable
 
 | Name | Type | Description |
 |---|---|---|
-| _admin | address | undefined |
-| _allower | address | undefined |
+| _admin | address | Address of the Allowlist administrator |
+| _allower | address | Address of the allower |
 
 ### isAllowed
 
@@ -112,7 +112,7 @@ function initAllowlistV1(address _admin, address _allower) external nonpayable
 function isAllowed(address _account, uint256 _mask) external view returns (bool)
 ```
 
-
+This method returns true if the user has the expected permission and         is not in the deny list
 
 
 
@@ -120,14 +120,14 @@ function isAllowed(address _account, uint256 _mask) external view returns (bool)
 
 | Name | Type | Description |
 |---|---|---|
-| _account | address | undefined |
-| _mask | uint256 | undefined |
+| _account | address | Recipient to verify |
+| _mask | uint256 | Combination of permissions to verify |
 
 #### Returns
 
 | Name | Type | Description |
 |---|---|---|
-| _0 | bool | undefined |
+| _0 | bool | True if mask is respected and user is not allowed |
 
 ### isDenied
 
@@ -135,7 +135,7 @@ function isAllowed(address _account, uint256 _mask) external view returns (bool)
 function isDenied(address _account) external view returns (bool)
 ```
 
-
+This method returns true if the user is in the deny list
 
 
 
@@ -143,13 +143,13 @@ function isDenied(address _account) external view returns (bool)
 
 | Name | Type | Description |
 |---|---|---|
-| _account | address | undefined |
+| _account | address | Recipient to verify |
 
 #### Returns
 
 | Name | Type | Description |
 |---|---|---|
-| _0 | bool | undefined |
+| _0 | bool | True if user is denied access |
 
 ### onlyAllowed
 
@@ -157,7 +157,7 @@ function isDenied(address _account) external view returns (bool)
 function onlyAllowed(address _account, uint256 _mask) external view
 ```
 
-
+This method should be used as a modifier and is expected to revert         if the user hasn&#39;t got the required permission or if the user is         in the deny list.
 
 
 
@@ -165,8 +165,8 @@ function onlyAllowed(address _account, uint256 _mask) external view
 
 | Name | Type | Description |
 |---|---|---|
-| _account | address | undefined |
-| _mask | uint256 | undefined |
+| _account | address | Recipient to verify |
+| _mask | uint256 | Combination of permissions to verify |
 
 ### setAllower
 
@@ -174,7 +174,7 @@ function onlyAllowed(address _account, uint256 _mask) external view
 function setAllower(address _newAllowerAddress) external nonpayable
 ```
 
-
+Changes the allower address
 
 
 
@@ -182,7 +182,7 @@ function setAllower(address _newAllowerAddress) external nonpayable
 
 | Name | Type | Description |
 |---|---|---|
-| _newAllowerAddress | address | undefined |
+| _newAllowerAddress | address | New address allowed to edit the allowlist |
 
 
 
@@ -194,7 +194,7 @@ function setAllower(address _newAllowerAddress) external nonpayable
 event SetAllower(address indexed allower)
 ```
 
-
+The stored allowe address has been changed
 
 
 
@@ -202,7 +202,7 @@ event SetAllower(address indexed allower)
 
 | Name | Type | Description |
 |---|---|---|
-| allower `indexed` | address | undefined |
+| allower `indexed` | address | The new allower address |
 
 ### SetAllowlistPermissions
 
@@ -210,7 +210,7 @@ event SetAllower(address indexed allower)
 event SetAllowlistPermissions(address[] indexed accounts, uint256[] permissions)
 ```
 
-
+Change the permissions of several accounts
 
 
 
@@ -218,8 +218,8 @@ event SetAllowlistPermissions(address[] indexed accounts, uint256[] permissions)
 
 | Name | Type | Description |
 |---|---|---|
-| accounts `indexed` | address[] | undefined |
-| permissions  | uint256[] | undefined |
+| accounts `indexed` | address[] | List of accounts |
+| permissions  | uint256[] | New permissions for each account at the same index |
 
 
 
@@ -231,7 +231,7 @@ event SetAllowlistPermissions(address[] indexed accounts, uint256[] permissions)
 error Denied(address _account)
 ```
 
-
+The account is denied access
 
 
 
@@ -239,7 +239,7 @@ error Denied(address _account)
 
 | Name | Type | Description |
 |---|---|---|
-| _account | address | undefined |
+| _account | address | The denied account |
 
 ### InvalidAlloweeCount
 
@@ -247,7 +247,7 @@ error Denied(address _account)
 error InvalidAlloweeCount()
 ```
 
-
+The provided accounts list is empty
 
 
 
@@ -258,25 +258,9 @@ error InvalidAlloweeCount()
 error MismatchedAlloweeAndStatusCount()
 ```
 
+The provided accounts and permissions list have different lengthg
 
 
 
-
-
-### Unauthorized
-
-```solidity
-error Unauthorized(address _account)
-```
-
-
-
-
-
-#### Parameters
-
-| Name | Type | Description |
-|---|---|---|
-| _account | address | undefined |
 
 

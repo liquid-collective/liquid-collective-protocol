@@ -18,24 +18,23 @@ abstract contract UserDepositManagerV1 is IUserDepositManagerV1 {
     /// @param _amount Amount deposited
     function _onDeposit(address _depositor, address _recipient, uint256 _amount) internal virtual;
 
-    /// @notice Explicit deposit method to mint on msg.sender
+    /// @inheritdoc IUserDepositManagerV1
     function deposit() external payable {
         _deposit(msg.sender);
     }
 
-    /// @notice Explicit deposit method to mint on msg.sender and transfer to _recipient
-    /// @param _recipient Address receiving the minted lsETH
+    /// @inheritdoc IUserDepositManagerV1
     function depositAndTransfer(address _recipient) external payable {
         LibSanitize._notZeroAddress(_recipient);
         _deposit(_recipient);
     }
 
-    /// @notice Implicit deposit method, when the user performs a regular transfer to the contract
+    /// @inheritdoc IUserDepositManagerV1
     receive() external payable {
         _deposit(msg.sender);
     }
 
-    /// @notice Invalid call, when the user sends a transaction with a data payload but no method matched
+    /// @inheritdoc IUserDepositManagerV1
     fallback() external payable {
         revert LibErrors.InvalidCall();
     }

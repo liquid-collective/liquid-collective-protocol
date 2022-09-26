@@ -16,16 +16,16 @@ This contract handles the input from the allowed oracle members. Highly inspired
 function addMember(address _newOracleMember, uint256 _newQuorum) external nonpayable
 ```
 
+Adds new address as oracle member, giving the ability to push cl reports.
 
-
-
+*Only callable by the adminstrator*
 
 #### Parameters
 
 | Name | Type | Description |
 |---|---|---|
-| _newOracleMember | address | undefined |
-| _newQuorum | uint256 | undefined |
+| _newOracleMember | address | Address of the new member |
+| _newQuorum | uint256 | New quorum value |
 
 ### getCLSpec
 
@@ -33,7 +33,7 @@ function addMember(address _newOracleMember, uint256 _newQuorum) external nonpay
 function getCLSpec() external view returns (struct CLSpec.CLSpecStruct)
 ```
 
-
+Retrieve the current cl spec
 
 
 
@@ -42,7 +42,7 @@ function getCLSpec() external view returns (struct CLSpec.CLSpecStruct)
 
 | Name | Type | Description |
 |---|---|---|
-| _0 | CLSpec.CLSpecStruct | undefined |
+| _0 | CLSpec.CLSpecStruct | The Consensus Layer Specification |
 
 ### getCurrentEpochId
 
@@ -50,7 +50,7 @@ function getCLSpec() external view returns (struct CLSpec.CLSpecStruct)
 function getCurrentEpochId() external view returns (uint256)
 ```
 
-
+Retrieve the current epoch id based on block timestamp
 
 
 
@@ -59,7 +59,7 @@ function getCurrentEpochId() external view returns (uint256)
 
 | Name | Type | Description |
 |---|---|---|
-| _0 | uint256 | undefined |
+| _0 | uint256 | The current epoch id |
 
 ### getCurrentFrame
 
@@ -67,7 +67,7 @@ function getCurrentEpochId() external view returns (uint256)
 function getCurrentFrame() external view returns (uint256 _startEpochId, uint256 _startTime, uint256 _endTime)
 ```
 
-
+Retrieve the current frame details
 
 
 
@@ -76,9 +76,9 @@ function getCurrentFrame() external view returns (uint256 _startEpochId, uint256
 
 | Name | Type | Description |
 |---|---|---|
-| _startEpochId | uint256 | undefined |
-| _startTime | uint256 | undefined |
-| _endTime | uint256 | undefined |
+| _startEpochId | uint256 | The epoch at the beginning of the frame |
+| _startTime | uint256 | The timestamp of the beginning of the frame in seconds |
+| _endTime | uint256 | The timestamp of the end of the frame in seconds |
 
 ### getExpectedEpochId
 
@@ -86,7 +86,7 @@ function getCurrentFrame() external view returns (uint256 _startEpochId, uint256
 function getExpectedEpochId() external view returns (uint256)
 ```
 
-
+Retrieve expected epoch id
 
 
 
@@ -95,7 +95,7 @@ function getExpectedEpochId() external view returns (uint256)
 
 | Name | Type | Description |
 |---|---|---|
-| _0 | uint256 | undefined |
+| _0 | uint256 | The current expected epoch id |
 
 ### getFrameFirstEpochId
 
@@ -103,7 +103,7 @@ function getExpectedEpochId() external view returns (uint256)
 function getFrameFirstEpochId(uint256 _epochId) external view returns (uint256)
 ```
 
-
+Retrieve the first epoch id of the frame of the provided epoch id
 
 
 
@@ -111,13 +111,13 @@ function getFrameFirstEpochId(uint256 _epochId) external view returns (uint256)
 
 | Name | Type | Description |
 |---|---|---|
-| _epochId | uint256 | undefined |
+| _epochId | uint256 | Epoch id used to get the frame |
 
 #### Returns
 
 | Name | Type | Description |
 |---|---|---|
-| _0 | uint256 | undefined |
+| _0 | uint256 | The first epoch id of the frame containing the given epoch id |
 
 ### getGlobalReportStatus
 
@@ -125,7 +125,7 @@ function getFrameFirstEpochId(uint256 _epochId) external view returns (uint256)
 function getGlobalReportStatus() external view returns (uint256)
 ```
 
-
+Retrieve member report status
 
 
 
@@ -134,7 +134,7 @@ function getGlobalReportStatus() external view returns (uint256)
 
 | Name | Type | Description |
 |---|---|---|
-| _0 | uint256 | undefined |
+| _0 | uint256 | The raw report status value |
 
 ### getLastCompletedEpochId
 
@@ -142,7 +142,7 @@ function getGlobalReportStatus() external view returns (uint256)
 function getLastCompletedEpochId() external view returns (uint256)
 ```
 
-
+Retrieve the last completed epoch id
 
 
 
@@ -151,7 +151,7 @@ function getLastCompletedEpochId() external view returns (uint256)
 
 | Name | Type | Description |
 |---|---|---|
-| _0 | uint256 | undefined |
+| _0 | uint256 | The last completed epoch id |
 
 ### getMemberReportStatus
 
@@ -159,7 +159,7 @@ function getLastCompletedEpochId() external view returns (uint256)
 function getMemberReportStatus(address _oracleMember) external view returns (bool)
 ```
 
-
+Retrieve member report status
 
 
 
@@ -167,13 +167,13 @@ function getMemberReportStatus(address _oracleMember) external view returns (boo
 
 | Name | Type | Description |
 |---|---|---|
-| _oracleMember | address | undefined |
+| _oracleMember | address | Address of member to check |
 
 #### Returns
 
 | Name | Type | Description |
 |---|---|---|
-| _0 | bool | undefined |
+| _0 | bool | True if member has reported |
 
 ### getOracleMembers
 
@@ -181,7 +181,7 @@ function getMemberReportStatus(address _oracleMember) external view returns (boo
 function getOracleMembers() external view returns (address[])
 ```
 
-
+Retrieve the list of oracle members
 
 
 
@@ -190,7 +190,7 @@ function getOracleMembers() external view returns (address[])
 
 | Name | Type | Description |
 |---|---|---|
-| _0 | address[] | undefined |
+| _0 | address[] | The oracle members |
 
 ### getQuorum
 
@@ -198,7 +198,7 @@ function getOracleMembers() external view returns (address[])
 function getQuorum() external view returns (uint256)
 ```
 
-
+Retrieve the current quorum
 
 
 
@@ -207,7 +207,7 @@ function getQuorum() external view returns (uint256)
 
 | Name | Type | Description |
 |---|---|---|
-| _0 | uint256 | undefined |
+| _0 | uint256 | The current quorum |
 
 ### getReportBounds
 
@@ -215,7 +215,7 @@ function getQuorum() external view returns (uint256)
 function getReportBounds() external view returns (struct ReportBounds.ReportBoundsStruct)
 ```
 
-
+Retrieve the report bounds
 
 
 
@@ -224,7 +224,7 @@ function getReportBounds() external view returns (struct ReportBounds.ReportBoun
 
 | Name | Type | Description |
 |---|---|---|
-| _0 | ReportBounds.ReportBoundsStruct | undefined |
+| _0 | ReportBounds.ReportBoundsStruct | The report bounds |
 
 ### getReportVariant
 
@@ -232,7 +232,7 @@ function getReportBounds() external view returns (struct ReportBounds.ReportBoun
 function getReportVariant(uint256 _idx) external view returns (uint64 _clBalance, uint32 _clValidators, uint16 _reportCount)
 ```
 
-
+Retrieve decoded report at provided index
 
 
 
@@ -240,15 +240,15 @@ function getReportVariant(uint256 _idx) external view returns (uint64 _clBalance
 
 | Name | Type | Description |
 |---|---|---|
-| _idx | uint256 | undefined |
+| _idx | uint256 | Index of report |
 
 #### Returns
 
 | Name | Type | Description |
 |---|---|---|
-| _clBalance | uint64 | undefined |
-| _clValidators | uint32 | undefined |
-| _reportCount | uint16 | undefined |
+| _clBalance | uint64 | The reported consensus layer balance sum of River&#39;s validators |
+| _clValidators | uint32 | The reported validator count |
+| _reportCount | uint16 | The number of similar reports |
 
 ### getReportVariantsCount
 
@@ -256,7 +256,7 @@ function getReportVariant(uint256 _idx) external view returns (uint64 _clBalance
 function getReportVariantsCount() external view returns (uint256)
 ```
 
-
+Retrieve report variants count
 
 
 
@@ -265,7 +265,7 @@ function getReportVariantsCount() external view returns (uint256)
 
 | Name | Type | Description |
 |---|---|---|
-| _0 | uint256 | undefined |
+| _0 | uint256 | The count of report variants |
 
 ### getRiver
 
@@ -273,7 +273,7 @@ function getReportVariantsCount() external view returns (uint256)
 function getRiver() external view returns (address)
 ```
 
-
+Retrieve River address
 
 
 
@@ -282,7 +282,7 @@ function getRiver() external view returns (address)
 
 | Name | Type | Description |
 |---|---|---|
-| _0 | address | undefined |
+| _0 | address | The address of River |
 
 ### getTime
 
@@ -290,7 +290,7 @@ function getRiver() external view returns (address)
 function getTime() external view returns (uint256)
 ```
 
-
+Retrieve the block timestamp
 
 
 
@@ -299,15 +299,15 @@ function getTime() external view returns (uint256)
 
 | Name | Type | Description |
 |---|---|---|
-| _0 | uint256 | undefined |
+| _0 | uint256 | The current timestamp from the EVM context |
 
 ### initOracleV1
 
 ```solidity
-function initOracleV1(address _riverContractAddress, address _administratorAddress, uint64 _epochsPerFrame, uint64 _slotsPerEpoch, uint64 _secondsPerSlot, uint64 _genesisTime, uint256 _annualAprUpperBound, uint256 _relativeLowerBound) external nonpayable
+function initOracleV1(address _river, address _administratorAddress, uint64 _epochsPerFrame, uint64 _slotsPerEpoch, uint64 _secondsPerSlot, uint64 _genesisTime, uint256 _annualAprUpperBound, uint256 _relativeLowerBound) external nonpayable
 ```
 
-
+Initializes the oracle
 
 
 
@@ -315,14 +315,14 @@ function initOracleV1(address _riverContractAddress, address _administratorAddre
 
 | Name | Type | Description |
 |---|---|---|
-| _riverContractAddress | address | undefined |
-| _administratorAddress | address | undefined |
-| _epochsPerFrame | uint64 | undefined |
-| _slotsPerEpoch | uint64 | undefined |
-| _secondsPerSlot | uint64 | undefined |
-| _genesisTime | uint64 | undefined |
-| _annualAprUpperBound | uint256 | undefined |
-| _relativeLowerBound | uint256 | undefined |
+| _river | address | Address of the River contract, able to receive oracle input data after quorum is met |
+| _administratorAddress | address | Address able to call administrative methods |
+| _epochsPerFrame | uint64 | CL spec parameter. Number of epochs in a frame. |
+| _slotsPerEpoch | uint64 | CL spec parameter. Number of slots in one epoch. |
+| _secondsPerSlot | uint64 | CL spec parameter. Number of seconds between slots. |
+| _genesisTime | uint64 | CL spec parameter. Timestamp of the genesis slot. |
+| _annualAprUpperBound | uint256 | CL bound parameter. Maximum apr allowed for balance increase. Delta between updates is extrapolated on a year time frame. |
+| _relativeLowerBound | uint256 | CL bound parameter. Maximum relative balance decrease. |
 
 ### isMember
 
@@ -330,21 +330,21 @@ function initOracleV1(address _riverContractAddress, address _administratorAddre
 function isMember(address _memberAddress) external view returns (bool)
 ```
 
+Returns true if address is member
 
-
-
+*Performs a naive search, do not call this on-chain, used as an off-chain helper*
 
 #### Parameters
 
 | Name | Type | Description |
 |---|---|---|
-| _memberAddress | address | undefined |
+| _memberAddress | address | Address of the member |
 
 #### Returns
 
 | Name | Type | Description |
 |---|---|---|
-| _0 | bool | undefined |
+| _0 | bool | True if address is a member |
 
 ### removeMember
 
@@ -352,34 +352,34 @@ function isMember(address _memberAddress) external view returns (bool)
 function removeMember(address _oracleMember, uint256 _newQuorum) external nonpayable
 ```
 
+Removes an address from the oracle members.
 
-
-
+*Only callable by the adminstrator*
 
 #### Parameters
 
 | Name | Type | Description |
 |---|---|---|
-| _oracleMember | address | undefined |
-| _newQuorum | uint256 | undefined |
+| _oracleMember | address | Address to remove |
+| _newQuorum | uint256 | New quorum value |
 
 ### reportConsensusLayerData
 
 ```solidity
-function reportConsensusLayerData(uint256 _epochId, uint64 _clBalance, uint32 _clValidators) external nonpayable
+function reportConsensusLayerData(uint256 _epochId, uint64 _clValidatorsBalance, uint32 _clValidatorCount) external nonpayable
 ```
 
+Report cl chain data
 
-
-
+*Only callable by an oracle member*
 
 #### Parameters
 
 | Name | Type | Description |
 |---|---|---|
-| _epochId | uint256 | undefined |
-| _clBalance | uint64 | undefined |
-| _clValidators | uint32 | undefined |
+| _epochId | uint256 | Epoch where the balance and validator count has been computed |
+| _clValidatorsBalance | uint64 | Total balance of River validators |
+| _clValidatorCount | uint32 | Total River validator count |
 
 ### setCLSpec
 
@@ -387,18 +387,18 @@ function reportConsensusLayerData(uint256 _epochId, uint64 _clBalance, uint32 _c
 function setCLSpec(uint64 _epochsPerFrame, uint64 _slotsPerEpoch, uint64 _secondsPerSlot, uint64 _genesisTime) external nonpayable
 ```
 
+Edits the cl spec parameters
 
-
-
+*Only callable by the adminstrator*
 
 #### Parameters
 
 | Name | Type | Description |
 |---|---|---|
-| _epochsPerFrame | uint64 | undefined |
-| _slotsPerEpoch | uint64 | undefined |
-| _secondsPerSlot | uint64 | undefined |
-| _genesisTime | uint64 | undefined |
+| _epochsPerFrame | uint64 | Number of epochs in a frame. |
+| _slotsPerEpoch | uint64 | Number of slots in one epoch. |
+| _secondsPerSlot | uint64 | Number of seconds between slots. |
+| _genesisTime | uint64 | Timestamp of the genesis slot. |
 
 ### setMember
 
@@ -406,16 +406,16 @@ function setCLSpec(uint64 _epochsPerFrame, uint64 _slotsPerEpoch, uint64 _second
 function setMember(address _oracleMember, address _newAddress) external nonpayable
 ```
 
+Changes the address of an oracle member
 
-
-
+*Only callable by the adminitratorCannot use an address already in use*
 
 #### Parameters
 
 | Name | Type | Description |
 |---|---|---|
-| _oracleMember | address | undefined |
-| _newAddress | address | undefined |
+| _oracleMember | address | Address to change |
+| _newAddress | address | New address for the member |
 
 ### setQuorum
 
@@ -423,15 +423,15 @@ function setMember(address _oracleMember, address _newAddress) external nonpayab
 function setQuorum(uint256 _newQuorum) external nonpayable
 ```
 
+Edits the quorum required to forward cl data to River
 
-
-
+*Only callable by the adminstrator*
 
 #### Parameters
 
 | Name | Type | Description |
 |---|---|---|
-| _newQuorum | uint256 | undefined |
+| _newQuorum | uint256 | New quorum parameter |
 
 ### setReportBounds
 
@@ -439,16 +439,16 @@ function setQuorum(uint256 _newQuorum) external nonpayable
 function setReportBounds(uint256 _annualAprUpperBound, uint256 _relativeLowerBound) external nonpayable
 ```
 
+Edits the cl bounds parameters
 
-
-
+*Only callable by the adminstrator*
 
 #### Parameters
 
 | Name | Type | Description |
 |---|---|---|
-| _annualAprUpperBound | uint256 | undefined |
-| _relativeLowerBound | uint256 | undefined |
+| _annualAprUpperBound | uint256 | Maximum apr allowed for balance increase. Delta between updates is extrapolated on a year time frame. |
+| _relativeLowerBound | uint256 | Maximum relative balance decrease. |
 
 
 
@@ -460,23 +460,7 @@ function setReportBounds(uint256 _annualAprUpperBound, uint256 _relativeLowerBou
 event AddMember(address indexed member)
 ```
 
-
-
-
-
-#### Parameters
-
-| Name | Type | Description |
-|---|---|---|
-| member `indexed` | address | undefined |
-
-### BeaconReported
-
-```solidity
-event BeaconReported(uint256 _epochId, uint128 _newBeaconBalance, uint32 _newBeaconValidatorCount, address indexed _oracleMember)
-```
-
-
+A member has been added to the oracle member list
 
 
 
@@ -484,18 +468,15 @@ event BeaconReported(uint256 _epochId, uint128 _newBeaconBalance, uint32 _newBea
 
 | Name | Type | Description |
 |---|---|---|
-| _epochId  | uint256 | undefined |
-| _newBeaconBalance  | uint128 | undefined |
-| _newBeaconValidatorCount  | uint32 | undefined |
-| _oracleMember `indexed` | address | undefined |
+| member `indexed` | address | The address of the member |
 
 ### CLReported
 
 ```solidity
-event CLReported(uint256 _epochId, uint128 _newCLBalance, uint32 _newCLValidatorCount, address _oracleMember)
+event CLReported(uint256 epochId, uint128 newCLBalance, uint32 newCLValidatorCount, address oracleMember)
 ```
 
-
+Consensys Layer data has been reported by an oracle member
 
 
 
@@ -503,18 +484,18 @@ event CLReported(uint256 _epochId, uint128 _newCLBalance, uint32 _newCLValidator
 
 | Name | Type | Description |
 |---|---|---|
-| _epochId  | uint256 | undefined |
-| _newCLBalance  | uint128 | undefined |
-| _newCLValidatorCount  | uint32 | undefined |
-| _oracleMember  | address | undefined |
+| epochId  | uint256 | The epoch of the report |
+| newCLBalance  | uint128 | The new consensus layer balance |
+| newCLValidatorCount  | uint32 | The new consensys layer validator count |
+| oracleMember  | address | The oracle member that reported |
 
 ### ExpectedEpochIdUpdated
 
 ```solidity
-event ExpectedEpochIdUpdated(uint256 _epochId)
+event ExpectedEpochIdUpdated(uint256 epochId)
 ```
 
-
+The expected epoch id has been changedS
 
 
 
@@ -522,15 +503,15 @@ event ExpectedEpochIdUpdated(uint256 _epochId)
 
 | Name | Type | Description |
 |---|---|---|
-| _epochId  | uint256 | undefined |
+| epochId  | uint256 | The new expected epoch id |
 
 ### PostTotalShares
 
 ```solidity
-event PostTotalShares(uint256 _postTotalEth, uint256 _prevTotalEth, uint256 _timeElapsed, uint256 _totalShares)
+event PostTotalShares(uint256 postTotalEth, uint256 prevTotalEth, uint256 timeElapsed, uint256 totalShares)
 ```
 
-
+The report has been submitted to river
 
 
 
@@ -538,10 +519,10 @@ event PostTotalShares(uint256 _postTotalEth, uint256 _prevTotalEth, uint256 _tim
 
 | Name | Type | Description |
 |---|---|---|
-| _postTotalEth  | uint256 | undefined |
-| _prevTotalEth  | uint256 | undefined |
-| _timeElapsed  | uint256 | undefined |
-| _totalShares  | uint256 | undefined |
+| postTotalEth  | uint256 | The new total eth balance |
+| prevTotalEth  | uint256 | The previous total eth balance |
+| timeElapsed  | uint256 | Time since last report |
+| totalShares  | uint256 | The new total amount of shares |
 
 ### RemoveMember
 
@@ -549,7 +530,7 @@ event PostTotalShares(uint256 _postTotalEth, uint256 _prevTotalEth, uint256 _tim
 event RemoveMember(address indexed member)
 ```
 
-
+A member has been removed from the oracle member list
 
 
 
@@ -557,15 +538,15 @@ event RemoveMember(address indexed member)
 
 | Name | Type | Description |
 |---|---|---|
-| member `indexed` | address | undefined |
+| member `indexed` | address | The address of the member |
 
 ### SetBounds
 
 ```solidity
-event SetBounds(uint256 _annualAprUpperBound, uint256 _relativeLowerBound)
+event SetBounds(uint256 annualAprUpperBound, uint256 relativeLowerBound)
 ```
 
-
+The report bounds have been changed
 
 
 
@@ -573,8 +554,8 @@ event SetBounds(uint256 _annualAprUpperBound, uint256 _relativeLowerBound)
 
 | Name | Type | Description |
 |---|---|---|
-| _annualAprUpperBound  | uint256 | undefined |
-| _relativeLowerBound  | uint256 | undefined |
+| annualAprUpperBound  | uint256 | The maximum allowed apr. 10% means increases in balance extrapolated to a year should not exceed 10%. |
+| relativeLowerBound  | uint256 | The maximum allowed balance decrease as a relative % of the total balance |
 
 ### SetMember
 
@@ -582,7 +563,7 @@ event SetBounds(uint256 _annualAprUpperBound, uint256 _relativeLowerBound)
 event SetMember(address indexed oldAddress, address indexed newAddress)
 ```
 
-
+A member address has been edited
 
 
 
@@ -590,16 +571,16 @@ event SetMember(address indexed oldAddress, address indexed newAddress)
 
 | Name | Type | Description |
 |---|---|---|
-| oldAddress `indexed` | address | undefined |
-| newAddress `indexed` | address | undefined |
+| oldAddress `indexed` | address | The previous member address |
+| newAddress `indexed` | address | The new member address |
 
 ### SetQuorum
 
 ```solidity
-event SetQuorum(uint256 _newQuorum)
+event SetQuorum(uint256 newQuorum)
 ```
 
-
+The storage quorum value has been changed
 
 
 
@@ -607,15 +588,15 @@ event SetQuorum(uint256 _newQuorum)
 
 | Name | Type | Description |
 |---|---|---|
-| _newQuorum  | uint256 | undefined |
+| newQuorum  | uint256 | The new quorum value |
 
 ### SetSpec
 
 ```solidity
-event SetSpec(uint64 _epochsPerFrame, uint64 _slotsPerEpoch, uint64 _secondsPerSlot, uint64 _genesisTime)
+event SetSpec(uint64 epochsPerFrame, uint64 slotsPerEpoch, uint64 secondsPerSlot, uint64 genesisTime)
 ```
 
-
+The consensus layer spec has been changed
 
 
 
@@ -623,10 +604,10 @@ event SetSpec(uint64 _epochsPerFrame, uint64 _slotsPerEpoch, uint64 _secondsPerS
 
 | Name | Type | Description |
 |---|---|---|
-| _epochsPerFrame  | uint64 | undefined |
-| _slotsPerEpoch  | uint64 | undefined |
-| _secondsPerSlot  | uint64 | undefined |
-| _genesisTime  | uint64 | undefined |
+| epochsPerFrame  | uint64 | The number of epochs inside a frame (225 = 24 hours) |
+| slotsPerEpoch  | uint64 | The number of slots inside an epoch (32 on ethereum mainnet) |
+| secondsPerSlot  | uint64 | The time between two slots (12 seconds on ethereum mainnet) |
+| genesisTime  | uint64 | The timestamp of block #0 |
 
 
 
@@ -635,10 +616,10 @@ event SetSpec(uint64 _epochsPerFrame, uint64 _slotsPerEpoch, uint64 _secondsPerS
 ### AddressAlreadyInUse
 
 ```solidity
-error AddressAlreadyInUse(address _newAddress)
+error AddressAlreadyInUse(address newAddress)
 ```
 
-
+The address is already in use by an oracle member
 
 
 
@@ -646,15 +627,15 @@ error AddressAlreadyInUse(address _newAddress)
 
 | Name | Type | Description |
 |---|---|---|
-| _newAddress | address | undefined |
+| newAddress | address | The address already in use |
 
 ### AlreadyReported
 
 ```solidity
-error AlreadyReported(uint256 _epochId, address _member)
+error AlreadyReported(uint256 epochId, address member)
 ```
 
-
+The member already reported on the given epoch id
 
 
 
@@ -662,16 +643,16 @@ error AlreadyReported(uint256 _epochId, address _member)
 
 | Name | Type | Description |
 |---|---|---|
-| _epochId | uint256 | undefined |
-| _member | address | undefined |
+| epochId | uint256 | The epoch id provided as input |
+| member | address | The oracle member |
 
 ### EpochTooOld
 
 ```solidity
-error EpochTooOld(uint256 _providedEpochId, uint256 _minExpectedEpochId)
+error EpochTooOld(uint256 providedEpochId, uint256 minExpectedEpochId)
 ```
 
-
+The provided epoch is too old compared to the expected epoch id
 
 
 
@@ -679,16 +660,16 @@ error EpochTooOld(uint256 _providedEpochId, uint256 _minExpectedEpochId)
 
 | Name | Type | Description |
 |---|---|---|
-| _providedEpochId | uint256 | undefined |
-| _minExpectedEpochId | uint256 | undefined |
+| providedEpochId | uint256 | The epoch id provided as input |
+| minExpectedEpochId | uint256 | The minimum epoch id expected |
 
 ### NotFrameFirstEpochId
 
 ```solidity
-error NotFrameFirstEpochId(uint256 _providedEpochId, uint256 _expectedFrameFirstEpochId)
+error NotFrameFirstEpochId(uint256 providedEpochId, uint256 expectedFrameFirstEpochId)
 ```
 
-
+The provided epoch is not at the beginning of its frame
 
 
 
@@ -696,16 +677,16 @@ error NotFrameFirstEpochId(uint256 _providedEpochId, uint256 _expectedFrameFirst
 
 | Name | Type | Description |
 |---|---|---|
-| _providedEpochId | uint256 | undefined |
-| _expectedFrameFirstEpochId | uint256 | undefined |
+| providedEpochId | uint256 | The epoch id provided as input |
+| expectedFrameFirstEpochId | uint256 | The frame first epoch id that was expected |
 
 ### TotalValidatorBalanceDecreaseOutOfBound
 
 ```solidity
-error TotalValidatorBalanceDecreaseOutOfBound(uint256 _prevTotalEth, uint256 _postTotalEth, uint256 _timeElapsed, uint256 _relativeLowerBound)
+error TotalValidatorBalanceDecreaseOutOfBound(uint256 prevTotalEth, uint256 postTotalEth, uint256 timeElapsed, uint256 relativeLowerBound)
 ```
 
-
+The delta in balance is under the allowed lower bound
 
 
 
@@ -713,18 +694,18 @@ error TotalValidatorBalanceDecreaseOutOfBound(uint256 _prevTotalEth, uint256 _po
 
 | Name | Type | Description |
 |---|---|---|
-| _prevTotalEth | uint256 | undefined |
-| _postTotalEth | uint256 | undefined |
-| _timeElapsed | uint256 | undefined |
-| _relativeLowerBound | uint256 | undefined |
+| prevTotalEth | uint256 | The previous total balance |
+| postTotalEth | uint256 | The new total balance |
+| timeElapsed | uint256 | The time ssince last report |
+| relativeLowerBound | uint256 | The maximum relative decrease allowed |
 
 ### TotalValidatorBalanceIncreaseOutOfBound
 
 ```solidity
-error TotalValidatorBalanceIncreaseOutOfBound(uint256 _prevTotalEth, uint256 _postTotalEth, uint256 _timeElapsed, uint256 _annualAprUpperBound)
+error TotalValidatorBalanceIncreaseOutOfBound(uint256 prevTotalEth, uint256 postTotalEth, uint256 timeElapsed, uint256 annualAprUpperBound)
 ```
 
-
+The delta in balance is above the allowed upper bound
 
 
 
@@ -732,9 +713,9 @@ error TotalValidatorBalanceIncreaseOutOfBound(uint256 _prevTotalEth, uint256 _po
 
 | Name | Type | Description |
 |---|---|---|
-| _prevTotalEth | uint256 | undefined |
-| _postTotalEth | uint256 | undefined |
-| _timeElapsed | uint256 | undefined |
-| _annualAprUpperBound | uint256 | undefined |
+| prevTotalEth | uint256 | The previous total balance |
+| postTotalEth | uint256 | The new total balance |
+| timeElapsed | uint256 | The time ssince last report |
+| annualAprUpperBound | uint256 | The maximum apr allowed |
 
 

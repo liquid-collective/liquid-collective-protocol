@@ -64,7 +64,7 @@ Emitted when the contract is properly initialized
 event SetRiver(address indexed river)
 ```
 
-
+The storage river address has changed
 
 
 
@@ -84,7 +84,7 @@ event SetRiver(address indexed river)
 error InvalidCall()
 ```
 
-
+The fallback has been triggered with calldata
 
 
 

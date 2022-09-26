@@ -16,7 +16,7 @@
 function initELFeeRecipientV1(address _riverAddress) external nonpayable
 ```
 
-
+Initialize the fee recipient with the required arguments
 
 
 
@@ -24,7 +24,7 @@ function initELFeeRecipientV1(address _riverAddress) external nonpayable
 
 | Name | Type | Description |
 |---|---|---|
-| _riverAddress | address | undefined |
+| _riverAddress | address | Address of River |
 
 ### pullELFees
 
@@ -32,9 +32,9 @@ function initELFeeRecipientV1(address _riverAddress) external nonpayable
 function pullELFees() external nonpayable
 ```
 
+Pulls all the ETH to the River contract
 
-
-
+*Only callable by the River contract*
 
 
 
@@ -47,7 +47,7 @@ function pullELFees() external nonpayable
 event SetRiver(address indexed river)
 ```
 
-
+The storage river address has changed
 
 
 
@@ -55,7 +55,7 @@ event SetRiver(address indexed river)
 
 | Name | Type | Description |
 |---|---|---|
-| river `indexed` | address | undefined |
+| river `indexed` | address | The new river address |
 
 
 
@@ -67,7 +67,7 @@ event SetRiver(address indexed river)
 error InvalidCall()
 ```
 
-
+The fallback has been triggered with calldata
 
 
 

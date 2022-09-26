@@ -13,10 +13,10 @@
 ### allowance
 
 ```solidity
-function allowance(address _owner, address _spender) external view returns (uint256 remaining)
+function allowance(address _owner, address _spender) external view returns (uint256)
 ```
 
-
+Retrieve the allowance value for a spender
 
 
 
@@ -24,45 +24,45 @@ function allowance(address _owner, address _spender) external view returns (uint
 
 | Name | Type | Description |
 |---|---|---|
-| _owner | address | undefined |
-| _spender | address | undefined |
+| _owner | address | Address that issued the allowance |
+| _spender | address | Address that received the allowance |
 
 #### Returns
 
 | Name | Type | Description |
 |---|---|---|
-| remaining | uint256 | undefined |
+| _0 | uint256 | The allowance for a given spender |
 
 ### approve
 
 ```solidity
-function approve(address _spender, uint256 _value) external nonpayable returns (bool success)
+function approve(address _spender, uint256 _value) external nonpayable returns (bool)
 ```
 
+Approves an account for future spendings
 
-
-
+*An approved account can use transferFrom to transfer funds on behalf of the token owner*
 
 #### Parameters
 
 | Name | Type | Description |
 |---|---|---|
-| _spender | address | undefined |
-| _value | uint256 | undefined |
+| _spender | address | Address that is allowed to spend the tokens |
+| _value | uint256 | The allowed amount, will override previous value |
 
 #### Returns
 
 | Name | Type | Description |
 |---|---|---|
-| success | bool | undefined |
+| _0 | bool | True if success |
 
 ### balanceOf
 
 ```solidity
-function balanceOf(address _owner) external view returns (uint256 balance)
+function balanceOf(address _owner) external view returns (uint256)
 ```
 
-
+Retrieve the balance of an account
 
 
 
@@ -70,21 +70,21 @@ function balanceOf(address _owner) external view returns (uint256 balance)
 
 | Name | Type | Description |
 |---|---|---|
-| _owner | address | undefined |
+| _owner | address | Address to be checked |
 
 #### Returns
 
 | Name | Type | Description |
 |---|---|---|
-| balance | uint256 | undefined |
+| _0 | uint256 | The balance of the account |
 
 ### balanceOfUnderlying
 
 ```solidity
-function balanceOfUnderlying(address _owner) external view returns (uint256 balance)
+function balanceOfUnderlying(address _owner) external view returns (uint256)
 ```
 
-
+Retrieve the underlying asset balance of an account
 
 
 
@@ -92,13 +92,13 @@ function balanceOfUnderlying(address _owner) external view returns (uint256 bala
 
 | Name | Type | Description |
 |---|---|---|
-| _owner | address | undefined |
+| _owner | address | Address to be checked |
 
 #### Returns
 
 | Name | Type | Description |
 |---|---|---|
-| balance | uint256 | undefined |
+| _0 | uint256 | The underlying balance of the account |
 
 ### decimals
 
@@ -106,7 +106,7 @@ function balanceOfUnderlying(address _owner) external view returns (uint256 bala
 function decimals() external pure returns (uint8)
 ```
 
-
+Retrieve the decimal count
 
 
 
@@ -115,15 +115,15 @@ function decimals() external pure returns (uint8)
 
 | Name | Type | Description |
 |---|---|---|
-| _0 | uint8 | undefined |
+| _0 | uint8 | The decimal count |
 
 ### decreaseAllowance
 
 ```solidity
-function decreaseAllowance(address _spender, uint256 _subtractableValue) external nonpayable returns (bool success)
+function decreaseAllowance(address _spender, uint256 _subtractableValue) external nonpayable returns (bool)
 ```
 
-
+Decrease allowance to another account
 
 
 
@@ -131,22 +131,22 @@ function decreaseAllowance(address _spender, uint256 _subtractableValue) externa
 
 | Name | Type | Description |
 |---|---|---|
-| _spender | address | undefined |
-| _subtractableValue | uint256 | undefined |
+| _spender | address | Spender that receives the allowance |
+| _subtractableValue | uint256 | Amount to subtract |
 
 #### Returns
 
 | Name | Type | Description |
 |---|---|---|
-| success | bool | undefined |
+| _0 | bool | True if success |
 
 ### increaseAllowance
 
 ```solidity
-function increaseAllowance(address _spender, uint256 _additionalValue) external nonpayable returns (bool success)
+function increaseAllowance(address _spender, uint256 _additionalValue) external nonpayable returns (bool)
 ```
 
-
+Increase allowance to another account
 
 
 
@@ -154,14 +154,14 @@ function increaseAllowance(address _spender, uint256 _additionalValue) external 
 
 | Name | Type | Description |
 |---|---|---|
-| _spender | address | undefined |
-| _additionalValue | uint256 | undefined |
+| _spender | address | Spender that receives the allowance |
+| _additionalValue | uint256 | Amount to add |
 
 #### Returns
 
 | Name | Type | Description |
 |---|---|---|
-| success | bool | undefined |
+| _0 | bool | True if success |
 
 ### name
 
@@ -169,7 +169,7 @@ function increaseAllowance(address _spender, uint256 _additionalValue) external 
 function name() external pure returns (string)
 ```
 
-
+Retrieve the token name
 
 
 
@@ -178,15 +178,15 @@ function name() external pure returns (string)
 
 | Name | Type | Description |
 |---|---|---|
-| _0 | string | undefined |
+| _0 | string | The token name |
 
 ### sharesFromUnderlyingBalance
 
 ```solidity
-function sharesFromUnderlyingBalance(uint256 underlyingBalance) external view returns (uint256)
+function sharesFromUnderlyingBalance(uint256 _underlyingAssetAmount) external view returns (uint256)
 ```
 
-
+Retrieve the shares count from an underlying asset amount
 
 
 
@@ -194,13 +194,13 @@ function sharesFromUnderlyingBalance(uint256 underlyingBalance) external view re
 
 | Name | Type | Description |
 |---|---|---|
-| underlyingBalance | uint256 | undefined |
+| _underlyingAssetAmount | uint256 | Amount of underlying asset to convert |
 
 #### Returns
 
 | Name | Type | Description |
 |---|---|---|
-| _0 | uint256 | undefined |
+| _0 | uint256 | The amount of shares worth the underlying asset amopunt |
 
 ### symbol
 
@@ -208,7 +208,7 @@ function sharesFromUnderlyingBalance(uint256 underlyingBalance) external view re
 function symbol() external pure returns (string)
 ```
 
-
+Retrieve the token symbol
 
 
 
@@ -217,7 +217,7 @@ function symbol() external pure returns (string)
 
 | Name | Type | Description |
 |---|---|---|
-| _0 | string | undefined |
+| _0 | string | The token symbol |
 
 ### totalSupply
 
@@ -225,16 +225,16 @@ function symbol() external pure returns (string)
 function totalSupply() external view returns (uint256)
 ```
 
+Retrieve the total token supply
 
 
-*Returns the amount of tokens in existence.*
 
 
 #### Returns
 
 | Name | Type | Description |
 |---|---|---|
-| _0 | uint256 | undefined |
+| _0 | uint256 | The total supply |
 
 ### totalUnderlyingSupply
 
@@ -242,7 +242,7 @@ function totalSupply() external view returns (uint256)
 function totalUnderlyingSupply() external view returns (uint256)
 ```
 
-
+Retrieve the total underlying asset supply
 
 
 
@@ -251,7 +251,7 @@ function totalUnderlyingSupply() external view returns (uint256)
 
 | Name | Type | Description |
 |---|---|---|
-| _0 | uint256 | undefined |
+| _0 | uint256 | The total underlying asset supply |
 
 ### transfer
 
@@ -259,7 +259,7 @@ function totalUnderlyingSupply() external view returns (uint256)
 function transfer(address _to, uint256 _value) external nonpayable returns (bool)
 ```
 
-
+Performs a transfer from the message sender to the provided account
 
 
 
@@ -267,14 +267,14 @@ function transfer(address _to, uint256 _value) external nonpayable returns (bool
 
 | Name | Type | Description |
 |---|---|---|
-| _to | address | undefined |
-| _value | uint256 | undefined |
+| _to | address | Address receiving the tokens |
+| _value | uint256 | Amount to be sent |
 
 #### Returns
 
 | Name | Type | Description |
 |---|---|---|
-| _0 | bool | undefined |
+| _0 | bool | True if success |
 
 ### transferFrom
 
@@ -282,7 +282,7 @@ function transfer(address _to, uint256 _value) external nonpayable returns (bool
 function transferFrom(address _from, address _to, uint256 _value) external nonpayable returns (bool)
 ```
 
-
+Performs a transfer between two recipients
 
 
 
@@ -290,23 +290,23 @@ function transferFrom(address _from, address _to, uint256 _value) external nonpa
 
 | Name | Type | Description |
 |---|---|---|
-| _from | address | undefined |
-| _to | address | undefined |
-| _value | uint256 | undefined |
+| _from | address | Address sending the tokens |
+| _to | address | Address receiving the tokens |
+| _value | uint256 | Amount to be sent |
 
 #### Returns
 
 | Name | Type | Description |
 |---|---|---|
-| _0 | bool | undefined |
+| _0 | bool | True if success |
 
 ### underlyingBalanceFromShares
 
 ```solidity
-function underlyingBalanceFromShares(uint256 shares) external view returns (uint256)
+function underlyingBalanceFromShares(uint256 _shares) external view returns (uint256)
 ```
 
-
+Retrieve the underlying asset balance from an amount of shares
 
 
 
@@ -314,13 +314,13 @@ function underlyingBalanceFromShares(uint256 shares) external view returns (uint
 
 | Name | Type | Description |
 |---|---|---|
-| shares | uint256 | undefined |
+| _shares | uint256 | Amount of shares to convert |
 
 #### Returns
 
 | Name | Type | Description |
 |---|---|---|
-| _0 | uint256 | undefined |
+| _0 | uint256 | The underlying asset balance represented by the shares |
 
 
 
@@ -372,7 +372,7 @@ event Transfer(address indexed from, address indexed to, uint256 value)
 error AllowanceTooLow(address _from, address _operator, uint256 _allowance, uint256 _value)
 ```
 
-
+Allowance too low to perform operation
 
 
 
@@ -380,10 +380,10 @@ error AllowanceTooLow(address _from, address _operator, uint256 _allowance, uint
 
 | Name | Type | Description |
 |---|---|---|
-| _from | address | undefined |
-| _operator | address | undefined |
-| _allowance | uint256 | undefined |
-| _value | uint256 | undefined |
+| _from | address | Account where funds are sent from |
+| _operator | address | Account attempting the transfer |
+| _allowance | uint256 | Current allowance |
+| _value | uint256 | Requested transfer value |
 
 ### BalanceTooLow
 
@@ -391,7 +391,7 @@ error AllowanceTooLow(address _from, address _operator, uint256 _allowance, uint
 error BalanceTooLow()
 ```
 
-
+Balance too low to perform operation
 
 
 
@@ -402,7 +402,7 @@ error BalanceTooLow()
 error NullTransfer()
 ```
 
-
+Invalid empty transfer
 
 
 
@@ -413,7 +413,7 @@ error NullTransfer()
 error UnauthorizedTransfer(address _from, address _to)
 ```
 
-
+Invalid transfer recipients
 
 
 

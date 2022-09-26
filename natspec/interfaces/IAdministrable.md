@@ -16,9 +16,9 @@
 function acceptAdmin() external nonpayable
 ```
 
+Accept the transfer of ownership
 
-
-
+*Only callable by the pending admin. Resets the pending admin if succesful.*
 
 
 ### getAdmin
@@ -27,7 +27,7 @@ function acceptAdmin() external nonpayable
 function getAdmin() external view returns (address)
 ```
 
-
+Retrieves the current admin address
 
 
 
@@ -36,7 +36,7 @@ function getAdmin() external view returns (address)
 
 | Name | Type | Description |
 |---|---|---|
-| _0 | address | undefined |
+| _0 | address | The admin address |
 
 ### getPendingAdmin
 
@@ -44,7 +44,7 @@ function getAdmin() external view returns (address)
 function getPendingAdmin() external view returns (address)
 ```
 
-
+Retrieve the current pending admin address
 
 
 
@@ -53,7 +53,7 @@ function getPendingAdmin() external view returns (address)
 
 | Name | Type | Description |
 |---|---|---|
-| _0 | address | undefined |
+| _0 | address | The pending admin address |
 
 ### proposeAdmin
 
@@ -61,15 +61,15 @@ function getPendingAdmin() external view returns (address)
 function proposeAdmin(address _newAdmin) external nonpayable
 ```
 
+Proposes a new address as admin
 
-
-
+*This security prevents setting and invalid address as an admin. The pendingadmin has to claim its ownership of the contract, and proves that the newaddress is able to perform regular transactions.*
 
 #### Parameters
 
 | Name | Type | Description |
 |---|---|---|
-| _newAdmin | address | undefined |
+| _newAdmin | address | New admin address |
 
 
 
@@ -81,7 +81,7 @@ function proposeAdmin(address _newAdmin) external nonpayable
 event SetAdmin(address indexed admin)
 ```
 
-
+The admin address changed
 
 
 
@@ -89,7 +89,7 @@ event SetAdmin(address indexed admin)
 
 | Name | Type | Description |
 |---|---|---|
-| admin `indexed` | address | undefined |
+| admin `indexed` | address | New admin address |
 
 ### SetPendingAdmin
 
@@ -97,7 +97,7 @@ event SetAdmin(address indexed admin)
 event SetPendingAdmin(address indexed pendingAdmin)
 ```
 
-
+The pending admin address changed
 
 
 
@@ -105,7 +105,7 @@ event SetPendingAdmin(address indexed pendingAdmin)
 
 | Name | Type | Description |
 |---|---|---|
-| pendingAdmin `indexed` | address | undefined |
+| pendingAdmin `indexed` | address | New pending admin address |
 
 
 

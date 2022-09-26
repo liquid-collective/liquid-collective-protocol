@@ -24,6 +24,15 @@ interface IRiverV1 is IConsensusLayerDepositManagerV1, IUserDepositManagerV1, IS
         uint256 _newTotalSupply
     );
 
+    /// @notice Initializes the River system
+    /// @param _depositContractAddress Address to make Consensus Layer deposits
+    /// @param _elFeeRecipientAddress Address that receives the execution layer fees
+    /// @param _withdrawalCredentials Credentials to use for every validator deposit
+    /// @param _systemAdministratorAddress Administrator address
+    /// @param _allowlistAddress Address of the allowlist contract
+    /// @param _operatorRegistryAddress Address of the operator registry
+    /// @param _collectorAddress Address receiving the fee minus the operator share
+    /// @param _globalFee Amount retained when the eth balance increases, splitted between the collector and the operators
     function initRiverV1(
         address _depositContractAddress,
         address _elFeeRecipientAddress,
@@ -36,14 +45,42 @@ interface IRiverV1 is IConsensusLayerDepositManagerV1, IUserDepositManagerV1, IS
         uint256 _globalFee
     ) external;
 
-    function setGlobalFee(uint256 newFee) external;
+    /// @notice Get the current global fee
+    /// @return The global fee
     function getGlobalFee() external view returns (uint256);
-    function setAllowlist(address _newAllowlist) external;
+
+    /// @notice Retrieve the allowlist address
+    /// @return The allowlist address
     function getAllowlist() external view returns (address);
-    function setCollector(address _newCollector) external;
+
+    /// @notice Retrieve the collector address
+    /// @return The collector address
     function getCollector() external view returns (address);
-    function setELFeeRecipient(address _newELFeeRecipient) external;
+
+    /// @notice Retrieve the execution layer fee recipient
+    /// @return The execution layer fee recipient address
     function getELFeeRecipient() external view returns (address);
+
+    /// @notice Retrieve the operators registry
+    /// @return The operators registry address
     function getOperatorsRegistry() external view returns (address);
+
+    /// @notice Changes the global fee parameter
+    /// @param newFee New fee value
+    function setGlobalFee(uint256 newFee) external;
+
+    /// @notice Changes the allowlist address
+    /// @param _newAllowlist New address for the allowlist
+    function setAllowlist(address _newAllowlist) external;
+
+    /// @notice Changes the collector address
+    /// @param _newCollector New address for the collector
+    function setCollector(address _newCollector) external;
+
+    /// @notice Changes the execution layer fee recipient
+    /// @param _newELFeeRecipient New address for the recipient
+    function setELFeeRecipient(address _newELFeeRecipient) external;
+
+    /// @notice Input for execution layer fee earnings
     function sendELFees() external payable;
 }

@@ -15,9 +15,14 @@ import "./Administrable.sol";
 ///         is unpermissioned in the underlying contract.
 ///         Calls to non-admin functions should be called at the underlying contract directly.
 contract Firewall is IFirewall, Administrable {
-    mapping(bytes4 => bool) internal executorCanCall;
+    /// @inheritdoc IFirewall
     address public executor;
-    address internal destination;
+
+    /// @inheritdoc IFirewall
+    address public destination;
+
+    /// @inheritdoc IFirewall
+    mapping(bytes4 => bool) public executorCanCall;
 
     /// @param _admin Address of the administrator, that is able to perform all calls via the Firewall
     /// @param _executor Address of the executor, that is able to perform only a subset of calls via the Firewall
@@ -49,28 +54,25 @@ contract Firewall is IFirewall, Administrable {
         _;
     }
 
-    /// @notice Sets the executor address
-    /// @param _newExecutor New address for the executor
+    /// @inheritdoc IFirewall
     function setExecutor(address _newExecutor) external onlyAdminOrExecutor {
         LibSanitize._notZeroAddress(_newExecutor);
         executor = _newExecutor;
         emit SetExecutor(_newExecutor);
     }
 
-    /// @notice Sets the permission for a function selector
-    /// @param _functionSelector Method signature on which the permission is changed
-    /// @param _executorCanCall True if selector is callable by the executor
+    /// @inheritdoc IFirewall
     function allowExecutor(bytes4 _functionSelector, bool _executorCanCall) external onlyAdmin {
         executorCanCall[_functionSelector] = _executorCanCall;
         emit SetExecutorPermissions(_functionSelector, _executorCanCall);
     }
 
-    /// @notice Fallback method. All its parameters are forwarded to the destination if caller is authorized
+    /// @inheritdoc IFirewall
     fallback() external payable virtual {
         _fallback();
     }
 
-    /// @notice Receive fallback method. All its parameters are forwarded to the destination if caller is authorized
+    /// @inheritdoc IFirewall
     receive() external payable virtual {
         _fallback();
     }

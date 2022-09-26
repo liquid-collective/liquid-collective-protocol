@@ -26,29 +26,22 @@ abstract contract Administrable is IAdministrable {
         _;
     }
 
-    /// @notice Retrieves the current admin address
-    /// @return The admin address
+    /// @inheritdoc IAdministrable
     function getAdmin() external view returns (address) {
         return LibAdministrable._getAdmin();
     }
 
-    /// @notice Retrieve the current pending admin address
-    /// @return The pending admin address
+    /// @inheritdoc IAdministrable
     function getPendingAdmin() external view returns (address) {
         return LibAdministrable._getPendingAdmin();
     }
 
-    /// @notice Proposes a new address as admin
-    /// @dev This security prevents setting and invalid address as an admin. The pending
-    /// @dev admin has to claim its ownership of the contract, and proves that the new
-    /// @dev address is able to perform regular transactions.
-    /// @param _newAdmin New admin address
+    /// @inheritdoc IAdministrable
     function proposeAdmin(address _newAdmin) external onlyAdmin {
         _setPendingAdmin(_newAdmin);
     }
 
-    /// @notice Accept the transfer of ownership
-    /// @dev Only callable by the pending admin. Resets the pending admin if succesful.
+    /// @inheritdoc IAdministrable
     function acceptAdmin() external onlyPendingAdmin {
         _setAdmin(LibAdministrable._getPendingAdmin());
         _setPendingAdmin(address(0));

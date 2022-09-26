@@ -16,7 +16,7 @@
 function getCLValidatorCount() external view returns (uint256)
 ```
 
-
+Get CL validator count (the amount of validator reported by the oracles)
 
 
 
@@ -25,7 +25,7 @@ function getCLValidatorCount() external view returns (uint256)
 
 | Name | Type | Description |
 |---|---|---|
-| _0 | uint256 | undefined |
+| _0 | uint256 | The CL validator count |
 
 ### getCLValidatorTotalBalance
 
@@ -33,7 +33,7 @@ function getCLValidatorCount() external view returns (uint256)
 function getCLValidatorTotalBalance() external view returns (uint256)
 ```
 
-
+Get CL validator total balance
 
 
 
@@ -42,7 +42,7 @@ function getCLValidatorTotalBalance() external view returns (uint256)
 
 | Name | Type | Description |
 |---|---|---|
-| _0 | uint256 | undefined |
+| _0 | uint256 | The CL Validator total balance |
 
 ### getOracle
 
@@ -50,7 +50,7 @@ function getCLValidatorTotalBalance() external view returns (uint256)
 function getOracle() external view returns (address)
 ```
 
-
+Get oracle address
 
 
 
@@ -59,7 +59,7 @@ function getOracle() external view returns (address)
 
 | Name | Type | Description |
 |---|---|---|
-| _0 | address | undefined |
+| _0 | address | The oracle address |
 
 ### setConsensusLayerData
 
@@ -67,17 +67,17 @@ function getOracle() external view returns (address)
 function setConsensusLayerData(uint256 _validatorCount, uint256 _validatorTotalBalance, bytes32 _roundId) external nonpayable
 ```
 
+Sets the validator count and validator balance sum reported by the oracle
 
-
-
+*Can only be called by the oracle address*
 
 #### Parameters
 
 | Name | Type | Description |
 |---|---|---|
-| _validatorCount | uint256 | undefined |
-| _validatorTotalBalance | uint256 | undefined |
-| _roundId | bytes32 | undefined |
+| _validatorCount | uint256 | The number of active validators on the consensus layer |
+| _validatorTotalBalance | uint256 | The validator balance sum of the active validators on the consensus layer |
+| _roundId | bytes32 | An identifier for this update |
 
 ### setOracle
 
@@ -85,7 +85,7 @@ function setConsensusLayerData(uint256 _validatorCount, uint256 _validatorTotalB
 function setOracle(address _oracleAddress) external nonpayable
 ```
 
-
+Set the oracle address
 
 
 
@@ -93,7 +93,7 @@ function setOracle(address _oracleAddress) external nonpayable
 
 | Name | Type | Description |
 |---|---|---|
-| _oracleAddress | address | undefined |
+| _oracleAddress | address | Address of the oracle |
 
 
 
@@ -105,7 +105,7 @@ function setOracle(address _oracleAddress) external nonpayable
 event ConsensusLayerDataUpdate(uint256 validatorCount, uint256 validatorTotalBalance, bytes32 roundId)
 ```
 
-
+The consensus layer data provided by the oracle has been updated
 
 
 
@@ -113,9 +113,9 @@ event ConsensusLayerDataUpdate(uint256 validatorCount, uint256 validatorTotalBal
 
 | Name | Type | Description |
 |---|---|---|
-| validatorCount  | uint256 | undefined |
-| validatorTotalBalance  | uint256 | undefined |
-| roundId  | bytes32 | undefined |
+| validatorCount  | uint256 | The new count of validators running on the consensus layer |
+| validatorTotalBalance  | uint256 | The new total balance sum of all validators |
+| roundId  | bytes32 | Round identifier |
 
 ### SetOracle
 
@@ -123,7 +123,7 @@ event ConsensusLayerDataUpdate(uint256 validatorCount, uint256 validatorTotalBal
 event SetOracle(address indexed oracleAddress)
 ```
 
-
+The storage oracle address changed
 
 
 
@@ -131,7 +131,7 @@ event SetOracle(address indexed oracleAddress)
 
 | Name | Type | Description |
 |---|---|---|
-| oracleAddress `indexed` | address | undefined |
+| oracleAddress `indexed` | address | The new oracle address |
 
 
 
@@ -140,10 +140,10 @@ event SetOracle(address indexed oracleAddress)
 ### InvalidValidatorCountReport
 
 ```solidity
-error InvalidValidatorCountReport(uint256 _providedValidatorCount, uint256 _depositedValidatorCount)
+error InvalidValidatorCountReport(uint256 providedValidatorCount, uint256 depositedValidatorCount)
 ```
 
-
+The reported validator count is invalid
 
 
 
@@ -151,7 +151,7 @@ error InvalidValidatorCountReport(uint256 _providedValidatorCount, uint256 _depo
 
 | Name | Type | Description |
 |---|---|---|
-| _providedValidatorCount | uint256 | undefined |
-| _depositedValidatorCount | uint256 | undefined |
+| providedValidatorCount | uint256 | The received validator count value |
+| depositedValidatorCount | uint256 | The number of deposits performed by the system |
 
 

@@ -378,7 +378,7 @@ Change the River address
 event AddedOperator(uint256 indexed index, string name, address indexed operatorAddress)
 ```
 
-
+A new operator has been added to the registry
 
 
 
@@ -396,7 +396,7 @@ event AddedOperator(uint256 indexed index, string name, address indexed operator
 event AddedValidatorKeys(uint256 indexed index, bytes publicKeysAndSignatures)
 ```
 
-
+The operator or the admin added new validator keys and signatures
 
 
 
@@ -430,7 +430,7 @@ Emitted when the contract is properly initialized
 event RemovedValidatorKey(uint256 indexed index, bytes publicKey)
 ```
 
-
+The operator or the admin removed a public key and its signature from the registry
 
 
 
@@ -447,7 +447,7 @@ event RemovedValidatorKey(uint256 indexed index, bytes publicKey)
 event SetAdmin(address indexed admin)
 ```
 
-
+The admin address changed
 
 
 
@@ -463,7 +463,7 @@ event SetAdmin(address indexed admin)
 event SetOperatorAddress(uint256 indexed index, address indexed newOperatorAddress)
 ```
 
-
+The operator address has been changed
 
 
 
@@ -480,7 +480,7 @@ event SetOperatorAddress(uint256 indexed index, address indexed newOperatorAddre
 event SetOperatorLimit(uint256 indexed index, uint256 newLimit)
 ```
 
-
+The operator limit has been changed
 
 
 
@@ -494,10 +494,10 @@ event SetOperatorLimit(uint256 indexed index, uint256 newLimit)
 ### SetOperatorName
 
 ```solidity
-event SetOperatorName(uint256 indexed name, string newName)
+event SetOperatorName(uint256 indexed index, string newName)
 ```
 
-
+The operator display name has been changed
 
 
 
@@ -505,7 +505,7 @@ event SetOperatorName(uint256 indexed name, string newName)
 
 | Name | Type | Description |
 |---|---|---|
-| name `indexed` | uint256 | undefined |
+| index `indexed` | uint256 | undefined |
 | newName  | string | undefined |
 
 ### SetOperatorStatus
@@ -514,7 +514,7 @@ event SetOperatorName(uint256 indexed name, string newName)
 event SetOperatorStatus(uint256 indexed index, bool active)
 ```
 
-
+The operator status has been changed
 
 
 
@@ -531,7 +531,7 @@ event SetOperatorStatus(uint256 indexed index, bool active)
 event SetOperatorStoppedValidatorCount(uint256 indexed index, uint256 newStoppedValidatorCount)
 ```
 
-
+The operator stopped validator count has been changed
 
 
 
@@ -548,7 +548,7 @@ event SetOperatorStoppedValidatorCount(uint256 indexed index, uint256 newStopped
 event SetPendingAdmin(address indexed pendingAdmin)
 ```
 
-
+The pending admin address changed
 
 
 
@@ -564,7 +564,7 @@ event SetPendingAdmin(address indexed pendingAdmin)
 event SetRiver(address indexed river)
 ```
 
-
+The stored river address has been changed
 
 
 
@@ -584,7 +584,7 @@ event SetRiver(address indexed river)
 error InactiveOperator(uint256 index)
 ```
 
-
+The calling operator is inactive
 
 
 
@@ -592,7 +592,7 @@ error InactiveOperator(uint256 index)
 
 | Name | Type | Description |
 |---|---|---|
-| index | uint256 | undefined |
+| index | uint256 | The operator index |
 
 ### InvalidArgument
 
@@ -611,7 +611,7 @@ error InvalidArgument()
 error InvalidArrayLengths()
 ```
 
-
+The provided operator and limits array have different lengths
 
 
 
@@ -622,7 +622,7 @@ error InvalidArrayLengths()
 error InvalidEmptyArray()
 ```
 
-
+The provided operator and limits array are empty
 
 
 
@@ -644,7 +644,7 @@ error InvalidEmptyString()
 error InvalidFundedKeyDeletionAttempt()
 ```
 
-
+A funded key deletion has been attempted
 
 
 
@@ -655,7 +655,7 @@ error InvalidFundedKeyDeletionAttempt()
 error InvalidIndexOutOfBounds()
 ```
 
-
+The index that is removed is out of bounds
 
 
 
@@ -683,7 +683,7 @@ An error occured during the initialization
 error InvalidKeyCount()
 ```
 
-
+The provided key count is 0
 
 
 
@@ -694,29 +694,7 @@ error InvalidKeyCount()
 error InvalidKeysLength()
 ```
 
-
-
-
-
-
-### InvalidPublicKeysLength
-
-```solidity
-error InvalidPublicKeysLength()
-```
-
-
-
-
-
-
-### InvalidSignatureLength
-
-```solidity
-error InvalidSignatureLength()
-```
-
-
+The provided concatenated keys do not have the expected length
 
 
 
@@ -727,7 +705,7 @@ error InvalidSignatureLength()
 error InvalidUnsortedIndexes()
 ```
 
-
+The index provided are not sorted properly (descending order)
 
 
 
@@ -743,29 +721,13 @@ error InvalidZeroAddress()
 
 
 
-### OperatorAlreadyExists
-
-```solidity
-error OperatorAlreadyExists(string name)
-```
-
-
-
-
-
-#### Parameters
-
-| Name | Type | Description |
-|---|---|---|
-| name | string | undefined |
-
 ### OperatorLimitTooHigh
 
 ```solidity
 error OperatorLimitTooHigh(uint256 limit, uint256 keyCount)
 ```
 
-
+The value for the operator limit is too high
 
 
 
@@ -773,8 +735,8 @@ error OperatorLimitTooHigh(uint256 limit, uint256 keyCount)
 
 | Name | Type | Description |
 |---|---|---|
-| limit | uint256 | undefined |
-| keyCount | uint256 | undefined |
+| limit | uint256 | The new limit provided |
+| keyCount | uint256 | The operator key count |
 
 ### OperatorLimitTooLow
 
@@ -782,7 +744,7 @@ error OperatorLimitTooHigh(uint256 limit, uint256 keyCount)
 error OperatorLimitTooLow(uint256 limit, uint256 fundedKeyCount)
 ```
 
-
+The value for the limit is too lowe
 
 
 
@@ -790,8 +752,8 @@ error OperatorLimitTooLow(uint256 limit, uint256 fundedKeyCount)
 
 | Name | Type | Description |
 |---|---|---|
-| limit | uint256 | undefined |
-| fundedKeyCount | uint256 | undefined |
+| limit | uint256 | The new limit provided |
+| fundedKeyCount | uint256 | The operator funded key count |
 
 ### OperatorNotFound
 

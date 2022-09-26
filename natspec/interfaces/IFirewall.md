@@ -13,10 +13,10 @@
 ### allowExecutor
 
 ```solidity
-function allowExecutor(bytes4 functionSelector, bool executorCanCall_) external nonpayable
+function allowExecutor(bytes4 _functionSelector, bool _executorCanCall) external nonpayable
 ```
 
-
+Sets the permission for a function selector
 
 
 
@@ -24,16 +24,72 @@ function allowExecutor(bytes4 functionSelector, bool executorCanCall_) external 
 
 | Name | Type | Description |
 |---|---|---|
-| functionSelector | bytes4 | undefined |
-| executorCanCall_ | bool | undefined |
+| _functionSelector | bytes4 | Method signature on which the permission is changed |
+| _executorCanCall | bool | True if selector is callable by the executor |
+
+### destination
+
+```solidity
+function destination() external view returns (address)
+```
+
+The destination address
+
+
+
+
+#### Returns
+
+| Name | Type | Description |
+|---|---|---|
+| _0 | address | undefined |
+
+### executor
+
+```solidity
+function executor() external view returns (address)
+```
+
+The executor address
+
+
+
+
+#### Returns
+
+| Name | Type | Description |
+|---|---|---|
+| _0 | address | undefined |
+
+### executorCanCall
+
+```solidity
+function executorCanCall(bytes4) external view returns (bool)
+```
+
+Returns true if the executor is allowed to perform a call on the given selector
+
+
+
+#### Parameters
+
+| Name | Type | Description |
+|---|---|---|
+| _0 | bytes4 | undefined |
+
+#### Returns
+
+| Name | Type | Description |
+|---|---|---|
+| _0 | bool | undefined |
 
 ### setExecutor
 
 ```solidity
-function setExecutor(address newExecutor) external nonpayable
+function setExecutor(address _newExecutor) external nonpayable
 ```
 
-
+Sets the executor address
 
 
 
@@ -41,7 +97,7 @@ function setExecutor(address newExecutor) external nonpayable
 
 | Name | Type | Description |
 |---|---|---|
-| newExecutor | address | undefined |
+| _newExecutor | address | New address for the executor |
 
 
 
@@ -53,7 +109,7 @@ function setExecutor(address newExecutor) external nonpayable
 event SetDestination(address indexed destination)
 ```
 
-
+The stored destination address has been changed
 
 
 
@@ -61,7 +117,7 @@ event SetDestination(address indexed destination)
 
 | Name | Type | Description |
 |---|---|---|
-| destination `indexed` | address | undefined |
+| destination `indexed` | address | The new destination address |
 
 ### SetExecutor
 
@@ -69,7 +125,7 @@ event SetDestination(address indexed destination)
 event SetExecutor(address indexed executor)
 ```
 
-
+The stored executor address has been changed
 
 
 
@@ -77,7 +133,7 @@ event SetExecutor(address indexed executor)
 
 | Name | Type | Description |
 |---|---|---|
-| executor `indexed` | address | undefined |
+| executor `indexed` | address | The new executor address |
 
 ### SetExecutorPermissions
 
@@ -85,7 +141,7 @@ event SetExecutor(address indexed executor)
 event SetExecutorPermissions(bytes4 selector, bool status)
 ```
 
-
+The storage permission for a selector has been changed
 
 
 
@@ -93,8 +149,8 @@ event SetExecutorPermissions(bytes4 selector, bool status)
 
 | Name | Type | Description |
 |---|---|---|
-| selector  | bytes4 | undefined |
-| status  | bool | undefined |
+| selector  | bytes4 | The 4 bytes method selector |
+| status  | bool | True if executor is allowed |
 
 
 

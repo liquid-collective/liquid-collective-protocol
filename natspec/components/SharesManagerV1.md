@@ -372,7 +372,7 @@ event Transfer(address indexed from, address indexed to, uint256 value)
 error AllowanceTooLow(address _from, address _operator, uint256 _allowance, uint256 _value)
 ```
 
-
+Allowance too low to perform operation
 
 
 
@@ -380,10 +380,10 @@ error AllowanceTooLow(address _from, address _operator, uint256 _allowance, uint
 
 | Name | Type | Description |
 |---|---|---|
-| _from | address | undefined |
-| _operator | address | undefined |
-| _allowance | uint256 | undefined |
-| _value | uint256 | undefined |
+| _from | address | Account where funds are sent from |
+| _operator | address | Account attempting the transfer |
+| _allowance | uint256 | Current allowance |
+| _value | uint256 | Requested transfer value |
 
 ### BalanceTooLow
 
@@ -391,7 +391,7 @@ error AllowanceTooLow(address _from, address _operator, uint256 _allowance, uint
 error BalanceTooLow()
 ```
 
-
+Balance too low to perform operation
 
 
 
@@ -402,7 +402,7 @@ error BalanceTooLow()
 error NullTransfer()
 ```
 
-
+Invalid empty transfer
 
 
 
@@ -413,7 +413,7 @@ error NullTransfer()
 error UnauthorizedTransfer(address _from, address _to)
 ```
 
-
+Invalid transfer recipients
 
 
 

@@ -156,7 +156,7 @@ contract OracleV1Tests is Test {
         address newMember = uf._new(newMemberSalt);
         vm.startPrank(admin);
         oracle.addMember(newMember, 1);
-        vm.expectRevert(abi.encodeWithSignature("InvalidCall()"));
+        vm.expectRevert(abi.encodeWithSignature("AddressAlreadyInUse(address)", newMember));
         oracle.addMember(newMember, 1);
     }
 

@@ -4,7 +4,7 @@
 
 > Oracle Manager (v1)
 
-This contract handles the inputs provided by the oracleThe Oracle contract is plugged to this contract and is in charge of pushingdata whenever a new report has been deemed valid. The report consists in twovalues: the sum of all balances of all deposited validators and the count of validators that have been activated on the consensus layer.
+This contract handles the inputs provided by the oracleThe Oracle contract is plugged to this contract and is in charge of pushingdata whenever a new report has been deemed valid. The report consists in twovalues: the sum of all balances of all deposited validators and the count ofvalidators that have been activated on the consensus layer.
 
 
 
@@ -105,7 +105,7 @@ Set the oracle address
 event ConsensusLayerDataUpdate(uint256 validatorCount, uint256 validatorTotalBalance, bytes32 roundId)
 ```
 
-
+The consensus layer data provided by the oracle has been updated
 
 
 
@@ -123,7 +123,7 @@ event ConsensusLayerDataUpdate(uint256 validatorCount, uint256 validatorTotalBal
 event SetOracle(address indexed oracleAddress)
 ```
 
-
+The storage oracle address changed
 
 
 
@@ -140,10 +140,10 @@ event SetOracle(address indexed oracleAddress)
 ### InvalidValidatorCountReport
 
 ```solidity
-error InvalidValidatorCountReport(uint256 _providedValidatorCount, uint256 _depositedValidatorCount)
+error InvalidValidatorCountReport(uint256 providedValidatorCount, uint256 depositedValidatorCount)
 ```
 
-
+The reported validator count is invalid
 
 
 
@@ -151,8 +151,8 @@ error InvalidValidatorCountReport(uint256 _providedValidatorCount, uint256 _depo
 
 | Name | Type | Description |
 |---|---|---|
-| _providedValidatorCount | uint256 | undefined |
-| _depositedValidatorCount | uint256 | undefined |
+| providedValidatorCount | uint256 | The received validator count value |
+| depositedValidatorCount | uint256 | The number of deposits performed by the system |
 
 ### InvalidZeroAddress
 

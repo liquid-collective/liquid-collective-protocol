@@ -13,10 +13,10 @@
 ### allowance
 
 ```solidity
-function allowance(address _owner, address _spender) external view returns (uint256 remaining)
+function allowance(address _owner, address _spender) external view returns (uint256)
 ```
 
-
+Retrieves the token allowance given from one address to another
 
 
 
@@ -24,22 +24,22 @@ function allowance(address _owner, address _spender) external view returns (uint
 
 | Name | Type | Description |
 |---|---|---|
-| _owner | address | undefined |
-| _spender | address | undefined |
+| _owner | address | Owner that gave the allowance |
+| _spender | address | Spender that received the allowance |
 
 #### Returns
 
 | Name | Type | Description |
 |---|---|---|
-| remaining | uint256 | undefined |
+| _0 | uint256 | The allowance of the owner to the spender |
 
 ### approve
 
 ```solidity
-function approve(address _spender, uint256 _value) external nonpayable returns (bool success)
+function approve(address _spender, uint256 _value) external nonpayable returns (bool)
 ```
 
-
+Approves another account to transfer tokens
 
 
 
@@ -47,22 +47,22 @@ function approve(address _spender, uint256 _value) external nonpayable returns (
 
 | Name | Type | Description |
 |---|---|---|
-| _spender | address | undefined |
-| _value | uint256 | undefined |
+| _spender | address | Spender that receives the allowance |
+| _value | uint256 | Amount to allow |
 
 #### Returns
 
 | Name | Type | Description |
 |---|---|---|
-| success | bool | undefined |
+| _0 | bool | True if success |
 
 ### balanceOf
 
 ```solidity
-function balanceOf(address _owner) external view returns (uint256 balance)
+function balanceOf(address _owner) external view returns (uint256)
 ```
 
-
+Retrieves the token balance of the specified user
 
 
 
@@ -70,30 +70,30 @@ function balanceOf(address _owner) external view returns (uint256 balance)
 
 | Name | Type | Description |
 |---|---|---|
-| _owner | address | undefined |
+| _owner | address | Owner to check the balance |
 
 #### Returns
 
 | Name | Type | Description |
 |---|---|---|
-| balance | uint256 | undefined |
+| _0 | uint256 | The balance of the owner |
 
 ### burn
 
 ```solidity
-function burn(address _recipient, uint256 _value) external nonpayable
+function burn(address _recipient, uint256 _shares) external nonpayable
 ```
 
+Burn tokens and retrieve underlying River tokens
 
-
-
+*Burned tokens are sent to recipient but are minted from the message sender balanceNo approval required from the message sender*
 
 #### Parameters
 
 | Name | Type | Description |
 |---|---|---|
-| _recipient | address | undefined |
-| _value | uint256 | undefined |
+| _recipient | address | Spender that receives the allowance |
+| _shares | uint256 | Amount of shares to burn |
 
 ### decimals
 
@@ -101,7 +101,7 @@ function burn(address _recipient, uint256 _value) external nonpayable
 function decimals() external pure returns (uint8)
 ```
 
-
+Retrieves the token decimal count
 
 
 
@@ -110,15 +110,15 @@ function decimals() external pure returns (uint8)
 
 | Name | Type | Description |
 |---|---|---|
-| _0 | uint8 | undefined |
+| _0 | uint8 | The decimal count |
 
 ### decreaseAllowance
 
 ```solidity
-function decreaseAllowance(address _spender, uint256 _subtractableValue) external nonpayable returns (bool success)
+function decreaseAllowance(address _spender, uint256 _subtractableValue) external nonpayable returns (bool)
 ```
 
-
+Decrease allowance to another account
 
 
 
@@ -126,22 +126,22 @@ function decreaseAllowance(address _spender, uint256 _subtractableValue) externa
 
 | Name | Type | Description |
 |---|---|---|
-| _spender | address | undefined |
-| _subtractableValue | uint256 | undefined |
+| _spender | address | Spender that receives the allowance |
+| _subtractableValue | uint256 | Amount to subtract |
 
 #### Returns
 
 | Name | Type | Description |
 |---|---|---|
-| success | bool | undefined |
+| _0 | bool | True if success |
 
 ### increaseAllowance
 
 ```solidity
-function increaseAllowance(address _spender, uint256 _additionalValue) external nonpayable returns (bool success)
+function increaseAllowance(address _spender, uint256 _additionalValue) external nonpayable returns (bool)
 ```
 
-
+Increase allowance to another account
 
 
 
@@ -149,14 +149,14 @@ function increaseAllowance(address _spender, uint256 _additionalValue) external 
 
 | Name | Type | Description |
 |---|---|---|
-| _spender | address | undefined |
-| _additionalValue | uint256 | undefined |
+| _spender | address | Spender that receives the allowance |
+| _additionalValue | uint256 | Amount to add |
 
 #### Returns
 
 | Name | Type | Description |
 |---|---|---|
-| success | bool | undefined |
+| _0 | bool | True if success |
 
 ### initWLSETHV1
 
@@ -164,7 +164,7 @@ function increaseAllowance(address _spender, uint256 _additionalValue) external 
 function initWLSETHV1(address _river) external nonpayable
 ```
 
-
+Initializes the wrapped token contract
 
 
 
@@ -172,7 +172,7 @@ function initWLSETHV1(address _river) external nonpayable
 
 | Name | Type | Description |
 |---|---|---|
-| _river | address | undefined |
+| _river | address | Address of the River contract |
 
 ### mint
 
@@ -180,16 +180,16 @@ function initWLSETHV1(address _river) external nonpayable
 function mint(address _recipient, uint256 _value) external nonpayable
 ```
 
+Mint tokens by providing River tokens
 
-
-
+*Minted tokens are sent to recipient but are minted from the message sender balanceIt is expected that the message sender approves _value amount of River token tothis contract before calling*
 
 #### Parameters
 
 | Name | Type | Description |
 |---|---|---|
-| _recipient | address | undefined |
-| _value | uint256 | undefined |
+| _recipient | address | Spender that receives the allowance |
+| _value | uint256 | Amount of river token to give to the mint |
 
 ### name
 
@@ -197,7 +197,7 @@ function mint(address _recipient, uint256 _value) external nonpayable
 function name() external pure returns (string)
 ```
 
-
+Retrieves the token full name
 
 
 
@@ -206,7 +206,29 @@ function name() external pure returns (string)
 
 | Name | Type | Description |
 |---|---|---|
-| _0 | string | undefined |
+| _0 | string | The name of the token |
+
+### sharesOf
+
+```solidity
+function sharesOf(address _owner) external view returns (uint256)
+```
+
+Retrieves the raw shares count of the user
+
+
+
+#### Parameters
+
+| Name | Type | Description |
+|---|---|---|
+| _owner | address | Owner to check the shares balance |
+
+#### Returns
+
+| Name | Type | Description |
+|---|---|---|
+| _0 | uint256 | The shares of the owner |
 
 ### symbol
 
@@ -214,7 +236,7 @@ function name() external pure returns (string)
 function symbol() external pure returns (string)
 ```
 
-
+Retrieves the token symbol
 
 
 
@@ -223,7 +245,7 @@ function symbol() external pure returns (string)
 
 | Name | Type | Description |
 |---|---|---|
-| _0 | string | undefined |
+| _0 | string | The symbol of the token |
 
 ### totalSupply
 
@@ -231,7 +253,7 @@ function symbol() external pure returns (string)
 function totalSupply() external view returns (uint256)
 ```
 
-
+Retrieves the token total supply
 
 
 
@@ -240,7 +262,7 @@ function totalSupply() external view returns (uint256)
 
 | Name | Type | Description |
 |---|---|---|
-| _0 | uint256 | undefined |
+| _0 | uint256 | The total supply |
 
 ### transfer
 
@@ -248,7 +270,7 @@ function totalSupply() external view returns (uint256)
 function transfer(address _to, uint256 _value) external nonpayable returns (bool)
 ```
 
-
+Transfers tokens between the message sender and a recipient
 
 
 
@@ -256,14 +278,14 @@ function transfer(address _to, uint256 _value) external nonpayable returns (bool
 
 | Name | Type | Description |
 |---|---|---|
-| _to | address | undefined |
-| _value | uint256 | undefined |
+| _to | address | Recipient of the transfer |
+| _value | uint256 | Amount to transfer |
 
 #### Returns
 
 | Name | Type | Description |
 |---|---|---|
-| _0 | bool | undefined |
+| _0 | bool | True if success |
 
 ### transferFrom
 
@@ -271,23 +293,23 @@ function transfer(address _to, uint256 _value) external nonpayable returns (bool
 function transferFrom(address _from, address _to, uint256 _value) external nonpayable returns (bool)
 ```
 
+Transfers tokens between two accounts
 
-
-
+*It is expected that _from has given at least _value allowance to msg.sender*
 
 #### Parameters
 
 | Name | Type | Description |
 |---|---|---|
-| _from | address | undefined |
-| _to | address | undefined |
-| _value | uint256 | undefined |
+| _from | address | Sender account |
+| _to | address | Recipient of the transfer |
+| _value | uint256 | Amount to transfer |
 
 #### Returns
 
 | Name | Type | Description |
 |---|---|---|
-| _0 | bool | undefined |
+| _0 | bool | True if success |
 
 
 
@@ -296,10 +318,10 @@ function transferFrom(address _from, address _to, uint256 _value) external nonpa
 ### Approval
 
 ```solidity
-event Approval(address indexed _owner, address indexed _spender, uint256 _value)
+event Approval(address indexed owner, address indexed spender, uint256 value)
 ```
 
-
+An approval has been made
 
 
 
@@ -307,17 +329,17 @@ event Approval(address indexed _owner, address indexed _spender, uint256 _value)
 
 | Name | Type | Description |
 |---|---|---|
-| _owner `indexed` | address | undefined |
-| _spender `indexed` | address | undefined |
-| _value  | uint256 | undefined |
+| owner `indexed` | address | The token owner |
+| spender `indexed` | address | The account allowed by the owner |
+| value  | uint256 | The amount allowed |
 
 ### Burn
 
 ```solidity
-event Burn(address indexed _recipient, uint256 _value)
+event Burn(address indexed recipient, uint256 shares)
 ```
 
-
+Tokens have been burned
 
 
 
@@ -325,16 +347,16 @@ event Burn(address indexed _recipient, uint256 _value)
 
 | Name | Type | Description |
 |---|---|---|
-| _recipient `indexed` | address | undefined |
-| _value  | uint256 | undefined |
+| recipient `indexed` | address | The account that receive the underlying LsETH |
+| shares  | uint256 | The amount of LsETH that got sent back |
 
 ### Mint
 
 ```solidity
-event Mint(address indexed _recipient, uint256 _value)
+event Mint(address indexed recipient, uint256 value)
 ```
 
-
+Tokens have been minted
 
 
 
@@ -342,8 +364,8 @@ event Mint(address indexed _recipient, uint256 _value)
 
 | Name | Type | Description |
 |---|---|---|
-| _recipient `indexed` | address | undefined |
-| _value  | uint256 | undefined |
+| recipient `indexed` | address | The account receiving the new tokens |
+| value  | uint256 | The amount of LsETH provided |
 
 ### SetRiver
 
@@ -351,7 +373,7 @@ event Mint(address indexed _recipient, uint256 _value)
 event SetRiver(address indexed river)
 ```
 
-
+The stored value of river has been changed
 
 
 
@@ -359,15 +381,15 @@ event SetRiver(address indexed river)
 
 | Name | Type | Description |
 |---|---|---|
-| river `indexed` | address | undefined |
+| river `indexed` | address | The new address of river |
 
 ### Transfer
 
 ```solidity
-event Transfer(address indexed _from, address indexed _to, uint256 _value)
+event Transfer(address indexed from, address indexed to, uint256 value)
 ```
 
-
+A transfer has been made
 
 
 
@@ -375,9 +397,9 @@ event Transfer(address indexed _from, address indexed _to, uint256 _value)
 
 | Name | Type | Description |
 |---|---|---|
-| _from `indexed` | address | undefined |
-| _to `indexed` | address | undefined |
-| _value  | uint256 | undefined |
+| from `indexed` | address | The transfer sender |
+| to `indexed` | address | The transfer recipient |
+| value  | uint256 | The amount transfered |
 
 
 
@@ -389,7 +411,7 @@ event Transfer(address indexed _from, address indexed _to, uint256 _value)
 error AllowanceTooLow(address _from, address _operator, uint256 _allowance, uint256 _value)
 ```
 
-
+Allowance too low to perform operation
 
 
 
@@ -397,10 +419,10 @@ error AllowanceTooLow(address _from, address _operator, uint256 _allowance, uint
 
 | Name | Type | Description |
 |---|---|---|
-| _from | address | undefined |
-| _operator | address | undefined |
-| _allowance | uint256 | undefined |
-| _value | uint256 | undefined |
+| _from | address | Account where funds are sent from |
+| _operator | address | Account attempting the transfer |
+| _allowance | uint256 | Current allowance |
+| _value | uint256 | Requested transfer value |
 
 ### BalanceTooLow
 
@@ -408,7 +430,7 @@ error AllowanceTooLow(address _from, address _operator, uint256 _allowance, uint
 error BalanceTooLow()
 ```
 
-
+Balance too low to perform operation
 
 
 
@@ -419,7 +441,7 @@ error BalanceTooLow()
 error NullTransfer()
 ```
 
-
+Invalid empty transfer
 
 
 
@@ -430,18 +452,7 @@ error NullTransfer()
 error TokenTransferError()
 ```
 
-
-
-
-
-
-### UnauthorizedOperation
-
-```solidity
-error UnauthorizedOperation()
-```
-
-
+The token transfer failed during the minting process
 
 
 
@@ -452,7 +463,7 @@ error UnauthorizedOperation()
 error UnauthorizedTransfer(address _from, address _to)
 ```
 
-
+Invalid transfer recipients
 
 
 

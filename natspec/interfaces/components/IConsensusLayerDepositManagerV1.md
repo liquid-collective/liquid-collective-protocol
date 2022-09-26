@@ -16,7 +16,7 @@
 function depositToConsensusLayer(uint256 _maxCount) external nonpayable
 ```
 
-
+Deposits current balance to the Consensus Layer by batches of 32 ETH
 
 
 
@@ -24,15 +24,15 @@ function depositToConsensusLayer(uint256 _maxCount) external nonpayable
 
 | Name | Type | Description |
 |---|---|---|
-| _maxCount | uint256 | undefined |
+| _maxCount | uint256 | The maximum amount of validator keys to fund |
 
 ### getDepositedValidatorCount
 
 ```solidity
-function getDepositedValidatorCount() external view returns (uint256 depositedValidatorCount)
+function getDepositedValidatorCount() external view returns (uint256)
 ```
 
-
+Get the deposited validator count (the count of deposits made by the contract)
 
 
 
@@ -41,7 +41,7 @@ function getDepositedValidatorCount() external view returns (uint256 depositedVa
 
 | Name | Type | Description |
 |---|---|---|
-| depositedValidatorCount | uint256 | undefined |
+| _0 | uint256 | The deposited validator count |
 
 ### getWithdrawalCredentials
 
@@ -49,7 +49,7 @@ function getDepositedValidatorCount() external view returns (uint256 depositedVa
 function getWithdrawalCredentials() external view returns (bytes32)
 ```
 
-
+Retrieve the withdrawal credentials
 
 
 
@@ -58,7 +58,7 @@ function getWithdrawalCredentials() external view returns (bytes32)
 
 | Name | Type | Description |
 |---|---|---|
-| _0 | bytes32 | undefined |
+| _0 | bytes32 | The withdrawal credentials |
 
 
 
@@ -70,7 +70,7 @@ function getWithdrawalCredentials() external view returns (bytes32)
 event FundedValidatorKey(bytes publicKey)
 ```
 
-
+A validator key got funded on the deposit contract
 
 
 
@@ -78,7 +78,7 @@ event FundedValidatorKey(bytes publicKey)
 
 | Name | Type | Description |
 |---|---|---|
-| publicKey  | bytes | undefined |
+| publicKey  | bytes | BLS Public key that got funded |
 
 ### SetDepositContractAddress
 
@@ -86,7 +86,7 @@ event FundedValidatorKey(bytes publicKey)
 event SetDepositContractAddress(address indexed depositContract)
 ```
 
-
+The stored deposit contract address changed
 
 
 
@@ -94,7 +94,7 @@ event SetDepositContractAddress(address indexed depositContract)
 
 | Name | Type | Description |
 |---|---|---|
-| depositContract `indexed` | address | undefined |
+| depositContract `indexed` | address | Address of the deposit contract |
 
 ### SetWithdrawalCredentials
 
@@ -102,7 +102,7 @@ event SetDepositContractAddress(address indexed depositContract)
 event SetWithdrawalCredentials(bytes32 withdrawalCredentials)
 ```
 
-
+The stored withdrawals credentials changed
 
 
 
@@ -110,7 +110,7 @@ event SetWithdrawalCredentials(bytes32 withdrawalCredentials)
 
 | Name | Type | Description |
 |---|---|---|
-| withdrawalCredentials  | bytes32 | undefined |
+| withdrawalCredentials  | bytes32 | The withdrawal credentials to use for deposits |
 
 
 
@@ -122,7 +122,7 @@ event SetWithdrawalCredentials(bytes32 withdrawalCredentials)
 error ErrorOnDeposit()
 ```
 
-
+An error occured during the deposit
 
 
 
@@ -133,7 +133,7 @@ error ErrorOnDeposit()
 error InconsistentPublicKeys()
 ```
 
-
+The length of the BLS Public key is invalid during deposit
 
 
 
@@ -144,7 +144,7 @@ error InconsistentPublicKeys()
 error InconsistentSignatures()
 ```
 
-
+The length of the BLS Signature is invalid during deposit
 
 
 
@@ -155,7 +155,7 @@ error InconsistentSignatures()
 error InvalidPublicKeyCount()
 ```
 
-
+The received count of public keys to deposit is invalid
 
 
 
@@ -166,7 +166,7 @@ error InvalidPublicKeyCount()
 error InvalidSignatureCount()
 ```
 
-
+The received count of signatures to deposit is invalid
 
 
 
@@ -177,7 +177,7 @@ error InvalidSignatureCount()
 error InvalidWithdrawalCredentials()
 ```
 
-
+The withdrawal credentials value is null
 
 
 
@@ -188,7 +188,7 @@ error InvalidWithdrawalCredentials()
 error NoAvailableValidatorKeys()
 ```
 
-
+The internal key retrieval returned no keys
 
 
 
@@ -199,7 +199,7 @@ error NoAvailableValidatorKeys()
 error NotEnoughFunds()
 ```
 
-
+Not enough funds to deposit one validator
 
 
 

@@ -64,7 +64,7 @@ Returns the amount of pending ETH
 event UserDeposit(address indexed depositor, address indexed recipient, uint256 amount)
 ```
 
-
+User deposited eth in the system
 
 
 
@@ -86,18 +86,7 @@ event UserDeposit(address indexed depositor, address indexed recipient, uint256 
 error EmptyDeposit()
 ```
 
-
-
-
-
-
-### EmptyDonation
-
-```solidity
-error EmptyDonation()
-```
-
-
+And empty deposit attempt was made
 
 
 

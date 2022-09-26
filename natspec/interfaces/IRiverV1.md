@@ -13,10 +13,10 @@
 ### allowance
 
 ```solidity
-function allowance(address _owner, address _spender) external view returns (uint256 remaining)
+function allowance(address _owner, address _spender) external view returns (uint256)
 ```
 
-
+Retrieve the allowance value for a spender
 
 
 
@@ -24,45 +24,45 @@ function allowance(address _owner, address _spender) external view returns (uint
 
 | Name | Type | Description |
 |---|---|---|
-| _owner | address | undefined |
-| _spender | address | undefined |
+| _owner | address | Address that issued the allowance |
+| _spender | address | Address that received the allowance |
 
 #### Returns
 
 | Name | Type | Description |
 |---|---|---|
-| remaining | uint256 | undefined |
+| _0 | uint256 | The allowance for a given spender |
 
 ### approve
 
 ```solidity
-function approve(address _spender, uint256 _value) external nonpayable returns (bool success)
+function approve(address _spender, uint256 _value) external nonpayable returns (bool)
 ```
 
+Approves an account for future spendings
 
-
-
+*An approved account can use transferFrom to transfer funds on behalf of the token owner*
 
 #### Parameters
 
 | Name | Type | Description |
 |---|---|---|
-| _spender | address | undefined |
-| _value | uint256 | undefined |
+| _spender | address | Address that is allowed to spend the tokens |
+| _value | uint256 | The allowed amount, will override previous value |
 
 #### Returns
 
 | Name | Type | Description |
 |---|---|---|
-| success | bool | undefined |
+| _0 | bool | True if success |
 
 ### balanceOf
 
 ```solidity
-function balanceOf(address _owner) external view returns (uint256 balance)
+function balanceOf(address _owner) external view returns (uint256)
 ```
 
-
+Retrieve the balance of an account
 
 
 
@@ -70,21 +70,21 @@ function balanceOf(address _owner) external view returns (uint256 balance)
 
 | Name | Type | Description |
 |---|---|---|
-| _owner | address | undefined |
+| _owner | address | Address to be checked |
 
 #### Returns
 
 | Name | Type | Description |
 |---|---|---|
-| balance | uint256 | undefined |
+| _0 | uint256 | The balance of the account |
 
 ### balanceOfUnderlying
 
 ```solidity
-function balanceOfUnderlying(address _owner) external view returns (uint256 balance)
+function balanceOfUnderlying(address _owner) external view returns (uint256)
 ```
 
-
+Retrieve the underlying asset balance of an account
 
 
 
@@ -92,13 +92,13 @@ function balanceOfUnderlying(address _owner) external view returns (uint256 bala
 
 | Name | Type | Description |
 |---|---|---|
-| _owner | address | undefined |
+| _owner | address | Address to be checked |
 
 #### Returns
 
 | Name | Type | Description |
 |---|---|---|
-| balance | uint256 | undefined |
+| _0 | uint256 | The underlying balance of the account |
 
 ### decimals
 
@@ -106,7 +106,7 @@ function balanceOfUnderlying(address _owner) external view returns (uint256 bala
 function decimals() external pure returns (uint8)
 ```
 
-
+Retrieve the decimal count
 
 
 
@@ -115,15 +115,15 @@ function decimals() external pure returns (uint8)
 
 | Name | Type | Description |
 |---|---|---|
-| _0 | uint8 | undefined |
+| _0 | uint8 | The decimal count |
 
 ### decreaseAllowance
 
 ```solidity
-function decreaseAllowance(address _spender, uint256 _subtractableValue) external nonpayable returns (bool success)
+function decreaseAllowance(address _spender, uint256 _subtractableValue) external nonpayable returns (bool)
 ```
 
-
+Decrease allowance to another account
 
 
 
@@ -131,14 +131,14 @@ function decreaseAllowance(address _spender, uint256 _subtractableValue) externa
 
 | Name | Type | Description |
 |---|---|---|
-| _spender | address | undefined |
-| _subtractableValue | uint256 | undefined |
+| _spender | address | Spender that receives the allowance |
+| _subtractableValue | uint256 | Amount to subtract |
 
 #### Returns
 
 | Name | Type | Description |
 |---|---|---|
-| success | bool | undefined |
+| _0 | bool | True if success |
 
 ### deposit
 
@@ -146,7 +146,7 @@ function decreaseAllowance(address _spender, uint256 _subtractableValue) externa
 function deposit() external payable
 ```
 
-
+Explicit deposit method to mint on msg.sender
 
 
 
@@ -157,7 +157,7 @@ function deposit() external payable
 function depositAndTransfer(address _recipient) external payable
 ```
 
-
+Explicit deposit method to mint on msg.sender and transfer to _recipient
 
 
 
@@ -165,7 +165,7 @@ function depositAndTransfer(address _recipient) external payable
 
 | Name | Type | Description |
 |---|---|---|
-| _recipient | address | undefined |
+| _recipient | address | Address receiving the minted lsETH |
 
 ### depositToConsensusLayer
 
@@ -173,7 +173,7 @@ function depositAndTransfer(address _recipient) external payable
 function depositToConsensusLayer(uint256 _maxCount) external nonpayable
 ```
 
-
+Deposits current balance to the Consensus Layer by batches of 32 ETH
 
 
 
@@ -181,7 +181,7 @@ function depositToConsensusLayer(uint256 _maxCount) external nonpayable
 
 | Name | Type | Description |
 |---|---|---|
-| _maxCount | uint256 | undefined |
+| _maxCount | uint256 | The maximum amount of validator keys to fund |
 
 ### getAllowlist
 
@@ -189,7 +189,7 @@ function depositToConsensusLayer(uint256 _maxCount) external nonpayable
 function getAllowlist() external view returns (address)
 ```
 
-
+Retrieve the allowlist address
 
 
 
@@ -198,7 +198,7 @@ function getAllowlist() external view returns (address)
 
 | Name | Type | Description |
 |---|---|---|
-| _0 | address | undefined |
+| _0 | address | The allowlist address |
 
 ### getCLValidatorCount
 
@@ -206,7 +206,7 @@ function getAllowlist() external view returns (address)
 function getCLValidatorCount() external view returns (uint256)
 ```
 
-
+Get CL validator count (the amount of validator reported by the oracles)
 
 
 
@@ -215,7 +215,7 @@ function getCLValidatorCount() external view returns (uint256)
 
 | Name | Type | Description |
 |---|---|---|
-| _0 | uint256 | undefined |
+| _0 | uint256 | The CL validator count |
 
 ### getCLValidatorTotalBalance
 
@@ -223,7 +223,7 @@ function getCLValidatorCount() external view returns (uint256)
 function getCLValidatorTotalBalance() external view returns (uint256)
 ```
 
-
+Get CL validator total balance
 
 
 
@@ -232,7 +232,7 @@ function getCLValidatorTotalBalance() external view returns (uint256)
 
 | Name | Type | Description |
 |---|---|---|
-| _0 | uint256 | undefined |
+| _0 | uint256 | The CL Validator total balance |
 
 ### getCollector
 
@@ -240,7 +240,7 @@ function getCLValidatorTotalBalance() external view returns (uint256)
 function getCollector() external view returns (address)
 ```
 
-
+Retrieve the collector address
 
 
 
@@ -249,15 +249,15 @@ function getCollector() external view returns (address)
 
 | Name | Type | Description |
 |---|---|---|
-| _0 | address | undefined |
+| _0 | address | The collector address |
 
 ### getDepositedValidatorCount
 
 ```solidity
-function getDepositedValidatorCount() external view returns (uint256 depositedValidatorCount)
+function getDepositedValidatorCount() external view returns (uint256)
 ```
 
-
+Get the deposited validator count (the count of deposits made by the contract)
 
 
 
@@ -266,7 +266,7 @@ function getDepositedValidatorCount() external view returns (uint256 depositedVa
 
 | Name | Type | Description |
 |---|---|---|
-| depositedValidatorCount | uint256 | undefined |
+| _0 | uint256 | The deposited validator count |
 
 ### getELFeeRecipient
 
@@ -274,7 +274,7 @@ function getDepositedValidatorCount() external view returns (uint256 depositedVa
 function getELFeeRecipient() external view returns (address)
 ```
 
-
+Retrieve the execution layer fee recipient
 
 
 
@@ -283,7 +283,7 @@ function getELFeeRecipient() external view returns (address)
 
 | Name | Type | Description |
 |---|---|---|
-| _0 | address | undefined |
+| _0 | address | The execution layer fee recipient address |
 
 ### getGlobalFee
 
@@ -291,7 +291,7 @@ function getELFeeRecipient() external view returns (address)
 function getGlobalFee() external view returns (uint256)
 ```
 
-
+Get the current global fee
 
 
 
@@ -300,7 +300,7 @@ function getGlobalFee() external view returns (uint256)
 
 | Name | Type | Description |
 |---|---|---|
-| _0 | uint256 | undefined |
+| _0 | uint256 | The global fee |
 
 ### getOracle
 
@@ -308,7 +308,7 @@ function getGlobalFee() external view returns (uint256)
 function getOracle() external view returns (address)
 ```
 
-
+Get oracle address
 
 
 
@@ -317,7 +317,7 @@ function getOracle() external view returns (address)
 
 | Name | Type | Description |
 |---|---|---|
-| _0 | address | undefined |
+| _0 | address | The oracle address |
 
 ### getPendingEth
 
@@ -325,7 +325,7 @@ function getOracle() external view returns (address)
 function getPendingEth() external view returns (uint256)
 ```
 
-
+Returns the amount of pending ETH
 
 
 
@@ -334,7 +334,7 @@ function getPendingEth() external view returns (uint256)
 
 | Name | Type | Description |
 |---|---|---|
-| _0 | uint256 | undefined |
+| _0 | uint256 | The amount of pending eth |
 
 ### getWithdrawalCredentials
 
@@ -342,7 +342,7 @@ function getPendingEth() external view returns (uint256)
 function getWithdrawalCredentials() external view returns (bytes32)
 ```
 
-
+Retrieve the withdrawal credentials
 
 
 
@@ -351,15 +351,15 @@ function getWithdrawalCredentials() external view returns (bytes32)
 
 | Name | Type | Description |
 |---|---|---|
-| _0 | bytes32 | undefined |
+| _0 | bytes32 | The withdrawal credentials |
 
 ### increaseAllowance
 
 ```solidity
-function increaseAllowance(address _spender, uint256 _additionalValue) external nonpayable returns (bool success)
+function increaseAllowance(address _spender, uint256 _additionalValue) external nonpayable returns (bool)
 ```
 
-
+Increase allowance to another account
 
 
 
@@ -367,14 +367,14 @@ function increaseAllowance(address _spender, uint256 _additionalValue) external 
 
 | Name | Type | Description |
 |---|---|---|
-| _spender | address | undefined |
-| _additionalValue | uint256 | undefined |
+| _spender | address | Spender that receives the allowance |
+| _additionalValue | uint256 | Amount to add |
 
 #### Returns
 
 | Name | Type | Description |
 |---|---|---|
-| success | bool | undefined |
+| _0 | bool | True if success |
 
 ### initRiverV1
 
@@ -382,7 +382,7 @@ function increaseAllowance(address _spender, uint256 _additionalValue) external 
 function initRiverV1(address _depositContractAddress, address _elFeeRecipientAddress, bytes32 _withdrawalCredentials, address _oracleAddress, address _systemAdministratorAddress, address _allowlistAddress, address _operatorRegistryAddress, address _collectorAddress, uint256 _globalFee) external nonpayable
 ```
 
-
+Initializes the River system
 
 
 
@@ -390,15 +390,15 @@ function initRiverV1(address _depositContractAddress, address _elFeeRecipientAdd
 
 | Name | Type | Description |
 |---|---|---|
-| _depositContractAddress | address | undefined |
-| _elFeeRecipientAddress | address | undefined |
-| _withdrawalCredentials | bytes32 | undefined |
+| _depositContractAddress | address | Address to make Consensus Layer deposits |
+| _elFeeRecipientAddress | address | Address that receives the execution layer fees |
+| _withdrawalCredentials | bytes32 | Credentials to use for every validator deposit |
 | _oracleAddress | address | undefined |
-| _systemAdministratorAddress | address | undefined |
-| _allowlistAddress | address | undefined |
-| _operatorRegistryAddress | address | undefined |
-| _collectorAddress | address | undefined |
-| _globalFee | uint256 | undefined |
+| _systemAdministratorAddress | address | Administrator address |
+| _allowlistAddress | address | Address of the allowlist contract |
+| _operatorRegistryAddress | address | Address of the operator registry |
+| _collectorAddress | address | Address receiving the fee minus the operator share |
+| _globalFee | uint256 | Amount retained when the eth balance increases, splitted between the collector and the operators |
 
 ### name
 
@@ -406,7 +406,7 @@ function initRiverV1(address _depositContractAddress, address _elFeeRecipientAdd
 function name() external pure returns (string)
 ```
 
-
+Retrieve the token name
 
 
 
@@ -415,7 +415,7 @@ function name() external pure returns (string)
 
 | Name | Type | Description |
 |---|---|---|
-| _0 | string | undefined |
+| _0 | string | The token name |
 
 ### sendELFees
 
@@ -423,7 +423,7 @@ function name() external pure returns (string)
 function sendELFees() external payable
 ```
 
-
+Input for execution layer fee earnings
 
 
 
@@ -434,7 +434,7 @@ function sendELFees() external payable
 function setAllowlist(address _newAllowlist) external nonpayable
 ```
 
-
+Changes the allowlist address
 
 
 
@@ -442,7 +442,7 @@ function setAllowlist(address _newAllowlist) external nonpayable
 
 | Name | Type | Description |
 |---|---|---|
-| _newAllowlist | address | undefined |
+| _newAllowlist | address | New address for the allowlist |
 
 ### setCollector
 
@@ -450,7 +450,7 @@ function setAllowlist(address _newAllowlist) external nonpayable
 function setCollector(address _newCollector) external nonpayable
 ```
 
-
+Changes the collector address
 
 
 
@@ -458,7 +458,7 @@ function setCollector(address _newCollector) external nonpayable
 
 | Name | Type | Description |
 |---|---|---|
-| _newCollector | address | undefined |
+| _newCollector | address | New address for the collector |
 
 ### setConsensusLayerData
 
@@ -466,17 +466,17 @@ function setCollector(address _newCollector) external nonpayable
 function setConsensusLayerData(uint256 _validatorCount, uint256 _validatorTotalBalance, bytes32 _roundId) external nonpayable
 ```
 
+Sets the validator count and validator balance sum reported by the oracle
 
-
-
+*Can only be called by the oracle address*
 
 #### Parameters
 
 | Name | Type | Description |
 |---|---|---|
-| _validatorCount | uint256 | undefined |
-| _validatorTotalBalance | uint256 | undefined |
-| _roundId | bytes32 | undefined |
+| _validatorCount | uint256 | The number of active validators on the consensus layer |
+| _validatorTotalBalance | uint256 | The validator balance sum of the active validators on the consensus layer |
+| _roundId | bytes32 | An identifier for this update |
 
 ### setELFeeRecipient
 
@@ -484,7 +484,7 @@ function setConsensusLayerData(uint256 _validatorCount, uint256 _validatorTotalB
 function setELFeeRecipient(address _newELFeeRecipient) external nonpayable
 ```
 
-
+Changes the execution layer fee recipient
 
 
 
@@ -492,7 +492,7 @@ function setELFeeRecipient(address _newELFeeRecipient) external nonpayable
 
 | Name | Type | Description |
 |---|---|---|
-| _newELFeeRecipient | address | undefined |
+| _newELFeeRecipient | address | New address for the recipient |
 
 ### setGlobalFee
 
@@ -500,7 +500,7 @@ function setELFeeRecipient(address _newELFeeRecipient) external nonpayable
 function setGlobalFee(uint256 newFee) external nonpayable
 ```
 
-
+Changes the global fee parameter
 
 
 
@@ -508,7 +508,7 @@ function setGlobalFee(uint256 newFee) external nonpayable
 
 | Name | Type | Description |
 |---|---|---|
-| newFee | uint256 | undefined |
+| newFee | uint256 | New fee value |
 
 ### setOracle
 
@@ -516,7 +516,7 @@ function setGlobalFee(uint256 newFee) external nonpayable
 function setOracle(address _oracleAddress) external nonpayable
 ```
 
-
+Set the oracle address
 
 
 
@@ -524,15 +524,15 @@ function setOracle(address _oracleAddress) external nonpayable
 
 | Name | Type | Description |
 |---|---|---|
-| _oracleAddress | address | undefined |
+| _oracleAddress | address | Address of the oracle |
 
 ### sharesFromUnderlyingBalance
 
 ```solidity
-function sharesFromUnderlyingBalance(uint256 underlyingBalance) external view returns (uint256)
+function sharesFromUnderlyingBalance(uint256 _underlyingAssetAmount) external view returns (uint256)
 ```
 
-
+Retrieve the shares count from an underlying asset amount
 
 
 
@@ -540,13 +540,13 @@ function sharesFromUnderlyingBalance(uint256 underlyingBalance) external view re
 
 | Name | Type | Description |
 |---|---|---|
-| underlyingBalance | uint256 | undefined |
+| _underlyingAssetAmount | uint256 | Amount of underlying asset to convert |
 
 #### Returns
 
 | Name | Type | Description |
 |---|---|---|
-| _0 | uint256 | undefined |
+| _0 | uint256 | The amount of shares worth the underlying asset amopunt |
 
 ### symbol
 
@@ -554,7 +554,7 @@ function sharesFromUnderlyingBalance(uint256 underlyingBalance) external view re
 function symbol() external pure returns (string)
 ```
 
-
+Retrieve the token symbol
 
 
 
@@ -563,7 +563,7 @@ function symbol() external pure returns (string)
 
 | Name | Type | Description |
 |---|---|---|
-| _0 | string | undefined |
+| _0 | string | The token symbol |
 
 ### totalSupply
 
@@ -571,16 +571,16 @@ function symbol() external pure returns (string)
 function totalSupply() external view returns (uint256)
 ```
 
+Retrieve the total token supply
 
 
-*Returns the amount of tokens in existence.*
 
 
 #### Returns
 
 | Name | Type | Description |
 |---|---|---|
-| _0 | uint256 | undefined |
+| _0 | uint256 | The total supply |
 
 ### totalUnderlyingSupply
 
@@ -588,7 +588,7 @@ function totalSupply() external view returns (uint256)
 function totalUnderlyingSupply() external view returns (uint256)
 ```
 
-
+Retrieve the total underlying asset supply
 
 
 
@@ -597,7 +597,7 @@ function totalUnderlyingSupply() external view returns (uint256)
 
 | Name | Type | Description |
 |---|---|---|
-| _0 | uint256 | undefined |
+| _0 | uint256 | The total underlying asset supply |
 
 ### transfer
 
@@ -605,7 +605,7 @@ function totalUnderlyingSupply() external view returns (uint256)
 function transfer(address _to, uint256 _value) external nonpayable returns (bool)
 ```
 
-
+Performs a transfer from the message sender to the provided account
 
 
 
@@ -613,14 +613,14 @@ function transfer(address _to, uint256 _value) external nonpayable returns (bool
 
 | Name | Type | Description |
 |---|---|---|
-| _to | address | undefined |
-| _value | uint256 | undefined |
+| _to | address | Address receiving the tokens |
+| _value | uint256 | Amount to be sent |
 
 #### Returns
 
 | Name | Type | Description |
 |---|---|---|
-| _0 | bool | undefined |
+| _0 | bool | True if success |
 
 ### transferFrom
 
@@ -628,7 +628,7 @@ function transfer(address _to, uint256 _value) external nonpayable returns (bool
 function transferFrom(address _from, address _to, uint256 _value) external nonpayable returns (bool)
 ```
 
-
+Performs a transfer between two recipients
 
 
 
@@ -636,23 +636,23 @@ function transferFrom(address _from, address _to, uint256 _value) external nonpa
 
 | Name | Type | Description |
 |---|---|---|
-| _from | address | undefined |
-| _to | address | undefined |
-| _value | uint256 | undefined |
+| _from | address | Address sending the tokens |
+| _to | address | Address receiving the tokens |
+| _value | uint256 | Amount to be sent |
 
 #### Returns
 
 | Name | Type | Description |
 |---|---|---|
-| _0 | bool | undefined |
+| _0 | bool | True if success |
 
 ### underlyingBalanceFromShares
 
 ```solidity
-function underlyingBalanceFromShares(uint256 shares) external view returns (uint256)
+function underlyingBalanceFromShares(uint256 _shares) external view returns (uint256)
 ```
 
-
+Retrieve the underlying asset balance from an amount of shares
 
 
 
@@ -660,13 +660,13 @@ function underlyingBalanceFromShares(uint256 shares) external view returns (uint
 
 | Name | Type | Description |
 |---|---|---|
-| shares | uint256 | undefined |
+| _shares | uint256 | Amount of shares to convert |
 
 #### Returns
 
 | Name | Type | Description |
 |---|---|---|
-| _0 | uint256 | undefined |
+| _0 | uint256 | The underlying asset balance represented by the shares |
 
 
 
@@ -696,7 +696,7 @@ event Approval(address indexed owner, address indexed spender, uint256 value)
 event ConsensusLayerDataUpdate(uint256 validatorCount, uint256 validatorTotalBalance, bytes32 roundId)
 ```
 
-
+The consensus layer data provided by the oracle has been updated
 
 
 
@@ -714,7 +714,7 @@ event ConsensusLayerDataUpdate(uint256 validatorCount, uint256 validatorTotalBal
 event FundedValidatorKey(bytes publicKey)
 ```
 
-
+A validator key got funded on the deposit contract
 
 
 
@@ -778,7 +778,7 @@ event SetCollector(address indexed collector)
 event SetDepositContractAddress(address indexed depositContract)
 ```
 
-
+The stored deposit contract address changed
 
 
 
@@ -842,7 +842,7 @@ event SetOperatorsRegistry(address indexed operatorRegistry)
 event SetOracle(address indexed oracleAddress)
 ```
 
-
+The storage oracle address changed
 
 
 
@@ -858,7 +858,7 @@ event SetOracle(address indexed oracleAddress)
 event SetWithdrawalCredentials(bytes32 withdrawalCredentials)
 ```
 
-
+The stored withdrawals credentials changed
 
 
 
@@ -892,7 +892,7 @@ event Transfer(address indexed from, address indexed to, uint256 value)
 event UserDeposit(address indexed depositor, address indexed recipient, uint256 amount)
 ```
 
-
+User deposited eth in the system
 
 
 
@@ -914,7 +914,7 @@ event UserDeposit(address indexed depositor, address indexed recipient, uint256 
 error AllowanceTooLow(address _from, address _operator, uint256 _allowance, uint256 _value)
 ```
 
-
+Allowance too low to perform operation
 
 
 
@@ -922,10 +922,10 @@ error AllowanceTooLow(address _from, address _operator, uint256 _allowance, uint
 
 | Name | Type | Description |
 |---|---|---|
-| _from | address | undefined |
-| _operator | address | undefined |
-| _allowance | uint256 | undefined |
-| _value | uint256 | undefined |
+| _from | address | Account where funds are sent from |
+| _operator | address | Account attempting the transfer |
+| _allowance | uint256 | Current allowance |
+| _value | uint256 | Requested transfer value |
 
 ### BalanceTooLow
 
@@ -933,7 +933,7 @@ error AllowanceTooLow(address _from, address _operator, uint256 _allowance, uint
 error BalanceTooLow()
 ```
 
-
+Balance too low to perform operation
 
 
 
@@ -960,18 +960,7 @@ error Denied(address _account)
 error EmptyDeposit()
 ```
 
-
-
-
-
-
-### EmptyDonation
-
-```solidity
-error EmptyDonation()
-```
-
-
+And empty deposit attempt was made
 
 
 
@@ -982,7 +971,7 @@ error EmptyDonation()
 error ErrorOnDeposit()
 ```
 
-
+An error occured during the deposit
 
 
 
@@ -993,7 +982,7 @@ error ErrorOnDeposit()
 error InconsistentPublicKeys()
 ```
 
-
+The length of the BLS Public key is invalid during deposit
 
 
 
@@ -1004,7 +993,7 @@ error InconsistentPublicKeys()
 error InconsistentSignatures()
 ```
 
-
+The length of the BLS Signature is invalid during deposit
 
 
 
@@ -1015,7 +1004,7 @@ error InconsistentSignatures()
 error InvalidPublicKeyCount()
 ```
 
-
+The received count of public keys to deposit is invalid
 
 
 
@@ -1026,7 +1015,7 @@ error InvalidPublicKeyCount()
 error InvalidSignatureCount()
 ```
 
-
+The received count of signatures to deposit is invalid
 
 
 
@@ -1034,10 +1023,10 @@ error InvalidSignatureCount()
 ### InvalidValidatorCountReport
 
 ```solidity
-error InvalidValidatorCountReport(uint256 _providedValidatorCount, uint256 _depositedValidatorCount)
+error InvalidValidatorCountReport(uint256 providedValidatorCount, uint256 depositedValidatorCount)
 ```
 
-
+The reported validator count is invalid
 
 
 
@@ -1045,8 +1034,8 @@ error InvalidValidatorCountReport(uint256 _providedValidatorCount, uint256 _depo
 
 | Name | Type | Description |
 |---|---|---|
-| _providedValidatorCount | uint256 | undefined |
-| _depositedValidatorCount | uint256 | undefined |
+| providedValidatorCount | uint256 | The received validator count value |
+| depositedValidatorCount | uint256 | The number of deposits performed by the system |
 
 ### InvalidWithdrawalCredentials
 
@@ -1054,7 +1043,7 @@ error InvalidValidatorCountReport(uint256 _providedValidatorCount, uint256 _depo
 error InvalidWithdrawalCredentials()
 ```
 
-
+The withdrawal credentials value is null
 
 
 
@@ -1065,7 +1054,7 @@ error InvalidWithdrawalCredentials()
 error NoAvailableValidatorKeys()
 ```
 
-
+The internal key retrieval returned no keys
 
 
 
@@ -1076,7 +1065,7 @@ error NoAvailableValidatorKeys()
 error NotEnoughFunds()
 ```
 
-
+Not enough funds to deposit one validator
 
 
 
@@ -1087,7 +1076,7 @@ error NotEnoughFunds()
 error NullTransfer()
 ```
 
-
+Invalid empty transfer
 
 
 
@@ -1098,7 +1087,7 @@ error NullTransfer()
 error UnauthorizedTransfer(address _from, address _to)
 ```
 
-
+Invalid transfer recipients
 
 
 

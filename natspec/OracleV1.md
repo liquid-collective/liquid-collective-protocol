@@ -521,7 +521,7 @@ Edits the cl bounds parameters
 event AddMember(address indexed member)
 ```
 
-
+A member has been added to the oracle member list
 
 
 
@@ -531,32 +531,13 @@ event AddMember(address indexed member)
 |---|---|---|
 | member `indexed` | address | undefined |
 
-### BeaconReported
-
-```solidity
-event BeaconReported(uint256 _epochId, uint128 _newBeaconBalance, uint32 _newBeaconValidatorCount, address indexed _oracleMember)
-```
-
-
-
-
-
-#### Parameters
-
-| Name | Type | Description |
-|---|---|---|
-| _epochId  | uint256 | undefined |
-| _newBeaconBalance  | uint128 | undefined |
-| _newBeaconValidatorCount  | uint32 | undefined |
-| _oracleMember `indexed` | address | undefined |
-
 ### CLReported
 
 ```solidity
-event CLReported(uint256 _epochId, uint128 _newCLBalance, uint32 _newCLValidatorCount, address _oracleMember)
+event CLReported(uint256 epochId, uint128 newCLBalance, uint32 newCLValidatorCount, address oracleMember)
 ```
 
-
+Consensys Layer data has been reported by an oracle member
 
 
 
@@ -564,18 +545,18 @@ event CLReported(uint256 _epochId, uint128 _newCLBalance, uint32 _newCLValidator
 
 | Name | Type | Description |
 |---|---|---|
-| _epochId  | uint256 | undefined |
-| _newCLBalance  | uint128 | undefined |
-| _newCLValidatorCount  | uint32 | undefined |
-| _oracleMember  | address | undefined |
+| epochId  | uint256 | undefined |
+| newCLBalance  | uint128 | undefined |
+| newCLValidatorCount  | uint32 | undefined |
+| oracleMember  | address | undefined |
 
 ### ExpectedEpochIdUpdated
 
 ```solidity
-event ExpectedEpochIdUpdated(uint256 _epochId)
+event ExpectedEpochIdUpdated(uint256 epochId)
 ```
 
-
+The expected epoch id has been changedS
 
 
 
@@ -583,7 +564,7 @@ event ExpectedEpochIdUpdated(uint256 _epochId)
 
 | Name | Type | Description |
 |---|---|---|
-| _epochId  | uint256 | undefined |
+| epochId  | uint256 | undefined |
 
 ### Initialize
 
@@ -605,10 +586,10 @@ Emitted when the contract is properly initialized
 ### PostTotalShares
 
 ```solidity
-event PostTotalShares(uint256 _postTotalEth, uint256 _prevTotalEth, uint256 _timeElapsed, uint256 _totalShares)
+event PostTotalShares(uint256 postTotalEth, uint256 prevTotalEth, uint256 timeElapsed, uint256 totalShares)
 ```
 
-
+The report has been submitted to river
 
 
 
@@ -616,10 +597,10 @@ event PostTotalShares(uint256 _postTotalEth, uint256 _prevTotalEth, uint256 _tim
 
 | Name | Type | Description |
 |---|---|---|
-| _postTotalEth  | uint256 | undefined |
-| _prevTotalEth  | uint256 | undefined |
-| _timeElapsed  | uint256 | undefined |
-| _totalShares  | uint256 | undefined |
+| postTotalEth  | uint256 | undefined |
+| prevTotalEth  | uint256 | undefined |
+| timeElapsed  | uint256 | undefined |
+| totalShares  | uint256 | undefined |
 
 ### RemoveMember
 
@@ -627,7 +608,7 @@ event PostTotalShares(uint256 _postTotalEth, uint256 _prevTotalEth, uint256 _tim
 event RemoveMember(address indexed member)
 ```
 
-
+A member has been removed from the oracle member list
 
 
 
@@ -643,7 +624,7 @@ event RemoveMember(address indexed member)
 event SetAdmin(address indexed admin)
 ```
 
-
+The admin address changed
 
 
 
@@ -656,10 +637,10 @@ event SetAdmin(address indexed admin)
 ### SetBounds
 
 ```solidity
-event SetBounds(uint256 _annualAprUpperBound, uint256 _relativeLowerBound)
+event SetBounds(uint256 annualAprUpperBound, uint256 relativeLowerBound)
 ```
 
-
+The report bounds have been changed
 
 
 
@@ -667,8 +648,8 @@ event SetBounds(uint256 _annualAprUpperBound, uint256 _relativeLowerBound)
 
 | Name | Type | Description |
 |---|---|---|
-| _annualAprUpperBound  | uint256 | undefined |
-| _relativeLowerBound  | uint256 | undefined |
+| annualAprUpperBound  | uint256 | undefined |
+| relativeLowerBound  | uint256 | undefined |
 
 ### SetMember
 
@@ -676,7 +657,7 @@ event SetBounds(uint256 _annualAprUpperBound, uint256 _relativeLowerBound)
 event SetMember(address indexed oldAddress, address indexed newAddress)
 ```
 
-
+A member address has been edited
 
 
 
@@ -693,7 +674,7 @@ event SetMember(address indexed oldAddress, address indexed newAddress)
 event SetPendingAdmin(address indexed pendingAdmin)
 ```
 
-
+The pending admin address changed
 
 
 
@@ -706,10 +687,10 @@ event SetPendingAdmin(address indexed pendingAdmin)
 ### SetQuorum
 
 ```solidity
-event SetQuorum(uint256 _newQuorum)
+event SetQuorum(uint256 newQuorum)
 ```
 
-
+The storage quorum value has been changed
 
 
 
@@ -717,15 +698,15 @@ event SetQuorum(uint256 _newQuorum)
 
 | Name | Type | Description |
 |---|---|---|
-| _newQuorum  | uint256 | undefined |
+| newQuorum  | uint256 | undefined |
 
 ### SetSpec
 
 ```solidity
-event SetSpec(uint64 _epochsPerFrame, uint64 _slotsPerEpoch, uint64 _secondsPerSlot, uint64 _genesisTime)
+event SetSpec(uint64 epochsPerFrame, uint64 slotsPerEpoch, uint64 secondsPerSlot, uint64 genesisTime)
 ```
 
-
+The consensus layer spec has been changed
 
 
 
@@ -733,10 +714,10 @@ event SetSpec(uint64 _epochsPerFrame, uint64 _slotsPerEpoch, uint64 _secondsPerS
 
 | Name | Type | Description |
 |---|---|---|
-| _epochsPerFrame  | uint64 | undefined |
-| _slotsPerEpoch  | uint64 | undefined |
-| _secondsPerSlot  | uint64 | undefined |
-| _genesisTime  | uint64 | undefined |
+| epochsPerFrame  | uint64 | undefined |
+| slotsPerEpoch  | uint64 | undefined |
+| secondsPerSlot  | uint64 | undefined |
+| genesisTime  | uint64 | undefined |
 
 
 
@@ -745,10 +726,10 @@ event SetSpec(uint64 _epochsPerFrame, uint64 _slotsPerEpoch, uint64 _secondsPerS
 ### AddressAlreadyInUse
 
 ```solidity
-error AddressAlreadyInUse(address _newAddress)
+error AddressAlreadyInUse(address newAddress)
 ```
 
-
+The address is already in use by an oracle member
 
 
 
@@ -756,15 +737,15 @@ error AddressAlreadyInUse(address _newAddress)
 
 | Name | Type | Description |
 |---|---|---|
-| _newAddress | address | undefined |
+| newAddress | address | The address already in use |
 
 ### AlreadyReported
 
 ```solidity
-error AlreadyReported(uint256 _epochId, address _member)
+error AlreadyReported(uint256 epochId, address member)
 ```
 
-
+The member already reported on the given epoch id
 
 
 
@@ -772,16 +753,16 @@ error AlreadyReported(uint256 _epochId, address _member)
 
 | Name | Type | Description |
 |---|---|---|
-| _epochId | uint256 | undefined |
-| _member | address | undefined |
+| epochId | uint256 | The epoch id provided as input |
+| member | address | The oracle member |
 
 ### EpochTooOld
 
 ```solidity
-error EpochTooOld(uint256 _providedEpochId, uint256 _minExpectedEpochId)
+error EpochTooOld(uint256 providedEpochId, uint256 minExpectedEpochId)
 ```
 
-
+The provided epoch is too old compared to the expected epoch id
 
 
 
@@ -789,8 +770,8 @@ error EpochTooOld(uint256 _providedEpochId, uint256 _minExpectedEpochId)
 
 | Name | Type | Description |
 |---|---|---|
-| _providedEpochId | uint256 | undefined |
-| _minExpectedEpochId | uint256 | undefined |
+| providedEpochId | uint256 | The epoch id provided as input |
+| minExpectedEpochId | uint256 | The minimum epoch id expected |
 
 ### InvalidArgument
 
@@ -845,10 +826,10 @@ error InvalidZeroAddress()
 ### NotFrameFirstEpochId
 
 ```solidity
-error NotFrameFirstEpochId(uint256 _providedEpochId, uint256 _expectedFrameFirstEpochId)
+error NotFrameFirstEpochId(uint256 providedEpochId, uint256 expectedFrameFirstEpochId)
 ```
 
-
+The provided epoch is not at the beginning of its frame
 
 
 
@@ -856,16 +837,16 @@ error NotFrameFirstEpochId(uint256 _providedEpochId, uint256 _expectedFrameFirst
 
 | Name | Type | Description |
 |---|---|---|
-| _providedEpochId | uint256 | undefined |
-| _expectedFrameFirstEpochId | uint256 | undefined |
+| providedEpochId | uint256 | The epoch id provided as input |
+| expectedFrameFirstEpochId | uint256 | The frame first epoch id that was expected |
 
 ### TotalValidatorBalanceDecreaseOutOfBound
 
 ```solidity
-error TotalValidatorBalanceDecreaseOutOfBound(uint256 _prevTotalEth, uint256 _postTotalEth, uint256 _timeElapsed, uint256 _relativeLowerBound)
+error TotalValidatorBalanceDecreaseOutOfBound(uint256 prevTotalEth, uint256 postTotalEth, uint256 timeElapsed, uint256 relativeLowerBound)
 ```
 
-
+The delta in balance is under the allowed lower bound
 
 
 
@@ -873,18 +854,18 @@ error TotalValidatorBalanceDecreaseOutOfBound(uint256 _prevTotalEth, uint256 _po
 
 | Name | Type | Description |
 |---|---|---|
-| _prevTotalEth | uint256 | undefined |
-| _postTotalEth | uint256 | undefined |
-| _timeElapsed | uint256 | undefined |
-| _relativeLowerBound | uint256 | undefined |
+| prevTotalEth | uint256 | The previous total balance |
+| postTotalEth | uint256 | The new total balance |
+| timeElapsed | uint256 | The time ssince last report |
+| relativeLowerBound | uint256 | The maximum relative decrease allowed |
 
 ### TotalValidatorBalanceIncreaseOutOfBound
 
 ```solidity
-error TotalValidatorBalanceIncreaseOutOfBound(uint256 _prevTotalEth, uint256 _postTotalEth, uint256 _timeElapsed, uint256 _annualAprUpperBound)
+error TotalValidatorBalanceIncreaseOutOfBound(uint256 prevTotalEth, uint256 postTotalEth, uint256 timeElapsed, uint256 annualAprUpperBound)
 ```
 
-
+The delta in balance is above the allowed upper bound
 
 
 
@@ -892,10 +873,10 @@ error TotalValidatorBalanceIncreaseOutOfBound(uint256 _prevTotalEth, uint256 _po
 
 | Name | Type | Description |
 |---|---|---|
-| _prevTotalEth | uint256 | undefined |
-| _postTotalEth | uint256 | undefined |
-| _timeElapsed | uint256 | undefined |
-| _annualAprUpperBound | uint256 | undefined |
+| prevTotalEth | uint256 | The previous total balance |
+| postTotalEth | uint256 | The new total balance |
+| timeElapsed | uint256 | The time ssince last report |
+| annualAprUpperBound | uint256 | The maximum apr allowed |
 
 ### Unauthorized
 

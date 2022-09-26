@@ -38,13 +38,13 @@ Sets the permission for a function selector
 | _functionSelector | bytes4 | Method signature on which the permission is changed |
 | _executorCanCall | bool | True if selector is callable by the executor |
 
-### executor
+### destination
 
 ```solidity
-function executor() external view returns (address)
+function destination() external view returns (address)
 ```
 
-
+The destination address
 
 
 
@@ -54,6 +54,45 @@ function executor() external view returns (address)
 | Name | Type | Description |
 |---|---|---|
 | _0 | address | undefined |
+
+### executor
+
+```solidity
+function executor() external view returns (address)
+```
+
+The executor address
+
+
+
+
+#### Returns
+
+| Name | Type | Description |
+|---|---|---|
+| _0 | address | undefined |
+
+### executorCanCall
+
+```solidity
+function executorCanCall(bytes4) external view returns (bool)
+```
+
+Returns true if the executor is allowed to perform a call on the given selector
+
+
+
+#### Parameters
+
+| Name | Type | Description |
+|---|---|---|
+| _0 | bytes4 | undefined |
+
+#### Returns
+
+| Name | Type | Description |
+|---|---|---|
+| _0 | bool | undefined |
 
 ### getAdmin
 
@@ -131,7 +170,7 @@ Sets the executor address
 event SetAdmin(address indexed admin)
 ```
 
-
+The admin address changed
 
 
 
@@ -147,7 +186,7 @@ event SetAdmin(address indexed admin)
 event SetDestination(address indexed destination)
 ```
 
-
+The stored destination address has been changed
 
 
 
@@ -163,7 +202,7 @@ event SetDestination(address indexed destination)
 event SetExecutor(address indexed executor)
 ```
 
-
+The stored executor address has been changed
 
 
 
@@ -179,7 +218,7 @@ event SetExecutor(address indexed executor)
 event SetExecutorPermissions(bytes4 selector, bool status)
 ```
 
-
+The storage permission for a selector has been changed
 
 
 
@@ -196,7 +235,7 @@ event SetExecutorPermissions(bytes4 selector, bool status)
 event SetPendingAdmin(address indexed pendingAdmin)
 ```
 
-
+The pending admin address changed
 
 
 

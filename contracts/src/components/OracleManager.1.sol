@@ -48,37 +48,28 @@ abstract contract OracleManagerV1 is IOracleManagerV1 {
         emit SetOracle(_oracle);
     }
 
-    /// @notice Get oracle address
-    /// @return The oracle address
+    /// @inheritdoc IOracleManagerV1
     function getOracle() external view returns (address) {
         return OracleAddress.get();
     }
 
-    /// @notice Get CL validator total balance
-    /// @return The CL Validator total balance
+    /// @inheritdoc IOracleManagerV1
     function getCLValidatorTotalBalance() external view returns (uint256) {
         return CLValidatorTotalBalance.get();
     }
 
-    /// @notice Get CL validator count (the amount of validator reported by the oracles)
-    /// @return The CL validator count
+    /// @inheritdoc IOracleManagerV1
     function getCLValidatorCount() external view returns (uint256) {
         return CLValidatorCount.get();
     }
 
-    /// @notice Set the oracle address
-    /// @param _oracleAddress Address of the oracle
+    /// @inheritdoc IOracleManagerV1
     function setOracle(address _oracleAddress) external onlyAdmin_OMV1 {
         OracleAddress.set(_oracleAddress);
         emit SetOracle(_oracleAddress);
     }
 
-    /// @notice Sets the validator count and validator balance sum reported by the oracle
-    /// @dev Can only be called by the oracle address
-    /// @param _validatorCount The number of active validators on the consensus layer
-    /// @param _validatorTotalBalance The validator balance sum of the active validators on the consensus layer
-    /// @param _roundId An identifier for this update
-    /// @param _maxIncrease Maximum positive delta allowed to the total underlying balance
+    /// @inheritdoc IOracleManagerV1
     function setConsensusLayerData(
         uint256 _validatorCount,
         uint256 _validatorTotalBalance,

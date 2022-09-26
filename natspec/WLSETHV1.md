@@ -318,10 +318,10 @@ Transfers tokens between two accounts
 ### Approval
 
 ```solidity
-event Approval(address indexed _owner, address indexed _spender, uint256 _value)
+event Approval(address indexed owner, address indexed spender, uint256 value)
 ```
 
-
+An approval has been made
 
 
 
@@ -329,17 +329,17 @@ event Approval(address indexed _owner, address indexed _spender, uint256 _value)
 
 | Name | Type | Description |
 |---|---|---|
-| _owner `indexed` | address | undefined |
-| _spender `indexed` | address | undefined |
-| _value  | uint256 | undefined |
+| owner `indexed` | address | undefined |
+| spender `indexed` | address | undefined |
+| value  | uint256 | undefined |
 
 ### Burn
 
 ```solidity
-event Burn(address indexed _recipient, uint256 _value)
+event Burn(address indexed recipient, uint256 shares)
 ```
 
-
+Tokens have been burned
 
 
 
@@ -347,8 +347,8 @@ event Burn(address indexed _recipient, uint256 _value)
 
 | Name | Type | Description |
 |---|---|---|
-| _recipient `indexed` | address | undefined |
-| _value  | uint256 | undefined |
+| recipient `indexed` | address | undefined |
+| shares  | uint256 | undefined |
 
 ### Initialize
 
@@ -370,10 +370,10 @@ Emitted when the contract is properly initialized
 ### Mint
 
 ```solidity
-event Mint(address indexed _recipient, uint256 _value)
+event Mint(address indexed recipient, uint256 value)
 ```
 
-
+Tokens have been minted
 
 
 
@@ -381,8 +381,8 @@ event Mint(address indexed _recipient, uint256 _value)
 
 | Name | Type | Description |
 |---|---|---|
-| _recipient `indexed` | address | undefined |
-| _value  | uint256 | undefined |
+| recipient `indexed` | address | undefined |
+| value  | uint256 | undefined |
 
 ### SetRiver
 
@@ -390,7 +390,7 @@ event Mint(address indexed _recipient, uint256 _value)
 event SetRiver(address indexed river)
 ```
 
-
+The stored value of river has been changed
 
 
 
@@ -403,10 +403,10 @@ event SetRiver(address indexed river)
 ### Transfer
 
 ```solidity
-event Transfer(address indexed _from, address indexed _to, uint256 _value)
+event Transfer(address indexed from, address indexed to, uint256 value)
 ```
 
-
+A transfer has been made
 
 
 
@@ -414,9 +414,9 @@ event Transfer(address indexed _from, address indexed _to, uint256 _value)
 
 | Name | Type | Description |
 |---|---|---|
-| _from `indexed` | address | undefined |
-| _to `indexed` | address | undefined |
-| _value  | uint256 | undefined |
+| from `indexed` | address | undefined |
+| to `indexed` | address | undefined |
+| value  | uint256 | undefined |
 
 
 
@@ -428,7 +428,7 @@ event Transfer(address indexed _from, address indexed _to, uint256 _value)
 error AllowanceTooLow(address _from, address _operator, uint256 _allowance, uint256 _value)
 ```
 
-
+Allowance too low to perform operation
 
 
 
@@ -436,10 +436,10 @@ error AllowanceTooLow(address _from, address _operator, uint256 _allowance, uint
 
 | Name | Type | Description |
 |---|---|---|
-| _from | address | undefined |
-| _operator | address | undefined |
-| _allowance | uint256 | undefined |
-| _value | uint256 | undefined |
+| _from | address | Account where funds are sent from |
+| _operator | address | Account attempting the transfer |
+| _allowance | uint256 | Current allowance |
+| _value | uint256 | Requested transfer value |
 
 ### BalanceTooLow
 
@@ -447,7 +447,7 @@ error AllowanceTooLow(address _from, address _operator, uint256 _allowance, uint
 error BalanceTooLow()
 ```
 
-
+Balance too low to perform operation
 
 
 
@@ -486,7 +486,7 @@ error InvalidZeroAddress()
 error NullTransfer()
 ```
 
-
+Invalid empty transfer
 
 
 
@@ -497,18 +497,7 @@ error NullTransfer()
 error TokenTransferError()
 ```
 
-
-
-
-
-
-### UnauthorizedOperation
-
-```solidity
-error UnauthorizedOperation()
-```
-
-
+The token transfer failed during the minting process
 
 
 
@@ -519,7 +508,7 @@ error UnauthorizedOperation()
 error UnauthorizedTransfer(address _from, address _to)
 ```
 
-
+Invalid transfer recipients
 
 
 

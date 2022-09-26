@@ -272,7 +272,7 @@ Emitted when the contract is properly initialized
 event SetAdmin(address indexed admin)
 ```
 
-
+The admin address changed
 
 
 
@@ -288,7 +288,7 @@ event SetAdmin(address indexed admin)
 event SetAllower(address indexed allower)
 ```
 
-
+The stored allowe address has been changed
 
 
 
@@ -304,7 +304,7 @@ event SetAllower(address indexed allower)
 event SetAllowlistPermissions(address[] indexed accounts, uint256[] permissions)
 ```
 
-
+Change the permissions of several accounts
 
 
 
@@ -321,7 +321,7 @@ event SetAllowlistPermissions(address[] indexed accounts, uint256[] permissions)
 event SetPendingAdmin(address indexed pendingAdmin)
 ```
 
-
+The pending admin address changed
 
 
 
@@ -341,7 +341,7 @@ event SetPendingAdmin(address indexed pendingAdmin)
 error Denied(address _account)
 ```
 
-
+The account is denied access
 
 
 
@@ -349,7 +349,7 @@ error Denied(address _account)
 
 | Name | Type | Description |
 |---|---|---|
-| _account | address | undefined |
+| _account | address | The denied account |
 
 ### InvalidAlloweeCount
 
@@ -357,7 +357,7 @@ error Denied(address _account)
 error InvalidAlloweeCount()
 ```
 
-
+The provided accounts list is empty
 
 
 
@@ -396,7 +396,7 @@ error InvalidZeroAddress()
 error MismatchedAlloweeAndStatusCount()
 ```
 
-
+The provided accounts and permissions list have different lengthg
 
 
 
