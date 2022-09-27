@@ -27,7 +27,7 @@ interface IOperatorsRegistryV1 {
     event RemovedValidatorKey(uint256 indexed index, bytes publicKey);
     event SetRiver(address indexed river);
     event OperatorEditsAfterSnapshot(
-        uint256 indexed index, uint256 limit, uint256 indexed lastEdit, uint256 indexed snapshotBlock
+        uint256 indexed index, uint256 limit, uint256 indexed latestKeysEditBlockNumber, uint256 indexed snapshotBlock
     );
 
     function initOperatorsRegistryV1(address _admin, address _river) external;
