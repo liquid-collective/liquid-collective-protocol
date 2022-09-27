@@ -2,13 +2,13 @@
 
 pragma solidity 0.8.10;
 
+import "forge-std/Test.sol";
+
 import "../../src/components/ConsensusLayerDepositManager.1.sol";
-import "../../src/libraries/LibUnstructuredStorage.sol";
-import "../utils/UserFactory.sol";
+
 import "../mocks/DepositContractMock.sol";
 import "../mocks/DepositContractEnhancedMock.sol";
 import "../mocks/DepositContractInvalidMock.sol";
-import "forge-std/Test.sol";
 
 contract ConsensusLayerDepositManagerV1ExposeInitializer is ConsensusLayerDepositManagerV1 {
     function publicConsensusLayerDepositManagerInitializeV1(
@@ -380,6 +380,7 @@ contract ConsensusLayerDepositManagerV1InvalidDepositContract is Test {
 
     function testDepositInvalidDepositContract() external {
         vm.deal(address(depositManager), 32 ether);
+        ConsensusLayerDepositManagerV1ValidKeys(address(depositManager)).sudoSyncBalance();
         vm.expectRevert(abi.encodeWithSignature("ErrorOnDeposit()"));
         depositManager.depositToConsensusLayer(1);
     }

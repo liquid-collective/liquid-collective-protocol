@@ -2,9 +2,9 @@
 
 pragma solidity 0.8.10;
 
-import "../src/libraries/LibSanitize.sol";
-
 import "forge-std/Test.sol";
+
+import "../src/libraries/LibSanitize.sol";
 
 contract SanitizedInputs {
     function setAddress(address _address) external pure {

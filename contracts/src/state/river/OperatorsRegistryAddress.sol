@@ -3,7 +3,6 @@ pragma solidity 0.8.10;
 
 import "../../libraries/LibUnstructuredStorage.sol";
 import "../../libraries/LibSanitize.sol";
-import "../../libraries/LibErrors.sol";
 
 library OperatorsRegistryAddress {
     bytes32 internal constant OPERATORS_REGISTRY_ADDRESS_SLOT =

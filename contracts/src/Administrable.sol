@@ -1,9 +1,9 @@
 //SPDX-License-Identifier: BUSL-1.1
 pragma solidity 0.8.10;
 
-import "./libraries/LibAdministrable.sol";
-import "./libraries/LibErrors.sol";
 import "./interfaces/IAdministrable.sol";
+
+import "./libraries/LibAdministrable.sol";
 import "./libraries/LibSanitize.sol";
 
 abstract contract Administrable is IAdministrable {

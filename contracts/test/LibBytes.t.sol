@@ -2,9 +2,9 @@
 
 pragma solidity 0.8.10;
 
-import "../src/libraries/LibBytes.sol";
-
 import "forge-std/Test.sol";
+
+import "../src/libraries/LibBytes.sol";
 
 contract BytesTest is Test {
     function testSliceOverflow() external {

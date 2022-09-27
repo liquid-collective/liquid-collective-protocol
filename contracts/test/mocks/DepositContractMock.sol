@@ -3,7 +3,6 @@
 pragma solidity 0.8.10;
 
 import "../../src/interfaces/IDepositContract.sol";
-import "../../src/Withdraw.1.sol";
 
 contract DepositContractMock is IDepositContract {
     event DepositEvent(bytes pubkey, bytes withdrawal_credentials, bytes amount, bytes signature, bytes index);

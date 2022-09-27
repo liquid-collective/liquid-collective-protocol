@@ -2,20 +2,19 @@
 
 pragma solidity 0.8.10;
 
+import "forge-std/Test.sol";
+
+import "./utils/UserFactory.sol";
+import "./utils/BytesGenerator.sol";
+import "./mocks/DepositContractMock.sol";
+
 import "../src/Allowlist.1.sol";
 import "../src/River.1.sol";
-import "../src/libraries/LibErrors.sol";
 import "../src/interfaces/IDepositContract.sol";
 import "../src/Withdraw.1.sol";
 import "../src/Oracle.1.sol";
 import "../src/ELFeeRecipient.1.sol";
-import "./utils/AllowlistHelper.sol";
-import "./utils/River.setup1.sol";
-import "./utils/UserFactory.sol";
-import "./utils/BytesGenerator.sol";
-import "./mocks/DepositContractMock.sol";
 import "../src/OperatorsRegistry.1.sol";
-import "forge-std/Test.sol";
 
 contract RiverV1SetupOneTests is Test, BytesGenerator {
     UserFactory internal uf = new UserFactory();

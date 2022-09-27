@@ -1,11 +1,11 @@
 //SPDX-License-Identifier: BUSL-1.1
 pragma solidity 0.8.10;
 
-import "../libraries/LibErrors.sol";
-import "../libraries/LibSanitize.sol";
-import "../state/river/BalanceToDeposit.sol";
-
 import "../interfaces/components/IUserDepositManager.1.sol";
+
+import "../libraries/LibSanitize.sol";
+
+import "../state/river/BalanceToDeposit.sol";
 
 /// @title User Deposit Manager (v1)
 /// @author Kiln

@@ -2,12 +2,13 @@
 
 pragma solidity 0.8.10;
 
-import "../Vm.sol";
+import "forge-std/Test.sol";
+
+import "../utils/UserFactory.sol";
+
 import "../../src/components/OracleManager.1.sol";
-import "../../src/libraries/LibErrors.sol";
 import "../../src/libraries/LibUint256.sol";
 import "../../src/state/shared/AdministratorAddress.sol";
-import "../utils/UserFactory.sol";
 
 contract OracleManagerV1ExposeInitializer is OracleManagerV1 {
     uint256 public lastReceived;
@@ -47,8 +48,7 @@ contract OracleManagerV1ExposeInitializer is OracleManagerV1 {
     }
 }
 
-contract OracleManagerV1Tests {
-    Vm internal vm = Vm(0x7109709ECfa91a80626fF3989D68f67F5b1DD12D);
+contract OracleManagerV1Tests is Test {
     UserFactory internal uf = new UserFactory();
 
     address internal oracle = address(0xEA674fdDe714fd979de3EdF0F56AA9716B898ec8);

@@ -1,11 +1,13 @@
 //SPDX-License-Identifier: BUSL-1.1
 pragma solidity 0.8.10;
 
-import "./Initializable.sol";
-import "./libraries/LibErrors.sol";
-import "./libraries/LibUint256.sol";
 import "./interfaces/IRiver.1.sol";
 import "./interfaces/IELFeeRecipient.1.sol";
+
+import "./libraries/LibUint256.sol";
+
+import "./Initializable.sol";
+
 import "./state/shared/RiverAddress.sol";
 
 /// @title Execution Layer Fee Recipient

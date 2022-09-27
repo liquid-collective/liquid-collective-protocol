@@ -1,13 +1,11 @@
 //SPDX-License-Identifier: BUSL-1.1
 pragma solidity 0.8.10;
 
-import "../libraries/LibErrors.sol";
+import "../interfaces/components/ISharesManager.1.sol";
 
 import "../state/river/Shares.sol";
 import "../state/river/SharesPerOwner.sol";
 import "../state/shared/ApprovalsPerOwner.sol";
-
-import "../interfaces/components/ISharesManager.1.sol";
 
 /// @title Shares Manager (v1)
 /// @author Kiln

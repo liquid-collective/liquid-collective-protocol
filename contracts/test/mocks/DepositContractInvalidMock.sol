@@ -2,9 +2,9 @@
 
 pragma solidity 0.8.10;
 
-import "../../src/interfaces/IDepositContract.sol";
-import "../../src/Withdraw.1.sol";
 import "forge-std/Test.sol";
+
+import "../../src/interfaces/IDepositContract.sol";
 
 contract DepositContractInvalidMock is IDepositContract, Test {
     event DepositEvent(bytes pubkey, bytes withdrawal_credentials, bytes amount, bytes signature, bytes index);
