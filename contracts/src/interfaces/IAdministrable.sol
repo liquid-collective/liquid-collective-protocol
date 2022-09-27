@@ -19,7 +19,7 @@ interface IAdministrable {
     function getPendingAdmin() external view returns (address);
 
     /// @notice Proposes a new address as admin
-    /// @dev This security prevents setting and invalid address as an admin. The pending
+    /// @dev This security prevents setting an invalid address as an admin. The pending
     /// @dev admin has to claim its ownership of the contract, and proves that the new
     /// @dev address is able to perform regular transactions.
     /// @param _newAdmin New admin address

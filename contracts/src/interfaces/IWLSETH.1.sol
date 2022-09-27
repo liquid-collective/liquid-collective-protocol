@@ -28,7 +28,7 @@ interface IWLSETHV1 {
     /// @param river The new address of river
     event SetRiver(address indexed river);
 
-    /// @notice The token transfer failed during the minting process
+    /// @notice The token transfer failed during the minting or burning process
     error TokenTransferError();
 
     /// @notice Balance too low to perform operation

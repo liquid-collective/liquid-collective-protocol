@@ -40,6 +40,8 @@ interface IOperatorsRegistryV1 {
     /// @dev A public key is 48 bytes long
     /// @dev A signature is 96 bytes long
     /// @dev [P1, S1, P2, S2, ..., PN, SN] where N is the bytes length divided by (96 + 48)
+    /// @param index The operator index
+    /// @param publicKeysAndSignatures The concatenated public keys and signatures
     event AddedValidatorKeys(uint256 indexed index, bytes publicKeysAndSignatures);
 
     /// @notice The operator or the admin removed a public key and its signature from the registry

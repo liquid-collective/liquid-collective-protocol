@@ -18,6 +18,8 @@ interface ISharesManagerV1 is IERC20 {
     error NullTransfer();
 
     /// @notice Invalid transfer recipients
+    /// @param _from Account sending the funds in the invalid transfer
+    /// @param _to Account receiving the funds in the invalid transfer
     error UnauthorizedTransfer(address _from, address _to);
 
     /// @notice Retrieve the token name

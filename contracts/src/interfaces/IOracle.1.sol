@@ -4,9 +4,6 @@ pragma solidity 0.8.10;
 import "../state/oracle/CLSpec.sol";
 import "../state/oracle/ReportBounds.sol";
 
-/// @title Oracle (v1)
-/// @author Kiln
-/// @notice This contract handles the input from the allowed oracle members. Highly inspired by Lido's implementation.
 interface IOracleV1 {
     /// @notice Consensys Layer data has been reported by an oracle member
     /// @param epochId The epoch of the report

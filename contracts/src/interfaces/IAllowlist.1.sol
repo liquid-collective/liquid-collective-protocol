@@ -2,12 +2,12 @@
 pragma solidity 0.8.10;
 
 interface IAllowlistV1 {
-    /// @notice Change the permissions of several accounts
+    /// @notice The permissions of several accounts have changed
     /// @param accounts List of accounts
     /// @param permissions New permissions for each account at the same index
     event SetAllowlistPermissions(address[] indexed accounts, uint256[] permissions);
 
-    /// @notice The stored allowe address has been changed
+    /// @notice The stored allowee address has been changed
     /// @param allower The new allower address
     event SetAllower(address indexed allower);
 
@@ -18,7 +18,7 @@ interface IAllowlistV1 {
     /// @param _account The denied account
     error Denied(address _account);
 
-    /// @notice The provided accounts and permissions list have different lengthg
+    /// @notice The provided accounts and permissions list have different lengths
     error MismatchedAlloweeAndStatusCount();
 
     /// @notice Initializes the allowlist

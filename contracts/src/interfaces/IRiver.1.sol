@@ -7,14 +7,28 @@ import "./components/ISharesManager.1.sol";
 import "./components/IUserDepositManager.1.sol";
 
 interface IRiverV1 is IConsensusLayerDepositManagerV1, IUserDepositManagerV1, ISharesManagerV1, IOracleManagerV1 {
-    error ZeroMintedShares();
-    error Denied(address _account);
-
+    /// @notice Funds have been pulled from the Execution Layer Fee Recipient
+    /// @param amount The amount pulled
     event PulledELFees(uint256 amount);
+
+    /// @notice The stored Execution Layer Fee Recipient has been changed
+    /// @param elFeeRecipient The new Execution Layer Fee Recipient
     event SetELFeeRecipient(address indexed elFeeRecipient);
+
+    /// @notice The stored Collector has been changed
+    /// @param collector The new Collector
     event SetCollector(address indexed collector);
+
+    /// @notice The stored Allowlist has been changed
+    /// @param allowlist The new Allowlist
     event SetAllowlist(address indexed allowlist);
+
+    /// @notice The stored Global Fee has been changed
+    /// @param fee The new Global Fee
     event SetGlobalFee(uint256 fee);
+
+    /// @notice The stored Operators Registry has been changed
+    /// @param operatorRegistry The new Operators Registry
     event SetOperatorsRegistry(address indexed operatorRegistry);
     event RewardsEarned(
         address indexed _collector,
@@ -24,14 +38,22 @@ interface IRiverV1 is IConsensusLayerDepositManagerV1, IUserDepositManagerV1, IS
         uint256 _newTotalSupply
     );
 
+    /// @notice The computed amount of shares to mint is 0
+    error ZeroMintedShares();
+
+    /// @notice The access was denied
+    /// @param account The account that was denied
+    error Denied(address account);
+
     /// @notice Initializes the River system
     /// @param _depositContractAddress Address to make Consensus Layer deposits
     /// @param _elFeeRecipientAddress Address that receives the execution layer fees
     /// @param _withdrawalCredentials Credentials to use for every validator deposit
+    /// @param _oracleAddress The address of the Oracle contract
     /// @param _systemAdministratorAddress Administrator address
     /// @param _allowlistAddress Address of the allowlist contract
     /// @param _operatorRegistryAddress Address of the operator registry
-    /// @param _collectorAddress Address receiving the fee minus the operator share
+    /// @param _collectorAddress Address receiving the the global fee on revenue
     /// @param _globalFee Amount retained when the eth balance increases, splitted between the collector and the operators
     function initRiverV1(
         address _depositContractAddress,

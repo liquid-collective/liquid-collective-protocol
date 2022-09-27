@@ -16,11 +16,17 @@ interface IFirewall {
     event SetExecutorPermissions(bytes4 selector, bool status);
 
     /// @notice The executor address
+    /// @return The executor address
     function executor() external view returns (address);
+
     /// @notice The destination address
+    /// @return The destination address
     function destination() external view returns (address);
+
     /// @notice Returns true if the executor is allowed to perform a call on the given selector
-    function executorCanCall(bytes4) external view returns (bool);
+    /// @param _selector The selector to verify
+    /// @return True if executor is allowed to call
+    function executorCanCall(bytes4 _selector) external view returns (bool);
 
     /// @notice Sets the executor address
     /// @param _newExecutor New address for the executor
