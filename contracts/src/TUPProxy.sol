@@ -12,8 +12,8 @@ contract TUPProxy is TransparentUpgradeableProxy {
 
     error CallWhenPaused();
 
-    event Pause();
-    event Unpause();
+    event Paused(address account);
+    event Unpaused(address account);
 
     constructor(address _logic, address admin_, bytes memory _data)
         payable
@@ -29,13 +29,13 @@ contract TUPProxy is TransparentUpgradeableProxy {
     /// @dev Pauses system
     function pause() external ifAdmin {
         StorageSlot.getBooleanSlot(_PAUSE_SLOT).value = true;
-        emit Pause();
+        emit Paused(msg.sender);
     }
 
     /// @dev Unpauses system
     function unpause() external ifAdmin {
         StorageSlot.getBooleanSlot(_PAUSE_SLOT).value = false;
-        emit Unpause();
+        emit Unpaused(msg.sender);
     }
 
     /// @dev Overrides the fallback method to check if system is not paused before
