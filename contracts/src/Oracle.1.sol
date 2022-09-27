@@ -393,9 +393,13 @@ contract OracleV1 is IOracleV1, Initializable, Administrable {
         return uint16(_report);
     }
 
+    /// @notice Compute the max allowed increase based on the previous total balance and the time elapsed
+    /// @param _prevTotalEth The previous total balance
+    /// @param _timeElapsed The time since last report
+    /// @return The maximum increase in balance allowed
     function _maxIncrease(uint256 _prevTotalEth, uint256 _timeElapsed) internal view returns (uint256) {
         uint256 annualAprUpperBound = ReportBounds.get().annualAprUpperBound;
-        return (_prevTotalEth * annualAprUpperBound * _timeElapsed) / uint256(10000 * 365 days);
+        return (_prevTotalEth * annualAprUpperBound * _timeElapsed) / (LibBasisPoints.BASIS_POINTS_MAX * ONE_YEAR);
     }
 
     /// @notice Performs sanity checks to prevent an erroneous update to the River system
