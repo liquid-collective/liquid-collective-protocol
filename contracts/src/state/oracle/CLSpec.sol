@@ -9,19 +9,19 @@ library CLSpec {
 
     /// @notice The Consensus Layer Spec structure
     struct CLSpecStruct {
-        /// @custom:member The count of epochs per frame, 225 means 24h
+        /// @custom:attribute The count of epochs per frame, 225 means 24h
         uint64 epochsPerFrame;
-        /// @custom:member The count of slots in an epoch (32 on mainnet)
+        /// @custom:attribute The count of slots in an epoch (32 on mainnet)
         uint64 slotsPerEpoch;
-        /// @custom:member The seconds in a slot (12 on mainnet)
+        /// @custom:attribute The seconds in a slot (12 on mainnet)
         uint64 secondsPerSlot;
-        /// @custom:member The block timestamp of the first consensus layer block
+        /// @custom:attribute The block timestamp of the first consensus layer block
         uint64 genesisTime;
     }
 
     /// @notice The structure in storage
     struct Slot {
-        /// @custom:member The structure in storage
+        /// @custom:attribute The structure in storage
         CLSpecStruct value;
     }
 

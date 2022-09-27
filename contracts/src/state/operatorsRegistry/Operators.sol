@@ -11,51 +11,51 @@ library Operators {
 
     /// @notice The Operator structure in storage
     struct Operator {
-        /// @custom:member True if the operator is active and allowed to operator on River
+        /// @custom:attribute True if the operator is active and allowed to operator on River
         bool active;
-        /// @custom:member Display name of the operator
+        /// @custom:attribute Display name of the operator
         string name;
-        /// @custom:member Address of the operator
+        /// @custom:attribute Address of the operator
         address operator;
         /// @dev The following values respect this invariant:
         /// @dev     keys >= limit >= funded >= stopped
 
-        /// @custom:member Staking limit of the operator
+        /// @custom:attribute Staking limit of the operator
         uint256 limit;
-        /// @custom:member The count of funded validators
+        /// @custom:attribute The count of funded validators
         uint256 funded;
-        /// @custom:member The total count of keys of the operator
+        /// @custom:attribute The total count of keys of the operator
         uint256 keys;
-        /// @custom:member The count of stopped validators
+        /// @custom:attribute The count of stopped validators
         uint256 stopped;
         uint256 latestKeysEditBlockNumber;
     }
 
     /// @notice The Operator structure when loaded in memory
     struct CachedOperator {
-        /// @custom:member True if the operator is active and allowed to operator on River
+        /// @custom:attribute True if the operator is active and allowed to operator on River
         bool active;
-        /// @custom:member Display name of the operator
+        /// @custom:attribute Display name of the operator
         string name;
-        /// @custom:member Address of the operator
+        /// @custom:attribute Address of the operator
         address operator;
-        /// @custom:member Staking limit of the operator
+        /// @custom:attribute Staking limit of the operator
         uint256 limit;
-        /// @custom:member The count of funded validators
+        /// @custom:attribute The count of funded validators
         uint256 funded;
-        /// @custom:member The total count of keys of the operator
+        /// @custom:attribute The total count of keys of the operator
         uint256 keys;
-        /// @custom:member The count of stopped validators
+        /// @custom:attribute The count of stopped validators
         uint256 stopped;
-        /// @custom:member The index of the operator
+        /// @custom:attribute The index of the operator
         uint256 index;
-        /// @custom:member The amount of picked keys, buffer used before changing funded in storage
+        /// @custom:attribute The amount of picked keys, buffer used before changing funded in storage
         uint256 picked;
     }
 
     /// @notice The structure at the storage slot
     struct SlotOperator {
-        /// @custom:member Array containing all the operators
+        /// @custom:attribute Array containing all the operators
         Operator[] value;
     }
 

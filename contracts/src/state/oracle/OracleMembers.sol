@@ -12,7 +12,7 @@ library OracleMembers {
 
     /// @notice The structure in storage
     struct Slot {
-        /// @custom:member The array of oracle members
+        /// @custom:attribute The array of oracle members
         address[] value;
     }
 

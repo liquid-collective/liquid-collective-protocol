@@ -9,7 +9,7 @@ library BalanceOf {
 
     /// @notice The structure in storage
     struct Slot {
-        /// @custom:member The mapping from an owner to its balance
+        /// @custom:attribute The mapping from an owner to its balance
         mapping(address => uint256) value;
     }
 
