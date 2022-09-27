@@ -36,6 +36,14 @@ interface IOracleManagerV1 {
     /// @notice Sets the validator count and validator total balance sum reported by the oracle
     /// @dev Can only be called by the oracle address
     /// @dev The round id is a blackbox value that should only be used to identify unique reports
+    /// @dev When a report is performed, River computes the amount of fees that can be pulled
+    /// @dev from the execution layer fee recipient. This amount is capped by the max allowed
+    /// @dev increase provided during the report.
+    /// @dev If the total asset balance increases (from the reported total balance and the pulled funds)
+    /// @dev we then compute the share that must be taken for the collector on the positive delta.
+    /// @dev The execution layer fees are taken into account here because they are the product of
+    /// @dev node operator's work, just like consensus layer fees, and both should be handled in the
+    /// @dev same manner, as a single revenue stream for the users and the collector.
     /// @param _validatorCount The number of active validators on the consensus layer
     /// @param _validatorTotalBalance The validator balance sum of the active validators on the consensus layer
     /// @param _roundId An identifier for this update
