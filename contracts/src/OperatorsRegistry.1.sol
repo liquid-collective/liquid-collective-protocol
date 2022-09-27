@@ -36,7 +36,7 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
 
     /// @notice Prevents anyone except the admin or the given operator to make the call. Also checks if operator is active
     /// @notice The admin is able to call this method on behalf of any operator, even if inactive
-    /// @param _index The name identifying the operator
+    /// @param _index The index identifying the operator
     modifier onlyOperatorOrAdmin(uint256 _index) {
         if (msg.sender == _getAdmin()) {
             _;
