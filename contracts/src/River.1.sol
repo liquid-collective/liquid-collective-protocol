@@ -127,6 +127,7 @@ contract RiverV1 is
     }
 
     /// @notice Retrieve the operators registry address
+    /// @return The operators registry address
     function getOperatorsRegistry() external view returns (address) {
         return OperatorsRegistryAddress.get();
     }
