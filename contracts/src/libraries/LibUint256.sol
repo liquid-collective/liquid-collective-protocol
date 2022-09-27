@@ -4,7 +4,7 @@ pragma solidity 0.8.10;
 /// @title Lib Uint256
 /// @notice Utilities to perform uint operations
 library LibUint256 {
-    /// @notice Converts a value to big endian (64 bits)
+    /// @notice Converts a value to little endian (64 bits)
     /// @param _value The value to convert
     /// @return result The converted value
     function toLittleEndian64(uint256 _value) internal pure returns (uint256 result) {

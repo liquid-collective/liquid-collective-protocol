@@ -48,6 +48,10 @@ interface IOracleManagerV1 {
     /// @param _validatorTotalBalance The validator balance sum of the active validators on the consensus layer
     /// @param _roundId An identifier for this update
     /// @param _maxIncrease The maximum allowed increase in the total balance
-    function setConsensusLayerData(uint256 _validatorCount, uint256 _validatorTotalBalance, bytes32 _roundId, uint256 _maxIncrease)
-        external;
+    function setConsensusLayerData(
+        uint256 _validatorCount,
+        uint256 _validatorTotalBalance,
+        bytes32 _roundId,
+        uint256 _maxIncrease
+    ) external;
 }

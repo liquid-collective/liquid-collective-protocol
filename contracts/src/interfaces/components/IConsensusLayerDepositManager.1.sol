@@ -53,5 +53,4 @@ interface IConsensusLayerDepositManagerV1 {
     /// @notice Deposits current balance to the Consensus Layer by batches of 32 ETH
     /// @param _maxCount The maximum amount of validator keys to fund
     function depositToConsensusLayer(uint256 _maxCount) external;
-
 }

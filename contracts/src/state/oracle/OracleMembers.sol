@@ -88,7 +88,7 @@ library OracleMembers {
         return int256(-1);
     }
 
-    /// @notice Delete the oracle member at the given address
+    /// @notice Delete the oracle member at the given index
     /// @param _idx The index of the member to remove
     function deleteItem(uint256 _idx) internal {
         bytes32 slot = ORACLE_MEMBERS_SLOT;

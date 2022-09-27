@@ -20,14 +20,14 @@ library LibAdministrable {
         return PendingAdministratorAddress.get();
     }
 
-    /// @notice Sets the system administrator
-    /// @param _admin New system adminitrator
+    /// @notice Sets the system admin
+    /// @param _admin New system admin
     function _setAdmin(address _admin) internal {
         AdministratorAddress.set(_admin);
     }
 
-    /// @notice Sets the pending system administrator
-    /// @param _pendingAdmin New pending system adminitrator
+    /// @notice Sets the pending system admin
+    /// @param _pendingAdmin New pending system admin
     function _setPendingAdmin(address _pendingAdmin) internal {
         PendingAdministratorAddress.set(_pendingAdmin);
     }

@@ -14,6 +14,7 @@ library LibBytes {
     /// @param _bytes Bytes to slice
     /// @param _start The starting index of the slice
     /// @param _length The length of the slice
+    /// @return The slice of _bytes starting at _start of length _length
     function slice(bytes memory _bytes, uint256 _start, uint256 _length) internal pure returns (bytes memory) {
         unchecked {
             if (_length + 31 < _length) {
