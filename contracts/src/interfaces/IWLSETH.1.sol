@@ -45,6 +45,8 @@ interface IWLSETHV1 {
     error NullTransfer();
 
     /// @notice Invalid transfer recipients
+    /// @param _from Account sending the funds in the invalid transfer
+    /// @param _to Account receiving the funds in the invalid transfer
     error UnauthorizedTransfer(address _from, address _to);
 
     /// @notice Initializes the wrapped token contract
@@ -115,15 +117,15 @@ interface IWLSETHV1 {
     /// @return True if success
     function decreaseAllowance(address _spender, uint256 _subtractableValue) external returns (bool);
 
-    /// @notice Mint tokens by providing River tokens
+    /// @notice Mint tokens by providing LsETH tokens
     /// @dev Minted tokens are sent to recipient but are minted from the message sender balance
-    /// @dev It is expected that the message sender approves _value amount of River token to
+    /// @dev It is expected that the message sender approves _value amount of LsETH token to
     /// @dev this contract before calling
     /// @param _recipient Spender that receives the allowance
     /// @param _value Amount of river token to give to the mint
     function mint(address _recipient, uint256 _value) external;
 
-    /// @notice Burn tokens and retrieve underlying River tokens
+    /// @notice Burn tokens and retrieve underlying LsETH tokens
     /// @dev Burned tokens are sent to recipient but are minted from the message sender balance
     /// @dev No approval required from the message sender
     /// @param _recipient Spender that receives the allowance
