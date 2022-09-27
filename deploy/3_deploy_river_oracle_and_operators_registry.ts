@@ -18,8 +18,6 @@ const func: DeployFunction = async function ({
   ethers,
   network,
 }: HardhatRuntimeEnvironment) {
-  logStep();
-
   let genesisTimestamp = 0;
   switch (network.name) {
     case "goerli":
@@ -237,4 +235,17 @@ const func: DeployFunction = async function ({
 
   logStepEnd();
 };
+
+func.skip = async function ({ deployments, getNamedAccounts }: HardhatRuntimeEnvironment): Promise<boolean> {
+  logStep();
+  try {
+    await deployments.get("River_Proxy");
+    console.log("Skipping");
+    logStepEnd();
+    return true;
+  } catch (e) {
+    return false;
+  }
+};
+
 export default func;

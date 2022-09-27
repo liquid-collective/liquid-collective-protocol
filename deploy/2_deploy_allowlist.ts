@@ -13,8 +13,6 @@ const logStepEnd = () => {
 };
 
 const func: DeployFunction = async function ({ deployments, getNamedAccounts, ethers }: HardhatRuntimeEnvironment) {
-  logStep();
-
   const { deployer, proxyAdministrator, systemAdministrator } = await getNamedAccounts();
 
   const signer = await ethers.getSigner(deployer);
@@ -57,4 +55,17 @@ const func: DeployFunction = async function ({ deployments, getNamedAccounts, et
 
   logStepEnd();
 };
+
+func.skip = async function ({ deployments, getNamedAccounts }: HardhatRuntimeEnvironment): Promise<boolean> {
+  logStep();
+  try {
+    await deployments.get("Allowlist_Proxy");
+    console.log("Skipping");
+    logStepEnd();
+    return true;
+  } catch (e) {
+    return false;
+  }
+};
+
 export default func;

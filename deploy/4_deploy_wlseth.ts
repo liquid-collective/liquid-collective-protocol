@@ -17,8 +17,6 @@ const func: DeployFunction = async function ({
   ethers,
   network,
 }: HardhatRuntimeEnvironment) {
-  logStep();
-
   const { deployer, proxyAdministrator } = await getNamedAccounts();
 
   const riverDeployment = await deployments.get("River");
@@ -40,4 +38,17 @@ const func: DeployFunction = async function ({
 
   logStepEnd();
 };
+
+func.skip = async function ({ deployments, getNamedAccounts }: HardhatRuntimeEnvironment): Promise<boolean> {
+  logStep();
+  try {
+    await deployments.get("WLSETH_Proxy");
+    console.log("Skipping");
+    logStepEnd();
+    return true;
+  } catch (e) {
+    return false;
+  }
+};
+
 export default func;

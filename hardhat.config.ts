@@ -49,6 +49,10 @@ const config: HardhatUserConfig = {
         accountsBalance: "10000000000000000000",
       },
     },
+    local: {
+      url: "http://localhost:8888", // anvil --port 8888
+      accounts: ["0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80"], // default anvil private key
+    },
   },
   namedAccounts: {
     deployer: {
@@ -57,21 +61,25 @@ const config: HardhatUserConfig = {
     depositContract: {
       default: "0x00000000219ab540356cBB839Cbe05303d7705Fa",
       goerli: "0xff50ed3d0ec03ac01d4c79aad74928bff48a7b2b", // prater deposit contract
+      local: "0x00000000219ab540356cBB839Cbe05303d7705Fa",
     },
     systemAdministrator: {
       default: 1,
       goerli: "0x71c9DAb681C209bb82270906e3B49388b2C15404",
       mockedGoerli: "0x71c9DAb681C209bb82270906e3B49388b2C15404",
+      local: "0x71c9DAb681C209bb82270906e3B49388b2C15404",
     },
     collector: {
       default: 1,
       goerli: "0x774c51712F2f1eAFA73681403414D5EE419f2c73",
       mockedGoerli: "0x774c51712F2f1eAFA73681403414D5EE419f2c73",
+      local: "0x774c51712F2f1eAFA73681403414D5EE419f2c73",
     },
     proxyAdministrator: {
       default: 2,
       goerli: "0x07706A7D768054c10eB4FC9103Ea322f62831cb9",
       mockedGoerli: "0x07706A7D768054c10eB4FC9103Ea322f62831cb9",
+      local: "0x07706A7D768054c10eB4FC9103Ea322f62831cb9",
     },
   },
   paths: {

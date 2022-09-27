@@ -1,5 +1,5 @@
-import { DeployFunction } from "hardhat-deploy/dist/types";
 import { HardhatRuntimeEnvironment } from "hardhat/types";
+import { DeployFunction } from "hardhat-deploy/dist/types";
 
 const logStep = () => {
   console.log(`=== ${__filename} START`);
@@ -12,8 +12,6 @@ const logStepEnd = () => {
 };
 
 const func: DeployFunction = async function ({ deployments, getNamedAccounts }: HardhatRuntimeEnvironment) {
-  logStep();
-
   const { deployer, proxyAdministrator } = await getNamedAccounts();
 
   await deployments.deploy("Withdraw", {
@@ -29,4 +27,17 @@ const func: DeployFunction = async function ({ deployments, getNamedAccounts }: 
 
   logStepEnd();
 };
+
+func.skip = async function ({ deployments, getNamedAccounts }: HardhatRuntimeEnvironment): Promise<boolean> {
+  logStep();
+  try {
+    await deployments.get("Withdraw_Proxy");
+    console.log("Skipping");
+    logStepEnd();
+    return true;
+  } catch (e) {
+    return false;
+  }
+};
+
 export default func;
