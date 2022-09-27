@@ -404,6 +404,7 @@ contract ConsensusLayerDepositManagerV1InvalidDepositContract is Test {
         vm.deal(address(depositManager), 32 ether);
         ConsensusLayerDepositManagerV1ValidKeys(address(depositManager)).sudoSyncBalance();
         vm.expectRevert(abi.encodeWithSignature("ErrorOnDeposit()"));
+        vm.prank(address(0));
         depositManager.depositToConsensusLayer(1);
     }
 }

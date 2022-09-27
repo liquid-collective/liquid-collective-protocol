@@ -21,6 +21,10 @@ contract OperatorsRegistryInitializableV1 is OperatorsRegistryV1 {
     {
         return _pickNextValidatorsFromActiveOperators(_requestedAmount);
     }
+
+    function sudoSetKeys(uint256 _operatorIndex, uint256 _keyCount) external {
+        Operators.setKeys(_operatorIndex, _keyCount);
+    }
 }
 
 contract OperatorsRegistryV1Tests is Test, BytesGenerator {
@@ -48,6 +52,21 @@ contract OperatorsRegistryV1Tests is Test, BytesGenerator {
         operatorsRegistry.initOperatorsRegistryV1(admin, river);
     }
 
+    function testInternalSetKeys(uint256 _nodeOperatorAddressSalt, bytes32 _name, uint256 _keyCount, uint128 _blockRoll)
+        public
+    {
+        address _nodeOperatorAddress = uf._new(_nodeOperatorAddressSalt);
+        vm.startPrank(admin);
+        uint256 operatorIndex = operatorsRegistry.addOperator(string(abi.encodePacked(_name)), _nodeOperatorAddress);
+        Operators.Operator memory newOperator = operatorsRegistry.getOperator(operatorIndex);
+        assert(newOperator.keys == 0);
+        assert(newOperator.latestKeysEditBlockNumber == block.number);
+        vm.roll(block.number + _blockRoll);
+        OperatorsRegistryInitializableV1(address(operatorsRegistry)).sudoSetKeys(0, _keyCount);
+        newOperator = operatorsRegistry.getOperator(operatorIndex);
+        assert(newOperator.keys == _keyCount);
+        assert(newOperator.latestKeysEditBlockNumber == block.number);
+    }
     function testAddNodeOperator(uint256 _nodeOperatorAddressSalt, bytes32 _name) public {
         address _nodeOperatorAddress = uf._new(_nodeOperatorAddressSalt);
         vm.startPrank(admin);
@@ -327,7 +346,9 @@ contract OperatorsRegistryV1Tests is Test, BytesGenerator {
         assert(newOperator.limit == 0);
     }
 
-    event OperatorEditsAfterSnapshot(uint256 _operatorIndex, uint256 _limit, uint256 _lastEdit, uint256 _snapshotBlock);
+    event OperatorEditsAfterSnapshot(
+        uint256 indexed index, uint256 limit, uint256 indexed lastEdit, uint256 indexed snapshotBlock
+    );
 
     function testSetOperatorLimitCountSnapshotTooLow(bytes32 _name, uint256 _firstAddressSalt, uint256 _limit) public {
         address _firstAddress = uf._new(_firstAddressSalt);

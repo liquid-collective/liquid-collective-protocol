@@ -372,7 +372,9 @@ contract RiverV1SetupOneTests is Test, BytesGenerator {
         assert(river.getDepositedValidatorCount() == 0);
         assert(river.totalUnderlyingSupply() == 1100 ether);
 
+        vm.prank(admin);
         river.depositToConsensusLayer(17);
+        vm.prank(admin);
         river.depositToConsensusLayer(17);
 
         Operators.Operator memory op1 = operatorsRegistry.getOperator(operatorOneIndex);
