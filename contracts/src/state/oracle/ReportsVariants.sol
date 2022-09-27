@@ -22,6 +22,7 @@ library ReportsVariants {
 
     /// @notice Structure in storage
     struct Slot {
+        /// @custom:member The list of variants
         uint256[] value;
     }
 

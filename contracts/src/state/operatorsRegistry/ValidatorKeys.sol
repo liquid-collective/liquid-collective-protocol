@@ -23,6 +23,7 @@ library ValidatorKeys {
 
     /// @notice Structure of the Validator Keys in storage
     struct Slot {
+        /// @custom:member The mapping from operator index to key index to key value
         mapping(uint256 => mapping(uint256 => bytes)) value;
     }
 

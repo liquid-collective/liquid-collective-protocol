@@ -9,6 +9,7 @@ library Allowlist {
 
     /// @notice Structure stored in storage slot
     struct Slot {
+        /// @custom:member Mapping keeping track of permissions per account
         mapping(address => uint256) value;
     }
 

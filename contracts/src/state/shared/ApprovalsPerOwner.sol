@@ -10,6 +10,7 @@ library ApprovalsPerOwner {
 
     /// @notice The structure in storage
     struct Slot {
+        /// @custom:member The mapping from an owner to an operator to the approval amount
         mapping(address => mapping(address => uint256)) value;
     }
 

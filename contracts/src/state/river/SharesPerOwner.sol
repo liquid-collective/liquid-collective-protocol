@@ -9,6 +9,7 @@ library SharesPerOwner {
 
     /// @notice Structure in storage
     struct Slot {
+        /// @custom:member The mapping from an owner to its share count
         mapping(address => uint256) value;
     }
 

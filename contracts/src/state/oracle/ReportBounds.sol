@@ -9,12 +9,15 @@ library ReportBounds {
 
     /// @notice The Report Bounds structure
     struct ReportBoundsStruct {
+        /// @custom:member The maximum allowed annual apr, checked on each oracle report submission
         uint256 annualAprUpperBound;
+        /// @custom:member The maximum allowed balance decrease, also checked on each oracle report submission
         uint256 relativeLowerBound;
     }
 
     /// @notice The structure in storage
     struct Slot {
+        /// @custom:member The structure in storage
         ReportBoundsStruct value;
     }
 
