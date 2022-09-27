@@ -309,17 +309,23 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
     }
 
     /// @notice Internal utility to concatenate bytes arrays together
-    /// @return The result of the concatenation
-    function _concatenateByteArrays(bytes[] memory arr1, bytes[] memory arr2) internal pure returns (bytes[] memory) {
-        bytes[] memory res = new bytes[](arr1.length + arr2.length);
-        for (uint256 idx = 0; idx < arr1.length;) {
-            res[idx] = arr1[idx];
+    /// @param _arr1 First array
+    /// @param _arr2 Second array
+    /// @return The result of the concatenation of _arr1 + _arr2
+    function _concatenateByteArrays(bytes[] memory _arr1, bytes[] memory _arr2)
+        internal
+        pure
+        returns (bytes[] memory)
+    {
+        bytes[] memory res = new bytes[](_arr1.length + _arr2.length);
+        for (uint256 idx = 0; idx < _arr1.length;) {
+            res[idx] = _arr1[idx];
             unchecked {
                 ++idx;
             }
         }
-        for (uint256 idx = 0; idx < arr2.length;) {
-            res[idx + arr1.length] = arr2[idx];
+        for (uint256 idx = 0; idx < _arr2.length;) {
+            res[idx + _arr1.length] = _arr2[idx];
             unchecked {
                 ++idx;
             }
@@ -328,18 +334,20 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
     }
 
     /// @notice Internal utility to verify if an operator has fundable keys during the selection process
+    /// @param _operator The Operator structure in memory
     /// @return True if at least one fundable key is available
     function _hasFundableKeys(Operators.CachedOperator memory _operator) internal pure returns (bool) {
         return (_operator.funded + _operator.picked) < _operator.limit;
     }
 
     /// @notice Internal utility to get the count of active validators during the selection process
+    /// @param _operator The Operator structure in memory
     /// @return The count of active validators for the operator
     function _getActiveKeyCount(Operators.CachedOperator memory _operator) internal pure returns (uint256) {
         return (_operator.funded + _operator.picked) - _operator.stopped;
     }
 
-    /// @notice Internal utility to retrieve _requestedAmount or lower fundable keys
+    /// @notice Internal utility to retrieve _count or lower fundable keys
     /// @dev The selection process starts by retrieving the full list of active operators with at least one fundable key.
     /// @dev
     /// @dev An operator is considered to have at least one fundable key when their staking limit is higher than their funded key count.
@@ -351,7 +359,8 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
     /// @dev
     /// @dev    activeValidatorCount = operator.funded - operator.stopped
     /// @dev
-    /// @dev During the selection process, we keep in memory all previously selected operators and the number of given validators inside a picked field.
+    /// @dev During the selection process, we keep in memory all previously selected operators and the number of given validators inside a field
+    /// @dev called picked that only exists on the CachedOperator structure in memory.
     /// @dev
     /// @dev    isFundable = operator.active && operator.limit > (operator.funded + operator.picked)
     /// @dev    activeValidatorCount = (operator.funded + operator.picked) - operator.stopped
