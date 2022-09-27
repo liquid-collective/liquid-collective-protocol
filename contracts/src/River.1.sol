@@ -76,7 +76,6 @@ contract RiverV1 is
     Administrable,
     IRiverV1
 {
-
     /// @notice The mask for the deposit right
     uint256 internal constant DEPOSIT_MASK = 0x1;
 

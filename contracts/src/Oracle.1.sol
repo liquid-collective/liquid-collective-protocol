@@ -19,7 +19,6 @@ import "./state/oracle/ReportsVariants.sol";
 /// @author Kiln
 /// @notice This contract handles the input from the allowed oracle members. Highly inspired by Lido's implementation.
 contract OracleV1 is IOracleV1, Initializable, Administrable {
-
     /// @notice One Year value
     uint256 internal constant ONE_YEAR = 365 days;
 
