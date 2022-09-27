@@ -155,15 +155,17 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
         for (uint256 idx = 0; idx < _operatorIndexes.length;) {
             Operators.Operator storage operator = Operators.get(_operatorIndexes[idx]);
             if (_newLimits[idx] > operator.keys) {
-                revert OperatorLimitTooHigh(_newLimits[idx], operator.keys);
+                revert OperatorLimitTooHigh(_operatorIndexes[idx], _newLimits[idx], operator.keys);
             }
 
             if (_newLimits[idx] < operator.funded) {
-                revert OperatorLimitTooLow(_newLimits[idx], operator.funded);
+                revert OperatorLimitTooLow(_operatorIndexes[idx], _newLimits[idx], operator.funded);
             }
 
-            if (_snapshotBlock < operator.lastEdit) {
-                emit FailedSetOperatorLimit(_operatorIndexes[idx], _newLimits[idx], operator.lastEdit, _snapshotBlock);
+            if (_snapshotBlock < operator.lastEdit && _newLimits[idx] > operator.funded) {
+                emit OperatorEditsAfterSnapshot(
+                    _operatorIndexes[idx], _newLimits[idx], operator.lastEdit, _snapshotBlock
+                    );
             } else {
                 operator.limit = _newLimits[idx];
                 emit SetOperatorLimit(_operatorIndexes[idx], operator.limit);

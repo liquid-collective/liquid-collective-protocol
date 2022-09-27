@@ -300,7 +300,9 @@ contract RiverV1SetupOneTests is Test, BytesGenerator {
         assert(river.getDepositedValidatorCount() == 0);
         assert(river.totalUnderlyingSupply() == 1100 ether);
 
+        vm.prank(admin);
         river.depositToConsensusLayer(17);
+        vm.prank(admin);
         river.depositToConsensusLayer(17);
 
         Operators.Operator memory op1 = operatorsRegistry.getOperator(operatorOneIndex);
@@ -434,7 +436,9 @@ contract RiverV1SetupOneTests is Test, BytesGenerator {
         assert(river.getDepositedValidatorCount() == 0);
         assert(river.totalUnderlyingSupply() == 1100 ether);
 
+        vm.prank(admin);
         river.depositToConsensusLayer(17);
+        vm.prank(admin);
         river.depositToConsensusLayer(17);
 
         Operators.Operator memory op1 = operatorsRegistry.getOperator(operatorOneIndex);
@@ -486,7 +490,9 @@ contract RiverV1SetupOneTests is Test, BytesGenerator {
         assert(river.getDepositedValidatorCount() == 0);
         assert(river.totalUnderlyingSupply() == 1100 ether);
 
+        vm.prank(admin);
         river.depositToConsensusLayer(17);
+        vm.prank(admin);
         river.depositToConsensusLayer(17);
 
         Operators.Operator memory op1 = operatorsRegistry.getOperator(operatorOneIndex);
@@ -544,7 +550,9 @@ contract RiverV1SetupOneTests is Test, BytesGenerator {
         assert(river.getDepositedValidatorCount() == 0);
         assert(river.totalUnderlyingSupply() == 1100 ether);
 
+        vm.prank(admin);
         river.depositToConsensusLayer(17);
+        vm.prank(admin);
         river.depositToConsensusLayer(17);
 
         Operators.Operator memory op1 = operatorsRegistry.getOperator(operatorOneIndex);
@@ -610,7 +618,9 @@ contract RiverV1SetupOneTests is Test, BytesGenerator {
         assert(river.getDepositedValidatorCount() == 0);
         assert(river.totalUnderlyingSupply() == 1100 ether);
 
+        vm.prank(admin);
         river.depositToConsensusLayer(17);
+        vm.prank(admin);
         river.depositToConsensusLayer(17);
 
         Operators.Operator memory op1 = operatorsRegistry.getOperator(operatorOneIndex);
@@ -680,7 +690,9 @@ contract RiverV1SetupOneTests is Test, BytesGenerator {
         assert(river.getDepositedValidatorCount() == 0);
         assert(river.totalUnderlyingSupply() == 1100 ether);
 
+        vm.prank(admin);
         river.depositToConsensusLayer(17);
+        vm.prank(admin);
         river.depositToConsensusLayer(17);
 
         Operators.Operator memory op1 = operatorsRegistry.getOperator(operatorOneIndex);
@@ -751,7 +763,9 @@ contract RiverV1SetupOneTests is Test, BytesGenerator {
         assert(river.getDepositedValidatorCount() == 0);
         assert(river.totalUnderlyingSupply() == 1100 ether);
 
+        vm.prank(admin);
         river.depositToConsensusLayer(17);
+        vm.prank(admin);
         river.depositToConsensusLayer(17);
 
         Operators.Operator memory op1 = operatorsRegistry.getOperator(operatorOneIndex);
@@ -823,7 +837,9 @@ contract RiverV1SetupOneTests is Test, BytesGenerator {
         assert(river.getDepositedValidatorCount() == 0);
         assert(river.totalUnderlyingSupply() == 1100 ether);
 
+        vm.prank(admin);
         river.depositToConsensusLayer(17);
+        vm.prank(admin);
         river.depositToConsensusLayer(17);
 
         Operators.Operator memory op1 = operatorsRegistry.getOperator(operatorOneIndex);
@@ -894,7 +910,9 @@ contract RiverV1SetupOneTests is Test, BytesGenerator {
         assert(river.getDepositedValidatorCount() == 0);
         assert(river.totalUnderlyingSupply() == 1100 ether);
 
+        vm.prank(admin);
         river.depositToConsensusLayer(17);
+        vm.prank(admin);
         river.depositToConsensusLayer(17);
 
         Operators.Operator memory op1 = operatorsRegistry.getOperator(operatorOneIndex);
@@ -974,7 +992,9 @@ contract RiverV1SetupOneTests is Test, BytesGenerator {
         assert(river.getDepositedValidatorCount() == 0);
         assert(river.totalUnderlyingSupply() == 1100 ether);
 
+        vm.prank(admin);
         river.depositToConsensusLayer(17);
+        vm.prank(admin);
         river.depositToConsensusLayer(17);
 
         Operators.Operator memory op1 = operatorsRegistry.getOperator(operatorOneIndex);
@@ -1027,7 +1047,9 @@ contract RiverV1SetupOneTests is Test, BytesGenerator {
         assert(river.getDepositedValidatorCount() == 0);
         assert(river.totalUnderlyingSupply() == 1100 ether);
 
+        vm.prank(admin);
         river.depositToConsensusLayer(17);
+        vm.prank(admin);
         river.depositToConsensusLayer(17);
 
         Operators.Operator memory op1 = operatorsRegistry.getOperator(operatorOneIndex);
@@ -1094,7 +1116,9 @@ contract RiverV1SetupOneTests is Test, BytesGenerator {
         assert(river.getDepositedValidatorCount() == 0);
         assert(river.totalUnderlyingSupply() == 1100 ether);
 
+        vm.prank(admin);
         river.depositToConsensusLayer(17);
+        vm.prank(admin);
         river.depositToConsensusLayer(17);
 
         Operators.Operator memory op1 = operatorsRegistry.getOperator(operatorOneIndex);
@@ -1158,8 +1182,11 @@ contract RiverV1SetupOneTests is Test, BytesGenerator {
         assert(river.getDepositedValidatorCount() == 0);
         assert(river.totalUnderlyingSupply() == 1100 ether);
 
+        vm.prank(admin);
         river.depositToConsensusLayer(1);
+        vm.prank(admin);
         river.depositToConsensusLayer(2);
+        vm.prank(admin);
         river.depositToConsensusLayer(31);
 
         Operators.Operator memory op1 = operatorsRegistry.getOperator(operatorOneIndex);
@@ -1222,10 +1249,12 @@ contract RiverV1SetupOneTests is Test, BytesGenerator {
         assert(river.getDepositedValidatorCount() == 0);
         assert(river.totalUnderlyingSupply() == 1100 ether);
 
+        vm.prank(admin);
         river.depositToConsensusLayer(20);
         vm.startPrank(admin);
         operatorsRegistry.setOperatorStoppedValidatorCount(operatorOneIndex, 10);
         vm.stopPrank();
+        vm.prank(admin);
         river.depositToConsensusLayer(10);
 
         Operators.Operator memory op1 = operatorsRegistry.getOperator(operatorOneIndex);
@@ -1307,6 +1336,7 @@ contract RiverV1SetupOneTests is Test, BytesGenerator {
                 op1Validator = realValidatorCount;
             }
 
+            vm.prank(admin);
             river.depositToConsensusLayer(realValidatorCount);
 
             Operators.Operator memory op1 = operatorsRegistry.getOperator(operatorOneIndex);
@@ -1335,6 +1365,7 @@ contract RiverV1SetupOneTests is Test, BytesGenerator {
                     == uint256(joeBalance) + uint256(bobBalance) + (realValidatorCount * increasePerValidator * 1e9)
             );
         } else {
+            vm.prank(admin);
             vm.expectRevert(abi.encodeWithSignature("NotEnoughFunds()"));
             river.depositToConsensusLayer(1);
         }
@@ -1368,6 +1399,7 @@ contract RiverV1SetupOneTests is Test, BytesGenerator {
         vm.prank(joe);
         river.deposit{value: 32 ether * uint256(_initialValidatorCount)}();
 
+        vm.prank(admin);
         river.depositToConsensusLayer(_initialValidatorCount);
 
         uint64 totalBalanceReported = uint64((32 ether * uint256(_initialValidatorCount)) / 1 gwei);
@@ -1464,6 +1496,7 @@ contract RiverV1SetupOneTests is Test, BytesGenerator {
         vm.prank(joe);
         river.deposit{value: 32 ether * uint256(_initialValidatorCount)}();
 
+        vm.prank(admin);
         river.depositToConsensusLayer(_initialValidatorCount);
 
         uint64 totalBalanceReported = uint64((32 ether * uint256(_initialValidatorCount)) / 1 gwei);

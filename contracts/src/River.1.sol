@@ -139,7 +139,12 @@ contract RiverV1 is
         }
     }
 
-    function _getRiverAdmin() internal view override (OracleManagerV1) returns (address) {
+    function _getRiverAdmin()
+        internal
+        view
+        override (OracleManagerV1, ConsensusLayerDepositManagerV1)
+        returns (address)
+    {
         return Administrable._getAdmin();
     }
 

@@ -14,8 +14,8 @@ interface IOperatorsRegistryV1 {
     error InvalidPublicKeysLength();
     error InvalidSignatureLength();
     error InvalidIndexOutOfBounds();
-    error OperatorLimitTooHigh(uint256 limit, uint256 keyCount);
-    error OperatorLimitTooLow(uint256 limit, uint256 fundedKeyCount);
+    error OperatorLimitTooHigh(uint256 index, uint256 limit, uint256 keyCount);
+    error OperatorLimitTooLow(uint256 index, uint256 limit, uint256 fundedKeyCount);
 
     event AddedOperator(uint256 indexed index, string name, address indexed operatorAddress);
     event SetOperatorStatus(uint256 indexed index, bool active);
@@ -26,7 +26,7 @@ interface IOperatorsRegistryV1 {
     event AddedValidatorKeys(uint256 indexed index, bytes publicKeysAndSignatures);
     event RemovedValidatorKey(uint256 indexed index, bytes publicKey);
     event SetRiver(address indexed river);
-    event FailedSetOperatorLimit(uint256 _operatorIndex, uint256 _limit, uint256 _lastEdit, uint256 _snapshotBlock);
+    event OperatorEditsAfterSnapshot(uint256 _operatorIndex, uint256 _limit, uint256 _lastEdit, uint256 _snapshotBlock);
 
     function initOperatorsRegistryV1(address _admin, address _river) external;
     function listActiveOperators() external view returns (Operators.Operator[] memory);

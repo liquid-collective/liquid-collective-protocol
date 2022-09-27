@@ -83,7 +83,7 @@ contract OperatorsRegistryV1Tests is Test, BytesGenerator {
         indexes[0] = 0;
         uint256[] memory limits = new uint256[](1);
         limits[0] = 1;
-        vm.expectRevert(abi.encodeWithSignature("OperatorLimitTooHigh(uint256,uint256)", 1, 0));
+        vm.expectRevert(abi.encodeWithSignature("OperatorLimitTooHigh(uint256,uint256,uint256)", 0, 1, 0));
         operatorsRegistry.setOperatorLimits(indexes, limits, block.number);
         vm.stopPrank();
     }
@@ -104,7 +104,7 @@ contract OperatorsRegistryV1Tests is Test, BytesGenerator {
         operatorsRegistry.setOperatorLimits(indexes, limits, block.number);
         OperatorsRegistryInitializableV1(address(operatorsRegistry)).sudoSetFunded(0, 1);
         limits[0] = 0;
-        vm.expectRevert(abi.encodeWithSignature("OperatorLimitTooLow(uint256,uint256)", 0, 1));
+        vm.expectRevert(abi.encodeWithSignature("OperatorLimitTooLow(uint256,uint256,uint256)", 0, 0, 1));
         operatorsRegistry.setOperatorLimits(indexes, limits, block.number);
         vm.stopPrank();
     }
@@ -327,11 +327,11 @@ contract OperatorsRegistryV1Tests is Test, BytesGenerator {
         assert(newOperator.limit == 0);
     }
 
-    event FailedSetOperatorLimit(uint256 _operatorIndex, uint256 _limit, uint256 _lastEdit, uint256 _snapshotBlock);
+    event OperatorEditsAfterSnapshot(uint256 _operatorIndex, uint256 _limit, uint256 _lastEdit, uint256 _snapshotBlock);
 
     function testSetOperatorLimitCountSnapshotTooLow(bytes32 _name, uint256 _firstAddressSalt, uint256 _limit) public {
         address _firstAddress = uf._new(_firstAddressSalt);
-        _limit = _limit % 11; // 10 is max
+        _limit = 1 + _limit % 10; // 10 is max, 1 is min
         vm.startPrank(admin);
         uint256 index = operatorsRegistry.addOperator(string(abi.encodePacked(_name)), _firstAddress);
 
@@ -349,7 +349,34 @@ contract OperatorsRegistryV1Tests is Test, BytesGenerator {
         uint256[] memory operatorLimits = new uint256[](1);
         operatorLimits[0] = _limit;
         vm.expectEmit(true, true, true, true);
-        emit FailedSetOperatorLimit(index, _limit, bn, bn - 1);
+        emit OperatorEditsAfterSnapshot(index, _limit, bn, bn - 1);
+        operatorsRegistry.setOperatorLimits(operatorIndexes, operatorLimits, bn - 1);
+        newOperator = operatorsRegistry.getOperator(index);
+        assert(newOperator.limit == 0);
+    }
+
+    event SetOperatorLimit(uint256 indexed index, uint256 newLimit);
+
+    function testSetOperatorLimitToFundedCountSnapshotTooLow(bytes32 _name, uint256 _firstAddressSalt) public {
+        address _firstAddress = uf._new(_firstAddressSalt);
+        vm.startPrank(admin);
+        uint256 index = operatorsRegistry.addOperator(string(abi.encodePacked(_name)), _firstAddress);
+
+        bytes memory tenKeys = genBytes((48 + 96) * 10);
+
+        uint256 bn = 1_000_000;
+        vm.roll(bn);
+
+        operatorsRegistry.addValidators(index, 10, tenKeys);
+
+        Operators.Operator memory newOperator = operatorsRegistry.getOperator(index);
+        assert(newOperator.limit == 0);
+        uint256[] memory operatorIndexes = new uint256[](1);
+        operatorIndexes[0] = index;
+        uint256[] memory operatorLimits = new uint256[](1);
+        operatorLimits[0] = 0;
+        vm.expectEmit(true, true, true, true);
+        emit SetOperatorLimit(index, 0);
         operatorsRegistry.setOperatorLimits(operatorIndexes, operatorLimits, bn - 1);
         newOperator = operatorsRegistry.getOperator(index);
         assert(newOperator.limit == 0);
