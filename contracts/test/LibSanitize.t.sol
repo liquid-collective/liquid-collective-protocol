@@ -49,11 +49,11 @@ contract SanitizeTest is Test {
 
     function testSetFeeTooHigh() external {
         vm.expectRevert(abi.encodeWithSignature("InvalidFee()"));
-        si.setFee(100001);
+        si.setFee(10001);
     }
 
     function testSetValidFee() external view {
-        uint256 validFee = 100000;
+        uint256 validFee = 10000;
         si.setFee(validFee);
     }
 }

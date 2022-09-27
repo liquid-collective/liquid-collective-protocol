@@ -19,7 +19,6 @@ import "./state/oracle/ReportsVariants.sol";
 /// @author Kiln
 /// @notice This contract handles the input from the allowed oracle members. Highly inspired by Lido's implementation.
 contract OracleV1 is IOracleV1, Initializable, Administrable {
-    uint256 internal constant BASIS_POINTS_MAX = 10_000;
     uint256 internal constant ONE_YEAR = 365 days;
 
     /// @notice Received ETH input has only 9 decimals
@@ -436,7 +435,7 @@ contract OracleV1 is IOracleV1, Initializable, Administrable {
             uint256 annualAprUpperBound = ReportBounds.get().annualAprUpperBound;
             // check that annualRelativeIncreaseBp <= allowedAnnualRelativeIncreaseBp
             if (
-                BASIS_POINTS_MAX * ONE_YEAR * (_postTotalEth - _prevTotalEth)
+                LibBasisPoints.BASIS_POINTS_MAX * ONE_YEAR * (_postTotalEth - _prevTotalEth)
                     > annualAprUpperBound * _prevTotalEth * _timeElapsed
             ) {
                 revert TotalValidatorBalanceIncreaseOutOfBound(
@@ -449,7 +448,8 @@ contract OracleV1 is IOracleV1, Initializable, Administrable {
             // relativeDecreaseBp = relativeDecrease * 10000, in basis points 0.01% (1e-4)
             uint256 relativeLowerBound = ReportBounds.get().relativeLowerBound;
             // check that relativeDecreaseBp <= allowedRelativeDecreaseBp
-            if (BASIS_POINTS_MAX * (_prevTotalEth - _postTotalEth) > relativeLowerBound * _prevTotalEth) {
+            if (LibBasisPoints.BASIS_POINTS_MAX * (_prevTotalEth - _postTotalEth) > relativeLowerBound * _prevTotalEth)
+            {
                 revert TotalValidatorBalanceDecreaseOutOfBound(
                     _prevTotalEth, _postTotalEth, _timeElapsed, relativeLowerBound
                 );

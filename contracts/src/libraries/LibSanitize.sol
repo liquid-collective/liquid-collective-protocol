@@ -2,6 +2,7 @@
 pragma solidity 0.8.10;
 
 import "./LibErrors.sol";
+import "./LibBasisPoints.sol";
 
 library LibSanitize {
     function _notZeroAddress(address _address) internal pure {
@@ -17,7 +18,7 @@ library LibSanitize {
     }
 
     function _validFee(uint256 _fee) internal pure {
-        if (_fee > 100000) {
+        if (_fee > LibBasisPoints.BASIS_POINTS_MAX) {
             revert LibErrors.InvalidFee();
         }
     }
