@@ -6,7 +6,7 @@ interface IELFeeRecipientV1 {
     /// @param river The new river address
     event SetRiver(address indexed river);
 
-    /// @notice The fallback has been triggered with calldata
+    /// @notice The fallback has been triggered
     error InvalidCall();
 
     /// @notice Initialize the fee recipient with the required arguments
