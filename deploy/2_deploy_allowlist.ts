@@ -29,18 +29,21 @@ const func: DeployFunction = async function ({ deployments, getNamedAccounts, et
   const allowlistArtifact = await deployments.getArtifact("AllowlistV1");
   const allowlistInterface = new ethers.utils.Interface(allowlistArtifact.abi);
 
-  const firewallDeployment = await deployments.deploy("Firewall", {
+  const firewallDeployment = await deployments.deploy("AllowlistFirewall", {
+    contract: "Firewall",
     from: deployer,
     log: true,
     args: [systemAdministrator, systemAdministrator, futureAllowlistAddress, [allowlistInterface.getSighash("allow")]],
   });
 
-  const allowlistDeployment = await deployments.deploy("AllowlistV1", {
+  const allowlistDeployment = await deployments.deploy("Allowlist", {
+    contract: "AllowlistV1",
     from: deployer,
     log: true,
     proxy: {
       owner: proxyAdministrator,
       proxyContract: "TUPProxy",
+      implementationName: "AllowlistV1_Implementation",
       execute: {
         methodName: "initAllowlistV1",
         args: [firewallDeployment.address, firewallDeployment.address],

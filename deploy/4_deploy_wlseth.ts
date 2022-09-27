@@ -21,12 +21,14 @@ const func: DeployFunction = async function ({
 
   const { deployer, proxyAdministrator } = await getNamedAccounts();
 
-  const riverDeployment = await deployments.get("RiverV1");
+  const riverDeployment = await deployments.get("River");
 
-  await deployments.deploy("WLSETHV1", {
+  await deployments.deploy("WLSETH", {
+    contract: "WLSETHV1",
     from: deployer,
     log: true,
     proxy: {
+      implementationName: "WLSETHV1_Implementation",
       owner: proxyAdministrator,
       proxyContract: "TUPProxy",
       execute: {

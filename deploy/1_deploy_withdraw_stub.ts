@@ -16,12 +16,14 @@ const func: DeployFunction = async function ({ deployments, getNamedAccounts }: 
 
   const { deployer, proxyAdministrator } = await getNamedAccounts();
 
-  await deployments.deploy("WithdrawV1", {
+  await deployments.deploy("Withdraw", {
+    contract: "WithdrawV1",
     from: deployer,
     log: true,
     proxy: {
       owner: proxyAdministrator,
       proxyContract: "TUPProxy",
+      implementationName: "WithdrawV1_Implementation",
     },
   });
 
