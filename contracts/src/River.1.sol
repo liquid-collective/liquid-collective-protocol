@@ -212,10 +212,11 @@ contract RiverV1 is
         uint256 sharesToMint = denominator == 0 ? 0 : (numerator / denominator);
 
         if (sharesToMint > 0) {
-            _mintRawShares(CollectorAddress.get(), sharesToMint);
+            address collector = CollectorAddress.get();
+            _mintRawShares(collector, sharesToMint);
             uint256 newTotalSupply = _totalSupply();
             uint256 oldTotalBalance = currentTotalBalance - _amount;
-            emit RewardsEarned(oldTotalBalance, currentTotalSupply, currentTotalBalance, newTotalSupply);
+            emit RewardsEarned(collector, oldTotalBalance, currentTotalSupply, currentTotalBalance, newTotalSupply);
         }
     }
 

@@ -345,6 +345,7 @@ contract RiverV1SetupOneTests is Test, BytesGenerator {
     }
 
     event RewardsEarned(
+        address indexed _collector,
         uint256 _oldTotalUnderylyingBalance,
         uint256 _oldTotalSupply,
         uint256 _newTotalUnderlyingBalance,
@@ -387,7 +388,7 @@ contract RiverV1SetupOneTests is Test, BytesGenerator {
         vm.startPrank(oracleMember);
         (uint256 epoch,,) = oracle.getCurrentFrame();
         vm.expectEmit(true, true, true, true);
-        emit RewardsEarned(1100 ether, 1100 ether, 1134 ether, 1101651505784686037269);
+        emit RewardsEarned(collector, 1100 ether, 1100 ether, 1134 ether, 1101651505784686037269);
         oracle.reportConsensusLayerData(epoch, 33 * 1e9 * 34, 34);
         vm.stopPrank();
 
