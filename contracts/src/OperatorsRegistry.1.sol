@@ -72,7 +72,7 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
             funded: 0,
             keys: 0,
             stopped: 0,
-            lastEdit: block.number
+            latestKeysEditBlockNumber: block.number
         });
 
         uint256 operatorIndex = Operators.push(newOperator) - 1;
@@ -162,9 +162,9 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
                 revert OperatorLimitTooLow(_operatorIndexes[idx], _newLimits[idx], operator.funded);
             }
 
-            if (_snapshotBlock < operator.lastEdit && _newLimits[idx] > operator.funded) {
+            if (_snapshotBlock < operator.latestKeysEditBlockNumber && _newLimits[idx] > operator.funded) {
                 emit OperatorEditsAfterSnapshot(
-                    _operatorIndexes[idx], _newLimits[idx], operator.lastEdit, _snapshotBlock
+                    _operatorIndexes[idx], _newLimits[idx], operator.latestKeysEditBlockNumber, _snapshotBlock
                     );
             } else {
                 operator.limit = _newLimits[idx];
@@ -212,9 +212,7 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
                 ++idx;
             }
         }
-
-        operator.keys += _keyCount;
-        operator.lastEdit = block.number;
+        Operators.setKeys(_index, operator.keys + _keyCount);
 
         emit AddedValidatorKeys(_index, _publicKeysAndSignatures);
     }
@@ -246,7 +244,7 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
         }
 
         bool limitEqualsKeyCount = operator.keys == operator.limit;
-        operator.keys = totalKeys - indexesLength;
+        Operators.setKeys(_index, totalKeys - indexesLength);
 
         uint256 idx;
         for (; idx < indexesLength;) {
@@ -275,8 +273,6 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
         } else if (lastIndex < operator.limit) {
             operator.limit = lastIndex;
         }
-
-        operator.lastEdit = block.number;
     }
 
     /// @notice Get operator details
