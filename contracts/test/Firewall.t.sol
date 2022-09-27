@@ -17,7 +17,7 @@ import "../src/Oracle.1.sol";
 import "../src/OperatorsRegistry.1.sol";
 import "../src/ELFeeRecipient.1.sol";
 
-contract FirewallTests is BytesGenerator {
+contract FirewallTests is BytesGenerator, Test {
     AllowlistV1 internal allowlist;
 
     ELFeeRecipientV1 internal elFeeRecipient;
@@ -54,8 +54,6 @@ contract FirewallTests is BytesGenerator {
     uint64 internal constant GENESIS_TIME = 1606824023;
     uint256 internal constant UPPER_BOUND = 1000;
     uint256 internal constant LOWER_BOUND = 500;
-
-    Vm internal vm = Vm(0x7109709ECfa91a80626fF3989D68f67F5b1DD12D);
 
     bytes internal unauthJoe = abi.encodeWithSignature("Unauthorized(address)", joe);
     bytes internal unauthExecutor = abi.encodeWithSignature("Unauthorized(address)", executor);
