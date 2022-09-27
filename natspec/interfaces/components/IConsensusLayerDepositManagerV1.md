@@ -26,6 +26,23 @@ Deposits current balance to the Consensus Layer by batches of 32 ETH
 |---|---|---|
 | _maxCount | uint256 | The maximum amount of validator keys to fund |
 
+### getBalanceToDeposit
+
+```solidity
+function getBalanceToDeposit() external view returns (uint256)
+```
+
+Returns the amount of pending ETH
+
+
+
+
+#### Returns
+
+| Name | Type | Description |
+|---|---|---|
+| _0 | uint256 | The amount of pending eth |
+
 ### getDepositedValidatorCount
 
 ```solidity

@@ -421,7 +421,7 @@ Invalid transfer recipients
 
 | Name | Type | Description |
 |---|---|---|
-| _from | address | undefined |
-| _to | address | undefined |
+| _from | address | Account sending the funds in the invalid transfer |
+| _to | address | Account receiving the funds in the invalid transfer |
 
 

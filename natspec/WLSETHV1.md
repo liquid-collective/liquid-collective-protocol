@@ -84,7 +84,7 @@ Retrieves the token balance of the specified user
 function burn(address _recipient, uint256 _shares) external nonpayable
 ```
 
-Burn tokens and retrieve underlying River tokens
+Burn tokens and retrieve underlying LsETH tokens
 
 *Burned tokens are sent to recipient but are minted from the message sender balanceNo approval required from the message sender*
 
@@ -180,9 +180,9 @@ Initializes the wrapped token contract
 function mint(address _recipient, uint256 _value) external nonpayable
 ```
 
-Mint tokens by providing River tokens
+Mint tokens by providing LsETH tokens
 
-*Minted tokens are sent to recipient but are minted from the message sender balanceIt is expected that the message sender approves _value amount of River token tothis contract before calling*
+*Minted tokens are sent to recipient but are minted from the message sender balanceIt is expected that the message sender approves _value amount of LsETH token tothis contract before calling*
 
 #### Parameters
 
@@ -497,7 +497,7 @@ Invalid empty transfer
 error TokenTransferError()
 ```
 
-The token transfer failed during the minting process
+The token transfer failed during the minting or burning process
 
 
 
@@ -516,7 +516,7 @@ Invalid transfer recipients
 
 | Name | Type | Description |
 |---|---|---|
-| _from | address | undefined |
-| _to | address | undefined |
+| _from | address | Account sending the funds in the invalid transfer |
+| _to | address | Account receiving the funds in the invalid transfer |
 
 

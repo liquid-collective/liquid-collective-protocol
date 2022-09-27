@@ -399,7 +399,7 @@ function proposeAdmin(address _newAdmin) external nonpayable
 
 Proposes a new address as admin
 
-*This security prevents setting and invalid address as an admin. The pendingadmin has to claim its ownership of the contract, and proves that the newaddress is able to perform regular transactions.*
+*This security prevents setting an invalid address as an admin. The pendingadmin has to claim its ownership of the contract, and proves that the newaddress is able to perform regular transactions.*
 
 #### Parameters
 
@@ -432,7 +432,7 @@ function reportConsensusLayerData(uint256 _epochId, uint64 _clValidatorsBalance,
 
 Report cl chain data
 
-*Only callable by an oracle memberThe epoch id is expected to be &gt;= to the expected epoch id stored in the contractThe epoch id is expected to be the first epoch of its frame*
+*Only callable by an oracle memberThe epoch id is expected to be &gt;= to the expected epoch id stored in the contractThe epoch id is expected to be the first epoch of its frameThe Consensus Layer Validator count is the amount of running validators managed by River.Until withdrawals are enabled, this count also takes into account any exited and slashed validatoras funds are still locked on the consensus layer.*
 
 #### Parameters
 
@@ -699,6 +699,22 @@ The storage quorum value has been changed
 | Name | Type | Description |
 |---|---|---|
 | newQuorum  | uint256 | undefined |
+
+### SetRiver
+
+```solidity
+event SetRiver(address _river)
+```
+
+The storage river address value has been changed
+
+
+
+#### Parameters
+
+| Name | Type | Description |
+|---|---|---|
+| _river  | address | undefined |
 
 ### SetSpec
 

@@ -221,7 +221,7 @@ function proposeAdmin(address _newAdmin) external nonpayable
 
 Proposes a new address as admin
 
-*This security prevents setting and invalid address as an admin. The pendingadmin has to claim its ownership of the contract, and proves that the newaddress is able to perform regular transactions.*
+*This security prevents setting an invalid address as an admin. The pendingadmin has to claim its ownership of the contract, and proves that the newaddress is able to perform regular transactions.*
 
 #### Parameters
 
@@ -288,7 +288,7 @@ The admin address changed
 event SetAllower(address indexed allower)
 ```
 
-The stored allowe address has been changed
+The stored allowee address has been changed
 
 
 
@@ -304,7 +304,7 @@ The stored allowe address has been changed
 event SetAllowlistPermissions(address[] indexed accounts, uint256[] permissions)
 ```
 
-Change the permissions of several accounts
+The permissions of several accounts have changed
 
 
 
@@ -396,7 +396,7 @@ The address is zero
 error MismatchedAlloweeAndStatusCount()
 ```
 
-The provided accounts and permissions list have different lengthg
+The provided accounts and permissions list have different lengths
 
 
 

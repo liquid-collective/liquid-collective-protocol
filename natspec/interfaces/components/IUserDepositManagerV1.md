@@ -37,23 +37,6 @@ Explicit deposit method to mint on msg.sender and transfer to _recipient
 |---|---|---|
 | _recipient | address | Address receiving the minted lsETH |
 
-### getPendingEth
-
-```solidity
-function getPendingEth() external view returns (uint256)
-```
-
-Returns the amount of pending ETH
-
-
-
-
-#### Returns
-
-| Name | Type | Description |
-|---|---|---|
-| _0 | uint256 | The amount of pending eth |
-
 
 
 ## Events

@@ -10,23 +10,6 @@ This contract merges all the manager contracts and implements all the virtual me
 
 ## Methods
 
-### BASE
-
-```solidity
-function BASE() external view returns (uint256)
-```
-
-Max Basis Points value
-
-
-
-
-#### Returns
-
-| Name | Type | Description |
-|---|---|---|
-| _0 | uint256 | undefined |
-
 ### DEPOSIT_SIZE
 
 ```solidity
@@ -296,6 +279,23 @@ Retrieve the allowlist address
 |---|---|---|
 | _0 | address | The allowlist address |
 
+### getBalanceToDeposit
+
+```solidity
+function getBalanceToDeposit() external view returns (uint256)
+```
+
+Returns the amount of pending ETH
+
+
+
+
+#### Returns
+
+| Name | Type | Description |
+|---|---|---|
+| _0 | uint256 | The amount of pending eth |
+
 ### getCLValidatorCount
 
 ```solidity
@@ -432,23 +432,6 @@ Retrieve the current pending admin address
 |---|---|---|
 | _0 | address | The pending admin address |
 
-### getPendingEth
-
-```solidity
-function getPendingEth() external view returns (uint256)
-```
-
-Returns the amount of pending ETH
-
-
-
-
-#### Returns
-
-| Name | Type | Description |
-|---|---|---|
-| _0 | uint256 | The amount of pending eth |
-
 ### getWithdrawalCredentials
 
 ```solidity
@@ -506,11 +489,11 @@ Initializes the River system
 | _depositContractAddress | address | Address to make Consensus Layer deposits |
 | _elFeeRecipientAddress | address | Address that receives the execution layer fees |
 | _withdrawalCredentials | bytes32 | Credentials to use for every validator deposit |
-| _oracleAddress | address | undefined |
+| _oracleAddress | address | The address of the Oracle contract |
 | _systemAdministratorAddress | address | Administrator address |
 | _allowlistAddress | address | Address of the allowlist contract |
 | _operatorRegistryAddress | address | Address of the operator registry |
-| _collectorAddress | address | Address receiving the fee minus the operator share |
+| _collectorAddress | address | Address receiving the the global fee on revenue |
 | _globalFee | uint256 | Amount retained when the eth balance increases, splitted between the collector and the operators |
 
 ### name
@@ -538,7 +521,7 @@ function proposeAdmin(address _newAdmin) external nonpayable
 
 Proposes a new address as admin
 
-*This security prevents setting and invalid address as an admin. The pendingadmin has to claim its ownership of the contract, and proves that the newaddress is able to perform regular transactions.*
+*This security prevents setting an invalid address as an admin. The pendingadmin has to claim its ownership of the contract, and proves that the newaddress is able to perform regular transactions.*
 
 #### Parameters
 
@@ -592,12 +575,12 @@ Changes the collector address
 ### setConsensusLayerData
 
 ```solidity
-function setConsensusLayerData(uint256 _validatorCount, uint256 _validatorTotalBalance, bytes32 _roundId) external nonpayable
+function setConsensusLayerData(uint256 _validatorCount, uint256 _validatorTotalBalance, bytes32 _roundId, uint256 _maxIncrease) external nonpayable
 ```
 
-Sets the validator count and validator balance sum reported by the oracle
+Sets the validator count and validator total balance sum reported by the oracle
 
-*Can only be called by the oracle addressThe round id is a blackbox value that should only be used to identify unique reports*
+*Can only be called by the oracle addressThe round id is a blackbox value that should only be used to identify unique reportsWhen a report is performed, River computes the amount of fees that can be pulledfrom the execution layer fee recipient. This amount is capped by the max allowedincrease provided during the report.If the total asset balance increases (from the reported total balance and the pulled funds)we then compute the share that must be taken for the collector on the positive delta.The execution layer fees are taken into account here because they are the product ofnode operator&#39;s work, just like consensus layer fees, and both should be handled in thesame manner, as a single revenue stream for the users and the collector.*
 
 #### Parameters
 
@@ -606,6 +589,7 @@ Sets the validator count and validator balance sum reported by the oracle
 | _validatorCount | uint256 | The number of active validators on the consensus layer |
 | _validatorTotalBalance | uint256 | The validator balance sum of the active validators on the consensus layer |
 | _roundId | bytes32 | An identifier for this update |
+| _maxIncrease | uint256 | The maximum allowed increase in the total balance |
 
 ### setELFeeRecipient
 
@@ -876,7 +860,7 @@ Emitted when the contract is properly initialized
 event PulledELFees(uint256 amount)
 ```
 
-
+Funds have been pulled from the Execution Layer Fee Recipient
 
 
 
@@ -908,7 +892,7 @@ The admin address changed
 event SetAllowlist(address indexed allowlist)
 ```
 
-
+The stored Allowlist has been changed
 
 
 
@@ -924,7 +908,7 @@ event SetAllowlist(address indexed allowlist)
 event SetCollector(address indexed collector)
 ```
 
-
+The stored Collector has been changed
 
 
 
@@ -956,7 +940,7 @@ The stored deposit contract address changed
 event SetELFeeRecipient(address indexed elFeeRecipient)
 ```
 
-
+The stored Execution Layer Fee Recipient has been changed
 
 
 
@@ -972,7 +956,7 @@ event SetELFeeRecipient(address indexed elFeeRecipient)
 event SetGlobalFee(uint256 fee)
 ```
 
-
+The stored Global Fee has been changed
 
 
 
@@ -988,7 +972,7 @@ event SetGlobalFee(uint256 fee)
 event SetOperatorsRegistry(address indexed operatorRegistry)
 ```
 
-
+The stored Operators Registry has been changed
 
 
 
@@ -1119,10 +1103,10 @@ Balance too low to perform operation
 ### Denied
 
 ```solidity
-error Denied(address _account)
+error Denied(address account)
 ```
 
-
+The access was denied
 
 
 
@@ -1130,7 +1114,7 @@ error Denied(address _account)
 
 | Name | Type | Description |
 |---|---|---|
-| _account | address | undefined |
+| account | address | The account that was denied |
 
 ### EmptyDeposit
 
@@ -1372,8 +1356,8 @@ Invalid transfer recipients
 
 | Name | Type | Description |
 |---|---|---|
-| _from | address | undefined |
-| _to | address | undefined |
+| _from | address | Account sending the funds in the invalid transfer |
+| _to | address | Account receiving the funds in the invalid transfer |
 
 ### ZeroMintedShares
 
@@ -1381,7 +1365,7 @@ Invalid transfer recipients
 error ZeroMintedShares()
 ```
 
-
+The computed amount of shares to mint is 0
 
 
 

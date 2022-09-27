@@ -53,7 +53,7 @@ The destination address
 
 | Name | Type | Description |
 |---|---|---|
-| _0 | address | undefined |
+| _0 | address | The destination address |
 
 ### executor
 
@@ -70,7 +70,7 @@ The executor address
 
 | Name | Type | Description |
 |---|---|---|
-| _0 | address | undefined |
+| _0 | address | The executor address |
 
 ### executorCanCall
 
@@ -92,7 +92,7 @@ Returns true if the executor is allowed to perform a call on the given selector
 
 | Name | Type | Description |
 |---|---|---|
-| _0 | bool | undefined |
+| _0 | bool | True if executor is allowed to call |
 
 ### getAdmin
 
@@ -136,7 +136,7 @@ function proposeAdmin(address _newAdmin) external nonpayable
 
 Proposes a new address as admin
 
-*This security prevents setting and invalid address as an admin. The pendingadmin has to claim its ownership of the contract, and proves that the newaddress is able to perform regular transactions.*
+*This security prevents setting an invalid address as an admin. The pendingadmin has to claim its ownership of the contract, and proves that the newaddress is able to perform regular transactions.*
 
 #### Parameters
 

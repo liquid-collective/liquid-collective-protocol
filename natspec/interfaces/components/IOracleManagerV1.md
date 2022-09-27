@@ -64,12 +64,12 @@ Get oracle address
 ### setConsensusLayerData
 
 ```solidity
-function setConsensusLayerData(uint256 _validatorCount, uint256 _validatorTotalBalance, bytes32 _roundId) external nonpayable
+function setConsensusLayerData(uint256 _validatorCount, uint256 _validatorTotalBalance, bytes32 _roundId, uint256 _maxIncrease) external nonpayable
 ```
 
-Sets the validator count and validator balance sum reported by the oracle
+Sets the validator count and validator total balance sum reported by the oracle
 
-*Can only be called by the oracle addressThe round id is a blackbox value that should only be used to identify unique reports*
+*Can only be called by the oracle addressThe round id is a blackbox value that should only be used to identify unique reportsWhen a report is performed, River computes the amount of fees that can be pulledfrom the execution layer fee recipient. This amount is capped by the max allowedincrease provided during the report.If the total asset balance increases (from the reported total balance and the pulled funds)we then compute the share that must be taken for the collector on the positive delta.The execution layer fees are taken into account here because they are the product ofnode operator&#39;s work, just like consensus layer fees, and both should be handled in thesame manner, as a single revenue stream for the users and the collector.*
 
 #### Parameters
 
@@ -78,6 +78,7 @@ Sets the validator count and validator balance sum reported by the oracle
 | _validatorCount | uint256 | The number of active validators on the consensus layer |
 | _validatorTotalBalance | uint256 | The validator balance sum of the active validators on the consensus layer |
 | _roundId | bytes32 | An identifier for this update |
+| _maxIncrease | uint256 | The maximum allowed increase in the total balance |
 
 ### setOracle
 

@@ -29,13 +29,18 @@ Initialize the fee recipient with the required arguments
 ### pullELFees
 
 ```solidity
-function pullELFees() external nonpayable
+function pullELFees(uint256 _maxAmount) external nonpayable
 ```
 
 Pulls all the ETH to the River contract
 
 *Only callable by the River contract*
 
+#### Parameters
+
+| Name | Type | Description |
+|---|---|---|
+| _maxAmount | uint256 | The maximum amount to pull into the system |
 
 
 
@@ -67,7 +72,7 @@ The storage river address has changed
 error InvalidCall()
 ```
 
-The fallback has been triggered with calldata
+The fallback has been triggered
 
 
 

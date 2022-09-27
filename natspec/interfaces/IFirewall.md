@@ -42,7 +42,7 @@ The destination address
 
 | Name | Type | Description |
 |---|---|---|
-| _0 | address | undefined |
+| _0 | address | The destination address |
 
 ### executor
 
@@ -59,12 +59,12 @@ The executor address
 
 | Name | Type | Description |
 |---|---|---|
-| _0 | address | undefined |
+| _0 | address | The executor address |
 
 ### executorCanCall
 
 ```solidity
-function executorCanCall(bytes4) external view returns (bool)
+function executorCanCall(bytes4 _selector) external view returns (bool)
 ```
 
 Returns true if the executor is allowed to perform a call on the given selector
@@ -75,13 +75,13 @@ Returns true if the executor is allowed to perform a call on the given selector
 
 | Name | Type | Description |
 |---|---|---|
-| _0 | bytes4 | undefined |
+| _selector | bytes4 | The selector to verify |
 
 #### Returns
 
 | Name | Type | Description |
 |---|---|---|
-| _0 | bool | undefined |
+| _0 | bool | True if executor is allowed to call |
 
 ### setExecutor
 

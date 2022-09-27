@@ -197,7 +197,7 @@ function removeValidators(uint256 _index, uint256[] _indexes) external nonpayabl
 
 Remove validator keys
 
-*Only callable by the administrator or the operator addressThe indexes must be provided sorted in decreasing order and duplicate-free, otherwise the method will revertThe operator limit will be set to the lowest deleted key index if the operator&#39;s limit wasn&#39;t equal to its total key count*
+*Only callable by the administrator or the operator addressThe indexes must be provided sorted in decreasing order and duplicate-free, otherwise the method will revertThe operator limit will be set to the lowest deleted key index if the operator&#39;s limit wasn&#39;t equal to its total key countThe operator or the admin cannot remove funded keys*
 
 #### Parameters
 
@@ -343,8 +343,8 @@ The operator or the admin added new validator keys and signatures
 
 | Name | Type | Description |
 |---|---|---|
-| index `indexed` | uint256 | undefined |
-| publicKeysAndSignatures  | bytes | undefined |
+| index `indexed` | uint256 | The operator index |
+| publicKeysAndSignatures  | bytes | The concatenated public keys and signatures |
 
 ### RemovedValidatorKey
 
