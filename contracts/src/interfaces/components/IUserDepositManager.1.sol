@@ -18,7 +18,7 @@ interface IUserDepositManagerV1 {
     function deposit() external payable;
 
     /// @notice Explicit deposit method to mint on msg.sender and transfer to _recipient
-    /// @param _recipient Address receiving the minted lsETH
+    /// @param _recipient Address receiving the minted LsETH
     function depositAndTransfer(address _recipient) external payable;
 
     /// @notice Implicit deposit method, when the user performs a regular transfer to the contract

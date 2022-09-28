@@ -14,7 +14,7 @@ import "./state/wlseth/BalanceOf.sol";
 
 /// @title Wrapped LsETH (v1)
 /// @author Kiln
-/// @notice This contract wraps the lsETH token into a rebase token, more suitable for some DeFi use-cases
+/// @notice This contract wraps the LsETH token into a rebase token, more suitable for some DeFi use-cases
 ///         like stable swaps.
 contract WLSETHV1 is IWLSETHV1, Initializable, ReentrancyGuard {
     /// @notice Ensures that the value is not 0
