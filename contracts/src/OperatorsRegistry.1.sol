@@ -164,22 +164,32 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
             }
 
             Operators.Operator storage operator = Operators.get(operatorIndex);
+
+            // we enter this condition if the operator edited its keys after the off-chain key audit was made
+            // we will skip any limit update on that operator unless it was a decrease in the initial limit
             if (_snapshotBlock < operator.latestKeysEditBlockNumber && _newLimits[idx] > operator.funded) {
                 emit OperatorEditsAfterSnapshot(
                     operatorIndex, _newLimits[idx], operator.latestKeysEditBlockNumber, _snapshotBlock
                     );
-            } else {
-                if (_newLimits[idx] > operator.keys) {
-                    revert OperatorLimitTooHigh(operatorIndex, _newLimits[idx], operator.keys);
+                unchecked {
+                    ++idx;
                 }
-
-                if (_newLimits[idx] < operator.funded) {
-                    revert OperatorLimitTooLow(operatorIndex, _newLimits[idx], operator.funded);
-                }
-
-                operator.limit = _newLimits[idx];
-                emit SetOperatorLimit(operatorIndex, operator.limit);
+                continue;
             }
+
+            // otherwise, we check for limit invariants that shouldn't happen if the off-chain key audit
+            // was made properly, and if everything is respected, we update the limit
+
+            if (_newLimits[idx] > operator.keys) {
+                revert OperatorLimitTooHigh(operatorIndex, _newLimits[idx], operator.keys);
+            }
+
+            if (_newLimits[idx] < operator.funded) {
+                revert OperatorLimitTooLow(operatorIndex, _newLimits[idx], operator.funded);
+            }
+
+            operator.limit = _newLimits[idx];
+            emit SetOperatorLimit(operatorIndex, operator.limit);
 
             unchecked {
                 ++idx;
