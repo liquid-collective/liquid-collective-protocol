@@ -156,27 +156,29 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
             revert InvalidEmptyArray();
         }
         for (uint256 idx = 0; idx < _operatorIndexes.length;) {
+            uint256 operatorIndex = _operatorIndexes[idx];
+
             // prevents duplicates
-            if (idx > 0 && _operatorIndexes[idx] <= _operatorIndexes[idx - 1]) {
+            if (idx > 0 && !(operatorIndex > _operatorIndexes[idx - 1])) {
                 revert UnorderedOperatorList();
             }
 
-            Operators.Operator storage operator = Operators.get(_operatorIndexes[idx]);
+            Operators.Operator storage operator = Operators.get(operatorIndex);
             if (_snapshotBlock < operator.latestKeysEditBlockNumber && _newLimits[idx] > operator.funded) {
                 emit OperatorEditsAfterSnapshot(
-                    _operatorIndexes[idx], _newLimits[idx], operator.latestKeysEditBlockNumber, _snapshotBlock
+                    operatorIndex, _newLimits[idx], operator.latestKeysEditBlockNumber, _snapshotBlock
                     );
             } else {
                 if (_newLimits[idx] > operator.keys) {
-                    revert OperatorLimitTooHigh(_operatorIndexes[idx], _newLimits[idx], operator.keys);
+                    revert OperatorLimitTooHigh(operatorIndex, _newLimits[idx], operator.keys);
                 }
 
                 if (_newLimits[idx] < operator.funded) {
-                    revert OperatorLimitTooLow(_operatorIndexes[idx], _newLimits[idx], operator.funded);
+                    revert OperatorLimitTooLow(operatorIndex, _newLimits[idx], operator.funded);
                 }
 
                 operator.limit = _newLimits[idx];
-                emit SetOperatorLimit(_operatorIndexes[idx], operator.limit);
+                emit SetOperatorLimit(operatorIndex, operator.limit);
             }
 
             unchecked {

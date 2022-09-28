@@ -107,6 +107,21 @@ contract OperatorsRegistryV1Tests is Test, BytesGenerator {
         vm.stopPrank();
     }
 
+    function testSetOperatorInvariantChecksSkipped(uint256 _nodeOperatorAddressSalt) public {
+        vm.roll(1);
+        address _nodeOperatorAddress = uf._new(_nodeOperatorAddressSalt);
+        vm.startPrank(admin);
+        operatorsRegistry.addOperator(string(abi.encodePacked(_nodeOperatorAddress)), _nodeOperatorAddress);
+        uint256[] memory indexes = new uint256[](1);
+        indexes[0] = 0;
+        uint256[] memory limits = new uint256[](1);
+        limits[0] = 1;
+        vm.expectEmit(true, true, true, true);
+        emit OperatorEditsAfterSnapshot(0, 1, 1, 0);
+        operatorsRegistry.setOperatorLimits(indexes, limits, 0);
+        vm.stopPrank();
+    }
+
     function testSetOperatorLimitTooLow(uint256 _nodeOperatorAddressSalt) public {
         address _nodeOperatorAddress = uf._new(_nodeOperatorAddressSalt);
         vm.startPrank(admin);
