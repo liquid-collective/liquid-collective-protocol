@@ -201,17 +201,22 @@ contract RiverV1 is
     /// @notice Handler called whenever the balance of ETH handled by the system increases. Splits funds between operators and collector.
     /// @param _amount Additional eth received
     function _onEarnings(uint256 _amount) internal override {
-        uint256 currentTotalSupply = _totalSupply();
-        if (currentTotalSupply == 0) {
+        uint256 oldTotalSupply = _totalSupply();
+        if (oldTotalSupply == 0) {
             revert ZeroMintedShares();
         }
+        uint256 newTotalBalance = _assetBalance();
         uint256 globalFee = GlobalFee.get();
-        uint256 numerator = _amount * currentTotalSupply * globalFee;
-        uint256 denominator = (_assetBalance() * LibBasisPoints.BASIS_POINTS_MAX) - (_amount * globalFee);
+        uint256 numerator = _amount * oldTotalSupply * globalFee;
+        uint256 denominator = (newTotalBalance * LibBasisPoints.BASIS_POINTS_MAX) - (_amount * globalFee);
         uint256 sharesToMint = denominator == 0 ? 0 : (numerator / denominator);
 
         if (sharesToMint > 0) {
-            _mintRawShares(CollectorAddress.get(), sharesToMint);
+            address collector = CollectorAddress.get();
+            _mintRawShares(collector, sharesToMint);
+            uint256 newTotalSupply = _totalSupply();
+            uint256 oldTotalBalance = newTotalBalance - _amount;
+            emit RewardsEarned(collector, oldTotalBalance, oldTotalSupply, newTotalBalance, newTotalSupply);
         }
     }
 

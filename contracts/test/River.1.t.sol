@@ -344,6 +344,78 @@ contract RiverV1SetupOneTests is Test, BytesGenerator {
         );
     }
 
+    event RewardsEarned(
+        address indexed _collector,
+        uint256 _oldTotalUnderylyingBalance,
+        uint256 _oldTotalSupply,
+        uint256 _newTotalUnderlyingBalance,
+        uint256 _newTotalSupply
+    );
+
+    function testRewardsEarnedEventBroadcasting() public {
+        vm.deal(joe, 100 ether);
+        vm.deal(bob, 1000 ether);
+
+        _allow(joe, DEPOSIT_MASK);
+        _allow(bob, DEPOSIT_MASK);
+
+        vm.startPrank(joe);
+        river.deposit{value: 100 ether}();
+        vm.stopPrank();
+        vm.startPrank(bob);
+        river.deposit{value: 1000 ether}();
+        vm.stopPrank();
+        assert(river.balanceOfUnderlying(joe) == 100 ether);
+        assert(river.balanceOfUnderlying(bob) == 1000 ether);
+        assert(river.getDepositedValidatorCount() == 0);
+        assert(river.totalUnderlyingSupply() == 1100 ether);
+
+        river.depositToConsensusLayer(17);
+        river.depositToConsensusLayer(17);
+
+        Operators.Operator memory op1 = operatorsRegistry.getOperator(operatorOneIndex);
+        Operators.Operator memory op2 = operatorsRegistry.getOperator(operatorTwoIndex);
+
+        assert(op1.funded == 17);
+        assert(op2.funded == 17);
+
+        assert(river.getDepositedValidatorCount() == 34);
+        assert(river.totalUnderlyingSupply() == 1100 ether);
+        assert(address(river).balance == (1000 ether + 100 ether) - (32 ether * 34));
+        assert(river.balanceOfUnderlying(joe) == 100 ether);
+        assert(river.balanceOfUnderlying(bob) == 1000 ether);
+
+        vm.startPrank(oracleMember);
+        (uint256 epoch,,) = oracle.getCurrentFrame();
+        vm.expectEmit(true, true, true, true);
+        emit RewardsEarned(collector, 1100 ether, 1100 ether, 1134 ether, 1101651505784686037269);
+        oracle.reportConsensusLayerData(epoch, 33 * 1e9 * 34, 34);
+        vm.stopPrank();
+
+        assert(river.totalUnderlyingSupply() == 1100 ether - (34 * 32 ether) + (34 * 33 ether));
+        assert(river.balanceOfUnderlying(joe) == 102936363636363636363);
+        assert(river.balanceOfUnderlying(bob) == 1029363636363636363636);
+        assert(river.balanceOfUnderlying(operatorOneFeeRecipient) == 0);
+        assert(river.balanceOfUnderlying(operatorTwoFeeRecipient) == 0);
+        assert(river.balanceOfUnderlying(collector) == 1699999999999999999);
+
+        vm.startPrank(joe);
+        river.transfer(bob, river.balanceOf(joe) - 1);
+        vm.stopPrank();
+
+        assert(river.balanceOfUnderlying(joe) == 1);
+        assert(river.balanceOfUnderlying(bob) == 1132299999999999999999);
+        assert(river.balanceOfUnderlying(operatorOneFeeRecipient) == 0);
+        assert(river.balanceOfUnderlying(operatorTwoFeeRecipient) == 0);
+        assert(river.balanceOfUnderlying(collector) == 1699999999999999999);
+
+        assert(
+            river.totalSupply()
+                == river.balanceOf(joe) + river.balanceOf(bob) + river.balanceOf(operatorOneFeeRecipient)
+                    + river.balanceOf(operatorTwoFeeRecipient) + river.balanceOf(collector)
+        );
+    }
+
     function testValidatorsPenalties() public {
         vm.deal(joe, 100 ether);
         vm.deal(bob, 1000 ether);
