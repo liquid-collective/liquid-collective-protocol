@@ -50,8 +50,8 @@ contract TUPProxyTest is Test {
 
     address internal admin = address(1);
 
-    event Paused(address);
-    event Unpaused(address);
+    event Paused(address admin);
+    event Unpaused(address admin);
 
     function setUp() public {
         implem = new DummyCounter();

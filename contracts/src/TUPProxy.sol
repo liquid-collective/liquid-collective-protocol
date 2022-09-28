@@ -12,8 +12,8 @@ contract TUPProxy is TransparentUpgradeableProxy {
 
     error CallWhenPaused();
 
-    event Paused(address account);
-    event Unpaused(address account);
+    event Paused(address admin);
+    event Unpaused(address admin);
 
     constructor(address _logic, address admin_, bytes memory _data)
         payable
