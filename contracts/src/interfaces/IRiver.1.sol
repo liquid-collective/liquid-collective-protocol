@@ -17,7 +17,7 @@ interface IRiverV1 is IConsensusLayerDepositManagerV1, IUserDepositManagerV1, IS
     event SetGlobalFee(uint256 fee);
     event SetOperatorsRegistry(address indexed operatorRegistry);
     event RewardsEarned(
-        address indexed _collected,
+        address indexed _collector,
         uint256 _oldTotalUnderlyingBalance,
         uint256 _oldTotalSupply,
         uint256 _newTotalUnderlyingBalance,
