@@ -12,7 +12,7 @@ import "./state/operatorsRegistry/Operators.sol";
 import "./state/operatorsRegistry/ValidatorKeys.sol";
 import "./state/shared/RiverAddress.sol";
 
-/// @title OperatorsRegistry (v1)
+/// @title Operators Registry (v1)
 /// @author Kiln
 /// @notice This contract handles the list of operators and their keys
 contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrable {

@@ -6,6 +6,9 @@ import "./components/IOracleManager.1.sol";
 import "./components/ISharesManager.1.sol";
 import "./components/IUserDepositManager.1.sol";
 
+/// @title River Interface (v1)
+/// @author Kiln
+/// @notice The main system interface
 interface IRiverV1 is IConsensusLayerDepositManagerV1, IUserDepositManagerV1, ISharesManagerV1, IOracleManagerV1 {
     /// @notice Funds have been pulled from the Execution Layer Fee Recipient
     /// @param amount The amount pulled
@@ -54,7 +57,7 @@ interface IRiverV1 is IConsensusLayerDepositManagerV1, IUserDepositManagerV1, IS
     /// @param _allowlistAddress Address of the allowlist contract
     /// @param _operatorRegistryAddress Address of the operator registry
     /// @param _collectorAddress Address receiving the the global fee on revenue
-    /// @param _globalFee Amount retained when the eth balance increases, splitted between the collector and the operators
+    /// @param _globalFee Amount retained when the eth balance increases and sent to the collector
     function initRiverV1(
         address _depositContractAddress,
         address _elFeeRecipientAddress,

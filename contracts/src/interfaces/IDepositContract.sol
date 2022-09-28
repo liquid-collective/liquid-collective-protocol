@@ -1,6 +1,8 @@
 //SPDX-License-Identifier: BUSL-1.1
 pragma solidity 0.8.10;
 
+/// @title Deposit Contract Interface
+/// @notice This interface exposes methods to perform validator deposits
 interface IDepositContract {
     /// @notice Official deposit method to activate a validator on the consensus layer
     /// @param pubkey The 48 bytes long BLS Public key representing the validator

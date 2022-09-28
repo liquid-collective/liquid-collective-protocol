@@ -12,7 +12,7 @@ import "./state/shared/RiverAddress.sol";
 import "./state/shared/ApprovalsPerOwner.sol";
 import "./state/wlseth/BalanceOf.sol";
 
-/// @title Wrapped lsETH v1
+/// @title Wrapped LsETH (v1)
 /// @author Kiln
 /// @notice This contract wraps the lsETH token into a rebase token, more suitable for some DeFi use-cases
 ///         like stable swaps.

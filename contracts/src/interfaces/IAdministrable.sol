@@ -1,6 +1,9 @@
 //SPDX-License-Identifier: BUSL-1.1
 pragma solidity 0.8.10;
 
+/// @title Administrable Interface
+/// @author Kiln
+/// @notice This interface exposes methods to handle the ownership of the contracts
 interface IAdministrable {
     /// @notice The pending admin address changed
     /// @param pendingAdmin New pending admin address

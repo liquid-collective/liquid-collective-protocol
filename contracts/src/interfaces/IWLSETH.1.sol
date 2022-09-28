@@ -1,6 +1,9 @@
 //SPDX-License-Identifier: BUSL-1.1
 pragma solidity 0.8.10;
 
+/// @title Wrapped LsETH Interface (v1)
+/// @author Kiln
+/// @notice This interface exposes methods to wrap the LsETH token into a rebase token.
 interface IWLSETHV1 {
     /// @notice A transfer has been made
     /// @param from The transfer sender

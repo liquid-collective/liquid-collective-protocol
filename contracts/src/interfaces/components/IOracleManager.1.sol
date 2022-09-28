@@ -1,6 +1,9 @@
 //SPDX-License-Identifier: BUSL-1.1
 pragma solidity 0.8.10;
 
+/// @title Oracle Manager (v1)
+/// @author Kiln
+/// @notice This interface exposes methods to handle the inputs provided by the oracle
 interface IOracleManagerV1 {
     /// @notice The storage oracle address changed
     /// @param oracleAddress The new oracle address

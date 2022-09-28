@@ -1,6 +1,9 @@
 //SPDX-License-Identifier: BUSL-1.1
 pragma solidity 0.8.10;
 
+/// @title User Deposit Manager (v1)
+/// @author Kiln
+/// @notice This interface exposes methods to handle the inbound transfers cases or the explicit submissions
 interface IUserDepositManagerV1 {
     /// @notice User deposited eth in the system
     /// @param depositor Address performing the deposit

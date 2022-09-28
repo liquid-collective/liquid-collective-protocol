@@ -11,7 +11,7 @@ library Operators {
 
     /// @notice The Operator structure in storage
     struct Operator {
-        /// @custom:attribute True if the operator is active and allowed to operator on River
+        /// @custom:attribute True if the operator is active and allowed to operate on River
         bool active;
         /// @custom:attribute Display name of the operator
         string name;
@@ -26,14 +26,15 @@ library Operators {
         uint256 funded;
         /// @custom:attribute The total count of keys of the operator
         uint256 keys;
-        /// @custom:attribute The count of stopped validators
+        /// @custom:attribute The count of stopped validators. Stopped validators are validators
+        ///                   that exited the consensus layer (voluntary or slashed)
         uint256 stopped;
         uint256 latestKeysEditBlockNumber;
     }
 
     /// @notice The Operator structure when loaded in memory
     struct CachedOperator {
-        /// @custom:attribute True if the operator is active and allowed to operator on River
+        /// @custom:attribute True if the operator is active and allowed to operate on River
         bool active;
         /// @custom:attribute Display name of the operator
         string name;
@@ -47,7 +48,8 @@ library Operators {
         uint256 keys;
         /// @custom:attribute The count of stopped validators
         uint256 stopped;
-        /// @custom:attribute The index of the operator
+        /// @custom:attribute The count of stopped validators. Stopped validators are validators
+        ///                   that exited the consensus layer (voluntary or slashed)
         uint256 index;
         /// @custom:attribute The amount of picked keys, buffer used before changing funded in storage
         uint256 picked;

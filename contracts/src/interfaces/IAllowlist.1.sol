@@ -1,6 +1,9 @@
 //SPDX-License-Identifier: BUSL-1.1
 pragma solidity 0.8.10;
 
+/// @title Allowlist Interface (v1)
+/// @author Kiln
+/// @notice This interface exposes methods to handle the list of allowed recipients.
 interface IAllowlistV1 {
     /// @notice The permissions of several accounts have changed
     /// @param accounts List of accounts
@@ -66,7 +69,7 @@ interface IAllowlistV1 {
     function setAllower(address _newAllowerAddress) external;
 
     /// @notice Sets the allowlisting status for one or more accounts
-    /// @dev The permission value is overriden and not updated
+    /// @dev The permission value is overridden and not updated
     /// @param _accounts Accounts with statuses to edit
     /// @param _permissions Allowlist permissions for each account, in the same order as _accounts
     function allow(address[] calldata _accounts, uint256[] calldata _permissions) external;

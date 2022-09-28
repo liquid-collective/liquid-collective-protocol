@@ -1,6 +1,9 @@
 //SPDX-License-Identifier: BUSL-1.1
 pragma solidity 0.8.10;
 
+/// @title Consensys Layer Deposit Manager Interface (v1)
+/// @author Kiln
+/// @notice This interface exposes methods to handle the interactions with the official deposit contract
 interface IConsensusLayerDepositManagerV1 {
     /// @notice A validator key got funded on the deposit contract
     /// @param publicKey BLS Public key that got funded

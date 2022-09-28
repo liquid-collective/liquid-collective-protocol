@@ -1,6 +1,9 @@
 //SPDX-License-Identifier: BUSL-1.1
 pragma solidity 0.8.10;
 
+/// @title Firewall
+/// @author Figment
+/// @notice This interface exposes methods to accept calls to admin-level functions of an underlying contract.
 interface IFirewall {
     /// @notice The stored executor address has been changed
     /// @param executor The new executor address

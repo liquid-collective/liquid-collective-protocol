@@ -3,6 +3,9 @@ pragma solidity 0.8.10;
 
 import "openzeppelin-contracts/contracts/token/ERC20/IERC20.sol";
 
+/// @title Shares Manager Interface (v1)
+/// @author Kiln
+/// @notice This interface exposes methods to handle the shares of the depositor and the ERC20 interface
 interface ISharesManagerV1 is IERC20 {
     /// @notice Balance too low to perform operation
     error BalanceTooLow();

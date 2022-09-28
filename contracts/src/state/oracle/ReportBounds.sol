@@ -9,9 +9,9 @@ library ReportBounds {
 
     /// @notice The Report Bounds structure
     struct ReportBoundsStruct {
-        /// @custom:attribute The maximum allowed annual apr, checked on each oracle report submission
+        /// @custom:attribute The maximum allowed annual apr, checked before submitting a report to River
         uint256 annualAprUpperBound;
-        /// @custom:attribute The maximum allowed balance decrease, also checked on each oracle report submission
+        /// @custom:attribute The maximum allowed balance decrease, also checked before submitting a report to River
         uint256 relativeLowerBound;
     }
 

@@ -3,6 +3,9 @@ pragma solidity 0.8.10;
 
 import "../state/operatorsRegistry/Operators.sol";
 
+/// @title Operators Registry Interface (v1)
+/// @author Kiln
+/// @notice This interface exposes methods to handle the list of operators and their keys
 interface IOperatorsRegistryV1 {
     /// @notice A new operator has been added to the registry
     /// @param index The operator index
