@@ -38,7 +38,7 @@ We wrap `AllowList`, `Oracle` and `River` in a `Firewall.sol`, through which adm
 
 ### System Administrator
 
-Administrator in charge of the implementation logics, can perform any taask on any administrable contract.
+Administrator in charge of the implementation logics, can perform any task on any administrable contract.
 
 ### System Executor
 
