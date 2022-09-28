@@ -205,13 +205,17 @@ contract RiverV1 is
         if (currentTotalSupply == 0) {
             revert ZeroMintedShares();
         }
+        uint256 currentTotalBalance = _assetBalance();
         uint256 globalFee = GlobalFee.get();
         uint256 numerator = _amount * currentTotalSupply * globalFee;
-        uint256 denominator = (_assetBalance() * LibBasisPoints.BASIS_POINTS_MAX) - (_amount * globalFee);
+        uint256 denominator = (currentTotalBalance * LibBasisPoints.BASIS_POINTS_MAX) - (_amount * globalFee);
         uint256 sharesToMint = denominator == 0 ? 0 : (numerator / denominator);
 
         if (sharesToMint > 0) {
             _mintRawShares(CollectorAddress.get(), sharesToMint);
+            uint256 newTotalSupply = _totalSupply();
+            uint256 oldTotalBalance = currentTotalBalance - _amount;
+            emit RewardsEarnt(oldTotalBalance, currentTotalSupply, currentTotalBalance, newTotalSupply);
         }
     }
 
