@@ -33,6 +33,13 @@ interface IRiverV1 is IConsensusLayerDepositManagerV1, IUserDepositManagerV1, IS
     /// @notice The stored Operators Registry has been changed
     /// @param operatorRegistry The new Operators Registry
     event SetOperatorsRegistry(address indexed operatorRegistry);
+
+    /// @notice The system underlying supply increased. This is a snapshot of the balances for accounting purposes
+    /// @param _collector The address of the collector during this event
+    /// @param _oldTotalUnderlyingBalance Old total eth balance under management by River
+    /// @param _oldTotalSupply Old total supply in shares
+    /// @param _newTotalUnderlyingBalance New total eth balance under management by River
+    /// @param _newTotalSupply New total supply in shares
     event RewardsEarned(
         address indexed _collector,
         uint256 _oldTotalUnderlyingBalance,

@@ -53,7 +53,7 @@ abstract contract ConsensusLayerDepositManagerV1 is IConsensusLayerDepositManage
     function initConsensusLayerDepositManagerV1(address _depositContractAddress, bytes32 _withdrawalCredentials)
         internal
     {
-        DepositContractAddress.set(IDepositContract(_depositContractAddress));
+        DepositContractAddress.set(_depositContractAddress);
         emit SetDepositContractAddress(_depositContractAddress);
 
         WithdrawalCredentials.set(_withdrawalCredentials);
@@ -153,7 +153,7 @@ abstract contract ConsensusLayerDepositManagerV1 is IConsensusLayerDepositManage
 
         uint256 targetBalance = address(this).balance - value;
 
-        DepositContractAddress.get().deposit{value: value}(
+        IDepositContract(DepositContractAddress.get()).deposit{value: value}(
             _publicKey, abi.encodePacked(_withdrawalCredentials), _signature, depositDataRoot
         );
         if (address(this).balance != targetBalance) {

@@ -122,7 +122,7 @@ contract RiverV1 is
 
     /// @inheritdoc IRiverV1
     function getAllowlist() external view returns (address) {
-        return address(AllowlistAddress.get());
+        return AllowlistAddress.get();
     }
 
     /// @inheritdoc IRiverV1
