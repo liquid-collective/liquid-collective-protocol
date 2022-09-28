@@ -134,11 +134,14 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
         emit SetOperatorStoppedValidatorCount(_index, operator.stopped);
     }
 
+    error UnorderedOperatorList();
+
     /// @notice Changes the operator staking limit
     /// @dev Only callable by the administrator
     /// @dev The limit cannot exceed the total key count of the operator
     /// @dev The _indexes and _newLimits must have the same length.
     /// @dev Each limit value is applied to the operator index at the same index in the _indexes array.
+    /// @dev The operator indexes must be in increasing order and contain no duplicates
     /// @param _operatorIndexes The operator indexes
     /// @param _newLimits The new staking limit of the operators
     function setOperatorLimits(
@@ -153,6 +156,11 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
             revert InvalidEmptyArray();
         }
         for (uint256 idx = 0; idx < _operatorIndexes.length;) {
+            // prevents duplicates
+            if (idx > 0 && _operatorIndexes[idx] <= _operatorIndexes[idx - 1]) {
+                revert UnorderedOperatorList();
+            }
+
             Operators.Operator storage operator = Operators.get(_operatorIndexes[idx]);
             if (_snapshotBlock < operator.latestKeysEditBlockNumber && _newLimits[idx] > operator.funded) {
                 emit OperatorEditsAfterSnapshot(

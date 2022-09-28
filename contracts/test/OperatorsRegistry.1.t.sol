@@ -419,6 +419,42 @@ contract OperatorsRegistryV1Tests is Test, BytesGenerator {
         operatorsRegistry.setOperatorLimits(operatorIndexes, operatorLimits, block.number);
     }
 
+    function testSetOperatorLimitUnorderedOperators(
+        bytes32 _name,
+        uint256 _firstAddressSalt,
+        uint256 _secondAddressSalt
+    ) public {
+        address _firstAddress = uf._new(_firstAddressSalt);
+        address _secondAddress = uf._new(_secondAddressSalt);
+        vm.startPrank(admin);
+        uint256 index0 = operatorsRegistry.addOperator(string(abi.encodePacked(_name)), _firstAddress);
+        uint256 index1 = operatorsRegistry.addOperator(string(abi.encodePacked(_name)), _secondAddress);
+        uint256[] memory operatorIndexes = new uint256[](2);
+        operatorIndexes[0] = index1;
+        operatorIndexes[1] = index0;
+        uint256[] memory operatorLimits = new uint256[](2);
+        operatorLimits[0] = 0;
+        operatorLimits[1] = 0;
+        vm.expectRevert(abi.encodeWithSignature("UnorderedOperatorList()"));
+        operatorsRegistry.setOperatorLimits(operatorIndexes, operatorLimits, block.number);
+        vm.stopPrank();
+    }
+
+    function testSetOperatorLimitDuplicateOperators(bytes32 _name, uint256 _firstAddressSalt) public {
+        address _firstAddress = uf._new(_firstAddressSalt);
+        vm.startPrank(admin);
+        uint256 index = operatorsRegistry.addOperator(string(abi.encodePacked(_name)), _firstAddress);
+        uint256[] memory operatorIndexes = new uint256[](2);
+        operatorIndexes[0] = index;
+        operatorIndexes[1] = index;
+        uint256[] memory operatorLimits = new uint256[](2);
+        operatorLimits[0] = 0;
+        operatorLimits[1] = 0;
+        vm.expectRevert(abi.encodeWithSignature("UnorderedOperatorList()"));
+        operatorsRegistry.setOperatorLimits(operatorIndexes, operatorLimits, block.number);
+        vm.stopPrank();
+    }
+
     event AddedValidatorKeys(uint256 indexed index, uint256 amount);
 
     function testAddValidatorsAsOperator(bytes32 _name, uint256 _firstAddressSalt) public {
