@@ -16,6 +16,7 @@ interface IOperatorsRegistryV1 {
     error InvalidIndexOutOfBounds();
     error OperatorLimitTooHigh(uint256 index, uint256 limit, uint256 keyCount);
     error OperatorLimitTooLow(uint256 index, uint256 limit, uint256 fundedKeyCount);
+    error UnorderedOperatorList();
 
     event AddedOperator(uint256 indexed index, string name, address indexed operatorAddress);
     event SetOperatorStatus(uint256 indexed index, bool active);

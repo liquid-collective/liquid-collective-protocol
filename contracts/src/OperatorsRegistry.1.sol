@@ -134,8 +134,6 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
         emit SetOperatorStoppedValidatorCount(_index, operator.stopped);
     }
 
-    error UnorderedOperatorList();
-
     /// @notice Changes the operator staking limit
     /// @dev Only callable by the administrator
     /// @dev The limit cannot exceed the total key count of the operator
