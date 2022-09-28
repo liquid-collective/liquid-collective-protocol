@@ -54,13 +54,6 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
         return RiverAddress.get();
     }
 
-    /// @notice Change the River address
-    /// @param _newRiver New address for the river system
-    function setRiver(address _newRiver) external onlyAdmin {
-        RiverAddress.set(_newRiver);
-        emit SetRiver(_newRiver);
-    }
-
     /// @notice Retrieve the active operator set
     function listActiveOperators() external view returns (Operators.Operator[] memory) {
         return Operators.getAllActive();

@@ -37,5 +37,6 @@ interface IRiverV1 is IConsensusLayerDepositManagerV1, IUserDepositManagerV1, IS
     function getCollector() external view returns (address);
     function setELFeeRecipient(address _newELFeeRecipient) external;
     function getELFeeRecipient() external view returns (address);
+    function getOperatorsRegistry() external view returns (address);
     function sendELFees() external payable;
 }

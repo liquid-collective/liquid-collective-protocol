@@ -48,24 +48,6 @@ contract OperatorsRegistryV1Tests is Test, BytesGenerator {
         operatorsRegistry.initOperatorsRegistryV1(admin, river);
     }
 
-    function testSetRiver(uint256 _newRiverSalt) public {
-        address _newRiverAddress = uf._new(_newRiverSalt);
-        assert(operatorsRegistry.getRiver() == river);
-        vm.startPrank(admin);
-        vm.expectEmit(true, true, true, true);
-        emit SetRiver(_newRiverAddress);
-        operatorsRegistry.setRiver(_newRiverAddress);
-        vm.stopPrank();
-        assert(operatorsRegistry.getRiver() == _newRiverAddress);
-    }
-
-    function testSetRiverUnauthorized(uint256 _newRiverSalt) public {
-        address _newRiverAddress = uf._new(_newRiverSalt);
-        assert(operatorsRegistry.getRiver() == river);
-        vm.expectRevert(abi.encodeWithSignature("Unauthorized(address)", address(this)));
-        operatorsRegistry.setRiver(_newRiverAddress);
-    }
-
     function testAddNodeOperator(uint256 _nodeOperatorAddressSalt, bytes32 _name) public {
         address _nodeOperatorAddress = uf._new(_nodeOperatorAddressSalt);
         vm.startPrank(admin);
