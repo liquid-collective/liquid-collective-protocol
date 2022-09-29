@@ -118,7 +118,7 @@ contract OperatorsRegistryV1Tests is Test, BytesGenerator {
         uint256[] memory limits = new uint256[](1);
         limits[0] = 1;
         vm.expectEmit(true, true, true, true);
-        emit OperatorEditsAfterSnapshot(0, 1, 1, 0);
+        emit OperatorEditsAfterSnapshot(0, 0, 1, 1, 0);
         operatorsRegistry.setOperatorLimits(indexes, limits, 0);
         vm.stopPrank();
     }
@@ -396,7 +396,11 @@ contract OperatorsRegistryV1Tests is Test, BytesGenerator {
     }
 
     event OperatorEditsAfterSnapshot(
-        uint256 indexed index, uint256 limit, uint256 indexed lastEdit, uint256 indexed snapshotBlock
+        uint256 indexed index,
+        uint256 currentLimit,
+        uint256 newLimit,
+        uint256 indexed lastEdit,
+        uint256 indexed snapshotBlock
     );
 
     function testSetOperatorLimitCountSnapshotTooLow(bytes32 _name, uint256 _firstAddressSalt, uint256 _limit) public {
@@ -419,7 +423,7 @@ contract OperatorsRegistryV1Tests is Test, BytesGenerator {
         uint256[] memory operatorLimits = new uint256[](1);
         operatorLimits[0] = _limit;
         vm.expectEmit(true, true, true, true);
-        emit OperatorEditsAfterSnapshot(index, _limit, bn, bn - 1);
+        emit OperatorEditsAfterSnapshot(index, 0, _limit, bn, bn - 1);
         operatorsRegistry.setOperatorLimits(operatorIndexes, operatorLimits, bn - 1);
         newOperator = operatorsRegistry.getOperator(index);
         assert(newOperator.limit == 0);
