@@ -362,6 +362,8 @@ contract OperatorsRegistryV1Tests is Test, BytesGenerator {
         assert(newOperator.limit == 0);
     }
 
+    event OperatorLimitUnchanged(uint256 indexed operatorIndex, uint256 currentLimit);
+
     function testSetOperatorLimitCountNoOp(bytes32 _name, uint256 _firstAddressSalt, uint256 _limit) public {
         address _firstAddress = uf._new(_firstAddressSalt);
         _limit = _limit % 11; // 10 is max
@@ -385,6 +387,8 @@ contract OperatorsRegistryV1Tests is Test, BytesGenerator {
         assert(writes.length == 1);
         newOperator = operatorsRegistry.getOperator(index);
         assert(newOperator.limit == _limit);
+        vm.expectEmit(true, true, true, true);
+        emit OperatorLimitUnchanged(0, _limit);
         vm.record();
         operatorsRegistry.setOperatorLimits(operatorIndexes, operatorLimits, block.number);
         (, writes) = vm.accesses(address(operatorsRegistry));

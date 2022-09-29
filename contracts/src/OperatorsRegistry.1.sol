@@ -166,6 +166,7 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
 
             uint256 currentLimit = operator.limit;
             if (newLimit == currentLimit) {
+                emit OperatorLimitUnchanged(operatorIndex, currentLimit);
                 unchecked {
                     ++idx;
                 }
