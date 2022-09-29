@@ -27,7 +27,7 @@ contract WLSETHV1 is IWLSETHV1, Initializable, ReentrancyGuard {
     }
 
     /// @notice Ensures that the owner has enough funds
-    /// @param _owner Balance to verify
+    /// @param _owner Owner of the balance to verify
     /// @param _value Minimum required value
     modifier hasFunds(address _owner, uint256 _value) {
         if (_balanceOf(_owner) < _value) {

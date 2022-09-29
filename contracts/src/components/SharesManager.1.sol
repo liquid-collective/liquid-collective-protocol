@@ -153,7 +153,7 @@ abstract contract SharesManagerV1 is ISharesManagerV1 {
 
     /// @notice Internal utility to spend the allowance of an account from the message sender
     /// @param _from Address owning the allowance
-    /// @param _value Amount of allowance to spend
+    /// @param _value Amount of allowance in shares to spend
     function _spendAllowance(address _from, uint256 _value) internal {
         uint256 currentAllowance = ApprovalsPerOwner.get(_from, msg.sender);
         if (currentAllowance < _value) {
@@ -173,7 +173,7 @@ abstract contract SharesManagerV1 is ISharesManagerV1 {
     /// @notice Internal utility to perform an unchecked transfer
     /// @param _from Address sending the tokens
     /// @param _to Address receiving the tokens
-    /// @param _value Amount to be sent
+    /// @param _value Amount of shares to be sent
     /// @return True if success
     function _transfer(address _from, address _to, uint256 _value) internal returns (bool) {
         SharesPerOwner.set(_from, SharesPerOwner.get(_from) - _value);
@@ -238,7 +238,7 @@ abstract contract SharesManagerV1 is ISharesManagerV1 {
 
     /// @notice Internal utility to retrieve the amount of shares per owner
     /// @param _owner Account to be checked
-    /// @return The balance of the account
+    /// @return The balance of the account in shares
     function _balanceOf(address _owner) internal view returns (uint256) {
         return SharesPerOwner.get(_owner);
     }

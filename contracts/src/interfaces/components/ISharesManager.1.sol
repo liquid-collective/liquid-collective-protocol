@@ -14,7 +14,7 @@ interface ISharesManagerV1 is IERC20 {
     /// @param _from Account where funds are sent from
     /// @param _operator Account attempting the transfer
     /// @param _allowance Current allowance
-    /// @param _value Requested transfer value
+    /// @param _value Requested transfer value in shares
     error AllowanceTooLow(address _from, address _operator, uint256 _allowance, uint256 _value);
 
     /// @notice Invalid empty transfer
@@ -38,7 +38,7 @@ interface ISharesManagerV1 is IERC20 {
     function decimals() external pure returns (uint8);
 
     /// @notice Retrieve the total token supply
-    /// @return The total supply
+    /// @return The total supply in shares
     function totalSupply() external view returns (uint256);
 
     /// @notice Retrieve the total underlying asset supply
@@ -47,7 +47,7 @@ interface ISharesManagerV1 is IERC20 {
 
     /// @notice Retrieve the balance of an account
     /// @param _owner Address to be checked
-    /// @return The balance of the account
+    /// @return The balance of the account in shares
     function balanceOf(address _owner) external view returns (uint256);
 
     /// @notice Retrieve the underlying asset balance of an account
@@ -68,38 +68,38 @@ interface ISharesManagerV1 is IERC20 {
     /// @notice Retrieve the allowance value for a spender
     /// @param _owner Address that issued the allowance
     /// @param _spender Address that received the allowance
-    /// @return The allowance for a given spender
+    /// @return The allowance in shares for a given spender
     function allowance(address _owner, address _spender) external view returns (uint256);
 
     /// @notice Performs a transfer from the message sender to the provided account
     /// @param _to Address receiving the tokens
-    /// @param _value Amount to be sent
+    /// @param _value Amount of shares to be sent
     /// @return True if success
     function transfer(address _to, uint256 _value) external returns (bool);
 
     /// @notice Performs a transfer between two recipients
     /// @param _from Address sending the tokens
     /// @param _to Address receiving the tokens
-    /// @param _value Amount to be sent
+    /// @param _value Amount of shares to be sent
     /// @return True if success
     function transferFrom(address _from, address _to, uint256 _value) external returns (bool);
 
     /// @notice Approves an account for future spendings
     /// @dev An approved account can use transferFrom to transfer funds on behalf of the token owner
     /// @param _spender Address that is allowed to spend the tokens
-    /// @param _value The allowed amount, will override previous value
+    /// @param _value The allowed amount in shares, will override previous value
     /// @return True if success
     function approve(address _spender, uint256 _value) external returns (bool);
 
     /// @notice Increase allowance to another account
     /// @param _spender Spender that receives the allowance
-    /// @param _additionalValue Amount to add
+    /// @param _additionalValue Amount of shares to add
     /// @return True if success
     function increaseAllowance(address _spender, uint256 _additionalValue) external returns (bool);
 
     /// @notice Decrease allowance to another account
     /// @param _spender Spender that receives the allowance
-    /// @param _subtractableValue Amount to subtract
+    /// @param _subtractableValue Amount of shares to subtract
     /// @return True if success
     function decreaseAllowance(address _spender, uint256 _subtractableValue) external returns (bool);
 }
