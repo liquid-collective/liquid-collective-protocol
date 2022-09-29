@@ -121,17 +121,18 @@ interface IWLSETHV1 {
     function decreaseAllowance(address _spender, uint256 _subtractableValue) external returns (bool);
 
     /// @notice Mint tokens by providing LsETH tokens
-    /// @dev Minted tokens are sent to recipient but are minted from the message sender balance
-    /// @dev It is expected that the message sender approves _value amount of LsETH token to
-    /// @dev this contract before calling
-    /// @param _recipient Spender that receives the allowance
-    /// @param _value Amount of river token to give to the mint
+    /// @dev The message sender locks LsETH tokens and received wrapped LsETH tokens in exchange
+    /// @dev The message sender needs to approve the contract to mint the wrapped tokens
+    /// @dev The minted wrapped LsETH is sent to the specified recipient
+    /// @param _recipient The account receiving the new minted wrapped LsETH
+    /// @param _value The amount of LsETH to wrap
     function mint(address _recipient, uint256 _value) external;
 
     /// @notice Burn tokens and retrieve underlying LsETH tokens
-    /// @dev Burned tokens are sent to recipient but are minted from the message sender balance
-    /// @dev No approval required from the message sender
-    /// @param _recipient Spender that receives the allowance
-    /// @param _shares Amount of shares to burn
+    /// @dev The message sender burns shares from its balance for the LsETH equivalent value
+    /// @dev The message sender doesn't need to approve the contract to burn the shares
+    /// @dev The freed LsETH is sent to the specified recipient
+    /// @param _recipient The account receiving the underlying LsETH tokens after shares are burned
+    /// @param _shares Amount of LsETH to free by burning wrapped LsETH
     function burn(address _recipient, uint256 _shares) external;
 }
