@@ -187,7 +187,7 @@ contract RiverV1SetupOneTests is Test, BytesGenerator {
         vm.stopPrank();
     }
 
-    function testGetOperatorsRegistry() public {
+    function testGetOperatorsRegistry() public view {
         assert(river.getOperatorsRegistry() == address(operatorsRegistry));
     }
 

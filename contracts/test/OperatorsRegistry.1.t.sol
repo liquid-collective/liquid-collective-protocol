@@ -67,6 +67,7 @@ contract OperatorsRegistryV1Tests is Test, BytesGenerator {
         assert(newOperator.keys == _keyCount);
         assert(newOperator.latestKeysEditBlockNumber == block.number);
     }
+
     function testAddNodeOperator(uint256 _nodeOperatorAddressSalt, bytes32 _name) public {
         address _nodeOperatorAddress = uf._new(_nodeOperatorAddressSalt);
         vm.startPrank(admin);
