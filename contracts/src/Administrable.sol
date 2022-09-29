@@ -8,7 +8,7 @@ import "./libraries/LibSanitize.sol";
 
 /// @title Administrable
 /// @author Kiln
-/// @notice This contract handles the ownership of the contracts
+/// @notice This contract handles the administration of the contracts
 abstract contract Administrable is IAdministrable {
     /// @notice Prevents unauthorized calls
     modifier onlyAdmin() {

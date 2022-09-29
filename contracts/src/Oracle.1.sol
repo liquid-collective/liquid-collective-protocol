@@ -338,7 +338,7 @@ contract OracleV1 is IOracleV1, Initializable, Administrable {
     }
 
     /// @notice Retrieve the block timestamp
-    /// @return the block timestamp
+    /// @return The block timestamp
     function _getTime() internal view returns (uint256) {
         return block.timestamp; // solhint-disable-line not-rely-on-time
     }
@@ -353,7 +353,7 @@ contract OracleV1 is IOracleV1, Initializable, Administrable {
     /// @notice Retrieve the first epoch id of the frame of the provided epoch id
     /// @param _epochId Epoch id used to get the frame
     /// @param _clSpec CL spec parameters
-    /// @return The epoch id at the beginning of the frame;
+    /// @return The epoch id at the beginning of the frame
     function _getFrameFirstEpochId(uint256 _epochId, CLSpec.CLSpecStruct memory _clSpec)
         internal
         pure

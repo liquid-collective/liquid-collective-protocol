@@ -8,7 +8,7 @@ import "./state/shared/Version.sol";
 /// @notice This contract ensures that initializers are called only once per version
 contract Initializable {
     /// @notice An error occured during the initialization
-    /// @param version The version that was attempting the be initialized
+    /// @param version The version that was attempting to be initialized
     /// @param expectedVersion The version that was expected
     error InvalidInitialization(uint256 version, uint256 expectedVersion);
 

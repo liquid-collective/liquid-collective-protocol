@@ -36,9 +36,9 @@ interface IRiverV1 is IConsensusLayerDepositManagerV1, IUserDepositManagerV1, IS
 
     /// @notice The system underlying supply increased. This is a snapshot of the balances for accounting purposes
     /// @param _collector The address of the collector during this event
-    /// @param _oldTotalUnderlyingBalance Old total eth balance under management by River
+    /// @param _oldTotalUnderlyingBalance Old total ETH balance under management by River
     /// @param _oldTotalSupply Old total supply in shares
-    /// @param _newTotalUnderlyingBalance New total eth balance under management by River
+    /// @param _newTotalUnderlyingBalance New total ETH balance under management by River
     /// @param _newTotalSupply New total supply in shares
     event RewardsEarned(
         address indexed _collector,
@@ -64,7 +64,7 @@ interface IRiverV1 is IConsensusLayerDepositManagerV1, IUserDepositManagerV1, IS
     /// @param _allowlistAddress Address of the allowlist contract
     /// @param _operatorRegistryAddress Address of the operator registry
     /// @param _collectorAddress Address receiving the the global fee on revenue
-    /// @param _globalFee Amount retained when the eth balance increases and sent to the collector
+    /// @param _globalFee Amount retained when the ETH balance increases and sent to the collector
     function initRiverV1(
         address _depositContractAddress,
         address _elFeeRecipientAddress,

@@ -10,7 +10,7 @@ import "./Administrable.sol";
 /// @notice This contract accepts calls to admin-level functions of an underlying contract, and
 ///         ensures the caller holds an appropriate role for calling that function. There are two roles:
 ///          - An Admin can call anything
-///          - An Executor can call specific functions specified at construction
+///          - An Executor can call specific functions. The list of function is customisable.
 ///         Random callers cannot call anything through this contract, even if the underlying function
 ///         is unpermissioned in the underlying contract.
 ///         Calls to non-admin functions should be called at the underlying contract directly.

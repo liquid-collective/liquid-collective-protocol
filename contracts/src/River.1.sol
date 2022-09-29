@@ -241,7 +241,7 @@ contract RiverV1 is
     }
 
     /// @notice Overriden handler called whenever the balance of ETH handled by the system increases. Computes the fees paid to the collector
-    /// @param _amount Additional eth received
+    /// @param _amount Additional ETH received
     function _onEarnings(uint256 _amount) internal override {
         uint256 oldTotalSupply = _totalSupply();
         if (oldTotalSupply == 0) {
@@ -263,7 +263,7 @@ contract RiverV1 is
     }
 
     /// @notice Overriden handler called whenever the total balance of ETH is requested
-    /// @return The current total asset balance manager by River
+    /// @return The current total asset balance managed by River
     function _assetBalance() internal view override returns (uint256) {
         uint256 clValidatorCount = CLValidatorCount.get();
         uint256 depositedValidatorCount = DepositedValidatorCount.get();

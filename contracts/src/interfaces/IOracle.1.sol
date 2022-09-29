@@ -25,8 +25,8 @@ interface IOracleV1 {
     event ExpectedEpochIdUpdated(uint256 epochId);
 
     /// @notice The report has been submitted to river
-    /// @param postTotalEth The new total eth balance
-    /// @param prevTotalEth The previous total eth balance
+    /// @param postTotalEth The new total ETH balance
+    /// @param prevTotalEth The previous total ETH balance
     /// @param timeElapsed Time since last report
     /// @param totalShares The new total amount of shares
     event PostTotalShares(uint256 postTotalEth, uint256 prevTotalEth, uint256 timeElapsed, uint256 totalShares);

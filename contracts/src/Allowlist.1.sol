@@ -12,7 +12,7 @@ import "./state/allowlist/Allowlist.sol";
 /// @title Allowlist (v1)
 /// @author Kiln
 /// @notice This contract handles the list of allowed recipients.
-/// @notice All accounts have an uitn256 value associated with their addresses where
+/// @notice All accounts have an uint256 value associated with their addresses where
 /// @notice each bit represents a right in the system. The DENY_MASK defined the mask
 /// @notice used to identify if the denied bit is on, preventing users from interacting
 /// @notice with the system

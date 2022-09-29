@@ -5,7 +5,7 @@ pragma solidity 0.8.10;
 /// @author Kiln
 /// @notice This interface exposes methods to handle the inbound transfers cases or the explicit submissions
 interface IUserDepositManagerV1 {
-    /// @notice User deposited eth in the system
+    /// @notice User deposited ETH in the system
     /// @param depositor Address performing the deposit
     /// @param recipient Address receiving the minted shares
     /// @param amount Amount in ETH deposited

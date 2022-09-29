@@ -13,7 +13,7 @@ interface IConsensusLayerDepositManagerV1 {
     /// @param depositContract Address of the deposit contract
     event SetDepositContractAddress(address indexed depositContract);
 
-    /// @notice The stored withdrawals credentials changed
+    /// @notice The stored withdrawal credentials changed
     /// @param withdrawalCredentials The withdrawal credentials to use for deposits
     event SetWithdrawalCredentials(bytes32 withdrawalCredentials);
 
@@ -42,7 +42,7 @@ interface IConsensusLayerDepositManagerV1 {
     error ErrorOnDeposit();
 
     /// @notice Returns the amount of pending ETH
-    /// @return The amount of pending eth
+    /// @return The amount of pending ETH
     function getBalanceToDeposit() external view returns (uint256);
 
     /// @notice Retrieve the withdrawal credentials

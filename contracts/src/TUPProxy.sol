@@ -7,6 +7,8 @@ import "openzeppelin-contracts/contracts/proxy/transparent/TransparentUpgradeabl
 /// @author Kiln
 /// @notice This contract extends the Transparent Upgradeable proxy and adds a system wide pause feature.
 ///         When the system is paused, the fallback will fail no matter what calls are made.
+///         Address Zero is allowed to perform calls even if paused to allow view calls made
+///         from RPC providers to properly work.
 contract TUPProxy is TransparentUpgradeableProxy {
     /// @notice Storage slot of the pause status value
     bytes32 private constant _PAUSE_SLOT = bytes32(uint256(keccak256("river.tupproxy.pause")) - 1);
@@ -22,7 +24,7 @@ contract TUPProxy is TransparentUpgradeableProxy {
     /// @param admin The admin at the time of the unpause event
     event Unpaused(address admin);
 
-    /// @dev The Admin of the proxy should not be the same as an
+    /// @dev The Admin of the proxy should not be the same as the
     /// @dev admin on the implementation logics. The admin here is
     /// @dev the only account allowed to perform calls on the proxy
     /// @dev (the calls are never delegated to the implementation)
