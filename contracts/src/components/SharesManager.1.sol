@@ -12,13 +12,13 @@ import "../state/shared/ApprovalsPerOwner.sol";
 /// @notice This contract handles the shares of the depositor and the ERC20 interface
 abstract contract SharesManagerV1 is ISharesManagerV1 {
     /// @notice Internal hook triggered on the external transfer call
-    /// @dev Must be overriden
+    /// @dev Must be overridden
     /// @param _from Address of the sender
     /// @param _to Address of the recipient
     function _onTransfer(address _from, address _to) internal view virtual;
 
     /// @notice Internal method to override to provide the total underlying asset balance
-    /// @dev Must be overriden
+    /// @dev Must be overridden
     /// @return The total asset balance of the system
     function _assetBalance() internal view virtual returns (uint256);
 

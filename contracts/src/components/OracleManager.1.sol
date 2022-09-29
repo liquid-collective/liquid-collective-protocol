@@ -18,18 +18,18 @@ import "../state/river/DepositedValidatorCount.sol";
 /// @notice validators that have been activated on the consensus layer.
 abstract contract OracleManagerV1 is IOracleManagerV1 {
     /// @notice Handler called if the delta between the last and new validator balance sum is positive
-    /// @dev Must be overriden
+    /// @dev Must be overridden
     /// @param _profits The positive increase in the validator balance sum (staking rewards)
     function _onEarnings(uint256 _profits) internal virtual;
 
     /// @notice Handler called to pull the Execution layer fees from the recipient
-    /// @dev Must be overriden
+    /// @dev Must be overridden
     /// @param _max The maximum amount of pull inside the system
     /// @return The amount pulled inside the system
     function _pullELFees(uint256 _max) internal virtual returns (uint256);
 
     /// @notice Handler called to retrieve the system administrator address
-    /// @dev Must be overriden
+    /// @dev Must be overridden
     /// @return The system administrator address
     function _getRiverAdmin() internal view virtual returns (address);
 

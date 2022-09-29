@@ -12,7 +12,7 @@ import "../state/river/BalanceToDeposit.sol";
 /// @notice This contract handles the inbound transfers cases or the explicit submissions
 abstract contract UserDepositManagerV1 is IUserDepositManagerV1 {
     /// @notice Handler called whenever a user has sent funds to the contract
-    /// @dev Must be overriden
+    /// @dev Must be overridden
     /// @param _depositor Address that made the deposit
     /// @param _recipient Address that receives the minted shares
     /// @param _amount Amount deposited

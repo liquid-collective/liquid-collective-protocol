@@ -17,8 +17,8 @@ import "../state/river/BalanceToDeposit.sol";
 /// @notice This contract handles the interactions with the official deposit contract, funding all validators
 /// @notice Whenever a deposit to the consensus layer is requested, this contract computed the amount of keys
 /// @notice that could be deposited depending on the amount available in the contract. It then tried to retrieve
-/// @notice validator keys by callings its internal virtual method _getNextValidators. This method should be
-/// @notice overriden by the implementing contract to provide [0; _keyCount] keys when invoked.
+/// @notice validator keys by calling its internal virtual method _getNextValidators. This method should be
+/// @notice overridden by the implementing contract to provide [0; _keyCount] keys when invoked.
 abstract contract ConsensusLayerDepositManagerV1 is IConsensusLayerDepositManagerV1 {
     /// @notice Size of a BLS Public key in bytes
     uint256 public constant PUBLIC_KEY_LENGTH = 48;
@@ -40,7 +40,7 @@ abstract contract ConsensusLayerDepositManagerV1 is IConsensusLayerDepositManage
     }
 
     /// @notice Internal helper to retrieve validator keys ready to be funded
-    /// @dev Must be overriden
+    /// @dev Must be overridden
     /// @param _keyCount The amount of keys (or less) to return.
     function _getNextValidators(uint256 _keyCount)
         internal
