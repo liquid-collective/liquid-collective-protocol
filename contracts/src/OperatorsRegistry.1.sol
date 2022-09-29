@@ -155,6 +155,7 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
         }
         for (uint256 idx = 0; idx < _operatorIndexes.length;) {
             uint256 operatorIndex = _operatorIndexes[idx];
+            uint256 newLimit = _newLimits[idx];
 
             // prevents duplicates
             if (idx > 0 && !(operatorIndex > _operatorIndexes[idx - 1])) {
@@ -165,9 +166,9 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
 
             // we enter this condition if the operator edited its keys after the off-chain key audit was made
             // we will skip any limit update on that operator unless it was a decrease in the initial limit
-            if (_snapshotBlock < operator.latestKeysEditBlockNumber && _newLimits[idx] > operator.limit) {
+            if (_snapshotBlock < operator.latestKeysEditBlockNumber && newLimit > operator.limit) {
                 emit OperatorEditsAfterSnapshot(
-                    operatorIndex, _newLimits[idx], operator.latestKeysEditBlockNumber, _snapshotBlock
+                    operatorIndex, newLimit, operator.latestKeysEditBlockNumber, _snapshotBlock
                     );
                 unchecked {
                     ++idx;
@@ -178,24 +179,22 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
             // otherwise, we check for limit invariants that shouldn't happen if the off-chain key audit
             // was made properly, and if everything is respected, we update the limit
 
-            if (_newLimits[idx] > operator.keys) {
-                revert OperatorLimitTooHigh(operatorIndex, _newLimits[idx], operator.keys);
+            if (newLimit > operator.keys) {
+                revert OperatorLimitTooHigh(operatorIndex, newLimit, operator.keys);
             }
 
-            if (_newLimits[idx] < operator.funded) {
-                revert OperatorLimitTooLow(operatorIndex, _newLimits[idx], operator.funded);
+            if (newLimit < operator.funded) {
+                revert OperatorLimitTooLow(operatorIndex, newLimit, operator.funded);
             }
 
-            operator.limit = _newLimits[idx];
-            emit SetOperatorLimit(operatorIndex, operator.limit);
+            operator.limit = newLimit;
+            emit SetOperatorLimit(operatorIndex, newLimit);
 
             unchecked {
                 ++idx;
             }
         }
     }
-
-    error InvalidKeysLength();
 
     /// @notice Adds new keys for an operator
     /// @dev Only callable by the administrator or the operator address
