@@ -163,10 +163,17 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
             }
 
             Operators.Operator storage operator = Operators.get(operatorIndex);
+            uint256 currentLimit = operator.limit;
+            if (currentLimit == newLimit) {
+                unchecked {
+                    ++idx;
+                }
+                continue;
+            }
 
             // we enter this condition if the operator edited its keys after the off-chain key audit was made
             // we will skip any limit update on that operator unless it was a decrease in the initial limit
-            if (_snapshotBlock < operator.latestKeysEditBlockNumber && newLimit > operator.limit) {
+            if (_snapshotBlock < operator.latestKeysEditBlockNumber && newLimit > currentLimit) {
                 emit OperatorEditsAfterSnapshot(
                     operatorIndex, newLimit, operator.latestKeysEditBlockNumber, _snapshotBlock
                     );

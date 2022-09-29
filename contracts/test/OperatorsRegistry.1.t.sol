@@ -362,6 +362,35 @@ contract OperatorsRegistryV1Tests is Test, BytesGenerator {
         assert(newOperator.limit == 0);
     }
 
+    function testSetOperatorLimitCountNoOp(bytes32 _name, uint256 _firstAddressSalt, uint256 _limit) public {
+        address _firstAddress = uf._new(_firstAddressSalt);
+        _limit = _limit % 11; // 10 is max
+        vm.assume(_limit > 0);
+        vm.startPrank(admin);
+        uint256 index = operatorsRegistry.addOperator(string(abi.encodePacked(_name)), _firstAddress);
+
+        bytes memory tenKeys = genBytes((48 + 96) * 10);
+
+        operatorsRegistry.addValidators(index, 10, tenKeys);
+
+        Operators.Operator memory newOperator = operatorsRegistry.getOperator(index);
+        assert(newOperator.limit == 0);
+        uint256[] memory operatorIndexes = new uint256[](1);
+        operatorIndexes[0] = index;
+        uint256[] memory operatorLimits = new uint256[](1);
+        operatorLimits[0] = _limit;
+        vm.record();
+        operatorsRegistry.setOperatorLimits(operatorIndexes, operatorLimits, block.number);
+        (, bytes32[] memory writes) = vm.accesses(address(operatorsRegistry));
+        assert(writes.length == 1);
+        newOperator = operatorsRegistry.getOperator(index);
+        assert(newOperator.limit == _limit);
+        vm.record();
+        operatorsRegistry.setOperatorLimits(operatorIndexes, operatorLimits, block.number);
+        (, writes) = vm.accesses(address(operatorsRegistry));
+        assert(writes.length == 0);
+    }
+
     event OperatorEditsAfterSnapshot(
         uint256 indexed index, uint256 limit, uint256 indexed lastEdit, uint256 indexed snapshotBlock
     );
