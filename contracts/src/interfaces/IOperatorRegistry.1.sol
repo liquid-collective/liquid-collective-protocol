@@ -31,7 +31,7 @@ interface IOperatorsRegistryV1 {
     event OperatorEditsAfterSnapshot(
         uint256 indexed index, uint256 limit, uint256 indexed latestKeysEditBlockNumber, uint256 indexed snapshotBlock
     );
-    event OperatorLimitUnchanged(uint256 indexed operatorIndex, uint256 currentLimit);
+    event OperatorLimitUnchanged(uint256 indexed operatorIndex, uint256 limit);
 
     function initOperatorsRegistryV1(address _admin, address _river) external;
     function listActiveOperators() external view returns (Operators.Operator[] memory);

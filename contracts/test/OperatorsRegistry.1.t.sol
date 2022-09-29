@@ -362,7 +362,7 @@ contract OperatorsRegistryV1Tests is Test, BytesGenerator {
         assert(newOperator.limit == 0);
     }
 
-    event OperatorLimitUnchanged(uint256 indexed operatorIndex, uint256 currentLimit);
+    event OperatorLimitUnchanged(uint256 indexed operatorIndex, uint256 limit);
 
     function testSetOperatorLimitCountNoOp(bytes32 _name, uint256 _firstAddressSalt, uint256 _limit) public {
         address _firstAddress = uf._new(_firstAddressSalt);
