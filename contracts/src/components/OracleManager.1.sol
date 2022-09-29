@@ -24,7 +24,7 @@ abstract contract OracleManagerV1 is IOracleManagerV1 {
 
     /// @notice Handler called to pull the Execution layer fees from the recipient
     /// @dev Must be overridden
-    /// @param _max The maximum amount of pull inside the system
+    /// @param _max The maximum amount to pull inside the system
     /// @return The amount pulled inside the system
     function _pullELFees(uint256 _max) internal virtual returns (uint256);
 
@@ -93,7 +93,7 @@ abstract contract OracleManagerV1 is IOracleManagerV1 {
 
         uint256 executionLayerFees;
 
-        // if there's a margin left for pulling the elFees that would leave our delta under the allowed maxIncrease value, do it
+        // if there's a margin left for pulling the execution layer fees that would leave our delta under the allowed maxIncrease value, do it
         if ((_maxIncrease + previousValidatorTotalBalance) > _validatorTotalBalance) {
             executionLayerFees = _pullELFees((_maxIncrease + previousValidatorTotalBalance) - _validatorTotalBalance);
         }

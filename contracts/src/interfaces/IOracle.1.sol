@@ -9,10 +9,10 @@ import "../state/oracle/ReportBounds.sol";
 /// @notice This interface exposes methods to handle the input from the allowed oracle members.
 /// @notice Highly inspired by Lido's implementation.
 interface IOracleV1 {
-    /// @notice Consensys Layer data has been reported by an oracle member
+    /// @notice Consensus Layer data has been reported by an oracle member
     /// @param epochId The epoch of the report
     /// @param newCLBalance The new consensus layer balance
-    /// @param newCLValidatorCount The new consensys layer validator count
+    /// @param newCLValidatorCount The new consensus layer validator count
     /// @param oracleMember The oracle member that reported
     event CLReported(uint256 epochId, uint128 newCLBalance, uint32 newCLValidatorCount, address oracleMember);
 
@@ -20,7 +20,7 @@ interface IOracleV1 {
     /// @param newQuorum The new quorum value
     event SetQuorum(uint256 newQuorum);
 
-    /// @notice The expected epoch id has been changedS
+    /// @notice The expected epoch id has been changed
     /// @param epochId The new expected epoch id
     event ExpectedEpochIdUpdated(uint256 epochId);
 
@@ -78,16 +78,16 @@ interface IOracleV1 {
     /// @notice The delta in balance is above the allowed upper bound
     /// @param prevTotalEth The previous total balance
     /// @param postTotalEth The new total balance
-    /// @param timeElapsed The time ssince last report
+    /// @param timeElapsed The time since last report
     /// @param annualAprUpperBound The maximum apr allowed
     error TotalValidatorBalanceIncreaseOutOfBound(
         uint256 prevTotalEth, uint256 postTotalEth, uint256 timeElapsed, uint256 annualAprUpperBound
     );
 
-    /// @notice The delta in balance is under the allowed lower bound
+    /// @notice The negative delta in balance is above the allowed lower bound
     /// @param prevTotalEth The previous total balance
     /// @param postTotalEth The new total balance
-    /// @param timeElapsed The time ssince last report
+    /// @param timeElapsed The time since last report
     /// @param relativeLowerBound The maximum relative decrease allowed
     error TotalValidatorBalanceDecreaseOutOfBound(
         uint256 prevTotalEth, uint256 postTotalEth, uint256 timeElapsed, uint256 relativeLowerBound

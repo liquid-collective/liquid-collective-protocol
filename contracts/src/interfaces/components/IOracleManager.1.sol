@@ -5,7 +5,7 @@ pragma solidity 0.8.10;
 /// @author Kiln
 /// @notice This interface exposes methods to handle the inputs provided by the oracle
 interface IOracleManagerV1 {
-    /// @notice The storage oracle address changed
+    /// @notice The stored oracle address changed
     /// @param oracleAddress The new oracle address
     event SetOracle(address indexed oracleAddress);
 
@@ -48,7 +48,7 @@ interface IOracleManagerV1 {
     /// @dev node operator's work, just like consensus layer fees, and both should be handled in the
     /// @dev same manner, as a single revenue stream for the users and the collector.
     /// @param _validatorCount The number of active validators on the consensus layer
-    /// @param _validatorTotalBalance The validator balance sum of the active validators on the consensus layer
+    /// @param _validatorTotalBalance The balance sum of the active validators on the consensus layer
     /// @param _roundId An identifier for this update
     /// @param _maxIncrease The maximum allowed increase in the total balance
     function setConsensusLayerData(

@@ -18,11 +18,11 @@ interface IFirewall {
     /// @param status True if executor is allowed
     event SetExecutorPermissions(bytes4 selector, bool status);
 
-    /// @notice The executor address
+    /// @notice Retrieve the executor address
     /// @return The executor address
     function executor() external view returns (address);
 
-    /// @notice The destination address
+    /// @notice Retrieve the destination address
     /// @return The destination address
     function destination() external view returns (address);
 

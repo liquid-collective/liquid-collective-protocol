@@ -95,7 +95,7 @@ interface IOperatorsRegistryV1 {
     /// @param keyCount The operator key count
     error OperatorLimitTooHigh(uint256 index, uint256 limit, uint256 keyCount);
 
-    /// @notice The value for the limit is too lowe
+    /// @notice The value for the limit is too low
     /// @param index The operator index
     /// @param limit The new limit provided
     /// @param fundedKeyCount The operator funded key count

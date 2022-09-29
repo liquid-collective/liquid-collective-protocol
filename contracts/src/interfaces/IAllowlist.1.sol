@@ -10,7 +10,7 @@ interface IAllowlistV1 {
     /// @param permissions New permissions for each account at the same index
     event SetAllowlistPermissions(address[] indexed accounts, uint256[] permissions);
 
-    /// @notice The stored allowee address has been changed
+    /// @notice The stored allower address has been changed
     /// @param allower The new allower address
     event SetAllower(address indexed allower);
 
@@ -37,7 +37,7 @@ interface IAllowlistV1 {
     ///         is not in the deny list
     /// @param _account Recipient to verify
     /// @param _mask Combination of permissions to verify
-    /// @return True if mask is respected and user is not allowed
+    /// @return True if mask is respected and user is allowed
     function isAllowed(address _account, uint256 _mask) external view returns (bool);
 
     /// @notice This method returns true if the user is in the deny list
