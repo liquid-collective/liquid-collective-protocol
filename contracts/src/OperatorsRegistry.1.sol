@@ -165,7 +165,7 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
 
             // we enter this condition if the operator edited its keys after the off-chain key audit was made
             // we will skip any limit update on that operator unless it was a decrease in the initial limit
-            if (_snapshotBlock < operator.latestKeysEditBlockNumber && _newLimits[idx] > operator.funded) {
+            if (_snapshotBlock < operator.latestKeysEditBlockNumber && _newLimits[idx] > operator.limit) {
                 emit OperatorEditsAfterSnapshot(
                     operatorIndex, _newLimits[idx], operator.latestKeysEditBlockNumber, _snapshotBlock
                     );

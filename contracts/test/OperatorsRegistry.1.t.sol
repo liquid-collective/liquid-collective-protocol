@@ -393,7 +393,7 @@ contract OperatorsRegistryV1Tests is Test, BytesGenerator {
 
     event SetOperatorLimit(uint256 indexed index, uint256 newLimit);
 
-    function testSetOperatorLimitToFundedCountSnapshotTooLow(bytes32 _name, uint256 _firstAddressSalt) public {
+    function testSetOperatorLimitDecreaseSkipsSnapshotCheck(bytes32 _name, uint256 _firstAddressSalt) public {
         address _firstAddress = uf._new(_firstAddressSalt);
         vm.startPrank(admin);
         uint256 index = operatorsRegistry.addOperator(string(abi.encodePacked(_name)), _firstAddress);
@@ -410,12 +410,18 @@ contract OperatorsRegistryV1Tests is Test, BytesGenerator {
         uint256[] memory operatorIndexes = new uint256[](1);
         operatorIndexes[0] = index;
         uint256[] memory operatorLimits = new uint256[](1);
-        operatorLimits[0] = 0;
+        operatorLimits[0] = 10;
         vm.expectEmit(true, true, true, true);
-        emit SetOperatorLimit(index, 0);
+        emit SetOperatorLimit(index, 10);
+        operatorsRegistry.setOperatorLimits(operatorIndexes, operatorLimits, bn);
+        newOperator = operatorsRegistry.getOperator(index);
+        assert(newOperator.limit == 10);
+        operatorLimits[0] = 5;
+        vm.expectEmit(true, true, true, true);
+        emit SetOperatorLimit(index, 5);
         operatorsRegistry.setOperatorLimits(operatorIndexes, operatorLimits, bn - 1);
         newOperator = operatorsRegistry.getOperator(index);
-        assert(newOperator.limit == 0);
+        assert(newOperator.limit == 5);
     }
 
     function testSetOperatorLimitCountAsUnauthorized(bytes32 _name, uint256 _firstAddressSalt, uint256 _limit) public {
