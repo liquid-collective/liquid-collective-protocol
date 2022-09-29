@@ -240,7 +240,7 @@ contract RiverV1 is
         return collectedELFees;
     }
 
-    /// @notice Overriden handler called whenever the balance of ETH handled by the system increases. Splits funds between operators and collector.
+    /// @notice Overriden handler called whenever the balance of ETH handled by the system increases. Computes the fees paid to the collector
     /// @param _amount Additional eth received
     function _onEarnings(uint256 _amount) internal override {
         uint256 oldTotalSupply = _totalSupply();
