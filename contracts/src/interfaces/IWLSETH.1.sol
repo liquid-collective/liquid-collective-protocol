@@ -19,8 +19,8 @@ interface IWLSETHV1 {
 
     /// @notice Tokens have been minted
     /// @param recipient The account receiving the new tokens
-    /// @param value The amount of LsETH provided
-    event Mint(address indexed recipient, uint256 value);
+    /// @param shares The amount of LsETH provided
+    event Mint(address indexed recipient, uint256 shares);
 
     /// @notice Tokens have been burned
     /// @param recipient The account that receive the underlying LsETH
@@ -125,8 +125,8 @@ interface IWLSETHV1 {
     /// @dev The message sender needs to approve the contract to mint the wrapped tokens
     /// @dev The minted wrapped LsETH is sent to the specified recipient
     /// @param _recipient The account receiving the new minted wrapped LsETH
-    /// @param _value The amount of LsETH to wrap
-    function mint(address _recipient, uint256 _value) external;
+    /// @param _shares The amount of LsETH to wrap
+    function mint(address _recipient, uint256 _shares) external;
 
     /// @notice Burn tokens and retrieve underlying LsETH tokens
     /// @dev The message sender burns shares from its balance for the LsETH equivalent value
