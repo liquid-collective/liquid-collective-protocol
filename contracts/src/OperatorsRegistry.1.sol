@@ -163,8 +163,9 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
             }
 
             Operators.Operator storage operator = Operators.get(operatorIndex);
+
             uint256 currentLimit = operator.limit;
-            if (currentLimit == newLimit) {
+            if (newLimit == currentLimit) {
                 unchecked {
                     ++idx;
                 }
