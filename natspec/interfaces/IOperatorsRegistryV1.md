@@ -1,10 +1,10 @@
 # IOperatorsRegistryV1
 
+*Kiln*
 
+> Operators Registry Interface (v1)
 
-
-
-
+This interface exposes methods to handle the list of operators and their keys
 
 
 
@@ -226,19 +226,20 @@ Changes the operator address of an operator
 ### setOperatorLimits
 
 ```solidity
-function setOperatorLimits(uint256[] _operatorIndexes, uint256[] _newLimits) external nonpayable
+function setOperatorLimits(uint256[] _operatorIndexes, uint256[] _newLimits, uint256 _snapshotBlock) external nonpayable
 ```
 
 Changes the operator staking limit
 
-*Only callable by the administratorThe limit cannot exceed the total key count of the operatorThe _indexes and _newLimits must have the same length.Each limit value is applied to the operator index at the same index in the _indexes array.*
+*Only callable by the administratorThe operator indexes must be in increasing order and contain no duplicateThe limit cannot exceed the total key count of the operatorThe _indexes and _newLimits must have the same length.Each limit value is applied to the operator index at the same index in the _indexes array.*
 
 #### Parameters
 
 | Name | Type | Description |
 |---|---|---|
-| _operatorIndexes | uint256[] | The operator indexes |
+| _operatorIndexes | uint256[] | The operator indexes, in increasing order and duplicate free |
 | _newLimits | uint256[] | The new staking limit of the operators |
+| _snapshotBlock | uint256 | The block number at which the snapshot was computed |
 
 ### setOperatorName
 
@@ -291,22 +292,6 @@ Changes the operator stopped validator count
 | _index | uint256 | The operator index |
 | _newStoppedValidatorCount | uint256 | The new stopped validator count of the operator |
 
-### setRiver
-
-```solidity
-function setRiver(address _newRiver) external nonpayable
-```
-
-Change the River address
-
-
-
-#### Parameters
-
-| Name | Type | Description |
-|---|---|---|
-| _newRiver | address | New address for the river system |
-
 
 
 ## Events
@@ -345,6 +330,43 @@ The operator or the admin added new validator keys and signatures
 |---|---|---|
 | index `indexed` | uint256 | The operator index |
 | publicKeysAndSignatures  | bytes | The concatenated public keys and signatures |
+
+### OperatorEditsAfterSnapshot
+
+```solidity
+event OperatorEditsAfterSnapshot(uint256 indexed index, uint256 currentLimit, uint256 newLimit, uint256 indexed latestKeysEditBlockNumber, uint256 indexed snapshotBlock)
+```
+
+The operator edited its keys after the snapshot block
+
+*This means that we cannot assume that its key set is checked by the snapshotThis happens only if the limit was meant to be increased*
+
+#### Parameters
+
+| Name | Type | Description |
+|---|---|---|
+| index `indexed` | uint256 | The operator index |
+| currentLimit  | uint256 | The current operator limit |
+| newLimit  | uint256 | The new operator limit that was attempted to be set |
+| latestKeysEditBlockNumber `indexed` | uint256 | The last block number at which the operator changed its keys |
+| snapshotBlock `indexed` | uint256 | The block number of the snapshot |
+
+### OperatorLimitUnchanged
+
+```solidity
+event OperatorLimitUnchanged(uint256 indexed index, uint256 limit)
+```
+
+The call didn&#39;t alter the limit of the operator
+
+
+
+#### Parameters
+
+| Name | Type | Description |
+|---|---|---|
+| index `indexed` | uint256 | The operator index |
+| limit  | uint256 | The limit of the operator |
 
 ### RemovedValidatorKey
 
@@ -564,7 +586,7 @@ The index provided are not sorted properly (descending order)
 ### OperatorLimitTooHigh
 
 ```solidity
-error OperatorLimitTooHigh(uint256 limit, uint256 keyCount)
+error OperatorLimitTooHigh(uint256 index, uint256 limit, uint256 keyCount)
 ```
 
 The value for the operator limit is too high
@@ -575,16 +597,17 @@ The value for the operator limit is too high
 
 | Name | Type | Description |
 |---|---|---|
+| index | uint256 | The operator index |
 | limit | uint256 | The new limit provided |
 | keyCount | uint256 | The operator key count |
 
 ### OperatorLimitTooLow
 
 ```solidity
-error OperatorLimitTooLow(uint256 limit, uint256 fundedKeyCount)
+error OperatorLimitTooLow(uint256 index, uint256 limit, uint256 fundedKeyCount)
 ```
 
-The value for the limit is too lowe
+The value for the limit is too low
 
 
 
@@ -592,7 +615,19 @@ The value for the limit is too lowe
 
 | Name | Type | Description |
 |---|---|---|
+| index | uint256 | The operator index |
 | limit | uint256 | The new limit provided |
 | fundedKeyCount | uint256 | The operator funded key count |
+
+### UnorderedOperatorList
+
+```solidity
+error UnorderedOperatorList()
+```
+
+The provided list of operators is not in increasing order
+
+
+
 
 

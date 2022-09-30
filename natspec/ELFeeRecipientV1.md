@@ -2,7 +2,7 @@
 
 *Kiln*
 
-> Execution Layer Fee Recipient
+> Execution Layer Fee Recipient (v1)
 
 This contract receives all the execution layer fees from the proposed blocks + bribes
 
@@ -108,7 +108,7 @@ An error occured during the initialization
 
 | Name | Type | Description |
 |---|---|---|
-| version | uint256 | The version that was attempting the be initialized |
+| version | uint256 | The version that was attempting to be initialized |
 | expectedVersion | uint256 | The version that was expected |
 
 ### InvalidZeroAddress

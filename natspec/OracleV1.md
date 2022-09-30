@@ -399,7 +399,7 @@ function proposeAdmin(address _newAdmin) external nonpayable
 
 Proposes a new address as admin
 
-*This security prevents setting an invalid address as an admin. The pendingadmin has to claim its ownership of the contract, and proves that the newaddress is able to perform regular transactions.*
+*This security prevents setting an invalid address as an admin. The pendingadmin has to claim its ownership of the contract, and prove that the newaddress is able to perform regular transactions.*
 
 #### Parameters
 
@@ -537,7 +537,7 @@ A member has been added to the oracle member list
 event CLReported(uint256 epochId, uint128 newCLBalance, uint32 newCLValidatorCount, address oracleMember)
 ```
 
-Consensys Layer data has been reported by an oracle member
+Consensus Layer data has been reported by an oracle member
 
 
 
@@ -556,7 +556,7 @@ Consensys Layer data has been reported by an oracle member
 event ExpectedEpochIdUpdated(uint256 epochId)
 ```
 
-The expected epoch id has been changedS
+The expected epoch id has been changed
 
 
 
@@ -825,7 +825,7 @@ An error occured during the initialization
 
 | Name | Type | Description |
 |---|---|---|
-| version | uint256 | The version that was attempting the be initialized |
+| version | uint256 | The version that was attempting to be initialized |
 | expectedVersion | uint256 | The version that was expected |
 
 ### InvalidZeroAddress
@@ -862,7 +862,7 @@ The provided epoch is not at the beginning of its frame
 error TotalValidatorBalanceDecreaseOutOfBound(uint256 prevTotalEth, uint256 postTotalEth, uint256 timeElapsed, uint256 relativeLowerBound)
 ```
 
-The delta in balance is under the allowed lower bound
+The negative delta in balance is above the allowed lower bound
 
 
 
@@ -872,7 +872,7 @@ The delta in balance is under the allowed lower bound
 |---|---|---|
 | prevTotalEth | uint256 | The previous total balance |
 | postTotalEth | uint256 | The new total balance |
-| timeElapsed | uint256 | The time ssince last report |
+| timeElapsed | uint256 | The time since last report |
 | relativeLowerBound | uint256 | The maximum relative decrease allowed |
 
 ### TotalValidatorBalanceIncreaseOutOfBound
@@ -891,7 +891,7 @@ The delta in balance is above the allowed upper bound
 |---|---|---|
 | prevTotalEth | uint256 | The previous total balance |
 | postTotalEth | uint256 | The new total balance |
-| timeElapsed | uint256 | The time ssince last report |
+| timeElapsed | uint256 | The time since last report |
 | annualAprUpperBound | uint256 | The maximum apr allowed |
 
 ### Unauthorized

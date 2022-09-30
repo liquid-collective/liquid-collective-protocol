@@ -1,10 +1,10 @@
 # IOracleManagerV1
 
+*Kiln*
 
+> Oracle Manager (v1)
 
-
-
-
+This interface exposes methods to handle the inputs provided by the oracle
 
 
 
@@ -76,7 +76,7 @@ Sets the validator count and validator total balance sum reported by the oracle
 | Name | Type | Description |
 |---|---|---|
 | _validatorCount | uint256 | The number of active validators on the consensus layer |
-| _validatorTotalBalance | uint256 | The validator balance sum of the active validators on the consensus layer |
+| _validatorTotalBalance | uint256 | The balance sum of the active validators on the consensus layer |
 | _roundId | bytes32 | An identifier for this update |
 | _maxIncrease | uint256 | The maximum allowed increase in the total balance |
 
@@ -124,7 +124,7 @@ The consensus layer data provided by the oracle has been updated
 event SetOracle(address indexed oracleAddress)
 ```
 
-The storage oracle address changed
+The stored oracle address changed
 
 
 

@@ -2,9 +2,9 @@
 
 *Kiln*
 
-> Wrapped lsETH v1
+> Wrapped LsETH (v1)
 
-This contract wraps the lsETH token into a rebase token, more suitable for some DeFi use-cases         like stable swaps.
+This contract wraps the LsETH token into a rebase token, more suitable for some DeFi use-cases         like stable swaps.
 
 
 
@@ -86,14 +86,14 @@ function burn(address _recipient, uint256 _shares) external nonpayable
 
 Burn tokens and retrieve underlying LsETH tokens
 
-*Burned tokens are sent to recipient but are minted from the message sender balanceNo approval required from the message sender*
+*The message sender burns shares from its balance for the LsETH equivalent valueThe message sender doesn&#39;t need to approve the contract to burn the sharesThe freed LsETH is sent to the specified recipient*
 
 #### Parameters
 
 | Name | Type | Description |
 |---|---|---|
-| _recipient | address | Spender that receives the allowance |
-| _shares | uint256 | Amount of shares to burn |
+| _recipient | address | The account receiving the underlying LsETH tokens after shares are burned |
+| _shares | uint256 | Amount of LsETH to free by burning wrapped LsETH |
 
 ### decimals
 
@@ -177,19 +177,19 @@ Initializes the wrapped token contract
 ### mint
 
 ```solidity
-function mint(address _recipient, uint256 _value) external nonpayable
+function mint(address _recipient, uint256 _shares) external nonpayable
 ```
 
 Mint tokens by providing LsETH tokens
 
-*Minted tokens are sent to recipient but are minted from the message sender balanceIt is expected that the message sender approves _value amount of LsETH token tothis contract before calling*
+*The message sender locks LsETH tokens and received wrapped LsETH tokens in exchangeThe message sender needs to approve the contract to mint the wrapped tokensThe minted wrapped LsETH is sent to the specified recipient*
 
 #### Parameters
 
 | Name | Type | Description |
 |---|---|---|
-| _recipient | address | Spender that receives the allowance |
-| _value | uint256 | Amount of river token to give to the mint |
+| _recipient | address | The account receiving the new minted wrapped LsETH |
+| _shares | uint256 | The amount of LsETH to wrap |
 
 ### name
 
@@ -370,7 +370,7 @@ Emitted when the contract is properly initialized
 ### Mint
 
 ```solidity
-event Mint(address indexed recipient, uint256 value)
+event Mint(address indexed recipient, uint256 shares)
 ```
 
 Tokens have been minted
@@ -382,7 +382,7 @@ Tokens have been minted
 | Name | Type | Description |
 |---|---|---|
 | recipient `indexed` | address | undefined |
-| value  | uint256 | undefined |
+| shares  | uint256 | undefined |
 
 ### SetRiver
 
@@ -466,7 +466,7 @@ An error occured during the initialization
 
 | Name | Type | Description |
 |---|---|---|
-| version | uint256 | The version that was attempting the be initialized |
+| version | uint256 | The version that was attempting to be initialized |
 | expectedVersion | uint256 | The version that was expected |
 
 ### InvalidZeroAddress

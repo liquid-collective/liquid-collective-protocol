@@ -1,10 +1,10 @@
 # IRiverV1
 
+*Kiln*
 
+> River Interface (v1)
 
-
-
-
+The main system interface
 
 
 
@@ -31,7 +31,7 @@ Retrieve the allowance value for a spender
 
 | Name | Type | Description |
 |---|---|---|
-| _0 | uint256 | The allowance for a given spender |
+| _0 | uint256 | The allowance in shares for a given spender |
 
 ### approve
 
@@ -48,7 +48,7 @@ Approves an account for future spendings
 | Name | Type | Description |
 |---|---|---|
 | _spender | address | Address that is allowed to spend the tokens |
-| _value | uint256 | The allowed amount, will override previous value |
+| _value | uint256 | The allowed amount in shares, will override previous value |
 
 #### Returns
 
@@ -76,7 +76,7 @@ Retrieve the balance of an account
 
 | Name | Type | Description |
 |---|---|---|
-| _0 | uint256 | The balance of the account |
+| _0 | uint256 | The balance of the account in shares |
 
 ### balanceOfUnderlying
 
@@ -132,7 +132,7 @@ Decrease allowance to another account
 | Name | Type | Description |
 |---|---|---|
 | _spender | address | Spender that receives the allowance |
-| _subtractableValue | uint256 | Amount to subtract |
+| _subtractableValue | uint256 | Amount of shares to subtract |
 
 #### Returns
 
@@ -165,7 +165,7 @@ Explicit deposit method to mint on msg.sender and transfer to _recipient
 
 | Name | Type | Description |
 |---|---|---|
-| _recipient | address | Address receiving the minted lsETH |
+| _recipient | address | Address receiving the minted LsETH |
 
 ### depositToConsensusLayer
 
@@ -215,7 +215,7 @@ Returns the amount of pending ETH
 
 | Name | Type | Description |
 |---|---|---|
-| _0 | uint256 | The amount of pending eth |
+| _0 | uint256 | The amount of pending ETH |
 
 ### getCLValidatorCount
 
@@ -319,6 +319,23 @@ Get the current global fee
 |---|---|---|
 | _0 | uint256 | The global fee |
 
+### getOperatorsRegistry
+
+```solidity
+function getOperatorsRegistry() external view returns (address)
+```
+
+Retrieve the operators registry
+
+
+
+
+#### Returns
+
+| Name | Type | Description |
+|---|---|---|
+| _0 | address | The operators registry address |
+
 ### getOracle
 
 ```solidity
@@ -368,7 +385,7 @@ Increase allowance to another account
 | Name | Type | Description |
 |---|---|---|
 | _spender | address | Spender that receives the allowance |
-| _additionalValue | uint256 | Amount to add |
+| _additionalValue | uint256 | Amount of shares to add |
 
 #### Returns
 
@@ -398,7 +415,7 @@ Initializes the River system
 | _allowlistAddress | address | Address of the allowlist contract |
 | _operatorRegistryAddress | address | Address of the operator registry |
 | _collectorAddress | address | Address receiving the the global fee on revenue |
-| _globalFee | uint256 | Amount retained when the eth balance increases, splitted between the collector and the operators |
+| _globalFee | uint256 | Amount retained when the ETH balance increases and sent to the collector |
 
 ### name
 
@@ -475,7 +492,7 @@ Sets the validator count and validator total balance sum reported by the oracle
 | Name | Type | Description |
 |---|---|---|
 | _validatorCount | uint256 | The number of active validators on the consensus layer |
-| _validatorTotalBalance | uint256 | The validator balance sum of the active validators on the consensus layer |
+| _validatorTotalBalance | uint256 | The balance sum of the active validators on the consensus layer |
 | _roundId | bytes32 | An identifier for this update |
 | _maxIncrease | uint256 | The maximum allowed increase in the total balance |
 
@@ -581,7 +598,7 @@ Retrieve the total token supply
 
 | Name | Type | Description |
 |---|---|---|
-| _0 | uint256 | The total supply |
+| _0 | uint256 | The total supply in shares |
 
 ### totalUnderlyingSupply
 
@@ -615,7 +632,7 @@ Performs a transfer from the message sender to the provided account
 | Name | Type | Description |
 |---|---|---|
 | _to | address | Address receiving the tokens |
-| _value | uint256 | Amount to be sent |
+| _value | uint256 | Amount of shares to be sent |
 
 #### Returns
 
@@ -639,7 +656,7 @@ Performs a transfer between two recipients
 |---|---|---|
 | _from | address | Address sending the tokens |
 | _to | address | Address receiving the tokens |
-| _value | uint256 | Amount to be sent |
+| _value | uint256 | Amount of shares to be sent |
 
 #### Returns
 
@@ -740,6 +757,26 @@ Funds have been pulled from the Execution Layer Fee Recipient
 | Name | Type | Description |
 |---|---|---|
 | amount  | uint256 | The amount pulled |
+
+### RewardsEarned
+
+```solidity
+event RewardsEarned(address indexed _collector, uint256 _oldTotalUnderlyingBalance, uint256 _oldTotalSupply, uint256 _newTotalUnderlyingBalance, uint256 _newTotalSupply)
+```
+
+The system underlying supply increased. This is a snapshot of the balances for accounting purposes
+
+
+
+#### Parameters
+
+| Name | Type | Description |
+|---|---|---|
+| _collector `indexed` | address | The address of the collector during this event |
+| _oldTotalUnderlyingBalance  | uint256 | Old total ETH balance under management by River |
+| _oldTotalSupply  | uint256 | Old total supply in shares |
+| _newTotalUnderlyingBalance  | uint256 | New total ETH balance under management by River |
+| _newTotalSupply  | uint256 | New total supply in shares |
 
 ### SetAllowlist
 
@@ -843,7 +880,7 @@ The stored Operators Registry has been changed
 event SetOracle(address indexed oracleAddress)
 ```
 
-The storage oracle address changed
+The stored oracle address changed
 
 
 
@@ -859,7 +896,7 @@ The storage oracle address changed
 event SetWithdrawalCredentials(bytes32 withdrawalCredentials)
 ```
 
-The stored withdrawals credentials changed
+The stored withdrawal credentials changed
 
 
 
@@ -893,7 +930,7 @@ event Transfer(address indexed from, address indexed to, uint256 value)
 event UserDeposit(address indexed depositor, address indexed recipient, uint256 amount)
 ```
 
-User deposited eth in the system
+User deposited ETH in the system
 
 
 
@@ -926,7 +963,7 @@ Allowance too low to perform operation
 | _from | address | Account where funds are sent from |
 | _operator | address | Account attempting the transfer |
 | _allowance | uint256 | Current allowance |
-| _value | uint256 | Requested transfer value |
+| _value | uint256 | Requested transfer value in shares |
 
 ### BalanceTooLow
 

@@ -1,10 +1,10 @@
 # IELFeeRecipientV1
 
+*Kiln*
 
+> Execution Layer Fee Recipient Interface (v1)
 
-
-
-
+This interface exposes methods to receive all the execution layer fees from the proposed blocks + bribes
 
 
 

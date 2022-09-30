@@ -1,10 +1,10 @@
 # IConsensusLayerDepositManagerV1
 
+*Kiln*
 
+> Consensys Layer Deposit Manager Interface (v1)
 
-
-
-
+This interface exposes methods to handle the interactions with the official deposit contract
 
 
 
@@ -41,7 +41,7 @@ Returns the amount of pending ETH
 
 | Name | Type | Description |
 |---|---|---|
-| _0 | uint256 | The amount of pending eth |
+| _0 | uint256 | The amount of pending ETH |
 
 ### getDepositedValidatorCount
 
@@ -119,7 +119,7 @@ The stored deposit contract address changed
 event SetWithdrawalCredentials(bytes32 withdrawalCredentials)
 ```
 
-The stored withdrawals credentials changed
+The stored withdrawal credentials changed
 
 
 

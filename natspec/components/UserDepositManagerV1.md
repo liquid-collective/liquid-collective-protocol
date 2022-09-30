@@ -35,7 +35,7 @@ Explicit deposit method to mint on msg.sender and transfer to _recipient
 
 | Name | Type | Description |
 |---|---|---|
-| _recipient | address | Address receiving the minted lsETH |
+| _recipient | address | Address receiving the minted LsETH |
 
 
 
@@ -47,7 +47,7 @@ Explicit deposit method to mint on msg.sender and transfer to _recipient
 event UserDeposit(address indexed depositor, address indexed recipient, uint256 amount)
 ```
 
-User deposited eth in the system
+User deposited ETH in the system
 
 
 

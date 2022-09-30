@@ -46,7 +46,7 @@ An error occured during the initialization
 
 | Name | Type | Description |
 |---|---|---|
-| version | uint256 | The version that was attempting the be initialized |
+| version | uint256 | The version that was attempting to be initialized |
 | expectedVersion | uint256 | The version that was expected |
 
 

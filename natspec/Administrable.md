@@ -4,7 +4,7 @@
 
 > Administrable
 
-This contract handles the ownership of the contracts
+This contract handles the administration of the contracts
 
 
 
@@ -63,7 +63,7 @@ function proposeAdmin(address _newAdmin) external nonpayable
 
 Proposes a new address as admin
 
-*This security prevents setting an invalid address as an admin. The pendingadmin has to claim its ownership of the contract, and proves that the newaddress is able to perform regular transactions.*
+*This security prevents setting an invalid address as an admin. The pendingadmin has to claim its ownership of the contract, and prove that the newaddress is able to perform regular transactions.*
 
 #### Parameters
 

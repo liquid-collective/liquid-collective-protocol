@@ -1,10 +1,10 @@
 # IOracleV1
 
+*Kiln*
 
+> Oracle Interface (v1)
 
-
-
-
+This interface exposes methods to handle the input from the allowed oracle members.Highly inspired by Lido&#39;s implementation.
 
 
 
@@ -476,7 +476,7 @@ A member has been added to the oracle member list
 event CLReported(uint256 epochId, uint128 newCLBalance, uint32 newCLValidatorCount, address oracleMember)
 ```
 
-Consensys Layer data has been reported by an oracle member
+Consensus Layer data has been reported by an oracle member
 
 
 
@@ -486,7 +486,7 @@ Consensys Layer data has been reported by an oracle member
 |---|---|---|
 | epochId  | uint256 | The epoch of the report |
 | newCLBalance  | uint128 | The new consensus layer balance |
-| newCLValidatorCount  | uint32 | The new consensys layer validator count |
+| newCLValidatorCount  | uint32 | The new consensus layer validator count |
 | oracleMember  | address | The oracle member that reported |
 
 ### ExpectedEpochIdUpdated
@@ -495,7 +495,7 @@ Consensys Layer data has been reported by an oracle member
 event ExpectedEpochIdUpdated(uint256 epochId)
 ```
 
-The expected epoch id has been changedS
+The expected epoch id has been changed
 
 
 
@@ -519,8 +519,8 @@ The report has been submitted to river
 
 | Name | Type | Description |
 |---|---|---|
-| postTotalEth  | uint256 | The new total eth balance |
-| prevTotalEth  | uint256 | The previous total eth balance |
+| postTotalEth  | uint256 | The new total ETH balance |
+| prevTotalEth  | uint256 | The previous total ETH balance |
 | timeElapsed  | uint256 | Time since last report |
 | totalShares  | uint256 | The new total amount of shares |
 
@@ -702,7 +702,7 @@ The provided epoch is not at the beginning of its frame
 error TotalValidatorBalanceDecreaseOutOfBound(uint256 prevTotalEth, uint256 postTotalEth, uint256 timeElapsed, uint256 relativeLowerBound)
 ```
 
-The delta in balance is under the allowed lower bound
+The negative delta in balance is above the allowed lower bound
 
 
 
@@ -712,7 +712,7 @@ The delta in balance is under the allowed lower bound
 |---|---|---|
 | prevTotalEth | uint256 | The previous total balance |
 | postTotalEth | uint256 | The new total balance |
-| timeElapsed | uint256 | The time ssince last report |
+| timeElapsed | uint256 | The time since last report |
 | relativeLowerBound | uint256 | The maximum relative decrease allowed |
 
 ### TotalValidatorBalanceIncreaseOutOfBound
@@ -731,7 +731,7 @@ The delta in balance is above the allowed upper bound
 |---|---|---|
 | prevTotalEth | uint256 | The previous total balance |
 | postTotalEth | uint256 | The new total balance |
-| timeElapsed | uint256 | The time ssince last report |
+| timeElapsed | uint256 | The time since last report |
 | annualAprUpperBound | uint256 | The maximum apr allowed |
 
 

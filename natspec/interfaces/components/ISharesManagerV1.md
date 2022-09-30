@@ -1,10 +1,10 @@
 # ISharesManagerV1
 
+*Kiln*
 
+> Shares Manager Interface (v1)
 
-
-
-
+This interface exposes methods to handle the shares of the depositor and the ERC20 interface
 
 
 
@@ -31,7 +31,7 @@ Retrieve the allowance value for a spender
 
 | Name | Type | Description |
 |---|---|---|
-| _0 | uint256 | The allowance for a given spender |
+| _0 | uint256 | The allowance in shares for a given spender |
 
 ### approve
 
@@ -48,7 +48,7 @@ Approves an account for future spendings
 | Name | Type | Description |
 |---|---|---|
 | _spender | address | Address that is allowed to spend the tokens |
-| _value | uint256 | The allowed amount, will override previous value |
+| _value | uint256 | The allowed amount in shares, will override previous value |
 
 #### Returns
 
@@ -76,7 +76,7 @@ Retrieve the balance of an account
 
 | Name | Type | Description |
 |---|---|---|
-| _0 | uint256 | The balance of the account |
+| _0 | uint256 | The balance of the account in shares |
 
 ### balanceOfUnderlying
 
@@ -132,7 +132,7 @@ Decrease allowance to another account
 | Name | Type | Description |
 |---|---|---|
 | _spender | address | Spender that receives the allowance |
-| _subtractableValue | uint256 | Amount to subtract |
+| _subtractableValue | uint256 | Amount of shares to subtract |
 
 #### Returns
 
@@ -155,7 +155,7 @@ Increase allowance to another account
 | Name | Type | Description |
 |---|---|---|
 | _spender | address | Spender that receives the allowance |
-| _additionalValue | uint256 | Amount to add |
+| _additionalValue | uint256 | Amount of shares to add |
 
 #### Returns
 
@@ -234,7 +234,7 @@ Retrieve the total token supply
 
 | Name | Type | Description |
 |---|---|---|
-| _0 | uint256 | The total supply |
+| _0 | uint256 | The total supply in shares |
 
 ### totalUnderlyingSupply
 
@@ -268,7 +268,7 @@ Performs a transfer from the message sender to the provided account
 | Name | Type | Description |
 |---|---|---|
 | _to | address | Address receiving the tokens |
-| _value | uint256 | Amount to be sent |
+| _value | uint256 | Amount of shares to be sent |
 
 #### Returns
 
@@ -292,7 +292,7 @@ Performs a transfer between two recipients
 |---|---|---|
 | _from | address | Address sending the tokens |
 | _to | address | Address receiving the tokens |
-| _value | uint256 | Amount to be sent |
+| _value | uint256 | Amount of shares to be sent |
 
 #### Returns
 
@@ -383,7 +383,7 @@ Allowance too low to perform operation
 | _from | address | Account where funds are sent from |
 | _operator | address | Account attempting the transfer |
 | _allowance | uint256 | Current allowance |
-| _value | uint256 | Requested transfer value |
+| _value | uint256 | Requested transfer value in shares |
 
 ### BalanceTooLow
 

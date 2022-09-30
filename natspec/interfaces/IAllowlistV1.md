@@ -1,10 +1,10 @@
 # IAllowlistV1
 
+*Kiln*
 
+> Allowlist Interface (v1)
 
-
-
-
+This interface exposes methods to handle the list of allowed recipients.
 
 
 
@@ -18,7 +18,7 @@ function allow(address[] _accounts, uint256[] _permissions) external nonpayable
 
 Sets the allowlisting status for one or more accounts
 
-*The permission value is overriden and not updated*
+*The permission value is overridden and not updated*
 
 #### Parameters
 
@@ -127,7 +127,7 @@ This method returns true if the user has the expected permission and         is 
 
 | Name | Type | Description |
 |---|---|---|
-| _0 | bool | True if mask is respected and user is not allowed |
+| _0 | bool | True if mask is respected and user is allowed |
 
 ### isDenied
 
@@ -194,7 +194,7 @@ Changes the allower address
 event SetAllower(address indexed allower)
 ```
 
-The stored allowee address has been changed
+The stored allower address has been changed
 
 
 

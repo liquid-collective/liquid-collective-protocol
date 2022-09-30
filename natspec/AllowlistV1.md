@@ -4,7 +4,7 @@
 
 > Allowlist (v1)
 
-This contract handles the list of allowed recipients.All accounts have an uitn256 value associated with their addresses whereeach bit represents a right in the system. The DENY_MASK defined the maskused to identify if the denied bit is on, preventing users from interactingwith the system
+This contract handles the list of allowed recipients.All accounts have an uint256 value associated with their addresses whereeach bit represents a right in the system. The DENY_MASK defined the maskused to identify if the denied bit is on, preventing users from interactingwith the system
 
 
 
@@ -29,7 +29,7 @@ function allow(address[] _accounts, uint256[] _permissions) external nonpayable
 
 Sets the allowlisting status for one or more accounts
 
-*The permission value is overriden and not updated*
+*The permission value is overridden and not updated*
 
 #### Parameters
 
@@ -172,7 +172,7 @@ This method returns true if the user has the expected permission and         is 
 
 | Name | Type | Description |
 |---|---|---|
-| _0 | bool | True if mask is respected and user is not allowed |
+| _0 | bool | True if mask is respected and user is allowed |
 
 ### isDenied
 
@@ -221,7 +221,7 @@ function proposeAdmin(address _newAdmin) external nonpayable
 
 Proposes a new address as admin
 
-*This security prevents setting an invalid address as an admin. The pendingadmin has to claim its ownership of the contract, and proves that the newaddress is able to perform regular transactions.*
+*This security prevents setting an invalid address as an admin. The pendingadmin has to claim its ownership of the contract, and prove that the newaddress is able to perform regular transactions.*
 
 #### Parameters
 
@@ -288,7 +288,7 @@ The admin address changed
 event SetAllower(address indexed allower)
 ```
 
-The stored allowee address has been changed
+The stored allower address has been changed
 
 
 
@@ -376,7 +376,7 @@ An error occured during the initialization
 
 | Name | Type | Description |
 |---|---|---|
-| version | uint256 | The version that was attempting the be initialized |
+| version | uint256 | The version that was attempting to be initialized |
 | expectedVersion | uint256 | The version that was expected |
 
 ### InvalidZeroAddress

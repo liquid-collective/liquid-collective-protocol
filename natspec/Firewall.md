@@ -4,7 +4,7 @@
 
 > Firewall
 
-This contract accepts calls to admin-level functions of an underlying contract, and         ensures the caller holds an appropriate role for calling that function. There are two roles:          - An Admin can call anything          - An Executor can call specific functions specified at construction         Random callers cannot call anything through this contract, even if the underlying function         is unpermissioned in the underlying contract.         Calls to non-admin functions should be called at the underlying contract directly.
+This contract accepts calls to admin-level functions of an underlying contract, and         ensures the caller holds an appropriate role for calling that function. There are two roles:          - An Admin can call anything          - An Executor can call specific functions. The list of function is customisable.         Random callers cannot call anything through this contract, even if the underlying function         is unpermissioned in the underlying contract.         Calls to non-admin functions should be called at the underlying contract directly.
 
 
 
@@ -44,7 +44,7 @@ Sets the permission for a function selector
 function destination() external view returns (address)
 ```
 
-The destination address
+Retrieve the destination address
 
 
 
@@ -61,7 +61,7 @@ The destination address
 function executor() external view returns (address)
 ```
 
-The executor address
+Retrieve the executor address
 
 
 
@@ -136,7 +136,7 @@ function proposeAdmin(address _newAdmin) external nonpayable
 
 Proposes a new address as admin
 
-*This security prevents setting an invalid address as an admin. The pendingadmin has to claim its ownership of the contract, and proves that the newaddress is able to perform regular transactions.*
+*This security prevents setting an invalid address as an admin. The pendingadmin has to claim its ownership of the contract, and prove that the newaddress is able to perform regular transactions.*
 
 #### Parameters
 

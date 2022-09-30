@@ -4,7 +4,7 @@
 
 > TUPProxy (Transparent Upgradeable Pausable Proxy)
 
-This contract extends the Transparent Upgradeable proxy and adds a system wide pause feature.         When the system is paused, the fallback will fail no matter what calls are made.
+This contract extends the Transparent Upgradeable proxy and adds a system wide pause feature.         When the system is paused, the fallback will fail no matter what calls are made.         Address Zero is allowed to perform calls even if paused to allow view calls made         from RPC providers to properly work.
 
 
 
@@ -60,10 +60,21 @@ function implementation() external nonpayable returns (address implementation_)
 |---|---|---|
 | implementation_ | address | undefined |
 
-### isPaused
+### pause
 
 ```solidity
-function isPaused() external nonpayable returns (bool)
+function pause() external nonpayable
+```
+
+
+
+*Pauses system*
+
+
+### paused
+
+```solidity
+function paused() external nonpayable returns (bool)
 ```
 
 
@@ -76,17 +87,6 @@ function isPaused() external nonpayable returns (bool)
 | Name | Type | Description |
 |---|---|---|
 | _0 | bool | Paused state |
-
-### pause
-
-```solidity
-function pause() external nonpayable
-```
-
-
-
-*Pauses system*
-
 
 ### unpause
 
@@ -169,27 +169,37 @@ event BeaconUpgraded(address indexed beacon)
 |---|---|---|
 | beacon `indexed` | address | undefined |
 
-### Pause
+### Paused
 
 ```solidity
-event Pause()
+event Paused(address admin)
 ```
 
 The system is now paused
 
 
 
+#### Parameters
 
-### Unpause
+| Name | Type | Description |
+|---|---|---|
+| admin  | address | The admin at the time of the pause event |
+
+### Unpaused
 
 ```solidity
-event Unpause()
+event Unpaused(address admin)
 ```
 
 The system is now unpaused
 
 
 
+#### Parameters
+
+| Name | Type | Description |
+|---|---|---|
+| admin  | address | The admin at the time of the unpause event |
 
 ### Upgraded
 

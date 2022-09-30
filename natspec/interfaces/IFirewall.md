@@ -1,10 +1,10 @@
 # IFirewall
 
+*Figment*
 
+> Firewall
 
-
-
-
+This interface exposes methods to accept calls to admin-level functions of an underlying contract.
 
 
 
@@ -33,7 +33,7 @@ Sets the permission for a function selector
 function destination() external view returns (address)
 ```
 
-The destination address
+Retrieve the destination address
 
 
 
@@ -50,7 +50,7 @@ The destination address
 function executor() external view returns (address)
 ```
 
-The executor address
+Retrieve the executor address
 
 
 

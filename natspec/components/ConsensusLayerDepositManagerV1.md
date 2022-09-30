@@ -4,7 +4,7 @@
 
 > Consensus Layer Deposit Manager (v1)
 
-This contract handles the interactions with the official deposit contract, funding all validatorsWhenever a deposit to the consensus layer is requested, this contract computed the amount of keysthat could be deposited depending on the amount available in the contract. It then tried to retrievevalidator keys by callings its internal virtual method _getNextValidators. This method should beoverriden by the implementing contract to provide [0; _keyCount] keys when invoked.
+This contract handles the interactions with the official deposit contract, funding all validatorsWhenever a deposit to the consensus layer is requested, this contract computed the amount of keysthat could be deposited depending on the amount available in the contract. It then tries to retrievevalidator keys by calling its internal virtual method _getNextValidators. This method should beoverridden by the implementing contract to provide [0; _keyCount] keys when invoked.
 
 
 
@@ -92,7 +92,7 @@ Returns the amount of pending ETH
 
 | Name | Type | Description |
 |---|---|---|
-| _0 | uint256 | The amount of pending eth |
+| _0 | uint256 | The amount of pending ETH |
 
 ### getDepositedValidatorCount
 
@@ -170,7 +170,7 @@ The stored deposit contract address changed
 event SetWithdrawalCredentials(bytes32 withdrawalCredentials)
 ```
 
-The stored withdrawals credentials changed
+The stored withdrawal credentials changed
 
 
 
@@ -293,5 +293,21 @@ The length overflows an uint
 
 
 
+
+### Unauthorized
+
+```solidity
+error Unauthorized(address caller)
+```
+
+The operator is unauthorized for the caller
+
+
+
+#### Parameters
+
+| Name | Type | Description |
+|---|---|---|
+| caller | address | Addres performing the call |
 
 

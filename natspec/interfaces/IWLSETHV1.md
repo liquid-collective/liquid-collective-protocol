@@ -1,10 +1,10 @@
 # IWLSETHV1
 
+*Kiln*
 
+> Wrapped LsETH Interface (v1)
 
-
-
-
+This interface exposes methods to wrap the LsETH token into a rebase token.
 
 
 
@@ -86,14 +86,14 @@ function burn(address _recipient, uint256 _shares) external nonpayable
 
 Burn tokens and retrieve underlying LsETH tokens
 
-*Burned tokens are sent to recipient but are minted from the message sender balanceNo approval required from the message sender*
+*The message sender burns shares from its balance for the LsETH equivalent valueThe message sender doesn&#39;t need to approve the contract to burn the sharesThe freed LsETH is sent to the specified recipient*
 
 #### Parameters
 
 | Name | Type | Description |
 |---|---|---|
-| _recipient | address | Spender that receives the allowance |
-| _shares | uint256 | Amount of shares to burn |
+| _recipient | address | The account receiving the underlying LsETH tokens after shares are burned |
+| _shares | uint256 | Amount of LsETH to free by burning wrapped LsETH |
 
 ### decimals
 
@@ -177,19 +177,19 @@ Initializes the wrapped token contract
 ### mint
 
 ```solidity
-function mint(address _recipient, uint256 _value) external nonpayable
+function mint(address _recipient, uint256 _shares) external nonpayable
 ```
 
 Mint tokens by providing LsETH tokens
 
-*Minted tokens are sent to recipient but are minted from the message sender balanceIt is expected that the message sender approves _value amount of LsETH token tothis contract before calling*
+*The message sender locks LsETH tokens and received wrapped LsETH tokens in exchangeThe message sender needs to approve the contract to mint the wrapped tokensThe minted wrapped LsETH is sent to the specified recipient*
 
 #### Parameters
 
 | Name | Type | Description |
 |---|---|---|
-| _recipient | address | Spender that receives the allowance |
-| _value | uint256 | Amount of river token to give to the mint |
+| _recipient | address | The account receiving the new minted wrapped LsETH |
+| _shares | uint256 | The amount of LsETH to wrap |
 
 ### name
 
@@ -353,7 +353,7 @@ Tokens have been burned
 ### Mint
 
 ```solidity
-event Mint(address indexed recipient, uint256 value)
+event Mint(address indexed recipient, uint256 shares)
 ```
 
 Tokens have been minted
@@ -365,7 +365,7 @@ Tokens have been minted
 | Name | Type | Description |
 |---|---|---|
 | recipient `indexed` | address | The account receiving the new tokens |
-| value  | uint256 | The amount of LsETH provided |
+| shares  | uint256 | The amount of LsETH provided |
 
 ### SetRiver
 
