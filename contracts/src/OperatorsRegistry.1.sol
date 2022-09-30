@@ -141,14 +141,7 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
         emit SetOperatorStoppedValidatorCount(_index, operator.stopped);
     }
 
-    /// @notice Changes the operator staking limit
-    /// @dev Only callable by the administrator
-    /// @dev The limit cannot exceed the total key count of the operator
-    /// @dev The _indexes and _newLimits must have the same length.
-    /// @dev Each limit value is applied to the operator index at the same index in the _indexes array.
-    /// @dev The operator indexes must be in increasing order and contain no duplicates
-    /// @param _operatorIndexes The operator indexes
-    /// @param _newLimits The new staking limit of the operators
+    /// @inheritdoc IOperatorsRegistryV1
     function setOperatorLimits(
         uint256[] calldata _operatorIndexes,
         uint256[] calldata _newLimits,

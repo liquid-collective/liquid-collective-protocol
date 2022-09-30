@@ -55,6 +55,15 @@ interface IOperatorsRegistryV1 {
     /// @notice The stored river address has been changed
     /// @param river The new river address
     event SetRiver(address indexed river);
+
+    /// @notice The operator edited its keys after the snapshot block
+    /// @dev This means that we cannot assume that its key set is checked by the snapshot
+    /// @dev This happens only if the limit was meant to be increased
+    /// @param index The operator index
+    /// @param currentLimit The current operator limit
+    /// @param newLimit The new operator limit that was attempted to be set
+    /// @param latestKeysEditBlockNumber The last block number at which the operator changed its keys
+    /// @param snapshotBlock The block number of the snapshot
     event OperatorEditsAfterSnapshot(
         uint256 indexed index,
         uint256 currentLimit,
@@ -62,7 +71,11 @@ interface IOperatorsRegistryV1 {
         uint256 indexed latestKeysEditBlockNumber,
         uint256 indexed snapshotBlock
     );
-    event OperatorLimitUnchanged(uint256 indexed operatorIndex, uint256 limit);
+
+    /// @notice The call didn't alter the limit of the operator
+    /// @param index The operator index
+    /// @param limit The limit of the operator
+    event OperatorLimitUnchanged(uint256 indexed index, uint256 limit);
 
     /// @notice The calling operator is inactive
     /// @param index The operator index
@@ -101,6 +114,7 @@ interface IOperatorsRegistryV1 {
     /// @param fundedKeyCount The operator funded key count
     error OperatorLimitTooLow(uint256 index, uint256 limit, uint256 fundedKeyCount);
 
+    /// @notice The provided list of operators is not in increasing order
     error UnorderedOperatorList();
 
     /// @notice Initializes the operators registry
@@ -169,13 +183,18 @@ interface IOperatorsRegistryV1 {
 
     /// @notice Changes the operator staking limit
     /// @dev Only callable by the administrator
+    /// @dev The operator indexes must be in increasing order and contain no duplicate
     /// @dev The limit cannot exceed the total key count of the operator
     /// @dev The _indexes and _newLimits must have the same length.
     /// @dev Each limit value is applied to the operator index at the same index in the _indexes array.
-    /// @param _operatorIndexes The operator indexes
+    /// @param _operatorIndexes The operator indexes, in increasing order and duplicate free
     /// @param _newLimits The new staking limit of the operators
     /// @param _snapshotBlock The block number at which the snapshot was computed
-    function setOperatorLimits(uint256[] calldata _operatorIndexes, uint256[] calldata _newLimits, uint256 _snapshotBlock) external;
+    function setOperatorLimits(
+        uint256[] calldata _operatorIndexes,
+        uint256[] calldata _newLimits,
+        uint256 _snapshotBlock
+    ) external;
 
     /// @notice Adds new keys for an operator
     /// @dev Only callable by the administrator or the operator address
@@ -200,5 +219,4 @@ interface IOperatorsRegistryV1 {
     function pickNextValidators(uint256 _count)
         external
         returns (bytes[] memory publicKeys, bytes[] memory signatures);
-
 }
