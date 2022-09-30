@@ -3,27 +3,32 @@
         "inputs": [
             {
                 "internalType": "address",
-                "name": "governor_",
+                "name": "_admin",
                 "type": "address"
             },
             {
                 "internalType": "address",
-                "name": "executor_",
+                "name": "_executor",
                 "type": "address"
             },
             {
                 "internalType": "address",
-                "name": "destination_",
+                "name": "_destination",
                 "type": "address"
             },
             {
                 "internalType": "bytes4[]",
-                "name": "executorCallableSelectors_",
+                "name": "_executorCallableSelectors",
                 "type": "bytes4[]"
             }
         ],
         "stateMutability": "nonpayable",
         "type": "constructor"
+    },
+    {
+        "inputs": [],
+        "name": "InvalidZeroAddress",
+        "type": "error"
     },
     {
         "inputs": [
@@ -37,25 +42,116 @@
         "type": "error"
     },
     {
+        "anonymous": false,
+        "inputs": [
+            {
+                "indexed": true,
+                "internalType": "address",
+                "name": "admin",
+                "type": "address"
+            }
+        ],
+        "name": "SetAdmin",
+        "type": "event"
+    },
+    {
+        "anonymous": false,
+        "inputs": [
+            {
+                "indexed": true,
+                "internalType": "address",
+                "name": "destination",
+                "type": "address"
+            }
+        ],
+        "name": "SetDestination",
+        "type": "event"
+    },
+    {
+        "anonymous": false,
+        "inputs": [
+            {
+                "indexed": true,
+                "internalType": "address",
+                "name": "executor",
+                "type": "address"
+            }
+        ],
+        "name": "SetExecutor",
+        "type": "event"
+    },
+    {
+        "anonymous": false,
+        "inputs": [
+            {
+                "indexed": false,
+                "internalType": "bytes4",
+                "name": "selector",
+                "type": "bytes4"
+            },
+            {
+                "indexed": false,
+                "internalType": "bool",
+                "name": "status",
+                "type": "bool"
+            }
+        ],
+        "name": "SetExecutorPermissions",
+        "type": "event"
+    },
+    {
+        "anonymous": false,
+        "inputs": [
+            {
+                "indexed": true,
+                "internalType": "address",
+                "name": "pendingAdmin",
+                "type": "address"
+            }
+        ],
+        "name": "SetPendingAdmin",
+        "type": "event"
+    },
+    {
         "stateMutability": "payable",
         "type": "fallback"
+    },
+    {
+        "inputs": [],
+        "name": "acceptAdmin",
+        "outputs": [],
+        "stateMutability": "nonpayable",
+        "type": "function"
     },
     {
         "inputs": [
             {
                 "internalType": "bytes4",
-                "name": "functionSelector",
+                "name": "_functionSelector",
                 "type": "bytes4"
             },
             {
                 "internalType": "bool",
-                "name": "executorCanCall_",
+                "name": "_executorCanCall",
                 "type": "bool"
             }
         ],
         "name": "allowExecutor",
         "outputs": [],
         "stateMutability": "nonpayable",
+        "type": "function"
+    },
+    {
+        "inputs": [],
+        "name": "destination",
+        "outputs": [
+            {
+                "internalType": "address",
+                "name": "",
+                "type": "address"
+            }
+        ],
+        "stateMutability": "view",
         "type": "function"
     },
     {
@@ -72,8 +168,40 @@
         "type": "function"
     },
     {
+        "inputs": [
+            {
+                "internalType": "bytes4",
+                "name": "",
+                "type": "bytes4"
+            }
+        ],
+        "name": "executorCanCall",
+        "outputs": [
+            {
+                "internalType": "bool",
+                "name": "",
+                "type": "bool"
+            }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
         "inputs": [],
-        "name": "governor",
+        "name": "getAdmin",
+        "outputs": [
+            {
+                "internalType": "address",
+                "name": "",
+                "type": "address"
+            }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "inputs": [],
+        "name": "getPendingAdmin",
         "outputs": [
             {
                 "internalType": "address",
@@ -88,11 +216,11 @@
         "inputs": [
             {
                 "internalType": "address",
-                "name": "newExecutor",
+                "name": "_newAdmin",
                 "type": "address"
             }
         ],
-        "name": "setExecutor",
+        "name": "proposeAdmin",
         "outputs": [],
         "stateMutability": "nonpayable",
         "type": "function"
@@ -101,11 +229,11 @@
         "inputs": [
             {
                 "internalType": "address",
-                "name": "newGovernor",
+                "name": "_newExecutor",
                 "type": "address"
             }
         ],
-        "name": "setGovernor",
+        "name": "setExecutor",
         "outputs": [],
         "stateMutability": "nonpayable",
         "type": "function"
@@ -149,6 +277,32 @@
             }
         ],
         "name": "BeaconUpgraded",
+        "type": "event"
+    },
+    {
+        "anonymous": false,
+        "inputs": [
+            {
+                "indexed": false,
+                "internalType": "address",
+                "name": "admin",
+                "type": "address"
+            }
+        ],
+        "name": "Paused",
+        "type": "event"
+    },
+    {
+        "anonymous": false,
+        "inputs": [
+            {
+                "indexed": false,
+                "internalType": "address",
+                "name": "admin",
+                "type": "address"
+            }
+        ],
+        "name": "Unpaused",
         "type": "event"
     },
     {
@@ -209,7 +363,14 @@
     },
     {
         "inputs": [],
-        "name": "isPaused",
+        "name": "pause",
+        "outputs": [],
+        "stateMutability": "nonpayable",
+        "type": "function"
+    },
+    {
+        "inputs": [],
+        "name": "paused",
         "outputs": [
             {
                 "internalType": "bool",
@@ -217,13 +378,6 @@
                 "type": "bool"
             }
         ],
-        "stateMutability": "nonpayable",
-        "type": "function"
-    },
-    {
-        "inputs": [],
-        "name": "pause",
-        "outputs": [],
         "stateMutability": "nonpayable",
         "type": "function"
     },
@@ -272,13 +426,24 @@
     {
         "inputs": [
             {
+                "internalType": "address",
+                "name": "newAddress",
+                "type": "address"
+            }
+        ],
+        "name": "AddressAlreadyInUse",
+        "type": "error"
+    },
+    {
+        "inputs": [
+            {
                 "internalType": "uint256",
-                "name": "_epochId",
+                "name": "epochId",
                 "type": "uint256"
             },
             {
                 "internalType": "address",
-                "name": "_member",
+                "name": "member",
                 "type": "address"
             }
         ],
@@ -289,64 +454,12 @@
         "inputs": [
             {
                 "internalType": "uint256",
-                "name": "_prevTotalEth",
+                "name": "providedEpochId",
                 "type": "uint256"
             },
             {
                 "internalType": "uint256",
-                "name": "_postTotalEth",
-                "type": "uint256"
-            },
-            {
-                "internalType": "uint256",
-                "name": "_timeElapsed",
-                "type": "uint256"
-            },
-            {
-                "internalType": "uint256",
-                "name": "_relativeLowerBound",
-                "type": "uint256"
-            }
-        ],
-        "name": "BeaconBalanceDecreaseOutOfBounds",
-        "type": "error"
-    },
-    {
-        "inputs": [
-            {
-                "internalType": "uint256",
-                "name": "_prevTotalEth",
-                "type": "uint256"
-            },
-            {
-                "internalType": "uint256",
-                "name": "_postTotalEth",
-                "type": "uint256"
-            },
-            {
-                "internalType": "uint256",
-                "name": "_timeElapsed",
-                "type": "uint256"
-            },
-            {
-                "internalType": "uint256",
-                "name": "_annualAprUpperBound",
-                "type": "uint256"
-            }
-        ],
-        "name": "BeaconBalanceIncreaseOutOfBounds",
-        "type": "error"
-    },
-    {
-        "inputs": [
-            {
-                "internalType": "uint256",
-                "name": "_providedEpochId",
-                "type": "uint256"
-            },
-            {
-                "internalType": "uint256",
-                "name": "_minExpectedEpochId",
+                "name": "minExpectedEpochId",
                 "type": "uint256"
             }
         ],
@@ -388,16 +501,68 @@
         "inputs": [
             {
                 "internalType": "uint256",
-                "name": "_providedEpochId",
+                "name": "providedEpochId",
                 "type": "uint256"
             },
             {
                 "internalType": "uint256",
-                "name": "_expectedFrameFirstEpochId",
+                "name": "expectedFrameFirstEpochId",
                 "type": "uint256"
             }
         ],
         "name": "NotFrameFirstEpochId",
+        "type": "error"
+    },
+    {
+        "inputs": [
+            {
+                "internalType": "uint256",
+                "name": "prevTotalEth",
+                "type": "uint256"
+            },
+            {
+                "internalType": "uint256",
+                "name": "postTotalEth",
+                "type": "uint256"
+            },
+            {
+                "internalType": "uint256",
+                "name": "timeElapsed",
+                "type": "uint256"
+            },
+            {
+                "internalType": "uint256",
+                "name": "relativeLowerBound",
+                "type": "uint256"
+            }
+        ],
+        "name": "TotalValidatorBalanceDecreaseOutOfBound",
+        "type": "error"
+    },
+    {
+        "inputs": [
+            {
+                "internalType": "uint256",
+                "name": "prevTotalEth",
+                "type": "uint256"
+            },
+            {
+                "internalType": "uint256",
+                "name": "postTotalEth",
+                "type": "uint256"
+            },
+            {
+                "internalType": "uint256",
+                "name": "timeElapsed",
+                "type": "uint256"
+            },
+            {
+                "internalType": "uint256",
+                "name": "annualAprUpperBound",
+                "type": "uint256"
+            }
+        ],
+        "name": "TotalValidatorBalanceIncreaseOutOfBound",
         "type": "error"
     },
     {
@@ -415,31 +580,13 @@
         "anonymous": false,
         "inputs": [
             {
-                "indexed": false,
-                "internalType": "uint256",
-                "name": "_epochId",
-                "type": "uint256"
-            },
-            {
-                "indexed": false,
-                "internalType": "uint128",
-                "name": "_newBeaconBalance",
-                "type": "uint128"
-            },
-            {
-                "indexed": false,
-                "internalType": "uint32",
-                "name": "_newBeaconValidatorCount",
-                "type": "uint32"
-            },
-            {
-                "indexed": false,
+                "indexed": true,
                 "internalType": "address",
-                "name": "_oracleMember",
+                "name": "member",
                 "type": "address"
             }
         ],
-        "name": "BeaconReported",
+        "name": "AddMember",
         "type": "event"
     },
     {
@@ -448,7 +595,38 @@
             {
                 "indexed": false,
                 "internalType": "uint256",
-                "name": "_epochId",
+                "name": "epochId",
+                "type": "uint256"
+            },
+            {
+                "indexed": false,
+                "internalType": "uint128",
+                "name": "newCLBalance",
+                "type": "uint128"
+            },
+            {
+                "indexed": false,
+                "internalType": "uint32",
+                "name": "newCLValidatorCount",
+                "type": "uint32"
+            },
+            {
+                "indexed": false,
+                "internalType": "address",
+                "name": "oracleMember",
+                "type": "address"
+            }
+        ],
+        "name": "CLReported",
+        "type": "event"
+    },
+    {
+        "anonymous": false,
+        "inputs": [
+            {
+                "indexed": false,
+                "internalType": "uint256",
+                "name": "epochId",
                 "type": "uint256"
             }
         ],
@@ -461,25 +639,44 @@
             {
                 "indexed": false,
                 "internalType": "uint256",
-                "name": "_postTotalEth",
+                "name": "version",
+                "type": "uint256"
+            },
+            {
+                "indexed": false,
+                "internalType": "bytes",
+                "name": "cdata",
+                "type": "bytes"
+            }
+        ],
+        "name": "Initialize",
+        "type": "event"
+    },
+    {
+        "anonymous": false,
+        "inputs": [
+            {
+                "indexed": false,
+                "internalType": "uint256",
+                "name": "postTotalEth",
                 "type": "uint256"
             },
             {
                 "indexed": false,
                 "internalType": "uint256",
-                "name": "_prevTotalEth",
+                "name": "prevTotalEth",
                 "type": "uint256"
             },
             {
                 "indexed": false,
                 "internalType": "uint256",
-                "name": "_timeElapsed",
+                "name": "timeElapsed",
                 "type": "uint256"
             },
             {
                 "indexed": false,
                 "internalType": "uint256",
-                "name": "_totalShares",
+                "name": "totalShares",
                 "type": "uint256"
             }
         ],
@@ -490,14 +687,142 @@
         "anonymous": false,
         "inputs": [
             {
+                "indexed": true,
+                "internalType": "address",
+                "name": "member",
+                "type": "address"
+            }
+        ],
+        "name": "RemoveMember",
+        "type": "event"
+    },
+    {
+        "anonymous": false,
+        "inputs": [
+            {
+                "indexed": true,
+                "internalType": "address",
+                "name": "admin",
+                "type": "address"
+            }
+        ],
+        "name": "SetAdmin",
+        "type": "event"
+    },
+    {
+        "anonymous": false,
+        "inputs": [
+            {
                 "indexed": false,
                 "internalType": "uint256",
-                "name": "_newQuorum",
+                "name": "annualAprUpperBound",
+                "type": "uint256"
+            },
+            {
+                "indexed": false,
+                "internalType": "uint256",
+                "name": "relativeLowerBound",
                 "type": "uint256"
             }
         ],
-        "name": "QuorumChanged",
+        "name": "SetBounds",
         "type": "event"
+    },
+    {
+        "anonymous": false,
+        "inputs": [
+            {
+                "indexed": true,
+                "internalType": "address",
+                "name": "oldAddress",
+                "type": "address"
+            },
+            {
+                "indexed": true,
+                "internalType": "address",
+                "name": "newAddress",
+                "type": "address"
+            }
+        ],
+        "name": "SetMember",
+        "type": "event"
+    },
+    {
+        "anonymous": false,
+        "inputs": [
+            {
+                "indexed": true,
+                "internalType": "address",
+                "name": "pendingAdmin",
+                "type": "address"
+            }
+        ],
+        "name": "SetPendingAdmin",
+        "type": "event"
+    },
+    {
+        "anonymous": false,
+        "inputs": [
+            {
+                "indexed": false,
+                "internalType": "uint256",
+                "name": "newQuorum",
+                "type": "uint256"
+            }
+        ],
+        "name": "SetQuorum",
+        "type": "event"
+    },
+    {
+        "anonymous": false,
+        "inputs": [
+            {
+                "indexed": false,
+                "internalType": "address",
+                "name": "_river",
+                "type": "address"
+            }
+        ],
+        "name": "SetRiver",
+        "type": "event"
+    },
+    {
+        "anonymous": false,
+        "inputs": [
+            {
+                "indexed": false,
+                "internalType": "uint64",
+                "name": "epochsPerFrame",
+                "type": "uint64"
+            },
+            {
+                "indexed": false,
+                "internalType": "uint64",
+                "name": "slotsPerEpoch",
+                "type": "uint64"
+            },
+            {
+                "indexed": false,
+                "internalType": "uint64",
+                "name": "secondsPerSlot",
+                "type": "uint64"
+            },
+            {
+                "indexed": false,
+                "internalType": "uint64",
+                "name": "genesisTime",
+                "type": "uint64"
+            }
+        ],
+        "name": "SetSpec",
+        "type": "event"
+    },
+    {
+        "inputs": [],
+        "name": "acceptAdmin",
+        "outputs": [],
+        "stateMutability": "nonpayable",
+        "type": "function"
     },
     {
         "inputs": [
@@ -505,6 +830,11 @@
                 "internalType": "address",
                 "name": "_newOracleMember",
                 "type": "address"
+            },
+            {
+                "internalType": "uint256",
+                "name": "_newQuorum",
+                "type": "uint256"
             }
         ],
         "name": "addMember",
@@ -516,7 +846,7 @@
         "inputs": [
             {
                 "internalType": "address",
-                "name": "_riverContractAddress",
+                "name": "_river",
                 "type": "address"
             },
             {
@@ -564,8 +894,26 @@
         "inputs": [
             {
                 "internalType": "address",
+                "name": "_newAdmin",
+                "type": "address"
+            }
+        ],
+        "name": "proposeAdmin",
+        "outputs": [],
+        "stateMutability": "nonpayable",
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {
+                "internalType": "address",
                 "name": "_oracleMember",
                 "type": "address"
+            },
+            {
+                "internalType": "uint256",
+                "name": "_newQuorum",
+                "type": "uint256"
             }
         ],
         "name": "removeMember",
@@ -582,34 +930,16 @@
             },
             {
                 "internalType": "uint64",
-                "name": "_beaconBalance",
+                "name": "_clValidatorsBalance",
                 "type": "uint64"
             },
             {
                 "internalType": "uint32",
-                "name": "_beaconValidators",
+                "name": "_clValidatorCount",
                 "type": "uint32"
             }
         ],
-        "name": "reportBeacon",
-        "outputs": [],
-        "stateMutability": "nonpayable",
-        "type": "function"
-    },
-    {
-        "inputs": [
-            {
-                "internalType": "uint256",
-                "name": "_annualAprUpperBound",
-                "type": "uint256"
-            },
-            {
-                "internalType": "uint256",
-                "name": "_relativeLowerBound",
-                "type": "uint256"
-            }
-        ],
-        "name": "setBeaconBounds",
+        "name": "reportConsensusLayerData",
         "outputs": [],
         "stateMutability": "nonpayable",
         "type": "function"
@@ -637,7 +967,25 @@
                 "type": "uint64"
             }
         ],
-        "name": "setBeaconSpec",
+        "name": "setCLSpec",
+        "outputs": [],
+        "stateMutability": "nonpayable",
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {
+                "internalType": "address",
+                "name": "_oracleMember",
+                "type": "address"
+            },
+            {
+                "internalType": "address",
+                "name": "_newAddress",
+                "type": "address"
+            }
+        ],
+        "name": "setMember",
         "outputs": [],
         "stateMutability": "nonpayable",
         "type": "function"
@@ -658,13 +1006,31 @@
     {
         "inputs": [
             {
+                "internalType": "uint256",
+                "name": "_annualAprUpperBound",
+                "type": "uint256"
+            },
+            {
+                "internalType": "uint256",
+                "name": "_relativeLowerBound",
+                "type": "uint256"
+            }
+        ],
+        "name": "setReportBounds",
+        "outputs": [],
+        "stateMutability": "nonpayable",
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {
                 "internalType": "address",
                 "name": "_logic",
                 "type": "address"
             },
             {
                 "internalType": "address",
-                "name": "admin_",
+                "name": "__admin",
                 "type": "address"
             },
             {
