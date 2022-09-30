@@ -106,24 +106,19 @@ contract WLSETHV1 is IWLSETHV1, Initializable, ReentrancyGuard {
 
     /// @inheritdoc IWLSETHV1
     function approve(address _spender, uint256 _value) external returns (bool) {
-        ApprovalsPerOwner.set(msg.sender, _spender, _value);
-        emit Approval(msg.sender, _spender, _value);
+        _approve(msg.sender, _spender, _value);
         return true;
     }
 
     /// @inheritdoc IWLSETHV1
     function increaseAllowance(address _spender, uint256 _additionalValue) external returns (bool) {
-        uint256 newApprovalValue = ApprovalsPerOwner.get(msg.sender, _spender) + _additionalValue;
-        ApprovalsPerOwner.set(msg.sender, _spender, newApprovalValue);
-        emit Approval(msg.sender, _spender, newApprovalValue);
+        _approve(msg.sender, _spender, ApprovalsPerOwner.get(msg.sender, _spender) + _additionalValue);
         return true;
     }
 
     /// @inheritdoc IWLSETHV1
     function decreaseAllowance(address _spender, uint256 _subtractableValue) external returns (bool) {
-        uint256 newApprovalValue = ApprovalsPerOwner.get(msg.sender, _spender) - _subtractableValue;
-        ApprovalsPerOwner.set(msg.sender, _spender, newApprovalValue);
-        emit Approval(msg.sender, _spender, newApprovalValue);
+        _approve(msg.sender, _spender, ApprovalsPerOwner.get(msg.sender, _spender) - _subtractableValue);
         return true;
     }
 
@@ -162,10 +157,17 @@ contract WLSETHV1 is IWLSETHV1, Initializable, ReentrancyGuard {
             revert AllowanceTooLow(_from, msg.sender, currentAllowance, _value);
         }
         if (currentAllowance != type(uint256).max) {
-            uint256 newAllowance = currentAllowance - _value;
-            ApprovalsPerOwner.set(_from, msg.sender, newAllowance);
-            emit Approval(_from, msg.sender, newAllowance);
+            _approve(_from, msg.sender, currentAllowance - _value);
         }
+    }
+
+    /// @notice Internal utility to change the allowance of an owner to a spender
+    /// @param _owner The owner of the wrapped tokens
+    /// @param _spender The allowed spender of the wrapped tokens
+    /// @param _value The new allowance value
+    function _approve(address _owner, address _spender, uint256 _value) internal {
+        ApprovalsPerOwner.set(_owner, _spender, _value);
+        emit Approval(_owner, _spender, _value);
     }
 
     /// @notice Internal utility to retrieve the amount of token per owner
