@@ -201,6 +201,8 @@ interface IOracleV1 {
 
     /// @notice Removes an address from the oracle members.
     /// @dev Only callable by the adminstrator
+    /// @dev Whenver an oracle member is removed, all the reporting data is cleared.
+    /// @dev Remaining members that have already voted should vote again for the same frame.
     /// @param _oracleMember Address to remove
     /// @param _newQuorum New quorum value
     function removeMember(address _oracleMember, uint256 _newQuorum) external;
