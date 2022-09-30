@@ -14,8 +14,10 @@ interface IOperatorsRegistryV1 {
     error InvalidPublicKeysLength();
     error InvalidSignatureLength();
     error InvalidIndexOutOfBounds();
-    error OperatorLimitTooHigh(uint256 limit, uint256 keyCount);
-    error OperatorLimitTooLow(uint256 limit, uint256 fundedKeyCount);
+    error OperatorLimitTooHigh(uint256 index, uint256 limit, uint256 keyCount);
+    error OperatorLimitTooLow(uint256 index, uint256 limit, uint256 fundedKeyCount);
+    error UnorderedOperatorList();
+    error InvalidKeysLength();
 
     event AddedOperator(uint256 indexed index, string name, address indexed operatorAddress);
     event SetOperatorStatus(uint256 indexed index, bool active);
@@ -26,6 +28,14 @@ interface IOperatorsRegistryV1 {
     event AddedValidatorKeys(uint256 indexed index, bytes publicKeysAndSignatures);
     event RemovedValidatorKey(uint256 indexed index, bytes publicKey);
     event SetRiver(address indexed river);
+    event OperatorEditsAfterSnapshot(
+        uint256 indexed index,
+        uint256 currentLimit,
+        uint256 newLimit,
+        uint256 indexed latestKeysEditBlockNumber,
+        uint256 indexed snapshotBlock
+    );
+    event OperatorLimitUnchanged(uint256 indexed operatorIndex, uint256 limit);
 
     function initOperatorsRegistryV1(address _admin, address _river) external;
     function listActiveOperators() external view returns (Operators.Operator[] memory);
@@ -35,7 +45,11 @@ interface IOperatorsRegistryV1 {
     function setOperatorName(uint256 _index, string calldata _newName) external;
     function setOperatorStatus(uint256 _index, bool _newStatus) external;
     function setOperatorStoppedValidatorCount(uint256 _index, uint256 _newStoppedValidatorCount) external;
-    function setOperatorLimits(uint256[] calldata _operatorIndexes, uint256[] calldata _newLimits) external;
+    function setOperatorLimits(
+        uint256[] calldata _operatorIndexes,
+        uint256[] calldata _newLimits,
+        uint256 _snapshotBlock
+    ) external;
     function addValidators(uint256 _index, uint256 _keyCount, bytes calldata _publicKeysAndSignatures) external;
     function removeValidators(uint256 _index, uint256[] calldata _indexes) external;
     function getOperator(uint256 _index) external view returns (Operators.Operator memory);

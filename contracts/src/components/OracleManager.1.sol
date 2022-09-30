@@ -23,7 +23,7 @@ abstract contract OracleManagerV1 is IOracleManagerV1 {
     function _getRiverAdmin() internal view virtual returns (address);
 
     /// @notice Prevents unauthorized calls
-    modifier _onlyAdmin() {
+    modifier onlyAdmin_OMV1() {
         if (msg.sender != _getRiverAdmin()) {
             revert LibErrors.Unauthorized(msg.sender);
         }
@@ -85,7 +85,7 @@ abstract contract OracleManagerV1 is IOracleManagerV1 {
 
     /// @notice Set Oracle address
     /// @param _oracleAddress Address of the oracle
-    function setOracle(address _oracleAddress) external _onlyAdmin {
+    function setOracle(address _oracleAddress) external onlyAdmin_OMV1 {
         OracleAddress.set(_oracleAddress);
         emit SetOracle(_oracleAddress);
     }

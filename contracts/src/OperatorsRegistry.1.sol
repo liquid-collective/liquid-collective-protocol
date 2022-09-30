@@ -71,7 +71,8 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
             limit: 0,
             funded: 0,
             keys: 0,
-            stopped: 0
+            stopped: 0,
+            latestKeysEditBlockNumber: block.number
         });
 
         uint256 operatorIndex = Operators.push(newOperator) - 1;
@@ -138,9 +139,14 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
     /// @dev The limit cannot exceed the total key count of the operator
     /// @dev The _indexes and _newLimits must have the same length.
     /// @dev Each limit value is applied to the operator index at the same index in the _indexes array.
+    /// @dev The operator indexes must be in increasing order and contain no duplicates
     /// @param _operatorIndexes The operator indexes
     /// @param _newLimits The new staking limit of the operators
-    function setOperatorLimits(uint256[] calldata _operatorIndexes, uint256[] calldata _newLimits) external onlyAdmin {
+    function setOperatorLimits(
+        uint256[] calldata _operatorIndexes,
+        uint256[] calldata _newLimits,
+        uint256 _snapshotBlock
+    ) external onlyAdmin {
         if (_operatorIndexes.length != _newLimits.length) {
             revert InvalidArrayLengths();
         }
@@ -148,26 +154,56 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
             revert InvalidEmptyArray();
         }
         for (uint256 idx = 0; idx < _operatorIndexes.length;) {
-            Operators.Operator storage operator = Operators.get(_operatorIndexes[idx]);
-            if (_newLimits[idx] > operator.keys) {
-                revert OperatorLimitTooHigh(_newLimits[idx], operator.keys);
+            uint256 operatorIndex = _operatorIndexes[idx];
+            uint256 newLimit = _newLimits[idx];
+
+            // prevents duplicates
+            if (idx > 0 && !(operatorIndex > _operatorIndexes[idx - 1])) {
+                revert UnorderedOperatorList();
             }
 
-            if (_newLimits[idx] < operator.funded) {
-                revert OperatorLimitTooLow(_newLimits[idx], operator.funded);
+            Operators.Operator storage operator = Operators.get(operatorIndex);
+
+            uint256 currentLimit = operator.limit;
+            if (newLimit == currentLimit) {
+                emit OperatorLimitUnchanged(operatorIndex, newLimit);
+                unchecked {
+                    ++idx;
+                }
+                continue;
             }
 
-            operator.limit = _newLimits[idx];
+            // we enter this condition if the operator edited its keys after the off-chain key audit was made
+            // we will skip any limit update on that operator unless it was a decrease in the initial limit
+            if (_snapshotBlock < operator.latestKeysEditBlockNumber && newLimit > currentLimit) {
+                emit OperatorEditsAfterSnapshot(
+                    operatorIndex, currentLimit, newLimit, operator.latestKeysEditBlockNumber, _snapshotBlock
+                    );
+                unchecked {
+                    ++idx;
+                }
+                continue;
+            }
 
-            emit SetOperatorLimit(_operatorIndexes[idx], operator.limit);
+            // otherwise, we check for limit invariants that shouldn't happen if the off-chain key audit
+            // was made properly, and if everything is respected, we update the limit
+
+            if (newLimit > operator.keys) {
+                revert OperatorLimitTooHigh(operatorIndex, newLimit, operator.keys);
+            }
+
+            if (newLimit < operator.funded) {
+                revert OperatorLimitTooLow(operatorIndex, newLimit, operator.funded);
+            }
+
+            operator.limit = newLimit;
+            emit SetOperatorLimit(operatorIndex, newLimit);
 
             unchecked {
                 ++idx;
             }
         }
     }
-
-    error InvalidKeysLength();
 
     /// @notice Adds new keys for an operator
     /// @dev Only callable by the administrator or the operator address
@@ -202,8 +238,7 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
                 ++idx;
             }
         }
-
-        operator.keys += _keyCount;
+        Operators.setKeys(_index, operator.keys + _keyCount);
 
         emit AddedValidatorKeys(_index, _publicKeysAndSignatures);
     }
@@ -235,7 +270,7 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
         }
 
         bool limitEqualsKeyCount = operator.keys == operator.limit;
-        operator.keys = totalKeys - indexesLength;
+        Operators.setKeys(_index, totalKeys - indexesLength);
 
         uint256 idx;
         for (; idx < indexesLength;) {

@@ -21,6 +21,10 @@ contract OperatorsRegistryInitializableV1 is OperatorsRegistryV1 {
     {
         return _pickNextValidatorsFromActiveOperators(_requestedAmount);
     }
+
+    function sudoSetKeys(uint256 _operatorIndex, uint256 _keyCount) external {
+        Operators.setKeys(_operatorIndex, _keyCount);
+    }
 }
 
 contract OperatorsRegistryV1Tests is Test, BytesGenerator {
@@ -46,6 +50,22 @@ contract OperatorsRegistryV1Tests is Test, BytesGenerator {
     function testInitializeTwice() public {
         vm.expectRevert(abi.encodeWithSignature("InvalidInitialization(uint256,uint256)", 0, 1));
         operatorsRegistry.initOperatorsRegistryV1(admin, river);
+    }
+
+    function testInternalSetKeys(uint256 _nodeOperatorAddressSalt, bytes32 _name, uint256 _keyCount, uint128 _blockRoll)
+        public
+    {
+        address _nodeOperatorAddress = uf._new(_nodeOperatorAddressSalt);
+        vm.startPrank(admin);
+        uint256 operatorIndex = operatorsRegistry.addOperator(string(abi.encodePacked(_name)), _nodeOperatorAddress);
+        Operators.Operator memory newOperator = operatorsRegistry.getOperator(operatorIndex);
+        assert(newOperator.keys == 0);
+        assert(newOperator.latestKeysEditBlockNumber == block.number);
+        vm.roll(block.number + _blockRoll);
+        OperatorsRegistryInitializableV1(address(operatorsRegistry)).sudoSetKeys(0, _keyCount);
+        newOperator = operatorsRegistry.getOperator(operatorIndex);
+        assert(newOperator.keys == _keyCount);
+        assert(newOperator.latestKeysEditBlockNumber == block.number);
     }
 
     function testAddNodeOperator(uint256 _nodeOperatorAddressSalt, bytes32 _name) public {
@@ -83,8 +103,23 @@ contract OperatorsRegistryV1Tests is Test, BytesGenerator {
         indexes[0] = 0;
         uint256[] memory limits = new uint256[](1);
         limits[0] = 1;
-        vm.expectRevert(abi.encodeWithSignature("OperatorLimitTooHigh(uint256,uint256)", 1, 0));
-        operatorsRegistry.setOperatorLimits(indexes, limits);
+        vm.expectRevert(abi.encodeWithSignature("OperatorLimitTooHigh(uint256,uint256,uint256)", 0, 1, 0));
+        operatorsRegistry.setOperatorLimits(indexes, limits, block.number);
+        vm.stopPrank();
+    }
+
+    function testSetOperatorInvariantChecksSkipped(uint256 _nodeOperatorAddressSalt) public {
+        vm.roll(1);
+        address _nodeOperatorAddress = uf._new(_nodeOperatorAddressSalt);
+        vm.startPrank(admin);
+        operatorsRegistry.addOperator(string(abi.encodePacked(_nodeOperatorAddress)), _nodeOperatorAddress);
+        uint256[] memory indexes = new uint256[](1);
+        indexes[0] = 0;
+        uint256[] memory limits = new uint256[](1);
+        limits[0] = 1;
+        vm.expectEmit(true, true, true, true);
+        emit OperatorEditsAfterSnapshot(0, 0, 1, 1, 0);
+        operatorsRegistry.setOperatorLimits(indexes, limits, 0);
         vm.stopPrank();
     }
 
@@ -101,11 +136,11 @@ contract OperatorsRegistryV1Tests is Test, BytesGenerator {
         indexes[0] = 0;
         uint256[] memory limits = new uint256[](1);
         limits[0] = 1;
-        operatorsRegistry.setOperatorLimits(indexes, limits);
+        operatorsRegistry.setOperatorLimits(indexes, limits, block.number);
         OperatorsRegistryInitializableV1(address(operatorsRegistry)).sudoSetFunded(0, 1);
         limits[0] = 0;
-        vm.expectRevert(abi.encodeWithSignature("OperatorLimitTooLow(uint256,uint256)", 0, 1));
-        operatorsRegistry.setOperatorLimits(indexes, limits);
+        vm.expectRevert(abi.encodeWithSignature("OperatorLimitTooLow(uint256,uint256,uint256)", 0, 0, 1));
+        operatorsRegistry.setOperatorLimits(indexes, limits, block.number);
         vm.stopPrank();
     }
 
@@ -318,13 +353,113 @@ contract OperatorsRegistryV1Tests is Test, BytesGenerator {
         operatorIndexes[0] = index;
         uint256[] memory operatorLimits = new uint256[](1);
         operatorLimits[0] = _limit;
-        operatorsRegistry.setOperatorLimits(operatorIndexes, operatorLimits);
+        operatorsRegistry.setOperatorLimits(operatorIndexes, operatorLimits, block.number);
         newOperator = operatorsRegistry.getOperator(index);
         assert(newOperator.limit == _limit);
         operatorLimits[0] = 0;
-        operatorsRegistry.setOperatorLimits(operatorIndexes, operatorLimits);
+        operatorsRegistry.setOperatorLimits(operatorIndexes, operatorLimits, block.number);
         newOperator = operatorsRegistry.getOperator(index);
         assert(newOperator.limit == 0);
+    }
+
+    event OperatorLimitUnchanged(uint256 indexed operatorIndex, uint256 limit);
+
+    function testSetOperatorLimitCountNoOp(bytes32 _name, uint256 _firstAddressSalt, uint256 _limit) public {
+        address _firstAddress = uf._new(_firstAddressSalt);
+        _limit = _limit % 11; // 10 is max
+        vm.assume(_limit > 0);
+        vm.startPrank(admin);
+        uint256 index = operatorsRegistry.addOperator(string(abi.encodePacked(_name)), _firstAddress);
+
+        bytes memory tenKeys = genBytes((48 + 96) * 10);
+
+        operatorsRegistry.addValidators(index, 10, tenKeys);
+
+        Operators.Operator memory newOperator = operatorsRegistry.getOperator(index);
+        assert(newOperator.limit == 0);
+        uint256[] memory operatorIndexes = new uint256[](1);
+        operatorIndexes[0] = index;
+        uint256[] memory operatorLimits = new uint256[](1);
+        operatorLimits[0] = _limit;
+        vm.record();
+        operatorsRegistry.setOperatorLimits(operatorIndexes, operatorLimits, block.number);
+        (, bytes32[] memory writes) = vm.accesses(address(operatorsRegistry));
+        assert(writes.length == 1);
+        newOperator = operatorsRegistry.getOperator(index);
+        assert(newOperator.limit == _limit);
+        vm.expectEmit(true, true, true, true);
+        emit OperatorLimitUnchanged(0, _limit);
+        vm.record();
+        operatorsRegistry.setOperatorLimits(operatorIndexes, operatorLimits, block.number);
+        (, writes) = vm.accesses(address(operatorsRegistry));
+        assert(writes.length == 0);
+    }
+
+    event OperatorEditsAfterSnapshot(
+        uint256 indexed index,
+        uint256 currentLimit,
+        uint256 newLimit,
+        uint256 indexed lastEdit,
+        uint256 indexed snapshotBlock
+    );
+
+    function testSetOperatorLimitCountSnapshotTooLow(bytes32 _name, uint256 _firstAddressSalt, uint256 _limit) public {
+        address _firstAddress = uf._new(_firstAddressSalt);
+        _limit = 1 + _limit % 10; // 10 is max, 1 is min
+        vm.startPrank(admin);
+        uint256 index = operatorsRegistry.addOperator(string(abi.encodePacked(_name)), _firstAddress);
+
+        bytes memory tenKeys = genBytes((48 + 96) * 10);
+
+        uint256 bn = 1_000_000;
+        vm.roll(bn);
+
+        operatorsRegistry.addValidators(index, 10, tenKeys);
+
+        Operators.Operator memory newOperator = operatorsRegistry.getOperator(index);
+        assert(newOperator.limit == 0);
+        uint256[] memory operatorIndexes = new uint256[](1);
+        operatorIndexes[0] = index;
+        uint256[] memory operatorLimits = new uint256[](1);
+        operatorLimits[0] = _limit;
+        vm.expectEmit(true, true, true, true);
+        emit OperatorEditsAfterSnapshot(index, 0, _limit, bn, bn - 1);
+        operatorsRegistry.setOperatorLimits(operatorIndexes, operatorLimits, bn - 1);
+        newOperator = operatorsRegistry.getOperator(index);
+        assert(newOperator.limit == 0);
+    }
+
+    event SetOperatorLimit(uint256 indexed index, uint256 newLimit);
+
+    function testSetOperatorLimitDecreaseSkipsSnapshotCheck(bytes32 _name, uint256 _firstAddressSalt) public {
+        address _firstAddress = uf._new(_firstAddressSalt);
+        vm.startPrank(admin);
+        uint256 index = operatorsRegistry.addOperator(string(abi.encodePacked(_name)), _firstAddress);
+
+        bytes memory tenKeys = genBytes((48 + 96) * 10);
+
+        uint256 bn = 1_000_000;
+        vm.roll(bn);
+
+        operatorsRegistry.addValidators(index, 10, tenKeys);
+
+        Operators.Operator memory newOperator = operatorsRegistry.getOperator(index);
+        assert(newOperator.limit == 0);
+        uint256[] memory operatorIndexes = new uint256[](1);
+        operatorIndexes[0] = index;
+        uint256[] memory operatorLimits = new uint256[](1);
+        operatorLimits[0] = 10;
+        vm.expectEmit(true, true, true, true);
+        emit SetOperatorLimit(index, 10);
+        operatorsRegistry.setOperatorLimits(operatorIndexes, operatorLimits, bn);
+        newOperator = operatorsRegistry.getOperator(index);
+        assert(newOperator.limit == 10);
+        operatorLimits[0] = 5;
+        vm.expectEmit(true, true, true, true);
+        emit SetOperatorLimit(index, 5);
+        operatorsRegistry.setOperatorLimits(operatorIndexes, operatorLimits, bn - 1);
+        newOperator = operatorsRegistry.getOperator(index);
+        assert(newOperator.limit == 5);
     }
 
     function testSetOperatorLimitCountAsUnauthorized(bytes32 _name, uint256 _firstAddressSalt, uint256 _limit) public {
@@ -340,7 +475,43 @@ contract OperatorsRegistryV1Tests is Test, BytesGenerator {
         uint256[] memory operatorLimits = new uint256[](1);
         operatorLimits[0] = _limit;
         vm.expectRevert(abi.encodeWithSignature("Unauthorized(address)", address(this)));
-        operatorsRegistry.setOperatorLimits(operatorIndexes, operatorLimits);
+        operatorsRegistry.setOperatorLimits(operatorIndexes, operatorLimits, block.number);
+    }
+
+    function testSetOperatorLimitUnorderedOperators(
+        bytes32 _name,
+        uint256 _firstAddressSalt,
+        uint256 _secondAddressSalt
+    ) public {
+        address _firstAddress = uf._new(_firstAddressSalt);
+        address _secondAddress = uf._new(_secondAddressSalt);
+        vm.startPrank(admin);
+        uint256 index0 = operatorsRegistry.addOperator(string(abi.encodePacked(_name)), _firstAddress);
+        uint256 index1 = operatorsRegistry.addOperator(string(abi.encodePacked(_name)), _secondAddress);
+        uint256[] memory operatorIndexes = new uint256[](2);
+        operatorIndexes[0] = index1;
+        operatorIndexes[1] = index0;
+        uint256[] memory operatorLimits = new uint256[](2);
+        operatorLimits[0] = 0;
+        operatorLimits[1] = 0;
+        vm.expectRevert(abi.encodeWithSignature("UnorderedOperatorList()"));
+        operatorsRegistry.setOperatorLimits(operatorIndexes, operatorLimits, block.number);
+        vm.stopPrank();
+    }
+
+    function testSetOperatorLimitDuplicateOperators(bytes32 _name, uint256 _firstAddressSalt) public {
+        address _firstAddress = uf._new(_firstAddressSalt);
+        vm.startPrank(admin);
+        uint256 index = operatorsRegistry.addOperator(string(abi.encodePacked(_name)), _firstAddress);
+        uint256[] memory operatorIndexes = new uint256[](2);
+        operatorIndexes[0] = index;
+        operatorIndexes[1] = index;
+        uint256[] memory operatorLimits = new uint256[](2);
+        operatorLimits[0] = 0;
+        operatorLimits[1] = 0;
+        vm.expectRevert(abi.encodeWithSignature("UnorderedOperatorList()"));
+        operatorsRegistry.setOperatorLimits(operatorIndexes, operatorLimits, block.number);
+        vm.stopPrank();
     }
 
     event AddedValidatorKeys(uint256 indexed index, uint256 amount);
@@ -391,7 +562,7 @@ contract OperatorsRegistryV1Tests is Test, BytesGenerator {
         operatorIndexes[0] = index;
         uint256[] memory limits = new uint256[](1);
         limits[0] = 10;
-        operatorsRegistry.setOperatorLimits(operatorIndexes, limits);
+        operatorsRegistry.setOperatorLimits(operatorIndexes, limits, block.number);
         vm.stopPrank();
 
         vm.startPrank(river);
@@ -419,7 +590,7 @@ contract OperatorsRegistryV1Tests is Test, BytesGenerator {
         operatorIndexes[0] = index;
         uint256[] memory limits = new uint256[](1);
         limits[0] = 5;
-        operatorsRegistry.setOperatorLimits(operatorIndexes, limits);
+        operatorsRegistry.setOperatorLimits(operatorIndexes, limits, block.number);
         vm.stopPrank();
 
         vm.startPrank(river);
@@ -472,7 +643,7 @@ contract OperatorsRegistryV1Tests is Test, BytesGenerator {
         limits[1] = 50;
         limits[2] = 50;
         vm.prank(admin);
-        operatorsRegistry.setOperatorLimits(indexes, limits);
+        operatorsRegistry.setOperatorLimits(indexes, limits, block.number);
         vm.prank(river);
         (bytes[] memory publicKeys, bytes[] memory signatures) = operatorsRegistry.pickNextValidators(6);
 
@@ -740,7 +911,7 @@ contract OperatorsRegistryV1Tests is Test, BytesGenerator {
         uint256[] memory limits = new uint256[](1);
         operators[0] = index;
         limits[0] = 10;
-        operatorsRegistry.setOperatorLimits(operators, limits);
+        operatorsRegistry.setOperatorLimits(operators, limits, block.number);
         vm.stopPrank();
         vm.startPrank(_firstAddress);
 
@@ -783,7 +954,7 @@ contract OperatorsRegistryV1Tests is Test, BytesGenerator {
         uint256[] memory limits = new uint256[](1);
         operators[0] = index;
         limits[0] = 8;
-        operatorsRegistry.setOperatorLimits(operators, limits);
+        operatorsRegistry.setOperatorLimits(operators, limits, block.number);
         vm.stopPrank();
         vm.startPrank(_firstAddress);
 
@@ -1089,7 +1260,7 @@ contract OperatorsRegistryV1TestDistribution is Test {
         operators[4] = 4;
 
         vm.prank(admin);
-        operatorsRegistry.setOperatorLimits(operators, limits);
+        operatorsRegistry.setOperatorLimits(operators, limits, block.number);
 
         {
             (bytes[] memory publicKeys, bytes[] memory signatures) = OperatorsRegistryInitializableV1(
@@ -1146,7 +1317,7 @@ contract OperatorsRegistryV1TestDistribution is Test {
         operators[4] = 4;
 
         vm.startPrank(admin);
-        operatorsRegistry.setOperatorLimits(operators, limits);
+        operatorsRegistry.setOperatorLimits(operators, limits, block.number);
         operatorsRegistry.setOperatorStatus(1, false);
         operatorsRegistry.setOperatorStatus(3, false);
         vm.stopPrank();
@@ -1188,7 +1359,7 @@ contract OperatorsRegistryV1TestDistribution is Test {
         operators[2] = 4;
 
         vm.startPrank(admin);
-        operatorsRegistry.setOperatorLimits(operators, limits);
+        operatorsRegistry.setOperatorLimits(operators, limits, block.number);
         vm.stopPrank();
 
         OperatorsRegistryInitializableV1(address(operatorsRegistry)).debugGetNextValidatorsFromActiveOperators(75);
@@ -1211,7 +1382,7 @@ contract OperatorsRegistryV1TestDistribution is Test {
         operators[0] = 1;
         operators[1] = 3;
 
-        operatorsRegistry.setOperatorLimits(operators, limits);
+        operatorsRegistry.setOperatorLimits(operators, limits, block.number);
 
         vm.stopPrank();
 

@@ -21,6 +21,16 @@ abstract contract ConsensusLayerDepositManagerV1 is IConsensusLayerDepositManage
     uint256 public constant SIGNATURE_LENGTH = 96;
     uint256 public constant DEPOSIT_SIZE = 32 ether;
 
+    function _getRiverAdmin() internal view virtual returns (address);
+
+    /// @notice Prevents unauthorized calls
+    modifier onlyAdmin_CDMV1() {
+        if (msg.sender != _getRiverAdmin()) {
+            revert LibErrors.Unauthorized(msg.sender);
+        }
+        _;
+    }
+
     /// @notice Initializer to set the deposit contract address and the withdrawal credentials to use
     /// @param _depositContractAddress The address of the deposit contract
     /// @param _withdrawalCredentials The withdrawal credentials to apply to all deposits
@@ -49,7 +59,7 @@ abstract contract ConsensusLayerDepositManagerV1 is IConsensusLayerDepositManage
 
     /// @notice Deposits current balance to the Consensus Layer by batches of 32 ETH
     /// @param _maxCount The maximum amount of validator keys to fund
-    function depositToConsensusLayer(uint256 _maxCount) external {
+    function depositToConsensusLayer(uint256 _maxCount) external onlyAdmin_CDMV1 {
         uint256 balanceToDeposit = BalanceToDeposit.get();
         uint256 keyToDepositCount = LibUint256.min(balanceToDeposit / DEPOSIT_SIZE, _maxCount);
 

@@ -16,6 +16,7 @@ library Operators {
         uint256 funded;
         uint256 keys;
         uint256 stopped;
+        uint256 latestKeysEditBlockNumber;
     }
 
     struct CachedOperator {
@@ -175,5 +176,12 @@ library Operators {
         r.value.push(newValue);
 
         return r.value.length;
+    }
+
+    function setKeys(uint256 opIndex, uint256 newKeys) internal {
+        Operator storage op = get(opIndex);
+
+        op.keys = newKeys;
+        op.latestKeysEditBlockNumber = block.number;
     }
 }
