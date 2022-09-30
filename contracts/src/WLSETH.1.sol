@@ -166,6 +166,8 @@ contract WLSETHV1 is IWLSETHV1, Initializable, ReentrancyGuard {
     /// @param _spender The allowed spender of the wrapped tokens
     /// @param _value The new allowance value
     function _approve(address _owner, address _spender, uint256 _value) internal {
+        LibSanitize._notZeroAddress(_owner);
+        LibSanitize._notZeroAddress(_spender);
         ApprovalsPerOwner.set(_owner, _spender, _value);
         emit Approval(_owner, _spender, _value);
     }
