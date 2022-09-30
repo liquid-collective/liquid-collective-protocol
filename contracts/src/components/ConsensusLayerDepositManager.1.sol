@@ -16,7 +16,7 @@ import "../state/river/BalanceToDeposit.sol";
 /// @author Kiln
 /// @notice This contract handles the interactions with the official deposit contract, funding all validators
 /// @notice Whenever a deposit to the consensus layer is requested, this contract computed the amount of keys
-/// @notice that could be deposited depending on the amount available in the contract. It then tried to retrieve
+/// @notice that could be deposited depending on the amount available in the contract. It then tries to retrieve
 /// @notice validator keys by calling its internal virtual method _getNextValidators. This method should be
 /// @notice overridden by the implementing contract to provide [0; _keyCount] keys when invoked.
 abstract contract ConsensusLayerDepositManagerV1 is IConsensusLayerDepositManagerV1 {
