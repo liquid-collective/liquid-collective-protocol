@@ -1,15 +1,6 @@
 import { DeployFunction } from "hardhat-deploy/dist/types";
 import { HardhatRuntimeEnvironment } from "hardhat/types";
-
-const logStep = () => {
-  console.log(`=== ${__filename} START`);
-  console.log();
-};
-
-const logStepEnd = () => {
-  console.log();
-  console.log(`=== ${__filename} END`);
-};
+import { isDeployed, logStep, logStepEnd } from '../ts-utils/helpers/index';
 
 const func: DeployFunction = async function ({
   deployments,
@@ -36,19 +27,17 @@ const func: DeployFunction = async function ({
     },
   });
 
-  logStepEnd();
+  logStepEnd(__filename);
 };
 
 func.skip = async function ({ deployments, getNamedAccounts }: HardhatRuntimeEnvironment): Promise<boolean> {
-  logStep();
-  try {
-    await deployments.get("WLSETH_Proxy");
-    console.log("Skipping");
-    logStepEnd();
-    return true;
-  } catch (e) {
-    return false;
+  logStep(__filename);
+  const shouldSkip = await isDeployed("WLSETH", deployments, __filename);
+  if (shouldSkip) {
+    console.log("Skipped");
+    logStepEnd(__filename);
   }
+  return shouldSkip;
 };
 
 export default func;

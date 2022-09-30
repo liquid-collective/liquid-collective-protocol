@@ -1,16 +1,7 @@
 import { DeployFunction } from "hardhat-deploy/dist/types";
 import { HardhatRuntimeEnvironment } from "hardhat/types";
 import { getContractAddress } from "ethers/lib/utils";
-
-const logStep = () => {
-  console.log(`=== ${__filename} START`);
-  console.log();
-};
-
-const logStepEnd = () => {
-  console.log();
-  console.log(`=== ${__filename} END`);
-};
+import { isDeployed, logStep, logStepEnd } from '../ts-utils/helpers/index';
 
 const func: DeployFunction = async function ({ deployments, getNamedAccounts, ethers }: HardhatRuntimeEnvironment) {
   const { deployer, proxyAdministrator, systemAdministrator } = await getNamedAccounts();
@@ -53,19 +44,17 @@ const func: DeployFunction = async function ({ deployments, getNamedAccounts, et
     throw new Error(`Invalid future address computation ${futureAllowlistAddress} != ${allowlistDeployment.address}`);
   }
 
-  logStepEnd();
+  logStepEnd(__filename);
 };
 
 func.skip = async function ({ deployments, getNamedAccounts }: HardhatRuntimeEnvironment): Promise<boolean> {
-  logStep();
-  try {
-    await deployments.get("Allowlist_Proxy");
-    console.log("Skipping");
-    logStepEnd();
-    return true;
-  } catch (e) {
-    return false;
+  logStep(__filename);
+  const shouldSkip = await isDeployed("Allowlist", deployments, __filename);
+  if (shouldSkip) {
+    console.log("Skipped");
+    logStepEnd(__filename);
   }
+  return shouldSkip;
 };
 
 export default func;

@@ -4,7 +4,7 @@
     "contracts": {
         "AllowlistV1": {
             "address": "0xc21Cee691fFF54c7646EF20d43Ef0a67D3d793B2",
-            "constructionArgs": {
+            "deploymentParams": {
                 "type": "proxy",
                 "methodName": "initAllowlistV1",
                 "args": {
@@ -16,7 +16,7 @@
         "AllowlistV1_Implementation": "0x674458A9b65f30979A00b18815aaB131FC6889a1",
         "AllowlistV1_Proxy": {
             "address": "0xc21Cee691fFF54c7646EF20d43Ef0a67D3d793B2",
-            "constructionArgs": {
+            "deploymentParams": {
                 "type": "constructor",
                 "args": {
                     "_logic": "0x674458A9b65f30979A00b18815aaB131FC6889a1",
@@ -27,7 +27,7 @@
         },
         "ELFeeRecipientV1": {
             "address": "0x41aF29279a83064cf905A50900ce81B42100Cbaa",
-            "constructionArgs": {
+            "deploymentParams": {
                 "type": "proxy",
                 "methodName": "initELFeeRecipientV1",
                 "args": {
@@ -38,7 +38,7 @@
         "ELFeeRecipientV1_Implementation": "0x5686F8585759410594112d2d89EeDAbA2D4Ad4e9",
         "ELFeeRecipientV1_Proxy": {
             "address": "0x41aF29279a83064cf905A50900ce81B42100Cbaa",
-            "constructionArgs": {
+            "deploymentParams": {
                 "type": "constructor",
                 "args": {
                     "_logic": "0x5686F8585759410594112d2d89EeDAbA2D4Ad4e9",
@@ -49,7 +49,7 @@
         },
         "Firewall": {
             "address": "0xC95Fd1AadCE00a234cab95796ec04d7A86C6c9e5",
-            "constructionArgs": {
+            "deploymentParams": {
                 "type": "constructor",
                 "args": {
                     "governor_": "0x71c9DAb681C209bb82270906e3B49388b2C15404",
@@ -61,7 +61,7 @@
         },
         "OperatorsRegistryV1": {
             "address": "0x17F4a77c9b1e5A6A8ee8964255F51321B6a41418",
-            "constructionArgs": {
+            "deploymentParams": {
                 "type": "proxy",
                 "methodName": "initOperatorsRegistryV1",
                 "args": {
@@ -73,7 +73,7 @@
         "OperatorsRegistryV1_Implementation": "0xBD2900b52c6abEc4455a302A635E929BFb2e81A6",
         "OperatorsRegistryV1_Proxy": {
             "address": "0x17F4a77c9b1e5A6A8ee8964255F51321B6a41418",
-            "constructionArgs": {
+            "deploymentParams": {
                 "type": "constructor",
                 "args": {
                     "_logic": "0xBD2900b52c6abEc4455a302A635E929BFb2e81A6",
@@ -84,7 +84,7 @@
         },
         "OracleV1": {
             "address": "0xd0ae807aeF539a1b98466CB779B491b560bDe3a0",
-            "constructionArgs": {
+            "deploymentParams": {
                 "type": "proxy",
                 "methodName": "initOracleV1",
                 "args": {
@@ -102,7 +102,7 @@
         "OracleV1_Implementation": "0x0F28718bf172eC040D5A243eAb5c0F7746C16Cb2",
         "OracleV1_Proxy": {
             "address": "0xd0ae807aeF539a1b98466CB779B491b560bDe3a0",
-            "constructionArgs": {
+            "deploymentParams": {
                 "type": "constructor",
                 "args": {
                     "_logic": "0x0F28718bf172eC040D5A243eAb5c0F7746C16Cb2",
@@ -113,7 +113,7 @@
         },
         "RiverV1": {
             "address": "0xf4324Bb0616598522a96892Bd40f50B50808823d",
-            "constructionArgs": {
+            "deploymentParams": {
                 "type": "proxy",
                 "methodName": "initRiverV1",
                 "args": {
@@ -133,7 +133,7 @@
         "RiverV1_Implementation": "0xBf2871F0b6dbB479f5F6bB540fb5b2e4D91f5b86",
         "RiverV1_Proxy": {
             "address": "0xf4324Bb0616598522a96892Bd40f50B50808823d",
-            "constructionArgs": {
+            "deploymentParams": {
                 "type": "constructor",
                 "args": {
                     "_logic": "0xBf2871F0b6dbB479f5F6bB540fb5b2e4D91f5b86",
@@ -144,7 +144,7 @@
         },
         "WLSETHV1": {
             "address": "0x1723e9b6C7a796B9059974977A20C7e98b29Dd27",
-            "constructionArgs": {
+            "deploymentParams": {
                 "type": "proxy",
                 "methodName": "initWLSETHV1",
                 "args": {
@@ -155,7 +155,7 @@
         "WLSETHV1_Implementation": "0x042Cf3e1C2cD3994aC4B2c513C1d7d75C5fA1c5A",
         "WLSETHV1_Proxy": {
             "address": "0x1723e9b6C7a796B9059974977A20C7e98b29Dd27",
-            "constructionArgs": {
+            "deploymentParams": {
                 "type": "constructor",
                 "args": {
                     "_logic": "0x042Cf3e1C2cD3994aC4B2c513C1d7d75C5fA1c5A",
@@ -166,7 +166,7 @@
         },
         "WithdrawV1": {
             "address": "0x32B4D97ea25DD3015Db122316f6823Aa30772a28",
-            "constructionArgs": {
+            "deploymentParams": {
                 "type": "constructor",
                 "args": {
                     "_logic": "0x103dcD424CA61cf83B1d6d734B9c0c53cE7706Ee",
@@ -178,7 +178,7 @@
         "WithdrawV1_Implementation": "0x103dcD424CA61cf83B1d6d734B9c0c53cE7706Ee",
         "WithdrawV1_Proxy": {
             "address": "0x32B4D97ea25DD3015Db122316f6823Aa30772a28",
-            "constructionArgs": {
+            "deploymentParams": {
                 "type": "constructor",
                 "args": {
                     "_logic": "0x103dcD424CA61cf83B1d6d734B9c0c53cE7706Ee",

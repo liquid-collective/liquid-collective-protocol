@@ -124,7 +124,7 @@ async function main() {
     if (constructorArgs !== null) {
       artifactContent.contracts[contractName] = {
         address: artifactContent.contracts[contractName].address,
-        constructionArgs: constructorArgs,
+        deploymentParams: constructorArgs,
       };
     } else {
       artifactContent.contracts[contractName] = artifactContent.contracts[contractName].address;
