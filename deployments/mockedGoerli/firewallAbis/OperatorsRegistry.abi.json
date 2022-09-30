@@ -3,27 +3,32 @@
         "inputs": [
             {
                 "internalType": "address",
-                "name": "governor_",
+                "name": "_admin",
                 "type": "address"
             },
             {
                 "internalType": "address",
-                "name": "executor_",
+                "name": "_executor",
                 "type": "address"
             },
             {
                 "internalType": "address",
-                "name": "destination_",
+                "name": "_destination",
                 "type": "address"
             },
             {
                 "internalType": "bytes4[]",
-                "name": "executorCallableSelectors_",
+                "name": "_executorCallableSelectors",
                 "type": "bytes4[]"
             }
         ],
         "stateMutability": "nonpayable",
         "type": "constructor"
+    },
+    {
+        "inputs": [],
+        "name": "InvalidZeroAddress",
+        "type": "error"
     },
     {
         "inputs": [
@@ -37,25 +42,116 @@
         "type": "error"
     },
     {
+        "anonymous": false,
+        "inputs": [
+            {
+                "indexed": true,
+                "internalType": "address",
+                "name": "admin",
+                "type": "address"
+            }
+        ],
+        "name": "SetAdmin",
+        "type": "event"
+    },
+    {
+        "anonymous": false,
+        "inputs": [
+            {
+                "indexed": true,
+                "internalType": "address",
+                "name": "destination",
+                "type": "address"
+            }
+        ],
+        "name": "SetDestination",
+        "type": "event"
+    },
+    {
+        "anonymous": false,
+        "inputs": [
+            {
+                "indexed": true,
+                "internalType": "address",
+                "name": "executor",
+                "type": "address"
+            }
+        ],
+        "name": "SetExecutor",
+        "type": "event"
+    },
+    {
+        "anonymous": false,
+        "inputs": [
+            {
+                "indexed": false,
+                "internalType": "bytes4",
+                "name": "selector",
+                "type": "bytes4"
+            },
+            {
+                "indexed": false,
+                "internalType": "bool",
+                "name": "status",
+                "type": "bool"
+            }
+        ],
+        "name": "SetExecutorPermissions",
+        "type": "event"
+    },
+    {
+        "anonymous": false,
+        "inputs": [
+            {
+                "indexed": true,
+                "internalType": "address",
+                "name": "pendingAdmin",
+                "type": "address"
+            }
+        ],
+        "name": "SetPendingAdmin",
+        "type": "event"
+    },
+    {
         "stateMutability": "payable",
         "type": "fallback"
+    },
+    {
+        "inputs": [],
+        "name": "acceptAdmin",
+        "outputs": [],
+        "stateMutability": "nonpayable",
+        "type": "function"
     },
     {
         "inputs": [
             {
                 "internalType": "bytes4",
-                "name": "functionSelector",
+                "name": "_functionSelector",
                 "type": "bytes4"
             },
             {
                 "internalType": "bool",
-                "name": "executorCanCall_",
+                "name": "_executorCanCall",
                 "type": "bool"
             }
         ],
         "name": "allowExecutor",
         "outputs": [],
         "stateMutability": "nonpayable",
+        "type": "function"
+    },
+    {
+        "inputs": [],
+        "name": "destination",
+        "outputs": [
+            {
+                "internalType": "address",
+                "name": "",
+                "type": "address"
+            }
+        ],
+        "stateMutability": "view",
         "type": "function"
     },
     {
@@ -72,8 +168,40 @@
         "type": "function"
     },
     {
+        "inputs": [
+            {
+                "internalType": "bytes4",
+                "name": "",
+                "type": "bytes4"
+            }
+        ],
+        "name": "executorCanCall",
+        "outputs": [
+            {
+                "internalType": "bool",
+                "name": "",
+                "type": "bool"
+            }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
         "inputs": [],
-        "name": "governor",
+        "name": "getAdmin",
+        "outputs": [
+            {
+                "internalType": "address",
+                "name": "",
+                "type": "address"
+            }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "inputs": [],
+        "name": "getPendingAdmin",
         "outputs": [
             {
                 "internalType": "address",
@@ -88,11 +216,11 @@
         "inputs": [
             {
                 "internalType": "address",
-                "name": "newExecutor",
+                "name": "_newAdmin",
                 "type": "address"
             }
         ],
-        "name": "setExecutor",
+        "name": "proposeAdmin",
         "outputs": [],
         "stateMutability": "nonpayable",
         "type": "function"
@@ -101,11 +229,11 @@
         "inputs": [
             {
                 "internalType": "address",
-                "name": "newGovernor",
+                "name": "_newExecutor",
                 "type": "address"
             }
         ],
-        "name": "setGovernor",
+        "name": "setExecutor",
         "outputs": [],
         "stateMutability": "nonpayable",
         "type": "function"
@@ -149,6 +277,32 @@
             }
         ],
         "name": "BeaconUpgraded",
+        "type": "event"
+    },
+    {
+        "anonymous": false,
+        "inputs": [
+            {
+                "indexed": false,
+                "internalType": "address",
+                "name": "admin",
+                "type": "address"
+            }
+        ],
+        "name": "Paused",
+        "type": "event"
+    },
+    {
+        "anonymous": false,
+        "inputs": [
+            {
+                "indexed": false,
+                "internalType": "address",
+                "name": "admin",
+                "type": "address"
+            }
+        ],
+        "name": "Unpaused",
         "type": "event"
     },
     {
@@ -209,7 +363,14 @@
     },
     {
         "inputs": [],
-        "name": "isPaused",
+        "name": "pause",
+        "outputs": [],
+        "stateMutability": "nonpayable",
+        "type": "function"
+    },
+    {
+        "inputs": [],
+        "name": "paused",
         "outputs": [
             {
                 "internalType": "bool",
@@ -217,13 +378,6 @@
                 "type": "bool"
             }
         ],
-        "stateMutability": "nonpayable",
-        "type": "function"
-    },
-    {
-        "inputs": [],
-        "name": "pause",
-        "outputs": [],
         "stateMutability": "nonpayable",
         "type": "function"
     },
@@ -297,6 +451,11 @@
     },
     {
         "inputs": [],
+        "name": "InvalidEmptyString",
+        "type": "error"
+    },
+    {
+        "inputs": [],
         "name": "InvalidFundedKeyDeletionAttempt",
         "type": "error"
     },
@@ -328,12 +487,7 @@
     },
     {
         "inputs": [],
-        "name": "InvalidPublicKeysLength",
-        "type": "error"
-    },
-    {
-        "inputs": [],
-        "name": "InvalidSignatureLength",
+        "name": "InvalidKeysLength",
         "type": "error"
     },
     {
@@ -349,16 +503,10 @@
     {
         "inputs": [
             {
-                "internalType": "string",
-                "name": "name",
-                "type": "string"
-            }
-        ],
-        "name": "OperatorAlreadyExists",
-        "type": "error"
-    },
-    {
-        "inputs": [
+                "internalType": "uint256",
+                "name": "index",
+                "type": "uint256"
+            },
             {
                 "internalType": "uint256",
                 "name": "limit",
@@ -376,12 +524,22 @@
     {
         "inputs": [
             {
-                "internalType": "string",
-                "name": "name",
-                "type": "string"
+                "internalType": "uint256",
+                "name": "index",
+                "type": "uint256"
+            },
+            {
+                "internalType": "uint256",
+                "name": "limit",
+                "type": "uint256"
+            },
+            {
+                "internalType": "uint256",
+                "name": "fundedKeyCount",
+                "type": "uint256"
             }
         ],
-        "name": "OperatorNotFound",
+        "name": "OperatorLimitTooLow",
         "type": "error"
     },
     {
@@ -392,7 +550,17 @@
                 "type": "uint256"
             }
         ],
-        "name": "OperatorNotFoundAtIndex",
+        "name": "OperatorNotFound",
+        "type": "error"
+    },
+    {
+        "inputs": [],
+        "name": "SliceOutOfBounds",
+        "type": "error"
+    },
+    {
+        "inputs": [],
+        "name": "SliceOverflow",
         "type": "error"
     },
     {
@@ -404,6 +572,11 @@
             }
         ],
         "name": "Unauthorized",
+        "type": "error"
+    },
+    {
+        "inputs": [],
+        "name": "UnorderedOperatorList",
         "type": "error"
     },
     {
@@ -422,15 +595,9 @@
                 "type": "string"
             },
             {
-                "indexed": false,
+                "indexed": true,
                 "internalType": "address",
                 "name": "operatorAddress",
-                "type": "address"
-            },
-            {
-                "indexed": false,
-                "internalType": "address",
-                "name": "feeRecipientAddress",
                 "type": "address"
             }
         ],
@@ -449,11 +616,86 @@
             {
                 "indexed": false,
                 "internalType": "bytes",
-                "name": "publicKeys",
+                "name": "publicKeysAndSignatures",
                 "type": "bytes"
             }
         ],
         "name": "AddedValidatorKeys",
+        "type": "event"
+    },
+    {
+        "anonymous": false,
+        "inputs": [
+            {
+                "indexed": false,
+                "internalType": "uint256",
+                "name": "version",
+                "type": "uint256"
+            },
+            {
+                "indexed": false,
+                "internalType": "bytes",
+                "name": "cdata",
+                "type": "bytes"
+            }
+        ],
+        "name": "Initialize",
+        "type": "event"
+    },
+    {
+        "anonymous": false,
+        "inputs": [
+            {
+                "indexed": true,
+                "internalType": "uint256",
+                "name": "index",
+                "type": "uint256"
+            },
+            {
+                "indexed": false,
+                "internalType": "uint256",
+                "name": "currentLimit",
+                "type": "uint256"
+            },
+            {
+                "indexed": false,
+                "internalType": "uint256",
+                "name": "newLimit",
+                "type": "uint256"
+            },
+            {
+                "indexed": true,
+                "internalType": "uint256",
+                "name": "latestKeysEditBlockNumber",
+                "type": "uint256"
+            },
+            {
+                "indexed": true,
+                "internalType": "uint256",
+                "name": "snapshotBlock",
+                "type": "uint256"
+            }
+        ],
+        "name": "OperatorEditsAfterSnapshot",
+        "type": "event"
+    },
+    {
+        "anonymous": false,
+        "inputs": [
+            {
+                "indexed": true,
+                "internalType": "uint256",
+                "name": "index",
+                "type": "uint256"
+            },
+            {
+                "indexed": false,
+                "internalType": "uint256",
+                "name": "limit",
+                "type": "uint256"
+            }
+        ],
+        "name": "OperatorLimitUnchanged",
         "type": "event"
     },
     {
@@ -480,18 +722,12 @@
         "inputs": [
             {
                 "indexed": true,
-                "internalType": "uint256",
-                "name": "index",
-                "type": "uint256"
-            },
-            {
-                "indexed": false,
                 "internalType": "address",
-                "name": "newOperatorAddress",
+                "name": "admin",
                 "type": "address"
             }
         ],
-        "name": "SetOperatorAddress",
+        "name": "SetAdmin",
         "type": "event"
     },
     {
@@ -504,13 +740,13 @@
                 "type": "uint256"
             },
             {
-                "indexed": false,
+                "indexed": true,
                 "internalType": "address",
                 "name": "newOperatorAddress",
                 "type": "address"
             }
         ],
-        "name": "SetOperatorFeeRecipientAddress",
+        "name": "SetOperatorAddress",
         "type": "event"
     },
     {
@@ -538,7 +774,7 @@
             {
                 "indexed": true,
                 "internalType": "uint256",
-                "name": "name",
+                "name": "index",
                 "type": "uint256"
             },
             {
@@ -590,8 +826,34 @@
         "type": "event"
     },
     {
+        "anonymous": false,
+        "inputs": [
+            {
+                "indexed": true,
+                "internalType": "address",
+                "name": "pendingAdmin",
+                "type": "address"
+            }
+        ],
+        "name": "SetPendingAdmin",
+        "type": "event"
+    },
+    {
+        "anonymous": false,
+        "inputs": [
+            {
+                "indexed": true,
+                "internalType": "address",
+                "name": "river",
+                "type": "address"
+            }
+        ],
+        "name": "SetRiver",
+        "type": "event"
+    },
+    {
         "inputs": [],
-        "name": "acceptOwnership",
+        "name": "acceptAdmin",
         "outputs": [],
         "stateMutability": "nonpayable",
         "type": "function"
@@ -607,15 +869,16 @@
                 "internalType": "address",
                 "name": "_operator",
                 "type": "address"
-            },
-            {
-                "internalType": "address",
-                "name": "_feeRecipient",
-                "type": "address"
             }
         ],
         "name": "addOperator",
-        "outputs": [],
+        "outputs": [
+            {
+                "internalType": "uint256",
+                "name": "",
+                "type": "uint256"
+            }
+        ],
         "stateMutability": "nonpayable",
         "type": "function"
     },
@@ -633,12 +896,7 @@
             },
             {
                 "internalType": "bytes",
-                "name": "_publicKeys",
-                "type": "bytes"
-            },
-            {
-                "internalType": "bytes",
-                "name": "_signatures",
+                "name": "_publicKeysAndSignatures",
                 "type": "bytes"
             }
         ],
@@ -669,7 +927,7 @@
         "inputs": [
             {
                 "internalType": "uint256",
-                "name": "_requestedAmount",
+                "name": "_count",
                 "type": "uint256"
             }
         ],
@@ -686,6 +944,19 @@
                 "type": "bytes[]"
             }
         ],
+        "stateMutability": "nonpayable",
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {
+                "internalType": "address",
+                "name": "_newAdmin",
+                "type": "address"
+            }
+        ],
+        "name": "proposeAdmin",
+        "outputs": [],
         "stateMutability": "nonpayable",
         "type": "function"
     },
@@ -728,24 +999,6 @@
     {
         "inputs": [
             {
-                "internalType": "uint256",
-                "name": "_index",
-                "type": "uint256"
-            },
-            {
-                "internalType": "address",
-                "name": "_newOperatorFeeRecipientAddress",
-                "type": "address"
-            }
-        ],
-        "name": "setOperatorFeeRecipientAddress",
-        "outputs": [],
-        "stateMutability": "nonpayable",
-        "type": "function"
-    },
-    {
-        "inputs": [
-            {
                 "internalType": "uint256[]",
                 "name": "_operatorIndexes",
                 "type": "uint256[]"
@@ -754,6 +1007,11 @@
                 "internalType": "uint256[]",
                 "name": "_newLimits",
                 "type": "uint256[]"
+            },
+            {
+                "internalType": "uint256",
+                "name": "_snapshotBlock",
+                "type": "uint256"
             }
         ],
         "name": "setOperatorLimits",
@@ -819,38 +1077,12 @@
         "inputs": [
             {
                 "internalType": "address",
-                "name": "_newRiver",
-                "type": "address"
-            }
-        ],
-        "name": "setRiver",
-        "outputs": [],
-        "stateMutability": "nonpayable",
-        "type": "function"
-    },
-    {
-        "inputs": [
-            {
-                "internalType": "address",
-                "name": "_newAdmin",
-                "type": "address"
-            }
-        ],
-        "name": "transferOwnership",
-        "outputs": [],
-        "stateMutability": "nonpayable",
-        "type": "function"
-    },
-    {
-        "inputs": [
-            {
-                "internalType": "address",
                 "name": "_logic",
                 "type": "address"
             },
             {
                 "internalType": "address",
-                "name": "admin_",
+                "name": "__admin",
                 "type": "address"
             },
             {

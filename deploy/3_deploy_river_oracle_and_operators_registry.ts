@@ -22,7 +22,20 @@ const func: DeployFunction = async function ({
     }
   }
 
-  const { deployer, proxyAdministrator, systemAdministrator, collector } = await getNamedAccounts();
+  let grossFee = 0;
+  switch (network.name) {
+    case "goerli":
+    case "mockedGoerli": {
+      grossFee = 1250;
+      break;
+    }
+    case "mainnet": {
+      grossFee = 1250;
+      break;
+    }
+  }
+
+  const { deployer, governor, executor, proxyAdministrator, collector } = await getNamedAccounts();
 
   let depositContract = (await getNamedAccounts()).depositContract;
 
@@ -73,8 +86,8 @@ const func: DeployFunction = async function ({
     from: deployer,
     log: true,
     args: [
-      systemAdministrator,
-      systemAdministrator,
+      governor,
+      executor,
       futureRiverAddress,
       [riverInterface.getSighash("depositToConsensusLayer"), riverInterface.getSighash("setOracle")],
     ],
@@ -101,7 +114,7 @@ const func: DeployFunction = async function ({
           allowlistDeployment.address,
           futureOperatorsRegistryAddress,
           collector,
-          500,
+          grossFee,
         ],
       },
     },
@@ -115,8 +128,8 @@ const func: DeployFunction = async function ({
     from: deployer,
     log: true,
     args: [
-      systemAdministrator,
-      systemAdministrator,
+      governor,
+      executor,
       futureOracleAddress,
       [
         oracleInterface.getSighash("addMember"),
@@ -151,8 +164,8 @@ const func: DeployFunction = async function ({
     from: deployer,
     log: true,
     args: [
-      systemAdministrator,
-      systemAdministrator,
+      governor,
+      executor,
       futureOperatorsRegistryAddress,
       [
         operatorsRegsitryInterface.getSighash("setOperatorStatus"),

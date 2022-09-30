@@ -1,5 +1,5 @@
 {
-  "address": "0xdC60C683b969cEc6e22a9509674507729155B233",
+  "address": "0xb9d6F29bFFF2eDF823a50948DF35aA1935Beb523",
   "abi": [
     {
       "inputs": [],
@@ -15,38 +15,48 @@
       "type": "function"
     }
   ],
-  "transactionHash": "0x03c13003284f66228e2240f7bef59d8899ad423e48b88318bc9480f1de524b29",
+  "transactionHash": "0xad92107f10a998f37e7e7ea0784224cc8b0d6bc72a886b2d2506345888b2f269",
   "receipt": {
     "to": null,
-    "from": "0x92D7d6DADe15fcF369534cEb8CD1A27f97185ab3",
-    "contractAddress": "0xdC60C683b969cEc6e22a9509674507729155B233",
-    "transactionIndex": 81,
+    "from": "0x341C40B94bF2afBFa42573cB78f16Ee15a056238",
+    "contractAddress": "0xb9d6F29bFFF2eDF823a50948DF35aA1935Beb523",
+    "transactionIndex": 30,
     "gasUsed": "92079",
     "logsBloom": "0x00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
-    "blockHash": "0x495f157cef054a6967adfc425cda5e88542f3396c4d0b225135bdec172fc9b13",
-    "transactionHash": "0x03c13003284f66228e2240f7bef59d8899ad423e48b88318bc9480f1de524b29",
+    "blockHash": "0x4e7a8793920b322576a61b54e0bd6be43b2d78c7e61a3618470eaa247303b139",
+    "transactionHash": "0xad92107f10a998f37e7e7ea0784224cc8b0d6bc72a886b2d2506345888b2f269",
     "logs": [],
-    "blockNumber": 7491631,
-    "cumulativeGasUsed": "24701216",
+    "blockNumber": 7685710,
+    "cumulativeGasUsed": "11482529",
     "status": 1,
     "byzantium": true
   },
   "args": [],
   "numDeployments": 1,
-  "solcInputHash": "497c9c50d40dc3da957542c95fbadb59",
-  "metadata": "{\"compiler\":{\"version\":\"0.8.10+commit.fc410830\"},\"language\":\"Solidity\",\"output\":{\"abi\":[{\"inputs\":[],\"name\":\"getCredentials\",\"outputs\":[{\"internalType\":\"bytes32\",\"name\":\"\",\"type\":\"bytes32\"}],\"stateMutability\":\"view\",\"type\":\"function\"}],\"devdoc\":{\"author\":\"Kiln\",\"kind\":\"dev\",\"methods\":{},\"title\":\"Withdraw (v1)\",\"version\":1},\"userdoc\":{\"kind\":\"user\",\"methods\":{},\"notice\":\"This contract is a stub contract that should be upgradeable to be adapted with future withdrawal specs\",\"version\":1}},\"settings\":{\"compilationTarget\":{\"contracts/src/Withdraw.1.sol\":\"WithdrawV1\"},\"evmVersion\":\"london\",\"libraries\":{},\"metadata\":{\"bytecodeHash\":\"ipfs\",\"useLiteralContent\":true},\"optimizer\":{\"enabled\":true,\"runs\":100},\"remappings\":[]},\"sources\":{\"contracts/src/Withdraw.1.sol\":{\"content\":\"//SPDX-License-Identifier: BUSL-1.1\\npragma solidity 0.8.10;\\n\\n/// @title Withdraw (v1)\\n/// @author Kiln\\n/// @notice This contract is a stub contract that should be upgradeable to be adapted with future withdrawal specs\\ncontract WithdrawV1 {\\n    function getCredentials() external view returns (bytes32) {\\n        return bytes32(uint256(uint160(address(this))) + 0x0100000000000000000000000000000000000000000000000000000000000000);\\n    }\\n}\\n\",\"keccak256\":\"0x3da7b69cb1a8b09fe1057bce023295b2335aec6489b10fe20bcef8e8f32b2d49\",\"license\":\"BUSL-1.1\"}},\"version\":1}",
-  "bytecode": "0x608060405234801561001057600080fd5b5060b38061001f6000396000f3fe6080604052348015600f57600080fd5b506004361060285760003560e01c80632294133814602d575b600080fd5b60336045565b60405190815260200160405180910390f35b6000605330600160f81b6058565b919050565b60008219821115607857634e487b7160e01b600052601160045260246000fd5b50019056fea26469706673582212205b4f49e80bfce4a33d197de5996987038104a412957e98280cc494336e0a80dd64736f6c634300080a0033",
-  "deployedBytecode": "0x6080604052348015600f57600080fd5b506004361060285760003560e01c80632294133814602d575b600080fd5b60336045565b60405190815260200160405180910390f35b6000605330600160f81b6058565b919050565b60008219821115607857634e487b7160e01b600052601160045260246000fd5b50019056fea26469706673582212205b4f49e80bfce4a33d197de5996987038104a412957e98280cc494336e0a80dd64736f6c634300080a0033",
+  "solcInputHash": "9bd7e803972243adbcfac637d96e01d2",
+  "metadata": "{\"compiler\":{\"version\":\"0.8.10+commit.fc410830\"},\"language\":\"Solidity\",\"output\":{\"abi\":[{\"inputs\":[],\"name\":\"getCredentials\",\"outputs\":[{\"internalType\":\"bytes32\",\"name\":\"\",\"type\":\"bytes32\"}],\"stateMutability\":\"view\",\"type\":\"function\"}],\"devdoc\":{\"author\":\"Kiln\",\"kind\":\"dev\",\"methods\":{\"getCredentials()\":{\"returns\":{\"_0\":\"The withdrawal credentials\"}}},\"title\":\"Withdraw (v1)\",\"version\":1},\"userdoc\":{\"kind\":\"user\",\"methods\":{\"getCredentials()\":{\"notice\":\"Retrieve the withdrawal credentials to use\"}},\"notice\":\"This contract is a stub contract that should be upgradeable to be adapted with future withdrawal specs\",\"version\":1}},\"settings\":{\"compilationTarget\":{\"contracts/src/Withdraw.1.sol\":\"WithdrawV1\"},\"evmVersion\":\"london\",\"libraries\":{},\"metadata\":{\"bytecodeHash\":\"ipfs\",\"useLiteralContent\":true},\"optimizer\":{\"enabled\":true,\"runs\":100},\"remappings\":[]},\"sources\":{\"contracts/src/Withdraw.1.sol\":{\"content\":\"//SPDX-License-Identifier: BUSL-1.1\\npragma solidity 0.8.10;\\n\\n/// @title Withdraw (v1)\\n/// @author Kiln\\n/// @notice This contract is a stub contract that should be upgradeable to be adapted with future withdrawal specs\\ncontract WithdrawV1 {\\n    /// @notice Retrieve the withdrawal credentials to use\\n    /// @return The withdrawal credentials\\n    function getCredentials() external view returns (bytes32) {\\n        return bytes32(\\n            uint256(uint160(address(this))) + 0x0100000000000000000000000000000000000000000000000000000000000000\\n        );\\n    }\\n}\\n\",\"keccak256\":\"0xc0ecf13922bda6fcb0f6ffac64c00eddea21db096b9fa7275446ae8db5f7a590\",\"license\":\"BUSL-1.1\"}},\"version\":1}",
+  "bytecode": "0x608060405234801561001057600080fd5b5060b38061001f6000396000f3fe6080604052348015600f57600080fd5b506004361060285760003560e01c80632294133814602d575b600080fd5b60336045565b60405190815260200160405180910390f35b6000605330600160f81b6058565b919050565b60008219821115607857634e487b7160e01b600052601160045260246000fd5b50019056fea264697066735822122042046b8c19f2c1ae6b7a3f2c915a5b741ec60fec028a487707848a7fd2a58be264736f6c634300080a0033",
+  "deployedBytecode": "0x6080604052348015600f57600080fd5b506004361060285760003560e01c80632294133814602d575b600080fd5b60336045565b60405190815260200160405180910390f35b6000605330600160f81b6058565b919050565b60008219821115607857634e487b7160e01b600052601160045260246000fd5b50019056fea264697066735822122042046b8c19f2c1ae6b7a3f2c915a5b741ec60fec028a487707848a7fd2a58be264736f6c634300080a0033",
   "devdoc": {
     "author": "Kiln",
     "kind": "dev",
-    "methods": {},
+    "methods": {
+      "getCredentials()": {
+        "returns": {
+          "_0": "The withdrawal credentials"
+        }
+      }
+    },
     "title": "Withdraw (v1)",
     "version": 1
   },
   "userdoc": {
     "kind": "user",
-    "methods": {},
+    "methods": {
+      "getCredentials()": {
+        "notice": "Retrieve the withdrawal credentials to use"
+      }
+    },
     "notice": "This contract is a stub contract that should be upgradeable to be adapted with future withdrawal specs",
     "version": 1
   },

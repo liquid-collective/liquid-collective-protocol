@@ -3,29 +3,7 @@ import hre from "hardhat";
 import { join } from "path";
 import { ethers } from "ethers";
 
-const firewalledContract = ["RiverV1", "AllowlistV1", "OracleV1", "OperatorsRegistryV1"];
-const proxiedContracts = [
-  {
-    name: "RiverV1",
-    init: "initRiverV1",
-  },
-  {
-    name: "AllowlistV1",
-    init: "initAllowlistV1",
-  },
-  {
-    name: "OracleV1",
-    init: "initOracleV1",
-  },
-  {
-    name: "ELFeeRecipientV1",
-    init: "initELFeeRecipientV1",
-  },
-  {
-    name: "OperatorsRegistryV1",
-    init: "initOperatorsRegistryV1",
-  },
-];
+const firewalledContract = ["River", "Allowlist", "Oracle", "OperatorsRegistry"];
 
 function getConstructorAbi(abi: any[]): any {
   for (const elem of abi) {
@@ -113,7 +91,7 @@ async function main() {
     if (firewalledContract.includes(contractName)) {
       contractsAbis[contractName] = artifactContent.contracts[contractName].abi;
     }
-    if (contractName === "Firewall") {
+    if (contractName === "RiverFirewall") {
       firewallAbi = artifactContent.contracts[contractName].abi;
     }
     const constructorArgs = await decodeConstructorArguments(

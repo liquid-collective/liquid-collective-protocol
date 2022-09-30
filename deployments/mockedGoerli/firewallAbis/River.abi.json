@@ -3,27 +3,32 @@
         "inputs": [
             {
                 "internalType": "address",
-                "name": "governor_",
+                "name": "_admin",
                 "type": "address"
             },
             {
                 "internalType": "address",
-                "name": "executor_",
+                "name": "_executor",
                 "type": "address"
             },
             {
                 "internalType": "address",
-                "name": "destination_",
+                "name": "_destination",
                 "type": "address"
             },
             {
                 "internalType": "bytes4[]",
-                "name": "executorCallableSelectors_",
+                "name": "_executorCallableSelectors",
                 "type": "bytes4[]"
             }
         ],
         "stateMutability": "nonpayable",
         "type": "constructor"
+    },
+    {
+        "inputs": [],
+        "name": "InvalidZeroAddress",
+        "type": "error"
     },
     {
         "inputs": [
@@ -37,25 +42,116 @@
         "type": "error"
     },
     {
+        "anonymous": false,
+        "inputs": [
+            {
+                "indexed": true,
+                "internalType": "address",
+                "name": "admin",
+                "type": "address"
+            }
+        ],
+        "name": "SetAdmin",
+        "type": "event"
+    },
+    {
+        "anonymous": false,
+        "inputs": [
+            {
+                "indexed": true,
+                "internalType": "address",
+                "name": "destination",
+                "type": "address"
+            }
+        ],
+        "name": "SetDestination",
+        "type": "event"
+    },
+    {
+        "anonymous": false,
+        "inputs": [
+            {
+                "indexed": true,
+                "internalType": "address",
+                "name": "executor",
+                "type": "address"
+            }
+        ],
+        "name": "SetExecutor",
+        "type": "event"
+    },
+    {
+        "anonymous": false,
+        "inputs": [
+            {
+                "indexed": false,
+                "internalType": "bytes4",
+                "name": "selector",
+                "type": "bytes4"
+            },
+            {
+                "indexed": false,
+                "internalType": "bool",
+                "name": "status",
+                "type": "bool"
+            }
+        ],
+        "name": "SetExecutorPermissions",
+        "type": "event"
+    },
+    {
+        "anonymous": false,
+        "inputs": [
+            {
+                "indexed": true,
+                "internalType": "address",
+                "name": "pendingAdmin",
+                "type": "address"
+            }
+        ],
+        "name": "SetPendingAdmin",
+        "type": "event"
+    },
+    {
         "stateMutability": "payable",
         "type": "fallback"
+    },
+    {
+        "inputs": [],
+        "name": "acceptAdmin",
+        "outputs": [],
+        "stateMutability": "nonpayable",
+        "type": "function"
     },
     {
         "inputs": [
             {
                 "internalType": "bytes4",
-                "name": "functionSelector",
+                "name": "_functionSelector",
                 "type": "bytes4"
             },
             {
                 "internalType": "bool",
-                "name": "executorCanCall_",
+                "name": "_executorCanCall",
                 "type": "bool"
             }
         ],
         "name": "allowExecutor",
         "outputs": [],
         "stateMutability": "nonpayable",
+        "type": "function"
+    },
+    {
+        "inputs": [],
+        "name": "destination",
+        "outputs": [
+            {
+                "internalType": "address",
+                "name": "",
+                "type": "address"
+            }
+        ],
+        "stateMutability": "view",
         "type": "function"
     },
     {
@@ -72,8 +168,40 @@
         "type": "function"
     },
     {
+        "inputs": [
+            {
+                "internalType": "bytes4",
+                "name": "",
+                "type": "bytes4"
+            }
+        ],
+        "name": "executorCanCall",
+        "outputs": [
+            {
+                "internalType": "bool",
+                "name": "",
+                "type": "bool"
+            }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
         "inputs": [],
-        "name": "governor",
+        "name": "getAdmin",
+        "outputs": [
+            {
+                "internalType": "address",
+                "name": "",
+                "type": "address"
+            }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "inputs": [],
+        "name": "getPendingAdmin",
         "outputs": [
             {
                 "internalType": "address",
@@ -88,11 +216,11 @@
         "inputs": [
             {
                 "internalType": "address",
-                "name": "newExecutor",
+                "name": "_newAdmin",
                 "type": "address"
             }
         ],
-        "name": "setExecutor",
+        "name": "proposeAdmin",
         "outputs": [],
         "stateMutability": "nonpayable",
         "type": "function"
@@ -101,11 +229,11 @@
         "inputs": [
             {
                 "internalType": "address",
-                "name": "newGovernor",
+                "name": "_newExecutor",
                 "type": "address"
             }
         ],
-        "name": "setGovernor",
+        "name": "setExecutor",
         "outputs": [],
         "stateMutability": "nonpayable",
         "type": "function"
@@ -149,6 +277,32 @@
             }
         ],
         "name": "BeaconUpgraded",
+        "type": "event"
+    },
+    {
+        "anonymous": false,
+        "inputs": [
+            {
+                "indexed": false,
+                "internalType": "address",
+                "name": "admin",
+                "type": "address"
+            }
+        ],
+        "name": "Paused",
+        "type": "event"
+    },
+    {
+        "anonymous": false,
+        "inputs": [
+            {
+                "indexed": false,
+                "internalType": "address",
+                "name": "admin",
+                "type": "address"
+            }
+        ],
+        "name": "Unpaused",
         "type": "event"
     },
     {
@@ -209,7 +363,14 @@
     },
     {
         "inputs": [],
-        "name": "isPaused",
+        "name": "pause",
+        "outputs": [],
+        "stateMutability": "nonpayable",
+        "type": "function"
+    },
+    {
+        "inputs": [],
+        "name": "paused",
         "outputs": [
             {
                 "internalType": "bool",
@@ -217,13 +378,6 @@
                 "type": "bool"
             }
         ],
-        "stateMutability": "nonpayable",
-        "type": "function"
-    },
-    {
-        "inputs": [],
-        "name": "pause",
-        "outputs": [],
         "stateMutability": "nonpayable",
         "type": "function"
     },
@@ -301,13 +455,24 @@
         "type": "error"
     },
     {
+        "inputs": [
+            {
+                "internalType": "address",
+                "name": "account",
+                "type": "address"
+            }
+        ],
+        "name": "Denied",
+        "type": "error"
+    },
+    {
         "inputs": [],
         "name": "EmptyDeposit",
         "type": "error"
     },
     {
         "inputs": [],
-        "name": "EmptyDonation",
+        "name": "ErrorOnDeposit",
         "type": "error"
     },
     {
@@ -328,6 +493,11 @@
     {
         "inputs": [],
         "name": "InvalidCall",
+        "type": "error"
+    },
+    {
+        "inputs": [],
+        "name": "InvalidFee",
         "type": "error"
     },
     {
@@ -360,12 +530,12 @@
         "inputs": [
             {
                 "internalType": "uint256",
-                "name": "_providedValidatorCount",
+                "name": "providedValidatorCount",
                 "type": "uint256"
             },
             {
                 "internalType": "uint256",
-                "name": "_depositedValidatorCount",
+                "name": "depositedValidatorCount",
                 "type": "uint256"
             }
         ],
@@ -398,6 +568,16 @@
         "type": "error"
     },
     {
+        "inputs": [],
+        "name": "SliceOutOfBounds",
+        "type": "error"
+    },
+    {
+        "inputs": [],
+        "name": "SliceOverflow",
+        "type": "error"
+    },
+    {
         "inputs": [
             {
                 "internalType": "address",
@@ -406,6 +586,22 @@
             }
         ],
         "name": "Unauthorized",
+        "type": "error"
+    },
+    {
+        "inputs": [
+            {
+                "internalType": "address",
+                "name": "_from",
+                "type": "address"
+            },
+            {
+                "internalType": "address",
+                "name": "_to",
+                "type": "address"
+            }
+        ],
+        "name": "UnauthorizedTransfer",
         "type": "error"
     },
     {
@@ -450,7 +646,7 @@
             {
                 "indexed": false,
                 "internalType": "uint256",
-                "name": "validatorBalanceSum",
+                "name": "validatorTotalBalance",
                 "type": "uint256"
             },
             {
@@ -460,7 +656,7 @@
                 "type": "bytes32"
             }
         ],
-        "name": "BeaconDataUpdate",
+        "name": "ConsensusLayerDataUpdate",
         "type": "event"
     },
     {
@@ -482,11 +678,197 @@
             {
                 "indexed": false,
                 "internalType": "uint256",
+                "name": "version",
+                "type": "uint256"
+            },
+            {
+                "indexed": false,
+                "internalType": "bytes",
+                "name": "cdata",
+                "type": "bytes"
+            }
+        ],
+        "name": "Initialize",
+        "type": "event"
+    },
+    {
+        "anonymous": false,
+        "inputs": [
+            {
+                "indexed": false,
+                "internalType": "uint256",
                 "name": "amount",
                 "type": "uint256"
             }
         ],
         "name": "PulledELFees",
+        "type": "event"
+    },
+    {
+        "anonymous": false,
+        "inputs": [
+            {
+                "indexed": true,
+                "internalType": "address",
+                "name": "_collector",
+                "type": "address"
+            },
+            {
+                "indexed": false,
+                "internalType": "uint256",
+                "name": "_oldTotalUnderlyingBalance",
+                "type": "uint256"
+            },
+            {
+                "indexed": false,
+                "internalType": "uint256",
+                "name": "_oldTotalSupply",
+                "type": "uint256"
+            },
+            {
+                "indexed": false,
+                "internalType": "uint256",
+                "name": "_newTotalUnderlyingBalance",
+                "type": "uint256"
+            },
+            {
+                "indexed": false,
+                "internalType": "uint256",
+                "name": "_newTotalSupply",
+                "type": "uint256"
+            }
+        ],
+        "name": "RewardsEarned",
+        "type": "event"
+    },
+    {
+        "anonymous": false,
+        "inputs": [
+            {
+                "indexed": true,
+                "internalType": "address",
+                "name": "admin",
+                "type": "address"
+            }
+        ],
+        "name": "SetAdmin",
+        "type": "event"
+    },
+    {
+        "anonymous": false,
+        "inputs": [
+            {
+                "indexed": true,
+                "internalType": "address",
+                "name": "allowlist",
+                "type": "address"
+            }
+        ],
+        "name": "SetAllowlist",
+        "type": "event"
+    },
+    {
+        "anonymous": false,
+        "inputs": [
+            {
+                "indexed": true,
+                "internalType": "address",
+                "name": "collector",
+                "type": "address"
+            }
+        ],
+        "name": "SetCollector",
+        "type": "event"
+    },
+    {
+        "anonymous": false,
+        "inputs": [
+            {
+                "indexed": true,
+                "internalType": "address",
+                "name": "depositContract",
+                "type": "address"
+            }
+        ],
+        "name": "SetDepositContractAddress",
+        "type": "event"
+    },
+    {
+        "anonymous": false,
+        "inputs": [
+            {
+                "indexed": true,
+                "internalType": "address",
+                "name": "elFeeRecipient",
+                "type": "address"
+            }
+        ],
+        "name": "SetELFeeRecipient",
+        "type": "event"
+    },
+    {
+        "anonymous": false,
+        "inputs": [
+            {
+                "indexed": false,
+                "internalType": "uint256",
+                "name": "fee",
+                "type": "uint256"
+            }
+        ],
+        "name": "SetGlobalFee",
+        "type": "event"
+    },
+    {
+        "anonymous": false,
+        "inputs": [
+            {
+                "indexed": true,
+                "internalType": "address",
+                "name": "operatorRegistry",
+                "type": "address"
+            }
+        ],
+        "name": "SetOperatorsRegistry",
+        "type": "event"
+    },
+    {
+        "anonymous": false,
+        "inputs": [
+            {
+                "indexed": true,
+                "internalType": "address",
+                "name": "oracleAddress",
+                "type": "address"
+            }
+        ],
+        "name": "SetOracle",
+        "type": "event"
+    },
+    {
+        "anonymous": false,
+        "inputs": [
+            {
+                "indexed": true,
+                "internalType": "address",
+                "name": "pendingAdmin",
+                "type": "address"
+            }
+        ],
+        "name": "SetPendingAdmin",
+        "type": "event"
+    },
+    {
+        "anonymous": false,
+        "inputs": [
+            {
+                "indexed": false,
+                "internalType": "bytes32",
+                "name": "withdrawalCredentials",
+                "type": "bytes32"
+            }
+        ],
+        "name": "SetWithdrawalCredentials",
         "type": "event"
     },
     {
@@ -541,7 +923,7 @@
     },
     {
         "inputs": [],
-        "name": "acceptOwnership",
+        "name": "acceptAdmin",
         "outputs": [],
         "stateMutability": "nonpayable",
         "type": "function"
@@ -563,7 +945,31 @@
         "outputs": [
             {
                 "internalType": "bool",
-                "name": "success",
+                "name": "",
+                "type": "bool"
+            }
+        ],
+        "stateMutability": "nonpayable",
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {
+                "internalType": "address",
+                "name": "_spender",
+                "type": "address"
+            },
+            {
+                "internalType": "uint256",
+                "name": "_subtractableValue",
+                "type": "uint256"
+            }
+        ],
+        "name": "decreaseAllowance",
+        "outputs": [
+            {
+                "internalType": "bool",
+                "name": "",
                 "type": "bool"
             }
         ],
@@ -607,6 +1013,30 @@
         "inputs": [
             {
                 "internalType": "address",
+                "name": "_spender",
+                "type": "address"
+            },
+            {
+                "internalType": "uint256",
+                "name": "_additionalValue",
+                "type": "uint256"
+            }
+        ],
+        "name": "increaseAllowance",
+        "outputs": [
+            {
+                "internalType": "bool",
+                "name": "",
+                "type": "bool"
+            }
+        ],
+        "stateMutability": "nonpayable",
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {
+                "internalType": "address",
                 "name": "_depositContractAddress",
                 "type": "address"
             },
@@ -642,21 +1072,29 @@
             },
             {
                 "internalType": "address",
-                "name": "_treasuryAddress",
+                "name": "_collectorAddress",
                 "type": "address"
             },
             {
                 "internalType": "uint256",
                 "name": "_globalFee",
                 "type": "uint256"
-            },
-            {
-                "internalType": "uint256",
-                "name": "_operatorRewardsShare",
-                "type": "uint256"
             }
         ],
         "name": "initRiverV1",
+        "outputs": [],
+        "stateMutability": "nonpayable",
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {
+                "internalType": "address",
+                "name": "_newAdmin",
+                "type": "address"
+            }
+        ],
+        "name": "proposeAdmin",
         "outputs": [],
         "stateMutability": "nonpayable",
         "type": "function"
@@ -684,22 +1122,40 @@
     {
         "inputs": [
             {
+                "internalType": "address",
+                "name": "_newCollector",
+                "type": "address"
+            }
+        ],
+        "name": "setCollector",
+        "outputs": [],
+        "stateMutability": "nonpayable",
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {
                 "internalType": "uint256",
                 "name": "_validatorCount",
                 "type": "uint256"
             },
             {
                 "internalType": "uint256",
-                "name": "_validatorBalanceSum",
+                "name": "_validatorTotalBalance",
                 "type": "uint256"
             },
             {
                 "internalType": "bytes32",
                 "name": "_roundId",
                 "type": "bytes32"
+            },
+            {
+                "internalType": "uint256",
+                "name": "_maxIncrease",
+                "type": "uint256"
             }
         ],
-        "name": "setBeaconData",
+        "name": "setConsensusLayerData",
         "outputs": [],
         "stateMutability": "nonpayable",
         "type": "function"
@@ -733,38 +1189,12 @@
     {
         "inputs": [
             {
-                "internalType": "uint256",
-                "name": "newOperatorRewardsShare",
-                "type": "uint256"
-            }
-        ],
-        "name": "setOperatorRewardsShare",
-        "outputs": [],
-        "stateMutability": "nonpayable",
-        "type": "function"
-    },
-    {
-        "inputs": [
-            {
                 "internalType": "address",
                 "name": "_oracleAddress",
                 "type": "address"
             }
         ],
         "name": "setOracle",
-        "outputs": [],
-        "stateMutability": "nonpayable",
-        "type": "function"
-    },
-    {
-        "inputs": [
-            {
-                "internalType": "address",
-                "name": "_newTreasury",
-                "type": "address"
-            }
-        ],
-        "name": "setTreasury",
         "outputs": [],
         "stateMutability": "nonpayable",
         "type": "function"
@@ -826,25 +1256,12 @@
         "inputs": [
             {
                 "internalType": "address",
-                "name": "_newAdmin",
-                "type": "address"
-            }
-        ],
-        "name": "transferOwnership",
-        "outputs": [],
-        "stateMutability": "nonpayable",
-        "type": "function"
-    },
-    {
-        "inputs": [
-            {
-                "internalType": "address",
                 "name": "_logic",
                 "type": "address"
             },
             {
                 "internalType": "address",
-                "name": "admin_",
+                "name": "__admin",
                 "type": "address"
             },
             {

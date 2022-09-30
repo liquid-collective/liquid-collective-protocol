@@ -4,7 +4,7 @@ import { getContractAddress } from "ethers/lib/utils";
 import { isDeployed, logStep, logStepEnd } from '../ts-utils/helpers/index';
 
 const func: DeployFunction = async function ({ deployments, getNamedAccounts, ethers }: HardhatRuntimeEnvironment) {
-  const { deployer, proxyAdministrator, systemAdministrator } = await getNamedAccounts();
+  const { deployer, proxyAdministrator, governor, executor } = await getNamedAccounts();
 
   const signer = await ethers.getSigner(deployer);
 
@@ -22,7 +22,7 @@ const func: DeployFunction = async function ({ deployments, getNamedAccounts, et
     contract: "Firewall",
     from: deployer,
     log: true,
-    args: [systemAdministrator, systemAdministrator, futureAllowlistAddress, [allowlistInterface.getSighash("allow")]],
+    args: [governor, executor, futureAllowlistAddress, [allowlistInterface.getSighash("allow")]],
   });
 
   const allowlistDeployment = await deployments.deploy("Allowlist", {
