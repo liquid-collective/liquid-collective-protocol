@@ -1,10 +1,10 @@
 # IUserDepositManagerV1
 
+*Kiln*
 
+> User Deposit Manager (v1)
 
-
-
-
+This interface exposes methods to handle the inbound transfers cases or the explicit submissions
 
 
 
@@ -16,7 +16,7 @@
 function deposit() external payable
 ```
 
-
+Explicit deposit method to mint on msg.sender
 
 
 
@@ -27,7 +27,7 @@ function deposit() external payable
 function depositAndTransfer(address _recipient) external payable
 ```
 
-
+Explicit deposit method to mint on msg.sender and transfer to _recipient
 
 
 
@@ -35,24 +35,7 @@ function depositAndTransfer(address _recipient) external payable
 
 | Name | Type | Description |
 |---|---|---|
-| _recipient | address | undefined |
-
-### getPendingEth
-
-```solidity
-function getPendingEth() external view returns (uint256)
-```
-
-
-
-
-
-
-#### Returns
-
-| Name | Type | Description |
-|---|---|---|
-| _0 | uint256 | undefined |
+| _recipient | address | Address receiving the minted LsETH |
 
 
 
@@ -64,7 +47,7 @@ function getPendingEth() external view returns (uint256)
 event UserDeposit(address indexed depositor, address indexed recipient, uint256 amount)
 ```
 
-
+User deposited ETH in the system
 
 
 
@@ -72,9 +55,9 @@ event UserDeposit(address indexed depositor, address indexed recipient, uint256 
 
 | Name | Type | Description |
 |---|---|---|
-| depositor `indexed` | address | undefined |
-| recipient `indexed` | address | undefined |
-| amount  | uint256 | undefined |
+| depositor `indexed` | address | Address performing the deposit |
+| recipient `indexed` | address | Address receiving the minted shares |
+| amount  | uint256 | Amount in ETH deposited |
 
 
 
@@ -86,18 +69,7 @@ event UserDeposit(address indexed depositor, address indexed recipient, uint256 
 error EmptyDeposit()
 ```
 
-
-
-
-
-
-### EmptyDonation
-
-```solidity
-error EmptyDonation()
-```
-
-
+And empty deposit attempt was made
 
 
 

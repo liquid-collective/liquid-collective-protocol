@@ -10,20 +10,17 @@ import "./Initializable.sol";
 
 import "./state/shared/RiverAddress.sol";
 
-/// @title Execution Layer Fee Recipient
+/// @title Execution Layer Fee Recipient (v1)
 /// @author Kiln
 /// @notice This contract receives all the execution layer fees from the proposed blocks + bribes
 contract ELFeeRecipientV1 is Initializable, IELFeeRecipientV1 {
-    /// @notice Initialize the fee recipient with the required arguments
-    /// @param _riverAddress Address of River
+    /// @inheritdoc IELFeeRecipientV1
     function initELFeeRecipientV1(address _riverAddress) external init(0) {
         RiverAddress.set(_riverAddress);
         emit SetRiver(_riverAddress);
     }
 
-    /// @notice Pulls all the ETH to the River contract
-    /// @dev Only callable by the River contract
-    /// @param _maxAmount Maximum value to extract from the recipient
+    /// @inheritdoc IELFeeRecipientV1
     function pullELFees(uint256 _maxAmount) external {
         address river = RiverAddress.get();
         if (msg.sender != river) {
@@ -34,12 +31,12 @@ contract ELFeeRecipientV1 is Initializable, IELFeeRecipientV1 {
         IRiverV1(payable(river)).sendELFees{value: amount}();
     }
 
-    /// @notice Ether receiver
+    /// @inheritdoc IELFeeRecipientV1
     receive() external payable {
         this;
     }
 
-    /// @notice Invalid fallback detector
+    /// @inheritdoc IELFeeRecipientV1
     fallback() external payable {
         revert InvalidCall();
     }

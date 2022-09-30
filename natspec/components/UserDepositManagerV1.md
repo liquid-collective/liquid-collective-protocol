@@ -35,24 +35,7 @@ Explicit deposit method to mint on msg.sender and transfer to _recipient
 
 | Name | Type | Description |
 |---|---|---|
-| _recipient | address | Address receiving the minted lsETH |
-
-### getPendingEth
-
-```solidity
-function getPendingEth() external view returns (uint256)
-```
-
-Returns the amount of pending ETH
-
-
-
-
-#### Returns
-
-| Name | Type | Description |
-|---|---|---|
-| _0 | uint256 | undefined |
+| _recipient | address | Address receiving the minted LsETH |
 
 
 
@@ -64,7 +47,7 @@ Returns the amount of pending ETH
 event UserDeposit(address indexed depositor, address indexed recipient, uint256 amount)
 ```
 
-
+User deposited ETH in the system
 
 
 
@@ -86,18 +69,7 @@ event UserDeposit(address indexed depositor, address indexed recipient, uint256 
 error EmptyDeposit()
 ```
 
-
-
-
-
-
-### EmptyDonation
-
-```solidity
-error EmptyDonation()
-```
-
-
+And empty deposit attempt was made
 
 
 
@@ -108,7 +80,18 @@ error EmptyDonation()
 error InvalidCall()
 ```
 
+The call was invalid
 
+
+
+
+### InvalidZeroAddress
+
+```solidity
+error InvalidZeroAddress()
+```
+
+The address is zero
 
 
 

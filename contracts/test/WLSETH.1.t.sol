@@ -94,6 +94,7 @@ contract WLSETHV1Tests is Test {
     event Mint(address indexed _recipient, uint256 _value);
     event Burn(address indexed _recipient, uint256 _value);
     event SetRiver(address indexed river);
+    event Transfer(address indexed _from, address indexed _to, uint256 _value);
 
     function setUp() external {
         river = IRiverV1(payable(address(new RiverTokenMock())));
@@ -291,6 +292,27 @@ contract WLSETHV1Tests is Test {
             RiverTokenMock(address(river)).approve(address(wlseth), _sum);
             vm.expectEmit(true, true, true, true);
             emit Mint(_guy, balance);
+            wlseth.mint(_guy, balance);
+            vm.stopPrank();
+            balance = wlseth.balanceOf(_guy);
+            assert(balance == 100 ether);
+        } else {
+            assert(balance == 0 ether);
+        }
+    }
+
+    function testMintWrappedTokensCheckTransfer(uint256 _guySalt, uint32 _sum) external {
+        address _guy = uf._new(_guySalt);
+        RiverTokenMock(address(river)).sudoSetBalance(_guy, _sum);
+        uint256 balance = river.balanceOfUnderlying(_guy);
+        if (_sum > 0) {
+            assert(balance == 100 ether);
+            balance = RiverTokenMock(address(river)).balanceOf(_guy);
+            assert(balance == _sum);
+            vm.startPrank(_guy);
+            RiverTokenMock(address(river)).approve(address(wlseth), _sum);
+            vm.expectEmit(true, true, true, true);
+            emit Transfer(address(0), _guy, 100 ether);
             wlseth.mint(_guy, balance);
             vm.stopPrank();
             balance = wlseth.balanceOf(_guy);
@@ -655,6 +677,37 @@ contract WLSETHV1Tests is Test {
             vm.startPrank(_guy);
             vm.expectEmit(true, true, true, true);
             emit Burn(_guy, balance);
+            wlseth.burn(_guy, balance);
+            balance = wlseth.balanceOf(_guy);
+            assert(balance == 0);
+            balance = RiverTokenMock(address(river)).balanceOf(_guy);
+            assert(balance == _sum);
+            vm.stopPrank();
+        } else {
+            assert(balance == 0 ether);
+        }
+    }
+
+    function testBurnWrappedTokensCheckTransfer(uint256 _guySalt, uint32 _sum) external {
+        address _guy = uf._new(_guySalt);
+        RiverTokenMock(address(river)).sudoSetBalance(_guy, _sum);
+        uint256 balance = river.balanceOfUnderlying(_guy);
+        if (_sum > 0) {
+            assert(balance == 100 ether);
+            balance = RiverTokenMock(address(river)).balanceOf(_guy);
+            assert(balance == _sum);
+            vm.startPrank(_guy);
+            RiverTokenMock(address(river)).approve(address(wlseth), _sum);
+            wlseth.mint(_guy, balance);
+            vm.stopPrank();
+            balance = RiverTokenMock(address(river)).balanceOf(_guy);
+            assert(balance == 0);
+            balance = wlseth.balanceOf(_guy);
+            assert(balance == 100 ether);
+            balance = wlseth.sharesOf(_guy);
+            vm.startPrank(_guy);
+            vm.expectEmit(true, true, true, true);
+            emit Transfer(_guy, address(0), 100 ether);
             wlseth.burn(_guy, balance);
             balance = wlseth.balanceOf(_guy);
             assert(balance == 0);

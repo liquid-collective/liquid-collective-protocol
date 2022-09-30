@@ -4,19 +4,19 @@
 
 > Oracle Manager (v1)
 
-This contract handles the inputs provided by the oracle
+This contract handles the inputs provided by the oracleThe Oracle contract is plugged to this contract and is in charge of pushingdata whenever a new report has been deemed valid. The report consists in twovalues: the sum of all balances of all deposited validators and the count ofvalidators that have been activated on the consensus layer.
 
 
 
 ## Methods
 
-### getBeaconValidatorBalanceSum
+### getCLValidatorCount
 
 ```solidity
-function getBeaconValidatorBalanceSum() external view returns (uint256 beaconValidatorBalanceSum)
+function getCLValidatorCount() external view returns (uint256)
 ```
 
-Get Beacon validator balance sum
+Get CL validator count (the amount of validator reported by the oracles)
 
 
 
@@ -25,15 +25,15 @@ Get Beacon validator balance sum
 
 | Name | Type | Description |
 |---|---|---|
-| beaconValidatorBalanceSum | uint256 | undefined |
+| _0 | uint256 | The CL validator count |
 
-### getBeaconValidatorCount
+### getCLValidatorTotalBalance
 
 ```solidity
-function getBeaconValidatorCount() external view returns (uint256 beaconValidatorCount)
+function getCLValidatorTotalBalance() external view returns (uint256)
 ```
 
-Get Beacon validator count (the amount of validator reported by the oracles)
+Get CL validator total balance
 
 
 
@@ -42,15 +42,15 @@ Get Beacon validator count (the amount of validator reported by the oracles)
 
 | Name | Type | Description |
 |---|---|---|
-| beaconValidatorCount | uint256 | undefined |
+| _0 | uint256 | The CL Validator total balance |
 
 ### getOracle
 
 ```solidity
-function getOracle() external view returns (address oracle)
+function getOracle() external view returns (address)
 ```
 
-Get Oracle address
+Get oracle address
 
 
 
@@ -59,25 +59,26 @@ Get Oracle address
 
 | Name | Type | Description |
 |---|---|---|
-| oracle | address | undefined |
+| _0 | address | The oracle address |
 
-### setBeaconData
+### setConsensusLayerData
 
 ```solidity
-function setBeaconData(uint256 _validatorCount, uint256 _validatorBalanceSum, bytes32 _roundId) external nonpayable
+function setConsensusLayerData(uint256 _validatorCount, uint256 _validatorTotalBalance, bytes32 _roundId, uint256 _maxIncrease) external nonpayable
 ```
 
-Sets the validator count and validator balance sum reported by the oracle
+Sets the validator count and validator total balance sum reported by the oracle
 
-*Can only be called by the oracle address*
+*Can only be called by the oracle addressThe round id is a blackbox value that should only be used to identify unique reportsWhen a report is performed, River computes the amount of fees that can be pulledfrom the execution layer fee recipient. This amount is capped by the max allowedincrease provided during the report.If the total asset balance increases (from the reported total balance and the pulled funds)we then compute the share that must be taken for the collector on the positive delta.The execution layer fees are taken into account here because they are the product ofnode operator&#39;s work, just like consensus layer fees, and both should be handled in thesame manner, as a single revenue stream for the users and the collector.*
 
 #### Parameters
 
 | Name | Type | Description |
 |---|---|---|
 | _validatorCount | uint256 | The number of active validators on the consensus layer |
-| _validatorBalanceSum | uint256 | The validator balance sum of the active validators on the consensus layer |
+| _validatorTotalBalance | uint256 | The balance sum of the active validators on the consensus layer |
 | _roundId | bytes32 | An identifier for this update |
+| _maxIncrease | uint256 | The maximum allowed increase in the total balance |
 
 ### setOracle
 
@@ -85,7 +86,7 @@ Sets the validator count and validator balance sum reported by the oracle
 function setOracle(address _oracleAddress) external nonpayable
 ```
 
-Set Oracle address
+Set the oracle address
 
 
 
@@ -99,13 +100,13 @@ Set Oracle address
 
 ## Events
 
-### BeaconDataUpdate
+### ConsensusLayerDataUpdate
 
 ```solidity
-event BeaconDataUpdate(uint256 validatorCount, uint256 validatorBalanceSum, bytes32 roundId)
+event ConsensusLayerDataUpdate(uint256 validatorCount, uint256 validatorTotalBalance, bytes32 roundId)
 ```
 
-
+The consensus layer data provided by the oracle has been updated
 
 
 
@@ -114,8 +115,24 @@ event BeaconDataUpdate(uint256 validatorCount, uint256 validatorBalanceSum, byte
 | Name | Type | Description |
 |---|---|---|
 | validatorCount  | uint256 | undefined |
-| validatorBalanceSum  | uint256 | undefined |
+| validatorTotalBalance  | uint256 | undefined |
 | roundId  | bytes32 | undefined |
+
+### SetOracle
+
+```solidity
+event SetOracle(address indexed oracleAddress)
+```
+
+The stored oracle address changed
+
+
+
+#### Parameters
+
+| Name | Type | Description |
+|---|---|---|
+| oracleAddress `indexed` | address | undefined |
 
 
 
@@ -124,10 +141,10 @@ event BeaconDataUpdate(uint256 validatorCount, uint256 validatorBalanceSum, byte
 ### InvalidValidatorCountReport
 
 ```solidity
-error InvalidValidatorCountReport(uint256 _providedValidatorCount, uint256 _depositedValidatorCount)
+error InvalidValidatorCountReport(uint256 providedValidatorCount, uint256 depositedValidatorCount)
 ```
 
-
+The reported validator count is invalid
 
 
 
@@ -135,8 +152,8 @@ error InvalidValidatorCountReport(uint256 _providedValidatorCount, uint256 _depo
 
 | Name | Type | Description |
 |---|---|---|
-| _providedValidatorCount | uint256 | undefined |
-| _depositedValidatorCount | uint256 | undefined |
+| providedValidatorCount | uint256 | The received validator count value |
+| depositedValidatorCount | uint256 | The number of deposits performed by the system |
 
 ### InvalidZeroAddress
 
@@ -144,7 +161,7 @@ error InvalidValidatorCountReport(uint256 _providedValidatorCount, uint256 _depo
 error InvalidZeroAddress()
 ```
 
-
+The address is zero
 
 
 
@@ -155,7 +172,7 @@ error InvalidZeroAddress()
 error Unauthorized(address caller)
 ```
 
-
+The operator is unauthorized for the caller
 
 
 
@@ -163,6 +180,6 @@ error Unauthorized(address caller)
 
 | Name | Type | Description |
 |---|---|---|
-| caller | address | undefined |
+| caller | address | Addres performing the call |
 
 

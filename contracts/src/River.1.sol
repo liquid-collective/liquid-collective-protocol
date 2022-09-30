@@ -22,6 +22,51 @@ import "./state/river/ELFeeRecipientAddress.sol";
 /// @title River (v1)
 /// @author Kiln
 /// @notice This contract merges all the manager contracts and implements all the virtual methods stitching all components together
+/// @notice
+/// @notice    +---------------------------------------------------------------------+
+/// @notice    |                                                                     |
+/// @notice    |                           Consensus Layer                           |
+/// @notice    |                                                                     |
+/// @notice    | +-------------------+  +-------------------+  +-------------------+ |
+/// @notice    | |                   |  |                   |  |                   | |
+/// @notice    | |  EL Fee Recipient |  |      Oracle       |  |  Deposit Contract | |
+/// @notice    | |                   |  |                   |  |                   | |
+/// @notice    | +---------|---------+  +---------|---------+  +---------|---------+ |
+/// @notice    +---------------------------------------------------------------------+
+/// @notice                |         7            |            5         |
+/// @notice                +-----------------|    |    |-----------------+
+/// @notice                                  |    |6   |
+/// @notice                                  |    |    |
+/// @notice        +---------+          +----|----|----|----+            +---------+
+/// @notice        |         |          |                   |     2      |         |
+/// @notice        |Operator |          |       River       --------------  User   |
+/// @notice        |         |          |                   |            |         |
+/// @notice        +----|----+          +----|---------|----+            +---------+
+/// @notice             |                    |         |
+/// @notice             |             4      |         |       3
+/// @notice             |1     +-------------|         |--------------+
+/// @notice             |      |                                      |
+/// @notice             |      |                                      |
+/// @notice      +------|------|------------+           +-------------|------------+
+/// @notice      |                          |           |                          |
+/// @notice      |    Operators Registry    |           |         Allowlist        |
+/// @notice      |                          |           |                          |
+/// @notice      +--------------------------+           +--------------------------+
+/// @notice
+/// @notice      1. Operators are adding BLS Public Keys of validators running in their
+/// @notice         infrastructure.
+/// @notice      2. User deposit ETH to the system and get shares minted in exchange
+/// @notice      3. Upon deposit, the system verifies if the User is allowed to deposit
+/// @notice         by querying the Allowlist
+/// @notice      4. When the system has enough funds to deposit validators, keys are pulled
+/// @notice         from the Operators Registry
+/// @notice      5. The deposit data is computed and the validators are funded via the official
+/// @notice         deposit contract
+/// @notice      6. Oracles report the total balance of the running validators and the total count
+/// @notice         of running validators
+/// @notice      7. The running validators propose blocks that reward the EL Fee Recipient. The funds
+/// @notice         are pulled back in the system.
+/// @notice
 contract RiverV1 is
     ConsensusLayerDepositManagerV1,
     UserDepositManagerV1,
@@ -31,18 +76,10 @@ contract RiverV1 is
     Administrable,
     IRiverV1
 {
+    /// @notice The mask for the deposit right
     uint256 internal constant DEPOSIT_MASK = 0x1;
-    /// @notice Prevents unauthorized calls
 
-    /// @notice Initializes the River system
-    /// @param _depositContractAddress Address to make Consensus Layer deposits
-    /// @param _elFeeRecipientAddress Address that receives the execution layer fees
-    /// @param _withdrawalCredentials Credentials to use for every validator deposit
-    /// @param _systemAdministratorAddress Administrator address
-    /// @param _allowlistAddress Address of the allowlist contract
-    /// @param _operatorRegistryAddress Address of the operator registry
-    /// @param _collectorAddress Address receiving the fee minus the operator share
-    /// @param _globalFee Amount retained when the eth balance increases, splitted between the collector and the operators
+    /// @inheritdoc IRiverV1
     function initRiverV1(
         address _depositContractAddress,
         address _elFeeRecipientAddress,
@@ -78,67 +115,64 @@ contract RiverV1 is
         OracleManagerV1.initOracleManagerV1(_oracleAddress);
     }
 
-    /// @notice Changes the global fee parameter
-    /// @param newFee New fee value
+    /// @inheritdoc IRiverV1
+    function getGlobalFee() external view returns (uint256) {
+        return GlobalFee.get();
+    }
+
+    /// @inheritdoc IRiverV1
+    function getAllowlist() external view returns (address) {
+        return AllowlistAddress.get();
+    }
+
+    /// @inheritdoc IRiverV1
+    function getCollector() external view returns (address) {
+        return CollectorAddress.get();
+    }
+
+    /// @inheritdoc IRiverV1
+    function getELFeeRecipient() external view returns (address) {
+        return ELFeeRecipientAddress.get();
+    }
+
+    /// @inheritdoc IRiverV1
     function setGlobalFee(uint256 newFee) external onlyAdmin {
         GlobalFee.set(newFee);
         emit SetGlobalFee(newFee);
     }
 
-    /// @notice Get the current global fee
-    function getGlobalFee() external view returns (uint256) {
-        return GlobalFee.get();
-    }
-
-    /// @notice Changes the allowlist address
-    /// @param _newAllowlist New address for the allowlist
+    /// @inheritdoc IRiverV1
     function setAllowlist(address _newAllowlist) external onlyAdmin {
         AllowlistAddress.set(_newAllowlist);
         emit SetAllowlist(_newAllowlist);
     }
 
-    /// @notice Retrieve the allowlist address
-    function getAllowlist() external view returns (address) {
-        return address(AllowlistAddress.get());
-    }
-
-    /// @notice Changes the collector address
-    /// @param _newCollector New address for the collector
+    /// @inheritdoc IRiverV1
     function setCollector(address _newCollector) external onlyAdmin {
         CollectorAddress.set(_newCollector);
         emit SetCollector(_newCollector);
     }
 
-    /// @notice Retrieve the collector address
-    function getCollector() external view returns (address) {
-        return CollectorAddress.get();
-    }
-
-    /// @notice Changes the execution layer fee recipient
-    /// @param _newELFeeRecipient New address for the recipient
+    /// @inheritdoc IRiverV1
     function setELFeeRecipient(address _newELFeeRecipient) external onlyAdmin {
         ELFeeRecipientAddress.set(_newELFeeRecipient);
         emit SetELFeeRecipient(_newELFeeRecipient);
     }
 
-    /// @notice Retrieve the execution layer fee recipient
-    function getELFeeRecipient() external view returns (address) {
-        return ELFeeRecipientAddress.get();
-    }
-
-    /// @notice Retrieve the operators registry address
-    /// @return The operators registry address
+    /// @inheritdoc IRiverV1
     function getOperatorsRegistry() external view returns (address) {
         return OperatorsRegistryAddress.get();
     }
 
-    /// @notice Input for execution layer fee earnings
+    /// @inheritdoc IRiverV1
     function sendELFees() external payable {
         if (msg.sender != ELFeeRecipientAddress.get()) {
             revert LibErrors.Unauthorized(msg.sender);
         }
     }
 
+    /// @notice Overriden handler to pass the system admin inside components
+    /// @return The address of the admin
     function _getRiverAdmin()
         internal
         view
@@ -148,7 +182,7 @@ contract RiverV1 is
         return Administrable._getAdmin();
     }
 
-    /// @notice Handler called whenever a token transfer is triggered
+    /// @notice Overriden handler called whenever a token transfer is triggered
     /// @param _from Token sender
     /// @param _to Token receiver
     function _onTransfer(address _from, address _to) internal view override {
@@ -161,7 +195,7 @@ contract RiverV1 is
         }
     }
 
-    /// @notice Handler called whenever a user deposits ETH to the system. Mints the adequate amount of shares.
+    /// @notice Overriden handler called whenever a user deposits ETH to the system. Mints the adequate amount of shares.
     /// @param _depositor User address that made the deposit
     /// @param _amount Amount of ETH deposited
     function _onDeposit(address _depositor, address _recipient, uint256 _amount) internal override {
@@ -178,8 +212,10 @@ contract RiverV1 is
         }
     }
 
-    /// @notice Handler called whenever a deposit to the consensus layer is made. Should retrieve _requestedAmount or lower keys
+    /// @notice Overriden handler called whenever a deposit to the consensus layer is made. Should retrieve _requestedAmount or lower keys
     /// @param _requestedAmount Amount of keys required. Contract is expected to send _requestedAmount or lower.
+    /// @return publicKeys Array of fundable public keys
+    /// @return signatures Array of signatures linked to the public keys
     function _getNextValidators(uint256 _requestedAmount)
         internal
         override
@@ -188,8 +224,9 @@ contract RiverV1 is
         return IOperatorsRegistryV1(OperatorsRegistryAddress.get()).pickNextValidators(_requestedAmount);
     }
 
-    /// @notice Internal utility to pull funds from the execution layer fee recipient to River and return the delta in the balance
-    /// @param _max Maximum value to extract from the el fee recipient
+    /// @notice Overriden handler to pull funds from the execution layer fee recipient to River and return the delta in the balance
+    /// @param _max The maximum amount to pull from the execution layer fee recipient
+    /// @return The amount pulled from the execution layer fee recipient
     function _pullELFees(uint256 _max) internal override returns (uint256) {
         address elFeeRecipient = ELFeeRecipientAddress.get();
         if (elFeeRecipient == address(0)) {
@@ -203,8 +240,8 @@ contract RiverV1 is
         return collectedELFees;
     }
 
-    /// @notice Handler called whenever the balance of ETH handled by the system increases. Splits funds between operators and collector.
-    /// @param _amount Additional eth received
+    /// @notice Overriden handler called whenever the balance of ETH handled by the system increases. Computes the fees paid to the collector
+    /// @param _amount Additional ETH received
     function _onEarnings(uint256 _amount) internal override {
         uint256 oldTotalSupply = _totalSupply();
         if (oldTotalSupply == 0) {
@@ -225,7 +262,8 @@ contract RiverV1 is
         }
     }
 
-    /// @notice Handler called whenever the total balance of ETH is requested
+    /// @notice Overriden handler called whenever the total balance of ETH is requested
+    /// @return The current total asset balance managed by River
     function _assetBalance() internal view override returns (uint256) {
         uint256 clValidatorCount = CLValidatorCount.get();
         uint256 depositedValidatorCount = DepositedValidatorCount.get();

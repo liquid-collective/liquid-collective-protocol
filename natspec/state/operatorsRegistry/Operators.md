@@ -2,9 +2,9 @@
 
 
 
+> Operators Storage
 
-
-
+Utility to manage the Operators in storage
 
 
 
@@ -15,10 +15,10 @@
 ### OperatorNotFound
 
 ```solidity
-error OperatorNotFound(string name)
+error OperatorNotFound(uint256 index)
 ```
 
-
+The operator was not found
 
 
 
@@ -26,22 +26,6 @@ error OperatorNotFound(string name)
 
 | Name | Type | Description |
 |---|---|---|
-| name | string | undefined |
-
-### OperatorNotFoundAtIndex
-
-```solidity
-error OperatorNotFoundAtIndex(uint256 index)
-```
-
-
-
-
-
-#### Parameters
-
-| Name | Type | Description |
-|---|---|---|
-| index | uint256 | undefined |
+| index | uint256 | The provided index |
 
 

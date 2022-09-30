@@ -19,20 +19,13 @@ import "./state/oracle/ReportsVariants.sol";
 /// @author Kiln
 /// @notice This contract handles the input from the allowed oracle members. Highly inspired by Lido's implementation.
 contract OracleV1 is IOracleV1, Initializable, Administrable {
+    /// @notice One Year value
     uint256 internal constant ONE_YEAR = 365 days;
 
     /// @notice Received ETH input has only 9 decimals
     uint128 internal constant DENOMINATION_OFFSET = 1e9;
 
-    /// @notice Initializes the oracle
-    /// @param _river Address of the River contract, able to receive oracle input data after quorum is met
-    /// @param _administratorAddress Address able to call administrative methods
-    /// @param _epochsPerFrame CL spec parameter. Number of epochs in a frame.
-    /// @param _slotsPerEpoch CL spec parameter. Number of slots in one epoch.
-    /// @param _secondsPerSlot CL spec parameter. Number of seconds between slots.
-    /// @param _genesisTime CL spec parameter. Timestamp of the genesis slot.
-    /// @param _annualAprUpperBound CL bound parameter. Maximum apr allowed for balance increase. Delta between updates is extrapolated on a year time frame.
-    /// @param _relativeLowerBound CL bound parameter. Maximum relative balance decrease.
+    /// @inheritdoc IOracleV1
     function initOracleV1(
         address _river,
         address _administratorAddress,
@@ -66,40 +59,38 @@ contract OracleV1 is IOracleV1, Initializable, Administrable {
         emit SetQuorum(1);
     }
 
-    /// @notice Retrieve River address
+    /// @inheritdoc IOracleV1
     function getRiver() external view returns (address) {
         return RiverAddress.get();
     }
-    /// @notice Retrieve the block timestamp
 
+    /// @inheritdoc IOracleV1
     function getTime() external view returns (uint256) {
         return _getTime();
     }
 
-    /// @notice Retrieve expected epoch id
+    /// @inheritdoc IOracleV1
     function getExpectedEpochId() external view returns (uint256) {
         return ExpectedEpochId.get();
     }
 
-    /// @notice Retrieve member report status
-    /// @param _oracleMember Address of member to check
+    /// @inheritdoc IOracleV1
     function getMemberReportStatus(address _oracleMember) external view returns (bool) {
         int256 memberIndex = OracleMembers.indexOf(_oracleMember);
         return memberIndex != -1 && ReportsPositions.get(uint256(memberIndex));
     }
 
-    /// @notice Retrieve member report status
+    /// @inheritdoc IOracleV1
     function getGlobalReportStatus() external view returns (uint256) {
         return ReportsPositions.getRaw();
     }
 
-    /// @notice Retrieve report variants count
+    /// @inheritdoc IOracleV1
     function getReportVariantsCount() external view returns (uint256) {
         return ReportsVariants.get().length;
     }
 
-    /// @notice Retrieve decoded report at provided index
-    /// @param _idx Index of report
+    /// @inheritdoc IOracleV1
     function getReportVariant(uint256 _idx)
         external
         view
@@ -110,28 +101,28 @@ contract OracleV1 is IOracleV1, Initializable, Administrable {
         _reportCount = _getReportCount(report);
     }
 
-    /// @notice Retrieve the last completed epoch id
+    /// @inheritdoc IOracleV1
     function getLastCompletedEpochId() external view returns (uint256) {
         return LastEpochId.get();
     }
 
-    /// @notice Retrieve the current epoch id based on block timestamp
+    /// @inheritdoc IOracleV1
     function getCurrentEpochId() external view returns (uint256) {
         CLSpec.CLSpecStruct memory clSpec = CLSpec.get();
         return _getCurrentEpochId(clSpec);
     }
 
-    /// @notice Retrieve the current quorum
+    /// @inheritdoc IOracleV1
     function getQuorum() external view returns (uint256) {
         return Quorum.get();
     }
 
-    /// @notice Retrieve the current cl spec
+    /// @inheritdoc IOracleV1
     function getCLSpec() external view returns (CLSpec.CLSpecStruct memory) {
         return CLSpec.get();
     }
 
-    /// @notice Retrieve the current frame details
+    /// @inheritdoc IOracleV1
     function getCurrentFrame() external view returns (uint256 _startEpochId, uint256 _startTime, uint256 _endTime) {
         CLSpec.CLSpecStruct memory clSpec = CLSpec.get();
         _startEpochId = _getFrameFirstEpochId(_getCurrentEpochId(clSpec), clSpec);
@@ -140,36 +131,32 @@ contract OracleV1 is IOracleV1, Initializable, Administrable {
         _endTime = _startTime + secondsPerEpoch * clSpec.epochsPerFrame - 1;
     }
 
-    /// @notice Retrieve the first epoch id of the frame of the provided epoch id
-    /// @param _epochId Epoch id used to get the frame
+    /// @inheritdoc IOracleV1
     function getFrameFirstEpochId(uint256 _epochId) external view returns (uint256) {
         CLSpec.CLSpecStruct memory clSpec = CLSpec.get();
         return _getFrameFirstEpochId(_epochId, clSpec);
     }
 
+    /// @inheritdoc IOracleV1
     function getReportBounds() external view returns (ReportBounds.ReportBoundsStruct memory) {
         return ReportBounds.get();
     }
 
+    /// @inheritdoc IOracleV1
     function getOracleMembers() external view returns (address[] memory) {
         return OracleMembers.get();
     }
 
-    /// @notice Returns true if address is member
-    /// @dev Performs a naive search, do not call this on-chain, used as an off-chain helper
-    /// @param _memberAddress Address of the member
+    /// @inheritdoc IOracleV1
     function isMember(address _memberAddress) external view returns (bool) {
         return OracleMembers.indexOf(_memberAddress) >= 0;
     }
 
-    /// @notice Adds new address as oracle member, giving the ability to push cl reports.
-    /// @dev Only callable by the adminstrator
-    /// @param _newOracleMember Address of the new member
-    /// @param _newQuorum New quorum value
+    /// @inheritdoc IOracleV1
     function addMember(address _newOracleMember, uint256 _newQuorum) external onlyAdmin {
         int256 memberIdx = OracleMembers.indexOf(_newOracleMember);
         if (memberIdx >= 0) {
-            revert LibErrors.InvalidCall();
+            revert AddressAlreadyInUse(_newOracleMember);
         }
         OracleMembers.push(_newOracleMember);
         uint256 previousQuorum = Quorum.get();
@@ -177,10 +164,7 @@ contract OracleV1 is IOracleV1, Initializable, Administrable {
         emit AddMember(_newOracleMember);
     }
 
-    /// @notice Removes an address from the oracle members.
-    /// @dev Only callable by the adminstrator
-    /// @param _oracleMember Address to remove
-    /// @param _newQuorum New quorum value
+    /// @inheritdoc IOracleV1
     function removeMember(address _oracleMember, uint256 _newQuorum) external onlyAdmin {
         int256 memberIdx = OracleMembers.indexOf(_oracleMember);
         if (memberIdx < 0) {
@@ -194,11 +178,9 @@ contract OracleV1 is IOracleV1, Initializable, Administrable {
         emit RemoveMember(_oracleMember);
     }
 
-    function setMember(address _oracleMember, address _newAddress) external {
+    /// @inheritdoc IOracleV1
+    function setMember(address _oracleMember, address _newAddress) external onlyAdmin {
         LibSanitize._notZeroAddress(_newAddress);
-        if (msg.sender != _getAdmin()) {
-            revert LibErrors.Unauthorized(msg.sender);
-        }
         if (OracleMembers.indexOf(_newAddress) >= 0) {
             revert AddressAlreadyInUse(_newAddress);
         }
@@ -210,12 +192,7 @@ contract OracleV1 is IOracleV1, Initializable, Administrable {
         emit SetMember(_oracleMember, _newAddress);
     }
 
-    /// @notice Edits the cl spec parameters
-    /// @dev Only callable by the adminstrator
-    /// @param _epochsPerFrame Number of epochs in a frame.
-    /// @param _slotsPerEpoch Number of slots in one epoch.
-    /// @param _secondsPerSlot Number of seconds between slots.
-    /// @param _genesisTime Timestamp of the genesis slot.
+    /// @inheritdoc IOracleV1
     function setCLSpec(uint64 _epochsPerFrame, uint64 _slotsPerEpoch, uint64 _secondsPerSlot, uint64 _genesisTime)
         external
         onlyAdmin
@@ -231,10 +208,7 @@ contract OracleV1 is IOracleV1, Initializable, Administrable {
         emit SetSpec(_epochsPerFrame, _slotsPerEpoch, _secondsPerSlot, _genesisTime);
     }
 
-    /// @notice Edits the cl bounds parameters
-    /// @dev Only callable by the adminstrator
-    /// @param _annualAprUpperBound Maximum apr allowed for balance increase. Delta between updates is extrapolated on a year time frame.
-    /// @param _relativeLowerBound Maximum relative balance decrease.
+    /// @inheritdoc IOracleV1
     function setReportBounds(uint256 _annualAprUpperBound, uint256 _relativeLowerBound) external onlyAdmin {
         ReportBounds.set(
             ReportBounds.ReportBoundsStruct({
@@ -245,9 +219,7 @@ contract OracleV1 is IOracleV1, Initializable, Administrable {
         emit SetBounds(_annualAprUpperBound, _relativeLowerBound);
     }
 
-    /// @notice Edits the quorum required to forward cl data to River
-    /// @dev Only callable by the adminstrator
-    /// @param _newQuorum New quorum parameter
+    /// @inheritdoc IOracleV1
     function setQuorum(uint256 _newQuorum) external onlyAdmin {
         uint256 previousQuorum = Quorum.get();
         if (previousQuorum == _newQuorum) {
@@ -256,30 +228,7 @@ contract OracleV1 is IOracleV1, Initializable, Administrable {
         _setQuorum(_newQuorum, previousQuorum);
     }
 
-    // TODO write natspec
-    function _setQuorum(uint256 _newQuorum, uint256 _previousQuorum) internal {
-        uint256 memberCount = OracleMembers.get().length;
-        if ((_newQuorum == 0 && memberCount > 0) || _newQuorum > memberCount) {
-            revert LibErrors.InvalidArgument();
-        }
-        if (_previousQuorum > _newQuorum) {
-            (bool isQuorum, uint256 report) = _getQuorumReport(_newQuorum);
-            if (isQuorum) {
-                (uint64 clBalance, uint32 clValidators) = _decodeReport(report);
-                _pushToRiver(
-                    ExpectedEpochId.get(), DENOMINATION_OFFSET * uint128(clBalance), clValidators, CLSpec.get()
-                );
-            }
-        }
-        Quorum.set(_newQuorum);
-        emit SetQuorum(_newQuorum);
-    }
-
-    /// @notice Report cl chain data
-    /// @dev Only callable by an oracle member
-    /// @param _epochId Epoch where the balance and validator count has been computed
-    /// @param _clValidatorsBalance Total balance of River validators
-    /// @param _clValidatorCount Total River validator count
+    /// @inheritdoc IOracleV1
     function reportConsensusLayerData(uint256 _epochId, uint64 _clValidatorsBalance, uint32 _clValidatorCount)
         external
     {
@@ -330,8 +279,30 @@ contract OracleV1 is IOracleV1, Initializable, Administrable {
         }
     }
 
+    /// @notice Internal utility to change the quorum
+    /// @dev Ensures that the quorum respects invariants
+    function _setQuorum(uint256 _newQuorum, uint256 _previousQuorum) internal {
+        uint256 memberCount = OracleMembers.get().length;
+        if ((_newQuorum == 0 && memberCount > 0) || _newQuorum > memberCount) {
+            revert LibErrors.InvalidArgument();
+        }
+        if (_previousQuorum > _newQuorum) {
+            (bool isQuorum, uint256 report) = _getQuorumReport(_newQuorum);
+            if (isQuorum) {
+                (uint64 clBalance, uint32 clValidators) = _decodeReport(report);
+                _pushToRiver(
+                    ExpectedEpochId.get(), DENOMINATION_OFFSET * uint128(clBalance), clValidators, CLSpec.get()
+                );
+            }
+        }
+        Quorum.set(_newQuorum);
+        emit SetQuorum(_newQuorum);
+    }
+
     /// @notice Retrieve the report that has the highest number of "votes"
     /// @param _quorum The quorum used for the query
+    /// @return isQuorum True if quorum is met
+    /// @return report The value of the report
     function _getQuorumReport(uint256 _quorum) internal view returns (bool isQuorum, uint256 report) {
         // check most frequent cases first: all reports are the same or no reports yet
         uint256[] memory variants = ReportsVariants.get();
@@ -367,12 +338,14 @@ contract OracleV1 is IOracleV1, Initializable, Administrable {
     }
 
     /// @notice Retrieve the block timestamp
+    /// @return The block timestamp
     function _getTime() internal view returns (uint256) {
         return block.timestamp; // solhint-disable-line not-rely-on-time
     }
 
     /// @notice Retrieve the current epoch id based on block timestamp
     /// @param _clSpec CL spec parameters
+    /// @return The current epoch id
     function _getCurrentEpochId(CLSpec.CLSpecStruct memory _clSpec) internal view returns (uint256) {
         return (_getTime() - _clSpec.genesisTime) / (_clSpec.slotsPerEpoch * _clSpec.secondsPerSlot);
     }
@@ -380,6 +353,7 @@ contract OracleV1 is IOracleV1, Initializable, Administrable {
     /// @notice Retrieve the first epoch id of the frame of the provided epoch id
     /// @param _epochId Epoch id used to get the frame
     /// @param _clSpec CL spec parameters
+    /// @return The epoch id at the beginning of the frame
     function _getFrameFirstEpochId(uint256 _epochId, CLSpec.CLSpecStruct memory _clSpec)
         internal
         pure
@@ -400,6 +374,7 @@ contract OracleV1 is IOracleV1, Initializable, Administrable {
     /// @notice Encode report into one slot. Last 16 bits are free to use for vote counting.
     /// @param _clBalance Total validator balance
     /// @param _clValidators Total validator count
+    /// @return The encoded report value
     function _encodeReport(uint64 _clBalance, uint32 _clValidators) internal pure returns (uint256) {
         return (uint256(_clBalance) << 48) | (uint256(_clValidators) << 16);
     }
@@ -413,13 +388,18 @@ contract OracleV1 is IOracleV1, Initializable, Administrable {
 
     /// @notice Retrieve the vote count from the encoded report (last 16 bits)
     /// @param _report Encoded report
+    /// @return The report count
     function _getReportCount(uint256 _report) internal pure returns (uint16) {
         return uint16(_report);
     }
 
+    /// @notice Compute the max allowed increase based on the previous total balance and the time elapsed
+    /// @param _prevTotalEth The previous total balance
+    /// @param _timeElapsed The time since last report
+    /// @return The maximum increase in balance allowed
     function _maxIncrease(uint256 _prevTotalEth, uint256 _timeElapsed) internal view returns (uint256) {
         uint256 annualAprUpperBound = ReportBounds.get().annualAprUpperBound;
-        return (_prevTotalEth * annualAprUpperBound * _timeElapsed) / uint256(10000 * 365 days);
+        return (_prevTotalEth * annualAprUpperBound * _timeElapsed) / (LibBasisPoints.BASIS_POINTS_MAX * ONE_YEAR);
     }
 
     /// @notice Performs sanity checks to prevent an erroneous update to the River system
@@ -458,6 +438,12 @@ contract OracleV1 is IOracleV1, Initializable, Administrable {
     }
 
     /// @notice Push the new cl data to the river system and performs sanity checks
+    /// @dev At this point, the maximum increase allowed to the previous total asset balance is computed and
+    /// @dev provided to River. It's then up to River to manage how extra funds are injected in the system
+    /// @dev and make sure the limit is not crossed. If the _totalBalance is already crossing this limit,
+    /// @dev then there is nothing River can do to prevent it.
+    /// @dev These extra funds are:
+    /// @dev - the execution layer fees
     /// @param _epochId Id of the epoch
     /// @param _totalBalance Total validator balance
     /// @param _validatorCount Total validator count

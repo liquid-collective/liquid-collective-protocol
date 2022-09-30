@@ -1,22 +1,22 @@
 # IOracleManagerV1
 
+*Kiln*
 
+> Oracle Manager (v1)
 
-
-
-
+This interface exposes methods to handle the inputs provided by the oracle
 
 
 
 ## Methods
 
-### getBeaconValidatorBalanceSum
+### getCLValidatorCount
 
 ```solidity
-function getBeaconValidatorBalanceSum() external view returns (uint256 beaconValidatorBalanceSum)
+function getCLValidatorCount() external view returns (uint256)
 ```
 
-
+Get CL validator count (the amount of validator reported by the oracles)
 
 
 
@@ -25,15 +25,15 @@ function getBeaconValidatorBalanceSum() external view returns (uint256 beaconVal
 
 | Name | Type | Description |
 |---|---|---|
-| beaconValidatorBalanceSum | uint256 | undefined |
+| _0 | uint256 | The CL validator count |
 
-### getBeaconValidatorCount
+### getCLValidatorTotalBalance
 
 ```solidity
-function getBeaconValidatorCount() external view returns (uint256 beaconValidatorCount)
+function getCLValidatorTotalBalance() external view returns (uint256)
 ```
 
-
+Get CL validator total balance
 
 
 
@@ -42,15 +42,15 @@ function getBeaconValidatorCount() external view returns (uint256 beaconValidato
 
 | Name | Type | Description |
 |---|---|---|
-| beaconValidatorCount | uint256 | undefined |
+| _0 | uint256 | The CL Validator total balance |
 
 ### getOracle
 
 ```solidity
-function getOracle() external view returns (address oracle)
+function getOracle() external view returns (address)
 ```
 
-
+Get oracle address
 
 
 
@@ -59,25 +59,26 @@ function getOracle() external view returns (address oracle)
 
 | Name | Type | Description |
 |---|---|---|
-| oracle | address | undefined |
+| _0 | address | The oracle address |
 
-### setBeaconData
+### setConsensusLayerData
 
 ```solidity
-function setBeaconData(uint256 _validatorCount, uint256 _validatorBalanceSum, bytes32 _roundId) external nonpayable
+function setConsensusLayerData(uint256 _validatorCount, uint256 _validatorTotalBalance, bytes32 _roundId, uint256 _maxIncrease) external nonpayable
 ```
 
+Sets the validator count and validator total balance sum reported by the oracle
 
-
-
+*Can only be called by the oracle addressThe round id is a blackbox value that should only be used to identify unique reportsWhen a report is performed, River computes the amount of fees that can be pulledfrom the execution layer fee recipient. This amount is capped by the max allowedincrease provided during the report.If the total asset balance increases (from the reported total balance and the pulled funds)we then compute the share that must be taken for the collector on the positive delta.The execution layer fees are taken into account here because they are the product ofnode operator&#39;s work, just like consensus layer fees, and both should be handled in thesame manner, as a single revenue stream for the users and the collector.*
 
 #### Parameters
 
 | Name | Type | Description |
 |---|---|---|
-| _validatorCount | uint256 | undefined |
-| _validatorBalanceSum | uint256 | undefined |
-| _roundId | bytes32 | undefined |
+| _validatorCount | uint256 | The number of active validators on the consensus layer |
+| _validatorTotalBalance | uint256 | The balance sum of the active validators on the consensus layer |
+| _roundId | bytes32 | An identifier for this update |
+| _maxIncrease | uint256 | The maximum allowed increase in the total balance |
 
 ### setOracle
 
@@ -85,7 +86,7 @@ function setBeaconData(uint256 _validatorCount, uint256 _validatorBalanceSum, by
 function setOracle(address _oracleAddress) external nonpayable
 ```
 
-
+Set the oracle address
 
 
 
@@ -93,19 +94,19 @@ function setOracle(address _oracleAddress) external nonpayable
 
 | Name | Type | Description |
 |---|---|---|
-| _oracleAddress | address | undefined |
+| _oracleAddress | address | Address of the oracle |
 
 
 
 ## Events
 
-### BeaconDataUpdate
+### ConsensusLayerDataUpdate
 
 ```solidity
-event BeaconDataUpdate(uint256 validatorCount, uint256 validatorBalanceSum, bytes32 roundId)
+event ConsensusLayerDataUpdate(uint256 validatorCount, uint256 validatorTotalBalance, bytes32 roundId)
 ```
 
-
+The consensus layer data provided by the oracle has been updated
 
 
 
@@ -113,9 +114,25 @@ event BeaconDataUpdate(uint256 validatorCount, uint256 validatorBalanceSum, byte
 
 | Name | Type | Description |
 |---|---|---|
-| validatorCount  | uint256 | undefined |
-| validatorBalanceSum  | uint256 | undefined |
-| roundId  | bytes32 | undefined |
+| validatorCount  | uint256 | The new count of validators running on the consensus layer |
+| validatorTotalBalance  | uint256 | The new total balance sum of all validators |
+| roundId  | bytes32 | Round identifier |
+
+### SetOracle
+
+```solidity
+event SetOracle(address indexed oracleAddress)
+```
+
+The stored oracle address changed
+
+
+
+#### Parameters
+
+| Name | Type | Description |
+|---|---|---|
+| oracleAddress `indexed` | address | The new oracle address |
 
 
 
@@ -124,10 +141,10 @@ event BeaconDataUpdate(uint256 validatorCount, uint256 validatorBalanceSum, byte
 ### InvalidValidatorCountReport
 
 ```solidity
-error InvalidValidatorCountReport(uint256 _providedValidatorCount, uint256 _depositedValidatorCount)
+error InvalidValidatorCountReport(uint256 providedValidatorCount, uint256 depositedValidatorCount)
 ```
 
-
+The reported validator count is invalid
 
 
 
@@ -135,7 +152,7 @@ error InvalidValidatorCountReport(uint256 _providedValidatorCount, uint256 _depo
 
 | Name | Type | Description |
 |---|---|---|
-| _providedValidatorCount | uint256 | undefined |
-| _depositedValidatorCount | uint256 | undefined |
+| providedValidatorCount | uint256 | The received validator count value |
+| depositedValidatorCount | uint256 | The number of deposits performed by the system |
 
 

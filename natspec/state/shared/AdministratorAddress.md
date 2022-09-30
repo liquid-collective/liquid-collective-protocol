@@ -2,9 +2,9 @@
 
 
 
+> Administrator Address Storage
 
-
-
+Utility to manage the Administrator Address in storage
 
 
 
@@ -16,7 +16,7 @@
 function ADMINISTRATOR_ADDRESS_SLOT() external view returns (bytes32)
 ```
 
-
+Storage slot of the Administrator Address
 
 
 

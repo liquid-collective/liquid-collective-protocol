@@ -2,7 +2,7 @@
 
 *Kiln*
 
-> Execution Layer Fee Recipient
+> Execution Layer Fee Recipient (v1)
 
 This contract receives all the execution layer fees from the proposed blocks + bribes
 
@@ -29,14 +29,55 @@ Initialize the fee recipient with the required arguments
 ### pullELFees
 
 ```solidity
-function pullELFees() external nonpayable
+function pullELFees(uint256 _maxAmount) external nonpayable
 ```
 
 Pulls all the ETH to the River contract
 
 *Only callable by the River contract*
 
+#### Parameters
 
+| Name | Type | Description |
+|---|---|---|
+| _maxAmount | uint256 | The maximum amount to pull into the system |
+
+
+
+## Events
+
+### Initialize
+
+```solidity
+event Initialize(uint256 version, bytes cdata)
+```
+
+Emitted when the contract is properly initialized
+
+
+
+#### Parameters
+
+| Name | Type | Description |
+|---|---|---|
+| version  | uint256 | undefined |
+| cdata  | bytes | undefined |
+
+### SetRiver
+
+```solidity
+event SetRiver(address indexed river)
+```
+
+The storage river address has changed
+
+
+
+#### Parameters
+
+| Name | Type | Description |
+|---|---|---|
+| river `indexed` | address | undefined |
 
 
 
@@ -48,7 +89,7 @@ Pulls all the ETH to the River contract
 error InvalidCall()
 ```
 
-
+The fallback has been triggered
 
 
 
@@ -59,7 +100,7 @@ error InvalidCall()
 error InvalidInitialization(uint256 version, uint256 expectedVersion)
 ```
 
-
+An error occured during the initialization
 
 
 
@@ -67,8 +108,8 @@ error InvalidInitialization(uint256 version, uint256 expectedVersion)
 
 | Name | Type | Description |
 |---|---|---|
-| version | uint256 | undefined |
-| expectedVersion | uint256 | undefined |
+| version | uint256 | The version that was attempting to be initialized |
+| expectedVersion | uint256 | The version that was expected |
 
 ### InvalidZeroAddress
 
@@ -76,7 +117,7 @@ error InvalidInitialization(uint256 version, uint256 expectedVersion)
 error InvalidZeroAddress()
 ```
 
-
+The address is zero
 
 
 
@@ -87,7 +128,7 @@ error InvalidZeroAddress()
 error Unauthorized(address caller)
 ```
 
-
+The operator is unauthorized for the caller
 
 
 
@@ -95,6 +136,6 @@ error Unauthorized(address caller)
 
 | Name | Type | Description |
 |---|---|---|
-| caller | address | undefined |
+| caller | address | Addres performing the call |
 
 

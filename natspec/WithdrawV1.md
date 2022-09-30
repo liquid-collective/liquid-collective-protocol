@@ -16,7 +16,7 @@ This contract is a stub contract that should be upgradeable to be adapted with f
 function getCredentials() external view returns (bytes32)
 ```
 
-
+Retrieve the withdrawal credentials to use
 
 
 
@@ -25,7 +25,7 @@ function getCredentials() external view returns (bytes32)
 
 | Name | Type | Description |
 |---|---|---|
-| _0 | bytes32 | undefined |
+| _0 | bytes32 | The withdrawal credentials |
 
 
 

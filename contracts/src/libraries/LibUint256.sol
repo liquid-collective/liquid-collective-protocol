@@ -1,39 +1,48 @@
-//SPDX-License-Identifier: BUSL-1.1
+//SPDX-License-Identifier: MIT
 pragma solidity 0.8.10;
 
+/// @title Lib Uint256
+/// @notice Utilities to perform uint operations
 library LibUint256 {
+    /// @notice Converts a value to little endian (64 bits)
+    /// @param _value The value to convert
+    /// @return result The converted value
     function toLittleEndian64(uint256 _value) internal pure returns (uint256 result) {
         result = 0;
-        uint256 temp_value = _value;
-        result = temp_value & 0xFF;
-        temp_value >>= 8;
+        uint256 tempValue = _value;
+        result = tempValue & 0xFF;
+        tempValue >>= 8;
 
-        result = (result << 8) | (temp_value & 0xFF);
-        temp_value >>= 8;
+        result = (result << 8) | (tempValue & 0xFF);
+        tempValue >>= 8;
 
-        result = (result << 8) | (temp_value & 0xFF);
-        temp_value >>= 8;
+        result = (result << 8) | (tempValue & 0xFF);
+        tempValue >>= 8;
 
-        result = (result << 8) | (temp_value & 0xFF);
-        temp_value >>= 8;
+        result = (result << 8) | (tempValue & 0xFF);
+        tempValue >>= 8;
 
-        result = (result << 8) | (temp_value & 0xFF);
-        temp_value >>= 8;
+        result = (result << 8) | (tempValue & 0xFF);
+        tempValue >>= 8;
 
-        result = (result << 8) | (temp_value & 0xFF);
-        temp_value >>= 8;
+        result = (result << 8) | (tempValue & 0xFF);
+        tempValue >>= 8;
 
-        result = (result << 8) | (temp_value & 0xFF);
-        temp_value >>= 8;
+        result = (result << 8) | (tempValue & 0xFF);
+        tempValue >>= 8;
 
-        result = (result << 8) | (temp_value & 0xFF);
-        temp_value >>= 8;
+        result = (result << 8) | (tempValue & 0xFF);
+        tempValue >>= 8;
 
-        assert(0 == temp_value); // fully converted
+        assert(0 == tempValue); // fully converted
         result <<= (24 * 8);
     }
 
-    function min(uint256 a, uint256 b) internal pure returns (uint256) {
-        return (a > b ? b : a);
+    /// @notice Returns the minimum value
+    /// @param _a First value
+    /// @param _b Second value
+    /// @return Smallest value between _a and _b
+    function min(uint256 _a, uint256 _b) internal pure returns (uint256) {
+        return (_a > _b ? _b : _a);
     }
 }

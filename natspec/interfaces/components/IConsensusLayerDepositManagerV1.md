@@ -1,10 +1,10 @@
 # IConsensusLayerDepositManagerV1
 
+*Kiln*
 
+> Consensys Layer Deposit Manager Interface (v1)
 
-
-
-
+This interface exposes methods to handle the interactions with the official deposit contract
 
 
 
@@ -16,7 +16,7 @@
 function depositToConsensusLayer(uint256 _maxCount) external nonpayable
 ```
 
-
+Deposits current balance to the Consensus Layer by batches of 32 ETH
 
 
 
@@ -24,15 +24,15 @@ function depositToConsensusLayer(uint256 _maxCount) external nonpayable
 
 | Name | Type | Description |
 |---|---|---|
-| _maxCount | uint256 | undefined |
+| _maxCount | uint256 | The maximum amount of validator keys to fund |
 
-### getDepositedValidatorCount
+### getBalanceToDeposit
 
 ```solidity
-function getDepositedValidatorCount() external view returns (uint256 depositedValidatorCount)
+function getBalanceToDeposit() external view returns (uint256)
 ```
 
-
+Returns the amount of pending ETH
 
 
 
@@ -41,7 +41,24 @@ function getDepositedValidatorCount() external view returns (uint256 depositedVa
 
 | Name | Type | Description |
 |---|---|---|
-| depositedValidatorCount | uint256 | undefined |
+| _0 | uint256 | The amount of pending ETH |
+
+### getDepositedValidatorCount
+
+```solidity
+function getDepositedValidatorCount() external view returns (uint256)
+```
+
+Get the deposited validator count (the count of deposits made by the contract)
+
+
+
+
+#### Returns
+
+| Name | Type | Description |
+|---|---|---|
+| _0 | uint256 | The deposited validator count |
 
 ### getWithdrawalCredentials
 
@@ -49,7 +66,7 @@ function getDepositedValidatorCount() external view returns (uint256 depositedVa
 function getWithdrawalCredentials() external view returns (bytes32)
 ```
 
-
+Retrieve the withdrawal credentials
 
 
 
@@ -58,7 +75,7 @@ function getWithdrawalCredentials() external view returns (bytes32)
 
 | Name | Type | Description |
 |---|---|---|
-| _0 | bytes32 | undefined |
+| _0 | bytes32 | The withdrawal credentials |
 
 
 
@@ -70,7 +87,7 @@ function getWithdrawalCredentials() external view returns (bytes32)
 event FundedValidatorKey(bytes publicKey)
 ```
 
-
+A validator key got funded on the deposit contract
 
 
 
@@ -78,11 +95,54 @@ event FundedValidatorKey(bytes publicKey)
 
 | Name | Type | Description |
 |---|---|---|
-| publicKey  | bytes | undefined |
+| publicKey  | bytes | BLS Public key that got funded |
+
+### SetDepositContractAddress
+
+```solidity
+event SetDepositContractAddress(address indexed depositContract)
+```
+
+The stored deposit contract address changed
+
+
+
+#### Parameters
+
+| Name | Type | Description |
+|---|---|---|
+| depositContract `indexed` | address | Address of the deposit contract |
+
+### SetWithdrawalCredentials
+
+```solidity
+event SetWithdrawalCredentials(bytes32 withdrawalCredentials)
+```
+
+The stored withdrawal credentials changed
+
+
+
+#### Parameters
+
+| Name | Type | Description |
+|---|---|---|
+| withdrawalCredentials  | bytes32 | The withdrawal credentials to use for deposits |
 
 
 
 ## Errors
+
+### ErrorOnDeposit
+
+```solidity
+error ErrorOnDeposit()
+```
+
+An error occured during the deposit
+
+
+
 
 ### InconsistentPublicKeys
 
@@ -90,7 +150,7 @@ event FundedValidatorKey(bytes publicKey)
 error InconsistentPublicKeys()
 ```
 
-
+The length of the BLS Public key is invalid during deposit
 
 
 
@@ -101,7 +161,7 @@ error InconsistentPublicKeys()
 error InconsistentSignatures()
 ```
 
-
+The length of the BLS Signature is invalid during deposit
 
 
 
@@ -112,7 +172,7 @@ error InconsistentSignatures()
 error InvalidPublicKeyCount()
 ```
 
-
+The received count of public keys to deposit is invalid
 
 
 
@@ -123,7 +183,7 @@ error InvalidPublicKeyCount()
 error InvalidSignatureCount()
 ```
 
-
+The received count of signatures to deposit is invalid
 
 
 
@@ -134,7 +194,7 @@ error InvalidSignatureCount()
 error InvalidWithdrawalCredentials()
 ```
 
-
+The withdrawal credentials value is null
 
 
 
@@ -145,7 +205,7 @@ error InvalidWithdrawalCredentials()
 error NoAvailableValidatorKeys()
 ```
 
-
+The internal key retrieval returned no keys
 
 
 
@@ -156,7 +216,7 @@ error NoAvailableValidatorKeys()
 error NotEnoughFunds()
 ```
 
-
+Not enough funds to deposit one validator
 
 
 

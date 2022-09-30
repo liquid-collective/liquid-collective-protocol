@@ -12,14 +12,25 @@ import "../state/river/DepositedValidatorCount.sol";
 /// @title Oracle Manager (v1)
 /// @author Kiln
 /// @notice This contract handles the inputs provided by the oracle
+/// @notice The Oracle contract is plugged to this contract and is in charge of pushing
+/// @notice data whenever a new report has been deemed valid. The report consists in two
+/// @notice values: the sum of all balances of all deposited validators and the count of
+/// @notice validators that have been activated on the consensus layer.
 abstract contract OracleManagerV1 is IOracleManagerV1 {
     /// @notice Handler called if the delta between the last and new validator balance sum is positive
-    /// @dev Must be overriden
+    /// @dev Must be overridden
     /// @param _profits The positive increase in the validator balance sum (staking rewards)
     function _onEarnings(uint256 _profits) internal virtual;
 
+    /// @notice Handler called to pull the Execution layer fees from the recipient
+    /// @dev Must be overridden
+    /// @param _max The maximum amount to pull inside the system
+    /// @return The amount pulled inside the system
     function _pullELFees(uint256 _max) internal virtual returns (uint256);
 
+    /// @notice Handler called to retrieve the system administrator address
+    /// @dev Must be overridden
+    /// @return The system administrator address
     function _getRiverAdmin() internal view virtual returns (address);
 
     /// @notice Prevents unauthorized calls
@@ -37,12 +48,28 @@ abstract contract OracleManagerV1 is IOracleManagerV1 {
         emit SetOracle(_oracle);
     }
 
-    /// @notice Sets the validator count and validator balance sum reported by the oracle
-    /// @dev Can only be called by the oracle address
-    /// @param _validatorCount The number of active validators on the consensus layer
-    /// @param _validatorTotalBalance The validator balance sum of the active validators on the consensus layer
-    /// @param _roundId An identifier for this update
-    /// @param _maxIncrease Maximum positive delta allowed to the total underlying balance
+    /// @inheritdoc IOracleManagerV1
+    function getOracle() external view returns (address) {
+        return OracleAddress.get();
+    }
+
+    /// @inheritdoc IOracleManagerV1
+    function getCLValidatorTotalBalance() external view returns (uint256) {
+        return CLValidatorTotalBalance.get();
+    }
+
+    /// @inheritdoc IOracleManagerV1
+    function getCLValidatorCount() external view returns (uint256) {
+        return CLValidatorCount.get();
+    }
+
+    /// @inheritdoc IOracleManagerV1
+    function setOracle(address _oracleAddress) external onlyAdmin_OMV1 {
+        OracleAddress.set(_oracleAddress);
+        emit SetOracle(_oracleAddress);
+    }
+
+    /// @inheritdoc IOracleManagerV1
     function setConsensusLayerData(
         uint256 _validatorCount,
         uint256 _validatorTotalBalance,
@@ -66,7 +93,7 @@ abstract contract OracleManagerV1 is IOracleManagerV1 {
 
         uint256 executionLayerFees;
 
-        // if there's a margin left for pulling the elFees that would leave our delta under the allowed maxIncrease value, do it
+        // if there's a margin left for pulling the execution layer fees that would leave our delta under the allowed maxIncrease value, do it
         if ((_maxIncrease + previousValidatorTotalBalance) > _validatorTotalBalance) {
             executionLayerFees = _pullELFees((_maxIncrease + previousValidatorTotalBalance) - _validatorTotalBalance);
         }
@@ -76,27 +103,5 @@ abstract contract OracleManagerV1 is IOracleManagerV1 {
         }
 
         emit ConsensusLayerDataUpdate(_validatorCount, _validatorTotalBalance, _roundId);
-    }
-
-    /// @notice Get Oracle address
-    function getOracle() external view returns (address) {
-        return OracleAddress.get();
-    }
-
-    /// @notice Set Oracle address
-    /// @param _oracleAddress Address of the oracle
-    function setOracle(address _oracleAddress) external onlyAdmin_OMV1 {
-        OracleAddress.set(_oracleAddress);
-        emit SetOracle(_oracleAddress);
-    }
-
-    /// @notice Get CL validator balance sum
-    function getCLValidatorTotalBalance() external view returns (uint256) {
-        return CLValidatorTotalBalance.get();
-    }
-
-    /// @notice Get CL validator count (the amount of validator reported by the oracles)
-    function getCLValidatorCount() external view returns (uint256) {
-        return CLValidatorCount.get();
     }
 }
