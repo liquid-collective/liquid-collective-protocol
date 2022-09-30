@@ -160,7 +160,9 @@ abstract contract SharesManagerV1 is ISharesManagerV1 {
             revert AllowanceTooLow(_from, msg.sender, currentAllowance, _value);
         }
         if (currentAllowance != type(uint256).max) {
-            ApprovalsPerOwner.set(_from, msg.sender, currentAllowance - _value);
+            uint256 newAllowance = currentAllowance - _value;
+            ApprovalsPerOwner.set(_from, msg.sender, newAllowance);
+            emit Approval(_from, msg.sender, newAllowance);
         }
     }
 
