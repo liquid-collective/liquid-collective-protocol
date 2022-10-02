@@ -160,7 +160,7 @@ contract OracleV1 is IOracleV1, Initializable, Administrable {
         }
         OracleMembers.push(_newOracleMember);
         uint256 previousQuorum = Quorum.get();
-        _setQuorumAndClearReports(_newQuorum, previousQuorum);
+        _setQuorum(_newQuorum, previousQuorum);
         emit AddMember(_newOracleMember);
     }
 
@@ -172,7 +172,8 @@ contract OracleV1 is IOracleV1, Initializable, Administrable {
         }
         OracleMembers.deleteItem(uint256(memberIdx));
         uint256 previousQuorum = Quorum.get();
-        _setQuorumAndClearReports(_newQuorum, previousQuorum);
+        _clearReports();
+        _setQuorum(_newQuorum, previousQuorum);
         emit RemoveMember(_oracleMember);
     }
 
@@ -223,7 +224,7 @@ contract OracleV1 is IOracleV1, Initializable, Administrable {
         if (previousQuorum == _newQuorum) {
             revert LibErrors.InvalidArgument();
         }
-        _setQuorumAndClearReports(_newQuorum, previousQuorum);
+        _setQuorum(_newQuorum, previousQuorum);
     }
 
     /// @inheritdoc IOracleV1
@@ -279,7 +280,7 @@ contract OracleV1 is IOracleV1, Initializable, Administrable {
 
     /// @notice Internal utility to change the quorum
     /// @dev Ensures that the quorum respects invariants
-    function _setQuorumAndClearReports(uint256 _newQuorum, uint256 _previousQuorum) internal {
+    function _setQuorum(uint256 _newQuorum, uint256 _previousQuorum) internal {
         uint256 memberCount = OracleMembers.get().length;
         if ((_newQuorum == 0 && memberCount > 0) || _newQuorum > memberCount) {
             revert LibErrors.InvalidArgument();
@@ -297,6 +298,10 @@ contract OracleV1 is IOracleV1, Initializable, Administrable {
             Quorum.set(_newQuorum);
             emit SetQuorum(_newQuorum);
         }
+    }
+
+    /// @notice Internal utility to clear the reporting data
+    function _clearReports() internal {
         ReportsPositions.clear();
         ReportsVariants.clear();
     }

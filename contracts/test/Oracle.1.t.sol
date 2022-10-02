@@ -455,7 +455,40 @@ contract OracleV1Tests is Test {
         }
     }
 
-    function testSetQuorumClearsReports(
+    function testAddMemberDoesntClearsReports(
+        uint256 oracleMemberOneSalt,
+        uint256 oracleMemberTwoSalt,
+        uint256 oracleMemberThreeSalt,
+        uint64 timeFromGenesis
+    ) public {
+        RiverMock(address(oracleInput)).sudoSetTotalShares(1e9);
+        RiverMock(address(oracleInput)).sudoSetTotalSupply(1e9);
+
+        address oracleMemberOne = uf._new(oracleMemberOneSalt);
+        address oracleMemberTwo = uf._new(oracleMemberTwoSalt);
+        address oracleMemberThree = uf._new(oracleMemberThreeSalt);
+        vm.warp(uint256(GENESIS_TIME) * 2 + uint256(timeFromGenesis));
+        vm.startPrank(admin);
+        oracle.addMember(oracleMemberOne, 1);
+        oracle.addMember(oracleMemberTwo, 2);
+        vm.stopPrank();
+
+        uint256 epochId = oracle.getCurrentEpochId();
+
+        uint256 frameFirstEpochId = oracle.getFrameFirstEpochId(epochId);
+        if (frameFirstEpochId > 0) {
+            vm.startPrank(oracleMemberOne);
+            oracle.reportConsensusLayerData(frameFirstEpochId, 1, 1);
+            vm.stopPrank();
+            vm.startPrank(admin);
+            assert(oracle.getGlobalReportStatus() != 0);
+            oracle.addMember(oracleMemberThree, 3);
+            assert(oracle.getGlobalReportStatus() != 0);
+            vm.stopPrank();
+        }
+    }
+
+    function testRemoveMemberClearsReports(
         uint256 oracleMemberOneSalt,
         uint256 oracleMemberTwoSalt,
         uint256 oracleMemberThreeSalt,
@@ -481,10 +514,11 @@ contract OracleV1Tests is Test {
             vm.startPrank(oracleMemberOne);
             oracle.reportConsensusLayerData(frameFirstEpochId, 1, 1);
             vm.stopPrank();
+            vm.startPrank(admin);
             assert(oracle.getGlobalReportStatus() != 0);
-            vm.prank(admin);
-            oracle.setQuorum(2);
+            oracle.removeMember(oracleMemberThree, 2);
             assert(oracle.getGlobalReportStatus() == 0);
+            vm.stopPrank();
         }
     }
 
