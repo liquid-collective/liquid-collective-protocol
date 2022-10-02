@@ -55,8 +55,8 @@ contract OracleV1 is IOracleV1, Initializable, Administrable {
             })
         );
         emit SetBounds(_annualAprUpperBound, _relativeLowerBound);
-        Quorum.set(1);
-        emit SetQuorum(1);
+        Quorum.set(0);
+        emit SetQuorum(0);
     }
 
     /// @inheritdoc IOracleV1
@@ -171,8 +171,6 @@ contract OracleV1 is IOracleV1, Initializable, Administrable {
             revert LibErrors.InvalidCall();
         }
         OracleMembers.deleteItem(uint256(memberIdx));
-        ReportsPositions.clear();
-        ReportsVariants.clear();
         uint256 previousQuorum = Quorum.get();
         _setQuorumAndClearReports(_newQuorum, previousQuorum);
         emit RemoveMember(_oracleMember);
@@ -295,10 +293,12 @@ contract OracleV1 is IOracleV1, Initializable, Administrable {
                 );
             }
         }
-        Quorum.set(_newQuorum);
+        if (_newQuorum != _previousQuorum) {
+            Quorum.set(_newQuorum);
+            emit SetQuorum(_newQuorum);
+        }
         ReportsPositions.clear();
         ReportsVariants.clear();
-        emit SetQuorum(_newQuorum);
     }
 
     /// @notice Retrieve the report that has the highest number of "votes"

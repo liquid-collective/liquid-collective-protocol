@@ -139,6 +139,7 @@ contract OracleV1Tests is Test {
         address newMember = uf._new(newMemberSalt);
         vm.startPrank(admin);
         assert(oracle.isMember(newMember) == false);
+        assert(oracle.getQuorum() == 0);
         vm.expectEmit(true, true, true, true);
         emit SetQuorum(1);
         oracle.addMember(newMember, 1);
@@ -185,6 +186,8 @@ contract OracleV1Tests is Test {
     }
 
     function testRemoveMemberAfterReport(uint256 newMemberSalt, uint256 otherNewMemberSalt) public {
+        RiverMock(address(oracleInput)).sudoSetTotalShares(32 ether);
+        RiverMock(address(oracleInput)).sudoSetTotalSupply(32 ether);
         address newMember = uf._new(newMemberSalt);
         address otherNewMember = uf._new(otherNewMemberSalt);
         assert(oracle.isMember(newMember) == false);
