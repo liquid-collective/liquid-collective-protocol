@@ -455,7 +455,7 @@ contract OracleV1Tests is Test {
         }
     }
 
-    function testAddMemberDoesntClearsReports(
+    function testAddMemberClearsReports(
         uint256 oracleMemberOneSalt,
         uint256 oracleMemberTwoSalt,
         uint256 oracleMemberThreeSalt,
@@ -483,7 +483,7 @@ contract OracleV1Tests is Test {
             vm.startPrank(admin);
             assert(oracle.getGlobalReportStatus() != 0);
             oracle.addMember(oracleMemberThree, 3);
-            assert(oracle.getGlobalReportStatus() != 0);
+            assert(oracle.getGlobalReportStatus() == 0);
             vm.stopPrank();
         }
     }

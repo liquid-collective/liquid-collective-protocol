@@ -160,7 +160,7 @@ contract OracleV1 is IOracleV1, Initializable, Administrable {
         }
         OracleMembers.push(_newOracleMember);
         uint256 previousQuorum = Quorum.get();
-        _setQuorum(_newQuorum, previousQuorum);
+        _clearReportsAndSetQuorum(_newQuorum, previousQuorum);
         emit AddMember(_newOracleMember);
     }
 
@@ -172,8 +172,7 @@ contract OracleV1 is IOracleV1, Initializable, Administrable {
         }
         OracleMembers.deleteItem(uint256(memberIdx));
         uint256 previousQuorum = Quorum.get();
-        _clearReports();
-        _setQuorum(_newQuorum, previousQuorum);
+        _clearReportsAndSetQuorum(_newQuorum, previousQuorum);
         emit RemoveMember(_oracleMember);
     }
 
@@ -224,7 +223,7 @@ contract OracleV1 is IOracleV1, Initializable, Administrable {
         if (previousQuorum == _newQuorum) {
             revert LibErrors.InvalidArgument();
         }
-        _setQuorum(_newQuorum, previousQuorum);
+        _clearReportsAndSetQuorum(_newQuorum, previousQuorum);
     }
 
     /// @inheritdoc IOracleV1
@@ -278,22 +277,16 @@ contract OracleV1 is IOracleV1, Initializable, Administrable {
         }
     }
 
-    /// @notice Internal utility to change the quorum
+    /// @notice Internal utility to clear all the reports and edit the quorum if a new value is provided
     /// @dev Ensures that the quorum respects invariants
-    function _setQuorum(uint256 _newQuorum, uint256 _previousQuorum) internal {
+    /// @param _newQuorum New quorum value
+    /// @param _previousQuorum The old quorum value
+    function _clearReportsAndSetQuorum(uint256 _newQuorum, uint256 _previousQuorum) internal {
         uint256 memberCount = OracleMembers.get().length;
         if ((_newQuorum == 0 && memberCount > 0) || _newQuorum > memberCount) {
             revert LibErrors.InvalidArgument();
         }
-        if (_previousQuorum > _newQuorum) {
-            (bool isQuorum, uint256 report) = _getQuorumReport(_newQuorum);
-            if (isQuorum) {
-                (uint64 clBalance, uint32 clValidators) = _decodeReport(report);
-                _pushToRiver(
-                    ExpectedEpochId.get(), DENOMINATION_OFFSET * uint128(clBalance), clValidators, CLSpec.get()
-                );
-            }
-        }
+        _clearReports();
         if (_newQuorum != _previousQuorum) {
             Quorum.set(_newQuorum);
             emit SetQuorum(_newQuorum);
