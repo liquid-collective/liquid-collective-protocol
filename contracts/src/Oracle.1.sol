@@ -246,7 +246,7 @@ contract OracleV1 is IOracleV1, Initializable, Administrable {
             if (_epochId != frameFirstEpochId) {
                 revert NotFrameFirstEpochId(_epochId, frameFirstEpochId);
             }
-            _clearReporting(_epochId);
+            _clearReportsAndUpdateExpectedEpochId(_epochId);
         }
 
         if (ReportsPositions.get(uint256(memberIndex))) {
@@ -293,50 +293,6 @@ contract OracleV1 is IOracleV1, Initializable, Administrable {
         }
     }
 
-    /// @notice Internal utility to clear the reporting data
-    function _clearReports() internal {
-        ReportsPositions.clear();
-        ReportsVariants.clear();
-    }
-
-    /// @notice Retrieve the report that has the highest number of "votes"
-    /// @param _quorum The quorum used for the query
-    /// @return isQuorum True if quorum is met
-    /// @return report The value of the report
-    function _getQuorumReport(uint256 _quorum) internal view returns (bool isQuorum, uint256 report) {
-        // check most frequent cases first: all reports are the same or no reports yet
-        uint256[] memory variants = ReportsVariants.get();
-        if (variants.length == 1) {
-            return (_getReportCount(variants[0]) >= _quorum, variants[0]);
-        } else if (variants.length == 0) {
-            return (false, 0);
-        }
-
-        // if more than 2 kind of reports exist, choose the most frequent
-        uint256 maxind = 0;
-        uint256 repeat = 0;
-        uint16 maxval = 0;
-        uint16 cur = 0;
-        for (uint256 i = 0; i < variants.length;) {
-            cur = _getReportCount(variants[i]);
-            if (cur >= maxval) {
-                if (cur == maxval) {
-                    unchecked {
-                        ++repeat;
-                    }
-                } else {
-                    maxind = i;
-                    maxval = cur;
-                    repeat = 0;
-                }
-            }
-            unchecked {
-                ++i;
-            }
-        }
-        return (maxval >= _quorum && repeat == 0, variants[maxind]);
-    }
-
     /// @notice Retrieve the block timestamp
     /// @return The block timestamp
     function _getTime() internal view returns (uint256) {
@@ -364,11 +320,16 @@ contract OracleV1 is IOracleV1, Initializable, Administrable {
 
     /// @notice Clear reporting data
     /// @param _epochId Next expected epoch id (first epoch of the next frame)
-    function _clearReporting(uint256 _epochId) internal {
-        ReportsPositions.clear();
-        ReportsVariants.clear();
+    function _clearReportsAndUpdateExpectedEpochId(uint256 _epochId) internal {
+        _clearReports();
         ExpectedEpochId.set(_epochId);
         emit ExpectedEpochIdUpdated(_epochId);
+    }
+
+    /// @notice Internal utility to clear the reporting data
+    function _clearReports() internal {
+        ReportsPositions.clear();
+        ReportsVariants.clear();
     }
 
     /// @notice Encode report into one slot. Last 16 bits are free to use for vote counting.
@@ -454,7 +415,7 @@ contract OracleV1 is IOracleV1, Initializable, Administrable {
         uint32 _validatorCount,
         CLSpec.CLSpecStruct memory _clSpec
     ) internal {
-        _clearReporting(_epochId + _clSpec.epochsPerFrame);
+        _clearReportsAndUpdateExpectedEpochId(_epochId + _clSpec.epochsPerFrame);
 
         IRiverV1 river = IRiverV1(payable(RiverAddress.get()));
         uint256 prevTotalEth = river.totalUnderlyingSupply();
