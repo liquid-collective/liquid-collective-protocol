@@ -208,6 +208,10 @@ interface IOperatorsRegistryV1 {
     /// @dev The indexes must be provided sorted in decreasing order and duplicate-free, otherwise the method will revert
     /// @dev The operator limit will be set to the lowest deleted key index if the operator's limit wasn't equal to its total key count
     /// @dev The operator or the admin cannot remove funded keys
+    /// @dev When removing validators, the indexes of specific unfunded keys can be changed in order to properly
+    /// @dev remove the keys from the storage array. Beware of this specific behavior when chaining calls as the
+    /// @dev targeted public key indexes can point to a different key after a first call was made and performed
+    /// @dev some swaps
     /// @param _index The operator index
     /// @param _indexes The indexes of the keys to remove
     function removeValidators(uint256 _index, uint256[] calldata _indexes) external;
