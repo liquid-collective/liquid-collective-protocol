@@ -188,6 +188,7 @@ contract OracleV1 is IOracleV1, Initializable, Administrable {
         }
         OracleMembers.set(uint256(memberIdx), _newAddress);
         emit SetMember(_oracleMember, _newAddress);
+        _clearReports();
     }
 
     /// @inheritdoc IOracleV1
