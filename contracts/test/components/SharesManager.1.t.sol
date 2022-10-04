@@ -155,6 +155,15 @@ contract SharesManagerV1Tests is Test {
         vm.stopPrank();
     }
 
+    function testApproveZeroAddress(uint256 _userOneSalt, uint256 _allowance) public {
+        address _userOne = uf._new(_userOneSalt);
+        SharesManagerPublicDeal(payable(address(sharesManager))).deal(_userOne, _allowance);
+        vm.startPrank(_userOne);
+        vm.expectRevert(abi.encodeWithSignature("InvalidZeroAddress()"));
+        sharesManager.approve(address(0), _allowance);
+        vm.stopPrank();
+    }
+
     function testApproveAndTransferPartial(uint256 _userOneSalt, uint256 _userTwoSalt, uint128 _allowance) public {
         address _userOne = uf._new(_userOneSalt);
         address _userTwo = uf._new(_userTwoSalt);

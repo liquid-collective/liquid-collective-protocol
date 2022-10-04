@@ -55,8 +55,8 @@ contract OracleV1 is IOracleV1, Initializable, Administrable {
             })
         );
         emit SetBounds(_annualAprUpperBound, _relativeLowerBound);
-        Quorum.set(1);
-        emit SetQuorum(1);
+        Quorum.set(0);
+        emit SetQuorum(0);
     }
 
     /// @inheritdoc IOracleV1
@@ -160,7 +160,7 @@ contract OracleV1 is IOracleV1, Initializable, Administrable {
         }
         OracleMembers.push(_newOracleMember);
         uint256 previousQuorum = Quorum.get();
-        _setQuorum(_newQuorum, previousQuorum);
+        _clearReportsAndSetQuorum(_newQuorum, previousQuorum);
         emit AddMember(_newOracleMember);
     }
 
@@ -171,10 +171,8 @@ contract OracleV1 is IOracleV1, Initializable, Administrable {
             revert LibErrors.InvalidCall();
         }
         OracleMembers.deleteItem(uint256(memberIdx));
-        ReportsPositions.clear();
-        ReportsVariants.clear();
         uint256 previousQuorum = Quorum.get();
-        _setQuorum(_newQuorum, previousQuorum);
+        _clearReportsAndSetQuorum(_newQuorum, previousQuorum);
         emit RemoveMember(_oracleMember);
     }
 
@@ -190,6 +188,7 @@ contract OracleV1 is IOracleV1, Initializable, Administrable {
         }
         OracleMembers.set(uint256(memberIdx), _newAddress);
         emit SetMember(_oracleMember, _newAddress);
+        _clearReports();
     }
 
     /// @inheritdoc IOracleV1
@@ -225,7 +224,7 @@ contract OracleV1 is IOracleV1, Initializable, Administrable {
         if (previousQuorum == _newQuorum) {
             revert LibErrors.InvalidArgument();
         }
-        _setQuorum(_newQuorum, previousQuorum);
+        _clearReportsAndSetQuorum(_newQuorum, previousQuorum);
     }
 
     /// @inheritdoc IOracleV1
@@ -248,7 +247,7 @@ contract OracleV1 is IOracleV1, Initializable, Administrable {
             if (_epochId != frameFirstEpochId) {
                 revert NotFrameFirstEpochId(_epochId, frameFirstEpochId);
             }
-            _clearReporting(_epochId);
+            _clearReportsAndUpdateExpectedEpochId(_epochId);
         }
 
         if (ReportsPositions.get(uint256(memberIndex))) {
@@ -279,62 +278,23 @@ contract OracleV1 is IOracleV1, Initializable, Administrable {
         }
     }
 
-    /// @notice Internal utility to change the quorum
+    /// @notice Internal utility to clear all the reports and edit the quorum if a new value is provided
     /// @dev Ensures that the quorum respects invariants
-    function _setQuorum(uint256 _newQuorum, uint256 _previousQuorum) internal {
+    /// @dev The admin is in charge of providing a proper quorum based on the oracle member count
+    /// @dev The quorum value Q should respect the following invariant, where O is oracle member count
+    /// @dev (O / 2) + 1 <= Q <= O
+    /// @param _newQuorum New quorum value
+    /// @param _previousQuorum The old quorum value
+    function _clearReportsAndSetQuorum(uint256 _newQuorum, uint256 _previousQuorum) internal {
         uint256 memberCount = OracleMembers.get().length;
         if ((_newQuorum == 0 && memberCount > 0) || _newQuorum > memberCount) {
             revert LibErrors.InvalidArgument();
         }
-        if (_previousQuorum > _newQuorum) {
-            (bool isQuorum, uint256 report) = _getQuorumReport(_newQuorum);
-            if (isQuorum) {
-                (uint64 clBalance, uint32 clValidators) = _decodeReport(report);
-                _pushToRiver(
-                    ExpectedEpochId.get(), DENOMINATION_OFFSET * uint128(clBalance), clValidators, CLSpec.get()
-                );
-            }
+        _clearReports();
+        if (_newQuorum != _previousQuorum) {
+            Quorum.set(_newQuorum);
+            emit SetQuorum(_newQuorum);
         }
-        Quorum.set(_newQuorum);
-        emit SetQuorum(_newQuorum);
-    }
-
-    /// @notice Retrieve the report that has the highest number of "votes"
-    /// @param _quorum The quorum used for the query
-    /// @return isQuorum True if quorum is met
-    /// @return report The value of the report
-    function _getQuorumReport(uint256 _quorum) internal view returns (bool isQuorum, uint256 report) {
-        // check most frequent cases first: all reports are the same or no reports yet
-        uint256[] memory variants = ReportsVariants.get();
-        if (variants.length == 1) {
-            return (_getReportCount(variants[0]) >= _quorum, variants[0]);
-        } else if (variants.length == 0) {
-            return (false, 0);
-        }
-
-        // if more than 2 kind of reports exist, choose the most frequent
-        uint256 maxind = 0;
-        uint256 repeat = 0;
-        uint16 maxval = 0;
-        uint16 cur = 0;
-        for (uint256 i = 0; i < variants.length;) {
-            cur = _getReportCount(variants[i]);
-            if (cur >= maxval) {
-                if (cur == maxval) {
-                    unchecked {
-                        ++repeat;
-                    }
-                } else {
-                    maxind = i;
-                    maxval = cur;
-                    repeat = 0;
-                }
-            }
-            unchecked {
-                ++i;
-            }
-        }
-        return (maxval >= _quorum && repeat == 0, variants[maxind]);
     }
 
     /// @notice Retrieve the block timestamp
@@ -364,11 +324,16 @@ contract OracleV1 is IOracleV1, Initializable, Administrable {
 
     /// @notice Clear reporting data
     /// @param _epochId Next expected epoch id (first epoch of the next frame)
-    function _clearReporting(uint256 _epochId) internal {
-        ReportsPositions.clear();
-        ReportsVariants.clear();
+    function _clearReportsAndUpdateExpectedEpochId(uint256 _epochId) internal {
+        _clearReports();
         ExpectedEpochId.set(_epochId);
         emit ExpectedEpochIdUpdated(_epochId);
+    }
+
+    /// @notice Internal utility to clear the reporting data
+    function _clearReports() internal {
+        ReportsPositions.clear();
+        ReportsVariants.clear();
     }
 
     /// @notice Encode report into one slot. Last 16 bits are free to use for vote counting.
@@ -454,7 +419,7 @@ contract OracleV1 is IOracleV1, Initializable, Administrable {
         uint32 _validatorCount,
         CLSpec.CLSpecStruct memory _clSpec
     ) internal {
-        _clearReporting(_epochId + _clSpec.epochsPerFrame);
+        _clearReportsAndUpdateExpectedEpochId(_epochId + _clSpec.epochsPerFrame);
 
         IRiverV1 river = IRiverV1(payable(RiverAddress.get()));
         uint256 prevTotalEth = river.totalUnderlyingSupply();

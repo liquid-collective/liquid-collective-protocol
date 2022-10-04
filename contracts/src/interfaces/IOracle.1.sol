@@ -195,12 +195,15 @@ interface IOracleV1 {
 
     /// @notice Adds new address as oracle member, giving the ability to push cl reports.
     /// @dev Only callable by the adminstrator
+    /// @dev Modifying the quorum clears all the reporting data
     /// @param _newOracleMember Address of the new member
     /// @param _newQuorum New quorum value
     function addMember(address _newOracleMember, uint256 _newQuorum) external;
 
     /// @notice Removes an address from the oracle members.
     /// @dev Only callable by the adminstrator
+    /// @dev Modifying the quorum clears all the reporting data
+    /// @dev Remaining members that have already voted should vote again for the same frame.
     /// @param _oracleMember Address to remove
     /// @param _newQuorum New quorum value
     function removeMember(address _oracleMember, uint256 _newQuorum) external;
@@ -208,6 +211,7 @@ interface IOracleV1 {
     /// @notice Changes the address of an oracle member
     /// @dev Only callable by the adminitrator
     /// @dev Cannot use an address already in use
+    /// @dev This call will clear all the reporting data
     /// @param _oracleMember Address to change
     /// @param _newAddress New address for the member
     function setMember(address _oracleMember, address _newAddress) external;
@@ -228,7 +232,7 @@ interface IOracleV1 {
     function setReportBounds(uint256 _annualAprUpperBound, uint256 _relativeLowerBound) external;
 
     /// @notice Edits the quorum required to forward cl data to River
-    /// @dev Only callable by the adminstrator
+    /// @dev Modifying the quorum clears all the reporting data
     /// @param _newQuorum New quorum parameter
     function setQuorum(uint256 _newQuorum) external;
 

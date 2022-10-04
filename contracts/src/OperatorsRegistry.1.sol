@@ -97,7 +97,7 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
 
         uint256 operatorIndex = Operators.push(newOperator) - 1;
 
-        emit AddedOperator(operatorIndex, newOperator.name, newOperator.operator);
+        emit AddedOperator(operatorIndex, _name, _operator);
         return operatorIndex;
     }
 
@@ -138,7 +138,7 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
 
         operator.stopped = _newStoppedValidatorCount;
 
-        emit SetOperatorStoppedValidatorCount(_index, operator.stopped);
+        emit SetOperatorStoppedValidatorCount(_index, _newStoppedValidatorCount);
     }
 
     /// @inheritdoc IOperatorsRegistryV1
