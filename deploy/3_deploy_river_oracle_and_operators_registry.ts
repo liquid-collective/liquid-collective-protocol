@@ -30,7 +30,7 @@ const func: DeployFunction = async function ({
       break;
     }
     case "mainnet": {
-      grossFee = 1250;
+      grossFee = 1500;
       break;
     }
   }
@@ -85,12 +85,7 @@ const func: DeployFunction = async function ({
     contract: "Firewall",
     from: deployer,
     log: true,
-    args: [
-      governor,
-      executor,
-      futureRiverAddress,
-      [riverInterface.getSighash("depositToConsensusLayer"), riverInterface.getSighash("setOracle")],
-    ],
+    args: [governor, executor, futureRiverAddress, [riverInterface.getSighash("depositToConsensusLayer")]],
   });
 
   const allowlistDeployment = await deployments.get("Allowlist");
@@ -127,18 +122,7 @@ const func: DeployFunction = async function ({
     contract: "Firewall",
     from: deployer,
     log: true,
-    args: [
-      governor,
-      executor,
-      futureOracleAddress,
-      [
-        oracleInterface.getSighash("addMember"),
-        oracleInterface.getSighash("removeMember"),
-        oracleInterface.getSighash("setQuorum"),
-        oracleInterface.getSighash("setCLSpec"),
-        oracleInterface.getSighash("setReportBounds"),
-      ],
-    ],
+    args: [governor, executor, futureOracleAddress, [oracleInterface.getSighash("removeMember")]],
   });
 
   const oracleDeployment = await deployments.deploy("Oracle", {
@@ -169,6 +153,7 @@ const func: DeployFunction = async function ({
       futureOperatorsRegistryAddress,
       [
         operatorsRegsitryInterface.getSighash("setOperatorStatus"),
+        operatorsRegsitryInterface.getSighash("setOperatorName"),
         operatorsRegsitryInterface.getSighash("setOperatorStoppedValidatorCount"),
         operatorsRegsitryInterface.getSighash("setOperatorLimits"),
       ],

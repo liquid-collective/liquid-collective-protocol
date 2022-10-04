@@ -15,14 +15,11 @@ const func: DeployFunction = async function ({ deployments, getNamedAccounts, et
     nonce: txCount + 2, // proxy is in 3 txs
   });
 
-  const allowlistArtifact = await deployments.getArtifact("AllowlistV1");
-  const allowlistInterface = new ethers.utils.Interface(allowlistArtifact.abi);
-
   const firewallDeployment = await deployments.deploy("AllowlistFirewall", {
     contract: "Firewall",
     from: deployer,
     log: true,
-    args: [governor, executor, futureAllowlistAddress, [allowlistInterface.getSighash("allow")]],
+    args: [governor, executor, futureAllowlistAddress, []],
   });
 
   const allowlistDeployment = await deployments.deploy("Allowlist", {
