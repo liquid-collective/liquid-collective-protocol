@@ -1,0 +1,212 @@
+{
+    "name": "mainnet",
+    "chainId": "1",
+    "contracts": {
+        "Allowlist": {
+            "address": "0xebc83Bb472b2816Ec5B5de8D34F0eFc9088BB2ce",
+            "deploymentParams": {
+                "type": "proxy",
+                "methodName": "initAllowlistV1",
+                "args": {
+                    "_admin": "0xF1b958564edF538dDa1302D3D81eB58eE204B87F",
+                    "_allower": "0xF1b958564edF538dDa1302D3D81eB58eE204B87F"
+                }
+            }
+        },
+        "AllowlistFirewall": {
+            "address": "0xF1b958564edF538dDa1302D3D81eB58eE204B87F",
+            "deploymentParams": {
+                "type": "constructor",
+                "args": {
+                    "_admin": "0xE3208Aa9d1186c1D1C8A5b76E794b2B68E6cb3a5",
+                    "_executor": "0xDE55C9dc78f985fE1502484Cb98EBfAB66A56B62",
+                    "_destination": "0xebc83Bb472b2816Ec5B5de8D34F0eFc9088BB2ce",
+                    "_executorCallableSelectors": ""
+                }
+            }
+        },
+        "AllowlistV1_Implementation": "0x8892dAf1FcD24B2e8A3c6194d297Aaab04E493f2",
+        "Allowlist_Proxy": {
+            "address": "0xebc83Bb472b2816Ec5B5de8D34F0eFc9088BB2ce",
+            "deploymentParams": {
+                "type": "constructor",
+                "args": {
+                    "_logic": "0x8892dAf1FcD24B2e8A3c6194d297Aaab04E493f2",
+                    "__admin": "0x8EE3fC0Bcd7B57429203751C5bE5fdf1AB8409f3",
+                    "_data": "0x6e8cac11000000000000000000000000f1b958564edf538dda1302d3d81eb58ee204b87f000000000000000000000000f1b958564edf538dda1302d3d81eb58ee204b87f"
+                }
+            }
+        },
+        "ELFeeRecipient": {
+            "address": "0x7D16d2c4e96BCFC8f815E15b771aC847EcbDB48b",
+            "deploymentParams": {
+                "type": "proxy",
+                "methodName": "initELFeeRecipientV1",
+                "args": {
+                    "_riverAddress": "0x8c1BEd5b9a0928467c9B1341Da1D7BD5e10b6549"
+                }
+            }
+        },
+        "ELFeeRecipientV1_Implementation": "0x4ed9a72B256E3857c3BE89eC8EC91A826aD97531",
+        "ELFeeRecipient_Proxy": {
+            "address": "0x7D16d2c4e96BCFC8f815E15b771aC847EcbDB48b",
+            "deploymentParams": {
+                "type": "constructor",
+                "args": {
+                    "_logic": "0x4ed9a72B256E3857c3BE89eC8EC91A826aD97531",
+                    "__admin": "0x8EE3fC0Bcd7B57429203751C5bE5fdf1AB8409f3",
+                    "_data": "0x5404dd790000000000000000000000008c1bed5b9a0928467c9b1341da1d7bd5e10b6549"
+                }
+            }
+        },
+        "OperatorsRegistry": {
+            "address": "0x1235f1b60df026B2620e48E735C422425E06b725",
+            "deploymentParams": {
+                "type": "proxy",
+                "methodName": "initOperatorsRegistryV1",
+                "args": {
+                    "_admin": "0xAF5ae0768291C4ADC57Cb7e1482F336b4Faa4291",
+                    "_river": "0x8c1BEd5b9a0928467c9B1341Da1D7BD5e10b6549"
+                }
+            }
+        },
+        "OperatorsRegistryFirewall": {
+            "address": "0xAF5ae0768291C4ADC57Cb7e1482F336b4Faa4291",
+            "deploymentParams": {
+                "type": "constructor",
+                "args": {
+                    "_admin": "0xE3208Aa9d1186c1D1C8A5b76E794b2B68E6cb3a5",
+                    "_executor": "0xDE55C9dc78f985fE1502484Cb98EBfAB66A56B62",
+                    "_destination": "0x1235f1b60df026B2620e48E735C422425E06b725",
+                    "_executorCallableSelectors": "0x5a16f135,0x39251321,0x5f41a0c4,0x460e6efb"
+                }
+            }
+        },
+        "OperatorsRegistryV1_Implementation": "0xC92a612eC60a8E948d6677cD0E6F836145679705",
+        "OperatorsRegistry_Proxy": {
+            "address": "0x1235f1b60df026B2620e48E735C422425E06b725",
+            "deploymentParams": {
+                "type": "constructor",
+                "args": {
+                    "_logic": "0xC92a612eC60a8E948d6677cD0E6F836145679705",
+                    "__admin": "0x8EE3fC0Bcd7B57429203751C5bE5fdf1AB8409f3",
+                    "_data": "0x54001d09000000000000000000000000af5ae0768291c4adc57cb7e1482f336b4faa42910000000000000000000000008c1bed5b9a0928467c9b1341da1d7bd5e10b6549"
+                }
+            }
+        },
+        "Oracle": {
+            "address": "0x895a57eD71025D51fe4080530A3489D92E230683",
+            "deploymentParams": {
+                "type": "proxy",
+                "methodName": "initOracleV1",
+                "args": {
+                    "_river": "0x8c1BEd5b9a0928467c9B1341Da1D7BD5e10b6549",
+                    "_administratorAddress": "0x9842a4eF1968b7FCb0eB970D6B9840Cd061f2Ab7",
+                    "_epochsPerFrame": "225",
+                    "_slotsPerEpoch": "32",
+                    "_secondsPerSlot": "12",
+                    "_genesisTime": "1606824023",
+                    "_annualAprUpperBound": "1000",
+                    "_relativeLowerBound": "500"
+                }
+            }
+        },
+        "OracleFirewall": {
+            "address": "0x9842a4eF1968b7FCb0eB970D6B9840Cd061f2Ab7",
+            "deploymentParams": {
+                "type": "constructor",
+                "args": {
+                    "_admin": "0xE3208Aa9d1186c1D1C8A5b76E794b2B68E6cb3a5",
+                    "_executor": "0xDE55C9dc78f985fE1502484Cb98EBfAB66A56B62",
+                    "_destination": "0x895a57eD71025D51fe4080530A3489D92E230683",
+                    "_executorCallableSelectors": "0x16f6f03e"
+                }
+            }
+        },
+        "OracleV1_Implementation": "0x7E49eB4699313Ae05009B98672bCd7c9Ca55F2e0",
+        "Oracle_Proxy": {
+            "address": "0x895a57eD71025D51fe4080530A3489D92E230683",
+            "deploymentParams": {
+                "type": "constructor",
+                "args": {
+                    "_logic": "0x7E49eB4699313Ae05009B98672bCd7c9Ca55F2e0",
+                    "__admin": "0x8EE3fC0Bcd7B57429203751C5bE5fdf1AB8409f3",
+                    "_data": "0xbc8b8f970000000000000000000000008c1bed5b9a0928467c9b1341da1d7bd5e10b65490000000000000000000000009842a4ef1968b7fcb0eb970d6b9840cd061f2ab700000000000000000000000000000000000000000000000000000000000000e10000000000000000000000000000000000000000000000000000000000000020000000000000000000000000000000000000000000000000000000000000000c000000000000000000000000000000000000000000000000000000005fc6305700000000000000000000000000000000000000000000000000000000000003e800000000000000000000000000000000000000000000000000000000000001f4"
+                }
+            }
+        },
+        "River": {
+            "address": "0x8c1BEd5b9a0928467c9B1341Da1D7BD5e10b6549",
+            "deploymentParams": {
+                "type": "proxy",
+                "methodName": "initRiverV1",
+                "args": {
+                    "_depositContractAddress": "0x00000000219ab540356cBB839Cbe05303d7705Fa",
+                    "_elFeeRecipientAddress": "0x7D16d2c4e96BCFC8f815E15b771aC847EcbDB48b",
+                    "_withdrawalCredentials": "0x0100000000000000000000000afd81862eea47322cf85db39d3d07e8a3c25154",
+                    "_oracleAddress": "0x895a57eD71025D51fe4080530A3489D92E230683",
+                    "_systemAdministratorAddress": "0xd745A68c705F5aa75DFf528540678288ed2aD9eE",
+                    "_allowlistAddress": "0xebc83Bb472b2816Ec5B5de8D34F0eFc9088BB2ce",
+                    "_operatorRegistryAddress": "0x1235f1b60df026B2620e48E735C422425E06b725",
+                    "_collectorAddress": "0xE3208Aa9d1186c1D1C8A5b76E794b2B68E6cb3a5",
+                    "_globalFee": "1500"
+                }
+            }
+        },
+        "RiverFirewall": {
+            "address": "0xd745A68c705F5aa75DFf528540678288ed2aD9eE",
+            "deploymentParams": {
+                "type": "constructor",
+                "args": {
+                    "_admin": "0xE3208Aa9d1186c1D1C8A5b76E794b2B68E6cb3a5",
+                    "_executor": "0xDE55C9dc78f985fE1502484Cb98EBfAB66A56B62",
+                    "_destination": "0x8c1BEd5b9a0928467c9B1341Da1D7BD5e10b6549",
+                    "_executorCallableSelectors": "0x13d86aed"
+                }
+            }
+        },
+        "RiverV1_Implementation": "0x660bD93e6C149E2e0Af1963E2bDF362087792824",
+        "River_Proxy": {
+            "address": "0x8c1BEd5b9a0928467c9B1341Da1D7BD5e10b6549",
+            "deploymentParams": {
+                "type": "constructor",
+                "args": {
+                    "_logic": "0x660bD93e6C149E2e0Af1963E2bDF362087792824",
+                    "__admin": "0x8EE3fC0Bcd7B57429203751C5bE5fdf1AB8409f3",
+                    "_data": "0x281a312200000000000000000000000000000000219ab540356cbb839cbe05303d7705fa0000000000000000000000007d16d2c4e96bcfc8f815e15b771ac847ecbdb48b0100000000000000000000000afd81862eea47322cf85db39d3d07e8a3c25154000000000000000000000000895a57ed71025d51fe4080530a3489d92e230683000000000000000000000000d745a68c705f5aa75dff528540678288ed2ad9ee000000000000000000000000ebc83bb472b2816ec5b5de8d34f0efc9088bb2ce0000000000000000000000001235f1b60df026b2620e48e735c422425e06b725000000000000000000000000e3208aa9d1186c1d1c8a5b76e794b2b68e6cb3a500000000000000000000000000000000000000000000000000000000000005dc"
+                }
+            }
+        },
+        "Withdraw": {
+            "address": "0x0AFd81862eEA47322Cf85Db39D3D07e8A3c25154",
+            "deploymentParams": {
+                "type": "constructor",
+                "args": {
+                    "_logic": "0xd08B360B3663495B89BE3631da97db2ce6BaDd39",
+                    "__admin": "0x8EE3fC0Bcd7B57429203751C5bE5fdf1AB8409f3",
+                    "_data": "0x"
+                }
+            }
+        },
+        "WithdrawV1_Implementation": "0xd08B360B3663495B89BE3631da97db2ce6BaDd39",
+        "Withdraw_Proxy": {
+            "address": "0x0AFd81862eEA47322Cf85Db39D3D07e8A3c25154",
+            "deploymentParams": {
+                "type": "constructor",
+                "args": {
+                    "_logic": "0xd08B360B3663495B89BE3631da97db2ce6BaDd39",
+                    "__admin": "0x8EE3fC0Bcd7B57429203751C5bE5fdf1AB8409f3",
+                    "_data": "0x"
+                }
+            }
+        }
+    },
+    "namedAccounts": {
+        "deployer": "0xBFa8549887E6ddef8Cdf83Cda1Ad24856496fd00",
+        "depositContract": "0x00000000219ab540356cBB839Cbe05303d7705Fa",
+        "governor": "0xE3208Aa9d1186c1D1C8A5b76E794b2B68E6cb3a5",
+        "executor": "0xDE55C9dc78f985fE1502484Cb98EBfAB66A56B62",
+        "proxyAdministrator": "0x8EE3fC0Bcd7B57429203751C5bE5fdf1AB8409f3",
+        "collector": "0xE3208Aa9d1186c1D1C8A5b76E794b2B68E6cb3a5"
+    }
+}
