@@ -27,7 +27,7 @@ ORACLE_EXECUTOR=$(cast call ${ORACLE_FIREWALL} "executor()(address)")
 echo "Oracle Firewall executor is ${ORACLE_EXECUTOR}"
 
 ALLOWLIST=$(cast call ${RIVER} "getAllowlist()(address)")
-echo "River oracle is ${ALLOWLIST}"
+echo "River allowlist is ${ALLOWLIST}"
 
 ALLOWLIST_FIREWALL=$(cast call ${ALLOWLIST} "getAdmin()(address)")
 echo "Allowlist admin is ${ALLOWLIST_FIREWALL}"
@@ -41,7 +41,7 @@ echo "Allowlist Firewall executor is ${ALLOWLIST_EXECUTOR}"
 echo "Allowlist allower is $(cast call ${ALLOWLIST} "getAllower()(address)")"
 
 OPERATORS_REGISTRY=$(cast call ${RIVER} "getOperatorsRegistry()(address)")
-echo "River oracle is ${OPERATORS_REGISTRY}"
+echo "River operators registry is ${OPERATORS_REGISTRY}"
 
 OPERATORS_REGISTRY_FIREWALL=$(cast call ${OPERATORS_REGISTRY} "getAdmin()(address)")
 echo "OperatorsRegistry admin is ${OPERATORS_REGISTRY_FIREWALL}"
@@ -57,10 +57,6 @@ echo "Operators Registry's River is $(cast call ${OPERATORS_REGISTRY} "getRiver(
 echo "River el fee recipient is $(cast call ${RIVER} "getELFeeRecipient()(address)")"
 
 echo "River withdrawal credentials are $(cast call ${RIVER} "getWithdrawalCredentials()(bytes32)")"
-
-echo "Allowlist Executor permission to call allow should be false = $(cast call ${ALLOWLIST_FIREWALL} "executorCanCall(bytes4)(bool)" $(cast keccak "allow()" | head -c 10))"
-
-echo "River Executor permission to call depositToConsensusLayer(uint256) should be true = $(cast call ${RIVER_FIREWALL} "executorCanCall(bytes4)(bool)" $(cast keccak "depositToConsensusLayer(uint256)" | head -c 10))"
 
 echo "Operators Registry Executor permission to call addOperator = $(cast call ${OPERATORS_REGISTRY_FIREWALL} "executorCanCall(bytes4)(bool)" $(cast keccak "addOperator(string,address)" | head -c 10))"
 echo "Operators Registry Executor permission to call setOperatorAddress = $(cast call ${OPERATORS_REGISTRY_FIREWALL} "executorCanCall(bytes4)(bool)" $(cast keccak "setOperatorAddress(uint256,address)" | head -c 10))"
