@@ -180,6 +180,6 @@ The operator is unauthorized for the caller
 
 | Name | Type | Description |
 |---|---|---|
-| caller | address | Addres performing the call |
+| caller | address | Address performing the call |
 
 

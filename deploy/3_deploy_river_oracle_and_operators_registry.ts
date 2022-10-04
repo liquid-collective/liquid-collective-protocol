@@ -1,17 +1,7 @@
 import { getContractAddress } from "ethers/lib/utils";
 import { DeployFunction } from "hardhat-deploy/dist/types";
 import { HardhatRuntimeEnvironment } from "hardhat/types";
-import { ELFeeRecipientV1 } from "../typechain/ELFeeRecipientV1";
-
-const logStep = () => {
-  console.log(`=== ${__filename} START`);
-  console.log();
-};
-
-const logStepEnd = () => {
-  console.log();
-  console.log(`=== ${__filename} END`);
-};
+import { isDeployed, logStep, logStepEnd } from "../ts-utils/helpers/index";
 
 const func: DeployFunction = async function ({
   deployments,
@@ -19,8 +9,6 @@ const func: DeployFunction = async function ({
   ethers,
   network,
 }: HardhatRuntimeEnvironment) {
-  logStep();
-
   let genesisTimestamp = 0;
   switch (network.name) {
     case "goerli":
@@ -34,11 +22,24 @@ const func: DeployFunction = async function ({
     }
   }
 
-  const { deployer, proxyAdministrator, systemAdministrator, collector } = await getNamedAccounts();
+  let grossFee = 0;
+  switch (network.name) {
+    case "goerli":
+    case "mockedGoerli": {
+      grossFee = 1250;
+      break;
+    }
+    case "mainnet": {
+      grossFee = 1250;
+      break;
+    }
+  }
+
+  const { deployer, governor, executor, proxyAdministrator, collector } = await getNamedAccounts();
 
   let depositContract = (await getNamedAccounts()).depositContract;
 
-  const withdrawDeployment = await deployments.get("WithdrawV1");
+  const withdrawDeployment = await deployments.get("Withdraw");
   const WithdrawContract = await ethers.getContractAt("WithdrawV1", withdrawDeployment.address);
   const withdrawalCredentials = await WithdrawContract.getCredentials();
 
@@ -80,25 +81,28 @@ const func: DeployFunction = async function ({
   const riverArtifact = await deployments.getArtifact("RiverV1");
   const riverInterface = new ethers.utils.Interface(riverArtifact.abi);
 
-  const riverFirewallDeployment = await deployments.deploy("Firewall", {
+  const riverFirewallDeployment = await deployments.deploy("RiverFirewall", {
+    contract: "Firewall",
     from: deployer,
     log: true,
     args: [
-      systemAdministrator,
-      systemAdministrator,
+      governor,
+      executor,
       futureRiverAddress,
       [riverInterface.getSighash("depositToConsensusLayer"), riverInterface.getSighash("setOracle")],
     ],
   });
 
-  const allowlistDeployment = await deployments.get("AllowlistV1");
+  const allowlistDeployment = await deployments.get("Allowlist");
 
-  const riverDeployment = await deployments.deploy("RiverV1", {
+  const riverDeployment = await deployments.deploy("River", {
+    contract: "RiverV1",
     from: deployer,
     log: true,
     proxy: {
       owner: proxyAdministrator,
       proxyContract: "TUPProxy",
+      implementationName: "RiverV1_Implementation",
       execute: {
         methodName: "initRiverV1",
         args: [
@@ -110,7 +114,7 @@ const func: DeployFunction = async function ({
           allowlistDeployment.address,
           futureOperatorsRegistryAddress,
           collector,
-          500,
+          grossFee,
         ],
       },
     },
@@ -119,12 +123,13 @@ const func: DeployFunction = async function ({
   const oracleArtifact = await deployments.getArtifact("OracleV1");
   const oracleInterface = new ethers.utils.Interface(oracleArtifact.abi);
 
-  const oracleFirewallDeployment = await deployments.deploy("Firewall", {
+  const oracleFirewallDeployment = await deployments.deploy("OracleFirewall", {
+    contract: "Firewall",
     from: deployer,
     log: true,
     args: [
-      systemAdministrator,
-      systemAdministrator,
+      governor,
+      executor,
       futureOracleAddress,
       [
         oracleInterface.getSighash("addMember"),
@@ -136,12 +141,14 @@ const func: DeployFunction = async function ({
     ],
   });
 
-  const oracleDeployment = await deployments.deploy("OracleV1", {
+  const oracleDeployment = await deployments.deploy("Oracle", {
+    contract: "OracleV1",
     from: deployer,
     log: true,
     proxy: {
       owner: proxyAdministrator,
       proxyContract: "TUPProxy",
+      implementationName: "OracleV1_Implementation",
       execute: {
         methodName: "initOracleV1",
         args: [riverDeployment.address, oracleFirewallDeployment.address, 225, 32, 12, genesisTimestamp, 1000, 500],
@@ -152,12 +159,13 @@ const func: DeployFunction = async function ({
   const operatorsRegistryArtifact = await deployments.getArtifact("OperatorsRegistryV1");
   const operatorsRegsitryInterface = new ethers.utils.Interface(operatorsRegistryArtifact.abi);
 
-  const operatorsRegistryFirewallDeployment = await deployments.deploy("Firewall", {
+  const operatorsRegistryFirewallDeployment = await deployments.deploy("OperatorsRegistryFirewall", {
+    contract: "Firewall",
     from: deployer,
     log: true,
     args: [
-      systemAdministrator,
-      systemAdministrator,
+      governor,
+      executor,
       futureOperatorsRegistryAddress,
       [
         operatorsRegsitryInterface.getSighash("setOperatorStatus"),
@@ -167,12 +175,14 @@ const func: DeployFunction = async function ({
     ],
   });
 
-  const operatorsRegistryDeployment = await deployments.deploy("OperatorsRegistryV1", {
+  const operatorsRegistryDeployment = await deployments.deploy("OperatorsRegistry", {
+    contract: "OperatorsRegistryV1",
     from: deployer,
     log: true,
     proxy: {
       owner: proxyAdministrator,
       proxyContract: "TUPProxy",
+      implementationName: "OperatorsRegistryV1_Implementation",
       execute: {
         methodName: "initOperatorsRegistryV1",
         args: [operatorsRegistryFirewallDeployment.address, futureRiverAddress],
@@ -180,10 +190,12 @@ const func: DeployFunction = async function ({
     },
   });
 
-  const elFeeRecipientDeployment = await deployments.deploy("ELFeeRecipientV1", {
+  const elFeeRecipientDeployment = await deployments.deploy("ELFeeRecipient", {
+    contract: "ELFeeRecipientV1",
     from: deployer,
     log: true,
     proxy: {
+      implementationName: "ELFeeRecipientV1_Implementation",
       owner: proxyAdministrator,
       proxyContract: "TUPProxy",
       execute: {
@@ -225,6 +237,21 @@ const func: DeployFunction = async function ({
     throw new Error(`Invalid river address provided by Oracle`);
   }
 
-  logStepEnd();
+  logStepEnd(__filename);
 };
+
+func.skip = async function ({ deployments, getNamedAccounts }: HardhatRuntimeEnvironment): Promise<boolean> {
+  logStep(__filename);
+  const shouldSkip =
+    (await isDeployed("River", deployments, __filename)) &&
+    (await isDeployed("Oracle", deployments, __filename)) &&
+    (await isDeployed("OperatorsRegistry", deployments, __filename)) &&
+    (await isDeployed("ELFeeRecipient", deployments, __filename));
+  if (shouldSkip) {
+    console.log("Skipped");
+    logStepEnd(__filename);
+  }
+  return shouldSkip;
+};
+
 export default func;

@@ -1,30 +1,32 @@
-import { DeployFunction } from "hardhat-deploy/dist/types";
 import { HardhatRuntimeEnvironment } from "hardhat/types";
-
-const logStep = () => {
-  console.log(`=== ${__filename} START`);
-  console.log();
-};
-
-const logStepEnd = () => {
-  console.log();
-  console.log(`=== ${__filename} END`);
-};
+import { DeployFunction } from "hardhat-deploy/dist/types";
+import { isDeployed, logStep, logStepEnd } from '../ts-utils/helpers/index';
 
 const func: DeployFunction = async function ({ deployments, getNamedAccounts }: HardhatRuntimeEnvironment) {
-  logStep();
-
   const { deployer, proxyAdministrator } = await getNamedAccounts();
 
-  await deployments.deploy("WithdrawV1", {
+  await deployments.deploy("Withdraw", {
+    contract: "WithdrawV1",
     from: deployer,
     log: true,
     proxy: {
       owner: proxyAdministrator,
       proxyContract: "TUPProxy",
+      implementationName: "WithdrawV1_Implementation",
     },
   });
 
-  logStepEnd();
+  logStepEnd(__filename);
 };
+
+func.skip = async function ({ deployments, getNamedAccounts }: HardhatRuntimeEnvironment): Promise<boolean> {
+  logStep(__filename);
+  const shouldSkip = await isDeployed("Withdraw", deployments, __filename);
+  if (shouldSkip) {
+    console.log("Skipped");
+    logStepEnd(__filename);
+  }
+  return shouldSkip;
+};
+
 export default func;

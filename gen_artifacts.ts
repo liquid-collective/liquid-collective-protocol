@@ -1,8 +1,78 @@
 import { existsSync, mkdirSync, writeFileSync } from "fs";
 import hre from "hardhat";
 import { join } from "path";
+import { ethers } from "ethers";
 
-const firewalledContract = ["RiverV1", "AllowlistV1", "OracleV1", "OperatorsRegistryV1"];
+const firewalledContract = ["River", "Allowlist", "Oracle", "OperatorsRegistry"];
+
+function getConstructorAbi(abi: any[]): any {
+  for (const elem of abi) {
+    if (elem.type === "constructor") {
+      return elem;
+    }
+  }
+  return null;
+}
+
+function getConstructorTypes(inputs: any[]): string[] {
+  let res: string[] = [];
+  for (const inp of inputs) {
+    res = [...res, inp.type];
+  }
+  return res;
+}
+
+async function decodeConstructorArguments(
+  contractName: string,
+  artifactContent: any,
+  networkName: string
+): Promise<any> {
+  const completeArtifactPath = join(__dirname, "deployments", networkName, `${contractName}.json`);
+  if (existsSync(completeArtifactPath)) {
+    const completeArtifact = require(completeArtifactPath);
+    if (completeArtifact.execute !== undefined) {
+      const intf = new ethers.utils.Interface(completeArtifact.abi);
+      const encoded = intf.encodeFunctionData(completeArtifact.execute.methodName, completeArtifact.execute.args);
+      const decoded = { ...intf.decodeFunctionData(completeArtifact.execute.methodName, encoded) };
+
+      const keys = Object.keys(decoded);
+      for (const key of keys) {
+        if (!isNaN(parseInt(key, 10))) {
+          delete decoded[key];
+        } else {
+          decoded[key] = decoded[key].toString();
+        }
+      }
+      return {
+        type: "proxy",
+        methodName: completeArtifact.execute.methodName,
+        args: decoded,
+      };
+    } else if (completeArtifact.args !== undefined) {
+      const constructorAbi = getConstructorAbi(completeArtifact.abi);
+      if (constructorAbi === null) {
+        return null;
+      }
+      const constructorTypes = getConstructorTypes(constructorAbi.inputs);
+      const encoded = ethers.utils.defaultAbiCoder.encode(constructorTypes, completeArtifact.args);
+      const decoded = { ...ethers.utils.defaultAbiCoder.decode(constructorAbi.inputs, encoded) };
+
+      const keys = Object.keys(decoded);
+      for (const key of keys) {
+        if (!isNaN(parseInt(key, 10))) {
+          delete decoded[key];
+        } else {
+          decoded[key] = decoded[key].toString();
+        }
+      }
+      return {
+        type: "constructor",
+        args: decoded,
+      };
+    }
+  }
+  return null;
+}
 
 async function main() {
   const network = hre.network;
@@ -21,10 +91,22 @@ async function main() {
     if (firewalledContract.includes(contractName)) {
       contractsAbis[contractName] = artifactContent.contracts[contractName].abi;
     }
-    if (contractName === "Firewall") {
+    if (contractName === "RiverFirewall") {
       firewallAbi = artifactContent.contracts[contractName].abi;
     }
-    artifactContent.contracts[contractName] = artifactContent.contracts[contractName].address;
+    const constructorArgs = await decodeConstructorArguments(
+      contractName,
+      artifactContent.contracts[contractName],
+      network.name
+    );
+    if (constructorArgs !== null) {
+      artifactContent.contracts[contractName] = {
+        address: artifactContent.contracts[contractName].address,
+        deploymentParams: constructorArgs,
+      };
+    } else {
+      artifactContent.contracts[contractName] = artifactContent.contracts[contractName].address;
+    }
   }
   const firewalledContractNames = Object.keys(contractsAbis);
   for (const firewalled of firewalledContractNames) {

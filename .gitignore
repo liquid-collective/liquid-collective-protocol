@@ -15,4 +15,7 @@ cache
 forge-artifacts
 out
 
+deployment.local.json
+deployments/local
+
 .DS_Store

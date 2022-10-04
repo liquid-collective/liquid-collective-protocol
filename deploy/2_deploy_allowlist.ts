@@ -1,21 +1,10 @@
 import { DeployFunction } from "hardhat-deploy/dist/types";
 import { HardhatRuntimeEnvironment } from "hardhat/types";
 import { getContractAddress } from "ethers/lib/utils";
-
-const logStep = () => {
-  console.log(`=== ${__filename} START`);
-  console.log();
-};
-
-const logStepEnd = () => {
-  console.log();
-  console.log(`=== ${__filename} END`);
-};
+import { isDeployed, logStep, logStepEnd } from '../ts-utils/helpers/index';
 
 const func: DeployFunction = async function ({ deployments, getNamedAccounts, ethers }: HardhatRuntimeEnvironment) {
-  logStep();
-
-  const { deployer, proxyAdministrator, systemAdministrator } = await getNamedAccounts();
+  const { deployer, proxyAdministrator, governor, executor } = await getNamedAccounts();
 
   const signer = await ethers.getSigner(deployer);
 
@@ -29,18 +18,21 @@ const func: DeployFunction = async function ({ deployments, getNamedAccounts, et
   const allowlistArtifact = await deployments.getArtifact("AllowlistV1");
   const allowlistInterface = new ethers.utils.Interface(allowlistArtifact.abi);
 
-  const firewallDeployment = await deployments.deploy("Firewall", {
+  const firewallDeployment = await deployments.deploy("AllowlistFirewall", {
+    contract: "Firewall",
     from: deployer,
     log: true,
-    args: [systemAdministrator, systemAdministrator, futureAllowlistAddress, [allowlistInterface.getSighash("allow")]],
+    args: [governor, executor, futureAllowlistAddress, [allowlistInterface.getSighash("allow")]],
   });
 
-  const allowlistDeployment = await deployments.deploy("AllowlistV1", {
+  const allowlistDeployment = await deployments.deploy("Allowlist", {
+    contract: "AllowlistV1",
     from: deployer,
     log: true,
     proxy: {
       owner: proxyAdministrator,
       proxyContract: "TUPProxy",
+      implementationName: "AllowlistV1_Implementation",
       execute: {
         methodName: "initAllowlistV1",
         args: [firewallDeployment.address, firewallDeployment.address],
@@ -52,6 +44,17 @@ const func: DeployFunction = async function ({ deployments, getNamedAccounts, et
     throw new Error(`Invalid future address computation ${futureAllowlistAddress} != ${allowlistDeployment.address}`);
   }
 
-  logStepEnd();
+  logStepEnd(__filename);
 };
+
+func.skip = async function ({ deployments, getNamedAccounts }: HardhatRuntimeEnvironment): Promise<boolean> {
+  logStep(__filename);
+  const shouldSkip = await isDeployed("Allowlist", deployments, __filename);
+  if (shouldSkip) {
+    console.log("Skipped");
+    logStepEnd(__filename);
+  }
+  return shouldSkip;
+};
+
 export default func;

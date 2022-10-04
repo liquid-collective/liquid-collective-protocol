@@ -1,15 +1,6 @@
 import { DeployFunction } from "hardhat-deploy/dist/types";
 import { HardhatRuntimeEnvironment } from "hardhat/types";
-
-const logStep = () => {
-  console.log(`=== ${__filename} START`);
-  console.log();
-};
-
-const logStepEnd = () => {
-  console.log();
-  console.log(`=== ${__filename} END`);
-};
+import { isDeployed, logStep, logStepEnd } from '../ts-utils/helpers/index';
 
 const func: DeployFunction = async function ({
   deployments,
@@ -17,16 +8,16 @@ const func: DeployFunction = async function ({
   ethers,
   network,
 }: HardhatRuntimeEnvironment) {
-  logStep();
-
   const { deployer, proxyAdministrator } = await getNamedAccounts();
 
-  const riverDeployment = await deployments.get("RiverV1");
+  const riverDeployment = await deployments.get("River");
 
-  await deployments.deploy("WLSETHV1", {
+  await deployments.deploy("WLSETH", {
+    contract: "WLSETHV1",
     from: deployer,
     log: true,
     proxy: {
+      implementationName: "WLSETHV1_Implementation",
       owner: proxyAdministrator,
       proxyContract: "TUPProxy",
       execute: {
@@ -36,6 +27,17 @@ const func: DeployFunction = async function ({
     },
   });
 
-  logStepEnd();
+  logStepEnd(__filename);
 };
+
+func.skip = async function ({ deployments, getNamedAccounts }: HardhatRuntimeEnvironment): Promise<boolean> {
+  logStep(__filename);
+  const shouldSkip = await isDeployed("WLSETH", deployments, __filename);
+  if (shouldSkip) {
+    console.log("Skipped");
+    logStepEnd(__filename);
+  }
+  return shouldSkip;
+};
+
 export default func;
