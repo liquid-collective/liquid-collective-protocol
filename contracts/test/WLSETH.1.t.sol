@@ -412,6 +412,29 @@ contract WLSETHV1Tests is Test {
         }
     }
 
+    function testApprove(uint256 _fromSalt, uint256 _approvedSalt, uint32 _sum) external {
+        address _from = uf._new(_fromSalt);
+        address _approved = uf._new(_approvedSalt);
+        if (_sum > 0) {
+            _mint(_from, _sum);
+            vm.startPrank(_from);
+            wlseth.approve(_approved, 100 ether);
+            vm.stopPrank();
+            assert(wlseth.allowance(_from, _approved) == 100 ether);
+        }
+    }
+
+    function testApproveZero(uint256 _fromSalt, uint32 _sum) external {
+        address _from = uf._new(_fromSalt);
+        if (_sum > 0) {
+            _mint(_from, _sum);
+            vm.startPrank(_from);
+            vm.expectRevert(abi.encodeWithSignature("InvalidZeroAddress()"));
+            wlseth.approve(address(0), 100 ether);
+            vm.stopPrank();
+        }
+    }
+
     function testTransferFrom(uint256 _fromSalt, uint256 _approvedSalt, uint256 _recipientSalt, uint32 _sum) external {
         address _from = uf._new(_fromSalt);
         address _approved = uf._new(_approvedSalt);

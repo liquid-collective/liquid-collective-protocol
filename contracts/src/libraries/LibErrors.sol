@@ -5,7 +5,7 @@ pragma solidity 0.8.10;
 /// @notice Library of common errors
 library LibErrors {
     /// @notice The operator is unauthorized for the caller
-    /// @param caller Addres performing the call
+    /// @param caller Address performing the call
     error Unauthorized(address caller);
 
     /// @notice The call was invalid

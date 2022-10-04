@@ -139,6 +139,7 @@ contract OracleV1Tests is Test {
         address newMember = uf._new(newMemberSalt);
         vm.startPrank(admin);
         assert(oracle.isMember(newMember) == false);
+        assert(oracle.getQuorum() == 0);
         vm.expectEmit(true, true, true, true);
         emit SetQuorum(1);
         oracle.addMember(newMember, 1);
@@ -185,6 +186,8 @@ contract OracleV1Tests is Test {
     }
 
     function testRemoveMemberAfterReport(uint256 newMemberSalt, uint256 otherNewMemberSalt) public {
+        RiverMock(address(oracleInput)).sudoSetTotalShares(32 ether);
+        RiverMock(address(oracleInput)).sudoSetTotalSupply(32 ether);
         address newMember = uf._new(newMemberSalt);
         address otherNewMember = uf._new(otherNewMemberSalt);
         assert(oracle.isMember(newMember) == false);
@@ -448,6 +451,73 @@ contract OracleV1Tests is Test {
                 abi.encodeWithSignature("AlreadyReported(uint256,address)", frameFirstEpochId, oracleMember)
             );
             oracle.reportConsensusLayerData(frameFirstEpochId, 0, 0);
+            vm.stopPrank();
+        }
+    }
+
+    function testAddMemberClearsReports(
+        uint256 oracleMemberOneSalt,
+        uint256 oracleMemberTwoSalt,
+        uint256 oracleMemberThreeSalt,
+        uint64 timeFromGenesis
+    ) public {
+        RiverMock(address(oracleInput)).sudoSetTotalShares(1e9);
+        RiverMock(address(oracleInput)).sudoSetTotalSupply(1e9);
+
+        address oracleMemberOne = uf._new(oracleMemberOneSalt);
+        address oracleMemberTwo = uf._new(oracleMemberTwoSalt);
+        address oracleMemberThree = uf._new(oracleMemberThreeSalt);
+        vm.warp(uint256(GENESIS_TIME) * 2 + uint256(timeFromGenesis));
+        vm.startPrank(admin);
+        oracle.addMember(oracleMemberOne, 1);
+        oracle.addMember(oracleMemberTwo, 2);
+        vm.stopPrank();
+
+        uint256 epochId = oracle.getCurrentEpochId();
+
+        uint256 frameFirstEpochId = oracle.getFrameFirstEpochId(epochId);
+        if (frameFirstEpochId > 0) {
+            vm.startPrank(oracleMemberOne);
+            oracle.reportConsensusLayerData(frameFirstEpochId, 1, 1);
+            vm.stopPrank();
+            vm.startPrank(admin);
+            assert(oracle.getGlobalReportStatus() != 0);
+            oracle.addMember(oracleMemberThree, 3);
+            assert(oracle.getGlobalReportStatus() == 0);
+            vm.stopPrank();
+        }
+    }
+
+    function testRemoveMemberClearsReports(
+        uint256 oracleMemberOneSalt,
+        uint256 oracleMemberTwoSalt,
+        uint256 oracleMemberThreeSalt,
+        uint64 timeFromGenesis
+    ) public {
+        RiverMock(address(oracleInput)).sudoSetTotalShares(1e9);
+        RiverMock(address(oracleInput)).sudoSetTotalSupply(1e9);
+
+        address oracleMemberOne = uf._new(oracleMemberOneSalt);
+        address oracleMemberTwo = uf._new(oracleMemberTwoSalt);
+        address oracleMemberThree = uf._new(oracleMemberThreeSalt);
+        vm.warp(uint256(GENESIS_TIME) * 2 + uint256(timeFromGenesis));
+        vm.startPrank(admin);
+        oracle.addMember(oracleMemberOne, 1);
+        oracle.addMember(oracleMemberTwo, 2);
+        oracle.addMember(oracleMemberThree, 3);
+        vm.stopPrank();
+
+        uint256 epochId = oracle.getCurrentEpochId();
+
+        uint256 frameFirstEpochId = oracle.getFrameFirstEpochId(epochId);
+        if (frameFirstEpochId > 0) {
+            vm.startPrank(oracleMemberOne);
+            oracle.reportConsensusLayerData(frameFirstEpochId, 1, 1);
+            vm.stopPrank();
+            vm.startPrank(admin);
+            assert(oracle.getGlobalReportStatus() != 0);
+            oracle.removeMember(oracleMemberThree, 2);
+            assert(oracle.getGlobalReportStatus() == 0);
             vm.stopPrank();
         }
     }
