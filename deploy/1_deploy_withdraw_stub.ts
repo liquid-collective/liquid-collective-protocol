@@ -19,7 +19,7 @@ const func: DeployFunction = async function ({ deployments, getNamedAccounts }: 
   logStepEnd(__filename);
 };
 
-func.skip = async function ({ deployments, getNamedAccounts }: HardhatRuntimeEnvironment): Promise<boolean> {
+func.skip = async function ({ deployments }: HardhatRuntimeEnvironment): Promise<boolean> {
   logStep(__filename);
   const shouldSkip = await isDeployed("Withdraw", deployments, __filename);
   if (shouldSkip) {

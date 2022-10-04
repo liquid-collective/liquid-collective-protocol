@@ -44,7 +44,7 @@ const func: DeployFunction = async function ({ deployments, getNamedAccounts, et
   logStepEnd(__filename);
 };
 
-func.skip = async function ({ deployments, getNamedAccounts }: HardhatRuntimeEnvironment): Promise<boolean> {
+func.skip = async function ({ deployments }: HardhatRuntimeEnvironment): Promise<boolean> {
   logStep(__filename);
   const shouldSkip = await isDeployed("Allowlist", deployments, __filename);
   if (shouldSkip) {
