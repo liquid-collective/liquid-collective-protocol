@@ -29,7 +29,7 @@ function addMember(address _newOracleMember, uint256 _newQuorum) external nonpay
 
 Adds new address as oracle member, giving the ability to push cl reports.
 
-*Only callable by the adminstrator*
+*Only callable by the adminstratorModifying the quorum clears all the reporting data*
 
 #### Parameters
 
@@ -415,7 +415,7 @@ function removeMember(address _oracleMember, uint256 _newQuorum) external nonpay
 
 Removes an address from the oracle members.
 
-*Only callable by the adminstrator*
+*Only callable by the adminstratorModifying the quorum clears all the reporting dataRemaining members that have already voted should vote again for the same frame.*
 
 #### Parameters
 
@@ -469,7 +469,7 @@ function setMember(address _oracleMember, address _newAddress) external nonpayab
 
 Changes the address of an oracle member
 
-*Only callable by the adminitratorCannot use an address already in use*
+*Only callable by the adminitratorCannot use an address already in useThis call will clear all the reporting data*
 
 #### Parameters
 
@@ -486,7 +486,7 @@ function setQuorum(uint256 _newQuorum) external nonpayable
 
 Edits the quorum required to forward cl data to River
 
-*Only callable by the adminstrator*
+*Modifying the quorum clears all the reporting data*
 
 #### Parameters
 
@@ -908,6 +908,6 @@ The operator is unauthorized for the caller
 
 | Name | Type | Description |
 |---|---|---|
-| caller | address | Addres performing the call |
+| caller | address | Address performing the call |
 
 

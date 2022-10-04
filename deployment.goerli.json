@@ -82,6 +82,7 @@
                 }
             }
         },
+        "OperatorsRegistryV1_1": "0x3511C69084dCb4EC806E538CA0676054820FfF7f",
         "OperatorsRegistryV1_Implementation": "0x5355b6Cadb4F18e2C3601CbAa758F94d40aEFAA6",
         "OperatorsRegistry_Proxy": {
             "address": "0xf06BEd337f29CB856b072dc8d57A2c22FB2eC2CB",
@@ -123,6 +124,7 @@
                 }
             }
         },
+        "OracleV1_1": "0x2Ab096CAa7d27385771fDc4F8d2ff144B423d17C",
         "OracleV1_Implementation": "0xc5c5B0Ce42F9CCB4F3Eb6c9F95A681B419e23802",
         "Oracle_Proxy": {
             "address": "0x088050c58ae0F447d52674Ac58e20DD2FB68E2da",
@@ -165,6 +167,7 @@
                 }
             }
         },
+        "RiverV1_1": "0x4a32c40b843608C9e8124537c7B8083f204aD382",
         "RiverV1_Implementation": "0x31a2297fc5715b59EC09941c2beca511a3fCB470",
         "River_Proxy": {
             "address": "0x3ecCAdA3e11c1Cc3e9B5a53176A67cc3ABDD3E46",
@@ -187,6 +190,7 @@
                 }
             }
         },
+        "WLSETHV1_1": "0x9E6Dd63444Af1568261Bea7bB22aB975fA5a5B41",
         "WLSETHV1_Implementation": "0x144F9bD8eA21Ca0A3D70FE7aEdf59674CF389d1E",
         "WLSETH_Proxy": {
             "address": "0x39Dca666D863f9a5Fcd0f54aEdC38583aB1478bc",
@@ -224,7 +228,7 @@
         }
     },
     "namedAccounts": {
-        "deployer": "0x959FD7Ef9089B7142B6B908Dc3A8af7Aa8ff0FA1",
+        "deployer": "0x341C40B94bF2afBFa42573cB78f16Ee15a056238",
         "depositContract": "0xff50ed3d0ec03aC01D4C79aAd74928BFF48a7b2b",
         "governor": "0x892D14B50Cc7a8278fa254A63B6c5b8B1a110ff1",
         "executor": "0xc025F2b41820c80F32AF27EFe95cf379C4A959F8",

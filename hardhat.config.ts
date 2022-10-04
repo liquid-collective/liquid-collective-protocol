@@ -36,9 +36,7 @@ const config: HardhatUserConfig = {
     },
     goerli: {
       url: process.env.RPC_URL || "",
-      accounts: {
-        mnemonic: process.env.MNEMONIC || "",
-      },
+      accounts: [process.env.PRIVATE_KEY || "0x0000000000000000000000000000000000000000000000000000000000000000"],
       gas: 5000000,
     },
     hardhat: {

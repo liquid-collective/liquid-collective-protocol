@@ -91,6 +91,7 @@
                 }
             }
         },
+        "OperatorsRegistryV1_1": "0x9F414a78461105218AfcFEE79cAC07E81aB46bAC",
         "OperatorsRegistryV1_Implementation": "0x3b8CA6c355CE3ACBd2b1878ba4390ae369Ea2aa1",
         "OperatorsRegistry_Proxy": {
             "address": "0xcd5820D0C8e4B65dE50eEB4d823a6a26437ABb63",
@@ -132,6 +133,7 @@
                 }
             }
         },
+        "OracleV1_1": "0xbcAa891dfC72990Ac6bcE050aa024ccbbC442996",
         "OracleV1_Implementation": "0x06Ddc348161c774ADF8073337c935F69C50871Ad",
         "Oracle_Proxy": {
             "address": "0x0e137678B2e6B141895e9C84B3468B38eB956A83",
@@ -174,6 +176,7 @@
                 }
             }
         },
+        "RiverV1_1": "0x307F6b5c9A260452C4F0d65EC69039CB8fD97CdD",
         "RiverV1_Implementation": "0x2BAFfcaE8D5e178EeFE17aaB9a3EA09f55Eb0568",
         "River_Proxy": {
             "address": "0xD5a7087835F63D3C28C11CE29de094cBc20c67e1",
@@ -196,6 +199,7 @@
                 }
             }
         },
+        "WLSETHV1_1": "0x800030b0C11E0A0E88729BBE1f1fB5E77a57B08f",
         "WLSETHV1_Implementation": "0xc22DE60c1F6668A73B6076aCDa69EddeBaCe3aEe",
         "WLSETH_Proxy": {
             "address": "0xcA0F4b8A5d692C48765574645636e469F06c6070",

@@ -396,6 +396,17 @@ Balance too low to perform operation
 
 
 
+### InvalidZeroAddress
+
+```solidity
+error InvalidZeroAddress()
+```
+
+The address is zero
+
+
+
+
 ### NullTransfer
 
 ```solidity
