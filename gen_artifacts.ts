@@ -3,7 +3,16 @@ import hre from "hardhat";
 import { join } from "path";
 import { ethers } from "ethers";
 
-const firewalledContract = ["River", "Allowlist", "Oracle", "OperatorsRegistry"];
+const firewalledContract = [
+  "River",
+  "Allowlist",
+  "Oracle",
+  "OperatorsRegistry",
+  "Allowlist_Proxy",
+  "OperatorsRegistry_Proxy",
+  "Oracle_Proxy",
+  "River_Proxy",
+];
 
 function getConstructorAbi(abi: any[]): any {
   for (const elem of abi) {
