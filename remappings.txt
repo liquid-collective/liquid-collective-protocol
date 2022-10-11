@@ -1,2 +1,8 @@
+@ensdomains/=node_modules/@ensdomains/
+ds-test/=lib/solmate/lib/ds-test/src/
+eth-gas-reporter/=node_modules/eth-gas-reporter/
 forge-std/=lib/forge-std/src/
+hardhat-deploy/=node_modules/hardhat-deploy/
+hardhat/=node_modules/hardhat/
 openzeppelin-contracts/=lib/openzeppelin-contracts/
+solmate/=lib/solmate/src/
