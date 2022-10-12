@@ -6,7 +6,7 @@ import "../src/TLC.1.sol";
 import "forge-std/Test.sol";
 
 contract TLCTestTests is Test {
-    TLC internal tlc;
+    TLCV1 internal tlc;
 
     address internal escrowImplem;
     address internal initAccount;
@@ -20,7 +20,7 @@ contract TLCTestTests is Test {
         bob = makeAddr("bob");
         joe = makeAddr("joe");
 
-        tlc = new TLC();
+        tlc = new TLCV1();
         tlc.initTLCV1(initAccount, escrowImplem);
     }
 
