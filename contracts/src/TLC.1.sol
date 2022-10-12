@@ -64,7 +64,7 @@ contract TLCV1 is IVestingSchedulesV1, ERC20VotesUpgradeable {
         returns  (uint256)
     {           
         if (balanceOf(msg.sender) < _amount) {
-            revert UnsufficientVestingScheduleCreatorBalance()
+            revert UnsufficientVestingScheduleCreatorBalance();
         }
 
         if (_beneficiary == address(0)) {

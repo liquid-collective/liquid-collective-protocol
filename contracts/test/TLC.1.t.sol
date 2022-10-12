@@ -2,7 +2,7 @@
 
 pragma solidity 0.8.10;
 
-import "../src/TLC.sol";
+import "../src/TLC.1.sol";
 import "forge-std/Test.sol";
 
 contract TLCTestTests is Test {
