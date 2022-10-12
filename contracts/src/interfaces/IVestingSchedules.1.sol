@@ -31,6 +31,9 @@ interface IVestingSchedulesV1 {
     /// @param newDelegatee new delegatee
     event DelegatedVestingEscrow(uint256 index, address oldDelegatee, address newDelegatee);
 
+    /// @notice Vesting schedule creator has unsufficient balance to create vesting schedule
+    error UnsufficientVestingScheduleCreatorBalance();
+
     /// @notice Invalid parameter for a vesting schedule
     error InvalidVestingScheduleParameter(string msg);
 

@@ -62,10 +62,10 @@ contract TLCV1 is IVestingSchedulesV1, ERC20VotesUpgradeable {
     )
         internal
         returns  (uint256)
-    {   
-        LibSanitize._notZeroAddress(_beneficiary);
-        address creator = _msgSender();
-        require(balanceOf(creator) >= _amount, "TLC: unsufficient tokens to create vesting schedule");
+    {           
+        if (balanceOf(msg.sender) < _amount) {
+            revert UnsufficientVestingScheduleCreatorBalance()
+        }
 
         if (_beneficiary == address(0)) {
             revert InvalidVestingScheduleParameter("Vesting schedule beneficiary must be non zero address");
