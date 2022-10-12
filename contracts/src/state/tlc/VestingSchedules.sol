@@ -9,7 +9,7 @@ library VestingSchedules {
     /// @notice Storage slot of the Vesting Schedules
     bytes32 internal constant VESTING_SCHEDULES_SLOT = bytes32(uint256(keccak256("tlc.state.schedules")) - 1);
 
-    struct VestingSchedule{
+    struct VestingSchedule {
         // start time of the vesting period
         uint256 start;
         // cliff period in seconds

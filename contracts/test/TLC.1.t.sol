@@ -147,18 +147,13 @@ contract TLCTestTests is Test {
 
     function testCreateVesting() public {
         vm.startPrank(initAccount);
-        assert(tlc.createVestingSchedule(
-            joe,
-            block.timestamp,
-            365 * 24 * 3600,
-            4 * 365 * 24 * 3600,
-            365 * 2 * 3600,
-            true,
-            10_000e18
-        ) == 0);
+        assert(
+            tlc.createVestingSchedule(
+                joe, block.timestamp, 365 * 24 * 3600, 4 * 365 * 24 * 3600, 365 * 2 * 3600, true, 10_000e18
+            ) == 0
+        );
         vm.stopPrank();
 
-         
         assert(tlc.getVestingScheduleCount() == 1);
 
         // Verify balances
@@ -185,24 +180,16 @@ contract TLCTestTests is Test {
 
     function testCreateMultipleVestings() public {
         vm.startPrank(initAccount);
-        assert(tlc.createVestingSchedule(
-            joe,
-            block.timestamp,
-            365 * 24 * 3600,
-            4 * 365 * 24 * 3600,
-            365 * 2 * 3600,
-            true,
-            10_000e18
-        ) == 0);
-        assert(tlc.createVestingSchedule(
-            bob,
-            block.timestamp,
-            365 * 24 * 3600,
-            4 * 365 * 24 * 3600,
-            365 * 2 * 3600,
-            true,
-            10_000e18
-        ) == 1);
+        assert(
+            tlc.createVestingSchedule(
+                joe, block.timestamp, 365 * 24 * 3600, 4 * 365 * 24 * 3600, 365 * 2 * 3600, true, 10_000e18
+            ) == 0
+        );
+        assert(
+            tlc.createVestingSchedule(
+                bob, block.timestamp, 365 * 24 * 3600, 4 * 365 * 24 * 3600, 365 * 2 * 3600, true, 10_000e18
+            ) == 1
+        );
         vm.stopPrank();
 
         assert(tlc.getVestingScheduleCount() == 2);
@@ -215,15 +202,10 @@ contract TLCTestTests is Test {
         vm.warp(0);
 
         vm.startPrank(initAccount);
-        assert(tlc.createVestingSchedule(
-            joe,
-            0,
-            365 * 24 * 3600,
-            4 * 365 * 24 * 3600,
-            365 * 2 * 3600,
-            true,
-            10_000e18
-        ) == 0);
+        assert(
+            tlc.createVestingSchedule(joe, 0, 365 * 24 * 3600, 4 * 365 * 24 * 3600, 365 * 2 * 3600, true, 10_000e18)
+                == 0
+        );
         vm.stopPrank();
 
         // Move time right before cliff
@@ -240,15 +222,10 @@ contract TLCTestTests is Test {
         vm.warp(0);
 
         vm.startPrank(initAccount);
-        assert(tlc.createVestingSchedule(
-            joe,
-            0,
-            365 * 24 * 3600,
-            4 * 365 * 24 * 3600,
-            365 * 2 * 3600,
-            true,
-            10_000e18
-        ) == 0);
+        assert(
+            tlc.createVestingSchedule(joe, 0, 365 * 24 * 3600, 4 * 365 * 24 * 3600, 365 * 2 * 3600, true, 10_000e18)
+                == 0
+        );
         vm.stopPrank();
 
         // Move to cliff
@@ -268,15 +245,10 @@ contract TLCTestTests is Test {
         vm.warp(0);
 
         vm.startPrank(initAccount);
-        assert(tlc.createVestingSchedule(
-            joe,
-            0,
-            365 * 24 * 3600,
-            4 * 365 * 24 * 3600,
-            365 * 2 * 3600,
-            true,
-            10_000e18
-        ) == 0);
+        assert(
+            tlc.createVestingSchedule(joe, 0, 365 * 24 * 3600, 4 * 365 * 24 * 3600, 365 * 2 * 3600, true, 10_000e18)
+                == 0
+        );
         vm.stopPrank();
 
         // Move to end half way vesting
@@ -296,15 +268,10 @@ contract TLCTestTests is Test {
         vm.warp(0);
 
         vm.startPrank(initAccount);
-        assert(tlc.createVestingSchedule(
-            joe,
-            0,
-            365 * 24 * 3600,
-            4 * 365 * 24 * 3600,
-            365 * 2 * 3600,
-            true,
-            10_000e18
-        ) == 0);
+        assert(
+            tlc.createVestingSchedule(joe, 0, 365 * 24 * 3600, 4 * 365 * 24 * 3600, 365 * 2 * 3600, true, 10_000e18)
+                == 0
+        );
         vm.stopPrank();
 
         // At beginning of schedule
@@ -313,7 +280,7 @@ contract TLCTestTests is Test {
         // Move right after beginning of schedule
         vm.warp(1);
         assert(tlc.computeReleasableAmount(0) == 0);
-        
+
         // Move to half way cliff
         vm.warp(365 * 12 * 3600);
         assert(tlc.computeReleasableAmount(0) == 0);
@@ -367,15 +334,10 @@ contract TLCTestTests is Test {
         vm.warp(0);
 
         vm.startPrank(initAccount);
-        assert(tlc.createVestingSchedule(
-            joe,
-            0,
-            365 * 24 * 3600,
-            4 * 365 * 24 * 3600,
-            365 * 2 * 3600,
-            true,
-            10_000e18
-        ) == 0);
+        assert(
+            tlc.createVestingSchedule(joe, 0, 365 * 24 * 3600, 4 * 365 * 24 * 3600, 365 * 2 * 3600, true, 10_000e18)
+                == 0
+        );
         vm.stopPrank();
 
         // Move to end half way vesting
@@ -391,15 +353,10 @@ contract TLCTestTests is Test {
         vm.warp(0);
 
         vm.startPrank(initAccount);
-        assert(tlc.createVestingSchedule(
-            joe,
-            0,
-            365 * 24 * 3600,
-            4 * 365 * 24 * 3600,
-            365 * 2 * 3600,
-            true,
-            10_000e18
-        ) == 0);
+        assert(
+            tlc.createVestingSchedule(joe, 0, 365 * 24 * 3600, 4 * 365 * 24 * 3600, 365 * 2 * 3600, true, 10_000e18)
+                == 0
+        );
         vm.stopPrank();
 
         // Move time right before cliff
@@ -422,15 +379,10 @@ contract TLCTestTests is Test {
         vm.warp(0);
 
         vm.startPrank(initAccount);
-        assert(tlc.createVestingSchedule(
-            joe,
-            0,
-            365 * 24 * 3600,
-            4 * 365 * 24 * 3600,
-            365 * 2 * 3600,
-            true,
-            10_000e18
-        ) == 0);
+        assert(
+            tlc.createVestingSchedule(joe, 0, 365 * 24 * 3600, 4 * 365 * 24 * 3600, 365 * 2 * 3600, true, 10_000e18)
+                == 0
+        );
         vm.stopPrank();
 
         // Move time right before cliff
@@ -453,15 +405,10 @@ contract TLCTestTests is Test {
         vm.warp(0);
 
         vm.startPrank(initAccount);
-        assert(tlc.createVestingSchedule(
-            joe,
-            0,
-            365 * 24 * 3600,
-            4 * 365 * 24 * 3600,
-            365 * 2 * 3600,
-            true,
-            10_000e18
-        ) == 0);
+        assert(
+            tlc.createVestingSchedule(joe, 0, 365 * 24 * 3600, 4 * 365 * 24 * 3600, 365 * 2 * 3600, true, 10_000e18)
+                == 0
+        );
         vm.stopPrank();
 
         // Move time right before cliff
@@ -484,15 +431,10 @@ contract TLCTestTests is Test {
         vm.warp(0);
 
         vm.startPrank(initAccount);
-        assert(tlc.createVestingSchedule(
-            joe,
-            0,
-            365 * 24 * 3600,
-            4 * 365 * 24 * 3600,
-            365 * 2 * 3600,
-            false,
-            10_000e18
-        ) == 0);
+        assert(
+            tlc.createVestingSchedule(joe, 0, 365 * 24 * 3600, 4 * 365 * 24 * 3600, 365 * 2 * 3600, false, 10_000e18)
+                == 0
+        );
         vm.stopPrank();
 
         // Move time right before cliff
@@ -508,15 +450,10 @@ contract TLCTestTests is Test {
         vm.warp(0);
 
         vm.startPrank(initAccount);
-        assert(tlc.createVestingSchedule(
-            joe,
-            0,
-            365 * 24 * 3600,
-            4 * 365 * 24 * 3600,
-            365 * 2 * 3600,
-            true,
-            10_000e18
-        ) == 0);
+        assert(
+            tlc.createVestingSchedule(joe, 0, 365 * 24 * 3600, 4 * 365 * 24 * 3600, 365 * 2 * 3600, true, 10_000e18)
+                == 0
+        );
         vm.stopPrank();
 
         // Move time right before cliff
@@ -532,15 +469,10 @@ contract TLCTestTests is Test {
         vm.warp(0);
 
         vm.startPrank(initAccount);
-        assert(tlc.createVestingSchedule(
-            joe,
-            0,
-            365 * 24 * 3600,
-            4 * 365 * 24 * 3600,
-            365 * 2 * 3600,
-            true,
-            10_000e18
-        ) == 0);
+        assert(
+            tlc.createVestingSchedule(joe, 0, 365 * 24 * 3600, 4 * 365 * 24 * 3600, 365 * 2 * 3600, true, 10_000e18)
+                == 0
+        );
         vm.stopPrank();
 
         // Move time right before cliff
@@ -560,15 +492,10 @@ contract TLCTestTests is Test {
         vm.warp(0);
 
         vm.startPrank(initAccount);
-        assert(tlc.createVestingSchedule(
-            joe,
-            0,
-            365 * 24 * 3600,
-            4 * 365 * 24 * 3600,
-            365 * 2 * 3600,
-            true,
-            10_000e18
-        ) == 0);
+        assert(
+            tlc.createVestingSchedule(joe, 0, 365 * 24 * 3600, 4 * 365 * 24 * 3600, 365 * 2 * 3600, true, 10_000e18)
+                == 0
+        );
         vm.stopPrank();
 
         // Move time right before cliff
@@ -584,17 +511,13 @@ contract TLCTestTests is Test {
         vm.stopPrank();
     }
 
-      function testdelegateVestingEscrow() public {
+    function testdelegateVestingEscrow() public {
         vm.startPrank(initAccount);
-        assert(tlc.createVestingSchedule(
-            joe,
-            block.timestamp,
-            365 * 24 * 3600,
-            4 * 365 * 24 * 3600,
-            365 * 2 * 3600,
-            true,
-            10_000e18
-        ) == 0);
+        assert(
+            tlc.createVestingSchedule(
+                joe, block.timestamp, 365 * 24 * 3600, 4 * 365 * 24 * 3600, 365 * 2 * 3600, true, 10_000e18
+            ) == 0
+        );
         vm.stopPrank();
 
         // Verify escrow delegated to beneficiary
@@ -610,15 +533,11 @@ contract TLCTestTests is Test {
 
     function testdelegateVestingEscrowFromInvalidAccount() public {
         vm.startPrank(initAccount);
-        assert(tlc.createVestingSchedule(
-            joe,
-            block.timestamp,
-            365 * 24 * 3600,
-            4 * 365 * 24 * 3600,
-            365 * 2 * 3600,
-            true,
-            10_000e18
-        ) == 0);
+        assert(
+            tlc.createVestingSchedule(
+                joe, block.timestamp, 365 * 24 * 3600, 4 * 365 * 24 * 3600, 365 * 2 * 3600, true, 10_000e18
+            ) == 0
+        );
         vm.stopPrank();
 
         // Verify escrow delegated to beneficiary
