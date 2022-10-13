@@ -34,6 +34,10 @@ interface IRiverV1 is IConsensusLayerDepositManagerV1, IUserDepositManagerV1, IS
     /// @param operatorRegistry The new Operators Registry
     event SetOperatorsRegistry(address indexed operatorRegistry);
 
+    /// @notice The stored Metadata string has been changed
+    /// @param metadata The new Metadata string
+    event SetMetadata(string metadata);
+
     /// @notice The system underlying supply increased. This is a snapshot of the balances for accounting purposes
     /// @param _collector The address of the collector during this event
     /// @param _oldTotalUnderlyingBalance Old total ETH balance under management by River
@@ -97,6 +101,10 @@ interface IRiverV1 is IConsensusLayerDepositManagerV1, IUserDepositManagerV1, IS
     /// @return The operators registry address
     function getOperatorsRegistry() external view returns (address);
 
+    /// @notice Retrieve the metadata string value
+    /// @return The metadata string value
+    function getMetadata() external view returns (string memory);
+
     /// @notice Changes the global fee parameter
     /// @param newFee New fee value
     function setGlobalFee(uint256 newFee) external;
@@ -112,6 +120,10 @@ interface IRiverV1 is IConsensusLayerDepositManagerV1, IUserDepositManagerV1, IS
     /// @notice Changes the execution layer fee recipient
     /// @param _newELFeeRecipient New address for the recipient
     function setELFeeRecipient(address _newELFeeRecipient) external;
+
+    /// @notice Sets the metadata string value
+    /// @param _metadata The new metadata string value
+    function setMetadata(string memory _metadata) external;
 
     /// @notice Input for execution layer fee earnings
     function sendELFees() external payable;

@@ -250,6 +250,18 @@ contract RiverV1SetupOneTests is Test, BytesGenerator {
         vm.stopPrank();
     }
 
+    event SetMetadata(string metadata);
+
+    function testSetMetadata(string memory _metadata) public {
+        vm.startPrank(admin);
+        assertEq(river.getMetadata(), "");
+        vm.expectEmit(true, true, true, true);
+        emit SetMetadata(_metadata);
+        river.setMetadata(_metadata);
+        assertEq(river.getMetadata(), _metadata);
+        vm.stopPrank();
+    }
+
     function _allow(address _who, uint256 _mask) internal {
         address[] memory allowees = new address[](1);
         allowees[0] = _who;

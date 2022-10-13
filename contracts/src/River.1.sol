@@ -17,6 +17,7 @@ import "./state/river/AllowlistAddress.sol";
 import "./state/river/OperatorsRegistryAddress.sol";
 import "./state/river/CollectorAddress.sol";
 import "./state/river/GlobalFee.sol";
+import "./state/river/Metadata.sol";
 import "./state/river/ELFeeRecipientAddress.sol";
 
 /// @title River (v1)
@@ -136,6 +137,11 @@ contract RiverV1 is
     }
 
     /// @inheritdoc IRiverV1
+    function getMetadata() external view returns (string memory) {
+        return Metadata.get();
+    }
+
+    /// @inheritdoc IRiverV1
     function setGlobalFee(uint256 newFee) external onlyAdmin {
         GlobalFee.set(newFee);
         emit SetGlobalFee(newFee);
@@ -157,6 +163,12 @@ contract RiverV1 is
     function setELFeeRecipient(address _newELFeeRecipient) external onlyAdmin {
         ELFeeRecipientAddress.set(_newELFeeRecipient);
         emit SetELFeeRecipient(_newELFeeRecipient);
+    }
+
+    /// @inheritdoc IRiverV1
+    function setMetadata(string memory _metadata) external onlyAdmin {
+        Metadata.set(_metadata);
+        emit SetMetadata(_metadata);
     }
 
     /// @inheritdoc IRiverV1
