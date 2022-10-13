@@ -262,6 +262,13 @@ contract RiverV1SetupOneTests is Test, BytesGenerator {
         vm.stopPrank();
     }
 
+    function testSetMetadataUnauthorized(string memory _metadata, uint256 _salt) public {
+        address unauthorized = uf._new(_salt);
+        vm.prank(unauthorized);
+        vm.expectRevert(abi.encodeWithSignature("Unauthorized(address)", unauthorized));
+        river.setMetadata(_metadata);
+    }
+
     function _allow(address _who, uint256 _mask) internal {
         address[] memory allowees = new address[](1);
         allowees[0] = _who;
