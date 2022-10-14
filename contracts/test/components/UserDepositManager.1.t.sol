@@ -12,6 +12,10 @@ contract UserDepositManagerV1EmptyDeposit is UserDepositManagerV1 {
     function _onDeposit(address, address, uint256) internal view override {
         this;
     }
+
+    function _onDonation(address) internal view override {
+        this;
+    }
 }
 
 contract UserDepositManagerV1DepositTests is Test {
@@ -21,6 +25,7 @@ contract UserDepositManagerV1DepositTests is Test {
     error InvalidCall();
 
     event UserDeposit(address indexed depositor, address indexed recipient, uint256 amount);
+    event UserDonation(address indexed donator, uint256 amount);
 
     function setUp() public {
         transferManager = new UserDepositManagerV1EmptyDeposit();
@@ -102,6 +107,27 @@ contract UserDepositManagerV1DepositTests is Test {
         assert(success == false);
         assert(keccak256(returnData) == keccak256(abi.encodeWithSignature("InvalidCall()")));
     }
+
+    function testDonate(uint256 _userSalt, uint256 _amount) public {
+        address _user = uf._new(_userSalt);
+        vm.deal(_user, _amount);
+        vm.deal(address(transferManager), 0);
+        vm.startPrank(_user);
+
+        assert(_user.balance == _amount);
+        assert(address(transferManager).balance == 0);
+
+        if (_amount > 0) {
+            vm.expectEmit(true, true, true, true);
+            emit UserDonation(_user, _amount);
+        } else {
+            vm.expectRevert(abi.encodeWithSignature("EmptyDonation()"));
+        }
+        transferManager.donate{value: _amount}();
+
+        assert(_user.balance == 0);
+        assert(address(transferManager).balance == _amount);
+    }
 }
 
 contract UserDepositManagerV1CatchableDeposit is UserDepositManagerV1 {
@@ -109,6 +135,10 @@ contract UserDepositManagerV1CatchableDeposit is UserDepositManagerV1 {
 
     function _onDeposit(address depositor, address recipient, uint256 amount) internal override {
         emit InternalCallbackCalled(depositor, recipient, amount);
+    }
+
+    function _onDonation(address depositor) internal override {
+        emit InternalCallbackCalled(depositor, depositor, msg.value);
     }
 }
 
@@ -159,5 +189,26 @@ contract UserDepositManagerV1CallbackTests is Test {
         transferManager.depositAndTransfer{value: _amount}(_anotherUser);
 
         assert(_user.balance == 0);
+    }
+
+    function testDonateInternalCallback(uint256 _userSalt, uint256 _amount) public {
+        address _user = uf._new(_userSalt);
+        vm.deal(_user, _amount);
+        vm.deal(address(transferManager), 0);
+        vm.startPrank(_user);
+
+        assert(_user.balance == _amount);
+        assert(address(transferManager).balance == 0);
+
+        if (_amount > 0) {
+            vm.expectEmit(true, true, true, true);
+            emit InternalCallbackCalled(_user, _user, _amount);
+        } else {
+            vm.expectRevert(abi.encodeWithSignature("EmptyDonation()"));
+        }
+        transferManager.donate{value: _amount}();
+
+        assert(_user.balance == 0);
+        assert(address(transferManager).balance == _amount);
     }
 }

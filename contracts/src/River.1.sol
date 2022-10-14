@@ -79,6 +79,9 @@ contract RiverV1 is
     /// @notice The mask for the deposit right
     uint256 internal constant DEPOSIT_MASK = 0x1;
 
+    /// @notice The mask for the donation right
+    uint256 internal constant DONATION_MASK = 0x1 << 1;
+
     /// @inheritdoc IRiverV1
     function initRiverV1(
         address _depositContractAddress,
@@ -210,6 +213,13 @@ contract RiverV1 is
             }
             _transfer(_depositor, _recipient, mintedShares);
         }
+    }
+
+    /// @notice Overriden handler called whenever a user donates ETH to the system. Mints no shares.
+    /// @param _donator User address that made the donation
+    function _onDonation(address _donator) internal view override {
+        IAllowlistV1 allowlist = IAllowlistV1(AllowlistAddress.get());
+        allowlist.onlyAllowed(_donator, DONATION_MASK); // this call reverts if unauthorized or denied
     }
 
     /// @notice Overriden handler called whenever a deposit to the consensus layer is made. Should retrieve _requestedAmount or lower keys

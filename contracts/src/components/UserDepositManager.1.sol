@@ -18,6 +18,8 @@ abstract contract UserDepositManagerV1 is IUserDepositManagerV1 {
     /// @param _amount Amount deposited
     function _onDeposit(address _depositor, address _recipient, uint256 _amount) internal virtual;
 
+    function _onDonation(address _donator) internal virtual;
+
     /// @inheritdoc IUserDepositManagerV1
     function deposit() external payable {
         _deposit(msg.sender);
@@ -27,6 +29,19 @@ abstract contract UserDepositManagerV1 is IUserDepositManagerV1 {
     function depositAndTransfer(address _recipient) external payable {
         LibSanitize._notZeroAddress(_recipient);
         _deposit(_recipient);
+    }
+
+    /// @inheritdoc IUserDepositManagerV1
+    function donate() external payable {
+        if (msg.value == 0) {
+            revert EmptyDonation();
+        }
+
+        BalanceToDeposit.set(BalanceToDeposit.get() + msg.value);
+
+        _onDonation(msg.sender);
+
+        emit UserDonation(msg.sender, msg.value);
     }
 
     /// @inheritdoc IUserDepositManagerV1

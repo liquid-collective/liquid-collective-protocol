@@ -11,8 +11,16 @@ interface IUserDepositManagerV1 {
     /// @param amount Amount in ETH deposited
     event UserDeposit(address indexed depositor, address indexed recipient, uint256 amount);
 
-    /// @notice And empty deposit attempt was made
+    /// @notice User donated ETH to the system
+    /// @param donator Address performing the donation
+    /// @param amount Amount in ETH donated
+    event UserDonation(address indexed donator, uint256 amount);
+
+    /// @notice An empty deposit attempt was made
     error EmptyDeposit();
+
+    /// @notice An empty donation attempt was made
+    error EmptyDonation();
 
     /// @notice Explicit deposit method to mint on msg.sender
     function deposit() external payable;
@@ -20,6 +28,9 @@ interface IUserDepositManagerV1 {
     /// @notice Explicit deposit method to mint on msg.sender and transfer to _recipient
     /// @param _recipient Address receiving the minted LsETH
     function depositAndTransfer(address _recipient) external payable;
+
+    /// @notice Explicit donation method, to add ETH into the system without creating new shares
+    function donate() external payable;
 
     /// @notice Implicit deposit method, when the user performs a regular transfer to the contract
     receive() external payable;
