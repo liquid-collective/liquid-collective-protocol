@@ -217,12 +217,10 @@ contract TLCV1 is IVestingSchedulesV1, ERC20VotesUpgradeable {
     /// @param _index index of the vesting schedule
     function _predictDeterministicEscrowClone(uint256 _index) internal view returns (address escrow) {
         bytes32 salt = sha256(abi.encodePacked(_index));
-        bytes32 hash = keccak256(
-            abi.encodePacked(bytes1(0xff), address(this), salt, keccak256(''))
-        );
+        bytes32 hash = keccak256(abi.encodePacked(bytes1(0xff), address(this), salt, keccak256("")));
 
         // NOTE: cast last 20 bytes of hash to address
-        return address(uint160(uint(hash)));
+        return address(uint160(uint256(hash)));
     }
 
     /// @notice Internal utility to deploy an escrow to hold the tokens while vesting
