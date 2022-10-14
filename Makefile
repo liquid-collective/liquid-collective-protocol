@@ -15,5 +15,5 @@ test:
 	yarn test
 
 test-lint:
-	yarn lint:check
-	yarn format:check
+	forge build --force
+	forge fmt --check
