@@ -82,6 +82,9 @@ contract RiverV1 is
     /// @notice The mask for the donation right
     uint256 internal constant DONATION_MASK = 0x1 << 1;
 
+    /// @notice The mask for the void right
+    uint256 internal constant VOID_MASK = 0x1 << 2;
+
     /// @inheritdoc IRiverV1
     function initRiverV1(
         address _depositContractAddress,
@@ -196,6 +199,13 @@ contract RiverV1 is
         if (allowlist.isDenied(_to)) {
             revert Denied(_to);
         }
+    }
+
+    /// @notice Overriden handler called whenever shares are voided
+    /// @param _from Voider account
+    function _onVoid(address _from) internal view override {
+        IAllowlistV1 allowlist = IAllowlistV1(AllowlistAddress.get());
+        allowlist.onlyAllowed(_from, VOID_MASK); // this call reverts if unauthorized or denied
     }
 
     /// @notice Overriden handler called whenever a user deposits ETH to the system. Mints the adequate amount of shares.

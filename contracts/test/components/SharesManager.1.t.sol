@@ -28,6 +28,12 @@ contract SharesManagerPublicDeal is SharesManagerV1 {
         }
     }
 
+    function _onVoid(address _from) internal view override {
+        if (denied[_from]) {
+            revert Denied(_from);
+        }
+    }
+
     function setValidatorBalance(uint256 _amount) external {
         totalBalance = _amount;
     }
@@ -529,5 +535,16 @@ contract SharesManagerV1Tests is Test {
         vm.expectRevert(abi.encodeWithSignature("BalanceTooLow()"));
         sharesManager.transfer(_userTwo, 1);
         vm.stopPrank();
+    }
+
+    function testVoidShares(uint256 _userSalt, uint128 _allowance) public {
+        address _user = uf._new(_userSalt);
+        SharesManagerPublicDeal(payable(address(sharesManager))).deal(_user, _allowance);
+        SharesManagerPublicDeal(payable(address(sharesManager))).setValidatorBalance(uint256(_allowance));
+        vm.startPrank(_user);
+        assert(_allowance == sharesManager.balanceOf(_user));
+        sharesManager.void(_allowance);
+        vm.stopPrank();
+        assert(0 == sharesManager.balanceOf(_user));
     }
 }

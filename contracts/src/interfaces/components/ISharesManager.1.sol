@@ -102,4 +102,8 @@ interface ISharesManagerV1 is IERC20 {
     /// @param _subtractableValue Amount of shares to subtract
     /// @return True if success
     function decreaseAllowance(address _spender, uint256 _subtractableValue) external returns (bool);
+
+    /// @notice Void shares without any underlying asset returned
+    /// @param _amount Amount of shares to void
+    function void(uint256 _amount) external;
 }

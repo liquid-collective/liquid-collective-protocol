@@ -49,6 +49,7 @@ contract RiverV1SetupOneTests is Test, BytesGenerator {
 
     uint256 internal constant DEPOSIT_MASK = 0x1;
     uint256 internal constant DONATION_MASK = 0x1 << 1;
+    uint256 internal constant VOID_MASK = 0x1 << 2;
 
     event PulledELFees(uint256 amount);
     event SetELFeeRecipient(address indexed elFeeRecipient);
@@ -374,6 +375,76 @@ contract RiverV1SetupOneTests is Test, BytesGenerator {
         assert(river.getDepositedValidatorCount() == 0);
         assert(river.totalUnderlyingSupply() == 2200 ether);
         assert(shareCount == river.totalSupply());
+    }
+
+    function testDonationUnauthorized() public {
+        vm.deal(joe, 100 ether);
+        vm.deal(bob, 2100 ether);
+
+        _allow(joe, DEPOSIT_MASK);
+        _allow(bob, DEPOSIT_MASK);
+
+        vm.prank(joe);
+        river.deposit{value: 100 ether}();
+        vm.prank(bob);
+        river.deposit{value: 1000 ether}();
+
+        assert(river.balanceOfUnderlying(joe) == 100 ether);
+        assert(river.balanceOfUnderlying(bob) == 1000 ether);
+        assert(river.getDepositedValidatorCount() == 0);
+        assert(river.totalUnderlyingSupply() == 1100 ether);
+
+        vm.prank(bob);
+        vm.expectRevert(abi.encodeWithSignature("Unauthorized(address)", bob));
+        river.donate{value: 1100 ether}();
+    }
+
+    function testVoiding() public {
+        vm.deal(joe, 100 ether);
+        vm.deal(bob, 100 ether);
+
+        _allow(joe, DEPOSIT_MASK);
+        _allow(bob, DEPOSIT_MASK + VOID_MASK);
+
+        vm.prank(joe);
+        river.deposit{value: 100 ether}();
+        vm.prank(bob);
+        river.deposit{value: 100 ether}();
+
+        assert(river.balanceOfUnderlying(joe) == 100 ether);
+        assert(river.balanceOfUnderlying(bob) == 100 ether);
+        assert(river.getDepositedValidatorCount() == 0);
+        assert(river.totalUnderlyingSupply() == 200 ether);
+
+        vm.prank(bob);
+        river.void(100 ether);
+
+        assert(river.balanceOfUnderlying(joe) == 200 ether);
+        assert(river.balanceOfUnderlying(bob) == 0);
+        assert(river.getDepositedValidatorCount() == 0);
+        assert(river.totalUnderlyingSupply() == 200 ether);
+    }
+
+    function testVoidingUnauthorized() public {
+        vm.deal(joe, 100 ether);
+        vm.deal(bob, 100 ether);
+
+        _allow(joe, DEPOSIT_MASK);
+        _allow(bob, DEPOSIT_MASK);
+
+        vm.prank(joe);
+        river.deposit{value: 100 ether}();
+        vm.prank(bob);
+        river.deposit{value: 100 ether}();
+
+        assert(river.balanceOfUnderlying(joe) == 100 ether);
+        assert(river.balanceOfUnderlying(bob) == 100 ether);
+        assert(river.getDepositedValidatorCount() == 0);
+        assert(river.totalUnderlyingSupply() == 200 ether);
+
+        vm.prank(bob);
+        vm.expectRevert(abi.encodeWithSignature("Unauthorized(address)", bob));
+        river.void(100 ether);
     }
 
     event RewardsEarned(
