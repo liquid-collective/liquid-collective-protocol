@@ -68,6 +68,14 @@ contract TLCV1 is IVestingSchedulesV1, ERC20VotesUpgradeable {
             revert InvalidVestingScheduleParameter("Vesting schedule period must be > 0");
         }
 
+        if (_duration % _period > 0) {
+            revert InvalidVestingScheduleParameter("Vesting schedule duration must be cut in exact periods");
+        }
+
+        if (_cliff % _period > 0) {
+            revert InvalidVestingScheduleParameter("Vesting schedule cliff must be cut in exact periods");
+        }
+
         // Create new vesting schedule
         VestingSchedules.VestingSchedule memory vestingSchedule = VestingSchedules.VestingSchedule({
             start: _start,
@@ -225,7 +233,7 @@ contract TLCV1 is IVestingSchedulesV1, ERC20VotesUpgradeable {
             // deploy a contract with empty code
             escrow := create2(0, 0, 0, salt)
         }
-        require(escrow != address(0), "ERC1167: create2 failed");
+        LibSanitize._notZeroAddress(escrow);
     }
 
     /// @inheritdoc IVestingSchedulesV1
@@ -244,9 +252,8 @@ contract TLCV1 is IVestingSchedulesV1, ERC20VotesUpgradeable {
         uint256 releasedAmount = vestingSchedule.amount - balanceOf(escrow);
         if (vestedAmount > releasedAmount) {
             return vestedAmount - releasedAmount;
-        } else {
-            return 0;
         }
+        return 0;
     }
 
     function _computeVestedAmount(VestingSchedules.VestingSchedule memory vestingSchedule)
@@ -263,18 +270,12 @@ contract TLCV1 is IVestingSchedulesV1, ERC20VotesUpgradeable {
             return vestingSchedule.amount;
         } else {
             uint256 timeFromStart = currentTime - vestingSchedule.start;
-            uint256 secondsPerSlice = vestingSchedule.period;
-            uint256 vestedSlicePeriods = timeFromStart / secondsPerSlice;
-            uint256 vestedSeconds = vestedSlicePeriods * secondsPerSlice;
-            return (vestingSchedule.amount * vestedSeconds) / vestingSchedule.duration;
+            uint256 vestedDuration = timeFromStart - timeFromStart % vestingSchedule.period;
+            return (vestedDuration * vestingSchedule.amount) / vestingSchedule.duration;
         }
     }
 
     function _getCurrentTime() internal view virtual returns (uint256) {
         return block.timestamp;
     }
-
-    receive() external payable {}
-
-    fallback() external payable {}
 }

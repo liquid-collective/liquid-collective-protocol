@@ -57,7 +57,7 @@ interface IVestingSchedulesV1 {
     /// @param _duration total vesting duration after which all tokens are vested (in seconds)
     /// @param _period duration of a period after which new tokens unlock (in seconds)
     /// @param _revocable whether the vesting schedule is revocable or not
-    /// @param _amount amount of token attributed by the vezsting schedule
+    /// @param _amount amount of token attributed by the vesting schedule
     /// @return index of the created vesting schedule
     function createVestingSchedule(
         address _beneficiary,
