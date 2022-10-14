@@ -6,3 +6,4 @@ hardhat-deploy/=node_modules/hardhat-deploy/
 hardhat/=node_modules/hardhat/
 openzeppelin-contracts/=lib/openzeppelin-contracts/
 solmate/=lib/solmate/src/
+openzeppelin-contracts-upgradeable/=lib/openzeppelin-contracts-upgradeable/
