@@ -1,8 +1,6 @@
 //SPDX-License-Identifier: BUSL-1.1
 pragma solidity 0.8.10;
 
-import "../../libraries/LibSanitize.sol";
-
 /// @title VestingSchedules Storage
 /// @notice Utility to manage VestingSchedules in storage
 library VestingSchedules {

@@ -14,14 +14,12 @@ contract TLCTestTests is Test {
     address internal joe;
 
     function setUp() public {
-        escrowImplem = address(new Escrow());
-
         initAccount = makeAddr("init");
         bob = makeAddr("bob");
         joe = makeAddr("joe");
 
         tlc = new TLCV1();
-        tlc.initTLCV1(initAccount, escrowImplem);
+        tlc.initTLCV1(initAccount);
     }
 
     function testName() public view {

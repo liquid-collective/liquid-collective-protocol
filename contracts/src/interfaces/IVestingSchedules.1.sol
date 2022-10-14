@@ -48,8 +48,7 @@ interface IVestingSchedulesV1 {
 
     /// @notice Initializes the TLC Token
     /// @param _account The initial account to grant all the minted tokens
-    /// @param _escrowImplementation Implementation for vesting schedule escrow clones
-    function initTLCV1(address _account, address _escrowImplementation) external;
+    function initTLCV1(address _account) external;
 
     /// @notice Creates a new vesting schedule
     /// @param _beneficiary address of the beneficiary of the tokens

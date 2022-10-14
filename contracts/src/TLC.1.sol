@@ -2,11 +2,12 @@
 pragma solidity 0.8.10;
 
 import "openzeppelin-contracts-upgradeable/contracts/token/ERC20/extensions/ERC20VotesUpgradeable.sol";
-import "openzeppelin-contracts/contracts/proxy/Clones.sol";
 
 import "./interfaces/IVestingSchedules.1.sol";
 
 import "./state/tlc/VestingSchedules.sol";
+
+import "./libraries/LibSanitize.sol";
 
 contract TLCV1 is IVestingSchedulesV1, ERC20VotesUpgradeable {
     // Token information
@@ -16,15 +17,12 @@ contract TLCV1 is IVestingSchedulesV1, ERC20VotesUpgradeable {
     // Initial supply of token minted
     uint256 internal constant INITIAL_SUPPLY = 1_000_000_000e18; // 1 billion TLC
 
-    // Implementation for token escrow clones
-    address private escrowImplementation;
-
     /// @inheritdoc IVestingSchedulesV1
-    function initTLCV1(address _account, address _escrowImplementation) external initializer {
+    function initTLCV1(address _account) external initializer {
+        LibSanitize._notZeroAddress(_account);
         __ERC20Permit_init(NAME);
         __ERC20_init(NAME, SYMBOL);
         _mint(_account, INITIAL_SUPPLY);
-        escrowImplementation = _escrowImplementation;
     }
 
     /// @inheritdoc IVestingSchedulesV1
@@ -37,10 +35,11 @@ contract TLCV1 is IVestingSchedulesV1, ERC20VotesUpgradeable {
         bool _revocable,
         uint256 _amount
     ) external returns (uint256) {
-        return _createVestingSchedule(_beneficiary, _start, _cliff, _duration, _period, _revocable, _amount);
+        return _createVestingSchedule(msg.sender, _beneficiary, _start, _cliff, _duration, _period, _revocable, _amount);
     }
 
     function _createVestingSchedule(
+        address _creator,
         address _beneficiary,
         uint256 _start,
         uint256 _cliff,
@@ -49,8 +48,7 @@ contract TLCV1 is IVestingSchedulesV1, ERC20VotesUpgradeable {
         bool _revocable,
         uint256 _amount
     ) internal returns (uint256) {
-        address creator = msg.sender;
-        if (balanceOf(creator) < _amount) {
+        if (balanceOf(_creator) < _amount) {
             revert UnsufficientVestingScheduleCreatorBalance();
         }
 
@@ -77,7 +75,7 @@ contract TLCV1 is IVestingSchedulesV1, ERC20VotesUpgradeable {
             duration: _duration,
             period: _period,
             amount: _amount,
-            creator: creator,
+            creator: _creator,
             beneficiary: _beneficiary,
             revocable: _revocable,
             revoked: false
@@ -88,10 +86,10 @@ contract TLCV1 is IVestingSchedulesV1, ERC20VotesUpgradeable {
         address escrow = _cloneDeterministicEscrow(index);
 
         // transfer tokens to escrow contract and delegate escrow to beneficiary
-        _transfer(creator, escrow, _amount);
+        _transfer(_creator, escrow, _amount);
         _delegate(escrow, _beneficiary);
 
-        emit CreatedVestingSchedule(index, creator, _beneficiary, _amount);
+        emit CreatedVestingSchedule(index, _creator, _beneficiary, _amount);
 
         return index;
     }
@@ -209,16 +207,25 @@ contract TLCV1 is IVestingSchedulesV1, ERC20VotesUpgradeable {
 
     /// @notice Internal utility to compute the escrow deterministic address
     /// @param _index index of the vesting schedule
-    function _predictDeterministicEscrowClone(uint256 _index) internal view returns (address) {
+    function _predictDeterministicEscrowClone(uint256 _index) internal view returns (address escrow) {
         bytes32 salt = sha256(abi.encodePacked(_index));
-        return Clones.predictDeterministicAddress(escrowImplementation, salt);
+        bytes32 hash = keccak256(
+            abi.encodePacked(bytes1(0xff), address(this), salt, keccak256(''))
+        );
+
+        // NOTE: cast last 20 bytes of hash to address
+        return address(uint160(uint(hash)));
     }
 
     /// @notice Internal utility to deploy an escrow to hold the tokens while vesting
     /// @param _index index of the vesting schedule
-    function _cloneDeterministicEscrow(uint256 _index) internal returns (address) {
+    function _cloneDeterministicEscrow(uint256 _index) internal returns (address escrow) {
         bytes32 salt = sha256(abi.encodePacked(_index));
-        return Clones.cloneDeterministic(escrowImplementation, salt);
+        assembly {
+            // deploy a contract with empty code
+            escrow := create2(0, 0, 0, salt)
+        }
+        require(escrow != address(0), "ERC1167: create2 failed");
     }
 
     /// @inheritdoc IVestingSchedulesV1
@@ -269,13 +276,5 @@ contract TLCV1 is IVestingSchedulesV1, ERC20VotesUpgradeable {
 
     receive() external payable {}
 
-    fallback() external payable {}
-}
-
-contract Escrow {
-    /// @notice Empty calldata fallback
-    receive() external payable {}
-
-    /// @notice Non-empty calldata fallback
     fallback() external payable {}
 }
