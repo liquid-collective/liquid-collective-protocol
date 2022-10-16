@@ -143,8 +143,12 @@ contract TLCTests is Test {
         assert(tlc.getVotes(bob) == 3_500e18);
     }
 
+    event CreatedVestingSchedule(uint256 index, address indexed creator, address indexed beneficiary, uint256 amount);
+
     function testCreateVesting() public {
         vm.startPrank(initAccount);
+        vm.expectEmit(true, true, true, true);
+        emit CreatedVestingSchedule(0, initAccount, joe, 10_000e18);
         assert(
             tlc.createVestingSchedule(
                 joe, block.timestamp, 365 * 24 * 3600, 4 * 365 * 24 * 3600, 365 * 2 * 3600, true, 10_000e18
@@ -241,11 +245,16 @@ contract TLCTests is Test {
 
     function testCreateMultipleVestings() public {
         vm.startPrank(initAccount);
+        vm.expectEmit(true, true, true, true);
+        emit CreatedVestingSchedule(0, initAccount, joe, 10_000e18);
         assert(
             tlc.createVestingSchedule(
                 joe, block.timestamp, 365 * 24 * 3600, 4 * 365 * 24 * 3600, 365 * 2 * 3600, true, 10_000e18
             ) == 0
         );
+
+        vm.expectEmit(true, true, true, true);
+        emit CreatedVestingSchedule(1, initAccount, bob, 10_000e18);
         assert(
             tlc.createVestingSchedule(
                 bob, block.timestamp, 365 * 24 * 3600, 4 * 365 * 24 * 3600, 365 * 2 * 3600, true, 10_000e18
@@ -279,6 +288,8 @@ contract TLCTests is Test {
         vm.stopPrank();
     }
 
+    event ReleasedVestingSchedule(uint256 index, uint256 releasedAmount);
+
     function testReleaseVestingScheduleAtCliff() public {
         vm.warp(0);
 
@@ -293,6 +304,8 @@ contract TLCTests is Test {
         vm.warp(365 * 24 * 3600);
 
         vm.startPrank(joe);
+        vm.expectEmit(true, true, true, true);
+        emit ReleasedVestingSchedule(0, 2_500e18);
         // Attempts to releaseVestingSchedule all vested tokens
         tlc.releaseVestingSchedule(0);
         vm.stopPrank();
@@ -316,6 +329,8 @@ contract TLCTests is Test {
         vm.warp(2 * 365 * 24 * 3600);
 
         vm.startPrank(joe);
+        vm.expectEmit(true, true, true, true);
+        emit ReleasedVestingSchedule(0, 5_000e18);
         // Attempts to releaseVestingSchedule all vested tokens
         tlc.releaseVestingSchedule(0);
         vm.stopPrank();
@@ -410,6 +425,8 @@ contract TLCTests is Test {
         vm.stopPrank();
     }
 
+    event RevokedVestingSchedule(uint256 index, uint256 returnedAmount);
+
     function testRevokeBeforeCliff() public {
         vm.warp(0);
 
@@ -421,6 +438,8 @@ contract TLCTests is Test {
         vm.stopPrank();
 
         vm.startPrank(initAccount);
+        vm.expectEmit(true, true, true, true);
+        emit RevokedVestingSchedule(0, 10_000e18);
         tlc.revokeVestingSchedule(0, 365 * 24 * 3600 - 1);
         vm.stopPrank();
 
@@ -444,6 +463,8 @@ contract TLCTests is Test {
         vm.stopPrank();
 
         vm.startPrank(initAccount);
+        vm.expectEmit(true, true, true, true);
+        emit RevokedVestingSchedule(0, 7_500e18);
         tlc.revokeVestingSchedule(0, 365 * 24 * 3600);
         vm.stopPrank();
 
@@ -467,6 +488,8 @@ contract TLCTests is Test {
         vm.stopPrank();
 
         vm.startPrank(initAccount);
+        vm.expectEmit(true, true, true, true);
+        emit RevokedVestingSchedule(0, 0);
         tlc.revokeVestingSchedule(0, 4 * 365 * 24 * 3600);
         vm.stopPrank();
 
@@ -596,6 +619,8 @@ contract TLCTests is Test {
         assert(tlc.balanceOf(joe) == 5_000e18);
     }
 
+    event DelegatedVestingEscrow(uint256 index, address oldDelegatee, address newDelegatee);
+
     function testDelegateVestingEscrow() public {
         vm.startPrank(initAccount);
         assert(
@@ -609,6 +634,8 @@ contract TLCTests is Test {
         assert(tlc.delegates(tlc.vestingEscrow(0)) == joe);
 
         vm.startPrank(joe);
+        vm.expectEmit(true, true, true, true);
+        emit DelegatedVestingEscrow(0, joe, bob);
         tlc.delegateVestingEscrow(0, bob);
         vm.stopPrank();
 
