@@ -170,7 +170,7 @@ contract TLCTests is Test {
         assert(vestingSchedule.creator == initAccount);
         assert(vestingSchedule.beneficiary == joe);
         assert(vestingSchedule.revocable == true);
-        assert(vestingSchedule.revoked == false);
+        assert(vestingSchedule.end == block.timestamp + 4 * 365 * 24 * 3600);
 
         // Verify escrow delegated to beneficiary
         assert(tlc.delegates(tlc.vestingEscrow(0)) == joe);
@@ -196,7 +196,7 @@ contract TLCTests is Test {
         assert(tlc.balanceOf(tlc.vestingEscrow(1)) == 10_000e18);
     }
 
-    function testreleaseVestingScheduleBeforeCliff() public {
+    function testReleaseVestingScheduleBeforeCliff() public {
         vm.warp(0);
 
         vm.startPrank(initAccount);
@@ -216,7 +216,7 @@ contract TLCTests is Test {
         vm.stopPrank();
     }
 
-    function testreleaseVestingScheduleAtCliff() public {
+    function testReleaseVestingScheduleAtCliff() public {
         vm.warp(0);
 
         vm.startPrank(initAccount);
@@ -239,7 +239,7 @@ contract TLCTests is Test {
         assert(tlc.balanceOf(joe) == 2_500e18);
     }
 
-    function testreleaseVestingScheduleAfterCliff() public {
+    function testReleaseVestingScheduleAfterCliff() public {
         vm.warp(0);
 
         vm.startPrank(initAccount);
@@ -328,7 +328,7 @@ contract TLCTests is Test {
         assert(tlc.computeReleasableAmount(0) == 10_000e18);
     }
 
-    function testreleaseVestingScheduleFromInvalidAccount() public {
+    function testReleaseVestingScheduleFromInvalidAccount() public {
         vm.warp(0);
 
         vm.startPrank(initAccount);
@@ -357,11 +357,8 @@ contract TLCTests is Test {
         );
         vm.stopPrank();
 
-        // Move time right before cliff
-        vm.warp(365 * 24 * 3600 - 1);
-
         vm.startPrank(initAccount);
-        tlc.revokeVestingSchedule(0);
+        tlc.revokeVestingSchedule(0, 365 * 24 * 3600 - 1);
         vm.stopPrank();
 
         assert(tlc.balanceOf(initAccount) == 1_000_000_000e18);
@@ -370,7 +367,7 @@ contract TLCTests is Test {
 
         // Verify vesting schedule object has been properly updated
         VestingSchedules.VestingSchedule memory vestingSchedule = tlc.getVestingSchedule(0);
-        assert(vestingSchedule.revoked);
+        assert(vestingSchedule.end == 365 * 24 * 3600 - 1);
     }
 
     function testRevokeAtCliff() public {
@@ -383,20 +380,17 @@ contract TLCTests is Test {
         );
         vm.stopPrank();
 
-        // Move time right before cliff
-        vm.warp(365 * 24 * 3600);
-
         vm.startPrank(initAccount);
-        tlc.revokeVestingSchedule(0);
+        tlc.revokeVestingSchedule(0, 365 * 24 * 3600);
         vm.stopPrank();
 
         assert(tlc.balanceOf(initAccount) == 999_997_500e18);
-        assert(tlc.balanceOf(tlc.vestingEscrow(0)) == 0);
-        assert(tlc.balanceOf(joe) == 2_500e18);
+        assert(tlc.balanceOf(tlc.vestingEscrow(0)) == 2_500e18);
+        assert(tlc.balanceOf(joe) == 0);
 
         // Verify vesting schedule object has been properly updated
         VestingSchedules.VestingSchedule memory vestingSchedule = tlc.getVestingSchedule(0);
-        assert(vestingSchedule.revoked);
+        assert(vestingSchedule.end == 365 * 24 * 3600);
     }
 
     function testRevokeAtDuration() public {
@@ -409,20 +403,16 @@ contract TLCTests is Test {
         );
         vm.stopPrank();
 
-        // Move time right before cliff
-        vm.warp(4 * 365 * 24 * 3600);
-
         vm.startPrank(initAccount);
-        tlc.revokeVestingSchedule(0);
+        tlc.revokeVestingSchedule(0,4 * 365 * 24 * 3600);
         vm.stopPrank();
 
         assert(tlc.balanceOf(initAccount) == 999_990_000e18);
-        assert(tlc.balanceOf(tlc.vestingEscrow(0)) == 0);
-        assert(tlc.balanceOf(joe) == 10_000e18);
+        assert(tlc.balanceOf(tlc.vestingEscrow(0)) == 10_000e18);
 
         // Verify vesting schedule object has been properly updated
         VestingSchedules.VestingSchedule memory vestingSchedule = tlc.getVestingSchedule(0);
-        assert(vestingSchedule.revoked);
+        assert(vestingSchedule.end == 4 * 365 * 24 * 3600);
     }
 
     function testRevokeNotRevokable() public {
@@ -435,12 +425,9 @@ contract TLCTests is Test {
         );
         vm.stopPrank();
 
-        // Move time right before cliff
-        vm.warp(4 * 365 * 24 * 3600);
-
         vm.startPrank(initAccount);
         vm.expectRevert(abi.encodeWithSignature("VestingScheduleNotRevocable()"));
-        tlc.revokeVestingSchedule(0);
+        tlc.revokeVestingSchedule(0, 4 * 365 * 24 * 3600);
         vm.stopPrank();
     }
 
@@ -454,12 +441,9 @@ contract TLCTests is Test {
         );
         vm.stopPrank();
 
-        // Move time right before cliff
-        vm.warp(4 * 365 * 24 * 3600);
-
         vm.startPrank(joe);
         vm.expectRevert(abi.encodeWithSignature("Unauthorized(address)", joe));
-        tlc.revokeVestingSchedule(0);
+        tlc.revokeVestingSchedule(0, 4 * 365 * 24 * 3600);
         vm.stopPrank();
     }
 
@@ -473,20 +457,22 @@ contract TLCTests is Test {
         );
         vm.stopPrank();
 
-        // Move time right before cliff
-        vm.warp(2 * 365 * 24 * 3600);
-
         vm.startPrank(initAccount);
-        tlc.revokeVestingSchedule(0);
+        tlc.revokeVestingSchedule(0, 2 * 365 * 24 * 3600);
         vm.stopPrank();
 
+        assert(tlc.balanceOf(initAccount) == 999_995_000e18);
+        assert(tlc.balanceOf(tlc.vestingEscrow(0)) == 5_000e18);
+
         vm.startPrank(initAccount);
-        vm.expectRevert(abi.encodeWithSignature("VestingScheduleRevoked()"));
-        tlc.revokeVestingSchedule(0);
+        tlc.revokeVestingSchedule(0, 1 * 365 * 24 * 3600);
         vm.stopPrank();
+
+        assert(tlc.balanceOf(initAccount) == 999_997_500e18);
+        assert(tlc.balanceOf(tlc.vestingEscrow(0)) == 2_500e18);
     }
 
-    function testreleaseVestingScheduleRevokedSchedule() public {
+    function testRevokeTwiceAfterEnd() public {
         vm.warp(0);
 
         vm.startPrank(initAccount);
@@ -496,17 +482,55 @@ contract TLCTests is Test {
         );
         vm.stopPrank();
 
-        // Move time right before cliff
-        vm.warp(2 * 365 * 24 * 3600);
+        vm.startPrank(initAccount);
+        tlc.revokeVestingSchedule(0, 1 * 365 * 24 * 3600);
+        vm.stopPrank();
 
         vm.startPrank(initAccount);
-        tlc.revokeVestingSchedule(0);
+        vm.expectRevert(abi.encodeWithSignature("VestingScheduleNotRevocableAfterEnd(uint256)",365 * 24 * 3600));
+        tlc.revokeVestingSchedule(0, 2 * 365 * 24 * 3600);
+        vm.stopPrank();
+    }
+
+    function testReleaseVestingScheduleAfterRevoke() public {
+        vm.warp(0);
+
+        vm.startPrank(initAccount);
+        assert(
+            tlc.createVestingSchedule(joe, 0, 365 * 24 * 3600, 4 * 365 * 24 * 3600, 365 * 2 * 3600, true, 10_000e18)
+                == 0
+        );
         vm.stopPrank();
 
+        vm.startPrank(initAccount);
+        // revoke at mid vesting duration
+        tlc.revokeVestingSchedule(0, 2 * 365 * 24 * 3600);
+        vm.stopPrank();
+
+        assert(tlc.balanceOf(initAccount) == 999_995_000e18);
+        assert(tlc.balanceOf(tlc.vestingEscrow(0)) == 5_000e18);
+
+        // move to cliff
+        vm.warp(365 * 24 * 3600);
+
         vm.startPrank(joe);
-        vm.expectRevert(abi.encodeWithSignature("VestingScheduleRevoked()"));
         tlc.releaseVestingSchedule(0);
         vm.stopPrank();
+
+        assert(tlc.balanceOf(initAccount) == 999_995_000e18);
+        assert(tlc.balanceOf(tlc.vestingEscrow(0)) == 2_500e18);
+        assert(tlc.balanceOf(joe) == 2_500e18);
+
+        // move to vesting schedule end
+        vm.warp(2 * 365 * 24 * 3600);
+
+        vm.startPrank(joe);
+        tlc.releaseVestingSchedule(0);
+        vm.stopPrank();
+
+        assert(tlc.balanceOf(initAccount) == 999_995_000e18);
+        assert(tlc.balanceOf(tlc.vestingEscrow(0)) == 0);
+        assert(tlc.balanceOf(joe) == 5_000e18);
     }
 
     function testdelegateVestingEscrow() public {

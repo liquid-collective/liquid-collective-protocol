@@ -10,7 +10,7 @@
     "compile": "hardhat compile",
     "hh": "hardhat",
     "uml": "sol2uml ./contracts/src -o ./docs/components.svg",
-    "link_contracts": "cd node_modules && ln -s ../lib/openzeppelin-contracts && ln -s ../openzeppelin-contracts-upgradeable"
+    "link_contracts": "cd node_modules && ln -s ../lib/openzeppelin-contracts && ln -s ../lib/openzeppelin-contracts-upgradeable"
   },
   "dependencies": {
     "@nomiclabs/hardhat-ethers": "^2.0.4",

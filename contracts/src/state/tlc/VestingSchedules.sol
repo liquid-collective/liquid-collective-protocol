@@ -14,8 +14,11 @@ library VestingSchedules {
         uint256 cliff;
         // duration of the vesting period in seconds
         uint256 duration;
-        // duration of a slice period for the vesting in seconds
+        // duration of a vesting period in seconds
         uint256 period;
+        // date at which the vesting is ended
+        // initially it is equal to start+duration then to revoke date in case of revoke
+        uint256 end;
         // amount of tokens granted by the vesting schedule
         uint256 amount;
         // creator of the token vesting
@@ -24,8 +27,6 @@ library VestingSchedules {
         address beneficiary;
         // whether or not the vesting is revocable
         bool revocable;
-        // whether or not the vesting has been revoked
-        bool revoked;
     }
 
     /// @notice The structure at the storage slot

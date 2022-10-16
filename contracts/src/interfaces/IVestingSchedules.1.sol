@@ -21,9 +21,8 @@ interface IVestingSchedulesV1 {
 
     /// @notice Vesting schedule has been revoked
     /// @param index Vesting schedule index
-    /// @param releasedAmount Amount of tokens released to the beneficiary
     /// @param returnedAmount Amount of tokens returned to the creator
-    event RevokedVestingSchedule(uint256 index, uint256 releasedAmount, uint256 returnedAmount);
+    event RevokedVestingSchedule(uint256 index, uint256 returnedAmount);
 
     /// @notice Vesting escrow has been delegated
     /// @param index Vesting schedule index
@@ -37,11 +36,14 @@ interface IVestingSchedulesV1 {
     /// @notice Invalid parameter for a vesting schedule
     error InvalidVestingScheduleParameter(string msg);
 
+    /// @notice Attempt to revoke a schedule in the past
+    error VestingScheduleNotRevocableInPast();
+
     /// @notice The vesting schedule is not revocable
     error VestingScheduleNotRevocable();
-
-    /// @notice The vesting schedule has been revoked
-    error VestingScheduleRevoked();
+    
+    /// @notice Attempt to revoke a schedule after the current end date
+    error VestingScheduleNotRevocableAfterEnd(uint256 end);
 
     /// @notice No token to release
     error ZeroReleasableAmount();
@@ -79,9 +81,9 @@ interface IVestingSchedulesV1 {
 
     /// @notice Revoke vesting schedule
     /// @param _index Index of the vesting schedule to revoke
-    /// @return releasedAmount released amount
+    /// @param _end End date for the schedule
     /// @return returnedAmount amount returned to the vesting schedule creator
-    function revokeVestingSchedule(uint256 _index) external returns (uint256 releasedAmount, uint256 returnedAmount);
+    function revokeVestingSchedule(uint256 _index, uint256 _end) external returns (uint256 returnedAmount);
 
     /// @notice Release vesting schedule
     /// @param _index Index of the vesting schedule to release

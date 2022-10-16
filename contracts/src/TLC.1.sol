@@ -80,13 +80,13 @@ contract TLCV1 is IVestingSchedulesV1, ERC20VotesUpgradeable {
         VestingSchedules.VestingSchedule memory vestingSchedule = VestingSchedules.VestingSchedule({
             start: _start,
             cliff: _start + _cliff,
+            end: _start + _duration,
             duration: _duration,
             period: _period,
             amount: _amount,
             creator: _creator,
             beneficiary: _beneficiary,
-            revocable: _revocable,
-            revoked: false
+            revocable: _revocable
         });
         uint256 index = VestingSchedules.push(vestingSchedule) - 1;
 
@@ -113,44 +113,42 @@ contract TLCV1 is IVestingSchedulesV1, ERC20VotesUpgradeable {
     }
 
     /// @inheritdoc IVestingSchedulesV1
-    function revokeVestingSchedule(uint256 _index) external returns (uint256 releasedAmount, uint256 returnedAmount) {
-        return _revokeVestingSchedule(_index);
+    function revokeVestingSchedule(uint256 _index, uint256 _end) external returns (uint256) {
+        return _revokeVestingSchedule(_index, _end);
     }
 
-    function _revokeVestingSchedule(uint256 _index) internal returns (uint256 releasedAmount, uint256 returnedAmount) {
-        VestingSchedules.VestingSchedule storage vestingSchedule = VestingSchedules.get(_index);
+    function _revokeVestingSchedule(uint256 _index, uint256 _end) internal returns (uint256) {
+        if (!(_end > block.timestamp)) {
+            revert VestingScheduleNotRevocableInPast();
+        }
 
+        VestingSchedules.VestingSchedule storage vestingSchedule = VestingSchedules.get(_index);
         if (!vestingSchedule.revocable) {
             revert VestingScheduleNotRevocable();
         }
 
-        if (vestingSchedule.revoked) {
-            revert VestingScheduleRevoked();
+        if (vestingSchedule.end < _end) {
+            revert VestingScheduleNotRevocableAfterEnd(vestingSchedule.end);
         }
 
         if (vestingSchedule.creator != msg.sender) {
             revert LibErrors.Unauthorized(msg.sender);
         }
-
+        
+        // return tokens that will never be vested to creator
         address escrow = _predictDeterministicEscrowClone(_index);
-
-        // transfer all releasable token to the beneficiary
-        uint256 releasableAmount = _computeReleasableAmount(vestingSchedule, escrow);
-        if (releasableAmount > 0) {
-            _transfer(escrow, vestingSchedule.beneficiary, releasableAmount);
+        uint256 releasableAmountAtEnd = _computeReleasableAmount(vestingSchedule, escrow, _end);
+        uint256 returnedAmount = balanceOf(escrow) - releasableAmountAtEnd;
+        if (returnedAmount > 0) {
+            _transfer(escrow, vestingSchedule.creator, returnedAmount);
         }
 
-        // transfer remaining token back to the creator
-        uint256 remainingAmount = balanceOf(escrow);
-        if (remainingAmount > 0) {
-            _transfer(escrow, vestingSchedule.creator, remainingAmount);
-        }
+        // Set schedule end
+        vestingSchedule.end = _end;
 
-        vestingSchedule.revoked = true;
+        emit RevokedVestingSchedule(_index, returnedAmount);
 
-        emit RevokedVestingSchedule(_index, releasableAmount, remainingAmount);
-
-        return (releasableAmount, remainingAmount);
+        return returnedAmount;
     }
 
     /// @inheritdoc IVestingSchedulesV1
@@ -159,18 +157,14 @@ contract TLCV1 is IVestingSchedulesV1, ERC20VotesUpgradeable {
     }
 
     function _releaseVestingSchedule(uint256 _index) internal returns (uint256) {
-        VestingSchedules.VestingSchedule storage vestingSchedule = VestingSchedules.get(_index);
-
-        if (vestingSchedule.revoked) {
-            revert VestingScheduleRevoked();
-        }
+        VestingSchedules.VestingSchedule memory vestingSchedule = VestingSchedules.get(_index);
 
         if (msg.sender != vestingSchedule.beneficiary) {
             revert LibErrors.Unauthorized(msg.sender);
         }
 
         address escrow = _predictDeterministicEscrowClone(_index);
-        uint256 releasableAmount = _computeReleasableAmount(vestingSchedule, escrow);
+        uint256 releasableAmount = _computeReleasableAmount(vestingSchedule, escrow, _getCurrentTime());
         if (releasableAmount == 0) {
             revert ZeroReleasableAmount();
         }
@@ -190,10 +184,6 @@ contract TLCV1 is IVestingSchedulesV1, ERC20VotesUpgradeable {
 
     function _delegateVestingEscrow(uint256 _index, address delegatee) internal returns (bool) {
         VestingSchedules.VestingSchedule storage vestingSchedule = VestingSchedules.get(_index);
-        if (vestingSchedule.revoked) {
-            revert VestingScheduleRevoked();
-        }
-
         if (msg.sender != vestingSchedule.beneficiary) {
             revert LibErrors.Unauthorized(msg.sender);
         }
@@ -238,36 +228,42 @@ contract TLCV1 is IVestingSchedulesV1, ERC20VotesUpgradeable {
     function computeReleasableAmount(uint256 _index) external view returns (uint256) {
         address escrow = _predictDeterministicEscrowClone(_index);
         VestingSchedules.VestingSchedule storage vestingSchedule = VestingSchedules.get(_index);
-        return _computeReleasableAmount(vestingSchedule, escrow);
+        return _computeReleasableAmount(vestingSchedule, escrow, _getCurrentTime());
     }
 
-    function _computeReleasableAmount(VestingSchedules.VestingSchedule memory vestingSchedule, address escrow)
+    function _computeReleasableAmount(VestingSchedules.VestingSchedule memory vestingSchedule, address escrow, uint256 time)
         internal
         view
         returns (uint256)
-    {
-        uint256 vestedAmount = _computeVestedAmount(vestingSchedule);
-        uint256 releasedAmount = vestingSchedule.amount - balanceOf(escrow);
-        if (vestedAmount > releasedAmount) {
-            return vestedAmount - releasedAmount;
+    {   
+        if (time < vestingSchedule.end) {
+            // vesting has been revoked an we are before end time
+            uint256 vestedAmount = _computeVestedAmount(vestingSchedule, time);
+            uint256 releasedAmount = _computeVestedAmount(vestingSchedule, vestingSchedule.end) - balanceOf(escrow);
+            if (vestedAmount > releasedAmount) {
+                return vestedAmount - releasedAmount;
+            }
+        } else {
+            // we are after vesting end date
+            return balanceOf(escrow);
         }
+
         return 0;
     }
 
-    function _computeVestedAmount(VestingSchedules.VestingSchedule memory vestingSchedule)
+    function _computeVestedAmount(VestingSchedules.VestingSchedule memory vestingSchedule, uint256 time)
         internal
-        view
+        pure
         returns (uint256)
-    {
-        uint256 currentTime = _getCurrentTime();
-        if ((currentTime < vestingSchedule.cliff) || vestingSchedule.revoked == true) {
+    {   
+        if (time < vestingSchedule.cliff) {
             // pre cliff tokens are locked
             return 0;
-        } else if (currentTime >= vestingSchedule.start + vestingSchedule.duration) {
+        } else if (time >= vestingSchedule.start + vestingSchedule.duration) {
             // post vesting all tokens have been vested
             return vestingSchedule.amount;
         } else {
-            uint256 timeFromStart = currentTime - vestingSchedule.start;
+            uint256 timeFromStart = time - vestingSchedule.start;
             uint256 vestedDuration = timeFromStart - timeFromStart % vestingSchedule.period;
             return (vestedDuration * vestingSchedule.amount) / vestingSchedule.duration;
         }
