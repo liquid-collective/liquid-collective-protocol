@@ -14,6 +14,10 @@ install: foundry lib yarn
 test:
 	yarn test
 
+lint:
+	forge build --force
+	forge fmt
+
 test-lint:
 	forge build --force
 	forge fmt --check

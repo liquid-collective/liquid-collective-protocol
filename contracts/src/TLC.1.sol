@@ -134,7 +134,7 @@ contract TLCV1 is IVestingSchedulesV1, ERC20VotesUpgradeable {
         if (vestingSchedule.creator != msg.sender) {
             revert LibErrors.Unauthorized(msg.sender);
         }
-        
+
         // return tokens that will never be vested to creator
         address escrow = _predictDeterministicEscrowClone(_index);
         uint256 releasableAmountAtEnd = _computeReleasableAmount(vestingSchedule, escrow, _end);
@@ -231,11 +231,11 @@ contract TLCV1 is IVestingSchedulesV1, ERC20VotesUpgradeable {
         return _computeReleasableAmount(vestingSchedule, escrow, _getCurrentTime());
     }
 
-    function _computeReleasableAmount(VestingSchedules.VestingSchedule memory vestingSchedule, address escrow, uint256 time)
-        internal
-        view
-        returns (uint256)
-    {   
+    function _computeReleasableAmount(
+        VestingSchedules.VestingSchedule memory vestingSchedule,
+        address escrow,
+        uint256 time
+    ) internal view returns (uint256) {
         if (time < vestingSchedule.end) {
             // vesting has been revoked an we are before end time
             uint256 vestedAmount = _computeVestedAmount(vestingSchedule, time);
@@ -255,7 +255,7 @@ contract TLCV1 is IVestingSchedulesV1, ERC20VotesUpgradeable {
         internal
         pure
         returns (uint256)
-    {   
+    {
         if (time < vestingSchedule.cliff) {
             // pre cliff tokens are locked
             return 0;

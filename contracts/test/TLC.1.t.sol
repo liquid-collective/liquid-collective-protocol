@@ -404,7 +404,7 @@ contract TLCTests is Test {
         vm.stopPrank();
 
         vm.startPrank(initAccount);
-        tlc.revokeVestingSchedule(0,4 * 365 * 24 * 3600);
+        tlc.revokeVestingSchedule(0, 4 * 365 * 24 * 3600);
         vm.stopPrank();
 
         assert(tlc.balanceOf(initAccount) == 999_990_000e18);
@@ -487,7 +487,7 @@ contract TLCTests is Test {
         vm.stopPrank();
 
         vm.startPrank(initAccount);
-        vm.expectRevert(abi.encodeWithSignature("VestingScheduleNotRevocableAfterEnd(uint256)",365 * 24 * 3600));
+        vm.expectRevert(abi.encodeWithSignature("VestingScheduleNotRevocableAfterEnd(uint256)", 365 * 24 * 3600));
         tlc.revokeVestingSchedule(0, 2 * 365 * 24 * 3600);
         vm.stopPrank();
     }

@@ -41,7 +41,7 @@ interface IVestingSchedulesV1 {
 
     /// @notice The vesting schedule is not revocable
     error VestingScheduleNotRevocable();
-    
+
     /// @notice Attempt to revoke a schedule after the current end date
     error VestingScheduleNotRevocableAfterEnd(uint256 end);
 
