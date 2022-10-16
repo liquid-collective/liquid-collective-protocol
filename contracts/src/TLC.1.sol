@@ -35,7 +35,9 @@ contract TLCV1 is IVestingSchedulesV1, ERC20VotesUpgradeable {
         bool _revocable,
         uint256 _amount
     ) external returns (uint256) {
-        return _createVestingSchedule(msg.sender, _beneficiary, _start, _lockDuration, _duration, _period, _revocable, _amount);
+        return _createVestingSchedule(
+            msg.sender, _beneficiary, _start, _lockDuration, _duration, _period, _revocable, _amount
+        );
     }
 
     function _createVestingSchedule(
@@ -140,7 +142,7 @@ contract TLCV1 is IVestingSchedulesV1, ERC20VotesUpgradeable {
         }
 
         // revoked end date MUST be after vesting schedule start and before current end
-        if  ((_end < vestingSchedule.start) || (vestingSchedule.end < _end)) {
+        if ((_end < vestingSchedule.start) || (vestingSchedule.end < _end)) {
             revert InvalidRevokedVestingScheduleEnd();
         }
 
@@ -199,7 +201,7 @@ contract TLCV1 is IVestingSchedulesV1, ERC20VotesUpgradeable {
 
     function _delegateVestingEscrow(uint256 _index, address delegatee) internal returns (bool) {
         VestingSchedules.VestingSchedule storage vestingSchedule = VestingSchedules.get(_index);
-        
+
         // Only schedule beneficiary can delegate
         if (msg.sender != vestingSchedule.beneficiary) {
             revert LibErrors.Unauthorized(msg.sender);
