@@ -176,6 +176,69 @@ contract TLCTests is Test {
         assert(tlc.delegates(tlc.vestingEscrow(0)) == joe);
     }
 
+    function testCreateInvalidVestingZeroBeneficiary() public {
+        vm.startPrank(initAccount);
+        vm.expectRevert(abi.encodeWithSignature("InvalidVestingScheduleParameter(string)","Vesting schedule beneficiary must be non zero address"));
+        tlc.createVestingSchedule(
+            address(0), block.timestamp, 365 * 24 * 3600, 4 * 365 * 24 * 3600, 365 * 2 * 3600, true, 10_000e18
+        );
+        vm.stopPrank();
+    }
+
+    function testCreateInvalidVestingZeroDuration() public {
+        vm.startPrank(initAccount);
+        vm.expectRevert(abi.encodeWithSignature("InvalidVestingScheduleParameter(string)","Vesting schedule duration must be > 0"));
+        tlc.createVestingSchedule(
+            joe, block.timestamp, 365 * 24 * 3600, 0, 365 * 2 * 3600, true, 10_000e18
+        );
+        vm.stopPrank();
+    }
+
+    function testCreateInvalidVestingLockDurationOverDuration() public {
+        vm.startPrank(initAccount);
+        vm.expectRevert(abi.encodeWithSignature("InvalidVestingScheduleParameter(string)","Vesting schedule duration must be greater than lock duration"));
+        tlc.createVestingSchedule(
+            joe, block.timestamp, 5 * 365 * 24 * 3600, 4 * 365 * 24 * 3600, 365 * 2 * 3600, true, 10_000e18
+        );
+        vm.stopPrank();
+    }
+
+    function testCreateInvalidVestingZeroAmount() public {
+        vm.startPrank(initAccount);
+        vm.expectRevert(abi.encodeWithSignature("InvalidVestingScheduleParameter(string)","Vesting schedule amount must be > 0"));
+        tlc.createVestingSchedule(
+            joe, block.timestamp, 365 * 24 * 3600, 4 * 365 * 24 * 3600, 365 * 2 * 3600, true, 0
+        );
+        vm.stopPrank();
+    }
+
+    function testCreateInvalidVestingZeroPeriod() public {
+        vm.startPrank(initAccount);
+        vm.expectRevert(abi.encodeWithSignature("InvalidVestingScheduleParameter(string)","Vesting schedule period must be > 0"));
+        tlc.createVestingSchedule(
+            joe, block.timestamp, 365 * 24 * 3600, 4 * 365 * 24 * 3600, 0, true, 10_000e18
+        );
+        vm.stopPrank();
+    }
+
+    function testCreateInvalidVestingPeriodDoesNotDivideDuration() public {
+        vm.startPrank(initAccount);
+        vm.expectRevert(abi.encodeWithSignature("InvalidVestingScheduleParameter(string)","Vesting schedule duration must split in exact periods"));
+        tlc.createVestingSchedule(
+            joe, block.timestamp, 365 * 24 * 3600, 4 * 365 * 24 * 3600 + 1,  365 * 2 * 3600, true, 10_000e18
+        );
+        vm.stopPrank();
+    }
+
+    function testCreateInvalidVestingPeriodDoesNotDivideLockDuration() public {
+        vm.startPrank(initAccount);
+        vm.expectRevert(abi.encodeWithSignature("InvalidVestingScheduleParameter(string)","Vesting schedule cliff must split in exact periods"));
+        tlc.createVestingSchedule(
+            joe, block.timestamp, 365 * 24 * 3600 + 1, 4 * 365 * 24 * 3600 ,  365 * 2 * 3600, true, 10_000e18
+        );
+        vm.stopPrank();
+    }
+
     function testCreateMultipleVestings() public {
         vm.startPrank(initAccount);
         assert(
@@ -487,7 +550,7 @@ contract TLCTests is Test {
         vm.stopPrank();
 
         vm.startPrank(initAccount);
-        vm.expectRevert(abi.encodeWithSignature("VestingScheduleNotRevocableAfterEnd(uint256)", 365 * 24 * 3600));
+        vm.expectRevert(abi.encodeWithSignature("InvalidRevokedVestingScheduleEnd()"));
         tlc.revokeVestingSchedule(0, 2 * 365 * 24 * 3600);
         vm.stopPrank();
     }
@@ -533,7 +596,7 @@ contract TLCTests is Test {
         assert(tlc.balanceOf(joe) == 5_000e18);
     }
 
-    function testdelegateVestingEscrow() public {
+    function testDelegateVestingEscrow() public {
         vm.startPrank(initAccount);
         assert(
             tlc.createVestingSchedule(
@@ -553,7 +616,7 @@ contract TLCTests is Test {
         assert(tlc.delegates(tlc.vestingEscrow(0)) == bob);
     }
 
-    function testdelegateVestingEscrowFromInvalidAccount() public {
+    function testDelegateVestingEscrowFromInvalidAccount() public {
         vm.startPrank(initAccount);
         assert(
             tlc.createVestingSchedule(
@@ -569,5 +632,68 @@ contract TLCTests is Test {
         vm.expectRevert(abi.encodeWithSignature("Unauthorized(address)", bob));
         tlc.delegateVestingEscrow(0, bob);
         vm.stopPrank();
+    }
+
+    function testVestingScheduleFuzzing(
+        uint128 periodDuration,
+        uint8 lockPeriodCount,
+        uint8 vestingPeriodCount,
+        uint256 amount,
+        uint256 releaseAt
+    ) 
+    public
+    { 
+        vm.warp(0);
+        if (periodDuration == 0) {
+            periodDuration = 1;
+        }
+
+        if ((lockPeriodCount == 0) && (vestingPeriodCount == 0)) {
+            vestingPeriodCount = 1;
+        }
+
+        // make sure that at least one token can be released for each period
+        if (amount < (uint256(lockPeriodCount) + uint256(vestingPeriodCount) + 1)) {
+            amount = uint256(lockPeriodCount) + uint256(vestingPeriodCount) + 1;
+        }  
+
+        amount = amount % tlc.balanceOf(initAccount);
+
+        uint256 totalDuration = (uint256(lockPeriodCount) + uint256(vestingPeriodCount)) * uint256(periodDuration);
+        uint256 lockDuration = uint256(lockPeriodCount) * uint256(periodDuration);
+        vm.startPrank(initAccount);
+        assert(
+            tlc.createVestingSchedule(
+                joe, 
+                0, 
+                lockDuration,
+                totalDuration, 
+                periodDuration, 
+                true,
+                amount
+            ) == 0
+        );
+        vm.stopPrank();
+        assert(tlc.balanceOf(initAccount) == 1_000_000_000e18 - amount);
+        assert(tlc.balanceOf(tlc.vestingEscrow(0)) == amount);
+
+        releaseAt = releaseAt % totalDuration;
+
+        vm.warp(releaseAt);
+        
+        if ((releaseAt < lockDuration) || (releaseAt < periodDuration)) {
+            vm.startPrank(joe);
+            vm.expectRevert(abi.encodeWithSignature("ZeroReleasableAmount()"));
+            tlc.releaseVestingSchedule(0);
+            vm.stopPrank();
+        } else {
+            vm.startPrank(joe);
+            uint256 releasedAmount = tlc.releaseVestingSchedule(0);
+            vm.stopPrank();
+            assert(releasedAmount > 0);
+            assert(tlc.balanceOf(joe) == releasedAmount);
+            assert(tlc.balanceOf(tlc.vestingEscrow(0)) == amount - releasedAmount);
+            assert(tlc.balanceOf(initAccount) + tlc.balanceOf(joe) + tlc.balanceOf(tlc.vestingEscrow(0)) == 1_000_000_000e18);
+        }
     }
 }

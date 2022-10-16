@@ -29,20 +29,20 @@ contract TLCV1 is IVestingSchedulesV1, ERC20VotesUpgradeable {
     function createVestingSchedule(
         address _beneficiary,
         uint256 _start,
-        uint256 _cliff,
+        uint256 _lockDuration,
         uint256 _duration,
         uint256 _period,
         bool _revocable,
         uint256 _amount
     ) external returns (uint256) {
-        return _createVestingSchedule(msg.sender, _beneficiary, _start, _cliff, _duration, _period, _revocable, _amount);
+        return _createVestingSchedule(msg.sender, _beneficiary, _start, _lockDuration, _duration, _period, _revocable, _amount);
     }
 
     function _createVestingSchedule(
         address _creator,
         address _beneficiary,
         uint256 _start,
-        uint256 _cliff,
+        uint256 _lockDuration,
         uint256 _duration,
         uint256 _period,
         bool _revocable,
@@ -60,6 +60,10 @@ contract TLCV1 is IVestingSchedulesV1, ERC20VotesUpgradeable {
             revert InvalidVestingScheduleParameter("Vesting schedule duration must be > 0");
         }
 
+        if (_lockDuration > _duration) {
+            revert InvalidVestingScheduleParameter("Vesting schedule duration must be greater than lock duration");
+        }
+
         if (_amount == 0) {
             revert InvalidVestingScheduleParameter("Vesting schedule amount must be > 0");
         }
@@ -69,17 +73,22 @@ contract TLCV1 is IVestingSchedulesV1, ERC20VotesUpgradeable {
         }
 
         if (_duration % _period > 0) {
-            revert InvalidVestingScheduleParameter("Vesting schedule duration must be cut in exact periods");
+            revert InvalidVestingScheduleParameter("Vesting schedule duration must split in exact periods");
         }
 
-        if (_cliff % _period > 0) {
-            revert InvalidVestingScheduleParameter("Vesting schedule cliff must be cut in exact periods");
+        if (_lockDuration % _period > 0) {
+            revert InvalidVestingScheduleParameter("Vesting schedule cliff must split in exact periods");
+        }
+
+        // if input start time is 0 then default to the current block time
+        if (_start == 0) {
+            _start = block.timestamp;
         }
 
         // Create new vesting schedule
         VestingSchedules.VestingSchedule memory vestingSchedule = VestingSchedules.VestingSchedule({
             start: _start,
-            cliff: _start + _cliff,
+            cliff: _start + _lockDuration,
             end: _start + _duration,
             duration: _duration,
             period: _period,
@@ -118,7 +127,10 @@ contract TLCV1 is IVestingSchedulesV1, ERC20VotesUpgradeable {
     }
 
     function _revokeVestingSchedule(uint256 _index, uint256 _end) internal returns (uint256) {
-        if (!(_end > block.timestamp)) {
+        if (_end == 0) {
+            // if end time is 0 then default to current block time
+            _end = block.timestamp;
+        } else if (_end < block.timestamp) {
             revert VestingScheduleNotRevocableInPast();
         }
 
@@ -127,15 +139,17 @@ contract TLCV1 is IVestingSchedulesV1, ERC20VotesUpgradeable {
             revert VestingScheduleNotRevocable();
         }
 
-        if (vestingSchedule.end < _end) {
-            revert VestingScheduleNotRevocableAfterEnd(vestingSchedule.end);
+        // revoked end date MUST be after vesting schedule start and before current end
+        if  ((_end < vestingSchedule.start) || (vestingSchedule.end < _end)) {
+            revert InvalidRevokedVestingScheduleEnd();
         }
 
+        // Only schedule creator can revoke vesting schedule
         if (vestingSchedule.creator != msg.sender) {
             revert LibErrors.Unauthorized(msg.sender);
         }
 
-        // return tokens that will never be vested to creator
+        // Return tokens that will never be vested to creator
         address escrow = _predictDeterministicEscrowClone(_index);
         uint256 releasableAmountAtEnd = _computeReleasableAmount(vestingSchedule, escrow, _end);
         uint256 returnedAmount = balanceOf(escrow) - releasableAmountAtEnd;
@@ -159,6 +173,7 @@ contract TLCV1 is IVestingSchedulesV1, ERC20VotesUpgradeable {
     function _releaseVestingSchedule(uint256 _index) internal returns (uint256) {
         VestingSchedules.VestingSchedule memory vestingSchedule = VestingSchedules.get(_index);
 
+        // Only schedule beneficiary can release
         if (msg.sender != vestingSchedule.beneficiary) {
             revert LibErrors.Unauthorized(msg.sender);
         }
@@ -184,6 +199,8 @@ contract TLCV1 is IVestingSchedulesV1, ERC20VotesUpgradeable {
 
     function _delegateVestingEscrow(uint256 _index, address delegatee) internal returns (bool) {
         VestingSchedules.VestingSchedule storage vestingSchedule = VestingSchedules.get(_index);
+        
+        // Only schedule beneficiary can delegate
         if (msg.sender != vestingSchedule.beneficiary) {
             revert LibErrors.Unauthorized(msg.sender);
         }

@@ -42,8 +42,8 @@ interface IVestingSchedulesV1 {
     /// @notice The vesting schedule is not revocable
     error VestingScheduleNotRevocable();
 
-    /// @notice Attempt to revoke a schedule after the current end date
-    error VestingScheduleNotRevocableAfterEnd(uint256 end);
+    /// @notice Attempt to revoke at a
+    error InvalidRevokedVestingScheduleEnd();
 
     /// @notice No token to release
     error ZeroReleasableAmount();
@@ -55,8 +55,8 @@ interface IVestingSchedulesV1 {
     /// @notice Creates a new vesting schedule
     /// @param _beneficiary address of the beneficiary of the tokens
     /// @param _start start time of the vesting
-    /// @param _cliff cliff duration during which tokens are locked (in seconds)
-    /// @param _duration total vesting duration after which all tokens are vested (in seconds)
+    /// @param _lockDuration duration during which tokens are locked (in seconds)
+    /// @param _duration total vesting schedule duration after which all tokens are vested (in seconds)
     /// @param _period duration of a period after which new tokens unlock (in seconds)
     /// @param _revocable whether the vesting schedule is revocable or not
     /// @param _amount amount of token attributed by the vesting schedule
@@ -64,7 +64,7 @@ interface IVestingSchedulesV1 {
     function createVestingSchedule(
         address _beneficiary,
         uint256 _start,
-        uint256 _cliff,
+        uint256 _lockDuration,
         uint256 _duration,
         uint256 _period,
         bool _revocable,
