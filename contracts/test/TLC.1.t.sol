@@ -683,7 +683,8 @@ contract TLCTests is Test {
         uint8 lockPeriodCount,
         uint8 vestingPeriodCount,
         uint256 amount,
-        uint256 releaseAt
+        uint256 releaseAt,
+        uint256 revokeAt
     ) public {
         vm.warp(0);
         if (periodDuration == 0) {
@@ -695,8 +696,8 @@ contract TLCTests is Test {
         }
 
         // make sure that at least one token can be released for each period
-        if (amount < (uint256(lockPeriodCount) + uint256(vestingPeriodCount) + 1)) {
-            amount = uint256(lockPeriodCount) + uint256(vestingPeriodCount) + 1;
+        if (amount < (uint256(lockPeriodCount) + uint256(vestingPeriodCount))) {
+            amount = uint256(lockPeriodCount) + uint256(vestingPeriodCount);
         }
 
         amount = amount % tlc.balanceOf(initAccount);
@@ -709,26 +710,50 @@ contract TLCTests is Test {
         assert(tlc.balanceOf(initAccount) == 1_000_000_000e18 - amount);
         assert(tlc.balanceOf(tlc.vestingEscrow(0)) == amount);
 
-        releaseAt = releaseAt % totalDuration;
-
-        vm.warp(releaseAt);
-
-        if ((releaseAt < lockDuration) || (releaseAt < periodDuration)) {
-            vm.startPrank(joe);
-            vm.expectRevert(abi.encodeWithSignature("ZeroReleasableAmount()"));
-            tlc.releaseVestingSchedule(0);
+        revokeAt = revokeAt % totalDuration;
+        if (revokeAt > 0) {
+            vm.startPrank(initAccount);
+            assert(tlc.revokeVestingSchedule(0, revokeAt) > 0);
             vm.stopPrank();
-        } else {
-            vm.startPrank(joe);
-            uint256 releasedAmount = tlc.releaseVestingSchedule(0);
-            vm.stopPrank();
-            assert(releasedAmount > 0);
-            assert(tlc.balanceOf(joe) == releasedAmount);
-            assert(tlc.balanceOf(tlc.vestingEscrow(0)) == amount - releasedAmount);
-            assert(
-                tlc.balanceOf(initAccount) + tlc.balanceOf(joe) + tlc.balanceOf(tlc.vestingEscrow(0))
-                    == 1_000_000_000e18
-            );
+        }
+
+        releaseAt = releaseAt % periodDuration;
+        while (true) {
+            vm.warp(releaseAt);
+            if ((releaseAt < lockDuration) || (releaseAt < periodDuration) || (revokeAt > 0) && ((revokeAt < lockDuration) || (revokeAt < periodDuration))) {
+                // we are in either of this situation
+                // - before end of lock duration
+                // - lock duration is 0 and we are before end of first period
+                // - vesting has been revoked and end is before end of lock duration
+                // - vesting has been revoked and end is before end of first period
+                vm.startPrank(joe);
+                vm.expectRevert(abi.encodeWithSignature("ZeroReleasableAmount()"));
+                tlc.releaseVestingSchedule(0);
+                vm.stopPrank();
+            } else {
+                uint256 oldJoeBalance = tlc.balanceOf(joe);
+                uint256 oldEscrowBalance = tlc.balanceOf(tlc.vestingEscrow(0));
+                
+                vm.startPrank(joe);
+                uint256 releasedAmount = tlc.releaseVestingSchedule(0);
+                vm.stopPrank();
+
+                // make sure funds are properly transferred from escrow to beneficiary
+                assert(releasedAmount > 0);
+                assert(tlc.balanceOf(joe) == oldJoeBalance + releasedAmount);
+                assert(tlc.balanceOf(tlc.vestingEscrow(0)) == oldEscrowBalance - releasedAmount);
+
+                // make sure invariant is respected
+                assert(tlc.balanceOf(initAccount) + tlc.balanceOf(joe) + tlc.balanceOf(tlc.vestingEscrow(0)) == 1_000_000_000e18);
+            }
+
+            if (releaseAt >= (tlc.getVestingSchedule(0).end /periodDuration) * periodDuration ) {
+                // we got into the end period so all tokens should have been released
+                assert(tlc.balanceOf(tlc.vestingEscrow(0)) == 0);
+                break;
+            }
+
+            releaseAt += periodDuration;
         }
     }
 }
