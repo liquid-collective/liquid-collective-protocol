@@ -292,8 +292,7 @@ contract ERC20VestableVotesUpgradeableV1Tests is Test {
 
         vm.startPrank(initAccount);
         assert(
-            tt.createVestingSchedule(joe, 0, 365 * 24 * 3600, 4 * 365 * 24 * 3600, 365 * 2 * 3600, true, 10_000e18)
-                == 0
+            tt.createVestingSchedule(joe, 0, 365 * 24 * 3600, 4 * 365 * 24 * 3600, 365 * 2 * 3600, true, 10_000e18) == 0
         );
         vm.stopPrank();
 
@@ -314,8 +313,7 @@ contract ERC20VestableVotesUpgradeableV1Tests is Test {
 
         vm.startPrank(initAccount);
         assert(
-            tt.createVestingSchedule(joe, 0, 365 * 24 * 3600, 4 * 365 * 24 * 3600, 365 * 2 * 3600, true, 10_000e18)
-                == 0
+            tt.createVestingSchedule(joe, 0, 365 * 24 * 3600, 4 * 365 * 24 * 3600, 365 * 2 * 3600, true, 10_000e18) == 0
         );
         vm.stopPrank();
 
@@ -339,8 +337,7 @@ contract ERC20VestableVotesUpgradeableV1Tests is Test {
 
         vm.startPrank(initAccount);
         assert(
-            tt.createVestingSchedule(joe, 0, 365 * 24 * 3600, 4 * 365 * 24 * 3600, 365 * 2 * 3600, true, 10_000e18)
-                == 0
+            tt.createVestingSchedule(joe, 0, 365 * 24 * 3600, 4 * 365 * 24 * 3600, 365 * 2 * 3600, true, 10_000e18) == 0
         );
         vm.stopPrank();
 
@@ -364,8 +361,7 @@ contract ERC20VestableVotesUpgradeableV1Tests is Test {
 
         vm.startPrank(initAccount);
         assert(
-            tt.createVestingSchedule(joe, 0, 365 * 24 * 3600, 4 * 365 * 24 * 3600, 365 * 2 * 3600, true, 10_000e18)
-                == 0
+            tt.createVestingSchedule(joe, 0, 365 * 24 * 3600, 4 * 365 * 24 * 3600, 365 * 2 * 3600, true, 10_000e18) == 0
         );
         vm.stopPrank();
 
@@ -430,8 +426,7 @@ contract ERC20VestableVotesUpgradeableV1Tests is Test {
 
         vm.startPrank(initAccount);
         assert(
-            tt.createVestingSchedule(joe, 0, 365 * 24 * 3600, 4 * 365 * 24 * 3600, 365 * 2 * 3600, true, 10_000e18)
-                == 0
+            tt.createVestingSchedule(joe, 0, 365 * 24 * 3600, 4 * 365 * 24 * 3600, 365 * 2 * 3600, true, 10_000e18) == 0
         );
         vm.stopPrank();
 
@@ -451,8 +446,7 @@ contract ERC20VestableVotesUpgradeableV1Tests is Test {
 
         vm.startPrank(initAccount);
         assert(
-            tt.createVestingSchedule(joe, 0, 365 * 24 * 3600, 4 * 365 * 24 * 3600, 365 * 2 * 3600, true, 10_000e18)
-                == 0
+            tt.createVestingSchedule(joe, 0, 365 * 24 * 3600, 4 * 365 * 24 * 3600, 365 * 2 * 3600, true, 10_000e18) == 0
         );
         vm.stopPrank();
 
@@ -476,8 +470,7 @@ contract ERC20VestableVotesUpgradeableV1Tests is Test {
 
         vm.startPrank(initAccount);
         assert(
-            tt.createVestingSchedule(joe, 0, 365 * 24 * 3600, 4 * 365 * 24 * 3600, 365 * 2 * 3600, true, 10_000e18)
-                == 0
+            tt.createVestingSchedule(joe, 0, 365 * 24 * 3600, 4 * 365 * 24 * 3600, 365 * 2 * 3600, true, 10_000e18) == 0
         );
         vm.stopPrank();
 
@@ -501,8 +494,7 @@ contract ERC20VestableVotesUpgradeableV1Tests is Test {
 
         vm.startPrank(initAccount);
         assert(
-            tt.createVestingSchedule(joe, 0, 365 * 24 * 3600, 4 * 365 * 24 * 3600, 365 * 2 * 3600, true, 10_000e18)
-                == 0
+            tt.createVestingSchedule(joe, 0, 365 * 24 * 3600, 4 * 365 * 24 * 3600, 365 * 2 * 3600, true, 10_000e18) == 0
         );
         vm.stopPrank();
 
@@ -541,8 +533,7 @@ contract ERC20VestableVotesUpgradeableV1Tests is Test {
 
         vm.startPrank(initAccount);
         assert(
-            tt.createVestingSchedule(joe, 0, 365 * 24 * 3600, 4 * 365 * 24 * 3600, 365 * 2 * 3600, true, 10_000e18)
-                == 0
+            tt.createVestingSchedule(joe, 0, 365 * 24 * 3600, 4 * 365 * 24 * 3600, 365 * 2 * 3600, true, 10_000e18) == 0
         );
         vm.stopPrank();
 
@@ -557,8 +548,7 @@ contract ERC20VestableVotesUpgradeableV1Tests is Test {
 
         vm.startPrank(initAccount);
         assert(
-            tt.createVestingSchedule(joe, 0, 365 * 24 * 3600, 4 * 365 * 24 * 3600, 365 * 2 * 3600, true, 10_000e18)
-                == 0
+            tt.createVestingSchedule(joe, 0, 365 * 24 * 3600, 4 * 365 * 24 * 3600, 365 * 2 * 3600, true, 10_000e18) == 0
         );
         vm.stopPrank();
 
@@ -582,8 +572,7 @@ contract ERC20VestableVotesUpgradeableV1Tests is Test {
 
         vm.startPrank(initAccount);
         assert(
-            tt.createVestingSchedule(joe, 0, 365 * 24 * 3600, 4 * 365 * 24 * 3600, 365 * 2 * 3600, true, 10_000e18)
-                == 0
+            tt.createVestingSchedule(joe, 0, 365 * 24 * 3600, 4 * 365 * 24 * 3600, 365 * 2 * 3600, true, 10_000e18) == 0
         );
         vm.stopPrank();
 
@@ -602,8 +591,7 @@ contract ERC20VestableVotesUpgradeableV1Tests is Test {
 
         vm.startPrank(initAccount);
         assert(
-            tt.createVestingSchedule(joe, 0, 365 * 24 * 3600, 4 * 365 * 24 * 3600, 365 * 2 * 3600, true, 10_000e18)
-                == 0
+            tt.createVestingSchedule(joe, 0, 365 * 24 * 3600, 4 * 365 * 24 * 3600, 365 * 2 * 3600, true, 10_000e18) == 0
         );
         vm.stopPrank();
 
@@ -722,7 +710,10 @@ contract ERC20VestableVotesUpgradeableV1Tests is Test {
         releaseAt = releaseAt % periodDuration;
         while (true) {
             vm.warp(releaseAt);
-            if ((releaseAt < lockDuration) || (releaseAt < periodDuration) || (revokeAt > 0) && ((revokeAt < lockDuration) || (revokeAt < periodDuration))) {
+            if (
+                (releaseAt < lockDuration) || (releaseAt < periodDuration)
+                    || (revokeAt > 0) && ((revokeAt < lockDuration) || (revokeAt < periodDuration))
+            ) {
                 // we are in either of this situation
                 // - before end of lock duration
                 // - lock duration is 0 and we are before end of first period
@@ -735,7 +726,7 @@ contract ERC20VestableVotesUpgradeableV1Tests is Test {
             } else {
                 uint256 oldJoeBalance = tt.balanceOf(joe);
                 uint256 oldEscrowBalance = tt.balanceOf(tt.vestingEscrow(0));
-                
+
                 vm.startPrank(joe);
                 uint256 releasedAmount = tt.releaseVestingSchedule(0);
                 vm.stopPrank();
@@ -746,10 +737,13 @@ contract ERC20VestableVotesUpgradeableV1Tests is Test {
                 assert(tt.balanceOf(tt.vestingEscrow(0)) == oldEscrowBalance - releasedAmount);
 
                 // make sure invariant is respected
-                assert(tt.balanceOf(initAccount) + tt.balanceOf(joe) + tt.balanceOf(tt.vestingEscrow(0)) == 1_000_000_000e18);
+                assert(
+                    tt.balanceOf(initAccount) + tt.balanceOf(joe) + tt.balanceOf(tt.vestingEscrow(0))
+                        == 1_000_000_000e18
+                );
             }
 
-            if (releaseAt >= (tt.getVestingSchedule(0).end /periodDuration) * periodDuration ) {
+            if (releaseAt >= (tt.getVestingSchedule(0).end / periodDuration) * periodDuration) {
                 // we got into the end period so all tokens should have been released
                 assert(tt.balanceOf(tt.vestingEscrow(0)) == 0);
                 break;

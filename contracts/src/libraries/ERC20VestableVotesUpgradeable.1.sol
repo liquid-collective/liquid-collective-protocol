@@ -11,13 +11,11 @@ import "../state/tlc/VestingSchedules.sol";
 import "./LibSanitize.sol";
 
 abstract contract ERC20VestableVotesUpgradeableV1 is Initializable, IVestingSchedulesV1, ERC20VotesUpgradeable {
-    function __ERC20VestableVotes_init() internal onlyInitializing {
-    }
+    function __ERC20VestableVotes_init() internal onlyInitializing {}
 
-    function __ERC20VestableVotes_init_unchained() internal onlyInitializing {
-    }
+    function __ERC20VestableVotes_init_unchained() internal onlyInitializing {}
 
-     /// @inheritdoc IVestingSchedulesV1
+    /// @inheritdoc IVestingSchedulesV1
     function createVestingSchedule(
         address _beneficiary,
         uint256 _start,
