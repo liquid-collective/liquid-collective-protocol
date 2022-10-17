@@ -48,10 +48,6 @@ interface IVestingSchedulesV1 {
     /// @notice No token to release
     error ZeroReleasableAmount();
 
-    /// @notice Initializes the TLC Token
-    /// @param _account The initial account to grant all the minted tokens
-    function initTLCV1(address _account) external;
-
     /// @notice Creates a new vesting schedule
     /// @param _beneficiary address of the beneficiary of the tokens
     /// @param _start start time of the vesting
