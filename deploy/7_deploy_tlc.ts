@@ -11,12 +11,6 @@ const func: DeployFunction = async function ({ deployments, getNamedAccounts }: 
     alluvialTreasury,
   } = await getNamedAccounts();
 
-  const escrowDeployment = await deployments.deploy("EscrowImplementation", {
-    contract: "Escrow",
-    from: deployer,
-    log: true,
-  });
-
   await deployments.deploy("TLC", {
     contract: "TLCV1",
     from: deployer,
@@ -24,9 +18,10 @@ const func: DeployFunction = async function ({ deployments, getNamedAccounts }: 
     proxy: {
       owner: proxyAdministrator,
       proxyContract: "TUPProxy",
+      implementationName: "TLCV1_Implementation",
       execute: {
         methodName: "initTLCV1",
-        args: [alluvialTreasury,escrowDeployment.address],
+        args: [alluvialTreasury],
       },
     },
   });
