@@ -249,19 +249,6 @@ contract ERC20VestableVotesUpgradeableV1Tests is Test {
         vm.stopPrank();
     }
 
-    function testCreateInvalidVestingPeriodDoesNotDivideLockDuration() public {
-        vm.startPrank(initAccount);
-        vm.expectRevert(
-            abi.encodeWithSignature(
-                "InvalidVestingScheduleParameter(string)", "Vesting schedule cliff must split in exact periods"
-            )
-        );
-        tt.createVestingSchedule(
-            joe, block.timestamp, 365 * 24 * 3600 + 1, 4 * 365 * 24 * 3600, 365 * 2 * 3600, true, 10_000e18
-        );
-        vm.stopPrank();
-    }
-
     function testCreateMultipleVestings() public {
         vm.startPrank(initAccount);
         vm.expectEmit(true, true, true, true);
@@ -670,7 +657,7 @@ contract ERC20VestableVotesUpgradeableV1Tests is Test {
 
     function testVestingScheduleFuzzing(
         uint128 periodDuration,
-        uint8 lockPeriodCount,
+        uint256 lockDuration,
         uint8 vestingPeriodCount,
         uint256 amount,
         uint256 releaseAt,
@@ -681,19 +668,19 @@ contract ERC20VestableVotesUpgradeableV1Tests is Test {
             periodDuration = 1;
         }
 
-        if ((lockPeriodCount == 0) && (vestingPeriodCount == 0)) {
+        if (vestingPeriodCount == 0)  {
             vestingPeriodCount = 1;
         }
 
         // make sure that at least one token can be released for each period
-        if (amount < (uint256(lockPeriodCount) + uint256(vestingPeriodCount))) {
-            amount = uint256(lockPeriodCount) + uint256(vestingPeriodCount);
+        if (amount < vestingPeriodCount) {
+            amount = uint256(vestingPeriodCount);
         }
 
         amount = amount % tt.balanceOf(initAccount);
 
-        uint256 totalDuration = (uint256(lockPeriodCount) + uint256(vestingPeriodCount)) * uint256(periodDuration);
-        uint256 lockDuration = uint256(lockPeriodCount) * uint256(periodDuration);
+        uint256 totalDuration = uint256(vestingPeriodCount) * uint256(periodDuration);
+        lockDuration = lockDuration % totalDuration;
         vm.startPrank(initAccount);
         assert(tt.createVestingSchedule(joe, 0, lockDuration, totalDuration, periodDuration, true, amount) == 0);
         vm.stopPrank();
@@ -743,12 +730,13 @@ contract ERC20VestableVotesUpgradeableV1Tests is Test {
                 );
             }
 
-            if (releaseAt >= (tt.getVestingSchedule(0).end / periodDuration) * periodDuration) {
-                // we got into the end period so all tokens should have been released
+            if (releaseAt >= ((tt.getVestingSchedule(0).end / periodDuration) * periodDuration) && (releaseAt >= lockDuration)) {
+                // we got into the end period and passed the lock duration so all tokens should have been released
                 assert(tt.balanceOf(tt.vestingEscrow(0)) == 0);
                 break;
             }
 
+            // Release at next period
             releaseAt += periodDuration;
         }
     }

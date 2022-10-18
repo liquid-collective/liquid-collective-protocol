@@ -68,10 +68,6 @@ abstract contract ERC20VestableVotesUpgradeableV1 is Initializable, IVestingSche
             revert InvalidVestingScheduleParameter("Vesting schedule duration must split in exact periods");
         }
 
-        if (_lockDuration % _period > 0) {
-            revert InvalidVestingScheduleParameter("Vesting schedule cliff must split in exact periods");
-        }
-
         // if input start time is 0 then default to the current block time
         if (_start == 0) {
             _start = block.timestamp;
