@@ -16,6 +16,28 @@ abstract contract ERC20VestableVotesUpgradeableV1 is Initializable, IVestingSche
     function __ERC20VestableVotes_init_unchained() internal onlyInitializing {}
 
     /// @inheritdoc IVestingSchedulesV1
+    function getVestingSchedule(uint256 _index) external view returns (VestingSchedules.VestingSchedule memory) {
+        return VestingSchedules.get(_index);
+    }
+
+    /// @inheritdoc IVestingSchedulesV1
+    function getVestingScheduleCount() external view returns (uint256) {
+        return VestingSchedules.getCount();
+    }
+
+    /// @inheritdoc IVestingSchedulesV1
+    function vestingEscrow(uint256 _index) external view returns (address) {
+        return _predictDeterministicEscrow(_index);
+    }
+
+    /// @inheritdoc IVestingSchedulesV1
+    function computeReleasableAmount(uint256 _index) external view returns (uint256) {
+        address escrow = _predictDeterministicEscrow(_index);
+        VestingSchedules.VestingSchedule memory vestingSchedule = VestingSchedules.get(_index);
+        return _computeReleasableAmount(vestingSchedule, escrow, _getCurrentTime());
+    }
+
+    /// @inheritdoc IVestingSchedulesV1
     function createVestingSchedule(
         address _beneficiary,
         uint256 _start,
@@ -30,6 +52,31 @@ abstract contract ERC20VestableVotesUpgradeableV1 is Initializable, IVestingSche
         );
     }
 
+    /// @inheritdoc IVestingSchedulesV1
+    function revokeVestingSchedule(uint256 _index, uint256 _end) external returns (uint256) {
+        return _revokeVestingSchedule(_index, _end);
+    }
+
+    /// @inheritdoc IVestingSchedulesV1
+    function releaseVestingSchedule(uint256 _index) external returns (uint256) {
+        return _releaseVestingSchedule(_index);
+    }
+
+    /// @inheritdoc IVestingSchedulesV1
+    function delegateVestingEscrow(uint256 _index, address _delegatee) external returns (bool) {
+        return _delegateVestingEscrow(_index, _delegatee);
+    }
+
+    /// @notice Creates a new vesting schedule
+    /// @param _creator address of the creator that transfer the tokens
+    /// @param _beneficiary address of the beneficiary of the tokens
+    /// @param _start start time of the vesting
+    /// @param _lockDuration duration during which tokens are locked (in seconds)
+    /// @param _duration total vesting schedule duration after which all tokens are vested (in seconds)
+    /// @param _period duration of a period after which new tokens unlock (in seconds)
+    /// @param _revocable whether the vesting schedule is revocable or not
+    /// @param _amount amount of token attributed by the vesting schedule
+    /// @return index of the created vesting schedule
     function _createVestingSchedule(
         address _creator,
         address _beneficiary,
@@ -44,6 +91,7 @@ abstract contract ERC20VestableVotesUpgradeableV1 is Initializable, IVestingSche
             revert UnsufficientVestingScheduleCreatorBalance();
         }
 
+        // validate schedule parameters are valid
         if (_beneficiary == address(0)) {
             revert InvalidVestingScheduleParameter("Vesting schedule beneficiary must be non zero address");
         }
@@ -88,7 +136,7 @@ abstract contract ERC20VestableVotesUpgradeableV1 is Initializable, IVestingSche
         uint256 index = VestingSchedules.push(vestingSchedule) - 1;
 
         // Create an escrow clone contract that will hold the token during the vesting
-        address escrow = _cloneDeterministicEscrow(index);
+        address escrow = _predictDeterministicEscrow(index);
 
         // transfer tokens to escrow contract and delegate escrow to beneficiary
         _transfer(_creator, escrow, _amount);
@@ -99,21 +147,10 @@ abstract contract ERC20VestableVotesUpgradeableV1 is Initializable, IVestingSche
         return index;
     }
 
-    /// @inheritdoc IVestingSchedulesV1
-    function getVestingSchedule(uint256 _index) external view returns (VestingSchedules.VestingSchedule memory) {
-        return VestingSchedules.get(_index);
-    }
-
-    /// @inheritdoc IVestingSchedulesV1
-    function getVestingScheduleCount() external view returns (uint256) {
-        return VestingSchedules.getCount();
-    }
-
-    /// @inheritdoc IVestingSchedulesV1
-    function revokeVestingSchedule(uint256 _index, uint256 _end) external returns (uint256) {
-        return _revokeVestingSchedule(_index, _end);
-    }
-
+    /// @notice Revoke vesting schedule
+    /// @param _index Index of the vesting schedule to revoke
+    /// @param _end End date for the schedule
+    /// @return returnedAmount amount returned to the vesting schedule creator
     function _revokeVestingSchedule(uint256 _index, uint256 _end) internal returns (uint256) {
         if (_end == 0) {
             // if end time is 0 then default to current block time
@@ -138,7 +175,7 @@ abstract contract ERC20VestableVotesUpgradeableV1 is Initializable, IVestingSche
         }
 
         // Return tokens that will never be vested to creator
-        address escrow = _predictDeterministicEscrowClone(_index);
+        address escrow = _predictDeterministicEscrow(_index);
         uint256 releasableAmountAtEnd = _computeReleasableAmount(vestingSchedule, escrow, _end);
         uint256 returnedAmount = balanceOf(escrow) - releasableAmountAtEnd;
         if (returnedAmount > 0) {
@@ -153,11 +190,9 @@ abstract contract ERC20VestableVotesUpgradeableV1 is Initializable, IVestingSche
         return returnedAmount;
     }
 
-    /// @inheritdoc IVestingSchedulesV1
-    function releaseVestingSchedule(uint256 _index) external returns (uint256) {
-        return _releaseVestingSchedule(_index);
-    }
-
+    /// @notice Release vesting schedule
+    /// @param _index Index of the vesting schedule to release
+    /// @return released amount
     function _releaseVestingSchedule(uint256 _index) internal returns (uint256) {
         VestingSchedules.VestingSchedule memory vestingSchedule = VestingSchedules.get(_index);
 
@@ -166,7 +201,7 @@ abstract contract ERC20VestableVotesUpgradeableV1 is Initializable, IVestingSche
             revert LibErrors.Unauthorized(msg.sender);
         }
 
-        address escrow = _predictDeterministicEscrowClone(_index);
+        address escrow = _predictDeterministicEscrow(_index);
         uint256 releasableAmount = _computeReleasableAmount(vestingSchedule, escrow, _getCurrentTime());
         if (releasableAmount == 0) {
             revert ZeroReleasableAmount();
@@ -180,12 +215,10 @@ abstract contract ERC20VestableVotesUpgradeableV1 is Initializable, IVestingSche
         return releasableAmount;
     }
 
-    /// @inheritdoc IVestingSchedulesV1
-    function delegateVestingEscrow(uint256 _index, address _delegatee) external returns (bool) {
-        return _delegateVestingEscrow(_index, _delegatee);
-    }
-
-    function _delegateVestingEscrow(uint256 _index, address delegatee) internal returns (bool) {
+    /// @notice Delegate vesting escrowed tokens
+    /// @param _index index of the vesting schedule
+    /// @param _delegatee address to delegate the token to
+    function _delegateVestingEscrow(uint256 _index, address _delegatee) internal returns (bool) {
         VestingSchedules.VestingSchedule storage vestingSchedule = VestingSchedules.get(_index);
 
         // Only schedule beneficiary can delegate
@@ -193,24 +226,20 @@ abstract contract ERC20VestableVotesUpgradeableV1 is Initializable, IVestingSche
             revert LibErrors.Unauthorized(msg.sender);
         }
 
-        address escrow = _predictDeterministicEscrowClone(_index);
+        address escrow = _predictDeterministicEscrow(_index);
         address oldDelegatee = delegates(escrow);
 
-        _delegate(escrow, delegatee);
+        _delegate(escrow, _delegatee);
 
-        emit DelegatedVestingEscrow(_index, oldDelegatee, delegatee);
+        emit DelegatedVestingEscrow(_index, oldDelegatee, _delegatee);
 
         return true;
     }
 
-    /// @inheritdoc IVestingSchedulesV1
-    function vestingEscrow(uint256 _index) external view returns (address) {
-        return _predictDeterministicEscrowClone(_index);
-    }
 
     /// @notice Internal utility to compute the escrow deterministic address
     /// @param _index index of the vesting schedule
-    function _predictDeterministicEscrowClone(uint256 _index) internal view returns (address escrow) {
+    function _predictDeterministicEscrow(uint256 _index) internal view returns (address escrow) {
         bytes32 salt = sha256(abi.encodePacked(_index));
         bytes32 hash = keccak256(abi.encodePacked(bytes1(0xff), address(this), salt, keccak256("")));
 
@@ -218,62 +247,54 @@ abstract contract ERC20VestableVotesUpgradeableV1 is Initializable, IVestingSche
         return address(uint160(uint256(hash)));
     }
 
-    /// @notice Internal utility to deploy an escrow to hold the tokens while vesting
-    /// @param _index index of the vesting schedule
-    function _cloneDeterministicEscrow(uint256 _index) internal returns (address escrow) {
-        bytes32 salt = sha256(abi.encodePacked(_index));
-        assembly {
-            // deploy a contract with empty code
-            escrow := create2(0, 0, 0, salt)
-        }
-        LibSanitize._notZeroAddress(escrow);
-    }
-
-    /// @inheritdoc IVestingSchedulesV1
-    function computeReleasableAmount(uint256 _index) external view returns (uint256) {
-        address escrow = _predictDeterministicEscrowClone(_index);
-        VestingSchedules.VestingSchedule storage vestingSchedule = VestingSchedules.get(_index);
-        return _computeReleasableAmount(vestingSchedule, escrow, _getCurrentTime());
-    }
-
+    /// @notice Computes the releasable amount of tokens for a vesting schedule.
+    /// @param _vestingSchedule vesting schedule to compute releasable tokens for
+    /// @param _escrow address of the escrow of the vesting schedule
+    /// @param _time time to compute the releasable amount at
+    /// @return amount of release tokens
     function _computeReleasableAmount(
-        VestingSchedules.VestingSchedule memory vestingSchedule,
-        address escrow,
-        uint256 time
+        VestingSchedules.VestingSchedule memory _vestingSchedule,
+        address _escrow,
+        uint256 _time
     ) internal view returns (uint256) {
-        if (time < vestingSchedule.end) {
+        if (_time < _vestingSchedule.end) {
             // vesting has been revoked an we are before end time
-            uint256 vestedAmount = _computeVestedAmount(vestingSchedule, time);
-            uint256 releasedAmount = _computeVestedAmount(vestingSchedule, vestingSchedule.end) - balanceOf(escrow);
+            uint256 vestedAmount = _computeVestedAmount(_vestingSchedule, _time);
+            uint256 releasedAmount = _computeVestedAmount(_vestingSchedule, _vestingSchedule.end) - balanceOf(_escrow);
             if (vestedAmount > releasedAmount) {
                 return vestedAmount - releasedAmount;
             }
         } else {
             // we are after vesting end date
-            return balanceOf(escrow);
+            return balanceOf(_escrow);
         }
 
         return 0;
     }
 
-    function _computeVestedAmount(VestingSchedules.VestingSchedule memory vestingSchedule, uint256 time)
+    /// @notice Computes the vested amount of tokens for a vesting schedule.
+    /// @param _vestingSchedule vesting schedule to compute vested tokens for
+    /// @param _time time to compute the vested amount at
+    /// @return amount of release tokens
+    function _computeVestedAmount(VestingSchedules.VestingSchedule memory _vestingSchedule, uint256 _time)
         internal
         pure
         returns (uint256)
     {
-        if (time < vestingSchedule.cliff) {
+        if (_time < _vestingSchedule.cliff) {
             // pre cliff tokens are locked
             return 0;
-        } else if (time >= vestingSchedule.start + vestingSchedule.duration) {
+        } else if (_time >= _vestingSchedule.start + _vestingSchedule.duration) {
             // post vesting all tokens have been vested
-            return vestingSchedule.amount;
+            return _vestingSchedule.amount;
         } else {
-            uint256 timeFromStart = time - vestingSchedule.start;
-            uint256 vestedDuration = timeFromStart - timeFromStart % vestingSchedule.period;
-            return (vestedDuration * vestingSchedule.amount) / vestingSchedule.duration;
+            uint256 timeFromStart = _time - _vestingSchedule.start;
+            uint256 vestedDuration = timeFromStart - timeFromStart % _vestingSchedule.period;
+            return (vestedDuration * _vestingSchedule.amount) / _vestingSchedule.duration;
         }
     }
 
+    /// @notice Returns current time
     function _getCurrentTime() internal view virtual returns (uint256) {
         return block.timestamp;
     }
