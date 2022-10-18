@@ -25,6 +25,11 @@ interface ISharesManagerV1 is IERC20 {
     /// @param _to Account receiving the funds in the invalid transfer
     error UnauthorizedTransfer(address _from, address _to);
 
+    /// @notice Shares have been voided without underlying asset being redeemed
+    /// @param caller The account that performed the voiding
+    /// @param amount The amount of shares that has been voided
+    event Void(address indexed caller, uint256 amount);
+
     /// @notice Retrieve the token name
     /// @return The token name
     function name() external pure returns (string memory);

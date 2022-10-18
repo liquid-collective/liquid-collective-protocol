@@ -67,6 +67,8 @@ contract SharesManagerV1Tests is Test {
 
     error Denied(address _account);
 
+    event Void(address indexed caller, uint256 amount);
+
     function setUp() public {
         sharesManager = new SharesManagerPublicDeal();
     }
@@ -543,6 +545,8 @@ contract SharesManagerV1Tests is Test {
         SharesManagerPublicDeal(payable(address(sharesManager))).setValidatorBalance(uint256(_allowance));
         vm.startPrank(_user);
         assert(_allowance == sharesManager.balanceOf(_user));
+        vm.expectEmit(true, true, true, true);
+        emit Void(_user, _allowance);
         sharesManager.void(_allowance);
         vm.stopPrank();
         assert(0 == sharesManager.balanceOf(_user));

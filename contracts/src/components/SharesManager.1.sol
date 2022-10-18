@@ -155,11 +155,9 @@ abstract contract SharesManagerV1 is ISharesManagerV1 {
 
     /// @inheritdoc ISharesManagerV1
     function void(uint256 _amount) external {
-        if (_balanceOf(msg.sender) < _amount) {
-            revert BalanceTooLow();
-        }
         _burnRawShares(msg.sender, _amount);
         _onVoid(msg.sender);
+        emit Void(msg.sender, _amount);
     }
 
     /// @notice Internal utility to spend the allowance of an account from the message sender
@@ -262,6 +260,9 @@ abstract contract SharesManagerV1 is ISharesManagerV1 {
     /// @param _owner Account that should burn the new shares
     /// @param _value Amount of shares to burn
     function _burnRawShares(address _owner, uint256 _value) internal {
+        if (_balanceOf(_owner) < _value) {
+            revert BalanceTooLow();
+        }
         Shares.set(Shares.get() - _value);
         SharesPerOwner.set(_owner, SharesPerOwner.get(_owner) - _value);
         emit Transfer(_owner, address(0), _value);
