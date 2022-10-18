@@ -274,6 +274,22 @@ contract ERC20VestableVotesUpgradeableV1Tests is Test {
         assert(tt.balanceOf(tt.vestingEscrow(1)) == 10_000e18);
     }
 
+    function testCreateVestingDefaultStart(uint192 start) public {
+        vm.warp(start);
+        vm.startPrank(initAccount);
+        assert(
+            tt.createVestingSchedule(
+                joe, 0, 365 * 24 * 3600, 4 * 365 * 24 * 3600, 365 * 2 * 3600, true, 10_000e18
+            ) == 0
+        );
+        vm.stopPrank();
+
+        // Verify vesting schedule object has been properly created
+        VestingSchedules.VestingSchedule memory vestingSchedule = tt.getVestingSchedule(0);
+
+        assert(vestingSchedule.start == start);
+    }
+
     function testReleaseVestingScheduleBeforeCliff() public {
         vm.warp(0);
 
@@ -295,7 +311,7 @@ contract ERC20VestableVotesUpgradeableV1Tests is Test {
 
     event ReleasedVestingSchedule(uint256 index, uint256 releasedAmount);
 
-    function testReleaseVestingScheduleAtCliff() public {
+    function testReleaseVestingScheduleAtLockDuration() public {
         vm.warp(0);
 
         vm.startPrank(initAccount);
@@ -319,7 +335,7 @@ contract ERC20VestableVotesUpgradeableV1Tests is Test {
         assert(tt.balanceOf(joe) == 2_500e18);
     }
 
-    function testReleaseVestingScheduleAfterCliff() public {
+    function testReleaseVestingScheduleAfterLockDuration() public {
         vm.warp(0);
 
         vm.startPrank(initAccount);
@@ -428,7 +444,7 @@ contract ERC20VestableVotesUpgradeableV1Tests is Test {
 
     event RevokedVestingSchedule(uint256 index, uint256 returnedAmount);
 
-    function testRevokeBeforeCliff() public {
+    function testRevokeBeforeLockDuration() public {
         vm.warp(0);
 
         vm.startPrank(initAccount);
@@ -452,7 +468,7 @@ contract ERC20VestableVotesUpgradeableV1Tests is Test {
         assert(vestingSchedule.end == 365 * 24 * 3600 - 1);
     }
 
-    function testRevokeAtCliff() public {
+    function testRevokeAtLockDuration() public {
         vm.warp(0);
 
         vm.startPrank(initAccount);
@@ -497,6 +513,31 @@ contract ERC20VestableVotesUpgradeableV1Tests is Test {
         // Verify vesting schedule object has been properly updated
         VestingSchedules.VestingSchedule memory vestingSchedule = tt.getVestingSchedule(0);
         assert(vestingSchedule.end == 4 * 365 * 24 * 3600);
+    }
+
+    function testRevokeDefaultEnd() public {
+        vm.warp(0);
+
+        vm.startPrank(initAccount);
+        assert(
+            tt.createVestingSchedule(joe, 0, 365 * 24 * 3600, 4 * 365 * 24 * 3600, 365 * 2 * 3600, true, 10_000e18) == 0
+        );
+        vm.stopPrank();
+
+        vm.warp(2 * 365 * 24 * 3600);
+
+        vm.startPrank(initAccount);
+        vm.expectEmit(true, true, true, true);
+        emit RevokedVestingSchedule(0, 5_000e18);
+        tt.revokeVestingSchedule(0, 0);
+        vm.stopPrank();
+
+        assert(tt.balanceOf(initAccount) == 999_995_000e18);
+        assert(tt.balanceOf(tt.vestingEscrow(0)) == 5_000e18);
+
+        // Verify vesting schedule object has been properly updated
+        VestingSchedules.VestingSchedule memory vestingSchedule = tt.getVestingSchedule(0);
+        assert(vestingSchedule.end == 2 * 365 * 24 * 3600);
     }
 
     function testRevokeNotRevokable() public {
