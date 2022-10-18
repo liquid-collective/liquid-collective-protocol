@@ -201,6 +201,7 @@ abstract contract ERC20VestableVotesUpgradeableV1 is Initializable, IVestingSche
             revert LibErrors.Unauthorized(msg.sender);
         }
 
+        // compute releasable amount
         address escrow = _predictDeterministicEscrow(_index);
         uint256 releasableAmount = _computeReleasableAmount(vestingSchedule, escrow, _getCurrentTime());
         if (releasableAmount == 0) {
@@ -226,9 +227,9 @@ abstract contract ERC20VestableVotesUpgradeableV1 is Initializable, IVestingSche
             revert LibErrors.Unauthorized(msg.sender);
         }
 
+        // update delegate
         address escrow = _predictDeterministicEscrow(_index);
         address oldDelegatee = delegates(escrow);
-
         _delegate(escrow, _delegatee);
 
         emit DelegatedVestingEscrow(_index, oldDelegatee, _delegatee);
@@ -264,12 +265,11 @@ abstract contract ERC20VestableVotesUpgradeableV1 is Initializable, IVestingSche
             if (vestedAmount > releasedAmount) {
                 return vestedAmount - releasedAmount;
             }
-        } else {
-            // we are after vesting end date
-            return balanceOf(_escrow);
-        }
+            return 0;
+        } 
 
-        return 0;
+        // we are after vesting end date so all remaining tokens can be released
+        return balanceOf(_escrow);
     }
 
     /// @notice Computes the vested amount of tokens for a vesting schedule.
@@ -289,7 +289,10 @@ abstract contract ERC20VestableVotesUpgradeableV1 is Initializable, IVestingSche
             return _vestingSchedule.amount;
         } else {
             uint256 timeFromStart = _time - _vestingSchedule.start;
+
+            // compute tokens vested for completly elapsed periods 
             uint256 vestedDuration = timeFromStart - timeFromStart % _vestingSchedule.period;
+
             return (vestedDuration * _vestingSchedule.amount) / _vestingSchedule.duration;
         }
     }
