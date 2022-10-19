@@ -124,7 +124,7 @@ abstract contract ERC20VestableVotesUpgradeableV1 is Initializable, IVestingSche
         // Create new vesting schedule
         VestingSchedules.VestingSchedule memory vestingSchedule = VestingSchedules.VestingSchedule({
             start: _start,
-            end: uint96(_start) + _duration,
+            end: _start + _duration,
             lockDuration: _lockDuration,
             duration: _duration,
             period: _period,

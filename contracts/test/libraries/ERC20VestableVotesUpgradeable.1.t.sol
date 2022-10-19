@@ -288,7 +288,7 @@ contract ERC20VestableVotesUpgradeableV1Tests is Test {
         assert(tt.balanceOf(tt.vestingEscrow(1)) == 10_000e18);
     }
 
-    function testCreateVestingDefaultStart(uint64 start) public {
+    function testCreateVestingDefaultStart(uint40 start) public {
         vm.warp(start);
         vm.startPrank(initAccount);
         assert(
