@@ -1,4 +1,4 @@
-.PHONY: foundry lib install test lint test-lint
+.PHONY: foundry lib yarn install test lint test-lint
 
 foundry:
 	echo "Install foundry"
