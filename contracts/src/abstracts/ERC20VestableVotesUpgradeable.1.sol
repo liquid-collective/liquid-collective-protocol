@@ -8,7 +8,7 @@ import "../interfaces/IVestingSchedules.1.sol";
 
 import "../state/tlc/VestingSchedules.sol";
 
-import "./LibSanitize.sol";
+import "../libraries/LibSanitize.sol";
 
 abstract contract ERC20VestableVotesUpgradeableV1 is Initializable, IVestingSchedulesV1, ERC20VotesUpgradeable {
     function __ERC20VestableVotes_init() internal onlyInitializing {}

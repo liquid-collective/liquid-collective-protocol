@@ -1,7 +1,7 @@
 //SPDX-License-Identifier: BUSL-1.1
 pragma solidity 0.8.10;
 
-import "./libraries/ERC20VestableVotesUpgradeable.1.sol";
+import "./abstracts/ERC20VestableVotesUpgradeable.1.sol";
 
 contract TLCV1 is ERC20VestableVotesUpgradeableV1 {
     // Token information
