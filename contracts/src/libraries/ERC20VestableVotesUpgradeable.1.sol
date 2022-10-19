@@ -237,7 +237,6 @@ abstract contract ERC20VestableVotesUpgradeableV1 is Initializable, IVestingSche
         return true;
     }
 
-
     /// @notice Internal utility to compute the escrow deterministic address
     /// @param _index index of the vesting schedule
     function _predictDeterministicEscrow(uint256 _index) internal view returns (address escrow) {
@@ -266,7 +265,7 @@ abstract contract ERC20VestableVotesUpgradeableV1 is Initializable, IVestingSche
                 return vestedAmount - releasedAmount;
             }
             return 0;
-        } 
+        }
 
         // we are after vesting end date so all remaining tokens can be released
         return balanceOf(_escrow);
@@ -290,7 +289,7 @@ abstract contract ERC20VestableVotesUpgradeableV1 is Initializable, IVestingSche
         } else {
             uint256 timeFromStart = _time - _vestingSchedule.start;
 
-            // compute tokens vested for completly elapsed periods 
+            // compute tokens vested for completly elapsed periods
             uint256 vestedDuration = timeFromStart - timeFromStart % _vestingSchedule.period;
 
             return (vestedDuration * _vestingSchedule.amount) / _vestingSchedule.duration;

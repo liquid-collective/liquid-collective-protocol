@@ -12,24 +12,19 @@ library VestingSchedules {
         uint64 start;
         // date at which the vesting is ended
         // initially it is equal to start+duration then to revoke date in case of revoke
-        uint96 end;   
-        
+        uint96 end;
         // duration before which first tokens gets unlocked
         uint32 lockDuration;
         // duration of the vesting period in seconds
         uint32 duration;
         // duration of a vesting period in seconds
         uint32 period;
-
         // amount of tokens granted by the vesting schedule
         uint256 amount;
-
         // creator of the token vesting
         address creator;
-
         // beneficiary of tokens after they are releaseVestingScheduled
         address beneficiary;
-
         // whether or not the vesting is revocable
         bool revocable;
     }

@@ -150,20 +150,14 @@ contract ERC20VestableVotesUpgradeableV1Tests is Test {
     function createVestingSchedule(
         address beneficiary,
         uint256 start,
-        uint256  lockDuration,
+        uint256 lockDuration,
         uint256 duration,
         uint256 period,
         bool revocable,
         uint256 amount
     ) public returns (uint256) {
         return tt.createVestingSchedule(
-            beneficiary, 
-            uint64(start), 
-            uint32(lockDuration), 
-            uint32(duration), 
-            uint32(period),
-            revocable,
-            amount
+            beneficiary, uint64(start), uint32(lockDuration), uint32(duration), uint32(period), revocable, amount
         );
     }
 
@@ -298,9 +292,7 @@ contract ERC20VestableVotesUpgradeableV1Tests is Test {
         vm.warp(start);
         vm.startPrank(initAccount);
         assert(
-            createVestingSchedule(
-                joe, 0, 365 * 24 * 3600, 4 * 365 * 24 * 3600, 365 * 2 * 3600, true, 10_000e18
-            ) == 0
+            createVestingSchedule(joe, 0, 365 * 24 * 3600, 4 * 365 * 24 * 3600, 365 * 2 * 3600, true, 10_000e18) == 0
         );
         vm.stopPrank();
 
@@ -565,8 +557,7 @@ contract ERC20VestableVotesUpgradeableV1Tests is Test {
 
         vm.startPrank(initAccount);
         assert(
-            createVestingSchedule(joe, 0, 365 * 24 * 3600, 4 * 365 * 24 * 3600, 365 * 2 * 3600, false, 10_000e18)
-                == 0
+            createVestingSchedule(joe, 0, 365 * 24 * 3600, 4 * 365 * 24 * 3600, 365 * 2 * 3600, false, 10_000e18) == 0
         );
         vm.stopPrank();
 
@@ -729,7 +720,7 @@ contract ERC20VestableVotesUpgradeableV1Tests is Test {
             periodDuration = 1;
         }
 
-        if (vestingPeriodCount == 0)  {
+        if (vestingPeriodCount == 0) {
             vestingPeriodCount = 1;
         }
 
@@ -791,7 +782,10 @@ contract ERC20VestableVotesUpgradeableV1Tests is Test {
                 );
             }
 
-            if (releaseAt >= ((tt.getVestingSchedule(0).end / periodDuration) * periodDuration) && (releaseAt >= lockDuration)) {
+            if (
+                releaseAt >= ((tt.getVestingSchedule(0).end / periodDuration) * periodDuration)
+                    && (releaseAt >= lockDuration)
+            ) {
                 // we got into the end period and passed the lock duration so all tokens should have been released
                 assert(tt.balanceOf(tt.vestingEscrow(0)) == 0);
                 break;
