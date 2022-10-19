@@ -5,7 +5,7 @@ pragma solidity 0.8.10;
 /// @notice Utility to manage VestingSchedules in storage
 library VestingSchedules {
     /// @notice Storage slot of the Vesting Schedules
-    bytes32 internal constant VESTING_SCHEDULES_SLOT = bytes32(uint256(keccak256("tlc.state.schedules")) - 1);
+    bytes32 internal constant VESTING_SCHEDULES_SLOT = bytes32(uint256(keccak256("erc20VestableVotes.state.schedules")) - 1);
 
     struct VestingSchedule {
         // start time of the vesting period

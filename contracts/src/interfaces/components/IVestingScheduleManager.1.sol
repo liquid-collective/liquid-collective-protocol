@@ -1,12 +1,12 @@
 //SPDX-License-Identifier: BUSL-1.1
 pragma solidity 0.8.10;
 
-import "../state/tlc/VestingSchedules.sol";
+import "../../state/tlc/VestingSchedules.sol";
 
 /// @title Vesting Schedules Interface (v1)
 /// @author Alluvial
 /// @notice This interface exposes methods to manage vestings
-interface IVestingSchedulesV1 {
+interface IVestingScheduleManagerV1 {
     /// @notice A new vesting schedule has been created
     /// @param index Vesting schedule index
     /// @param creator Creator of the vesting schedule
