@@ -157,7 +157,14 @@ contract ERC20VestableVotesUpgradeableV1Tests is Test {
         uint256 amount
     ) public returns (uint256) {
         return tt.createVestingSchedule(
-            uint64(start), uint32(lockDuration), uint32(duration), uint32(period), revocable, amount, beneficiary, address(0)
+            uint64(start),
+            uint32(lockDuration),
+            uint32(duration),
+            uint32(period),
+            revocable,
+            amount,
+            beneficiary,
+            address(0)
         );
     }
 
@@ -196,14 +203,13 @@ contract ERC20VestableVotesUpgradeableV1Tests is Test {
         assert(tt.delegates(tt.vestingEscrow(0)) == joe);
     }
 
-     function testCreateVestingWithDelegatee() public {
+    function testCreateVestingWithDelegatee() public {
         vm.startPrank(initAccount);
         vm.expectEmit(true, true, true, true);
         emit CreatedVestingSchedule(0, initAccount, joe, 10_000e18);
         assert(
-            tt.createVestingSchedule(
-                0, 365 * 24 * 3600, 4 * 365 * 24 * 3600, 365 * 2 * 3600, true, 10_000e18, joe, bob 
-            ) == 0
+            tt.createVestingSchedule(0, 365 * 24 * 3600, 4 * 365 * 24 * 3600, 365 * 2 * 3600, true, 10_000e18, joe, bob)
+                == 0
         );
         vm.stopPrank();
 
@@ -758,7 +764,7 @@ contract ERC20VestableVotesUpgradeableV1Tests is Test {
         uint32 totalDuration = uint32(vestingPeriodCount) * uint32(periodDuration);
 
         lockDuration = lockDuration % (totalDuration + periodDuration);
-        
+
         vm.startPrank(initAccount);
         assert(createVestingSchedule(joe, 0, lockDuration, totalDuration, periodDuration, true, amount) == 0);
         vm.stopPrank();

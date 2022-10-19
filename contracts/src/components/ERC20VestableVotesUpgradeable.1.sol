@@ -142,7 +142,7 @@ abstract contract ERC20VestableVotesUpgradeableV1 is Initializable, IVestingSche
 
         // transfer tokens to the escrow and delegate escrow to beneficiary
         _transfer(_creator, escrow, _amount);
-        
+
         // delegate escrow tokens
         if (_delegatee == address(0)) {
             // default to beneficiary address
@@ -150,7 +150,7 @@ abstract contract ERC20VestableVotesUpgradeableV1 is Initializable, IVestingSche
         } else {
             _delegate(escrow, _delegatee);
         }
-        
+
         emit CreatedVestingSchedule(index, _creator, _beneficiary, _amount);
 
         return index;
