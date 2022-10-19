@@ -31,10 +31,10 @@ abstract contract ERC20VestableVotesUpgradeableV1 is Initializable, IVestingSche
     }
 
     /// @inheritdoc IVestingSchedulesV1
-    function computeReleasableAmount(uint256 _index) external view returns (uint256) {
+    function computeVestingReleasableAmount(uint256 _index) external view returns (uint256) {
         address escrow = _predictDeterministicEscrow(_index);
         VestingSchedules.VestingSchedule memory vestingSchedule = VestingSchedules.get(_index);
-        return _computeReleasableAmount(vestingSchedule, escrow, _getCurrentTime());
+        return _computeVestingReleasableAmount(vestingSchedule, escrow, _getCurrentTime());
     }
 
     /// @inheritdoc IVestingSchedulesV1
@@ -176,7 +176,7 @@ abstract contract ERC20VestableVotesUpgradeableV1 is Initializable, IVestingSche
 
         // Return tokens that will never be vested to creator
         address escrow = _predictDeterministicEscrow(_index);
-        uint256 releasableAmountAtEnd = _computeReleasableAmount(vestingSchedule, escrow, _end);
+        uint256 releasableAmountAtEnd = _computeVestingReleasableAmount(vestingSchedule, escrow, _end);
         uint256 returnedAmount = balanceOf(escrow) - releasableAmountAtEnd;
         if (returnedAmount > 0) {
             _transfer(escrow, vestingSchedule.creator, returnedAmount);
@@ -203,7 +203,7 @@ abstract contract ERC20VestableVotesUpgradeableV1 is Initializable, IVestingSche
 
         // compute releasable amount
         address escrow = _predictDeterministicEscrow(_index);
-        uint256 releasableAmount = _computeReleasableAmount(vestingSchedule, escrow, _getCurrentTime());
+        uint256 releasableAmount = _computeVestingReleasableAmount(vestingSchedule, escrow, _getCurrentTime());
         if (releasableAmount == 0) {
             revert ZeroReleasableAmount();
         }
@@ -252,7 +252,7 @@ abstract contract ERC20VestableVotesUpgradeableV1 is Initializable, IVestingSche
     /// @param _escrow address of the escrow of the vesting schedule
     /// @param _time time to compute the releasable amount at
     /// @return amount of release tokens
-    function _computeReleasableAmount(
+    function _computeVestingReleasableAmount(
         VestingSchedules.VestingSchedule memory _vestingSchedule,
         address _escrow,
         uint256 _time

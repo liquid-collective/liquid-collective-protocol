@@ -48,6 +48,24 @@ interface IVestingSchedulesV1 {
     /// @notice No token to release
     error ZeroReleasableAmount();
 
+    /// @notice Get vesting schedule
+    /// @param _index Index of the vesting schedule
+    function getVestingSchedule(uint256 _index) external view returns (VestingSchedules.VestingSchedule memory);
+
+    /// @notice Get count of vesting schedules
+    /// @return count of vesting schedules
+    function getVestingScheduleCount() external view returns (uint256);
+
+    /// @notice Get the address of the escrow for a vesting schedule
+    /// @param _index Index of the vesting schedule
+    /// @return address of the escrow
+    function vestingEscrow(uint256 _index) external view returns (address);
+
+    /// @notice Computes the releasable amount of tokens for a vesting schedule.
+    /// @param _index index of the vesting schedule
+    /// @return amount of release tokens
+    function computeVestingReleasableAmount(uint256 _index) external view returns (uint256);
+
     /// @notice Creates a new vesting schedule
     /// @param _beneficiary address of the beneficiary of the tokens
     /// @param _start start time of the vesting
@@ -67,14 +85,6 @@ interface IVestingSchedulesV1 {
         uint256 _amount
     ) external returns (uint256);
 
-    /// @notice Get vesting schedule
-    /// @param _index Index of the vesting schedule
-    function getVestingSchedule(uint256 _index) external view returns (VestingSchedules.VestingSchedule memory);
-
-    /// @notice Get count of vesting schedules
-    /// @return count of vesting schedules
-    function getVestingScheduleCount() external view returns (uint256);
-
     /// @notice Revoke vesting schedule
     /// @param _index Index of the vesting schedule to revoke
     /// @param _end End date for the schedule
@@ -86,18 +96,8 @@ interface IVestingSchedulesV1 {
     /// @return released amount
     function releaseVestingSchedule(uint256 _index) external returns (uint256);
 
-    /// @notice Get the address of the escrow for a vesting schedule
-    /// @param _index Index of the vesting schedule
-    /// @return address of the escrow
-    function vestingEscrow(uint256 _index) external view returns (address);
-
     /// @notice Delegate vesting escrowed tokens
     /// @param _index index of the vesting schedule
     /// @param _delegatee address to delegate the token to
     function delegateVestingEscrow(uint256 _index, address _delegatee) external returns (bool);
-
-    /// @notice Computes the releasable amount of tokens for a vesting schedule.
-    /// @param _index index of the vesting schedule
-    /// @return amount of release tokens
-    function computeReleasableAmount(uint256 _index) external view returns (uint256);
 }
