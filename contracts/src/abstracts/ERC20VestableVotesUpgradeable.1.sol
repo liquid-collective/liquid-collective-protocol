@@ -100,10 +100,6 @@ abstract contract ERC20VestableVotesUpgradeableV1 is Initializable, IVestingSche
             revert InvalidVestingScheduleParameter("Vesting schedule duration must be > 0");
         }
 
-        if (_lockDuration > _duration) {
-            revert InvalidVestingScheduleParameter("Vesting schedule duration must be greater than lock duration");
-        }
-
         if (_amount == 0) {
             revert InvalidVestingScheduleParameter("Vesting schedule amount must be > 0");
         }
@@ -257,6 +253,10 @@ abstract contract ERC20VestableVotesUpgradeableV1 is Initializable, IVestingSche
         address _escrow,
         uint256 _time
     ) internal view returns (uint256) {
+        if (_time < (_vestingSchedule.start + _vestingSchedule.lockDuration)) {
+            return 0;
+        }
+
         if (_time < _vestingSchedule.end) {
             // vesting has been revoked an we are before end time
             uint256 vestedAmount = _computeVestedAmount(_vestingSchedule, _time);
@@ -280,10 +280,7 @@ abstract contract ERC20VestableVotesUpgradeableV1 is Initializable, IVestingSche
         pure
         returns (uint256)
     {
-        if (_time < (_vestingSchedule.start + _vestingSchedule.lockDuration)) {
-            // before lock duration tokens are locked
-            return 0;
-        } else if (_time >= _vestingSchedule.start + _vestingSchedule.duration) {
+        if (_time >= _vestingSchedule.start + _vestingSchedule.duration) {
             // post vesting all tokens have been vested
             return _vestingSchedule.amount;
         } else {

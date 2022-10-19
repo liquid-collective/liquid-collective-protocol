@@ -218,20 +218,6 @@ contract ERC20VestableVotesUpgradeableV1Tests is Test {
         vm.stopPrank();
     }
 
-    function testCreateInvalidVestingLockDurationOverDuration() public {
-        vm.startPrank(initAccount);
-        vm.expectRevert(
-            abi.encodeWithSignature(
-                "InvalidVestingScheduleParameter(string)",
-                "Vesting schedule duration must be greater than lock duration"
-            )
-        );
-        createVestingSchedule(
-            joe, block.timestamp, 5 * 365 * 24 * 3600, 4 * 365 * 24 * 3600, 365 * 2 * 3600, true, 10_000e18
-        );
-        vm.stopPrank();
-    }
-
     function testCreateInvalidVestingZeroAmount() public {
         vm.startPrank(initAccount);
         vm.expectRevert(
@@ -717,10 +703,12 @@ contract ERC20VestableVotesUpgradeableV1Tests is Test {
     ) public {
         vm.warp(0);
         if (periodDuration == 0) {
+            // period duration should be a list one
             periodDuration = 1;
         }
 
         if (vestingPeriodCount == 0) {
+            // we should have at list one period for the vesting
             vestingPeriodCount = 1;
         }
 
@@ -729,13 +717,16 @@ contract ERC20VestableVotesUpgradeableV1Tests is Test {
             amount = uint256(vestingPeriodCount);
         }
 
+        // make sure that initAccount has enough funds to create the schedule
         amount = amount % tt.balanceOf(initAccount);
 
         uint32 totalDuration = uint32(vestingPeriodCount) * uint32(periodDuration);
-        lockDuration = lockDuration % totalDuration;
+        lockDuration = lockDuration % (totalDuration + periodDuration);
+        
         vm.startPrank(initAccount);
         assert(createVestingSchedule(joe, 0, lockDuration, totalDuration, periodDuration, true, amount) == 0);
         vm.stopPrank();
+
         assert(tt.balanceOf(initAccount) == 1_000_000_000e18 - amount);
         assert(tt.balanceOf(tt.vestingEscrow(0)) == amount);
 
