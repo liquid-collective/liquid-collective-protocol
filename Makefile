@@ -1,3 +1,5 @@
+.PHONY: foundry lib install test lint test-lint
+
 foundry:
 	echo "Install foundry"
 	curl -L https://foundry.paradigm.xyz | bash
