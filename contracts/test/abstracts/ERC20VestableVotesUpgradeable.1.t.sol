@@ -157,7 +157,7 @@ contract ERC20VestableVotesUpgradeableV1Tests is Test {
         uint256 amount
     ) public returns (uint256) {
         return tt.createVestingSchedule(
-            beneficiary, uint64(start), uint32(lockDuration), uint32(duration), uint32(period), revocable, amount
+            uint64(start), uint32(lockDuration), uint32(duration), uint32(period), revocable, amount, beneficiary, address(0)
         );
     }
 
@@ -194,6 +194,41 @@ contract ERC20VestableVotesUpgradeableV1Tests is Test {
 
         // Verify escrow delegated to beneficiary
         assert(tt.delegates(tt.vestingEscrow(0)) == joe);
+    }
+
+     function testCreateVestingWithDelegatee() public {
+        vm.startPrank(initAccount);
+        vm.expectEmit(true, true, true, true);
+        emit CreatedVestingSchedule(0, initAccount, joe, 10_000e18);
+        assert(
+            tt.createVestingSchedule(
+                0, 365 * 24 * 3600, 4 * 365 * 24 * 3600, 365 * 2 * 3600, true, 10_000e18, joe, bob 
+            ) == 0
+        );
+        vm.stopPrank();
+
+        assert(tt.getVestingScheduleCount() == 1);
+
+        // Verify balances
+        assert(tt.balanceOf(initAccount) == 999_990_000e18);
+        assert(tt.balanceOf(tt.vestingEscrow(0)) == 10_000e18);
+        assert(tt.balanceOf(joe) == 0);
+
+        // Verify vesting schedule object has been properly created
+        VestingSchedules.VestingSchedule memory vestingSchedule = tt.getVestingSchedule(0);
+
+        assert(vestingSchedule.start == block.timestamp);
+        assert(vestingSchedule.lockDuration == 365 * 24 * 3600);
+        assert(vestingSchedule.duration == 4 * 365 * 24 * 3600);
+        assert(vestingSchedule.period == 365 * 2 * 3600);
+        assert(vestingSchedule.amount == 10_000e18);
+        assert(vestingSchedule.creator == initAccount);
+        assert(vestingSchedule.beneficiary == joe);
+        assert(vestingSchedule.revocable == true);
+        assert(vestingSchedule.end == block.timestamp + 4 * 365 * 24 * 3600);
+
+        // Verify escrow delegated to beneficiary
+        assert(tt.delegates(tt.vestingEscrow(0)) == bob);
     }
 
     function testCreateInvalidVestingZeroBeneficiary() public {
@@ -721,6 +756,7 @@ contract ERC20VestableVotesUpgradeableV1Tests is Test {
         amount = amount % tt.balanceOf(initAccount);
 
         uint32 totalDuration = uint32(vestingPeriodCount) * uint32(periodDuration);
+
         lockDuration = lockDuration % (totalDuration + periodDuration);
         
         vm.startPrank(initAccount);

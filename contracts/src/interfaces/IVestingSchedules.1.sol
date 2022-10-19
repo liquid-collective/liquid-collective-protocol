@@ -74,15 +74,17 @@ interface IVestingSchedulesV1 {
     /// @param _period duration of a period after which new tokens unlock (in seconds)
     /// @param _revocable whether the vesting schedule is revocable or not
     /// @param _amount amount of token attributed by the vesting schedule
+    /// @param _delegatee address to delegate escrow voting power to
     /// @return index of the created vesting schedule
     function createVestingSchedule(
-        address _beneficiary,
         uint64 _start,
         uint32 _lockDuration,
         uint32 _duration,
         uint32 _period,
         bool _revocable,
-        uint256 _amount
+        uint256 _amount,
+        address _beneficiary,
+        address _delegatee
     ) external returns (uint256);
 
     /// @notice Revoke vesting schedule

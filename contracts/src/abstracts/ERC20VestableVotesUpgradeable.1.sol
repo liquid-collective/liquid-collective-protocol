@@ -39,16 +39,17 @@ abstract contract ERC20VestableVotesUpgradeableV1 is Initializable, IVestingSche
 
     /// @inheritdoc IVestingSchedulesV1
     function createVestingSchedule(
-        address _beneficiary,
         uint64 _start,
         uint32 _lockDuration,
         uint32 _duration,
         uint32 _period,
         bool _revocable,
-        uint256 _amount
+        uint256 _amount,
+        address _beneficiary,
+        address _delegatee
     ) external returns (uint256) {
         return _createVestingSchedule(
-            msg.sender, _beneficiary, _start, _lockDuration, _duration, _period, _revocable, _amount
+            msg.sender, _beneficiary, _delegatee, _start, _lockDuration, _duration, _period, _revocable, _amount
         );
     }
 
@@ -70,6 +71,7 @@ abstract contract ERC20VestableVotesUpgradeableV1 is Initializable, IVestingSche
     /// @notice Creates a new vesting schedule
     /// @param _creator address of the creator that transfer the tokens
     /// @param _beneficiary address of the beneficiary of the tokens
+    /// @param _delegatee address of the delegate escrowed tokens votes to (if address(0) then it defaults to the beneficiary)
     /// @param _start start time of the vesting
     /// @param _lockDuration duration during which tokens are locked (in seconds)
     /// @param _duration total vesting schedule duration after which all tokens are vested (in seconds)
@@ -80,6 +82,7 @@ abstract contract ERC20VestableVotesUpgradeableV1 is Initializable, IVestingSche
     function _createVestingSchedule(
         address _creator,
         address _beneficiary,
+        address _delegatee,
         uint64 _start,
         uint32 _lockDuration,
         uint32 _duration,
@@ -136,8 +139,15 @@ abstract contract ERC20VestableVotesUpgradeableV1 is Initializable, IVestingSche
 
         // transfer tokens to escrow contract and delegate escrow to beneficiary
         _transfer(_creator, escrow, _amount);
-        _delegate(escrow, _beneficiary);
-
+        
+        // delegate escrow tokens
+        if (_delegatee == address(0)) {
+            // default to beneficiary address
+            _delegate(escrow, _beneficiary);
+        } else {
+            _delegate(escrow, _delegatee);
+        }
+        
         emit CreatedVestingSchedule(index, _creator, _beneficiary, _amount);
 
         return index;
