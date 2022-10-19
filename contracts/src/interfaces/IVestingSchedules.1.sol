@@ -59,10 +59,10 @@ interface IVestingSchedulesV1 {
     /// @return index of the created vesting schedule
     function createVestingSchedule(
         address _beneficiary,
-        uint256 _start,
-        uint256 _lockDuration,
-        uint256 _duration,
-        uint256 _period,
+        uint64 _start,
+        uint32 _lockDuration,
+        uint32 _duration,
+        uint32 _period,
         bool _revocable,
         uint256 _amount
     ) external returns (uint256);
@@ -79,7 +79,7 @@ interface IVestingSchedulesV1 {
     /// @param _index Index of the vesting schedule to revoke
     /// @param _end End date for the schedule
     /// @return returnedAmount amount returned to the vesting schedule creator
-    function revokeVestingSchedule(uint256 _index, uint256 _end) external returns (uint256 returnedAmount);
+    function revokeVestingSchedule(uint256 _index, uint64 _end) external returns (uint256 returnedAmount);
 
     /// @notice Release vesting schedule
     /// @param _index Index of the vesting schedule to release
