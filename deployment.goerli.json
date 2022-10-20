@@ -25,6 +25,18 @@
                 }
             }
         },
+        "AllowlistProxyFirewall": {
+            "address": "0x0CA0c58b1986a55876552E0D9532C963625D5646",
+            "deploymentParams": {
+                "type": "constructor",
+                "args": {
+                    "_admin": "0x67bc791A7EA5A98DDcEcBbF6580aE1BB310F5d9B",
+                    "_executor": "0xc025F2b41820c80F32AF27EFe95cf379C4A959F8",
+                    "_destination": "0xe7B74d98D46A8e0979B0342172A3A4890F852558",
+                    "_executorCallableSelectors": "0x8456cb59"
+                }
+            }
+        },
         "AllowlistV1_Implementation": "0xBebf58684CA998690BFBA90DE12d012dd51690e3",
         "Allowlist_Proxy": {
             "address": "0xe7B74d98D46A8e0979B0342172A3A4890F852558",
@@ -82,6 +94,18 @@
                 }
             }
         },
+        "OperatorsRegistryProxyFirewall": {
+            "address": "0xfa5270E35C00b4e6F642493705B9d3AD3Ca893D8",
+            "deploymentParams": {
+                "type": "constructor",
+                "args": {
+                    "_admin": "0x67bc791A7EA5A98DDcEcBbF6580aE1BB310F5d9B",
+                    "_executor": "0xc025F2b41820c80F32AF27EFe95cf379C4A959F8",
+                    "_destination": "0xf06BEd337f29CB856b072dc8d57A2c22FB2eC2CB",
+                    "_executorCallableSelectors": "0x8456cb59"
+                }
+            }
+        },
         "OperatorsRegistryV1_1": "0x3511C69084dCb4EC806E538CA0676054820FfF7f",
         "OperatorsRegistryV1_Implementation": "0x5355b6Cadb4F18e2C3601CbAa758F94d40aEFAA6",
         "OperatorsRegistry_Proxy": {
@@ -121,6 +145,18 @@
                     "_executor": "0xc025F2b41820c80F32AF27EFe95cf379C4A959F8",
                     "_destination": "0x088050c58ae0F447d52674Ac58e20DD2FB68E2da",
                     "_executorCallableSelectors": "0x98041ea3,0x16f6f03e,0xc1ba4e59,0x47c1a7e4,0x9e557464"
+                }
+            }
+        },
+        "OracleProxyFirewall": {
+            "address": "0x7412f61383f2396a959d158e519B90Dd20750121",
+            "deploymentParams": {
+                "type": "constructor",
+                "args": {
+                    "_admin": "0x67bc791A7EA5A98DDcEcBbF6580aE1BB310F5d9B",
+                    "_executor": "0xc025F2b41820c80F32AF27EFe95cf379C4A959F8",
+                    "_destination": "0x088050c58ae0F447d52674Ac58e20DD2FB68E2da",
+                    "_executorCallableSelectors": "0x8456cb59"
                 }
             }
         },
@@ -164,6 +200,18 @@
                     "_executor": "0xc025F2b41820c80F32AF27EFe95cf379C4A959F8",
                     "_destination": "0x3ecCAdA3e11c1Cc3e9B5a53176A67cc3ABDD3E46",
                     "_executorCallableSelectors": "0x13d86aed,0x7adbf973"
+                }
+            }
+        },
+        "RiverProxyFirewall": {
+            "address": "0x1D47F1720976362Acc8b870812F5DA8c712EdAA6",
+            "deploymentParams": {
+                "type": "constructor",
+                "args": {
+                    "_admin": "0x67bc791A7EA5A98DDcEcBbF6580aE1BB310F5d9B",
+                    "_executor": "0xc025F2b41820c80F32AF27EFe95cf379C4A959F8",
+                    "_destination": "0x3ecCAdA3e11c1Cc3e9B5a53176A67cc3ABDD3E46",
+                    "_executorCallableSelectors": "0x8456cb59"
                 }
             }
         },
