@@ -237,6 +237,28 @@
                 }
             }
         },
+        "TLC": {
+            "address": "0x69BF297F1c4001C246dDeB4A8B1a14252EB6B0B2",
+            "deploymentParams": {
+                "type": "proxy",
+                "methodName": "initTLCV1",
+                "args": {
+                    "_account": "0x7932EdA85E33D8e13f7C110ACBEb4a5A8B53dda9"
+                }
+            }
+        },
+        "TLCV1_Implementation": "0x20028A25F159A8e92c315525b04eA3A972e81496",
+        "TLC_Proxy": {
+            "address": "0x69BF297F1c4001C246dDeB4A8B1a14252EB6B0B2",
+            "deploymentParams": {
+                "type": "constructor",
+                "args": {
+                    "_logic": "0x20028A25F159A8e92c315525b04eA3A972e81496",
+                    "__admin": "0x07706A7D768054c10eB4FC9103Ea322f62831cb9",
+                    "_data": "0x28766ffd0000000000000000000000007932eda85e33d8e13f7c110acbeb4a5a8b53dda9"
+                }
+            }
+        },
         "WLSETH": {
             "address": "0xcA0F4b8A5d692C48765574645636e469F06c6070",
             "deploymentParams": {
@@ -290,6 +312,7 @@
         "governor": "0x71c9DAb681C209bb82270906e3B49388b2C15404",
         "executor": "0x7932EdA85E33D8e13f7C110ACBEb4a5A8B53dda9",
         "proxyAdministrator": "0x07706A7D768054c10eB4FC9103Ea322f62831cb9",
-        "collector": "0x71c9DAb681C209bb82270906e3B49388b2C15404"
+        "collector": "0x71c9DAb681C209bb82270906e3B49388b2C15404",
+        "alluvialTreasury": "0x7932EdA85E33D8e13f7C110ACBEb4a5A8B53dda9"
     }
 }
