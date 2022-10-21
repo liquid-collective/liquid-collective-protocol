@@ -364,7 +364,7 @@
             }
         },
         "TLC": {
-            "address": "0x69BF297F1c4001C246dDeB4A8B1a14252EB6B0B2",
+            "address": "0x7572eF956eE783a1E19A4458379A633CdA30C704",
             "deploymentParams": {
                 "type": "proxy",
                 "methodName": "initTLCV1",
@@ -376,19 +376,39 @@
                 }
             }
         },
-        "TLCV1_Implementation": "0x20028A25F159A8e92c315525b04eA3A972e81496",
+        "TLCProxyFirewall": {
+            "address": "0x2135EFc45c42c6242E3ACE651220D0af679eB63c",
+            "deploymentParams": {
+                "type": "constructor",
+                "args": {
+                    "_admin": {
+                        "value": "0x07706A7D768054c10eB4FC9103Ea322f62831cb9",
+                        "namedAccount": "proxyAdministrator"
+                    },
+                    "_executor": {
+                        "value": "0x7932EdA85E33D8e13f7C110ACBEb4a5A8B53dda9",
+                        "namedAccount": "executor,tlcMintAccount"
+                    },
+                    "_destination": {
+                        "value": "0x7572eF956eE783a1E19A4458379A633CdA30C704",
+                        "contract": "TLC_Proxy"
+                    }
+                }
+            }
+        },
+        "TLCV1_Implementation": "0x4792304b6B5596Da807C22809461cAcbE975e218",
         "TLC_Proxy": {
-            "address": "0x69BF297F1c4001C246dDeB4A8B1a14252EB6B0B2",
+            "address": "0x7572eF956eE783a1E19A4458379A633CdA30C704",
             "deploymentParams": {
                 "type": "constructor",
                 "args": {
                     "_logic": {
-                        "value": "0x20028A25F159A8e92c315525b04eA3A972e81496",
+                        "value": "0x4792304b6B5596Da807C22809461cAcbE975e218",
                         "contract": "TLCV1_Implementation"
                     },
                     "__admin": {
-                        "value": "0x07706A7D768054c10eB4FC9103Ea322f62831cb9",
-                        "namedAccount": "proxyAdministrator"
+                        "value": "0x2135EFc45c42c6242E3ACE651220D0af679eB63c",
+                        "contract": "TLCProxyFirewall"
                     }
                 }
             }
