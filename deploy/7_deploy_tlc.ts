@@ -3,7 +3,7 @@ import { HardhatRuntimeEnvironment } from "hardhat/types";
 import { isDeployed, logStep, logStepEnd } from "../ts-utils/helpers/index";
 
 const func: DeployFunction = async function ({ deployments, getNamedAccounts }: HardhatRuntimeEnvironment) {
-  const { deployer, proxyAdministrator, alluvialTreasury } = await getNamedAccounts();
+  const { deployer, proxyAdministrator, tlcMintAccount } = await getNamedAccounts();
 
   await deployments.deploy("TLC", {
     contract: "TLCV1",
@@ -15,7 +15,7 @@ const func: DeployFunction = async function ({ deployments, getNamedAccounts }: 
       implementationName: "TLCV1_Implementation",
       execute: {
         methodName: "initTLCV1",
-        args: [alluvialTreasury],
+        args: [tlcMintAccount],
       },
     },
   });

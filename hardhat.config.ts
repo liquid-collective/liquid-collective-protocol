@@ -92,7 +92,7 @@ const config: HardhatUserConfig = {
       local: "0x71c9DAb681C209bb82270906e3B49388b2C15404",
       mainnet: "0xE3208Aa9d1186c1D1C8A5b76E794b2B68E6cb3a5",
     },
-    alluvialTreasury: {
+    tlcMintAccount: {
       default: 1,
       goerli: "0x48D96977722426Cc22A9a017E098624b04969706",
       mockedGoerli: "0x7932EdA85E33D8e13f7C110ACBEb4a5A8B53dda9",

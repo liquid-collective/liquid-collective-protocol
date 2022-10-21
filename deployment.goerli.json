@@ -359,7 +359,7 @@
                 "args": {
                     "_account": {
                         "value": "0x48D96977722426Cc22A9a017E098624b04969706",
-                        "namedAccount": "alluvialTreasury"
+                        "namedAccount": "tlcMintAccount"
                     }
                 }
             }
@@ -453,6 +453,6 @@
         "executor": "0xc025F2b41820c80F32AF27EFe95cf379C4A959F8",
         "proxyAdministrator": "0x67bc791A7EA5A98DDcEcBbF6580aE1BB310F5d9B",
         "collector": "0x892D14B50Cc7a8278fa254A63B6c5b8B1a110ff1",
-        "alluvialTreasury": "0x48D96977722426Cc22A9a017E098624b04969706"
+        "tlcMintAccount": "0x48D96977722426Cc22A9a017E098624b04969706"
     }
 }
