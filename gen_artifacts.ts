@@ -31,10 +31,44 @@ function getConstructorTypes(inputs: any[]): string[] {
   return res;
 }
 
+function getValue(
+  decodedValue: any,
+  namedAccountsMapping: { [key: string]: string },
+  contractsMapping: { [key: string]: string }
+): any {
+  let res;
+  if (namedAccountsMapping[decodedValue.toLowerCase()] !== undefined) {
+    res = {
+      value: decodedValue.toString(),
+      namedAccount: namedAccountsMapping[decodedValue.toLowerCase()],
+    };
+  }
+  if (contractsMapping[decodedValue.toLowerCase()] !== undefined) {
+    if (res) {
+      if (typeof res === "string") {
+        res = {
+          value: decodedValue,
+          contract: contractsMapping[decodedValue.toLowerCase()],
+        };
+      } else {
+        res.contract = contractsMapping[decodedValue.toLowerCase()];
+      }
+    } else {
+      res = {
+        value: decodedValue.toString(),
+        contract: contractsMapping[decodedValue.toLowerCase()],
+      };
+    }
+  }
+  return res;
+}
+
 async function decodeConstructorArguments(
   contractName: string,
   artifactContent: any,
-  networkName: string
+  networkName: string,
+  namedAccountsMapping: { [key: string]: string },
+  contractsMapping: { [key: string]: string }
 ): Promise<any> {
   const completeArtifactPath = join(__dirname, "deployments", networkName, `${contractName}.json`);
   if (existsSync(completeArtifactPath)) {
@@ -49,7 +83,7 @@ async function decodeConstructorArguments(
         if (!isNaN(parseInt(key, 10))) {
           delete decoded[key];
         } else {
-          decoded[key] = decoded[key].toString();
+          decoded[key] = getValue(decoded[key].toString(), namedAccountsMapping, contractsMapping);
         }
       }
       return {
@@ -71,7 +105,7 @@ async function decodeConstructorArguments(
         if (!isNaN(parseInt(key, 10))) {
           delete decoded[key];
         } else {
-          decoded[key] = decoded[key].toString();
+          decoded[key] = getValue(decoded[key].toString(), namedAccountsMapping, contractsMapping);
         }
       }
       return {
@@ -96,6 +130,20 @@ async function main() {
   const contractNames = Object.keys(artifactContent.contracts);
   let firewallAbi;
   const contractsAbis = {};
+  const inversedNamedAccounts = {};
+  for (const namedAccount of Object.keys(namedAccounts)) {
+    if (inversedNamedAccounts[namedAccounts[namedAccount].toLowerCase()] === undefined) {
+      inversedNamedAccounts[namedAccounts[namedAccount].toLowerCase()] = namedAccount;
+    } else {
+      inversedNamedAccounts[namedAccounts[namedAccount].toLowerCase()] += "," + namedAccount;
+    }
+  }
+  const inversedContracts = {};
+  for (const contract of Object.keys(artifactContent.contracts)) {
+    if (artifactContent.contracts[contract].address) {
+      inversedContracts[artifactContent.contracts[contract].address.toLowerCase()] = contract;
+    }
+  }
   for (const contractName of contractNames) {
     if (firewalledContract.includes(contractName)) {
       contractsAbis[contractName] = artifactContent.contracts[contractName].abi;
@@ -106,7 +154,9 @@ async function main() {
     const constructorArgs = await decodeConstructorArguments(
       contractName,
       artifactContent.contracts[contractName],
-      network.name
+      network.name,
+      inversedNamedAccounts,
+      inversedContracts
     );
     if (constructorArgs !== null) {
       artifactContent.contracts[contractName] = {
