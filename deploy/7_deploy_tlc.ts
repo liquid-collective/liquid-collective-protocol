@@ -1,15 +1,9 @@
 import { DeployFunction } from "hardhat-deploy/dist/types";
 import { HardhatRuntimeEnvironment } from "hardhat/types";
-import { isDeployed, logStep, logStepEnd } from '../ts-utils/helpers/index';
+import { isDeployed, logStep, logStepEnd } from "../ts-utils/helpers/index";
 
 const func: DeployFunction = async function ({ deployments, getNamedAccounts }: HardhatRuntimeEnvironment) {
-  logStep(__filename);
-
-  const { 
-    deployer, 
-    proxyAdministrator,
-    alluvialTreasury,
-  } = await getNamedAccounts();
+  const { deployer, proxyAdministrator, alluvialTreasury } = await getNamedAccounts();
 
   await deployments.deploy("TLC", {
     contract: "TLCV1",
