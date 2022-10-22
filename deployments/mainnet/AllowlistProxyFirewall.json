@@ -1,0 +1,521 @@
+{
+  "address": "0x854e42A12ed8BBAFb75f99D4a1499e219947C70a",
+  "abi": [
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "_admin",
+          "type": "address"
+        },
+        {
+          "internalType": "address",
+          "name": "_executor",
+          "type": "address"
+        },
+        {
+          "internalType": "address",
+          "name": "_destination",
+          "type": "address"
+        },
+        {
+          "internalType": "bytes4[]",
+          "name": "_executorCallableSelectors",
+          "type": "bytes4[]"
+        }
+      ],
+      "stateMutability": "nonpayable",
+      "type": "constructor"
+    },
+    {
+      "inputs": [],
+      "name": "InvalidZeroAddress",
+      "type": "error"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "caller",
+          "type": "address"
+        }
+      ],
+      "name": "Unauthorized",
+      "type": "error"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "admin",
+          "type": "address"
+        }
+      ],
+      "name": "SetAdmin",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "destination",
+          "type": "address"
+        }
+      ],
+      "name": "SetDestination",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "executor",
+          "type": "address"
+        }
+      ],
+      "name": "SetExecutor",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": false,
+          "internalType": "bytes4",
+          "name": "selector",
+          "type": "bytes4"
+        },
+        {
+          "indexed": false,
+          "internalType": "bool",
+          "name": "status",
+          "type": "bool"
+        }
+      ],
+      "name": "SetExecutorPermissions",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "pendingAdmin",
+          "type": "address"
+        }
+      ],
+      "name": "SetPendingAdmin",
+      "type": "event"
+    },
+    {
+      "stateMutability": "payable",
+      "type": "fallback"
+    },
+    {
+      "inputs": [],
+      "name": "acceptAdmin",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "bytes4",
+          "name": "_functionSelector",
+          "type": "bytes4"
+        },
+        {
+          "internalType": "bool",
+          "name": "_executorCanCall",
+          "type": "bool"
+        }
+      ],
+      "name": "allowExecutor",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "destination",
+      "outputs": [
+        {
+          "internalType": "address",
+          "name": "",
+          "type": "address"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "executor",
+      "outputs": [
+        {
+          "internalType": "address",
+          "name": "",
+          "type": "address"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "bytes4",
+          "name": "",
+          "type": "bytes4"
+        }
+      ],
+      "name": "executorCanCall",
+      "outputs": [
+        {
+          "internalType": "bool",
+          "name": "",
+          "type": "bool"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "getAdmin",
+      "outputs": [
+        {
+          "internalType": "address",
+          "name": "",
+          "type": "address"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "getPendingAdmin",
+      "outputs": [
+        {
+          "internalType": "address",
+          "name": "",
+          "type": "address"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "_newAdmin",
+          "type": "address"
+        }
+      ],
+      "name": "proposeAdmin",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "_newExecutor",
+          "type": "address"
+        }
+      ],
+      "name": "setExecutor",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "stateMutability": "payable",
+      "type": "receive"
+    }
+  ],
+  "transactionHash": "0x33e638b83ed37a1b781e845e29be7dd2a415785453f06453cecaaec34fb9f139",
+  "receipt": {
+    "to": null,
+    "from": "0xBFa8549887E6ddef8Cdf83Cda1Ad24856496fd00",
+    "contractAddress": "0x854e42A12ed8BBAFb75f99D4a1499e219947C70a",
+    "transactionIndex": 154,
+    "gasUsed": "563504",
+    "logsBloom": "0x00000000000000000200000000000000000000000000000020000004000000000000040000004000000040000000000000000000000000000000000000000000000101000080000000000000000000000002080000000000000040000000000000000000000200000080000000000000000100000001000000000000000000000000400000000000000000000000000000000000000000000000000000000000000000040000000000020000000000000100000000000080000000000000000400000000000000000000000000000000000000000000000000000000000000000001000000000000000000000000000000000000000200000000000000000000",
+    "blockHash": "0xbe9dc38327aa3bbc8659c43c9f5b6acafa4a564b95e71e0ee5503d2f89fc7822",
+    "transactionHash": "0x33e638b83ed37a1b781e845e29be7dd2a415785453f06453cecaaec34fb9f139",
+    "logs": [
+      {
+        "transactionIndex": 154,
+        "blockNumber": 15797844,
+        "transactionHash": "0x33e638b83ed37a1b781e845e29be7dd2a415785453f06453cecaaec34fb9f139",
+        "address": "0x854e42A12ed8BBAFb75f99D4a1499e219947C70a",
+        "topics": [
+          "0x5a272403b402d892977df56625f4164ccaf70ca3863991c43ecfe76a6905b0a1",
+          "0x0000000000000000000000008ee3fc0bcd7b57429203751c5be5fdf1ab8409f3"
+        ],
+        "data": "0x",
+        "logIndex": 340,
+        "blockHash": "0xbe9dc38327aa3bbc8659c43c9f5b6acafa4a564b95e71e0ee5503d2f89fc7822"
+      },
+      {
+        "transactionIndex": 154,
+        "blockNumber": 15797844,
+        "transactionHash": "0x33e638b83ed37a1b781e845e29be7dd2a415785453f06453cecaaec34fb9f139",
+        "address": "0x854e42A12ed8BBAFb75f99D4a1499e219947C70a",
+        "topics": [
+          "0x34d4f6a542f13533b1eaa27e7ae8691368028d05b7075ad7a6c34df851a67a43",
+          "0x000000000000000000000000de55c9dc78f985fe1502484cb98ebfab66a56b62"
+        ],
+        "data": "0x",
+        "logIndex": 341,
+        "blockHash": "0xbe9dc38327aa3bbc8659c43c9f5b6acafa4a564b95e71e0ee5503d2f89fc7822"
+      },
+      {
+        "transactionIndex": 154,
+        "blockNumber": 15797844,
+        "transactionHash": "0x33e638b83ed37a1b781e845e29be7dd2a415785453f06453cecaaec34fb9f139",
+        "address": "0x854e42A12ed8BBAFb75f99D4a1499e219947C70a",
+        "topics": [
+          "0x44bcfad6adf95e4168c90f181d665d8b22f3f7708a74828c51854ef849f70857",
+          "0x000000000000000000000000ebc83bb472b2816ec5b5de8d34f0efc9088bb2ce"
+        ],
+        "data": "0x",
+        "logIndex": 342,
+        "blockHash": "0xbe9dc38327aa3bbc8659c43c9f5b6acafa4a564b95e71e0ee5503d2f89fc7822"
+      },
+      {
+        "transactionIndex": 154,
+        "blockNumber": 15797844,
+        "transactionHash": "0x33e638b83ed37a1b781e845e29be7dd2a415785453f06453cecaaec34fb9f139",
+        "address": "0x854e42A12ed8BBAFb75f99D4a1499e219947C70a",
+        "topics": [
+          "0xe1d1d2578e62581ba0a25d03a939b23a37d567cee7e6113f5d4a6a2f446ad5a9"
+        ],
+        "data": "0x8456cb59000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000001",
+        "logIndex": 343,
+        "blockHash": "0xbe9dc38327aa3bbc8659c43c9f5b6acafa4a564b95e71e0ee5503d2f89fc7822"
+      }
+    ],
+    "blockNumber": 15797844,
+    "cumulativeGasUsed": "18882089",
+    "status": 1,
+    "byzantium": true
+  },
+  "args": [
+    "0x8EE3fC0Bcd7B57429203751C5bE5fdf1AB8409f3",
+    "0xDE55C9dc78f985fE1502484Cb98EBfAB66A56B62",
+    "0xebc83Bb472b2816Ec5B5de8D34F0eFc9088BB2ce",
+    [
+      "0x8456cb59"
+    ]
+  ],
+  "numDeployments": 1,
+  "solcInputHash": "2dd77678bc5a10a5ce359bc75f81dec3",
+  "metadata": "{\"compiler\":{\"version\":\"0.8.10+commit.fc410830\"},\"language\":\"Solidity\",\"output\":{\"abi\":[{\"inputs\":[{\"internalType\":\"address\",\"name\":\"_admin\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"_executor\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"_destination\",\"type\":\"address\"},{\"internalType\":\"bytes4[]\",\"name\":\"_executorCallableSelectors\",\"type\":\"bytes4[]\"}],\"stateMutability\":\"nonpayable\",\"type\":\"constructor\"},{\"inputs\":[],\"name\":\"InvalidZeroAddress\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"caller\",\"type\":\"address\"}],\"name\":\"Unauthorized\",\"type\":\"error\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"admin\",\"type\":\"address\"}],\"name\":\"SetAdmin\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"destination\",\"type\":\"address\"}],\"name\":\"SetDestination\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"executor\",\"type\":\"address\"}],\"name\":\"SetExecutor\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"bytes4\",\"name\":\"selector\",\"type\":\"bytes4\"},{\"indexed\":false,\"internalType\":\"bool\",\"name\":\"status\",\"type\":\"bool\"}],\"name\":\"SetExecutorPermissions\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"pendingAdmin\",\"type\":\"address\"}],\"name\":\"SetPendingAdmin\",\"type\":\"event\"},{\"stateMutability\":\"payable\",\"type\":\"fallback\"},{\"inputs\":[],\"name\":\"acceptAdmin\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes4\",\"name\":\"_functionSelector\",\"type\":\"bytes4\"},{\"internalType\":\"bool\",\"name\":\"_executorCanCall\",\"type\":\"bool\"}],\"name\":\"allowExecutor\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"destination\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"executor\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes4\",\"name\":\"\",\"type\":\"bytes4\"}],\"name\":\"executorCanCall\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"getAdmin\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"getPendingAdmin\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"_newAdmin\",\"type\":\"address\"}],\"name\":\"proposeAdmin\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"_newExecutor\",\"type\":\"address\"}],\"name\":\"setExecutor\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"stateMutability\":\"payable\",\"type\":\"receive\"}],\"devdoc\":{\"author\":\"Figment\",\"errors\":{\"Unauthorized(address)\":[{\"params\":{\"caller\":\"Address performing the call\"}}]},\"kind\":\"dev\",\"methods\":{\"acceptAdmin()\":{\"details\":\"Only callable by the pending admin. Resets the pending admin if succesful.\"},\"allowExecutor(bytes4,bool)\":{\"params\":{\"_executorCanCall\":\"True if selector is callable by the executor\",\"_functionSelector\":\"Method signature on which the permission is changed\"}},\"constructor\":{\"params\":{\"_admin\":\"Address of the administrator, that is able to perform all calls via the Firewall\",\"_executor\":\"Address of the executor, that is able to perform only a subset of calls via the Firewall\",\"_executorCallableSelectors\":\"Initial list of allowed selectors for the executor\"}},\"getAdmin()\":{\"returns\":{\"_0\":\"The admin address\"}},\"getPendingAdmin()\":{\"returns\":{\"_0\":\"The pending admin address\"}},\"proposeAdmin(address)\":{\"details\":\"This security prevents setting an invalid address as an admin. The pendingadmin has to claim its ownership of the contract, and prove that the newaddress is able to perform regular transactions.\",\"params\":{\"_newAdmin\":\"New admin address\"}},\"setExecutor(address)\":{\"params\":{\"_newExecutor\":\"New address for the executor\"}}},\"stateVariables\":{\"destination\":{\"return\":\"The destination address\",\"returns\":{\"_0\":\"The destination address\"}},\"executor\":{\"return\":\"The executor address\",\"returns\":{\"_0\":\"The executor address\"}},\"executorCanCall\":{\"params\":{\"_selector\":\"The selector to verify\"},\"return\":\"True if executor is allowed to call\",\"returns\":{\"_0\":\"True if executor is allowed to call\"}}},\"title\":\"Firewall\",\"version\":1},\"userdoc\":{\"errors\":{\"InvalidZeroAddress()\":[{\"notice\":\"The address is zero\"}],\"Unauthorized(address)\":[{\"notice\":\"The operator is unauthorized for the caller\"}]},\"events\":{\"SetAdmin(address)\":{\"notice\":\"The admin address changed\"},\"SetDestination(address)\":{\"notice\":\"The stored destination address has been changed\"},\"SetExecutor(address)\":{\"notice\":\"The stored executor address has been changed\"},\"SetExecutorPermissions(bytes4,bool)\":{\"notice\":\"The storage permission for a selector has been changed\"},\"SetPendingAdmin(address)\":{\"notice\":\"The pending admin address changed\"}},\"kind\":\"user\",\"methods\":{\"acceptAdmin()\":{\"notice\":\"Accept the transfer of ownership\"},\"allowExecutor(bytes4,bool)\":{\"notice\":\"Sets the permission for a function selector\"},\"destination()\":{\"notice\":\"Retrieve the destination address\"},\"executor()\":{\"notice\":\"Retrieve the executor address\"},\"executorCanCall(bytes4)\":{\"notice\":\"Returns true if the executor is allowed to perform a call on the given selector\"},\"getAdmin()\":{\"notice\":\"Retrieves the current admin address\"},\"getPendingAdmin()\":{\"notice\":\"Retrieve the current pending admin address\"},\"proposeAdmin(address)\":{\"notice\":\"Proposes a new address as admin\"},\"setExecutor(address)\":{\"notice\":\"Sets the executor address\"}},\"notice\":\"This contract accepts calls to admin-level functions of an underlying contract, and         ensures the caller holds an appropriate role for calling that function. There are two roles:          - An Admin can call anything          - An Executor can call specific functions. The list of function is customisable.         Random callers cannot call anything through this contract, even if the underlying function         is unpermissioned in the underlying contract.         Calls to non-admin functions should be called at the underlying contract directly.\",\"version\":1}},\"settings\":{\"compilationTarget\":{\"contracts/src/Firewall.sol\":\"Firewall\"},\"evmVersion\":\"london\",\"libraries\":{},\"metadata\":{\"bytecodeHash\":\"ipfs\",\"useLiteralContent\":true},\"optimizer\":{\"enabled\":true,\"runs\":100},\"remappings\":[]},\"sources\":{\"contracts/src/Administrable.sol\":{\"content\":\"//SPDX-License-Identifier: BUSL-1.1\\npragma solidity 0.8.10;\\n\\nimport \\\"./interfaces/IAdministrable.sol\\\";\\n\\nimport \\\"./libraries/LibAdministrable.sol\\\";\\nimport \\\"./libraries/LibSanitize.sol\\\";\\n\\n/// @title Administrable\\n/// @author Kiln\\n/// @notice This contract handles the administration of the contracts\\nabstract contract Administrable is IAdministrable {\\n    /// @notice Prevents unauthorized calls\\n    modifier onlyAdmin() {\\n        if (msg.sender != LibAdministrable._getAdmin()) {\\n            revert LibErrors.Unauthorized(msg.sender);\\n        }\\n        _;\\n    }\\n\\n    /// @notice Prevents unauthorized calls\\n    modifier onlyPendingAdmin() {\\n        if (msg.sender != LibAdministrable._getPendingAdmin()) {\\n            revert LibErrors.Unauthorized(msg.sender);\\n        }\\n        _;\\n    }\\n\\n    /// @inheritdoc IAdministrable\\n    function getAdmin() external view returns (address) {\\n        return LibAdministrable._getAdmin();\\n    }\\n\\n    /// @inheritdoc IAdministrable\\n    function getPendingAdmin() external view returns (address) {\\n        return LibAdministrable._getPendingAdmin();\\n    }\\n\\n    /// @inheritdoc IAdministrable\\n    function proposeAdmin(address _newAdmin) external onlyAdmin {\\n        _setPendingAdmin(_newAdmin);\\n    }\\n\\n    /// @inheritdoc IAdministrable\\n    function acceptAdmin() external onlyPendingAdmin {\\n        _setAdmin(LibAdministrable._getPendingAdmin());\\n        _setPendingAdmin(address(0));\\n    }\\n\\n    /// @notice Internal utility to set the admin address\\n    /// @param _admin Address to set as admin\\n    function _setAdmin(address _admin) internal {\\n        LibSanitize._notZeroAddress(_admin);\\n        LibAdministrable._setAdmin(_admin);\\n        emit SetAdmin(_admin);\\n    }\\n\\n    /// @notice Internal utility to set the pending admin address\\n    /// @param _pendingAdmin Address to set as pending admin\\n    function _setPendingAdmin(address _pendingAdmin) internal {\\n        LibAdministrable._setPendingAdmin(_pendingAdmin);\\n        emit SetPendingAdmin(_pendingAdmin);\\n    }\\n\\n    /// @notice Internal utility to retrieve the address of the current admin\\n    /// @return The address of admin\\n    function _getAdmin() internal view returns (address) {\\n        return LibAdministrable._getAdmin();\\n    }\\n}\\n\",\"keccak256\":\"0xc9ce727028bc42bf4ea4247dfde9b57a5c36e1820aba5219207aa95c4f035372\",\"license\":\"BUSL-1.1\"},\"contracts/src/Firewall.sol\":{\"content\":\"//SPDX-License-Identifier: BUSL-1.1\\npragma solidity 0.8.10;\\n\\nimport \\\"./interfaces/IFirewall.sol\\\";\\n\\nimport \\\"./Administrable.sol\\\";\\n\\n/// @title Firewall\\n/// @author Figment\\n/// @notice This contract accepts calls to admin-level functions of an underlying contract, and\\n///         ensures the caller holds an appropriate role for calling that function. There are two roles:\\n///          - An Admin can call anything\\n///          - An Executor can call specific functions. The list of function is customisable.\\n///         Random callers cannot call anything through this contract, even if the underlying function\\n///         is unpermissioned in the underlying contract.\\n///         Calls to non-admin functions should be called at the underlying contract directly.\\ncontract Firewall is IFirewall, Administrable {\\n    /// @inheritdoc IFirewall\\n    address public executor;\\n\\n    /// @inheritdoc IFirewall\\n    address public destination;\\n\\n    /// @inheritdoc IFirewall\\n    mapping(bytes4 => bool) public executorCanCall;\\n\\n    /// @param _admin Address of the administrator, that is able to perform all calls via the Firewall\\n    /// @param _executor Address of the executor, that is able to perform only a subset of calls via the Firewall\\n    /// @param _executorCallableSelectors Initial list of allowed selectors for the executor\\n    constructor(address _admin, address _executor, address _destination, bytes4[] memory _executorCallableSelectors) {\\n        LibSanitize._notZeroAddress(_executor);\\n        LibSanitize._notZeroAddress(_destination);\\n        _setAdmin(_admin);\\n        executor = _executor;\\n        destination = _destination;\\n\\n        emit SetExecutor(_executor);\\n        emit SetDestination(_destination);\\n\\n        for (uint256 i; i < _executorCallableSelectors.length;) {\\n            executorCanCall[_executorCallableSelectors[i]] = true;\\n            emit SetExecutorPermissions(_executorCallableSelectors[i], true);\\n            unchecked {\\n                ++i;\\n            }\\n        }\\n    }\\n\\n    /// @notice Prevents unauthorized calls\\n    modifier onlyAdminOrExecutor() {\\n        if (_getAdmin() != msg.sender && msg.sender != executor) {\\n            revert LibErrors.Unauthorized(msg.sender);\\n        }\\n        _;\\n    }\\n\\n    /// @inheritdoc IFirewall\\n    function setExecutor(address _newExecutor) external onlyAdminOrExecutor {\\n        LibSanitize._notZeroAddress(_newExecutor);\\n        executor = _newExecutor;\\n        emit SetExecutor(_newExecutor);\\n    }\\n\\n    /// @inheritdoc IFirewall\\n    function allowExecutor(bytes4 _functionSelector, bool _executorCanCall) external onlyAdmin {\\n        executorCanCall[_functionSelector] = _executorCanCall;\\n        emit SetExecutorPermissions(_functionSelector, _executorCanCall);\\n    }\\n\\n    /// @inheritdoc IFirewall\\n    fallback() external payable virtual {\\n        _fallback();\\n    }\\n\\n    /// @inheritdoc IFirewall\\n    receive() external payable virtual {\\n        _fallback();\\n    }\\n\\n    /// @notice Performs call checks to verify that the caller is able to perform the call\\n    function _checkCallerRole() internal view {\\n        if (msg.sender == _getAdmin() || (executorCanCall[msg.sig] && msg.sender == executor)) {\\n            return;\\n        }\\n        revert LibErrors.Unauthorized(msg.sender);\\n    }\\n\\n    /// @notice Forwards the current call parameters to the destination address\\n    /// @param _destination Address on which the forwarded call is performed\\n    /// @param _value Message value to attach to the call\\n    function _forward(address _destination, uint256 _value) internal {\\n        // solhint-disable-next-line no-inline-assembly\\n        assembly {\\n            // Copy msg.data. We take full control of memory in this inline assembly\\n            // block because it will not return to Solidity code. We overwrite the\\n            // Solidity scratch pad at memory position 0.\\n            calldatacopy(0, 0, calldatasize())\\n\\n            // Call the destination.\\n            // out and outsize are 0 because we don't know the size yet.\\n            let result := call(gas(), _destination, _value, 0, calldatasize(), 0, 0)\\n\\n            // Copy the returned data.\\n            returndatacopy(0, 0, returndatasize())\\n\\n            switch result\\n            // call returns 0 on error.\\n            case 0 { revert(0, returndatasize()) }\\n            default { return(0, returndatasize()) }\\n        }\\n    }\\n\\n    /// @notice Internal utility to perform authorization checks and forward a call\\n    function _fallback() internal virtual {\\n        _checkCallerRole();\\n        _forward(destination, msg.value);\\n    }\\n}\\n\",\"keccak256\":\"0xe5748034bfb10798762c5aed6be798510db67e5c12db29fcd0583cf0b30147a3\",\"license\":\"BUSL-1.1\"},\"contracts/src/interfaces/IAdministrable.sol\":{\"content\":\"//SPDX-License-Identifier: BUSL-1.1\\npragma solidity 0.8.10;\\n\\n/// @title Administrable Interface\\n/// @author Kiln\\n/// @notice This interface exposes methods to handle the ownership of the contracts\\ninterface IAdministrable {\\n    /// @notice The pending admin address changed\\n    /// @param pendingAdmin New pending admin address\\n    event SetPendingAdmin(address indexed pendingAdmin);\\n\\n    /// @notice The admin address changed\\n    /// @param admin New admin address\\n    event SetAdmin(address indexed admin);\\n\\n    /// @notice Retrieves the current admin address\\n    /// @return The admin address\\n    function getAdmin() external view returns (address);\\n\\n    /// @notice Retrieve the current pending admin address\\n    /// @return The pending admin address\\n    function getPendingAdmin() external view returns (address);\\n\\n    /// @notice Proposes a new address as admin\\n    /// @dev This security prevents setting an invalid address as an admin. The pending\\n    /// @dev admin has to claim its ownership of the contract, and prove that the new\\n    /// @dev address is able to perform regular transactions.\\n    /// @param _newAdmin New admin address\\n    function proposeAdmin(address _newAdmin) external;\\n\\n    /// @notice Accept the transfer of ownership\\n    /// @dev Only callable by the pending admin. Resets the pending admin if succesful.\\n    function acceptAdmin() external;\\n}\\n\",\"keccak256\":\"0xe45ef81bf9326bac437dcf901eeb80628d5c87d51dcbcf3addb80e834ba7bfea\",\"license\":\"BUSL-1.1\"},\"contracts/src/interfaces/IFirewall.sol\":{\"content\":\"//SPDX-License-Identifier: BUSL-1.1\\npragma solidity 0.8.10;\\n\\n/// @title Firewall\\n/// @author Figment\\n/// @notice This interface exposes methods to accept calls to admin-level functions of an underlying contract.\\ninterface IFirewall {\\n    /// @notice The stored executor address has been changed\\n    /// @param executor The new executor address\\n    event SetExecutor(address indexed executor);\\n\\n    /// @notice The stored destination address has been changed\\n    /// @param destination The new destination address\\n    event SetDestination(address indexed destination);\\n\\n    /// @notice The storage permission for a selector has been changed\\n    /// @param selector The 4 bytes method selector\\n    /// @param status True if executor is allowed\\n    event SetExecutorPermissions(bytes4 selector, bool status);\\n\\n    /// @notice Retrieve the executor address\\n    /// @return The executor address\\n    function executor() external view returns (address);\\n\\n    /// @notice Retrieve the destination address\\n    /// @return The destination address\\n    function destination() external view returns (address);\\n\\n    /// @notice Returns true if the executor is allowed to perform a call on the given selector\\n    /// @param _selector The selector to verify\\n    /// @return True if executor is allowed to call\\n    function executorCanCall(bytes4 _selector) external view returns (bool);\\n\\n    /// @notice Sets the executor address\\n    /// @param _newExecutor New address for the executor\\n    function setExecutor(address _newExecutor) external;\\n\\n    /// @notice Sets the permission for a function selector\\n    /// @param _functionSelector Method signature on which the permission is changed\\n    /// @param _executorCanCall True if selector is callable by the executor\\n    function allowExecutor(bytes4 _functionSelector, bool _executorCanCall) external;\\n\\n    /// @notice Fallback method. All its parameters are forwarded to the destination if caller is authorized\\n    fallback() external payable;\\n\\n    /// @notice Receive fallback method. All its parameters are forwarded to the destination if caller is authorized\\n    receive() external payable;\\n}\\n\",\"keccak256\":\"0x1fc776357859833f262829a87de36be2ff4311bef1b3b8189016fb84b74db82b\",\"license\":\"BUSL-1.1\"},\"contracts/src/libraries/LibAdministrable.sol\":{\"content\":\"//SPDX-License-Identifier: MIT\\npragma solidity 0.8.10;\\n\\nimport \\\"../state/shared/AdministratorAddress.sol\\\";\\nimport \\\"../state/shared/PendingAdministratorAddress.sol\\\";\\n\\n/// @title Lib Administrable\\n/// @author Kiln\\n/// @notice This library handles the admin and pending admin storage vars\\nlibrary LibAdministrable {\\n    /// @notice Retrieve the system admin\\n    /// @return The address of the system admin\\n    function _getAdmin() internal view returns (address) {\\n        return AdministratorAddress.get();\\n    }\\n\\n    /// @notice Retrieve the pending system admin\\n    /// @return The adress of the pending system admin\\n    function _getPendingAdmin() internal view returns (address) {\\n        return PendingAdministratorAddress.get();\\n    }\\n\\n    /// @notice Sets the system admin\\n    /// @param _admin New system admin\\n    function _setAdmin(address _admin) internal {\\n        AdministratorAddress.set(_admin);\\n    }\\n\\n    /// @notice Sets the pending system admin\\n    /// @param _pendingAdmin New pending system admin\\n    function _setPendingAdmin(address _pendingAdmin) internal {\\n        PendingAdministratorAddress.set(_pendingAdmin);\\n    }\\n}\\n\",\"keccak256\":\"0xbe4cec02aff69406624f3ab71a19948997aaf74f63e171137f2f3b85bdb7bc3a\",\"license\":\"MIT\"},\"contracts/src/libraries/LibBasisPoints.sol\":{\"content\":\"//SPDX-License-Identifier: BUSL-1.1\\npragma solidity 0.8.10;\\n\\n/// @title Lib Basis Points\\n/// @notice Holds the basis points max value\\nlibrary LibBasisPoints {\\n    /// @notice The max value for basis points (represents 100%)\\n    uint256 internal constant BASIS_POINTS_MAX = 10_000;\\n}\\n\",\"keccak256\":\"0x97228a01dcd48f033555e3a44f9be37fb474a1b027f703f28097d539808f1c6c\",\"license\":\"BUSL-1.1\"},\"contracts/src/libraries/LibErrors.sol\":{\"content\":\"//SPDX-License-Identifier: MIT\\npragma solidity 0.8.10;\\n\\n/// @title Lib Errors\\n/// @notice Library of common errors\\nlibrary LibErrors {\\n    /// @notice The operator is unauthorized for the caller\\n    /// @param caller Address performing the call\\n    error Unauthorized(address caller);\\n\\n    /// @notice The call was invalid\\n    error InvalidCall();\\n\\n    /// @notice The argument was invalid\\n    error InvalidArgument();\\n\\n    /// @notice The address is zero\\n    error InvalidZeroAddress();\\n\\n    /// @notice The string is empty\\n    error InvalidEmptyString();\\n\\n    /// @notice The fee is invalid\\n    error InvalidFee();\\n}\\n\",\"keccak256\":\"0x7bdbd4ada124723fa08e2088405ba0bf4453beb23d84f4af09e894e06e751f33\",\"license\":\"MIT\"},\"contracts/src/libraries/LibSanitize.sol\":{\"content\":\"//SPDX-License-Identifier: MIT\\npragma solidity 0.8.10;\\n\\nimport \\\"./LibErrors.sol\\\";\\nimport \\\"./LibBasisPoints.sol\\\";\\n\\n/// @title Lib Sanitize\\n/// @notice Utilities to sanitize input values\\nlibrary LibSanitize {\\n    /// @notice Reverts if address is 0\\n    /// @param _address Address to check\\n    function _notZeroAddress(address _address) internal pure {\\n        if (_address == address(0)) {\\n            revert LibErrors.InvalidZeroAddress();\\n        }\\n    }\\n\\n    /// @notice Reverts if string is empty\\n    /// @param _string String to check\\n    function _notEmptyString(string memory _string) internal pure {\\n        if (bytes(_string).length == 0) {\\n            revert LibErrors.InvalidEmptyString();\\n        }\\n    }\\n\\n    /// @notice Reverts if fee is invalid\\n    /// @param _fee Fee to check\\n    function _validFee(uint256 _fee) internal pure {\\n        if (_fee > LibBasisPoints.BASIS_POINTS_MAX) {\\n            revert LibErrors.InvalidFee();\\n        }\\n    }\\n}\\n\",\"keccak256\":\"0xf8aeeb866c4657a96c8b4c006340c7996d15a6f0044b730c276bc3ba8d5bcd48\",\"license\":\"MIT\"},\"contracts/src/libraries/LibUnstructuredStorage.sol\":{\"content\":\"// SPDX-License-Identifier:    MIT\\n\\npragma solidity 0.8.10;\\n\\n/// @title Lib Unstructured Storage\\n/// @notice Utilities to work with unstructured storage\\nlibrary LibUnstructuredStorage {\\n    /// @notice Retrieve a bool value at a storage slot\\n    /// @param _position The storage slot to retrieve\\n    /// @return data The bool value\\n    function getStorageBool(bytes32 _position) internal view returns (bool data) {\\n        // solhint-disable-next-line no-inline-assembly\\n        assembly {\\n            data := sload(_position)\\n        }\\n    }\\n\\n    /// @notice Retrieve an address value at a storage slot\\n    /// @param _position The storage slot to retrieve\\n    /// @return data The address value\\n    function getStorageAddress(bytes32 _position) internal view returns (address data) {\\n        // solhint-disable-next-line no-inline-assembly\\n        assembly {\\n            data := sload(_position)\\n        }\\n    }\\n\\n    /// @notice Retrieve a bytes32 value at a storage slot\\n    /// @param _position The storage slot to retrieve\\n    /// @return data The bytes32 value\\n    function getStorageBytes32(bytes32 _position) internal view returns (bytes32 data) {\\n        // solhint-disable-next-line no-inline-assembly\\n        assembly {\\n            data := sload(_position)\\n        }\\n    }\\n\\n    /// @notice Retrieve an uint256 value at a storage slot\\n    /// @param _position The storage slot to retrieve\\n    /// @return data The uint256 value\\n    function getStorageUint256(bytes32 _position) internal view returns (uint256 data) {\\n        // solhint-disable-next-line no-inline-assembly\\n        assembly {\\n            data := sload(_position)\\n        }\\n    }\\n\\n    /// @notice Sets a bool value at a storage slot\\n    /// @param _position The storage slot to set\\n    /// @param _data The bool value to set\\n    function setStorageBool(bytes32 _position, bool _data) internal {\\n        // solhint-disable-next-line no-inline-assembly\\n        assembly {\\n            sstore(_position, _data)\\n        }\\n    }\\n\\n    /// @notice Sets an address value at a storage slot\\n    /// @param _position The storage slot to set\\n    /// @param _data The address value to set\\n    function setStorageAddress(bytes32 _position, address _data) internal {\\n        // solhint-disable-next-line no-inline-assembly\\n        assembly {\\n            sstore(_position, _data)\\n        }\\n    }\\n\\n    /// @notice Sets a bytes32 value at a storage slot\\n    /// @param _position The storage slot to set\\n    /// @param _data The bytes32 value to set\\n    function setStorageBytes32(bytes32 _position, bytes32 _data) internal {\\n        // solhint-disable-next-line no-inline-assembly\\n        assembly {\\n            sstore(_position, _data)\\n        }\\n    }\\n\\n    /// @notice Sets an uint256 value at a storage slot\\n    /// @param _position The storage slot to set\\n    /// @param _data The uint256 value to set\\n    function setStorageUint256(bytes32 _position, uint256 _data) internal {\\n        // solhint-disable-next-line no-inline-assembly\\n        assembly {\\n            sstore(_position, _data)\\n        }\\n    }\\n}\\n\",\"keccak256\":\"0xf8e1a2f0dc18e023e12747355b3c95258d4de698f2bb6196222a1dc92940caa3\",\"license\":\"MIT\"},\"contracts/src/state/shared/AdministratorAddress.sol\":{\"content\":\"//SPDX-License-Identifier: MIT\\npragma solidity 0.8.10;\\n\\nimport \\\"../../libraries/LibUnstructuredStorage.sol\\\";\\nimport \\\"../../libraries/LibSanitize.sol\\\";\\n\\n/// @title Administrator Address Storage\\n/// @notice Utility to manage the Administrator Address in storage\\nlibrary AdministratorAddress {\\n    /// @notice Storage slot of the Administrator Address\\n    bytes32 public constant ADMINISTRATOR_ADDRESS_SLOT =\\n        bytes32(uint256(keccak256(\\\"river.state.administratorAddress\\\")) - 1);\\n\\n    /// @notice Retrieve the Administrator Address\\n    /// @return The Administrator Address\\n    function get() internal view returns (address) {\\n        return LibUnstructuredStorage.getStorageAddress(ADMINISTRATOR_ADDRESS_SLOT);\\n    }\\n\\n    /// @notice Sets the Administrator Address\\n    /// @param _newValue New Administrator Address\\n    function set(address _newValue) internal {\\n        LibSanitize._notZeroAddress(_newValue);\\n        LibUnstructuredStorage.setStorageAddress(ADMINISTRATOR_ADDRESS_SLOT, _newValue);\\n    }\\n}\\n\",\"keccak256\":\"0x4f702b4454858199ca8fd15ef1cee63d9dc3d4d8f2ff7a2f859a4e151e46e8ec\",\"license\":\"MIT\"},\"contracts/src/state/shared/PendingAdministratorAddress.sol\":{\"content\":\"//SPDX-License-Identifier: MIT\\npragma solidity 0.8.10;\\n\\nimport \\\"../../libraries/LibUnstructuredStorage.sol\\\";\\n\\n/// @title Pending Administrator Address Storage\\n/// @notice Utility to manage the Pending Administrator Address in storage\\nlibrary PendingAdministratorAddress {\\n    /// @notice Storage slot of the Pending Administrator Address\\n    bytes32 public constant PENDING_ADMINISTRATOR_ADDRESS_SLOT =\\n        bytes32(uint256(keccak256(\\\"river.state.pendingAdministratorAddress\\\")) - 1);\\n\\n    /// @notice Retrieve the Pending Administrator Address\\n    /// @return The Pending Administrator Address\\n    function get() internal view returns (address) {\\n        return LibUnstructuredStorage.getStorageAddress(PENDING_ADMINISTRATOR_ADDRESS_SLOT);\\n    }\\n\\n    /// @notice Sets the Pending Administrator Address\\n    /// @param _newValue New Pending Administrator Address\\n    function set(address _newValue) internal {\\n        LibUnstructuredStorage.setStorageAddress(PENDING_ADMINISTRATOR_ADDRESS_SLOT, _newValue);\\n    }\\n}\\n\",\"keccak256\":\"0x2164cafa435d1e1650037164e2b094ca3af00cc68e05b59140406aa59b1949f2\",\"license\":\"MIT\"}},\"version\":1}",
+  "bytecode": "0x60806040523480156200001157600080fd5b5060405162000bb438038062000bb4833981016040819052620000349162000330565b6200004a83620001e060201b620003df1760201c565b6200006082620001e060201b620003df1760201c565b6200006b846200020b565b600080546001600160a01b03199081166001600160a01b038681169182178455600180549093169086161790915560405190917f34d4f6a542f13533b1eaa27e7ae8691368028d05b7075ad7a6c34df851a67a4391a26040516001600160a01b038316907f44bcfad6adf95e4168c90f181d665d8b22f3f7708a74828c51854ef849f7085790600090a260005b8151811015620001d5576001600260008484815181106200011d576200011d6200043b565b60200260200101516001600160e01b0319166001600160e01b031916815260200190815260200160002060006101000a81548160ff0219169083151502179055507fe1d1d2578e62581ba0a25d03a939b23a37d567cee7e6113f5d4a6a2f446ad5a98282815181106200019457620001946200043b565b60200260200101516001604051620001c49291906001600160e01b03199290921682521515602082015260400190565b60405180910390a1600101620000f8565b505050505062000477565b6001600160a01b038116620002085760405163f6b2911f60e01b815260040160405180910390fd5b50565b6200022181620001e060201b620003df1760201c565b62000237816200026e60201b620004061760201c565b6040516001600160a01b038216907f5a272403b402d892977df56625f4164ccaf70ca3863991c43ecfe76a6905b0a190600090a250565b62000208816200028460201b6200040b1760201c565b6200029a81620001e060201b620003df1760201c565b62000208620002cb60017fb5b37715a3e346e996104f0086703f19825def429233930fd9399c38e05fb11362000451565b60001b82620002e060201b620004471760201c565b9055565b80516001600160a01b0381168114620002fc57600080fd5b919050565b634e487b7160e01b600052604160045260246000fd5b80516001600160e01b031981168114620002fc57600080fd5b600080600080608085870312156200034757600080fd5b6200035285620002e4565b9350602062000363818701620002e4565b93506200037360408701620002e4565b60608701519093506001600160401b03808211156200039157600080fd5b818801915088601f830112620003a657600080fd5b815181811115620003bb57620003bb62000301565b8060051b604051601f19603f83011681018181108582111715620003e357620003e362000301565b60405291825284820192508381018501918b8311156200040257600080fd5b938501935b828510156200042b576200041b8562000317565b8452938501939285019262000407565b989b979a50959850505050505050565b634e487b7160e01b600052603260045260246000fd5b6000828210156200047257634e487b7160e01b600052601160045260246000fd5b500390565b61072d80620004876000396000f3fe60806040526004361061007a5760003560e01c806302aaa9cc146100915780630e18b681146100b1578063147bf6c4146100c65780631c3c0ea8146100e65780636e9960c314610106578063b269681d14610131578063c34c08e514610151578063d046815614610171578063f0e70dab1461018657610089565b36610089576100876101c6565b005b6100876101c6565b34801561009d57600080fd5b506100876100ac366004610637565b6101e6565b3480156100bd57600080fd5b5061008761028e565b3480156100d257600080fd5b506100876100e1366004610673565b6102e3565b3480156100f257600080fd5b50610087610101366004610673565b61032a565b34801561011257600080fd5b5061011b6103c6565b60405161012891906106a3565b60405180910390f35b34801561013d57600080fd5b5060015461011b906001600160a01b031681565b34801561015d57600080fd5b5060005461011b906001600160a01b031681565b34801561017d57600080fd5b5061011b6103d5565b34801561019257600080fd5b506101b66101a13660046106b7565b60026020526000908152604090205460ff1681565b6040519015158152602001610128565b6101ce61044b565b6001546101e4906001600160a01b0316346104c2565b565b6101ee6104e7565b6001600160a01b0316336001600160a01b03161461022a573360405163472511eb60e11b815260040161022191906106a3565b60405180910390fd5b6001600160e01b03198216600081815260026020908152604091829020805460ff19168515159081179091558251938452908301527fe1d1d2578e62581ba0a25d03a939b23a37d567cee7e6113f5d4a6a2f446ad5a9910160405180910390a15050565b6102966104f1565b6001600160a01b0316336001600160a01b0316146102c9573360405163472511eb60e11b815260040161022191906106a3565b6102d96102d46104f1565b6104fb565b6101e46000610544565b6102eb6104e7565b6001600160a01b0316336001600160a01b03161461031e573360405163472511eb60e11b815260040161022191906106a3565b61032781610544565b50565b336103336103c6565b6001600160a01b03161415801561035557506000546001600160a01b03163314155b15610375573360405163472511eb60e11b815260040161022191906106a3565b61037e816103df565b600080546001600160a01b0319166001600160a01b038316908117825560405190917f34d4f6a542f13533b1eaa27e7ae8691368028d05b7075ad7a6c34df851a67a4391a250565b60006103d06104e7565b905090565b60006103d06104f1565b6001600160a01b0381166103275760405163f6b2911f60e01b815260040160405180910390fd5b610327815b610414816103df565b61032761044260017fb5b37715a3e346e996104f0086703f19825def429233930fd9399c38e05fb1136106d2565b829055565b9055565b6104536103c6565b6001600160a01b0316336001600160a01b031614806104a05750600080356001600160e01b03191681526002602052604090205460ff1680156104a057506000546001600160a01b031633145b156104a757565b3360405163472511eb60e11b815260040161022191906106a3565b366000803760008036600084865af13d6000803e8080156104e2573d6000f35b3d6000fd5b60006103d0610584565b60006103d06105b8565b610504816103df565b61050d81610406565b6040516001600160a01b038216907f5a272403b402d892977df56625f4164ccaf70ca3863991c43ecfe76a6905b0a190600090a250565b61054d816105e8565b6040516001600160a01b038216907f2a0f8515de3fa34ef68b99300347b8793c01683350743e96fe440594528298f490600090a250565b60006103d06105b460017fb5b37715a3e346e996104f0086703f19825def429233930fd9399c38e05fb1136106d2565b5490565b60006103d06105b460017f6e6ab8b7c7aaba79eef8cc633522d606bb008c101cf9832c9ad05d10a98472816106d2565b6103278161032761044260017f6e6ab8b7c7aaba79eef8cc633522d606bb008c101cf9832c9ad05d10a98472816106d2565b80356001600160e01b03198116811461063257600080fd5b919050565b6000806040838503121561064a57600080fd5b6106538361061a565b91506020830135801515811461066857600080fd5b809150509250929050565b60006020828403121561068557600080fd5b81356001600160a01b038116811461069c57600080fd5b9392505050565b6001600160a01b0391909116815260200190565b6000602082840312156106c957600080fd5b61069c8261061a565b6000828210156106f257634e487b7160e01b600052601160045260246000fd5b50039056fea264697066735822122027faa5210ede76045698c44539215a454cef6e919b7cc35cd04bf2426d13109064736f6c634300080a0033",
+  "deployedBytecode": "0x60806040526004361061007a5760003560e01c806302aaa9cc146100915780630e18b681146100b1578063147bf6c4146100c65780631c3c0ea8146100e65780636e9960c314610106578063b269681d14610131578063c34c08e514610151578063d046815614610171578063f0e70dab1461018657610089565b36610089576100876101c6565b005b6100876101c6565b34801561009d57600080fd5b506100876100ac366004610637565b6101e6565b3480156100bd57600080fd5b5061008761028e565b3480156100d257600080fd5b506100876100e1366004610673565b6102e3565b3480156100f257600080fd5b50610087610101366004610673565b61032a565b34801561011257600080fd5b5061011b6103c6565b60405161012891906106a3565b60405180910390f35b34801561013d57600080fd5b5060015461011b906001600160a01b031681565b34801561015d57600080fd5b5060005461011b906001600160a01b031681565b34801561017d57600080fd5b5061011b6103d5565b34801561019257600080fd5b506101b66101a13660046106b7565b60026020526000908152604090205460ff1681565b6040519015158152602001610128565b6101ce61044b565b6001546101e4906001600160a01b0316346104c2565b565b6101ee6104e7565b6001600160a01b0316336001600160a01b03161461022a573360405163472511eb60e11b815260040161022191906106a3565b60405180910390fd5b6001600160e01b03198216600081815260026020908152604091829020805460ff19168515159081179091558251938452908301527fe1d1d2578e62581ba0a25d03a939b23a37d567cee7e6113f5d4a6a2f446ad5a9910160405180910390a15050565b6102966104f1565b6001600160a01b0316336001600160a01b0316146102c9573360405163472511eb60e11b815260040161022191906106a3565b6102d96102d46104f1565b6104fb565b6101e46000610544565b6102eb6104e7565b6001600160a01b0316336001600160a01b03161461031e573360405163472511eb60e11b815260040161022191906106a3565b61032781610544565b50565b336103336103c6565b6001600160a01b03161415801561035557506000546001600160a01b03163314155b15610375573360405163472511eb60e11b815260040161022191906106a3565b61037e816103df565b600080546001600160a01b0319166001600160a01b038316908117825560405190917f34d4f6a542f13533b1eaa27e7ae8691368028d05b7075ad7a6c34df851a67a4391a250565b60006103d06104e7565b905090565b60006103d06104f1565b6001600160a01b0381166103275760405163f6b2911f60e01b815260040160405180910390fd5b610327815b610414816103df565b61032761044260017fb5b37715a3e346e996104f0086703f19825def429233930fd9399c38e05fb1136106d2565b829055565b9055565b6104536103c6565b6001600160a01b0316336001600160a01b031614806104a05750600080356001600160e01b03191681526002602052604090205460ff1680156104a057506000546001600160a01b031633145b156104a757565b3360405163472511eb60e11b815260040161022191906106a3565b366000803760008036600084865af13d6000803e8080156104e2573d6000f35b3d6000fd5b60006103d0610584565b60006103d06105b8565b610504816103df565b61050d81610406565b6040516001600160a01b038216907f5a272403b402d892977df56625f4164ccaf70ca3863991c43ecfe76a6905b0a190600090a250565b61054d816105e8565b6040516001600160a01b038216907f2a0f8515de3fa34ef68b99300347b8793c01683350743e96fe440594528298f490600090a250565b60006103d06105b460017fb5b37715a3e346e996104f0086703f19825def429233930fd9399c38e05fb1136106d2565b5490565b60006103d06105b460017f6e6ab8b7c7aaba79eef8cc633522d606bb008c101cf9832c9ad05d10a98472816106d2565b6103278161032761044260017f6e6ab8b7c7aaba79eef8cc633522d606bb008c101cf9832c9ad05d10a98472816106d2565b80356001600160e01b03198116811461063257600080fd5b919050565b6000806040838503121561064a57600080fd5b6106538361061a565b91506020830135801515811461066857600080fd5b809150509250929050565b60006020828403121561068557600080fd5b81356001600160a01b038116811461069c57600080fd5b9392505050565b6001600160a01b0391909116815260200190565b6000602082840312156106c957600080fd5b61069c8261061a565b6000828210156106f257634e487b7160e01b600052601160045260246000fd5b50039056fea264697066735822122027faa5210ede76045698c44539215a454cef6e919b7cc35cd04bf2426d13109064736f6c634300080a0033",
+  "devdoc": {
+    "author": "Figment",
+    "errors": {
+      "Unauthorized(address)": [
+        {
+          "params": {
+            "caller": "Address performing the call"
+          }
+        }
+      ]
+    },
+    "kind": "dev",
+    "methods": {
+      "acceptAdmin()": {
+        "details": "Only callable by the pending admin. Resets the pending admin if succesful."
+      },
+      "allowExecutor(bytes4,bool)": {
+        "params": {
+          "_executorCanCall": "True if selector is callable by the executor",
+          "_functionSelector": "Method signature on which the permission is changed"
+        }
+      },
+      "constructor": {
+        "params": {
+          "_admin": "Address of the administrator, that is able to perform all calls via the Firewall",
+          "_executor": "Address of the executor, that is able to perform only a subset of calls via the Firewall",
+          "_executorCallableSelectors": "Initial list of allowed selectors for the executor"
+        }
+      },
+      "getAdmin()": {
+        "returns": {
+          "_0": "The admin address"
+        }
+      },
+      "getPendingAdmin()": {
+        "returns": {
+          "_0": "The pending admin address"
+        }
+      },
+      "proposeAdmin(address)": {
+        "details": "This security prevents setting an invalid address as an admin. The pendingadmin has to claim its ownership of the contract, and prove that the newaddress is able to perform regular transactions.",
+        "params": {
+          "_newAdmin": "New admin address"
+        }
+      },
+      "setExecutor(address)": {
+        "params": {
+          "_newExecutor": "New address for the executor"
+        }
+      }
+    },
+    "stateVariables": {
+      "destination": {
+        "return": "The destination address",
+        "returns": {
+          "_0": "The destination address"
+        }
+      },
+      "executor": {
+        "return": "The executor address",
+        "returns": {
+          "_0": "The executor address"
+        }
+      },
+      "executorCanCall": {
+        "params": {
+          "_selector": "The selector to verify"
+        },
+        "return": "True if executor is allowed to call",
+        "returns": {
+          "_0": "True if executor is allowed to call"
+        }
+      }
+    },
+    "title": "Firewall",
+    "version": 1
+  },
+  "userdoc": {
+    "errors": {
+      "InvalidZeroAddress()": [
+        {
+          "notice": "The address is zero"
+        }
+      ],
+      "Unauthorized(address)": [
+        {
+          "notice": "The operator is unauthorized for the caller"
+        }
+      ]
+    },
+    "events": {
+      "SetAdmin(address)": {
+        "notice": "The admin address changed"
+      },
+      "SetDestination(address)": {
+        "notice": "The stored destination address has been changed"
+      },
+      "SetExecutor(address)": {
+        "notice": "The stored executor address has been changed"
+      },
+      "SetExecutorPermissions(bytes4,bool)": {
+        "notice": "The storage permission for a selector has been changed"
+      },
+      "SetPendingAdmin(address)": {
+        "notice": "The pending admin address changed"
+      }
+    },
+    "kind": "user",
+    "methods": {
+      "acceptAdmin()": {
+        "notice": "Accept the transfer of ownership"
+      },
+      "allowExecutor(bytes4,bool)": {
+        "notice": "Sets the permission for a function selector"
+      },
+      "destination()": {
+        "notice": "Retrieve the destination address"
+      },
+      "executor()": {
+        "notice": "Retrieve the executor address"
+      },
+      "executorCanCall(bytes4)": {
+        "notice": "Returns true if the executor is allowed to perform a call on the given selector"
+      },
+      "getAdmin()": {
+        "notice": "Retrieves the current admin address"
+      },
+      "getPendingAdmin()": {
+        "notice": "Retrieve the current pending admin address"
+      },
+      "proposeAdmin(address)": {
+        "notice": "Proposes a new address as admin"
+      },
+      "setExecutor(address)": {
+        "notice": "Sets the executor address"
+      }
+    },
+    "notice": "This contract accepts calls to admin-level functions of an underlying contract, and         ensures the caller holds an appropriate role for calling that function. There are two roles:          - An Admin can call anything          - An Executor can call specific functions. The list of function is customisable.         Random callers cannot call anything through this contract, even if the underlying function         is unpermissioned in the underlying contract.         Calls to non-admin functions should be called at the underlying contract directly.",
+    "version": 1
+  },
+  "storageLayout": {
+    "storage": [
+      {
+        "astId": 554,
+        "contract": "contracts/src/Firewall.sol:Firewall",
+        "label": "executor",
+        "offset": 0,
+        "slot": "0",
+        "type": "t_address"
+      },
+      {
+        "astId": 557,
+        "contract": "contracts/src/Firewall.sol:Firewall",
+        "label": "destination",
+        "offset": 0,
+        "slot": "1",
+        "type": "t_address"
+      },
+      {
+        "astId": 562,
+        "contract": "contracts/src/Firewall.sol:Firewall",
+        "label": "executorCanCall",
+        "offset": 0,
+        "slot": "2",
+        "type": "t_mapping(t_bytes4,t_bool)"
+      }
+    ],
+    "types": {
+      "t_address": {
+        "encoding": "inplace",
+        "label": "address",
+        "numberOfBytes": "20"
+      },
+      "t_bool": {
+        "encoding": "inplace",
+        "label": "bool",
+        "numberOfBytes": "1"
+      },
+      "t_bytes4": {
+        "encoding": "inplace",
+        "label": "bytes4",
+        "numberOfBytes": "4"
+      },
+      "t_mapping(t_bytes4,t_bool)": {
+        "encoding": "mapping",
+        "key": "t_bytes4",
+        "label": "mapping(bytes4 => bool)",
+        "numberOfBytes": "32",
+        "value": "t_bool"
+      }
+    }
+  }
+}
