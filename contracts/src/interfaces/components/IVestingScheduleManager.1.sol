@@ -42,6 +42,9 @@ interface IVestingScheduleManagerV1 {
     /// @notice The vesting schedule is not revocable
     error VestingScheduleNotRevocable();
 
+    /// @notice The vesting schedule is locked
+    error VestingScheduleIsLocked();
+
     /// @notice Attempt to revoke at a
     error InvalidRevokedVestingScheduleEnd();
 
@@ -69,18 +72,20 @@ interface IVestingScheduleManagerV1 {
     /// @notice Creates a new vesting schedule
     /// @param _beneficiary address of the beneficiary of the tokens
     /// @param _start start time of the vesting
-    /// @param _lockDuration duration during which tokens are locked (in seconds)
+    /// @param _cliffDuration duration to vesting cliff (in seconds)
     /// @param _duration total vesting schedule duration after which all tokens are vested (in seconds)
     /// @param _period duration of a period after which new tokens unlock (in seconds)
+    /// @param _lockDuration duration during which tokens are locked (in seconds)
     /// @param _revocable whether the vesting schedule is revocable or not
     /// @param _amount amount of token attributed by the vesting schedule
     /// @param _delegatee address to delegate escrow voting power to
     /// @return index of the created vesting schedule
     function createVestingSchedule(
         uint64 _start,
-        uint32 _lockDuration,
+        uint32 _cliffDuration,
         uint32 _duration,
         uint32 _period,
+        uint32 _lockDuration,
         bool _revocable,
         uint256 _amount,
         address _beneficiary,

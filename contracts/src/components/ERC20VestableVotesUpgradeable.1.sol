@@ -43,16 +43,26 @@ abstract contract ERC20VestableVotesUpgradeableV1 is Initializable, IVestingSche
     /// @inheritdoc IVestingScheduleManagerV1
     function createVestingSchedule(
         uint64 _start,
-        uint32 _lockDuration,
+        uint32 _cliffDuration,
         uint32 _duration,
         uint32 _period,
+        uint32 _lockDuration,
         bool _revocable,
         uint256 _amount,
         address _beneficiary,
         address _delegatee
     ) external returns (uint256) {
         return _createVestingSchedule(
-            msg.sender, _beneficiary, _delegatee, _start, _lockDuration, _duration, _period, _revocable, _amount
+            msg.sender,
+            _beneficiary,
+            _delegatee,
+            _start,
+            _cliffDuration,
+            _duration,
+            _period,
+            _lockDuration,
+            _revocable,
+            _amount
         );
     }
 
@@ -76,9 +86,10 @@ abstract contract ERC20VestableVotesUpgradeableV1 is Initializable, IVestingSche
     /// @param _beneficiary address of the beneficiary of the tokens
     /// @param _delegatee address of the delegate escrowed tokens votes to (if address(0) then it defaults to the beneficiary)
     /// @param _start start time of the vesting
-    /// @param _lockDuration duration during which tokens are locked (in seconds)
+    /// @param _cliffDuration duration to vesting cliff (in seconds)
     /// @param _duration total vesting schedule duration after which all tokens are vested (in seconds)
     /// @param _period duration of a period after which new tokens unlock (in seconds)
+    /// @param _lockDuration duration during which tokens are locked (in seconds)
     /// @param _revocable whether the vesting schedule is revocable or not
     /// @param _amount amount of token attributed by the vesting schedule
     /// @return index of the created vesting schedule
@@ -87,9 +98,10 @@ abstract contract ERC20VestableVotesUpgradeableV1 is Initializable, IVestingSche
         address _beneficiary,
         address _delegatee,
         uint64 _start,
-        uint32 _lockDuration,
+        uint32 _cliffDuration,
         uint32 _duration,
         uint32 _period,
+        uint32 _lockDuration,
         bool _revocable,
         uint256 _amount
     ) internal returns (uint256) {
@@ -118,6 +130,10 @@ abstract contract ERC20VestableVotesUpgradeableV1 is Initializable, IVestingSche
             revert InvalidVestingScheduleParameter("Vesting schedule duration must split in exact periods");
         }
 
+        if (_cliffDuration > _duration) {
+            revert InvalidVestingScheduleParameter("Vesting schedule duration must be greater than the cliff duration");
+        }
+
         // if input start time is 0 then default to the current block time
         if (_start == 0) {
             _start = uint64(block.timestamp);
@@ -128,6 +144,7 @@ abstract contract ERC20VestableVotesUpgradeableV1 is Initializable, IVestingSche
             start: _start,
             end: _start + _duration,
             lockDuration: _lockDuration,
+            cliffDuration: _cliffDuration,
             duration: _duration,
             period: _period,
             amount: _amount,
@@ -211,8 +228,13 @@ abstract contract ERC20VestableVotesUpgradeableV1 is Initializable, IVestingSche
         }
 
         // compute releasable amount
+        uint256 time = _getCurrentTime();
+        if (time < (vestingSchedule.start + vestingSchedule.lockDuration)) {
+            revert VestingScheduleIsLocked();
+        }
+
         address escrow = _deterministicVestingEscrow(_index);
-        uint256 releasableAmount = _computeVestingReleasableAmount(vestingSchedule, escrow, _getCurrentTime());
+        uint256 releasableAmount = _computeVestingReleasableAmount(vestingSchedule, escrow, time);
         if (releasableAmount == 0) {
             revert ZeroReleasableAmount();
         }
@@ -263,10 +285,6 @@ abstract contract ERC20VestableVotesUpgradeableV1 is Initializable, IVestingSche
         address _escrow,
         uint256 _time
     ) internal view returns (uint256) {
-        if (_time < (_vestingSchedule.start + _vestingSchedule.lockDuration)) {
-            return 0;
-        }
-
         if (_time < _vestingSchedule.end) {
             // vesting has been revoked an we are before end time
             uint256 vestedAmount = _computeVestedAmount(_vestingSchedule, _time);
@@ -290,7 +308,10 @@ abstract contract ERC20VestableVotesUpgradeableV1 is Initializable, IVestingSche
         pure
         returns (uint256)
     {
-        if (_time >= _vestingSchedule.start + _vestingSchedule.duration) {
+        if (_time < _vestingSchedule.start + _vestingSchedule.cliffDuration) {
+            // pre-fliff no tokens have been vested
+            return 0;
+        } else if (_time >= _vestingSchedule.start + _vestingSchedule.duration) {
             // post vesting all tokens have been vested
             return _vestingSchedule.amount;
         } else {
