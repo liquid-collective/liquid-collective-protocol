@@ -94,8 +94,8 @@ const config: HardhatUserConfig = {
     },
     tlcMintAccount: {
       default: 1,
-      goerli: "0x48D96977722426Cc22A9a017E098624b04969706",
-      mockedGoerli: "0x7932EdA85E33D8e13f7C110ACBEb4a5A8B53dda9",
+      goerli: "0xa3cf5f149a680F5AC72eC90dFb4382f5C88E5cBe",
+      mockedGoerli: "0x027c17E24288a1EbF5f9e5Dc45fB603D70633F05",
       local: "0x7932EdA85E33D8e13f7C110ACBEb4a5A8B53dda9",
       mainnet: "0x070cbF96cac223D88401D6227577f9FA480C57C8",
     },
