@@ -35,9 +35,22 @@ abstract contract ERC20VestableVotesUpgradeableV1 is Initializable, IVestingSche
 
     /// @inheritdoc IVestingScheduleManagerV1
     function computeVestingReleasableAmount(uint256 _index) external view returns (uint256) {
-        address escrow = _deterministicVestingEscrow(_index);
         VestingSchedules.VestingSchedule memory vestingSchedule = VestingSchedules.get(_index);
-        return _computeVestingReleasableAmount(vestingSchedule, escrow, _getCurrentTime());
+
+        uint256 time = _getCurrentTime();
+        if (time < (vestingSchedule.start + vestingSchedule.lockDuration)) {
+            return 0;
+        }
+
+        address escrow = _deterministicVestingEscrow(_index);
+
+        return _computeVestingReleasableAmount(vestingSchedule, escrow, time);
+    }
+
+    /// @inheritdoc IVestingScheduleManagerV1
+    function computeVestingVestedAmount(uint256 _index) external view returns (uint256) {
+        VestingSchedules.VestingSchedule memory vestingSchedule = VestingSchedules.get(_index);
+        return _computeVestedAmount(vestingSchedule, _getCurrentTime());
     }
 
     /// @inheritdoc IVestingScheduleManagerV1

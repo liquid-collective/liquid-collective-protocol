@@ -484,71 +484,99 @@ contract ERC20VestableVotesUpgradeableV1Tests is Test {
         assert(tt.balanceOf(joe) == 5_000e18);
     }
 
-    function testcomputeVestingReleasableAmount() public {
+    function testcomputeVestingAmounts() public {
         vm.warp(0);
 
+        // Create a schedule such as
+        // - cliff 1 year
+        // - total duration 4 years
+        // - lock duration 2 years
         vm.startPrank(initAccount);
         assert(
             createVestingSchedule(
-                joe, 0, 365 * 24 * 3600, 4 * 365 * 24 * 3600, 365 * 2 * 3600, 365 * 24 * 3600, true, 10_000e18
+                joe, 0, 365 * 24 * 3600, 4 * 365 * 24 * 3600, 365 * 2 * 3600, 2 * 365 * 24 * 3600, true, 10_000e18
             ) == 0
         );
         vm.stopPrank();
 
         // At beginning of schedule
         assert(tt.computeVestingReleasableAmount(0) == 0);
+        assert(tt.computeVestingVestedAmount(0) == 0);
 
         // Move right after beginning of schedule
         vm.warp(1);
         assert(tt.computeVestingReleasableAmount(0) == 0);
+        assert(tt.computeVestingVestedAmount(0) == 0);
 
         // Move to half way cliff
         vm.warp(365 * 12 * 3600);
         assert(tt.computeVestingReleasableAmount(0) == 0);
+        assert(tt.computeVestingVestedAmount(0) == 0);
 
         // Move right before cliff
         vm.warp(365 * 24 * 3600 - 1);
         assert(tt.computeVestingReleasableAmount(0) == 0);
+        assert(tt.computeVestingVestedAmount(0) == 0);
 
         // Move at cliff
         vm.warp(365 * 24 * 3600);
-        assert(tt.computeVestingReleasableAmount(0) == 2_500e18);
+        assert(tt.computeVestingReleasableAmount(0) == 0);
+        assert(tt.computeVestingVestedAmount(0) == 2_500e18);
 
         // Move right after cliff
         vm.warp(365 * 24 * 3600 + 1);
-        assert(tt.computeVestingReleasableAmount(0) == 2_500e18);
+        assert(tt.computeVestingReleasableAmount(0) == 0);
+        assert(tt.computeVestingVestedAmount(0) == 2_500e18);
 
         // Move right before slice period
         vm.warp(365 * 24 * 3600 + 365 * 2 * 3600 - 1);
-        assert(tt.computeVestingReleasableAmount(0) == 2_500e18);
+        assert(tt.computeVestingReleasableAmount(0) == 0);
+        assert(tt.computeVestingVestedAmount(0) == 2_500e18);
 
         // Move at slice period
         vm.warp(365 * 24 * 3600 + 365 * 2 * 3600);
-        assert(tt.computeVestingReleasableAmount(0) == 2708333333333333333333);
+        assert(tt.computeVestingReleasableAmount(0) == 0);
+        assert(tt.computeVestingVestedAmount(0) == 2708333333333333333333);
 
         // Move right after slice period
         vm.warp(365 * 24 * 3600 + 365 * 2 * 3600 + 1);
-        assert(tt.computeVestingReleasableAmount(0) == 2708333333333333333333);
+        assert(tt.computeVestingReleasableAmount(0) == 0);
+        assert(tt.computeVestingVestedAmount(0) == 2708333333333333333333);
 
-        // Move half way vesting
-        vm.warp(365 * 24 * 3600 + 365 * 24 * 3600);
+        // Move right before lock
+        vm.warp(2 * 365 * 24 * 3600 - 1);
+        assert(tt.computeVestingReleasableAmount(0) == 0);
+        assert(tt.computeVestingVestedAmount(0) == 4791666666666666666666);
+
+        // Move at lock
+        vm.warp(2 * 365 * 24 * 3600);
         assert(tt.computeVestingReleasableAmount(0) == 5_000e18);
+        assert(tt.computeVestingVestedAmount(0) == 5_000e18);
+
+        // Move right after lock
+        vm.warp(2 * 365 * 24 * 3600);
+        assert(tt.computeVestingReleasableAmount(0) == 5_000e18);
+        assert(tt.computeVestingVestedAmount(0) == 5_000e18);
 
         // Move right before vesting end
         vm.warp(4 * 365 * 24 * 3600 - 1);
         assert(tt.computeVestingReleasableAmount(0) == 9791666666666666666666);
+        assert(tt.computeVestingVestedAmount(0) == 9791666666666666666666);
 
         // Move at vesting end
         vm.warp(4 * 365 * 24 * 3600);
         assert(tt.computeVestingReleasableAmount(0) == 10_000e18);
+         assert(tt.computeVestingVestedAmount(0) == 10_000e18);
 
         // Move right after vesting end
         vm.warp(4 * 365 * 24 * 3600 + 1);
         assert(tt.computeVestingReleasableAmount(0) == 10_000e18);
+         assert(tt.computeVestingVestedAmount(0) == 10_000e18);
 
         // Move 1 year after vesting end
         vm.warp(5 * 365 * 24 * 3600 + 1);
         assert(tt.computeVestingReleasableAmount(0) == 10_000e18);
+         assert(tt.computeVestingVestedAmount(0) == 10_000e18);
     }
 
     function testReleaseVestingScheduleFromInvalidAccount() public {

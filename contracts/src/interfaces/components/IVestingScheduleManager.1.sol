@@ -66,8 +66,13 @@ interface IVestingScheduleManagerV1 {
 
     /// @notice Computes the releasable amount of tokens for a vesting schedule.
     /// @param _index index of the vesting schedule
-    /// @return amount of release tokens
+    /// @return amount of releasable tokens
     function computeVestingReleasableAmount(uint256 _index) external view returns (uint256);
+
+    /// @notice Computes the vested amount of tokens for a vesting schedule.
+    /// @param _index index of the vesting schedule
+    /// @return amount of vested tokens
+    function computeVestingVestedAmount(uint256 _index) external view returns (uint256);
 
     /// @notice Creates a new vesting schedule
     /// @param _beneficiary address of the beneficiary of the tokens
