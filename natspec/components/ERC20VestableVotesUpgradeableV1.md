@@ -138,7 +138,29 @@ Computes the releasable amount of tokens for a vesting schedule.
 
 | Name | Type | Description |
 |---|---|---|
-| _0 | uint256 | amount of release tokens |
+| _0 | uint256 | amount of releasable tokens |
+
+### computeVestingVestedAmount
+
+```solidity
+function computeVestingVestedAmount(uint256 _index) external view returns (uint256)
+```
+
+Computes the vested amount of tokens for a vesting schedule.
+
+
+
+#### Parameters
+
+| Name | Type | Description |
+|---|---|---|
+| _index | uint256 | index of the vesting schedule |
+
+#### Returns
+
+| Name | Type | Description |
+|---|---|---|
+| _0 | uint256 | amount of vested tokens |
 
 ### createVestingSchedule
 
