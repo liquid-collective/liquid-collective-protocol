@@ -171,7 +171,7 @@ abstract contract ERC20VestableVotesUpgradeableV1 is Initializable, IVestingSche
             revert UnsufficientVestingScheduleCreatorBalance();
         }
 
-        // validate schedule parameters are valid
+        // validate schedule parameters
         if (_beneficiary == address(0)) {
             revert InvalidVestingScheduleParameter("Vesting schedule beneficiary must be non zero address");
         }
@@ -201,7 +201,7 @@ abstract contract ERC20VestableVotesUpgradeableV1 is Initializable, IVestingSche
             _start = uint64(block.timestamp);
         }
 
-        // Create new vesting schedule
+        // create new vesting schedule
         VestingSchedules.VestingSchedule memory vestingSchedule = VestingSchedules.VestingSchedule({
             start: _start,
             end: _start + _duration,
@@ -219,12 +219,12 @@ abstract contract ERC20VestableVotesUpgradeableV1 is Initializable, IVestingSche
         // compute escrow address that will hold the token during the vesting
         address escrow = _deterministicVestingEscrow(index);
 
-        // transfer tokens to the escrow and delegate escrow to beneficiary
+        // transfer tokens to the escrow
         _transfer(_creator, escrow, _amount);
 
         // delegate escrow tokens
         if (_delegatee == address(0)) {
-            // default to beneficiary address
+            // default delegatee to beneficiary address
             _delegate(escrow, _beneficiary);
         } else {
             _delegate(escrow, _delegatee);
@@ -289,12 +289,13 @@ abstract contract ERC20VestableVotesUpgradeableV1 is Initializable, IVestingSche
             revert LibErrors.Unauthorized(msg.sender);
         }
 
-        // compute releasable amount
         uint256 time = _getCurrentTime();
         if (time < (vestingSchedule.start + vestingSchedule.lockDuration)) {
+            // before lock no tokens can be vested
             revert VestingScheduleIsLocked();
         }
 
+        // compute releasable amount
         address escrow = _deterministicVestingEscrow(_index);
         uint256 releasableAmount = _computeVestingReleasableAmount(vestingSchedule, escrow, time);
         if (releasableAmount == 0) {
@@ -320,7 +321,7 @@ abstract contract ERC20VestableVotesUpgradeableV1 is Initializable, IVestingSche
             revert LibErrors.Unauthorized(msg.sender);
         }
 
-        // update delegate
+        // update delegatee
         address escrow = _deterministicVestingEscrow(_index);
         address oldDelegatee = delegates(escrow);
         _delegate(escrow, _delegatee);
@@ -348,7 +349,6 @@ abstract contract ERC20VestableVotesUpgradeableV1 is Initializable, IVestingSche
         uint256 _time
     ) internal view returns (uint256) {
         if (_time < _vestingSchedule.end) {
-            // vesting has been revoked an we are before end time
             uint256 vestedAmount = _computeVestedAmount(_vestingSchedule, _time);
             uint256 releasedAmount = _computeVestedAmount(_vestingSchedule, _vestingSchedule.end) - balanceOf(_escrow);
             if (vestedAmount > releasedAmount) {
@@ -357,7 +357,7 @@ abstract contract ERC20VestableVotesUpgradeableV1 is Initializable, IVestingSche
             return 0;
         }
 
-        // we are after vesting end date so all remaining tokens can be released
+        // after vesting end date so all remaining tokens on escrow can be released
         return balanceOf(_escrow);
     }
 
@@ -371,7 +371,7 @@ abstract contract ERC20VestableVotesUpgradeableV1 is Initializable, IVestingSche
         returns (uint256)
     {
         if (_time < _vestingSchedule.start + _vestingSchedule.cliffDuration) {
-            // pre-fliff no tokens have been vested
+            // pre-cliff no tokens have been vested
             return 0;
         } else if (_time >= _vestingSchedule.start + _vestingSchedule.duration) {
             // post vesting all tokens have been vested
