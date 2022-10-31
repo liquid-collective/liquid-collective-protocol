@@ -43,13 +43,14 @@ import "../libraries/LibSanitize.sol";
 /// @notice   - beneficiary: the beneficiary of the vested tokens
 /// @notice   - revocable: is a boolean indicating whether a the vesting can be revoked by the creator
 /// @notice
-/// @notice Vesting release rules
-/// @notice   - before cliff no token are vested and no token can be released
-/// @notice   - at cliff first chunk of token get vested and can be released as long as the locked period is over
-/// @notice   - at the end of every period new tokens get vested and can be released as long as the locked period is over
+/// @notice Vesting schedule
+/// @notice   - from start to cliff: no token are vested
+/// @notice   - at cliff: first part of token get vested
+/// @notice   - from cliff to end: after every period new tokens get vested
 /// @notice
-/// @notice Lock period prevents beneficiary from releasing vested tokens before the lock end. Vested tokens
-/// @notice will eventually be releasable once the lock duration is over.
+/// @notice A vested token is a token that will be eventually releasable from the escrow to the beneficiary.
+/// @notice Lock period prevents beneficiary from releasing vested tokens before the lock period end. Vested tokens
+/// @notice will eventually be releasable once the lock period is over.
 /// @notice
 /// @notice Example: Joe gets a vesting starting on Jan 1st 2022 with duration of 1 year and a lock period of 2 years.
 /// @notice On Jan 1st 2023, Joe will have all tokens vested but can not yet release it due to the lock period.
