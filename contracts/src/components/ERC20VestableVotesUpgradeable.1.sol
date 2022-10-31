@@ -10,6 +10,50 @@ import "../state/tlc/VestingSchedules.sol";
 
 import "../libraries/LibSanitize.sol";
 
+/// @title ERC20VestableVotesUpgradeableV1
+/// @author Alluvial
+/// @notice This is an ERC20 extension that
+/// @notice   - can be used as source of voting power (inherited from OpenZeppelin ERC20VotesUpgradeable)
+/// @notice   - can delegate voting power from an account to another account (inherited from OpenZeppelin ERC20Votes)
+/// @notice   - can manage token vestings (token that are progressively transfered to a beneficiary according to a vesting schedule)
+/// @notice This extension keeps a history (checkpoints) of each account's vote power. Vote power can be delegated either
+/// @notice
+/// @notice Notes from OpenZeppelin ERC20VotesUpgradeable (https://github.com/OpenZeppelin/openzeppelin-contracts-upgradeable/blob/master/contracts/token/ERC20/extensions/ERC20VotesUpgradeable.sol)
+/// @notice   - Vote power can be delegated either by calling the {delegate} function directly, or by providing a signature to be used with {delegateBySig}
+/// @notice   - keeps a history (checkpoints) of each account's vote power
+/// @notice   - power can be queried through the public accessors {getVotes} and {getPastVotes}.
+/// @notice   - By default, token balance does not account for voting power. This makes transfers cheaper. The downside is that it
+/// @notice requires users to delegate to themselves in order to activate checkpoints and have their voting power tracked.
+/// @notice
+/// @notice Notes about vesting
+/// @notice   - any token holder can call the method {createVestingSchedule} in order to transfer tokens to a beneficiary according to a vesting schedule. When
+/// @notice     creating a vesting schedule, tokens are transferred to a temporary escrow and the voting power is delegated to the beneficiary or a delegatee account
+/// @notice     set by the vesting schedule creator
+/// @notice   - beneficiary gets tokens transferred from escrow by calling {releaseVestingSchedule}
+/// @notice   - the schedule creator can revoke a revocable schedule by calling {revokeVestingSchedule} in which case the non-vested tokens are transfered from the escrow back to the creator
+/// @notice   - a beneficiary can delegate escrow voting power to any account by calling {releaseVestingEscrow}
+/// @notice
+/// @notice Vesting attributes are
+/// @notice   - start date: date at which tokens start to be vested)
+/// @notice   - cliff duration: duration before reaching vesting cliff when first tokens are vested (example this may be 1 year)
+/// @notice   - total duration: total duration after which all tokens are vested (example this may be 4 year)
+/// @notice   - period duration: slice the vesting into periods. New tokens get vested an the end of each period (example this may be 1 month)
+/// @notice   - lock duration: duration before which no tokens can be released to beneficiary even if some tokens have been vested already (the lock supersedes the cliff)
+/// @notice   - amount: the total amount of tokens to be vested
+/// @notice   - beneficiary: the beneficiary of the vested tokens
+/// @notice   - revocable: is a boolean indicating whether a the vesting can be revoked by the creator
+/// @notice
+/// @notice Vesting release rules
+/// @notice   - before cliff no token are vested and no token can be released
+/// @notice   - at cliff first chunk of token get vested and can be released as long as the locked period is over
+/// @notice   - at the end of every period new tokens get vested and can be released as long as the locked period is over
+/// @notice
+/// @notice Lock period prevents beneficiary from releasing vested tokens before the lock end. Vested tokens
+/// @notice will eventually be releasable once the lock duration is over.
+/// @notice
+/// @notice Example: Joe gets a vesting starting on Jan 1st 2022 with duration of 1 year and a lock period of 2 years.
+/// @notice On Jan 1st 2023, Joe will have all tokens vested but can not yet release it due to the lock period.
+/// @notice On Jan 1st 2024, lock period is over and Joe can release all tokens.
 abstract contract ERC20VestableVotesUpgradeableV1 is Initializable, IVestingScheduleManagerV1, ERC20VotesUpgradeable {
     // internal used to compute the address of the escrow
     bytes32 internal constant ESCROW = bytes32(uint256(keccak256("escrow")) - 1);
