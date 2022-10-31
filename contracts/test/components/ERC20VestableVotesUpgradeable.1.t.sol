@@ -566,17 +566,17 @@ contract ERC20VestableVotesUpgradeableV1Tests is Test {
         // Move at vesting end
         vm.warp(4 * 365 * 24 * 3600);
         assert(tt.computeVestingReleasableAmount(0) == 10_000e18);
-         assert(tt.computeVestingVestedAmount(0) == 10_000e18);
+        assert(tt.computeVestingVestedAmount(0) == 10_000e18);
 
         // Move right after vesting end
         vm.warp(4 * 365 * 24 * 3600 + 1);
         assert(tt.computeVestingReleasableAmount(0) == 10_000e18);
-         assert(tt.computeVestingVestedAmount(0) == 10_000e18);
+        assert(tt.computeVestingVestedAmount(0) == 10_000e18);
 
         // Move 1 year after vesting end
         vm.warp(5 * 365 * 24 * 3600 + 1);
         assert(tt.computeVestingReleasableAmount(0) == 10_000e18);
-         assert(tt.computeVestingVestedAmount(0) == 10_000e18);
+        assert(tt.computeVestingVestedAmount(0) == 10_000e18);
     }
 
     function testReleaseVestingScheduleFromInvalidAccount() public {
