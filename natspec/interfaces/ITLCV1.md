@@ -98,12 +98,34 @@ Computes the releasable amount of tokens for a vesting schedule.
 
 | Name | Type | Description |
 |---|---|---|
-| _0 | uint256 | amount of release tokens |
+| _0 | uint256 | amount of releasable tokens |
+
+### computeVestingVestedAmount
+
+```solidity
+function computeVestingVestedAmount(uint256 _index) external view returns (uint256)
+```
+
+Computes the vested amount of tokens for a vesting schedule.
+
+
+
+#### Parameters
+
+| Name | Type | Description |
+|---|---|---|
+| _index | uint256 | index of the vesting schedule |
+
+#### Returns
+
+| Name | Type | Description |
+|---|---|---|
+| _0 | uint256 | amount of vested tokens |
 
 ### createVestingSchedule
 
 ```solidity
-function createVestingSchedule(uint64 _start, uint32 _lockDuration, uint32 _duration, uint32 _period, bool _revocable, uint256 _amount, address _beneficiary, address _delegatee) external nonpayable returns (uint256)
+function createVestingSchedule(uint64 _start, uint32 _cliffDuration, uint32 _duration, uint32 _period, uint32 _lockDuration, bool _revocable, uint256 _amount, address _beneficiary, address _delegatee) external nonpayable returns (uint256)
 ```
 
 Creates a new vesting schedule
@@ -115,9 +137,10 @@ Creates a new vesting schedule
 | Name | Type | Description |
 |---|---|---|
 | _start | uint64 | start time of the vesting |
-| _lockDuration | uint32 | duration during which tokens are locked (in seconds) |
+| _cliffDuration | uint32 | duration to vesting cliff (in seconds) |
 | _duration | uint32 | total vesting schedule duration after which all tokens are vested (in seconds) |
 | _period | uint32 | duration of a period after which new tokens unlock (in seconds) |
+| _lockDuration | uint32 | duration during which tokens are locked (in seconds) |
 | _revocable | bool | whether the vesting schedule is revocable or not |
 | _amount | uint256 | amount of token attributed by the vesting schedule |
 | _beneficiary | address | address of the beneficiary of the tokens |
@@ -649,6 +672,17 @@ error UnsufficientVestingScheduleCreatorBalance()
 ```
 
 Vesting schedule creator has unsufficient balance to create vesting schedule
+
+
+
+
+### VestingScheduleIsLocked
+
+```solidity
+error VestingScheduleIsLocked()
+```
+
+The vesting schedule is locked
 
 
 

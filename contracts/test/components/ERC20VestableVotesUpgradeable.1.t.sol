@@ -150,21 +150,37 @@ contract ERC20VestableVotesUpgradeableV1Tests is Test {
     function createVestingSchedule(
         address beneficiary,
         uint256 start,
-        uint256 lockDuration,
+        uint256 cliffDuration,
         uint256 duration,
         uint256 period,
+        uint256 lockDuration,
         bool revocable,
         uint256 amount
-    ) public returns (uint256) {
-        return tt.createVestingSchedule(
+    ) internal returns (uint256) {
+        return createVestingScheduleStackOptimized(
             uint64(start),
-            uint32(lockDuration),
+            uint32(cliffDuration),
             uint32(duration),
             uint32(period),
-            revocable,
+            uint32(lockDuration),
             amount,
             beneficiary,
-            address(0)
+            revocable
+        );
+    }
+
+    function createVestingScheduleStackOptimized(
+        uint64 start,
+        uint32 cliffDuration,
+        uint32 duration,
+        uint32 period,
+        uint32 lockDuration,
+        uint256 amount,
+        address beneficiary,
+        bool revocable
+    ) internal returns (uint256) {
+        return tt.createVestingSchedule(
+            start, cliffDuration, duration, period, lockDuration, revocable, amount, beneficiary, address(0)
         );
     }
 
@@ -174,7 +190,14 @@ contract ERC20VestableVotesUpgradeableV1Tests is Test {
         emit CreatedVestingSchedule(0, initAccount, joe, 10_000e18);
         assert(
             createVestingSchedule(
-                joe, block.timestamp, 365 * 24 * 3600, 4 * 365 * 24 * 3600, 365 * 2 * 3600, true, 10_000e18
+                joe,
+                block.timestamp,
+                365 * 24 * 3600,
+                4 * 365 * 24 * 3600,
+                365 * 2 * 3600,
+                365 * 24 * 3600,
+                true,
+                10_000e18
             ) == 0
         );
         vm.stopPrank();
@@ -190,6 +213,7 @@ contract ERC20VestableVotesUpgradeableV1Tests is Test {
         VestingSchedules.VestingSchedule memory vestingSchedule = tt.getVestingSchedule(0);
 
         assert(vestingSchedule.start == block.timestamp);
+        assert(vestingSchedule.cliffDuration == 365 * 24 * 3600);
         assert(vestingSchedule.lockDuration == 365 * 24 * 3600);
         assert(vestingSchedule.duration == 4 * 365 * 24 * 3600);
         assert(vestingSchedule.period == 365 * 2 * 3600);
@@ -208,8 +232,9 @@ contract ERC20VestableVotesUpgradeableV1Tests is Test {
         vm.expectEmit(true, true, true, true);
         emit CreatedVestingSchedule(0, initAccount, joe, 10_000e18);
         assert(
-            tt.createVestingSchedule(0, 365 * 24 * 3600, 4 * 365 * 24 * 3600, 365 * 2 * 3600, true, 10_000e18, joe, bob)
-                == 0
+            tt.createVestingSchedule(
+                0, 365 * 24 * 3600, 4 * 365 * 24 * 3600, 365 * 2 * 3600, 365 * 24 * 3600, true, 10_000e18, joe, bob
+            ) == 0
         );
         vm.stopPrank();
 
@@ -245,7 +270,14 @@ contract ERC20VestableVotesUpgradeableV1Tests is Test {
             )
         );
         createVestingSchedule(
-            address(0), block.timestamp, 365 * 24 * 3600, 4 * 365 * 24 * 3600, 365 * 2 * 3600, true, 10_000e18
+            address(0),
+            block.timestamp,
+            365 * 24 * 3600,
+            4 * 365 * 24 * 3600,
+            365 * 2 * 3600,
+            365 * 24 * 3600,
+            true,
+            10_000e18
         );
         vm.stopPrank();
     }
@@ -255,7 +287,9 @@ contract ERC20VestableVotesUpgradeableV1Tests is Test {
         vm.expectRevert(
             abi.encodeWithSignature("InvalidVestingScheduleParameter(string)", "Vesting schedule duration must be > 0")
         );
-        createVestingSchedule(joe, block.timestamp, 365 * 24 * 3600, 0, 365 * 2 * 3600, true, 10_000e18);
+        createVestingSchedule(
+            joe, block.timestamp, 365 * 24 * 3600, 0, 365 * 2 * 3600, 365 * 24 * 3600, true, 10_000e18
+        );
         vm.stopPrank();
     }
 
@@ -264,7 +298,9 @@ contract ERC20VestableVotesUpgradeableV1Tests is Test {
         vm.expectRevert(
             abi.encodeWithSignature("InvalidVestingScheduleParameter(string)", "Vesting schedule amount must be > 0")
         );
-        createVestingSchedule(joe, block.timestamp, 365 * 24 * 3600, 4 * 365 * 24 * 3600, 365 * 2 * 3600, true, 0);
+        createVestingSchedule(
+            joe, block.timestamp, 365 * 24 * 3600, 4 * 365 * 24 * 3600, 365 * 2 * 3600, 365 * 24 * 3600, true, 0
+        );
         vm.stopPrank();
     }
 
@@ -273,7 +309,9 @@ contract ERC20VestableVotesUpgradeableV1Tests is Test {
         vm.expectRevert(
             abi.encodeWithSignature("InvalidVestingScheduleParameter(string)", "Vesting schedule period must be > 0")
         );
-        createVestingSchedule(joe, block.timestamp, 365 * 24 * 3600, 4 * 365 * 24 * 3600, 0, true, 10_000e18);
+        createVestingSchedule(
+            joe, block.timestamp, 365 * 24 * 3600, 4 * 365 * 24 * 3600, 0, 365 * 24 * 3600, true, 10_000e18
+        );
         vm.stopPrank();
     }
 
@@ -285,7 +323,14 @@ contract ERC20VestableVotesUpgradeableV1Tests is Test {
             )
         );
         createVestingSchedule(
-            joe, block.timestamp, 365 * 24 * 3600, 4 * 365 * 24 * 3600 + 1, 365 * 2 * 3600, true, 10_000e18
+            joe,
+            block.timestamp,
+            365 * 24 * 3600,
+            4 * 365 * 24 * 3600 + 1,
+            365 * 2 * 3600,
+            365 * 24 * 3600,
+            true,
+            10_000e18
         );
         vm.stopPrank();
     }
@@ -296,7 +341,14 @@ contract ERC20VestableVotesUpgradeableV1Tests is Test {
         emit CreatedVestingSchedule(0, initAccount, joe, 10_000e18);
         assert(
             createVestingSchedule(
-                joe, block.timestamp, 365 * 24 * 3600, 4 * 365 * 24 * 3600, 365 * 2 * 3600, true, 10_000e18
+                joe,
+                block.timestamp,
+                365 * 24 * 3600,
+                4 * 365 * 24 * 3600,
+                365 * 2 * 3600,
+                365 * 24 * 3600,
+                true,
+                10_000e18
             ) == 0
         );
 
@@ -304,7 +356,14 @@ contract ERC20VestableVotesUpgradeableV1Tests is Test {
         emit CreatedVestingSchedule(1, initAccount, bob, 10_000e18);
         assert(
             createVestingSchedule(
-                bob, block.timestamp, 365 * 24 * 3600, 4 * 365 * 24 * 3600, 365 * 2 * 3600, true, 10_000e18
+                bob,
+                block.timestamp,
+                365 * 24 * 3600,
+                4 * 365 * 24 * 3600,
+                365 * 2 * 3600,
+                365 * 24 * 3600,
+                true,
+                10_000e18
             ) == 1
         );
         vm.stopPrank();
@@ -319,7 +378,9 @@ contract ERC20VestableVotesUpgradeableV1Tests is Test {
         vm.warp(start);
         vm.startPrank(initAccount);
         assert(
-            createVestingSchedule(joe, 0, 365 * 24 * 3600, 4 * 365 * 24 * 3600, 365 * 2 * 3600, true, 10_000e18) == 0
+            createVestingSchedule(
+                joe, 0, 365 * 24 * 3600, 4 * 365 * 24 * 3600, 365 * 2 * 3600, 365 * 24 * 3600, true, 10_000e18
+            ) == 0
         );
         vm.stopPrank();
 
@@ -334,7 +395,7 @@ contract ERC20VestableVotesUpgradeableV1Tests is Test {
 
         vm.startPrank(initAccount);
         assert(
-            createVestingSchedule(joe, 0, 365 * 24 * 3600, 4 * 365 * 24 * 3600, 365 * 2 * 3600, true, 10_000e18) == 0
+            createVestingSchedule(joe, 0, 365 * 24 * 3600, 4 * 365 * 24 * 3600, 365 * 2 * 3600, 0, true, 10_000e18) == 0
         );
         vm.stopPrank();
 
@@ -348,6 +409,27 @@ contract ERC20VestableVotesUpgradeableV1Tests is Test {
         vm.stopPrank();
     }
 
+    function testReleaseVestingScheduleAfterCliffButBeforeLock() public {
+        vm.warp(0);
+
+        vm.startPrank(initAccount);
+        assert(
+            createVestingSchedule(
+                joe, 0, 365 * 24 * 3600, 4 * 365 * 24 * 3600, 365 * 2 * 3600, 365 * 24 * 3600 + 1, true, 10_000e18
+            ) == 0
+        );
+        vm.stopPrank();
+
+        // Move time right before cliff
+        vm.warp(365 * 24 * 3600);
+
+        vm.startPrank(joe);
+        vm.expectRevert(abi.encodeWithSignature("VestingScheduleIsLocked()"));
+        // Attempts to releaseVestingSchedule
+        tt.releaseVestingSchedule(0);
+        vm.stopPrank();
+    }
+
     event ReleasedVestingSchedule(uint256 index, uint256 releasedAmount);
 
     function testReleaseVestingScheduleAtLockDuration() public {
@@ -355,7 +437,9 @@ contract ERC20VestableVotesUpgradeableV1Tests is Test {
 
         vm.startPrank(initAccount);
         assert(
-            createVestingSchedule(joe, 0, 365 * 24 * 3600, 4 * 365 * 24 * 3600, 365 * 2 * 3600, true, 10_000e18) == 0
+            createVestingSchedule(
+                joe, 0, 365 * 24 * 3600, 4 * 365 * 24 * 3600, 365 * 2 * 3600, 365 * 24 * 3600, true, 10_000e18
+            ) == 0
         );
         vm.stopPrank();
 
@@ -379,7 +463,9 @@ contract ERC20VestableVotesUpgradeableV1Tests is Test {
 
         vm.startPrank(initAccount);
         assert(
-            createVestingSchedule(joe, 0, 365 * 24 * 3600, 4 * 365 * 24 * 3600, 365 * 2 * 3600, true, 10_000e18) == 0
+            createVestingSchedule(
+                joe, 0, 365 * 24 * 3600, 4 * 365 * 24 * 3600, 365 * 2 * 3600, 365 * 24 * 3600, true, 10_000e18
+            ) == 0
         );
         vm.stopPrank();
 
@@ -398,69 +484,99 @@ contract ERC20VestableVotesUpgradeableV1Tests is Test {
         assert(tt.balanceOf(joe) == 5_000e18);
     }
 
-    function testcomputeVestingReleasableAmount() public {
+    function testcomputeVestingAmounts() public {
         vm.warp(0);
 
+        // Create a schedule such as
+        // - cliff 1 year
+        // - total duration 4 years
+        // - lock duration 2 years
         vm.startPrank(initAccount);
         assert(
-            createVestingSchedule(joe, 0, 365 * 24 * 3600, 4 * 365 * 24 * 3600, 365 * 2 * 3600, true, 10_000e18) == 0
+            createVestingSchedule(
+                joe, 0, 365 * 24 * 3600, 4 * 365 * 24 * 3600, 365 * 2 * 3600, 2 * 365 * 24 * 3600, true, 10_000e18
+            ) == 0
         );
         vm.stopPrank();
 
         // At beginning of schedule
         assert(tt.computeVestingReleasableAmount(0) == 0);
+        assert(tt.computeVestingVestedAmount(0) == 0);
 
         // Move right after beginning of schedule
         vm.warp(1);
         assert(tt.computeVestingReleasableAmount(0) == 0);
+        assert(tt.computeVestingVestedAmount(0) == 0);
 
         // Move to half way cliff
         vm.warp(365 * 12 * 3600);
         assert(tt.computeVestingReleasableAmount(0) == 0);
+        assert(tt.computeVestingVestedAmount(0) == 0);
 
         // Move right before cliff
         vm.warp(365 * 24 * 3600 - 1);
         assert(tt.computeVestingReleasableAmount(0) == 0);
+        assert(tt.computeVestingVestedAmount(0) == 0);
 
         // Move at cliff
         vm.warp(365 * 24 * 3600);
-        assert(tt.computeVestingReleasableAmount(0) == 2_500e18);
+        assert(tt.computeVestingReleasableAmount(0) == 0);
+        assert(tt.computeVestingVestedAmount(0) == 2_500e18);
 
         // Move right after cliff
         vm.warp(365 * 24 * 3600 + 1);
-        assert(tt.computeVestingReleasableAmount(0) == 2_500e18);
+        assert(tt.computeVestingReleasableAmount(0) == 0);
+        assert(tt.computeVestingVestedAmount(0) == 2_500e18);
 
         // Move right before slice period
         vm.warp(365 * 24 * 3600 + 365 * 2 * 3600 - 1);
-        assert(tt.computeVestingReleasableAmount(0) == 2_500e18);
+        assert(tt.computeVestingReleasableAmount(0) == 0);
+        assert(tt.computeVestingVestedAmount(0) == 2_500e18);
 
         // Move at slice period
         vm.warp(365 * 24 * 3600 + 365 * 2 * 3600);
-        assert(tt.computeVestingReleasableAmount(0) == 2708333333333333333333);
+        assert(tt.computeVestingReleasableAmount(0) == 0);
+        assert(tt.computeVestingVestedAmount(0) == 2708333333333333333333);
 
         // Move right after slice period
         vm.warp(365 * 24 * 3600 + 365 * 2 * 3600 + 1);
-        assert(tt.computeVestingReleasableAmount(0) == 2708333333333333333333);
+        assert(tt.computeVestingReleasableAmount(0) == 0);
+        assert(tt.computeVestingVestedAmount(0) == 2708333333333333333333);
 
-        // Move half way vesting
-        vm.warp(365 * 24 * 3600 + 365 * 24 * 3600);
+        // Move right before lock
+        vm.warp(2 * 365 * 24 * 3600 - 1);
+        assert(tt.computeVestingReleasableAmount(0) == 0);
+        assert(tt.computeVestingVestedAmount(0) == 4791666666666666666666);
+
+        // Move at lock
+        vm.warp(2 * 365 * 24 * 3600);
         assert(tt.computeVestingReleasableAmount(0) == 5_000e18);
+        assert(tt.computeVestingVestedAmount(0) == 5_000e18);
+
+        // Move right after lock
+        vm.warp(2 * 365 * 24 * 3600);
+        assert(tt.computeVestingReleasableAmount(0) == 5_000e18);
+        assert(tt.computeVestingVestedAmount(0) == 5_000e18);
 
         // Move right before vesting end
         vm.warp(4 * 365 * 24 * 3600 - 1);
         assert(tt.computeVestingReleasableAmount(0) == 9791666666666666666666);
+        assert(tt.computeVestingVestedAmount(0) == 9791666666666666666666);
 
         // Move at vesting end
         vm.warp(4 * 365 * 24 * 3600);
         assert(tt.computeVestingReleasableAmount(0) == 10_000e18);
+        assert(tt.computeVestingVestedAmount(0) == 10_000e18);
 
         // Move right after vesting end
         vm.warp(4 * 365 * 24 * 3600 + 1);
         assert(tt.computeVestingReleasableAmount(0) == 10_000e18);
+        assert(tt.computeVestingVestedAmount(0) == 10_000e18);
 
         // Move 1 year after vesting end
         vm.warp(5 * 365 * 24 * 3600 + 1);
         assert(tt.computeVestingReleasableAmount(0) == 10_000e18);
+        assert(tt.computeVestingVestedAmount(0) == 10_000e18);
     }
 
     function testReleaseVestingScheduleFromInvalidAccount() public {
@@ -468,7 +584,9 @@ contract ERC20VestableVotesUpgradeableV1Tests is Test {
 
         vm.startPrank(initAccount);
         assert(
-            createVestingSchedule(joe, 0, 365 * 24 * 3600, 4 * 365 * 24 * 3600, 365 * 2 * 3600, true, 10_000e18) == 0
+            createVestingSchedule(
+                joe, 0, 365 * 24 * 3600, 4 * 365 * 24 * 3600, 365 * 2 * 3600, 365 * 24 * 3600, true, 10_000e18
+            ) == 0
         );
         vm.stopPrank();
 
@@ -483,12 +601,14 @@ contract ERC20VestableVotesUpgradeableV1Tests is Test {
 
     event RevokedVestingSchedule(uint256 index, uint256 returnedAmount);
 
-    function testRevokeBeforeLockDuration() public {
+    function testRevokeBeforeCliff() public {
         vm.warp(0);
 
         vm.startPrank(initAccount);
         assert(
-            createVestingSchedule(joe, 0, 365 * 24 * 3600, 4 * 365 * 24 * 3600, 365 * 2 * 3600, true, 10_000e18) == 0
+            createVestingSchedule(
+                joe, 0, 365 * 24 * 3600, 4 * 365 * 24 * 3600, 365 * 2 * 3600, 365 * 24 * 3600, true, 10_000e18
+            ) == 0
         );
         vm.stopPrank();
 
@@ -507,12 +627,14 @@ contract ERC20VestableVotesUpgradeableV1Tests is Test {
         assert(vestingSchedule.end == 365 * 24 * 3600 - 1);
     }
 
-    function testRevokeAtLockDuration() public {
+    function testRevokeAtCliff() public {
         vm.warp(0);
 
         vm.startPrank(initAccount);
         assert(
-            createVestingSchedule(joe, 0, 365 * 24 * 3600, 4 * 365 * 24 * 3600, 365 * 2 * 3600, true, 10_000e18) == 0
+            createVestingSchedule(
+                joe, 0, 365 * 24 * 3600, 4 * 365 * 24 * 3600, 365 * 2 * 3600, 365 * 24 * 3600, true, 10_000e18
+            ) == 0
         );
         vm.stopPrank();
 
@@ -536,7 +658,9 @@ contract ERC20VestableVotesUpgradeableV1Tests is Test {
 
         vm.startPrank(initAccount);
         assert(
-            createVestingSchedule(joe, 0, 365 * 24 * 3600, 4 * 365 * 24 * 3600, 365 * 2 * 3600, true, 10_000e18) == 0
+            createVestingSchedule(
+                joe, 0, 365 * 24 * 3600, 4 * 365 * 24 * 3600, 365 * 2 * 3600, 365 * 24 * 3600, true, 10_000e18
+            ) == 0
         );
         vm.stopPrank();
 
@@ -554,12 +678,14 @@ contract ERC20VestableVotesUpgradeableV1Tests is Test {
         assert(vestingSchedule.end == 4 * 365 * 24 * 3600);
     }
 
-    function testRevokeDefaultEnd() public {
+    function testRevokeDefault() public {
         vm.warp(0);
 
         vm.startPrank(initAccount);
         assert(
-            createVestingSchedule(joe, 0, 365 * 24 * 3600, 4 * 365 * 24 * 3600, 365 * 2 * 3600, true, 10_000e18) == 0
+            createVestingSchedule(
+                joe, 0, 365 * 24 * 3600, 4 * 365 * 24 * 3600, 365 * 2 * 3600, 365 * 24 * 3600, true, 10_000e18
+            ) == 0
         );
         vm.stopPrank();
 
@@ -584,7 +710,9 @@ contract ERC20VestableVotesUpgradeableV1Tests is Test {
 
         vm.startPrank(initAccount);
         assert(
-            createVestingSchedule(joe, 0, 365 * 24 * 3600, 4 * 365 * 24 * 3600, 365 * 2 * 3600, false, 10_000e18) == 0
+            createVestingSchedule(
+                joe, 0, 365 * 24 * 3600, 4 * 365 * 24 * 3600, 365 * 2 * 3600, 365 * 24 * 3600, false, 10_000e18
+            ) == 0
         );
         vm.stopPrank();
 
@@ -599,7 +727,9 @@ contract ERC20VestableVotesUpgradeableV1Tests is Test {
 
         vm.startPrank(initAccount);
         assert(
-            createVestingSchedule(joe, 0, 365 * 24 * 3600, 4 * 365 * 24 * 3600, 365 * 2 * 3600, true, 10_000e18) == 0
+            createVestingSchedule(
+                joe, 0, 365 * 24 * 3600, 4 * 365 * 24 * 3600, 365 * 2 * 3600, 365 * 24 * 3600, true, 10_000e18
+            ) == 0
         );
         vm.stopPrank();
 
@@ -614,7 +744,9 @@ contract ERC20VestableVotesUpgradeableV1Tests is Test {
 
         vm.startPrank(initAccount);
         assert(
-            createVestingSchedule(joe, 0, 365 * 24 * 3600, 4 * 365 * 24 * 3600, 365 * 2 * 3600, true, 10_000e18) == 0
+            createVestingSchedule(
+                joe, 0, 365 * 24 * 3600, 4 * 365 * 24 * 3600, 365 * 2 * 3600, 365 * 24 * 3600, true, 10_000e18
+            ) == 0
         );
         vm.stopPrank();
 
@@ -638,7 +770,9 @@ contract ERC20VestableVotesUpgradeableV1Tests is Test {
 
         vm.startPrank(initAccount);
         assert(
-            createVestingSchedule(joe, 0, 365 * 24 * 3600, 4 * 365 * 24 * 3600, 365 * 2 * 3600, true, 10_000e18) == 0
+            createVestingSchedule(
+                joe, 0, 365 * 24 * 3600, 4 * 365 * 24 * 3600, 365 * 2 * 3600, 365 * 24 * 3600, true, 10_000e18
+            ) == 0
         );
         vm.stopPrank();
 
@@ -657,7 +791,9 @@ contract ERC20VestableVotesUpgradeableV1Tests is Test {
 
         vm.startPrank(initAccount);
         assert(
-            createVestingSchedule(joe, 0, 365 * 24 * 3600, 4 * 365 * 24 * 3600, 365 * 2 * 3600, true, 10_000e18) == 0
+            createVestingSchedule(
+                joe, 0, 365 * 24 * 3600, 4 * 365 * 24 * 3600, 365 * 2 * 3600, 365 * 24 * 3600, true, 10_000e18
+            ) == 0
         );
         vm.stopPrank();
 
@@ -698,7 +834,14 @@ contract ERC20VestableVotesUpgradeableV1Tests is Test {
         vm.startPrank(initAccount);
         assert(
             createVestingSchedule(
-                joe, block.timestamp, 365 * 24 * 3600, 4 * 365 * 24 * 3600, 365 * 2 * 3600, true, 10_000e18
+                joe,
+                block.timestamp,
+                365 * 24 * 3600,
+                4 * 365 * 24 * 3600,
+                365 * 2 * 3600,
+                365 * 24 * 3600,
+                true,
+                10_000e18
             ) == 0
         );
         vm.stopPrank();
@@ -720,7 +863,14 @@ contract ERC20VestableVotesUpgradeableV1Tests is Test {
         vm.startPrank(initAccount);
         assert(
             createVestingSchedule(
-                joe, block.timestamp, 365 * 24 * 3600, 4 * 365 * 24 * 3600, 365 * 2 * 3600, true, 10_000e18
+                joe,
+                block.timestamp,
+                365 * 24 * 3600,
+                4 * 365 * 24 * 3600,
+                365 * 2 * 3600,
+                365 * 24 * 3600,
+                true,
+                10_000e18
             ) == 0
         );
         vm.stopPrank();
@@ -737,6 +887,7 @@ contract ERC20VestableVotesUpgradeableV1Tests is Test {
     function testVestingScheduleFuzzing(
         uint24 periodDuration,
         uint32 lockDuration,
+        uint8 cliffPeriodCount,
         uint8 vestingPeriodCount,
         uint256 amount,
         uint256 releaseAt,
@@ -763,10 +914,13 @@ contract ERC20VestableVotesUpgradeableV1Tests is Test {
 
         uint32 totalDuration = uint32(vestingPeriodCount) * uint32(periodDuration);
 
+        uint32 cliffDuration = (cliffPeriodCount % vestingPeriodCount) * uint32(periodDuration);
         lockDuration = lockDuration % (totalDuration + periodDuration);
 
         vm.startPrank(initAccount);
-        assert(createVestingSchedule(joe, 0, lockDuration, totalDuration, periodDuration, true, amount) == 0);
+        assert(
+            createVestingSchedule(joe, 0, cliffDuration, totalDuration, periodDuration, lockDuration, true, amount) == 0
+        );
         vm.stopPrank();
 
         assert(tt.balanceOf(initAccount) == 1_000_000_000e18 - amount);
@@ -777,14 +931,25 @@ contract ERC20VestableVotesUpgradeableV1Tests is Test {
             vm.startPrank(initAccount);
             assert(tt.revokeVestingSchedule(0, uint64(revokeAt)) > 0);
             vm.stopPrank();
+
+            if (revokeAt < cliffDuration) {
+                assert(tt.balanceOf(tt.vestingEscrow(0)) == 0);
+            } else if (revokeAt >= periodDuration) {
+                assert(tt.balanceOf(tt.vestingEscrow(0)) > 0);
+            }
         }
 
         releaseAt = releaseAt % periodDuration;
         while (true) {
             vm.warp(releaseAt);
-            if (
-                (releaseAt < lockDuration) || (releaseAt < periodDuration)
-                    || (revokeAt > 0) && ((revokeAt < lockDuration) || (revokeAt < periodDuration))
+            if (releaseAt < lockDuration) {
+                vm.startPrank(joe);
+                vm.expectRevert(abi.encodeWithSignature("VestingScheduleIsLocked()"));
+                tt.releaseVestingSchedule(0);
+                vm.stopPrank();
+            } else if (
+                (releaseAt < periodDuration) || (releaseAt < cliffDuration)
+                    || (revokeAt > 0) && ((revokeAt < cliffDuration) || (revokeAt < periodDuration))
             ) {
                 // we are in either of this situation
                 // - before end of lock duration
