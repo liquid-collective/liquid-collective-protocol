@@ -34,9 +34,9 @@ interface IRiverV1 is IConsensusLayerDepositManagerV1, IUserDepositManagerV1, IS
     /// @param operatorRegistry The new Operators Registry
     event SetOperatorsRegistry(address indexed operatorRegistry);
 
-    /// @notice The stored Metadata string has been changed
-    /// @param metadata The new Metadata string
-    event SetMetadata(string metadata);
+    /// @notice The stored Metadata URI string has been changed
+    /// @param metadataURI The new Metadata URI string
+    event SetMetadataURI(string metadataURI);
 
     /// @notice The system underlying supply increased. This is a snapshot of the balances for accounting purposes
     /// @param _collector The address of the collector during this event
@@ -101,9 +101,9 @@ interface IRiverV1 is IConsensusLayerDepositManagerV1, IUserDepositManagerV1, IS
     /// @return The operators registry address
     function getOperatorsRegistry() external view returns (address);
 
-    /// @notice Retrieve the metadata string value
-    /// @return The metadata string value
-    function getMetadata() external view returns (string memory);
+    /// @notice Retrieve the metadata uri string value
+    /// @return The metadata uri string value
+    function getMetadataURI() external view returns (string memory);
 
     /// @notice Changes the global fee parameter
     /// @param newFee New fee value
@@ -121,9 +121,9 @@ interface IRiverV1 is IConsensusLayerDepositManagerV1, IUserDepositManagerV1, IS
     /// @param _newELFeeRecipient New address for the recipient
     function setELFeeRecipient(address _newELFeeRecipient) external;
 
-    /// @notice Sets the metadata string value
-    /// @param _metadata The new metadata string value
-    function setMetadata(string memory _metadata) external;
+    /// @notice Sets the metadata uri string value
+    /// @param _metadataURI The new metadata uri string value
+    function setMetadataURI(string memory _metadataURI) external;
 
     /// @notice Input for execution layer fee earnings
     function sendELFees() external payable;

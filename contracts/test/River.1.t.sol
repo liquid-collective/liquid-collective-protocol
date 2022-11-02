@@ -250,23 +250,23 @@ contract RiverV1SetupOneTests is Test, BytesGenerator {
         vm.stopPrank();
     }
 
-    event SetMetadata(string metadata);
+    event SetMetadataURI(string metadataURI);
 
-    function testSetMetadata(string memory _metadata) public {
+    function testSetMetadataURI(string memory _metadataURI) public {
         vm.startPrank(admin);
-        assertEq(river.getMetadata(), "");
+        assertEq(river.getMetadataURI(), "");
         vm.expectEmit(true, true, true, true);
-        emit SetMetadata(_metadata);
-        river.setMetadata(_metadata);
-        assertEq(river.getMetadata(), _metadata);
+        emit SetMetadataURI(_metadataURI);
+        river.setMetadataURI(_metadataURI);
+        assertEq(river.getMetadataURI(), _metadataURI);
         vm.stopPrank();
     }
 
-    function testSetMetadataUnauthorized(string memory _metadata, uint256 _salt) public {
+    function testSetMetadataURIUnauthorized(string memory _metadataURI, uint256 _salt) public {
         address unauthorized = uf._new(_salt);
         vm.prank(unauthorized);
         vm.expectRevert(abi.encodeWithSignature("Unauthorized(address)", unauthorized));
-        river.setMetadata(_metadata);
+        river.setMetadataURI(_metadataURI);
     }
 
     function _allow(address _who, uint256 _mask) internal {
