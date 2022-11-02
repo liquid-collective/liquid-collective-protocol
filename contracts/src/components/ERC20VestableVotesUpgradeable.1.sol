@@ -29,20 +29,20 @@ import "../libraries/LibSanitize.sol";
 /// @notice   - any token holder can call the method {createVestingSchedule} in order to transfer tokens to a beneficiary according to a vesting schedule. When
 /// @notice     creating a vesting schedule, tokens are transferred to an escrow that holds the token while the vesting progresses. Voting power of the escrowed token is delegated to the
 /// @notice     beneficiary or a delegatee account set by the vesting schedule creator
-/// @notice   - beneficiary gets releasable tokens transferred from escrow by calling {releaseVestingSchedule}
+/// @notice   - the schedule beneficiary call {releaseVestingSchedule} to get vested tokens transferred from escrow 
 /// @notice   - the schedule creator can revoke a revocable schedule by calling {revokeVestingSchedule} in which case the non-vested tokens are transfered from the escrow back to the creator
-/// @notice   - a beneficiary can delegate escrow voting power to any account by calling {releaseVestingEscrow}
+/// @notice   - the schedule beneficiary can delegate escrow voting power to any account by calling {delegateVestingEscrow}
 /// @notice
 /// @notice Vesting schedule attributes are
 /// @notice   - start date: date at which vesting schedules starts
 /// @notice   - cliff duration: duration from start to vesting cliff when first tokens are vested (e.g 1 year)
 /// @notice   - total duration: duration from start to vesting end when all tokens are vested (e.g 4 years)
 /// @notice   - period duration: split the vesting in period. After cliff, new tokens get vested at the end of each period (e.g 1 month)
-/// @notice   - lock duration: duration before which no tokens can be released to beneficiary even if some tokens
+/// @notice   - lock duration: duration before which no tokens can be released to beneficiary even if tokens
 /// @notice     have been vested already (the lock period supersedes the cliff)
 /// @notice   - amount: the total amount of tokens to be vested
 /// @notice   - beneficiary: the beneficiary of the vested tokens
-/// @notice   - revocable: is a boolean indicating whether a the vesting can be revoked by the creator
+/// @notice   - revocable: a boolean indicating whether the vesting can be revoked by the creator
 /// @notice
 /// @notice Vesting schedule
 /// @notice   - if currentTime < cliff: vestedToken = 0
@@ -52,9 +52,9 @@ import "../libraries/LibSanitize.sol";
 /// @notice Remark: After cliff new tokens get vested at the end of each period
 /// @notice
 /// @notice Vested token & lock period
-/// @notice   - a vested token is a token that will be eventually releasable from the escrow to the beneficiary.
+/// @notice   - a vested token is a token that will be eventually releasable from the escrow to the beneficiary once the lock period is over
 /// @notice   - lock period prevents beneficiary from releasing vested tokens before the lock period ends. Vested tokens
-/// @notice will eventually be releasable once the lock period is over.
+/// @notice will eventually be releasable once the lock period is over
 /// @notice
 /// @notice Example: Joe gets a vesting starting on Jan 1st 2022 with duration of 1 year and a lock period of 2 years.
 /// @notice On Jan 1st 2023, Joe will have all tokens vested but can not yet release it due to the lock period.
