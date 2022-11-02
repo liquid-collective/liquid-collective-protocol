@@ -29,7 +29,7 @@ import "../libraries/LibSanitize.sol";
 /// @notice   - any token holder can call the method {createVestingSchedule} in order to transfer tokens to a beneficiary according to a vesting schedule. When
 /// @notice     creating a vesting schedule, tokens are transferred to an escrow that holds the token while the vesting progresses. Voting power of the escrowed token is delegated to the
 /// @notice     beneficiary or a delegatee account set by the vesting schedule creator
-/// @notice   - the schedule beneficiary call {releaseVestingSchedule} to get vested tokens transferred from escrow 
+/// @notice   - the schedule beneficiary call {releaseVestingSchedule} to get vested tokens transferred from escrow
 /// @notice   - the schedule creator can revoke a revocable schedule by calling {revokeVestingSchedule} in which case the non-vested tokens are transfered from the escrow back to the creator
 /// @notice   - the schedule beneficiary can delegate escrow voting power to any account by calling {delegateVestingEscrow}
 /// @notice
