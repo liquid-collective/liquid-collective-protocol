@@ -1,5 +1,53 @@
 # Staking Contracts changelog
 
+## v0.5.0-beta (November 3rd 2022)
+
+### :dizzy: Features
+
+- [[contracts] feat: add proxy firewall deployments and tests](https://github.com/liquid-collective/liquid-collective-protocol/pull/153)
+- [[contracts] Deploy updated version of TLC](https://github.com/liquid-collective/liquid-collective-protocol/pull/163)
+- [[contracts] ETH-277: chore(dev+staging): deploy all proxy firewalls](https://github.com/liquid-collective/liquid-collective-protocol/pull/154)
+- [[contracts] Deploy proxy firewalls and TLC to mainnet](https://github.com/liquid-collective/liquid-collective-protocol/pull/160)
+
+## v0.4.0 (October 5th 2022)
+
+### :dizzy: Features
+
+- [[contracts] Contracts have been deployed to mainnet](https://github.com/liquid-collective/liquid-collective-protocol/pull/152)
+  
+### :hammer_and_wrench: Bug Fixes
+
+- [[contracts] [SPEARBIT/2] Re-initialize Oracle reports on remove](https://github.com/liquid-collective/liquid-collective-protocol/pull/118)
+- [[contracts] [SPEARBIT/3] Update operator selection](https://github.com/liquid-collective/liquid-collective-protocol/pull/119)
+- [[contracts] [SPEARBIT/4] Add a ethToDeposit storage var that accounts for incoming ETH](https://github.com/liquid-collective/liquid-collective-protocol/pull/120)
+- [[contracts] [SPEARBIT/5] Remove dust on WLSETH burn](https://github.com/liquid-collective/liquid-collective-protocol/pull/121)
+- [[contracts] [SPEARBIT/6] Use native bytes lib](https://github.com/liquid-collective/liquid-collective-protocol/pull/122)
+- [[contracts] [SPEARBIT/8] Remove operators rewarding from River contract](https://github.com/liquid-collective/liquid-collective-protocol/pull/123)
+- [[contracts] [SPEARBIT/9] Update ERC-20s](https://github.com/liquid-collective/liquid-collective-protocol/pull/124)
+- [[contracts] [SPEARBIT/10] Add validation checks on constructors](https://github.com/liquid-collective/liquid-collective-protocol/pull/125)
+- [[contracts] [SPEARBIT/11] Convert LibOwnable to Administrable contract](https://github.com/liquid-collective/liquid-collective-protocol/pull/126)
+- [[contracts] [SPEARBIT/12] Add check on oracle member index when not found](https://github.com/liquid-collective/liquid-collective-protocol/pull/127)
+- [[contracts] [SPEARBIT/13] Add a max on pullEL fees](https://github.com/liquid-collective/liquid-collective-protocol/pull/128)
+- [[contracts] [SPEARBIT/14] Remove name to operator index resolution mechanism](https://github.com/liquid-collective/liquid-collective-protocol/pull/129)
+- [[contracts] [SPEARBIT/15] Ensure invariant on Oracle quorum](https://github.com/liquid-collective/liquid-collective-protocol/pull/130)
+- [[contracts] [SPEARBIT/18] Update token names](https://github.com/liquid-collective/liquid-collective-protocol/pull/131)
+- [[contracts] [SPEARBIT/19] Update constants](https://github.com/liquid-collective/liquid-collective-protocol/pull/132)
+- [[contracts] [SPEARBIT/20] Oracle gas optimisations](https://github.com/liquid-collective/liquid-collective-protocol/pull/133)
+- [[contracts] [SPEARBIT/21] Remove TRANSFER_MASK](https://github.com/liquid-collective/liquid-collective-protocol/pull/134)
+- [[contracts] [SPEARBIT/22] Maintain limit at key count if both were equal before key removal](https://github.com/liquid-collective/liquid-collective-protocol/pull/135)
+- [[contracts] [SPEARBIT/23] Update requires to errors](https://github.com/liquid-collective/liquid-collective-protocol/pull/136)
+- [[contracts] [SPEARBIT/24] Operator Registry gas optimisations](https://github.com/liquid-collective/liquid-collective-protocol/pull/137)
+- [[contracts] [SPEARBIT/25] River gas optimisations](https://github.com/liquid-collective/liquid-collective-protocol/pull/138)
+- [[contracts] [SPEARBIT/26] Update getters and setters](https://github.com/liquid-collective/liquid-collective-protocol/pull/139)
+- [[contracts] [SPEARBIT/27] Prevent operator limit update on keys out of scope](https://github.com/liquid-collective/liquid-collective-protocol/pull/140)
+- [[contracts] [SPEARBIT/28] Add RewardsEarned event](https://github.com/liquid-collective/liquid-collective-protocol/pull/142)
+- [[contracts] [SPEARBIT/29] Move all fees to bps](https://github.com/liquid-collective/liquid-collective-protocol/pull/143)
+- [[contracts] [SPEARBIT/30] Var Renamings](https://github.com/liquid-collective/liquid-collective-protocol/pull/144)
+- [[contracts] [SPEARBIT/31] Add missing events](https://github.com/liquid-collective/liquid-collective-protocol/pull/145)
+- [[contracts] [SPEARBIT/32] Remove unused code](https://github.com/liquid-collective/liquid-collective-protocol/pull/149)
+- [[contracts] [SPEARBIT/33] Documentation and natspec](https://github.com/liquid-collective/liquid-collective-protocol/pull/147)
+- [[contracts] Spearbit: Add SetRiver event on Oracle and add tests](https://github.com/liquid-collective/liquid-collective-protocol/pull/146)
+
 ## v0.3.0 (August 31st 2022)
 
 ### :dizzy: Features
