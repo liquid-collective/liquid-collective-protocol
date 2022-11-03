@@ -30,7 +30,7 @@
                     },
                     "_executor": {
                         "value": "0x7932EdA85E33D8e13f7C110ACBEb4a5A8B53dda9",
-                        "namedAccount": "executor,tlcMintAccount"
+                        "namedAccount": "executor"
                     },
                     "_destination": {
                         "value": "0xF7FA16b512416d8CA38E6ddd268C7Af562F94b7a",
@@ -50,7 +50,7 @@
                     },
                     "_executor": {
                         "value": "0x7932EdA85E33D8e13f7C110ACBEb4a5A8B53dda9",
-                        "namedAccount": "executor,tlcMintAccount"
+                        "namedAccount": "executor"
                     },
                     "_destination": {
                         "value": "0xF7FA16b512416d8CA38E6ddd268C7Af562F94b7a",
@@ -146,7 +146,7 @@
                     },
                     "_executor": {
                         "value": "0x7932EdA85E33D8e13f7C110ACBEb4a5A8B53dda9",
-                        "namedAccount": "executor,tlcMintAccount"
+                        "namedAccount": "executor"
                     },
                     "_destination": {
                         "value": "0xcd5820D0C8e4B65dE50eEB4d823a6a26437ABb63",
@@ -166,7 +166,7 @@
                     },
                     "_executor": {
                         "value": "0x7932EdA85E33D8e13f7C110ACBEb4a5A8B53dda9",
-                        "namedAccount": "executor,tlcMintAccount"
+                        "namedAccount": "executor"
                     },
                     "_destination": {
                         "value": "0xcd5820D0C8e4B65dE50eEB4d823a6a26437ABb63",
@@ -221,7 +221,7 @@
                     },
                     "_executor": {
                         "value": "0x7932EdA85E33D8e13f7C110ACBEb4a5A8B53dda9",
-                        "namedAccount": "executor,tlcMintAccount"
+                        "namedAccount": "executor"
                     },
                     "_destination": {
                         "value": "0x0e137678B2e6B141895e9C84B3468B38eB956A83",
@@ -241,7 +241,7 @@
                     },
                     "_executor": {
                         "value": "0x7932EdA85E33D8e13f7C110ACBEb4a5A8B53dda9",
-                        "namedAccount": "executor,tlcMintAccount"
+                        "namedAccount": "executor"
                     },
                     "_destination": {
                         "value": "0x0e137678B2e6B141895e9C84B3468B38eB956A83",
@@ -316,7 +316,7 @@
                     },
                     "_executor": {
                         "value": "0x7932EdA85E33D8e13f7C110ACBEb4a5A8B53dda9",
-                        "namedAccount": "executor,tlcMintAccount"
+                        "namedAccount": "executor"
                     },
                     "_destination": {
                         "value": "0xD5a7087835F63D3C28C11CE29de094cBc20c67e1",
@@ -336,7 +336,7 @@
                     },
                     "_executor": {
                         "value": "0x7932EdA85E33D8e13f7C110ACBEb4a5A8B53dda9",
-                        "namedAccount": "executor,tlcMintAccount"
+                        "namedAccount": "executor"
                     },
                     "_destination": {
                         "value": "0xD5a7087835F63D3C28C11CE29de094cBc20c67e1",
@@ -364,20 +364,20 @@
             }
         },
         "TLC": {
-            "address": "0x7572eF956eE783a1E19A4458379A633CdA30C704",
+            "address": "0xe5F6F2F2b44A4931Ca6846ad470e6b944966BB15",
             "deploymentParams": {
                 "type": "proxy",
                 "methodName": "initTLCV1",
                 "args": {
                     "_account": {
-                        "value": "0x7932EdA85E33D8e13f7C110ACBEb4a5A8B53dda9",
-                        "namedAccount": "executor,tlcMintAccount"
+                        "value": "0x027c17E24288a1EbF5f9e5Dc45fB603D70633F05",
+                        "namedAccount": "tlcMintAccount"
                     }
                 }
             }
         },
         "TLCProxyFirewall": {
-            "address": "0x2135EFc45c42c6242E3ACE651220D0af679eB63c",
+            "address": "0x5D677b759117fC0B3b345421EaD7E9273EAB2f12",
             "deploymentParams": {
                 "type": "constructor",
                 "args": {
@@ -387,27 +387,27 @@
                     },
                     "_executor": {
                         "value": "0x7932EdA85E33D8e13f7C110ACBEb4a5A8B53dda9",
-                        "namedAccount": "executor,tlcMintAccount"
+                        "namedAccount": "executor"
                     },
                     "_destination": {
-                        "value": "0x7572eF956eE783a1E19A4458379A633CdA30C704",
+                        "value": "0xe5F6F2F2b44A4931Ca6846ad470e6b944966BB15",
                         "contract": "TLC_Proxy"
                     }
                 }
             }
         },
-        "TLCV1_Implementation": "0x4792304b6B5596Da807C22809461cAcbE975e218",
+        "TLCV1_Implementation": "0x004bB5C9C61C9e2F72DCa6bb802fbf6786365165",
         "TLC_Proxy": {
-            "address": "0x7572eF956eE783a1E19A4458379A633CdA30C704",
+            "address": "0xe5F6F2F2b44A4931Ca6846ad470e6b944966BB15",
             "deploymentParams": {
                 "type": "constructor",
                 "args": {
                     "_logic": {
-                        "value": "0x4792304b6B5596Da807C22809461cAcbE975e218",
+                        "value": "0x004bB5C9C61C9e2F72DCa6bb802fbf6786365165",
                         "contract": "TLCV1_Implementation"
                     },
                     "__admin": {
-                        "value": "0x2135EFc45c42c6242E3ACE651220D0af679eB63c",
+                        "value": "0x5D677b759117fC0B3b345421EaD7E9273EAB2f12",
                         "contract": "TLCProxyFirewall"
                     }
                 }
@@ -485,6 +485,6 @@
         "executor": "0x7932EdA85E33D8e13f7C110ACBEb4a5A8B53dda9",
         "proxyAdministrator": "0x07706A7D768054c10eB4FC9103Ea322f62831cb9",
         "collector": "0x71c9DAb681C209bb82270906e3B49388b2C15404",
-        "tlcMintAccount": "0x7932EdA85E33D8e13f7C110ACBEb4a5A8B53dda9"
+        "tlcMintAccount": "0x027c17E24288a1EbF5f9e5Dc45fB603D70633F05"
     }
 }

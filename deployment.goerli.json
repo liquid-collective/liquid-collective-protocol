@@ -352,20 +352,20 @@
             }
         },
         "TLC": {
-            "address": "0xf88d4AD5d6f45ce86952DDc5aACCE5A97501e104",
+            "address": "0xb2f102b87022bf5a64e012b39FF25a404102e301",
             "deploymentParams": {
                 "type": "proxy",
                 "methodName": "initTLCV1",
                 "args": {
                     "_account": {
-                        "value": "0x48D96977722426Cc22A9a017E098624b04969706",
+                        "value": "0xa3cf5f149a680F5AC72eC90dFb4382f5C88E5cBe",
                         "namedAccount": "tlcMintAccount"
                     }
                 }
             }
         },
         "TLCProxyFirewall": {
-            "address": "0x08CC4d7cE071BB80EB30184da96692C312Cfa904",
+            "address": "0x5868e1Bc0CB23014ca3C52e39E559beC7E532C13",
             "deploymentParams": {
                 "type": "constructor",
                 "args": {
@@ -378,24 +378,24 @@
                         "namedAccount": "executor"
                     },
                     "_destination": {
-                        "value": "0xf88d4AD5d6f45ce86952DDc5aACCE5A97501e104",
+                        "value": "0xb2f102b87022bf5a64e012b39FF25a404102e301",
                         "contract": "TLC_Proxy"
                     }
                 }
             }
         },
-        "TLCV1_Implementation": "0xa1A32E617b8aD5C4e30d9dd765dC191983E539C7",
+        "TLCV1_Implementation": "0xefFb05618fcAA507d9A00e2eFAe0ADEb0b9E1158",
         "TLC_Proxy": {
-            "address": "0xf88d4AD5d6f45ce86952DDc5aACCE5A97501e104",
+            "address": "0xb2f102b87022bf5a64e012b39FF25a404102e301",
             "deploymentParams": {
                 "type": "constructor",
                 "args": {
                     "_logic": {
-                        "value": "0xa1A32E617b8aD5C4e30d9dd765dC191983E539C7",
+                        "value": "0xefFb05618fcAA507d9A00e2eFAe0ADEb0b9E1158",
                         "contract": "TLCV1_Implementation"
                     },
                     "__admin": {
-                        "value": "0x08CC4d7cE071BB80EB30184da96692C312Cfa904",
+                        "value": "0x5868e1Bc0CB23014ca3C52e39E559beC7E532C13",
                         "contract": "TLCProxyFirewall"
                     }
                 }
@@ -473,6 +473,6 @@
         "executor": "0xc025F2b41820c80F32AF27EFe95cf379C4A959F8",
         "proxyAdministrator": "0x67bc791A7EA5A98DDcEcBbF6580aE1BB310F5d9B",
         "collector": "0x892D14B50Cc7a8278fa254A63B6c5b8B1a110ff1",
-        "tlcMintAccount": "0x48D96977722426Cc22A9a017E098624b04969706"
+        "tlcMintAccount": "0xa3cf5f149a680F5AC72eC90dFb4382f5C88E5cBe"
     }
 }
