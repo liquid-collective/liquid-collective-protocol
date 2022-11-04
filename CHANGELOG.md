@@ -4,17 +4,18 @@
 
 ### :dizzy: Features
 
+- [contracts] TLC Deployments [(dev)](https://github.com/liquid-collective/liquid-collective-protocol/pull/158) [(staging)](https://github.com/liquid-collective/liquid-collective-protocol/pull/159) [(mainnet)](https://github.com/liquid-collective/liquid-collective-protocol/pull/160) [(dev+staging+mainnet updated)](https://github.com/liquid-collective/liquid-collective-protocol/pull/163)
 - [[contracts] feat: add proxy firewall deployments and tests](https://github.com/liquid-collective/liquid-collective-protocol/pull/153)
-- [[contracts] Deploy updated version of TLC](https://github.com/liquid-collective/liquid-collective-protocol/pull/163)
 - [[contracts] ETH-277: chore(dev+staging): deploy all proxy firewalls](https://github.com/liquid-collective/liquid-collective-protocol/pull/154)
 - [[contracts] Deploy proxy firewalls and TLC to mainnet](https://github.com/liquid-collective/liquid-collective-protocol/pull/160)
+- [[contracts] ETH-317: Add cliff duration that differs from lock duration](https://github.com/liquid-collective/liquid-collective-protocol/pull/162)
 
 ## v0.4.0 (October 5th 2022)
 
 ### :dizzy: Features
 
 - [[contracts] Contracts have been deployed to mainnet](https://github.com/liquid-collective/liquid-collective-protocol/pull/152)
-  
+
 ### :hammer_and_wrench: Bug Fixes
 
 - [[contracts] [SPEARBIT/2] Re-initialize Oracle reports on remove](https://github.com/liquid-collective/liquid-collective-protocol/pull/118)
@@ -57,7 +58,6 @@
 ### 🕹️ Others
 
 - [[docs] Add architecture diagram in README](https://github.com/River-Protocol/river-contracts/pull/111)
-
 
 ## v0.2.2 (August 18th 2022)
 
@@ -118,7 +118,6 @@
 - [[ci] remove scheduled jobs](https://github.com/River-Protocol/river-contracts/pull/76)
 - [[ci] store mythril reports in github artifacts](https://github.com/River-Protocol/river-contracts/pull/67)
 - [[ci] store test and gas reports in github artifacts](https://github.com/River-Protocol/river-contracts/pull/66)
-
 
 ## v0.1.0 (May 26th 2022)
 
