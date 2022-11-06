@@ -12,7 +12,9 @@ import "../../src/state/shared/AdministratorAddress.sol";
 
 contract OracleManagerV1ExposeInitializer is OracleManagerV1 {
     uint256 public lastReceived;
+    uint256 public lastPulledCoverage;
     uint256 public extraAmount;
+    uint256 public coverageAmount;
 
     function _onEarnings(uint256 amount) internal override {
         lastReceived = amount;
@@ -22,8 +24,16 @@ contract OracleManagerV1ExposeInitializer is OracleManagerV1 {
         return LibUint256.min(extraAmount, _max);
     }
 
+    function _pullCoverageFunds(uint256 _max) internal override returns (uint256) {
+        return (lastPulledCoverage = LibUint256.min(coverageAmount, _max));
+    }
+
     function supersedeExtraAmount(uint256 amount) external {
         extraAmount = amount;
+    }
+
+    function supersedeCoverageAmount(uint256 amount) external {
+        coverageAmount = amount;
     }
 
     function supersedeBalanceSum(uint256 amount) external {
@@ -77,8 +87,21 @@ contract OracleManagerV1Tests is Test {
         OracleManagerV1ExposeInitializer(address(oracleManager)).supersedeBalanceSum(32 ether);
         OracleManagerV1ExposeInitializer(address(oracleManager)).supersedeAllValidatorCount(1);
         OracleManagerV1ExposeInitializer(address(oracleManager)).supersedeExtraAmount(val3);
-        oracleManager.setConsensusLayerData(1, val2 + 32 ether, roundId, val2 + 32 ether);
+        oracleManager.setConsensusLayerData(1, val2 + 32 ether, roundId, uint256(val2) + val3);
         assert(OracleManagerV1ExposeInitializer(address(oracleManager)).lastReceived() == uint256(val2) + uint256(val3));
+    }
+
+    function testSetCLDataWithELFeesAndCoverageFundsPulling(uint64 val2, uint64 val3, uint64 val4, bytes32 roundId)
+        public
+    {
+        vm.startPrank(oracle);
+        OracleManagerV1ExposeInitializer(address(oracleManager)).supersedeBalanceSum(32 ether);
+        OracleManagerV1ExposeInitializer(address(oracleManager)).supersedeAllValidatorCount(1);
+        OracleManagerV1ExposeInitializer(address(oracleManager)).supersedeExtraAmount(val3);
+        OracleManagerV1ExposeInitializer(address(oracleManager)).supersedeCoverageAmount(val4);
+        oracleManager.setConsensusLayerData(1, val2 + 32 ether, roundId, uint256(val2) + val3 + val4);
+        assert(OracleManagerV1ExposeInitializer(address(oracleManager)).lastReceived() == uint256(val2) + uint256(val3));
+        assert(OracleManagerV1ExposeInitializer(address(oracleManager)).lastPulledCoverage() == uint256(val4));
     }
 
     function testSetCLDataWithValidatorCountDelta(uint64 val2, bytes32 roundId) public {

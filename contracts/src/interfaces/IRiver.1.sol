@@ -14,9 +14,17 @@ interface IRiverV1 is IConsensusLayerDepositManagerV1, IUserDepositManagerV1, IS
     /// @param amount The amount pulled
     event PulledELFees(uint256 amount);
 
+    /// @notice Funds have been pulled from the Coverage Fund
+    /// @param amount The amount pulled
+    event PulledCoverageFunds(uint256 amount);
+
     /// @notice The stored Execution Layer Fee Recipient has been changed
     /// @param elFeeRecipient The new Execution Layer Fee Recipient
     event SetELFeeRecipient(address indexed elFeeRecipient);
+
+    /// @notice The stored Coverage Fund has been changed
+    /// @param coverageFund The new Coverage Fund
+    event SetCoverageFund(address coverageFund);
 
     /// @notice The stored Collector has been changed
     /// @param collector The new Collector
@@ -93,6 +101,10 @@ interface IRiverV1 is IConsensusLayerDepositManagerV1, IUserDepositManagerV1, IS
     /// @return The execution layer fee recipient address
     function getELFeeRecipient() external view returns (address);
 
+    /// @notice Retrieve the coverage fund
+    /// @return The coverage fund address
+    function getCoverageFund() external view returns (address);
+
     /// @notice Retrieve the operators registry
     /// @return The operators registry address
     function getOperatorsRegistry() external view returns (address);
@@ -112,6 +124,10 @@ interface IRiverV1 is IConsensusLayerDepositManagerV1, IUserDepositManagerV1, IS
     /// @notice Changes the execution layer fee recipient
     /// @param _newELFeeRecipient New address for the recipient
     function setELFeeRecipient(address _newELFeeRecipient) external;
+
+    /// @notice Changes the coverage fund
+    /// @param _newCoverageFund New address for the fund
+    function setCoverageFund(address _newCoverageFund) external;
 
     /// @notice Input for execution layer fee earnings
     function sendELFees() external payable;

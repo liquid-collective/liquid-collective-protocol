@@ -5,6 +5,7 @@ import "./interfaces/IAllowlist.1.sol";
 import "./interfaces/IOperatorRegistry.1.sol";
 import "./interfaces/IRiver.1.sol";
 import "./interfaces/IELFeeRecipient.1.sol";
+import "./interfaces/ICoverageFund.1.sol";
 
 import "./components/ConsensusLayerDepositManager.1.sol";
 import "./components/UserDepositManager.1.sol";
@@ -13,11 +14,14 @@ import "./components/OracleManager.1.sol";
 import "./Initializable.sol";
 import "./Administrable.sol";
 
+import "./libraries/LibAllowlistMasks.sol";
+
 import "./state/river/AllowlistAddress.sol";
 import "./state/river/OperatorsRegistryAddress.sol";
 import "./state/river/CollectorAddress.sol";
 import "./state/river/GlobalFee.sol";
 import "./state/river/ELFeeRecipientAddress.sol";
+import "./state/river/CoverageFundAddress.sol";
 
 /// @title River (v1)
 /// @author Kiln
@@ -76,9 +80,6 @@ contract RiverV1 is
     Administrable,
     IRiverV1
 {
-    /// @notice The mask for the deposit right
-    uint256 internal constant DEPOSIT_MASK = 0x1;
-
     /// @inheritdoc IRiverV1
     function initRiverV1(
         address _depositContractAddress,
@@ -136,6 +137,11 @@ contract RiverV1 is
     }
 
     /// @inheritdoc IRiverV1
+    function getCoverageFund() external view returns (address) {
+        return CoverageFundAddress.get();
+    }
+
+    /// @inheritdoc IRiverV1
     function setGlobalFee(uint256 newFee) external onlyAdmin {
         GlobalFee.set(newFee);
         emit SetGlobalFee(newFee);
@@ -160,13 +166,19 @@ contract RiverV1 is
     }
 
     /// @inheritdoc IRiverV1
+    function setCoverageFund(address _newCoverageFund) external onlyAdmin {
+        CoverageFundAddress.set(_newCoverageFund);
+        emit SetCoverageFund(_newCoverageFund);
+    }
+
+    /// @inheritdoc IRiverV1
     function getOperatorsRegistry() external view returns (address) {
         return OperatorsRegistryAddress.get();
     }
 
     /// @inheritdoc IRiverV1
     function sendELFees() external payable {
-        if (msg.sender != ELFeeRecipientAddress.get()) {
+        if (msg.sender != ELFeeRecipientAddress.get() && msg.sender != CoverageFundAddress.get()) {
             revert LibErrors.Unauthorized(msg.sender);
         }
     }
@@ -202,9 +214,9 @@ contract RiverV1 is
         uint256 mintedShares = SharesManagerV1._mintShares(_depositor, _amount);
         IAllowlistV1 allowlist = IAllowlistV1(AllowlistAddress.get());
         if (_depositor == _recipient) {
-            allowlist.onlyAllowed(_depositor, DEPOSIT_MASK); // this call reverts if unauthorized or denied
+            allowlist.onlyAllowed(_depositor, LibAllowlistMasks.DEPOSIT_MASK); // this call reverts if unauthorized or denied
         } else {
-            allowlist.onlyAllowed(_depositor, DEPOSIT_MASK); // this call reverts if unauthorized or denied
+            allowlist.onlyAllowed(_depositor, LibAllowlistMasks.DEPOSIT_MASK); // this call reverts if unauthorized or denied
             if (allowlist.isDenied(_recipient)) {
                 revert Denied(_recipient);
             }
@@ -238,6 +250,22 @@ contract RiverV1 is
         BalanceToDeposit.set(BalanceToDeposit.get() + collectedELFees);
         emit PulledELFees(collectedELFees);
         return collectedELFees;
+    }
+
+    /// @notice Overriden handler to pull funds from the coverage fund to River and return the delta in the balance
+    /// @param _max The maximum amount to pull from the coverage fund
+    /// @return The amount pulled from the coverage fund
+    function _pullCoverageFunds(uint256 _max) internal override returns (uint256) {
+        address coverageFund = CoverageFundAddress.get();
+        if (coverageFund == address(0)) {
+            return 0;
+        }
+        uint256 initialBalance = address(this).balance;
+        ICoverageFundV1(payable(coverageFund)).pullCoverageFunds(_max);
+        uint256 collectedCoverageFunds = address(this).balance - initialBalance;
+        BalanceToDeposit.set(BalanceToDeposit.get() + collectedCoverageFunds);
+        emit PulledCoverageFunds(collectedCoverageFunds);
+        return collectedCoverageFunds;
     }
 
     /// @notice Overriden handler called whenever the balance of ETH handled by the system increases. Computes the fees paid to the collector
