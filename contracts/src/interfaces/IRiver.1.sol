@@ -42,6 +42,10 @@ interface IRiverV1 is IConsensusLayerDepositManagerV1, IUserDepositManagerV1, IS
     /// @param operatorRegistry The new Operators Registry
     event SetOperatorsRegistry(address indexed operatorRegistry);
 
+    /// @notice The stored Metadata URI string has been changed
+    /// @param metadataURI The new Metadata URI string
+    event SetMetadataURI(string metadataURI);
+
     /// @notice The system underlying supply increased. This is a snapshot of the balances for accounting purposes
     /// @param _collector The address of the collector during this event
     /// @param _oldTotalUnderlyingBalance Old total ETH balance under management by River
@@ -109,6 +113,10 @@ interface IRiverV1 is IConsensusLayerDepositManagerV1, IUserDepositManagerV1, IS
     /// @return The operators registry address
     function getOperatorsRegistry() external view returns (address);
 
+    /// @notice Retrieve the metadata uri string value
+    /// @return The metadata uri string value
+    function getMetadataURI() external view returns (string memory);
+
     /// @notice Changes the global fee parameter
     /// @param newFee New fee value
     function setGlobalFee(uint256 newFee) external;
@@ -128,6 +136,10 @@ interface IRiverV1 is IConsensusLayerDepositManagerV1, IUserDepositManagerV1, IS
     /// @notice Changes the coverage fund
     /// @param _newCoverageFund New address for the fund
     function setCoverageFund(address _newCoverageFund) external;
+
+    /// @notice Sets the metadata uri string value
+    /// @param _metadataURI The new metadata uri string value
+    function setMetadataURI(string memory _metadataURI) external;
 
     /// @notice Input for execution layer fee earnings
     /// @notice The naming of this method is not accurate anymore as it accepts both EL Fees and Coverage Funds
