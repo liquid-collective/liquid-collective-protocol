@@ -130,5 +130,6 @@ interface IRiverV1 is IConsensusLayerDepositManagerV1, IUserDepositManagerV1, IS
     function setCoverageFund(address _newCoverageFund) external;
 
     /// @notice Input for execution layer fee earnings
+    /// @notice The naming of this method is not accurate anymore as it accepts both EL Fees and Coverage Funds
     function sendELFees() external payable;
 }

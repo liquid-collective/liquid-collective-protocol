@@ -263,8 +263,10 @@ contract RiverV1 is
         uint256 initialBalance = address(this).balance;
         ICoverageFundV1(payable(coverageFund)).pullCoverageFunds(_max);
         uint256 collectedCoverageFunds = address(this).balance - initialBalance;
-        BalanceToDeposit.set(BalanceToDeposit.get() + collectedCoverageFunds);
-        emit PulledCoverageFunds(collectedCoverageFunds);
+        if (collectedCoverageFunds > 0) {
+            BalanceToDeposit.set(BalanceToDeposit.get() + collectedCoverageFunds);
+            emit PulledCoverageFunds(collectedCoverageFunds);
+        }
         return collectedCoverageFunds;
     }
 
