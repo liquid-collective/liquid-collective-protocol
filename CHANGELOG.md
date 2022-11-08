@@ -4,11 +4,8 @@
 
 ### :dizzy: Features
 
-- [contracts] TLC Deployments [(dev)](https://github.com/liquid-collective/liquid-collective-protocol/pull/158) [(staging)](https://github.com/liquid-collective/liquid-collective-protocol/pull/159) [(mainnet)](https://github.com/liquid-collective/liquid-collective-protocol/pull/160) [(dev+staging+mainnet updated)](https://github.com/liquid-collective/liquid-collective-protocol/pull/163)
-- [[contracts] feat: add proxy firewall deployments and tests](https://github.com/liquid-collective/liquid-collective-protocol/pull/153)
-- [[contracts] ETH-277: chore(dev+staging): deploy all proxy firewalls](https://github.com/liquid-collective/liquid-collective-protocol/pull/154)
-- [[contracts] Deploy proxy firewalls and TLC to mainnet](https://github.com/liquid-collective/liquid-collective-protocol/pull/160)
-- [[contracts] ETH-317: Add cliff duration that differs from lock duration](https://github.com/liquid-collective/liquid-collective-protocol/pull/162)
+- [contracts] Add and deploy TLC Governance Token (Beta) (https://github.com/liquid-collective/liquid-collective-protocol/pull/141) (https://github.com/liquid-collective/liquid-collective-protocol/pull/158) (https://github.com/liquid-collective/liquid-collective-protocol/pull/159) (https://github.com/liquid-collective/liquid-collective-protocol/pull/160)(https://github.com/liquid-collective/liquid-collective-protocol/pull/162) (https://github.com/liquid-collective/liquid-collective-protocol/pull/163)
+- [contracts] Deploy Firewalls on contract TUP Proxies to give `pause()` permission to Executor (https://github.com/liquid-collective/liquid-collective-protocol/pull/153) (https://github.com/liquid-collective/liquid-collective-protocol/pull/154) (https://github.com/liquid-collective/liquid-collective-protocol/pull/160)
 
 ## v0.4.0 (October 5th 2022)
 
