@@ -264,8 +264,10 @@ contract RiverV1 is
         uint256 initialBalance = address(this).balance;
         IELFeeRecipientV1(payable(elFeeRecipient)).pullELFees(_max);
         uint256 collectedELFees = address(this).balance - initialBalance;
-        BalanceToDeposit.set(BalanceToDeposit.get() + collectedELFees);
-        emit PulledELFees(collectedELFees);
+        if (collectedELFees > 0) {
+            BalanceToDeposit.set(BalanceToDeposit.get() + collectedELFees);
+            emit PulledELFees(collectedELFees);
+        }
         return collectedELFees;
     }
 
