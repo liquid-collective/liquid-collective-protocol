@@ -24,7 +24,7 @@ interface IRiverV1 is IConsensusLayerDepositManagerV1, IUserDepositManagerV1, IS
 
     /// @notice The stored Coverage Fund has been changed
     /// @param coverageFund The new Coverage Fund
-    event SetCoverageFund(address coverageFund);
+    event SetCoverageFund(address indexed coverageFund);
 
     /// @notice The stored Collector has been changed
     /// @param collector The new Collector

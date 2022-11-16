@@ -12,7 +12,7 @@ interface ICoverageFundV1 {
     /// @notice A donation has been made to the coverage fund
     /// @param donator Address that performed the donation
     /// @param amount The amount donated
-    event Donate(address donator, uint256 amount);
+    event Donate(address indexed donator, uint256 amount);
 
     /// @notice The fallback has been triggered
     error InvalidCall();

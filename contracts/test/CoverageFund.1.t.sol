@@ -41,6 +41,7 @@ contract CoverageFundTestV1 is Test {
 
     event BalanceUpdated(uint256 amount);
     event SetRiver(address indexed river);
+    event Donate(address indexed donator, uint256 amount);
 
     function setUp() public {
         admin = makeAddr("admin");
@@ -100,6 +101,8 @@ contract CoverageFundTestV1 is Test {
         allowlist.allow(accounts, permissions);
 
         vm.startPrank(sender);
+        vm.expectEmit(true, true, true, true);
+        emit Donate(sender, _amount);
         coverageFund.donate{value: _amount}();
         vm.stopPrank();
 

@@ -53,6 +53,7 @@ contract RiverV1Tests is Test, BytesGenerator {
     event PulledELFees(uint256 amount);
     event SetELFeeRecipient(address indexed elFeeRecipient);
     event SetCollector(address indexed collector);
+    event SetCoverageFund(address indexed coverageFund);
     event SetAllowlist(address indexed allowlist);
     event SetGlobalFee(uint256 fee);
     event SetOperatorsRegistry(address indexed operatorsRegistry);
@@ -200,11 +201,36 @@ contract RiverV1Tests is Test, BytesGenerator {
         vm.stopPrank();
     }
 
+    function testSetCoverageFund(uint256 _newCoverageFundSalt) public {
+        address newCoverageFund = uf._new(_newCoverageFundSalt);
+        vm.startPrank(admin);
+        assert(river.getCoverageFund() == address(coverageFund));
+        vm.expectEmit(true, true, true, true);
+        emit SetCoverageFund(newCoverageFund);
+        river.setCoverageFund(newCoverageFund);
+        assert(river.getCoverageFund() == newCoverageFund);
+        vm.stopPrank();
+    }
+
+    function testSetCoverageFundUnauthorized(uint256 _newCoverageFundSalt) public {
+        address newCoverageFund = uf._new(_newCoverageFundSalt);
+        assert(river.getCoverageFund() == address(coverageFund));
+        vm.expectRevert(abi.encodeWithSignature("Unauthorized(address)", address(this)));
+        river.setCoverageFund(newCoverageFund);
+    }
+
     function testSetCoverageFundZero() public {
         vm.startPrank(admin);
         assert(river.getCoverageFund() == address(coverageFund));
         vm.expectRevert(abi.encodeWithSignature("InvalidZeroAddress()"));
         river.setCoverageFund(address(0));
+    }
+
+    function testSendCoverageFundsUnauthorized(uint256 _invalidAddressSalt) public {
+        address invalidAddress = uf._new(_invalidAddressSalt);
+        vm.startPrank(invalidAddress);
+        vm.expectRevert(abi.encodeWithSignature("Unauthorized(address)", invalidAddress));
+        river.sendCoverageFunds();
         vm.stopPrank();
     }
 
