@@ -97,8 +97,7 @@ abstract contract OracleManagerV1 is IOracleManagerV1 {
         CLValidatorCount.set(_validatorCount);
         LastOracleRoundId.set(_roundId);
 
-        uint256 executionLayerFees;
-        uint256 coverageFunds;
+        uint256 executionLayerFees = 0;
 
         // if there's a margin left for pulling the execution layer fees that would leave our delta under the allowed maxIncrease value, do it
         if ((_maxIncrease + previousValidatorTotalBalance) > _validatorTotalBalance) {
@@ -107,7 +106,7 @@ abstract contract OracleManagerV1 is IOracleManagerV1 {
 
         // if there's a margin for pulling coverage funds that would also leave our delta under the allowed maxIncrease value, also do it
         if (((_maxIncrease + previousValidatorTotalBalance) - executionLayerFees) > _validatorTotalBalance) {
-            coverageFunds = _pullCoverageFunds(
+            _pullCoverageFunds(
                 ((_maxIncrease + previousValidatorTotalBalance) - executionLayerFees) - _validatorTotalBalance
             );
         }
