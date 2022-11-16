@@ -167,12 +167,14 @@ contract RiverV1 is
 
     /// @inheritdoc IRiverV1
     function setELFeeRecipient(address _newELFeeRecipient) external onlyAdmin {
+        LibSanitize._notZeroAddress(_newELFeeRecipient);
         ELFeeRecipientAddress.set(_newELFeeRecipient);
         emit SetELFeeRecipient(_newELFeeRecipient);
     }
 
     /// @inheritdoc IRiverV1
     function setCoverageFund(address _newCoverageFund) external onlyAdmin {
+        LibSanitize._notZeroAddress(_newCoverageFund);
         CoverageFundAddress.set(_newCoverageFund);
         emit SetCoverageFund(_newCoverageFund);
     }

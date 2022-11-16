@@ -18,7 +18,7 @@ import "../src/ELFeeRecipient.1.sol";
 import "../src/OperatorsRegistry.1.sol";
 import "../src/CoverageFund.1.sol";
 
-contract RiverV1SetupOneTests is Test, BytesGenerator {
+contract RiverV1Tests is Test, BytesGenerator {
     UserFactory internal uf = new UserFactory();
 
     RiverV1 internal river;
@@ -189,6 +189,22 @@ contract RiverV1SetupOneTests is Test, BytesGenerator {
         vm.startPrank(invalidAddress);
         vm.expectRevert(abi.encodeWithSignature("Unauthorized(address)", invalidAddress));
         river.sendELFees();
+        vm.stopPrank();
+    }
+
+    function testSetELFeeRecipientZero() public {
+        vm.startPrank(admin);
+        assert(river.getELFeeRecipient() == address(elFeeRecipient));
+        vm.expectRevert(abi.encodeWithSignature("InvalidZeroAddress()"));
+        river.setELFeeRecipient(address(0));
+        vm.stopPrank();
+    }
+
+    function testSetCoverageFundZero() public {
+        vm.startPrank(admin);
+        assert(river.getCoverageFund() == address(coverageFund));
+        vm.expectRevert(abi.encodeWithSignature("InvalidZeroAddress()"));
+        river.setCoverageFund(address(0));
         vm.stopPrank();
     }
 
@@ -1002,79 +1018,6 @@ contract RiverV1SetupOneTests is Test, BytesGenerator {
     }
 
     // Testing regular parameters
-    function testNoELFeeRecipient() public {
-        vm.deal(joe, 100 ether);
-        vm.deal(bob, 1000 ether);
-
-        _allow(joe, LibAllowlistMasks.DEPOSIT_MASK);
-        _allow(bob, LibAllowlistMasks.DEPOSIT_MASK);
-
-        vm.startPrank(joe);
-        river.deposit{value: 100 ether}();
-        vm.stopPrank();
-        vm.startPrank(bob);
-        river.deposit{value: 1000 ether}();
-        vm.stopPrank();
-        assert(river.balanceOfUnderlying(joe) == 100 ether);
-        assert(river.balanceOfUnderlying(bob) == 1000 ether);
-        assert(river.getDepositedValidatorCount() == 0);
-        assert(river.totalUnderlyingSupply() == 1100 ether);
-
-        vm.prank(admin);
-        river.depositToConsensusLayer(17);
-        vm.prank(admin);
-        river.depositToConsensusLayer(17);
-
-        Operators.Operator memory op1 = operatorsRegistry.getOperator(operatorOneIndex);
-        Operators.Operator memory op2 = operatorsRegistry.getOperator(operatorTwoIndex);
-
-        assert(op1.funded == 17);
-        assert(op2.funded == 17);
-
-        assert(river.getDepositedValidatorCount() == 34);
-        assert(river.totalUnderlyingSupply() == 1100 ether);
-        assert(address(river).balance == (1000 ether + 100 ether) - (32 ether * 34));
-        assert(river.balanceOfUnderlying(joe) == 100 ether);
-        assert(river.balanceOfUnderlying(bob) == 1000 ether);
-
-        vm.deal(address(elFeeRecipient), 100 ether);
-
-        vm.startPrank(admin);
-        river.setELFeeRecipient(address(0));
-        vm.stopPrank();
-
-        vm.startPrank(oracleMember);
-        (uint256 epoch,,) = oracle.getCurrentFrame();
-        oracle.reportConsensusLayerData(epoch, 33 * 1e9 * 34, 34);
-        vm.stopPrank();
-
-        assert(address(elFeeRecipient).balance == 100 ether);
-
-        assert(river.totalUnderlyingSupply() == 1100 ether - (34 * 32 ether) + (34 * 33 ether));
-        assert(river.balanceOfUnderlying(joe) == 102936363636363636363);
-        assert(river.balanceOfUnderlying(bob) == 1029363636363636363636);
-        assert(river.balanceOfUnderlying(operatorOneFeeRecipient) == 0);
-        assert(river.balanceOfUnderlying(operatorTwoFeeRecipient) == 0);
-        assert(river.balanceOfUnderlying(collector) == 1699999999999999999);
-
-        vm.startPrank(joe);
-        river.transfer(bob, river.balanceOf(joe) - 1);
-        vm.stopPrank();
-
-        assert(river.balanceOfUnderlying(joe) == 1);
-        assert(river.balanceOfUnderlying(bob) == 1132299999999999999999);
-        assert(river.balanceOfUnderlying(operatorOneFeeRecipient) == 0);
-        assert(river.balanceOfUnderlying(operatorTwoFeeRecipient) == 0);
-        assert(river.balanceOfUnderlying(collector) == 1699999999999999999);
-
-        assert(
-            river.totalSupply()
-                == river.balanceOf(joe) + river.balanceOf(bob) + river.balanceOf(operatorOneFeeRecipient)
-                    + river.balanceOf(operatorTwoFeeRecipient) + river.balanceOf(collector)
-        );
-    }
-
-    // Testing regular parameters
     function testUserDepositsForAnotherUser() public {
         vm.deal(bob, 1100 ether);
         vm.deal(joe, 100 ether);
@@ -1816,5 +1759,207 @@ contract RiverV1SetupOneTests is Test, BytesGenerator {
         vm.stopPrank();
 
         assert(address(elFeeRecipient).balance == 0);
+    }
+}
+
+contract RiverV1TestsNoExtraSetup is Test, BytesGenerator {
+    UserFactory internal uf = new UserFactory();
+
+    RiverV1 internal river;
+    IDepositContract internal deposit;
+    WithdrawV1 internal withdraw;
+    OracleV1 internal oracle;
+    ELFeeRecipientV1 internal elFeeRecipient;
+    CoverageFundV1 internal coverageFund;
+    AllowlistV1 internal allowlist;
+    OperatorsRegistryV1 internal operatorsRegistry;
+
+    address internal admin;
+    address internal newAdmin;
+    address internal collector;
+    address internal newCollector;
+    address internal allower;
+    address internal oracleMember;
+    address internal newAllowlist;
+    address internal operatorOne;
+    address internal operatorOneFeeRecipient;
+    address internal operatorTwo;
+    address internal operatorTwoFeeRecipient;
+    address internal bob;
+    address internal joe;
+
+    string internal operatorOneName = "NodeMasters";
+    string internal operatorTwoName = "StakePros";
+
+    uint256 internal operatorOneIndex;
+    uint256 internal operatorTwoIndex;
+
+    event PulledELFees(uint256 amount);
+    event SetELFeeRecipient(address indexed elFeeRecipient);
+    event SetCollector(address indexed collector);
+    event SetAllowlist(address indexed allowlist);
+    event SetGlobalFee(uint256 fee);
+    event SetOperatorsRegistry(address indexed operatorsRegistry);
+
+    function setUp() public {
+        admin = makeAddr("admin");
+        newAdmin = makeAddr("newAdmin");
+        collector = makeAddr("collector");
+        newCollector = makeAddr("newCollector");
+        allower = makeAddr("allower");
+        oracleMember = makeAddr("oracleMember");
+        newAllowlist = makeAddr("newAllowlist");
+        operatorOne = makeAddr("operatorOne");
+        operatorTwo = makeAddr("operatorTwo");
+        bob = makeAddr("bob");
+        joe = makeAddr("joe");
+
+        vm.warp(857034746);
+
+        elFeeRecipient = new ELFeeRecipientV1();
+        coverageFund = new CoverageFundV1();
+        oracle = new OracleV1();
+        allowlist = new AllowlistV1();
+        deposit = new DepositContractMock();
+        withdraw = new WithdrawV1();
+        river = new RiverV1();
+        operatorsRegistry = new OperatorsRegistryV1();
+
+        bytes32 withdrawalCredentials = withdraw.getCredentials();
+        allowlist.initAllowlistV1(admin, allower);
+        operatorsRegistry.initOperatorsRegistryV1(admin, address(river));
+        elFeeRecipient.initELFeeRecipientV1(address(river));
+        coverageFund.initCoverageFundV1(address(river));
+        vm.expectEmit(true, true, true, true);
+        emit SetOperatorsRegistry(address(operatorsRegistry));
+        river.initRiverV1(
+            address(deposit),
+            address(elFeeRecipient),
+            withdrawalCredentials,
+            address(oracle),
+            admin,
+            address(allowlist),
+            address(operatorsRegistry),
+            collector,
+            500
+        );
+        oracle.initOracleV1(address(river), admin, 225, 32, 12, 0, 1000, 500);
+        vm.startPrank(admin);
+
+        // ===================
+
+        oracle.addMember(oracleMember, 1);
+
+        operatorOneIndex = operatorsRegistry.addOperator(operatorOneName, operatorOne);
+        operatorTwoIndex = operatorsRegistry.addOperator(operatorTwoName, operatorTwo);
+
+        bytes memory hundredKeysOp1 = genBytes((48 + 96) * 100);
+
+        operatorsRegistry.addValidators(operatorOneIndex, 100, hundredKeysOp1);
+
+        bytes memory hundredKeysOp2 = genBytes((48 + 96) * 100);
+
+        operatorsRegistry.addValidators(operatorTwoIndex, 100, hundredKeysOp2);
+
+        uint256[] memory operatorIndexes = new uint256[](2);
+        operatorIndexes[0] = operatorOneIndex;
+        operatorIndexes[1] = operatorTwoIndex;
+        uint256[] memory operatorLimits = new uint256[](2);
+        operatorLimits[0] = 100;
+        operatorLimits[1] = 100;
+
+        operatorsRegistry.setOperatorLimits(operatorIndexes, operatorLimits, block.number);
+        vm.stopPrank();
+    }
+
+    function _allow(address _who, uint256 _mask) internal {
+        address[] memory allowees = new address[](1);
+        allowees[0] = _who;
+        uint256[] memory statuses = new uint256[](1);
+        statuses[0] = _mask;
+
+        vm.startPrank(admin);
+        allowlist.allow(allowees, statuses);
+        vm.stopPrank();
+    }
+
+    function _deny(address _who) internal {
+        address[] memory allowees = new address[](1);
+        allowees[0] = _who;
+        uint256[] memory statuses = new uint256[](1);
+        statuses[0] = 0x1 << 255; // DENY_MASK
+
+        vm.startPrank(admin);
+        allowlist.allow(allowees, statuses);
+        vm.stopPrank();
+    }
+
+    // This happens after upgrade
+    function testNoCoverageFund() public {
+        vm.deal(joe, 100 ether);
+        vm.deal(bob, 1000 ether);
+
+        _allow(joe, LibAllowlistMasks.DEPOSIT_MASK);
+        _allow(bob, LibAllowlistMasks.DEPOSIT_MASK);
+
+        vm.startPrank(joe);
+        river.deposit{value: 100 ether}();
+        vm.stopPrank();
+        vm.startPrank(bob);
+        river.deposit{value: 1000 ether}();
+        vm.stopPrank();
+        assert(river.balanceOfUnderlying(joe) == 100 ether);
+        assert(river.balanceOfUnderlying(bob) == 1000 ether);
+        assert(river.getDepositedValidatorCount() == 0);
+        assert(river.totalUnderlyingSupply() == 1100 ether);
+
+        vm.prank(admin);
+        river.depositToConsensusLayer(17);
+        vm.prank(admin);
+        river.depositToConsensusLayer(17);
+
+        Operators.Operator memory op1 = operatorsRegistry.getOperator(operatorOneIndex);
+        Operators.Operator memory op2 = operatorsRegistry.getOperator(operatorTwoIndex);
+
+        assert(op1.funded == 17);
+        assert(op2.funded == 17);
+
+        assert(river.getDepositedValidatorCount() == 34);
+        assert(river.totalUnderlyingSupply() == 1100 ether);
+        assert(address(river).balance == (1000 ether + 100 ether) - (32 ether * 34));
+        assert(river.balanceOfUnderlying(joe) == 100 ether);
+        assert(river.balanceOfUnderlying(bob) == 1000 ether);
+
+        vm.deal(address(coverageFund), 100 ether);
+
+        vm.startPrank(oracleMember);
+        (uint256 epoch,,) = oracle.getCurrentFrame();
+        oracle.reportConsensusLayerData(epoch, 33 * 1e9 * 34, 34);
+        vm.stopPrank();
+
+        assert(address(coverageFund).balance == 100 ether);
+
+        assert(river.totalUnderlyingSupply() == 1100 ether - (34 * 32 ether) + (34 * 33 ether));
+        assert(river.balanceOfUnderlying(joe) == 102936363636363636363);
+        assert(river.balanceOfUnderlying(bob) == 1029363636363636363636);
+        assert(river.balanceOfUnderlying(operatorOneFeeRecipient) == 0);
+        assert(river.balanceOfUnderlying(operatorTwoFeeRecipient) == 0);
+        assert(river.balanceOfUnderlying(collector) == 1699999999999999999);
+
+        vm.startPrank(joe);
+        river.transfer(bob, river.balanceOf(joe) - 1);
+        vm.stopPrank();
+
+        assert(river.balanceOfUnderlying(joe) == 1);
+        assert(river.balanceOfUnderlying(bob) == 1132299999999999999999);
+        assert(river.balanceOfUnderlying(operatorOneFeeRecipient) == 0);
+        assert(river.balanceOfUnderlying(operatorTwoFeeRecipient) == 0);
+        assert(river.balanceOfUnderlying(collector) == 1699999999999999999);
+
+        assert(
+            river.totalSupply()
+                == river.balanceOf(joe) + river.balanceOf(bob) + river.balanceOf(operatorOneFeeRecipient)
+                    + river.balanceOf(operatorTwoFeeRecipient) + river.balanceOf(collector)
+        );
     }
 }
