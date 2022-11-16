@@ -17,6 +17,9 @@ interface ICoverageFundV1 {
     /// @notice The fallback has been triggered
     error InvalidCall();
 
+    /// @notice A donation with 0 ETH has been performed
+    error EmptyDonation();
+
     /// @notice Initialize the coverage fund with the required arguments
     /// @param _riverAddress Address of River
     function initCoverageFundV1(address _riverAddress) external;

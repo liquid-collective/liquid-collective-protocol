@@ -1683,9 +1683,11 @@ contract RiverV1Tests is Test, BytesGenerator {
                 {
                     uint256 coverageFundBalance = (maxIncrease - ((increase / 1 gwei) * 1 gwei))
                         - ((maxIncrease - ((increase / 1 gwei) * 1 gwei)) / 2);
-                    vm.deal(joe, coverageFundBalance);
-                    vm.prank(joe);
-                    coverageFund.donate{value: coverageFundBalance}();
+                    if (coverageFundBalance > 0) {
+                        vm.deal(joe, coverageFundBalance);
+                        vm.prank(joe);
+                        coverageFund.donate{value: coverageFundBalance}();
+                    }
                 }
                 vm.prank(oracleMember);
                 oracle.reportConsensusLayerData(
@@ -1724,9 +1726,11 @@ contract RiverV1Tests is Test, BytesGenerator {
                 {
                     uint256 coverageFundBalance =
                         (maxIncrease + (decrease / 1 gwei) * 1 gwei) - (maxIncrease + (decrease / 1 gwei) * 1 gwei / 2);
-                    vm.deal(joe, coverageFundBalance);
-                    vm.prank(joe);
-                    coverageFund.donate{value: coverageFundBalance}();
+                    if (coverageFundBalance > 0) {
+                        vm.deal(joe, coverageFundBalance);
+                        vm.prank(joe);
+                        coverageFund.donate{value: coverageFundBalance}();
+                    }
                 }
 
                 vm.prank(oracleMember);

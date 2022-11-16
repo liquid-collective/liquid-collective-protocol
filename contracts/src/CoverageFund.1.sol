@@ -39,9 +39,14 @@ contract CoverageFundV1 is Initializable, ICoverageFundV1 {
 
     /// @inheritdoc ICoverageFundV1
     function donate() external payable {
-        IAllowlistV1 allowlist = IAllowlistV1(IRiverV1(payable(RiverAddress.get())).getAllowlist());
+        if (msg.value == 0) {
+            revert EmptyDonation();
+        }
         BalanceForCoverage.set(BalanceForCoverage.get() + msg.value);
+
+        IAllowlistV1 allowlist = IAllowlistV1(IRiverV1(payable(RiverAddress.get())).getAllowlist());
         allowlist.onlyAllowed(msg.sender, LibAllowlistMasks.DONATE_MASK);
+
         emit Donate(msg.sender, msg.value);
     }
 
