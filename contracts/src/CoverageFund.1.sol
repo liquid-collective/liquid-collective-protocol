@@ -33,7 +33,7 @@ contract CoverageFundV1 is Initializable, ICoverageFundV1 {
 
         if (amount > 0) {
             BalanceForCoverage.set(BalanceForCoverage.get() - amount);
-            IRiverV1(payable(river)).sendELFees{value: amount}();
+            IRiverV1(payable(river)).sendCoverageFunds{value: amount}();
         }
     }
 

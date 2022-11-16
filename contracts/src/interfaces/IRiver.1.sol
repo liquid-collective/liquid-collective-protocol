@@ -142,6 +142,8 @@ interface IRiverV1 is IConsensusLayerDepositManagerV1, IUserDepositManagerV1, IS
     function setMetadataURI(string memory _metadataURI) external;
 
     /// @notice Input for execution layer fee earnings
-    /// @notice The naming of this method is not accurate anymore as it accepts both EL Fees and Coverage Funds
     function sendELFees() external payable;
+
+    /// @notice Input for coverage funds
+    function sendCoverageFunds() external payable;
 }

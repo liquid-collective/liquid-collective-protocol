@@ -18,7 +18,7 @@ contract RiverMock {
         allowlist = _allowlist;
     }
 
-    function sendELFees() external payable {
+    function sendCoverageFunds() external payable {
         emit BalanceUpdated(address(this).balance);
     }
 

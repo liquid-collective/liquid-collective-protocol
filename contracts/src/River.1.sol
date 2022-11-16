@@ -191,7 +191,14 @@ contract RiverV1 is
 
     /// @inheritdoc IRiverV1
     function sendELFees() external payable {
-        if (msg.sender != ELFeeRecipientAddress.get() && msg.sender != CoverageFundAddress.get()) {
+        if (msg.sender != ELFeeRecipientAddress.get()) {
+            revert LibErrors.Unauthorized(msg.sender);
+        }
+    }
+
+    /// @inheritdoc IRiverV1
+    function sendCoverageFunds() external payable {
+        if (msg.sender != CoverageFundAddress.get()) {
             revert LibErrors.Unauthorized(msg.sender);
         }
     }
