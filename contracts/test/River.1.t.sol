@@ -1762,7 +1762,7 @@ contract RiverV1Tests is Test, BytesGenerator {
     }
 }
 
-contract RiverV1TestsNoExtraSetup is Test, BytesGenerator {
+contract RiverV1TestsNoExtraRecipients is Test, BytesGenerator {
     UserFactory internal uf = new UserFactory();
 
     RiverV1 internal river;
@@ -1899,7 +1899,7 @@ contract RiverV1TestsNoExtraSetup is Test, BytesGenerator {
         vm.deal(joe, 100 ether);
         vm.deal(bob, 1000 ether);
 
-        _allow(joe, LibAllowlistMasks.DEPOSIT_MASK);
+        _allow(joe, LibAllowlistMasks.DEPOSIT_MASK + LibAllowlistMasks.DONATE_MASK);
         _allow(bob, LibAllowlistMasks.DEPOSIT_MASK);
 
         vm.startPrank(joe);
@@ -1930,7 +1930,11 @@ contract RiverV1TestsNoExtraSetup is Test, BytesGenerator {
         assert(river.balanceOfUnderlying(joe) == 100 ether);
         assert(river.balanceOfUnderlying(bob) == 1000 ether);
 
-        vm.deal(address(coverageFund), 100 ether);
+        vm.deal(address(joe), 100 ether);
+        vm.prank(joe);
+        coverageFund.donate{value: 100 ether}();
+
+        assert(address(coverageFund).balance == 100 ether);
 
         vm.startPrank(oracleMember);
         (uint256 epoch,,) = oracle.getCurrentFrame();

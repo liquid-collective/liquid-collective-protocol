@@ -2,6 +2,7 @@
 pragma solidity 0.8.10;
 
 import "../../libraries/LibUnstructuredStorage.sol";
+import "../../libraries/LibSanitize.sol";
 
 /// @title Execution Layer Fee Recipient Address Storage
 /// @notice Utility to manage the Execution Layer Fee Recipient Address in storage
@@ -19,6 +20,7 @@ library ELFeeRecipientAddress {
     /// @notice Sets the Execution Layer Fee Recipient Address
     /// @param _newValue New Execution Layer Fee Recipient Address
     function set(address _newValue) internal {
+        LibSanitize._notZeroAddress(_newValue);
         LibUnstructuredStorage.setStorageAddress(EL_FEE_RECIPIENT_ADDRESS, _newValue);
     }
 }

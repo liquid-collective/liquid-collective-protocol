@@ -2,6 +2,7 @@
 pragma solidity 0.8.10;
 
 import "../../libraries/LibUnstructuredStorage.sol";
+import "../../libraries/LibSanitize.sol";
 
 /// @title Coverage Fund Address Storage
 /// @notice Utility to manage the Coverage Fund Address in storage
@@ -18,6 +19,7 @@ library CoverageFundAddress {
     /// @notice Sets the Coverage Fund Address
     /// @param _newValue New Coverage Fund Address
     function set(address _newValue) internal {
+        LibSanitize._notZeroAddress(_newValue);
         LibUnstructuredStorage.setStorageAddress(COVERAGE_FUND_ADDRESS, _newValue);
     }
 }
