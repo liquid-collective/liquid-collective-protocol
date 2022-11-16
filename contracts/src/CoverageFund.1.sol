@@ -32,16 +32,16 @@ contract CoverageFundV1 is Initializable, ICoverageFundV1 {
         uint256 amount = LibUint256.min(_maxAmount, BalanceForCoverage.get());
 
         if (amount > 0) {
-            IRiverV1(payable(river)).sendELFees{value: amount}();
             BalanceForCoverage.set(BalanceForCoverage.get() - amount);
+            IRiverV1(payable(river)).sendELFees{value: amount}();
         }
     }
 
     /// @inheritdoc ICoverageFundV1
     function donate() external payable {
         IAllowlistV1 allowlist = IAllowlistV1(IRiverV1(payable(RiverAddress.get())).getAllowlist());
-        allowlist.onlyAllowed(msg.sender, LibAllowlistMasks.DONATE_MASK);
         BalanceForCoverage.set(BalanceForCoverage.get() + msg.value);
+        allowlist.onlyAllowed(msg.sender, LibAllowlistMasks.DONATE_MASK);
         emit Donate(msg.sender, msg.value);
     }
 
