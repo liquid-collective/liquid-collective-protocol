@@ -27,11 +27,13 @@ contract ERC20VestableVotesUpgradeableV1Tests is Test {
     address internal initAccount;
     address internal bob;
     address internal joe;
+    address internal alice;
 
     function setUp() public {
         initAccount = makeAddr("init");
         bob = makeAddr("bob");
         joe = makeAddr("joe");
+        alice = makeAddr("alice");
 
         tt = new TestToken();
         tt.initTestTokenV1(initAccount);
@@ -157,7 +159,7 @@ contract ERC20VestableVotesUpgradeableV1Tests is Test {
         bool revocable,
         uint256 amount
     ) internal returns (uint256) {
-        return createVestingScheduleStackOptimized(
+        return createVestingSchedulesV2tackOptimized(
             uint64(start),
             uint32(cliffDuration),
             uint32(duration),
@@ -169,7 +171,7 @@ contract ERC20VestableVotesUpgradeableV1Tests is Test {
         );
     }
 
-    function createVestingScheduleStackOptimized(
+    function createVestingSchedulesV2tackOptimized(
         uint64 start,
         uint32 cliffDuration,
         uint32 duration,
@@ -210,7 +212,7 @@ contract ERC20VestableVotesUpgradeableV1Tests is Test {
         assert(tt.balanceOf(joe) == 0);
 
         // Verify vesting schedule object has been properly created
-        VestingSchedules.VestingSchedule memory vestingSchedule = tt.getVestingSchedule(0);
+        VestingSchedulesV2.VestingSchedule memory vestingSchedule = tt.getVestingSchedule(0);
 
         assert(vestingSchedule.start == block.timestamp);
         assert(vestingSchedule.cliffDuration == 365 * 24 * 3600);
@@ -246,7 +248,7 @@ contract ERC20VestableVotesUpgradeableV1Tests is Test {
         assert(tt.balanceOf(joe) == 0);
 
         // Verify vesting schedule object has been properly created
-        VestingSchedules.VestingSchedule memory vestingSchedule = tt.getVestingSchedule(0);
+        VestingSchedulesV2.VestingSchedule memory vestingSchedule = tt.getVestingSchedule(0);
 
         assert(vestingSchedule.start == block.timestamp);
         assert(vestingSchedule.lockDuration == 365 * 24 * 3600);
@@ -416,7 +418,7 @@ contract ERC20VestableVotesUpgradeableV1Tests is Test {
         vm.stopPrank();
 
         // Verify vesting schedule object has been properly created
-        VestingSchedules.VestingSchedule memory vestingSchedule = tt.getVestingSchedule(0);
+        VestingSchedulesV2.VestingSchedule memory vestingSchedule = tt.getVestingSchedule(0);
 
         assert(vestingSchedule.start == start);
     }
@@ -654,7 +656,7 @@ contract ERC20VestableVotesUpgradeableV1Tests is Test {
         assert(tt.balanceOf(joe) == 0);
 
         // Verify vesting schedule object has been properly updated
-        VestingSchedules.VestingSchedule memory vestingSchedule = tt.getVestingSchedule(0);
+        VestingSchedulesV2.VestingSchedule memory vestingSchedule = tt.getVestingSchedule(0);
         assert(vestingSchedule.end == 365 * 24 * 3600 - 1);
     }
 
@@ -680,7 +682,7 @@ contract ERC20VestableVotesUpgradeableV1Tests is Test {
         assert(tt.balanceOf(joe) == 0);
 
         // Verify vesting schedule object has been properly updated
-        VestingSchedules.VestingSchedule memory vestingSchedule = tt.getVestingSchedule(0);
+        VestingSchedulesV2.VestingSchedule memory vestingSchedule = tt.getVestingSchedule(0);
         assert(vestingSchedule.end == 365 * 24 * 3600);
     }
 
@@ -705,7 +707,7 @@ contract ERC20VestableVotesUpgradeableV1Tests is Test {
         assert(tt.balanceOf(tt.vestingEscrow(0)) == 10_000e18);
 
         // Verify vesting schedule object has been properly updated
-        VestingSchedules.VestingSchedule memory vestingSchedule = tt.getVestingSchedule(0);
+        VestingSchedulesV2.VestingSchedule memory vestingSchedule = tt.getVestingSchedule(0);
         assert(vestingSchedule.end == 4 * 365 * 24 * 3600);
     }
 
@@ -732,7 +734,7 @@ contract ERC20VestableVotesUpgradeableV1Tests is Test {
         assert(tt.balanceOf(tt.vestingEscrow(0)) == 5_000e18);
 
         // Verify vesting schedule object has been properly updated
-        VestingSchedules.VestingSchedule memory vestingSchedule = tt.getVestingSchedule(0);
+        VestingSchedulesV2.VestingSchedule memory vestingSchedule = tt.getVestingSchedule(0);
         assert(vestingSchedule.end == 2 * 365 * 24 * 3600);
     }
 
@@ -926,6 +928,7 @@ contract ERC20VestableVotesUpgradeableV1Tests is Test {
         uint256 releaseAt,
         uint256 revokeAt
     ) public {
+        vm.assume(amount > 0);
         vm.warp(0);
         if (periodDuration == 0) {
             // period duration should be a list one
@@ -1025,5 +1028,99 @@ contract ERC20VestableVotesUpgradeableV1Tests is Test {
             // Release at next period
             releaseAt += periodDuration;
         }
+    }
+
+    struct VestingSchedule {
+        uint256 start;
+        uint256 cliffDuration;
+        uint256 lockDuration;
+        uint256 duration;
+        uint256 period;
+        uint256 amount;
+        address beneficiary;
+        address delegatee;
+        bool revocable;
+    }
+
+    // test DOS following spearbit audit
+    function testDOSReleaseVestingSchedule() public {
+        // send Bob 1 vote token
+        vm.prank(initAccount);
+        tt.transfer(bob, 1);
+
+        // create a vesting schedule for Alice
+        vm.prank(initAccount);
+        createVestingSchedule(alice, block.timestamp, 1 days, 10 days, 1 days, 0, true, 10);
+
+        address aliceEscrow = tt.vestingEscrow(0);
+
+        // Bob send one token directly to the Escrow contract of alice
+        vm.prank(bob);
+        tt.transfer(aliceEscrow, 1);
+
+        // Cliff period has passed and Alice try to get the first batch of the vested token
+        vm.warp(block.timestamp + 1 days);
+        vm.prank(alice);
+
+        // The transaction should not revert for UNDERFLOW because now the balance of the escrow has been increased externally
+        tt.releaseVestingSchedule(0);
+
+        // Warp at the vesting schedule period end
+        vm.warp(block.timestamp + 9 days);
+
+        // Alice is able to get the whole vesting schedule amount
+        // but not the token sent by the attacker to the escrow contract
+        vm.prank(alice);
+        tt.releaseVestingSchedule(0);
+
+        assertEq(tt.balanceOf(alice), 10);
+    }
+
+    // test DOS following spearbit audit
+    function testDOSRevokeVestingSchedule() public {
+        // send Bob 1 vote token
+        vm.prank(initAccount);
+        tt.transfer(bob, 1);
+
+        // create a vesting schedule for Alice
+        vm.prank(initAccount);
+
+        createVestingSchedule(alice, block.timestamp, 1 days, 10 days, 1 days, 0, true, 10);
+
+        address aliceEscrow = tt.vestingEscrow(0);
+
+        // Bob send one token directly to the Escrow contract of alice
+        vm.prank(bob);
+        tt.transfer(aliceEscrow, 1);
+
+        // The creator decide to revoke the vesting schedule before the end timestamp
+        // It should not throw an underflow error
+        vm.prank(initAccount);
+        tt.revokeVestingSchedule(0, uint64(block.timestamp + 1));
+    }
+
+    // test DOS following spearbit audit
+    function testDOSComputeVestingReleasableAmount() public {
+        // send Bob 1 vote token
+        vm.prank(initAccount);
+        tt.transfer(bob, 1);
+
+        // create a vesting schedule for Alice
+        vm.prank(initAccount);
+        createVestingSchedule(alice, block.timestamp, 1 days, 10 days, 1 days, 0, true, 10);
+
+        address aliceEscrow = tt.vestingEscrow(0);
+
+        // Bob send one token directly to the Escrow contract of alice
+        vm.prank(bob);
+        tt.transfer(aliceEscrow, 1);
+
+        // Should not UNDERFLOW
+        uint256 releasableAmount = tt.computeVestingReleasableAmount(0);
+
+        // Warp to the end of the vesting schedule
+        vm.warp(block.timestamp + 10 days);
+        releasableAmount = tt.computeVestingReleasableAmount(0);
+        assertEq(releasableAmount, 10);
     }
 }

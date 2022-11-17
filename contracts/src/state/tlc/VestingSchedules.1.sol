@@ -1,9 +1,9 @@
 //SPDX-License-Identifier: BUSL-1.1
 pragma solidity 0.8.10;
 
-/// @title VestingSchedules Storage
-/// @notice Utility to manage VestingSchedules in storage
-library VestingSchedules {
+/// @title VestingSchedulesV1 Storage
+/// @notice Utility to manage VestingSchedulesV1 in storage
+library VestingSchedulesV1 {
     /// @notice Storage slot of the Vesting Schedules
     bytes32 internal constant VESTING_SCHEDULES_SLOT =
         bytes32(uint256(keccak256("erc20VestableVotes.state.schedules")) - 1);

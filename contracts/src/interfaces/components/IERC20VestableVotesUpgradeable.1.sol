@@ -1,7 +1,7 @@
 //SPDX-License-Identifier: BUSL-1.1
 pragma solidity 0.8.10;
 
-import "../../state/tlc/VestingSchedules.sol";
+import "../../state/tlc/VestingSchedules.2.sol";
 
 /// @title ERC20 Vestable Votes Upgradeable Interface(v1)
 /// @author Alluvial
@@ -60,8 +60,7 @@ interface IERC20VestableVotesUpgradeableV1 {
     /// @dev vesting details of a beneficiary at all times. The values won't change even after tokens are released.
     /// @dev The only dynamic field of the structure is end, and is updated whenever a vesting schedule is revoked
     /// @param _index Index of the vesting schedule
-    /// @return The vesting schedule structure
-    function getVestingSchedule(uint256 _index) external view returns (VestingSchedules.VestingSchedule memory);
+    function getVestingSchedule(uint256 _index) external view returns (VestingSchedulesV2.VestingSchedule memory);
 
     /// @notice Get count of vesting schedules
     /// @return count of vesting schedules
