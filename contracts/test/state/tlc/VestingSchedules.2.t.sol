@@ -53,7 +53,7 @@ contract VestingSchedulesMigrationTest is Test {
         uint32 _lockDuration,
         bool _revocable,
         uint256 _amount,
-        uint256 _updateReleasedAmount
+        uint256 _releasedAmount
     ) public {
         // #1. Create V1 schedule
         VestingSchedulesV1.VestingSchedule memory vestingScheduleV1 = VestingSchedulesV1.VestingSchedule({
@@ -87,18 +87,19 @@ contract VestingSchedulesMigrationTest is Test {
         assert(vestingScheduleV2.releasedAmount == 0);
 
         // #3. Update it as a V2 schedule
+        // Arguments are mixed on purpose to increase fuzzing variability
         VestingSchedulesV2.VestingSchedule memory newVestingScheduleV2 = VestingSchedulesV2.VestingSchedule({
-            start: _start / 2,
-            end: _end / 2,
-            lockDuration: _lockDuration / 2,
-            cliffDuration: _cliffDuration / 2,
-            duration: _duration / 2,
-            period: _period / 2,
-            amount: _amount / 2,
+            start: _end,
+            end: _start,
+            lockDuration: _cliffDuration,
+            cliffDuration: _lockDuration,
+            duration: _period,
+            period: _duration,
+            amount: _releasedAmount,
             creator: bob,
             beneficiary: alice,
             revocable: _start % 2 == 0,
-            releasedAmount: _updateReleasedAmount
+            releasedAmount: _amount
         });
 
         vm.startPrank(bob);
