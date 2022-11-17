@@ -14,17 +14,18 @@ contract VestingSchedulesMigrationTest is Test {
         bob = makeAddr("bob");
     }
 
-    function _createV1VestingSchedule(
-        VestingSchedulesV1.VestingSchedule memory vestingSchedule
-    ) internal returns(uint256) {
+    function _createV1VestingSchedule(VestingSchedulesV1.VestingSchedule memory vestingSchedule)
+        internal
+        returns (uint256)
+    {
         // Create a V1 schedule
-       return VestingSchedulesV1.push(vestingSchedule) - 1;
+        return VestingSchedulesV1.push(vestingSchedule) - 1;
     }
 
-    function _updateV2VestingSchedule(
-        uint256 index,
-        VestingSchedulesV2.VestingSchedule memory newVestingSchedule
-    ) internal returns(bool) {
+    function _updateV2VestingSchedule(uint256 index, VestingSchedulesV2.VestingSchedule memory newVestingSchedule)
+        internal
+        returns (bool)
+    {
         VestingSchedulesV2.VestingSchedule storage vestingScheduleV2 = VestingSchedulesV2.get(index);
 
         vestingScheduleV2.start = newVestingSchedule.start;
@@ -40,7 +41,7 @@ contract VestingSchedulesMigrationTest is Test {
         vestingScheduleV2.releasedAmount = newVestingSchedule.releasedAmount;
 
         // Create a V1 schedule
-       return true;
+        return true;
     }
 
     function testVestingScheduleV1ToV2Compatibility(
@@ -55,7 +56,7 @@ contract VestingSchedulesMigrationTest is Test {
         uint256 _updateReleasedAmount
     ) public {
         // #1. Create V1 schedule
-         VestingSchedulesV1.VestingSchedule memory vestingScheduleV1 = VestingSchedulesV1.VestingSchedule({
+        VestingSchedulesV1.VestingSchedule memory vestingScheduleV1 = VestingSchedulesV1.VestingSchedule({
             start: _start,
             end: _end,
             lockDuration: _lockDuration,
@@ -69,7 +70,7 @@ contract VestingSchedulesMigrationTest is Test {
         });
 
         vm.startPrank(bob);
-        uint256 index =  _createV1VestingSchedule(vestingScheduleV1);
+        uint256 index = _createV1VestingSchedule(vestingScheduleV1);
         vm.stopPrank();
 
         // #2. Get it as a V2 schedule and verifies attributes
@@ -87,17 +88,17 @@ contract VestingSchedulesMigrationTest is Test {
 
         // #3. Update it as a V2 schedule
         VestingSchedulesV2.VestingSchedule memory newVestingScheduleV2 = VestingSchedulesV2.VestingSchedule({
-            start: _start/2,
-            end: _end/2,
-            lockDuration: _lockDuration/2,
-            cliffDuration: _cliffDuration/2,
-            duration: _duration/2,
-            period: _period/2,
-            amount: _amount/2,
+            start: _start / 2,
+            end: _end / 2,
+            lockDuration: _lockDuration / 2,
+            cliffDuration: _cliffDuration / 2,
+            duration: _duration / 2,
+            period: _period / 2,
+            amount: _amount / 2,
             creator: bob,
             beneficiary: alice,
             revocable: _start % 2 == 0,
-            releasedAmount: _updateReleasedAmount 
+            releasedAmount: _updateReleasedAmount
         });
 
         vm.startPrank(bob);
