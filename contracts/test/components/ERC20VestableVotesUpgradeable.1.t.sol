@@ -859,7 +859,7 @@ contract ERC20VestableVotesUpgradeableV1Tests is Test {
         assert(tt.balanceOf(joe) == 5_000e18);
     }
 
-    event DelegatedVestingEscrow(uint256 index, address oldDelegatee, address newDelegatee);
+    event DelegatedVestingEscrow(uint256 index, address indexed oldDelegatee, address indexed newDelegatee);
 
     function testDelegateVestingEscrow() public {
         vm.startPrank(initAccount);

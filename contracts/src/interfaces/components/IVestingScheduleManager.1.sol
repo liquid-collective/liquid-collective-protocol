@@ -28,7 +28,7 @@ interface IVestingScheduleManagerV1 {
     /// @param index Vesting schedule index
     /// @param oldDelegatee old delegatee
     /// @param newDelegatee new delegatee
-    event DelegatedVestingEscrow(uint256 index, address oldDelegatee, address newDelegatee);
+    event DelegatedVestingEscrow(uint256 index, address indexed oldDelegatee, address indexed newDelegatee);
 
     /// @notice Vesting schedule creator has unsufficient balance to create vesting schedule
     error UnsufficientVestingScheduleCreatorBalance();
