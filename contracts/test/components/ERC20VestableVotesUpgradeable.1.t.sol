@@ -346,6 +346,26 @@ contract ERC20VestableVotesUpgradeableV1Tests is Test {
         vm.stopPrank();
     }
 
+    function testCreateInvalidVestingPeriodDoesNotDivideCliffDuration() public {
+        vm.startPrank(initAccount);
+        vm.expectRevert(
+            abi.encodeWithSignature(
+                "InvalidVestingScheduleParameter(string)", "Vesting schedule cliff duration must split in exact periods"
+            )
+        );
+        createVestingSchedule(
+            joe,
+            block.timestamp,
+            365 * 24 * 3600 + 1,
+            4 * 365 * 24 * 3600,
+            365 * 2 * 3600,
+            365 * 24 * 3600,
+            true,
+            10_000e18
+        );
+        vm.stopPrank();
+    }
+
     function testCreateMultipleVestings() public {
         vm.startPrank(initAccount);
         vm.expectEmit(true, true, true, true);

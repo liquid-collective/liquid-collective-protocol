@@ -192,6 +192,10 @@ abstract contract ERC20VestableVotesUpgradeableV1 is Initializable, IVestingSche
             revert InvalidVestingScheduleParameter("Vesting schedule duration must split in exact periods");
         }
 
+        if (_cliffDuration % _period > 0) {
+            revert InvalidVestingScheduleParameter("Vesting schedule cliff duration must split in exact periods");
+        }
+
         if (_cliffDuration > _duration) {
             revert InvalidVestingScheduleParameter("Vesting schedule duration must be greater than the cliff duration");
         }
