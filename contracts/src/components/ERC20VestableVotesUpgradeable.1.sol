@@ -363,7 +363,9 @@ abstract contract ERC20VestableVotesUpgradeableV1 is Initializable, IVestingSche
             uint256 vestedAmount = _computeVestedAmount(_vestingSchedule, _time);
             uint256 releasedAmount = _computeVestedAmount(_vestingSchedule, _vestingSchedule.end) - balanceOf(_escrow);
             if (vestedAmount > releasedAmount) {
-                return vestedAmount - releasedAmount;
+                unchecked {
+                    return vestedAmount - releasedAmount;
+                }
             }
             return 0;
         }
