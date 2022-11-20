@@ -284,7 +284,7 @@ abstract contract ERC20VestableVotesUpgradeableV1 is Initializable, IVestingSche
         // set schedule end
         vestingSchedule.end = uint64(_end);
 
-        emit RevokedVestingSchedule(_index, returnedAmount);
+        emit RevokedVestingSchedule(_index, returnedAmount, _end);
 
         return returnedAmount;
     }
@@ -337,7 +337,7 @@ abstract contract ERC20VestableVotesUpgradeableV1 is Initializable, IVestingSche
         address oldDelegatee = delegates(escrow);
         _delegate(escrow, _delegatee);
 
-        emit DelegatedVestingEscrow(_index, oldDelegatee, _delegatee);
+        emit DelegatedVestingEscrow(_index, oldDelegatee, _delegatee, vestingSchedule.beneficiary);
 
         return true;
     }

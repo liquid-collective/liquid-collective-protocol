@@ -22,13 +22,17 @@ interface IVestingScheduleManagerV1 {
     /// @notice Vesting schedule has been revoked
     /// @param index Vesting schedule index
     /// @param returnedAmount Amount of tokens returned to the creator
-    event RevokedVestingSchedule(uint256 index, uint256 returnedAmount);
+    /// @param newEnd New end timestamp after revoke action
+    event RevokedVestingSchedule(uint256 index, uint256 returnedAmount, uint256 newEnd);
 
     /// @notice Vesting escrow has been delegated
     /// @param index Vesting schedule index
     /// @param oldDelegatee old delegatee
     /// @param newDelegatee new delegatee
-    event DelegatedVestingEscrow(uint256 index, address indexed oldDelegatee, address indexed newDelegatee);
+    /// @param beneficiary vesting schedule beneficiary
+    event DelegatedVestingEscrow(
+        uint256 index, address indexed oldDelegatee, address indexed newDelegatee, address indexed beneficiary
+    );
 
     /// @notice Vesting schedule creator has unsufficient balance to create vesting schedule
     error UnsufficientVestingScheduleCreatorBalance();

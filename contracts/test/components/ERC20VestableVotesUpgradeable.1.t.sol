@@ -630,7 +630,7 @@ contract ERC20VestableVotesUpgradeableV1Tests is Test {
         vm.stopPrank();
     }
 
-    event RevokedVestingSchedule(uint256 index, uint256 returnedAmount);
+    event RevokedVestingSchedule(uint256 index, uint256 returnedAmount, uint256 newEnd);
 
     function testRevokeBeforeCliff() public {
         vm.warp(0);
@@ -645,7 +645,7 @@ contract ERC20VestableVotesUpgradeableV1Tests is Test {
 
         vm.startPrank(initAccount);
         vm.expectEmit(true, true, true, true);
-        emit RevokedVestingSchedule(0, 10_000e18);
+        emit RevokedVestingSchedule(0, 10_000e18, 365 * 24 * 3600 - 1);
         tt.revokeVestingSchedule(0, 365 * 24 * 3600 - 1);
         vm.stopPrank();
 
@@ -671,7 +671,7 @@ contract ERC20VestableVotesUpgradeableV1Tests is Test {
 
         vm.startPrank(initAccount);
         vm.expectEmit(true, true, true, true);
-        emit RevokedVestingSchedule(0, 7_500e18);
+        emit RevokedVestingSchedule(0, 7_500e18, 365 * 24 * 3600);
         tt.revokeVestingSchedule(0, 365 * 24 * 3600);
         vm.stopPrank();
 
@@ -697,7 +697,7 @@ contract ERC20VestableVotesUpgradeableV1Tests is Test {
 
         vm.startPrank(initAccount);
         vm.expectEmit(true, true, true, true);
-        emit RevokedVestingSchedule(0, 0);
+        emit RevokedVestingSchedule(0, 0, 4 * 365 * 24 * 3600);
         tt.revokeVestingSchedule(0, 4 * 365 * 24 * 3600);
         vm.stopPrank();
 
@@ -724,7 +724,7 @@ contract ERC20VestableVotesUpgradeableV1Tests is Test {
 
         vm.startPrank(initAccount);
         vm.expectEmit(true, true, true, true);
-        emit RevokedVestingSchedule(0, 5_000e18);
+        emit RevokedVestingSchedule(0, 5_000e18, block.timestamp);
         tt.revokeVestingSchedule(0, 0);
         vm.stopPrank();
 
@@ -859,7 +859,9 @@ contract ERC20VestableVotesUpgradeableV1Tests is Test {
         assert(tt.balanceOf(joe) == 5_000e18);
     }
 
-    event DelegatedVestingEscrow(uint256 index, address indexed oldDelegatee, address indexed newDelegatee);
+    event DelegatedVestingEscrow(
+        uint256 index, address indexed oldDelegatee, address indexed newDelegatee, address indexed beneficiary
+    );
 
     function testDelegateVestingEscrow() public {
         vm.startPrank(initAccount);
@@ -882,7 +884,7 @@ contract ERC20VestableVotesUpgradeableV1Tests is Test {
 
         vm.startPrank(joe);
         vm.expectEmit(true, true, true, true);
-        emit DelegatedVestingEscrow(0, joe, bob);
+        emit DelegatedVestingEscrow(0, joe, bob, joe);
         tt.delegateVestingEscrow(0, bob);
         vm.stopPrank();
 
