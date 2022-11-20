@@ -3,10 +3,10 @@ pragma solidity 0.8.10;
 
 import "../../state/tlc/VestingSchedules.sol";
 
-/// @title Vesting Schedules Interface (v1)
+/// @title ERC20 Vestable Votes Upgradeable Interface(v1)
 /// @author Alluvial
 /// @notice This interface exposes methods to manage vestings
-interface IVestingScheduleManagerV1 {
+interface IERC20VestableVotesUpgradeableV1 {
     /// @notice A new vesting schedule has been created
     /// @param index Vesting schedule index
     /// @param creator Creator of the vesting schedule

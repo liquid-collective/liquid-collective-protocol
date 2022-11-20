@@ -4,7 +4,7 @@ pragma solidity 0.8.10;
 import "openzeppelin-contracts-upgradeable/contracts/token/ERC20/extensions/ERC20VotesUpgradeable.sol";
 import "openzeppelin-contracts-upgradeable/contracts/proxy/utils/Initializable.sol";
 
-import "../interfaces/components/IVestingScheduleManager.1.sol";
+import "../interfaces/components/IERC20VestableVotesUpgradeable.1.sol";
 
 import "../state/tlc/VestingSchedules.sol";
 
@@ -59,7 +59,11 @@ import "../libraries/LibUint256.sol";
 /// @notice Example: Joe gets a vesting starting on Jan 1st 2022 with duration of 1 year and a lock period of 2 years.
 /// @notice On Jan 1st 2023, Joe will have all tokens vested but can not yet release it due to the lock period.
 /// @notice On Jan 1st 2024, lock period is over and Joe can release all tokens.
-abstract contract ERC20VestableVotesUpgradeableV1 is Initializable, IVestingScheduleManagerV1, ERC20VotesUpgradeable {
+abstract contract ERC20VestableVotesUpgradeableV1 is
+    Initializable,
+    IERC20VestableVotesUpgradeableV1,
+    ERC20VotesUpgradeable
+{
     // internal used to compute the address of the escrow
     bytes32 internal constant ESCROW = bytes32(uint256(keccak256("escrow")) - 1);
 
@@ -67,22 +71,22 @@ abstract contract ERC20VestableVotesUpgradeableV1 is Initializable, IVestingSche
 
     function __ERC20VestableVotes_init_unchained() internal onlyInitializing {}
 
-    /// @inheritdoc IVestingScheduleManagerV1
+    /// @inheritdoc IERC20VestableVotesUpgradeableV1
     function getVestingSchedule(uint256 _index) external view returns (VestingSchedules.VestingSchedule memory) {
         return VestingSchedules.get(_index);
     }
 
-    /// @inheritdoc IVestingScheduleManagerV1
+    /// @inheritdoc IERC20VestableVotesUpgradeableV1
     function getVestingScheduleCount() external view returns (uint256) {
         return VestingSchedules.getCount();
     }
 
-    /// @inheritdoc IVestingScheduleManagerV1
+    /// @inheritdoc IERC20VestableVotesUpgradeableV1
     function vestingEscrow(uint256 _index) external view returns (address) {
         return _deterministicVestingEscrow(_index);
     }
 
-    /// @inheritdoc IVestingScheduleManagerV1
+    /// @inheritdoc IERC20VestableVotesUpgradeableV1
     function computeVestingReleasableAmount(uint256 _index) external view returns (uint256) {
         VestingSchedules.VestingSchedule memory vestingSchedule = VestingSchedules.get(_index);
 
@@ -96,13 +100,13 @@ abstract contract ERC20VestableVotesUpgradeableV1 is Initializable, IVestingSche
         return _computeVestingReleasableAmount(vestingSchedule, escrow, time);
     }
 
-    /// @inheritdoc IVestingScheduleManagerV1
+    /// @inheritdoc IERC20VestableVotesUpgradeableV1
     function computeVestingVestedAmount(uint256 _index) external view returns (uint256) {
         VestingSchedules.VestingSchedule memory vestingSchedule = VestingSchedules.get(_index);
         return _computeVestedAmount(vestingSchedule, LibUint256.min(_getCurrentTime(), vestingSchedule.end));
     }
 
-    /// @inheritdoc IVestingScheduleManagerV1
+    /// @inheritdoc IERC20VestableVotesUpgradeableV1
     function createVestingSchedule(
         uint64 _start,
         uint32 _cliffDuration,
@@ -128,17 +132,17 @@ abstract contract ERC20VestableVotesUpgradeableV1 is Initializable, IVestingSche
         );
     }
 
-    /// @inheritdoc IVestingScheduleManagerV1
+    /// @inheritdoc IERC20VestableVotesUpgradeableV1
     function revokeVestingSchedule(uint256 _index, uint64 _end) external returns (uint256) {
         return _revokeVestingSchedule(_index, _end);
     }
 
-    /// @inheritdoc IVestingScheduleManagerV1
+    /// @inheritdoc IERC20VestableVotesUpgradeableV1
     function releaseVestingSchedule(uint256 _index) external returns (uint256) {
         return _releaseVestingSchedule(_index);
     }
 
-    /// @inheritdoc IVestingScheduleManagerV1
+    /// @inheritdoc IERC20VestableVotesUpgradeableV1
     function delegateVestingEscrow(uint256 _index, address _delegatee) external returns (bool) {
         return _delegateVestingEscrow(_index, _delegatee);
     }
