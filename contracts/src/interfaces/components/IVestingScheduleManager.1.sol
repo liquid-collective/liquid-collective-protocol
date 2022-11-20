@@ -112,6 +112,8 @@ interface IVestingScheduleManagerV1 {
     function revokeVestingSchedule(uint256 _index, uint64 _end) external returns (uint256 returnedAmount);
 
     /// @notice Release vesting schedule
+    /// @notice When tokens are released from the escrow, the delegated address of the escrow will see its voting power decrease.
+    /// @notice The beneficiary has to make sure its delegation parameters are set properly to be able to use/delegate the voting power of its balance.
     /// @param _index Index of the vesting schedule to release
     /// @return released amount
     function releaseVestingSchedule(uint256 _index) external returns (uint256);
