@@ -9,6 +9,7 @@ import "../interfaces/components/IVestingScheduleManager.1.sol";
 import "../state/tlc/VestingSchedules.sol";
 
 import "../libraries/LibSanitize.sol";
+import "../libraries/LibUint256.sol";
 
 /// @title ERC20VestableVotesUpgradeableV1
 /// @author Alluvial
@@ -99,7 +100,7 @@ abstract contract ERC20VestableVotesUpgradeableV1 is Initializable, IVestingSche
     /// @inheritdoc IVestingScheduleManagerV1
     function computeVestingVestedAmount(uint256 _index) external view returns (uint256) {
         VestingSchedules.VestingSchedule memory vestingSchedule = VestingSchedules.get(_index);
-        return _computeVestedAmount(vestingSchedule, _getCurrentTime());
+        return _computeVestedAmount(vestingSchedule, LibUint256.min(_getCurrentTime(), vestingSchedule.end));
     }
 
     /// @inheritdoc IVestingScheduleManagerV1
