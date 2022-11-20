@@ -78,6 +78,8 @@ interface IVestingScheduleManagerV1 {
     /// @notice There may delay between the time a user should start vesting tokens and the time the vesting schedule is actually created on the contract.
     /// @notice Typically a user joins the Liquid Collective but some weeks pass before the user gets all legal agreements in place and signed for the
     /// @notice token grant emission to happen. In this case, the vesting schedule created for the token grant would start on the join date which is in the past.
+    /// @dev As vesting schedules can be created in the past, this means that you should be careful when creating a vesting schedule and what duration parameters
+    /// @dev you use as this contract would allow creating a vesting schedule in the past and even a vesting schedule that has already ended.
     /// @param _beneficiary address of the beneficiary of the tokens
     /// @param _start start time of the vesting
     /// @param _cliffDuration duration to vesting cliff (in seconds)
