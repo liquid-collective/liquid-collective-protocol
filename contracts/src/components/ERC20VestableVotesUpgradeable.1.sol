@@ -196,6 +196,10 @@ abstract contract ERC20VestableVotesUpgradeableV1 is Initializable, IVestingSche
             revert InvalidVestingScheduleParameter("Vesting schedule duration must be greater than the cliff duration");
         }
 
+        if ((_amount * _period) / _duration == 0) {
+            revert InvalidVestingScheduleParameter("Vesting schedule amount too low for duration and period");
+        }
+
         // if input start time is 0 then default to the current block time
         if (_start == 0) {
             _start = uint64(block.timestamp);

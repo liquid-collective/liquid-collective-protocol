@@ -282,6 +282,17 @@ contract ERC20VestableVotesUpgradeableV1Tests is Test {
         vm.stopPrank();
     }
 
+    function testCreateInvalidVestingAmountTooLowForPeriodAndDuration() public {
+        vm.startPrank(initAccount);
+        vm.expectRevert(
+            abi.encodeWithSignature(
+                "InvalidVestingScheduleParameter(string)", "Vesting schedule amount too low for duration and period"
+            )
+        );
+        createVestingSchedule(joe, block.timestamp, 0, 365, 1, 0, true, 364);
+        vm.stopPrank();
+    }
+
     function testCreateInvalidVestingZeroDuration() public {
         vm.startPrank(initAccount);
         vm.expectRevert(
