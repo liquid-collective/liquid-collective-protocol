@@ -52,6 +52,9 @@ interface IVestingScheduleManagerV1 {
     error ZeroReleasableAmount();
 
     /// @notice Get vesting schedule
+    /// @dev The vesting schedule structure represents a static configuration used to compute the desired
+    /// @dev vesting details of a beneficiary at all times. The values won't change even after tokens are released.
+    /// @dev The only dynamic field of the structure is end, and is updated whenever a vesting schedule is revoked
     /// @param _index Index of the vesting schedule
     function getVestingSchedule(uint256 _index) external view returns (VestingSchedules.VestingSchedule memory);
 
