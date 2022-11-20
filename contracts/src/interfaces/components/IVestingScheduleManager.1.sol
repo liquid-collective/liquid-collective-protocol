@@ -87,7 +87,7 @@ interface IVestingScheduleManagerV1 {
     /// @param _start start time of the vesting
     /// @param _cliffDuration duration to vesting cliff (in seconds)
     /// @param _duration total vesting schedule duration after which all tokens are vested (in seconds)
-    /// @param _period duration of a period after which new tokens unlock (in seconds)
+    /// @param _periodDuration duration of a period after which new tokens unlock (in seconds)
     /// @param _lockDuration duration during which tokens are locked (in seconds)
     /// @param _revocable whether the vesting schedule is revocable or not
     /// @param _amount amount of token attributed by the vesting schedule
@@ -97,7 +97,7 @@ interface IVestingScheduleManagerV1 {
         uint64 _start,
         uint32 _cliffDuration,
         uint32 _duration,
-        uint32 _period,
+        uint32 _periodDuration,
         uint32 _lockDuration,
         bool _revocable,
         uint256 _amount,

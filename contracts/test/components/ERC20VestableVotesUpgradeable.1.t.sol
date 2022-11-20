@@ -216,7 +216,7 @@ contract ERC20VestableVotesUpgradeableV1Tests is Test {
         assert(vestingSchedule.cliffDuration == 365 * 24 * 3600);
         assert(vestingSchedule.lockDuration == 365 * 24 * 3600);
         assert(vestingSchedule.duration == 4 * 365 * 24 * 3600);
-        assert(vestingSchedule.period == 365 * 2 * 3600);
+        assert(vestingSchedule.periodDuration == 365 * 2 * 3600);
         assert(vestingSchedule.amount == 10_000e18);
         assert(vestingSchedule.creator == initAccount);
         assert(vestingSchedule.beneficiary == joe);
@@ -251,7 +251,7 @@ contract ERC20VestableVotesUpgradeableV1Tests is Test {
         assert(vestingSchedule.start == block.timestamp);
         assert(vestingSchedule.lockDuration == 365 * 24 * 3600);
         assert(vestingSchedule.duration == 4 * 365 * 24 * 3600);
-        assert(vestingSchedule.period == 365 * 2 * 3600);
+        assert(vestingSchedule.periodDuration == 365 * 2 * 3600);
         assert(vestingSchedule.amount == 10_000e18);
         assert(vestingSchedule.creator == initAccount);
         assert(vestingSchedule.beneficiary == joe);

@@ -18,10 +18,10 @@ library VestingSchedules {
         uint32 cliffDuration;
         // duration before tokens gets unlocked
         uint32 lockDuration;
-        // duration of the vesting period in seconds
+        // duration of the entire vesting (sum of all vesting period durations)
         uint32 duration;
-        // duration of a vesting period in seconds
-        uint32 period;
+        // duration of a single period of vesting
+        uint32 periodDuration;
         // amount of tokens granted by the vesting schedule
         uint256 amount;
         // creator of the token vesting

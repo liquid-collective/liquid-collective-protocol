@@ -108,7 +108,7 @@ abstract contract ERC20VestableVotesUpgradeableV1 is Initializable, IVestingSche
         uint64 _start,
         uint32 _cliffDuration,
         uint32 _duration,
-        uint32 _period,
+        uint32 _periodDuration,
         uint32 _lockDuration,
         bool _revocable,
         uint256 _amount,
@@ -122,7 +122,7 @@ abstract contract ERC20VestableVotesUpgradeableV1 is Initializable, IVestingSche
             _start,
             _cliffDuration,
             _duration,
-            _period,
+            _periodDuration,
             _lockDuration,
             _revocable,
             _amount
@@ -151,7 +151,7 @@ abstract contract ERC20VestableVotesUpgradeableV1 is Initializable, IVestingSche
     /// @param _start start time of the vesting
     /// @param _cliffDuration duration to vesting cliff (in seconds)
     /// @param _duration total vesting schedule duration after which all tokens are vested (in seconds)
-    /// @param _period duration of a period after which new tokens unlock (in seconds)
+    /// @param _periodDuration duration of a period after which new tokens unlock (in seconds)
     /// @param _lockDuration duration during which tokens are locked (in seconds)
     /// @param _revocable whether the vesting schedule is revocable or not
     /// @param _amount amount of token attributed by the vesting schedule
@@ -163,7 +163,7 @@ abstract contract ERC20VestableVotesUpgradeableV1 is Initializable, IVestingSche
         uint64 _start,
         uint32 _cliffDuration,
         uint32 _duration,
-        uint32 _period,
+        uint32 _periodDuration,
         uint32 _lockDuration,
         bool _revocable,
         uint256 _amount
@@ -185,15 +185,15 @@ abstract contract ERC20VestableVotesUpgradeableV1 is Initializable, IVestingSche
             revert InvalidVestingScheduleParameter("Vesting schedule amount must be > 0");
         }
 
-        if (_period == 0) {
+        if (_periodDuration == 0) {
             revert InvalidVestingScheduleParameter("Vesting schedule period must be > 0");
         }
 
-        if (_duration % _period > 0) {
+        if (_duration % _periodDuration > 0) {
             revert InvalidVestingScheduleParameter("Vesting schedule duration must split in exact periods");
         }
 
-        if (_cliffDuration % _period > 0) {
+        if (_cliffDuration % _periodDuration > 0) {
             revert InvalidVestingScheduleParameter("Vesting schedule cliff duration must split in exact periods");
         }
 
@@ -203,7 +203,7 @@ abstract contract ERC20VestableVotesUpgradeableV1 is Initializable, IVestingSche
             );
         }
 
-        if ((_amount * _period) / _duration == 0) {
+        if ((_amount * _periodDuration) / _duration == 0) {
             revert InvalidVestingScheduleParameter("Vesting schedule amount too low for duration and period");
         }
 
@@ -219,7 +219,7 @@ abstract contract ERC20VestableVotesUpgradeableV1 is Initializable, IVestingSche
             lockDuration: _lockDuration,
             cliffDuration: _cliffDuration,
             duration: _duration,
-            period: _period,
+            periodDuration: _periodDuration,
             amount: _amount,
             creator: _creator,
             beneficiary: _beneficiary,
@@ -391,7 +391,7 @@ abstract contract ERC20VestableVotesUpgradeableV1 is Initializable, IVestingSche
             uint256 timeFromStart = _time - _vestingSchedule.start;
 
             // compute tokens vested for completly elapsed periods
-            uint256 vestedDuration = timeFromStart - timeFromStart % _vestingSchedule.period;
+            uint256 vestedDuration = timeFromStart - timeFromStart % _vestingSchedule.periodDuration;
 
             return (vestedDuration * _vestingSchedule.amount) / _vestingSchedule.duration;
         }
