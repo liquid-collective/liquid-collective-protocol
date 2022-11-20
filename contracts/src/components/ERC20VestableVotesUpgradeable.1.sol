@@ -35,15 +35,14 @@ import "../libraries/LibUint256.sol";
 /// @notice   - the schedule beneficiary can delegate escrow voting power to any account by calling {delegateVestingEscrow}
 /// @notice
 /// @notice Vesting schedule attributes are
-/// @notice   - start date: date at which vesting schedules starts
-/// @notice   - cliff duration: duration from start to vesting cliff when first tokens are vested (e.g 1 year)
-/// @notice   - total duration: duration from start to vesting end when all tokens are vested (e.g 4 years)
-/// @notice   - period duration: split the vesting in period. After cliff, new tokens get vested at the end of each period (e.g 1 month)
-/// @notice   - lock duration: duration before which no tokens can be released to beneficiary even if tokens
-/// @notice     have been vested already (the lock period supersedes the cliff)
-/// @notice   - amount: the total amount of tokens to be vested
-/// @notice   - beneficiary: the beneficiary of the vested tokens
-/// @notice   - revocable: a boolean indicating whether the vesting can be revoked by the creator
+/// @notice   - start : start time of the vesting period
+/// @notice   - cliff duration: duration before which first tokens gets ownable
+/// @notice   - total duration: duration of the entire vesting (sum of all vesting period durations)
+/// @notice   - period duration: duration of a single period of vesting
+/// @notice   - lock duration: duration before tokens gets unlocked. can exceed the duration of the vesting chedule
+/// @notice   - amount: amount of tokens granted by the vesting schedule
+/// @notice   - beneficiary: beneficiary of tokens after they are releaseVestingScheduled
+/// @notice   - revocable: whether the schedule can be revoked
 /// @notice
 /// @notice Vesting schedule
 /// @notice   - if currentTime < cliff: vestedToken = 0
@@ -145,16 +144,16 @@ abstract contract ERC20VestableVotesUpgradeableV1 is Initializable, IVestingSche
     }
 
     /// @notice Creates a new vesting schedule
-    /// @param _creator address of the creator that transfer the tokens
-    /// @param _beneficiary address of the beneficiary of the tokens
+    /// @param _creator creator of the token vesting
+    /// @param _beneficiary beneficiary of tokens after they are releaseVestingScheduled
     /// @param _delegatee address of the delegate escrowed tokens votes to (if address(0) then it defaults to the beneficiary)
-    /// @param _start start time of the vesting
-    /// @param _cliffDuration duration to vesting cliff (in seconds)
-    /// @param _duration total vesting schedule duration after which all tokens are vested (in seconds)
-    /// @param _periodDuration duration of a period after which new tokens unlock (in seconds)
-    /// @param _lockDuration duration during which tokens are locked (in seconds)
-    /// @param _revocable whether the vesting schedule is revocable or not
-    /// @param _amount amount of token attributed by the vesting schedule
+    /// @param _start start time of the vesting period
+    /// @param _cliffDuration duration before which first tokens gets ownable
+    /// @param _duration duration of the entire vesting (sum of all vesting period durations)
+    /// @param _periodDuration duration of a single period of vesting
+    /// @param _lockDuration duration before tokens gets unlocked. can exceed the duration of the vesting chedule
+    /// @param _revocable whether the schedule can be revoked
+    /// @param _amount amount of tokens granted by the vesting schedule
     /// @return index of the created vesting schedule
     function _createVestingSchedule(
         address _creator,
@@ -324,6 +323,7 @@ abstract contract ERC20VestableVotesUpgradeableV1 is Initializable, IVestingSche
     /// @notice Delegate vesting escrowed tokens
     /// @param _index index of the vesting schedule
     /// @param _delegatee address to delegate the token to
+    /// @return True on success
     function _delegateVestingEscrow(uint256 _index, address _delegatee) internal returns (bool) {
         VestingSchedules.VestingSchedule storage vestingSchedule = VestingSchedules.get(_index);
 
@@ -344,6 +344,7 @@ abstract contract ERC20VestableVotesUpgradeableV1 is Initializable, IVestingSche
 
     /// @notice Internal utility to compute the unique escrow deterministic address
     /// @param _index index of the vesting schedule
+    /// @return escrow The deterministic escrow address for the vesting schedule index
     function _deterministicVestingEscrow(uint256 _index) internal view returns (address escrow) {
         bytes32 hash = keccak256(abi.encodePacked(address(this), ESCROW, _index));
         return address(uint160(uint256(hash)));
@@ -400,6 +401,7 @@ abstract contract ERC20VestableVotesUpgradeableV1 is Initializable, IVestingSche
     }
 
     /// @notice Returns current time
+    /// @return The current time
     function _getCurrentTime() internal view virtual returns (uint256) {
         return block.timestamp;
     }

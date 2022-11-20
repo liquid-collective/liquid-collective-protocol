@@ -409,6 +409,7 @@ contract OracleV1 is IOracleV1, Initializable, Administrable {
     /// @dev then there is nothing River can do to prevent it.
     /// @dev These extra funds are:
     /// @dev - the execution layer fees
+    /// @dev - the coverage funds
     /// @param _epochId Id of the epoch
     /// @param _totalBalance Total validator balance
     /// @param _validatorCount Total validator count

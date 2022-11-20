@@ -49,7 +49,7 @@ interface IVestingScheduleManagerV1 {
     /// @notice The vesting schedule is locked
     error VestingScheduleIsLocked();
 
-    /// @notice Attempt to revoke at a
+    /// @notice Attempt to revoke a vesting schedule with an invalid end parameter
     error InvalidRevokedVestingScheduleEnd();
 
     /// @notice No token to release
@@ -60,6 +60,7 @@ interface IVestingScheduleManagerV1 {
     /// @dev vesting details of a beneficiary at all times. The values won't change even after tokens are released.
     /// @dev The only dynamic field of the structure is end, and is updated whenever a vesting schedule is revoked
     /// @param _index Index of the vesting schedule
+    /// @return The vesting schedule structure
     function getVestingSchedule(uint256 _index) external view returns (VestingSchedules.VestingSchedule memory);
 
     /// @notice Get count of vesting schedules
@@ -87,7 +88,6 @@ interface IVestingScheduleManagerV1 {
     /// @notice token grant emission to happen. In this case, the vesting schedule created for the token grant would start on the join date which is in the past.
     /// @dev As vesting schedules can be created in the past, this means that you should be careful when creating a vesting schedule and what duration parameters
     /// @dev you use as this contract would allow creating a vesting schedule in the past and even a vesting schedule that has already ended.
-    /// @param _beneficiary address of the beneficiary of the tokens
     /// @param _start start time of the vesting
     /// @param _cliffDuration duration to vesting cliff (in seconds)
     /// @param _duration total vesting schedule duration after which all tokens are vested (in seconds)
@@ -95,6 +95,7 @@ interface IVestingScheduleManagerV1 {
     /// @param _lockDuration duration during which tokens are locked (in seconds)
     /// @param _revocable whether the vesting schedule is revocable or not
     /// @param _amount amount of token attributed by the vesting schedule
+    /// @param _beneficiary address of the beneficiary of the tokens
     /// @param _delegatee address to delegate escrow voting power to
     /// @return index of the created vesting schedule
     function createVestingSchedule(
@@ -125,5 +126,6 @@ interface IVestingScheduleManagerV1 {
     /// @notice Delegate vesting escrowed tokens
     /// @param _index index of the vesting schedule
     /// @param _delegatee address to delegate the token to
+    /// @return True on success
     function delegateVestingEscrow(uint256 _index, address _delegatee) external returns (bool);
 }
