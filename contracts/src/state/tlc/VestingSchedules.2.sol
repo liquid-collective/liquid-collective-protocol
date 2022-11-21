@@ -1,12 +1,14 @@
 //SPDX-License-Identifier: BUSL-1.1
 pragma solidity 0.8.10;
 
+import "./VestingSchedules.1.sol";
+
 /// @title VestingSchedulesV2 Storage
 /// @notice Utility to manage VestingSchedulesV2 in storage
 library VestingSchedulesV2 {
-    /// @notice Storage slot of the Vesting Schedules
+    /// @notice Storage slot of the Vesting Schedules (note the slot is different from v1)
     bytes32 internal constant VESTING_SCHEDULES_SLOT =
-        bytes32(uint256(keccak256("erc20VestableVotes.state.schedules")) - 1);
+        bytes32(uint256(keccak256("erc20VestableVotes.state.v2.schedules")) - 1);
 
     struct VestingSchedule {
         // start time of the vesting period
@@ -81,7 +83,7 @@ library VestingSchedulesV2 {
 
     /// @notice Add a new vesting schedule in storage
     /// @param _newSchedule new vesting schedule to create
-    /// @return The size of the operator array after the operation
+    /// @return The size of the vesting schedule array after the operation
     function push(VestingSchedule memory _newSchedule) internal returns (uint256) {
         bytes32 slot = VESTING_SCHEDULES_SLOT;
 
@@ -95,5 +97,42 @@ library VestingSchedulesV2 {
         r.value.push(_newSchedule);
 
         return r.value.length;
+    }
+
+    /// @notice Migrate a VestingSchedule from v1 to v2
+    /// @notice Takes a VestingSchedule in v1 format in stores it in v2 format
+    /// @param _index of the schedule in v1 to be migrated
+    /// @return The index of the created schedule in v2 format
+    function migrateVestingScheduleFromV1(uint256 _index, uint256 releasedAmount) internal returns (uint256) {
+        VestingSchedulesV1.VestingSchedule memory scheduleV1 = VestingSchedulesV1.get(_index);
+        VestingSchedulesV2.VestingSchedule memory scheduleV2 = VestingSchedulesV2.VestingSchedule({
+            start: scheduleV1.start,
+            end: scheduleV1.end,
+            lockDuration: scheduleV1.lockDuration,
+            cliffDuration: scheduleV1.cliffDuration,
+            duration: scheduleV1.duration,
+            period: scheduleV1.period,
+            amount: scheduleV1.amount,
+            creator: scheduleV1.creator,
+            beneficiary: scheduleV1.beneficiary,
+            revocable: scheduleV1.revocable,
+            releasedAmount: releasedAmount
+        });
+
+        return push(scheduleV2) - 1;
+    } 
+
+    /// @notice Default migration from v1
+    /// @notice Migrate all vesting schedule from v1 to v2 assuming releasedAmount = 0 for all of it
+    /// @return Return the count of vesting schedule in v2
+    function migrateFromV1Default() internal returns (uint256) {
+        uint256 count = VestingSchedulesV1.getCount();
+        for (uint256 idx = 0; idx < count;) {
+            migrateVestingScheduleFromV1(idx, 0);
+            unchecked {
+                ++idx;
+            }
+        }
+        return VestingSchedulesV2.getCount();
     }
 }

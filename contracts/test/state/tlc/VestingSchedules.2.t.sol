@@ -44,6 +44,14 @@ contract VestingSchedulesMigrationTest is Test {
         return true;
     }
 
+    function _migrate()
+        internal
+        returns (uint256)
+    {
+        return VestingSchedulesV2.migrateFromV1Default();
+    }
+
+
     function testVestingScheduleV1ToV2Compatibility(
         uint64 _start,
         uint64 _end,
@@ -55,7 +63,7 @@ contract VestingSchedulesMigrationTest is Test {
         uint256 _amount,
         uint256 _releasedAmount
     ) public {
-        // #1. Create V1 schedule
+        // #1. Create two V1 schedule
         VestingSchedulesV1.VestingSchedule memory vestingScheduleV1 = VestingSchedulesV1.VestingSchedule({
             start: _start,
             end: _end,
@@ -70,23 +78,35 @@ contract VestingSchedulesMigrationTest is Test {
         });
 
         vm.startPrank(bob);
-        uint256 index = _createV1VestingSchedule(vestingScheduleV1);
+        _createV1VestingSchedule(vestingScheduleV1);
+        _createV1VestingSchedule(vestingScheduleV1);
         vm.stopPrank();
 
-        // #2. Get it as a V2 schedule and verifies attributes
-        VestingSchedulesV2.VestingSchedule memory vestingScheduleV2 = VestingSchedulesV2.get(index);
-        assert(vestingScheduleV2.start == vestingScheduleV1.start);
-        assert(vestingScheduleV2.end == vestingScheduleV1.end);
-        assert(vestingScheduleV2.cliffDuration == vestingScheduleV1.cliffDuration);
-        assert(vestingScheduleV2.lockDuration == vestingScheduleV1.lockDuration);
-        assert(vestingScheduleV2.period == vestingScheduleV1.period);
-        assert(vestingScheduleV2.amount == vestingScheduleV1.amount);
-        assert(vestingScheduleV2.creator == vestingScheduleV1.creator);
-        assert(vestingScheduleV2.beneficiary == vestingScheduleV1.beneficiary);
-        assert(vestingScheduleV2.revocable == vestingScheduleV1.revocable);
-        assert(vestingScheduleV2.releasedAmount == 0);
+        // #2. Migrate from v1 to v2
+        vm.startPrank(bob);
+        uint256 count = _migrate();
+        vm.stopPrank();
 
-        // #3. Update it as a V2 schedule
+        assert(count == 2);
+
+        // #3. Get v2 schedules and check validity of inputs
+        for (uint256 idx = 0; idx < count;) {
+            VestingSchedulesV2.VestingSchedule memory vestingScheduleV2 = VestingSchedulesV2.get(0);
+            assert(vestingScheduleV2.start == vestingScheduleV1.start);
+            assert(vestingScheduleV2.end == vestingScheduleV1.end);
+            assert(vestingScheduleV2.cliffDuration == vestingScheduleV1.cliffDuration);
+            assert(vestingScheduleV2.lockDuration == vestingScheduleV1.lockDuration);
+            assert(vestingScheduleV2.period == vestingScheduleV1.period);
+            assert(vestingScheduleV2.amount == vestingScheduleV1.amount);
+            assert(vestingScheduleV2.creator == vestingScheduleV1.creator);
+            assert(vestingScheduleV2.beneficiary == vestingScheduleV1.beneficiary);
+            assert(vestingScheduleV2.revocable == vestingScheduleV1.revocable);
+            assert(vestingScheduleV2.releasedAmount == 0);
+            unchecked {
+                ++idx;
+            }
+        }
+
         // Arguments are mixed on purpose to increase fuzzing variability
         VestingSchedulesV2.VestingSchedule memory newVestingScheduleV2 = VestingSchedulesV2.VestingSchedule({
             start: _end,
@@ -102,21 +122,32 @@ contract VestingSchedulesMigrationTest is Test {
             releasedAmount: _amount
         });
 
-        vm.startPrank(bob);
-        assert(_updateV2VestingSchedule(index, newVestingScheduleV2));
-        vm.stopPrank();
+        // #3. Update V2 schedule
+        for (uint256 idx = 0; idx < count;) {
+            vm.startPrank(bob);
+            assert(_updateV2VestingSchedule(idx, newVestingScheduleV2));
+            vm.stopPrank();
+            unchecked {
+                ++idx;
+            }
+        }
 
-        // #4. Get it as a V2 schedule and verifies attributes have been updated properly
-        vestingScheduleV2 = VestingSchedulesV2.get(index);
-        assert(vestingScheduleV2.start == newVestingScheduleV2.start);
-        assert(vestingScheduleV2.end == newVestingScheduleV2.end);
-        assert(vestingScheduleV2.cliffDuration == newVestingScheduleV2.cliffDuration);
-        assert(vestingScheduleV2.lockDuration == newVestingScheduleV2.lockDuration);
-        assert(vestingScheduleV2.period == newVestingScheduleV2.period);
-        assert(vestingScheduleV2.amount == newVestingScheduleV2.amount);
-        assert(vestingScheduleV2.creator == newVestingScheduleV2.creator);
-        assert(vestingScheduleV2.beneficiary == newVestingScheduleV2.beneficiary);
-        assert(vestingScheduleV2.revocable == newVestingScheduleV2.revocable);
-        assert(vestingScheduleV2.releasedAmount == newVestingScheduleV2.releasedAmount);
+        // #4. Verify V2 schedule have been updated properly
+        for (uint256 idx = 0; idx < count;) {
+            VestingSchedulesV2.VestingSchedule memory vestingScheduleV2 = VestingSchedulesV2.get(idx);
+            assert(vestingScheduleV2.start == newVestingScheduleV2.start);
+            assert(vestingScheduleV2.end == newVestingScheduleV2.end);
+            assert(vestingScheduleV2.cliffDuration == newVestingScheduleV2.cliffDuration);
+            assert(vestingScheduleV2.lockDuration == newVestingScheduleV2.lockDuration);
+            assert(vestingScheduleV2.period == newVestingScheduleV2.period);
+            assert(vestingScheduleV2.amount == newVestingScheduleV2.amount);
+            assert(vestingScheduleV2.creator == newVestingScheduleV2.creator);
+            assert(vestingScheduleV2.beneficiary == newVestingScheduleV2.beneficiary);
+            assert(vestingScheduleV2.revocable == newVestingScheduleV2.revocable);
+            assert(vestingScheduleV2.releasedAmount == newVestingScheduleV2.releasedAmount);
+            unchecked {
+                ++idx;
+            }
+        }
     }
 }
