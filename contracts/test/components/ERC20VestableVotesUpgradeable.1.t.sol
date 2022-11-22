@@ -18,6 +18,114 @@ contract TestToken is ERC20VestableVotesUpgradeableV1 {
         __ERC20_init(NAME, SYMBOL);
         _mint(_account, INITIAL_SUPPLY);
     }
+
+    function migrateVestingSchedules() external reinitializer(2) {
+        migrateVestingSchedulesFromV1ToV2();
+    }
+
+    function debugPushV1VestingSchedule(
+        uint64 start,
+        uint64 end,
+        uint32 cliffDuration,
+        uint32 lockDuration,
+        uint32 duration,
+        uint32 periodDuration,
+        uint256 amount,
+        address creator,
+        address beneficiary,
+        bool revocable
+    ) external {
+        VestingSchedulesV1.push(
+            VestingSchedulesV1.VestingSchedule({
+                start: start,
+                end: end,
+                cliffDuration: cliffDuration,
+                lockDuration: lockDuration,
+                duration: duration,
+                periodDuration: periodDuration,
+                amount: amount,
+                creator: creator,
+                beneficiary: beneficiary,
+                revocable: revocable
+            })
+        );
+        migrateVestingSchedulesFromV1ToV2();
+    }
+}
+
+contract ERC20VestableVotesUpgradeableV1ToV2Migration is Test {
+    TestToken internal tt;
+
+    address internal escrowImplem;
+    address internal initAccount;
+    address internal bob;
+    address internal joe;
+    address internal alice;
+
+    function setUp() public {
+        initAccount = makeAddr("init");
+        bob = makeAddr("bob");
+        joe = makeAddr("joe");
+        alice = makeAddr("alice");
+
+        tt = new TestToken();
+        tt.initTestTokenV1(initAccount);
+    }
+
+    function test_migrateTwice() external {
+        tt.migrateVestingSchedules();
+        vm.expectRevert("Initializable: contract is already initialized");
+        tt.migrateVestingSchedules();
+    }
+
+    function test_migrateAndInspectVestingSchedules(
+        uint64 start,
+        uint64 end,
+        uint32 cliffDuration,
+        uint32 lockDuration,
+        uint32 duration,
+        uint32 periodDuration,
+        uint256 amount,
+        address creator,
+        address beneficiary,
+        bool revocable
+    ) external {
+        tt.debugPushV1VestingSchedule(
+            start, end, cliffDuration, lockDuration, duration, periodDuration, amount, creator, beneficiary, revocable
+        );
+        tt.debugPushV1VestingSchedule(
+            start, end, cliffDuration, lockDuration, duration, periodDuration, amount, creator, beneficiary, revocable
+        );
+        tt.migrateVestingSchedules();
+        {
+            VestingSchedulesV2.VestingSchedule memory vs0 = tt.getVestingSchedule(0);
+            assertEq(vs0.start, start);
+            assertEq(vs0.end, end);
+            assertEq(vs0.cliffDuration, cliffDuration);
+            assertEq(vs0.lockDuration, lockDuration);
+            assertEq(vs0.duration, duration);
+            assertEq(vs0.periodDuration, periodDuration);
+            assertEq(vs0.amount, amount);
+            assertEq(vs0.creator, creator);
+            assertEq(vs0.beneficiary, beneficiary);
+            assertEq(vs0.revocable, revocable);
+            assertEq(vs0.releasedAmount, 0);
+        }
+        {
+            VestingSchedulesV2.VestingSchedule memory vs1 = tt.getVestingSchedule(1);
+            assertEq(vs1.start, start);
+            assertEq(vs1.end, end);
+            assertEq(vs1.cliffDuration, cliffDuration);
+            assertEq(vs1.lockDuration, lockDuration);
+            assertEq(vs1.duration, duration);
+            assertEq(vs1.periodDuration, periodDuration);
+            assertEq(vs1.amount, amount);
+            assertEq(vs1.creator, creator);
+            assertEq(vs1.beneficiary, beneficiary);
+            assertEq(vs1.revocable, revocable);
+            assertEq(vs1.releasedAmount, 0);
+        }
+    }
 }
 
 contract ERC20VestableVotesUpgradeableV1Tests is Test {
@@ -37,6 +145,7 @@ contract ERC20VestableVotesUpgradeableV1Tests is Test {
 
         tt = new TestToken();
         tt.initTestTokenV1(initAccount);
+        tt.migrateVestingSchedules();
     }
 
     function testTransfer() public {

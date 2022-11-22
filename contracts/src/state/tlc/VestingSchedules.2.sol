@@ -111,7 +111,7 @@ library VestingSchedulesV2 {
             lockDuration: scheduleV1.lockDuration,
             cliffDuration: scheduleV1.cliffDuration,
             duration: scheduleV1.duration,
-            period: scheduleV1.period,
+            periodDuration: scheduleV1.periodDuration,
             amount: scheduleV1.amount,
             creator: scheduleV1.creator,
             beneficiary: scheduleV1.beneficiary,
@@ -120,7 +120,7 @@ library VestingSchedulesV2 {
         });
 
         return push(scheduleV2) - 1;
-    } 
+    }
 
     /// @notice Default migration from v1
     /// @notice Migrate all vesting schedule from v1 to v2 assuming releasedAmount = 0 for all of it

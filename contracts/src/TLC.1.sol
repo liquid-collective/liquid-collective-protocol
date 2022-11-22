@@ -25,4 +25,9 @@ contract TLCV1 is ERC20VestableVotesUpgradeableV1, ITLCV1 {
         __ERC20_init(NAME, SYMBOL);
         _mint(_account, INITIAL_SUPPLY);
     }
+
+    /// @inheritdoc ITLCV1
+    function migrateVestingSchedules() external reinitializer(2) {
+        ERC20VestableVotesUpgradeableV1.migrateVestingSchedulesFromV1ToV2();
+    }
 }

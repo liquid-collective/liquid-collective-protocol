@@ -71,6 +71,12 @@ abstract contract ERC20VestableVotesUpgradeableV1 is
 
     function __ERC20VestableVotes_init_unchained() internal onlyInitializing {}
 
+    /// @notice This method migrates the state of the vesting schedules from V1 to V2
+    /// @dev This method should be used if deployment with the old version using V1 state models is upgraded
+    function migrateVestingSchedulesFromV1ToV2() internal {
+        VestingSchedulesV2.migrateFromV1Default();
+    }
+
     /// @inheritdoc IERC20VestableVotesUpgradeableV1
     function getVestingSchedule(uint256 _index) external view returns (VestingSchedulesV2.VestingSchedule memory) {
         return VestingSchedulesV2.get(_index);

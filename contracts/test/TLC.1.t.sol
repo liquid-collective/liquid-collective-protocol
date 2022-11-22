@@ -20,6 +20,7 @@ contract TLCTests is Test {
 
         tlc = new TLCV1();
         tlc.initTLCV1(initAccount);
+        tlc.migrateVestingSchedules();
     }
 
     function testName() public view {

@@ -33,7 +33,7 @@ contract VestingSchedulesMigrationTest is Test {
         vestingScheduleV2.lockDuration = newVestingSchedule.lockDuration;
         vestingScheduleV2.cliffDuration = newVestingSchedule.cliffDuration;
         vestingScheduleV2.duration = newVestingSchedule.duration;
-        vestingScheduleV2.period = newVestingSchedule.period;
+        vestingScheduleV2.periodDuration = newVestingSchedule.periodDuration;
         vestingScheduleV2.amount = newVestingSchedule.amount;
         vestingScheduleV2.creator = newVestingSchedule.creator;
         vestingScheduleV2.beneficiary = newVestingSchedule.beneficiary;
@@ -44,19 +44,15 @@ contract VestingSchedulesMigrationTest is Test {
         return true;
     }
 
-    function _migrate()
-        internal
-        returns (uint256)
-    {
+    function _migrate() internal returns (uint256) {
         return VestingSchedulesV2.migrateFromV1Default();
     }
-
 
     function testVestingScheduleV1ToV2Compatibility(
         uint64 _start,
         uint64 _end,
         uint32 _duration,
-        uint32 _period,
+        uint32 _periodDuration,
         uint32 _cliffDuration,
         uint32 _lockDuration,
         bool _revocable,
@@ -70,7 +66,7 @@ contract VestingSchedulesMigrationTest is Test {
             lockDuration: _lockDuration,
             cliffDuration: _cliffDuration,
             duration: _duration,
-            period: _period,
+            periodDuration: _periodDuration,
             amount: _amount,
             creator: bob,
             beneficiary: alice,
@@ -96,7 +92,7 @@ contract VestingSchedulesMigrationTest is Test {
             assert(vestingScheduleV2.end == vestingScheduleV1.end);
             assert(vestingScheduleV2.cliffDuration == vestingScheduleV1.cliffDuration);
             assert(vestingScheduleV2.lockDuration == vestingScheduleV1.lockDuration);
-            assert(vestingScheduleV2.period == vestingScheduleV1.period);
+            assert(vestingScheduleV2.periodDuration == vestingScheduleV1.periodDuration);
             assert(vestingScheduleV2.amount == vestingScheduleV1.amount);
             assert(vestingScheduleV2.creator == vestingScheduleV1.creator);
             assert(vestingScheduleV2.beneficiary == vestingScheduleV1.beneficiary);
@@ -113,8 +109,8 @@ contract VestingSchedulesMigrationTest is Test {
             end: _start,
             lockDuration: _cliffDuration,
             cliffDuration: _lockDuration,
-            duration: _period,
-            period: _duration,
+            duration: _periodDuration,
+            periodDuration: _duration,
             amount: _releasedAmount,
             creator: bob,
             beneficiary: alice,
@@ -139,7 +135,7 @@ contract VestingSchedulesMigrationTest is Test {
             assert(vestingScheduleV2.end == newVestingScheduleV2.end);
             assert(vestingScheduleV2.cliffDuration == newVestingScheduleV2.cliffDuration);
             assert(vestingScheduleV2.lockDuration == newVestingScheduleV2.lockDuration);
-            assert(vestingScheduleV2.period == newVestingScheduleV2.period);
+            assert(vestingScheduleV2.periodDuration == newVestingScheduleV2.periodDuration);
             assert(vestingScheduleV2.amount == newVestingScheduleV2.amount);
             assert(vestingScheduleV2.creator == newVestingScheduleV2.creator);
             assert(vestingScheduleV2.beneficiary == newVestingScheduleV2.beneficiary);
