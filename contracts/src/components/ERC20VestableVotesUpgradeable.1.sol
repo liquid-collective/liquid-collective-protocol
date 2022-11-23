@@ -74,7 +74,9 @@ abstract contract ERC20VestableVotesUpgradeableV1 is
     /// @notice This method migrates the state of the vesting schedules from V1 to V2
     /// @dev This method should be used if deployment with the old version using V1 state models is upgraded
     function migrateVestingSchedulesFromV1ToV2() internal {
-        VestingSchedulesV2.migrateFromV1Default();
+        if (VestingSchedulesV2.getCount() == 0) {
+            VestingSchedulesV2.migrateFromV1Default();
+        }
     }
 
     /// @inheritdoc IERC20VestableVotesUpgradeableV1

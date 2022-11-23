@@ -49,7 +49,6 @@ contract TestToken is ERC20VestableVotesUpgradeableV1 {
                 revocable: revocable
             })
         );
-        migrateVestingSchedulesFromV1ToV2();
     }
 }
 
