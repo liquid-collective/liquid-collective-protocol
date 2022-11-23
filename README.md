@@ -66,6 +66,14 @@ yarn && yarn link_contracts
 yarn test
 ```
 
+### Run tests include fork tests
+
+```
+env MAINNET_FORK_URL=... yarn test
+```
+
+The provided url must be an archive node endpoint allowing state queries at arbitrary block numbers.
+
 ### Run checks
 
 ```
