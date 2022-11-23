@@ -318,11 +318,12 @@ abstract contract ERC20VestableVotesUpgradeableV1 is
         }
 
         // compute releasable amount
-        address escrow = _deterministicVestingEscrow(_index);
         uint256 releasableAmount = _computeVestingReleasableAmount(vestingSchedule, time);
         if (releasableAmount == 0) {
             revert ZeroReleasableAmount();
         }
+
+        address escrow = _deterministicVestingEscrow(_index);
 
         // transfer all releasable token to the beneficiary
         _transfer(escrow, vestingSchedule.beneficiary, releasableAmount);

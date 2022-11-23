@@ -40,7 +40,6 @@ contract VestingSchedulesMigrationTest is Test {
         vestingScheduleV2.revocable = newVestingSchedule.revocable;
         vestingScheduleV2.releasedAmount = newVestingSchedule.releasedAmount;
 
-        // Create a V1 schedule
         return true;
     }
 
@@ -87,7 +86,7 @@ contract VestingSchedulesMigrationTest is Test {
 
         // #3. Get v2 schedules and check validity of inputs
         for (uint256 idx = 0; idx < count;) {
-            VestingSchedulesV2.VestingSchedule memory vestingScheduleV2 = VestingSchedulesV2.get(0);
+            VestingSchedulesV2.VestingSchedule memory vestingScheduleV2 = VestingSchedulesV2.get(idx);
             assert(vestingScheduleV2.start == vestingScheduleV1.start);
             assert(vestingScheduleV2.end == vestingScheduleV1.end);
             assert(vestingScheduleV2.cliffDuration == vestingScheduleV1.cliffDuration);
@@ -120,9 +119,7 @@ contract VestingSchedulesMigrationTest is Test {
 
         // #3. Update V2 schedule
         for (uint256 idx = 0; idx < count;) {
-            vm.startPrank(bob);
             assert(_updateV2VestingSchedule(idx, newVestingScheduleV2));
-            vm.stopPrank();
             unchecked {
                 ++idx;
             }
