@@ -75,7 +75,15 @@ abstract contract ERC20VestableVotesUpgradeableV1 is
     /// @dev This method should be used if deployment with the old version using V1 state models is upgraded
     function migrateVestingSchedulesFromV1ToV2() internal {
         if (VestingSchedulesV2.getCount() == 0) {
-            VestingSchedulesV2.migrateFromV1Default();
+            uint256 existingV1VestingSchedules = VestingSchedulesV1.getCount();
+            for (uint256 idx; idx < existingV1VestingSchedules;) {
+                uint256 releasedAmount =
+                    VestingSchedulesV1.get(idx).amount - balanceOf(_deterministicVestingEscrow(idx));
+                VestingSchedulesV2.migrateVestingScheduleFromV1(idx, releasedAmount);
+                unchecked {
+                    ++idx;
+                }
+            }
         }
     }
 

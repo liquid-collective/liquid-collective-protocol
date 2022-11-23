@@ -19,8 +19,22 @@ contract TestToken is ERC20VestableVotesUpgradeableV1 {
         _mint(_account, INITIAL_SUPPLY);
     }
 
+    function _maxSupply() internal pure override returns (uint224) {
+        return type(uint224).max;
+    }
+
     function migrateVestingSchedules() external reinitializer(2) {
-        migrateVestingSchedulesFromV1ToV2();
+        if (VestingSchedulesV2.getCount() == 0) {
+            uint256 existingV1VestingSchedules = VestingSchedulesV1.getCount();
+            for (uint256 idx; idx < existingV1VestingSchedules;) {
+                uint256 releasedAmount =
+                    VestingSchedulesV1.get(idx).amount - balanceOf(_deterministicVestingEscrow(idx));
+                VestingSchedulesV2.migrateVestingScheduleFromV1(idx, releasedAmount);
+                unchecked {
+                    ++idx;
+                }
+            }
+        }
     }
 
     function debugPushV1VestingSchedule(
@@ -49,6 +63,7 @@ contract TestToken is ERC20VestableVotesUpgradeableV1 {
                 revocable: revocable
             })
         );
+        _mint(_deterministicVestingEscrow(VestingSchedulesV1.getCount() - 1), amount);
     }
 }
 
