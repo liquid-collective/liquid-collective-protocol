@@ -179,6 +179,7 @@ contract RiverV1 is
 
     /// @inheritdoc IRiverV1
     function setMetadataURI(string memory _metadataURI) external onlyAdmin {
+        LibSanitize._notEmptyString(_metadataURI);
         MetadataURI.set(_metadataURI);
         emit SetMetadataURI(_metadataURI);
     }

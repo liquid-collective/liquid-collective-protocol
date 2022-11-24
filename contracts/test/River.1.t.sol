@@ -258,12 +258,20 @@ contract RiverV1SetupOneTests is Test, BytesGenerator {
     event SetMetadataURI(string metadataURI);
 
     function testSetMetadataURI(string memory _metadataURI) public {
+        vm.assume(bytes(_metadataURI).length > 0);
         vm.startPrank(admin);
         assertEq(river.getMetadataURI(), "");
         vm.expectEmit(true, true, true, true);
         emit SetMetadataURI(_metadataURI);
         river.setMetadataURI(_metadataURI);
         assertEq(river.getMetadataURI(), _metadataURI);
+        vm.stopPrank();
+    }
+
+    function testSetMetadataURIEmpty() public {
+        vm.startPrank(admin);
+        vm.expectRevert(abi.encodeWithSignature("InvalidEmptyString()"));
+        river.setMetadataURI("");
         vm.stopPrank();
     }
 
