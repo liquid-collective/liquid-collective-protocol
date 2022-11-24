@@ -44,7 +44,16 @@ contract VestingSchedulesMigrationTest is Test {
     }
 
     function _migrate() internal returns (uint256) {
-        return VestingSchedulesV2.migrateFromV1Default();
+        if (VestingSchedulesV2.getCount() == 0) {
+            uint256 existingV1VestingSchedules = VestingSchedulesV1.getCount();
+            for (uint256 idx; idx < existingV1VestingSchedules;) {
+                VestingSchedulesV2.migrateVestingScheduleFromV1(idx, 0);
+                unchecked {
+                    ++idx;
+                }
+            }
+        }
+        return VestingSchedulesV2.getCount();
     }
 
     function testVestingScheduleV1ToV2Compatibility(

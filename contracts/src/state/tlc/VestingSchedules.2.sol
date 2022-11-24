@@ -121,18 +121,4 @@ library VestingSchedulesV2 {
 
         return push(scheduleV2) - 1;
     }
-
-    /// @notice Default migration from v1
-    /// @notice Migrate all vesting schedule from v1 to v2 assuming releasedAmount = 0 for all of it
-    /// @return Return the count of vesting schedule in v2
-    function migrateFromV1Default() internal returns (uint256) {
-        uint256 count = VestingSchedulesV1.getCount();
-        for (uint256 idx = 0; idx < count;) {
-            migrateVestingScheduleFromV1(idx, 0);
-            unchecked {
-                ++idx;
-            }
-        }
-        return VestingSchedulesV2.getCount();
-    }
 }
