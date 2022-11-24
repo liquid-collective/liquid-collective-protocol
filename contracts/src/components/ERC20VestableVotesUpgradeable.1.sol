@@ -8,6 +8,7 @@ import "../interfaces/components/IERC20VestableVotesUpgradeable.1.sol";
 
 import "../state/tlc/VestingSchedules.2.sol";
 
+import "../libraries/LibUint256.sol";
 import "../libraries/LibSanitize.sol";
 import "../libraries/LibUint256.sol";
 
@@ -77,8 +78,9 @@ abstract contract ERC20VestableVotesUpgradeableV1 is
         if (VestingSchedulesV2.getCount() == 0) {
             uint256 existingV1VestingSchedules = VestingSchedulesV1.getCount();
             for (uint256 idx; idx < existingV1VestingSchedules;) {
+                uint256 scheduleAmount = VestingSchedulesV1.get(idx).amount;
                 uint256 releasedAmount =
-                    VestingSchedulesV1.get(idx).amount - balanceOf(_deterministicVestingEscrow(idx));
+                    scheduleAmount - LibUint256.min(balanceOf(_deterministicVestingEscrow(idx)), scheduleAmount);
                 VestingSchedulesV2.migrateVestingScheduleFromV1(idx, releasedAmount);
                 unchecked {
                     ++idx;
