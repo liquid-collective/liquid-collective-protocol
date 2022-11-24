@@ -4,6 +4,7 @@ pragma solidity 0.8.10;
 
 import "forge-std/Test.sol";
 
+import "../src/libraries/LibAllowlistMasks.sol";
 import "./utils/AllowlistHelper.sol";
 import "./utils/UserFactory.sol";
 
@@ -35,7 +36,6 @@ contract AllowlistV1Tests is Test {
 
     uint256 internal constant TEST_ONE_MASK = 0x1;
     uint256 internal constant TEST_TWO_MASK = 0x1 << 1;
-    uint256 internal constant DENIED_MASK = 0x1 << 255;
 
     function testSetAllowlistStatus(uint256 userSalt) public {
         address user = uf._new(userSalt);
@@ -190,7 +190,8 @@ contract AllowlistV1Tests is Test {
         {
             address[] memory allowees = new address[](1);
             allowees[0] = user;
-            uint256[] memory permissions = AllowlistHelper.batchAllowees(allowees.length, TEST_ONE_MASK + DENIED_MASK);
+            uint256[] memory permissions =
+                AllowlistHelper.batchAllowees(allowees.length, TEST_ONE_MASK + LibAllowlistMasks.DENY_MASK);
             allowlist.allow(allowees, permissions);
             assert(allowlist.isDenied(user) == true);
             assert(allowlist.isAllowed(user, TEST_ONE_MASK) == false);
@@ -217,14 +218,15 @@ contract AllowlistV1Tests is Test {
         {
             address[] memory allowees = new address[](1);
             allowees[0] = user;
-            uint256[] memory permissions =
-                AllowlistHelper.batchAllowees(allowees.length, TEST_ONE_MASK + TEST_TWO_MASK + DENIED_MASK);
+            uint256[] memory permissions = AllowlistHelper.batchAllowees(
+                allowees.length, TEST_ONE_MASK + TEST_TWO_MASK + LibAllowlistMasks.DENY_MASK
+            );
             allowlist.allow(allowees, permissions);
             assert(allowlist.isAllowed(user, TEST_ONE_MASK) == false);
             assert(allowlist.hasPermission(user, TEST_ONE_MASK) == true);
             assert(allowlist.isAllowed(user, TEST_TWO_MASK) == false);
             assert(allowlist.hasPermission(user, TEST_TWO_MASK) == true);
-            assert(allowlist.getPermissions(user) == TEST_ONE_MASK + TEST_TWO_MASK + DENIED_MASK);
+            assert(allowlist.getPermissions(user) == TEST_ONE_MASK + TEST_TWO_MASK + LibAllowlistMasks.DENY_MASK);
         }
     }
 }

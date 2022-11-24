@@ -3,6 +3,7 @@ pragma solidity 0.8.10;
 
 import "./interfaces/IAllowlist.1.sol";
 
+import "./libraries/LibAllowlistMasks.sol";
 import "./Initializable.sol";
 import "./Administrable.sol";
 
@@ -17,9 +18,6 @@ import "./state/allowlist/Allowlist.sol";
 /// @notice used to identify if the denied bit is on, preventing users from interacting
 /// @notice with the system
 contract AllowlistV1 is IAllowlistV1, Initializable, Administrable {
-    /// @notice Mask used for denied accounts
-    uint256 internal constant DENY_MASK = 0x1 << 255;
-
     /// @inheritdoc IAllowlistV1
     function initAllowlistV1(address _admin, address _allower) external init(0) {
         _setAdmin(_admin);
@@ -35,7 +33,7 @@ contract AllowlistV1 is IAllowlistV1, Initializable, Administrable {
     /// @inheritdoc IAllowlistV1
     function isAllowed(address _account, uint256 _mask) external view returns (bool) {
         uint256 userPermissions = Allowlist.get(_account);
-        if (userPermissions & DENY_MASK == DENY_MASK) {
+        if (userPermissions & LibAllowlistMasks.DENY_MASK == LibAllowlistMasks.DENY_MASK) {
             return false;
         }
         return userPermissions & _mask == _mask;
@@ -43,7 +41,7 @@ contract AllowlistV1 is IAllowlistV1, Initializable, Administrable {
 
     /// @inheritdoc IAllowlistV1
     function isDenied(address _account) external view returns (bool) {
-        return Allowlist.get(_account) & DENY_MASK == DENY_MASK;
+        return Allowlist.get(_account) & LibAllowlistMasks.DENY_MASK == LibAllowlistMasks.DENY_MASK;
     }
 
     /// @inheritdoc IAllowlistV1
@@ -59,7 +57,7 @@ contract AllowlistV1 is IAllowlistV1, Initializable, Administrable {
     /// @inheritdoc IAllowlistV1
     function onlyAllowed(address _account, uint256 _mask) external view {
         uint256 userPermissions = Allowlist.get(_account);
-        if (userPermissions & DENY_MASK == DENY_MASK) {
+        if (userPermissions & LibAllowlistMasks.DENY_MASK == LibAllowlistMasks.DENY_MASK) {
             revert Denied(_account);
         }
         if (userPermissions & _mask != _mask) {

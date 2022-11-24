@@ -289,7 +289,7 @@ contract RiverV1SetupOneTests is Test, BytesGenerator {
         address[] memory allowees = new address[](1);
         allowees[0] = _who;
         uint256[] memory statuses = new uint256[](1);
-        statuses[0] = 0x1 << 255; // DENY_MASK
+        statuses[0] = LibAllowlistMasks.DENY_MASK;
 
         vm.startPrank(admin);
         allowlist.allow(allowees, statuses);
