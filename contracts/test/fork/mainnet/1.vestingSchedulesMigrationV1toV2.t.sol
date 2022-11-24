@@ -14,6 +14,7 @@ contract VestingSchedulesMigrationV1ToV2 is Test {
     function setUp() external {
         try vm.envString("MAINNET_FORK_RPC_URL") returns (string memory rpcUrl) {
             vm.createSelectFork(rpcUrl, 16000000);
+            console.log("1.vestingSchedulesMigrationV1toV2.t.sol is active");
         } catch {
             _skip = true;
         }
