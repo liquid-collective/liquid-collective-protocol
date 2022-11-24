@@ -1,0 +1,31 @@
+name: Deploy Scripts Checks
+
+on:
+  push:
+
+jobs:
+  run-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          submodules: recursive
+
+      - name: install foundry
+        uses: onbjerg/foundry-toolchain@v1
+        with:
+          version: nightly
+
+      - name: cache node_modules
+        uses: actions/cache@v2
+        with:
+          path: |
+            ./node_modules
+          key: ${{ runner.os }}-${{ hashFiles('yarn.lock') }}
+
+      - name: install node dependencies
+        run: yarn
+
+      - name: run deployment on local node
+        run: yarn link_contracts && yarn hh deploy
