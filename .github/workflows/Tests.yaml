@@ -21,3 +21,4 @@ jobs:
         run: forge test --force -vvv --gas-report 
         env:
           FOUNDRY_FUZZ_RUNS: 5000
+          MAINNET_FORK_RPC_URL: ${{ secrets.MAINNET_FORK_RPC_URL }}
