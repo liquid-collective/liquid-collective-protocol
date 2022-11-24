@@ -254,9 +254,6 @@ contract RiverV1 is
     /// @return The amount pulled from the execution layer fee recipient
     function _pullELFees(uint256 _max) internal override returns (uint256) {
         address elFeeRecipient = ELFeeRecipientAddress.get();
-        if (elFeeRecipient == address(0)) {
-            return 0;
-        }
         uint256 initialBalance = address(this).balance;
         IELFeeRecipientV1(payable(elFeeRecipient)).pullELFees(_max);
         uint256 collectedELFees = address(this).balance - initialBalance;
