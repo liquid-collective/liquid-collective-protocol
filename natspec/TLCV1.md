@@ -1,10 +1,10 @@
 # TLCV1
 
+*Alluvial*
 
+> TLC (v1)
 
-
-
-
+The TLC token has a max supply of 1,000,000,000 and 18 decimal places.Upon deployment, all minted tokens are send to account provided at construction, in charge of creating the vesting schedulesThe contract is based on ERC20Votes by OpenZeppelin. Users need to delegate their voting power to someone or themselves to be able to vote.The contract contains vesting logics allowing vested users to still be able to delegate their voting power while their tokens are held in an escrow
 
 
 
@@ -165,12 +165,12 @@ Computes the vested amount of tokens for a vesting schedule.
 ### createVestingSchedule
 
 ```solidity
-function createVestingSchedule(uint64 _start, uint32 _cliffDuration, uint32 _duration, uint32 _period, uint32 _lockDuration, bool _revocable, uint256 _amount, address _beneficiary, address _delegatee) external nonpayable returns (uint256)
+function createVestingSchedule(uint64 _start, uint32 _cliffDuration, uint32 _duration, uint32 _periodDuration, uint32 _lockDuration, bool _revocable, uint256 _amount, address _beneficiary, address _delegatee) external nonpayable returns (uint256)
 ```
 
-Creates a new vesting schedule
+Creates a new vesting scheduleThere may delay between the time a user should start vesting tokens and the time the vesting schedule is actually created on the contract.Typically a user joins the Liquid Collective but some weeks pass before the user gets all legal agreements in place and signed for thetoken grant emission to happen. In this case, the vesting schedule created for the token grant would start on the join date which is in the past.
 
-
+*As vesting schedules can be created in the past, this means that you should be careful when creating a vesting schedule and what duration parametersyou use as this contract would allow creating a vesting schedule in the past and even a vesting schedule that has already ended.*
 
 #### Parameters
 
@@ -179,7 +179,7 @@ Creates a new vesting schedule
 | _start | uint64 | start time of the vesting |
 | _cliffDuration | uint32 | duration to vesting cliff (in seconds) |
 | _duration | uint32 | total vesting schedule duration after which all tokens are vested (in seconds) |
-| _period | uint32 | duration of a period after which new tokens unlock (in seconds) |
+| _periodDuration | uint32 | duration of a period after which new tokens unlock (in seconds) |
 | _lockDuration | uint32 | duration during which tokens are locked (in seconds) |
 | _revocable | bool | whether the vesting schedule is revocable or not |
 | _amount | uint256 | amount of token attributed by the vesting schedule |
@@ -290,7 +290,7 @@ Delegate vesting escrowed tokens
 
 | Name | Type | Description |
 |---|---|---|
-| _0 | bool | undefined |
+| _0 | bool | True on success |
 
 ### delegates
 
@@ -362,12 +362,12 @@ function getPastVotes(address account, uint256 blockNumber) external view return
 ### getVestingSchedule
 
 ```solidity
-function getVestingSchedule(uint256 _index) external view returns (struct VestingSchedules.VestingSchedule)
+function getVestingSchedule(uint256 _index) external view returns (struct VestingSchedulesV2.VestingSchedule)
 ```
 
 Get vesting schedule
 
-
+*The vesting schedule structure represents a static configuration used to compute the desiredvesting details of a beneficiary at all times. The values won&#39;t change even after tokens are released.The only dynamic field of the structure is end, and is updated whenever a vesting schedule is revoked*
 
 #### Parameters
 
@@ -379,7 +379,7 @@ Get vesting schedule
 
 | Name | Type | Description |
 |---|---|---|
-| _0 | VestingSchedules.VestingSchedule | undefined |
+| _0 | VestingSchedulesV2.VestingSchedule | undefined |
 
 ### getVestingScheduleCount
 
@@ -458,6 +458,17 @@ Initializes the TLC Token
 | Name | Type | Description |
 |---|---|---|
 | _account | address | The initial account to grant all the minted tokens |
+
+### migrateVestingSchedules
+
+```solidity
+function migrateVestingSchedules() external nonpayable
+```
+
+Migrates the vesting schedule state structures
+
+
+
 
 ### name
 
@@ -548,7 +559,7 @@ function permit(address owner, address spender, uint256 value, uint256 deadline,
 function releaseVestingSchedule(uint256 _index) external nonpayable returns (uint256)
 ```
 
-Release vesting schedule
+Release vesting scheduleWhen tokens are released from the escrow, the delegated address of the escrow will see its voting power decrease.The beneficiary has to make sure its delegation parameters are set properly to be able to use/delegate the voting power of its balance.
 
 
 
@@ -770,7 +781,7 @@ event DelegateVotesChanged(address indexed delegate, uint256 previousBalance, ui
 ### DelegatedVestingEscrow
 
 ```solidity
-event DelegatedVestingEscrow(uint256 index, address oldDelegatee, address newDelegatee)
+event DelegatedVestingEscrow(uint256 index, address indexed oldDelegatee, address indexed newDelegatee, address indexed beneficiary)
 ```
 
 Vesting escrow has been delegated
@@ -782,8 +793,9 @@ Vesting escrow has been delegated
 | Name | Type | Description |
 |---|---|---|
 | index  | uint256 | undefined |
-| oldDelegatee  | address | undefined |
-| newDelegatee  | address | undefined |
+| oldDelegatee `indexed` | address | undefined |
+| newDelegatee `indexed` | address | undefined |
+| beneficiary `indexed` | address | undefined |
 
 ### Initialized
 
@@ -821,7 +833,7 @@ Vesting schedule has been released
 ### RevokedVestingSchedule
 
 ```solidity
-event RevokedVestingSchedule(uint256 index, uint256 returnedAmount)
+event RevokedVestingSchedule(uint256 index, uint256 returnedAmount, uint256 newEnd)
 ```
 
 Vesting schedule has been revoked
@@ -834,6 +846,7 @@ Vesting schedule has been revoked
 |---|---|---|
 | index  | uint256 | undefined |
 | returnedAmount  | uint256 | undefined |
+| newEnd  | uint256 | undefined |
 
 ### Transfer
 
@@ -863,7 +876,7 @@ event Transfer(address indexed from, address indexed to, uint256 value)
 error InvalidRevokedVestingScheduleEnd()
 ```
 
-Attempt to revoke at a
+Attempt to revoke a vesting schedule with an invalid end parameter
 
 
 

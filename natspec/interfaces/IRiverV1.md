@@ -268,6 +268,23 @@ Retrieve the collector address
 |---|---|---|
 | _0 | address | The collector address |
 
+### getCoverageFund
+
+```solidity
+function getCoverageFund() external view returns (address)
+```
+
+Retrieve the coverage fund
+
+
+
+
+#### Returns
+
+| Name | Type | Description |
+|---|---|---|
+| _0 | address | The coverage fund address |
+
 ### getDepositedValidatorCount
 
 ```solidity
@@ -318,6 +335,23 @@ Get the current global fee
 | Name | Type | Description |
 |---|---|---|
 | _0 | uint256 | The global fee |
+
+### getMetadataURI
+
+```solidity
+function getMetadataURI() external view returns (string)
+```
+
+Retrieve the metadata uri string value
+
+
+
+
+#### Returns
+
+| Name | Type | Description |
+|---|---|---|
+| _0 | string | The metadata uri string value |
 
 ### getOperatorsRegistry
 
@@ -434,6 +468,17 @@ Retrieve the token name
 |---|---|---|
 | _0 | string | The token name |
 
+### sendCoverageFunds
+
+```solidity
+function sendCoverageFunds() external payable
+```
+
+Input for coverage funds
+
+
+
+
 ### sendELFees
 
 ```solidity
@@ -496,6 +541,22 @@ Sets the validator count and validator total balance sum reported by the oracle
 | _roundId | bytes32 | An identifier for this update |
 | _maxIncrease | uint256 | The maximum allowed increase in the total balance |
 
+### setCoverageFund
+
+```solidity
+function setCoverageFund(address _newCoverageFund) external nonpayable
+```
+
+Changes the coverage fund
+
+
+
+#### Parameters
+
+| Name | Type | Description |
+|---|---|---|
+| _newCoverageFund | address | New address for the fund |
+
 ### setELFeeRecipient
 
 ```solidity
@@ -527,6 +588,22 @@ Changes the global fee parameter
 | Name | Type | Description |
 |---|---|---|
 | newFee | uint256 | New fee value |
+
+### setMetadataURI
+
+```solidity
+function setMetadataURI(string _metadataURI) external nonpayable
+```
+
+Sets the metadata uri string value
+
+
+
+#### Parameters
+
+| Name | Type | Description |
+|---|---|---|
+| _metadataURI | string | The new metadata uri string value |
 
 ### setOracle
 
@@ -742,6 +819,22 @@ A validator key got funded on the deposit contract
 |---|---|---|
 | publicKey  | bytes | undefined |
 
+### PulledCoverageFunds
+
+```solidity
+event PulledCoverageFunds(uint256 amount)
+```
+
+Funds have been pulled from the Coverage Fund
+
+
+
+#### Parameters
+
+| Name | Type | Description |
+|---|---|---|
+| amount  | uint256 | The amount pulled |
+
 ### PulledELFees
 
 ```solidity
@@ -810,6 +903,22 @@ The stored Collector has been changed
 |---|---|---|
 | collector `indexed` | address | The new Collector |
 
+### SetCoverageFund
+
+```solidity
+event SetCoverageFund(address indexed coverageFund)
+```
+
+The stored Coverage Fund has been changed
+
+
+
+#### Parameters
+
+| Name | Type | Description |
+|---|---|---|
+| coverageFund `indexed` | address | The new Coverage Fund |
+
 ### SetDepositContractAddress
 
 ```solidity
@@ -857,6 +966,22 @@ The stored Global Fee has been changed
 | Name | Type | Description |
 |---|---|---|
 | fee  | uint256 | The new Global Fee |
+
+### SetMetadataURI
+
+```solidity
+event SetMetadataURI(string metadataURI)
+```
+
+The stored Metadata URI string has been changed
+
+
+
+#### Parameters
+
+| Name | Type | Description |
+|---|---|---|
+| metadataURI  | string | The new Metadata URI string |
 
 ### SetOperatorsRegistry
 

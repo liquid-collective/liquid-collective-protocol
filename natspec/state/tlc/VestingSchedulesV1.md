@@ -1,10 +1,10 @@
-# VestingSchedules
+# VestingSchedulesV1
 
 
 
-> VestingSchedules Storage
+> VestingSchedulesV1 Storage
 
-Utility to manage VestingSchedules in storage
+Utility to manage VestingSchedulesV1 in storage
 
 
 

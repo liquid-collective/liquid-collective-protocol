@@ -32,7 +32,7 @@ Initialize the fee recipient with the required arguments
 function pullELFees(uint256 _maxAmount) external nonpayable
 ```
 
-Pulls all the ETH to the River contract
+Pulls ETH to the River contract
 
 *Only callable by the River contract*
 
