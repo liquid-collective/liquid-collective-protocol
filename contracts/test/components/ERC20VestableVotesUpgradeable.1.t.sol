@@ -45,7 +45,7 @@ contract TestToken is ERC20VestableVotesUpgradeableV1 {
         uint32 lockDuration,
         uint32 duration,
         uint32 periodDuration,
-        uint256 amount,
+        uint128 amount,
         address creator,
         address beneficiary,
         bool revocable
@@ -100,7 +100,7 @@ contract ERC20VestableVotesUpgradeableV1ToV2Migration is Test {
         uint32 lockDuration,
         uint32 duration,
         uint32 periodDuration,
-        uint256 amount,
+        uint128 amount,
         address creator,
         address beneficiary,
         bool revocable
