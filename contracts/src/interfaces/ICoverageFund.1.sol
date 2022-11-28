@@ -14,7 +14,7 @@ interface ICoverageFundV1 {
     /// @param amount The amount donated
     event Donate(address donator, uint256 amount);
 
-    /// @notice The fallback has been triggered
+    /// @notice The fallback or receive callback has been triggered
     error InvalidCall();
 
     /// @notice Initialize the coverage fund with the required arguments

@@ -196,7 +196,7 @@ contract RiverV1 is
         }
     }
 
-    /// @notice Overriden handler to pass the system admin inside components
+    /// @notice Overridden handler to pass the system admin inside components
     /// @return The address of the admin
     function _getRiverAdmin()
         internal
@@ -207,7 +207,7 @@ contract RiverV1 is
         return Administrable._getAdmin();
     }
 
-    /// @notice Overriden handler called whenever a token transfer is triggered
+    /// @notice Overridden handler called whenever a token transfer is triggered
     /// @param _from Token sender
     /// @param _to Token receiver
     function _onTransfer(address _from, address _to) internal view override {
@@ -220,7 +220,7 @@ contract RiverV1 is
         }
     }
 
-    /// @notice Overriden handler called whenever a user deposits ETH to the system. Mints the adequate amount of shares.
+    /// @notice Overridden handler called whenever a user deposits ETH to the system. Mints the adequate amount of shares.
     /// @param _depositor User address that made the deposit
     /// @param _amount Amount of ETH deposited
     function _onDeposit(address _depositor, address _recipient, uint256 _amount) internal override {
@@ -237,7 +237,7 @@ contract RiverV1 is
         }
     }
 
-    /// @notice Overriden handler called whenever a deposit to the consensus layer is made. Should retrieve _requestedAmount or lower keys
+    /// @notice Overridden handler called whenever a deposit to the consensus layer is made. Should retrieve _requestedAmount or lower keys
     /// @param _requestedAmount Amount of keys required. Contract is expected to send _requestedAmount or lower.
     /// @return publicKeys Array of fundable public keys
     /// @return signatures Array of signatures linked to the public keys
@@ -249,7 +249,7 @@ contract RiverV1 is
         return IOperatorsRegistryV1(OperatorsRegistryAddress.get()).pickNextValidators(_requestedAmount);
     }
 
-    /// @notice Overriden handler to pull funds from the execution layer fee recipient to River and return the delta in the balance
+    /// @notice Overridden handler to pull funds from the execution layer fee recipient to River and return the delta in the balance
     /// @param _max The maximum amount to pull from the execution layer fee recipient
     /// @return The amount pulled from the execution layer fee recipient
     function _pullELFees(uint256 _max) internal override returns (uint256) {
@@ -262,7 +262,7 @@ contract RiverV1 is
         return collectedELFees;
     }
 
-    /// @notice Overriden handler to pull funds from the coverage fund to River and return the delta in the balance
+    /// @notice Overridden handler to pull funds from the coverage fund to River and return the delta in the balance
     /// @param _max The maximum amount to pull from the coverage fund
     /// @return The amount pulled from the coverage fund
     function _pullCoverageFunds(uint256 _max) internal override returns (uint256) {
@@ -280,7 +280,7 @@ contract RiverV1 is
         return collectedCoverageFunds;
     }
 
-    /// @notice Overriden handler called whenever the balance of ETH handled by the system increases. Computes the fees paid to the collector
+    /// @notice Overridden handler called whenever the balance of ETH handled by the system increases. Computes the fees paid to the collector
     /// @param _amount Additional ETH received
     function _onEarnings(uint256 _amount) internal override {
         uint256 oldTotalSupply = _totalSupply();
@@ -302,7 +302,7 @@ contract RiverV1 is
         }
     }
 
-    /// @notice Overriden handler called whenever the total balance of ETH is requested
+    /// @notice Overridden handler called whenever the total balance of ETH is requested
     /// @return The current total asset balance managed by River
     function _assetBalance() internal view override returns (uint256) {
         uint256 clValidatorCount = CLValidatorCount.get();

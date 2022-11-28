@@ -28,7 +28,7 @@ abstract contract ConsensusLayerDepositManagerV1 is IConsensusLayerDepositManage
     uint256 public constant DEPOSIT_SIZE = 32 ether;
 
     /// @notice Handler called to retrieve the internal River admin address
-    /// @dev Must be overriden
+    /// @dev Must be Overridden
     function _getRiverAdmin() internal view virtual returns (address);
 
     /// @notice Prevents unauthorized calls
