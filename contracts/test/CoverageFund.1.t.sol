@@ -18,7 +18,7 @@ contract RiverMock {
         allowlist = _allowlist;
     }
 
-    function sendELFees() external payable {
+    function sendCoverageFunds() external payable {
         emit BalanceUpdated(address(this).balance);
     }
 
@@ -41,6 +41,7 @@ contract CoverageFundTestV1 is Test {
 
     event BalanceUpdated(uint256 amount);
     event SetRiver(address indexed river);
+    event Donate(address indexed donator, uint256 amount);
 
     function setUp() public {
         admin = makeAddr("admin");
@@ -54,6 +55,7 @@ contract CoverageFundTestV1 is Test {
     }
 
     function testTransferInvalidCall(uint256 _senderSalt, uint256 _amount) external {
+        vm.assume(_amount > 0);
         address sender = uf._new(_senderSalt);
         vm.deal(sender, _amount);
 
@@ -64,6 +66,7 @@ contract CoverageFundTestV1 is Test {
     }
 
     function testSendInvalidCall(uint256 _senderSalt, uint256 _amount) external {
+        vm.assume(_amount > 0);
         address sender = uf._new(_senderSalt);
         vm.deal(sender, _amount);
 
@@ -74,6 +77,7 @@ contract CoverageFundTestV1 is Test {
     }
 
     function testCallInvalidCall(uint256 _senderSalt, uint256 _amount) external {
+        vm.assume(_amount > 0);
         address sender = uf._new(_senderSalt);
         vm.deal(sender, _amount);
 
@@ -85,6 +89,7 @@ contract CoverageFundTestV1 is Test {
     }
 
     function testPullFundsFromDonate(uint256 _senderSalt, uint256 _amount) external {
+        vm.assume(_amount > 0);
         address sender = uf._new(_senderSalt);
         vm.deal(sender, _amount);
 
@@ -96,6 +101,8 @@ contract CoverageFundTestV1 is Test {
         allowlist.allow(accounts, permissions);
 
         vm.startPrank(sender);
+        vm.expectEmit(true, true, true, true);
+        emit Donate(sender, _amount);
         coverageFund.donate{value: _amount}();
         vm.stopPrank();
 
@@ -107,6 +114,7 @@ contract CoverageFundTestV1 is Test {
     }
 
     function testPullHalfFundsFromDonate(uint256 _senderSalt, uint256 _amount) external {
+        vm.assume(_amount > 0);
         address sender = uf._new(_senderSalt);
         vm.deal(sender, _amount);
 
@@ -129,6 +137,7 @@ contract CoverageFundTestV1 is Test {
     }
 
     function testDonateUnauthorized(uint256 _senderSalt, uint256 _amount) external {
+        vm.assume(_amount > 0);
         address sender = uf._new(_senderSalt);
         vm.deal(sender, _amount);
 
@@ -138,7 +147,24 @@ contract CoverageFundTestV1 is Test {
         vm.stopPrank();
     }
 
+    function testDonateZero(uint256 _senderSalt) external {
+        address sender = uf._new(_senderSalt);
+
+        vm.prank(admin);
+        address[] memory accounts = new address[](1);
+        accounts[0] = sender;
+        uint256[] memory permissions = new uint256[](1);
+        permissions[0] = LibAllowlistMasks.DONATE_MASK;
+        allowlist.allow(accounts, permissions);
+
+        vm.startPrank(sender);
+        vm.expectRevert(abi.encodeWithSignature("EmptyDonation()"));
+        coverageFund.donate{value: 0}();
+        vm.stopPrank();
+    }
+
     function testPullFundsUnauthorized(uint256 _senderSalt, uint256 _amount) external {
+        vm.assume(_amount > 0);
         address sender = uf._new(_senderSalt);
         vm.deal(sender, _amount);
 

@@ -12,10 +12,13 @@ interface ICoverageFundV1 {
     /// @notice A donation has been made to the coverage fund
     /// @param donator Address that performed the donation
     /// @param amount The amount donated
-    event Donate(address donator, uint256 amount);
+    event Donate(address indexed donator, uint256 amount);
 
     /// @notice The fallback or receive callback has been triggered
     error InvalidCall();
+
+    /// @notice A donation with 0 ETH has been performed
+    error EmptyDonation();
 
     /// @notice Initialize the coverage fund with the required arguments
     /// @param _riverAddress Address of River

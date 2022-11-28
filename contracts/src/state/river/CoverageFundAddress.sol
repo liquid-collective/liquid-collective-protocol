@@ -8,18 +8,19 @@ import "../../libraries/LibSanitize.sol";
 /// @notice Utility to manage the Coverage Fund Address in storage
 library CoverageFundAddress {
     /// @notice Storage slot of the Coverage Fund Address
-    bytes32 internal constant COVERAGE_FUND_ADDRESS = bytes32(uint256(keccak256("river.state.coverageFundAddress")) - 1);
+    bytes32 internal constant COVERAGE_FUND_ADDRESS_SLOT =
+        bytes32(uint256(keccak256("river.state.coverageFundAddress")) - 1);
 
     /// @notice Retrieve the Coverage Fund Address
     /// @return The Coverage Fund Address
     function get() internal view returns (address) {
-        return LibUnstructuredStorage.getStorageAddress(COVERAGE_FUND_ADDRESS);
+        return LibUnstructuredStorage.getStorageAddress(COVERAGE_FUND_ADDRESS_SLOT);
     }
 
     /// @notice Sets the Coverage Fund Address
     /// @param _newValue New Coverage Fund Address
     function set(address _newValue) internal {
         LibSanitize._notZeroAddress(_newValue);
-        LibUnstructuredStorage.setStorageAddress(COVERAGE_FUND_ADDRESS, _newValue);
+        LibUnstructuredStorage.setStorageAddress(COVERAGE_FUND_ADDRESS_SLOT, _newValue);
     }
 }

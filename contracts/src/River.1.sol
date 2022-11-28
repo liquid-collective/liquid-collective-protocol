@@ -191,7 +191,14 @@ contract RiverV1 is
 
     /// @inheritdoc IRiverV1
     function sendELFees() external payable {
-        if (msg.sender != ELFeeRecipientAddress.get() && msg.sender != CoverageFundAddress.get()) {
+        if (msg.sender != ELFeeRecipientAddress.get()) {
+            revert LibErrors.Unauthorized(msg.sender);
+        }
+    }
+
+    /// @inheritdoc IRiverV1
+    function sendCoverageFunds() external payable {
+        if (msg.sender != CoverageFundAddress.get()) {
             revert LibErrors.Unauthorized(msg.sender);
         }
     }
@@ -257,8 +264,10 @@ contract RiverV1 is
         uint256 initialBalance = address(this).balance;
         IELFeeRecipientV1(payable(elFeeRecipient)).pullELFees(_max);
         uint256 collectedELFees = address(this).balance - initialBalance;
-        BalanceToDeposit.set(BalanceToDeposit.get() + collectedELFees);
-        emit PulledELFees(collectedELFees);
+        if (collectedELFees > 0) {
+            BalanceToDeposit.set(BalanceToDeposit.get() + collectedELFees);
+            emit PulledELFees(collectedELFees);
+        }
         return collectedELFees;
     }
 
