@@ -13,4 +13,7 @@ interface ITLCV1 is IERC20VestableVotesUpgradeableV1, IVotesUpgradeable, IERC20U
     /// @notice Initializes the TLC Token
     /// @param _account The initial account to grant all the minted tokens
     function initTLCV1(address _account) external;
+
+    /// @notice Migrates the vesting schedule state structures
+    function migrateVestingSchedules() external;
 }
