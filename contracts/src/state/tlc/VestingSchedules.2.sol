@@ -102,8 +102,9 @@ library VestingSchedulesV2 {
     /// @notice Migrate a VestingSchedule from v1 to v2
     /// @notice Takes a VestingSchedule in v1 format in stores it in v2 format
     /// @param _index of the schedule in v1 to be migrated
+    /// @param _releasedAmount The released amount to keep in storage
     /// @return The index of the created schedule in v2 format
-    function migrateVestingScheduleFromV1(uint256 _index, uint256 releasedAmount) internal returns (uint256) {
+    function migrateVestingScheduleFromV1(uint256 _index, uint256 _releasedAmount) internal returns (uint256) {
         VestingSchedulesV1.VestingSchedule memory scheduleV1 = VestingSchedulesV1.get(_index);
         VestingSchedulesV2.VestingSchedule memory scheduleV2 = VestingSchedulesV2.VestingSchedule({
             start: scheduleV1.start,
@@ -116,7 +117,7 @@ library VestingSchedulesV2 {
             creator: scheduleV1.creator,
             beneficiary: scheduleV1.beneficiary,
             revocable: scheduleV1.revocable,
-            releasedAmount: releasedAmount
+            releasedAmount: _releasedAmount
         });
 
         return push(scheduleV2) - 1;
