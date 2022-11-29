@@ -27,7 +27,7 @@ contract AllowlistV1Tests is Test {
     AllowlistV1 internal allowlist;
 
     event SetAllower(address indexed allower);
-    event SetAllowlistPermissions(address[] indexed accounts, uint256[] permissions);
+    event SetAllowlistPermissions(address[] accounts, uint256[] permissions);
 
     function setUp() public {
         allowlist = new AllowlistV1Sudo();
