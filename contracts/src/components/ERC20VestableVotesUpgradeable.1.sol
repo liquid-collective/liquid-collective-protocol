@@ -8,7 +8,6 @@ import "../interfaces/components/IERC20VestableVotesUpgradeable.1.sol";
 
 import "../state/tlc/VestingSchedules.2.sol";
 
-import "../libraries/LibUint256.sol";
 import "../libraries/LibSanitize.sol";
 import "../libraries/LibUint256.sol";
 

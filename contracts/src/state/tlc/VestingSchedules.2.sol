@@ -18,11 +18,11 @@ library VestingSchedulesV2 {
         uint64 end;
         // duration before which first tokens gets ownable
         uint32 cliffDuration;
-        // duration before tokens gets unlocked
+        // duration before tokens gets unlocked. can exceed the duration of the vesting chedule
         uint32 lockDuration;
-        // duration of the vesting period in seconds
+        // duration of the entire vesting (sum of all vesting period durations)
         uint32 duration;
-        // duration of a vesting period in seconds
+        // duration of a single period of vesting
         uint32 periodDuration;
         // amount of tokens granted by the vesting schedule
         uint256 amount;
@@ -38,7 +38,7 @@ library VestingSchedulesV2 {
 
     /// @notice The structure at the storage slot
     struct SlotVestingSchedule {
-        /// @custom:attribute Array containing all the operators
+        /// @custom:attribute Array containing all the vesting schedules
         VestingSchedule[] value;
     }
 
