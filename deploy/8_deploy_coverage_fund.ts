@@ -14,7 +14,7 @@ const func: DeployFunction = async function ({ deployments, getNamedAccounts, et
     proxy: {
       owner: proxyAdministrator,
       proxyContract: "TUPProxy",
-      implementationName: "CoverageFundV1_Implementation",
+      implementationName: "CoverageFundV1_Implementation_0_5_0",
       execute: {
         methodName: "initCoverageFundV1",
         args: [riverDeployment.address],
