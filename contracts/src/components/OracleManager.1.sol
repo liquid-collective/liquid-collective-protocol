@@ -28,6 +28,12 @@ abstract contract OracleManagerV1 is IOracleManagerV1 {
     /// @return The amount pulled inside the system
     function _pullELFees(uint256 _max) internal virtual returns (uint256);
 
+    /// @notice Handler called to pull the coverage funds
+    /// @dev Must be overridden
+    /// @param _max The maximum amount to pull inside the system
+    /// @return The amount pulled inside the system
+    function _pullCoverageFunds(uint256 _max) internal virtual returns (uint256);
+
     /// @notice Handler called to retrieve the system administrator address
     /// @dev Must be overridden
     /// @return The system administrator address
@@ -91,13 +97,21 @@ abstract contract OracleManagerV1 is IOracleManagerV1 {
         CLValidatorCount.set(_validatorCount);
         LastOracleRoundId.set(_roundId);
 
-        uint256 executionLayerFees;
+        uint256 executionLayerFees = 0;
 
         // if there's a margin left for pulling the execution layer fees that would leave our delta under the allowed maxIncrease value, do it
         if ((_maxIncrease + previousValidatorTotalBalance) > _validatorTotalBalance) {
             executionLayerFees = _pullELFees((_maxIncrease + previousValidatorTotalBalance) - _validatorTotalBalance);
         }
 
+        // if there's a margin for pulling coverage funds that would also leave our delta under the allowed maxIncrease value, also do it
+        if (((_maxIncrease + previousValidatorTotalBalance) - executionLayerFees) > _validatorTotalBalance) {
+            _pullCoverageFunds(
+                ((_maxIncrease + previousValidatorTotalBalance) - executionLayerFees) - _validatorTotalBalance
+            );
+        }
+
+        // the revenue value does not include the pulled coverageFunds
         if (previousValidatorTotalBalance < _validatorTotalBalance + executionLayerFees) {
             _onEarnings((_validatorTotalBalance + executionLayerFees) - previousValidatorTotalBalance);
         }

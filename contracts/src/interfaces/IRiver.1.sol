@@ -14,9 +14,17 @@ interface IRiverV1 is IConsensusLayerDepositManagerV1, IUserDepositManagerV1, IS
     /// @param amount The amount pulled
     event PulledELFees(uint256 amount);
 
+    /// @notice Funds have been pulled from the Coverage Fund
+    /// @param amount The amount pulled
+    event PulledCoverageFunds(uint256 amount);
+
     /// @notice The stored Execution Layer Fee Recipient has been changed
     /// @param elFeeRecipient The new Execution Layer Fee Recipient
     event SetELFeeRecipient(address indexed elFeeRecipient);
+
+    /// @notice The stored Coverage Fund has been changed
+    /// @param coverageFund The new Coverage Fund
+    event SetCoverageFund(address indexed coverageFund);
 
     /// @notice The stored Collector has been changed
     /// @param collector The new Collector
@@ -33,6 +41,10 @@ interface IRiverV1 is IConsensusLayerDepositManagerV1, IUserDepositManagerV1, IS
     /// @notice The stored Operators Registry has been changed
     /// @param operatorRegistry The new Operators Registry
     event SetOperatorsRegistry(address indexed operatorRegistry);
+
+    /// @notice The stored Metadata URI string has been changed
+    /// @param metadataURI The new Metadata URI string
+    event SetMetadataURI(string metadataURI);
 
     /// @notice The system underlying supply increased. This is a snapshot of the balances for accounting purposes
     /// @param _collector The address of the collector during this event
@@ -93,9 +105,17 @@ interface IRiverV1 is IConsensusLayerDepositManagerV1, IUserDepositManagerV1, IS
     /// @return The execution layer fee recipient address
     function getELFeeRecipient() external view returns (address);
 
+    /// @notice Retrieve the coverage fund
+    /// @return The coverage fund address
+    function getCoverageFund() external view returns (address);
+
     /// @notice Retrieve the operators registry
     /// @return The operators registry address
     function getOperatorsRegistry() external view returns (address);
+
+    /// @notice Retrieve the metadata uri string value
+    /// @return The metadata uri string value
+    function getMetadataURI() external view returns (string memory);
 
     /// @notice Changes the global fee parameter
     /// @param newFee New fee value
@@ -113,6 +133,17 @@ interface IRiverV1 is IConsensusLayerDepositManagerV1, IUserDepositManagerV1, IS
     /// @param _newELFeeRecipient New address for the recipient
     function setELFeeRecipient(address _newELFeeRecipient) external;
 
+    /// @notice Changes the coverage fund
+    /// @param _newCoverageFund New address for the fund
+    function setCoverageFund(address _newCoverageFund) external;
+
+    /// @notice Sets the metadata uri string value
+    /// @param _metadataURI The new metadata uri string value
+    function setMetadataURI(string memory _metadataURI) external;
+
     /// @notice Input for execution layer fee earnings
     function sendELFees() external payable;
+
+    /// @notice Input for coverage funds
+    function sendCoverageFunds() external payable;
 }

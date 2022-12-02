@@ -8,7 +8,7 @@ interface IAllowlistV1 {
     /// @notice The permissions of several accounts have changed
     /// @param accounts List of accounts
     /// @param permissions New permissions for each account at the same index
-    event SetAllowlistPermissions(address[] indexed accounts, uint256[] permissions);
+    event SetAllowlistPermissions(address[] accounts, uint256[] permissions);
 
     /// @notice The stored allower address has been changed
     /// @param allower The new allower address

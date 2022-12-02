@@ -4,7 +4,7 @@
 
 > ERC20VestableVotesUpgradeableV1
 
-This is an ERC20 extension that- can be used as source of vote power (inherited from OpenZeppelin ERC20VotesUpgradeable)- can delegate vote power from an account to another account (inherited from OpenZeppelin ERC20VotesUpgradeable)- can manage token vestings: ownership is progressively transferred to a beneficiary according to a vesting schedule- keeps a history (checkpoints) of each account&#39;s vote power@notice Notes from OpenZeppelin [ERC20VotesUpgradeable](https://github.com/OpenZeppelin/openzeppelin-contracts-upgradeable/blob/master/contracts/token/ERC20/extensions/ERC20VotesUpgradeable.sol)- vote power can be delegated either by calling the {delegate} function, or by providing a signature to be used with {delegateBySig}- keeps a history (checkpoints) of each account&#39;s vote power- power can be queried through the public accessors {getVotes} and {getPastVotes}.- by default, token balance does not account for voting power. This makes transfers cheaper. The downside is that itrequires users to delegate to themselves in order to activate checkpoints and have their voting power tracked.@notice Notes about token vesting- any token holder can call the method {createVestingSchedule} in order to transfer tokens to a beneficiary according to a vesting schedule. Whencreating a vesting schedule, tokens are transferred to an escrow that holds the token while the vesting progresses. Voting power of the escrowed token is delegated to thebeneficiary or a delegatee account set by the vesting schedule creator- the schedule beneficiary call {releaseVestingSchedule} to get vested tokens transferred from escrow- the schedule creator can revoke a revocable schedule by calling {revokeVestingSchedule} in which case the non-vested tokens are transfered from the escrow back to the creator- the schedule beneficiary can delegate escrow voting power to any account by calling {delegateVestingEscrow}@notice Vesting schedule attributes are- start date: date at which vesting schedules starts- cliff duration: duration from start to vesting cliff when first tokens are vested (e.g 1 year)- total duration: duration from start to vesting end when all tokens are vested (e.g 4 years)- period duration: split the vesting in period. After cliff, new tokens get vested at the end of each period (e.g 1 month)- lock duration: duration before which no tokens can be released to beneficiary even if tokenshave been vested already (the lock period supersedes the cliff)- amount: the total amount of tokens to be vested- beneficiary: the beneficiary of the vested tokens- revocable: a boolean indicating whether the vesting can be revoked by the creator@notice Vesting schedule- if currentTime &lt; cliff: vestedToken = 0- if cliff &lt;= currentTime &lt; end: vestedToken = (vestedPeriodCount(currentTime) * periodDuration * amount) / totalDuration- if end &lt; currentTime: vestedToken = amount@notice Remark: After cliff new tokens get vested at the end of each period@notice Vested token &amp; lock period- a vested token is a token that will be eventually releasable from the escrow to the beneficiary once the lock period is over- lock period prevents beneficiary from releasing vested tokens before the lock period ends. Vested tokenswill eventually be releasable once the lock period is over@notice Example: Joe gets a vesting starting on Jan 1st 2022 with duration of 1 year and a lock period of 2 years.On Jan 1st 2023, Joe will have all tokens vested but can not yet release it due to the lock period.On Jan 1st 2024, lock period is over and Joe can release all tokens.
+This is an ERC20 extension that- can be used as source of vote power (inherited from OpenZeppelin ERC20VotesUpgradeable)- can delegate vote power from an account to another account (inherited from OpenZeppelin ERC20VotesUpgradeable)- can manage token vestings: ownership is progressively transferred to a beneficiary according to a vesting schedule- keeps a history (checkpoints) of each account&#39;s vote power@notice Notes from OpenZeppelin [ERC20VotesUpgradeable](https://github.com/OpenZeppelin/openzeppelin-contracts-upgradeable/blob/master/contracts/token/ERC20/extensions/ERC20VotesUpgradeable.sol)- vote power can be delegated either by calling the {delegate} function, or by providing a signature to be used with {delegateBySig}- keeps a history (checkpoints) of each account&#39;s vote power- power can be queried through the public accessors {getVotes} and {getPastVotes}.- by default, token balance does not account for voting power. This makes transfers cheaper. The downside is that itrequires users to delegate to themselves in order to activate checkpoints and have their voting power tracked.@notice Notes about token vesting- any token holder can call the method {createVestingSchedule} in order to transfer tokens to a beneficiary according to a vesting schedule. Whencreating a vesting schedule, tokens are transferred to an escrow that holds the token while the vesting progresses. Voting power of the escrowed token is delegated to thebeneficiary or a delegatee account set by the vesting schedule creator- the schedule beneficiary call {releaseVestingSchedule} to get vested tokens transferred from escrow- the schedule creator can revoke a revocable schedule by calling {revokeVestingSchedule} in which case the non-vested tokens are transfered from the escrow back to the creator- the schedule beneficiary can delegate escrow voting power to any account by calling {delegateVestingEscrow}@notice Vesting schedule attributes are- start : start time of the vesting period- cliff duration: duration before which first tokens gets ownable- total duration: duration of the entire vesting (sum of all vesting period durations)- period duration: duration of a single period of vesting- lock duration: duration before tokens gets unlocked. can exceed the duration of the vesting chedule- amount: amount of tokens granted by the vesting schedule- beneficiary: beneficiary of tokens after they are releaseVestingScheduled- revocable: whether the schedule can be revoked@notice Vesting schedule- if currentTime &lt; cliff: vestedToken = 0- if cliff &lt;= currentTime &lt; end: vestedToken = (vestedPeriodCount(currentTime) * periodDuration * amount) / totalDuration- if end &lt; currentTime: vestedToken = amount@notice Remark: After cliff new tokens get vested at the end of each period@notice Vested token &amp; lock period- a vested token is a token that will be eventually releasable from the escrow to the beneficiary once the lock period is over- lock period prevents beneficiary from releasing vested tokens before the lock period ends. Vested tokenswill eventually be releasable once the lock period is over@notice Example: Joe gets a vesting starting on Jan 1st 2022 with duration of 1 year and a lock period of 2 years.On Jan 1st 2023, Joe will have all tokens vested but can not yet release it due to the lock period.On Jan 1st 2024, lock period is over and Joe can release all tokens.
 
 
 
@@ -165,12 +165,12 @@ Computes the vested amount of tokens for a vesting schedule.
 ### createVestingSchedule
 
 ```solidity
-function createVestingSchedule(uint64 _start, uint32 _cliffDuration, uint32 _duration, uint32 _period, uint32 _lockDuration, bool _revocable, uint256 _amount, address _beneficiary, address _delegatee) external nonpayable returns (uint256)
+function createVestingSchedule(uint64 _start, uint32 _cliffDuration, uint32 _duration, uint32 _periodDuration, uint32 _lockDuration, bool _revocable, uint256 _amount, address _beneficiary, address _delegatee) external nonpayable returns (uint256)
 ```
 
-Creates a new vesting schedule
+Creates a new vesting scheduleThere may delay between the time a user should start vesting tokens and the time the vesting schedule is actually created on the contract.Typically a user joins the Liquid Collective but some weeks pass before the user gets all legal agreements in place and signed for thetoken grant emission to happen. In this case, the vesting schedule created for the token grant would start on the join date which is in the past.
 
-
+*As vesting schedules can be created in the past, this means that you should be careful when creating a vesting schedule and what duration parametersyou use as this contract would allow creating a vesting schedule in the past and even a vesting schedule that has already ended.*
 
 #### Parameters
 
@@ -179,7 +179,7 @@ Creates a new vesting schedule
 | _start | uint64 | start time of the vesting |
 | _cliffDuration | uint32 | duration to vesting cliff (in seconds) |
 | _duration | uint32 | total vesting schedule duration after which all tokens are vested (in seconds) |
-| _period | uint32 | duration of a period after which new tokens unlock (in seconds) |
+| _periodDuration | uint32 | duration of a period after which new tokens unlock (in seconds) |
 | _lockDuration | uint32 | duration during which tokens are locked (in seconds) |
 | _revocable | bool | whether the vesting schedule is revocable or not |
 | _amount | uint256 | amount of token attributed by the vesting schedule |
@@ -290,7 +290,7 @@ Delegate vesting escrowed tokens
 
 | Name | Type | Description |
 |---|---|---|
-| _0 | bool | undefined |
+| _0 | bool | True on success |
 
 ### delegates
 
@@ -362,12 +362,12 @@ function getPastVotes(address account, uint256 blockNumber) external view return
 ### getVestingSchedule
 
 ```solidity
-function getVestingSchedule(uint256 _index) external view returns (struct VestingSchedules.VestingSchedule)
+function getVestingSchedule(uint256 _index) external view returns (struct VestingSchedulesV2.VestingSchedule)
 ```
 
 Get vesting schedule
 
-
+*The vesting schedule structure represents a static configuration used to compute the desiredvesting details of a beneficiary at all times. The values won&#39;t change even after tokens are released.The only dynamic field of the structure is end, and is updated whenever a vesting schedule is revoked*
 
 #### Parameters
 
@@ -379,7 +379,7 @@ Get vesting schedule
 
 | Name | Type | Description |
 |---|---|---|
-| _0 | VestingSchedules.VestingSchedule | undefined |
+| _0 | VestingSchedulesV2.VestingSchedule | undefined |
 
 ### getVestingScheduleCount
 
@@ -532,7 +532,7 @@ function permit(address owner, address spender, uint256 value, uint256 deadline,
 function releaseVestingSchedule(uint256 _index) external nonpayable returns (uint256)
 ```
 
-Release vesting schedule
+Release vesting scheduleWhen tokens are released from the escrow, the delegated address of the escrow will see its voting power decrease.The beneficiary has to make sure its delegation parameters are set properly to be able to use/delegate the voting power of its balance.
 
 
 
@@ -754,7 +754,7 @@ event DelegateVotesChanged(address indexed delegate, uint256 previousBalance, ui
 ### DelegatedVestingEscrow
 
 ```solidity
-event DelegatedVestingEscrow(uint256 index, address oldDelegatee, address newDelegatee)
+event DelegatedVestingEscrow(uint256 index, address indexed oldDelegatee, address indexed newDelegatee, address indexed beneficiary)
 ```
 
 Vesting escrow has been delegated
@@ -766,8 +766,9 @@ Vesting escrow has been delegated
 | Name | Type | Description |
 |---|---|---|
 | index  | uint256 | undefined |
-| oldDelegatee  | address | undefined |
-| newDelegatee  | address | undefined |
+| oldDelegatee `indexed` | address | undefined |
+| newDelegatee `indexed` | address | undefined |
+| beneficiary `indexed` | address | undefined |
 
 ### Initialized
 
@@ -805,7 +806,7 @@ Vesting schedule has been released
 ### RevokedVestingSchedule
 
 ```solidity
-event RevokedVestingSchedule(uint256 index, uint256 returnedAmount)
+event RevokedVestingSchedule(uint256 index, uint256 returnedAmount, uint256 newEnd)
 ```
 
 Vesting schedule has been revoked
@@ -818,6 +819,7 @@ Vesting schedule has been revoked
 |---|---|---|
 | index  | uint256 | undefined |
 | returnedAmount  | uint256 | undefined |
+| newEnd  | uint256 | undefined |
 
 ### Transfer
 
@@ -847,7 +849,7 @@ event Transfer(address indexed from, address indexed to, uint256 value)
 error InvalidRevokedVestingScheduleEnd()
 ```
 
-Attempt to revoke at a
+Attempt to revoke a vesting schedule with an invalid end parameter
 
 
 

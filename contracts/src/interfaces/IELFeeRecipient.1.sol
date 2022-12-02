@@ -16,7 +16,7 @@ interface IELFeeRecipientV1 {
     /// @param _riverAddress Address of River
     function initELFeeRecipientV1(address _riverAddress) external;
 
-    /// @notice Pulls all the ETH to the River contract
+    /// @notice Pulls ETH to the River contract
     /// @dev Only callable by the River contract
     /// @param _maxAmount The maximum amount to pull into the system
     function pullELFees(uint256 _maxAmount) external;

@@ -1,9 +1,9 @@
 //SPDX-License-Identifier: BUSL-1.1
 pragma solidity 0.8.10;
 
-/// @title VestingSchedules Storage
-/// @notice Utility to manage VestingSchedules in storage
-library VestingSchedules {
+/// @title VestingSchedulesV1 Storage
+/// @notice Utility to manage VestingSchedulesV1 in storage
+library VestingSchedulesV1 {
     /// @notice Storage slot of the Vesting Schedules
     bytes32 internal constant VESTING_SCHEDULES_SLOT =
         bytes32(uint256(keccak256("erc20VestableVotes.state.schedules")) - 1);
@@ -16,12 +16,12 @@ library VestingSchedules {
         uint64 end;
         // duration before which first tokens gets ownable
         uint32 cliffDuration;
-        // duration before tokens gets unlocked
+        // duration before tokens gets unlocked. can exceed the duration of the vesting chedule
         uint32 lockDuration;
-        // duration of the vesting period in seconds
+        // duration of the entire vesting (sum of all vesting period durations)
         uint32 duration;
-        // duration of a vesting period in seconds
-        uint32 period;
+        // duration of a single period of vesting
+        uint32 periodDuration;
         // amount of tokens granted by the vesting schedule
         uint256 amount;
         // creator of the token vesting
@@ -34,7 +34,7 @@ library VestingSchedules {
 
     /// @notice The structure at the storage slot
     struct SlotVestingSchedule {
-        /// @custom:attribute Array containing all the operators
+        /// @custom:attribute Array containing all the vesting schedules
         VestingSchedule[] value;
     }
 
@@ -79,7 +79,7 @@ library VestingSchedules {
 
     /// @notice Add a new vesting schedule in storage
     /// @param _newSchedule new vesting schedule to create
-    /// @return The size of the operator array after the operation
+    /// @return The size of the vesting schedule array after the operation
     function push(VestingSchedule memory _newSchedule) internal returns (uint256) {
         bytes32 slot = VESTING_SCHEDULES_SLOT;
 
