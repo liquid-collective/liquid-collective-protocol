@@ -1,5 +1,18 @@
 # Staking Contracts changelog
 
+## v0.5.0 (December 3rd 2022)
+
+### :hammer_and_wrench: Bug Fixes
+
+- [[contracts] [Spearbit] TLC informational and gas optimizations issues](https://github.com/liquid-collective/liquid-collective-protocol/pull/172)
+- [[contracts] [Spearbit] ERC20VestableVotesUpgradeable: protect against DOS on escrow (ETH-342)](https://github.com/liquid-collective/liquid-collective-protocol/pull/171)
+- [[contracts] [Spearbit] Add deployment script for CoverageFund](https://github.com/liquid-collective/liquid-collective-protocol/pull/170)
+- [[contracts] [Spearbit] Sanitize SetCoverageFund](https://github.com/liquid-collective/liquid-collective-protocol/pull/169)
+- [[contracts] [Spearbit] CoverageFund informational issues](https://github.com/liquid-collective/liquid-collective-protocol/pull/168)
+- [[contracts] [Spearbit] Sanitize inputs for SetMetadataURI](https://github.com/liquid-collective/liquid-collective-protocol/pull/167)
+- [[contracts] [Spearbit] Move DENY_MASK to LibAllowlistMask](https://github.com/liquid-collective/liquid-collective-protocol/pull/166)
+- [[contracts] Remove dynamic indexed type from Allowlist event](https://github.com/liquid-collective/liquid-collective-protocol/blob/c0517983140f593f8db033c7ab75e6a91556182b/contracts/src/interfaces/IAllowlist.1.sol#L11)
+
 ## v0.5.0-beta (November 3rd 2022)
 
 ### :dizzy: Features
