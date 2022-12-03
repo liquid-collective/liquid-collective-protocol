@@ -1,6 +1,348 @@
 {
-    "address": "0xe7B74d98D46A8e0979B0342172A3A4890F852558",
+    "address": "0xF7FA16b512416d8CA38E6ddd268C7Af562F94b7a",
     "abi": [
+        {
+            "inputs": [
+                {
+                    "internalType": "address",
+                    "name": "_account",
+                    "type": "address"
+                }
+            ],
+            "name": "Denied",
+            "type": "error"
+        },
+        {
+            "inputs": [],
+            "name": "InvalidAlloweeCount",
+            "type": "error"
+        },
+        {
+            "inputs": [
+                {
+                    "internalType": "uint256",
+                    "name": "version",
+                    "type": "uint256"
+                },
+                {
+                    "internalType": "uint256",
+                    "name": "expectedVersion",
+                    "type": "uint256"
+                }
+            ],
+            "name": "InvalidInitialization",
+            "type": "error"
+        },
+        {
+            "inputs": [],
+            "name": "InvalidZeroAddress",
+            "type": "error"
+        },
+        {
+            "inputs": [],
+            "name": "MismatchedAlloweeAndStatusCount",
+            "type": "error"
+        },
+        {
+            "inputs": [
+                {
+                    "internalType": "address",
+                    "name": "caller",
+                    "type": "address"
+                }
+            ],
+            "name": "Unauthorized",
+            "type": "error"
+        },
+        {
+            "anonymous": false,
+            "inputs": [
+                {
+                    "indexed": false,
+                    "internalType": "uint256",
+                    "name": "version",
+                    "type": "uint256"
+                },
+                {
+                    "indexed": false,
+                    "internalType": "bytes",
+                    "name": "cdata",
+                    "type": "bytes"
+                }
+            ],
+            "name": "Initialize",
+            "type": "event"
+        },
+        {
+            "anonymous": false,
+            "inputs": [
+                {
+                    "indexed": true,
+                    "internalType": "address",
+                    "name": "admin",
+                    "type": "address"
+                }
+            ],
+            "name": "SetAdmin",
+            "type": "event"
+        },
+        {
+            "anonymous": false,
+            "inputs": [
+                {
+                    "indexed": true,
+                    "internalType": "address",
+                    "name": "allower",
+                    "type": "address"
+                }
+            ],
+            "name": "SetAllower",
+            "type": "event"
+        },
+        {
+            "anonymous": false,
+            "inputs": [
+                {
+                    "indexed": true,
+                    "internalType": "address[]",
+                    "name": "accounts",
+                    "type": "address[]"
+                },
+                {
+                    "indexed": false,
+                    "internalType": "uint256[]",
+                    "name": "permissions",
+                    "type": "uint256[]"
+                }
+            ],
+            "name": "SetAllowlistPermissions",
+            "type": "event"
+        },
+        {
+            "anonymous": false,
+            "inputs": [
+                {
+                    "indexed": true,
+                    "internalType": "address",
+                    "name": "pendingAdmin",
+                    "type": "address"
+                }
+            ],
+            "name": "SetPendingAdmin",
+            "type": "event"
+        },
+        {
+            "inputs": [],
+            "name": "acceptAdmin",
+            "outputs": [],
+            "stateMutability": "nonpayable",
+            "type": "function"
+        },
+        {
+            "inputs": [
+                {
+                    "internalType": "address[]",
+                    "name": "_accounts",
+                    "type": "address[]"
+                },
+                {
+                    "internalType": "uint256[]",
+                    "name": "_permissions",
+                    "type": "uint256[]"
+                }
+            ],
+            "name": "allow",
+            "outputs": [],
+            "stateMutability": "nonpayable",
+            "type": "function"
+        },
+        {
+            "inputs": [],
+            "name": "getAdmin",
+            "outputs": [
+                {
+                    "internalType": "address",
+                    "name": "",
+                    "type": "address"
+                }
+            ],
+            "stateMutability": "view",
+            "type": "function"
+        },
+        {
+            "inputs": [],
+            "name": "getAllower",
+            "outputs": [
+                {
+                    "internalType": "address",
+                    "name": "",
+                    "type": "address"
+                }
+            ],
+            "stateMutability": "view",
+            "type": "function"
+        },
+        {
+            "inputs": [],
+            "name": "getPendingAdmin",
+            "outputs": [
+                {
+                    "internalType": "address",
+                    "name": "",
+                    "type": "address"
+                }
+            ],
+            "stateMutability": "view",
+            "type": "function"
+        },
+        {
+            "inputs": [
+                {
+                    "internalType": "address",
+                    "name": "_account",
+                    "type": "address"
+                }
+            ],
+            "name": "getPermissions",
+            "outputs": [
+                {
+                    "internalType": "uint256",
+                    "name": "",
+                    "type": "uint256"
+                }
+            ],
+            "stateMutability": "view",
+            "type": "function"
+        },
+        {
+            "inputs": [
+                {
+                    "internalType": "address",
+                    "name": "_account",
+                    "type": "address"
+                },
+                {
+                    "internalType": "uint256",
+                    "name": "_mask",
+                    "type": "uint256"
+                }
+            ],
+            "name": "hasPermission",
+            "outputs": [
+                {
+                    "internalType": "bool",
+                    "name": "",
+                    "type": "bool"
+                }
+            ],
+            "stateMutability": "view",
+            "type": "function"
+        },
+        {
+            "inputs": [
+                {
+                    "internalType": "address",
+                    "name": "_admin",
+                    "type": "address"
+                },
+                {
+                    "internalType": "address",
+                    "name": "_allower",
+                    "type": "address"
+                }
+            ],
+            "name": "initAllowlistV1",
+            "outputs": [],
+            "stateMutability": "nonpayable",
+            "type": "function"
+        },
+        {
+            "inputs": [
+                {
+                    "internalType": "address",
+                    "name": "_account",
+                    "type": "address"
+                },
+                {
+                    "internalType": "uint256",
+                    "name": "_mask",
+                    "type": "uint256"
+                }
+            ],
+            "name": "isAllowed",
+            "outputs": [
+                {
+                    "internalType": "bool",
+                    "name": "",
+                    "type": "bool"
+                }
+            ],
+            "stateMutability": "view",
+            "type": "function"
+        },
+        {
+            "inputs": [
+                {
+                    "internalType": "address",
+                    "name": "_account",
+                    "type": "address"
+                }
+            ],
+            "name": "isDenied",
+            "outputs": [
+                {
+                    "internalType": "bool",
+                    "name": "",
+                    "type": "bool"
+                }
+            ],
+            "stateMutability": "view",
+            "type": "function"
+        },
+        {
+            "inputs": [
+                {
+                    "internalType": "address",
+                    "name": "_account",
+                    "type": "address"
+                },
+                {
+                    "internalType": "uint256",
+                    "name": "_mask",
+                    "type": "uint256"
+                }
+            ],
+            "name": "onlyAllowed",
+            "outputs": [],
+            "stateMutability": "view",
+            "type": "function"
+        },
+        {
+            "inputs": [
+                {
+                    "internalType": "address",
+                    "name": "_newAdmin",
+                    "type": "address"
+                }
+            ],
+            "name": "proposeAdmin",
+            "outputs": [],
+            "stateMutability": "nonpayable",
+            "type": "function"
+        },
+        {
+            "inputs": [
+                {
+                    "internalType": "address",
+                    "name": "_newAllowerAddress",
+                    "type": "address"
+                }
+            ],
+            "name": "setAllower",
+            "outputs": [],
+            "stateMutability": "nonpayable",
+            "type": "function"
+        },
         {
             "inputs": [
                 {
@@ -546,90 +888,90 @@
             "type": "receive"
         }
     ],
-    "transactionHash": "0x4f4aabb1b62bfbdaed33007e08de1e629f3a2fa84e6758068c7d3ddcc65fb6b1",
+    "transactionHash": "0x218e7f6848ad55b15ea9bc78e346080c4679072bb6b9e32b476e23d46d7e4447",
     "receipt": {
         "to": null,
-        "from": "0x959FD7Ef9089B7142B6B908Dc3A8af7Aa8ff0FA1",
-        "contractAddress": "0xe7B74d98D46A8e0979B0342172A3A4890F852558",
-        "transactionIndex": 44,
-        "gasUsed": "799445",
-        "logsBloom": "0x00000000000000000000000000000000400000000000000000000004001000000800000000004000100000000000000000000000000020000000000000000000000000000000000000000000000002000200000000000000000000004000000000000000000000000000000000000020000000880001040000000000000000000000000000000000001000000000000000000000000000000000000000800000000000000000000000000000000000000000000000000000020000000000100000000020000000000000000000000080000000002400000000000000000000000000000000000000000000000000040000000000000000000000000000000000",
-        "blockHash": "0x681f3da6888a7c5a69aba321110e0f690d3223d47f750f70523e5fa0d84a50fa",
-        "transactionHash": "0x4f4aabb1b62bfbdaed33007e08de1e629f3a2fa84e6758068c7d3ddcc65fb6b1",
+        "from": "0x341C40B94bF2afBFa42573cB78f16Ee15a056238",
+        "contractAddress": "0xF7FA16b512416d8CA38E6ddd268C7Af562F94b7a",
+        "transactionIndex": 85,
+        "gasUsed": "799433",
+        "logsBloom": "0x00000010000000000000000000000020400000000000000000000004001000000000000000004000000000000000000000000000000020000000000000000000008000000400000000000000000002000000000000000000000000000000000000000000000000000000080000000020000400800001040000000000000000000000000000000000001000800000000000000000000000000000080000800000000000000000000000000000000000000000000000000000000000000000100000000020000000000000000000000000000000000420000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+        "blockHash": "0xded9430c5f8cf218a4f929f2b0692ef56fd2a87fd9354b3e722b9554fb5cb6cc",
+        "transactionHash": "0x218e7f6848ad55b15ea9bc78e346080c4679072bb6b9e32b476e23d46d7e4447",
         "logs": [
             {
-                "transactionIndex": 44,
-                "blockNumber": 7685804,
-                "transactionHash": "0x4f4aabb1b62bfbdaed33007e08de1e629f3a2fa84e6758068c7d3ddcc65fb6b1",
-                "address": "0xe7B74d98D46A8e0979B0342172A3A4890F852558",
+                "transactionIndex": 85,
+                "blockNumber": 7685717,
+                "transactionHash": "0x218e7f6848ad55b15ea9bc78e346080c4679072bb6b9e32b476e23d46d7e4447",
+                "address": "0xF7FA16b512416d8CA38E6ddd268C7Af562F94b7a",
                 "topics": [
                     "0xbc7cd75a20ee27fd9adebab32041f755214dbc6bffa90cc0225b39da2e5c2d3b",
-                    "0x000000000000000000000000bebf58684ca998690bfba90de12d012dd51690e3"
+                    "0x00000000000000000000000032618a848a850c129a1387fa6b00bdc8a35a0e69"
                 ],
                 "data": "0x",
-                "logIndex": 80,
-                "blockHash": "0x681f3da6888a7c5a69aba321110e0f690d3223d47f750f70523e5fa0d84a50fa"
+                "logIndex": 224,
+                "blockHash": "0xded9430c5f8cf218a4f929f2b0692ef56fd2a87fd9354b3e722b9554fb5cb6cc"
             },
             {
-                "transactionIndex": 44,
-                "blockNumber": 7685804,
-                "transactionHash": "0x4f4aabb1b62bfbdaed33007e08de1e629f3a2fa84e6758068c7d3ddcc65fb6b1",
-                "address": "0xe7B74d98D46A8e0979B0342172A3A4890F852558",
+                "transactionIndex": 85,
+                "blockNumber": 7685717,
+                "transactionHash": "0x218e7f6848ad55b15ea9bc78e346080c4679072bb6b9e32b476e23d46d7e4447",
+                "address": "0xF7FA16b512416d8CA38E6ddd268C7Af562F94b7a",
                 "topics": [
                     "0x5a272403b402d892977df56625f4164ccaf70ca3863991c43ecfe76a6905b0a1",
-                    "0x000000000000000000000000829566f013e1be7c36a32e0ad78173970709d41e"
+                    "0x0000000000000000000000001e52c10e7d1fbfb11d206b53bb1ec7210a0bd6af"
                 ],
                 "data": "0x",
-                "logIndex": 81,
-                "blockHash": "0x681f3da6888a7c5a69aba321110e0f690d3223d47f750f70523e5fa0d84a50fa"
+                "logIndex": 225,
+                "blockHash": "0xded9430c5f8cf218a4f929f2b0692ef56fd2a87fd9354b3e722b9554fb5cb6cc"
             },
             {
-                "transactionIndex": 44,
-                "blockNumber": 7685804,
-                "transactionHash": "0x4f4aabb1b62bfbdaed33007e08de1e629f3a2fa84e6758068c7d3ddcc65fb6b1",
-                "address": "0xe7B74d98D46A8e0979B0342172A3A4890F852558",
+                "transactionIndex": 85,
+                "blockNumber": 7685717,
+                "transactionHash": "0x218e7f6848ad55b15ea9bc78e346080c4679072bb6b9e32b476e23d46d7e4447",
+                "address": "0xF7FA16b512416d8CA38E6ddd268C7Af562F94b7a",
                 "topics": [
                     "0xb96ab8443049f385aba7fbc2899e3fcdfba4d80ac8458847f40b7d426bae2dcf",
-                    "0x000000000000000000000000829566f013e1be7c36a32e0ad78173970709d41e"
+                    "0x0000000000000000000000001e52c10e7d1fbfb11d206b53bb1ec7210a0bd6af"
                 ],
                 "data": "0x",
-                "logIndex": 82,
-                "blockHash": "0x681f3da6888a7c5a69aba321110e0f690d3223d47f750f70523e5fa0d84a50fa"
+                "logIndex": 226,
+                "blockHash": "0xded9430c5f8cf218a4f929f2b0692ef56fd2a87fd9354b3e722b9554fb5cb6cc"
             },
             {
-                "transactionIndex": 44,
-                "blockNumber": 7685804,
-                "transactionHash": "0x4f4aabb1b62bfbdaed33007e08de1e629f3a2fa84e6758068c7d3ddcc65fb6b1",
-                "address": "0xe7B74d98D46A8e0979B0342172A3A4890F852558",
+                "transactionIndex": 85,
+                "blockNumber": 7685717,
+                "transactionHash": "0x218e7f6848ad55b15ea9bc78e346080c4679072bb6b9e32b476e23d46d7e4447",
+                "address": "0xF7FA16b512416d8CA38E6ddd268C7Af562F94b7a",
                 "topics": [
                     "0x1809e49bba43f2d39fa57894b50cd6ccb428cc438230e065cac3eb24a1355a71"
                 ],
-                "data": "0x0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000004000000000000000000000000000000000000000000000000000000000000000446e8cac11000000000000000000000000829566f013e1be7c36a32e0ad78173970709d41e000000000000000000000000829566f013e1be7c36a32e0ad78173970709d41e00000000000000000000000000000000000000000000000000000000",
-                "logIndex": 83,
-                "blockHash": "0x681f3da6888a7c5a69aba321110e0f690d3223d47f750f70523e5fa0d84a50fa"
+                "data": "0x0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000004000000000000000000000000000000000000000000000000000000000000000446e8cac110000000000000000000000001e52c10e7d1fbfb11d206b53bb1ec7210a0bd6af0000000000000000000000001e52c10e7d1fbfb11d206b53bb1ec7210a0bd6af00000000000000000000000000000000000000000000000000000000",
+                "logIndex": 227,
+                "blockHash": "0xded9430c5f8cf218a4f929f2b0692ef56fd2a87fd9354b3e722b9554fb5cb6cc"
             },
             {
-                "transactionIndex": 44,
-                "blockNumber": 7685804,
-                "transactionHash": "0x4f4aabb1b62bfbdaed33007e08de1e629f3a2fa84e6758068c7d3ddcc65fb6b1",
-                "address": "0xe7B74d98D46A8e0979B0342172A3A4890F852558",
+                "transactionIndex": 85,
+                "blockNumber": 7685717,
+                "transactionHash": "0x218e7f6848ad55b15ea9bc78e346080c4679072bb6b9e32b476e23d46d7e4447",
+                "address": "0xF7FA16b512416d8CA38E6ddd268C7Af562F94b7a",
                 "topics": [
                     "0x7e644d79422f17c01e4894b5f4f588d331ebfa28653d42ae832dc59e38c9798f"
                 ],
-                "data": "0x000000000000000000000000000000000000000000000000000000000000000000000000000000000000000067bc791a7ea5a98ddcecbbf6580ae1bb310f5d9b",
-                "logIndex": 84,
-                "blockHash": "0x681f3da6888a7c5a69aba321110e0f690d3223d47f750f70523e5fa0d84a50fa"
+                "data": "0x000000000000000000000000000000000000000000000000000000000000000000000000000000000000000007706a7d768054c10eb4fc9103ea322f62831cb9",
+                "logIndex": 228,
+                "blockHash": "0xded9430c5f8cf218a4f929f2b0692ef56fd2a87fd9354b3e722b9554fb5cb6cc"
             }
         ],
-        "blockNumber": 7685804,
-        "cumulativeGasUsed": "25624438",
+        "blockNumber": 7685717,
+        "cumulativeGasUsed": "24690172",
         "status": 1,
         "byzantium": true
     },
     "args": [
-        "0xBebf58684CA998690BFBA90DE12d012dd51690e3",
-        "0x67bc791A7EA5A98DDcEcBbF6580aE1BB310F5d9B",
-        "0x6e8cac11000000000000000000000000829566f013e1be7c36a32e0ad78173970709d41e000000000000000000000000829566f013e1be7c36a32e0ad78173970709d41e"
+        "0x32618a848A850C129A1387fa6B00bDc8A35A0e69",
+        "0x07706A7D768054c10eB4FC9103Ea322f62831cb9",
+        "0x6e8cac110000000000000000000000001e52c10e7d1fbfb11d206b53bb1ec7210a0bd6af0000000000000000000000001e52c10e7d1fbfb11d206b53bb1ec7210a0bd6af"
     ],
     "numDeployments": 1,
     "solcInputHash": "803b991b13fc3eb82937205601e77786",
@@ -722,37 +1064,37 @@
             "AllowlistV1_Implementation_0_5_0.json"
         ],
         "transactionHash": [
-            "0x600f7822287193dda106cc78a0194a2696166f9a14ebfe2f424393767c93cac4",
-            "0x6c7211a4d911991dbf212ad8e232d5d5b29b9198a256f613bba3b46f4efc4408"
+            "0x8bd7f36f9097c00f81f5ef5e617cde88349919240ad3455cc01136c548e13c00",
+            "0x77bf516b9e8bb11f357ad9cb4c4b89b7279c0d7bbf6eb755d31facaa570004be"
         ],
         "receipt": [
             {
                 "to": null,
-                "from": "0x959FD7Ef9089B7142B6B908Dc3A8af7Aa8ff0FA1",
-                "contractAddress": "0xBebf58684CA998690BFBA90DE12d012dd51690e3",
-                "transactionIndex": 51,
+                "from": "0x341C40B94bF2afBFa42573cB78f16Ee15a056238",
+                "contractAddress": "0x32618a848A850C129A1387fa6B00bDc8A35A0e69",
+                "transactionIndex": 21,
                 "gasUsed": "709254",
                 "logsBloom": "0x00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
-                "blockHash": "0xfdfd4c8de8a4a0eeab185953d37dc3a421bdab3f98c30fe8489091fe2503dce4",
-                "transactionHash": "0x600f7822287193dda106cc78a0194a2696166f9a14ebfe2f424393767c93cac4",
+                "blockHash": "0xff0a3f577e9d3bbdafc3df0297d521bb3d12079feeddb0df70d9ab4256526be7",
+                "transactionHash": "0x8bd7f36f9097c00f81f5ef5e617cde88349919240ad3455cc01136c548e13c00",
                 "logs": [],
-                "blockNumber": 7685802,
-                "cumulativeGasUsed": "14763553",
+                "blockNumber": 7685715,
+                "cumulativeGasUsed": "7966952",
                 "status": 1,
                 "byzantium": true
             },
             {
                 "to": null,
                 "from": "0x341C40B94bF2afBFa42573cB78f16Ee15a056238",
-                "contractAddress": "0x5146470B4e4FA5Bd4866B1aca000e4E1dFdBD896",
-                "transactionIndex": 28,
+                "contractAddress": "0xB399675b232975A36fcA75aB7096dd5A5cC6f2b3",
+                "transactionIndex": 31,
                 "gasUsed": "706254",
                 "logsBloom": "0x00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
-                "blockHash": "0x4b2bb790d7d0ea494bc23ba935020de51fb6bd15c7ac72eea65e08fa909ab3b5",
-                "transactionHash": "0x6c7211a4d911991dbf212ad8e232d5d5b29b9198a256f613bba3b46f4efc4408",
+                "blockHash": "0x6a22569f7f43d6d7e97a9caaf2dab234fa69a11f72a6ac3ad9ce3e037c868740",
+                "transactionHash": "0x77bf516b9e8bb11f357ad9cb4c4b89b7279c0d7bbf6eb755d31facaa570004be",
                 "logs": [],
-                "blockNumber": 8060049,
-                "cumulativeGasUsed": "7321988",
+                "blockNumber": 8060038,
+                "cumulativeGasUsed": "2728731",
                 "status": 1,
                 "byzantium": true
             }

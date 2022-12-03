@@ -60,6 +60,7 @@
             }
         },
         "AllowlistV1_Implementation": "0x8892dAf1FcD24B2e8A3c6194d297Aaab04E493f2",
+        "AllowlistV1_Implementation_0_5_0": "0xCfa8cf872f0B8cE15C175a8eB13688D5c69E9CEe",
         "Allowlist_Proxy": {
             "address": "0xebc83Bb472b2816Ec5B5de8D34F0eFc9088BB2ce",
             "deploymentParams": {
@@ -68,6 +69,36 @@
                     "_logic": {
                         "value": "0x8892dAf1FcD24B2e8A3c6194d297Aaab04E493f2",
                         "contract": "AllowlistV1_Implementation"
+                    },
+                    "__admin": {
+                        "value": "0x8EE3fC0Bcd7B57429203751C5bE5fdf1AB8409f3",
+                        "namedAccount": "proxyAdministrator"
+                    }
+                }
+            }
+        },
+        "CoverageFund": {
+            "address": "0x32Aac358b627B9FEaa971CC33304027A41e49a81",
+            "deploymentParams": {
+                "type": "proxy",
+                "methodName": "initCoverageFundV1",
+                "args": {
+                    "_riverAddress": {
+                        "value": "0x8c1BEd5b9a0928467c9B1341Da1D7BD5e10b6549",
+                        "contract": "River_Proxy"
+                    }
+                }
+            }
+        },
+        "CoverageFundV1_Implementation_0_5_0": "0x6B747258A0E926De1F5C2a54Fe92514706Cce2D4",
+        "CoverageFund_Proxy": {
+            "address": "0x32Aac358b627B9FEaa971CC33304027A41e49a81",
+            "deploymentParams": {
+                "type": "constructor",
+                "args": {
+                    "_logic": {
+                        "value": "0x6B747258A0E926De1F5C2a54Fe92514706Cce2D4",
+                        "contract": "CoverageFundV1_Implementation_0_5_0"
                     },
                     "__admin": {
                         "value": "0x8EE3fC0Bcd7B57429203751C5bE5fdf1AB8409f3",
@@ -332,6 +363,7 @@
             }
         },
         "RiverV1_Implementation": "0x660bD93e6C149E2e0Af1963E2bDF362087792824",
+        "RiverV1_Implementation_0_5_0": "0x179D669aC78896f970040E57cb297582b50DE4F2",
         "River_Proxy": {
             "address": "0x8c1BEd5b9a0928467c9B1341Da1D7BD5e10b6549",
             "deploymentParams": {
@@ -382,6 +414,7 @@
             }
         },
         "TLCV1_Implementation": "0x7B2518de3DBB0F6b287C9979Cf713603F7f7f238",
+        "TLCV1_Implementation_0_5_0": "0xCb2aE4Ad13Da800373d7161431b373940B7CB05d",
         "TLC_Proxy": {
             "address": "0xb5Fe6946836D687848B5aBd42dAbF531d5819632",
             "deploymentParams": {
