@@ -26,4 +26,6 @@ jobs:
         with:
           body: |
             Metadata directory has been uploaded to IPFS
-            [`${{ steps.ipfs.outputs.hash }}`](https://gateway.ipfs.io/ipfs/${{steps.ipfs.outputs.hash}})
+            - Hash: `${{ steps.ipfs.outputs.hash }}`
+            - URI: `ipfs://${{ steps.ipfs.outputs.hash }}`
+            - Gateway Link: [link](https://gateway.ipfs.io/ipfs/${{steps.ipfs.outputs.hash}})
