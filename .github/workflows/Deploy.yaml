@@ -3,6 +3,7 @@ name: Deploy Scripts Checks
 on:
   push:
     paths:
+      - ".github/**"
       - "contracts/**"
       - "deploy/**"
       - "lib/**"
