@@ -123,12 +123,12 @@ async function main() {
   if (network.name === "hardhat") {
     throw new Error("Cannot generate artifacts for hardhat network");
   }
-  const artifactName = `deployment.${network.name}.json`;
+  const artifactName = join(process.cwd(),`deployment.${network.name}.json`);
   hre.run("export", { export: artifactName });
   await new Promise((resolve) => setTimeout(resolve, 5000));
-  const artifactContent = require(`./${artifactName}`);
+  const artifactContent = require(artifactName);
   const namedAccounts = await hre.getNamedAccounts();
-  const contractNames = Object.keys(artifactContent.contracts);
+  const contractNames = Object.keys(artifactContent.contracts).filter((a) => !(a.includes("firewallAbis/") || a.includes("combinedImplementations/")))
   let firewallAbi;
   const contractsAbis = {};
   const inversedNamedAccounts = {};
@@ -140,7 +140,7 @@ async function main() {
     }
   }
   const inversedContracts = {};
-  for (const contract of Object.keys(artifactContent.contracts)) {
+  for (const contract of contractNames) {
     if (artifactContent.contracts[contract].address) {
       inversedContracts[artifactContent.contracts[contract].address.toLowerCase()] = contract;
     }
