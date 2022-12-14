@@ -1,0 +1,31 @@
+name: Upload Metadata to IPFS
+
+on:
+  push:
+    branches:
+         - master
+    paths:
+      - "metadata/**"
+
+jobs:
+  run-metadata-ipfs:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - uses: aquiladev/ipfs-action@master
+        id: ipfs
+        with:
+          path: ./metadata
+          service: pinata
+          pinataKey: ${{ secrets.PINATA_KEY }}
+          pinataSecret: ${{ secrets.PINATA_SECRET }}
+
+      - uses: peter-evans/commit-comment@v2
+        with:
+          body: |
+            Metadata directory has been uploaded to IPFS
+            - Hash: `${{ steps.ipfs.outputs.hash }}`
+            - URI: `ipfs://${{ steps.ipfs.outputs.hash }}`
+            - Gateway Link: [link](https://gateway.ipfs.io/ipfs/${{steps.ipfs.outputs.hash}})

@@ -2,6 +2,8 @@ name: Format Checks
 
 on:
   push:
+    paths:
+      - "contracts/**"
 
 jobs:
   run-format:

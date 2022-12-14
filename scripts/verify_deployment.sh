@@ -55,8 +55,9 @@ echo "OperatorsRegistry Firewall executor is ${OPERATORS_REGISTRY_EXECUTOR}"
 echo "Operators Registry's River is $(cast call ${OPERATORS_REGISTRY} "getRiver()(address)")"
 
 echo "River el fee recipient is $(cast call ${RIVER} "getELFeeRecipient()(address)")"
+
 echo "River coverage fund is $(cast call ${RIVER} "getCoverageFund()(address)")"
-echo "River metadata uri is $(cast call ${RIVER} "getMetadataUri()(string)")"
+echo "River metadata uri is $(cast call ${RIVER} "getMetadataURI()(string)")"
 
 echo "River withdrawal credentials are $(cast call ${RIVER} "getWithdrawalCredentials()(bytes32)")"
 

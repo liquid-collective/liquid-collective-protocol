@@ -2,6 +2,16 @@ name: Deploy Scripts Checks
 
 on:
   push:
+    paths:
+      - ".github/**"
+      - "contracts/**"
+      - "deploy/**"
+      - "lib/**"
+      - "scripts/**"
+      - "ts-utils/**"
+      - "package.json"
+      - "yarn.lock"
+      - "hardhat.config.ts"
 
 jobs:
   run-deploy:
