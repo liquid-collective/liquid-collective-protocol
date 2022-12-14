@@ -29,7 +29,7 @@ const func: DeployFunction = async function ({ deployments, getNamedAccounts, et
     proxy: {
       owner: proxyAdministrator,
       proxyContract: "TUPProxy",
-      implementationName: "AllowlistV1_Implementation",
+      implementationName: "AllowlistV1_Implementation_0_2_2",
       execute: {
         methodName: "initAllowlistV1",
         args: [firewallDeployment.address, firewallDeployment.address],

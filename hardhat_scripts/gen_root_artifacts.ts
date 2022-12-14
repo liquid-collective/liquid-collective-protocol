@@ -71,7 +71,7 @@ async function decodeConstructorArguments(
   namedAccountsMapping: { [key: string]: string },
   contractsMapping: { [key: string]: string }
 ): Promise<any> {
-  const completeArtifactPath = join(__dirname, "deployments", networkName, `${contractName}.json`);
+  const completeArtifactPath = join(process.cwd(), "deployments", networkName, `${contractName}.json`);
   if (existsSync(completeArtifactPath)) {
     const completeArtifact = require(completeArtifactPath);
     if (completeArtifact.execute !== undefined) {

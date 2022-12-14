@@ -1321,7 +1321,7 @@
     },
     "implementations": {
         "names": [
-            "OracleV1_Implementation.json"
+            "OracleV1_Implementation_0_4_0.json"
         ],
         "transactionHash": [
             "0x37dbf6a6415e1176d3ab0f5a7efcd0200f10e0a88ddc4f758b80dbd572efc09c"

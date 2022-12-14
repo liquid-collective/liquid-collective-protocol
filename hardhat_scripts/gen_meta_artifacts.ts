@@ -55,7 +55,7 @@ const mergeImplemsAndProxy = (imps: any[], impNames: string[], proxy: any): any 
 })
 
 const generateMainArtifact = (network: string, cfg: Config) => {
-  const artifactPath = path.join(__dirname, "deployments", network);
+  const artifactPath = path.join(process.cwd(), "deployments", network);
   const proxyArtifact = JSON.parse(fs.readFileSync(path.join(artifactPath, cfg.proxy)).toString())
   const implemsArtifact = cfg.implementations.map(i => JSON.parse(fs.readFileSync(path.join(artifactPath, i)).toString()))
   
@@ -94,13 +94,13 @@ const aggregateImplemsAndProxy = (imps: any[], impNames: string[], proxy: any): 
 })
 
 const generateAggregatedArtifact = (network: string, cfg: Config) => {
-  const artifactPath = path.join(__dirname, "deployments", network);
+  const artifactPath = path.join(process.cwd(), "deployments", network);
   const proxyArtifact = JSON.parse(fs.readFileSync(path.join(artifactPath, cfg.proxy)).toString())
   const implemsArtifact = cfg.implementations.map(i => JSON.parse(fs.readFileSync(path.join(artifactPath, i)).toString()))
 
   const aggregatedArtifact = aggregateImplemsAndProxy(implemsArtifact, cfg.implementations, proxyArtifact)
 
-  const combinedArtifactPath = path.join(artifactPath, "combinedImplementationsArtifacts", `${path.basename(cfg.target, '.json')}_combined_implementations.json`)
+  const combinedArtifactPath = path.join(artifactPath, "combinedImplementations", `${path.basename(cfg.target, '.json')}_combined_implementations.json`)
   
   fs.writeFileSync(combinedArtifactPath, JSON.stringify(aggregatedArtifact, null, 4));
 }
@@ -120,7 +120,7 @@ const config: AllNetsConfigs = {
     {
       target: "Allowlist.json" ,
       implementations: [
-        "AllowlistV1_Implementation.json",
+        "AllowlistV1_Implementation_0_2_2.json",
         "AllowlistV1_Implementation_0_5_0.json"
       ],
       proxy: "Allowlist_Proxy.json"
@@ -135,31 +135,31 @@ const config: AllNetsConfigs = {
     {
       target: "ELFeeRecipient.json" ,
       implementations: [
-        "ELFeeRecipientV1_Implementation.json",
+        "ELFeeRecipientV1_Implementation_0_2_2.json",
       ],
       proxy: "ELFeeRecipient_Proxy.json"
     },
     {
       target: "OperatorsRegistry.json" ,
       implementations: [
-        "OperatorsRegistryV1_Implementation.json",
-        "OperatorsRegistryV1_1.json",
+        "OperatorsRegistryV1_Implementation_0_2_2.json",
+        "OperatorsRegistryV1_Implementation_0_4_0.json",
       ],
       proxy: "OperatorsRegistry_Proxy.json"
     },
     {
       target: "Oracle.json" ,
       implementations: [
-        "OracleV1_Implementation.json",
-        "OracleV1_1.json",
+        "OracleV1_Implementation_0_2_2.json",
+        "OracleV1_Implementation_0_4_0.json",
       ],
       proxy: "Oracle_Proxy.json"
     },
     {
       target: "River.json" ,
       implementations: [
-        "RiverV1_Implementation.json",
-        "RiverV1_1.json",
+        "RiverV1_Implementation_0_2_2.json",
+        "RiverV1_Implementation_0_4_0.json",
         "RiverV1_Implementation_0_5_0.json",
       ],
       proxy: "River_Proxy.json"
@@ -167,7 +167,7 @@ const config: AllNetsConfigs = {
     {
       target: "TLC.json" ,
       implementations: [
-        "TLCV1_Implementation.json",
+        "TLCV1_Implementation_0_4_0.json",
         "TLCV1_Implementation_0_5_0.json",
       ],
       proxy: "TLC_Proxy.json"
@@ -175,15 +175,15 @@ const config: AllNetsConfigs = {
     {
       target: "Withdraw.json" ,
       implementations: [
-        "WithdrawV1_Implementation.json",
+        "WithdrawV1_Implementation_0_2_2.json",
       ],
       proxy: "Withdraw_Proxy.json"
     },
     {
       target: "WLSETH.json" ,
       implementations: [
-        "WLSETHV1_Implementation.json",
-        "WLSETHV1_1.json",
+        "WLSETHV1_Implementation_0_2_2.json",
+        "WLSETHV1_Implementation_0_4_0.json",
       ],
       proxy: "WLSETH_Proxy.json"
     },
@@ -192,7 +192,7 @@ const config: AllNetsConfigs = {
     {
       target: "Allowlist.json" ,
       implementations: [
-        "AllowlistV1_Implementation.json",
+        "AllowlistV1_Implementation_0_2_2.json",
         "AllowlistV1_Implementation_0_5_0.json"
       ],
       proxy: "Allowlist_Proxy.json"
@@ -207,31 +207,31 @@ const config: AllNetsConfigs = {
     {
       target: "ELFeeRecipient.json" ,
       implementations: [
-        "ELFeeRecipientV1_Implementation.json",
+        "ELFeeRecipientV1_Implementation_0_2_2.json",
       ],
       proxy: "ELFeeRecipient_Proxy.json"
     },
     {
       target: "OperatorsRegistry.json" ,
       implementations: [
-        "OperatorsRegistryV1_Implementation.json",
-        "OperatorsRegistryV1_1.json",
+        "OperatorsRegistryV1_Implementation_0_2_2.json",
+        "OperatorsRegistryV1_Implementation_0_4_0.json",
       ],
       proxy: "OperatorsRegistry_Proxy.json"
     },
     {
       target: "Oracle.json" ,
       implementations: [
-        "OracleV1_Implementation.json",
-        "OracleV1_1.json",
+        "OracleV1_Implementation_0_2_2.json",
+        "OracleV1_Implementation_0_4_0.json",
       ],
       proxy: "Oracle_Proxy.json"
     },
     {
       target: "River.json" ,
       implementations: [
-        "RiverV1_Implementation.json",
-        "RiverV1_1.json",
+        "RiverV1_Implementation_0_2_2.json",
+        "RiverV1_Implementation_0_4_0.json",
         "RiverV1_Implementation_0_5_0.json",
       ],
       proxy: "River_Proxy.json"
@@ -239,7 +239,7 @@ const config: AllNetsConfigs = {
     {
       target: "TLC.json" ,
       implementations: [
-        "TLCV1_Implementation.json",
+        "TLCV1_Implementation_0_4_0.json",
         "TLCV1_Implementation_0_5_0.json",
       ],
       proxy: "TLC_Proxy.json"
@@ -247,15 +247,15 @@ const config: AllNetsConfigs = {
     {
       target: "Withdraw.json" ,
       implementations: [
-        "WithdrawV1_Implementation.json",
+        "WithdrawV1_Implementation_0_2_2.json",
       ],
       proxy: "Withdraw_Proxy.json"
     },
     {
       target: "WLSETH.json" ,
       implementations: [
-        "WLSETHV1_Implementation.json",
-        "WLSETHV1_1.json",
+        "WLSETHV1_Implementation_0_2_2.json",
+        "WLSETHV1_Implementation_0_4_0.json",
       ],
       proxy: "WLSETH_Proxy.json"
     },
@@ -264,7 +264,7 @@ const config: AllNetsConfigs = {
     {
       target: "Allowlist.json" ,
       implementations: [
-        "AllowlistV1_Implementation.json",
+        "AllowlistV1_Implementation_0_4_0.json",
         "AllowlistV1_Implementation_0_5_0.json"
       ],
       proxy: "Allowlist_Proxy.json"
@@ -279,28 +279,28 @@ const config: AllNetsConfigs = {
     {
       target: "ELFeeRecipient.json" ,
       implementations: [
-        "ELFeeRecipientV1_Implementation.json",
+        "ELFeeRecipientV1_Implementation_0_4_0.json",
       ],
       proxy: "ELFeeRecipient_Proxy.json"
     },
     {
       target: "OperatorsRegistry.json" ,
       implementations: [
-        "OperatorsRegistryV1_Implementation.json",
+        "OperatorsRegistryV1_Implementation_0_4_0.json",
       ],
       proxy: "OperatorsRegistry_Proxy.json"
     },
     {
       target: "Oracle.json" ,
       implementations: [
-        "OracleV1_Implementation.json",
+        "OracleV1_Implementation_0_4_0.json",
       ],
       proxy: "Oracle_Proxy.json"
     },
     {
       target: "River.json" ,
       implementations: [
-        "RiverV1_Implementation.json",
+        "RiverV1_Implementation_0_4_0.json",
         "RiverV1_Implementation_0_5_0.json",
       ],
       proxy: "River_Proxy.json"
@@ -308,7 +308,7 @@ const config: AllNetsConfigs = {
     {
       target: "TLC.json" ,
       implementations: [
-        "TLCV1_Implementation.json",
+        "TLCV1_Implementation_0_4_0.json",
         "TLCV1_Implementation_0_5_0.json",
       ],
       proxy: "TLC_Proxy.json"
@@ -316,7 +316,7 @@ const config: AllNetsConfigs = {
     {
       target: "Withdraw.json" ,
       implementations: [
-        "WithdrawV1_Implementation.json",
+        "WithdrawV1_Implementation_0_4_0.json",
       ],
       proxy: "Withdraw_Proxy.json"
     },
@@ -325,7 +325,7 @@ const config: AllNetsConfigs = {
 
 const main = async () => {
   const net = hre.network.name
-  const dirPath = path.join(__dirname, "deployments", net, "combinedImplementationsArtifacts")
+  const dirPath = path.join(process.cwd(), "deployments", net, "combinedImplementations")
   if (fs.existsSync(dirPath)) {
     rimraf.sync(dirPath)
   }

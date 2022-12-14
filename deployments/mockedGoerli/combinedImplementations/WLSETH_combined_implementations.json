@@ -1335,8 +1335,8 @@
     },
     "implementations": {
         "names": [
-            "WLSETHV1_Implementation.json",
-            "WLSETHV1_1.json"
+            "WLSETHV1_Implementation_0_2_2.json",
+            "WLSETHV1_Implementation_0_4_0.json"
         ],
         "transactionHash": [
             "0xe0ed25d54afeb2190b44a846e286637703c0d04ee9b116ec3e3a477752eada43",

@@ -12,7 +12,7 @@ const func: DeployFunction = async function ({ deployments, getNamedAccounts }: 
     from: deployer,
     log: true,
     proxy: {
-      implementationName: "WLSETHV1_Implementation",
+      implementationName: "WLSETHV1_Implementation_0_2_2",
       owner: proxyAdministrator,
       proxyContract: "TUPProxy",
       execute: {

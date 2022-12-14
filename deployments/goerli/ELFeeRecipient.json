@@ -466,7 +466,7 @@
     },
     "implementations": {
         "names": [
-            "ELFeeRecipientV1_Implementation.json"
+            "ELFeeRecipientV1_Implementation_0_2_2.json"
         ],
         "transactionHash": [
             "0xca428658ec4a4e67f4dbe58fa1b1e5b355eb90e367c53bc49074b06d272d3e37"

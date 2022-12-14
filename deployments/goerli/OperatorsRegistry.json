@@ -1228,8 +1228,8 @@
     },
     "implementations": {
         "names": [
-            "OperatorsRegistryV1_Implementation.json",
-            "OperatorsRegistryV1_1.json"
+            "OperatorsRegistryV1_Implementation_0_2_2.json",
+            "OperatorsRegistryV1_Implementation_0_4_0.json"
         ],
         "transactionHash": [
             "0x57482eeed98b05a723f965c80ab81720d46ec1d44dfa8118dee4fbcd2aa6ded3",

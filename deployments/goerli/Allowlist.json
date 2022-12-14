@@ -718,7 +718,7 @@
     },
     "implementations": {
         "names": [
-            "AllowlistV1_Implementation.json",
+            "AllowlistV1_Implementation_0_2_2.json",
             "AllowlistV1_Implementation_0_5_0.json"
         ],
         "transactionHash": [

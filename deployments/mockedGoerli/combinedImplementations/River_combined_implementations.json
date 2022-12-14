@@ -4198,8 +4198,8 @@
     },
     "implementations": {
         "names": [
-            "RiverV1_Implementation.json",
-            "RiverV1_1.json",
+            "RiverV1_Implementation_0_2_2.json",
+            "RiverV1_Implementation_0_4_0.json",
             "RiverV1_Implementation_0_5_0.json"
         ],
         "transactionHash": [

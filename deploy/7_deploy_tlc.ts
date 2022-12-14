@@ -31,7 +31,7 @@ const func: DeployFunction = async function ({ deployments, getNamedAccounts, et
     proxy: {
       owner: tlcProxyFirewallDeployment.address,
       proxyContract: "TUPProxy",
-      implementationName: "TLCV1_Implementation",
+      implementationName: "TLCV1_Implementation_0_4_0",
       execute: {
         methodName: "initTLCV1",
         args: [tlcMintAccount],
