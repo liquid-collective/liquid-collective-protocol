@@ -301,7 +301,7 @@ The stored allower address has been changed
 ### SetAllowlistPermissions
 
 ```solidity
-event SetAllowlistPermissions(address[] indexed accounts, uint256[] permissions)
+event SetAllowlistPermissions(address[] accounts, uint256[] permissions)
 ```
 
 The permissions of several accounts have changed
@@ -312,7 +312,7 @@ The permissions of several accounts have changed
 
 | Name | Type | Description |
 |---|---|---|
-| accounts `indexed` | address[] | undefined |
+| accounts  | address[] | undefined |
 | permissions  | uint256[] | undefined |
 
 ### SetPendingAdmin

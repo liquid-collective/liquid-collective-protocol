@@ -42,6 +42,7 @@
     "hardhat-gas-reporter": "^1.0.7",
     "prettier": "^2.5.1",
     "prettier-plugin-solidity": "^1.0.0-beta.13",
+    "rimraf": "^3.0.2",
     "sol2uml": "^1.1.29",
     "solhint": "^3.3.6",
     "solidity-coverage": "^0.7.18",
