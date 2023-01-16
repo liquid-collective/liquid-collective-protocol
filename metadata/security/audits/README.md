@@ -33,6 +33,8 @@ It covers the following smart contracts
 |   Informational   |     5     |     4     |         1        |
 |     **Total**     |     15    |     12    |         3        |
 
+### Audit Report
+
 See [full report](202207_Halborn_Security%20Audit%20Report.pdf) for more details.
 
 ## 2022-09 Spearbit Security Audit
@@ -68,5 +70,7 @@ It covers the following smart contracts
 | Gas Optimizations |     19    |     18    |         1        |
 |   Informational   |     39    |     32    |         17       |
 |     **Total**     |     85    |     72    |         13       |
+
+### Audit Report
 
 See [full report](202209_Spearbit_Security%20Audit%20Report.pdf) for more details.
