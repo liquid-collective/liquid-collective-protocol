@@ -19,3 +19,4 @@ deployment.local.json
 deployments/local
 
 .DS_Store
+.idea
