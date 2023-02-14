@@ -17,6 +17,12 @@ library WithdrawalCredentials {
         return LibUnstructuredStorage.getStorageBytes32(WITHDRAWAL_CREDENTIALS_SLOT);
     }
 
+    /// @notice Retrieve the Withdrawal Credential under its address format
+    /// @return The Withdrawal Credentials in its address format
+    function getAddress() internal view returns (address) {
+        return LibUnstructuredStorage.getStorageAddress(WITHDRAWAL_CREDENTIALS_SLOT);
+    }
+
     /// @notice Sets the Withdrawal Credentials
     /// @param _newValue New Withdrawal Credentials
     function set(bytes32 _newValue) internal {

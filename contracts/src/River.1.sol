@@ -197,6 +197,13 @@ contract RiverV1 is
     }
 
     /// @inheritdoc IRiverV1
+    function sendCLFunds() external payable {
+        if (msg.sender != WithdrawalCredentials.getAddress()) {
+            revert LibErrors.Unauthorized(msg.sender);
+        }
+    }
+
+    /// @inheritdoc IRiverV1
     function sendCoverageFunds() external payable {
         if (msg.sender != CoverageFundAddress.get()) {
             revert LibErrors.Unauthorized(msg.sender);
@@ -208,7 +215,7 @@ contract RiverV1 is
     function _getRiverAdmin()
         internal
         view
-        override (OracleManagerV1, ConsensusLayerDepositManagerV1)
+        override(OracleManagerV1, ConsensusLayerDepositManagerV1)
         returns (address)
     {
         return Administrable._getAdmin();
