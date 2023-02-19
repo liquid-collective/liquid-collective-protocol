@@ -1,0 +1,132 @@
+//SPDX-License-Identifier: BUSL-1.1
+pragma solidity 0.8.10;
+
+import "../state/redeemManager/RedeemRequests.sol";
+import "../state/redeemManager/WithdrawalEvents.sol";
+import "../state/redeemManager/Redeemers.sol";
+
+/// @title Redeem Manager Interface (v1)
+/// @author Kiln
+/// @notice This contract handles the redeem requests of all users
+interface IRedeemManagerV1 {
+    /// @notice Emitted when a redeem request is created
+    /// @param owner The owner of the redeem request
+    /// @param height The height of the redeem request in LsETH
+    /// @param size The size of the redeem request in LsETH
+    /// @param id The id of the new redeem request
+    event CreatedRedeemRequest(address indexed owner, uint256 height, uint256 size, uint256 id);
+
+    /// @notice Emitted when a withdrawal event is created
+    /// @param height The height of the withdrawal event in LsETH
+    /// @param size The size of the withdrawal event in LsETH
+    /// @param ethAmount The amount of eth to distrubute to claimers
+    /// @param id The id of the withdrawal event
+    event CreatedWithdrawalEvent(uint256 height, uint256 size, uint256 ethAmount, uint256 id);
+
+    /// @notice Emitted when a redeem request has been filled (even partially)
+    /// @param id The id of the redeem request
+    /// @param withdrawalEventId The id of the withdrawal event used to fill the request
+    /// @param amountFilled The amount of LsETH filled
+    /// @param ethAmountFilled The amount of ETH filled
+    event FilledRedeemRequest(
+        uint256 indexed id, uint256 withdrawalEventId, uint256 amountFilled, uint256 ethAmountFilled
+    );
+
+    /// @notice Emitted when a account is sent rewards
+    /// @param recipient The address receiving the rewards
+    /// @param amount The amount sent
+    event SentRewards(address indexed recipient, uint256 amount);
+
+    /// @notice Emitted when the River address is set
+    /// @param river The new river address
+    event SetRiver(address river);
+
+    /// @notice Thrown When a zero value is provided
+    error InvalidZeroAmount();
+
+    /// @notice Thrown when a transfer error occured with LsETH
+    error TransferError();
+
+    /// @notice Thrown when the provided arrays don't have matching lengths
+    error InvalidArrayLengths();
+
+    /// @notice Thrown when the provided redeem request id is out of bounds
+    /// @param id The redeem request id
+    error RedeemRequestIdOutOfBounds(uint256 id);
+
+    /// @notice Thrown when the withdrawal request id if out of bounds
+    /// @param id The withdrawal event id
+    error WithdrawalEventIdOutOfBounds(uint256 id);
+
+    /// @notice Thrown when	the redeem request id is already claimed
+    /// @param id The redeem request id
+    error RedeemRequestAlreadyClaimed(uint256 id);
+
+    /// @notice Thrown when the redeem request and withdrawal event are not matching during claim
+    /// @param redeemRequestId The provided redeem request id
+    /// @param withdrawalEventId The provided associated withdrawal event id
+    error DoesNotMatch(uint256 redeemRequestId, uint256 withdrawalEventId);
+
+    /// @param river The address of the River contract
+    function initializeRedeemManagerV1(address river) external;
+
+    /// @notice Retrieve the global count of redeem requests
+    function getRedeemRequestCount() external view returns (uint256);
+
+    /// @notice Retrieve the details of a specific redeem request
+    /// @param redeemRequestId The id of the request
+    /// @return The redeem request details
+    function getRedeemRequestDetails(uint256 redeemRequestId)
+        external
+        view
+        returns (RedeemRequests.RedeemRequest memory);
+
+    /// @notice Retrieve the global count of withdrawal events
+    function getWithdrawalEventCount() external view returns (uint256);
+
+    /// @notice Retrieve the details of a specific withdrawal event
+    /// @param withdrawalEventId The id of the withdrawal event
+    /// @return The withdrawal event details
+    function getWithdrawalEventDetails(uint256 withdrawalEventId)
+        external
+        view
+        returns (WithdrawalEvents.WithdrawalEvent memory);
+
+    /// @notice Retrieve the list of redeem requests of an account
+    /// @param account The account to query
+    /// @return redeemRequestIds The list of redeemRequests belonging to the specified account
+    function listRedeemRequests(address account) external view returns (uint256[] memory redeemRequestIds);
+
+    /// @notice Resolves the provided list of redeem request ids
+    /// @dev The result is an array of equal length with ids or error code
+    /// @dev -1 means that the request is not satisfied yet
+    /// @dev -2 means that the request is out of bounds
+    /// @dev -3 means that the request has already been claimed
+    /// @dev This call was created to be called by an off-chain interface, the output could then be used to perform the claimRewards call in a regular transaction
+    /// @param redeemRequestIds The list of redeem requests to resolve
+    /// @return withdrawalEventIds The list of withdrawal events matching every redeem request (or error codes)
+    function resolveRedeemRequests(uint256[] calldata redeemRequestIds)
+        external
+        view
+        returns (int256[] memory withdrawalEventIds);
+
+    /// @notice Creates a redeem request
+    /// @param lsETHAmount The amount of LsETH to redeem
+    /// @param recipient The recipient owning the redeem request
+    /// @return redeemRequestId The id of the redeem request
+    function requestRedeem(uint256 lsETHAmount, address recipient) external returns (uint256 redeemRequestId);
+
+    /// @notice Claims the rewards of the provided redeem request ids
+    /// @param redeemRequestIds The list of redeem requests to claim
+    /// @param withdrawalEventIds The list of withdrawal events to use for every redeem request claim
+    /// @param skipAlreadyClaimed True if the call should not revert on claiming of already claimed requests
+    function claimRewards(
+        uint256[] calldata redeemRequestIds,
+        uint256[] calldata withdrawalEventIds,
+        bool skipAlreadyClaimed
+    ) external;
+
+    /// @notice Reports a withdraw event from River
+    /// @param lsETHWithdrawable The amount of LsETH that can be redeemed due to this new withdraw event
+    function reportWithdraw(uint256 lsETHWithdrawable) external payable;
+}
