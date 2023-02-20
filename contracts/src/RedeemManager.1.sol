@@ -200,7 +200,7 @@ contract RedeemManagerV1 is Initializable, IRedeemManagerV1 {
     /// @param redeemRequest The loaded redeem request
     /// @param withdrawalEvent The load withdrawal event
     /// @return True if matching
-    function _match(
+    function _isMatch(
         RedeemRequests.RedeemRequest memory redeemRequest,
         WithdrawalEvents.WithdrawalEvent memory withdrawalEvent
     ) internal pure returns (bool) {
@@ -208,45 +208,6 @@ contract RedeemManagerV1 is Initializable, IRedeemManagerV1 {
             redeemRequest.height < withdrawalEvent.height + withdrawalEvent.size
                 && redeemRequest.height >= withdrawalEvent.height
         );
-    }
-
-    /// @notice Internal Utility to verify if a redeem request and a withdrawal event id are matching
-    /// @param redeemRequest The loaded redeem request
-    /// @param withdrawalEventId The withdrawal event id
-    /// @return True if matching
-    function _getMatch(RedeemRequests.RedeemRequest memory redeemRequest, int64 withdrawalEventId)
-        internal
-        view
-        returns (bool)
-    {
-        WithdrawalEvents.WithdrawalEvent memory we = WithdrawalEvents.get()[uint64(withdrawalEventId)];
-
-        return _match(redeemRequest, we);
-    }
-
-    /// @notice Internal Utility to retrieve the distance between a withdrawal event and a redeem request, or if both are matching
-    /// @dev If the withdrawal event is before the redeem request, the delta is negative, otherwise positive
-    /// @dev Sign is used to identify which cursor to move in the dichotomic search
-    /// @param redeemRequest The loaded redeem request
-    /// @param withdrawalEventId The id of the withdrawal event
-    /// @return The delta between both entities
-    /// @return True if matching
-    function _getDeltaOrMatch(RedeemRequests.RedeemRequest memory redeemRequest, int256 withdrawalEventId)
-        internal
-        view
-        returns (int256, bool)
-    {
-        WithdrawalEvents.WithdrawalEvent memory we = WithdrawalEvents.get()[uint256(withdrawalEventId)];
-
-        if (_match(redeemRequest, we)) {
-            return (0, true);
-        }
-
-        if (redeemRequest.height < we.height) {
-            return (int256(we.height) - int256(redeemRequest.height), false);
-        }
-
-        return (int256(we.height + we.size) - int256(redeemRequest.height), false);
     }
 
     /// @notice Internal utility to perform a dichotomic search of the withdrawal event to use to claim the redeem request
@@ -257,30 +218,32 @@ contract RedeemManagerV1 is Initializable, IRedeemManagerV1 {
         view
         returns (int64)
     {
+        WithdrawalEvents.WithdrawalEvent[] storage withdrawalEvents = WithdrawalEvents.get();
+
         int64 max = int64(int256(WithdrawalEvents.get().length - 1));
 
-        if (_getMatch(redeemRequest, max)) {
+        if (_isMatch(redeemRequest, withdrawalEvents[uint64(max)])) {
             return max;
         }
 
         int64 min = 0;
 
-        if (_getMatch(redeemRequest, min)) {
+        if (_isMatch(redeemRequest, withdrawalEvents[uint64(min)])) {
             return min;
         }
 
         while (min != max) {
             int64 mid = (min + max) / 2;
 
-            (int256 midDelta, bool found) = _getDeltaOrMatch(redeemRequest, mid);
-            if (found) {
+            WithdrawalEvents.WithdrawalEvent memory midWithdrawalEvent = withdrawalEvents[uint64(mid)];
+            if (_isMatch(redeemRequest, midWithdrawalEvent)) {
                 return mid;
             }
 
-            if (midDelta < 0) {
-                min = mid;
-            } else {
+            if (redeemRequest.height < midWithdrawalEvent.height) {
                 max = mid;
+            } else {
+                min = mid;
             }
         }
 
@@ -359,7 +322,7 @@ contract RedeemManagerV1 is Initializable, IRedeemManagerV1 {
         }
         WithdrawalEvents.WithdrawalEvent memory withdrawalEvent = withdrawalEvents[withdrawalEventId];
 
-        if (!_match(redeemRequest, withdrawalEvent)) {
+        if (!_isMatch(redeemRequest, withdrawalEvent)) {
             revert DoesNotMatch(redeemRequestId, withdrawalEventId);
         }
 
