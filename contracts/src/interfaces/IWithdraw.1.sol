@@ -9,11 +9,6 @@ interface IWithdrawV1 {
     /// @param river The new River address
     event SetRiver(address river);
 
-    /// @notice Thrown when the requested pulled amount is too high
-    /// @param requestedAmount The amount that was requested by River
-    /// @param availableAmount The current balance available
-    error PulledAmountTooHigh(uint256 requestedAmount, uint256 availableAmount);
-
     /// @param river The address of the River contract
     function initializeWithdrawV1(address river) external;
 

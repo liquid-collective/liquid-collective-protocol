@@ -120,14 +120,17 @@ contract WithdrawV1Tests is Test {
         withdraw.pullEth(1 ether);
     }
 
-    function testPullFundsAmountTooHigh(uint256 _salt, uint256 _amount) external {
-        vm.assume(_amount < type(uint256).max);
-        address random = uf._new(_salt);
+    function testPullFundsAmountTooHigh(uint256 _amount) external {
+        _amount = bound(_amount, 1, type(uint128).max);
 
         vm.deal(address(withdraw), _amount);
 
-        vm.prank(random);
-        vm.expectRevert(abi.encodeWithSignature("PulledAmountTooHigh(uint256,uint256)", _amount + 1, _amount));
-        river.debug_pullFunds(address(withdraw), _amount + 1);
+        assertEq(address(withdraw).balance, uint256(_amount));
+        assertEq(address(river).balance, 0);
+
+        river.debug_pullFunds(address(withdraw), _amount * 2);
+
+        assertEq(address(withdraw).balance, 0);
+        assertEq(address(river).balance, _amount);
     }
 }

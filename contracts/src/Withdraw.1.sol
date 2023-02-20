@@ -5,6 +5,7 @@ import "./Initializable.sol";
 import "./interfaces/IRiver.1.sol";
 import "./interfaces/IWithdraw.1.sol";
 import "./libraries/LibErrors.sol";
+import "./libraries/LibUint256.sol";
 
 import "./state/shared/RiverAddress.sol";
 
@@ -37,11 +38,8 @@ contract WithdrawV1 is IWithdrawV1, Initializable {
     }
 
     /// @inheritdoc IWithdrawV1
-    function pullEth(uint256 amount) external onlyRiver {
-        if (address(this).balance < amount) {
-            revert PulledAmountTooHigh(amount, address(this).balance);
-        }
-        IRiverV1(payable(RiverAddress.get())).sendCLFunds{value: amount}();
+    function pullEth(uint256 max) external onlyRiver {
+        IRiverV1(payable(RiverAddress.get())).sendCLFunds{value: LibUint256.min(address(this).balance, max)}();
     }
 
     /// @inheritdoc IWithdrawV1
