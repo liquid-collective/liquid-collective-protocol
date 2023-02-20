@@ -287,7 +287,7 @@ contract RedeemManagerV1 is Initializable, IRedeemManagerV1 {
         return min;
     }
 
-    /// @notice Internal utility to resolve a redeem request and retrieve its matching redeem request, or identify possible errors
+    /// @notice Internal utility to resolve a redeem request and retrieve its satisfying withdrawal event id, or identify possible errors
     /// @param redeemRequestId The redeem request id
     /// @param lastWithdrawalEvent The last withdrawal event loaded in memory
     /// @param withdrawalEventId The id of the withdrawal event matching the redeem request or error code
