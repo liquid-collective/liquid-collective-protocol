@@ -77,6 +77,9 @@ contract RedeemManagerV1 is Initializable, IRedeemManagerV1 {
         uint32[] memory completeList = redeemers[account].redeemRequestIds;
         uint256 startIndex = redeemers[account].startIndex;
 
+        /// Here we reuse the memory region of completeList and simply set resultList at startIndex in this memory region
+        /// To do this we move the length value stored in 32 bytes up in the memory region and then we set the address
+        /// of resultList to be this new updated length value
         assembly {
             let len := mload(completeList)
             let size := sub(len, startIndex)
