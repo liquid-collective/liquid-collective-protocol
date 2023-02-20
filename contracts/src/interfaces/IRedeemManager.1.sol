@@ -14,14 +14,14 @@ interface IRedeemManagerV1 {
     /// @param height The height of the redeem request in LsETH
     /// @param size The size of the redeem request in LsETH
     /// @param id The id of the new redeem request
-    event CreatedRedeemRequest(address indexed owner, uint256 height, uint256 size, uint32 id);
+    event RequestedRedeem(address indexed owner, uint256 height, uint256 size, uint32 id);
 
     /// @notice Emitted when a withdrawal event is created
     /// @param height The height of the withdrawal event in LsETH
     /// @param size The size of the withdrawal event in LsETH
     /// @param ethAmount The amount of eth to distrubute to claimers
     /// @param id The id of the withdrawal event
-    event CreatedWithdrawalEvent(uint256 height, uint256 size, uint256 ethAmount, uint32 id);
+    event ReportedWithdrawal(uint256 height, uint256 size, uint256 ethAmount, uint32 id);
 
     /// @notice Emitted when a redeem request has been filled (even partially)
     /// @param id The id of the redeem request
@@ -48,15 +48,15 @@ interface IRedeemManagerV1 {
     error TransferError();
 
     /// @notice Thrown when the provided arrays don't have matching lengths
-    error InvalidArrayLengths();
+    error IncompatibleArrayLengths();
 
     /// @notice Thrown when the provided redeem request id is out of bounds
     /// @param id The redeem request id
-    error RedeemRequestIdOutOfBounds(uint256 id);
+    error RedeemRequestOutOfBounds(uint256 id);
 
     /// @notice Thrown when the withdrawal request id if out of bounds
     /// @param id The withdrawal event id
-    error WithdrawalEventIdOutOfBounds(uint256 id);
+    error WithdrawalEventOutOfBounds(uint256 id);
 
     /// @notice Thrown when	the redeem request id is already claimed
     /// @param id The redeem request id
@@ -120,7 +120,7 @@ interface IRedeemManagerV1 {
     /// @param redeemRequestIds The list of redeem requests to claim
     /// @param withdrawalEventIds The list of withdrawal events to use for every redeem request claim
     /// @param skipAlreadyClaimed True if the call should not revert on claiming of already claimed requests
-    function claimRewards(
+    function claimRedeemRequests(
         uint32[] calldata redeemRequestIds,
         uint32[] calldata withdrawalEventIds,
         bool skipAlreadyClaimed

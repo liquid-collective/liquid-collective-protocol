@@ -132,18 +132,18 @@ contract RedeemManagerV1 is Initializable, IRedeemManagerV1 {
         redeemRequests.push(RedeemRequests.RedeemRequest({height: height, size: lsETHAmount, owner: recipient}));
 
         Redeemers.get()[recipient].redeemRequestIds.push(uint32(redeemRequestId));
-        emit CreatedRedeemRequest(recipient, height, lsETHAmount, redeemRequestId);
+        emit RequestedRedeem(recipient, height, lsETHAmount, redeemRequestId);
     }
 
     /// @inheritdoc IRedeemManagerV1
-    function claimRewards(
+    function claimRedeemRequests(
         uint32[] calldata redeemRequestIds,
         uint32[] calldata withdrawalEventIds,
         bool skipAlreadyClaimed
     ) external {
         uint256 redeemRequestIdsLength = redeemRequestIds.length;
         if (redeemRequestIdsLength != withdrawalEventIds.length) {
-            revert InvalidArrayLengths();
+            revert IncompatibleArrayLengths();
         }
         address[] memory accounts = new address[](redeemRequestIdsLength);
         for (uint256 idx = 0; idx < redeemRequestIdsLength;) {
@@ -159,7 +159,7 @@ contract RedeemManagerV1 is Initializable, IRedeemManagerV1 {
         for (uint256 idx = 0; idx < redeemRequestIdsLength;) {
             if (idx == 0 || accounts[idx] != address(0)) {
                 address account = accounts[idx];
-                _pruneRedeemRequestsList(account);
+                _pruneRedeemerClaimedRequests(account);
                 for (uint256 cleanIdx = idx + 1; cleanIdx < redeemRequestIdsLength;) {
                     if (accounts[cleanIdx] == account) {
                         accounts[cleanIdx] = address(0);
@@ -190,7 +190,7 @@ contract RedeemManagerV1 is Initializable, IRedeemManagerV1 {
             WithdrawalEvents.WithdrawalEvent({height: height, size: lsETHWithdrawable, ethAmount: msgValue})
         );
 
-        emit CreatedWithdrawalEvent(height, lsETHWithdrawable, msgValue, withdrawalEventId);
+        emit ReportedWithdrawal(height, lsETHWithdrawable, msgValue, withdrawalEventId);
     }
 
     /// @notice Internal utility to load and cast the River address
@@ -307,14 +307,14 @@ contract RedeemManagerV1 is Initializable, IRedeemManagerV1 {
     ) internal returns (address, uint256) {
         RedeemRequests.RedeemRequest[] storage redeemRequests = RedeemRequests.get();
         if (redeemRequestId >= redeemRequests.length) {
-            revert RedeemRequestIdOutOfBounds(redeemRequestId);
+            revert RedeemRequestOutOfBounds(redeemRequestId);
         }
         WithdrawalEvents.WithdrawalEvent[] storage withdrawalEvents = WithdrawalEvents.get();
         if (withdrawalEventId >= withdrawalEvents.length) {
             if (skipWithdrawalEventDoesNotExist) {
                 return (address(0), 0);
             }
-            revert WithdrawalEventIdOutOfBounds(withdrawalEventId);
+            revert WithdrawalEventOutOfBounds(withdrawalEventId);
         }
         RedeemRequests.RedeemRequest memory redeemRequest = redeemRequests[redeemRequestId];
         if (redeemRequest.size == 0) {
@@ -357,7 +357,7 @@ contract RedeemManagerV1 is Initializable, IRedeemManagerV1 {
 
     /// @notice Prunes the redeem request list of an account by recomputing the starting index
     /// @param account The account to prune
-    function _pruneRedeemRequestsList(address account) internal {
+    function _pruneRedeemerClaimedRequests(address account) internal {
         mapping(address => Redeemers.Redeemer) storage redeemers = Redeemers.get();
         uint32[] storage accountRedeemRequests = redeemers[account].redeemRequestIds;
         uint256 requestCount = accountRedeemRequests.length;
