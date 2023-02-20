@@ -96,8 +96,9 @@ contract RedeemManagerV1 is Initializable, IRedeemManagerV1 {
         withdrawalEventIds = new int256[](redeemRequestIds.length);
         WithdrawalEvents.WithdrawalEvent memory lastWithdrawalEvent;
         WithdrawalEvents.WithdrawalEvent[] storage withdrawalEvents = WithdrawalEvents.get();
-        if (withdrawalEvents.length > 0) {
-            lastWithdrawalEvent = withdrawalEvents[withdrawalEvents.length - 1];
+        uint256 withdrawalEventsLength = withdrawalEvents.length;
+        if (withdrawalEventsLength > 0) {
+            lastWithdrawalEvent = withdrawalEvents[withdrawalEventsLength - 1];
         }
         for (uint256 idx = 0; idx < redeemRequestIds.length; ++idx) {
             withdrawalEventIds[idx] = _resolveRedeemRequestId(redeemRequestIds[idx], lastWithdrawalEvent);
@@ -218,8 +219,7 @@ contract RedeemManagerV1 is Initializable, IRedeemManagerV1 {
         view
         returns (bool)
     {
-        WithdrawalEvents.WithdrawalEvent[] storage withdrawalEvents = WithdrawalEvents.get();
-        WithdrawalEvents.WithdrawalEvent memory we = withdrawalEvents[uint256(withdrawalEventId)];
+        WithdrawalEvents.WithdrawalEvent memory we = WithdrawalEvents.get()[uint256(withdrawalEventId)];
 
         return _match(redeemRequest, we);
     }
@@ -236,8 +236,7 @@ contract RedeemManagerV1 is Initializable, IRedeemManagerV1 {
         view
         returns (int256, bool)
     {
-        WithdrawalEvents.WithdrawalEvent[] storage withdrawalEvents = WithdrawalEvents.get();
-        WithdrawalEvents.WithdrawalEvent memory we = withdrawalEvents[uint256(withdrawalEventId)];
+        WithdrawalEvents.WithdrawalEvent memory we = WithdrawalEvents.get()[uint256(withdrawalEventId)];
 
         if (_match(redeemRequest, we)) {
             return (0, true);
@@ -258,8 +257,7 @@ contract RedeemManagerV1 is Initializable, IRedeemManagerV1 {
         view
         returns (int256)
     {
-        WithdrawalEvents.WithdrawalEvent[] storage withdrawalEvents = WithdrawalEvents.get();
-        int256 max = int256(withdrawalEvents.length - 1);
+        int256 max = int256(WithdrawalEvents.get().length - 1);
 
         if (_getMatch(redeemRequest, max)) {
             return max;
@@ -298,7 +296,6 @@ contract RedeemManagerV1 is Initializable, IRedeemManagerV1 {
         WithdrawalEvents.WithdrawalEvent memory lastWithdrawalEvent
     ) internal view returns (int256 withdrawalEventId) {
         RedeemRequests.RedeemRequest[] storage redeemRequests = RedeemRequests.get();
-        WithdrawalEvents.WithdrawalEvent[] storage withdrawalEvents = WithdrawalEvents.get();
         if (redeemRequestId >= redeemRequests.length) {
             return OUT_OF_BOUNDS;
         }
@@ -307,7 +304,7 @@ contract RedeemManagerV1 is Initializable, IRedeemManagerV1 {
             return FULLY_CLAIMED;
         }
         if (
-            withdrawalEvents.length == 0
+            WithdrawalEvents.get().length == 0
                 || (lastWithdrawalEvent.height + lastWithdrawalEvent.size) < redeemRequest.height
         ) {
             return UNSATISFIED;
