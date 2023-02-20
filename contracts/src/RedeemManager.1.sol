@@ -17,11 +17,11 @@ import "./state/redeemManager/Redeemers.sol";
 /// @notice This contract handles the redeem requests of all users
 contract RedeemManagerV1 is Initializable, IRedeemManagerV1 {
     /// @notice Internal value returned when resolving a redeem request that is unsatisfied
-    int256 internal constant UNSATISFIED = -1;
+    int64 internal constant UNSATISFIED = -1;
     /// @notice Internal value returned when resolving a redeem request that is out of bounds
-    int256 internal constant OUT_OF_BOUNDS = -2;
+    int64 internal constant OUT_OF_BOUNDS = -2;
     /// @notice Internal value returned when resolving a redeem request that is already claimed
-    int256 internal constant FULLY_CLAIMED = -3;
+    int64 internal constant FULLY_CLAIMED = -3;
 
     modifier onlyRiver() {
         if (msg.sender != RiverAddress.get()) {
@@ -47,7 +47,7 @@ contract RedeemManagerV1 is Initializable, IRedeemManagerV1 {
     }
 
     /// @inheritdoc IRedeemManagerV1
-    function getRedeemRequestDetails(uint256 redeemRequestId)
+    function getRedeemRequestDetails(uint32 redeemRequestId)
         external
         view
         returns (RedeemRequests.RedeemRequest memory)
@@ -61,7 +61,7 @@ contract RedeemManagerV1 is Initializable, IRedeemManagerV1 {
     }
 
     /// @inheritdoc IRedeemManagerV1
-    function getWithdrawalEventDetails(uint256 withdrawalEventId)
+    function getWithdrawalEventDetails(uint32 withdrawalEventId)
         external
         view
         returns (WithdrawalEvents.WithdrawalEvent memory)
@@ -70,17 +70,17 @@ contract RedeemManagerV1 is Initializable, IRedeemManagerV1 {
     }
 
     /// @inheritdoc IRedeemManagerV1
-    function listRedeemRequests(address account) external view returns (uint256[] memory redeemRequestIds) {
+    function listRedeemRequests(address account) external view returns (uint32[] memory redeemRequestIds) {
         mapping(address => Redeemers.Redeemer) storage redeemers = Redeemers.get();
 
-        uint256[] memory resultList;
-        uint256[] memory completeList = redeemers[account].redeemRequestIds;
+        uint32[] memory resultList;
+        uint32[] memory completeList = redeemers[account].redeemRequestIds;
         uint256 startIndex = redeemers[account].startIndex;
 
         assembly {
             let len := mload(completeList)
             let size := sub(len, startIndex)
-            resultList := add(completeList, mul(32, startIndex))
+            resultList := add(completeList, mul(4, startIndex))
             mstore(resultList, size)
         }
 
@@ -88,12 +88,12 @@ contract RedeemManagerV1 is Initializable, IRedeemManagerV1 {
     }
 
     /// @inheritdoc IRedeemManagerV1
-    function resolveRedeemRequests(uint256[] calldata redeemRequestIds)
+    function resolveRedeemRequests(uint32[] calldata redeemRequestIds)
         external
         view
-        returns (int256[] memory withdrawalEventIds)
+        returns (int64[] memory withdrawalEventIds)
     {
-        withdrawalEventIds = new int256[](redeemRequestIds.length);
+        withdrawalEventIds = new int64[](redeemRequestIds.length);
         WithdrawalEvents.WithdrawalEvent memory lastWithdrawalEvent;
         WithdrawalEvents.WithdrawalEvent[] storage withdrawalEvents = WithdrawalEvents.get();
         uint256 withdrawalEventsLength = withdrawalEvents.length;
@@ -109,7 +109,7 @@ contract RedeemManagerV1 is Initializable, IRedeemManagerV1 {
     function requestRedeem(uint256 lsETHAmount, address recipient)
         external
         onlyRedeemer
-        returns (uint256 redeemRequestId)
+        returns (uint32 redeemRequestId)
     {
         LibSanitize._notZeroAddress(recipient);
         if (lsETHAmount == 0) {
@@ -119,7 +119,7 @@ contract RedeemManagerV1 is Initializable, IRedeemManagerV1 {
             revert TransferError();
         }
         RedeemRequests.RedeemRequest[] storage redeemRequests = RedeemRequests.get();
-        redeemRequestId = redeemRequests.length;
+        redeemRequestId = uint32(redeemRequests.length);
         uint256 height = 0;
         if (redeemRequestId != 0) {
             RedeemRequests.RedeemRequest memory previousRedeemRequest = redeemRequests[redeemRequestId - 1];
@@ -128,14 +128,14 @@ contract RedeemManagerV1 is Initializable, IRedeemManagerV1 {
 
         redeemRequests.push(RedeemRequests.RedeemRequest({height: height, size: lsETHAmount, owner: recipient}));
 
-        Redeemers.get()[recipient].redeemRequestIds.push(redeemRequestId);
+        Redeemers.get()[recipient].redeemRequestIds.push(uint32(redeemRequestId));
         emit CreatedRedeemRequest(recipient, height, lsETHAmount, redeemRequestId);
     }
 
     /// @inheritdoc IRedeemManagerV1
     function claimRewards(
-        uint256[] calldata redeemRequestIds,
-        uint256[] calldata withdrawalEventIds,
+        uint32[] calldata redeemRequestIds,
+        uint32[] calldata withdrawalEventIds,
         bool skipAlreadyClaimed
     ) external {
         uint256 redeemRequestIdsLength = redeemRequestIds.length;
@@ -176,7 +176,7 @@ contract RedeemManagerV1 is Initializable, IRedeemManagerV1 {
     /// @inheritdoc IRedeemManagerV1
     function reportWithdraw(uint256 lsETHWithdrawable) external payable onlyRiver {
         WithdrawalEvents.WithdrawalEvent[] storage withdrawalEvents = WithdrawalEvents.get();
-        uint256 withdrawalEventId = withdrawalEvents.length;
+        uint32 withdrawalEventId = uint32(withdrawalEvents.length);
         uint256 height = 0;
         uint256 msgValue = msg.value;
         if (withdrawalEventId != 0) {
@@ -214,12 +214,12 @@ contract RedeemManagerV1 is Initializable, IRedeemManagerV1 {
     /// @param redeemRequest The loaded redeem request
     /// @param withdrawalEventId The withdrawal event id
     /// @return True if matching
-    function _getMatch(RedeemRequests.RedeemRequest memory redeemRequest, int256 withdrawalEventId)
+    function _getMatch(RedeemRequests.RedeemRequest memory redeemRequest, int64 withdrawalEventId)
         internal
         view
         returns (bool)
     {
-        WithdrawalEvents.WithdrawalEvent memory we = WithdrawalEvents.get()[uint256(withdrawalEventId)];
+        WithdrawalEvents.WithdrawalEvent memory we = WithdrawalEvents.get()[uint64(withdrawalEventId)];
 
         return _match(redeemRequest, we);
     }
@@ -255,22 +255,22 @@ contract RedeemManagerV1 is Initializable, IRedeemManagerV1 {
     function _performDichotomicResolution(RedeemRequests.RedeemRequest memory redeemRequest)
         internal
         view
-        returns (int256)
+        returns (int64)
     {
-        int256 max = int256(WithdrawalEvents.get().length - 1);
+        int64 max = int64(int256(WithdrawalEvents.get().length - 1));
 
         if (_getMatch(redeemRequest, max)) {
             return max;
         }
 
-        int256 min = 0;
+        int64 min = 0;
 
         if (_getMatch(redeemRequest, min)) {
             return min;
         }
 
         while (min != max) {
-            int256 mid = (min + max) / 2;
+            int64 mid = (min + max) / 2;
 
             (int256 midDelta, bool found) = _getDeltaOrMatch(redeemRequest, mid);
             if (found) {
@@ -292,9 +292,9 @@ contract RedeemManagerV1 is Initializable, IRedeemManagerV1 {
     /// @param lastWithdrawalEvent The last withdrawal event loaded in memory
     /// @param withdrawalEventId The id of the withdrawal event matching the redeem request or error code
     function _resolveRedeemRequestId(
-        uint256 redeemRequestId,
+        uint32 redeemRequestId,
         WithdrawalEvents.WithdrawalEvent memory lastWithdrawalEvent
-    ) internal view returns (int256 withdrawalEventId) {
+    ) internal view returns (int64 withdrawalEventId) {
         RedeemRequests.RedeemRequest[] storage redeemRequests = RedeemRequests.get();
         if (redeemRequestId >= redeemRequests.length) {
             return OUT_OF_BOUNDS;
@@ -334,8 +334,8 @@ contract RedeemManagerV1 is Initializable, IRedeemManagerV1 {
     /// @return The owner of the redeem request
     /// @return The amount of ETH to send to the owner
     function _claimRewards(
-        uint256 redeemRequestId,
-        uint256 withdrawalEventId,
+        uint32 redeemRequestId,
+        uint32 withdrawalEventId,
         bool skipAlreadyClaimed,
         bool skipWithdrawalEventDoesNotExist
     ) internal returns (address, uint256) {
@@ -393,7 +393,7 @@ contract RedeemManagerV1 is Initializable, IRedeemManagerV1 {
     /// @param account The account to prune
     function _pruneRedeemRequestsList(address account) internal {
         mapping(address => Redeemers.Redeemer) storage redeemers = Redeemers.get();
-        uint256[] storage accountRedeemRequests = redeemers[account].redeemRequestIds;
+        uint32[] storage accountRedeemRequests = redeemers[account].redeemRequestIds;
         uint256 requestCount = accountRedeemRequests.length;
         uint256 startIndex = redeemers[account].startIndex;
         uint256 idx = startIndex;

@@ -10,7 +10,7 @@ library Redeemers {
     /// @notice The Redeemer structure represents an account that interacts with the Redeem Manager
     struct Redeemer {
         /// @custom:attribute The list of redeem request ids created by the redeemer
-        uint256[] redeemRequestIds;
+        uint32[] redeemRequestIds;
         /// @custom:attribute The starting index in the array above
         uint256 startIndex;
     }
