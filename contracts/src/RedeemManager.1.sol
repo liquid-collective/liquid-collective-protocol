@@ -148,7 +148,7 @@ contract RedeemManagerV1 is Initializable, IRedeemManagerV1 {
         address[] memory accounts = new address[](redeemRequestIdsLength);
         for (uint256 idx = 0; idx < redeemRequestIdsLength;) {
             (address recipient, uint256 amount) =
-                _claimRewards(redeemRequestIds[idx], withdrawalEventIds[idx], skipAlreadyClaimed, false);
+                _claimRedeemRequest(redeemRequestIds[idx], withdrawalEventIds[idx], skipAlreadyClaimed, false);
             _sendRewards(recipient, amount);
             accounts[idx] = recipient;
             unchecked {
@@ -299,7 +299,7 @@ contract RedeemManagerV1 is Initializable, IRedeemManagerV1 {
     /// @param skipWithdrawalEventDoesNotExist True if the method should simply return if the withdrawal event is out of bounds
     /// @return The owner of the redeem request
     /// @return The amount of ETH to send to the owner
-    function _claimRewards(
+    function _claimRedeemRequest(
         uint32 redeemRequestId,
         uint32 withdrawalEventId,
         bool skipAlreadyClaimed,
@@ -348,7 +348,7 @@ contract RedeemManagerV1 is Initializable, IRedeemManagerV1 {
         emit FilledRedeemRequest(redeemRequestId, withdrawalEventId, matchingSize, ethAmount);
 
         if (matchingSize < redeemRequest.size) {
-            (, uint256 nextEthAmount) = _claimRewards(redeemRequestId, withdrawalEventId + 1, false, true);
+            (, uint256 nextEthAmount) = _claimRedeemRequest(redeemRequestId, withdrawalEventId + 1, false, true);
             return (redeemRequest.owner, ethAmount + nextEthAmount);
         }
 
