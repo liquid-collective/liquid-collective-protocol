@@ -11,6 +11,7 @@ import "./state/shared/RiverAddress.sol";
 import "./state/redeemManager/RedeemRequests.sol";
 import "./state/redeemManager/WithdrawalEvents.sol";
 import "./state/redeemManager/Redeemers.sol";
+import "./state/redeemManager/RedeemBufferedEth.sol";
 
 /// @title Redeem Manager (v1)
 /// @author Kiln
@@ -67,6 +68,11 @@ contract RedeemManagerV1 is Initializable, IRedeemManagerV1 {
         returns (WithdrawalEvents.WithdrawalEvent memory)
     {
         return WithdrawalEvents.get()[withdrawalEventId];
+    }
+
+    /// @inheritdoc IRedeemManagerV1
+    function getBufferedEth() external view returns (uint256) {
+        return RedeemBufferedEth.get();
     }
 
     /// @inheritdoc IRedeemManagerV1
@@ -129,7 +135,16 @@ contract RedeemManagerV1 is Initializable, IRedeemManagerV1 {
             height = previousRedeemRequest.height + previousRedeemRequest.size;
         }
 
-        redeemRequests.push(RedeemRequests.RedeemRequest({height: height, size: lsETHAmount, owner: recipient}));
+        uint256 maxRedeemableEth = (_river().totalUnderlyingSupply() * lsETHAmount) / _river().totalSupply();
+
+        redeemRequests.push(
+            RedeemRequests.RedeemRequest({
+                height: height,
+                size: lsETHAmount,
+                owner: recipient,
+                maxRedeemableEth: maxRedeemableEth
+            })
+        );
 
         Redeemers.get()[recipient].redeemRequestIds.push(uint32(redeemRequestId));
         emit RequestedRedeem(recipient, height, lsETHAmount, redeemRequestId);
@@ -176,8 +191,14 @@ contract RedeemManagerV1 is Initializable, IRedeemManagerV1 {
         }
     }
 
+    error ConsumedRedeemBufferAmountTooHigh(uint256 consumed, uint256 available);
+
     /// @inheritdoc IRedeemManagerV1
-    function reportWithdraw(uint256 lsETHWithdrawable) external payable onlyRiver {
+    function reportWithdraw(uint256 lsETHWithdrawable, uint256 consumedRedeemBufferAmount) external payable onlyRiver {
+        uint256 currentRedeemBufferedEth = RedeemBufferedEth.get();
+        if (consumedRedeemBufferAmount > currentRedeemBufferedEth) {
+            revert ConsumedRedeemBufferAmountTooHigh(consumedRedeemBufferAmount, currentRedeemBufferedEth);
+        }
         WithdrawalEvents.WithdrawalEvent[] storage withdrawalEvents = WithdrawalEvents.get();
         uint32 withdrawalEventId = uint32(withdrawalEvents.length);
         uint256 height = 0;
@@ -186,8 +207,13 @@ contract RedeemManagerV1 is Initializable, IRedeemManagerV1 {
             WithdrawalEvents.WithdrawalEvent memory previousWithdrawalEvent = withdrawalEvents[withdrawalEventId - 1];
             height = previousWithdrawalEvent.height + previousWithdrawalEvent.size;
         }
+        RedeemBufferedEth.set(currentRedeemBufferedEth - consumedRedeemBufferAmount);
         withdrawalEvents.push(
-            WithdrawalEvents.WithdrawalEvent({height: height, size: lsETHWithdrawable, ethAmount: msgValue})
+            WithdrawalEvents.WithdrawalEvent({
+                height: height,
+                size: lsETHWithdrawable,
+                ethAmount: msgValue + consumedRedeemBufferAmount
+            })
         );
 
         emit ReportedWithdrawal(height, lsETHWithdrawable, msgValue, withdrawalEventId);
@@ -331,19 +357,28 @@ contract RedeemManagerV1 is Initializable, IRedeemManagerV1 {
 
         uint256 matchingSize = 0;
 
-        uint256 requestEndPosition = redeemRequest.height + redeemRequest.size;
-        uint256 withdrawalEventEndPosition = withdrawalEvent.height + withdrawalEvent.size;
+        {
+            uint256 requestEndPosition = redeemRequest.height + redeemRequest.size;
+            uint256 withdrawalEventEndPosition = withdrawalEvent.height + withdrawalEvent.size;
 
-        if (requestEndPosition < withdrawalEventEndPosition) {
-            matchingSize = redeemRequest.size;
-        } else {
-            matchingSize = redeemRequest.size - (requestEndPosition - withdrawalEventEndPosition);
+            if (requestEndPosition < withdrawalEventEndPosition) {
+                matchingSize = redeemRequest.size;
+            } else {
+                matchingSize = redeemRequest.size - (requestEndPosition - withdrawalEventEndPosition);
+            }
         }
 
         uint256 ethAmount = (matchingSize * withdrawalEvent.ethAmount) / withdrawalEvent.size;
+        uint256 maxRedeemableEthAmount = (matchingSize * redeemRequest.maxRedeemableEth) / redeemRequest.size;
+
+        if (maxRedeemableEthAmount < ethAmount) {
+            RedeemBufferedEth.set(RedeemBufferedEth.get() + (ethAmount - maxRedeemableEthAmount));
+            ethAmount = maxRedeemableEthAmount;
+        }
 
         redeemRequests[redeemRequestId].height += matchingSize;
         redeemRequests[redeemRequestId].size -= matchingSize;
+        redeemRequests[redeemRequestId].maxRedeemableEth -= ethAmount;
 
         emit FilledRedeemRequest(redeemRequestId, withdrawalEventId, matchingSize, ethAmount);
 

@@ -13,6 +13,8 @@ library RedeemRequests {
         uint256 height;
         /// @custom:attribute The size of the redeem request in LsETH
         uint256 size;
+        /// @custom:attribute The maximum amount of ETH redeemable by this request
+        uint256 maxRedeemableEth;
         /// @custom:attribute The owner of the redeem request
         address owner;
     }

@@ -92,6 +92,10 @@ interface IRedeemManagerV1 {
         view
         returns (WithdrawalEvents.WithdrawalEvent memory);
 
+    /// @notice Retrieve the amount of eth available in the buffer
+    /// @return The amount of eth in the buffer
+    function getBufferedEth() external view returns (uint256);
+
     /// @notice Retrieve the list of redeem requests of an account
     /// @param account The account to query
     /// @return redeemRequestIds The list of redeemRequests belonging to the specified account
@@ -128,5 +132,6 @@ interface IRedeemManagerV1 {
 
     /// @notice Reports a withdraw event from River
     /// @param lsETHWithdrawable The amount of LsETH that can be redeemed due to this new withdraw event
-    function reportWithdraw(uint256 lsETHWithdrawable) external payable;
+    /// @param consumedRedeemBufferAmount The amount of ETH to use from the redeem buffer in addition to the provided eth in the call
+    function reportWithdraw(uint256 lsETHWithdrawable, uint256 consumedRedeemBufferAmount) external payable;
 }
