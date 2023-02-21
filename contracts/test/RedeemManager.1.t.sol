@@ -422,13 +422,16 @@ contract RedeemManagerV1Tests is Test {
         emit FilledRedeemRequest(0, 0, amount, amount);
         vm.expectEmit(true, true, true, true);
         emit SentRewards(user, amount);
-        redeemManager.claimRedeemRequests(redeemRequestIds, withdrawEventIds, true);
+        uint8[] memory claimStatus = redeemManager.claimRedeemRequests(redeemRequestIds, withdrawEventIds, true);
 
         redeemRequestIds = redeemManager.listRedeemRequests(user);
 
         assertEq(redeemRequestIds.length, 0);
         assertEq(address(redeemManager).balance, 0);
         assertEq(user.balance, amount);
+        assertEq(claimStatus.length, 2);
+        assertEq(claimStatus[0], 0);
+        assertEq(claimStatus[1], 2);
 
         {
             RedeemRequests.RedeemRequest memory rr = redeemManager.getRedeemRequestDetails(0);
@@ -594,13 +597,15 @@ contract RedeemManagerV1Tests is Test {
         assertEq(address(redeemManager).balance, amount / 2);
         assertEq(user.balance, 0);
 
-        redeemManager.claimRedeemRequests(redeemRequestIds, withdrawEventIds, true);
+        uint8[] memory claimStatuses = redeemManager.claimRedeemRequests(redeemRequestIds, withdrawEventIds, true);
 
         redeemRequestIds = redeemManager.listRedeemRequests(user);
 
         assertEq(redeemRequestIds.length, 1);
         assertEq(address(redeemManager).balance, 0);
         assertEq(user.balance, amount / 2);
+        assertEq(claimStatuses.length, 1);
+        assertEq(claimStatuses[0], 1);
 
         {
             RedeemRequests.RedeemRequest memory rr = redeemManager.getRedeemRequestDetails(0);
@@ -969,7 +974,7 @@ contract RedeemManagerV1Tests is Test {
         assertEq(user.balance, 0);
         assertEq(redeemManager.listRedeemRequests(user).length, redeemManager.getRedeemRequestCount());
 
-        redeemManager.claimRedeemRequests(redeemRequestIds, withdrawalEventIdsUint, false);
+        uint8[] memory claimStatus = redeemManager.claimRedeemRequests(redeemRequestIds, withdrawalEventIdsUint, false);
 
         assertEq(address(redeemManager).balance, totalAmount);
         assertEq(user.balance, totalAmount);
@@ -979,6 +984,7 @@ contract RedeemManagerV1Tests is Test {
 
         for (uint256 idx = 0; idx < withdrawalEventIds.length;) {
             assertTrue(withdrawalEventIds[idx] == -3);
+            assertTrue(claimStatus[idx] == 0);
             unchecked {
                 ++idx;
             }

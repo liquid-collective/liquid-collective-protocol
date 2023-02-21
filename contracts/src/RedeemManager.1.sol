@@ -17,12 +17,19 @@ import "./state/redeemManager/RedeemBufferedEth.sol";
 /// @author Kiln
 /// @notice This contract handles the redeem requests of all users
 contract RedeemManagerV1 is Initializable, IRedeemManagerV1 {
-    /// @notice Internal value returned when resolving a redeem request that is unsatisfied
-    int64 internal constant UNSATISFIED = -1;
-    /// @notice Internal value returned when resolving a redeem request that is out of bounds
-    int64 internal constant OUT_OF_BOUNDS = -2;
-    /// @notice Internal value returned when resolving a redeem request that is already claimed
-    int64 internal constant FULLY_CLAIMED = -3;
+    /// @notice Value returned when resolving a redeem request that is unsatisfied
+    int64 internal constant RESOLVE_UNSATISFIED = -1;
+    /// @notice Value returned when resolving a redeem request that is out of bounds
+    int64 internal constant RESOLVE_OUT_OF_BOUNDS = -2;
+    /// @notice Value returned when resolving a redeem request that is already claimed
+    int64 internal constant RESOLVE_FULLY_CLAIMED = -3;
+
+    /// @notice Status value returned when fully claiming a redeem request
+    uint8 internal constant CLAIM_FULLY_CLAIMED = 0;
+    /// @notice Status value returned when partially claiming a redeem request
+    uint8 internal constant CLAIM_PARTIALLY_CLAIMED = 1;
+    /// @notice Status value returned when a redeem request is already claimed and skipped during a claim
+    uint8 internal constant CLAIM_SKIPPED = 2;
 
     modifier onlyRiver() {
         if (msg.sender != RiverAddress.get()) {
@@ -155,15 +162,17 @@ contract RedeemManagerV1 is Initializable, IRedeemManagerV1 {
         uint32[] calldata redeemRequestIds,
         uint32[] calldata withdrawalEventIds,
         bool skipAlreadyClaimed
-    ) external {
+    ) external returns (uint8[] memory claimStatuses) {
         uint256 redeemRequestIdsLength = redeemRequestIds.length;
         if (redeemRequestIdsLength != withdrawalEventIds.length) {
             revert IncompatibleArrayLengths();
         }
         address[] memory accounts = new address[](redeemRequestIdsLength);
+        claimStatuses = new uint8[](redeemRequestIdsLength);
         for (uint256 idx = 0; idx < redeemRequestIdsLength;) {
-            (address recipient, uint256 amount) =
+            (address recipient, uint256 amount, uint8 claimStatus) =
                 _claimRedeemRequest(redeemRequestIds[idx], withdrawalEventIds[idx], skipAlreadyClaimed, false);
+            claimStatuses[idx] = claimStatus;
             _sendRewards(recipient, amount);
             accounts[idx] = recipient;
             unchecked {
@@ -289,17 +298,17 @@ contract RedeemManagerV1 is Initializable, IRedeemManagerV1 {
     ) internal view returns (int64 withdrawalEventId) {
         RedeemRequests.RedeemRequest[] storage redeemRequests = RedeemRequests.get();
         if (redeemRequestId >= redeemRequests.length) {
-            return OUT_OF_BOUNDS;
+            return RESOLVE_OUT_OF_BOUNDS;
         }
         RedeemRequests.RedeemRequest memory redeemRequest = redeemRequests[redeemRequestId];
         if (redeemRequest.size == 0) {
-            return FULLY_CLAIMED;
+            return RESOLVE_FULLY_CLAIMED;
         }
         if (
             WithdrawalEvents.get().length == 0
                 || (lastWithdrawalEvent.height + lastWithdrawalEvent.size) < redeemRequest.height
         ) {
-            return UNSATISFIED;
+            return RESOLVE_UNSATISFIED;
         }
         return _performDichotomicResolution(redeemRequest);
     }
@@ -330,7 +339,7 @@ contract RedeemManagerV1 is Initializable, IRedeemManagerV1 {
         uint32 withdrawalEventId,
         bool skipAlreadyClaimed,
         bool skipWithdrawalEventDoesNotExist
-    ) internal returns (address, uint256) {
+    ) internal returns (address, uint256, uint8) {
         RedeemRequests.RedeemRequest[] storage redeemRequests = RedeemRequests.get();
         if (redeemRequestId >= redeemRequests.length) {
             revert RedeemRequestOutOfBounds(redeemRequestId);
@@ -338,14 +347,14 @@ contract RedeemManagerV1 is Initializable, IRedeemManagerV1 {
         WithdrawalEvents.WithdrawalEvent[] storage withdrawalEvents = WithdrawalEvents.get();
         if (withdrawalEventId >= withdrawalEvents.length) {
             if (skipWithdrawalEventDoesNotExist) {
-                return (address(0), 0);
+                return (address(0), 0, CLAIM_PARTIALLY_CLAIMED);
             }
             revert WithdrawalEventOutOfBounds(withdrawalEventId);
         }
         RedeemRequests.RedeemRequest memory redeemRequest = redeemRequests[redeemRequestId];
         if (redeemRequest.size == 0) {
             if (skipAlreadyClaimed) {
-                return (address(0), 0);
+                return (address(0), 0, CLAIM_SKIPPED);
             }
             revert RedeemRequestAlreadyClaimed(redeemRequestId);
         }
@@ -369,11 +378,14 @@ contract RedeemManagerV1 is Initializable, IRedeemManagerV1 {
         }
 
         uint256 ethAmount = (matchingSize * withdrawalEvent.ethAmount) / withdrawalEvent.size;
-        uint256 maxRedeemableEthAmount = (matchingSize * redeemRequest.maxRedeemableEth) / redeemRequest.size;
 
-        if (maxRedeemableEthAmount < ethAmount) {
-            RedeemBufferedEth.set(RedeemBufferedEth.get() + (ethAmount - maxRedeemableEthAmount));
-            ethAmount = maxRedeemableEthAmount;
+        {
+            uint256 maxRedeemableEthAmount = (matchingSize * redeemRequest.maxRedeemableEth) / redeemRequest.size;
+
+            if (maxRedeemableEthAmount < ethAmount) {
+                RedeemBufferedEth.set(RedeemBufferedEth.get() + (ethAmount - maxRedeemableEthAmount));
+                ethAmount = maxRedeemableEthAmount;
+            }
         }
 
         redeemRequests[redeemRequestId].height += matchingSize;
@@ -383,11 +395,12 @@ contract RedeemManagerV1 is Initializable, IRedeemManagerV1 {
         emit FilledRedeemRequest(redeemRequestId, withdrawalEventId, matchingSize, ethAmount);
 
         if (matchingSize < redeemRequest.size) {
-            (, uint256 nextEthAmount) = _claimRedeemRequest(redeemRequestId, withdrawalEventId + 1, false, true);
-            return (redeemRequest.owner, ethAmount + nextEthAmount);
+            (, uint256 nextEthAmount, uint8 claimStatus) =
+                _claimRedeemRequest(redeemRequestId, withdrawalEventId + 1, false, true);
+            return (redeemRequest.owner, ethAmount + nextEthAmount, claimStatus);
         }
 
-        return (redeemRequest.owner, ethAmount);
+        return (redeemRequest.owner, ethAmount, CLAIM_FULLY_CLAIMED);
     }
 
     /// @notice Prunes the redeem request list of an account by recomputing the starting index

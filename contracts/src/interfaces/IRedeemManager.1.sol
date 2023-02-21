@@ -124,11 +124,12 @@ interface IRedeemManagerV1 {
     /// @param redeemRequestIds The list of redeem requests to claim
     /// @param withdrawalEventIds The list of withdrawal events to use for every redeem request claim
     /// @param skipAlreadyClaimed True if the call should not revert on claiming of already claimed requests
+    /// @return claimStatuses The list of claim statuses. 0 for fully claimed, 1 for partially claimed, 2 for skipped
     function claimRedeemRequests(
         uint32[] calldata redeemRequestIds,
         uint32[] calldata withdrawalEventIds,
         bool skipAlreadyClaimed
-    ) external;
+    ) external returns (uint8[] memory claimStatuses);
 
     /// @notice Reports a withdraw event from River
     /// @param lsETHWithdrawable The amount of LsETH that can be redeemed due to this new withdraw event
