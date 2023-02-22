@@ -26,10 +26,15 @@ interface IRedeemManagerV1 {
     /// @notice Emitted when a redeem request has been filled (even partially)
     /// @param id The id of the redeem request
     /// @param withdrawalEventId The id of the withdrawal event used to fill the request
-    /// @param amountFilled The amount of LsETH filled
-    /// @param ethAmountFilled The amount of ETH filled
-    event FilledRedeemRequest(
-        uint32 indexed id, uint32 withdrawalEventId, uint256 amountFilled, uint256 ethAmountFilled
+    /// @param amountClaimed The amount of LsETH filled
+    /// @param ethAmountClaimed The amount of ETH filled
+    /// @param amountRemaining The amount of LsETH remaining
+    event ClaimedRedeemRequest(
+        uint32 indexed id,
+        uint32 withdrawalEventId,
+        uint256 amountClaimed,
+        uint256 ethAmountClaimed,
+        uint256 amountRemaining
     );
 
     /// @notice Emitted when a account is sent rewards

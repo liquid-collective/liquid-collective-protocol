@@ -139,7 +139,7 @@ contract RedeemManagerV1 is Initializable, IRedeemManagerV1 {
         uint256 height = 0;
         if (redeemRequestId != 0) {
             RedeemRequests.RedeemRequest memory previousRedeemRequest = redeemRequests[redeemRequestId - 1];
-            height = previousRedeemRequest.height + previousRedeemRequest.size;
+            height = previousRedeemRequest.height + previousRedeemRequest.amount;
         }
 
         uint256 maxRedeemableEth = (_river().totalUnderlyingSupply() * lsETHAmount) / _river().totalSupply();
@@ -147,7 +147,7 @@ contract RedeemManagerV1 is Initializable, IRedeemManagerV1 {
         redeemRequests.push(
             RedeemRequests.RedeemRequest({
                 height: height,
-                size: lsETHAmount,
+                amount: lsETHAmount,
                 owner: recipient,
                 maxRedeemableEth: maxRedeemableEth
             })
@@ -214,14 +214,14 @@ contract RedeemManagerV1 is Initializable, IRedeemManagerV1 {
         uint256 msgValue = msg.value;
         if (withdrawalEventId != 0) {
             WithdrawalEvents.WithdrawalEvent memory previousWithdrawalEvent = withdrawalEvents[withdrawalEventId - 1];
-            height = previousWithdrawalEvent.height + previousWithdrawalEvent.size;
+            height = previousWithdrawalEvent.height + previousWithdrawalEvent.amount;
         }
         RedeemBufferedEth.set(currentRedeemBufferedEth - consumedRedeemBufferAmount);
         withdrawalEvents.push(
             WithdrawalEvents.WithdrawalEvent({
                 height: height,
-                size: lsETHWithdrawable,
-                ethAmount: msgValue + consumedRedeemBufferAmount
+                amount: lsETHWithdrawable,
+                withdrawnEth: msgValue + consumedRedeemBufferAmount
             })
         );
 
@@ -243,7 +243,7 @@ contract RedeemManagerV1 is Initializable, IRedeemManagerV1 {
         WithdrawalEvents.WithdrawalEvent memory withdrawalEvent
     ) internal pure returns (bool) {
         return (
-            redeemRequest.height < withdrawalEvent.height + withdrawalEvent.size
+            redeemRequest.height < withdrawalEvent.height + withdrawalEvent.amount
                 && redeemRequest.height >= withdrawalEvent.height
         );
     }
@@ -301,12 +301,12 @@ contract RedeemManagerV1 is Initializable, IRedeemManagerV1 {
             return RESOLVE_OUT_OF_BOUNDS;
         }
         RedeemRequests.RedeemRequest memory redeemRequest = redeemRequests[redeemRequestId];
-        if (redeemRequest.size == 0) {
+        if (redeemRequest.amount == 0) {
             return RESOLVE_FULLY_CLAIMED;
         }
         if (
             WithdrawalEvents.get().length == 0
-                || (lastWithdrawalEvent.height + lastWithdrawalEvent.size) < redeemRequest.height
+                || (lastWithdrawalEvent.height + lastWithdrawalEvent.amount) < redeemRequest.height
         ) {
             return RESOLVE_UNSATISFIED;
         }
@@ -352,35 +352,39 @@ contract RedeemManagerV1 is Initializable, IRedeemManagerV1 {
             revert WithdrawalEventOutOfBounds(withdrawalEventId);
         }
         RedeemRequests.RedeemRequest memory redeemRequest = redeemRequests[redeemRequestId];
-        if (redeemRequest.size == 0) {
+        if (redeemRequest.amount == 0) {
             if (skipAlreadyClaimed) {
                 return (address(0), 0, CLAIM_SKIPPED);
             }
             revert RedeemRequestAlreadyClaimed(redeemRequestId);
         }
-        WithdrawalEvents.WithdrawalEvent memory withdrawalEvent = withdrawalEvents[withdrawalEventId];
-
-        if (!_isMatch(redeemRequest, withdrawalEvent)) {
-            revert DoesNotMatch(redeemRequestId, withdrawalEventId);
-        }
-
-        uint256 matchingSize = 0;
-
+        uint256 ethAmount = 0;
+        uint256 matchingAmount = 0;
         {
-            uint256 requestEndPosition = redeemRequest.height + redeemRequest.size;
-            uint256 withdrawalEventEndPosition = withdrawalEvent.height + withdrawalEvent.size;
+            WithdrawalEvents.WithdrawalEvent memory withdrawalEvent = withdrawalEvents[withdrawalEventId];
 
-            if (requestEndPosition < withdrawalEventEndPosition) {
-                matchingSize = redeemRequest.size;
-            } else {
-                matchingSize = redeemRequest.size - (requestEndPosition - withdrawalEventEndPosition);
+            if (!_isMatch(redeemRequest, withdrawalEvent)) {
+                revert DoesNotMatch(redeemRequestId, withdrawalEventId);
             }
+
+            {
+                uint256 requestEndPosition = redeemRequest.height + redeemRequest.amount;
+                uint256 withdrawalEventEndPosition = withdrawalEvent.height + withdrawalEvent.amount;
+
+                if (requestEndPosition < withdrawalEventEndPosition) {
+                    matchingAmount = redeemRequest.amount;
+                } else {
+                    matchingAmount = redeemRequest.amount - (requestEndPosition - withdrawalEventEndPosition);
+                }
+            }
+
+            ethAmount = (matchingAmount * withdrawalEvent.withdrawnEth) / withdrawalEvent.amount;
         }
 
-        uint256 ethAmount = (matchingSize * withdrawalEvent.ethAmount) / withdrawalEvent.size;
+        uint256 currentRequestAmount = redeemRequest.amount;
 
         {
-            uint256 maxRedeemableEthAmount = (matchingSize * redeemRequest.maxRedeemableEth) / redeemRequest.size;
+            uint256 maxRedeemableEthAmount = (matchingAmount * redeemRequest.maxRedeemableEth) / currentRequestAmount;
 
             if (maxRedeemableEthAmount < ethAmount) {
                 RedeemBufferedEth.set(RedeemBufferedEth.get() + (ethAmount - maxRedeemableEthAmount));
@@ -388,13 +392,15 @@ contract RedeemManagerV1 is Initializable, IRedeemManagerV1 {
             }
         }
 
-        redeemRequests[redeemRequestId].height += matchingSize;
-        redeemRequests[redeemRequestId].size -= matchingSize;
+        emit ClaimedRedeemRequest(
+            redeemRequestId, withdrawalEventId, matchingAmount, ethAmount, currentRequestAmount - matchingAmount
+            );
+
+        redeemRequests[redeemRequestId].height += matchingAmount;
+        redeemRequests[redeemRequestId].amount = currentRequestAmount - matchingAmount;
         redeemRequests[redeemRequestId].maxRedeemableEth -= ethAmount;
 
-        emit FilledRedeemRequest(redeemRequestId, withdrawalEventId, matchingSize, ethAmount);
-
-        if (matchingSize < redeemRequest.size) {
+        if (matchingAmount < redeemRequest.amount) {
             (, uint256 nextEthAmount, uint8 claimStatus) =
                 _claimRedeemRequest(redeemRequestId, withdrawalEventId + 1, false, true);
             return (redeemRequest.owner, ethAmount + nextEthAmount, claimStatus);
@@ -404,6 +410,7 @@ contract RedeemManagerV1 is Initializable, IRedeemManagerV1 {
     }
 
     /// @notice Prunes the redeem request list of an account by recomputing the starting index
+    /// @dev Pruning will increment the startIndex to the count of consecutive fully claimed requests from the beginning of the array
     /// @param account The account to prune
     function _pruneRedeemerClaimedRequests(address account) internal {
         mapping(address => Redeemers.Redeemer) storage redeemers = Redeemers.get();
@@ -412,7 +419,7 @@ contract RedeemManagerV1 is Initializable, IRedeemManagerV1 {
         uint256 startIndex = redeemers[account].startIndex;
         uint256 idx = startIndex;
         RedeemRequests.RedeemRequest[] storage redeemRequests = RedeemRequests.get();
-        for (; idx < requestCount && redeemRequests[accountRedeemRequests[idx]].size == 0;) {
+        for (; idx < requestCount && redeemRequests[accountRedeemRequests[idx]].amount == 0;) {
             unchecked {
                 ++idx;
             }

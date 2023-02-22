@@ -9,14 +9,14 @@ library RedeemRequests {
 
     /// @notice The Redeemer structure represents the redeem request made by a user
     struct RedeemRequest {
-        /// @custom:attribute The height is the cumulative sum of all the sizes of preceding redeem requests
-        uint256 height;
-        /// @custom:attribute The size of the redeem request in LsETH
-        uint256 size;
+        /// @custom:attribute The amount of the redeem request in LsETH
+        uint256 amount;
         /// @custom:attribute The maximum amount of ETH redeemable by this request
         uint256 maxRedeemableEth;
         /// @custom:attribute The owner of the redeem request
         address owner;
+        /// @custom:attribute The height is the cumulative sum of all the sizes of preceding redeem requests
+        uint256 height;
     }
 
     /// @notice Retrieve the Redeem Requests array storage pointer

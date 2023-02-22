@@ -10,12 +10,12 @@ library WithdrawalEvents {
 
     /// @notice The Redeemer structure represents the withdrawal events made by River
     struct WithdrawalEvent {
+        /// @custom:attribute The amount of the withdrawal event in LsETH
+        uint256 amount;
+        /// @custom:attribute The amount of the withdrawal event in ETH
+        uint256 withdrawnEth;
         /// @custom:attribute The height is the cumulative sum of all the sizes of preceding withdrawal events
         uint256 height;
-        /// @custom:attribute The size of the withdrawal event in LsETH
-        uint256 size;
-        /// @custom:attribute The size of the withdrawal event in ETH
-        uint256 ethAmount;
     }
 
     /// @notice Retrieve the Withdrawal Events array storage pointer
