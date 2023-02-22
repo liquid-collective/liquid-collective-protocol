@@ -1052,7 +1052,6 @@ contract ERC20VestableVotesUpgradeableV1Tests is Test {
         uint256 releaseAt,
         uint256 revokeAt
     ) public {
-        vm.assume(amount > 0);
         vm.warp(0);
         if (periodDuration == 0) {
             // period duration should be a list one
@@ -1071,6 +1070,8 @@ contract ERC20VestableVotesUpgradeableV1Tests is Test {
 
         // make sure that initAccount has enough funds to create the schedule
         amount = amount % tt.balanceOf(initAccount);
+
+        vm.assume(amount > 0);
 
         uint32 totalDuration = uint32(vestingPeriodCount) * uint32(periodDuration);
 
