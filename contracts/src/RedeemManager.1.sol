@@ -284,7 +284,8 @@ contract RedeemManagerV1 is Initializable, IRedeemManagerV1 {
                 min = mid;
             }
         }
-
+        // we have eliminated all code paths that could lead to this line so we will never get to this return
+        // statement but it's needed for the compiler warnings
         return min;
     }
 
