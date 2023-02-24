@@ -86,10 +86,9 @@ contract FirewallTests is BytesGenerator, Test {
         firewalledAllowlist = AllowlistV1(payable(address(allowlistFirewall)));
         allowlist.initAllowlistV1(payable(address(allowlistFirewall)), payable(address(allowlistFirewall)));
 
-        bytes4[] memory executorCallableOperatorsRegistrySelectors = new bytes4[](3);
+        bytes4[] memory executorCallableOperatorsRegistrySelectors = new bytes4[](2);
         executorCallableOperatorsRegistrySelectors[0] = operatorsRegistry.setOperatorStatus.selector;
-        executorCallableOperatorsRegistrySelectors[1] = operatorsRegistry.setOperatorStoppedValidatorCount.selector;
-        executorCallableOperatorsRegistrySelectors[2] = operatorsRegistry.setOperatorLimits.selector;
+        executorCallableOperatorsRegistrySelectors[1] = operatorsRegistry.setOperatorLimits.selector;
         operatorsRegistryFirewall = new Firewall(
             riverGovernorDAO,
             executor,
@@ -233,32 +232,6 @@ contract FirewallTests is BytesGenerator, Test {
         vm.stopPrank();
     }
 
-    function testGovernorCanSetOperatorStoppedValidatorCount() public {
-        uint256 operatorBobIndex = haveGovernorAddOperatorBob();
-        // Assert this by expecting InvalidArgument, NOT Unauthorized
-        vm.startPrank(riverGovernorDAO);
-        vm.expectRevert(abi.encodeWithSignature("InvalidArgument()"));
-        firewalledOperatorsRegistry.setOperatorStoppedValidatorCount(operatorBobIndex, 3);
-        vm.stopPrank();
-    }
-
-    function testExecutorCanSetOperatorStoppedValidatorCount() public {
-        uint256 operatorBobIndex = haveGovernorAddOperatorBob();
-        // Assert this by expecting InvalidArgument, NOT Unauthorized
-        vm.startPrank(executor);
-        vm.expectRevert(abi.encodeWithSignature("InvalidArgument()"));
-        firewalledOperatorsRegistry.setOperatorStoppedValidatorCount(operatorBobIndex, 3);
-        vm.stopPrank();
-    }
-
-    function testRandomCallerCannotSetOperatorStoppedValidatorCount() public {
-        uint256 operatorBobIndex = haveGovernorAddOperatorBob();
-        vm.startPrank(joe);
-        vm.expectRevert(unauthJoe);
-        firewalledOperatorsRegistry.setOperatorStoppedValidatorCount(operatorBobIndex, 3);
-        vm.stopPrank();
-    }
-
     function testGovernorCanSetOperatorLimit() public {
         uint256 operatorBobIndex = haveGovernorAddOperatorBob();
         vm.startPrank(bob);
@@ -270,7 +243,7 @@ contract FirewallTests is BytesGenerator, Test {
         vm.startPrank(riverGovernorDAO);
         uint256[] memory operatorIndexes = new uint256[](1);
         operatorIndexes[0] = operatorBobIndex;
-        uint256[] memory operatorLimits = new uint256[](1);
+        uint32[] memory operatorLimits = new uint32[](1);
         operatorLimits[0] = 10;
         firewalledOperatorsRegistry.setOperatorLimits(operatorIndexes, operatorLimits, block.number);
         assert(operatorsRegistry.getOperator(operatorBobIndex).limit == 10);
@@ -288,7 +261,7 @@ contract FirewallTests is BytesGenerator, Test {
         vm.startPrank(executor);
         uint256[] memory operatorIndexes = new uint256[](1);
         operatorIndexes[0] = operatorBobIndex;
-        uint256[] memory operatorLimits = new uint256[](1);
+        uint32[] memory operatorLimits = new uint32[](1);
         operatorLimits[0] = 10;
         firewalledOperatorsRegistry.setOperatorLimits(operatorIndexes, operatorLimits, block.number);
         assert(operatorsRegistry.getOperator(operatorBobIndex).limit == 10);
@@ -301,7 +274,7 @@ contract FirewallTests is BytesGenerator, Test {
         vm.expectRevert(unauthJoe);
         uint256[] memory operatorIndexes = new uint256[](1);
         operatorIndexes[0] = operatorBobIndex;
-        uint256[] memory operatorLimits = new uint256[](1);
+        uint32[] memory operatorLimits = new uint32[](1);
         operatorLimits[0] = 10;
         firewalledOperatorsRegistry.setOperatorLimits(operatorIndexes, operatorLimits, block.number);
         vm.stopPrank();
