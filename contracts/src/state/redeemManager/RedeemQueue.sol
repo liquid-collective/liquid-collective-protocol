@@ -1,11 +1,11 @@
 //SPDX-License-Identifier: BUSL-1.1
 pragma solidity 0.8.10;
 
-/// @title Redeem Manager Redeem Requests storage
-/// @notice Utility to manage the Redeem Requests in the Redeem Manager
-library RedeemRequests {
-    /// @notice Storage slot of the Redeem Requests
-    bytes32 internal constant REDEEM_REQUESTS_ID_SLOT = bytes32(uint256(keccak256("river.state.redeemRequests")) - 1);
+/// @title Redeem Manager Redeem Queue storage
+/// @notice Utility to manage the Redeem Queue in the Redeem Manager
+library RedeemQueue {
+    /// @notice Storage slot of the Redeem Queue
+    bytes32 internal constant REDEEM_QUEUE_ID_SLOT = bytes32(uint256(keccak256("river.state.redeemQueue")) - 1);
 
     /// @notice The Redeemer structure represents the redeem request made by a user
     struct RedeemRequest {
@@ -19,10 +19,10 @@ library RedeemRequests {
         uint256 height;
     }
 
-    /// @notice Retrieve the Redeem Requests array storage pointer
-    /// @return data The Redeem Requests array storage pointer
+    /// @notice Retrieve the Redeem Queue array storage pointer
+    /// @return data The Redeem Queue array storage pointer
     function get() internal pure returns (RedeemRequest[] storage data) {
-        bytes32 position = REDEEM_REQUESTS_ID_SLOT;
+        bytes32 position = REDEEM_QUEUE_ID_SLOT;
         assembly {
             data.slot := position
         }

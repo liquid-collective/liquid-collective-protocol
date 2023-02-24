@@ -1,8 +1,8 @@
 //SPDX-License-Identifier: BUSL-1.1
 pragma solidity 0.8.10;
 
-import "../state/redeemManager/RedeemRequests.sol";
-import "../state/redeemManager/WithdrawalEvents.sol";
+import "../state/redeemManager/RedeemQueue.sol";
+import "../state/redeemManager/WithdrawalStack.sol";
 import "../state/redeemManager/Redeemers.sol";
 
 /// @title Redeem Manager Interface (v1)
@@ -12,24 +12,24 @@ interface IRedeemManagerV1 {
     /// @notice Emitted when a redeem request is created
     /// @param owner The owner of the redeem request
     /// @param height The height of the redeem request in LsETH
-    /// @param size The size of the redeem request in LsETH
+    /// @param amount The size of the redeem request in LsETH
     /// @param id The id of the new redeem request
-    event RequestedRedeem(address indexed owner, uint256 height, uint256 size, uint32 id);
+    event RequestedRedeem(address indexed owner, uint256 height, uint256 amount, uint32 id);
 
     /// @notice Emitted when a withdrawal event is created
     /// @param height The height of the withdrawal event in LsETH
-    /// @param size The size of the withdrawal event in LsETH
+    /// @param amount The size of the withdrawal event in LsETH
     /// @param ethAmount The amount of eth to distrubute to claimers
     /// @param id The id of the withdrawal event
-    event ReportedWithdrawal(uint256 height, uint256 size, uint256 ethAmount, uint32 id);
+    event ReportedWithdrawal(uint256 height, uint256 amount, uint256 ethAmount, uint32 id);
 
-    /// @notice Emitted when a redeem request has been filled (even partially)
+    /// @notice Emitted when a redeem request has been matched and filled (even partially) from a withdrawal event
     /// @param id The id of the redeem request
     /// @param withdrawalEventId The id of the withdrawal event used to fill the request
     /// @param amountClaimed The amount of LsETH filled
     /// @param ethAmountClaimed The amount of ETH filled
     /// @param amountRemaining The amount of LsETH remaining
-    event ClaimedRedeemRequest(
+    event MatchedRedeemRequest(
         uint32 indexed id,
         uint32 withdrawalEventId,
         uint256 amountClaimed,
@@ -37,10 +37,12 @@ interface IRedeemManagerV1 {
         uint256 amountRemaining
     );
 
-    /// @notice Emitted when a account is sent rewards
-    /// @param recipient The address receiving the rewards
-    /// @param amount The amount sent
-    event SentRewards(address indexed recipient, uint256 amount);
+    /// @notice Emitted when a redeem request claim has been processed and matched at least once and funds are sent to the recipient
+    /// @param id The id of the redeem request
+    /// @param recipient The address receiving the redeem request funds
+    /// @param ethAmount The amount of eth retrieved
+    /// @param fullyClaimed True if request is now empty
+    event ClaimedRedeemRequest(uint32 indexed id, address indexed recipient, uint256 ethAmount, bool fullyClaimed);
 
     /// @notice Emitted when the River address is set
     /// @param river The new river address
@@ -81,10 +83,7 @@ interface IRedeemManagerV1 {
     /// @notice Retrieve the details of a specific redeem request
     /// @param redeemRequestId The id of the request
     /// @return The redeem request details
-    function getRedeemRequestDetails(uint32 redeemRequestId)
-        external
-        view
-        returns (RedeemRequests.RedeemRequest memory);
+    function getRedeemRequestDetails(uint32 redeemRequestId) external view returns (RedeemQueue.RedeemRequest memory);
 
     /// @notice Retrieve the global count of withdrawal events
     function getWithdrawalEventCount() external view returns (uint256);
@@ -95,11 +94,11 @@ interface IRedeemManagerV1 {
     function getWithdrawalEventDetails(uint32 withdrawalEventId)
         external
         view
-        returns (WithdrawalEvents.WithdrawalEvent memory);
+        returns (WithdrawalStack.WithdrawalEvent memory);
 
     /// @notice Retrieve the amount of eth available in the buffer
     /// @return The amount of eth in the buffer
-    function getBufferedEth() external view returns (uint256);
+    function getBufferedExceedingEth() external view returns (uint256);
 
     /// @notice Retrieve the list of redeem requests of an account
     /// @param account The account to query
@@ -138,6 +137,5 @@ interface IRedeemManagerV1 {
 
     /// @notice Reports a withdraw event from River
     /// @param lsETHWithdrawable The amount of LsETH that can be redeemed due to this new withdraw event
-    /// @param consumedRedeemBufferAmount The amount of ETH to use from the redeem buffer in addition to the provided eth in the call
-    function reportWithdraw(uint256 lsETHWithdrawable, uint256 consumedRedeemBufferAmount) external payable;
+    function reportWithdraw(uint256 lsETHWithdrawable) external payable;
 }

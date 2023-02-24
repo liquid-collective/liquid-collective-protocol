@@ -6,8 +6,8 @@ import "forge-std/Test.sol";
 
 import "./utils/UserFactory.sol";
 
-import "../src/state/redeemManager/RedeemRequests.sol";
-import "../src/state/redeemManager/WithdrawalEvents.sol";
+import "../src/state/redeemManager/RedeemQueue.sol";
+import "../src/state/redeemManager/WithdrawalStack.sol";
 import "../src/RedeemManager.1.sol";
 import "../src/Allowlist.1.sol";
 
@@ -57,11 +57,8 @@ contract RiverMock {
         return allowlist;
     }
 
-    function sudoReportWithdraw(address redeemManager, uint256 lsETHAmount, uint256 consumedBufferAmount)
-        external
-        payable
-    {
-        RedeemManagerV1(redeemManager).reportWithdraw{value: msg.value}(lsETHAmount, consumedBufferAmount);
+    function sudoReportWithdraw(address redeemManager, uint256 lsETHAmount) external payable {
+        RedeemManagerV1(redeemManager).reportWithdraw{value: msg.value}(lsETHAmount);
     }
 
     function totalSupply() external view returns (uint256) {
@@ -70,6 +67,10 @@ contract RiverMock {
 
     function totalUnderlyingSupply() external view returns (uint256) {
         return (_totalSupply * rate) / 1e18;
+    }
+
+    function underlyingBalanceFromShares(uint256 shares) external view returns (uint256) {
+        return (shares * rate) / 1e18;
     }
 }
 
@@ -83,14 +84,14 @@ contract RedeemManagerV1Tests is Test {
 
     event RequestedRedeem(address indexed owner, uint256 height, uint256 size, uint32 id);
     event ReportedWithdrawal(uint256 height, uint256 size, uint256 ethAmount, uint32 id);
-    event ClaimedRedeemRequest(
+    event MatchedRedeemRequest(
         uint32 indexed id,
         uint32 withdrawalEventId,
         uint256 amountClaimed,
         uint256 ethAmountClaimed,
         uint256 amountRemaining
     );
-    event SentRewards(address indexed recipient, uint256 amount);
+    event ClaimedRedeemRequest(uint32 indexed id, address indexed recipient, uint256 ethAmount, bool fullyClaimed);
 
     function setUp() external {
         allowlistAdmin = makeAddr("allowlistAdmin");
@@ -139,7 +140,7 @@ contract RedeemManagerV1Tests is Test {
         assertEq(requests[0], 0);
 
         {
-            RedeemRequests.RedeemRequest memory rr = redeemManager.getRedeemRequestDetails(0);
+            RedeemQueue.RedeemRequest memory rr = redeemManager.getRedeemRequestDetails(0);
 
             assertEq(rr.height, 0);
             assertEq(rr.amount, amount);
@@ -187,7 +188,7 @@ contract RedeemManagerV1Tests is Test {
         assertEq(requests[1], 1);
 
         {
-            RedeemRequests.RedeemRequest memory rr = redeemManager.getRedeemRequestDetails(0);
+            RedeemQueue.RedeemRequest memory rr = redeemManager.getRedeemRequestDetails(0);
 
             assertEq(rr.height, 0);
             assertEq(rr.amount, amount);
@@ -195,7 +196,7 @@ contract RedeemManagerV1Tests is Test {
         }
 
         {
-            RedeemRequests.RedeemRequest memory rr = redeemManager.getRedeemRequestDetails(1);
+            RedeemQueue.RedeemRequest memory rr = redeemManager.getRedeemRequestDetails(1);
 
             assertEq(rr.height, amount);
             assertEq(rr.amount, amount);
@@ -256,12 +257,12 @@ contract RedeemManagerV1Tests is Test {
 
         vm.expectEmit(true, true, true, true);
         emit ReportedWithdrawal(0, amount, amount, 0);
-        river.sudoReportWithdraw{value: amount}(address(redeemManager), amount, 0);
+        river.sudoReportWithdraw{value: amount}(address(redeemManager), amount);
 
         assertEq(redeemManager.getWithdrawalEventCount(), 1);
 
         {
-            WithdrawalEvents.WithdrawalEvent memory we = redeemManager.getWithdrawalEventDetails(0);
+            WithdrawalStack.WithdrawalEvent memory we = redeemManager.getWithdrawalEventDetails(0);
 
             assertEq(we.height, 0);
             assertEq(we.amount, amount);
@@ -276,18 +277,18 @@ contract RedeemManagerV1Tests is Test {
 
         vm.expectEmit(true, true, true, true);
         emit ReportedWithdrawal(0, amount, amount, 0);
-        river.sudoReportWithdraw{value: amount}(address(redeemManager), amount, 0);
+        river.sudoReportWithdraw{value: amount}(address(redeemManager), amount);
 
         vm.deal(address(this), amount);
 
         vm.expectEmit(true, true, true, true);
         emit ReportedWithdrawal(amount, amount, amount, 1);
-        river.sudoReportWithdraw{value: amount}(address(redeemManager), amount, 0);
+        river.sudoReportWithdraw{value: amount}(address(redeemManager), amount);
 
         assertEq(redeemManager.getWithdrawalEventCount(), 2);
 
         {
-            WithdrawalEvents.WithdrawalEvent memory we = redeemManager.getWithdrawalEventDetails(0);
+            WithdrawalStack.WithdrawalEvent memory we = redeemManager.getWithdrawalEventDetails(0);
 
             assertEq(we.height, 0);
             assertEq(we.amount, amount);
@@ -295,7 +296,7 @@ contract RedeemManagerV1Tests is Test {
         }
 
         {
-            WithdrawalEvents.WithdrawalEvent memory we = redeemManager.getWithdrawalEventDetails(1);
+            WithdrawalStack.WithdrawalEvent memory we = redeemManager.getWithdrawalEventDetails(1);
 
             assertEq(we.height, amount);
             assertEq(we.amount, amount);
@@ -317,13 +318,13 @@ contract RedeemManagerV1Tests is Test {
         redeemManager.requestRedeem(amount, user);
 
         vm.deal(address(this), amount);
-        river.sudoReportWithdraw{value: amount}(address(redeemManager), amount, 0);
+        river.sudoReportWithdraw{value: amount}(address(redeemManager), amount);
 
         assertEq(redeemManager.getWithdrawalEventCount(), 1);
         assertEq(redeemManager.getRedeemRequestCount(), 1);
 
         {
-            RedeemRequests.RedeemRequest memory rr = redeemManager.getRedeemRequestDetails(0);
+            RedeemQueue.RedeemRequest memory rr = redeemManager.getRedeemRequestDetails(0);
 
             assertEq(rr.height, 0);
             assertEq(rr.amount, amount);
@@ -331,7 +332,7 @@ contract RedeemManagerV1Tests is Test {
         }
 
         {
-            WithdrawalEvents.WithdrawalEvent memory we = redeemManager.getWithdrawalEventDetails(0);
+            WithdrawalStack.WithdrawalEvent memory we = redeemManager.getWithdrawalEventDetails(0);
 
             assertEq(we.height, 0);
             assertEq(we.amount, amount);
@@ -348,9 +349,9 @@ contract RedeemManagerV1Tests is Test {
         assertEq(user.balance, 0);
 
         vm.expectEmit(true, true, true, true);
-        emit ClaimedRedeemRequest(0, 0, amount, amount, 0);
+        emit MatchedRedeemRequest(0, 0, amount, amount, 0);
         vm.expectEmit(true, true, true, true);
-        emit SentRewards(user, amount);
+        emit ClaimedRedeemRequest(0, user, amount, true);
         redeemManager.claimRedeemRequests(redeemRequestIds, withdrawEventIds, true);
 
         redeemRequestIds = redeemManager.listRedeemRequests(user);
@@ -360,7 +361,7 @@ contract RedeemManagerV1Tests is Test {
         assertEq(user.balance, amount);
 
         {
-            RedeemRequests.RedeemRequest memory rr = redeemManager.getRedeemRequestDetails(0);
+            RedeemQueue.RedeemRequest memory rr = redeemManager.getRedeemRequestDetails(0);
 
             assertEq(rr.height, amount);
             assertEq(rr.amount, 0);
@@ -368,7 +369,7 @@ contract RedeemManagerV1Tests is Test {
         }
 
         {
-            WithdrawalEvents.WithdrawalEvent memory we = redeemManager.getWithdrawalEventDetails(0);
+            WithdrawalStack.WithdrawalEvent memory we = redeemManager.getWithdrawalEventDetails(0);
 
             assertEq(we.height, 0);
             assertEq(we.amount, amount);
@@ -390,13 +391,13 @@ contract RedeemManagerV1Tests is Test {
         redeemManager.requestRedeem(amount, user);
 
         vm.deal(address(this), amount);
-        river.sudoReportWithdraw{value: amount}(address(redeemManager), amount, 0);
+        river.sudoReportWithdraw{value: amount}(address(redeemManager), amount);
 
         assertEq(redeemManager.getWithdrawalEventCount(), 1);
         assertEq(redeemManager.getRedeemRequestCount(), 1);
 
         {
-            RedeemRequests.RedeemRequest memory rr = redeemManager.getRedeemRequestDetails(0);
+            RedeemQueue.RedeemRequest memory rr = redeemManager.getRedeemRequestDetails(0);
 
             assertEq(rr.height, 0);
             assertEq(rr.amount, amount);
@@ -404,7 +405,7 @@ contract RedeemManagerV1Tests is Test {
         }
 
         {
-            WithdrawalEvents.WithdrawalEvent memory we = redeemManager.getWithdrawalEventDetails(0);
+            WithdrawalStack.WithdrawalEvent memory we = redeemManager.getWithdrawalEventDetails(0);
 
             assertEq(we.height, 0);
             assertEq(we.amount, amount);
@@ -423,9 +424,9 @@ contract RedeemManagerV1Tests is Test {
         assertEq(user.balance, 0);
 
         vm.expectEmit(true, true, true, true);
-        emit ClaimedRedeemRequest(0, 0, amount, amount, 0);
+        emit MatchedRedeemRequest(0, 0, amount, amount, 0);
         vm.expectEmit(true, true, true, true);
-        emit SentRewards(user, amount);
+        emit ClaimedRedeemRequest(0, user, amount, true);
         uint8[] memory claimStatus = redeemManager.claimRedeemRequests(redeemRequestIds, withdrawEventIds, true);
 
         redeemRequestIds = redeemManager.listRedeemRequests(user);
@@ -438,7 +439,7 @@ contract RedeemManagerV1Tests is Test {
         assertEq(claimStatus[1], 2);
 
         {
-            RedeemRequests.RedeemRequest memory rr = redeemManager.getRedeemRequestDetails(0);
+            RedeemQueue.RedeemRequest memory rr = redeemManager.getRedeemRequestDetails(0);
 
             assertEq(rr.height, amount);
             assertEq(rr.amount, 0);
@@ -446,7 +447,7 @@ contract RedeemManagerV1Tests is Test {
         }
 
         {
-            WithdrawalEvents.WithdrawalEvent memory we = redeemManager.getWithdrawalEventDetails(0);
+            WithdrawalStack.WithdrawalEvent memory we = redeemManager.getWithdrawalEventDetails(0);
 
             assertEq(we.height, 0);
             assertEq(we.amount, amount);
@@ -468,7 +469,7 @@ contract RedeemManagerV1Tests is Test {
         redeemManager.requestRedeem(amount, user);
 
         vm.deal(address(this), amount);
-        river.sudoReportWithdraw{value: amount}(address(redeemManager), amount, 0);
+        river.sudoReportWithdraw{value: amount}(address(redeemManager), amount);
 
         assertEq(redeemManager.getWithdrawalEventCount(), 1);
         assertEq(redeemManager.getRedeemRequestCount(), 1);
@@ -502,13 +503,13 @@ contract RedeemManagerV1Tests is Test {
         redeemManager.requestRedeem(amount / 2, user);
 
         vm.deal(address(this), amount);
-        river.sudoReportWithdraw{value: amount}(address(redeemManager), amount, 0);
+        river.sudoReportWithdraw{value: amount}(address(redeemManager), amount);
 
         assertEq(redeemManager.getWithdrawalEventCount(), 1);
         assertEq(redeemManager.getRedeemRequestCount(), 1);
 
         {
-            RedeemRequests.RedeemRequest memory rr = redeemManager.getRedeemRequestDetails(0);
+            RedeemQueue.RedeemRequest memory rr = redeemManager.getRedeemRequestDetails(0);
 
             assertEq(rr.height, 0);
             assertEq(rr.amount, amount / 2);
@@ -516,7 +517,7 @@ contract RedeemManagerV1Tests is Test {
         }
 
         {
-            WithdrawalEvents.WithdrawalEvent memory we = redeemManager.getWithdrawalEventDetails(0);
+            WithdrawalStack.WithdrawalEvent memory we = redeemManager.getWithdrawalEventDetails(0);
 
             assertEq(we.height, 0);
             assertEq(we.amount, amount);
@@ -541,7 +542,7 @@ contract RedeemManagerV1Tests is Test {
         assertEq(user.balance, amount / 2);
 
         {
-            RedeemRequests.RedeemRequest memory rr = redeemManager.getRedeemRequestDetails(0);
+            RedeemQueue.RedeemRequest memory rr = redeemManager.getRedeemRequestDetails(0);
 
             assertEq(rr.height, amount / 2);
             assertEq(rr.amount, 0);
@@ -549,7 +550,7 @@ contract RedeemManagerV1Tests is Test {
         }
 
         {
-            WithdrawalEvents.WithdrawalEvent memory we = redeemManager.getWithdrawalEventDetails(0);
+            WithdrawalStack.WithdrawalEvent memory we = redeemManager.getWithdrawalEventDetails(0);
 
             assertEq(we.height, 0);
             assertEq(we.amount, amount);
@@ -571,13 +572,13 @@ contract RedeemManagerV1Tests is Test {
         redeemManager.requestRedeem(amount, user);
 
         vm.deal(address(this), amount / 2);
-        river.sudoReportWithdraw{value: amount / 2}(address(redeemManager), amount / 2, 0);
+        river.sudoReportWithdraw{value: amount / 2}(address(redeemManager), amount / 2);
 
         assertEq(redeemManager.getWithdrawalEventCount(), 1);
         assertEq(redeemManager.getRedeemRequestCount(), 1);
 
         {
-            RedeemRequests.RedeemRequest memory rr = redeemManager.getRedeemRequestDetails(0);
+            RedeemQueue.RedeemRequest memory rr = redeemManager.getRedeemRequestDetails(0);
 
             assertEq(rr.height, 0);
             assertEq(rr.amount, amount);
@@ -585,7 +586,7 @@ contract RedeemManagerV1Tests is Test {
         }
 
         {
-            WithdrawalEvents.WithdrawalEvent memory we = redeemManager.getWithdrawalEventDetails(0);
+            WithdrawalStack.WithdrawalEvent memory we = redeemManager.getWithdrawalEventDetails(0);
 
             assertEq(we.height, 0);
             assertEq(we.amount, amount / 2);
@@ -612,7 +613,7 @@ contract RedeemManagerV1Tests is Test {
         assertEq(claimStatuses[0], 1);
 
         {
-            RedeemRequests.RedeemRequest memory rr = redeemManager.getRedeemRequestDetails(0);
+            RedeemQueue.RedeemRequest memory rr = redeemManager.getRedeemRequestDetails(0);
 
             assertEq(rr.height, amount / 2);
             assertEq(rr.amount, amount - (amount / 2));
@@ -620,7 +621,7 @@ contract RedeemManagerV1Tests is Test {
         }
 
         {
-            WithdrawalEvents.WithdrawalEvent memory we = redeemManager.getWithdrawalEventDetails(0);
+            WithdrawalStack.WithdrawalEvent memory we = redeemManager.getWithdrawalEventDetails(0);
 
             assertEq(we.height, 0);
             assertEq(we.amount, amount / 2);
@@ -642,16 +643,16 @@ contract RedeemManagerV1Tests is Test {
         redeemManager.requestRedeem(amount, user);
 
         vm.deal(address(this), amount / 2);
-        river.sudoReportWithdraw{value: amount / 2}(address(redeemManager), amount / 2, 0);
+        river.sudoReportWithdraw{value: amount / 2}(address(redeemManager), amount / 2);
 
         vm.deal(address(this), amount - (amount / 2));
-        river.sudoReportWithdraw{value: amount - (amount / 2)}(address(redeemManager), amount - (amount / 2), 0);
+        river.sudoReportWithdraw{value: amount - (amount / 2)}(address(redeemManager), amount - (amount / 2));
 
         assertEq(redeemManager.getWithdrawalEventCount(), 2);
         assertEq(redeemManager.getRedeemRequestCount(), 1);
 
         {
-            RedeemRequests.RedeemRequest memory rr = redeemManager.getRedeemRequestDetails(0);
+            RedeemQueue.RedeemRequest memory rr = redeemManager.getRedeemRequestDetails(0);
 
             assertEq(rr.height, 0);
             assertEq(rr.amount, amount);
@@ -659,7 +660,7 @@ contract RedeemManagerV1Tests is Test {
         }
 
         {
-            WithdrawalEvents.WithdrawalEvent memory we = redeemManager.getWithdrawalEventDetails(0);
+            WithdrawalStack.WithdrawalEvent memory we = redeemManager.getWithdrawalEventDetails(0);
 
             assertEq(we.height, 0);
             assertEq(we.amount, amount / 2);
@@ -667,7 +668,7 @@ contract RedeemManagerV1Tests is Test {
         }
 
         {
-            WithdrawalEvents.WithdrawalEvent memory we = redeemManager.getWithdrawalEventDetails(1);
+            WithdrawalStack.WithdrawalEvent memory we = redeemManager.getWithdrawalEventDetails(1);
 
             assertEq(we.height, amount / 2);
             assertEq(we.amount, amount - (amount / 2));
@@ -684,11 +685,11 @@ contract RedeemManagerV1Tests is Test {
         assertEq(user.balance, 0);
 
         vm.expectEmit(true, true, true, true);
-        emit ClaimedRedeemRequest(0, 0, amount / 2, amount / 2, amount - (amount / 2));
+        emit MatchedRedeemRequest(0, 0, amount / 2, amount / 2, amount - (amount / 2));
         vm.expectEmit(true, true, true, true);
-        emit ClaimedRedeemRequest(0, 1, amount - (amount / 2), amount - (amount / 2), 0);
+        emit MatchedRedeemRequest(0, 1, amount - (amount / 2), amount - (amount / 2), 0);
         vm.expectEmit(true, true, true, true);
-        emit SentRewards(user, amount);
+        emit ClaimedRedeemRequest(0, user, amount, true);
         redeemManager.claimRedeemRequests(redeemRequestIds, withdrawEventIds, true);
 
         redeemRequestIds = redeemManager.listRedeemRequests(user);
@@ -698,7 +699,7 @@ contract RedeemManagerV1Tests is Test {
         assertEq(user.balance, amount);
 
         {
-            RedeemRequests.RedeemRequest memory rr = redeemManager.getRedeemRequestDetails(0);
+            RedeemQueue.RedeemRequest memory rr = redeemManager.getRedeemRequestDetails(0);
 
             assertEq(rr.height, amount);
             assertEq(rr.amount, 0);
@@ -706,7 +707,7 @@ contract RedeemManagerV1Tests is Test {
         }
 
         {
-            WithdrawalEvents.WithdrawalEvent memory we = redeemManager.getWithdrawalEventDetails(0);
+            WithdrawalStack.WithdrawalEvent memory we = redeemManager.getWithdrawalEventDetails(0);
 
             assertEq(we.height, 0);
             assertEq(we.amount, amount / 2);
@@ -714,7 +715,7 @@ contract RedeemManagerV1Tests is Test {
         }
 
         {
-            WithdrawalEvents.WithdrawalEvent memory we = redeemManager.getWithdrawalEventDetails(1);
+            WithdrawalStack.WithdrawalEvent memory we = redeemManager.getWithdrawalEventDetails(1);
 
             assertEq(we.height, amount / 2);
             assertEq(we.amount, amount - (amount / 2));
@@ -743,13 +744,13 @@ contract RedeemManagerV1Tests is Test {
         redeemManager.requestRedeem(amount, userB);
 
         vm.deal(address(this), amount * 2);
-        river.sudoReportWithdraw{value: amount * 2}(address(redeemManager), amount * 2, 0);
+        river.sudoReportWithdraw{value: amount * 2}(address(redeemManager), amount * 2);
 
         assertEq(redeemManager.getWithdrawalEventCount(), 1);
         assertEq(redeemManager.getRedeemRequestCount(), 2);
 
         {
-            RedeemRequests.RedeemRequest memory rr = redeemManager.getRedeemRequestDetails(0);
+            RedeemQueue.RedeemRequest memory rr = redeemManager.getRedeemRequestDetails(0);
 
             assertEq(rr.height, 0);
             assertEq(rr.amount, amount);
@@ -757,7 +758,7 @@ contract RedeemManagerV1Tests is Test {
         }
 
         {
-            RedeemRequests.RedeemRequest memory rr = redeemManager.getRedeemRequestDetails(1);
+            RedeemQueue.RedeemRequest memory rr = redeemManager.getRedeemRequestDetails(1);
 
             assertEq(rr.height, amount);
             assertEq(rr.amount, amount);
@@ -765,7 +766,7 @@ contract RedeemManagerV1Tests is Test {
         }
 
         {
-            WithdrawalEvents.WithdrawalEvent memory we = redeemManager.getWithdrawalEventDetails(0);
+            WithdrawalStack.WithdrawalEvent memory we = redeemManager.getWithdrawalEventDetails(0);
 
             assertEq(we.height, 0);
             assertEq(we.amount, amount * 2);
@@ -788,13 +789,13 @@ contract RedeemManagerV1Tests is Test {
         assertEq(userB.balance, 0);
 
         vm.expectEmit(true, true, true, true);
-        emit ClaimedRedeemRequest(1, 0, amount, amount, 0);
+        emit MatchedRedeemRequest(1, 0, amount, amount, 0);
         vm.expectEmit(true, true, true, true);
-        emit SentRewards(userB, amount);
+        emit ClaimedRedeemRequest(1, userB, amount, true);
         vm.expectEmit(true, true, true, true);
-        emit ClaimedRedeemRequest(0, 0, amount, amount, 0);
+        emit MatchedRedeemRequest(0, 0, amount, amount, 0);
         vm.expectEmit(true, true, true, true);
-        emit SentRewards(user, amount);
+        emit ClaimedRedeemRequest(0, user, amount, true);
         redeemManager.claimRedeemRequests(redeemRequestIds, withdrawEventIds, true);
 
         assertEq(redeemManager.listRedeemRequests(user).length, 0);
@@ -804,7 +805,7 @@ contract RedeemManagerV1Tests is Test {
         assertEq(userB.balance, amount);
 
         {
-            RedeemRequests.RedeemRequest memory rr = redeemManager.getRedeemRequestDetails(0);
+            RedeemQueue.RedeemRequest memory rr = redeemManager.getRedeemRequestDetails(0);
 
             assertEq(rr.height, amount);
             assertEq(rr.amount, 0);
@@ -812,7 +813,7 @@ contract RedeemManagerV1Tests is Test {
         }
 
         {
-            RedeemRequests.RedeemRequest memory rr = redeemManager.getRedeemRequestDetails(1);
+            RedeemQueue.RedeemRequest memory rr = redeemManager.getRedeemRequestDetails(1);
 
             assertEq(rr.height, amount * 2);
             assertEq(rr.amount, 0);
@@ -820,7 +821,7 @@ contract RedeemManagerV1Tests is Test {
         }
 
         {
-            WithdrawalEvents.WithdrawalEvent memory we = redeemManager.getWithdrawalEventDetails(0);
+            WithdrawalStack.WithdrawalEvent memory we = redeemManager.getWithdrawalEventDetails(0);
 
             assertEq(we.height, 0);
             assertEq(we.amount, amount * 2);
@@ -842,7 +843,7 @@ contract RedeemManagerV1Tests is Test {
         redeemManager.requestRedeem(amount, user);
 
         vm.deal(address(this), amount);
-        river.sudoReportWithdraw{value: amount}(address(redeemManager), amount, 0);
+        river.sudoReportWithdraw{value: amount}(address(redeemManager), amount);
 
         uint32[] memory redeemRequestIds = redeemManager.listRedeemRequests(user);
         uint32[] memory withdrawEventIds = new uint32[](0);
@@ -855,7 +856,7 @@ contract RedeemManagerV1Tests is Test {
         uint128 amount = uint128(bound(_salt, 1, type(uint128).max));
 
         vm.deal(address(this), amount);
-        river.sudoReportWithdraw{value: amount}(address(redeemManager), amount, 0);
+        river.sudoReportWithdraw{value: amount}(address(redeemManager), amount);
 
         uint32[] memory redeemRequestIds = new uint32[](1);
         uint32[] memory withdrawEventIds = new uint32[](1);
@@ -907,7 +908,7 @@ contract RedeemManagerV1Tests is Test {
         redeemManager.requestRedeem(amount, user);
 
         vm.deal(address(this), amount);
-        river.sudoReportWithdraw{value: amount}(address(redeemManager), amount, 0);
+        river.sudoReportWithdraw{value: amount}(address(redeemManager), amount);
 
         uint32[] memory redeemRequestIds = new uint32[](1);
         uint32[] memory withdrawEventIds = new uint32[](1);
@@ -938,7 +939,7 @@ contract RedeemManagerV1Tests is Test {
             }
             filled += eventSize;
             vm.deal(address(this), eventSize * 2);
-            river.sudoReportWithdraw{value: eventSize * 2}(address(redeemManager), eventSize, 0);
+            river.sudoReportWithdraw{value: eventSize * 2}(address(redeemManager), eventSize);
         }
 
         filled = 0;
@@ -994,7 +995,7 @@ contract RedeemManagerV1Tests is Test {
             }
         }
 
-        assertEq(redeemManager.getBufferedEth(), totalAmount);
+        assertEq(redeemManager.getBufferedExceedingEth(), totalAmount);
     }
 
     function testResolveOutOfBounds() external {
