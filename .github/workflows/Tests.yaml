@@ -5,6 +5,7 @@ on:
     paths:
       - "contracts/**"
       - "lib/**"
+      - ".github/**"
 
 jobs:
   run-tests:

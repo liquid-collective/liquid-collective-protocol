@@ -4,6 +4,7 @@ on:
   push:
     paths:
       - "contracts/**"
+      - ".github/**"
 
 jobs:
   run-format:
