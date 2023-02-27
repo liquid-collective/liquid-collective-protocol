@@ -178,7 +178,7 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
             if (_snapshotBlock < operator.latestKeysEditBlockNumber && newLimit > currentLimit) {
                 emit OperatorEditsAfterSnapshot(
                     operatorIndex, currentLimit, newLimit, operator.latestKeysEditBlockNumber, _snapshotBlock
-                    );
+                );
                 unchecked {
                     ++idx;
                 }

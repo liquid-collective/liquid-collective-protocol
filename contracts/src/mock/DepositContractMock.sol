@@ -37,7 +37,7 @@ contract DepositContractMock is IDepositContract {
             to_little_endian_64(uint64(msg.value / 1 gwei)),
             signature,
             to_little_endian_64(uint64(depositCount))
-            );
+        );
         depositCount += 1;
         (bool sent,) = receiver.call{value: address(this).balance}("");
         require(sent, "Fund transfer failed");
