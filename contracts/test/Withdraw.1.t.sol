@@ -66,6 +66,35 @@ contract WithdrawV1Tests is Test {
         assertEq(address(river).balance, _amount);
     }
 
+    function testSendingFundsReverting(uint256 _amount) external {
+        address sender = uf._new(_amount);
+        vm.deal(sender, _amount);
+
+        vm.startPrank(sender);
+
+        assertEq(sender.balance, _amount);
+        assertEq(address(withdraw).balance, 0);
+
+        assertEq(payable(address(withdraw)).send(_amount), false);
+
+        assertEq(sender.balance, _amount);
+        assertEq(address(withdraw).balance, 0);
+
+        vm.expectRevert();
+        payable(address(withdraw)).transfer(_amount);
+
+        assertEq(sender.balance, _amount);
+        assertEq(address(withdraw).balance, 0);
+
+        (bool success,) = payable(address(withdraw)).call{value: _amount}("");
+        assertEq(success, false);
+
+        assertEq(sender.balance, _amount);
+        assertEq(address(withdraw).balance, 0);
+
+        vm.stopPrank();
+    }
+
     function testPullFundsAsRiverPullPartial(uint256 _salt, uint256 _amount) external {
         vm.assume(_amount > 0);
         vm.deal(address(withdraw), _amount);
