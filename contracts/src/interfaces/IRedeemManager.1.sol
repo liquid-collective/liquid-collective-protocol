@@ -12,13 +12,13 @@ interface IRedeemManagerV1 {
     /// @notice Emitted when a redeem request is created
     /// @param owner The owner of the redeem request
     /// @param height The height of the redeem request in LsETH
-    /// @param amount The size of the redeem request in LsETH
+    /// @param amount The amount of the redeem request in LsETH
     /// @param id The id of the new redeem request
     event RequestedRedeem(address indexed owner, uint256 height, uint256 amount, uint32 id);
 
     /// @notice Emitted when a withdrawal event is created
     /// @param height The height of the withdrawal event in LsETH
-    /// @param amount The size of the withdrawal event in LsETH
+    /// @param amount The amount of the withdrawal event in LsETH
     /// @param ethAmount The amount of eth to distrubute to claimers
     /// @param id The id of the withdrawal event
     event ReportedWithdrawal(uint256 height, uint256 amount, uint256 ethAmount, uint32 id);

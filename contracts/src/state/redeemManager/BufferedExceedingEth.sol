@@ -4,7 +4,7 @@ pragma solidity 0.8.10;
 import "../../libraries/LibUnstructuredStorage.sol";
 
 /// @title Buffered Exceeding Eth storage
-/// @notice Utility to manage the exceeding redeem buffered eth Redeem Manager
+/// @notice Redeen Manager utility to manage the exceeding ETH with a redeem request
 library BufferedExceedingEth {
     /// @notice Storage slot of the Redeem Buffered Eth
     bytes32 internal constant BUFFERED_EXCEEDING_ETH_SLOT =
