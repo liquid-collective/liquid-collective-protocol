@@ -221,14 +221,18 @@ contract RedeemManagerV1 is Initializable, IRedeemManagerV1 {
             return min;
         }
 
+        // we start a dichotomic search between min and max
         while (min != max) {
             int64 mid = (min + max) / 2;
 
+            // we identify and verify that the middle element is not matching
             WithdrawalStack.WithdrawalEvent memory midWithdrawalEvent = withdrawalEvents[uint64(mid)];
             if (_isMatch(redeemRequest, midWithdrawalEvent)) {
                 return mid;
             }
 
+            // depending on the position of the middle element, we update max or min to get our min max range
+            // closer to our redeem request position
             if (redeemRequest.height < midWithdrawalEvent.height) {
                 max = mid;
             } else {
