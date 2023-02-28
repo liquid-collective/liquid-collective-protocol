@@ -3,7 +3,6 @@ pragma solidity 0.8.10;
 
 import "../state/redeemManager/RedeemQueue.sol";
 import "../state/redeemManager/WithdrawalStack.sol";
-import "../state/redeemManager/Redeemers.sol";
 
 /// @title Redeem Manager Interface (v1)
 /// @author Kiln
@@ -99,11 +98,6 @@ interface IRedeemManagerV1 {
     /// @notice Retrieve the amount of eth available in the buffer
     /// @return The amount of eth in the buffer
     function getBufferedExceedingEth() external view returns (uint256);
-
-    /// @notice Retrieve the list of redeem requests of an account
-    /// @param account The account to query
-    /// @return redeemRequestIds The list of redeemRequests belonging to the specified account
-    function listRedeemRequests(address account) external view returns (uint32[] memory redeemRequestIds);
 
     /// @notice Resolves the provided list of redeem request ids
     /// @dev The result is an array of equal length with ids or error code

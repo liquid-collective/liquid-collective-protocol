@@ -10,7 +10,6 @@ import "./Initializable.sol";
 import "./state/shared/RiverAddress.sol";
 import "./state/redeemManager/RedeemQueue.sol";
 import "./state/redeemManager/WithdrawalStack.sol";
-import "./state/redeemManager/Redeemers.sol";
 import "./state/redeemManager/BufferedExceedingEth.sol";
 
 /// @title Redeem Manager (v1)
@@ -79,27 +78,6 @@ contract RedeemManagerV1 is Initializable, IRedeemManagerV1 {
     }
 
     /// @inheritdoc IRedeemManagerV1
-    function listRedeemRequests(address account) external view returns (uint32[] memory redeemRequestIds) {
-        mapping(address => Redeemers.Redeemer) storage redeemers = Redeemers.get();
-
-        uint32[] memory resultList;
-        uint32[] memory completeList = redeemers[account].redeemRequestIds;
-        uint256 startIndex = redeemers[account].startIndex;
-
-        /// Here we reuse the memory region of completeList and simply set resultList at startIndex in this memory region
-        /// To do this we move the length value stored in 32 bytes up in the memory region and then we set the address
-        /// of resultList to be this new updated length value
-        assembly {
-            let len := mload(completeList)
-            let size := sub(len, startIndex)
-            resultList := add(completeList, mul(4, startIndex))
-            mstore(resultList, size)
-        }
-
-        return resultList;
-    }
-
-    /// @inheritdoc IRedeemManagerV1
     function resolveRedeemRequests(uint32[] calldata redeemRequestIds)
         external
         view
@@ -149,7 +127,6 @@ contract RedeemManagerV1 is Initializable, IRedeemManagerV1 {
             })
         );
 
-        Redeemers.get()[recipient].redeemRequestIds.push(uint32(redeemRequestId));
         emit RequestedRedeem(recipient, height, lsETHAmount, redeemRequestId);
     }
 
@@ -179,25 +156,6 @@ contract RedeemManagerV1 is Initializable, IRedeemManagerV1 {
             emit ClaimedRedeemRequest(redeemRequestIds[idx], recipient, amount, claimStatus == CLAIM_FULLY_CLAIMED);
 
             accounts[idx] = recipient;
-            unchecked {
-                ++idx;
-            }
-        }
-
-        for (uint256 idx = 0; idx < redeemRequestIdsLength;) {
-            if (idx == 0 || accounts[idx] != address(0)) {
-                address account = accounts[idx];
-                _pruneRedeemerClaimedRequests(account);
-                for (uint256 cleanIdx = idx + 1; cleanIdx < redeemRequestIdsLength;) {
-                    if (accounts[cleanIdx] == account) {
-                        accounts[cleanIdx] = address(0);
-                    }
-                    unchecked {
-                        ++cleanIdx;
-                    }
-                }
-            }
-
             unchecked {
                 ++idx;
             }
@@ -420,25 +378,5 @@ contract RedeemManagerV1 is Initializable, IRedeemManagerV1 {
 
         // if we end up here, we have successfully claimed everything in the redeem request, and the CLAIM_FULLY_CLAIMED status is returned
         return (redeemRequest.owner, ethAmount, CLAIM_FULLY_CLAIMED);
-    }
-
-    /// @notice Prunes the redeem request list of an account by recomputing the starting index
-    /// @dev Pruning will increment the startIndex to the count of consecutive fully claimed requests from the beginning of the array
-    /// @param account The account to prune
-    function _pruneRedeemerClaimedRequests(address account) internal {
-        mapping(address => Redeemers.Redeemer) storage redeemers = Redeemers.get();
-        uint32[] storage accountRedeemRequests = redeemers[account].redeemRequestIds;
-        uint256 requestCount = accountRedeemRequests.length;
-        uint256 startIndex = redeemers[account].startIndex;
-        uint256 idx = startIndex;
-        RedeemQueue.RedeemRequest[] storage redeemRequests = RedeemQueue.get();
-        for (; idx < requestCount && redeemRequests[accountRedeemRequests[idx]].amount == 0;) {
-            unchecked {
-                ++idx;
-            }
-        }
-        if (idx != startIndex) {
-            redeemers[account].startIndex = idx;
-        }
     }
 }
