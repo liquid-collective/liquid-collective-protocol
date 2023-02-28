@@ -52,61 +52,34 @@ contract WithdrawV1Tests is Test {
         assertEq(withdraw.getRiver(), address(river));
     }
 
-    function testPullFundsAsRiverPullAll(uint256 _salt, uint128 _amount) external {
-        address sender = uf._new(_salt);
+    function testPullFundsAsRiverPullAll(uint256 _amount) external {
         vm.deal(address(withdraw), _amount);
 
-        vm.deal(sender, uint256(_amount) * 4);
-
-        vm.startPrank(sender);
-        (bool success,) = address(withdraw).call{value: _amount}("");
-        assertTrue(success, "call failed");
-        (success,) = address(withdraw).call{value: _amount}(abi.encodeWithSignature("thisMethodDoesNotExist()"));
-        assertTrue(success, "call with data failed");
-        assertTrue(payable(address(withdraw)).send(_amount), "send failed");
-        payable(address(withdraw)).transfer(_amount);
-        assertTrue(success, "transfer failed");
-        vm.stopPrank();
-
-        assertEq(address(withdraw).balance, uint256(_amount) * 5);
+        assertEq(address(withdraw).balance, _amount);
         assertEq(address(river).balance, 0);
 
         vm.expectEmit(true, true, true, true);
-        emit DebugReceivedCLFunds(uint256(_amount) * 5);
-        river.debug_pullFunds(address(withdraw), uint256(_amount) * 5);
+        emit DebugReceivedCLFunds(_amount);
+        river.debug_pullFunds(address(withdraw), _amount);
 
         assertEq(address(withdraw).balance, 0);
-        assertEq(address(river).balance, uint256(_amount) * 5);
+        assertEq(address(river).balance, _amount);
     }
 
-    function testPullFundsAsRiverPullPartial(uint256 _salt, uint128 _amount) external {
+    function testPullFundsAsRiverPullPartial(uint256 _salt, uint256 _amount) external {
         vm.assume(_amount > 0);
-        address sender = uf._new(_salt);
         vm.deal(address(withdraw), _amount);
 
-        vm.deal(sender, uint256(_amount) * 4);
-
-        vm.startPrank(sender);
-        (bool success,) = address(withdraw).call{value: _amount}("");
-        assertTrue(success, "call failed");
-        (success,) = address(withdraw).call{value: _amount}(abi.encodeWithSignature("thisMethodDoesNotExist()"));
-        assertTrue(success, "call with data failed");
-        success = payable(address(withdraw)).send(_amount);
-        assertTrue(success, "send failed");
-        payable(address(withdraw)).transfer(_amount);
-        assertTrue(success, "transfer failed");
-        vm.stopPrank();
-
-        assertEq(address(withdraw).balance, uint256(_amount) * 5);
+        assertEq(address(withdraw).balance, _amount);
         assertEq(address(river).balance, 0);
 
-        uint256 amountToPull = bound(_salt, 1, uint256(_amount) * 5);
+        uint256 amountToPull = bound(_salt, 1, _amount);
 
         vm.expectEmit(true, true, true, true);
         emit DebugReceivedCLFunds(amountToPull);
         river.debug_pullFunds(address(withdraw), amountToPull);
 
-        assertEq(address(withdraw).balance, uint256(_amount) * 5 - amountToPull);
+        assertEq(address(withdraw).balance, _amount - amountToPull);
         assertEq(address(river).balance, amountToPull);
     }
 

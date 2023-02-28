@@ -42,16 +42,6 @@ contract WithdrawV1 is IWithdrawV1, Initializable {
         IRiverV1(payable(RiverAddress.get())).sendCLFunds{value: LibUint256.min(address(this).balance, max)}();
     }
 
-    /// @inheritdoc IWithdrawV1
-    receive() external payable {
-        this;
-    }
-
-    /// @inheritdoc IWithdrawV1
-    fallback() external payable {
-        this;
-    }
-
     /// @notice Internal utility to set the river address
     /// @param _river The new river address
     function _setRiver(address _river) internal {

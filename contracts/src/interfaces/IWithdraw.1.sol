@@ -23,10 +23,4 @@ interface IWithdrawV1 {
     /// @notice Callable by River, sends the specified amount of ETH to River
     /// @param amount The amount to pull
     function pullEth(uint256 amount) external;
-
-    /// @notice Fallback for payments (transfer, send, call without data)
-    receive() external payable;
-
-    /// @notice Fallback for calls with data
-    fallback() external payable;
 }
