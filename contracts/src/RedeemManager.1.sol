@@ -362,7 +362,7 @@ contract RedeemManagerV1 is Initializable, IRedeemManagerV1 {
             // this event signals that an amount has been matched from a redeem request on a withdrawal event
             // this event can be triggered several times for the same redeem request, depending on its size and
             // how many withdrawal events it overlaps.
-            emit MatchedRedeemRequest(
+            emit SatisfiedRedeemRequest(
                 redeemRequestId, withdrawalEventId, matchingAmount, ethAmount, currentRequestAmount - matchingAmount
             );
 
