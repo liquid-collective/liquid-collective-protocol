@@ -91,7 +91,9 @@ contract RedeemManagerV1Tests is Test {
         uint256 ethAmountClaimed,
         uint256 amountRemaining
     );
-    event ClaimedRedeemRequest(uint32 indexed id, address indexed recipient, uint256 ethAmount, bool fullyClaimed);
+    event ClaimedRedeemRequest(
+        uint32 indexed id, address indexed recipient, uint256 amount, uint256 ethAmount, bool fullyClaimed
+    );
 
     function setUp() external {
         allowlistAdmin = makeAddr("allowlistAdmin");
@@ -354,7 +356,7 @@ contract RedeemManagerV1Tests is Test {
         vm.expectEmit(true, true, true, true);
         emit MatchedRedeemRequest(0, 0, amount, amount, 0);
         vm.expectEmit(true, true, true, true);
-        emit ClaimedRedeemRequest(0, user, amount, true);
+        emit ClaimedRedeemRequest(0, user, amount, amount, true);
         redeemManager.claimRedeemRequests(redeemRequestIds, withdrawEventIds, true);
 
         assertEq(address(redeemManager).balance, 0);
@@ -426,7 +428,7 @@ contract RedeemManagerV1Tests is Test {
         vm.expectEmit(true, true, true, true);
         emit MatchedRedeemRequest(0, 0, amount, amount, 0);
         vm.expectEmit(true, true, true, true);
-        emit ClaimedRedeemRequest(0, user, amount, true);
+        emit ClaimedRedeemRequest(0, user, amount, amount, true);
         uint8[] memory claimStatus = redeemManager.claimRedeemRequests(redeemRequestIds, withdrawEventIds, true);
 
         assertEq(address(redeemManager).balance, 0);
@@ -680,7 +682,7 @@ contract RedeemManagerV1Tests is Test {
         vm.expectEmit(true, true, true, true);
         emit MatchedRedeemRequest(0, 1, amount - (amount / 2), amount - (amount / 2), 0);
         vm.expectEmit(true, true, true, true);
-        emit ClaimedRedeemRequest(0, user, amount, true);
+        emit ClaimedRedeemRequest(0, user, amount, amount, true);
         redeemManager.claimRedeemRequests(redeemRequestIds, withdrawEventIds, true);
 
         assertEq(address(redeemManager).balance, 0);
@@ -777,11 +779,11 @@ contract RedeemManagerV1Tests is Test {
         vm.expectEmit(true, true, true, true);
         emit MatchedRedeemRequest(1, 0, amount, amount, 0);
         vm.expectEmit(true, true, true, true);
-        emit ClaimedRedeemRequest(1, userB, amount, true);
+        emit ClaimedRedeemRequest(1, userB, amount, amount, true);
         vm.expectEmit(true, true, true, true);
         emit MatchedRedeemRequest(0, 0, amount, amount, 0);
         vm.expectEmit(true, true, true, true);
-        emit ClaimedRedeemRequest(0, user, amount, true);
+        emit ClaimedRedeemRequest(0, user, amount, amount, true);
         redeemManager.claimRedeemRequests(redeemRequestIds, withdrawEventIds, true);
 
         assertEq(address(redeemManager).balance, 0);

@@ -140,22 +140,22 @@ contract RedeemManagerV1 is Initializable, IRedeemManagerV1 {
         if (redeemRequestIdsLength != withdrawalEventIds.length) {
             revert IncompatibleArrayLengths();
         }
-        address[] memory accounts = new address[](redeemRequestIdsLength);
         claimStatuses = new uint8[](redeemRequestIdsLength);
         for (uint256 idx = 0; idx < redeemRequestIdsLength;) {
-            (address recipient, uint256 amount, uint8 claimStatus) =
+            (address recipient, uint256 lsETHAmount, uint256 ethAmount, uint8 claimStatus) =
                 _claimRedeemRequest(redeemRequestIds[idx], withdrawalEventIds[idx], skipAlreadyClaimed, false);
             claimStatuses[idx] = claimStatus;
 
-            (bool success, bytes memory rdata) = recipient.call{value: amount}("");
+            (bool success, bytes memory rdata) = recipient.call{value: ethAmount}("");
             if (!success) {
                 assembly {
                     revert(add(32, rdata), mload(rdata))
                 }
             }
-            emit ClaimedRedeemRequest(redeemRequestIds[idx], recipient, amount, claimStatus == CLAIM_FULLY_CLAIMED);
+            emit ClaimedRedeemRequest(
+                redeemRequestIds[idx], recipient, lsETHAmount, ethAmount, claimStatus == CLAIM_FULLY_CLAIMED
+            );
 
-            accounts[idx] = recipient;
             unchecked {
                 ++idx;
             }
@@ -285,98 +285,103 @@ contract RedeemManagerV1 is Initializable, IRedeemManagerV1 {
         uint32 withdrawalEventId,
         bool skipAlreadyClaimed,
         bool skipWithdrawalEventDoesNotExist
-    ) internal returns (address, uint256, uint8) {
-        RedeemQueue.RedeemRequest[] storage redeemRequests = RedeemQueue.get();
-        // the provided redeem request id is >= than the total count of request, meaning that the provided id doesn't exist
-        // we revert in this case
-        if (redeemRequestId >= redeemRequests.length) {
-            revert RedeemRequestOutOfBounds(redeemRequestId);
-        }
-        WithdrawalStack.WithdrawalEvent[] storage withdrawalEvents = WithdrawalStack.get();
-        // same check is done with the withdrawal event
-        // we revert only if the skipWithdrawalEventDoesNotExist flag is false
-        // otherwise we return the CLAIM_PARTIALLY_CLAIMED status
-        if (withdrawalEventId >= withdrawalEvents.length) {
-            if (skipWithdrawalEventDoesNotExist) {
-                return (address(0), 0, CLAIM_PARTIALLY_CLAIMED);
-            }
-            revert WithdrawalEventOutOfBounds(withdrawalEventId);
-        }
-        RedeemQueue.RedeemRequest memory redeemRequest = redeemRequests[redeemRequestId];
-        // if the redeem request is already claimed and if the skipAlreadyClaimed flag is false, we revert
-        // otherwise we return the CLAIM_SKIPPED status
-        if (redeemRequest.amount == 0) {
-            if (skipAlreadyClaimed) {
-                return (address(0), 0, CLAIM_SKIPPED);
-            }
-            revert RedeemRequestAlreadyClaimed(redeemRequestId);
-        }
+    ) internal returns (address, uint256, uint256, uint8) {
         uint256 ethAmount = 0;
         uint256 matchingAmount = 0;
+        RedeemQueue.RedeemRequest memory redeemRequest;
+
         {
-            WithdrawalStack.WithdrawalEvent memory withdrawalEvent = withdrawalEvents[withdrawalEventId];
-            // now that both entities are loaded in memory, we verify that they indeed match, otherwise we revert
-            if (!_isMatch(redeemRequest, withdrawalEvent)) {
-                revert DoesNotMatch(redeemRequestId, withdrawalEventId);
+            RedeemQueue.RedeemRequest[] storage redeemRequests = RedeemQueue.get();
+            // the provided redeem request id is >= than the total count of request, meaning that the provided id doesn't exist
+            // we revert in this case
+            if (redeemRequestId >= redeemRequests.length) {
+                revert RedeemRequestOutOfBounds(redeemRequestId);
             }
+            WithdrawalStack.WithdrawalEvent[] storage withdrawalEvents = WithdrawalStack.get();
+            // same check is done with the withdrawal event
+            // we revert only if the skipWithdrawalEventDoesNotExist flag is false
+            // otherwise we return the CLAIM_PARTIALLY_CLAIMED status
+            if (withdrawalEventId >= withdrawalEvents.length) {
+                if (skipWithdrawalEventDoesNotExist) {
+                    return (address(0), 0, 0, CLAIM_PARTIALLY_CLAIMED);
+                }
+                revert WithdrawalEventOutOfBounds(withdrawalEventId);
+            }
+            redeemRequest = redeemRequests[redeemRequestId];
+            // if the redeem request is already claimed and if the skipAlreadyClaimed flag is false, we revert
+            // otherwise we return the CLAIM_SKIPPED status
+            if (redeemRequest.amount == 0) {
+                if (skipAlreadyClaimed) {
+                    return (address(0), 0, 0, CLAIM_SKIPPED);
+                }
+                revert RedeemRequestAlreadyClaimed(redeemRequestId);
+            }
+            {
+                WithdrawalStack.WithdrawalEvent memory withdrawalEvent = withdrawalEvents[withdrawalEventId];
+                // now that both entities are loaded in memory, we verify that they indeed match, otherwise we revert
+                if (!_isMatch(redeemRequest, withdrawalEvent)) {
+                    revert DoesNotMatch(redeemRequestId, withdrawalEventId);
+                }
+
+                {
+                    uint256 requestEndPosition = redeemRequest.height + redeemRequest.amount;
+                    uint256 withdrawalEventEndPosition = withdrawalEvent.height + withdrawalEvent.amount;
+
+                    // it can occur that the redeem request is overlapping the provided withdrawal event
+                    // the amount that is matched in the withdrawal event is adapted depending on this
+                    if (requestEndPosition < withdrawalEventEndPosition) {
+                        // we know that the request's end is inside the withdrawal event, so all the remaining amount is matched
+                        matchingAmount = redeemRequest.amount;
+                    } else {
+                        // we know that the request's end is outside of the withdrawal event, so only a portion amount is matched
+                        matchingAmount = redeemRequest.amount - (requestEndPosition - withdrawalEventEndPosition);
+                    }
+                }
+                // we can now compute the equivalent eth amount based on the withdrawal event details
+                ethAmount = (matchingAmount * withdrawalEvent.withdrawnEth) / withdrawalEvent.amount;
+            }
+
+            uint256 currentRequestAmount = redeemRequest.amount;
 
             {
-                uint256 requestEndPosition = redeemRequest.height + redeemRequest.amount;
-                uint256 withdrawalEventEndPosition = withdrawalEvent.height + withdrawalEvent.amount;
+                // as each request has a maximum withdrawable amount, we verify that the eth amount is not exceeding this amount, pro rata
+                // the amount that is matched
+                uint256 maxRedeemableEthAmount =
+                    (matchingAmount * redeemRequest.maxRedeemableEth) / currentRequestAmount;
 
-                // it can occur that the redeem request is overlapping the provided withdrawal event
-                // the amount that is matched in the withdrawal event is adapted depending on this
-                if (requestEndPosition < withdrawalEventEndPosition) {
-                    // we know that the request's end is inside the withdrawal event, so all the remaining amount is matched
-                    matchingAmount = redeemRequest.amount;
-                } else {
-                    // we know that the request's end is outside of the withdrawal event, so only a portion amount is matched
-                    matchingAmount = redeemRequest.amount - (requestEndPosition - withdrawalEventEndPosition);
+                if (maxRedeemableEthAmount < ethAmount) {
+                    BufferedExceedingEth.set(BufferedExceedingEth.get() + (ethAmount - maxRedeemableEthAmount));
+                    ethAmount = maxRedeemableEthAmount;
                 }
             }
-            // we can now compute the equivalent eth amount based on the withdrawal event details
-            ethAmount = (matchingAmount * withdrawalEvent.withdrawnEth) / withdrawalEvent.amount;
+
+            // this event signals that an amount has been matched from a redeem request on a withdrawal event
+            // this event can be triggered several times for the same redeem request, depending on its size and
+            // how many withdrawal events it overlaps.
+            emit MatchedRedeemRequest(
+                redeemRequestId, withdrawalEventId, matchingAmount, ethAmount, currentRequestAmount - matchingAmount
+            );
+
+            // height and amount are updated to reflect the amount that was matched.
+            // we will always keep this invariant true oldRequest.height + oldRequest.amount == newRequest.height + newRequest.amount
+            // this also means that if the request wasn't entirely matched, it will now be automatically be assigned to the next
+            // withdrawal event in the queue, because height is updated based on the amount matched and is now equal to the height
+            // of the next withdrawal event
+            redeemRequests[redeemRequestId].height += matchingAmount;
+            redeemRequests[redeemRequestId].amount = currentRequestAmount - matchingAmount;
+            redeemRequests[redeemRequestId].maxRedeemableEth -= ethAmount;
         }
-
-        uint256 currentRequestAmount = redeemRequest.amount;
-
-        {
-            // as each request has a maximum withdrawable amount, we verify that the eth amount is not exceeding this amount, pro rata
-            // the amount that is matched
-            uint256 maxRedeemableEthAmount = (matchingAmount * redeemRequest.maxRedeemableEth) / currentRequestAmount;
-
-            if (maxRedeemableEthAmount < ethAmount) {
-                BufferedExceedingEth.set(BufferedExceedingEth.get() + (ethAmount - maxRedeemableEthAmount));
-                ethAmount = maxRedeemableEthAmount;
-            }
-        }
-
-        // this event signals that an amount has been matched from a redeem request on a withdrawal event
-        // this event can be triggered several times for the same redeem request, depending on its size and
-        // how many withdrawal events it overlaps.
-        emit MatchedRedeemRequest(
-            redeemRequestId, withdrawalEventId, matchingAmount, ethAmount, currentRequestAmount - matchingAmount
-        );
-
-        // height and amount are updated to reflect the amount that was matched.
-        // we will always keep this invariant true oldRequest.height + oldRequest.amount == newRequest.height + newRequest.amount
-        // this also means that if the request wasn't entirely matched, it will now be automatically be assigned to the next
-        // withdrawal event in the queue, because height is updated based on the amount matched and is now equal to the height
-        // of the next withdrawal event
-        redeemRequests[redeemRequestId].height += matchingAmount;
-        redeemRequests[redeemRequestId].amount = currentRequestAmount - matchingAmount;
-        redeemRequests[redeemRequestId].maxRedeemableEth -= ethAmount;
 
         // in the case where we did not match all the amount, we call this method recursively with the same request id but
         // we increment the withdrawal event id. We also allow to skip if the withdrawal event does not exist, resulting in
         // a returned CLAIM_PARTIALLY_CLAIMED status if a withdrawal event id we need next in the stack does not exist yet.
         if (matchingAmount < redeemRequest.amount) {
-            (, uint256 nextEthAmount, uint8 claimStatus) =
+            (, uint256 nextLsETHAmount, uint256 nextEthAmount, uint8 claimStatus) =
                 _claimRedeemRequest(redeemRequestId, withdrawalEventId + 1, false, true);
-            return (redeemRequest.owner, ethAmount + nextEthAmount, claimStatus);
+            return (redeemRequest.owner, matchingAmount + nextLsETHAmount, ethAmount + nextEthAmount, claimStatus);
         }
 
         // if we end up here, we have successfully claimed everything in the redeem request, and the CLAIM_FULLY_CLAIMED status is returned
-        return (redeemRequest.owner, ethAmount, CLAIM_FULLY_CLAIMED);
+        return (redeemRequest.owner, matchingAmount, ethAmount, CLAIM_FULLY_CLAIMED);
     }
 }

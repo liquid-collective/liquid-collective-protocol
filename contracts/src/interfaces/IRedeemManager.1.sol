@@ -39,9 +39,12 @@ interface IRedeemManagerV1 {
     /// @notice Emitted when a redeem request claim has been processed and matched at least once and funds are sent to the recipient
     /// @param id The id of the redeem request
     /// @param recipient The address receiving the redeem request funds
+    /// @param amount The total amount of LsETH used to redeem the eth
     /// @param ethAmount The amount of eth retrieved
     /// @param fullyClaimed True if request is now empty
-    event ClaimedRedeemRequest(uint32 indexed id, address indexed recipient, uint256 ethAmount, bool fullyClaimed);
+    event ClaimedRedeemRequest(
+        uint32 indexed id, address indexed recipient, uint256 amount, uint256 ethAmount, bool fullyClaimed
+    );
 
     /// @notice Emitted when the River address is set
     /// @param river The new river address
