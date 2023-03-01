@@ -79,13 +79,14 @@ interface IOperatorsRegistryV1 {
 
     /// @notice The stopped validator array has been changed
     /// @notice A validator is considered stopped if exiting, exited or slashed
+    /// @notice This event is emitted when the oracle reports new stopped validators counts
     /// @param stoppedValidatorCounts The new stopped validator counts
     event SetStoppedValidatorCounts(uint32[] stoppedValidatorCounts);
 
     /// @notice The requested exit count has been updated
     /// @param index The operator index
     /// @param count The count of requested exits
-    event SetOperatorRequestedExitCount(uint256 indexed index, uint256 count);
+    event RequestedValidatorExits(uint256 indexed index, uint256 count);
 
     /// @notice The calling operator is inactive
     /// @param index The operator index

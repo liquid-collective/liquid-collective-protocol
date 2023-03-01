@@ -1222,7 +1222,7 @@ contract OperatorsRegistryV1TestDistribution is Test {
 
     event AddedValidatorKeys(uint256 indexed index, bytes publicKeys);
     event RemovedValidatorKey(uint256 indexed index, bytes publicKey);
-    event SetOperatorRequestedExitCount(uint256 indexed index, uint256 count);
+    event RequestedValidatorExits(uint256 indexed index, uint256 count);
 
     bytes32 salt = bytes32(0);
 
