@@ -418,10 +418,10 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
     /// @return The count of active validators for the operator
     function _getActiveKeyCountForDeposits(OperatorsV2.CachedOperator memory _operator)
         internal
-        pure
+        view
         returns (uint256)
     {
-        return (_operator.funded + _operator.picked) - _operator.requestedExits;
+        return (_operator.funded + _operator.picked) - _getStoppedCount(_operator.index);
     }
 
     /// @notice Internal utility to retrieve _count or lower fundable keys

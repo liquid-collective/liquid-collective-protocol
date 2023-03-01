@@ -33,6 +33,10 @@ contract OperatorsRegistryInitializableV1 is OperatorsRegistryV1 {
     function sudoExitRequests(uint256 _operatorIndex, uint32 _requestedExits) external {
         OperatorsV2.get(_operatorIndex).requestedExits = _requestedExits;
     }
+
+    function sudoStoppedValidatorCount(uint32[] calldata stoppedValidatorCounts) external {
+        _setStoppedValidators(stoppedValidatorCounts);
+    }
 }
 
 contract OperatorsRegistryV1Tests is Test, BytesGenerator {
@@ -1397,9 +1401,13 @@ contract OperatorsRegistryV1TestDistribution is Test {
 
         vm.startPrank(admin);
 
-        OperatorsRegistryInitializableV1(address(operatorsRegistry)).sudoExitRequests(0, 25);
-        OperatorsRegistryInitializableV1(address(operatorsRegistry)).sudoExitRequests(2, 25);
-        OperatorsRegistryInitializableV1(address(operatorsRegistry)).sudoExitRequests(4, 25);
+        uint32[] memory stoppedValidatorCounts = new uint32[](6);
+        stoppedValidatorCounts[0] = 75;
+        stoppedValidatorCounts[1] = 25;
+        stoppedValidatorCounts[3] = 25;
+        stoppedValidatorCounts[5] = 25;
+
+        OperatorsRegistryInitializableV1(address(operatorsRegistry)).sudoStoppedValidatorCount(stoppedValidatorCounts);
 
         limits = new uint32[](2);
         limits[0] = 50;

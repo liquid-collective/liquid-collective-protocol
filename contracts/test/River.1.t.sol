@@ -19,8 +19,8 @@ import "../src/OperatorsRegistry.1.sol";
 import "../src/CoverageFund.1.sol";
 
 contract OperatorsRegistryWithOverridesV1 is OperatorsRegistryV1 {
-    function sudoExitRequests(uint256 _operatorIndex, uint32 _requestedExits) external {
-        OperatorsV2.get(_operatorIndex).requestedExits = _requestedExits;
+    function sudoStoppedValidatorCount(uint32[] calldata stoppedValidatorCounts) external {
+        _setStoppedValidators(stoppedValidatorCounts);
     }
 }
 
@@ -1438,7 +1438,11 @@ contract RiverV1Tests is Test, BytesGenerator {
 
         vm.prank(admin);
         river.depositToConsensusLayer(20);
-        operatorsRegistry.sudoExitRequests(operatorOneIndex, 10);
+        uint32[] memory stoppedCounts = new uint32[](3);
+        stoppedCounts[0] = 10;
+        stoppedCounts[1] = 10;
+        stoppedCounts[2] = 0;
+        operatorsRegistry.sudoStoppedValidatorCount(stoppedCounts);
         vm.prank(admin);
         river.depositToConsensusLayer(10);
 
@@ -1446,8 +1450,10 @@ contract RiverV1Tests is Test, BytesGenerator {
         OperatorsV2.Operator memory op2 = operatorsRegistry.getOperator(operatorTwoIndex);
 
         assert(op1.funded == 20);
-        assert(op1.requestedExits == 10);
+        assert(op1.requestedExits == 0);
         assert(op2.funded == 10);
+
+        assert(operatorsRegistry.getOperatorStoppedValidatorCount(operatorOneIndex) == 10);
 
         assert(river.getDepositedValidatorCount() == 30);
         assert(river.totalUnderlyingSupply() == 1100 ether);
