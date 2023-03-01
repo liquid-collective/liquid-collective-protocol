@@ -577,7 +577,10 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
             uint256 rest = optimalTotalDispatchCount % siblings;
             for (uint256 idx = 0; idx < operatorsLength;) {
                 if (_getActiveKeyCountForExitRequests(operators[idx]) == highestActiveCount) {
-                    operators[idx].picked += (optimalTotalDispatchCount / siblings) + (idx < rest ? 1 : 0);
+                    operators[idx].picked += (optimalTotalDispatchCount / siblings) + (rest > 0 ? 1 : 0);
+                    if (rest > 0) {
+                        --rest;
+                    }
                 }
                 unchecked {
                     ++idx;
