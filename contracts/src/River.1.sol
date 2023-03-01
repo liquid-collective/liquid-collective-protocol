@@ -4,6 +4,7 @@ pragma solidity 0.8.10;
 import "./interfaces/IAllowlist.1.sol";
 import "./interfaces/IOperatorRegistry.1.sol";
 import "./interfaces/IRiver.1.sol";
+import "./interfaces/IWithdraw.1.sol";
 import "./interfaces/IELFeeRecipient.1.sol";
 import "./interfaces/ICoverageFund.1.sol";
 
@@ -329,5 +330,27 @@ contract RiverV1 is
         } else {
             return CLValidatorTotalBalance.get() + BalanceToDeposit.get();
         }
+    }
+
+    // rework beyond this point
+
+    uint256 balanceToRedeem;
+
+    function _getTotalUnderlyingBalance() internal view override returns (uint256) {
+        return _assetBalance();
+    }
+
+    error InvalidPulledClFundsAmount(uint256 requested, uint256 received);
+
+    function _pullCLFunds(uint256 skimmedEthAmount, uint256 exitedEthAmount) internal override {
+        uint256 currentBalance = address(this).balance;
+        uint256 totalAmountToPull = skimmedEthAmount + exitedEthAmount;
+        IWithdrawV1(WithdrawalCredentials.getAddress()).pullEth(totalAmountToPull);
+        uint256 collectedCLFunds = address(this).balance - currentBalance;
+        if (collectedCLFunds != skimmedEthAmount + exitedEthAmount) {
+            revert InvalidPulledClFundsAmount(skimmedEthAmount + exitedEthAmount, collectedCLFunds);
+        }
+        BalanceToDeposit.set(BalanceToDeposit.get() + skimmedEthAmount);
+        balanceToRedeem += exitedEthAmount;
     }
 }

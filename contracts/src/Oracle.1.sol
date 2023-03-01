@@ -434,4 +434,89 @@ contract OracleV1 is IOracleV1, Initializable, Administrable {
 
         emit PostTotalShares(postTotalEth, prevTotalEth, timeElapsed, river.totalSupply());
     }
+
+    // rework beyond this point
+
+    event ReportedConsensusLayerData(
+        address indexed member, bytes32 indexed variant, IRiverV1.ConsensusLayerReport report, uint256 voteCount
+    );
+    event SetLastReportedEpoch(uint256 lastReportedEpoch);
+    event ClearedReporting();
+
+    error InvalidEpoch(uint256 epoch);
+
+    uint256 internal lastReportedEpoch;
+    ReportVariantDetails[] internal reportVariants;
+
+    function _reportChecksum(IRiverV1.ConsensusLayerReport calldata report) internal pure returns (bytes32) {
+        return keccak256(abi.encode(report));
+    }
+
+    function _clearReportingData() internal {
+        delete reportVariants;
+        ReportsPositions.clear();
+        emit ClearedReporting();
+    }
+
+    struct ReportVariantDetails {
+        bytes32 variant;
+        uint256 votes;
+    }
+
+    function _getReportVariant(bytes32 variant) internal view returns (int256, uint256) {
+        uint256 reportVariantsLength = reportVariants.length;
+        for (uint256 idx = 0; idx < reportVariantsLength;) {
+            if (reportVariants[idx].variant == variant) {
+                return (int256(idx), reportVariants[idx].votes);
+            }
+            unchecked {
+                ++idx;
+            }
+        }
+        return (-1, 0);
+    }
+
+    function reportConsensusLayerData(IRiverV1.ConsensusLayerReport calldata report) external {
+        int256 memberIndex = OracleMembers.indexOf(msg.sender);
+        if (memberIndex == -1) {
+            revert LibErrors.Unauthorized(msg.sender);
+        }
+
+        uint256 lastReportedEpochValue = lastReportedEpoch;
+
+        if (report.epoch < lastReportedEpochValue) {
+            revert EpochTooOld(report.epoch, lastReportedEpoch);
+        }
+        IRiverV1 river = IRiverV1(payable(RiverAddress.get()));
+        if (!river.isValidEpoch(report.epoch)) {
+            revert InvalidEpoch(report.epoch);
+        }
+        if (report.epoch > lastReportedEpochValue) {
+            _clearReportingData();
+            lastReportedEpoch = report.epoch;
+            emit SetLastReportedEpoch(report.epoch);
+        }
+
+        if (ReportsPositions.get(uint256(memberIndex))) {
+            revert AlreadyReported(report.epoch, msg.sender);
+        }
+        ReportsPositions.register(uint256(memberIndex));
+
+        bytes32 variant = _reportChecksum(report);
+        (int256 variantIndex, uint256 variantVotes) = _getReportVariant(variant);
+        uint256 quorum = Quorum.get();
+
+        emit ReportedConsensusLayerData(msg.sender, variant, report, variantVotes + 1);
+
+        if (variantVotes + 1 >= quorum) {
+            river.setConsensusLayerData(report);
+            _clearReportingData();
+            lastReportedEpoch = lastReportedEpochValue + 1;
+            emit SetLastReportedEpoch(lastReportedEpochValue + 1);
+        } else if (variantVotes == 0) {
+            reportVariants.push(ReportVariantDetails({variant: variant, votes: 1}));
+        } else {
+            reportVariants[uint256(variantIndex)].votes += 1;
+        }
+    }
 }

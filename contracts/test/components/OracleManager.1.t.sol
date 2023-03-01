@@ -56,6 +56,14 @@ contract OracleManagerV1ExposeInitializer is OracleManagerV1 {
     constructor(address admin) {
         AdministratorAddress.set(admin);
     }
+
+    // rework beyond this point
+
+    function _getTotalUnderlyingBalance() internal view override returns (uint256) {
+        return 0;
+    }
+
+    function _pullCLFunds(uint256 skimmedEthAmount, uint256 exitedEthAmount) internal override {}
 }
 
 contract OracleManagerV1Tests is Test {

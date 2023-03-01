@@ -8,6 +8,8 @@ import "../state/river/LastOracleRoundId.sol";
 import "../state/river/CLValidatorTotalBalance.sol";
 import "../state/river/CLValidatorCount.sol";
 import "../state/river/DepositedValidatorCount.sol";
+import "../state/oracle/CLSpec.sol";
+import "../state/oracle/ReportBounds.sol";
 
 /// @title Oracle Manager (v1)
 /// @author Kiln
@@ -117,5 +119,226 @@ abstract contract OracleManagerV1 is IOracleManagerV1 {
         }
 
         emit ConsensusLayerDataUpdate(_validatorCount, _validatorTotalBalance, _roundId);
+    }
+
+    // rework beyond this point
+
+    event SetSpec(uint64 epochsPerFrame, uint64 slotsPerEpoch, uint64 secondsPerSlot, uint64 genesisTime);
+    event SetBounds(uint256 annualAprUpperBound, uint256 relativeLowerBound);
+
+    error InvalidEpoch(uint256 epoch);
+    error TotalValidatorBalanceIncreaseOutOfBound(
+        uint256 prevTotalEth, uint256 postTotalEth, uint256 timeElapsed, uint256 annualAprUpperBound
+    );
+    error TotalValidatorBalanceDecreaseOutOfBound(
+        uint256 prevTotalEth, uint256 postTotalEth, uint256 timeElapsed, uint256 relativeLowerBound
+    );
+    error InvalidDecreasingValidatorsExitedBalance(
+        uint256 currentValidatorsExitedBalance, uint256 newValidatorsExitedBalance
+    );
+    error InvalidDecreasingValidatorsSkimmedBalance(
+        uint256 currentValidatorsExitedBalance, uint256 newValidatorsExitedBalance
+    );
+
+    uint256 lastReportEpoch;
+    uint256 lastValidatorsSkimmedBalance;
+    uint256 lastValidatorsExitedBalance;
+    uint256 internal constant ONE_YEAR = 365 days;
+
+    function _getTotalUnderlyingBalance() internal view virtual returns (uint256);
+    // this method should pull the sum of its parameters, if the amount pulled is lower than the sum it should revert
+    // then we increase the deposit buffer by skimmed eth amount
+    // we also increase the redeem buffer by exited eth amount
+    function _pullCLFunds(uint256 skimmedEthAmount, uint256 exitedEthAmount) internal virtual;
+
+    function initOracleManagerV1_1(
+        uint64 epochsPerFrame,
+        uint64 slotsPerEpoch,
+        uint64 secondsPerSlot,
+        uint64 genesisTime,
+        uint256 annualAprUpperBound,
+        uint256 relativeLowerBound
+    ) internal {
+        CLSpec.set(
+            CLSpec.CLSpecStruct({
+                epochsPerFrame: epochsPerFrame,
+                slotsPerEpoch: slotsPerEpoch,
+                secondsPerSlot: secondsPerSlot,
+                genesisTime: genesisTime
+            })
+        );
+        emit SetSpec(epochsPerFrame, slotsPerEpoch, secondsPerSlot, genesisTime);
+        ReportBounds.set(
+            ReportBounds.ReportBoundsStruct({
+                annualAprUpperBound: annualAprUpperBound,
+                relativeLowerBound: relativeLowerBound
+            })
+        );
+        emit SetBounds(annualAprUpperBound, relativeLowerBound);
+    }
+
+    struct ConsensusLayerDataReportingVariables {
+        uint256 preReportUnderlyingBalance;
+        uint256 postReportUnderlyingBalance;
+        uint256 newExitedEthAmount;
+        uint256 newSkimmedEthAmount;
+        uint256 timeElapsed;
+        uint256 revenue;
+        uint256 pullCredit;
+        uint256 pulledExecutionLayerFees;
+        uint256 pulledCoverageFunds;
+    }
+
+    function setConsensusLayerData(IOracleManagerV1.ConsensusLayerReport calldata report) external {
+        // only the oracle is allowed to call this endpoint
+        if (msg.sender != OracleAddress.get()) {
+            revert LibErrors.Unauthorized(msg.sender);
+        }
+
+        CLSpec.CLSpecStruct memory cls = CLSpec.get();
+
+        // we start by verifying that the reported epoch is valid based on the consensus layer spec
+        if (!_isValidEpoch(cls, report.epoch)) {
+            revert InvalidEpoch(report.epoch);
+        }
+
+        // we ensure that the reported validator count is not decreasing
+        if (report.validatorsCount > DepositedValidatorCount.get()) {
+            revert InvalidValidatorCountReport(report.validatorsCount, DepositedValidatorCount.get());
+        }
+
+        ConsensusLayerDataReportingVariables memory vars;
+
+        // we ensure that the reported total exited balance is not decreasing
+        if (report.validatorsExitedBalance < lastValidatorsExitedBalance) {
+            revert InvalidDecreasingValidatorsExitedBalance(lastValidatorsExitedBalance, report.validatorsExitedBalance);
+        }
+
+        // we compute the new exited amount by taking the delta between reports
+        vars.newExitedEthAmount = report.validatorsExitedBalance - lastValidatorsExitedBalance;
+
+        // we ensure that the reported total skimmed balance is not decreasing
+        if (report.validatorsSkimmedBalance < lastValidatorsSkimmedBalance) {
+            revert InvalidDecreasingValidatorsSkimmedBalance(
+                lastValidatorsSkimmedBalance, report.validatorsSkimmedBalance
+            );
+        }
+
+        // we compute the new skimmed amount by taking the delta between reports
+        vars.newSkimmedEthAmount = report.validatorsSkimmedBalance - lastValidatorsSkimmedBalance;
+
+        ReportBounds.ReportBoundsStruct memory rb = ReportBounds.get();
+
+        // we retrieve the current total underlying balance before any reporting data is applied to the system
+        vars.preReportUnderlyingBalance = _getTotalUnderlyingBalance();
+        // we compute the time elapsed since last report based on epoch numbers
+        vars.timeElapsed = _timeBetweenEpochs(cls, lastReportEpoch, report.epoch);
+
+        // we update the system parameters, this will have an impact on how the total underlying balance is computed
+        CLValidatorTotalBalance.set(report.validatorsBalance);
+        CLValidatorCount.set(report.validatorsCount);
+
+        // we compute the maximum allowed increase in balance based on the pre report value
+        uint256 maxIncrease = _maxIncrease(rb, vars.preReportUnderlyingBalance, vars.timeElapsed);
+
+        // we retrieve the new total underlying balance after system parameters are changed
+        vars.postReportUnderlyingBalance = _getTotalUnderlyingBalance();
+
+        // if the new underlying balance has increased, we verify that we are not exceeding reporting bound, and we update
+        // reporting variables accordingly
+        if (vars.postReportUnderlyingBalance >= vars.preReportUnderlyingBalance) {
+            // if this happens, we revert and the reporting process is cancelled
+            if (vars.postReportUnderlyingBalance > vars.preReportUnderlyingBalance + maxIncrease) {
+                revert TotalValidatorBalanceIncreaseOutOfBound(
+                    vars.preReportUnderlyingBalance,
+                    vars.postReportUnderlyingBalance,
+                    vars.timeElapsed,
+                    rb.annualAprUpperBound
+                );
+            }
+
+            // we update the revenue based on the balance delta
+            vars.revenue = (vars.postReportUnderlyingBalance - vars.preReportUnderlyingBalance);
+
+            // we update the pull credit (the amount of eth we can still pull and stay below the upper reporting bound)
+            vars.pullCredit = maxIncrease - vars.revenue;
+        } else {
+            // otherwise if the balance has decreased, we verify that we are not exceeding the lower reporting bound
+
+            // we compute the maximum allowed decrease in balance
+            uint256 maxDecrease = _maxDecrease(rb, vars.preReportUnderlyingBalance);
+
+            // we verify that the bound is not crossed
+            if (vars.postReportUnderlyingBalance < vars.preReportUnderlyingBalance - maxDecrease) {
+                revert TotalValidatorBalanceDecreaseOutOfBound(
+                    vars.preReportUnderlyingBalance,
+                    vars.postReportUnderlyingBalance,
+                    vars.timeElapsed,
+                    rb.relativeLowerBound
+                );
+            }
+
+            // we update the pull credit to be equal to the maximum allowed increase plus the negative delta due to the loss
+            vars.pullCredit = maxIncrease + (vars.preReportUnderlyingBalance - vars.postReportUnderlyingBalance);
+        }
+
+        // if we have pull credit available after the reporting value are applied
+        if (vars.pullCredit > 0) {
+            // we pull the funds from the execution layer fee recipient
+            vars.pulledExecutionLayerFees = _pullELFees(vars.pullCredit);
+            // we update the revenue aswell
+            vars.revenue += vars.pulledExecutionLayerFees;
+            // we update the pull credit accordingly
+            vars.pullCredit -= vars.pulledExecutionLayerFees;
+        }
+
+        if (vars.newExitedEthAmount + vars.newSkimmedEthAmount > 0) {
+            _pullCLFunds(vars.newSkimmedEthAmount, vars.newExitedEthAmount);
+        }
+
+        // if we have pull credit available after pulling execution layer fees, we attempt to pull coverage funds
+        if (vars.pullCredit > 0) {
+            // we pull the funds from the coverage recipient
+            vars.pulledCoverageFunds = _pullCoverageFunds(vars.pullCredit);
+            // we do not update the revenue as coverage is not considered revenue
+            // we do not update the pull credit as there are no more pulling actions to perform afterwards
+        }
+
+        // if our revenue is not null, we dispatch the fee to the collector
+        if (vars.revenue > 0) {
+            _onEarnings(vars.revenue);
+        }
+    }
+
+    function isValidEpoch(uint256 epoch) external view returns (bool) {
+        return _isValidEpoch(CLSpec.get(), epoch);
+    }
+
+    function _isValidEpoch(CLSpec.CLSpecStruct memory cls, uint256 epoch) internal view returns (bool) {
+        return (epoch >= lastReportEpoch && epoch % cls.epochsPerFrame == 0);
+    }
+
+    function _maxIncrease(ReportBounds.ReportBoundsStruct memory rb, uint256 _prevTotalEth, uint256 _timeElapsed)
+        internal
+        pure
+        returns (uint256)
+    {
+        return (_prevTotalEth * rb.annualAprUpperBound * _timeElapsed) / (LibBasisPoints.BASIS_POINTS_MAX * ONE_YEAR);
+    }
+
+    function _maxDecrease(ReportBounds.ReportBoundsStruct memory rb, uint256 _prevTotalEth)
+        internal
+        pure
+        returns (uint256)
+    {
+        return (_prevTotalEth * rb.relativeLowerBound) / LibBasisPoints.BASIS_POINTS_MAX;
+    }
+
+    function _timeBetweenEpochs(CLSpec.CLSpecStruct memory cls, uint256 epochPast, uint256 epochNow)
+        internal
+        pure
+        returns (uint256)
+    {
+        return (epochNow - epochPast) * (cls.secondsPerSlot * cls.slotsPerEpoch);
     }
 }

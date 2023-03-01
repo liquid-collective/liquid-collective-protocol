@@ -57,4 +57,22 @@ interface IOracleManagerV1 {
         bytes32 _roundId,
         uint256 _maxIncrease
     ) external;
+
+    // rework beyond this point
+
+    struct ConsensusLayerReport {
+        uint256 epoch;
+        uint64 validatorsBalance;
+        uint32 validatorsCount;
+        uint64 validatorsSkimmedBalance;
+        uint64 validatorsExitedBalance;
+        uint64 validatorsExitingBalance;
+        uint32[] stoppedValidatorCountPerOperator;
+        bool bufferRebalancingMode;
+        bool slashingContainmentMode;
+    }
+
+    function setConsensusLayerData(ConsensusLayerReport calldata report) external;
+
+    function isValidEpoch(uint256 epoch) external view returns (bool);
 }
