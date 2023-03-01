@@ -154,7 +154,6 @@ const func: DeployFunction = async function ({
       [
         operatorsRegsitryInterface.getSighash("setOperatorStatus"),
         operatorsRegsitryInterface.getSighash("setOperatorName"),
-        operatorsRegsitryInterface.getSighash("setOperatorStoppedValidatorCount"),
         operatorsRegsitryInterface.getSighash("setOperatorLimits"),
       ],
     ],
