@@ -145,7 +145,6 @@ contract RedeemManagerV1Tests is Test {
         uint32[] memory requests = new uint32[](1);
         requests[0] = 0;
 
-        assertEq(requests.length, 1);
         assertEq(requests[0], 0);
 
         {
@@ -194,7 +193,6 @@ contract RedeemManagerV1Tests is Test {
         requests[0] = 0;
         requests[1] = 1;
 
-        assertEq(requests.length, 2);
         assertEq(requests[0], 0);
         assertEq(requests[1], 1);
 
@@ -323,7 +321,7 @@ contract RedeemManagerV1Tests is Test {
         river.sudoDeal(user, uint256(amount));
 
         vm.prank(user);
-        river.approve(address(redeemManager), uint256(amount) * 2);
+        river.approve(address(redeemManager), uint256(amount));
 
         vm.prank(user);
         redeemManager.requestRedeem(amount, user);
