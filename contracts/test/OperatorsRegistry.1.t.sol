@@ -34,8 +34,8 @@ contract OperatorsRegistryInitializableV1 is OperatorsRegistryV1 {
         OperatorsV2.get(_operatorIndex).requestedExits = _requestedExits;
     }
 
-    function sudoStoppedValidatorCount(uint32[] calldata stoppedValidatorCounts) external {
-        _setStoppedValidators(stoppedValidatorCounts);
+    function sudoStoppedValidatorCounts(uint32[] calldata stoppedValidatorCounts) external {
+        _setStoppedValidatorCounts(stoppedValidatorCounts);
     }
 }
 
@@ -51,6 +51,19 @@ contract OperatorsRegistryV1Tests is Test, BytesGenerator {
     event AddedValidatorKeys(uint256 indexed index, bytes publicKeys);
     event RemovedValidatorKey(uint256 indexed index, bytes publicKey);
     event SetRiver(address indexed river);
+    event OperatorLimitUnchanged(uint256 indexed operatorIndex, uint256 limit);
+    event OperatorEditsAfterSnapshot(
+        uint256 indexed index,
+        uint256 currentLimit,
+        uint256 newLimit,
+        uint256 indexed lastEdit,
+        uint256 indexed snapshotBlock
+    );
+
+    event SetOperatorLimit(uint256 indexed index, uint256 newLimit);
+    event AddedValidatorKeys(uint256 indexed index, uint256 amount);
+
+    event SetStoppedValidatorCounts(uint32[] stoppedValidatorCounts);
 
     function setUp() public {
         admin = makeAddr("admin");
@@ -323,8 +336,6 @@ contract OperatorsRegistryV1Tests is Test, BytesGenerator {
         assert(newOperator.limit == 0);
     }
 
-    event OperatorLimitUnchanged(uint256 indexed operatorIndex, uint256 limit);
-
     function testSetOperatorLimitCountNoOp(bytes32 _name, uint256 _firstAddressSalt, uint32 _limit) public {
         address _firstAddress = uf._new(_firstAddressSalt);
         _limit = _limit % 11; // 10 is max
@@ -356,14 +367,6 @@ contract OperatorsRegistryV1Tests is Test, BytesGenerator {
         assert(writes.length == 0);
     }
 
-    event OperatorEditsAfterSnapshot(
-        uint256 indexed index,
-        uint256 currentLimit,
-        uint256 newLimit,
-        uint256 indexed lastEdit,
-        uint256 indexed snapshotBlock
-    );
-
     function testSetOperatorLimitCountSnapshotTooLow(bytes32 _name, uint256 _firstAddressSalt, uint32 _limit) public {
         address _firstAddress = uf._new(_firstAddressSalt);
         _limit = 1 + _limit % 10; // 10 is max, 1 is min
@@ -389,8 +392,6 @@ contract OperatorsRegistryV1Tests is Test, BytesGenerator {
         newOperator = operatorsRegistry.getOperator(index);
         assert(newOperator.limit == 0);
     }
-
-    event SetOperatorLimit(uint256 indexed index, uint256 newLimit);
 
     function testSetOperatorLimitDecreaseSkipsSnapshotCheck(bytes32 _name, uint256 _firstAddressSalt) public {
         address _firstAddress = uf._new(_firstAddressSalt);
@@ -474,8 +475,6 @@ contract OperatorsRegistryV1Tests is Test, BytesGenerator {
         operatorsRegistry.setOperatorLimits(operatorIndexes, operatorLimits, block.number);
         vm.stopPrank();
     }
-
-    event AddedValidatorKeys(uint256 indexed index, uint256 amount);
 
     function testAddValidatorsAsOperator(bytes32 _name, uint256 _firstAddressSalt) public {
         address _firstAddress = uf._new(_firstAddressSalt);
@@ -1146,45 +1145,43 @@ contract OperatorsRegistryV1Tests is Test, BytesGenerator {
         assertEq(operatorsRegistry.getTotalStoppedValidatorCount(), 0);
     }
 
-    event SetStoppedValidatorArray(uint32[] stoppedValidators);
-
     function testSetStoppedValidatorCounts(uint32 totalCount, uint8 len) public {
         vm.assume(len > 0 && len < type(uint8).max);
         totalCount = uint32(bound(totalCount, len, type(uint32).max));
 
-        uint32[] memory stoppedValidators = new uint32[](len + 1);
-        stoppedValidators[0] = totalCount;
+        uint32[] memory stoppedValidatorCounts = new uint32[](len + 1);
+        stoppedValidatorCounts[0] = totalCount;
 
         for (uint256 idx = 1; idx < len + 1; ++idx) {
             vm.prank(admin);
             operatorsRegistry.addOperator(string(abi.encodePacked(idx)), address(123));
-            stoppedValidators[idx] = (totalCount / len) + (idx - 1 < totalCount % len ? 1 : 0);
+            stoppedValidatorCounts[idx] = (totalCount / len) + (idx - 1 < totalCount % len ? 1 : 0);
         }
 
         vm.prank(river);
         vm.expectEmit(true, true, true, true);
-        emit SetStoppedValidatorArray(stoppedValidators);
-        operatorsRegistry.setStoppedValidators(stoppedValidators);
+        emit SetStoppedValidatorCounts(stoppedValidatorCounts);
+        operatorsRegistry.setStoppedValidatorCounts(stoppedValidatorCounts);
 
         assertEq(operatorsRegistry.getTotalStoppedValidatorCount(), totalCount);
 
         for (uint256 idx = 1; idx < len + 1; ++idx) {
-            assertEq(stoppedValidators[idx], operatorsRegistry.getOperatorStoppedValidatorCount(idx - 1));
+            assertEq(stoppedValidatorCounts[idx], operatorsRegistry.getOperatorStoppedValidatorCount(idx - 1));
         }
     }
 
     function testSetStoppedValidatorCountsEmptyArray() public {
         uint32[] memory stoppedValidators = new uint32[](0);
         vm.prank(river);
-        vm.expectRevert(abi.encodeWithSignature("InvalidEmptyStoppedValidatorArray()"));
-        operatorsRegistry.setStoppedValidators(stoppedValidators);
+        vm.expectRevert(abi.encodeWithSignature("InvalidEmptyStoppedValidatorCountsArray()"));
+        operatorsRegistry.setStoppedValidatorCounts(stoppedValidators);
     }
 
     function testSetStoppedValidatorCountsMoreElementsThanOperators() public {
         uint32[] memory stoppedValidators = new uint32[](2);
         vm.prank(river);
-        vm.expectRevert(abi.encodeWithSignature("StoppedValidatorElementsTooHigh()"));
-        operatorsRegistry.setStoppedValidators(stoppedValidators);
+        vm.expectRevert(abi.encodeWithSignature("StoppedValidatorCountsTooHigh()"));
+        operatorsRegistry.setStoppedValidatorCounts(stoppedValidators);
     }
 
     function testSetStoppedValidatorCountsInvalidSum(uint32 totalCount, uint8 len) public {
@@ -1203,8 +1200,8 @@ contract OperatorsRegistryV1Tests is Test, BytesGenerator {
         stoppedValidators[0] -= 1;
 
         vm.prank(river);
-        vm.expectRevert(abi.encodeWithSignature("InvalidStoppedValidatorSum()"));
-        operatorsRegistry.setStoppedValidators(stoppedValidators);
+        vm.expectRevert(abi.encodeWithSignature("InvalidStoppedValidatorCountsSum()"));
+        operatorsRegistry.setStoppedValidatorCounts(stoppedValidators);
     }
 }
 
@@ -1407,7 +1404,7 @@ contract OperatorsRegistryV1TestDistribution is Test {
         stoppedValidatorCounts[3] = 25;
         stoppedValidatorCounts[5] = 25;
 
-        OperatorsRegistryInitializableV1(address(operatorsRegistry)).sudoStoppedValidatorCount(stoppedValidatorCounts);
+        OperatorsRegistryInitializableV1(address(operatorsRegistry)).sudoStoppedValidatorCounts(stoppedValidatorCounts);
 
         limits = new uint32[](2);
         limits[0] = 50;

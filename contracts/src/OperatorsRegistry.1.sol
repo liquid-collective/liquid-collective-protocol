@@ -102,11 +102,11 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
 
     /// @inheritdoc IOperatorsRegistryV1
     function getTotalStoppedValidatorCount() external view returns (uint32) {
-        uint32[] storage stoppedValidators = StoppedValidators.get();
-        if (stoppedValidators.length == 0) {
+        uint32[] storage stoppedValidatorCounts = StoppedValidators.get();
+        if (stoppedValidatorCounts.length == 0) {
             return 0;
         }
-        return stoppedValidators[0];
+        return stoppedValidatorCounts[0];
     }
 
     /// @inheritdoc IOperatorsRegistryV1
@@ -115,7 +115,7 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
     }
 
     /// @inheritdoc IOperatorsRegistryV1
-    function getStoppedValidators() external view returns (uint32[] memory) {
+    function getStoppedValidatorCounts() external view returns (uint32[] memory) {
         return StoppedValidators.get();
     }
 
@@ -135,8 +135,8 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
     }
 
     /// @inheritdoc IOperatorsRegistryV1
-    function setStoppedValidators(uint32[] calldata stoppedValidators) external onlyRiver {
-        _setStoppedValidators(stoppedValidators);
+    function setStoppedValidatorCounts(uint32[] calldata stoppedValidatorCounts) external onlyRiver {
+        _setStoppedValidatorCounts(stoppedValidatorCounts);
     }
 
     /// @inheritdoc IOperatorsRegistryV1
@@ -346,28 +346,28 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
     }
 
     /// @notice Internal utiltiy to set the stopped validator array after sanity checks
-    /// @param stoppedValidators The stopped validators counts for every operator + the total count in index 0
-    function _setStoppedValidators(uint32[] calldata stoppedValidators) internal {
-        uint256 stoppedValidatorsLength = stoppedValidators.length;
-        if (stoppedValidatorsLength == 0) {
-            revert InvalidEmptyStoppedValidatorArray();
+    /// @param stoppedValidatorCounts The stopped validators counts for every operator + the total count in index 0
+    function _setStoppedValidatorCounts(uint32[] calldata stoppedValidatorCounts) internal {
+        uint256 stoppedValidatorCountsLength = stoppedValidatorCounts.length;
+        if (stoppedValidatorCountsLength == 0) {
+            revert InvalidEmptyStoppedValidatorCountsArray();
         }
-        uint32 total = stoppedValidators[0];
+        uint32 total = stoppedValidatorCounts[0];
         uint32 count = 0;
-        if (stoppedValidatorsLength - 1 > OperatorsV2.getCount()) {
-            revert StoppedValidatorElementsTooHigh();
+        if (stoppedValidatorCountsLength - 1 > OperatorsV2.getCount()) {
+            revert StoppedValidatorCountsTooHigh();
         }
-        for (uint256 idx = 1; idx < stoppedValidatorsLength;) {
-            count += stoppedValidators[idx];
+        for (uint256 idx = 1; idx < stoppedValidatorCountsLength;) {
+            count += stoppedValidatorCounts[idx];
             unchecked {
                 ++idx;
             }
         }
         if (total != count) {
-            revert InvalidStoppedValidatorSum();
+            revert InvalidStoppedValidatorCountsSum();
         }
-        StoppedValidators.setRaw(stoppedValidators);
-        emit SetStoppedValidatorArray(stoppedValidators);
+        StoppedValidators.setRaw(stoppedValidatorCounts);
+        emit SetStoppedValidatorCounts(stoppedValidatorCounts);
     }
 
     /// @notice Internal utility to concatenate bytes arrays together
@@ -406,11 +406,11 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
     /// @param operatorIndex The operator index
     /// @return The count of stopped validators
     function _getStoppedCount(uint256 operatorIndex) internal view returns (uint32) {
-        uint32[] storage stoppedValidators = StoppedValidators.get();
-        if (operatorIndex + 1 >= stoppedValidators.length) {
+        uint32[] storage stoppedValidatorCounts = StoppedValidators.get();
+        if (operatorIndex + 1 >= stoppedValidatorCounts.length) {
             return 0;
         }
-        return stoppedValidators[operatorIndex + 1];
+        return stoppedValidatorCounts[operatorIndex + 1];
     }
 
     /// @notice Internal utility to get the count of active validators during the deposit selection process

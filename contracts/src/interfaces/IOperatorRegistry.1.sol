@@ -78,8 +78,9 @@ interface IOperatorsRegistryV1 {
     event OperatorLimitUnchanged(uint256 indexed index, uint256 limit);
 
     /// @notice The stopped validator array has been changed
-    /// @param stoppedValidators The new stopped validators array
-    event SetStoppedValidatorArray(uint32[] stoppedValidators);
+    /// @notice A validator is considered stopped if exiting, exited or slashed
+    /// @param stoppedValidatorCounts The new stopped validator counts
+    event SetStoppedValidatorCounts(uint32[] stoppedValidatorCounts);
 
     /// @notice The requested exit count has been updated
     /// @param index The operator index
@@ -127,13 +128,13 @@ interface IOperatorsRegistryV1 {
     error UnorderedOperatorList();
 
     /// @notice Thrown when an invalid empty stopped validator array is provided
-    error InvalidEmptyStoppedValidatorArray();
+    error InvalidEmptyStoppedValidatorCountsArray();
 
     /// @notice Thrown when the sum of stopped validators is invalid
-    error InvalidStoppedValidatorSum();
+    error InvalidStoppedValidatorCountsSum();
 
     /// @notice Thrown when the number of elements in the array is too high compared to operator count
-    error StoppedValidatorElementsTooHigh();
+    error StoppedValidatorCountsTooHigh();
 
     /// @notice Initializes the operators registry
     /// @param _admin Admin in charge of managing operators
@@ -167,7 +168,7 @@ interface IOperatorsRegistryV1 {
 
     /// @notice Retrieve the raw stopped validators array from storage
     /// @return The stopped validator array
-    function getStoppedValidators() external view returns (uint32[] memory);
+    function getStoppedValidatorCounts() external view returns (uint32[] memory);
 
     /// @notice Get the details of a validator
     /// @param _operatorIndex The index of the operator
@@ -185,8 +186,8 @@ interface IOperatorsRegistryV1 {
     function listActiveOperators() external view returns (OperatorsV2.Operator[] memory);
 
     /// @notice Allows river to override the stopped validators array
-    /// @param stoppedValidators The new stopped validators array
-    function setStoppedValidators(uint32[] calldata stoppedValidators) external;
+    /// @param stoppedValidatorCounts The new stopped validators array
+    function setStoppedValidatorCounts(uint32[] calldata stoppedValidatorCounts) external;
 
     /// @notice Adds an operator to the registry
     /// @dev Only callable by the administrator

@@ -19,8 +19,8 @@ import "../src/OperatorsRegistry.1.sol";
 import "../src/CoverageFund.1.sol";
 
 contract OperatorsRegistryWithOverridesV1 is OperatorsRegistryV1 {
-    function sudoStoppedValidatorCount(uint32[] calldata stoppedValidatorCounts) external {
-        _setStoppedValidators(stoppedValidatorCounts);
+    function sudoStoppedValidatorCounts(uint32[] calldata stoppedValidatorCounts) external {
+        _setStoppedValidatorCounts(stoppedValidatorCounts);
     }
 }
 
@@ -1442,7 +1442,7 @@ contract RiverV1Tests is Test, BytesGenerator {
         stoppedCounts[0] = 10;
         stoppedCounts[1] = 10;
         stoppedCounts[2] = 0;
-        operatorsRegistry.sudoStoppedValidatorCount(stoppedCounts);
+        operatorsRegistry.sudoStoppedValidatorCounts(stoppedCounts);
         vm.prank(admin);
         river.depositToConsensusLayer(10);
 
