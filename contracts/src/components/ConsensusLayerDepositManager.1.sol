@@ -159,6 +159,5 @@ abstract contract ConsensusLayerDepositManagerV1 is IConsensusLayerDepositManage
         if (address(this).balance != targetBalance) {
             revert ErrorOnDeposit();
         }
-        emit FundedValidatorKey(_publicKey);
     }
 }

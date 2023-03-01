@@ -1223,6 +1223,7 @@ contract OperatorsRegistryV1TestDistribution is Test {
     event AddedValidatorKeys(uint256 indexed index, bytes publicKeys);
     event RemovedValidatorKey(uint256 indexed index, bytes publicKey);
     event RequestedValidatorExits(uint256 indexed index, uint256 count);
+    event FundedValidatorKeys(uint256 indexed index, bytes[] publicKeys);
 
     bytes32 salt = bytes32(0);
 
@@ -1261,13 +1262,40 @@ contract OperatorsRegistryV1TestDistribution is Test {
         vm.stopPrank();
     }
 
+    function _bytesToPublicKeysArray(bytes memory raw, uint256 start, uint256 end)
+        internal
+        pure
+        returns (bytes[] memory res)
+    {
+        if ((end - start) % (ValidatorKeys.PUBLIC_KEY_LENGTH + ValidatorKeys.SIGNATURE_LENGTH) != 0) {
+            revert();
+        }
+        uint256 count = (end - start) / (ValidatorKeys.PUBLIC_KEY_LENGTH + ValidatorKeys.SIGNATURE_LENGTH);
+        res = new bytes[](count);
+        for (uint256 idx = 0; idx < count; ++idx) {
+            res[idx] = LibBytes.slice(
+                raw,
+                start + (idx * (ValidatorKeys.PUBLIC_KEY_LENGTH + ValidatorKeys.SIGNATURE_LENGTH)),
+                ValidatorKeys.PUBLIC_KEY_LENGTH
+            );
+        }
+    }
+
     function testRegularDepositDistribution() external {
+        bytes[] memory rawKeys = new bytes[](5);
+
+        rawKeys[0] = genBytes((48 + 96) * 50);
+        rawKeys[1] = genBytes((48 + 96) * 50);
+        rawKeys[2] = genBytes((48 + 96) * 50);
+        rawKeys[3] = genBytes((48 + 96) * 50);
+        rawKeys[4] = genBytes((48 + 96) * 50);
+
         vm.startPrank(admin);
-        operatorsRegistry.addValidators(0, 50, genBytes((48 + 96) * 50));
-        operatorsRegistry.addValidators(1, 50, genBytes((48 + 96) * 50));
-        operatorsRegistry.addValidators(2, 50, genBytes((48 + 96) * 50));
-        operatorsRegistry.addValidators(3, 50, genBytes((48 + 96) * 50));
-        operatorsRegistry.addValidators(4, 50, genBytes((48 + 96) * 50));
+        operatorsRegistry.addValidators(0, 50, rawKeys[0]);
+        operatorsRegistry.addValidators(1, 50, rawKeys[1]);
+        operatorsRegistry.addValidators(2, 50, rawKeys[2]);
+        operatorsRegistry.addValidators(3, 50, rawKeys[3]);
+        operatorsRegistry.addValidators(4, 50, rawKeys[4]);
         vm.stopPrank();
 
         uint32[] memory limits = new uint32[](5);
@@ -1288,6 +1316,41 @@ contract OperatorsRegistryV1TestDistribution is Test {
         operatorsRegistry.setOperatorLimits(operators, limits, block.number);
 
         {
+            vm.expectEmit(true, true, true, true);
+            emit FundedValidatorKeys(
+                0,
+                _bytesToPublicKeysArray(
+                    rawKeys[0], 0, 10 * (ValidatorKeys.PUBLIC_KEY_LENGTH + ValidatorKeys.SIGNATURE_LENGTH)
+                )
+            );
+            vm.expectEmit(true, true, true, true);
+            emit FundedValidatorKeys(
+                1,
+                _bytesToPublicKeysArray(
+                    rawKeys[1], 0, 10 * (ValidatorKeys.PUBLIC_KEY_LENGTH + ValidatorKeys.SIGNATURE_LENGTH)
+                )
+            );
+            vm.expectEmit(true, true, true, true);
+            emit FundedValidatorKeys(
+                2,
+                _bytesToPublicKeysArray(
+                    rawKeys[2], 0, 10 * (ValidatorKeys.PUBLIC_KEY_LENGTH + ValidatorKeys.SIGNATURE_LENGTH)
+                )
+            );
+            vm.expectEmit(true, true, true, true);
+            emit FundedValidatorKeys(
+                3,
+                _bytesToPublicKeysArray(
+                    rawKeys[3], 0, 10 * (ValidatorKeys.PUBLIC_KEY_LENGTH + ValidatorKeys.SIGNATURE_LENGTH)
+                )
+            );
+            vm.expectEmit(true, true, true, true);
+            emit FundedValidatorKeys(
+                4,
+                _bytesToPublicKeysArray(
+                    rawKeys[4], 0, 10 * (ValidatorKeys.PUBLIC_KEY_LENGTH + ValidatorKeys.SIGNATURE_LENGTH)
+                )
+            );
             (bytes[] memory publicKeys, bytes[] memory signatures) = OperatorsRegistryInitializableV1(
                 address(operatorsRegistry)
             ).debugGetNextValidatorsToDepositFromActiveOperators(50);
@@ -1302,6 +1365,51 @@ contract OperatorsRegistryV1TestDistribution is Test {
             assert(operatorsRegistry.getOperator(4).funded == 10);
         }
         {
+            vm.expectEmit(true, true, true, true);
+            emit FundedValidatorKeys(
+                0,
+                _bytesToPublicKeysArray(
+                    rawKeys[0],
+                    10 * (ValidatorKeys.PUBLIC_KEY_LENGTH + ValidatorKeys.SIGNATURE_LENGTH),
+                    50 * (ValidatorKeys.PUBLIC_KEY_LENGTH + ValidatorKeys.SIGNATURE_LENGTH)
+                )
+            );
+            vm.expectEmit(true, true, true, true);
+            emit FundedValidatorKeys(
+                1,
+                _bytesToPublicKeysArray(
+                    rawKeys[1],
+                    10 * (ValidatorKeys.PUBLIC_KEY_LENGTH + ValidatorKeys.SIGNATURE_LENGTH),
+                    50 * (ValidatorKeys.PUBLIC_KEY_LENGTH + ValidatorKeys.SIGNATURE_LENGTH)
+                )
+            );
+            vm.expectEmit(true, true, true, true);
+            emit FundedValidatorKeys(
+                2,
+                _bytesToPublicKeysArray(
+                    rawKeys[2],
+                    10 * (ValidatorKeys.PUBLIC_KEY_LENGTH + ValidatorKeys.SIGNATURE_LENGTH),
+                    50 * (ValidatorKeys.PUBLIC_KEY_LENGTH + ValidatorKeys.SIGNATURE_LENGTH)
+                )
+            );
+            vm.expectEmit(true, true, true, true);
+            emit FundedValidatorKeys(
+                3,
+                _bytesToPublicKeysArray(
+                    rawKeys[3],
+                    10 * (ValidatorKeys.PUBLIC_KEY_LENGTH + ValidatorKeys.SIGNATURE_LENGTH),
+                    50 * (ValidatorKeys.PUBLIC_KEY_LENGTH + ValidatorKeys.SIGNATURE_LENGTH)
+                )
+            );
+            vm.expectEmit(true, true, true, true);
+            emit FundedValidatorKeys(
+                4,
+                _bytesToPublicKeysArray(
+                    rawKeys[4],
+                    10 * (ValidatorKeys.PUBLIC_KEY_LENGTH + ValidatorKeys.SIGNATURE_LENGTH),
+                    50 * (ValidatorKeys.PUBLIC_KEY_LENGTH + ValidatorKeys.SIGNATURE_LENGTH)
+                )
+            );
             (bytes[] memory publicKeys, bytes[] memory signatures) = OperatorsRegistryInitializableV1(
                 address(operatorsRegistry)
             ).debugGetNextValidatorsToDepositFromActiveOperators(200);
@@ -1470,15 +1578,15 @@ contract OperatorsRegistryV1TestDistribution is Test {
         assert(operatorsRegistry.getOperator(4).funded == 50);
 
         vm.expectEmit(true, true, true, true);
-        emit SetOperatorRequestedExitCount(0, 50);
+        emit RequestedValidatorExits(0, 50);
         vm.expectEmit(true, true, true, true);
-        emit SetOperatorRequestedExitCount(1, 50);
+        emit RequestedValidatorExits(1, 50);
         vm.expectEmit(true, true, true, true);
-        emit SetOperatorRequestedExitCount(2, 50);
+        emit RequestedValidatorExits(2, 50);
         vm.expectEmit(true, true, true, true);
-        emit SetOperatorRequestedExitCount(3, 50);
+        emit RequestedValidatorExits(3, 50);
         vm.expectEmit(true, true, true, true);
-        emit SetOperatorRequestedExitCount(4, 50);
+        emit RequestedValidatorExits(4, 50);
         OperatorsRegistryInitializableV1(address(operatorsRegistry)).debugGetNextValidatorsToExitFromActiveOperators(
             250
         );
@@ -1526,7 +1634,7 @@ contract OperatorsRegistryV1TestDistribution is Test {
         assert(operatorsRegistry.getOperator(4).funded == 50);
 
         vm.expectEmit(true, true, true, true);
-        emit SetOperatorRequestedExitCount(0, 1);
+        emit RequestedValidatorExits(0, 1);
         OperatorsRegistryInitializableV1(address(operatorsRegistry)).debugGetNextValidatorsToExitFromActiveOperators(1);
 
         assert(operatorsRegistry.getOperator(0).requestedExits == 1);
@@ -1572,15 +1680,15 @@ contract OperatorsRegistryV1TestDistribution is Test {
         assert(operatorsRegistry.getOperator(4).funded == 50);
 
         vm.expectEmit(true, true, true, true);
-        emit SetOperatorRequestedExitCount(0, 50);
+        emit RequestedValidatorExits(0, 50);
         vm.expectEmit(true, true, true, true);
-        emit SetOperatorRequestedExitCount(1, 50);
+        emit RequestedValidatorExits(1, 50);
         vm.expectEmit(true, true, true, true);
-        emit SetOperatorRequestedExitCount(2, 50);
+        emit RequestedValidatorExits(2, 50);
         vm.expectEmit(true, true, true, true);
-        emit SetOperatorRequestedExitCount(3, 50);
+        emit RequestedValidatorExits(3, 50);
         vm.expectEmit(true, true, true, true);
-        emit SetOperatorRequestedExitCount(4, 50);
+        emit RequestedValidatorExits(4, 50);
         OperatorsRegistryInitializableV1(address(operatorsRegistry)).debugGetNextValidatorsToExitFromActiveOperators(
             500
         );
@@ -1628,15 +1736,15 @@ contract OperatorsRegistryV1TestDistribution is Test {
         assert(operatorsRegistry.getOperator(4).funded == 10);
 
         vm.expectEmit(true, true, true, true);
-        emit SetOperatorRequestedExitCount(0, 50);
+        emit RequestedValidatorExits(0, 50);
         vm.expectEmit(true, true, true, true);
-        emit SetOperatorRequestedExitCount(1, 40);
+        emit RequestedValidatorExits(1, 40);
         vm.expectEmit(true, true, true, true);
-        emit SetOperatorRequestedExitCount(2, 30);
+        emit RequestedValidatorExits(2, 30);
         vm.expectEmit(true, true, true, true);
-        emit SetOperatorRequestedExitCount(3, 20);
+        emit RequestedValidatorExits(3, 20);
         vm.expectEmit(true, true, true, true);
-        emit SetOperatorRequestedExitCount(4, 10);
+        emit RequestedValidatorExits(4, 10);
         OperatorsRegistryInitializableV1(address(operatorsRegistry)).debugGetNextValidatorsToExitFromActiveOperators(
             500
         );
@@ -1684,15 +1792,15 @@ contract OperatorsRegistryV1TestDistribution is Test {
         assert(operatorsRegistry.getOperator(4).funded == 50);
 
         vm.expectEmit(true, true, true, true);
-        emit SetOperatorRequestedExitCount(0, 3);
+        emit RequestedValidatorExits(0, 3);
         vm.expectEmit(true, true, true, true);
-        emit SetOperatorRequestedExitCount(1, 3);
+        emit RequestedValidatorExits(1, 3);
         vm.expectEmit(true, true, true, true);
-        emit SetOperatorRequestedExitCount(2, 3);
+        emit RequestedValidatorExits(2, 3);
         vm.expectEmit(true, true, true, true);
-        emit SetOperatorRequestedExitCount(3, 3);
+        emit RequestedValidatorExits(3, 3);
         vm.expectEmit(true, true, true, true);
-        emit SetOperatorRequestedExitCount(4, 2);
+        emit RequestedValidatorExits(4, 2);
         OperatorsRegistryInitializableV1(address(operatorsRegistry)).debugGetNextValidatorsToExitFromActiveOperators(14);
 
         assert(operatorsRegistry.getOperator(0).requestedExits == 3);
@@ -1738,9 +1846,9 @@ contract OperatorsRegistryV1TestDistribution is Test {
         assert(operatorsRegistry.getOperator(4).funded == 10);
 
         vm.expectEmit(true, true, true, true);
-        emit SetOperatorRequestedExitCount(0, 20);
+        emit RequestedValidatorExits(0, 20);
         vm.expectEmit(true, true, true, true);
-        emit SetOperatorRequestedExitCount(1, 10);
+        emit RequestedValidatorExits(1, 10);
         OperatorsRegistryInitializableV1(address(operatorsRegistry)).debugGetNextValidatorsToExitFromActiveOperators(30);
 
         assert(operatorsRegistry.getOperator(0).requestedExits == 20);
@@ -1750,35 +1858,35 @@ contract OperatorsRegistryV1TestDistribution is Test {
         assert(operatorsRegistry.getOperator(4).requestedExits == 0);
 
         vm.expectEmit(true, true, true, true);
-        emit SetOperatorRequestedExitCount(0, 30);
+        emit RequestedValidatorExits(0, 30);
         vm.expectEmit(true, true, true, true);
-        emit SetOperatorRequestedExitCount(1, 20);
+        emit RequestedValidatorExits(1, 20);
         vm.expectEmit(true, true, true, true);
-        emit SetOperatorRequestedExitCount(2, 10);
+        emit RequestedValidatorExits(2, 10);
         vm.expectEmit(true, true, true, true);
-        emit SetOperatorRequestedExitCount(3, 10);
+        emit RequestedValidatorExits(3, 10);
         OperatorsRegistryInitializableV1(address(operatorsRegistry)).debugGetNextValidatorsToExitFromActiveOperators(40);
 
         vm.expectEmit(true, true, true, true);
-        emit SetOperatorRequestedExitCount(0, 40);
+        emit RequestedValidatorExits(0, 40);
         vm.expectEmit(true, true, true, true);
-        emit SetOperatorRequestedExitCount(1, 30);
+        emit RequestedValidatorExits(1, 30);
         vm.expectEmit(true, true, true, true);
-        emit SetOperatorRequestedExitCount(2, 20);
+        emit RequestedValidatorExits(2, 20);
         vm.expectEmit(true, true, true, true);
-        emit SetOperatorRequestedExitCount(3, 20);
+        emit RequestedValidatorExits(3, 20);
         OperatorsRegistryInitializableV1(address(operatorsRegistry)).debugGetNextValidatorsToExitFromActiveOperators(40);
 
         vm.expectEmit(true, true, true, true);
-        emit SetOperatorRequestedExitCount(0, 50);
+        emit RequestedValidatorExits(0, 50);
         vm.expectEmit(true, true, true, true);
-        emit SetOperatorRequestedExitCount(1, 40);
+        emit RequestedValidatorExits(1, 40);
         vm.expectEmit(true, true, true, true);
-        emit SetOperatorRequestedExitCount(2, 30);
+        emit RequestedValidatorExits(2, 30);
         vm.expectEmit(true, true, true, true);
-        emit SetOperatorRequestedExitCount(3, 30);
+        emit RequestedValidatorExits(3, 30);
         vm.expectEmit(true, true, true, true);
-        emit SetOperatorRequestedExitCount(4, 10);
+        emit RequestedValidatorExits(4, 10);
         OperatorsRegistryInitializableV1(address(operatorsRegistry)).debugGetNextValidatorsToExitFromActiveOperators(50);
     }
 }

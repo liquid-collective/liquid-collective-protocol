@@ -88,6 +88,11 @@ interface IOperatorsRegistryV1 {
     /// @param count The count of requested exits
     event RequestedValidatorExits(uint256 indexed index, uint256 count);
 
+    /// @notice A validator key got funded on the deposit contract
+    /// @param index The operator index
+    /// @param publicKeys BLS Public key that got funded
+    event FundedValidatorKeys(uint256 indexed index, bytes[] publicKeys);
+
     /// @notice The calling operator is inactive
     /// @param index The operator index
     error InactiveOperator(uint256 index);

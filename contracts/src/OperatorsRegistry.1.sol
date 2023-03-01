@@ -512,6 +512,7 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
             if (operators[idx].picked > 0) {
                 (bytes[] memory _publicKeys, bytes[] memory _signatures) =
                     ValidatorKeys.getKeys(operators[idx].index, operators[idx].funded, operators[idx].picked);
+                emit FundedValidatorKeys(operators[idx].index, _publicKeys);
                 publicKeys = _concatenateByteArrays(publicKeys, _publicKeys);
                 signatures = _concatenateByteArrays(signatures, _signatures);
                 (OperatorsV2.get(operators[idx].index)).funded += operators[idx].picked;
