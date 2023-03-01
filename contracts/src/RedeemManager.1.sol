@@ -101,36 +101,15 @@ contract RedeemManagerV1 is Initializable, IRedeemManagerV1 {
         onlyRedeemer
         returns (uint32 redeemRequestId)
     {
-        LibSanitize._notZeroAddress(recipient);
-        if (lsETHAmount == 0) {
-            revert InvalidZeroAmount();
-        }
-        if (!_river().transferFrom(msg.sender, address(this), lsETHAmount)) {
-            revert TransferError();
-        }
-        RedeemQueue.RedeemRequest[] storage redeemRequests = RedeemQueue.get();
-        redeemRequestId = uint32(redeemRequests.length);
-        uint256 height = 0;
-        if (redeemRequestId != 0) {
-            RedeemQueue.RedeemRequest memory previousRedeemRequest = redeemRequests[redeemRequestId - 1];
-            height = previousRedeemRequest.height + previousRedeemRequest.amount;
-        }
-
-        uint256 maxRedeemableEth = _river().underlyingBalanceFromShares(lsETHAmount);
-
-        redeemRequests.push(
-            RedeemQueue.RedeemRequest({
-                height: height,
-                amount: lsETHAmount,
-                owner: recipient,
-                maxRedeemableEth: maxRedeemableEth
-            })
-        );
-
-        emit RequestedRedeem(recipient, height, lsETHAmount, redeemRequestId);
+        return _requestRedeem(lsETHAmount, recipient);
     }
-    /// @inheritdoc IRedeemManagerV1
 
+    /// @inheritdoc IRedeemManagerV1
+    function requestRedeem(uint256 lsETHAmount) external onlyRedeemer returns (uint32 redeemRequestId) {
+        return _requestRedeem(lsETHAmount, msg.sender);
+    }
+
+    /// @inheritdoc IRedeemManagerV1
     function claimRedeemRequests(
         uint32[] calldata redeemRequestIds,
         uint32[] calldata withdrawalEventIds,
@@ -273,6 +252,40 @@ contract RedeemManagerV1 is Initializable, IRedeemManagerV1 {
         RedeemQueue.RedeemRequest redeemRequest;
         /// @custom The loaded withdrawal event
         WithdrawalStack.WithdrawalEvent withdrawalEvent;
+    }
+
+    /// @notice Perform a new redeem request for the specified recipient
+    /// @param lsETHAmount The amount of LsETH to redeem
+    /// @param recipient The recipient owning the request
+    /// @return redeemRequestId The id of the newly created redeem request
+    function _requestRedeem(uint256 lsETHAmount, address recipient) internal returns (uint32 redeemRequestId) {
+        LibSanitize._notZeroAddress(recipient);
+        if (lsETHAmount == 0) {
+            revert InvalidZeroAmount();
+        }
+        if (!_river().transferFrom(msg.sender, address(this), lsETHAmount)) {
+            revert TransferError();
+        }
+        RedeemQueue.RedeemRequest[] storage redeemRequests = RedeemQueue.get();
+        redeemRequestId = uint32(redeemRequests.length);
+        uint256 height = 0;
+        if (redeemRequestId != 0) {
+            RedeemQueue.RedeemRequest memory previousRedeemRequest = redeemRequests[redeemRequestId - 1];
+            height = previousRedeemRequest.height + previousRedeemRequest.amount;
+        }
+
+        uint256 maxRedeemableEth = _river().underlyingBalanceFromShares(lsETHAmount);
+
+        redeemRequests.push(
+            RedeemQueue.RedeemRequest({
+                height: height,
+                amount: lsETHAmount,
+                owner: recipient,
+                maxRedeemableEth: maxRedeemableEth
+            })
+        );
+
+        emit RequestedRedeem(recipient, height, lsETHAmount, redeemRequestId);
     }
 
     /// @notice Internal utility to claim a redeem request if possible

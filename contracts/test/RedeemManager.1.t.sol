@@ -166,6 +166,41 @@ contract RedeemManagerV1Tests is Test {
         assertEq(redeemManager.getRedeemRequestCount(), 1);
     }
 
+    function testRequestRedeemImplicitRecipient(uint256 _salt) external {
+        address user = _generateAllowlistedUser(_salt);
+
+        uint128 amount = uint128(bound(_salt, 1, type(uint128).max));
+
+        river.sudoDeal(user, amount);
+
+        vm.prank(user);
+        river.approve(address(redeemManager), amount);
+
+        assertEq(river.balanceOf(user), amount);
+
+        vm.prank(user);
+        vm.expectEmit(true, true, true, true);
+        emit RequestedRedeem(user, 0, amount, 0);
+        redeemManager.requestRedeem(amount);
+
+        uint32[] memory requests = new uint32[](1);
+        requests[0] = 0;
+
+        assertEq(requests[0], 0);
+
+        {
+            RedeemQueue.RedeemRequest memory rr = redeemManager.getRedeemRequestDetails(0);
+
+            assertEq(rr.height, 0);
+            assertEq(rr.amount, amount);
+            assertEq(rr.owner, user);
+            assertEq(rr.maxRedeemableEth, amount);
+        }
+
+        assertEq(river.balanceOf(user), 0);
+        assertEq(redeemManager.getRedeemRequestCount(), 1);
+    }
+
     function testRequestRedeemUnauthorizedUser(uint256 _salt) external {
         address user = uf._new(_salt);
 

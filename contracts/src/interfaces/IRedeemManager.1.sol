@@ -127,6 +127,11 @@ interface IRedeemManagerV1 {
     /// @return redeemRequestId The id of the redeem request
     function requestRedeem(uint256 lsETHAmount, address recipient) external returns (uint32 redeemRequestId);
 
+    /// @notice Creates a redeem request using msg.sender as recipient
+    /// @param lsETHAmount The amount of LsETH to redeem
+    /// @return redeemRequestId The id of the redeem request
+    function requestRedeem(uint256 lsETHAmount) external returns (uint32 redeemRequestId);
+
     /// @notice Claims the rewards of the provided redeem request ids
     /// @param redeemRequestIds The list of redeem requests to claim
     /// @param withdrawalEventIds The list of withdrawal events to use for every redeem request claim
