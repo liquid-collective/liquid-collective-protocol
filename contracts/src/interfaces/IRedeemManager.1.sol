@@ -28,28 +28,24 @@ interface IRedeemManagerV1 {
     /// @param amountClaimed The amount of LsETH filled
     /// @param ethAmountClaimed The amount of ETH filled
     /// @param amountRemaining The amount of LsETH remaining
+    /// @param exceedingEthAmount The amount of eth added to the exceeding buffer
     event SatisfiedRedeemRequest(
         uint32 indexed id,
         uint32 withdrawalEventId,
         uint256 amountClaimed,
         uint256 ethAmountClaimed,
-        uint256 amountRemaining
+        uint256 amountRemaining,
+        uint256 exceedingEthAmount
     );
-
-    /// @notice Emitted when the exceeding eth buffer has increased
-    /// @param withdrawalEventId The withrawal event id where the eth was taken to increase the buffer
-    /// @param redeemRequestId The redeem request id that was satisfied at a lower rate than the withdrawal event rate
-    /// @param amount The amount of eth added to the exceeding buffer
-    event IncreasedExceedingEthBuffer(uint32 indexed withdrawalEventId, uint32 indexed redeemRequestId, uint256 amount);
 
     /// @notice Emitted when a redeem request claim has been processed and matched at least once and funds are sent to the recipient
     /// @param id The id of the redeem request
     /// @param recipient The address receiving the redeem request funds
     /// @param amount The total amount of LsETH used to redeem the eth
     /// @param ethAmount The amount of eth retrieved
-    /// @param fullyClaimed True if request is now empty
+    /// @param remainingAmount The amount of LsETH remaining
     event ClaimedRedeemRequest(
-        uint32 indexed id, address indexed recipient, uint256 amount, uint256 ethAmount, bool fullyClaimed
+        uint32 indexed id, address indexed recipient, uint256 amount, uint256 ethAmount, uint256 remainingAmount
     );
 
     /// @notice Emitted when the River address is set

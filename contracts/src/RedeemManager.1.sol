@@ -142,8 +142,8 @@ contract RedeemManagerV1 is Initializable, IRedeemManagerV1 {
         }
         claimStatuses = new uint8[](redeemRequestIdsLength);
         for (uint256 idx = 0; idx < redeemRequestIdsLength;) {
-            (address recipient, uint256 lsETHAmount, uint256 ethAmount, uint8 claimStatus) =
-                _claimRedeemRequest(redeemRequestIds[idx], withdrawalEventIds[idx], skipAlreadyClaimed, false);
+            (address recipient, uint256 lsETHAmount, uint256 ethAmount, uint256 remainingLsETHAmount, uint8 claimStatus)
+            = _claimRedeemRequest(redeemRequestIds[idx], withdrawalEventIds[idx], skipAlreadyClaimed, false);
             claimStatuses[idx] = claimStatus;
 
             (bool success, bytes memory rdata) = recipient.call{value: ethAmount}("");
@@ -152,9 +152,7 @@ contract RedeemManagerV1 is Initializable, IRedeemManagerV1 {
                     revert(add(32, rdata), mload(rdata))
                 }
             }
-            emit ClaimedRedeemRequest(
-                redeemRequestIds[idx], recipient, lsETHAmount, ethAmount, claimStatus == CLAIM_FULLY_CLAIMED
-            );
+            emit ClaimedRedeemRequest(redeemRequestIds[idx], recipient, lsETHAmount, ethAmount, remainingLsETHAmount);
 
             unchecked {
                 ++idx;
@@ -276,6 +274,20 @@ contract RedeemManagerV1 is Initializable, IRedeemManagerV1 {
         return _performDichotomicResolution(redeemRequest);
     }
 
+    /// @notice Internal structure used to optimize stack usage in _claimRedeemRequest
+    struct ClaimRedeemRequestInternalArguments {
+        /// @custom:attribute The eth amount claimed by the user
+        uint256 ethAmount;
+        /// @custom:attribute The amount of LsETH matched during this step
+        uint256 matchingAmount;
+        /// @custom:attribute The amount of eth redirected to the exceeding eth buffer
+        uint256 exceedingEthAmount;
+        /// @custom The loaded redeem request
+        RedeemQueue.RedeemRequest redeemRequest;
+        /// @custom The loaded withdrawal event
+        WithdrawalStack.WithdrawalEvent withdrawalEvent;
+    }
+
     /// @notice Internal utility to claim a redeem request if possible
     /// @dev Will call itself recursively if the redeem requests overflows its matching withdrawal event
     /// @param redeemRequestId The redeem request to claim
@@ -283,16 +295,17 @@ contract RedeemManagerV1 is Initializable, IRedeemManagerV1 {
     /// @param skipAlreadyClaimed True if the method should skip redeem requests already claimed
     /// @param skipWithdrawalEventDoesNotExist True if the method should simply return if the withdrawal event is out of bounds
     /// @return The owner of the redeem request
+    /// @return The amount of LsETH claimed
     /// @return The amount of ETH to send to the owner
+    /// @return The amount of LsETH remaining in the redeem request
+    /// @return The status of the claim
     function _claimRedeemRequest(
         uint32 redeemRequestId,
         uint32 withdrawalEventId,
         bool skipAlreadyClaimed,
         bool skipWithdrawalEventDoesNotExist
-    ) internal returns (address, uint256, uint256, uint8) {
-        uint256 ethAmount = 0;
-        uint256 matchingAmount = 0;
-        RedeemQueue.RedeemRequest memory redeemRequest;
+    ) internal returns (address, uint256, uint256, uint256, uint8) {
+        ClaimRedeemRequestInternalArguments memory args;
 
         {
             RedeemQueue.RedeemRequest[] storage redeemRequests = RedeemQueue.get();
@@ -307,57 +320,57 @@ contract RedeemManagerV1 is Initializable, IRedeemManagerV1 {
             // otherwise we return the CLAIM_PARTIALLY_CLAIMED status
             if (withdrawalEventId >= withdrawalEvents.length) {
                 if (skipWithdrawalEventDoesNotExist) {
-                    return (address(0), 0, 0, CLAIM_PARTIALLY_CLAIMED);
+                    return (address(0), 0, 0, redeemRequests[redeemRequestId].amount, CLAIM_PARTIALLY_CLAIMED);
                 }
                 revert WithdrawalEventOutOfBounds(withdrawalEventId);
             }
-            redeemRequest = redeemRequests[redeemRequestId];
+            args.redeemRequest = redeemRequests[redeemRequestId];
             // if the redeem request is already claimed and if the skipAlreadyClaimed flag is false, we revert
             // otherwise we return the CLAIM_SKIPPED status
-            if (redeemRequest.amount == 0) {
+            if (args.redeemRequest.amount == 0) {
                 if (skipAlreadyClaimed) {
-                    return (address(0), 0, 0, CLAIM_SKIPPED);
+                    return (address(0), 0, 0, 0, CLAIM_SKIPPED);
                 }
                 revert RedeemRequestAlreadyClaimed(redeemRequestId);
             }
             {
-                WithdrawalStack.WithdrawalEvent memory withdrawalEvent = withdrawalEvents[withdrawalEventId];
+                args.withdrawalEvent = withdrawalEvents[withdrawalEventId];
                 // now that both entities are loaded in memory, we verify that they indeed match, otherwise we revert
-                if (!_isMatch(redeemRequest, withdrawalEvent)) {
+                if (!_isMatch(args.redeemRequest, args.withdrawalEvent)) {
                     revert DoesNotMatch(redeemRequestId, withdrawalEventId);
                 }
 
                 {
-                    uint256 requestEndPosition = redeemRequest.height + redeemRequest.amount;
-                    uint256 withdrawalEventEndPosition = withdrawalEvent.height + withdrawalEvent.amount;
+                    uint256 requestEndPosition = args.redeemRequest.height + args.redeemRequest.amount;
+                    uint256 withdrawalEventEndPosition = args.withdrawalEvent.height + args.withdrawalEvent.amount;
 
                     // it can occur that the redeem request is overlapping the provided withdrawal event
                     // the amount that is matched in the withdrawal event is adapted depending on this
                     if (requestEndPosition < withdrawalEventEndPosition) {
                         // we know that the request's end is inside the withdrawal event, so all the remaining amount is matched
-                        matchingAmount = redeemRequest.amount;
+                        args.matchingAmount = args.redeemRequest.amount;
                     } else {
                         // we know that the request's end is outside of the withdrawal event, so only a portion amount is matched
-                        matchingAmount = redeemRequest.amount - (requestEndPosition - withdrawalEventEndPosition);
+                        args.matchingAmount =
+                            args.redeemRequest.amount - (requestEndPosition - withdrawalEventEndPosition);
                     }
                 }
                 // we can now compute the equivalent eth amount based on the withdrawal event details
-                ethAmount = (matchingAmount * withdrawalEvent.withdrawnEth) / withdrawalEvent.amount;
+                args.ethAmount = (args.matchingAmount * args.withdrawalEvent.withdrawnEth) / args.withdrawalEvent.amount;
             }
 
-            uint256 currentRequestAmount = redeemRequest.amount;
+            uint256 currentRequestAmount = args.redeemRequest.amount;
 
             {
                 // as each request has a maximum withdrawable amount, we verify that the eth amount is not exceeding this amount, pro rata
                 // the amount that is matched
                 uint256 maxRedeemableEthAmount =
-                    (matchingAmount * redeemRequest.maxRedeemableEth) / currentRequestAmount;
+                    (args.matchingAmount * args.redeemRequest.maxRedeemableEth) / currentRequestAmount;
 
-                if (maxRedeemableEthAmount < ethAmount) {
-                    uint256 exceedingBufferIncrease = ethAmount - maxRedeemableEthAmount;
-                    BufferedExceedingEth.set(BufferedExceedingEth.get() + exceedingBufferIncrease);
-                    emit IncreasedExceedingEthBuffer(withdrawalEventId, redeemRequestId, exceedingBufferIncrease);
-                    ethAmount = maxRedeemableEthAmount;
+                if (maxRedeemableEthAmount < args.ethAmount) {
+                    args.exceedingEthAmount = args.ethAmount - maxRedeemableEthAmount;
+                    BufferedExceedingEth.set(BufferedExceedingEth.get() + args.exceedingEthAmount);
+                    args.ethAmount = maxRedeemableEthAmount;
                 }
             }
 
@@ -365,7 +378,12 @@ contract RedeemManagerV1 is Initializable, IRedeemManagerV1 {
             // this event can be triggered several times for the same redeem request, depending on its size and
             // how many withdrawal events it overlaps.
             emit SatisfiedRedeemRequest(
-                redeemRequestId, withdrawalEventId, matchingAmount, ethAmount, currentRequestAmount - matchingAmount
+                redeemRequestId,
+                withdrawalEventId,
+                args.matchingAmount,
+                args.ethAmount,
+                currentRequestAmount - args.matchingAmount,
+                args.exceedingEthAmount
             );
 
             // height and amount are updated to reflect the amount that was matched.
@@ -373,21 +391,27 @@ contract RedeemManagerV1 is Initializable, IRedeemManagerV1 {
             // this also means that if the request wasn't entirely matched, it will now be automatically be assigned to the next
             // withdrawal event in the queue, because height is updated based on the amount matched and is now equal to the height
             // of the next withdrawal event
-            redeemRequests[redeemRequestId].height += matchingAmount;
-            redeemRequests[redeemRequestId].amount = currentRequestAmount - matchingAmount;
-            redeemRequests[redeemRequestId].maxRedeemableEth -= ethAmount;
+            redeemRequests[redeemRequestId].height += args.matchingAmount;
+            redeemRequests[redeemRequestId].amount = currentRequestAmount - args.matchingAmount;
+            redeemRequests[redeemRequestId].maxRedeemableEth -= args.ethAmount;
         }
 
         // in the case where we did not match all the amount, we call this method recursively with the same request id but
         // we increment the withdrawal event id. We also allow to skip if the withdrawal event does not exist, resulting in
         // a returned CLAIM_PARTIALLY_CLAIMED status if a withdrawal event id we need next in the stack does not exist yet.
-        if (matchingAmount < redeemRequest.amount) {
-            (, uint256 nextLsETHAmount, uint256 nextEthAmount, uint8 claimStatus) =
+        if (args.matchingAmount < args.redeemRequest.amount) {
+            (, uint256 nextLsETHAmount, uint256 nextEthAmount, uint256 remainingLsETHAmount, uint8 claimStatus) =
                 _claimRedeemRequest(redeemRequestId, withdrawalEventId + 1, false, true);
-            return (redeemRequest.owner, matchingAmount + nextLsETHAmount, ethAmount + nextEthAmount, claimStatus);
+            return (
+                args.redeemRequest.owner,
+                args.matchingAmount + nextLsETHAmount,
+                args.ethAmount + nextEthAmount,
+                remainingLsETHAmount,
+                claimStatus
+            );
         }
 
         // if we end up here, we have successfully claimed everything in the redeem request, and the CLAIM_FULLY_CLAIMED status is returned
-        return (redeemRequest.owner, matchingAmount, ethAmount, CLAIM_FULLY_CLAIMED);
+        return (args.redeemRequest.owner, args.matchingAmount, args.ethAmount, 0, CLAIM_FULLY_CLAIMED);
     }
 }
