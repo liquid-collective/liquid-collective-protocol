@@ -129,35 +129,22 @@ contract RedeemManagerV1 is Initializable, IRedeemManagerV1 {
 
         emit RequestedRedeem(recipient, height, lsETHAmount, redeemRequestId);
     }
-
     /// @inheritdoc IRedeemManagerV1
+
     function claimRedeemRequests(
         uint32[] calldata redeemRequestIds,
         uint32[] calldata withdrawalEventIds,
         bool skipAlreadyClaimed
     ) external returns (uint8[] memory claimStatuses) {
-        uint256 redeemRequestIdsLength = redeemRequestIds.length;
-        if (redeemRequestIdsLength != withdrawalEventIds.length) {
-            revert IncompatibleArrayLengths();
-        }
-        claimStatuses = new uint8[](redeemRequestIdsLength);
-        for (uint256 idx = 0; idx < redeemRequestIdsLength;) {
-            (address recipient, uint256 lsETHAmount, uint256 ethAmount, uint256 remainingLsETHAmount, uint8 claimStatus)
-            = _claimRedeemRequest(redeemRequestIds[idx], withdrawalEventIds[idx], skipAlreadyClaimed, false);
-            claimStatuses[idx] = claimStatus;
+        return _claimRedeemRequests(redeemRequestIds, withdrawalEventIds, skipAlreadyClaimed);
+    }
 
-            (bool success, bytes memory rdata) = recipient.call{value: ethAmount}("");
-            if (!success) {
-                assembly {
-                    revert(add(32, rdata), mload(rdata))
-                }
-            }
-            emit ClaimedRedeemRequest(redeemRequestIds[idx], recipient, ethAmount, lsETHAmount, remainingLsETHAmount);
-
-            unchecked {
-                ++idx;
-            }
-        }
+    /// @inheritdoc IRedeemManagerV1
+    function claimRedeemRequests(uint32[] calldata redeemRequestIds, uint32[] calldata withdrawalEventIds)
+        external
+        returns (uint8[] memory claimStatuses)
+    {
+        return _claimRedeemRequests(redeemRequestIds, withdrawalEventIds, true);
     }
 
     /// @inheritdoc IRedeemManagerV1
@@ -412,5 +399,39 @@ contract RedeemManagerV1 is Initializable, IRedeemManagerV1 {
 
         // if we end up here, we have successfully claimed everything in the redeem request, and the CLAIM_FULLY_CLAIMED status is returned
         return (vars.redeemRequest.owner, vars.matchingAmount, vars.ethAmount, 0, CLAIM_FULLY_CLAIMED);
+    }
+
+    /// @notice Internal utility to claim several redeem requests at once
+    /// @param redeemRequestIds The list of redeem requests to claim
+    /// @param withdrawalEventIds The list of withdrawal events to use for each redeem request. Should have the same length.
+    /// @param skipAlreadyClaimed True if the system should skip redeem requests already claimed, otherwise will revert
+    /// @return claimStatuses The claim statuses for each redeem request
+    function _claimRedeemRequests(
+        uint32[] calldata redeemRequestIds,
+        uint32[] calldata withdrawalEventIds,
+        bool skipAlreadyClaimed
+    ) internal returns (uint8[] memory claimStatuses) {
+        uint256 redeemRequestIdsLength = redeemRequestIds.length;
+        if (redeemRequestIdsLength != withdrawalEventIds.length) {
+            revert IncompatibleArrayLengths();
+        }
+        claimStatuses = new uint8[](redeemRequestIdsLength);
+        for (uint256 idx = 0; idx < redeemRequestIdsLength;) {
+            (address recipient, uint256 lsETHAmount, uint256 ethAmount, uint256 remainingLsETHAmount, uint8 claimStatus)
+            = _claimRedeemRequest(redeemRequestIds[idx], withdrawalEventIds[idx], skipAlreadyClaimed, false);
+            claimStatuses[idx] = claimStatus;
+
+            (bool success, bytes memory rdata) = recipient.call{value: ethAmount}("");
+            if (!success) {
+                assembly {
+                    revert(add(32, rdata), mload(rdata))
+                }
+            }
+            emit ClaimedRedeemRequest(redeemRequestIds[idx], recipient, ethAmount, lsETHAmount, remainingLsETHAmount);
+
+            unchecked {
+                ++idx;
+            }
+        }
     }
 }

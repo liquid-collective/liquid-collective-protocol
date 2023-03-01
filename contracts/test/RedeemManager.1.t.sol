@@ -385,6 +385,76 @@ contract RedeemManagerV1Tests is Test {
         }
     }
 
+    function testClaimRewardsWithImplicitSkipFlag(uint256 _salt) external {
+        uint128 amount = uint128(bound(_salt, 1, type(uint128).max));
+
+        address user = _generateAuthorizedUser(_salt);
+
+        river.sudoDeal(user, uint256(amount));
+
+        vm.prank(user);
+        river.approve(address(redeemManager), uint256(amount) * 2);
+
+        vm.prank(user);
+        redeemManager.requestRedeem(amount, user);
+
+        vm.deal(address(this), amount);
+        river.sudoReportWithdraw{value: amount}(address(redeemManager), amount);
+
+        assertEq(redeemManager.getWithdrawalEventCount(), 1);
+        assertEq(redeemManager.getRedeemRequestCount(), 1);
+
+        {
+            RedeemQueue.RedeemRequest memory rr = redeemManager.getRedeemRequestDetails(0);
+
+            assertEq(rr.height, 0);
+            assertEq(rr.amount, amount);
+            assertEq(rr.owner, user);
+        }
+
+        {
+            WithdrawalStack.WithdrawalEvent memory we = redeemManager.getWithdrawalEventDetails(0);
+
+            assertEq(we.height, 0);
+            assertEq(we.amount, amount);
+            assertEq(we.withdrawnEth, amount);
+        }
+
+        uint32[] memory redeemRequestIds = new uint32[](1);
+        uint32[] memory withdrawEventIds = new uint32[](1);
+
+        redeemRequestIds[0] = 0;
+        withdrawEventIds[0] = 0;
+
+        assertEq(address(redeemManager).balance, amount);
+        assertEq(user.balance, 0);
+
+        vm.expectEmit(true, true, true, true);
+        emit SatisfiedRedeemRequest(0, 0, amount, amount, 0, 0);
+        vm.expectEmit(true, true, true, true);
+        emit ClaimedRedeemRequest(0, user, amount, amount, 0);
+        redeemManager.claimRedeemRequests(redeemRequestIds, withdrawEventIds);
+
+        assertEq(address(redeemManager).balance, 0);
+        assertEq(user.balance, amount);
+
+        {
+            RedeemQueue.RedeemRequest memory rr = redeemManager.getRedeemRequestDetails(0);
+
+            assertEq(rr.height, amount);
+            assertEq(rr.amount, 0);
+            assertEq(rr.owner, user);
+        }
+
+        {
+            WithdrawalStack.WithdrawalEvent memory we = redeemManager.getWithdrawalEventDetails(0);
+
+            assertEq(we.height, 0);
+            assertEq(we.amount, amount);
+            assertEq(we.withdrawnEth, amount);
+        }
+    }
+
     function testClaimRewardsTwiceWithSkipFlag(uint256 _salt) external {
         uint128 amount = uint128(bound(_salt, 1, type(uint128).max));
 
