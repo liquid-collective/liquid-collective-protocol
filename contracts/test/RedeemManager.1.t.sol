@@ -85,15 +85,20 @@ contract RedeemManagerV1Tests is Test {
     event RequestedRedeem(address indexed owner, uint256 height, uint256 size, uint32 id);
     event ReportedWithdrawal(uint256 height, uint256 size, uint256 ethAmount, uint32 id);
     event SatisfiedRedeemRequest(
-        uint32 indexed id,
-        uint32 withdrawalEventId,
-        uint256 amountClaimed,
-        uint256 ethAmountClaimed,
-        uint256 amountRemaining,
-        uint256 exceedingEthAmount
+        uint32 indexed redeemRequestId,
+        uint32 indexed withdrawalEventId,
+        uint256 lsEthAmountSatisfied,
+        uint256 ethAmountSatisfied,
+        uint256 lsEthAmountRemaining,
+        uint256 ethAmountExceeding
     );
+
     event ClaimedRedeemRequest(
-        uint32 indexed id, address indexed recipient, uint256 amount, uint256 ethAmount, uint256 remainingAmount
+        uint32 indexed redeemRequestId,
+        address indexed recipient,
+        uint256 ethAmount,
+        uint256 lsEthAmount,
+        uint256 remainingLsEthAmount
     );
 
     function setUp() external {

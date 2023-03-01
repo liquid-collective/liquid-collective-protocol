@@ -152,7 +152,7 @@ contract RedeemManagerV1 is Initializable, IRedeemManagerV1 {
                     revert(add(32, rdata), mload(rdata))
                 }
             }
-            emit ClaimedRedeemRequest(redeemRequestIds[idx], recipient, lsETHAmount, ethAmount, remainingLsETHAmount);
+            emit ClaimedRedeemRequest(redeemRequestIds[idx], recipient, ethAmount, lsETHAmount, remainingLsETHAmount);
 
             unchecked {
                 ++idx;

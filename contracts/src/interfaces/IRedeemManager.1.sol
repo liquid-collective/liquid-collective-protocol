@@ -23,29 +23,33 @@ interface IRedeemManagerV1 {
     event ReportedWithdrawal(uint256 height, uint256 amount, uint256 ethAmount, uint32 id);
 
     /// @notice Emitted when a redeem request has been satisfied and filled (even partially) from a withdrawal event
-    /// @param id The id of the redeem request
+    /// @param redeemRequestId The id of the redeem request
     /// @param withdrawalEventId The id of the withdrawal event used to fill the request
-    /// @param amountClaimed The amount of LsETH filled
-    /// @param ethAmountClaimed The amount of ETH filled
-    /// @param amountRemaining The amount of LsETH remaining
-    /// @param exceedingEthAmount The amount of eth added to the exceeding buffer
+    /// @param lsEthAmountSatisfied The amount of LsETH filled
+    /// @param ethAmountSatisfied The amount of ETH filled
+    /// @param lsEthAmountRemaining The amount of LsETH remaining
+    /// @param ethAmountExceeding The amount of eth added to the exceeding buffer
     event SatisfiedRedeemRequest(
-        uint32 indexed id,
-        uint32 withdrawalEventId,
-        uint256 amountClaimed,
-        uint256 ethAmountClaimed,
-        uint256 amountRemaining,
-        uint256 exceedingEthAmount
+        uint32 indexed redeemRequestId,
+        uint32 indexed withdrawalEventId,
+        uint256 lsEthAmountSatisfied,
+        uint256 ethAmountSatisfied,
+        uint256 lsEthAmountRemaining,
+        uint256 ethAmountExceeding
     );
 
     /// @notice Emitted when a redeem request claim has been processed and matched at least once and funds are sent to the recipient
-    /// @param id The id of the redeem request
+    /// @param redeemRequestId The id of the redeem request
     /// @param recipient The address receiving the redeem request funds
-    /// @param amount The total amount of LsETH used to redeem the eth
     /// @param ethAmount The amount of eth retrieved
-    /// @param remainingAmount The amount of LsETH remaining
+    /// @param lsEthAmount The total amount of LsETH used to redeem the eth
+    /// @param remainingLsEthAmount The amount of LsETH remaining
     event ClaimedRedeemRequest(
-        uint32 indexed id, address indexed recipient, uint256 amount, uint256 ethAmount, uint256 remainingAmount
+        uint32 indexed redeemRequestId,
+        address indexed recipient,
+        uint256 ethAmount,
+        uint256 lsEthAmount,
+        uint256 remainingLsEthAmount
     );
 
     /// @notice Emitted when the River address is set
