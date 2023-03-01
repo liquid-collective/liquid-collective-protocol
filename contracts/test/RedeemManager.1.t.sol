@@ -1072,6 +1072,101 @@ contract RedeemManagerV1Tests is Test {
         assertEq(redeemManager.getBufferedExceedingEth(), totalAmount);
     }
 
+    function applyRate(uint256 amount, uint256 rate) internal pure returns (uint256) {
+        return (amount * rate) / 1e18;
+    }
+
+    function testClaimMultiRate() external {
+        address user = _generateAuthorizedUser(0);
+
+        uint256[] memory redeemRates = new uint256[](5);
+        redeemRates[0] = 1_000_000_000_000_000_000;
+        redeemRates[1] = 1_100_000_000_000_000_000;
+        redeemRates[2] = 1_500_000_000_000_000_000;
+        redeemRates[3] = 2_000_000_000_000_000_000;
+        redeemRates[4] = 4_000_000_000_000_000_000;
+
+        for (uint256 idx = 0; idx < redeemRates.length; ++idx) {
+            uint256 amount = applyRate(100e18, redeemRates[idx]);
+            vm.deal(address(this), amount);
+            river.sudoReportWithdraw{value: amount}(address(redeemManager), 100e18);
+        }
+
+        uint256[] memory rates = new uint256[](15);
+        rates[0] = 1_000_000_000_000_000_000;
+        rates[1] = 1_000_000_000_000_000_000;
+        rates[2] = 1_000_000_000_000_000_000;
+        rates[3] = 1_000_000_000_000_000_000;
+
+        rates[4] = 1_025_000_000_000_000_000;
+        rates[5] = 1_050_000_000_000_000_000;
+        rates[6] = 1_075_000_000_000_000_000;
+
+        rates[7] = 1_200_000_000_000_000_000;
+        rates[8] = 1_300_000_000_000_000_000;
+        rates[9] = 1_400_000_000_000_000_000;
+
+        rates[10] = 1_500_000_000_000_000_000;
+        rates[11] = 1_600_000_000_000_000_000;
+        rates[12] = 1_700_000_000_000_000_000;
+        rates[13] = 1_900_000_000_000_000_000;
+
+        rates[14] = 3_000_000_000_000_000_000;
+
+        for (uint256 idx = 0; idx < rates.length; ++idx) {
+            river.sudoSetRate(rates[idx]);
+            river.sudoDeal(user, 30e18);
+
+            vm.prank(user);
+            river.approve(address(redeemManager), 30e18);
+
+            vm.prank(user);
+            redeemManager.requestRedeem(30e18, user);
+        }
+
+        uint256 exceedingAmount = 0;
+
+        exceedingAmount += applyRate(30e18, redeemRates[0]) - applyRate(30e18, rates[0]);
+        exceedingAmount += applyRate(30e18, redeemRates[0]) - applyRate(30e18, rates[1]);
+        exceedingAmount += applyRate(30e18, redeemRates[0]) - applyRate(30e18, rates[2]);
+        exceedingAmount += applyRate(10e18, redeemRates[0]) - applyRate(10e18, rates[3]);
+
+        exceedingAmount += applyRate(20e18, redeemRates[1]) - applyRate(20e18, rates[3]);
+        exceedingAmount += applyRate(30e18, redeemRates[1]) - applyRate(30e18, rates[4]);
+        exceedingAmount += applyRate(30e18, redeemRates[1]) - applyRate(30e18, rates[5]);
+        exceedingAmount += applyRate(20e18, redeemRates[1]) - applyRate(20e18, rates[6]);
+
+        exceedingAmount += applyRate(10e18, redeemRates[2]) - applyRate(10e18, rates[6]);
+        exceedingAmount += applyRate(30e18, redeemRates[2]) - applyRate(30e18, rates[7]);
+        exceedingAmount += applyRate(30e18, redeemRates[2]) - applyRate(30e18, rates[8]);
+        exceedingAmount += applyRate(30e18, redeemRates[2]) - applyRate(30e18, rates[9]);
+
+        exceedingAmount += applyRate(30e18, redeemRates[3]) - applyRate(30e18, rates[10]);
+        exceedingAmount += applyRate(30e18, redeemRates[3]) - applyRate(30e18, rates[11]);
+        exceedingAmount += applyRate(30e18, redeemRates[3]) - applyRate(30e18, rates[12]);
+        exceedingAmount += applyRate(10e18, redeemRates[3]) - applyRate(10e18, rates[13]);
+
+        exceedingAmount += applyRate(20e18, redeemRates[4]) - applyRate(20e18, rates[13]);
+        exceedingAmount += applyRate(30e18, redeemRates[4]) - applyRate(30e18, rates[14]);
+
+        uint32[] memory ids = new uint32[](15);
+
+        for (uint256 idx = 0; idx < ids.length; ++idx) {
+            ids[idx] = uint32(idx);
+        }
+
+        int64[] memory withdrawalEventIds = redeemManager.resolveRedeemRequests(ids);
+
+        uint32[] memory withdrawalEventIdsU32 = new uint32[](withdrawalEventIds.length);
+        for (uint256 idx = 0; idx < withdrawalEventIds.length; ++idx) {
+            withdrawalEventIdsU32[idx] = uint32(uint64(withdrawalEventIds[idx]));
+        }
+
+        redeemManager.claimRedeemRequests(ids, withdrawalEventIdsU32);
+
+        assertEq(redeemManager.getBufferedExceedingEth(), exceedingAmount);
+    }
+
     function testResolveOutOfBounds() external {
         uint32[] memory redeemRequestIds = new uint32[](1);
         int64[] memory withdrawalEventIds = redeemManager.resolveRedeemRequests(redeemRequestIds);
