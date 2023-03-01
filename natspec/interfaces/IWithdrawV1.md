@@ -1,8 +1,8 @@
-# WithdrawV1
+# IWithdrawV1
 
 *Kiln*
 
-> Withdraw (v1)
+> Withdraw Interface (V1)
 
 This contract is in charge of holding the exit and skimming funds and allow river to pull these funds
 
@@ -80,23 +80,6 @@ Callable by River, sends the specified amount of ETH to River
 
 ## Events
 
-### Initialize
-
-```solidity
-event Initialize(uint256 version, bytes cdata)
-```
-
-Emitted when the contract is properly initialized
-
-
-
-#### Parameters
-
-| Name | Type | Description |
-|---|---|---|
-| version  | uint256 | undefined |
-| cdata  | bytes | undefined |
-
 ### SetRiver
 
 ```solidity
@@ -111,39 +94,11 @@ Emitted when the linked River address is changed
 
 | Name | Type | Description |
 |---|---|---|
-| river  | address | undefined |
+| river  | address | The new River address |
 
 
 
 ## Errors
-
-### InvalidInitialization
-
-```solidity
-error InvalidInitialization(uint256 version, uint256 expectedVersion)
-```
-
-An error occured during the initialization
-
-
-
-#### Parameters
-
-| Name | Type | Description |
-|---|---|---|
-| version | uint256 | The version that was attempting to be initialized |
-| expectedVersion | uint256 | The version that was expected |
-
-### InvalidZeroAddress
-
-```solidity
-error InvalidZeroAddress()
-```
-
-The address is zero
-
-
-
 
 ### PulledAmountTooHigh
 
@@ -161,21 +116,5 @@ Thrown when the requested pulled amount is too high
 |---|---|---|
 | requestedAmount | uint256 | The amount that was requested by River |
 | availableAmount | uint256 | The current balance available |
-
-### Unauthorized
-
-```solidity
-error Unauthorized(address caller)
-```
-
-The operator is unauthorized for the caller
-
-
-
-#### Parameters
-
-| Name | Type | Description |
-|---|---|---|
-| caller | address | Address performing the call |
 
 

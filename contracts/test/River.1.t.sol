@@ -185,6 +185,27 @@ contract RiverV1Tests is Test, BytesGenerator {
         river.setELFeeRecipient(newELFeeRecipient);
     }
 
+    function testSendCLFunds(uint256 amount) public {
+        vm.deal(address(withdraw), amount);
+
+        assertEq(address(river).balance, 0);
+        assertEq(address(withdraw).balance, amount);
+
+        vm.prank(address(withdraw));
+        river.sendCLFunds{value: amount}();
+
+        assertEq(address(river).balance, amount);
+        assertEq(address(withdraw).balance, 0);
+    }
+
+    function testSendCLFundsUnauthorized(uint256 _invalidAddressSalt) public {
+        address invalidAddress = uf._new(_invalidAddressSalt);
+        vm.startPrank(invalidAddress);
+        vm.expectRevert(abi.encodeWithSignature("Unauthorized(address)", invalidAddress));
+        river.sendCLFunds();
+        vm.stopPrank();
+    }
+
     function testSendELFundsUnauthorized(uint256 _invalidAddressSalt) public {
         address invalidAddress = uf._new(_invalidAddressSalt);
         vm.startPrank(invalidAddress);

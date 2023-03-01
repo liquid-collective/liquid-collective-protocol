@@ -144,6 +144,9 @@ interface IRiverV1 is IConsensusLayerDepositManagerV1, IUserDepositManagerV1, IS
     /// @notice Input for execution layer fee earnings
     function sendELFees() external payable;
 
+    /// @notice Input for consensus layer funds, containing both exit and skimming
+    function sendCLFunds() external payable;
+
     /// @notice Input for coverage funds
     function sendCoverageFunds() external payable;
 }

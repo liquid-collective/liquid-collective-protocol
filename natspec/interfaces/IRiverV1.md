@@ -468,6 +468,17 @@ Retrieve the token name
 |---|---|---|
 | _0 | string | The token name |
 
+### sendCLFunds
+
+```solidity
+function sendCLFunds() external payable
+```
+
+Input for consensus layer funds, containing both exit and skimming
+
+
+
+
 ### sendCoverageFunds
 
 ```solidity

@@ -117,7 +117,7 @@ contract ConsensusLayerDepositManagerV1Tests is Test {
         vm.expectEmit(true, true, true, true);
         emit FundedValidatorKey(
             hex"4681ddeb7bad423182704048f3fb9fe82bded37429b0643af12c730b0f0851815a6ef1a563fdcef7c05512b33278218c"
-            );
+        );
         vm.prank(address(0));
         depositManager.depositToConsensusLayer(10);
         assert(address(depositManager).balance == 0);
@@ -130,7 +130,7 @@ contract ConsensusLayerDepositManagerV1Tests is Test {
         vm.expectEmit(true, true, true, true);
         emit FundedValidatorKey(
             hex"4681ddeb7bad423182704048f3fb9fe82bded37429b0643af12c730b0f0851815a6ef1a563fdcef7c05512b33278218c"
-            );
+        );
         vm.prank(address(0));
         depositManager.depositToConsensusLayer(20);
         assert(address(depositManager).balance == 320 ether);

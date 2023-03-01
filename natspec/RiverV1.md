@@ -580,6 +580,17 @@ Proposes a new address as admin
 |---|---|---|
 | _newAdmin | address | New admin address |
 
+### sendCLFunds
+
+```solidity
+function sendCLFunds() external payable
+```
+
+Input for consensus layer funds, containing both exit and skimming
+
+
+
+
 ### sendCoverageFunds
 
 ```solidity
