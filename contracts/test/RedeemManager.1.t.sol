@@ -40,6 +40,10 @@ contract RiverMock {
         return true;
     }
 
+    function balanceOf(address account) external view returns (uint256) {
+        return balances[account];
+    }
+
     function sudoDeal(address account, uint256 amount) external {
         if (amount > balances[account]) {
             _totalSupply += amount - balances[account];
@@ -112,7 +116,7 @@ contract RedeemManagerV1Tests is Test {
         redeemManager.initializeRedeemManagerV1(address(river));
     }
 
-    function _generateAuthorizedUser(uint256 _salt) internal returns (address) {
+    function _generateAllowlistedUser(uint256 _salt) internal returns (address) {
         address user = uf._new(_salt);
 
         address[] memory accounts = new address[](1);
@@ -128,7 +132,7 @@ contract RedeemManagerV1Tests is Test {
     }
 
     function testRequestRedeem(uint256 _salt) external {
-        address user = _generateAuthorizedUser(_salt);
+        address user = _generateAllowlistedUser(_salt);
 
         uint128 amount = uint128(bound(_salt, 1, type(uint128).max));
 
@@ -136,6 +140,8 @@ contract RedeemManagerV1Tests is Test {
 
         vm.prank(user);
         river.approve(address(redeemManager), amount);
+
+        assertEq(river.balanceOf(user), amount);
 
         vm.prank(user);
         vm.expectEmit(true, true, true, true);
@@ -153,8 +159,10 @@ contract RedeemManagerV1Tests is Test {
             assertEq(rr.height, 0);
             assertEq(rr.amount, amount);
             assertEq(rr.owner, user);
+            assertEq(rr.maxRedeemableEth, amount);
         }
 
+        assertEq(river.balanceOf(user), 0);
         assertEq(redeemManager.getRedeemRequestCount(), 1);
     }
 
@@ -174,20 +182,32 @@ contract RedeemManagerV1Tests is Test {
     }
 
     function testRequestRedeemMultiple(uint256 _salt) external {
-        address user = _generateAuthorizedUser(_salt);
+        address user0 = _generateAllowlistedUser(_salt);
+        address user1 = _generateAllowlistedUser(uint256(keccak256(abi.encode(_salt))));
 
-        uint64 amount = uint64(bound(_salt, 1, type(uint64).max));
+        uint64 amount0 = uint64(bound(_salt, 1, type(uint64).max));
+        uint64 amount1 = uint64(bound(uint256(keccak256(abi.encode(_salt))), 1, type(uint64).max));
 
-        river.sudoDeal(user, uint256(amount) * 2);
+        river.sudoDeal(user0, uint256(amount0));
+        river.sudoDeal(user1, uint256(amount1));
 
-        vm.prank(user);
-        river.approve(address(redeemManager), uint256(amount) * 2);
+        vm.prank(user0);
+        river.approve(address(redeemManager), uint256(amount0));
 
-        vm.prank(user);
-        redeemManager.requestRedeem(amount, user);
+        vm.prank(user1);
+        river.approve(address(redeemManager), uint256(amount1));
 
-        vm.prank(user);
-        redeemManager.requestRedeem(amount, user);
+        assertEq(river.balanceOf(user0), amount0);
+        assertEq(river.balanceOf(user1), amount1);
+
+        vm.prank(user0);
+        redeemManager.requestRedeem(amount0, user0);
+
+        vm.prank(user1);
+        redeemManager.requestRedeem(amount1, user1);
+
+        assertEq(river.balanceOf(user0), 0);
+        assertEq(river.balanceOf(user1), 0);
 
         uint32[] memory requests = new uint32[](2);
         requests[0] = 0;
@@ -200,23 +220,23 @@ contract RedeemManagerV1Tests is Test {
             RedeemQueue.RedeemRequest memory rr = redeemManager.getRedeemRequestDetails(0);
 
             assertEq(rr.height, 0);
-            assertEq(rr.amount, amount);
-            assertEq(rr.owner, user);
+            assertEq(rr.amount, amount0);
+            assertEq(rr.owner, user0);
         }
 
         {
             RedeemQueue.RedeemRequest memory rr = redeemManager.getRedeemRequestDetails(1);
 
-            assertEq(rr.height, amount);
-            assertEq(rr.amount, amount);
-            assertEq(rr.owner, user);
+            assertEq(rr.height, amount0);
+            assertEq(rr.amount, amount1);
+            assertEq(rr.owner, user1);
         }
 
         assertEq(redeemManager.getRedeemRequestCount(), 2);
     }
 
     function testRequestRedeemAmountZero(uint256 _salt) external {
-        address user = _generateAuthorizedUser(_salt);
+        address user = _generateAllowlistedUser(_salt);
 
         vm.prank(user);
         vm.expectRevert(abi.encodeWithSignature("InvalidZeroAmount()"));
@@ -226,7 +246,7 @@ contract RedeemManagerV1Tests is Test {
     }
 
     function testRequestRedeemApproveTooLow(uint256 _salt) external {
-        address user = _generateAuthorizedUser(_salt);
+        address user = _generateAllowlistedUser(_salt);
 
         uint64 amount = uint64(bound(_salt, 1, type(uint64).max));
 
@@ -243,7 +263,7 @@ contract RedeemManagerV1Tests is Test {
     }
 
     function testRequestRedeemZeroRecipient(uint256 _salt) external {
-        address user = _generateAuthorizedUser(_salt);
+        address user = _generateAllowlistedUser(_salt);
 
         uint64 amount = uint64(bound(_salt, 1, type(uint64).max));
 
@@ -268,6 +288,7 @@ contract RedeemManagerV1Tests is Test {
         emit ReportedWithdrawal(0, amount, amount, 0);
         river.sudoReportWithdraw{value: amount}(address(redeemManager), amount);
 
+        assertEq(address(redeemManager).balance, amount);
         assertEq(redeemManager.getWithdrawalEventCount(), 1);
 
         {
@@ -295,6 +316,7 @@ contract RedeemManagerV1Tests is Test {
         river.sudoReportWithdraw{value: amount}(address(redeemManager), amount);
 
         assertEq(redeemManager.getWithdrawalEventCount(), 2);
+        assertEq(address(redeemManager).balance, uint256(amount) * 2);
 
         {
             WithdrawalStack.WithdrawalEvent memory we = redeemManager.getWithdrawalEventDetails(0);
@@ -313,10 +335,10 @@ contract RedeemManagerV1Tests is Test {
         }
     }
 
-    function testClaimRewards(uint256 _salt) external {
+    function testClaimRedeemRequest(uint256 _salt) external {
         uint128 amount = uint128(bound(_salt, 1, type(uint128).max));
 
-        address user = _generateAuthorizedUser(_salt);
+        address user = _generateAllowlistedUser(_salt);
 
         river.sudoDeal(user, uint256(amount));
 
@@ -357,14 +379,25 @@ contract RedeemManagerV1Tests is Test {
         assertEq(address(redeemManager).balance, amount);
         assertEq(user.balance, 0);
 
+        int64[] memory resolvedRedeemRequests = redeemManager.resolveRedeemRequests(redeemRequestIds);
+
+        assertEq(resolvedRedeemRequests.length, 1);
+        assertEq(resolvedRedeemRequests[0], 0);
+
         vm.expectEmit(true, true, true, true);
         emit SatisfiedRedeemRequest(0, 0, amount, amount, 0, 0);
         vm.expectEmit(true, true, true, true);
         emit ClaimedRedeemRequest(0, user, amount, amount, 0);
         redeemManager.claimRedeemRequests(redeemRequestIds, withdrawEventIds, true);
 
+        assertEq(redeemManager.getBufferedExceedingEth(), 0);
         assertEq(address(redeemManager).balance, 0);
         assertEq(user.balance, amount);
+
+        resolvedRedeemRequests = redeemManager.resolveRedeemRequests(redeemRequestIds);
+
+        assertEq(resolvedRedeemRequests.length, 1);
+        assertEq(resolvedRedeemRequests[0], -3);
 
         {
             RedeemQueue.RedeemRequest memory rr = redeemManager.getRedeemRequestDetails(0);
@@ -383,10 +416,10 @@ contract RedeemManagerV1Tests is Test {
         }
     }
 
-    function testClaimRewardsWithImplicitSkipFlag(uint256 _salt) external {
+    function testClaimRedeemRequestWithImplicitSkipFlag(uint256 _salt) external {
         uint128 amount = uint128(bound(_salt, 1, type(uint128).max));
 
-        address user = _generateAuthorizedUser(_salt);
+        address user = _generateAllowlistedUser(_salt);
 
         river.sudoDeal(user, uint256(amount));
 
@@ -424,6 +457,11 @@ contract RedeemManagerV1Tests is Test {
         redeemRequestIds[0] = 0;
         withdrawEventIds[0] = 0;
 
+        int64[] memory resolvedRedeemRequests = redeemManager.resolveRedeemRequests(redeemRequestIds);
+
+        assertEq(resolvedRedeemRequests.length, 1);
+        assertEq(resolvedRedeemRequests[0], 0);
+
         assertEq(address(redeemManager).balance, amount);
         assertEq(user.balance, 0);
 
@@ -435,6 +473,11 @@ contract RedeemManagerV1Tests is Test {
 
         assertEq(address(redeemManager).balance, 0);
         assertEq(user.balance, amount);
+
+        resolvedRedeemRequests = redeemManager.resolveRedeemRequests(redeemRequestIds);
+
+        assertEq(resolvedRedeemRequests.length, 1);
+        assertEq(resolvedRedeemRequests[0], -3);
 
         {
             RedeemQueue.RedeemRequest memory rr = redeemManager.getRedeemRequestDetails(0);
@@ -453,10 +496,10 @@ contract RedeemManagerV1Tests is Test {
         }
     }
 
-    function testClaimRewardsTwiceWithSkipFlag(uint256 _salt) external {
+    function testClaimRedeemRequestTwiceWithSkipFlag(uint256 _salt) external {
         uint128 amount = uint128(bound(_salt, 1, type(uint128).max));
 
-        address user = _generateAuthorizedUser(_salt);
+        address user = _generateAllowlistedUser(_salt);
 
         river.sudoDeal(user, uint256(amount));
 
@@ -496,6 +539,12 @@ contract RedeemManagerV1Tests is Test {
         withdrawEventIds[0] = 0;
         withdrawEventIds[1] = 0;
 
+        int64[] memory resolvedRedeemRequests = redeemManager.resolveRedeemRequests(redeemRequestIds);
+
+        assertEq(resolvedRedeemRequests.length, 2);
+        assertEq(resolvedRedeemRequests[0], 0);
+        assertEq(resolvedRedeemRequests[0], 0);
+
         assertEq(address(redeemManager).balance, amount);
         assertEq(user.balance, 0);
 
@@ -505,11 +554,19 @@ contract RedeemManagerV1Tests is Test {
         emit ClaimedRedeemRequest(0, user, amount, amount, 0);
         uint8[] memory claimStatus = redeemManager.claimRedeemRequests(redeemRequestIds, withdrawEventIds, true);
 
+        redeemManager.claimRedeemRequests(redeemRequestIds, withdrawEventIds, true);
+
         assertEq(address(redeemManager).balance, 0);
         assertEq(user.balance, amount);
         assertEq(claimStatus.length, 2);
         assertEq(claimStatus[0], 0);
         assertEq(claimStatus[1], 2);
+
+        resolvedRedeemRequests = redeemManager.resolveRedeemRequests(redeemRequestIds);
+
+        assertEq(resolvedRedeemRequests.length, 2);
+        assertEq(resolvedRedeemRequests[0], -3);
+        assertEq(resolvedRedeemRequests[0], -3);
 
         {
             RedeemQueue.RedeemRequest memory rr = redeemManager.getRedeemRequestDetails(0);
@@ -528,10 +585,10 @@ contract RedeemManagerV1Tests is Test {
         }
     }
 
-    function testClaimRewardsTwiceWithoutSkipFlag(uint256 _salt) external {
+    function testClaimRedeemRequestTwiceWithoutSkipFlag(uint256 _salt) external {
         uint128 amount = uint128(bound(_salt, 1, type(uint128).max));
 
-        address user = _generateAuthorizedUser(_salt);
+        address user = _generateAllowlistedUser(_salt);
 
         river.sudoDeal(user, uint256(amount));
 
@@ -562,10 +619,10 @@ contract RedeemManagerV1Tests is Test {
         redeemManager.claimRedeemRequests(redeemRequestIds, withdrawEventIds, false);
     }
 
-    function testClaimRewardsRequestInside(uint256 _salt) external {
+    function testClaimRedeemRequestContainedInsideWithdrawalEvent(uint256 _salt) external {
         uint128 amount = uint128(bound(_salt, 2, type(uint128).max));
 
-        address user = _generateAuthorizedUser(_salt);
+        address user = _generateAllowlistedUser(_salt);
 
         river.sudoDeal(user, uint256(amount) / 2);
 
@@ -628,10 +685,10 @@ contract RedeemManagerV1Tests is Test {
         }
     }
 
-    function testClaimRewardsRequestTwiceBigger(uint256 _salt) external {
+    function testClaimRedeemRequestTwiceBigger(uint256 _salt) external {
         uint128 amount = uint128(bound(_salt, 2, type(uint128).max));
 
-        address user = _generateAuthorizedUser(_salt);
+        address user = _generateAllowlistedUser(_salt);
 
         river.sudoDeal(user, uint256(amount));
 
@@ -669,6 +726,11 @@ contract RedeemManagerV1Tests is Test {
         redeemRequestIds[0] = 0;
         withdrawEventIds[0] = 0;
 
+        int64[] memory resolvedRedeemRequests = redeemManager.resolveRedeemRequests(redeemRequestIds);
+
+        assertEq(resolvedRedeemRequests.length, 1);
+        assertEq(resolvedRedeemRequests[0], 0);
+
         assertEq(address(redeemManager).balance, amount / 2);
         assertEq(user.balance, 0);
 
@@ -682,6 +744,11 @@ contract RedeemManagerV1Tests is Test {
         assertEq(user.balance, amount / 2);
         assertEq(claimStatuses.length, 1);
         assertEq(claimStatuses[0], 1);
+
+        resolvedRedeemRequests = redeemManager.resolveRedeemRequests(redeemRequestIds);
+
+        assertEq(resolvedRedeemRequests.length, 1);
+        assertEq(resolvedRedeemRequests[0], 0);
 
         {
             RedeemQueue.RedeemRequest memory rr = redeemManager.getRedeemRequestDetails(0);
@@ -700,10 +767,10 @@ contract RedeemManagerV1Tests is Test {
         }
     }
 
-    function testClaimRewardsRequestOnTwoEvents(uint256 _salt) external {
+    function testClaimRedeemRequestOnTwoEvents(uint256 _salt) external {
         uint128 amount = uint128(bound(_salt, 2, type(uint128).max));
 
-        address user = _generateAuthorizedUser(_salt);
+        address user = _generateAllowlistedUser(_salt);
 
         river.sudoDeal(user, uint256(amount));
 
@@ -752,6 +819,11 @@ contract RedeemManagerV1Tests is Test {
         withdrawEventIds[0] = 0;
         redeemRequestIds[0] = 0;
 
+        int64[] memory resolvedRedeemRequests = redeemManager.resolveRedeemRequests(redeemRequestIds);
+
+        assertEq(resolvedRedeemRequests.length, 1);
+        assertEq(resolvedRedeemRequests[0], 0);
+
         assertEq(address(redeemManager).balance, amount);
         assertEq(user.balance, 0);
 
@@ -765,6 +837,11 @@ contract RedeemManagerV1Tests is Test {
 
         assertEq(address(redeemManager).balance, 0);
         assertEq(user.balance, amount);
+
+        resolvedRedeemRequests = redeemManager.resolveRedeemRequests(redeemRequestIds);
+
+        assertEq(resolvedRedeemRequests.length, 1);
+        assertEq(resolvedRedeemRequests[0], -3);
 
         {
             RedeemQueue.RedeemRequest memory rr = redeemManager.getRedeemRequestDetails(0);
@@ -791,10 +868,10 @@ contract RedeemManagerV1Tests is Test {
         }
     }
 
-    function testClaimRewardsTwoRequestsOnOneEvent(uint256 _salt) external {
+    function testClaimRedeemRequestTwoRequestsOnOneEvent(uint256 _salt) external {
         uint256 amount = uint128(bound(_salt, 2, type(uint120).max));
 
-        address user = _generateAuthorizedUser(_salt);
+        address user = _generateAllowlistedUser(_salt);
         address userB;
         unchecked {
             userB = uf._new(_salt + 1);
@@ -893,10 +970,10 @@ contract RedeemManagerV1Tests is Test {
         }
     }
 
-    function testClaimRewardsIncompatibleArrayLengths(uint256 _salt) external {
+    function testClaimRedeemRequestIncompatibleArrayLengths(uint256 _salt) external {
         uint128 amount = uint128(bound(_salt, 1, type(uint128).max));
 
-        address user = _generateAuthorizedUser(_salt);
+        address user = _generateAllowlistedUser(_salt);
 
         river.sudoDeal(user, uint256(amount));
 
@@ -918,7 +995,7 @@ contract RedeemManagerV1Tests is Test {
         redeemManager.claimRedeemRequests(redeemRequestIds, withdrawEventIds, true);
     }
 
-    function testClaimRewardsRequestOutOfBounds(uint256 _salt) external {
+    function testClaimRedeemRequestOutOfBounds(uint256 _salt) external {
         uint128 amount = uint128(bound(_salt, 1, type(uint128).max));
 
         vm.deal(address(this), amount);
@@ -934,10 +1011,10 @@ contract RedeemManagerV1Tests is Test {
         redeemManager.claimRedeemRequests(redeemRequestIds, withdrawEventIds, true);
     }
 
-    function testClaimRewardsWithdrawalEventOutOfBounds(uint256 _salt) external {
+    function testClaimRedeemRequestWithdrawalEventOutOfBounds(uint256 _salt) external {
         uint128 amount = uint128(bound(_salt, 1, type(uint128).max));
 
-        address user = _generateAuthorizedUser(_salt);
+        address user = _generateAllowlistedUser(_salt);
 
         river.sudoDeal(user, uint256(amount));
 
@@ -957,10 +1034,10 @@ contract RedeemManagerV1Tests is Test {
         redeemManager.claimRedeemRequests(redeemRequestIds, withdrawEventIds, true);
     }
 
-    function testClaimRewardsRequestNotMatching(uint256 _salt) external {
+    function testClaimRedeemRequestNotMatching(uint256 _salt) external {
         uint128 amount = uint128(bound(_salt, 1, type(uint120).max));
 
-        address user = _generateAuthorizedUser(_salt);
+        address user = _generateAllowlistedUser(_salt);
 
         river.sudoDeal(user, uint256(amount) * 2);
 
@@ -991,7 +1068,7 @@ contract RedeemManagerV1Tests is Test {
     }
 
     function testFillingBothQueues(uint256 _salt) external {
-        address user = _generateAuthorizedUser(_salt);
+        address user = _generateAllowlistedUser(_salt);
         river.sudoDeal(address(this), 1e18);
         _salt = rollNext(_salt);
         uint256 totalAmount = bound(_salt, 1, type(uint64).max);
@@ -1075,7 +1152,7 @@ contract RedeemManagerV1Tests is Test {
     }
 
     function testClaimMultiRate() external {
-        address user = _generateAuthorizedUser(0);
+        address user = _generateAllowlistedUser(0);
 
         uint256[] memory redeemRates = new uint256[](5);
         redeemRates[0] = 1_000_000_000_000_000_000;
@@ -1088,6 +1165,13 @@ contract RedeemManagerV1Tests is Test {
             uint256 amount = applyRate(100e18, redeemRates[idx]);
             vm.deal(address(this), amount);
             river.sudoReportWithdraw{value: amount}(address(redeemManager), 100e18);
+
+            WithdrawalStack.WithdrawalEvent memory withdrawalEvent =
+                redeemManager.getWithdrawalEventDetails(uint32(idx));
+
+            assertEq(withdrawalEvent.height, idx * 100e18);
+            assertEq(withdrawalEvent.amount, 100e18);
+            assertEq(withdrawalEvent.withdrawnEth, applyRate(100e18, redeemRates[idx]));
         }
 
         uint256[] memory rates = new uint256[](15);
@@ -1120,6 +1204,13 @@ contract RedeemManagerV1Tests is Test {
 
             vm.prank(user);
             redeemManager.requestRedeem(30e18, user);
+
+            RedeemQueue.RedeemRequest memory redeemRequest = redeemManager.getRedeemRequestDetails(uint32(idx));
+
+            assertEq(redeemRequest.height, idx * 30e18);
+            assertEq(redeemRequest.amount, 30e18);
+            assertEq(redeemRequest.owner, user);
+            assertEq(redeemRequest.maxRedeemableEth, applyRate(30e18, rates[idx]));
         }
 
         uint256 exceedingAmount = 0;
@@ -1174,7 +1265,7 @@ contract RedeemManagerV1Tests is Test {
 
     function testResolveUnsatisfied(uint256 _salt) external {
         uint128 amount = uint128(bound(_salt, 1, type(uint120).max));
-        address user = _generateAuthorizedUser(_salt);
+        address user = _generateAllowlistedUser(_salt);
 
         river.sudoDeal(user, uint256(amount) * 2);
 
