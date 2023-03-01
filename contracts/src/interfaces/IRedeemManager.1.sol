@@ -36,6 +36,12 @@ interface IRedeemManagerV1 {
         uint256 amountRemaining
     );
 
+    /// @notice Emitted when the exceeding eth buffer has increased
+    /// @param withdrawalEventId The withrawal event id where the eth was taken to increase the buffer
+    /// @param redeemRequestId The redeem request id that was satisfied at a lower rate than the withdrawal event rate
+    /// @param amount The amount of eth added to the exceeding buffer
+    event IncreasedExceedingEthBuffer(uint32 indexed withdrawalEventId, uint32 indexed redeemRequestId, uint256 amount);
+
     /// @notice Emitted when a redeem request claim has been processed and matched at least once and funds are sent to the recipient
     /// @param id The id of the redeem request
     /// @param recipient The address receiving the redeem request funds

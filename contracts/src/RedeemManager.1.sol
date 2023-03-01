@@ -354,7 +354,9 @@ contract RedeemManagerV1 is Initializable, IRedeemManagerV1 {
                     (matchingAmount * redeemRequest.maxRedeemableEth) / currentRequestAmount;
 
                 if (maxRedeemableEthAmount < ethAmount) {
-                    BufferedExceedingEth.set(BufferedExceedingEth.get() + (ethAmount - maxRedeemableEthAmount));
+                    uint256 exceedingBufferIncrease = ethAmount - maxRedeemableEthAmount;
+                    BufferedExceedingEth.set(BufferedExceedingEth.get() + exceedingBufferIncrease);
+                    emit IncreasedExceedingEthBuffer(withdrawalEventId, redeemRequestId, exceedingBufferIncrease);
                     ethAmount = maxRedeemableEthAmount;
                 }
             }
