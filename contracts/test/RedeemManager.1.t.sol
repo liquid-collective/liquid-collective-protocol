@@ -566,18 +566,15 @@ contract RedeemManagerV1Tests is Test {
             assertEq(we.withdrawnEth, amount);
         }
 
-        uint32[] memory redeemRequestIds = new uint32[](2);
-        uint32[] memory withdrawEventIds = new uint32[](2);
+        uint32[] memory redeemRequestIds = new uint32[](1);
+        uint32[] memory withdrawEventIds = new uint32[](1);
 
         redeemRequestIds[0] = 0;
-        redeemRequestIds[1] = 0;
         withdrawEventIds[0] = 0;
-        withdrawEventIds[1] = 0;
 
         int64[] memory resolvedRedeemRequests = redeemManager.resolveRedeemRequests(redeemRequestIds);
 
-        assertEq(resolvedRedeemRequests.length, 2);
-        assertEq(resolvedRedeemRequests[0], 0);
+        assertEq(resolvedRedeemRequests.length, 1);
         assertEq(resolvedRedeemRequests[0], 0);
 
         assertEq(address(redeemManager).balance, amount);
@@ -589,18 +586,25 @@ contract RedeemManagerV1Tests is Test {
         emit ClaimedRedeemRequest(0, user, amount, amount, 0);
         uint8[] memory claimStatus = redeemManager.claimRedeemRequests(redeemRequestIds, withdrawEventIds, true);
 
-        redeemManager.claimRedeemRequests(redeemRequestIds, withdrawEventIds, true);
-
         assertEq(address(redeemManager).balance, 0);
         assertEq(user.balance, amount);
-        assertEq(claimStatus.length, 2);
+
+        assertEq(claimStatus.length, 1);
         assertEq(claimStatus[0], 0);
-        assertEq(claimStatus[1], 2);
 
         resolvedRedeemRequests = redeemManager.resolveRedeemRequests(redeemRequestIds);
 
-        assertEq(resolvedRedeemRequests.length, 2);
+        assertEq(resolvedRedeemRequests.length, 1);
         assertEq(resolvedRedeemRequests[0], -3);
+
+        claimStatus = redeemManager.claimRedeemRequests(redeemRequestIds, withdrawEventIds, true);
+
+        assertEq(claimStatus.length, 1);
+        assertEq(claimStatus[0], 2);
+
+        resolvedRedeemRequests = redeemManager.resolveRedeemRequests(redeemRequestIds);
+
+        assertEq(resolvedRedeemRequests.length, 1);
         assertEq(resolvedRedeemRequests[0], -3);
 
         {
