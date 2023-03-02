@@ -44,6 +44,9 @@ contract RiverMock {
         return balances[account];
     }
 
+    /// @notice Sets the balance of the given account and updates totalSupply
+    /// @param account The account to set the balance of
+    /// @param amount Amount to set as balance
     function sudoDeal(address account, uint256 amount) external {
         if (amount > balances[account]) {
             _totalSupply += amount - balances[account];
