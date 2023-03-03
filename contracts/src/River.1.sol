@@ -371,4 +371,17 @@ contract RiverV1 is
         redeemManager = _redeemManager;
         emit SetRedeemManager(redeemManager);
     }
+
+    event PulledRedeemManagerExceedingEth(uint256 amount);
+
+    function _pullRedeemManagerExceedingEth(uint256 max) internal override returns (uint256) {
+        uint256 currentBalance = address(this).balance;
+        IRedeemManagerV1(redeemManager).pullExceedingEth(max);
+        uint256 collectedExceedingEth = address(this).balance - currentBalance;
+        if (collectedExceedingEth > 0) {
+            BalanceToDeposit.set(BalanceToDeposit.get() + collectedExceedingEth);
+            emit PulledRedeemManagerExceedingEth(collectedExceedingEth);
+        }
+        return collectedExceedingEth;
+    }
 }

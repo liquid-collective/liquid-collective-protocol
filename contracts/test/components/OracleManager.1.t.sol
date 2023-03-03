@@ -68,6 +68,10 @@ contract OracleManagerV1ExposeInitializer is OracleManagerV1 {
     }
 
     function _pullCLFunds(uint256 skimmedEthAmount, uint256 exitedEthAmount) internal override {}
+
+    function _pullRedeemManagerExceedingEth(uint256 max) internal override returns (uint256) {
+        return 0;
+    }
 }
 
 contract OracleManagerV1Tests is Test {

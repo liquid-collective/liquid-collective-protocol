@@ -149,4 +149,7 @@ interface IRiverV1 is IConsensusLayerDepositManagerV1, IUserDepositManagerV1, IS
 
     /// @notice Input for coverage funds
     function sendCoverageFunds() external payable;
+
+    // rework beyond this point
+    function sendRedeemManagerExceedingFunds() external payable;
 }

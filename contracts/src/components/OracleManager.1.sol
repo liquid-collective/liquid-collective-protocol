@@ -2,6 +2,7 @@
 pragma solidity 0.8.10;
 
 import "../interfaces/components/IOracleManager.1.sol";
+import "../interfaces/IRedeemManager.1.sol";
 
 import "../state/river/OracleAddress.sol";
 import "../state/river/LastOracleRoundId.sol";
@@ -154,6 +155,8 @@ abstract contract OracleManagerV1 is IOracleManagerV1 {
     // we also increase the redeem buffer by exited eth amount
     function _pullCLFunds(uint256 skimmedEthAmount, uint256 exitedEthAmount) internal virtual;
 
+    function _pullRedeemManagerExceedingEth(uint256 max) internal virtual returns (uint256);
+
     function _getRedeemManager() internal view virtual returns (address);
 
     function initOracleManagerV1_1(
@@ -303,10 +306,9 @@ abstract contract OracleManagerV1 is IOracleManagerV1 {
 
         // if we have available amount to upper bound after the execution layer fees are pulled
         if (vars.availableAmountToUpperBound > 0) {
-            // address redeemManager = _getRedeemManager();
-
             // we pull the funds from the exceeding eth buffer of the redeem manager
-            vars.pulledRedeemManagerExceedingEthBuffer = 0; //rm.pull(vars.availableAmountToUpperBound) TODO
+            vars.pulledRedeemManagerExceedingEthBuffer =
+                _pullRedeemManagerExceedingEth(vars.availableAmountToUpperBound);
             // we update the rewards
             vars.rewards += vars.pulledRedeemManagerExceedingEthBuffer;
             // we update the available amount accordingly

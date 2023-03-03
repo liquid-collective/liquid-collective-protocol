@@ -5,6 +5,7 @@ import "./interfaces/IAllowlist.1.sol";
 import "./interfaces/IRiver.1.sol";
 import "./interfaces/IRedeemManager.1.sol";
 import "./libraries/LibAllowlistMasks.sol";
+import "./libraries/LibUint256.sol";
 import "./Initializable.sol";
 
 import "./state/shared/RiverAddress.sol";
@@ -141,6 +142,16 @@ contract RedeemManagerV1 is Initializable, IRedeemManagerV1 {
         );
 
         emit ReportedWithdrawal(height, lsETHWithdrawable, msgValue, withdrawalEventId);
+    }
+
+    event SentExceedingEth(uint256 amount);
+
+    /// @inheritdoc IRedeemManagerV1
+    function pullExceedingEth(uint256 max) external onlyRiver {
+        uint256 amountToSend = LibUint256.min(BufferedExceedingEth.get(), max);
+        _river().sendRedeemManagerExceedingFunds{value: amountToSend}();
+        BufferedExceedingEth.set(BufferedExceedingEth.get() - amountToSend);
+        emit SentExceedingEth(amountToSend);
     }
 
     /// @notice Internal utility to load and cast the River address
