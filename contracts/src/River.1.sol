@@ -335,6 +335,7 @@ contract RiverV1 is
     // rework beyond this point
 
     uint256 balanceToRedeem;
+    address redeemManager;
 
     function _getTotalUnderlyingBalance() internal view override returns (uint256) {
         return _assetBalance();
@@ -352,5 +353,18 @@ contract RiverV1 is
         }
         BalanceToDeposit.set(BalanceToDeposit.get() + skimmedEthAmount);
         balanceToRedeem += exitedEthAmount;
+    }
+
+    function sendRedeemManagerExceedingFunds() external payable {
+        if (msg.sender != redeemManager) {
+            revert LibErrors.Unauthorized(msg.sender);
+        }
+    }
+
+    event SetRedeemManager(address redeemManager);
+
+    function initRiverV1_1(address _redeemManager) external init(1) {
+        redeemManager = _redeemManager;
+        emit SetRedeemManager(redeemManager);
     }
 }
