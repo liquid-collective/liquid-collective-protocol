@@ -97,7 +97,7 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
 
     /// @inheritdoc IOperatorsRegistryV1
     function getOperatorStoppedValidatorCount(uint256 _idx) external view returns (uint32) {
-        return _getStoppedCount(_idx);
+        return _getStoppedValidatorsCount(_idx);
     }
 
     /// @inheritdoc IOperatorsRegistryV1
@@ -115,7 +115,7 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
     }
 
     /// @inheritdoc IOperatorsRegistryV1
-    function getStoppedValidatorCounts() external view returns (uint32[] memory) {
+    function getStoppedValidatorCountPerOperator() external view returns (uint32[] memory) {
         return StoppedValidators.get();
     }
 
@@ -135,7 +135,7 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
     }
 
     /// @inheritdoc IOperatorsRegistryV1
-    function setStoppedValidatorCounts(uint32[] calldata stoppedValidatorCounts) external onlyRiver {
+    function reportStoppedValidatorCounts(uint32[] calldata stoppedValidatorCounts) external onlyRiver {
         _setStoppedValidatorCounts(stoppedValidatorCounts);
     }
 
@@ -367,7 +367,7 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
             revert InvalidStoppedValidatorCountsSum();
         }
         StoppedValidators.setRaw(stoppedValidatorCounts);
-        emit SetStoppedValidatorCounts(stoppedValidatorCounts);
+        emit UpdatedStoppedValidators(stoppedValidatorCounts);
     }
 
     /// @notice Internal utility to concatenate bytes arrays together
@@ -405,7 +405,7 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
     /// @notice Internal utility to retrieve the actual stopped validator count of an operator from the reported array
     /// @param operatorIndex The operator index
     /// @return The count of stopped validators
-    function _getStoppedCount(uint256 operatorIndex) internal view returns (uint32) {
+    function _getStoppedValidatorsCount(uint256 operatorIndex) internal view returns (uint32) {
         uint32[] storage stoppedValidatorCounts = StoppedValidators.get();
         if (operatorIndex + 1 >= stoppedValidatorCounts.length) {
             return 0;
@@ -416,12 +416,12 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
     /// @notice Internal utility to get the count of active validators during the deposit selection process
     /// @param _operator The Operator structure in memory
     /// @return The count of active validators for the operator
-    function _getActiveKeyCountForDeposits(OperatorsV2.CachedOperator memory _operator)
+    function _getActiveValidatorCountForDeposits(OperatorsV2.CachedOperator memory _operator)
         internal
         view
         returns (uint256)
     {
-        return (_operator.funded + _operator.picked) - _getStoppedCount(_operator.index);
+        return (_operator.funded + _operator.picked) - _getStoppedValidatorsCount(_operator.index);
     }
 
     /// @notice Internal utility to retrieve _count or lower fundable keys
@@ -477,8 +477,8 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
             // we start from the next operator and we try to find one that has fundable keys but a lower (funded + picked) - stopped value
             for (uint256 idx = selectedOperatorIndex + 1; idx < operators.length;) {
                 if (
-                    _getActiveKeyCountForDeposits(operators[idx])
-                        < _getActiveKeyCountForDeposits(operators[selectedOperatorIndex])
+                    _getActiveValidatorCountForDeposits(operators[idx])
+                        < _getActiveValidatorCountForDeposits(operators[selectedOperatorIndex])
                         && _hasFundableKeys(operators[idx])
                 ) {
                     selectedOperatorIndex = idx;
@@ -523,7 +523,7 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
     /// @notice Internal utility to get the count of active validators during the exit selection process
     /// @param _operator The Operator structure in memory
     /// @return The count of active validators for the operator
-    function _getActiveKeyCountForExitRequests(OperatorsV2.CachedOperator memory _operator)
+    function _getActiveValidatorCountForExitRequests(OperatorsV2.CachedOperator memory _operator)
         internal
         pure
         returns (uint32)
@@ -548,7 +548,7 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
             uint32 siblings = 0;
 
             for (uint256 idx = 0; idx < operatorsLength;) {
-                uint32 activeCount = _getActiveKeyCountForExitRequests(operators[idx]);
+                uint32 activeCount = _getActiveValidatorCountForExitRequests(operators[idx]);
 
                 if (activeCount == highestActiveCount) {
                     ++siblings;
@@ -577,7 +577,7 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
             // We lookup the operators again to assign the exit requests
             uint256 rest = optimalTotalDispatchCount % siblings;
             for (uint256 idx = 0; idx < operatorsLength;) {
-                if (_getActiveKeyCountForExitRequests(operators[idx]) == highestActiveCount) {
+                if (_getActiveValidatorCountForExitRequests(operators[idx]) == highestActiveCount) {
                     operators[idx].picked += (optimalTotalDispatchCount / siblings) + (rest > 0 ? 1 : 0);
                     if (rest > 0) {
                         --rest;

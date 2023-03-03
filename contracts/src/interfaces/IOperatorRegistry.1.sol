@@ -81,7 +81,7 @@ interface IOperatorsRegistryV1 {
     /// @notice A validator is considered stopped if exiting, exited or slashed
     /// @notice This event is emitted when the oracle reports new stopped validators counts
     /// @param stoppedValidatorCounts The new stopped validator counts
-    event SetStoppedValidatorCounts(uint32[] stoppedValidatorCounts);
+    event UpdatedStoppedValidators(uint32[] stoppedValidatorCounts);
 
     /// @notice The requested exit count has been updated
     /// @param index The operator index
@@ -174,7 +174,7 @@ interface IOperatorsRegistryV1 {
 
     /// @notice Retrieve the raw stopped validators array from storage
     /// @return The stopped validator array
-    function getStoppedValidatorCounts() external view returns (uint32[] memory);
+    function getStoppedValidatorCountPerOperator() external view returns (uint32[] memory);
 
     /// @notice Get the details of a validator
     /// @param _operatorIndex The index of the operator
@@ -192,8 +192,9 @@ interface IOperatorsRegistryV1 {
     function listActiveOperators() external view returns (OperatorsV2.Operator[] memory);
 
     /// @notice Allows river to override the stopped validators array
+    /// @notice This actions happens during the Oracle report processing
     /// @param stoppedValidatorCounts The new stopped validators array
-    function setStoppedValidatorCounts(uint32[] calldata stoppedValidatorCounts) external;
+    function reportStoppedValidatorCounts(uint32[] calldata stoppedValidatorCounts) external;
 
     /// @notice Adds an operator to the registry
     /// @dev Only callable by the administrator

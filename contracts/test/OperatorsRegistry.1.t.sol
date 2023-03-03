@@ -62,8 +62,7 @@ contract OperatorsRegistryV1Tests is Test, BytesGenerator {
 
     event SetOperatorLimit(uint256 indexed index, uint256 newLimit);
     event AddedValidatorKeys(uint256 indexed index, uint256 amount);
-
-    event SetStoppedValidatorCounts(uint32[] stoppedValidatorCounts);
+    event UpdatedStoppedValidators(uint32[] stoppedValidatorCounts);
 
     function setUp() public {
         admin = makeAddr("admin");
@@ -1145,7 +1144,7 @@ contract OperatorsRegistryV1Tests is Test, BytesGenerator {
         assertEq(operatorsRegistry.getTotalStoppedValidatorCount(), 0);
     }
 
-    function testSetStoppedValidatorCounts(uint32 totalCount, uint8 len) public {
+    function testReportStoppedValidatorCounts(uint32 totalCount, uint8 len) public {
         vm.assume(len > 0 && len < type(uint8).max);
         totalCount = uint32(bound(totalCount, len, type(uint32).max));
 
@@ -1160,8 +1159,8 @@ contract OperatorsRegistryV1Tests is Test, BytesGenerator {
 
         vm.prank(river);
         vm.expectEmit(true, true, true, true);
-        emit SetStoppedValidatorCounts(stoppedValidatorCounts);
-        operatorsRegistry.setStoppedValidatorCounts(stoppedValidatorCounts);
+        emit UpdatedStoppedValidators(stoppedValidatorCounts);
+        operatorsRegistry.reportStoppedValidatorCounts(stoppedValidatorCounts);
 
         assertEq(operatorsRegistry.getTotalStoppedValidatorCount(), totalCount);
 
@@ -1170,21 +1169,40 @@ contract OperatorsRegistryV1Tests is Test, BytesGenerator {
         }
     }
 
-    function testSetStoppedValidatorCountsEmptyArray() public {
+    function testReportStoppedValidatorCountsUnauthorized(uint256 _salt, uint32 totalCount, uint8 len) public {
+        address random = uf._new(_salt);
+        vm.assume(len > 0 && len < type(uint8).max);
+        totalCount = uint32(bound(totalCount, len, type(uint32).max));
+
+        uint32[] memory stoppedValidatorCounts = new uint32[](len + 1);
+        stoppedValidatorCounts[0] = totalCount;
+
+        for (uint256 idx = 1; idx < len + 1; ++idx) {
+            vm.prank(admin);
+            operatorsRegistry.addOperator(string(abi.encodePacked(idx)), address(123));
+            stoppedValidatorCounts[idx] = (totalCount / len) + (idx - 1 < totalCount % len ? 1 : 0);
+        }
+
+        vm.prank(random);
+        vm.expectRevert(abi.encodeWithSignature("Unauthorized(address)", random));
+        operatorsRegistry.reportStoppedValidatorCounts(stoppedValidatorCounts);
+    }
+
+    function testReportStoppedValidatorCountsEmptyArray() public {
         uint32[] memory stoppedValidators = new uint32[](0);
         vm.prank(river);
         vm.expectRevert(abi.encodeWithSignature("InvalidEmptyStoppedValidatorCountsArray()"));
-        operatorsRegistry.setStoppedValidatorCounts(stoppedValidators);
+        operatorsRegistry.reportStoppedValidatorCounts(stoppedValidators);
     }
 
-    function testSetStoppedValidatorCountsMoreElementsThanOperators() public {
+    function testReportStoppedValidatorCountsMoreElementsThanOperators() public {
         uint32[] memory stoppedValidators = new uint32[](2);
         vm.prank(river);
         vm.expectRevert(abi.encodeWithSignature("StoppedValidatorCountsTooHigh()"));
-        operatorsRegistry.setStoppedValidatorCounts(stoppedValidators);
+        operatorsRegistry.reportStoppedValidatorCounts(stoppedValidators);
     }
 
-    function testSetStoppedValidatorCountsInvalidSum(uint32 totalCount, uint8 len) public {
+    function testReportStoppedValidatorCountsInvalidSum(uint32 totalCount, uint8 len) public {
         vm.assume(len > 0 && len < type(uint8).max);
         totalCount = uint32(bound(totalCount, len, type(uint32).max));
 
@@ -1201,7 +1219,7 @@ contract OperatorsRegistryV1Tests is Test, BytesGenerator {
 
         vm.prank(river);
         vm.expectRevert(abi.encodeWithSignature("InvalidStoppedValidatorCountsSum()"));
-        operatorsRegistry.setStoppedValidatorCounts(stoppedValidators);
+        operatorsRegistry.reportStoppedValidatorCounts(stoppedValidators);
     }
 }
 
