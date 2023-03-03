@@ -14,6 +14,9 @@ import "./state/operatorsRegistry/ValidatorKeys.sol";
 import "./state/operatorsRegistry/StoppedValidators.sol";
 import "./state/shared/RiverAddress.sol";
 
+import "./state/migration/OperatorsRegistry_FundedKeyEventRebroadcasting_KeyIndex.sol";
+import "./state/migration/OperatorsRegistry_FundedKeyEventRebroadcasting_OperatorIndex.sol";
+
 /// @title Operators Registry (v1)
 /// @author Kiln
 /// @notice This contract handles the list of operators and their keys
@@ -52,6 +55,44 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
                 ++idx;
             }
         }
+    }
+
+    /// MIGRATION: FUNDED VALIDATOR KEY EVENT REBROADCASTING
+    /// As the event for funded keys was moved from River to this contract because we needed to be able to bind
+    /// operator indexes to public keys, we need to rebroadcast the past funded validator keys with the new event
+    /// to keep retro-compatibility
+
+    /// Emitted when the event rebroadcasting is done and we attempt to broadcast new events
+    error FundedKeyEventMigrationComplete();
+
+    /// Utility to force the broadcasting of events. Will keep its progress in storage to prevent being DoSed by the number of keys
+    /// @param amountToEmit The amount of events to emit at maximum in this call
+    function forceFundedValidatorKeysEventEmission(uint256 amountToEmit) external {
+        uint256 operatorIndex = OperatorsRegistry_FundedKeyEventRebroadcasting_OperatorIndex.get();
+        if (operatorIndex == type(uint256).max || OperatorsV2.getCount() == 0) {
+            revert FundedKeyEventMigrationComplete();
+        }
+        uint256 keyIndex = OperatorsRegistry_FundedKeyEventRebroadcasting_KeyIndex.get();
+        while (amountToEmit > 0 && operatorIndex != type(uint256).max) {
+            OperatorsV2.Operator memory operator = OperatorsV2.get(operatorIndex);
+
+            (bytes[] memory publicKeys,) =
+                ValidatorKeys.getKeys(operatorIndex, keyIndex, LibUint256.min(amountToEmit, operator.funded - keyIndex));
+            emit FundedValidatorKeys(operatorIndex, publicKeys);
+            if (keyIndex + publicKeys.length == operator.funded) {
+                keyIndex = 0;
+                if (operatorIndex == OperatorsV2.getCount() - 1) {
+                    operatorIndex = type(uint256).max;
+                } else {
+                    ++operatorIndex;
+                }
+            } else {
+                keyIndex += publicKeys.length;
+            }
+            amountToEmit -= publicKeys.length;
+        }
+        OperatorsRegistry_FundedKeyEventRebroadcasting_OperatorIndex.set(operatorIndex);
+        OperatorsRegistry_FundedKeyEventRebroadcasting_KeyIndex.set(keyIndex);
     }
 
     /// @inheritdoc IOperatorsRegistryV1
