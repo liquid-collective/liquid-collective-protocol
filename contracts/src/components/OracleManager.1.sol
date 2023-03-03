@@ -191,6 +191,7 @@ abstract contract OracleManagerV1 is IOracleManagerV1 {
         uint256 rewards;
         uint256 availableAmountToUpperBound;
         uint256 pulledELFees;
+        uint256 pulledRedeemManagerExceedingEthBuffer;
         uint256 pulledCoverageFunds;
     }
 
@@ -288,28 +289,38 @@ abstract contract OracleManagerV1 is IOracleManagerV1 {
                 maxIncrease + (vars.preReportUnderlyingBalance - vars.postReportUnderlyingBalance);
         }
 
-        // if we have available amount to upper bound after the reporting value are applied
+        // if we have available amount to upper bound after the reporting values are applied
         if (vars.availableAmountToUpperBound > 0) {
             // we pull the funds from the execution layer fee recipient
             vars.pulledELFees = _pullELFees(vars.availableAmountToUpperBound);
-            // we update the rewards aswell
+            // we update the rewards
             vars.rewards += vars.pulledELFees;
             // we update the available amount accordingly
             vars.availableAmountToUpperBound -= vars.pulledELFees;
         }
 
-        if (vars.exitedAmountIncrease + vars.skimmedAmountIncrease > 0) {
-            _pullCLFunds(vars.skimmedAmountIncrease, vars.exitedAmountIncrease);
+        // if we have available amount to upper bound after the execution layer fees are pulled
+        if (vars.availableAmountToUpperBound > 0) {
+            // we pull the funds from the exceeding eth buffer of the redeem manager
+            vars.pulledRedeemManagerExceedingEthBuffer = 0; //rm.pull(vars.availableAmountToUpperBound) TODO
+            // we update the rewards
+            vars.rewards += vars.pulledRedeemManagerExceedingEthBuffer;
+            // we update the available amount accordingly
+            vars.availableAmountToUpperBound -= vars.pulledRedeemManagerExceedingEthBuffer;
         }
 
-        // TODO pull exceeding buffer from redeem manager, should we check bound ?
-
-        // if we have available amount to upper bound after pulling execution layer fees, we attempt to pull coverage funds
+        // if we have available amount to upper bound after pulling the exceeding eth buffer, we attempt to pull coverage funds
         if (vars.availableAmountToUpperBound > 0) {
             // we pull the funds from the coverage recipient
             vars.pulledCoverageFunds = _pullCoverageFunds(vars.availableAmountToUpperBound);
             // we do not update the rewards as coverage is not considered rewards
             // we do not update the available amount as there are no more pulling actions to perform afterwards
+        }
+
+        // if we have new exited / skimmed eth available, we pull funds from the consensus layer recipient
+        if (vars.exitedAmountIncrease + vars.skimmedAmountIncrease > 0) {
+            // this method pulls and updates ethToDeposit / ethToRedeem accordingly
+            _pullCLFunds(vars.skimmedAmountIncrease, vars.exitedAmountIncrease);
         }
 
         // TODO get redeem manager LsETH balance
