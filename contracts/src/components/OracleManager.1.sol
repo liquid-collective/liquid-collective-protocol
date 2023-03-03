@@ -154,6 +154,8 @@ abstract contract OracleManagerV1 is IOracleManagerV1 {
     // we also increase the redeem buffer by exited eth amount
     function _pullCLFunds(uint256 skimmedEthAmount, uint256 exitedEthAmount) internal virtual;
 
+    function _getRedeemManager() internal view virtual returns (address);
+
     function initOracleManagerV1_1(
         uint64 epochsPerFrame,
         uint64 slotsPerEpoch,
@@ -301,6 +303,8 @@ abstract contract OracleManagerV1 is IOracleManagerV1 {
 
         // if we have available amount to upper bound after the execution layer fees are pulled
         if (vars.availableAmountToUpperBound > 0) {
+            // address redeemManager = _getRedeemManager();
+
             // we pull the funds from the exceeding eth buffer of the redeem manager
             vars.pulledRedeemManagerExceedingEthBuffer = 0; //rm.pull(vars.availableAmountToUpperBound) TODO
             // we update the rewards

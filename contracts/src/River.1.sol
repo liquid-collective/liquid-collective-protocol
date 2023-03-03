@@ -337,11 +337,13 @@ contract RiverV1 is
     uint256 balanceToRedeem;
     address redeemManager;
 
+    event SetRedeemManager(address redeemManager);
+
+    error InvalidPulledClFundsAmount(uint256 requested, uint256 received);
+
     function _getTotalUnderlyingBalance() internal view override returns (uint256) {
         return _assetBalance();
     }
-
-    error InvalidPulledClFundsAmount(uint256 requested, uint256 received);
 
     function _pullCLFunds(uint256 skimmedEthAmount, uint256 exitedEthAmount) internal override {
         uint256 currentBalance = address(this).balance;
@@ -355,13 +357,15 @@ contract RiverV1 is
         balanceToRedeem += exitedEthAmount;
     }
 
+    function _getRedeemManager() internal view override returns (address) {
+        return redeemManager;
+    }
+
     function sendRedeemManagerExceedingFunds() external payable {
         if (msg.sender != redeemManager) {
             revert LibErrors.Unauthorized(msg.sender);
         }
     }
-
-    event SetRedeemManager(address redeemManager);
 
     function initRiverV1_1(address _redeemManager) external init(1) {
         redeemManager = _redeemManager;

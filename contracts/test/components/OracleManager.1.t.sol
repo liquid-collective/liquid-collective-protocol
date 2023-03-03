@@ -63,6 +63,10 @@ contract OracleManagerV1ExposeInitializer is OracleManagerV1 {
         return 0;
     }
 
+    function _getRedeemManager() internal view override returns (address) {
+        return address(0);
+    }
+
     function _pullCLFunds(uint256 skimmedEthAmount, uint256 exitedEthAmount) internal override {}
 }
 
