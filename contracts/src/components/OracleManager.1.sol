@@ -145,6 +145,9 @@ abstract contract OracleManagerV1 is IOracleManagerV1 {
     uint256 lastValidatorsExitedBalance;
     uint256 internal constant ONE_YEAR = 365 days;
 
+    // this should be added to CLSpec
+    uint64 epochsToAssumedFinality_TO_MOVE;
+
     function _getTotalUnderlyingBalance() internal view virtual returns (uint256);
     // this method should pull the sum of its parameters, if the amount pulled is lower than the sum it should revert
     // then we increase the deposit buffer by skimmed eth amount
@@ -156,6 +159,7 @@ abstract contract OracleManagerV1 is IOracleManagerV1 {
         uint64 slotsPerEpoch,
         uint64 secondsPerSlot,
         uint64 genesisTime,
+        uint64 epochsToAssumedFinality,
         uint256 annualAprUpperBound,
         uint256 relativeLowerBound
     ) internal {
@@ -168,6 +172,7 @@ abstract contract OracleManagerV1 is IOracleManagerV1 {
             })
         );
         emit SetSpec(epochsPerFrame, slotsPerEpoch, secondsPerSlot, genesisTime);
+        epochsToAssumedFinality_TO_MOVE = epochsToAssumedFinality;
         ReportBounds.set(
             ReportBounds.ReportBoundsStruct({
                 annualAprUpperBound: annualAprUpperBound,
@@ -180,12 +185,12 @@ abstract contract OracleManagerV1 is IOracleManagerV1 {
     struct ConsensusLayerDataReportingVariables {
         uint256 preReportUnderlyingBalance;
         uint256 postReportUnderlyingBalance;
-        uint256 newExitedEthAmount;
-        uint256 newSkimmedEthAmount;
-        uint256 timeElapsed;
-        uint256 revenue;
-        uint256 pullCredit;
-        uint256 pulledExecutionLayerFees;
+        uint256 exitedAmountIncrease;
+        uint256 skimmedAmountIncrease;
+        uint256 timeElapsedSinceLastReport;
+        uint256 rewards;
+        uint256 availableAmountToUpperBound;
+        uint256 pulledELFees;
         uint256 pulledCoverageFunds;
     }
 
@@ -214,8 +219,8 @@ abstract contract OracleManagerV1 is IOracleManagerV1 {
             revert InvalidDecreasingValidatorsExitedBalance(lastValidatorsExitedBalance, report.validatorsExitedBalance);
         }
 
-        // we compute the new exited amount by taking the delta between reports
-        vars.newExitedEthAmount = report.validatorsExitedBalance - lastValidatorsExitedBalance;
+        // we compute the exited amount increase by taking the delta between reports
+        vars.exitedAmountIncrease = report.validatorsExitedBalance - lastValidatorsExitedBalance;
 
         // we ensure that the reported total skimmed balance is not decreasing
         if (report.validatorsSkimmedBalance < lastValidatorsSkimmedBalance) {
@@ -225,21 +230,21 @@ abstract contract OracleManagerV1 is IOracleManagerV1 {
         }
 
         // we compute the new skimmed amount by taking the delta between reports
-        vars.newSkimmedEthAmount = report.validatorsSkimmedBalance - lastValidatorsSkimmedBalance;
+        vars.skimmedAmountIncrease = report.validatorsSkimmedBalance - lastValidatorsSkimmedBalance;
 
         ReportBounds.ReportBoundsStruct memory rb = ReportBounds.get();
 
         // we retrieve the current total underlying balance before any reporting data is applied to the system
         vars.preReportUnderlyingBalance = _getTotalUnderlyingBalance();
         // we compute the time elapsed since last report based on epoch numbers
-        vars.timeElapsed = _timeBetweenEpochs(cls, lastReportEpoch, report.epoch);
+        vars.timeElapsedSinceLastReport = _timeBetweenEpochs(cls, lastReportEpoch, report.epoch);
 
         // we update the system parameters, this will have an impact on how the total underlying balance is computed
         CLValidatorTotalBalance.set(report.validatorsBalance);
         CLValidatorCount.set(report.validatorsCount);
 
         // we compute the maximum allowed increase in balance based on the pre report value
-        uint256 maxIncrease = _maxIncrease(rb, vars.preReportUnderlyingBalance, vars.timeElapsed);
+        uint256 maxIncrease = _maxIncrease(rb, vars.preReportUnderlyingBalance, vars.timeElapsedSinceLastReport);
 
         // we retrieve the new total underlying balance after system parameters are changed
         vars.postReportUnderlyingBalance = _getTotalUnderlyingBalance();
@@ -252,16 +257,16 @@ abstract contract OracleManagerV1 is IOracleManagerV1 {
                 revert TotalValidatorBalanceIncreaseOutOfBound(
                     vars.preReportUnderlyingBalance,
                     vars.postReportUnderlyingBalance,
-                    vars.timeElapsed,
+                    vars.timeElapsedSinceLastReport,
                     rb.annualAprUpperBound
                 );
             }
 
-            // we update the revenue based on the balance delta
-            vars.revenue = (vars.postReportUnderlyingBalance - vars.preReportUnderlyingBalance);
+            // we update the rewards based on the balance delta
+            vars.rewards = (vars.postReportUnderlyingBalance - vars.preReportUnderlyingBalance);
 
-            // we update the pull credit (the amount of eth we can still pull and stay below the upper reporting bound)
-            vars.pullCredit = maxIncrease - vars.revenue;
+            // we update the available amount to upper bound (the amount of eth we can still pull and stay below the upper reporting bound)
+            vars.availableAmountToUpperBound = maxIncrease - vars.rewards;
         } else {
             // otherwise if the balance has decreased, we verify that we are not exceeding the lower reporting bound
 
@@ -273,40 +278,41 @@ abstract contract OracleManagerV1 is IOracleManagerV1 {
                 revert TotalValidatorBalanceDecreaseOutOfBound(
                     vars.preReportUnderlyingBalance,
                     vars.postReportUnderlyingBalance,
-                    vars.timeElapsed,
+                    vars.timeElapsedSinceLastReport,
                     rb.relativeLowerBound
                 );
             }
 
-            // we update the pull credit to be equal to the maximum allowed increase plus the negative delta due to the loss
-            vars.pullCredit = maxIncrease + (vars.preReportUnderlyingBalance - vars.postReportUnderlyingBalance);
+            // we update the available amount to upper bound to be equal to the maximum allowed increase plus the negative delta due to the loss
+            vars.availableAmountToUpperBound =
+                maxIncrease + (vars.preReportUnderlyingBalance - vars.postReportUnderlyingBalance);
         }
 
-        // if we have pull credit available after the reporting value are applied
-        if (vars.pullCredit > 0) {
+        // if we have available amount to upper bound after the reporting value are applied
+        if (vars.availableAmountToUpperBound > 0) {
             // we pull the funds from the execution layer fee recipient
-            vars.pulledExecutionLayerFees = _pullELFees(vars.pullCredit);
-            // we update the revenue aswell
-            vars.revenue += vars.pulledExecutionLayerFees;
-            // we update the pull credit accordingly
-            vars.pullCredit -= vars.pulledExecutionLayerFees;
+            vars.pulledELFees = _pullELFees(vars.availableAmountToUpperBound);
+            // we update the rewards aswell
+            vars.rewards += vars.pulledELFees;
+            // we update the available amount accordingly
+            vars.availableAmountToUpperBound -= vars.pulledELFees;
         }
 
-        if (vars.newExitedEthAmount + vars.newSkimmedEthAmount > 0) {
-            _pullCLFunds(vars.newSkimmedEthAmount, vars.newExitedEthAmount);
+        if (vars.exitedAmountIncrease + vars.skimmedAmountIncrease > 0) {
+            _pullCLFunds(vars.skimmedAmountIncrease, vars.exitedAmountIncrease);
         }
 
-        // if we have pull credit available after pulling execution layer fees, we attempt to pull coverage funds
-        if (vars.pullCredit > 0) {
+        // if we have available amount to upper bound after pulling execution layer fees, we attempt to pull coverage funds
+        if (vars.availableAmountToUpperBound > 0) {
             // we pull the funds from the coverage recipient
-            vars.pulledCoverageFunds = _pullCoverageFunds(vars.pullCredit);
-            // we do not update the revenue as coverage is not considered revenue
-            // we do not update the pull credit as there are no more pulling actions to perform afterwards
+            vars.pulledCoverageFunds = _pullCoverageFunds(vars.availableAmountToUpperBound);
+            // we do not update the rewards as coverage is not considered rewards
+            // we do not update the available amount as there are no more pulling actions to perform afterwards
         }
 
-        // if our revenue is not null, we dispatch the fee to the collector
-        if (vars.revenue > 0) {
-            _onEarnings(vars.revenue);
+        // if our rewards are not null, we dispatch the fee to the collector
+        if (vars.rewards > 0) {
+            _onEarnings(vars.rewards);
         }
     }
 
@@ -314,8 +320,15 @@ abstract contract OracleManagerV1 is IOracleManagerV1 {
         return _isValidEpoch(CLSpec.get(), epoch);
     }
 
+    function _currentEpoch(CLSpec.CLSpecStruct memory cls) internal view returns (uint256) {
+        return ((block.timestamp - cls.genesisTime) / cls.secondsPerSlot) / cls.slotsPerEpoch;
+    }
+
     function _isValidEpoch(CLSpec.CLSpecStruct memory cls, uint256 epoch) internal view returns (bool) {
-        return (epoch >= lastReportEpoch && epoch % cls.epochsPerFrame == 0);
+        return (
+            _currentEpoch(cls) >= epoch + epochsToAssumedFinality_TO_MOVE && epoch >= lastReportEpoch
+                && epoch % cls.epochsPerFrame == 0
+        );
     }
 
     function _maxIncrease(ReportBounds.ReportBoundsStruct memory rb, uint256 _prevTotalEth, uint256 _timeElapsed)
