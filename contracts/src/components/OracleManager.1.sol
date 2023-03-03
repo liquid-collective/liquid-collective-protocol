@@ -302,6 +302,8 @@ abstract contract OracleManagerV1 is IOracleManagerV1 {
             _pullCLFunds(vars.skimmedAmountIncrease, vars.exitedAmountIncrease);
         }
 
+        // TODO pull exceeding buffer from redeem manager, should we check bound ?
+
         // if we have available amount to upper bound after pulling execution layer fees, we attempt to pull coverage funds
         if (vars.availableAmountToUpperBound > 0) {
             // we pull the funds from the coverage recipient
@@ -310,10 +312,22 @@ abstract contract OracleManagerV1 is IOracleManagerV1 {
             // we do not update the available amount as there are no more pulling actions to perform afterwards
         }
 
+        // TODO get redeem manager LsETH balance
+        // TODO compute amount of eth to provide based on balance, and the amount of LsETH that it will cover
+        // TODO perform a withdrawal event creation on redeem manager
+        // TODO burn the amount of LsETH from the redeem manager
+        // TODO update ethToRedeem
+
         // if our rewards are not null, we dispatch the fee to the collector
         if (vars.rewards > 0) {
             _onEarnings(vars.rewards);
         }
+
+        // TODO skip everything below if the slashing containment mode is active
+        // TODO compute redeem manager remaining demand based on updated LsETH balance
+        // TODO IF value is 0 (everything is satisfied) we add ethToRedeem value to ethToDeposit
+        // TODO ELSE update ethToDeposit by taking into account demand and currently exiting eth
+        // TODO based on possibly updated ethToRedeem value, currently exiting funds and redeem demand, we ask the node operator registry to exit validators
     }
 
     function isValidEpoch(uint256 epoch) external view returns (bool) {
