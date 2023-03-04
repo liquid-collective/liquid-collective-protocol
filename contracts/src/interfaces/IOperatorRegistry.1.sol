@@ -89,9 +89,15 @@ interface IOperatorsRegistryV1 {
     event RequestedValidatorExits(uint256 indexed index, uint256 count);
 
     /// @notice A validator key got funded on the deposit contract
+    /// @notice This event was introduced during a contract upgrade, in order to cover all possible public keys, this event
+    /// @notice will be replayed for past funded keys in order to have a complete coverage of all the funded public keys.
+    /// @notice In this particuliar scenario, the deferred value will be set to true, to indicate that we are not going to have
+    /// @notice the expected additional events and side effects in the same transaction (deposit to official DepositContract etc ...) because
+    /// @notice the event was synthetically crafted.
     /// @param index The operator index
     /// @param publicKeys BLS Public key that got funded
-    event FundedValidatorKeys(uint256 indexed index, bytes[] publicKeys);
+    /// @param deferred True if event has been replayed in the context of a migration
+    event FundedValidatorKeys(uint256 indexed index, bytes[] publicKeys, bool deferred);
 
     /// @notice The calling operator is inactive
     /// @param index The operator index

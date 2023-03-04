@@ -1241,7 +1241,7 @@ contract OperatorsRegistryV1TestDistribution is Test {
     event AddedValidatorKeys(uint256 indexed index, bytes publicKeys);
     event RemovedValidatorKey(uint256 indexed index, bytes publicKey);
     event RequestedValidatorExits(uint256 indexed index, uint256 count);
-    event FundedValidatorKeys(uint256 indexed index, bytes[] publicKeys);
+    event FundedValidatorKeys(uint256 indexed index, bytes[] publicKeys, bool deferred);
 
     bytes32 salt = bytes32(0);
 
@@ -1339,35 +1339,40 @@ contract OperatorsRegistryV1TestDistribution is Test {
                 0,
                 _bytesToPublicKeysArray(
                     rawKeys[0], 0, 10 * (ValidatorKeys.PUBLIC_KEY_LENGTH + ValidatorKeys.SIGNATURE_LENGTH)
-                )
+                ),
+                false
             );
             vm.expectEmit(true, true, true, true);
             emit FundedValidatorKeys(
                 1,
                 _bytesToPublicKeysArray(
                     rawKeys[1], 0, 10 * (ValidatorKeys.PUBLIC_KEY_LENGTH + ValidatorKeys.SIGNATURE_LENGTH)
-                )
+                ),
+                false
             );
             vm.expectEmit(true, true, true, true);
             emit FundedValidatorKeys(
                 2,
                 _bytesToPublicKeysArray(
                     rawKeys[2], 0, 10 * (ValidatorKeys.PUBLIC_KEY_LENGTH + ValidatorKeys.SIGNATURE_LENGTH)
-                )
+                ),
+                false
             );
             vm.expectEmit(true, true, true, true);
             emit FundedValidatorKeys(
                 3,
                 _bytesToPublicKeysArray(
                     rawKeys[3], 0, 10 * (ValidatorKeys.PUBLIC_KEY_LENGTH + ValidatorKeys.SIGNATURE_LENGTH)
-                )
+                ),
+                false
             );
             vm.expectEmit(true, true, true, true);
             emit FundedValidatorKeys(
                 4,
                 _bytesToPublicKeysArray(
                     rawKeys[4], 0, 10 * (ValidatorKeys.PUBLIC_KEY_LENGTH + ValidatorKeys.SIGNATURE_LENGTH)
-                )
+                ),
+                false
             );
             (bytes[] memory publicKeys, bytes[] memory signatures) = OperatorsRegistryInitializableV1(
                 address(operatorsRegistry)
@@ -1390,7 +1395,8 @@ contract OperatorsRegistryV1TestDistribution is Test {
                     rawKeys[0],
                     10 * (ValidatorKeys.PUBLIC_KEY_LENGTH + ValidatorKeys.SIGNATURE_LENGTH),
                     50 * (ValidatorKeys.PUBLIC_KEY_LENGTH + ValidatorKeys.SIGNATURE_LENGTH)
-                )
+                ),
+                false
             );
             vm.expectEmit(true, true, true, true);
             emit FundedValidatorKeys(
@@ -1399,7 +1405,8 @@ contract OperatorsRegistryV1TestDistribution is Test {
                     rawKeys[1],
                     10 * (ValidatorKeys.PUBLIC_KEY_LENGTH + ValidatorKeys.SIGNATURE_LENGTH),
                     50 * (ValidatorKeys.PUBLIC_KEY_LENGTH + ValidatorKeys.SIGNATURE_LENGTH)
-                )
+                ),
+                false
             );
             vm.expectEmit(true, true, true, true);
             emit FundedValidatorKeys(
@@ -1408,7 +1415,8 @@ contract OperatorsRegistryV1TestDistribution is Test {
                     rawKeys[2],
                     10 * (ValidatorKeys.PUBLIC_KEY_LENGTH + ValidatorKeys.SIGNATURE_LENGTH),
                     50 * (ValidatorKeys.PUBLIC_KEY_LENGTH + ValidatorKeys.SIGNATURE_LENGTH)
-                )
+                ),
+                false
             );
             vm.expectEmit(true, true, true, true);
             emit FundedValidatorKeys(
@@ -1417,7 +1425,8 @@ contract OperatorsRegistryV1TestDistribution is Test {
                     rawKeys[3],
                     10 * (ValidatorKeys.PUBLIC_KEY_LENGTH + ValidatorKeys.SIGNATURE_LENGTH),
                     50 * (ValidatorKeys.PUBLIC_KEY_LENGTH + ValidatorKeys.SIGNATURE_LENGTH)
-                )
+                ),
+                false
             );
             vm.expectEmit(true, true, true, true);
             emit FundedValidatorKeys(
@@ -1426,7 +1435,8 @@ contract OperatorsRegistryV1TestDistribution is Test {
                     rawKeys[4],
                     10 * (ValidatorKeys.PUBLIC_KEY_LENGTH + ValidatorKeys.SIGNATURE_LENGTH),
                     50 * (ValidatorKeys.PUBLIC_KEY_LENGTH + ValidatorKeys.SIGNATURE_LENGTH)
-                )
+                ),
+                false
             );
             (bytes[] memory publicKeys, bytes[] memory signatures) = OperatorsRegistryInitializableV1(
                 address(operatorsRegistry)
