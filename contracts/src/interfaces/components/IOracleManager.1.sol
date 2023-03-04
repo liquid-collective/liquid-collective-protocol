@@ -62,11 +62,11 @@ interface IOracleManagerV1 {
 
     struct ConsensusLayerReport {
         uint256 epoch;
-        uint64 validatorsBalance;
+        uint256 validatorsBalance;
+        uint256 validatorsSkimmedBalance;
+        uint256 validatorsExitedBalance;
+        uint256 validatorsExitingBalance;
         uint32 validatorsCount;
-        uint64 validatorsSkimmedBalance;
-        uint64 validatorsExitedBalance;
-        uint64 validatorsExitingBalance;
         uint32[] stoppedValidatorCountPerOperator;
         bool bufferRebalancingMode;
         bool slashingContainmentMode;

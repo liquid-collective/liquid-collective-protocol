@@ -273,7 +273,7 @@ contract RiverV1 is
         IELFeeRecipientV1(payable(elFeeRecipient)).pullELFees(_max);
         uint256 collectedELFees = address(this).balance - initialBalance;
         if (collectedELFees > 0) {
-            BalanceToDeposit.set(BalanceToDeposit.get() + collectedELFees);
+            _setBalanceToDeposit(BalanceToDeposit.get() + collectedELFees);
             emit PulledELFees(collectedELFees);
         }
         return collectedELFees;
@@ -291,7 +291,7 @@ contract RiverV1 is
         ICoverageFundV1(payable(coverageFund)).pullCoverageFunds(_max);
         uint256 collectedCoverageFunds = address(this).balance - initialBalance;
         if (collectedCoverageFunds > 0) {
-            BalanceToDeposit.set(BalanceToDeposit.get() + collectedCoverageFunds);
+            _setBalanceToDeposit(BalanceToDeposit.get() + collectedCoverageFunds);
             emit PulledCoverageFunds(collectedCoverageFunds);
         }
         return collectedCoverageFunds;
@@ -353,8 +353,8 @@ contract RiverV1 is
         if (collectedCLFunds != skimmedEthAmount + exitedEthAmount) {
             revert InvalidPulledClFundsAmount(skimmedEthAmount + exitedEthAmount, collectedCLFunds);
         }
-        BalanceToDeposit.set(BalanceToDeposit.get() + skimmedEthAmount);
-        balanceToRedeem += exitedEthAmount;
+        _setBalanceToDeposit(BalanceToDeposit.get() + skimmedEthAmount);
+        _setBalanceToRedeem(balanceToRedeem + exitedEthAmount);
     }
 
     function sendRedeemManagerExceedingFunds() external payable {
@@ -363,19 +363,54 @@ contract RiverV1 is
         }
     }
 
-    function initRiverV1_1(address _redeemManager) external init(1) {
+    function initRiverV1_1(
+        address _redeemManager,
+        uint64 epochsPerFrame,
+        uint64 slotsPerEpoch,
+        uint64 secondsPerSlot,
+        uint64 genesisTime,
+        uint64 epochsToAssumedFinality,
+        uint256 annualAprUpperBound,
+        uint256 relativeLowerBound
+    ) external init(1) {
         redeemManager = _redeemManager;
         emit SetRedeemManager(redeemManager);
+        initOracleManagerV1_1(
+            epochsPerFrame,
+            slotsPerEpoch,
+            secondsPerSlot,
+            genesisTime,
+            epochsToAssumedFinality,
+            annualAprUpperBound,
+            relativeLowerBound
+        );
     }
 
     event PulledRedeemManagerExceedingEth(uint256 amount);
+
+    event SetBalanceToDeposit(uint256 amount);
+
+    function _setBalanceToDeposit(uint256 newBalanceToDeposit)
+        internal
+        override(UserDepositManagerV1, ConsensusLayerDepositManagerV1)
+    {
+        BalanceToDeposit.set(newBalanceToDeposit);
+        emit SetBalanceToDeposit(newBalanceToDeposit);
+    }
+
+    event SetBalanceToRedeem(uint256 amount);
+
+    function _setBalanceToRedeem(uint256 newBalanceToRedeem) internal {
+        balanceToRedeem = newBalanceToRedeem;
+        emit SetBalanceToRedeem(newBalanceToRedeem);
+    }
 
     function _pullRedeemManagerExceedingEth(uint256 max) internal override returns (uint256) {
         uint256 currentBalance = address(this).balance;
         IRedeemManagerV1(redeemManager).pullExceedingEth(max);
         uint256 collectedExceedingEth = address(this).balance - currentBalance;
         if (collectedExceedingEth > 0) {
-            BalanceToDeposit.set(BalanceToDeposit.get() + collectedExceedingEth);
+            _setBalanceToDeposit(BalanceToDeposit.get() + collectedExceedingEth);
             emit PulledRedeemManagerExceedingEth(collectedExceedingEth);
         }
         return collectedExceedingEth;
@@ -398,14 +433,16 @@ contract RiverV1 is
                 redeemManagerDemand = (redeemManagerDemandInEth * underlyingAssetBalance) / totalSupply;
             }
 
-            // the available balance to redeem is updated
-            balanceToRedeem -= redeemManagerDemandInEth;
+            if (redeemManagerDemandInEth > 0) {
+                // the available balance to redeem is updated
+                _setBalanceToRedeem(balanceToRedeem - redeemManagerDemandInEth);
 
-            // perform a report withdraw call to the redeem manager
-            redeemManager_.reportWithdraw{value: redeemManagerDemandInEth}(redeemManagerDemand);
+                // perform a report withdraw call to the redeem manager
+                redeemManager_.reportWithdraw{value: redeemManagerDemandInEth}(redeemManagerDemand);
 
-            // we burn the shares of the redeem manager associated with the amount of eth provided
-            _burnRawShares(address(redeemManager), redeemManagerDemand);
+                // we burn the shares of the redeem manager associated with the amount of eth provided
+                _burnRawShares(address(redeemManager), redeemManagerDemand);
+            }
         }
     }
 
@@ -421,13 +458,13 @@ contract RiverV1 is
 
             // if the available balance to redeem is not 0, it means that all the redeem requests are fulfilled, we should redirect funds for deposits
             if (availableBalanceToRedeem > 0) {
-                BalanceToDeposit.set(availableBalanceToDeposit + availableBalanceToRedeem);
-                balanceToRedeem = 0;
+                _setBalanceToDeposit(availableBalanceToDeposit + availableBalanceToRedeem);
+                _setBalanceToRedeem(0);
                 // if reblancing is enabled and the redeem manager demand is higher than exiting eth, we add eth for deposit buffer to redeem buffer
             } else if (depositToRedeemRebalancingAllowed && redeemManagerDemandInEth > exitingBalance) {
                 availableBalanceToRedeem +=
                     LibUint256.min(availableBalanceToDeposit, redeemManagerDemandInEth - exitingBalance);
-                balanceToRedeem = availableBalanceToRedeem;
+                _setBalanceToRedeem(availableBalanceToRedeem);
             }
 
             // if after all rebalancings, the redeem manager demand is still higher than the balance to redeem and exiting eth, we compute

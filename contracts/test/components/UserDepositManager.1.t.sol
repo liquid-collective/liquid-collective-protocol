@@ -12,6 +12,10 @@ contract UserDepositManagerV1EmptyDeposit is UserDepositManagerV1 {
     function _onDeposit(address, address, uint256) internal view override {
         this;
     }
+
+    function _setBalanceToDeposit(uint256 newBalanceToDeposit) internal override {
+        BalanceToDeposit.set(newBalanceToDeposit);
+    }
 }
 
 contract UserDepositManagerV1DepositTests is Test {
@@ -109,6 +113,10 @@ contract UserDepositManagerV1CatchableDeposit is UserDepositManagerV1 {
 
     function _onDeposit(address depositor, address recipient, uint256 amount) internal override {
         emit InternalCallbackCalled(depositor, recipient, amount);
+    }
+
+    function _setBalanceToDeposit(uint256 newBalanceToDeposit) internal override {
+        BalanceToDeposit.set(newBalanceToDeposit);
     }
 }
 

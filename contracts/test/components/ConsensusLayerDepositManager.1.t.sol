@@ -49,6 +49,10 @@ contract ConsensusLayerDepositManagerV1ExposeInitializer is ConsensusLayerDeposi
     function sudoSyncBalance() external {
         BalanceToDeposit.set(address(this).balance);
     }
+
+    function _setBalanceToDeposit(uint256 newBalanceToDeposit) internal override {
+        BalanceToDeposit.set(newBalanceToDeposit);
+    }
 }
 
 contract ConsensusLayerDepositManagerV1InitTests is Test {
@@ -215,6 +219,10 @@ contract ConsensusLayerDepositManagerV1ControllableValidatorKeyRequest is Consen
     function sudoSyncBalance() external {
         BalanceToDeposit.set(address(this).balance);
     }
+
+    function _setBalanceToDeposit(uint256 newBalanceToDeposit) internal override {
+        BalanceToDeposit.set(newBalanceToDeposit);
+    }
 }
 
 contract ConsensusLayerDepositManagerV1ErrorTests is Test {
@@ -341,6 +349,10 @@ contract ConsensusLayerDepositManagerV1ValidKeys is ConsensusLayerDepositManager
 
     function sudoSyncBalance() external {
         BalanceToDeposit.set(address(this).balance);
+    }
+
+    function _setBalanceToDeposit(uint256 newBalanceToDeposit) internal override {
+        BalanceToDeposit.set(newBalanceToDeposit);
     }
 }
 

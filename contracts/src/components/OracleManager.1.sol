@@ -400,4 +400,12 @@ abstract contract OracleManagerV1 is IOracleManagerV1 {
     {
         return (epochNow - epochPast) * (cls.secondsPerSlot * cls.slotsPerEpoch);
     }
+
+    function getReportingBounds() external view returns (ReportBounds.ReportBoundsStruct memory) {
+        return ReportBounds.get();
+    }
+
+    function getConsensusLayerSpec() external view returns (CLSpec.CLSpecStruct memory) {
+        return CLSpec.get();
+    }
 }

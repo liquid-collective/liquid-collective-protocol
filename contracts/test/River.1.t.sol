@@ -17,6 +17,7 @@ import "../src/Oracle.1.sol";
 import "../src/ELFeeRecipient.1.sol";
 import "../src/OperatorsRegistry.1.sol";
 import "../src/CoverageFund.1.sol";
+import "../src/RedeemManager.1.sol";
 
 contract OperatorsRegistryWithOverridesV1 is OperatorsRegistryV1 {
     function sudoStoppedValidatorCounts(uint32[] calldata stoppedValidatorCounts) external {
@@ -2034,5 +2035,342 @@ contract RiverV1TestsNoExtraRecipients is Test, BytesGenerator {
                 == river.balanceOf(joe) + river.balanceOf(bob) + river.balanceOf(operatorOneFeeRecipient)
                     + river.balanceOf(operatorTwoFeeRecipient) + river.balanceOf(collector)
         );
+    }
+}
+
+contract RiverV1TestsReportFuzzing is Test, BytesGenerator {
+    UserFactory internal uf = new UserFactory();
+
+    RiverV1 internal river;
+    IDepositContract internal deposit;
+    WithdrawV1 internal withdraw;
+    OracleV1 internal oracle;
+    ELFeeRecipientV1 internal elFeeRecipient;
+    CoverageFundV1 internal coverageFund;
+    AllowlistV1 internal allowlist;
+    OperatorsRegistryV1 internal operatorsRegistry;
+    RedeemManagerV1 internal redeemManager;
+
+    address internal admin;
+    address internal newAdmin;
+    address internal collector;
+    address internal newCollector;
+    address internal allower;
+    address internal oracleMember;
+    address internal newAllowlist;
+    address internal bob;
+    address internal joe;
+
+    string internal operatorOneName = "NodeMasters";
+
+    event PulledELFees(uint256 amount);
+    event SetELFeeRecipient(address indexed elFeeRecipient);
+    event SetCollector(address indexed collector);
+    event SetAllowlist(address indexed allowlist);
+    event SetGlobalFee(uint256 fee);
+    event SetOperatorsRegistry(address indexed operatorsRegistry);
+
+    uint64 constant epochsPerFrame = 225;
+    uint64 constant slotsPerEpoch = 32;
+    uint64 constant secondsPerSlot = 12;
+    uint64 constant epochsUntilFinal = 4;
+
+    function setUp() public {
+        admin = makeAddr("admin");
+        newAdmin = makeAddr("newAdmin");
+        collector = makeAddr("collector");
+        newCollector = makeAddr("newCollector");
+        allower = makeAddr("allower");
+        oracleMember = makeAddr("oracleMember");
+        newAllowlist = makeAddr("newAllowlist");
+        bob = makeAddr("bob");
+        joe = makeAddr("joe");
+
+        vm.warp(857034746);
+
+        elFeeRecipient = new ELFeeRecipientV1();
+        coverageFund = new CoverageFundV1();
+        oracle = new OracleV1();
+        allowlist = new AllowlistV1();
+        deposit = new DepositContractMock();
+        withdraw = new WithdrawV1();
+        river = new RiverV1();
+        operatorsRegistry = new OperatorsRegistryV1();
+        redeemManager = new RedeemManagerV1();
+
+        bytes32 withdrawalCredentials = withdraw.getCredentials();
+        allowlist.initAllowlistV1(admin, allower);
+        operatorsRegistry.initOperatorsRegistryV1(admin, address(river));
+        elFeeRecipient.initELFeeRecipientV1(address(river));
+        coverageFund.initCoverageFundV1(address(river));
+        redeemManager.initializeRedeemManagerV1(address(river));
+        vm.expectEmit(true, true, true, true);
+        emit SetOperatorsRegistry(address(operatorsRegistry));
+        river.initRiverV1(
+            address(deposit),
+            address(elFeeRecipient),
+            withdrawalCredentials,
+            address(oracle),
+            admin,
+            address(allowlist),
+            address(operatorsRegistry),
+            collector,
+            500
+        );
+        river.initRiverV1_1(
+            address(redeemManager), epochsPerFrame, slotsPerEpoch, secondsPerSlot, 0, epochsUntilFinal, 1000, 500
+        );
+        withdraw.initializeWithdrawV1(address(river));
+        oracle.initOracleV1(address(river), admin, 225, 32, 12, 0, 1000, 500);
+        vm.startPrank(admin);
+
+        // ===================
+
+        oracle.addMember(oracleMember, 1);
+
+        vm.stopPrank();
+    }
+
+    function _allow(address _who, uint256 _mask) internal {
+        address[] memory allowees = new address[](1);
+        allowees[0] = _who;
+        uint256[] memory statuses = new uint256[](1);
+        statuses[0] = _mask;
+
+        vm.startPrank(admin);
+        allowlist.allow(allowees, statuses);
+        vm.stopPrank();
+    }
+
+    function _next(uint256 _salt) internal pure returns (uint256 _newSalt) {
+        return uint256(keccak256(abi.encode(_salt)));
+    }
+
+    function _performFakeDeposits(uint8 userCount, uint256 _salt)
+        internal
+        returns (address[] memory users, uint256 _newSalt)
+    {
+        users = new address[](userCount);
+        for (uint256 idx = 0; idx < userCount; ++idx) {
+            users[idx] = address(uint160(_salt));
+            _allow(users[idx], LibAllowlistMasks.DEPOSIT_MASK + LibAllowlistMasks.REDEEM_MASK);
+            _salt = _next(_salt);
+            uint256 amountToDeposit = bound(_salt, 1 ether, 100 ether);
+            vm.deal(users[idx], amountToDeposit);
+            vm.prank(users[idx]);
+            river.deposit{value: amountToDeposit}();
+            _salt = _next(_salt);
+
+            uint256 amountToRedeem = bound(_salt, 0.1 ether, amountToDeposit / 2);
+            vm.prank(users[idx]);
+            river.approve(address(redeemManager), amountToRedeem);
+            vm.prank(users[idx]);
+            redeemManager.requestRedeem(amountToRedeem);
+            _salt = _next(_salt);
+        }
+        return (users, _salt);
+    }
+
+    function _performDepositsToConsensusLayer(uint256 _salt)
+        internal
+        returns (uint256 depositCount, uint256 operatorCount, uint256 _newSalt)
+    {
+        uint256 maxDepositPossible = river.getBalanceToDeposit() / 32 ether;
+        depositCount = bound(_salt, 1, LibUint256.min(maxDepositPossible, 200));
+        _salt = _next(_salt);
+        operatorCount = bound(_salt, 1, 100);
+        _salt = _next(_salt);
+
+        uint256 rest = depositCount % operatorCount;
+        for (uint256 idx = 0; idx < operatorCount; ++idx) {
+            address operatorAddress = address(uint160(_salt));
+            _salt = _next(_salt);
+            string memory operatorName = string(abi.encode(_salt));
+            _salt = _next(_salt);
+
+            vm.prank(admin);
+            uint256 operatorIndex = operatorsRegistry.addOperator(operatorName, operatorAddress);
+
+            uint256 operatorKeyCount = (depositCount / operatorCount) + (rest > 0 ? 1 : 0);
+            if (rest > 0) {
+                --rest;
+            }
+
+            if (operatorKeyCount > 0) {
+                bytes memory operatorKeys = genBytes((48 + 96) * operatorKeyCount);
+                vm.prank(operatorAddress);
+                operatorsRegistry.addValidators(operatorIndex, operatorKeyCount, operatorKeys);
+
+                uint256[] memory operatorIndexes = new uint256[](1);
+                operatorIndexes[0] = operatorIndex;
+                uint256[] memory operatorLimits = new uint256[](1);
+                operatorLimits[0] = operatorKeyCount;
+
+                vm.prank(admin);
+                operatorsRegistry.setOperatorLimits(operatorIndexes, operatorLimits, block.number);
+            }
+        }
+
+        vm.prank(admin);
+        river.depositToConsensusLayer(depositCount);
+
+        _newSalt = _salt;
+    }
+
+    function _redeemAllSatisfiedRedeemRequests() internal {
+        uint256 redeemRequestCount = redeemManager.getRedeemRequestCount();
+        uint32[] memory unresolvedRedeemRequestIds = new uint32[](redeemRequestCount);
+        for (uint256 idx = 0; idx < redeemRequestCount; ++idx) {
+            unresolvedRedeemRequestIds[idx] = uint32(idx);
+        }
+
+        int64[] memory resolutions = redeemManager.resolveRedeemRequests(unresolvedRedeemRequestIds);
+
+        uint256 satisfiedRedeemRequestCount = 0;
+        for (uint256 idx = 0; idx < resolutions.length; ++idx) {
+            if (resolutions[idx] >= 0) {
+                ++satisfiedRedeemRequestCount;
+            }
+        }
+
+        uint32[] memory redeemRequestIds = new uint32[](satisfiedRedeemRequestCount);
+        uint32[] memory withdrawalEventIds = new uint32[](satisfiedRedeemRequestCount);
+        uint256 savedIdx = 0;
+        for (uint256 idx = 0; idx < resolutions.length; ++idx) {
+            if (resolutions[idx] >= 0) {
+                redeemRequestIds[savedIdx] = unresolvedRedeemRequestIds[idx];
+                withdrawalEventIds[savedIdx] = uint32(uint64(resolutions[idx]));
+                ++savedIdx;
+            }
+        }
+
+        redeemManager.claimRedeemRequests(redeemRequestIds, withdrawalEventIds);
+
+        resolutions = redeemManager.resolveRedeemRequests(unresolvedRedeemRequestIds);
+        for (uint256 idx = 0; idx < resolutions.length; ++idx) {
+            assertTrue(resolutions[idx] < 0, "should not have satisfied requests left");
+        }
+    }
+
+    struct ReportingFuzzingVariables {
+        address[] users;
+        uint256 depositCount;
+        uint256 scenario;
+        uint256 operatorCount;
+        CLSpec.CLSpecStruct cls;
+        ReportBounds.ReportBoundsStruct rb;
+    }
+
+    function testReportingFuzzing(uint256 _salt) external {
+        _salt = _next(_salt);
+
+        IOracleManagerV1.ConsensusLayerReport memory clr;
+
+        ReportingFuzzingVariables memory rfv;
+
+        (rfv.users, _salt) = _performFakeDeposits(uint8(bound(_salt, 160, type(uint8).max)), _salt);
+        console.log("User Count = ", rfv.users.length);
+        (rfv.depositCount, rfv.operatorCount, _salt) = _performDepositsToConsensusLayer(_salt);
+        console.log("Deposit Count = ", rfv.depositCount);
+
+        rfv.scenario = _salt % 1;
+        _salt = _next(_salt);
+
+        rfv.cls = river.getConsensusLayerSpec();
+        rfv.rb = river.getReportingBounds();
+
+        (clr, _salt) = _retrieveReportingData(rfv, _salt);
+
+        vm.prank(oracleMember);
+        oracle.reportConsensusLayerData(clr);
+
+        _redeemAllSatisfiedRedeemRequests();
+    }
+
+    uint256 internal constant SCENARIO_REGULAR_REPORTING_NOTHING_PULLED = 0;
+
+    function _retrieveReportingData(ReportingFuzzingVariables memory rfv, uint256 _salt)
+        internal
+        returns (IOracleManagerV1.ConsensusLayerReport memory clr, uint256 _newSalt)
+    {
+        if (rfv.scenario == SCENARIO_REGULAR_REPORTING_NOTHING_PULLED) {
+            return _retrieveScenario_REGULAR_REPORTING_NOTHING_PULLED(rfv, _salt);
+        } else {
+            revert();
+        }
+    }
+
+    function _retrieveScenario_REGULAR_REPORTING_NOTHING_PULLED(ReportingFuzzingVariables memory rfv, uint256 _salt)
+        internal
+        returns (IOracleManagerV1.ConsensusLayerReport memory clr, uint256 _newSalt)
+    {
+        clr.epoch = (_salt % 1_000_000) * epochsPerFrame;
+        _salt = _next(_salt);
+
+        uint256 timeIntoTheFuture = bound(_salt, epochsUntilFinal * secondsPerSlot * slotsPerEpoch, 365 days);
+        _salt = _next(_salt);
+        vm.warp(timeIntoTheFuture + (secondsPerSlot * slotsPerEpoch) * clr.epoch);
+
+        uint256 maxAllowedIncrease =
+            debug_maxIncrease(rfv.rb, river.totalUnderlyingSupply(), debug_timeBetweenEpochs(rfv.cls, 0, clr.epoch));
+
+        uint256 totalIncrease = bound(_salt, 0, maxAllowedIncrease);
+        clr.validatorsBalance = rfv.depositCount * 32 ether + totalIncrease;
+        _salt = _next(_salt);
+
+        clr.validatorsCount = uint32(rfv.depositCount);
+
+        uint256 skimmingPerValidator = bound(_salt, 0, 0.1 gwei);
+        clr.validatorsSkimmedBalance = uint64(rfv.depositCount) * skimmingPerValidator;
+        _salt = _next(_salt);
+
+        uint256 exitedTotalCount = bound(_salt, 0, rfv.depositCount);
+        _salt = _next(_salt);
+        uint256 exitingTotalCount = bound(_salt, 0, exitedTotalCount);
+
+        clr.validatorsExitedBalance = 32 ether * exitedTotalCount;
+        clr.validatorsExitingBalance = 32 ether * exitingTotalCount;
+
+        vm.deal(address(withdraw), clr.validatorsSkimmedBalance + clr.validatorsExitedBalance);
+
+        clr.stoppedValidatorCountPerOperator = new uint32[](rfv.operatorCount + 1);
+
+        clr.stoppedValidatorCountPerOperator[0] = uint32(exitedTotalCount);
+        uint256 rest = exitedTotalCount % rfv.operatorCount;
+        for (uint256 idx = 0; idx < rfv.operatorCount; ++idx) {
+            clr.stoppedValidatorCountPerOperator[idx + 1] =
+                uint32((exitedTotalCount / rfv.operatorCount) + (rest > 0 ? 1 : 0));
+            if (rest > 0) {
+                --rest;
+            }
+        }
+
+        clr.bufferRebalancingMode = false;
+        clr.slashingContainmentMode = false;
+        _newSalt = _salt;
+    }
+
+    function debug_maxIncrease(ReportBounds.ReportBoundsStruct memory rb, uint256 _prevTotalEth, uint256 _timeElapsed)
+        internal
+        pure
+        returns (uint256)
+    {
+        return (_prevTotalEth * rb.annualAprUpperBound * _timeElapsed) / (LibBasisPoints.BASIS_POINTS_MAX * 365 days);
+    }
+
+    function debug_maxDecrease(ReportBounds.ReportBoundsStruct memory rb, uint256 _prevTotalEth)
+        internal
+        pure
+        returns (uint256)
+    {
+        return (_prevTotalEth * rb.relativeLowerBound) / LibBasisPoints.BASIS_POINTS_MAX;
+    }
+
+    function debug_timeBetweenEpochs(CLSpec.CLSpecStruct memory cls, uint256 epochPast, uint256 epochNow)
+        internal
+        pure
+        returns (uint256)
+    {
+        return (epochNow - epochPast) * (cls.secondsPerSlot * cls.slotsPerEpoch);
     }
 }

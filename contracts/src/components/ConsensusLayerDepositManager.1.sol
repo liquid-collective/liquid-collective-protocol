@@ -31,6 +31,8 @@ abstract contract ConsensusLayerDepositManagerV1 is IConsensusLayerDepositManage
     /// @dev Must be Overridden
     function _getRiverAdmin() internal view virtual returns (address);
 
+    function _setBalanceToDeposit(uint256 newBalanceToDeposit) internal virtual;
+
     /// @notice Prevents unauthorized calls
     modifier onlyAdmin_CDMV1() {
         if (msg.sender != _getRiverAdmin()) {
