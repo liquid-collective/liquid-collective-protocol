@@ -319,20 +319,20 @@ contract RiverV1 is
         }
     }
 
+    // rework beyond this point
+
     /// @notice Overridden handler called whenever the total balance of ETH is requested
     /// @return The current total asset balance managed by River
     function _assetBalance() internal view override returns (uint256) {
         uint256 clValidatorCount = CLValidatorCount.get();
         uint256 depositedValidatorCount = DepositedValidatorCount.get();
         if (clValidatorCount < depositedValidatorCount) {
-            return CLValidatorTotalBalance.get() + BalanceToDeposit.get()
+            return CLValidatorTotalBalance.get() + BalanceToDeposit.get() + balanceToRedeem
                 + (depositedValidatorCount - clValidatorCount) * ConsensusLayerDepositManagerV1.DEPOSIT_SIZE;
         } else {
-            return CLValidatorTotalBalance.get() + BalanceToDeposit.get();
+            return CLValidatorTotalBalance.get() + BalanceToDeposit.get() + balanceToRedeem;
         }
     }
-
-    // rework beyond this point
 
     uint256 balanceToRedeem;
     address redeemManager;
@@ -357,10 +357,6 @@ contract RiverV1 is
         balanceToRedeem += exitedEthAmount;
     }
 
-    function _getRedeemManager() internal view override returns (address) {
-        return redeemManager;
-    }
-
     function sendRedeemManagerExceedingFunds() external payable {
         if (msg.sender != redeemManager) {
             revert LibErrors.Unauthorized(msg.sender);
@@ -383,5 +379,65 @@ contract RiverV1 is
             emit PulledRedeemManagerExceedingEth(collectedExceedingEth);
         }
         return collectedExceedingEth;
+    }
+
+    function _reportWithdrawToRedeemManager() internal override {
+        IRedeemManagerV1 redeemManager_ = IRedeemManagerV1(redeemManager);
+        uint256 underlyingAssetBalance = _assetBalance();
+        uint256 totalSupply = _totalSupply();
+
+        if (underlyingAssetBalance > 0) {
+            // we compute the redeem manager demands in eth and lsEth based on current conversion rate
+            uint256 redeemManagerDemand = _balanceOf(redeemManager);
+            uint256 redeemManagerDemandInEth = (redeemManagerDemand * totalSupply) / underlyingAssetBalance;
+            uint256 availableBalanceToRedeem = balanceToRedeem;
+
+            // if demand is higher than available eth, we update demand values to use the available eth
+            if (redeemManagerDemandInEth > availableBalanceToRedeem) {
+                redeemManagerDemandInEth = availableBalanceToRedeem;
+                redeemManagerDemand = (redeemManagerDemandInEth * underlyingAssetBalance) / totalSupply;
+            }
+
+            // the available balance to redeem is updated
+            balanceToRedeem -= redeemManagerDemandInEth;
+
+            // perform a report withdraw call to the redeem manager
+            redeemManager_.reportWithdraw{value: redeemManagerDemandInEth}(redeemManagerDemand);
+
+            // we burn the shares of the redeem manager associated with the amount of eth provided
+            _burnRawShares(address(redeemManager), redeemManagerDemand);
+        }
+    }
+
+    function _requestExitsBasedOnRedeemDemandAfterRebalancings(
+        uint256 exitingBalance,
+        bool depositToRedeemRebalancingAllowed
+    ) internal override {
+        uint256 underlyingAssetBalance = _assetBalance();
+        if (underlyingAssetBalance > 0) {
+            uint256 availableBalanceToRedeem = balanceToRedeem;
+            uint256 availableBalanceToDeposit = BalanceToDeposit.get();
+            uint256 redeemManagerDemandInEth = (_balanceOf(redeemManager) * _totalSupply()) / underlyingAssetBalance;
+
+            // if the available balance to redeem is not 0, it means that all the redeem requests are fulfilled, we should redirect funds for deposits
+            if (availableBalanceToRedeem > 0) {
+                BalanceToDeposit.set(availableBalanceToDeposit + availableBalanceToRedeem);
+                balanceToRedeem = 0;
+                // if reblancing is enabled and the redeem manager demand is higher than exiting eth, we add eth for deposit buffer to redeem buffer
+            } else if (depositToRedeemRebalancingAllowed && redeemManagerDemandInEth > exitingBalance) {
+                availableBalanceToRedeem +=
+                    LibUint256.min(availableBalanceToDeposit, redeemManagerDemandInEth - exitingBalance);
+                balanceToRedeem = availableBalanceToRedeem;
+            }
+
+            // if after all rebalancings, the redeem manager demand is still higher than the balance to redeem and exiting eth, we compute
+            // the amount of validators to exit in order to cover the remaining demand
+            if (availableBalanceToRedeem + exitingBalance < redeemManagerDemandInEth) {
+                uint256 validatorCountToExit = LibUint256.ceil(
+                    redeemManagerDemandInEth - (availableBalanceToRedeem + exitingBalance), DEPOSIT_SIZE
+                );
+                // call operators registry to request exit to validators
+            }
+        }
     }
 }

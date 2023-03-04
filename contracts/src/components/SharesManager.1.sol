@@ -250,4 +250,12 @@ abstract contract SharesManagerV1 is ISharesManagerV1 {
     function _balanceOf(address _owner) internal view returns (uint256) {
         return SharesPerOwner.get(_owner);
     }
+
+    // rework beyond this point
+
+    function _burnRawShares(address _owner, uint256 _value) internal {
+        Shares.set(Shares.get() - _value);
+        SharesPerOwner.set(_owner, SharesPerOwner.get(_owner) - _value);
+        emit Transfer(_owner, address(0), _value);
+    }
 }

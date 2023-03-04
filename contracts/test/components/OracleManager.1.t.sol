@@ -63,15 +63,18 @@ contract OracleManagerV1ExposeInitializer is OracleManagerV1 {
         return 0;
     }
 
-    function _getRedeemManager() internal view override returns (address) {
-        return address(0);
-    }
+    function _reportWithdrawToRedeemManager() internal override {}
 
     function _pullCLFunds(uint256 skimmedEthAmount, uint256 exitedEthAmount) internal override {}
 
     function _pullRedeemManagerExceedingEth(uint256 max) internal override returns (uint256) {
         return 0;
     }
+
+    function _requestExitsBasedOnRedeemDemandAfterRebalancings(
+        uint256 exitingBalance,
+        bool depositToRedeemRebalancingAllowed
+    ) internal override {}
 }
 
 contract OracleManagerV1Tests is Test {

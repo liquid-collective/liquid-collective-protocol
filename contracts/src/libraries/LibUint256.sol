@@ -45,4 +45,12 @@ library LibUint256 {
     function min(uint256 _a, uint256 _b) internal pure returns (uint256) {
         return (_a > _b ? _b : _a);
     }
+
+    /// @notice Performs a ceiled division
+    /// @param _a Numerator
+    /// @param _b Denominator
+    /// @return ceil(_a / _b)
+    function ceil(uint256 _a, uint256 _b) internal pure returns (uint256) {
+        return (_a / _b) + (_a % _b > 0 ? 1 : 0);
+    }
 }

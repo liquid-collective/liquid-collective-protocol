@@ -157,7 +157,11 @@ abstract contract OracleManagerV1 is IOracleManagerV1 {
 
     function _pullRedeemManagerExceedingEth(uint256 max) internal virtual returns (uint256);
 
-    function _getRedeemManager() internal view virtual returns (address);
+    function _reportWithdrawToRedeemManager() internal virtual;
+    function _requestExitsBasedOnRedeemDemandAfterRebalancings(
+        uint256 exitingBalance,
+        bool depositToRedeemRebalancingAllowed
+    ) internal virtual;
 
     function initOracleManagerV1_1(
         uint64 epochsPerFrame,
@@ -187,18 +191,27 @@ abstract contract OracleManagerV1 is IOracleManagerV1 {
         emit SetBounds(annualAprUpperBound, relativeLowerBound);
     }
 
+    struct ConsensusLayerDataReportingTrace {
+        uint256 rewards;
+        uint256 pulledELFees;
+        uint256 pulledRedeemManagerExceedingEthBuffer;
+        uint256 pulledCoverageFunds;
+    }
+
     struct ConsensusLayerDataReportingVariables {
         uint256 preReportUnderlyingBalance;
         uint256 postReportUnderlyingBalance;
         uint256 exitedAmountIncrease;
         uint256 skimmedAmountIncrease;
         uint256 timeElapsedSinceLastReport;
-        uint256 rewards;
         uint256 availableAmountToUpperBound;
-        uint256 pulledELFees;
-        uint256 pulledRedeemManagerExceedingEthBuffer;
-        uint256 pulledCoverageFunds;
+        uint256 redeemManagerDemand;
+        ConsensusLayerDataReportingTrace trace;
     }
+
+    event ProcessedConsensusLayerReport(
+        IOracleManagerV1.ConsensusLayerReport report, ConsensusLayerDataReportingTrace trace
+    );
 
     function setConsensusLayerData(IOracleManagerV1.ConsensusLayerReport calldata report) external {
         // only the oracle is allowed to call this endpoint
@@ -269,10 +282,10 @@ abstract contract OracleManagerV1 is IOracleManagerV1 {
             }
 
             // we update the rewards based on the balance delta
-            vars.rewards = (vars.postReportUnderlyingBalance - vars.preReportUnderlyingBalance);
+            vars.trace.rewards = (vars.postReportUnderlyingBalance - vars.preReportUnderlyingBalance);
 
             // we update the available amount to upper bound (the amount of eth we can still pull and stay below the upper reporting bound)
-            vars.availableAmountToUpperBound = maxIncrease - vars.rewards;
+            vars.availableAmountToUpperBound = maxIncrease - vars.trace.rewards;
         } else {
             // otherwise if the balance has decreased, we verify that we are not exceeding the lower reporting bound
 
@@ -297,28 +310,28 @@ abstract contract OracleManagerV1 is IOracleManagerV1 {
         // if we have available amount to upper bound after the reporting values are applied
         if (vars.availableAmountToUpperBound > 0) {
             // we pull the funds from the execution layer fee recipient
-            vars.pulledELFees = _pullELFees(vars.availableAmountToUpperBound);
+            vars.trace.pulledELFees = _pullELFees(vars.availableAmountToUpperBound);
             // we update the rewards
-            vars.rewards += vars.pulledELFees;
+            vars.trace.rewards += vars.trace.pulledELFees;
             // we update the available amount accordingly
-            vars.availableAmountToUpperBound -= vars.pulledELFees;
+            vars.availableAmountToUpperBound -= vars.trace.pulledELFees;
         }
 
         // if we have available amount to upper bound after the execution layer fees are pulled
         if (vars.availableAmountToUpperBound > 0) {
             // we pull the funds from the exceeding eth buffer of the redeem manager
-            vars.pulledRedeemManagerExceedingEthBuffer =
+            vars.trace.pulledRedeemManagerExceedingEthBuffer =
                 _pullRedeemManagerExceedingEth(vars.availableAmountToUpperBound);
             // we update the rewards
-            vars.rewards += vars.pulledRedeemManagerExceedingEthBuffer;
+            vars.trace.rewards += vars.trace.pulledRedeemManagerExceedingEthBuffer;
             // we update the available amount accordingly
-            vars.availableAmountToUpperBound -= vars.pulledRedeemManagerExceedingEthBuffer;
+            vars.availableAmountToUpperBound -= vars.trace.pulledRedeemManagerExceedingEthBuffer;
         }
 
         // if we have available amount to upper bound after pulling the exceeding eth buffer, we attempt to pull coverage funds
         if (vars.availableAmountToUpperBound > 0) {
             // we pull the funds from the coverage recipient
-            vars.pulledCoverageFunds = _pullCoverageFunds(vars.availableAmountToUpperBound);
+            vars.trace.pulledCoverageFunds = _pullCoverageFunds(vars.availableAmountToUpperBound);
             // we do not update the rewards as coverage is not considered rewards
             // we do not update the available amount as there are no more pulling actions to perform afterwards
         }
@@ -329,22 +342,24 @@ abstract contract OracleManagerV1 is IOracleManagerV1 {
             _pullCLFunds(vars.skimmedAmountIncrease, vars.exitedAmountIncrease);
         }
 
-        // TODO get redeem manager LsETH balance
-        // TODO compute amount of eth to provide based on balance, and the amount of LsETH that it will cover
-        // TODO perform a withdrawal event creation on redeem manager
-        // TODO burn the amount of LsETH from the redeem manager
-        // TODO update ethToRedeem
+        // we use the updated balanceToRedeem value to report a withdraw event on the redeem manager
+        _reportWithdrawToRedeemManager();
 
         // if our rewards are not null, we dispatch the fee to the collector
-        if (vars.rewards > 0) {
-            _onEarnings(vars.rewards);
+        if (vars.trace.rewards > 0) {
+            _onEarnings(vars.trace.rewards);
         }
 
-        // TODO skip everything below if the slashing containment mode is active
-        // TODO compute redeem manager remaining demand based on updated LsETH balance
-        // TODO IF value is 0 (everything is satisfied) we add ethToRedeem value to ethToDeposit
-        // TODO ELSE update ethToDeposit by taking into account demand and currently exiting eth
-        // TODO based on possibly updated ethToRedeem value, currently exiting funds and redeem demand, we ask the node operator registry to exit validators
+        // if the slashing containment mode is active, we do not perform exit related action until it is disabled
+        if (!report.slashingContainmentMode) {
+            // we request exits based on incoming still in the exit process and current eth buffers
+            _requestExitsBasedOnRedeemDemandAfterRebalancings(
+                report.validatorsExitingBalance, report.bufferRebalancingMode
+            );
+        }
+
+        // we emit a summary event with all the reporting details
+        emit ProcessedConsensusLayerReport(report, vars.trace);
     }
 
     function isValidEpoch(uint256 epoch) external view returns (bool) {
