@@ -646,4 +646,232 @@ contract OracleV1Tests is Test {
             vm.stopPrank();
         }
     }
+
+    // rework beyond this point
+
+    function _generateEmptyReport(uint256 stoppedValidatorsCountElements)
+        internal
+        pure
+        returns (IOracleManagerV1.ConsensusLayerReport memory clr)
+    {
+        clr.stoppedValidatorCountPerOperator = new uint32[](stoppedValidatorsCountElements);
+    }
+
+    event DebugReceivedReport(IOracleManagerV1.ConsensusLayerReport report);
+
+    function testValidReport(uint256 _salt) external {
+        address member = uf._new(_salt);
+
+        assertEq(oracle.getQuorum(), 0);
+        assertEq(oracle.isMember(member), false);
+
+        vm.prank(admin);
+        oracle.addMember(member, 1);
+
+        assertEq(oracle.getQuorum(), 1);
+        assertEq(oracle.isMember(member), true);
+
+        IOracleManagerV1.ConsensusLayerReport memory report = _generateEmptyReport(2);
+
+        vm.prank(member);
+        vm.expectEmit(true, true, true, true);
+        emit DebugReceivedReport(report);
+        oracle.reportConsensusLayerData(report);
+    }
+
+    function testValidReportMultiVote(uint256 _salt) external {
+        address member0 = uf._new(_salt);
+        _salt = uint256(keccak256(abi.encode(_salt)));
+        address member1 = uf._new(_salt);
+
+        assertEq(oracle.getQuorum(), 0);
+        assertEq(oracle.isMember(member0), false);
+        assertEq(oracle.isMember(member1), false);
+
+        vm.prank(admin);
+        oracle.addMember(member0, 1);
+        vm.prank(admin);
+        oracle.addMember(member1, 2);
+
+        assertEq(oracle.getQuorum(), 2);
+        assertEq(oracle.isMember(member0), true);
+        assertEq(oracle.isMember(member1), true);
+
+        IOracleManagerV1.ConsensusLayerReport memory report = _generateEmptyReport(2);
+
+        vm.prank(member0);
+        oracle.reportConsensusLayerData(report);
+
+        vm.prank(member1);
+        vm.expectEmit(true, true, true, true);
+        emit DebugReceivedReport(report);
+        oracle.reportConsensusLayerData(report);
+    }
+
+    function testReportUnauthorized(uint256 _salt) external {
+        address member = uf._new(_salt);
+
+        assertEq(oracle.getQuorum(), 0);
+        assertEq(oracle.isMember(member), false);
+
+        IOracleManagerV1.ConsensusLayerReport memory report = _generateEmptyReport(2);
+
+        vm.prank(member);
+        vm.expectRevert(abi.encodeWithSignature("Unauthorized(address)", member));
+        oracle.reportConsensusLayerData(report);
+    }
+
+    function testReportEpochTooOld(uint256 _salt) external {
+        address member = uf._new(_salt);
+
+        assertEq(oracle.getQuorum(), 0);
+        assertEq(oracle.isMember(member), false);
+
+        vm.prank(admin);
+        oracle.addMember(member, 1);
+
+        assertEq(oracle.getQuorum(), 1);
+        assertEq(oracle.isMember(member), true);
+
+        IOracleManagerV1.ConsensusLayerReport memory report = _generateEmptyReport(2);
+
+        vm.prank(member);
+        vm.expectEmit(true, true, true, true);
+        emit DebugReceivedReport(report);
+        oracle.reportConsensusLayerData(report);
+
+        vm.prank(member);
+        vm.expectRevert(abi.encodeWithSignature("EpochTooOld(uint256,uint256)", report.epoch, report.epoch + 1));
+        oracle.reportConsensusLayerData(report);
+    }
+
+    function testReportEpochInvalidEpoch(uint256 _salt) external {
+        address member = uf._new(_salt);
+
+        assertEq(oracle.getQuorum(), 0);
+        assertEq(oracle.isMember(member), false);
+
+        vm.prank(admin);
+        oracle.addMember(member, 1);
+
+        assertEq(oracle.getQuorum(), 1);
+        assertEq(oracle.isMember(member), true);
+
+        IOracleManagerV1.ConsensusLayerReport memory report = _generateEmptyReport(2);
+
+        RiverMock(address(oracleInput)).sudoSetInvalidEpoch(report.epoch);
+
+        vm.prank(member);
+        vm.expectRevert(abi.encodeWithSignature("InvalidEpoch(uint256)", report.epoch));
+        oracle.reportConsensusLayerData(report);
+    }
+
+    function testValidReportAlreadyReported(uint256 _salt) external {
+        address member0 = uf._new(_salt);
+        _salt = uint256(keccak256(abi.encode(_salt)));
+        address member1 = uf._new(_salt);
+
+        assertEq(oracle.getQuorum(), 0);
+        assertEq(oracle.isMember(member0), false);
+        assertEq(oracle.isMember(member1), false);
+
+        vm.prank(admin);
+        oracle.addMember(member0, 1);
+        vm.prank(admin);
+        oracle.addMember(member1, 2);
+
+        assertEq(oracle.getQuorum(), 2);
+        assertEq(oracle.isMember(member0), true);
+        assertEq(oracle.isMember(member1), true);
+
+        IOracleManagerV1.ConsensusLayerReport memory report = _generateEmptyReport(2);
+
+        vm.prank(member0);
+        oracle.reportConsensusLayerData(report);
+
+        vm.prank(member0);
+        vm.expectRevert(abi.encodeWithSignature("AlreadyReported(uint256,address)", report.epoch, member0));
+        oracle.reportConsensusLayerData(report);
+    }
+
+    event ClearedReporting();
+
+    function testValidReportClearOnNewReport(uint256 _salt) external {
+        address member0 = uf._new(_salt);
+        _salt = uint256(keccak256(abi.encode(_salt)));
+        address member1 = uf._new(_salt);
+
+        assertEq(oracle.getQuorum(), 0);
+        assertEq(oracle.isMember(member0), false);
+        assertEq(oracle.isMember(member1), false);
+
+        vm.prank(admin);
+        oracle.addMember(member0, 1);
+        vm.prank(admin);
+        oracle.addMember(member1, 2);
+
+        assertEq(oracle.getQuorum(), 2);
+        assertEq(oracle.isMember(member0), true);
+        assertEq(oracle.isMember(member1), true);
+
+        IOracleManagerV1.ConsensusLayerReport memory report = _generateEmptyReport(2);
+
+        vm.prank(member0);
+        oracle.reportConsensusLayerData(report);
+
+        ++report.epoch;
+
+        vm.prank(member0);
+        vm.expectEmit(true, true, true, true);
+        emit ClearedReporting();
+        oracle.reportConsensusLayerData(report);
+        ++report.epoch;
+
+        vm.prank(member0);
+        vm.expectEmit(true, true, true, true);
+        emit ClearedReporting();
+        oracle.reportConsensusLayerData(report);
+
+        vm.prank(member1);
+        vm.expectEmit(true, true, true, true);
+        emit DebugReceivedReport(report);
+        oracle.reportConsensusLayerData(report);
+    }
+
+    function testValidReportEpochTooOldAfterClear(uint256 _salt) external {
+        address member0 = uf._new(_salt);
+        _salt = uint256(keccak256(abi.encode(_salt)));
+        address member1 = uf._new(_salt);
+
+        assertEq(oracle.getQuorum(), 0);
+        assertEq(oracle.isMember(member0), false);
+        assertEq(oracle.isMember(member1), false);
+
+        vm.prank(admin);
+        oracle.addMember(member0, 1);
+        vm.prank(admin);
+        oracle.addMember(member1, 2);
+
+        assertEq(oracle.getQuorum(), 2);
+        assertEq(oracle.isMember(member0), true);
+        assertEq(oracle.isMember(member1), true);
+
+        IOracleManagerV1.ConsensusLayerReport memory report = _generateEmptyReport(2);
+
+        vm.prank(member0);
+        oracle.reportConsensusLayerData(report);
+
+        ++report.epoch;
+
+        vm.prank(member0);
+        vm.expectEmit(true, true, true, true);
+        emit ClearedReporting();
+        oracle.reportConsensusLayerData(report);
+
+        --report.epoch;
+
+        vm.prank(member1);
+        vm.expectRevert(abi.encodeWithSignature("EpochTooOld(uint256,uint256)", report.epoch, report.epoch + 1));
+        oracle.reportConsensusLayerData(report);
+    }
 }
