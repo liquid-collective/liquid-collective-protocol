@@ -242,6 +242,7 @@ abstract contract OracleManagerV1 is IOracleManagerV1 {
 
         // we compute the exited amount increase by taking the delta between reports
         vars.exitedAmountIncrease = report.validatorsExitedBalance - lastValidatorsExitedBalance;
+        lastValidatorsExitedBalance = report.validatorsExitedBalance;
 
         // we ensure that the reported total skimmed balance is not decreasing
         if (report.validatorsSkimmedBalance < lastValidatorsSkimmedBalance) {
@@ -252,6 +253,7 @@ abstract contract OracleManagerV1 is IOracleManagerV1 {
 
         // we compute the new skimmed amount by taking the delta between reports
         vars.skimmedAmountIncrease = report.validatorsSkimmedBalance - lastValidatorsSkimmedBalance;
+        lastValidatorsSkimmedBalance = report.validatorsSkimmedBalance;
 
         ReportBounds.ReportBoundsStruct memory rb = ReportBounds.get();
 
@@ -259,6 +261,7 @@ abstract contract OracleManagerV1 is IOracleManagerV1 {
         vars.preReportUnderlyingBalance = _getTotalUnderlyingBalance();
         // we compute the time elapsed since last report based on epoch numbers
         vars.timeElapsedSinceLastReport = _timeBetweenEpochs(cls, lastReportEpoch, report.epoch);
+        lastReportEpoch = report.epoch;
 
         // we update the system parameters, this will have an impact on how the total underlying balance is computed
         CLValidatorTotalBalance.set(report.validatorsBalance);
@@ -268,7 +271,7 @@ abstract contract OracleManagerV1 is IOracleManagerV1 {
         uint256 maxIncrease = _maxIncrease(rb, vars.preReportUnderlyingBalance, vars.timeElapsedSinceLastReport);
 
         // we retrieve the new total underlying balance after system parameters are changed
-        vars.postReportUnderlyingBalance = _getTotalUnderlyingBalance();
+        vars.postReportUnderlyingBalance = _getTotalUnderlyingBalance() + vars.exitedAmountIncrease;
 
         // if the new underlying balance has increased, we verify that we are not exceeding reporting bound, and we update
         // reporting variables accordingly

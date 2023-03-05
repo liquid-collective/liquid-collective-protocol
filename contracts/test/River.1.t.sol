@@ -2052,16 +2052,9 @@ contract RiverV1TestsReport_HEAVY_FUZZING is Test, BytesGenerator {
     RedeemManagerV1 internal redeemManager;
 
     address internal admin;
-    address internal newAdmin;
     address internal collector;
-    address internal newCollector;
     address internal allower;
     address internal oracleMember;
-    address internal newAllowlist;
-    address internal bob;
-    address internal joe;
-
-    string internal operatorOneName = "NodeMasters";
 
     event PulledELFees(uint256 amount);
     event SetELFeeRecipient(address indexed elFeeRecipient);
@@ -2077,14 +2070,9 @@ contract RiverV1TestsReport_HEAVY_FUZZING is Test, BytesGenerator {
 
     function setUp() public {
         admin = makeAddr("admin");
-        newAdmin = makeAddr("newAdmin");
         collector = makeAddr("collector");
-        newCollector = makeAddr("newCollector");
         allower = makeAddr("allower");
         oracleMember = makeAddr("oracleMember");
-        newAllowlist = makeAddr("newAllowlist");
-        bob = makeAddr("bob");
-        joe = makeAddr("joe");
 
         vm.warp(857034746);
 
@@ -2122,9 +2110,8 @@ contract RiverV1TestsReport_HEAVY_FUZZING is Test, BytesGenerator {
         );
         withdraw.initializeWithdrawV1(address(river));
         oracle.initOracleV1(address(river), admin, 225, 32, 12, 0, 1000, 500);
-        vm.startPrank(admin);
 
-        // ===================
+        vm.startPrank(admin);
 
         oracle.addMember(oracleMember, 1);
         river.setCoverageFund(address(coverageFund));
@@ -2418,11 +2405,19 @@ contract RiverV1TestsReport_HEAVY_FUZZING is Test, BytesGenerator {
         _salt = _next(_salt);
         vm.warp(timeIntoTheFuture + (secondsPerSlot * slotsPerEpoch) * clr.epoch);
 
-        uint256 maxAllowedIncrease =
-            debug_maxIncrease(rfv.rb, river.totalUnderlyingSupply(), debug_timeBetweenEpochs(rfv.cls, 0, clr.epoch));
+        uint256 maxAllowedIncrease = debug_maxIncrease(
+            rfv.rb,
+            river.totalUnderlyingSupply(),
+            debug_timeBetweenEpochs(rfv.cls, river.getLastReportedEpoch(), clr.epoch)
+        );
+
+        uint256 stoppedTotalCount = bound(_salt, 0, rfv.depositCount);
+        _salt = _next(_salt);
+        uint256 exitingTotalCount = bound(_salt, 0, stoppedTotalCount);
+        _salt = _next(_salt);
 
         uint256 totalIncrease = bound(_salt, 0, maxAllowedIncrease);
-        clr.validatorsBalance = rfv.depositCount * 32 ether + totalIncrease;
+        clr.validatorsBalance = (rfv.depositCount - (stoppedTotalCount - exitingTotalCount)) * 32 ether + totalIncrease;
         _salt = _next(_salt);
 
         clr.validatorsCount = uint32(rfv.depositCount);
@@ -2431,22 +2426,18 @@ contract RiverV1TestsReport_HEAVY_FUZZING is Test, BytesGenerator {
         clr.validatorsSkimmedBalance = uint64(rfv.depositCount) * skimmingPerValidator;
         _salt = _next(_salt);
 
-        uint256 exitedTotalCount = bound(_salt, 0, rfv.depositCount);
-        _salt = _next(_salt);
-        uint256 exitingTotalCount = bound(_salt, 0, exitedTotalCount);
-
-        clr.validatorsExitedBalance = 32 ether * exitedTotalCount;
+        clr.validatorsExitedBalance = 32 ether * (stoppedTotalCount - exitingTotalCount);
         clr.validatorsExitingBalance = 32 ether * exitingTotalCount;
 
         vm.deal(address(withdraw), clr.validatorsSkimmedBalance + clr.validatorsExitedBalance);
 
         clr.stoppedValidatorCountPerOperator = new uint32[](rfv.operatorCount + 1);
 
-        clr.stoppedValidatorCountPerOperator[0] = uint32(exitedTotalCount);
-        uint256 rest = exitedTotalCount % rfv.operatorCount;
+        clr.stoppedValidatorCountPerOperator[0] = uint32(stoppedTotalCount);
+        uint256 rest = stoppedTotalCount % rfv.operatorCount;
         for (uint256 idx = 0; idx < rfv.operatorCount; ++idx) {
             clr.stoppedValidatorCountPerOperator[idx + 1] =
-                uint32((exitedTotalCount / rfv.operatorCount) + (rest > 0 ? 1 : 0));
+                uint32((stoppedTotalCount / rfv.operatorCount) + (rest > 0 ? 1 : 0));
             if (rest > 0) {
                 --rest;
             }
@@ -2477,11 +2468,19 @@ contract RiverV1TestsReport_HEAVY_FUZZING is Test, BytesGenerator {
         _salt = _next(_salt);
         vm.warp(timeIntoTheFuture + (secondsPerSlot * slotsPerEpoch) * clr.epoch);
 
-        uint256 maxAllowedIncrease =
-            debug_maxIncrease(rfv.rb, river.totalUnderlyingSupply(), debug_timeBetweenEpochs(rfv.cls, 0, clr.epoch));
+        uint256 maxAllowedIncrease = debug_maxIncrease(
+            rfv.rb,
+            river.totalUnderlyingSupply(),
+            debug_timeBetweenEpochs(rfv.cls, river.getLastReportedEpoch(), clr.epoch)
+        );
+
+        uint256 stoppedTotalCount = bound(_salt, 0, rfv.depositCount);
+        _salt = _next(_salt);
+        uint256 exitingTotalCount = bound(_salt, 0, stoppedTotalCount);
+        _salt = _next(_salt);
 
         uint256 totalIncrease = bound(_salt, 0, maxAllowedIncrease);
-        clr.validatorsBalance = rfv.depositCount * 32 ether + totalIncrease;
+        clr.validatorsBalance = (rfv.depositCount - (stoppedTotalCount - exitingTotalCount)) * 32 ether + totalIncrease;
         _salt = _next(_salt);
 
         clr.validatorsCount = uint32(rfv.depositCount);
@@ -2490,22 +2489,18 @@ contract RiverV1TestsReport_HEAVY_FUZZING is Test, BytesGenerator {
         clr.validatorsSkimmedBalance = uint64(rfv.depositCount) * skimmingPerValidator;
         _salt = _next(_salt);
 
-        uint256 exitedTotalCount = bound(_salt, 0, rfv.depositCount);
-        _salt = _next(_salt);
-        uint256 exitingTotalCount = bound(_salt, 0, exitedTotalCount);
-
-        clr.validatorsExitedBalance = 32 ether * exitedTotalCount;
+        clr.validatorsExitedBalance = 32 ether * (stoppedTotalCount - exitingTotalCount);
         clr.validatorsExitingBalance = 32 ether * exitingTotalCount;
 
         vm.deal(address(withdraw), clr.validatorsSkimmedBalance + clr.validatorsExitedBalance);
 
         clr.stoppedValidatorCountPerOperator = new uint32[](rfv.operatorCount + 1);
 
-        clr.stoppedValidatorCountPerOperator[0] = uint32(exitedTotalCount);
-        uint256 rest = exitedTotalCount % rfv.operatorCount;
+        clr.stoppedValidatorCountPerOperator[0] = uint32(stoppedTotalCount);
+        uint256 rest = stoppedTotalCount % rfv.operatorCount;
         for (uint256 idx = 0; idx < rfv.operatorCount; ++idx) {
             clr.stoppedValidatorCountPerOperator[idx + 1] =
-                uint32((exitedTotalCount / rfv.operatorCount) + (rest > 0 ? 1 : 0));
+                uint32((stoppedTotalCount / rfv.operatorCount) + (rest > 0 ? 1 : 0));
             if (rest > 0) {
                 --rest;
             }
@@ -2539,11 +2534,19 @@ contract RiverV1TestsReport_HEAVY_FUZZING is Test, BytesGenerator {
         _salt = _next(_salt);
         vm.warp(timeIntoTheFuture + (secondsPerSlot * slotsPerEpoch) * clr.epoch);
 
-        uint256 maxAllowedIncrease =
-            debug_maxIncrease(rfv.rb, river.totalUnderlyingSupply(), debug_timeBetweenEpochs(rfv.cls, 0, clr.epoch));
+        uint256 maxAllowedIncrease = debug_maxIncrease(
+            rfv.rb,
+            river.totalUnderlyingSupply(),
+            debug_timeBetweenEpochs(rfv.cls, river.getLastReportedEpoch(), clr.epoch)
+        );
+
+        uint256 stoppedTotalCount = bound(_salt, 0, rfv.depositCount);
+        _salt = _next(_salt);
+        uint256 exitingTotalCount = bound(_salt, 0, stoppedTotalCount);
+        _salt = _next(_salt);
 
         uint256 totalIncrease = bound(_salt, 0, maxAllowedIncrease);
-        clr.validatorsBalance = rfv.depositCount * 32 ether + totalIncrease;
+        clr.validatorsBalance = (rfv.depositCount - (stoppedTotalCount - exitingTotalCount)) * 32 ether + totalIncrease;
         _salt = _next(_salt);
 
         clr.validatorsCount = uint32(rfv.depositCount);
@@ -2552,22 +2555,18 @@ contract RiverV1TestsReport_HEAVY_FUZZING is Test, BytesGenerator {
         clr.validatorsSkimmedBalance = uint64(rfv.depositCount) * skimmingPerValidator;
         _salt = _next(_salt);
 
-        uint256 exitedTotalCount = bound(_salt, 0, rfv.depositCount);
-        _salt = _next(_salt);
-        uint256 exitingTotalCount = bound(_salt, 0, exitedTotalCount);
-
-        clr.validatorsExitedBalance = 32 ether * exitedTotalCount;
+        clr.validatorsExitedBalance = 32 ether * (stoppedTotalCount - exitingTotalCount);
         clr.validatorsExitingBalance = 32 ether * exitingTotalCount;
 
         vm.deal(address(withdraw), clr.validatorsSkimmedBalance + clr.validatorsExitedBalance);
 
         clr.stoppedValidatorCountPerOperator = new uint32[](rfv.operatorCount + 1);
 
-        clr.stoppedValidatorCountPerOperator[0] = uint32(exitedTotalCount);
-        uint256 rest = exitedTotalCount % rfv.operatorCount;
+        clr.stoppedValidatorCountPerOperator[0] = uint32(stoppedTotalCount);
+        uint256 rest = stoppedTotalCount % rfv.operatorCount;
         for (uint256 idx = 0; idx < rfv.operatorCount; ++idx) {
             clr.stoppedValidatorCountPerOperator[idx + 1] =
-                uint32((exitedTotalCount / rfv.operatorCount) + (rest > 0 ? 1 : 0));
+                uint32((stoppedTotalCount / rfv.operatorCount) + (rest > 0 ? 1 : 0));
             if (rest > 0) {
                 --rest;
             }
@@ -2606,11 +2605,19 @@ contract RiverV1TestsReport_HEAVY_FUZZING is Test, BytesGenerator {
         _salt = _next(_salt);
         vm.warp(timeIntoTheFuture + (secondsPerSlot * slotsPerEpoch) * clr.epoch);
 
-        uint256 maxAllowedIncrease =
-            debug_maxIncrease(rfv.rb, river.totalUnderlyingSupply(), debug_timeBetweenEpochs(rfv.cls, 0, clr.epoch));
+        uint256 maxAllowedIncrease = debug_maxIncrease(
+            rfv.rb,
+            river.totalUnderlyingSupply(),
+            debug_timeBetweenEpochs(rfv.cls, river.getLastReportedEpoch(), clr.epoch)
+        );
+
+        uint256 stoppedTotalCount = bound(_salt, 0, rfv.depositCount);
+        _salt = _next(_salt);
+        uint256 exitingTotalCount = bound(_salt, 0, stoppedTotalCount);
+        _salt = _next(_salt);
 
         uint256 totalIncrease = bound(_salt, 0, maxAllowedIncrease);
-        clr.validatorsBalance = rfv.depositCount * 32 ether + totalIncrease;
+        clr.validatorsBalance = (rfv.depositCount - (stoppedTotalCount - exitingTotalCount)) * 32 ether + totalIncrease;
         _salt = _next(_salt);
 
         clr.validatorsCount = uint32(rfv.depositCount);
@@ -2619,22 +2626,18 @@ contract RiverV1TestsReport_HEAVY_FUZZING is Test, BytesGenerator {
         clr.validatorsSkimmedBalance = uint64(rfv.depositCount) * skimmingPerValidator;
         _salt = _next(_salt);
 
-        uint256 exitedTotalCount = bound(_salt, 0, rfv.depositCount);
-        _salt = _next(_salt);
-        uint256 exitingTotalCount = bound(_salt, 0, exitedTotalCount);
-
-        clr.validatorsExitedBalance = 32 ether * exitedTotalCount;
+        clr.validatorsExitedBalance = 32 ether * (stoppedTotalCount - exitingTotalCount);
         clr.validatorsExitingBalance = 32 ether * exitingTotalCount;
 
         vm.deal(address(withdraw), clr.validatorsSkimmedBalance + clr.validatorsExitedBalance);
 
         clr.stoppedValidatorCountPerOperator = new uint32[](rfv.operatorCount + 1);
 
-        clr.stoppedValidatorCountPerOperator[0] = uint32(exitedTotalCount);
-        uint256 rest = exitedTotalCount % rfv.operatorCount;
+        clr.stoppedValidatorCountPerOperator[0] = uint32(stoppedTotalCount);
+        uint256 rest = stoppedTotalCount % rfv.operatorCount;
         for (uint256 idx = 0; idx < rfv.operatorCount; ++idx) {
             clr.stoppedValidatorCountPerOperator[idx + 1] =
-                uint32((exitedTotalCount / rfv.operatorCount) + (rest > 0 ? 1 : 0));
+                uint32((stoppedTotalCount / rfv.operatorCount) + (rest > 0 ? 1 : 0));
             if (rest > 0) {
                 --rest;
             }
@@ -2668,10 +2671,17 @@ contract RiverV1TestsReport_HEAVY_FUZZING is Test, BytesGenerator {
         _salt = _next(_salt);
         vm.warp(timeIntoTheFuture + (secondsPerSlot * slotsPerEpoch) * clr.epoch);
 
-        uint256 maxAllowedIncrease =
-            debug_maxIncrease(rfv.rb, river.totalUnderlyingSupply(), debug_timeBetweenEpochs(rfv.cls, 0, clr.epoch));
+        uint256 stoppedTotalCount = bound(_salt, 0, rfv.depositCount);
+        _salt = _next(_salt);
+        uint256 exitingTotalCount = bound(_salt, 0, stoppedTotalCount);
+
+        uint256 maxAllowedIncrease = debug_maxIncrease(
+            rfv.rb,
+            river.totalUnderlyingSupply(),
+            debug_timeBetweenEpochs(rfv.cls, river.getLastReportedEpoch(), clr.epoch)
+        );
         uint256 totalIncrease = bound(_salt, 0, maxAllowedIncrease);
-        clr.validatorsBalance = rfv.depositCount * 32 ether + totalIncrease;
+        clr.validatorsBalance = (rfv.depositCount - (stoppedTotalCount - exitingTotalCount)) * 32 ether + totalIncrease;
         _salt = _next(_salt);
         {
             clr.validatorsCount = uint32(rfv.depositCount);
@@ -2680,22 +2690,18 @@ contract RiverV1TestsReport_HEAVY_FUZZING is Test, BytesGenerator {
             clr.validatorsSkimmedBalance = uint64(rfv.depositCount) * skimmingPerValidator;
             _salt = _next(_salt);
 
-            uint256 exitedTotalCount = bound(_salt, 0, rfv.depositCount);
-            _salt = _next(_salt);
-            uint256 exitingTotalCount = bound(_salt, 0, exitedTotalCount);
-
-            clr.validatorsExitedBalance = 32 ether * exitedTotalCount;
+            clr.validatorsExitedBalance = 32 ether * (stoppedTotalCount - exitingTotalCount);
             clr.validatorsExitingBalance = 32 ether * exitingTotalCount;
 
             vm.deal(address(withdraw), clr.validatorsSkimmedBalance + clr.validatorsExitedBalance);
 
             clr.stoppedValidatorCountPerOperator = new uint32[](rfv.operatorCount + 1);
 
-            clr.stoppedValidatorCountPerOperator[0] = uint32(exitedTotalCount);
-            uint256 rest = exitedTotalCount % rfv.operatorCount;
+            clr.stoppedValidatorCountPerOperator[0] = uint32(stoppedTotalCount);
+            uint256 rest = stoppedTotalCount % rfv.operatorCount;
             for (uint256 idx = 0; idx < rfv.operatorCount; ++idx) {
                 clr.stoppedValidatorCountPerOperator[idx + 1] =
-                    uint32((exitedTotalCount / rfv.operatorCount) + (rest > 0 ? 1 : 0));
+                    uint32((stoppedTotalCount / rfv.operatorCount) + (rest > 0 ? 1 : 0));
                 if (rest > 0) {
                     --rest;
                 }
@@ -2749,5 +2755,245 @@ contract RiverV1TestsReport_HEAVY_FUZZING is Test, BytesGenerator {
         returns (uint256)
     {
         return (epochNow - epochPast) * (cls.secondsPerSlot * cls.slotsPerEpoch);
+    }
+
+    function _generateEmptyReport() internal pure returns (IOracleManagerV1.ConsensusLayerReport memory clr) {
+        clr.stoppedValidatorCountPerOperator = new uint32[](1);
+        clr.stoppedValidatorCountPerOperator[0] = 0;
+    }
+
+    function testReportingError_Unauthorized(uint256 _salt) external {
+        address random = uf._new(_salt);
+        IOracleManagerV1.ConsensusLayerReport memory clr = _generateEmptyReport();
+
+        vm.prank(random);
+        vm.expectRevert(abi.encodeWithSignature("Unauthorized(address)", random));
+        river.setConsensusLayerData(clr);
+    }
+
+    function testReportingError_InvalidEpoch(uint256 _salt) external {
+        IOracleManagerV1.ConsensusLayerReport memory clr = _generateEmptyReport();
+
+        clr.epoch = (bound(_salt, 0, type(uint128).max) * epochsPerFrame) + 1;
+        vm.warp((clr.epoch + epochsUntilFinal) * (secondsPerSlot * slotsPerEpoch));
+
+        vm.prank(address(oracle));
+        vm.expectRevert(abi.encodeWithSignature("InvalidEpoch(uint256)", clr.epoch));
+        river.setConsensusLayerData(clr);
+    }
+
+    function _depositValidators(uint256 count, uint256 _salt) internal returns (uint256) {
+        address depositor = uf._new(_salt);
+        _salt = _next(_salt);
+        _allow(depositor, LibAllowlistMasks.DEPOSIT_MASK);
+        vm.deal(depositor, count * 32 ether);
+        vm.prank(depositor);
+        river.deposit{value: count * 32 ether}();
+
+        address operator = uf._new(_salt);
+        _salt = _next(_salt);
+        string memory operatorName = string(abi.encode(_salt));
+        _salt = _next(_salt);
+
+        vm.prank(admin);
+        uint256 operatorIndex = operatorsRegistry.addOperator(operatorName, operator);
+        vm.prank(operator);
+        operatorsRegistry.addValidators(operatorIndex, count, genBytes((48 + 96) * count));
+
+        uint256[] memory operatorIndexes = new uint256[](1);
+        operatorIndexes[0] = operatorIndex;
+        uint256[] memory operatorLimits = new uint256[](1);
+        operatorLimits[0] = count;
+
+        vm.prank(admin);
+        operatorsRegistry.setOperatorLimits(operatorIndexes, operatorLimits, block.number);
+
+        vm.prank(admin);
+        river.depositToConsensusLayer(count);
+
+        return _salt;
+    }
+
+    function testReportingError_InvalidValidatorCountReport(uint256 _salt) external {
+        uint8 depositCount = uint8(bound(_salt, 1, 32));
+        IOracleManagerV1.ConsensusLayerReport memory clr = _generateEmptyReport();
+
+        clr.epoch = bound(_salt, 1, type(uint128).max) * epochsPerFrame;
+        vm.warp((clr.epoch + epochsUntilFinal) * (secondsPerSlot * slotsPerEpoch));
+        _salt = _depositValidators(depositCount, _salt);
+
+        clr.validatorsCount = depositCount + 1;
+
+        vm.prank(address(oracle));
+        vm.expectRevert(
+            abi.encodeWithSignature("InvalidValidatorCountReport(uint256,uint256)", clr.validatorsCount, depositCount)
+        );
+        river.setConsensusLayerData(clr);
+    }
+
+    function testReportingError_InvalidDecreasingValidatorsExitedBalance(uint256 _salt) external {
+        uint8 depositCount = uint8(bound(_salt, 2, 32));
+        IOracleManagerV1.ConsensusLayerReport memory clr = _generateEmptyReport();
+
+        clr.epoch = bound(_salt, 1, type(uint128).max) * epochsPerFrame;
+        vm.warp((clr.epoch + epochsUntilFinal) * (secondsPerSlot * slotsPerEpoch));
+        _salt = _depositValidators(depositCount, _salt);
+
+        clr.validatorsCount = depositCount;
+        clr.validatorsBalance = 32 ether * (depositCount - 1);
+        clr.validatorsExitingBalance = 0;
+        clr.validatorsSkimmedBalance = 0;
+        clr.validatorsExitedBalance = 32 ether;
+
+        vm.deal(address(withdraw), 32 ether);
+
+        vm.prank(address(oracle));
+        river.setConsensusLayerData(clr);
+
+        clr.epoch += epochsPerFrame;
+        vm.warp((clr.epoch + epochsUntilFinal) * (secondsPerSlot * slotsPerEpoch));
+        clr.validatorsBalance = 32 ether * (depositCount);
+        clr.validatorsExitedBalance = 0;
+
+        vm.prank(address(oracle));
+        vm.expectRevert(
+            abi.encodeWithSignature("InvalidDecreasingValidatorsExitedBalance(uint256,uint256)", 32 ether, 0)
+        );
+        river.setConsensusLayerData(clr);
+    }
+
+    function testReportingError_InvalidDecreasingValidatorsSkimmedBalance(uint256 _salt) external {
+        uint8 depositCount = uint8(bound(_salt, 2, 32));
+        IOracleManagerV1.ConsensusLayerReport memory clr = _generateEmptyReport();
+
+        clr.epoch = bound(_salt, 1, type(uint128).max) * epochsPerFrame;
+        vm.warp((clr.epoch + epochsUntilFinal) * (secondsPerSlot * slotsPerEpoch));
+        _salt = _depositValidators(depositCount, _salt);
+
+        clr.validatorsCount = depositCount;
+        clr.validatorsBalance = 32 ether * (depositCount);
+        clr.validatorsExitingBalance = 0;
+        clr.validatorsSkimmedBalance = 1 ether;
+        clr.validatorsExitedBalance = 0;
+
+        vm.deal(address(withdraw), 1 ether);
+
+        vm.prank(address(oracle));
+        river.setConsensusLayerData(clr);
+
+        clr.epoch += epochsPerFrame;
+        vm.warp((clr.epoch + epochsUntilFinal) * (secondsPerSlot * slotsPerEpoch));
+        clr.validatorsBalance = 32 ether * (depositCount);
+        clr.validatorsSkimmedBalance = 0;
+
+        vm.prank(address(oracle));
+        vm.expectRevert(
+            abi.encodeWithSignature("InvalidDecreasingValidatorsSkimmedBalance(uint256,uint256)", 1 ether, 0)
+        );
+        river.setConsensusLayerData(clr);
+    }
+
+    function testReportingError_TotalValidatorBalanceIncreaseOutOfBound(uint256 _salt) external {
+        uint8 depositCount = uint8(bound(_salt, 2, 32));
+        IOracleManagerV1.ConsensusLayerReport memory clr = _generateEmptyReport();
+
+        clr.epoch = bound(_salt, 1, type(uint128).max) * epochsPerFrame;
+        vm.warp((clr.epoch + epochsUntilFinal) * (secondsPerSlot * slotsPerEpoch));
+        _salt = _depositValidators(depositCount, _salt);
+
+        clr.validatorsCount = depositCount;
+        clr.validatorsBalance = 32 ether * (depositCount);
+        clr.validatorsExitingBalance = 0;
+        clr.validatorsSkimmedBalance = 0;
+        clr.validatorsExitedBalance = 0;
+
+        _salt = _next(_salt);
+        uint256 framesBetween = bound(_salt, 1, 1_000_000);
+        uint256 timeBetween = framesBetween * secondsPerSlot * slotsPerEpoch * epochsPerFrame;
+        uint256 maxIncrease = debug_maxIncrease(river.getReportingBounds(), river.totalUnderlyingSupply(), timeBetween);
+
+        vm.prank(address(oracle));
+        river.setConsensusLayerData(clr);
+
+        clr.epoch += framesBetween * epochsPerFrame;
+        vm.warp((clr.epoch + epochsUntilFinal) * (secondsPerSlot * slotsPerEpoch));
+        clr.validatorsBalance += maxIncrease + 1;
+
+        vm.expectRevert(
+            abi.encodeWithSignature(
+                "TotalValidatorBalanceIncreaseOutOfBound(uint256,uint256,uint256,uint256)",
+                32 ether * depositCount,
+                32 ether * depositCount + maxIncrease + 1,
+                timeBetween,
+                river.getReportingBounds().annualAprUpperBound
+            )
+        );
+        vm.prank(address(oracle));
+        river.setConsensusLayerData(clr);
+    }
+
+    function testReportingError_TotalValidatorBalanceDecreaseOutOfBound(uint256 _salt) external {
+        uint8 depositCount = uint8(bound(_salt, 2, 32));
+        IOracleManagerV1.ConsensusLayerReport memory clr = _generateEmptyReport();
+
+        clr.epoch = bound(_salt, 1, type(uint128).max) * epochsPerFrame;
+        vm.warp((clr.epoch + epochsUntilFinal) * (secondsPerSlot * slotsPerEpoch));
+        _salt = _depositValidators(depositCount, _salt);
+
+        clr.validatorsCount = depositCount;
+        clr.validatorsBalance = 32 ether * (depositCount);
+        clr.validatorsExitingBalance = 0;
+        clr.validatorsSkimmedBalance = 0;
+        clr.validatorsExitedBalance = 0;
+
+        _salt = _next(_salt);
+        uint256 framesBetween = bound(_salt, 1, 1_000_000);
+        uint256 timeBetween = framesBetween * secondsPerSlot * slotsPerEpoch * epochsPerFrame;
+        uint256 maxDecrease = debug_maxDecrease(river.getReportingBounds(), river.totalUnderlyingSupply());
+
+        vm.prank(address(oracle));
+        river.setConsensusLayerData(clr);
+
+        clr.epoch += framesBetween * epochsPerFrame;
+        vm.warp((clr.epoch + epochsUntilFinal) * (secondsPerSlot * slotsPerEpoch));
+        clr.validatorsBalance -= maxDecrease + 1;
+
+        vm.expectRevert(
+            abi.encodeWithSignature(
+                "TotalValidatorBalanceDecreaseOutOfBound(uint256,uint256,uint256,uint256)",
+                32 ether * depositCount,
+                32 ether * depositCount - (maxDecrease + 1),
+                timeBetween,
+                river.getReportingBounds().relativeLowerBound
+            )
+        );
+        vm.prank(address(oracle));
+        river.setConsensusLayerData(clr);
+    }
+
+    function testReportingError_InvalidPulledClFundsAmount(uint256 _salt) external {
+        uint8 depositCount = uint8(bound(_salt, 2, 32));
+        uint256 skimmedAmount = bound(_salt, 1 ether, 100 ether);
+        _salt = _next(_salt);
+        uint256 notEnoughAmount = bound(_salt, 0, skimmedAmount - 1);
+        IOracleManagerV1.ConsensusLayerReport memory clr = _generateEmptyReport();
+
+        clr.epoch = bound(_salt, 1, type(uint128).max) * epochsPerFrame;
+        vm.warp((clr.epoch + epochsUntilFinal) * (secondsPerSlot * slotsPerEpoch));
+        _salt = _depositValidators(depositCount, _salt);
+
+        clr.validatorsCount = depositCount;
+        clr.validatorsBalance = 32 ether * (depositCount);
+        clr.validatorsExitingBalance = 0;
+        clr.validatorsSkimmedBalance = skimmedAmount;
+        clr.validatorsExitedBalance = 0;
+
+        vm.deal(address(withdraw), notEnoughAmount);
+
+        vm.prank(address(oracle));
+        vm.expectRevert(
+            abi.encodeWithSignature("InvalidPulledClFundsAmount(uint256,uint256)", skimmedAmount, notEnoughAmount)
+        );
+        river.setConsensusLayerData(clr);
     }
 }
