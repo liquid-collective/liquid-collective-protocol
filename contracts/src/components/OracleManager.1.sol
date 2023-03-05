@@ -4,6 +4,8 @@ pragma solidity 0.8.10;
 import "../interfaces/components/IOracleManager.1.sol";
 import "../interfaces/IRedeemManager.1.sol";
 
+import "../libraries/LibUint256.sol";
+
 import "../state/river/OracleAddress.sol";
 import "../state/river/LastOracleRoundId.sol";
 import "../state/river/CLValidatorTotalBalance.sol";
@@ -360,6 +362,16 @@ abstract contract OracleManagerV1 is IOracleManagerV1 {
 
         // we emit a summary event with all the reporting details
         emit ProcessedConsensusLayerReport(report, vars.trace);
+    }
+
+    function getLastReportedEpoch() external view returns (uint256) {
+        return lastReportEpoch;
+    }
+
+    function getExpectedEpoch() external view returns (uint256) {
+        CLSpec.CLSpecStruct memory cls = CLSpec.get();
+        uint256 currentEpoch = _currentEpoch(cls);
+        return LibUint256.max(lastReportEpoch + cls.epochsPerFrame, currentEpoch - (currentEpoch % cls.epochsPerFrame));
     }
 
     function isValidEpoch(uint256 epoch) external view returns (bool) {

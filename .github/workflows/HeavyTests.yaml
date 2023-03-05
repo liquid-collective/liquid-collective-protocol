@@ -1,4 +1,4 @@
-name: Tests
+name: Heavy Tests
 
 on:
   push:
@@ -8,7 +8,7 @@ on:
       - ".github/**"
 
 jobs:
-  run-tests:
+  run-heavy-tests:
     runs-on: ubuntu-latest
 
     steps:
@@ -22,7 +22,7 @@ jobs:
           version: nightly
 
       - name: run tests
-        run: forge test --force -vvv --gas-report --no-match-contract HEAVY_FUZZING
+        run: forge test --force -vvv --gas-report --match-contract HEAVY_FUZZING
         env:
-          FOUNDRY_FUZZ_RUNS: 5000
+          FOUNDRY_FUZZ_RUNS: 1000
           MAINNET_FORK_RPC_URL: ${{ secrets.MAINNET_FORK_RPC_URL }}

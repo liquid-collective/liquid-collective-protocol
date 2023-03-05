@@ -46,6 +46,14 @@ library LibUint256 {
         return (_a > _b ? _b : _a);
     }
 
+    /// @notice Returns the max value
+    /// @param _a First value
+    /// @param _b Second value
+    /// @return Highest value between _a and _b
+    function max(uint256 _a, uint256 _b) internal pure returns (uint256) {
+        return (_a < _b ? _b : _a);
+    }
+
     /// @notice Performs a ceiled division
     /// @param _a Numerator
     /// @param _b Denominator

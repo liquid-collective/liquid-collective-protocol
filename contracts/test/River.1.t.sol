@@ -2038,7 +2038,7 @@ contract RiverV1TestsNoExtraRecipients is Test, BytesGenerator {
     }
 }
 
-contract RiverV1TestsReportFuzzing is Test, BytesGenerator {
+contract RiverV1TestsReport_HEAVY_FUZZING is Test, BytesGenerator {
     UserFactory internal uf = new UserFactory();
 
     RiverV1 internal river;
@@ -2127,6 +2127,7 @@ contract RiverV1TestsReportFuzzing is Test, BytesGenerator {
         // ===================
 
         oracle.addMember(oracleMember, 1);
+        river.setCoverageFund(address(coverageFund));
 
         vm.stopPrank();
     }
@@ -2168,7 +2169,7 @@ contract RiverV1TestsReportFuzzing is Test, BytesGenerator {
             redeemManager.requestRedeem(amountToRedeem);
             _salt = _next(_salt);
         }
-        return (users, _salt);
+        _newSalt = _salt;
     }
 
     function _performDepositsToConsensusLayer(uint256 _salt)
@@ -2252,6 +2253,58 @@ contract RiverV1TestsReportFuzzing is Test, BytesGenerator {
         }
     }
 
+    function _performPreAssertions(ReportingFuzzingVariables memory rfv) internal {
+        assertEq(
+            rfv.expected_pre_elFeeRecipientBalance,
+            address(elFeeRecipient).balance,
+            "failed pre elFeeRecipient balance check"
+        );
+        assertEq(
+            rfv.expected_pre_coverageFundBalance, address(coverageFund).balance, "failed pre coverageFund balance check"
+        );
+        assertEq(
+            rfv.expected_pre_exceedingBufferAmount,
+            redeemManager.getBufferedExceedingEth(),
+            "failed pre redeem manager exceeding amount check"
+        );
+
+        uint256 rebuiltTotalSupply = 0;
+        for (uint256 idx = 0; idx < rfv.users.length; ++idx) {
+            rebuiltTotalSupply += river.balanceOf(rfv.users[idx]);
+        }
+        rebuiltTotalSupply += river.balanceOf(collector);
+        rebuiltTotalSupply += river.balanceOf(address(redeemManager));
+
+        assertEq(rebuiltTotalSupply, river.totalSupply(), "failed to rebuild pre total supply");
+    }
+
+    function _performPostAssertions(ReportingFuzzingVariables memory rfv) internal {
+        assertEq(
+            rfv.expected_post_elFeeRecipientBalance,
+            address(elFeeRecipient).balance,
+            "failed post elFeeRecipient balance check"
+        );
+        assertEq(
+            rfv.expected_post_coverageFundBalance,
+            address(coverageFund).balance,
+            "failed post coverageFund balance check"
+        );
+        assertEq(
+            rfv.expected_post_exceedingBufferAmount,
+            redeemManager.getBufferedExceedingEth(),
+            "failed post redeem manager exceeding amount check"
+        );
+
+        uint256 rebuiltTotalSupply = 0;
+        for (uint256 idx = 0; idx < rfv.users.length; ++idx) {
+            rebuiltTotalSupply += river.balanceOf(rfv.users[idx]);
+        }
+        rebuiltTotalSupply += river.balanceOf(collector);
+        rebuiltTotalSupply += river.balanceOf(address(redeemManager));
+
+        assertEq(rebuiltTotalSupply, river.totalSupply(), "failed to rebuild post total supply");
+    }
+
     struct ReportingFuzzingVariables {
         address[] users;
         uint256 depositCount;
@@ -2259,6 +2312,35 @@ contract RiverV1TestsReportFuzzing is Test, BytesGenerator {
         uint256 operatorCount;
         CLSpec.CLSpecStruct cls;
         ReportBounds.ReportBoundsStruct rb;
+        uint256 expected_pre_elFeeRecipientBalance;
+        uint256 expected_pre_coverageFundBalance;
+        uint256 expected_pre_exceedingBufferAmount;
+        uint256 expected_post_elFeeRecipientBalance;
+        uint256 expected_post_coverageFundBalance;
+        uint256 expected_post_exceedingBufferAmount;
+    }
+
+    function _retrieveInitialReportingData(ReportingFuzzingVariables memory rfv, uint256 _salt)
+        internal
+        returns (IOracleManagerV1.ConsensusLayerReport memory clr, uint256 _newSalt)
+    {
+        clr.epoch = bound(_salt, 1_000, 1_000_000) * epochsPerFrame;
+        _salt = _next(_salt);
+        vm.warp((secondsPerSlot * slotsPerEpoch) * (clr.epoch + epochsUntilFinal));
+        if (rfv.scenario == SCENARIO_REGULAR_REPORTING_PULL_EXCEEDING_BUFFER) {
+            uint256 amountPerValidator = bound(_salt, 0, 1 ether);
+            clr.validatorsBalance = rfv.depositCount * (32 ether + amountPerValidator);
+        } else {
+            clr.validatorsBalance = rfv.depositCount * 32 ether;
+        }
+        clr.validatorsCount = uint32(rfv.depositCount);
+
+        clr.validatorsSkimmedBalance = 0;
+        clr.validatorsExitedBalance = 0;
+        clr.validatorsExitingBalance = 0;
+        clr.stoppedValidatorCountPerOperator = new uint32[](1);
+        clr.stoppedValidatorCountPerOperator[0] = 0;
+        _newSalt = _salt;
     }
 
     function testReportingFuzzing(uint256 _salt) external {
@@ -2273,28 +2355,52 @@ contract RiverV1TestsReportFuzzing is Test, BytesGenerator {
         (rfv.depositCount, rfv.operatorCount, _salt) = _performDepositsToConsensusLayer(_salt);
         console.log("Deposit Count = ", rfv.depositCount);
 
-        rfv.scenario = _salt % 1;
+        rfv.scenario = SCENARIO_REGULAR_REPORTING_PULL_EXCEEDING_BUFFER;
         _salt = _next(_salt);
 
         rfv.cls = river.getConsensusLayerSpec();
         rfv.rb = river.getReportingBounds();
 
-        (clr, _salt) = _retrieveReportingData(rfv, _salt);
+        (clr, _salt) = _retrieveInitialReportingData(rfv, _salt);
 
         vm.prank(oracleMember);
         oracle.reportConsensusLayerData(clr);
+
+        (clr, _salt) = _retrieveReportingData(rfv, _salt);
+
+        _performPreAssertions(rfv);
+        vm.prank(oracleMember);
+        oracle.reportConsensusLayerData(clr);
+        _performPostAssertions(rfv);
 
         _redeemAllSatisfiedRedeemRequests();
     }
 
     uint256 internal constant SCENARIO_REGULAR_REPORTING_NOTHING_PULLED = 0;
+    uint256 internal constant SCENARIO_REGULAR_REPORTING_PULL_EL_FEES = 1;
+    uint256 internal constant SCENARIO_REGULAR_REPORTING_PULL_COVERAGE = 2;
+    uint256 internal constant SCENARIO_REGULAR_REPORTING_PULL_EXCEEDING_BUFFER = 3;
+    uint256 internal constant SCENARIO_REGULAR_REPORTING_PULL_HALF_EL_COVERAGE = 4;
 
     function _retrieveReportingData(ReportingFuzzingVariables memory rfv, uint256 _salt)
         internal
         returns (IOracleManagerV1.ConsensusLayerReport memory clr, uint256 _newSalt)
     {
         if (rfv.scenario == SCENARIO_REGULAR_REPORTING_NOTHING_PULLED) {
+            console.log("playing SCENARIO_REGULAR_REPORTING_NOTHING_PULLED");
             return _retrieveScenario_REGULAR_REPORTING_NOTHING_PULLED(rfv, _salt);
+        } else if (rfv.scenario == SCENARIO_REGULAR_REPORTING_PULL_EL_FEES) {
+            console.log("playing SCENARIO_REGULAR_REPORTING_PULL_EL_FEES");
+            return _retrieveScenario_REGULAR_REPORTING_PULL_EL_FEES(rfv, _salt);
+        } else if (rfv.scenario == SCENARIO_REGULAR_REPORTING_PULL_COVERAGE) {
+            console.log("playing SCENARIO_REGULAR_REPORTING_PULL_COVERAGE");
+            return _retrieveScenario_REGULAR_REPORTING_PULL_COVERAGE(rfv, _salt);
+        } else if (rfv.scenario == SCENARIO_REGULAR_REPORTING_PULL_EXCEEDING_BUFFER) {
+            console.log("playing SCENARIO_REGULAR_REPORTING_PULL_EXCEEDING_BUFFER");
+            return _retrieveScenario_REGULAR_REPORTING_PULL_EXCEEDING_BUFFER(rfv, _salt);
+        } else if (rfv.scenario == SCENARIO_REGULAR_REPORTING_PULL_HALF_EL_COVERAGE) {
+            console.log("playing SCENARIO_REGULAR_REPORTING_PULL_HALF_EL_COVERAGE");
+            return _retrieveScenario_REGULAR_REPORTING_PULL_HALF_EL_COVERAGE(rfv, _salt);
         } else {
             revert();
         }
@@ -2304,7 +2410,8 @@ contract RiverV1TestsReportFuzzing is Test, BytesGenerator {
         internal
         returns (IOracleManagerV1.ConsensusLayerReport memory clr, uint256 _newSalt)
     {
-        clr.epoch = (_salt % 1_000_000) * epochsPerFrame;
+        uint256 expectedEpoch = river.getExpectedEpoch();
+        clr.epoch = expectedEpoch + bound(_salt, 1, 1_000) * epochsPerFrame;
         _salt = _next(_salt);
 
         uint256 timeIntoTheFuture = bound(_salt, epochsUntilFinal * secondsPerSlot * slotsPerEpoch, 365 days);
@@ -2347,6 +2454,276 @@ contract RiverV1TestsReportFuzzing is Test, BytesGenerator {
 
         clr.bufferRebalancingMode = false;
         clr.slashingContainmentMode = false;
+
+        rfv.expected_pre_elFeeRecipientBalance = 0;
+        rfv.expected_pre_coverageFundBalance = 0;
+        rfv.expected_pre_exceedingBufferAmount = 0;
+
+        rfv.expected_post_elFeeRecipientBalance = 0;
+        rfv.expected_post_coverageFundBalance = 0;
+        rfv.expected_post_exceedingBufferAmount = 0;
+        _newSalt = _salt;
+    }
+
+    function _retrieveScenario_REGULAR_REPORTING_PULL_EL_FEES(ReportingFuzzingVariables memory rfv, uint256 _salt)
+        internal
+        returns (IOracleManagerV1.ConsensusLayerReport memory clr, uint256 _newSalt)
+    {
+        uint256 expectedEpoch = river.getExpectedEpoch();
+        clr.epoch = expectedEpoch + bound(_salt, 1, 1_000) * epochsPerFrame;
+        _salt = _next(_salt);
+
+        uint256 timeIntoTheFuture = bound(_salt, epochsUntilFinal * secondsPerSlot * slotsPerEpoch, 365 days);
+        _salt = _next(_salt);
+        vm.warp(timeIntoTheFuture + (secondsPerSlot * slotsPerEpoch) * clr.epoch);
+
+        uint256 maxAllowedIncrease =
+            debug_maxIncrease(rfv.rb, river.totalUnderlyingSupply(), debug_timeBetweenEpochs(rfv.cls, 0, clr.epoch));
+
+        uint256 totalIncrease = bound(_salt, 0, maxAllowedIncrease);
+        clr.validatorsBalance = rfv.depositCount * 32 ether + totalIncrease;
+        _salt = _next(_salt);
+
+        clr.validatorsCount = uint32(rfv.depositCount);
+
+        uint256 skimmingPerValidator = bound(_salt, 0, 0.1 gwei);
+        clr.validatorsSkimmedBalance = uint64(rfv.depositCount) * skimmingPerValidator;
+        _salt = _next(_salt);
+
+        uint256 exitedTotalCount = bound(_salt, 0, rfv.depositCount);
+        _salt = _next(_salt);
+        uint256 exitingTotalCount = bound(_salt, 0, exitedTotalCount);
+
+        clr.validatorsExitedBalance = 32 ether * exitedTotalCount;
+        clr.validatorsExitingBalance = 32 ether * exitingTotalCount;
+
+        vm.deal(address(withdraw), clr.validatorsSkimmedBalance + clr.validatorsExitedBalance);
+
+        clr.stoppedValidatorCountPerOperator = new uint32[](rfv.operatorCount + 1);
+
+        clr.stoppedValidatorCountPerOperator[0] = uint32(exitedTotalCount);
+        uint256 rest = exitedTotalCount % rfv.operatorCount;
+        for (uint256 idx = 0; idx < rfv.operatorCount; ++idx) {
+            clr.stoppedValidatorCountPerOperator[idx + 1] =
+                uint32((exitedTotalCount / rfv.operatorCount) + (rest > 0 ? 1 : 0));
+            if (rest > 0) {
+                --rest;
+            }
+        }
+
+        clr.bufferRebalancingMode = false;
+        clr.slashingContainmentMode = false;
+
+        uint256 remainingIncrease = maxAllowedIncrease - totalIncrease;
+        vm.deal(address(elFeeRecipient), remainingIncrease);
+
+        rfv.expected_pre_elFeeRecipientBalance = remainingIncrease;
+        rfv.expected_pre_coverageFundBalance = 0;
+        rfv.expected_pre_exceedingBufferAmount = 0;
+
+        rfv.expected_post_elFeeRecipientBalance = 0;
+        rfv.expected_post_coverageFundBalance = 0;
+        rfv.expected_post_exceedingBufferAmount = 0;
+        _newSalt = _salt;
+    }
+
+    function _retrieveScenario_REGULAR_REPORTING_PULL_COVERAGE(ReportingFuzzingVariables memory rfv, uint256 _salt)
+        internal
+        returns (IOracleManagerV1.ConsensusLayerReport memory clr, uint256 _newSalt)
+    {
+        uint256 expectedEpoch = river.getExpectedEpoch();
+        clr.epoch = expectedEpoch + bound(_salt, 1, 1_000) * epochsPerFrame;
+        _salt = _next(_salt);
+
+        uint256 timeIntoTheFuture = bound(_salt, epochsUntilFinal * secondsPerSlot * slotsPerEpoch, 365 days);
+        _salt = _next(_salt);
+        vm.warp(timeIntoTheFuture + (secondsPerSlot * slotsPerEpoch) * clr.epoch);
+
+        uint256 maxAllowedIncrease =
+            debug_maxIncrease(rfv.rb, river.totalUnderlyingSupply(), debug_timeBetweenEpochs(rfv.cls, 0, clr.epoch));
+
+        uint256 totalIncrease = bound(_salt, 0, maxAllowedIncrease);
+        clr.validatorsBalance = rfv.depositCount * 32 ether + totalIncrease;
+        _salt = _next(_salt);
+
+        clr.validatorsCount = uint32(rfv.depositCount);
+
+        uint256 skimmingPerValidator = bound(_salt, 0, 0.1 gwei);
+        clr.validatorsSkimmedBalance = uint64(rfv.depositCount) * skimmingPerValidator;
+        _salt = _next(_salt);
+
+        uint256 exitedTotalCount = bound(_salt, 0, rfv.depositCount);
+        _salt = _next(_salt);
+        uint256 exitingTotalCount = bound(_salt, 0, exitedTotalCount);
+
+        clr.validatorsExitedBalance = 32 ether * exitedTotalCount;
+        clr.validatorsExitingBalance = 32 ether * exitingTotalCount;
+
+        vm.deal(address(withdraw), clr.validatorsSkimmedBalance + clr.validatorsExitedBalance);
+
+        clr.stoppedValidatorCountPerOperator = new uint32[](rfv.operatorCount + 1);
+
+        clr.stoppedValidatorCountPerOperator[0] = uint32(exitedTotalCount);
+        uint256 rest = exitedTotalCount % rfv.operatorCount;
+        for (uint256 idx = 0; idx < rfv.operatorCount; ++idx) {
+            clr.stoppedValidatorCountPerOperator[idx + 1] =
+                uint32((exitedTotalCount / rfv.operatorCount) + (rest > 0 ? 1 : 0));
+            if (rest > 0) {
+                --rest;
+            }
+        }
+
+        clr.bufferRebalancingMode = false;
+        clr.slashingContainmentMode = false;
+
+        uint256 remainingIncrease = maxAllowedIncrease - totalIncrease;
+        address donator = uf._new(_salt);
+        _salt = _next(_salt);
+        _allow(donator, LibAllowlistMasks.DONATE_MASK);
+        vm.deal(address(donator), remainingIncrease);
+        vm.prank(donator);
+        coverageFund.donate{value: remainingIncrease}();
+
+        rfv.expected_pre_elFeeRecipientBalance = 0;
+        rfv.expected_pre_coverageFundBalance = remainingIncrease;
+        rfv.expected_pre_exceedingBufferAmount = 0;
+
+        rfv.expected_post_elFeeRecipientBalance = 0;
+        rfv.expected_post_coverageFundBalance = 0;
+        rfv.expected_post_exceedingBufferAmount = 0;
+        _newSalt = _salt;
+    }
+
+    function _retrieveScenario_REGULAR_REPORTING_PULL_EXCEEDING_BUFFER(
+        ReportingFuzzingVariables memory rfv,
+        uint256 _salt
+    ) internal returns (IOracleManagerV1.ConsensusLayerReport memory clr, uint256 _newSalt) {
+        uint256 expectedEpoch = river.getExpectedEpoch();
+        clr.epoch = expectedEpoch + bound(_salt, 1, 1_000) * epochsPerFrame;
+        _salt = _next(_salt);
+
+        uint256 timeIntoTheFuture = bound(_salt, epochsUntilFinal * secondsPerSlot * slotsPerEpoch, 365 days);
+        _salt = _next(_salt);
+        vm.warp(timeIntoTheFuture + (secondsPerSlot * slotsPerEpoch) * clr.epoch);
+
+        uint256 maxAllowedIncrease =
+            debug_maxIncrease(rfv.rb, river.totalUnderlyingSupply(), debug_timeBetweenEpochs(rfv.cls, 0, clr.epoch));
+
+        uint256 totalIncrease = bound(_salt, 0, maxAllowedIncrease);
+        clr.validatorsBalance = rfv.depositCount * 32 ether + totalIncrease;
+        _salt = _next(_salt);
+
+        clr.validatorsCount = uint32(rfv.depositCount);
+
+        uint256 skimmingPerValidator = bound(_salt, 0, 0.1 gwei);
+        clr.validatorsSkimmedBalance = uint64(rfv.depositCount) * skimmingPerValidator;
+        _salt = _next(_salt);
+
+        uint256 exitedTotalCount = bound(_salt, 0, rfv.depositCount);
+        _salt = _next(_salt);
+        uint256 exitingTotalCount = bound(_salt, 0, exitedTotalCount);
+
+        clr.validatorsExitedBalance = 32 ether * exitedTotalCount;
+        clr.validatorsExitingBalance = 32 ether * exitingTotalCount;
+
+        vm.deal(address(withdraw), clr.validatorsSkimmedBalance + clr.validatorsExitedBalance);
+
+        clr.stoppedValidatorCountPerOperator = new uint32[](rfv.operatorCount + 1);
+
+        clr.stoppedValidatorCountPerOperator[0] = uint32(exitedTotalCount);
+        uint256 rest = exitedTotalCount % rfv.operatorCount;
+        for (uint256 idx = 0; idx < rfv.operatorCount; ++idx) {
+            clr.stoppedValidatorCountPerOperator[idx + 1] =
+                uint32((exitedTotalCount / rfv.operatorCount) + (rest > 0 ? 1 : 0));
+            if (rest > 0) {
+                --rest;
+            }
+        }
+
+        clr.bufferRebalancingMode = false;
+        clr.slashingContainmentMode = false;
+
+        _redeemAllSatisfiedRedeemRequests();
+
+        rfv.expected_pre_elFeeRecipientBalance = 0;
+        rfv.expected_pre_coverageFundBalance = 0;
+        rfv.expected_pre_exceedingBufferAmount = redeemManager.getBufferedExceedingEth();
+
+        rfv.expected_post_elFeeRecipientBalance = 0;
+        rfv.expected_post_coverageFundBalance = 0;
+        rfv.expected_post_exceedingBufferAmount = rfv.expected_pre_exceedingBufferAmount
+            - LibUint256.min(rfv.expected_pre_exceedingBufferAmount, maxAllowedIncrease);
+        _newSalt = _salt;
+    }
+
+    function _retrieveScenario_REGULAR_REPORTING_PULL_HALF_EL_COVERAGE(
+        ReportingFuzzingVariables memory rfv,
+        uint256 _salt
+    ) internal returns (IOracleManagerV1.ConsensusLayerReport memory clr, uint256 _newSalt) {
+        uint256 expectedEpoch = river.getExpectedEpoch();
+        clr.epoch = expectedEpoch + bound(_salt, 1, 1_000) * epochsPerFrame;
+        _salt = _next(_salt);
+
+        uint256 timeIntoTheFuture = bound(_salt, epochsUntilFinal * secondsPerSlot * slotsPerEpoch, 365 days);
+        _salt = _next(_salt);
+        vm.warp(timeIntoTheFuture + (secondsPerSlot * slotsPerEpoch) * clr.epoch);
+
+        uint256 maxAllowedIncrease =
+            debug_maxIncrease(rfv.rb, river.totalUnderlyingSupply(), debug_timeBetweenEpochs(rfv.cls, 0, clr.epoch));
+        uint256 totalIncrease = bound(_salt, 0, maxAllowedIncrease);
+        clr.validatorsBalance = rfv.depositCount * 32 ether + totalIncrease;
+        _salt = _next(_salt);
+        {
+            clr.validatorsCount = uint32(rfv.depositCount);
+
+            uint256 skimmingPerValidator = bound(_salt, 0, 0.1 gwei);
+            clr.validatorsSkimmedBalance = uint64(rfv.depositCount) * skimmingPerValidator;
+            _salt = _next(_salt);
+
+            uint256 exitedTotalCount = bound(_salt, 0, rfv.depositCount);
+            _salt = _next(_salt);
+            uint256 exitingTotalCount = bound(_salt, 0, exitedTotalCount);
+
+            clr.validatorsExitedBalance = 32 ether * exitedTotalCount;
+            clr.validatorsExitingBalance = 32 ether * exitingTotalCount;
+
+            vm.deal(address(withdraw), clr.validatorsSkimmedBalance + clr.validatorsExitedBalance);
+
+            clr.stoppedValidatorCountPerOperator = new uint32[](rfv.operatorCount + 1);
+
+            clr.stoppedValidatorCountPerOperator[0] = uint32(exitedTotalCount);
+            uint256 rest = exitedTotalCount % rfv.operatorCount;
+            for (uint256 idx = 0; idx < rfv.operatorCount; ++idx) {
+                clr.stoppedValidatorCountPerOperator[idx + 1] =
+                    uint32((exitedTotalCount / rfv.operatorCount) + (rest > 0 ? 1 : 0));
+                if (rest > 0) {
+                    --rest;
+                }
+            }
+
+            clr.bufferRebalancingMode = false;
+            clr.slashingContainmentMode = false;
+        }
+
+        uint256 remainingIncrease = maxAllowedIncrease - totalIncrease;
+        uint256 elAmount = remainingIncrease / 2;
+        uint256 coverageAmount = remainingIncrease - elAmount;
+        vm.deal(address(elFeeRecipient), elAmount);
+
+        address donator = uf._new(_salt);
+        _salt = _next(_salt);
+        _allow(donator, LibAllowlistMasks.DONATE_MASK);
+        vm.deal(address(donator), coverageAmount);
+        vm.prank(donator);
+        coverageFund.donate{value: coverageAmount}();
+
+        rfv.expected_pre_elFeeRecipientBalance = elAmount;
+        rfv.expected_pre_coverageFundBalance = coverageAmount;
+        rfv.expected_pre_exceedingBufferAmount = 0;
+
+        rfv.expected_post_elFeeRecipientBalance = 0;
+        rfv.expected_post_coverageFundBalance = 0;
+        rfv.expected_post_exceedingBufferAmount = 0;
         _newSalt = _salt;
     }
 
