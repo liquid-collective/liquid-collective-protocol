@@ -1163,9 +1163,13 @@ contract OperatorsRegistryV1Tests is Test, BytesGenerator {
         operatorsRegistry.reportStoppedValidatorCounts(stoppedValidatorCounts);
 
         assertEq(operatorsRegistry.getTotalStoppedValidatorCount(), totalCount);
+        uint32[] memory rawStoppedValidators = operatorsRegistry.getStoppedValidatorCountPerOperator();
+
+        assertEq(rawStoppedValidators.length, stoppedValidatorCounts.length - 1);
 
         for (uint256 idx = 1; idx < len + 1; ++idx) {
             assertEq(stoppedValidatorCounts[idx], operatorsRegistry.getOperatorStoppedValidatorCount(idx - 1));
+            assertEq(stoppedValidatorCounts[idx], rawStoppedValidators[idx - 1]);
         }
     }
 

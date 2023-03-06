@@ -157,7 +157,25 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
 
     /// @inheritdoc IOperatorsRegistryV1
     function getStoppedValidatorCountPerOperator() external view returns (uint32[] memory) {
-        return StoppedValidators.get();
+        uint32[] memory completeList = StoppedValidators.get();
+        uint256 listLength = completeList.length;
+
+        if (listLength > 0) {
+            assembly {
+                // no need to use free memory pointer as we reuse the same memory range
+
+                // erase previous word storing length
+                mstore(completeList, 0)
+
+                // move memory pointer up by a word
+                completeList := add(completeList, 0x20)
+
+                // store updated length at new memory pointer location
+                mstore(completeList, sub(listLength, 1))
+            }
+        }
+
+        return completeList;
     }
 
     /// @inheritdoc IOperatorsRegistryV1
