@@ -396,12 +396,17 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
     }
 
     /// @inheritdoc IOperatorsRegistryV1
-    function pickNextValidators(uint256 _count)
+    function pickNextValidatorsToDeposit(uint256 _count)
         external
         onlyRiver
         returns (bytes[] memory publicKeys, bytes[] memory signatures)
     {
         return _pickNextValidatorsToDepositFromActiveOperators(_count);
+    }
+
+    /// @inheritdoc IOperatorsRegistryV1
+    function pickNextValidatorsToExit(uint256 _count) external onlyRiver {
+        return _pickNextValidatorsToExitFromActiveOperators(_count);
     }
 
     /// @notice Internal utiltiy to set the stopped validator array after sanity checks

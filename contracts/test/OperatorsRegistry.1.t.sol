@@ -525,7 +525,7 @@ contract OperatorsRegistryV1Tests is Test, BytesGenerator {
         vm.stopPrank();
 
         vm.startPrank(river);
-        (bytes[] memory publicKeys, bytes[] memory signatures) = operatorsRegistry.pickNextValidators(10);
+        (bytes[] memory publicKeys, bytes[] memory signatures) = operatorsRegistry.pickNextValidatorsToDeposit(10);
         vm.stopPrank();
         assert(publicKeys.length == 10);
         assert(keccak256(publicKeys[0]) == keccak256(LibBytes.slice(tenKeys, 0, 48)));
@@ -553,7 +553,7 @@ contract OperatorsRegistryV1Tests is Test, BytesGenerator {
         vm.stopPrank();
 
         vm.startPrank(river);
-        (bytes[] memory publicKeys, bytes[] memory signatures) = operatorsRegistry.pickNextValidators(10);
+        (bytes[] memory publicKeys, bytes[] memory signatures) = operatorsRegistry.pickNextValidatorsToDeposit(10);
         vm.stopPrank();
         assert(publicKeys.length == 5);
         assert(keccak256(publicKeys[0]) == keccak256(LibBytes.slice(tenKeys, 0, 48)));
@@ -604,7 +604,7 @@ contract OperatorsRegistryV1Tests is Test, BytesGenerator {
         vm.prank(admin);
         operatorsRegistry.setOperatorLimits(indexes, limits, block.number);
         vm.prank(river);
-        (bytes[] memory publicKeys, bytes[] memory signatures) = operatorsRegistry.pickNextValidators(6);
+        (bytes[] memory publicKeys, bytes[] memory signatures) = operatorsRegistry.pickNextValidatorsToDeposit(6);
 
         assert(publicKeys.length == 6);
         assert(signatures.length == 6);
@@ -633,7 +633,7 @@ contract OperatorsRegistryV1Tests is Test, BytesGenerator {
             assert(op.requestedExits == 0);
         }
         vm.prank(river);
-        (publicKeys, signatures) = operatorsRegistry.pickNextValidators(6);
+        (publicKeys, signatures) = operatorsRegistry.pickNextValidatorsToDeposit(6);
 
         assert(publicKeys.length == 6);
         assert(signatures.length == 6);
@@ -663,7 +663,7 @@ contract OperatorsRegistryV1Tests is Test, BytesGenerator {
         }
 
         vm.prank(river);
-        (publicKeys, signatures) = operatorsRegistry.pickNextValidators(64);
+        (publicKeys, signatures) = operatorsRegistry.pickNextValidatorsToDeposit(64);
 
         assert(publicKeys.length == 64);
         assert(signatures.length == 64);
@@ -693,7 +693,7 @@ contract OperatorsRegistryV1Tests is Test, BytesGenerator {
         }
 
         vm.prank(river);
-        (publicKeys, signatures) = operatorsRegistry.pickNextValidators(74);
+        (publicKeys, signatures) = operatorsRegistry.pickNextValidatorsToDeposit(74);
 
         assert(publicKeys.length == 74);
         assert(signatures.length == 74);
@@ -749,14 +749,19 @@ contract OperatorsRegistryV1Tests is Test, BytesGenerator {
 
     function testGetKeysAsRiverNoKeys() public {
         vm.startPrank(river);
-        (bytes[] memory publicKeys,) = operatorsRegistry.pickNextValidators(10);
+        (bytes[] memory publicKeys,) = operatorsRegistry.pickNextValidatorsToDeposit(10);
         vm.stopPrank();
         assert(publicKeys.length == 0);
     }
 
     function testGetKeysAsUnauthorized() public {
         vm.expectRevert(abi.encodeWithSignature("Unauthorized(address)", address(this)));
-        operatorsRegistry.pickNextValidators(10);
+        operatorsRegistry.pickNextValidatorsToDeposit(10);
+    }
+
+    function testRequestExitAsUnauthorized() public {
+        vm.expectRevert(abi.encodeWithSignature("Unauthorized(address)", address(this)));
+        operatorsRegistry.pickNextValidatorsToExit(10);
     }
 
     function testAddValidatorsAsAdmin(bytes32 _name, uint256 _firstAddressSalt) public {

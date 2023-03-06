@@ -266,7 +266,11 @@ interface IOperatorsRegistryV1 {
     /// @param _count Max amount of keys requested
     /// @return publicKeys An array of public keys
     /// @return signatures An array of signatures linked to the public keys
-    function pickNextValidators(uint256 _count)
+    function pickNextValidatorsToDeposit(uint256 _count)
         external
         returns (bytes[] memory publicKeys, bytes[] memory signatures);
+
+    /// @notice Emits events for operators to exit validators
+    /// @param _count Max amount of exits to request
+    function pickNextValidatorsToExit(uint256 _count) external;
 }

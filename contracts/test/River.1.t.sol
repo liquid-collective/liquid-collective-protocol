@@ -2405,7 +2405,7 @@ contract RiverV1TestsReport_HEAVY_FUZZING is Test, BytesGenerator {
         (rfv.depositCount, rfv.operatorCount, _salt) = _performDepositsToConsensusLayer(_salt);
         console.log("Deposit Count = ", rfv.depositCount);
 
-        rfv.scenario = SCENARIO_REGULAR_REPORTING_NOTHING_PULLED;
+        rfv.scenario = _salt % 5;
         _salt = _next(_salt);
 
         rfv.cls = river.getConsensusLayerSpec();

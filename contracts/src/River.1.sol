@@ -261,7 +261,7 @@ contract RiverV1 is
         override
         returns (bytes[] memory publicKeys, bytes[] memory signatures)
     {
-        return IOperatorsRegistryV1(OperatorsRegistryAddress.get()).pickNextValidators(_requestedAmount);
+        return IOperatorsRegistryV1(OperatorsRegistryAddress.get()).pickNextValidatorsToDeposit(_requestedAmount);
     }
 
     /// @notice Overridden handler to pull funds from the execution layer fee recipient to River and return the delta in the balance
@@ -496,6 +496,7 @@ contract RiverV1 is
                     redeemManagerDemandInEth - (availableBalanceToRedeem + exitingBalance), DEPOSIT_SIZE
                 );
                 // call operators registry to request exit to validators
+                IOperatorsRegistryV1(OperatorsRegistryAddress.get()).pickNextValidatorsToExit(validatorCountToExit);
             }
         }
     }
