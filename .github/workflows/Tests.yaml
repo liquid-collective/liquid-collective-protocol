@@ -25,3 +25,16 @@ jobs:
         env:
           FOUNDRY_FUZZ_RUNS: 5000
           MAINNET_FORK_RPC_URL: ${{ secrets.MAINNET_FORK_RPC_URL }}
+
+      - name: run coverage
+        run: forge coverage --report lcov && mv lcov.info lcov.txt
+        env:
+          FOUNDRY_FUZZ_RUNS: 5000
+          MAINNET_FORK_RPC_URL: ${{ secrets.MAINNET_FORK_RPC_URL }}
+
+      - name: Update codecov report
+        uses: codecov/codecov-action@v3
+        with:
+          files: ./lcov.txt
+          fail_ci_if_error: false
+          verbose: true

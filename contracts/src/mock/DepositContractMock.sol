@@ -27,6 +27,7 @@ contract DepositContractMock is IDepositContract {
         ret[7] = bytesValue[0];
     }
 
+
     function deposit(bytes calldata pubkey, bytes calldata withdrawalCredentials, bytes calldata signature, bytes32)
         external
         payable
