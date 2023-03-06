@@ -18,6 +18,12 @@ import "../src/ELFeeRecipient.1.sol";
 import "../src/OperatorsRegistry.1.sol";
 import "../src/CoverageFund.1.sol";
 
+contract OperatorsRegistryWithOverridesV1 is OperatorsRegistryV1 {
+    function sudoStoppedValidatorCounts(uint32[] calldata stoppedValidatorCounts) external {
+        _setStoppedValidatorCounts(stoppedValidatorCounts);
+    }
+}
+
 contract RiverV1Tests is Test, BytesGenerator {
     UserFactory internal uf = new UserFactory();
 
@@ -28,7 +34,7 @@ contract RiverV1Tests is Test, BytesGenerator {
     ELFeeRecipientV1 internal elFeeRecipient;
     CoverageFundV1 internal coverageFund;
     AllowlistV1 internal allowlist;
-    OperatorsRegistryV1 internal operatorsRegistry;
+    OperatorsRegistryWithOverridesV1 internal operatorsRegistry;
 
     address internal admin;
     address internal newAdmin;
@@ -80,7 +86,7 @@ contract RiverV1Tests is Test, BytesGenerator {
         deposit = new DepositContractMock();
         withdraw = new WithdrawV1();
         river = new RiverV1();
-        operatorsRegistry = new OperatorsRegistryV1();
+        operatorsRegistry = new OperatorsRegistryWithOverridesV1();
 
         bytes32 withdrawalCredentials = withdraw.getCredentials();
         allowlist.initAllowlistV1(admin, allower);
@@ -123,7 +129,7 @@ contract RiverV1Tests is Test, BytesGenerator {
         uint256[] memory operatorIndexes = new uint256[](2);
         operatorIndexes[0] = operatorOneIndex;
         operatorIndexes[1] = operatorTwoIndex;
-        uint256[] memory operatorLimits = new uint256[](2);
+        uint32[] memory operatorLimits = new uint32[](2);
         operatorLimits[0] = 100;
         operatorLimits[1] = 100;
 
@@ -400,8 +406,8 @@ contract RiverV1Tests is Test, BytesGenerator {
         vm.prank(admin);
         river.depositToConsensusLayer(17);
 
-        Operators.Operator memory op1 = operatorsRegistry.getOperator(operatorOneIndex);
-        Operators.Operator memory op2 = operatorsRegistry.getOperator(operatorTwoIndex);
+        OperatorsV2.Operator memory op1 = operatorsRegistry.getOperator(operatorOneIndex);
+        OperatorsV2.Operator memory op2 = operatorsRegistry.getOperator(operatorTwoIndex);
 
         assert(op1.funded == 17);
         assert(op2.funded == 17);
@@ -472,8 +478,8 @@ contract RiverV1Tests is Test, BytesGenerator {
         vm.prank(admin);
         river.depositToConsensusLayer(17);
 
-        Operators.Operator memory op1 = operatorsRegistry.getOperator(operatorOneIndex);
-        Operators.Operator memory op2 = operatorsRegistry.getOperator(operatorTwoIndex);
+        OperatorsV2.Operator memory op1 = operatorsRegistry.getOperator(operatorOneIndex);
+        OperatorsV2.Operator memory op2 = operatorsRegistry.getOperator(operatorTwoIndex);
 
         assert(op1.funded == 17);
         assert(op2.funded == 17);
@@ -538,8 +544,8 @@ contract RiverV1Tests is Test, BytesGenerator {
         vm.prank(admin);
         river.depositToConsensusLayer(17);
 
-        Operators.Operator memory op1 = operatorsRegistry.getOperator(operatorOneIndex);
-        Operators.Operator memory op2 = operatorsRegistry.getOperator(operatorTwoIndex);
+        OperatorsV2.Operator memory op1 = operatorsRegistry.getOperator(operatorOneIndex);
+        OperatorsV2.Operator memory op2 = operatorsRegistry.getOperator(operatorTwoIndex);
 
         assert(op1.funded == 17);
         assert(op2.funded == 17);
@@ -592,8 +598,8 @@ contract RiverV1Tests is Test, BytesGenerator {
         vm.prank(admin);
         river.depositToConsensusLayer(17);
 
-        Operators.Operator memory op1 = operatorsRegistry.getOperator(operatorOneIndex);
-        Operators.Operator memory op2 = operatorsRegistry.getOperator(operatorTwoIndex);
+        OperatorsV2.Operator memory op1 = operatorsRegistry.getOperator(operatorOneIndex);
+        OperatorsV2.Operator memory op2 = operatorsRegistry.getOperator(operatorTwoIndex);
 
         assert(op1.funded == 17);
         assert(op2.funded == 17);
@@ -652,8 +658,8 @@ contract RiverV1Tests is Test, BytesGenerator {
         vm.prank(admin);
         river.depositToConsensusLayer(17);
 
-        Operators.Operator memory op1 = operatorsRegistry.getOperator(operatorOneIndex);
-        Operators.Operator memory op2 = operatorsRegistry.getOperator(operatorTwoIndex);
+        OperatorsV2.Operator memory op1 = operatorsRegistry.getOperator(operatorOneIndex);
+        OperatorsV2.Operator memory op2 = operatorsRegistry.getOperator(operatorTwoIndex);
 
         assert(op1.funded == 17);
         assert(op2.funded == 17);
@@ -720,8 +726,8 @@ contract RiverV1Tests is Test, BytesGenerator {
         vm.prank(admin);
         river.depositToConsensusLayer(17);
 
-        Operators.Operator memory op1 = operatorsRegistry.getOperator(operatorOneIndex);
-        Operators.Operator memory op2 = operatorsRegistry.getOperator(operatorTwoIndex);
+        OperatorsV2.Operator memory op1 = operatorsRegistry.getOperator(operatorOneIndex);
+        OperatorsV2.Operator memory op2 = operatorsRegistry.getOperator(operatorTwoIndex);
 
         assert(op1.funded == 17);
         assert(op2.funded == 17);
@@ -792,8 +798,8 @@ contract RiverV1Tests is Test, BytesGenerator {
         vm.prank(admin);
         river.depositToConsensusLayer(17);
 
-        Operators.Operator memory op1 = operatorsRegistry.getOperator(operatorOneIndex);
-        Operators.Operator memory op2 = operatorsRegistry.getOperator(operatorTwoIndex);
+        OperatorsV2.Operator memory op1 = operatorsRegistry.getOperator(operatorOneIndex);
+        OperatorsV2.Operator memory op2 = operatorsRegistry.getOperator(operatorTwoIndex);
 
         assert(op1.funded == 17);
         assert(op2.funded == 17);
@@ -868,8 +874,8 @@ contract RiverV1Tests is Test, BytesGenerator {
         vm.prank(admin);
         river.depositToConsensusLayer(17);
 
-        Operators.Operator memory op1 = operatorsRegistry.getOperator(operatorOneIndex);
-        Operators.Operator memory op2 = operatorsRegistry.getOperator(operatorTwoIndex);
+        OperatorsV2.Operator memory op1 = operatorsRegistry.getOperator(operatorOneIndex);
+        OperatorsV2.Operator memory op2 = operatorsRegistry.getOperator(operatorTwoIndex);
 
         assert(op1.funded == 17);
         assert(op2.funded == 17);
@@ -949,8 +955,8 @@ contract RiverV1Tests is Test, BytesGenerator {
         vm.prank(admin);
         river.depositToConsensusLayer(17);
 
-        Operators.Operator memory op1 = operatorsRegistry.getOperator(operatorOneIndex);
-        Operators.Operator memory op2 = operatorsRegistry.getOperator(operatorTwoIndex);
+        OperatorsV2.Operator memory op1 = operatorsRegistry.getOperator(operatorOneIndex);
+        OperatorsV2.Operator memory op2 = operatorsRegistry.getOperator(operatorTwoIndex);
 
         assert(op1.funded == 17);
         assert(op2.funded == 17);
@@ -1022,8 +1028,8 @@ contract RiverV1Tests is Test, BytesGenerator {
         vm.prank(admin);
         river.depositToConsensusLayer(17);
 
-        Operators.Operator memory op1 = operatorsRegistry.getOperator(operatorOneIndex);
-        Operators.Operator memory op2 = operatorsRegistry.getOperator(operatorTwoIndex);
+        OperatorsV2.Operator memory op1 = operatorsRegistry.getOperator(operatorOneIndex);
+        OperatorsV2.Operator memory op2 = operatorsRegistry.getOperator(operatorTwoIndex);
 
         assert(op1.funded == 17);
         assert(op2.funded == 17);
@@ -1096,8 +1102,8 @@ contract RiverV1Tests is Test, BytesGenerator {
         vm.prank(admin);
         river.depositToConsensusLayer(17);
 
-        Operators.Operator memory op1 = operatorsRegistry.getOperator(operatorOneIndex);
-        Operators.Operator memory op2 = operatorsRegistry.getOperator(operatorTwoIndex);
+        OperatorsV2.Operator memory op1 = operatorsRegistry.getOperator(operatorOneIndex);
+        OperatorsV2.Operator memory op2 = operatorsRegistry.getOperator(operatorTwoIndex);
 
         assert(op1.funded == 17);
         assert(op2.funded == 17);
@@ -1178,8 +1184,8 @@ contract RiverV1Tests is Test, BytesGenerator {
         vm.prank(admin);
         river.depositToConsensusLayer(17);
 
-        Operators.Operator memory op1 = operatorsRegistry.getOperator(operatorOneIndex);
-        Operators.Operator memory op2 = operatorsRegistry.getOperator(operatorTwoIndex);
+        OperatorsV2.Operator memory op1 = operatorsRegistry.getOperator(operatorOneIndex);
+        OperatorsV2.Operator memory op2 = operatorsRegistry.getOperator(operatorTwoIndex);
 
         assert(op1.funded == 17);
         assert(op2.funded == 17);
@@ -1233,8 +1239,8 @@ contract RiverV1Tests is Test, BytesGenerator {
         vm.prank(admin);
         river.depositToConsensusLayer(17);
 
-        Operators.Operator memory op1 = operatorsRegistry.getOperator(operatorOneIndex);
-        Operators.Operator memory op2 = operatorsRegistry.getOperator(operatorTwoIndex);
+        OperatorsV2.Operator memory op1 = operatorsRegistry.getOperator(operatorOneIndex);
+        OperatorsV2.Operator memory op2 = operatorsRegistry.getOperator(operatorTwoIndex);
 
         assert(op1.funded == 17);
         assert(op2.funded == 17);
@@ -1302,8 +1308,8 @@ contract RiverV1Tests is Test, BytesGenerator {
         vm.prank(admin);
         river.depositToConsensusLayer(17);
 
-        Operators.Operator memory op1 = operatorsRegistry.getOperator(operatorOneIndex);
-        Operators.Operator memory op2 = operatorsRegistry.getOperator(operatorTwoIndex);
+        OperatorsV2.Operator memory op1 = operatorsRegistry.getOperator(operatorOneIndex);
+        OperatorsV2.Operator memory op2 = operatorsRegistry.getOperator(operatorTwoIndex);
 
         assert(op1.funded == 17);
         assert(op2.funded == 17);
@@ -1370,8 +1376,8 @@ contract RiverV1Tests is Test, BytesGenerator {
         vm.prank(admin);
         river.depositToConsensusLayer(31);
 
-        Operators.Operator memory op1 = operatorsRegistry.getOperator(operatorOneIndex);
-        Operators.Operator memory op2 = operatorsRegistry.getOperator(operatorTwoIndex);
+        OperatorsV2.Operator memory op1 = operatorsRegistry.getOperator(operatorOneIndex);
+        OperatorsV2.Operator memory op2 = operatorsRegistry.getOperator(operatorTwoIndex);
 
         assert(op1.funded == 17);
         assert(op2.funded == 17);
@@ -1432,18 +1438,22 @@ contract RiverV1Tests is Test, BytesGenerator {
 
         vm.prank(admin);
         river.depositToConsensusLayer(20);
-        vm.startPrank(admin);
-        operatorsRegistry.setOperatorStoppedValidatorCount(operatorOneIndex, 10);
-        vm.stopPrank();
+        uint32[] memory stoppedCounts = new uint32[](3);
+        stoppedCounts[0] = 10;
+        stoppedCounts[1] = 10;
+        stoppedCounts[2] = 0;
+        operatorsRegistry.sudoStoppedValidatorCounts(stoppedCounts);
         vm.prank(admin);
         river.depositToConsensusLayer(10);
 
-        Operators.Operator memory op1 = operatorsRegistry.getOperator(operatorOneIndex);
-        Operators.Operator memory op2 = operatorsRegistry.getOperator(operatorTwoIndex);
+        OperatorsV2.Operator memory op1 = operatorsRegistry.getOperator(operatorOneIndex);
+        OperatorsV2.Operator memory op2 = operatorsRegistry.getOperator(operatorTwoIndex);
 
         assert(op1.funded == 20);
-        assert(op1.stopped == 10);
+        assert(op1.requestedExits == 0);
         assert(op2.funded == 10);
+
+        assert(operatorsRegistry.getOperatorStoppedValidatorCount(operatorOneIndex) == 10);
 
         assert(river.getDepositedValidatorCount() == 30);
         assert(river.totalUnderlyingSupply() == 1100 ether);
@@ -1520,8 +1530,8 @@ contract RiverV1Tests is Test, BytesGenerator {
             vm.prank(admin);
             river.depositToConsensusLayer(realValidatorCount);
 
-            Operators.Operator memory op1 = operatorsRegistry.getOperator(operatorOneIndex);
-            Operators.Operator memory op2 = operatorsRegistry.getOperator(operatorTwoIndex);
+            OperatorsV2.Operator memory op1 = operatorsRegistry.getOperator(operatorOneIndex);
+            OperatorsV2.Operator memory op2 = operatorsRegistry.getOperator(operatorTwoIndex);
 
             assert(op1.funded == op1Validator);
             assert(op2.funded == op2Validator);
@@ -1923,7 +1933,7 @@ contract RiverV1TestsNoExtraRecipients is Test, BytesGenerator {
         uint256[] memory operatorIndexes = new uint256[](2);
         operatorIndexes[0] = operatorOneIndex;
         operatorIndexes[1] = operatorTwoIndex;
-        uint256[] memory operatorLimits = new uint256[](2);
+        uint32[] memory operatorLimits = new uint32[](2);
         operatorLimits[0] = 100;
         operatorLimits[1] = 100;
 
@@ -1977,8 +1987,8 @@ contract RiverV1TestsNoExtraRecipients is Test, BytesGenerator {
         vm.prank(admin);
         river.depositToConsensusLayer(17);
 
-        Operators.Operator memory op1 = operatorsRegistry.getOperator(operatorOneIndex);
-        Operators.Operator memory op2 = operatorsRegistry.getOperator(operatorTwoIndex);
+        OperatorsV2.Operator memory op1 = operatorsRegistry.getOperator(operatorOneIndex);
+        OperatorsV2.Operator memory op2 = operatorsRegistry.getOperator(operatorTwoIndex);
 
         assert(op1.funded == 17);
         assert(op2.funded == 17);

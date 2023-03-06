@@ -5,10 +5,6 @@ pragma solidity 0.8.10;
 /// @author Kiln
 /// @notice This interface exposes methods to handle the interactions with the official deposit contract
 interface IConsensusLayerDepositManagerV1 {
-    /// @notice A validator key got funded on the deposit contract
-    /// @param publicKey BLS Public key that got funded
-    event FundedValidatorKey(bytes publicKey);
-
     /// @notice The stored deposit contract address changed
     /// @param depositContract Address of the deposit contract
     event SetDepositContractAddress(address indexed depositContract);

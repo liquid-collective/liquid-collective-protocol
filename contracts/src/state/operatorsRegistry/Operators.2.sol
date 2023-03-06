@@ -5,54 +5,45 @@ import "../../libraries/LibSanitize.sol";
 
 /// @title Operators Storage
 /// @notice Utility to manage the Operators in storage
-library Operators {
+library OperatorsV2 {
     /// @notice Storage slot of the Operators
-    bytes32 internal constant OPERATORS_SLOT = bytes32(uint256(keccak256("river.state.operators")) - 1);
+    bytes32 internal constant OPERATORS_SLOT = bytes32(uint256(keccak256("river.state.v2.operators")) - 1);
 
     /// @notice The Operator structure in storage
     struct Operator {
+        /// @dev The following values respect this invariant:
+        /// @dev     keys >= limit >= funded >= RequestedExits
+
+        /// @custom:attribute Staking limit of the operator
+        uint32 limit;
+        /// @custom:attribute The count of funded validators
+        uint32 funded;
+        /// @custom:attribute The count of exit requests made to this operator
+        uint32 requestedExits;
+        /// @custom:attribute The total count of keys of the operator
+        uint32 keys;
+        /// @custom attribute The block at which the last edit happened in the operator details
+        uint64 latestKeysEditBlockNumber;
         /// @custom:attribute True if the operator is active and allowed to operate on River
         bool active;
         /// @custom:attribute Display name of the operator
         string name;
         /// @custom:attribute Address of the operator
         address operator;
-        /// @dev The following values respect this invariant:
-        /// @dev     keys >= limit >= funded >= stopped
-
-        /// @custom:attribute Staking limit of the operator
-        uint256 limit;
-        /// @custom:attribute The count of funded validators
-        uint256 funded;
-        /// @custom:attribute The total count of keys of the operator
-        uint256 keys;
-        /// @custom:attribute The count of stopped validators. Stopped validators are validators
-        ///                   that exited the consensus layer (voluntary or slashed)
-        uint256 stopped;
-        uint256 latestKeysEditBlockNumber;
     }
 
     /// @notice The Operator structure when loaded in memory
     struct CachedOperator {
-        /// @custom:attribute True if the operator is active and allowed to operate on River
-        bool active;
-        /// @custom:attribute Display name of the operator
-        string name;
-        /// @custom:attribute Address of the operator
-        address operator;
         /// @custom:attribute Staking limit of the operator
-        uint256 limit;
+        uint32 limit;
         /// @custom:attribute The count of funded validators
-        uint256 funded;
-        /// @custom:attribute The total count of keys of the operator
-        uint256 keys;
-        /// @custom:attribute The count of stopped validators
-        uint256 stopped;
-        /// @custom:attribute The count of stopped validators. Stopped validators are validators
-        ///                   that exited the consensus layer (voluntary or slashed)
-        uint256 index;
+        uint32 funded;
+        /// @custom:attribute The count of exit requests made to this operator
+        uint32 requestedExits;
+        /// @custom:attribute The original index of the operator
+        uint32 index;
         /// @custom:attribute The amount of picked keys, buffer used before changing funded in storage
-        uint256 picked;
+        uint32 picked;
     }
 
     /// @notice The structure at the storage slot
@@ -174,17 +165,64 @@ library Operators {
 
         uint256 activeIdx = 0;
         for (uint256 idx = 0; idx < operatorCount;) {
-            Operator memory op = r.value[idx];
+            Operator storage op = r.value[idx];
             if (_hasFundableKeys(op)) {
                 activeOperators[activeIdx] = CachedOperator({
-                    active: op.active,
-                    name: op.name,
-                    operator: op.operator,
                     limit: op.limit,
                     funded: op.funded,
-                    keys: op.keys,
-                    stopped: op.stopped,
-                    index: idx,
+                    requestedExits: op.requestedExits,
+                    index: uint32(idx),
+                    picked: 0
+                });
+                unchecked {
+                    ++activeIdx;
+                }
+            }
+            unchecked {
+                ++idx;
+            }
+        }
+
+        return activeOperators;
+    }
+
+    /// @notice Retrieve all the active and fundable operators
+    /// @return The list of active and fundable operators
+    function getAllExitable() internal view returns (CachedOperator[] memory) {
+        bytes32 slot = OPERATORS_SLOT;
+
+        SlotOperator storage r;
+
+        // solhint-disable-next-line no-inline-assembly
+        assembly {
+            r.slot := slot
+        }
+
+        uint256 activeCount = 0;
+        uint256 operatorCount = r.value.length;
+
+        for (uint256 idx = 0; idx < operatorCount;) {
+            if (_hasExitableKeys(r.value[idx])) {
+                unchecked {
+                    ++activeCount;
+                }
+            }
+            unchecked {
+                ++idx;
+            }
+        }
+
+        CachedOperator[] memory activeOperators = new CachedOperator[](activeCount);
+
+        uint256 activeIdx = 0;
+        for (uint256 idx = 0; idx < operatorCount;) {
+            Operator memory op = r.value[idx];
+            if (_hasExitableKeys(op)) {
+                activeOperators[activeIdx] = CachedOperator({
+                    limit: op.limit,
+                    funded: op.funded,
+                    requestedExits: op.requestedExits,
+                    index: uint32(idx),
                     picked: 0
                 });
                 unchecked {
@@ -222,17 +260,24 @@ library Operators {
     /// @notice Atomic operation to set the key count and update the latestKeysEditBlockNumber field at the same time
     /// @param _index The operator index
     /// @param _newKeys The new value for the key count
-    function setKeys(uint256 _index, uint256 _newKeys) internal {
+    function setKeys(uint256 _index, uint32 _newKeys) internal {
         Operator storage op = get(_index);
 
         op.keys = _newKeys;
-        op.latestKeysEditBlockNumber = block.number;
+        op.latestKeysEditBlockNumber = uint64(block.number);
     }
 
     /// @notice Checks if an operator is active and has fundable keys
     /// @param _operator The operator details
     /// @return True if active and fundable
-    function _hasFundableKeys(Operators.Operator memory _operator) internal pure returns (bool) {
+    function _hasFundableKeys(OperatorsV2.Operator memory _operator) internal pure returns (bool) {
         return (_operator.active && _operator.limit > _operator.funded);
+    }
+
+    /// @notice Checks if an operator is active and has exitable keys
+    /// @param _operator The operator details
+    /// @return True if active and exitable
+    function _hasExitableKeys(OperatorsV2.Operator memory _operator) internal pure returns (bool) {
+        return (_operator.active && _operator.funded > _operator.requestedExits);
     }
 }

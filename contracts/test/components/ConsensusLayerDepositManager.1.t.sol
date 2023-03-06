@@ -57,7 +57,6 @@ contract ConsensusLayerDepositManagerV1InitTests is Test {
     ConsensusLayerDepositManagerV1 internal depositManager;
     IDepositContract internal depositContract;
 
-    event FundedValidatorKey(bytes publicKey);
     event SetDepositContractAddress(address indexed depositContract);
     event SetWithdrawalCredentials(bytes32 withdrawalCredentials);
 
@@ -88,8 +87,6 @@ contract ConsensusLayerDepositManagerV1Tests is Test {
     ConsensusLayerDepositManagerV1 internal depositManager;
     IDepositContract internal depositContract;
 
-    event FundedValidatorKey(bytes publicKey);
-
     function setUp() public {
         depositContract = new DepositContractMock();
 
@@ -114,10 +111,6 @@ contract ConsensusLayerDepositManagerV1Tests is Test {
         vm.deal(address(depositManager), 320 ether);
         ConsensusLayerDepositManagerV1ExposeInitializer(address(depositManager)).sudoSyncBalance();
         assert(address(depositManager).balance == 320 ether);
-        vm.expectEmit(true, true, true, true);
-        emit FundedValidatorKey(
-            hex"4681ddeb7bad423182704048f3fb9fe82bded37429b0643af12c730b0f0851815a6ef1a563fdcef7c05512b33278218c"
-        );
         vm.prank(address(0));
         depositManager.depositToConsensusLayer(10);
         assert(address(depositManager).balance == 0);
@@ -127,10 +120,6 @@ contract ConsensusLayerDepositManagerV1Tests is Test {
         vm.deal(address(depositManager), 640 ether);
         ConsensusLayerDepositManagerV1ExposeInitializer(address(depositManager)).sudoSyncBalance();
         assert(address(depositManager).balance == 640 ether);
-        vm.expectEmit(true, true, true, true);
-        emit FundedValidatorKey(
-            hex"4681ddeb7bad423182704048f3fb9fe82bded37429b0643af12c730b0f0851815a6ef1a563fdcef7c05512b33278218c"
-        );
         vm.prank(address(0));
         depositManager.depositToConsensusLayer(20);
         assert(address(depositManager).balance == 320 ether);
