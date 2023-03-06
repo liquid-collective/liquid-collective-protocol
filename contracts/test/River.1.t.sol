@@ -2945,9 +2945,12 @@ contract RiverV1TestsReport_HEAVY_FUZZING is Test, BytesGenerator {
         uint256 framesBetween = bound(_salt, 1, 1_000_000);
         uint256 timeBetween = framesBetween * secondsPerSlot * slotsPerEpoch * epochsPerFrame;
         uint256 maxDecrease = debug_maxDecrease(river.getReportingBounds(), river.totalUnderlyingSupply());
+        console.log(river.totalUnderlyingSupply());
 
         vm.prank(address(oracle));
         river.setConsensusLayerData(clr);
+
+        console.log(river.totalUnderlyingSupply());
 
         clr.epoch += framesBetween * epochsPerFrame;
         vm.warp((clr.epoch + epochsUntilFinal) * (secondsPerSlot * slotsPerEpoch));

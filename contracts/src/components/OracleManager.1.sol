@@ -242,7 +242,6 @@ abstract contract OracleManagerV1 is IOracleManagerV1 {
 
         // we compute the exited amount increase by taking the delta between reports
         vars.exitedAmountIncrease = report.validatorsExitedBalance - lastValidatorsExitedBalance;
-        lastValidatorsExitedBalance = report.validatorsExitedBalance;
 
         // we ensure that the reported total skimmed balance is not decreasing
         if (report.validatorsSkimmedBalance < lastValidatorsSkimmedBalance) {
@@ -253,28 +252,33 @@ abstract contract OracleManagerV1 is IOracleManagerV1 {
 
         // we compute the new skimmed amount by taking the delta between reports
         vars.skimmedAmountIncrease = report.validatorsSkimmedBalance - lastValidatorsSkimmedBalance;
-        lastValidatorsSkimmedBalance = report.validatorsSkimmedBalance;
-
-        ReportBounds.ReportBoundsStruct memory rb = ReportBounds.get();
 
         // we retrieve the current total underlying balance before any reporting data is applied to the system
         vars.preReportUnderlyingBalance = _getTotalUnderlyingBalance();
         // we compute the time elapsed since last report based on epoch numbers
+
+        // if we have new exited / skimmed eth available, we pull funds from the consensus layer recipient
+        if (vars.exitedAmountIncrease + vars.skimmedAmountIncrease > 0) {
+            // this method pulls and updates ethToDeposit / ethToRedeem accordingly
+            _pullCLFunds(vars.skimmedAmountIncrease, vars.exitedAmountIncrease);
+        }
+
         vars.timeElapsedSinceLastReport = _timeBetweenEpochs(cls, lastReportEpoch, report.epoch);
-        lastReportEpoch = report.epoch;
 
         // we update the system parameters, this will have an impact on how the total underlying balance is computed
         CLValidatorTotalBalance.set(report.validatorsBalance);
         CLValidatorCount.set(report.validatorsCount);
+        lastReportEpoch = report.epoch;
+        lastValidatorsSkimmedBalance = report.validatorsSkimmedBalance;
+        lastValidatorsExitedBalance = report.validatorsExitedBalance;
+
+        ReportBounds.ReportBoundsStruct memory rb = ReportBounds.get();
 
         // we compute the maximum allowed increase in balance based on the pre report value
         uint256 maxIncrease = _maxIncrease(rb, vars.preReportUnderlyingBalance, vars.timeElapsedSinceLastReport);
 
         // we retrieve the new total underlying balance after system parameters are changed
-        // we account for the newly exited balance because the funds have not yet been incorporated into the balance to redeem or burnedS
-        // we account for the newly skimmed balance because the funds have not yet been incorporated into the balance to deposit
-        vars.postReportUnderlyingBalance =
-            _getTotalUnderlyingBalance() + vars.exitedAmountIncrease + vars.skimmedAmountIncrease;
+        vars.postReportUnderlyingBalance = _getTotalUnderlyingBalance();
 
         // if the new underlying balance has increased, we verify that we are not exceeding reporting bound, and we update
         // reporting variables accordingly
@@ -342,12 +346,6 @@ abstract contract OracleManagerV1 is IOracleManagerV1 {
             vars.trace.pulledCoverageFunds = _pullCoverageFunds(vars.availableAmountToUpperBound);
             // we do not update the rewards as coverage is not considered rewards
             // we do not update the available amount as there are no more pulling actions to perform afterwards
-        }
-
-        // if we have new exited / skimmed eth available, we pull funds from the consensus layer recipient
-        if (vars.exitedAmountIncrease + vars.skimmedAmountIncrease > 0) {
-            // this method pulls and updates ethToDeposit / ethToRedeem accordingly
-            _pullCLFunds(vars.skimmedAmountIncrease, vars.exitedAmountIncrease);
         }
 
         // we use the updated balanceToRedeem value to report a withdraw event on the redeem manager
