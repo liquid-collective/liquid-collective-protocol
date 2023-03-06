@@ -271,7 +271,10 @@ abstract contract OracleManagerV1 is IOracleManagerV1 {
         uint256 maxIncrease = _maxIncrease(rb, vars.preReportUnderlyingBalance, vars.timeElapsedSinceLastReport);
 
         // we retrieve the new total underlying balance after system parameters are changed
-        vars.postReportUnderlyingBalance = _getTotalUnderlyingBalance() + vars.exitedAmountIncrease;
+        // we account for the newly exited balance because the funds have not yet been incorporated into the balance to redeem or burnedS
+        // we account for the newly skimmed balance because the funds have not yet been incorporated into the balance to deposit
+        vars.postReportUnderlyingBalance =
+            _getTotalUnderlyingBalance() + vars.exitedAmountIncrease + vars.skimmedAmountIncrease;
 
         // if the new underlying balance has increased, we verify that we are not exceeding reporting bound, and we update
         // reporting variables accordingly

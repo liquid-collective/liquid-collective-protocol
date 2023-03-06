@@ -2417,14 +2417,13 @@ contract RiverV1TestsReport_HEAVY_FUZZING is Test, BytesGenerator {
         _salt = _next(_salt);
 
         uint256 totalIncrease = bound(_salt, 0, maxAllowedIncrease);
-        clr.validatorsBalance = (rfv.depositCount - (stoppedTotalCount - exitingTotalCount)) * 32 ether + totalIncrease;
         _salt = _next(_salt);
+        clr.validatorsSkimmedBalance = bound(_salt, 0, totalIncrease);
+        _salt = _next(_salt);
+        clr.validatorsBalance = (rfv.depositCount - (stoppedTotalCount - exitingTotalCount)) * 32 ether
+            + (totalIncrease - clr.validatorsSkimmedBalance);
 
         clr.validatorsCount = uint32(rfv.depositCount);
-
-        uint256 skimmingPerValidator = bound(_salt, 0, 0.1 gwei);
-        clr.validatorsSkimmedBalance = uint64(rfv.depositCount) * skimmingPerValidator;
-        _salt = _next(_salt);
 
         clr.validatorsExitedBalance = 32 ether * (stoppedTotalCount - exitingTotalCount);
         clr.validatorsExitingBalance = 32 ether * exitingTotalCount;
@@ -2480,14 +2479,13 @@ contract RiverV1TestsReport_HEAVY_FUZZING is Test, BytesGenerator {
         _salt = _next(_salt);
 
         uint256 totalIncrease = bound(_salt, 0, maxAllowedIncrease);
-        clr.validatorsBalance = (rfv.depositCount - (stoppedTotalCount - exitingTotalCount)) * 32 ether + totalIncrease;
         _salt = _next(_salt);
+        clr.validatorsSkimmedBalance = bound(_salt, 0, totalIncrease);
+        _salt = _next(_salt);
+        clr.validatorsBalance = (rfv.depositCount - (stoppedTotalCount - exitingTotalCount)) * 32 ether
+            + (totalIncrease - clr.validatorsSkimmedBalance);
 
         clr.validatorsCount = uint32(rfv.depositCount);
-
-        uint256 skimmingPerValidator = bound(_salt, 0, 0.1 gwei);
-        clr.validatorsSkimmedBalance = uint64(rfv.depositCount) * skimmingPerValidator;
-        _salt = _next(_salt);
 
         clr.validatorsExitedBalance = 32 ether * (stoppedTotalCount - exitingTotalCount);
         clr.validatorsExitingBalance = 32 ether * exitingTotalCount;
@@ -2546,14 +2544,13 @@ contract RiverV1TestsReport_HEAVY_FUZZING is Test, BytesGenerator {
         _salt = _next(_salt);
 
         uint256 totalIncrease = bound(_salt, 0, maxAllowedIncrease);
-        clr.validatorsBalance = (rfv.depositCount - (stoppedTotalCount - exitingTotalCount)) * 32 ether + totalIncrease;
         _salt = _next(_salt);
+        clr.validatorsSkimmedBalance = bound(_salt, 0, totalIncrease);
+        _salt = _next(_salt);
+        clr.validatorsBalance = (rfv.depositCount - (stoppedTotalCount - exitingTotalCount)) * 32 ether
+            + (totalIncrease - clr.validatorsSkimmedBalance);
 
         clr.validatorsCount = uint32(rfv.depositCount);
-
-        uint256 skimmingPerValidator = bound(_salt, 0, 0.1 gwei);
-        clr.validatorsSkimmedBalance = uint64(rfv.depositCount) * skimmingPerValidator;
-        _salt = _next(_salt);
 
         clr.validatorsExitedBalance = 32 ether * (stoppedTotalCount - exitingTotalCount);
         clr.validatorsExitingBalance = 32 ether * exitingTotalCount;
@@ -2617,14 +2614,13 @@ contract RiverV1TestsReport_HEAVY_FUZZING is Test, BytesGenerator {
         _salt = _next(_salt);
 
         uint256 totalIncrease = bound(_salt, 0, maxAllowedIncrease);
-        clr.validatorsBalance = (rfv.depositCount - (stoppedTotalCount - exitingTotalCount)) * 32 ether + totalIncrease;
         _salt = _next(_salt);
+        clr.validatorsSkimmedBalance = bound(_salt, 0, totalIncrease);
+        _salt = _next(_salt);
+        clr.validatorsBalance = (rfv.depositCount - (stoppedTotalCount - exitingTotalCount)) * 32 ether
+            + (totalIncrease - clr.validatorsSkimmedBalance);
 
         clr.validatorsCount = uint32(rfv.depositCount);
-
-        uint256 skimmingPerValidator = bound(_salt, 0, 0.1 gwei);
-        clr.validatorsSkimmedBalance = uint64(rfv.depositCount) * skimmingPerValidator;
-        _salt = _next(_salt);
 
         clr.validatorsExitedBalance = 32 ether * (stoppedTotalCount - exitingTotalCount);
         clr.validatorsExitingBalance = 32 ether * exitingTotalCount;
@@ -2681,14 +2677,13 @@ contract RiverV1TestsReport_HEAVY_FUZZING is Test, BytesGenerator {
             debug_timeBetweenEpochs(rfv.cls, river.getLastReportedEpoch(), clr.epoch)
         );
         uint256 totalIncrease = bound(_salt, 0, maxAllowedIncrease);
-        clr.validatorsBalance = (rfv.depositCount - (stoppedTotalCount - exitingTotalCount)) * 32 ether + totalIncrease;
         _salt = _next(_salt);
+        clr.validatorsSkimmedBalance = bound(_salt, 0, totalIncrease);
+        _salt = _next(_salt);
+        clr.validatorsBalance = (rfv.depositCount - (stoppedTotalCount - exitingTotalCount)) * 32 ether
+            + (totalIncrease - clr.validatorsSkimmedBalance);
         {
             clr.validatorsCount = uint32(rfv.depositCount);
-
-            uint256 skimmingPerValidator = bound(_salt, 0, 0.1 gwei);
-            clr.validatorsSkimmedBalance = uint64(rfv.depositCount) * skimmingPerValidator;
-            _salt = _next(_salt);
 
             clr.validatorsExitedBalance = 32 ether * (stoppedTotalCount - exitingTotalCount);
             clr.validatorsExitingBalance = 32 ether * exitingTotalCount;
@@ -2871,7 +2866,7 @@ contract RiverV1TestsReport_HEAVY_FUZZING is Test, BytesGenerator {
         _salt = _depositValidators(depositCount, _salt);
 
         clr.validatorsCount = depositCount;
-        clr.validatorsBalance = 32 ether * (depositCount);
+        clr.validatorsBalance = 32 ether * (depositCount) - 1 ether;
         clr.validatorsExitingBalance = 0;
         clr.validatorsSkimmedBalance = 1 ether;
         clr.validatorsExitedBalance = 0;
@@ -2883,7 +2878,7 @@ contract RiverV1TestsReport_HEAVY_FUZZING is Test, BytesGenerator {
 
         clr.epoch += epochsPerFrame;
         vm.warp((clr.epoch + epochsUntilFinal) * (secondsPerSlot * slotsPerEpoch));
-        clr.validatorsBalance = 32 ether * (depositCount);
+        clr.validatorsBalance = 32 ether * (depositCount) - 1 ether;
         clr.validatorsSkimmedBalance = 0;
 
         vm.prank(address(oracle));
