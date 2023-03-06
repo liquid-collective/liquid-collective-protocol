@@ -177,21 +177,6 @@ contract OracleV1 is IOracleV1, Initializable, Administrable {
     }
 
     /// @inheritdoc IOracleV1
-    function setMember(address _oracleMember, address _newAddress) external onlyAdmin {
-        LibSanitize._notZeroAddress(_newAddress);
-        if (OracleMembers.indexOf(_newAddress) >= 0) {
-            revert AddressAlreadyInUse(_newAddress);
-        }
-        int256 memberIdx = OracleMembers.indexOf(_oracleMember);
-        if (memberIdx < 0) {
-            revert LibErrors.InvalidCall();
-        }
-        OracleMembers.set(uint256(memberIdx), _newAddress);
-        emit SetMember(_oracleMember, _newAddress);
-        _clearReports();
-    }
-
-    /// @inheritdoc IOracleV1
     function setCLSpec(uint64 _epochsPerFrame, uint64 _slotsPerEpoch, uint64 _secondsPerSlot, uint64 _genesisTime)
         external
         onlyAdmin
@@ -518,5 +503,27 @@ contract OracleV1 is IOracleV1, Initializable, Administrable {
         } else {
             reportVariants[uint256(variantIndex)].votes += 1;
         }
+    }
+
+    modifier onlyAdminOrMember(address _oracleMember) {
+        if (msg.sender != _getAdmin() && msg.sender != _oracleMember) {
+            revert LibErrors.Unauthorized(msg.sender);
+        }
+        _;
+    }
+
+    /// @inheritdoc IOracleV1
+    function setMember(address _oracleMember, address _newAddress) external onlyAdminOrMember(_oracleMember) {
+        LibSanitize._notZeroAddress(_newAddress);
+        if (OracleMembers.indexOf(_newAddress) >= 0) {
+            revert AddressAlreadyInUse(_newAddress);
+        }
+        int256 memberIdx = OracleMembers.indexOf(_oracleMember);
+        if (memberIdx < 0) {
+            revert LibErrors.InvalidCall();
+        }
+        OracleMembers.set(uint256(memberIdx), _newAddress);
+        emit SetMember(_oracleMember, _newAddress);
+        _clearReports();
     }
 }
