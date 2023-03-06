@@ -355,8 +355,12 @@ contract RiverV1 is
         if (collectedCLFunds != skimmedEthAmount + exitedEthAmount) {
             revert InvalidPulledClFundsAmount(skimmedEthAmount + exitedEthAmount, collectedCLFunds);
         }
-        _setBalanceToDeposit(BalanceToDeposit.get() + skimmedEthAmount);
-        _setBalanceToRedeem(balanceToRedeem + exitedEthAmount);
+        if (skimmedEthAmount > 0) {
+            _setBalanceToDeposit(BalanceToDeposit.get() + skimmedEthAmount);
+        }
+        if (exitedEthAmount > 0) {
+            _setBalanceToRedeem(balanceToRedeem + exitedEthAmount);
+        }
     }
 
     function sendRedeemManagerExceedingFunds() external payable {
@@ -441,16 +445,16 @@ contract RiverV1 is
         uint256 underlyingAssetBalance = _assetBalance();
         uint256 totalSupply = _totalSupply();
 
-        if (underlyingAssetBalance > 0) {
+        if (underlyingAssetBalance > 0 && totalSupply > 0) {
             // we compute the redeem manager demands in eth and lsEth based on current conversion rate
             uint256 redeemManagerDemand = _balanceOf(redeemManager);
-            uint256 redeemManagerDemandInEth = (redeemManagerDemand * totalSupply) / underlyingAssetBalance;
+            uint256 redeemManagerDemandInEth = (redeemManagerDemand * underlyingAssetBalance) / totalSupply;
             uint256 availableBalanceToRedeem = balanceToRedeem;
 
             // if demand is higher than available eth, we update demand values to use the available eth
             if (redeemManagerDemandInEth > availableBalanceToRedeem) {
                 redeemManagerDemandInEth = availableBalanceToRedeem;
-                redeemManagerDemand = (redeemManagerDemandInEth * underlyingAssetBalance) / totalSupply;
+                redeemManagerDemand = (redeemManagerDemandInEth * totalSupply) / underlyingAssetBalance;
             }
 
             emit ComputedCoverableRedeemManagerDemand(redeemManagerDemand, redeemManagerDemandInEth);
@@ -472,11 +476,11 @@ contract RiverV1 is
         uint256 exitingBalance,
         bool depositToRedeemRebalancingAllowed
     ) internal override {
-        uint256 underlyingAssetBalance = _assetBalance();
-        if (underlyingAssetBalance > 0) {
+        uint256 totalSupply = _totalSupply();
+        if (totalSupply > 0) {
             uint256 availableBalanceToRedeem = balanceToRedeem;
             uint256 availableBalanceToDeposit = BalanceToDeposit.get();
-            uint256 redeemManagerDemandInEth = (_balanceOf(redeemManager) * _totalSupply()) / underlyingAssetBalance;
+            uint256 redeemManagerDemandInEth = (_balanceOf(redeemManager) * _assetBalance()) / totalSupply;
 
             // if the available balance to redeem is not 0, it means that all the redeem requests are fulfilled, we should redirect funds for deposits
             if (availableBalanceToRedeem > 0) {
@@ -484,9 +488,10 @@ contract RiverV1 is
                 _setBalanceToRedeem(0);
                 // if reblancing is enabled and the redeem manager demand is higher than exiting eth, we add eth for deposit buffer to redeem buffer
             } else if (depositToRedeemRebalancingAllowed && redeemManagerDemandInEth > exitingBalance) {
-                availableBalanceToRedeem +=
+                uint256 rebalancingAmount =
                     LibUint256.min(availableBalanceToDeposit, redeemManagerDemandInEth - exitingBalance);
-                _setBalanceToRedeem(availableBalanceToRedeem);
+                _setBalanceToRedeem(availableBalanceToRedeem + rebalancingAmount);
+                _setBalanceToDeposit(availableBalanceToDeposit - rebalancingAmount);
             }
 
             // if after all rebalancings, the redeem manager demand is still higher than the balance to redeem and exiting eth, we compute

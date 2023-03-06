@@ -660,7 +660,7 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
             if (operators[idx].picked > 0) {
                 uint32 requestedExits = OperatorsV2.get(operators[idx].index).requestedExits;
                 OperatorsV2.get(operators[idx].index).requestedExits = requestedExits + operators[idx].picked;
-                emit RequestedValidatorExits(idx, requestedExits + operators[idx].picked);
+                emit RequestedValidatorExits(operators[idx].index, requestedExits + operators[idx].picked);
             }
 
             unchecked {

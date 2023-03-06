@@ -2353,6 +2353,10 @@ contract RiverV1TestsReport_HEAVY_FUZZING is Test, BytesGenerator {
         rebuiltTotalSupply += river.balanceOf(address(redeemManager));
 
         assertEq(rebuiltTotalSupply, river.totalSupply(), "failed to rebuild post total supply");
+
+        if (rfv.expected_checkBalanceToRedeem) {
+            assertEq(river.getBalanceToRedeem(), rfv.expected_balanceToRedeem, "invalid balance to redeem");
+        }
     }
 
     struct ReportingFuzzingVariables {
@@ -2368,6 +2372,9 @@ contract RiverV1TestsReport_HEAVY_FUZZING is Test, BytesGenerator {
         uint256 expected_post_elFeeRecipientBalance;
         uint256 expected_post_coverageFundBalance;
         uint256 expected_post_exceedingBufferAmount;
+        bool expected_checkBalanceToRedeem;
+        uint256 expected_balanceToRedeem;
+        uint256 cache_pre_balanceToDeposit;
     }
 
     function _retrieveInitialReportingData(ReportingFuzzingVariables memory rfv, uint256 _salt)
@@ -2387,7 +2394,7 @@ contract RiverV1TestsReport_HEAVY_FUZZING is Test, BytesGenerator {
 
         clr.validatorsSkimmedBalance = 0;
         clr.validatorsExitedBalance = 0;
-        clr.validatorsExitingBalance = 0;
+        clr.validatorsExitingBalance = type(uint256).max; // ensures no exits will be requested before asserted report
         clr.stoppedValidatorCountPerOperator = new uint32[](1);
         clr.stoppedValidatorCountPerOperator[0] = 0;
         _newSalt = _salt;
@@ -2405,7 +2412,7 @@ contract RiverV1TestsReport_HEAVY_FUZZING is Test, BytesGenerator {
         (rfv.depositCount, rfv.operatorCount, _salt) = _performDepositsToConsensusLayer(_salt);
         console.log("Deposit Count = ", rfv.depositCount);
 
-        rfv.scenario = _salt % 5;
+        rfv.scenario = _salt % 6;
         _salt = _next(_salt);
 
         rfv.cls = river.getConsensusLayerSpec();
@@ -2421,6 +2428,9 @@ contract RiverV1TestsReport_HEAVY_FUZZING is Test, BytesGenerator {
         _performPreAssertions(rfv);
         vm.prank(oracleMember);
         oracle.reportConsensusLayerData(clr);
+
+        _updateAssertions(clr, rfv, _salt);
+
         _performPostAssertions(rfv);
 
         _redeemAllSatisfiedRedeemRequests();
@@ -2431,6 +2441,7 @@ contract RiverV1TestsReport_HEAVY_FUZZING is Test, BytesGenerator {
     uint256 internal constant SCENARIO_REGULAR_REPORTING_PULL_COVERAGE = 2;
     uint256 internal constant SCENARIO_REGULAR_REPORTING_PULL_EXCEEDING_BUFFER = 3;
     uint256 internal constant SCENARIO_REGULAR_REPORTING_PULL_HALF_EL_COVERAGE = 4;
+    uint256 internal constant SCENARIO_REGULAR_REPORTING_REBALANCING_MODE_ACTIVE = 5;
 
     function _retrieveReportingData(ReportingFuzzingVariables memory rfv, uint256 _salt)
         internal
@@ -2451,6 +2462,31 @@ contract RiverV1TestsReport_HEAVY_FUZZING is Test, BytesGenerator {
         } else if (rfv.scenario == SCENARIO_REGULAR_REPORTING_PULL_HALF_EL_COVERAGE) {
             console.log("playing SCENARIO_REGULAR_REPORTING_PULL_HALF_EL_COVERAGE");
             return _retrieveScenario_REGULAR_REPORTING_PULL_HALF_EL_COVERAGE(rfv, _salt);
+        } else if (rfv.scenario == SCENARIO_REGULAR_REPORTING_REBALANCING_MODE_ACTIVE) {
+            console.log("playing SCENARIO_REGULAR_REPORTING_REBALANCING_MODE_ACTIVE");
+            return _retrieveScenario_REGULAR_REPORTING_REBALANCING_MODE_ACTIVE(rfv, _salt);
+        } else {
+            revert();
+        }
+    }
+
+    function _updateAssertions(
+        IOracleManagerV1.ConsensusLayerReport memory clr,
+        ReportingFuzzingVariables memory rfv,
+        uint256 _salt
+    ) internal view {
+        if (rfv.scenario == SCENARIO_REGULAR_REPORTING_NOTHING_PULLED) {
+            return;
+        } else if (rfv.scenario == SCENARIO_REGULAR_REPORTING_PULL_EL_FEES) {
+            return;
+        } else if (rfv.scenario == SCENARIO_REGULAR_REPORTING_PULL_COVERAGE) {
+            return;
+        } else if (rfv.scenario == SCENARIO_REGULAR_REPORTING_PULL_EXCEEDING_BUFFER) {
+            return;
+        } else if (rfv.scenario == SCENARIO_REGULAR_REPORTING_PULL_HALF_EL_COVERAGE) {
+            return;
+        } else if (rfv.scenario == SCENARIO_REGULAR_REPORTING_REBALANCING_MODE_ACTIVE) {
+            return _updateAssertions_REGULAR_REPORTING_REBALANCING_MODE_ACTIVE(rfv, clr, _salt);
         } else {
             revert();
         }
@@ -2789,6 +2825,83 @@ contract RiverV1TestsReport_HEAVY_FUZZING is Test, BytesGenerator {
         rfv.expected_post_coverageFundBalance = 0;
         rfv.expected_post_exceedingBufferAmount = 0;
         _newSalt = _salt;
+    }
+
+    function _retrieveScenario_REGULAR_REPORTING_REBALANCING_MODE_ACTIVE(
+        ReportingFuzzingVariables memory rfv,
+        uint256 _salt
+    ) internal returns (IOracleManagerV1.ConsensusLayerReport memory clr, uint256 _newSalt) {
+        uint256 expectedEpoch = river.getExpectedEpoch();
+        clr.epoch = expectedEpoch + bound(_salt, 1, 1_000) * epochsPerFrame;
+        _salt = _next(_salt);
+
+        uint256 timeIntoTheFuture = bound(_salt, epochsUntilFinal * secondsPerSlot * slotsPerEpoch, 365 days);
+        _salt = _next(_salt);
+        vm.warp(timeIntoTheFuture + (secondsPerSlot * slotsPerEpoch) * clr.epoch);
+
+        uint256 maxAllowedIncrease = debug_maxIncrease(
+            rfv.rb,
+            river.totalUnderlyingSupply(),
+            debug_timeBetweenEpochs(rfv.cls, river.getLastReportedEpoch(), clr.epoch)
+        );
+
+        uint256 stoppedTotalCount = bound(_salt, 0, rfv.depositCount);
+        _salt = _next(_salt);
+
+        uint256 totalIncrease = bound(_salt, 0, maxAllowedIncrease);
+        _salt = _next(_salt);
+        clr.validatorsSkimmedBalance = bound(_salt, 0, totalIncrease);
+        _salt = _next(_salt);
+        clr.validatorsBalance = rfv.depositCount * 32 ether + (totalIncrease - clr.validatorsSkimmedBalance);
+
+        clr.validatorsCount = uint32(rfv.depositCount);
+
+        clr.validatorsExitedBalance = 0;
+        clr.validatorsExitingBalance = 0;
+
+        vm.deal(address(withdraw), clr.validatorsSkimmedBalance + clr.validatorsExitedBalance);
+
+        clr.stoppedValidatorCountPerOperator = new uint32[](rfv.operatorCount + 1);
+
+        clr.stoppedValidatorCountPerOperator[0] = uint32(stoppedTotalCount);
+        uint256 rest = stoppedTotalCount % rfv.operatorCount;
+        for (uint256 idx = 0; idx < rfv.operatorCount; ++idx) {
+            clr.stoppedValidatorCountPerOperator[idx + 1] =
+                uint32((stoppedTotalCount / rfv.operatorCount) + (rest > 0 ? 1 : 0));
+            if (rest > 0) {
+                --rest;
+            }
+        }
+
+        clr.bufferRebalancingMode = true;
+        clr.slashingContainmentMode = false;
+
+        rfv.expected_pre_elFeeRecipientBalance = 0;
+        rfv.expected_pre_coverageFundBalance = 0;
+        rfv.expected_pre_exceedingBufferAmount = 0;
+
+        rfv.expected_post_elFeeRecipientBalance = 0;
+        rfv.expected_post_coverageFundBalance = 0;
+        rfv.expected_post_exceedingBufferAmount = 0;
+
+        rfv.cache_pre_balanceToDeposit = river.getBalanceToDeposit();
+
+        _newSalt = _salt;
+    }
+
+    function _updateAssertions_REGULAR_REPORTING_REBALANCING_MODE_ACTIVE(
+        ReportingFuzzingVariables memory rfv,
+        IOracleManagerV1.ConsensusLayerReport memory clr,
+        uint256 _salt
+    ) internal view {
+        uint256 totalUnderlyingSupply = river.totalUnderlyingSupply();
+        uint256 totalSupply = river.totalSupply();
+        uint256 redeemManagerDemand = river.balanceOf(address(redeemManager));
+        uint256 redeemManagerDemandInEth = (redeemManagerDemand * totalUnderlyingSupply) / totalSupply;
+
+        rfv.expected_checkBalanceToRedeem = true;
+        rfv.expected_balanceToRedeem =
+            LibUint256.min(redeemManagerDemandInEth, rfv.cache_pre_balanceToDeposit + clr.validatorsSkimmedBalance);
     }
 
     function debug_maxIncrease(ReportBounds.ReportBoundsStruct memory rb, uint256 _prevTotalEth, uint256 _timeElapsed)
