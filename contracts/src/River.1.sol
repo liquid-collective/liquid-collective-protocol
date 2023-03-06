@@ -327,15 +327,17 @@ contract RiverV1 is
         uint256 clValidatorCount = CLValidatorCount.get();
         uint256 depositedValidatorCount = DepositedValidatorCount.get();
         if (clValidatorCount < depositedValidatorCount) {
-            return CLValidatorTotalBalance.get() + BalanceToDeposit.get() + balanceToRedeem
+            return CLValidatorTotalBalance.get() + BalanceToDeposit.get() + CommittedBalance.get() + balanceToRedeem
                 + (depositedValidatorCount - clValidatorCount) * ConsensusLayerDepositManagerV1.DEPOSIT_SIZE;
         } else {
-            return CLValidatorTotalBalance.get() + BalanceToDeposit.get() + balanceToRedeem;
+            return CLValidatorTotalBalance.get() + BalanceToDeposit.get() + CommittedBalance.get() + balanceToRedeem;
         }
     }
 
     uint256 balanceToRedeem;
     address redeemManager;
+    uint256 maxNetCommittableAmount;
+    uint256 maxRelativeCommittableAmount;
 
     event SetRedeemManager(address redeemManager);
 
@@ -363,6 +365,8 @@ contract RiverV1 is
         }
     }
 
+    event SetMaxCommittableAmounts(uint256 maxNetAmount, uint256 maxRelativeAmount);
+
     function initRiverV1_1(
         address _redeemManager,
         uint64 epochsPerFrame,
@@ -371,7 +375,9 @@ contract RiverV1 is
         uint64 genesisTime,
         uint64 epochsToAssumedFinality,
         uint256 annualAprUpperBound,
-        uint256 relativeLowerBound
+        uint256 relativeLowerBound,
+        uint256 maxNetCommittableAmount_,
+        uint256 maxRelativeCommittableAmount_
     ) external init(1) {
         redeemManager = _redeemManager;
         emit SetRedeemManager(redeemManager);
@@ -384,16 +390,17 @@ contract RiverV1 is
             annualAprUpperBound,
             relativeLowerBound
         );
+        maxNetCommittableAmount = maxNetCommittableAmount_;
+        LibSanitize._validFee(maxRelativeCommittableAmount_);
+        maxRelativeCommittableAmount = maxRelativeCommittableAmount_;
+        emit SetMaxCommittableAmounts(maxNetCommittableAmount_, maxRelativeCommittableAmount_);
     }
 
     event PulledRedeemManagerExceedingEth(uint256 amount);
 
     event SetBalanceToDeposit(uint256 amount);
 
-    function _setBalanceToDeposit(uint256 newBalanceToDeposit)
-        internal
-        override(UserDepositManagerV1, ConsensusLayerDepositManagerV1)
-    {
+    function _setBalanceToDeposit(uint256 newBalanceToDeposit) internal override(UserDepositManagerV1) {
         BalanceToDeposit.set(newBalanceToDeposit);
         emit SetBalanceToDeposit(newBalanceToDeposit);
     }
@@ -403,6 +410,13 @@ contract RiverV1 is
     function _setBalanceToRedeem(uint256 newBalanceToRedeem) internal {
         balanceToRedeem = newBalanceToRedeem;
         emit SetBalanceToRedeem(newBalanceToRedeem);
+    }
+
+    event SetCommittedBalance(uint256 amount);
+
+    function _setCommittedBalance(uint256 newCommittedBalance) internal override(ConsensusLayerDepositManagerV1) {
+        CommittedBalance.set(newCommittedBalance);
+        emit SetCommittedBalance(newCommittedBalance);
     }
 
     function _pullRedeemManagerExceedingEth(uint256 max) internal override returns (uint256) {
@@ -415,6 +429,8 @@ contract RiverV1 is
         }
         return collectedExceedingEth;
     }
+
+    event ComputedCoverableRedeemManagerDemand(uint256 lsETHDemand, uint256 ethDemand);
 
     function _reportWithdrawToRedeemManager() internal override {
         IRedeemManagerV1 redeemManager_ = IRedeemManagerV1(redeemManager);
@@ -432,6 +448,8 @@ contract RiverV1 is
                 redeemManagerDemandInEth = availableBalanceToRedeem;
                 redeemManagerDemand = (redeemManagerDemandInEth * underlyingAssetBalance) / totalSupply;
             }
+
+            emit ComputedCoverableRedeemManagerDemand(redeemManagerDemand, redeemManagerDemandInEth);
 
             if (redeemManagerDemandInEth > 0) {
                 // the available balance to redeem is updated
@@ -475,6 +493,24 @@ contract RiverV1 is
                 );
                 // call operators registry to request exit to validators
             }
+        }
+    }
+
+    function _updateComittableAmount() internal override {
+        uint256 underlyingAssetBalance = _assetBalance();
+        uint256 currentMaxCommittableAmount = LibUint256.max(
+            maxNetCommittableAmount,
+            (maxRelativeCommittableAmount * underlyingAssetBalance) / LibBasisPoints.BASIS_POINTS_MAX
+        );
+
+        uint256 currentCommittedAmount = CommittedBalance.get();
+
+        if (currentCommittedAmount < currentMaxCommittableAmount) {
+            uint256 currentBalanceToDeposit = BalanceToDeposit.get();
+            uint256 extraCommittableAmount =
+                LibUint256.min(currentBalanceToDeposit, currentMaxCommittableAmount - currentCommittedAmount);
+            _setCommittedBalance(currentCommittedAmount + extraCommittableAmount);
+            _setBalanceToDeposit(currentBalanceToDeposit - extraCommittableAmount);
         }
     }
 }

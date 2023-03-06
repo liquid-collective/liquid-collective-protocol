@@ -75,6 +75,8 @@ contract OracleManagerV1ExposeInitializer is OracleManagerV1 {
         uint256 exitingBalance,
         bool depositToRedeemRebalancingAllowed
     ) internal override {}
+
+    function _updateComittableAmount() internal override {}
 }
 
 contract OracleManagerV1Tests is Test {

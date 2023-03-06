@@ -37,9 +37,13 @@ interface IConsensusLayerDepositManagerV1 {
     /// @notice An error occured during the deposit
     error ErrorOnDeposit();
 
-    /// @notice Returns the amount of pending ETH
-    /// @return The amount of pending ETH
+    /// @notice Returns the amount of ETH not yet committed for deposit
+    /// @return The amount of ETH not yet committed for deposit
     function getBalanceToDeposit() external view returns (uint256);
+
+    /// @notice Returns the amount of ETH committed for deposit
+    /// @return The amount of ETH committed for deposit
+    function getCommittedBalance() external view returns (uint256);
 
     /// @notice Retrieve the withdrawal credentials
     /// @return The withdrawal credentials

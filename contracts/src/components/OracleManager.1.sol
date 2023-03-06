@@ -165,6 +165,8 @@ abstract contract OracleManagerV1 is IOracleManagerV1 {
         bool depositToRedeemRebalancingAllowed
     ) internal virtual;
 
+    function _updateComittableAmount() internal virtual;
+
     function initOracleManagerV1_1(
         uint64 epochsPerFrame,
         uint64 slotsPerEpoch,
@@ -363,6 +365,8 @@ abstract contract OracleManagerV1 is IOracleManagerV1 {
                 report.validatorsExitingBalance, report.bufferRebalancingMode
             );
         }
+
+        _updateComittableAmount();
 
         // we emit a summary event with all the reporting details
         emit ProcessedConsensusLayerReport(report, vars.trace);

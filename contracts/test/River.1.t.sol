@@ -25,10 +25,17 @@ contract OperatorsRegistryWithOverridesV1 is OperatorsRegistryV1 {
     }
 }
 
+contract RiverV1ForceCommittable is RiverV1 {
+    function debug_moveDepositToCommitted() external {
+        _setCommittedBalance(CommittedBalance.get() + BalanceToDeposit.get());
+        _setBalanceToDeposit(0);
+    }
+}
+
 contract RiverV1Tests is Test, BytesGenerator {
     UserFactory internal uf = new UserFactory();
 
-    RiverV1 internal river;
+    RiverV1ForceCommittable internal river;
     IDepositContract internal deposit;
     WithdrawV1 internal withdraw;
     OracleV1 internal oracle;
@@ -86,7 +93,7 @@ contract RiverV1Tests is Test, BytesGenerator {
         allowlist = new AllowlistV1();
         deposit = new DepositContractMock();
         withdraw = new WithdrawV1();
-        river = new RiverV1();
+        river = new RiverV1ForceCommittable();
         operatorsRegistry = new OperatorsRegistryWithOverridesV1();
 
         bytes32 withdrawalCredentials = withdraw.getCredentials();
@@ -141,7 +148,7 @@ contract RiverV1Tests is Test, BytesGenerator {
     function testInitWithZeroAddressValue() public {
         withdraw = new WithdrawV1();
         bytes32 withdrawalCredentials = withdraw.getCredentials();
-        river = new RiverV1();
+        river = new RiverV1ForceCommittable();
         vm.expectRevert(abi.encodeWithSignature("InvalidZeroAddress()"));
         river.initRiverV1(
             address(0),
@@ -402,6 +409,8 @@ contract RiverV1Tests is Test, BytesGenerator {
         assert(river.getDepositedValidatorCount() == 0);
         assert(river.totalUnderlyingSupply() == 1100 ether);
 
+        river.debug_moveDepositToCommitted();
+
         vm.prank(admin);
         river.depositToConsensusLayer(17);
         vm.prank(admin);
@@ -474,6 +483,8 @@ contract RiverV1Tests is Test, BytesGenerator {
         assert(river.getDepositedValidatorCount() == 0);
         assert(river.totalUnderlyingSupply() == 1100 ether);
 
+        river.debug_moveDepositToCommitted();
+
         vm.prank(admin);
         river.depositToConsensusLayer(17);
         vm.prank(admin);
@@ -540,6 +551,8 @@ contract RiverV1Tests is Test, BytesGenerator {
         assert(river.getDepositedValidatorCount() == 0);
         assert(river.totalUnderlyingSupply() == 1100 ether);
 
+        river.debug_moveDepositToCommitted();
+
         vm.prank(admin);
         river.depositToConsensusLayer(17);
         vm.prank(admin);
@@ -593,6 +606,8 @@ contract RiverV1Tests is Test, BytesGenerator {
         assert(river.balanceOfUnderlying(bob) == 1000 ether);
         assert(river.getDepositedValidatorCount() == 0);
         assert(river.totalUnderlyingSupply() == 1100 ether);
+
+        river.debug_moveDepositToCommitted();
 
         vm.prank(admin);
         river.depositToConsensusLayer(17);
@@ -653,6 +668,8 @@ contract RiverV1Tests is Test, BytesGenerator {
         assert(river.balanceOfUnderlying(bob) == 1000 ether);
         assert(river.getDepositedValidatorCount() == 0);
         assert(river.totalUnderlyingSupply() == 1100 ether);
+
+        river.debug_moveDepositToCommitted();
 
         vm.prank(admin);
         river.depositToConsensusLayer(17);
@@ -721,6 +738,8 @@ contract RiverV1Tests is Test, BytesGenerator {
         assert(river.balanceOfUnderlying(bob) == 1000 ether);
         assert(river.getDepositedValidatorCount() == 0);
         assert(river.totalUnderlyingSupply() == 1100 ether);
+
+        river.debug_moveDepositToCommitted();
 
         vm.prank(admin);
         river.depositToConsensusLayer(17);
@@ -793,6 +812,8 @@ contract RiverV1Tests is Test, BytesGenerator {
         assert(river.balanceOfUnderlying(bob) == 1000 ether);
         assert(river.getDepositedValidatorCount() == 0);
         assert(river.totalUnderlyingSupply() == 1100 ether);
+
+        river.debug_moveDepositToCommitted();
 
         vm.prank(admin);
         river.depositToConsensusLayer(17);
@@ -869,6 +890,8 @@ contract RiverV1Tests is Test, BytesGenerator {
         assert(river.balanceOfUnderlying(bob) == 1000 ether);
         assert(river.getDepositedValidatorCount() == 0);
         assert(river.totalUnderlyingSupply() == 1100 ether);
+
+        river.debug_moveDepositToCommitted();
 
         vm.prank(admin);
         river.depositToConsensusLayer(17);
@@ -951,6 +974,8 @@ contract RiverV1Tests is Test, BytesGenerator {
         assert(river.getDepositedValidatorCount() == 0);
         assert(river.totalUnderlyingSupply() == 1100 ether);
 
+        river.debug_moveDepositToCommitted();
+
         vm.prank(admin);
         river.depositToConsensusLayer(17);
         vm.prank(admin);
@@ -1023,6 +1048,8 @@ contract RiverV1Tests is Test, BytesGenerator {
         assert(river.balanceOfUnderlying(bob) == 1000 ether);
         assert(river.getDepositedValidatorCount() == 0);
         assert(river.totalUnderlyingSupply() == 1100 ether);
+
+        river.debug_moveDepositToCommitted();
 
         vm.prank(admin);
         river.depositToConsensusLayer(17);
@@ -1097,6 +1124,8 @@ contract RiverV1Tests is Test, BytesGenerator {
         assert(river.balanceOfUnderlying(bob) == 1000 ether);
         assert(river.getDepositedValidatorCount() == 0);
         assert(river.totalUnderlyingSupply() == 1100 ether);
+
+        river.debug_moveDepositToCommitted();
 
         vm.prank(admin);
         river.depositToConsensusLayer(17);
@@ -1180,6 +1209,8 @@ contract RiverV1Tests is Test, BytesGenerator {
         assert(river.getDepositedValidatorCount() == 0);
         assert(river.totalUnderlyingSupply() == 1100 ether);
 
+        river.debug_moveDepositToCommitted();
+
         vm.prank(admin);
         river.depositToConsensusLayer(17);
         vm.prank(admin);
@@ -1234,6 +1265,8 @@ contract RiverV1Tests is Test, BytesGenerator {
         assert(river.balanceOfUnderlying(bob) == 1000 ether);
         assert(river.getDepositedValidatorCount() == 0);
         assert(river.totalUnderlyingSupply() == 1100 ether);
+
+        river.debug_moveDepositToCommitted();
 
         vm.prank(admin);
         river.depositToConsensusLayer(17);
@@ -1304,6 +1337,8 @@ contract RiverV1Tests is Test, BytesGenerator {
         assert(river.getDepositedValidatorCount() == 0);
         assert(river.totalUnderlyingSupply() == 1100 ether);
 
+        river.debug_moveDepositToCommitted();
+
         vm.prank(admin);
         river.depositToConsensusLayer(17);
         vm.prank(admin);
@@ -1369,6 +1404,8 @@ contract RiverV1Tests is Test, BytesGenerator {
         assert(river.balanceOfUnderlying(bob) == 1000 ether);
         assert(river.getDepositedValidatorCount() == 0);
         assert(river.totalUnderlyingSupply() == 1100 ether);
+
+        river.debug_moveDepositToCommitted();
 
         vm.prank(admin);
         river.depositToConsensusLayer(1);
@@ -1436,6 +1473,8 @@ contract RiverV1Tests is Test, BytesGenerator {
         assert(river.balanceOfUnderlying(bob) == 1000 ether);
         assert(river.getDepositedValidatorCount() == 0);
         assert(river.totalUnderlyingSupply() == 1100 ether);
+
+        river.debug_moveDepositToCommitted();
 
         vm.prank(admin);
         river.depositToConsensusLayer(20);
@@ -1515,6 +1554,8 @@ contract RiverV1Tests is Test, BytesGenerator {
         assert(river.getDepositedValidatorCount() == 0);
         assert(river.totalUnderlyingSupply() == uint256(joeBalance) + uint256(bobBalance));
 
+        river.debug_moveDepositToCommitted();
+
         uint256 validatorCount = river.totalUnderlyingSupply() / 32 ether;
         if (validatorCount > 0) {
             uint256 realValidatorCount = LibUint256.min(34, validatorCount);
@@ -1590,6 +1631,8 @@ contract RiverV1Tests is Test, BytesGenerator {
 
         vm.prank(joe);
         river.deposit{value: 32 ether * uint256(_initialValidatorCount)}();
+
+        river.debug_moveDepositToCommitted();
 
         vm.prank(admin);
         river.depositToConsensusLayer(_initialValidatorCount);
@@ -1693,6 +1736,8 @@ contract RiverV1Tests is Test, BytesGenerator {
 
         vm.prank(joe);
         river.deposit{value: 32 ether * uint256(_initialValidatorCount)}();
+
+        river.debug_moveDepositToCommitted();
 
         vm.prank(admin);
         river.depositToConsensusLayer(_initialValidatorCount);
@@ -1814,6 +1859,8 @@ contract RiverV1Tests is Test, BytesGenerator {
         vm.prank(joe);
         river.deposit{value: 32 ether * uint256(_initialValidatorCount)}();
 
+        river.debug_moveDepositToCommitted();
+
         vm.prank(admin);
         river.depositToConsensusLayer(_initialValidatorCount);
 
@@ -1835,7 +1882,7 @@ contract RiverV1Tests is Test, BytesGenerator {
 contract RiverV1TestsNoExtraRecipients is Test, BytesGenerator {
     UserFactory internal uf = new UserFactory();
 
-    RiverV1 internal river;
+    RiverV1ForceCommittable internal river;
     IDepositContract internal deposit;
     WithdrawV1 internal withdraw;
     OracleV1 internal oracle;
@@ -1892,7 +1939,7 @@ contract RiverV1TestsNoExtraRecipients is Test, BytesGenerator {
         allowlist = new AllowlistV1();
         deposit = new DepositContractMock();
         withdraw = new WithdrawV1();
-        river = new RiverV1();
+        river = new RiverV1ForceCommittable();
         operatorsRegistry = new OperatorsRegistryV1();
 
         bytes32 withdrawalCredentials = withdraw.getCredentials();
@@ -1983,6 +2030,8 @@ contract RiverV1TestsNoExtraRecipients is Test, BytesGenerator {
         assert(river.getDepositedValidatorCount() == 0);
         assert(river.totalUnderlyingSupply() == 1100 ether);
 
+        river.debug_moveDepositToCommitted();
+
         vm.prank(admin);
         river.depositToConsensusLayer(17);
         vm.prank(admin);
@@ -2041,7 +2090,7 @@ contract RiverV1TestsNoExtraRecipients is Test, BytesGenerator {
 contract RiverV1TestsReport_HEAVY_FUZZING is Test, BytesGenerator {
     UserFactory internal uf = new UserFactory();
 
-    RiverV1 internal river;
+    RiverV1ForceCommittable internal river;
     IDepositContract internal deposit;
     WithdrawV1 internal withdraw;
     OracleV1 internal oracle;
@@ -2068,6 +2117,9 @@ contract RiverV1TestsReport_HEAVY_FUZZING is Test, BytesGenerator {
     uint64 constant secondsPerSlot = 12;
     uint64 constant epochsUntilFinal = 4;
 
+    uint256 constant maxNetCommittable = 3200 ether;
+    uint256 constant maxRelativeCommittable = 2000;
+
     function setUp() public {
         admin = makeAddr("admin");
         collector = makeAddr("collector");
@@ -2082,7 +2134,7 @@ contract RiverV1TestsReport_HEAVY_FUZZING is Test, BytesGenerator {
         allowlist = new AllowlistV1();
         deposit = new DepositContractMock();
         withdraw = new WithdrawV1();
-        river = new RiverV1();
+        river = new RiverV1ForceCommittable();
         operatorsRegistry = new OperatorsRegistryV1();
         redeemManager = new RedeemManagerV1();
 
@@ -2106,7 +2158,16 @@ contract RiverV1TestsReport_HEAVY_FUZZING is Test, BytesGenerator {
             500
         );
         river.initRiverV1_1(
-            address(redeemManager), epochsPerFrame, slotsPerEpoch, secondsPerSlot, 0, epochsUntilFinal, 1000, 500
+            address(redeemManager),
+            epochsPerFrame,
+            slotsPerEpoch,
+            secondsPerSlot,
+            0,
+            epochsUntilFinal,
+            1000,
+            500,
+            maxNetCommittable,
+            maxRelativeCommittable
         );
         withdraw.initializeWithdrawV1(address(river));
         oracle.initOracleV1(address(river), admin, 225, 32, 12, 0, 1000, 500);
@@ -2157,13 +2218,15 @@ contract RiverV1TestsReport_HEAVY_FUZZING is Test, BytesGenerator {
             _salt = _next(_salt);
         }
         _newSalt = _salt;
+
+        river.debug_moveDepositToCommitted();
     }
 
     function _performDepositsToConsensusLayer(uint256 _salt)
         internal
         returns (uint256 depositCount, uint256 operatorCount, uint256 _newSalt)
     {
-        uint256 maxDepositPossible = river.getBalanceToDeposit() / 32 ether;
+        uint256 maxDepositPossible = river.getCommittedBalance() / 32 ether;
         depositCount = bound(_salt, 1, LibUint256.min(maxDepositPossible, 200));
         _salt = _next(_salt);
         operatorCount = bound(_salt, 1, 100);
@@ -2187,12 +2250,12 @@ contract RiverV1TestsReport_HEAVY_FUZZING is Test, BytesGenerator {
             if (operatorKeyCount > 0) {
                 bytes memory operatorKeys = genBytes((48 + 96) * operatorKeyCount);
                 vm.prank(operatorAddress);
-                operatorsRegistry.addValidators(operatorIndex, operatorKeyCount, operatorKeys);
+                operatorsRegistry.addValidators(operatorIndex, uint32(operatorKeyCount), operatorKeys);
 
                 uint256[] memory operatorIndexes = new uint256[](1);
                 operatorIndexes[0] = operatorIndex;
-                uint256[] memory operatorLimits = new uint256[](1);
-                operatorLimits[0] = operatorKeyCount;
+                uint32[] memory operatorLimits = new uint32[](1);
+                operatorLimits[0] = uint32(operatorKeyCount);
 
                 vm.prank(admin);
                 operatorsRegistry.setOperatorLimits(operatorIndexes, operatorLimits, block.number);
@@ -2342,7 +2405,7 @@ contract RiverV1TestsReport_HEAVY_FUZZING is Test, BytesGenerator {
         (rfv.depositCount, rfv.operatorCount, _salt) = _performDepositsToConsensusLayer(_salt);
         console.log("Deposit Count = ", rfv.depositCount);
 
-        rfv.scenario = SCENARIO_REGULAR_REPORTING_PULL_EXCEEDING_BUFFER;
+        rfv.scenario = _salt % 5;
         _salt = _next(_salt);
 
         rfv.cls = river.getConsensusLayerSpec();
@@ -2368,6 +2431,7 @@ contract RiverV1TestsReport_HEAVY_FUZZING is Test, BytesGenerator {
     uint256 internal constant SCENARIO_REGULAR_REPORTING_PULL_COVERAGE = 2;
     uint256 internal constant SCENARIO_REGULAR_REPORTING_PULL_EXCEEDING_BUFFER = 3;
     uint256 internal constant SCENARIO_REGULAR_REPORTING_PULL_HALF_EL_COVERAGE = 4;
+    uint256 internal constant SCENARIO_REGULAR_REPORTING_CHECK_COMMITTING_LOGICS = 5;
 
     function _retrieveReportingData(ReportingFuzzingVariables memory rfv, uint256 _salt)
         internal
@@ -2793,15 +2857,17 @@ contract RiverV1TestsReport_HEAVY_FUZZING is Test, BytesGenerator {
         vm.prank(admin);
         uint256 operatorIndex = operatorsRegistry.addOperator(operatorName, operator);
         vm.prank(operator);
-        operatorsRegistry.addValidators(operatorIndex, count, genBytes((48 + 96) * count));
+        operatorsRegistry.addValidators(operatorIndex, uint32(count), genBytes((48 + 96) * count));
 
         uint256[] memory operatorIndexes = new uint256[](1);
         operatorIndexes[0] = operatorIndex;
-        uint256[] memory operatorLimits = new uint256[](1);
-        operatorLimits[0] = count;
+        uint32[] memory operatorLimits = new uint32[](1);
+        operatorLimits[0] = uint32(count);
 
         vm.prank(admin);
         operatorsRegistry.setOperatorLimits(operatorIndexes, operatorLimits, block.number);
+
+        river.debug_moveDepositToCommitted();
 
         vm.prank(admin);
         river.depositToConsensusLayer(count);
