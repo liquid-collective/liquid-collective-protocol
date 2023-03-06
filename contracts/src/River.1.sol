@@ -412,6 +412,10 @@ contract RiverV1 is
         emit SetBalanceToRedeem(newBalanceToRedeem);
     }
 
+    function getBalanceToRedeem() external view returns (uint256) {
+        return balanceToRedeem;
+    }
+
     event SetCommittedBalance(uint256 amount);
 
     function _setCommittedBalance(uint256 newCommittedBalance) internal override(ConsensusLayerDepositManagerV1) {

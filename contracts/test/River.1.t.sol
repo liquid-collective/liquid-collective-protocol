@@ -2405,7 +2405,7 @@ contract RiverV1TestsReport_HEAVY_FUZZING is Test, BytesGenerator {
         (rfv.depositCount, rfv.operatorCount, _salt) = _performDepositsToConsensusLayer(_salt);
         console.log("Deposit Count = ", rfv.depositCount);
 
-        rfv.scenario = _salt % 5;
+        rfv.scenario = SCENARIO_REGULAR_REPORTING_NOTHING_PULLED;
         _salt = _next(_salt);
 
         rfv.cls = river.getConsensusLayerSpec();
@@ -2431,7 +2431,6 @@ contract RiverV1TestsReport_HEAVY_FUZZING is Test, BytesGenerator {
     uint256 internal constant SCENARIO_REGULAR_REPORTING_PULL_COVERAGE = 2;
     uint256 internal constant SCENARIO_REGULAR_REPORTING_PULL_EXCEEDING_BUFFER = 3;
     uint256 internal constant SCENARIO_REGULAR_REPORTING_PULL_HALF_EL_COVERAGE = 4;
-    uint256 internal constant SCENARIO_REGULAR_REPORTING_CHECK_COMMITTING_LOGICS = 5;
 
     function _retrieveReportingData(ReportingFuzzingVariables memory rfv, uint256 _salt)
         internal
@@ -3059,5 +3058,170 @@ contract RiverV1TestsReport_HEAVY_FUZZING is Test, BytesGenerator {
             abi.encodeWithSignature("InvalidPulledClFundsAmount(uint256,uint256)", skimmedAmount, notEnoughAmount)
         );
         river.setConsensusLayerData(clr);
+    }
+
+    function testReportingSuccess_AssertCommittedAmountAfterSkimming(uint256 _salt) external {
+        uint8 depositCount = uint8(bound(_salt, 2, 32));
+        IOracleManagerV1.ConsensusLayerReport memory clr = _generateEmptyReport();
+
+        _salt = _depositValidators(depositCount, _salt);
+
+        _salt = _next(_salt);
+        uint256 framesBetween = bound(_salt, 1, 1_000_000);
+        uint256 timeBetween = framesBetween * secondsPerSlot * slotsPerEpoch * epochsPerFrame;
+        uint256 maxIncrease = debug_maxIncrease(river.getReportingBounds(), river.totalUnderlyingSupply(), timeBetween);
+
+        clr.validatorsCount = depositCount;
+        clr.validatorsBalance = 32 ether * (depositCount);
+        clr.validatorsExitingBalance = 0;
+        clr.validatorsSkimmedBalance = maxIncrease;
+        clr.validatorsExitedBalance = 0;
+        clr.epoch = framesBetween * epochsPerFrame;
+        vm.warp((clr.epoch + epochsUntilFinal) * (secondsPerSlot * slotsPerEpoch));
+
+        vm.deal(address(withdraw), maxIncrease);
+
+        uint256 committedAmount = river.getCommittedBalance();
+
+        vm.prank(address(oracle));
+        river.setConsensusLayerData(clr);
+
+        assertEq(
+            river.getCommittedBalance(),
+            LibUint256.min(
+                committedAmount + maxIncrease,
+                LibUint256.max(
+                    maxNetCommittable,
+                    (river.totalUnderlyingSupply() * maxRelativeCommittable) / LibBasisPoints.BASIS_POINTS_MAX
+                )
+            )
+        );
+    }
+
+    function testReportingSuccess_AssertCommittedAmountAfterELFees(uint256 _salt) external {
+        uint8 depositCount = uint8(bound(_salt, 2, 32));
+        IOracleManagerV1.ConsensusLayerReport memory clr = _generateEmptyReport();
+
+        _salt = _depositValidators(depositCount, _salt);
+
+        _salt = _next(_salt);
+        uint256 framesBetween = bound(_salt, 1, 1_000_000);
+        uint256 timeBetween = framesBetween * secondsPerSlot * slotsPerEpoch * epochsPerFrame;
+        uint256 maxIncrease = debug_maxIncrease(river.getReportingBounds(), river.totalUnderlyingSupply(), timeBetween);
+
+        clr.validatorsCount = depositCount;
+        clr.validatorsBalance = 32 ether * (depositCount);
+        clr.validatorsExitingBalance = 0;
+        clr.validatorsSkimmedBalance = 0;
+        clr.validatorsExitedBalance = 0;
+        clr.epoch = framesBetween * epochsPerFrame;
+        vm.warp((clr.epoch + epochsUntilFinal) * (secondsPerSlot * slotsPerEpoch));
+
+        vm.deal(address(elFeeRecipient), maxIncrease);
+
+        uint256 committedAmount = river.getCommittedBalance();
+
+        vm.prank(address(oracle));
+        river.setConsensusLayerData(clr);
+
+        assertEq(
+            river.getCommittedBalance(),
+            LibUint256.min(
+                committedAmount + maxIncrease,
+                LibUint256.max(
+                    maxNetCommittable,
+                    (river.totalUnderlyingSupply() * maxRelativeCommittable) / LibBasisPoints.BASIS_POINTS_MAX
+                )
+            )
+        );
+    }
+
+    function testReportingSuccess_AssertCommittedAmountAfterCoverage(uint256 _salt) external {
+        uint8 depositCount = uint8(bound(_salt, 2, 32));
+        IOracleManagerV1.ConsensusLayerReport memory clr = _generateEmptyReport();
+
+        _salt = _depositValidators(depositCount, _salt);
+
+        _salt = _next(_salt);
+        uint256 framesBetween = bound(_salt, 1, 1_000_000);
+        uint256 timeBetween = framesBetween * secondsPerSlot * slotsPerEpoch * epochsPerFrame;
+        uint256 maxIncrease = debug_maxIncrease(river.getReportingBounds(), river.totalUnderlyingSupply(), timeBetween);
+
+        clr.validatorsCount = depositCount;
+        clr.validatorsBalance = 32 ether * (depositCount);
+        clr.validatorsExitingBalance = 0;
+        clr.validatorsSkimmedBalance = 0;
+        clr.validatorsExitedBalance = 0;
+        clr.epoch = framesBetween * epochsPerFrame;
+        vm.warp((clr.epoch + epochsUntilFinal) * (secondsPerSlot * slotsPerEpoch));
+
+        address donator = uf._new(_salt);
+        _salt = _next(_salt);
+        _allow(donator, LibAllowlistMasks.DONATE_MASK);
+        vm.deal(address(donator), maxIncrease);
+        vm.prank(donator);
+        coverageFund.donate{value: maxIncrease}();
+
+        uint256 committedAmount = river.getCommittedBalance();
+
+        vm.prank(address(oracle));
+        river.setConsensusLayerData(clr);
+
+        assertEq(
+            river.getCommittedBalance(),
+            LibUint256.min(
+                committedAmount + maxIncrease,
+                LibUint256.max(
+                    maxNetCommittable,
+                    (river.totalUnderlyingSupply() * maxRelativeCommittable) / LibBasisPoints.BASIS_POINTS_MAX
+                )
+            )
+        );
+    }
+
+    function testReportingSuccess_AssertCommittedAmountAfterMultiPulling(uint256 _salt) external {
+        uint8 depositCount = uint8(bound(_salt, 2, 32));
+        IOracleManagerV1.ConsensusLayerReport memory clr = _generateEmptyReport();
+
+        _salt = _depositValidators(depositCount, _salt);
+
+        _salt = _next(_salt);
+        uint256 framesBetween = bound(_salt, 1, 1_000_000);
+        uint256 timeBetween = framesBetween * secondsPerSlot * slotsPerEpoch * epochsPerFrame;
+        uint256 maxIncrease = debug_maxIncrease(river.getReportingBounds(), river.totalUnderlyingSupply(), timeBetween);
+
+        clr.validatorsCount = depositCount;
+        clr.validatorsBalance = 32 ether * (depositCount);
+        clr.validatorsExitingBalance = 0;
+        clr.validatorsSkimmedBalance = maxIncrease / 3;
+        clr.validatorsExitedBalance = 0;
+        clr.epoch = framesBetween * epochsPerFrame;
+        vm.warp((clr.epoch + epochsUntilFinal) * (secondsPerSlot * slotsPerEpoch));
+
+        vm.deal(address(elFeeRecipient), maxIncrease / 3);
+        vm.deal(address(withdraw), maxIncrease / 3);
+
+        address donator = uf._new(_salt);
+        _salt = _next(_salt);
+        _allow(donator, LibAllowlistMasks.DONATE_MASK);
+        vm.deal(address(donator), maxIncrease - (maxIncrease / 3) * 2);
+        vm.prank(donator);
+        coverageFund.donate{value: maxIncrease - (maxIncrease / 3) * 2}();
+
+        uint256 committedAmount = river.getCommittedBalance();
+
+        vm.prank(address(oracle));
+        river.setConsensusLayerData(clr);
+
+        assertEq(
+            river.getCommittedBalance(),
+            LibUint256.min(
+                committedAmount + maxIncrease,
+                LibUint256.max(
+                    maxNetCommittable,
+                    (river.totalUnderlyingSupply() * maxRelativeCommittable) / LibBasisPoints.BASIS_POINTS_MAX
+                )
+            )
+        );
     }
 }
