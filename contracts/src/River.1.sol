@@ -438,7 +438,9 @@ contract RiverV1 is
         return collectedExceedingEth;
     }
 
-    event ComputedCoverableRedeemManagerDemand(uint256 lsETHDemand, uint256 ethDemand);
+    event ReportedRedeemManager(
+        uint256 redeemManagerDemand, uint256 suppliedRedeemManagerDemand, uint256 suppliedRedeemManagerDemandInEth
+    );
 
     function _reportWithdrawToRedeemManager() internal override {
         IRedeemManagerV1 redeemManager_ = IRedeemManagerV1(redeemManager);
@@ -447,17 +449,18 @@ contract RiverV1 is
 
         if (underlyingAssetBalance > 0 && totalSupply > 0) {
             // we compute the redeem manager demands in eth and lsEth based on current conversion rate
-            uint256 redeemManagerDemand = _balanceOf(redeemManager);
-            uint256 redeemManagerDemandInEth = (redeemManagerDemand * underlyingAssetBalance) / totalSupply;
+            uint256 redeemManagerBalance = _balanceOf(redeemManager);
+            uint256 redeemManagerDemand = redeemManagerBalance;
+            uint256 redeemManagerDemandInEth = _balanceFromShares(redeemManagerDemand);
             uint256 availableBalanceToRedeem = balanceToRedeem;
 
             // if demand is higher than available eth, we update demand values to use the available eth
             if (redeemManagerDemandInEth > availableBalanceToRedeem) {
                 redeemManagerDemandInEth = availableBalanceToRedeem;
-                redeemManagerDemand = (redeemManagerDemandInEth * totalSupply) / underlyingAssetBalance;
+                redeemManagerDemand = _sharesFromBalance(redeemManagerDemandInEth);
             }
 
-            emit ComputedCoverableRedeemManagerDemand(redeemManagerDemand, redeemManagerDemandInEth);
+            emit ReportedRedeemManager(redeemManagerBalance, redeemManagerDemand, redeemManagerDemandInEth);
 
             if (redeemManagerDemandInEth > 0) {
                 // the available balance to redeem is updated
@@ -480,7 +483,7 @@ contract RiverV1 is
         if (totalSupply > 0) {
             uint256 availableBalanceToRedeem = balanceToRedeem;
             uint256 availableBalanceToDeposit = BalanceToDeposit.get();
-            uint256 redeemManagerDemandInEth = (_balanceOf(redeemManager) * _assetBalance()) / totalSupply;
+            uint256 redeemManagerDemandInEth = _balanceFromShares(_balanceOf(redeemManager));
 
             // TODO MOVE REBALANCING HERE
             // if after all rebalancings, the redeem manager demand is still higher than the balance to redeem and exiting eth, we compute
