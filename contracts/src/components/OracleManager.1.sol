@@ -80,50 +80,6 @@ abstract contract OracleManagerV1 is IOracleManagerV1 {
         emit SetOracle(_oracleAddress);
     }
 
-    /// @inheritdoc IOracleManagerV1
-    function setConsensusLayerData(
-        uint256 _validatorCount,
-        uint256 _validatorTotalBalance,
-        bytes32 _roundId,
-        uint256 _maxIncrease
-    ) external {
-        if (msg.sender != OracleAddress.get()) {
-            revert LibErrors.Unauthorized(msg.sender);
-        }
-
-        if (_validatorCount > DepositedValidatorCount.get()) {
-            revert InvalidValidatorCountReport(_validatorCount, DepositedValidatorCount.get());
-        }
-
-        uint256 newValidators = _validatorCount - CLValidatorCount.get();
-        uint256 previousValidatorTotalBalance = CLValidatorTotalBalance.get() + (newValidators * 32 ether);
-
-        CLValidatorTotalBalance.set(_validatorTotalBalance);
-        CLValidatorCount.set(_validatorCount);
-        LastOracleRoundId.set(_roundId);
-
-        uint256 executionLayerFees = 0;
-
-        // if there's a margin left for pulling the execution layer fees that would leave our delta under the allowed maxIncrease value, do it
-        if ((_maxIncrease + previousValidatorTotalBalance) > _validatorTotalBalance) {
-            executionLayerFees = _pullELFees((_maxIncrease + previousValidatorTotalBalance) - _validatorTotalBalance);
-        }
-
-        // if there's a margin for pulling coverage funds that would also leave our delta under the allowed maxIncrease value, also do it
-        if (((_maxIncrease + previousValidatorTotalBalance) - executionLayerFees) > _validatorTotalBalance) {
-            _pullCoverageFunds(
-                ((_maxIncrease + previousValidatorTotalBalance) - executionLayerFees) - _validatorTotalBalance
-            );
-        }
-
-        // the revenue value does not include the pulled coverageFunds
-        if (previousValidatorTotalBalance < _validatorTotalBalance + executionLayerFees) {
-            _onEarnings((_validatorTotalBalance + executionLayerFees) - previousValidatorTotalBalance);
-        }
-
-        emit ConsensusLayerDataUpdate(_validatorCount, _validatorTotalBalance, _roundId);
-    }
-
     // rework beyond this point
 
     event SetSpec(uint64 epochsPerFrame, uint64 slotsPerEpoch, uint64 secondsPerSlot, uint64 genesisTime);
@@ -456,6 +412,16 @@ abstract contract OracleManagerV1 is IOracleManagerV1 {
     /// @return The Consensus Layer Specification
     function getCLSpec() external view returns (CLSpec.CLSpecStruct memory) {
         return CLSpec.get();
+    }
+
+    function setCLSpec(CLSpec.CLSpecStruct calldata newValue) external onlyAdmin_OMV1 {
+        CLSpec.set(newValue);
+        emit SetSpec(newValue.epochsPerFrame, newValue.slotsPerEpoch, newValue.secondsPerSlot, newValue.genesisTime);
+    }
+
+    function setReportBounds(ReportBounds.ReportBoundsStruct calldata newValue) external onlyAdmin_OMV1 {
+        ReportBounds.set(newValue);
+        emit SetBounds(newValue.annualAprUpperBound, newValue.relativeLowerBound);
     }
 
     /// @notice Retrieve the current frame details
