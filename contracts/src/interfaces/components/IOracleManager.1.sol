@@ -1,6 +1,9 @@
 //SPDX-License-Identifier: BUSL-1.1
 pragma solidity 0.8.10;
 
+import "../../state/oracle/CLSpec.sol";
+import "../../state/oracle/ReportBounds.sol";
+
 /// @title Oracle Manager (v1)
 /// @author Kiln
 /// @notice This interface exposes methods to handle the inputs provided by the oracle
@@ -75,4 +78,39 @@ interface IOracleManagerV1 {
     function setConsensusLayerData(ConsensusLayerReport calldata report) external;
 
     function isValidEpoch(uint256 epoch) external view returns (bool);
+
+    /// @notice Retrieve the block timestamp
+    /// @return The current timestamp from the EVM context
+    function getTime() external view returns (uint256);
+
+    /// @notice Retrieve expected epoch id
+    /// @return The current expected epoch id
+    function getExpectedEpochId() external view returns (uint256);
+
+    /// @notice Retrieve the last completed epoch id
+    /// @return The last completed epoch id
+    function getLastCompletedEpochId() external view returns (uint256);
+
+    /// @notice Retrieve the current epoch id based on block timestamp
+    /// @return The current epoch id
+    function getCurrentEpochId() external view returns (uint256);
+
+    /// @notice Retrieve the current cl spec
+    /// @return The Consensus Layer Specification
+    function getCLSpec() external view returns (CLSpec.CLSpecStruct memory);
+
+    /// @notice Retrieve the current frame details
+    /// @return _startEpochId The epoch at the beginning of the frame
+    /// @return _startTime The timestamp of the beginning of the frame in seconds
+    /// @return _endTime The timestamp of the end of the frame in seconds
+    function getCurrentFrame() external view returns (uint256 _startEpochId, uint256 _startTime, uint256 _endTime);
+
+    /// @notice Retrieve the first epoch id of the frame of the provided epoch id
+    /// @param _epochId Epoch id used to get the frame
+    /// @return The first epoch id of the frame containing the given epoch id
+    function getFrameFirstEpochId(uint256 _epochId) external view returns (uint256);
+
+    /// @notice Retrieve the report bounds
+    /// @return The report bounds
+    function getReportBounds() external view returns (ReportBounds.ReportBoundsStruct memory);
 }

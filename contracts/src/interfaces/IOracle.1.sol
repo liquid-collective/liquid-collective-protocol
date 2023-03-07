@@ -97,6 +97,11 @@ interface IOracleV1 {
     /// @param newAddress The address already in use
     error AddressAlreadyInUse(address newAddress);
 
+    struct ReportVariantDetails {
+        bytes32 variant;
+        uint256 votes;
+    }
+
     /// @notice Initializes the oracle
     /// @param _river Address of the River contract, able to receive oracle input data after quorum is met
     /// @param _administratorAddress Address able to call administrative methods
@@ -121,14 +126,6 @@ interface IOracleV1 {
     /// @return The address of River
     function getRiver() external view returns (address);
 
-    /// @notice Retrieve the block timestamp
-    /// @return The current timestamp from the EVM context
-    function getTime() external view returns (uint256);
-
-    /// @notice Retrieve expected epoch id
-    /// @return The current expected epoch id
-    function getExpectedEpochId() external view returns (uint256);
-
     /// @notice Retrieve member report status
     /// @param _oracleMember Address of member to check
     /// @return True if member has reported
@@ -142,46 +139,15 @@ interface IOracleV1 {
     /// @return The count of report variants
     function getReportVariantsCount() external view returns (uint256);
 
-    /// @notice Retrieve decoded report at provided index
-    /// @param _idx Index of report
-    /// @return _clBalance The reported consensus layer balance sum of River's validators
-    /// @return _clValidators The reported validator count
-    /// @return _reportCount The number of similar reports
-    function getReportVariant(uint256 _idx)
-        external
-        view
-        returns (uint64 _clBalance, uint32 _clValidators, uint16 _reportCount);
+    function getReportVariantDetails(uint256 _idx) external view returns (ReportVariantDetails memory);
 
     /// @notice Retrieve the last completed epoch id
     /// @return The last completed epoch id
-    function getLastCompletedEpochId() external view returns (uint256);
-
-    /// @notice Retrieve the current epoch id based on block timestamp
-    /// @return The current epoch id
-    function getCurrentEpochId() external view returns (uint256);
+    function getLastCompletedReportEpoch() external view returns (uint256);
 
     /// @notice Retrieve the current quorum
     /// @return The current quorum
     function getQuorum() external view returns (uint256);
-
-    /// @notice Retrieve the current cl spec
-    /// @return The Consensus Layer Specification
-    function getCLSpec() external view returns (CLSpec.CLSpecStruct memory);
-
-    /// @notice Retrieve the current frame details
-    /// @return _startEpochId The epoch at the beginning of the frame
-    /// @return _startTime The timestamp of the beginning of the frame in seconds
-    /// @return _endTime The timestamp of the end of the frame in seconds
-    function getCurrentFrame() external view returns (uint256 _startEpochId, uint256 _startTime, uint256 _endTime);
-
-    /// @notice Retrieve the first epoch id of the frame of the provided epoch id
-    /// @param _epochId Epoch id used to get the frame
-    /// @return The first epoch id of the frame containing the given epoch id
-    function getFrameFirstEpochId(uint256 _epochId) external view returns (uint256);
-
-    /// @notice Retrieve the report bounds
-    /// @return The report bounds
-    function getReportBounds() external view returns (ReportBounds.ReportBoundsStruct memory);
 
     /// @notice Retrieve the list of oracle members
     /// @return The oracle members
@@ -216,36 +182,45 @@ interface IOracleV1 {
     /// @param _newAddress New address for the member
     function setMember(address _oracleMember, address _newAddress) external;
 
-    /// @notice Edits the cl spec parameters
-    /// @dev Only callable by the adminstrator
-    /// @param _epochsPerFrame Number of epochs in a frame.
-    /// @param _slotsPerEpoch Number of slots in one epoch.
-    /// @param _secondsPerSlot Number of seconds between slots.
-    /// @param _genesisTime Timestamp of the genesis slot.
-    function setCLSpec(uint64 _epochsPerFrame, uint64 _slotsPerEpoch, uint64 _secondsPerSlot, uint64 _genesisTime)
-        external;
-
-    /// @notice Edits the cl bounds parameters
-    /// @dev Only callable by the adminstrator
-    /// @param _annualAprUpperBound Maximum apr allowed for balance increase. Delta between updates is extrapolated on a year time frame.
-    /// @param _relativeLowerBound Maximum relative balance decrease.
-    function setReportBounds(uint256 _annualAprUpperBound, uint256 _relativeLowerBound) external;
-
     /// @notice Edits the quorum required to forward cl data to River
     /// @dev Modifying the quorum clears all the reporting data
     /// @param _newQuorum New quorum parameter
     function setQuorum(uint256 _newQuorum) external;
 
-    /// @notice Report cl chain data
-    /// @dev Only callable by an oracle member
-    /// @dev The epoch id is expected to be >= to the expected epoch id stored in the contract
-    /// @dev The epoch id is expected to be the first epoch of its frame
-    /// @dev The Consensus Layer Validator count is the amount of running validators managed by River.
-    /// @dev Until withdrawals are enabled, this count also takes into account any exited and slashed validator
-    /// @dev as funds are still locked on the consensus layer.
-    /// @param _epochId Epoch where the balance and validator count has been computed
-    /// @param _clValidatorsBalance Total balance of River validators
-    /// @param _clValidatorCount Total River validator count
-    function reportConsensusLayerData(uint256 _epochId, uint64 _clValidatorsBalance, uint32 _clValidatorCount)
-        external;
+    function isValidEpoch(uint256 epoch) external view returns (bool);
+
+    /// @notice Retrieve the block timestamp
+    /// @return The current timestamp from the EVM context
+    function getTime() external view returns (uint256);
+
+    /// @notice Retrieve expected epoch id
+    /// @return The current expected epoch id
+    function getExpectedEpochId() external view returns (uint256);
+
+    /// @notice Retrieve the last completed epoch id
+    /// @return The last completed epoch id
+    function getLastCompletedEpochId() external view returns (uint256);
+
+    /// @notice Retrieve the current epoch id based on block timestamp
+    /// @return The current epoch id
+    function getCurrentEpochId() external view returns (uint256);
+
+    /// @notice Retrieve the current cl spec
+    /// @return The Consensus Layer Specification
+    function getCLSpec() external view returns (CLSpec.CLSpecStruct memory);
+
+    /// @notice Retrieve the current frame details
+    /// @return _startEpochId The epoch at the beginning of the frame
+    /// @return _startTime The timestamp of the beginning of the frame in seconds
+    /// @return _endTime The timestamp of the end of the frame in seconds
+    function getCurrentFrame() external view returns (uint256 _startEpochId, uint256 _startTime, uint256 _endTime);
+
+    /// @notice Retrieve the first epoch id of the frame of the provided epoch id
+    /// @param _epochId Epoch id used to get the frame
+    /// @return The first epoch id of the frame containing the given epoch id
+    function getFrameFirstEpochId(uint256 _epochId) external view returns (uint256);
+
+    /// @notice Retrieve the report bounds
+    /// @return The report bounds
+    function getReportBounds() external view returns (ReportBounds.ReportBoundsStruct memory);
 }

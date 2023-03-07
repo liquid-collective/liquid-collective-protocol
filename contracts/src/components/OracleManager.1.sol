@@ -381,7 +381,7 @@ abstract contract OracleManagerV1 is IOracleManagerV1 {
         return lastReportEpoch;
     }
 
-    function getExpectedEpoch() external view returns (uint256) {
+    function getExpectedEpochId() external view returns (uint256) {
         CLSpec.CLSpecStruct memory cls = CLSpec.get();
         uint256 currentEpoch = _currentEpoch(cls);
         return LibUint256.max(lastReportEpoch + cls.epochsPerFrame, currentEpoch - (currentEpoch % cls.epochsPerFrame));
@@ -432,5 +432,54 @@ abstract contract OracleManagerV1 is IOracleManagerV1 {
 
     function getConsensusLayerSpec() external view returns (CLSpec.CLSpecStruct memory) {
         return CLSpec.get();
+    }
+
+    // view functions of oracle
+
+    function getTime() external view returns (uint256) {
+        return block.timestamp;
+    }
+
+    /// @notice Retrieve the last completed epoch id
+    /// @return The last completed epoch id
+    function getLastCompletedEpochId() external view returns (uint256) {
+        return lastReportEpoch;
+    }
+
+    /// @notice Retrieve the current epoch id based on block timestamp
+    /// @return The current epoch id
+    function getCurrentEpochId() external view returns (uint256) {
+        return _currentEpoch(CLSpec.get());
+    }
+
+    /// @notice Retrieve the current cl spec
+    /// @return The Consensus Layer Specification
+    function getCLSpec() external view returns (CLSpec.CLSpecStruct memory) {
+        return CLSpec.get();
+    }
+
+    /// @notice Retrieve the current frame details
+    /// @return _startEpochId The epoch at the beginning of the frame
+    /// @return _startTime The timestamp of the beginning of the frame in seconds
+    /// @return _endTime The timestamp of the end of the frame in seconds
+    function getCurrentFrame() external view returns (uint256 _startEpochId, uint256 _startTime, uint256 _endTime) {
+        CLSpec.CLSpecStruct memory cls = CLSpec.get();
+        uint256 currentEpoch = _currentEpoch(cls);
+        _startEpochId = currentEpoch - (currentEpoch % cls.epochsPerFrame);
+        _startTime = _startEpochId * cls.slotsPerEpoch * cls.secondsPerSlot;
+        _endTime = (_startEpochId + cls.epochsPerFrame) * cls.slotsPerEpoch * cls.secondsPerSlot - 1;
+    }
+
+    /// @notice Retrieve the first epoch id of the frame of the provided epoch id
+    /// @param _epochId Epoch id used to get the frame
+    /// @return The first epoch id of the frame containing the given epoch id
+    function getFrameFirstEpochId(uint256 _epochId) external view returns (uint256) {
+        return _epochId - (_epochId % CLSpec.get().epochsPerFrame);
+    }
+
+    /// @notice Retrieve the report bounds
+    /// @return The report bounds
+    function getReportBounds() external view returns (ReportBounds.ReportBoundsStruct memory) {
+        return ReportBounds.get();
     }
 }
