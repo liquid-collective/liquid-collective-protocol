@@ -76,7 +76,9 @@ contract OracleManagerV1ExposeInitializer is OracleManagerV1 {
         bool depositToRedeemRebalancingAllowed
     ) internal override {}
 
-    function _updateComittableAmount() internal override {}
+    function _commitBalanceToDeposit(uint256) internal override {}
+
+    function _skimExcessBalanceToRedeem() internal override {}
 }
 
 contract OracleManagerV1Tests is Test {

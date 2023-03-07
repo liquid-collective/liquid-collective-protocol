@@ -336,8 +336,8 @@ contract RiverV1 is
 
     uint256 balanceToRedeem;
     address redeemManager;
-    uint256 maxNetCommittableAmount;
-    uint256 maxRelativeCommittableAmount;
+    uint256 maxDailyNetCommittableAmount;
+    uint256 maxDailyRelativeCommittableAmount;
 
     event SetRedeemManager(address redeemManager);
 
@@ -369,7 +369,7 @@ contract RiverV1 is
         }
     }
 
-    event SetMaxCommittableAmounts(uint256 maxNetAmount, uint256 maxRelativeAmount);
+    event SetMaxDailyCommittableAmounts(uint256 maxNetAmount, uint256 maxRelativeAmount);
 
     function initRiverV1_1(
         address _redeemManager,
@@ -380,8 +380,8 @@ contract RiverV1 is
         uint64 epochsToAssumedFinality,
         uint256 annualAprUpperBound,
         uint256 relativeLowerBound,
-        uint256 maxNetCommittableAmount_,
-        uint256 maxRelativeCommittableAmount_
+        uint256 maxDailyNetCommittableAmount_,
+        uint256 maxDailyRelativeCommittableAmount_
     ) external init(1) {
         redeemManager = _redeemManager;
         emit SetRedeemManager(redeemManager);
@@ -394,37 +394,37 @@ contract RiverV1 is
             annualAprUpperBound,
             relativeLowerBound
         );
-        maxNetCommittableAmount = maxNetCommittableAmount_;
-        LibSanitize._validFee(maxRelativeCommittableAmount_);
-        maxRelativeCommittableAmount = maxRelativeCommittableAmount_;
-        emit SetMaxCommittableAmounts(maxNetCommittableAmount_, maxRelativeCommittableAmount_);
+        maxDailyNetCommittableAmount = maxDailyNetCommittableAmount_;
+        LibSanitize._validFee(maxDailyRelativeCommittableAmount_);
+        maxDailyRelativeCommittableAmount = maxDailyRelativeCommittableAmount_;
+        emit SetMaxDailyCommittableAmounts(maxDailyNetCommittableAmount_, maxDailyRelativeCommittableAmount_);
     }
 
     event PulledRedeemManagerExceedingEth(uint256 amount);
 
-    event SetBalanceToDeposit(uint256 amount);
+    event SetBalanceToDeposit(uint256 oldAmount, uint256 newAmount);
 
     function _setBalanceToDeposit(uint256 newBalanceToDeposit) internal override(UserDepositManagerV1) {
+        emit SetBalanceToDeposit(BalanceToDeposit.get(), newBalanceToDeposit);
         BalanceToDeposit.set(newBalanceToDeposit);
-        emit SetBalanceToDeposit(newBalanceToDeposit);
     }
 
-    event SetBalanceToRedeem(uint256 amount);
+    event SetBalanceToRedeem(uint256 oldAmount, uint256 newAmount);
 
     function _setBalanceToRedeem(uint256 newBalanceToRedeem) internal {
+        emit SetBalanceToRedeem(balanceToRedeem, newBalanceToRedeem);
         balanceToRedeem = newBalanceToRedeem;
-        emit SetBalanceToRedeem(newBalanceToRedeem);
     }
 
     function getBalanceToRedeem() external view returns (uint256) {
         return balanceToRedeem;
     }
 
-    event SetCommittedBalance(uint256 amount);
+    event SetBalanceCommittedToDeposit(uint256 oldAmount, uint256 newAmount);
 
     function _setCommittedBalance(uint256 newCommittedBalance) internal override(ConsensusLayerDepositManagerV1) {
+        emit SetBalanceCommittedToDeposit(CommittedBalance.get(), newCommittedBalance);
         CommittedBalance.set(newCommittedBalance);
-        emit SetCommittedBalance(newCommittedBalance);
     }
 
     function _pullRedeemManagerExceedingEth(uint256 max) internal override returns (uint256) {
@@ -482,45 +482,63 @@ contract RiverV1 is
             uint256 availableBalanceToDeposit = BalanceToDeposit.get();
             uint256 redeemManagerDemandInEth = (_balanceOf(redeemManager) * _assetBalance()) / totalSupply;
 
-            // if the available balance to redeem is not 0, it means that all the redeem requests are fulfilled, we should redirect funds for deposits
-            if (availableBalanceToRedeem > 0) {
-                _setBalanceToDeposit(availableBalanceToDeposit + availableBalanceToRedeem);
-                _setBalanceToRedeem(0);
-                // if reblancing is enabled and the redeem manager demand is higher than exiting eth, we add eth for deposit buffer to redeem buffer
-            } else if (depositToRedeemRebalancingAllowed && redeemManagerDemandInEth > exitingBalance) {
-                uint256 rebalancingAmount =
-                    LibUint256.min(availableBalanceToDeposit, redeemManagerDemandInEth - exitingBalance);
-                _setBalanceToRedeem(availableBalanceToRedeem + rebalancingAmount);
-                _setBalanceToDeposit(availableBalanceToDeposit - rebalancingAmount);
-            }
-
+            // TODO MOVE REBALANCING HERE
             // if after all rebalancings, the redeem manager demand is still higher than the balance to redeem and exiting eth, we compute
             // the amount of validators to exit in order to cover the remaining demand
             if (availableBalanceToRedeem + exitingBalance < redeemManagerDemandInEth) {
+                // if reblancing is enabled and the redeem manager demand is higher than exiting eth, we add eth for deposit buffer to redeem buffer
+                if (depositToRedeemRebalancingAllowed && availableBalanceToDeposit > 0) {
+                    uint256 rebalancingAmount =
+                        LibUint256.min(availableBalanceToDeposit, redeemManagerDemandInEth - exitingBalance);
+                    if (rebalancingAmount > 0) {
+                        availableBalanceToRedeem += rebalancingAmount;
+                        _setBalanceToRedeem(availableBalanceToRedeem);
+                        _setBalanceToDeposit(availableBalanceToDeposit - rebalancingAmount);
+                    }
+                }
+
                 uint256 validatorCountToExit = LibUint256.ceil(
                     redeemManagerDemandInEth - (availableBalanceToRedeem + exitingBalance), DEPOSIT_SIZE
                 );
-                // call operators registry to request exit to validators
-                IOperatorsRegistryV1(OperatorsRegistryAddress.get()).pickNextValidatorsToExit(validatorCountToExit);
+
+                if (validatorCountToExit > 0) {
+                    // call operators registry to request exit to validators
+                    IOperatorsRegistryV1(OperatorsRegistryAddress.get()).pickNextValidatorsToExit(validatorCountToExit);
+                }
             }
         }
     }
 
-    function _updateComittableAmount() internal override {
+    function _skimExcessBalanceToRedeem() internal override {
+        uint256 availableBalanceToRedeem = balanceToRedeem;
+
+        // if the available balance to redeem is not 0, it means that all the redeem requests are fulfilled, we should redirect funds for deposits
+        if (availableBalanceToRedeem > 0) {
+            _setBalanceToDeposit(BalanceToDeposit.get() + availableBalanceToRedeem);
+            _setBalanceToRedeem(0);
+        }
+    }
+
+    // TODO always commit max + daily amounts
+    function _commitBalanceToDeposit(uint256 period) internal override {
         uint256 underlyingAssetBalance = _assetBalance();
-        uint256 currentMaxCommittableAmount = LibUint256.max(
-            maxNetCommittableAmount,
-            (maxRelativeCommittableAmount * underlyingAssetBalance) / LibBasisPoints.BASIS_POINTS_MAX
+        uint256 currentBalanceToDeposit = BalanceToDeposit.get();
+
+        // we compute the max daily committable amount by taking the asset balance without the balance to deposit into account
+        uint256 currentMaxDailyCommittableAmount = LibUint256.max(
+            maxDailyNetCommittableAmount,
+            (maxDailyRelativeCommittableAmount * (underlyingAssetBalance - currentBalanceToDeposit))
+                / LibBasisPoints.BASIS_POINTS_MAX
+        );
+        // we adapt the value for the reporting period by using the asset balance as upper bound
+        uint256 currentMaxCommittableAmount = LibUint256.min(
+            LibUint256.min(underlyingAssetBalance, (currentMaxDailyCommittableAmount * period) / 1 days),
+            currentBalanceToDeposit
         );
 
-        uint256 currentCommittedAmount = CommittedBalance.get();
-
-        if (currentCommittedAmount < currentMaxCommittableAmount) {
-            uint256 currentBalanceToDeposit = BalanceToDeposit.get();
-            uint256 extraCommittableAmount =
-                LibUint256.min(currentBalanceToDeposit, currentMaxCommittableAmount - currentCommittedAmount);
-            _setCommittedBalance(currentCommittedAmount + extraCommittableAmount);
-            _setBalanceToDeposit(currentBalanceToDeposit - extraCommittableAmount);
+        if (currentMaxCommittableAmount > 0) {
+            _setCommittedBalance(CommittedBalance.get() + currentMaxCommittableAmount);
+            _setBalanceToDeposit(currentBalanceToDeposit - currentMaxCommittableAmount);
         }
     }
 }

@@ -2117,8 +2117,8 @@ contract RiverV1TestsReport_HEAVY_FUZZING is Test, BytesGenerator {
     uint64 constant secondsPerSlot = 12;
     uint64 constant epochsUntilFinal = 4;
 
-    uint256 constant maxNetCommittable = 3200 ether;
-    uint256 constant maxRelativeCommittable = 2000;
+    uint256 constant maxDailyNetCommittableAmount = 3200 ether;
+    uint256 constant maxDailyRelativeCommittableAmount = 2000;
 
     function setUp() public {
         admin = makeAddr("admin");
@@ -2166,8 +2166,8 @@ contract RiverV1TestsReport_HEAVY_FUZZING is Test, BytesGenerator {
             epochsUntilFinal,
             1000,
             500,
-            maxNetCommittable,
-            maxRelativeCommittable
+            maxDailyNetCommittableAmount,
+            maxDailyRelativeCommittableAmount
         );
         withdraw.initializeWithdrawV1(address(river));
         oracle.initOracleV1(address(river), admin, 225, 32, 12, 0, 1000, 500);
@@ -2344,6 +2344,7 @@ contract RiverV1TestsReport_HEAVY_FUZZING is Test, BytesGenerator {
             redeemManager.getBufferedExceedingEth(),
             "failed post redeem manager exceeding amount check"
         );
+        assertEq(river.getBalanceToRedeem(), 0, "failed checking balance to redeem is empty");
 
         uint256 rebuiltTotalSupply = 0;
         for (uint256 idx = 0; idx < rfv.users.length; ++idx) {
@@ -2353,10 +2354,6 @@ contract RiverV1TestsReport_HEAVY_FUZZING is Test, BytesGenerator {
         rebuiltTotalSupply += river.balanceOf(address(redeemManager));
 
         assertEq(rebuiltTotalSupply, river.totalSupply(), "failed to rebuild post total supply");
-
-        if (rfv.expected_checkBalanceToRedeem) {
-            assertEq(river.getBalanceToRedeem(), rfv.expected_balanceToRedeem, "invalid balance to redeem");
-        }
     }
 
     struct ReportingFuzzingVariables {
@@ -2372,9 +2369,6 @@ contract RiverV1TestsReport_HEAVY_FUZZING is Test, BytesGenerator {
         uint256 expected_post_elFeeRecipientBalance;
         uint256 expected_post_coverageFundBalance;
         uint256 expected_post_exceedingBufferAmount;
-        bool expected_checkBalanceToRedeem;
-        uint256 expected_balanceToRedeem;
-        uint256 cache_pre_balanceToDeposit;
     }
 
     function _retrieveInitialReportingData(ReportingFuzzingVariables memory rfv, uint256 _salt)
@@ -2490,7 +2484,7 @@ contract RiverV1TestsReport_HEAVY_FUZZING is Test, BytesGenerator {
         } else if (rfv.scenario == SCENARIO_REGULAR_REPORTING_PULL_HALF_EL_COVERAGE) {
             return;
         } else if (rfv.scenario == SCENARIO_REGULAR_REPORTING_REBALANCING_MODE_ACTIVE) {
-            return _updateAssertions_REGULAR_REPORTING_REBALANCING_MODE_ACTIVE(rfv, clr, _salt);
+            return;
         } else if (rfv.scenario == SCENARIO_REGULAR_REPORTING_SLASHING_CONTAINMENT_ACTIVE) {
             return _updateAssertions_REGULAR_REPORTING_SLASHING_CONTAINMENT_ACTIVE(rfv, clr, _salt);
         } else {
@@ -2890,24 +2884,7 @@ contract RiverV1TestsReport_HEAVY_FUZZING is Test, BytesGenerator {
         rfv.expected_post_coverageFundBalance = 0;
         rfv.expected_post_exceedingBufferAmount = 0;
 
-        rfv.cache_pre_balanceToDeposit = river.getBalanceToDeposit();
-
         _newSalt = _salt;
-    }
-
-    function _updateAssertions_REGULAR_REPORTING_REBALANCING_MODE_ACTIVE(
-        ReportingFuzzingVariables memory rfv,
-        IOracleManagerV1.ConsensusLayerReport memory clr,
-        uint256
-    ) internal view {
-        uint256 totalUnderlyingSupply = river.totalUnderlyingSupply();
-        uint256 totalSupply = river.totalSupply();
-        uint256 redeemManagerDemand = river.balanceOf(address(redeemManager));
-        uint256 redeemManagerDemandInEth = (redeemManagerDemand * totalUnderlyingSupply) / totalSupply;
-
-        rfv.expected_checkBalanceToRedeem = true;
-        rfv.expected_balanceToRedeem =
-            LibUint256.min(redeemManagerDemandInEth, rfv.cache_pre_balanceToDeposit + clr.validatorsSkimmedBalance);
     }
 
     function _retrieveScenario_REGULAR_REPORTING_SLASHING_CONTAINMENT_ACTIVE(
@@ -2935,11 +2912,12 @@ contract RiverV1TestsReport_HEAVY_FUZZING is Test, BytesGenerator {
         _salt = _next(_salt);
         clr.validatorsSkimmedBalance = bound(_salt, 0, totalIncrease);
         _salt = _next(_salt);
-        clr.validatorsBalance = rfv.depositCount * 32 ether + (totalIncrease - clr.validatorsSkimmedBalance);
+        clr.validatorsBalance = rfv.depositCount * 32 ether - (stoppedTotalCount * 32 ether)
+            + (totalIncrease - clr.validatorsSkimmedBalance);
 
         clr.validatorsCount = uint32(rfv.depositCount);
 
-        clr.validatorsExitedBalance = 0;
+        clr.validatorsExitedBalance = stoppedTotalCount * 32 ether;
         clr.validatorsExitingBalance = 0;
 
         vm.deal(address(withdraw), clr.validatorsSkimmedBalance + clr.validatorsExitedBalance);
@@ -2966,8 +2944,6 @@ contract RiverV1TestsReport_HEAVY_FUZZING is Test, BytesGenerator {
         rfv.expected_post_elFeeRecipientBalance = 0;
         rfv.expected_post_coverageFundBalance = 0;
         rfv.expected_post_exceedingBufferAmount = 0;
-
-        rfv.cache_pre_balanceToDeposit = river.getBalanceToDeposit();
 
         _newSalt = _salt;
     }
@@ -3252,6 +3228,27 @@ contract RiverV1TestsReport_HEAVY_FUZZING is Test, BytesGenerator {
         river.setConsensusLayerData(clr);
     }
 
+    function _computeCommittedAmount(
+        uint256 epochStart,
+        uint256 epochReported,
+        uint256 initialCommittedAmount,
+        uint256 initialDepositAmount,
+        uint256 extraBalanceToDeposit
+    ) internal view returns (uint256) {
+        uint256 period = (epochReported - epochStart) * slotsPerEpoch * secondsPerSlot;
+        uint256 maxCommittedBalanceDailyIncrease = LibUint256.max(
+            maxDailyNetCommittableAmount,
+            ((river.totalUnderlyingSupply() - initialDepositAmount) * maxDailyRelativeCommittableAmount)
+                / LibBasisPoints.BASIS_POINTS_MAX
+        );
+        uint256 maxCommittedBalanceIncrease = LibUint256.min(
+            extraBalanceToDeposit,
+            LibUint256.min(river.totalUnderlyingSupply(), (maxCommittedBalanceDailyIncrease * period) / 1 days)
+        );
+
+        return initialCommittedAmount + maxCommittedBalanceIncrease;
+    }
+
     function testReportingSuccess_AssertCommittedAmountAfterSkimming(uint256 _salt) external {
         uint8 depositCount = uint8(bound(_salt, 2, 32));
         IOracleManagerV1.ConsensusLayerReport memory clr = _generateEmptyReport();
@@ -3274,19 +3271,14 @@ contract RiverV1TestsReport_HEAVY_FUZZING is Test, BytesGenerator {
         vm.deal(address(withdraw), maxIncrease);
 
         uint256 committedAmount = river.getCommittedBalance();
+        uint256 depositAmount = river.getBalanceToDeposit();
 
         vm.prank(address(oracle));
         river.setConsensusLayerData(clr);
 
         assertEq(
             river.getCommittedBalance(),
-            LibUint256.min(
-                committedAmount + maxIncrease,
-                LibUint256.max(
-                    maxNetCommittable,
-                    (river.totalUnderlyingSupply() * maxRelativeCommittable) / LibBasisPoints.BASIS_POINTS_MAX
-                )
-            )
+            _computeCommittedAmount(0, clr.epoch, committedAmount, depositAmount, maxIncrease)
         );
     }
 
@@ -3312,19 +3304,14 @@ contract RiverV1TestsReport_HEAVY_FUZZING is Test, BytesGenerator {
         vm.deal(address(elFeeRecipient), maxIncrease);
 
         uint256 committedAmount = river.getCommittedBalance();
+        uint256 depositAmount = river.getBalanceToDeposit();
 
         vm.prank(address(oracle));
         river.setConsensusLayerData(clr);
 
         assertEq(
             river.getCommittedBalance(),
-            LibUint256.min(
-                committedAmount + maxIncrease,
-                LibUint256.max(
-                    maxNetCommittable,
-                    (river.totalUnderlyingSupply() * maxRelativeCommittable) / LibBasisPoints.BASIS_POINTS_MAX
-                )
-            )
+            _computeCommittedAmount(0, clr.epoch, committedAmount, depositAmount, maxIncrease)
         );
     }
 
@@ -3355,19 +3342,14 @@ contract RiverV1TestsReport_HEAVY_FUZZING is Test, BytesGenerator {
         coverageFund.donate{value: maxIncrease}();
 
         uint256 committedAmount = river.getCommittedBalance();
+        uint256 depositAmount = river.getBalanceToDeposit();
 
         vm.prank(address(oracle));
         river.setConsensusLayerData(clr);
 
         assertEq(
             river.getCommittedBalance(),
-            LibUint256.min(
-                committedAmount + maxIncrease,
-                LibUint256.max(
-                    maxNetCommittable,
-                    (river.totalUnderlyingSupply() * maxRelativeCommittable) / LibBasisPoints.BASIS_POINTS_MAX
-                )
-            )
+            _computeCommittedAmount(0, clr.epoch, committedAmount, depositAmount, maxIncrease)
         );
     }
 
@@ -3401,19 +3383,14 @@ contract RiverV1TestsReport_HEAVY_FUZZING is Test, BytesGenerator {
         coverageFund.donate{value: maxIncrease - (maxIncrease / 3) * 2}();
 
         uint256 committedAmount = river.getCommittedBalance();
+        uint256 depositAmount = river.getBalanceToDeposit();
 
         vm.prank(address(oracle));
         river.setConsensusLayerData(clr);
 
         assertEq(
             river.getCommittedBalance(),
-            LibUint256.min(
-                committedAmount + maxIncrease,
-                LibUint256.max(
-                    maxNetCommittable,
-                    (river.totalUnderlyingSupply() * maxRelativeCommittable) / LibBasisPoints.BASIS_POINTS_MAX
-                )
-            )
+            _computeCommittedAmount(0, clr.epoch, committedAmount, depositAmount, maxIncrease)
         );
     }
 }

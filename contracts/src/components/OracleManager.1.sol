@@ -165,7 +165,8 @@ abstract contract OracleManagerV1 is IOracleManagerV1 {
         bool depositToRedeemRebalancingAllowed
     ) internal virtual;
 
-    function _updateComittableAmount() internal virtual;
+    function _commitBalanceToDeposit(uint256 period) internal virtual;
+    function _skimExcessBalanceToRedeem() internal virtual;
 
     function initOracleManagerV1_1(
         uint64 epochsPerFrame,
@@ -350,9 +351,6 @@ abstract contract OracleManagerV1 is IOracleManagerV1 {
             // we do not update the available amount as there are no more pulling actions to perform afterwards
         }
 
-        // we use the updated balanceToRedeem value to report a withdraw event on the redeem manager
-        _reportWithdrawToRedeemManager();
-
         // if our rewards are not null, we dispatch the fee to the collector
         if (vars.trace.rewards > 0) {
             _onEarnings(vars.trace.rewards);
@@ -366,7 +364,14 @@ abstract contract OracleManagerV1 is IOracleManagerV1 {
             );
         }
 
-        _updateComittableAmount();
+        // we use the updated balanceToRedeem value to report a withdraw event on the redeem manager
+        _reportWithdrawToRedeemManager();
+
+        // if funds are left in the balance to redeem, we move them to the deposit balance
+        _skimExcessBalanceToRedeem();
+
+        // we update the committable amount based on daily maximum allowed
+        _commitBalanceToDeposit(vars.timeElapsedSinceLastReport);
 
         // we emit a summary event with all the reporting details
         emit ProcessedConsensusLayerReport(report, vars.trace);
