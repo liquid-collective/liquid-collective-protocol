@@ -372,4 +372,70 @@ contract OracleManagerV1Tests is Test {
     {
         return (epochNow - epochPast) * (cls.secondsPerSlot * cls.slotsPerEpoch);
     }
+
+    event SetSpec(uint64 epochsPerFrame, uint64 slotsPerEpoch, uint64 secondsPerSlot, uint64 genesisTime);
+    event SetBounds(uint256 annualAprUpperBound, uint256 relativeLowerBound);
+
+    function testSetCLSpec(uint64 _genesisTime, uint64 _epochsPerFrame, uint64 _slotsPerEpoch, uint64 _secondsPerSlot)
+        external
+    {
+        CLSpec.CLSpecStruct memory newValue;
+        newValue.genesisTime = _genesisTime;
+        newValue.epochsPerFrame = _epochsPerFrame;
+        newValue.slotsPerEpoch = _slotsPerEpoch;
+        newValue.secondsPerSlot = _secondsPerSlot;
+
+        vm.prank(admin);
+        vm.expectEmit(true, true, true, true);
+        emit SetSpec(_epochsPerFrame, _slotsPerEpoch, _secondsPerSlot, _genesisTime);
+        oracleManager.setCLSpec(newValue);
+
+        newValue = oracleManager.getCLSpec();
+
+        assertEq(newValue.genesisTime, _genesisTime);
+        assertEq(newValue.epochsPerFrame, _epochsPerFrame);
+        assertEq(newValue.slotsPerEpoch, _slotsPerEpoch);
+        assertEq(newValue.secondsPerSlot, _secondsPerSlot);
+    }
+
+    function testSetCLSpecUnauthorized(
+        uint64 _genesisTime,
+        uint64 _epochsPerFrame,
+        uint64 _slotsPerEpoch,
+        uint64 _secondsPerSlot
+    ) external {
+        CLSpec.CLSpecStruct memory newValue;
+        newValue.genesisTime = _genesisTime;
+        newValue.epochsPerFrame = _epochsPerFrame;
+        newValue.slotsPerEpoch = _slotsPerEpoch;
+        newValue.secondsPerSlot = _secondsPerSlot;
+
+        vm.expectRevert(abi.encodeWithSignature("Unauthorized(address)", address(this)));
+        oracleManager.setCLSpec(newValue);
+    }
+
+    function testSetReportBounds(uint256 upper, uint256 lower) external {
+        ReportBounds.ReportBoundsStruct memory newValue;
+        newValue.annualAprUpperBound = upper;
+        newValue.relativeLowerBound = lower;
+
+        vm.prank(admin);
+        vm.expectEmit(true, true, true, true);
+        emit SetBounds(upper, lower);
+        oracleManager.setReportBounds(newValue);
+
+        newValue = oracleManager.getReportBounds();
+
+        assertEq(newValue.annualAprUpperBound, upper);
+        assertEq(newValue.relativeLowerBound, lower);
+    }
+
+    function testSetReportBoundsUnauthorized(uint256 upper, uint256 lower) external {
+        ReportBounds.ReportBoundsStruct memory newValue;
+        newValue.annualAprUpperBound = upper;
+        newValue.relativeLowerBound = lower;
+
+        vm.expectRevert(abi.encodeWithSignature("Unauthorized(address)", address(this)));
+        oracleManager.setReportBounds(newValue);
+    }
 }
