@@ -1579,6 +1579,79 @@ contract OperatorsRegistryV1TestDistribution is Test {
         }
     }
 
+    function testDepositDistributionWithOperatorsWithPositiveStoppedDelta() external {
+        vm.startPrank(admin);
+        operatorsRegistry.addValidators(0, 50, genBytes((48 + 96) * 50));
+        operatorsRegistry.addValidators(1, 50, genBytes((48 + 96) * 50));
+        operatorsRegistry.addValidators(2, 50, genBytes((48 + 96) * 50));
+        operatorsRegistry.addValidators(3, 50, genBytes((48 + 96) * 50));
+        operatorsRegistry.addValidators(4, 50, genBytes((48 + 96) * 50));
+        vm.stopPrank();
+
+        uint32[] memory limits = new uint32[](5);
+        limits[0] = 50;
+        limits[1] = 50;
+        limits[2] = 50;
+        limits[3] = 50;
+        limits[4] = 50;
+
+        uint256[] memory operators = new uint256[](5);
+        operators[0] = 0;
+        operators[1] = 1;
+        operators[2] = 2;
+        operators[3] = 3;
+        operators[4] = 4;
+
+        vm.prank(admin);
+        operatorsRegistry.setOperatorLimits(operators, limits, block.number);
+
+        OperatorsRegistryInitializableV1(address(operatorsRegistry)).debugGetNextValidatorsToDepositFromActiveOperators(
+            50
+        );
+        assert(operatorsRegistry.getOperator(0).funded == 10);
+        assert(operatorsRegistry.getOperator(1).funded == 10);
+        assert(operatorsRegistry.getOperator(2).funded == 10);
+        assert(operatorsRegistry.getOperator(3).funded == 10);
+        assert(operatorsRegistry.getOperator(4).funded == 10);
+
+        vm.expectEmit(true, true, true, true);
+        emit RequestedValidatorExits(0, 10);
+        vm.expectEmit(true, true, true, true);
+        emit RequestedValidatorExits(1, 10);
+        vm.expectEmit(true, true, true, true);
+        emit RequestedValidatorExits(2, 10);
+        vm.expectEmit(true, true, true, true);
+        emit RequestedValidatorExits(3, 10);
+        vm.expectEmit(true, true, true, true);
+        emit RequestedValidatorExits(4, 10);
+        OperatorsRegistryInitializableV1(address(operatorsRegistry)).debugGetNextValidatorsToExitFromActiveOperators(50);
+
+        assert(operatorsRegistry.getOperator(0).requestedExits == 10);
+        assert(operatorsRegistry.getOperator(1).requestedExits == 10);
+        assert(operatorsRegistry.getOperator(2).requestedExits == 10);
+        assert(operatorsRegistry.getOperator(3).requestedExits == 10);
+        assert(operatorsRegistry.getOperator(4).requestedExits == 10);
+
+        uint32[] memory stoppedValidatorCounts = new uint32[](6);
+        stoppedValidatorCounts[0] = 47;
+        stoppedValidatorCounts[1] = 9;
+        stoppedValidatorCounts[2] = 10;
+        stoppedValidatorCounts[3] = 9;
+        stoppedValidatorCounts[4] = 10;
+        stoppedValidatorCounts[5] = 9;
+
+        OperatorsRegistryInitializableV1(address(operatorsRegistry)).sudoStoppedValidatorCounts(stoppedValidatorCounts);
+
+        OperatorsRegistryInitializableV1(address(operatorsRegistry)).debugGetNextValidatorsToDepositFromActiveOperators(
+            50
+        );
+        assert(operatorsRegistry.getOperator(0).funded == 10);
+        assert(operatorsRegistry.getOperator(1).funded == 35);
+        assert(operatorsRegistry.getOperator(2).funded == 10);
+        assert(operatorsRegistry.getOperator(3).funded == 35);
+        assert(operatorsRegistry.getOperator(4).funded == 10);
+    }
+
     function testRegularExitDistribution() external {
         vm.startPrank(admin);
         operatorsRegistry.addValidators(0, 50, genBytes((48 + 96) * 50));

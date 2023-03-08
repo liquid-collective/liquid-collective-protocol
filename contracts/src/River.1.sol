@@ -485,14 +485,14 @@ contract RiverV1 is
             uint256 availableBalanceToDeposit = BalanceToDeposit.get();
             uint256 redeemManagerDemandInEth = _balanceFromShares(_balanceOf(redeemManager));
 
-            // TODO MOVE REBALANCING HERE
             // if after all rebalancings, the redeem manager demand is still higher than the balance to redeem and exiting eth, we compute
             // the amount of validators to exit in order to cover the remaining demand
             if (availableBalanceToRedeem + exitingBalance < redeemManagerDemandInEth) {
                 // if reblancing is enabled and the redeem manager demand is higher than exiting eth, we add eth for deposit buffer to redeem buffer
                 if (depositToRedeemRebalancingAllowed && availableBalanceToDeposit > 0) {
-                    uint256 rebalancingAmount =
-                        LibUint256.min(availableBalanceToDeposit, redeemManagerDemandInEth - exitingBalance);
+                    uint256 rebalancingAmount = LibUint256.min(
+                        availableBalanceToDeposit, redeemManagerDemandInEth - exitingBalance - availableBalanceToRedeem
+                    );
                     if (rebalancingAmount > 0) {
                         availableBalanceToRedeem += rebalancingAmount;
                         _setBalanceToRedeem(availableBalanceToRedeem);

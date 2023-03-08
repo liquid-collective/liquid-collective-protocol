@@ -1,35 +1,17 @@
 //SPDX-License-Identifier: BUSL-1.1
 pragma solidity 0.8.10;
 
-import "../state/oracle/CLSpec.sol";
-import "../state/oracle/ReportBounds.sol";
+import "./IRiver.1.sol";
+import "../state/oracle/ReportVariants.sol";
 
 /// @title Oracle Interface (v1)
 /// @author Kiln
 /// @notice This interface exposes methods to handle the input from the allowed oracle members.
 /// @notice Highly inspired by Lido's implementation.
 interface IOracleV1 {
-    /// @notice Consensus Layer data has been reported by an oracle member
-    /// @param epochId The epoch of the report
-    /// @param newCLBalance The new consensus layer balance
-    /// @param newCLValidatorCount The new consensus layer validator count
-    /// @param oracleMember The oracle member that reported
-    event CLReported(uint256 epochId, uint128 newCLBalance, uint32 newCLValidatorCount, address oracleMember);
-
     /// @notice The storage quorum value has been changed
     /// @param newQuorum The new quorum value
     event SetQuorum(uint256 newQuorum);
-
-    /// @notice The expected epoch id has been changed
-    /// @param epochId The new expected epoch id
-    event ExpectedEpochIdUpdated(uint256 epochId);
-
-    /// @notice The report has been submitted to river
-    /// @param postTotalEth The new total ETH balance
-    /// @param prevTotalEth The previous total ETH balance
-    /// @param timeElapsed Time since last report
-    /// @param totalShares The new total amount of shares
-    event PostTotalShares(uint256 postTotalEth, uint256 prevTotalEth, uint256 timeElapsed, uint256 totalShares);
 
     /// @notice A member has been added to the oracle member list
     /// @param member The address of the member
@@ -60,47 +42,36 @@ interface IOracleV1 {
     /// @param relativeLowerBound The maximum allowed balance decrease as a relative % of the total balance
     event SetBounds(uint256 annualAprUpperBound, uint256 relativeLowerBound);
 
+    /// @notice An oracle member performed a report
+    /// @param member The oracle member
+    /// @param variant The variant of the report
+    /// @param report The raw report structure
+    /// @param voteCount The vote count
+    event ReportedConsensusLayerData(
+        address indexed member, bytes32 indexed variant, IRiverV1.ConsensusLayerReport report, uint256 voteCount
+    );
+
+    /// @notice The last reported epoch has changed
+    event SetLastReportedEpoch(uint256 lastReportedEpoch);
+    event ClearedReporting();
+
     /// @notice The provided epoch is too old compared to the expected epoch id
     /// @param providedEpochId The epoch id provided as input
     /// @param minExpectedEpochId The minimum epoch id expected
     error EpochTooOld(uint256 providedEpochId, uint256 minExpectedEpochId);
 
-    /// @notice The provided epoch is not at the beginning of its frame
-    /// @param providedEpochId The epoch id provided as input
-    /// @param expectedFrameFirstEpochId The frame first epoch id that was expected
-    error NotFrameFirstEpochId(uint256 providedEpochId, uint256 expectedFrameFirstEpochId);
+    error InvalidEpoch(uint256 epoch);
+
+    error ReportIndexOutOfBounds(uint256 index, uint256 length);
 
     /// @notice The member already reported on the given epoch id
     /// @param epochId The epoch id provided as input
     /// @param member The oracle member
     error AlreadyReported(uint256 epochId, address member);
 
-    /// @notice The delta in balance is above the allowed upper bound
-    /// @param prevTotalEth The previous total balance
-    /// @param postTotalEth The new total balance
-    /// @param timeElapsed The time since last report
-    /// @param annualAprUpperBound The maximum apr allowed
-    error TotalValidatorBalanceIncreaseOutOfBound(
-        uint256 prevTotalEth, uint256 postTotalEth, uint256 timeElapsed, uint256 annualAprUpperBound
-    );
-
-    /// @notice The negative delta in balance is above the allowed lower bound
-    /// @param prevTotalEth The previous total balance
-    /// @param postTotalEth The new total balance
-    /// @param timeElapsed The time since last report
-    /// @param relativeLowerBound The maximum relative decrease allowed
-    error TotalValidatorBalanceDecreaseOutOfBound(
-        uint256 prevTotalEth, uint256 postTotalEth, uint256 timeElapsed, uint256 relativeLowerBound
-    );
-
     /// @notice The address is already in use by an oracle member
     /// @param newAddress The address already in use
     error AddressAlreadyInUse(address newAddress);
-
-    struct ReportVariantDetails {
-        bytes32 variant;
-        uint256 votes;
-    }
 
     /// @notice Initializes the oracle
     /// @param _river Address of the River contract, able to receive oracle input data after quorum is met
@@ -139,11 +110,10 @@ interface IOracleV1 {
     /// @return The count of report variants
     function getReportVariantsCount() external view returns (uint256);
 
-    function getReportVariantDetails(uint256 _idx) external view returns (ReportVariantDetails memory);
-
-    /// @notice Retrieve the last completed epoch id
-    /// @return The last completed epoch id
-    function getLastCompletedReportEpoch() external view returns (uint256);
+    /// @notice Retrieve the details of a report variant
+    /// @param _idx The index of the report variant
+    /// @return The report variant details
+    function getReportVariantDetails(uint256 _idx) external view returns (ReportVariants.ReportVariantDetails memory);
 
     /// @notice Retrieve the current quorum
     /// @return The current quorum
@@ -158,6 +128,51 @@ interface IOracleV1 {
     /// @param _memberAddress Address of the member
     /// @return True if address is a member
     function isMember(address _memberAddress) external view returns (bool);
+
+    /// @notice Verifies if an epoch is valid or not
+    /// @param epoch The epoch to verify
+    /// @return True if valid
+    function isValidEpoch(uint256 epoch) external view returns (bool);
+
+    /// @notice Retrieve the block timestamp
+    /// @return The current timestamp from the EVM context
+    function getTime() external view returns (uint256);
+
+    /// @notice Retrieve expected epoch id
+    /// @return The current expected epoch id
+    function getExpectedEpochId() external view returns (uint256);
+
+    /// @notice Retrieve the last completed epoch id
+    /// @return The last completed epoch id
+    function getLastCompletedEpochId() external view returns (uint256);
+
+    /// @notice Retrieve the last reported epoch id
+    /// @dev The Oracle contracts expects reports on an epoch id >= that the returned value
+    /// @return The last reported epoch id
+    function getLastReportedEpochId() external view returns (uint256);
+
+    /// @notice Retrieve the current epoch id based on block timestamp
+    /// @return The current epoch id
+    function getCurrentEpochId() external view returns (uint256);
+
+    /// @notice Retrieve the current cl spec
+    /// @return The Consensus Layer Specification
+    function getCLSpec() external view returns (CLSpec.CLSpecStruct memory);
+
+    /// @notice Retrieve the current frame details
+    /// @return _startEpochId The epoch at the beginning of the frame
+    /// @return _startTime The timestamp of the beginning of the frame in seconds
+    /// @return _endTime The timestamp of the end of the frame in seconds
+    function getCurrentFrame() external view returns (uint256 _startEpochId, uint256 _startTime, uint256 _endTime);
+
+    /// @notice Retrieve the first epoch id of the frame of the provided epoch id
+    /// @param _epochId Epoch id used to get the frame
+    /// @return The first epoch id of the frame containing the given epoch id
+    function getFrameFirstEpochId(uint256 _epochId) external view returns (uint256);
+
+    /// @notice Retrieve the report bounds
+    /// @return The report bounds
+    function getReportBounds() external view returns (ReportBounds.ReportBoundsStruct memory);
 
     /// @notice Adds new address as oracle member, giving the ability to push cl reports.
     /// @dev Only callable by the adminstrator
@@ -187,40 +202,7 @@ interface IOracleV1 {
     /// @param _newQuorum New quorum parameter
     function setQuorum(uint256 _newQuorum) external;
 
-    function isValidEpoch(uint256 epoch) external view returns (bool);
-
-    /// @notice Retrieve the block timestamp
-    /// @return The current timestamp from the EVM context
-    function getTime() external view returns (uint256);
-
-    /// @notice Retrieve expected epoch id
-    /// @return The current expected epoch id
-    function getExpectedEpochId() external view returns (uint256);
-
-    /// @notice Retrieve the last completed epoch id
-    /// @return The last completed epoch id
-    function getLastCompletedEpochId() external view returns (uint256);
-
-    /// @notice Retrieve the current epoch id based on block timestamp
-    /// @return The current epoch id
-    function getCurrentEpochId() external view returns (uint256);
-
-    /// @notice Retrieve the current cl spec
-    /// @return The Consensus Layer Specification
-    function getCLSpec() external view returns (CLSpec.CLSpecStruct memory);
-
-    /// @notice Retrieve the current frame details
-    /// @return _startEpochId The epoch at the beginning of the frame
-    /// @return _startTime The timestamp of the beginning of the frame in seconds
-    /// @return _endTime The timestamp of the end of the frame in seconds
-    function getCurrentFrame() external view returns (uint256 _startEpochId, uint256 _startTime, uint256 _endTime);
-
-    /// @notice Retrieve the first epoch id of the frame of the provided epoch id
-    /// @param _epochId Epoch id used to get the frame
-    /// @return The first epoch id of the frame containing the given epoch id
-    function getFrameFirstEpochId(uint256 _epochId) external view returns (uint256);
-
-    /// @notice Retrieve the report bounds
-    /// @return The report bounds
-    function getReportBounds() external view returns (ReportBounds.ReportBoundsStruct memory);
+    /// @notice Submit a report as an oracle member
+    /// @param report The report structure
+    function reportConsensusLayerData(IRiverV1.ConsensusLayerReport calldata report) external;
 }

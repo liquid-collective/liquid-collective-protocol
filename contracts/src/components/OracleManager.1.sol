@@ -11,8 +11,8 @@ import "../state/river/LastOracleRoundId.sol";
 import "../state/river/CLValidatorTotalBalance.sol";
 import "../state/river/CLValidatorCount.sol";
 import "../state/river/DepositedValidatorCount.sol";
-import "../state/oracle/CLSpec.sol";
-import "../state/oracle/ReportBounds.sol";
+import "../state/river/CLSpec.sol";
+import "../state/river/ReportBounds.sol";
 
 /// @title Oracle Manager (v1)
 /// @author Kiln

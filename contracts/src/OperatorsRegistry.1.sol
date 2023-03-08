@@ -515,7 +515,7 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
         internal
         returns (bytes[] memory publicKeys, bytes[] memory signatures)
     {
-        OperatorsV2.CachedOperator[] memory operators = OperatorsV2.getAllFundable();
+        OperatorsV2.CachedOperator[] memory operators = OperatorsV2.getAllFundable(StoppedValidators.get());
 
         if (operators.length == 0) {
             return (new bytes[](0), new bytes[](0));

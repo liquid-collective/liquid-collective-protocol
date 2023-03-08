@@ -8,10 +8,12 @@ import "./Administrable.sol";
 import "./Initializable.sol";
 
 import "./state/shared/RiverAddress.sol";
+
+import "./state/oracle/LastEpochId.sol";
 import "./state/oracle/OracleMembers.sol";
 import "./state/oracle/Quorum.sol";
-import "./state/oracle/ExpectedEpochId.sol";
 import "./state/oracle/ReportsPositions.sol";
+import "./state/oracle/ReportVariants.sol";
 
 /// @title Oracle (v1)
 /// @author Kiln
@@ -22,6 +24,13 @@ contract OracleV1 is IOracleV1, Initializable, Administrable {
 
     /// @notice Received ETH input has only 9 decimals
     uint128 internal constant DENOMINATION_OFFSET = 1e9;
+
+    modifier onlyAdminOrMember(address _oracleMember) {
+        if (msg.sender != _getAdmin() && msg.sender != _oracleMember) {
+            revert LibErrors.Unauthorized(msg.sender);
+        }
+        _;
+    }
 
     /// @inheritdoc IOracleV1
     function initOracleV1(
@@ -75,22 +84,15 @@ contract OracleV1 is IOracleV1, Initializable, Administrable {
 
     /// @inheritdoc IOracleV1
     function getReportVariantsCount() external view returns (uint256) {
-        return reportVariants.length;
+        return ReportVariants.get().length;
     }
 
-    error ReportIndexOutOfBounds(uint256 index, uint256 length);
-
     /// @inheritdoc IOracleV1
-    function getReportVariantDetails(uint256 _idx) external view returns (ReportVariantDetails memory) {
-        if (reportVariants.length <= _idx) {
-            revert ReportIndexOutOfBounds(_idx, reportVariants.length);
+    function getReportVariantDetails(uint256 _idx) external view returns (ReportVariants.ReportVariantDetails memory) {
+        if (ReportVariants.get().length <= _idx) {
+            revert ReportIndexOutOfBounds(_idx, ReportVariants.get().length);
         }
-        return reportVariants[_idx];
-    }
-
-    /// @inheritdoc IOracleV1
-    function getLastCompletedReportEpoch() external view returns (uint256) {
-        return lastCompletedReportEpoch;
+        return ReportVariants.get()[_idx];
     }
 
     /// @inheritdoc IOracleV1
@@ -106,6 +108,56 @@ contract OracleV1 is IOracleV1, Initializable, Administrable {
     /// @inheritdoc IOracleV1
     function isMember(address _memberAddress) external view returns (bool) {
         return OracleMembers.indexOf(_memberAddress) >= 0;
+    }
+
+    /// @inheritdoc IOracleV1
+    function isValidEpoch(uint256 epoch) external view returns (bool) {
+        return _river().isValidEpoch(epoch);
+    }
+
+    /// @inheritdoc IOracleV1
+    function getTime() external view returns (uint256) {
+        return _river().getTime();
+    }
+
+    /// @inheritdoc IOracleV1
+    function getExpectedEpochId() external view returns (uint256) {
+        return _river().getExpectedEpochId();
+    }
+
+    /// @inheritdoc IOracleV1
+    function getLastCompletedEpochId() external view returns (uint256) {
+        return _river().getLastCompletedEpochId();
+    }
+
+    /// @inheritdoc IOracleV1
+    function getLastReportedEpochId() external view returns (uint256) {
+        return LastEpochId.get();
+    }
+
+    /// @inheritdoc IOracleV1
+    function getCurrentEpochId() external view returns (uint256) {
+        return _river().getCurrentEpochId();
+    }
+
+    /// @inheritdoc IOracleV1
+    function getCLSpec() external view returns (CLSpec.CLSpecStruct memory) {
+        return _river().getCLSpec();
+    }
+
+    /// @inheritdoc IOracleV1
+    function getCurrentFrame() external view returns (uint256 _startEpochId, uint256 _startTime, uint256 _endTime) {
+        return _river().getCurrentFrame();
+    }
+
+    /// @inheritdoc IOracleV1
+    function getFrameFirstEpochId(uint256 _epochId) external view returns (uint256) {
+        return _river().getFrameFirstEpochId(_epochId);
+    }
+
+    /// @inheritdoc IOracleV1
+    function getReportBounds() external view returns (ReportBounds.ReportBoundsStruct memory) {
+        return _river().getReportBounds();
     }
 
     /// @inheritdoc IOracleV1
@@ -133,12 +185,87 @@ contract OracleV1 is IOracleV1, Initializable, Administrable {
     }
 
     /// @inheritdoc IOracleV1
+    function setMember(address _oracleMember, address _newAddress) external onlyAdminOrMember(_oracleMember) {
+        LibSanitize._notZeroAddress(_newAddress);
+        if (OracleMembers.indexOf(_newAddress) >= 0) {
+            revert AddressAlreadyInUse(_newAddress);
+        }
+        int256 memberIdx = OracleMembers.indexOf(_oracleMember);
+        if (memberIdx < 0) {
+            revert LibErrors.InvalidCall();
+        }
+        OracleMembers.set(uint256(memberIdx), _newAddress);
+        emit SetMember(_oracleMember, _newAddress);
+        _clearReports();
+    }
+
+    /// @inheritdoc IOracleV1
     function setQuorum(uint256 _newQuorum) external onlyAdmin {
         uint256 previousQuorum = Quorum.get();
         if (previousQuorum == _newQuorum) {
             revert LibErrors.InvalidArgument();
         }
         _clearReportsAndSetQuorum(_newQuorum, previousQuorum);
+    }
+
+    /// @inheritdoc IOracleV1
+    function reportConsensusLayerData(IRiverV1.ConsensusLayerReport calldata report) external {
+        // retrieve member index and revert if not oracle member
+        int256 memberIndex = OracleMembers.indexOf(msg.sender);
+        if (memberIndex == -1) {
+            revert LibErrors.Unauthorized(msg.sender);
+        }
+
+        // store last reported epoch to stack
+        uint256 lastReportedEpochValue = LastEpochId.get();
+
+        // checks that the report epoch is not too old
+        if (report.epoch < lastReportedEpochValue) {
+            revert EpochTooOld(report.epoch, LastEpochId.get());
+        }
+        IRiverV1 river = IRiverV1(payable(RiverAddress.get()));
+        // checks that the report epoch is not invalid
+        if (!river.isValidEpoch(report.epoch)) {
+            revert InvalidEpoch(report.epoch);
+        }
+        // if valid and greater than the lastReportedEpoch, we clear the reporting data
+        if (report.epoch > lastReportedEpochValue) {
+            _clearReports();
+            LastEpochId.set(report.epoch);
+            emit SetLastReportedEpoch(report.epoch);
+        }
+        // we retrieve the voting status of the caller, and revert if already voted
+        if (ReportsPositions.get(uint256(memberIndex))) {
+            revert AlreadyReported(report.epoch, msg.sender);
+        }
+        // we register the caller
+        ReportsPositions.register(uint256(memberIndex));
+
+        // we compute the variant by hashing the report
+        bytes32 variant = _reportChecksum(report);
+        // we retrieve the details for the given variant
+        (int256 variantIndex, uint256 variantVotes) = _getReportVariant(variant);
+        // we retrieve the quorum to stack
+        uint256 quorum = Quorum.get();
+
+        emit ReportedConsensusLayerData(msg.sender, variant, report, variantVotes + 1);
+
+        // if adding this vote reaches quorum
+        if (variantVotes + 1 >= quorum) {
+            // we push the report to river
+            river.setConsensusLayerData(report);
+            // we clear the reporting data
+            _clearReports();
+            // we increment the lastReportedEpoch to force reports to be on the last frame
+            LastEpochId.set(lastReportedEpochValue + 1);
+            emit SetLastReportedEpoch(lastReportedEpochValue + 1);
+        } else if (variantVotes == 0) {
+            // if we have no votes for the variant, we create the variant details
+            ReportVariants.push(ReportVariants.ReportVariantDetails({variant: variant, votes: 1}));
+        } else {
+            // otherwise we increment the vote
+            ReportVariants.get()[uint256(variantIndex)].votes += 1;
+        }
     }
 
     /// @notice Internal utility to clear all the reports and edit the quorum if a new value is provided
@@ -160,35 +287,29 @@ contract OracleV1 is IOracleV1, Initializable, Administrable {
         }
     }
 
-    // rework beyond this point
-
-    event ReportedConsensusLayerData(
-        address indexed member, bytes32 indexed variant, IRiverV1.ConsensusLayerReport report, uint256 voteCount
-    );
-    event SetLastReportedEpoch(uint256 lastReportedEpoch);
-    event ClearedReporting();
-
-    error InvalidEpoch(uint256 epoch);
-
-    uint256 internal lastReportedEpoch;
-    uint256 internal lastCompletedReportEpoch;
-    ReportVariantDetails[] internal reportVariants;
-
+    /// @notice Internal utility to hash and retrieve the variant id of a report
+    /// @param report The reported data structure
+    /// @return The report variant
     function _reportChecksum(IRiverV1.ConsensusLayerReport calldata report) internal pure returns (bytes32) {
         return keccak256(abi.encode(report));
     }
 
+    /// @notice Internal utility to clear all reporting details
     function _clearReports() internal {
-        delete reportVariants;
+        ReportVariants.clear();
         ReportsPositions.clear();
         emit ClearedReporting();
     }
 
+    /// @notice Internal utility to retrieve index and vote count for a given variant
+    /// @param variant The variant to lookup
+    /// @return The index of the variant, -1 if not found
+    /// @return The vote count of the variant
     function _getReportVariant(bytes32 variant) internal view returns (int256, uint256) {
-        uint256 reportVariantsLength = reportVariants.length;
+        uint256 reportVariantsLength = ReportVariants.get().length;
         for (uint256 idx = 0; idx < reportVariantsLength;) {
-            if (reportVariants[idx].variant == variant) {
-                return (int256(idx), reportVariants[idx].votes);
+            if (ReportVariants.get()[idx].variant == variant) {
+                return (int256(idx), ReportVariants.get()[idx].votes);
             }
             unchecked {
                 ++idx;
@@ -197,110 +318,9 @@ contract OracleV1 is IOracleV1, Initializable, Administrable {
         return (-1, 0);
     }
 
-    function reportConsensusLayerData(IRiverV1.ConsensusLayerReport calldata report) external {
-        int256 memberIndex = OracleMembers.indexOf(msg.sender);
-        if (memberIndex == -1) {
-            revert LibErrors.Unauthorized(msg.sender);
-        }
-
-        uint256 lastReportedEpochValue = lastReportedEpoch;
-
-        if (report.epoch < lastReportedEpochValue) {
-            revert EpochTooOld(report.epoch, lastReportedEpoch);
-        }
-        IRiverV1 river = IRiverV1(payable(RiverAddress.get()));
-        if (!river.isValidEpoch(report.epoch)) {
-            revert InvalidEpoch(report.epoch);
-        }
-        if (report.epoch > lastReportedEpochValue) {
-            _clearReports();
-            lastReportedEpoch = report.epoch;
-            emit SetLastReportedEpoch(report.epoch);
-        }
-
-        if (ReportsPositions.get(uint256(memberIndex))) {
-            revert AlreadyReported(report.epoch, msg.sender);
-        }
-        ReportsPositions.register(uint256(memberIndex));
-
-        bytes32 variant = _reportChecksum(report);
-        (int256 variantIndex, uint256 variantVotes) = _getReportVariant(variant);
-        uint256 quorum = Quorum.get();
-
-        emit ReportedConsensusLayerData(msg.sender, variant, report, variantVotes + 1);
-
-        if (variantVotes + 1 >= quorum) {
-            river.setConsensusLayerData(report);
-            _clearReports();
-            lastCompletedReportEpoch = lastReportedEpochValue;
-            lastReportedEpoch = lastReportedEpochValue + 1;
-            emit SetLastReportedEpoch(lastReportedEpochValue + 1);
-        } else if (variantVotes == 0) {
-            reportVariants.push(ReportVariantDetails({variant: variant, votes: 1}));
-        } else {
-            reportVariants[uint256(variantIndex)].votes += 1;
-        }
-    }
-
-    modifier onlyAdminOrMember(address _oracleMember) {
-        if (msg.sender != _getAdmin() && msg.sender != _oracleMember) {
-            revert LibErrors.Unauthorized(msg.sender);
-        }
-        _;
-    }
-
-    /// @inheritdoc IOracleV1
-    function setMember(address _oracleMember, address _newAddress) external onlyAdminOrMember(_oracleMember) {
-        LibSanitize._notZeroAddress(_newAddress);
-        if (OracleMembers.indexOf(_newAddress) >= 0) {
-            revert AddressAlreadyInUse(_newAddress);
-        }
-        int256 memberIdx = OracleMembers.indexOf(_oracleMember);
-        if (memberIdx < 0) {
-            revert LibErrors.InvalidCall();
-        }
-        OracleMembers.set(uint256(memberIdx), _newAddress);
-        emit SetMember(_oracleMember, _newAddress);
-        _clearReports();
-    }
-
+    /// @notice Internal utility to retrieve a casted River interface
+    /// @return The casted River interface
     function _river() internal view returns (IRiverV1) {
         return IRiverV1(payable(RiverAddress.get()));
-    }
-
-    function isValidEpoch(uint256 epoch) external view returns (bool) {
-        return _river().isValidEpoch(epoch);
-    }
-
-    function getTime() external view returns (uint256) {
-        return _river().getTime();
-    }
-
-    function getExpectedEpochId() external view returns (uint256) {
-        return _river().getExpectedEpochId();
-    }
-
-    function getLastCompletedEpochId() external view returns (uint256) {
-        return _river().getLastCompletedEpochId();
-    }
-
-    function getCurrentEpochId() external view returns (uint256) {
-        return _river().getCurrentEpochId();
-    }
-
-    function getCLSpec() external view returns (CLSpec.CLSpecStruct memory) {
-        return _river().getCLSpec();
-    }
-
-    function getCurrentFrame() external view returns (uint256 _startEpochId, uint256 _startTime, uint256 _endTime) {
-        return _river().getCurrentFrame();
-    }
-
-    function getFrameFirstEpochId(uint256 _epochId) external view returns (uint256) {
-        return _river().getFrameFirstEpochId(_epochId);
-    }
-
-    function getReportBounds() external view returns (ReportBounds.ReportBoundsStruct memory) {
-        return _river().getReportBounds();
     }
 }

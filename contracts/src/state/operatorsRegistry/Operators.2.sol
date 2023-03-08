@@ -135,9 +135,24 @@ library OperatorsV2 {
         return activeOperators;
     }
 
+    /// @notice Retrieve the stopped validator count for an operator by its index
+    /// @param stoppedValidatorCounts The storage pointer to the raw array containing the stopped validator counts
+    /// @param index The index of the operator to lookup
+    /// @return The amount of stopped validators for the given operator index
+    function _getStoppedValidatorCountAtIndex(uint32[] storage stoppedValidatorCounts, uint256 index)
+        internal
+        view
+        returns (uint32)
+    {
+        if (index + 1 >= stoppedValidatorCounts.length) {
+            return 0;
+        }
+        return stoppedValidatorCounts[index + 1];
+    }
+
     /// @notice Retrieve all the active and fundable operators
     /// @return The list of active and fundable operators
-    function getAllFundable() internal view returns (CachedOperator[] memory) {
+    function getAllFundable(uint32[] storage stoppedValidatorCounts) internal view returns (CachedOperator[] memory) {
         bytes32 slot = OPERATORS_SLOT;
 
         SlotOperator storage r;
@@ -151,7 +166,10 @@ library OperatorsV2 {
         uint256 operatorCount = r.value.length;
 
         for (uint256 idx = 0; idx < operatorCount;) {
-            if (_hasFundableKeys(r.value[idx])) {
+            if (
+                _hasFundableKeys(r.value[idx])
+                    && _getStoppedValidatorCountAtIndex(stoppedValidatorCounts, idx) >= r.value[idx].requestedExits
+            ) {
                 unchecked {
                     ++activeCount;
                 }
@@ -166,7 +184,10 @@ library OperatorsV2 {
         uint256 activeIdx = 0;
         for (uint256 idx = 0; idx < operatorCount;) {
             Operator storage op = r.value[idx];
-            if (_hasFundableKeys(op)) {
+            if (
+                _hasFundableKeys(op)
+                    && _getStoppedValidatorCountAtIndex(stoppedValidatorCounts, idx) >= op.requestedExits
+            ) {
                 activeOperators[activeIdx] = CachedOperator({
                     limit: op.limit,
                     funded: op.funded,

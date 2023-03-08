@@ -1,8 +1,8 @@
 //SPDX-License-Identifier: BUSL-1.1
 pragma solidity 0.8.10;
 
-import "../../state/oracle/CLSpec.sol";
-import "../../state/oracle/ReportBounds.sol";
+import "../../state/river/CLSpec.sol";
+import "../../state/river/ReportBounds.sol";
 
 /// @title Oracle Manager (v1)
 /// @author Kiln
