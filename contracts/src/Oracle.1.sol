@@ -51,7 +51,8 @@ contract OracleV1 is IOracleV1, Initializable, Administrable {
                 epochsPerFrame: _epochsPerFrame,
                 slotsPerEpoch: _slotsPerEpoch,
                 secondsPerSlot: _secondsPerSlot,
-                genesisTime: _genesisTime
+                genesisTime: _genesisTime,
+                epochsToAssumedFinality: 0
             })
         );
         emit SetSpec(_epochsPerFrame, _slotsPerEpoch, _secondsPerSlot, _genesisTime);

@@ -382,21 +382,32 @@ contract OracleManagerV1Tests is Test {
         return (epochNow - epochPast) * (cls.secondsPerSlot * cls.slotsPerEpoch);
     }
 
-    event SetSpec(uint64 epochsPerFrame, uint64 slotsPerEpoch, uint64 secondsPerSlot, uint64 genesisTime);
+    event SetSpec(
+        uint64 epochsPerFrame,
+        uint64 slotsPerEpoch,
+        uint64 secondsPerSlot,
+        uint64 genesisTime,
+        uint64 epochsToAssumedFinality
+    );
     event SetBounds(uint256 annualAprUpperBound, uint256 relativeLowerBound);
 
-    function testSetCLSpec(uint64 _genesisTime, uint64 _epochsPerFrame, uint64 _slotsPerEpoch, uint64 _secondsPerSlot)
-        external
-    {
+    function testSetCLSpec(
+        uint64 _genesisTime,
+        uint64 _epochsPerFrame,
+        uint64 _slotsPerEpoch,
+        uint64 _secondsPerSlot,
+        uint64 _epochsToAssumedFinality
+    ) external {
         CLSpec.CLSpecStruct memory newValue;
         newValue.genesisTime = _genesisTime;
         newValue.epochsPerFrame = _epochsPerFrame;
         newValue.slotsPerEpoch = _slotsPerEpoch;
         newValue.secondsPerSlot = _secondsPerSlot;
+        newValue.epochsToAssumedFinality = _epochsToAssumedFinality;
 
         vm.prank(admin);
         vm.expectEmit(true, true, true, true);
-        emit SetSpec(_epochsPerFrame, _slotsPerEpoch, _secondsPerSlot, _genesisTime);
+        emit SetSpec(_epochsPerFrame, _slotsPerEpoch, _secondsPerSlot, _genesisTime, _epochsToAssumedFinality);
         oracleManager.setCLSpec(newValue);
 
         newValue = oracleManager.getCLSpec();
@@ -405,19 +416,22 @@ contract OracleManagerV1Tests is Test {
         assertEq(newValue.epochsPerFrame, _epochsPerFrame);
         assertEq(newValue.slotsPerEpoch, _slotsPerEpoch);
         assertEq(newValue.secondsPerSlot, _secondsPerSlot);
+        assertEq(newValue.epochsToAssumedFinality, _epochsToAssumedFinality);
     }
 
     function testSetCLSpecUnauthorized(
         uint64 _genesisTime,
         uint64 _epochsPerFrame,
         uint64 _slotsPerEpoch,
-        uint64 _secondsPerSlot
+        uint64 _secondsPerSlot,
+        uint64 _epochsToAssumedFinality
     ) external {
         CLSpec.CLSpecStruct memory newValue;
         newValue.genesisTime = _genesisTime;
         newValue.epochsPerFrame = _epochsPerFrame;
         newValue.slotsPerEpoch = _slotsPerEpoch;
         newValue.secondsPerSlot = _secondsPerSlot;
+        newValue.epochsToAssumedFinality = _epochsToAssumedFinality;
 
         vm.expectRevert(abi.encodeWithSignature("Unauthorized(address)", address(this)));
         oracleManager.setCLSpec(newValue);

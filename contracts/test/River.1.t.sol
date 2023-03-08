@@ -1059,7 +1059,7 @@ contract RiverV1TestsReport_HEAVY_FUZZING is Test, BytesGenerator {
         uint256 maxAllowedIncrease = debug_maxIncrease(
             rfv.rb,
             river.totalUnderlyingSupply(),
-            debug_timeBetweenEpochs(rfv.cls, river.getLastReportedEpoch(), clr.epoch)
+            debug_timeBetweenEpochs(rfv.cls, river.getLastCompletedEpochId(), clr.epoch)
         );
 
         uint256 stoppedTotalCount = bound(_salt, 0, rfv.depositCount);
@@ -1121,7 +1121,7 @@ contract RiverV1TestsReport_HEAVY_FUZZING is Test, BytesGenerator {
         uint256 maxAllowedIncrease = debug_maxIncrease(
             rfv.rb,
             river.totalUnderlyingSupply(),
-            debug_timeBetweenEpochs(rfv.cls, river.getLastReportedEpoch(), clr.epoch)
+            debug_timeBetweenEpochs(rfv.cls, river.getLastCompletedEpochId(), clr.epoch)
         );
 
         uint256 stoppedTotalCount = bound(_salt, 0, rfv.depositCount);
@@ -1186,7 +1186,7 @@ contract RiverV1TestsReport_HEAVY_FUZZING is Test, BytesGenerator {
         uint256 maxAllowedIncrease = debug_maxIncrease(
             rfv.rb,
             river.totalUnderlyingSupply(),
-            debug_timeBetweenEpochs(rfv.cls, river.getLastReportedEpoch(), clr.epoch)
+            debug_timeBetweenEpochs(rfv.cls, river.getLastCompletedEpochId(), clr.epoch)
         );
 
         uint256 stoppedTotalCount = bound(_salt, 0, rfv.depositCount);
@@ -1256,7 +1256,7 @@ contract RiverV1TestsReport_HEAVY_FUZZING is Test, BytesGenerator {
         uint256 maxAllowedIncrease = debug_maxIncrease(
             rfv.rb,
             river.totalUnderlyingSupply(),
-            debug_timeBetweenEpochs(rfv.cls, river.getLastReportedEpoch(), clr.epoch)
+            debug_timeBetweenEpochs(rfv.cls, river.getLastCompletedEpochId(), clr.epoch)
         );
 
         uint256 stoppedTotalCount = bound(_salt, 0, rfv.depositCount);
@@ -1325,7 +1325,7 @@ contract RiverV1TestsReport_HEAVY_FUZZING is Test, BytesGenerator {
         uint256 maxAllowedIncrease = debug_maxIncrease(
             rfv.rb,
             river.totalUnderlyingSupply(),
-            debug_timeBetweenEpochs(rfv.cls, river.getLastReportedEpoch(), clr.epoch)
+            debug_timeBetweenEpochs(rfv.cls, river.getLastCompletedEpochId(), clr.epoch)
         );
         uint256 totalIncrease = bound(_salt, 0, maxAllowedIncrease);
         _salt = _next(_salt);
@@ -1394,7 +1394,7 @@ contract RiverV1TestsReport_HEAVY_FUZZING is Test, BytesGenerator {
         uint256 maxAllowedIncrease = debug_maxIncrease(
             rfv.rb,
             river.totalUnderlyingSupply(),
-            debug_timeBetweenEpochs(rfv.cls, river.getLastReportedEpoch(), clr.epoch)
+            debug_timeBetweenEpochs(rfv.cls, river.getLastCompletedEpochId(), clr.epoch)
         );
 
         uint256 stoppedTotalCount = bound(_salt, 0, rfv.depositCount);
@@ -1454,7 +1454,7 @@ contract RiverV1TestsReport_HEAVY_FUZZING is Test, BytesGenerator {
         uint256 maxAllowedIncrease = debug_maxIncrease(
             rfv.rb,
             river.totalUnderlyingSupply(),
-            debug_timeBetweenEpochs(rfv.cls, river.getLastReportedEpoch(), clr.epoch)
+            debug_timeBetweenEpochs(rfv.cls, river.getLastCompletedEpochId(), clr.epoch)
         );
 
         uint256 stoppedTotalCount = bound(_salt, 0, rfv.depositCount);
