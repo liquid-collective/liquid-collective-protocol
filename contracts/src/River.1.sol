@@ -449,28 +449,30 @@ contract RiverV1 is
 
         if (underlyingAssetBalance > 0 && totalSupply > 0) {
             // we compute the redeem manager demands in eth and lsEth based on current conversion rate
-            uint256 redeemManagerBalance = _balanceOf(redeemManager);
-            uint256 redeemManagerDemand = redeemManagerBalance;
-            uint256 redeemManagerDemandInEth = _balanceFromShares(redeemManagerDemand);
+            uint256 redeemManagerDemand = _balanceOf(redeemManager);
+            uint256 suppliedRedeemManagerDemand = redeemManagerDemand;
+            uint256 suppliedRedeemManagerDemandInEth = _balanceFromShares(suppliedRedeemManagerDemand);
             uint256 availableBalanceToRedeem = balanceToRedeem;
 
             // if demand is higher than available eth, we update demand values to use the available eth
-            if (redeemManagerDemandInEth > availableBalanceToRedeem) {
-                redeemManagerDemandInEth = availableBalanceToRedeem;
-                redeemManagerDemand = _sharesFromBalance(redeemManagerDemandInEth);
+            if (suppliedRedeemManagerDemandInEth > availableBalanceToRedeem) {
+                suppliedRedeemManagerDemandInEth = availableBalanceToRedeem;
+                suppliedRedeemManagerDemand = _sharesFromBalance(suppliedRedeemManagerDemandInEth);
             }
 
-            emit ReportedRedeemManager(redeemManagerBalance, redeemManagerDemand, redeemManagerDemandInEth);
+            emit ReportedRedeemManager(
+                redeemManagerDemand, suppliedRedeemManagerDemand, suppliedRedeemManagerDemandInEth
+            );
 
-            if (redeemManagerDemandInEth > 0) {
+            if (suppliedRedeemManagerDemandInEth > 0) {
                 // the available balance to redeem is updated
-                _setBalanceToRedeem(balanceToRedeem - redeemManagerDemandInEth);
+                _setBalanceToRedeem(balanceToRedeem - suppliedRedeemManagerDemandInEth);
 
                 // perform a report withdraw call to the redeem manager
-                redeemManager_.reportWithdraw{value: redeemManagerDemandInEth}(redeemManagerDemand);
+                redeemManager_.reportWithdraw{value: suppliedRedeemManagerDemandInEth}(suppliedRedeemManagerDemand);
 
                 // we burn the shares of the redeem manager associated with the amount of eth provided
-                _burnRawShares(address(redeemManager), redeemManagerDemand);
+                _burnRawShares(address(redeemManager), suppliedRedeemManagerDemand);
             }
         }
     }
@@ -538,7 +540,6 @@ contract RiverV1 is
         }
     }
 
-    // TODO always commit max + daily amounts
     function _commitBalanceToDeposit(uint256 period) internal override {
         uint256 underlyingAssetBalance = _assetBalance();
         uint256 currentBalanceToDeposit = BalanceToDeposit.get();
