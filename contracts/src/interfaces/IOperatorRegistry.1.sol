@@ -99,6 +99,12 @@ interface IOperatorsRegistryV1 {
     /// @param deferred True if event has been replayed in the context of a migration
     event FundedValidatorKeys(uint256 indexed index, bytes[] publicKeys, bool deferred);
 
+    /// @notice The requested exit count has been update to fill the gap with the reported stopped count
+    /// @param index The operator index
+    /// @param oldRequestedExits The old requested exit count
+    /// @param newRequestedExits The new requested exit count
+    event UpdatedRequestedUponStopped(uint256 indexed index, uint32 oldRequestedExits, uint32 newRequestedExits);
+
     /// @notice The calling operator is inactive
     /// @param index The operator index
     error InactiveOperator(uint256 index);

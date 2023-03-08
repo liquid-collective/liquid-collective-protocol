@@ -470,7 +470,17 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
     /// @param operatorIndex The operator index
     /// @return The count of stopped validators
     function _getStoppedValidatorsCount(uint256 operatorIndex) internal view returns (uint32) {
-        uint32[] storage stoppedValidatorCounts = StoppedValidators.get();
+        return _getStoppedValidatorsCountFromRawArray(StoppedValidators.get(), operatorIndex);
+    }
+
+    /// @notice Internal utility to retrieve the stopped validator count from the raw storage array pointer
+    /// @param stoppedValidatorCounts The storage pointer
+    /// @param operatorIndex The index of the operator to lookup
+    function _getStoppedValidatorsCountFromRawArray(uint32[] storage stoppedValidatorCounts, uint256 operatorIndex)
+        internal
+        view
+        returns (uint32)
+    {
         if (operatorIndex + 1 >= stoppedValidatorCounts.length) {
             return 0;
         }
@@ -599,10 +609,25 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
     /// @param _count The count of validators to request exits for
     function _pickNextValidatorsToExitFromActiveOperators(uint256 _count) internal {
         OperatorsV2.CachedOperator[] memory operators = OperatorsV2.getAllExitable();
+        uint32[] storage stoppedValidators = StoppedValidators.get();
         uint256 operatorsLength = operators.length;
 
         if (operatorsLength == 0) {
             return;
+        }
+
+        for (uint256 idx = 0; idx < operatorsLength;) {
+            uint32 currentRequestedExits = operators[idx].requestedExits;
+            uint32 currentStoppedCount = _getStoppedValidatorsCountFromRawArray(stoppedValidators, idx);
+
+            if (currentRequestedExits < currentStoppedCount) {
+                emit UpdatedRequestedUponStopped(operators[idx].index, currentRequestedExits, currentStoppedCount);
+                operators[idx].picked += currentStoppedCount - currentRequestedExits;
+            }
+
+            unchecked {
+                ++idx;
+            }
         }
 
         // we loop to find the highest count of active validators, the number of operators that have this amount and the second highest amount
