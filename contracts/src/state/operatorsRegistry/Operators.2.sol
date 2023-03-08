@@ -151,8 +151,15 @@ library OperatorsV2 {
     }
 
     /// @notice Retrieve all the active and fundable operators
+    /// @dev This method will return a memory array of length equal to the number of operator, but only
+    /// @dev populated up to the fundable operator count, also returned by the method
     /// @return The list of active and fundable operators
-    function getAllFundable(uint32[] storage stoppedValidatorCounts) internal view returns (CachedOperator[] memory) {
+    /// @return The count of active and fundable operators
+    function getAllFundable(uint32[] storage stoppedValidatorCounts)
+        internal
+        view
+        returns (CachedOperator[] memory, uint256)
+    {
         bytes32 slot = OPERATORS_SLOT;
 
         SlotOperator storage r;
@@ -162,33 +169,17 @@ library OperatorsV2 {
             r.slot := slot
         }
 
-        uint256 activeCount = 0;
+        uint256 fundableCount = 0;
         uint256 operatorCount = r.value.length;
+        CachedOperator[] memory fundableOperators = new CachedOperator[](operatorCount);
 
         for (uint256 idx = 0; idx < operatorCount;) {
             if (
                 _hasFundableKeys(r.value[idx])
                     && _getStoppedValidatorCountAtIndex(stoppedValidatorCounts, idx) >= r.value[idx].requestedExits
             ) {
-                unchecked {
-                    ++activeCount;
-                }
-            }
-            unchecked {
-                ++idx;
-            }
-        }
-
-        CachedOperator[] memory activeOperators = new CachedOperator[](activeCount);
-
-        uint256 activeIdx = 0;
-        for (uint256 idx = 0; idx < operatorCount;) {
-            Operator storage op = r.value[idx];
-            if (
-                _hasFundableKeys(op)
-                    && _getStoppedValidatorCountAtIndex(stoppedValidatorCounts, idx) >= op.requestedExits
-            ) {
-                activeOperators[activeIdx] = CachedOperator({
+                Operator storage op = r.value[idx];
+                fundableOperators[fundableCount] = CachedOperator({
                     limit: op.limit,
                     funded: op.funded,
                     requestedExits: op.requestedExits,
@@ -196,7 +187,7 @@ library OperatorsV2 {
                     picked: 0
                 });
                 unchecked {
-                    ++activeIdx;
+                    ++fundableCount;
                 }
             }
             unchecked {
@@ -204,12 +195,15 @@ library OperatorsV2 {
             }
         }
 
-        return activeOperators;
+        return (fundableOperators, fundableCount);
     }
 
-    /// @notice Retrieve all the active and fundable operators
-    /// @return The list of active and fundable operators
-    function getAllExitable() internal view returns (CachedOperator[] memory) {
+    /// @notice Retrieve all the active and exitable operators
+    /// @dev This method will return a memory array of length equal to the number of operator, but only
+    /// @dev populated up to the exitable operator count, also returned by the method
+    /// @return The list of active and exitable operators
+    /// @return The count of active and exitable operators
+    function getAllExitable() internal view returns (CachedOperator[] memory, uint256) {
         bytes32 slot = OPERATORS_SLOT;
 
         SlotOperator storage r;
@@ -219,27 +213,15 @@ library OperatorsV2 {
             r.slot := slot
         }
 
-        uint256 activeCount = 0;
+        uint256 exitableCount = 0;
         uint256 operatorCount = r.value.length;
+
+        CachedOperator[] memory exitableOperators = new CachedOperator[](operatorCount);
 
         for (uint256 idx = 0; idx < operatorCount;) {
             if (_hasExitableKeys(r.value[idx])) {
-                unchecked {
-                    ++activeCount;
-                }
-            }
-            unchecked {
-                ++idx;
-            }
-        }
-
-        CachedOperator[] memory activeOperators = new CachedOperator[](activeCount);
-
-        uint256 activeIdx = 0;
-        for (uint256 idx = 0; idx < operatorCount;) {
-            Operator memory op = r.value[idx];
-            if (_hasExitableKeys(op)) {
-                activeOperators[activeIdx] = CachedOperator({
+                Operator storage op = r.value[idx];
+                exitableOperators[exitableCount] = CachedOperator({
                     limit: op.limit,
                     funded: op.funded,
                     requestedExits: op.requestedExits,
@@ -247,7 +229,7 @@ library OperatorsV2 {
                     picked: 0
                 });
                 unchecked {
-                    ++activeIdx;
+                    ++exitableCount;
                 }
             }
             unchecked {
@@ -255,7 +237,7 @@ library OperatorsV2 {
             }
         }
 
-        return activeOperators;
+        return (exitableOperators, exitableCount);
     }
 
     /// @notice Add a new operator in storage
