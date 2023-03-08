@@ -475,6 +475,10 @@ contract RiverV1 is
         }
     }
 
+    function _setReportedStoppedValidatorCounts(uint32[] memory stoppedValidatorCounts) internal override {
+        IOperatorsRegistryV1(OperatorsRegistryAddress.get()).reportStoppedValidatorCounts(stoppedValidatorCounts);
+    }
+
     function _requestExitsBasedOnRedeemDemandAfterRebalancings(
         uint256 exitingBalance,
         bool depositToRedeemRebalancingAllowed
@@ -500,13 +504,25 @@ contract RiverV1 is
                     }
                 }
 
-                uint256 validatorCountToExit = LibUint256.ceil(
-                    redeemManagerDemandInEth - (availableBalanceToRedeem + exitingBalance), DEPOSIT_SIZE
-                );
+                IOperatorsRegistryV1 or = IOperatorsRegistryV1(OperatorsRegistryAddress.get());
 
-                if (validatorCountToExit > 0) {
+                uint256 totalStoppedValidatorCount = or.getTotalStoppedValidatorCount();
+                uint256 totalRequestedExitsCount = or.getTotalRequestedExitsCount();
+
+                uint256 preExitingBalance = (
+                    totalRequestedExitsCount > totalStoppedValidatorCount
+                        ? (totalRequestedExitsCount - totalStoppedValidatorCount)
+                        : 0
+                ) * DEPOSIT_SIZE;
+
+                if (availableBalanceToRedeem + exitingBalance + preExitingBalance < redeemManagerDemandInEth) {
+                    uint256 validatorCountToExit = LibUint256.ceil(
+                        redeemManagerDemandInEth - (availableBalanceToRedeem + exitingBalance + preExitingBalance),
+                        DEPOSIT_SIZE
+                    );
+
                     // call operators registry to request exit to validators
-                    IOperatorsRegistryV1(OperatorsRegistryAddress.get()).pickNextValidatorsToExit(validatorCountToExit);
+                    or.pickNextValidatorsToExit(validatorCountToExit);
                 }
             }
         }

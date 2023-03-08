@@ -167,6 +167,12 @@ contract OracleManagerV1ExposeInitializer is OracleManagerV1 {
         amountToDeposit += amountToRedeem;
         amountToRedeem = 0;
     }
+
+    event Internal_SetReportedStoppedValidatorCounts(uint32[] stoppedValidatorCounts);
+
+    function _setReportedStoppedValidatorCounts(uint32[] memory stoppedValidatorCounts) internal override {
+        emit Internal_SetReportedStoppedValidatorCounts(stoppedValidatorCounts);
+    }
 }
 
 contract OracleManagerV1Tests is Test {
@@ -198,6 +204,7 @@ contract OracleManagerV1Tests is Test {
     );
     event Internal_CommitBalanceToDeposit(uint256 period, uint256 depositBalance);
     event Internal_SkimExcessBalanceToRedeem(uint256 balanceToDeposit, uint256 balanceToRedeem);
+    event Internal_SetReportedStoppedValidatorCounts(uint32[] stoppedValidatorCounts);
 
     function setUp() public {
         admin = makeAddr("admin");
@@ -317,6 +324,8 @@ contract OracleManagerV1Tests is Test {
             vm.expectEmit(true, true, true, true);
             emit Internal_PullCLFunds(v.clr.validatorsSkimmedBalance, v.clr.validatorsExitedBalance);
         }
+        vm.expectEmit(true, true, true, true);
+        emit Internal_SetReportedStoppedValidatorCounts(v.clr.stoppedValidatorCountPerOperator);
         vm.expectEmit(true, true, true, true);
         emit Internal_PullELFees(v.maxIncrease, v.elFeesAvailable);
         vm.expectEmit(true, true, true, true);

@@ -1652,6 +1652,8 @@ contract OperatorsRegistryV1TestDistribution is Test {
         assert(operatorsRegistry.getOperator(4).funded == 10);
     }
 
+    event SetTotalRequestedExits(uint256 previousTotalRequestedExits, uint256 newTotalRequestedExits);
+
     function testRegularExitDistribution() external {
         vm.startPrank(admin);
         operatorsRegistry.addValidators(0, 50, genBytes((48 + 96) * 50));
@@ -1697,6 +1699,8 @@ contract OperatorsRegistryV1TestDistribution is Test {
         emit RequestedValidatorExits(3, 50);
         vm.expectEmit(true, true, true, true);
         emit RequestedValidatorExits(4, 50);
+        vm.expectEmit(true, true, true, true);
+        emit SetTotalRequestedExits(0, 250);
         OperatorsRegistryInitializableV1(address(operatorsRegistry)).debugGetNextValidatorsToExitFromActiveOperators(
             250
         );
@@ -1706,6 +1710,7 @@ contract OperatorsRegistryV1TestDistribution is Test {
         assert(operatorsRegistry.getOperator(2).requestedExits == 50);
         assert(operatorsRegistry.getOperator(3).requestedExits == 50);
         assert(operatorsRegistry.getOperator(4).requestedExits == 50);
+        assert(operatorsRegistry.getTotalRequestedExitsCount() == 250);
     }
 
     function testOneExitDistribution() external {
@@ -1752,6 +1757,7 @@ contract OperatorsRegistryV1TestDistribution is Test {
         assert(operatorsRegistry.getOperator(2).requestedExits == 0);
         assert(operatorsRegistry.getOperator(3).requestedExits == 0);
         assert(operatorsRegistry.getOperator(4).requestedExits == 0);
+        assert(operatorsRegistry.getTotalRequestedExitsCount() == 1);
     }
 
     event UpdatedRequestedUponStopped(uint256 indexed index, uint32 oldRequestedExits, uint32 newRequestedExits);
@@ -1840,6 +1846,14 @@ contract OperatorsRegistryV1TestDistribution is Test {
         vm.expectEmit(true, true, true, true);
         emit RequestedValidatorExits(4, 23);
         OperatorsRegistryInitializableV1(address(operatorsRegistry)).debugGetNextValidatorsToExitFromActiveOperators(50);
+
+        assert(operatorsRegistry.getOperator(0).requestedExits == 23);
+        assert(operatorsRegistry.getOperator(1).requestedExits == 23);
+        assert(operatorsRegistry.getOperator(2).requestedExits == 23);
+        assert(operatorsRegistry.getOperator(3).requestedExits == 23);
+        assert(operatorsRegistry.getOperator(4).requestedExits == 23);
+
+        assert(operatorsRegistry.getTotalRequestedExitsCount() == 115);
     }
 
     function testMoreThanMaxExitDistribution() external {
@@ -1896,6 +1910,8 @@ contract OperatorsRegistryV1TestDistribution is Test {
         assert(operatorsRegistry.getOperator(2).requestedExits == 50);
         assert(operatorsRegistry.getOperator(3).requestedExits == 50);
         assert(operatorsRegistry.getOperator(4).requestedExits == 50);
+
+        assert(operatorsRegistry.getTotalRequestedExitsCount() == 250);
     }
 
     function testMoreThanMaxExitDistributionOnUnevenSetup() external {
@@ -1952,6 +1968,8 @@ contract OperatorsRegistryV1TestDistribution is Test {
         assert(operatorsRegistry.getOperator(2).requestedExits == 30);
         assert(operatorsRegistry.getOperator(3).requestedExits == 20);
         assert(operatorsRegistry.getOperator(4).requestedExits == 10);
+
+        assert(operatorsRegistry.getTotalRequestedExitsCount() == 150);
     }
 
     function testUnevenExitDistribution() external {
@@ -2006,6 +2024,8 @@ contract OperatorsRegistryV1TestDistribution is Test {
         assert(operatorsRegistry.getOperator(2).requestedExits == 3);
         assert(operatorsRegistry.getOperator(3).requestedExits == 3);
         assert(operatorsRegistry.getOperator(4).requestedExits == 2);
+
+        assert(operatorsRegistry.getTotalRequestedExitsCount() == 14);
     }
 
     function testExitDistributionUnevenFunded() external {
@@ -2054,6 +2074,8 @@ contract OperatorsRegistryV1TestDistribution is Test {
         assert(operatorsRegistry.getOperator(2).requestedExits == 0);
         assert(operatorsRegistry.getOperator(3).requestedExits == 0);
         assert(operatorsRegistry.getOperator(4).requestedExits == 0);
+
+        assert(operatorsRegistry.getTotalRequestedExitsCount() == 30);
 
         vm.expectEmit(true, true, true, true);
         emit RequestedValidatorExits(0, 30);

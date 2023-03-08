@@ -114,6 +114,7 @@ abstract contract OracleManagerV1 is IOracleManagerV1 {
     function _pullCLFunds(uint256 skimmedEthAmount, uint256 exitedEthAmount) internal virtual;
 
     function _pullRedeemManagerExceedingEth(uint256 max) internal virtual returns (uint256);
+    function _setReportedStoppedValidatorCounts(uint32[] memory stoppedValidatorCounts) internal virtual;
 
     function _reportWithdrawToRedeemManager() internal virtual;
     function _requestExitsBasedOnRedeemDemandAfterRebalancings(
@@ -230,6 +231,7 @@ abstract contract OracleManagerV1 is IOracleManagerV1 {
         lastReportEpoch = report.epoch;
         lastValidatorsSkimmedBalance = report.validatorsSkimmedBalance;
         lastValidatorsExitedBalance = report.validatorsExitedBalance;
+        _setReportedStoppedValidatorCounts(report.stoppedValidatorCountPerOperator);
 
         ReportBounds.ReportBoundsStruct memory rb = ReportBounds.get();
 

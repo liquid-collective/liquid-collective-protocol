@@ -12,6 +12,7 @@ import "./state/operatorsRegistry/Operators.1.sol";
 import "./state/operatorsRegistry/Operators.2.sol";
 import "./state/operatorsRegistry/ValidatorKeys.sol";
 import "./state/operatorsRegistry/StoppedValidators.sol";
+import "./state/operatorsRegistry/TotalRequestedExits.sol";
 import "./state/shared/RiverAddress.sol";
 
 import "./state/migration/OperatorsRegistry_FundedKeyEventRebroadcasting_KeyIndex.sol";
@@ -148,6 +149,11 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
             return 0;
         }
         return stoppedValidatorCounts[0];
+    }
+
+    /// @inheritdoc IOperatorsRegistryV1
+    function getTotalRequestedExitsCount() external view returns (uint256) {
+        return TotalRequestedExits.get();
     }
 
     /// @inheritdoc IOperatorsRegistryV1
@@ -616,6 +622,9 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
             return;
         }
 
+        uint256 totalRequestedExitsValue = TotalRequestedExits.get();
+        uint256 totalRequestedExitsCopy = totalRequestedExitsValue;
+
         for (uint256 idx = 0; idx < operatorsLength;) {
             uint32 currentRequestedExits = operators[idx].requestedExits;
             uint32 currentStoppedCount = _getStoppedValidatorsCountFromRawArray(stoppedValidators, idx);
@@ -623,6 +632,7 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
             if (currentRequestedExits < currentStoppedCount) {
                 emit UpdatedRequestedUponStopped(operators[idx].index, currentRequestedExits, currentStoppedCount);
                 operators[idx].picked += currentStoppedCount - currentRequestedExits;
+                totalRequestedExitsValue += currentStoppedCount - currentRequestedExits;
             }
 
             unchecked {
@@ -667,7 +677,9 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
             uint256 rest = optimalTotalDispatchCount % siblings;
             for (uint256 idx = 0; idx < operatorsLength;) {
                 if (_getActiveValidatorCountForExitRequests(operators[idx]) == highestActiveCount) {
-                    operators[idx].picked += (optimalTotalDispatchCount / siblings) + (rest > 0 ? 1 : 0);
+                    uint32 additionalRequestedExits = (optimalTotalDispatchCount / siblings) + (rest > 0 ? 1 : 0);
+                    operators[idx].picked += additionalRequestedExits;
+                    totalRequestedExitsValue += additionalRequestedExits;
                     if (rest > 0) {
                         --rest;
                     }
@@ -691,6 +703,11 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
             unchecked {
                 ++idx;
             }
+        }
+
+        if (totalRequestedExitsValue != totalRequestedExitsCopy) {
+            TotalRequestedExits.set(totalRequestedExitsValue);
+            emit SetTotalRequestedExits(totalRequestedExitsCopy, totalRequestedExitsValue);
         }
     }
 }
