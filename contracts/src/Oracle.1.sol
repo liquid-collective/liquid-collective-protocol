@@ -245,7 +245,7 @@ contract OracleV1 is IOracleV1, Initializable, Administrable {
         // we compute the variant by hashing the report
         bytes32 variant = _reportChecksum(report);
         // we retrieve the details for the given variant
-        (int256 variantIndex, uint256 variantVotes) = _getReportVariant(variant);
+        (int256 variantIndex, uint256 variantVotes) = _getReportVariantIndexAndVotes(variant);
         // we retrieve the quorum to stack
         uint256 quorum = Quorum.get();
 
@@ -306,7 +306,7 @@ contract OracleV1 is IOracleV1, Initializable, Administrable {
     /// @param variant The variant to lookup
     /// @return The index of the variant, -1 if not found
     /// @return The vote count of the variant
-    function _getReportVariant(bytes32 variant) internal view returns (int256, uint256) {
+    function _getReportVariantIndexAndVotes(bytes32 variant) internal view returns (int256, uint256) {
         uint256 reportVariantsLength = ReportVariants.get().length;
         for (uint256 idx = 0; idx < reportVariantsLength;) {
             if (ReportVariants.get()[idx].variant == variant) {
