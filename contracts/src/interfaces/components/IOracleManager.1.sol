@@ -18,10 +18,56 @@ interface IOracleManagerV1 {
     /// @param roundId Round identifier
     event ConsensusLayerDataUpdate(uint256 validatorCount, uint256 validatorTotalBalance, bytes32 roundId);
 
+    event SetSpec(
+        uint64 epochsPerFrame,
+        uint64 slotsPerEpoch,
+        uint64 secondsPerSlot,
+        uint64 genesisTime,
+        uint64 epochsToAssumedFinality
+    );
+    event SetBounds(uint256 annualAprUpperBound, uint256 relativeLowerBound);
+
+    event ProcessedConsensusLayerReport(
+        IOracleManagerV1.ConsensusLayerReport report, ConsensusLayerDataReportingTrace trace
+    );
+
     /// @notice The reported validator count is invalid
     /// @param providedValidatorCount The received validator count value
     /// @param depositedValidatorCount The number of deposits performed by the system
     error InvalidValidatorCountReport(uint256 providedValidatorCount, uint256 depositedValidatorCount);
+
+    error InvalidEpoch(uint256 epoch);
+    error TotalValidatorBalanceIncreaseOutOfBound(
+        uint256 prevTotalEth, uint256 postTotalEth, uint256 timeElapsed, uint256 annualAprUpperBound
+    );
+    error TotalValidatorBalanceDecreaseOutOfBound(
+        uint256 prevTotalEth, uint256 postTotalEth, uint256 timeElapsed, uint256 relativeLowerBound
+    );
+    error InvalidDecreasingValidatorsExitedBalance(
+        uint256 currentValidatorsExitedBalance, uint256 newValidatorsExitedBalance
+    );
+    error InvalidDecreasingValidatorsSkimmedBalance(
+        uint256 currentValidatorsExitedBalance, uint256 newValidatorsExitedBalance
+    );
+
+    struct ConsensusLayerDataReportingTrace {
+        uint256 rewards;
+        uint256 pulledELFees;
+        uint256 pulledRedeemManagerExceedingEthBuffer;
+        uint256 pulledCoverageFunds;
+    }
+
+    struct ConsensusLayerReport {
+        uint256 epoch;
+        uint256 validatorsBalance;
+        uint256 validatorsSkimmedBalance;
+        uint256 validatorsExitedBalance;
+        uint256 validatorsExitingBalance;
+        uint32 validatorsCount;
+        uint32[] stoppedValidatorCountPerOperator;
+        bool bufferRebalancingMode;
+        bool slashingContainmentMode;
+    }
 
     /// @notice Get oracle address
     /// @return The oracle address
@@ -38,18 +84,6 @@ interface IOracleManagerV1 {
     /// @notice Set the oracle address
     /// @param _oracleAddress Address of the oracle
     function setOracle(address _oracleAddress) external;
-
-    struct ConsensusLayerReport {
-        uint256 epoch;
-        uint256 validatorsBalance;
-        uint256 validatorsSkimmedBalance;
-        uint256 validatorsExitedBalance;
-        uint256 validatorsExitingBalance;
-        uint32 validatorsCount;
-        uint32[] stoppedValidatorCountPerOperator;
-        bool bufferRebalancingMode;
-        bool slashingContainmentMode;
-    }
 
     function setConsensusLayerData(ConsensusLayerReport calldata report) external;
 

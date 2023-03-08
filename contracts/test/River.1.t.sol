@@ -669,8 +669,8 @@ contract RiverV1TestsReport_HEAVY_FUZZING is Test, BytesGenerator {
     uint64 constant secondsPerSlot = 12;
     uint64 constant epochsUntilFinal = 4;
 
-    uint256 constant maxDailyNetCommittableAmount = 3200 ether;
-    uint256 constant maxDailyRelativeCommittableAmount = 2000;
+    uint128 constant maxDailyNetCommittableAmount = 3200 ether;
+    uint128 constant maxDailyRelativeCommittableAmount = 2000;
 
     function setUp() public {
         admin = makeAddr("admin");

@@ -24,6 +24,8 @@ import "../state/river/LastReporedEpochId.sol";
 /// @notice values: the sum of all balances of all deposited validators and the count of
 /// @notice validators that have been activated on the consensus layer.
 abstract contract OracleManagerV1 is IOracleManagerV1 {
+    uint256 internal constant ONE_YEAR = 365 days;
+
     /// @notice Handler called if the delta between the last and new validator balance sum is positive
     /// @dev Must be overridden
     /// @param _profits The positive increase in the validator balance sum (staking rewards)
@@ -46,6 +48,18 @@ abstract contract OracleManagerV1 is IOracleManagerV1 {
     /// @return The system administrator address
     function _getRiverAdmin() internal view virtual returns (address);
 
+    function _pullRedeemManagerExceedingEth(uint256 max) internal virtual returns (uint256);
+    function _pullCLFunds(uint256 skimmedEthAmount, uint256 exitedEthAmount) internal virtual;
+    function _reportWithdrawToRedeemManager() internal virtual;
+    function _requestExitsBasedOnRedeemDemandAfterRebalancings(
+        uint256 exitingBalance,
+        bool depositToRedeemRebalancingAllowed
+    ) internal virtual;
+    function _skimExcessBalanceToRedeem() internal virtual;
+    function _assetBalance() internal view virtual returns (uint256);
+    function _setReportedStoppedValidatorCounts(uint32[] memory stoppedValidatorCounts) internal virtual;
+    function _commitBalanceToDeposit(uint256 period) internal virtual;
+
     /// @notice Prevents unauthorized calls
     modifier onlyAdmin_OMV1() {
         if (msg.sender != _getRiverAdmin()) {
@@ -60,66 +74,6 @@ abstract contract OracleManagerV1 is IOracleManagerV1 {
         OracleAddress.set(_oracle);
         emit SetOracle(_oracle);
     }
-
-    /// @inheritdoc IOracleManagerV1
-    function getOracle() external view returns (address) {
-        return OracleAddress.get();
-    }
-
-    /// @inheritdoc IOracleManagerV1
-    function getCLValidatorTotalBalance() external view returns (uint256) {
-        return CLValidatorTotalBalance.get();
-    }
-
-    /// @inheritdoc IOracleManagerV1
-    function getCLValidatorCount() external view returns (uint256) {
-        return CLValidatorCount.get();
-    }
-
-    /// @inheritdoc IOracleManagerV1
-    function setOracle(address _oracleAddress) external onlyAdmin_OMV1 {
-        OracleAddress.set(_oracleAddress);
-        emit SetOracle(_oracleAddress);
-    }
-
-    // rework beyond this point
-
-    event SetSpec(
-        uint64 epochsPerFrame,
-        uint64 slotsPerEpoch,
-        uint64 secondsPerSlot,
-        uint64 genesisTime,
-        uint64 epochsToAssumedFinality
-    );
-    event SetBounds(uint256 annualAprUpperBound, uint256 relativeLowerBound);
-
-    error InvalidEpoch(uint256 epoch);
-    error TotalValidatorBalanceIncreaseOutOfBound(
-        uint256 prevTotalEth, uint256 postTotalEth, uint256 timeElapsed, uint256 annualAprUpperBound
-    );
-    error TotalValidatorBalanceDecreaseOutOfBound(
-        uint256 prevTotalEth, uint256 postTotalEth, uint256 timeElapsed, uint256 relativeLowerBound
-    );
-    error InvalidDecreasingValidatorsExitedBalance(
-        uint256 currentValidatorsExitedBalance, uint256 newValidatorsExitedBalance
-    );
-    error InvalidDecreasingValidatorsSkimmedBalance(
-        uint256 currentValidatorsExitedBalance, uint256 newValidatorsExitedBalance
-    );
-
-    uint256 internal constant ONE_YEAR = 365 days;
-
-    function _getTotalUnderlyingBalance() internal view virtual returns (uint256);
-    function _pullCLFunds(uint256 skimmedEthAmount, uint256 exitedEthAmount) internal virtual;
-    function _pullRedeemManagerExceedingEth(uint256 max) internal virtual returns (uint256);
-    function _setReportedStoppedValidatorCounts(uint32[] memory stoppedValidatorCounts) internal virtual;
-    function _reportWithdrawToRedeemManager() internal virtual;
-    function _requestExitsBasedOnRedeemDemandAfterRebalancings(
-        uint256 exitingBalance,
-        bool depositToRedeemRebalancingAllowed
-    ) internal virtual;
-    function _commitBalanceToDeposit(uint256 period) internal virtual;
-    function _skimExcessBalanceToRedeem() internal virtual;
 
     function initOracleManagerV1_1(
         uint64 epochsPerFrame,
@@ -149,11 +103,108 @@ abstract contract OracleManagerV1 is IOracleManagerV1 {
         emit SetBounds(annualAprUpperBound, relativeLowerBound);
     }
 
-    struct ConsensusLayerDataReportingTrace {
-        uint256 rewards;
-        uint256 pulledELFees;
-        uint256 pulledRedeemManagerExceedingEthBuffer;
-        uint256 pulledCoverageFunds;
+    /// @inheritdoc IOracleManagerV1
+    function getOracle() external view returns (address) {
+        return OracleAddress.get();
+    }
+
+    /// @inheritdoc IOracleManagerV1
+    function getCLValidatorTotalBalance() external view returns (uint256) {
+        return CLValidatorTotalBalance.get();
+    }
+
+    /// @inheritdoc IOracleManagerV1
+    function getCLValidatorCount() external view returns (uint256) {
+        return CLValidatorCount.get();
+    }
+
+    function getExpectedEpochId() external view returns (uint256) {
+        CLSpec.CLSpecStruct memory cls = CLSpec.get();
+        uint256 currentEpoch = _currentEpoch(cls);
+        return LibUint256.max(
+            LastReportedEpochId.get() + cls.epochsPerFrame, currentEpoch - (currentEpoch % cls.epochsPerFrame)
+        );
+    }
+
+    function isValidEpoch(uint256 epoch) external view returns (bool) {
+        return _isValidEpoch(CLSpec.get(), epoch);
+    }
+
+    function getReportingBounds() external view returns (ReportBounds.ReportBoundsStruct memory) {
+        return ReportBounds.get();
+    }
+
+    function getConsensusLayerSpec() external view returns (CLSpec.CLSpecStruct memory) {
+        return CLSpec.get();
+    }
+
+    function getTime() external view returns (uint256) {
+        return block.timestamp;
+    }
+
+    /// @notice Retrieve the last completed report epoch id
+    /// @return The last completed epoch id
+    function getLastCompletedEpochId() external view returns (uint256) {
+        return LastReportedEpochId.get();
+    }
+
+    /// @notice Retrieve the current epoch id based on block timestamp
+    /// @return The current epoch id
+    function getCurrentEpochId() external view returns (uint256) {
+        return _currentEpoch(CLSpec.get());
+    }
+
+    /// @notice Retrieve the current cl spec
+    /// @return The Consensus Layer Specification
+    function getCLSpec() external view returns (CLSpec.CLSpecStruct memory) {
+        return CLSpec.get();
+    }
+
+    /// @notice Retrieve the current frame details
+    /// @return _startEpochId The epoch at the beginning of the frame
+    /// @return _startTime The timestamp of the beginning of the frame in seconds
+    /// @return _endTime The timestamp of the end of the frame in seconds
+    function getCurrentFrame() external view returns (uint256 _startEpochId, uint256 _startTime, uint256 _endTime) {
+        CLSpec.CLSpecStruct memory cls = CLSpec.get();
+        uint256 currentEpoch = _currentEpoch(cls);
+        _startEpochId = currentEpoch - (currentEpoch % cls.epochsPerFrame);
+        _startTime = _startEpochId * cls.slotsPerEpoch * cls.secondsPerSlot;
+        _endTime = (_startEpochId + cls.epochsPerFrame) * cls.slotsPerEpoch * cls.secondsPerSlot - 1;
+    }
+
+    /// @notice Retrieve the first epoch id of the frame of the provided epoch id
+    /// @param _epochId Epoch id used to get the frame
+    /// @return The first epoch id of the frame containing the given epoch id
+    function getFrameFirstEpochId(uint256 _epochId) external view returns (uint256) {
+        return _epochId - (_epochId % CLSpec.get().epochsPerFrame);
+    }
+
+    /// @notice Retrieve the report bounds
+    /// @return The report bounds
+    function getReportBounds() external view returns (ReportBounds.ReportBoundsStruct memory) {
+        return ReportBounds.get();
+    }
+
+    /// @inheritdoc IOracleManagerV1
+    function setOracle(address _oracleAddress) external onlyAdmin_OMV1 {
+        OracleAddress.set(_oracleAddress);
+        emit SetOracle(_oracleAddress);
+    }
+
+    function setCLSpec(CLSpec.CLSpecStruct calldata newValue) external onlyAdmin_OMV1 {
+        CLSpec.set(newValue);
+        emit SetSpec(
+            newValue.epochsPerFrame,
+            newValue.slotsPerEpoch,
+            newValue.secondsPerSlot,
+            newValue.genesisTime,
+            newValue.epochsToAssumedFinality
+        );
+    }
+
+    function setReportBounds(ReportBounds.ReportBoundsStruct calldata newValue) external onlyAdmin_OMV1 {
+        ReportBounds.set(newValue);
+        emit SetBounds(newValue.annualAprUpperBound, newValue.relativeLowerBound);
     }
 
     struct ConsensusLayerDataReportingVariables {
@@ -168,10 +219,6 @@ abstract contract OracleManagerV1 is IOracleManagerV1 {
         uint256 redeemManagerDemand;
         ConsensusLayerDataReportingTrace trace;
     }
-
-    event ProcessedConsensusLayerReport(
-        IOracleManagerV1.ConsensusLayerReport report, ConsensusLayerDataReportingTrace trace
-    );
 
     function setConsensusLayerData(IOracleManagerV1.ConsensusLayerReport calldata report) external {
         // only the oracle is allowed to call this endpoint
@@ -218,7 +265,7 @@ abstract contract OracleManagerV1 is IOracleManagerV1 {
         vars.skimmedAmountIncrease = report.validatorsSkimmedBalance - vars.lastReportSkimmedBalance;
 
         // we retrieve the current total underlying balance before any reporting data is applied to the system
-        vars.preReportUnderlyingBalance = _getTotalUnderlyingBalance();
+        vars.preReportUnderlyingBalance = _assetBalance();
         // we compute the time elapsed since last report based on epoch numbers
 
         // if we have new exited / skimmed eth available, we pull funds from the consensus layer recipient
@@ -243,7 +290,7 @@ abstract contract OracleManagerV1 is IOracleManagerV1 {
         uint256 maxIncrease = _maxIncrease(rb, vars.preReportUnderlyingBalance, vars.timeElapsedSinceLastReport);
 
         // we retrieve the new total underlying balance after system parameters are changed
-        vars.postReportUnderlyingBalance = _getTotalUnderlyingBalance();
+        vars.postReportUnderlyingBalance = _assetBalance();
 
         // if the new underlying balance has increased, we verify that we are not exceeding reporting bound, and we update
         // reporting variables accordingly
@@ -339,18 +386,6 @@ abstract contract OracleManagerV1 is IOracleManagerV1 {
         emit ProcessedConsensusLayerReport(report, vars.trace);
     }
 
-    function getExpectedEpochId() external view returns (uint256) {
-        CLSpec.CLSpecStruct memory cls = CLSpec.get();
-        uint256 currentEpoch = _currentEpoch(cls);
-        return LibUint256.max(
-            LastReportedEpochId.get() + cls.epochsPerFrame, currentEpoch - (currentEpoch % cls.epochsPerFrame)
-        );
-    }
-
-    function isValidEpoch(uint256 epoch) external view returns (bool) {
-        return _isValidEpoch(CLSpec.get(), epoch);
-    }
-
     function _currentEpoch(CLSpec.CLSpecStruct memory cls) internal view returns (uint256) {
         return ((block.timestamp - cls.genesisTime) / cls.secondsPerSlot) / cls.slotsPerEpoch;
     }
@@ -384,78 +419,5 @@ abstract contract OracleManagerV1 is IOracleManagerV1 {
         returns (uint256)
     {
         return (epochNow - epochPast) * (cls.secondsPerSlot * cls.slotsPerEpoch);
-    }
-
-    function getReportingBounds() external view returns (ReportBounds.ReportBoundsStruct memory) {
-        return ReportBounds.get();
-    }
-
-    function getConsensusLayerSpec() external view returns (CLSpec.CLSpecStruct memory) {
-        return CLSpec.get();
-    }
-
-    // view functions of oracle
-
-    function getTime() external view returns (uint256) {
-        return block.timestamp;
-    }
-
-    /// @notice Retrieve the last completed report epoch id
-    /// @return The last completed epoch id
-    function getLastCompletedEpochId() external view returns (uint256) {
-        return LastReportedEpochId.get();
-    }
-
-    /// @notice Retrieve the current epoch id based on block timestamp
-    /// @return The current epoch id
-    function getCurrentEpochId() external view returns (uint256) {
-        return _currentEpoch(CLSpec.get());
-    }
-
-    /// @notice Retrieve the current cl spec
-    /// @return The Consensus Layer Specification
-    function getCLSpec() external view returns (CLSpec.CLSpecStruct memory) {
-        return CLSpec.get();
-    }
-
-    function setCLSpec(CLSpec.CLSpecStruct calldata newValue) external onlyAdmin_OMV1 {
-        CLSpec.set(newValue);
-        emit SetSpec(
-            newValue.epochsPerFrame,
-            newValue.slotsPerEpoch,
-            newValue.secondsPerSlot,
-            newValue.genesisTime,
-            newValue.epochsToAssumedFinality
-        );
-    }
-
-    function setReportBounds(ReportBounds.ReportBoundsStruct calldata newValue) external onlyAdmin_OMV1 {
-        ReportBounds.set(newValue);
-        emit SetBounds(newValue.annualAprUpperBound, newValue.relativeLowerBound);
-    }
-
-    /// @notice Retrieve the current frame details
-    /// @return _startEpochId The epoch at the beginning of the frame
-    /// @return _startTime The timestamp of the beginning of the frame in seconds
-    /// @return _endTime The timestamp of the end of the frame in seconds
-    function getCurrentFrame() external view returns (uint256 _startEpochId, uint256 _startTime, uint256 _endTime) {
-        CLSpec.CLSpecStruct memory cls = CLSpec.get();
-        uint256 currentEpoch = _currentEpoch(cls);
-        _startEpochId = currentEpoch - (currentEpoch % cls.epochsPerFrame);
-        _startTime = _startEpochId * cls.slotsPerEpoch * cls.secondsPerSlot;
-        _endTime = (_startEpochId + cls.epochsPerFrame) * cls.slotsPerEpoch * cls.secondsPerSlot - 1;
-    }
-
-    /// @notice Retrieve the first epoch id of the frame of the provided epoch id
-    /// @param _epochId Epoch id used to get the frame
-    /// @return The first epoch id of the frame containing the given epoch id
-    function getFrameFirstEpochId(uint256 _epochId) external view returns (uint256) {
-        return _epochId - (_epochId % CLSpec.get().epochsPerFrame);
-    }
-
-    /// @notice Retrieve the report bounds
-    /// @return The report bounds
-    function getReportBounds() external view returns (ReportBounds.ReportBoundsStruct memory) {
-        return ReportBounds.get();
     }
 }

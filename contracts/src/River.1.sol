@@ -17,7 +17,10 @@ import "./Administrable.sol";
 
 import "./libraries/LibAllowlistMasks.sol";
 
+import "./state/river/DailyCommittableLimits.sol";
+import "./state/river/BalanceToRedeem.sol";
 import "./state/river/AllowlistAddress.sol";
+import "./state/river/RedeemManagerAddress.sol";
 import "./state/river/OperatorsRegistryAddress.sol";
 import "./state/river/CollectorAddress.sol";
 import "./state/river/GlobalFee.sol";
@@ -118,6 +121,40 @@ contract RiverV1 is
         OracleManagerV1.initOracleManagerV1(_oracleAddress);
     }
 
+    function initRiverV1_1(
+        address _redeemManager,
+        uint64 epochsPerFrame,
+        uint64 slotsPerEpoch,
+        uint64 secondsPerSlot,
+        uint64 genesisTime,
+        uint64 epochsToAssumedFinality,
+        uint256 annualAprUpperBound,
+        uint256 relativeLowerBound,
+        uint128 maxDailyNetCommittableAmount_,
+        uint128 maxDailyRelativeCommittableAmount_
+    ) external init(1) {
+        RedeemManagerAddress.set(_redeemManager);
+        emit SetRedeemManager(_redeemManager);
+
+        DailyCommittableLimits.set(
+            DailyCommittableLimits.DailyCommittableLimitsStruct({
+                maxDailyNetCommittableAmount: maxDailyNetCommittableAmount_,
+                maxDailyRelativeCommittableAmount: maxDailyRelativeCommittableAmount_
+            })
+        );
+        emit SetMaxDailyCommittableAmounts(maxDailyNetCommittableAmount_, maxDailyRelativeCommittableAmount_);
+
+        initOracleManagerV1_1(
+            epochsPerFrame,
+            slotsPerEpoch,
+            secondsPerSlot,
+            genesisTime,
+            epochsToAssumedFinality,
+            annualAprUpperBound,
+            relativeLowerBound
+        );
+    }
+
     /// @inheritdoc IRiverV1
     function getGlobalFee() external view returns (uint256) {
         return GlobalFee.get();
@@ -146,6 +183,29 @@ contract RiverV1 is
     /// @inheritdoc IRiverV1
     function getMetadataURI() external view returns (string memory) {
         return MetadataURI.get();
+    }
+
+    /// @inheritdoc IRiverV1
+    function getDailyCommittableLimits()
+        external
+        view
+        returns (DailyCommittableLimits.DailyCommittableLimitsStruct memory)
+    {
+        return DailyCommittableLimits.get();
+    }
+
+    /// @inheritdoc IRiverV1
+    function setDailyCommittableLimits(DailyCommittableLimits.DailyCommittableLimitsStruct memory dcl)
+        external
+        onlyAdmin
+    {
+        DailyCommittableLimits.set(dcl);
+        emit SetMaxDailyCommittableAmounts(dcl.maxDailyNetCommittableAmount, dcl.maxDailyRelativeCommittableAmount);
+    }
+
+    /// @inheritdoc IRiverV1
+    function getBalanceToRedeem() external view returns (uint256) {
+        return BalanceToRedeem.get();
     }
 
     /// @inheritdoc IRiverV1
@@ -207,6 +267,13 @@ contract RiverV1 is
     /// @inheritdoc IRiverV1
     function sendCoverageFunds() external payable {
         if (msg.sender != CoverageFundAddress.get()) {
+            revert LibErrors.Unauthorized(msg.sender);
+        }
+    }
+
+    /// @inheritdoc IRiverV1
+    function sendRedeemManagerExceedingFunds() external payable {
+        if (msg.sender != RedeemManagerAddress.get()) {
             revert LibErrors.Unauthorized(msg.sender);
         }
     }
@@ -319,32 +386,19 @@ contract RiverV1 is
         }
     }
 
-    // rework beyond this point
-
     /// @notice Overridden handler called whenever the total balance of ETH is requested
     /// @return The current total asset balance managed by River
-    function _assetBalance() internal view override returns (uint256) {
+    function _assetBalance() internal view override(SharesManagerV1, OracleManagerV1) returns (uint256) {
         uint256 clValidatorCount = CLValidatorCount.get();
         uint256 depositedValidatorCount = DepositedValidatorCount.get();
         if (clValidatorCount < depositedValidatorCount) {
-            return CLValidatorTotalBalance.get() + BalanceToDeposit.get() + CommittedBalance.get() + balanceToRedeem
+            return CLValidatorTotalBalance.get() + BalanceToDeposit.get() + CommittedBalance.get()
+                + BalanceToRedeem.get()
                 + (depositedValidatorCount - clValidatorCount) * ConsensusLayerDepositManagerV1.DEPOSIT_SIZE;
         } else {
-            return CLValidatorTotalBalance.get() + BalanceToDeposit.get() + CommittedBalance.get() + balanceToRedeem;
+            return
+                CLValidatorTotalBalance.get() + BalanceToDeposit.get() + CommittedBalance.get() + BalanceToRedeem.get();
         }
-    }
-
-    uint256 balanceToRedeem;
-    address redeemManager;
-    uint256 maxDailyNetCommittableAmount;
-    uint256 maxDailyRelativeCommittableAmount;
-
-    event SetRedeemManager(address redeemManager);
-
-    error InvalidPulledClFundsAmount(uint256 requested, uint256 received);
-
-    function _getTotalUnderlyingBalance() internal view override returns (uint256) {
-        return _assetBalance();
     }
 
     function _pullCLFunds(uint256 skimmedEthAmount, uint256 exitedEthAmount) internal override {
@@ -359,68 +413,19 @@ contract RiverV1 is
             _setBalanceToDeposit(BalanceToDeposit.get() + skimmedEthAmount);
         }
         if (exitedEthAmount > 0) {
-            _setBalanceToRedeem(balanceToRedeem + exitedEthAmount);
+            _setBalanceToRedeem(BalanceToRedeem.get() + exitedEthAmount);
         }
     }
-
-    function sendRedeemManagerExceedingFunds() external payable {
-        if (msg.sender != redeemManager) {
-            revert LibErrors.Unauthorized(msg.sender);
-        }
-    }
-
-    event SetMaxDailyCommittableAmounts(uint256 maxNetAmount, uint256 maxRelativeAmount);
-
-    function initRiverV1_1(
-        address _redeemManager,
-        uint64 epochsPerFrame,
-        uint64 slotsPerEpoch,
-        uint64 secondsPerSlot,
-        uint64 genesisTime,
-        uint64 epochsToAssumedFinality,
-        uint256 annualAprUpperBound,
-        uint256 relativeLowerBound,
-        uint256 maxDailyNetCommittableAmount_,
-        uint256 maxDailyRelativeCommittableAmount_
-    ) external init(1) {
-        redeemManager = _redeemManager;
-        emit SetRedeemManager(redeemManager);
-        initOracleManagerV1_1(
-            epochsPerFrame,
-            slotsPerEpoch,
-            secondsPerSlot,
-            genesisTime,
-            epochsToAssumedFinality,
-            annualAprUpperBound,
-            relativeLowerBound
-        );
-        maxDailyNetCommittableAmount = maxDailyNetCommittableAmount_;
-        LibSanitize._validFee(maxDailyRelativeCommittableAmount_);
-        maxDailyRelativeCommittableAmount = maxDailyRelativeCommittableAmount_;
-        emit SetMaxDailyCommittableAmounts(maxDailyNetCommittableAmount_, maxDailyRelativeCommittableAmount_);
-    }
-
-    event PulledRedeemManagerExceedingEth(uint256 amount);
-
-    event SetBalanceToDeposit(uint256 oldAmount, uint256 newAmount);
 
     function _setBalanceToDeposit(uint256 newBalanceToDeposit) internal override(UserDepositManagerV1) {
         emit SetBalanceToDeposit(BalanceToDeposit.get(), newBalanceToDeposit);
         BalanceToDeposit.set(newBalanceToDeposit);
     }
 
-    event SetBalanceToRedeem(uint256 oldAmount, uint256 newAmount);
-
     function _setBalanceToRedeem(uint256 newBalanceToRedeem) internal {
-        emit SetBalanceToRedeem(balanceToRedeem, newBalanceToRedeem);
-        balanceToRedeem = newBalanceToRedeem;
+        emit SetBalanceToRedeem(BalanceToRedeem.get(), newBalanceToRedeem);
+        BalanceToRedeem.set(newBalanceToRedeem);
     }
-
-    function getBalanceToRedeem() external view returns (uint256) {
-        return balanceToRedeem;
-    }
-
-    event SetBalanceCommittedToDeposit(uint256 oldAmount, uint256 newAmount);
 
     function _setCommittedBalance(uint256 newCommittedBalance) internal override(ConsensusLayerDepositManagerV1) {
         emit SetBalanceCommittedToDeposit(CommittedBalance.get(), newCommittedBalance);
@@ -429,7 +434,7 @@ contract RiverV1 is
 
     function _pullRedeemManagerExceedingEth(uint256 max) internal override returns (uint256) {
         uint256 currentBalance = address(this).balance;
-        IRedeemManagerV1(redeemManager).pullExceedingEth(max);
+        IRedeemManagerV1(RedeemManagerAddress.get()).pullExceedingEth(max);
         uint256 collectedExceedingEth = address(this).balance - currentBalance;
         if (collectedExceedingEth > 0) {
             _setBalanceToDeposit(BalanceToDeposit.get() + collectedExceedingEth);
@@ -438,21 +443,17 @@ contract RiverV1 is
         return collectedExceedingEth;
     }
 
-    event ReportedRedeemManager(
-        uint256 redeemManagerDemand, uint256 suppliedRedeemManagerDemand, uint256 suppliedRedeemManagerDemandInEth
-    );
-
     function _reportWithdrawToRedeemManager() internal override {
-        IRedeemManagerV1 redeemManager_ = IRedeemManagerV1(redeemManager);
+        IRedeemManagerV1 redeemManager_ = IRedeemManagerV1(RedeemManagerAddress.get());
         uint256 underlyingAssetBalance = _assetBalance();
         uint256 totalSupply = _totalSupply();
 
         if (underlyingAssetBalance > 0 && totalSupply > 0) {
             // we compute the redeem manager demands in eth and lsEth based on current conversion rate
-            uint256 redeemManagerDemand = _balanceOf(redeemManager);
+            uint256 redeemManagerDemand = _balanceOf(RedeemManagerAddress.get());
             uint256 suppliedRedeemManagerDemand = redeemManagerDemand;
             uint256 suppliedRedeemManagerDemandInEth = _balanceFromShares(suppliedRedeemManagerDemand);
-            uint256 availableBalanceToRedeem = balanceToRedeem;
+            uint256 availableBalanceToRedeem = BalanceToRedeem.get();
 
             // if demand is higher than available eth, we update demand values to use the available eth
             if (suppliedRedeemManagerDemandInEth > availableBalanceToRedeem) {
@@ -466,13 +467,13 @@ contract RiverV1 is
 
             if (suppliedRedeemManagerDemandInEth > 0) {
                 // the available balance to redeem is updated
-                _setBalanceToRedeem(balanceToRedeem - suppliedRedeemManagerDemandInEth);
+                _setBalanceToRedeem(availableBalanceToRedeem - suppliedRedeemManagerDemandInEth);
 
                 // perform a report withdraw call to the redeem manager
                 redeemManager_.reportWithdraw{value: suppliedRedeemManagerDemandInEth}(suppliedRedeemManagerDemand);
 
                 // we burn the shares of the redeem manager associated with the amount of eth provided
-                _burnRawShares(address(redeemManager), suppliedRedeemManagerDemand);
+                _burnRawShares(address(RedeemManagerAddress.get()), suppliedRedeemManagerDemand);
             }
         }
     }
@@ -487,9 +488,9 @@ contract RiverV1 is
     ) internal override {
         uint256 totalSupply = _totalSupply();
         if (totalSupply > 0) {
-            uint256 availableBalanceToRedeem = balanceToRedeem;
+            uint256 availableBalanceToRedeem = BalanceToRedeem.get();
             uint256 availableBalanceToDeposit = BalanceToDeposit.get();
-            uint256 redeemManagerDemandInEth = _balanceFromShares(_balanceOf(redeemManager));
+            uint256 redeemManagerDemandInEth = _balanceFromShares(_balanceOf(RedeemManagerAddress.get()));
 
             // if after all rebalancings, the redeem manager demand is still higher than the balance to redeem and exiting eth, we compute
             // the amount of validators to exit in order to cover the remaining demand
@@ -531,7 +532,7 @@ contract RiverV1 is
     }
 
     function _skimExcessBalanceToRedeem() internal override {
-        uint256 availableBalanceToRedeem = balanceToRedeem;
+        uint256 availableBalanceToRedeem = BalanceToRedeem.get();
 
         // if the available balance to redeem is not 0, it means that all the redeem requests are fulfilled, we should redirect funds for deposits
         if (availableBalanceToRedeem > 0) {
@@ -543,11 +544,12 @@ contract RiverV1 is
     function _commitBalanceToDeposit(uint256 period) internal override {
         uint256 underlyingAssetBalance = _assetBalance();
         uint256 currentBalanceToDeposit = BalanceToDeposit.get();
+        DailyCommittableLimits.DailyCommittableLimitsStruct memory dcl = DailyCommittableLimits.get();
 
         // we compute the max daily committable amount by taking the asset balance without the balance to deposit into account
         uint256 currentMaxDailyCommittableAmount = LibUint256.max(
-            maxDailyNetCommittableAmount,
-            (maxDailyRelativeCommittableAmount * (underlyingAssetBalance - currentBalanceToDeposit))
+            dcl.maxDailyNetCommittableAmount,
+            (uint256(dcl.maxDailyRelativeCommittableAmount) * (underlyingAssetBalance - currentBalanceToDeposit))
                 / LibBasisPoints.BASIS_POINTS_MAX
         );
         // we adapt the value for the reporting period by using the asset balance as upper bound

@@ -90,13 +90,13 @@ contract OracleManagerV1ExposeInitializer is OracleManagerV1 {
         emit Internal_PullCoverageFunds(_max, result);
     }
 
-    function _getTotalUnderlyingBalance() internal view override returns (uint256 result) {
+    function _assetBalance() internal view override returns (uint256 result) {
         result = (DepositedValidatorCount.get() - CLValidatorCount.get()) * 32 ether + CLValidatorTotalBalance.get()
             + amountToDeposit + amountToRedeem;
     }
 
     function debug_getTotalUnderlyingBalance() external view returns (uint256) {
-        return _getTotalUnderlyingBalance();
+        return _assetBalance();
     }
 
     uint256 public redeemDemand;

@@ -1,6 +1,8 @@
 //SPDX-License-Identifier: BUSL-1.1
 pragma solidity 0.8.10;
 
+import "../state/river/DailyCommittableLimits.sol";
+
 import "./components/IConsensusLayerDepositManager.1.sol";
 import "./components/IOracleManager.1.sol";
 import "./components/ISharesManager.1.sol";
@@ -60,6 +62,24 @@ interface IRiverV1 is IConsensusLayerDepositManagerV1, IUserDepositManagerV1, IS
         uint256 _newTotalSupply
     );
 
+    event SetMaxDailyCommittableAmounts(uint256 maxNetAmount, uint256 maxRelativeAmount);
+
+    event SetRedeemManager(address redeemManager);
+
+    event PulledRedeemManagerExceedingEth(uint256 amount);
+
+    event SetBalanceToDeposit(uint256 oldAmount, uint256 newAmount);
+
+    event SetBalanceToRedeem(uint256 oldAmount, uint256 newAmount);
+
+    event SetBalanceCommittedToDeposit(uint256 oldAmount, uint256 newAmount);
+
+    event ReportedRedeemManager(
+        uint256 redeemManagerDemand, uint256 suppliedRedeemManagerDemand, uint256 suppliedRedeemManagerDemandInEth
+    );
+
+    error InvalidPulledClFundsAmount(uint256 requested, uint256 received);
+
     /// @notice The computed amount of shares to mint is 0
     error ZeroMintedShares();
 
@@ -116,6 +136,15 @@ interface IRiverV1 is IConsensusLayerDepositManagerV1, IUserDepositManagerV1, IS
     /// @notice Retrieve the metadata uri string value
     /// @return The metadata uri string value
     function getMetadataURI() external view returns (string memory);
+
+    function getDailyCommittableLimits()
+        external
+        view
+        returns (DailyCommittableLimits.DailyCommittableLimitsStruct memory);
+
+    function setDailyCommittableLimits(DailyCommittableLimits.DailyCommittableLimitsStruct memory dcl) external;
+
+    function getBalanceToRedeem() external view returns (uint256);
 
     /// @notice Changes the global fee parameter
     /// @param newFee New fee value
