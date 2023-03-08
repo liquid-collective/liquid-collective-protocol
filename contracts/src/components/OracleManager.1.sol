@@ -11,7 +11,7 @@ import "../state/river/OracleAddress.sol";
 import "../state/river/CLValidatorTotalBalance.sol";
 import "../state/river/CLValidatorCount.sol";
 import "../state/river/DepositedValidatorCount.sol";
-import "../state/river/LastReportedEpochId.sol";
+import "../state/river/LastOracleRoundId.sol";
 
 /// @title Oracle Manager (v1)
 /// @author Kiln
@@ -131,7 +131,7 @@ abstract contract OracleManagerV1 is IOracleManagerV1 {
         emit SetBounds(annualAprUpperBound, relativeLowerBound);
 
         IOracleManagerV1.StoredConsensusLayerReport memory storedReport;
-        storedReport.epoch = LastReportedEpochId.get();
+        storedReport.epoch = uint256(LastOracleRoundId.get());
         storedReport.validatorsBalance = CLValidatorTotalBalance.get();
         storedReport.validatorsSkimmedBalance = 0;
         storedReport.validatorsExitedBalance = 0;
