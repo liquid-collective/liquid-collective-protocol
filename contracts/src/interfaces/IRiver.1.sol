@@ -62,22 +62,45 @@ interface IRiverV1 is IConsensusLayerDepositManagerV1, IUserDepositManagerV1, IS
         uint256 _newTotalSupply
     );
 
+    /// @notice Emitted when the daily committable limits are changed
+    /// @param maxNetAmount The maximum net amount that can be committed daily
+    /// @param maxRelativeAmount The maximum amount relative to the total underlying supply that can be committed daily
     event SetMaxDailyCommittableAmounts(uint256 maxNetAmount, uint256 maxRelativeAmount);
 
+    /// @notice Emitted when the redeem manager address is changed
+    /// @param redeemManager The address of the redeem manager
     event SetRedeemManager(address redeemManager);
 
+    /// @notice Emitted when funds are pulled from the redeem manager
+    /// @param amount The amount pulled
     event PulledRedeemManagerExceedingEth(uint256 amount);
 
+    /// @notice Emitted when the balance to deposit is updated
+    /// @param oldAmount The old balance to deposit
+    /// @param newAmount The new balance to deposit
     event SetBalanceToDeposit(uint256 oldAmount, uint256 newAmount);
 
+    /// @notice Emitted when the balance to redeem is updated
+    /// @param oldAmount The old balance to redeem
+    /// @param newAmount The new balance to redeem
     event SetBalanceToRedeem(uint256 oldAmount, uint256 newAmount);
 
+    /// @notice Emitted when the balance committed to deposit
+    /// @param oldAmount The old balance committed to deposit
+    /// @param newAmount The new balance committed to deposit
     event SetBalanceCommittedToDeposit(uint256 oldAmount, uint256 newAmount);
 
+    /// @notice Emitted when the redeem manager received a withdraw event report
+    /// @param redeemManagerDemand The total demand in LsETH of the redeem manager
+    /// @param suppliedRedeemManagerDemand The amount of LsETH demand actually supplied
+    /// @param suppliedRedeemManagerDemandInEth The amount in ETH of the supplied demand
     event ReportedRedeemManager(
         uint256 redeemManagerDemand, uint256 suppliedRedeemManagerDemand, uint256 suppliedRedeemManagerDemandInEth
     );
 
+    /// @notice Thrown when the amount received from the Withdraw contract doe not match the requested amount
+    /// @param requested The amount that was requested
+    /// @param received The amount that was received
     error InvalidPulledClFundsAmount(uint256 requested, uint256 received);
 
     /// @notice The computed amount of shares to mint is 0
@@ -109,6 +132,30 @@ interface IRiverV1 is IConsensusLayerDepositManagerV1, IUserDepositManagerV1, IS
         uint256 _globalFee
     ) external;
 
+    /// @notice Initialized version 1.1 of the River System
+    /// @param _redeemManager The redeem manager address
+    /// @param epochsPerFrame The amounts of epochs in a frame
+    /// @param slotsPerEpoch The slots inside an epoch
+    /// @param secondsPerSlot The seconds inside a slot
+    /// @param genesisTime The genesis timestamp
+    /// @param epochsToAssumedFinality The number of epochs before an epoch is considered final on-chain
+    /// @param annualAprUpperBound The reporting upper bound
+    /// @param relativeLowerBound The reporting lower bound
+    /// @param maxDailyNetCommittableAmount_ The net daily committable limit
+    /// @param maxDailyRelativeCommittableAmount_ The relative daily committable limit
+    function initRiverV1_1(
+        address _redeemManager,
+        uint64 epochsPerFrame,
+        uint64 slotsPerEpoch,
+        uint64 secondsPerSlot,
+        uint64 genesisTime,
+        uint64 epochsToAssumedFinality,
+        uint256 annualAprUpperBound,
+        uint256 relativeLowerBound,
+        uint128 maxDailyNetCommittableAmount_,
+        uint128 maxDailyRelativeCommittableAmount_
+    ) external;
+
     /// @notice Get the current global fee
     /// @return The global fee
     function getGlobalFee() external view returns (uint256);
@@ -137,13 +184,19 @@ interface IRiverV1 is IConsensusLayerDepositManagerV1, IUserDepositManagerV1, IS
     /// @return The metadata uri string value
     function getMetadataURI() external view returns (string memory);
 
+    /// @notice Retrieve the configured daily committable limits
+    /// @return The daily committable limits structure
     function getDailyCommittableLimits()
         external
         view
         returns (DailyCommittableLimits.DailyCommittableLimitsStruct memory);
 
+    /// @notice Set the daily committable limits
+    /// @param dcl The Daily Committable Limits structure
     function setDailyCommittableLimits(DailyCommittableLimits.DailyCommittableLimitsStruct memory dcl) external;
 
+    /// @notice Retrieve the current balance to redeem
+    /// @return The current balance to redeem
     function getBalanceToRedeem() external view returns (uint256);
 
     /// @notice Changes the global fee parameter
@@ -179,6 +232,6 @@ interface IRiverV1 is IConsensusLayerDepositManagerV1, IUserDepositManagerV1, IS
     /// @notice Input for coverage funds
     function sendCoverageFunds() external payable;
 
-    // rework beyond this point
+    /// @notice Input for the redeem manager funds
     function sendRedeemManagerExceedingFunds() external payable;
 }

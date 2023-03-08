@@ -13,6 +13,11 @@ interface IConsensusLayerDepositManagerV1 {
     /// @param withdrawalCredentials The withdrawal credentials to use for deposits
     event SetWithdrawalCredentials(bytes32 withdrawalCredentials);
 
+    /// @notice Emitted when the deposited validator count is updated
+    /// @param oldDepositedValidatorCount The old deposited validator count value
+    /// @param newDepositedValidatorCount The new deposited validator count value
+    event SetDepositedValidatorCount(uint256 oldDepositedValidatorCount, uint256 newDepositedValidatorCount);
+
     /// @notice Not enough funds to deposit one validator
     error NotEnoughFunds();
 

@@ -32,6 +32,8 @@ abstract contract ConsensusLayerDepositManagerV1 is IConsensusLayerDepositManage
     /// @dev Must be Overridden
     function _getRiverAdmin() internal view virtual returns (address);
 
+    /// @notice Handler called to change the committed balance to deposit
+    /// @param newCommittedBalance The new committed balance value
     function _setCommittedBalance(uint256 newCommittedBalance) internal virtual;
 
     /// @notice Internal helper to retrieve validator keys ready to be funded
@@ -115,7 +117,11 @@ abstract contract ConsensusLayerDepositManagerV1 is IConsensusLayerDepositManage
             }
         }
         _setCommittedBalance(committedBalance - DEPOSIT_SIZE * receivedPublicKeyCount);
-        DepositedValidatorCount.set(DepositedValidatorCount.get() + receivedPublicKeyCount);
+        uint256 currentDepositedValidatorCount = DepositedValidatorCount.get();
+        DepositedValidatorCount.set(currentDepositedValidatorCount + receivedPublicKeyCount);
+        emit SetDepositedValidatorCount(
+            currentDepositedValidatorCount, currentDepositedValidatorCount + receivedPublicKeyCount
+        );
     }
 
     /// @notice Deposits 32 ETH to the official Deposit contract

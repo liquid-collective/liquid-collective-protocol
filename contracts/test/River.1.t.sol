@@ -181,6 +181,31 @@ contract RiverV1Tests is Test, BytesGenerator {
         vm.stopPrank();
     }
 
+    event SetMaxDailyCommittableAmounts(uint256 maxNetAmount, uint256 maxRelativeAmount);
+
+    function testSetDailyCommittableLimits(uint128 net, uint128 relative) public {
+        relative = uint128(bound(relative, 0, 10_000));
+        DailyCommittableLimits.DailyCommittableLimitsStruct memory dcl = DailyCommittableLimits
+            .DailyCommittableLimitsStruct({maxDailyRelativeCommittableAmount: relative, maxDailyNetCommittableAmount: net});
+        vm.prank(admin);
+        vm.expectEmit(true, true, true, true);
+        emit SetMaxDailyCommittableAmounts(net, relative);
+        river.setDailyCommittableLimits(dcl);
+
+        dcl = river.getDailyCommittableLimits();
+
+        assertEq(dcl.maxDailyNetCommittableAmount, net);
+        assertEq(dcl.maxDailyRelativeCommittableAmount, relative);
+    }
+
+    function testSetDailyCommittableLimitsUnauthorized(uint128 net, uint128 relative) public {
+        relative = uint128(bound(relative, 0, 10_000));
+        DailyCommittableLimits.DailyCommittableLimitsStruct memory dcl = DailyCommittableLimits
+            .DailyCommittableLimitsStruct({maxDailyRelativeCommittableAmount: relative, maxDailyNetCommittableAmount: net});
+        vm.expectRevert(abi.encodeWithSignature("Unauthorized(address)", address(this)));
+        river.setDailyCommittableLimits(dcl);
+    }
+
     function testSetELFeeRecipient(uint256 _newELFeeRecipientSalt) public {
         address newELFeeRecipient = uf._new(_newELFeeRecipientSalt);
         vm.startPrank(admin);
@@ -961,8 +986,8 @@ contract RiverV1TestsReport_HEAVY_FUZZING is Test, BytesGenerator {
         rfv.scenario = _salt % 7;
         _salt = _next(_salt);
 
-        rfv.cls = river.getConsensusLayerSpec();
-        rfv.rb = river.getReportingBounds();
+        rfv.cls = river.getCLSpec();
+        rfv.rb = river.getReportBounds();
 
         (clr, _salt) = _retrieveInitialReportingData(rfv, _salt);
 
@@ -1690,7 +1715,7 @@ contract RiverV1TestsReport_HEAVY_FUZZING is Test, BytesGenerator {
         _salt = _next(_salt);
         uint256 framesBetween = bound(_salt, 1, 1_000_000);
         uint256 timeBetween = framesBetween * secondsPerSlot * slotsPerEpoch * epochsPerFrame;
-        uint256 maxIncrease = debug_maxIncrease(river.getReportingBounds(), river.totalUnderlyingSupply(), timeBetween);
+        uint256 maxIncrease = debug_maxIncrease(river.getReportBounds(), river.totalUnderlyingSupply(), timeBetween);
 
         vm.prank(address(oracle));
         river.setConsensusLayerData(clr);
@@ -1705,7 +1730,7 @@ contract RiverV1TestsReport_HEAVY_FUZZING is Test, BytesGenerator {
                 32 ether * depositCount,
                 32 ether * depositCount + maxIncrease + 1,
                 timeBetween,
-                river.getReportingBounds().annualAprUpperBound
+                river.getReportBounds().annualAprUpperBound
             )
         );
         vm.prank(address(oracle));
@@ -1729,7 +1754,7 @@ contract RiverV1TestsReport_HEAVY_FUZZING is Test, BytesGenerator {
         _salt = _next(_salt);
         uint256 framesBetween = bound(_salt, 1, 1_000_000);
         uint256 timeBetween = framesBetween * secondsPerSlot * slotsPerEpoch * epochsPerFrame;
-        uint256 maxDecrease = debug_maxDecrease(river.getReportingBounds(), river.totalUnderlyingSupply());
+        uint256 maxDecrease = debug_maxDecrease(river.getReportBounds(), river.totalUnderlyingSupply());
         console.log(river.totalUnderlyingSupply());
 
         vm.prank(address(oracle));
@@ -1747,7 +1772,7 @@ contract RiverV1TestsReport_HEAVY_FUZZING is Test, BytesGenerator {
                 32 ether * depositCount,
                 32 ether * depositCount - (maxDecrease + 1),
                 timeBetween,
-                river.getReportingBounds().relativeLowerBound
+                river.getReportBounds().relativeLowerBound
             )
         );
         vm.prank(address(oracle));
@@ -1810,7 +1835,7 @@ contract RiverV1TestsReport_HEAVY_FUZZING is Test, BytesGenerator {
         _salt = _next(_salt);
         uint256 framesBetween = bound(_salt, 1, 1_000_000);
         uint256 timeBetween = framesBetween * secondsPerSlot * slotsPerEpoch * epochsPerFrame;
-        uint256 maxIncrease = debug_maxIncrease(river.getReportingBounds(), river.totalUnderlyingSupply(), timeBetween);
+        uint256 maxIncrease = debug_maxIncrease(river.getReportBounds(), river.totalUnderlyingSupply(), timeBetween);
 
         clr.validatorsCount = depositCount;
         clr.validatorsBalance = 32 ether * (depositCount);
@@ -1843,7 +1868,7 @@ contract RiverV1TestsReport_HEAVY_FUZZING is Test, BytesGenerator {
         _salt = _next(_salt);
         uint256 framesBetween = bound(_salt, 1, 1_000_000);
         uint256 timeBetween = framesBetween * secondsPerSlot * slotsPerEpoch * epochsPerFrame;
-        uint256 maxIncrease = debug_maxIncrease(river.getReportingBounds(), river.totalUnderlyingSupply(), timeBetween);
+        uint256 maxIncrease = debug_maxIncrease(river.getReportBounds(), river.totalUnderlyingSupply(), timeBetween);
 
         clr.validatorsCount = depositCount;
         clr.validatorsBalance = 32 ether * (depositCount);
@@ -1876,7 +1901,7 @@ contract RiverV1TestsReport_HEAVY_FUZZING is Test, BytesGenerator {
         _salt = _next(_salt);
         uint256 framesBetween = bound(_salt, 1, 1_000_000);
         uint256 timeBetween = framesBetween * secondsPerSlot * slotsPerEpoch * epochsPerFrame;
-        uint256 maxIncrease = debug_maxIncrease(river.getReportingBounds(), river.totalUnderlyingSupply(), timeBetween);
+        uint256 maxIncrease = debug_maxIncrease(river.getReportBounds(), river.totalUnderlyingSupply(), timeBetween);
 
         clr.validatorsCount = depositCount;
         clr.validatorsBalance = 32 ether * (depositCount);
@@ -1914,7 +1939,7 @@ contract RiverV1TestsReport_HEAVY_FUZZING is Test, BytesGenerator {
         _salt = _next(_salt);
         uint256 framesBetween = bound(_salt, 1, 1_000_000);
         uint256 timeBetween = framesBetween * secondsPerSlot * slotsPerEpoch * epochsPerFrame;
-        uint256 maxIncrease = debug_maxIncrease(river.getReportingBounds(), river.totalUnderlyingSupply(), timeBetween);
+        uint256 maxIncrease = debug_maxIncrease(river.getReportBounds(), river.totalUnderlyingSupply(), timeBetween);
 
         clr.validatorsCount = depositCount;
         clr.validatorsBalance = 32 ether * (depositCount);

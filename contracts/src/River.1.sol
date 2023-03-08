@@ -17,16 +17,15 @@ import "./Administrable.sol";
 
 import "./libraries/LibAllowlistMasks.sol";
 
-import "./state/river/DailyCommittableLimits.sol";
-import "./state/river/BalanceToRedeem.sol";
 import "./state/river/AllowlistAddress.sol";
 import "./state/river/RedeemManagerAddress.sol";
 import "./state/river/OperatorsRegistryAddress.sol";
 import "./state/river/CollectorAddress.sol";
-import "./state/river/GlobalFee.sol";
-import "./state/river/MetadataURI.sol";
 import "./state/river/ELFeeRecipientAddress.sol";
 import "./state/river/CoverageFundAddress.sol";
+import "./state/river/BalanceToRedeem.sol";
+import "./state/river/GlobalFee.sol";
+import "./state/river/MetadataURI.sol";
 
 /// @title River (v1)
 /// @author Kiln
@@ -121,6 +120,7 @@ contract RiverV1 is
         OracleManagerV1.initOracleManagerV1(_oracleAddress);
     }
 
+    /// @inheritdoc IRiverV1
     function initRiverV1_1(
         address _redeemManager,
         uint64 epochsPerFrame,
@@ -401,6 +401,30 @@ contract RiverV1 is
         }
     }
 
+    /// @notice Sets the balance to deposit, but not yet committed
+    /// @param newBalanceToDeposit The new balance to deposit value
+    function _setBalanceToDeposit(uint256 newBalanceToDeposit) internal override(UserDepositManagerV1) {
+        emit SetBalanceToDeposit(BalanceToDeposit.get(), newBalanceToDeposit);
+        BalanceToDeposit.set(newBalanceToDeposit);
+    }
+
+    /// @notice Sets the balance to redeem, to be used to satisfy redeem requests on the redeem manager
+    /// @param newBalanceToRedeem The new balance to redeem value
+    function _setBalanceToRedeem(uint256 newBalanceToRedeem) internal {
+        emit SetBalanceToRedeem(BalanceToRedeem.get(), newBalanceToRedeem);
+        BalanceToRedeem.set(newBalanceToRedeem);
+    }
+
+    /// @notice Sets the committed balance, ready to be deposited to the consensus layer
+    /// @param newCommittedBalance The new committed balance value
+    function _setCommittedBalance(uint256 newCommittedBalance) internal override(ConsensusLayerDepositManagerV1) {
+        emit SetBalanceCommittedToDeposit(CommittedBalance.get(), newCommittedBalance);
+        CommittedBalance.set(newCommittedBalance);
+    }
+
+    /// @notice Pulls funds from the Withdraw contract, and adds funds to deposit and redeem balances
+    /// @param skimmedEthAmount The new amount of skimmed eth to pull
+    /// @param exitedEthAmount The new amount of exited eth to pull
     function _pullCLFunds(uint256 skimmedEthAmount, uint256 exitedEthAmount) internal override {
         uint256 currentBalance = address(this).balance;
         uint256 totalAmountToPull = skimmedEthAmount + exitedEthAmount;
@@ -417,21 +441,8 @@ contract RiverV1 is
         }
     }
 
-    function _setBalanceToDeposit(uint256 newBalanceToDeposit) internal override(UserDepositManagerV1) {
-        emit SetBalanceToDeposit(BalanceToDeposit.get(), newBalanceToDeposit);
-        BalanceToDeposit.set(newBalanceToDeposit);
-    }
-
-    function _setBalanceToRedeem(uint256 newBalanceToRedeem) internal {
-        emit SetBalanceToRedeem(BalanceToRedeem.get(), newBalanceToRedeem);
-        BalanceToRedeem.set(newBalanceToRedeem);
-    }
-
-    function _setCommittedBalance(uint256 newCommittedBalance) internal override(ConsensusLayerDepositManagerV1) {
-        emit SetBalanceCommittedToDeposit(CommittedBalance.get(), newCommittedBalance);
-        CommittedBalance.set(newCommittedBalance);
-    }
-
+    /// @notice Pulls funds from the redeem manager exceeding eth buffer
+    /// @param max The maximum amount to pull
     function _pullRedeemManagerExceedingEth(uint256 max) internal override returns (uint256) {
         uint256 currentBalance = address(this).balance;
         IRedeemManagerV1(RedeemManagerAddress.get()).pullExceedingEth(max);
@@ -443,6 +454,7 @@ contract RiverV1 is
         return collectedExceedingEth;
     }
 
+    /// @notice Use the balance to redeem to report a withdrawal event on the redeem manager
     function _reportWithdrawToRedeemManager() internal override {
         IRedeemManagerV1 redeemManager_ = IRedeemManagerV1(RedeemManagerAddress.get());
         uint256 underlyingAssetBalance = _assetBalance();
@@ -478,10 +490,15 @@ contract RiverV1 is
         }
     }
 
+    /// @notice Change the stored stopped validator counts for all the operators
+    /// @param stoppedValidatorCounts The list of stopped validator counts
     function _setReportedStoppedValidatorCounts(uint32[] memory stoppedValidatorCounts) internal override {
         IOperatorsRegistryV1(OperatorsRegistryAddress.get()).reportStoppedValidatorCounts(stoppedValidatorCounts);
     }
 
+    /// @notice Requests exits of validators after possibly rebalancing deposit and redeem balances
+    /// @param exitingBalance The currently exiting funds, soon to be received on the execution layer
+    /// @param depositToRedeemRebalancingAllowed True if rebalancing from deposit to redeem is allowed
     function _requestExitsBasedOnRedeemDemandAfterRebalancings(
         uint256 exitingBalance,
         bool depositToRedeemRebalancingAllowed
@@ -524,13 +541,13 @@ contract RiverV1 is
                         DEPOSIT_SIZE
                     );
 
-                    // call operators registry to request exit to validators
                     or.pickNextValidatorsToExit(validatorCountToExit);
                 }
             }
         }
     }
 
+    /// @notice Skims the redeem balance and sends remaining funds to the deposit balance
     function _skimExcessBalanceToRedeem() internal override {
         uint256 availableBalanceToRedeem = BalanceToRedeem.get();
 
@@ -541,6 +558,8 @@ contract RiverV1 is
         }
     }
 
+    /// @notice Commits the deposit balance up to the allowed daily limit
+    /// @param period The period between current and last report
     function _commitBalanceToDeposit(uint256 period) internal override {
         uint256 underlyingAssetBalance = _assetBalance();
         uint256 currentBalanceToDeposit = BalanceToDeposit.get();

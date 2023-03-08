@@ -403,48 +403,6 @@ contract FirewallTests is BytesGenerator, Test {
         vm.stopPrank();
     }
 
-    // function testGovernorCanSetCLSpec() public {
-    //     vm.startPrank(riverGovernorDAO);
-    //     firewalledOracle.setCLSpec(2, 3, 4, 5);
-    //     assert(oracle.getCLSpec().epochsPerFrame == 2);
-    //     vm.stopPrank();
-    // }
-
-    // function testExecutorCanSetCLSpec() public {
-    //     vm.startPrank(executor);
-    //     firewalledOracle.setCLSpec(2, 3, 4, 5);
-    //     assert(oracle.getCLSpec().epochsPerFrame == 2);
-    //     vm.stopPrank();
-    // }
-
-    // function testRandomCallerCannotSetCLSpec() public {
-    //     vm.startPrank(joe);
-    //     vm.expectRevert(unauthJoe);
-    //     firewalledOracle.setCLSpec(2, 3, 4, 5);
-    //     vm.stopPrank();
-    // }
-
-    // function testGovernorCanSetCLBounds() public {
-    //     vm.startPrank(riverGovernorDAO);
-    //     firewalledOracle.setReportBounds(2, 3);
-    //     assert(oracle.getReportBounds().annualAprUpperBound == 2);
-    //     vm.stopPrank();
-    // }
-
-    // function testExecutorCanSetCLBounds() public {
-    //     vm.startPrank(executor);
-    //     firewalledOracle.setReportBounds(2, 3);
-    //     assert(oracle.getReportBounds().annualAprUpperBound == 2);
-    //     vm.stopPrank();
-    // }
-
-    // function testRandomCallerCannotSetCLBounds() public {
-    //     vm.startPrank(joe);
-    //     vm.expectRevert(unauthJoe);
-    //     firewalledOracle.setReportBounds(2, 3);
-    //     vm.stopPrank();
-    // }
-
     /// @dev convert function sig, of form "functionName(arg1Type,arg2Type)", to the 4 bytes used in
     ///      a contract call, accessible at msg.sig
     function getSelector(string memory functionSig) internal pure returns (bytes4) {

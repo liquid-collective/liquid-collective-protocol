@@ -18,6 +18,12 @@ interface IOracleManagerV1 {
     /// @param roundId Round identifier
     event ConsensusLayerDataUpdate(uint256 validatorCount, uint256 validatorTotalBalance, bytes32 roundId);
 
+    /// @notice The Consensus Layer Spec is changed
+    /// @param epochsPerFrame The number of epochs inside a frame
+    /// @param slotsPerEpoch The number of slots inside an epoch
+    /// @param secondsPerSlot The number of seconds inside a slot
+    /// @param genesisTime The genesis timestamp
+    /// @param epochsToAssumedFinality The number of epochs before an epoch is considered final
     event SetSpec(
         uint64 epochsPerFrame,
         uint64 slotsPerEpoch,
@@ -25,8 +31,15 @@ interface IOracleManagerV1 {
         uint64 genesisTime,
         uint64 epochsToAssumedFinality
     );
+
+    /// @notice The Report Bounds are changed
+    /// @param annualAprUpperBound The reporting upper bound
+    /// @param relativeLowerBound The reporting lower bound
     event SetBounds(uint256 annualAprUpperBound, uint256 relativeLowerBound);
 
+    /// @notice The provided report has beend processed
+    /// @param report The report that was provided
+    /// @param trace The trace structure providing more insights on internals
     event ProcessedConsensusLayerReport(
         IOracleManagerV1.ConsensusLayerReport report, ConsensusLayerDataReportingTrace trace
     );
@@ -36,20 +49,43 @@ interface IOracleManagerV1 {
     /// @param depositedValidatorCount The number of deposits performed by the system
     error InvalidValidatorCountReport(uint256 providedValidatorCount, uint256 depositedValidatorCount);
 
+    /// @notice Thrown when an invalid epoch was reported
+    /// @param epoch Invalid epoch
     error InvalidEpoch(uint256 epoch);
+
+    /// @notice The balance increase is higher than the maximum allowed by the upper bound
+    /// @param prevTotalEth The previous total balance
+    /// @param postTotalEth The post-report total balance
+    /// @param timeElapsed The time in seconds since last report
+    /// @param annualAprUpperBound The upper bound value that was used
     error TotalValidatorBalanceIncreaseOutOfBound(
         uint256 prevTotalEth, uint256 postTotalEth, uint256 timeElapsed, uint256 annualAprUpperBound
     );
+
+    /// @notice The balance decrease is higher than the maximum allowed by the lower bound
+    /// @param prevTotalEth The previous total balance
+    /// @param postTotalEth The post-report total balance
+    /// @param timeElapsed The time in seconds since last report
+    /// @param relativeLowerBound The lower bound value that was used
     error TotalValidatorBalanceDecreaseOutOfBound(
         uint256 prevTotalEth, uint256 postTotalEth, uint256 timeElapsed, uint256 relativeLowerBound
     );
+
+    /// @notice The total exited balance decreased
+    /// @param currentValidatorsExitedBalance The current exited balance
+    /// @param newValidatorsExitedBalance The new exited balance
     error InvalidDecreasingValidatorsExitedBalance(
         uint256 currentValidatorsExitedBalance, uint256 newValidatorsExitedBalance
     );
+
+    /// @notice The total skimmed balance decreased
+    /// @param currentValidatorsSkimmedBalance The current exited balance
+    /// @param newValidatorsSkimmedBalance The new exited balance
     error InvalidDecreasingValidatorsSkimmedBalance(
-        uint256 currentValidatorsExitedBalance, uint256 newValidatorsExitedBalance
+        uint256 currentValidatorsSkimmedBalance, uint256 newValidatorsSkimmedBalance
     );
 
+    /// @notice Trace structure emitted via logs during reporting
     struct ConsensusLayerDataReportingTrace {
         uint256 rewards;
         uint256 pulledELFees;
@@ -57,6 +93,7 @@ interface IOracleManagerV1 {
         uint256 pulledCoverageFunds;
     }
 
+    /// @notice The format of the oracle report
     struct ConsensusLayerReport {
         uint256 epoch;
         uint256 validatorsBalance;
@@ -81,12 +118,9 @@ interface IOracleManagerV1 {
     /// @return The CL validator count
     function getCLValidatorCount() external view returns (uint256);
 
-    /// @notice Set the oracle address
-    /// @param _oracleAddress Address of the oracle
-    function setOracle(address _oracleAddress) external;
-
-    function setConsensusLayerData(ConsensusLayerReport calldata report) external;
-
+    /// @notice Verifies if the provided epoch is valid
+    /// @param epoch The epoch to lookup
+    /// @return True if valid
     function isValidEpoch(uint256 epoch) external view returns (bool);
 
     /// @notice Retrieve the block timestamp
@@ -123,4 +157,20 @@ interface IOracleManagerV1 {
     /// @notice Retrieve the report bounds
     /// @return The report bounds
     function getReportBounds() external view returns (ReportBounds.ReportBoundsStruct memory);
+
+    /// @notice Set the oracle address
+    /// @param _oracleAddress Address of the oracle
+    function setOracle(address _oracleAddress) external;
+
+    /// @notice Set the consensus layer spec
+    /// @param newValue The new consensus layer spec value
+    function setCLSpec(CLSpec.CLSpecStruct calldata newValue) external;
+
+    /// @notice Set the report bounds
+    /// @param newValue The new report bounds value
+    function setReportBounds(ReportBounds.ReportBoundsStruct calldata newValue) external;
+
+    /// @notice Performs all the reporting logics
+    /// @param report The consensus layer report structure
+    function setConsensusLayerData(ConsensusLayerReport calldata report) external;
 }
