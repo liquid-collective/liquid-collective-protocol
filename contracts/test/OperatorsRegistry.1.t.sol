@@ -1760,7 +1760,9 @@ contract OperatorsRegistryV1TestDistribution is Test {
         assert(operatorsRegistry.getTotalRequestedExitsCount() == 1);
     }
 
-    event UpdatedRequestedUponStopped(uint256 indexed index, uint32 oldRequestedExits, uint32 newRequestedExits);
+    event UpdatedRequestedValidatorExitsUponStopped(
+        uint256 indexed index, uint32 oldRequestedExits, uint32 newRequestedExits
+    );
 
     function testExitDistributionWithCatchupToStopped() external {
         vm.startPrank(admin);
@@ -1826,15 +1828,15 @@ contract OperatorsRegistryV1TestDistribution is Test {
         OperatorsRegistryInitializableV1(address(operatorsRegistry)).sudoStoppedValidatorCounts(stoppedValidatorCounts);
 
         vm.expectEmit(true, true, true, true);
-        emit UpdatedRequestedUponStopped(0, 10, 11);
+        emit UpdatedRequestedValidatorExitsUponStopped(0, 10, 11);
         vm.expectEmit(true, true, true, true);
-        emit UpdatedRequestedUponStopped(1, 10, 12);
+        emit UpdatedRequestedValidatorExitsUponStopped(1, 10, 12);
         vm.expectEmit(true, true, true, true);
-        emit UpdatedRequestedUponStopped(2, 10, 13);
+        emit UpdatedRequestedValidatorExitsUponStopped(2, 10, 13);
         vm.expectEmit(true, true, true, true);
-        emit UpdatedRequestedUponStopped(3, 10, 14);
+        emit UpdatedRequestedValidatorExitsUponStopped(3, 10, 14);
         vm.expectEmit(true, true, true, true);
-        emit UpdatedRequestedUponStopped(4, 10, 15);
+        emit UpdatedRequestedValidatorExitsUponStopped(4, 10, 15);
         vm.expectEmit(true, true, true, true);
         emit RequestedValidatorExits(0, 23);
         vm.expectEmit(true, true, true, true);

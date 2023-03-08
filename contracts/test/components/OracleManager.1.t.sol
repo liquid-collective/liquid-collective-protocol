@@ -333,7 +333,7 @@ contract OracleManagerV1Tests is Test {
         vm.expectEmit(true, true, true, true);
         emit Internal_PullCoverageFunds(v.maxIncrease - v.elFeesAvailable - v.exceedingEth, v.coverageFundAvailable);
         vm.expectEmit(true, true, true, true);
-        emit Internal_OnEarnings(v.elFeesAvailable + v.exceedingEth + v.clr.validatorsSkimmedBalance);
+        emit Internal_OnEarnings(v.elFeesAvailable + v.clr.validatorsSkimmedBalance);
         vm.expectEmit(true, true, true, true);
         emit Internal_RequestExitsBasedOnRedeemDemandAfterRebalancings(v.clr.validatorsExitingBalance, false, 0);
         vm.expectEmit(true, true, true, true);

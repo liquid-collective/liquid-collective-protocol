@@ -103,7 +103,9 @@ interface IOperatorsRegistryV1 {
     /// @param index The operator index
     /// @param oldRequestedExits The old requested exit count
     /// @param newRequestedExits The new requested exit count
-    event UpdatedRequestedUponStopped(uint256 indexed index, uint32 oldRequestedExits, uint32 newRequestedExits);
+    event UpdatedRequestedValidatorExitsUponStopped(
+        uint256 indexed index, uint32 oldRequestedExits, uint32 newRequestedExits
+    );
 
     /// @notice The total requested exit has been updated
     /// @param previousTotalRequestedExits The old total requested exit value

@@ -628,7 +628,9 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
             uint32 currentStoppedCount = _getStoppedValidatorsCountFromRawArray(stoppedValidators, idx);
 
             if (currentRequestedExits < currentStoppedCount) {
-                emit UpdatedRequestedUponStopped(operators[idx].index, currentRequestedExits, currentStoppedCount);
+                emit UpdatedRequestedValidatorExitsUponStopped(
+                    operators[idx].index, currentRequestedExits, currentStoppedCount
+                );
                 operators[idx].picked += currentStoppedCount - currentRequestedExits;
                 totalRequestedExitsValue += currentStoppedCount - currentRequestedExits;
             }

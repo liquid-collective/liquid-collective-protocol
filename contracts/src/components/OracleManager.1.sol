@@ -365,8 +365,6 @@ abstract contract OracleManagerV1 is IOracleManagerV1 {
             // we pull the funds from the exceeding eth buffer of the redeem manager
             vars.trace.pulledRedeemManagerExceedingEthBuffer =
                 _pullRedeemManagerExceedingEth(vars.availableAmountToUpperBound);
-            // we update the rewards
-            vars.trace.rewards += vars.trace.pulledRedeemManagerExceedingEthBuffer;
             // we update the available amount accordingly
             vars.availableAmountToUpperBound -= vars.trace.pulledRedeemManagerExceedingEthBuffer;
         }
