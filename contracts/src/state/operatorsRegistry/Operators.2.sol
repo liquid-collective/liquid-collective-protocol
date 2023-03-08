@@ -155,11 +155,7 @@ library OperatorsV2 {
     /// @dev populated up to the fundable operator count, also returned by the method
     /// @return The list of active and fundable operators
     /// @return The count of active and fundable operators
-    function getAllFundable(uint32[] storage stoppedValidatorCounts)
-        internal
-        view
-        returns (CachedOperator[] memory, uint256)
-    {
+    function getAllFundable() internal view returns (CachedOperator[] memory, uint256) {
         bytes32 slot = OPERATORS_SLOT;
 
         SlotOperator storage r;
@@ -172,6 +168,8 @@ library OperatorsV2 {
         uint256 fundableCount = 0;
         uint256 operatorCount = r.value.length;
         CachedOperator[] memory fundableOperators = new CachedOperator[](operatorCount);
+
+        uint32[] storage stoppedValidatorCounts = getStoppedValidators();
 
         for (uint256 idx = 0; idx < operatorCount;) {
             if (
@@ -282,5 +280,42 @@ library OperatorsV2 {
     /// @return True if active and exitable
     function _hasExitableKeys(OperatorsV2.Operator memory _operator) internal pure returns (bool) {
         return (_operator.active && _operator.funded > _operator.requestedExits);
+    }
+
+    /// @notice Storage slot of the Stopped Validators
+    bytes32 internal constant STOPPED_VALIDATORS_SLOT = bytes32(uint256(keccak256("river.state.stoppedValidators")) - 1);
+
+    struct SlotStoppedValidators {
+        uint32[] value;
+    }
+
+    /// @notice Retrieve the storage pointer of the Stopped Validators array
+    /// @return The Stopped Validators storage pointer
+    function getStoppedValidators() internal view returns (uint32[] storage) {
+        bytes32 slot = STOPPED_VALIDATORS_SLOT;
+
+        SlotStoppedValidators storage r;
+
+        // solhint-disable-next-line no-inline-assembly
+        assembly {
+            r.slot := slot
+        }
+
+        return r.value;
+    }
+
+    /// @notice Sets the entire stopped validators array
+    /// @param value The new stopped validators array
+    function setRawStoppedValidators(uint32[] memory value) internal {
+        bytes32 slot = STOPPED_VALIDATORS_SLOT;
+
+        SlotStoppedValidators storage r;
+
+        // solhint-disable-next-line no-inline-assembly
+        assembly {
+            r.slot := slot
+        }
+
+        r.value = value;
     }
 }
