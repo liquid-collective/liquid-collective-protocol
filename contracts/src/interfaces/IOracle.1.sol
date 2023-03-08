@@ -48,11 +48,17 @@ interface IOracleV1 {
     /// @param report The raw report structure
     /// @param voteCount The vote count
     event ReportedConsensusLayerData(
-        address indexed member, bytes32 indexed variant, IRiverV1.ConsensusLayerReport report, uint256 voteCount
+        address indexed member,
+        bytes32 indexed variant,
+        IRiverV1.ConsensusLayerReport report,
+        uint256 voteCount,
+        uint256 quorum
     );
 
     /// @notice The last reported epoch has changed
     event SetLastReportedEpoch(uint256 lastReportedEpoch);
+
+    /// @notice Cleared reporting data
     event ClearedReporting();
 
     /// @notice The provided epoch is too old compared to the expected epoch id
@@ -60,8 +66,13 @@ interface IOracleV1 {
     /// @param minExpectedEpochId The minimum epoch id expected
     error EpochTooOld(uint256 providedEpochId, uint256 minExpectedEpochId);
 
+    /// @notice Thrown when the reported epoch is invalid
+    /// @param epoch The invalid epoch
     error InvalidEpoch(uint256 epoch);
 
+    /// @notice Thrown when the report indexs fetched is out of bounds
+    /// @param index Requested index
+    /// @param length Size of the variant array
     error ReportIndexOutOfBounds(uint256 index, uint256 length);
 
     /// @notice The member already reported on the given epoch id

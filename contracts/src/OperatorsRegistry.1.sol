@@ -151,7 +151,7 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
     }
 
     /// @inheritdoc IOperatorsRegistryV1
-    function getTotalRequestedExitsCount() external view returns (uint256) {
+    function getTotalRequestedValidatorExitsCount() external view returns (uint256) {
         return TotalRequestedExits.get();
     }
 
@@ -707,7 +707,7 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
 
         if (totalRequestedExitsValue != totalRequestedExitsCopy) {
             TotalRequestedExits.set(totalRequestedExitsValue);
-            emit SetTotalRequestedExits(totalRequestedExitsCopy, totalRequestedExitsValue);
+            emit SetTotalRequestedValidatorExits(totalRequestedExitsCopy, totalRequestedExitsValue);
         }
     }
 }

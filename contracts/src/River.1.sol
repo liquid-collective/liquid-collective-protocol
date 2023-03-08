@@ -527,7 +527,7 @@ contract RiverV1 is
                 IOperatorsRegistryV1 or = IOperatorsRegistryV1(OperatorsRegistryAddress.get());
 
                 uint256 totalStoppedValidatorCount = or.getTotalStoppedValidatorCount();
-                uint256 totalRequestedExitsCount = or.getTotalRequestedExitsCount();
+                uint256 totalRequestedExitsCount = or.getTotalRequestedValidatorExitsCount();
 
                 uint256 preExitingBalance = (
                     totalRequestedExitsCount > totalStoppedValidatorCount

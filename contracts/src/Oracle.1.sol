@@ -249,7 +249,7 @@ contract OracleV1 is IOracleV1, Initializable, Administrable {
         // we retrieve the quorum to stack
         uint256 quorum = Quorum.get();
 
-        emit ReportedConsensusLayerData(msg.sender, variant, report, variantVotes + 1);
+        emit ReportedConsensusLayerData(msg.sender, variant, report, variantVotes + 1, quorum);
 
         // if adding this vote reaches quorum
         if (variantVotes + 1 >= quorum) {

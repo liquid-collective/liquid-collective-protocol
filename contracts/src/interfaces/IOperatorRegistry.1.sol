@@ -108,9 +108,11 @@ interface IOperatorsRegistryV1 {
     );
 
     /// @notice The total requested exit has been updated
-    /// @param previousTotalRequestedExits The old total requested exit value
-    /// @param newTotalRequestedExits The new total requested exit value
-    event SetTotalRequestedExits(uint256 previousTotalRequestedExits, uint256 newTotalRequestedExits);
+    /// @param previousTotalRequestedValidatorExits The old total requested exit value
+    /// @param newTotalRequestedValidatorExits The new total requested exit value
+    event SetTotalRequestedValidatorExits(
+        uint256 previousTotalRequestedValidatorExits, uint256 newTotalRequestedValidatorExits
+    );
 
     /// @notice The calling operator is inactive
     /// @param index The operator index
@@ -193,7 +195,7 @@ interface IOperatorsRegistryV1 {
 
     /// @notice Retrieve the total requested exit count
     /// @return The total requested exit count
-    function getTotalRequestedExitsCount() external view returns (uint256);
+    function getTotalRequestedValidatorExitsCount() external view returns (uint256);
 
     /// @notice Retrieve the raw stopped validators array from storage
     /// @return The stopped validator array
