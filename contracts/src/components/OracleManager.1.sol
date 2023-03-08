@@ -6,10 +6,9 @@ import "../interfaces/IRedeemManager.1.sol";
 
 import "../libraries/LibUint256.sol";
 
+import "../state/river/LastConsensusLayerReport.sol";
 import "../state/river/OracleAddress.sol";
 import "../state/river/CLValidatorTotalBalance.sol";
-import "../state/river/CLValidatorTotalSkimmedBalance.sol";
-import "../state/river/CLValidatorTotalExitedBalance.sol";
 import "../state/river/CLValidatorCount.sol";
 import "../state/river/DepositedValidatorCount.sol";
 import "../state/river/LastReportedEpochId.sol";
@@ -130,6 +129,17 @@ abstract contract OracleManagerV1 is IOracleManagerV1 {
             })
         );
         emit SetBounds(annualAprUpperBound, relativeLowerBound);
+
+        IOracleManagerV1.StoredConsensusLayerReport memory storedReport;
+        storedReport.epoch = LastReportedEpochId.get();
+        storedReport.validatorsBalance = CLValidatorTotalBalance.get();
+        storedReport.validatorsSkimmedBalance = 0;
+        storedReport.validatorsExitedBalance = 0;
+        storedReport.validatorsExitingBalance = 0;
+        storedReport.validatorsCount = uint32(CLValidatorCount.get());
+        storedReport.bufferRebalancingMode = false;
+        storedReport.slashingContainmentMode = false;
+        LastConsensusLayerReport.set(storedReport);
     }
 
     /// @inheritdoc IOracleManagerV1
@@ -139,12 +149,12 @@ abstract contract OracleManagerV1 is IOracleManagerV1 {
 
     /// @inheritdoc IOracleManagerV1
     function getCLValidatorTotalBalance() external view returns (uint256) {
-        return CLValidatorTotalBalance.get();
+        return LastConsensusLayerReport.get().validatorsBalance;
     }
 
     /// @inheritdoc IOracleManagerV1
     function getCLValidatorCount() external view returns (uint256) {
-        return CLValidatorCount.get();
+        return LastConsensusLayerReport.get().validatorsCount;
     }
 
     /// @inheritdoc IOracleManagerV1
@@ -152,7 +162,8 @@ abstract contract OracleManagerV1 is IOracleManagerV1 {
         CLSpec.CLSpecStruct memory cls = CLSpec.get();
         uint256 currentEpoch = _currentEpoch(cls);
         return LibUint256.max(
-            LastReportedEpochId.get() + cls.epochsPerFrame, currentEpoch - (currentEpoch % cls.epochsPerFrame)
+            LastConsensusLayerReport.get().epoch + cls.epochsPerFrame,
+            currentEpoch - (currentEpoch % cls.epochsPerFrame)
         );
     }
 
@@ -168,7 +179,7 @@ abstract contract OracleManagerV1 is IOracleManagerV1 {
 
     /// @inheritdoc IOracleManagerV1
     function getLastCompletedEpochId() external view returns (uint256) {
-        return LastReportedEpochId.get();
+        return LastConsensusLayerReport.get().epoch;
     }
 
     /// @inheritdoc IOracleManagerV1
@@ -198,6 +209,11 @@ abstract contract OracleManagerV1 is IOracleManagerV1 {
     /// @inheritdoc IOracleManagerV1
     function getReportBounds() external view returns (ReportBounds.ReportBoundsStruct memory) {
         return ReportBounds.get();
+    }
+
+    /// @inheritdoc IOracleManagerV1
+    function getLastConsensusLayerReport() external view returns (IOracleManagerV1.StoredConsensusLayerReport memory) {
+        return LastConsensusLayerReport.get();
     }
 
     /// @inheritdoc IOracleManagerV1
@@ -259,29 +275,35 @@ abstract contract OracleManagerV1 is IOracleManagerV1 {
 
         ConsensusLayerDataReportingVariables memory vars;
 
-        vars.lastReportExitedBalance = CLValidatorTotalExitedBalance.get();
+        {
+            IOracleManagerV1.StoredConsensusLayerReport storage lastStoredReport = LastConsensusLayerReport.get();
 
-        // we ensure that the reported total exited balance is not decreasing
-        if (report.validatorsExitedBalance < vars.lastReportExitedBalance) {
-            revert InvalidDecreasingValidatorsExitedBalance(
-                vars.lastReportExitedBalance, report.validatorsExitedBalance
-            );
+            vars.lastReportExitedBalance = lastStoredReport.validatorsExitedBalance;
+
+            // we ensure that the reported total exited balance is not decreasing
+            if (report.validatorsExitedBalance < vars.lastReportExitedBalance) {
+                revert InvalidDecreasingValidatorsExitedBalance(
+                    vars.lastReportExitedBalance, report.validatorsExitedBalance
+                );
+            }
+
+            // we compute the exited amount increase by taking the delta between reports
+            vars.exitedAmountIncrease = report.validatorsExitedBalance - vars.lastReportExitedBalance;
+
+            vars.lastReportSkimmedBalance = lastStoredReport.validatorsSkimmedBalance;
+
+            // we ensure that the reported total skimmed balance is not decreasing
+            if (report.validatorsSkimmedBalance < vars.lastReportSkimmedBalance) {
+                revert InvalidDecreasingValidatorsSkimmedBalance(
+                    vars.lastReportSkimmedBalance, report.validatorsSkimmedBalance
+                );
+            }
+
+            // we compute the new skimmed amount by taking the delta between reports
+            vars.skimmedAmountIncrease = report.validatorsSkimmedBalance - vars.lastReportSkimmedBalance;
+
+            vars.timeElapsedSinceLastReport = _timeBetweenEpochs(cls, lastStoredReport.epoch, report.epoch);
         }
-
-        // we compute the exited amount increase by taking the delta between reports
-        vars.exitedAmountIncrease = report.validatorsExitedBalance - vars.lastReportExitedBalance;
-
-        vars.lastReportSkimmedBalance = CLValidatorTotalSkimmedBalance.get();
-
-        // we ensure that the reported total skimmed balance is not decreasing
-        if (report.validatorsSkimmedBalance < vars.lastReportSkimmedBalance) {
-            revert InvalidDecreasingValidatorsSkimmedBalance(
-                vars.lastReportSkimmedBalance, report.validatorsSkimmedBalance
-            );
-        }
-
-        // we compute the new skimmed amount by taking the delta between reports
-        vars.skimmedAmountIncrease = report.validatorsSkimmedBalance - vars.lastReportSkimmedBalance;
 
         // we retrieve the current total underlying balance before any reporting data is applied to the system
         vars.preReportUnderlyingBalance = _assetBalance();
@@ -293,14 +315,20 @@ abstract contract OracleManagerV1 is IOracleManagerV1 {
             _pullCLFunds(vars.skimmedAmountIncrease, vars.exitedAmountIncrease);
         }
 
-        vars.timeElapsedSinceLastReport = _timeBetweenEpochs(cls, LastReportedEpochId.get(), report.epoch);
+        {
+            // we update the system parameters, this will have an impact on how the total underlying balance is computed
+            IOracleManagerV1.StoredConsensusLayerReport memory storedReport;
 
-        // we update the system parameters, this will have an impact on how the total underlying balance is computed
-        CLValidatorCount.set(report.validatorsCount);
-        CLValidatorTotalBalance.set(report.validatorsBalance);
-        CLValidatorTotalExitedBalance.set(report.validatorsExitedBalance);
-        CLValidatorTotalSkimmedBalance.set(report.validatorsSkimmedBalance);
-        LastReportedEpochId.set(report.epoch);
+            storedReport.epoch = report.epoch;
+            storedReport.validatorsBalance = report.validatorsBalance;
+            storedReport.validatorsSkimmedBalance = report.validatorsSkimmedBalance;
+            storedReport.validatorsExitedBalance = report.validatorsExitedBalance;
+            storedReport.validatorsExitingBalance = report.validatorsExitingBalance;
+            storedReport.validatorsCount = report.validatorsCount;
+            storedReport.bufferRebalancingMode = report.bufferRebalancingMode;
+            storedReport.slashingContainmentMode = report.slashingContainmentMode;
+            LastConsensusLayerReport.set(storedReport);
+        }
         _setReportedStoppedValidatorCounts(report.stoppedValidatorCountPerOperator);
 
         ReportBounds.ReportBoundsStruct memory rb = ReportBounds.get();
@@ -416,7 +444,7 @@ abstract contract OracleManagerV1 is IOracleManagerV1 {
     /// @return True if valid
     function _isValidEpoch(CLSpec.CLSpecStruct memory cls, uint256 epoch) internal view returns (bool) {
         return (
-            _currentEpoch(cls) >= epoch + cls.epochsToAssumedFinality && epoch >= LastReportedEpochId.get()
+            _currentEpoch(cls) >= epoch + cls.epochsToAssumedFinality && epoch >= LastConsensusLayerReport.get().epoch
                 && epoch % cls.epochsPerFrame == 0
         );
     }

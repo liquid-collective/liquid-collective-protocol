@@ -26,6 +26,7 @@ import "./state/river/CoverageFundAddress.sol";
 import "./state/river/BalanceToRedeem.sol";
 import "./state/river/GlobalFee.sol";
 import "./state/river/MetadataURI.sol";
+import "./state/river/LastConsensusLayerReport.sol";
 
 /// @title River (v1)
 /// @author Kiln
@@ -389,15 +390,16 @@ contract RiverV1 is
     /// @notice Overridden handler called whenever the total balance of ETH is requested
     /// @return The current total asset balance managed by River
     function _assetBalance() internal view override(SharesManagerV1, OracleManagerV1) returns (uint256) {
-        uint256 clValidatorCount = CLValidatorCount.get();
+        IOracleManagerV1.StoredConsensusLayerReport storage storedReport = LastConsensusLayerReport.get();
+        uint256 clValidatorCount = storedReport.validatorsCount;
         uint256 depositedValidatorCount = DepositedValidatorCount.get();
         if (clValidatorCount < depositedValidatorCount) {
-            return CLValidatorTotalBalance.get() + BalanceToDeposit.get() + CommittedBalance.get()
+            return storedReport.validatorsBalance + BalanceToDeposit.get() + CommittedBalance.get()
                 + BalanceToRedeem.get()
                 + (depositedValidatorCount - clValidatorCount) * ConsensusLayerDepositManagerV1.DEPOSIT_SIZE;
         } else {
             return
-                CLValidatorTotalBalance.get() + BalanceToDeposit.get() + CommittedBalance.get() + BalanceToRedeem.get();
+                storedReport.validatorsBalance + BalanceToDeposit.get() + CommittedBalance.get() + BalanceToRedeem.get();
         }
     }
 

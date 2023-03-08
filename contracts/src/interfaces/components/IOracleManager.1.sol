@@ -106,6 +106,18 @@ interface IOracleManagerV1 {
         bool slashingContainmentMode;
     }
 
+    /// @notice The format of the oracle report in storage
+    struct StoredConsensusLayerReport {
+        uint256 epoch;
+        uint256 validatorsBalance;
+        uint256 validatorsSkimmedBalance;
+        uint256 validatorsExitedBalance;
+        uint256 validatorsExitingBalance;
+        uint32 validatorsCount;
+        bool bufferRebalancingMode;
+        bool slashingContainmentMode;
+    }
+
     /// @notice Get oracle address
     /// @return The oracle address
     function getOracle() external view returns (address);
@@ -157,6 +169,10 @@ interface IOracleManagerV1 {
     /// @notice Retrieve the report bounds
     /// @return The report bounds
     function getReportBounds() external view returns (ReportBounds.ReportBoundsStruct memory);
+
+    /// @notice Retrieve the last consensus layer report
+    /// @return The stored consensus layer report
+    function getLastConsensusLayerReport() external view returns (IOracleManagerV1.StoredConsensusLayerReport memory);
 
     /// @notice Set the oracle address
     /// @param _oracleAddress Address of the oracle

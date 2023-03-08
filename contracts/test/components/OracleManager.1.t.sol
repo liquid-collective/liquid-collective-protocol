@@ -12,11 +12,11 @@ import "../../src/state/shared/AdministratorAddress.sol";
 
 contract OracleManagerV1ExposeInitializer is OracleManagerV1 {
     function supersedeReportedBalanceSum(uint256 amount) external {
-        CLValidatorTotalBalance.set(amount);
+        LastConsensusLayerReport.get().validatorsBalance = amount;
     }
 
     function supersedeReportedValidatorCount(uint256 amount) external {
-        CLValidatorCount.set(amount);
+        LastConsensusLayerReport.get().validatorsCount = uint32(amount);
     }
 
     function supersedeDepositedValidatorCount(uint256 amount) external {
@@ -91,8 +91,8 @@ contract OracleManagerV1ExposeInitializer is OracleManagerV1 {
     }
 
     function _assetBalance() internal view override returns (uint256 result) {
-        result = (DepositedValidatorCount.get() - CLValidatorCount.get()) * 32 ether + CLValidatorTotalBalance.get()
-            + amountToDeposit + amountToRedeem;
+        result = (DepositedValidatorCount.get() - LastConsensusLayerReport.get().validatorsCount) * 32 ether
+            + LastConsensusLayerReport.get().validatorsBalance + amountToDeposit + amountToRedeem;
     }
 
     function debug_getTotalUnderlyingBalance() external view returns (uint256) {

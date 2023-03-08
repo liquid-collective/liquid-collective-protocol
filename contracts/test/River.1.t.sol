@@ -1717,6 +1717,8 @@ contract RiverV1TestsReport_HEAVY_FUZZING is Test, BytesGenerator {
         uint256 timeBetween = framesBetween * secondsPerSlot * slotsPerEpoch * epochsPerFrame;
         uint256 maxIncrease = debug_maxIncrease(river.getReportBounds(), river.totalUnderlyingSupply(), timeBetween);
 
+        console.log(maxIncrease);
+
         vm.prank(address(oracle));
         river.setConsensusLayerData(clr);
 
