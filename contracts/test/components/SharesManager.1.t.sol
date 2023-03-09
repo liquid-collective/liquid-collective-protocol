@@ -61,6 +61,8 @@ contract SharesManagerV1Tests is Test {
 
     error Denied(address _account);
 
+    event SetTotalSupply(uint256 totalSupply);
+
     function setUp() public {
         sharesManager = new SharesManagerPublicDeal();
     }
@@ -111,6 +113,33 @@ contract SharesManagerV1Tests is Test {
         assert(sharesManager.balanceOf(_user) == 300 ether);
 
         SharesManagerPublicDeal(payable(address(sharesManager))).setValidatorBalance(440 ether);
+        SharesManagerPublicDeal(payable(address(sharesManager))).mint(_anotherUser, 100 ether);
+
+        assert(sharesManager.balanceOf(_user) == 300 ether);
+        assert(sharesManager.balanceOf(_anotherUser) == 88235294117647058823);
+
+        assert(sharesManager.balanceOfUnderlying(_user) == 340 ether);
+        assert(sharesManager.balanceOfUnderlying(_anotherUser) == 99999999999999999999); // rounding issues with solidity, diff is negligible
+    }
+
+    function testTotalSupplyEvent(uint256 _userSalt, uint256 _anotherUserSalt) public {
+        address _user = uf._new(_userSalt);
+        address _anotherUser = uf._new(_anotherUserSalt);
+        _anotherUser = address(uint160(_user) + 1);
+        SharesManagerPublicDeal(payable(address(sharesManager))).setValidatorBalance(0 ether);
+
+        assert(sharesManager.balanceOf(_user) == 0);
+
+        SharesManagerPublicDeal(payable(address(sharesManager))).setValidatorBalance(300 ether);
+        vm.expectEmit(true, true, true, true);
+        emit SetTotalSupply(300 ether);
+        SharesManagerPublicDeal(payable(address(sharesManager))).mint(_user, 300 ether);
+
+        assert(sharesManager.balanceOf(_user) == 300 ether);
+
+        SharesManagerPublicDeal(payable(address(sharesManager))).setValidatorBalance(440 ether);
+        vm.expectEmit(true, true, true, true);
+        emit SetTotalSupply(388235294117647058823);
         SharesManagerPublicDeal(payable(address(sharesManager))).mint(_anotherUser, 100 ether);
 
         assert(sharesManager.balanceOf(_user) == 300 ether);

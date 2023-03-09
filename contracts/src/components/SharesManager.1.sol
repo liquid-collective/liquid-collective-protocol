@@ -235,15 +235,6 @@ abstract contract SharesManagerV1 is ISharesManagerV1 {
         }
     }
 
-    /// @notice Internal utility to mint shares without any conversion, and emits a mint Transfer event
-    /// @param _owner Account that should receive the new shares
-    /// @param _value Amount of shares to mint
-    function _mintRawShares(address _owner, uint256 _value) internal {
-        Shares.set(Shares.get() + _value);
-        SharesPerOwner.set(_owner, SharesPerOwner.get(_owner) + _value);
-        emit Transfer(address(0), _owner, _value);
-    }
-
     /// @notice Internal utility to retrieve the amount of shares per owner
     /// @param _owner Account to be checked
     /// @return The balance of the account in shares
@@ -251,11 +242,28 @@ abstract contract SharesManagerV1 is ISharesManagerV1 {
         return SharesPerOwner.get(_owner);
     }
 
-    // rework beyond this point
+    /// @notice Internal utility to mint shares without any conversion, and emits a mint Transfer event
+    /// @param _owner Account that should receive the new shares
+    /// @param _value Amount of shares to mint
+    function _mintRawShares(address _owner, uint256 _value) internal {
+        _setTotalSupply(Shares.get() + _value);
+        SharesPerOwner.set(_owner, SharesPerOwner.get(_owner) + _value);
+        emit Transfer(address(0), _owner, _value);
+    }
 
+    /// @notice Internal utility to burn shares without any conversion, and emits a burn Transfer event
+    /// @param _owner Account that should burn its shares
+    /// @param _value Amount of shares to burn
     function _burnRawShares(address _owner, uint256 _value) internal {
-        Shares.set(Shares.get() - _value);
+        _setTotalSupply(Shares.get() - _value);
         SharesPerOwner.set(_owner, SharesPerOwner.get(_owner) - _value);
         emit Transfer(_owner, address(0), _value);
+    }
+
+    /// @notice Internal utility to set the total supply and emit an event
+    /// @param newTotalSupply The new total supply value
+    function _setTotalSupply(uint256 newTotalSupply) internal {
+        Shares.set(newTotalSupply);
+        emit SetTotalSupply(newTotalSupply);
     }
 }
