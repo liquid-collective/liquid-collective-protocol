@@ -5,6 +5,7 @@ import "./interfaces/IAllowlist.1.sol";
 import "./interfaces/IRiver.1.sol";
 import "./interfaces/IRedeemManager.1.sol";
 import "./libraries/LibAllowlistMasks.sol";
+import "./libraries/LibUint256.sol";
 import "./Initializable.sol";
 
 import "./state/shared/RiverAddress.sol";
@@ -143,6 +144,16 @@ contract RedeemManagerV1 is Initializable, IRedeemManagerV1 {
         emit ReportedWithdrawal(height, lsETHWithdrawable, msgValue, withdrawalEventId);
     }
 
+    event SentExceedingEth(uint256 amount);
+
+    /// @inheritdoc IRedeemManagerV1
+    function pullExceedingEth(uint256 max) external onlyRiver {
+        uint256 amountToSend = LibUint256.min(BufferedExceedingEth.get(), max);
+        _river().sendRedeemManagerExceedingFunds{value: amountToSend}();
+        BufferedExceedingEth.set(BufferedExceedingEth.get() - amountToSend);
+        emit SentExceedingEth(amountToSend);
+    }
+
     /// @notice Internal utility to load and cast the River address
     /// @return The casted river address
     function _river() internal view returns (IRiverV1) {
@@ -203,8 +214,6 @@ contract RedeemManagerV1 is Initializable, IRedeemManagerV1 {
                 min = mid;
             }
         }
-        // we have eliminated all code paths that could lead to this line so we will never get to this return
-        // statement but it's needed for the compiler warnings
         return min;
     }
 
@@ -231,7 +240,7 @@ contract RedeemManagerV1 is Initializable, IRedeemManagerV1 {
         // amount of the last withdrawal element, we know that the redeem request is not yet satisfied
         if (
             WithdrawalStack.get().length == 0
-                || (lastWithdrawalEvent.height + lastWithdrawalEvent.amount) < redeemRequest.height
+                || (lastWithdrawalEvent.height + lastWithdrawalEvent.amount) <= redeemRequest.height
         ) {
             return RESOLVE_UNSATISFIED;
         }

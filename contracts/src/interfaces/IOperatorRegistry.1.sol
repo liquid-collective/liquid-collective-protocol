@@ -99,6 +99,21 @@ interface IOperatorsRegistryV1 {
     /// @param deferred True if event has been replayed in the context of a migration
     event FundedValidatorKeys(uint256 indexed index, bytes[] publicKeys, bool deferred);
 
+    /// @notice The requested exit count has been update to fill the gap with the reported stopped count
+    /// @param index The operator index
+    /// @param oldRequestedExits The old requested exit count
+    /// @param newRequestedExits The new requested exit count
+    event UpdatedRequestedValidatorExitsUponStopped(
+        uint256 indexed index, uint32 oldRequestedExits, uint32 newRequestedExits
+    );
+
+    /// @notice The total requested exit has been updated
+    /// @param previousTotalRequestedValidatorExits The old total requested exit value
+    /// @param newTotalRequestedValidatorExits The new total requested exit value
+    event SetTotalRequestedValidatorExits(
+        uint256 previousTotalRequestedValidatorExits, uint256 newTotalRequestedValidatorExits
+    );
+
     /// @notice The calling operator is inactive
     /// @param index The operator index
     error InactiveOperator(uint256 index);
@@ -177,6 +192,10 @@ interface IOperatorsRegistryV1 {
     /// @notice Retrieve the total stopped validator count
     /// @return The total stopped validator count
     function getTotalStoppedValidatorCount() external view returns (uint32);
+
+    /// @notice Retrieve the total requested exit count
+    /// @return The total requested exit count
+    function getTotalRequestedValidatorExitsCount() external view returns (uint256);
 
     /// @notice Retrieve the raw stopped validators array from storage
     /// @return The stopped validator array
@@ -266,7 +285,11 @@ interface IOperatorsRegistryV1 {
     /// @param _count Max amount of keys requested
     /// @return publicKeys An array of public keys
     /// @return signatures An array of signatures linked to the public keys
-    function pickNextValidators(uint256 _count)
+    function pickNextValidatorsToDeposit(uint256 _count)
         external
         returns (bytes[] memory publicKeys, bytes[] memory signatures);
+
+    /// @notice Emits events for operators to exit validators
+    /// @param _count Max amount of exits to request
+    function pickNextValidatorsToExit(uint256 _count) external;
 }

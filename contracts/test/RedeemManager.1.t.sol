@@ -790,7 +790,7 @@ contract RedeemManagerV1Tests is Test {
         resolvedRedeemRequests = redeemManager.resolveRedeemRequests(redeemRequestIds);
 
         assertEq(resolvedRedeemRequests.length, 1);
-        assertEq(resolvedRedeemRequests[0], 0);
+        assertEq(resolvedRedeemRequests[0], -1);
 
         {
             RedeemQueue.RedeemRequest memory rr = redeemManager.getRedeemRequestDetails(0);

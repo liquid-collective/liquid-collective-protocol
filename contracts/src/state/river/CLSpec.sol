@@ -17,6 +17,8 @@ library CLSpec {
         uint64 secondsPerSlot;
         /// @custom:attribute The block timestamp of the first consensus layer block
         uint64 genesisTime;
+        /// @custom:attribute The count of epochs before considering an epoch final on-chain
+        uint64 epochsToAssumedFinality;
     }
 
     /// @notice The structure in storage

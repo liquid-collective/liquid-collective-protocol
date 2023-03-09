@@ -17,6 +17,7 @@ abstract contract UserDepositManagerV1 is IUserDepositManagerV1 {
     /// @param _recipient Address that receives the minted shares
     /// @param _amount Amount deposited
     function _onDeposit(address _depositor, address _recipient, uint256 _amount) internal virtual;
+    function _setBalanceToDeposit(uint256 newBalanceToDeposit) internal virtual;
 
     /// @inheritdoc IUserDepositManagerV1
     function deposit() external payable {

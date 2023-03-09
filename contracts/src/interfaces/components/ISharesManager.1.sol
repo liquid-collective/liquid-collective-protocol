@@ -7,6 +7,9 @@ import "openzeppelin-contracts/contracts/token/ERC20/IERC20.sol";
 /// @author Kiln
 /// @notice This interface exposes methods to handle the shares of the depositor and the ERC20 interface
 interface ISharesManagerV1 is IERC20 {
+    /// @notice Emitted when the total supply is changed
+    event SetTotalSupply(uint256 totalSupply);
+
     /// @notice Balance too low to perform operation
     error BalanceTooLow();
 

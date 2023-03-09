@@ -62,22 +62,6 @@ contract OracleV1Tests is Test {
         assert(oracle.getRiver() == address(oracleInput));
     }
 
-    function testGetTime(uint256 time) public {
-        vm.warp(time);
-        assert(oracle.getTime() == time);
-    }
-
-    function testGetEpochId(uint32 epochId) public {
-        vm.warp(GENESIS_TIME + (epochId * SECONDS_PER_SLOT * SLOTS_PER_EPOCH));
-        assert(oracle.getCurrentEpochId() == epochId);
-    }
-
-    function testGetFrameFirst(uint32 epochId) public {
-        uint256 frameFirst = (epochId / EPOCHS_PER_FRAME) * EPOCHS_PER_FRAME;
-        vm.warp(GENESIS_TIME + (epochId * SECONDS_PER_SLOT * SLOTS_PER_EPOCH));
-        assert(oracle.getFrameFirstEpochId(epochId) == frameFirst);
-    }
-
     function testSetQuorum(uint256 newMemberSalt, uint256 anotherMemberSalt) public {
         address newMember = uf._new(newMemberSalt);
         address anotherMember = uf._new(anotherMemberSalt);
@@ -185,30 +169,6 @@ contract OracleV1Tests is Test {
         assert(oracle.isMember(newMember) == false);
     }
 
-    function testRemoveMemberAfterReport(uint256 newMemberSalt, uint256 otherNewMemberSalt) public {
-        RiverMock(address(oracleInput)).sudoSetTotalShares(32 ether);
-        RiverMock(address(oracleInput)).sudoSetTotalSupply(32 ether);
-        address newMember = uf._new(newMemberSalt);
-        address otherNewMember = uf._new(otherNewMemberSalt);
-        assert(oracle.isMember(newMember) == false);
-        vm.prank(admin);
-        oracle.addMember(newMember, 1);
-        vm.prank(admin);
-        oracle.addMember(otherNewMember, 2);
-        assert(oracle.isMember(newMember) == true);
-        assert(oracle.getReportVariantsCount() == 0);
-        assert(oracle.getGlobalReportStatus() == 0);
-        vm.prank(newMember);
-        oracle.reportConsensusLayerData(0, 32 ether / 1e9, 1);
-        assert(oracle.getReportVariantsCount() == 1);
-        assert(oracle.getGlobalReportStatus() != 0);
-        vm.prank(admin);
-        oracle.removeMember(newMember, 1);
-        assert(oracle.isMember(newMember) == false);
-        assert(oracle.getReportVariantsCount() == 0);
-        assert(oracle.getGlobalReportStatus() == 0);
-    }
-
     function testEditMember(uint256 newMemberSalt, uint256 newAddressSalt) public {
         address newMember = uf._new(newMemberSalt);
         address newAddress = uf._new(newAddressSalt);
@@ -248,7 +208,7 @@ contract OracleV1Tests is Test {
         vm.stopPrank();
     }
 
-    function testEditMemberUnauthorized(uint256 newMemberSalt, uint256 newAddressSalt) public {
+    function testEditMemberAsMember(uint256 newMemberSalt, uint256 newAddressSalt) public {
         address newMember = uf._new(newMemberSalt);
         address newAddress = uf._new(newAddressSalt);
         vm.startPrank(admin);
@@ -259,7 +219,24 @@ contract OracleV1Tests is Test {
         assert(oracle.isMember(newAddress) == false);
         vm.stopPrank();
         vm.startPrank(newMember);
-        vm.expectRevert(abi.encodeWithSignature("Unauthorized(address)", newMember));
+        vm.expectEmit(true, true, true, true);
+        emit SetMember(newMember, newAddress);
+        oracle.setMember(newMember, newAddress);
+        vm.stopPrank();
+    }
+
+    function testEditMemberUnauthorized(uint256 newMemberSalt, uint256 newAddressSalt) public {
+        address newMember = uf._new(newMemberSalt);
+        address newAddress = uf._new(newAddressSalt);
+        vm.startPrank(admin);
+        assert(oracle.isMember(newMember) == false);
+        assert(oracle.isMember(newAddress) == false);
+        oracle.addMember(newMember, 1);
+        assert(oracle.isMember(newMember) == true);
+        assert(oracle.isMember(newAddress) == false);
+        vm.stopPrank();
+        vm.startPrank(newAddress);
+        vm.expectRevert(abi.encodeWithSignature("Unauthorized(address)", newAddress));
         oracle.setMember(newMember, newAddress);
         vm.stopPrank();
     }
@@ -290,27 +267,6 @@ contract OracleV1Tests is Test {
         oracle.removeMember(newMember, 0);
     }
 
-    function testSetCLSpec(uint64 _epochsPerFrame, uint64 _slotsPerEpoch, uint64 _secondsPerSlot, uint64 _genesisTime)
-        public
-    {
-        CLSpec.CLSpecStruct memory bs = oracle.getCLSpec();
-        assert(bs.epochsPerFrame == EPOCHS_PER_FRAME);
-        assert(bs.slotsPerEpoch == SLOTS_PER_EPOCH);
-        assert(bs.secondsPerSlot == SECONDS_PER_SLOT);
-        assert(bs.genesisTime == GENESIS_TIME);
-
-        vm.startPrank(admin);
-        vm.expectEmit(true, true, true, true);
-        emit SetSpec(_epochsPerFrame, _slotsPerEpoch, _secondsPerSlot, _genesisTime);
-        oracle.setCLSpec(_epochsPerFrame, _slotsPerEpoch, _secondsPerSlot, _genesisTime);
-
-        bs = oracle.getCLSpec();
-        assert(bs.epochsPerFrame == _epochsPerFrame);
-        assert(bs.slotsPerEpoch == _slotsPerEpoch);
-        assert(bs.secondsPerSlot == _secondsPerSlot);
-        assert(bs.genesisTime == _genesisTime);
-    }
-
     function testSetQuorumRedundant(uint256 oracleMemberSalt) public {
         address oracleMember = uf._new(oracleMemberSalt);
         vm.startPrank(admin);
@@ -327,323 +283,404 @@ contract OracleV1Tests is Test {
         vm.stopPrank();
     }
 
-    function testSetCLSpecUnauthorized(
-        uint256 _intruderSalt,
-        uint64 _epochsPerFrame,
-        uint64 _slotsPerEpoch,
-        uint64 _secondsPerSlot,
-        uint64 _genesisTime
-    ) public {
-        address _intruder = uf._new(_intruderSalt);
-        CLSpec.CLSpecStruct memory bs = oracle.getCLSpec();
-        assert(bs.epochsPerFrame == EPOCHS_PER_FRAME);
-        assert(bs.slotsPerEpoch == SLOTS_PER_EPOCH);
-        assert(bs.secondsPerSlot == SECONDS_PER_SLOT);
-        assert(bs.genesisTime == GENESIS_TIME);
-
-        vm.startPrank(_intruder);
-        vm.expectRevert(abi.encodeWithSignature("Unauthorized(address)", _intruder));
-        oracle.setCLSpec(_epochsPerFrame, _slotsPerEpoch, _secondsPerSlot, _genesisTime);
+    function _generateEmptyReport(uint256 stoppedValidatorsCountElements)
+        internal
+        pure
+        returns (IOracleManagerV1.ConsensusLayerReport memory clr)
+    {
+        clr.stoppedValidatorCountPerOperator = new uint32[](stoppedValidatorsCountElements);
     }
 
-    function testSetCLBounds(uint256 _up, uint64 _down) public {
-        ReportBounds.ReportBoundsStruct memory bounds = oracle.getReportBounds();
-        assert(bounds.annualAprUpperBound == UPPER_BOUND);
-        assert(bounds.relativeLowerBound == LOWER_BOUND);
-        vm.startPrank(admin);
+    event DebugReceivedReport(IOracleManagerV1.ConsensusLayerReport report);
+
+    function testValidReport(uint256 _salt) external {
+        address member = uf._new(_salt);
+
+        assertEq(oracle.getQuorum(), 0);
+        assertEq(oracle.isMember(member), false);
+
+        vm.prank(admin);
+        oracle.addMember(member, 1);
+
+        assertEq(oracle.getQuorum(), 1);
+        assertEq(oracle.isMember(member), true);
+
+        IOracleManagerV1.ConsensusLayerReport memory report = _generateEmptyReport(2);
+
+        vm.prank(member);
         vm.expectEmit(true, true, true, true);
-        emit SetBounds(_up, _down);
-        oracle.setReportBounds(_up, _down);
-
-        bounds = oracle.getReportBounds();
-        assert(bounds.annualAprUpperBound == _up);
-        assert(bounds.relativeLowerBound == _down);
+        emit DebugReceivedReport(report);
+        oracle.reportConsensusLayerData(report);
     }
 
-    function testSetCLBoundsUnauthorized(uint256 _intruderSalt, uint256 _up, uint64 _down) public {
-        address _intruder = uf._new(_intruderSalt);
-        ReportBounds.ReportBoundsStruct memory bounds = oracle.getReportBounds();
-        assert(bounds.annualAprUpperBound == UPPER_BOUND);
-        assert(bounds.relativeLowerBound == LOWER_BOUND);
+    function testValidReportMultiVote(uint256 _salt) external {
+        address member0 = uf._new(_salt);
+        _salt = uint256(keccak256(abi.encode(_salt)));
+        address member1 = uf._new(_salt);
 
-        vm.startPrank(_intruder);
-        vm.expectRevert(abi.encodeWithSignature("Unauthorized(address)", _intruder));
-        oracle.setReportBounds(_up, _down);
+        assertEq(oracle.getQuorum(), 0);
+        assertEq(oracle.isMember(member0), false);
+        assertEq(oracle.isMember(member1), false);
+
+        vm.prank(admin);
+        oracle.addMember(member0, 1);
+        vm.prank(admin);
+        oracle.addMember(member1, 2);
+
+        assertEq(oracle.getQuorum(), 2);
+        assertEq(oracle.isMember(member0), true);
+        assertEq(oracle.isMember(member1), true);
+
+        IOracleManagerV1.ConsensusLayerReport memory report = _generateEmptyReport(2);
+
+        vm.prank(member0);
+        oracle.reportConsensusLayerData(report);
+
+        vm.prank(member1);
+        vm.expectEmit(true, true, true, true);
+        emit DebugReceivedReport(report);
+        oracle.reportConsensusLayerData(report);
     }
 
-    function testReportCLEpochTooOld(uint256 oracleMemberSalt, uint64 timeFromGenesis) public {
-        address oracleMember = uf._new(oracleMemberSalt);
-        vm.warp(uint256(GENESIS_TIME) + uint256(timeFromGenesis));
-        vm.startPrank(admin);
-        oracle.addMember(oracleMember, 1);
-        vm.stopPrank();
+    function testReportUnauthorized(uint256 _salt) external {
+        address member = uf._new(_salt);
 
-        uint256 epochId = oracle.getCurrentEpochId();
+        assertEq(oracle.getQuorum(), 0);
+        assertEq(oracle.isMember(member), false);
 
-        uint256 frameFirstEpochId = oracle.getFrameFirstEpochId(epochId);
-        if (frameFirstEpochId > 0) {
-            vm.startPrank(oracleMember);
-            oracle.reportConsensusLayerData(frameFirstEpochId, 0, 0);
-            uint256 oldFrameFirstEpochId = oracle.getFrameFirstEpochId(frameFirstEpochId + EPOCHS_PER_FRAME - 1);
-            vm.expectRevert(
-                abi.encodeWithSignature(
-                    "EpochTooOld(uint256,uint256)", oldFrameFirstEpochId, frameFirstEpochId + EPOCHS_PER_FRAME
-                )
-            );
-            oracle.reportConsensusLayerData(oldFrameFirstEpochId, 0, 0);
-        }
+        IOracleManagerV1.ConsensusLayerReport memory report = _generateEmptyReport(2);
+
+        vm.prank(member);
+        vm.expectRevert(abi.encodeWithSignature("Unauthorized(address)", member));
+        oracle.reportConsensusLayerData(report);
     }
 
-    function testReportCLNotFrameFirst(uint256 oracleMemberSalt, uint64 timeFromGenesis) public {
-        address oracleMember = uf._new(oracleMemberSalt);
-        vm.warp(uint256(GENESIS_TIME) + uint256(timeFromGenesis));
-        vm.startPrank(admin);
-        oracle.addMember(oracleMember, 1);
-        vm.stopPrank();
+    function testReportEpochTooOld(uint256 _salt) external {
+        address member = uf._new(_salt);
 
-        uint256 epochId = oracle.getCurrentEpochId();
+        assertEq(oracle.getQuorum(), 0);
+        assertEq(oracle.isMember(member), false);
 
-        uint256 frameFirstEpochId = oracle.getFrameFirstEpochId(epochId);
-        if (frameFirstEpochId > 0) {
-            vm.startPrank(oracleMember);
-            vm.expectRevert(
-                abi.encodeWithSignature(
-                    "NotFrameFirstEpochId(uint256,uint256)", frameFirstEpochId - 1, frameFirstEpochId
-                )
-            );
-            oracle.reportConsensusLayerData(frameFirstEpochId - 1, 0, 0);
-        }
+        vm.prank(admin);
+        oracle.addMember(member, 1);
+
+        assertEq(oracle.getQuorum(), 1);
+        assertEq(oracle.isMember(member), true);
+
+        IOracleManagerV1.ConsensusLayerReport memory report = _generateEmptyReport(2);
+
+        vm.prank(member);
+        vm.expectEmit(true, true, true, true);
+        emit DebugReceivedReport(report);
+        oracle.reportConsensusLayerData(report);
+
+        vm.prank(member);
+        vm.expectRevert(abi.encodeWithSignature("EpochTooOld(uint256,uint256)", report.epoch, report.epoch + 1));
+        oracle.reportConsensusLayerData(report);
     }
 
-    function testReportCLUnauthorized(uint256 oracleMemberSalt, uint64 timeFromGenesis) public {
-        address oracleMember = uf._new(oracleMemberSalt);
-        vm.warp(uint256(GENESIS_TIME) + uint256(timeFromGenesis));
+    function testReportEpochInvalidEpoch(uint256 _salt) external {
+        address member = uf._new(_salt);
 
-        uint256 epochId = oracle.getCurrentEpochId();
+        assertEq(oracle.getQuorum(), 0);
+        assertEq(oracle.isMember(member), false);
 
-        uint256 frameFirstEpochId = oracle.getFrameFirstEpochId(epochId);
-        if (frameFirstEpochId > 0) {
-            vm.startPrank(oracleMember);
-            vm.expectRevert(abi.encodeWithSignature("Unauthorized(address)", oracleMember));
-            oracle.reportConsensusLayerData(frameFirstEpochId, 0, 0);
-        }
+        vm.prank(admin);
+        oracle.addMember(member, 1);
+
+        assertEq(oracle.getQuorum(), 1);
+        assertEq(oracle.isMember(member), true);
+
+        IOracleManagerV1.ConsensusLayerReport memory report = _generateEmptyReport(2);
+
+        RiverMock(address(oracleInput)).sudoSetInvalidEpoch(report.epoch);
+
+        vm.prank(member);
+        vm.expectRevert(abi.encodeWithSignature("InvalidEpoch(uint256)", report.epoch));
+        oracle.reportConsensusLayerData(report);
     }
 
-    function testReportCLTwice(uint256 oracleMemberSalt, uint64 timeFromGenesis) public {
-        address oracleMember = uf._new(oracleMemberSalt);
-        vm.warp(uint256(GENESIS_TIME) + uint256(timeFromGenesis));
-        vm.startPrank(admin);
-        oracle.addMember(oracleMember, 1);
-        address secondOracleMember;
-        unchecked {
-            secondOracleMember = address(uint160(oracleMember) + 1);
-        }
-        oracle.addMember(secondOracleMember, 2);
-        vm.stopPrank();
+    function testValidReportAlreadyReported(uint256 _salt) external {
+        address member0 = uf._new(_salt);
+        _salt = uint256(keccak256(abi.encode(_salt)));
+        address member1 = uf._new(_salt);
 
-        uint256 epochId = oracle.getCurrentEpochId();
+        assertEq(oracle.getQuorum(), 0);
+        assertEq(oracle.isMember(member0), false);
+        assertEq(oracle.isMember(member1), false);
 
-        uint256 frameFirstEpochId = oracle.getFrameFirstEpochId(epochId);
-        if (frameFirstEpochId > 0) {
-            vm.startPrank(oracleMember);
-            oracle.reportConsensusLayerData(frameFirstEpochId, 0, 0);
-            vm.expectRevert(
-                abi.encodeWithSignature("AlreadyReported(uint256,address)", frameFirstEpochId, oracleMember)
-            );
-            oracle.reportConsensusLayerData(frameFirstEpochId, 0, 0);
-            vm.stopPrank();
-        }
+        vm.prank(admin);
+        oracle.addMember(member0, 1);
+        vm.prank(admin);
+        oracle.addMember(member1, 2);
+
+        assertEq(oracle.getQuorum(), 2);
+        assertEq(oracle.isMember(member0), true);
+        assertEq(oracle.isMember(member1), true);
+
+        IOracleManagerV1.ConsensusLayerReport memory report = _generateEmptyReport(2);
+
+        vm.prank(member0);
+        oracle.reportConsensusLayerData(report);
+
+        vm.prank(member0);
+        vm.expectRevert(abi.encodeWithSignature("AlreadyReported(uint256,address)", report.epoch, member0));
+        oracle.reportConsensusLayerData(report);
     }
 
-    function testAddMemberClearsReports(
-        uint256 oracleMemberOneSalt,
-        uint256 oracleMemberTwoSalt,
-        uint256 oracleMemberThreeSalt,
-        uint64 timeFromGenesis
-    ) public {
-        RiverMock(address(oracleInput)).sudoSetTotalShares(1e9);
-        RiverMock(address(oracleInput)).sudoSetTotalSupply(1e9);
+    event ClearedReporting();
 
-        address oracleMemberOne = uf._new(oracleMemberOneSalt);
-        address oracleMemberTwo = uf._new(oracleMemberTwoSalt);
-        address oracleMemberThree = uf._new(oracleMemberThreeSalt);
-        vm.warp(uint256(GENESIS_TIME) * 2 + uint256(timeFromGenesis));
-        vm.startPrank(admin);
-        oracle.addMember(oracleMemberOne, 1);
-        oracle.addMember(oracleMemberTwo, 2);
-        vm.stopPrank();
+    function testValidReportClearOnNewReport(uint256 _salt) external {
+        address member0 = uf._new(_salt);
+        _salt = uint256(keccak256(abi.encode(_salt)));
+        address member1 = uf._new(_salt);
 
-        uint256 epochId = oracle.getCurrentEpochId();
+        assertEq(oracle.getQuorum(), 0);
+        assertEq(oracle.isMember(member0), false);
+        assertEq(oracle.isMember(member1), false);
 
-        uint256 frameFirstEpochId = oracle.getFrameFirstEpochId(epochId);
-        if (frameFirstEpochId > 0) {
-            vm.startPrank(oracleMemberOne);
-            oracle.reportConsensusLayerData(frameFirstEpochId, 1, 1);
-            vm.stopPrank();
-            vm.startPrank(admin);
-            assert(oracle.getGlobalReportStatus() != 0);
-            oracle.addMember(oracleMemberThree, 3);
-            assert(oracle.getGlobalReportStatus() == 0);
-            vm.stopPrank();
-        }
+        vm.prank(admin);
+        oracle.addMember(member0, 1);
+        vm.prank(admin);
+        oracle.addMember(member1, 2);
+
+        assertEq(oracle.getQuorum(), 2);
+        assertEq(oracle.isMember(member0), true);
+        assertEq(oracle.isMember(member1), true);
+
+        IOracleManagerV1.ConsensusLayerReport memory report = _generateEmptyReport(2);
+
+        vm.prank(member0);
+        oracle.reportConsensusLayerData(report);
+
+        ++report.epoch;
+
+        vm.prank(member0);
+        vm.expectEmit(true, true, true, true);
+        emit ClearedReporting();
+        oracle.reportConsensusLayerData(report);
+        ++report.epoch;
+
+        vm.prank(member0);
+        vm.expectEmit(true, true, true, true);
+        emit ClearedReporting();
+        oracle.reportConsensusLayerData(report);
+
+        vm.prank(member1);
+        vm.expectEmit(true, true, true, true);
+        emit DebugReceivedReport(report);
+        oracle.reportConsensusLayerData(report);
     }
 
-    function testRemoveMemberClearsReports(
-        uint256 oracleMemberOneSalt,
-        uint256 oracleMemberTwoSalt,
-        uint256 oracleMemberThreeSalt,
-        uint64 timeFromGenesis
-    ) public {
-        RiverMock(address(oracleInput)).sudoSetTotalShares(1e9);
-        RiverMock(address(oracleInput)).sudoSetTotalSupply(1e9);
+    function testValidReportEpochTooOldAfterClear(uint256 _salt) external {
+        address member0 = uf._new(_salt);
+        _salt = uint256(keccak256(abi.encode(_salt)));
+        address member1 = uf._new(_salt);
 
-        address oracleMemberOne = uf._new(oracleMemberOneSalt);
-        address oracleMemberTwo = uf._new(oracleMemberTwoSalt);
-        address oracleMemberThree = uf._new(oracleMemberThreeSalt);
-        vm.warp(uint256(GENESIS_TIME) * 2 + uint256(timeFromGenesis));
-        vm.startPrank(admin);
-        oracle.addMember(oracleMemberOne, 1);
-        oracle.addMember(oracleMemberTwo, 2);
-        oracle.addMember(oracleMemberThree, 3);
-        vm.stopPrank();
+        assertEq(oracle.getQuorum(), 0);
+        assertEq(oracle.isMember(member0), false);
+        assertEq(oracle.isMember(member1), false);
 
-        uint256 epochId = oracle.getCurrentEpochId();
+        vm.prank(admin);
+        oracle.addMember(member0, 1);
+        vm.prank(admin);
+        oracle.addMember(member1, 2);
 
-        uint256 frameFirstEpochId = oracle.getFrameFirstEpochId(epochId);
-        if (frameFirstEpochId > 0) {
-            vm.startPrank(oracleMemberOne);
-            oracle.reportConsensusLayerData(frameFirstEpochId, 1, 1);
-            vm.stopPrank();
-            vm.startPrank(admin);
-            assert(oracle.getGlobalReportStatus() != 0);
-            oracle.removeMember(oracleMemberThree, 2);
-            assert(oracle.getGlobalReportStatus() == 0);
-            vm.stopPrank();
-        }
+        assertEq(oracle.getQuorum(), 2);
+        assertEq(oracle.isMember(member0), true);
+        assertEq(oracle.isMember(member1), true);
+
+        IOracleManagerV1.ConsensusLayerReport memory report = _generateEmptyReport(2);
+
+        vm.prank(member0);
+        oracle.reportConsensusLayerData(report);
+
+        ++report.epoch;
+
+        vm.prank(member0);
+        vm.expectEmit(true, true, true, true);
+        emit ClearedReporting();
+        oracle.reportConsensusLayerData(report);
+
+        --report.epoch;
+
+        vm.prank(member1);
+        vm.expectRevert(abi.encodeWithSignature("EpochTooOld(uint256,uint256)", report.epoch, report.epoch + 1));
+        oracle.reportConsensusLayerData(report);
     }
 
-    function testReportCL(uint64 timeFromGenesis, uint64 totalBalance, uint32 validatorCount) public {
-        RiverMock(address(oracleInput)).sudoSetTotalShares(1e9 * uint256(totalBalance));
-        RiverMock(address(oracleInput)).sudoSetTotalSupply(1e9 * uint256(totalBalance));
+    function testValidReportClearedAfterNewMemberAdded(uint256 _salt) external {
+        address member0 = uf._new(_salt);
+        _salt = uint256(keccak256(abi.encode(_salt)));
+        address member1 = uf._new(_salt);
+        _salt = uint256(keccak256(abi.encode(_salt)));
+        address member2 = uf._new(_salt);
 
-        vm.warp(uint256(GENESIS_TIME) + uint256(timeFromGenesis));
-        vm.startPrank(admin);
-        oracle.addMember(oracleOne, 1);
-        oracle.addMember(oracleTwo, 2);
-        vm.stopPrank();
+        assertEq(oracle.getQuorum(), 0);
+        assertEq(oracle.isMember(member0), false);
+        assertEq(oracle.isMember(member1), false);
+        assertEq(oracle.isMember(member2), false);
 
-        uint256 epochId = oracle.getCurrentEpochId();
+        vm.prank(admin);
+        oracle.addMember(member0, 1);
+        vm.prank(admin);
+        oracle.addMember(member1, 2);
 
-        uint256 frameFirstEpochId = oracle.getFrameFirstEpochId(epochId);
-        if (frameFirstEpochId > 0) {
-            assert(RiverMock(address(oracleInput)).validatorBalanceSum() == 0);
-            assert(RiverMock(address(oracleInput)).validatorCount() == 0);
-            assert(oracle.getExpectedEpochId() == 0);
-            assert(oracle.getMemberReportStatus(oracleOne) == false);
-            assert(oracle.getMemberReportStatus(oracleTwo) == false);
+        assertEq(oracle.getQuorum(), 2);
+        assertEq(oracle.isMember(member0), true);
+        assertEq(oracle.isMember(member1), true);
+        assertEq(oracle.isMember(member2), false);
 
-            vm.startPrank(oracleOne);
-            oracle.reportConsensusLayerData(frameFirstEpochId, totalBalance, validatorCount);
-            vm.stopPrank();
+        IOracleManagerV1.ConsensusLayerReport memory report = _generateEmptyReport(2);
 
-            assert(RiverMock(address(oracleInput)).validatorBalanceSum() == 0);
-            assert(RiverMock(address(oracleInput)).validatorCount() == 0);
-            assert(oracle.getExpectedEpochId() == frameFirstEpochId);
-            assert(oracle.getMemberReportStatus(oracleOne) == true);
-            assert(oracle.getMemberReportStatus(oracleTwo) == false);
+        vm.prank(member0);
+        oracle.reportConsensusLayerData(report);
 
-            vm.startPrank(oracleTwo);
-            oracle.reportConsensusLayerData(frameFirstEpochId, totalBalance, validatorCount);
-            vm.stopPrank();
-
-            assert(RiverMock(address(oracleInput)).validatorBalanceSum() == uint256(totalBalance) * 1e9);
-            assert(RiverMock(address(oracleInput)).validatorCount() == validatorCount);
-            assert(oracle.getExpectedEpochId() == frameFirstEpochId + EPOCHS_PER_FRAME);
-            assert(oracle.getMemberReportStatus(oracleOne) == false);
-            assert(oracle.getMemberReportStatus(oracleTwo) == false);
-        }
+        vm.prank(admin);
+        vm.expectEmit(true, true, true, true);
+        emit ClearedReporting();
+        oracle.addMember(member2, 3);
     }
 
-    function testBreakingUpperBoundLimit(uint64 timeFromGenesis, uint64 totalBalance, uint32 validatorCount) public {
-        RiverMock(address(oracleInput)).sudoSetTotalShares(1e9 * uint256(totalBalance));
-        RiverMock(address(oracleInput)).sudoSetTotalSupply(1e9 * uint256(totalBalance));
+    function testValidReportClearedAfterMemberRemoved(uint256 _salt) external {
+        address member0 = uf._new(_salt);
+        _salt = uint256(keccak256(abi.encode(_salt)));
+        address member1 = uf._new(_salt);
+        _salt = uint256(keccak256(abi.encode(_salt)));
+        address member2 = uf._new(_salt);
 
-        vm.warp(uint256(GENESIS_TIME) + uint256(timeFromGenesis));
-        vm.startPrank(admin);
-        oracle.addMember(oracleOne, 1);
-        vm.stopPrank();
+        assertEq(oracle.getQuorum(), 0);
+        assertEq(oracle.isMember(member0), false);
+        assertEq(oracle.isMember(member1), false);
+        assertEq(oracle.isMember(member2), false);
 
-        uint256 epochId = oracle.getCurrentEpochId();
+        vm.prank(admin);
+        oracle.addMember(member0, 1);
+        vm.prank(admin);
+        oracle.addMember(member1, 2);
+        vm.prank(admin);
+        oracle.addMember(member2, 3);
 
-        uint256 frameFirstEpochId = oracle.getFrameFirstEpochId(epochId);
-        if (frameFirstEpochId > 0) {
-            vm.startPrank(oracleOne);
-            oracle.reportConsensusLayerData(frameFirstEpochId, totalBalance, validatorCount);
-            vm.stopPrank();
+        assertEq(oracle.getQuorum(), 3);
+        assertEq(oracle.isMember(member0), true);
+        assertEq(oracle.isMember(member1), true);
+        assertEq(oracle.isMember(member2), true);
 
-            uint256 oneYearAway = uint256(GENESIS_TIME) + uint256(timeFromGenesis) + 364.9 days;
-            vm.warp(oneYearAway);
-            uint256 futureEpochId = oracle.getFrameFirstEpochId(oracle.getCurrentEpochId());
-            ReportBounds.ReportBoundsStruct memory bounds = oracle.getReportBounds();
+        IOracleManagerV1.ConsensusLayerReport memory report = _generateEmptyReport(2);
 
-            uint256 totalBalanceIncrease = ((totalBalance * bounds.annualAprUpperBound) / 10000) + 1;
+        vm.prank(member0);
+        oracle.reportConsensusLayerData(report);
 
-            if (uint256(totalBalance) + totalBalanceIncrease <= type(uint64).max) {
-                vm.startPrank(oracleOne);
-                vm.expectRevert(
-                    abi.encodeWithSignature(
-                        "TotalValidatorBalanceIncreaseOutOfBound(uint256,uint256,uint256,uint256)",
-                        1e9 * uint256(totalBalance),
-                        (uint256(totalBalance) + uint256(totalBalanceIncrease)) * 1e9,
-                        (futureEpochId - frameFirstEpochId) * SLOTS_PER_EPOCH * SECONDS_PER_SLOT,
-                        UPPER_BOUND
-                    )
-                );
-                oracle.reportConsensusLayerData(
-                    futureEpochId, totalBalance + uint64(totalBalanceIncrease), validatorCount
-                );
-                vm.stopPrank();
-            }
-        }
+        vm.prank(admin);
+        vm.expectEmit(true, true, true, true);
+        emit ClearedReporting();
+        oracle.removeMember(member2, 2);
     }
 
-    function testBreakingLowerBoundLimit(uint64 timeFromGenesis, uint64 totalBalance, uint32 validatorCount) public {
-        RiverMock(address(oracleInput)).sudoSetTotalShares(1e9 * uint256(totalBalance));
-        RiverMock(address(oracleInput)).sudoSetTotalSupply(1e9 * uint256(totalBalance));
+    function testIsValidEpochForwardsCallToRiver(uint256 _salt) external {
+        uint256 epoch = _salt;
+        bool result = bool(_salt % 2 == 0);
 
-        vm.warp(uint256(GENESIS_TIME) + uint256(timeFromGenesis));
-        vm.startPrank(admin);
-        oracle.addMember(oracleOne, 1);
-        vm.stopPrank();
+        bytes memory cdata = abi.encodeWithSelector(IRiverV1(oracleInput).isValidEpoch.selector, epoch);
+        bytes memory rdata = abi.encode(result);
+        vm.mockCall(address(oracleInput), cdata, rdata);
+        vm.expectCall(address(oracleInput), cdata);
+        assertEq(oracle.isValidEpoch(_salt), bool(_salt % 2 == 0));
+    }
 
-        uint256 epochId = oracle.getCurrentEpochId();
+    function testGetTimeForwardsCallToRiver(uint256 _salt) external {
+        uint256 result = _salt;
 
-        uint256 frameFirstEpochId = oracle.getFrameFirstEpochId(epochId);
-        if (totalBalance > 0) {
-            vm.startPrank(oracleOne);
-            oracle.reportConsensusLayerData(frameFirstEpochId, totalBalance, validatorCount);
-            vm.stopPrank();
+        bytes memory cdata = abi.encodeWithSelector(IRiverV1(oracleInput).getTime.selector);
+        bytes memory rdata = abi.encode(result);
+        vm.mockCall(address(oracleInput), cdata, rdata);
+        vm.expectCall(address(oracleInput), cdata);
+        assertEq(oracle.getTime(), result);
+    }
 
-            uint256 oneEpochAway =
-                uint256(GENESIS_TIME) + uint256(timeFromGenesis) + SLOTS_PER_EPOCH * SECONDS_PER_SLOT * EPOCHS_PER_FRAME;
-            vm.warp(oneEpochAway);
-            uint256 futureEpochId = oracle.getFrameFirstEpochId(oracle.getCurrentEpochId());
-            ReportBounds.ReportBoundsStruct memory bounds = oracle.getReportBounds();
+    function testGetExpectedEpochIdForwardsCallToRiver(uint256 _salt) external {
+        uint256 result = _salt;
 
-            uint256 totalBalanceDecrease = ((totalBalance * bounds.relativeLowerBound) / 10000) + 1;
+        bytes memory cdata = abi.encodeWithSelector(IRiverV1(oracleInput).getExpectedEpochId.selector);
+        bytes memory rdata = abi.encode(result);
+        vm.mockCall(address(oracleInput), cdata, rdata);
+        vm.expectCall(address(oracleInput), cdata);
+        assertEq(oracle.getExpectedEpochId(), result);
+    }
 
-            vm.startPrank(oracleOne);
-            vm.expectRevert(
-                abi.encodeWithSignature(
-                    "TotalValidatorBalanceDecreaseOutOfBound(uint256,uint256,uint256,uint256)",
-                    1e9 * uint256(totalBalance),
-                    (uint256(totalBalance) - uint256(totalBalanceDecrease)) * 1e9,
-                    (futureEpochId - frameFirstEpochId) * SLOTS_PER_EPOCH * SECONDS_PER_SLOT,
-                    LOWER_BOUND
-                )
-            );
-            oracle.reportConsensusLayerData(futureEpochId, totalBalance - uint64(totalBalanceDecrease), validatorCount);
-            vm.stopPrank();
-        }
+    function testGetLastCompletedEpochIdForwardsCallToRiver(uint256 _salt) external {
+        uint256 result = _salt;
+
+        bytes memory cdata = abi.encodeWithSelector(IRiverV1(oracleInput).getLastCompletedEpochId.selector);
+        bytes memory rdata = abi.encode(result);
+        vm.mockCall(address(oracleInput), cdata, rdata);
+        vm.expectCall(address(oracleInput), cdata);
+        assertEq(oracle.getLastCompletedEpochId(), result);
+    }
+
+    function testGetCurrentEpochIdForwardsCallToRiver(uint256 _salt) external {
+        uint256 result = _salt;
+
+        bytes memory cdata = abi.encodeWithSelector(IRiverV1(oracleInput).getCurrentEpochId.selector);
+        bytes memory rdata = abi.encode(result);
+        vm.mockCall(address(oracleInput), cdata, rdata);
+        vm.expectCall(address(oracleInput), cdata);
+        assertEq(oracle.getCurrentEpochId(), result);
+    }
+
+    function _next(uint256 _salt) internal pure returns (uint256) {
+        return uint256(keccak256(abi.encode(_salt)));
+    }
+
+    function testGetCLSpecForwardsCallToRiver(uint256 _salt) external {
+        CLSpec.CLSpecStruct memory cls;
+        cls.epochsPerFrame = uint64(_salt);
+        _salt = _next(_salt);
+        cls.slotsPerEpoch = uint64(_salt);
+        _salt = _next(_salt);
+        cls.secondsPerSlot = uint64(_salt);
+        _salt = _next(_salt);
+        cls.genesisTime = uint64(_salt);
+
+        bytes memory cdata = abi.encodeWithSelector(IRiverV1(oracleInput).getCLSpec.selector);
+        bytes memory rdata = abi.encode(cls);
+        vm.mockCall(address(oracleInput), cdata, rdata);
+        vm.expectCall(address(oracleInput), cdata);
+
+        CLSpec.CLSpecStruct memory retrievedCls = oracle.getCLSpec();
+
+        assertEq(retrievedCls.epochsPerFrame, cls.epochsPerFrame);
+        assertEq(retrievedCls.slotsPerEpoch, cls.slotsPerEpoch);
+        assertEq(retrievedCls.secondsPerSlot, cls.secondsPerSlot);
+        assertEq(retrievedCls.genesisTime, cls.genesisTime);
+    }
+
+    function testGetCurrentFrameForwardsCallToRiver(uint256 _salt) external {
+        uint256 startEpoch = _salt;
+        _salt = _next(_salt);
+        uint256 startTime = _salt;
+        _salt = _next(_salt);
+        uint256 endTime = _salt;
+
+        bytes memory cdata = abi.encodeWithSelector(IRiverV1(oracleInput).getCurrentFrame.selector);
+        bytes memory rdata = abi.encode(startEpoch, startTime, endTime);
+        vm.mockCall(address(oracleInput), cdata, rdata);
+        vm.expectCall(address(oracleInput), cdata);
+        (uint256 retrievedStartEpoch, uint256 retrievedStartTime, uint256 retrievedEndTime) = oracle.getCurrentFrame();
+        assertEq(retrievedStartEpoch, startEpoch);
+        assertEq(retrievedStartTime, startTime);
+        assertEq(retrievedEndTime, endTime);
+    }
+
+    function testGetFrameFirstEpochIdForwardsCallToRiver(uint256 _salt) external {
+        uint256 epoch = _salt;
+        _salt = _next(_salt);
+        uint256 result = _salt;
+
+        bytes memory cdata = abi.encodeWithSelector(IRiverV1(oracleInput).getFrameFirstEpochId.selector);
+        bytes memory rdata = abi.encode(result);
+        vm.mockCall(address(oracleInput), cdata, rdata);
+        vm.expectCall(address(oracleInput), cdata);
+        assertEq(oracle.getFrameFirstEpochId(epoch), result);
     }
 }

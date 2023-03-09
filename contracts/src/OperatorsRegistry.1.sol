@@ -11,7 +11,7 @@ import "./Administrable.sol";
 import "./state/operatorsRegistry/Operators.1.sol";
 import "./state/operatorsRegistry/Operators.2.sol";
 import "./state/operatorsRegistry/ValidatorKeys.sol";
-import "./state/operatorsRegistry/StoppedValidators.sol";
+import "./state/operatorsRegistry/TotalRequestedExits.sol";
 import "./state/shared/RiverAddress.sol";
 
 import "./state/migration/OperatorsRegistry_FundedKeyEventRebroadcasting_KeyIndex.sol";
@@ -143,11 +143,16 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
 
     /// @inheritdoc IOperatorsRegistryV1
     function getTotalStoppedValidatorCount() external view returns (uint32) {
-        uint32[] storage stoppedValidatorCounts = StoppedValidators.get();
+        uint32[] storage stoppedValidatorCounts = OperatorsV2.getStoppedValidators();
         if (stoppedValidatorCounts.length == 0) {
             return 0;
         }
         return stoppedValidatorCounts[0];
+    }
+
+    /// @inheritdoc IOperatorsRegistryV1
+    function getTotalRequestedValidatorExitsCount() external view returns (uint256) {
+        return TotalRequestedExits.get();
     }
 
     /// @inheritdoc IOperatorsRegistryV1
@@ -157,7 +162,7 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
 
     /// @inheritdoc IOperatorsRegistryV1
     function getStoppedValidatorCountPerOperator() external view returns (uint32[] memory) {
-        uint32[] memory completeList = StoppedValidators.get();
+        uint32[] memory completeList = OperatorsV2.getStoppedValidators();
         uint256 listLength = completeList.length;
 
         if (listLength > 0) {
@@ -396,12 +401,17 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
     }
 
     /// @inheritdoc IOperatorsRegistryV1
-    function pickNextValidators(uint256 _count)
+    function pickNextValidatorsToDeposit(uint256 _count)
         external
         onlyRiver
         returns (bytes[] memory publicKeys, bytes[] memory signatures)
     {
         return _pickNextValidatorsToDepositFromActiveOperators(_count);
+    }
+
+    /// @inheritdoc IOperatorsRegistryV1
+    function pickNextValidatorsToExit(uint256 _count) external onlyRiver {
+        return _pickNextValidatorsToExitFromActiveOperators(_count);
     }
 
     /// @notice Internal utiltiy to set the stopped validator array after sanity checks
@@ -425,7 +435,7 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
         if (total != count) {
             revert InvalidStoppedValidatorCountsSum();
         }
-        StoppedValidators.setRaw(stoppedValidatorCounts);
+        OperatorsV2.setRawStoppedValidators(stoppedValidatorCounts);
         emit UpdatedStoppedValidators(stoppedValidatorCounts);
     }
 
@@ -465,7 +475,17 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
     /// @param operatorIndex The operator index
     /// @return The count of stopped validators
     function _getStoppedValidatorsCount(uint256 operatorIndex) internal view returns (uint32) {
-        uint32[] storage stoppedValidatorCounts = StoppedValidators.get();
+        return _getStoppedValidatorsCountFromRawArray(OperatorsV2.getStoppedValidators(), operatorIndex);
+    }
+
+    /// @notice Internal utility to retrieve the stopped validator count from the raw storage array pointer
+    /// @param stoppedValidatorCounts The storage pointer
+    /// @param operatorIndex The index of the operator to lookup
+    function _getStoppedValidatorsCountFromRawArray(uint32[] storage stoppedValidatorCounts, uint256 operatorIndex)
+        internal
+        view
+        returns (uint32)
+    {
         if (operatorIndex + 1 >= stoppedValidatorCounts.length) {
             return 0;
         }
@@ -510,16 +530,16 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
         internal
         returns (bytes[] memory publicKeys, bytes[] memory signatures)
     {
-        OperatorsV2.CachedOperator[] memory operators = OperatorsV2.getAllFundable();
+        (OperatorsV2.CachedOperator[] memory operators, uint256 fundableOperatorCount) = OperatorsV2.getAllFundable();
 
-        if (operators.length == 0) {
+        if (fundableOperatorCount == 0) {
             return (new bytes[](0), new bytes[](0));
         }
 
         while (_count > 0) {
             // loop on operators to find the first that has fundable keys, taking into account previous loop round attributions
             uint256 selectedOperatorIndex = 0;
-            for (; selectedOperatorIndex < operators.length;) {
+            for (; selectedOperatorIndex < fundableOperatorCount;) {
                 if (_hasFundableKeys(operators[selectedOperatorIndex])) {
                     break;
                 }
@@ -529,12 +549,12 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
             }
 
             // if we reach the end, we have allocated all keys
-            if (selectedOperatorIndex == operators.length) {
+            if (selectedOperatorIndex == fundableOperatorCount) {
                 break;
             }
 
             // we start from the next operator and we try to find one that has fundable keys but a lower (funded + picked) - stopped value
-            for (uint256 idx = selectedOperatorIndex + 1; idx < operators.length;) {
+            for (uint256 idx = selectedOperatorIndex + 1; idx < fundableOperatorCount;) {
                 if (
                     _getActiveValidatorCountForDeposits(operators[idx])
                         < _getActiveValidatorCountForDeposits(operators[selectedOperatorIndex])
@@ -565,7 +585,7 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
         }
 
         // we loop on all operators
-        for (uint256 idx = 0; idx < operators.length; ++idx) {
+        for (uint256 idx = 0; idx < fundableOperatorCount; ++idx) {
             // if we picked keys on any operator, we extract the keys from storage and concatenate them in the result
             // we then update the funded value
             if (operators[idx].picked > 0) {
@@ -593,11 +613,31 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
     /// @notice Internal utility to pick the next validator counts to exit for every operator
     /// @param _count The count of validators to request exits for
     function _pickNextValidatorsToExitFromActiveOperators(uint256 _count) internal {
-        OperatorsV2.CachedOperator[] memory operators = OperatorsV2.getAllExitable();
-        uint256 operatorsLength = operators.length;
+        (OperatorsV2.CachedOperator[] memory operators, uint256 exitableOperatorCount) = OperatorsV2.getAllExitable();
+        uint32[] storage stoppedValidators = OperatorsV2.getStoppedValidators();
 
-        if (operatorsLength == 0) {
+        if (exitableOperatorCount == 0) {
             return;
+        }
+
+        uint256 totalRequestedExitsValue = TotalRequestedExits.get();
+        uint256 totalRequestedExitsCopy = totalRequestedExitsValue;
+
+        for (uint256 idx = 0; idx < exitableOperatorCount;) {
+            uint32 currentRequestedExits = operators[idx].requestedExits;
+            uint32 currentStoppedCount = _getStoppedValidatorsCountFromRawArray(stoppedValidators, idx);
+
+            if (currentRequestedExits < currentStoppedCount) {
+                emit UpdatedRequestedValidatorExitsUponStopped(
+                    operators[idx].index, currentRequestedExits, currentStoppedCount
+                );
+                operators[idx].picked += currentStoppedCount - currentRequestedExits;
+                totalRequestedExitsValue += currentStoppedCount - currentRequestedExits;
+            }
+
+            unchecked {
+                ++idx;
+            }
         }
 
         // we loop to find the highest count of active validators, the number of operators that have this amount and the second highest amount
@@ -606,7 +646,7 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
             uint32 secondHighestActiveCount = 0;
             uint32 siblings = 0;
 
-            for (uint256 idx = 0; idx < operatorsLength;) {
+            for (uint256 idx = 0; idx < exitableOperatorCount;) {
                 uint32 activeCount = _getActiveValidatorCountForExitRequests(operators[idx]);
 
                 if (activeCount == highestActiveCount) {
@@ -625,7 +665,7 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
             }
 
             // we exited all validators
-            if (highestActiveCount == 0 && siblings == operatorsLength) {
+            if (highestActiveCount == 0 && siblings == exitableOperatorCount) {
                 break;
             }
             // The optimal amount is how much we should dispatch to all the operators with the highest count for them to get the same amount
@@ -635,9 +675,11 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
 
             // We lookup the operators again to assign the exit requests
             uint256 rest = optimalTotalDispatchCount % siblings;
-            for (uint256 idx = 0; idx < operatorsLength;) {
+            for (uint256 idx = 0; idx < exitableOperatorCount;) {
                 if (_getActiveValidatorCountForExitRequests(operators[idx]) == highestActiveCount) {
-                    operators[idx].picked += (optimalTotalDispatchCount / siblings) + (rest > 0 ? 1 : 0);
+                    uint32 additionalRequestedExits = (optimalTotalDispatchCount / siblings) + (rest > 0 ? 1 : 0);
+                    operators[idx].picked += additionalRequestedExits;
+                    totalRequestedExitsValue += additionalRequestedExits;
                     if (rest > 0) {
                         --rest;
                     }
@@ -651,16 +693,21 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
         }
 
         // We loop over the operators and apply the change, also emit the exit request event
-        for (uint256 idx = 0; idx < operatorsLength;) {
+        for (uint256 idx = 0; idx < exitableOperatorCount;) {
             if (operators[idx].picked > 0) {
                 uint32 requestedExits = OperatorsV2.get(operators[idx].index).requestedExits;
                 OperatorsV2.get(operators[idx].index).requestedExits = requestedExits + operators[idx].picked;
-                emit RequestedValidatorExits(idx, requestedExits + operators[idx].picked);
+                emit RequestedValidatorExits(operators[idx].index, requestedExits + operators[idx].picked);
             }
 
             unchecked {
                 ++idx;
             }
+        }
+
+        if (totalRequestedExitsValue != totalRequestedExitsCopy) {
+            TotalRequestedExits.set(totalRequestedExitsValue);
+            emit SetTotalRequestedValidatorExits(totalRequestedExitsCopy, totalRequestedExitsValue);
         }
     }
 }

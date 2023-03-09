@@ -154,4 +154,8 @@ interface IRedeemManagerV1 {
     /// @notice Reports a withdraw event from River
     /// @param lsETHWithdrawable The amount of LsETH that can be redeemed due to this new withdraw event
     function reportWithdraw(uint256 lsETHWithdrawable) external payable;
+
+    /// @notice Pulls exceeding buffer eth
+    /// @param max The maximum amount that should be pulled
+    function pullExceedingEth(uint256 max) external;
 }

@@ -3,33 +3,25 @@ pragma solidity 0.8.10;
 
 /// @title Reports Variants Storage
 /// @notice Utility to manage the Reports Variants in storage
-library ReportsVariants {
+library ReportVariants {
     /// @notice Storage slot of the Reports Variants
-    bytes32 internal constant REPORTS_VARIANTS_SLOT = bytes32(uint256(keccak256("river.state.reportsVariants")) - 1);
+    bytes32 internal constant REPORT_VARIANTS_SLOT = bytes32(uint256(keccak256("river.state.reportVariants")) - 1);
 
-    /// @notice Mask used to extra the report values from the variant
-    /// @notice This is the packing done inside the variant in storage
-    /// @notice
-    /// @notice [ 0,  16) : <voteCount>           oracle member's total vote count for the numbers below (uint16, 2 bytes)
-    /// @notice [16,  48) : <beaconValidators>    total number of beacon validators (uint32, 4 bytes)
-    /// @notice [48, 112) : <beaconBalance>       total balance of all the beacon validators (uint64, 6 bytes)
-    /// @notice
-    /// @notice So applying this mask, we can extra the voteCount out to perform comparisons on the report values
-    /// @notice
-    /// @notice xx...xx <beaconBalance> <beaconValidators> xxxx & COUNT_OUTMASK  ==
-    /// @notice 00...00 <beaconBalance> <beaconValidators> 0000
-    uint256 internal constant COUNT_OUTMASK = 0xFFFFFFFFFFFFFFFFFFFFFFFF0000;
+    struct ReportVariantDetails {
+        bytes32 variant;
+        uint256 votes;
+    }
 
     /// @notice Structure in storage
     struct Slot {
         /// @custom:attribute The list of variants
-        uint256[] value;
+        ReportVariantDetails[] value;
     }
 
     /// @notice Retrieve the Reports Variants from storage
     /// @return The Reports Variants
-    function get() internal view returns (uint256[] memory) {
-        bytes32 slot = REPORTS_VARIANTS_SLOT;
+    function get() internal view returns (ReportVariantDetails[] memory) {
+        bytes32 slot = REPORT_VARIANTS_SLOT;
 
         Slot storage r;
 
@@ -44,8 +36,8 @@ library ReportsVariants {
     /// @notice Set the Reports Variants value at index
     /// @param _idx The index to set
     /// @param _val The value to set
-    function set(uint256 _idx, uint256 _val) internal {
-        bytes32 slot = REPORTS_VARIANTS_SLOT;
+    function set(uint256 _idx, ReportVariantDetails memory _val) internal {
+        bytes32 slot = REPORT_VARIANTS_SLOT;
 
         Slot storage r;
 
@@ -59,8 +51,8 @@ library ReportsVariants {
 
     /// @notice Add a new variant in the list
     /// @param _variant The new variant to add
-    function push(uint256 _variant) internal {
-        bytes32 slot = REPORTS_VARIANTS_SLOT;
+    function push(ReportVariantDetails memory _variant) internal {
+        bytes32 slot = REPORT_VARIANTS_SLOT;
 
         Slot storage r;
 
@@ -75,8 +67,8 @@ library ReportsVariants {
     /// @notice Retrieve the index of a specific variant, ignoring the count field
     /// @param _variant Variant value to lookup
     /// @return The index of the variant, -1 if not found
-    function indexOfReport(uint256 _variant) internal view returns (int256) {
-        bytes32 slot = REPORTS_VARIANTS_SLOT;
+    function indexOfReport(bytes32 _variant) internal view returns (int256) {
+        bytes32 slot = REPORT_VARIANTS_SLOT;
 
         Slot storage r;
 
@@ -86,7 +78,7 @@ library ReportsVariants {
         }
 
         for (uint256 idx = 0; idx < r.value.length;) {
-            if (r.value[idx] & COUNT_OUTMASK == _variant) {
+            if (r.value[idx].variant == _variant) {
                 return int256(idx);
             }
             unchecked {
@@ -99,7 +91,7 @@ library ReportsVariants {
 
     /// @notice Clear all variants from storage
     function clear() internal {
-        bytes32 slot = REPORTS_VARIANTS_SLOT;
+        bytes32 slot = REPORT_VARIANTS_SLOT;
 
         Slot storage r;
 
