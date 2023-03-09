@@ -5,6 +5,7 @@ pragma solidity 0.8.10;
 import "forge-std/Test.sol";
 
 import "./utils/UserFactory.sol";
+import "./utils/LibImplementationUnbricker.sol";
 
 import "../src/CoverageFund.1.sol";
 import "../src/Allowlist.1.sol";
@@ -46,9 +47,11 @@ contract CoverageFundTestV1 is Test {
     function setUp() public {
         admin = makeAddr("admin");
         allowlist = new AllowlistV1();
+        LibImplementationUnbricker.unbrick(vm, address(allowlist));
         allowlist.initAllowlistV1(admin, admin);
         river = new RiverMock(address(allowlist));
         coverageFund = new CoverageFundV1();
+        LibImplementationUnbricker.unbrick(vm, address(coverageFund));
         vm.expectEmit(true, true, true, true);
         emit SetRiver(address(river));
         coverageFund.initCoverageFundV1(address(river));

@@ -5,6 +5,7 @@ pragma solidity 0.8.10;
 import "forge-std/Test.sol";
 
 import "./utils/BytesGenerator.sol";
+import "./utils/LibImplementationUnbricker.sol";
 import "./mocks/DepositContractMock.sol";
 import "./mocks/RiverMock.sol";
 
@@ -65,11 +66,17 @@ contract FirewallTests is BytesGenerator, Test {
     function setUp() public {
         deposit = new DepositContractMock();
         elFeeRecipient = new ELFeeRecipientV1();
+        LibImplementationUnbricker.unbrick(vm, address(elFeeRecipient));
         withdraw = new WithdrawV1();
+        LibImplementationUnbricker.unbrick(vm, address(withdraw));
         river = new RiverV1();
+        LibImplementationUnbricker.unbrick(vm, address(river));
         allowlist = new AllowlistV1();
+        LibImplementationUnbricker.unbrick(vm, address(allowlist));
         operatorsRegistry = new OperatorsRegistryV1();
+        LibImplementationUnbricker.unbrick(vm, address(operatorsRegistry));
         oracle = new OracleV1();
+        LibImplementationUnbricker.unbrick(vm, address(oracle));
 
         elFeeRecipient.initELFeeRecipientV1(address(river));
 

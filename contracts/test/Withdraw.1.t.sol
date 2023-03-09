@@ -4,6 +4,7 @@ pragma solidity 0.8.10;
 
 import "forge-std/Test.sol";
 import "./utils/UserFactory.sol";
+import "./utils/LibImplementationUnbricker.sol";
 
 import "../src/interfaces/IWithdraw.1.sol";
 import "../src/Withdraw.1.sol";
@@ -31,6 +32,7 @@ contract WithdrawV1Tests is Test {
         river = new RiverMock();
 
         withdraw = new WithdrawV1();
+        LibImplementationUnbricker.unbrick(vm, address(withdraw));
         withdraw.initializeWithdrawV1(address(river));
     }
 

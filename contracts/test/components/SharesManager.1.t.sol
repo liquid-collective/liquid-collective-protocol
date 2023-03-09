@@ -5,6 +5,7 @@ pragma solidity 0.8.10;
 import "forge-std/Test.sol";
 
 import "../utils/UserFactory.sol";
+import "../utils/LibImplementationUnbricker.sol";
 
 import "../../src/components/SharesManager.1.sol";
 
@@ -65,6 +66,7 @@ contract SharesManagerV1Tests is Test {
 
     function setUp() public {
         sharesManager = new SharesManagerPublicDeal();
+        LibImplementationUnbricker.unbrick(vm, address(sharesManager));
     }
 
     function testBalanceOfUnderlying(uint256 _userSalt) public {

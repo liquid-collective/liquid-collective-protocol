@@ -6,6 +6,7 @@ import "forge-std/Test.sol";
 
 import "./utils/UserFactory.sol";
 import "./utils/BytesGenerator.sol";
+import "./utils/LibImplementationUnbricker.sol";
 import "./mocks/DepositContractMock.sol";
 
 import "../src/libraries/LibAllowlistMasks.sol";
@@ -88,13 +89,21 @@ contract RiverV1Tests is Test, BytesGenerator {
         vm.warp(857034746);
 
         elFeeRecipient = new ELFeeRecipientV1();
+        LibImplementationUnbricker.unbrick(vm, address(elFeeRecipient));
         coverageFund = new CoverageFundV1();
+        LibImplementationUnbricker.unbrick(vm, address(coverageFund));
         oracle = new OracleV1();
+        LibImplementationUnbricker.unbrick(vm, address(oracle));
         allowlist = new AllowlistV1();
+        LibImplementationUnbricker.unbrick(vm, address(allowlist));
         deposit = new DepositContractMock();
+        LibImplementationUnbricker.unbrick(vm, address(deposit));
         withdraw = new WithdrawV1();
+        LibImplementationUnbricker.unbrick(vm, address(withdraw));
         river = new RiverV1ForceCommittable();
+        LibImplementationUnbricker.unbrick(vm, address(river));
         operatorsRegistry = new OperatorsRegistryWithOverridesV1();
+        LibImplementationUnbricker.unbrick(vm, address(operatorsRegistry));
 
         bytes32 withdrawalCredentials = withdraw.getCredentials();
         allowlist.initAllowlistV1(admin, allower);
@@ -149,6 +158,7 @@ contract RiverV1Tests is Test, BytesGenerator {
         withdraw = new WithdrawV1();
         bytes32 withdrawalCredentials = withdraw.getCredentials();
         river = new RiverV1ForceCommittable();
+        LibImplementationUnbricker.unbrick(vm, address(river));
         vm.expectRevert(abi.encodeWithSignature("InvalidZeroAddress()"));
         river.initRiverV1(
             address(0),
@@ -706,14 +716,23 @@ contract RiverV1TestsReport_HEAVY_FUZZING is Test, BytesGenerator {
         vm.warp(857034746);
 
         elFeeRecipient = new ELFeeRecipientV1();
+        LibImplementationUnbricker.unbrick(vm, address(elFeeRecipient));
         coverageFund = new CoverageFundV1();
+        LibImplementationUnbricker.unbrick(vm, address(coverageFund));
         oracle = new OracleV1();
+        LibImplementationUnbricker.unbrick(vm, address(oracle));
         allowlist = new AllowlistV1();
+        LibImplementationUnbricker.unbrick(vm, address(allowlist));
         deposit = new DepositContractMock();
+        LibImplementationUnbricker.unbrick(vm, address(deposit));
         withdraw = new WithdrawV1();
+        LibImplementationUnbricker.unbrick(vm, address(withdraw));
         river = new RiverV1ForceCommittable();
-        operatorsRegistry = new OperatorsRegistryV1();
+        LibImplementationUnbricker.unbrick(vm, address(river));
+        operatorsRegistry = new OperatorsRegistryWithOverridesV1();
+        LibImplementationUnbricker.unbrick(vm, address(operatorsRegistry));
         redeemManager = new RedeemManagerV1();
+        LibImplementationUnbricker.unbrick(vm, address(redeemManager));
 
         bytes32 withdrawalCredentials = withdraw.getCredentials();
         allowlist.initAllowlistV1(admin, allower);
