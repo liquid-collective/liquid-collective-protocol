@@ -191,6 +191,14 @@ interface IRiverV1 is IConsensusLayerDepositManagerV1, IUserDepositManagerV1, IS
         view
         returns (DailyCommittableLimits.DailyCommittableLimitsStruct memory);
 
+    /// @notice Resolves the provided redeem requests by calling the redeem manager
+    /// @param redeemRequestIds The list of redeem requests to resolve
+    /// @return withdrawalEventIds The list of matching withdrawal events, or error codes
+    function resolveRedeemRequests(uint32[] calldata redeemRequestIds)
+        external
+        view
+        returns (int64[] memory withdrawalEventIds);
+
     /// @notice Set the daily committable limits
     /// @param dcl The Daily Committable Limits structure
     function setDailyCommittableLimits(DailyCommittableLimits.DailyCommittableLimitsStruct memory dcl) external;
@@ -198,6 +206,19 @@ interface IRiverV1 is IConsensusLayerDepositManagerV1, IUserDepositManagerV1, IS
     /// @notice Retrieve the current balance to redeem
     /// @return The current balance to redeem
     function getBalanceToRedeem() external view returns (uint256);
+
+    /// @notice Performs a redeem request on the redeem manager
+    /// @param lsETHAmount The amount of LsETH to redeem
+    /// @return redeemRequestId The ID of the newly created redeem request
+    function requestRedeem(uint256 lsETHAmount) external returns (uint32 redeemRequestId);
+
+    /// @notice Claims several redeem requests
+    /// @param redeemRequestIds The list of redeem requests to claim
+    /// @param withdrawalEventIds The list of resolved withdrawal event ids
+    /// @return claimStatuses The operation status results
+    function claimRedeemRequests(uint32[] calldata redeemRequestIds, uint32[] calldata withdrawalEventIds)
+        external
+        returns (uint8[] memory claimStatuses);
 
     /// @notice Changes the global fee parameter
     /// @param newFee New fee value

@@ -788,11 +788,17 @@ contract RiverV1TestsReport_HEAVY_FUZZING is Test, BytesGenerator {
             _salt = _next(_salt);
 
             uint256 amountToRedeem = bound(_salt, 0.1 ether, amountToDeposit / 2);
-            vm.prank(users[idx]);
-            river.approve(address(redeemManager), amountToRedeem);
-            vm.prank(users[idx]);
-            redeemManager.requestRedeem(amountToRedeem);
-            _salt = _next(_salt);
+            if (_salt % 2 == 0) {
+                vm.prank(users[idx]);
+                river.approve(address(redeemManager), amountToRedeem);
+                vm.prank(users[idx]);
+                redeemManager.requestRedeem(amountToRedeem);
+                _salt = _next(_salt);
+            } else {
+                vm.prank(users[idx]);
+                river.requestRedeem(amountToRedeem);
+                _salt = _next(_salt);
+            }
         }
         _newSalt = _salt;
 
@@ -845,14 +851,20 @@ contract RiverV1TestsReport_HEAVY_FUZZING is Test, BytesGenerator {
         _newSalt = _salt;
     }
 
-    function _redeemAllSatisfiedRedeemRequests() internal {
+    function _redeemAllSatisfiedRedeemRequests(uint256 _salt) internal returns (uint256) {
         uint256 redeemRequestCount = redeemManager.getRedeemRequestCount();
         uint32[] memory unresolvedRedeemRequestIds = new uint32[](redeemRequestCount);
         for (uint256 idx = 0; idx < redeemRequestCount; ++idx) {
             unresolvedRedeemRequestIds[idx] = uint32(idx);
         }
 
-        int64[] memory resolutions = redeemManager.resolveRedeemRequests(unresolvedRedeemRequestIds);
+        int64[] memory resolutions;
+        if (_salt % 2 == 0) {
+            resolutions = redeemManager.resolveRedeemRequests(unresolvedRedeemRequestIds);
+        } else {
+            resolutions = river.resolveRedeemRequests(unresolvedRedeemRequestIds);
+        }
+        _salt = _next(_salt);
 
         uint256 satisfiedRedeemRequestCount = 0;
         for (uint256 idx = 0; idx < resolutions.length; ++idx) {
@@ -871,13 +883,23 @@ contract RiverV1TestsReport_HEAVY_FUZZING is Test, BytesGenerator {
                 ++savedIdx;
             }
         }
+        if (_salt % 2 == 0) {
+            redeemManager.claimRedeemRequests(redeemRequestIds, withdrawalEventIds);
+        } else {
+            river.claimRedeemRequests(redeemRequestIds, withdrawalEventIds);
+        }
+        _salt = _next(_salt);
 
-        redeemManager.claimRedeemRequests(redeemRequestIds, withdrawalEventIds);
-
-        resolutions = redeemManager.resolveRedeemRequests(unresolvedRedeemRequestIds);
+        if (_salt % 2 == 0) {
+            resolutions = redeemManager.resolveRedeemRequests(unresolvedRedeemRequestIds);
+        } else {
+            resolutions = river.resolveRedeemRequests(unresolvedRedeemRequestIds);
+        }
         for (uint256 idx = 0; idx < resolutions.length; ++idx) {
             assertTrue(resolutions[idx] < 0, "should not have satisfied requests left");
         }
+
+        return _salt;
     }
 
     function _performPreAssertions(ReportingFuzzingVariables memory rfv) internal {
@@ -1004,7 +1026,7 @@ contract RiverV1TestsReport_HEAVY_FUZZING is Test, BytesGenerator {
 
         _performPostAssertions(rfv);
 
-        _redeemAllSatisfiedRedeemRequests();
+        _salt = _redeemAllSatisfiedRedeemRequests(_salt);
     }
 
     uint256 internal constant SCENARIO_REGULAR_REPORTING_NOTHING_PULLED = 0;
@@ -1318,7 +1340,7 @@ contract RiverV1TestsReport_HEAVY_FUZZING is Test, BytesGenerator {
         clr.bufferRebalancingMode = false;
         clr.slashingContainmentMode = false;
 
-        _redeemAllSatisfiedRedeemRequests();
+        _salt = _redeemAllSatisfiedRedeemRequests(_salt);
 
         rfv.expected_pre_elFeeRecipientBalance = 0;
         rfv.expected_pre_coverageFundBalance = 0;

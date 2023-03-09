@@ -38,8 +38,13 @@ contract RedeemManagerV1 is Initializable, IRedeemManagerV1 {
         _;
     }
 
-    modifier onlyRedeemer() {
-        IAllowlistV1(_river().getAllowlist()).onlyAllowed(msg.sender, LibAllowlistMasks.REDEEM_MASK);
+    modifier onlyRedeemerOrRiver() {
+        {
+            IRiverV1 river = _river();
+            if (msg.sender != address(river)) {
+                IAllowlistV1(river.getAllowlist()).onlyAllowed(msg.sender, LibAllowlistMasks.REDEEM_MASK);
+            }
+        }
         _;
     }
 
@@ -99,14 +104,14 @@ contract RedeemManagerV1 is Initializable, IRedeemManagerV1 {
     /// @inheritdoc IRedeemManagerV1
     function requestRedeem(uint256 lsETHAmount, address recipient)
         external
-        onlyRedeemer
+        onlyRedeemerOrRiver
         returns (uint32 redeemRequestId)
     {
         return _requestRedeem(lsETHAmount, recipient);
     }
 
     /// @inheritdoc IRedeemManagerV1
-    function requestRedeem(uint256 lsETHAmount) external onlyRedeemer returns (uint32 redeemRequestId) {
+    function requestRedeem(uint256 lsETHAmount) external onlyRedeemerOrRiver returns (uint32 redeemRequestId) {
         return _requestRedeem(lsETHAmount, msg.sender);
     }
 
