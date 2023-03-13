@@ -6,6 +6,7 @@ import "forge-std/Test.sol";
 
 import "./utils/UserFactory.sol";
 import "./utils/BytesGenerator.sol";
+import "./utils/LibImplementationUnbricker.sol";
 
 import "../src/OperatorsRegistry.1.sol";
 
@@ -68,6 +69,7 @@ contract OperatorsRegistryV1Tests is Test, BytesGenerator {
         admin = makeAddr("admin");
         river = makeAddr("river");
         operatorsRegistry = new OperatorsRegistryInitializableV1();
+        LibImplementationUnbricker.unbrick(vm, address(operatorsRegistry));
         operatorsRegistry.initOperatorsRegistryV1(admin, river);
     }
 
@@ -1278,6 +1280,7 @@ contract OperatorsRegistryV1TestDistribution is Test {
         operatorFive = makeAddr("operatorFive");
 
         operatorsRegistry = new OperatorsRegistryInitializableV1();
+        LibImplementationUnbricker.unbrick(vm, address(operatorsRegistry));
         operatorsRegistry.initOperatorsRegistryV1(admin, river);
 
         vm.startPrank(admin);

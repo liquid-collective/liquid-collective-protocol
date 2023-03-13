@@ -5,6 +5,7 @@ pragma solidity 0.8.10;
 import "forge-std/Test.sol";
 
 import "../../src/components/ConsensusLayerDepositManager.1.sol";
+import "../utils/LibImplementationUnbricker.sol";
 
 import "../mocks/DepositContractMock.sol";
 import "../mocks/DepositContractEnhancedMock.sol";
@@ -68,6 +69,8 @@ contract ConsensusLayerDepositManagerV1InitTests is Test {
         depositContract = new DepositContractMock();
 
         depositManager = new ConsensusLayerDepositManagerV1ExposeInitializer();
+        LibImplementationUnbricker.unbrick(vm, address(depositManager));
+
         vm.expectEmit(true, true, true, true);
         emit SetDepositContractAddress(address(depositContract));
         ConsensusLayerDepositManagerV1ExposeInitializer(address(depositManager))
@@ -78,6 +81,7 @@ contract ConsensusLayerDepositManagerV1InitTests is Test {
         depositContract = new DepositContractMock();
 
         depositManager = new ConsensusLayerDepositManagerV1ExposeInitializer();
+        LibImplementationUnbricker.unbrick(vm, address(depositManager));
         vm.expectEmit(true, true, true, true);
         emit SetWithdrawalCredentials(withdrawalCredentials);
         ConsensusLayerDepositManagerV1ExposeInitializer(address(depositManager))
@@ -95,6 +99,7 @@ contract ConsensusLayerDepositManagerV1Tests is Test {
         depositContract = new DepositContractMock();
 
         depositManager = new ConsensusLayerDepositManagerV1ExposeInitializer();
+        LibImplementationUnbricker.unbrick(vm, address(depositManager));
         ConsensusLayerDepositManagerV1ExposeInitializer(address(depositManager))
             .publicConsensusLayerDepositManagerInitializeV1(address(depositContract), withdrawalCredentials);
     }
@@ -235,6 +240,7 @@ contract ConsensusLayerDepositManagerV1ErrorTests is Test {
         depositContract = new DepositContractMock();
 
         depositManager = new ConsensusLayerDepositManagerV1ControllableValidatorKeyRequest();
+        LibImplementationUnbricker.unbrick(vm, address(depositManager));
         ConsensusLayerDepositManagerV1ControllableValidatorKeyRequest(address(depositManager))
             .publicConsensusLayerDepositManagerInitializeV1(address(depositContract), withdrawalCredentials);
     }
@@ -295,6 +301,7 @@ contract ConsensusLayerDepositManagerV1WithdrawalCredentialError is Test {
         depositContract = new DepositContractMock();
 
         depositManager = new ConsensusLayerDepositManagerV1ControllableValidatorKeyRequest();
+        LibImplementationUnbricker.unbrick(vm, address(depositManager));
     }
 
     function testInvalidWithdrawalCredential() public {
@@ -372,6 +379,7 @@ contract ConsensusLayerDepositManagerV1ValidKeysTest is Test {
         depositContract = IDepositContract(address(new DepositContractEnhancedMock()));
 
         depositManager = new ConsensusLayerDepositManagerV1ValidKeys();
+        LibImplementationUnbricker.unbrick(vm, address(depositManager));
         ConsensusLayerDepositManagerV1ValidKeys(address(depositManager)).publicConsensusLayerDepositManagerInitializeV1(
             address(depositContract), withdrawalCredentials
         );
@@ -396,6 +404,7 @@ contract ConsensusLayerDepositManagerV1InvalidDepositContract is Test {
         depositContract = IDepositContract(address(new DepositContractInvalidMock()));
 
         depositManager = new ConsensusLayerDepositManagerV1ValidKeys();
+        LibImplementationUnbricker.unbrick(vm, address(depositManager));
         ConsensusLayerDepositManagerV1ValidKeys(address(depositManager)).publicConsensusLayerDepositManagerInitializeV1(
             address(depositContract), withdrawalCredentials
         );

@@ -5,6 +5,7 @@ pragma solidity 0.8.10;
 import "forge-std/Test.sol";
 
 import "../utils/UserFactory.sol";
+import "../utils/LibImplementationUnbricker.sol";
 
 import "../../src/components/OracleManager.1.sol";
 import "../../src/libraries/LibUint256.sol";
@@ -211,6 +212,7 @@ contract OracleManagerV1Tests is Test {
         oracle = makeAddr("oracle");
         oracleManager =
         new OracleManagerV1ExposeInitializer(oracle, admin, epochsPerFrame, slotsPerEpoch, secondsPerSlot, genesisTime, epochsToAssumedFinality, annualAprUpperBound, relativeLowerBound);
+        LibImplementationUnbricker.unbrick(vm, address(oracleManager));
         vm.warp(genesisTime);
     }
 

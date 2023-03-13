@@ -5,6 +5,7 @@ pragma solidity 0.8.10;
 import "forge-std/Test.sol";
 
 import "./utils/UserFactory.sol";
+import "./utils/LibImplementationUnbricker.sol";
 import "./mocks/RiverMock.sol";
 
 import "../src/Oracle.1.sol";
@@ -40,6 +41,7 @@ contract OracleV1Tests is Test {
     function setUp() public {
         oracleInput = IRiverV1(payable(address(new RiverMock())));
         oracle = new OracleV1();
+        LibImplementationUnbricker.unbrick(vm, address(oracle));
         vm.expectEmit(true, true, true, true);
         emit SetRiver(address(oracleInput));
         oracle.initOracleV1(

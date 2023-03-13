@@ -5,6 +5,7 @@ pragma solidity 0.8.10;
 import "forge-std/Test.sol";
 
 import "./utils/UserFactory.sol";
+import "./utils/LibImplementationUnbricker.sol";
 
 import "../src/state/redeemManager/RedeemQueue.sol";
 import "../src/state/redeemManager/WithdrawalStack.sol";
@@ -112,7 +113,9 @@ contract RedeemManagerV1Tests is Test {
         allowlistAdmin = makeAddr("allowlistAdmin");
         allowlistAllower = makeAddr("allowlistAllower");
         redeemManager = new RedeemManagerV1();
+        LibImplementationUnbricker.unbrick(vm, address(redeemManager));
         allowlist = new AllowlistV1();
+        LibImplementationUnbricker.unbrick(vm, address(allowlist));
         allowlist.initAllowlistV1(allowlistAdmin, allowlistAllower);
         river = new RiverMock(address(allowlist));
 

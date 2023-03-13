@@ -5,6 +5,7 @@ pragma solidity 0.8.10;
 import "forge-std/Test.sol";
 
 import "../utils/UserFactory.sol";
+import "../utils/LibImplementationUnbricker.sol";
 
 import "../../src/components/UserDepositManager.1.sol";
 
@@ -28,6 +29,7 @@ contract UserDepositManagerV1DepositTests is Test {
 
     function setUp() public {
         transferManager = new UserDepositManagerV1EmptyDeposit();
+        LibImplementationUnbricker.unbrick(vm, address(transferManager));
     }
 
     function testDepositWithDedicatedMethod(uint256 _userSalt, uint256 _amount) public {
@@ -128,6 +130,7 @@ contract UserDepositManagerV1CallbackTests is Test {
 
     function setUp() public {
         transferManager = new UserDepositManagerV1CatchableDeposit();
+        LibImplementationUnbricker.unbrick(vm, address(transferManager));
     }
 
     function testDepositInternalCallback(uint256 _userSalt, uint256 _amount) public {
