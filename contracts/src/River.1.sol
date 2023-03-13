@@ -154,6 +154,8 @@ contract RiverV1 is
             annualAprUpperBound,
             relativeLowerBound
         );
+
+        _approve(address(this), _redeemManager, type(uint256).max);
     }
 
     /// @inheritdoc IRiverV1
@@ -207,6 +209,31 @@ contract RiverV1 is
     /// @inheritdoc IRiverV1
     function getBalanceToRedeem() external view returns (uint256) {
         return BalanceToRedeem.get();
+    }
+
+    /// @inheritdoc IRiverV1
+    function resolveRedeemRequests(uint32[] calldata redeemRequestIds)
+        external
+        view
+        returns (int64[] memory withdrawalEventIds)
+    {
+        return IRedeemManagerV1(RedeemManagerAddress.get()).resolveRedeemRequests(redeemRequestIds);
+    }
+
+    /// @inheritdoc IRiverV1
+    function requestRedeem(uint256 lsETHAmount) external returns (uint32 redeemRequestId) {
+        IAllowlistV1(AllowlistAddress.get()).onlyAllowed(msg.sender, LibAllowlistMasks.REDEEM_MASK);
+        _transfer(msg.sender, address(this), lsETHAmount);
+        return IRedeemManagerV1(RedeemManagerAddress.get()).requestRedeem(lsETHAmount, msg.sender);
+    }
+
+    /// @inheritdoc IRiverV1
+    function claimRedeemRequests(uint32[] calldata redeemRequestIds, uint32[] calldata withdrawalEventIds)
+        external
+        returns (uint8[] memory claimStatuses)
+    {
+        return
+            IRedeemManagerV1(RedeemManagerAddress.get()).claimRedeemRequests(redeemRequestIds, withdrawalEventIds, true);
     }
 
     /// @inheritdoc IRiverV1
