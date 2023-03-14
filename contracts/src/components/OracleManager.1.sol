@@ -22,6 +22,8 @@ import "../state/river/LastOracleRoundId.sol";
 /// @notice validators that have been activated on the consensus layer.
 abstract contract OracleManagerV1 is IOracleManagerV1 {
     uint256 internal constant ONE_YEAR = 365 days;
+    /// @notice Size of a deposit in ETH
+    uint256 public constant _DEPOSIT_SIZE = 32 ether;
 
     /// @notice Handler called if the delta between the last and new validator balance sum is positive
     /// @dev Must be overridden
@@ -305,9 +307,17 @@ abstract contract OracleManagerV1 is IOracleManagerV1 {
             vars.timeElapsedSinceLastReport = _timeBetweenEpochs(cls, lastStoredReport.epoch, report.epoch);
         }
 
+        IOracleManagerV1.StoredConsensusLayerReport storage lastReport = LastConsensusLayerReport.get();
+
         // we retrieve the current total underlying balance before any reporting data is applied to the system
         vars.preReportUnderlyingBalance = _assetBalance();
-        // we compute the time elapsed since last report based on epoch numbers
+        uint256 preUnderlyingBalanceIncludingExits = lastReport.validatorsBalance + lastReport.validatorsSkimmedBalance + lastReport.validatorsExitedBalance;
+        {
+          uint256 previousReportedValidatorCount = LastConsensusLayerReport.get().validatorsCount;
+          if (previousReportedValidatorCount < report.validatorsCount) {
+            preUnderlyingBalanceIncludingExits += (report.validatorsCount - previousReportedValidatorCount) * _DEPOSIT_SIZE;
+          }
+        }
 
         // if we have new exited / skimmed eth available, we pull funds from the consensus layer recipient
         if (vars.exitedAmountIncrease + vars.skimmedAmountIncrease > 0) {
@@ -338,12 +348,14 @@ abstract contract OracleManagerV1 is IOracleManagerV1 {
 
         // we retrieve the new total underlying balance after system parameters are changed
         vars.postReportUnderlyingBalance = _assetBalance();
+        uint256 postUnderlyingBalanceIncludingExits = report.validatorsBalance + report.validatorsSkimmedBalance + report.validatorsExitedBalance;
 
         // if the new underlying balance has increased, we verify that we are not exceeding reporting bound, and we update
         // reporting variables accordingly
-        if (vars.postReportUnderlyingBalance >= vars.preReportUnderlyingBalance) {
+        // TODO add exitedSum to both sides to get net rewards
+        if (postUnderlyingBalanceIncludingExits >= preUnderlyingBalanceIncludingExits) {
             // if this happens, we revert and the reporting process is cancelled
-            if (vars.postReportUnderlyingBalance > vars.preReportUnderlyingBalance + maxIncrease) {
+            if (postUnderlyingBalanceIncludingExits > preUnderlyingBalanceIncludingExits + maxIncrease) {
                 revert TotalValidatorBalanceIncreaseOutOfBound(
                     vars.preReportUnderlyingBalance,
                     vars.postReportUnderlyingBalance,
@@ -353,7 +365,7 @@ abstract contract OracleManagerV1 is IOracleManagerV1 {
             }
 
             // we update the rewards based on the balance delta
-            vars.trace.rewards = (vars.postReportUnderlyingBalance - vars.preReportUnderlyingBalance);
+            vars.trace.rewards = postUnderlyingBalanceIncludingExits - preUnderlyingBalanceIncludingExits;
 
             // we update the available amount to upper bound (the amount of eth we can still pull and stay below the upper reporting bound)
             vars.availableAmountToUpperBound = maxIncrease - vars.trace.rewards;
@@ -364,7 +376,7 @@ abstract contract OracleManagerV1 is IOracleManagerV1 {
             uint256 maxDecrease = _maxDecrease(rb, vars.preReportUnderlyingBalance);
 
             // we verify that the bound is not crossed
-            if (vars.postReportUnderlyingBalance < vars.preReportUnderlyingBalance - maxDecrease) {
+            if (postUnderlyingBalanceIncludingExits < preUnderlyingBalanceIncludingExits - maxDecrease) {
                 revert TotalValidatorBalanceDecreaseOutOfBound(
                     vars.preReportUnderlyingBalance,
                     vars.postReportUnderlyingBalance,
@@ -375,7 +387,7 @@ abstract contract OracleManagerV1 is IOracleManagerV1 {
 
             // we update the available amount to upper bound to be equal to the maximum allowed increase plus the negative delta due to the loss
             vars.availableAmountToUpperBound =
-                maxIncrease + (vars.preReportUnderlyingBalance - vars.postReportUnderlyingBalance);
+                maxIncrease + (preUnderlyingBalanceIncludingExits - postUnderlyingBalanceIncludingExits);
         }
 
         // if we have available amount to upper bound after the reporting values are applied
