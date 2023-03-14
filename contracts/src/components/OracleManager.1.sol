@@ -311,12 +311,14 @@ abstract contract OracleManagerV1 is IOracleManagerV1 {
 
         // we retrieve the current total underlying balance before any reporting data is applied to the system
         vars.preReportUnderlyingBalance = _assetBalance();
-        uint256 preUnderlyingBalanceIncludingExits = lastReport.validatorsBalance + lastReport.validatorsSkimmedBalance + lastReport.validatorsExitedBalance;
+        uint256 preUnderlyingBalanceIncludingExits =
+            lastReport.validatorsBalance + lastReport.validatorsSkimmedBalance + lastReport.validatorsExitedBalance;
         {
-          uint256 previousReportedValidatorCount = LastConsensusLayerReport.get().validatorsCount;
-          if (previousReportedValidatorCount < report.validatorsCount) {
-            preUnderlyingBalanceIncludingExits += (report.validatorsCount - previousReportedValidatorCount) * _DEPOSIT_SIZE;
-          }
+            uint256 previousReportedValidatorCount = LastConsensusLayerReport.get().validatorsCount;
+            if (previousReportedValidatorCount < report.validatorsCount) {
+                preUnderlyingBalanceIncludingExits +=
+                    (report.validatorsCount - previousReportedValidatorCount) * _DEPOSIT_SIZE;
+            }
         }
 
         // if we have new exited / skimmed eth available, we pull funds from the consensus layer recipient
@@ -348,7 +350,8 @@ abstract contract OracleManagerV1 is IOracleManagerV1 {
 
         // we retrieve the new total underlying balance after system parameters are changed
         vars.postReportUnderlyingBalance = _assetBalance();
-        uint256 postUnderlyingBalanceIncludingExits = report.validatorsBalance + report.validatorsSkimmedBalance + report.validatorsExitedBalance;
+        uint256 postUnderlyingBalanceIncludingExits =
+            report.validatorsBalance + report.validatorsSkimmedBalance + report.validatorsExitedBalance;
 
         // if the new underlying balance has increased, we verify that we are not exceeding reporting bound, and we update
         // reporting variables accordingly
