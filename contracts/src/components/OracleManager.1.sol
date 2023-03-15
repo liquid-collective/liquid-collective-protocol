@@ -353,7 +353,10 @@ abstract contract OracleManagerV1 is IOracleManagerV1 {
         uint256 postUnderlyingBalanceIncludingExits =
             report.validatorsBalance + report.validatorsSkimmedBalance + report.validatorsExitedBalance;
 
-        // we can now
+        // we can now compute the earned rewards from the consensus layer balances
+        // in order to properly account for the balance increase, we compare the sums of current balances, skimmed balance and exited balances
+        // we also synthetically increase the current balance by 32 eth per new activated validator, this way we have no discrepency due
+        // to currently activating funds that were not yet accounted in the consensus layer balances
         if (postUnderlyingBalanceIncludingExits >= preUnderlyingBalanceIncludingExits) {
             // if this happens, we revert and the reporting process is cancelled
             if (postUnderlyingBalanceIncludingExits > preUnderlyingBalanceIncludingExits + maxIncrease) {
