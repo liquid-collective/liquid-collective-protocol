@@ -360,8 +360,8 @@ abstract contract OracleManagerV1 is IOracleManagerV1 {
             // if this happens, we revert and the reporting process is cancelled
             if (postUnderlyingBalanceIncludingExits > preUnderlyingBalanceIncludingExits + maxIncrease) {
                 revert TotalValidatorBalanceIncreaseOutOfBound(
-                    vars.preReportUnderlyingBalance,
-                    vars.postReportUnderlyingBalance,
+                    preUnderlyingBalanceIncludingExits,
+                    postUnderlyingBalanceIncludingExits,
                     vars.timeElapsedSinceLastReport,
                     rb.annualAprUpperBound
                 );
@@ -381,8 +381,8 @@ abstract contract OracleManagerV1 is IOracleManagerV1 {
             // we verify that the bound is not crossed
             if (postUnderlyingBalanceIncludingExits < preUnderlyingBalanceIncludingExits - maxDecrease) {
                 revert TotalValidatorBalanceDecreaseOutOfBound(
-                    vars.preReportUnderlyingBalance,
-                    vars.postReportUnderlyingBalance,
+                    preUnderlyingBalanceIncludingExits,
+                    postUnderlyingBalanceIncludingExits,
                     vars.timeElapsedSinceLastReport,
                     rb.relativeLowerBound
                 );
