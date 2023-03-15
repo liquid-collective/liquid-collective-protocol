@@ -314,7 +314,7 @@ abstract contract OracleManagerV1 is IOracleManagerV1 {
         uint256 preUnderlyingBalanceIncludingExits =
             lastReport.validatorsBalance + lastReport.validatorsSkimmedBalance + lastReport.validatorsExitedBalance;
         {
-            uint256 previousReportedValidatorCount = LastConsensusLayerReport.get().validatorsCount;
+            uint256 previousReportedValidatorCount = lastReport.validatorsCount;
             if (previousReportedValidatorCount < report.validatorsCount) {
                 preUnderlyingBalanceIncludingExits +=
                     (report.validatorsCount - previousReportedValidatorCount) * _DEPOSIT_SIZE;
@@ -355,7 +355,6 @@ abstract contract OracleManagerV1 is IOracleManagerV1 {
 
         // if the new underlying balance has increased, we verify that we are not exceeding reporting bound, and we update
         // reporting variables accordingly
-        // TODO add exitedSum to both sides to get net rewards
         if (postUnderlyingBalanceIncludingExits >= preUnderlyingBalanceIncludingExits) {
             // if this happens, we revert and the reporting process is cancelled
             if (postUnderlyingBalanceIncludingExits > preUnderlyingBalanceIncludingExits + maxIncrease) {
