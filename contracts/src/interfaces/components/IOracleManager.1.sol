@@ -54,21 +54,27 @@ interface IOracleManagerV1 {
     error InvalidEpoch(uint256 epoch);
 
     /// @notice The balance increase is higher than the maximum allowed by the upper bound
-    /// @param prevTotalEth The previous total balance
-    /// @param postTotalEth The post-report total balance
+    /// @param prevTotalEthIncludingExited The previous total balance, including all exited balance
+    /// @param postTotalEthIncludingExited The post-report total balance, including all exited balance
     /// @param timeElapsed The time in seconds since last report
     /// @param annualAprUpperBound The upper bound value that was used
     error TotalValidatorBalanceIncreaseOutOfBound(
-        uint256 prevTotalEth, uint256 postTotalEth, uint256 timeElapsed, uint256 annualAprUpperBound
+        uint256 prevTotalEthIncludingExited,
+        uint256 postTotalEthIncludingExited,
+        uint256 timeElapsed,
+        uint256 annualAprUpperBound
     );
 
     /// @notice The balance decrease is higher than the maximum allowed by the lower bound
-    /// @param prevTotalEth The previous total balance
-    /// @param postTotalEth The post-report total balance
+    /// @param prevTotalEthIncludingExited The previous total balance, including all exited balance
+    /// @param postTotalEthIncludingExited The post-report total balance, including all exited balance
     /// @param timeElapsed The time in seconds since last report
     /// @param relativeLowerBound The lower bound value that was used
     error TotalValidatorBalanceDecreaseOutOfBound(
-        uint256 prevTotalEth, uint256 postTotalEth, uint256 timeElapsed, uint256 relativeLowerBound
+        uint256 prevTotalEthIncludingExited,
+        uint256 postTotalEthIncludingExited,
+        uint256 timeElapsed,
+        uint256 relativeLowerBound
     );
 
     /// @notice The total exited balance decreased
