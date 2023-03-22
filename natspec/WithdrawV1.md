@@ -63,7 +63,7 @@ function initializeWithdrawV1(address river) external nonpayable
 ### pullEth
 
 ```solidity
-function pullEth(uint256 amount) external nonpayable
+function pullEth(uint256 max) external nonpayable
 ```
 
 Callable by River, sends the specified amount of ETH to River
@@ -74,7 +74,7 @@ Callable by River, sends the specified amount of ETH to River
 
 | Name | Type | Description |
 |---|---|---|
-| amount | uint256 | The amount to pull |
+| max | uint256 | undefined |
 
 
 
@@ -144,23 +144,6 @@ The address is zero
 
 
 
-
-### PulledAmountTooHigh
-
-```solidity
-error PulledAmountTooHigh(uint256 requestedAmount, uint256 availableAmount)
-```
-
-Thrown when the requested pulled amount is too high
-
-
-
-#### Parameters
-
-| Name | Type | Description |
-|---|---|---|
-| requestedAmount | uint256 | The amount that was requested by River |
-| availableAmount | uint256 | The current balance available |
 
 ### Unauthorized
 

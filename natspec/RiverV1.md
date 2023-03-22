@@ -61,6 +61,23 @@ Size of a BLS Signature in bytes
 |---|---|---|
 | _0 | uint256 | undefined |
 
+### _DEPOSIT_SIZE
+
+```solidity
+function _DEPOSIT_SIZE() external view returns (uint256)
+```
+
+Size of a deposit in ETH
+
+
+
+
+#### Returns
+
+| Name | Type | Description |
+|---|---|---|
+| _0 | uint256 | undefined |
+
 ### acceptAdmin
 
 ```solidity
@@ -161,6 +178,29 @@ Retrieve the underlying asset balance of an account
 | Name | Type | Description |
 |---|---|---|
 | _0 | uint256 | The underlying balance of the account |
+
+### claimRedeemRequests
+
+```solidity
+function claimRedeemRequests(uint32[] redeemRequestIds, uint32[] withdrawalEventIds) external nonpayable returns (uint8[] claimStatuses)
+```
+
+Claims several redeem requests
+
+
+
+#### Parameters
+
+| Name | Type | Description |
+|---|---|---|
+| redeemRequestIds | uint32[] | The list of redeem requests to claim |
+| withdrawalEventIds | uint32[] | The list of resolved withdrawal event ids |
+
+#### Returns
+
+| Name | Type | Description |
+|---|---|---|
+| claimStatuses | uint8[] | The operation status results |
 
 ### decimals
 
@@ -285,7 +325,7 @@ Retrieve the allowlist address
 function getBalanceToDeposit() external view returns (uint256)
 ```
 
-Returns the amount of pending ETH
+Returns the amount of ETH not yet committed for deposit
 
 
 
@@ -294,7 +334,41 @@ Returns the amount of pending ETH
 
 | Name | Type | Description |
 |---|---|---|
-| _0 | uint256 | The amount of pending ETH |
+| _0 | uint256 | The amount of ETH not yet committed for deposit |
+
+### getBalanceToRedeem
+
+```solidity
+function getBalanceToRedeem() external view returns (uint256)
+```
+
+Retrieve the current balance to redeem
+
+
+
+
+#### Returns
+
+| Name | Type | Description |
+|---|---|---|
+| _0 | uint256 | The current balance to redeem |
+
+### getCLSpec
+
+```solidity
+function getCLSpec() external view returns (struct CLSpec.CLSpecStruct)
+```
+
+Retrieve the current cl spec
+
+
+
+
+#### Returns
+
+| Name | Type | Description |
+|---|---|---|
+| _0 | CLSpec.CLSpecStruct | The Consensus Layer Specification |
 
 ### getCLValidatorCount
 
@@ -347,6 +421,23 @@ Retrieve the collector address
 |---|---|---|
 | _0 | address | The collector address |
 
+### getCommittedBalance
+
+```solidity
+function getCommittedBalance() external view returns (uint256)
+```
+
+Returns the amount of ETH committed for deposit
+
+
+
+
+#### Returns
+
+| Name | Type | Description |
+|---|---|---|
+| _0 | uint256 | The amount of ETH committed for deposit |
+
 ### getCoverageFund
 
 ```solidity
@@ -363,6 +454,59 @@ Retrieve the coverage fund
 | Name | Type | Description |
 |---|---|---|
 | _0 | address | The coverage fund address |
+
+### getCurrentEpochId
+
+```solidity
+function getCurrentEpochId() external view returns (uint256)
+```
+
+Retrieve the current epoch id based on block timestamp
+
+
+
+
+#### Returns
+
+| Name | Type | Description |
+|---|---|---|
+| _0 | uint256 | The current epoch id |
+
+### getCurrentFrame
+
+```solidity
+function getCurrentFrame() external view returns (uint256 _startEpochId, uint256 _startTime, uint256 _endTime)
+```
+
+Retrieve the current frame details
+
+
+
+
+#### Returns
+
+| Name | Type | Description |
+|---|---|---|
+| _startEpochId | uint256 | The epoch at the beginning of the frame |
+| _startTime | uint256 | The timestamp of the beginning of the frame in seconds |
+| _endTime | uint256 | The timestamp of the end of the frame in seconds |
+
+### getDailyCommittableLimits
+
+```solidity
+function getDailyCommittableLimits() external view returns (struct DailyCommittableLimits.DailyCommittableLimitsStruct)
+```
+
+Retrieve the configured daily committable limits
+
+
+
+
+#### Returns
+
+| Name | Type | Description |
+|---|---|---|
+| _0 | DailyCommittableLimits.DailyCommittableLimitsStruct | The daily committable limits structure |
 
 ### getDepositedValidatorCount
 
@@ -398,6 +542,45 @@ Retrieve the execution layer fee recipient
 |---|---|---|
 | _0 | address | The execution layer fee recipient address |
 
+### getExpectedEpochId
+
+```solidity
+function getExpectedEpochId() external view returns (uint256)
+```
+
+Retrieve expected epoch id
+
+
+
+
+#### Returns
+
+| Name | Type | Description |
+|---|---|---|
+| _0 | uint256 | The current expected epoch id |
+
+### getFrameFirstEpochId
+
+```solidity
+function getFrameFirstEpochId(uint256 _epochId) external view returns (uint256)
+```
+
+Retrieve the first epoch id of the frame of the provided epoch id
+
+
+
+#### Parameters
+
+| Name | Type | Description |
+|---|---|---|
+| _epochId | uint256 | Epoch id used to get the frame |
+
+#### Returns
+
+| Name | Type | Description |
+|---|---|---|
+| _0 | uint256 | The first epoch id of the frame containing the given epoch id |
+
 ### getGlobalFee
 
 ```solidity
@@ -414,6 +597,40 @@ Get the current global fee
 | Name | Type | Description |
 |---|---|---|
 | _0 | uint256 | The global fee |
+
+### getLastCompletedEpochId
+
+```solidity
+function getLastCompletedEpochId() external view returns (uint256)
+```
+
+Retrieve the last completed epoch id
+
+
+
+
+#### Returns
+
+| Name | Type | Description |
+|---|---|---|
+| _0 | uint256 | The last completed epoch id |
+
+### getLastConsensusLayerReport
+
+```solidity
+function getLastConsensusLayerReport() external view returns (struct IOracleManagerV1.StoredConsensusLayerReport)
+```
+
+Retrieve the last consensus layer report
+
+
+
+
+#### Returns
+
+| Name | Type | Description |
+|---|---|---|
+| _0 | IOracleManagerV1.StoredConsensusLayerReport | The stored consensus layer report |
 
 ### getMetadataURI
 
@@ -483,6 +700,40 @@ Retrieve the current pending admin address
 |---|---|---|
 | _0 | address | The pending admin address |
 
+### getReportBounds
+
+```solidity
+function getReportBounds() external view returns (struct ReportBounds.ReportBoundsStruct)
+```
+
+Retrieve the report bounds
+
+
+
+
+#### Returns
+
+| Name | Type | Description |
+|---|---|---|
+| _0 | ReportBounds.ReportBoundsStruct | The report bounds |
+
+### getTime
+
+```solidity
+function getTime() external view returns (uint256)
+```
+
+Retrieve the block timestamp
+
+
+
+
+#### Returns
+
+| Name | Type | Description |
+|---|---|---|
+| _0 | uint256 | The current timestamp from the EVM context |
+
 ### getWithdrawalCredentials
 
 ```solidity
@@ -547,6 +798,53 @@ Initializes the River system
 | _collectorAddress | address | Address receiving the the global fee on revenue |
 | _globalFee | uint256 | Amount retained when the ETH balance increases and sent to the collector |
 
+### initRiverV1_1
+
+```solidity
+function initRiverV1_1(address _redeemManager, uint64 epochsPerFrame, uint64 slotsPerEpoch, uint64 secondsPerSlot, uint64 genesisTime, uint64 epochsToAssumedFinality, uint256 annualAprUpperBound, uint256 relativeLowerBound, uint128 maxDailyNetCommittableAmount_, uint128 maxDailyRelativeCommittableAmount_) external nonpayable
+```
+
+Initialized version 1.1 of the River System
+
+
+
+#### Parameters
+
+| Name | Type | Description |
+|---|---|---|
+| _redeemManager | address | The redeem manager address |
+| epochsPerFrame | uint64 | The amounts of epochs in a frame |
+| slotsPerEpoch | uint64 | The slots inside an epoch |
+| secondsPerSlot | uint64 | The seconds inside a slot |
+| genesisTime | uint64 | The genesis timestamp |
+| epochsToAssumedFinality | uint64 | The number of epochs before an epoch is considered final on-chain |
+| annualAprUpperBound | uint256 | The reporting upper bound |
+| relativeLowerBound | uint256 | The reporting lower bound |
+| maxDailyNetCommittableAmount_ | uint128 | The net daily committable limit |
+| maxDailyRelativeCommittableAmount_ | uint128 | The relative daily committable limit |
+
+### isValidEpoch
+
+```solidity
+function isValidEpoch(uint256 epoch) external view returns (bool)
+```
+
+Verifies if the provided epoch is valid
+
+
+
+#### Parameters
+
+| Name | Type | Description |
+|---|---|---|
+| epoch | uint256 | The epoch to lookup |
+
+#### Returns
+
+| Name | Type | Description |
+|---|---|---|
+| _0 | bool | True if valid |
+
 ### name
 
 ```solidity
@@ -579,6 +877,50 @@ Proposes a new address as admin
 | Name | Type | Description |
 |---|---|---|
 | _newAdmin | address | New admin address |
+
+### requestRedeem
+
+```solidity
+function requestRedeem(uint256 lsETHAmount) external nonpayable returns (uint32 redeemRequestId)
+```
+
+Performs a redeem request on the redeem manager
+
+
+
+#### Parameters
+
+| Name | Type | Description |
+|---|---|---|
+| lsETHAmount | uint256 | The amount of LsETH to redeem |
+
+#### Returns
+
+| Name | Type | Description |
+|---|---|---|
+| redeemRequestId | uint32 | The ID of the newly created redeem request |
+
+### resolveRedeemRequests
+
+```solidity
+function resolveRedeemRequests(uint32[] redeemRequestIds) external view returns (int64[] withdrawalEventIds)
+```
+
+Resolves the provided redeem requests by calling the redeem manager
+
+
+
+#### Parameters
+
+| Name | Type | Description |
+|---|---|---|
+| redeemRequestIds | uint32[] | The list of redeem requests to resolve |
+
+#### Returns
+
+| Name | Type | Description |
+|---|---|---|
+| withdrawalEventIds | int64[] | The list of matching withdrawal events, or error codes |
 
 ### sendCLFunds
 
@@ -613,6 +955,17 @@ Input for execution layer fee earnings
 
 
 
+### sendRedeemManagerExceedingFunds
+
+```solidity
+function sendRedeemManagerExceedingFunds() external payable
+```
+
+Input for the redeem manager funds
+
+
+
+
 ### setAllowlist
 
 ```solidity
@@ -628,6 +981,22 @@ Changes the allowlist address
 | Name | Type | Description |
 |---|---|---|
 | _newAllowlist | address | New address for the allowlist |
+
+### setCLSpec
+
+```solidity
+function setCLSpec(CLSpec.CLSpecStruct newValue) external nonpayable
+```
+
+
+
+
+
+#### Parameters
+
+| Name | Type | Description |
+|---|---|---|
+| newValue | CLSpec.CLSpecStruct | undefined |
 
 ### setCollector
 
@@ -648,21 +1017,18 @@ Changes the collector address
 ### setConsensusLayerData
 
 ```solidity
-function setConsensusLayerData(uint256 _validatorCount, uint256 _validatorTotalBalance, bytes32 _roundId, uint256 _maxIncrease) external nonpayable
+function setConsensusLayerData(IOracleManagerV1.ConsensusLayerReport report) external nonpayable
 ```
 
-Sets the validator count and validator total balance sum reported by the oracle
 
-*Can only be called by the oracle addressThe round id is a blackbox value that should only be used to identify unique reportsWhen a report is performed, River computes the amount of fees that can be pulledfrom the execution layer fee recipient. This amount is capped by the max allowedincrease provided during the report.If the total asset balance increases (from the reported total balance and the pulled funds)we then compute the share that must be taken for the collector on the positive delta.The execution layer fees are taken into account here because they are the product ofnode operator&#39;s work, just like consensus layer fees, and both should be handled in thesame manner, as a single revenue stream for the users and the collector.*
+
+
 
 #### Parameters
 
 | Name | Type | Description |
 |---|---|---|
-| _validatorCount | uint256 | The number of active validators on the consensus layer |
-| _validatorTotalBalance | uint256 | The balance sum of the active validators on the consensus layer |
-| _roundId | bytes32 | An identifier for this update |
-| _maxIncrease | uint256 | The maximum allowed increase in the total balance |
+| report | IOracleManagerV1.ConsensusLayerReport | undefined |
 
 ### setCoverageFund
 
@@ -679,6 +1045,22 @@ Changes the coverage fund
 | Name | Type | Description |
 |---|---|---|
 | _newCoverageFund | address | New address for the fund |
+
+### setDailyCommittableLimits
+
+```solidity
+function setDailyCommittableLimits(DailyCommittableLimits.DailyCommittableLimitsStruct dcl) external nonpayable
+```
+
+
+
+
+
+#### Parameters
+
+| Name | Type | Description |
+|---|---|---|
+| dcl | DailyCommittableLimits.DailyCommittableLimitsStruct | undefined |
 
 ### setELFeeRecipient
 
@@ -743,6 +1125,22 @@ Set the oracle address
 | Name | Type | Description |
 |---|---|---|
 | _oracleAddress | address | Address of the oracle |
+
+### setReportBounds
+
+```solidity
+function setReportBounds(ReportBounds.ReportBoundsStruct newValue) external nonpayable
+```
+
+
+
+
+
+#### Parameters
+
+| Name | Type | Description |
+|---|---|---|
+| newValue | ReportBounds.ReportBoundsStruct | undefined |
 
 ### sharesFromUnderlyingBalance
 
@@ -926,22 +1324,6 @@ The consensus layer data provided by the oracle has been updated
 | validatorTotalBalance  | uint256 | undefined |
 | roundId  | bytes32 | undefined |
 
-### FundedValidatorKey
-
-```solidity
-event FundedValidatorKey(bytes publicKey)
-```
-
-A validator key got funded on the deposit contract
-
-
-
-#### Parameters
-
-| Name | Type | Description |
-|---|---|---|
-| publicKey  | bytes | undefined |
-
 ### Initialize
 
 ```solidity
@@ -958,6 +1340,23 @@ Emitted when the contract is properly initialized
 |---|---|---|
 | version  | uint256 | undefined |
 | cdata  | bytes | undefined |
+
+### ProcessedConsensusLayerReport
+
+```solidity
+event ProcessedConsensusLayerReport(IOracleManagerV1.ConsensusLayerReport report, IOracleManagerV1.ConsensusLayerDataReportingTrace trace)
+```
+
+The provided report has beend processed
+
+
+
+#### Parameters
+
+| Name | Type | Description |
+|---|---|---|
+| report  | IOracleManagerV1.ConsensusLayerReport | undefined |
+| trace  | IOracleManagerV1.ConsensusLayerDataReportingTrace | undefined |
 
 ### PulledCoverageFunds
 
@@ -990,6 +1389,40 @@ Funds have been pulled from the Execution Layer Fee Recipient
 | Name | Type | Description |
 |---|---|---|
 | amount  | uint256 | undefined |
+
+### PulledRedeemManagerExceedingEth
+
+```solidity
+event PulledRedeemManagerExceedingEth(uint256 amount)
+```
+
+Emitted when funds are pulled from the redeem manager
+
+
+
+#### Parameters
+
+| Name | Type | Description |
+|---|---|---|
+| amount  | uint256 | undefined |
+
+### ReportedRedeemManager
+
+```solidity
+event ReportedRedeemManager(uint256 redeemManagerDemand, uint256 suppliedRedeemManagerDemand, uint256 suppliedRedeemManagerDemandInEth)
+```
+
+Emitted when the redeem manager received a withdraw event report
+
+
+
+#### Parameters
+
+| Name | Type | Description |
+|---|---|---|
+| redeemManagerDemand  | uint256 | undefined |
+| suppliedRedeemManagerDemand  | uint256 | undefined |
+| suppliedRedeemManagerDemandInEth  | uint256 | undefined |
 
 ### RewardsEarned
 
@@ -1043,6 +1476,74 @@ The stored Allowlist has been changed
 |---|---|---|
 | allowlist `indexed` | address | undefined |
 
+### SetBalanceCommittedToDeposit
+
+```solidity
+event SetBalanceCommittedToDeposit(uint256 oldAmount, uint256 newAmount)
+```
+
+Emitted when the balance committed to deposit
+
+
+
+#### Parameters
+
+| Name | Type | Description |
+|---|---|---|
+| oldAmount  | uint256 | undefined |
+| newAmount  | uint256 | undefined |
+
+### SetBalanceToDeposit
+
+```solidity
+event SetBalanceToDeposit(uint256 oldAmount, uint256 newAmount)
+```
+
+Emitted when the balance to deposit is updated
+
+
+
+#### Parameters
+
+| Name | Type | Description |
+|---|---|---|
+| oldAmount  | uint256 | undefined |
+| newAmount  | uint256 | undefined |
+
+### SetBalanceToRedeem
+
+```solidity
+event SetBalanceToRedeem(uint256 oldAmount, uint256 newAmount)
+```
+
+Emitted when the balance to redeem is updated
+
+
+
+#### Parameters
+
+| Name | Type | Description |
+|---|---|---|
+| oldAmount  | uint256 | undefined |
+| newAmount  | uint256 | undefined |
+
+### SetBounds
+
+```solidity
+event SetBounds(uint256 annualAprUpperBound, uint256 relativeLowerBound)
+```
+
+The Report Bounds are changed
+
+
+
+#### Parameters
+
+| Name | Type | Description |
+|---|---|---|
+| annualAprUpperBound  | uint256 | undefined |
+| relativeLowerBound  | uint256 | undefined |
+
 ### SetCollector
 
 ```solidity
@@ -1091,6 +1592,23 @@ The stored deposit contract address changed
 |---|---|---|
 | depositContract `indexed` | address | undefined |
 
+### SetDepositedValidatorCount
+
+```solidity
+event SetDepositedValidatorCount(uint256 oldDepositedValidatorCount, uint256 newDepositedValidatorCount)
+```
+
+Emitted when the deposited validator count is updated
+
+
+
+#### Parameters
+
+| Name | Type | Description |
+|---|---|---|
+| oldDepositedValidatorCount  | uint256 | undefined |
+| newDepositedValidatorCount  | uint256 | undefined |
+
 ### SetELFeeRecipient
 
 ```solidity
@@ -1122,6 +1640,23 @@ The stored Global Fee has been changed
 | Name | Type | Description |
 |---|---|---|
 | fee  | uint256 | undefined |
+
+### SetMaxDailyCommittableAmounts
+
+```solidity
+event SetMaxDailyCommittableAmounts(uint256 maxNetAmount, uint256 maxRelativeAmount)
+```
+
+Emitted when the daily committable limits are changed
+
+
+
+#### Parameters
+
+| Name | Type | Description |
+|---|---|---|
+| maxNetAmount  | uint256 | undefined |
+| maxRelativeAmount  | uint256 | undefined |
 
 ### SetMetadataURI
 
@@ -1186,6 +1721,58 @@ The pending admin address changed
 | Name | Type | Description |
 |---|---|---|
 | pendingAdmin `indexed` | address | undefined |
+
+### SetRedeemManager
+
+```solidity
+event SetRedeemManager(address redeemManager)
+```
+
+Emitted when the redeem manager address is changed
+
+
+
+#### Parameters
+
+| Name | Type | Description |
+|---|---|---|
+| redeemManager  | address | undefined |
+
+### SetSpec
+
+```solidity
+event SetSpec(uint64 epochsPerFrame, uint64 slotsPerEpoch, uint64 secondsPerSlot, uint64 genesisTime, uint64 epochsToAssumedFinality)
+```
+
+The Consensus Layer Spec is changed
+
+
+
+#### Parameters
+
+| Name | Type | Description |
+|---|---|---|
+| epochsPerFrame  | uint64 | undefined |
+| slotsPerEpoch  | uint64 | undefined |
+| secondsPerSlot  | uint64 | undefined |
+| genesisTime  | uint64 | undefined |
+| epochsToAssumedFinality  | uint64 | undefined |
+
+### SetTotalSupply
+
+```solidity
+event SetTotalSupply(uint256 totalSupply)
+```
+
+Emitted when the total supply is changed
+
+
+
+#### Parameters
+
+| Name | Type | Description |
+|---|---|---|
+| totalSupply  | uint256 | undefined |
 
 ### SetWithdrawalCredentials
 
@@ -1355,6 +1942,40 @@ The call was invalid
 
 
 
+### InvalidDecreasingValidatorsExitedBalance
+
+```solidity
+error InvalidDecreasingValidatorsExitedBalance(uint256 currentValidatorsExitedBalance, uint256 newValidatorsExitedBalance)
+```
+
+The total exited balance decreased
+
+
+
+#### Parameters
+
+| Name | Type | Description |
+|---|---|---|
+| currentValidatorsExitedBalance | uint256 | The current exited balance |
+| newValidatorsExitedBalance | uint256 | The new exited balance |
+
+### InvalidDecreasingValidatorsSkimmedBalance
+
+```solidity
+error InvalidDecreasingValidatorsSkimmedBalance(uint256 currentValidatorsSkimmedBalance, uint256 newValidatorsSkimmedBalance)
+```
+
+The total skimmed balance decreased
+
+
+
+#### Parameters
+
+| Name | Type | Description |
+|---|---|---|
+| currentValidatorsSkimmedBalance | uint256 | The current exited balance |
+| newValidatorsSkimmedBalance | uint256 | The new exited balance |
+
 ### InvalidEmptyString
 
 ```solidity
@@ -1365,6 +1986,22 @@ The string is empty
 
 
 
+
+### InvalidEpoch
+
+```solidity
+error InvalidEpoch(uint256 epoch)
+```
+
+Thrown when an invalid epoch was reported
+
+
+
+#### Parameters
+
+| Name | Type | Description |
+|---|---|---|
+| epoch | uint256 | Invalid epoch |
 
 ### InvalidFee
 
@@ -1404,6 +2041,23 @@ The received count of public keys to deposit is invalid
 
 
 
+
+### InvalidPulledClFundsAmount
+
+```solidity
+error InvalidPulledClFundsAmount(uint256 requested, uint256 received)
+```
+
+Thrown when the amount received from the Withdraw contract doe not match the requested amount
+
+
+
+#### Parameters
+
+| Name | Type | Description |
+|---|---|---|
+| requested | uint256 | The amount that was requested |
+| received | uint256 | The amount that was received |
 
 ### InvalidSignatureCount
 
@@ -1509,6 +2163,44 @@ The length overflows an uint
 
 
 
+
+### TotalValidatorBalanceDecreaseOutOfBound
+
+```solidity
+error TotalValidatorBalanceDecreaseOutOfBound(uint256 prevTotalEthIncludingExited, uint256 postTotalEthIncludingExited, uint256 timeElapsed, uint256 relativeLowerBound)
+```
+
+The balance decrease is higher than the maximum allowed by the lower bound
+
+
+
+#### Parameters
+
+| Name | Type | Description |
+|---|---|---|
+| prevTotalEthIncludingExited | uint256 | The previous total balance, including all exited balance |
+| postTotalEthIncludingExited | uint256 | The post-report total balance, including all exited balance |
+| timeElapsed | uint256 | The time in seconds since last report |
+| relativeLowerBound | uint256 | The lower bound value that was used |
+
+### TotalValidatorBalanceIncreaseOutOfBound
+
+```solidity
+error TotalValidatorBalanceIncreaseOutOfBound(uint256 prevTotalEthIncludingExited, uint256 postTotalEthIncludingExited, uint256 timeElapsed, uint256 annualAprUpperBound)
+```
+
+The balance increase is higher than the maximum allowed by the upper bound
+
+
+
+#### Parameters
+
+| Name | Type | Description |
+|---|---|---|
+| prevTotalEthIncludingExited | uint256 | The previous total balance, including all exited balance |
+| postTotalEthIncludingExited | uint256 | The post-report total balance, including all exited balance |
+| timeElapsed | uint256 | The time in seconds since last report |
+| annualAprUpperBound | uint256 | The upper bound value that was used |
 
 ### Unauthorized
 

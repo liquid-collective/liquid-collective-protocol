@@ -98,23 +98,3 @@ Emitted when the linked River address is changed
 
 
 
-## Errors
-
-### PulledAmountTooHigh
-
-```solidity
-error PulledAmountTooHigh(uint256 requestedAmount, uint256 availableAmount)
-```
-
-Thrown when the requested pulled amount is too high
-
-
-
-#### Parameters
-
-| Name | Type | Description |
-|---|---|---|
-| requestedAmount | uint256 | The amount that was requested by River |
-| availableAmount | uint256 | The current balance available |
-
-

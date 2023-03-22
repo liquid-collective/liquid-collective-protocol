@@ -32,7 +32,7 @@ Deposits current balance to the Consensus Layer by batches of 32 ETH
 function getBalanceToDeposit() external view returns (uint256)
 ```
 
-Returns the amount of pending ETH
+Returns the amount of ETH not yet committed for deposit
 
 
 
@@ -41,7 +41,24 @@ Returns the amount of pending ETH
 
 | Name | Type | Description |
 |---|---|---|
-| _0 | uint256 | The amount of pending ETH |
+| _0 | uint256 | The amount of ETH not yet committed for deposit |
+
+### getCommittedBalance
+
+```solidity
+function getCommittedBalance() external view returns (uint256)
+```
+
+Returns the amount of ETH committed for deposit
+
+
+
+
+#### Returns
+
+| Name | Type | Description |
+|---|---|---|
+| _0 | uint256 | The amount of ETH committed for deposit |
 
 ### getDepositedValidatorCount
 
@@ -81,22 +98,6 @@ Retrieve the withdrawal credentials
 
 ## Events
 
-### FundedValidatorKey
-
-```solidity
-event FundedValidatorKey(bytes publicKey)
-```
-
-A validator key got funded on the deposit contract
-
-
-
-#### Parameters
-
-| Name | Type | Description |
-|---|---|---|
-| publicKey  | bytes | BLS Public key that got funded |
-
 ### SetDepositContractAddress
 
 ```solidity
@@ -112,6 +113,23 @@ The stored deposit contract address changed
 | Name | Type | Description |
 |---|---|---|
 | depositContract `indexed` | address | Address of the deposit contract |
+
+### SetDepositedValidatorCount
+
+```solidity
+event SetDepositedValidatorCount(uint256 oldDepositedValidatorCount, uint256 newDepositedValidatorCount)
+```
+
+Emitted when the deposited validator count is updated
+
+
+
+#### Parameters
+
+| Name | Type | Description |
+|---|---|---|
+| oldDepositedValidatorCount  | uint256 | The old deposited validator count value |
+| newDepositedValidatorCount  | uint256 | The new deposited validator count value |
 
 ### SetWithdrawalCredentials
 

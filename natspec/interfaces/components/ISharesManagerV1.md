@@ -344,6 +344,22 @@ event Approval(address indexed owner, address indexed spender, uint256 value)
 | spender `indexed` | address | undefined |
 | value  | uint256 | undefined |
 
+### SetTotalSupply
+
+```solidity
+event SetTotalSupply(uint256 totalSupply)
+```
+
+Emitted when the total supply is changed
+
+
+
+#### Parameters
+
+| Name | Type | Description |
+|---|---|---|
+| totalSupply  | uint256 | undefined |
+
 ### Transfer
 
 ```solidity

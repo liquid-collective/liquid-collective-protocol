@@ -1,0 +1,847 @@
+{
+  "address": "0x18cbb63F8aE26D04d9F006B6cf32B6feBDe59744",
+  "abi": [
+    {
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "redeemRequestId",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint256",
+          "name": "withdrawalEventId",
+          "type": "uint256"
+        }
+      ],
+      "name": "DoesNotMatch",
+      "type": "error"
+    },
+    {
+      "inputs": [],
+      "name": "IncompatibleArrayLengths",
+      "type": "error"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "version",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint256",
+          "name": "expectedVersion",
+          "type": "uint256"
+        }
+      ],
+      "name": "InvalidInitialization",
+      "type": "error"
+    },
+    {
+      "inputs": [],
+      "name": "InvalidZeroAddress",
+      "type": "error"
+    },
+    {
+      "inputs": [],
+      "name": "InvalidZeroAmount",
+      "type": "error"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "id",
+          "type": "uint256"
+        }
+      ],
+      "name": "RedeemRequestAlreadyClaimed",
+      "type": "error"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "id",
+          "type": "uint256"
+        }
+      ],
+      "name": "RedeemRequestOutOfBounds",
+      "type": "error"
+    },
+    {
+      "inputs": [],
+      "name": "TransferError",
+      "type": "error"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "caller",
+          "type": "address"
+        }
+      ],
+      "name": "Unauthorized",
+      "type": "error"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "id",
+          "type": "uint256"
+        }
+      ],
+      "name": "WithdrawalEventOutOfBounds",
+      "type": "error"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "internalType": "uint32",
+          "name": "redeemRequestId",
+          "type": "uint32"
+        },
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "recipient",
+          "type": "address"
+        },
+        {
+          "indexed": false,
+          "internalType": "uint256",
+          "name": "ethAmount",
+          "type": "uint256"
+        },
+        {
+          "indexed": false,
+          "internalType": "uint256",
+          "name": "lsEthAmount",
+          "type": "uint256"
+        },
+        {
+          "indexed": false,
+          "internalType": "uint256",
+          "name": "remainingLsEthAmount",
+          "type": "uint256"
+        }
+      ],
+      "name": "ClaimedRedeemRequest",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": false,
+          "internalType": "uint256",
+          "name": "version",
+          "type": "uint256"
+        },
+        {
+          "indexed": false,
+          "internalType": "bytes",
+          "name": "cdata",
+          "type": "bytes"
+        }
+      ],
+      "name": "Initialize",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": false,
+          "internalType": "uint256",
+          "name": "height",
+          "type": "uint256"
+        },
+        {
+          "indexed": false,
+          "internalType": "uint256",
+          "name": "amount",
+          "type": "uint256"
+        },
+        {
+          "indexed": false,
+          "internalType": "uint256",
+          "name": "ethAmount",
+          "type": "uint256"
+        },
+        {
+          "indexed": false,
+          "internalType": "uint32",
+          "name": "id",
+          "type": "uint32"
+        }
+      ],
+      "name": "ReportedWithdrawal",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "owner",
+          "type": "address"
+        },
+        {
+          "indexed": false,
+          "internalType": "uint256",
+          "name": "height",
+          "type": "uint256"
+        },
+        {
+          "indexed": false,
+          "internalType": "uint256",
+          "name": "amount",
+          "type": "uint256"
+        },
+        {
+          "indexed": false,
+          "internalType": "uint32",
+          "name": "id",
+          "type": "uint32"
+        }
+      ],
+      "name": "RequestedRedeem",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "internalType": "uint32",
+          "name": "redeemRequestId",
+          "type": "uint32"
+        },
+        {
+          "indexed": true,
+          "internalType": "uint32",
+          "name": "withdrawalEventId",
+          "type": "uint32"
+        },
+        {
+          "indexed": false,
+          "internalType": "uint256",
+          "name": "lsEthAmountSatisfied",
+          "type": "uint256"
+        },
+        {
+          "indexed": false,
+          "internalType": "uint256",
+          "name": "ethAmountSatisfied",
+          "type": "uint256"
+        },
+        {
+          "indexed": false,
+          "internalType": "uint256",
+          "name": "lsEthAmountRemaining",
+          "type": "uint256"
+        },
+        {
+          "indexed": false,
+          "internalType": "uint256",
+          "name": "ethAmountExceeding",
+          "type": "uint256"
+        }
+      ],
+      "name": "SatisfiedRedeemRequest",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": false,
+          "internalType": "uint256",
+          "name": "amount",
+          "type": "uint256"
+        }
+      ],
+      "name": "SentExceedingEth",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": false,
+          "internalType": "address",
+          "name": "river",
+          "type": "address"
+        }
+      ],
+      "name": "SetRiver",
+      "type": "event"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint32[]",
+          "name": "redeemRequestIds",
+          "type": "uint32[]"
+        },
+        {
+          "internalType": "uint32[]",
+          "name": "withdrawalEventIds",
+          "type": "uint32[]"
+        }
+      ],
+      "name": "claimRedeemRequests",
+      "outputs": [
+        {
+          "internalType": "uint8[]",
+          "name": "claimStatuses",
+          "type": "uint8[]"
+        }
+      ],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint32[]",
+          "name": "redeemRequestIds",
+          "type": "uint32[]"
+        },
+        {
+          "internalType": "uint32[]",
+          "name": "withdrawalEventIds",
+          "type": "uint32[]"
+        },
+        {
+          "internalType": "bool",
+          "name": "skipAlreadyClaimed",
+          "type": "bool"
+        }
+      ],
+      "name": "claimRedeemRequests",
+      "outputs": [
+        {
+          "internalType": "uint8[]",
+          "name": "claimStatuses",
+          "type": "uint8[]"
+        }
+      ],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "getBufferedExceedingEth",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "getRedeemRequestCount",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint32",
+          "name": "redeemRequestId",
+          "type": "uint32"
+        }
+      ],
+      "name": "getRedeemRequestDetails",
+      "outputs": [
+        {
+          "components": [
+            {
+              "internalType": "uint256",
+              "name": "amount",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "maxRedeemableEth",
+              "type": "uint256"
+            },
+            {
+              "internalType": "address",
+              "name": "owner",
+              "type": "address"
+            },
+            {
+              "internalType": "uint256",
+              "name": "height",
+              "type": "uint256"
+            }
+          ],
+          "internalType": "struct RedeemQueue.RedeemRequest",
+          "name": "",
+          "type": "tuple"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "getWithdrawalEventCount",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint32",
+          "name": "withdrawalEventId",
+          "type": "uint32"
+        }
+      ],
+      "name": "getWithdrawalEventDetails",
+      "outputs": [
+        {
+          "components": [
+            {
+              "internalType": "uint256",
+              "name": "amount",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "withdrawnEth",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "height",
+              "type": "uint256"
+            }
+          ],
+          "internalType": "struct WithdrawalStack.WithdrawalEvent",
+          "name": "",
+          "type": "tuple"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "river",
+          "type": "address"
+        }
+      ],
+      "name": "initializeRedeemManagerV1",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "max",
+          "type": "uint256"
+        }
+      ],
+      "name": "pullExceedingEth",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "lsETHWithdrawable",
+          "type": "uint256"
+        }
+      ],
+      "name": "reportWithdraw",
+      "outputs": [],
+      "stateMutability": "payable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "lsETHAmount",
+          "type": "uint256"
+        },
+        {
+          "internalType": "address",
+          "name": "recipient",
+          "type": "address"
+        }
+      ],
+      "name": "requestRedeem",
+      "outputs": [
+        {
+          "internalType": "uint32",
+          "name": "redeemRequestId",
+          "type": "uint32"
+        }
+      ],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "lsETHAmount",
+          "type": "uint256"
+        }
+      ],
+      "name": "requestRedeem",
+      "outputs": [
+        {
+          "internalType": "uint32",
+          "name": "redeemRequestId",
+          "type": "uint32"
+        }
+      ],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint32[]",
+          "name": "redeemRequestIds",
+          "type": "uint32[]"
+        }
+      ],
+      "name": "resolveRedeemRequests",
+      "outputs": [
+        {
+          "internalType": "int64[]",
+          "name": "withdrawalEventIds",
+          "type": "int64[]"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    }
+  ],
+  "transactionHash": "0xf0b30fb75a613de03a14a5efb36473f8709c946a14bbb1e37a6385d9fd35c267",
+  "receipt": {
+    "to": null,
+    "from": "0xb327fA3b591cF8E27BA72AcBA7dF3f599009E49d",
+    "contractAddress": "0x18cbb63F8aE26D04d9F006B6cf32B6feBDe59744",
+    "transactionIndex": 69,
+    "gasUsed": "1742135",
+    "logsBloom": "0x00000000000000000000000000000000000000010000000000000000001000000000000000000000000000000000000000000000000020000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000080000000000020000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000040000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+    "blockHash": "0x606201c3fe835b7a65f487a6ae11fbcbfda362c8cda8004fb3c24d1971252ac2",
+    "transactionHash": "0xf0b30fb75a613de03a14a5efb36473f8709c946a14bbb1e37a6385d9fd35c267",
+    "logs": [
+      {
+        "transactionIndex": 69,
+        "blockNumber": 8699423,
+        "transactionHash": "0xf0b30fb75a613de03a14a5efb36473f8709c946a14bbb1e37a6385d9fd35c267",
+        "address": "0x18cbb63F8aE26D04d9F006B6cf32B6feBDe59744",
+        "topics": [
+          "0x1809e49bba43f2d39fa57894b50cd6ccb428cc438230e065cac3eb24a1355a71"
+        ],
+        "data": "0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff00000000000000000000000000000000000000000000000000000000000000400000000000000000000000000000000000000000000000000000000000000000",
+        "logIndex": 136,
+        "blockHash": "0x606201c3fe835b7a65f487a6ae11fbcbfda362c8cda8004fb3c24d1971252ac2"
+      }
+    ],
+    "blockNumber": 8699423,
+    "cumulativeGasUsed": "11058155",
+    "status": 1,
+    "byzantium": true
+  },
+  "args": [],
+  "numDeployments": 1,
+  "solcInputHash": "0a2910002f1f7235235bf4c9129dadf0",
+  "metadata": "{\"compiler\":{\"version\":\"0.8.10+commit.fc410830\"},\"language\":\"Solidity\",\"output\":{\"abi\":[{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"redeemRequestId\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"withdrawalEventId\",\"type\":\"uint256\"}],\"name\":\"DoesNotMatch\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"IncompatibleArrayLengths\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"version\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"expectedVersion\",\"type\":\"uint256\"}],\"name\":\"InvalidInitialization\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"InvalidZeroAddress\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"InvalidZeroAmount\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"id\",\"type\":\"uint256\"}],\"name\":\"RedeemRequestAlreadyClaimed\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"id\",\"type\":\"uint256\"}],\"name\":\"RedeemRequestOutOfBounds\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"TransferError\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"caller\",\"type\":\"address\"}],\"name\":\"Unauthorized\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"id\",\"type\":\"uint256\"}],\"name\":\"WithdrawalEventOutOfBounds\",\"type\":\"error\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"uint32\",\"name\":\"redeemRequestId\",\"type\":\"uint32\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"recipient\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"ethAmount\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"lsEthAmount\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"remainingLsEthAmount\",\"type\":\"uint256\"}],\"name\":\"ClaimedRedeemRequest\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"version\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"bytes\",\"name\":\"cdata\",\"type\":\"bytes\"}],\"name\":\"Initialize\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"height\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"amount\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"ethAmount\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"uint32\",\"name\":\"id\",\"type\":\"uint32\"}],\"name\":\"ReportedWithdrawal\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"owner\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"height\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"amount\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"uint32\",\"name\":\"id\",\"type\":\"uint32\"}],\"name\":\"RequestedRedeem\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"uint32\",\"name\":\"redeemRequestId\",\"type\":\"uint32\"},{\"indexed\":true,\"internalType\":\"uint32\",\"name\":\"withdrawalEventId\",\"type\":\"uint32\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"lsEthAmountSatisfied\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"ethAmountSatisfied\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"lsEthAmountRemaining\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"ethAmountExceeding\",\"type\":\"uint256\"}],\"name\":\"SatisfiedRedeemRequest\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"amount\",\"type\":\"uint256\"}],\"name\":\"SentExceedingEth\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"address\",\"name\":\"river\",\"type\":\"address\"}],\"name\":\"SetRiver\",\"type\":\"event\"},{\"inputs\":[{\"internalType\":\"uint32[]\",\"name\":\"redeemRequestIds\",\"type\":\"uint32[]\"},{\"internalType\":\"uint32[]\",\"name\":\"withdrawalEventIds\",\"type\":\"uint32[]\"}],\"name\":\"claimRedeemRequests\",\"outputs\":[{\"internalType\":\"uint8[]\",\"name\":\"claimStatuses\",\"type\":\"uint8[]\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint32[]\",\"name\":\"redeemRequestIds\",\"type\":\"uint32[]\"},{\"internalType\":\"uint32[]\",\"name\":\"withdrawalEventIds\",\"type\":\"uint32[]\"},{\"internalType\":\"bool\",\"name\":\"skipAlreadyClaimed\",\"type\":\"bool\"}],\"name\":\"claimRedeemRequests\",\"outputs\":[{\"internalType\":\"uint8[]\",\"name\":\"claimStatuses\",\"type\":\"uint8[]\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"getBufferedExceedingEth\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"getRedeemRequestCount\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint32\",\"name\":\"redeemRequestId\",\"type\":\"uint32\"}],\"name\":\"getRedeemRequestDetails\",\"outputs\":[{\"components\":[{\"internalType\":\"uint256\",\"name\":\"amount\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"maxRedeemableEth\",\"type\":\"uint256\"},{\"internalType\":\"address\",\"name\":\"owner\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"height\",\"type\":\"uint256\"}],\"internalType\":\"struct RedeemQueue.RedeemRequest\",\"name\":\"\",\"type\":\"tuple\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"getWithdrawalEventCount\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint32\",\"name\":\"withdrawalEventId\",\"type\":\"uint32\"}],\"name\":\"getWithdrawalEventDetails\",\"outputs\":[{\"components\":[{\"internalType\":\"uint256\",\"name\":\"amount\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"withdrawnEth\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"height\",\"type\":\"uint256\"}],\"internalType\":\"struct WithdrawalStack.WithdrawalEvent\",\"name\":\"\",\"type\":\"tuple\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"river\",\"type\":\"address\"}],\"name\":\"initializeRedeemManagerV1\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"max\",\"type\":\"uint256\"}],\"name\":\"pullExceedingEth\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"lsETHWithdrawable\",\"type\":\"uint256\"}],\"name\":\"reportWithdraw\",\"outputs\":[],\"stateMutability\":\"payable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"lsETHAmount\",\"type\":\"uint256\"},{\"internalType\":\"address\",\"name\":\"recipient\",\"type\":\"address\"}],\"name\":\"requestRedeem\",\"outputs\":[{\"internalType\":\"uint32\",\"name\":\"redeemRequestId\",\"type\":\"uint32\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"lsETHAmount\",\"type\":\"uint256\"}],\"name\":\"requestRedeem\",\"outputs\":[{\"internalType\":\"uint32\",\"name\":\"redeemRequestId\",\"type\":\"uint32\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint32[]\",\"name\":\"redeemRequestIds\",\"type\":\"uint32[]\"}],\"name\":\"resolveRedeemRequests\",\"outputs\":[{\"internalType\":\"int64[]\",\"name\":\"withdrawalEventIds\",\"type\":\"int64[]\"}],\"stateMutability\":\"view\",\"type\":\"function\"}],\"devdoc\":{\"author\":\"Kiln\",\"errors\":{\"DoesNotMatch(uint256,uint256)\":[{\"params\":{\"redeemRequestId\":\"The provided redeem request id\",\"withdrawalEventId\":\"The provided associated withdrawal event id\"}}],\"InvalidInitialization(uint256,uint256)\":[{\"params\":{\"expectedVersion\":\"The version that was expected\",\"version\":\"The version that was attempting to be initialized\"}}],\"RedeemRequestAlreadyClaimed(uint256)\":[{\"params\":{\"id\":\"The redeem request id\"}}],\"RedeemRequestOutOfBounds(uint256)\":[{\"params\":{\"id\":\"The redeem request id\"}}],\"Unauthorized(address)\":[{\"params\":{\"caller\":\"Address performing the call\"}}],\"WithdrawalEventOutOfBounds(uint256)\":[{\"params\":{\"id\":\"The withdrawal event id\"}}]},\"kind\":\"dev\",\"methods\":{\"claimRedeemRequests(uint32[],uint32[])\":{\"params\":{\"redeemRequestIds\":\"The list of redeem requests to claim\",\"withdrawalEventIds\":\"The list of withdrawal events to use for every redeem request claim\"},\"returns\":{\"claimStatuses\":\"The list of claim statuses. 0 for fully claimed, 1 for partially claimed, 2 for skipped\"}},\"claimRedeemRequests(uint32[],uint32[],bool)\":{\"params\":{\"redeemRequestIds\":\"The list of redeem requests to claim\",\"skipAlreadyClaimed\":\"True if the call should not revert on claiming of already claimed requests\",\"withdrawalEventIds\":\"The list of withdrawal events to use for every redeem request claim\"},\"returns\":{\"claimStatuses\":\"The list of claim statuses. 0 for fully claimed, 1 for partially claimed, 2 for skipped\"}},\"getBufferedExceedingEth()\":{\"returns\":{\"_0\":\"The amount of eth in the buffer\"}},\"getRedeemRequestDetails(uint32)\":{\"params\":{\"redeemRequestId\":\"The id of the request\"},\"returns\":{\"_0\":\"The redeem request details\"}},\"getWithdrawalEventDetails(uint32)\":{\"params\":{\"withdrawalEventId\":\"The id of the withdrawal event\"},\"returns\":{\"_0\":\"The withdrawal event details\"}},\"initializeRedeemManagerV1(address)\":{\"params\":{\"river\":\"The address of the River contract\"}},\"pullExceedingEth(uint256)\":{\"params\":{\"max\":\"The maximum amount that should be pulled\"}},\"reportWithdraw(uint256)\":{\"params\":{\"lsETHWithdrawable\":\"The amount of LsETH that can be redeemed due to this new withdraw event\"}},\"requestRedeem(uint256)\":{\"params\":{\"lsETHAmount\":\"The amount of LsETH to redeem\"},\"returns\":{\"redeemRequestId\":\"The id of the redeem request\"}},\"requestRedeem(uint256,address)\":{\"params\":{\"lsETHAmount\":\"The amount of LsETH to redeem\",\"recipient\":\"The recipient owning the redeem request\"},\"returns\":{\"redeemRequestId\":\"The id of the redeem request\"}},\"resolveRedeemRequests(uint32[])\":{\"details\":\"The result is an array of equal length with ids or error code-1 means that the request is not satisfied yet-2 means that the request is out of bounds-3 means that the request has already been claimedThis call was created to be called by an off-chain interface, the output could then be used to perform the claimRewards call in a regular transaction\",\"params\":{\"redeemRequestIds\":\"The list of redeem requests to resolve\"},\"returns\":{\"withdrawalEventIds\":\"The list of withdrawal events matching every redeem request (or error codes)\"}}},\"title\":\"Redeem Manager (v1)\",\"version\":1},\"userdoc\":{\"errors\":{\"DoesNotMatch(uint256,uint256)\":[{\"notice\":\"Thrown when the redeem request and withdrawal event are not matching during claim\"}],\"IncompatibleArrayLengths()\":[{\"notice\":\"Thrown when the provided arrays don't have matching lengths\"}],\"InvalidInitialization(uint256,uint256)\":[{\"notice\":\"An error occured during the initialization\"}],\"InvalidZeroAddress()\":[{\"notice\":\"The address is zero\"}],\"InvalidZeroAmount()\":[{\"notice\":\"Thrown When a zero value is provided\"}],\"RedeemRequestAlreadyClaimed(uint256)\":[{\"notice\":\"Thrown when\\tthe redeem request id is already claimed\"}],\"RedeemRequestOutOfBounds(uint256)\":[{\"notice\":\"Thrown when the provided redeem request id is out of bounds\"}],\"TransferError()\":[{\"notice\":\"Thrown when a transfer error occured with LsETH\"}],\"Unauthorized(address)\":[{\"notice\":\"The operator is unauthorized for the caller\"}],\"WithdrawalEventOutOfBounds(uint256)\":[{\"notice\":\"Thrown when the withdrawal request id if out of bounds\"}]},\"events\":{\"ClaimedRedeemRequest(uint32,address,uint256,uint256,uint256)\":{\"notice\":\"Emitted when a redeem request claim has been processed and matched at least once and funds are sent to the recipient\"},\"Initialize(uint256,bytes)\":{\"notice\":\"Emitted when the contract is properly initialized\"},\"ReportedWithdrawal(uint256,uint256,uint256,uint32)\":{\"notice\":\"Emitted when a withdrawal event is created\"},\"RequestedRedeem(address,uint256,uint256,uint32)\":{\"notice\":\"Emitted when a redeem request is created\"},\"SatisfiedRedeemRequest(uint32,uint32,uint256,uint256,uint256,uint256)\":{\"notice\":\"Emitted when a redeem request has been satisfied and filled (even partially) from a withdrawal event\"},\"SetRiver(address)\":{\"notice\":\"Emitted when the River address is set\"}},\"kind\":\"user\",\"methods\":{\"claimRedeemRequests(uint32[],uint32[])\":{\"notice\":\"Claims the rewards of the provided redeem request ids\"},\"claimRedeemRequests(uint32[],uint32[],bool)\":{\"notice\":\"Claims the rewards of the provided redeem request ids\"},\"getBufferedExceedingEth()\":{\"notice\":\"Retrieve the amount of eth available in the buffer\"},\"getRedeemRequestCount()\":{\"notice\":\"Retrieve the global count of redeem requests\"},\"getRedeemRequestDetails(uint32)\":{\"notice\":\"Retrieve the details of a specific redeem request\"},\"getWithdrawalEventCount()\":{\"notice\":\"Retrieve the global count of withdrawal events\"},\"getWithdrawalEventDetails(uint32)\":{\"notice\":\"Retrieve the details of a specific withdrawal event\"},\"pullExceedingEth(uint256)\":{\"notice\":\"Pulls exceeding buffer eth\"},\"reportWithdraw(uint256)\":{\"notice\":\"Reports a withdraw event from River\"},\"requestRedeem(uint256)\":{\"notice\":\"Creates a redeem request using msg.sender as recipient\"},\"requestRedeem(uint256,address)\":{\"notice\":\"Creates a redeem request\"},\"resolveRedeemRequests(uint32[])\":{\"notice\":\"Resolves the provided list of redeem request ids\"}},\"notice\":\"This contract handles the redeem requests of all users\",\"version\":1}},\"settings\":{\"compilationTarget\":{\"contracts/src/RedeemManager.1.sol\":\"RedeemManagerV1\"},\"evmVersion\":\"london\",\"libraries\":{},\"metadata\":{\"bytecodeHash\":\"ipfs\",\"useLiteralContent\":true},\"optimizer\":{\"enabled\":true,\"runs\":100},\"remappings\":[]},\"sources\":{\"contracts/src/Initializable.sol\":{\"content\":\"//SPDX-License-Identifier: BUSL-1.1\\npragma solidity 0.8.10;\\n\\nimport \\\"./state/shared/Version.sol\\\";\\n\\n/// @title Initializable\\n/// @author Kiln\\n/// @notice This contract ensures that initializers are called only once per version\\ncontract Initializable {\\n    /// @notice Disable initialization on implementations\\n    constructor() {\\n        Version.set(type(uint256).max);\\n        emit Initialize(type(uint256).max, msg.data);\\n    }\\n\\n    /// @notice An error occured during the initialization\\n    /// @param version The version that was attempting to be initialized\\n    /// @param expectedVersion The version that was expected\\n    error InvalidInitialization(uint256 version, uint256 expectedVersion);\\n\\n    /// @notice Emitted when the contract is properly initialized\\n    /// @param version New version of the contracts\\n    /// @param cdata Complete calldata that was used during the initialization\\n    event Initialize(uint256 version, bytes cdata);\\n\\n    /// @notice Use this modifier on initializers along with a hard-coded version number\\n    /// @param _version Version to initialize\\n    modifier init(uint256 _version) {\\n        if (_version != Version.get()) {\\n            revert InvalidInitialization(_version, Version.get());\\n        }\\n        Version.set(_version + 1); // prevents reentrency on the called method\\n        _;\\n        emit Initialize(_version, msg.data);\\n    }\\n}\\n\",\"keccak256\":\"0x2d85476c54b86308bc9687a7d072fddd2506f84f72a6892f7e0187214094ef79\",\"license\":\"BUSL-1.1\"},\"contracts/src/RedeemManager.1.sol\":{\"content\":\"//SPDX-License-Identifier: BUSL-1.1\\npragma solidity 0.8.10;\\n\\nimport \\\"./interfaces/IAllowlist.1.sol\\\";\\nimport \\\"./interfaces/IRiver.1.sol\\\";\\nimport \\\"./interfaces/IRedeemManager.1.sol\\\";\\nimport \\\"./libraries/LibAllowlistMasks.sol\\\";\\nimport \\\"./libraries/LibUint256.sol\\\";\\nimport \\\"./Initializable.sol\\\";\\n\\nimport \\\"./state/shared/RiverAddress.sol\\\";\\nimport \\\"./state/redeemManager/RedeemQueue.sol\\\";\\nimport \\\"./state/redeemManager/WithdrawalStack.sol\\\";\\nimport \\\"./state/redeemManager/BufferedExceedingEth.sol\\\";\\n\\n/// @title Redeem Manager (v1)\\n/// @author Kiln\\n/// @notice This contract handles the redeem requests of all users\\ncontract RedeemManagerV1 is Initializable, IRedeemManagerV1 {\\n    /// @notice Value returned when resolving a redeem request that is unsatisfied\\n    int64 internal constant RESOLVE_UNSATISFIED = -1;\\n    /// @notice Value returned when resolving a redeem request that is out of bounds\\n    int64 internal constant RESOLVE_OUT_OF_BOUNDS = -2;\\n    /// @notice Value returned when resolving a redeem request that is already claimed\\n    int64 internal constant RESOLVE_FULLY_CLAIMED = -3;\\n\\n    /// @notice Status value returned when fully claiming a redeem request\\n    uint8 internal constant CLAIM_FULLY_CLAIMED = 0;\\n    /// @notice Status value returned when partially claiming a redeem request\\n    uint8 internal constant CLAIM_PARTIALLY_CLAIMED = 1;\\n    /// @notice Status value returned when a redeem request is already claimed and skipped during a claim\\n    uint8 internal constant CLAIM_SKIPPED = 2;\\n\\n    modifier onlyRiver() {\\n        if (msg.sender != RiverAddress.get()) {\\n            revert LibErrors.Unauthorized(msg.sender);\\n        }\\n        _;\\n    }\\n\\n    modifier onlyRedeemerOrRiver() {\\n        {\\n            IRiverV1 river = _river();\\n            if (msg.sender != address(river)) {\\n                IAllowlistV1(river.getAllowlist()).onlyAllowed(msg.sender, LibAllowlistMasks.REDEEM_MASK);\\n            }\\n        }\\n        _;\\n    }\\n\\n    /// @inheritdoc IRedeemManagerV1\\n    function initializeRedeemManagerV1(address river) external init(0) {\\n        RiverAddress.set(river);\\n        emit SetRiver(river);\\n    }\\n\\n    /// @inheritdoc IRedeemManagerV1\\n    function getRedeemRequestCount() external view returns (uint256) {\\n        return RedeemQueue.get().length;\\n    }\\n\\n    /// @inheritdoc IRedeemManagerV1\\n    function getRedeemRequestDetails(uint32 redeemRequestId) external view returns (RedeemQueue.RedeemRequest memory) {\\n        return RedeemQueue.get()[redeemRequestId];\\n    }\\n\\n    /// @inheritdoc IRedeemManagerV1\\n    function getWithdrawalEventCount() external view returns (uint256) {\\n        return WithdrawalStack.get().length;\\n    }\\n\\n    /// @inheritdoc IRedeemManagerV1\\n    function getWithdrawalEventDetails(uint32 withdrawalEventId)\\n        external\\n        view\\n        returns (WithdrawalStack.WithdrawalEvent memory)\\n    {\\n        return WithdrawalStack.get()[withdrawalEventId];\\n    }\\n\\n    /// @inheritdoc IRedeemManagerV1\\n    function getBufferedExceedingEth() external view returns (uint256) {\\n        return BufferedExceedingEth.get();\\n    }\\n\\n    /// @inheritdoc IRedeemManagerV1\\n    function resolveRedeemRequests(uint32[] calldata redeemRequestIds)\\n        external\\n        view\\n        returns (int64[] memory withdrawalEventIds)\\n    {\\n        withdrawalEventIds = new int64[](redeemRequestIds.length);\\n        WithdrawalStack.WithdrawalEvent memory lastWithdrawalEvent;\\n        WithdrawalStack.WithdrawalEvent[] storage withdrawalEvents = WithdrawalStack.get();\\n        uint256 withdrawalEventsLength = withdrawalEvents.length;\\n        if (withdrawalEventsLength > 0) {\\n            lastWithdrawalEvent = withdrawalEvents[withdrawalEventsLength - 1];\\n        }\\n        for (uint256 idx = 0; idx < redeemRequestIds.length; ++idx) {\\n            withdrawalEventIds[idx] = _resolveRedeemRequestId(redeemRequestIds[idx], lastWithdrawalEvent);\\n        }\\n    }\\n\\n    /// @inheritdoc IRedeemManagerV1\\n    function requestRedeem(uint256 lsETHAmount, address recipient)\\n        external\\n        onlyRedeemerOrRiver\\n        returns (uint32 redeemRequestId)\\n    {\\n        return _requestRedeem(lsETHAmount, recipient);\\n    }\\n\\n    /// @inheritdoc IRedeemManagerV1\\n    function requestRedeem(uint256 lsETHAmount) external onlyRedeemerOrRiver returns (uint32 redeemRequestId) {\\n        return _requestRedeem(lsETHAmount, msg.sender);\\n    }\\n\\n    /// @inheritdoc IRedeemManagerV1\\n    function claimRedeemRequests(\\n        uint32[] calldata redeemRequestIds,\\n        uint32[] calldata withdrawalEventIds,\\n        bool skipAlreadyClaimed\\n    ) external returns (uint8[] memory claimStatuses) {\\n        return _claimRedeemRequests(redeemRequestIds, withdrawalEventIds, skipAlreadyClaimed);\\n    }\\n\\n    /// @inheritdoc IRedeemManagerV1\\n    function claimRedeemRequests(uint32[] calldata redeemRequestIds, uint32[] calldata withdrawalEventIds)\\n        external\\n        returns (uint8[] memory claimStatuses)\\n    {\\n        return _claimRedeemRequests(redeemRequestIds, withdrawalEventIds, true);\\n    }\\n\\n    /// @inheritdoc IRedeemManagerV1\\n    function reportWithdraw(uint256 lsETHWithdrawable) external payable onlyRiver {\\n        WithdrawalStack.WithdrawalEvent[] storage withdrawalEvents = WithdrawalStack.get();\\n        uint32 withdrawalEventId = uint32(withdrawalEvents.length);\\n        uint256 height = 0;\\n        uint256 msgValue = msg.value;\\n        if (withdrawalEventId != 0) {\\n            WithdrawalStack.WithdrawalEvent memory previousWithdrawalEvent = withdrawalEvents[withdrawalEventId - 1];\\n            height = previousWithdrawalEvent.height + previousWithdrawalEvent.amount;\\n        }\\n        withdrawalEvents.push(\\n            WithdrawalStack.WithdrawalEvent({height: height, amount: lsETHWithdrawable, withdrawnEth: msgValue})\\n        );\\n\\n        emit ReportedWithdrawal(height, lsETHWithdrawable, msgValue, withdrawalEventId);\\n    }\\n\\n    event SentExceedingEth(uint256 amount);\\n\\n    /// @inheritdoc IRedeemManagerV1\\n    function pullExceedingEth(uint256 max) external onlyRiver {\\n        uint256 amountToSend = LibUint256.min(BufferedExceedingEth.get(), max);\\n        _river().sendRedeemManagerExceedingFunds{value: amountToSend}();\\n        BufferedExceedingEth.set(BufferedExceedingEth.get() - amountToSend);\\n        emit SentExceedingEth(amountToSend);\\n    }\\n\\n    /// @notice Internal utility to load and cast the River address\\n    /// @return The casted river address\\n    function _river() internal view returns (IRiverV1) {\\n        return IRiverV1(payable(RiverAddress.get()));\\n    }\\n\\n    /// @notice Internal utility to verify if a redeem request and a withdrawal event are matching\\n    /// @param redeemRequest The loaded redeem request\\n    /// @param withdrawalEvent The load withdrawal event\\n    /// @return True if matching\\n    function _isMatch(\\n        RedeemQueue.RedeemRequest memory redeemRequest,\\n        WithdrawalStack.WithdrawalEvent memory withdrawalEvent\\n    ) internal pure returns (bool) {\\n        return (\\n            redeemRequest.height < withdrawalEvent.height + withdrawalEvent.amount\\n                && redeemRequest.height >= withdrawalEvent.height\\n        );\\n    }\\n\\n    /// @notice Internal utility to perform a dichotomic search of the withdrawal event to use to claim the redeem request\\n    /// @param redeemRequest The redeem request to resolve\\n    /// @return The matching withdrawal event\\n    function _performDichotomicResolution(RedeemQueue.RedeemRequest memory redeemRequest)\\n        internal\\n        view\\n        returns (int64)\\n    {\\n        WithdrawalStack.WithdrawalEvent[] storage withdrawalEvents = WithdrawalStack.get();\\n\\n        int64 max = int64(int256(WithdrawalStack.get().length - 1));\\n\\n        if (_isMatch(redeemRequest, withdrawalEvents[uint64(max)])) {\\n            return max;\\n        }\\n\\n        int64 min = 0;\\n\\n        if (_isMatch(redeemRequest, withdrawalEvents[uint64(min)])) {\\n            return min;\\n        }\\n\\n        // we start a dichotomic search between min and max\\n        while (min != max) {\\n            int64 mid = (min + max) / 2;\\n\\n            // we identify and verify that the middle element is not matching\\n            WithdrawalStack.WithdrawalEvent memory midWithdrawalEvent = withdrawalEvents[uint64(mid)];\\n            if (_isMatch(redeemRequest, midWithdrawalEvent)) {\\n                return mid;\\n            }\\n\\n            // depending on the position of the middle element, we update max or min to get our min max range\\n            // closer to our redeem request position\\n            if (redeemRequest.height < midWithdrawalEvent.height) {\\n                max = mid;\\n            } else {\\n                min = mid;\\n            }\\n        }\\n        return min;\\n    }\\n\\n    /// @notice Internal utility to resolve a redeem request and retrieve its satisfying withdrawal event id, or identify possible errors\\n    /// @param redeemRequestId The redeem request id\\n    /// @param lastWithdrawalEvent The last withdrawal event loaded in memory\\n    /// @param withdrawalEventId The id of the withdrawal event matching the redeem request or error code\\n    function _resolveRedeemRequestId(uint32 redeemRequestId, WithdrawalStack.WithdrawalEvent memory lastWithdrawalEvent)\\n        internal\\n        view\\n        returns (int64 withdrawalEventId)\\n    {\\n        RedeemQueue.RedeemRequest[] storage redeemRequests = RedeemQueue.get();\\n        // if the redeem request id is >= than the size of requests, we know it's out of bounds and doesn't exist\\n        if (redeemRequestId >= redeemRequests.length) {\\n            return RESOLVE_OUT_OF_BOUNDS;\\n        }\\n        RedeemQueue.RedeemRequest memory redeemRequest = redeemRequests[redeemRequestId];\\n        // if the redeem request remaining amount is 0, we know that the request has been entirely claimed\\n        if (redeemRequest.amount == 0) {\\n            return RESOLVE_FULLY_CLAIMED;\\n        }\\n        // if there are no existing withdrawal events or if the height of the redeem request is higher than the height and\\n        // amount of the last withdrawal element, we know that the redeem request is not yet satisfied\\n        if (\\n            WithdrawalStack.get().length == 0\\n                || (lastWithdrawalEvent.height + lastWithdrawalEvent.amount) <= redeemRequest.height\\n        ) {\\n            return RESOLVE_UNSATISFIED;\\n        }\\n        // we know for sure that the redeem request has funds yet to be claimed and there is a withdrawal event we need to identify\\n        // that would allow the user to claim the redeem request\\n        return _performDichotomicResolution(redeemRequest);\\n    }\\n\\n    /// @notice Internal structure used to optimize stack usage in _claimRedeemRequest\\n    struct ClaimRedeemRequestInternalVariables {\\n        /// @custom:attribute The eth amount claimed by the user\\n        uint256 ethAmount;\\n        /// @custom:attribute The amount of LsETH matched during this step\\n        uint256 matchingAmount;\\n        /// @custom:attribute The amount of eth redirected to the exceeding eth buffer\\n        uint256 exceedingEthAmount;\\n        /// @custom The loaded redeem request\\n        RedeemQueue.RedeemRequest redeemRequest;\\n        /// @custom The loaded withdrawal event\\n        WithdrawalStack.WithdrawalEvent withdrawalEvent;\\n    }\\n\\n    /// @notice Perform a new redeem request for the specified recipient\\n    /// @param lsETHAmount The amount of LsETH to redeem\\n    /// @param recipient The recipient owning the request\\n    /// @return redeemRequestId The id of the newly created redeem request\\n    function _requestRedeem(uint256 lsETHAmount, address recipient) internal returns (uint32 redeemRequestId) {\\n        LibSanitize._notZeroAddress(recipient);\\n        if (lsETHAmount == 0) {\\n            revert InvalidZeroAmount();\\n        }\\n        if (!_river().transferFrom(msg.sender, address(this), lsETHAmount)) {\\n            revert TransferError();\\n        }\\n        RedeemQueue.RedeemRequest[] storage redeemRequests = RedeemQueue.get();\\n        redeemRequestId = uint32(redeemRequests.length);\\n        uint256 height = 0;\\n        if (redeemRequestId != 0) {\\n            RedeemQueue.RedeemRequest memory previousRedeemRequest = redeemRequests[redeemRequestId - 1];\\n            height = previousRedeemRequest.height + previousRedeemRequest.amount;\\n        }\\n\\n        uint256 maxRedeemableEth = _river().underlyingBalanceFromShares(lsETHAmount);\\n\\n        redeemRequests.push(\\n            RedeemQueue.RedeemRequest({\\n                height: height,\\n                amount: lsETHAmount,\\n                owner: recipient,\\n                maxRedeemableEth: maxRedeemableEth\\n            })\\n        );\\n\\n        emit RequestedRedeem(recipient, height, lsETHAmount, redeemRequestId);\\n    }\\n\\n    /// @notice Internal utility to claim a redeem request if possible\\n    /// @dev Will call itself recursively if the redeem requests overflows its matching withdrawal event\\n    /// @param redeemRequestId The redeem request to claim\\n    /// @param withdrawalEventId Its matching withdrawal event, computed by performing an rpc call to resolveRedeemRequests\\n    /// @param skipAlreadyClaimed True if the method should skip redeem requests already claimed\\n    /// @param skipWithdrawalEventDoesNotExist True if the method should simply return if the withdrawal event is out of bounds\\n    /// @return The owner of the redeem request\\n    /// @return The amount of LsETH claimed\\n    /// @return The amount of ETH to send to the owner\\n    /// @return The amount of LsETH remaining in the redeem request\\n    /// @return The status of the claim\\n    function _claimRedeemRequest(\\n        uint32 redeemRequestId,\\n        uint32 withdrawalEventId,\\n        bool skipAlreadyClaimed,\\n        bool skipWithdrawalEventDoesNotExist\\n    ) internal returns (address, uint256, uint256, uint256, uint8) {\\n        ClaimRedeemRequestInternalVariables memory vars;\\n        {\\n            RedeemQueue.RedeemRequest[] storage redeemRequests = RedeemQueue.get();\\n            // the provided redeem request id is >= than the total count of request, meaning that the provided id doesn't exist\\n            // we revert in this case\\n            if (redeemRequestId >= redeemRequests.length) {\\n                revert RedeemRequestOutOfBounds(redeemRequestId);\\n            }\\n            WithdrawalStack.WithdrawalEvent[] storage withdrawalEvents = WithdrawalStack.get();\\n            // same check is done with the withdrawal event\\n            // we revert only if the skipWithdrawalEventDoesNotExist flag is false\\n            // otherwise we return the CLAIM_PARTIALLY_CLAIMED status\\n            if (withdrawalEventId >= withdrawalEvents.length) {\\n                if (skipWithdrawalEventDoesNotExist) {\\n                    return (address(0), 0, 0, redeemRequests[redeemRequestId].amount, CLAIM_PARTIALLY_CLAIMED);\\n                }\\n                revert WithdrawalEventOutOfBounds(withdrawalEventId);\\n            }\\n            vars.redeemRequest = redeemRequests[redeemRequestId];\\n            // if the redeem request is already claimed and if the skipAlreadyClaimed flag is false, we revert\\n            // otherwise we return the CLAIM_SKIPPED status\\n            if (vars.redeemRequest.amount == 0) {\\n                if (skipAlreadyClaimed) {\\n                    return (address(0), 0, 0, 0, CLAIM_SKIPPED);\\n                }\\n                revert RedeemRequestAlreadyClaimed(redeemRequestId);\\n            }\\n            {\\n                vars.withdrawalEvent = withdrawalEvents[withdrawalEventId];\\n                // now that both entities are loaded in memory, we verify that they indeed match, otherwise we revert\\n                if (!_isMatch(vars.redeemRequest, vars.withdrawalEvent)) {\\n                    revert DoesNotMatch(redeemRequestId, withdrawalEventId);\\n                }\\n\\n                {\\n                    uint256 requestEndPosition = vars.redeemRequest.height + vars.redeemRequest.amount;\\n                    uint256 withdrawalEventEndPosition = vars.withdrawalEvent.height + vars.withdrawalEvent.amount;\\n\\n                    // it can occur that the redeem request is overlapping the provided withdrawal event\\n                    // the amount that is matched in the withdrawal event is adapted depending on this\\n                    if (requestEndPosition < withdrawalEventEndPosition) {\\n                        // we know that the request's end is inside the withdrawal event, so all the remaining amount is matched\\n                        vars.matchingAmount = vars.redeemRequest.amount;\\n                    } else {\\n                        // we know that the request's end is outside of the withdrawal event, so only a portion amount is matched\\n                        vars.matchingAmount =\\n                            vars.redeemRequest.amount - (requestEndPosition - withdrawalEventEndPosition);\\n                    }\\n                }\\n                // we can now compute the equivalent eth amount based on the withdrawal event details\\n                vars.ethAmount = (vars.matchingAmount * vars.withdrawalEvent.withdrawnEth) / vars.withdrawalEvent.amount;\\n            }\\n\\n            uint256 currentRequestAmount = vars.redeemRequest.amount;\\n\\n            {\\n                // as each request has a maximum withdrawable amount, we verify that the eth amount is not exceeding this amount, pro rata\\n                // the amount that is matched\\n                uint256 maxRedeemableEthAmount =\\n                    (vars.matchingAmount * vars.redeemRequest.maxRedeemableEth) / currentRequestAmount;\\n\\n                if (maxRedeemableEthAmount < vars.ethAmount) {\\n                    vars.exceedingEthAmount = vars.ethAmount - maxRedeemableEthAmount;\\n                    BufferedExceedingEth.set(BufferedExceedingEth.get() + vars.exceedingEthAmount);\\n                    vars.ethAmount = maxRedeemableEthAmount;\\n                }\\n            }\\n\\n            // this event signals that an amount has been matched from a redeem request on a withdrawal event\\n            // this event can be triggered several times for the same redeem request, depending on its size and\\n            // how many withdrawal events it overlaps.\\n            emit SatisfiedRedeemRequest(\\n                redeemRequestId,\\n                withdrawalEventId,\\n                vars.matchingAmount,\\n                vars.ethAmount,\\n                currentRequestAmount - vars.matchingAmount,\\n                vars.exceedingEthAmount\\n            );\\n\\n            // height and amount are updated to reflect the amount that was matched.\\n            // we will always keep this invariant true oldRequest.height + oldRequest.amount == newRequest.height + newRequest.amount\\n            // this also means that if the request wasn't entirely matched, it will now be automatically be assigned to the next\\n            // withdrawal event in the queue, because height is updated based on the amount matched and is now equal to the height\\n            // of the next withdrawal event\\n            redeemRequests[redeemRequestId].height += vars.matchingAmount;\\n            redeemRequests[redeemRequestId].amount = currentRequestAmount - vars.matchingAmount;\\n            redeemRequests[redeemRequestId].maxRedeemableEth -= vars.ethAmount;\\n        }\\n\\n        // in the case where we did not match all the amount, we call this method recursively with the same request id but\\n        // we increment the withdrawal event id. We also allow to skip if the withdrawal event does not exist, resulting in\\n        // a returned CLAIM_PARTIALLY_CLAIMED status if a withdrawal event id we need next in the stack does not exist yet.\\n        if (vars.matchingAmount < vars.redeemRequest.amount) {\\n            (, uint256 nextLsETHAmount, uint256 nextEthAmount, uint256 remainingLsETHAmount, uint8 claimStatus) =\\n                _claimRedeemRequest(redeemRequestId, withdrawalEventId + 1, false, true);\\n            return (\\n                vars.redeemRequest.owner,\\n                vars.matchingAmount + nextLsETHAmount,\\n                vars.ethAmount + nextEthAmount,\\n                remainingLsETHAmount,\\n                claimStatus\\n            );\\n        }\\n\\n        // if we end up here, we have successfully claimed everything in the redeem request, and the CLAIM_FULLY_CLAIMED status is returned\\n        return (vars.redeemRequest.owner, vars.matchingAmount, vars.ethAmount, 0, CLAIM_FULLY_CLAIMED);\\n    }\\n\\n    /// @notice Internal utility to claim several redeem requests at once\\n    /// @param redeemRequestIds The list of redeem requests to claim\\n    /// @param withdrawalEventIds The list of withdrawal events to use for each redeem request. Should have the same length.\\n    /// @param skipAlreadyClaimed True if the system should skip redeem requests already claimed, otherwise will revert\\n    /// @return claimStatuses The claim statuses for each redeem request\\n    function _claimRedeemRequests(\\n        uint32[] calldata redeemRequestIds,\\n        uint32[] calldata withdrawalEventIds,\\n        bool skipAlreadyClaimed\\n    ) internal returns (uint8[] memory claimStatuses) {\\n        uint256 redeemRequestIdsLength = redeemRequestIds.length;\\n        if (redeemRequestIdsLength != withdrawalEventIds.length) {\\n            revert IncompatibleArrayLengths();\\n        }\\n        claimStatuses = new uint8[](redeemRequestIdsLength);\\n        for (uint256 idx = 0; idx < redeemRequestIdsLength;) {\\n            (address recipient, uint256 lsETHAmount, uint256 ethAmount, uint256 remainingLsETHAmount, uint8 claimStatus)\\n            = _claimRedeemRequest(redeemRequestIds[idx], withdrawalEventIds[idx], skipAlreadyClaimed, false);\\n            claimStatuses[idx] = claimStatus;\\n\\n            (bool success, bytes memory rdata) = recipient.call{value: ethAmount}(\\\"\\\");\\n            if (!success) {\\n                assembly {\\n                    revert(add(32, rdata), mload(rdata))\\n                }\\n            }\\n            emit ClaimedRedeemRequest(redeemRequestIds[idx], recipient, ethAmount, lsETHAmount, remainingLsETHAmount);\\n\\n            unchecked {\\n                ++idx;\\n            }\\n        }\\n    }\\n}\\n\",\"keccak256\":\"0xd1583ee7e83ad8dc4284682b2d5ae9ddb8dbea6dd492f9b24114d3cb6791864d\",\"license\":\"BUSL-1.1\"},\"contracts/src/interfaces/IAllowlist.1.sol\":{\"content\":\"//SPDX-License-Identifier: BUSL-1.1\\npragma solidity 0.8.10;\\n\\n/// @title Allowlist Interface (v1)\\n/// @author Kiln\\n/// @notice This interface exposes methods to handle the list of allowed recipients.\\ninterface IAllowlistV1 {\\n    /// @notice The permissions of several accounts have changed\\n    /// @param accounts List of accounts\\n    /// @param permissions New permissions for each account at the same index\\n    event SetAllowlistPermissions(address[] accounts, uint256[] permissions);\\n\\n    /// @notice The stored allower address has been changed\\n    /// @param allower The new allower address\\n    event SetAllower(address indexed allower);\\n\\n    /// @notice The provided accounts list is empty\\n    error InvalidAlloweeCount();\\n\\n    /// @notice The account is denied access\\n    /// @param _account The denied account\\n    error Denied(address _account);\\n\\n    /// @notice The provided accounts and permissions list have different lengths\\n    error MismatchedAlloweeAndStatusCount();\\n\\n    /// @notice Initializes the allowlist\\n    /// @param _admin Address of the Allowlist administrator\\n    /// @param _allower Address of the allower\\n    function initAllowlistV1(address _admin, address _allower) external;\\n\\n    /// @notice Retrieves the allower address\\n    /// @return The address of the allower\\n    function getAllower() external view returns (address);\\n\\n    /// @notice This method returns true if the user has the expected permission and\\n    ///         is not in the deny list\\n    /// @param _account Recipient to verify\\n    /// @param _mask Combination of permissions to verify\\n    /// @return True if mask is respected and user is allowed\\n    function isAllowed(address _account, uint256 _mask) external view returns (bool);\\n\\n    /// @notice This method returns true if the user is in the deny list\\n    /// @param _account Recipient to verify\\n    /// @return True if user is denied access\\n    function isDenied(address _account) external view returns (bool);\\n\\n    /// @notice This method returns true if the user has the expected permission\\n    ///         ignoring any deny list membership\\n    /// @param _account Recipient to verify\\n    /// @param _mask Combination of permissions to verify\\n    /// @return True if mask is respected\\n    function hasPermission(address _account, uint256 _mask) external view returns (bool);\\n\\n    /// @notice This method retrieves the raw permission value\\n    /// @param _account Recipient to verify\\n    /// @return The raw permissions value of the account\\n    function getPermissions(address _account) external view returns (uint256);\\n\\n    /// @notice This method should be used as a modifier and is expected to revert\\n    ///         if the user hasn't got the required permission or if the user is\\n    ///         in the deny list.\\n    /// @param _account Recipient to verify\\n    /// @param _mask Combination of permissions to verify\\n    function onlyAllowed(address _account, uint256 _mask) external view;\\n\\n    /// @notice Changes the allower address\\n    /// @param _newAllowerAddress New address allowed to edit the allowlist\\n    function setAllower(address _newAllowerAddress) external;\\n\\n    /// @notice Sets the allowlisting status for one or more accounts\\n    /// @dev The permission value is overridden and not updated\\n    /// @param _accounts Accounts with statuses to edit\\n    /// @param _permissions Allowlist permissions for each account, in the same order as _accounts\\n    function allow(address[] calldata _accounts, uint256[] calldata _permissions) external;\\n}\\n\",\"keccak256\":\"0x31166276cb00a5933800d9fadbe6c17f7397d981cd6193df5c50a0c0457b0355\",\"license\":\"BUSL-1.1\"},\"contracts/src/interfaces/IRedeemManager.1.sol\":{\"content\":\"//SPDX-License-Identifier: BUSL-1.1\\npragma solidity 0.8.10;\\n\\nimport \\\"../state/redeemManager/RedeemQueue.sol\\\";\\nimport \\\"../state/redeemManager/WithdrawalStack.sol\\\";\\n\\n/// @title Redeem Manager Interface (v1)\\n/// @author Kiln\\n/// @notice This contract handles the redeem requests of all users\\ninterface IRedeemManagerV1 {\\n    /// @notice Emitted when a redeem request is created\\n    /// @param owner The owner of the redeem request\\n    /// @param height The height of the redeem request in LsETH\\n    /// @param amount The amount of the redeem request in LsETH\\n    /// @param id The id of the new redeem request\\n    event RequestedRedeem(address indexed owner, uint256 height, uint256 amount, uint32 id);\\n\\n    /// @notice Emitted when a withdrawal event is created\\n    /// @param height The height of the withdrawal event in LsETH\\n    /// @param amount The amount of the withdrawal event in LsETH\\n    /// @param ethAmount The amount of eth to distrubute to claimers\\n    /// @param id The id of the withdrawal event\\n    event ReportedWithdrawal(uint256 height, uint256 amount, uint256 ethAmount, uint32 id);\\n\\n    /// @notice Emitted when a redeem request has been satisfied and filled (even partially) from a withdrawal event\\n    /// @param redeemRequestId The id of the redeem request\\n    /// @param withdrawalEventId The id of the withdrawal event used to fill the request\\n    /// @param lsEthAmountSatisfied The amount of LsETH filled\\n    /// @param ethAmountSatisfied The amount of ETH filled\\n    /// @param lsEthAmountRemaining The amount of LsETH remaining\\n    /// @param ethAmountExceeding The amount of eth added to the exceeding buffer\\n    event SatisfiedRedeemRequest(\\n        uint32 indexed redeemRequestId,\\n        uint32 indexed withdrawalEventId,\\n        uint256 lsEthAmountSatisfied,\\n        uint256 ethAmountSatisfied,\\n        uint256 lsEthAmountRemaining,\\n        uint256 ethAmountExceeding\\n    );\\n\\n    /// @notice Emitted when a redeem request claim has been processed and matched at least once and funds are sent to the recipient\\n    /// @param redeemRequestId The id of the redeem request\\n    /// @param recipient The address receiving the redeem request funds\\n    /// @param ethAmount The amount of eth retrieved\\n    /// @param lsEthAmount The total amount of LsETH used to redeem the eth\\n    /// @param remainingLsEthAmount The amount of LsETH remaining\\n    event ClaimedRedeemRequest(\\n        uint32 indexed redeemRequestId,\\n        address indexed recipient,\\n        uint256 ethAmount,\\n        uint256 lsEthAmount,\\n        uint256 remainingLsEthAmount\\n    );\\n\\n    /// @notice Emitted when the River address is set\\n    /// @param river The new river address\\n    event SetRiver(address river);\\n\\n    /// @notice Thrown When a zero value is provided\\n    error InvalidZeroAmount();\\n\\n    /// @notice Thrown when a transfer error occured with LsETH\\n    error TransferError();\\n\\n    /// @notice Thrown when the provided arrays don't have matching lengths\\n    error IncompatibleArrayLengths();\\n\\n    /// @notice Thrown when the provided redeem request id is out of bounds\\n    /// @param id The redeem request id\\n    error RedeemRequestOutOfBounds(uint256 id);\\n\\n    /// @notice Thrown when the withdrawal request id if out of bounds\\n    /// @param id The withdrawal event id\\n    error WithdrawalEventOutOfBounds(uint256 id);\\n\\n    /// @notice Thrown when\\tthe redeem request id is already claimed\\n    /// @param id The redeem request id\\n    error RedeemRequestAlreadyClaimed(uint256 id);\\n\\n    /// @notice Thrown when the redeem request and withdrawal event are not matching during claim\\n    /// @param redeemRequestId The provided redeem request id\\n    /// @param withdrawalEventId The provided associated withdrawal event id\\n    error DoesNotMatch(uint256 redeemRequestId, uint256 withdrawalEventId);\\n\\n    /// @param river The address of the River contract\\n    function initializeRedeemManagerV1(address river) external;\\n\\n    /// @notice Retrieve the global count of redeem requests\\n    function getRedeemRequestCount() external view returns (uint256);\\n\\n    /// @notice Retrieve the details of a specific redeem request\\n    /// @param redeemRequestId The id of the request\\n    /// @return The redeem request details\\n    function getRedeemRequestDetails(uint32 redeemRequestId) external view returns (RedeemQueue.RedeemRequest memory);\\n\\n    /// @notice Retrieve the global count of withdrawal events\\n    function getWithdrawalEventCount() external view returns (uint256);\\n\\n    /// @notice Retrieve the details of a specific withdrawal event\\n    /// @param withdrawalEventId The id of the withdrawal event\\n    /// @return The withdrawal event details\\n    function getWithdrawalEventDetails(uint32 withdrawalEventId)\\n        external\\n        view\\n        returns (WithdrawalStack.WithdrawalEvent memory);\\n\\n    /// @notice Retrieve the amount of eth available in the buffer\\n    /// @return The amount of eth in the buffer\\n    function getBufferedExceedingEth() external view returns (uint256);\\n\\n    /// @notice Resolves the provided list of redeem request ids\\n    /// @dev The result is an array of equal length with ids or error code\\n    /// @dev -1 means that the request is not satisfied yet\\n    /// @dev -2 means that the request is out of bounds\\n    /// @dev -3 means that the request has already been claimed\\n    /// @dev This call was created to be called by an off-chain interface, the output could then be used to perform the claimRewards call in a regular transaction\\n    /// @param redeemRequestIds The list of redeem requests to resolve\\n    /// @return withdrawalEventIds The list of withdrawal events matching every redeem request (or error codes)\\n    function resolveRedeemRequests(uint32[] calldata redeemRequestIds)\\n        external\\n        view\\n        returns (int64[] memory withdrawalEventIds);\\n\\n    /// @notice Creates a redeem request\\n    /// @param lsETHAmount The amount of LsETH to redeem\\n    /// @param recipient The recipient owning the redeem request\\n    /// @return redeemRequestId The id of the redeem request\\n    function requestRedeem(uint256 lsETHAmount, address recipient) external returns (uint32 redeemRequestId);\\n\\n    /// @notice Creates a redeem request using msg.sender as recipient\\n    /// @param lsETHAmount The amount of LsETH to redeem\\n    /// @return redeemRequestId The id of the redeem request\\n    function requestRedeem(uint256 lsETHAmount) external returns (uint32 redeemRequestId);\\n\\n    /// @notice Claims the rewards of the provided redeem request ids\\n    /// @param redeemRequestIds The list of redeem requests to claim\\n    /// @param withdrawalEventIds The list of withdrawal events to use for every redeem request claim\\n    /// @param skipAlreadyClaimed True if the call should not revert on claiming of already claimed requests\\n    /// @return claimStatuses The list of claim statuses. 0 for fully claimed, 1 for partially claimed, 2 for skipped\\n    function claimRedeemRequests(\\n        uint32[] calldata redeemRequestIds,\\n        uint32[] calldata withdrawalEventIds,\\n        bool skipAlreadyClaimed\\n    ) external returns (uint8[] memory claimStatuses);\\n\\n    /// @notice Claims the rewards of the provided redeem request ids\\n    /// @param redeemRequestIds The list of redeem requests to claim\\n    /// @param withdrawalEventIds The list of withdrawal events to use for every redeem request claim\\n    /// @return claimStatuses The list of claim statuses. 0 for fully claimed, 1 for partially claimed, 2 for skipped\\n    function claimRedeemRequests(uint32[] calldata redeemRequestIds, uint32[] calldata withdrawalEventIds)\\n        external\\n        returns (uint8[] memory claimStatuses);\\n\\n    /// @notice Reports a withdraw event from River\\n    /// @param lsETHWithdrawable The amount of LsETH that can be redeemed due to this new withdraw event\\n    function reportWithdraw(uint256 lsETHWithdrawable) external payable;\\n\\n    /// @notice Pulls exceeding buffer eth\\n    /// @param max The maximum amount that should be pulled\\n    function pullExceedingEth(uint256 max) external;\\n}\\n\",\"keccak256\":\"0xa1ed332e196bf88f8ebc58e56bfc05c593354125baf659bd7581c6a3ecdc263f\",\"license\":\"BUSL-1.1\"},\"contracts/src/interfaces/IRiver.1.sol\":{\"content\":\"//SPDX-License-Identifier: BUSL-1.1\\npragma solidity 0.8.10;\\n\\nimport \\\"../state/river/DailyCommittableLimits.sol\\\";\\n\\nimport \\\"./components/IConsensusLayerDepositManager.1.sol\\\";\\nimport \\\"./components/IOracleManager.1.sol\\\";\\nimport \\\"./components/ISharesManager.1.sol\\\";\\nimport \\\"./components/IUserDepositManager.1.sol\\\";\\n\\n/// @title River Interface (v1)\\n/// @author Kiln\\n/// @notice The main system interface\\ninterface IRiverV1 is IConsensusLayerDepositManagerV1, IUserDepositManagerV1, ISharesManagerV1, IOracleManagerV1 {\\n    /// @notice Funds have been pulled from the Execution Layer Fee Recipient\\n    /// @param amount The amount pulled\\n    event PulledELFees(uint256 amount);\\n\\n    /// @notice Funds have been pulled from the Coverage Fund\\n    /// @param amount The amount pulled\\n    event PulledCoverageFunds(uint256 amount);\\n\\n    /// @notice The stored Execution Layer Fee Recipient has been changed\\n    /// @param elFeeRecipient The new Execution Layer Fee Recipient\\n    event SetELFeeRecipient(address indexed elFeeRecipient);\\n\\n    /// @notice The stored Coverage Fund has been changed\\n    /// @param coverageFund The new Coverage Fund\\n    event SetCoverageFund(address indexed coverageFund);\\n\\n    /// @notice The stored Collector has been changed\\n    /// @param collector The new Collector\\n    event SetCollector(address indexed collector);\\n\\n    /// @notice The stored Allowlist has been changed\\n    /// @param allowlist The new Allowlist\\n    event SetAllowlist(address indexed allowlist);\\n\\n    /// @notice The stored Global Fee has been changed\\n    /// @param fee The new Global Fee\\n    event SetGlobalFee(uint256 fee);\\n\\n    /// @notice The stored Operators Registry has been changed\\n    /// @param operatorRegistry The new Operators Registry\\n    event SetOperatorsRegistry(address indexed operatorRegistry);\\n\\n    /// @notice The stored Metadata URI string has been changed\\n    /// @param metadataURI The new Metadata URI string\\n    event SetMetadataURI(string metadataURI);\\n\\n    /// @notice The system underlying supply increased. This is a snapshot of the balances for accounting purposes\\n    /// @param _collector The address of the collector during this event\\n    /// @param _oldTotalUnderlyingBalance Old total ETH balance under management by River\\n    /// @param _oldTotalSupply Old total supply in shares\\n    /// @param _newTotalUnderlyingBalance New total ETH balance under management by River\\n    /// @param _newTotalSupply New total supply in shares\\n    event RewardsEarned(\\n        address indexed _collector,\\n        uint256 _oldTotalUnderlyingBalance,\\n        uint256 _oldTotalSupply,\\n        uint256 _newTotalUnderlyingBalance,\\n        uint256 _newTotalSupply\\n    );\\n\\n    /// @notice Emitted when the daily committable limits are changed\\n    /// @param maxNetAmount The maximum net amount that can be committed daily\\n    /// @param maxRelativeAmount The maximum amount relative to the total underlying supply that can be committed daily\\n    event SetMaxDailyCommittableAmounts(uint256 maxNetAmount, uint256 maxRelativeAmount);\\n\\n    /// @notice Emitted when the redeem manager address is changed\\n    /// @param redeemManager The address of the redeem manager\\n    event SetRedeemManager(address redeemManager);\\n\\n    /// @notice Emitted when funds are pulled from the redeem manager\\n    /// @param amount The amount pulled\\n    event PulledRedeemManagerExceedingEth(uint256 amount);\\n\\n    /// @notice Emitted when the balance to deposit is updated\\n    /// @param oldAmount The old balance to deposit\\n    /// @param newAmount The new balance to deposit\\n    event SetBalanceToDeposit(uint256 oldAmount, uint256 newAmount);\\n\\n    /// @notice Emitted when the balance to redeem is updated\\n    /// @param oldAmount The old balance to redeem\\n    /// @param newAmount The new balance to redeem\\n    event SetBalanceToRedeem(uint256 oldAmount, uint256 newAmount);\\n\\n    /// @notice Emitted when the balance committed to deposit\\n    /// @param oldAmount The old balance committed to deposit\\n    /// @param newAmount The new balance committed to deposit\\n    event SetBalanceCommittedToDeposit(uint256 oldAmount, uint256 newAmount);\\n\\n    /// @notice Emitted when the redeem manager received a withdraw event report\\n    /// @param redeemManagerDemand The total demand in LsETH of the redeem manager\\n    /// @param suppliedRedeemManagerDemand The amount of LsETH demand actually supplied\\n    /// @param suppliedRedeemManagerDemandInEth The amount in ETH of the supplied demand\\n    event ReportedRedeemManager(\\n        uint256 redeemManagerDemand, uint256 suppliedRedeemManagerDemand, uint256 suppliedRedeemManagerDemandInEth\\n    );\\n\\n    /// @notice Thrown when the amount received from the Withdraw contract doe not match the requested amount\\n    /// @param requested The amount that was requested\\n    /// @param received The amount that was received\\n    error InvalidPulledClFundsAmount(uint256 requested, uint256 received);\\n\\n    /// @notice The computed amount of shares to mint is 0\\n    error ZeroMintedShares();\\n\\n    /// @notice The access was denied\\n    /// @param account The account that was denied\\n    error Denied(address account);\\n\\n    /// @notice Initializes the River system\\n    /// @param _depositContractAddress Address to make Consensus Layer deposits\\n    /// @param _elFeeRecipientAddress Address that receives the execution layer fees\\n    /// @param _withdrawalCredentials Credentials to use for every validator deposit\\n    /// @param _oracleAddress The address of the Oracle contract\\n    /// @param _systemAdministratorAddress Administrator address\\n    /// @param _allowlistAddress Address of the allowlist contract\\n    /// @param _operatorRegistryAddress Address of the operator registry\\n    /// @param _collectorAddress Address receiving the the global fee on revenue\\n    /// @param _globalFee Amount retained when the ETH balance increases and sent to the collector\\n    function initRiverV1(\\n        address _depositContractAddress,\\n        address _elFeeRecipientAddress,\\n        bytes32 _withdrawalCredentials,\\n        address _oracleAddress,\\n        address _systemAdministratorAddress,\\n        address _allowlistAddress,\\n        address _operatorRegistryAddress,\\n        address _collectorAddress,\\n        uint256 _globalFee\\n    ) external;\\n\\n    /// @notice Initialized version 1.1 of the River System\\n    /// @param _redeemManager The redeem manager address\\n    /// @param epochsPerFrame The amounts of epochs in a frame\\n    /// @param slotsPerEpoch The slots inside an epoch\\n    /// @param secondsPerSlot The seconds inside a slot\\n    /// @param genesisTime The genesis timestamp\\n    /// @param epochsToAssumedFinality The number of epochs before an epoch is considered final on-chain\\n    /// @param annualAprUpperBound The reporting upper bound\\n    /// @param relativeLowerBound The reporting lower bound\\n    /// @param maxDailyNetCommittableAmount_ The net daily committable limit\\n    /// @param maxDailyRelativeCommittableAmount_ The relative daily committable limit\\n    function initRiverV1_1(\\n        address _redeemManager,\\n        uint64 epochsPerFrame,\\n        uint64 slotsPerEpoch,\\n        uint64 secondsPerSlot,\\n        uint64 genesisTime,\\n        uint64 epochsToAssumedFinality,\\n        uint256 annualAprUpperBound,\\n        uint256 relativeLowerBound,\\n        uint128 maxDailyNetCommittableAmount_,\\n        uint128 maxDailyRelativeCommittableAmount_\\n    ) external;\\n\\n    /// @notice Get the current global fee\\n    /// @return The global fee\\n    function getGlobalFee() external view returns (uint256);\\n\\n    /// @notice Retrieve the allowlist address\\n    /// @return The allowlist address\\n    function getAllowlist() external view returns (address);\\n\\n    /// @notice Retrieve the collector address\\n    /// @return The collector address\\n    function getCollector() external view returns (address);\\n\\n    /// @notice Retrieve the execution layer fee recipient\\n    /// @return The execution layer fee recipient address\\n    function getELFeeRecipient() external view returns (address);\\n\\n    /// @notice Retrieve the coverage fund\\n    /// @return The coverage fund address\\n    function getCoverageFund() external view returns (address);\\n\\n    /// @notice Retrieve the operators registry\\n    /// @return The operators registry address\\n    function getOperatorsRegistry() external view returns (address);\\n\\n    /// @notice Retrieve the metadata uri string value\\n    /// @return The metadata uri string value\\n    function getMetadataURI() external view returns (string memory);\\n\\n    /// @notice Retrieve the configured daily committable limits\\n    /// @return The daily committable limits structure\\n    function getDailyCommittableLimits()\\n        external\\n        view\\n        returns (DailyCommittableLimits.DailyCommittableLimitsStruct memory);\\n\\n    /// @notice Resolves the provided redeem requests by calling the redeem manager\\n    /// @param redeemRequestIds The list of redeem requests to resolve\\n    /// @return withdrawalEventIds The list of matching withdrawal events, or error codes\\n    function resolveRedeemRequests(uint32[] calldata redeemRequestIds)\\n        external\\n        view\\n        returns (int64[] memory withdrawalEventIds);\\n\\n    /// @notice Set the daily committable limits\\n    /// @param dcl The Daily Committable Limits structure\\n    function setDailyCommittableLimits(DailyCommittableLimits.DailyCommittableLimitsStruct memory dcl) external;\\n\\n    /// @notice Retrieve the current balance to redeem\\n    /// @return The current balance to redeem\\n    function getBalanceToRedeem() external view returns (uint256);\\n\\n    /// @notice Performs a redeem request on the redeem manager\\n    /// @param lsETHAmount The amount of LsETH to redeem\\n    /// @return redeemRequestId The ID of the newly created redeem request\\n    function requestRedeem(uint256 lsETHAmount) external returns (uint32 redeemRequestId);\\n\\n    /// @notice Claims several redeem requests\\n    /// @param redeemRequestIds The list of redeem requests to claim\\n    /// @param withdrawalEventIds The list of resolved withdrawal event ids\\n    /// @return claimStatuses The operation status results\\n    function claimRedeemRequests(uint32[] calldata redeemRequestIds, uint32[] calldata withdrawalEventIds)\\n        external\\n        returns (uint8[] memory claimStatuses);\\n\\n    /// @notice Changes the global fee parameter\\n    /// @param newFee New fee value\\n    function setGlobalFee(uint256 newFee) external;\\n\\n    /// @notice Changes the allowlist address\\n    /// @param _newAllowlist New address for the allowlist\\n    function setAllowlist(address _newAllowlist) external;\\n\\n    /// @notice Changes the collector address\\n    /// @param _newCollector New address for the collector\\n    function setCollector(address _newCollector) external;\\n\\n    /// @notice Changes the execution layer fee recipient\\n    /// @param _newELFeeRecipient New address for the recipient\\n    function setELFeeRecipient(address _newELFeeRecipient) external;\\n\\n    /// @notice Changes the coverage fund\\n    /// @param _newCoverageFund New address for the fund\\n    function setCoverageFund(address _newCoverageFund) external;\\n\\n    /// @notice Sets the metadata uri string value\\n    /// @param _metadataURI The new metadata uri string value\\n    function setMetadataURI(string memory _metadataURI) external;\\n\\n    /// @notice Input for execution layer fee earnings\\n    function sendELFees() external payable;\\n\\n    /// @notice Input for consensus layer funds, containing both exit and skimming\\n    function sendCLFunds() external payable;\\n\\n    /// @notice Input for coverage funds\\n    function sendCoverageFunds() external payable;\\n\\n    /// @notice Input for the redeem manager funds\\n    function sendRedeemManagerExceedingFunds() external payable;\\n}\\n\",\"keccak256\":\"0x9c5a66968e2bb547f1cd8f1676ef9ce37bd7b3e944e76acc749f71ac58bbbac9\",\"license\":\"BUSL-1.1\"},\"contracts/src/interfaces/components/IConsensusLayerDepositManager.1.sol\":{\"content\":\"//SPDX-License-Identifier: BUSL-1.1\\npragma solidity 0.8.10;\\n\\n/// @title Consensys Layer Deposit Manager Interface (v1)\\n/// @author Kiln\\n/// @notice This interface exposes methods to handle the interactions with the official deposit contract\\ninterface IConsensusLayerDepositManagerV1 {\\n    /// @notice The stored deposit contract address changed\\n    /// @param depositContract Address of the deposit contract\\n    event SetDepositContractAddress(address indexed depositContract);\\n\\n    /// @notice The stored withdrawal credentials changed\\n    /// @param withdrawalCredentials The withdrawal credentials to use for deposits\\n    event SetWithdrawalCredentials(bytes32 withdrawalCredentials);\\n\\n    /// @notice Emitted when the deposited validator count is updated\\n    /// @param oldDepositedValidatorCount The old deposited validator count value\\n    /// @param newDepositedValidatorCount The new deposited validator count value\\n    event SetDepositedValidatorCount(uint256 oldDepositedValidatorCount, uint256 newDepositedValidatorCount);\\n\\n    /// @notice Not enough funds to deposit one validator\\n    error NotEnoughFunds();\\n\\n    /// @notice The length of the BLS Public key is invalid during deposit\\n    error InconsistentPublicKeys();\\n\\n    /// @notice The length of the BLS Signature is invalid during deposit\\n    error InconsistentSignatures();\\n\\n    /// @notice The internal key retrieval returned no keys\\n    error NoAvailableValidatorKeys();\\n\\n    /// @notice The received count of public keys to deposit is invalid\\n    error InvalidPublicKeyCount();\\n\\n    /// @notice The received count of signatures to deposit is invalid\\n    error InvalidSignatureCount();\\n\\n    /// @notice The withdrawal credentials value is null\\n    error InvalidWithdrawalCredentials();\\n\\n    /// @notice An error occured during the deposit\\n    error ErrorOnDeposit();\\n\\n    /// @notice Returns the amount of ETH not yet committed for deposit\\n    /// @return The amount of ETH not yet committed for deposit\\n    function getBalanceToDeposit() external view returns (uint256);\\n\\n    /// @notice Returns the amount of ETH committed for deposit\\n    /// @return The amount of ETH committed for deposit\\n    function getCommittedBalance() external view returns (uint256);\\n\\n    /// @notice Retrieve the withdrawal credentials\\n    /// @return The withdrawal credentials\\n    function getWithdrawalCredentials() external view returns (bytes32);\\n\\n    /// @notice Get the deposited validator count (the count of deposits made by the contract)\\n    /// @return The deposited validator count\\n    function getDepositedValidatorCount() external view returns (uint256);\\n\\n    /// @notice Deposits current balance to the Consensus Layer by batches of 32 ETH\\n    /// @param _maxCount The maximum amount of validator keys to fund\\n    function depositToConsensusLayer(uint256 _maxCount) external;\\n}\\n\",\"keccak256\":\"0x8e55597dba3a8c15b097a9e66bb5b833020bcb67ea833acb1d6e1f4b1a0457c0\",\"license\":\"BUSL-1.1\"},\"contracts/src/interfaces/components/IOracleManager.1.sol\":{\"content\":\"//SPDX-License-Identifier: BUSL-1.1\\npragma solidity 0.8.10;\\n\\nimport \\\"../../state/river/CLSpec.sol\\\";\\nimport \\\"../../state/river/ReportBounds.sol\\\";\\n\\n/// @title Oracle Manager (v1)\\n/// @author Kiln\\n/// @notice This interface exposes methods to handle the inputs provided by the oracle\\ninterface IOracleManagerV1 {\\n    /// @notice The stored oracle address changed\\n    /// @param oracleAddress The new oracle address\\n    event SetOracle(address indexed oracleAddress);\\n\\n    /// @notice The consensus layer data provided by the oracle has been updated\\n    /// @param validatorCount The new count of validators running on the consensus layer\\n    /// @param validatorTotalBalance The new total balance sum of all validators\\n    /// @param roundId Round identifier\\n    event ConsensusLayerDataUpdate(uint256 validatorCount, uint256 validatorTotalBalance, bytes32 roundId);\\n\\n    /// @notice The Consensus Layer Spec is changed\\n    /// @param epochsPerFrame The number of epochs inside a frame\\n    /// @param slotsPerEpoch The number of slots inside an epoch\\n    /// @param secondsPerSlot The number of seconds inside a slot\\n    /// @param genesisTime The genesis timestamp\\n    /// @param epochsToAssumedFinality The number of epochs before an epoch is considered final\\n    event SetSpec(\\n        uint64 epochsPerFrame,\\n        uint64 slotsPerEpoch,\\n        uint64 secondsPerSlot,\\n        uint64 genesisTime,\\n        uint64 epochsToAssumedFinality\\n    );\\n\\n    /// @notice The Report Bounds are changed\\n    /// @param annualAprUpperBound The reporting upper bound\\n    /// @param relativeLowerBound The reporting lower bound\\n    event SetBounds(uint256 annualAprUpperBound, uint256 relativeLowerBound);\\n\\n    /// @notice The provided report has beend processed\\n    /// @param report The report that was provided\\n    /// @param trace The trace structure providing more insights on internals\\n    event ProcessedConsensusLayerReport(\\n        IOracleManagerV1.ConsensusLayerReport report, ConsensusLayerDataReportingTrace trace\\n    );\\n\\n    /// @notice The reported validator count is invalid\\n    /// @param providedValidatorCount The received validator count value\\n    /// @param depositedValidatorCount The number of deposits performed by the system\\n    error InvalidValidatorCountReport(uint256 providedValidatorCount, uint256 depositedValidatorCount);\\n\\n    /// @notice Thrown when an invalid epoch was reported\\n    /// @param epoch Invalid epoch\\n    error InvalidEpoch(uint256 epoch);\\n\\n    /// @notice The balance increase is higher than the maximum allowed by the upper bound\\n    /// @param prevTotalEthIncludingExited The previous total balance, including all exited balance\\n    /// @param postTotalEthIncludingExited The post-report total balance, including all exited balance\\n    /// @param timeElapsed The time in seconds since last report\\n    /// @param annualAprUpperBound The upper bound value that was used\\n    error TotalValidatorBalanceIncreaseOutOfBound(\\n        uint256 prevTotalEthIncludingExited,\\n        uint256 postTotalEthIncludingExited,\\n        uint256 timeElapsed,\\n        uint256 annualAprUpperBound\\n    );\\n\\n    /// @notice The balance decrease is higher than the maximum allowed by the lower bound\\n    /// @param prevTotalEthIncludingExited The previous total balance, including all exited balance\\n    /// @param postTotalEthIncludingExited The post-report total balance, including all exited balance\\n    /// @param timeElapsed The time in seconds since last report\\n    /// @param relativeLowerBound The lower bound value that was used\\n    error TotalValidatorBalanceDecreaseOutOfBound(\\n        uint256 prevTotalEthIncludingExited,\\n        uint256 postTotalEthIncludingExited,\\n        uint256 timeElapsed,\\n        uint256 relativeLowerBound\\n    );\\n\\n    /// @notice The total exited balance decreased\\n    /// @param currentValidatorsExitedBalance The current exited balance\\n    /// @param newValidatorsExitedBalance The new exited balance\\n    error InvalidDecreasingValidatorsExitedBalance(\\n        uint256 currentValidatorsExitedBalance, uint256 newValidatorsExitedBalance\\n    );\\n\\n    /// @notice The total skimmed balance decreased\\n    /// @param currentValidatorsSkimmedBalance The current exited balance\\n    /// @param newValidatorsSkimmedBalance The new exited balance\\n    error InvalidDecreasingValidatorsSkimmedBalance(\\n        uint256 currentValidatorsSkimmedBalance, uint256 newValidatorsSkimmedBalance\\n    );\\n\\n    /// @notice Trace structure emitted via logs during reporting\\n    struct ConsensusLayerDataReportingTrace {\\n        uint256 rewards;\\n        uint256 pulledELFees;\\n        uint256 pulledRedeemManagerExceedingEthBuffer;\\n        uint256 pulledCoverageFunds;\\n    }\\n\\n    /// @notice The format of the oracle report\\n    struct ConsensusLayerReport {\\n        uint256 epoch;\\n        uint256 validatorsBalance;\\n        uint256 validatorsSkimmedBalance;\\n        uint256 validatorsExitedBalance;\\n        uint256 validatorsExitingBalance;\\n        uint32 validatorsCount;\\n        uint32[] stoppedValidatorCountPerOperator;\\n        bool bufferRebalancingMode;\\n        bool slashingContainmentMode;\\n    }\\n\\n    /// @notice The format of the oracle report in storage\\n    struct StoredConsensusLayerReport {\\n        uint256 epoch;\\n        uint256 validatorsBalance;\\n        uint256 validatorsSkimmedBalance;\\n        uint256 validatorsExitedBalance;\\n        uint256 validatorsExitingBalance;\\n        uint32 validatorsCount;\\n        bool bufferRebalancingMode;\\n        bool slashingContainmentMode;\\n    }\\n\\n    /// @notice Get oracle address\\n    /// @return The oracle address\\n    function getOracle() external view returns (address);\\n\\n    /// @notice Get CL validator total balance\\n    /// @return The CL Validator total balance\\n    function getCLValidatorTotalBalance() external view returns (uint256);\\n\\n    /// @notice Get CL validator count (the amount of validator reported by the oracles)\\n    /// @return The CL validator count\\n    function getCLValidatorCount() external view returns (uint256);\\n\\n    /// @notice Verifies if the provided epoch is valid\\n    /// @param epoch The epoch to lookup\\n    /// @return True if valid\\n    function isValidEpoch(uint256 epoch) external view returns (bool);\\n\\n    /// @notice Retrieve the block timestamp\\n    /// @return The current timestamp from the EVM context\\n    function getTime() external view returns (uint256);\\n\\n    /// @notice Retrieve expected epoch id\\n    /// @return The current expected epoch id\\n    function getExpectedEpochId() external view returns (uint256);\\n\\n    /// @notice Retrieve the last completed epoch id\\n    /// @return The last completed epoch id\\n    function getLastCompletedEpochId() external view returns (uint256);\\n\\n    /// @notice Retrieve the current epoch id based on block timestamp\\n    /// @return The current epoch id\\n    function getCurrentEpochId() external view returns (uint256);\\n\\n    /// @notice Retrieve the current cl spec\\n    /// @return The Consensus Layer Specification\\n    function getCLSpec() external view returns (CLSpec.CLSpecStruct memory);\\n\\n    /// @notice Retrieve the current frame details\\n    /// @return _startEpochId The epoch at the beginning of the frame\\n    /// @return _startTime The timestamp of the beginning of the frame in seconds\\n    /// @return _endTime The timestamp of the end of the frame in seconds\\n    function getCurrentFrame() external view returns (uint256 _startEpochId, uint256 _startTime, uint256 _endTime);\\n\\n    /// @notice Retrieve the first epoch id of the frame of the provided epoch id\\n    /// @param _epochId Epoch id used to get the frame\\n    /// @return The first epoch id of the frame containing the given epoch id\\n    function getFrameFirstEpochId(uint256 _epochId) external view returns (uint256);\\n\\n    /// @notice Retrieve the report bounds\\n    /// @return The report bounds\\n    function getReportBounds() external view returns (ReportBounds.ReportBoundsStruct memory);\\n\\n    /// @notice Retrieve the last consensus layer report\\n    /// @return The stored consensus layer report\\n    function getLastConsensusLayerReport() external view returns (IOracleManagerV1.StoredConsensusLayerReport memory);\\n\\n    /// @notice Set the oracle address\\n    /// @param _oracleAddress Address of the oracle\\n    function setOracle(address _oracleAddress) external;\\n\\n    /// @notice Set the consensus layer spec\\n    /// @param newValue The new consensus layer spec value\\n    function setCLSpec(CLSpec.CLSpecStruct calldata newValue) external;\\n\\n    /// @notice Set the report bounds\\n    /// @param newValue The new report bounds value\\n    function setReportBounds(ReportBounds.ReportBoundsStruct calldata newValue) external;\\n\\n    /// @notice Performs all the reporting logics\\n    /// @param report The consensus layer report structure\\n    function setConsensusLayerData(ConsensusLayerReport calldata report) external;\\n}\\n\",\"keccak256\":\"0xf9cf2537680699240e73bc0e568e7c1ae3d05d7117c888fedb647bc1675ce57e\",\"license\":\"BUSL-1.1\"},\"contracts/src/interfaces/components/ISharesManager.1.sol\":{\"content\":\"//SPDX-License-Identifier: BUSL-1.1\\npragma solidity 0.8.10;\\n\\nimport \\\"openzeppelin-contracts/contracts/token/ERC20/IERC20.sol\\\";\\n\\n/// @title Shares Manager Interface (v1)\\n/// @author Kiln\\n/// @notice This interface exposes methods to handle the shares of the depositor and the ERC20 interface\\ninterface ISharesManagerV1 is IERC20 {\\n    /// @notice Emitted when the total supply is changed\\n    event SetTotalSupply(uint256 totalSupply);\\n\\n    /// @notice Balance too low to perform operation\\n    error BalanceTooLow();\\n\\n    /// @notice Allowance too low to perform operation\\n    /// @param _from Account where funds are sent from\\n    /// @param _operator Account attempting the transfer\\n    /// @param _allowance Current allowance\\n    /// @param _value Requested transfer value in shares\\n    error AllowanceTooLow(address _from, address _operator, uint256 _allowance, uint256 _value);\\n\\n    /// @notice Invalid empty transfer\\n    error NullTransfer();\\n\\n    /// @notice Invalid transfer recipients\\n    /// @param _from Account sending the funds in the invalid transfer\\n    /// @param _to Account receiving the funds in the invalid transfer\\n    error UnauthorizedTransfer(address _from, address _to);\\n\\n    /// @notice Retrieve the token name\\n    /// @return The token name\\n    function name() external pure returns (string memory);\\n\\n    /// @notice Retrieve the token symbol\\n    /// @return The token symbol\\n    function symbol() external pure returns (string memory);\\n\\n    /// @notice Retrieve the decimal count\\n    /// @return The decimal count\\n    function decimals() external pure returns (uint8);\\n\\n    /// @notice Retrieve the total token supply\\n    /// @return The total supply in shares\\n    function totalSupply() external view returns (uint256);\\n\\n    /// @notice Retrieve the total underlying asset supply\\n    /// @return The total underlying asset supply\\n    function totalUnderlyingSupply() external view returns (uint256);\\n\\n    /// @notice Retrieve the balance of an account\\n    /// @param _owner Address to be checked\\n    /// @return The balance of the account in shares\\n    function balanceOf(address _owner) external view returns (uint256);\\n\\n    /// @notice Retrieve the underlying asset balance of an account\\n    /// @param _owner Address to be checked\\n    /// @return The underlying balance of the account\\n    function balanceOfUnderlying(address _owner) external view returns (uint256);\\n\\n    /// @notice Retrieve the underlying asset balance from an amount of shares\\n    /// @param _shares Amount of shares to convert\\n    /// @return The underlying asset balance represented by the shares\\n    function underlyingBalanceFromShares(uint256 _shares) external view returns (uint256);\\n\\n    /// @notice Retrieve the shares count from an underlying asset amount\\n    /// @param _underlyingAssetAmount Amount of underlying asset to convert\\n    /// @return The amount of shares worth the underlying asset amopunt\\n    function sharesFromUnderlyingBalance(uint256 _underlyingAssetAmount) external view returns (uint256);\\n\\n    /// @notice Retrieve the allowance value for a spender\\n    /// @param _owner Address that issued the allowance\\n    /// @param _spender Address that received the allowance\\n    /// @return The allowance in shares for a given spender\\n    function allowance(address _owner, address _spender) external view returns (uint256);\\n\\n    /// @notice Performs a transfer from the message sender to the provided account\\n    /// @param _to Address receiving the tokens\\n    /// @param _value Amount of shares to be sent\\n    /// @return True if success\\n    function transfer(address _to, uint256 _value) external returns (bool);\\n\\n    /// @notice Performs a transfer between two recipients\\n    /// @param _from Address sending the tokens\\n    /// @param _to Address receiving the tokens\\n    /// @param _value Amount of shares to be sent\\n    /// @return True if success\\n    function transferFrom(address _from, address _to, uint256 _value) external returns (bool);\\n\\n    /// @notice Approves an account for future spendings\\n    /// @dev An approved account can use transferFrom to transfer funds on behalf of the token owner\\n    /// @param _spender Address that is allowed to spend the tokens\\n    /// @param _value The allowed amount in shares, will override previous value\\n    /// @return True if success\\n    function approve(address _spender, uint256 _value) external returns (bool);\\n\\n    /// @notice Increase allowance to another account\\n    /// @param _spender Spender that receives the allowance\\n    /// @param _additionalValue Amount of shares to add\\n    /// @return True if success\\n    function increaseAllowance(address _spender, uint256 _additionalValue) external returns (bool);\\n\\n    /// @notice Decrease allowance to another account\\n    /// @param _spender Spender that receives the allowance\\n    /// @param _subtractableValue Amount of shares to subtract\\n    /// @return True if success\\n    function decreaseAllowance(address _spender, uint256 _subtractableValue) external returns (bool);\\n}\\n\",\"keccak256\":\"0x48205c5d24d9946b62185f16c7d43e071e96b0d4b8a25ce6948fd4450f868444\",\"license\":\"BUSL-1.1\"},\"contracts/src/interfaces/components/IUserDepositManager.1.sol\":{\"content\":\"//SPDX-License-Identifier: BUSL-1.1\\npragma solidity 0.8.10;\\n\\n/// @title User Deposit Manager (v1)\\n/// @author Kiln\\n/// @notice This interface exposes methods to handle the inbound transfers cases or the explicit submissions\\ninterface IUserDepositManagerV1 {\\n    /// @notice User deposited ETH in the system\\n    /// @param depositor Address performing the deposit\\n    /// @param recipient Address receiving the minted shares\\n    /// @param amount Amount in ETH deposited\\n    event UserDeposit(address indexed depositor, address indexed recipient, uint256 amount);\\n\\n    /// @notice And empty deposit attempt was made\\n    error EmptyDeposit();\\n\\n    /// @notice Explicit deposit method to mint on msg.sender\\n    function deposit() external payable;\\n\\n    /// @notice Explicit deposit method to mint on msg.sender and transfer to _recipient\\n    /// @param _recipient Address receiving the minted LsETH\\n    function depositAndTransfer(address _recipient) external payable;\\n\\n    /// @notice Implicit deposit method, when the user performs a regular transfer to the contract\\n    receive() external payable;\\n\\n    /// @notice Invalid call, when the user sends a transaction with a data payload but no method matched\\n    fallback() external payable;\\n}\\n\",\"keccak256\":\"0x1abcda34431bfbb82b6ede5c852f4ece6544cca24616f58cb44ed340df0ef06b\",\"license\":\"BUSL-1.1\"},\"contracts/src/libraries/LibAllowlistMasks.sol\":{\"content\":\"//SPDX-License-Identifier: BUSL-1.1\\npragma solidity 0.8.10;\\n\\n/// @title Lib Allowlist Masks\\n/// @notice Holds all the mask values\\nlibrary LibAllowlistMasks {\\n    /// @notice Mask used for denied accounts\\n    uint256 internal constant DENY_MASK = 0x1 << 255;\\n    /// @notice The mask for the deposit right\\n    uint256 internal constant DEPOSIT_MASK = 0x1;\\n    /// @notice The mask for the donation right\\n    uint256 internal constant DONATE_MASK = 0x1 << 1;\\n    /// @notice The mask for the redeem right\\n    uint256 internal constant REDEEM_MASK = 0x1 << 2;\\n}\\n\",\"keccak256\":\"0x39a0307a04bcec3b8352c3205a746407939ccf05625c56e78f2e43105a5e6d4c\",\"license\":\"BUSL-1.1\"},\"contracts/src/libraries/LibBasisPoints.sol\":{\"content\":\"//SPDX-License-Identifier: BUSL-1.1\\npragma solidity 0.8.10;\\n\\n/// @title Lib Basis Points\\n/// @notice Holds the basis points max value\\nlibrary LibBasisPoints {\\n    /// @notice The max value for basis points (represents 100%)\\n    uint256 internal constant BASIS_POINTS_MAX = 10_000;\\n}\\n\",\"keccak256\":\"0x97228a01dcd48f033555e3a44f9be37fb474a1b027f703f28097d539808f1c6c\",\"license\":\"BUSL-1.1\"},\"contracts/src/libraries/LibErrors.sol\":{\"content\":\"//SPDX-License-Identifier: MIT\\npragma solidity 0.8.10;\\n\\n/// @title Lib Errors\\n/// @notice Library of common errors\\nlibrary LibErrors {\\n    /// @notice The operator is unauthorized for the caller\\n    /// @param caller Address performing the call\\n    error Unauthorized(address caller);\\n\\n    /// @notice The call was invalid\\n    error InvalidCall();\\n\\n    /// @notice The argument was invalid\\n    error InvalidArgument();\\n\\n    /// @notice The address is zero\\n    error InvalidZeroAddress();\\n\\n    /// @notice The string is empty\\n    error InvalidEmptyString();\\n\\n    /// @notice The fee is invalid\\n    error InvalidFee();\\n}\\n\",\"keccak256\":\"0x7bdbd4ada124723fa08e2088405ba0bf4453beb23d84f4af09e894e06e751f33\",\"license\":\"MIT\"},\"contracts/src/libraries/LibSanitize.sol\":{\"content\":\"//SPDX-License-Identifier: MIT\\npragma solidity 0.8.10;\\n\\nimport \\\"./LibErrors.sol\\\";\\nimport \\\"./LibBasisPoints.sol\\\";\\n\\n/// @title Lib Sanitize\\n/// @notice Utilities to sanitize input values\\nlibrary LibSanitize {\\n    /// @notice Reverts if address is 0\\n    /// @param _address Address to check\\n    function _notZeroAddress(address _address) internal pure {\\n        if (_address == address(0)) {\\n            revert LibErrors.InvalidZeroAddress();\\n        }\\n    }\\n\\n    /// @notice Reverts if string is empty\\n    /// @param _string String to check\\n    function _notEmptyString(string memory _string) internal pure {\\n        if (bytes(_string).length == 0) {\\n            revert LibErrors.InvalidEmptyString();\\n        }\\n    }\\n\\n    /// @notice Reverts if fee is invalid\\n    /// @param _fee Fee to check\\n    function _validFee(uint256 _fee) internal pure {\\n        if (_fee > LibBasisPoints.BASIS_POINTS_MAX) {\\n            revert LibErrors.InvalidFee();\\n        }\\n    }\\n}\\n\",\"keccak256\":\"0xf8aeeb866c4657a96c8b4c006340c7996d15a6f0044b730c276bc3ba8d5bcd48\",\"license\":\"MIT\"},\"contracts/src/libraries/LibUint256.sol\":{\"content\":\"//SPDX-License-Identifier: MIT\\npragma solidity 0.8.10;\\n\\n/// @title Lib Uint256\\n/// @notice Utilities to perform uint operations\\nlibrary LibUint256 {\\n    /// @notice Converts a value to little endian (64 bits)\\n    /// @param _value The value to convert\\n    /// @return result The converted value\\n    function toLittleEndian64(uint256 _value) internal pure returns (uint256 result) {\\n        result = 0;\\n        uint256 tempValue = _value;\\n        result = tempValue & 0xFF;\\n        tempValue >>= 8;\\n\\n        result = (result << 8) | (tempValue & 0xFF);\\n        tempValue >>= 8;\\n\\n        result = (result << 8) | (tempValue & 0xFF);\\n        tempValue >>= 8;\\n\\n        result = (result << 8) | (tempValue & 0xFF);\\n        tempValue >>= 8;\\n\\n        result = (result << 8) | (tempValue & 0xFF);\\n        tempValue >>= 8;\\n\\n        result = (result << 8) | (tempValue & 0xFF);\\n        tempValue >>= 8;\\n\\n        result = (result << 8) | (tempValue & 0xFF);\\n        tempValue >>= 8;\\n\\n        result = (result << 8) | (tempValue & 0xFF);\\n        tempValue >>= 8;\\n\\n        assert(0 == tempValue); // fully converted\\n        result <<= (24 * 8);\\n    }\\n\\n    /// @notice Returns the minimum value\\n    /// @param _a First value\\n    /// @param _b Second value\\n    /// @return Smallest value between _a and _b\\n    function min(uint256 _a, uint256 _b) internal pure returns (uint256) {\\n        return (_a > _b ? _b : _a);\\n    }\\n\\n    /// @notice Returns the max value\\n    /// @param _a First value\\n    /// @param _b Second value\\n    /// @return Highest value between _a and _b\\n    function max(uint256 _a, uint256 _b) internal pure returns (uint256) {\\n        return (_a < _b ? _b : _a);\\n    }\\n\\n    /// @notice Performs a ceiled division\\n    /// @param _a Numerator\\n    /// @param _b Denominator\\n    /// @return ceil(_a / _b)\\n    function ceil(uint256 _a, uint256 _b) internal pure returns (uint256) {\\n        return (_a / _b) + (_a % _b > 0 ? 1 : 0);\\n    }\\n}\\n\",\"keccak256\":\"0xdf3adb82d2cb4392cc687c910fb1874e148d29fdf2f3a187213d349a0f95e399\",\"license\":\"MIT\"},\"contracts/src/libraries/LibUnstructuredStorage.sol\":{\"content\":\"// SPDX-License-Identifier:    MIT\\n\\npragma solidity 0.8.10;\\n\\n/// @title Lib Unstructured Storage\\n/// @notice Utilities to work with unstructured storage\\nlibrary LibUnstructuredStorage {\\n    /// @notice Retrieve a bool value at a storage slot\\n    /// @param _position The storage slot to retrieve\\n    /// @return data The bool value\\n    function getStorageBool(bytes32 _position) internal view returns (bool data) {\\n        // solhint-disable-next-line no-inline-assembly\\n        assembly {\\n            data := sload(_position)\\n        }\\n    }\\n\\n    /// @notice Retrieve an address value at a storage slot\\n    /// @param _position The storage slot to retrieve\\n    /// @return data The address value\\n    function getStorageAddress(bytes32 _position) internal view returns (address data) {\\n        // solhint-disable-next-line no-inline-assembly\\n        assembly {\\n            data := sload(_position)\\n        }\\n    }\\n\\n    /// @notice Retrieve a bytes32 value at a storage slot\\n    /// @param _position The storage slot to retrieve\\n    /// @return data The bytes32 value\\n    function getStorageBytes32(bytes32 _position) internal view returns (bytes32 data) {\\n        // solhint-disable-next-line no-inline-assembly\\n        assembly {\\n            data := sload(_position)\\n        }\\n    }\\n\\n    /// @notice Retrieve an uint256 value at a storage slot\\n    /// @param _position The storage slot to retrieve\\n    /// @return data The uint256 value\\n    function getStorageUint256(bytes32 _position) internal view returns (uint256 data) {\\n        // solhint-disable-next-line no-inline-assembly\\n        assembly {\\n            data := sload(_position)\\n        }\\n    }\\n\\n    /// @notice Sets a bool value at a storage slot\\n    /// @param _position The storage slot to set\\n    /// @param _data The bool value to set\\n    function setStorageBool(bytes32 _position, bool _data) internal {\\n        // solhint-disable-next-line no-inline-assembly\\n        assembly {\\n            sstore(_position, _data)\\n        }\\n    }\\n\\n    /// @notice Sets an address value at a storage slot\\n    /// @param _position The storage slot to set\\n    /// @param _data The address value to set\\n    function setStorageAddress(bytes32 _position, address _data) internal {\\n        // solhint-disable-next-line no-inline-assembly\\n        assembly {\\n            sstore(_position, _data)\\n        }\\n    }\\n\\n    /// @notice Sets a bytes32 value at a storage slot\\n    /// @param _position The storage slot to set\\n    /// @param _data The bytes32 value to set\\n    function setStorageBytes32(bytes32 _position, bytes32 _data) internal {\\n        // solhint-disable-next-line no-inline-assembly\\n        assembly {\\n            sstore(_position, _data)\\n        }\\n    }\\n\\n    /// @notice Sets an uint256 value at a storage slot\\n    /// @param _position The storage slot to set\\n    /// @param _data The uint256 value to set\\n    function setStorageUint256(bytes32 _position, uint256 _data) internal {\\n        // solhint-disable-next-line no-inline-assembly\\n        assembly {\\n            sstore(_position, _data)\\n        }\\n    }\\n}\\n\",\"keccak256\":\"0xf8e1a2f0dc18e023e12747355b3c95258d4de698f2bb6196222a1dc92940caa3\",\"license\":\"MIT\"},\"contracts/src/state/redeemManager/BufferedExceedingEth.sol\":{\"content\":\"//SPDX-License-Identifier: BUSL-1.1\\npragma solidity 0.8.10;\\n\\nimport \\\"../../libraries/LibUnstructuredStorage.sol\\\";\\n\\n/// @title Buffered Exceeding Eth storage\\n/// @notice Redeen Manager utility to manage the exceeding ETH with a redeem request\\nlibrary BufferedExceedingEth {\\n    /// @notice Storage slot of the Redeem Buffered Eth\\n    bytes32 internal constant BUFFERED_EXCEEDING_ETH_SLOT =\\n        bytes32(uint256(keccak256(\\\"river.state.bufferedExceedingEth\\\")) - 1);\\n\\n    /// @notice Retrieve the Redeem Buffered Eth Value\\n    /// @return The Redeem Buffered Eth Value\\n    function get() internal view returns (uint256) {\\n        return LibUnstructuredStorage.getStorageUint256(BUFFERED_EXCEEDING_ETH_SLOT);\\n    }\\n\\n    /// @notice Sets the Redeem Buffered Eth Value\\n    /// @param newValue The new value\\n    function set(uint256 newValue) internal {\\n        LibUnstructuredStorage.setStorageUint256(BUFFERED_EXCEEDING_ETH_SLOT, newValue);\\n    }\\n}\\n\",\"keccak256\":\"0x0e076870f171fa0db4635ad0c01e3a50c95c2790846e2cc7f3e0a3993181f523\",\"license\":\"BUSL-1.1\"},\"contracts/src/state/redeemManager/RedeemQueue.sol\":{\"content\":\"//SPDX-License-Identifier: BUSL-1.1\\npragma solidity 0.8.10;\\n\\n/// @title Redeem Manager Redeem Queue storage\\n/// @notice Utility to manage the Redeem Queue in the Redeem Manager\\nlibrary RedeemQueue {\\n    /// @notice Storage slot of the Redeem Queue\\n    bytes32 internal constant REDEEM_QUEUE_ID_SLOT = bytes32(uint256(keccak256(\\\"river.state.redeemQueue\\\")) - 1);\\n\\n    /// @notice The Redeemer structure represents the redeem request made by a user\\n    struct RedeemRequest {\\n        /// @custom:attribute The amount of the redeem request in LsETH\\n        uint256 amount;\\n        /// @custom:attribute The maximum amount of ETH redeemable by this request\\n        uint256 maxRedeemableEth;\\n        /// @custom:attribute The owner of the redeem request\\n        address owner;\\n        /// @custom:attribute The height is the cumulative sum of all the sizes of preceding redeem requests\\n        uint256 height;\\n    }\\n\\n    /// @notice Retrieve the Redeem Queue array storage pointer\\n    /// @return data The Redeem Queue array storage pointer\\n    function get() internal pure returns (RedeemRequest[] storage data) {\\n        bytes32 position = REDEEM_QUEUE_ID_SLOT;\\n        assembly {\\n            data.slot := position\\n        }\\n    }\\n}\\n\",\"keccak256\":\"0x6ef8da6d91e1b679459384b51f8fc0762ce43bccd3807c22dadfc40971bb9097\",\"license\":\"BUSL-1.1\"},\"contracts/src/state/redeemManager/WithdrawalStack.sol\":{\"content\":\"//SPDX-License-Identifier: BUSL-1.1\\npragma solidity 0.8.10;\\n\\n/// @title Redeem Manager Withdrawal Stack storage\\n/// @notice Utility to manage the Withdrawal Stack in the Redeem Manager\\nlibrary WithdrawalStack {\\n    /// @notice Storage slot of the Withdrawal Stack\\n    bytes32 internal constant WITHDRAWAL_STACK_ID_SLOT = bytes32(uint256(keccak256(\\\"river.state.withdrawalStack\\\")) - 1);\\n\\n    /// @notice The Redeemer structure represents the withdrawal events made by River\\n    struct WithdrawalEvent {\\n        /// @custom:attribute The amount of the withdrawal event in LsETH\\n        uint256 amount;\\n        /// @custom:attribute The amount of the withdrawal event in ETH\\n        uint256 withdrawnEth;\\n        /// @custom:attribute The height is the cumulative sum of all the sizes of preceding withdrawal events\\n        uint256 height;\\n    }\\n\\n    /// @notice Retrieve the Withdrawal Stack array storage pointer\\n    /// @return data The Withdrawal Stack array storage pointer\\n    function get() internal pure returns (WithdrawalEvent[] storage data) {\\n        bytes32 position = WITHDRAWAL_STACK_ID_SLOT;\\n        assembly {\\n            data.slot := position\\n        }\\n    }\\n}\\n\",\"keccak256\":\"0x3c6c66f3b541e8256c9074c3ad17b88668e280d33bc3300de3a877eef5847d85\",\"license\":\"BUSL-1.1\"},\"contracts/src/state/river/CLSpec.sol\":{\"content\":\"//SPDX-License-Identifier: BUSL-1.1\\npragma solidity 0.8.10;\\n\\n/// @title Consensus Layer Spec Storage\\n/// @notice Utility to manage the Consensus Layer Spec in storage\\nlibrary CLSpec {\\n    /// @notice Storage slot of the Consensus Layer Spec\\n    bytes32 internal constant CL_SPEC_SLOT = bytes32(uint256(keccak256(\\\"river.state.clSpec\\\")) - 1);\\n\\n    /// @notice The Consensus Layer Spec structure\\n    struct CLSpecStruct {\\n        /// @custom:attribute The count of epochs per frame, 225 means 24h\\n        uint64 epochsPerFrame;\\n        /// @custom:attribute The count of slots in an epoch (32 on mainnet)\\n        uint64 slotsPerEpoch;\\n        /// @custom:attribute The seconds in a slot (12 on mainnet)\\n        uint64 secondsPerSlot;\\n        /// @custom:attribute The block timestamp of the first consensus layer block\\n        uint64 genesisTime;\\n        /// @custom:attribute The count of epochs before considering an epoch final on-chain\\n        uint64 epochsToAssumedFinality;\\n    }\\n\\n    /// @notice The structure in storage\\n    struct Slot {\\n        /// @custom:attribute The structure in storage\\n        CLSpecStruct value;\\n    }\\n\\n    /// @notice Retrieve the Consensus Layer Spec from storage\\n    /// @return The Consensus Layer Spec\\n    function get() internal view returns (CLSpecStruct memory) {\\n        bytes32 slot = CL_SPEC_SLOT;\\n\\n        Slot storage r;\\n\\n        // solhint-disable-next-line no-inline-assembly\\n        assembly {\\n            r.slot := slot\\n        }\\n\\n        return r.value;\\n    }\\n\\n    /// @notice Set the Consensus Layer Spec value in storage\\n    /// @param _newCLSpec The new value to set in storage\\n    function set(CLSpecStruct memory _newCLSpec) internal {\\n        bytes32 slot = CL_SPEC_SLOT;\\n\\n        Slot storage r;\\n\\n        // solhint-disable-next-line no-inline-assembly\\n        assembly {\\n            r.slot := slot\\n        }\\n\\n        r.value = _newCLSpec;\\n    }\\n}\\n\",\"keccak256\":\"0x308ade79e8c4249aa28e30b86518c9e02b223dca76e01b5036de63d2c7176635\",\"license\":\"BUSL-1.1\"},\"contracts/src/state/river/DailyCommittableLimits.sol\":{\"content\":\"//SPDX-License-Identifier: BUSL-1.1\\npragma solidity 0.8.10;\\n\\nimport \\\"../../libraries/LibSanitize.sol\\\";\\n\\n/// @title Daily Committable Limits storage\\n/// @notice Utility to manage the Daily Committable Limits in storage\\nlibrary DailyCommittableLimits {\\n    /// @notice Storage slot of the Daily Committable Limits storage\\n    bytes32 internal constant DAILY_COMMITTABLE_LIMITS_SLOT =\\n        bytes32(uint256(keccak256(\\\"river.state.dailyCommittableLimits\\\")) - 1);\\n\\n    /// @notice The daily committable limits structure\\n    struct DailyCommittableLimitsStruct {\\n        uint128 maxDailyNetCommittableAmount;\\n        uint128 maxDailyRelativeCommittableAmount;\\n    }\\n\\n    /// @notice The structure in storage\\n    struct Slot {\\n        /// @custom:attribute The structure in storage\\n        DailyCommittableLimitsStruct value;\\n    }\\n\\n    /// @notice Retrieve the Daily Committable Limits from storage\\n    /// @return The Daily Committable Limits\\n    function get() internal view returns (DailyCommittableLimitsStruct memory) {\\n        bytes32 slot = DAILY_COMMITTABLE_LIMITS_SLOT;\\n\\n        Slot storage r;\\n\\n        // solhint-disable-next-line no-inline-assembly\\n        assembly {\\n            r.slot := slot\\n        }\\n\\n        return r.value;\\n    }\\n\\n    /// @notice Set the Daily Committable Limits value in storage\\n    /// @param _newValue The new value to set in storage\\n    function set(DailyCommittableLimitsStruct memory _newValue) internal {\\n        LibSanitize._validFee(_newValue.maxDailyRelativeCommittableAmount);\\n        bytes32 slot = DAILY_COMMITTABLE_LIMITS_SLOT;\\n\\n        Slot storage r;\\n\\n        // solhint-disable-next-line no-inline-assembly\\n        assembly {\\n            r.slot := slot\\n        }\\n\\n        r.value = _newValue;\\n    }\\n}\\n\",\"keccak256\":\"0x1e421e2d9ff76c0e43f5b95c1212dacc914f73694e66004db154df096cf7a5aa\",\"license\":\"BUSL-1.1\"},\"contracts/src/state/river/ReportBounds.sol\":{\"content\":\"//SPDX-License-Identifier: BUSL-1.1\\npragma solidity 0.8.10;\\n\\n/// @title Report Bounds Storage\\n/// @notice Utility to manage the Report Bounds in storage\\nlibrary ReportBounds {\\n    /// @notice Storage slot of the Report Bounds\\n    bytes32 internal constant REPORT_BOUNDS_SLOT = bytes32(uint256(keccak256(\\\"river.state.reportBounds\\\")) - 1);\\n\\n    /// @notice The Report Bounds structure\\n    struct ReportBoundsStruct {\\n        /// @custom:attribute The maximum allowed annual apr, checked before submitting a report to River\\n        uint256 annualAprUpperBound;\\n        /// @custom:attribute The maximum allowed balance decrease, also checked before submitting a report to River\\n        uint256 relativeLowerBound;\\n    }\\n\\n    /// @notice The structure in storage\\n    struct Slot {\\n        /// @custom:attribute The structure in storage\\n        ReportBoundsStruct value;\\n    }\\n\\n    /// @notice Retrieve the Report Bounds from storage\\n    /// @return The Report Bounds\\n    function get() internal view returns (ReportBoundsStruct memory) {\\n        bytes32 slot = REPORT_BOUNDS_SLOT;\\n\\n        Slot storage r;\\n\\n        // solhint-disable-next-line no-inline-assembly\\n        assembly {\\n            r.slot := slot\\n        }\\n\\n        return r.value;\\n    }\\n\\n    /// @notice Set the Report Bounds in storage\\n    /// @param _newReportBounds The new Report Bounds value\\n    function set(ReportBoundsStruct memory _newReportBounds) internal {\\n        bytes32 slot = REPORT_BOUNDS_SLOT;\\n\\n        Slot storage r;\\n\\n        // solhint-disable-next-line no-inline-assembly\\n        assembly {\\n            r.slot := slot\\n        }\\n\\n        r.value = _newReportBounds;\\n    }\\n}\\n\",\"keccak256\":\"0xbae9eb981ca4714656f2cee8137329d94196fca58d0c18a097da583662023ca9\",\"license\":\"BUSL-1.1\"},\"contracts/src/state/shared/RiverAddress.sol\":{\"content\":\"//SPDX-License-Identifier: BUSL-1.1\\npragma solidity 0.8.10;\\n\\nimport \\\"../../libraries/LibSanitize.sol\\\";\\nimport \\\"../../libraries/LibUnstructuredStorage.sol\\\";\\n\\n/// @title River Address Storage\\n/// @notice Utility to manage the River Address in storage\\nlibrary RiverAddress {\\n    /// @notice Storage slot of the River Address\\n    bytes32 internal constant RIVER_ADDRESS_SLOT = bytes32(uint256(keccak256(\\\"river.state.riverAddress\\\")) - 1);\\n\\n    /// @notice Retrieve the River Address\\n    /// @return The River Address\\n    function get() internal view returns (address) {\\n        return LibUnstructuredStorage.getStorageAddress(RIVER_ADDRESS_SLOT);\\n    }\\n\\n    /// @notice Sets the River Address\\n    /// @param _newValue New River Address\\n    function set(address _newValue) internal {\\n        LibSanitize._notZeroAddress(_newValue);\\n        LibUnstructuredStorage.setStorageAddress(RIVER_ADDRESS_SLOT, _newValue);\\n    }\\n}\\n\",\"keccak256\":\"0xffc846d2e04891e3b0625a9e710fa2a18b4e1af43609f0d76d6c3b7bf5c51384\",\"license\":\"BUSL-1.1\"},\"contracts/src/state/shared/Version.sol\":{\"content\":\"//SPDX-License-Identifier: BUSL-1.1\\npragma solidity 0.8.10;\\n\\nimport \\\"../../libraries/LibUnstructuredStorage.sol\\\";\\n\\n/// @title Version Storage\\n/// @notice Utility to manage the Version in storage\\nlibrary Version {\\n    /// @notice Storage slot of the Version\\n    bytes32 public constant VERSION_SLOT = bytes32(uint256(keccak256(\\\"river.state.version\\\")) - 1);\\n\\n    /// @notice Retrieve the Version\\n    /// @return The Version\\n    function get() internal view returns (uint256) {\\n        return LibUnstructuredStorage.getStorageUint256(VERSION_SLOT);\\n    }\\n\\n    /// @notice Sets the Version\\n    /// @param _newValue New Version\\n    function set(uint256 _newValue) internal {\\n        LibUnstructuredStorage.setStorageUint256(VERSION_SLOT, _newValue);\\n    }\\n}\\n\",\"keccak256\":\"0x82f1cc4bbb1f16c1cdbac93596334805eb1a2e0e40ccbd0ab0f78e22d3f83864\",\"license\":\"BUSL-1.1\"},\"openzeppelin-contracts/contracts/token/ERC20/IERC20.sol\":{\"content\":\"// SPDX-License-Identifier: MIT\\n// OpenZeppelin Contracts (last updated v4.6.0) (token/ERC20/IERC20.sol)\\n\\npragma solidity ^0.8.0;\\n\\n/**\\n * @dev Interface of the ERC20 standard as defined in the EIP.\\n */\\ninterface IERC20 {\\n    /**\\n     * @dev Emitted when `value` tokens are moved from one account (`from`) to\\n     * another (`to`).\\n     *\\n     * Note that `value` may be zero.\\n     */\\n    event Transfer(address indexed from, address indexed to, uint256 value);\\n\\n    /**\\n     * @dev Emitted when the allowance of a `spender` for an `owner` is set by\\n     * a call to {approve}. `value` is the new allowance.\\n     */\\n    event Approval(address indexed owner, address indexed spender, uint256 value);\\n\\n    /**\\n     * @dev Returns the amount of tokens in existence.\\n     */\\n    function totalSupply() external view returns (uint256);\\n\\n    /**\\n     * @dev Returns the amount of tokens owned by `account`.\\n     */\\n    function balanceOf(address account) external view returns (uint256);\\n\\n    /**\\n     * @dev Moves `amount` tokens from the caller's account to `to`.\\n     *\\n     * Returns a boolean value indicating whether the operation succeeded.\\n     *\\n     * Emits a {Transfer} event.\\n     */\\n    function transfer(address to, uint256 amount) external returns (bool);\\n\\n    /**\\n     * @dev Returns the remaining number of tokens that `spender` will be\\n     * allowed to spend on behalf of `owner` through {transferFrom}. This is\\n     * zero by default.\\n     *\\n     * This value changes when {approve} or {transferFrom} are called.\\n     */\\n    function allowance(address owner, address spender) external view returns (uint256);\\n\\n    /**\\n     * @dev Sets `amount` as the allowance of `spender` over the caller's tokens.\\n     *\\n     * Returns a boolean value indicating whether the operation succeeded.\\n     *\\n     * IMPORTANT: Beware that changing an allowance with this method brings the risk\\n     * that someone may use both the old and the new allowance by unfortunate\\n     * transaction ordering. One possible solution to mitigate this race\\n     * condition is to first reduce the spender's allowance to 0 and set the\\n     * desired value afterwards:\\n     * https://github.com/ethereum/EIPs/issues/20#issuecomment-263524729\\n     *\\n     * Emits an {Approval} event.\\n     */\\n    function approve(address spender, uint256 amount) external returns (bool);\\n\\n    /**\\n     * @dev Moves `amount` tokens from `from` to `to` using the\\n     * allowance mechanism. `amount` is then deducted from the caller's\\n     * allowance.\\n     *\\n     * Returns a boolean value indicating whether the operation succeeded.\\n     *\\n     * Emits a {Transfer} event.\\n     */\\n    function transferFrom(\\n        address from,\\n        address to,\\n        uint256 amount\\n    ) external returns (bool);\\n}\\n\",\"keccak256\":\"0x9750c6b834f7b43000631af5cc30001c5f547b3ceb3635488f140f60e897ea6b\",\"license\":\"MIT\"}},\"version\":1}",
+  "bytecode": "0x60806040523480156200001157600080fd5b506200002a6000196200007060201b62000a521760201c565b7f1809e49bba43f2d39fa57894b50cd6ccb428cc438230e065cac3eb24a1355a716000196000366040516200006293929190620000bd565b60405180910390a162000119565b620000b6620000a160017f82055909238c0f5e63d6f174068ebb8f51bcec9bd37de63bb68f6551feec0cfd620000f3565b60001b82620000b960201b62000a881760201c565b50565b9055565b83815260406020820152816040820152818360608301376000818301606090810191909152601f909201601f1916010192915050565b6000828210156200011457634e487b7160e01b600052601160045260246000fd5b500390565b611e0b80620001296000396000f3fe6080604052600436106100b25760003560e01c8063862337541161006f578063862337541461018d5780639332525d146101cf5780639b92d6de146101fc578063aa2f892d14610258578063b30d8bb714610278578063c3b832111461028b578063c8fade5a146102ab57600080fd5b80630c779401146100b7578063107703ab146100d9578063319798d1146101135780635b5985a2146101365780635f2e5f071461014b578063841ecb8514610178575b600080fd5b3480156100c357600080fd5b506100d76100d23660046118d4565b6102cb565b005b3480156100e557600080fd5b506100f96100f4366004611902565b6103d2565b60405163ffffffff90911681526020015b60405180910390f35b34801561011f57600080fd5b506101286104c8565b60405190815260200161010a565b34801561014257600080fd5b506101286104d8565b34801561015757600080fd5b5061016b61016636600461197d565b6104e7565b60405161010a91906119be565b34801561018457600080fd5b5061012861061c565b34801561019957600080fd5b506101ad6101a8366004611a05565b610626565b604080518251815260208084015190820152918101519082015260600161010a565b3480156101db57600080fd5b506101ef6101ea366004611a32565b61068b565b60405161010a9190611a9d565b34801561020857600080fd5b5061021c610217366004611a05565b6106a4565b60405161010a919081518152602080830151908201526040808301516001600160a01b0316908201526060918201519181019190915260800190565b34801561026457600080fd5b506100f96102733660046118d4565b61071b565b6100d76102863660046118d4565b610808565b34801561029757600080fd5b506101ef6102a6366004611ae6565b610977565b3480156102b757600080fd5b506100d76102c6366004611b69565b610990565b6102d3610a8c565b6001600160a01b0316336001600160a01b03161461030f573360405163472511eb60e11b81526004016103069190611b86565b60405180910390fd5b600061032261031c610ac0565b83610af0565b905061032c610b05565b6001600160a01b031663056850c6826040518263ffffffff1660e01b81526004016000604051808303818588803b15801561036657600080fd5b505af115801561037a573d6000803e3d6000fd5b505050505061039a8161038b610ac0565b6103959190611bb0565b610b0f565b6040518181527fe4421923600d79aa81e054fab2083d01983d85b94ec8c8928f404820dfca4036906020015b60405180910390a15050565b6000806103dd610b05565b9050336001600160a01b038216146104b457806001600160a01b031663c5eff3d06040518163ffffffff1660e01b8152600401602060405180830381865afa15801561042d573d6000803e3d6000fd5b505050506040513d601f19601f820116820180604052508101906104519190611bc7565b604051632d20488160e11b81523360048281019190915260248201526001600160a01b039190911690635a4091029060440160006040518083038186803b15801561049b57600080fd5b505afa1580156104af573d6000803e3d6000fd5b505050505b506104bf8383610b3d565b90505b92915050565b60006104d2610de8565b54919050565b60006104e2610ac0565b905090565b6060816001600160401b0381111561050157610501611be4565b60405190808252806020026020018201604052801561052a578160200160208202803683370190505b509050610535611848565b600061053f610e16565b805490915080156105a05781610556600183611bb0565b8154811061056657610566611bfa565b9060005260206000209060030201604051806060016040529081600082015481526020016001820154815260200160028201548152505092505b60005b85811015610612576105db8787838181106105c0576105c0611bfa565b90506020020160208101906105d59190611a05565b85610e44565b8582815181106105ed576105ed611bfa565b602002602001019060070b908160070b815250508061060b90611c10565b90506105a3565b5050505092915050565b60006104d2610e16565b61062e611848565b610636610e16565b8263ffffffff168154811061064d5761064d611bfa565b906000526020600020906003020160405180606001604052908160008201548152602001600182015481526020016002820154815250509050919050565b606061069b858585856001610f26565b95945050505050565b6106ac611869565b6106b4610de8565b8263ffffffff16815481106106cb576106cb611bfa565b60009182526020918290206040805160808101825260049093029091018054835260018101549383019390935260028301546001600160a01b031690820152600390910154606082015292915050565b600080610726610b05565b9050336001600160a01b038216146107fd57806001600160a01b031663c5eff3d06040518163ffffffff1660e01b8152600401602060405180830381865afa158015610776573d6000803e3d6000fd5b505050506040513d601f19601f8201168201806040525081019061079a9190611bc7565b604051632d20488160e11b81523360048281019190915260248201526001600160a01b039190911690635a4091029060440160006040518083038186803b1580156107e457600080fd5b505afa1580156107f8573d6000803e3d6000fd5b505050505b506104c28233610b3d565b610810610a8c565b6001600160a01b0316336001600160a01b031614610843573360405163472511eb60e11b81526004016103069190611b86565b600061084d610e16565b805490915060003463ffffffff8316156108ce5760008461086f600186611c2b565b63ffffffff168154811061088557610885611bfa565b60009182526020918290206040805160608101825260039093029091018054808452600182015494840194909452600201549082018190529092506108ca9190611c50565b9250505b604080516060810182528681526020808201848152828401868152885460018181018b5560008b8152949094209451600390910290940193845590519183019190915551600290910155517f05e5b10ca266c2e8cfd73b1fb719694fb6b89fcda9e3739ace4cc19b3e855445906109689084908890859088909384526020840192909252604083015263ffffffff16606082015260800190565b60405180910390a15050505050565b60606109868686868686610f26565b9695505050505050565b600061099a611128565b81146109cb57806109a9611128565b604051631cfd276760e31b815260048101929092526024820152604401610306565b6109de6109d9826001611c50565b610a52565b6109e782611158565b7ffc0d749143b04e0d92a3b49edae84a45f6bc88b75e99d9118ec4d7e87fe626c582604051610a169190611b86565b60405180910390a17f1809e49bba43f2d39fa57894b50cd6ccb428cc438230e065cac3eb24a1355a71816000366040516103c693929190611c68565b610a85610a8060017f82055909238c0f5e63d6f174068ebb8f51bcec9bd37de63bb68f6551feec0cfd611bb0565b829055565b50565b9055565b60006104e2610abc60017f1ec4138404500a2a0be2c2f9b103581c2a7fa783a934f91a6cc5cc924404973c611bb0565b5490565b60006104e2610abc60017f9afb091d33aa9fdd4ac2dbd1cbba78215a097062e9dbdc7b707ac5bb59049bc1611bb0565b6000818311610aff57826104bf565b50919050565b60006104e2610a8c565b610a85610a8060017f9afb091d33aa9fdd4ac2dbd1cbba78215a097062e9dbdc7b707ac5bb59049bc1611bb0565b6000610b488261118f565b82610b6657604051630dd484e760e41b815260040160405180910390fd5b610b6e610b05565b6040516323b872dd60e01b8152336004820152306024820152604481018590526001600160a01b0391909116906323b872dd906064016020604051808303816000875af1158015610bc3573d6000803e3d6000fd5b505050506040513d601f19601f82011682018060405250810190610be79190611c9e565b610c04576040516313ff771f60e21b815260040160405180910390fd5b6000610c0e610de8565b805492509050600063ffffffff831615610ca557600082610c30600186611c2b565b63ffffffff1681548110610c4657610c46611bfa565b6000918252602091829020604080516080810182526004909302909101805480845260018201549484019490945260028101546001600160a01b0316918301919091526003015460608201819052909250610ca19190611c50565b9150505b6000610caf610b05565b6001600160a01b031663f79c3f02876040518263ffffffff1660e01b8152600401610cdc91815260200190565b602060405180830381865afa158015610cf9573d6000803e3d6000fd5b505050506040513d601f19601f82011682018060405250810190610d1d9190611cbb565b6040805160808101825288815260208082018481526001600160a01b038a811684860181815260608087018b81528c5460018082018f5560008f81528990209951600490920290990190815595519786019790975590516002850180546001600160a01b0319169190941617909255935160039092019190915583518781529182018b905263ffffffff891693820193909352929350917f90bfa4ef79103821d7d3b08cb2cdfcd683d3d93c932f63ad7657db07c361a4ff910160405180910390a250505092915050565b6000806104c260017f232f0d723a47bd57c991606dd0525f28484745095475b69dffe8416b3749c3c2611bb0565b6000806104c260017f0c9122afab04eaf9e9bdaa10927c74406e40c7f08744e32826fff29b1c9e7abd611bb0565b600080610e4f610de8565b805490915063ffffffff851610610e6b576001199150506104c2565b6000818563ffffffff1681548110610e8557610e85611bfa565b6000918252602091829020604080516080810182526004909302909101805480845260018201549484019490945260028101546001600160a01b0316918301919091526003015460608201529150610ee357600219925050506104c2565b610eeb610e16565b541580610f0c5750606081015184516040860151610f099190611c50565b11155b15610f1d57600019925050506104c2565b61069b816111b6565b606084838114610f4957604051633a5e3f0d60e01b815260040160405180910390fd5b806001600160401b03811115610f6157610f61611be4565b604051908082528060200260200182016040528015610f8a578160200160208202803683370190505b50915060005b8181101561111d576000806000806000610ff98d8d88818110610fb557610fb5611bfa565b9050602002016020810190610fca9190611a05565b8c8c89818110610fdc57610fdc611bfa565b9050602002016020810190610ff19190611a05565b8b6000611332565b945094509450945094508088878151811061101657611016611bfa565b602002602001019060ff16908160ff1681525050600080866001600160a01b03168560405160006040518083038185875af1925050503d8060008114611078576040519150601f19603f3d011682016040523d82523d6000602084013e61107d565b606091505b50915091508161108f57805181602001fd5b866001600160a01b03168f8f8a8181106110ab576110ab611bfa565b90506020020160208101906110c09190611a05565b60408051888152602081018a905290810187905263ffffffff91909116907f25f4dfa5f0703d4c509bd7216e70f8378f419433c14840c14f3eaadb60642ad19060600160405180910390a387600101975050505050505050610f90565b505095945050505050565b60006104e2610abc60017f82055909238c0f5e63d6f174068ebb8f51bcec9bd37de63bb68f6551feec0cfd611bb0565b6111618161118f565b610a85610a8060017f1ec4138404500a2a0be2c2f9b103581c2a7fa783a934f91a6cc5cc924404973c611bb0565b6001600160a01b038116610a855760405163f6b2911f60e01b815260040160405180910390fd5b6000806111c1610e16565b9050600060016111cf610e16565b546111da9190611bb0565b90506112378483836001600160401b0316815481106111fb576111fb611bfa565b90600052602060002090600302016040518060600160405290816000820154815260200160018201548152602001600282015481525050611818565b15611243579392505050565b60006112648584836001600160401b0316815481106111fb576111fb611bfa565b1561127157949350505050565b8160070b8160070b1461132a576000600261128c8484611cd4565b6112969190611d3b565b9050600084826001600160401b0316815481106112b5576112b5611bfa565b9060005260206000209060030201604051806060016040529081600082015481526020016001820154815260200160028201548152505090506112f88782611818565b15611307575095945050505050565b80604001518760600151101561131f57819350611323565b8192505b5050611271565b949350505050565b600080600080600061134261189a565b600061134c610de8565b805490915063ffffffff8c161061137e57604051637ba6f8f560e11b815263ffffffff8c166004820152602401610306565b6000611388610e16565b805490915063ffffffff8c16106114035788156113e2576000806000848f63ffffffff16815481106113bc576113bc611bfa565b90600052602060002090600402016000015460019750975097509750975050505061180d565b60405163311569d960e01b815263ffffffff8c166004820152602401610306565b818c63ffffffff168154811061141b5761141b611bfa565b60009182526020918290206040805160808101825260049093029091018054835260018101549383019390935260028301546001600160a01b0316908201526003909101546060808301919091528401819052516114b45789156114935760008060008060029750975097509750975050505061180d565b6040516339775c8160e01b815263ffffffff8d166004820152602401610306565b808b63ffffffff16815481106114cc576114cc611bfa565b90600052602060002090600302016040518060600160405290816000820154815260200160018201548152602001600282015481525050836080018190525061151d83606001518460800151611818565b61154a5760405163b826420960e01b815263ffffffff808e1660048301528c166024820152604401610306565b606080840151805191015160009161156191611c50565b6080850151805160409091015191925060009161157e9190611c50565b9050808210156115985760608501515160208601526115b8565b6115a28183611bb0565b6060860151516115b29190611bb0565b60208601525b5050608083015180516020918201519185015190916115d691611d7a565b6115e09190611d99565b835260608301518051602091820151918501519091600091839161160391611d7a565b61160d9190611d99565b8551909150811015611647578451611626908290611bb0565b6040860181905261164390611639610ac0565b6103959190611c50565b8085525b508b63ffffffff168d63ffffffff167f01d87b0f07b182b784c074487c5a8f901a8e2348275f5480d822a70de74fa8b7866020015187600001518860200151866116919190611bb0565b6040808b015181519485526020850193909352830152606082015260800160405180910390a38360200151838e63ffffffff16815481106116d4576116d4611bfa565b906000526020600020906004020160030160008282546116f49190611c50565b909155505060208401516117089082611bb0565b838e63ffffffff168154811061172057611720611bfa565b9060005260206000209060040201600001819055508360000151838e63ffffffff168154811061175257611752611bfa565b906000526020600020906004020160010160008282546117729190611bb0565b909155505050506060820151516020830151101590506117ed5760008080806117a98e6117a08f6001611dad565b60006001611332565b9450945094509450508460600151604001518486602001516117cb9190611c50565b86516117d8908690611c50565b919b5099509750909550935061180d92505050565b606081015160400151602082015191519096509094509250600091508190505b945094509450945094565b8051604082015160009161182b91611c50565b83606001511080156104bf57505060400151606090910151101590565b60405180606001604052806000815260200160008152602001600081525090565b6040518060800160405280600081526020016000815260200160006001600160a01b03168152602001600081525090565b6040518060a001604052806000815260200160008152602001600081526020016118c2611869565b81526020016118cf611848565b905290565b6000602082840312156118e657600080fd5b5035919050565b6001600160a01b0381168114610a8557600080fd5b6000806040838503121561191557600080fd5b823591506020830135611927816118ed565b809150509250929050565b60008083601f84011261194457600080fd5b5081356001600160401b0381111561195b57600080fd5b6020830191508360208260051b850101111561197657600080fd5b9250929050565b6000806020838503121561199057600080fd5b82356001600160401b038111156119a657600080fd5b6119b285828601611932565b90969095509350505050565b6020808252825182820181905260009190848201906040850190845b818110156119f957835160070b835292840192918401916001016119da565b50909695505050505050565b600060208284031215611a1757600080fd5b813563ffffffff81168114611a2b57600080fd5b9392505050565b60008060008060408587031215611a4857600080fd5b84356001600160401b0380821115611a5f57600080fd5b611a6b88838901611932565b90965094506020870135915080821115611a8457600080fd5b50611a9187828801611932565b95989497509550505050565b6020808252825182820181905260009190848201906040850190845b818110156119f957835160ff1683529284019291840191600101611ab9565b8015158114610a8557600080fd5b600080600080600060608688031215611afe57600080fd5b85356001600160401b0380821115611b1557600080fd5b611b2189838a01611932565b90975095506020880135915080821115611b3a57600080fd5b50611b4788828901611932565b9094509250506040860135611b5b81611ad8565b809150509295509295909350565b600060208284031215611b7b57600080fd5b8135611a2b816118ed565b6001600160a01b0391909116815260200190565b634e487b7160e01b600052601160045260246000fd5b600082821015611bc257611bc2611b9a565b500390565b600060208284031215611bd957600080fd5b8151611a2b816118ed565b634e487b7160e01b600052604160045260246000fd5b634e487b7160e01b600052603260045260246000fd5b6000600019821415611c2457611c24611b9a565b5060010190565b600063ffffffff83811690831681811015611c4857611c48611b9a565b039392505050565b60008219821115611c6357611c63611b9a565b500190565b83815260406020820152816040820152818360608301376000818301606090810191909152601f909201601f1916010192915050565b600060208284031215611cb057600080fd5b8151611a2b81611ad8565b600060208284031215611ccd57600080fd5b5051919050565b60008160070b8360070b6000821282677fffffffffffffff03821381151615611cff57611cff611b9a565b82677fffffffffffffff19038212811615611d1c57611d1c611b9a565b50019392505050565b634e487b7160e01b600052601260045260246000fd5b60008160070b8360070b80611d5257611d52611d25565b677fffffffffffffff19821460001982141615611d7157611d71611b9a565b90059392505050565b6000816000190483118215151615611d9457611d94611b9a565b500290565b600082611da857611da8611d25565b500490565b600063ffffffff808316818516808303821115611dcc57611dcc611b9a565b0194935050505056fea2646970667358221220135efbb8fdab12eeb0c164a092f6ff1aea7564d13583d5ab11d773e0cdc748ff64736f6c634300080a0033",
+  "deployedBytecode": "0x6080604052600436106100b25760003560e01c8063862337541161006f578063862337541461018d5780639332525d146101cf5780639b92d6de146101fc578063aa2f892d14610258578063b30d8bb714610278578063c3b832111461028b578063c8fade5a146102ab57600080fd5b80630c779401146100b7578063107703ab146100d9578063319798d1146101135780635b5985a2146101365780635f2e5f071461014b578063841ecb8514610178575b600080fd5b3480156100c357600080fd5b506100d76100d23660046118d4565b6102cb565b005b3480156100e557600080fd5b506100f96100f4366004611902565b6103d2565b60405163ffffffff90911681526020015b60405180910390f35b34801561011f57600080fd5b506101286104c8565b60405190815260200161010a565b34801561014257600080fd5b506101286104d8565b34801561015757600080fd5b5061016b61016636600461197d565b6104e7565b60405161010a91906119be565b34801561018457600080fd5b5061012861061c565b34801561019957600080fd5b506101ad6101a8366004611a05565b610626565b604080518251815260208084015190820152918101519082015260600161010a565b3480156101db57600080fd5b506101ef6101ea366004611a32565b61068b565b60405161010a9190611a9d565b34801561020857600080fd5b5061021c610217366004611a05565b6106a4565b60405161010a919081518152602080830151908201526040808301516001600160a01b0316908201526060918201519181019190915260800190565b34801561026457600080fd5b506100f96102733660046118d4565b61071b565b6100d76102863660046118d4565b610808565b34801561029757600080fd5b506101ef6102a6366004611ae6565b610977565b3480156102b757600080fd5b506100d76102c6366004611b69565b610990565b6102d3610a8c565b6001600160a01b0316336001600160a01b03161461030f573360405163472511eb60e11b81526004016103069190611b86565b60405180910390fd5b600061032261031c610ac0565b83610af0565b905061032c610b05565b6001600160a01b031663056850c6826040518263ffffffff1660e01b81526004016000604051808303818588803b15801561036657600080fd5b505af115801561037a573d6000803e3d6000fd5b505050505061039a8161038b610ac0565b6103959190611bb0565b610b0f565b6040518181527fe4421923600d79aa81e054fab2083d01983d85b94ec8c8928f404820dfca4036906020015b60405180910390a15050565b6000806103dd610b05565b9050336001600160a01b038216146104b457806001600160a01b031663c5eff3d06040518163ffffffff1660e01b8152600401602060405180830381865afa15801561042d573d6000803e3d6000fd5b505050506040513d601f19601f820116820180604052508101906104519190611bc7565b604051632d20488160e11b81523360048281019190915260248201526001600160a01b039190911690635a4091029060440160006040518083038186803b15801561049b57600080fd5b505afa1580156104af573d6000803e3d6000fd5b505050505b506104bf8383610b3d565b90505b92915050565b60006104d2610de8565b54919050565b60006104e2610ac0565b905090565b6060816001600160401b0381111561050157610501611be4565b60405190808252806020026020018201604052801561052a578160200160208202803683370190505b509050610535611848565b600061053f610e16565b805490915080156105a05781610556600183611bb0565b8154811061056657610566611bfa565b9060005260206000209060030201604051806060016040529081600082015481526020016001820154815260200160028201548152505092505b60005b85811015610612576105db8787838181106105c0576105c0611bfa565b90506020020160208101906105d59190611a05565b85610e44565b8582815181106105ed576105ed611bfa565b602002602001019060070b908160070b815250508061060b90611c10565b90506105a3565b5050505092915050565b60006104d2610e16565b61062e611848565b610636610e16565b8263ffffffff168154811061064d5761064d611bfa565b906000526020600020906003020160405180606001604052908160008201548152602001600182015481526020016002820154815250509050919050565b606061069b858585856001610f26565b95945050505050565b6106ac611869565b6106b4610de8565b8263ffffffff16815481106106cb576106cb611bfa565b60009182526020918290206040805160808101825260049093029091018054835260018101549383019390935260028301546001600160a01b031690820152600390910154606082015292915050565b600080610726610b05565b9050336001600160a01b038216146107fd57806001600160a01b031663c5eff3d06040518163ffffffff1660e01b8152600401602060405180830381865afa158015610776573d6000803e3d6000fd5b505050506040513d601f19601f8201168201806040525081019061079a9190611bc7565b604051632d20488160e11b81523360048281019190915260248201526001600160a01b039190911690635a4091029060440160006040518083038186803b1580156107e457600080fd5b505afa1580156107f8573d6000803e3d6000fd5b505050505b506104c28233610b3d565b610810610a8c565b6001600160a01b0316336001600160a01b031614610843573360405163472511eb60e11b81526004016103069190611b86565b600061084d610e16565b805490915060003463ffffffff8316156108ce5760008461086f600186611c2b565b63ffffffff168154811061088557610885611bfa565b60009182526020918290206040805160608101825260039093029091018054808452600182015494840194909452600201549082018190529092506108ca9190611c50565b9250505b604080516060810182528681526020808201848152828401868152885460018181018b5560008b8152949094209451600390910290940193845590519183019190915551600290910155517f05e5b10ca266c2e8cfd73b1fb719694fb6b89fcda9e3739ace4cc19b3e855445906109689084908890859088909384526020840192909252604083015263ffffffff16606082015260800190565b60405180910390a15050505050565b60606109868686868686610f26565b9695505050505050565b600061099a611128565b81146109cb57806109a9611128565b604051631cfd276760e31b815260048101929092526024820152604401610306565b6109de6109d9826001611c50565b610a52565b6109e782611158565b7ffc0d749143b04e0d92a3b49edae84a45f6bc88b75e99d9118ec4d7e87fe626c582604051610a169190611b86565b60405180910390a17f1809e49bba43f2d39fa57894b50cd6ccb428cc438230e065cac3eb24a1355a71816000366040516103c693929190611c68565b610a85610a8060017f82055909238c0f5e63d6f174068ebb8f51bcec9bd37de63bb68f6551feec0cfd611bb0565b829055565b50565b9055565b60006104e2610abc60017f1ec4138404500a2a0be2c2f9b103581c2a7fa783a934f91a6cc5cc924404973c611bb0565b5490565b60006104e2610abc60017f9afb091d33aa9fdd4ac2dbd1cbba78215a097062e9dbdc7b707ac5bb59049bc1611bb0565b6000818311610aff57826104bf565b50919050565b60006104e2610a8c565b610a85610a8060017f9afb091d33aa9fdd4ac2dbd1cbba78215a097062e9dbdc7b707ac5bb59049bc1611bb0565b6000610b488261118f565b82610b6657604051630dd484e760e41b815260040160405180910390fd5b610b6e610b05565b6040516323b872dd60e01b8152336004820152306024820152604481018590526001600160a01b0391909116906323b872dd906064016020604051808303816000875af1158015610bc3573d6000803e3d6000fd5b505050506040513d601f19601f82011682018060405250810190610be79190611c9e565b610c04576040516313ff771f60e21b815260040160405180910390fd5b6000610c0e610de8565b805492509050600063ffffffff831615610ca557600082610c30600186611c2b565b63ffffffff1681548110610c4657610c46611bfa565b6000918252602091829020604080516080810182526004909302909101805480845260018201549484019490945260028101546001600160a01b0316918301919091526003015460608201819052909250610ca19190611c50565b9150505b6000610caf610b05565b6001600160a01b031663f79c3f02876040518263ffffffff1660e01b8152600401610cdc91815260200190565b602060405180830381865afa158015610cf9573d6000803e3d6000fd5b505050506040513d601f19601f82011682018060405250810190610d1d9190611cbb565b6040805160808101825288815260208082018481526001600160a01b038a811684860181815260608087018b81528c5460018082018f5560008f81528990209951600490920290990190815595519786019790975590516002850180546001600160a01b0319169190941617909255935160039092019190915583518781529182018b905263ffffffff891693820193909352929350917f90bfa4ef79103821d7d3b08cb2cdfcd683d3d93c932f63ad7657db07c361a4ff910160405180910390a250505092915050565b6000806104c260017f232f0d723a47bd57c991606dd0525f28484745095475b69dffe8416b3749c3c2611bb0565b6000806104c260017f0c9122afab04eaf9e9bdaa10927c74406e40c7f08744e32826fff29b1c9e7abd611bb0565b600080610e4f610de8565b805490915063ffffffff851610610e6b576001199150506104c2565b6000818563ffffffff1681548110610e8557610e85611bfa565b6000918252602091829020604080516080810182526004909302909101805480845260018201549484019490945260028101546001600160a01b0316918301919091526003015460608201529150610ee357600219925050506104c2565b610eeb610e16565b541580610f0c5750606081015184516040860151610f099190611c50565b11155b15610f1d57600019925050506104c2565b61069b816111b6565b606084838114610f4957604051633a5e3f0d60e01b815260040160405180910390fd5b806001600160401b03811115610f6157610f61611be4565b604051908082528060200260200182016040528015610f8a578160200160208202803683370190505b50915060005b8181101561111d576000806000806000610ff98d8d88818110610fb557610fb5611bfa565b9050602002016020810190610fca9190611a05565b8c8c89818110610fdc57610fdc611bfa565b9050602002016020810190610ff19190611a05565b8b6000611332565b945094509450945094508088878151811061101657611016611bfa565b602002602001019060ff16908160ff1681525050600080866001600160a01b03168560405160006040518083038185875af1925050503d8060008114611078576040519150601f19603f3d011682016040523d82523d6000602084013e61107d565b606091505b50915091508161108f57805181602001fd5b866001600160a01b03168f8f8a8181106110ab576110ab611bfa565b90506020020160208101906110c09190611a05565b60408051888152602081018a905290810187905263ffffffff91909116907f25f4dfa5f0703d4c509bd7216e70f8378f419433c14840c14f3eaadb60642ad19060600160405180910390a387600101975050505050505050610f90565b505095945050505050565b60006104e2610abc60017f82055909238c0f5e63d6f174068ebb8f51bcec9bd37de63bb68f6551feec0cfd611bb0565b6111618161118f565b610a85610a8060017f1ec4138404500a2a0be2c2f9b103581c2a7fa783a934f91a6cc5cc924404973c611bb0565b6001600160a01b038116610a855760405163f6b2911f60e01b815260040160405180910390fd5b6000806111c1610e16565b9050600060016111cf610e16565b546111da9190611bb0565b90506112378483836001600160401b0316815481106111fb576111fb611bfa565b90600052602060002090600302016040518060600160405290816000820154815260200160018201548152602001600282015481525050611818565b15611243579392505050565b60006112648584836001600160401b0316815481106111fb576111fb611bfa565b1561127157949350505050565b8160070b8160070b1461132a576000600261128c8484611cd4565b6112969190611d3b565b9050600084826001600160401b0316815481106112b5576112b5611bfa565b9060005260206000209060030201604051806060016040529081600082015481526020016001820154815260200160028201548152505090506112f88782611818565b15611307575095945050505050565b80604001518760600151101561131f57819350611323565b8192505b5050611271565b949350505050565b600080600080600061134261189a565b600061134c610de8565b805490915063ffffffff8c161061137e57604051637ba6f8f560e11b815263ffffffff8c166004820152602401610306565b6000611388610e16565b805490915063ffffffff8c16106114035788156113e2576000806000848f63ffffffff16815481106113bc576113bc611bfa565b90600052602060002090600402016000015460019750975097509750975050505061180d565b60405163311569d960e01b815263ffffffff8c166004820152602401610306565b818c63ffffffff168154811061141b5761141b611bfa565b60009182526020918290206040805160808101825260049093029091018054835260018101549383019390935260028301546001600160a01b0316908201526003909101546060808301919091528401819052516114b45789156114935760008060008060029750975097509750975050505061180d565b6040516339775c8160e01b815263ffffffff8d166004820152602401610306565b808b63ffffffff16815481106114cc576114cc611bfa565b90600052602060002090600302016040518060600160405290816000820154815260200160018201548152602001600282015481525050836080018190525061151d83606001518460800151611818565b61154a5760405163b826420960e01b815263ffffffff808e1660048301528c166024820152604401610306565b606080840151805191015160009161156191611c50565b6080850151805160409091015191925060009161157e9190611c50565b9050808210156115985760608501515160208601526115b8565b6115a28183611bb0565b6060860151516115b29190611bb0565b60208601525b5050608083015180516020918201519185015190916115d691611d7a565b6115e09190611d99565b835260608301518051602091820151918501519091600091839161160391611d7a565b61160d9190611d99565b8551909150811015611647578451611626908290611bb0565b6040860181905261164390611639610ac0565b6103959190611c50565b8085525b508b63ffffffff168d63ffffffff167f01d87b0f07b182b784c074487c5a8f901a8e2348275f5480d822a70de74fa8b7866020015187600001518860200151866116919190611bb0565b6040808b015181519485526020850193909352830152606082015260800160405180910390a38360200151838e63ffffffff16815481106116d4576116d4611bfa565b906000526020600020906004020160030160008282546116f49190611c50565b909155505060208401516117089082611bb0565b838e63ffffffff168154811061172057611720611bfa565b9060005260206000209060040201600001819055508360000151838e63ffffffff168154811061175257611752611bfa565b906000526020600020906004020160010160008282546117729190611bb0565b909155505050506060820151516020830151101590506117ed5760008080806117a98e6117a08f6001611dad565b60006001611332565b9450945094509450508460600151604001518486602001516117cb9190611c50565b86516117d8908690611c50565b919b5099509750909550935061180d92505050565b606081015160400151602082015191519096509094509250600091508190505b945094509450945094565b8051604082015160009161182b91611c50565b83606001511080156104bf57505060400151606090910151101590565b60405180606001604052806000815260200160008152602001600081525090565b6040518060800160405280600081526020016000815260200160006001600160a01b03168152602001600081525090565b6040518060a001604052806000815260200160008152602001600081526020016118c2611869565b81526020016118cf611848565b905290565b6000602082840312156118e657600080fd5b5035919050565b6001600160a01b0381168114610a8557600080fd5b6000806040838503121561191557600080fd5b823591506020830135611927816118ed565b809150509250929050565b60008083601f84011261194457600080fd5b5081356001600160401b0381111561195b57600080fd5b6020830191508360208260051b850101111561197657600080fd5b9250929050565b6000806020838503121561199057600080fd5b82356001600160401b038111156119a657600080fd5b6119b285828601611932565b90969095509350505050565b6020808252825182820181905260009190848201906040850190845b818110156119f957835160070b835292840192918401916001016119da565b50909695505050505050565b600060208284031215611a1757600080fd5b813563ffffffff81168114611a2b57600080fd5b9392505050565b60008060008060408587031215611a4857600080fd5b84356001600160401b0380821115611a5f57600080fd5b611a6b88838901611932565b90965094506020870135915080821115611a8457600080fd5b50611a9187828801611932565b95989497509550505050565b6020808252825182820181905260009190848201906040850190845b818110156119f957835160ff1683529284019291840191600101611ab9565b8015158114610a8557600080fd5b600080600080600060608688031215611afe57600080fd5b85356001600160401b0380821115611b1557600080fd5b611b2189838a01611932565b90975095506020880135915080821115611b3a57600080fd5b50611b4788828901611932565b9094509250506040860135611b5b81611ad8565b809150509295509295909350565b600060208284031215611b7b57600080fd5b8135611a2b816118ed565b6001600160a01b0391909116815260200190565b634e487b7160e01b600052601160045260246000fd5b600082821015611bc257611bc2611b9a565b500390565b600060208284031215611bd957600080fd5b8151611a2b816118ed565b634e487b7160e01b600052604160045260246000fd5b634e487b7160e01b600052603260045260246000fd5b6000600019821415611c2457611c24611b9a565b5060010190565b600063ffffffff83811690831681811015611c4857611c48611b9a565b039392505050565b60008219821115611c6357611c63611b9a565b500190565b83815260406020820152816040820152818360608301376000818301606090810191909152601f909201601f1916010192915050565b600060208284031215611cb057600080fd5b8151611a2b81611ad8565b600060208284031215611ccd57600080fd5b5051919050565b60008160070b8360070b6000821282677fffffffffffffff03821381151615611cff57611cff611b9a565b82677fffffffffffffff19038212811615611d1c57611d1c611b9a565b50019392505050565b634e487b7160e01b600052601260045260246000fd5b60008160070b8360070b80611d5257611d52611d25565b677fffffffffffffff19821460001982141615611d7157611d71611b9a565b90059392505050565b6000816000190483118215151615611d9457611d94611b9a565b500290565b600082611da857611da8611d25565b500490565b600063ffffffff808316818516808303821115611dcc57611dcc611b9a565b0194935050505056fea2646970667358221220135efbb8fdab12eeb0c164a092f6ff1aea7564d13583d5ab11d773e0cdc748ff64736f6c634300080a0033",
+  "devdoc": {
+    "author": "Kiln",
+    "errors": {
+      "DoesNotMatch(uint256,uint256)": [
+        {
+          "params": {
+            "redeemRequestId": "The provided redeem request id",
+            "withdrawalEventId": "The provided associated withdrawal event id"
+          }
+        }
+      ],
+      "InvalidInitialization(uint256,uint256)": [
+        {
+          "params": {
+            "expectedVersion": "The version that was expected",
+            "version": "The version that was attempting to be initialized"
+          }
+        }
+      ],
+      "RedeemRequestAlreadyClaimed(uint256)": [
+        {
+          "params": {
+            "id": "The redeem request id"
+          }
+        }
+      ],
+      "RedeemRequestOutOfBounds(uint256)": [
+        {
+          "params": {
+            "id": "The redeem request id"
+          }
+        }
+      ],
+      "Unauthorized(address)": [
+        {
+          "params": {
+            "caller": "Address performing the call"
+          }
+        }
+      ],
+      "WithdrawalEventOutOfBounds(uint256)": [
+        {
+          "params": {
+            "id": "The withdrawal event id"
+          }
+        }
+      ]
+    },
+    "kind": "dev",
+    "methods": {
+      "claimRedeemRequests(uint32[],uint32[])": {
+        "params": {
+          "redeemRequestIds": "The list of redeem requests to claim",
+          "withdrawalEventIds": "The list of withdrawal events to use for every redeem request claim"
+        },
+        "returns": {
+          "claimStatuses": "The list of claim statuses. 0 for fully claimed, 1 for partially claimed, 2 for skipped"
+        }
+      },
+      "claimRedeemRequests(uint32[],uint32[],bool)": {
+        "params": {
+          "redeemRequestIds": "The list of redeem requests to claim",
+          "skipAlreadyClaimed": "True if the call should not revert on claiming of already claimed requests",
+          "withdrawalEventIds": "The list of withdrawal events to use for every redeem request claim"
+        },
+        "returns": {
+          "claimStatuses": "The list of claim statuses. 0 for fully claimed, 1 for partially claimed, 2 for skipped"
+        }
+      },
+      "getBufferedExceedingEth()": {
+        "returns": {
+          "_0": "The amount of eth in the buffer"
+        }
+      },
+      "getRedeemRequestDetails(uint32)": {
+        "params": {
+          "redeemRequestId": "The id of the request"
+        },
+        "returns": {
+          "_0": "The redeem request details"
+        }
+      },
+      "getWithdrawalEventDetails(uint32)": {
+        "params": {
+          "withdrawalEventId": "The id of the withdrawal event"
+        },
+        "returns": {
+          "_0": "The withdrawal event details"
+        }
+      },
+      "initializeRedeemManagerV1(address)": {
+        "params": {
+          "river": "The address of the River contract"
+        }
+      },
+      "pullExceedingEth(uint256)": {
+        "params": {
+          "max": "The maximum amount that should be pulled"
+        }
+      },
+      "reportWithdraw(uint256)": {
+        "params": {
+          "lsETHWithdrawable": "The amount of LsETH that can be redeemed due to this new withdraw event"
+        }
+      },
+      "requestRedeem(uint256)": {
+        "params": {
+          "lsETHAmount": "The amount of LsETH to redeem"
+        },
+        "returns": {
+          "redeemRequestId": "The id of the redeem request"
+        }
+      },
+      "requestRedeem(uint256,address)": {
+        "params": {
+          "lsETHAmount": "The amount of LsETH to redeem",
+          "recipient": "The recipient owning the redeem request"
+        },
+        "returns": {
+          "redeemRequestId": "The id of the redeem request"
+        }
+      },
+      "resolveRedeemRequests(uint32[])": {
+        "details": "The result is an array of equal length with ids or error code-1 means that the request is not satisfied yet-2 means that the request is out of bounds-3 means that the request has already been claimedThis call was created to be called by an off-chain interface, the output could then be used to perform the claimRewards call in a regular transaction",
+        "params": {
+          "redeemRequestIds": "The list of redeem requests to resolve"
+        },
+        "returns": {
+          "withdrawalEventIds": "The list of withdrawal events matching every redeem request (or error codes)"
+        }
+      }
+    },
+    "title": "Redeem Manager (v1)",
+    "version": 1
+  },
+  "userdoc": {
+    "errors": {
+      "DoesNotMatch(uint256,uint256)": [
+        {
+          "notice": "Thrown when the redeem request and withdrawal event are not matching during claim"
+        }
+      ],
+      "IncompatibleArrayLengths()": [
+        {
+          "notice": "Thrown when the provided arrays don't have matching lengths"
+        }
+      ],
+      "InvalidInitialization(uint256,uint256)": [
+        {
+          "notice": "An error occured during the initialization"
+        }
+      ],
+      "InvalidZeroAddress()": [
+        {
+          "notice": "The address is zero"
+        }
+      ],
+      "InvalidZeroAmount()": [
+        {
+          "notice": "Thrown When a zero value is provided"
+        }
+      ],
+      "RedeemRequestAlreadyClaimed(uint256)": [
+        {
+          "notice": "Thrown when\tthe redeem request id is already claimed"
+        }
+      ],
+      "RedeemRequestOutOfBounds(uint256)": [
+        {
+          "notice": "Thrown when the provided redeem request id is out of bounds"
+        }
+      ],
+      "TransferError()": [
+        {
+          "notice": "Thrown when a transfer error occured with LsETH"
+        }
+      ],
+      "Unauthorized(address)": [
+        {
+          "notice": "The operator is unauthorized for the caller"
+        }
+      ],
+      "WithdrawalEventOutOfBounds(uint256)": [
+        {
+          "notice": "Thrown when the withdrawal request id if out of bounds"
+        }
+      ]
+    },
+    "events": {
+      "ClaimedRedeemRequest(uint32,address,uint256,uint256,uint256)": {
+        "notice": "Emitted when a redeem request claim has been processed and matched at least once and funds are sent to the recipient"
+      },
+      "Initialize(uint256,bytes)": {
+        "notice": "Emitted when the contract is properly initialized"
+      },
+      "ReportedWithdrawal(uint256,uint256,uint256,uint32)": {
+        "notice": "Emitted when a withdrawal event is created"
+      },
+      "RequestedRedeem(address,uint256,uint256,uint32)": {
+        "notice": "Emitted when a redeem request is created"
+      },
+      "SatisfiedRedeemRequest(uint32,uint32,uint256,uint256,uint256,uint256)": {
+        "notice": "Emitted when a redeem request has been satisfied and filled (even partially) from a withdrawal event"
+      },
+      "SetRiver(address)": {
+        "notice": "Emitted when the River address is set"
+      }
+    },
+    "kind": "user",
+    "methods": {
+      "claimRedeemRequests(uint32[],uint32[])": {
+        "notice": "Claims the rewards of the provided redeem request ids"
+      },
+      "claimRedeemRequests(uint32[],uint32[],bool)": {
+        "notice": "Claims the rewards of the provided redeem request ids"
+      },
+      "getBufferedExceedingEth()": {
+        "notice": "Retrieve the amount of eth available in the buffer"
+      },
+      "getRedeemRequestCount()": {
+        "notice": "Retrieve the global count of redeem requests"
+      },
+      "getRedeemRequestDetails(uint32)": {
+        "notice": "Retrieve the details of a specific redeem request"
+      },
+      "getWithdrawalEventCount()": {
+        "notice": "Retrieve the global count of withdrawal events"
+      },
+      "getWithdrawalEventDetails(uint32)": {
+        "notice": "Retrieve the details of a specific withdrawal event"
+      },
+      "pullExceedingEth(uint256)": {
+        "notice": "Pulls exceeding buffer eth"
+      },
+      "reportWithdraw(uint256)": {
+        "notice": "Reports a withdraw event from River"
+      },
+      "requestRedeem(uint256)": {
+        "notice": "Creates a redeem request using msg.sender as recipient"
+      },
+      "requestRedeem(uint256,address)": {
+        "notice": "Creates a redeem request"
+      },
+      "resolveRedeemRequests(uint32[])": {
+        "notice": "Resolves the provided list of redeem request ids"
+      }
+    },
+    "notice": "This contract handles the redeem requests of all users",
+    "version": 1
+  },
+  "storageLayout": {
+    "storage": [],
+    "types": null
+  }
+}
