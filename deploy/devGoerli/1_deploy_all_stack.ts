@@ -45,20 +45,18 @@ const func: DeployFunction = async function ({ deployments, getNamedAccounts, et
 
 	const futureELFeeRecipientAddress = getContractAddress({
 		from: deployer,
-		nonce: txCount + 8, // proxy is in 8 txs
+		nonce: txCount + 7, // proxy is in 8 txs
 	});
 
 	const futureOperatorsRegistryAddress = getContractAddress({
 		from: deployer,
-		nonce: txCount + 6, // proxy is in 8 txs
+		nonce: txCount + 5, // proxy is in 8 txs
 	});
 
 	const futureOracleAddress = getContractAddress({
 		from: deployer,
-		nonce: txCount + 4, // proxy is in 6 txs
+		nonce: txCount + 3, // proxy is in 6 txs
 	});
-
-
 
 	const riverDeployment = await deployments.deploy("River", {
 		contract: "RiverV1",
@@ -100,6 +98,10 @@ const func: DeployFunction = async function ({ deployments, getNamedAccounts, et
 		},
 	});
 
+	if (oracleDeployment.address !== futureOracleAddress) {
+		throw new Error("Oracle address is not as expected");
+	}
+
 	const operatorsRegistryDeployment = await deployments.deploy("OperatorsRegistry", {
 		contract: "OperatorsRegistryV1",
 		from: deployer,
@@ -115,6 +117,10 @@ const func: DeployFunction = async function ({ deployments, getNamedAccounts, et
 		},
 	});
 
+	if (operatorsRegistryDeployment.address !== futureOperatorsRegistryAddress) {
+		throw new Error("OperatorsRegistry address is not as expected");
+	}
+
 	const elFeeRecipientDeployment = await deployments.deploy("ELFeeRecipient", {
 		contract: "ELFeeRecipientV1",
 		from: deployer,
@@ -129,6 +135,10 @@ const func: DeployFunction = async function ({ deployments, getNamedAccounts, et
 			},
 		},
 	});
+
+	if (elFeeRecipientDeployment.address !== futureELFeeRecipientAddress) {
+		throw new Error("ELFeeRecipient address is not as expected");
+	}
 
 	await deployments.deploy("CoverageFund", {
 		contract: "CoverageFundV1",
