@@ -1,128 +1,44 @@
-# 🌊
-[![tests](https://github.com/River-Protocol/river-contracts/actions/workflows/Tests.yaml/badge.svg)](https://github.com/River-Protocol/river-contracts/actions/workflows/Tests.yaml)
-[![mythril](https://github.com/River-Protocol/river-contracts/actions/workflows/Mythril.yaml/badge.svg)](https://github.com/River-Protocol/river-contracts/actions/workflows/Mythril.yaml)
-[![lint](https://github.com/River-Protocol/river-contracts/actions/workflows/Lint.yaml/badge.svg)](https://github.com/River-Protocol/river-contracts/actions/workflows/Lint.yaml)
+# Liquid Collective Protocol
+
+[![tests](https://github.com/liquid-collective/liquid-collective-protocol/actions/workflows/Tests.yaml/badge.svg)](https://github.com/liquid-collective/liquid-collective-protocol/actions/workflows/Tests.yaml)
+[![mythril](https://github.com/liquid-collective/liquid-collective-protocol/actions/workflows/Mythril.yaml/badge.svg)](https://github.com/liquid-collective/liquid-collective-protocol/actions/workflows/Mythril.yaml)
+[![lint](https://github.com/liquid-collective/liquid-collective-protocol/actions/workflows/Lint.yaml/badge.svg)](https://github.com/liquid-collective/liquid-collective-protocol/actions/workflows/Lint.yaml)
 [![license](https://img.shields.io/badge/license-busl--1.1-blue.svg)](./LICENSE)
-[![docs](https://img.shields.io/badge/docs-protocol-blue)](https://docs.liquidcollective.io)
-![twitter](https://img.shields.io/twitter/follow/liquid_col?style=social)
 
-## Field Guide
+This repository contains the Liquid Collective Protocol's smart contracts.
 
-Users interact with this contract through an upgradeable proxy, defined at `contracts/src/TUPProxy.sol`. This requires us to use [unstructured storage](https://blog.openzeppelin.com/upgradeability-using-unstructured-storage/), a Solidity pattern in which we save state variables in their own library rather than as in-line variables in the contract manipulating those variables. Each variable's libary comes with its own getters and setters for the variable value. This lets a future version of the contract access the same values that the old version was relying on. River, as an upgradeable protocol, must also use an Initializer (`contracts/src/Initializer.sol`) to mimic a constructor, since a proxy cannot call that constructor. [See here](https://docs.openzeppelin.com/upgrades-plugins/1.x/writing-upgradeable#initializers).
+Liquid Collective is a liquid staking protocol designed to meet the needs of institutions, built and run by a collective of leading web3 teams.
 
-`TUPProxy.sol` points to the logic at `River.{VERSION_NUMBER}.sol`. In turn, `River.sol` uses the managers in `contracts/src/components/` to accomplish the following logic:
+Liquid Collective enables users to stake ETH and mint LsETH. The LsETH liquid staking token evidences legal and beneficial ownership of the staked ETH and any network rewards that the staked ETH accrues, minus any fees and penalties. 
 
-- `TransferManager` to handle incoming ETH from stakers
-- `DepositManager` to take deposited ETH and allocate it to validators
-- `OperatorsManager` to handle the node operators
-- `OracleManager` to receive input from `Oracle.sol`
-- `SharesManager` as the ERC20 implementation to credit initial deposits, & reflect earnings reported by the oracle in rebased LsETH balances
+## Useful Links
 
-`River.sol`, as well as the managers it uses, leverages the state libraries in `contracts/src/state/` to read & set the variables in unstructured storage.
+- [Liquid Collective Protocol Documentation](https://docs.liquidcollective.io/)
+- [Liquid Collective Website](https://liquidcollective.io)
+- ![twitter](https://img.shields.io/twitter/follow/liquid_col?style=social)
+- [Litepaper](https://liquidcollective.io/litepaper/)
+- [Report Security Vulnerability](https://github.com/liquid-collective/security)
 
-`River.sol` will get its withdrawal logic from `contracts/src/Withdraw.sol`. Since the actual protocol for moving ETH off of a validator post-merge has not yet been defined, this contract is a temporary stub contract, which will be upgraded post-merge.
+## Deployment Addresses
 
-`Oracle.sol` receives reports of staking rewards from designated reporters, and pushes the data to `River.sol` to modify LsETH balances.
+| Contract                                                                                                                               |                   Mainnet                                                                                              |                   Goerli                                                                                                      |
+|----------------------------------------------------------------------------------------------------------------------------------------|:----------------------------------------------------------------------------------------------------------------------:|:-----------------------------------------------------------------------------------------------------------------------------:|
+| [TLC](https://github.com/liquid-collective/liquid-collective-protocol/blob/master/contracts/src/TLC.1.sol)                 | [`0xb5Fe6946836D687848B5aBd42dAbF531d5819632`](http://etherscan.io/address/0xb5Fe6946836D687848B5aBd42dAbF531d5819632) | [`0xb2f102b87022bf5a64e012b39FF25a404102e301`](http://goerli.etherscan.io/address/0xb2f102b87022bf5a64e012b39FF25a404102e301) |
+| [River (LsETH)](https://github.com/liquid-collective/liquid-collective-protocol/blob/master/contracts/src/River.1.sol)                 | [`0x8c1BEd5b9a0928467c9B1341Da1D7BD5e10b6549`](http://etherscan.io/address/0x8c1BEd5b9a0928467c9B1341Da1D7BD5e10b6549) | [`0x3ecCAdA3e11c1Cc3e9B5a53176A67cc3ABDD3E46`](http://goerli.etherscan.io/address/0x3ecCAdA3e11c1Cc3e9B5a53176A67cc3ABDD3E46) |
+| [OperatorsRegistry](https://github.com/liquid-collective/liquid-collective-protocol/blob/master/contracts/src/OperatorsRegistry.1.sol) | [`0x1235f1b60df026B2620e48E735C422425E06b725`](http://etherscan.io/address/0x1235f1b60df026B2620e48E735C422425E06b725) | [`0xf06BEd337f29CB856b072dc8d57A2c22FB2eC2CB`](http://goerli.etherscan.io/address/0xf06BEd337f29CB856b072dc8d57A2c22FB2eC2CB) |
+| [Oracle](https://github.com/liquid-collective/liquid-collective-protocol/blob/master/contracts/src/Oracle.1.sol)                       | [`0x895a57eD71025D51fe4080530A3489D92E230683`](http://etherscan.io/address/0x895a57eD71025D51fe4080530A3489D92E230683) | [`0x088050c58ae0F447d52674Ac58e20DD2FB68E2da`](http://goerli.etherscan.io/address/0x088050c58ae0F447d52674Ac58e20DD2FB68E2da) |
+| [Allowlist](https://github.com/liquid-collective/liquid-collective-protocol/blob/master/contracts/src/Allowlist.1.sol)                 | [`0xebc83Bb472b2816Ec5B5de8D34F0eFc9088BB2ce`](http://etherscan.io/address/0xebc83Bb472b2816Ec5B5de8D34F0eFc9088BB2ce) | [`0xe7B74d98D46A8e0979B0342172A3A4890F852558`](http://goerli.etherscan.io/address/0xe7B74d98D46A8e0979B0342172A3A4890F852558) |
+| [Withdraw](https://github.com/liquid-collective/liquid-collective-protocol/blob/master/contracts/src/Withdraw.1.sol)                   | [`0x0AFd81862eEA47322Cf85Db39D3D07e8A3c25154`](http://etherscan.io/address/0x0AFd81862eEA47322Cf85Db39D3D07e8A3c25154) | [`0x40a369DD92f043A6782F4d071f9D2ba22b4Ea14d`](http://goerli.etherscan.io/address/0x40a369DD92f043A6782F4d071f9D2ba22b4Ea14d) |
+| [ELFeeRecipient](https://github.com/liquid-collective/liquid-collective-protocol/blob/master/contracts/src/ELFeeRecipient.1.sol)       | [`0x7D16d2c4e96BCFC8f815E15b771aC847EcbDB48b`](http://etherscan.io/address/0x7D16d2c4e96BCFC8f815E15b771aC847EcbDB48b) | [`0x5654f8dFFE80ca9Fa270540C44F230CEeB0EA3bB`](http://goerli.etherscan.io/address/0x5654f8dFFE80ca9Fa270540C44F230CEeB0EA3bB) |
 
-`AllowList.sol` handles the list of recipients allowed to interact with River. `River.sol` reads from it.
+## Security
 
-We wrap `AllowList`, `Oracle` and `River` in a `Firewall.sol`, through which administrators can make onlyAdmin function calls.
+If you're interested in learning more about Liquid Collective security processes, including security audits and the protocol's vulnerability disclosure policy, see: [Liquid Collective Security](https://github.com/liquid-collective/security)
 
-## Architecture
+## Contributing
 
-![Architecture](./docs/Architecture.png)
+For guidance on setting up a development environment and how to make a contribution to Liquid Collective, see the [contributing guidelines](./CONTRIBUTING.md).
 
-## Governance
+## Licensing
 
-![Governance](./docs/Governance.png)
-
-### System Administrator
-
-Administrator in charge of the implementation logics, can perform any task on any administrable contract.
-
-### System Executor
-
-Administrator only able to perform a subset of tasks on the system. This set of tasks is defined in the Firewall.
-
-### Firewall
-
-Contract that is the admin of the other system contracts of River. The Firewall stores 2 actors: an admin and an executor. The admin is able to perform any call on the Firewall and the Firewall will forward the call to the system component. The executor has a set of selector he is allowed to call on the system and the Firewall will only forward these calls.
-
-### Implementation Administrator
-
-Administrator of the proxy contracts, has the ability to upgrade the implementation or pause the contracts.
-
-## Scripts
-
-### Install dependencies
-
-```
-yarn && yarn link_contracts
-```
-
-### Run tests
-
-```
-yarn test
-```
-
-### Run tests include fork tests
-
-```
-env MAINNET_FORK_URL=... yarn test
-```
-
-The provided url must be an archive node endpoint allowing state queries at arbitrary block numbers.
-
-### Run checks
-
-```
-yarn lint:check && yarn format:check
-```
-
-### Deploy
-
-You need to define the `MNEMONIC` env variable before running these scripts. The mnemonic should unlock an account with enough ETH to cover deployment fees. The deployment account has no ownership on the contracts deployed. Core components addresses are configured in `hardhat.config.ts` in the `namedAccounts` section.
-
-#### Local
-
-To deploy the contracts in an ephemeral EVM instance, run
-
-```
-yarn hh deploy
-```
-
-#### Goerli
-
-Deployment on the goerli test network using the Prater Beacon test chain.
-
-```
-yarn hh --network goerli
-```
-
-#### Goerli with mocked DepositContract
-
-Deployment on the goerli test network using a mocked DepositContract that emits the same event as the real DepositContract, but transfers back the funds to the treasury address.
-
-```
-yarn hh --network mockedGoerli
-```
-
-## Components Overview
-
-![Components](./docs/components.svg)
-
-Generate by running `yarn uml`
-
-### Interfaces
-
-| Contract | Documentation |
-|---|---|
-| `RiverV1` | [📜](./natspec/RiverV1.md)
-| `OracleV1` | [📜](./natspec/OracleV1.md)
-| `AllowlistV1` | [📜](./natspec/AllowlistV1.md)
-| `WithdrawV1` | [📜](./natspec/WithdrawV1.md)
-
-## Live Deployments
-
-All addresses can be found inside the `deployment.NETWORK.json` files
+The primary license for Liquid Collective is the Business Source License 1.1 (`BUSL-1.1`), see [`LICENSE`](./LICENSE). However, some files are dual licensed as indicated in its SPDX header.
