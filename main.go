@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"io/fs"
 	"os"
 	"strings"
 
@@ -28,6 +29,9 @@ func NewRest() *rest.Rest {
 		call.NewExportCalls(),
 		call.NewNetworkCalls(),
 		call.NewActionCalls(),
+		call.NewDevNetCalls(),
+		call.NewGatewayCalls(),
+		call.NewExtensionCalls(),
 	)
 }
 
@@ -57,6 +61,31 @@ func UploadContract(cl *rest.Rest, abi *ContractABI, projectSlug, networkID stri
 	var hardhatMeta providers.ContractMetadata
 	if hardhatContract.Metadata != "" {
 		err = json.Unmarshal([]byte(hardhatContract.Metadata), &hardhatMeta)
+		if err != nil {
+			return err
+		}
+
+		etherscan := make(map[string]interface{})
+		etherscan["language"] = hardhatMeta.Language
+		settings := make(map[string]interface{})
+		optimizer := make(map[string]interface{})
+		optimizer["enabled"] = hardhatMeta.Settings.Optimizer.Enabled
+		optimizer["runs"] = hardhatMeta.Settings.Optimizer.Runs
+		settings["optimizer"] = optimizer
+		etherscan["settings"] = settings
+		sources := make(map[string]map[string]string)
+		for k, source := range hardhatMeta.Sources {
+			sources[k] = make(map[string]string)
+			sources[k]["content"] = source.Content
+		}
+		etherscan["sources"] = sources
+
+		b, err := json.MarshalIndent(etherscan, "", "  ")
+		if err != nil {
+			return err
+		}
+
+		err = os.WriteFile(strings.ReplaceAll(abi.Path, ".json", ".solcinput.json"), b, fs.ModePerm)
 		if err != nil {
 			return err
 		}
