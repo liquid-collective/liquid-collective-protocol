@@ -1,10 +1,10 @@
 # 🌊
-![format](https://github.com/River-Protocol/river-contracts/actions/workflows/Format.yaml/badge.svg)
-![lint](https://github.com/River-Protocol/river-contracts/actions/workflows/Lint.yaml/badge.svg)
-![mythril](https://github.com/River-Protocol/river-contracts/actions/workflows/Mythril.yaml/badge.svg)
-![Tests](https://github.com/River-Protocol/river-contracts/actions/workflows/Tests.yaml/badge.svg)
-
-Ethereum Liquid Staking. Documentation available at https://river-protocol.gitbook.io.
+[![tests](https://github.com/River-Protocol/river-contracts/actions/workflows/Tests.yaml/badge.svg)](https://github.com/River-Protocol/river-contracts/actions/workflows/Tests.yaml)
+[![mythril](https://github.com/River-Protocol/river-contracts/actions/workflows/Mythril.yaml/badge.svg)](https://github.com/River-Protocol/river-contracts/actions/workflows/Mythril.yaml)
+[![lint](https://github.com/River-Protocol/river-contracts/actions/workflows/Lint.yaml/badge.svg)](https://github.com/River-Protocol/river-contracts/actions/workflows/Lint.yaml)
+[![license](https://img.shields.io/badge/license-busl--1.1-blue.svg)](./LICENSE)
+[![docs](https://img.shields.io/badge/docs-protocol-blue)](https://docs.liquidcollective.io)
+![twitter](https://img.shields.io/twitter/follow/liquid_col?style=social)
 
 ## Field Guide
 

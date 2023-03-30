@@ -1,4 +1,4 @@
-name: Mythril Checks
+name: Mythril
 on:
   push:
     paths:
