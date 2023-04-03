@@ -252,12 +252,12 @@ contract OracleV1 is IOracleV1, Initializable, Administrable {
 
         // if adding this vote reaches quorum
         if (variantVotes + 1 >= quorum) {
-            // we push the report to river
-            river.setConsensusLayerData(report);
             // we clear the reporting data
             _clearReports();
             // we increment the lastReportedEpoch to force reports to be on the last frame
             LastEpochId.set(report.epoch + 1);
+            // we push the report to river
+            river.setConsensusLayerData(report);
             emit SetLastReportedEpoch(report.epoch + 1);
         } else if (variantVotes == 0) {
             // if we have no votes for the variant, we create the variant details
