@@ -40,6 +40,18 @@ contract OperatorsRegistryInitializableV1 is OperatorsRegistryV1 {
     }
 }
 
+contract RiverMock {
+    uint256 public getDepositedValidatorCount;
+
+    constructor(uint256 _getDepositedValidatorsCount) {
+        getDepositedValidatorCount = _getDepositedValidatorsCount;
+    }
+
+    function sudoSetDepositedValidatorsCount(uint256 _getDepositedValidatorsCount) external {
+        getDepositedValidatorCount = _getDepositedValidatorsCount;
+    }
+}
+
 contract OperatorsRegistryV1Tests is Test, BytesGenerator {
     UserFactory internal uf = new UserFactory();
 
@@ -67,7 +79,7 @@ contract OperatorsRegistryV1Tests is Test, BytesGenerator {
 
     function setUp() public {
         admin = makeAddr("admin");
-        river = makeAddr("river");
+        river = address(new RiverMock(0));
         operatorsRegistry = new OperatorsRegistryInitializableV1();
         LibImplementationUnbricker.unbrick(vm, address(operatorsRegistry));
         operatorsRegistry.initOperatorsRegistryV1(admin, river);
@@ -1158,6 +1170,8 @@ contract OperatorsRegistryV1Tests is Test, BytesGenerator {
         uint32[] memory stoppedValidatorCounts = new uint32[](len + 1);
         stoppedValidatorCounts[0] = totalCount;
 
+        RiverMock(address(river)).sudoSetDepositedValidatorsCount(totalCount);
+
         for (uint256 idx = 1; idx < len + 1; ++idx) {
             vm.prank(admin);
             operatorsRegistry.addOperator(string(abi.encodePacked(idx)), address(123));
@@ -1271,7 +1285,7 @@ contract OperatorsRegistryV1TestDistribution is Test {
 
     function setUp() public {
         admin = makeAddr("admin");
-        river = makeAddr("river");
+        river = address(new RiverMock(0));
 
         operatorOne = makeAddr("operatorOne");
         operatorTwo = makeAddr("operatorTwo");
@@ -1552,6 +1566,7 @@ contract OperatorsRegistryV1TestDistribution is Test {
         stoppedValidatorCounts[3] = 25;
         stoppedValidatorCounts[5] = 25;
 
+        RiverMock(address(river)).sudoSetDepositedValidatorsCount(75);
         OperatorsRegistryInitializableV1(address(operatorsRegistry)).sudoStoppedValidatorCounts(stoppedValidatorCounts);
 
         limits = new uint32[](2);
@@ -1643,6 +1658,7 @@ contract OperatorsRegistryV1TestDistribution is Test {
         stoppedValidatorCounts[4] = 10;
         stoppedValidatorCounts[5] = 9;
 
+        RiverMock(river).sudoSetDepositedValidatorsCount(47);
         OperatorsRegistryInitializableV1(address(operatorsRegistry)).sudoStoppedValidatorCounts(stoppedValidatorCounts);
 
         OperatorsRegistryInitializableV1(address(operatorsRegistry)).debugGetNextValidatorsToDepositFromActiveOperators(
@@ -1828,6 +1844,7 @@ contract OperatorsRegistryV1TestDistribution is Test {
         stoppedValidatorCounts[4] = 14;
         stoppedValidatorCounts[5] = 15;
 
+        RiverMock(address(river)).sudoSetDepositedValidatorsCount(65);
         OperatorsRegistryInitializableV1(address(operatorsRegistry)).sudoStoppedValidatorCounts(stoppedValidatorCounts);
 
         vm.expectEmit(true, true, true, true);
@@ -2113,5 +2130,46 @@ contract OperatorsRegistryV1TestDistribution is Test {
         vm.expectEmit(true, true, true, true);
         emit RequestedValidatorExits(4, 10);
         OperatorsRegistryInitializableV1(address(operatorsRegistry)).debugGetNextValidatorsToExitFromActiveOperators(50);
+    }
+
+    function testDecreasingStoppedValidatorCounts() external {
+        RiverMock(address(river)).sudoSetDepositedValidatorsCount(100);
+
+        uint32[] memory stoppedValidatorCount = new uint32[](6);
+
+        stoppedValidatorCount[1] = 10;
+        stoppedValidatorCount[2] = 15;
+        stoppedValidatorCount[3] = 20;
+        stoppedValidatorCount[4] = 25;
+        stoppedValidatorCount[5] = 30;
+        stoppedValidatorCount[0] = 100;
+
+        OperatorsRegistryInitializableV1(address(operatorsRegistry)).sudoStoppedValidatorCounts(stoppedValidatorCount);
+
+        stoppedValidatorCount[1] = 10;
+        stoppedValidatorCount[2] = 15;
+        stoppedValidatorCount[3] = 20;
+        stoppedValidatorCount[4] = 25;
+        stoppedValidatorCount[5] = 29;
+        stoppedValidatorCount[0] = 99;
+
+        vm.expectRevert(abi.encodeWithSignature("StoppedValidatorCountsDecreased()"));
+        OperatorsRegistryInitializableV1(address(operatorsRegistry)).sudoStoppedValidatorCounts(stoppedValidatorCount);
+    }
+
+    function testStoppedValidatorCountHigherThanDepositCount() external {
+        RiverMock(address(river)).sudoSetDepositedValidatorsCount(99);
+
+        uint32[] memory stoppedValidatorCount = new uint32[](6);
+
+        stoppedValidatorCount[1] = 10;
+        stoppedValidatorCount[2] = 15;
+        stoppedValidatorCount[3] = 20;
+        stoppedValidatorCount[4] = 25;
+        stoppedValidatorCount[5] = 30;
+        stoppedValidatorCount[0] = 100;
+
+        vm.expectRevert(abi.encodeWithSignature("StoppedValidatorCountsTooHigh()"));
+        OperatorsRegistryInitializableV1(address(operatorsRegistry)).sudoStoppedValidatorCounts(stoppedValidatorCount);
     }
 }

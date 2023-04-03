@@ -2,6 +2,7 @@
 pragma solidity 0.8.10;
 
 import "./interfaces/IOperatorRegistry.1.sol";
+import "./interfaces/IRiver.1.sol";
 
 import "./libraries/LibUint256.sol";
 
@@ -426,7 +427,15 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
         if (stoppedValidatorCountsLength - 1 > OperatorsV2.getCount()) {
             revert StoppedValidatorCountsTooHigh();
         }
+        uint32[] memory currentStoppedValidatorCounts = OperatorsV2.getStoppedValidators();
+        uint256 currentStoppedValidatorCountsLength = currentStoppedValidatorCounts.length;
         for (uint256 idx = 1; idx < stoppedValidatorCountsLength;) {
+            if (
+                idx < currentStoppedValidatorCountsLength
+                    && stoppedValidatorCounts[idx] < currentStoppedValidatorCounts[idx - 1]
+            ) {
+                revert StoppedValidatorCountsDecreased();
+            }
             count += stoppedValidatorCounts[idx];
             unchecked {
                 ++idx;
@@ -434,6 +443,9 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
         }
         if (total != count) {
             revert InvalidStoppedValidatorCountsSum();
+        }
+        if (total > IRiverV1(payable(RiverAddress.get())).getDepositedValidatorCount()) {
+            revert StoppedValidatorCountsTooHigh();
         }
         OperatorsV2.setRawStoppedValidators(stoppedValidatorCounts);
         emit UpdatedStoppedValidators(stoppedValidatorCounts);

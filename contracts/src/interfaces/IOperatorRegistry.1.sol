@@ -160,6 +160,9 @@ interface IOperatorsRegistryV1 {
     /// @notice Thrown when the sum of stopped validators is invalid
     error InvalidStoppedValidatorCountsSum();
 
+    /// @notice Throw when an element in the stopped validator array is decreasing
+    error StoppedValidatorCountsDecreased();
+
     /// @notice Thrown when the number of elements in the array is too high compared to operator count
     error StoppedValidatorCountsTooHigh();
 
