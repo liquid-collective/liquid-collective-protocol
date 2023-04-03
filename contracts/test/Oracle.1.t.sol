@@ -370,6 +370,7 @@ contract OracleV1Tests is Test {
         assertEq(oracle.isMember(member), true);
 
         IOracleManagerV1.ConsensusLayerReport memory report = _generateEmptyReport(2);
+        report.epoch = 1_000;
 
         vm.prank(member);
         vm.expectEmit(true, true, true, true);

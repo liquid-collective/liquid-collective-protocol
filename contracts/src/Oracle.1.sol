@@ -258,8 +258,8 @@ contract OracleV1 is IOracleV1, Initializable, Administrable {
             // we clear the reporting data
             _clearReports();
             // we increment the lastReportedEpoch to force reports to be on the last frame
-            LastEpochId.set(lastReportedEpochValue + 1);
-            emit SetLastReportedEpoch(lastReportedEpochValue + 1);
+            LastEpochId.set(report.epoch + 1);
+            emit SetLastReportedEpoch(report.epoch + 1);
         } else if (variantVotes == 0) {
             // if we have no votes for the variant, we create the variant details
             ReportVariants.push(ReportVariants.ReportVariantDetails({variant: variant, votes: 1}));
