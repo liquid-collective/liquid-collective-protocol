@@ -104,6 +104,9 @@ interface IOracleV1 {
         uint256 _relativeLowerBound
     ) external;
 
+    /// @notice Initializes the oracle
+    function initOracleV1_1() external;
+
     /// @notice Retrieve River address
     /// @return The address of River
     function getRiver() external view returns (address);

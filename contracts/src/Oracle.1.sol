@@ -19,12 +19,6 @@ import "./state/oracle/ReportVariants.sol";
 /// @author Kiln
 /// @notice This contract handles the input from the allowed oracle members. Highly inspired by Lido's implementation.
 contract OracleV1 is IOracleV1, Initializable, Administrable {
-    /// @notice One Year value
-    uint256 internal constant ONE_YEAR = 365 days;
-
-    /// @notice Received ETH input has only 9 decimals
-    uint128 internal constant DENOMINATION_OFFSET = 1e9;
-
     modifier onlyAdminOrMember(address _oracleMember) {
         if (msg.sender != _getAdmin() && msg.sender != _oracleMember) {
             revert LibErrors.Unauthorized(msg.sender);
@@ -67,6 +61,7 @@ contract OracleV1 is IOracleV1, Initializable, Administrable {
         emit SetQuorum(0);
     }
 
+    /// @inheritdoc IOracleV1
     function initOracleV1_1() external init(1) {
         _clearReports();
     }
