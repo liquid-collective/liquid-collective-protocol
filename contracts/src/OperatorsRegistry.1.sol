@@ -487,21 +487,7 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
     /// @param operatorIndex The operator index
     /// @return The count of stopped validators
     function _getStoppedValidatorsCount(uint256 operatorIndex) internal view returns (uint32) {
-        return _getStoppedValidatorsCountFromRawArray(OperatorsV2.getStoppedValidators(), operatorIndex);
-    }
-
-    /// @notice Internal utility to retrieve the stopped validator count from the raw storage array pointer
-    /// @param stoppedValidatorCounts The storage pointer
-    /// @param operatorIndex The index of the operator to lookup
-    function _getStoppedValidatorsCountFromRawArray(uint32[] storage stoppedValidatorCounts, uint256 operatorIndex)
-        internal
-        view
-        returns (uint32)
-    {
-        if (operatorIndex + 1 >= stoppedValidatorCounts.length) {
-            return 0;
-        }
-        return stoppedValidatorCounts[operatorIndex + 1];
+        return OperatorsV2._getStoppedValidatorCountAtIndex(OperatorsV2.getStoppedValidators(), operatorIndex);
     }
 
     /// @notice Internal utility to get the count of active validators during the deposit selection process
@@ -637,7 +623,7 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
 
         for (uint256 idx = 0; idx < exitableOperatorCount;) {
             uint32 currentRequestedExits = operators[idx].requestedExits;
-            uint32 currentStoppedCount = _getStoppedValidatorsCountFromRawArray(stoppedValidators, idx);
+            uint32 currentStoppedCount = OperatorsV2._getStoppedValidatorCountAtIndex(stoppedValidators, idx);
 
             if (currentRequestedExits < currentStoppedCount) {
                 emit UpdatedRequestedValidatorExitsUponStopped(
