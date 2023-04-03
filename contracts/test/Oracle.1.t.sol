@@ -685,4 +685,39 @@ contract OracleV1Tests is Test {
         vm.expectCall(address(oracleInput), cdata);
         assertEq(oracle.getFrameFirstEpochId(epoch), result);
     }
+
+    event SetLastReportedEpoch(uint256 lastReportedEpoch);
+
+    function testVoteFuzzing(uint256 _salt) external {
+        uint256 memberCount = bound(_salt, 1, type(uint8).max);
+        _salt = _next(_salt);
+        uint256 quorum = bound(_salt, 1, memberCount);
+        address[] memory members = new address[](memberCount);
+
+        for (uint256 i = 0; i < memberCount; i++) {
+            _salt = _next(_salt);
+            members[i] = uf._new(_salt);
+            vm.prank(admin);
+            oracle.addMember(members[i], i + 1);
+        }
+
+        if (oracle.getQuorum() != quorum) {
+            vm.prank(admin);
+            oracle.setQuorum(quorum);
+        }
+
+        IOracleManagerV1.ConsensusLayerReport memory report = _generateEmptyReport(2);
+        for (uint256 i = 0; i < memberCount; i++) {
+            _salt = _next(_salt);
+            vm.prank(members[i]);
+            if (i == quorum - 1) {
+                vm.expectEmit(true, true, true, true);
+                emit SetLastReportedEpoch(report.epoch + 1);
+            }
+            if (i > quorum - 1) {
+                vm.expectRevert(abi.encodeWithSignature("EpochTooOld(uint256,uint256)", report.epoch, report.epoch + 1));
+            }
+            oracle.reportConsensusLayerData(report);
+        }
+    }
 }

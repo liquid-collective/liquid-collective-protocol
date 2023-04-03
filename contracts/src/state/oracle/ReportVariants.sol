@@ -20,7 +20,7 @@ library ReportVariants {
 
     /// @notice Retrieve the Reports Variants from storage
     /// @return The Reports Variants
-    function get() internal view returns (ReportVariantDetails[] memory) {
+    function get() internal view returns (ReportVariantDetails[] storage) {
         bytes32 slot = REPORT_VARIANTS_SLOT;
 
         Slot storage r;
