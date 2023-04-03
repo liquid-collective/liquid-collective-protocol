@@ -54,6 +54,7 @@ contract OracleV1Tests is Test {
             UPPER_BOUND,
             LOWER_BOUND
         );
+        oracle.initOracleV1_1();
     }
 
     function testGetAdmin() public view {

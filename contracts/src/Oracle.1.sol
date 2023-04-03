@@ -67,6 +67,10 @@ contract OracleV1 is IOracleV1, Initializable, Administrable {
         emit SetQuorum(0);
     }
 
+    function initOracleV1_1() external init(1) {
+        _clearReports();
+    }
+
     /// @inheritdoc IOracleV1
     function getRiver() external view returns (address) {
         return RiverAddress.get();
