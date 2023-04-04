@@ -98,12 +98,6 @@ abstract contract ConsensusLayerDepositManagerV1 is IConsensusLayerDepositManage
             revert InvalidPublicKeyCount();
         }
 
-        uint256 receivedSignatureCount = signatures.length;
-
-        if (receivedSignatureCount != receivedPublicKeyCount) {
-            revert InvalidSignatureCount();
-        }
-
         bytes32 withdrawalCredentials = WithdrawalCredentials.get();
 
         if (withdrawalCredentials == 0) {
