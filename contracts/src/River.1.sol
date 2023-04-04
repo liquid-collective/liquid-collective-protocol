@@ -510,11 +510,11 @@ contract RiverV1 is
                 // the available balance to redeem is updated
                 _setBalanceToRedeem(availableBalanceToRedeem - suppliedRedeemManagerDemandInEth);
 
-                // perform a report withdraw call to the redeem manager
-                redeemManager_.reportWithdraw{value: suppliedRedeemManagerDemandInEth}(suppliedRedeemManagerDemand);
-
                 // we burn the shares of the redeem manager associated with the amount of eth provided
                 _burnRawShares(address(RedeemManagerAddress.get()), suppliedRedeemManagerDemand);
+
+                // perform a report withdraw call to the redeem manager
+                redeemManager_.reportWithdraw{value: suppliedRedeemManagerDemandInEth}(suppliedRedeemManagerDemand);
             }
         }
     }
