@@ -270,11 +270,6 @@ abstract contract OracleManagerV1 is IOracleManagerV1 {
             revert InvalidEpoch(report.epoch);
         }
 
-        // we ensure that the reported validator count is not decreasing
-        if (report.validatorsCount > DepositedValidatorCount.get()) {
-            revert InvalidValidatorCountReport(report.validatorsCount, DepositedValidatorCount.get());
-        }
-
         ConsensusLayerDataReportingVariables memory vars;
 
         {
@@ -298,6 +293,16 @@ abstract contract OracleManagerV1 is IOracleManagerV1 {
             if (report.validatorsSkimmedBalance < vars.lastReportSkimmedBalance) {
                 revert InvalidDecreasingValidatorsSkimmedBalance(
                     vars.lastReportSkimmedBalance, report.validatorsSkimmedBalance
+                );
+            }
+
+            // we ensure that the reported validator count is not decreasing
+            if (
+                report.validatorsCount > DepositedValidatorCount.get()
+                    || report.validatorsCount < lastStoredReport.validatorsCount
+            ) {
+                revert InvalidValidatorCountReport(
+                    report.validatorsCount, DepositedValidatorCount.get(), lastStoredReport.validatorsCount
                 );
             }
 
