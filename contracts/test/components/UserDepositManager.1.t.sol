@@ -26,6 +26,7 @@ contract UserDepositManagerV1DepositTests is Test {
     error InvalidCall();
 
     event UserDeposit(address indexed depositor, address indexed recipient, uint256 amount);
+    event SetBalanceToDeposit(uint256 oldAmount, uint256 newAmount);
 
     function setUp() public {
         transferManager = new UserDepositManagerV1EmptyDeposit();
@@ -42,6 +43,8 @@ contract UserDepositManagerV1DepositTests is Test {
         assert(address(transferManager).balance == 0);
 
         if (_amount > 0) {
+            vm.expectEmit(true, true, true, true);
+            emit SetBalanceToDeposit(0, _amount);
             vm.expectEmit(true, true, true, true);
             emit UserDeposit(_user, _user, _amount);
         } else {
@@ -67,6 +70,8 @@ contract UserDepositManagerV1DepositTests is Test {
 
         if (_amount > 0) {
             vm.expectEmit(true, true, true, true);
+            emit SetBalanceToDeposit(0, _amount);
+            vm.expectEmit(true, true, true, true);
             emit UserDeposit(_user, _anotherUser, _amount);
         } else {
             vm.expectRevert(abi.encodeWithSignature("EmptyDeposit()"));
@@ -87,6 +92,8 @@ contract UserDepositManagerV1DepositTests is Test {
         assert(address(transferManager).balance == 0);
 
         if (_amount > 0) {
+            vm.expectEmit(true, true, true, true);
+            emit SetBalanceToDeposit(0, _amount);
             vm.expectEmit(true, true, true, true);
             emit UserDeposit(_user, _user, _amount);
         } else {
