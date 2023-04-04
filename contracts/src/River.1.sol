@@ -556,7 +556,7 @@ contract RiverV1 is
                 IOperatorsRegistryV1 or = IOperatorsRegistryV1(OperatorsRegistryAddress.get());
 
                 uint256 totalStoppedValidatorCount = or.getTotalStoppedValidatorCount();
-                uint256 totalRequestedExitsCount = or.getTotalRequestedValidatorExitsCount();
+                uint256 totalRequestedExitsCount = or.getTotalPerformedExitRequests() + or.getCurrentExitRequestDemand();
 
                 uint256 preExitingBalance = (
                     totalRequestedExitsCount > totalStoppedValidatorCount
@@ -570,7 +570,7 @@ contract RiverV1 is
                         DEPOSIT_SIZE
                     );
 
-                    or.pickNextValidatorsToExit(validatorCountToExit);
+                    or.requestExits(validatorCountToExit);
                 }
             }
         }
