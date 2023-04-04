@@ -706,7 +706,6 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
                 if (_getActiveValidatorCountForExitRequests(operators[idx]) == highestActiveCount) {
                     uint32 additionalRequestedExits = (optimalTotalDispatchCount / siblings) + (rest > 0 ? 1 : 0);
                     operators[idx].picked += additionalRequestedExits;
-                    totalRequestedExitsValue += additionalRequestedExits;
                     if (rest > 0) {
                         --rest;
                     }
@@ -716,6 +715,7 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
                 }
             }
 
+            totalRequestedExitsValue += optimalTotalDispatchCount;
             _count -= optimalTotalDispatchCount;
         }
 
