@@ -177,6 +177,15 @@ const func: DeployFunction = async function ({ deployments, getNamedAccounts, et
 		// we do this only on testnet, on mainnet it will be done via atomic contract upgrades
 		const tx = await RiverContract.initRiverV1_1(redeemManagerDeployment.address, 225, 32, 12, genesisTimestamp, 4, 1000, 500, "3200000000000000000000", "1000");
 		console.log("river.initRiverV1_1", tx.hash);
+
+		const withdrawDeployment = await deployments.get("Withdraw");
+
+	}
+
+	{
+		const WithdrawContract = await ethers.getContractAt("WithdrawV1", withdrawDeployment.address);
+		const tx = await WithdrawContract.initializeWithdrawV1(riverDeployment.address);
+		console.log("withdraw.initializeWithdrawV1", tx.hash);
 	}
 
 	logStepEnd(__filename);
