@@ -558,6 +558,9 @@ contract RiverV1 is
                 uint256 totalStoppedValidatorCount = or.getTotalStoppedValidatorCount();
                 uint256 totalRequestedExitsCount = or.getTotalRequestedValidatorExitsCount();
 
+                // what we are calling pre-exiting balance is the amount of eth that should soon enter the exiting balance
+                // because exit requests have been made and operators might have a lag to process them
+                // we take them into account to not exit too many validators
                 uint256 preExitingBalance = (
                     totalRequestedExitsCount > totalStoppedValidatorCount
                         ? (totalRequestedExitsCount - totalStoppedValidatorCount)
