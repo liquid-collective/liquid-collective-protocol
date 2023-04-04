@@ -601,10 +601,8 @@ contract RiverV1 is
                 / LibBasisPoints.BASIS_POINTS_MAX
         );
         // we adapt the value for the reporting period by using the asset balance as upper bound
-        uint256 currentMaxCommittableAmount = LibUint256.min(
-            LibUint256.min(underlyingAssetBalance, (currentMaxDailyCommittableAmount * period) / 1 days),
-            currentBalanceToDeposit
-        );
+        uint256 currentMaxCommittableAmount =
+            LibUint256.min((currentMaxDailyCommittableAmount * period) / 1 days, currentBalanceToDeposit);
 
         if (currentMaxCommittableAmount > 0) {
             _setCommittedBalance(CommittedBalance.get() + currentMaxCommittableAmount);
