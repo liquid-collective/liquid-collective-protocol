@@ -58,6 +58,7 @@ abstract contract OracleManagerV1 is IOracleManagerV1 {
 
     /// @notice Pulls funds from the redeem manager exceeding eth buffer
     /// @param max The maximum amount to pull
+    /// @return The amount pulled
     function _pullRedeemManagerExceedingEth(uint256 max) internal virtual returns (uint256);
 
     /// @notice Use the balance to redeem to report a withdrawal event on the redeem manager
@@ -469,6 +470,7 @@ abstract contract OracleManagerV1 is IOracleManagerV1 {
     /// @param rb The report bounds struct
     /// @param _prevTotalEth The total underlying supply during reporting
     /// @param _timeElapsed The time since last report
+    /// @return The maximum allowed increase in balance
     function _maxIncrease(ReportBounds.ReportBoundsStruct memory rb, uint256 _prevTotalEth, uint256 _timeElapsed)
         internal
         pure
@@ -480,6 +482,7 @@ abstract contract OracleManagerV1 is IOracleManagerV1 {
     /// @notice Retrieves the maximum decrease in balance based on current total underlying supply
     /// @param rb The report bounds struct
     /// @param _prevTotalEth The total underlying supply during reporting
+    /// @return The maximum allowed decrease in balance
     function _maxDecrease(ReportBounds.ReportBoundsStruct memory rb, uint256 _prevTotalEth)
         internal
         pure
@@ -492,6 +495,7 @@ abstract contract OracleManagerV1 is IOracleManagerV1 {
     /// @param cls The consensus layer spec struct
     /// @param epochPast The starting epoch
     /// @param epochNow The current epoch
+    /// @return The number of seconds between the two epochs
     function _timeBetweenEpochs(CLSpec.CLSpecStruct memory cls, uint256 epochPast, uint256 epochNow)
         internal
         pure

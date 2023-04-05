@@ -201,9 +201,8 @@ interface IOracleV1 {
     function removeMember(address _oracleMember, uint256 _newQuorum) external;
 
     /// @notice Changes the address of an oracle member
-    /// @dev Only callable by the adminitrator
+    /// @dev Only callable by the adminitrator or the member itself
     /// @dev Cannot use an address already in use
-    /// @dev This call will clear all the reporting data
     /// @param _oracleMember Address to change
     /// @param _newAddress New address for the member
     function setMember(address _oracleMember, address _newAddress) external;
