@@ -95,6 +95,11 @@ interface IRedeemManagerV1 {
     /// @param redeemDemand The current redeem demand
     error WithdrawalExceedsRedeemDemand(uint256 withdrawalAmount, uint256 redeemDemand);
 
+    /// @notice Thrown when the payment after a claim failed
+    /// @param recipient The recipient of the payment
+    /// @param rdata The revert data
+    error ClaimPaymentFailed(address recipient, bytes rdata);
+
     /// @param river The address of the River contract
     function initializeRedeemManagerV1(address river) external;
 

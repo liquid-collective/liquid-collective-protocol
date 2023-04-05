@@ -460,9 +460,7 @@ contract RedeemManagerV1 is Initializable, IRedeemManagerV1 {
 
             (bool success, bytes memory rdata) = recipient.call{value: ethAmount}("");
             if (!success) {
-                assembly {
-                    revert(add(32, rdata), mload(rdata))
-                }
+                revert ClaimPaymentFailed(recipient, rdata);
             }
             emit ClaimedRedeemRequest(redeemRequestIds[idx], recipient, ethAmount, lsETHAmount, remainingLsETHAmount);
 
