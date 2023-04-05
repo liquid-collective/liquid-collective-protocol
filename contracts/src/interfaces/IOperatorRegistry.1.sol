@@ -89,14 +89,15 @@ interface IOperatorsRegistryV1 {
     event RequestedValidatorExits(uint256 indexed index, uint256 count);
 
     /// @notice The exit request demand has been updated
-    /// @param exitRequestDemand The new exit request demand
-    event SetCurrentExitRequestDemand(uint256 exitRequestDemand);
+    /// @param previousValidatorExitsDemand The previous exit request demand
+    /// @param nextValidatorExitsDemand The new exit request demand
+    event SetCurrentValidatorExitsDemand(uint256 previousValidatorExitsDemand, uint256 nextValidatorExitsDemand);
 
     /// @notice The total requested exit has been updated
-    /// @param previousTotalPerformedExitRequests The previous total requested exit
-    /// @param newTotalPerformedExitRequests The new total requested exit
-    event SetTotalPerformedExitRequests(
-        uint256 previousTotalPerformedExitRequests, uint256 newTotalPerformedExitRequests
+    /// @param previousTotalValidatorExitsRequested The previous total requested exit
+    /// @param newTotalValidatorExitsRequested The new total requested exit
+    event SetTotalValidatorExitsRequested(
+        uint256 previousTotalValidatorExitsRequested, uint256 newTotalValidatorExitsRequested
     );
 
     /// @notice A validator key got funded on the deposit contract
@@ -205,7 +206,7 @@ interface IOperatorsRegistryV1 {
 
     /// @notice Retrieve the total requested exit count
     /// @return The total requested exit count
-    function getTotalPerformedExitRequests() external view returns (uint256);
+    function getTotalValidatorExitsRequested() external view returns (uint256);
 
     /// @notice Retrieve the raw stopped validators array from storage
     /// @return The stopped validator array
@@ -224,7 +225,7 @@ interface IOperatorsRegistryV1 {
 
     /// @notice Get the current exit request demand waiting to be triggered
     /// @return The current exit request demand
-    function getCurrentExitRequestDemand() external view returns (uint256);
+    function getCurrentValidatorExitsDemand() external view returns (uint256);
 
     /// @notice Retrieve the active operator set
     /// @return The list of active operators and their details
@@ -305,9 +306,9 @@ interface IOperatorsRegistryV1 {
 
     /// @notice Public endpoint to consume the exit request demand and perform the actual exit requests
     /// @param _count Max amount of exits to request
-    function pickNextValidatorsToExit(uint256 _count) external;
+    function requestValidatorExits(uint256 _count) external;
 
     /// @notice Increases the exit request demand
     /// @param _count The amount of exit requests to add to the demand
-    function requestExits(uint256 _count) external;
+    function demandValidatorExits(uint256 _count) external;
 }

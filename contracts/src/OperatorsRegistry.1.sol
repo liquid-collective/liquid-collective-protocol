@@ -12,8 +12,8 @@ import "./Administrable.sol";
 import "./state/operatorsRegistry/Operators.1.sol";
 import "./state/operatorsRegistry/Operators.2.sol";
 import "./state/operatorsRegistry/ValidatorKeys.sol";
-import "./state/operatorsRegistry/TotalPerformedExitRequests.sol";
-import "./state/operatorsRegistry/CurrentExitRequestDemand.sol";
+import "./state/operatorsRegistry/TotalValidatorExitsRequested.sol";
+import "./state/operatorsRegistry/CurrentValidatorExitsDemand.sol";
 import "./state/shared/RiverAddress.sol";
 
 import "./state/migration/OperatorsRegistry_FundedKeyEventRebroadcasting_KeyIndex.sol";
@@ -153,13 +153,13 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
     }
 
     /// @inheritdoc IOperatorsRegistryV1
-    function getTotalPerformedExitRequests() external view returns (uint256) {
-        return TotalPerformedExitRequests.get();
+    function getTotalValidatorExitsRequested() external view returns (uint256) {
+        return TotalValidatorExitsRequested.get();
     }
 
     /// @inheritdoc IOperatorsRegistryV1
-    function getCurrentExitRequestDemand() external view returns (uint256) {
-        return CurrentExitRequestDemand.get();
+    function getCurrentValidatorExitsDemand() external view returns (uint256) {
+        return CurrentValidatorExitsDemand.get();
     }
 
     /// @inheritdoc IOperatorsRegistryV1
@@ -417,29 +417,31 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
     }
 
     /// @inheritdoc IOperatorsRegistryV1
-    function pickNextValidatorsToExit(uint256 _count) external {
-        uint256 currentExitRequestDemand = CurrentExitRequestDemand.get();
-        uint256 exitRequestsToPerform = LibUint256.min(currentExitRequestDemand, _count);
+    function requestValidatorExits(uint256 _count) external {
+        uint256 currentValidatorExitsDemand = CurrentValidatorExitsDemand.get();
+        uint256 exitRequestsToPerform = LibUint256.min(currentValidatorExitsDemand, _count);
         if (exitRequestsToPerform == 0) {
             revert NoExitRequestsToPerform();
         }
-        currentExitRequestDemand -= _pickNextValidatorsToExitFromActiveOperators(exitRequestsToPerform);
+        uint256 savedCurrentValidatorExitsDemand = currentValidatorExitsDemand;
+        currentValidatorExitsDemand -= _pickNextValidatorsToExitFromActiveOperators(exitRequestsToPerform);
 
-        CurrentExitRequestDemand.set(currentExitRequestDemand);
-        emit SetCurrentExitRequestDemand(currentExitRequestDemand);
+        CurrentValidatorExitsDemand.set(currentValidatorExitsDemand);
+        emit SetCurrentValidatorExitsDemand(savedCurrentValidatorExitsDemand, currentValidatorExitsDemand);
     }
 
     /// @inheritdoc IOperatorsRegistryV1
-    function requestExits(uint256 _count) external onlyRiver {
-        uint256 currentExitRequestDemand = CurrentExitRequestDemand.get();
-        uint256 currentPerformedExitRequests = TotalPerformedExitRequests.get();
+    function demandValidatorExits(uint256 _count) external onlyRiver {
+        uint256 currentValidatorExitsDemand = CurrentValidatorExitsDemand.get();
+        uint256 totalValidatorExitsRequested = TotalValidatorExitsRequested.get();
         _count = LibUint256.min(
-            currentExitRequestDemand + _count + currentPerformedExitRequests,
+            _count,
             IRiverV1(payable(RiverAddress.get())).getDepositedValidatorCount()
-        ) - (currentExitRequestDemand + currentPerformedExitRequests);
+                - (totalValidatorExitsRequested + currentValidatorExitsDemand)
+        );
         if (_count > 0) {
-            CurrentExitRequestDemand.set(currentExitRequestDemand + _count);
-            emit SetCurrentExitRequestDemand(currentExitRequestDemand + _count);
+            CurrentValidatorExitsDemand.set(currentValidatorExitsDemand + _count);
+            emit SetCurrentValidatorExitsDemand(currentValidatorExitsDemand, currentValidatorExitsDemand + _count);
         }
     }
 
@@ -647,7 +649,7 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
         }
 
         uint256 initialExitRequestDemand = _count;
-        uint256 totalRequestedExitsValue = TotalPerformedExitRequests.get();
+        uint256 totalRequestedExitsValue = TotalValidatorExitsRequested.get();
         uint256 totalRequestedExitsCopy = totalRequestedExitsValue;
 
         for (uint256 idx = 0; idx < exitableOperatorCount;) {
@@ -733,8 +735,8 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
         }
 
         if (totalRequestedExitsValue != totalRequestedExitsCopy) {
-            TotalPerformedExitRequests.set(totalRequestedExitsValue);
-            emit SetTotalPerformedExitRequests(totalRequestedExitsCopy, totalRequestedExitsValue);
+            TotalValidatorExitsRequested.set(totalRequestedExitsValue);
+            emit SetTotalValidatorExitsRequested(totalRequestedExitsCopy, totalRequestedExitsValue);
         }
 
         return initialExitRequestDemand - _count;
