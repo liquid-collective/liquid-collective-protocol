@@ -154,11 +154,13 @@ interface IRedeemManagerV1 {
     /// @param redeemRequestIds The list of redeem requests to claim
     /// @param withdrawalEventIds The list of withdrawal events to use for every redeem request claim
     /// @param skipAlreadyClaimed True if the call should not revert on claiming of already claimed requests
+    /// @param _depth The maximum recursive depth for the resolution of the redeem requests
     /// @return claimStatuses The list of claim statuses. 0 for fully claimed, 1 for partially claimed, 2 for skipped
     function claimRedeemRequests(
         uint32[] calldata redeemRequestIds,
         uint32[] calldata withdrawalEventIds,
-        bool skipAlreadyClaimed
+        bool skipAlreadyClaimed,
+        uint16 _depth
     ) external returns (uint8[] memory claimStatuses);
 
     /// @notice Claims the rewards of the provided redeem request ids
