@@ -163,7 +163,6 @@ contract RedeemManagerV1 is Initializable, IRedeemManagerV1 {
     function pullExceedingEth(uint256 max) external onlyRiver {
         uint256 amountToSend = LibUint256.min(BufferedExceedingEth.get(), max);
         BufferedExceedingEth.set(BufferedExceedingEth.get() - amountToSend);
-        emit SentExceedingEth(amountToSend);
         _river().sendRedeemManagerExceedingFunds{value: amountToSend}();
     }
 

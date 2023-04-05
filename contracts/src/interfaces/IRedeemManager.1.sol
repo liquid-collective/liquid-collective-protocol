@@ -56,10 +56,6 @@ interface IRedeemManagerV1 {
     /// @param redeemDemand The new redeem demand
     event SetRedeemDemand(uint256 redeemDemand);
 
-    /// @notice Emitted when funds are sent from the exceeding buffer
-    /// @param amount The amount of funds sent
-    event SentExceedingEth(uint256 amount);
-
     /// @notice Emitted when the River address is set
     /// @param river The new river address
     event SetRiver(address river);
