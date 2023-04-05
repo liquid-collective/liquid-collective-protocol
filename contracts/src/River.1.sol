@@ -131,7 +131,7 @@ contract RiverV1 is
         uint64 _epochsToAssumedFinality,
         uint256 _annualAprUpperBound,
         uint256 _relativeLowerBound,
-        uint128 _maxDailyNetCommittableAmount_,
+        uint128 _minDailyNetCommittableAmount_,
         uint128 _maxDailyRelativeCommittableAmount_
     ) external init(1) {
         RedeemManagerAddress.set(_redeemManager);
@@ -139,11 +139,11 @@ contract RiverV1 is
 
         DailyCommittableLimits.set(
             DailyCommittableLimits.DailyCommittableLimitsStruct({
-                maxDailyNetCommittableAmount: _maxDailyNetCommittableAmount_,
+                minDailyNetCommittableAmount: _minDailyNetCommittableAmount_,
                 maxDailyRelativeCommittableAmount: _maxDailyRelativeCommittableAmount_
             })
         );
-        emit SetMaxDailyCommittableAmounts(_maxDailyNetCommittableAmount_, _maxDailyRelativeCommittableAmount_);
+        emit SetMaxDailyCommittableAmounts(_minDailyNetCommittableAmount_, _maxDailyRelativeCommittableAmount_);
 
         initOracleManagerV1_1(
             _epochsPerFrame,
@@ -203,7 +203,7 @@ contract RiverV1 is
         onlyAdmin
     {
         DailyCommittableLimits.set(_dcl);
-        emit SetMaxDailyCommittableAmounts(_dcl.maxDailyNetCommittableAmount, _dcl.maxDailyRelativeCommittableAmount);
+        emit SetMaxDailyCommittableAmounts(_dcl.minDailyNetCommittableAmount, _dcl.maxDailyRelativeCommittableAmount);
     }
 
     /// @inheritdoc IRiverV1
@@ -600,7 +600,7 @@ contract RiverV1 is
         // we take the maximum value between a net amount and an amount relative to the asset balance
         // this ensures that the amount we can commit is not too low in the beginning and that it is not too high when volumes grow
         uint256 currentMaxDailyCommittableAmount = LibUint256.max(
-            dcl.maxDailyNetCommittableAmount,
+            dcl.minDailyNetCommittableAmount,
             (uint256(dcl.maxDailyRelativeCommittableAmount) * (underlyingAssetBalance - currentBalanceToDeposit))
                 / LibBasisPoints.BASIS_POINTS_MAX
         );

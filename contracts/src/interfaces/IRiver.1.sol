@@ -63,9 +63,9 @@ interface IRiverV1 is IConsensusLayerDepositManagerV1, IUserDepositManagerV1, IS
     );
 
     /// @notice Emitted when the daily committable limits are changed
-    /// @param maxNetAmount The maximum net amount that can be committed daily
-    /// @param maxRelativeAmount The maximum amount relative to the total underlying supply that can be committed daily
-    event SetMaxDailyCommittableAmounts(uint256 maxNetAmount, uint256 maxRelativeAmount);
+    /// @param minNetAmount The minimum amount that must be used as the daily committable amount
+    /// @param maxRelativeAmount The maximum amount that can be used as the daily committable amount, relative to the total underlying supply
+    event SetMaxDailyCommittableAmounts(uint256 minNetAmount, uint256 maxRelativeAmount);
 
     /// @notice Emitted when the redeem manager address is changed
     /// @param redeemManager The address of the redeem manager
