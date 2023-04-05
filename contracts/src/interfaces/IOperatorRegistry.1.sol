@@ -205,6 +205,7 @@ interface IOperatorsRegistryV1 {
     function getTotalStoppedValidatorCount() external view returns (uint32);
 
     /// @notice Retrieve the total requested exit count
+    /// @notice This value is the amount of exit requests that have been performed, emitting an event for operators to catch
     /// @return The total requested exit count
     function getTotalValidatorExitsRequested() external view returns (uint256);
 
@@ -224,6 +225,7 @@ interface IOperatorsRegistryV1 {
         returns (bytes memory publicKey, bytes memory signature, bool funded);
 
     /// @notice Get the current exit request demand waiting to be triggered
+    /// @notice This value is the amount of exit requests that are demanded and not yet performed by the contract
     /// @return The current exit request demand
     function getCurrentValidatorExitsDemand() external view returns (uint256);
 
