@@ -536,7 +536,8 @@ contract RiverV1 is
         if (totalSupply > 0) {
             uint256 availableBalanceToRedeem = BalanceToRedeem.get();
             uint256 availableBalanceToDeposit = BalanceToDeposit.get();
-            uint256 redeemManagerDemandInEth = _balanceFromShares(_balanceOf(RedeemManagerAddress.get()));
+            uint256 redeemManagerDemandInEth =
+                _balanceFromShares(IRedeemManagerV1(RedeemManagerAddress.get()).getRedeemDemand());
 
             // if after all rebalancings, the redeem manager demand is still higher than the balance to redeem and exiting eth, we compute
             // the amount of validators to exit in order to cover the remaining demand

@@ -12,6 +12,7 @@ import "./state/shared/RiverAddress.sol";
 import "./state/redeemManager/RedeemQueue.sol";
 import "./state/redeemManager/WithdrawalStack.sol";
 import "./state/redeemManager/BufferedExceedingEth.sol";
+import "./state/redeemManager/RedeemDemand.sol";
 
 /// @title Redeem Manager (v1)
 /// @author Kiln
@@ -84,6 +85,11 @@ contract RedeemManagerV1 is Initializable, IRedeemManagerV1 {
     }
 
     /// @inheritdoc IRedeemManagerV1
+    function getRedeemDemand() external view returns (uint256) {
+        return RedeemDemand.get();
+    }
+
+    /// @inheritdoc IRedeemManagerV1
     function resolveRedeemRequests(uint32[] calldata redeemRequestIds)
         external
         view
@@ -134,6 +140,10 @@ contract RedeemManagerV1 is Initializable, IRedeemManagerV1 {
 
     /// @inheritdoc IRedeemManagerV1
     function reportWithdraw(uint256 lsETHWithdrawable) external payable onlyRiver {
+        uint256 redeemDemand = RedeemDemand.get();
+        if (lsETHWithdrawable > redeemDemand) {
+            revert WithdrawalExceedsRedeemDemand(lsETHWithdrawable, redeemDemand);
+        }
         WithdrawalStack.WithdrawalEvent[] storage withdrawalEvents = WithdrawalStack.get();
         uint32 withdrawalEventId = uint32(withdrawalEvents.length);
         uint256 height = 0;
@@ -145,11 +155,9 @@ contract RedeemManagerV1 is Initializable, IRedeemManagerV1 {
         withdrawalEvents.push(
             WithdrawalStack.WithdrawalEvent({height: height, amount: lsETHWithdrawable, withdrawnEth: msgValue})
         );
-
+        _setRedeemDemand(redeemDemand - lsETHWithdrawable);
         emit ReportedWithdrawal(height, lsETHWithdrawable, msgValue, withdrawalEventId);
     }
-
-    event SentExceedingEth(uint256 amount);
 
     /// @inheritdoc IRedeemManagerV1
     function pullExceedingEth(uint256 max) external onlyRiver {
@@ -298,6 +306,8 @@ contract RedeemManagerV1 is Initializable, IRedeemManagerV1 {
                 maxRedeemableEth: maxRedeemableEth
             })
         );
+
+        _setRedeemDemand(RedeemDemand.get() + lsETHAmount);
 
         emit RequestedRedeem(recipient, height, lsETHAmount, redeemRequestId);
     }
@@ -460,5 +470,12 @@ contract RedeemManagerV1 is Initializable, IRedeemManagerV1 {
                 ++idx;
             }
         }
+    }
+
+    /// @notice Internal utility to set the redeem demand
+    /// @param newValue The new value to set
+    function _setRedeemDemand(uint256 newValue) internal {
+        RedeemDemand.set(newValue);
+        emit SetRedeemDemand(newValue);
     }
 }

@@ -52,6 +52,14 @@ interface IRedeemManagerV1 {
         uint256 remainingLsEthAmount
     );
 
+    /// @notice Emitted when the redeem demand is set
+    /// @param redeemDemand The new redeem demand
+    event SetRedeemDemand(uint256 redeemDemand);
+
+    /// @notice Emitted when funds are sent from the exceeding buffer
+    /// @param amount The amount of funds sent
+    event SentExceedingEth(uint256 amount);
+
     /// @notice Emitted when the River address is set
     /// @param river The new river address
     event SetRiver(address river);
@@ -82,6 +90,11 @@ interface IRedeemManagerV1 {
     /// @param withdrawalEventId The provided associated withdrawal event id
     error DoesNotMatch(uint256 redeemRequestId, uint256 withdrawalEventId);
 
+    /// @notice Thrown when the provided withdrawal event exceeds the redeem demand
+    /// @param withdrawalAmount The amount of the withdrawal event
+    /// @param redeemDemand The current redeem demand
+    error WithdrawalExceedsRedeemDemand(uint256 withdrawalAmount, uint256 redeemDemand);
+
     /// @param river The address of the River contract
     function initializeRedeemManagerV1(address river) external;
 
@@ -107,6 +120,10 @@ interface IRedeemManagerV1 {
     /// @notice Retrieve the amount of eth available in the buffer
     /// @return The amount of eth in the buffer
     function getBufferedExceedingEth() external view returns (uint256);
+
+    /// @notice Retrieve the amount of LsETH waiting to be exited
+    /// @return The amount of LsETH waiting to be exited
+    function getRedeemDemand() external view returns (uint256);
 
     /// @notice Resolves the provided list of redeem request ids
     /// @dev The result is an array of equal length with ids or error code
