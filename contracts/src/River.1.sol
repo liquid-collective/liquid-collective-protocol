@@ -596,12 +596,17 @@ contract RiverV1 is
         DailyCommittableLimits.DailyCommittableLimitsStruct memory dcl = DailyCommittableLimits.get();
 
         // we compute the max daily committable amount by taking the asset balance without the balance to deposit into account
+        // this value is the daily maximum amount we can commit for deposits
+        // we take the maximum value between a net amount and an amount relative to the asset balance
+        // this ensures that the amount we can commit is not too low in the beginning and that it is not too high when volumes grow
         uint256 currentMaxDailyCommittableAmount = LibUint256.max(
             dcl.maxDailyNetCommittableAmount,
             (uint256(dcl.maxDailyRelativeCommittableAmount) * (underlyingAssetBalance - currentBalanceToDeposit))
                 / LibBasisPoints.BASIS_POINTS_MAX
         );
         // we adapt the value for the reporting period by using the asset balance as upper bound
+        // this ensures that even if we skip a reporting period, we can still commit the maximum amount on that
+        // period and not just the maximum amount for a single day
         uint256 currentMaxCommittableAmount = LibUint256.min(
             LibUint256.min(underlyingAssetBalance, (currentMaxDailyCommittableAmount * _period) / 1 days),
             currentBalanceToDeposit
