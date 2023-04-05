@@ -66,18 +66,19 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
     error FundedKeyEventMigrationComplete();
 
     /// Utility to force the broadcasting of events. Will keep its progress in storage to prevent being DoSed by the number of keys
-    /// @param amountToEmit The amount of events to emit at maximum in this call
-    function forceFundedValidatorKeysEventEmission(uint256 amountToEmit) external {
+    /// @param _amountToEmit The amount of events to emit at maximum in this call
+    function forceFundedValidatorKeysEventEmission(uint256 _amountToEmit) external {
         uint256 operatorIndex = OperatorsRegistry_FundedKeyEventRebroadcasting_OperatorIndex.get();
         if (operatorIndex == type(uint256).max || OperatorsV2.getCount() == 0) {
             revert FundedKeyEventMigrationComplete();
         }
         uint256 keyIndex = OperatorsRegistry_FundedKeyEventRebroadcasting_KeyIndex.get();
-        while (amountToEmit > 0 && operatorIndex != type(uint256).max) {
+        while (_amountToEmit > 0 && operatorIndex != type(uint256).max) {
             OperatorsV2.Operator memory operator = OperatorsV2.get(operatorIndex);
 
-            (bytes[] memory publicKeys,) =
-                ValidatorKeys.getKeys(operatorIndex, keyIndex, LibUint256.min(amountToEmit, operator.funded - keyIndex));
+            (bytes[] memory publicKeys,) = ValidatorKeys.getKeys(
+                operatorIndex, keyIndex, LibUint256.min(_amountToEmit, operator.funded - keyIndex)
+            );
             emit FundedValidatorKeys(operatorIndex, publicKeys, true);
             if (keyIndex + publicKeys.length == operator.funded) {
                 keyIndex = 0;
@@ -89,7 +90,7 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
             } else {
                 keyIndex += publicKeys.length;
             }
-            amountToEmit -= publicKeys.length;
+            _amountToEmit -= publicKeys.length;
         }
         OperatorsRegistry_FundedKeyEventRebroadcasting_OperatorIndex.set(operatorIndex);
         OperatorsRegistry_FundedKeyEventRebroadcasting_KeyIndex.set(keyIndex);
@@ -199,8 +200,8 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
     }
 
     /// @inheritdoc IOperatorsRegistryV1
-    function reportStoppedValidatorCounts(uint32[] calldata stoppedValidatorCounts) external onlyRiver {
-        _setStoppedValidatorCounts(stoppedValidatorCounts);
+    function reportStoppedValidatorCounts(uint32[] calldata _stoppedValidatorCounts) external onlyRiver {
+        _setStoppedValidatorCounts(_stoppedValidatorCounts);
     }
 
     /// @inheritdoc IOperatorsRegistryV1
@@ -415,19 +416,19 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
     }
 
     /// @notice Internal utiltiy to set the stopped validator array after sanity checks
-    /// @param stoppedValidatorCounts The stopped validators counts for every operator + the total count in index 0
-    function _setStoppedValidatorCounts(uint32[] calldata stoppedValidatorCounts) internal {
-        uint256 stoppedValidatorCountsLength = stoppedValidatorCounts.length;
+    /// @param _stoppedValidatorCounts The stopped validators counts for every operator + the total count in index 0
+    function _setStoppedValidatorCounts(uint32[] calldata _stoppedValidatorCounts) internal {
+        uint256 stoppedValidatorCountsLength = _stoppedValidatorCounts.length;
         if (stoppedValidatorCountsLength == 0) {
             revert InvalidEmptyStoppedValidatorCountsArray();
         }
-        uint32 total = stoppedValidatorCounts[0];
+        uint32 total = _stoppedValidatorCounts[0];
         uint32 count = 0;
         if (stoppedValidatorCountsLength - 1 > OperatorsV2.getCount()) {
             revert StoppedValidatorCountsTooHigh();
         }
         for (uint256 idx = 1; idx < stoppedValidatorCountsLength;) {
-            count += stoppedValidatorCounts[idx];
+            count += _stoppedValidatorCounts[idx];
             unchecked {
                 ++idx;
             }
@@ -435,8 +436,8 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
         if (total != count) {
             revert InvalidStoppedValidatorCountsSum();
         }
-        OperatorsV2.setRawStoppedValidators(stoppedValidatorCounts);
-        emit UpdatedStoppedValidators(stoppedValidatorCounts);
+        OperatorsV2.setRawStoppedValidators(_stoppedValidatorCounts);
+        emit UpdatedStoppedValidators(_stoppedValidatorCounts);
     }
 
     /// @notice Internal utility to concatenate bytes arrays together
@@ -472,24 +473,24 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
     }
 
     /// @notice Internal utility to retrieve the actual stopped validator count of an operator from the reported array
-    /// @param operatorIndex The operator index
+    /// @param _operatorIndex The operator index
     /// @return The count of stopped validators
-    function _getStoppedValidatorsCount(uint256 operatorIndex) internal view returns (uint32) {
-        return _getStoppedValidatorsCountFromRawArray(OperatorsV2.getStoppedValidators(), operatorIndex);
+    function _getStoppedValidatorsCount(uint256 _operatorIndex) internal view returns (uint32) {
+        return _getStoppedValidatorsCountFromRawArray(OperatorsV2.getStoppedValidators(), _operatorIndex);
     }
 
     /// @notice Internal utility to retrieve the stopped validator count from the raw storage array pointer
-    /// @param stoppedValidatorCounts The storage pointer
-    /// @param operatorIndex The index of the operator to lookup
-    function _getStoppedValidatorsCountFromRawArray(uint32[] storage stoppedValidatorCounts, uint256 operatorIndex)
+    /// @param _stoppedValidatorCounts The storage pointer
+    /// @param _operatorIndex The index of the operator to lookup
+    function _getStoppedValidatorsCountFromRawArray(uint32[] storage _stoppedValidatorCounts, uint256 _operatorIndex)
         internal
         view
         returns (uint32)
     {
-        if (operatorIndex + 1 >= stoppedValidatorCounts.length) {
+        if (_operatorIndex + 1 >= _stoppedValidatorCounts.length) {
             return 0;
         }
-        return stoppedValidatorCounts[operatorIndex + 1];
+        return _stoppedValidatorCounts[_operatorIndex + 1];
     }
 
     /// @notice Internal utility to get the count of active validators during the deposit selection process

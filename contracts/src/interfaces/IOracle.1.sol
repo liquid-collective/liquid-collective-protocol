@@ -141,9 +141,9 @@ interface IOracleV1 {
     function isMember(address _memberAddress) external view returns (bool);
 
     /// @notice Verifies if an epoch is valid or not
-    /// @param epoch The epoch to verify
+    /// @param _epoch The epoch to verify
     /// @return True if valid
-    function isValidEpoch(uint256 epoch) external view returns (bool);
+    function isValidEpoch(uint256 _epoch) external view returns (bool);
 
     /// @notice Retrieve the block timestamp
     /// @return The current timestamp from the EVM context
@@ -213,6 +213,6 @@ interface IOracleV1 {
     function setQuorum(uint256 _newQuorum) external;
 
     /// @notice Submit a report as an oracle member
-    /// @param report The report structure
-    function reportConsensusLayerData(IRiverV1.ConsensusLayerReport calldata report) external;
+    /// @param _report The report structure
+    function reportConsensusLayerData(IRiverV1.ConsensusLayerReport calldata _report) external;
 }

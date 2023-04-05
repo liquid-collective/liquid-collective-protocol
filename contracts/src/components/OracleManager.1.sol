@@ -52,36 +52,36 @@ abstract contract OracleManagerV1 is IOracleManagerV1 {
     function _assetBalance() internal view virtual returns (uint256);
 
     /// @notice Pulls funds from the Withdraw contract, and adds funds to deposit and redeem balances
-    /// @param skimmedEthAmount The new amount of skimmed eth to pull
-    /// @param exitedEthAmount The new amount of exited eth to pull
-    function _pullCLFunds(uint256 skimmedEthAmount, uint256 exitedEthAmount) internal virtual;
+    /// @param _skimmedEthAmount The new amount of skimmed eth to pull
+    /// @param _exitedEthAmount The new amount of exited eth to pull
+    function _pullCLFunds(uint256 _skimmedEthAmount, uint256 _exitedEthAmount) internal virtual;
 
     /// @notice Pulls funds from the redeem manager exceeding eth buffer
-    /// @param max The maximum amount to pull
+    /// @param _max The maximum amount to pull
     /// @return The amount pulled
-    function _pullRedeemManagerExceedingEth(uint256 max) internal virtual returns (uint256);
+    function _pullRedeemManagerExceedingEth(uint256 _max) internal virtual returns (uint256);
 
     /// @notice Use the balance to redeem to report a withdrawal event on the redeem manager
     function _reportWithdrawToRedeemManager() internal virtual;
 
     /// @notice Change the stored stopped validator counts for all the operators
-    /// @param stoppedValidatorCounts The list of stopped validator counts
-    function _setReportedStoppedValidatorCounts(uint32[] memory stoppedValidatorCounts) internal virtual;
+    /// @param _stoppedValidatorCounts The list of stopped validator counts
+    function _setReportedStoppedValidatorCounts(uint32[] memory _stoppedValidatorCounts) internal virtual;
 
     /// @notice Requests exits of validators after possibly rebalancing deposit and redeem balances
-    /// @param exitingBalance The currently exiting funds, soon to be received on the execution layer
-    /// @param depositToRedeemRebalancingAllowed True if rebalancing from deposit to redeem is allowed
+    /// @param _exitingBalance The currently exiting funds, soon to be received on the execution layer
+    /// @param _depositToRedeemRebalancingAllowed True if rebalancing from deposit to redeem is allowed
     function _requestExitsBasedOnRedeemDemandAfterRebalancings(
-        uint256 exitingBalance,
-        bool depositToRedeemRebalancingAllowed
+        uint256 _exitingBalance,
+        bool _depositToRedeemRebalancingAllowed
     ) internal virtual;
 
     /// @notice Skims the redeem balance and sends remaining funds to the deposit balance
     function _skimExcessBalanceToRedeem() internal virtual;
 
     /// @notice Commits the deposit balance up to the allowed daily limit
-    /// @param period The period between current and last report
-    function _commitBalanceToDeposit(uint256 period) internal virtual;
+    /// @param _period The period between current and last report
+    function _commitBalanceToDeposit(uint256 _period) internal virtual;
 
     /// @notice Prevents unauthorized calls
     modifier onlyAdmin_OMV1() {
@@ -99,39 +99,39 @@ abstract contract OracleManagerV1 is IOracleManagerV1 {
     }
 
     /// @notice Initializes version 1.1 of the oracle manager
-    /// @param epochsPerFrame The amounts of epochs in a frame
-    /// @param slotsPerEpoch The slots inside an epoch
-    /// @param secondsPerSlot The seconds inside a slot
-    /// @param genesisTime The genesis timestamp
-    /// @param epochsToAssumedFinality The number of epochs before an epoch is considered final on-chain
-    /// @param annualAprUpperBound The reporting upper bound
-    /// @param relativeLowerBound The reporting lower bound
+    /// @param _epochsPerFrame The amounts of epochs in a frame
+    /// @param _slotsPerEpoch The slots inside an epoch
+    /// @param _secondsPerSlot The seconds inside a slot
+    /// @param _genesisTime The genesis timestamp
+    /// @param _epochsToAssumedFinality The number of epochs before an epoch is considered final on-chain
+    /// @param _annualAprUpperBound The reporting upper bound
+    /// @param _relativeLowerBound The reporting lower bound
     function initOracleManagerV1_1(
-        uint64 epochsPerFrame,
-        uint64 slotsPerEpoch,
-        uint64 secondsPerSlot,
-        uint64 genesisTime,
-        uint64 epochsToAssumedFinality,
-        uint256 annualAprUpperBound,
-        uint256 relativeLowerBound
+        uint64 _epochsPerFrame,
+        uint64 _slotsPerEpoch,
+        uint64 _secondsPerSlot,
+        uint64 _genesisTime,
+        uint64 _epochsToAssumedFinality,
+        uint256 _annualAprUpperBound,
+        uint256 _relativeLowerBound
     ) internal {
         CLSpec.set(
             CLSpec.CLSpecStruct({
-                epochsPerFrame: epochsPerFrame,
-                slotsPerEpoch: slotsPerEpoch,
-                secondsPerSlot: secondsPerSlot,
-                genesisTime: genesisTime,
-                epochsToAssumedFinality: epochsToAssumedFinality
+                epochsPerFrame: _epochsPerFrame,
+                slotsPerEpoch: _slotsPerEpoch,
+                secondsPerSlot: _secondsPerSlot,
+                genesisTime: _genesisTime,
+                epochsToAssumedFinality: _epochsToAssumedFinality
             })
         );
-        emit SetSpec(epochsPerFrame, slotsPerEpoch, secondsPerSlot, genesisTime, epochsToAssumedFinality);
+        emit SetSpec(_epochsPerFrame, _slotsPerEpoch, _secondsPerSlot, _genesisTime, _epochsToAssumedFinality);
         ReportBounds.set(
             ReportBounds.ReportBoundsStruct({
-                annualAprUpperBound: annualAprUpperBound,
-                relativeLowerBound: relativeLowerBound
+                annualAprUpperBound: _annualAprUpperBound,
+                relativeLowerBound: _relativeLowerBound
             })
         );
-        emit SetBounds(annualAprUpperBound, relativeLowerBound);
+        emit SetBounds(_annualAprUpperBound, _relativeLowerBound);
 
         IOracleManagerV1.StoredConsensusLayerReport memory storedReport;
         storedReport.epoch = uint256(LastOracleRoundId.get());
@@ -171,8 +171,8 @@ abstract contract OracleManagerV1 is IOracleManagerV1 {
     }
 
     /// @inheritdoc IOracleManagerV1
-    function isValidEpoch(uint256 epoch) external view returns (bool) {
-        return _isValidEpoch(CLSpec.get(), epoch);
+    function isValidEpoch(uint256 _epoch) external view returns (bool) {
+        return _isValidEpoch(CLSpec.get(), _epoch);
     }
 
     /// @inheritdoc IOracleManagerV1
@@ -226,21 +226,21 @@ abstract contract OracleManagerV1 is IOracleManagerV1 {
     }
 
     /// @inheritdoc IOracleManagerV1
-    function setCLSpec(CLSpec.CLSpecStruct calldata newValue) external onlyAdmin_OMV1 {
-        CLSpec.set(newValue);
+    function setCLSpec(CLSpec.CLSpecStruct calldata _newValue) external onlyAdmin_OMV1 {
+        CLSpec.set(_newValue);
         emit SetSpec(
-            newValue.epochsPerFrame,
-            newValue.slotsPerEpoch,
-            newValue.secondsPerSlot,
-            newValue.genesisTime,
-            newValue.epochsToAssumedFinality
+            _newValue.epochsPerFrame,
+            _newValue.slotsPerEpoch,
+            _newValue.secondsPerSlot,
+            _newValue.genesisTime,
+            _newValue.epochsToAssumedFinality
         );
     }
 
     /// @inheritdoc IOracleManagerV1
-    function setReportBounds(ReportBounds.ReportBoundsStruct calldata newValue) external onlyAdmin_OMV1 {
-        ReportBounds.set(newValue);
-        emit SetBounds(newValue.annualAprUpperBound, newValue.relativeLowerBound);
+    function setReportBounds(ReportBounds.ReportBoundsStruct calldata _newValue) external onlyAdmin_OMV1 {
+        ReportBounds.set(_newValue);
+        emit SetBounds(_newValue.annualAprUpperBound, _newValue.relativeLowerBound);
     }
 
     /// @notice Structure holding internal variables used during reporting
@@ -258,7 +258,7 @@ abstract contract OracleManagerV1 is IOracleManagerV1 {
     }
 
     /// @inheritdoc IOracleManagerV1
-    function setConsensusLayerData(IOracleManagerV1.ConsensusLayerReport calldata report) external {
+    function setConsensusLayerData(IOracleManagerV1.ConsensusLayerReport calldata _report) external {
         // only the oracle is allowed to call this endpoint
         if (msg.sender != OracleAddress.get()) {
             revert LibErrors.Unauthorized(msg.sender);
@@ -267,13 +267,13 @@ abstract contract OracleManagerV1 is IOracleManagerV1 {
         CLSpec.CLSpecStruct memory cls = CLSpec.get();
 
         // we start by verifying that the reported epoch is valid based on the consensus layer spec
-        if (!_isValidEpoch(cls, report.epoch)) {
-            revert InvalidEpoch(report.epoch);
+        if (!_isValidEpoch(cls, _report.epoch)) {
+            revert InvalidEpoch(_report.epoch);
         }
 
         // we ensure that the reported validator count is not decreasing
-        if (report.validatorsCount > DepositedValidatorCount.get()) {
-            revert InvalidValidatorCountReport(report.validatorsCount, DepositedValidatorCount.get());
+        if (_report.validatorsCount > DepositedValidatorCount.get()) {
+            revert InvalidValidatorCountReport(_report.validatorsCount, DepositedValidatorCount.get());
         }
 
         ConsensusLayerDataReportingVariables memory vars;
@@ -284,28 +284,28 @@ abstract contract OracleManagerV1 is IOracleManagerV1 {
             vars.lastReportExitedBalance = lastStoredReport.validatorsExitedBalance;
 
             // we ensure that the reported total exited balance is not decreasing
-            if (report.validatorsExitedBalance < vars.lastReportExitedBalance) {
+            if (_report.validatorsExitedBalance < vars.lastReportExitedBalance) {
                 revert InvalidDecreasingValidatorsExitedBalance(
-                    vars.lastReportExitedBalance, report.validatorsExitedBalance
+                    vars.lastReportExitedBalance, _report.validatorsExitedBalance
                 );
             }
 
             // we compute the exited amount increase by taking the delta between reports
-            vars.exitedAmountIncrease = report.validatorsExitedBalance - vars.lastReportExitedBalance;
+            vars.exitedAmountIncrease = _report.validatorsExitedBalance - vars.lastReportExitedBalance;
 
             vars.lastReportSkimmedBalance = lastStoredReport.validatorsSkimmedBalance;
 
             // we ensure that the reported total skimmed balance is not decreasing
-            if (report.validatorsSkimmedBalance < vars.lastReportSkimmedBalance) {
+            if (_report.validatorsSkimmedBalance < vars.lastReportSkimmedBalance) {
                 revert InvalidDecreasingValidatorsSkimmedBalance(
-                    vars.lastReportSkimmedBalance, report.validatorsSkimmedBalance
+                    vars.lastReportSkimmedBalance, _report.validatorsSkimmedBalance
                 );
             }
 
             // we compute the new skimmed amount by taking the delta between reports
-            vars.skimmedAmountIncrease = report.validatorsSkimmedBalance - vars.lastReportSkimmedBalance;
+            vars.skimmedAmountIncrease = _report.validatorsSkimmedBalance - vars.lastReportSkimmedBalance;
 
-            vars.timeElapsedSinceLastReport = _timeBetweenEpochs(cls, lastStoredReport.epoch, report.epoch);
+            vars.timeElapsedSinceLastReport = _timeBetweenEpochs(cls, lastStoredReport.epoch, _report.epoch);
         }
 
         IOracleManagerV1.StoredConsensusLayerReport storage lastReport = LastConsensusLayerReport.get();
@@ -316,9 +316,9 @@ abstract contract OracleManagerV1 is IOracleManagerV1 {
             lastReport.validatorsBalance + lastReport.validatorsSkimmedBalance + lastReport.validatorsExitedBalance;
         {
             uint256 lastReportValidatorsCount = lastReport.validatorsCount;
-            if (lastReportValidatorsCount < report.validatorsCount) {
+            if (lastReportValidatorsCount < _report.validatorsCount) {
                 preUnderlyingBalanceIncludingExits +=
-                    (report.validatorsCount - lastReportValidatorsCount) * _DEPOSIT_SIZE;
+                    (_report.validatorsCount - lastReportValidatorsCount) * _DEPOSIT_SIZE;
             }
         }
 
@@ -332,17 +332,17 @@ abstract contract OracleManagerV1 is IOracleManagerV1 {
             // we update the system parameters, this will have an impact on how the total underlying balance is computed
             IOracleManagerV1.StoredConsensusLayerReport memory storedReport;
 
-            storedReport.epoch = report.epoch;
-            storedReport.validatorsBalance = report.validatorsBalance;
-            storedReport.validatorsSkimmedBalance = report.validatorsSkimmedBalance;
-            storedReport.validatorsExitedBalance = report.validatorsExitedBalance;
-            storedReport.validatorsExitingBalance = report.validatorsExitingBalance;
-            storedReport.validatorsCount = report.validatorsCount;
-            storedReport.bufferRebalancingMode = report.bufferRebalancingMode;
-            storedReport.slashingContainmentMode = report.slashingContainmentMode;
+            storedReport.epoch = _report.epoch;
+            storedReport.validatorsBalance = _report.validatorsBalance;
+            storedReport.validatorsSkimmedBalance = _report.validatorsSkimmedBalance;
+            storedReport.validatorsExitedBalance = _report.validatorsExitedBalance;
+            storedReport.validatorsExitingBalance = _report.validatorsExitingBalance;
+            storedReport.validatorsCount = _report.validatorsCount;
+            storedReport.bufferRebalancingMode = _report.bufferRebalancingMode;
+            storedReport.slashingContainmentMode = _report.slashingContainmentMode;
             LastConsensusLayerReport.set(storedReport);
         }
-        _setReportedStoppedValidatorCounts(report.stoppedValidatorCountPerOperator);
+        _setReportedStoppedValidatorCounts(_report.stoppedValidatorCountPerOperator);
 
         ReportBounds.ReportBoundsStruct memory rb = ReportBounds.get();
 
@@ -352,7 +352,7 @@ abstract contract OracleManagerV1 is IOracleManagerV1 {
         // we retrieve the new total underlying balance after system parameters are changed
         vars.postReportUnderlyingBalance = _assetBalance();
         uint256 postUnderlyingBalanceIncludingExits =
-            report.validatorsBalance + report.validatorsSkimmedBalance + report.validatorsExitedBalance;
+            _report.validatorsBalance + _report.validatorsSkimmedBalance + _report.validatorsExitedBalance;
 
         // we can now compute the earned rewards from the consensus layer balances
         // in order to properly account for the balance increase, we compare the sums of current balances, skimmed balance and exited balances
@@ -428,10 +428,10 @@ abstract contract OracleManagerV1 is IOracleManagerV1 {
         }
 
         // if the slashing containment mode is active, we do not perform exit related action until it is disabled
-        if (!report.slashingContainmentMode) {
+        if (!_report.slashingContainmentMode) {
             // we request exits based on incoming still in the exit process and current eth buffers
             _requestExitsBasedOnRedeemDemandAfterRebalancings(
-                report.validatorsExitingBalance, report.bufferRebalancingMode
+                _report.validatorsExitingBalance, _report.bufferRebalancingMode
             );
         }
 
@@ -445,62 +445,62 @@ abstract contract OracleManagerV1 is IOracleManagerV1 {
         _commitBalanceToDeposit(vars.timeElapsedSinceLastReport);
 
         // we emit a summary event with all the reporting details
-        emit ProcessedConsensusLayerReport(report, vars.trace);
+        emit ProcessedConsensusLayerReport(_report, vars.trace);
     }
 
     /// @notice Retrieve the current epoch based on the current timestamp
-    /// @param cls The consensus layer spec struct
+    /// @param _cls The consensus layer spec struct
     /// @return The current epoch
-    function _currentEpoch(CLSpec.CLSpecStruct memory cls) internal view returns (uint256) {
-        return ((block.timestamp - cls.genesisTime) / cls.secondsPerSlot) / cls.slotsPerEpoch;
+    function _currentEpoch(CLSpec.CLSpecStruct memory _cls) internal view returns (uint256) {
+        return ((block.timestamp - _cls.genesisTime) / _cls.secondsPerSlot) / _cls.slotsPerEpoch;
     }
 
     /// @notice Verifies if the given epoch is valid
-    /// @param cls The consensus layer spec struct
-    /// @param epoch The epoch to verify
+    /// @param _cls The consensus layer spec struct
+    /// @param _epoch The epoch to verify
     /// @return True if valid
-    function _isValidEpoch(CLSpec.CLSpecStruct memory cls, uint256 epoch) internal view returns (bool) {
+    function _isValidEpoch(CLSpec.CLSpecStruct memory _cls, uint256 _epoch) internal view returns (bool) {
         return (
-            _currentEpoch(cls) >= epoch + cls.epochsToAssumedFinality && epoch >= LastConsensusLayerReport.get().epoch
-                && epoch % cls.epochsPerFrame == 0
+            _currentEpoch(_cls) >= _epoch + _cls.epochsToAssumedFinality
+                && _epoch >= LastConsensusLayerReport.get().epoch && _epoch % _cls.epochsPerFrame == 0
         );
     }
 
     /// @notice Retrieves the maximum increase in balance based on current total underlying supply and period since last report
-    /// @param rb The report bounds struct
+    /// @param _rb The report bounds struct
     /// @param _prevTotalEth The total underlying supply during reporting
     /// @param _timeElapsed The time since last report
     /// @return The maximum allowed increase in balance
-    function _maxIncrease(ReportBounds.ReportBoundsStruct memory rb, uint256 _prevTotalEth, uint256 _timeElapsed)
+    function _maxIncrease(ReportBounds.ReportBoundsStruct memory _rb, uint256 _prevTotalEth, uint256 _timeElapsed)
         internal
         pure
         returns (uint256)
     {
-        return (_prevTotalEth * rb.annualAprUpperBound * _timeElapsed) / (LibBasisPoints.BASIS_POINTS_MAX * ONE_YEAR);
+        return (_prevTotalEth * _rb.annualAprUpperBound * _timeElapsed) / (LibBasisPoints.BASIS_POINTS_MAX * ONE_YEAR);
     }
 
     /// @notice Retrieves the maximum decrease in balance based on current total underlying supply
-    /// @param rb The report bounds struct
+    /// @param _rb The report bounds struct
     /// @param _prevTotalEth The total underlying supply during reporting
     /// @return The maximum allowed decrease in balance
-    function _maxDecrease(ReportBounds.ReportBoundsStruct memory rb, uint256 _prevTotalEth)
+    function _maxDecrease(ReportBounds.ReportBoundsStruct memory _rb, uint256 _prevTotalEth)
         internal
         pure
         returns (uint256)
     {
-        return (_prevTotalEth * rb.relativeLowerBound) / LibBasisPoints.BASIS_POINTS_MAX;
+        return (_prevTotalEth * _rb.relativeLowerBound) / LibBasisPoints.BASIS_POINTS_MAX;
     }
 
     /// @notice Retrieve the number of seconds between two epochs
-    /// @param cls The consensus layer spec struct
-    /// @param epochPast The starting epoch
-    /// @param epochNow The current epoch
+    /// @param _cls The consensus layer spec struct
+    /// @param _epochPast The starting epoch
+    /// @param _epochNow The current epoch
     /// @return The number of seconds between the two epochs
-    function _timeBetweenEpochs(CLSpec.CLSpecStruct memory cls, uint256 epochPast, uint256 epochNow)
+    function _timeBetweenEpochs(CLSpec.CLSpecStruct memory _cls, uint256 _epochPast, uint256 _epochNow)
         internal
         pure
         returns (uint256)
     {
-        return (epochNow - epochPast) * (cls.secondsPerSlot * cls.slotsPerEpoch);
+        return (_epochNow - _epochPast) * (_cls.secondsPerSlot * _cls.slotsPerEpoch);
     }
 }

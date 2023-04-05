@@ -82,24 +82,27 @@ interface IRedeemManagerV1 {
     /// @param withdrawalEventId The provided associated withdrawal event id
     error DoesNotMatch(uint256 redeemRequestId, uint256 withdrawalEventId);
 
-    /// @param river The address of the River contract
-    function initializeRedeemManagerV1(address river) external;
+    /// @param _river The address of the River contract
+    function initializeRedeemManagerV1(address _river) external;
 
     /// @notice Retrieve the global count of redeem requests
     function getRedeemRequestCount() external view returns (uint256);
 
     /// @notice Retrieve the details of a specific redeem request
-    /// @param redeemRequestId The id of the request
+    /// @param _redeemRequestId The id of the request
     /// @return The redeem request details
-    function getRedeemRequestDetails(uint32 redeemRequestId) external view returns (RedeemQueue.RedeemRequest memory);
+    function getRedeemRequestDetails(uint32 _redeemRequestId)
+        external
+        view
+        returns (RedeemQueue.RedeemRequest memory);
 
     /// @notice Retrieve the global count of withdrawal events
     function getWithdrawalEventCount() external view returns (uint256);
 
     /// @notice Retrieve the details of a specific withdrawal event
-    /// @param withdrawalEventId The id of the withdrawal event
+    /// @param _withdrawalEventId The id of the withdrawal event
     /// @return The withdrawal event details
-    function getWithdrawalEventDetails(uint32 withdrawalEventId)
+    function getWithdrawalEventDetails(uint32 _withdrawalEventId)
         external
         view
         returns (WithdrawalStack.WithdrawalEvent memory);
@@ -114,48 +117,48 @@ interface IRedeemManagerV1 {
     /// @dev -2 means that the request is out of bounds
     /// @dev -3 means that the request has already been claimed
     /// @dev This call was created to be called by an off-chain interface, the output could then be used to perform the claimRewards call in a regular transaction
-    /// @param redeemRequestIds The list of redeem requests to resolve
+    /// @param _redeemRequestIds The list of redeem requests to resolve
     /// @return withdrawalEventIds The list of withdrawal events matching every redeem request (or error codes)
-    function resolveRedeemRequests(uint32[] calldata redeemRequestIds)
+    function resolveRedeemRequests(uint32[] calldata _redeemRequestIds)
         external
         view
         returns (int64[] memory withdrawalEventIds);
 
     /// @notice Creates a redeem request
-    /// @param lsETHAmount The amount of LsETH to redeem
-    /// @param recipient The recipient owning the redeem request
+    /// @param _lsETHAmount The amount of LsETH to redeem
+    /// @param _recipient The recipient owning the redeem request
     /// @return redeemRequestId The id of the redeem request
-    function requestRedeem(uint256 lsETHAmount, address recipient) external returns (uint32 redeemRequestId);
+    function requestRedeem(uint256 _lsETHAmount, address _recipient) external returns (uint32 redeemRequestId);
 
     /// @notice Creates a redeem request using msg.sender as recipient
-    /// @param lsETHAmount The amount of LsETH to redeem
+    /// @param _lsETHAmount The amount of LsETH to redeem
     /// @return redeemRequestId The id of the redeem request
-    function requestRedeem(uint256 lsETHAmount) external returns (uint32 redeemRequestId);
+    function requestRedeem(uint256 _lsETHAmount) external returns (uint32 redeemRequestId);
 
     /// @notice Claims the rewards of the provided redeem request ids
-    /// @param redeemRequestIds The list of redeem requests to claim
-    /// @param withdrawalEventIds The list of withdrawal events to use for every redeem request claim
-    /// @param skipAlreadyClaimed True if the call should not revert on claiming of already claimed requests
+    /// @param _redeemRequestIds The list of redeem requests to claim
+    /// @param _withdrawalEventIds The list of withdrawal events to use for every redeem request claim
+    /// @param _skipAlreadyClaimed True if the call should not revert on claiming of already claimed requests
     /// @return claimStatuses The list of claim statuses. 0 for fully claimed, 1 for partially claimed, 2 for skipped
     function claimRedeemRequests(
-        uint32[] calldata redeemRequestIds,
-        uint32[] calldata withdrawalEventIds,
-        bool skipAlreadyClaimed
+        uint32[] calldata _redeemRequestIds,
+        uint32[] calldata _withdrawalEventIds,
+        bool _skipAlreadyClaimed
     ) external returns (uint8[] memory claimStatuses);
 
     /// @notice Claims the rewards of the provided redeem request ids
-    /// @param redeemRequestIds The list of redeem requests to claim
-    /// @param withdrawalEventIds The list of withdrawal events to use for every redeem request claim
+    /// @param _redeemRequestIds The list of redeem requests to claim
+    /// @param _withdrawalEventIds The list of withdrawal events to use for every redeem request claim
     /// @return claimStatuses The list of claim statuses. 0 for fully claimed, 1 for partially claimed, 2 for skipped
-    function claimRedeemRequests(uint32[] calldata redeemRequestIds, uint32[] calldata withdrawalEventIds)
+    function claimRedeemRequests(uint32[] calldata _redeemRequestIds, uint32[] calldata _withdrawalEventIds)
         external
         returns (uint8[] memory claimStatuses);
 
     /// @notice Reports a withdraw event from River
-    /// @param lsETHWithdrawable The amount of LsETH that can be redeemed due to this new withdraw event
-    function reportWithdraw(uint256 lsETHWithdrawable) external payable;
+    /// @param _lsETHWithdrawable The amount of LsETH that can be redeemed due to this new withdraw event
+    function reportWithdraw(uint256 _lsETHWithdrawable) external payable;
 
     /// @notice Pulls exceeding buffer eth
-    /// @param max The maximum amount that should be pulled
-    function pullExceedingEth(uint256 max) external;
+    /// @param _max The maximum amount that should be pulled
+    function pullExceedingEth(uint256 _max) external;
 }

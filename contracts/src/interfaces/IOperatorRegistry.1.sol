@@ -218,8 +218,8 @@ interface IOperatorsRegistryV1 {
 
     /// @notice Allows river to override the stopped validators array
     /// @notice This actions happens during the Oracle report processing
-    /// @param stoppedValidatorCounts The new stopped validators array
-    function reportStoppedValidatorCounts(uint32[] calldata stoppedValidatorCounts) external;
+    /// @param _stoppedValidatorCounts The new stopped validators array
+    function reportStoppedValidatorCounts(uint32[] calldata _stoppedValidatorCounts) external;
 
     /// @notice Adds an operator to the registry
     /// @dev Only callable by the administrator

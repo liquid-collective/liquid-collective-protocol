@@ -124,35 +124,35 @@ contract RiverV1 is
     /// @inheritdoc IRiverV1
     function initRiverV1_1(
         address _redeemManager,
-        uint64 epochsPerFrame,
-        uint64 slotsPerEpoch,
-        uint64 secondsPerSlot,
-        uint64 genesisTime,
-        uint64 epochsToAssumedFinality,
-        uint256 annualAprUpperBound,
-        uint256 relativeLowerBound,
-        uint128 maxDailyNetCommittableAmount_,
-        uint128 maxDailyRelativeCommittableAmount_
+        uint64 _epochsPerFrame,
+        uint64 _slotsPerEpoch,
+        uint64 _secondsPerSlot,
+        uint64 _genesisTime,
+        uint64 _epochsToAssumedFinality,
+        uint256 _annualAprUpperBound,
+        uint256 _relativeLowerBound,
+        uint128 _maxDailyNetCommittableAmount_,
+        uint128 _maxDailyRelativeCommittableAmount_
     ) external init(1) {
         RedeemManagerAddress.set(_redeemManager);
         emit SetRedeemManager(_redeemManager);
 
         DailyCommittableLimits.set(
             DailyCommittableLimits.DailyCommittableLimitsStruct({
-                maxDailyNetCommittableAmount: maxDailyNetCommittableAmount_,
-                maxDailyRelativeCommittableAmount: maxDailyRelativeCommittableAmount_
+                maxDailyNetCommittableAmount: _maxDailyNetCommittableAmount_,
+                maxDailyRelativeCommittableAmount: _maxDailyRelativeCommittableAmount_
             })
         );
-        emit SetMaxDailyCommittableAmounts(maxDailyNetCommittableAmount_, maxDailyRelativeCommittableAmount_);
+        emit SetMaxDailyCommittableAmounts(_maxDailyNetCommittableAmount_, _maxDailyRelativeCommittableAmount_);
 
         initOracleManagerV1_1(
-            epochsPerFrame,
-            slotsPerEpoch,
-            secondsPerSlot,
-            genesisTime,
-            epochsToAssumedFinality,
-            annualAprUpperBound,
-            relativeLowerBound
+            _epochsPerFrame,
+            _slotsPerEpoch,
+            _secondsPerSlot,
+            _genesisTime,
+            _epochsToAssumedFinality,
+            _annualAprUpperBound,
+            _relativeLowerBound
         );
 
         _approve(address(this), _redeemManager, type(uint256).max);
@@ -198,12 +198,12 @@ contract RiverV1 is
     }
 
     /// @inheritdoc IRiverV1
-    function setDailyCommittableLimits(DailyCommittableLimits.DailyCommittableLimitsStruct memory dcl)
+    function setDailyCommittableLimits(DailyCommittableLimits.DailyCommittableLimitsStruct memory _dcl)
         external
         onlyAdmin
     {
-        DailyCommittableLimits.set(dcl);
-        emit SetMaxDailyCommittableAmounts(dcl.maxDailyNetCommittableAmount, dcl.maxDailyRelativeCommittableAmount);
+        DailyCommittableLimits.set(_dcl);
+        emit SetMaxDailyCommittableAmounts(_dcl.maxDailyNetCommittableAmount, _dcl.maxDailyRelativeCommittableAmount);
     }
 
     /// @inheritdoc IRiverV1
@@ -212,34 +212,35 @@ contract RiverV1 is
     }
 
     /// @inheritdoc IRiverV1
-    function resolveRedeemRequests(uint32[] calldata redeemRequestIds)
+    function resolveRedeemRequests(uint32[] calldata _redeemRequestIds)
         external
         view
         returns (int64[] memory withdrawalEventIds)
     {
-        return IRedeemManagerV1(RedeemManagerAddress.get()).resolveRedeemRequests(redeemRequestIds);
+        return IRedeemManagerV1(RedeemManagerAddress.get()).resolveRedeemRequests(_redeemRequestIds);
     }
 
     /// @inheritdoc IRiverV1
-    function requestRedeem(uint256 lsETHAmount) external returns (uint32 redeemRequestId) {
+    function requestRedeem(uint256 _lsETHAmount) external returns (uint32 _redeemRequestId) {
         IAllowlistV1(AllowlistAddress.get()).onlyAllowed(msg.sender, LibAllowlistMasks.REDEEM_MASK);
-        _transfer(msg.sender, address(this), lsETHAmount);
-        return IRedeemManagerV1(RedeemManagerAddress.get()).requestRedeem(lsETHAmount, msg.sender);
+        _transfer(msg.sender, address(this), _lsETHAmount);
+        return IRedeemManagerV1(RedeemManagerAddress.get()).requestRedeem(_lsETHAmount, msg.sender);
     }
 
     /// @inheritdoc IRiverV1
-    function claimRedeemRequests(uint32[] calldata redeemRequestIds, uint32[] calldata withdrawalEventIds)
+    function claimRedeemRequests(uint32[] calldata _redeemRequestIds, uint32[] calldata _withdrawalEventIds)
         external
         returns (uint8[] memory claimStatuses)
     {
-        return
-            IRedeemManagerV1(RedeemManagerAddress.get()).claimRedeemRequests(redeemRequestIds, withdrawalEventIds, true);
+        return IRedeemManagerV1(RedeemManagerAddress.get()).claimRedeemRequests(
+            _redeemRequestIds, _withdrawalEventIds, true
+        );
     }
 
     /// @inheritdoc IRiverV1
-    function setGlobalFee(uint256 newFee) external onlyAdmin {
-        GlobalFee.set(newFee);
-        emit SetGlobalFee(newFee);
+    function setGlobalFee(uint256 _newFee) external onlyAdmin {
+        GlobalFee.set(_newFee);
+        emit SetGlobalFee(_newFee);
     }
 
     /// @inheritdoc IRiverV1
@@ -431,50 +432,50 @@ contract RiverV1 is
     }
 
     /// @notice Sets the balance to deposit, but not yet committed
-    /// @param newBalanceToDeposit The new balance to deposit value
-    function _setBalanceToDeposit(uint256 newBalanceToDeposit) internal override(UserDepositManagerV1) {
-        emit SetBalanceToDeposit(BalanceToDeposit.get(), newBalanceToDeposit);
-        BalanceToDeposit.set(newBalanceToDeposit);
+    /// @param _newBalanceToDeposit The new balance to deposit value
+    function _setBalanceToDeposit(uint256 _newBalanceToDeposit) internal override(UserDepositManagerV1) {
+        emit SetBalanceToDeposit(BalanceToDeposit.get(), _newBalanceToDeposit);
+        BalanceToDeposit.set(_newBalanceToDeposit);
     }
 
     /// @notice Sets the balance to redeem, to be used to satisfy redeem requests on the redeem manager
-    /// @param newBalanceToRedeem The new balance to redeem value
-    function _setBalanceToRedeem(uint256 newBalanceToRedeem) internal {
-        emit SetBalanceToRedeem(BalanceToRedeem.get(), newBalanceToRedeem);
-        BalanceToRedeem.set(newBalanceToRedeem);
+    /// @param _newBalanceToRedeem The new balance to redeem value
+    function _setBalanceToRedeem(uint256 _newBalanceToRedeem) internal {
+        emit SetBalanceToRedeem(BalanceToRedeem.get(), _newBalanceToRedeem);
+        BalanceToRedeem.set(_newBalanceToRedeem);
     }
 
     /// @notice Sets the committed balance, ready to be deposited to the consensus layer
-    /// @param newCommittedBalance The new committed balance value
-    function _setCommittedBalance(uint256 newCommittedBalance) internal override(ConsensusLayerDepositManagerV1) {
-        emit SetBalanceCommittedToDeposit(CommittedBalance.get(), newCommittedBalance);
-        CommittedBalance.set(newCommittedBalance);
+    /// @param _newCommittedBalance The new committed balance value
+    function _setCommittedBalance(uint256 _newCommittedBalance) internal override(ConsensusLayerDepositManagerV1) {
+        emit SetBalanceCommittedToDeposit(CommittedBalance.get(), _newCommittedBalance);
+        CommittedBalance.set(_newCommittedBalance);
     }
 
     /// @notice Pulls funds from the Withdraw contract, and adds funds to deposit and redeem balances
-    /// @param skimmedEthAmount The new amount of skimmed eth to pull
-    /// @param exitedEthAmount The new amount of exited eth to pull
-    function _pullCLFunds(uint256 skimmedEthAmount, uint256 exitedEthAmount) internal override {
+    /// @param _skimmedEthAmount The new amount of skimmed eth to pull
+    /// @param _exitedEthAmount The new amount of exited eth to pull
+    function _pullCLFunds(uint256 _skimmedEthAmount, uint256 _exitedEthAmount) internal override {
         uint256 currentBalance = address(this).balance;
-        uint256 totalAmountToPull = skimmedEthAmount + exitedEthAmount;
+        uint256 totalAmountToPull = _skimmedEthAmount + _exitedEthAmount;
         IWithdrawV1(WithdrawalCredentials.getAddress()).pullEth(totalAmountToPull);
         uint256 collectedCLFunds = address(this).balance - currentBalance;
-        if (collectedCLFunds != skimmedEthAmount + exitedEthAmount) {
-            revert InvalidPulledClFundsAmount(skimmedEthAmount + exitedEthAmount, collectedCLFunds);
+        if (collectedCLFunds != _skimmedEthAmount + _exitedEthAmount) {
+            revert InvalidPulledClFundsAmount(_skimmedEthAmount + _exitedEthAmount, collectedCLFunds);
         }
-        if (skimmedEthAmount > 0) {
-            _setBalanceToDeposit(BalanceToDeposit.get() + skimmedEthAmount);
+        if (_skimmedEthAmount > 0) {
+            _setBalanceToDeposit(BalanceToDeposit.get() + _skimmedEthAmount);
         }
-        if (exitedEthAmount > 0) {
-            _setBalanceToRedeem(BalanceToRedeem.get() + exitedEthAmount);
+        if (_exitedEthAmount > 0) {
+            _setBalanceToRedeem(BalanceToRedeem.get() + _exitedEthAmount);
         }
     }
 
     /// @notice Pulls funds from the redeem manager exceeding eth buffer
-    /// @param max The maximum amount to pull
-    function _pullRedeemManagerExceedingEth(uint256 max) internal override returns (uint256) {
+    /// @param _max The maximum amount to pull
+    function _pullRedeemManagerExceedingEth(uint256 _max) internal override returns (uint256) {
         uint256 currentBalance = address(this).balance;
-        IRedeemManagerV1(RedeemManagerAddress.get()).pullExceedingEth(max);
+        IRedeemManagerV1(RedeemManagerAddress.get()).pullExceedingEth(_max);
         uint256 collectedExceedingEth = address(this).balance - currentBalance;
         if (collectedExceedingEth > 0) {
             _setBalanceToDeposit(BalanceToDeposit.get() + collectedExceedingEth);
@@ -520,17 +521,17 @@ contract RiverV1 is
     }
 
     /// @notice Change the stored stopped validator counts for all the operators
-    /// @param stoppedValidatorCounts The list of stopped validator counts
-    function _setReportedStoppedValidatorCounts(uint32[] memory stoppedValidatorCounts) internal override {
-        IOperatorsRegistryV1(OperatorsRegistryAddress.get()).reportStoppedValidatorCounts(stoppedValidatorCounts);
+    /// @param _stoppedValidatorCounts The list of stopped validator counts
+    function _setReportedStoppedValidatorCounts(uint32[] memory _stoppedValidatorCounts) internal override {
+        IOperatorsRegistryV1(OperatorsRegistryAddress.get()).reportStoppedValidatorCounts(_stoppedValidatorCounts);
     }
 
     /// @notice Requests exits of validators after possibly rebalancing deposit and redeem balances
-    /// @param exitingBalance The currently exiting funds, soon to be received on the execution layer
-    /// @param depositToRedeemRebalancingAllowed True if rebalancing from deposit to redeem is allowed
+    /// @param _exitingBalance The currently exiting funds, soon to be received on the execution layer
+    /// @param _depositToRedeemRebalancingAllowed True if rebalancing from deposit to redeem is allowed
     function _requestExitsBasedOnRedeemDemandAfterRebalancings(
-        uint256 exitingBalance,
-        bool depositToRedeemRebalancingAllowed
+        uint256 _exitingBalance,
+        bool _depositToRedeemRebalancingAllowed
     ) internal override {
         uint256 totalSupply = _totalSupply();
         if (totalSupply > 0) {
@@ -540,11 +541,11 @@ contract RiverV1 is
 
             // if after all rebalancings, the redeem manager demand is still higher than the balance to redeem and exiting eth, we compute
             // the amount of validators to exit in order to cover the remaining demand
-            if (availableBalanceToRedeem + exitingBalance < redeemManagerDemandInEth) {
+            if (availableBalanceToRedeem + _exitingBalance < redeemManagerDemandInEth) {
                 // if reblancing is enabled and the redeem manager demand is higher than exiting eth, we add eth for deposit buffer to redeem buffer
-                if (depositToRedeemRebalancingAllowed && availableBalanceToDeposit > 0) {
+                if (_depositToRedeemRebalancingAllowed && availableBalanceToDeposit > 0) {
                     uint256 rebalancingAmount = LibUint256.min(
-                        availableBalanceToDeposit, redeemManagerDemandInEth - exitingBalance - availableBalanceToRedeem
+                        availableBalanceToDeposit, redeemManagerDemandInEth - _exitingBalance - availableBalanceToRedeem
                     );
                     if (rebalancingAmount > 0) {
                         availableBalanceToRedeem += rebalancingAmount;
@@ -564,9 +565,9 @@ contract RiverV1 is
                         : 0
                 ) * DEPOSIT_SIZE;
 
-                if (availableBalanceToRedeem + exitingBalance + preExitingBalance < redeemManagerDemandInEth) {
+                if (availableBalanceToRedeem + _exitingBalance + preExitingBalance < redeemManagerDemandInEth) {
                     uint256 validatorCountToExit = LibUint256.ceil(
-                        redeemManagerDemandInEth - (availableBalanceToRedeem + exitingBalance + preExitingBalance),
+                        redeemManagerDemandInEth - (availableBalanceToRedeem + _exitingBalance + preExitingBalance),
                         DEPOSIT_SIZE
                     );
 
@@ -588,8 +589,8 @@ contract RiverV1 is
     }
 
     /// @notice Commits the deposit balance up to the allowed daily limit
-    /// @param period The period between current and last report
-    function _commitBalanceToDeposit(uint256 period) internal override {
+    /// @param _period The period between current and last report
+    function _commitBalanceToDeposit(uint256 _period) internal override {
         uint256 underlyingAssetBalance = _assetBalance();
         uint256 currentBalanceToDeposit = BalanceToDeposit.get();
         DailyCommittableLimits.DailyCommittableLimitsStruct memory dcl = DailyCommittableLimits.get();
@@ -602,7 +603,7 @@ contract RiverV1 is
         );
         // we adapt the value for the reporting period by using the asset balance as upper bound
         uint256 currentMaxCommittableAmount = LibUint256.min(
-            LibUint256.min(underlyingAssetBalance, (currentMaxDailyCommittableAmount * period) / 1 days),
+            LibUint256.min(underlyingAssetBalance, (currentMaxDailyCommittableAmount * _period) / 1 days),
             currentBalanceToDeposit
         );
 

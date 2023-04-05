@@ -134,26 +134,26 @@ interface IRiverV1 is IConsensusLayerDepositManagerV1, IUserDepositManagerV1, IS
 
     /// @notice Initialized version 1.1 of the River System
     /// @param _redeemManager The redeem manager address
-    /// @param epochsPerFrame The amounts of epochs in a frame
-    /// @param slotsPerEpoch The slots inside an epoch
-    /// @param secondsPerSlot The seconds inside a slot
-    /// @param genesisTime The genesis timestamp
-    /// @param epochsToAssumedFinality The number of epochs before an epoch is considered final on-chain
-    /// @param annualAprUpperBound The reporting upper bound
-    /// @param relativeLowerBound The reporting lower bound
-    /// @param maxDailyNetCommittableAmount_ The net daily committable limit
-    /// @param maxDailyRelativeCommittableAmount_ The relative daily committable limit
+    /// @param _epochsPerFrame The amounts of epochs in a frame
+    /// @param _slotsPerEpoch The slots inside an epoch
+    /// @param _secondsPerSlot The seconds inside a slot
+    /// @param _genesisTime The genesis timestamp
+    /// @param _epochsToAssumedFinality The number of epochs before an epoch is considered final on-chain
+    /// @param _annualAprUpperBound The reporting upper bound
+    /// @param _relativeLowerBound The reporting lower bound
+    /// @param _maxDailyNetCommittableAmount_ The net daily committable limit
+    /// @param _maxDailyRelativeCommittableAmount_ The relative daily committable limit
     function initRiverV1_1(
         address _redeemManager,
-        uint64 epochsPerFrame,
-        uint64 slotsPerEpoch,
-        uint64 secondsPerSlot,
-        uint64 genesisTime,
-        uint64 epochsToAssumedFinality,
-        uint256 annualAprUpperBound,
-        uint256 relativeLowerBound,
-        uint128 maxDailyNetCommittableAmount_,
-        uint128 maxDailyRelativeCommittableAmount_
+        uint64 _epochsPerFrame,
+        uint64 _slotsPerEpoch,
+        uint64 _secondsPerSlot,
+        uint64 _genesisTime,
+        uint64 _epochsToAssumedFinality,
+        uint256 _annualAprUpperBound,
+        uint256 _relativeLowerBound,
+        uint128 _maxDailyNetCommittableAmount_,
+        uint128 _maxDailyRelativeCommittableAmount_
     ) external;
 
     /// @notice Get the current global fee
@@ -192,37 +192,37 @@ interface IRiverV1 is IConsensusLayerDepositManagerV1, IUserDepositManagerV1, IS
         returns (DailyCommittableLimits.DailyCommittableLimitsStruct memory);
 
     /// @notice Resolves the provided redeem requests by calling the redeem manager
-    /// @param redeemRequestIds The list of redeem requests to resolve
+    /// @param _redeemRequestIds The list of redeem requests to resolve
     /// @return withdrawalEventIds The list of matching withdrawal events, or error codes
-    function resolveRedeemRequests(uint32[] calldata redeemRequestIds)
+    function resolveRedeemRequests(uint32[] calldata _redeemRequestIds)
         external
         view
         returns (int64[] memory withdrawalEventIds);
 
     /// @notice Set the daily committable limits
-    /// @param dcl The Daily Committable Limits structure
-    function setDailyCommittableLimits(DailyCommittableLimits.DailyCommittableLimitsStruct memory dcl) external;
+    /// @param _dcl The Daily Committable Limits structure
+    function setDailyCommittableLimits(DailyCommittableLimits.DailyCommittableLimitsStruct memory _dcl) external;
 
     /// @notice Retrieve the current balance to redeem
     /// @return The current balance to redeem
     function getBalanceToRedeem() external view returns (uint256);
 
     /// @notice Performs a redeem request on the redeem manager
-    /// @param lsETHAmount The amount of LsETH to redeem
+    /// @param _lsETHAmount The amount of LsETH to redeem
     /// @return redeemRequestId The ID of the newly created redeem request
-    function requestRedeem(uint256 lsETHAmount) external returns (uint32 redeemRequestId);
+    function requestRedeem(uint256 _lsETHAmount) external returns (uint32 redeemRequestId);
 
     /// @notice Claims several redeem requests
-    /// @param redeemRequestIds The list of redeem requests to claim
-    /// @param withdrawalEventIds The list of resolved withdrawal event ids
+    /// @param _redeemRequestIds The list of redeem requests to claim
+    /// @param _withdrawalEventIds The list of resolved withdrawal event ids
     /// @return claimStatuses The operation status results
-    function claimRedeemRequests(uint32[] calldata redeemRequestIds, uint32[] calldata withdrawalEventIds)
+    function claimRedeemRequests(uint32[] calldata _redeemRequestIds, uint32[] calldata _withdrawalEventIds)
         external
         returns (uint8[] memory claimStatuses);
 
     /// @notice Changes the global fee parameter
-    /// @param newFee New fee value
-    function setGlobalFee(uint256 newFee) external;
+    /// @param _newFee New fee value
+    function setGlobalFee(uint256 _newFee) external;
 
     /// @notice Changes the allowlist address
     /// @param _newAllowlist New address for the allowlist
