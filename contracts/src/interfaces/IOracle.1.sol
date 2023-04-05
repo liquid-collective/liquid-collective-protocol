@@ -143,50 +143,10 @@ interface IOracleV1 {
     /// @return True if address is a member
     function isMember(address _memberAddress) external view returns (bool);
 
-    /// @notice Verifies if an epoch is valid or not
-    /// @param epoch The epoch to verify
-    /// @return True if valid
-    function isValidEpoch(uint256 epoch) external view returns (bool);
-
-    /// @notice Retrieve the block timestamp
-    /// @return The current timestamp from the EVM context
-    function getTime() external view returns (uint256);
-
-    /// @notice Retrieve expected epoch id
-    /// @return The current expected epoch id
-    function getExpectedEpochId() external view returns (uint256);
-
-    /// @notice Retrieve the last completed epoch id
-    /// @return The last completed epoch id
-    function getLastCompletedEpochId() external view returns (uint256);
-
     /// @notice Retrieve the last reported epoch id
     /// @dev The Oracle contracts expects reports on an epoch id >= that the returned value
     /// @return The last reported epoch id
     function getLastReportedEpochId() external view returns (uint256);
-
-    /// @notice Retrieve the current epoch id based on block timestamp
-    /// @return The current epoch id
-    function getCurrentEpochId() external view returns (uint256);
-
-    /// @notice Retrieve the current cl spec
-    /// @return The Consensus Layer Specification
-    function getCLSpec() external view returns (CLSpec.CLSpecStruct memory);
-
-    /// @notice Retrieve the current frame details
-    /// @return _startEpochId The epoch at the beginning of the frame
-    /// @return _startTime The timestamp of the beginning of the frame in seconds
-    /// @return _endTime The timestamp of the end of the frame in seconds
-    function getCurrentFrame() external view returns (uint256 _startEpochId, uint256 _startTime, uint256 _endTime);
-
-    /// @notice Retrieve the first epoch id of the frame of the provided epoch id
-    /// @param _epochId Epoch id used to get the frame
-    /// @return The first epoch id of the frame containing the given epoch id
-    function getFrameFirstEpochId(uint256 _epochId) external view returns (uint256);
-
-    /// @notice Retrieve the report bounds
-    /// @return The report bounds
-    function getReportBounds() external view returns (ReportBounds.ReportBoundsStruct memory);
 
     /// @notice Adds new address as oracle member, giving the ability to push cl reports.
     /// @dev Only callable by the adminstrator

@@ -111,53 +111,8 @@ contract OracleV1 is IOracleV1, Initializable, Administrable {
     }
 
     /// @inheritdoc IOracleV1
-    function isValidEpoch(uint256 epoch) external view returns (bool) {
-        return _river().isValidEpoch(epoch);
-    }
-
-    /// @inheritdoc IOracleV1
-    function getTime() external view returns (uint256) {
-        return _river().getTime();
-    }
-
-    /// @inheritdoc IOracleV1
-    function getExpectedEpochId() external view returns (uint256) {
-        return _river().getExpectedEpochId();
-    }
-
-    /// @inheritdoc IOracleV1
-    function getLastCompletedEpochId() external view returns (uint256) {
-        return _river().getLastCompletedEpochId();
-    }
-
-    /// @inheritdoc IOracleV1
     function getLastReportedEpochId() external view returns (uint256) {
         return LastEpochId.get();
-    }
-
-    /// @inheritdoc IOracleV1
-    function getCurrentEpochId() external view returns (uint256) {
-        return _river().getCurrentEpochId();
-    }
-
-    /// @inheritdoc IOracleV1
-    function getCLSpec() external view returns (CLSpec.CLSpecStruct memory) {
-        return _river().getCLSpec();
-    }
-
-    /// @inheritdoc IOracleV1
-    function getCurrentFrame() external view returns (uint256 _startEpochId, uint256 _startTime, uint256 _endTime) {
-        return _river().getCurrentFrame();
-    }
-
-    /// @inheritdoc IOracleV1
-    function getFrameFirstEpochId(uint256 _epochId) external view returns (uint256) {
-        return _river().getFrameFirstEpochId(_epochId);
-    }
-
-    /// @inheritdoc IOracleV1
-    function getReportBounds() external view returns (ReportBounds.ReportBoundsStruct memory) {
-        return _river().getReportBounds();
     }
 
     /// @inheritdoc IOracleV1
