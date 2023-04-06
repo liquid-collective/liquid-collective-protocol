@@ -111,7 +111,7 @@ interface IOracleManagerV1 {
         uint256 validatorsExitingBalance;
         uint32 validatorsCount;
         uint32[] stoppedValidatorCountPerOperator;
-        bool bufferRebalancingMode;
+        bool rebalanceDepositToRedeemMode;
         bool slashingContainmentMode;
     }
 
@@ -123,7 +123,7 @@ interface IOracleManagerV1 {
         uint256 validatorsExitedBalance;
         uint256 validatorsExitingBalance;
         uint32 validatorsCount;
-        bool bufferRebalancingMode;
+        bool rebalanceDepositToRedeemMode;
         bool slashingContainmentMode;
     }
 

@@ -1159,7 +1159,7 @@ contract RiverV1TestsReport_HEAVY_FUZZING is Test, BytesGenerator {
             }
         }
 
-        clr.bufferRebalancingMode = false;
+        clr.rebalanceDepositToRedeemMode = false;
         clr.slashingContainmentMode = false;
 
         rfv.expected_pre_elFeeRecipientBalance = 0;
@@ -1221,7 +1221,7 @@ contract RiverV1TestsReport_HEAVY_FUZZING is Test, BytesGenerator {
             }
         }
 
-        clr.bufferRebalancingMode = false;
+        clr.rebalanceDepositToRedeemMode = false;
         clr.slashingContainmentMode = false;
 
         uint256 remainingIncrease = maxAllowedIncrease - totalIncrease;
@@ -1286,7 +1286,7 @@ contract RiverV1TestsReport_HEAVY_FUZZING is Test, BytesGenerator {
             }
         }
 
-        clr.bufferRebalancingMode = false;
+        clr.rebalanceDepositToRedeemMode = false;
         clr.slashingContainmentMode = false;
 
         uint256 remainingIncrease = maxAllowedIncrease - totalIncrease;
@@ -1356,7 +1356,7 @@ contract RiverV1TestsReport_HEAVY_FUZZING is Test, BytesGenerator {
             }
         }
 
-        clr.bufferRebalancingMode = false;
+        clr.rebalanceDepositToRedeemMode = false;
         clr.slashingContainmentMode = false;
 
         _salt = _redeemAllSatisfiedRedeemRequests(_salt);
@@ -1419,7 +1419,7 @@ contract RiverV1TestsReport_HEAVY_FUZZING is Test, BytesGenerator {
                 }
             }
 
-            clr.bufferRebalancingMode = false;
+            clr.rebalanceDepositToRedeemMode = false;
             clr.slashingContainmentMode = false;
         }
 
@@ -1491,7 +1491,7 @@ contract RiverV1TestsReport_HEAVY_FUZZING is Test, BytesGenerator {
             }
         }
 
-        clr.bufferRebalancingMode = true;
+        clr.rebalanceDepositToRedeemMode = true;
         clr.slashingContainmentMode = false;
 
         rfv.expected_pre_elFeeRecipientBalance = 0;
@@ -1552,7 +1552,7 @@ contract RiverV1TestsReport_HEAVY_FUZZING is Test, BytesGenerator {
             }
         }
 
-        clr.bufferRebalancingMode = false;
+        clr.rebalanceDepositToRedeemMode = false;
         clr.slashingContainmentMode = true;
 
         rfv.expected_pre_elFeeRecipientBalance = 0;

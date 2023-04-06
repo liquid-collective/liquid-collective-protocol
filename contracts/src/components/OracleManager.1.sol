@@ -139,7 +139,7 @@ abstract contract OracleManagerV1 is IOracleManagerV1 {
         storedReport.validatorsExitedBalance = 0;
         storedReport.validatorsExitingBalance = 0;
         storedReport.validatorsCount = uint32(CLValidatorCount.get());
-        storedReport.bufferRebalancingMode = false;
+        storedReport.rebalanceDepositToRedeemMode = false;
         storedReport.slashingContainmentMode = false;
         LastConsensusLayerReport.set(storedReport);
     }
@@ -342,7 +342,7 @@ abstract contract OracleManagerV1 is IOracleManagerV1 {
             storedReport.validatorsExitedBalance = report.validatorsExitedBalance;
             storedReport.validatorsExitingBalance = report.validatorsExitingBalance;
             storedReport.validatorsCount = report.validatorsCount;
-            storedReport.bufferRebalancingMode = report.bufferRebalancingMode;
+            storedReport.rebalanceDepositToRedeemMode = report.rebalanceDepositToRedeemMode;
             storedReport.slashingContainmentMode = report.slashingContainmentMode;
             LastConsensusLayerReport.set(storedReport);
         }
@@ -435,7 +435,7 @@ abstract contract OracleManagerV1 is IOracleManagerV1 {
         if (!report.slashingContainmentMode) {
             // we request exits based on incoming still in the exit process and current eth buffers
             _requestExitsBasedOnRedeemDemandAfterRebalancings(
-                report.validatorsExitingBalance, report.bufferRebalancingMode
+                report.validatorsExitingBalance, report.rebalanceDepositToRedeemMode
             );
         }
 
