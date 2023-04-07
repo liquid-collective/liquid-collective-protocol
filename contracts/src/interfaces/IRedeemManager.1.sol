@@ -53,8 +53,9 @@ interface IRedeemManagerV1 {
     );
 
     /// @notice Emitted when the redeem demand is set
-    /// @param redeemDemand The new redeem demand
-    event SetRedeemDemand(uint256 redeemDemand);
+    /// @param oldRedeemDemand The old redeem demand
+    /// @param newRedeemDemand The new redeem demand
+    event SetRedeemDemand(uint256 oldRedeemDemand, uint256 newRedeemDemand);
 
     /// @notice Emitted when the River address is set
     /// @param river The new river address
@@ -94,7 +95,7 @@ interface IRedeemManagerV1 {
     /// @notice Thrown when the payment after a claim failed
     /// @param recipient The recipient of the payment
     /// @param rdata The revert data
-    error ClaimPaymentFailed(address recipient, bytes rdata);
+    error ClaimRedeemFailed(address recipient, bytes rdata);
 
     /// @param river The address of the River contract
     function initializeRedeemManagerV1(address river) external;
@@ -118,7 +119,7 @@ interface IRedeemManagerV1 {
         view
         returns (WithdrawalStack.WithdrawalEvent memory);
 
-    /// @notice Retrieve the amount of eth available in the buffer
+    /// @notice Retrieve the amount of redeemed LsETH pending to be supplied with withdrawn ETH
     /// @return The amount of eth in the buffer
     function getBufferedExceedingEth() external view returns (uint256);
 

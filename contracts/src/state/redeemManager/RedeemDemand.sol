@@ -4,7 +4,7 @@ pragma solidity 0.8.10;
 import "../../libraries/LibUnstructuredStorage.sol";
 
 /// @title Redeem Demand storage
-/// @notice Redeen Manager utility to manage the exceeding ETH with a redeem request
+/// @notice Redeem Manager utility to store the current demand in LsETH
 library RedeemDemand {
     /// @notice Storage slot of the Redeem Demand
     bytes32 internal constant REDEEM_DEMAND_SLOT = bytes32(uint256(keccak256("river.state.redeemDemand")) - 1);

@@ -447,7 +447,7 @@ contract RedeemManagerV1Tests is Test {
         emit SatisfiedRedeemRequest(0, 0, amount, amount, 0, 0);
         vm.expectEmit(true, true, true, true);
         emit ClaimedRedeemRequest(0, user, amount, amount, 0);
-        redeemManager.claimRedeemRequests(redeemRequestIds, withdrawEventIds, true, 0);
+        redeemManager.claimRedeemRequests(redeemRequestIds, withdrawEventIds, true, type(uint16).max);
 
         assertEq(redeemManager.getBufferedExceedingEth(), 0);
         assertEq(address(redeemManager).balance, 0);
@@ -608,7 +608,8 @@ contract RedeemManagerV1Tests is Test {
         emit SatisfiedRedeemRequest(0, 0, amount, amount, 0, 0);
         vm.expectEmit(true, true, true, true);
         emit ClaimedRedeemRequest(0, user, amount, amount, 0);
-        uint8[] memory claimStatus = redeemManager.claimRedeemRequests(redeemRequestIds, withdrawEventIds, true, 0);
+        uint8[] memory claimStatus =
+            redeemManager.claimRedeemRequests(redeemRequestIds, withdrawEventIds, true, type(uint16).max);
 
         assertEq(address(redeemManager).balance, 0);
         assertEq(user.balance, amount);
@@ -621,7 +622,7 @@ contract RedeemManagerV1Tests is Test {
         assertEq(resolvedRedeemRequests.length, 1);
         assertEq(resolvedRedeemRequests[0], -3);
 
-        claimStatus = redeemManager.claimRedeemRequests(redeemRequestIds, withdrawEventIds, true, 0);
+        claimStatus = redeemManager.claimRedeemRequests(redeemRequestIds, withdrawEventIds, true, type(uint16).max);
 
         assertEq(claimStatus.length, 1);
         assertEq(claimStatus[0], 2);
@@ -679,7 +680,7 @@ contract RedeemManagerV1Tests is Test {
         assertEq(user.balance, 0);
 
         vm.expectRevert(abi.encodeWithSignature("RedeemRequestAlreadyClaimed(uint256)", 0));
-        redeemManager.claimRedeemRequests(redeemRequestIds, withdrawEventIds, false, 0);
+        redeemManager.claimRedeemRequests(redeemRequestIds, withdrawEventIds, false, type(uint16).max);
     }
 
     function testClaimRedeemRequestTwiceBigger(uint256 _salt) external {
@@ -735,7 +736,8 @@ contract RedeemManagerV1Tests is Test {
         emit SatisfiedRedeemRequest(0, 0, amount / 2, amount / 2, amount - (amount / 2), 0);
         vm.expectEmit(true, true, true, true);
         emit ClaimedRedeemRequest(0, user, amount / 2, amount / 2, amount - (amount / 2));
-        uint8[] memory claimStatuses = redeemManager.claimRedeemRequests(redeemRequestIds, withdrawEventIds, true, 0);
+        uint8[] memory claimStatuses =
+            redeemManager.claimRedeemRequests(redeemRequestIds, withdrawEventIds, true, type(uint16).max);
 
         assertEq(address(redeemManager).balance, 0);
         assertEq(user.balance, amount / 2);
@@ -925,7 +927,7 @@ contract RedeemManagerV1Tests is Test {
         emit SatisfiedRedeemRequest(0, 1, amount - (amount / 2), amount - (amount / 2), 0, 0);
         vm.expectEmit(true, true, true, true);
         emit ClaimedRedeemRequest(0, user, amount, amount, 0);
-        redeemManager.claimRedeemRequests(redeemRequestIds, withdrawEventIds, true, 0);
+        redeemManager.claimRedeemRequests(redeemRequestIds, withdrawEventIds, true, type(uint16).max);
 
         assertEq(address(redeemManager).balance, 0);
         assertEq(user.balance, amount);
@@ -1031,7 +1033,7 @@ contract RedeemManagerV1Tests is Test {
         emit SatisfiedRedeemRequest(0, 0, amount, amount, 0, 0);
         vm.expectEmit(true, true, true, true);
         emit ClaimedRedeemRequest(0, user, amount, amount, 0);
-        redeemManager.claimRedeemRequests(redeemRequestIds, withdrawEventIds, true, 0);
+        redeemManager.claimRedeemRequests(redeemRequestIds, withdrawEventIds, true, type(uint16).max);
 
         assertEq(address(redeemManager).balance, 0);
         assertEq(user.balance, amount);
@@ -1084,7 +1086,7 @@ contract RedeemManagerV1Tests is Test {
         redeemRequestIds[0] = 0;
 
         vm.expectRevert(abi.encodeWithSignature("IncompatibleArrayLengths()"));
-        redeemManager.claimRedeemRequests(redeemRequestIds, withdrawEventIds, true, 0);
+        redeemManager.claimRedeemRequests(redeemRequestIds, withdrawEventIds, true, type(uint16).max);
     }
 
     function testClaimRedeemRequestOutOfBounds() external {
@@ -1095,7 +1097,7 @@ contract RedeemManagerV1Tests is Test {
         withdrawEventIds[0] = 0;
 
         vm.expectRevert(abi.encodeWithSignature("RedeemRequestOutOfBounds(uint256)", 0));
-        redeemManager.claimRedeemRequests(redeemRequestIds, withdrawEventIds, true, 0);
+        redeemManager.claimRedeemRequests(redeemRequestIds, withdrawEventIds, true, type(uint16).max);
     }
 
     function testClaimRedeemRequestWithdrawalEventOutOfBounds(uint256 _salt) external {
@@ -1118,7 +1120,7 @@ contract RedeemManagerV1Tests is Test {
         withdrawEventIds[0] = 0;
 
         vm.expectRevert(abi.encodeWithSignature("WithdrawalEventOutOfBounds(uint256)", 0));
-        redeemManager.claimRedeemRequests(redeemRequestIds, withdrawEventIds, true, 0);
+        redeemManager.claimRedeemRequests(redeemRequestIds, withdrawEventIds, true, type(uint16).max);
     }
 
     function testClaimRedeemRequestNotMatching(uint256 _salt) external {
@@ -1147,7 +1149,7 @@ contract RedeemManagerV1Tests is Test {
         withdrawEventIds[0] = 0;
 
         vm.expectRevert(abi.encodeWithSignature("DoesNotMatch(uint256,uint256)", 1, 0));
-        redeemManager.claimRedeemRequests(redeemRequestIds, withdrawEventIds, true, 0);
+        redeemManager.claimRedeemRequests(redeemRequestIds, withdrawEventIds, true, type(uint16).max);
     }
 
     function rollNext(uint256 _salt) internal pure returns (uint256) {
@@ -1221,7 +1223,7 @@ contract RedeemManagerV1Tests is Test {
         assertEq(user.balance, 0);
 
         uint8[] memory claimStatus =
-            redeemManager.claimRedeemRequests(redeemRequestIds, withdrawalEventIdsUint, false, 0);
+            redeemManager.claimRedeemRequests(redeemRequestIds, withdrawalEventIdsUint, false, type(uint16).max);
 
         assertEq(address(redeemManager).balance, totalAmount);
         assertEq(user.balance, totalAmount);

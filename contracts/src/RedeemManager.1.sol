@@ -144,7 +144,7 @@ contract RedeemManagerV1 is Initializable, IRedeemManagerV1 {
         external
         returns (uint8[] memory claimStatuses)
     {
-        return _claimRedeemRequests(redeemRequestIds, withdrawalEventIds, true, 0);
+        return _claimRedeemRequests(redeemRequestIds, withdrawalEventIds, true, type(uint16).max);
     }
 
     /// @inheritdoc IRedeemManagerV1
@@ -474,9 +474,6 @@ contract RedeemManagerV1 is Initializable, IRedeemManagerV1 {
         bool skipAlreadyClaimed,
         uint16 _depth
     ) internal returns (uint8[] memory claimStatuses) {
-        if (_depth == 0) {
-            _depth = type(uint16).max;
-        }
         uint256 redeemRequestIdsLength = redeemRequestIds.length;
         if (redeemRequestIdsLength != withdrawalEventIds.length) {
             revert IncompatibleArrayLengths();
@@ -496,7 +493,7 @@ contract RedeemManagerV1 is Initializable, IRedeemManagerV1 {
             {
                 (bool success, bytes memory rdata) = recipient.call{value: ethAmount}("");
                 if (!success) {
-                    revert ClaimPaymentFailed(recipient, rdata);
+                    revert ClaimRedeemFailed(recipient, rdata);
                 }
             }
             emit ClaimedRedeemRequest(redeemRequestIds[idx], recipient, ethAmount, lsETHAmount, remainingLsETHAmount);
@@ -510,7 +507,7 @@ contract RedeemManagerV1 is Initializable, IRedeemManagerV1 {
     /// @notice Internal utility to set the redeem demand
     /// @param newValue The new value to set
     function _setRedeemDemand(uint256 newValue) internal {
+        emit SetRedeemDemand(RedeemDemand.get(), newValue);
         RedeemDemand.set(newValue);
-        emit SetRedeemDemand(newValue);
     }
 }
