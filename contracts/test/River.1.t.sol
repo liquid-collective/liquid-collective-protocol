@@ -208,6 +208,16 @@ contract RiverV1Tests is Test, BytesGenerator {
         assertEq(dcl.maxDailyRelativeCommittableAmount, relative);
     }
 
+    function testSetDailyCommittableLimitsInvalidBpsValue(uint128 net, uint128 relative) public {
+        relative = uint128(bound(relative, 10_001, type(uint128).max));
+        DailyCommittableLimits.DailyCommittableLimitsStruct memory dcl = DailyCommittableLimits
+            .DailyCommittableLimitsStruct({maxDailyRelativeCommittableAmount: relative, maxDailyNetCommittableAmount: net});
+
+        vm.prank(admin);
+        vm.expectRevert(abi.encodeWithSignature("InvalidFee()"));
+        river.setDailyCommittableLimits(dcl);
+    }
+
     function testSetDailyCommittableLimitsUnauthorized(uint128 net, uint128 relative) public {
         relative = uint128(bound(relative, 0, 10_000));
         DailyCommittableLimits.DailyCommittableLimitsStruct memory dcl = DailyCommittableLimits

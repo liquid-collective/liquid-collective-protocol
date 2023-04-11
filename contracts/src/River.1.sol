@@ -137,13 +137,12 @@ contract RiverV1 is
         RedeemManagerAddress.set(_redeemManager);
         emit SetRedeemManager(_redeemManager);
 
-        DailyCommittableLimits.set(
+        _setDailyCommittableLimits(
             DailyCommittableLimits.DailyCommittableLimitsStruct({
                 maxDailyNetCommittableAmount: maxDailyNetCommittableAmount_,
                 maxDailyRelativeCommittableAmount: maxDailyRelativeCommittableAmount_
             })
         );
-        emit SetMaxDailyCommittableAmounts(maxDailyNetCommittableAmount_, maxDailyRelativeCommittableAmount_);
 
         initOracleManagerV1_1(
             epochsPerFrame,
@@ -202,8 +201,7 @@ contract RiverV1 is
         external
         onlyAdmin
     {
-        DailyCommittableLimits.set(dcl);
-        emit SetMaxDailyCommittableAmounts(dcl.maxDailyNetCommittableAmount, dcl.maxDailyRelativeCommittableAmount);
+        _setDailyCommittableLimits(dcl);
     }
 
     /// @inheritdoc IRiverV1
@@ -428,6 +426,14 @@ contract RiverV1 is
             return
                 storedReport.validatorsBalance + BalanceToDeposit.get() + CommittedBalance.get() + BalanceToRedeem.get();
         }
+    }
+
+    /// @notice Internal utility to set the daily committable limits
+    /// @param dcl The new daily committable limits
+    function _setDailyCommittableLimits(DailyCommittableLimits.DailyCommittableLimitsStruct memory dcl) internal {
+        LibSanitize._validFee(dcl.maxDailyRelativeCommittableAmount);
+        DailyCommittableLimits.set(dcl);
+        emit SetMaxDailyCommittableAmounts(dcl.maxDailyNetCommittableAmount, dcl.maxDailyRelativeCommittableAmount);
     }
 
     /// @notice Sets the balance to deposit, but not yet committed
