@@ -153,7 +153,8 @@ interface IRiverV1 is IConsensusLayerDepositManagerV1, IUserDepositManagerV1, IS
         uint256 annualAprUpperBound,
         uint256 relativeLowerBound,
         uint128 maxDailyNetCommittableAmount_,
-        uint128 maxDailyRelativeCommittableAmount_
+        uint128 maxDailyRelativeCommittableAmount_,
+        uint256 amountToPullFromWithdrawalContract
     ) external;
 
     /// @notice Get the current global fee

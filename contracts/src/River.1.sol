@@ -132,7 +132,8 @@ contract RiverV1 is
         uint256 annualAprUpperBound,
         uint256 relativeLowerBound,
         uint128 maxDailyNetCommittableAmount_,
-        uint128 maxDailyRelativeCommittableAmount_
+        uint128 maxDailyRelativeCommittableAmount_,
+        uint256 amountToPullFromWithdrawalContract
     ) external init(1) {
         RedeemManagerAddress.set(_redeemManager);
         emit SetRedeemManager(_redeemManager);
@@ -156,6 +157,8 @@ contract RiverV1 is
         );
 
         _approve(address(this), _redeemManager, type(uint256).max);
+
+        _pullCLFunds(amountToPullFromWithdrawalContract, 0);
     }
 
     /// @inheritdoc IRiverV1
