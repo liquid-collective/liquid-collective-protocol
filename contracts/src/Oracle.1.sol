@@ -13,7 +13,6 @@ import "./state/oracle/LastEpochId.sol";
 import "./state/oracle/OracleMembers.sol";
 import "./state/oracle/Quorum.sol";
 import "./state/oracle/ReportsPositions.sol";
-import "./state/oracle/ReportVariants.sol";
 
 /// @title Oracle (v1)
 /// @author Kiln
@@ -84,15 +83,19 @@ contract OracleV1 is IOracleV1, Initializable, Administrable {
 
     /// @inheritdoc IOracleV1
     function getReportVariantsCount() external view returns (uint256) {
-        return ReportVariants.get().length;
+        return ReportsVariants.get().length;
     }
 
     /// @inheritdoc IOracleV1
-    function getReportVariantDetails(uint256 _idx) external view returns (ReportVariants.ReportVariantDetails memory) {
-        if (ReportVariants.get().length <= _idx) {
-            revert ReportIndexOutOfBounds(_idx, ReportVariants.get().length);
+    function getReportVariantDetails(uint256 _idx)
+        external
+        view
+        returns (ReportsVariants.ReportVariantDetails memory)
+    {
+        if (ReportsVariants.get().length <= _idx) {
+            revert ReportIndexOutOfBounds(_idx, ReportsVariants.get().length);
         }
-        return ReportVariants.get()[_idx];
+        return ReportsVariants.get()[_idx];
     }
 
     /// @inheritdoc IOracleV1
@@ -215,10 +218,10 @@ contract OracleV1 is IOracleV1, Initializable, Administrable {
             emit SetLastReportedEpoch(report.epoch + 1);
         } else if (variantVotes == 0) {
             // if we have no votes for the variant, we create the variant details
-            ReportVariants.push(ReportVariants.ReportVariantDetails({variant: variant, votes: 1}));
+            ReportsVariants.push(ReportsVariants.ReportVariantDetails({variant: variant, votes: 1}));
         } else {
             // otherwise we increment the vote
-            ReportVariants.get()[uint256(variantIndex)].votes += 1;
+            ReportsVariants.get()[uint256(variantIndex)].votes += 1;
         }
     }
 
@@ -250,7 +253,7 @@ contract OracleV1 is IOracleV1, Initializable, Administrable {
 
     /// @notice Internal utility to clear all reporting details
     function _clearReports() internal {
-        ReportVariants.clear();
+        ReportsVariants.clear();
         ReportsPositions.clear();
         emit ClearedReporting();
     }
@@ -260,10 +263,10 @@ contract OracleV1 is IOracleV1, Initializable, Administrable {
     /// @return The index of the variant, -1 if not found
     /// @return The vote count of the variant
     function _getReportVariantIndexAndVotes(bytes32 variant) internal view returns (int256, uint256) {
-        uint256 reportVariantsLength = ReportVariants.get().length;
+        uint256 reportVariantsLength = ReportsVariants.get().length;
         for (uint256 idx = 0; idx < reportVariantsLength;) {
-            if (ReportVariants.get()[idx].variant == variant) {
-                return (int256(idx), ReportVariants.get()[idx].votes);
+            if (ReportsVariants.get()[idx].variant == variant) {
+                return (int256(idx), ReportsVariants.get()[idx].votes);
             }
             unchecked {
                 ++idx;

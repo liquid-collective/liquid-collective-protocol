@@ -2,7 +2,7 @@
 pragma solidity 0.8.10;
 
 import "./IRiver.1.sol";
-import "../state/oracle/ReportVariants.sol";
+import "../state/oracle/ReportsVariants.sol";
 
 /// @title Oracle Interface (v1)
 /// @author Kiln
@@ -127,7 +127,10 @@ interface IOracleV1 {
     /// @notice Retrieve the details of a report variant
     /// @param _idx The index of the report variant
     /// @return The report variant details
-    function getReportVariantDetails(uint256 _idx) external view returns (ReportVariants.ReportVariantDetails memory);
+    function getReportVariantDetails(uint256 _idx)
+        external
+        view
+        returns (ReportsVariants.ReportVariantDetails memory);
 
     /// @notice Retrieve the current quorum
     /// @return The current quorum

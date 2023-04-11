@@ -3,9 +3,9 @@ pragma solidity 0.8.10;
 
 /// @title Reports Variants Storage
 /// @notice Utility to manage the Reports Variants in storage
-library ReportVariants {
+library ReportsVariants {
     /// @notice Storage slot of the Reports Variants
-    bytes32 internal constant REPORT_VARIANTS_SLOT = bytes32(uint256(keccak256("river.state.reportVariants")) - 1);
+    bytes32 internal constant REPORT_VARIANTS_SLOT = bytes32(uint256(keccak256("river.state.reportsVariants")) - 1);
 
     struct ReportVariantDetails {
         bytes32 variant;
