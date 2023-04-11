@@ -183,6 +183,11 @@ contract RiverV1 is
     }
 
     /// @inheritdoc IRiverV1
+    function getRedeemManager() external view returns (address) {
+        return RedeemManagerAddress.get();
+    }
+
+    /// @inheritdoc IRiverV1
     function getMetadataURI() external view returns (string memory) {
         return MetadataURI.get();
     }

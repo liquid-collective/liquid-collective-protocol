@@ -176,6 +176,10 @@ interface IRiverV1 is IConsensusLayerDepositManagerV1, IUserDepositManagerV1, IS
     /// @return The coverage fund address
     function getCoverageFund() external view returns (address);
 
+    /// @notice Retrieve the redeem manager
+    /// @return The redeem manager address
+    function getRedeemManager() external view returns (address);
+
     /// @notice Retrieve the operators registry
     /// @return The operators registry address
     function getOperatorsRegistry() external view returns (address);
