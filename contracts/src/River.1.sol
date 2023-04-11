@@ -158,7 +158,9 @@ contract RiverV1 is
 
         _approve(address(this), _redeemManager, type(uint256).max);
 
-        _pullCLFunds(amountToPullFromWithdrawalContract, 0);
+        if (amountToPullFromWithdrawalContract > 0) {
+            _pullCLFunds(amountToPullFromWithdrawalContract, 0);
+        }
     }
 
     /// @inheritdoc IRiverV1

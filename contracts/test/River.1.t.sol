@@ -674,6 +674,129 @@ contract RiverV1Tests is Test, BytesGenerator {
     }
 }
 
+contract RiverV1TestsMigrations is Test, BytesGenerator {
+    UserFactory internal uf = new UserFactory();
+
+    RiverV1ForceCommittable internal river;
+    IDepositContract internal deposit;
+    WithdrawV1 internal withdraw;
+    OracleV1 internal oracle;
+    ELFeeRecipientV1 internal elFeeRecipient;
+    CoverageFundV1 internal coverageFund;
+    AllowlistV1 internal allowlist;
+    OperatorsRegistryV1 internal operatorsRegistry;
+    RedeemManagerV1 internal redeemManager;
+
+    address internal admin;
+    address internal collector;
+    address internal allower;
+    address internal oracleMember;
+
+    event PulledELFees(uint256 amount);
+    event SetRedeemManager(address redeemManager);
+    event SetELFeeRecipient(address indexed elFeeRecipient);
+    event SetCollector(address indexed collector);
+    event SetAllowlist(address indexed allowlist);
+    event SetGlobalFee(uint256 fee);
+    event SetOperatorsRegistry(address indexed operatorsRegistry);
+
+    uint64 constant epochsPerFrame = 225;
+    uint64 constant slotsPerEpoch = 32;
+    uint64 constant secondsPerSlot = 12;
+    uint64 constant epochsUntilFinal = 4;
+
+    uint128 constant maxDailyNetCommittableAmount = 3200 ether;
+    uint128 constant maxDailyRelativeCommittableAmount = 2000;
+
+    function setUp() public {
+        admin = makeAddr("admin");
+        collector = makeAddr("collector");
+        allower = makeAddr("allower");
+        oracleMember = makeAddr("oracleMember");
+
+        vm.warp(857034746);
+
+        elFeeRecipient = new ELFeeRecipientV1();
+        LibImplementationUnbricker.unbrick(vm, address(elFeeRecipient));
+        coverageFund = new CoverageFundV1();
+        LibImplementationUnbricker.unbrick(vm, address(coverageFund));
+        oracle = new OracleV1();
+        LibImplementationUnbricker.unbrick(vm, address(oracle));
+        allowlist = new AllowlistV1();
+        LibImplementationUnbricker.unbrick(vm, address(allowlist));
+        deposit = new DepositContractMock();
+        LibImplementationUnbricker.unbrick(vm, address(deposit));
+        withdraw = new WithdrawV1();
+        LibImplementationUnbricker.unbrick(vm, address(withdraw));
+        river = new RiverV1ForceCommittable();
+        LibImplementationUnbricker.unbrick(vm, address(river));
+        operatorsRegistry = new OperatorsRegistryWithOverridesV1();
+        LibImplementationUnbricker.unbrick(vm, address(operatorsRegistry));
+        redeemManager = new RedeemManagerV1();
+        LibImplementationUnbricker.unbrick(vm, address(redeemManager));
+
+        bytes32 withdrawalCredentials = withdraw.getCredentials();
+        allowlist.initAllowlistV1(admin, allower);
+        operatorsRegistry.initOperatorsRegistryV1(admin, address(river));
+        elFeeRecipient.initELFeeRecipientV1(address(river));
+        coverageFund.initCoverageFundV1(address(river));
+        redeemManager.initializeRedeemManagerV1(address(river));
+        vm.expectEmit(true, true, true, true);
+        emit SetOperatorsRegistry(address(operatorsRegistry));
+        river.initRiverV1(
+            address(deposit),
+            address(elFeeRecipient),
+            withdrawalCredentials,
+            address(oracle),
+            admin,
+            address(allowlist),
+            address(operatorsRegistry),
+            collector,
+            500
+        );
+    }
+
+    function testMigrateToV1_1() public {
+        vm.expectEmit(true, true, true, true);
+        emit SetRedeemManager(address(redeemManager));
+        river.initRiverV1_1(
+            address(redeemManager),
+            epochsPerFrame,
+            slotsPerEpoch,
+            secondsPerSlot,
+            0,
+            epochsUntilFinal,
+            1000,
+            500,
+            maxDailyNetCommittableAmount,
+            maxDailyRelativeCommittableAmount,
+            0
+        );
+    }
+
+    function testMigrateToV1_1_pullWithdrawalRecipient(uint256 amount) public {
+        vm.deal(address(withdraw), amount);
+        assertEq(address(withdraw).balance, amount);
+
+        withdraw.initializeWithdrawV1(address(river));
+        river.initRiverV1_1(
+            address(redeemManager),
+            epochsPerFrame,
+            slotsPerEpoch,
+            secondsPerSlot,
+            0,
+            epochsUntilFinal,
+            1000,
+            500,
+            maxDailyNetCommittableAmount,
+            maxDailyRelativeCommittableAmount,
+            amount
+        );
+
+        assertEq(address(withdraw).balance, 0);
+    }
+}
+
 contract RiverV1TestsReport_HEAVY_FUZZING is Test, BytesGenerator {
     UserFactory internal uf = new UserFactory();
 
@@ -763,7 +886,8 @@ contract RiverV1TestsReport_HEAVY_FUZZING is Test, BytesGenerator {
             1000,
             500,
             maxDailyNetCommittableAmount,
-            maxDailyRelativeCommittableAmount
+            maxDailyRelativeCommittableAmount,
+            0
         );
         withdraw.initializeWithdrawV1(address(river));
         oracle.initOracleV1(address(river), admin, 225, 32, 12, 0, 1000, 500);
