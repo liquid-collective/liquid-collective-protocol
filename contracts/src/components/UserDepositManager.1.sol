@@ -47,9 +47,7 @@ abstract contract UserDepositManagerV1 is IUserDepositManagerV1 {
             revert EmptyDeposit();
         }
 
-        uint256 currentBalanceToDeposit = BalanceToDeposit.get();
-        BalanceToDeposit.set(currentBalanceToDeposit + msg.value);
-        emit SetBalanceToDeposit(currentBalanceToDeposit, currentBalanceToDeposit + msg.value);
+        _setBalanceToDeposit(BalanceToDeposit.get() + msg.value);
 
         _onDeposit(msg.sender, _recipient, msg.value);
 

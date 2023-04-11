@@ -75,6 +75,11 @@ interface IRiverV1 is IConsensusLayerDepositManagerV1, IUserDepositManagerV1, IS
     /// @param amount The amount pulled
     event PulledRedeemManagerExceedingEth(uint256 amount);
 
+    /// @notice Emitted when the balance to deposit is updated
+    /// @param oldAmount The old balance to deposit
+    /// @param newAmount The new balance to deposit
+    event SetBalanceToDeposit(uint256 oldAmount, uint256 newAmount);
+
     /// @notice Emitted when the balance to redeem is updated
     /// @param oldAmount The old balance to redeem
     /// @param newAmount The new balance to redeem

@@ -10,11 +10,14 @@ import "../utils/LibImplementationUnbricker.sol";
 import "../../src/components/UserDepositManager.1.sol";
 
 contract UserDepositManagerV1EmptyDeposit is UserDepositManagerV1 {
+    event SetBalanceToDeposit(uint256 oldAmount, uint256 newAmount);
+
     function _onDeposit(address, address, uint256) internal view override {
         this;
     }
 
     function _setBalanceToDeposit(uint256 newBalanceToDeposit) internal override {
+        emit SetBalanceToDeposit(BalanceToDeposit.get(), newBalanceToDeposit);
         BalanceToDeposit.set(newBalanceToDeposit);
     }
 }
@@ -119,12 +122,14 @@ contract UserDepositManagerV1DepositTests is Test {
 
 contract UserDepositManagerV1CatchableDeposit is UserDepositManagerV1 {
     event InternalCallbackCalled(address depositor, address recipient, uint256 amount);
+    event SetBalanceToDeposit(uint256 oldAmount, uint256 newAmount);
 
     function _onDeposit(address depositor, address recipient, uint256 amount) internal override {
         emit InternalCallbackCalled(depositor, recipient, amount);
     }
 
     function _setBalanceToDeposit(uint256 newBalanceToDeposit) internal override {
+        emit SetBalanceToDeposit(BalanceToDeposit.get(), newBalanceToDeposit);
         BalanceToDeposit.set(newBalanceToDeposit);
     }
 }

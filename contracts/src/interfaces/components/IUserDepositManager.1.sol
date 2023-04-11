@@ -11,11 +11,6 @@ interface IUserDepositManagerV1 {
     /// @param amount Amount in ETH deposited
     event UserDeposit(address indexed depositor, address indexed recipient, uint256 amount);
 
-    /// @notice Emitted when the balance to deposit is updated
-    /// @param oldAmount The old balance to deposit
-    /// @param newAmount The new balance to deposit
-    event SetBalanceToDeposit(uint256 oldAmount, uint256 newAmount);
-
     /// @notice And empty deposit attempt was made
     error EmptyDeposit();
 
