@@ -692,12 +692,7 @@ contract RiverV1TestsMigrations is Test, BytesGenerator {
     address internal allower;
     address internal oracleMember;
 
-    event PulledELFees(uint256 amount);
     event SetRedeemManager(address redeemManager);
-    event SetELFeeRecipient(address indexed elFeeRecipient);
-    event SetCollector(address indexed collector);
-    event SetAllowlist(address indexed allowlist);
-    event SetGlobalFee(uint256 fee);
     event SetOperatorsRegistry(address indexed operatorsRegistry);
 
     uint64 constant epochsPerFrame = 225;
@@ -772,6 +767,19 @@ contract RiverV1TestsMigrations is Test, BytesGenerator {
             maxDailyRelativeCommittableAmount,
             0
         );
+
+        DailyCommittableLimits.DailyCommittableLimitsStruct memory dcl = river.getDailyCommittableLimits();
+        assertEq(dcl.maxDailyNetCommittableAmount, maxDailyNetCommittableAmount);
+        assertEq(dcl.maxDailyRelativeCommittableAmount, maxDailyRelativeCommittableAmount);
+        ReportBounds.ReportBoundsStruct memory rb = river.getReportBounds();
+        assertEq(rb.annualAprUpperBound, 1000);
+        assertEq(rb.relativeLowerBound, 500);
+        CLSpec.CLSpecStruct memory cl = river.getCLSpec();
+        assertEq(cl.epochsPerFrame, epochsPerFrame);
+        assertEq(cl.slotsPerEpoch, slotsPerEpoch);
+        assertEq(cl.secondsPerSlot, secondsPerSlot);
+        assertEq(cl.genesisTime, 0);
+        assertEq(cl.epochsToAssumedFinality, epochsUntilFinal);
     }
 
     function testMigrateToV1_1_pullWithdrawalRecipient(uint256 amount) public {
