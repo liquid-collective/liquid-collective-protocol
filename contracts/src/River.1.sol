@@ -233,7 +233,7 @@ contract RiverV1 is
         returns (uint8[] memory claimStatuses)
     {
         return IRedeemManagerV1(RedeemManagerAddress.get()).claimRedeemRequests(
-            redeemRequestIds, withdrawalEventIds, true, 0
+            redeemRequestIds, withdrawalEventIds, true, type(uint16).max
         );
     }
 
