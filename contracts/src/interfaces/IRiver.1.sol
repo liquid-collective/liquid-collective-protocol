@@ -16,6 +16,10 @@ interface IRiverV1 is IConsensusLayerDepositManagerV1, IUserDepositManagerV1, IS
     /// @param amount The amount pulled
     event PulledELFees(uint256 amount);
 
+    /// @notice Funds have been pulled from the Withdrawal Contract
+    /// @param amount The amount pulled
+    event PulledCLFunds(uint256 amount);
+
     /// @notice Funds have been pulled from the Coverage Fund
     /// @param amount The amount pulled
     event PulledCoverageFunds(uint256 amount);

@@ -694,6 +694,7 @@ contract RiverV1TestsMigrations is Test, BytesGenerator {
 
     event SetRedeemManager(address redeemManager);
     event SetOperatorsRegistry(address indexed operatorsRegistry);
+    event PulledCLFunds(uint256 amount);
 
     uint64 constant epochsPerFrame = 225;
     uint64 constant slotsPerEpoch = 32;
@@ -787,6 +788,10 @@ contract RiverV1TestsMigrations is Test, BytesGenerator {
         assertEq(address(withdraw).balance, amount);
 
         withdraw.initializeWithdrawV1(address(river));
+        if (amount > 0) {
+            vm.expectEmit(true, true, true, true);
+            emit PulledCLFunds(amount);
+        }
         river.initRiverV1_1(
             address(redeemManager),
             epochsPerFrame,

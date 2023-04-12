@@ -473,6 +473,9 @@ contract RiverV1 is
         if (exitedEthAmount > 0) {
             _setBalanceToRedeem(BalanceToRedeem.get() + exitedEthAmount);
         }
+        if (collectedCLFunds > 0) {
+            emit PulledCLFunds(collectedCLFunds);
+        }
     }
 
     /// @notice Pulls funds from the redeem manager exceeding eth buffer
