@@ -4,6 +4,7 @@ pragma solidity 0.8.10;
 import "../../libraries/LibUnstructuredStorage.sol";
 
 /// @title TotalValidatorExitsRequested Storage
+/// @notice This value is the amount of performed exit requests, only increased when there is current exit demand
 /// @notice Utility to manage the TotalValidatorExitsRequested in storage
 library TotalValidatorExitsRequested {
     /// @notice Storage slot of the TotalValidatorExitsRequested
