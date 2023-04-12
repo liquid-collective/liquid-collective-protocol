@@ -589,6 +589,8 @@ contract RiverV1 is
     }
 
     /// @notice Commits the deposit balance up to the allowed daily limit
+    /// @notice Committed funds are funds waiting to be deposited but that cannot be used to fund the redeem manager anymore
+    /// @notice This two step process is required to prevent possible out of gas issues we would have from actually funding the validators at this point
     /// @param _period The period between current and last report
     function _commitBalanceToDeposit(uint256 _period) internal override {
         uint256 underlyingAssetBalance = _assetBalance();
@@ -599,6 +601,9 @@ contract RiverV1 is
         // this value is the daily maximum amount we can commit for deposits
         // we take the maximum value between a net amount and an amount relative to the asset balance
         // this ensures that the amount we can commit is not too low in the beginning and that it is not too high when volumes grow
+        // the relative amount is computed from the committed and activated funds (on the CL or committed to be on the CL soon) and not
+        // the deposit balance
+        // this value is computed by subtracting the current balance to deposit from the underlying asset balance
         uint256 currentMaxDailyCommittableAmount = LibUint256.max(
             dcl.minDailyNetCommittableAmount,
             (uint256(dcl.maxDailyRelativeCommittableAmount) * (underlyingAssetBalance - currentBalanceToDeposit))
