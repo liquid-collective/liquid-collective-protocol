@@ -2140,26 +2140,34 @@ contract OperatorsRegistryV1TestDistribution is Test {
         OperatorsRegistryInitializableV1(address(operatorsRegistry)).debugGetNextValidatorsToExitFromActiveOperators(50);
     }
 
-    function testDecreasingStoppedValidatorCounts() external {
-        RiverMock(address(river)).sudoSetDepositedValidatorsCount(100);
+    function testDecreasingStoppedValidatorCounts(uint8 decreasingIndex, uint16[5] memory fuzzedStoppedValidatorCount)
+        external
+    {
+        vm.assume(fuzzedStoppedValidatorCount[0] > 0);
+        vm.assume(fuzzedStoppedValidatorCount[1] > 0);
+        vm.assume(fuzzedStoppedValidatorCount[2] > 0);
+        vm.assume(fuzzedStoppedValidatorCount[3] > 0);
+        vm.assume(fuzzedStoppedValidatorCount[4] > 0);
+
+        uint32 sum = uint32(fuzzedStoppedValidatorCount[0]) + fuzzedStoppedValidatorCount[1]
+            + fuzzedStoppedValidatorCount[2] + fuzzedStoppedValidatorCount[3] + fuzzedStoppedValidatorCount[4];
 
         uint32[] memory stoppedValidatorCount = new uint32[](6);
 
-        stoppedValidatorCount[1] = 10;
-        stoppedValidatorCount[2] = 15;
-        stoppedValidatorCount[3] = 20;
-        stoppedValidatorCount[4] = 25;
-        stoppedValidatorCount[5] = 30;
-        stoppedValidatorCount[0] = 100;
+        stoppedValidatorCount[0] = sum;
+        stoppedValidatorCount[1] = fuzzedStoppedValidatorCount[0];
+        stoppedValidatorCount[2] = fuzzedStoppedValidatorCount[1];
+        stoppedValidatorCount[3] = fuzzedStoppedValidatorCount[2];
+        stoppedValidatorCount[4] = fuzzedStoppedValidatorCount[3];
+        stoppedValidatorCount[5] = fuzzedStoppedValidatorCount[4];
+
+        RiverMock(address(river)).sudoSetDepositedValidatorsCount(sum);
 
         OperatorsRegistryInitializableV1(address(operatorsRegistry)).sudoStoppedValidatorCounts(stoppedValidatorCount);
 
-        stoppedValidatorCount[1] = 10;
-        stoppedValidatorCount[2] = 15;
-        stoppedValidatorCount[3] = 20;
-        stoppedValidatorCount[4] = 25;
-        stoppedValidatorCount[5] = 29;
-        stoppedValidatorCount[0] = 99;
+        decreasingIndex = uint8(bound(decreasingIndex, 0, 5));
+
+        stoppedValidatorCount[decreasingIndex] -= 1;
 
         vm.expectRevert(abi.encodeWithSignature("StoppedValidatorCountsDecreased()"));
         OperatorsRegistryInitializableV1(address(operatorsRegistry)).sudoStoppedValidatorCounts(stoppedValidatorCount);

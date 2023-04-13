@@ -163,6 +163,11 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
     }
 
     /// @inheritdoc IOperatorsRegistryV1
+    function getPerformedAndPendingValidatorExitRequests() external view returns (uint256) {
+        return TotalValidatorExitsRequested.get() + CurrentValidatorExitsDemand.get();
+    }
+
+    /// @inheritdoc IOperatorsRegistryV1
     function getOperatorCount() external view returns (uint256) {
         return OperatorsV2.getCount();
     }
@@ -426,8 +431,7 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
         uint256 savedCurrentValidatorExitsDemand = currentValidatorExitsDemand;
         currentValidatorExitsDemand -= _pickNextValidatorsToExitFromActiveOperators(exitRequestsToPerform);
 
-        CurrentValidatorExitsDemand.set(currentValidatorExitsDemand);
-        emit SetCurrentValidatorExitsDemand(savedCurrentValidatorExitsDemand, currentValidatorExitsDemand);
+        _setCurrentValidatorExitsDemand(savedCurrentValidatorExitsDemand, currentValidatorExitsDemand);
     }
 
     /// @inheritdoc IOperatorsRegistryV1
@@ -440,43 +444,69 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
                 - (totalValidatorExitsRequested + currentValidatorExitsDemand)
         );
         if (_count > 0) {
-            CurrentValidatorExitsDemand.set(currentValidatorExitsDemand + _count);
-            emit SetCurrentValidatorExitsDemand(currentValidatorExitsDemand, currentValidatorExitsDemand + _count);
+            _setCurrentValidatorExitsDemand(currentValidatorExitsDemand, currentValidatorExitsDemand + _count);
         }
     }
+
+    /// @notice Internal utility to set the current validator exits demand
+    /// @param _currentValue The current value
+    /// @param _newValue The new value
+    function _setCurrentValidatorExitsDemand(uint256 _currentValue, uint256 _newValue) internal {
+        CurrentValidatorExitsDemand.set(_newValue);
+        emit SetCurrentValidatorExitsDemand(_currentValue, _newValue);
+    }
+
+    error StoppedValidatorCountArrayShrinking();
 
     /// @notice Internal utiltiy to set the stopped validator array after sanity checks
     /// @param stoppedValidatorCounts The stopped validators counts for every operator + the total count in index 0
     function _setStoppedValidatorCounts(uint32[] calldata stoppedValidatorCounts) internal {
+        // we check that the array is not empty
         uint256 stoppedValidatorCountsLength = stoppedValidatorCounts.length;
         if (stoppedValidatorCountsLength == 0) {
             revert InvalidEmptyStoppedValidatorCountsArray();
         }
-        uint32 total = stoppedValidatorCounts[0];
-        uint32 count = 0;
+        // we check that the cells containing operator stopped values are no more than the current operator count
         if (stoppedValidatorCountsLength - 1 > OperatorsV2.getCount()) {
             revert StoppedValidatorCountsTooHigh();
         }
+
         uint32[] memory currentStoppedValidatorCounts = OperatorsV2.getStoppedValidators();
         uint256 currentStoppedValidatorCountsLength = currentStoppedValidatorCounts.length;
-        for (uint256 idx = 1; idx < stoppedValidatorCountsLength;) {
+
+        // we check that the number of stopped values is not decreasing
+        if (stoppedValidatorCountsLength < currentStoppedValidatorCountsLength) {
+            revert StoppedValidatorCountArrayShrinking();
+        }
+
+        uint32 total = stoppedValidatorCounts[0];
+        uint32 count = 0;
+
+        for (uint256 idx = 0; idx < stoppedValidatorCountsLength;) {
+            // if the previous array was long enough, we check that the values are not decreasing
             if (
                 idx < currentStoppedValidatorCountsLength
-                    && stoppedValidatorCounts[idx] < currentStoppedValidatorCounts[idx - 1]
+                    && stoppedValidatorCounts[idx] < currentStoppedValidatorCounts[idx]
             ) {
                 revert StoppedValidatorCountsDecreased();
             }
-            count += stoppedValidatorCounts[idx];
+            // we recompute the total to ensure it's not an invalid sum
+            if (idx > 0) {
+                count += stoppedValidatorCounts[idx];
+            }
             unchecked {
                 ++idx;
             }
         }
+        // we check that the total is matching the sum of the individual values
         if (total != count) {
             revert InvalidStoppedValidatorCountsSum();
         }
+        // we check that the total is not higher than the current deposited validator count
         if (total > IRiverV1(payable(RiverAddress.get())).getDepositedValidatorCount()) {
             revert StoppedValidatorCountsTooHigh();
         }
+        // we set the new stopped validators counts
         OperatorsV2.setRawStoppedValidators(stoppedValidatorCounts);
         emit UpdatedStoppedValidators(stoppedValidatorCounts);
     }

@@ -209,6 +209,15 @@ interface IOperatorsRegistryV1 {
     /// @return The total requested exit count
     function getTotalValidatorExitsRequested() external view returns (uint256);
 
+    /// @notice Get the current exit request demand waiting to be triggered
+    /// @notice This value is the amount of exit requests that are demanded and not yet performed by the contract
+    /// @return The current exit request demand
+    function getCurrentValidatorExitsDemand() external view returns (uint256);
+
+    /// @notice Retrieve the total pending and performed exit requests (sum of getTotalValidatorExitsRequested() and getCurrentValidatorExitsDemand())
+    /// @return The total pending and performed exit requests
+    function getPerformedAndPendingValidatorExitRequests() external view returns (uint256);
+
     /// @notice Retrieve the raw stopped validators array from storage
     /// @return The stopped validator array
     function getStoppedValidatorCountPerOperator() external view returns (uint32[] memory);
@@ -223,11 +232,6 @@ interface IOperatorsRegistryV1 {
         external
         view
         returns (bytes memory publicKey, bytes memory signature, bool funded);
-
-    /// @notice Get the current exit request demand waiting to be triggered
-    /// @notice This value is the amount of exit requests that are demanded and not yet performed by the contract
-    /// @return The current exit request demand
-    function getCurrentValidatorExitsDemand() external view returns (uint256);
 
     /// @notice Retrieve the active operator set
     /// @return The list of active operators and their details
@@ -313,6 +317,7 @@ interface IOperatorsRegistryV1 {
     function requestValidatorExits(uint256 _count) external;
 
     /// @notice Increases the exit request demand
+    /// @dev This method is only callable by the river contract, and to actually forward the information to the node operators via event emission, the unprotected requestValidatorExits method must be called
     /// @param _count The amount of exit requests to add to the demand
     function demandValidatorExits(uint256 _count) external;
 }
