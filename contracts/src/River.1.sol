@@ -436,7 +436,6 @@ contract RiverV1 is
     /// @notice Internal utility to set the daily committable limits
     /// @param dcl The new daily committable limits
     function _setDailyCommittableLimits(DailyCommittableLimits.DailyCommittableLimitsStruct memory dcl) internal {
-        LibSanitize._validFee(dcl.maxDailyRelativeCommittableAmount);
         DailyCommittableLimits.set(dcl);
         emit SetMaxDailyCommittableAmounts(dcl.maxDailyNetCommittableAmount, dcl.maxDailyRelativeCommittableAmount);
     }
