@@ -38,8 +38,10 @@ contract OperatorsRegistryInitializableV1 is OperatorsRegistryV1 {
         OperatorsV2.get(_operatorIndex).requestedExits = _requestedExits;
     }
 
-    function sudoStoppedValidatorCounts(uint32[] calldata stoppedValidatorCounts) external {
-        _setStoppedValidatorCounts(stoppedValidatorCounts);
+    function sudoStoppedValidatorCounts(uint32[] calldata stoppedValidatorCount, uint256 depositedValidatorCount)
+        external
+    {
+        _setStoppedValidatorCounts(stoppedValidatorCount, depositedValidatorCount);
     }
 }
 
@@ -1168,8 +1170,6 @@ contract OperatorsRegistryV1Tests is Test, BytesGenerator {
         uint32[] memory stoppedValidatorCounts = new uint32[](len + 1);
         stoppedValidatorCounts[0] = totalCount;
 
-        RiverMock(address(river)).sudoSetDepositedValidatorsCount(totalCount);
-
         for (uint256 idx = 1; idx < len + 1; ++idx) {
             vm.prank(admin);
             operatorsRegistry.addOperator(string(abi.encodePacked(idx)), address(123));
@@ -1179,7 +1179,7 @@ contract OperatorsRegistryV1Tests is Test, BytesGenerator {
         vm.prank(river);
         vm.expectEmit(true, true, true, true);
         emit UpdatedStoppedValidators(stoppedValidatorCounts);
-        operatorsRegistry.reportStoppedValidatorCounts(stoppedValidatorCounts);
+        operatorsRegistry.reportStoppedValidatorCounts(stoppedValidatorCounts, totalCount);
 
         assertEq(operatorsRegistry.getTotalStoppedValidatorCount(), totalCount);
         uint32[] memory rawStoppedValidators = operatorsRegistry.getStoppedValidatorCountPerOperator();
@@ -1208,21 +1208,21 @@ contract OperatorsRegistryV1Tests is Test, BytesGenerator {
 
         vm.prank(random);
         vm.expectRevert(abi.encodeWithSignature("Unauthorized(address)", random));
-        operatorsRegistry.reportStoppedValidatorCounts(stoppedValidatorCounts);
+        operatorsRegistry.reportStoppedValidatorCounts(stoppedValidatorCounts, totalCount);
     }
 
     function testReportStoppedValidatorCountsEmptyArray() public {
         uint32[] memory stoppedValidators = new uint32[](0);
         vm.prank(river);
         vm.expectRevert(abi.encodeWithSignature("InvalidEmptyStoppedValidatorCountsArray()"));
-        operatorsRegistry.reportStoppedValidatorCounts(stoppedValidators);
+        operatorsRegistry.reportStoppedValidatorCounts(stoppedValidators, 0);
     }
 
     function testReportStoppedValidatorCountsMoreElementsThanOperators() public {
         uint32[] memory stoppedValidators = new uint32[](2);
         vm.prank(river);
         vm.expectRevert(abi.encodeWithSignature("StoppedValidatorCountsTooHigh()"));
-        operatorsRegistry.reportStoppedValidatorCounts(stoppedValidators);
+        operatorsRegistry.reportStoppedValidatorCounts(stoppedValidators, 0);
     }
 
     function testReportStoppedValidatorCountsInvalidSum(uint32 totalCount, uint8 len) public {
@@ -1242,7 +1242,7 @@ contract OperatorsRegistryV1Tests is Test, BytesGenerator {
 
         vm.prank(river);
         vm.expectRevert(abi.encodeWithSignature("InvalidStoppedValidatorCountsSum()"));
-        operatorsRegistry.reportStoppedValidatorCounts(stoppedValidators);
+        operatorsRegistry.reportStoppedValidatorCounts(stoppedValidators, 0);
     }
 }
 
@@ -1565,7 +1565,9 @@ contract OperatorsRegistryV1TestDistribution is Test {
         stoppedValidatorCounts[5] = 25;
 
         RiverMock(address(river)).sudoSetDepositedValidatorsCount(75);
-        OperatorsRegistryInitializableV1(address(operatorsRegistry)).sudoStoppedValidatorCounts(stoppedValidatorCounts);
+        OperatorsRegistryInitializableV1(address(operatorsRegistry)).sudoStoppedValidatorCounts(
+            stoppedValidatorCounts, 75
+        );
 
         limits = new uint32[](2);
         limits[0] = 50;
@@ -1657,7 +1659,9 @@ contract OperatorsRegistryV1TestDistribution is Test {
         stoppedValidatorCounts[5] = 9;
 
         RiverMock(river).sudoSetDepositedValidatorsCount(47);
-        OperatorsRegistryInitializableV1(address(operatorsRegistry)).sudoStoppedValidatorCounts(stoppedValidatorCounts);
+        OperatorsRegistryInitializableV1(address(operatorsRegistry)).sudoStoppedValidatorCounts(
+            stoppedValidatorCounts, 47
+        );
 
         OperatorsRegistryInitializableV1(address(operatorsRegistry)).debugGetNextValidatorsToDepositFromActiveOperators(
             50
@@ -1853,7 +1857,9 @@ contract OperatorsRegistryV1TestDistribution is Test {
         stoppedValidatorCounts[5] = 15;
 
         RiverMock(address(river)).sudoSetDepositedValidatorsCount(65);
-        OperatorsRegistryInitializableV1(address(operatorsRegistry)).sudoStoppedValidatorCounts(stoppedValidatorCounts);
+        OperatorsRegistryInitializableV1(address(operatorsRegistry)).sudoStoppedValidatorCounts(
+            stoppedValidatorCounts, 65
+        );
 
         vm.expectEmit(true, true, true, true);
         emit UpdatedRequestedValidatorExitsUponStopped(0, 10, 11);
@@ -2163,19 +2169,21 @@ contract OperatorsRegistryV1TestDistribution is Test {
 
         RiverMock(address(river)).sudoSetDepositedValidatorsCount(sum);
 
-        OperatorsRegistryInitializableV1(address(operatorsRegistry)).sudoStoppedValidatorCounts(stoppedValidatorCount);
+        OperatorsRegistryInitializableV1(address(operatorsRegistry)).sudoStoppedValidatorCounts(
+            stoppedValidatorCount, sum
+        );
 
         decreasingIndex = uint8(bound(decreasingIndex, 0, 5));
 
         stoppedValidatorCount[decreasingIndex] -= 1;
 
         vm.expectRevert(abi.encodeWithSignature("StoppedValidatorCountsDecreased()"));
-        OperatorsRegistryInitializableV1(address(operatorsRegistry)).sudoStoppedValidatorCounts(stoppedValidatorCount);
+        OperatorsRegistryInitializableV1(address(operatorsRegistry)).sudoStoppedValidatorCounts(
+            stoppedValidatorCount, sum
+        );
     }
 
     function testStoppedValidatorCountHigherThanDepositCount() external {
-        RiverMock(address(river)).sudoSetDepositedValidatorsCount(99);
-
         uint32[] memory stoppedValidatorCount = new uint32[](6);
 
         stoppedValidatorCount[1] = 10;
@@ -2185,7 +2193,10 @@ contract OperatorsRegistryV1TestDistribution is Test {
         stoppedValidatorCount[5] = 30;
         stoppedValidatorCount[0] = 100;
 
+        RiverMock(address(river)).sudoSetDepositedValidatorsCount(99);
         vm.expectRevert(abi.encodeWithSignature("StoppedValidatorCountsTooHigh()"));
-        OperatorsRegistryInitializableV1(address(operatorsRegistry)).sudoStoppedValidatorCounts(stoppedValidatorCount);
+        OperatorsRegistryInitializableV1(address(operatorsRegistry)).sudoStoppedValidatorCounts(
+            stoppedValidatorCount, 99
+        );
     }
 }

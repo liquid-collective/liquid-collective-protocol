@@ -214,9 +214,10 @@ interface IOperatorsRegistryV1 {
     /// @return The current exit request demand
     function getCurrentValidatorExitsDemand() external view returns (uint256);
 
-    /// @notice Retrieve the total pending and performed exit requests (sum of getTotalValidatorExitsRequested() and getCurrentValidatorExitsDemand())
-    /// @return The total pending and performed exit requests
-    function getPerformedAndPendingValidatorExitRequests() external view returns (uint256);
+    /// @notice Retrieve the total stopped and requested exit count
+    /// @return The total stopped count
+    /// @return The total requested exit count
+    function getStoppedAndRequestedExitCounts() external view returns (uint32, uint256);
 
     /// @notice Retrieve the raw stopped validators array from storage
     /// @return The stopped validator array
@@ -239,8 +240,10 @@ interface IOperatorsRegistryV1 {
 
     /// @notice Allows river to override the stopped validators array
     /// @notice This actions happens during the Oracle report processing
-    /// @param stoppedValidatorCounts The new stopped validators array
-    function reportStoppedValidatorCounts(uint32[] calldata stoppedValidatorCounts) external;
+    /// @param _stoppedValidatorCounts The new stopped validators array
+    /// @param _depositedValidatorCount The total deposited validator count
+    function reportStoppedValidatorCounts(uint32[] calldata _stoppedValidatorCounts, uint256 _depositedValidatorCount)
+        external;
 
     /// @notice Adds an operator to the registry
     /// @dev Only callable by the administrator

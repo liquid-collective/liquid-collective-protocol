@@ -145,11 +145,7 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
 
     /// @inheritdoc IOperatorsRegistryV1
     function getTotalStoppedValidatorCount() external view returns (uint32) {
-        uint32[] storage stoppedValidatorCounts = OperatorsV2.getStoppedValidators();
-        if (stoppedValidatorCounts.length == 0) {
-            return 0;
-        }
-        return stoppedValidatorCounts[0];
+        return _getTotalStoppedValidatorCount();
     }
 
     /// @inheritdoc IOperatorsRegistryV1
@@ -163,8 +159,9 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
     }
 
     /// @inheritdoc IOperatorsRegistryV1
-    function getPerformedAndPendingValidatorExitRequests() external view returns (uint256) {
-        return TotalValidatorExitsRequested.get() + CurrentValidatorExitsDemand.get();
+    function getStoppedAndRequestedExitCounts() external view returns (uint32, uint256) {
+        return
+            (_getTotalStoppedValidatorCount(), TotalValidatorExitsRequested.get() + CurrentValidatorExitsDemand.get());
     }
 
     /// @inheritdoc IOperatorsRegistryV1
@@ -211,8 +208,11 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
     }
 
     /// @inheritdoc IOperatorsRegistryV1
-    function reportStoppedValidatorCounts(uint32[] calldata stoppedValidatorCounts) external onlyRiver {
-        _setStoppedValidatorCounts(stoppedValidatorCounts);
+    function reportStoppedValidatorCounts(uint32[] calldata _stoppedValidatorCounts, uint256 _depositedValidatorCount)
+        external
+        onlyRiver
+    {
+        _setStoppedValidatorCounts(_stoppedValidatorCounts, _depositedValidatorCount);
     }
 
     /// @inheritdoc IOperatorsRegistryV1
@@ -448,6 +448,16 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
         }
     }
 
+    /// @notice Internal utility to retrieve the total stopped validator count
+    /// @return The total stopped validator count
+    function _getTotalStoppedValidatorCount() internal view returns (uint32) {
+        uint32[] storage stoppedValidatorCounts = OperatorsV2.getStoppedValidators();
+        if (stoppedValidatorCounts.length == 0) {
+            return 0;
+        }
+        return stoppedValidatorCounts[0];
+    }
+
     /// @notice Internal utility to set the current validator exits demand
     /// @param _currentValue The current value
     /// @param _newValue The new value
@@ -459,10 +469,13 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
     error StoppedValidatorCountArrayShrinking();
 
     /// @notice Internal utiltiy to set the stopped validator array after sanity checks
-    /// @param stoppedValidatorCounts The stopped validators counts for every operator + the total count in index 0
-    function _setStoppedValidatorCounts(uint32[] calldata stoppedValidatorCounts) internal {
+    /// @param _stoppedValidatorCounts The stopped validators counts for every operator + the total count in index 0
+    /// @param _depositedValidatorCount The current deposited validator count
+    function _setStoppedValidatorCounts(uint32[] calldata _stoppedValidatorCounts, uint256 _depositedValidatorCount)
+        internal
+    {
         // we check that the array is not empty
-        uint256 stoppedValidatorCountsLength = stoppedValidatorCounts.length;
+        uint256 stoppedValidatorCountsLength = _stoppedValidatorCounts.length;
         if (stoppedValidatorCountsLength == 0) {
             revert InvalidEmptyStoppedValidatorCountsArray();
         }
@@ -479,21 +492,23 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
             revert StoppedValidatorCountArrayShrinking();
         }
 
-        uint32 total = stoppedValidatorCounts[0];
+        uint32 total = _stoppedValidatorCounts[0];
         uint32 count = 0;
 
-        for (uint256 idx = 0; idx < stoppedValidatorCountsLength;) {
+        if (currentStoppedValidatorCountsLength > 0 && _stoppedValidatorCounts[0] < currentStoppedValidatorCounts[0]) {
+            revert StoppedValidatorCountsDecreased();
+        }
+
+        for (uint256 idx = 1; idx < stoppedValidatorCountsLength;) {
             // if the previous array was long enough, we check that the values are not decreasing
             if (
                 idx < currentStoppedValidatorCountsLength
-                    && stoppedValidatorCounts[idx] < currentStoppedValidatorCounts[idx]
+                    && _stoppedValidatorCounts[idx] < currentStoppedValidatorCounts[idx]
             ) {
                 revert StoppedValidatorCountsDecreased();
             }
             // we recompute the total to ensure it's not an invalid sum
-            if (idx > 0) {
-                count += stoppedValidatorCounts[idx];
-            }
+            count += _stoppedValidatorCounts[idx];
             unchecked {
                 ++idx;
             }
@@ -503,12 +518,12 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
             revert InvalidStoppedValidatorCountsSum();
         }
         // we check that the total is not higher than the current deposited validator count
-        if (total > IRiverV1(payable(RiverAddress.get())).getDepositedValidatorCount()) {
+        if (total > _depositedValidatorCount) {
             revert StoppedValidatorCountsTooHigh();
         }
         // we set the new stopped validators counts
-        OperatorsV2.setRawStoppedValidators(stoppedValidatorCounts);
-        emit UpdatedStoppedValidators(stoppedValidatorCounts);
+        OperatorsV2.setRawStoppedValidators(_stoppedValidatorCounts);
+        emit UpdatedStoppedValidators(_stoppedValidatorCounts);
     }
 
     /// @notice Internal utility to concatenate bytes arrays together

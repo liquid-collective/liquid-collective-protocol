@@ -522,7 +522,9 @@ contract RiverV1 is
     /// @notice Change the stored stopped validator counts for all the operators
     /// @param stoppedValidatorCounts The list of stopped validator counts
     function _setReportedStoppedValidatorCounts(uint32[] memory stoppedValidatorCounts) internal override {
-        IOperatorsRegistryV1(OperatorsRegistryAddress.get()).reportStoppedValidatorCounts(stoppedValidatorCounts);
+        IOperatorsRegistryV1(OperatorsRegistryAddress.get()).reportStoppedValidatorCounts(
+            stoppedValidatorCounts, DepositedValidatorCount.get()
+        );
     }
 
     /// @notice Requests exits of validators after possibly rebalancing deposit and redeem balances
@@ -555,8 +557,8 @@ contract RiverV1 is
 
                 IOperatorsRegistryV1 or = IOperatorsRegistryV1(OperatorsRegistryAddress.get());
 
-                uint256 totalStoppedValidatorCount = or.getTotalStoppedValidatorCount();
-                uint256 totalRequestedExitsCount = or.getPerformedAndPendingValidatorExitRequests();
+                (uint256 totalStoppedValidatorCount, uint256 totalRequestedExitsCount) =
+                    or.getStoppedAndRequestedExitCounts();
 
                 uint256 preExitingBalance = (
                     totalRequestedExitsCount > totalStoppedValidatorCount
