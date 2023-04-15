@@ -2343,6 +2343,177 @@ contract OperatorsRegistryV1TestDistribution is Test {
         );
     }
 
+    function testStoppedValidatorCountArrayShrinking(uint8[5] memory fuzzedStoppedValidatorCount) external {
+        fuzzedStoppedValidatorCount[0] = uint8(bound(fuzzedStoppedValidatorCount[0], 1, 50));
+        fuzzedStoppedValidatorCount[1] = uint8(bound(fuzzedStoppedValidatorCount[1], 1, 50));
+        fuzzedStoppedValidatorCount[2] = uint8(bound(fuzzedStoppedValidatorCount[2], 1, 50));
+        fuzzedStoppedValidatorCount[3] = uint8(bound(fuzzedStoppedValidatorCount[3], 1, 50));
+        fuzzedStoppedValidatorCount[4] = uint8(bound(fuzzedStoppedValidatorCount[4], 1, 50));
+
+        vm.startPrank(admin);
+        operatorsRegistry.addValidators(
+            0, fuzzedStoppedValidatorCount[0], genBytes((48 + 96) * uint256(fuzzedStoppedValidatorCount[0]))
+        );
+        operatorsRegistry.addValidators(
+            1, fuzzedStoppedValidatorCount[1], genBytes((48 + 96) * uint256(fuzzedStoppedValidatorCount[1]))
+        );
+        operatorsRegistry.addValidators(
+            2, fuzzedStoppedValidatorCount[2], genBytes((48 + 96) * uint256(fuzzedStoppedValidatorCount[2]))
+        );
+        operatorsRegistry.addValidators(
+            3, fuzzedStoppedValidatorCount[3], genBytes((48 + 96) * uint256(fuzzedStoppedValidatorCount[3]))
+        );
+        operatorsRegistry.addValidators(
+            4, fuzzedStoppedValidatorCount[4], genBytes((48 + 96) * uint256(fuzzedStoppedValidatorCount[4]))
+        );
+        vm.stopPrank();
+
+        uint32[] memory limits = new uint32[](5);
+        limits[0] = fuzzedStoppedValidatorCount[0];
+        limits[1] = fuzzedStoppedValidatorCount[1];
+        limits[2] = fuzzedStoppedValidatorCount[2];
+        limits[3] = fuzzedStoppedValidatorCount[3];
+        limits[4] = fuzzedStoppedValidatorCount[4];
+
+        uint256[] memory operators = new uint256[](5);
+        operators[0] = 0;
+        operators[1] = 1;
+        operators[2] = 2;
+        operators[3] = 3;
+        operators[4] = 4;
+
+        vm.prank(admin);
+        operatorsRegistry.setOperatorLimits(operators, limits, block.number);
+
+        uint32 sum = uint32(fuzzedStoppedValidatorCount[0]) + fuzzedStoppedValidatorCount[1]
+            + fuzzedStoppedValidatorCount[2] + fuzzedStoppedValidatorCount[3] + fuzzedStoppedValidatorCount[4];
+
+        OperatorsRegistryInitializableV1(address(operatorsRegistry)).debugGetNextValidatorsToDepositFromActiveOperators(
+            sum
+        );
+
+        {
+            uint32[] memory stoppedValidatorCount = new uint32[](6);
+
+            stoppedValidatorCount[0] = sum;
+            stoppedValidatorCount[1] = fuzzedStoppedValidatorCount[0];
+            stoppedValidatorCount[2] = fuzzedStoppedValidatorCount[1];
+            stoppedValidatorCount[3] = fuzzedStoppedValidatorCount[2];
+            stoppedValidatorCount[4] = fuzzedStoppedValidatorCount[3];
+            stoppedValidatorCount[5] = fuzzedStoppedValidatorCount[4];
+
+            RiverMock(address(river)).sudoSetDepositedValidatorsCount(sum);
+
+            OperatorsRegistryInitializableV1(address(operatorsRegistry)).sudoStoppedValidatorCounts(
+                stoppedValidatorCount, sum
+            );
+        }
+        {
+            uint32[] memory stoppedValidatorCount = new uint32[](5);
+
+            stoppedValidatorCount[0] = sum - fuzzedStoppedValidatorCount[4];
+            stoppedValidatorCount[1] = fuzzedStoppedValidatorCount[0];
+            stoppedValidatorCount[2] = fuzzedStoppedValidatorCount[1];
+            stoppedValidatorCount[3] = fuzzedStoppedValidatorCount[2];
+            stoppedValidatorCount[4] = fuzzedStoppedValidatorCount[3];
+
+            vm.expectRevert(abi.encodeWithSignature("StoppedValidatorCountArrayShrinking()"));
+            OperatorsRegistryInitializableV1(address(operatorsRegistry)).sudoStoppedValidatorCounts(
+                stoppedValidatorCount, sum
+            );
+        }
+    }
+
+    function testStoppedValidatorCountAboveFundedCountOnNewArrayElements(uint8[5] memory fuzzedStoppedValidatorCount)
+        external
+    {
+        fuzzedStoppedValidatorCount[0] = uint8(bound(fuzzedStoppedValidatorCount[0], 1, 50));
+        fuzzedStoppedValidatorCount[1] = uint8(bound(fuzzedStoppedValidatorCount[1], 1, 50));
+        fuzzedStoppedValidatorCount[2] = uint8(bound(fuzzedStoppedValidatorCount[2], 1, 50));
+        fuzzedStoppedValidatorCount[3] = uint8(bound(fuzzedStoppedValidatorCount[3], 1, 50));
+        fuzzedStoppedValidatorCount[4] = uint8(bound(fuzzedStoppedValidatorCount[4], 1, 50));
+
+        vm.startPrank(admin);
+        operatorsRegistry.addValidators(
+            0, fuzzedStoppedValidatorCount[0], genBytes((48 + 96) * uint256(fuzzedStoppedValidatorCount[0]))
+        );
+        operatorsRegistry.addValidators(
+            1, fuzzedStoppedValidatorCount[1], genBytes((48 + 96) * uint256(fuzzedStoppedValidatorCount[1]))
+        );
+        operatorsRegistry.addValidators(
+            2, fuzzedStoppedValidatorCount[2], genBytes((48 + 96) * uint256(fuzzedStoppedValidatorCount[2]))
+        );
+        operatorsRegistry.addValidators(
+            3, fuzzedStoppedValidatorCount[3], genBytes((48 + 96) * uint256(fuzzedStoppedValidatorCount[3]))
+        );
+        operatorsRegistry.addValidators(
+            4, fuzzedStoppedValidatorCount[4], genBytes((48 + 96) * uint256(fuzzedStoppedValidatorCount[4]))
+        );
+        vm.stopPrank();
+
+        uint32[] memory limits = new uint32[](5);
+        limits[0] = fuzzedStoppedValidatorCount[0];
+        limits[1] = fuzzedStoppedValidatorCount[1];
+        limits[2] = fuzzedStoppedValidatorCount[2];
+        limits[3] = fuzzedStoppedValidatorCount[3];
+        limits[4] = fuzzedStoppedValidatorCount[4];
+
+        uint256[] memory operators = new uint256[](5);
+        operators[0] = 0;
+        operators[1] = 1;
+        operators[2] = 2;
+        operators[3] = 3;
+        operators[4] = 4;
+
+        vm.prank(admin);
+        operatorsRegistry.setOperatorLimits(operators, limits, block.number);
+
+        uint32 sum = uint32(fuzzedStoppedValidatorCount[0]) + fuzzedStoppedValidatorCount[1]
+            + fuzzedStoppedValidatorCount[2] + fuzzedStoppedValidatorCount[3] + fuzzedStoppedValidatorCount[4];
+
+        OperatorsRegistryInitializableV1(address(operatorsRegistry)).debugGetNextValidatorsToDepositFromActiveOperators(
+            sum
+        );
+
+        {
+            uint32[] memory stoppedValidatorCount = new uint32[](5);
+
+            stoppedValidatorCount[0] = sum - fuzzedStoppedValidatorCount[4];
+            stoppedValidatorCount[1] = fuzzedStoppedValidatorCount[0];
+            stoppedValidatorCount[2] = fuzzedStoppedValidatorCount[1];
+            stoppedValidatorCount[3] = fuzzedStoppedValidatorCount[2];
+            stoppedValidatorCount[4] = fuzzedStoppedValidatorCount[3];
+
+            RiverMock(address(river)).sudoSetDepositedValidatorsCount(sum);
+
+            OperatorsRegistryInitializableV1(address(operatorsRegistry)).sudoStoppedValidatorCounts(
+                stoppedValidatorCount, sum
+            );
+        }
+        {
+            uint32[] memory stoppedValidatorCount = new uint32[](6);
+
+            stoppedValidatorCount[0] = sum + 1;
+            stoppedValidatorCount[1] = fuzzedStoppedValidatorCount[0];
+            stoppedValidatorCount[2] = fuzzedStoppedValidatorCount[1];
+            stoppedValidatorCount[3] = fuzzedStoppedValidatorCount[2];
+            stoppedValidatorCount[4] = fuzzedStoppedValidatorCount[3];
+            stoppedValidatorCount[5] = fuzzedStoppedValidatorCount[4] + 1;
+
+            vm.expectRevert(
+                abi.encodeWithSignature(
+                    "StoppedValidatorCountAboveFundedCount(uint256,uint32,uint32)",
+                    4,
+                    fuzzedStoppedValidatorCount[4] + 1,
+                    fuzzedStoppedValidatorCount[4]
+                )
+            );
+            OperatorsRegistryInitializableV1(address(operatorsRegistry)).sudoStoppedValidatorCounts(
+                stoppedValidatorCount, sum
+            );
+        }
+    }
+
     function testDecreasingStoppedValidatorCountsSum(uint16[5] memory fuzzedStoppedValidatorCount) external {
         fuzzedStoppedValidatorCount[0] = uint8(bound(fuzzedStoppedValidatorCount[0], 1, 50));
         fuzzedStoppedValidatorCount[1] = uint8(bound(fuzzedStoppedValidatorCount[1], 1, 50));
