@@ -76,6 +76,21 @@ library OperatorsV2 {
         return r.value[_index];
     }
 
+    /// @notice Retrieve the operators in storage
+    /// @return The Operator structure array
+    function getAll() internal view returns (Operator[] storage) {
+        bytes32 slot = OPERATORS_SLOT;
+
+        SlotOperator storage r;
+
+        // solhint-disable-next-line no-inline-assembly
+        assembly {
+            r.slot := slot
+        }
+
+        return r.value;
+    }
+
     /// @notice Retrieve the operator count in storage
     /// @return The count of operators in storage
     function getCount() internal view returns (uint256) {

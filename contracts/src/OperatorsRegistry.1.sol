@@ -465,6 +465,7 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
     }
 
     error StoppedValidatorCountArrayShrinking();
+    error StoppedValidatorCountAboveFundedCount(uint256 operatorIndex, uint32 stoppedCount, uint32 fundedCount);
 
     /// @notice Internal utiltiy to set the stopped validator array after sanity checks
     /// @param _stoppedValidatorCounts The stopped validators counts for every operator + the total count in index 0
@@ -477,8 +478,11 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
         if (stoppedValidatorCountsLength == 0) {
             revert InvalidEmptyStoppedValidatorCountsArray();
         }
+
+        OperatorsV2.Operator[] storage operators = OperatorsV2.getAll();
+
         // we check that the cells containing operator stopped values are no more than the current operator count
-        if (stoppedValidatorCountsLength - 1 > OperatorsV2.getCount()) {
+        if (stoppedValidatorCountsLength - 1 > operators.length) {
             revert StoppedValidatorCountsTooHigh();
         }
 
@@ -498,6 +502,11 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
             // if the previous array was long enough, we check that the values are not decreasing
             if (_stoppedValidatorCounts[idx] < currentStoppedValidatorCounts[idx]) {
                 revert StoppedValidatorCountsDecreased();
+            }
+            if (_stoppedValidatorCounts[idx] > operators[idx - 1].funded) {
+                revert StoppedValidatorCountAboveFundedCount(
+                    idx - 1, _stoppedValidatorCounts[idx], operators[idx - 1].funded
+                );
             }
             // we recompute the total to ensure it's not an invalid sum
             count += _stoppedValidatorCounts[idx];
