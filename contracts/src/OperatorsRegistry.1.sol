@@ -517,6 +517,11 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
 
         for (; idx < stoppedValidatorCountsLength;) {
             // we recompute the total to ensure it's not an invalid sum
+            if (_stoppedValidatorCounts[idx] > operators[idx - 1].funded) {
+                revert StoppedValidatorCountAboveFundedCount(
+                    idx - 1, _stoppedValidatorCounts[idx], operators[idx - 1].funded
+                );
+            }
             count += _stoppedValidatorCounts[idx];
             unchecked {
                 ++idx;

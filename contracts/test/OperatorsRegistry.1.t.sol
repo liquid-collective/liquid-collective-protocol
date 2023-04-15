@@ -1163,18 +1163,36 @@ contract OperatorsRegistryV1Tests is Test, BytesGenerator {
         assertEq(operatorsRegistry.getTotalStoppedValidatorCount(), 0);
     }
 
-    function testReportStoppedValidatorCounts(uint32 totalCount, uint8 len) public {
+    function testReportStoppedValidatorCounts(uint8 totalCount, uint8 len) public {
+        len = uint8(bound(len, 1, type(uint8).max / 2));
         vm.assume(len > 0 && len < type(uint8).max);
-        totalCount = uint32(bound(totalCount, len, type(uint32).max));
+        totalCount = uint8(bound(totalCount, len, type(uint8).max));
 
         uint32[] memory stoppedValidatorCounts = new uint32[](len + 1);
+        uint32[] memory limits = new uint32[](len);
+        uint256[] memory operators = new uint256[](len);
         stoppedValidatorCounts[0] = totalCount;
 
         for (uint256 idx = 1; idx < len + 1; ++idx) {
             vm.prank(admin);
             operatorsRegistry.addOperator(string(abi.encodePacked(idx)), address(123));
             stoppedValidatorCounts[idx] = (totalCount / len) + (idx - 1 < totalCount % len ? 1 : 0);
+            if (stoppedValidatorCounts[idx] > 0) {
+                vm.prank(admin);
+                operatorsRegistry.addValidators(
+                    idx - 1, stoppedValidatorCounts[idx], genBytes((48 + 96) * stoppedValidatorCounts[idx])
+                );
+            }
+            limits[idx - 1] = stoppedValidatorCounts[idx];
+            operators[idx - 1] = idx - 1;
         }
+
+        vm.prank(admin);
+        operatorsRegistry.setOperatorLimits(operators, limits, block.number);
+
+        OperatorsRegistryInitializableV1(address(operatorsRegistry)).debugGetNextValidatorsToDepositFromActiveOperators(
+            totalCount
+        );
 
         vm.prank(river);
         vm.expectEmit(true, true, true, true);
@@ -1225,18 +1243,36 @@ contract OperatorsRegistryV1Tests is Test, BytesGenerator {
         operatorsRegistry.reportStoppedValidatorCounts(stoppedValidators, 0);
     }
 
-    function testReportStoppedValidatorCountsInvalidSum(uint32 totalCount, uint8 len) public {
+    function testReportStoppedValidatorCountsInvalidSum(uint8 totalCount, uint8 len) public {
+        len = uint8(bound(len, 1, type(uint8).max / 2));
         vm.assume(len > 0 && len < type(uint8).max);
-        totalCount = uint32(bound(totalCount, len, type(uint32).max));
+        totalCount = uint8(bound(totalCount, len, type(uint8).max));
 
         uint32[] memory stoppedValidators = new uint32[](len + 1);
+        uint32[] memory limits = new uint32[](len);
+        uint256[] memory operators = new uint256[](len);
         stoppedValidators[0] = totalCount;
 
         for (uint256 idx = 1; idx < len + 1; ++idx) {
             vm.prank(admin);
             operatorsRegistry.addOperator(string(abi.encodePacked(idx)), address(123));
             stoppedValidators[idx] = (totalCount / len) + (idx - 1 < totalCount % len ? 1 : 0);
+            if (stoppedValidators[idx] > 0) {
+                vm.prank(admin);
+                operatorsRegistry.addValidators(
+                    idx - 1, stoppedValidators[idx], genBytes((48 + 96) * stoppedValidators[idx])
+                );
+            }
+            limits[idx - 1] = stoppedValidators[idx];
+            operators[idx - 1] = idx - 1;
         }
+
+        vm.prank(admin);
+        operatorsRegistry.setOperatorLimits(operators, limits, block.number);
+
+        OperatorsRegistryInitializableV1(address(operatorsRegistry)).debugGetNextValidatorsToDepositFromActiveOperators(
+            totalCount
+        );
 
         stoppedValidators[0] -= 1;
 
@@ -2380,6 +2416,34 @@ contract OperatorsRegistryV1TestDistribution is Test {
     }
 
     function testStoppedValidatorCountHigherThanDepositCount() external {
+        vm.startPrank(admin);
+        operatorsRegistry.addValidators(0, 10, genBytes((48 + 96) * 10));
+        operatorsRegistry.addValidators(1, 15, genBytes((48 + 96) * 15));
+        operatorsRegistry.addValidators(2, 20, genBytes((48 + 96) * 20));
+        operatorsRegistry.addValidators(3, 25, genBytes((48 + 96) * 25));
+        operatorsRegistry.addValidators(4, 30, genBytes((48 + 96) * 30));
+        vm.stopPrank();
+
+        uint32[] memory limits = new uint32[](5);
+        limits[0] = 10;
+        limits[1] = 15;
+        limits[2] = 20;
+        limits[3] = 25;
+        limits[4] = 30;
+
+        uint256[] memory operators = new uint256[](5);
+        operators[0] = 0;
+        operators[1] = 1;
+        operators[2] = 2;
+        operators[3] = 3;
+        operators[4] = 4;
+
+        vm.prank(admin);
+        operatorsRegistry.setOperatorLimits(operators, limits, block.number);
+
+        OperatorsRegistryInitializableV1(address(operatorsRegistry)).debugGetNextValidatorsToDepositFromActiveOperators(
+            100
+        );
         uint32[] memory stoppedValidatorCount = new uint32[](6);
 
         stoppedValidatorCount[1] = 10;
