@@ -492,7 +492,7 @@ contract RiverV1 is
 
         if (underlyingAssetBalance > 0 && totalSupply > 0) {
             // we compute the redeem manager demands in eth and lsEth based on current conversion rate
-            uint256 redeemManagerDemand = IRedeemManagerV1(RedeemManagerAddress.get()).getRedeemDemand();
+            uint256 redeemManagerDemand = redeemManager_.getRedeemDemand();
             uint256 suppliedRedeemManagerDemand = redeemManagerDemand;
             uint256 suppliedRedeemManagerDemandInEth = _balanceFromShares(suppliedRedeemManagerDemand);
             uint256 availableBalanceToRedeem = BalanceToRedeem.get();
@@ -515,7 +515,7 @@ contract RiverV1 is
                 redeemManager_.reportWithdraw{value: suppliedRedeemManagerDemandInEth}(suppliedRedeemManagerDemand);
 
                 // we burn the shares of the redeem manager associated with the amount of eth provided
-                _burnRawShares(address(RedeemManagerAddress.get()), suppliedRedeemManagerDemand);
+                _burnRawShares(address(redeemManager_), suppliedRedeemManagerDemand);
             }
         }
     }
