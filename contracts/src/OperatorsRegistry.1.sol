@@ -497,14 +497,20 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
             revert StoppedValidatorCountsDecreased();
         }
 
-        for (uint256 idx = 1; idx < stoppedValidatorCountsLength;) {
+        uint256 idx = 1;
+        for (; idx < currentStoppedValidatorCountsLength;) {
             // if the previous array was long enough, we check that the values are not decreasing
-            if (
-                idx < currentStoppedValidatorCountsLength
-                    && _stoppedValidatorCounts[idx] < currentStoppedValidatorCounts[idx]
-            ) {
+            if (_stoppedValidatorCounts[idx] < currentStoppedValidatorCounts[idx]) {
                 revert StoppedValidatorCountsDecreased();
             }
+            // we recompute the total to ensure it's not an invalid sum
+            count += _stoppedValidatorCounts[idx];
+            unchecked {
+                ++idx;
+            }
+        }
+
+        for (; idx < stoppedValidatorCountsLength;) {
             // we recompute the total to ensure it's not an invalid sum
             count += _stoppedValidatorCounts[idx];
             unchecked {
