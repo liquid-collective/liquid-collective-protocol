@@ -435,13 +435,11 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
     }
 
     /// @inheritdoc IOperatorsRegistryV1
-    function demandValidatorExits(uint256 _count) external onlyRiver {
+    function demandValidatorExits(uint256 _count, uint256 _depositedValidatorCount) external onlyRiver {
         uint256 currentValidatorExitsDemand = CurrentValidatorExitsDemand.get();
         uint256 totalValidatorExitsRequested = TotalValidatorExitsRequested.get();
         _count = LibUint256.min(
-            _count,
-            IRiverV1(payable(RiverAddress.get())).getDepositedValidatorCount()
-                - (totalValidatorExitsRequested + currentValidatorExitsDemand)
+            _count, _depositedValidatorCount - (totalValidatorExitsRequested + currentValidatorExitsDemand)
         );
         if (_count > 0) {
             _setCurrentValidatorExitsDemand(currentValidatorExitsDemand, currentValidatorExitsDemand + _count);

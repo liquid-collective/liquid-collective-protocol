@@ -1715,7 +1715,7 @@ contract OperatorsRegistryV1TestDistribution is Test {
         assertEq(operatorsRegistry.getTotalValidatorExitsRequested(), 0);
 
         vm.prank(river);
-        operatorsRegistry.demandValidatorExits(250);
+        operatorsRegistry.demandValidatorExits(250, 250);
 
         assertEq(operatorsRegistry.getCurrentValidatorExitsDemand(), 250);
         assertEq(operatorsRegistry.getTotalValidatorExitsRequested(), 0);

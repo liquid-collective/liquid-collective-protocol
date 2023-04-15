@@ -572,7 +572,7 @@ contract RiverV1 is
                         DEPOSIT_SIZE
                     );
 
-                    or.demandValidatorExits(validatorCountToExit);
+                    or.demandValidatorExits(validatorCountToExit, DepositedValidatorCount.get());
                 }
             }
         }
