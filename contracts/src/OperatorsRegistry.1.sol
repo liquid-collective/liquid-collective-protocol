@@ -493,10 +493,6 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
         uint32 total = _stoppedValidatorCounts[0];
         uint32 count = 0;
 
-        if (currentStoppedValidatorCountsLength > 0 && _stoppedValidatorCounts[0] < currentStoppedValidatorCounts[0]) {
-            revert StoppedValidatorCountsDecreased();
-        }
-
         uint256 idx = 1;
         for (; idx < currentStoppedValidatorCountsLength;) {
             // if the previous array was long enough, we check that the values are not decreasing

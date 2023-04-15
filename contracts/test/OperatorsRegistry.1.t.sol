@@ -2173,11 +2173,44 @@ contract OperatorsRegistryV1TestDistribution is Test {
             stoppedValidatorCount, sum
         );
 
-        decreasingIndex = uint8(bound(decreasingIndex, 0, 5));
+        decreasingIndex = uint8(bound(decreasingIndex, 1, 5));
 
         stoppedValidatorCount[decreasingIndex] -= 1;
 
         vm.expectRevert(abi.encodeWithSignature("StoppedValidatorCountsDecreased()"));
+        OperatorsRegistryInitializableV1(address(operatorsRegistry)).sudoStoppedValidatorCounts(
+            stoppedValidatorCount, sum
+        );
+    }
+
+    function testDecreasingStoppedValidatorCountsSum(uint16[5] memory fuzzedStoppedValidatorCount) external {
+        vm.assume(fuzzedStoppedValidatorCount[0] > 0);
+        vm.assume(fuzzedStoppedValidatorCount[1] > 0);
+        vm.assume(fuzzedStoppedValidatorCount[2] > 0);
+        vm.assume(fuzzedStoppedValidatorCount[3] > 0);
+        vm.assume(fuzzedStoppedValidatorCount[4] > 0);
+
+        uint32 sum = uint32(fuzzedStoppedValidatorCount[0]) + fuzzedStoppedValidatorCount[1]
+            + fuzzedStoppedValidatorCount[2] + fuzzedStoppedValidatorCount[3] + fuzzedStoppedValidatorCount[4];
+
+        uint32[] memory stoppedValidatorCount = new uint32[](6);
+
+        stoppedValidatorCount[0] = sum;
+        stoppedValidatorCount[1] = fuzzedStoppedValidatorCount[0];
+        stoppedValidatorCount[2] = fuzzedStoppedValidatorCount[1];
+        stoppedValidatorCount[3] = fuzzedStoppedValidatorCount[2];
+        stoppedValidatorCount[4] = fuzzedStoppedValidatorCount[3];
+        stoppedValidatorCount[5] = fuzzedStoppedValidatorCount[4];
+
+        RiverMock(address(river)).sudoSetDepositedValidatorsCount(sum);
+
+        OperatorsRegistryInitializableV1(address(operatorsRegistry)).sudoStoppedValidatorCounts(
+            stoppedValidatorCount, sum
+        );
+
+        stoppedValidatorCount[0] -= 1;
+
+        vm.expectRevert(abi.encodeWithSignature("InvalidStoppedValidatorCountsSum()"));
         OperatorsRegistryInitializableV1(address(operatorsRegistry)).sudoStoppedValidatorCounts(
             stoppedValidatorCount, sum
         );
