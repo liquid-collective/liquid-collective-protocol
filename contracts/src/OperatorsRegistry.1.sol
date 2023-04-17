@@ -754,8 +754,8 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
                 }
             }
 
-            // we exited all validators
-            if (highestActiveCount == 0 && siblings == exitableOperatorCount) {
+            // we exited all exitable validators
+            if (highestActiveCount == 0) {
                 break;
             }
             // The optimal amount is how much we should dispatch to all the operators with the highest count for them to get the same amount
@@ -765,9 +765,10 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
 
             // We lookup the operators again to assign the exit requests
             uint256 rest = optimalTotalDispatchCount % siblings;
+            uint32 baseExitRequestAmount = optimalTotalDispatchCount / siblings;
             for (uint256 idx = 0; idx < exitableOperatorCount;) {
                 if (_getActiveValidatorCountForExitRequests(operators[idx]) == highestActiveCount) {
-                    uint32 additionalRequestedExits = (optimalTotalDispatchCount / siblings) + (rest > 0 ? 1 : 0);
+                    uint32 additionalRequestedExits = baseExitRequestAmount + (rest > 0 ? 1 : 0);
                     operators[idx].picked += additionalRequestedExits;
                     if (rest > 0) {
                         --rest;
@@ -785,9 +786,11 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
         // We loop over the operators and apply the change, also emit the exit request event
         for (uint256 idx = 0; idx < exitableOperatorCount;) {
             if (operators[idx].picked > 0) {
-                uint32 requestedExits = OperatorsV2.get(operators[idx].index).requestedExits;
-                OperatorsV2.get(operators[idx].index).requestedExits = requestedExits + operators[idx].picked;
-                emit RequestedValidatorExits(operators[idx].index, requestedExits + operators[idx].picked);
+                uint256 opIndex = operators[idx].index;
+                uint32 newRequestedExits = operators[idx].requestedExits + operators[idx].picked;
+
+                OperatorsV2.get(opIndex).requestedExits = newRequestedExits;
+                emit RequestedValidatorExits(opIndex, newRequestedExits);
             }
 
             unchecked {
