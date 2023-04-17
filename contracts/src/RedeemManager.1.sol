@@ -433,6 +433,8 @@ contract RedeemManagerV1 is Initializable, IRedeemManagerV1 {
             // this also means that if the request wasn't entirely matched, it will now be automatically be assigned to the next
             // withdrawal event in the queue, because height is updated based on the amount matched and is now equal to the height
             // of the next withdrawal event
+            // the end position of a redeem request (height + amount) is an invariant that never changes throughout the lifetime of a request
+            // this end position is used to define the starting position of the next redeem request
             redeemRequests[params.redeemRequestId].height = vars.redeemRequest.height + vars.matchingAmount;
             redeemRequests[params.redeemRequestId].amount = currentRequestAmount - vars.matchingAmount;
             redeemRequests[params.redeemRequestId].maxRedeemableEth -= vars.ethAmount;
