@@ -394,8 +394,7 @@ contract RedeemManagerV1 is Initializable, IRedeemManagerV1 {
                         vars.matchingAmount = vars.redeemRequest.amount;
                     } else {
                         // we know that the request's end is outside of the withdrawal event, so only a portion amount is matched
-                        vars.matchingAmount =
-                            vars.redeemRequest.amount - (requestEndPosition - withdrawalEventEndPosition);
+                        vars.matchingAmount = withdrawalEventEndPosition - vars.redeemRequest.height;
                     }
                 }
                 // we can now compute the equivalent eth amount based on the withdrawal event details
@@ -434,7 +433,7 @@ contract RedeemManagerV1 is Initializable, IRedeemManagerV1 {
             // this also means that if the request wasn't entirely matched, it will now be automatically be assigned to the next
             // withdrawal event in the queue, because height is updated based on the amount matched and is now equal to the height
             // of the next withdrawal event
-            redeemRequests[params.redeemRequestId].height += vars.matchingAmount;
+            redeemRequests[params.redeemRequestId].height = vars.redeemRequest.height + vars.matchingAmount;
             redeemRequests[params.redeemRequestId].amount = currentRequestAmount - vars.matchingAmount;
             redeemRequests[params.redeemRequestId].maxRedeemableEth -= vars.ethAmount;
         }
