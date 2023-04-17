@@ -689,7 +689,7 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
     /// @notice Internal utility to get the count of active validators during the exit selection process
     /// @param _operator The Operator structure in memory
     /// @return The count of active validators for the operator
-    function _getActiveValidatorCountForExitRequests(OperatorsV2.CachedOperator memory _operator)
+    function _getActiveValidatorCountForExitRequests(OperatorsV2.CachedExitableOperator memory _operator)
         internal
         pure
         returns (uint32)
@@ -700,7 +700,8 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
     /// @notice Internal utility to pick the next validator counts to exit for every operator
     /// @param _count The count of validators to request exits for
     function _pickNextValidatorsToExitFromActiveOperators(uint256 _count) internal returns (uint256) {
-        (OperatorsV2.CachedOperator[] memory operators, uint256 exitableOperatorCount) = OperatorsV2.getAllExitable();
+        (OperatorsV2.CachedExitableOperator[] memory operators, uint256 exitableOperatorCount) =
+            OperatorsV2.getAllExitable();
         uint32[] storage stoppedValidators = OperatorsV2.getStoppedValidators();
 
         if (exitableOperatorCount == 0) {
