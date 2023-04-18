@@ -82,6 +82,9 @@ interface IRedeemManagerV1 {
     /// @param id The redeem request id
     error RedeemRequestAlreadyClaimed(uint256 id);
 
+    /// @notice Thrown when the provided claim depth is zero
+    error InvalidZeroDepth();
+
     /// @notice Thrown when the redeem request and withdrawal event are not matching during claim
     /// @param redeemRequestId The provided redeem request id
     /// @param withdrawalEventId The provided associated withdrawal event id

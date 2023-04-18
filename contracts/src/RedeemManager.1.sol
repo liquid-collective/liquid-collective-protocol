@@ -475,6 +475,9 @@ contract RedeemManagerV1 is Initializable, IRedeemManagerV1 {
         bool skipAlreadyClaimed,
         uint16 _depth
     ) internal returns (uint8[] memory claimStatuses) {
+        if (_depth == 0) {
+            revert InvalidZeroDepth();
+        }
         uint256 redeemRequestIdsLength = redeemRequestIds.length;
         if (redeemRequestIdsLength != withdrawalEventIds.length) {
             revert IncompatibleArrayLengths();

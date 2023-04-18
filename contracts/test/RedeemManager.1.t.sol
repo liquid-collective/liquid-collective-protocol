@@ -475,6 +475,35 @@ contract RedeemManagerV1Tests is Test {
         }
     }
 
+    function testClaimRedeemRequestWithDepthZero(uint256 _salt) external {
+        uint128 amount = uint128(bound(_salt, 1, type(uint128).max));
+
+        address user = _generateAllowlistedUser(_salt);
+
+        river.sudoDeal(user, uint256(amount));
+
+        vm.prank(user);
+        river.approve(address(redeemManager), uint256(amount));
+
+        vm.prank(user);
+        redeemManager.requestRedeem(amount, user);
+
+        vm.deal(address(this), amount);
+        river.sudoReportWithdraw{value: amount}(address(redeemManager), amount);
+
+        assertEq(redeemManager.getWithdrawalEventCount(), 1);
+        assertEq(redeemManager.getRedeemRequestCount(), 1);
+
+        uint32[] memory redeemRequestIds = new uint32[](1);
+        uint32[] memory withdrawEventIds = new uint32[](1);
+
+        redeemRequestIds[0] = 0;
+        withdrawEventIds[0] = 0;
+
+        vm.expectRevert(abi.encodeWithSignature("InvalidZeroDepth()"));
+        redeemManager.claimRedeemRequests(redeemRequestIds, withdrawEventIds, true, 0);
+    }
+
     function testClaimRedeemRequestWithImplicitSkipFlag(uint256 _salt) external {
         uint128 amount = uint128(bound(_salt, 1, type(uint128).max));
 
