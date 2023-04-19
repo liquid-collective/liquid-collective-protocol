@@ -475,35 +475,6 @@ contract RedeemManagerV1Tests is Test {
         }
     }
 
-    function testClaimRedeemRequestWithDepthZero(uint256 _salt) external {
-        uint128 amount = uint128(bound(_salt, 1, type(uint128).max));
-
-        address user = _generateAllowlistedUser(_salt);
-
-        river.sudoDeal(user, uint256(amount));
-
-        vm.prank(user);
-        river.approve(address(redeemManager), uint256(amount));
-
-        vm.prank(user);
-        redeemManager.requestRedeem(amount, user);
-
-        vm.deal(address(this), amount);
-        river.sudoReportWithdraw{value: amount}(address(redeemManager), amount);
-
-        assertEq(redeemManager.getWithdrawalEventCount(), 1);
-        assertEq(redeemManager.getRedeemRequestCount(), 1);
-
-        uint32[] memory redeemRequestIds = new uint32[](1);
-        uint32[] memory withdrawEventIds = new uint32[](1);
-
-        redeemRequestIds[0] = 0;
-        withdrawEventIds[0] = 0;
-
-        vm.expectRevert(abi.encodeWithSignature("InvalidZeroDepth()"));
-        redeemManager.claimRedeemRequests(redeemRequestIds, withdrawEventIds, true, 0);
-    }
-
     function testClaimRedeemRequestWithImplicitSkipFlag(uint256 _salt) external {
         uint128 amount = uint128(bound(_salt, 1, type(uint128).max));
 
@@ -795,7 +766,7 @@ contract RedeemManagerV1Tests is Test {
         }
     }
 
-    function testClaimRedeemRequestOnMultipleEventsDepthOne(uint256 _salt) external {
+    function testClaimRedeemRequestOnMultipleEventsCustomDepths(uint256 _salt) external {
         uint128 amount = uint128(bound(_salt, 10, type(uint128).max / 10));
         amount *= 10;
 
@@ -839,7 +810,7 @@ contract RedeemManagerV1Tests is Test {
         emit SatisfiedRedeemRequest(0, 0, amount / 10, amount / 10, remaining, 0);
         vm.expectEmit(true, true, true, true);
         emit ClaimedRedeemRequest(0, user, amount / 10, amount / 10, remaining);
-        redeemManager.claimRedeemRequests(redeemRequestIds, withdrawEventIds, true, 1);
+        redeemManager.claimRedeemRequests(redeemRequestIds, withdrawEventIds, true, 0);
 
         withdrawEventIds[0] = 1;
 
@@ -851,7 +822,7 @@ contract RedeemManagerV1Tests is Test {
         emit SatisfiedRedeemRequest(0, 2, amount / 10, amount / 10, remaining, 0);
         vm.expectEmit(true, true, true, true);
         emit ClaimedRedeemRequest(0, user, 2 * (amount / 10), 2 * (amount / 10), remaining);
-        redeemManager.claimRedeemRequests(redeemRequestIds, withdrawEventIds, true, 2);
+        redeemManager.claimRedeemRequests(redeemRequestIds, withdrawEventIds, true, 1);
 
         withdrawEventIds[0] = 3;
 
@@ -866,7 +837,7 @@ contract RedeemManagerV1Tests is Test {
         emit SatisfiedRedeemRequest(0, 5, amount / 10, amount / 10, remaining, 0);
         vm.expectEmit(true, true, true, true);
         emit ClaimedRedeemRequest(0, user, 3 * (amount / 10), 3 * (amount / 10), remaining);
-        redeemManager.claimRedeemRequests(redeemRequestIds, withdrawEventIds, true, 3);
+        redeemManager.claimRedeemRequests(redeemRequestIds, withdrawEventIds, true, 2);
 
         withdrawEventIds[0] = 6;
 
@@ -884,7 +855,7 @@ contract RedeemManagerV1Tests is Test {
         emit SatisfiedRedeemRequest(0, 9, amount / 10, amount / 10, remaining, 0);
         vm.expectEmit(true, true, true, true);
         emit ClaimedRedeemRequest(0, user, 4 * (amount / 10), 4 * (amount / 10), remaining);
-        redeemManager.claimRedeemRequests(redeemRequestIds, withdrawEventIds, true, 4);
+        redeemManager.claimRedeemRequests(redeemRequestIds, withdrawEventIds, true, 3);
 
         assertEq(address(redeemManager).balance, 0);
         assertEq(user.balance, amount);

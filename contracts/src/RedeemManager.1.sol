@@ -337,17 +337,12 @@ contract RedeemManagerV1 is Initializable, IRedeemManagerV1 {
     }
 
     /// @notice Internal utility to save a redeem request to storage
-    /// @param redeemRequest The redeem request to save
-    /// @param redeemRequestId The id of the redeem request to save
-    /// @param redeemRequests The storage array of redeem requests
-    function _saveRedeemRequest(
-        RedeemQueue.RedeemRequest memory redeemRequest,
-        uint32 redeemRequestId,
-        RedeemQueue.RedeemRequest[] storage redeemRequests
-    ) internal {
-        redeemRequests[redeemRequestId].height = redeemRequest.height;
-        redeemRequests[redeemRequestId].amount = redeemRequest.amount;
-        redeemRequests[redeemRequestId].maxRedeemableEth = redeemRequest.maxRedeemableEth;
+    /// @param params The parameters of the claim redeem request call
+    function _saveRedeemRequest(ClaimRedeemRequestParameters memory params) internal {
+        RedeemQueue.RedeemRequest[] storage redeemRequests = RedeemQueue.get();
+        redeemRequests[params.redeemRequestId].height = params.redeemRequest.height;
+        redeemRequests[params.redeemRequestId].amount = params.redeemRequest.amount;
+        redeemRequests[params.redeemRequestId].maxRedeemableEth = params.redeemRequest.maxRedeemableEth;
     }
 
     /// @notice Internal utility to claim a redeem request if possible
@@ -408,7 +403,7 @@ contract RedeemManagerV1 is Initializable, IRedeemManagerV1 {
         // also we stop the claim process if the claim depth is about to be 0
         if (
             params.redeemRequest.amount > 0 && params.withdrawalEventId + 1 < params.withdrawalEventCount
-                && params.depth > 1
+                && params.depth > 0
         ) {
             WithdrawalStack.WithdrawalEvent[] storage withdrawalEvents = WithdrawalStack.get();
 
@@ -421,7 +416,7 @@ contract RedeemManagerV1 is Initializable, IRedeemManagerV1 {
             // if we end up here, we either claimed everything or we reached the end of the withdrawal event stack
             // in this case we save the current redeem request state to storage and return the status according to the
             // remaining claimable amount on the redeem request
-            _saveRedeemRequest(params.redeemRequest, params.redeemRequestId, RedeemQueue.get());
+            _saveRedeemRequest(params);
         }
     }
 
@@ -437,9 +432,6 @@ contract RedeemManagerV1 is Initializable, IRedeemManagerV1 {
         bool skipAlreadyClaimed,
         uint16 _depth
     ) internal returns (uint8[] memory claimStatuses) {
-        if (_depth == 0) {
-            revert InvalidZeroDepth();
-        }
         uint256 redeemRequestIdsLength = redeemRequestIds.length;
         if (redeemRequestIdsLength != withdrawalEventIds.length) {
             revert IncompatibleArrayLengths();
@@ -492,6 +484,8 @@ contract RedeemManagerV1 is Initializable, IRedeemManagerV1 {
             }
 
             params.depth = _depth;
+            params.ethAmount = 0;
+            params.lsETHAmount = 0;
 
             _claimRedeemRequest(params);
 
@@ -512,8 +506,6 @@ contract RedeemManagerV1 is Initializable, IRedeemManagerV1 {
             );
 
             unchecked {
-                params.ethAmount = 0;
-                params.lsETHAmount = 0;
                 ++idx;
             }
         }
