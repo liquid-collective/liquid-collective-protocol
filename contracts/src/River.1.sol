@@ -31,51 +31,6 @@ import "./state/river/LastConsensusLayerReport.sol";
 /// @title River (v1)
 /// @author Kiln
 /// @notice This contract merges all the manager contracts and implements all the virtual methods stitching all components together
-/// @notice
-/// @notice    +---------------------------------------------------------------------+
-/// @notice    |                                                                     |
-/// @notice    |                           Consensus Layer                           |
-/// @notice    |                                                                     |
-/// @notice    | +-------------------+  +-------------------+  +-------------------+ |
-/// @notice    | |                   |  |                   |  |                   | |
-/// @notice    | |  EL Fee Recipient |  |      Oracle       |  |  Deposit Contract | |
-/// @notice    | |                   |  |                   |  |                   | |
-/// @notice    | +---------|---------+  +---------|---------+  +---------|---------+ |
-/// @notice    +---------------------------------------------------------------------+
-/// @notice                |         7            |            5         |
-/// @notice                +-----------------|    |    |-----------------+
-/// @notice                                  |    |6   |
-/// @notice                                  |    |    |
-/// @notice        +---------+          +----|----|----|----+            +---------+
-/// @notice        |         |          |                   |     2      |         |
-/// @notice        |Operator |          |       River       --------------  User   |
-/// @notice        |         |          |                   |            |         |
-/// @notice        +----|----+          +----|---------|----+            +---------+
-/// @notice             |                    |         |
-/// @notice             |             4      |         |       3
-/// @notice             |1     +-------------|         |--------------+
-/// @notice             |      |                                      |
-/// @notice             |      |                                      |
-/// @notice      +------|------|------------+           +-------------|------------+
-/// @notice      |                          |           |                          |
-/// @notice      |    Operators Registry    |           |         Allowlist        |
-/// @notice      |                          |           |                          |
-/// @notice      +--------------------------+           +--------------------------+
-/// @notice
-/// @notice      1. Operators are adding BLS Public Keys of validators running in their
-/// @notice         infrastructure.
-/// @notice      2. User deposit ETH to the system and get shares minted in exchange
-/// @notice      3. Upon deposit, the system verifies if the User is allowed to deposit
-/// @notice         by querying the Allowlist
-/// @notice      4. When the system has enough funds to deposit validators, keys are pulled
-/// @notice         from the Operators Registry
-/// @notice      5. The deposit data is computed and the validators are funded via the official
-/// @notice         deposit contract
-/// @notice      6. Oracles report the total balance of the running validators and the total count
-/// @notice         of running validators
-/// @notice      7. The running validators propose blocks that reward the EL Fee Recipient. The funds
-/// @notice         are pulled back in the system.
-/// @notice
 contract RiverV1 is
     ConsensusLayerDepositManagerV1,
     UserDepositManagerV1,
