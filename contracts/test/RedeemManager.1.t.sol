@@ -812,6 +812,10 @@ contract RedeemManagerV1Tests is Test {
         emit ClaimedRedeemRequest(0, user, amount / 10, amount / 10, remaining);
         redeemManager.claimRedeemRequests(redeemRequestIds, withdrawEventIds, true, 0);
 
+        RedeemQueue.RedeemRequest memory redeemRequest = redeemManager.getRedeemRequestDetails(0);
+        assertEq(redeemRequest.height, amount - remaining);
+        assertEq(redeemRequest.amount, remaining);
+
         withdrawEventIds[0] = 1;
 
         remaining -= (amount / 10);
@@ -823,6 +827,10 @@ contract RedeemManagerV1Tests is Test {
         vm.expectEmit(true, true, true, true);
         emit ClaimedRedeemRequest(0, user, 2 * (amount / 10), 2 * (amount / 10), remaining);
         redeemManager.claimRedeemRequests(redeemRequestIds, withdrawEventIds, true, 1);
+
+        redeemRequest = redeemManager.getRedeemRequestDetails(0);
+        assertEq(redeemRequest.height, amount - remaining);
+        assertEq(redeemRequest.amount, remaining);
 
         withdrawEventIds[0] = 3;
 
@@ -838,6 +846,10 @@ contract RedeemManagerV1Tests is Test {
         vm.expectEmit(true, true, true, true);
         emit ClaimedRedeemRequest(0, user, 3 * (amount / 10), 3 * (amount / 10), remaining);
         redeemManager.claimRedeemRequests(redeemRequestIds, withdrawEventIds, true, 2);
+
+        redeemRequest = redeemManager.getRedeemRequestDetails(0);
+        assertEq(redeemRequest.height, amount - remaining);
+        assertEq(redeemRequest.amount, remaining);
 
         withdrawEventIds[0] = 6;
 
@@ -856,6 +868,10 @@ contract RedeemManagerV1Tests is Test {
         vm.expectEmit(true, true, true, true);
         emit ClaimedRedeemRequest(0, user, 4 * (amount / 10), 4 * (amount / 10), remaining);
         redeemManager.claimRedeemRequests(redeemRequestIds, withdrawEventIds, true, 3);
+
+        redeemRequest = redeemManager.getRedeemRequestDetails(0);
+        assertEq(redeemRequest.height, amount - remaining);
+        assertEq(redeemRequest.amount, remaining);
 
         assertEq(address(redeemManager).balance, 0);
         assertEq(user.balance, amount);
