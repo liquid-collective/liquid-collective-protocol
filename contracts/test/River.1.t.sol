@@ -21,8 +21,10 @@ import "../src/CoverageFund.1.sol";
 import "../src/RedeemManager.1.sol";
 
 contract OperatorsRegistryWithOverridesV1 is OperatorsRegistryV1 {
-    function sudoStoppedValidatorCounts(uint32[] calldata stoppedValidatorCounts) external {
-        _setStoppedValidatorCounts(stoppedValidatorCounts);
+    function sudoStoppedValidatorCounts(uint32[] calldata stoppedValidatorCounts, uint256 depositedValidatorCount)
+        external
+    {
+        _setStoppedValidatorCounts(stoppedValidatorCounts, depositedValidatorCount);
     }
 }
 
@@ -643,7 +645,7 @@ contract RiverV1Tests is Test, BytesGenerator {
         stoppedCounts[0] = 10;
         stoppedCounts[1] = 10;
         stoppedCounts[2] = 0;
-        operatorsRegistry.sudoStoppedValidatorCounts(stoppedCounts);
+        operatorsRegistry.sudoStoppedValidatorCounts(stoppedCounts, 20);
         vm.prank(admin);
         river.depositToConsensusLayer(10);
 
@@ -1904,6 +1906,43 @@ contract RiverV1TestsReport_HEAVY_FUZZING is Test, BytesGenerator {
         vm.expectRevert(
             abi.encodeWithSignature("InvalidPulledClFundsAmount(uint256,uint256)", skimmedAmount, notEnoughAmount)
         );
+        river.setConsensusLayerData(clr);
+    }
+
+    function testReportingError_StoppedValidatorCountDecreasing(uint256 _salt) external {
+        uint8 depositCount = uint8(bound(_salt, 2, 32));
+        IOracleManagerV1.ConsensusLayerReport memory clr = _generateEmptyReport();
+
+        _salt = _depositValidators(depositCount, _salt);
+
+        _salt = _next(_salt);
+        uint256 framesBetween = bound(_salt, 1, 1_000_000);
+        uint256 timeBetween = framesBetween * secondsPerSlot * slotsPerEpoch * epochsPerFrame;
+        uint256 maxIncrease = debug_maxIncrease(river.getReportBounds(), river.totalUnderlyingSupply(), timeBetween);
+
+        clr.validatorsCount = depositCount;
+        clr.validatorsBalance = 32 ether * (depositCount);
+        clr.validatorsExitingBalance = 0;
+        clr.validatorsSkimmedBalance = maxIncrease;
+        clr.validatorsExitedBalance = 0;
+        clr.epoch = framesBetween * epochsPerFrame;
+        clr.stoppedValidatorCountPerOperator = new uint32[](2);
+        clr.stoppedValidatorCountPerOperator[0] = 2;
+        clr.stoppedValidatorCountPerOperator[1] = 2;
+        vm.warp((clr.epoch + epochsUntilFinal) * (secondsPerSlot * slotsPerEpoch));
+
+        vm.deal(address(withdraw), maxIncrease);
+
+        vm.prank(address(oracle));
+        river.setConsensusLayerData(clr);
+
+        clr.epoch += epochsPerFrame;
+        clr.stoppedValidatorCountPerOperator[0] = 1;
+        clr.stoppedValidatorCountPerOperator[1] = 1;
+        vm.warp((clr.epoch + epochsUntilFinal) * (secondsPerSlot * slotsPerEpoch));
+
+        vm.prank(address(oracle));
+        vm.expectRevert(abi.encodeWithSignature("StoppedValidatorCountsDecreased()"));
         river.setConsensusLayerData(clr);
     }
 

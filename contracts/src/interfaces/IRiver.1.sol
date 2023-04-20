@@ -20,6 +20,15 @@ interface IRiverV1 is IConsensusLayerDepositManagerV1, IUserDepositManagerV1, IS
     /// @param amount The amount pulled
     event PulledCoverageFunds(uint256 amount);
 
+    /// @notice Emitted when funds are pulled from the redeem manager
+    /// @param amount The amount pulled
+    event PulledRedeemManagerExceedingEth(uint256 amount);
+
+    /// @notice Emitted when funds are pulled from the CL recipient
+    /// @param pulledSkimmedEthAmount The amount of skimmed ETH pulled
+    /// @param pullExitedEthAmount The amount of exited ETH pulled
+    event PulledCLFunds(uint256 pulledSkimmedEthAmount, uint256 pullExitedEthAmount);
+
     /// @notice The stored Execution Layer Fee Recipient has been changed
     /// @param elFeeRecipient The new Execution Layer Fee Recipient
     event SetELFeeRecipient(address indexed elFeeRecipient);
@@ -70,10 +79,6 @@ interface IRiverV1 is IConsensusLayerDepositManagerV1, IUserDepositManagerV1, IS
     /// @notice Emitted when the redeem manager address is changed
     /// @param redeemManager The address of the redeem manager
     event SetRedeemManager(address redeemManager);
-
-    /// @notice Emitted when funds are pulled from the redeem manager
-    /// @param amount The amount pulled
-    event PulledRedeemManagerExceedingEth(uint256 amount);
 
     /// @notice Emitted when the balance to deposit is updated
     /// @param oldAmount The old balance to deposit

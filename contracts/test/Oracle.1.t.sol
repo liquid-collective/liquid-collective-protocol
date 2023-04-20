@@ -54,6 +54,7 @@ contract OracleV1Tests is Test {
             UPPER_BOUND,
             LOWER_BOUND
         );
+        oracle.initOracleV1_1();
     }
 
     function testGetAdmin() public view {
@@ -344,6 +345,44 @@ contract OracleV1Tests is Test {
         oracle.reportConsensusLayerData(report);
     }
 
+    function testRevoteAfterSetMember(uint256 _salt) external {
+        address member0 = uf._new(_salt);
+        _salt = uint256(keccak256(abi.encode(_salt)));
+        address member1 = uf._new(_salt);
+        _salt = uint256(keccak256(abi.encode(_salt)));
+        address member0NewAddress = uf._new(_salt);
+
+        assertEq(oracle.getQuorum(), 0);
+        assertEq(oracle.isMember(member0), false);
+        assertEq(oracle.isMember(member1), false);
+
+        vm.prank(admin);
+        oracle.addMember(member0, 1);
+        vm.prank(admin);
+        oracle.addMember(member1, 2);
+
+        assertEq(oracle.getQuorum(), 2);
+        assertEq(oracle.isMember(member0), true);
+        assertEq(oracle.isMember(member1), true);
+
+        IOracleManagerV1.ConsensusLayerReport memory report = _generateEmptyReport(2);
+
+        vm.prank(member0);
+        oracle.reportConsensusLayerData(report);
+
+        vm.prank(member0);
+        oracle.setMember(member0, member0NewAddress);
+
+        vm.prank(member0NewAddress);
+        vm.expectRevert(abi.encodeWithSignature("AlreadyReported(uint256,address)", report.epoch, member0NewAddress));
+        oracle.reportConsensusLayerData(report);
+
+        vm.prank(member1);
+        vm.expectEmit(true, true, true, true);
+        emit DebugReceivedReport(report);
+        oracle.reportConsensusLayerData(report);
+    }
+
     function testReportUnauthorized(uint256 _salt) external {
         address member = uf._new(_salt);
 
@@ -370,6 +409,7 @@ contract OracleV1Tests is Test {
         assertEq(oracle.isMember(member), true);
 
         IOracleManagerV1.ConsensusLayerReport memory report = _generateEmptyReport(2);
+        report.epoch = 1_000;
 
         vm.prank(member);
         vm.expectEmit(true, true, true, true);
@@ -579,110 +619,42 @@ contract OracleV1Tests is Test {
         oracle.removeMember(member2, 2);
     }
 
-    function testIsValidEpochForwardsCallToRiver(uint256 _salt) external {
-        uint256 epoch = _salt;
-        bool result = bool(_salt % 2 == 0);
-
-        bytes memory cdata = abi.encodeWithSelector(IRiverV1(oracleInput).isValidEpoch.selector, epoch);
-        bytes memory rdata = abi.encode(result);
-        vm.mockCall(address(oracleInput), cdata, rdata);
-        vm.expectCall(address(oracleInput), cdata);
-        assertEq(oracle.isValidEpoch(_salt), bool(_salt % 2 == 0));
-    }
-
-    function testGetTimeForwardsCallToRiver(uint256 _salt) external {
-        uint256 result = _salt;
-
-        bytes memory cdata = abi.encodeWithSelector(IRiverV1(oracleInput).getTime.selector);
-        bytes memory rdata = abi.encode(result);
-        vm.mockCall(address(oracleInput), cdata, rdata);
-        vm.expectCall(address(oracleInput), cdata);
-        assertEq(oracle.getTime(), result);
-    }
-
-    function testGetExpectedEpochIdForwardsCallToRiver(uint256 _salt) external {
-        uint256 result = _salt;
-
-        bytes memory cdata = abi.encodeWithSelector(IRiverV1(oracleInput).getExpectedEpochId.selector);
-        bytes memory rdata = abi.encode(result);
-        vm.mockCall(address(oracleInput), cdata, rdata);
-        vm.expectCall(address(oracleInput), cdata);
-        assertEq(oracle.getExpectedEpochId(), result);
-    }
-
-    function testGetLastCompletedEpochIdForwardsCallToRiver(uint256 _salt) external {
-        uint256 result = _salt;
-
-        bytes memory cdata = abi.encodeWithSelector(IRiverV1(oracleInput).getLastCompletedEpochId.selector);
-        bytes memory rdata = abi.encode(result);
-        vm.mockCall(address(oracleInput), cdata, rdata);
-        vm.expectCall(address(oracleInput), cdata);
-        assertEq(oracle.getLastCompletedEpochId(), result);
-    }
-
-    function testGetCurrentEpochIdForwardsCallToRiver(uint256 _salt) external {
-        uint256 result = _salt;
-
-        bytes memory cdata = abi.encodeWithSelector(IRiverV1(oracleInput).getCurrentEpochId.selector);
-        bytes memory rdata = abi.encode(result);
-        vm.mockCall(address(oracleInput), cdata, rdata);
-        vm.expectCall(address(oracleInput), cdata);
-        assertEq(oracle.getCurrentEpochId(), result);
-    }
-
     function _next(uint256 _salt) internal pure returns (uint256) {
         return uint256(keccak256(abi.encode(_salt)));
     }
 
-    function testGetCLSpecForwardsCallToRiver(uint256 _salt) external {
-        CLSpec.CLSpecStruct memory cls;
-        cls.epochsPerFrame = uint64(_salt);
+    event SetLastReportedEpoch(uint256 lastReportedEpoch);
+
+    function testVoteFuzzing(uint256 _salt) external {
+        uint256 memberCount = bound(_salt, 1, type(uint8).max);
         _salt = _next(_salt);
-        cls.slotsPerEpoch = uint64(_salt);
-        _salt = _next(_salt);
-        cls.secondsPerSlot = uint64(_salt);
-        _salt = _next(_salt);
-        cls.genesisTime = uint64(_salt);
+        uint256 quorum = bound(_salt, 1, memberCount);
+        address[] memory members = new address[](memberCount);
 
-        bytes memory cdata = abi.encodeWithSelector(IRiverV1(oracleInput).getCLSpec.selector);
-        bytes memory rdata = abi.encode(cls);
-        vm.mockCall(address(oracleInput), cdata, rdata);
-        vm.expectCall(address(oracleInput), cdata);
+        for (uint256 i = 0; i < memberCount; i++) {
+            _salt = _next(_salt);
+            members[i] = uf._new(_salt);
+            vm.prank(admin);
+            oracle.addMember(members[i], i + 1);
+        }
 
-        CLSpec.CLSpecStruct memory retrievedCls = oracle.getCLSpec();
+        if (oracle.getQuorum() != quorum) {
+            vm.prank(admin);
+            oracle.setQuorum(quorum);
+        }
 
-        assertEq(retrievedCls.epochsPerFrame, cls.epochsPerFrame);
-        assertEq(retrievedCls.slotsPerEpoch, cls.slotsPerEpoch);
-        assertEq(retrievedCls.secondsPerSlot, cls.secondsPerSlot);
-        assertEq(retrievedCls.genesisTime, cls.genesisTime);
-    }
-
-    function testGetCurrentFrameForwardsCallToRiver(uint256 _salt) external {
-        uint256 startEpoch = _salt;
-        _salt = _next(_salt);
-        uint256 startTime = _salt;
-        _salt = _next(_salt);
-        uint256 endTime = _salt;
-
-        bytes memory cdata = abi.encodeWithSelector(IRiverV1(oracleInput).getCurrentFrame.selector);
-        bytes memory rdata = abi.encode(startEpoch, startTime, endTime);
-        vm.mockCall(address(oracleInput), cdata, rdata);
-        vm.expectCall(address(oracleInput), cdata);
-        (uint256 retrievedStartEpoch, uint256 retrievedStartTime, uint256 retrievedEndTime) = oracle.getCurrentFrame();
-        assertEq(retrievedStartEpoch, startEpoch);
-        assertEq(retrievedStartTime, startTime);
-        assertEq(retrievedEndTime, endTime);
-    }
-
-    function testGetFrameFirstEpochIdForwardsCallToRiver(uint256 _salt) external {
-        uint256 epoch = _salt;
-        _salt = _next(_salt);
-        uint256 result = _salt;
-
-        bytes memory cdata = abi.encodeWithSelector(IRiverV1(oracleInput).getFrameFirstEpochId.selector);
-        bytes memory rdata = abi.encode(result);
-        vm.mockCall(address(oracleInput), cdata, rdata);
-        vm.expectCall(address(oracleInput), cdata);
-        assertEq(oracle.getFrameFirstEpochId(epoch), result);
+        IOracleManagerV1.ConsensusLayerReport memory report = _generateEmptyReport(2);
+        for (uint256 i = 0; i < memberCount; i++) {
+            _salt = _next(_salt);
+            vm.prank(members[i]);
+            if (i == quorum - 1) {
+                vm.expectEmit(true, true, true, true);
+                emit SetLastReportedEpoch(report.epoch + 1);
+            }
+            if (i > quorum - 1) {
+                vm.expectRevert(abi.encodeWithSignature("EpochTooOld(uint256,uint256)", report.epoch, report.epoch + 1));
+            }
+            oracle.reportConsensusLayerData(report);
+        }
     }
 }

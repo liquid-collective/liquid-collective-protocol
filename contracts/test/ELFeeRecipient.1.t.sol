@@ -47,8 +47,10 @@ contract ELFeeRecipientV1Test is Test {
         payable(address(feeRecipient)).transfer(_amount);
         vm.stopPrank();
 
-        vm.expectEmit(true, true, true, true);
-        emit BalanceUpdated(_amount);
+        if (_amount > 0) {
+            vm.expectEmit(true, true, true, true);
+            emit BalanceUpdated(_amount);
+        }
         river.pullELFees(address(feeRecipient), address(feeRecipient).balance);
     }
 
@@ -60,8 +62,10 @@ contract ELFeeRecipientV1Test is Test {
         assert(payable(address(feeRecipient)).send(_amount) == true);
         vm.stopPrank();
 
-        vm.expectEmit(true, true, true, true);
-        emit BalanceUpdated(_amount);
+        if (_amount > 0) {
+            vm.expectEmit(true, true, true, true);
+            emit BalanceUpdated(_amount);
+        }
         river.pullELFees(address(feeRecipient), address(feeRecipient).balance);
     }
 
@@ -74,8 +78,10 @@ contract ELFeeRecipientV1Test is Test {
         assert(ok == true);
         vm.stopPrank();
 
-        vm.expectEmit(true, true, true, true);
-        emit BalanceUpdated(_amount);
+        if (_amount > 0) {
+            vm.expectEmit(true, true, true, true);
+            emit BalanceUpdated(_amount);
+        }
         river.pullELFees(address(feeRecipient), address(feeRecipient).balance);
     }
 
@@ -88,8 +94,10 @@ contract ELFeeRecipientV1Test is Test {
         assert(ok == true);
         vm.stopPrank();
 
-        vm.expectEmit(true, true, true, true);
-        emit BalanceUpdated(_amount / 2);
+        if (_amount / 2 > 0) {
+            vm.expectEmit(true, true, true, true);
+            emit BalanceUpdated(_amount / 2);
+        }
         river.pullELFees(address(feeRecipient), address(feeRecipient).balance / 2);
     }
 

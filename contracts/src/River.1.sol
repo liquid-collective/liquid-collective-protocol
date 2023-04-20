@@ -327,8 +327,8 @@ contract RiverV1 is
         uint256 collectedELFees = address(this).balance - initialBalance;
         if (collectedELFees > 0) {
             _setBalanceToDeposit(BalanceToDeposit.get() + collectedELFees);
-            emit PulledELFees(collectedELFees);
         }
+        emit PulledELFees(collectedELFees);
         return collectedELFees;
     }
 
@@ -345,8 +345,8 @@ contract RiverV1 is
         uint256 collectedCoverageFunds = address(this).balance - initialBalance;
         if (collectedCoverageFunds > 0) {
             _setBalanceToDeposit(BalanceToDeposit.get() + collectedCoverageFunds);
-            emit PulledCoverageFunds(collectedCoverageFunds);
         }
+        emit PulledCoverageFunds(collectedCoverageFunds);
         return collectedCoverageFunds;
     }
 
@@ -433,6 +433,7 @@ contract RiverV1 is
         if (exitedEthAmount > 0) {
             _setBalanceToRedeem(BalanceToRedeem.get() + exitedEthAmount);
         }
+        emit PulledCLFunds(skimmedEthAmount, exitedEthAmount);
     }
 
     /// @notice Pulls funds from the redeem manager exceeding eth buffer
@@ -443,8 +444,8 @@ contract RiverV1 is
         uint256 collectedExceedingEth = address(this).balance - currentBalance;
         if (collectedExceedingEth > 0) {
             _setBalanceToDeposit(BalanceToDeposit.get() + collectedExceedingEth);
-            emit PulledRedeemManagerExceedingEth(collectedExceedingEth);
         }
+        emit PulledRedeemManagerExceedingEth(collectedExceedingEth);
         return collectedExceedingEth;
     }
 
@@ -487,7 +488,9 @@ contract RiverV1 is
     /// @notice Change the stored stopped validator counts for all the operators
     /// @param stoppedValidatorCounts The list of stopped validator counts
     function _setReportedStoppedValidatorCounts(uint32[] memory stoppedValidatorCounts) internal override {
-        IOperatorsRegistryV1(OperatorsRegistryAddress.get()).reportStoppedValidatorCounts(stoppedValidatorCounts);
+        IOperatorsRegistryV1(OperatorsRegistryAddress.get()).reportStoppedValidatorCounts(
+            stoppedValidatorCounts, DepositedValidatorCount.get()
+        );
     }
 
     /// @notice Requests exits of validators after possibly rebalancing deposit and redeem balances
@@ -520,8 +523,8 @@ contract RiverV1 is
 
                 IOperatorsRegistryV1 or = IOperatorsRegistryV1(OperatorsRegistryAddress.get());
 
-                uint256 totalStoppedValidatorCount = or.getTotalStoppedValidatorCount();
-                uint256 totalRequestedExitsCount = or.getTotalRequestedValidatorExitsCount();
+                (uint256 totalStoppedValidatorCount, uint256 totalRequestedExitsCount) =
+                    or.getStoppedAndRequestedExitCounts();
 
                 // what we are calling pre-exiting balance is the amount of eth that should soon enter the exiting balance
                 // because exit requests have been made and operators might have a lag to process them
@@ -538,7 +541,7 @@ contract RiverV1 is
                         DEPOSIT_SIZE
                     );
 
-                    or.pickNextValidatorsToExit(validatorCountToExit);
+                    or.demandValidatorExits(validatorCountToExit, DepositedValidatorCount.get());
                 }
             }
         }
