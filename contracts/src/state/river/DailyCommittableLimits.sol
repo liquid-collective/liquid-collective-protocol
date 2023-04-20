@@ -12,7 +12,7 @@ library DailyCommittableLimits {
 
     /// @notice The daily committable limits structure
     struct DailyCommittableLimitsStruct {
-        uint128 maxDailyNetCommittableAmount;
+        uint128 minDailyNetCommittableAmount;
         uint128 maxDailyRelativeCommittableAmount;
     }
 

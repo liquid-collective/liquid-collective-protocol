@@ -9,8 +9,8 @@ interface IWithdrawV1 {
     /// @param river The new River address
     event SetRiver(address river);
 
-    /// @param river The address of the River contract
-    function initializeWithdrawV1(address river) external;
+    /// @param _river The address of the River contract
+    function initializeWithdrawV1(address _river) external;
 
     /// @notice Retrieve the withdrawal credentials to use
     /// @return The withdrawal credentials
@@ -21,6 +21,6 @@ interface IWithdrawV1 {
     function getRiver() external view returns (address);
 
     /// @notice Callable by River, sends the specified amount of ETH to River
-    /// @param amount The amount to pull
-    function pullEth(uint256 amount) external;
+    /// @param _amount The amount to pull
+    function pullEth(uint256 _amount) external;
 }

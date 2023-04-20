@@ -5,6 +5,7 @@ import "../../libraries/LibUnstructuredStorage.sol";
 
 /// @title Last Oracle Round Id Storage
 /// @notice Utility to manage the Last Oracle Round Id in storage
+/// @notice This state variable is deprecated and was kept due to migration logic needs
 library LastOracleRoundId {
     /// @notice Storage slot of the Last Oracle Round Id
     bytes32 internal constant LAST_ORACLE_ROUND_ID_SLOT =

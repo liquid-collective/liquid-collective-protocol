@@ -104,18 +104,54 @@ interface IOracleManagerV1 {
 
     /// @notice The format of the oracle report
     struct ConsensusLayerReport {
+        // this is the epoch at which the report was performed
+        // data should be fetched up to the state of this epoch by the oracles
         uint256 epoch;
+        // the sum of all the validator balances on the consensus layer
+        // when a validator enters the exit queue, the validator is considered stopped, its balance is accounted in both validatorsExitingBalance and validatorsBalance
+        // when a validator leaves the exit queue and the funds are sweeped onto the execution layer, the balance is only accounted in validatorsExitedBalance and not in validatorsBalance
+        // this value can decrease between reports
         uint256 validatorsBalance;
+        // the sum of all the skimmings performed on the validators
+        // these values can be found in the execution layer block bodies under the withdrawals field
+        // a withdrawal is considered skimming if
+        // - the epoch at which it happened is < validator.withdrawableEpoch
+        // - the epoch at which it happened is >= validator.withdrawableEpoch and in that case we only account for what would be above 32 eth as skimming
+        // this value cannot decrease over reports
         uint256 validatorsSkimmedBalance;
+        // the sum of all the exits performed on the validators
+        // these values can be found in the execution layer block bodies under the withdrawals field
+        // a withdrawal is considered exit if
+        // - the epoch at which it happened is >= validator.withdrawableEpoch and in that case we only account for what would be <= 32 eth as exit
+        // this value cannot decrease over reports
         uint256 validatorsExitedBalance;
+        // the sum of all the exiting balance, which is all the validators on their way to get sweeped and exited
+        // this includes voluntary exits and slashings
+        // this value can decrease between reports
         uint256 validatorsExitingBalance;
+        // the count of activated validators
+        // even validators that are exited are still accounted
+        // this value cannot decrease over reports
         uint32 validatorsCount;
+        // an array containing the count of stopped validators per operator
+        // the first element of the array is the sum of all stopped validators
+        // then index 1 would be operator 0
+        // these values cannot decrease over reports
         uint32[] stoppedValidatorCountPerOperator;
+        // flag enabled by the oracles when the buffer rebalancing is activated
+        // the activation logic is written in the oracle specification and all oracle members must agree on the activation
+        // when active, the eth in the deposit buffer can be used to pay for exits in the redeem manager
         bool rebalanceDepositToRedeemMode;
+        // flag enabled by the oracles when the slashing containment is activated
+        // the activation logic is written in the oracle specification and all oracle members must agree on the activation
+        // This flag is activated when a pre-defined threshold of slashed validators in our set of validators is reached
+        // This flag is deactivated when a bottom threshold is met, this means that when we reach the upper threshold and activate the flag, we will deactivate it when we reach the bottom threshold and not before
+        // when active, no more validator exits can be requested by the protocol
         bool slashingContainmentMode;
     }
 
     /// @notice The format of the oracle report in storage
+    /// @notice These fields have the exact same function as the ones in ConsensusLayerReport, but this struct is optimized for storage
     struct StoredConsensusLayerReport {
         uint256 epoch;
         uint256 validatorsBalance;
@@ -188,14 +224,14 @@ interface IOracleManagerV1 {
     function setOracle(address _oracleAddress) external;
 
     /// @notice Set the consensus layer spec
-    /// @param newValue The new consensus layer spec value
-    function setCLSpec(CLSpec.CLSpecStruct calldata newValue) external;
+    /// @param _newValue The new consensus layer spec value
+    function setCLSpec(CLSpec.CLSpecStruct calldata _newValue) external;
 
     /// @notice Set the report bounds
-    /// @param newValue The new report bounds value
-    function setReportBounds(ReportBounds.ReportBoundsStruct calldata newValue) external;
+    /// @param _newValue The new report bounds value
+    function setReportBounds(ReportBounds.ReportBoundsStruct calldata _newValue) external;
 
     /// @notice Performs all the reporting logics
-    /// @param report The consensus layer report structure
-    function setConsensusLayerData(ConsensusLayerReport calldata report) external;
+    /// @param _report The consensus layer report structure
+    function setConsensusLayerData(ConsensusLayerReport calldata _report) external;
 }

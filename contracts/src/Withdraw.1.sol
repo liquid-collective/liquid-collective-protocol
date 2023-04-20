@@ -21,8 +21,8 @@ contract WithdrawV1 is IWithdrawV1, Initializable {
     }
 
     /// @inheritdoc IWithdrawV1
-    function initializeWithdrawV1(address river) external init(0) {
-        _setRiver(river);
+    function initializeWithdrawV1(address _river) external init(0) {
+        _setRiver(_river);
     }
 
     /// @inheritdoc IWithdrawV1
@@ -38,8 +38,8 @@ contract WithdrawV1 is IWithdrawV1, Initializable {
     }
 
     /// @inheritdoc IWithdrawV1
-    function pullEth(uint256 max) external onlyRiver {
-        uint256 amountToPull = LibUint256.min(address(this).balance, max);
+    function pullEth(uint256 _max) external onlyRiver {
+        uint256 amountToPull = LibUint256.min(address(this).balance, _max);
         if (amountToPull > 0) {
             IRiverV1(payable(RiverAddress.get())).sendCLFunds{value: amountToPull}();
         }

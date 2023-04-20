@@ -68,18 +68,19 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
     error FundedKeyEventMigrationComplete();
 
     /// Utility to force the broadcasting of events. Will keep its progress in storage to prevent being DoSed by the number of keys
-    /// @param amountToEmit The amount of events to emit at maximum in this call
-    function forceFundedValidatorKeysEventEmission(uint256 amountToEmit) external {
+    /// @param _amountToEmit The amount of events to emit at maximum in this call
+    function forceFundedValidatorKeysEventEmission(uint256 _amountToEmit) external {
         uint256 operatorIndex = OperatorsRegistry_FundedKeyEventRebroadcasting_OperatorIndex.get();
         if (operatorIndex == type(uint256).max || OperatorsV2.getCount() == 0) {
             revert FundedKeyEventMigrationComplete();
         }
         uint256 keyIndex = OperatorsRegistry_FundedKeyEventRebroadcasting_KeyIndex.get();
-        while (amountToEmit > 0 && operatorIndex != type(uint256).max) {
+        while (_amountToEmit > 0 && operatorIndex != type(uint256).max) {
             OperatorsV2.Operator memory operator = OperatorsV2.get(operatorIndex);
 
-            (bytes[] memory publicKeys,) =
-                ValidatorKeys.getKeys(operatorIndex, keyIndex, LibUint256.min(amountToEmit, operator.funded - keyIndex));
+            (bytes[] memory publicKeys,) = ValidatorKeys.getKeys(
+                operatorIndex, keyIndex, LibUint256.min(_amountToEmit, operator.funded - keyIndex)
+            );
             emit FundedValidatorKeys(operatorIndex, publicKeys, true);
             if (keyIndex + publicKeys.length == operator.funded) {
                 keyIndex = 0;
@@ -91,7 +92,7 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
             } else {
                 keyIndex += publicKeys.length;
             }
-            amountToEmit -= publicKeys.length;
+            _amountToEmit -= publicKeys.length;
         }
         OperatorsRegistry_FundedKeyEventRebroadcasting_OperatorIndex.set(operatorIndex);
         OperatorsRegistry_FundedKeyEventRebroadcasting_KeyIndex.set(keyIndex);
@@ -573,10 +574,10 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
     }
 
     /// @notice Internal utility to retrieve the actual stopped validator count of an operator from the reported array
-    /// @param operatorIndex The operator index
+    /// @param _operatorIndex The operator index
     /// @return The count of stopped validators
-    function _getStoppedValidatorsCount(uint256 operatorIndex) internal view returns (uint32) {
-        return OperatorsV2._getStoppedValidatorCountAtIndex(OperatorsV2.getStoppedValidators(), operatorIndex);
+    function _getStoppedValidatorsCount(uint256 _operatorIndex) internal view returns (uint32) {
+        return OperatorsV2._getStoppedValidatorCountAtIndex(OperatorsV2.getStoppedValidators(), _operatorIndex);
     }
 
     /// @notice Internal utility to get the count of active validators during the deposit selection process

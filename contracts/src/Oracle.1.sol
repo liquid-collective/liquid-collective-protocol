@@ -166,7 +166,7 @@ contract OracleV1 is IOracleV1, Initializable, Administrable {
     }
 
     /// @inheritdoc IOracleV1
-    function reportConsensusLayerData(IRiverV1.ConsensusLayerReport calldata report) external {
+    function reportConsensusLayerData(IRiverV1.ConsensusLayerReport calldata _report) external {
         // retrieve member index and revert if not oracle member
         int256 memberIndex = OracleMembers.indexOf(msg.sender);
         if (memberIndex == -1) {
@@ -177,45 +177,45 @@ contract OracleV1 is IOracleV1, Initializable, Administrable {
         uint256 lastReportedEpochValue = LastEpochId.get();
 
         // checks that the report epoch is not too old
-        if (report.epoch < lastReportedEpochValue) {
-            revert EpochTooOld(report.epoch, LastEpochId.get());
+        if (_report.epoch < lastReportedEpochValue) {
+            revert EpochTooOld(_report.epoch, LastEpochId.get());
         }
         IRiverV1 river = IRiverV1(payable(RiverAddress.get()));
         // checks that the report epoch is not invalid
-        if (!river.isValidEpoch(report.epoch)) {
-            revert InvalidEpoch(report.epoch);
+        if (!river.isValidEpoch(_report.epoch)) {
+            revert InvalidEpoch(_report.epoch);
         }
         // if valid and greater than the lastReportedEpoch, we clear the reporting data
-        if (report.epoch > lastReportedEpochValue) {
+        if (_report.epoch > lastReportedEpochValue) {
             _clearReports();
-            LastEpochId.set(report.epoch);
-            emit SetLastReportedEpoch(report.epoch);
+            LastEpochId.set(_report.epoch);
+            emit SetLastReportedEpoch(_report.epoch);
         }
         // we retrieve the voting status of the caller, and revert if already voted
         if (ReportsPositions.get(uint256(memberIndex))) {
-            revert AlreadyReported(report.epoch, msg.sender);
+            revert AlreadyReported(_report.epoch, msg.sender);
         }
         // we register the caller
         ReportsPositions.register(uint256(memberIndex));
 
         // we compute the variant by hashing the report
-        bytes32 variant = _reportChecksum(report);
+        bytes32 variant = _reportChecksum(_report);
         // we retrieve the details for the given variant
         (int256 variantIndex, uint256 variantVotes) = _getReportVariantIndexAndVotes(variant);
         // we retrieve the quorum to stack
         uint256 quorum = Quorum.get();
 
-        emit ReportedConsensusLayerData(msg.sender, variant, report, variantVotes + 1, quorum);
+        emit ReportedConsensusLayerData(msg.sender, variant, _report, variantVotes + 1, quorum);
 
         // if adding this vote reaches quorum
         if (variantVotes + 1 >= quorum) {
             // we clear the reporting data
             _clearReports();
             // we increment the lastReportedEpoch to force reports to be on the last frame
-            LastEpochId.set(report.epoch + 1);
+            LastEpochId.set(_report.epoch + 1);
             // we push the report to river
-            river.setConsensusLayerData(report);
-            emit SetLastReportedEpoch(report.epoch + 1);
+            river.setConsensusLayerData(_report);
+            emit SetLastReportedEpoch(_report.epoch + 1);
         } else if (variantVotes == 0) {
             // if we have no votes for the variant, we create the variant details
             ReportsVariants.push(ReportsVariants.ReportVariantDetails({variant: variant, votes: 1}));
@@ -245,10 +245,10 @@ contract OracleV1 is IOracleV1, Initializable, Administrable {
     }
 
     /// @notice Internal utility to hash and retrieve the variant id of a report
-    /// @param report The reported data structure
+    /// @param _report The reported data structure
     /// @return The report variant
-    function _reportChecksum(IRiverV1.ConsensusLayerReport calldata report) internal pure returns (bytes32) {
-        return keccak256(abi.encode(report));
+    function _reportChecksum(IRiverV1.ConsensusLayerReport calldata _report) internal pure returns (bytes32) {
+        return keccak256(abi.encode(_report));
     }
 
     /// @notice Internal utility to clear all reporting details
@@ -259,13 +259,13 @@ contract OracleV1 is IOracleV1, Initializable, Administrable {
     }
 
     /// @notice Internal utility to retrieve index and vote count for a given variant
-    /// @param variant The variant to lookup
+    /// @param _variant The variant to lookup
     /// @return The index of the variant, -1 if not found
     /// @return The vote count of the variant
-    function _getReportVariantIndexAndVotes(bytes32 variant) internal view returns (int256, uint256) {
+    function _getReportVariantIndexAndVotes(bytes32 _variant) internal view returns (int256, uint256) {
         uint256 reportVariantsLength = ReportsVariants.get().length;
         for (uint256 idx = 0; idx < reportVariantsLength;) {
-            if (ReportsVariants.get()[idx].variant == variant) {
+            if (ReportsVariants.get()[idx].variant == _variant) {
                 return (int256(idx), ReportsVariants.get()[idx].votes);
             }
             unchecked {

@@ -5,6 +5,7 @@ import "../../libraries/LibUnstructuredStorage.sol";
 
 /// @title Consensus Layer Validator Total Balance Storage
 /// @notice Utility to manage the Consensus Layer Validator Total Balance in storage
+/// @notice This state variable is deprecated and was kept due to migration logic needs
 library CLValidatorTotalBalance {
     /// @notice Storage slot of the Consensus Layer Validator Total Balance
     bytes32 internal constant CL_VALIDATOR_TOTAL_BALANCE_SLOT =
