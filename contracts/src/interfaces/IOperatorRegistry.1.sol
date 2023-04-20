@@ -88,6 +88,18 @@ interface IOperatorsRegistryV1 {
     /// @param count The count of requested exits
     event RequestedValidatorExits(uint256 indexed index, uint256 count);
 
+    /// @notice The exit request demand has been updated
+    /// @param previousValidatorExitsDemand The previous exit request demand
+    /// @param nextValidatorExitsDemand The new exit request demand
+    event SetCurrentValidatorExitsDemand(uint256 previousValidatorExitsDemand, uint256 nextValidatorExitsDemand);
+
+    /// @notice The total requested exit has been updated
+    /// @param previousTotalValidatorExitsRequested The previous total requested exit
+    /// @param newTotalValidatorExitsRequested The new total requested exit
+    event SetTotalValidatorExitsRequested(
+        uint256 previousTotalValidatorExitsRequested, uint256 newTotalValidatorExitsRequested
+    );
+
     /// @notice A validator key got funded on the deposit contract
     /// @notice This event was introduced during a contract upgrade, in order to cover all possible public keys, this event
     /// @notice will be replayed for past funded keys in order to have a complete coverage of all the funded public keys.
@@ -105,13 +117,6 @@ interface IOperatorsRegistryV1 {
     /// @param newRequestedExits The new requested exit count
     event UpdatedRequestedValidatorExitsUponStopped(
         uint256 indexed index, uint32 oldRequestedExits, uint32 newRequestedExits
-    );
-
-    /// @notice The total requested exit has been updated
-    /// @param previousTotalRequestedValidatorExits The old total requested exit value
-    /// @param newTotalRequestedValidatorExits The new total requested exit value
-    event SetTotalRequestedValidatorExits(
-        uint256 previousTotalRequestedValidatorExits, uint256 newTotalRequestedValidatorExits
     );
 
     /// @notice The calling operator is inactive
@@ -160,8 +165,14 @@ interface IOperatorsRegistryV1 {
     /// @notice Thrown when the sum of stopped validators is invalid
     error InvalidStoppedValidatorCountsSum();
 
+    /// @notice Throw when an element in the stopped validator array is decreasing
+    error StoppedValidatorCountsDecreased();
+
     /// @notice Thrown when the number of elements in the array is too high compared to operator count
     error StoppedValidatorCountsTooHigh();
+
+    /// @notice Thrown when no exit requests can be performed
+    error NoExitRequestsToPerform();
 
     /// @notice Initializes the operators registry
     /// @param _admin Admin in charge of managing operators
@@ -194,8 +205,19 @@ interface IOperatorsRegistryV1 {
     function getTotalStoppedValidatorCount() external view returns (uint32);
 
     /// @notice Retrieve the total requested exit count
+    /// @notice This value is the amount of exit requests that have been performed, emitting an event for operators to catch
     /// @return The total requested exit count
-    function getTotalRequestedValidatorExitsCount() external view returns (uint256);
+    function getTotalValidatorExitsRequested() external view returns (uint256);
+
+    /// @notice Get the current exit request demand waiting to be triggered
+    /// @notice This value is the amount of exit requests that are demanded and not yet performed by the contract
+    /// @return The current exit request demand
+    function getCurrentValidatorExitsDemand() external view returns (uint256);
+
+    /// @notice Retrieve the total stopped and requested exit count
+    /// @return The total stopped count
+    /// @return The total requested exit count
+    function getStoppedAndRequestedExitCounts() external view returns (uint32, uint256);
 
     /// @notice Retrieve the raw stopped validators array from storage
     /// @return The stopped validator array
@@ -219,7 +241,9 @@ interface IOperatorsRegistryV1 {
     /// @notice Allows river to override the stopped validators array
     /// @notice This actions happens during the Oracle report processing
     /// @param _stoppedValidatorCounts The new stopped validators array
-    function reportStoppedValidatorCounts(uint32[] calldata _stoppedValidatorCounts) external;
+    /// @param _depositedValidatorCount The total deposited validator count
+    function reportStoppedValidatorCounts(uint32[] calldata _stoppedValidatorCounts, uint256 _depositedValidatorCount)
+        external;
 
     /// @notice Adds an operator to the registry
     /// @dev Only callable by the administrator
@@ -289,7 +313,15 @@ interface IOperatorsRegistryV1 {
         external
         returns (bytes[] memory publicKeys, bytes[] memory signatures);
 
-    /// @notice Emits events for operators to exit validators
+    /// @notice Public endpoint to consume the exit request demand and perform the actual exit requests
+    /// @notice The selection algorithm will pick validators based on their active validator counts
+    /// @notice This value is computed by using the count of funded keys and taking into account the stopped validator counts and exit requests
     /// @param _count Max amount of exits to request
-    function pickNextValidatorsToExit(uint256 _count) external;
+    function requestValidatorExits(uint256 _count) external;
+
+    /// @notice Increases the exit request demand
+    /// @dev This method is only callable by the river contract, and to actually forward the information to the node operators via event emission, the unprotected requestValidatorExits method must be called
+    /// @param _count The amount of exit requests to add to the demand
+    /// @param _depositedValidatorCount The total deposited validator count
+    function demandValidatorExits(uint256 _count, uint256 _depositedValidatorCount) external;
 }

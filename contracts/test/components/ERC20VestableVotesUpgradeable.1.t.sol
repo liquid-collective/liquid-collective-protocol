@@ -1071,9 +1071,9 @@ contract ERC20VestableVotesUpgradeableV1Tests is Test {
         // make sure that initAccount has enough funds to create the schedule
         amount = amount % tt.balanceOf(initAccount);
 
-        vm.assume(amount > 0);
-
         uint32 totalDuration = uint32(vestingPeriodCount) * uint32(periodDuration);
+
+        vm.assume(amount >= vestingPeriodCount);
 
         uint32 cliffDuration = (cliffPeriodCount % vestingPeriodCount) * uint32(periodDuration);
         lockDuration = lockDuration % (totalDuration + periodDuration);

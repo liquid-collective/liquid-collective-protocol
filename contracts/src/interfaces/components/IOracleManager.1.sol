@@ -47,7 +47,10 @@ interface IOracleManagerV1 {
     /// @notice The reported validator count is invalid
     /// @param providedValidatorCount The received validator count value
     /// @param depositedValidatorCount The number of deposits performed by the system
-    error InvalidValidatorCountReport(uint256 providedValidatorCount, uint256 depositedValidatorCount);
+    /// @param lastReportedValidatorCount The last reported validator count
+    error InvalidValidatorCountReport(
+        uint256 providedValidatorCount, uint256 depositedValidatorCount, uint256 lastReportedValidatorCount
+    );
 
     /// @notice Thrown when an invalid epoch was reported
     /// @param epoch Invalid epoch
@@ -138,7 +141,7 @@ interface IOracleManagerV1 {
         // flag enabled by the oracles when the buffer rebalancing is activated
         // the activation logic is written in the oracle specification and all oracle members must agree on the activation
         // when active, the eth in the deposit buffer can be used to pay for exits in the redeem manager
-        bool bufferRebalancingMode;
+        bool rebalanceDepositToRedeemMode;
         // flag enabled by the oracles when the slashing containment is activated
         // the activation logic is written in the oracle specification and all oracle members must agree on the activation
         // This flag is activated when a pre-defined threshold of slashed validators in our set of validators is reached
@@ -156,7 +159,7 @@ interface IOracleManagerV1 {
         uint256 validatorsExitedBalance;
         uint256 validatorsExitingBalance;
         uint32 validatorsCount;
-        bool bufferRebalancingMode;
+        bool rebalanceDepositToRedeemMode;
         bool slashingContainmentMode;
     }
 
@@ -221,14 +224,14 @@ interface IOracleManagerV1 {
     function setOracle(address _oracleAddress) external;
 
     /// @notice Set the consensus layer spec
-    /// @param newValue The new consensus layer spec value
-    function setCLSpec(CLSpec.CLSpecStruct calldata newValue) external;
+    /// @param _newValue The new consensus layer spec value
+    function setCLSpec(CLSpec.CLSpecStruct calldata _newValue) external;
 
     /// @notice Set the report bounds
-    /// @param newValue The new report bounds value
-    function setReportBounds(ReportBounds.ReportBoundsStruct calldata newValue) external;
+    /// @param _newValue The new report bounds value
+    function setReportBounds(ReportBounds.ReportBoundsStruct calldata _newValue) external;
 
     /// @notice Performs all the reporting logics
-    /// @param report The consensus layer report structure
-    function setConsensusLayerData(ConsensusLayerReport calldata report) external;
+    /// @param _report The consensus layer report structure
+    function setConsensusLayerData(ConsensusLayerReport calldata _report) external;
 }

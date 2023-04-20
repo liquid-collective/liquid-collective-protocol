@@ -13,18 +13,11 @@ import "./state/oracle/LastEpochId.sol";
 import "./state/oracle/OracleMembers.sol";
 import "./state/oracle/Quorum.sol";
 import "./state/oracle/ReportsPositions.sol";
-import "./state/oracle/ReportVariants.sol";
 
 /// @title Oracle (v1)
 /// @author Kiln
 /// @notice This contract handles the input from the allowed oracle members. Highly inspired by Lido's implementation.
 contract OracleV1 is IOracleV1, Initializable, Administrable {
-    /// @notice One Year value
-    uint256 internal constant ONE_YEAR = 365 days;
-
-    /// @notice Received ETH input has only 9 decimals
-    uint128 internal constant DENOMINATION_OFFSET = 1e9;
-
     modifier onlyAdminOrMember(address _oracleMember) {
         if (msg.sender != _getAdmin() && msg.sender != _oracleMember) {
             revert LibErrors.Unauthorized(msg.sender);
@@ -68,6 +61,11 @@ contract OracleV1 is IOracleV1, Initializable, Administrable {
     }
 
     /// @inheritdoc IOracleV1
+    function initOracleV1_1() external init(1) {
+        _clearReports();
+    }
+
+    /// @inheritdoc IOracleV1
     function getRiver() external view returns (address) {
         return RiverAddress.get();
     }
@@ -85,15 +83,19 @@ contract OracleV1 is IOracleV1, Initializable, Administrable {
 
     /// @inheritdoc IOracleV1
     function getReportVariantsCount() external view returns (uint256) {
-        return ReportVariants.get().length;
+        return ReportsVariants.get().length;
     }
 
     /// @inheritdoc IOracleV1
-    function getReportVariantDetails(uint256 _idx) external view returns (ReportVariants.ReportVariantDetails memory) {
-        if (ReportVariants.get().length <= _idx) {
-            revert ReportIndexOutOfBounds(_idx, ReportVariants.get().length);
+    function getReportVariantDetails(uint256 _idx)
+        external
+        view
+        returns (ReportsVariants.ReportVariantDetails memory)
+    {
+        if (ReportsVariants.get().length <= _idx) {
+            revert ReportIndexOutOfBounds(_idx, ReportsVariants.get().length);
         }
-        return ReportVariants.get()[_idx];
+        return ReportsVariants.get()[_idx];
     }
 
     /// @inheritdoc IOracleV1
@@ -112,53 +114,8 @@ contract OracleV1 is IOracleV1, Initializable, Administrable {
     }
 
     /// @inheritdoc IOracleV1
-    function isValidEpoch(uint256 epoch) external view returns (bool) {
-        return _river().isValidEpoch(epoch);
-    }
-
-    /// @inheritdoc IOracleV1
-    function getTime() external view returns (uint256) {
-        return _river().getTime();
-    }
-
-    /// @inheritdoc IOracleV1
-    function getExpectedEpochId() external view returns (uint256) {
-        return _river().getExpectedEpochId();
-    }
-
-    /// @inheritdoc IOracleV1
-    function getLastCompletedEpochId() external view returns (uint256) {
-        return _river().getLastCompletedEpochId();
-    }
-
-    /// @inheritdoc IOracleV1
     function getLastReportedEpochId() external view returns (uint256) {
         return LastEpochId.get();
-    }
-
-    /// @inheritdoc IOracleV1
-    function getCurrentEpochId() external view returns (uint256) {
-        return _river().getCurrentEpochId();
-    }
-
-    /// @inheritdoc IOracleV1
-    function getCLSpec() external view returns (CLSpec.CLSpecStruct memory) {
-        return _river().getCLSpec();
-    }
-
-    /// @inheritdoc IOracleV1
-    function getCurrentFrame() external view returns (uint256 _startEpochId, uint256 _startTime, uint256 _endTime) {
-        return _river().getCurrentFrame();
-    }
-
-    /// @inheritdoc IOracleV1
-    function getFrameFirstEpochId(uint256 _epochId) external view returns (uint256) {
-        return _river().getFrameFirstEpochId(_epochId);
-    }
-
-    /// @inheritdoc IOracleV1
-    function getReportBounds() external view returns (ReportBounds.ReportBoundsStruct memory) {
-        return _river().getReportBounds();
     }
 
     /// @inheritdoc IOracleV1
@@ -197,7 +154,6 @@ contract OracleV1 is IOracleV1, Initializable, Administrable {
         }
         OracleMembers.set(uint256(memberIdx), _newAddress);
         emit SetMember(_oracleMember, _newAddress);
-        _clearReports();
     }
 
     /// @inheritdoc IOracleV1
@@ -253,19 +209,19 @@ contract OracleV1 is IOracleV1, Initializable, Administrable {
 
         // if adding this vote reaches quorum
         if (variantVotes + 1 >= quorum) {
-            // we push the report to river
-            river.setConsensusLayerData(_report);
             // we clear the reporting data
             _clearReports();
             // we increment the lastReportedEpoch to force reports to be on the last frame
-            LastEpochId.set(lastReportedEpochValue + 1);
-            emit SetLastReportedEpoch(lastReportedEpochValue + 1);
+            LastEpochId.set(_report.epoch + 1);
+            // we push the report to river
+            river.setConsensusLayerData(_report);
+            emit SetLastReportedEpoch(_report.epoch + 1);
         } else if (variantVotes == 0) {
             // if we have no votes for the variant, we create the variant details
-            ReportVariants.push(ReportVariants.ReportVariantDetails({variant: variant, votes: 1}));
+            ReportsVariants.push(ReportsVariants.ReportVariantDetails({variant: variant, votes: 1}));
         } else {
             // otherwise we increment the vote
-            ReportVariants.get()[uint256(variantIndex)].votes += 1;
+            ReportsVariants.get()[uint256(variantIndex)].votes += 1;
         }
     }
 
@@ -297,7 +253,7 @@ contract OracleV1 is IOracleV1, Initializable, Administrable {
 
     /// @notice Internal utility to clear all reporting details
     function _clearReports() internal {
-        ReportVariants.clear();
+        ReportsVariants.clear();
         ReportsPositions.clear();
         emit ClearedReporting();
     }
@@ -307,10 +263,10 @@ contract OracleV1 is IOracleV1, Initializable, Administrable {
     /// @return The index of the variant, -1 if not found
     /// @return The vote count of the variant
     function _getReportVariantIndexAndVotes(bytes32 _variant) internal view returns (int256, uint256) {
-        uint256 reportVariantsLength = ReportVariants.get().length;
+        uint256 reportVariantsLength = ReportsVariants.get().length;
         for (uint256 idx = 0; idx < reportVariantsLength;) {
-            if (ReportVariants.get()[idx].variant == _variant) {
-                return (int256(idx), ReportVariants.get()[idx].votes);
+            if (ReportsVariants.get()[idx].variant == _variant) {
+                return (int256(idx), ReportsVariants.get()[idx].votes);
             }
             unchecked {
                 ++idx;

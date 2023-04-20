@@ -280,15 +280,6 @@ contract ConsensusLayerDepositManagerV1ErrorTests is Test {
         vm.prank(address(0));
         depositManager.depositToConsensusLayer(5);
     }
-
-    function testInvalidSignatureCount() public {
-        vm.deal(address(depositManager), 32 ether);
-        ConsensusLayerDepositManagerV1ControllableValidatorKeyRequest(address(depositManager)).sudoSyncBalance();
-        ConsensusLayerDepositManagerV1ControllableValidatorKeyRequest(address(depositManager)).setScenario(5);
-        vm.expectRevert(abi.encodeWithSignature("InvalidSignatureCount()"));
-        vm.prank(address(0));
-        depositManager.depositToConsensusLayer(5);
-    }
 }
 
 contract ConsensusLayerDepositManagerV1WithdrawalCredentialError is Test {
