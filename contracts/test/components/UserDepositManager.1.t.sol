@@ -10,11 +10,14 @@ import "../utils/LibImplementationUnbricker.sol";
 import "../../src/components/UserDepositManager.1.sol";
 
 contract UserDepositManagerV1EmptyDeposit is UserDepositManagerV1 {
+    event SetBalanceToDeposit(uint256 oldAmount, uint256 newAmount);
+
     function _onDeposit(address, address, uint256) internal view override {
         this;
     }
 
     function _setBalanceToDeposit(uint256 newBalanceToDeposit) internal override {
+        emit SetBalanceToDeposit(BalanceToDeposit.get(), newBalanceToDeposit);
         BalanceToDeposit.set(newBalanceToDeposit);
     }
 }
@@ -26,6 +29,7 @@ contract UserDepositManagerV1DepositTests is Test {
     error InvalidCall();
 
     event UserDeposit(address indexed depositor, address indexed recipient, uint256 amount);
+    event SetBalanceToDeposit(uint256 oldAmount, uint256 newAmount);
 
     function setUp() public {
         transferManager = new UserDepositManagerV1EmptyDeposit();
@@ -42,6 +46,8 @@ contract UserDepositManagerV1DepositTests is Test {
         assert(address(transferManager).balance == 0);
 
         if (_amount > 0) {
+            vm.expectEmit(true, true, true, true);
+            emit SetBalanceToDeposit(0, _amount);
             vm.expectEmit(true, true, true, true);
             emit UserDeposit(_user, _user, _amount);
         } else {
@@ -67,6 +73,8 @@ contract UserDepositManagerV1DepositTests is Test {
 
         if (_amount > 0) {
             vm.expectEmit(true, true, true, true);
+            emit SetBalanceToDeposit(0, _amount);
+            vm.expectEmit(true, true, true, true);
             emit UserDeposit(_user, _anotherUser, _amount);
         } else {
             vm.expectRevert(abi.encodeWithSignature("EmptyDeposit()"));
@@ -87,6 +95,8 @@ contract UserDepositManagerV1DepositTests is Test {
         assert(address(transferManager).balance == 0);
 
         if (_amount > 0) {
+            vm.expectEmit(true, true, true, true);
+            emit SetBalanceToDeposit(0, _amount);
             vm.expectEmit(true, true, true, true);
             emit UserDeposit(_user, _user, _amount);
         } else {
@@ -112,12 +122,14 @@ contract UserDepositManagerV1DepositTests is Test {
 
 contract UserDepositManagerV1CatchableDeposit is UserDepositManagerV1 {
     event InternalCallbackCalled(address depositor, address recipient, uint256 amount);
+    event SetBalanceToDeposit(uint256 oldAmount, uint256 newAmount);
 
     function _onDeposit(address depositor, address recipient, uint256 amount) internal override {
         emit InternalCallbackCalled(depositor, recipient, amount);
     }
 
     function _setBalanceToDeposit(uint256 newBalanceToDeposit) internal override {
+        emit SetBalanceToDeposit(BalanceToDeposit.get(), newBalanceToDeposit);
         BalanceToDeposit.set(newBalanceToDeposit);
     }
 }

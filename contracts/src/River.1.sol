@@ -31,51 +31,6 @@ import "./state/river/LastConsensusLayerReport.sol";
 /// @title River (v1)
 /// @author Kiln
 /// @notice This contract merges all the manager contracts and implements all the virtual methods stitching all components together
-/// @notice
-/// @notice    +---------------------------------------------------------------------+
-/// @notice    |                                                                     |
-/// @notice    |                           Consensus Layer                           |
-/// @notice    |                                                                     |
-/// @notice    | +-------------------+  +-------------------+  +-------------------+ |
-/// @notice    | |                   |  |                   |  |                   | |
-/// @notice    | |  EL Fee Recipient |  |      Oracle       |  |  Deposit Contract | |
-/// @notice    | |                   |  |                   |  |                   | |
-/// @notice    | +---------|---------+  +---------|---------+  +---------|---------+ |
-/// @notice    +---------------------------------------------------------------------+
-/// @notice                |         7            |            5         |
-/// @notice                +-----------------|    |    |-----------------+
-/// @notice                                  |    |6   |
-/// @notice                                  |    |    |
-/// @notice        +---------+          +----|----|----|----+            +---------+
-/// @notice        |         |          |                   |     2      |         |
-/// @notice        |Operator |          |       River       --------------  User   |
-/// @notice        |         |          |                   |            |         |
-/// @notice        +----|----+          +----|---------|----+            +---------+
-/// @notice             |                    |         |
-/// @notice             |             4      |         |       3
-/// @notice             |1     +-------------|         |--------------+
-/// @notice             |      |                                      |
-/// @notice             |      |                                      |
-/// @notice      +------|------|------------+           +-------------|------------+
-/// @notice      |                          |           |                          |
-/// @notice      |    Operators Registry    |           |         Allowlist        |
-/// @notice      |                          |           |                          |
-/// @notice      +--------------------------+           +--------------------------+
-/// @notice
-/// @notice      1. Operators are adding BLS Public Keys of validators running in their
-/// @notice         infrastructure.
-/// @notice      2. User deposit ETH to the system and get shares minted in exchange
-/// @notice      3. Upon deposit, the system verifies if the User is allowed to deposit
-/// @notice         by querying the Allowlist
-/// @notice      4. When the system has enough funds to deposit validators, keys are pulled
-/// @notice         from the Operators Registry
-/// @notice      5. The deposit data is computed and the validators are funded via the official
-/// @notice         deposit contract
-/// @notice      6. Oracles report the total balance of the running validators and the total count
-/// @notice         of running validators
-/// @notice      7. The running validators propose blocks that reward the EL Fee Recipient. The funds
-/// @notice         are pulled back in the system.
-/// @notice
 contract RiverV1 is
     ConsensusLayerDepositManagerV1,
     UserDepositManagerV1,
@@ -137,13 +92,12 @@ contract RiverV1 is
         RedeemManagerAddress.set(_redeemManager);
         emit SetRedeemManager(_redeemManager);
 
-        DailyCommittableLimits.set(
+        _setDailyCommittableLimits(
             DailyCommittableLimits.DailyCommittableLimitsStruct({
                 maxDailyNetCommittableAmount: maxDailyNetCommittableAmount_,
                 maxDailyRelativeCommittableAmount: maxDailyRelativeCommittableAmount_
             })
         );
-        emit SetMaxDailyCommittableAmounts(maxDailyNetCommittableAmount_, maxDailyRelativeCommittableAmount_);
 
         initOracleManagerV1_1(
             epochsPerFrame,
@@ -184,6 +138,11 @@ contract RiverV1 is
     }
 
     /// @inheritdoc IRiverV1
+    function getRedeemManager() external view returns (address) {
+        return RedeemManagerAddress.get();
+    }
+
+    /// @inheritdoc IRiverV1
     function getMetadataURI() external view returns (string memory) {
         return MetadataURI.get();
     }
@@ -202,8 +161,7 @@ contract RiverV1 is
         external
         onlyAdmin
     {
-        DailyCommittableLimits.set(dcl);
-        emit SetMaxDailyCommittableAmounts(dcl.maxDailyNetCommittableAmount, dcl.maxDailyRelativeCommittableAmount);
+        _setDailyCommittableLimits(dcl);
     }
 
     /// @inheritdoc IRiverV1
@@ -430,6 +388,13 @@ contract RiverV1 is
         }
     }
 
+    /// @notice Internal utility to set the daily committable limits
+    /// @param dcl The new daily committable limits
+    function _setDailyCommittableLimits(DailyCommittableLimits.DailyCommittableLimitsStruct memory dcl) internal {
+        DailyCommittableLimits.set(dcl);
+        emit SetMaxDailyCommittableAmounts(dcl.maxDailyNetCommittableAmount, dcl.maxDailyRelativeCommittableAmount);
+    }
+
     /// @notice Sets the balance to deposit, but not yet committed
     /// @param newBalanceToDeposit The new balance to deposit value
     function _setBalanceToDeposit(uint256 newBalanceToDeposit) internal override(UserDepositManagerV1) {
@@ -511,11 +476,11 @@ contract RiverV1 is
                 // the available balance to redeem is updated
                 _setBalanceToRedeem(availableBalanceToRedeem - suppliedRedeemManagerDemandInEth);
 
-                // perform a report withdraw call to the redeem manager
-                redeemManager_.reportWithdraw{value: suppliedRedeemManagerDemandInEth}(suppliedRedeemManagerDemand);
-
                 // we burn the shares of the redeem manager associated with the amount of eth provided
                 _burnRawShares(address(RedeemManagerAddress.get()), suppliedRedeemManagerDemand);
+
+                // perform a report withdraw call to the redeem manager
+                redeemManager_.reportWithdraw{value: suppliedRedeemManagerDemandInEth}(suppliedRedeemManagerDemand);
             }
         }
     }
@@ -561,6 +526,9 @@ contract RiverV1 is
                 (uint256 totalStoppedValidatorCount, uint256 totalRequestedExitsCount) =
                     or.getStoppedAndRequestedExitCounts();
 
+                // what we are calling pre-exiting balance is the amount of eth that should soon enter the exiting balance
+                // because exit requests have been made and operators might have a lag to process them
+                // we take them into account to not exit too many validators
                 uint256 preExitingBalance = (
                     totalRequestedExitsCount > totalStoppedValidatorCount
                         ? (totalRequestedExitsCount - totalStoppedValidatorCount)
@@ -604,10 +572,8 @@ contract RiverV1 is
                 / LibBasisPoints.BASIS_POINTS_MAX
         );
         // we adapt the value for the reporting period by using the asset balance as upper bound
-        uint256 currentMaxCommittableAmount = LibUint256.min(
-            LibUint256.min(underlyingAssetBalance, (currentMaxDailyCommittableAmount * period) / 1 days),
-            currentBalanceToDeposit
-        );
+        uint256 currentMaxCommittableAmount =
+            LibUint256.min((currentMaxDailyCommittableAmount * period) / 1 days, currentBalanceToDeposit);
 
         if (currentMaxCommittableAmount > 0) {
             _setCommittedBalance(CommittedBalance.get() + currentMaxCommittableAmount);

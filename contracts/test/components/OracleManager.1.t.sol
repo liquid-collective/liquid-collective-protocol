@@ -304,7 +304,7 @@ contract OracleManagerV1Tests is Test {
         v.clr.validatorsExitedBalance = exitedCount * 32 ether;
         v.clr.validatorsExitingBalance = (stoppedValidatorCount - exitedCount) * 32 ether;
         v.clr.stoppedValidatorCountPerOperator = new uint32[](1);
-        v.clr.bufferRebalancingMode = false;
+        v.clr.rebalanceDepositToRedeemMode = false;
         v.clr.slashingContainmentMode = false;
 
         v.elFeesAvailable = om.elFeesAvailable();
