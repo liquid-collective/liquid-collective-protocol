@@ -60,8 +60,10 @@ contract WithdrawV1Tests is Test {
         assertEq(address(withdraw).balance, _amount);
         assertEq(address(river).balance, 0);
 
-        vm.expectEmit(true, true, true, true);
-        emit DebugReceivedCLFunds(_amount);
+        if (_amount > 0) {
+            vm.expectEmit(true, true, true, true);
+            emit DebugReceivedCLFunds(_amount);
+        }
         river.debug_pullFunds(address(withdraw), _amount);
 
         assertEq(address(withdraw).balance, 0);

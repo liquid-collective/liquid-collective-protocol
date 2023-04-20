@@ -369,8 +369,8 @@ contract RiverV1 is
         uint256 collectedELFees = address(this).balance - initialBalance;
         if (collectedELFees > 0) {
             _setBalanceToDeposit(BalanceToDeposit.get() + collectedELFees);
-            emit PulledELFees(collectedELFees);
         }
+        emit PulledELFees(collectedELFees);
         return collectedELFees;
     }
 
@@ -387,8 +387,8 @@ contract RiverV1 is
         uint256 collectedCoverageFunds = address(this).balance - initialBalance;
         if (collectedCoverageFunds > 0) {
             _setBalanceToDeposit(BalanceToDeposit.get() + collectedCoverageFunds);
-            emit PulledCoverageFunds(collectedCoverageFunds);
         }
+        emit PulledCoverageFunds(collectedCoverageFunds);
         return collectedCoverageFunds;
     }
 
@@ -468,6 +468,7 @@ contract RiverV1 is
         if (exitedEthAmount > 0) {
             _setBalanceToRedeem(BalanceToRedeem.get() + exitedEthAmount);
         }
+        emit PulledCLFunds(skimmedEthAmount, exitedEthAmount);
     }
 
     /// @notice Pulls funds from the redeem manager exceeding eth buffer
@@ -478,8 +479,8 @@ contract RiverV1 is
         uint256 collectedExceedingEth = address(this).balance - currentBalance;
         if (collectedExceedingEth > 0) {
             _setBalanceToDeposit(BalanceToDeposit.get() + collectedExceedingEth);
-            emit PulledRedeemManagerExceedingEth(collectedExceedingEth);
         }
+        emit PulledRedeemManagerExceedingEth(collectedExceedingEth);
         return collectedExceedingEth;
     }
 
