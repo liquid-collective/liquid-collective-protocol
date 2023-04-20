@@ -39,7 +39,10 @@ contract WithdrawV1 is IWithdrawV1, Initializable {
 
     /// @inheritdoc IWithdrawV1
     function pullEth(uint256 max) external onlyRiver {
-        IRiverV1(payable(RiverAddress.get())).sendCLFunds{value: LibUint256.min(address(this).balance, max)}();
+        uint256 amountToPull = LibUint256.min(address(this).balance, max);
+        if (amountToPull > 0) {
+            IRiverV1(payable(RiverAddress.get())).sendCLFunds{value: amountToPull}();
+        }
     }
 
     /// @notice Internal utility to set the river address

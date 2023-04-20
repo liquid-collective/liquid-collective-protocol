@@ -46,6 +46,18 @@ library OperatorsV2 {
         uint32 picked;
     }
 
+    /// @notice The Operator structure when loaded in memory for the exit selection
+    struct CachedExitableOperator {
+        /// @custom:attribute The count of funded validators
+        uint32 funded;
+        /// @custom:attribute The count of exit requests made to this operator
+        uint32 requestedExits;
+        /// @custom:attribute The original index of the operator
+        uint32 index;
+        /// @custom:attribute The amount of picked keys, buffer used before changing funded in storage
+        uint32 picked;
+    }
+
     /// @notice The structure at the storage slot
     struct SlotOperator {
         /// @custom:attribute Array containing all the operators
@@ -74,6 +86,21 @@ library OperatorsV2 {
         }
 
         return r.value[_index];
+    }
+
+    /// @notice Retrieve the operators in storage
+    /// @return The Operator structure array
+    function getAll() internal view returns (Operator[] storage) {
+        bytes32 slot = OPERATORS_SLOT;
+
+        SlotOperator storage r;
+
+        // solhint-disable-next-line no-inline-assembly
+        assembly {
+            r.slot := slot
+        }
+
+        return r.value;
     }
 
     /// @notice Retrieve the operator count in storage
@@ -201,7 +228,7 @@ library OperatorsV2 {
     /// @dev populated up to the exitable operator count, also returned by the method
     /// @return The list of active and exitable operators
     /// @return The count of active and exitable operators
-    function getAllExitable() internal view returns (CachedOperator[] memory, uint256) {
+    function getAllExitable() internal view returns (CachedExitableOperator[] memory, uint256) {
         bytes32 slot = OPERATORS_SLOT;
 
         SlotOperator storage r;
@@ -214,13 +241,12 @@ library OperatorsV2 {
         uint256 exitableCount = 0;
         uint256 operatorCount = r.value.length;
 
-        CachedOperator[] memory exitableOperators = new CachedOperator[](operatorCount);
+        CachedExitableOperator[] memory exitableOperators = new CachedExitableOperator[](operatorCount);
 
         for (uint256 idx = 0; idx < operatorCount;) {
             if (_hasExitableKeys(r.value[idx])) {
                 Operator storage op = r.value[idx];
-                exitableOperators[exitableCount] = CachedOperator({
-                    limit: op.limit,
+                exitableOperators[exitableCount] = CachedExitableOperator({
                     funded: op.funded,
                     requestedExits: op.requestedExits,
                     index: uint32(idx),

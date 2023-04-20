@@ -47,7 +47,10 @@ interface IOracleManagerV1 {
     /// @notice The reported validator count is invalid
     /// @param providedValidatorCount The received validator count value
     /// @param depositedValidatorCount The number of deposits performed by the system
-    error InvalidValidatorCountReport(uint256 providedValidatorCount, uint256 depositedValidatorCount);
+    /// @param lastReportedValidatorCount The last reported validator count
+    error InvalidValidatorCountReport(
+        uint256 providedValidatorCount, uint256 depositedValidatorCount, uint256 lastReportedValidatorCount
+    );
 
     /// @notice Thrown when an invalid epoch was reported
     /// @param epoch Invalid epoch
@@ -108,7 +111,7 @@ interface IOracleManagerV1 {
         uint256 validatorsExitingBalance;
         uint32 validatorsCount;
         uint32[] stoppedValidatorCountPerOperator;
-        bool bufferRebalancingMode;
+        bool rebalanceDepositToRedeemMode;
         bool slashingContainmentMode;
     }
 
@@ -120,7 +123,7 @@ interface IOracleManagerV1 {
         uint256 validatorsExitedBalance;
         uint256 validatorsExitingBalance;
         uint32 validatorsCount;
-        bool bufferRebalancingMode;
+        bool rebalanceDepositToRedeemMode;
         bool slashingContainmentMode;
     }
 

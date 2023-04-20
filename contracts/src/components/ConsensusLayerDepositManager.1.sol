@@ -86,6 +86,8 @@ abstract contract ConsensusLayerDepositManagerV1 is IConsensusLayerDepositManage
             revert NotEnoughFunds();
         }
 
+        // it's up to the internal overriden _getNextValidators method to provide two array of the same
+        // size for the publicKeys and the signatures
         (bytes[] memory publicKeys, bytes[] memory signatures) = _getNextValidators(keyToDepositCount);
 
         uint256 receivedPublicKeyCount = publicKeys.length;
@@ -96,12 +98,6 @@ abstract contract ConsensusLayerDepositManagerV1 is IConsensusLayerDepositManage
 
         if (receivedPublicKeyCount > keyToDepositCount) {
             revert InvalidPublicKeyCount();
-        }
-
-        uint256 receivedSignatureCount = signatures.length;
-
-        if (receivedSignatureCount != receivedPublicKeyCount) {
-            revert InvalidSignatureCount();
         }
 
         bytes32 withdrawalCredentials = WithdrawalCredentials.get();

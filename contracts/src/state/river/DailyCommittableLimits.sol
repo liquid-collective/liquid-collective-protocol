@@ -40,7 +40,6 @@ library DailyCommittableLimits {
     /// @notice Set the Daily Committable Limits value in storage
     /// @param _newValue The new value to set in storage
     function set(DailyCommittableLimitsStruct memory _newValue) internal {
-        LibSanitize._validFee(_newValue.maxDailyRelativeCommittableAmount);
         bytes32 slot = DAILY_COMMITTABLE_LIMITS_SLOT;
 
         Slot storage r;
