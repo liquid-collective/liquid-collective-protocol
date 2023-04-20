@@ -372,7 +372,10 @@ abstract contract OracleManagerV1 is IOracleManagerV1 {
             uint256 maxDecrease = _maxDecrease(rb, vars.preReportUnderlyingBalance);
 
             // we verify that the bound is not crossed
-            if (vars.postReportUnderlyingBalance < vars.preReportUnderlyingBalance - maxDecrease) {
+            if (
+                vars.postReportUnderlyingBalance
+                    < vars.preReportUnderlyingBalance - LibUint256.min(maxDecrease, vars.preReportUnderlyingBalance)
+            ) {
                 revert TotalValidatorBalanceDecreaseOutOfBound(
                     vars.preReportUnderlyingBalance,
                     vars.postReportUnderlyingBalance,

@@ -52,6 +52,11 @@ interface IRedeemManagerV1 {
         uint256 remainingLsEthAmount
     );
 
+    /// @notice Emitted when the redeem demand is set
+    /// @param oldRedeemDemand The old redeem demand
+    /// @param newRedeemDemand The new redeem demand
+    event SetRedeemDemand(uint256 oldRedeemDemand, uint256 newRedeemDemand);
+
     /// @notice Emitted when the River address is set
     /// @param river The new river address
     event SetRiver(address river);
@@ -82,6 +87,16 @@ interface IRedeemManagerV1 {
     /// @param withdrawalEventId The provided associated withdrawal event id
     error DoesNotMatch(uint256 redeemRequestId, uint256 withdrawalEventId);
 
+    /// @notice Thrown when the provided withdrawal event exceeds the redeem demand
+    /// @param withdrawalAmount The amount of the withdrawal event
+    /// @param redeemDemand The current redeem demand
+    error WithdrawalExceedsRedeemDemand(uint256 withdrawalAmount, uint256 redeemDemand);
+
+    /// @notice Thrown when the payment after a claim failed
+    /// @param recipient The recipient of the payment
+    /// @param rdata The revert data
+    error ClaimRedeemFailed(address recipient, bytes rdata);
+
     /// @param river The address of the River contract
     function initializeRedeemManagerV1(address river) external;
 
@@ -104,9 +119,13 @@ interface IRedeemManagerV1 {
         view
         returns (WithdrawalStack.WithdrawalEvent memory);
 
-    /// @notice Retrieve the amount of eth available in the buffer
+    /// @notice Retrieve the amount of redeemed LsETH pending to be supplied with withdrawn ETH
     /// @return The amount of eth in the buffer
     function getBufferedExceedingEth() external view returns (uint256);
+
+    /// @notice Retrieve the amount of LsETH waiting to be exited
+    /// @return The amount of LsETH waiting to be exited
+    function getRedeemDemand() external view returns (uint256);
 
     /// @notice Resolves the provided list of redeem request ids
     /// @dev The result is an array of equal length with ids or error code
@@ -136,11 +155,13 @@ interface IRedeemManagerV1 {
     /// @param redeemRequestIds The list of redeem requests to claim
     /// @param withdrawalEventIds The list of withdrawal events to use for every redeem request claim
     /// @param skipAlreadyClaimed True if the call should not revert on claiming of already claimed requests
+    /// @param _depth The maximum recursive depth for the resolution of the redeem requests
     /// @return claimStatuses The list of claim statuses. 0 for fully claimed, 1 for partially claimed, 2 for skipped
     function claimRedeemRequests(
         uint32[] calldata redeemRequestIds,
         uint32[] calldata withdrawalEventIds,
-        bool skipAlreadyClaimed
+        bool skipAlreadyClaimed,
+        uint16 _depth
     ) external returns (uint8[] memory claimStatuses);
 
     /// @notice Claims the rewards of the provided redeem request ids

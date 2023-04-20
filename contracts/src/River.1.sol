@@ -190,8 +190,9 @@ contract RiverV1 is
         external
         returns (uint8[] memory claimStatuses)
     {
-        return
-            IRedeemManagerV1(RedeemManagerAddress.get()).claimRedeemRequests(redeemRequestIds, withdrawalEventIds, true);
+        return IRedeemManagerV1(RedeemManagerAddress.get()).claimRedeemRequests(
+            redeemRequestIds, withdrawalEventIds, true, type(uint16).max
+        );
     }
 
     /// @inheritdoc IRiverV1
@@ -457,7 +458,7 @@ contract RiverV1 is
 
         if (underlyingAssetBalance > 0 && totalSupply > 0) {
             // we compute the redeem manager demands in eth and lsEth based on current conversion rate
-            uint256 redeemManagerDemand = _balanceOf(RedeemManagerAddress.get());
+            uint256 redeemManagerDemand = redeemManager_.getRedeemDemand();
             uint256 suppliedRedeemManagerDemand = redeemManagerDemand;
             uint256 suppliedRedeemManagerDemandInEth = _balanceFromShares(suppliedRedeemManagerDemand);
             uint256 availableBalanceToRedeem = BalanceToRedeem.get();
@@ -477,7 +478,7 @@ contract RiverV1 is
                 _setBalanceToRedeem(availableBalanceToRedeem - suppliedRedeemManagerDemandInEth);
 
                 // we burn the shares of the redeem manager associated with the amount of eth provided
-                _burnRawShares(address(RedeemManagerAddress.get()), suppliedRedeemManagerDemand);
+                _burnRawShares(address(redeemManager_), suppliedRedeemManagerDemand);
 
                 // perform a report withdraw call to the redeem manager
                 redeemManager_.reportWithdraw{value: suppliedRedeemManagerDemandInEth}(suppliedRedeemManagerDemand);
@@ -504,7 +505,8 @@ contract RiverV1 is
         if (totalSupply > 0) {
             uint256 availableBalanceToRedeem = BalanceToRedeem.get();
             uint256 availableBalanceToDeposit = BalanceToDeposit.get();
-            uint256 redeemManagerDemandInEth = _balanceFromShares(_balanceOf(RedeemManagerAddress.get()));
+            uint256 redeemManagerDemandInEth =
+                _balanceFromShares(IRedeemManagerV1(RedeemManagerAddress.get()).getRedeemDemand());
 
             // if after all rebalancings, the redeem manager demand is still higher than the balance to redeem and exiting eth, we compute
             // the amount of validators to exit in order to cover the remaining demand
