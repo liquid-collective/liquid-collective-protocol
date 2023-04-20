@@ -460,7 +460,7 @@ abstract contract OracleManagerV1 is IOracleManagerV1 {
     /// @return True if valid
     function _isValidEpoch(CLSpec.CLSpecStruct memory cls, uint256 epoch) internal view returns (bool) {
         return (
-            _currentEpoch(cls) >= epoch + cls.epochsToAssumedFinality && epoch >= LastConsensusLayerReport.get().epoch
+            _currentEpoch(cls) >= epoch + cls.epochsToAssumedFinality && epoch > LastConsensusLayerReport.get().epoch
                 && epoch % cls.epochsPerFrame == 0
         );
     }
