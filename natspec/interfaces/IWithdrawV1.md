@@ -47,7 +47,7 @@ Retrieve the linked River address
 ### initializeWithdrawV1
 
 ```solidity
-function initializeWithdrawV1(address river) external nonpayable
+function initializeWithdrawV1(address _river) external nonpayable
 ```
 
 
@@ -58,12 +58,12 @@ function initializeWithdrawV1(address river) external nonpayable
 
 | Name | Type | Description |
 |---|---|---|
-| river | address | The address of the River contract |
+| _river | address | The address of the River contract |
 
 ### pullEth
 
 ```solidity
-function pullEth(uint256 amount) external nonpayable
+function pullEth(uint256 _amount) external nonpayable
 ```
 
 Callable by River, sends the specified amount of ETH to River
@@ -74,7 +74,7 @@ Callable by River, sends the specified amount of ETH to River
 
 | Name | Type | Description |
 |---|---|---|
-| amount | uint256 | The amount to pull |
+| _amount | uint256 | The amount to pull |
 
 
 
@@ -96,25 +96,5 @@ Emitted when the linked River address is changed
 |---|---|---|
 | river  | address | The new River address |
 
-
-
-## Errors
-
-### PulledAmountTooHigh
-
-```solidity
-error PulledAmountTooHigh(uint256 requestedAmount, uint256 availableAmount)
-```
-
-Thrown when the requested pulled amount is too high
-
-
-
-#### Parameters
-
-| Name | Type | Description |
-|---|---|---|
-| requestedAmount | uint256 | The amount that was requested by River |
-| availableAmount | uint256 | The current balance available |
 
 

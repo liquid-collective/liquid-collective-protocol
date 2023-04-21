@@ -1,9 +1,17 @@
 import { DeployFunction } from "hardhat-deploy/dist/types";
 import { HardhatRuntimeEnvironment } from "hardhat/types";
 import { getContractAddress } from "ethers/lib/utils";
-import { isDeployed, logStep, logStepEnd } from '../ts-utils/helpers/index';
+import { isDeployed, logStep, logStepEnd } from "../../ts-utils/helpers/index";
 
-const func: DeployFunction = async function ({ deployments, getNamedAccounts, ethers }: HardhatRuntimeEnvironment) {
+const func: DeployFunction = async function ({
+  deployments,
+  getNamedAccounts,
+  ethers,
+  network,
+}: HardhatRuntimeEnvironment) {
+  if (!["devGoerli", "hardhat"].includes(network.name)) {
+    throw new Error("Invalid network for devGoerli deployment");
+  }
   const { deployer, proxyAdministrator, governor, executor } = await getNamedAccounts();
 
   const signer = await ethers.getSigner(deployer);
@@ -29,7 +37,7 @@ const func: DeployFunction = async function ({ deployments, getNamedAccounts, et
     proxy: {
       owner: proxyAdministrator,
       proxyContract: "TUPProxy",
-      implementationName: "AllowlistV1_Implementation_0_2_2",
+      implementationName: "AllowlistV1_Implementation_0_6_0",
       execute: {
         methodName: "initAllowlistV1",
         args: [firewallDeployment.address, firewallDeployment.address],

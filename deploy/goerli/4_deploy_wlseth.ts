@@ -1,6 +1,6 @@
 import { DeployFunction } from "hardhat-deploy/dist/types";
 import { HardhatRuntimeEnvironment } from "hardhat/types";
-import { isDeployed, logStep, logStepEnd } from "../ts-utils/helpers/index";
+import { isDeployed, logStep, logStepEnd } from "../../ts-utils/helpers/index";
 
 const func: DeployFunction = async function ({ deployments, getNamedAccounts }: HardhatRuntimeEnvironment) {
   const { deployer, proxyAdministrator } = await getNamedAccounts();

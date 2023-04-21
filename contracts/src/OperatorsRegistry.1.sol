@@ -71,8 +71,12 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
     /// @param _amountToEmit The amount of events to emit at maximum in this call
     function forceFundedValidatorKeysEventEmission(uint256 _amountToEmit) external {
         uint256 operatorIndex = OperatorsRegistry_FundedKeyEventRebroadcasting_OperatorIndex.get();
-        if (operatorIndex == type(uint256).max || OperatorsV2.getCount() == 0) {
+        if (operatorIndex == type(uint256).max) {
             revert FundedKeyEventMigrationComplete();
+        }
+        if (OperatorsV2.getCount() == 0) {
+            OperatorsRegistry_FundedKeyEventRebroadcasting_OperatorIndex.set(type(uint256).max);
+            return;
         }
         uint256 keyIndex = OperatorsRegistry_FundedKeyEventRebroadcasting_KeyIndex.get();
         while (_amountToEmit > 0 && operatorIndex != type(uint256).max) {

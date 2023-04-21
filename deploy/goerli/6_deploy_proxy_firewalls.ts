@@ -1,7 +1,7 @@
 import { ethers } from "ethers";
 import { DeployFunction } from "hardhat-deploy/dist/types";
 import { HardhatRuntimeEnvironment } from "hardhat/types";
-import { isDeployed, logStep, logStepEnd } from "../ts-utils/helpers/index";
+import { isDeployed, logStep, logStepEnd } from "../../ts-utils/helpers/index";
 
 // This migration brings the post audit modifications to the goerli and mockedGoerli deployments
 const func: DeployFunction = async function ({ deployments, getNamedAccounts }: HardhatRuntimeEnvironment) {
