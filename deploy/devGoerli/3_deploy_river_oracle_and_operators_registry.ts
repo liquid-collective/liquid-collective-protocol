@@ -1,7 +1,7 @@
 import { getContractAddress } from "ethers/lib/utils";
 import { DeployFunction } from "hardhat-deploy/dist/types";
 import { HardhatRuntimeEnvironment } from "hardhat/types";
-import { isDeployed, logStep, logStepEnd } from "../ts-utils/helpers/index";
+import { isDeployed, logStep, logStepEnd } from "../../ts-utils/helpers/index";
 
 const func: DeployFunction = async function ({
   deployments,
@@ -9,31 +9,11 @@ const func: DeployFunction = async function ({
   ethers,
   network,
 }: HardhatRuntimeEnvironment) {
-  let genesisTimestamp = 0;
-  switch (network.name) {
-    case "goerli":
-    case "mockedGoerli": {
-      genesisTimestamp = 1616508000;
-      break;
-    }
-    case "mainnet": {
-      genesisTimestamp = 1606824023;
-      break;
-    }
+  if (!["devGoerli", "hardhat"].includes(network.name)) {
+    throw new Error("Invalid network for devGoerli deployment");
   }
-
-  let grossFee = 0;
-  switch (network.name) {
-    case "goerli":
-    case "mockedGoerli": {
-      grossFee = 1250;
-      break;
-    }
-    case "mainnet": {
-      grossFee = 1500;
-      break;
-    }
-  }
+  const genesisTimestamp = 1616508000;
+  const grossFee = 1250;
 
   const { deployer, governor, executor, proxyAdministrator, collector } = await getNamedAccounts();
 
@@ -42,17 +22,6 @@ const func: DeployFunction = async function ({
   const withdrawDeployment = await deployments.get("Withdraw");
   const WithdrawContract = await ethers.getContractAt("WithdrawV1", withdrawDeployment.address);
   const withdrawalCredentials = await WithdrawContract.getCredentials();
-
-  if (["mockedGoerli"].includes(network.name)) {
-    console.log("Mocked Deposit Contract mode: ON");
-    await deployments.deploy("DepositContractMock", {
-      from: deployer,
-      log: true,
-      args: [collector],
-    });
-    const mockedDepositContractDeployment = await deployments.get("DepositContractMock");
-    depositContract = mockedDepositContractDeployment.address;
-  }
 
   const signer = await ethers.getSigner(deployer);
 
@@ -97,7 +66,7 @@ const func: DeployFunction = async function ({
     proxy: {
       owner: proxyAdministrator,
       proxyContract: "TUPProxy",
-      implementationName: "RiverV1_Implementation_0_2_2",
+      implementationName: "RiverV1_Implementation_0_6_0",
       execute: {
         methodName: "initRiverV1",
         args: [
@@ -132,7 +101,7 @@ const func: DeployFunction = async function ({
     proxy: {
       owner: proxyAdministrator,
       proxyContract: "TUPProxy",
-      implementationName: "OracleV1_Implementation_0_2_2",
+      implementationName: "OracleV1_Implementation_0_6_0",
       execute: {
         methodName: "initOracleV1",
         args: [riverDeployment.address, oracleFirewallDeployment.address, 225, 32, 12, genesisTimestamp, 1000, 500],
@@ -154,7 +123,6 @@ const func: DeployFunction = async function ({
       [
         operatorsRegsitryInterface.getSighash("setOperatorStatus"),
         operatorsRegsitryInterface.getSighash("setOperatorName"),
-        operatorsRegsitryInterface.getSighash("setOperatorStoppedValidatorCount"),
         operatorsRegsitryInterface.getSighash("setOperatorLimits"),
       ],
     ],
@@ -167,7 +135,7 @@ const func: DeployFunction = async function ({
     proxy: {
       owner: proxyAdministrator,
       proxyContract: "TUPProxy",
-      implementationName: "OperatorsRegistryV1_Implementation_0_2_2",
+      implementationName: "OperatorsRegistryV1_Implementation_0_6_0",
       execute: {
         methodName: "initOperatorsRegistryV1",
         args: [operatorsRegistryFirewallDeployment.address, futureRiverAddress],
@@ -180,7 +148,7 @@ const func: DeployFunction = async function ({
     from: deployer,
     log: true,
     proxy: {
-      implementationName: "ELFeeRecipientV1_Implementation_0_2_2",
+      implementationName: "ELFeeRecipientV1_Implementation_0_6_0",
       owner: proxyAdministrator,
       proxyContract: "TUPProxy",
       execute: {

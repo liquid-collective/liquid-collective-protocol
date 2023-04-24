@@ -1,6 +1,6 @@
 import { DeployFunction } from "hardhat-deploy/dist/types";
 import { HardhatRuntimeEnvironment } from "hardhat/types";
-import { isDeployed, logStep, logStepEnd } from "../ts-utils/helpers/index";
+import { isDeployed, logStep, logStepEnd } from "../../ts-utils/helpers/index";
 
 // this upgrade occurs after the 11/22 spearbit audit changes
 const func: DeployFunction = async function ({ deployments, getNamedAccounts }: HardhatRuntimeEnvironment) {
@@ -29,11 +29,10 @@ const func: DeployFunction = async function ({ deployments, getNamedAccounts }: 
 
 func.skip = async function ({ deployments }: HardhatRuntimeEnvironment): Promise<boolean> {
   logStep(__filename);
-  const shouldSkip = (
-    await isDeployed("AllowlistV1_Implementation_0_5_0", deployments, __filename)
-    && await isDeployed("RiverV1_Implementation_0_5_0", deployments, __filename)
-    && await isDeployed("TLCV1_Implementation_0_5_0", deployments, __filename)
-  );
+  const shouldSkip =
+    (await isDeployed("AllowlistV1_Implementation_0_5_0", deployments, __filename)) &&
+    (await isDeployed("RiverV1_Implementation_0_5_0", deployments, __filename)) &&
+    (await isDeployed("TLCV1_Implementation_0_5_0", deployments, __filename));
   if (shouldSkip) {
     console.log("Skipped");
     logStepEnd(__filename);
