@@ -7,6 +7,7 @@ import "forge-std/Test.sol";
 import "../src/libraries/LibAllowlistMasks.sol";
 import "./utils/AllowlistHelper.sol";
 import "./utils/UserFactory.sol";
+import "./utils/LibImplementationUnbricker.sol";
 
 import "../src/Allowlist.1.sol";
 
@@ -31,6 +32,7 @@ contract AllowlistV1Tests is Test {
 
     function setUp() public {
         allowlist = new AllowlistV1Sudo();
+        LibImplementationUnbricker.unbrick(vm, address(allowlist));
         allowlist.initAllowlistV1(testAdmin, allower);
     }
 

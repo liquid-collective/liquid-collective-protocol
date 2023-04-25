@@ -1,6 +1,8 @@
 //SPDX-License-Identifier: MIT
 pragma solidity 0.8.10;
 
+import "../../src/interfaces/components/IOracleManager.1.sol";
+
 contract RiverMock {
     event DebugReceivedCLData(
         uint256 _validatorCount, uint256 _validatorBalanceSum, bytes32 _roundId, uint256 _maxIncrease
@@ -38,5 +40,21 @@ contract RiverMock {
 
     function totalSupply() external view returns (uint256) {
         return _totalShares;
+    }
+
+    mapping(uint256 => bool) invalidEpochs;
+
+    function isValidEpoch(uint256 epoch) external view returns (bool) {
+        return !invalidEpochs[epoch];
+    }
+
+    function sudoSetInvalidEpoch(uint256 epoch) external {
+        invalidEpochs[epoch] = true;
+    }
+
+    event DebugReceivedReport(IOracleManagerV1.ConsensusLayerReport report);
+
+    function setConsensusLayerData(IOracleManagerV1.ConsensusLayerReport calldata report) external {
+        emit DebugReceivedReport(report);
     }
 }

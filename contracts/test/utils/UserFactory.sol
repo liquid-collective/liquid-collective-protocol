@@ -2,7 +2,10 @@
 
 pragma solidity 0.8.10;
 
-contract User {}
+contract User {
+    receive() external payable {}
+    fallback() external payable {}
+}
 
 contract UserFactory {
     uint256 internal counter;

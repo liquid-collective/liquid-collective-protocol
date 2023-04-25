@@ -5,6 +5,7 @@ pragma solidity 0.8.10;
 import "forge-std/Test.sol";
 
 import "./utils/UserFactory.sol";
+import "./utils/LibImplementationUnbricker.sol";
 
 import "../src/ELFeeRecipient.1.sol";
 
@@ -32,6 +33,7 @@ contract ELFeeRecipientV1Test is Test {
     function setUp() public {
         river = new RiverDonationMock();
         feeRecipient = new ELFeeRecipientV1();
+        LibImplementationUnbricker.unbrick(vm, address(feeRecipient));
         vm.expectEmit(true, true, true, true);
         emit SetRiver(address(river));
         feeRecipient.initELFeeRecipientV1(address(river));
@@ -45,8 +47,10 @@ contract ELFeeRecipientV1Test is Test {
         payable(address(feeRecipient)).transfer(_amount);
         vm.stopPrank();
 
-        vm.expectEmit(true, true, true, true);
-        emit BalanceUpdated(_amount);
+        if (_amount > 0) {
+            vm.expectEmit(true, true, true, true);
+            emit BalanceUpdated(_amount);
+        }
         river.pullELFees(address(feeRecipient), address(feeRecipient).balance);
     }
 
@@ -58,8 +62,10 @@ contract ELFeeRecipientV1Test is Test {
         assert(payable(address(feeRecipient)).send(_amount) == true);
         vm.stopPrank();
 
-        vm.expectEmit(true, true, true, true);
-        emit BalanceUpdated(_amount);
+        if (_amount > 0) {
+            vm.expectEmit(true, true, true, true);
+            emit BalanceUpdated(_amount);
+        }
         river.pullELFees(address(feeRecipient), address(feeRecipient).balance);
     }
 
@@ -72,8 +78,10 @@ contract ELFeeRecipientV1Test is Test {
         assert(ok == true);
         vm.stopPrank();
 
-        vm.expectEmit(true, true, true, true);
-        emit BalanceUpdated(_amount);
+        if (_amount > 0) {
+            vm.expectEmit(true, true, true, true);
+            emit BalanceUpdated(_amount);
+        }
         river.pullELFees(address(feeRecipient), address(feeRecipient).balance);
     }
 
@@ -86,8 +94,10 @@ contract ELFeeRecipientV1Test is Test {
         assert(ok == true);
         vm.stopPrank();
 
-        vm.expectEmit(true, true, true, true);
-        emit BalanceUpdated(_amount / 2);
+        if (_amount / 2 > 0) {
+            vm.expectEmit(true, true, true, true);
+            emit BalanceUpdated(_amount / 2);
+        }
         river.pullELFees(address(feeRecipient), address(feeRecipient).balance / 2);
     }
 

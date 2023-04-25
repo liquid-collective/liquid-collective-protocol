@@ -5,6 +5,7 @@ pragma solidity 0.8.10;
 import "forge-std/Test.sol";
 
 import "./utils/UserFactory.sol";
+import "./utils/LibImplementationUnbricker.sol";
 
 import "../src/WLSETH.1.sol";
 
@@ -99,6 +100,7 @@ contract WLSETHV1Tests is Test {
     function setUp() external {
         river = IRiverV1(payable(address(new RiverTokenMock())));
         wlseth = new WLSETHV1();
+        LibImplementationUnbricker.unbrick(vm, address(wlseth));
         vm.expectEmit(true, true, true, true);
         emit SetRiver(address(river));
         wlseth.initWLSETHV1(address(river));
