@@ -218,8 +218,9 @@ interface IRiverV1 is IConsensusLayerDepositManagerV1, IUserDepositManagerV1, IS
 
     /// @notice Performs a redeem request on the redeem manager
     /// @param _lsETHAmount The amount of LsETH to redeem
+    /// @param _recipient The address that will own the redeem request
     /// @return redeemRequestId The ID of the newly created redeem request
-    function requestRedeem(uint256 _lsETHAmount) external returns (uint32 redeemRequestId);
+    function requestRedeem(uint256 _lsETHAmount, address _recipient) external returns (uint32 redeemRequestId);
 
     /// @notice Claims several redeem requests
     /// @param _redeemRequestIds The list of redeem requests to claim
