@@ -815,7 +815,7 @@ contract RiverV1TestsReport_HEAVY_FUZZING is Test, BytesGenerator {
                 _salt = _next(_salt);
             } else {
                 vm.prank(users[idx]);
-                river.requestRedeem(amountToRedeem);
+                river.requestRedeem(amountToRedeem, users[idx]);
                 _salt = _next(_salt);
             }
         }
