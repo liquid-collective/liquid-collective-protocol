@@ -90,7 +90,7 @@ contract RedeemManagerV1Tests is Test {
     address internal allowlistAdmin;
     address internal allowlistAllower;
 
-    event RequestedRedeem(address indexed owner, uint256 height, uint256 size, uint32 id);
+    event RequestedRedeem(address indexed owner, uint256 height, uint256 size, uint256 maxRedeemableEth, uint32 id);
     event ReportedWithdrawal(uint256 height, uint256 size, uint256 ethAmount, uint32 id);
     event SatisfiedRedeemRequest(
         uint32 indexed redeemRequestId,
@@ -151,7 +151,7 @@ contract RedeemManagerV1Tests is Test {
 
         vm.prank(user);
         vm.expectEmit(true, true, true, true);
-        emit RequestedRedeem(user, 0, amount, 0);
+        emit RequestedRedeem(user, 0, amount, amount, 0);
         redeemManager.requestRedeem(amount, user);
 
         uint32[] memory requests = new uint32[](1);
@@ -186,7 +186,7 @@ contract RedeemManagerV1Tests is Test {
 
         vm.prank(user);
         vm.expectEmit(true, true, true, true);
-        emit RequestedRedeem(user, 0, amount, 0);
+        emit RequestedRedeem(user, 0, amount, amount, 0);
         redeemManager.requestRedeem(amount);
 
         uint32[] memory requests = new uint32[](1);
