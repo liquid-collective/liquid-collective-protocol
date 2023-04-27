@@ -60,13 +60,13 @@ const func: DeployFunction = async function ({ deployments, network, getNamedAcc
   });
 
   await deployments.deploy("OracleV1_Implementation_0_6_0_rc2", {
-    contract: "OperatorsRegistryV1",
+    contract: "OracleV1",
     from: deployer,
     log: true,
   });
 
   await deployments.deploy("RiverV1_Implementation_0_6_0_rc2", {
-    contract: "OperatorsRegistryV1",
+    contract: "RiverV1",
     from: deployer,
     log: true,
   });
