@@ -1,5 +1,13 @@
 # Staking Contracts changelog
 
+## v0.6.0-rc2-devGoerli & v0.6.0-rc2-goerli (April 27th 2023)
+
+- [[contracts] add recipient argument to RiverV1.requestRedeem](https://github.com/liquid-collective/liquid-collective-protocol/pull/202)
+- [[contracts] add maxRedeemableEth value to emitted event](https://github.com/liquid-collective/liquid-collective-protocol/pull/206)
+- [[contracts] deploy 0.6.0-rc2 contracts for devGoerli](https://github.com/liquid-collective/liquid-collective-protocol/pull/208)
+- [[contracts] deploy 0.6.0-rc2 contracts for goerli](https://github.com/liquid-collective/liquid-collective-protocol/pull/208)
+
+
 ## v0.6.0-rc1-devGoerli (April 26th 2023)
 
 ### :hammer_and_wrench: Bug Fixes
