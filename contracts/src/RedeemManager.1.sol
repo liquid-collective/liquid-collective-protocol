@@ -308,7 +308,7 @@ contract RedeemManagerV1 is Initializable, IRedeemManagerV1 {
 
         _setRedeemDemand(RedeemDemand.get() + _lsETHAmount);
 
-        emit RequestedRedeem(_recipient, height, _lsETHAmount, redeemRequestId);
+        emit RequestedRedeem(_recipient, height, _lsETHAmount, maxRedeemableEth, redeemRequestId);
     }
 
     /// @notice Internal structure used to optimize stack usage in _claimRedeemRequest
