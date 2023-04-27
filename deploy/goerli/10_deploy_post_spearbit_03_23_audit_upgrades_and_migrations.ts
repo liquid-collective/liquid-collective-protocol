@@ -99,7 +99,9 @@ const func: DeployFunction = async function ({ deployments, network, getNamedAcc
   //                              minDailyNetCommittable,
   //                              maxDailyRelativeCommittable
   //                            );
-  // 5. call OperatorsRegistryContract.forceFundedValidatorKeysEventEmission(x) several time until it reverts
+  // 5. upgrade ELFeeRecipientContract
+  // 6. upgrade TLCContract
+  // 7. call OperatorsRegistryContract.forceFundedValidatorKeysEventEmission(x) several time until it reverts
 
   logStepEnd(__filename);
 };
