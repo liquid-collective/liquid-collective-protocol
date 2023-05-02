@@ -11,7 +11,7 @@ const merge = (a: any, afs: string[], b: any, bfs: string[]): any => {
       throw new Error(`Conflicting field in artifacts ${af}`)
     }
   }
-  
+
   const fields = Object.keys(a);
   for (const field of fields) {
     if (bfs.includes(field)) {
@@ -58,7 +58,7 @@ const generateMainArtifact = (network: string, cfg: Config) => {
   const artifactPath = path.join(process.cwd(), "deployments", network);
   const proxyArtifact = JSON.parse(fs.readFileSync(path.join(artifactPath, cfg.proxy)).toString())
   const implemsArtifact = cfg.implementations.map(i => JSON.parse(fs.readFileSync(path.join(artifactPath, i)).toString()))
-  
+
   const mergedArtifact = mergeImplemsAndProxy(implemsArtifact, cfg.implementations, proxyArtifact);
   fs.writeFileSync(path.join(artifactPath, cfg.target), JSON.stringify(mergedArtifact, null, 4))
 }
@@ -101,12 +101,12 @@ const generateAggregatedArtifact = (network: string, cfg: Config) => {
   const aggregatedArtifact = aggregateImplemsAndProxy(implemsArtifact, cfg.implementations, proxyArtifact)
 
   const combinedArtifactPath = path.join(artifactPath, "combinedImplementations", `${path.basename(cfg.target, '.json')}_combined_implementations.json`)
-  
+
   fs.writeFileSync(combinedArtifactPath, JSON.stringify(aggregatedArtifact, null, 4));
 }
 
-interface Config { 
-  target: string; 
+interface Config {
+  target: string;
   implementations: string[];
   proxy: string;
 }
@@ -118,7 +118,7 @@ interface AllNetsConfigs {
 const config: AllNetsConfigs = {
   "mockedGoerli": [
     {
-      target: "Allowlist.json" ,
+      target: "Allowlist.json",
       implementations: [
         "AllowlistV1_Implementation_0_2_2.json",
         "AllowlistV1_Implementation_0_5_0.json"
@@ -126,21 +126,21 @@ const config: AllNetsConfigs = {
       proxy: "Allowlist_Proxy.json"
     },
     {
-      target: "CoverageFund.json" ,
+      target: "CoverageFund.json",
       implementations: [
         "CoverageFundV1_Implementation_0_5_0.json",
       ],
       proxy: "CoverageFund_Proxy.json"
     },
     {
-      target: "ELFeeRecipient.json" ,
+      target: "ELFeeRecipient.json",
       implementations: [
         "ELFeeRecipientV1_Implementation_0_2_2.json",
       ],
       proxy: "ELFeeRecipient_Proxy.json"
     },
     {
-      target: "OperatorsRegistry.json" ,
+      target: "OperatorsRegistry.json",
       implementations: [
         "OperatorsRegistryV1_Implementation_0_2_2.json",
         "OperatorsRegistryV1_Implementation_0_4_0.json",
@@ -148,7 +148,7 @@ const config: AllNetsConfigs = {
       proxy: "OperatorsRegistry_Proxy.json"
     },
     {
-      target: "Oracle.json" ,
+      target: "Oracle.json",
       implementations: [
         "OracleV1_Implementation_0_2_2.json",
         "OracleV1_Implementation_0_4_0.json",
@@ -156,7 +156,7 @@ const config: AllNetsConfigs = {
       proxy: "Oracle_Proxy.json"
     },
     {
-      target: "River.json" ,
+      target: "River.json",
       implementations: [
         "RiverV1_Implementation_0_2_2.json",
         "RiverV1_Implementation_0_4_0.json",
@@ -165,7 +165,7 @@ const config: AllNetsConfigs = {
       proxy: "River_Proxy.json"
     },
     {
-      target: "TLC.json" ,
+      target: "TLC.json",
       implementations: [
         "TLCV1_Implementation_0_4_0.json",
         "TLCV1_Implementation_0_5_0.json",
@@ -173,14 +173,14 @@ const config: AllNetsConfigs = {
       proxy: "TLC_Proxy.json"
     },
     {
-      target: "Withdraw.json" ,
+      target: "Withdraw.json",
       implementations: [
         "WithdrawV1_Implementation_0_2_2.json",
       ],
       proxy: "Withdraw_Proxy.json"
     },
     {
-      target: "WLSETH.json" ,
+      target: "WLSETH.json",
       implementations: [
         "WLSETHV1_Implementation_0_2_2.json",
         "WLSETHV1_Implementation_0_4_0.json",
@@ -190,7 +190,7 @@ const config: AllNetsConfigs = {
   ],
   "goerli": [
     {
-      target: "Allowlist.json" ,
+      target: "Allowlist.json",
       implementations: [
         "AllowlistV1_Implementation_0_2_2.json",
         "AllowlistV1_Implementation_0_5_0.json"
@@ -198,61 +198,74 @@ const config: AllNetsConfigs = {
       proxy: "Allowlist_Proxy.json"
     },
     {
-      target: "CoverageFund.json" ,
+      target: "CoverageFund.json",
       implementations: [
         "CoverageFundV1_Implementation_0_5_0.json",
       ],
       proxy: "CoverageFund_Proxy.json"
     },
     {
-      target: "ELFeeRecipient.json" ,
+      target: "ELFeeRecipient.json",
       implementations: [
         "ELFeeRecipientV1_Implementation_0_2_2.json",
+        "ELFeeRecipientV1_Implementation_0_6_0_rc2.json",
       ],
       proxy: "ELFeeRecipient_Proxy.json"
     },
     {
-      target: "OperatorsRegistry.json" ,
+      target: "OperatorsRegistry.json",
       implementations: [
         "OperatorsRegistryV1_Implementation_0_2_2.json",
         "OperatorsRegistryV1_Implementation_0_4_0.json",
+        "OperatorsRegistryV1_Implementation_0_6_0_rc2.json",
       ],
       proxy: "OperatorsRegistry_Proxy.json"
     },
     {
-      target: "Oracle.json" ,
+      target: "Oracle.json",
       implementations: [
         "OracleV1_Implementation_0_2_2.json",
         "OracleV1_Implementation_0_4_0.json",
+        "OracleV1_Implementation_0_6_0_rc2.json",
       ],
       proxy: "Oracle_Proxy.json"
     },
     {
-      target: "River.json" ,
+      target: "RedeemManager.json",
+      implementations: [
+        "RedeemManagerV1_Implementation_0_6_0_rc2.json",
+      ],
+      proxy: "RedeemManager_Proxy.json"
+    },
+    {
+      target: "River.json",
       implementations: [
         "RiverV1_Implementation_0_2_2.json",
         "RiverV1_Implementation_0_4_0.json",
         "RiverV1_Implementation_0_5_0.json",
+        "RiverV1_Implementation_0_6_0_rc2.json",
       ],
       proxy: "River_Proxy.json"
     },
     {
-      target: "TLC.json" ,
+      target: "TLC.json",
       implementations: [
         "TLCV1_Implementation_0_4_0.json",
         "TLCV1_Implementation_0_5_0.json",
+        "TLCV1_Implementation_0_6_0_rc2.json",
       ],
       proxy: "TLC_Proxy.json"
     },
     {
-      target: "Withdraw.json" ,
+      target: "Withdraw.json",
       implementations: [
         "WithdrawV1_Implementation_0_2_2.json",
+        "WithdrawV1_Implementation_0_6_0_rc2.json",
       ],
       proxy: "Withdraw_Proxy.json"
     },
     {
-      target: "WLSETH.json" ,
+      target: "WLSETH.json",
       implementations: [
         "WLSETHV1_Implementation_0_2_2.json",
         "WLSETHV1_Implementation_0_4_0.json",
@@ -262,7 +275,7 @@ const config: AllNetsConfigs = {
   ],
   "mainnet": [
     {
-      target: "Allowlist.json" ,
+      target: "Allowlist.json",
       implementations: [
         "AllowlistV1_Implementation_0_4_0.json",
         "AllowlistV1_Implementation_0_5_0.json"
@@ -270,35 +283,35 @@ const config: AllNetsConfigs = {
       proxy: "Allowlist_Proxy.json"
     },
     {
-      target: "CoverageFund.json" ,
+      target: "CoverageFund.json",
       implementations: [
         "CoverageFundV1_Implementation_0_5_0.json",
       ],
       proxy: "CoverageFund_Proxy.json"
     },
     {
-      target: "ELFeeRecipient.json" ,
+      target: "ELFeeRecipient.json",
       implementations: [
         "ELFeeRecipientV1_Implementation_0_4_0.json",
       ],
       proxy: "ELFeeRecipient_Proxy.json"
     },
     {
-      target: "OperatorsRegistry.json" ,
+      target: "OperatorsRegistry.json",
       implementations: [
         "OperatorsRegistryV1_Implementation_0_4_0.json",
       ],
       proxy: "OperatorsRegistry_Proxy.json"
     },
     {
-      target: "Oracle.json" ,
+      target: "Oracle.json",
       implementations: [
         "OracleV1_Implementation_0_4_0.json",
       ],
       proxy: "Oracle_Proxy.json"
     },
     {
-      target: "River.json" ,
+      target: "River.json",
       implementations: [
         "RiverV1_Implementation_0_4_0.json",
         "RiverV1_Implementation_0_5_0.json",
@@ -306,7 +319,7 @@ const config: AllNetsConfigs = {
       proxy: "River_Proxy.json"
     },
     {
-      target: "TLC.json" ,
+      target: "TLC.json",
       implementations: [
         "TLCV1_Implementation_0_4_0.json",
         "TLCV1_Implementation_0_5_0.json",
@@ -314,7 +327,7 @@ const config: AllNetsConfigs = {
       proxy: "TLC_Proxy.json"
     },
     {
-      target: "Withdraw.json" ,
+      target: "Withdraw.json",
       implementations: [
         "WithdrawV1_Implementation_0_4_0.json",
       ],

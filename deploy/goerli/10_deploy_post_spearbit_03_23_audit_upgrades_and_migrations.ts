@@ -9,7 +9,7 @@ const func: DeployFunction = async function ({ deployments, network, getNamedAcc
     throw new Error("Invalid network for devGoerli deployment");
   }
 
-  const { deployer, executor, governor } = await getNamedAccounts();
+  const { deployer, executor, proxyAdministrator } = await getNamedAccounts();
   const riverDeployment = await deployments.get("River");
   const proxyArtifact = await deployments.getArtifact("TUPProxy");
   const proxyInterface = new ethers.utils.Interface(proxyArtifact.abi);
@@ -25,7 +25,7 @@ const func: DeployFunction = async function ({ deployments, network, getNamedAcc
     contract: "Firewall",
     from: deployer,
     log: true,
-    args: [governor, executor, futureRedeemManagerAddress, [proxyInterface.getSighash("pause()")]],
+    args: [proxyAdministrator, executor, futureRedeemManagerAddress, [proxyInterface.getSighash("pause()")]],
   });
 
   const redeemManagerDeployment = await deployments.deploy("RedeemManager", {
@@ -84,10 +84,10 @@ const func: DeployFunction = async function ({ deployments, network, getNamedAcc
   });
 
   // migration and upgrade steps
-  // 1. upgrade WithdrawContract + WithdrawContract.initializeWithdrawV1(riverDeployment.address)
-  // 2. upgrade OperatorsRegistry + OperatorsRegistryContract.initOperatorsRegistryV1_1()
-  // 3. upgrade OracleContract + OracleContract.initOracleV1_1()
-  // 4. upgrade RiverContract + RiverContract.initRiverV1_1(
+  // 1. upgradeToAndCall WithdrawContract + WithdrawContract.initializeWithdrawV1(riverDeployment.address)
+  // 2. upgradeToAndCall OperatorsRegistry + OperatorsRegistryContract.initOperatorsRegistryV1_1()
+  // 3. upgradeToAndCall OracleContract + OracleContract.initOracleV1_1()
+  // 4. upgradeToAndCall RiverContract + RiverContract.initRiverV1_1(
   //                              redeemManagerDeployment.address,
   //                              epochsPerFrame,
   //                              slotsPerEpoch,
@@ -99,8 +99,8 @@ const func: DeployFunction = async function ({ deployments, network, getNamedAcc
   //                              minDailyNetCommittable,
   //                              maxDailyRelativeCommittable
   //                            );
-  // 5. upgrade ELFeeRecipientContract
-  // 6. upgrade TLCContract
+  // 5. upgradeTo ELFeeRecipientContract
+  // 6. upgradeTo TLCContract
   // 7. call OperatorsRegistryContract.forceFundedValidatorKeysEventEmission(x) several time until it reverts
 
   logStepEnd(__filename);
@@ -108,17 +108,10 @@ const func: DeployFunction = async function ({ deployments, network, getNamedAcc
 
 func.skip = async function ({ deployments, ethers }: HardhatRuntimeEnvironment): Promise<boolean> {
   logStep(__filename);
-  const shouldSkip = !(
-    BigInt(await ethers.provider.getStorageAt((await deployments.get("River")).address, TUPPROXY_VERSION_SLOT)) ===
-    BigInt(1) &&
-    BigInt(await ethers.provider.getStorageAt((await deployments.get("Withdraw")).address, TUPPROXY_VERSION_SLOT)) ===
-    BigInt(0) &&
-    BigInt(
-      await ethers.provider.getStorageAt((await deployments.get("OperatorsRegistry")).address, TUPPROXY_VERSION_SLOT)
-    ) === BigInt(1) &&
-    BigInt(await ethers.provider.getStorageAt((await deployments.get("Oracle")).address, TUPPROXY_VERSION_SLOT)) ===
-    BigInt(1)
-  );
+  const shouldSkip =
+    (await isDeployed("AllowlistV1_Implementation_0_5_0", deployments, __filename)) &&
+    (await isDeployed("RiverV1_Implementation_0_5_0", deployments, __filename)) &&
+    (await isDeployed("TLCV1_Implementation_0_5_0", deployments, __filename));
   if (shouldSkip) {
     console.log("Skipped");
     logStepEnd(__filename);
