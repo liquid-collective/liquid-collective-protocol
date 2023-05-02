@@ -13,6 +13,7 @@ const firewalledContract = [
   "Oracle_Proxy",
   "River_Proxy",
   "TLC_Proxy",
+  "RedeemManager_Proxy"
 ];
 
 function getConstructorAbi(abi: any[]): any {

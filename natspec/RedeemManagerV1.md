@@ -348,7 +348,7 @@ Emitted when a withdrawal event is created
 ### RequestedRedeem
 
 ```solidity
-event RequestedRedeem(address indexed owner, uint256 height, uint256 amount, uint32 id)
+event RequestedRedeem(address indexed owner, uint256 height, uint256 amount, uint256 maxRedeemableEth, uint32 id)
 ```
 
 Emitted when a redeem request is created
@@ -362,6 +362,7 @@ Emitted when a redeem request is created
 | owner `indexed` | address | undefined |
 | height  | uint256 | undefined |
 | amount  | uint256 | undefined |
+| maxRedeemableEth  | uint256 | undefined |
 | id  | uint32 | undefined |
 
 ### SatisfiedRedeemRequest
