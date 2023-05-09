@@ -1,5 +1,20 @@
 # Staking Contracts changelog
 
+## v0.6.0-rc1-devGoerli (April 26th 2023)
+
+### :hammer_and_wrench: Bug Fixes
+
+- [[contracts] fix oracle vote storage issue](https://github.com/liquid-collective/liquid-collective-protocol/pull/193)
+- [[contracts] [SPEARBIT/03/23] Oracle fixes](https://github.com/liquid-collective/liquid-collective-protocol/pull/193)
+- [[contracts] [SPEARBIT/03/23] Recipient Fixes](https://github.com/liquid-collective/liquid-collective-protocol/pull/194)
+- [[contracts] fix invalid index usage on validator exit request flow](https://github.com/liquid-collective/liquid-collective-protocol/pull/195)
+- [[contracts] [SPEARBIT/03/23] OperatorsRegistry Fixes](https://github.com/liquid-collective/liquid-collective-protocol/pull/195)
+- [[contracts] [SPEARBIT/03/23] River Fixes](https://github.com/liquid-collective/liquid-collective-protocol/pull/196)
+- [[contracts] fix redeem manager issue coming from LsETH directly sent to contract](https://github.com/liquid-collective/liquid-collective-protocol/pull/197)
+- [[contracts] [SPEARBIT/03/23] RedeemManager Fixes](https://github.com/liquid-collective/liquid-collective-protocol/pull/197)
+- [[contracts] [SPEARBIT/03/23] Docs, Styling & Naming](https://github.com/liquid-collective/liquid-collective-protocol/pull/198)
+- [[contracts] perform devGoerli deployment](https://github.com/liquid-collective/liquid-collective-protocol/pull/190/commits/8ed58a23972220def3d4d94e70c9be11aee05619)
+
 ## v0.5.0 (December 3rd 2022)
 
 ### :hammer_and_wrench: Bug Fixes

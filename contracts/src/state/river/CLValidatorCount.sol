@@ -5,6 +5,7 @@ import "../../libraries/LibUnstructuredStorage.sol";
 
 /// @title Consensus Layer Validator Count Storage
 /// @notice Utility to manage the Consensus Layer Validator Count in storage
+/// @notice This state variable is deprecated and was kept due to migration logic needs
 library CLValidatorCount {
     /// @notice Storage slot of the Consensus Layer Validator Count
     bytes32 internal constant CL_VALIDATOR_COUNT_SLOT = bytes32(uint256(keccak256("river.state.clValidatorCount")) - 1);

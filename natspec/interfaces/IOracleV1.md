@@ -27,98 +27,6 @@ Adds new address as oracle member, giving the ability to push cl reports.
 | _newOracleMember | address | Address of the new member |
 | _newQuorum | uint256 | New quorum value |
 
-### getCLSpec
-
-```solidity
-function getCLSpec() external view returns (struct CLSpec.CLSpecStruct)
-```
-
-Retrieve the current cl spec
-
-
-
-
-#### Returns
-
-| Name | Type | Description |
-|---|---|---|
-| _0 | CLSpec.CLSpecStruct | The Consensus Layer Specification |
-
-### getCurrentEpochId
-
-```solidity
-function getCurrentEpochId() external view returns (uint256)
-```
-
-Retrieve the current epoch id based on block timestamp
-
-
-
-
-#### Returns
-
-| Name | Type | Description |
-|---|---|---|
-| _0 | uint256 | The current epoch id |
-
-### getCurrentFrame
-
-```solidity
-function getCurrentFrame() external view returns (uint256 _startEpochId, uint256 _startTime, uint256 _endTime)
-```
-
-Retrieve the current frame details
-
-
-
-
-#### Returns
-
-| Name | Type | Description |
-|---|---|---|
-| _startEpochId | uint256 | The epoch at the beginning of the frame |
-| _startTime | uint256 | The timestamp of the beginning of the frame in seconds |
-| _endTime | uint256 | The timestamp of the end of the frame in seconds |
-
-### getExpectedEpochId
-
-```solidity
-function getExpectedEpochId() external view returns (uint256)
-```
-
-Retrieve expected epoch id
-
-
-
-
-#### Returns
-
-| Name | Type | Description |
-|---|---|---|
-| _0 | uint256 | The current expected epoch id |
-
-### getFrameFirstEpochId
-
-```solidity
-function getFrameFirstEpochId(uint256 _epochId) external view returns (uint256)
-```
-
-Retrieve the first epoch id of the frame of the provided epoch id
-
-
-
-#### Parameters
-
-| Name | Type | Description |
-|---|---|---|
-| _epochId | uint256 | Epoch id used to get the frame |
-
-#### Returns
-
-| Name | Type | Description |
-|---|---|---|
-| _0 | uint256 | The first epoch id of the frame containing the given epoch id |
-
 ### getGlobalReportStatus
 
 ```solidity
@@ -136,22 +44,22 @@ Retrieve member report status
 |---|---|---|
 | _0 | uint256 | The raw report status value |
 
-### getLastCompletedEpochId
+### getLastReportedEpochId
 
 ```solidity
-function getLastCompletedEpochId() external view returns (uint256)
+function getLastReportedEpochId() external view returns (uint256)
 ```
 
-Retrieve the last completed epoch id
+Retrieve the last reported epoch id
 
-
+*The Oracle contracts expects reports on an epoch id &gt;= that the returned value*
 
 
 #### Returns
 
 | Name | Type | Description |
 |---|---|---|
-| _0 | uint256 | The last completed epoch id |
+| _0 | uint256 | The last reported epoch id |
 
 ### getMemberReportStatus
 
@@ -209,30 +117,13 @@ Retrieve the current quorum
 |---|---|---|
 | _0 | uint256 | The current quorum |
 
-### getReportBounds
+### getReportVariantDetails
 
 ```solidity
-function getReportBounds() external view returns (struct ReportBounds.ReportBoundsStruct)
+function getReportVariantDetails(uint256 _idx) external view returns (struct ReportsVariants.ReportVariantDetails)
 ```
 
-Retrieve the report bounds
-
-
-
-
-#### Returns
-
-| Name | Type | Description |
-|---|---|---|
-| _0 | ReportBounds.ReportBoundsStruct | The report bounds |
-
-### getReportVariant
-
-```solidity
-function getReportVariant(uint256 _idx) external view returns (uint64 _clBalance, uint32 _clValidators, uint16 _reportCount)
-```
-
-Retrieve decoded report at provided index
+Retrieve the details of a report variant
 
 
 
@@ -240,15 +131,13 @@ Retrieve decoded report at provided index
 
 | Name | Type | Description |
 |---|---|---|
-| _idx | uint256 | Index of report |
+| _idx | uint256 | The index of the report variant |
 
 #### Returns
 
 | Name | Type | Description |
 |---|---|---|
-| _clBalance | uint64 | The reported consensus layer balance sum of River&#39;s validators |
-| _clValidators | uint32 | The reported validator count |
-| _reportCount | uint16 | The number of similar reports |
+| _0 | ReportsVariants.ReportVariantDetails | The report variant details |
 
 ### getReportVariantsCount
 
@@ -284,23 +173,6 @@ Retrieve River address
 |---|---|---|
 | _0 | address | The address of River |
 
-### getTime
-
-```solidity
-function getTime() external view returns (uint256)
-```
-
-Retrieve the block timestamp
-
-
-
-
-#### Returns
-
-| Name | Type | Description |
-|---|---|---|
-| _0 | uint256 | The current timestamp from the EVM context |
-
 ### initOracleV1
 
 ```solidity
@@ -323,6 +195,17 @@ Initializes the oracle
 | _genesisTime | uint64 | CL spec parameter. Timestamp of the genesis slot. |
 | _annualAprUpperBound | uint256 | CL bound parameter. Maximum apr allowed for balance increase. Delta between updates is extrapolated on a year time frame. |
 | _relativeLowerBound | uint256 | CL bound parameter. Maximum relative balance decrease. |
+
+### initOracleV1_1
+
+```solidity
+function initOracleV1_1() external nonpayable
+```
+
+Initializes the oracle
+
+
+
 
 ### isMember
 
@@ -366,39 +249,18 @@ Removes an address from the oracle members.
 ### reportConsensusLayerData
 
 ```solidity
-function reportConsensusLayerData(uint256 _epochId, uint64 _clValidatorsBalance, uint32 _clValidatorCount) external nonpayable
+function reportConsensusLayerData(IOracleManagerV1.ConsensusLayerReport _report) external nonpayable
 ```
 
-Report cl chain data
 
-*Only callable by an oracle memberThe epoch id is expected to be &gt;= to the expected epoch id stored in the contractThe epoch id is expected to be the first epoch of its frameThe Consensus Layer Validator count is the amount of running validators managed by River.Until withdrawals are enabled, this count also takes into account any exited and slashed validatoras funds are still locked on the consensus layer.*
+
+
 
 #### Parameters
 
 | Name | Type | Description |
 |---|---|---|
-| _epochId | uint256 | Epoch where the balance and validator count has been computed |
-| _clValidatorsBalance | uint64 | Total balance of River validators |
-| _clValidatorCount | uint32 | Total River validator count |
-
-### setCLSpec
-
-```solidity
-function setCLSpec(uint64 _epochsPerFrame, uint64 _slotsPerEpoch, uint64 _secondsPerSlot, uint64 _genesisTime) external nonpayable
-```
-
-Edits the cl spec parameters
-
-*Only callable by the adminstrator*
-
-#### Parameters
-
-| Name | Type | Description |
-|---|---|---|
-| _epochsPerFrame | uint64 | Number of epochs in a frame. |
-| _slotsPerEpoch | uint64 | Number of slots in one epoch. |
-| _secondsPerSlot | uint64 | Number of seconds between slots. |
-| _genesisTime | uint64 | Timestamp of the genesis slot. |
+| _report | IOracleManagerV1.ConsensusLayerReport | undefined |
 
 ### setMember
 
@@ -408,7 +270,7 @@ function setMember(address _oracleMember, address _newAddress) external nonpayab
 
 Changes the address of an oracle member
 
-*Only callable by the adminitratorCannot use an address already in useThis call will clear all the reporting data*
+*Only callable by the adminitrator or the member itselfCannot use an address already in use*
 
 #### Parameters
 
@@ -433,23 +295,6 @@ Edits the quorum required to forward cl data to River
 |---|---|---|
 | _newQuorum | uint256 | New quorum parameter |
 
-### setReportBounds
-
-```solidity
-function setReportBounds(uint256 _annualAprUpperBound, uint256 _relativeLowerBound) external nonpayable
-```
-
-Edits the cl bounds parameters
-
-*Only callable by the adminstrator*
-
-#### Parameters
-
-| Name | Type | Description |
-|---|---|---|
-| _annualAprUpperBound | uint256 | Maximum apr allowed for balance increase. Delta between updates is extrapolated on a year time frame. |
-| _relativeLowerBound | uint256 | Maximum relative balance decrease. |
-
 
 
 ## Events
@@ -470,59 +315,16 @@ A member has been added to the oracle member list
 |---|---|---|
 | member `indexed` | address | The address of the member |
 
-### CLReported
+### ClearedReporting
 
 ```solidity
-event CLReported(uint256 epochId, uint128 newCLBalance, uint32 newCLValidatorCount, address oracleMember)
+event ClearedReporting()
 ```
 
-Consensus Layer data has been reported by an oracle member
+Cleared reporting data
 
 
 
-#### Parameters
-
-| Name | Type | Description |
-|---|---|---|
-| epochId  | uint256 | The epoch of the report |
-| newCLBalance  | uint128 | The new consensus layer balance |
-| newCLValidatorCount  | uint32 | The new consensus layer validator count |
-| oracleMember  | address | The oracle member that reported |
-
-### ExpectedEpochIdUpdated
-
-```solidity
-event ExpectedEpochIdUpdated(uint256 epochId)
-```
-
-The expected epoch id has been changed
-
-
-
-#### Parameters
-
-| Name | Type | Description |
-|---|---|---|
-| epochId  | uint256 | The new expected epoch id |
-
-### PostTotalShares
-
-```solidity
-event PostTotalShares(uint256 postTotalEth, uint256 prevTotalEth, uint256 timeElapsed, uint256 totalShares)
-```
-
-The report has been submitted to river
-
-
-
-#### Parameters
-
-| Name | Type | Description |
-|---|---|---|
-| postTotalEth  | uint256 | The new total ETH balance |
-| prevTotalEth  | uint256 | The previous total ETH balance |
-| timeElapsed  | uint256 | Time since last report |
-| totalShares  | uint256 | The new total amount of shares |
 
 ### RemoveMember
 
@@ -540,6 +342,26 @@ A member has been removed from the oracle member list
 |---|---|---|
 | member `indexed` | address | The address of the member |
 
+### ReportedConsensusLayerData
+
+```solidity
+event ReportedConsensusLayerData(address indexed member, bytes32 indexed variant, IOracleManagerV1.ConsensusLayerReport report, uint256 voteCount, uint256 quorum)
+```
+
+An oracle member performed a report
+
+
+
+#### Parameters
+
+| Name | Type | Description |
+|---|---|---|
+| member `indexed` | address | The oracle member |
+| variant `indexed` | bytes32 | The variant of the report |
+| report  | IOracleManagerV1.ConsensusLayerReport | The raw report structure |
+| voteCount  | uint256 | The vote count |
+| quorum  | uint256 | undefined |
+
 ### SetBounds
 
 ```solidity
@@ -556,6 +378,22 @@ The report bounds have been changed
 |---|---|---|
 | annualAprUpperBound  | uint256 | The maximum allowed apr. 10% means increases in balance extrapolated to a year should not exceed 10%. |
 | relativeLowerBound  | uint256 | The maximum allowed balance decrease as a relative % of the total balance |
+
+### SetLastReportedEpoch
+
+```solidity
+event SetLastReportedEpoch(uint256 lastReportedEpoch)
+```
+
+The last reported epoch has changed
+
+
+
+#### Parameters
+
+| Name | Type | Description |
+|---|---|---|
+| lastReportedEpoch  | uint256 | undefined |
 
 ### SetMember
 
@@ -679,13 +517,13 @@ The provided epoch is too old compared to the expected epoch id
 | providedEpochId | uint256 | The epoch id provided as input |
 | minExpectedEpochId | uint256 | The minimum epoch id expected |
 
-### NotFrameFirstEpochId
+### InvalidEpoch
 
 ```solidity
-error NotFrameFirstEpochId(uint256 providedEpochId, uint256 expectedFrameFirstEpochId)
+error InvalidEpoch(uint256 epoch)
 ```
 
-The provided epoch is not at the beginning of its frame
+Thrown when the reported epoch is invalid
 
 
 
@@ -693,16 +531,15 @@ The provided epoch is not at the beginning of its frame
 
 | Name | Type | Description |
 |---|---|---|
-| providedEpochId | uint256 | The epoch id provided as input |
-| expectedFrameFirstEpochId | uint256 | The frame first epoch id that was expected |
+| epoch | uint256 | The invalid epoch |
 
-### TotalValidatorBalanceDecreaseOutOfBound
+### ReportIndexOutOfBounds
 
 ```solidity
-error TotalValidatorBalanceDecreaseOutOfBound(uint256 prevTotalEth, uint256 postTotalEth, uint256 timeElapsed, uint256 relativeLowerBound)
+error ReportIndexOutOfBounds(uint256 index, uint256 length)
 ```
 
-The negative delta in balance is above the allowed lower bound
+Thrown when the report indexs fetched is out of bounds
 
 
 
@@ -710,28 +547,7 @@ The negative delta in balance is above the allowed lower bound
 
 | Name | Type | Description |
 |---|---|---|
-| prevTotalEth | uint256 | The previous total balance |
-| postTotalEth | uint256 | The new total balance |
-| timeElapsed | uint256 | The time since last report |
-| relativeLowerBound | uint256 | The maximum relative decrease allowed |
-
-### TotalValidatorBalanceIncreaseOutOfBound
-
-```solidity
-error TotalValidatorBalanceIncreaseOutOfBound(uint256 prevTotalEth, uint256 postTotalEth, uint256 timeElapsed, uint256 annualAprUpperBound)
-```
-
-The delta in balance is above the allowed upper bound
-
-
-
-#### Parameters
-
-| Name | Type | Description |
-|---|---|---|
-| prevTotalEth | uint256 | The previous total balance |
-| postTotalEth | uint256 | The new total balance |
-| timeElapsed | uint256 | The time since last report |
-| annualAprUpperBound | uint256 | The maximum apr allowed |
+| index | uint256 | Requested index |
+| length | uint256 | Size of the variant array |
 
 

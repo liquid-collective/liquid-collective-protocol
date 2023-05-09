@@ -4,6 +4,7 @@ on:
   push:
     paths:
       - "contracts/**"
+      - ".github/**"
 
 jobs:
   run-lint:
@@ -18,6 +19,11 @@ jobs:
         uses: onbjerg/foundry-toolchain@v1
         with:
           version: nightly
+
+      - name: install nodejs
+        uses: actions/setup-node@v3
+        with:
+          node-version: 16
 
       - name: cache node_modules
         uses: actions/cache@v2

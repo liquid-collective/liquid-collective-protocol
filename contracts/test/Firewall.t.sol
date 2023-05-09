@@ -5,6 +5,7 @@ pragma solidity 0.8.10;
 import "forge-std/Test.sol";
 
 import "./utils/BytesGenerator.sol";
+import "./utils/LibImplementationUnbricker.sol";
 import "./mocks/DepositContractMock.sol";
 import "./mocks/RiverMock.sol";
 
@@ -65,11 +66,17 @@ contract FirewallTests is BytesGenerator, Test {
     function setUp() public {
         deposit = new DepositContractMock();
         elFeeRecipient = new ELFeeRecipientV1();
+        LibImplementationUnbricker.unbrick(vm, address(elFeeRecipient));
         withdraw = new WithdrawV1();
+        LibImplementationUnbricker.unbrick(vm, address(withdraw));
         river = new RiverV1();
+        LibImplementationUnbricker.unbrick(vm, address(river));
         allowlist = new AllowlistV1();
+        LibImplementationUnbricker.unbrick(vm, address(allowlist));
         operatorsRegistry = new OperatorsRegistryV1();
+        LibImplementationUnbricker.unbrick(vm, address(operatorsRegistry));
         oracle = new OracleV1();
+        LibImplementationUnbricker.unbrick(vm, address(oracle));
 
         elFeeRecipient.initELFeeRecipientV1(address(river));
 
@@ -86,10 +93,9 @@ contract FirewallTests is BytesGenerator, Test {
         firewalledAllowlist = AllowlistV1(payable(address(allowlistFirewall)));
         allowlist.initAllowlistV1(payable(address(allowlistFirewall)), payable(address(allowlistFirewall)));
 
-        bytes4[] memory executorCallableOperatorsRegistrySelectors = new bytes4[](3);
+        bytes4[] memory executorCallableOperatorsRegistrySelectors = new bytes4[](2);
         executorCallableOperatorsRegistrySelectors[0] = operatorsRegistry.setOperatorStatus.selector;
-        executorCallableOperatorsRegistrySelectors[1] = operatorsRegistry.setOperatorStoppedValidatorCount.selector;
-        executorCallableOperatorsRegistrySelectors[2] = operatorsRegistry.setOperatorLimits.selector;
+        executorCallableOperatorsRegistrySelectors[1] = operatorsRegistry.setOperatorLimits.selector;
         operatorsRegistryFirewall = new Firewall(
             riverGovernorDAO,
             executor,
@@ -117,12 +123,10 @@ contract FirewallTests is BytesGenerator, Test {
             5000
         );
 
-        bytes4[] memory executorCallableOracleSelectors = new bytes4[](5);
+        bytes4[] memory executorCallableOracleSelectors = new bytes4[](3);
         executorCallableOracleSelectors[0] = oracle.addMember.selector;
         executorCallableOracleSelectors[1] = oracle.removeMember.selector;
         executorCallableOracleSelectors[2] = oracle.setQuorum.selector;
-        executorCallableOracleSelectors[3] = oracle.setCLSpec.selector;
-        executorCallableOracleSelectors[4] = oracle.setReportBounds.selector;
         oracleFirewall = new Firewall(riverGovernorDAO, executor, address(oracle), executorCallableOracleSelectors);
         firewalledOracle = OracleV1(address(oracleFirewall));
         oracleInput = IRiverV1(payable(address(new RiverMock())));
@@ -233,32 +237,6 @@ contract FirewallTests is BytesGenerator, Test {
         vm.stopPrank();
     }
 
-    function testGovernorCanSetOperatorStoppedValidatorCount() public {
-        uint256 operatorBobIndex = haveGovernorAddOperatorBob();
-        // Assert this by expecting InvalidArgument, NOT Unauthorized
-        vm.startPrank(riverGovernorDAO);
-        vm.expectRevert(abi.encodeWithSignature("InvalidArgument()"));
-        firewalledOperatorsRegistry.setOperatorStoppedValidatorCount(operatorBobIndex, 3);
-        vm.stopPrank();
-    }
-
-    function testExecutorCanSetOperatorStoppedValidatorCount() public {
-        uint256 operatorBobIndex = haveGovernorAddOperatorBob();
-        // Assert this by expecting InvalidArgument, NOT Unauthorized
-        vm.startPrank(executor);
-        vm.expectRevert(abi.encodeWithSignature("InvalidArgument()"));
-        firewalledOperatorsRegistry.setOperatorStoppedValidatorCount(operatorBobIndex, 3);
-        vm.stopPrank();
-    }
-
-    function testRandomCallerCannotSetOperatorStoppedValidatorCount() public {
-        uint256 operatorBobIndex = haveGovernorAddOperatorBob();
-        vm.startPrank(joe);
-        vm.expectRevert(unauthJoe);
-        firewalledOperatorsRegistry.setOperatorStoppedValidatorCount(operatorBobIndex, 3);
-        vm.stopPrank();
-    }
-
     function testGovernorCanSetOperatorLimit() public {
         uint256 operatorBobIndex = haveGovernorAddOperatorBob();
         vm.startPrank(bob);
@@ -270,7 +248,7 @@ contract FirewallTests is BytesGenerator, Test {
         vm.startPrank(riverGovernorDAO);
         uint256[] memory operatorIndexes = new uint256[](1);
         operatorIndexes[0] = operatorBobIndex;
-        uint256[] memory operatorLimits = new uint256[](1);
+        uint32[] memory operatorLimits = new uint32[](1);
         operatorLimits[0] = 10;
         firewalledOperatorsRegistry.setOperatorLimits(operatorIndexes, operatorLimits, block.number);
         assert(operatorsRegistry.getOperator(operatorBobIndex).limit == 10);
@@ -288,7 +266,7 @@ contract FirewallTests is BytesGenerator, Test {
         vm.startPrank(executor);
         uint256[] memory operatorIndexes = new uint256[](1);
         operatorIndexes[0] = operatorBobIndex;
-        uint256[] memory operatorLimits = new uint256[](1);
+        uint32[] memory operatorLimits = new uint32[](1);
         operatorLimits[0] = 10;
         firewalledOperatorsRegistry.setOperatorLimits(operatorIndexes, operatorLimits, block.number);
         assert(operatorsRegistry.getOperator(operatorBobIndex).limit == 10);
@@ -301,7 +279,7 @@ contract FirewallTests is BytesGenerator, Test {
         vm.expectRevert(unauthJoe);
         uint256[] memory operatorIndexes = new uint256[](1);
         operatorIndexes[0] = operatorBobIndex;
-        uint256[] memory operatorLimits = new uint256[](1);
+        uint32[] memory operatorLimits = new uint32[](1);
         operatorLimits[0] = 10;
         firewalledOperatorsRegistry.setOperatorLimits(operatorIndexes, operatorLimits, block.number);
         vm.stopPrank();
@@ -429,48 +407,6 @@ contract FirewallTests is BytesGenerator, Test {
         vm.startPrank(joe);
         vm.expectRevert(unauthJoe);
         firewalledOracle.setQuorum(2);
-        vm.stopPrank();
-    }
-
-    function testGovernorCanSetCLSpec() public {
-        vm.startPrank(riverGovernorDAO);
-        firewalledOracle.setCLSpec(2, 3, 4, 5);
-        assert(oracle.getCLSpec().epochsPerFrame == 2);
-        vm.stopPrank();
-    }
-
-    function testExecutorCanSetCLSpec() public {
-        vm.startPrank(executor);
-        firewalledOracle.setCLSpec(2, 3, 4, 5);
-        assert(oracle.getCLSpec().epochsPerFrame == 2);
-        vm.stopPrank();
-    }
-
-    function testRandomCallerCannotSetCLSpec() public {
-        vm.startPrank(joe);
-        vm.expectRevert(unauthJoe);
-        firewalledOracle.setCLSpec(2, 3, 4, 5);
-        vm.stopPrank();
-    }
-
-    function testGovernorCanSetCLBounds() public {
-        vm.startPrank(riverGovernorDAO);
-        firewalledOracle.setReportBounds(2, 3);
-        assert(oracle.getReportBounds().annualAprUpperBound == 2);
-        vm.stopPrank();
-    }
-
-    function testExecutorCanSetCLBounds() public {
-        vm.startPrank(executor);
-        firewalledOracle.setReportBounds(2, 3);
-        assert(oracle.getReportBounds().annualAprUpperBound == 2);
-        vm.stopPrank();
-    }
-
-    function testRandomCallerCannotSetCLBounds() public {
-        vm.startPrank(joe);
-        vm.expectRevert(unauthJoe);
-        firewalledOracle.setReportBounds(2, 3);
         vm.stopPrank();
     }
 

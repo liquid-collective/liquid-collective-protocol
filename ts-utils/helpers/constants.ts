@@ -1,0 +1,1 @@
+export const TUPPROXY_VERSION_SLOT = "0x82055909238c0f5e63d6f174068ebb8f51bcec9bd37de63bb68f6551feec0cfc"

@@ -1,0 +1,28 @@
+name: Heavy Tests
+
+on:
+  push:
+    paths:
+      - "contracts/**"
+      - "lib/**"
+      - ".github/**"
+
+jobs:
+  run-heavy-tests:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          submodules: recursive
+
+      - name: install foundry
+        uses: onbjerg/foundry-toolchain@v1
+        with:
+          version: nightly
+
+      - name: run tests
+        run: forge test --force -vvv --gas-report --match-contract HEAVY_FUZZING
+        env:
+          FOUNDRY_FUZZ_RUNS: 1000
+          MAINNET_FORK_RPC_URL: ${{ secrets.MAINNET_FORK_RPC_URL }}

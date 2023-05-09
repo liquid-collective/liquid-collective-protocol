@@ -11,6 +11,7 @@ import "../state/river/DepositContractAddress.sol";
 import "../state/river/WithdrawalCredentials.sol";
 import "../state/river/DepositedValidatorCount.sol";
 import "../state/river/BalanceToDeposit.sol";
+import "../state/river/CommittedBalance.sol";
 
 /// @title Consensus Layer Deposit Manager (v1)
 /// @author Kiln
@@ -31,13 +32,9 @@ abstract contract ConsensusLayerDepositManagerV1 is IConsensusLayerDepositManage
     /// @dev Must be Overridden
     function _getRiverAdmin() internal view virtual returns (address);
 
-    /// @notice Prevents unauthorized calls
-    modifier onlyAdmin_CDMV1() {
-        if (msg.sender != _getRiverAdmin()) {
-            revert LibErrors.Unauthorized(msg.sender);
-        }
-        _;
-    }
+    /// @notice Handler called to change the committed balance to deposit
+    /// @param newCommittedBalance The new committed balance value
+    function _setCommittedBalance(uint256 newCommittedBalance) internal virtual;
 
     /// @notice Internal helper to retrieve validator keys ready to be funded
     /// @dev Must be overridden
@@ -61,6 +58,11 @@ abstract contract ConsensusLayerDepositManagerV1 is IConsensusLayerDepositManage
     }
 
     /// @inheritdoc IConsensusLayerDepositManagerV1
+    function getCommittedBalance() external view returns (uint256) {
+        return CommittedBalance.get();
+    }
+
+    /// @inheritdoc IConsensusLayerDepositManagerV1
     function getBalanceToDeposit() external view returns (uint256) {
         return BalanceToDeposit.get();
     }
@@ -76,14 +78,16 @@ abstract contract ConsensusLayerDepositManagerV1 is IConsensusLayerDepositManage
     }
 
     /// @inheritdoc IConsensusLayerDepositManagerV1
-    function depositToConsensusLayer(uint256 _maxCount) external onlyAdmin_CDMV1 {
-        uint256 balanceToDeposit = BalanceToDeposit.get();
-        uint256 keyToDepositCount = LibUint256.min(balanceToDeposit / DEPOSIT_SIZE, _maxCount);
+    function depositToConsensusLayer(uint256 _maxCount) external {
+        uint256 committedBalance = CommittedBalance.get();
+        uint256 keyToDepositCount = LibUint256.min(committedBalance / DEPOSIT_SIZE, _maxCount);
 
         if (keyToDepositCount == 0) {
             revert NotEnoughFunds();
         }
 
+        // it's up to the internal overriden _getNextValidators method to provide two array of the same
+        // size for the publicKeys and the signatures
         (bytes[] memory publicKeys, bytes[] memory signatures) = _getNextValidators(keyToDepositCount);
 
         uint256 receivedPublicKeyCount = publicKeys.length;
@@ -94,12 +98,6 @@ abstract contract ConsensusLayerDepositManagerV1 is IConsensusLayerDepositManage
 
         if (receivedPublicKeyCount > keyToDepositCount) {
             revert InvalidPublicKeyCount();
-        }
-
-        uint256 receivedSignatureCount = signatures.length;
-
-        if (receivedSignatureCount != receivedPublicKeyCount) {
-            revert InvalidSignatureCount();
         }
 
         bytes32 withdrawalCredentials = WithdrawalCredentials.get();
@@ -114,8 +112,12 @@ abstract contract ConsensusLayerDepositManagerV1 is IConsensusLayerDepositManage
                 ++idx;
             }
         }
-        BalanceToDeposit.set(balanceToDeposit - DEPOSIT_SIZE * receivedPublicKeyCount);
-        DepositedValidatorCount.set(DepositedValidatorCount.get() + receivedPublicKeyCount);
+        _setCommittedBalance(committedBalance - DEPOSIT_SIZE * receivedPublicKeyCount);
+        uint256 currentDepositedValidatorCount = DepositedValidatorCount.get();
+        DepositedValidatorCount.set(currentDepositedValidatorCount + receivedPublicKeyCount);
+        emit SetDepositedValidatorCount(
+            currentDepositedValidatorCount, currentDepositedValidatorCount + receivedPublicKeyCount
+        );
     }
 
     /// @notice Deposits 32 ETH to the official Deposit contract
@@ -159,6 +161,5 @@ abstract contract ConsensusLayerDepositManagerV1 is IConsensusLayerDepositManage
         if (address(this).balance != targetBalance) {
             revert ErrorOnDeposit();
         }
-        emit FundedValidatorKey(_publicKey);
     }
 }

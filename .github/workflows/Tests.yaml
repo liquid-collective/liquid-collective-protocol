@@ -5,6 +5,7 @@ on:
     paths:
       - "contracts/**"
       - "lib/**"
+      - ".github/**"
 
 jobs:
   run-tests:
@@ -21,7 +22,7 @@ jobs:
           version: nightly
 
       - name: run tests
-        run: forge test --force -vvv --gas-report 
+        run: forge test --force -vvv --gas-report --no-match-contract HEAVY_FUZZING
         env:
           FOUNDRY_FUZZ_RUNS: 5000
           MAINNET_FORK_RPC_URL: ${{ secrets.MAINNET_FORK_RPC_URL }}

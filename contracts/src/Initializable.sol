@@ -7,6 +7,12 @@ import "./state/shared/Version.sol";
 /// @author Kiln
 /// @notice This contract ensures that initializers are called only once per version
 contract Initializable {
+    /// @notice Disable initialization on implementations
+    constructor() {
+        Version.set(type(uint256).max);
+        emit Initialize(type(uint256).max, msg.data);
+    }
+
     /// @notice An error occured during the initialization
     /// @param version The version that was attempting to be initialized
     /// @param expectedVersion The version that was expected

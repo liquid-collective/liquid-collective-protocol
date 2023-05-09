@@ -3,24 +3,37 @@
 pragma solidity 0.8.10;
 
 import "../src/TLC.1.sol";
+import "../src/TUPProxy.sol";
 import "forge-std/Test.sol";
 
 contract TLCTests is Test {
+    TLCV1 internal tlcImplem;
     TLCV1 internal tlc;
 
     address internal escrowImplem;
     address internal initAccount;
     address internal bob;
     address internal joe;
+    address internal admin;
 
     function setUp() public {
         initAccount = makeAddr("init");
         bob = makeAddr("bob");
         joe = makeAddr("joe");
+        admin = makeAddr("admin");
 
-        tlc = new TLCV1();
-        tlc.initTLCV1(initAccount);
+        tlcImplem = new TLCV1();
+        tlc = TLCV1(
+            address(
+                new TUPProxy(address(tlcImplem), admin, abi.encodeWithSelector(tlcImplem.initTLCV1.selector, initAccount))
+            )
+        );
         tlc.migrateVestingSchedules();
+    }
+
+    function testImplementationInitialization() public {
+        vm.expectRevert("Initializable: contract is already initialized");
+        tlcImplem.initTLCV1(initAccount);
     }
 
     function testName() public view {

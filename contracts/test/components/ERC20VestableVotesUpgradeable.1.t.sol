@@ -1052,7 +1052,6 @@ contract ERC20VestableVotesUpgradeableV1Tests is Test {
         uint256 releaseAt,
         uint256 revokeAt
     ) public {
-        vm.assume(amount > 0);
         vm.warp(0);
         if (periodDuration == 0) {
             // period duration should be a list one
@@ -1073,6 +1072,8 @@ contract ERC20VestableVotesUpgradeableV1Tests is Test {
         amount = amount % tt.balanceOf(initAccount);
 
         uint32 totalDuration = uint32(vestingPeriodCount) * uint32(periodDuration);
+
+        vm.assume(amount >= vestingPeriodCount);
 
         uint32 cliffDuration = (cliffPeriodCount % vestingPeriodCount) * uint32(periodDuration);
         lockDuration = lockDuration % (totalDuration + periodDuration);

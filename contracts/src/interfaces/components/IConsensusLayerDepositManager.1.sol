@@ -5,10 +5,6 @@ pragma solidity 0.8.10;
 /// @author Kiln
 /// @notice This interface exposes methods to handle the interactions with the official deposit contract
 interface IConsensusLayerDepositManagerV1 {
-    /// @notice A validator key got funded on the deposit contract
-    /// @param publicKey BLS Public key that got funded
-    event FundedValidatorKey(bytes publicKey);
-
     /// @notice The stored deposit contract address changed
     /// @param depositContract Address of the deposit contract
     event SetDepositContractAddress(address indexed depositContract);
@@ -16,6 +12,11 @@ interface IConsensusLayerDepositManagerV1 {
     /// @notice The stored withdrawal credentials changed
     /// @param withdrawalCredentials The withdrawal credentials to use for deposits
     event SetWithdrawalCredentials(bytes32 withdrawalCredentials);
+
+    /// @notice Emitted when the deposited validator count is updated
+    /// @param oldDepositedValidatorCount The old deposited validator count value
+    /// @param newDepositedValidatorCount The new deposited validator count value
+    event SetDepositedValidatorCount(uint256 oldDepositedValidatorCount, uint256 newDepositedValidatorCount);
 
     /// @notice Not enough funds to deposit one validator
     error NotEnoughFunds();
@@ -41,9 +42,13 @@ interface IConsensusLayerDepositManagerV1 {
     /// @notice An error occured during the deposit
     error ErrorOnDeposit();
 
-    /// @notice Returns the amount of pending ETH
-    /// @return The amount of pending ETH
+    /// @notice Returns the amount of ETH not yet committed for deposit
+    /// @return The amount of ETH not yet committed for deposit
     function getBalanceToDeposit() external view returns (uint256);
+
+    /// @notice Returns the amount of ETH committed for deposit
+    /// @return The amount of ETH committed for deposit
+    function getCommittedBalance() external view returns (uint256);
 
     /// @notice Retrieve the withdrawal credentials
     /// @return The withdrawal credentials

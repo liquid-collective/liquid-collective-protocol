@@ -27,6 +27,11 @@ jobs:
         with:
           version: nightly
 
+      - name: install nodejs
+        uses: actions/setup-node@v3
+        with:
+          node-version: 16
+
       - name: cache node_modules
         uses: actions/cache@v2
         with:
@@ -37,5 +42,8 @@ jobs:
       - name: install node dependencies
         run: yarn
 
-      - name: run deployment on local node
-        run: yarn link_contracts && yarn hh deploy
+      - name: run deployment on local fork
+        uses: BerniWittmann/background-server-action@v1
+        with:
+          command: sleep 10 && yarn link_contracts && env RPC_URL=http://localhost:8545 PRIVATE_KEY=0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80 yarn hh deploy --network mainnet --deploy-scripts ./deploy/mainnet
+          start: anvil --fork-url ${{ secrets.MAINNET_FORK_RPC_URL }}

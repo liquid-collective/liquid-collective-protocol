@@ -28,7 +28,9 @@ contract ELFeeRecipientV1 is Initializable, IELFeeRecipientV1 {
         }
         uint256 amount = LibUint256.min(_maxAmount, address(this).balance);
 
-        IRiverV1(payable(river)).sendELFees{value: amount}();
+        if (amount > 0) {
+            IRiverV1(payable(river)).sendELFees{value: amount}();
+        }
     }
 
     /// @inheritdoc IELFeeRecipientV1

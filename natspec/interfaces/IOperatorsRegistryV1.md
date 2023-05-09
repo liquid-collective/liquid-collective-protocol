@@ -36,7 +36,7 @@ Adds an operator to the registry
 ### addValidators
 
 ```solidity
-function addValidators(uint256 _index, uint256 _keyCount, bytes _publicKeysAndSignatures) external nonpayable
+function addValidators(uint256 _index, uint32 _keyCount, bytes _publicKeysAndSignatures) external nonpayable
 ```
 
 Adds new keys for an operator
@@ -48,13 +48,47 @@ Adds new keys for an operator
 | Name | Type | Description |
 |---|---|---|
 | _index | uint256 | The operator index |
-| _keyCount | uint256 | The amount of keys provided |
+| _keyCount | uint32 | The amount of keys provided |
 | _publicKeysAndSignatures | bytes | Public keys of the validator, concatenated |
+
+### demandValidatorExits
+
+```solidity
+function demandValidatorExits(uint256 _count, uint256 _depositedValidatorCount) external nonpayable
+```
+
+Increases the exit request demand
+
+*This method is only callable by the river contract, and to actually forward the information to the node operators via event emission, the unprotected requestValidatorExits method must be called*
+
+#### Parameters
+
+| Name | Type | Description |
+|---|---|---|
+| _count | uint256 | The amount of exit requests to add to the demand |
+| _depositedValidatorCount | uint256 | The total deposited validator count |
+
+### getCurrentValidatorExitsDemand
+
+```solidity
+function getCurrentValidatorExitsDemand() external view returns (uint256)
+```
+
+Get the current exit request demand waiting to be triggeredThis value is the amount of exit requests that are demanded and not yet performed by the contract
+
+
+
+
+#### Returns
+
+| Name | Type | Description |
+|---|---|---|
+| _0 | uint256 | The current exit request demand |
 
 ### getOperator
 
 ```solidity
-function getOperator(uint256 _index) external view returns (struct Operators.Operator)
+function getOperator(uint256 _index) external view returns (struct OperatorsV2.Operator)
 ```
 
 Get operator details
@@ -71,7 +105,7 @@ Get operator details
 
 | Name | Type | Description |
 |---|---|---|
-| _0 | Operators.Operator | The details of the operator |
+| _0 | OperatorsV2.Operator | The details of the operator |
 
 ### getOperatorCount
 
@@ -90,6 +124,28 @@ Get operator count
 |---|---|---|
 | _0 | uint256 | The operator count |
 
+### getOperatorStoppedValidatorCount
+
+```solidity
+function getOperatorStoppedValidatorCount(uint256 _idx) external view returns (uint32)
+```
+
+Retrieve the stopped validator count for an operator index
+
+
+
+#### Parameters
+
+| Name | Type | Description |
+|---|---|---|
+| _idx | uint256 | The index of the operator |
+
+#### Returns
+
+| Name | Type | Description |
+|---|---|---|
+| _0 | uint32 | The stopped validator count of the operator |
+
 ### getRiver
 
 ```solidity
@@ -106,6 +162,75 @@ Retrieve the River address
 | Name | Type | Description |
 |---|---|---|
 | _0 | address | The address of River |
+
+### getStoppedAndRequestedExitCounts
+
+```solidity
+function getStoppedAndRequestedExitCounts() external view returns (uint32, uint256)
+```
+
+Retrieve the total stopped and requested exit count
+
+
+
+
+#### Returns
+
+| Name | Type | Description |
+|---|---|---|
+| _0 | uint32 | The total stopped count |
+| _1 | uint256 | The total requested exit count |
+
+### getStoppedValidatorCountPerOperator
+
+```solidity
+function getStoppedValidatorCountPerOperator() external view returns (uint32[])
+```
+
+Retrieve the raw stopped validators array from storage
+
+
+
+
+#### Returns
+
+| Name | Type | Description |
+|---|---|---|
+| _0 | uint32[] | The stopped validator array |
+
+### getTotalStoppedValidatorCount
+
+```solidity
+function getTotalStoppedValidatorCount() external view returns (uint32)
+```
+
+Retrieve the total stopped validator count
+
+
+
+
+#### Returns
+
+| Name | Type | Description |
+|---|---|---|
+| _0 | uint32 | The total stopped validator count |
+
+### getTotalValidatorExitsRequested
+
+```solidity
+function getTotalValidatorExitsRequested() external view returns (uint256)
+```
+
+Retrieve the total requested exit countThis value is the amount of exit requests that have been performed, emitting an event for operators to catch
+
+
+
+
+#### Returns
+
+| Name | Type | Description |
+|---|---|---|
+| _0 | uint256 | The total requested exit count |
 
 ### getValidator
 
@@ -149,10 +274,21 @@ Initializes the operators registry
 | _admin | address | Admin in charge of managing operators |
 | _river | address | Address of River system |
 
+### initOperatorsRegistryV1_1
+
+```solidity
+function initOperatorsRegistryV1_1() external nonpayable
+```
+
+Initializes the operators registry for V1_1
+
+
+
+
 ### listActiveOperators
 
 ```solidity
-function listActiveOperators() external view returns (struct Operators.Operator[])
+function listActiveOperators() external view returns (struct OperatorsV2.Operator[])
 ```
 
 Retrieve the active operator set
@@ -164,12 +300,12 @@ Retrieve the active operator set
 
 | Name | Type | Description |
 |---|---|---|
-| _0 | Operators.Operator[] | The list of active operators and their details |
+| _0 | OperatorsV2.Operator[] | The list of active operators and their details |
 
-### pickNextValidators
+### pickNextValidatorsToDeposit
 
 ```solidity
-function pickNextValidators(uint256 _count) external nonpayable returns (bytes[] publicKeys, bytes[] signatures)
+function pickNextValidatorsToDeposit(uint256 _count) external nonpayable returns (bytes[] publicKeys, bytes[] signatures)
 ```
 
 Retrieve validator keys based on operator statuses
@@ -206,6 +342,39 @@ Remove validator keys
 | _index | uint256 | The operator index |
 | _indexes | uint256[] | The indexes of the keys to remove |
 
+### reportStoppedValidatorCounts
+
+```solidity
+function reportStoppedValidatorCounts(uint32[] _stoppedValidatorCounts, uint256 _depositedValidatorCount) external nonpayable
+```
+
+Allows river to override the stopped validators arrayThis actions happens during the Oracle report processing
+
+
+
+#### Parameters
+
+| Name | Type | Description |
+|---|---|---|
+| _stoppedValidatorCounts | uint32[] | The new stopped validators array |
+| _depositedValidatorCount | uint256 | The total deposited validator count |
+
+### requestValidatorExits
+
+```solidity
+function requestValidatorExits(uint256 _count) external nonpayable
+```
+
+Public endpoint to consume the exit request demand and perform the actual exit requestsThe selection algorithm will pick validators based on their active validator countsThis value is computed by using the count of funded keys and taking into account the stopped validator counts and exit requests
+
+
+
+#### Parameters
+
+| Name | Type | Description |
+|---|---|---|
+| _count | uint256 | Max amount of exits to request |
+
 ### setOperatorAddress
 
 ```solidity
@@ -226,7 +395,7 @@ Changes the operator address of an operator
 ### setOperatorLimits
 
 ```solidity
-function setOperatorLimits(uint256[] _operatorIndexes, uint256[] _newLimits, uint256 _snapshotBlock) external nonpayable
+function setOperatorLimits(uint256[] _operatorIndexes, uint32[] _newLimits, uint256 _snapshotBlock) external nonpayable
 ```
 
 Changes the operator staking limit
@@ -238,7 +407,7 @@ Changes the operator staking limit
 | Name | Type | Description |
 |---|---|---|
 | _operatorIndexes | uint256[] | The operator indexes, in increasing order and duplicate free |
-| _newLimits | uint256[] | The new staking limit of the operators |
+| _newLimits | uint32[] | The new staking limit of the operators |
 | _snapshotBlock | uint256 | The block number at which the snapshot was computed |
 
 ### setOperatorName
@@ -274,23 +443,6 @@ Changes the operator status
 |---|---|---|
 | _index | uint256 | The operator index |
 | _newStatus | bool | The new status of the operator |
-
-### setOperatorStoppedValidatorCount
-
-```solidity
-function setOperatorStoppedValidatorCount(uint256 _index, uint256 _newStoppedValidatorCount) external nonpayable
-```
-
-Changes the operator stopped validator count
-
-*Only callable by the administrator*
-
-#### Parameters
-
-| Name | Type | Description |
-|---|---|---|
-| _index | uint256 | The operator index |
-| _newStoppedValidatorCount | uint256 | The new stopped validator count of the operator |
 
 
 
@@ -330,6 +482,24 @@ The operator or the admin added new validator keys and signatures
 |---|---|---|
 | index `indexed` | uint256 | The operator index |
 | publicKeysAndSignatures  | bytes | The concatenated public keys and signatures |
+
+### FundedValidatorKeys
+
+```solidity
+event FundedValidatorKeys(uint256 indexed index, bytes[] publicKeys, bool deferred)
+```
+
+A validator key got funded on the deposit contractThis event was introduced during a contract upgrade, in order to cover all possible public keys, this eventwill be replayed for past funded keys in order to have a complete coverage of all the funded public keys.In this particuliar scenario, the deferred value will be set to true, to indicate that we are not going to havethe expected additional events and side effects in the same transaction (deposit to official DepositContract etc ...) becausethe event was synthetically crafted.
+
+
+
+#### Parameters
+
+| Name | Type | Description |
+|---|---|---|
+| index `indexed` | uint256 | The operator index |
+| publicKeys  | bytes[] | BLS Public key that got funded |
+| deferred  | bool | True if event has been replayed in the context of a migration |
 
 ### OperatorEditsAfterSnapshot
 
@@ -384,6 +554,40 @@ The operator or the admin removed a public key and its signature from the regist
 |---|---|---|
 | index `indexed` | uint256 | The operator index |
 | publicKey  | bytes | The BLS public key that has been removed |
+
+### RequestedValidatorExits
+
+```solidity
+event RequestedValidatorExits(uint256 indexed index, uint256 count)
+```
+
+The requested exit count has been updated
+
+
+
+#### Parameters
+
+| Name | Type | Description |
+|---|---|---|
+| index `indexed` | uint256 | The operator index |
+| count  | uint256 | The count of requested exits |
+
+### SetCurrentValidatorExitsDemand
+
+```solidity
+event SetCurrentValidatorExitsDemand(uint256 previousValidatorExitsDemand, uint256 nextValidatorExitsDemand)
+```
+
+The exit request demand has been updated
+
+
+
+#### Parameters
+
+| Name | Type | Description |
+|---|---|---|
+| previousValidatorExitsDemand  | uint256 | The previous exit request demand |
+| nextValidatorExitsDemand  | uint256 | The new exit request demand |
 
 ### SetOperatorAddress
 
@@ -486,6 +690,57 @@ The stored river address has been changed
 |---|---|---|
 | river `indexed` | address | The new river address |
 
+### SetTotalValidatorExitsRequested
+
+```solidity
+event SetTotalValidatorExitsRequested(uint256 previousTotalValidatorExitsRequested, uint256 newTotalValidatorExitsRequested)
+```
+
+The total requested exit has been updated
+
+
+
+#### Parameters
+
+| Name | Type | Description |
+|---|---|---|
+| previousTotalValidatorExitsRequested  | uint256 | The previous total requested exit |
+| newTotalValidatorExitsRequested  | uint256 | The new total requested exit |
+
+### UpdatedRequestedValidatorExitsUponStopped
+
+```solidity
+event UpdatedRequestedValidatorExitsUponStopped(uint256 indexed index, uint32 oldRequestedExits, uint32 newRequestedExits)
+```
+
+The requested exit count has been update to fill the gap with the reported stopped count
+
+
+
+#### Parameters
+
+| Name | Type | Description |
+|---|---|---|
+| index `indexed` | uint256 | The operator index |
+| oldRequestedExits  | uint32 | The old requested exit count |
+| newRequestedExits  | uint32 | The new requested exit count |
+
+### UpdatedStoppedValidators
+
+```solidity
+event UpdatedStoppedValidators(uint32[] stoppedValidatorCounts)
+```
+
+The stopped validator array has been changedA validator is considered stopped if exiting, exited or slashedThis event is emitted when the oracle reports new stopped validators counts
+
+
+
+#### Parameters
+
+| Name | Type | Description |
+|---|---|---|
+| stoppedValidatorCounts  | uint32[] | The new stopped validator counts |
+
 
 
 ## Errors
@@ -524,6 +779,17 @@ error InvalidEmptyArray()
 ```
 
 The provided operator and limits array are empty
+
+
+
+
+### InvalidEmptyStoppedValidatorCountsArray
+
+```solidity
+error InvalidEmptyStoppedValidatorCountsArray()
+```
+
+Thrown when an invalid empty stopped validator array is provided
 
 
 
@@ -572,6 +838,17 @@ The provided concatenated keys do not have the expected length
 
 
 
+### InvalidStoppedValidatorCountsSum
+
+```solidity
+error InvalidStoppedValidatorCountsSum()
+```
+
+Thrown when the sum of stopped validators is invalid
+
+
+
+
 ### InvalidUnsortedIndexes
 
 ```solidity
@@ -579,6 +856,17 @@ error InvalidUnsortedIndexes()
 ```
 
 The index provided are not sorted properly (descending order)
+
+
+
+
+### NoExitRequestsToPerform
+
+```solidity
+error NoExitRequestsToPerform()
+```
+
+Thrown when no exit requests can be performed
 
 
 
@@ -618,6 +906,28 @@ The value for the limit is too low
 | index | uint256 | The operator index |
 | limit | uint256 | The new limit provided |
 | fundedKeyCount | uint256 | The operator funded key count |
+
+### StoppedValidatorCountsDecreased
+
+```solidity
+error StoppedValidatorCountsDecreased()
+```
+
+Throw when an element in the stopped validator array is decreasing
+
+
+
+
+### StoppedValidatorCountsTooHigh
+
+```solidity
+error StoppedValidatorCountsTooHigh()
+```
+
+Thrown when the number of elements in the array is too high compared to operator count
+
+
+
 
 ### UnorderedOperatorList
 

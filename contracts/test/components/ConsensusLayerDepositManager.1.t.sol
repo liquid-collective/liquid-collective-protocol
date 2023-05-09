@@ -5,6 +5,7 @@ pragma solidity 0.8.10;
 import "forge-std/Test.sol";
 
 import "../../src/components/ConsensusLayerDepositManager.1.sol";
+import "../utils/LibImplementationUnbricker.sol";
 
 import "../mocks/DepositContractMock.sol";
 import "../mocks/DepositContractEnhancedMock.sol";
@@ -47,7 +48,11 @@ contract ConsensusLayerDepositManagerV1ExposeInitializer is ConsensusLayerDeposi
     }
 
     function sudoSyncBalance() external {
-        BalanceToDeposit.set(address(this).balance);
+        _setCommittedBalance(address(this).balance);
+    }
+
+    function _setCommittedBalance(uint256 newCommittedBalance) internal override {
+        CommittedBalance.set(newCommittedBalance);
     }
 }
 
@@ -57,7 +62,6 @@ contract ConsensusLayerDepositManagerV1InitTests is Test {
     ConsensusLayerDepositManagerV1 internal depositManager;
     IDepositContract internal depositContract;
 
-    event FundedValidatorKey(bytes publicKey);
     event SetDepositContractAddress(address indexed depositContract);
     event SetWithdrawalCredentials(bytes32 withdrawalCredentials);
 
@@ -65,6 +69,8 @@ contract ConsensusLayerDepositManagerV1InitTests is Test {
         depositContract = new DepositContractMock();
 
         depositManager = new ConsensusLayerDepositManagerV1ExposeInitializer();
+        LibImplementationUnbricker.unbrick(vm, address(depositManager));
+
         vm.expectEmit(true, true, true, true);
         emit SetDepositContractAddress(address(depositContract));
         ConsensusLayerDepositManagerV1ExposeInitializer(address(depositManager))
@@ -75,6 +81,7 @@ contract ConsensusLayerDepositManagerV1InitTests is Test {
         depositContract = new DepositContractMock();
 
         depositManager = new ConsensusLayerDepositManagerV1ExposeInitializer();
+        LibImplementationUnbricker.unbrick(vm, address(depositManager));
         vm.expectEmit(true, true, true, true);
         emit SetWithdrawalCredentials(withdrawalCredentials);
         ConsensusLayerDepositManagerV1ExposeInitializer(address(depositManager))
@@ -88,12 +95,11 @@ contract ConsensusLayerDepositManagerV1Tests is Test {
     ConsensusLayerDepositManagerV1 internal depositManager;
     IDepositContract internal depositContract;
 
-    event FundedValidatorKey(bytes publicKey);
-
     function setUp() public {
         depositContract = new DepositContractMock();
 
         depositManager = new ConsensusLayerDepositManagerV1ExposeInitializer();
+        LibImplementationUnbricker.unbrick(vm, address(depositManager));
         ConsensusLayerDepositManagerV1ExposeInitializer(address(depositManager))
             .publicConsensusLayerDepositManagerInitializeV1(address(depositContract), withdrawalCredentials);
     }
@@ -114,10 +120,6 @@ contract ConsensusLayerDepositManagerV1Tests is Test {
         vm.deal(address(depositManager), 320 ether);
         ConsensusLayerDepositManagerV1ExposeInitializer(address(depositManager)).sudoSyncBalance();
         assert(address(depositManager).balance == 320 ether);
-        vm.expectEmit(true, true, true, true);
-        emit FundedValidatorKey(
-            hex"4681ddeb7bad423182704048f3fb9fe82bded37429b0643af12c730b0f0851815a6ef1a563fdcef7c05512b33278218c"
-            );
         vm.prank(address(0));
         depositManager.depositToConsensusLayer(10);
         assert(address(depositManager).balance == 0);
@@ -127,10 +129,6 @@ contract ConsensusLayerDepositManagerV1Tests is Test {
         vm.deal(address(depositManager), 640 ether);
         ConsensusLayerDepositManagerV1ExposeInitializer(address(depositManager)).sudoSyncBalance();
         assert(address(depositManager).balance == 640 ether);
-        vm.expectEmit(true, true, true, true);
-        emit FundedValidatorKey(
-            hex"4681ddeb7bad423182704048f3fb9fe82bded37429b0643af12c730b0f0851815a6ef1a563fdcef7c05512b33278218c"
-            );
         vm.prank(address(0));
         depositManager.depositToConsensusLayer(20);
         assert(address(depositManager).balance == 320 ether);
@@ -224,7 +222,11 @@ contract ConsensusLayerDepositManagerV1ControllableValidatorKeyRequest is Consen
     }
 
     function sudoSyncBalance() external {
-        BalanceToDeposit.set(address(this).balance);
+        _setCommittedBalance(address(this).balance);
+    }
+
+    function _setCommittedBalance(uint256 newCommittedBalance) internal override {
+        CommittedBalance.set(newCommittedBalance);
     }
 }
 
@@ -238,6 +240,7 @@ contract ConsensusLayerDepositManagerV1ErrorTests is Test {
         depositContract = new DepositContractMock();
 
         depositManager = new ConsensusLayerDepositManagerV1ControllableValidatorKeyRequest();
+        LibImplementationUnbricker.unbrick(vm, address(depositManager));
         ConsensusLayerDepositManagerV1ControllableValidatorKeyRequest(address(depositManager))
             .publicConsensusLayerDepositManagerInitializeV1(address(depositContract), withdrawalCredentials);
     }
@@ -277,15 +280,6 @@ contract ConsensusLayerDepositManagerV1ErrorTests is Test {
         vm.prank(address(0));
         depositManager.depositToConsensusLayer(5);
     }
-
-    function testInvalidSignatureCount() public {
-        vm.deal(address(depositManager), 32 ether);
-        ConsensusLayerDepositManagerV1ControllableValidatorKeyRequest(address(depositManager)).sudoSyncBalance();
-        ConsensusLayerDepositManagerV1ControllableValidatorKeyRequest(address(depositManager)).setScenario(5);
-        vm.expectRevert(abi.encodeWithSignature("InvalidSignatureCount()"));
-        vm.prank(address(0));
-        depositManager.depositToConsensusLayer(5);
-    }
 }
 
 contract ConsensusLayerDepositManagerV1WithdrawalCredentialError is Test {
@@ -298,6 +292,7 @@ contract ConsensusLayerDepositManagerV1WithdrawalCredentialError is Test {
         depositContract = new DepositContractMock();
 
         depositManager = new ConsensusLayerDepositManagerV1ControllableValidatorKeyRequest();
+        LibImplementationUnbricker.unbrick(vm, address(depositManager));
     }
 
     function testInvalidWithdrawalCredential() public {
@@ -351,7 +346,11 @@ contract ConsensusLayerDepositManagerV1ValidKeys is ConsensusLayerDepositManager
     }
 
     function sudoSyncBalance() external {
-        BalanceToDeposit.set(address(this).balance);
+        _setCommittedBalance(address(this).balance);
+    }
+
+    function _setCommittedBalance(uint256 newCommittedBalance) internal override {
+        CommittedBalance.set(newCommittedBalance);
     }
 }
 
@@ -371,6 +370,7 @@ contract ConsensusLayerDepositManagerV1ValidKeysTest is Test {
         depositContract = IDepositContract(address(new DepositContractEnhancedMock()));
 
         depositManager = new ConsensusLayerDepositManagerV1ValidKeys();
+        LibImplementationUnbricker.unbrick(vm, address(depositManager));
         ConsensusLayerDepositManagerV1ValidKeys(address(depositManager)).publicConsensusLayerDepositManagerInitializeV1(
             address(depositContract), withdrawalCredentials
         );
@@ -395,6 +395,7 @@ contract ConsensusLayerDepositManagerV1InvalidDepositContract is Test {
         depositContract = IDepositContract(address(new DepositContractInvalidMock()));
 
         depositManager = new ConsensusLayerDepositManagerV1ValidKeys();
+        LibImplementationUnbricker.unbrick(vm, address(depositManager));
         ConsensusLayerDepositManagerV1ValidKeys(address(depositManager)).publicConsensusLayerDepositManagerInitializeV1(
             address(depositContract), withdrawalCredentials
         );

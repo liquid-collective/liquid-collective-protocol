@@ -35,7 +35,7 @@ contract DepositContractInvalidMock is IDepositContract, Test {
             to_little_endian_64(uint64(msg.value / 1 gwei)),
             signature,
             to_little_endian_64(uint64(counter))
-            );
+        );
         vm.deal(msg.sender, address(msg.sender).balance + msg.value); // selfdestruct like forced ETH injection
         counter += 1;
     }
