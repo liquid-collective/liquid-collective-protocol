@@ -414,7 +414,6 @@ contract SharesManagerV1Tests is Test {
             vm.prank(_userTwo);
             vm.expectRevert(abi.encodeWithSignature("UnauthorizedTransfer(address,address)", _userOne, address(0)));
             sharesManager.transferFrom(_userOne, address(0), _allowance);
-            vm.stopPrank();
         }
     }
 
