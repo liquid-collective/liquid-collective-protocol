@@ -653,7 +653,7 @@ contract RiverV1Tests is Test, BytesGenerator {
         OperatorsV2.Operator memory op2 = operatorsRegistry.getOperator(operatorTwoIndex);
 
         assert(op1.funded == 20);
-        assert(op1.requestedExits == 0);
+        assert(op1.requestedExits == 10);
         assert(op2.funded == 10);
 
         assert(operatorsRegistry.getOperatorStoppedValidatorCount(operatorOneIndex) == 10);

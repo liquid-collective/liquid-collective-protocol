@@ -217,7 +217,7 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
         external
         onlyRiver
     {
-        _setStoppedValidatorCounts(_stoppedValidatorCounts, _depositedValidatorCount);
+        return _setStoppedValidatorCounts(_stoppedValidatorCounts, _depositedValidatorCount);
     }
 
     /// @inheritdoc IOperatorsRegistryV1
@@ -472,40 +472,59 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
     error StoppedValidatorCountArrayShrinking();
     error StoppedValidatorCountAboveFundedCount(uint256 operatorIndex, uint32 stoppedCount, uint32 fundedCount);
 
+    struct SetStoppedValidatorCountInternalVars {
+        uint256 stoppedValidatorCountsLength;
+        uint32[] currentStoppedValidatorCounts;
+        uint256 currentStoppedValidatorCountsLength;
+        uint32 total;
+        uint32 count;
+        uint256 currentValidatorExitsDemand;
+        uint256 cachedCurrentValidatorExitsDemand;
+        uint256 totalRequestedExits;
+        uint256 cachedTotalRequestedExits;
+    }
+
     /// @notice Internal utiltiy to set the stopped validator array after sanity checks
     /// @param _stoppedValidatorCounts The stopped validators counts for every operator + the total count in index 0
     /// @param _depositedValidatorCount The current deposited validator count
     function _setStoppedValidatorCounts(uint32[] calldata _stoppedValidatorCounts, uint256 _depositedValidatorCount)
         internal
     {
+        SetStoppedValidatorCountInternalVars memory vars;
         // we check that the array is not empty
-        uint256 stoppedValidatorCountsLength = _stoppedValidatorCounts.length;
-        if (stoppedValidatorCountsLength == 0) {
+        vars.stoppedValidatorCountsLength = _stoppedValidatorCounts.length;
+        if (vars.stoppedValidatorCountsLength == 0) {
             revert InvalidEmptyStoppedValidatorCountsArray();
         }
 
         OperatorsV2.Operator[] storage operators = OperatorsV2.getAll();
 
         // we check that the cells containing operator stopped values are no more than the current operator count
-        if (stoppedValidatorCountsLength - 1 > operators.length) {
+        if (vars.stoppedValidatorCountsLength - 1 > operators.length) {
             revert StoppedValidatorCountsTooHigh();
         }
 
-        uint32[] memory currentStoppedValidatorCounts = OperatorsV2.getStoppedValidators();
-        uint256 currentStoppedValidatorCountsLength = currentStoppedValidatorCounts.length;
+        vars.currentStoppedValidatorCounts = OperatorsV2.getStoppedValidators();
+        vars.currentStoppedValidatorCountsLength = vars.currentStoppedValidatorCounts.length;
 
         // we check that the number of stopped values is not decreasing
-        if (stoppedValidatorCountsLength < currentStoppedValidatorCountsLength) {
+        if (vars.stoppedValidatorCountsLength < vars.currentStoppedValidatorCountsLength) {
             revert StoppedValidatorCountArrayShrinking();
         }
 
-        uint32 total = _stoppedValidatorCounts[0];
-        uint32 count = 0;
+        vars.total = _stoppedValidatorCounts[0];
+        vars.count = 0;
+
+        // create value to track unsollicited exit count
+        vars.currentValidatorExitsDemand = CurrentValidatorExitsDemand.get();
+        vars.cachedCurrentValidatorExitsDemand = vars.currentValidatorExitsDemand;
+        vars.totalRequestedExits = TotalValidatorExitsRequested.get();
+        vars.cachedTotalRequestedExits = vars.totalRequestedExits;
 
         uint256 idx = 1;
-        for (; idx < currentStoppedValidatorCountsLength;) {
+        for (; idx < vars.currentStoppedValidatorCountsLength;) {
             // if the previous array was long enough, we check that the values are not decreasing
-            if (_stoppedValidatorCounts[idx] < currentStoppedValidatorCounts[idx]) {
+            if (_stoppedValidatorCounts[idx] < vars.currentStoppedValidatorCounts[idx]) {
                 revert StoppedValidatorCountsDecreased();
             }
             if (_stoppedValidatorCounts[idx] > operators[idx - 1].funded) {
@@ -513,31 +532,67 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
                     idx - 1, _stoppedValidatorCounts[idx], operators[idx - 1].funded
                 );
             }
+            if (_stoppedValidatorCounts[idx] > operators[idx - 1].requestedExits) {
+                emit UpdatedRequestedValidatorExitsUponStopped(
+                    idx - 1, operators[idx - 1].requestedExits, _stoppedValidatorCounts[idx]
+                );
+                uint256 unsollicitedExits = _stoppedValidatorCounts[idx] - operators[idx - 1].requestedExits;
+                vars.totalRequestedExits += unsollicitedExits;
+                operators[idx - 1].funded = _stoppedValidatorCounts[idx];
+                emit RequestedValidatorExits(idx - 1, _stoppedValidatorCounts[idx]);
+
+                vars.currentValidatorExitsDemand -= LibUint256.min(unsollicitedExits, vars.currentValidatorExitsDemand);
+            }
+
             // we recompute the total to ensure it's not an invalid sum
-            count += _stoppedValidatorCounts[idx];
+            vars.count += _stoppedValidatorCounts[idx];
             unchecked {
                 ++idx;
             }
         }
 
-        for (; idx < stoppedValidatorCountsLength;) {
+        for (; idx < vars.stoppedValidatorCountsLength;) {
             if (_stoppedValidatorCounts[idx] > operators[idx - 1].funded) {
                 revert StoppedValidatorCountAboveFundedCount(
                     idx - 1, _stoppedValidatorCounts[idx], operators[idx - 1].funded
                 );
             }
+            if (_stoppedValidatorCounts[idx] > operators[idx - 1].requestedExits) {
+                emit UpdatedRequestedValidatorExitsUponStopped(
+                    idx - 1, operators[idx - 1].requestedExits, _stoppedValidatorCounts[idx]
+                );
+                uint256 unsollicitedExits = _stoppedValidatorCounts[idx] - operators[idx - 1].requestedExits;
+                vars.totalRequestedExits += unsollicitedExits;
+                operators[idx - 1].requestedExits = _stoppedValidatorCounts[idx];
+                emit RequestedValidatorExits(idx - 1, _stoppedValidatorCounts[idx]);
+
+                vars.currentValidatorExitsDemand -= LibUint256.min(unsollicitedExits, vars.currentValidatorExitsDemand);
+            }
             // we recompute the total to ensure it's not an invalid sum
-            count += _stoppedValidatorCounts[idx];
+            vars.count += _stoppedValidatorCounts[idx];
             unchecked {
                 ++idx;
             }
         }
+
+        if (vars.totalRequestedExits != vars.cachedTotalRequestedExits) {
+            TotalValidatorExitsRequested.set(vars.totalRequestedExits);
+            emit SetTotalValidatorExitsRequested(vars.cachedTotalRequestedExits, vars.totalRequestedExits);
+        }
+
+        if (vars.currentValidatorExitsDemand != vars.cachedCurrentValidatorExitsDemand) {
+            CurrentValidatorExitsDemand.set(vars.currentValidatorExitsDemand);
+            emit SetCurrentValidatorExitsDemand(
+                vars.cachedCurrentValidatorExitsDemand, vars.currentValidatorExitsDemand
+            );
+        }
+
         // we check that the total is matching the sum of the individual values
-        if (total != count) {
+        if (vars.total != vars.count) {
             revert InvalidStoppedValidatorCountsSum();
         }
         // we check that the total is not higher than the current deposited validator count
-        if (total > _depositedValidatorCount) {
+        if (vars.total > _depositedValidatorCount) {
             revert StoppedValidatorCountsTooHigh();
         }
         // we set the new stopped validators counts
@@ -707,7 +762,6 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
     function _pickNextValidatorsToExitFromActiveOperators(uint256 _count) internal returns (uint256) {
         (OperatorsV2.CachedExitableOperator[] memory operators, uint256 exitableOperatorCount) =
             OperatorsV2.getAllExitable();
-        uint32[] storage stoppedValidators = OperatorsV2.getStoppedValidators();
 
         if (exitableOperatorCount == 0) {
             return 0;
@@ -716,24 +770,6 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
         uint256 initialExitRequestDemand = _count;
         uint256 totalRequestedExitsValue = TotalValidatorExitsRequested.get();
         uint256 totalRequestedExitsCopy = totalRequestedExitsValue;
-
-        for (uint256 idx = 0; idx < exitableOperatorCount;) {
-            uint32 currentRequestedExits = operators[idx].requestedExits;
-            uint32 currentStoppedCount =
-                OperatorsV2._getStoppedValidatorCountAtIndex(stoppedValidators, operators[idx].index);
-
-            if (currentRequestedExits < currentStoppedCount) {
-                emit UpdatedRequestedValidatorExitsUponStopped(
-                    operators[idx].index, currentRequestedExits, currentStoppedCount
-                );
-                operators[idx].picked += currentStoppedCount - currentRequestedExits;
-                totalRequestedExitsValue += currentStoppedCount - currentRequestedExits;
-            }
-
-            unchecked {
-                ++idx;
-            }
-        }
 
         // we loop to find the highest count of active validators, the number of operators that have this amount and the second highest amount
         while (_count > 0) {

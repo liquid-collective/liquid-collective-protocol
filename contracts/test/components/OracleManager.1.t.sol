@@ -143,9 +143,17 @@ contract OracleManagerV1ExposeInitializer is OracleManagerV1 {
 
     function _requestExitsBasedOnRedeemDemandAfterRebalancings(
         uint256 exitingBalance,
-        bool depositToRedeemRebalancingAllowed
+        uint32[] memory stoppedValidatorCounts,
+        bool depositToRedeemRebalancingAllowed,
+        bool slashingContainmentModeEnabled
     ) internal override {
         uint256 exitCount = 0;
+
+        emit Internal_SetReportedStoppedValidatorCounts(stoppedValidatorCounts);
+
+        if (slashingContainmentModeEnabled) {
+            return;
+        }
 
         if (redeemDemand > amountToRedeem + exitingBalance) {
             exitCount = LibUint256.ceil((redeemDemand - (amountToRedeem + exitingBalance)), 32 ether);
@@ -327,8 +335,6 @@ contract OracleManagerV1Tests is Test {
             emit Internal_PullCLFunds(v.clr.validatorsSkimmedBalance, v.clr.validatorsExitedBalance);
         }
         vm.expectEmit(true, true, true, true);
-        emit Internal_SetReportedStoppedValidatorCounts(v.clr.stoppedValidatorCountPerOperator);
-        vm.expectEmit(true, true, true, true);
         emit Internal_PullELFees(v.maxIncrease, v.elFeesAvailable);
         vm.expectEmit(true, true, true, true);
         emit Internal_PullRedeemManagerExceedingEth(v.maxIncrease - v.elFeesAvailable, v.exceedingEth);
@@ -336,6 +342,8 @@ contract OracleManagerV1Tests is Test {
         emit Internal_PullCoverageFunds(v.maxIncrease - v.elFeesAvailable - v.exceedingEth, v.coverageFundAvailable);
         vm.expectEmit(true, true, true, true);
         emit Internal_OnEarnings(v.elFeesAvailable + v.clr.validatorsSkimmedBalance);
+        vm.expectEmit(true, true, true, true);
+        emit Internal_SetReportedStoppedValidatorCounts(v.clr.stoppedValidatorCountPerOperator);
         vm.expectEmit(true, true, true, true);
         emit Internal_RequestExitsBasedOnRedeemDemandAfterRebalancings(v.clr.validatorsExitingBalance, false, 0);
         vm.expectEmit(true, true, true, true);

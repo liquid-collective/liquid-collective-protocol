@@ -499,8 +499,18 @@ contract RiverV1 is
     /// @param _depositToRedeemRebalancingAllowed True if rebalancing from deposit to redeem is allowed
     function _requestExitsBasedOnRedeemDemandAfterRebalancings(
         uint256 _exitingBalance,
-        bool _depositToRedeemRebalancingAllowed
+        uint32[] memory _stoppedValidatorCounts,
+        bool _depositToRedeemRebalancingAllowed,
+        bool _slashingContainmentModeEnabled
     ) internal override {
+        IOperatorsRegistryV1(OperatorsRegistryAddress.get()).reportStoppedValidatorCounts(
+            _stoppedValidatorCounts, DepositedValidatorCount.get()
+        );
+
+        if (_slashingContainmentModeEnabled) {
+            return;
+        }
+
         uint256 totalSupply = _totalSupply();
         if (totalSupply > 0) {
             uint256 availableBalanceToRedeem = BalanceToRedeem.get();

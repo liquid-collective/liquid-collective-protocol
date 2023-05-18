@@ -73,7 +73,9 @@ abstract contract OracleManagerV1 is IOracleManagerV1 {
     /// @param _depositToRedeemRebalancingAllowed True if rebalancing from deposit to redeem is allowed
     function _requestExitsBasedOnRedeemDemandAfterRebalancings(
         uint256 _exitingBalance,
-        bool _depositToRedeemRebalancingAllowed
+        uint32[] memory _stoppedValidatorCounts,
+        bool _depositToRedeemRebalancingAllowed,
+        bool _slashingContainmentModeEnabled
     ) internal virtual;
 
     /// @notice Skims the redeem balance and sends remaining funds to the deposit balance
@@ -336,7 +338,6 @@ abstract contract OracleManagerV1 is IOracleManagerV1 {
             storedReport.slashingContainmentMode = _report.slashingContainmentMode;
             LastConsensusLayerReport.set(storedReport);
         }
-        _setReportedStoppedValidatorCounts(_report.stoppedValidatorCountPerOperator);
 
         ReportBounds.ReportBoundsStruct memory rb = ReportBounds.get();
 
@@ -422,13 +423,12 @@ abstract contract OracleManagerV1 is IOracleManagerV1 {
             _onEarnings(vars.trace.rewards);
         }
 
-        // if the slashing containment mode is active, we do not perform exit related action until it is disabled
-        if (!_report.slashingContainmentMode) {
-            // we request exits based on incoming still in the exit process and current eth buffers
-            _requestExitsBasedOnRedeemDemandAfterRebalancings(
-                _report.validatorsExitingBalance, _report.rebalanceDepositToRedeemMode
-            );
-        }
+        _requestExitsBasedOnRedeemDemandAfterRebalancings(
+            _report.validatorsExitingBalance,
+            _report.stoppedValidatorCountPerOperator,
+            _report.rebalanceDepositToRedeemMode,
+            _report.slashingContainmentMode
+        );
 
         // we use the updated balanceToRedeem value to report a withdraw event on the redeem manager
         _reportWithdrawToRedeemManager();
