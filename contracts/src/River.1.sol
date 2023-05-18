@@ -486,14 +486,6 @@ contract RiverV1 is
         }
     }
 
-    /// @notice Change the stored stopped validator counts for all the operators
-    /// @param _stoppedValidatorCounts The list of stopped validator counts
-    function _setReportedStoppedValidatorCounts(uint32[] memory _stoppedValidatorCounts) internal override {
-        IOperatorsRegistryV1(OperatorsRegistryAddress.get()).reportStoppedValidatorCounts(
-            _stoppedValidatorCounts, DepositedValidatorCount.get()
-        );
-    }
-
     /// @notice Requests exits of validators after possibly rebalancing deposit and redeem balances
     /// @param _exitingBalance The currently exiting funds, soon to be received on the execution layer
     /// @param _depositToRedeemRebalancingAllowed True if rebalancing from deposit to redeem is allowed

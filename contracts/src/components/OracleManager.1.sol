@@ -64,10 +64,6 @@ abstract contract OracleManagerV1 is IOracleManagerV1 {
     /// @notice Use the balance to redeem to report a withdrawal event on the redeem manager
     function _reportWithdrawToRedeemManager() internal virtual;
 
-    /// @notice Change the stored stopped validator counts for all the operators
-    /// @param _stoppedValidatorCounts The list of stopped validator counts
-    function _setReportedStoppedValidatorCounts(uint32[] memory _stoppedValidatorCounts) internal virtual;
-
     /// @notice Requests exits of validators after possibly rebalancing deposit and redeem balances
     /// @param _exitingBalance The currently exiting funds, soon to be received on the execution layer
     /// @param _depositToRedeemRebalancingAllowed True if rebalancing from deposit to redeem is allowed

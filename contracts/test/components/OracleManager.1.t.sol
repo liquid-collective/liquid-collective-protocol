@@ -137,6 +137,8 @@ contract OracleManagerV1ExposeInitializer is OracleManagerV1 {
         amountToDeposit += result;
     }
 
+    event Internal_SetReportedStoppedValidatorCounts(uint32[] stoppedValidatorCounts);
+
     event Internal_RequestExitsBasedOnRedeemDemandAfterRebalancings(
         uint256 exitingBalance, bool depositToRedeemRebalancingAllowed, uint256 exitCountRequest
     );
@@ -175,12 +177,6 @@ contract OracleManagerV1ExposeInitializer is OracleManagerV1 {
         emit Internal_SkimExcessBalanceToRedeem(amountToDeposit, amountToRedeem);
         amountToDeposit += amountToRedeem;
         amountToRedeem = 0;
-    }
-
-    event Internal_SetReportedStoppedValidatorCounts(uint32[] stoppedValidatorCounts);
-
-    function _setReportedStoppedValidatorCounts(uint32[] memory stoppedValidatorCounts) internal override {
-        emit Internal_SetReportedStoppedValidatorCounts(stoppedValidatorCounts);
     }
 }
 
