@@ -541,7 +541,6 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
                 uint256 unsollicitedExits = _stoppedValidatorCounts[idx] - operators[idx - 1].requestedExits;
                 vars.totalRequestedExits += unsollicitedExits;
                 operators[idx - 1].requestedExits = _stoppedValidatorCounts[idx];
-                emit RequestedValidatorExits(idx - 1, _stoppedValidatorCounts[idx]);
 
                 // we decrease the demand, considering unsollicited exits as if the exit requests were performed for them
                 vars.currentValidatorExitsDemand -= LibUint256.min(unsollicitedExits, vars.currentValidatorExitsDemand);
@@ -570,7 +569,6 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
                 uint256 unsollicitedExits = _stoppedValidatorCounts[idx] - operators[idx - 1].requestedExits;
                 vars.totalRequestedExits += unsollicitedExits;
                 operators[idx - 1].requestedExits = _stoppedValidatorCounts[idx];
-                emit RequestedValidatorExits(idx - 1, _stoppedValidatorCounts[idx]);
 
                 // we decrease the demand, considering unsollicited exits as if the exit requests were performed for them
                 vars.currentValidatorExitsDemand -= LibUint256.min(unsollicitedExits, vars.currentValidatorExitsDemand);
