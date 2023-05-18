@@ -1568,12 +1568,17 @@ contract RiverV1TestsReport_HEAVY_FUZZING is Test, BytesGenerator {
 
     function _updateAssertions_REGULAR_REPORTING_SLASHING_CONTAINMENT_ACTIVE(
         ReportingFuzzingVariables memory,
-        IOracleManagerV1.ConsensusLayerReport memory,
+        IOracleManagerV1.ConsensusLayerReport memory clr,
         uint256
     ) internal {
+        uint32[] memory stoppedValidatorCounts = clr.stoppedValidatorCountPerOperator;
         for (uint256 idx = 0; idx < operatorsRegistry.getOperatorCount(); ++idx) {
             OperatorsV2.Operator memory op = operatorsRegistry.getOperator(idx);
-            assertEq(op.requestedExits, 0);
+            if (stoppedValidatorCounts.length - 1 > idx) {
+                assertEq(op.requestedExits, stoppedValidatorCounts[idx + 1]);
+            } else {
+                assertEq(op.requestedExits, 0);
+            }
         }
     }
 
