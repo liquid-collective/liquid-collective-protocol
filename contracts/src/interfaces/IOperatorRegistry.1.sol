@@ -174,6 +174,12 @@ interface IOperatorsRegistryV1 {
     /// @notice Thrown when no exit requests can be performed
     error NoExitRequestsToPerform();
 
+    /// @notice The provided stopped validator count array is shrinking
+    error StoppedValidatorCountArrayShrinking();
+
+    /// @notice The provided stopped validator count of an operator is above its funded validator count
+    error StoppedValidatorCountAboveFundedCount(uint256 operatorIndex, uint32 stoppedCount, uint32 fundedCount);
+
     /// @notice Initializes the operators registry
     /// @param _admin Admin in charge of managing operators
     /// @param _river Address of River system

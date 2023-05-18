@@ -217,7 +217,7 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
         external
         onlyRiver
     {
-        return _setStoppedValidatorCounts(_stoppedValidatorCounts, _depositedValidatorCount);
+        _setStoppedValidatorCounts(_stoppedValidatorCounts, _depositedValidatorCount);
     }
 
     /// @inheritdoc IOperatorsRegistryV1
@@ -469,14 +469,12 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
         emit SetCurrentValidatorExitsDemand(_currentValue, _newValue);
     }
 
-    error StoppedValidatorCountArrayShrinking();
-    error StoppedValidatorCountAboveFundedCount(uint256 operatorIndex, uint32 stoppedCount, uint32 fundedCount);
-
+    /// @notice Internal structure to hold variables for the _setStoppedValidatorCounts method
     struct SetStoppedValidatorCountInternalVars {
         uint256 stoppedValidatorCountsLength;
         uint32[] currentStoppedValidatorCounts;
         uint256 currentStoppedValidatorCountsLength;
-        uint32 total;
+        uint32 totalStoppedValidatorCount;
         uint32 count;
         uint256 currentValidatorExitsDemand;
         uint256 cachedCurrentValidatorExitsDemand;
@@ -512,10 +510,10 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
             revert StoppedValidatorCountArrayShrinking();
         }
 
-        vars.total = _stoppedValidatorCounts[0];
+        vars.totalStoppedValidatorCount = _stoppedValidatorCounts[0];
         vars.count = 0;
 
-        // create value to track unsollicited exit count
+        // create value to track unsollicited validator exits (e.g. to cover cases when Node Operator exit a validator without being requested to)
         vars.currentValidatorExitsDemand = CurrentValidatorExitsDemand.get();
         vars.cachedCurrentValidatorExitsDemand = vars.currentValidatorExitsDemand;
         vars.totalRequestedExits = TotalValidatorExitsRequested.get();
@@ -527,20 +525,25 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
             if (_stoppedValidatorCounts[idx] < vars.currentStoppedValidatorCounts[idx]) {
                 revert StoppedValidatorCountsDecreased();
             }
+
+            // we check that the count of stopped validators is not above the funded validator count of an operator
             if (_stoppedValidatorCounts[idx] > operators[idx - 1].funded) {
                 revert StoppedValidatorCountAboveFundedCount(
                     idx - 1, _stoppedValidatorCounts[idx], operators[idx - 1].funded
                 );
             }
+
+            // if the stopped validator count is greater than its requested exit count, we update the requested exit count
             if (_stoppedValidatorCounts[idx] > operators[idx - 1].requestedExits) {
                 emit UpdatedRequestedValidatorExitsUponStopped(
                     idx - 1, operators[idx - 1].requestedExits, _stoppedValidatorCounts[idx]
                 );
                 uint256 unsollicitedExits = _stoppedValidatorCounts[idx] - operators[idx - 1].requestedExits;
                 vars.totalRequestedExits += unsollicitedExits;
-                operators[idx - 1].funded = _stoppedValidatorCounts[idx];
+                operators[idx - 1].requestedExits = _stoppedValidatorCounts[idx];
                 emit RequestedValidatorExits(idx - 1, _stoppedValidatorCounts[idx]);
 
+                // we decrease the demand, considering unsollicited exits as if the exit requests were performed for them
                 vars.currentValidatorExitsDemand -= LibUint256.min(unsollicitedExits, vars.currentValidatorExitsDemand);
             }
 
@@ -552,11 +555,14 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
         }
 
         for (; idx < vars.stoppedValidatorCountsLength;) {
+            // if the previous array was long enough, we check that the values are not decreasing
             if (_stoppedValidatorCounts[idx] > operators[idx - 1].funded) {
                 revert StoppedValidatorCountAboveFundedCount(
                     idx - 1, _stoppedValidatorCounts[idx], operators[idx - 1].funded
                 );
             }
+
+            // if the stopped validator count is greater than its requested exit count, we update the requested exit count
             if (_stoppedValidatorCounts[idx] > operators[idx - 1].requestedExits) {
                 emit UpdatedRequestedValidatorExitsUponStopped(
                     idx - 1, operators[idx - 1].requestedExits, _stoppedValidatorCounts[idx]
@@ -566,6 +572,7 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
                 operators[idx - 1].requestedExits = _stoppedValidatorCounts[idx];
                 emit RequestedValidatorExits(idx - 1, _stoppedValidatorCounts[idx]);
 
+                // we decrease the demand, considering unsollicited exits as if the exit requests were performed for them
                 vars.currentValidatorExitsDemand -= LibUint256.min(unsollicitedExits, vars.currentValidatorExitsDemand);
             }
             // we recompute the total to ensure it's not an invalid sum
@@ -588,11 +595,11 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
         }
 
         // we check that the total is matching the sum of the individual values
-        if (vars.total != vars.count) {
+        if (vars.totalStoppedValidatorCount != vars.count) {
             revert InvalidStoppedValidatorCountsSum();
         }
         // we check that the total is not higher than the current deposited validator count
-        if (vars.total > _depositedValidatorCount) {
+        if (vars.totalStoppedValidatorCount > _depositedValidatorCount) {
             revert StoppedValidatorCountsTooHigh();
         }
         // we set the new stopped validators counts
