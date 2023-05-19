@@ -1,4 +1,4 @@
-name: Tests
+name: Coverage
 
 on:
   push:
@@ -6,9 +6,10 @@ on:
       - "contracts/**"
       - "lib/**"
       - ".github/**"
+      - "codecov.yml"
 
 jobs:
-  run-tests:
+  run-coverage:
     runs-on: ubuntu-latest
 
     steps:
@@ -21,8 +22,16 @@ jobs:
         with:
           version: nightly
 
-      - name: Run tests
-        run: forge test --force -vvv --gas-report --no-match-contract HEAVY_FUZZING
+      - name: Run coverage
+        run: forge coverage --report lcov && mv lcov.info lcov.txt
         env:
           FOUNDRY_FUZZ_RUNS: 1500
           MAINNET_FORK_RPC_URL: ${{ secrets.MAINNET_FORK_RPC_URL }}
+
+      - name: Update lcov report
+        uses: codecov/codecov-action@v3
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          files: ./lcov.txt
+          fail_ci_if_error: true
+          verbose: false

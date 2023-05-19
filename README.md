@@ -3,6 +3,7 @@
 [![tests](https://github.com/liquid-collective/liquid-collective-protocol/actions/workflows/Tests.yaml/badge.svg)](https://github.com/liquid-collective/liquid-collective-protocol/actions/workflows/Tests.yaml)
 [![mythril](https://github.com/liquid-collective/liquid-collective-protocol/actions/workflows/Mythril.yaml/badge.svg)](https://github.com/liquid-collective/liquid-collective-protocol/actions/workflows/Mythril.yaml)
 [![lint](https://github.com/liquid-collective/liquid-collective-protocol/actions/workflows/Lint.yaml/badge.svg)](https://github.com/liquid-collective/liquid-collective-protocol/actions/workflows/Lint.yaml)
+[![codecov](https://codecov.io/gh/liquid-collective/liquid-collective-protocol/branch/master/graph/badge.svg?token=RJYWIW2ADS)](https://codecov.io/gh/liquid-collective/liquid-collective-protocol)
 [![license](https://img.shields.io/badge/license-busl--1.1-blue.svg)](./LICENSE)
 
 This repository contains the Liquid Collective Protocol's smart contracts.
