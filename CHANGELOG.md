@@ -1,5 +1,9 @@
 # Staking Contracts changelog
 
+## v0.6.0 (May 30th 2023)
+
+- [[contracts] add requested exit catchup upon stopped validator count update at oracle report time](https://github.com/liquid-collective/liquid-collective-protocol/pull/211)
+
 ## v0.6.0-rc2-devGoerli & v0.6.0-rc2-goerli (April 27th 2023)
 
 - [[contracts] add recipient argument to RiverV1.requestRedeem](https://github.com/liquid-collective/liquid-collective-protocol/pull/202)
