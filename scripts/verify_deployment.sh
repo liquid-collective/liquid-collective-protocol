@@ -61,6 +61,15 @@ echo "River metadata uri is $(cast call ${RIVER} "getMetadataURI()(string)")"
 
 echo "River withdrawal credentials are $(cast call ${RIVER} "getWithdrawalCredentials()(bytes32)")"
 
+REDEEM_MANAGER_PROXY_FIREWALL="0x$(cast storage ${REDEEM_MANAGER} 0xb53127684a568b3173ae13b9f8a6016e243e63b6e8ee1178d6a717850b5d6103 | cut -c 27-)"
+echo "Redeem Manager Proxy Firewall is ${REDEEM_MANAGER_PROXY_FIREWALL}"
+
+REDEEM_MANAGER_PROXY_FIREWALL_ADMIN=$(cast call ${REDEEM_MANAGER_PROXY_FIREWALL} "getAdmin()(address)")
+echo "Redeem Manager Proxy Firewall Governor is ${REDEEM_MANAGER_PROXY_FIREWALL_ADMIN}"
+
+REDEEM_MANAGER_PROXY_FIREWALL_EXECUTOR=$(cast call ${REDEEM_MANAGER_PROXY_FIREWALL} "executor()(address)")
+echo "Redeem Manager Proxy Firewall Executor is ${REDEEM_MANAGER_PROXY_FIREWALL_EXECUTOR}"
+
 echo "Operators Registry Executor permission to call addOperator = $(cast call ${OPERATORS_REGISTRY_FIREWALL} "executorCanCall(bytes4)(bool)" $(cast keccak "addOperator(string,address)" | head -c 10))"
 echo "Operators Registry Executor permission to call setOperatorAddress = $(cast call ${OPERATORS_REGISTRY_FIREWALL} "executorCanCall(bytes4)(bool)" $(cast keccak "setOperatorAddress(uint256,address)" | head -c 10))"
 echo "Operators Registry Executor permission to call setOperatorName = $(cast call ${OPERATORS_REGISTRY_FIREWALL} "executorCanCall(bytes4)(bool)" $(cast keccak "setOperatorName(uint256,string)" | head -c 10))"
