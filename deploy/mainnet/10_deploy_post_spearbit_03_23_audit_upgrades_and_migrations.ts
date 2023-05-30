@@ -70,14 +70,14 @@ const func: DeployFunction = async function ({ deployments, network, getNamedAcc
     log: true,
   });
 
-  await deployments.deploy("TLCV1_Implementation_0_6_0", {
-    contract: "TLCV1",
+  await deployments.deploy("WithdrawV1_Implementation_0_6_0", {
+    contract: "WithdrawV1",
     from: deployer,
     log: true,
   });
 
-  await deployments.deploy("WithdrawV1_Implementation_0_6_0", {
-    contract: "WithdrawV1",
+  await deployments.deploy("TLCV1_Implementation_0_6_0", {
+    contract: "TLCV1",
     from: deployer,
     log: true,
   });
