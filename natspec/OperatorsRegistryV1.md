@@ -1127,7 +1127,7 @@ The length overflows an uint
 error StoppedValidatorCountAboveFundedCount(uint256 operatorIndex, uint32 stoppedCount, uint32 fundedCount)
 ```
 
-
+The provided stopped validator count of an operator is above its funded validator count
 
 
 
@@ -1145,7 +1145,7 @@ error StoppedValidatorCountAboveFundedCount(uint256 operatorIndex, uint32 stoppe
 error StoppedValidatorCountArrayShrinking()
 ```
 
-
+The provided stopped validator count array is shrinking
 
 
 

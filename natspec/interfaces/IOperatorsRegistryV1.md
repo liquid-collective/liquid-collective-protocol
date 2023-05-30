@@ -907,6 +907,35 @@ The value for the limit is too low
 | limit | uint256 | The new limit provided |
 | fundedKeyCount | uint256 | The operator funded key count |
 
+### StoppedValidatorCountAboveFundedCount
+
+```solidity
+error StoppedValidatorCountAboveFundedCount(uint256 operatorIndex, uint32 stoppedCount, uint32 fundedCount)
+```
+
+The provided stopped validator count of an operator is above its funded validator count
+
+
+
+#### Parameters
+
+| Name | Type | Description |
+|---|---|---|
+| operatorIndex | uint256 | undefined |
+| stoppedCount | uint32 | undefined |
+| fundedCount | uint32 | undefined |
+
+### StoppedValidatorCountArrayShrinking
+
+```solidity
+error StoppedValidatorCountArrayShrinking()
+```
+
+The provided stopped validator count array is shrinking
+
+
+
+
 ### StoppedValidatorCountsDecreased
 
 ```solidity
