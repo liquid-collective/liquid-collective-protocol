@@ -898,7 +898,7 @@ Proposes a new address as admin
 ### requestRedeem
 
 ```solidity
-function requestRedeem(uint256 _lsETHAmount) external nonpayable returns (uint32 _redeemRequestId)
+function requestRedeem(uint256 _lsETHAmount, address _recipient) external nonpayable returns (uint32 _redeemRequestId)
 ```
 
 Performs a redeem request on the redeem manager
@@ -910,6 +910,7 @@ Performs a redeem request on the redeem manager
 | Name | Type | Description |
 |---|---|---|
 | _lsETHAmount | uint256 | The amount of LsETH to redeem |
+| _recipient | address | The address that will own the redeem request |
 
 #### Returns
 

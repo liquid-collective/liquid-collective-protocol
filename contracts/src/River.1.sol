@@ -179,10 +179,10 @@ contract RiverV1 is
     }
 
     /// @inheritdoc IRiverV1
-    function requestRedeem(uint256 _lsETHAmount) external returns (uint32 _redeemRequestId) {
+    function requestRedeem(uint256 _lsETHAmount, address _recipient) external returns (uint32 _redeemRequestId) {
         IAllowlistV1(AllowlistAddress.get()).onlyAllowed(msg.sender, LibAllowlistMasks.REDEEM_MASK);
         _transfer(msg.sender, address(this), _lsETHAmount);
-        return IRedeemManagerV1(RedeemManagerAddress.get()).requestRedeem(_lsETHAmount, msg.sender);
+        return IRedeemManagerV1(RedeemManagerAddress.get()).requestRedeem(_lsETHAmount, _recipient);
     }
 
     /// @inheritdoc IRiverV1
@@ -486,21 +486,23 @@ contract RiverV1 is
         }
     }
 
-    /// @notice Change the stored stopped validator counts for all the operators
-    /// @param _stoppedValidatorCounts The list of stopped validator counts
-    function _setReportedStoppedValidatorCounts(uint32[] memory _stoppedValidatorCounts) internal override {
-        IOperatorsRegistryV1(OperatorsRegistryAddress.get()).reportStoppedValidatorCounts(
-            _stoppedValidatorCounts, DepositedValidatorCount.get()
-        );
-    }
-
     /// @notice Requests exits of validators after possibly rebalancing deposit and redeem balances
     /// @param _exitingBalance The currently exiting funds, soon to be received on the execution layer
     /// @param _depositToRedeemRebalancingAllowed True if rebalancing from deposit to redeem is allowed
     function _requestExitsBasedOnRedeemDemandAfterRebalancings(
         uint256 _exitingBalance,
-        bool _depositToRedeemRebalancingAllowed
+        uint32[] memory _stoppedValidatorCounts,
+        bool _depositToRedeemRebalancingAllowed,
+        bool _slashingContainmentModeEnabled
     ) internal override {
+        IOperatorsRegistryV1(OperatorsRegistryAddress.get()).reportStoppedValidatorCounts(
+            _stoppedValidatorCounts, DepositedValidatorCount.get()
+        );
+
+        if (_slashingContainmentModeEnabled) {
+            return;
+        }
+
         uint256 totalSupply = _totalSupply();
         if (totalSupply > 0) {
             uint256 availableBalanceToRedeem = BalanceToRedeem.get();
