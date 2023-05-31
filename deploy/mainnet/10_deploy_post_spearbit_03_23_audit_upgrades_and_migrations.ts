@@ -34,7 +34,7 @@ const func: DeployFunction = async function ({ deployments, network, getNamedAcc
     proxy: {
       owner: redeemManagerProxyFirewall.address,
       proxyContract: "TUPProxy",
-      implementationName: "RedeemManagerV1_Implementation_0_6_0",
+      implementationName: "RedeemManagerV1_Implementation_1_0_0",
       execute: {
         methodName: "initializeRedeemManagerV1",
         args: [riverDeployment.address],
@@ -46,37 +46,37 @@ const func: DeployFunction = async function ({ deployments, network, getNamedAcc
     throw new Error(`Invalid future redeem manager address computation ${futureRedeemManagerAddress} != ${redeemManagerDeployment.address}`);
   }
 
-  await deployments.deploy("ELFeeRecipientV1_Implementation_0_6_0", {
+  await deployments.deploy("ELFeeRecipientV1_Implementation_1_0_0", {
     contract: "ELFeeRecipientV1",
     from: deployer,
     log: true,
   });
 
-  await deployments.deploy("OperatorsRegistryV1_Implementation_0_6_0", {
+  await deployments.deploy("OperatorsRegistryV1_Implementation_1_0_0", {
     contract: "OperatorsRegistryV1",
     from: deployer,
     log: true,
   });
 
-  await deployments.deploy("OracleV1_Implementation_0_6_0", {
+  await deployments.deploy("OracleV1_Implementation_1_0_0", {
     contract: "OracleV1",
     from: deployer,
     log: true,
   });
 
-  await deployments.deploy("RiverV1_Implementation_0_6_0", {
+  await deployments.deploy("RiverV1_Implementation_1_0_0", {
     contract: "RiverV1",
     from: deployer,
     log: true,
   });
 
-  await deployments.deploy("WithdrawV1_Implementation_0_6_0", {
+  await deployments.deploy("WithdrawV1_Implementation_1_0_0", {
     contract: "WithdrawV1",
     from: deployer,
     log: true,
   });
 
-  await deployments.deploy("TLCV1_Implementation_0_6_0", {
+  await deployments.deploy("TLCV1_Implementation_1_0_0", {
     contract: "TLCV1",
     from: deployer,
     log: true,
@@ -108,13 +108,13 @@ const func: DeployFunction = async function ({ deployments, network, getNamedAcc
 func.skip = async function ({ deployments }: HardhatRuntimeEnvironment): Promise<boolean> {
   logStep(__filename);
   const shouldSkip =
-    (await isDeployed("RedeemManagerV1_Implementation_0_6_0", deployments, __filename)) &&
-    (await isDeployed("ELFeeRecipientV1_Implementation_0_6_0", deployments, __filename)) &&
-    (await isDeployed("OperatorsRegistryV1_Implementation_0_6_0", deployments, __filename)) &&
-    (await isDeployed("OracleV1_Implementation_0_6_0", deployments, __filename)) &&
-    (await isDeployed("RiverV1_Implementation_0_6_0", deployments, __filename)) &&
-    (await isDeployed("WithdrawV1_Implementation_0_6_0", deployments, __filename)) &&
-    (await isDeployed("TLCV1_Implementation_0_6_0", deployments, __filename));
+    (await isDeployed("RedeemManagerV1_Implementation_1_0_0", deployments, __filename)) &&
+    (await isDeployed("ELFeeRecipientV1_Implementation_1_0_0", deployments, __filename)) &&
+    (await isDeployed("OperatorsRegistryV1_Implementation_1_0_0", deployments, __filename)) &&
+    (await isDeployed("OracleV1_Implementation_1_0_0", deployments, __filename)) &&
+    (await isDeployed("RiverV1_Implementation_1_0_0", deployments, __filename)) &&
+    (await isDeployed("WithdrawV1_Implementation_1_0_0", deployments, __filename)) &&
+    (await isDeployed("TLCV1_Implementation_1_0_0", deployments, __filename));
   if (shouldSkip) {
     console.log("Skipped");
     logStepEnd(__filename);
