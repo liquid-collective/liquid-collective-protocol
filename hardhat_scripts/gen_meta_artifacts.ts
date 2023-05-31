@@ -26,7 +26,7 @@ const merge = (a: any, afs: string[], b: any, bfs: string[]): any => {
 
 const mergeImplemsAndProxy = (imps: any[], impNames: string[], proxy: any): any => ({
   address: proxy.address,
-  abi: [...imps[imps.length - 1].abi, ...proxy.abi],
+  abi: [...imps[imps.length - 1].abi, ...proxy.abi].filter((a: any) => a.type !== "constructor"),
   transactionHash: proxy.transactionHash,
   receipt: proxy.receipt,
   args: proxy.args,
@@ -209,6 +209,7 @@ const config: AllNetsConfigs = {
       implementations: [
         "ELFeeRecipientV1_Implementation_0_2_2.json",
         "ELFeeRecipientV1_Implementation_0_6_0_rc2.json",
+        "ELFeeRecipientV1_Implementation_1_0_0.json",
       ],
       proxy: "ELFeeRecipient_Proxy.json"
     },
@@ -218,6 +219,7 @@ const config: AllNetsConfigs = {
         "OperatorsRegistryV1_Implementation_0_2_2.json",
         "OperatorsRegistryV1_Implementation_0_4_0.json",
         "OperatorsRegistryV1_Implementation_0_6_0_rc2.json",
+        "OperatorsRegistryV1_Implementation_1_0_0.json",
       ],
       proxy: "OperatorsRegistry_Proxy.json"
     },
@@ -227,6 +229,7 @@ const config: AllNetsConfigs = {
         "OracleV1_Implementation_0_2_2.json",
         "OracleV1_Implementation_0_4_0.json",
         "OracleV1_Implementation_0_6_0_rc2.json",
+        "OracleV1_Implementation_1_0_0.json",
       ],
       proxy: "Oracle_Proxy.json"
     },
@@ -234,6 +237,7 @@ const config: AllNetsConfigs = {
       target: "RedeemManager.json",
       implementations: [
         "RedeemManagerV1_Implementation_0_6_0_rc2.json",
+        "RedeemManagerV1_Implementation_1_0_0.json",
       ],
       proxy: "RedeemManager_Proxy.json"
     },
@@ -244,6 +248,7 @@ const config: AllNetsConfigs = {
         "RiverV1_Implementation_0_4_0.json",
         "RiverV1_Implementation_0_5_0.json",
         "RiverV1_Implementation_0_6_0_rc2.json",
+        "RiverV1_Implementation_1_0_0.json",
       ],
       proxy: "River_Proxy.json"
     },
@@ -253,6 +258,7 @@ const config: AllNetsConfigs = {
         "TLCV1_Implementation_0_4_0.json",
         "TLCV1_Implementation_0_5_0.json",
         "TLCV1_Implementation_0_6_0_rc2.json",
+        "TLCV1_Implementation_1_0_0.json",
       ],
       proxy: "TLC_Proxy.json"
     },
@@ -261,6 +267,7 @@ const config: AllNetsConfigs = {
       implementations: [
         "WithdrawV1_Implementation_0_2_2.json",
         "WithdrawV1_Implementation_0_6_0_rc2.json",
+        "WithdrawV1_Implementation_1_0_0.json",
       ],
       proxy: "Withdraw_Proxy.json"
     },
