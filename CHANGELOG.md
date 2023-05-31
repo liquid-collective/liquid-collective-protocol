@@ -1,6 +1,6 @@
 # Staking Contracts changelog
 
-## v0.6.0 (May 30th 2023)
+## v1.0.0 (May 30th 2023)
 
 - [[contracts] add requested exit catchup upon stopped validator count update at oracle report time](https://github.com/liquid-collective/liquid-collective-protocol/pull/211)
 - [[contracts] deploy 0.6.0 implementation and contracts to mainnet](https://github.com/liquid-collective/liquid-collective-protocol/pull/215)
