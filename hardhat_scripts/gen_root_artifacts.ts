@@ -124,7 +124,7 @@ async function main() {
   if (network.name === "hardhat") {
     throw new Error("Cannot generate artifacts for hardhat network");
   }
-  const artifactName = join(process.cwd(),`deployment.${network.name}.json`);
+  const artifactName = join(process.cwd(), `deployment.${network.name}.json`);
   hre.run("export", { export: artifactName });
   await new Promise((resolve) => setTimeout(resolve, 5000));
   const artifactContent = require(artifactName);

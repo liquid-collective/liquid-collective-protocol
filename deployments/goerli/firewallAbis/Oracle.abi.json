@@ -299,6 +299,17 @@
         "inputs": [
             {
                 "internalType": "uint256",
+                "name": "epoch",
+                "type": "uint256"
+            }
+        ],
+        "name": "InvalidEpoch",
+        "type": "error"
+    },
+    {
+        "inputs": [
+            {
+                "internalType": "uint256",
                 "name": "version",
                 "type": "uint256"
             },
@@ -320,68 +331,16 @@
         "inputs": [
             {
                 "internalType": "uint256",
-                "name": "providedEpochId",
+                "name": "index",
                 "type": "uint256"
             },
             {
                 "internalType": "uint256",
-                "name": "expectedFrameFirstEpochId",
+                "name": "length",
                 "type": "uint256"
             }
         ],
-        "name": "NotFrameFirstEpochId",
-        "type": "error"
-    },
-    {
-        "inputs": [
-            {
-                "internalType": "uint256",
-                "name": "prevTotalEth",
-                "type": "uint256"
-            },
-            {
-                "internalType": "uint256",
-                "name": "postTotalEth",
-                "type": "uint256"
-            },
-            {
-                "internalType": "uint256",
-                "name": "timeElapsed",
-                "type": "uint256"
-            },
-            {
-                "internalType": "uint256",
-                "name": "relativeLowerBound",
-                "type": "uint256"
-            }
-        ],
-        "name": "TotalValidatorBalanceDecreaseOutOfBound",
-        "type": "error"
-    },
-    {
-        "inputs": [
-            {
-                "internalType": "uint256",
-                "name": "prevTotalEth",
-                "type": "uint256"
-            },
-            {
-                "internalType": "uint256",
-                "name": "postTotalEth",
-                "type": "uint256"
-            },
-            {
-                "internalType": "uint256",
-                "name": "timeElapsed",
-                "type": "uint256"
-            },
-            {
-                "internalType": "uint256",
-                "name": "annualAprUpperBound",
-                "type": "uint256"
-            }
-        ],
-        "name": "TotalValidatorBalanceIncreaseOutOfBound",
+        "name": "ReportIndexOutOfBounds",
         "type": "error"
     },
     {
@@ -410,46 +369,8 @@
     },
     {
         "anonymous": false,
-        "inputs": [
-            {
-                "indexed": false,
-                "internalType": "uint256",
-                "name": "epochId",
-                "type": "uint256"
-            },
-            {
-                "indexed": false,
-                "internalType": "uint128",
-                "name": "newCLBalance",
-                "type": "uint128"
-            },
-            {
-                "indexed": false,
-                "internalType": "uint32",
-                "name": "newCLValidatorCount",
-                "type": "uint32"
-            },
-            {
-                "indexed": false,
-                "internalType": "address",
-                "name": "oracleMember",
-                "type": "address"
-            }
-        ],
-        "name": "CLReported",
-        "type": "event"
-    },
-    {
-        "anonymous": false,
-        "inputs": [
-            {
-                "indexed": false,
-                "internalType": "uint256",
-                "name": "epochId",
-                "type": "uint256"
-            }
-        ],
-        "name": "ExpectedEpochIdUpdated",
+        "inputs": [],
+        "name": "ClearedReporting",
         "type": "event"
     },
     {
@@ -475,31 +396,13 @@
         "anonymous": false,
         "inputs": [
             {
-                "indexed": false,
-                "internalType": "uint256",
-                "name": "postTotalEth",
-                "type": "uint256"
-            },
-            {
-                "indexed": false,
-                "internalType": "uint256",
-                "name": "prevTotalEth",
-                "type": "uint256"
-            },
-            {
-                "indexed": false,
-                "internalType": "uint256",
-                "name": "timeElapsed",
-                "type": "uint256"
-            },
-            {
-                "indexed": false,
-                "internalType": "uint256",
-                "name": "totalShares",
-                "type": "uint256"
+                "indexed": true,
+                "internalType": "address",
+                "name": "member",
+                "type": "address"
             }
         ],
-        "name": "PostTotalShares",
+        "name": "RemoveMember",
         "type": "event"
     },
     {
@@ -510,9 +413,80 @@
                 "internalType": "address",
                 "name": "member",
                 "type": "address"
+            },
+            {
+                "indexed": true,
+                "internalType": "bytes32",
+                "name": "variant",
+                "type": "bytes32"
+            },
+            {
+                "components": [
+                    {
+                        "internalType": "uint256",
+                        "name": "epoch",
+                        "type": "uint256"
+                    },
+                    {
+                        "internalType": "uint256",
+                        "name": "validatorsBalance",
+                        "type": "uint256"
+                    },
+                    {
+                        "internalType": "uint256",
+                        "name": "validatorsSkimmedBalance",
+                        "type": "uint256"
+                    },
+                    {
+                        "internalType": "uint256",
+                        "name": "validatorsExitedBalance",
+                        "type": "uint256"
+                    },
+                    {
+                        "internalType": "uint256",
+                        "name": "validatorsExitingBalance",
+                        "type": "uint256"
+                    },
+                    {
+                        "internalType": "uint32",
+                        "name": "validatorsCount",
+                        "type": "uint32"
+                    },
+                    {
+                        "internalType": "uint32[]",
+                        "name": "stoppedValidatorCountPerOperator",
+                        "type": "uint32[]"
+                    },
+                    {
+                        "internalType": "bool",
+                        "name": "rebalanceDepositToRedeemMode",
+                        "type": "bool"
+                    },
+                    {
+                        "internalType": "bool",
+                        "name": "slashingContainmentMode",
+                        "type": "bool"
+                    }
+                ],
+                "indexed": false,
+                "internalType": "struct IOracleManagerV1.ConsensusLayerReport",
+                "name": "report",
+                "type": "tuple"
+            },
+            {
+                "indexed": false,
+                "internalType": "uint256",
+                "name": "voteCount",
+                "type": "uint256"
+            },
+            {
+                "indexed": false,
+                "internalType": "uint256",
+                "name": "quorum",
+                "type": "uint256"
             }
         ],
-        "name": "RemoveMember",
+        "name": "ReportedConsensusLayerData",
         "type": "event"
     },
     {
@@ -545,6 +519,19 @@
             }
         ],
         "name": "SetBounds",
+        "type": "event"
+    },
+    {
+        "anonymous": false,
+        "inputs": [
+            {
+                "indexed": false,
+                "internalType": "uint256",
+                "name": "lastReportedEpoch",
+                "type": "uint256"
+            }
+        ],
+        "name": "SetLastReportedEpoch",
         "type": "event"
     },
     {
@@ -665,7 +652,7 @@
         "inputs": [
             {
                 "internalType": "address",
-                "name": "_river",
+                "name": "_riverAddress",
                 "type": "address"
             },
             {
@@ -710,6 +697,13 @@
         "type": "function"
     },
     {
+        "inputs": [],
+        "name": "initOracleV1_1",
+        "outputs": [],
+        "stateMutability": "nonpayable",
+        "type": "function"
+    },
+    {
         "inputs": [
             {
                 "internalType": "address",
@@ -743,50 +737,59 @@
     {
         "inputs": [
             {
-                "internalType": "uint256",
-                "name": "_epochId",
-                "type": "uint256"
-            },
-            {
-                "internalType": "uint64",
-                "name": "_clValidatorsBalance",
-                "type": "uint64"
-            },
-            {
-                "internalType": "uint32",
-                "name": "_clValidatorCount",
-                "type": "uint32"
+                "components": [
+                    {
+                        "internalType": "uint256",
+                        "name": "epoch",
+                        "type": "uint256"
+                    },
+                    {
+                        "internalType": "uint256",
+                        "name": "validatorsBalance",
+                        "type": "uint256"
+                    },
+                    {
+                        "internalType": "uint256",
+                        "name": "validatorsSkimmedBalance",
+                        "type": "uint256"
+                    },
+                    {
+                        "internalType": "uint256",
+                        "name": "validatorsExitedBalance",
+                        "type": "uint256"
+                    },
+                    {
+                        "internalType": "uint256",
+                        "name": "validatorsExitingBalance",
+                        "type": "uint256"
+                    },
+                    {
+                        "internalType": "uint32",
+                        "name": "validatorsCount",
+                        "type": "uint32"
+                    },
+                    {
+                        "internalType": "uint32[]",
+                        "name": "stoppedValidatorCountPerOperator",
+                        "type": "uint32[]"
+                    },
+                    {
+                        "internalType": "bool",
+                        "name": "rebalanceDepositToRedeemMode",
+                        "type": "bool"
+                    },
+                    {
+                        "internalType": "bool",
+                        "name": "slashingContainmentMode",
+                        "type": "bool"
+                    }
+                ],
+                "internalType": "struct IOracleManagerV1.ConsensusLayerReport",
+                "name": "_report",
+                "type": "tuple"
             }
         ],
         "name": "reportConsensusLayerData",
-        "outputs": [],
-        "stateMutability": "nonpayable",
-        "type": "function"
-    },
-    {
-        "inputs": [
-            {
-                "internalType": "uint64",
-                "name": "_epochsPerFrame",
-                "type": "uint64"
-            },
-            {
-                "internalType": "uint64",
-                "name": "_slotsPerEpoch",
-                "type": "uint64"
-            },
-            {
-                "internalType": "uint64",
-                "name": "_secondsPerSlot",
-                "type": "uint64"
-            },
-            {
-                "internalType": "uint64",
-                "name": "_genesisTime",
-                "type": "uint64"
-            }
-        ],
-        "name": "setCLSpec",
         "outputs": [],
         "stateMutability": "nonpayable",
         "type": "function"
@@ -821,45 +824,6 @@
         "outputs": [],
         "stateMutability": "nonpayable",
         "type": "function"
-    },
-    {
-        "inputs": [
-            {
-                "internalType": "uint256",
-                "name": "_annualAprUpperBound",
-                "type": "uint256"
-            },
-            {
-                "internalType": "uint256",
-                "name": "_relativeLowerBound",
-                "type": "uint256"
-            }
-        ],
-        "name": "setReportBounds",
-        "outputs": [],
-        "stateMutability": "nonpayable",
-        "type": "function"
-    },
-    {
-        "inputs": [
-            {
-                "internalType": "address",
-                "name": "_logic",
-                "type": "address"
-            },
-            {
-                "internalType": "address",
-                "name": "__admin",
-                "type": "address"
-            },
-            {
-                "internalType": "bytes",
-                "name": "_data",
-                "type": "bytes"
-            }
-        ],
-        "stateMutability": "payable",
-        "type": "constructor"
     },
     {
         "inputs": [],

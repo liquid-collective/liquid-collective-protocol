@@ -315,8 +315,51 @@
         "type": "error"
     },
     {
+        "inputs": [
+            {
+                "internalType": "uint256",
+                "name": "currentValidatorsExitedBalance",
+                "type": "uint256"
+            },
+            {
+                "internalType": "uint256",
+                "name": "newValidatorsExitedBalance",
+                "type": "uint256"
+            }
+        ],
+        "name": "InvalidDecreasingValidatorsExitedBalance",
+        "type": "error"
+    },
+    {
+        "inputs": [
+            {
+                "internalType": "uint256",
+                "name": "currentValidatorsSkimmedBalance",
+                "type": "uint256"
+            },
+            {
+                "internalType": "uint256",
+                "name": "newValidatorsSkimmedBalance",
+                "type": "uint256"
+            }
+        ],
+        "name": "InvalidDecreasingValidatorsSkimmedBalance",
+        "type": "error"
+    },
+    {
         "inputs": [],
         "name": "InvalidEmptyString",
+        "type": "error"
+    },
+    {
+        "inputs": [
+            {
+                "internalType": "uint256",
+                "name": "epoch",
+                "type": "uint256"
+            }
+        ],
+        "name": "InvalidEpoch",
         "type": "error"
     },
     {
@@ -346,6 +389,22 @@
         "type": "error"
     },
     {
+        "inputs": [
+            {
+                "internalType": "uint256",
+                "name": "requested",
+                "type": "uint256"
+            },
+            {
+                "internalType": "uint256",
+                "name": "received",
+                "type": "uint256"
+            }
+        ],
+        "name": "InvalidPulledClFundsAmount",
+        "type": "error"
+    },
+    {
         "inputs": [],
         "name": "InvalidSignatureCount",
         "type": "error"
@@ -360,6 +419,11 @@
             {
                 "internalType": "uint256",
                 "name": "depositedValidatorCount",
+                "type": "uint256"
+            },
+            {
+                "internalType": "uint256",
+                "name": "lastReportedValidatorCount",
                 "type": "uint256"
             }
         ],
@@ -399,6 +463,58 @@
     {
         "inputs": [],
         "name": "SliceOverflow",
+        "type": "error"
+    },
+    {
+        "inputs": [
+            {
+                "internalType": "uint256",
+                "name": "prevTotalEthIncludingExited",
+                "type": "uint256"
+            },
+            {
+                "internalType": "uint256",
+                "name": "postTotalEthIncludingExited",
+                "type": "uint256"
+            },
+            {
+                "internalType": "uint256",
+                "name": "timeElapsed",
+                "type": "uint256"
+            },
+            {
+                "internalType": "uint256",
+                "name": "relativeLowerBound",
+                "type": "uint256"
+            }
+        ],
+        "name": "TotalValidatorBalanceDecreaseOutOfBound",
+        "type": "error"
+    },
+    {
+        "inputs": [
+            {
+                "internalType": "uint256",
+                "name": "prevTotalEthIncludingExited",
+                "type": "uint256"
+            },
+            {
+                "internalType": "uint256",
+                "name": "postTotalEthIncludingExited",
+                "type": "uint256"
+            },
+            {
+                "internalType": "uint256",
+                "name": "timeElapsed",
+                "type": "uint256"
+            },
+            {
+                "internalType": "uint256",
+                "name": "annualAprUpperBound",
+                "type": "uint256"
+            }
+        ],
+        "name": "TotalValidatorBalanceIncreaseOutOfBound",
         "type": "error"
     },
     {
@@ -488,19 +604,6 @@
         "inputs": [
             {
                 "indexed": false,
-                "internalType": "bytes",
-                "name": "publicKey",
-                "type": "bytes"
-            }
-        ],
-        "name": "FundedValidatorKey",
-        "type": "event"
-    },
-    {
-        "anonymous": false,
-        "inputs": [
-            {
-                "indexed": false,
                 "internalType": "uint256",
                 "name": "version",
                 "type": "uint256"
@@ -513,6 +616,113 @@
             }
         ],
         "name": "Initialize",
+        "type": "event"
+    },
+    {
+        "anonymous": false,
+        "inputs": [
+            {
+                "components": [
+                    {
+                        "internalType": "uint256",
+                        "name": "epoch",
+                        "type": "uint256"
+                    },
+                    {
+                        "internalType": "uint256",
+                        "name": "validatorsBalance",
+                        "type": "uint256"
+                    },
+                    {
+                        "internalType": "uint256",
+                        "name": "validatorsSkimmedBalance",
+                        "type": "uint256"
+                    },
+                    {
+                        "internalType": "uint256",
+                        "name": "validatorsExitedBalance",
+                        "type": "uint256"
+                    },
+                    {
+                        "internalType": "uint256",
+                        "name": "validatorsExitingBalance",
+                        "type": "uint256"
+                    },
+                    {
+                        "internalType": "uint32",
+                        "name": "validatorsCount",
+                        "type": "uint32"
+                    },
+                    {
+                        "internalType": "uint32[]",
+                        "name": "stoppedValidatorCountPerOperator",
+                        "type": "uint32[]"
+                    },
+                    {
+                        "internalType": "bool",
+                        "name": "rebalanceDepositToRedeemMode",
+                        "type": "bool"
+                    },
+                    {
+                        "internalType": "bool",
+                        "name": "slashingContainmentMode",
+                        "type": "bool"
+                    }
+                ],
+                "indexed": false,
+                "internalType": "struct IOracleManagerV1.ConsensusLayerReport",
+                "name": "report",
+                "type": "tuple"
+            },
+            {
+                "components": [
+                    {
+                        "internalType": "uint256",
+                        "name": "rewards",
+                        "type": "uint256"
+                    },
+                    {
+                        "internalType": "uint256",
+                        "name": "pulledELFees",
+                        "type": "uint256"
+                    },
+                    {
+                        "internalType": "uint256",
+                        "name": "pulledRedeemManagerExceedingEthBuffer",
+                        "type": "uint256"
+                    },
+                    {
+                        "internalType": "uint256",
+                        "name": "pulledCoverageFunds",
+                        "type": "uint256"
+                    }
+                ],
+                "indexed": false,
+                "internalType": "struct IOracleManagerV1.ConsensusLayerDataReportingTrace",
+                "name": "trace",
+                "type": "tuple"
+            }
+        ],
+        "name": "ProcessedConsensusLayerReport",
+        "type": "event"
+    },
+    {
+        "anonymous": false,
+        "inputs": [
+            {
+                "indexed": false,
+                "internalType": "uint256",
+                "name": "pulledSkimmedEthAmount",
+                "type": "uint256"
+            },
+            {
+                "indexed": false,
+                "internalType": "uint256",
+                "name": "pullExitedEthAmount",
+                "type": "uint256"
+            }
+        ],
+        "name": "PulledCLFunds",
         "type": "event"
     },
     {
@@ -539,6 +749,44 @@
             }
         ],
         "name": "PulledELFees",
+        "type": "event"
+    },
+    {
+        "anonymous": false,
+        "inputs": [
+            {
+                "indexed": false,
+                "internalType": "uint256",
+                "name": "amount",
+                "type": "uint256"
+            }
+        ],
+        "name": "PulledRedeemManagerExceedingEth",
+        "type": "event"
+    },
+    {
+        "anonymous": false,
+        "inputs": [
+            {
+                "indexed": false,
+                "internalType": "uint256",
+                "name": "redeemManagerDemand",
+                "type": "uint256"
+            },
+            {
+                "indexed": false,
+                "internalType": "uint256",
+                "name": "suppliedRedeemManagerDemand",
+                "type": "uint256"
+            },
+            {
+                "indexed": false,
+                "internalType": "uint256",
+                "name": "suppliedRedeemManagerDemandInEth",
+                "type": "uint256"
+            }
+        ],
+        "name": "ReportedRedeemManager",
         "type": "event"
     },
     {
@@ -608,6 +856,82 @@
         "anonymous": false,
         "inputs": [
             {
+                "indexed": false,
+                "internalType": "uint256",
+                "name": "oldAmount",
+                "type": "uint256"
+            },
+            {
+                "indexed": false,
+                "internalType": "uint256",
+                "name": "newAmount",
+                "type": "uint256"
+            }
+        ],
+        "name": "SetBalanceCommittedToDeposit",
+        "type": "event"
+    },
+    {
+        "anonymous": false,
+        "inputs": [
+            {
+                "indexed": false,
+                "internalType": "uint256",
+                "name": "oldAmount",
+                "type": "uint256"
+            },
+            {
+                "indexed": false,
+                "internalType": "uint256",
+                "name": "newAmount",
+                "type": "uint256"
+            }
+        ],
+        "name": "SetBalanceToDeposit",
+        "type": "event"
+    },
+    {
+        "anonymous": false,
+        "inputs": [
+            {
+                "indexed": false,
+                "internalType": "uint256",
+                "name": "oldAmount",
+                "type": "uint256"
+            },
+            {
+                "indexed": false,
+                "internalType": "uint256",
+                "name": "newAmount",
+                "type": "uint256"
+            }
+        ],
+        "name": "SetBalanceToRedeem",
+        "type": "event"
+    },
+    {
+        "anonymous": false,
+        "inputs": [
+            {
+                "indexed": false,
+                "internalType": "uint256",
+                "name": "annualAprUpperBound",
+                "type": "uint256"
+            },
+            {
+                "indexed": false,
+                "internalType": "uint256",
+                "name": "relativeLowerBound",
+                "type": "uint256"
+            }
+        ],
+        "name": "SetBounds",
+        "type": "event"
+    },
+    {
+        "anonymous": false,
+        "inputs": [
+            {
                 "indexed": true,
                 "internalType": "address",
                 "name": "collector",
@@ -647,6 +971,25 @@
         "anonymous": false,
         "inputs": [
             {
+                "indexed": false,
+                "internalType": "uint256",
+                "name": "oldDepositedValidatorCount",
+                "type": "uint256"
+            },
+            {
+                "indexed": false,
+                "internalType": "uint256",
+                "name": "newDepositedValidatorCount",
+                "type": "uint256"
+            }
+        ],
+        "name": "SetDepositedValidatorCount",
+        "type": "event"
+    },
+    {
+        "anonymous": false,
+        "inputs": [
+            {
                 "indexed": true,
                 "internalType": "address",
                 "name": "elFeeRecipient",
@@ -667,6 +1010,25 @@
             }
         ],
         "name": "SetGlobalFee",
+        "type": "event"
+    },
+    {
+        "anonymous": false,
+        "inputs": [
+            {
+                "indexed": false,
+                "internalType": "uint256",
+                "name": "minNetAmount",
+                "type": "uint256"
+            },
+            {
+                "indexed": false,
+                "internalType": "uint256",
+                "name": "maxRelativeAmount",
+                "type": "uint256"
+            }
+        ],
+        "name": "SetMaxDailyCommittableAmounts",
         "type": "event"
     },
     {
@@ -719,6 +1081,69 @@
             }
         ],
         "name": "SetPendingAdmin",
+        "type": "event"
+    },
+    {
+        "anonymous": false,
+        "inputs": [
+            {
+                "indexed": false,
+                "internalType": "address",
+                "name": "redeemManager",
+                "type": "address"
+            }
+        ],
+        "name": "SetRedeemManager",
+        "type": "event"
+    },
+    {
+        "anonymous": false,
+        "inputs": [
+            {
+                "indexed": false,
+                "internalType": "uint64",
+                "name": "epochsPerFrame",
+                "type": "uint64"
+            },
+            {
+                "indexed": false,
+                "internalType": "uint64",
+                "name": "slotsPerEpoch",
+                "type": "uint64"
+            },
+            {
+                "indexed": false,
+                "internalType": "uint64",
+                "name": "secondsPerSlot",
+                "type": "uint64"
+            },
+            {
+                "indexed": false,
+                "internalType": "uint64",
+                "name": "genesisTime",
+                "type": "uint64"
+            },
+            {
+                "indexed": false,
+                "internalType": "uint64",
+                "name": "epochsToAssumedFinality",
+                "type": "uint64"
+            }
+        ],
+        "name": "SetSpec",
+        "type": "event"
+    },
+    {
+        "anonymous": false,
+        "inputs": [
+            {
+                "indexed": false,
+                "internalType": "uint256",
+                "name": "totalSupply",
+                "type": "uint256"
+            }
+        ],
+        "name": "SetTotalSupply",
         "type": "event"
     },
     {
@@ -814,6 +1239,30 @@
                 "internalType": "bool",
                 "name": "",
                 "type": "bool"
+            }
+        ],
+        "stateMutability": "nonpayable",
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {
+                "internalType": "uint32[]",
+                "name": "_redeemRequestIds",
+                "type": "uint32[]"
+            },
+            {
+                "internalType": "uint32[]",
+                "name": "_withdrawalEventIds",
+                "type": "uint32[]"
+            }
+        ],
+        "name": "claimRedeemRequests",
+        "outputs": [
+            {
+                "internalType": "uint8[]",
+                "name": "claimStatuses",
+                "type": "uint8[]"
             }
         ],
         "stateMutability": "nonpayable",
@@ -957,6 +1406,64 @@
         "inputs": [
             {
                 "internalType": "address",
+                "name": "_redeemManager",
+                "type": "address"
+            },
+            {
+                "internalType": "uint64",
+                "name": "_epochsPerFrame",
+                "type": "uint64"
+            },
+            {
+                "internalType": "uint64",
+                "name": "_slotsPerEpoch",
+                "type": "uint64"
+            },
+            {
+                "internalType": "uint64",
+                "name": "_secondsPerSlot",
+                "type": "uint64"
+            },
+            {
+                "internalType": "uint64",
+                "name": "_genesisTime",
+                "type": "uint64"
+            },
+            {
+                "internalType": "uint64",
+                "name": "_epochsToAssumedFinality",
+                "type": "uint64"
+            },
+            {
+                "internalType": "uint256",
+                "name": "_annualAprUpperBound",
+                "type": "uint256"
+            },
+            {
+                "internalType": "uint256",
+                "name": "_relativeLowerBound",
+                "type": "uint256"
+            },
+            {
+                "internalType": "uint128",
+                "name": "_minDailyNetCommittableAmount_",
+                "type": "uint128"
+            },
+            {
+                "internalType": "uint128",
+                "name": "_maxDailyRelativeCommittableAmount_",
+                "type": "uint128"
+            }
+        ],
+        "name": "initRiverV1_1",
+        "outputs": [],
+        "stateMutability": "nonpayable",
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {
+                "internalType": "address",
                 "name": "_newAdmin",
                 "type": "address"
             }
@@ -964,6 +1471,37 @@
         "name": "proposeAdmin",
         "outputs": [],
         "stateMutability": "nonpayable",
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {
+                "internalType": "uint256",
+                "name": "_lsETHAmount",
+                "type": "uint256"
+            },
+            {
+                "internalType": "address",
+                "name": "_recipient",
+                "type": "address"
+            }
+        ],
+        "name": "requestRedeem",
+        "outputs": [
+            {
+                "internalType": "uint32",
+                "name": "_redeemRequestId",
+                "type": "uint32"
+            }
+        ],
+        "stateMutability": "nonpayable",
+        "type": "function"
+    },
+    {
+        "inputs": [],
+        "name": "sendCLFunds",
+        "outputs": [],
+        "stateMutability": "payable",
         "type": "function"
     },
     {
@@ -976,6 +1514,13 @@
     {
         "inputs": [],
         "name": "sendELFees",
+        "outputs": [],
+        "stateMutability": "payable",
+        "type": "function"
+    },
+    {
+        "inputs": [],
+        "name": "sendRedeemManagerExceedingFunds",
         "outputs": [],
         "stateMutability": "payable",
         "type": "function"
@@ -996,6 +1541,46 @@
     {
         "inputs": [
             {
+                "components": [
+                    {
+                        "internalType": "uint64",
+                        "name": "epochsPerFrame",
+                        "type": "uint64"
+                    },
+                    {
+                        "internalType": "uint64",
+                        "name": "slotsPerEpoch",
+                        "type": "uint64"
+                    },
+                    {
+                        "internalType": "uint64",
+                        "name": "secondsPerSlot",
+                        "type": "uint64"
+                    },
+                    {
+                        "internalType": "uint64",
+                        "name": "genesisTime",
+                        "type": "uint64"
+                    },
+                    {
+                        "internalType": "uint64",
+                        "name": "epochsToAssumedFinality",
+                        "type": "uint64"
+                    }
+                ],
+                "internalType": "struct CLSpec.CLSpecStruct",
+                "name": "_newValue",
+                "type": "tuple"
+            }
+        ],
+        "name": "setCLSpec",
+        "outputs": [],
+        "stateMutability": "nonpayable",
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {
                 "internalType": "address",
                 "name": "_newCollector",
                 "type": "address"
@@ -1009,24 +1594,56 @@
     {
         "inputs": [
             {
-                "internalType": "uint256",
-                "name": "_validatorCount",
-                "type": "uint256"
-            },
-            {
-                "internalType": "uint256",
-                "name": "_validatorTotalBalance",
-                "type": "uint256"
-            },
-            {
-                "internalType": "bytes32",
-                "name": "_roundId",
-                "type": "bytes32"
-            },
-            {
-                "internalType": "uint256",
-                "name": "_maxIncrease",
-                "type": "uint256"
+                "components": [
+                    {
+                        "internalType": "uint256",
+                        "name": "epoch",
+                        "type": "uint256"
+                    },
+                    {
+                        "internalType": "uint256",
+                        "name": "validatorsBalance",
+                        "type": "uint256"
+                    },
+                    {
+                        "internalType": "uint256",
+                        "name": "validatorsSkimmedBalance",
+                        "type": "uint256"
+                    },
+                    {
+                        "internalType": "uint256",
+                        "name": "validatorsExitedBalance",
+                        "type": "uint256"
+                    },
+                    {
+                        "internalType": "uint256",
+                        "name": "validatorsExitingBalance",
+                        "type": "uint256"
+                    },
+                    {
+                        "internalType": "uint32",
+                        "name": "validatorsCount",
+                        "type": "uint32"
+                    },
+                    {
+                        "internalType": "uint32[]",
+                        "name": "stoppedValidatorCountPerOperator",
+                        "type": "uint32[]"
+                    },
+                    {
+                        "internalType": "bool",
+                        "name": "rebalanceDepositToRedeemMode",
+                        "type": "bool"
+                    },
+                    {
+                        "internalType": "bool",
+                        "name": "slashingContainmentMode",
+                        "type": "bool"
+                    }
+                ],
+                "internalType": "struct IOracleManagerV1.ConsensusLayerReport",
+                "name": "_report",
+                "type": "tuple"
             }
         ],
         "name": "setConsensusLayerData",
@@ -1050,6 +1667,31 @@
     {
         "inputs": [
             {
+                "components": [
+                    {
+                        "internalType": "uint128",
+                        "name": "minDailyNetCommittableAmount",
+                        "type": "uint128"
+                    },
+                    {
+                        "internalType": "uint128",
+                        "name": "maxDailyRelativeCommittableAmount",
+                        "type": "uint128"
+                    }
+                ],
+                "internalType": "struct DailyCommittableLimits.DailyCommittableLimitsStruct",
+                "name": "_dcl",
+                "type": "tuple"
+            }
+        ],
+        "name": "setDailyCommittableLimits",
+        "outputs": [],
+        "stateMutability": "nonpayable",
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {
                 "internalType": "address",
                 "name": "_newELFeeRecipient",
                 "type": "address"
@@ -1064,7 +1706,7 @@
         "inputs": [
             {
                 "internalType": "uint256",
-                "name": "newFee",
+                "name": "_newFee",
                 "type": "uint256"
             }
         ],
@@ -1095,6 +1737,31 @@
             }
         ],
         "name": "setOracle",
+        "outputs": [],
+        "stateMutability": "nonpayable",
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {
+                "components": [
+                    {
+                        "internalType": "uint256",
+                        "name": "annualAprUpperBound",
+                        "type": "uint256"
+                    },
+                    {
+                        "internalType": "uint256",
+                        "name": "relativeLowerBound",
+                        "type": "uint256"
+                    }
+                ],
+                "internalType": "struct ReportBounds.ReportBoundsStruct",
+                "name": "_newValue",
+                "type": "tuple"
+            }
+        ],
+        "name": "setReportBounds",
         "outputs": [],
         "stateMutability": "nonpayable",
         "type": "function"
@@ -1155,27 +1822,6 @@
     {
         "stateMutability": "payable",
         "type": "receive"
-    },
-    {
-        "inputs": [
-            {
-                "internalType": "address",
-                "name": "_logic",
-                "type": "address"
-            },
-            {
-                "internalType": "address",
-                "name": "__admin",
-                "type": "address"
-            },
-            {
-                "internalType": "bytes",
-                "name": "_data",
-                "type": "bytes"
-            }
-        ],
-        "stateMutability": "payable",
-        "type": "constructor"
     },
     {
         "inputs": [],
