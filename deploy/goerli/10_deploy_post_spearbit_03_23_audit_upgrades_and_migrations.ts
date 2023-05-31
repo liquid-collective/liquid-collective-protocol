@@ -109,9 +109,13 @@ const func: DeployFunction = async function ({ deployments, network, getNamedAcc
 func.skip = async function ({ deployments, ethers }: HardhatRuntimeEnvironment): Promise<boolean> {
   logStep(__filename);
   const shouldSkip =
-    (await isDeployed("AllowlistV1_Implementation_0_5_0", deployments, __filename)) &&
-    (await isDeployed("RiverV1_Implementation_0_5_0", deployments, __filename)) &&
-    (await isDeployed("TLCV1_Implementation_0_5_0", deployments, __filename));
+  (await isDeployed("RedeemManagerV1_Implementation_0_6_0_rc2", deployments, __filename)) &&
+  (await isDeployed("ELFeeRecipientV1_Implementation_0_6_0_rc2", deployments, __filename)) &&
+  (await isDeployed("OperatorsRegistryV1_Implementation_0_6_0_rc2", deployments, __filename)) &&
+  (await isDeployed("OracleV1_Implementation_0_6_0_rc2", deployments, __filename)) &&
+  (await isDeployed("RiverV1_Implementation_0_6_0_rc2", deployments, __filename)) &&
+  (await isDeployed("WithdrawV1_Implementation_0_6_0_rc2", deployments, __filename)) &&
+  (await isDeployed("TLCV1_Implementation_0_6_0_rc2", deployments, __filename));
   if (shouldSkip) {
     console.log("Skipped");
     logStepEnd(__filename);
