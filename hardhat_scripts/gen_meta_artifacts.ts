@@ -300,6 +300,7 @@ const config: AllNetsConfigs = {
       target: "ELFeeRecipient.json",
       implementations: [
         "ELFeeRecipientV1_Implementation_0_4_0.json",
+        "ELFeeRecipientV1_Implementation_1_0_0.json",
       ],
       proxy: "ELFeeRecipient_Proxy.json"
     },
@@ -307,6 +308,7 @@ const config: AllNetsConfigs = {
       target: "OperatorsRegistry.json",
       implementations: [
         "OperatorsRegistryV1_Implementation_0_4_0.json",
+        "OperatorsRegistryV1_Implementation_1_0_0.json",
       ],
       proxy: "OperatorsRegistry_Proxy.json"
     },
@@ -314,6 +316,7 @@ const config: AllNetsConfigs = {
       target: "Oracle.json",
       implementations: [
         "OracleV1_Implementation_0_4_0.json",
+        "OracleV1_Implementation_1_0_0.json",
       ],
       proxy: "Oracle_Proxy.json"
     },
@@ -322,6 +325,7 @@ const config: AllNetsConfigs = {
       implementations: [
         "RiverV1_Implementation_0_4_0.json",
         "RiverV1_Implementation_0_5_0.json",
+        "RiverV1_Implementation_1_0_0.json",
       ],
       proxy: "River_Proxy.json"
     },
@@ -330,6 +334,7 @@ const config: AllNetsConfigs = {
       implementations: [
         "TLCV1_Implementation_0_4_0.json",
         "TLCV1_Implementation_0_5_0.json",
+        "TLCV1_Implementation_1_0_0.json",
       ],
       proxy: "TLC_Proxy.json"
     },
@@ -337,6 +342,7 @@ const config: AllNetsConfigs = {
       target: "Withdraw.json",
       implementations: [
         "WithdrawV1_Implementation_0_4_0.json",
+        "WithdrawV1_Implementation_1_0_0.json",
       ],
       proxy: "Withdraw_Proxy.json"
     },

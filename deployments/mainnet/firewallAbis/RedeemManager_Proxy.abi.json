@@ -246,200 +246,22 @@
         "inputs": [
             {
                 "internalType": "address",
-                "name": "_account",
+                "name": "_logic",
                 "type": "address"
-            }
-        ],
-        "name": "Denied",
-        "type": "error"
-    },
-    {
-        "inputs": [],
-        "name": "InvalidAlloweeCount",
-        "type": "error"
-    },
-    {
-        "inputs": [
-            {
-                "internalType": "uint256",
-                "name": "version",
-                "type": "uint256"
             },
-            {
-                "internalType": "uint256",
-                "name": "expectedVersion",
-                "type": "uint256"
-            }
-        ],
-        "name": "InvalidInitialization",
-        "type": "error"
-    },
-    {
-        "inputs": [],
-        "name": "InvalidZeroAddress",
-        "type": "error"
-    },
-    {
-        "inputs": [],
-        "name": "MismatchedAlloweeAndStatusCount",
-        "type": "error"
-    },
-    {
-        "inputs": [
             {
                 "internalType": "address",
-                "name": "caller",
+                "name": "__admin",
                 "type": "address"
-            }
-        ],
-        "name": "Unauthorized",
-        "type": "error"
-    },
-    {
-        "anonymous": false,
-        "inputs": [
-            {
-                "indexed": false,
-                "internalType": "uint256",
-                "name": "version",
-                "type": "uint256"
             },
             {
-                "indexed": false,
                 "internalType": "bytes",
-                "name": "cdata",
+                "name": "_data",
                 "type": "bytes"
             }
         ],
-        "name": "Initialize",
-        "type": "event"
-    },
-    {
-        "anonymous": false,
-        "inputs": [
-            {
-                "indexed": true,
-                "internalType": "address",
-                "name": "admin",
-                "type": "address"
-            }
-        ],
-        "name": "SetAdmin",
-        "type": "event"
-    },
-    {
-        "anonymous": false,
-        "inputs": [
-            {
-                "indexed": true,
-                "internalType": "address",
-                "name": "allower",
-                "type": "address"
-            }
-        ],
-        "name": "SetAllower",
-        "type": "event"
-    },
-    {
-        "anonymous": false,
-        "inputs": [
-            {
-                "indexed": false,
-                "internalType": "address[]",
-                "name": "accounts",
-                "type": "address[]"
-            },
-            {
-                "indexed": false,
-                "internalType": "uint256[]",
-                "name": "permissions",
-                "type": "uint256[]"
-            }
-        ],
-        "name": "SetAllowlistPermissions",
-        "type": "event"
-    },
-    {
-        "anonymous": false,
-        "inputs": [
-            {
-                "indexed": true,
-                "internalType": "address",
-                "name": "pendingAdmin",
-                "type": "address"
-            }
-        ],
-        "name": "SetPendingAdmin",
-        "type": "event"
-    },
-    {
-        "inputs": [],
-        "name": "acceptAdmin",
-        "outputs": [],
-        "stateMutability": "nonpayable",
-        "type": "function"
-    },
-    {
-        "inputs": [
-            {
-                "internalType": "address[]",
-                "name": "_accounts",
-                "type": "address[]"
-            },
-            {
-                "internalType": "uint256[]",
-                "name": "_permissions",
-                "type": "uint256[]"
-            }
-        ],
-        "name": "allow",
-        "outputs": [],
-        "stateMutability": "nonpayable",
-        "type": "function"
-    },
-    {
-        "inputs": [
-            {
-                "internalType": "address",
-                "name": "_admin",
-                "type": "address"
-            },
-            {
-                "internalType": "address",
-                "name": "_allower",
-                "type": "address"
-            }
-        ],
-        "name": "initAllowlistV1",
-        "outputs": [],
-        "stateMutability": "nonpayable",
-        "type": "function"
-    },
-    {
-        "inputs": [
-            {
-                "internalType": "address",
-                "name": "_newAdmin",
-                "type": "address"
-            }
-        ],
-        "name": "proposeAdmin",
-        "outputs": [],
-        "stateMutability": "nonpayable",
-        "type": "function"
-    },
-    {
-        "inputs": [
-            {
-                "internalType": "address",
-                "name": "_newAllowerAddress",
-                "type": "address"
-            }
-        ],
-        "name": "setAllower",
-        "outputs": [],
-        "stateMutability": "nonpayable",
-        "type": "function"
+        "stateMutability": "payable",
+        "type": "constructor"
     },
     {
         "inputs": [],
