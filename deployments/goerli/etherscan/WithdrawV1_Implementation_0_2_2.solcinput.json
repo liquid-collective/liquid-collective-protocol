@@ -1,0 +1,14 @@
+{
+  "language": "Solidity",
+  "settings": {
+    "optimizer": {
+      "enabled": true,
+      "runs": 100
+    }
+  },
+  "sources": {
+    "contracts/src/Withdraw.1.sol": {
+      "content": "//SPDX-License-Identifier: BUSL-1.1\npragma solidity 0.8.10;\n\n/// @title Withdraw (v1)\n/// @author Kiln\n/// @notice This contract is a stub contract that should be upgradeable to be adapted with future withdrawal specs\ncontract WithdrawV1 {\n    /// @notice Retrieve the withdrawal credentials to use\n    /// @return The withdrawal credentials\n    function getCredentials() external view returns (bytes32) {\n        return bytes32(\n            uint256(uint160(address(this))) + 0x0100000000000000000000000000000000000000000000000000000000000000\n        );\n    }\n}\n"
+    }
+  }
+}

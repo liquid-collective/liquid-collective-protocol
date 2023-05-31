@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io/fs"
 	"os"
+	"path/filepath"
 	"strings"
 
 	"github.com/tenderly/tenderly-cli/config"
@@ -85,7 +86,16 @@ func UploadContract(cl *rest.Rest, abi *ContractABI, projectSlug, networkID stri
 			return err
 		}
 
-		err = os.WriteFile(strings.ReplaceAll(abi.Path, ".json", ".solcinput.json"), b, fs.ModePerm)
+		dir := filepath.Dir(abi.Path)
+		base := filepath.Base(abi.Path)
+		etherscanDir := filepath.Join(dir, "etherscan")
+		etherscanPath := filepath.Join(etherscanDir, base)
+
+		if _, err := os.Stat(etherscanDir); os.IsNotExist(err) {
+			os.MkdirAll(etherscanDir, 0700) // Create your file
+		}
+
+		err = os.WriteFile(strings.ReplaceAll(etherscanPath, ".json", ".solcinput.json"), b, fs.ModePerm)
 		if err != nil {
 			return err
 		}
