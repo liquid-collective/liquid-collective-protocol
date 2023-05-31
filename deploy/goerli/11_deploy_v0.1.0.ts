@@ -52,25 +52,13 @@ const func: DeployFunction = async function ({ deployments, network, getNamedAcc
   });
 
   // migration and upgrade steps
-  // 1. upgradeToAndCall WithdrawContract + WithdrawContract.initializeWithdrawV1(riverDeployment.address)
-  // 2. upgradeToAndCall OperatorsRegistry + OperatorsRegistryContract.initOperatorsRegistryV1_1()
-  // 3. upgradeToAndCall OracleContract + OracleContract.initOracleV1_1()
-  // 4. upgradeToAndCall RiverContract + RiverContract.initRiverV1_1(
-  //                              redeemManagerDeployment.address,
-  //                              epochsPerFrame,
-  //                              slotsPerEpoch,
-  //                              secondsPerSlot,
-  //                              genesisTimestamp,
-  //                              epochsToAssumedFinality,
-  //                              upperBound,
-  //                              lowerBound,
-  //                              minDailyNetCommittable,
-  //                              maxDailyRelativeCommittable
-  //                            );
+  // 1. upgradeTo WithdrawContract 
+  // 2. upgradeTo OperatorsRegistry 
+  // 3. upgradeTo OracleContract
+  // 4. upgradeTo RiverContract
   // 5. upgradeTo ELFeeRecipientContract
   // 6. upgradeTo TLCContract
-  // 7. call OperatorsRegistryContract.forceFundedValidatorKeysEventEmission(x) several time until it reverts
-
+  // 7. upgradeTo RedeemManager
   logStepEnd(__filename);
 };
 
