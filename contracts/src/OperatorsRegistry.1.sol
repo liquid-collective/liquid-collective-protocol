@@ -585,10 +585,7 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
         }
 
         if (vars.currentValidatorExitsDemand != vars.cachedCurrentValidatorExitsDemand) {
-            CurrentValidatorExitsDemand.set(vars.currentValidatorExitsDemand);
-            emit SetCurrentValidatorExitsDemand(
-                vars.cachedCurrentValidatorExitsDemand, vars.currentValidatorExitsDemand
-            );
+            _setCurrentValidatorExitsDemand(vars.cachedCurrentValidatorExitsDemand, vars.currentValidatorExitsDemand);
         }
 
         // we check that the total is matching the sum of the individual values
