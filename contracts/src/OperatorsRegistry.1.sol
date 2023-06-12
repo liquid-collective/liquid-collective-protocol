@@ -581,8 +581,7 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
         }
 
         if (vars.totalRequestedExits != vars.cachedTotalRequestedExits) {
-            TotalValidatorExitsRequested.set(vars.totalRequestedExits);
-            emit SetTotalValidatorExitsRequested(vars.cachedTotalRequestedExits, vars.totalRequestedExits);
+            _setTotalValidatorExitsRequested(vars.cachedTotalRequestedExits, vars.totalRequestedExits);
         }
 
         if (vars.currentValidatorExitsDemand != vars.cachedCurrentValidatorExitsDemand) {
@@ -845,10 +844,17 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
         }
 
         if (totalRequestedExitsValue != totalRequestedExitsCopy) {
-            TotalValidatorExitsRequested.set(totalRequestedExitsValue);
-            emit SetTotalValidatorExitsRequested(totalRequestedExitsCopy, totalRequestedExitsValue);
+            _setTotalValidatorExitsRequested(totalRequestedExitsCopy, totalRequestedExitsValue);
         }
 
         return initialExitRequestDemand - _count;
+    }
+
+    /// @notice Internal utility to set the total validator exits requested by the system
+    /// @param _currentValue The current value of the total validator exits requested
+    /// @param _newValue The new value of the total validator exits requested
+    function _setTotalValidatorExitsRequested(uint256 _currentValue, uint256 _newValue) internal {
+        TotalValidatorExitsRequested.set(_newValue);
+        emit SetTotalValidatorExitsRequested(_currentValue, _newValue);
     }
 }
