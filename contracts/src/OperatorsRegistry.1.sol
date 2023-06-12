@@ -520,6 +520,7 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
         vars.cachedTotalRequestedExits = vars.totalRequestedExits;
 
         uint256 idx = 1;
+        uint256 unsollicitedExitsSum;
         for (; idx < vars.currentStoppedValidatorCountsLength;) {
             // if the previous array was long enough, we check that the values are not decreasing
             if (_stoppedValidatorCounts[idx] < vars.currentStoppedValidatorCounts[idx]) {
@@ -538,12 +539,8 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
                 emit UpdatedRequestedValidatorExitsUponStopped(
                     idx - 1, operators[idx - 1].requestedExits, _stoppedValidatorCounts[idx]
                 );
-                uint256 unsollicitedExits = _stoppedValidatorCounts[idx] - operators[idx - 1].requestedExits;
-                vars.totalRequestedExits += unsollicitedExits;
+                unsollicitedExitsSum += _stoppedValidatorCounts[idx] - operators[idx - 1].requestedExits;
                 operators[idx - 1].requestedExits = _stoppedValidatorCounts[idx];
-
-                // we decrease the demand, considering unsollicited exits as if the exit requests were performed for them
-                vars.currentValidatorExitsDemand -= LibUint256.min(unsollicitedExits, vars.currentValidatorExitsDemand);
             }
 
             // we recompute the total to ensure it's not an invalid sum
@@ -566,12 +563,8 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
                 emit UpdatedRequestedValidatorExitsUponStopped(
                     idx - 1, operators[idx - 1].requestedExits, _stoppedValidatorCounts[idx]
                 );
-                uint256 unsollicitedExits = _stoppedValidatorCounts[idx] - operators[idx - 1].requestedExits;
-                vars.totalRequestedExits += unsollicitedExits;
+                unsollicitedExitsSum += _stoppedValidatorCounts[idx] - operators[idx - 1].requestedExits;
                 operators[idx - 1].requestedExits = _stoppedValidatorCounts[idx];
-
-                // we decrease the demand, considering unsollicited exits as if the exit requests were performed for them
-                vars.currentValidatorExitsDemand -= LibUint256.min(unsollicitedExits, vars.currentValidatorExitsDemand);
             }
             // we recompute the total to ensure it's not an invalid sum
             vars.count += _stoppedValidatorCounts[idx];
@@ -579,6 +572,10 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
                 ++idx;
             }
         }
+
+        vars.totalRequestedExits += unsollicitedExitsSum;
+        // we decrease the demand, considering unsollicited exits as if they were answering the demand
+        vars.currentValidatorExitsDemand -= LibUint256.min(unsollicitedExitsSum, vars.currentValidatorExitsDemand);
 
         if (vars.totalRequestedExits != vars.cachedTotalRequestedExits) {
             _setTotalValidatorExitsRequested(vars.cachedTotalRequestedExits, vars.totalRequestedExits);
