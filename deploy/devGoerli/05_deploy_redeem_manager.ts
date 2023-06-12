@@ -17,7 +17,7 @@ const func: DeployFunction = async function ({ deployments, getNamedAccounts, ne
     proxy: {
       owner: proxyAdministrator,
       proxyContract: "TUPProxy",
-      implementationName: "RedeemManagerV1_Implementation_0_6_0_rc1",
+      implementationName: "RedeemManagerV1_Implementation_0_6_0",
       execute: {
         methodName: "initializeRedeemManagerV1",
         args: [riverDeployment.address],

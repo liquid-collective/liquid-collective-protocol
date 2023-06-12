@@ -15,7 +15,7 @@ const func: DeployFunction = async function ({ deployments, getNamedAccounts, ne
     proxy: {
       owner: proxyAdministrator,
       proxyContract: "TUPProxy",
-      implementationName: "WithdrawV1_Implementation_0_6_0_rc1",
+      implementationName: "WithdrawV1_Implementation_0_6_0",
     },
   });
 
