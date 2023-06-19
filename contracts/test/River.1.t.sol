@@ -1968,6 +1968,7 @@ contract RiverV1TestsReport_HEAVY_FUZZING is Test, BytesGenerator {
             extraBalanceToDeposit,
             LibUint256.min(river.totalUnderlyingSupply(), (maxCommittedBalanceDailyIncrease * period) / 1 days)
         );
+        maxCommittedBalanceIncrease = maxCommittedBalanceIncrease / 32 ether * 32 ether;
 
         return initialCommittedAmount + maxCommittedBalanceIncrease;
     }
@@ -1999,6 +2000,7 @@ contract RiverV1TestsReport_HEAVY_FUZZING is Test, BytesGenerator {
         vm.prank(address(oracle));
         river.setConsensusLayerData(clr);
 
+        assertEq(river.getCommittedBalance() % 32 ether, 0);
         assertEq(
             river.getCommittedBalance(),
             _computeCommittedAmount(0, clr.epoch, committedAmount, depositAmount, maxIncrease)
@@ -2032,6 +2034,7 @@ contract RiverV1TestsReport_HEAVY_FUZZING is Test, BytesGenerator {
         vm.prank(address(oracle));
         river.setConsensusLayerData(clr);
 
+        assertEq(river.getCommittedBalance() % 32 ether, 0);
         assertEq(
             river.getCommittedBalance(),
             _computeCommittedAmount(0, clr.epoch, committedAmount, depositAmount, maxIncrease)
@@ -2070,6 +2073,7 @@ contract RiverV1TestsReport_HEAVY_FUZZING is Test, BytesGenerator {
         vm.prank(address(oracle));
         river.setConsensusLayerData(clr);
 
+        assertEq(river.getCommittedBalance() % 32 ether, 0);
         assertEq(
             river.getCommittedBalance(),
             _computeCommittedAmount(0, clr.epoch, committedAmount, depositAmount, maxIncrease)
@@ -2111,6 +2115,7 @@ contract RiverV1TestsReport_HEAVY_FUZZING is Test, BytesGenerator {
         vm.prank(address(oracle));
         river.setConsensusLayerData(clr);
 
+        assertEq(river.getCommittedBalance() % 32 ether, 0);
         assertEq(
             river.getCommittedBalance(),
             _computeCommittedAmount(0, clr.epoch, committedAmount, depositAmount, maxIncrease)

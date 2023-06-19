@@ -562,7 +562,7 @@ contract RiverV1 is
         }
     }
 
-    /// @notice Commits the deposit balance up to the allowed daily limit
+    /// @notice Commits the deposit balance up to the allowed daily limit in batches of 32 ETH.
     /// @notice Committed funds are funds waiting to be deposited but that cannot be used to fund the redeem manager anymore
     /// @notice This two step process is required to prevent possible out of gas issues we would have from actually funding the validators at this point
     /// @param _period The period between current and last report
@@ -586,6 +586,8 @@ contract RiverV1 is
         // we adapt the value for the reporting period by using the asset balance as upper bound
         uint256 currentMaxCommittableAmount =
             LibUint256.min((currentMaxDailyCommittableAmount * _period) / 1 days, currentBalanceToDeposit);
+        // we only commit multiples of 32 ETH
+        currentMaxCommittableAmount = (currentMaxCommittableAmount / DEPOSIT_SIZE) * DEPOSIT_SIZE;
 
         if (currentMaxCommittableAmount > 0) {
             _setCommittedBalance(CommittedBalance.get() + currentMaxCommittableAmount);
