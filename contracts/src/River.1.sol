@@ -113,6 +113,13 @@ contract RiverV1 is
     }
 
     /// @inheritdoc IRiverV1
+    function initRiverV1_2() external init(2) {
+        uint256 dustToUncommit = CommittedBalance.get() % DEPOSIT_SIZE;
+        _setCommittedBalance(CommittedBalance.get() - dustToUncommit);
+        _setBalanceToDeposit(BalanceToDeposit.get() + dustToUncommit);
+    }
+
+    /// @inheritdoc IRiverV1
     function getGlobalFee() external view returns (uint256) {
         return GlobalFee.get();
     }
