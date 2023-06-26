@@ -1,0 +1,374 @@
+{
+    "name": "devGoerli",
+    "chainId": "5",
+    "contracts": {
+        "Allowlist": {
+            "address": "0xd22445dFeB2e394d097DbfBa94270d1E0868d5AE",
+            "deploymentParams": {
+                "type": "proxy",
+                "methodName": "initAllowlistV1",
+                "args": {
+                    "_admin": {
+                        "value": "0xccfcA4493945879911907CEA0e319b28cEDA4f67",
+                        "contract": "AllowlistFirewall"
+                    },
+                    "_allower": {
+                        "value": "0xccfcA4493945879911907CEA0e319b28cEDA4f67",
+                        "contract": "AllowlistFirewall"
+                    }
+                }
+            }
+        },
+        "AllowlistFirewall": {
+            "address": "0xccfcA4493945879911907CEA0e319b28cEDA4f67",
+            "deploymentParams": {
+                "type": "constructor",
+                "args": {
+                    "_admin": {
+                        "value": "0x71c9DAb681C209bb82270906e3B49388b2C15404",
+                        "namedAccount": "governor,collector"
+                    },
+                    "_executor": {
+                        "value": "0x7932EdA85E33D8e13f7C110ACBEb4a5A8B53dda9",
+                        "namedAccount": "executor"
+                    },
+                    "_destination": {
+                        "value": "0xd22445dFeB2e394d097DbfBa94270d1E0868d5AE",
+                        "contract": "Allowlist_Proxy"
+                    }
+                }
+            }
+        },
+        "AllowlistV1_Implementation_0_6_0": "0x67DDc8290c15e18c21FAbbCD5fA4613824E3F165",
+        "Allowlist_Proxy": {
+            "address": "0xd22445dFeB2e394d097DbfBa94270d1E0868d5AE",
+            "deploymentParams": {
+                "type": "constructor",
+                "args": {
+                    "_logic": {
+                        "value": "0x67DDc8290c15e18c21FAbbCD5fA4613824E3F165",
+                        "contract": "AllowlistV1_Implementation_0_6_0"
+                    },
+                    "__admin": {
+                        "value": "0x07706A7D768054c10eB4FC9103Ea322f62831cb9",
+                        "namedAccount": "proxyAdministrator"
+                    }
+                }
+            }
+        },
+        "CoverageFund": {
+            "address": "0x9B0E261d7BBC02637B23d2d30bdc09203Cb3B945",
+            "deploymentParams": {
+                "type": "proxy",
+                "methodName": "initCoverageFundV1",
+                "args": {
+                    "_riverAddress": {
+                        "value": "0x5B1dff31747Bc2a35e459007869cc6fe8ba90212",
+                        "contract": "River_Proxy"
+                    }
+                }
+            }
+        },
+        "CoverageFundV1_Implementation_0_6_0": "0xdc9fA1e97FF3c097EE47141517479E344f21d1Fc",
+        "CoverageFund_Proxy": {
+            "address": "0x9B0E261d7BBC02637B23d2d30bdc09203Cb3B945",
+            "deploymentParams": {
+                "type": "constructor",
+                "args": {
+                    "_logic": {
+                        "value": "0xdc9fA1e97FF3c097EE47141517479E344f21d1Fc",
+                        "contract": "CoverageFundV1_Implementation_0_6_0"
+                    },
+                    "__admin": {
+                        "value": "0x07706A7D768054c10eB4FC9103Ea322f62831cb9",
+                        "namedAccount": "proxyAdministrator"
+                    }
+                }
+            }
+        },
+        "ELFeeRecipient": {
+            "address": "0x6e30C95894BB567BAF2866Be927C5D7397B82DC0",
+            "deploymentParams": {
+                "type": "proxy",
+                "methodName": "initELFeeRecipientV1",
+                "args": {
+                    "_riverAddress": {
+                        "value": "0x5B1dff31747Bc2a35e459007869cc6fe8ba90212",
+                        "contract": "River_Proxy"
+                    }
+                }
+            }
+        },
+        "ELFeeRecipientV1_Implementation_0_6_0": "0xBB2f53Edb82d0C81D8986D9B36974aCAdE47E97d",
+        "ELFeeRecipient_Proxy": {
+            "address": "0x6e30C95894BB567BAF2866Be927C5D7397B82DC0",
+            "deploymentParams": {
+                "type": "constructor",
+                "args": {
+                    "_logic": {
+                        "value": "0xBB2f53Edb82d0C81D8986D9B36974aCAdE47E97d",
+                        "contract": "ELFeeRecipientV1_Implementation_0_6_0"
+                    },
+                    "__admin": {
+                        "value": "0x07706A7D768054c10eB4FC9103Ea322f62831cb9",
+                        "namedAccount": "proxyAdministrator"
+                    }
+                }
+            }
+        },
+        "OperatorsRegistry": {
+            "address": "0x3A7bC4733826884Ef4C706f695Ce8eb014f1b591",
+            "deploymentParams": {
+                "type": "proxy",
+                "methodName": "initOperatorsRegistryV1",
+                "args": {
+                    "_admin": {
+                        "value": "0xA9ab3821b1c3657a779Eb751F2f8a2E109fb8332",
+                        "contract": "OperatorsRegistryFirewall"
+                    },
+                    "_river": {
+                        "value": "0x5B1dff31747Bc2a35e459007869cc6fe8ba90212",
+                        "contract": "River_Proxy"
+                    }
+                }
+            }
+        },
+        "OperatorsRegistryFirewall": {
+            "address": "0xA9ab3821b1c3657a779Eb751F2f8a2E109fb8332",
+            "deploymentParams": {
+                "type": "constructor",
+                "args": {
+                    "_admin": {
+                        "value": "0x71c9DAb681C209bb82270906e3B49388b2C15404",
+                        "namedAccount": "governor,collector"
+                    },
+                    "_executor": {
+                        "value": "0x7932EdA85E33D8e13f7C110ACBEb4a5A8B53dda9",
+                        "namedAccount": "executor"
+                    },
+                    "_destination": {
+                        "value": "0x3A7bC4733826884Ef4C706f695Ce8eb014f1b591",
+                        "contract": "OperatorsRegistry_Proxy"
+                    }
+                }
+            }
+        },
+        "OperatorsRegistryV1_Implementation_0_6_0": "0x4558cffD081638E8E791C4183b77d6Fe80E7dF4c",
+        "OperatorsRegistry_Proxy": {
+            "address": "0x3A7bC4733826884Ef4C706f695Ce8eb014f1b591",
+            "deploymentParams": {
+                "type": "constructor",
+                "args": {
+                    "_logic": {
+                        "value": "0x4558cffD081638E8E791C4183b77d6Fe80E7dF4c",
+                        "contract": "OperatorsRegistryV1_Implementation_0_6_0"
+                    },
+                    "__admin": {
+                        "value": "0x07706A7D768054c10eB4FC9103Ea322f62831cb9",
+                        "namedAccount": "proxyAdministrator"
+                    }
+                }
+            }
+        },
+        "Oracle": {
+            "address": "0x995CDF6c584EcD474D547a1B95b39Fc130f0b184",
+            "deploymentParams": {
+                "type": "proxy",
+                "methodName": "initOracleV1",
+                "args": {
+                    "_riverAddress": {
+                        "value": "0x5B1dff31747Bc2a35e459007869cc6fe8ba90212",
+                        "contract": "River_Proxy"
+                    },
+                    "_administratorAddress": {
+                        "value": "0x1C8d258846f5e3EaCC0885AD265Fb505c69B600f",
+                        "contract": "OracleFirewall"
+                    }
+                }
+            }
+        },
+        "OracleFirewall": {
+            "address": "0x1C8d258846f5e3EaCC0885AD265Fb505c69B600f",
+            "deploymentParams": {
+                "type": "constructor",
+                "args": {
+                    "_admin": {
+                        "value": "0x71c9DAb681C209bb82270906e3B49388b2C15404",
+                        "namedAccount": "governor,collector"
+                    },
+                    "_executor": {
+                        "value": "0x7932EdA85E33D8e13f7C110ACBEb4a5A8B53dda9",
+                        "namedAccount": "executor"
+                    },
+                    "_destination": {
+                        "value": "0x995CDF6c584EcD474D547a1B95b39Fc130f0b184",
+                        "contract": "Oracle_Proxy"
+                    }
+                }
+            }
+        },
+        "OracleV1_Implementation_0_6_0": "0x014e50c540213f5c91fD3DD960fb1255EA599F18",
+        "Oracle_Proxy": {
+            "address": "0x995CDF6c584EcD474D547a1B95b39Fc130f0b184",
+            "deploymentParams": {
+                "type": "constructor",
+                "args": {
+                    "_logic": {
+                        "value": "0x014e50c540213f5c91fD3DD960fb1255EA599F18",
+                        "contract": "OracleV1_Implementation_0_6_0"
+                    },
+                    "__admin": {
+                        "value": "0x07706A7D768054c10eB4FC9103Ea322f62831cb9",
+                        "namedAccount": "proxyAdministrator"
+                    }
+                }
+            }
+        },
+        "RedeemManager": {
+            "address": "0xccdf0074f1586a86A8848B70CF034eDA7c62b46E",
+            "deploymentParams": {
+                "type": "proxy",
+                "methodName": "initializeRedeemManagerV1",
+                "args": {
+                    "_river": {
+                        "value": "0x5B1dff31747Bc2a35e459007869cc6fe8ba90212",
+                        "contract": "River_Proxy"
+                    }
+                }
+            }
+        },
+        "RedeemManagerV1_Implementation_0_6_0": "0xBdAB22344dEb823a3F42A3FC6133DCa3fE5A3E75",
+        "RedeemManager_Proxy": {
+            "address": "0xccdf0074f1586a86A8848B70CF034eDA7c62b46E",
+            "deploymentParams": {
+                "type": "constructor",
+                "args": {
+                    "_logic": {
+                        "value": "0xBdAB22344dEb823a3F42A3FC6133DCa3fE5A3E75",
+                        "contract": "RedeemManagerV1_Implementation_0_6_0"
+                    },
+                    "__admin": {
+                        "value": "0x07706A7D768054c10eB4FC9103Ea322f62831cb9",
+                        "namedAccount": "proxyAdministrator"
+                    }
+                }
+            }
+        },
+        "River": {
+            "address": "0x5B1dff31747Bc2a35e459007869cc6fe8ba90212",
+            "deploymentParams": {
+                "type": "proxy",
+                "methodName": "initRiverV1",
+                "args": {
+                    "_depositContractAddress": {
+                        "value": "0xff50ed3d0ec03aC01D4C79aAd74928BFF48a7b2b",
+                        "namedAccount": "depositContract"
+                    },
+                    "_elFeeRecipientAddress": {
+                        "value": "0x6e30C95894BB567BAF2866Be927C5D7397B82DC0",
+                        "contract": "ELFeeRecipient_Proxy"
+                    },
+                    "_oracleAddress": {
+                        "value": "0x995CDF6c584EcD474D547a1B95b39Fc130f0b184",
+                        "contract": "Oracle_Proxy"
+                    },
+                    "_systemAdministratorAddress": {
+                        "value": "0x7bcc8Bb59f88b74a706EF901152CF95BA6f9cC42",
+                        "contract": "RiverFirewall"
+                    },
+                    "_allowlistAddress": {
+                        "value": "0xd22445dFeB2e394d097DbfBa94270d1E0868d5AE",
+                        "contract": "Allowlist_Proxy"
+                    },
+                    "_operatorRegistryAddress": {
+                        "value": "0x3A7bC4733826884Ef4C706f695Ce8eb014f1b591",
+                        "contract": "OperatorsRegistry_Proxy"
+                    },
+                    "_collectorAddress": {
+                        "value": "0x71c9DAb681C209bb82270906e3B49388b2C15404",
+                        "namedAccount": "governor,collector"
+                    }
+                }
+            }
+        },
+        "RiverFirewall": {
+            "address": "0x7bcc8Bb59f88b74a706EF901152CF95BA6f9cC42",
+            "deploymentParams": {
+                "type": "constructor",
+                "args": {
+                    "_admin": {
+                        "value": "0x71c9DAb681C209bb82270906e3B49388b2C15404",
+                        "namedAccount": "governor,collector"
+                    },
+                    "_executor": {
+                        "value": "0x7932EdA85E33D8e13f7C110ACBEb4a5A8B53dda9",
+                        "namedAccount": "executor"
+                    },
+                    "_destination": {
+                        "value": "0x5B1dff31747Bc2a35e459007869cc6fe8ba90212",
+                        "contract": "River_Proxy"
+                    }
+                }
+            }
+        },
+        "RiverV1_Implementation_0_6_0": "0xe1c3781Dfefe39f7cF5bc5a9A3F8fAa0FB732dd7",
+        "River_Proxy": {
+            "address": "0x5B1dff31747Bc2a35e459007869cc6fe8ba90212",
+            "deploymentParams": {
+                "type": "constructor",
+                "args": {
+                    "_logic": {
+                        "value": "0xe1c3781Dfefe39f7cF5bc5a9A3F8fAa0FB732dd7",
+                        "contract": "RiverV1_Implementation_0_6_0"
+                    },
+                    "__admin": {
+                        "value": "0x07706A7D768054c10eB4FC9103Ea322f62831cb9",
+                        "namedAccount": "proxyAdministrator"
+                    }
+                }
+            }
+        },
+        "Withdraw": {
+            "address": "0xA8D87FB7A9c9fE7F063Ae459e26431FbbF51F548",
+            "deploymentParams": {
+                "type": "constructor",
+                "args": {
+                    "_logic": {
+                        "value": "0x652855c7B1681c3d8Fe7630a3eA89Dd769d96a68",
+                        "contract": "WithdrawV1_Implementation_0_6_0"
+                    },
+                    "__admin": {
+                        "value": "0x07706A7D768054c10eB4FC9103Ea322f62831cb9",
+                        "namedAccount": "proxyAdministrator"
+                    }
+                }
+            }
+        },
+        "WithdrawV1_Implementation_0_6_0": "0x652855c7B1681c3d8Fe7630a3eA89Dd769d96a68",
+        "Withdraw_Proxy": {
+            "address": "0xA8D87FB7A9c9fE7F063Ae459e26431FbbF51F548",
+            "deploymentParams": {
+                "type": "constructor",
+                "args": {
+                    "_logic": {
+                        "value": "0x652855c7B1681c3d8Fe7630a3eA89Dd769d96a68",
+                        "contract": "WithdrawV1_Implementation_0_6_0"
+                    },
+                    "__admin": {
+                        "value": "0x07706A7D768054c10eB4FC9103Ea322f62831cb9",
+                        "namedAccount": "proxyAdministrator"
+                    }
+                }
+            }
+        }
+    },
+    "namedAccounts": {
+        "deployer": "0x341C40B94bF2afBFa42573cB78f16Ee15a056238",
+        "depositContract": "0xff50ed3d0ec03aC01D4C79aAd74928BFF48a7b2b",
+        "governor": "0x71c9DAb681C209bb82270906e3B49388b2C15404",
+        "executor": "0x7932EdA85E33D8e13f7C110ACBEb4a5A8B53dda9",
+        "proxyAdministrator": "0x07706A7D768054c10eB4FC9103Ea322f62831cb9",
+        "collector": "0x71c9DAb681C209bb82270906e3B49388b2C15404",
+        "tlcMintAccount": "0x027c17E24288a1EbF5f9e5Dc45fB603D70633F05"
+    }
+}
