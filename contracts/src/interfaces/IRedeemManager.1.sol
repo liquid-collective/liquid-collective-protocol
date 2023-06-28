@@ -101,6 +101,10 @@ interface IRedeemManagerV1 {
     /// @param _river The address of the River contract
     function initializeRedeemManagerV1(address _river) external;
 
+    /// @notice Retrieve River address
+    /// @return The address of River
+    function getRiver() external view returns (address);
+
     /// @notice Retrieve the global count of redeem requests
     function getRedeemRequestCount() external view returns (uint256);
 
