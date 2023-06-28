@@ -64,6 +64,11 @@ contract RedeemManagerV1 is Initializable, IRedeemManagerV1 {
     }
 
     /// @inheritdoc IRedeemManagerV1
+    function getRiver() external view returns (address) {
+        return RiverAddress.get();
+    }
+
+    /// @inheritdoc IRedeemManagerV1
     function getRedeemRequestCount() external view returns (uint256) {
         return RedeemQueue.get().length;
     }
