@@ -28,7 +28,7 @@ jobs:
 
       - name: Rename output artifact
         run: mv mythril_output.md ${{ matrix.contract.name }}.mythril.md
-        
+
       - name: Upload output artifact
         uses: actions/upload-artifact@v3
         with:
