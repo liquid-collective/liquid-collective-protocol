@@ -545,6 +545,7 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
                 // we decrease the demand, considering unsollicited exits as if the exit requests were performed for them
                 vars.currentValidatorExitsDemand -= LibUint256.min(unsollicitedExits, vars.currentValidatorExitsDemand);
             }
+            emit SetOperatorStoppedValidatorCount(idx - 1, _stoppedValidatorCounts[idx]);
 
             // we recompute the total to ensure it's not an invalid sum
             vars.count += _stoppedValidatorCounts[idx];
@@ -553,8 +554,9 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
             }
         }
 
+        // In case of a new operator we do not check against the current stopped validator count (would revert OOB)
         for (; idx < vars.stoppedValidatorCountsLength;) {
-            // if the previous array was long enough, we check that the values are not decreasing
+            // we check that the count of stopped validators is not above the funded validator count of an operator
             if (_stoppedValidatorCounts[idx] > operators[idx - 1].funded) {
                 revert StoppedValidatorCountAboveFundedCount(
                     idx - 1, _stoppedValidatorCounts[idx], operators[idx - 1].funded
@@ -573,6 +575,8 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
                 // we decrease the demand, considering unsollicited exits as if the exit requests were performed for them
                 vars.currentValidatorExitsDemand -= LibUint256.min(unsollicitedExits, vars.currentValidatorExitsDemand);
             }
+            emit SetOperatorStoppedValidatorCount(idx - 1, _stoppedValidatorCounts[idx]);
+
             // we recompute the total to ensure it's not an invalid sum
             vars.count += _stoppedValidatorCounts[idx];
             unchecked {
