@@ -1,9 +1,9 @@
-# Welcome to Liquid Collective contributing guide
+# Welcome to Liquid Collective's contribution guide
 Thank you for investing your time in contributing to our project!
 
 Read our [Code of Conduct](./CODE_OF_CONDUCT.md) to keep our community approachable and respectable.
 
-In this guide you will get an overview of the contribution workflow from opening an issue, creating a PR, reviewing, and merging the PR.
+In this guide you will get an overview of the contribution workflow, from opening an issue and creating a pull request (PR) to reviewing and merging the PR.
 
 ## Contribution steps
 Below we describe the workflow to contribute to this repository:
