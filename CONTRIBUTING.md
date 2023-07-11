@@ -9,7 +9,7 @@ In this guide you will get an overview of the contribution workflow, from openin
 Below we describe the workflow to contribute to this repository:
 
 1. Open an issue describing what you intend to work on. Be as detailed as possible.
-2. Maintainers will discuss your issue and validate whether we would accept a PR for this.
+2. Code owners will discuss your issue and validate whether we would accept a PR for this.
 3. Open a PR:
    1. Fork the repository.
    2. Create your branch.
