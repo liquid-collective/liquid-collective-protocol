@@ -26,24 +26,26 @@ yarn && yarn link_contracts
 ```
 
 ### Run tests
+
 ```
-yarn test
+make test
+make test-heavy
 ```
 
 ### Run tests include fork tests
 ```
-env MAINNET_FORK_URL=... yarn test
+env MAINNET_FORK_URL=... make test
 ```
 
 The URL provided must be an archive node endpoint allowing state queries at arbitrary block numbers.
 
 ### Run checks
 ```
-yarn lint:check && yarn format:check
+forge build && forge fmt --check
 ```
 
 ### Deploy
-You need to define the `MNEMONIC` env variable before running these scripts. The mnemonic should unlock an account with enough ETH to cover deployment fees. The deployment account has no ownership on the contracts deployed. Core components addresses are configured in `hardhat.config.ts` in the `namedAccounts` section.
+You need to define the `PRIVATE_KEY` env variable before running these scripts. The private key should unlock an account with enough ETH to cover deployment fees. The deployment account has no ownership on the contracts deployed. Core components addresses are configured in `hardhat.config.ts` in the `namedAccounts` section.
 
 #### Local
 To deploy the contracts in an ephemeral EVM instance, run
