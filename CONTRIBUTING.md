@@ -18,46 +18,6 @@ Below we describe the workflow to contribute to this repository:
 4. Your PR will be reviewed by code owners.
 5. Your PR will be merged by code owners.
 
-## Field Guide
-Users interact with the Liquid Collective protocol smart contract, River, through an upgradeable proxy, defined at `contracts/src/TUPProxy.sol`. This requires us to use [unstructured storage](https://blog.openzeppelin.com/upgradeability-using-unstructured-storage/), a Solidity pattern in which we save state variables in their own library rather than as in-line variables in the contract manipulating those variables. Each variable's library comes with its own getters and setters for the variable value. This lets a future version of the contract access the same values that the old version was relying on. 
-River, as an upgradeable smart contract, must also use an Initializer (`contracts/src/Initializer.sol`) to mimic a constructor, since a proxy cannot call that constructor. [See here](https://docs.openzeppelin.com/upgrades-plugins/1.x/writing-upgradeable#initializers).
-
-`TUPProxy.sol` points to the logic at `River.{VERSION_NUMBER}.sol`. In turn, `River.sol` uses the managers in `contracts/src/components/` to accomplish the following logic:
-
-- `TransferManager` to handle incoming ETH from stakers
-- `DepositManager` to take deposited ETH and allocate it to validators
-- `OperatorsManager` to handle the node operators
-- `OracleManager` to receive input from `Oracle.sol`
-- `SharesManager` as the ERC20 implementation to credit initial deposits, & reflect earnings reported by the oracle in rebased LsETH balances
-
-`River.sol`, as well as the managers it uses, leverages the state libraries in `contracts/src/state/` to read & set the variables in unstructured storage.
-
-`River.sol` will get its withdrawal logic from `contracts/src/Withdraw.sol`. Since the actual protocol for moving ETH off of a validator post-merge has not yet been defined, this contract is a temporary stub contract, which will be upgraded post-merge.
-
-`Oracle.sol` receives reports of staking rewards from designated reporters, and pushes the data to `River.sol` to modify LsETH balances.
-
-`AllowList.sol` handles the list of recipients allowed to interact with River. `River.sol` reads from it.
-
-We wrap `AllowList`, `Oracle` and `River` in a `Firewall.sol`, through which administrators can make onlyAdmin function calls.
-
-## Architecture
-![Architecture](./docs/Architecture.png)
-
-## Governance
-![Governance](./docs/Governance.png)
-
-### System Administrator
-Administrator in charge of the implementation logics, can perform any task on any administrable contract.
-
-### System Executor
-Administrator only able to perform a subset of tasks on the system. This set of tasks is defined in the Firewall.
-
-### Firewall
-Contract that is the admin of the other system contracts of River. The Firewall stores 2 actors: an admin and an executor. The admin is able to perform any call on the Firewall and the Firewall will forward the call to the system component. The executor has a set of selector he is allowed to call on the system and the Firewall will only forward these calls.
-
-### Implementation Administrator
-Administrator of the proxy contracts, has the ability to upgrade the implementation or pause the contracts.
-
 ## Scripts
 
 ### Install dependencies
@@ -107,19 +67,6 @@ Submodules should only be updated by maintainers. If you happen to have submodul
 ```
 git submodule update --init --recursive
 ```
-
-## Components Overview
-![Components](./docs/components.svg)
-
-Generate by running `yarn uml`
-
-### Interfaces
-| Contract      | Documentation                  |
-|---------------|--------------------------------|
-| `RiverV1`     | [📜](./natspec/RiverV1.md)     |
-| `OracleV1`    | [📜](./natspec/OracleV1.md)    |
-| `AllowlistV1` | [📜](./natspec/AllowlistV1.md) |
-| `WithdrawV1`  | [📜](./natspec/WithdrawV1.md)  |
 
 ## Live Deployments
 All addresses can be found inside the `deployment.NETWORK.json` files
