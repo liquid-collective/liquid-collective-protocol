@@ -114,6 +114,8 @@ contract RiverV1 is
 
     /// @inheritdoc IRiverV1
     function initRiverV1_2() external init(2) {
+        // force committed balance to a multiple of 32 ETH and
+        // move extra funds back to the deposit buffer
         uint256 dustToUncommit = CommittedBalance.get() % DEPOSIT_SIZE;
         _setCommittedBalance(CommittedBalance.get() - dustToUncommit);
         _setBalanceToDeposit(BalanceToDeposit.get() + dustToUncommit);
