@@ -75,6 +75,14 @@ contract RiverV1Tests is Test, BytesGenerator {
     event SetGlobalFee(uint256 fee);
     event SetOperatorsRegistry(address indexed operatorsRegistry);
 
+    uint64 constant epochsPerFrame = 225;
+    uint64 constant slotsPerEpoch = 32;
+    uint64 constant secondsPerSlot = 12;
+    uint64 constant epochsUntilFinal = 4;
+
+    uint128 constant maxDailyNetCommittableAmount = 3200 ether;
+    uint128 constant maxDailyRelativeCommittableAmount = 2000;
+
     function setUp() public {
         admin = makeAddr("admin");
         newAdmin = makeAddr("newAdmin");
@@ -191,6 +199,46 @@ contract RiverV1Tests is Test, BytesGenerator {
             5000
         );
         vm.stopPrank();
+    }
+
+    function testInit2(uint128 depositTotal, uint96 committedBalance) public {
+        vm.assume(depositTotal > committedBalance && committedBalance > 0);
+        RedeemManagerV1 redeemManager;
+        redeemManager = new RedeemManagerV1();
+        LibImplementationUnbricker.unbrick(vm, address(redeemManager));
+        redeemManager.initializeRedeemManagerV1(address(river));
+
+        river.initRiverV1_1(
+            address(redeemManager),
+            epochsPerFrame,
+            slotsPerEpoch,
+            secondsPerSlot,
+            0,
+            epochsUntilFinal,
+            1000,
+            500,
+            maxDailyNetCommittableAmount,
+            maxDailyRelativeCommittableAmount
+        );
+        _allow(joe, LibAllowlistMasks.DEPOSIT_MASK);
+        vm.deal(joe, depositTotal);
+        vm.prank(joe);
+        river.deposit{value: committedBalance}();
+        river.debug_moveDepositToCommitted();
+        vm.prank(joe);
+        river.deposit{value: depositTotal - committedBalance}();
+        IConsensusLayerDepositManagerV1 castedRiver = IConsensusLayerDepositManagerV1(address(river));
+        uint256 balanceBefore = castedRiver.getBalanceToDeposit();
+        uint256 committedBefore = castedRiver.getCommittedBalance();
+        uint256 dust = committedBefore % 32 ether;
+
+        river.initRiverV1_2();
+
+        uint256 balanceAfter = castedRiver.getBalanceToDeposit();
+        uint256 committedAfter = castedRiver.getCommittedBalance();
+        assertEq(balanceBefore + dust, balanceAfter);
+        assertEq(committedBefore - dust, committedAfter);
+        assertEq(committedAfter % 32 ether, 0);
     }
 
     event SetMaxDailyCommittableAmounts(uint256 maxNetAmount, uint256 maxRelativeAmount);
@@ -765,6 +813,7 @@ contract RiverV1TestsReport_HEAVY_FUZZING is Test, BytesGenerator {
             maxDailyNetCommittableAmount,
             maxDailyRelativeCommittableAmount
         );
+        river.initRiverV1_2();
         withdraw.initializeWithdrawV1(address(river));
         oracle.initOracleV1(address(river), admin, 225, 32, 12, 0, 1000, 500);
 
@@ -1968,6 +2017,7 @@ contract RiverV1TestsReport_HEAVY_FUZZING is Test, BytesGenerator {
             extraBalanceToDeposit,
             LibUint256.min(river.totalUnderlyingSupply(), (maxCommittedBalanceDailyIncrease * period) / 1 days)
         );
+        maxCommittedBalanceIncrease = maxCommittedBalanceIncrease / 32 ether * 32 ether;
 
         return initialCommittedAmount + maxCommittedBalanceIncrease;
     }
@@ -1999,6 +2049,7 @@ contract RiverV1TestsReport_HEAVY_FUZZING is Test, BytesGenerator {
         vm.prank(address(oracle));
         river.setConsensusLayerData(clr);
 
+        assertEq(river.getCommittedBalance() % 32 ether, 0);
         assertEq(
             river.getCommittedBalance(),
             _computeCommittedAmount(0, clr.epoch, committedAmount, depositAmount, maxIncrease)
@@ -2032,6 +2083,7 @@ contract RiverV1TestsReport_HEAVY_FUZZING is Test, BytesGenerator {
         vm.prank(address(oracle));
         river.setConsensusLayerData(clr);
 
+        assertEq(river.getCommittedBalance() % 32 ether, 0);
         assertEq(
             river.getCommittedBalance(),
             _computeCommittedAmount(0, clr.epoch, committedAmount, depositAmount, maxIncrease)
@@ -2070,6 +2122,7 @@ contract RiverV1TestsReport_HEAVY_FUZZING is Test, BytesGenerator {
         vm.prank(address(oracle));
         river.setConsensusLayerData(clr);
 
+        assertEq(river.getCommittedBalance() % 32 ether, 0);
         assertEq(
             river.getCommittedBalance(),
             _computeCommittedAmount(0, clr.epoch, committedAmount, depositAmount, maxIncrease)
@@ -2111,6 +2164,7 @@ contract RiverV1TestsReport_HEAVY_FUZZING is Test, BytesGenerator {
         vm.prank(address(oracle));
         river.setConsensusLayerData(clr);
 
+        assertEq(river.getCommittedBalance() % 32 ether, 0);
         assertEq(
             river.getCommittedBalance(),
             _computeCommittedAmount(0, clr.epoch, committedAmount, depositAmount, maxIncrease)
