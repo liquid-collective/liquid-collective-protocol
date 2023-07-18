@@ -1,5 +1,11 @@
 # Staking Contracts changelog
 
+## v1.0.1 (July 18th 2023)
+
+- [[contracts] deposit by multiples of 32 ETH](https://github.com/liquid-collective/liquid-collective-protocol/pull/222)
+- [[contracts] minor fixes following Spearbit review](https://github.com/liquid-collective/liquid-collective-protocol/pull/219)
+
+
 ## v1.0.0 (May 30th 2023)
 
 - [[contracts] add requested exit catchup upon stopped validator count update at oracle report time](https://github.com/liquid-collective/liquid-collective-protocol/pull/211)
