@@ -144,6 +144,7 @@
         "OperatorsRegistryV1_Implementation_0_4_0": "0x3511C69084dCb4EC806E538CA0676054820FfF7f",
         "OperatorsRegistryV1_Implementation_0_6_0_rc2": "0xeF534eeA85Cc23A79f7082F25CEa20D9FcaEb7E7",
         "OperatorsRegistryV1_Implementation_1_0_0": "0x1591414AF80eAcC9D920bb53c6a7131A9BFADB63",
+        "OperatorsRegistryV1_Implementation_1_0_1": "0x05dAA8115Cf42BF4eA6b842f80Cfd6E701180db7",
         "OperatorsRegistry_Proxy": {
             "address": "0xf06BEd337f29CB856b072dc8d57A2c22FB2eC2CB",
             "deploymentParams": {
@@ -306,6 +307,7 @@
         "RiverV1_Implementation_0_5_0": "0x7C0C0ab9032413ffB1982c937A62B6997Eae8304",
         "RiverV1_Implementation_0_6_0_rc2": "0x1B375a15D0b5fbB215bD2678C362350AA0f40142",
         "RiverV1_Implementation_1_0_0": "0x6db53718021e1e818e9286e541a30f45b5416d20",
+        "RiverV1_Implementation_1_0_1": "0xF32fC26C9604a380c311e7eC0c5E545917e7934f",
         "River_Proxy": {
             "address": "0x3ecCAdA3e11c1Cc3e9B5a53176A67cc3ABDD3E46",
             "deploymentParams": {
