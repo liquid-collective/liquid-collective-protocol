@@ -141,6 +141,7 @@
         },
         "OperatorsRegistryV1_Implementation_0_4_0": "0xC92a612eC60a8E948d6677cD0E6F836145679705",
         "OperatorsRegistryV1_Implementation_1_0_0": "0x7ADbc0BD23aB71b1dC8C946C0550fF87c9841008",
+        "OperatorsRegistryV1_Implementation_1_0_1": "0xb54cdb51e2b86c7f37b35558eed87e6206457a98",
         "OperatorsRegistry_Proxy": {
             "address": "0x1235f1b60df026B2620e48E735C422425E06b725",
             "deploymentParams": {
@@ -310,6 +311,7 @@
         "RiverV1_Implementation_0_4_0": "0x660bD93e6C149E2e0Af1963E2bDF362087792824",
         "RiverV1_Implementation_0_5_0": "0x179D669aC78896f970040E57cb297582b50DE4F2",
         "RiverV1_Implementation_1_0_0": "0xeB6e193B9b9f0D677890F7B614283e45adf37874",
+        "RiverV1_Implementation_1_0_1": "0x48D93d8C45Fb25125F13cdd40529BbeaA97A6565",
         "River_Proxy": {
             "address": "0x8c1BEd5b9a0928467c9B1341Da1D7BD5e10b6549",
             "deploymentParams": {
