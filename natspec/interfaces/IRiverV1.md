@@ -727,6 +727,17 @@ Initialized version 1.1 of the River System
 | _maxDailyNetCommittableAmount_ | uint128 | The net daily committable limit |
 | _maxDailyRelativeCommittableAmount_ | uint128 | The relative daily committable limit |
 
+### initRiverV1_2
+
+```solidity
+function initRiverV1_2() external nonpayable
+```
+
+Initializes version 1.2 of the River System
+
+
+
+
 ### isValidEpoch
 
 ```solidity
