@@ -62,6 +62,11 @@ interface IERC20VestableVotesUpgradeableV1 {
     /// @param _index Index of the vesting schedule
     function getVestingSchedule(uint256 _index) external view returns (VestingSchedulesV2.VestingSchedule memory);
 
+    /// @notice Get vesting global unlock schedule activation status for a vesting schedule
+    /// @param _index Index of the vesting schedule
+    /// @return true if the vesting schedule should ignore the global unlock schedule
+    function isGlobalUnlockedScheduleIgnored(uint256 _index) external view returns (bool);
+
     /// @notice Get count of vesting schedules
     /// @return count of vesting schedules
     function getVestingScheduleCount() external view returns (uint256);
@@ -96,6 +101,7 @@ interface IERC20VestableVotesUpgradeableV1 {
     /// @param _amount amount of token attributed by the vesting schedule
     /// @param _beneficiary address of the beneficiary of the tokens
     /// @param _delegatee address to delegate escrow voting power to
+    /// @param _ignoreGlobalLock whether the vesting schedule should ignore the global lock
     /// @return index of the created vesting schedule
     function createVestingSchedule(
         uint64 _start,
@@ -106,7 +112,8 @@ interface IERC20VestableVotesUpgradeableV1 {
         bool _revocable,
         uint256 _amount,
         address _beneficiary,
-        address _delegatee
+        address _delegatee,
+        bool _ignoreGlobalLock
     ) external returns (uint256);
 
     /// @notice Revoke vesting schedule

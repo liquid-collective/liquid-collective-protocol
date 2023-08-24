@@ -291,7 +291,31 @@ contract ERC20VestableVotesUpgradeableV1Tests is Test {
             uint32(lockDuration),
             amount,
             beneficiary,
-            revocable
+            revocable,
+            true
+        );
+    }
+
+    function createVestingScheduleWithGlobalUnlock(
+        address beneficiary,
+        uint256 start,
+        uint256 cliffDuration,
+        uint256 duration,
+        uint256 period,
+        uint256 lockDuration,
+        bool revocable,
+        uint256 amount
+    ) internal returns (uint256) {
+        return createVestingSchedulesV2tackOptimized(
+            uint64(start),
+            uint32(cliffDuration),
+            uint32(duration),
+            uint32(period),
+            uint32(lockDuration),
+            amount,
+            beneficiary,
+            revocable,
+            false
         );
     }
 
@@ -303,10 +327,20 @@ contract ERC20VestableVotesUpgradeableV1Tests is Test {
         uint32 lockDuration,
         uint256 amount,
         address beneficiary,
-        bool revocable
+        bool revocable,
+        bool ignoreGlobalLock
     ) internal returns (uint256) {
         return tt.createVestingSchedule(
-            start, cliffDuration, duration, period, lockDuration, revocable, amount, beneficiary, address(0)
+            start,
+            cliffDuration,
+            duration,
+            period,
+            lockDuration,
+            revocable,
+            amount,
+            beneficiary,
+            address(0),
+            ignoreGlobalLock
         );
     }
 
@@ -349,6 +383,53 @@ contract ERC20VestableVotesUpgradeableV1Tests is Test {
         assert(vestingSchedule.revocable == true);
         assert(vestingSchedule.end == block.timestamp + 4 * 365 * 24 * 3600);
 
+        assert(tt.isGlobalUnlockedScheduleIgnored(0) == true);
+
+        // Verify escrow delegated to beneficiary
+        assert(tt.delegates(tt.vestingEscrow(0)) == joe);
+    }
+
+    function testCreateVestingWithGlobalUnlcok() public {
+        vm.startPrank(initAccount);
+        vm.expectEmit(true, true, true, true);
+        emit CreatedVestingSchedule(0, initAccount, joe, 10_000e18);
+        assert(
+            createVestingScheduleWithGlobalUnlock(
+                joe,
+                block.timestamp,
+                365 * 24 * 3600,
+                4 * 365 * 24 * 3600,
+                365 * 2 * 3600,
+                365 * 24 * 3600,
+                true,
+                10_000e18
+            ) == 0
+        );
+        vm.stopPrank();
+
+        assert(tt.getVestingScheduleCount() == 1);
+
+        // Verify balances
+        assert(tt.balanceOf(initAccount) == 999_990_000e18);
+        assert(tt.balanceOf(tt.vestingEscrow(0)) == 10_000e18);
+        assert(tt.balanceOf(joe) == 0);
+
+        // Verify vesting schedule object has been properly created
+        VestingSchedulesV2.VestingSchedule memory vestingSchedule = tt.getVestingSchedule(0);
+
+        assert(vestingSchedule.start == block.timestamp);
+        assert(vestingSchedule.cliffDuration == 365 * 24 * 3600);
+        assert(vestingSchedule.lockDuration == 365 * 24 * 3600);
+        assert(vestingSchedule.duration == 4 * 365 * 24 * 3600);
+        assert(vestingSchedule.periodDuration == 365 * 2 * 3600);
+        assert(vestingSchedule.amount == 10_000e18);
+        assert(vestingSchedule.creator == initAccount);
+        assert(vestingSchedule.beneficiary == joe);
+        assert(vestingSchedule.revocable == true);
+        assert(vestingSchedule.end == block.timestamp + 4 * 365 * 24 * 3600);
+
+        assert(tt.isGlobalUnlockedScheduleIgnored(0) == false);
+
         // Verify escrow delegated to beneficiary
         assert(tt.delegates(tt.vestingEscrow(0)) == joe);
     }
@@ -359,7 +440,16 @@ contract ERC20VestableVotesUpgradeableV1Tests is Test {
         emit CreatedVestingSchedule(0, initAccount, joe, 10_000e18);
         assert(
             tt.createVestingSchedule(
-                0, 365 * 24 * 3600, 4 * 365 * 24 * 3600, 365 * 2 * 3600, 365 * 24 * 3600, true, 10_000e18, joe, bob
+                0,
+                365 * 24 * 3600,
+                4 * 365 * 24 * 3600,
+                365 * 2 * 3600,
+                365 * 24 * 3600,
+                true,
+                10_000e18,
+                joe,
+                bob,
+                true
             ) == 0
         );
         vm.stopPrank();
@@ -648,6 +738,7 @@ contract ERC20VestableVotesUpgradeableV1Tests is Test {
         // - cliff 1 year
         // - total duration 4 years
         // - lock duration 2 years
+        // - not subject to global unlock schedule
         vm.startPrank(initAccount);
         assert(
             createVestingSchedule(
@@ -734,6 +825,161 @@ contract ERC20VestableVotesUpgradeableV1Tests is Test {
         vm.warp(5 * 365 * 24 * 3600 + 1);
         assert(tt.computeVestingReleasableAmount(0) == 10_000e18);
         assert(tt.computeVestingVestedAmount(0) == 10_000e18);
+    }
+
+    function testcomputeVestingAmountsWithGlobalUnlockSchedule() public {
+        vm.warp(0);
+
+        // Create a schedule such as
+        // - cliff 1 year
+        // - total duration 1 years
+        // - lock duration 1 years
+        // - subject to global unlock schedule
+        vm.startPrank(initAccount);
+        assert(
+            createVestingScheduleWithGlobalUnlock(
+                joe, 0, 365 * 24 * 3600, 365 * 24 * 3600, 365 * 2 * 3600, 365 * 24 * 3600, true, 24_000e18
+            ) == 0
+        );
+        vm.stopPrank();
+
+        // At beginning of schedule
+        assert(tt.computeVestingReleasableAmount(0) == 0);
+        assert(tt.computeVestingVestedAmount(0) == 0);
+
+        // Move right after beginning of schedule
+        vm.warp(1);
+        assert(tt.computeVestingReleasableAmount(0) == 0);
+        assert(tt.computeVestingVestedAmount(0) == 0);
+
+        // Move to half way cliff
+        vm.warp(365 * 12 * 3600);
+        assert(tt.computeVestingReleasableAmount(0) == 0);
+        assert(tt.computeVestingVestedAmount(0) == 0);
+
+        // Move right before cliff / local lock
+        vm.warp(365 * 24 * 3600 - 1);
+        assert(tt.computeVestingReleasableAmount(0) == 0);
+        assert(tt.computeVestingVestedAmount(0) == 0);
+
+        // Move at cliff / local lock
+        vm.warp(365 * 24 * 3600);
+        assert(tt.computeVestingReleasableAmount(0) == 0);
+        assert(tt.computeVestingVestedAmount(0) == 24_000e18);
+
+        // Move right after cliff
+        vm.warp(365 * 24 * 3600 + 1);
+        assert(tt.computeVestingReleasableAmount(0) == 0);
+        assert(tt.computeVestingVestedAmount(0) == 24_000e18);
+
+        // Move at local lock + 1 month - 1
+        vm.warp(365 * 24 * 3600 + (365 / 12) * 24 * 3600 - 1);
+        assert(tt.computeVestingReleasableAmount(0) == 0);
+        assert(tt.computeVestingVestedAmount(0) == 24_000e18);
+
+        // Move at local lock + 1 month
+        vm.warp(365 * 24 * 3600 + (365 / 12) * 24 * 3600);
+        assertEq(tt.computeVestingReleasableAmount(0), 1_000e18); // 1/24 th after a month
+        assertEq(tt.computeVestingVestedAmount(0), 24_000e18);
+
+        // Move at local lock + 1 month + 1
+        vm.warp(365 * 24 * 3600 + (365 / 12) * 24 * 3600 + 1);
+        assertEq(tt.computeVestingReleasableAmount(0), 1_000e18); // 1/24 th after a month
+        assertEq(tt.computeVestingVestedAmount(0), 24_000e18);
+
+        // Move at local lock + 2 month - 1
+        vm.warp(365 * 24 * 3600 + (365 / 6) * 24 * 3600 - 1);
+        assert(tt.computeVestingReleasableAmount(0) == 1_000e18);
+        assert(tt.computeVestingVestedAmount(0) == 24_000e18);
+
+        // Move at local lock + 2 month
+        vm.warp(365 * 24 * 3600 + (365 / 6) * 24 * 3600);
+        assertEq(tt.computeVestingReleasableAmount(0), 2_000e18);
+        assertEq(tt.computeVestingVestedAmount(0), 24_000e18);
+
+        // Move at local lock + 2 month + 1
+        vm.warp(365 * 24 * 3600 + (365 / 6) * 24 * 3600 + 1);
+        assertEq(tt.computeVestingReleasableAmount(0), 2_000e18);
+        assertEq(tt.computeVestingVestedAmount(0), 24_000e18);
+
+        // Move at the end of global unlock schedule - 1
+        vm.warp(365 * 24 * 3600 + 2 * 365 * 24 * 3600 - 1);
+        assertEq(tt.computeVestingReleasableAmount(0), 23_000e18);
+        assertEq(tt.computeVestingVestedAmount(0), 24_000e18);
+
+        // Move at the end of global unlock schedule (2 years)
+        vm.warp(365 * 24 * 3600 + 2 * 365 * 24 * 3600);
+        assertEq(tt.computeVestingReleasableAmount(0), 24_000e18);
+        assertEq(tt.computeVestingVestedAmount(0), 24_000e18);
+
+        // Move at the end of global unlock schedule + 1
+        vm.warp(365 * 24 * 3600 + 2 * 365 * 24 * 3600 + 1);
+        assertEq(tt.computeVestingReleasableAmount(0), 24_000e18);
+        assertEq(tt.computeVestingVestedAmount(0), 24_000e18);
+
+        // Move 1 year after global unlock schedule
+        vm.warp(365 * 24 * 3600 + 3 * 365 * 24 * 3600 + 1);
+        assertEq(tt.computeVestingReleasableAmount(0), 24_000e18);
+        assertEq(tt.computeVestingVestedAmount(0), 24_000e18);
+    }
+
+    function testReleaseVestingScheduleAfterVestingBeforeGlobalUnlock() public {
+        vm.warp(0);
+
+        // Create a schedule such as
+        // - cliff 1 year
+        // - total duration 1 years
+        // - lock duration 1 years
+        // - subject to global unlock schedule
+        vm.startPrank(initAccount);
+        assert(
+            createVestingScheduleWithGlobalUnlock(
+                joe, 0, 365 * 24 * 3600, 365 * 24 * 3600, 365 * 2 * 3600, 365 * 24 * 3600, true, 24_000e18
+            ) == 0
+        );
+        vm.stopPrank();
+
+        // Move to end of cliff, lock & vesting
+        vm.warp(1 * 365 * 24 * 3600);
+
+        vm.startPrank(joe);
+        vm.expectRevert(abi.encodeWithSignature("ZeroReleasableAmount()"));
+        // Attempts to releaseVestingSchedule
+        tt.releaseVestingSchedule(0);
+        vm.stopPrank();
+
+        // Verify balances
+        assert(tt.balanceOf(tt.vestingEscrow(0)) == 24_000e18);
+        assert(tt.balanceOf(joe) == 0);
+
+        // Move to half way through the global unlock schedule
+        vm.warp(2 * 365 * 24 * 3600);
+
+        vm.startPrank(joe);
+        vm.expectEmit(true, true, true, true);
+        emit ReleasedVestingSchedule(0, 12_000e18);
+        // Attempts to releaseVestingSchedule
+        tt.releaseVestingSchedule(0);
+        vm.stopPrank();
+
+        // Verify balances
+        assert(tt.balanceOf(tt.vestingEscrow(0)) == 12_000e18);
+        assert(tt.balanceOf(joe) == 12_000e18);
+
+        // Move to end of global unlock schedule
+        vm.warp(3 * 365 * 24 * 3600);
+
+        vm.startPrank(joe);
+        vm.expectEmit(true, true, true, true);
+        emit ReleasedVestingSchedule(0, 12_000e18);
+
+        // Attempts to releaseVestingSchedule
+        tt.releaseVestingSchedule(0);
+        vm.stopPrank();
+
+        // Verify balances
+        assert(tt.balanceOf(tt.vestingEscrow(0)) == 0);
+        assert(tt.balanceOf(joe) == 24_000e18);
     }
 
     function testReleaseVestingScheduleFromInvalidAccount() public {
