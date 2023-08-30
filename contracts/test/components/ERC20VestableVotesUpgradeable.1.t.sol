@@ -389,7 +389,7 @@ contract ERC20VestableVotesUpgradeableV1Tests is Test {
         assert(tt.delegates(tt.vestingEscrow(0)) == joe);
     }
 
-    function testCreateVestingWithGlobalUnlcok() public {
+    function testCreateVestingWithGlobalUnlock() public {
         vm.startPrank(initAccount);
         vm.expectEmit(true, true, true, true);
         emit CreatedVestingSchedule(0, initAccount, joe, 10_000e18);
