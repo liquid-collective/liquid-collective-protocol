@@ -1,6 +1,6 @@
 #! /bin/bash
 
-rm vesting.csv
+rm vestingPost.csv
 
 echo "start,end,cliffDuration,lockDuration,duration,periodDuration,amount,creator,beneficiary,revocable,releasedAmount,ignoreGlobalLock" >> vestingPost.csv
 
