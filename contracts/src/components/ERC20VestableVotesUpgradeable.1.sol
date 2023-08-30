@@ -456,7 +456,6 @@ abstract contract ERC20VestableVotesUpgradeableV1 is
     {
         // 1/24 th of the amount per month
         uint256 unlockedAmount = (scheduledAmount / 24) * (timeSinceLocalLockEnd / (365 days / 12));
-
         if (unlockedAmount > scheduledAmount) {
             return scheduledAmount;
         }

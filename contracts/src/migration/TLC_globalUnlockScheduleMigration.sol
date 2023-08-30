@@ -1,0 +1,390 @@
+//SPDX-License-Identifier: BUSL-1.1
+pragma solidity 0.8.10;
+
+import "../state/tlc/VestingSchedules.2.sol";
+import "../state/tlc/IgnoreGlobalUnlockSchedule.sol";
+
+struct VestingScheduleMigration {
+    // number of consecutive schedules to migrate with the same parameters
+    uint8 scheduleCount;
+    // The new lock duration
+    uint32 newLockDuration;
+    // if != 0, the new start value
+    uint64 newStart;
+    // if != 0, the new end value
+    uint64 newEnd;
+    // set cliff to 0 if true
+    bool setCliff;
+    // if true set vesting duration to 86400
+    bool setDuration;
+    // if true set vesting period duration to 86400
+    bool setPeriodDuration;
+    // if true schedule will not be subject to global unlock schedule
+    bool ignoreGlobalUnlock;
+}
+
+contract TlcMigration {
+    function migrate() external {
+        VestingScheduleMigration[] memory migrations = new VestingScheduleMigration[](30);
+        // 0 -> 6
+        migrations[0] = VestingScheduleMigration({
+            scheduleCount: 7,
+            newStart: 0,
+            newEnd: 0,
+            newLockDuration: 75859200,
+            setCliff: false,
+            setDuration: false,
+            setPeriodDuration: false,
+            ignoreGlobalUnlock: false
+        });
+        // 7
+        migrations[1] = VestingScheduleMigration({
+            scheduleCount: 1,
+            newStart: 0,
+            newEnd: 0,
+            newLockDuration: 70416000,
+            setCliff: false,
+            setDuration: false,
+            setPeriodDuration: false,
+            ignoreGlobalUnlock: false
+        });
+        // 8
+        migrations[2] = VestingScheduleMigration({
+            scheduleCount: 1,
+            newStart: 0,
+            newEnd: 0,
+            newLockDuration: 65577600,
+            setCliff: false,
+            setDuration: false,
+            setPeriodDuration: false,
+            ignoreGlobalUnlock: false
+        });
+        // 9 -> 12
+        migrations[3] = VestingScheduleMigration({
+            scheduleCount: 4,
+            newStart: 0,
+            newEnd: 1693001280,
+            newLockDuration: 72489600,
+            setCliff: true,
+            setDuration: true,
+            setPeriodDuration: true,
+            ignoreGlobalUnlock: false
+        });
+        // 13
+        migrations[4] = VestingScheduleMigration({
+            scheduleCount: 1,
+            newStart: 0,
+            newEnd: 0,
+            newLockDuration: 67132800,
+            setCliff: false,
+            setDuration: false,
+            setPeriodDuration: false,
+            ignoreGlobalUnlock: false
+        });
+        // 14
+        migrations[5] = VestingScheduleMigration({
+            scheduleCount: 1,
+            newStart: 0,
+            newEnd: 0,
+            newLockDuration: 56592000,
+            setCliff: false,
+            setDuration: false,
+            setPeriodDuration: false,
+            ignoreGlobalUnlock: false
+        });
+        // 15
+        migrations[6] = VestingScheduleMigration({
+            scheduleCount: 1,
+            newStart: 0,
+            newEnd: 0,
+            newLockDuration: 58320000,
+            setCliff: false,
+            setDuration: false,
+            setPeriodDuration: false,
+            ignoreGlobalUnlock: false
+        });
+        // 16
+        migrations[7] = VestingScheduleMigration({
+            scheduleCount: 1,
+            newStart: 0,
+            newEnd: 0,
+            newLockDuration: 58060800,
+            setCliff: false,
+            setDuration: false,
+            setPeriodDuration: false,
+            ignoreGlobalUnlock: false
+        });
+        // 17
+        migrations[8] = VestingScheduleMigration({
+            scheduleCount: 1,
+            newStart: 0,
+            newEnd: 0,
+            newLockDuration: 53827200,
+            setCliff: false,
+            setDuration: false,
+            setPeriodDuration: false,
+            ignoreGlobalUnlock: true
+        });
+        // 18
+        migrations[9] = VestingScheduleMigration({
+            scheduleCount: 1,
+            newStart: 0,
+            newEnd: 0,
+            newLockDuration: 75859200,
+            setCliff: false,
+            setDuration: false,
+            setPeriodDuration: false,
+            ignoreGlobalUnlock: false
+        });
+        // 19
+        migrations[10] = VestingScheduleMigration({
+            scheduleCount: 1,
+            newStart: 0,
+            newEnd: 0,
+            newLockDuration: 49507200,
+            setCliff: false,
+            setDuration: false,
+            setPeriodDuration: false,
+            ignoreGlobalUnlock: false
+        });
+        // 20
+        migrations[11] = VestingScheduleMigration({
+            scheduleCount: 1,
+            newStart: 0,
+            newEnd: 0,
+            newLockDuration: 75859200,
+            setCliff: false,
+            setDuration: false,
+            setPeriodDuration: false,
+            ignoreGlobalUnlock: false
+        });
+        // 21
+        migrations[12] = VestingScheduleMigration({
+            scheduleCount: 1,
+            newStart: 0,
+            newEnd: 0,
+            newLockDuration: 49507200,
+            setCliff: false,
+            setDuration: false,
+            setPeriodDuration: false,
+            ignoreGlobalUnlock: false
+        });
+        // 22
+        migrations[13] = VestingScheduleMigration({
+            scheduleCount: 1,
+            newStart: 0,
+            newEnd: 0,
+            newLockDuration: 75859200,
+            setCliff: false,
+            setDuration: false,
+            setPeriodDuration: false,
+            ignoreGlobalUnlock: false
+        });
+        // 23
+        migrations[14] = VestingScheduleMigration({
+            scheduleCount: 1,
+            newStart: 0,
+            newEnd: 0,
+            newLockDuration: 49507200,
+            setCliff: false,
+            setDuration: false,
+            setPeriodDuration: false,
+            ignoreGlobalUnlock: false
+        });
+        // 24 -> 26
+        migrations[15] = VestingScheduleMigration({
+            scheduleCount: 3,
+            newStart: 0,
+            newEnd: 0,
+            newLockDuration: 75859200,
+            setCliff: false,
+            setDuration: false,
+            setPeriodDuration: false,
+            ignoreGlobalUnlock: false
+        });
+        // 27
+        migrations[16] = VestingScheduleMigration({
+            scheduleCount: 1,
+            newStart: 0,
+            newEnd: 0,
+            newLockDuration: 70416000,
+            setCliff: false,
+            setDuration: false,
+            setPeriodDuration: false,
+            ignoreGlobalUnlock: false
+        });
+        // 28 -> 29
+        migrations[17] = VestingScheduleMigration({
+            scheduleCount: 2,
+            newStart: 0,
+            newEnd: 0,
+            newLockDuration: 50457600,
+            setCliff: false,
+            setDuration: false,
+            setPeriodDuration: false,
+            ignoreGlobalUnlock: false
+        });
+        // 30
+        migrations[18] = VestingScheduleMigration({
+            scheduleCount: 1,
+            newStart: 0,
+            newEnd: 0,
+            newLockDuration: 50803200,
+            setCliff: false,
+            setDuration: false,
+            setPeriodDuration: false,
+            ignoreGlobalUnlock: true
+        });
+        // 31
+        migrations[19] = VestingScheduleMigration({
+            scheduleCount: 1,
+            newStart: 0,
+            newEnd: 0,
+            newLockDuration: 50889600,
+            setCliff: false,
+            setDuration: false,
+            setPeriodDuration: false,
+            ignoreGlobalUnlock: true
+        });
+        // 32
+        migrations[20] = VestingScheduleMigration({
+            scheduleCount: 1,
+            newStart: 0,
+            newEnd: 0,
+            newLockDuration: 50976000,
+            setCliff: false,
+            setDuration: false,
+            setPeriodDuration: false,
+            ignoreGlobalUnlock: true
+        });
+        // 33
+        migrations[21] = VestingScheduleMigration({
+            scheduleCount: 1,
+            newStart: 0,
+            newEnd: 0,
+            newLockDuration: 50803200,
+            setCliff: false,
+            setDuration: false,
+            setPeriodDuration: false,
+            ignoreGlobalUnlock: true
+        });
+        // 34 -> 35
+        migrations[22] = VestingScheduleMigration({
+            scheduleCount: 2,
+            newStart: 0,
+            newEnd: 0,
+            newLockDuration: 50976000,
+            setCliff: false,
+            setDuration: false,
+            setPeriodDuration: false,
+            ignoreGlobalUnlock: true
+        });
+        // 36 -> 60
+        migrations[23] = VestingScheduleMigration({
+            scheduleCount: 25,
+            newStart: 1686175200,
+            newEnd: 1686261600,
+            newLockDuration: 42854400,
+            setCliff: false,
+            setDuration: true,
+            setPeriodDuration: true,
+            ignoreGlobalUnlock: false
+        });
+        // 61
+        migrations[24] = VestingScheduleMigration({
+            scheduleCount: 1,
+            newStart: 0,
+            newEnd: 0,
+            newLockDuration: 41040000,
+            setCliff: false,
+            setDuration: false,
+            setPeriodDuration: false,
+            ignoreGlobalUnlock: false
+        });
+        // 62
+        migrations[25] = VestingScheduleMigration({
+            scheduleCount: 1,
+            newStart: 0,
+            newEnd: 0,
+            newLockDuration: 48816000,
+            setCliff: false,
+            setDuration: false,
+            setPeriodDuration: false,
+            ignoreGlobalUnlock: false
+        });
+        // 63
+        migrations[26] = VestingScheduleMigration({
+            scheduleCount: 1,
+            newStart: 0,
+            newEnd: 0,
+            newLockDuration: 41731200,
+            setCliff: false,
+            setDuration: false,
+            setPeriodDuration: false,
+            ignoreGlobalUnlock: true
+        });
+        // 64
+        migrations[27] = VestingScheduleMigration({
+            scheduleCount: 1,
+            newStart: 0,
+            newEnd: 0,
+            newLockDuration: 47088000,
+            setCliff: false,
+            setDuration: false,
+            setPeriodDuration: false,
+            ignoreGlobalUnlock: true
+        });
+        // 65
+        migrations[28] = VestingScheduleMigration({
+            scheduleCount: 1,
+            newStart: 0,
+            newEnd: 0,
+            newLockDuration: 45100800,
+            setCliff: false,
+            setDuration: false,
+            setPeriodDuration: false,
+            ignoreGlobalUnlock: true
+        });
+        // 66
+        migrations[29] = VestingScheduleMigration({
+            scheduleCount: 1,
+            newStart: 0,
+            newEnd: 0,
+            newLockDuration: 38275200,
+            setCliff: false,
+            setDuration: false,
+            setPeriodDuration: false,
+            ignoreGlobalUnlock: true
+        });
+        // All schedules covered
+
+        uint256 index = 0;
+        for (uint256 i = 0; i < migrations.length; i++) {
+            VestingScheduleMigration memory migration = migrations[i];
+            for (uint256 j = 0; j < migration.scheduleCount; j++) {
+                VestingSchedulesV2.VestingSchedule storage sch = VestingSchedulesV2.get(index);
+
+                sch.lockDuration = migration.newLockDuration;
+                if (migration.newStart != 0) {
+                    sch.start = migration.newStart;
+                }
+                if (migration.newEnd != 0) {
+                    sch.end = migration.newEnd;
+                }
+                if (migration.setCliff) {
+                    sch.cliffDuration = 0;
+                }
+                if (migration.setDuration) {
+                    sch.duration = 86400;
+                }
+                if (migration.setPeriodDuration) {
+                    sch.periodDuration = 86400;
+                }
+                if (migration.ignoreGlobalUnlock) {
+                    IgnoreGlobalUnlockSchedule.set(index, true);
+                }
+                index += 1;
+            }
+        }
+    }
+}
