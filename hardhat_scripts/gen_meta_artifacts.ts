@@ -220,6 +220,7 @@ const config: AllNetsConfigs = {
         "OperatorsRegistryV1_Implementation_0_4_0.json",
         "OperatorsRegistryV1_Implementation_0_6_0_rc2.json",
         "OperatorsRegistryV1_Implementation_1_0_0.json",
+        "OperatorsRegistryV1_Implementation_1_0_1.json",
       ],
       proxy: "OperatorsRegistry_Proxy.json"
     },
@@ -249,6 +250,7 @@ const config: AllNetsConfigs = {
         "RiverV1_Implementation_0_5_0.json",
         "RiverV1_Implementation_0_6_0_rc2.json",
         "RiverV1_Implementation_1_0_0.json",
+        "RiverV1_Implementation_1_0_1.json",
       ],
       proxy: "River_Proxy.json"
     },
@@ -309,6 +311,7 @@ const config: AllNetsConfigs = {
       implementations: [
         "OperatorsRegistryV1_Implementation_0_4_0.json",
         "OperatorsRegistryV1_Implementation_1_0_0.json",
+        "OperatorsRegistryV1_Implementation_1_0_1.json",
       ],
       proxy: "OperatorsRegistry_Proxy.json"
     },
@@ -326,6 +329,7 @@ const config: AllNetsConfigs = {
         "RiverV1_Implementation_0_4_0.json",
         "RiverV1_Implementation_0_5_0.json",
         "RiverV1_Implementation_1_0_0.json",
+        "RiverV1_Implementation_1_0_1.json",
       ],
       proxy: "River_Proxy.json"
     },
