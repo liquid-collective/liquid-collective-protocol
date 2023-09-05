@@ -131,6 +131,23 @@ Retrieve the details of a specific redeem request
 |---|---|---|
 | _0 | RedeemQueue.RedeemRequest | The redeem request details |
 
+### getRiver
+
+```solidity
+function getRiver() external view returns (address)
+```
+
+Retrieve River address
+
+
+
+
+#### Returns
+
+| Name | Type | Description |
+|---|---|---|
+| _0 | address | The address of River |
+
 ### getWithdrawalEventCount
 
 ```solidity
