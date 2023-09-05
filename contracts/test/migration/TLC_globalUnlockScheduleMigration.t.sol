@@ -14,11 +14,18 @@ contract TlcMigrationTest is Test {
         migrationsContract = new TlcMigration();
     }
 
-    function testMigrate() public {
-        vm.pauseGasMetering();
+    function testGas() public {
+        vm.createSelectFork("http://127.0.0.1:8545", 18063740);
 
+        migrationsContract = new TlcMigration();
+        proxy tlcProxy = proxy(0xb5Fe6946836D687848B5aBd42dAbF531d5819632);
+        vm.prank(0x0D1dE267015a75F5069fD1c9ed382210B3002cEb);
+        tlcProxy.upgradeToAndCall(address(migrationsContract), abi.encodeWithSignature("migrate()"));
+    }
+
+    function testMigrate() public {
         // Significantly faster when cached locally, run a local fork for best perf (anvil recommended)
-        vm.createSelectFork("http://127.0.0.1:8545");
+        vm.createSelectFork("http://127.0.0.1:8545", 18063740);
 
         proxy tlcProxy = proxy(0xb5Fe6946836D687848B5aBd42dAbF531d5819632);
         assertEq(tlcProxy.getVestingScheduleCount(), 67);
@@ -28,8 +35,6 @@ contract TlcMigrationTest is Test {
             schedulesBefore[i] = TLCV1(address(tlcProxy)).getVestingSchedule(i);
             //console.log("%s,%s,%s", i, schedulesBefore[i].start, schedulesBefore[i].end);
         }
-
-        vm.resumeGasMetering();
 
         migrationsContract = new TlcMigration();
         vm.prank(0x0D1dE267015a75F5069fD1c9ed382210B3002cEb);
