@@ -328,7 +328,7 @@ contract ERC20VestableVotesUpgradeableV1Tests is Test {
         uint256 amount,
         address beneficiary,
         bool revocable,
-        bool ignoreGlobalLock
+        bool ignoreGlobalUnlockSchedule
     ) internal returns (uint256) {
         return tt.createVestingSchedule(
             start,
@@ -340,7 +340,7 @@ contract ERC20VestableVotesUpgradeableV1Tests is Test {
             amount,
             beneficiary,
             address(0),
-            ignoreGlobalLock
+            ignoreGlobalUnlockSchedule
         );
     }
 

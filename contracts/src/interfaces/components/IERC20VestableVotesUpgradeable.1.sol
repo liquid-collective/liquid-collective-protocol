@@ -101,7 +101,7 @@ interface IERC20VestableVotesUpgradeableV1 {
     /// @param _amount amount of token attributed by the vesting schedule
     /// @param _beneficiary address of the beneficiary of the tokens
     /// @param _delegatee address to delegate escrow voting power to
-    /// @param _ignoreGlobalLock whether the vesting schedule should ignore the global lock
+    /// @param _ignoreGlobalUnlockSchedule whether the vesting schedule should ignore the global lock
     /// @return index of the created vesting schedule
     function createVestingSchedule(
         uint64 _start,
@@ -113,7 +113,7 @@ interface IERC20VestableVotesUpgradeableV1 {
         uint256 _amount,
         address _beneficiary,
         address _delegatee,
-        bool _ignoreGlobalLock
+        bool _ignoreGlobalUnlockSchedule
     ) external returns (uint256);
 
     /// @notice Revoke vesting schedule

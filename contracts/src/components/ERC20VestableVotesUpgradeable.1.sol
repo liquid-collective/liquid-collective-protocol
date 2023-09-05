@@ -144,7 +144,7 @@ abstract contract ERC20VestableVotesUpgradeableV1 is
         uint256 _amount,
         address _beneficiary,
         address _delegatee,
-        bool _ignoreGlobalLock
+        bool _ignoreGlobalUnlockSchedule
     ) external returns (uint256) {
         return _createVestingSchedule(
             msg.sender,
@@ -157,7 +157,7 @@ abstract contract ERC20VestableVotesUpgradeableV1 is
             _lockDuration,
             _revocable,
             _amount,
-            _ignoreGlobalLock
+            _ignoreGlobalUnlockSchedule
         );
     }
 

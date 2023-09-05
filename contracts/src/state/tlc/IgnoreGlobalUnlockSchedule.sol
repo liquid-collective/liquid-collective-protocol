@@ -5,9 +5,9 @@ pragma solidity 0.8.10;
 /// @notice Utility to manage the global unlock schedule activation mapping in storage
 /// @notice The global unlock schedule releases 1/24th of the total scheduled amount every month after the local lock end
 library IgnoreGlobalUnlockSchedule {
-    /// @notice Storage slot of the global unlock activation mapping
+    /// @notice Storage slot of the global unlock schedule activation mapping
     bytes32 internal constant GLOBAL_UNLOCK_ACTIVATION_SLOT =
-        bytes32(uint256(keccak256("tlc.state.globalLockActivation")) - 1);
+        bytes32(uint256(keccak256("tlc.state.globalUnlockScheduleActivation")) - 1);
 
     /// @notice Structure stored in storage slot
     struct Slot {
