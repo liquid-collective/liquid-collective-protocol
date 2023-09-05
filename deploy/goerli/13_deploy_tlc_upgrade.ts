@@ -9,7 +9,7 @@ const func: DeployFunction = async function ({ deployments, network, getNamedAcc
 
   const { deployer } = await getNamedAccounts();
 
-  await deployments.deploy("TLCV1_Implementation_1_0_1", {
+  await deployments.deploy("TLCV1_Implementation_1_1_0", {
     contract: "TLCV1",
     from: deployer,
     log: true,
@@ -23,14 +23,14 @@ const func: DeployFunction = async function ({ deployments, network, getNamedAcc
 
   // migration and upgrade steps
   // 1. upgradeToAndCall  TlcMigration + TlcMigration.migrate()
-  // 2. upgradeTo         TLCV1_Implementation_1_0_1
+  // 2. upgradeTo         TLCV1_Implementation_1_1_0
   logStepEnd(__filename);
 };
 
 func.skip = async function ({ deployments, ethers }: HardhatRuntimeEnvironment): Promise<boolean> {
   logStep(__filename);
   const shouldSkip =
-  (await isDeployed("TLCV1_Implementation_1_0_1", deployments, __filename)) &&
+  (await isDeployed("TLCV1_Implementation_1_1_0", deployments, __filename)) &&
   (await isDeployed("TLC_GlobalUnlockSchedule_Migration", deployments, __filename))
   if (shouldSkip) {
     console.log("Skipped");
