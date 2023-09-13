@@ -317,7 +317,7 @@ abstract contract ERC20VestableVotesUpgradeableV1 is
         uint256 returnedAmount = vestedAmountAtOldEnd - vestedAmountAtNewEnd;
         if (returnedAmount > 0) {
             address escrow = _deterministicVestingEscrow(_index);
-            _transfer(escrow, vestingSchedule.creator, returnedAmount);
+            _transfer(escrow, msg.sender, returnedAmount);
         }
 
         // set schedule end
@@ -354,7 +354,7 @@ abstract contract ERC20VestableVotesUpgradeableV1 is
         address escrow = _deterministicVestingEscrow(_index);
 
         // transfer all releasable token to the beneficiary
-        _transfer(escrow, vestingSchedule.beneficiary, releasableAmount);
+        _transfer(escrow, msg.sender, releasableAmount);
 
         // increase released amount as per the release
         vestingSchedule.releasedAmount += releasableAmount;
@@ -381,7 +381,7 @@ abstract contract ERC20VestableVotesUpgradeableV1 is
         address oldDelegatee = delegates(escrow);
         _delegate(escrow, _delegatee);
 
-        emit DelegatedVestingEscrow(_index, oldDelegatee, _delegatee, vestingSchedule.beneficiary);
+        emit DelegatedVestingEscrow(_index, oldDelegatee, _delegatee, msg.sender);
 
         return true;
     }
