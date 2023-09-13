@@ -412,6 +412,9 @@ abstract contract ERC20VestableVotesUpgradeableV1 is
                 uint256 globalUnlocked = _computeGlobalUnlocked(
                     _vestingSchedule.amount, _time - (_vestingSchedule.start + _vestingSchedule.lockDuration)
                 );
+                if (releasedAmount > globalUnlocked) {
+                    revert GlobalUnlockUnderlfow();
+                }
                 return LibUint256.min(vestedAmount, globalUnlocked) - releasedAmount;
             }
             unchecked {
