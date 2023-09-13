@@ -63,7 +63,7 @@ contract TlcMigration {
         migrations[3] = VestingScheduleMigration({
             scheduleCount: 4,
             newStart: 0,
-            newEnd: 1656626400,
+            newEnd: 1656720000,
             newLockDuration: 72403200,
             setCliff: true,
             setDuration: true,
