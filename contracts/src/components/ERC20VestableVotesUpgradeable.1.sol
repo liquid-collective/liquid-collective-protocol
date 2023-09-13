@@ -55,6 +55,7 @@ import "../libraries/LibUint256.sol";
 /// @notice   - the global unlock schedule releases 1/24th of the total scheduled amount every month after the local lock end
 /// @notice   - the local lock end is the end of the lock period of the vesting schedule
 /// @notice   - the global unlock schedule is ignored if the vesting schedule has the ignoreGlobalUnlockSchedule flag set to true
+/// @notice   - the global unlock schedule is only a cap on the vested funds that can be withdrawn, it does not alter the vesting
 /// @notice
 /// @notice Remark: After cliff new tokens get vested at the end of each period
 /// @notice
