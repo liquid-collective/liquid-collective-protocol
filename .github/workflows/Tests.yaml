@@ -22,7 +22,7 @@ jobs:
           version: nightly
 
       - name: Run tests
-        run: forge test --force -vvv --gas-report --no-match-contract HEAVY_FUZZING
+        run: make test
         env:
           FOUNDRY_FUZZ_RUNS: 1500
           MAINNET_FORK_RPC_URL: ${{ secrets.MAINNET_FORK_RPC_URL }}
