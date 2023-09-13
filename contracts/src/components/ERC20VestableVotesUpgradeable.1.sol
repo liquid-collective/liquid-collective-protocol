@@ -341,7 +341,7 @@ abstract contract ERC20VestableVotesUpgradeableV1 is
 
         uint256 time = _getCurrentTime();
         if (time < (vestingSchedule.start + vestingSchedule.lockDuration)) {
-            // before lock no tokens can be vested
+            // during the locked period no vested tokens can be released by the beneficiary
             revert VestingScheduleIsLocked();
         }
 
@@ -397,6 +397,7 @@ abstract contract ERC20VestableVotesUpgradeableV1 is
     /// @notice Computes the releasable amount of tokens for a vesting schedule.
     /// @param _vestingSchedule vesting schedule to compute releasable tokens for
     /// @param _time time to compute the releasable amount at
+    /// @param _index index of the vesting schedule
     /// @return amount of release tokens
     function _computeVestingReleasableAmount(
         VestingSchedulesV2.VestingSchedule memory _vestingSchedule,
@@ -439,7 +440,7 @@ abstract contract ERC20VestableVotesUpgradeableV1 is
         } else {
             uint256 timeFromStart = _time - _vestingSchedule.start;
 
-            // compute tokens vested for completly elapsed periods
+            // compute tokens vested for completely elapsed periods
             uint256 vestedDuration = timeFromStart - timeFromStart % _vestingSchedule.periodDuration;
 
             return (vestedDuration * _vestingSchedule.amount) / _vestingSchedule.duration;
