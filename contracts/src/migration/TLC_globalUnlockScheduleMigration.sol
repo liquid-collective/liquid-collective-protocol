@@ -23,7 +23,13 @@ struct VestingScheduleMigration {
     bool ignoreGlobalUnlock;
 }
 
+uint256 constant OCTOBER_16_2024 = 1729036800;
+
 contract TlcMigration {
+    error CliffTooLong(uint256 i);
+    error WrongUnlockDate(uint256 i);
+    error WrongEnd(uint256 i);
+
     function migrate() external {
         VestingScheduleMigration[] memory migrations = new VestingScheduleMigration[](30);
         // 0 -> 6
@@ -141,7 +147,7 @@ contract TlcMigration {
             scheduleCount: 1,
             newStart: 0,
             newEnd: 0,
-            newLockDuration: 49507200,
+            newLockDuration: 49474800,
             setCliff: false,
             setDuration: false,
             setPeriodDuration: false,
@@ -163,7 +169,7 @@ contract TlcMigration {
             scheduleCount: 1,
             newStart: 0,
             newEnd: 0,
-            newLockDuration: 49507200,
+            newLockDuration: 49474800,
             setCliff: false,
             setDuration: false,
             setPeriodDuration: false,
@@ -185,7 +191,7 @@ contract TlcMigration {
             scheduleCount: 1,
             newStart: 0,
             newEnd: 0,
-            newLockDuration: 49507200,
+            newLockDuration: 49474800,
             setCliff: false,
             setDuration: false,
             setPeriodDuration: false,
@@ -284,7 +290,7 @@ contract TlcMigration {
             scheduleCount: 25,
             newStart: 1686175200,
             newEnd: 1686261600,
-            newLockDuration: 42940800,
+            newLockDuration: 42861600,
             setCliff: false,
             setDuration: true,
             setPeriodDuration: true,
@@ -364,6 +370,11 @@ contract TlcMigration {
             for (uint256 j = 0; j < migration.scheduleCount; j++) {
                 VestingSchedulesV2.VestingSchedule storage sch = VestingSchedulesV2.get(index);
 
+                bool isRevoked = false;
+                if (sch.start + sch.duration != sch.end) {
+                    isRevoked = true;
+                }
+                // Modifications
                 sch.lockDuration = migration.newLockDuration;
                 if (migration.newStart != 0) {
                     sch.start = migration.newStart;
@@ -383,6 +394,21 @@ contract TlcMigration {
                 if (migration.ignoreGlobalUnlock) {
                     IgnoreGlobalUnlockSchedule.set(index, true);
                 }
+
+                // Post effects checks
+                // check cliff is not longer than duration
+                if (sch.cliffDuration > sch.duration) {
+                    revert CliffTooLong(index);
+                }
+                // sanity checks on non revoked schedules
+                if (!isRevoked && (sch.end < sch.start + sch.cliffDuration || sch.end != sch.start + sch.duration)) {
+                    revert WrongEnd(index);
+                }
+                // check all the schedules are locked until unix : 1729036800
+                if (sch.start + sch.lockDuration != OCTOBER_16_2024) {
+                    revert WrongUnlockDate(index);
+                }
+
                 index += 1;
             }
         }

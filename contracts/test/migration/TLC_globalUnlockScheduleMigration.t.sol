@@ -80,7 +80,7 @@ contract TlcMigrationTest is Test {
         schedule = TLCV1(address(tlcProxy)).getVestingSchedule(36);
         assertEq(schedule.start, 1686175200);
         assertEq(schedule.end, 1686261600);
-        assertEq(schedule.lockDuration, 42940800);
+        assertEq(schedule.lockDuration, 42861600);
         assertEq(schedule.cliffDuration, schedulesBefore[36].cliffDuration);
         assertEq(schedule.duration, 86400);
         assertEq(schedule.periodDuration, 86400);
@@ -90,7 +90,7 @@ contract TlcMigrationTest is Test {
         schedule = TLCV1(address(tlcProxy)).getVestingSchedule(60);
         assertEq(schedule.start, 1686175200);
         assertEq(schedule.end, 1686261600);
-        assertEq(schedule.lockDuration, 42940800);
+        assertEq(schedule.lockDuration, 42861600);
         assertEq(schedule.cliffDuration, schedulesBefore[60].cliffDuration);
         assertEq(schedule.duration, 86400);
         assertEq(schedule.periodDuration, 86400);
