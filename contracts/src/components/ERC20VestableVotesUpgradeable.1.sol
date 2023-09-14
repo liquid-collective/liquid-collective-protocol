@@ -119,13 +119,7 @@ abstract contract ERC20VestableVotesUpgradeableV1 is
     /// @inheritdoc IERC20VestableVotesUpgradeableV1
     function computeVestingReleasableAmount(uint256 _index) external view returns (uint256) {
         VestingSchedulesV2.VestingSchedule memory vestingSchedule = VestingSchedulesV2.get(_index);
-
-        uint256 time = _getCurrentTime();
-        if (time < (vestingSchedule.start + vestingSchedule.lockDuration)) {
-            return 0;
-        }
-
-        return _computeVestingReleasableAmount(vestingSchedule, time, _index);
+        return _computeVestingReleasableAmount(vestingSchedule, false, _index);
     }
 
     /// @inheritdoc IERC20VestableVotesUpgradeableV1
@@ -339,14 +333,8 @@ abstract contract ERC20VestableVotesUpgradeableV1 is
             revert LibErrors.Unauthorized(msg.sender);
         }
 
-        uint256 time = _getCurrentTime();
-        if (time < (vestingSchedule.start + vestingSchedule.lockDuration)) {
-            // during the locked period no vested tokens can be released by the beneficiary
-            revert VestingScheduleIsLocked();
-        }
-
         // compute releasable amount (taking into account local lock and global unlock schedule if it applies)
-        uint256 releasableAmount = _computeVestingReleasableAmount(vestingSchedule, time, _index);
+        uint256 releasableAmount = _computeVestingReleasableAmount(vestingSchedule, true, _index);
         if (releasableAmount == 0) {
             revert ZeroReleasableAmount();
         }
@@ -396,21 +384,29 @@ abstract contract ERC20VestableVotesUpgradeableV1 is
 
     /// @notice Computes the releasable amount of tokens for a vesting schedule.
     /// @param _vestingSchedule vesting schedule to compute releasable tokens for
-    /// @param _time time to compute the releasable amount at
+    /// @param  _revertIfLocked if true will revert if the schedule is locked
     /// @param _index index of the vesting schedule
     /// @return amount of release tokens
     function _computeVestingReleasableAmount(
         VestingSchedulesV2.VestingSchedule memory _vestingSchedule,
-        uint256 _time,
+        bool _revertIfLocked,
         uint256 _index
     ) internal view returns (uint256) {
+        uint256 time = _getCurrentTime();
+        if (time < (_vestingSchedule.start + _vestingSchedule.lockDuration)) {
+            if (_revertIfLocked) {
+                revert VestingScheduleIsLocked();
+            } else {
+                return 0;
+            }
+        }
         uint256 releasedAmount = _vestingSchedule.releasedAmount;
         uint256 vestedAmount =
-            _computeVestedAmount(_vestingSchedule, _time > _vestingSchedule.end ? _vestingSchedule.end : _time);
+            _computeVestedAmount(_vestingSchedule, time > _vestingSchedule.end ? _vestingSchedule.end : time);
         if (vestedAmount > releasedAmount) {
             if (!IgnoreGlobalUnlockSchedule.get(_index)) {
                 uint256 globalUnlocked = _computeGlobalUnlocked(
-                    _vestingSchedule.amount, _time - (_vestingSchedule.start + _vestingSchedule.lockDuration)
+                    _vestingSchedule.amount, time - (_vestingSchedule.start + _vestingSchedule.lockDuration)
                 );
                 if (releasedAmount > globalUnlocked) {
                     revert GlobalUnlockUnderlfow();
