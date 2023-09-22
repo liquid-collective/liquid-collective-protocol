@@ -401,7 +401,7 @@ contract TlcMigration {
                     revert CliffTooLong(index);
                 }
                 // sanity checks on non revoked schedules
-                if (!isRevoked && (sch.end < sch.start + sch.cliffDuration || sch.end != sch.start + sch.duration)) {
+                if (!isRevoked && (sch.end != sch.start + sch.duration)) {
                     revert WrongEnd(index);
                 }
                 // check all the schedules are locked until unix : 1729036800
