@@ -137,6 +137,10 @@ contract RedeemManagerV1Tests is Test {
         return user;
     }
 
+    function testGetRiver() public view {
+        assert(redeemManager.getRiver() == address(river));
+    }
+
     function testRequestRedeem(uint256 _salt) external {
         address user = _generateAllowlistedUser(_salt);
 

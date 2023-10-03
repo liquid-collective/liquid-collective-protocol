@@ -81,6 +81,7 @@ contract OperatorsRegistryV1Tests is Test, BytesGenerator {
     event SetOperatorLimit(uint256 indexed index, uint256 newLimit);
     event AddedValidatorKeys(uint256 indexed index, uint256 amount);
     event UpdatedStoppedValidators(uint32[] stoppedValidatorCounts);
+    event SetOperatorStoppedValidatorCount(uint256 indexed index, uint256 newStoppedValidatorCount);
 
     function setUp() public {
         admin = makeAddr("admin");
@@ -1195,6 +1196,10 @@ contract OperatorsRegistryV1Tests is Test, BytesGenerator {
         );
 
         vm.prank(river);
+        for (uint256 idx = 1; idx < len + 1; ++idx) {
+            vm.expectEmit(true, true, true, true);
+            emit SetOperatorStoppedValidatorCount(idx - 1, (totalCount / len) + (idx - 1 < totalCount % len ? 1 : 0));
+        }
         vm.expectEmit(true, true, true, true);
         emit UpdatedStoppedValidators(stoppedValidatorCounts);
         operatorsRegistry.reportStoppedValidatorCounts(stoppedValidatorCounts, totalCount);

@@ -7,6 +7,7 @@ import "openzeppelin-contracts-upgradeable/contracts/proxy/utils/Initializable.s
 import "../interfaces/components/IERC20VestableVotesUpgradeable.1.sol";
 
 import "../state/tlc/VestingSchedules.2.sol";
+import "../state/tlc/IgnoreGlobalUnlockSchedule.sol";
 
 import "../libraries/LibSanitize.sol";
 import "../libraries/LibUint256.sol";
@@ -43,11 +44,18 @@ import "../libraries/LibUint256.sol";
 /// @notice   - amount: amount of tokens granted by the vesting schedule
 /// @notice   - beneficiary: beneficiary of tokens after they are releaseVestingScheduled
 /// @notice   - revocable: whether the schedule can be revoked
+/// @notice   - ignoreGlobalUnlockSchedule: whether the schedule should ignore the global unlock schedule
 /// @notice
 /// @notice Vesting schedule
 /// @notice   - if currentTime < cliff: vestedToken = 0
 /// @notice   - if cliff <= currentTime < end: vestedToken = (vestedPeriodCount(currentTime) * periodDuration * amount) / totalDuration
 /// @notice   - if end < currentTime: vestedToken = amount
+/// @notice
+/// @notice Global unlock schedule
+/// @notice   - the global unlock schedule releases 1/24th of the total scheduled amount every month after the local lock end
+/// @notice   - the local lock end is the end of the lock period of the vesting schedule
+/// @notice   - the global unlock schedule is ignored if the vesting schedule has the ignoreGlobalUnlockSchedule flag set to true
+/// @notice   - the global unlock schedule is only a cap on the vested funds that can be withdrawn, it does not alter the vesting
 /// @notice
 /// @notice Remark: After cliff new tokens get vested at the end of each period
 /// @notice
@@ -94,6 +102,11 @@ abstract contract ERC20VestableVotesUpgradeableV1 is
     }
 
     /// @inheritdoc IERC20VestableVotesUpgradeableV1
+    function isGlobalUnlockedScheduleIgnored(uint256 _index) external view returns (bool) {
+        return IgnoreGlobalUnlockSchedule.get(_index);
+    }
+
+    /// @inheritdoc IERC20VestableVotesUpgradeableV1
     function getVestingScheduleCount() external view returns (uint256) {
         return VestingSchedulesV2.getCount();
     }
@@ -106,13 +119,7 @@ abstract contract ERC20VestableVotesUpgradeableV1 is
     /// @inheritdoc IERC20VestableVotesUpgradeableV1
     function computeVestingReleasableAmount(uint256 _index) external view returns (uint256) {
         VestingSchedulesV2.VestingSchedule memory vestingSchedule = VestingSchedulesV2.get(_index);
-
-        uint256 time = _getCurrentTime();
-        if (time < (vestingSchedule.start + vestingSchedule.lockDuration)) {
-            return 0;
-        }
-
-        return _computeVestingReleasableAmount(vestingSchedule, time);
+        return _computeVestingReleasableAmount(vestingSchedule, false, _index);
     }
 
     /// @inheritdoc IERC20VestableVotesUpgradeableV1
@@ -131,7 +138,8 @@ abstract contract ERC20VestableVotesUpgradeableV1 is
         bool _revocable,
         uint256 _amount,
         address _beneficiary,
-        address _delegatee
+        address _delegatee,
+        bool _ignoreGlobalUnlockSchedule
     ) external returns (uint256) {
         return _createVestingSchedule(
             msg.sender,
@@ -143,7 +151,8 @@ abstract contract ERC20VestableVotesUpgradeableV1 is
             _periodDuration,
             _lockDuration,
             _revocable,
-            _amount
+            _amount,
+            _ignoreGlobalUnlockSchedule
         );
     }
 
@@ -173,6 +182,7 @@ abstract contract ERC20VestableVotesUpgradeableV1 is
     /// @param _lockDuration duration before tokens gets unlocked. can exceed the duration of the vesting chedule
     /// @param _revocable whether the schedule can be revoked
     /// @param _amount amount of tokens granted by the vesting schedule
+    /// @param _ignoreGlobalUnlockSchedule whether the schedule should ignore the global unlock schedule
     /// @return index of the created vesting schedule
     function _createVestingSchedule(
         address _creator,
@@ -184,7 +194,8 @@ abstract contract ERC20VestableVotesUpgradeableV1 is
         uint32 _periodDuration,
         uint32 _lockDuration,
         bool _revocable,
-        uint256 _amount
+        uint256 _amount,
+        bool _ignoreGlobalUnlockSchedule
     ) internal returns (uint256) {
         if (balanceOf(_creator) < _amount) {
             revert UnsufficientVestingScheduleCreatorBalance();
@@ -246,6 +257,8 @@ abstract contract ERC20VestableVotesUpgradeableV1 is
         });
         uint256 index = VestingSchedulesV2.push(vestingSchedule) - 1;
 
+        IgnoreGlobalUnlockSchedule.set(index, _ignoreGlobalUnlockSchedule);
+
         // compute escrow address that will hold the token during the vesting
         address escrow = _deterministicVestingEscrow(index);
 
@@ -298,7 +311,7 @@ abstract contract ERC20VestableVotesUpgradeableV1 is
         uint256 returnedAmount = vestedAmountAtOldEnd - vestedAmountAtNewEnd;
         if (returnedAmount > 0) {
             address escrow = _deterministicVestingEscrow(_index);
-            _transfer(escrow, vestingSchedule.creator, returnedAmount);
+            _transfer(escrow, msg.sender, returnedAmount);
         }
 
         // set schedule end
@@ -320,14 +333,8 @@ abstract contract ERC20VestableVotesUpgradeableV1 is
             revert LibErrors.Unauthorized(msg.sender);
         }
 
-        uint256 time = _getCurrentTime();
-        if (time < (vestingSchedule.start + vestingSchedule.lockDuration)) {
-            // before lock no tokens can be vested
-            revert VestingScheduleIsLocked();
-        }
-
-        // compute releasable amount
-        uint256 releasableAmount = _computeVestingReleasableAmount(vestingSchedule, time);
+        // compute releasable amount (taking into account local lock and global unlock schedule if it applies)
+        uint256 releasableAmount = _computeVestingReleasableAmount(vestingSchedule, true, _index);
         if (releasableAmount == 0) {
             revert ZeroReleasableAmount();
         }
@@ -335,7 +342,7 @@ abstract contract ERC20VestableVotesUpgradeableV1 is
         address escrow = _deterministicVestingEscrow(_index);
 
         // transfer all releasable token to the beneficiary
-        _transfer(escrow, vestingSchedule.beneficiary, releasableAmount);
+        _transfer(escrow, msg.sender, releasableAmount);
 
         // increase released amount as per the release
         vestingSchedule.releasedAmount += releasableAmount;
@@ -362,7 +369,7 @@ abstract contract ERC20VestableVotesUpgradeableV1 is
         address oldDelegatee = delegates(escrow);
         _delegate(escrow, _delegatee);
 
-        emit DelegatedVestingEscrow(_index, oldDelegatee, _delegatee, vestingSchedule.beneficiary);
+        emit DelegatedVestingEscrow(_index, oldDelegatee, _delegatee, msg.sender);
 
         return true;
     }
@@ -377,21 +384,35 @@ abstract contract ERC20VestableVotesUpgradeableV1 is
 
     /// @notice Computes the releasable amount of tokens for a vesting schedule.
     /// @param _vestingSchedule vesting schedule to compute releasable tokens for
-    /// @param _time time to compute the releasable amount at
+    /// @param  _revertIfLocked if true will revert if the schedule is locked
+    /// @param _index index of the vesting schedule
     /// @return amount of release tokens
-    function _computeVestingReleasableAmount(VestingSchedulesV2.VestingSchedule memory _vestingSchedule, uint256 _time)
-        internal
-        pure
-        returns (uint256)
-    {
-        uint256 releasedAmount = _vestingSchedule.releasedAmount;
-
-        if (_time > _vestingSchedule.end) {
-            _time = _vestingSchedule.end;
+    function _computeVestingReleasableAmount(
+        VestingSchedulesV2.VestingSchedule memory _vestingSchedule,
+        bool _revertIfLocked,
+        uint256 _index
+    ) internal view returns (uint256) {
+        uint256 time = _getCurrentTime();
+        if (time < (_vestingSchedule.start + _vestingSchedule.lockDuration)) {
+            if (_revertIfLocked) {
+                revert VestingScheduleIsLocked();
+            } else {
+                return 0;
+            }
         }
-
-        uint256 vestedAmount = _computeVestedAmount(_vestingSchedule, _time);
+        uint256 releasedAmount = _vestingSchedule.releasedAmount;
+        uint256 vestedAmount =
+            _computeVestedAmount(_vestingSchedule, time > _vestingSchedule.end ? _vestingSchedule.end : time);
         if (vestedAmount > releasedAmount) {
+            if (!IgnoreGlobalUnlockSchedule.get(_index)) {
+                uint256 globalUnlocked = _computeGlobalUnlocked(
+                    _vestingSchedule.amount, time - (_vestingSchedule.start + _vestingSchedule.lockDuration)
+                );
+                if (releasedAmount > globalUnlocked) {
+                    revert GlobalUnlockUnderlfow();
+                }
+                return LibUint256.min(vestedAmount, globalUnlocked) - releasedAmount;
+            }
             unchecked {
                 return vestedAmount - releasedAmount;
             }
@@ -418,11 +439,28 @@ abstract contract ERC20VestableVotesUpgradeableV1 is
         } else {
             uint256 timeFromStart = _time - _vestingSchedule.start;
 
-            // compute tokens vested for completly elapsed periods
+            // compute tokens vested for completely elapsed periods
             uint256 vestedDuration = timeFromStart - timeFromStart % _vestingSchedule.periodDuration;
 
             return (vestedDuration * _vestingSchedule.amount) / _vestingSchedule.duration;
         }
+    }
+
+    /// @notice Computes the unlocked amount of tokens for a vesting schedule according to the global unlock schedule
+    /// @param scheduledAmount amount of tokens scheduled for the vesting schedule
+    /// @param timeSinceLocalLockEnd time since the local lock end
+    /// @return amount of unlocked tokens
+    function _computeGlobalUnlocked(uint256 scheduledAmount, uint256 timeSinceLocalLockEnd)
+        internal
+        pure
+        returns (uint256)
+    {
+        // 1/24 th of the amount per month
+        uint256 unlockedAmount = (scheduledAmount / 24) * (timeSinceLocalLockEnd / (365 days / 12));
+        if (unlockedAmount > scheduledAmount) {
+            return scheduledAmount;
+        }
+        return unlockedAmount;
     }
 
     /// @notice Returns current time
