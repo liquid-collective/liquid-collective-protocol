@@ -390,6 +390,7 @@ const config: AllNetsConfigs = {
         "TLCV1_Implementation_0_4_0.json",
         "TLCV1_Implementation_0_5_0.json",
         "TLCV1_Implementation_1_0_0.json",
+        "TLCV1_Implementation_1_1_0.json",
       ],
       proxy: "TLC_Proxy.json"
     },

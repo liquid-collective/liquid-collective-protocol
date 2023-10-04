@@ -893,6 +893,17 @@ event Transfer(address indexed from, address indexed to, uint256 value)
 
 ## Errors
 
+### GlobalUnlockUnderlfow
+
+```solidity
+error GlobalUnlockUnderlfow()
+```
+
+Underflow in global unlock logic (should never happen)
+
+
+
+
 ### InvalidRevokedVestingScheduleEnd
 
 ```solidity

@@ -358,6 +358,14 @@
                 "args": {}
             }
         },
+        "TLCV1_Implementation_1_1_0": {
+            "address": "0xF8745c392feF5c91fa1cdB0202efF7Ca08dF55ce",
+            "deploymentParams": {
+                "type": "constructor",
+                "args": {}
+            }
+        },
+        "TLC_GlobalUnlockSchedule_Migration": "0x4B846e38a3cA71De4fce093EC6778c61E326cCEA",
         "TLC_Proxy": {
             "address": "0xb5Fe6946836D687848B5aBd42dAbF531d5819632",
             "deploymentParams": {

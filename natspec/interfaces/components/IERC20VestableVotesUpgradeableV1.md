@@ -317,6 +317,17 @@ Vesting schedule has been revoked
 
 ## Errors
 
+### GlobalUnlockUnderlfow
+
+```solidity
+error GlobalUnlockUnderlfow()
+```
+
+Underflow in global unlock logic (should never happen)
+
+
+
+
 ### InvalidRevokedVestingScheduleEnd
 
 ```solidity
