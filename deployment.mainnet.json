@@ -142,7 +142,7 @@
         "OperatorsRegistryV1_Implementation_0_4_0": "0xC92a612eC60a8E948d6677cD0E6F836145679705",
         "OperatorsRegistryV1_Implementation_1_0_0": "0x7ADbc0BD23aB71b1dC8C946C0550fF87c9841008",
         "OperatorsRegistryV1_Implementation_1_0_1": "0x72662E4da74278430123cE51405c1e7A1B87C294",
-        "OperatorsRegistryV1_Implementation_1_0_2": "0x99Dd9F8D3a62cb416f6ef5ABBC90185c4162f8d0",
+        "OperatorsRegistryV1_Implementation_1_1_0": "0x99Dd9F8D3a62cb416f6ef5ABBC90185c4162f8d0",
         "OperatorsRegistry_Proxy": {
             "address": "0x1235f1b60df026B2620e48E735C422425E06b725",
             "deploymentParams": {
@@ -252,7 +252,7 @@
             }
         },
         "RedeemManagerV1_Implementation_1_0_0": "0x3fe10fd2ce1F492Ede1266a50f6451bC1D8AF9b0",
-        "RedeemManagerV1_Implementation_1_0_2": "0x423CE5282c460EED5FE0786B4D47d2c2a4Ef3721",
+        "RedeemManagerV1_Implementation_1_1_0": "0x423CE5282c460EED5FE0786B4D47d2c2a4Ef3721",
         "RedeemManager_Proxy": {
             "address": "0x080b3a41390b357Ad7e8097644d1DEDf57AD3375",
             "deploymentParams": {
