@@ -290,6 +290,7 @@ const config: AllNetsConfigs = {
       implementations: [
         "RedeemManagerV1_Implementation_0_6_0_rc2.json",
         "RedeemManagerV1_Implementation_1_0_0.json",
+        "RedeemManagerV1_Implementation_1_0_2.json",
       ],
       proxy: "RedeemManager_Proxy.json"
     },
@@ -363,6 +364,7 @@ const config: AllNetsConfigs = {
         "OperatorsRegistryV1_Implementation_0_4_0.json",
         "OperatorsRegistryV1_Implementation_1_0_0.json",
         "OperatorsRegistryV1_Implementation_1_0_1.json",
+        "OperatorsRegistryV1_Implementation_1_0_2.json",
       ],
       proxy: "OperatorsRegistry_Proxy.json"
     },
