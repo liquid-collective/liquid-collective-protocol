@@ -1461,6 +1461,13 @@
         "type": "function"
     },
     {
+        "inputs": [],
+        "name": "initRiverV1_2",
+        "outputs": [],
+        "stateMutability": "nonpayable",
+        "type": "function"
+    },
+    {
         "inputs": [
             {
                 "internalType": "address",

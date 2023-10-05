@@ -21,6 +21,18 @@ const func: DeployFunction = async function ({ deployments, network, getNamedAcc
     log: true,
   });
 
+  await deployments.deploy("OperatorsRegistryV1_Implementation_1_1_0", {
+    contract: "OperatorsRegistryV1",
+    from: deployer,
+    log: true,
+  });
+
+  await deployments.deploy("RedeemManagerV1_Implementation_1_1_0", {
+    contract: "RedeemManagerV1",
+    from: deployer,
+    log: true,
+  });
+
   // migration and upgrade steps
   // 1. upgradeToAndCall  TlcMigration + TlcMigration.migrate()
   // 2. upgradeTo         TLCV1_Implementation_1_1_0
@@ -31,7 +43,9 @@ func.skip = async function ({ deployments, ethers }: HardhatRuntimeEnvironment):
   logStep(__filename);
   const shouldSkip =
   (await isDeployed("TLCV1_Implementation_1_1_0", deployments, __filename)) &&
-  (await isDeployed("TLC_GlobalUnlockSchedule_Migration", deployments, __filename))
+  (await isDeployed("TLC_GlobalUnlockSchedule_Migration", deployments, __filename)) &&
+  (await isDeployed("OperatorsRegistryV1_Implementation_1_1_0", deployments, __filename)) &&
+  (await isDeployed("RedeemManagerV1_Implementation_1_1_0", deployments, __filename));
   if (shouldSkip) {
     console.log("Skipped");
     logStepEnd(__filename);
