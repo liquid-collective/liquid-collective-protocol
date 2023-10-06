@@ -272,6 +272,7 @@ const config: AllNetsConfigs = {
         "OperatorsRegistryV1_Implementation_0_6_0_rc2.json",
         "OperatorsRegistryV1_Implementation_1_0_0.json",
         "OperatorsRegistryV1_Implementation_1_0_1.json",
+        "OperatorsRegistryV1_Implementation_1_1_0.json",
       ],
       proxy: "OperatorsRegistry_Proxy.json"
     },
@@ -290,6 +291,7 @@ const config: AllNetsConfigs = {
       implementations: [
         "RedeemManagerV1_Implementation_0_6_0_rc2.json",
         "RedeemManagerV1_Implementation_1_0_0.json",
+        "RedeemManagerV1_Implementation_1_1_0.json",
       ],
       proxy: "RedeemManager_Proxy.json"
     },
@@ -312,6 +314,7 @@ const config: AllNetsConfigs = {
         "TLCV1_Implementation_0_5_0.json",
         "TLCV1_Implementation_0_6_0_rc2.json",
         "TLCV1_Implementation_1_0_0.json",
+        "TLCV1_Implementation_1_1_0.json",
       ],
       proxy: "TLC_Proxy.json"
     },
@@ -363,6 +366,7 @@ const config: AllNetsConfigs = {
         "OperatorsRegistryV1_Implementation_0_4_0.json",
         "OperatorsRegistryV1_Implementation_1_0_0.json",
         "OperatorsRegistryV1_Implementation_1_0_1.json",
+        "OperatorsRegistryV1_Implementation_1_1_0.json",
       ],
       proxy: "OperatorsRegistry_Proxy.json"
     },
@@ -401,6 +405,14 @@ const config: AllNetsConfigs = {
         "WithdrawV1_Implementation_1_0_0.json",
       ],
       proxy: "Withdraw_Proxy.json"
+    },
+    {
+      target: "RedeemManager.json",
+      implementations: [
+        "RedeemManagerV1_Implementation_1_0_0.json",
+        "RedeemManagerV1_Implementation_1_1_0.json",
+      ],
+      proxy: "RedeemManager_Proxy.json"
     },
   ]
 }
