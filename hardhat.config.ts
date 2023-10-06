@@ -10,6 +10,8 @@ import "solidity-coverage";
 import "hardhat-docgen";
 import "hardhat-contract-sizer";
 import "@primitivefi/hardhat-dodoc";
+import * as tdly from "@tenderly/hardhat-tenderly";
+tdly.setup({ automaticVerifications: false });
 
 dotenv.config();
 
@@ -58,6 +60,9 @@ const config: HardhatUserConfig = {
       url: "http://localhost:8888", // anvil --port 8888
       accounts: ["0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80"], // default anvil private key
     },
+    tenderly: {
+      url: "https://rpc.tenderly.co/fork/07dfd761-d8e8-428e-9738-0cdc03280877"
+    }
   },
   namedAccounts: {
     deployer: {
@@ -114,6 +119,10 @@ const config: HardhatUserConfig = {
   paths: {
     sources: "./contracts/src",
     cache: "./hardhat-cache",
+  },
+  tenderly: {
+    project: "test",
+    username: "prafful"
   },
 };
 
