@@ -4,7 +4,7 @@
 
 > ERC20VestableVotesUpgradeableV1
 
-This is an ERC20 extension that- can be used as source of vote power (inherited from OpenZeppelin ERC20VotesUpgradeable)- can delegate vote power from an account to another account (inherited from OpenZeppelin ERC20VotesUpgradeable)- can manage token vestings: ownership is progressively transferred to a beneficiary according to a vesting schedule- keeps a history (checkpoints) of each account&#39;s vote power@notice Notes from OpenZeppelin [ERC20VotesUpgradeable](https://github.com/OpenZeppelin/openzeppelin-contracts-upgradeable/blob/master/contracts/token/ERC20/extensions/ERC20VotesUpgradeable.sol)- vote power can be delegated either by calling the {delegate} function, or by providing a signature to be used with {delegateBySig}- keeps a history (checkpoints) of each account&#39;s vote power- power can be queried through the public accessors {getVotes} and {getPastVotes}.- by default, token balance does not account for voting power. This makes transfers cheaper. The downside is that itrequires users to delegate to themselves in order to activate checkpoints and have their voting power tracked.@notice Notes about token vesting- any token holder can call the method {createVestingSchedule} in order to transfer tokens to a beneficiary according to a vesting schedule. Whencreating a vesting schedule, tokens are transferred to an escrow that holds the token while the vesting progresses. Voting power of the escrowed token is delegated to thebeneficiary or a delegatee account set by the vesting schedule creator- the schedule beneficiary call {releaseVestingSchedule} to get vested tokens transferred from escrow- the schedule creator can revoke a revocable schedule by calling {revokeVestingSchedule} in which case the non-vested tokens are transfered from the escrow back to the creator- the schedule beneficiary can delegate escrow voting power to any account by calling {delegateVestingEscrow}@notice Vesting schedule attributes are- start : start time of the vesting period- cliff duration: duration before which first tokens gets ownable- total duration: duration of the entire vesting (sum of all vesting period durations)- period duration: duration of a single period of vesting- lock duration: duration before tokens gets unlocked. can exceed the duration of the vesting chedule- amount: amount of tokens granted by the vesting schedule- beneficiary: beneficiary of tokens after they are releaseVestingScheduled- revocable: whether the schedule can be revoked@notice Vesting schedule- if currentTime &lt; cliff: vestedToken = 0- if cliff &lt;= currentTime &lt; end: vestedToken = (vestedPeriodCount(currentTime) * periodDuration * amount) / totalDuration- if end &lt; currentTime: vestedToken = amount@notice Remark: After cliff new tokens get vested at the end of each period@notice Vested token &amp; lock period- a vested token is a token that will be eventually releasable from the escrow to the beneficiary once the lock period is over- lock period prevents beneficiary from releasing vested tokens before the lock period ends. Vested tokenswill eventually be releasable once the lock period is over@notice Example: Joe gets a vesting starting on Jan 1st 2022 with duration of 1 year and a lock period of 2 years.On Jan 1st 2023, Joe will have all tokens vested but can not yet release it due to the lock period.On Jan 1st 2024, lock period is over and Joe can release all tokens.
+This is an ERC20 extension that- can be used as source of vote power (inherited from OpenZeppelin ERC20VotesUpgradeable)- can delegate vote power from an account to another account (inherited from OpenZeppelin ERC20VotesUpgradeable)- can manage token vestings: ownership is progressively transferred to a beneficiary according to a vesting schedule- keeps a history (checkpoints) of each account&#39;s vote power@notice Notes from OpenZeppelin [ERC20VotesUpgradeable](https://github.com/OpenZeppelin/openzeppelin-contracts-upgradeable/blob/master/contracts/token/ERC20/extensions/ERC20VotesUpgradeable.sol)- vote power can be delegated either by calling the {delegate} function, or by providing a signature to be used with {delegateBySig}- keeps a history (checkpoints) of each account&#39;s vote power- power can be queried through the public accessors {getVotes} and {getPastVotes}.- by default, token balance does not account for voting power. This makes transfers cheaper. The downside is that itrequires users to delegate to themselves in order to activate checkpoints and have their voting power tracked.@notice Notes about token vesting- any token holder can call the method {createVestingSchedule} in order to transfer tokens to a beneficiary according to a vesting schedule. Whencreating a vesting schedule, tokens are transferred to an escrow that holds the token while the vesting progresses. Voting power of the escrowed token is delegated to thebeneficiary or a delegatee account set by the vesting schedule creator- the schedule beneficiary call {releaseVestingSchedule} to get vested tokens transferred from escrow- the schedule creator can revoke a revocable schedule by calling {revokeVestingSchedule} in which case the non-vested tokens are transfered from the escrow back to the creator- the schedule beneficiary can delegate escrow voting power to any account by calling {delegateVestingEscrow}@notice Vesting schedule attributes are- start : start time of the vesting period- cliff duration: duration before which first tokens gets ownable- total duration: duration of the entire vesting (sum of all vesting period durations)- period duration: duration of a single period of vesting- lock duration: duration before tokens gets unlocked. can exceed the duration of the vesting chedule- amount: amount of tokens granted by the vesting schedule- beneficiary: beneficiary of tokens after they are releaseVestingScheduled- revocable: whether the schedule can be revoked- ignoreGlobalUnlockSchedule: whether the schedule should ignore the global unlock schedule@notice Vesting schedule- if currentTime &lt; cliff: vestedToken = 0- if cliff &lt;= currentTime &lt; end: vestedToken = (vestedPeriodCount(currentTime) * periodDuration * amount) / totalDuration- if end &lt; currentTime: vestedToken = amount@notice Global unlock schedule- the global unlock schedule releases 1/24th of the total scheduled amount every month after the local lock end- the local lock end is the end of the lock period of the vesting schedule- the global unlock schedule is ignored if the vesting schedule has the ignoreGlobalUnlockSchedule flag set to true- the global unlock schedule is only a cap on the vested funds that can be withdrawn, it does not alter the vesting@notice Remark: After cliff new tokens get vested at the end of each period@notice Vested token &amp; lock period- a vested token is a token that will be eventually releasable from the escrow to the beneficiary once the lock period is over- lock period prevents beneficiary from releasing vested tokens before the lock period ends. Vested tokenswill eventually be releasable once the lock period is over@notice Example: Joe gets a vesting starting on Jan 1st 2022 with duration of 1 year and a lock period of 2 years.On Jan 1st 2023, Joe will have all tokens vested but can not yet release it due to the lock period.On Jan 1st 2024, lock period is over and Joe can release all tokens.
 
 
 
@@ -165,7 +165,7 @@ Computes the vested amount of tokens for a vesting schedule.
 ### createVestingSchedule
 
 ```solidity
-function createVestingSchedule(uint64 _start, uint32 _cliffDuration, uint32 _duration, uint32 _periodDuration, uint32 _lockDuration, bool _revocable, uint256 _amount, address _beneficiary, address _delegatee) external nonpayable returns (uint256)
+function createVestingSchedule(uint64 _start, uint32 _cliffDuration, uint32 _duration, uint32 _periodDuration, uint32 _lockDuration, bool _revocable, uint256 _amount, address _beneficiary, address _delegatee, bool _ignoreGlobalUnlockSchedule) external nonpayable returns (uint256)
 ```
 
 Creates a new vesting scheduleThere may delay between the time a user should start vesting tokens and the time the vesting schedule is actually created on the contract.Typically a user joins the Liquid Collective but some weeks pass before the user gets all legal agreements in place and signed for thetoken grant emission to happen. In this case, the vesting schedule created for the token grant would start on the join date which is in the past.
@@ -185,6 +185,7 @@ Creates a new vesting scheduleThere may delay between the time a user should sta
 | _amount | uint256 | amount of token attributed by the vesting schedule |
 | _beneficiary | address | address of the beneficiary of the tokens |
 | _delegatee | address | address to delegate escrow voting power to |
+| _ignoreGlobalUnlockSchedule | bool | whether the vesting schedule should ignore the global lock |
 
 #### Returns
 
@@ -442,6 +443,28 @@ function increaseAllowance(address spender, uint256 addedValue) external nonpaya
 | Name | Type | Description |
 |---|---|---|
 | _0 | bool | undefined |
+
+### isGlobalUnlockedScheduleIgnored
+
+```solidity
+function isGlobalUnlockedScheduleIgnored(uint256 _index) external view returns (bool)
+```
+
+Get vesting global unlock schedule activation status for a vesting schedule
+
+
+
+#### Parameters
+
+| Name | Type | Description |
+|---|---|---|
+| _index | uint256 | Index of the vesting schedule |
+
+#### Returns
+
+| Name | Type | Description |
+|---|---|---|
+| _0 | bool | true if the vesting schedule should ignore the global unlock schedule |
 
 ### name
 
@@ -842,6 +865,17 @@ event Transfer(address indexed from, address indexed to, uint256 value)
 
 
 ## Errors
+
+### GlobalUnlockUnderlfow
+
+```solidity
+error GlobalUnlockUnderlfow()
+```
+
+Underflow in global unlock logic (should never happen)
+
+
+
 
 ### InvalidRevokedVestingScheduleEnd
 

@@ -1,5 +1,9 @@
 # Staking Contracts changelog
 
+## v1.1.0 (Ocotber 3rd 2023)
+
+- [[contracts] TLC global unlock schedule + minor fixes](https://github.com/liquid-collective/liquid-collective-protocol/pull/232)
+
 ## v1.0.1 (July 18th 2023)
 
 - [[contracts] deposit by multiples of 32 ETH](https://github.com/liquid-collective/liquid-collective-protocol/pull/222)

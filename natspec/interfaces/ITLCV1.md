@@ -125,7 +125,7 @@ Computes the vested amount of tokens for a vesting schedule.
 ### createVestingSchedule
 
 ```solidity
-function createVestingSchedule(uint64 _start, uint32 _cliffDuration, uint32 _duration, uint32 _periodDuration, uint32 _lockDuration, bool _revocable, uint256 _amount, address _beneficiary, address _delegatee) external nonpayable returns (uint256)
+function createVestingSchedule(uint64 _start, uint32 _cliffDuration, uint32 _duration, uint32 _periodDuration, uint32 _lockDuration, bool _revocable, uint256 _amount, address _beneficiary, address _delegatee, bool _ignoreGlobalUnlockSchedule) external nonpayable returns (uint256)
 ```
 
 Creates a new vesting scheduleThere may delay between the time a user should start vesting tokens and the time the vesting schedule is actually created on the contract.Typically a user joins the Liquid Collective but some weeks pass before the user gets all legal agreements in place and signed for thetoken grant emission to happen. In this case, the vesting schedule created for the token grant would start on the join date which is in the past.
@@ -145,6 +145,7 @@ Creates a new vesting scheduleThere may delay between the time a user should sta
 | _amount | uint256 | amount of token attributed by the vesting schedule |
 | _beneficiary | address | address of the beneficiary of the tokens |
 | _delegatee | address | address to delegate escrow voting power to |
+| _ignoreGlobalUnlockSchedule | bool | whether the vesting schedule should ignore the global lock |
 
 #### Returns
 
@@ -355,6 +356,28 @@ Initializes the TLC Token
 | Name | Type | Description |
 |---|---|---|
 | _account | address | The initial account to grant all the minted tokens |
+
+### isGlobalUnlockedScheduleIgnored
+
+```solidity
+function isGlobalUnlockedScheduleIgnored(uint256 _index) external view returns (bool)
+```
+
+Get vesting global unlock schedule activation status for a vesting schedule
+
+
+
+#### Parameters
+
+| Name | Type | Description |
+|---|---|---|
+| _index | uint256 | Index of the vesting schedule |
+
+#### Returns
+
+| Name | Type | Description |
+|---|---|---|
+| _0 | bool | true if the vesting schedule should ignore the global unlock schedule |
 
 ### migrateVestingSchedules
 
@@ -650,6 +673,17 @@ event Transfer(address indexed from, address indexed to, uint256 value)
 
 
 ## Errors
+
+### GlobalUnlockUnderlfow
+
+```solidity
+error GlobalUnlockUnderlfow()
+```
+
+Underflow in global unlock logic (should never happen)
+
+
+
 
 ### InvalidRevokedVestingScheduleEnd
 

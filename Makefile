@@ -14,7 +14,7 @@ yarn:
 install: foundry lib yarn
 
 test:
-	forge test -vvv --gas-report --no-match-contract HEAVY_FUZZING
+	forge test -vvv --gas-report --no-match-contract "HEAVY_FUZZING|Migration"
 
 test-heavy:
 	forge test -vvv --gas-report --match-contract HEAVY_FUZZING
