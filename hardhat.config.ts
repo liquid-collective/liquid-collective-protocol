@@ -50,6 +50,11 @@ const config: HardhatUserConfig = {
       accounts: [process.env.PRIVATE_KEY || "0x0000000000000000000000000000000000000000000000000000000000000000"],
       gas: 5000000,
     },
+    holesky: {
+      url: process.env.RPC_URL || "",
+      accounts: [process.env.PRIVATE_KEY || "0x0000000000000000000000000000000000000000000000000000000000000000"],
+      gas: 5000000,
+    },
     hardhat: {
       accounts: {
         mnemonic: "word word word word word word word word word word word word",
@@ -61,8 +66,8 @@ const config: HardhatUserConfig = {
       accounts: ["0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80"], // default anvil private key
     },
     tenderly: {
-      url: "https://rpc.tenderly.co/fork/07dfd761-d8e8-428e-9738-0cdc03280877"
-    }
+      url: process.env.TENDERLY_URL,
+    },
   },
   namedAccounts: {
     deployer: {
@@ -74,6 +79,7 @@ const config: HardhatUserConfig = {
       devGoerli: "0xff50ed3d0ec03ac01d4c79aad74928bff48a7b2b", // prater deposit contract
       local: "0x00000000219ab540356cBB839Cbe05303d7705Fa",
       mainnet: "0x00000000219ab540356cBB839Cbe05303d7705Fa",
+      holesky: "0x4242424242424242424242424242424242424242",
     },
     governor: {
       default: 1,
@@ -82,6 +88,7 @@ const config: HardhatUserConfig = {
       mockedGoerli: "0x71c9DAb681C209bb82270906e3B49388b2C15404",
       local: "0x71c9DAb681C209bb82270906e3B49388b2C15404",
       mainnet: "0xE3208Aa9d1186c1D1C8A5b76E794b2B68E6cb3a5",
+      holesky: "",
     },
     executor: {
       default: 1,
@@ -90,6 +97,7 @@ const config: HardhatUserConfig = {
       mockedGoerli: "0x7932EdA85E33D8e13f7C110ACBEb4a5A8B53dda9",
       local: "0x71c9DAb681C209bb82270906e3B49388b2C15404",
       mainnet: "0xDE55C9dc78f985fE1502484Cb98EBfAB66A56B62",
+      holesky: "",
     },
     proxyAdministrator: {
       default: 2,
@@ -98,6 +106,7 @@ const config: HardhatUserConfig = {
       mockedGoerli: "0x07706A7D768054c10eB4FC9103Ea322f62831cb9",
       local: "0x07706A7D768054c10eB4FC9103Ea322f62831cb9",
       mainnet: "0x8EE3fC0Bcd7B57429203751C5bE5fdf1AB8409f3",
+      holesky: "",
     },
     collector: {
       default: 1,
@@ -106,6 +115,7 @@ const config: HardhatUserConfig = {
       mockedGoerli: "0x71c9DAb681C209bb82270906e3B49388b2C15404",
       local: "0x71c9DAb681C209bb82270906e3B49388b2C15404",
       mainnet: "0xE3208Aa9d1186c1D1C8A5b76E794b2B68E6cb3a5",
+      holesky: "",
     },
     tlcMintAccount: {
       default: 1,
@@ -114,6 +124,7 @@ const config: HardhatUserConfig = {
       mockedGoerli: "0x027c17E24288a1EbF5f9e5Dc45fB603D70633F05",
       local: "0x7932EdA85E33D8e13f7C110ACBEb4a5A8B53dda9",
       mainnet: "0x070cbF96cac223D88401D6227577f9FA480C57C8",
+      holesky: "",
     },
   },
   paths: {
@@ -121,8 +132,8 @@ const config: HardhatUserConfig = {
     cache: "./hardhat-cache",
   },
   tenderly: {
-    project: "test",
-    username: "prafful"
+    project: process.env.TENDERLY_PROJECT_ID,
+    username: process.env.TENDERLY_USERNAME,
   },
 };
 

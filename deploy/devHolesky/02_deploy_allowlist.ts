@@ -40,7 +40,7 @@ const func: DeployFunction = async function ({
     proxy: {
       owner: proxyAdministrator,
       proxyContract: "TUPProxy",
-      implementationName: "AllowlistV1_Implementation_0_6_0_rc1",
+      implementationName: "AllowlistV1_Implementation_0_2_2",
       execute: {
         methodName: "initAllowlistV1",
         args: [firewallDeployment.address, firewallDeployment.address],

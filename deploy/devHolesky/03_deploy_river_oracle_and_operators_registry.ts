@@ -67,7 +67,7 @@ const func: DeployFunction = async function ({
     proxy: {
       owner: proxyAdministrator,
       proxyContract: "TUPProxy",
-      implementationName: "RiverV1_Implementation_0_6_0_rc1",
+      implementationName: "RiverV1_Implementation_1_0_1",
       execute: {
         methodName: "initRiverV1",
         args: [
@@ -112,7 +112,7 @@ const func: DeployFunction = async function ({
     proxy: {
       owner: proxyAdministrator,
       proxyContract: "TUPProxy",
-      implementationName: "OracleV1_Implementation_0_6_0_rc1",
+      implementationName: "OracleV1_Implementation_1_0_0",
       execute: {
         methodName: "initOracleV1",
         args: [riverDeployment.address, oracleFirewallDeployment.address, 225, 32, 12, genesisTimestamp, 1000, 500],
@@ -160,7 +160,7 @@ const func: DeployFunction = async function ({
     proxy: {
       owner: proxyAdministrator,
       proxyContract: "TUPProxy",
-      implementationName: "OperatorsRegistryV1_Implementation_0_6_0_rc1",
+      implementationName: "OperatorsRegistryV1_Implementation_1_1_0",
       execute: {
         methodName: "initOperatorsRegistryV1",
         args: [operatorsRegistryFirewallDeployment.address, futureRiverAddress],
@@ -176,7 +176,7 @@ const func: DeployFunction = async function ({
     from: deployer,
     log: true,
     proxy: {
-      implementationName: "ELFeeRecipientV1_Implementation_0_6_0_rc1",
+      implementationName: "ELFeeRecipientV1_Implementation_1_0_0",
       owner: proxyAdministrator,
       proxyContract: "TUPProxy",
       execute: {

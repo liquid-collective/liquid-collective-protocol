@@ -39,9 +39,6 @@ const func: DeployFunction = async function ({ deployments, network, ethers }: H
   tx = await OperatorsRegistryContract.initOperatorsRegistryV1_1();
   console.log("Performed OperatorsRegistry.initOperatorsRegistryV1_1() contract 0.6.0 upgrade:", tx.hash);
 
-  tx = await OracleContract.initOracleV1_1();
-  console.log("Performed Operator.initOracleV1_1() contract 0.6.0 upgrade:", tx.hash);
-
   tx = await RiverContract.initRiverV1_1(
     redeemManagerDeployment.address,
     epochsPerFrame,
