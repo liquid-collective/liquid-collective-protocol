@@ -17,6 +17,7 @@ out
 
 deployment.local.json
 deployments/local
+deployments/tenderly
 
 .DS_Store
 .idea

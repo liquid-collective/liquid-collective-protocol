@@ -13,7 +13,7 @@ const func: DeployFunction = async function ({
   if (!["devHolesky", "hardhat", "local", "tenderly"].includes(network.name)) {
     throw new Error("Invalid network for devGoerli deployment");
   }
-  const genesisTimestamp = 1616508000;
+  const genesisTimestamp = 1695902400;
   const grossFee = 1250;
 
   const { deployer, governor, executor, proxyAdministrator, collector } = await getNamedAccounts();
@@ -221,6 +221,79 @@ const func: DeployFunction = async function ({
     throw new Error(`Invalid river address provided by Oracle`);
   }
 
+  const redeemManagerDeployment = await deployments.deploy("RedeemManager", {
+    contract: "RedeemManagerV1",
+    from: deployer,
+    log: true,
+    proxy: {
+      owner: proxyAdministrator,
+      proxyContract: "TUPProxy",
+      implementationName: "RedeemManagerV1_Implementation_1_1_0",
+      execute: {
+        methodName: "initializeRedeemManagerV1",
+        args: [riverDeployment.address],
+      },
+    },
+  });
+
+  await verify("TUPProxy", redeemManagerDeployment.address, []);
+  await verify("RedeemManagerV1", redeemManagerDeployment.implementation, []);
+
+  // Initializations
+
+  let tx = await WithdrawContract.initializeWithdrawV1(riverDeployment.address);
+  console.log(`Performed Withdraw.initializeWithdrawV1(${riverDeployment.address}) contract 0.6.0 upgrade:`, tx.hash);
+
+  const epochsPerFrame = 225;
+  const slotsPerEpoch = 32;
+  const secondsPerSlot = 12;
+  const epochsToAssumedFinality = 4;
+  const upperBound = 1000;
+  const lowerBound = 500;
+  const minDailyNetCommittable = BigInt(3200) * BigInt(1e18);
+  const maxDailyRelativeCommittable = 1000;
+
+  const RiverContract = await ethers.getContractAt("RiverV1", riverDeployment.address);
+  tx = await RiverContract.initRiverV1_1(
+    redeemManagerDeployment.address,
+    epochsPerFrame,
+    slotsPerEpoch,
+    secondsPerSlot,
+    genesisTimestamp,
+    epochsToAssumedFinality,
+    upperBound,
+    lowerBound,
+    minDailyNetCommittable,
+    maxDailyRelativeCommittable
+  );
+  console.log(
+    `Performed River.initRiverV1_1(${[
+      redeemManagerDeployment.address,
+      epochsPerFrame,
+      slotsPerEpoch,
+      secondsPerSlot,
+      genesisTimestamp,
+      epochsToAssumedFinality,
+      upperBound,
+      lowerBound,
+      minDailyNetCommittable,
+      maxDailyRelativeCommittable,
+    ]
+      .map((x) => x.toString())
+      .join(", ")}) contract 0.6.0 upgrade:`,
+    tx.hash
+  );
+
+  const OperatorsRegistryContract = await ethers.getContractAt(
+    "OperatorsRegistryV1",
+    operatorsRegistryDeployment.address
+  );
+  tx = await OperatorsRegistryContract.forceFundedValidatorKeysEventEmission(1);
+  console.log(
+    `Performed OperatorsRegistry.forceFundedValidatorKeysEventEmission(${1}) contract 0.6.0 migration:`,
+    tx.hash
+  );
+
   logStepEnd(__filename);
 };
 
@@ -230,7 +303,8 @@ func.skip = async function ({ deployments }: HardhatRuntimeEnvironment): Promise
     (await isDeployed("River", deployments, __filename)) &&
     (await isDeployed("Oracle", deployments, __filename)) &&
     (await isDeployed("OperatorsRegistry", deployments, __filename)) &&
-    (await isDeployed("ELFeeRecipient", deployments, __filename));
+    (await isDeployed("ELFeeRecipient", deployments, __filename)) &&
+    (await isDeployed("RedeemManager", deployments, __filename));
   if (shouldSkip) {
     console.log("Skipped");
     logStepEnd(__filename);
