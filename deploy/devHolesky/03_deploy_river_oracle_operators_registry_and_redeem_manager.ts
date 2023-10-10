@@ -4,6 +4,18 @@ import { HardhatRuntimeEnvironment } from "hardhat/types";
 import { isDeployed, logStep, logStepEnd } from "../../ts-utils/helpers/index";
 import { verify } from "../../scripts/helpers";
 
+// Deploy the following contracts:
+// 1. River (River + TUPProxy + Firewall)
+// 2. Oracle (Oracle + TUPProxy + Firewall)
+// 3. OperatorsRegistry (OperatorsRegistry + TUPProxy + Firewall)
+// 4. ELFeeRecipient (ELFeeRecipient + TUPProxy)
+// 5. RedeemManager (RedeemManager + TUPProxy)
+//
+// Run initializations
+// 1. initializeWithdrawV1 on Withdraw
+// 2. initRiverV1_1 on River
+// 3. forceFundedValidatorKeysEventEmission on OperatorsRegistry
+//
 const func: DeployFunction = async function ({
   deployments,
   getNamedAccounts,
