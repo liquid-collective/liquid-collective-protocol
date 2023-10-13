@@ -40,3 +40,4 @@ func.skip = async function ({ deployments, network }: HardhatRuntimeEnvironment)
 };
 
 export default func;
+
