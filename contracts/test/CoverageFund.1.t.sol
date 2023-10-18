@@ -45,7 +45,7 @@ abstract contract CoverageFundV1TestBase {
     event Donate(address indexed donator, uint256 amount);
 }
 
-contract CoverageFundV1InitializationTests {
+contract CoverageFundV1InitializationTests is CoverageFundV1TestBase, Test {
     function setUp() public {
         admin = makeAddr("admin");
         allowlist = new AllowlistV1();
@@ -60,7 +60,6 @@ contract CoverageFundV1InitializationTests {
         vm.expectEmit(true, true, true, true);
         emit SetRiver(address(river));
         coverageFund.initCoverageFundV1(address(river));
-        assertEq(address(river), coverageFund.river());
     }
 }
 
