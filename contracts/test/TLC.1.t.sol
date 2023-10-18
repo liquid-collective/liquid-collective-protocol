@@ -6,7 +6,7 @@ import "../src/TLC.1.sol";
 import "../src/TUPProxy.sol";
 import "forge-std/Test.sol";
 
-contract TLCTests is Test {
+abstract contract TLCTestBase {
     TLCV1 internal tlcImplem;
     TLCV1 internal tlc;
 
@@ -15,7 +15,30 @@ contract TLCTests is Test {
     address internal bob;
     address internal joe;
     address internal admin;
+}
 
+contract TLCInitializationTest is TLCTestBase, Test {
+    function setUp() public {
+        initAccount = makeAddr("init");
+        bob = makeAddr("bob");
+        joe = makeAddr("joe");
+        admin = makeAddr("admin");
+
+        tlcImplem = new TLCV1();
+    }
+
+    function testInitialization() external {
+        tlc = TLCV1(
+            address(
+                new TUPProxy(address(tlcImplem), admin, abi.encodeWithSelector(tlcImplem.initTLCV1.selector, initAccount))
+            )
+        );
+
+        assertEq(1_000_000_000e18, tlc.totalSupply());
+    }
+}
+
+contract TLCTests is TLCTestBase, Test {
     function setUp() public {
         initAccount = makeAddr("init");
         bob = makeAddr("bob");

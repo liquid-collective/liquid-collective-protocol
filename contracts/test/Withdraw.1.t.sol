@@ -21,13 +21,29 @@ contract RiverMock {
     }
 }
 
-contract WithdrawV1Tests is Test {
+abstract contract WithdrawV1TestBase {
     WithdrawV1 internal withdraw;
     RiverMock internal river;
     UserFactory internal uf = new UserFactory();
 
     event DebugReceivedCLFunds(uint256 amount);
+}
 
+contract WithdrawV1InitializationTests is WithdrawV1TestBase, Test {
+    function setUp() external {
+        river = new RiverMock();
+
+        withdraw = new WithdrawV1();
+        LibImplementationUnbricker.unbrick(vm, address(withdraw));
+    }
+
+    function testInitialization() external {
+        withdraw.initializeWithdrawV1(address(river));
+        assertEq(address(river), withdraw.getRiver());
+    }
+}
+
+contract WithdrawV1Tests is WithdrawV1TestBase, Test {
     function setUp() external {
         river = new RiverMock();
 

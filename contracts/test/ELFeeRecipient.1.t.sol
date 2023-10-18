@@ -21,7 +21,7 @@ contract RiverDonationMock {
     }
 }
 
-contract ELFeeRecipientV1Test is Test {
+abstract contract ELFeeRecipientV1TestBase {
     ELFeeRecipientV1 internal feeRecipient;
 
     RiverDonationMock internal river;
@@ -29,6 +29,23 @@ contract ELFeeRecipientV1Test is Test {
 
     event BalanceUpdated(uint256 amount);
     event SetRiver(address indexed river);
+}
+
+contract ELFeeRecipientV1InitializationTests is ELFeeRecipientV1TestBase, Test {
+    function setUp() public {
+        river = new RiverDonationMock();
+        feeRecipient = new ELFeeRecipientV1();
+        LibImplementationUnbricker.unbrick(vm, address(feeRecipient));
+    }
+
+    function testInitialization() external {
+        vm.expectEmit(true, true, true, true);
+        emit SetRiver(address(river));
+        feeRecipient.initELFeeRecipientV1(address(river));
+    }
+}
+
+contract ELFeeRecipientV1Test is ELFeeRecipientV1TestBase, Test {
 
     function setUp() public {
         river = new RiverDonationMock();
@@ -110,6 +127,16 @@ contract ELFeeRecipientV1Test is Test {
 
         vm.expectRevert(abi.encodeWithSignature("Unauthorized(address)", sender));
         feeRecipient.pullELFees(address(feeRecipient).balance);
+        vm.stopPrank();
+    }
+
+    function testFallbackFail() external {
+        address sender = uf._new(1);
+        vm.deal(sender, 1e18);
+
+        vm.startPrank(sender);
+        vm.expectRevert(abi.encodeWithSignature("InvalidCall()"));
+        address(feeRecipient).call{value: 1e18}(abi.encodeWithSignature("Hello()"));
         vm.stopPrank();
     }
 }
