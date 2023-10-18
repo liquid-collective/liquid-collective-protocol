@@ -217,4 +217,9 @@ contract CoverageFundTestV1 is CoverageFundV1TestBase {
         address(coverageFund).call{value: 1e18}(abi.encodeWithSignature("Hello()"));
         vm.stopPrank();
     }
+
+    function testNoFundPulled() external {
+        river.pullCoverageFunds(address(coverageFund), 0);
+        assertEq(0, address(river).balance);
+    }
 }

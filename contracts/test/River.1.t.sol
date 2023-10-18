@@ -785,6 +785,10 @@ contract RiverV1Tests is RiverV1TestBase {
         vm.expectRevert(abi.encodeWithSignature("Unauthorized(address)", address(this)));
         river.sendRedeemManagerExceedingFunds();
     }
+
+    function testExternalViewFunctions() public {
+        assertEq(block.timestamp, river.getTime());
+    }
 }
 
 contract RiverV1TestsReport_HEAVY_FUZZING is RiverV1TestBase {

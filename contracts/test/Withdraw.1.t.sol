@@ -162,4 +162,9 @@ contract WithdrawV1Tests is WithdrawV1TestBase {
         assertEq(address(withdraw).balance, 0);
         assertEq(address(river).balance, _amount);
     }
+
+    function testNoFundPulled() external {
+        river.debug_pullFunds(address(withdraw), 0);
+        assertEq(0, address(river).balance);
+    }
 }

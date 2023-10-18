@@ -117,6 +117,11 @@ contract ELFeeRecipientV1Test is ELFeeRecipientV1TestBase {
         river.pullELFees(address(feeRecipient), address(feeRecipient).balance / 2);
     }
 
+    function testNoFundPulled() external {
+        river.pullELFees(address(feeRecipient), 0);
+        assertEq(0, address(river).balance);
+    }
+
     function testPullFundsUnauthorized(uint256 _senderSalt, uint256 _amount) external {
         address sender = uf._new(_senderSalt);
         vm.deal(sender, _amount);
