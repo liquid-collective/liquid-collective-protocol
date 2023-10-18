@@ -142,6 +142,13 @@ contract WithdrawV1Tests is WithdrawV1TestBase {
         withdraw.pullEth(1 ether);
     }
 
+    function testPullFundsAsRiver(uint256 _salt) external {
+        vm.deal(address(withdraw), 1 ether);
+        river.debug_pullFunds(address(withdraw), 1 ether);
+
+        assertEq(1 ether, address(river).balance);
+    }
+
     function testPullFundsAmountTooHigh(uint256 _amount) external {
         _amount = bound(_amount, 1, type(uint128).max);
 

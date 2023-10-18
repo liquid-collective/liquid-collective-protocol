@@ -691,6 +691,13 @@ contract OracleV1Tests is OracleV1TestBase {
         }
     }
 
+    function testGetReportVariantDetailsFail() external {
+        vm.expectRevert(
+            abi.encodeWithSignature("ReportIndexOutOfBounds(uint256,uint256)", 100, oracle.getReportVariantsCount())
+        );
+        oracle.getReportVariantDetails(100);
+    }
+
     function testExternalViewFunctions() external {
         assertEq(0, oracle.getGlobalReportStatus());
         assertEq(new address[](0), oracle.getOracleMembers());
