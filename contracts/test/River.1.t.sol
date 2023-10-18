@@ -609,6 +609,35 @@ contract RiverV1Tests is RiverV1TestBase {
         vm.stopPrank();
     }
 
+    function testOnTransferFailsForAllowlistDenied() public {
+        vm.deal(joe, 100 ether);
+        vm.deal(bob, 1000 ether);
+
+        _allow(joe, LibAllowlistMasks.DEPOSIT_MASK);
+        _allow(bob, LibAllowlistMasks.DEPOSIT_MASK);
+
+        vm.startPrank(joe);
+        river.deposit{value: 100 ether}();
+        vm.stopPrank();
+
+        assert(river.balanceOfUnderlying(joe) == 100 ether);
+
+        // A user present on denied allow list can't send
+        _deny(joe);
+        vm.startPrank(joe);
+        vm.expectRevert(abi.encodeWithSignature("Denied(address)", joe));
+        river.transfer(bob, 100 ether);
+        vm.stopPrank();
+
+        // A user present on denied allow list can't receive
+        _allow(joe, LibAllowlistMasks.DEPOSIT_MASK);
+        _deny(bob);
+        vm.startPrank(joe);
+        vm.expectRevert(abi.encodeWithSignature("Denied(address)", bob));
+        river.transfer(bob, 100 ether);
+        vm.stopPrank();
+    }
+
     // Testing regular parameters
     function testUserDepositsFullAllowance() public {
         vm.deal(joe, 100 ether);
@@ -750,6 +779,11 @@ contract RiverV1Tests is RiverV1TestBase {
         returns (uint256)
     {
         return (_prevTotalEth * annualAprUpperBound * _timeElapsed) / uint256(10000 * 365 days);
+    }
+
+    function testSendRedeemManagerUnauthorizedCall() public {
+        vm.expectRevert(abi.encodeWithSignature("Unauthorized(address)", address(this)));
+        river.sendRedeemManagerExceedingFunds();
     }
 }
 

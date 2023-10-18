@@ -11,7 +11,7 @@ import "./mocks/RiverMock.sol";
 import "../src/Oracle.1.sol";
 import "../src/interfaces/IRiver.1.sol";
 
-contract OracleV1Tests is Test {
+abstract contract OracleV1TestBase is Test {
     OracleV1 internal oracle;
 
     IRiverV1 internal oracleInput;
@@ -38,10 +38,43 @@ contract OracleV1Tests is Test {
     event SetBounds(uint256 _annualAprUpperBound, uint256 _relativeLowerBound);
     event SetRiver(address _river);
 
-    function setUp() public {
+    function setUp() public virtual {
         oracleInput = IRiverV1(payable(address(new RiverMock())));
         oracle = new OracleV1();
         LibImplementationUnbricker.unbrick(vm, address(oracle));
+    }
+}
+
+contract OracleV1InitializationTests is OracleV1TestBase {
+    function testInitialization() public {
+        vm.expectEmit(true, true, true, true);
+        emit SetRiver(address(oracleInput));
+        vm.expectEmit(true, true, true, true);
+        emit SetSpec(EPOCHS_PER_FRAME, SLOTS_PER_EPOCH, SECONDS_PER_SLOT, GENESIS_TIME);
+        vm.expectEmit(true, true, true, true);
+        emit SetBounds(UPPER_BOUND, LOWER_BOUND);
+        vm.expectEmit(true, true, true, true);
+        emit SetQuorum(0);
+
+        oracle.initOracleV1(
+            address(oracleInput),
+            admin,
+            EPOCHS_PER_FRAME,
+            SLOTS_PER_EPOCH,
+            SECONDS_PER_SLOT,
+            GENESIS_TIME,
+            UPPER_BOUND,
+            LOWER_BOUND
+        );
+        assertEq(address(oracleInput), oracle.getRiver());
+
+        oracle.initOracleV1_1();
+    }
+}
+
+contract OracleV1Tests is OracleV1TestBase {
+    function setUp() public override {
+        super.setUp();
         vm.expectEmit(true, true, true, true);
         emit SetRiver(address(oracleInput));
         oracle.initOracleV1(
@@ -656,5 +689,11 @@ contract OracleV1Tests is Test {
             }
             oracle.reportConsensusLayerData(report);
         }
+    }
+
+    function testExternalViewFunctions() external {
+        assertEq(0, oracle.getGlobalReportStatus());
+        assertEq(new address[](0), oracle.getOracleMembers());
+        assertEq(0, oracle.getLastReportedEpochId());
     }
 }
