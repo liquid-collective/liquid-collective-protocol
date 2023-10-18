@@ -21,7 +21,7 @@ contract RiverDonationMock {
     }
 }
 
-abstract contract ELFeeRecipientV1TestBase {
+abstract contract ELFeeRecipientV1TestBase is Test {
     ELFeeRecipientV1 internal feeRecipient;
 
     RiverDonationMock internal river;
@@ -31,7 +31,7 @@ abstract contract ELFeeRecipientV1TestBase {
     event SetRiver(address indexed river);
 }
 
-contract ELFeeRecipientV1InitializationTests is ELFeeRecipientV1TestBase, Test {
+contract ELFeeRecipientV1InitializationTests is ELFeeRecipientV1TestBase {
     function setUp() public {
         river = new RiverDonationMock();
         feeRecipient = new ELFeeRecipientV1();
@@ -45,8 +45,7 @@ contract ELFeeRecipientV1InitializationTests is ELFeeRecipientV1TestBase, Test {
     }
 }
 
-contract ELFeeRecipientV1Test is ELFeeRecipientV1TestBase, Test {
-
+contract ELFeeRecipientV1Test is ELFeeRecipientV1TestBase {
     function setUp() public {
         river = new RiverDonationMock();
         feeRecipient = new ELFeeRecipientV1();

@@ -21,7 +21,7 @@ contract RiverMock {
     }
 }
 
-abstract contract WithdrawV1TestBase {
+abstract contract WithdrawV1TestBase is Test {
     WithdrawV1 internal withdraw;
     RiverMock internal river;
     UserFactory internal uf = new UserFactory();
@@ -29,7 +29,7 @@ abstract contract WithdrawV1TestBase {
     event DebugReceivedCLFunds(uint256 amount);
 }
 
-contract WithdrawV1InitializationTests is WithdrawV1TestBase, Test {
+contract WithdrawV1InitializationTests is WithdrawV1TestBase {
     function setUp() external {
         river = new RiverMock();
 
@@ -43,7 +43,7 @@ contract WithdrawV1InitializationTests is WithdrawV1TestBase, Test {
     }
 }
 
-contract WithdrawV1Tests is WithdrawV1TestBase, Test {
+contract WithdrawV1Tests is WithdrawV1TestBase {
     function setUp() external {
         river = new RiverMock();
 

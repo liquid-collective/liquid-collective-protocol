@@ -6,7 +6,7 @@ import "../src/TLC.1.sol";
 import "../src/TUPProxy.sol";
 import "forge-std/Test.sol";
 
-abstract contract TLCTestBase {
+abstract contract TLCTestBase is Test {
     TLCV1 internal tlcImplem;
     TLCV1 internal tlc;
 
@@ -17,7 +17,7 @@ abstract contract TLCTestBase {
     address internal admin;
 }
 
-contract TLCInitializationTest is TLCTestBase, Test {
+contract TLCInitializationTest is TLCTestBase {
     function setUp() public {
         initAccount = makeAddr("init");
         bob = makeAddr("bob");
@@ -38,7 +38,7 @@ contract TLCInitializationTest is TLCTestBase, Test {
     }
 }
 
-contract TLCTests is TLCTestBase, Test {
+contract TLCTests is TLCTestBase {
     function setUp() public {
         initAccount = makeAddr("init");
         bob = makeAddr("bob");

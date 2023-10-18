@@ -32,7 +32,7 @@ contract RiverMock {
     }
 }
 
-abstract contract CoverageFundV1TestBase {
+abstract contract CoverageFundV1TestBase is Test {
     CoverageFundV1 internal coverageFund;
 
     AllowlistV1 internal allowlist;
@@ -45,7 +45,7 @@ abstract contract CoverageFundV1TestBase {
     event Donate(address indexed donator, uint256 amount);
 }
 
-contract CoverageFundV1InitializationTests is CoverageFundV1TestBase, Test {
+contract CoverageFundV1InitializationTests is CoverageFundV1TestBase {
     function setUp() public {
         admin = makeAddr("admin");
         allowlist = new AllowlistV1();
@@ -63,7 +63,7 @@ contract CoverageFundV1InitializationTests is CoverageFundV1TestBase, Test {
     }
 }
 
-contract CoverageFundTestV1 is CoverageFundV1TestBase, Test {
+contract CoverageFundTestV1 is CoverageFundV1TestBase {
     function setUp() public {
         admin = makeAddr("admin");
         allowlist = new AllowlistV1();
