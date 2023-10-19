@@ -3,5 +3,3 @@ codecov:
 ignore:
   - "contracts/test/"
   - "contracts/src/mock/"
-  - "contracts/src/libraries/"
-  - "contracts/src/state/"
