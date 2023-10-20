@@ -1,3 +1,6 @@
 [profile.default]
 optimizer = true
 optimizer_runs = 100
+
+[rpc_endpoints]
+mainnet = "${MAINNET_FORK_RPC_URL}"
