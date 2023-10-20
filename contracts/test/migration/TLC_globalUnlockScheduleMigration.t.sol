@@ -9,15 +9,17 @@ import "../../src/TLC.1.sol";
 contract TlcMigrationTest is Test {
     TlcMigration migrationsContract;
     TLCV1 tlc;
-    string public constant MAINNET = "MAINNET";
-    string public constant LOCALFORK = "http://127.0.0.1:8545";
+    string rpc;
+
+    function setUp() public {
+        rpc = vm.rpcUrl("mainnet");
+    }
 
     function testCreate() public {
         migrationsContract = new TlcMigration();
     }
 
     function testGas() public {
-        string memory rpc = vm.rpcUrl("mainnet");
         vm.createSelectFork(rpc, 18063740);
 
         migrationsContract = new TlcMigration();
@@ -28,7 +30,6 @@ contract TlcMigrationTest is Test {
 
     function testMigrate() public {
         // Significantly faster when cached locally, run a local fork for best perf (anvil recommended)
-        string memory rpc = vm.rpcUrl("mainnet");
         vm.createSelectFork(rpc, 18063740);
 
         proxy tlcProxy = proxy(0xb5Fe6946836D687848B5aBd42dAbF531d5819632);
