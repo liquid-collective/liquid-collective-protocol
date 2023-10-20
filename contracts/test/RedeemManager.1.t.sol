@@ -84,6 +84,8 @@ contract RiverMock {
     function pullExceedingEth(address redeemManager, uint256 amount) external {
         RedeemManagerV1(redeemManager).pullExceedingEth(amount);
     }
+
+    fallback() external payable {}
 }
 
 contract RedeemManagerV1Tests is Test {
@@ -1386,6 +1388,7 @@ contract RedeemManagerV1Tests is Test {
     }
 
     function testPullExceedingEth() external {
+        vm.deal(address(redeemManager), 1 ether);
         vm.store(
             address(redeemManager),
             bytes32(uint256(keccak256("river.state.bufferedExceedingEth")) - 1),
