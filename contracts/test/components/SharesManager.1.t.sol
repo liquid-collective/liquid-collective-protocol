@@ -560,4 +560,8 @@ contract SharesManagerV1Tests is Test {
         sharesManager.transfer(_userTwo, 1);
         vm.stopPrank();
     }
+
+    function testExternalViewFunctions() external {
+        assert(0 == sharesManager.sharesFromUnderlyingBalance(1));
+    }
 }

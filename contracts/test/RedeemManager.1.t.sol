@@ -80,6 +80,10 @@ contract RiverMock {
     function underlyingBalanceFromShares(uint256 shares) external view returns (uint256) {
         return (shares * rate) / 1e18;
     }
+
+    function pullExceedingEth(address redeemManager, uint256 amount) external {
+        RedeemManagerV1(redeemManager).pullExceedingEth(amount);
+    }
 }
 
 contract RedeemManagerV1Tests is Test {
@@ -1379,5 +1383,14 @@ contract RedeemManagerV1Tests is Test {
         int64[] memory withdrawalEventIds = redeemManager.resolveRedeemRequests(redeemRequestIds);
         assertEq(withdrawalEventIds.length, 1);
         assertTrue(withdrawalEventIds[0] == -1);
+    }
+
+    function testPullExceedingEth() external {
+        vm.store(
+            address(redeemManager),
+            bytes32(uint256(keccak256("river.state.bufferedExceedingEth")) - 1),
+            bytes32(uint256(1 ether))
+        );
+        river.pullExceedingEth(address(redeemManager), 1 ether);
     }
 }
