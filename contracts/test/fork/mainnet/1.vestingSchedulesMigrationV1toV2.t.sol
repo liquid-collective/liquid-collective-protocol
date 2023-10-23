@@ -1,5 +1,8 @@
 //SPDX-License-Identifier: MIT
 
+/*
+Left here for legacy reasons, you can now execute this test from the TLC repository
+
 pragma solidity 0.8.10;
 
 import "forge-std/Test.sol";
@@ -235,3 +238,4 @@ contract VestingSchedulesMigrationV1ToV2 is Test {
         vs[13].releasedAmount = 0;
     }
 }
+*/
