@@ -145,13 +145,19 @@ contract AllowlistV1 is IAllowlistV1, Initializable, Administrable {
         for (uint256 i = 0; i < _accounts.length;) {
             LibSanitize._notZeroAddress(_accounts[i]);
             // Check if it doesn't contain allow or deny permissions
-            if (
-                _permissions[i] & LibAllowlistMasks.DEPOSIT_MASK == 0
-                    && _permissions[i] & LibAllowlistMasks.DENY_MASK == 0
-                    && _permissions[i] & LibAllowlistMasks.REDEEM_MASK == 0
-            ) {
-                revert LibErrors.Unauthorized(msg.sender);
-            }
+            require(
+                (_permissions[i] & LibAllowlistMasks.DENY_MASK) != LibAllowlistMasks.DENY_MASK,
+                "Cannot set deny permission"
+            );
+            require(
+                (_permissions[i] & LibAllowlistMasks.DEPOSIT_MASK) != LibAllowlistMasks.DEPOSIT_MASK,
+                "Cannot set deposit permission"
+            );
+            require(
+                (_permissions[i] & LibAllowlistMasks.REDEEM_MASK) != LibAllowlistMasks.REDEEM_MASK,
+                "Cannot set redeem permission"
+            );
+
             Allowlist.set(_accounts[i], _permissions[i]);
             unchecked {
                 ++i;
