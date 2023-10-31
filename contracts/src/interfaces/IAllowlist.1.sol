@@ -7,12 +7,21 @@ pragma solidity 0.8.10;
 interface IAllowlistV1 {
     /// @notice The permissions of several accounts have changed
     /// @param accounts List of accounts
+    /// @param permission New permissions for each account at the same index
+    event SetAllowlistPermissions(address[] accounts, uint256 permission);
+
+    /// @notice The permissions of several accounts have changed
+    /// @param accounts List of accounts
     /// @param permissions New permissions for each account at the same index
     event SetAllowlistPermissions(address[] accounts, uint256[] permissions);
 
     /// @notice The stored allower address has been changed
     /// @param allower The new allower address
     event SetAllower(address indexed allower);
+
+    /// @notice The stored denier address has been changed
+    /// @param denier The new denier address
+    event SetDenier(address indexed denier);
 
     /// @notice The provided accounts list is empty
     error InvalidAlloweeCount();
@@ -27,11 +36,16 @@ interface IAllowlistV1 {
     /// @notice Initializes the allowlist
     /// @param _admin Address of the Allowlist administrator
     /// @param _allower Address of the allower
-    function initAllowlistV1(address _admin, address _allower) external;
+    /// @param _denier Address of the denier
+    function initAllowlistV1(address _admin, address _allower, address _denier) external;
 
     /// @notice Retrieves the allower address
     /// @return The address of the allower
     function getAllower() external view returns (address);
+
+    /// @notice Retrieves the allower address
+    /// @return The address of the allower
+    function getDenier() external view returns (address);
 
     /// @notice This method returns true if the user has the expected permission and
     ///         is not in the deny list
@@ -68,9 +82,17 @@ interface IAllowlistV1 {
     /// @param _newAllowerAddress New address allowed to edit the allowlist
     function setAllower(address _newAllowerAddress) external;
 
+    /// @notice Changes the denier address
+    /// @param _newDenierAddress New address allowed to edit the allowlist
+    function setDenier(address _newDenierAddress) external;
+
     /// @notice Sets the allowlisting status for one or more accounts
     /// @dev The permission value is overridden and not updated
-    /// @param _accounts Accounts with statuses to edit
-    /// @param _permissions Allowlist permissions for each account, in the same order as _accounts
-    function allow(address[] calldata _accounts, uint256[] calldata _permissions) external;
+    /// @param _accounts Accounts with statuses to be set to allow
+    function allow(address[] calldata _accounts) external;
+
+    /// @notice Sets the allowlisting status for one or more accounts
+    /// @dev The permission value is overridden and not updated
+    /// @param _accounts Accounts with statuses to be set to deny
+    function deny(address[] calldata _accounts) external;
 }

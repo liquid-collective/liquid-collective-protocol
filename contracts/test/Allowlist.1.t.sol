@@ -24,6 +24,7 @@ contract AllowlistV1Tests is Test {
 
     address internal testAdmin = address(0xFA674fDde714fD979DE3EdF0f56aa9716b898eC8);
     address internal allower = address(0xEA674fdDe714fd979de3EdF0F56AA9716B898ec8);
+    address internal denier = address(0xEA674fdDe714fd979de3EdF0F56AA9716B898ec8);
 
     AllowlistV1 internal allowlist;
 
@@ -33,7 +34,7 @@ contract AllowlistV1Tests is Test {
     function setUp() public {
         allowlist = new AllowlistV1Sudo();
         LibImplementationUnbricker.unbrick(vm, address(allowlist));
-        allowlist.initAllowlistV1(testAdmin, allower);
+        allowlist.initAllowlistV1(testAdmin, allower, denier);
     }
 
     uint256 internal constant TEST_ONE_MASK = 0x1;
@@ -41,37 +42,37 @@ contract AllowlistV1Tests is Test {
 
     function testSetAllowlistStatus(uint256 userSalt) public {
         address user = uf._new(userSalt);
-        vm.startPrank(allower);
+        vm.startPrank(testAdmin);
         assert(allowlist.isAllowed(user, 0x1) == false);
         address[] memory allowees = new address[](1);
         allowees[0] = user;
         uint256[] memory permissions = AllowlistHelper.batchAllowees(allowees.length, TEST_ONE_MASK);
         vm.expectEmit(true, true, true, true);
         emit SetAllowlistPermissions(allowees, permissions);
-        allowlist.allow(allowees, permissions);
+        allowlist.setPermissions(allowees, permissions);
         assert(allowlist.isAllowed(user, TEST_ONE_MASK) == true);
     }
 
     function testSetAllowlistStatusZeroAddress() public {
-        vm.startPrank(allower);
+        vm.startPrank(testAdmin);
         address[] memory allowees = new address[](1);
         allowees[0] = address(0);
         uint256[] memory permissions = AllowlistHelper.batchAllowees(allowees.length, TEST_ONE_MASK);
         vm.expectRevert(abi.encodeWithSignature("InvalidZeroAddress()"));
-        allowlist.allow(allowees, permissions);
+        allowlist.setPermissions(allowees, permissions);
     }
 
     function testSetAllowlistStatusComplicatedMask(uint256 userOneSalt, uint256 userTwoSalt) public {
         address userOne = uf._new(userOneSalt);
         address userTwo = uf._new(userTwoSalt);
-        vm.startPrank(allower);
+        vm.startPrank(testAdmin);
         assert(allowlist.isAllowed(userOne, TEST_ONE_MASK + TEST_TWO_MASK) == false);
         assert(allowlist.isAllowed(userTwo, TEST_ONE_MASK + TEST_TWO_MASK) == false);
         address[] memory allowees = new address[](2);
         allowees[0] = userOne;
         allowees[1] = userTwo;
         uint256[] memory permissions = AllowlistHelper.batchAllowees(allowees.length, TEST_ONE_MASK + TEST_TWO_MASK);
-        allowlist.allow(allowees, permissions);
+        allowlist.setPermissions(allowees, permissions);
 
         assert(allowlist.isAllowed(userOne, 0x1 + (0x1 << 1)) == true);
         assert(allowlist.isAllowed(userOne, 0x1) == true);
@@ -91,7 +92,7 @@ contract AllowlistV1Tests is Test {
         allowees[0] = user;
         uint256[] memory permissions = AllowlistHelper.batchAllowees(allowees.length, TEST_ONE_MASK);
         vm.expectRevert(abi.encodeWithSignature("Unauthorized(address)", user));
-        allowlist.allow(allowees, permissions);
+        allowlist.setPermissions(allowees, permissions);
     }
 
     function testSetAllowlistStatusMultipleSame(uint256 userOneSalt, uint256 userTwoSalt, uint256 userThreeSalt)
@@ -104,11 +105,11 @@ contract AllowlistV1Tests is Test {
         allowees[0] = userOne;
         allowees[1] = userTwo;
         allowees[2] = userThree;
-        vm.startPrank(allower);
+        vm.startPrank(testAdmin);
         assert(allowlist.isAllowed(userOne, TEST_ONE_MASK) == false);
         assert(allowlist.isAllowed(userTwo, TEST_ONE_MASK) == false);
         assert(allowlist.isAllowed(userThree, TEST_ONE_MASK) == false);
-        allowlist.allow(allowees, AllowlistHelper.batchAllowees(allowees.length, TEST_ONE_MASK));
+        allowlist.setPermissions(allowees, AllowlistHelper.batchAllowees(allowees.length, TEST_ONE_MASK));
         assert(allowlist.isAllowed(userOne, TEST_ONE_MASK) == true);
         assert(allowlist.isAllowed(userTwo, TEST_ONE_MASK) == true);
         assert(allowlist.isAllowed(userThree, TEST_ONE_MASK) == true);
@@ -128,11 +129,11 @@ contract AllowlistV1Tests is Test {
         permissions[0] = 0;
         permissions[1] = TEST_ONE_MASK;
         permissions[2] = 0;
-        vm.startPrank(allower);
+        vm.startPrank(testAdmin);
         assert(allowlist.isAllowed(userOne, TEST_ONE_MASK) == false);
         assert(allowlist.isAllowed(userTwo, TEST_ONE_MASK) == false);
         assert(allowlist.isAllowed(userThree, TEST_ONE_MASK) == false);
-        allowlist.allow(allowees, permissions);
+        allowlist.setPermissions(allowees, permissions);
         assert(allowlist.isAllowed(userOne, TEST_ONE_MASK) == false);
         assert(allowlist.isAllowed(userTwo, TEST_ONE_MASK) == true);
         assert(allowlist.isAllowed(userThree, TEST_ONE_MASK) == false);
@@ -151,9 +152,9 @@ contract AllowlistV1Tests is Test {
         uint256[] memory permissions = new uint256[](2);
         permissions[0] = 0;
         permissions[1] = TEST_ONE_MASK;
-        vm.startPrank(allower);
+        vm.startPrank(testAdmin);
         vm.expectRevert(abi.encodeWithSignature("MismatchedAlloweeAndStatusCount()"));
-        allowlist.allow(allowees, permissions);
+        allowlist.setPermissions(allowees, permissions);
     }
 
     function testSetAllower(uint256 adminSalt, uint256 newAllowerSalt) public {
@@ -179,13 +180,13 @@ contract AllowlistV1Tests is Test {
 
     function testSetUserDenied(uint256 userSalt) public {
         address user = uf._new(userSalt);
-        vm.startPrank(allower);
+        vm.startPrank(testAdmin);
         {
             assert(allowlist.isDenied(user) == false);
             address[] memory allowees = new address[](1);
             allowees[0] = user;
             uint256[] memory permissions = AllowlistHelper.batchAllowees(allowees.length, TEST_ONE_MASK);
-            allowlist.allow(allowees, permissions);
+            allowlist.setPermissions(allowees, permissions);
             assert(allowlist.isDenied(user) == false);
             assert(allowlist.isAllowed(user, TEST_ONE_MASK) == true);
         }
@@ -194,7 +195,7 @@ contract AllowlistV1Tests is Test {
             allowees[0] = user;
             uint256[] memory permissions =
                 AllowlistHelper.batchAllowees(allowees.length, TEST_ONE_MASK + LibAllowlistMasks.DENY_MASK);
-            allowlist.allow(allowees, permissions);
+            allowlist.setPermissions(allowees, permissions);
             assert(allowlist.isDenied(user) == true);
             assert(allowlist.isAllowed(user, TEST_ONE_MASK) == false);
             vm.expectRevert(abi.encodeWithSignature("Denied(address)", user));
@@ -204,13 +205,13 @@ contract AllowlistV1Tests is Test {
 
     function testGetRawPermissions(uint256 userSalt) public {
         address user = uf._new(userSalt);
-        vm.startPrank(allower);
+        vm.startPrank(testAdmin);
         {
             assert(allowlist.isDenied(user) == false);
             address[] memory allowees = new address[](1);
             allowees[0] = user;
             uint256[] memory permissions = AllowlistHelper.batchAllowees(allowees.length, TEST_ONE_MASK + TEST_TWO_MASK);
-            allowlist.allow(allowees, permissions);
+            allowlist.setPermissions(allowees, permissions);
             assert(allowlist.isAllowed(user, TEST_ONE_MASK) == true);
             assert(allowlist.hasPermission(user, TEST_ONE_MASK) == true);
             assert(allowlist.isAllowed(user, TEST_TWO_MASK) == true);
@@ -223,7 +224,7 @@ contract AllowlistV1Tests is Test {
             uint256[] memory permissions = AllowlistHelper.batchAllowees(
                 allowees.length, TEST_ONE_MASK + TEST_TWO_MASK + LibAllowlistMasks.DENY_MASK
             );
-            allowlist.allow(allowees, permissions);
+            allowlist.setPermissions(allowees, permissions);
             assert(allowlist.isAllowed(user, TEST_ONE_MASK) == false);
             assert(allowlist.hasPermission(user, TEST_ONE_MASK) == true);
             assert(allowlist.isAllowed(user, TEST_TWO_MASK) == false);

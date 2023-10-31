@@ -116,7 +116,7 @@ contract RedeemManagerV1Tests is Test {
         LibImplementationUnbricker.unbrick(vm, address(redeemManager));
         allowlist = new AllowlistV1();
         LibImplementationUnbricker.unbrick(vm, address(allowlist));
-        allowlist.initAllowlistV1(allowlistAdmin, allowlistAllower);
+        allowlist.initAllowlistV1(allowlistAdmin, allowlistAllower, allowlistAllower);
         river = new RiverMock(address(allowlist));
 
         redeemManager.initializeRedeemManagerV1(address(river));
@@ -131,8 +131,8 @@ contract RedeemManagerV1Tests is Test {
         accounts[0] = user;
         permissions[0] = LibAllowlistMasks.REDEEM_MASK;
 
-        vm.prank(allowlistAllower);
-        allowlist.allow(accounts, permissions);
+        vm.prank(allowlistAdmin);
+        allowlist.setPermissions(accounts, permissions);
 
         return user;
     }

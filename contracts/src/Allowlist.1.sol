@@ -8,6 +8,7 @@ import "./Initializable.sol";
 import "./Administrable.sol";
 
 import "./state/allowlist/AllowerAddress.sol";
+import "./state/allowlist/DenierAddress.sol";
 import "./state/allowlist/Allowlist.sol";
 
 /// @title Allowlist (v1)
@@ -19,15 +20,23 @@ import "./state/allowlist/Allowlist.sol";
 /// @notice with the system
 contract AllowlistV1 is IAllowlistV1, Initializable, Administrable {
     /// @inheritdoc IAllowlistV1
-    function initAllowlistV1(address _admin, address _allower) external init(0) {
+    function initAllowlistV1(address _admin, address _allower, address _denier) external init(0) {
         _setAdmin(_admin);
         AllowerAddress.set(_allower);
         emit SetAllower(_allower);
+
+        DenierAddress.set(_allower);
+        emit SetDenier(_denier);
     }
 
     /// @inheritdoc IAllowlistV1
     function getAllower() external view returns (address) {
         return AllowerAddress.get();
+    }
+
+    /// @inheritdoc IAllowlistV1
+    function getDenier() external view returns (address) {
+        return DenierAddress.get();
     }
 
     /// @inheritdoc IAllowlistV1
@@ -72,8 +81,57 @@ contract AllowlistV1 is IAllowlistV1, Initializable, Administrable {
     }
 
     /// @inheritdoc IAllowlistV1
-    function allow(address[] calldata _accounts, uint256[] calldata _permissions) external {
-        if (msg.sender != AllowerAddress.get() && msg.sender != _getAdmin()) {
+    function setDenier(address _newDenierAddress) external onlyAdmin {
+        DenierAddress.set(_newDenierAddress);
+        emit SetDenier(_newDenierAddress);
+    }
+
+    /// @inheritdoc IAllowlistV1
+    function allow(address[] calldata _accounts) external {
+        if (msg.sender != AllowerAddress.get()) {
+            revert LibErrors.Unauthorized(msg.sender);
+        }
+
+        if (_accounts.length == 0) {
+            revert InvalidAlloweeCount();
+        }
+
+        for (uint256 i = 0; i < _accounts.length;) {
+            LibSanitize._notZeroAddress(_accounts[i]);
+            Allowlist.set(_accounts[i], LibAllowlistMasks.DEPOSIT_MASK | LibAllowlistMasks.REDEEM_MASK);
+            unchecked {
+                ++i;
+            }
+        }
+
+        emit SetAllowlistPermissions(_accounts, LibAllowlistMasks.DEPOSIT_MASK | LibAllowlistMasks.REDEEM_MASK);
+    }
+
+    /// @inheritdoc IAllowlistV1
+    function deny(address[] calldata _accounts) external {
+        if (msg.sender != DenierAddress.get()) {
+            revert LibErrors.Unauthorized(msg.sender);
+        }
+
+        if (_accounts.length == 0) {
+            revert InvalidAlloweeCount();
+        }
+
+        for (uint256 i = 0; i < _accounts.length;) {
+            LibSanitize._notZeroAddress(_accounts[i]);
+            Allowlist.set(_accounts[i], LibAllowlistMasks.DENY_MASK);
+            unchecked {
+                ++i;
+            }
+        }
+
+        emit SetAllowlistPermissions(_accounts, LibAllowlistMasks.DENY_MASK);
+    }
+
+    /// @dev Allows the admin to set permissions for accounts
+    /// @dev This function will help in accomodation of custom type of permissions
+    function setPermissions(address[] calldata _accounts, uint256[] calldata _permissions) external {
+        if (msg.sender != _getAdmin()) {
             revert LibErrors.Unauthorized(msg.sender);
         }
 

@@ -116,7 +116,7 @@ contract RiverV1Tests is Test, BytesGenerator {
         LibImplementationUnbricker.unbrick(vm, address(operatorsRegistry));
 
         bytes32 withdrawalCredentials = withdraw.getCredentials();
-        allowlist.initAllowlistV1(admin, allower);
+        allowlist.initAllowlistV1(admin, allower, allower);
         operatorsRegistry.initOperatorsRegistryV1(admin, address(river));
         elFeeRecipient.initELFeeRecipientV1(address(river));
         coverageFund.initCoverageFundV1(address(river));
@@ -449,18 +449,16 @@ contract RiverV1Tests is Test, BytesGenerator {
         statuses[0] = _mask;
 
         vm.startPrank(admin);
-        allowlist.allow(allowees, statuses);
+        allowlist.setPermissions(allowees, statuses);
         vm.stopPrank();
     }
 
     function _deny(address _who) internal {
         address[] memory allowees = new address[](1);
         allowees[0] = _who;
-        uint256[] memory statuses = new uint256[](1);
-        statuses[0] = LibAllowlistMasks.DENY_MASK;
 
-        vm.startPrank(admin);
-        allowlist.allow(allowees, statuses);
+        vm.startPrank(allower);
+        allowlist.deny(allowees);
         vm.stopPrank();
     }
 
@@ -783,7 +781,7 @@ contract RiverV1TestsReport_HEAVY_FUZZING is Test, BytesGenerator {
         LibImplementationUnbricker.unbrick(vm, address(redeemManager));
 
         bytes32 withdrawalCredentials = withdraw.getCredentials();
-        allowlist.initAllowlistV1(admin, allower);
+        allowlist.initAllowlistV1(admin, allower, allower);
         operatorsRegistry.initOperatorsRegistryV1(admin, address(river));
         elFeeRecipient.initELFeeRecipientV1(address(river));
         coverageFund.initCoverageFundV1(address(river));
@@ -832,7 +830,7 @@ contract RiverV1TestsReport_HEAVY_FUZZING is Test, BytesGenerator {
         statuses[0] = _mask;
 
         vm.startPrank(admin);
-        allowlist.allow(allowees, statuses);
+        allowlist.setPermissions(allowees, statuses);
         vm.stopPrank();
     }
 

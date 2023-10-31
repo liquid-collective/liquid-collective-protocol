@@ -48,7 +48,7 @@ contract CoverageFundTestV1 is Test {
         admin = makeAddr("admin");
         allowlist = new AllowlistV1();
         LibImplementationUnbricker.unbrick(vm, address(allowlist));
-        allowlist.initAllowlistV1(admin, admin);
+        allowlist.initAllowlistV1(admin, admin, admin);
         river = new RiverMock(address(allowlist));
         coverageFund = new CoverageFundV1();
         LibImplementationUnbricker.unbrick(vm, address(coverageFund));
@@ -101,7 +101,7 @@ contract CoverageFundTestV1 is Test {
         accounts[0] = sender;
         uint256[] memory permissions = new uint256[](1);
         permissions[0] = LibAllowlistMasks.DONATE_MASK;
-        allowlist.allow(accounts, permissions);
+        allowlist.setPermissions(accounts, permissions);
 
         vm.startPrank(sender);
         vm.expectEmit(true, true, true, true);
@@ -126,7 +126,7 @@ contract CoverageFundTestV1 is Test {
         accounts[0] = sender;
         uint256[] memory permissions = new uint256[](1);
         permissions[0] = LibAllowlistMasks.DONATE_MASK;
-        allowlist.allow(accounts, permissions);
+        allowlist.setPermissions(accounts, permissions);
 
         vm.startPrank(sender);
         coverageFund.donate{value: _amount}();
@@ -158,7 +158,7 @@ contract CoverageFundTestV1 is Test {
         accounts[0] = sender;
         uint256[] memory permissions = new uint256[](1);
         permissions[0] = LibAllowlistMasks.DONATE_MASK;
-        allowlist.allow(accounts, permissions);
+        allowlist.setPermissions(accounts, permissions);
 
         vm.startPrank(sender);
         vm.expectRevert(abi.encodeWithSignature("EmptyDonation()"));
@@ -176,7 +176,7 @@ contract CoverageFundTestV1 is Test {
         accounts[0] = sender;
         uint256[] memory permissions = new uint256[](1);
         permissions[0] = LibAllowlistMasks.DONATE_MASK;
-        allowlist.allow(accounts, permissions);
+        allowlist.setPermissions(accounts, permissions);
 
         vm.startPrank(sender);
         coverageFund.donate{value: _amount}();
