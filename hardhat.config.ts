@@ -88,7 +88,7 @@ const config: HardhatUserConfig = {
       mockedGoerli: "0x71c9DAb681C209bb82270906e3B49388b2C15404",
       local: "0x71c9DAb681C209bb82270906e3B49388b2C15404",
       mainnet: "0xE3208Aa9d1186c1D1C8A5b76E794b2B68E6cb3a5",
-      holesky: "",
+      holesky: "0x17A01E669A0A9a76D5584a847fA3429F966DCCed",
     },
     executor: {
       default: 1,
@@ -97,7 +97,7 @@ const config: HardhatUserConfig = {
       mockedGoerli: "0x7932EdA85E33D8e13f7C110ACBEb4a5A8B53dda9",
       local: "0x71c9DAb681C209bb82270906e3B49388b2C15404",
       mainnet: "0xDE55C9dc78f985fE1502484Cb98EBfAB66A56B62",
-      holesky: "",
+      holesky: "0x8EBB61A9f0fE1146DC32eED8b4009dA11f8b0826",
     },
     proxyAdministrator: {
       default: 2,
@@ -106,7 +106,7 @@ const config: HardhatUserConfig = {
       mockedGoerli: "0x07706A7D768054c10eB4FC9103Ea322f62831cb9",
       local: "0x07706A7D768054c10eB4FC9103Ea322f62831cb9",
       mainnet: "0x8EE3fC0Bcd7B57429203751C5bE5fdf1AB8409f3",
-      holesky: "",
+      holesky: "0x36dc79220B5A02a7b833Fa0414C85b0c6574BE94",
     },
     collector: {
       default: 1,
@@ -115,7 +115,7 @@ const config: HardhatUserConfig = {
       mockedGoerli: "0x71c9DAb681C209bb82270906e3B49388b2C15404",
       local: "0x71c9DAb681C209bb82270906e3B49388b2C15404",
       mainnet: "0xE3208Aa9d1186c1D1C8A5b76E794b2B68E6cb3a5",
-      holesky: "",
+      holesky: "0x17A01E669A0A9a76D5584a847fA3429F966DCCed",
     },
     tlcMintAccount: {
       default: 1,
@@ -124,7 +124,7 @@ const config: HardhatUserConfig = {
       mockedGoerli: "0x027c17E24288a1EbF5f9e5Dc45fB603D70633F05",
       local: "0x7932EdA85E33D8e13f7C110ACBEb4a5A8B53dda9",
       mainnet: "0x070cbF96cac223D88401D6227577f9FA480C57C8",
-      holesky: "",
+      holesky: "",// EOA
     },
   },
   paths: {
