@@ -101,7 +101,7 @@ contract CoverageFundTestV1 is Test {
         accounts[0] = sender;
         uint256[] memory permissions = new uint256[](1);
         permissions[0] = LibAllowlistMasks.DONATE_MASK;
-        allowlist.setPermissions(accounts, permissions);
+        allowlist.setAllowlistPermissions(accounts, permissions);
 
         vm.startPrank(sender);
         vm.expectEmit(true, true, true, true);
@@ -126,7 +126,7 @@ contract CoverageFundTestV1 is Test {
         accounts[0] = sender;
         uint256[] memory permissions = new uint256[](1);
         permissions[0] = LibAllowlistMasks.DONATE_MASK;
-        allowlist.setPermissions(accounts, permissions);
+        allowlist.setAllowlistPermissions(accounts, permissions);
 
         vm.startPrank(sender);
         coverageFund.donate{value: _amount}();
@@ -158,7 +158,7 @@ contract CoverageFundTestV1 is Test {
         accounts[0] = sender;
         uint256[] memory permissions = new uint256[](1);
         permissions[0] = LibAllowlistMasks.DONATE_MASK;
-        allowlist.setPermissions(accounts, permissions);
+        allowlist.setAllowlistPermissions(accounts, permissions);
 
         vm.startPrank(sender);
         vm.expectRevert(abi.encodeWithSignature("EmptyDonation()"));
@@ -176,7 +176,7 @@ contract CoverageFundTestV1 is Test {
         accounts[0] = sender;
         uint256[] memory permissions = new uint256[](1);
         permissions[0] = LibAllowlistMasks.DONATE_MASK;
-        allowlist.setPermissions(accounts, permissions);
+        allowlist.setAllowlistPermissions(accounts, permissions);
 
         vm.startPrank(sender);
         coverageFund.donate{value: _amount}();

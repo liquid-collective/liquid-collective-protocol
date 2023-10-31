@@ -449,7 +449,7 @@ contract RiverV1Tests is Test, BytesGenerator {
         statuses[0] = _mask;
 
         vm.startPrank(admin);
-        allowlist.setPermissions(allowees, statuses);
+        allowlist.setAllowlistPermissions(allowees, statuses);
         vm.stopPrank();
     }
 
@@ -830,7 +830,7 @@ contract RiverV1TestsReport_HEAVY_FUZZING is Test, BytesGenerator {
         statuses[0] = _mask;
 
         vm.startPrank(admin);
-        allowlist.setPermissions(allowees, statuses);
+        allowlist.setAllowlistPermissions(allowees, statuses);
         vm.stopPrank();
     }
 

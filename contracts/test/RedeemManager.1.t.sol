@@ -132,7 +132,7 @@ contract RedeemManagerV1Tests is Test {
         permissions[0] = LibAllowlistMasks.REDEEM_MASK;
 
         vm.prank(allowlistAdmin);
-        allowlist.setPermissions(accounts, permissions);
+        allowlist.setAllowlistPermissions(accounts, permissions);
 
         return user;
     }

@@ -128,9 +128,8 @@ contract AllowlistV1 is IAllowlistV1, Initializable, Administrable {
         emit SetAllowlistPermissions(_accounts, LibAllowlistMasks.DENY_MASK);
     }
 
-    /// @dev Allows the admin to set permissions for accounts
-    /// @dev This function will help in accomodation of custom type of permissions
-    function setPermissions(address[] calldata _accounts, uint256[] calldata _permissions) external {
+    /// @inheritdoc IAllowlistV1
+    function setAllowlistPermissions(address[] calldata _accounts, uint256[] calldata _permissions) external {
         if (msg.sender != _getAdmin()) {
             revert LibErrors.Unauthorized(msg.sender);
         }
@@ -145,6 +144,14 @@ contract AllowlistV1 is IAllowlistV1, Initializable, Administrable {
 
         for (uint256 i = 0; i < _accounts.length;) {
             LibSanitize._notZeroAddress(_accounts[i]);
+            // Check if it doesn't contain allow or deny permissions
+            if (
+                _permissions[i] & LibAllowlistMasks.DEPOSIT_MASK == 0
+                    && _permissions[i] & LibAllowlistMasks.DENY_MASK == 0
+                    && _permissions[i] & LibAllowlistMasks.REDEEM_MASK == 0
+            ) {
+                revert LibErrors.Unauthorized(msg.sender);
+            }
             Allowlist.set(_accounts[i], _permissions[i]);
             unchecked {
                 ++i;

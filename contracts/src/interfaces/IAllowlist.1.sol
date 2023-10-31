@@ -95,4 +95,10 @@ interface IAllowlistV1 {
     /// @dev The permission value is overridden and not updated
     /// @param _accounts Accounts with statuses to be set to deny
     function deny(address[] calldata _accounts) external;
+
+    /// @notice Sets the permissions for one or more accounts
+    /// @dev This function is for allocating permissions other than allow & deny
+    /// @param _accounts Accounts to update
+    /// @param _permissions New permission values
+    function setAllowlistPermissions(address[] calldata _accounts, uint256[] calldata _permissions) external;
 }
