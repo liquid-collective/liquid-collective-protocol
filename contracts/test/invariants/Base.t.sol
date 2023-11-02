@@ -19,6 +19,19 @@ import "../../src/OperatorsRegistry.1.sol";
 import "../../src/CoverageFund.1.sol";
 import "../../src/RedeemManager.1.sol";
 
+// 1. add getTimestamp, getBlockNumber, setTimestamp, setBlockNumber to Base
+// 2. create BaseService that is constructed with a Base instance
+// 3. BaseService has a modifier that loads timestamp and block number into the context using vm
+// 4. The modifier should save everything back to base using the setters and reading the values from block.timestamp and block.number
+// 5. BaseService should return the target selectors that the invariant tests should call (an array of inputs sent to Test.targetSelector). It should be selectors of methods
+//    on the BaseService. We can prefix all of them with "action_" so we can quickly identify them. They should all use the modifier.
+//    ex: StakerService, has one address that represents a staker, exposes `action_stakeAll`, `action_stakePercent(uint256)`, `action_unstakeAll` etc ...
+// 6. Base setup should deploy all stack, then deploy all Services and for each one retrieve the list of target selectors and call Test.targetSelector for each one
+// 7. Write invariant_test test that does a dummy action just to see that the services are called
+// 8. run "env FOUNDRY_INVARIANT_FAIL_ON_REVERT=true FOUNDRY_INVARIANT_RUNS=128 FOUNDRY_INVARIANT_DEPTH=128 forge test -vvv --match-contract INVARIANT"
+// 9. It would be good to move Base and the logic around block.timestamp and block.number into another contract and inherit from that on the test contract. This way we can call
+//    the contract "INVARIANT_River" or something like that in order for the --match-contract argument to work
+
 contract Base is Test, BytesGenerator{
 
     RiverV1 internal river;
