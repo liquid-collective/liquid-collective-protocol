@@ -4,7 +4,7 @@ import { isDeployed, logStep, logStepEnd } from "../../ts-utils/helpers/index";
 import { verify } from "../../scripts/helpers";
 
 const func: DeployFunction = async function ({ deployments, getNamedAccounts, network }: HardhatRuntimeEnvironment) {
-  if (!["devHolesky", "hardhat", "local", "tenderly"].includes(network.name)) {
+  if (!["holesky", "hardhat", "local", "tenderly"].includes(network.name)) {
     throw new Error("Invalid network for devGoerli deployment");
   }
   const { deployer, proxyAdministrator } = await getNamedAccounts();

@@ -131,9 +131,13 @@ const config: HardhatUserConfig = {
     sources: "./contracts/src",
     cache: "./hardhat-cache",
   },
+  etherscan : {
+    apiKey: process.env.ETHERSCAN_API_KEY || "",
+  },
   tenderly: {
     project: process.env.TENDERLY_PROJECT_ID,
     username: process.env.TENDERLY_USERNAME,
+    privateVerification: false
   },
 };
 
