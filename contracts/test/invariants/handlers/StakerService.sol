@@ -24,7 +24,7 @@ contract StakerService is BaseService {
         console.log("Staking all funds");
     }
 
-    function action_stakePercent(uint256) public recordBlockData {
+    function action_stakePercent(uint256 pct) public recordBlockData {
         console.log("Staking percentage of funds");
     }
 

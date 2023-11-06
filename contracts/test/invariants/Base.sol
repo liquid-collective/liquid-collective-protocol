@@ -36,14 +36,14 @@ import {StakerService} from "./handlers/StakerService.sol";
 
 contract Base is Test, BytesGenerator {
     // Protocol contracts
-    RiverV1 internal river;
-    IDepositContract internal deposit;
-    WithdrawV1 internal withdraw;
-    OracleV1 internal oracle;
-    ELFeeRecipientV1 internal elFeeRecipient;
-    CoverageFundV1 internal coverageFund;
-    AllowlistV1 internal allowlist;
-    OperatorsRegistryV1 internal operatorsRegistry;
+    RiverV1 public river;
+    IDepositContract public deposit;
+    WithdrawV1 public withdraw;
+    OracleV1 public oracle;
+    ELFeeRecipientV1 public elFeeRecipient;
+    CoverageFundV1 public coverageFund;
+    AllowlistV1 public allowlist;
+    OperatorsRegistryV1 public operatorsRegistry;
 
     address internal admin;
     address internal newAdmin;
@@ -80,9 +80,10 @@ contract Base is Test, BytesGenerator {
     // Services
     StakerService public stakerService;
 
-    function setUp() public virtual{
+    function setUp() public virtual {
         deployProtocol();
         deployServices();
+        addTargetSelectors();
     }
 
     function loadBlockState() public {
@@ -194,5 +195,14 @@ contract Base is Test, BytesGenerator {
 
     function deployServices() internal {
         stakerService = new StakerService(this);
+    }
+
+    function dealETH(address _to, uint256 _amount) external {
+        vm.deal(_to, _amount);
+    }
+
+    function addTargetSelectors() internal virtual {
+        StdInvariant.FuzzSelector memory selectors = stakerService.getTargetSelectors();
+        targetSelector(selectors);
     }
 }
