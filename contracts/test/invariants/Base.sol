@@ -19,6 +19,8 @@ import "../../src/OperatorsRegistry.1.sol";
 import "../../src/CoverageFund.1.sol";
 import "../../src/RedeemManager.1.sol";
 
+import {StakerService} from "./handlers/StakerService.sol";
+
 // 1. add getTimestamp, getBlockNumber, setTimestamp, setBlockNumber to Base
 // 2. create BaseService that is constructed with a Base instance
 // 3. BaseService has a modifier that loads timestamp and block number into the context using vm
@@ -32,8 +34,8 @@ import "../../src/RedeemManager.1.sol";
 // 9. It would be good to move Base and the logic around block.timestamp and block.number into another contract and inherit from that on the test contract. This way we can call
 //    the contract "INVARIANT_River" or something like that in order for the --match-contract argument to work
 
-contract Base is Test, BytesGenerator{
-
+contract Base is Test, BytesGenerator {
+    // Protocol contracts
     RiverV1 internal river;
     IDepositContract internal deposit;
     WithdrawV1 internal withdraw;
@@ -71,12 +73,46 @@ contract Base is Test, BytesGenerator{
     uint128 constant maxDailyNetCommittableAmount = 3200 ether;
     uint128 constant maxDailyRelativeCommittableAmount = 2000;
 
-    // TODO: Tracking data
-    // block time stamps
-    // block numbers
+    // Tracking data
+    uint256 timeStamp;
+    uint256 blockNumber;
+
+    // Services
+    StakerService public stakerService;
+
+    function setUp() public virtual{
+        deployProtocol();
+        deployServices();
+    }
+
+    function loadBlockState() public {
+        vm.warp(getTimeStamp());
+        vm.roll(getBlockNumber());
+    }
+
+    function writeBlockState() public {
+        setBlockNumber(block.number + 1);
+        setTimeStamp(block.timestamp + 1);
+    }
+
+    function getTimeStamp() public view returns (uint256) {
+        return timeStamp;
+    }
+
+    function getBlockNumber() public view returns (uint256) {
+        return blockNumber;
+    }
+
+    function setTimeStamp(uint256 _timeStamp) internal {
+        timeStamp = _timeStamp;
+    }
+
+    function setBlockNumber(uint256 _blockNumber) internal {
+        blockNumber = _blockNumber;
+    }
 
     // @dev: This function will deploy the protocol with the correct config
-    function deployProtocol() public{
+    function deployProtocol() internal {
         admin = makeAddr("admin");
         newAdmin = makeAddr("newAdmin");
         collector = makeAddr("collector");
@@ -113,7 +149,7 @@ contract Base is Test, BytesGenerator{
         operatorsRegistry.initOperatorsRegistryV1(admin, address(river));
         elFeeRecipient.initELFeeRecipientV1(address(river));
         coverageFund.initCoverageFundV1(address(river));
-        
+
         river.initRiverV1(
             address(deposit),
             address(elFeeRecipient),
@@ -156,10 +192,7 @@ contract Base is Test, BytesGenerator{
         vm.stopPrank();
     }
 
-    // Base functions
-    // Setup dummy validators
-    // Setup dummy oracles
-
-    // Setups
-    // Here we will call up the different handlers based on the different setup requirements
+    function deployServices() internal {
+        stakerService = new StakerService(this);
+    }
 }
