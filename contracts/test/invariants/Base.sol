@@ -44,6 +44,7 @@ contract Base is Test, BytesGenerator {
     CoverageFundV1 public coverageFund;
     AllowlistV1 public allowlist;
     OperatorsRegistryV1 public operatorsRegistry;
+    RedeemManagerV1 public redeemManager;
 
     address internal admin;
     address internal newAdmin;
@@ -84,6 +85,7 @@ contract Base is Test, BytesGenerator {
         deployProtocol();
         deployServices();
         addTargetSelectors();
+        excludeDeployedContracts();
     }
 
     function loadBlockState() public {
@@ -144,12 +146,15 @@ contract Base is Test, BytesGenerator {
         LibImplementationUnbricker.unbrick(vm, address(river));
         operatorsRegistry = new OperatorsRegistryV1();
         LibImplementationUnbricker.unbrick(vm, address(operatorsRegistry));
+        redeemManager = new RedeemManagerV1();
+        LibImplementationUnbricker.unbrick(vm, address(redeemManager));
 
         bytes32 withdrawalCredentials = withdraw.getCredentials();
         allowlist.initAllowlistV1(admin, allower);
         operatorsRegistry.initOperatorsRegistryV1(admin, address(river));
         elFeeRecipient.initELFeeRecipientV1(address(river));
         coverageFund.initCoverageFundV1(address(river));
+        redeemManager.initializeRedeemManagerV1(address(river));
 
         river.initRiverV1(
             address(deposit),
@@ -195,14 +200,32 @@ contract Base is Test, BytesGenerator {
 
     function deployServices() internal {
         stakerService = new StakerService(this);
+        address[] memory stakerServiceArray = new address[](1);
+        stakerServiceArray[0] = address(stakerService);
+        uint256[] memory stakerServiceMask = new uint256[](1);
+        stakerServiceMask[0] = 5;
+        vm.prank(allower);
+        allowlist.allow(stakerServiceArray, stakerServiceMask);
     }
 
-    function dealETH(address _to, uint256 _amount) external {
+    function dealETH(address _to, uint256 _amount) public {
+        console.log("dealing");
         vm.deal(_to, _amount);
     }
 
     function addTargetSelectors() internal virtual {
-        StdInvariant.FuzzSelector memory selectors = stakerService.getTargetSelectors();
-        targetSelector(selectors);
+        targetSelector(stakerService.getTargetSelectors());
+    }
+
+    function excludeDeployedContracts() internal virtual {
+        excludeContract(address(river));
+        excludeContract(address(deposit));
+        excludeContract(address(withdraw));
+        excludeContract(address(oracle));
+        excludeContract(address(elFeeRecipient));
+        excludeContract(address(coverageFund));
+        excludeContract(address(allowlist));
+        excludeContract(address(operatorsRegistry));
+        excludeContract(address(redeemManager));
     }
 }
