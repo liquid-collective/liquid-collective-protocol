@@ -21,6 +21,8 @@ import "../../src/RedeemManager.1.sol";
 import "../../src/TUPProxy.sol";
 
 import {StakerService} from "./handlers/StakerService.sol";
+import {OperatorService} from "./handlers/OperatorService.sol";
+import {OracleDaemonService} from "./handlers/OracleDaemonService.sol";
 
 // 1. add getTimestamp, getBlockNumber, setTimestamp, setBlockNumber to Base
 // 2. create BaseService that is constructed with a Base instance
@@ -64,26 +66,16 @@ contract Base is Test, BytesGenerator {
     OperatorsRegistryV1 public operatorsRegistry;
     RedeemManagerV1 public redeemManager;
 
-    address internal admin;
+    address public admin;
     address internal proxyAdmin;
     address internal newAdmin;
     address internal collector;
     address internal newCollector;
     address internal allower;
-    address internal oracleMember;
     address internal newAllowlist;
-    address internal operatorOne;
-    address internal operatorOneFeeRecipient;
-    address internal operatorTwo;
-    address internal operatorTwoFeeRecipient;
+    address public oracleMember;
     address internal bob;
     address internal joe;
-
-    string internal operatorOneName = "NodeMasters";
-    string internal operatorTwoName = "StakePros";
-
-    uint256 internal operatorOneIndex;
-    uint256 internal operatorTwoIndex;
 
     uint64 constant epochsPerFrame = 225;
     uint64 constant slotsPerEpoch = 32;
@@ -99,6 +91,8 @@ contract Base is Test, BytesGenerator {
 
     // Services
     StakerService public stakerService;
+    OperatorService public operatorService;
+    OracleDaemonService public oracleDaemonService;
 
     function setUp() public virtual {
         deployProtocol();
@@ -142,9 +136,8 @@ contract Base is Test, BytesGenerator {
         newCollector = makeAddr("newCollector");
         allower = makeAddr("allower");
         oracleMember = makeAddr("oracleMember");
+
         newAllowlist = makeAddr("newAllowlist");
-        operatorOne = makeAddr("operatorOne");
-        operatorTwo = makeAddr("operatorTwo");
         bob = makeAddr("bob");
         joe = makeAddr("joe");
 
@@ -174,11 +167,7 @@ contract Base is Test, BytesGenerator {
         operatorsRegistryProxy = new TUPProxy(address(operatorsRegistryImplementation), proxyAdmin, "");
         redeemManagerProxy = new TUPProxy(address(redeemManagerImplementation), proxyAdmin, "");
         riverProxy = new TUPProxy(address(riverImplementation), proxyAdmin, "");
-        oracleProxy = new TUPProxy(
-            address(oracleImplementation),
-            proxyAdmin,
-            ""
-        );
+        oracleProxy = new TUPProxy(address(oracleImplementation), proxyAdmin, "");
 
         bytes32 withdrawalCredentials = WithdrawV1(address(withdrawProxy)).getCredentials();
         // Proxy initialization
@@ -209,34 +198,8 @@ contract Base is Test, BytesGenerator {
         operatorsRegistry = OperatorsRegistryV1(address(operatorsRegistryProxy));
         redeemManager = RedeemManagerV1(address(redeemManagerProxy));
 
-        vm.startPrank(admin);
-
+        vm.prank(admin);
         river.setCoverageFund(address(coverageFund));
-
-        // ===================
-
-        oracle.addMember(oracleMember, 1);
-
-        operatorOneIndex = operatorsRegistry.addOperator(operatorOneName, operatorOne);
-        operatorTwoIndex = operatorsRegistry.addOperator(operatorTwoName, operatorTwo);
-
-        bytes memory hundredKeysOp1 = genBytes((48 + 96) * 100);
-
-        operatorsRegistry.addValidators(operatorOneIndex, 100, hundredKeysOp1);
-
-        bytes memory hundredKeysOp2 = genBytes((48 + 96) * 100);
-
-        operatorsRegistry.addValidators(operatorTwoIndex, 100, hundredKeysOp2);
-
-        uint256[] memory operatorIndexes = new uint256[](2);
-        operatorIndexes[0] = operatorOneIndex;
-        operatorIndexes[1] = operatorTwoIndex;
-        uint32[] memory operatorLimits = new uint32[](2);
-        operatorLimits[0] = 100;
-        operatorLimits[1] = 100;
-
-        operatorsRegistry.setOperatorLimits(operatorIndexes, operatorLimits, block.number);
-        vm.stopPrank();
     }
 
     function deployServices() internal {
@@ -247,6 +210,9 @@ contract Base is Test, BytesGenerator {
         stakerServiceMask[0] = 5;
         vm.prank(allower);
         allowlist.allow(stakerServiceArray, stakerServiceMask);
+
+        operatorService = new OperatorService(this);
+        oracleDaemonService = new OracleDaemonService(this);
     }
 
     function dealETH(address _to, uint256 _amount) public {
@@ -256,6 +222,8 @@ contract Base is Test, BytesGenerator {
 
     function addTargetSelectors() internal virtual {
         targetSelector(stakerService.getTargetSelectors());
+        // targetSelector(operatorService.getTargetSelectors());
+        targetSelector(oracleDaemonService.getTargetSelectors());
     }
 
     function excludeDeployedContracts() internal virtual {

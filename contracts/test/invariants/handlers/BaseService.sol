@@ -17,6 +17,18 @@ abstract contract BaseService is Test {
         base.writeBlockState();
     }
 
+    modifier prankAdmin() {
+        vm.startPrank(base.admin());
+        _;
+        vm.stopPrank();
+    }
+
+    modifier prankOracleMember() {
+        vm.startPrank(base.oracleMember());
+        _;
+        vm.stopPrank();
+    }
+
     constructor(Base _base) {
         base = _base;
     }
