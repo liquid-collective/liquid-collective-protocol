@@ -31,7 +31,7 @@ contract StakerService is BaseService {
     }
 
     function action_stakeAmount(uint256 amount) public recordBlockData {
-        amount = bound(amount, 1, 10000 ether);
+        amount = bound(amount, 1e16, 10000 ether);
         console.log("Staking amount of funds");
         base.dealETH(address(this), amount);
         base.river().deposit{value: amount}();
