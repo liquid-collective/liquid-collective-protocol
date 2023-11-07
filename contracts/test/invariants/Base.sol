@@ -18,6 +18,7 @@ import "../../src/ELFeeRecipient.1.sol";
 import "../../src/OperatorsRegistry.1.sol";
 import "../../src/CoverageFund.1.sol";
 import "../../src/RedeemManager.1.sol";
+import "../../src/TUPProxy.sol";
 
 import {StakerService} from "./handlers/StakerService.sol";
 
@@ -33,11 +34,28 @@ import {StakerService} from "./handlers/StakerService.sol";
 // 8. run "env FOUNDRY_INVARIANT_FAIL_ON_REVERT=true FOUNDRY_INVARIANT_RUNS=128 FOUNDRY_INVARIANT_DEPTH=128 forge test -vvv --match-contract INVARIANT"
 // 9. It would be good to move Base and the logic around block.timestamp and block.number into another contract and inherit from that on the test contract. This way we can call
 //    the contract "INVARIANT_River" or something like that in order for the --match-contract argument to work
-
 contract Base is Test, BytesGenerator {
     // Protocol contracts
+    IDepositContract internal deposit;
+    RiverV1 internal riverImplementation;
+    WithdrawV1 internal withdrawImplementation;
+    OracleV1 internal oracleImplementation;
+    ELFeeRecipientV1 internal elFeeRecipientImplementation;
+    CoverageFundV1 internal coverageFundImplementation;
+    AllowlistV1 internal allowlistImplementation;
+    OperatorsRegistryV1 internal operatorsRegistryImplementation;
+    RedeemManagerV1 internal redeemManagerImplementation;
+
+    TUPProxy internal riverProxy;
+    TUPProxy internal withdrawProxy;
+    TUPProxy internal oracleProxy;
+    TUPProxy internal elFeeRecipientProxy;
+    TUPProxy internal coverageFundProxy;
+    TUPProxy internal allowListProxy;
+    TUPProxy internal operatorsRegistryProxy;
+    TUPProxy internal redeemManagerProxy;
+
     RiverV1 public river;
-    IDepositContract public deposit;
     WithdrawV1 public withdraw;
     OracleV1 public oracle;
     ELFeeRecipientV1 public elFeeRecipient;
@@ -47,6 +65,7 @@ contract Base is Test, BytesGenerator {
     RedeemManagerV1 public redeemManager;
 
     address internal admin;
+    address internal proxyAdmin;
     address internal newAdmin;
     address internal collector;
     address internal newCollector;
@@ -95,7 +114,7 @@ contract Base is Test, BytesGenerator {
 
     function writeBlockState() public {
         setBlockNumber(block.number + 1);
-        setTimeStamp(block.timestamp + 1);
+        setTimeStamp(block.timestamp + 12);
     }
 
     function getTimeStamp() public view returns (uint256) {
@@ -117,6 +136,7 @@ contract Base is Test, BytesGenerator {
     // @dev: This function will deploy the protocol with the correct config
     function deployProtocol() internal {
         admin = makeAddr("admin");
+        proxyAdmin = makeAddr("proxyAdmin");
         newAdmin = makeAddr("newAdmin");
         collector = makeAddr("collector");
         newCollector = makeAddr("newCollector");
@@ -130,44 +150,65 @@ contract Base is Test, BytesGenerator {
 
         vm.warp(857034746);
 
-        elFeeRecipient = new ELFeeRecipientV1();
-        LibImplementationUnbricker.unbrick(vm, address(elFeeRecipient));
-        coverageFund = new CoverageFundV1();
-        LibImplementationUnbricker.unbrick(vm, address(coverageFund));
-        oracle = new OracleV1();
-        LibImplementationUnbricker.unbrick(vm, address(oracle));
-        allowlist = new AllowlistV1();
-        LibImplementationUnbricker.unbrick(vm, address(allowlist));
         deposit = new DepositContractMock();
-        LibImplementationUnbricker.unbrick(vm, address(deposit));
-        withdraw = new WithdrawV1();
-        LibImplementationUnbricker.unbrick(vm, address(withdraw));
-        river = new RiverV1();
-        LibImplementationUnbricker.unbrick(vm, address(river));
-        operatorsRegistry = new OperatorsRegistryV1();
-        LibImplementationUnbricker.unbrick(vm, address(operatorsRegistry));
-        redeemManager = new RedeemManagerV1();
-        LibImplementationUnbricker.unbrick(vm, address(redeemManager));
 
-        bytes32 withdrawalCredentials = withdraw.getCredentials();
-        allowlist.initAllowlistV1(admin, allower);
-        operatorsRegistry.initOperatorsRegistryV1(admin, address(river));
-        elFeeRecipient.initELFeeRecipientV1(address(river));
-        coverageFund.initCoverageFundV1(address(river));
-        redeemManager.initializeRedeemManagerV1(address(river));
+        // Implementation deployment
+        withdrawImplementation = new WithdrawV1();
+        allowlistImplementation = new AllowlistV1();
+        elFeeRecipientImplementation = new ELFeeRecipientV1();
+        coverageFundImplementation = new CoverageFundV1();
+        oracleImplementation = new OracleV1();
+        operatorsRegistryImplementation = new OperatorsRegistryV1();
+        redeemManagerImplementation = new RedeemManagerV1();
+        riverImplementation = new RiverV1();
 
-        river.initRiverV1(
+        // Proxy deployment
+        withdrawProxy = new TUPProxy(address(withdrawImplementation), proxyAdmin, "");
+        allowListProxy = new TUPProxy(
+            address(allowlistImplementation),
+            proxyAdmin,
+            abi.encodeWithSelector(AllowlistV1.initAllowlistV1.selector, admin, allower)
+        );
+        elFeeRecipientProxy = new TUPProxy(address(elFeeRecipientImplementation), proxyAdmin, "");
+        coverageFundProxy = new TUPProxy(address(coverageFundImplementation), proxyAdmin, "");
+        operatorsRegistryProxy = new TUPProxy(address(operatorsRegistryImplementation), proxyAdmin, "");
+        redeemManagerProxy = new TUPProxy(address(redeemManagerImplementation), proxyAdmin, "");
+        riverProxy = new TUPProxy(address(riverImplementation), proxyAdmin, "");
+        oracleProxy = new TUPProxy(
+            address(oracleImplementation),
+            proxyAdmin,
+            ""
+        );
+
+        bytes32 withdrawalCredentials = WithdrawV1(address(withdrawProxy)).getCredentials();
+        // Proxy initialization
+        OperatorsRegistryV1(address(operatorsRegistryProxy)).initOperatorsRegistryV1(admin, address(riverProxy));
+        ELFeeRecipientV1(payable(address(elFeeRecipientProxy))).initELFeeRecipientV1(address(riverProxy));
+        CoverageFundV1(payable(address(coverageFundProxy))).initCoverageFundV1(address(riverProxy));
+        RedeemManagerV1(payable(address(redeemManagerProxy))).initializeRedeemManagerV1(address(riverProxy));
+        RiverV1(payable(address(riverProxy))).initRiverV1(
             address(deposit),
-            address(elFeeRecipient),
+            address(elFeeRecipientProxy),
             withdrawalCredentials,
-            address(oracle),
+            address(oracleProxy),
             admin,
-            address(allowlist),
-            address(operatorsRegistry),
+            address(allowListProxy),
+            address(operatorsRegistryProxy),
             collector,
             500
         );
-        oracle.initOracleV1(address(river), admin, 225, 32, 12, 0, 1000, 500);
+        OracleV1(address(oracleProxy)).initOracleV1(address(riverProxy), admin, 225, 32, 12, 0, 1000, 500);
+
+        // Assigning proxy contracts to variables for readability
+        river = RiverV1(payable(address(riverProxy)));
+        withdraw = WithdrawV1(address(withdrawProxy));
+        oracle = OracleV1(address(oracleProxy));
+        elFeeRecipient = ELFeeRecipientV1(payable(address(elFeeRecipientProxy)));
+        coverageFund = CoverageFundV1(payable(address(coverageFundProxy)));
+        allowlist = AllowlistV1(address(allowListProxy));
+        operatorsRegistry = OperatorsRegistryV1(address(operatorsRegistryProxy));
+        redeemManager = RedeemManagerV1(address(redeemManagerProxy));
+
         vm.startPrank(admin);
 
         river.setCoverageFund(address(coverageFund));

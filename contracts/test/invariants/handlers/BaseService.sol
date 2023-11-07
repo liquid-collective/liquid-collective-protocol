@@ -3,9 +3,10 @@
 pragma solidity 0.8.10;
 
 import "forge-std/StdInvariant.sol";
+import "forge-std/Test.sol";
 import {Base} from "../Base.sol";
 
-abstract contract BaseService {
+abstract contract BaseService is Test {
     Base internal base;
 
     modifier recordBlockData() {
