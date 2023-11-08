@@ -2,6 +2,7 @@
 
 pragma solidity 0.8.10;
 
+import "forge-std/console.sol";
 import "forge-std/StdInvariant.sol";
 
 import {Base} from "../Base.sol";
@@ -21,6 +22,7 @@ contract OracleDaemonService is BaseService {
     }
 
     function action_dummy_report() external prankOracleMember recordBlockData {
+        console.log("Dummy report");
         IOracleManagerV1.ConsensusLayerReport memory dummyReport;
         dummyReport.stoppedValidatorCountPerOperator = new uint32[](1);
         base.oracle().reportConsensusLayerData(dummyReport);

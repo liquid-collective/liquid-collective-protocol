@@ -97,8 +97,7 @@ contract Base is Test, BytesGenerator {
     function setUp() public virtual {
         deployProtocol();
         deployServices();
-        excludeDeployedContracts();
-        addTargetSelectors();
+        addTargetContracts();
     }
 
     function loadBlockState() public {
@@ -206,13 +205,6 @@ contract Base is Test, BytesGenerator {
 
     function deployServices() internal {
         stakerService = new StakerService(this);
-        address[] memory stakerServiceArray = new address[](1);
-        stakerServiceArray[0] = address(stakerService);
-        uint256[] memory stakerServiceMask = new uint256[](1);
-        stakerServiceMask[0] = 5;
-        vm.prank(allower);
-        allowlist.allow(stakerServiceArray, stakerServiceMask);
-
         operatorService = new OperatorService(this);
         oracleDaemonService = new OracleDaemonService(this);
     }
@@ -223,8 +215,13 @@ contract Base is Test, BytesGenerator {
 
     function addTargetSelectors() internal virtual {
         targetSelector(stakerService.getTargetSelectors());
-        // targetSelector(operatorService.getTargetSelectors());
         targetSelector(oracleDaemonService.getTargetSelectors());
+        // targetSelector(operatorService.getTargetSelectors());
+    }
+
+    function addTargetContracts() internal virtual {
+        targetContract(address(stakerService));
+        targetContract(address(oracleDaemonService));
     }
 
     function excludeDeployedContracts() internal virtual {

@@ -13,6 +13,7 @@ uint256 constant MAX_STAKERS = 100;
 contract StakerService is BaseService {
     address[] internal stakers;
     address internal currentStaker;
+    mapping(address => uint32[]) redeemRequests;
 
     modifier useStaker(uint256 index) {
         currentStaker = stakers[bound(index, 0, MAX_STAKERS - 1)];
@@ -60,16 +61,27 @@ contract StakerService is BaseService {
         amount = bound(amount, 1e16, base.river().balanceOf(currentStaker));
         console.log("Unstaking");
         // Keep track of the redeem requests
+        redeemRequests[currentStaker].push(base.river().requestRedeem(amount, currentStaker));
     }
 
     function action_request_redeem_all(uint256 stakerIndex) public recordBlockData useStaker(stakerIndex) {
         console.log("Unstaking all funds");
         uint256 balance = base.river().balanceOf(currentStaker);
         // Keep track of the redeem requests
+        redeemRequests[currentStaker].push(base.river().requestRedeem(balance, currentStaker));
     }
 
     function action_claim_redeem_request(uint256 stakerIndex) public recordBlockData useStaker(stakerIndex) {
         console.log("Claiming redeem request");
-        // Do we have a check on whether it is being done after the cooldown period?
+        uint32[] memory redeemRequestIds = redeemRequests[currentStaker];
+
+        // Get withdrawal events
+        int64[] memory withdrawalEvents = base.river().resolveRedeemRequests(redeemRequestIds);
+        uint32[] memory withdrawEvents = new uint32[](withdrawalEvents.length);
+        for (uint256 index = 0; index < withdrawalEvents.length; index++) {
+            withdrawEvents[index] = uint32(uint64(withdrawalEvents[index]));
+        }
+        
+        uint8[] memory claimStatuses = base.river().claimRedeemRequests(redeemRequestIds, withdrawEvents);
     }
 }
