@@ -71,7 +71,7 @@ contract Base is Test, BytesGenerator {
     address internal newAdmin;
     address internal collector;
     address internal newCollector;
-    address internal allower;
+    address public allower;
     address internal newAllowlist;
     address public oracleMember;
     address internal bob;
@@ -97,8 +97,8 @@ contract Base is Test, BytesGenerator {
     function setUp() public virtual {
         deployProtocol();
         deployServices();
-        addTargetSelectors();
         excludeDeployedContracts();
+        addTargetSelectors();
     }
 
     function loadBlockState() public {
@@ -198,8 +198,10 @@ contract Base is Test, BytesGenerator {
         operatorsRegistry = OperatorsRegistryV1(address(operatorsRegistryProxy));
         redeemManager = RedeemManagerV1(address(redeemManagerProxy));
 
-        vm.prank(admin);
+        vm.startPrank(admin);
         river.setCoverageFund(address(coverageFund));
+        oracle.addMember(oracleMember, 1);
+        vm.stopPrank();
     }
 
     function deployServices() internal {
@@ -216,7 +218,6 @@ contract Base is Test, BytesGenerator {
     }
 
     function dealETH(address _to, uint256 _amount) public {
-        console.log("dealing");
         vm.deal(_to, _amount);
     }
 

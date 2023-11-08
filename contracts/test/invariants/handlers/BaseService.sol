@@ -2,8 +2,9 @@
 
 pragma solidity 0.8.10;
 
-import "forge-std/StdInvariant.sol";
 import "forge-std/Test.sol";
+import "forge-std/StdInvariant.sol";
+
 import {Base} from "../Base.sol";
 
 abstract contract BaseService is Test {
@@ -25,6 +26,12 @@ abstract contract BaseService is Test {
 
     modifier prankOracleMember() {
         vm.startPrank(base.oracleMember());
+        _;
+        vm.stopPrank();
+    }
+
+    modifier prankAllower() {
+        vm.startPrank(base.allower());
         _;
         vm.stopPrank();
     }

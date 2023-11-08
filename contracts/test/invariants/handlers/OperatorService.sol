@@ -26,8 +26,6 @@ contract OperatorService is BaseService, BytesGenerator {
     }
 
     function staticOperatorsSetup() internal prankAdmin {
-        base.oracle().addMember(base.oracleMember(), 1);
-
         operatorOneIndex = base.operatorsRegistry().addOperator(operatorOneName, operatorOne);
         operatorTwoIndex = base.operatorsRegistry().addOperator(operatorTwoName, operatorTwo);
 
@@ -50,7 +48,24 @@ contract OperatorService is BaseService, BytesGenerator {
     }
 
     // function getTargetSelectors() external view override returns (StdInvariant.FuzzSelector memory selectors) {
+    // bytes4[] memory selectorsArray = new bytes4[](1);
+    // selectorsArray[0] = this.action_addOperator.selector;
+    // selectors.selectors = selectorsArray;
+    // selectors.addr = address(this);
     // }
 
-    // TODO: Add the dynamic operator management
+    // function action_addOperator() external prankAdmin recordBlockData {
+    //     string memory operatorName = vm.toString(base.operatorsRegistry().getOperatorCount() + 1);
+    //     uint256 operatorIndex = base.operatorsRegistry().addOperator(operatorName, makeAddr(operatorName));
+
+    //     bytes memory hundredKeys = genBytes((48 + 96) * 100);
+    //     base.operatorsRegistry().addValidators(operatorIndex, 100, hundredKeys);
+
+    //     uint256[] memory operatorIndexes = new uint256[](1);
+    //     operatorIndexes[0] = operatorIndex;
+    //     uint32[] memory operatorLimits = new uint32[](1);
+    //     operatorLimits[0] = 100;
+
+    //     base.operatorsRegistry().setOperatorLimits(operatorIndexes, operatorLimits, block.number);
+    // }
 }
