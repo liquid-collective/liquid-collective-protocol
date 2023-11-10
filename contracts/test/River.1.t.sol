@@ -49,6 +49,7 @@ contract RiverV1Tests is Test, BytesGenerator {
 
     address internal admin;
     address internal newAdmin;
+    address internal denier;
     address internal collector;
     address internal newCollector;
     address internal allower;
@@ -86,6 +87,7 @@ contract RiverV1Tests is Test, BytesGenerator {
     function setUp() public {
         admin = makeAddr("admin");
         newAdmin = makeAddr("newAdmin");
+        denier = makeAddr("denier");
         collector = makeAddr("collector");
         newCollector = makeAddr("newCollector");
         allower = makeAddr("allower");
@@ -116,7 +118,7 @@ contract RiverV1Tests is Test, BytesGenerator {
         LibImplementationUnbricker.unbrick(vm, address(operatorsRegistry));
 
         bytes32 withdrawalCredentials = withdraw.getCredentials();
-        allowlist.initAllowlistV1(admin, allower, allower);
+        allowlist.initAllowlistV1(admin, allower, denier);
         operatorsRegistry.initOperatorsRegistryV1(admin, address(river));
         elFeeRecipient.initELFeeRecipientV1(address(river));
         coverageFund.initCoverageFundV1(address(river));
@@ -220,7 +222,7 @@ contract RiverV1Tests is Test, BytesGenerator {
             maxDailyNetCommittableAmount,
             maxDailyRelativeCommittableAmount
         );
-        _allow(joe, LibAllowlistMasks.DEPOSIT_MASK);
+        _allow(joe);
         vm.deal(joe, depositTotal);
         vm.prank(joe);
         river.deposit{value: committedBalance}();
@@ -442,7 +444,7 @@ contract RiverV1Tests is Test, BytesGenerator {
         river.setMetadataURI(_metadataURI);
     }
 
-    function _allow(address _who, uint256 _mask) internal {
+    function _rawPermissions(address _who, uint256 _mask) internal {
         address[] memory allowees = new address[](1);
         allowees[0] = _who;
         uint256[] memory statuses = new uint256[](1);
@@ -453,12 +455,21 @@ contract RiverV1Tests is Test, BytesGenerator {
         vm.stopPrank();
     }
 
-    function _deny(address _who) internal {
+    function _allow(address _who) internal {
         address[] memory allowees = new address[](1);
         allowees[0] = _who;
 
         vm.startPrank(allower);
-        allowlist.deny(allowees);
+        allowlist.allow(allowees);
+        vm.stopPrank();
+    }
+
+    function _deny(address _who) internal {
+        address[] memory toBeDenied = new address[](1);
+        toBeDenied[0] = _who;
+        allowlist.getDenier();
+        vm.startPrank(denier);
+        allowlist.deny(toBeDenied);
         vm.stopPrank();
     }
 
@@ -476,8 +487,8 @@ contract RiverV1Tests is Test, BytesGenerator {
         vm.deal(joe, 100 ether);
         vm.deal(bob, 1000 ether);
 
-        _allow(joe, LibAllowlistMasks.DEPOSIT_MASK);
-        _allow(bob, LibAllowlistMasks.DEPOSIT_MASK);
+        _allow(joe);
+        _allow(bob);
 
         vm.startPrank(joe);
         river.deposit{value: 100 ether}();
@@ -515,8 +526,8 @@ contract RiverV1Tests is Test, BytesGenerator {
         vm.deal(bob, 1100 ether);
         vm.deal(joe, 100 ether);
 
-        _allow(joe, LibAllowlistMasks.DEPOSIT_MASK);
-        _allow(bob, LibAllowlistMasks.DEPOSIT_MASK);
+        _allow(joe);
+        _allow(bob);
 
         vm.startPrank(bob);
         river.depositAndTransfer{value: 100 ether}(joe);
@@ -554,8 +565,8 @@ contract RiverV1Tests is Test, BytesGenerator {
         vm.deal(joe, 200 ether);
         vm.deal(bob, 1100 ether);
 
-        _allow(joe, LibAllowlistMasks.DEPOSIT_MASK);
-        _allow(bob, LibAllowlistMasks.DEPOSIT_MASK);
+        _allow(joe);
+        _allow(bob);
 
         vm.startPrank(joe);
         river.deposit{value: 100 ether}();
@@ -581,8 +592,8 @@ contract RiverV1Tests is Test, BytesGenerator {
         vm.deal(joe, 100 ether);
         vm.deal(bob, 1000 ether);
 
-        _allow(joe, LibAllowlistMasks.DEPOSIT_MASK);
-        _allow(bob, LibAllowlistMasks.DEPOSIT_MASK);
+        _allow(joe);
+        _allow(bob);
 
         vm.startPrank(joe);
         river.deposit{value: 100 ether}();
@@ -628,8 +639,8 @@ contract RiverV1Tests is Test, BytesGenerator {
         vm.deal(joe, 100 ether);
         vm.deal(bob, 1000 ether);
 
-        _allow(joe, LibAllowlistMasks.DEPOSIT_MASK);
-        _allow(bob, LibAllowlistMasks.DEPOSIT_MASK);
+        _allow(joe);
+        _allow(bob);
 
         vm.startPrank(joe);
         river.deposit{value: 100 ether}();
@@ -669,8 +680,8 @@ contract RiverV1Tests is Test, BytesGenerator {
         vm.deal(joe, 100 ether);
         vm.deal(bob, 1000 ether);
 
-        _allow(joe, LibAllowlistMasks.DEPOSIT_MASK);
-        _allow(bob, LibAllowlistMasks.DEPOSIT_MASK);
+        _allow(joe);
+        _allow(bob);
 
         vm.startPrank(joe);
         river.deposit{value: 100 ether}();
@@ -736,6 +747,7 @@ contract RiverV1TestsReport_HEAVY_FUZZING is Test, BytesGenerator {
     address internal admin;
     address internal collector;
     address internal allower;
+    address internal denier;
     address internal oracleMember;
 
     event PulledELFees(uint256 amount);
@@ -757,6 +769,7 @@ contract RiverV1TestsReport_HEAVY_FUZZING is Test, BytesGenerator {
         admin = makeAddr("admin");
         collector = makeAddr("collector");
         allower = makeAddr("allower");
+        denier = makeAddr("denier");
         oracleMember = makeAddr("oracleMember");
 
         vm.warp(857034746);
@@ -781,7 +794,7 @@ contract RiverV1TestsReport_HEAVY_FUZZING is Test, BytesGenerator {
         LibImplementationUnbricker.unbrick(vm, address(redeemManager));
 
         bytes32 withdrawalCredentials = withdraw.getCredentials();
-        allowlist.initAllowlistV1(admin, allower, allower);
+        allowlist.initAllowlistV1(admin, allower, denier);
         operatorsRegistry.initOperatorsRegistryV1(admin, address(river));
         elFeeRecipient.initELFeeRecipientV1(address(river));
         coverageFund.initCoverageFundV1(address(river));
@@ -823,7 +836,7 @@ contract RiverV1TestsReport_HEAVY_FUZZING is Test, BytesGenerator {
         vm.stopPrank();
     }
 
-    function _allow(address _who, uint256 _mask) internal {
+    function _rawPermissions(address _who, uint256 _mask) internal {
         address[] memory allowees = new address[](1);
         allowees[0] = _who;
         uint256[] memory statuses = new uint256[](1);
@@ -831,6 +844,15 @@ contract RiverV1TestsReport_HEAVY_FUZZING is Test, BytesGenerator {
 
         vm.startPrank(admin);
         allowlist.setAllowlistPermissions(allowees, statuses);
+        vm.stopPrank();
+    }
+
+    function _allow(address _who) internal {
+        address[] memory allowees = new address[](1);
+        allowees[0] = _who;
+
+        vm.startPrank(allower);
+        allowlist.allow(allowees);
         vm.stopPrank();
     }
 
@@ -845,7 +867,7 @@ contract RiverV1TestsReport_HEAVY_FUZZING is Test, BytesGenerator {
         users = new address[](userCount);
         for (uint256 idx = 0; idx < userCount; ++idx) {
             users[idx] = address(uint160(_salt));
-            _allow(users[idx], LibAllowlistMasks.DEPOSIT_MASK + LibAllowlistMasks.REDEEM_MASK);
+            _allow(users[idx]);
             _salt = _next(_salt);
             uint256 amountToDeposit = bound(_salt, 1 ether, 100 ether);
             vm.deal(users[idx], amountToDeposit);
@@ -1339,7 +1361,7 @@ contract RiverV1TestsReport_HEAVY_FUZZING is Test, BytesGenerator {
         uint256 remainingIncrease = maxAllowedIncrease - totalIncrease;
         address donator = uf._new(_salt);
         _salt = _next(_salt);
-        _allow(donator, LibAllowlistMasks.DONATE_MASK);
+        _rawPermissions(donator, LibAllowlistMasks.DONATE_MASK);
         vm.deal(address(donator), remainingIncrease);
         vm.prank(donator);
         coverageFund.donate{value: remainingIncrease}();
@@ -1477,7 +1499,7 @@ contract RiverV1TestsReport_HEAVY_FUZZING is Test, BytesGenerator {
 
         address donator = uf._new(_salt);
         _salt = _next(_salt);
-        _allow(donator, LibAllowlistMasks.DONATE_MASK);
+        _rawPermissions(donator, LibAllowlistMasks.DONATE_MASK);
         vm.deal(address(donator), coverageAmount);
         vm.prank(donator);
         coverageFund.donate{value: coverageAmount}();
@@ -1681,7 +1703,7 @@ contract RiverV1TestsReport_HEAVY_FUZZING is Test, BytesGenerator {
     function _depositValidators(uint256 count, uint256 _salt) internal returns (uint256) {
         address depositor = uf._new(_salt);
         _salt = _next(_salt);
-        _allow(depositor, LibAllowlistMasks.DEPOSIT_MASK);
+        _allow(depositor);
         vm.deal(depositor, count * 32 ether);
         vm.prank(depositor);
         river.deposit{value: count * 32 ether}();
@@ -2109,7 +2131,7 @@ contract RiverV1TestsReport_HEAVY_FUZZING is Test, BytesGenerator {
 
         address donator = uf._new(_salt);
         _salt = _next(_salt);
-        _allow(donator, LibAllowlistMasks.DONATE_MASK);
+        _rawPermissions(donator, LibAllowlistMasks.DONATE_MASK);
         vm.deal(address(donator), maxIncrease);
         vm.prank(donator);
         coverageFund.donate{value: maxIncrease}();
@@ -2151,7 +2173,7 @@ contract RiverV1TestsReport_HEAVY_FUZZING is Test, BytesGenerator {
 
         address donator = uf._new(_salt);
         _salt = _next(_salt);
-        _allow(donator, LibAllowlistMasks.DONATE_MASK);
+        _rawPermissions(donator, LibAllowlistMasks.DONATE_MASK);
         vm.deal(address(donator), maxIncrease - (maxIncrease / 3) * 2);
         vm.prank(donator);
         coverageFund.donate{value: maxIncrease - (maxIncrease / 3) * 2}();

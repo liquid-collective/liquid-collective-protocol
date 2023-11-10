@@ -25,7 +25,7 @@ contract AllowlistV1 is IAllowlistV1, Initializable, Administrable {
         AllowerAddress.set(_allower);
         emit SetAllower(_allower);
 
-        DenierAddress.set(_allower);
+        DenierAddress.set(_denier);
         emit SetDenier(_denier);
     }
 
