@@ -24,7 +24,7 @@ Accept the transfer of ownership
 ### allow
 
 ```solidity
-function allow(address[] _accounts, uint256[] _permissions) external nonpayable
+function allow(address[] _accounts) external nonpayable
 ```
 
 Sets the allowlisting status for one or more accounts
@@ -35,8 +35,23 @@ Sets the allowlisting status for one or more accounts
 
 | Name | Type | Description |
 |---|---|---|
-| _accounts | address[] | Accounts with statuses to edit |
-| _permissions | uint256[] | Allowlist permissions for each account, in the same order as _accounts |
+| _accounts | address[] | Accounts with statuses to be set to allow |
+
+### deny
+
+```solidity
+function deny(address[] _accounts) external nonpayable
+```
+
+Sets the allowlisting status for one or more accounts
+
+*The permission value is overridden and not updated*
+
+#### Parameters
+
+| Name | Type | Description |
+|---|---|---|
+| _accounts | address[] | Accounts with statuses to be set to deny |
 
 ### getAdmin
 
@@ -59,6 +74,23 @@ Retrieves the current admin address
 
 ```solidity
 function getAllower() external view returns (address)
+```
+
+Retrieves the allower address
+
+
+
+
+#### Returns
+
+| Name | Type | Description |
+|---|---|---|
+| _0 | address | The address of the allower |
+
+### getDenier
+
+```solidity
+function getDenier() external view returns (address)
 ```
 
 Retrieves the allower address
@@ -137,7 +169,7 @@ This method returns true if the user has the expected permission         ignorin
 ### initAllowlistV1
 
 ```solidity
-function initAllowlistV1(address _admin, address _allower) external nonpayable
+function initAllowlistV1(address _admin, address _allower, address _denier) external nonpayable
 ```
 
 Initializes the allowlist
@@ -150,6 +182,7 @@ Initializes the allowlist
 |---|---|---|
 | _admin | address | Address of the Allowlist administrator |
 | _allower | address | Address of the allower |
+| _denier | address | Address of the denier |
 
 ### isAllowed
 
@@ -245,6 +278,39 @@ Changes the allower address
 |---|---|---|
 | _newAllowerAddress | address | New address allowed to edit the allowlist |
 
+### setAllowlistPermissions
+
+```solidity
+function setAllowlistPermissions(address[] _accounts, uint256[] _permissions) external nonpayable
+```
+
+Sets the permissions for one or more accounts
+
+*This function is for allocating permissions other than allow &amp; deny*
+
+#### Parameters
+
+| Name | Type | Description |
+|---|---|---|
+| _accounts | address[] | Accounts to update |
+| _permissions | uint256[] | New permission values |
+
+### setDenier
+
+```solidity
+function setDenier(address _newDenierAddress) external nonpayable
+```
+
+Changes the denier address
+
+
+
+#### Parameters
+
+| Name | Type | Description |
+|---|---|---|
+| _newDenierAddress | address | New address allowed to edit the allowlist |
+
 
 
 ## Events
@@ -298,6 +364,23 @@ The stored allower address has been changed
 |---|---|---|
 | allower `indexed` | address | undefined |
 
+### SetAllowlistPermission
+
+```solidity
+event SetAllowlistPermission(address[] accounts, uint256 permission)
+```
+
+The permissions of several accounts have changed
+
+
+
+#### Parameters
+
+| Name | Type | Description |
+|---|---|---|
+| accounts  | address[] | undefined |
+| permission  | uint256 | undefined |
+
 ### SetAllowlistPermissions
 
 ```solidity
@@ -314,6 +397,22 @@ The permissions of several accounts have changed
 |---|---|---|
 | accounts  | address[] | undefined |
 | permissions  | uint256[] | undefined |
+
+### SetDenier
+
+```solidity
+event SetDenier(address indexed denier)
+```
+
+The stored denier address has been changed
+
+
+
+#### Parameters
+
+| Name | Type | Description |
+|---|---|---|
+| denier `indexed` | address | undefined |
 
 ### SetPendingAdmin
 

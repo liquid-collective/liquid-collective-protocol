@@ -7,8 +7,8 @@ pragma solidity 0.8.10;
 interface IAllowlistV1 {
     /// @notice The permissions of several accounts have changed
     /// @param accounts List of accounts
-    /// @param permission New permissions for each account at the same index
-    event SetAllowlistPermissions(address[] accounts, uint256 permission);
+    /// @param permission New permission for each account at the same index
+    event SetAllowlistPermission(address[] accounts, uint256 permission);
 
     /// @notice The permissions of several accounts have changed
     /// @param accounts List of accounts

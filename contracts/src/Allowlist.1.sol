@@ -104,7 +104,7 @@ contract AllowlistV1 is IAllowlistV1, Initializable, Administrable {
             }
         }
 
-        emit SetAllowlistPermissions(_accounts, LibAllowlistMasks.DEPOSIT_MASK | LibAllowlistMasks.REDEEM_MASK);
+        emit SetAllowlistPermission(_accounts, LibAllowlistMasks.DEPOSIT_MASK | LibAllowlistMasks.REDEEM_MASK);
     }
 
     /// @inheritdoc IAllowlistV1
@@ -125,7 +125,7 @@ contract AllowlistV1 is IAllowlistV1, Initializable, Administrable {
             }
         }
 
-        emit SetAllowlistPermissions(_accounts, LibAllowlistMasks.DENY_MASK);
+        emit SetAllowlistPermission(_accounts, LibAllowlistMasks.DENY_MASK);
     }
 
     /// @inheritdoc IAllowlistV1
