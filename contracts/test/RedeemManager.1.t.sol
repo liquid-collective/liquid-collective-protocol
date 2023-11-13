@@ -118,7 +118,8 @@ contract RedeemManagerV1Tests is Test {
         LibImplementationUnbricker.unbrick(vm, address(redeemManager));
         allowlist = new AllowlistV1();
         LibImplementationUnbricker.unbrick(vm, address(allowlist));
-        allowlist.initAllowlistV1(allowlistAdmin, allowlistAllower, allowlistDenier);
+        allowlist.initAllowlistV1(allowlistAdmin, allowlistAllower);
+        allowlist.initAllowlistV1_1(allowlistDenier);
         river = new RiverMock(address(allowlist));
 
         redeemManager.initializeRedeemManagerV1(address(river));

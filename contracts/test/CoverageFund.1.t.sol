@@ -48,7 +48,8 @@ contract CoverageFundTestV1 is Test {
         admin = makeAddr("admin");
         allowlist = new AllowlistV1();
         LibImplementationUnbricker.unbrick(vm, address(allowlist));
-        allowlist.initAllowlistV1(admin, admin, admin);
+        allowlist.initAllowlistV1(admin, admin);
+        allowlist.initAllowlistV1_1(admin);
         river = new RiverMock(address(allowlist));
         coverageFund = new CoverageFundV1();
         LibImplementationUnbricker.unbrick(vm, address(coverageFund));

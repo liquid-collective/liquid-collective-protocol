@@ -36,8 +36,11 @@ interface IAllowlistV1 {
     /// @notice Initializes the allowlist
     /// @param _admin Address of the Allowlist administrator
     /// @param _allower Address of the allower
+    function initAllowlistV1(address _admin, address _allower) external;
+
+    /// @notice Initializes the allowlist denier
     /// @param _denier Address of the denier
-    function initAllowlistV1(address _admin, address _allower, address _denier) external;
+    function initAllowlistV1_1(address _denier) external;
 
     /// @notice Retrieves the allower address
     /// @return The address of the allower

@@ -91,11 +91,8 @@ contract FirewallTests is BytesGenerator, Test {
             executorCallableAllowlistSelectors
         );
         firewalledAllowlist = AllowlistV1(payable(address(allowlistFirewall)));
-        allowlist.initAllowlistV1(
-            payable(address(allowlistFirewall)),
-            payable(address(allowlistFirewall)),
-            payable(address(allowlistFirewall))
-        );
+        allowlist.initAllowlistV1(payable(address(allowlistFirewall)), payable(address(allowlistFirewall)));
+        allowlist.initAllowlistV1_1(payable(address(allowlistFirewall)));
 
         bytes4[] memory executorCallableOperatorsRegistrySelectors = new bytes4[](2);
         executorCallableOperatorsRegistrySelectors[0] = operatorsRegistry.setOperatorStatus.selector;

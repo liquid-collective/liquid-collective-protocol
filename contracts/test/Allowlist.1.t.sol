@@ -34,7 +34,8 @@ contract AllowlistV1Tests is Test {
     function setUp() public {
         allowlist = new AllowlistV1Sudo();
         LibImplementationUnbricker.unbrick(vm, address(allowlist));
-        allowlist.initAllowlistV1(testAdmin, allower, denier);
+        allowlist.initAllowlistV1(testAdmin, allower);
+        allowlist.initAllowlistV1_1(denier);
     }
 
     uint256 internal constant TEST_ZERO_MASK = 0x0;

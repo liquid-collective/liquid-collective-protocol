@@ -20,11 +20,13 @@ import "./state/allowlist/Allowlist.sol";
 /// @notice with the system
 contract AllowlistV1 is IAllowlistV1, Initializable, Administrable {
     /// @inheritdoc IAllowlistV1
-    function initAllowlistV1(address _admin, address _allower, address _denier) external init(0) {
+    function initAllowlistV1(address _admin, address _allower) external init(0) {
         _setAdmin(_admin);
         AllowerAddress.set(_allower);
         emit SetAllower(_allower);
+    }
 
+    function initAllowlistV1_1(address _denier) external init(1) {
         DenierAddress.set(_denier);
         emit SetDenier(_denier);
     }

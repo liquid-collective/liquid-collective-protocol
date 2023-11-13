@@ -124,7 +124,7 @@ This method returns true if the user has the expected permission         ignorin
 ### initAllowlistV1
 
 ```solidity
-function initAllowlistV1(address _admin, address _allower, address _denier) external nonpayable
+function initAllowlistV1(address _admin, address _allower) external nonpayable
 ```
 
 Initializes the allowlist
@@ -137,6 +137,21 @@ Initializes the allowlist
 |---|---|---|
 | _admin | address | Address of the Allowlist administrator |
 | _allower | address | Address of the allower |
+
+### initAllowlistV1_1
+
+```solidity
+function initAllowlistV1_1(address _denier) external nonpayable
+```
+
+Initializes the allowlist denier
+
+
+
+#### Parameters
+
+| Name | Type | Description |
+|---|---|---|
 | _denier | address | Address of the denier |
 
 ### isAllowed
@@ -285,7 +300,7 @@ The permissions of several accounts have changed
 | Name | Type | Description |
 |---|---|---|
 | accounts  | address[] | List of accounts |
-| permission  | uint256 | New permissions for each account at the same index |
+| permission  | uint256 | New permission for each account at the same index |
 
 ### SetAllowlistPermissions
 
