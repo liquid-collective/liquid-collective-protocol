@@ -81,7 +81,7 @@ contract FirewallTests is BytesGenerator, Test {
         elFeeRecipient.initELFeeRecipientV1(address(river));
 
         bytes4[] memory executorCallableAllowlistSelectors = new bytes4[](1);
-        executorCallableAllowlistSelectors[0] = allowlist.allow.selector;
+        executorCallableAllowlistSelectors[0] = allowlist.setAllowPermissions.selector;
         vm.expectEmit(true, true, true, true);
         emit SetDestination(address(allowlist));
         allowlistFirewall = new Firewall(

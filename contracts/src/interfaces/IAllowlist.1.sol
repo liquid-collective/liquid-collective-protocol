@@ -7,11 +7,6 @@ pragma solidity 0.8.10;
 interface IAllowlistV1 {
     /// @notice The permissions of several accounts have changed
     /// @param accounts List of accounts
-    /// @param permission New permission for each account at the same index
-    event SetAllowlistPermission(address[] accounts, uint256 permission);
-
-    /// @notice The permissions of several accounts have changed
-    /// @param accounts List of accounts
     /// @param permissions New permissions for each account at the same index
     event SetAllowlistPermissions(address[] accounts, uint256[] permissions);
 
@@ -32,6 +27,9 @@ interface IAllowlistV1 {
 
     /// @notice The provided accounts and permissions list have different lengths
     error MismatchedAlloweeAndStatusCount();
+
+    /// @notice Invalid permission being set
+    error AttemptToSetDenyPermission();
 
     /// @notice Initializes the allowlist
     /// @param _admin Address of the Allowlist administrator
@@ -89,19 +87,15 @@ interface IAllowlistV1 {
     /// @param _newDenierAddress New address allowed to edit the allowlist
     function setDenier(address _newDenierAddress) external;
 
-    /// @notice Sets the allowlisting status for one or more accounts
-    /// @dev The permission value is overridden and not updated
-    /// @param _accounts Accounts with statuses to be set to allow
-    function allow(address[] calldata _accounts) external;
-
-    /// @notice Sets the allowlisting status for one or more accounts
-    /// @dev The permission value is overridden and not updated
-    /// @param _accounts Accounts with statuses to be set to deny
-    function deny(address[] calldata _accounts) external;
-
-    /// @notice Sets the permissions for one or more accounts
-    /// @dev This function is for allocating permissions other than allow & deny
+    /// @notice Sets the allow permissions for one or more accounts
+    /// @dev This function is for allocating or removing deposit, redeem or donate permissions
     /// @param _accounts Accounts to update
     /// @param _permissions New permission values
-    function setAllowlistPermissions(address[] calldata _accounts, uint256[] calldata _permissions) external;
+    function setAllowPermissions(address[] calldata _accounts, uint256[] calldata _permissions) external;
+
+    /// @notice Sets the deny permissions for one or more accounts
+    /// @dev This function is for allocating or removing deny permissions
+    /// @param _accounts Accounts to update
+    /// @param _permissions New permission values
+    function setDenyPermissions(address[] calldata _accounts, uint256[] calldata _permissions) external;
 }

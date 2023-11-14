@@ -129,11 +129,12 @@ contract RedeemManagerV1Tests is Test {
         address user = uf._new(_salt);
 
         address[] memory accounts = new address[](1);
-
         accounts[0] = user;
+        uint256[] memory permissions = new uint256[](1);
+        permissions[0] = LibAllowlistMasks.REDEEM_MASK | LibAllowlistMasks.DEPOSIT_MASK;
 
         vm.prank(allowlistAllower);
-        allowlist.allow(accounts);
+        allowlist.setAllowPermissions(accounts, permissions);
 
         return user;
     }

@@ -89,7 +89,7 @@ contract AllowlistV1 is IAllowlistV1, Initializable, Administrable {
     }
 
     /// @inheritdoc IAllowlistV1
-    function allow(address[] calldata _accounts) external {
+    function setAllowPermissions(address[] calldata _accounts, uint256[] calldata _permissions) external {
         if (msg.sender != AllowerAddress.get()) {
             revert LibErrors.Unauthorized(msg.sender);
         }
@@ -98,41 +98,29 @@ contract AllowlistV1 is IAllowlistV1, Initializable, Administrable {
             revert InvalidAlloweeCount();
         }
 
+        if (_accounts.length != _permissions.length) {
+            revert MismatchedAlloweeAndStatusCount();
+        }
+
+        uint256 permission;
         for (uint256 i = 0; i < _accounts.length;) {
             LibSanitize._notZeroAddress(_accounts[i]);
-            Allowlist.set(_accounts[i], LibAllowlistMasks.DEPOSIT_MASK | LibAllowlistMasks.REDEEM_MASK);
+            permission = _permissions[i];
+            if (permission & LibAllowlistMasks.DENY_MASK == LibAllowlistMasks.DENY_MASK) {
+                revert AttemptToSetDenyPermission();
+            }
+            Allowlist.set(_accounts[i], permission);
             unchecked {
                 ++i;
             }
         }
 
-        emit SetAllowlistPermission(_accounts, LibAllowlistMasks.DEPOSIT_MASK | LibAllowlistMasks.REDEEM_MASK);
+        emit SetAllowlistPermissions(_accounts, _permissions);
     }
 
     /// @inheritdoc IAllowlistV1
-    function deny(address[] calldata _accounts) external {
+    function setDenyPermissions(address[] calldata _accounts, uint256[] calldata _permissions) external {
         if (msg.sender != DenierAddress.get()) {
-            revert LibErrors.Unauthorized(msg.sender);
-        }
-
-        if (_accounts.length == 0) {
-            revert InvalidAlloweeCount();
-        }
-
-        for (uint256 i = 0; i < _accounts.length;) {
-            LibSanitize._notZeroAddress(_accounts[i]);
-            Allowlist.set(_accounts[i], LibAllowlistMasks.DENY_MASK);
-            unchecked {
-                ++i;
-            }
-        }
-
-        emit SetAllowlistPermission(_accounts, LibAllowlistMasks.DENY_MASK);
-    }
-
-    /// @inheritdoc IAllowlistV1
-    function setAllowlistPermissions(address[] calldata _accounts, uint256[] calldata _permissions) external {
-        if (msg.sender != _getAdmin()) {
             revert LibErrors.Unauthorized(msg.sender);
         }
 
@@ -146,21 +134,12 @@ contract AllowlistV1 is IAllowlistV1, Initializable, Administrable {
 
         for (uint256 i = 0; i < _accounts.length;) {
             LibSanitize._notZeroAddress(_accounts[i]);
-            // Check if it doesn't contain allow or deny permissions
-            require(
-                (_permissions[i] & LibAllowlistMasks.DENY_MASK) != LibAllowlistMasks.DENY_MASK,
-                "Cannot set deny permission"
-            );
-            require(
-                (_permissions[i] & LibAllowlistMasks.DEPOSIT_MASK) != LibAllowlistMasks.DEPOSIT_MASK,
-                "Cannot set deposit permission"
-            );
-            require(
-                (_permissions[i] & LibAllowlistMasks.REDEEM_MASK) != LibAllowlistMasks.REDEEM_MASK,
-                "Cannot set redeem permission"
-            );
-
-            Allowlist.set(_accounts[i], _permissions[i]);
+            if (_permissions[i] & LibAllowlistMasks.DENY_MASK == LibAllowlistMasks.DENY_MASK) {
+                Allowlist.set(_accounts[i], LibAllowlistMasks.DENY_MASK);
+            } else {
+                // Remove deny mask
+                Allowlist.set(_accounts[i], 0);
+            }
             unchecked {
                 ++i;
             }

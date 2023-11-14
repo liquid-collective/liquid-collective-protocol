@@ -451,26 +451,30 @@ contract RiverV1Tests is Test, BytesGenerator {
         uint256[] memory statuses = new uint256[](1);
         statuses[0] = _mask;
 
-        vm.startPrank(admin);
-        allowlist.setAllowlistPermissions(allowees, statuses);
+        vm.startPrank(allower);
+        allowlist.setAllowPermissions(allowees, statuses);
         vm.stopPrank();
     }
 
     function _allow(address _who) internal {
         address[] memory allowees = new address[](1);
         allowees[0] = _who;
+        uint256[] memory permissions = new uint256[](1);
+        permissions[0] = LibAllowlistMasks.REDEEM_MASK | LibAllowlistMasks.DEPOSIT_MASK;
 
         vm.startPrank(allower);
-        allowlist.allow(allowees);
+        allowlist.setAllowPermissions(allowees, permissions);
         vm.stopPrank();
     }
 
     function _deny(address _who) internal {
         address[] memory toBeDenied = new address[](1);
         toBeDenied[0] = _who;
+        uint256[] memory permissions = new uint256[](1);
+        permissions[0] = LibAllowlistMasks.DENY_MASK;
         allowlist.getDenier();
         vm.startPrank(denier);
-        allowlist.deny(toBeDenied);
+        allowlist.setDenyPermissions(toBeDenied, permissions);
         vm.stopPrank();
     }
 
@@ -844,8 +848,8 @@ contract RiverV1TestsReport_HEAVY_FUZZING is Test, BytesGenerator {
         uint256[] memory statuses = new uint256[](1);
         statuses[0] = _mask;
 
-        vm.startPrank(admin);
-        allowlist.setAllowlistPermissions(allowees, statuses);
+        vm.startPrank(allower);
+        allowlist.setAllowPermissions(allowees, statuses);
         vm.stopPrank();
     }
 
@@ -853,8 +857,11 @@ contract RiverV1TestsReport_HEAVY_FUZZING is Test, BytesGenerator {
         address[] memory allowees = new address[](1);
         allowees[0] = _who;
 
+        uint256[] memory permissions = new uint256[](1);
+        permissions[0] = LibAllowlistMasks.REDEEM_MASK | LibAllowlistMasks.DEPOSIT_MASK;
+
         vm.startPrank(allower);
-        allowlist.allow(allowees);
+        allowlist.setAllowPermissions(allowees, permissions);
         vm.stopPrank();
     }
 
