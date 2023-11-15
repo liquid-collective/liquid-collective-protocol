@@ -102,14 +102,16 @@ contract AllowlistV1 is IAllowlistV1, Initializable, Administrable {
             revert MismatchedAlloweeAndStatusCount();
         }
 
-        uint256 permission;
         for (uint256 i = 0; i < _accounts.length;) {
             LibSanitize._notZeroAddress(_accounts[i]);
-            permission = _permissions[i];
-            if (permission & LibAllowlistMasks.DENY_MASK == LibAllowlistMasks.DENY_MASK) {
+            if (Allowlist.get(_accounts[i]) & LibAllowlistMasks.DENY_MASK == LibAllowlistMasks.DENY_MASK) {
+                revert AttemptToRemoveDenyPermission();
+            }
+
+            if (_permissions[i] & LibAllowlistMasks.DENY_MASK == LibAllowlistMasks.DENY_MASK) {
                 revert AttemptToSetDenyPermission();
             }
-            Allowlist.set(_accounts[i], permission);
+            Allowlist.set(_accounts[i], _permissions[i]);
             unchecked {
                 ++i;
             }

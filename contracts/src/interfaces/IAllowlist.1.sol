@@ -31,6 +31,9 @@ interface IAllowlistV1 {
     /// @notice Invalid permission being set
     error AttemptToSetDenyPermission();
 
+    /// @notice Allower can't remove deny permission
+    error AttemptToRemoveDenyPermission();
+
     /// @notice Initializes the allowlist
     /// @param _admin Address of the Allowlist administrator
     /// @param _allower Address of the allower
@@ -88,13 +91,15 @@ interface IAllowlistV1 {
     function setDenier(address _newDenierAddress) external;
 
     /// @notice Sets the allow permissions for one or more accounts
-    /// @dev This function is for allocating or removing deposit, redeem or donate permissions
+    /// @dev This function is for allocating or removing deposit, redeem or donate permissions.
+    ///      This function could be used to give any permissions that we come up with in the future.
     /// @param _accounts Accounts to update
     /// @param _permissions New permission values
     function setAllowPermissions(address[] calldata _accounts, uint256[] calldata _permissions) external;
 
     /// @notice Sets the deny permissions for one or more accounts
-    /// @dev This function is for allocating or removing deny permissions
+    /// @dev This function is for allocating or removing deny permissions.
+    ///      An address which is undenied has to be given permissions again for them to be able to deposit, donate or redeem.
     /// @param _accounts Accounts to update
     /// @param _permissions New permission values
     function setDenyPermissions(address[] calldata _accounts, uint256[] calldata _permissions) external;

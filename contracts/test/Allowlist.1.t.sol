@@ -24,7 +24,7 @@ contract AllowlistV1Tests is Test {
 
     address internal testAdmin = address(0xFA674fDde714fD979DE3EdF0f56aa9716b898eC8);
     address internal allower = address(0xEA674fdDe714fd979de3EdF0F56AA9716B898ec8);
-    address internal denier = address(0xEA674fdDe714fd979de3EdF0F56AA9716B898ec8);
+    address internal denier = makeAddr("denier");
 
     AllowlistV1 internal allowlist;
 
@@ -43,6 +43,19 @@ contract AllowlistV1Tests is Test {
 
     function testSetAllowlistStatus(uint256 userSalt) public {
         address user = uf._new(userSalt);
+        vm.startPrank(allower);
+        assert(allowlist.isAllowed(user, 0x1) == false);
+        address[] memory allowees = new address[](1);
+        allowees[0] = user;
+        uint256[] memory permissions = AllowlistHelper.batchAllowees(allowees.length, TEST_ONE_MASK);
+        vm.expectEmit(true, true, true, true);
+        emit SetAllowlistPermissions(allowees, permissions);
+        allowlist.setAllowPermissions(allowees, permissions);
+        assert(allowlist.isAllowed(user, TEST_ONE_MASK) == true);
+    }
+
+    function testSetAllowlistStatus() public {
+        address user = uf._new(1);
         vm.startPrank(allower);
         assert(allowlist.isAllowed(user, 0x1) == false);
         address[] memory allowees = new address[](1);
@@ -263,10 +276,33 @@ contract AllowlistV1Tests is Test {
             permissions[0] = LibAllowlistMasks.DENY_MASK;
             allowlist.setDenyPermissions(allowees, permissions);
             assert(allowlist.isDenied(user) == true);
-            permissions[0] = ~LibAllowlistMasks.DENY_MASK;
+            permissions[0] = 0;
             allowlist.setDenyPermissions(allowees, permissions);
             vm.stopPrank();
             assert(allowlist.isAllowed(user, TEST_ONE_MASK) == false);
+        }
+    }
+
+    function testAllowerCantUndeny(uint256 userSalt) public {
+        address user = uf._new(userSalt);
+        address[] memory allowees = new address[](1);
+        allowees[0] = user;
+        uint256[] memory permissions = new uint256[](1);
+        // Deny a user
+        {
+            vm.startPrank(denier);
+            permissions[0] = LibAllowlistMasks.DENY_MASK;
+            allowlist.setDenyPermissions(allowees, permissions);
+            assert(allowlist.isDenied(user) == true);
+            vm.stopPrank();
+        }
+        // Attempt to set a permission on a user through allower
+        {
+            permissions[0] = TEST_ONE_MASK;
+            vm.startPrank(allower);
+            vm.expectRevert(abi.encodeWithSignature("AttemptToRemoveDenyPermission()"));
+            allowlist.setAllowPermissions(allowees, permissions);
+            vm.stopPrank();
         }
     }
 }
