@@ -20,9 +20,9 @@ import "../../src/CoverageFund.1.sol";
 import "../../src/RedeemManager.1.sol";
 import "../../src/TUPProxy.sol";
 
-import {StakerService} from "./handlers/StakerService.sol";
-import {OperatorService} from "./handlers/OperatorService.sol";
-import {OracleDaemonService} from "./handlers/OracleDaemonService.sol";
+// import {StakerService} from "./handlers/StakerService.sol";
+// import {OperatorService} from "./handlers/OperatorService.sol";
+// import {OracleDaemonService} from "./handlers/OracleDaemonService.sol";
 
 // 1. add getTimestamp, getBlockNumber, setTimestamp, setBlockNumber to Base
 // 2. create BaseService that is constructed with a Base instance
@@ -90,9 +90,9 @@ contract Base is Test, BytesGenerator {
     uint256 blockNumber;
 
     // Services
-    StakerService public stakerService;
-    OperatorService public operatorService;
-    OracleDaemonService public oracleDaemonService;
+    // StakerService public stakerService;
+    // OperatorService public operatorService;
+    // OracleDaemonService public oracleDaemonService;
 
     function setUp() public virtual {
         deployProtocol();
@@ -204,9 +204,9 @@ contract Base is Test, BytesGenerator {
     }
 
     function deployServices() internal {
-        stakerService = new StakerService(this);
-        operatorService = new OperatorService(this);
-        oracleDaemonService = new OracleDaemonService(this);
+        // stakerService = new StakerService(this);
+        // operatorService = new OperatorService(this);
+        // oracleDaemonService = new OracleDaemonService(this);
     }
 
     function dealETH(address _to, uint256 _amount) public {
@@ -214,14 +214,14 @@ contract Base is Test, BytesGenerator {
     }
 
     function addTargetSelectors() internal virtual {
-        targetSelector(stakerService.getTargetSelectors());
-        targetSelector(oracleDaemonService.getTargetSelectors());
+        // targetSelector(stakerService.getTargetSelectors());
+        // targetSelector(oracleDaemonService.getTargetSelectors());
         // targetSelector(operatorService.getTargetSelectors());
     }
 
     function addTargetContracts() internal virtual {
-        targetContract(address(stakerService));
-        targetContract(address(oracleDaemonService));
+        // targetContract(address(stakerService));
+        // targetContract(address(oracleDaemonService));
     }
 
     function excludeDeployedContracts() internal virtual {

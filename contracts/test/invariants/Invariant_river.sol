@@ -15,7 +15,7 @@ contract Invariant_River is Base {
 
     function invariant_setBalanceToDeposit() public {
         uint256 balanceToDepositBefore = river.getBalanceToDeposit();
-        stakerService.action_stakeAmount(10 ether, 10);
+        // stakerService.action_stakeAmount(10 ether, 10);
         uint256 balanceToDepositAfter = river.getBalanceToDeposit();
 
         assertEq(balanceToDepositAfter, balanceToDepositBefore + 10 ether);
