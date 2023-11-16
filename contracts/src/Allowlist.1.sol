@@ -104,13 +104,17 @@ contract AllowlistV1 is IAllowlistV1, Initializable, Administrable {
 
         for (uint256 i = 0; i < _accounts.length;) {
             LibSanitize._notZeroAddress(_accounts[i]);
+
+            // Check if account is already denied
             if (Allowlist.get(_accounts[i]) & LibAllowlistMasks.DENY_MASK == LibAllowlistMasks.DENY_MASK) {
                 revert AttemptToRemoveDenyPermission();
             }
 
+            // Check if DENY permission is present in new permission
             if (_permissions[i] & LibAllowlistMasks.DENY_MASK == LibAllowlistMasks.DENY_MASK) {
                 revert AttemptToSetDenyPermission();
             }
+
             Allowlist.set(_accounts[i], _permissions[i]);
             unchecked {
                 ++i;
@@ -137,6 +141,7 @@ contract AllowlistV1 is IAllowlistV1, Initializable, Administrable {
         for (uint256 i = 0; i < _accounts.length;) {
             LibSanitize._notZeroAddress(_accounts[i]);
             if (_permissions[i] & LibAllowlistMasks.DENY_MASK == LibAllowlistMasks.DENY_MASK) {
+                // Apply deny mask
                 Allowlist.set(_accounts[i], LibAllowlistMasks.DENY_MASK);
             } else {
                 // Remove deny mask

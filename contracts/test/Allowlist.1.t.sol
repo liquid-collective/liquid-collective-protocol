@@ -29,6 +29,7 @@ contract AllowlistV1Tests is Test {
     AllowlistV1 internal allowlist;
 
     event SetAllower(address indexed allower);
+    event SetDenier(address indexed denier);
     event SetAllowlistPermissions(address[] accounts, uint256[] permissions);
 
     function setUp() public {
@@ -202,6 +203,27 @@ contract AllowlistV1Tests is Test {
         allowlist.setAllower(newAllower);
     }
 
+    function testSetDenier(uint256 adminSalt, uint256 newDenierSalt) public {
+        address admin = uf._new(adminSalt);
+        address newDenier = uf._new(newDenierSalt);
+        AllowlistV1Sudo(address(allowlist)).sudoSetAdmin(admin);
+        assert(allowlist.getDenier() == denier);
+        vm.startPrank(admin);
+        vm.expectEmit(true, true, true, true);
+        emit SetDenier(newDenier);
+        allowlist.setDenier(newDenier);
+        assert(allowlist.getDenier() == newDenier);
+    }
+
+    function testSetDenierUnauthorized(uint256 nonAdminSalt, uint256 newDenierSalt) public {
+        address nonAdmin = uf._new(nonAdminSalt);
+        address newDenier = uf._new(newDenierSalt);
+        vm.startPrank(nonAdmin);
+        assert(nonAdmin != testAdmin);
+        vm.expectRevert(abi.encodeWithSignature("Unauthorized(address)", nonAdmin));
+        allowlist.setDenier(newDenier);
+    }
+
     function testSetUserDenied(uint256 userSalt) public {
         address user = uf._new(userSalt);
         vm.startPrank(allower);
@@ -228,6 +250,12 @@ contract AllowlistV1Tests is Test {
             vm.expectRevert(abi.encodeWithSignature("Denied(address)", user));
             allowlist.onlyAllowed(user, LibAllowlistMasks.DEPOSIT_MASK);
         }
+    }
+
+    function testUnauthorizedPermission(uint256 userSalt) public {
+        address user = uf._new(userSalt);
+        vm.expectRevert(abi.encodeWithSignature("Unauthorized(address)", user));
+        allowlist.onlyAllowed(user, LibAllowlistMasks.DEPOSIT_MASK);
     }
 
     function testGetRawPermissions(uint256 userSalt) public {
@@ -274,9 +302,11 @@ contract AllowlistV1Tests is Test {
         {
             vm.startPrank(denier);
             permissions[0] = LibAllowlistMasks.DENY_MASK;
+            // DENY
             allowlist.setDenyPermissions(allowees, permissions);
             assert(allowlist.isDenied(user) == true);
             permissions[0] = 0;
+            // UNDENY
             allowlist.setDenyPermissions(allowees, permissions);
             vm.stopPrank();
             assert(allowlist.isAllowed(user, TEST_ONE_MASK) == false);
@@ -302,6 +332,40 @@ contract AllowlistV1Tests is Test {
             vm.startPrank(allower);
             vm.expectRevert(abi.encodeWithSignature("AttemptToRemoveDenyPermission()"));
             allowlist.setAllowPermissions(allowees, permissions);
+            vm.stopPrank();
+        }
+    }
+
+    function testRevertsOnIncorrectParameters(uint256 userSalt) public {
+        address user = uf._new(userSalt);
+        {
+            address[] memory allowees = new address[](1);
+            allowees[0] = user;
+            uint256[] memory permissions = new uint256[](0);
+
+            vm.startPrank(allower);
+            vm.expectRevert(abi.encodeWithSignature("MismatchedAlloweeAndStatusCount()"));
+            allowlist.setAllowPermissions(allowees, permissions);
+            vm.stopPrank();
+
+            vm.startPrank(denier);
+            vm.expectRevert(abi.encodeWithSignature("MismatchedAlloweeAndStatusCount()"));
+            allowlist.setDenyPermissions(allowees, permissions);
+            vm.stopPrank();
+        }
+
+        {
+            address[] memory allowees = new address[](0);
+            uint256[] memory permissions = new uint256[](0);
+
+            vm.startPrank(allower);
+            vm.expectRevert(abi.encodeWithSignature("InvalidAlloweeCount()"));
+            allowlist.setAllowPermissions(allowees, permissions);
+            vm.stopPrank();
+
+            vm.startPrank(denier);
+            vm.expectRevert(abi.encodeWithSignature("InvalidAlloweeCount()"));
+            allowlist.setDenyPermissions(allowees, permissions);
             vm.stopPrank();
         }
     }

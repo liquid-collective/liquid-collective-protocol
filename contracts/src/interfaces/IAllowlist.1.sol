@@ -93,6 +93,7 @@ interface IAllowlistV1 {
     /// @notice Sets the allow permissions for one or more accounts
     /// @dev This function is for allocating or removing deposit, redeem or donate permissions.
     ///      This function could be used to give any permissions that we come up with in the future.
+    ///      An address which was denied has to be undenied first before they could be given any permission(s).
     /// @param _accounts Accounts to update
     /// @param _permissions New permission values
     function setAllowPermissions(address[] calldata _accounts, uint256[] calldata _permissions) external;
