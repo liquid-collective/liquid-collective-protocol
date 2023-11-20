@@ -703,4 +703,8 @@ contract OracleV1Tests is OracleV1TestBase {
         assertEq(new address[](0), oracle.getOracleMembers());
         assertEq(0, oracle.getLastReportedEpochId());
     }
+
+    function testGetReportVariantCount() external {
+        assertEq(0, oracle.getReportVariantsCount());
+    }
 }
