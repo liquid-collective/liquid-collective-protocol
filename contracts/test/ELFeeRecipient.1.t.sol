@@ -118,6 +118,7 @@ contract ELFeeRecipientV1Test is ELFeeRecipientV1TestBase {
     }
 
     function testNoFundPulled() external {
+        vm.deal(address(feeRecipient), 0);
         river.pullELFees(address(feeRecipient), 0);
         assertEq(0, address(river).balance);
     }

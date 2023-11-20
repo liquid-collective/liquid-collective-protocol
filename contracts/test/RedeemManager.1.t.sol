@@ -360,6 +360,28 @@ contract RedeemManagerV1Tests is Test {
         }
     }
 
+    function testReportWithdrawFail(uint256 _salt) external {
+        uint128 amount = uint128(bound(_salt, 1, type(uint128).max));
+        address user = _generateAllowlistedUser(_salt);
+
+        river.sudoDeal(user, amount);
+
+        vm.prank(user);
+        river.approve(address(redeemManager), amount);
+
+        vm.prank(user);
+        redeemManager.requestRedeem(amount, user);
+
+        vm.deal(address(this), amount);
+
+        vm.expectRevert(
+            abi.encodeWithSignature(
+                "WithdrawalExceedsRedeemDemand(uint256,uint256)", uint256(amount) + 1e18, uint256(amount)
+            )
+        );
+        river.sudoReportWithdraw{value: amount}(address(redeemManager), uint256(amount) + 1e18);
+    }
+
     function testReportWithdrawMultiple(uint256 _salt) external {
         uint128 amount = uint128(bound(_salt, 1, type(uint128).max));
         address user = _generateAllowlistedUser(_salt);
