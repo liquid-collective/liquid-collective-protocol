@@ -84,6 +84,10 @@ contract SharesManagerV1Tests is Test {
         assert(sharesManager.balanceOfUnderlying(_user) == expectedBalance);
     }
 
+    function testUnderlyingBalanceFromShares(uint256 _userSalt) public {
+        assert(sharesManager.underlyingBalanceFromShares(_userSalt) == 0);
+    }
+
     function testBalanceOf(uint256 _userSalt, uint256 _anotherUserSalt) public {
         address _user = uf._new(_userSalt);
         address _anotherUser = uf._new(_anotherUserSalt);

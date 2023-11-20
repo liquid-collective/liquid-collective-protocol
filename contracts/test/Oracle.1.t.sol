@@ -691,6 +691,32 @@ contract OracleV1Tests is OracleV1TestBase {
         }
     }
 
+    function testGetReportVariantDetails() external {
+        uint256 _salt = 1;
+        address member = uf._new(_salt);
+        _salt = uint256(keccak256(abi.encode(_salt)));
+        address member2 = uf._new(_salt);
+        _salt = uint256(keccak256(abi.encode(_salt)));
+        address member3 = uf._new(_salt);
+        _salt = uint256(keccak256(abi.encode(_salt)));
+        address member4 = uf._new(_salt);
+
+        vm.startPrank(admin);
+        oracle.addMember(member, 1);
+        oracle.addMember(member2, 2);
+        oracle.addMember(member3, 3);
+        oracle.addMember(member4, 4);
+        vm.stopPrank();
+
+        IOracleManagerV1.ConsensusLayerReport memory report = _generateEmptyReport(2);
+
+        vm.prank(member);
+        oracle.reportConsensusLayerData(report);
+        ReportsVariants.ReportVariantDetails memory test = oracle.getReportVariantDetails(0);
+        assertEq(test.variant, keccak256(abi.encode(report)));
+        assertEq(test.votes, 1);
+    }
+
     function testGetReportVariantDetailsFail() external {
         vm.expectRevert(
             abi.encodeWithSignature("ReportIndexOutOfBounds(uint256,uint256)", 100, oracle.getReportVariantsCount())
