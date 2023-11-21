@@ -56,7 +56,8 @@ contract VestingSchedulesMigrationTest is Test {
         return VestingSchedulesV2.getCount();
     }
 
-    function testGetRevert(uint256 _index) public {
+    function testGetRevert() public {
+        uint256 _index = 1;
         vm.expectRevert(abi.encodeWithSignature("VestingScheduleNotFound(uint256)", _index));
         VestingSchedulesV1.get(_index);
         vm.expectRevert(abi.encodeWithSignature("VestingScheduleNotFound(uint256)", _index));

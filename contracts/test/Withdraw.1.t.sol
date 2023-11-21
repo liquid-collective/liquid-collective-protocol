@@ -27,16 +27,16 @@ abstract contract WithdrawV1TestBase is Test {
     UserFactory internal uf = new UserFactory();
 
     event DebugReceivedCLFunds(uint256 amount);
-}
 
-contract WithdrawV1InitializationTests is WithdrawV1TestBase {
-    function setUp() external {
+    function setUp() public virtual {
         river = new RiverMock();
 
         withdraw = new WithdrawV1();
         LibImplementationUnbricker.unbrick(vm, address(withdraw));
     }
+}
 
+contract WithdrawV1InitializationTests is WithdrawV1TestBase {
     function testInitialization() external {
         withdraw.initializeWithdrawV1(address(river));
         assertEq(address(river), withdraw.getRiver());
@@ -44,11 +44,8 @@ contract WithdrawV1InitializationTests is WithdrawV1TestBase {
 }
 
 contract WithdrawV1Tests is WithdrawV1TestBase {
-    function setUp() external {
-        river = new RiverMock();
-
-        withdraw = new WithdrawV1();
-        LibImplementationUnbricker.unbrick(vm, address(withdraw));
+    function setUp() public override {
+        super.setUp();
         withdraw.initializeWithdrawV1(address(river));
     }
 
@@ -142,7 +139,7 @@ contract WithdrawV1Tests is WithdrawV1TestBase {
         withdraw.pullEth(1 ether);
     }
 
-    function testPullFundsAsRiver(uint256 _salt) external {
+    function testPullFundsAsRiver() external {
         vm.deal(address(withdraw), 1 ether);
         river.debug_pullFunds(address(withdraw), 1 ether);
 
