@@ -16,9 +16,6 @@ jobs:
           - { file: Withdraw.1.sol, name: WithdrawV1 }
           - { file: Allowlist.1.sol, name: AllowlistV1 }
           - { file: Firewall.sol, name: Firewall }
-          - { file: RedeemManager.1.sol, name: RedeemManagerV1 }
-          - { file: ELFeeRecipient.1.sol, name: ELFeeRecipientV1 }
-          - { file: OperatorsRegistry.1.sol, name: OperatorsRegistryV1 }
     steps:
       - uses: actions/checkout@v3
         with:
