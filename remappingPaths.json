@@ -1,7 +1,0 @@
-{
-  "remappings": [
-    "openzeppelin-contracts/=lib/openzeppelin-contracts/",
-    "solmate/=lib/solmate/src/",
-    "openzeppelin-contracts-upgradeable/=lib/openzeppelin-contracts-upgradeable/"
-    ]
-}

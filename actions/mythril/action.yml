@@ -15,4 +15,3 @@ runs:
     - ${{ inputs.contract }}
     - '--execution-timeout'
     - '300'
-    - '--solc-json ./remappingPaths.json' 

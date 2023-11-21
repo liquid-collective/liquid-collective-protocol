@@ -27,7 +27,6 @@ jobs:
       - name: Mythril analysis
         uses: ./actions/mythril
         with:
-          command: yarn link_contracts
           contract: "./contracts/src/${{ matrix.contract.file }}:${{ matrix.contract.name }}"
 
       - name: Rename output artifact
