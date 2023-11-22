@@ -16,3 +16,4 @@ runs:
     - '--execution-timeout'
     - '300'
     - '--solc-json ./remappingPaths.json'
+    - '-t 10'
