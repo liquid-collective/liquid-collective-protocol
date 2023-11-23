@@ -1409,6 +1409,12 @@ contract RedeemManagerV1Tests is Test {
         assertTrue(withdrawalEventIds[0] == -1);
     }
 
+    function testResolveRedeemRequestForZeroIds() external {
+        uint32[] memory redeemRequestIds = new uint32[](0);
+        int64[] memory withdrawalEventIds = redeemManager.resolveRedeemRequests(redeemRequestIds);
+        assert(withdrawalEventIds.length == 0);
+    }
+
     function testPullExceedingEth() external {
         vm.deal(address(redeemManager), 1 ether);
         vm.store(

@@ -303,6 +303,15 @@ contract OracleV1Tests is OracleV1TestBase {
         oracle.removeMember(newMember, 0);
     }
 
+    function testRemoveMemberInvalidCall() public {
+        address newMemberOne = uf._new(1);
+        address newMemberTwo = uf._new(2);
+
+        vm.prank(admin);
+        vm.expectRevert(abi.encodeWithSignature("InvalidCall()"));
+        oracle.removeMember(newMemberOne, 0);
+    }
+
     function testSetQuorumRedundant(uint256 oracleMemberSalt) public {
         address oracleMember = uf._new(oracleMemberSalt);
         vm.startPrank(admin);
