@@ -214,8 +214,17 @@ contract OracleManagerV1Tests is Test {
     function setUp() public {
         admin = makeAddr("admin");
         oracle = makeAddr("oracle");
-        oracleManager =
-        new OracleManagerV1ExposeInitializer(oracle, admin, epochsPerFrame, slotsPerEpoch, secondsPerSlot, genesisTime, epochsToAssumedFinality, annualAprUpperBound, relativeLowerBound);
+        oracleManager = new OracleManagerV1ExposeInitializer(
+            oracle,
+            admin,
+            epochsPerFrame,
+            slotsPerEpoch,
+            secondsPerSlot,
+            genesisTime,
+            epochsToAssumedFinality,
+            annualAprUpperBound,
+            relativeLowerBound
+        );
         LibImplementationUnbricker.unbrick(vm, address(oracleManager));
         vm.warp(genesisTime);
     }
