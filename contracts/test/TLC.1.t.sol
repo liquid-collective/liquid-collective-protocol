@@ -25,7 +25,9 @@ contract TLCTests is Test {
         tlcImplem = new TLCV1();
         tlc = TLCV1(
             address(
-                new TUPProxy(address(tlcImplem), admin, abi.encodeWithSelector(tlcImplem.initTLCV1.selector, initAccount))
+                new TUPProxy(
+                    address(tlcImplem), admin, abi.encodeWithSelector(tlcImplem.initTLCV1.selector, initAccount)
+                )
             )
         );
         tlc.migrateVestingSchedules();
