@@ -20,6 +20,7 @@ jobs:
           - { file: ELFeeRecipient.1.sol, name: ELFeeRecipientV1 }
           - { file: OperatorsRegistry.1.sol, name: OperatorsRegistryV1 }
           - { file: CoverageFund.1.sol, name: CoverageFundV1 }
+          - { file: TLC.1.sol, name: TLCV1 }
     steps:
       - uses: actions/checkout@v3
         with:
