@@ -95,11 +95,11 @@ contract AllowlistV1 is IAllowlistV1, Initializable, Administrable {
         }
 
         if (_accounts.length == 0) {
-            revert InvalidAlloweeCount();
+            revert InvalidCount();
         }
 
         if (_accounts.length != _permissions.length) {
-            revert MismatchedAlloweeAndStatusCount();
+            revert MismatchedArrayLengths();
         }
 
         for (uint256 i = 0; i < _accounts.length;) {
@@ -131,11 +131,11 @@ contract AllowlistV1 is IAllowlistV1, Initializable, Administrable {
         }
 
         if (_accounts.length == 0) {
-            revert InvalidAlloweeCount();
+            revert InvalidCount();
         }
 
         if (_accounts.length != _permissions.length) {
-            revert MismatchedAlloweeAndStatusCount();
+            revert MismatchedArrayLengths();
         }
 
         for (uint256 i = 0; i < _accounts.length;) {

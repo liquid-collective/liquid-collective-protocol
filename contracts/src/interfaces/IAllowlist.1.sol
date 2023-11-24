@@ -19,16 +19,16 @@ interface IAllowlistV1 {
     event SetDenier(address indexed denier);
 
     /// @notice The provided accounts list is empty
-    error InvalidAlloweeCount();
+    error InvalidCount();
 
     /// @notice The account is denied access
     /// @param _account The denied account
     error Denied(address _account);
 
     /// @notice The provided accounts and permissions list have different lengths
-    error MismatchedAlloweeAndStatusCount();
+    error MismatchedArrayLengths();
 
-    /// @notice Invalid permission being set
+    /// @notice Allower can't set deny permission
     error AttemptToSetDenyPermission();
 
     /// @notice Allower can't remove deny permission
@@ -47,8 +47,8 @@ interface IAllowlistV1 {
     /// @return The address of the allower
     function getAllower() external view returns (address);
 
-    /// @notice Retrieves the allower address
-    /// @return The address of the allower
+    /// @notice Retrieves the denier address
+    /// @return The address of the denier
     function getDenier() external view returns (address);
 
     /// @notice This method returns true if the user has the expected permission and

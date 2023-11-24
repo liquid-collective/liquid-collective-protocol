@@ -178,7 +178,7 @@ contract AllowlistV1Tests is Test {
         permissions[0] = 0;
         permissions[1] = TEST_ONE_MASK;
         vm.startPrank(allower);
-        vm.expectRevert(abi.encodeWithSignature("MismatchedAlloweeAndStatusCount()"));
+        vm.expectRevert(abi.encodeWithSignature("MismatchedArrayLengths()"));
         allowlist.setAllowPermissions(allowees, permissions);
     }
 
@@ -344,12 +344,12 @@ contract AllowlistV1Tests is Test {
             uint256[] memory permissions = new uint256[](0);
 
             vm.startPrank(allower);
-            vm.expectRevert(abi.encodeWithSignature("MismatchedAlloweeAndStatusCount()"));
+            vm.expectRevert(abi.encodeWithSignature("MismatchedArrayLengths()"));
             allowlist.setAllowPermissions(allowees, permissions);
             vm.stopPrank();
 
             vm.startPrank(denier);
-            vm.expectRevert(abi.encodeWithSignature("MismatchedAlloweeAndStatusCount()"));
+            vm.expectRevert(abi.encodeWithSignature("MismatchedArrayLengths()"));
             allowlist.setDenyPermissions(allowees, permissions);
             vm.stopPrank();
         }
@@ -359,12 +359,12 @@ contract AllowlistV1Tests is Test {
             uint256[] memory permissions = new uint256[](0);
 
             vm.startPrank(allower);
-            vm.expectRevert(abi.encodeWithSignature("InvalidAlloweeCount()"));
+            vm.expectRevert(abi.encodeWithSignature("InvalidCount()"));
             allowlist.setAllowPermissions(allowees, permissions);
             vm.stopPrank();
 
             vm.startPrank(denier);
-            vm.expectRevert(abi.encodeWithSignature("InvalidAlloweeCount()"));
+            vm.expectRevert(abi.encodeWithSignature("InvalidCount()"));
             allowlist.setDenyPermissions(allowees, permissions);
             vm.stopPrank();
         }
