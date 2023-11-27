@@ -35,7 +35,7 @@ contract RiverV1ForceCommittable is RiverV1 {
     }
 }
 
-contract RiverV1Tests is Test, BytesGenerator {
+abstract contract RiverV1TestBase is Test, BytesGenerator {
     UserFactory internal uf = new UserFactory();
 
     RiverV1ForceCommittable internal river;
@@ -83,7 +83,7 @@ contract RiverV1Tests is Test, BytesGenerator {
     uint128 constant maxDailyNetCommittableAmount = 3200 ether;
     uint128 constant maxDailyRelativeCommittableAmount = 2000;
 
-    function setUp() public {
+    function setUp() public virtual {
         admin = makeAddr("admin");
         newAdmin = makeAddr("newAdmin");
         collector = makeAddr("collector");
@@ -115,11 +115,44 @@ contract RiverV1Tests is Test, BytesGenerator {
         operatorsRegistry = new OperatorsRegistryWithOverridesV1();
         LibImplementationUnbricker.unbrick(vm, address(operatorsRegistry));
 
-        bytes32 withdrawalCredentials = withdraw.getCredentials();
         allowlist.initAllowlistV1(admin, allower);
         operatorsRegistry.initOperatorsRegistryV1(admin, address(river));
         elFeeRecipient.initELFeeRecipientV1(address(river));
         coverageFund.initCoverageFundV1(address(river));
+    }
+}
+
+contract RiverV1InitializationTests is RiverV1TestBase {
+    function testInitialization() public {
+        bytes32 withdrawalCredentials = withdraw.getCredentials();
+        vm.expectEmit(true, true, true, true);
+        emit SetCollector(collector);
+        vm.expectEmit(true, true, true, true);
+        emit SetGlobalFee(500);
+        vm.expectEmit(true, true, true, true);
+        emit SetELFeeRecipient(address(elFeeRecipient));
+        vm.expectEmit(true, true, true, true);
+        emit SetAllowlist(address(allowlist));
+        vm.expectEmit(true, true, true, true);
+        emit SetOperatorsRegistry(address(operatorsRegistry));
+        river.initRiverV1(
+            address(deposit),
+            address(elFeeRecipient),
+            withdrawalCredentials,
+            address(oracle),
+            admin,
+            address(allowlist),
+            address(operatorsRegistry),
+            collector,
+            500
+        );
+    }
+}
+
+contract RiverV1Tests is RiverV1TestBase {
+    function setUp() public override {
+        super.setUp();
+        bytes32 withdrawalCredentials = withdraw.getCredentials();
         vm.expectEmit(true, true, true, true);
         emit SetOperatorsRegistry(address(operatorsRegistry));
         river.initRiverV1(
@@ -134,13 +167,11 @@ contract RiverV1Tests is Test, BytesGenerator {
             500
         );
         oracle.initOracleV1(address(river), admin, 225, 32, 12, 0, 1000, 500);
+
         vm.startPrank(admin);
-
         river.setCoverageFund(address(coverageFund));
-
-        // ===================
-
         oracle.addMember(oracleMember, 1);
+        // ===================
 
         operatorOneIndex = operatorsRegistry.addOperator(operatorOneName, operatorOne);
         operatorTwoIndex = operatorsRegistry.addOperator(operatorTwoName, operatorTwo);
@@ -578,6 +609,35 @@ contract RiverV1Tests is Test, BytesGenerator {
         vm.stopPrank();
     }
 
+    function testOnTransferFailsForAllowlistDenied() public {
+        vm.deal(joe, 100 ether);
+        vm.deal(bob, 1000 ether);
+
+        _allow(joe, LibAllowlistMasks.DEPOSIT_MASK);
+        _allow(bob, LibAllowlistMasks.DEPOSIT_MASK);
+
+        vm.startPrank(joe);
+        river.deposit{value: 100 ether}();
+        vm.stopPrank();
+
+        assert(river.balanceOfUnderlying(joe) == 100 ether);
+
+        // A user present on denied allow list can't send
+        _deny(joe);
+        vm.startPrank(joe);
+        vm.expectRevert(abi.encodeWithSignature("Denied(address)", joe));
+        river.transfer(bob, 100 ether);
+        vm.stopPrank();
+
+        // A user present on denied allow list can't receive
+        _allow(joe, LibAllowlistMasks.DEPOSIT_MASK);
+        _deny(bob);
+        vm.startPrank(joe);
+        vm.expectRevert(abi.encodeWithSignature("Denied(address)", bob));
+        river.transfer(bob, 100 ether);
+        vm.stopPrank();
+    }
+
     // Testing regular parameters
     function testUserDepositsFullAllowance() public {
         vm.deal(joe, 100 ether);
@@ -720,73 +780,21 @@ contract RiverV1Tests is Test, BytesGenerator {
     {
         return (_prevTotalEth * annualAprUpperBound * _timeElapsed) / uint256(10000 * 365 days);
     }
+
+    function testSendRedeemManagerUnauthorizedCall() public {
+        vm.expectRevert(abi.encodeWithSignature("Unauthorized(address)", address(this)));
+        river.sendRedeemManagerExceedingFunds();
+    }
 }
 
-contract RiverV1TestsReport_HEAVY_FUZZING is Test, BytesGenerator {
-    UserFactory internal uf = new UserFactory();
+contract RiverV1TestsReport_HEAVY_FUZZING is RiverV1TestBase {
+    RedeemManagerV1 redeemManager;
 
-    RiverV1ForceCommittable internal river;
-    IDepositContract internal deposit;
-    WithdrawV1 internal withdraw;
-    OracleV1 internal oracle;
-    ELFeeRecipientV1 internal elFeeRecipient;
-    CoverageFundV1 internal coverageFund;
-    AllowlistV1 internal allowlist;
-    OperatorsRegistryV1 internal operatorsRegistry;
-    RedeemManagerV1 internal redeemManager;
-
-    address internal admin;
-    address internal collector;
-    address internal allower;
-    address internal oracleMember;
-
-    event PulledELFees(uint256 amount);
-    event SetELFeeRecipient(address indexed elFeeRecipient);
-    event SetCollector(address indexed collector);
-    event SetAllowlist(address indexed allowlist);
-    event SetGlobalFee(uint256 fee);
-    event SetOperatorsRegistry(address indexed operatorsRegistry);
-
-    uint64 constant epochsPerFrame = 225;
-    uint64 constant slotsPerEpoch = 32;
-    uint64 constant secondsPerSlot = 12;
-    uint64 constant epochsUntilFinal = 4;
-
-    uint128 constant maxDailyNetCommittableAmount = 3200 ether;
-    uint128 constant maxDailyRelativeCommittableAmount = 2000;
-
-    function setUp() public {
-        admin = makeAddr("admin");
-        collector = makeAddr("collector");
-        allower = makeAddr("allower");
-        oracleMember = makeAddr("oracleMember");
-
-        vm.warp(857034746);
-
-        elFeeRecipient = new ELFeeRecipientV1();
-        LibImplementationUnbricker.unbrick(vm, address(elFeeRecipient));
-        coverageFund = new CoverageFundV1();
-        LibImplementationUnbricker.unbrick(vm, address(coverageFund));
-        oracle = new OracleV1();
-        LibImplementationUnbricker.unbrick(vm, address(oracle));
-        allowlist = new AllowlistV1();
-        LibImplementationUnbricker.unbrick(vm, address(allowlist));
-        deposit = new DepositContractMock();
-        LibImplementationUnbricker.unbrick(vm, address(deposit));
-        withdraw = new WithdrawV1();
-        LibImplementationUnbricker.unbrick(vm, address(withdraw));
-        river = new RiverV1ForceCommittable();
-        LibImplementationUnbricker.unbrick(vm, address(river));
-        operatorsRegistry = new OperatorsRegistryWithOverridesV1();
-        LibImplementationUnbricker.unbrick(vm, address(operatorsRegistry));
+    function setUp() public override {
+        super.setUp();
+        bytes32 withdrawalCredentials = withdraw.getCredentials();
         redeemManager = new RedeemManagerV1();
         LibImplementationUnbricker.unbrick(vm, address(redeemManager));
-
-        bytes32 withdrawalCredentials = withdraw.getCredentials();
-        allowlist.initAllowlistV1(admin, allower);
-        operatorsRegistry.initOperatorsRegistryV1(admin, address(river));
-        elFeeRecipient.initELFeeRecipientV1(address(river));
-        coverageFund.initCoverageFundV1(address(river));
         redeemManager.initializeRedeemManagerV1(address(river));
         vm.expectEmit(true, true, true, true);
         emit SetOperatorsRegistry(address(operatorsRegistry));
@@ -2169,5 +2177,10 @@ contract RiverV1TestsReport_HEAVY_FUZZING is Test, BytesGenerator {
             river.getCommittedBalance(),
             _computeCommittedAmount(0, clr.epoch, committedAmount, depositAmount, maxIncrease)
         );
+    }
+
+    function testExternalViewFunctions() public {
+        assertEq(block.timestamp, river.getTime());
+        assertEq(address(redeemManager), river.getRedeemManager());
     }
 }

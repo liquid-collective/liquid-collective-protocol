@@ -21,18 +21,31 @@ contract RiverMock {
     }
 }
 
-contract WithdrawV1Tests is Test {
+abstract contract WithdrawV1TestBase is Test {
     WithdrawV1 internal withdraw;
     RiverMock internal river;
     UserFactory internal uf = new UserFactory();
 
     event DebugReceivedCLFunds(uint256 amount);
 
-    function setUp() external {
+    function setUp() public virtual {
         river = new RiverMock();
 
         withdraw = new WithdrawV1();
         LibImplementationUnbricker.unbrick(vm, address(withdraw));
+    }
+}
+
+contract WithdrawV1InitializationTests is WithdrawV1TestBase {
+    function testInitialization() external {
+        withdraw.initializeWithdrawV1(address(river));
+        assertEq(address(river), withdraw.getRiver());
+    }
+}
+
+contract WithdrawV1Tests is WithdrawV1TestBase {
+    function setUp() public override {
+        super.setUp();
         withdraw.initializeWithdrawV1(address(river));
     }
 
@@ -126,6 +139,13 @@ contract WithdrawV1Tests is Test {
         withdraw.pullEth(1 ether);
     }
 
+    function testPullFundsAsRiver() external {
+        vm.deal(address(withdraw), 1 ether);
+        river.debug_pullFunds(address(withdraw), 1 ether);
+
+        assertEq(1 ether, address(river).balance);
+    }
+
     function testPullFundsAmountTooHigh(uint256 _amount) external {
         _amount = bound(_amount, 1, type(uint128).max);
 
@@ -138,5 +158,10 @@ contract WithdrawV1Tests is Test {
 
         assertEq(address(withdraw).balance, 0);
         assertEq(address(river).balance, _amount);
+    }
+
+    function testNoFundPulled() external {
+        river.debug_pullFunds(address(withdraw), 0);
+        assertEq(0, address(river).balance);
     }
 }
