@@ -306,6 +306,11 @@ contract ConsensusLayerDepositManagerV1WithdrawalCredentialError is Test {
             withdrawalCredentials
         );
     }
+
+    function testInvalidArgumentForWithdrawalCredential() public {
+        vm.expectRevert(abi.encodeWithSignature("InvalidArgument()"));
+        ConsensusLayerDepositManagerV1ExposeInitializer(address(depositManager)).sudoSetWithdrawalCredentials(0x00);
+    }
 }
 
 // values are coming from this tx https://etherscan.io/tx/0x87eb1df9b26c7e655c9eb568e38009c7c2b0e10b397708ea63dffccd93c6626a that was picked randomly

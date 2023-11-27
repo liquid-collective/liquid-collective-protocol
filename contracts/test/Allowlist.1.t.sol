@@ -17,7 +17,7 @@ contract AllowlistV1Sudo is AllowlistV1 {
     }
 }
 
-contract AllowlistV1Tests is Test {
+abstract contract AllowlistV1TestBase is Test {
     UserFactory internal uf = new UserFactory();
 
     bytes32 internal withdrawalCredentials = bytes32(uint256(1));
@@ -31,7 +31,25 @@ contract AllowlistV1Tests is Test {
     event SetAllower(address indexed allower);
     event SetDenier(address indexed denier);
     event SetAllowlistPermissions(address[] accounts, uint256[] permissions);
+}
 
+contract AllowlistV1InitializationTests is AllowlistV1TestBase {
+    function setUp() public {
+        allowlist = new AllowlistV1Sudo();
+        LibImplementationUnbricker.unbrick(vm, address(allowlist));
+    }
+
+    function testInitialization() public {
+        vm.expectEmit(true, true, true, true);
+        emit SetAllower(allower);
+        allowlist.initAllowlistV1(testAdmin, allower);
+
+        assertEq(allower, allowlist.getAllower());
+        assertEq(testAdmin, allowlist.getAdmin());
+    }
+}
+
+contract AllowlistV1Tests is AllowlistV1TestBase {
     function setUp() public {
         allowlist = new AllowlistV1Sudo();
         LibImplementationUnbricker.unbrick(vm, address(allowlist));
@@ -368,5 +386,13 @@ contract AllowlistV1Tests is Test {
             allowlist.setDenyPermissions(allowees, permissions);
             vm.stopPrank();
         }
+    }
+
+    function testAllowFail() public {
+        vm.startPrank(allower);
+        address[] memory allowees = new address[](0);
+        uint256[] memory permissions = new uint256[](0);
+        vm.expectRevert(abi.encodeWithSignature("InvalidAlloweeCount()"));
+        allowlist.allow(allowees, permissions);
     }
 }

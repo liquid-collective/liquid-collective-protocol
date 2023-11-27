@@ -80,6 +80,12 @@ contract RiverMock {
     function underlyingBalanceFromShares(uint256 shares) external view returns (uint256) {
         return (shares * rate) / 1e18;
     }
+
+    function pullExceedingEth(address redeemManager, uint256 amount) external {
+        RedeemManagerV1(redeemManager).pullExceedingEth(amount);
+    }
+
+    fallback() external payable {}
 }
 
 contract RedeemManagerV1Tests is Test {
@@ -354,6 +360,28 @@ contract RedeemManagerV1Tests is Test {
             assertEq(we.amount, amount);
             assertEq(we.withdrawnEth, amount);
         }
+    }
+
+    function testReportWithdrawFail(uint256 _salt) external {
+        uint128 amount = uint128(bound(_salt, 1, type(uint128).max));
+        address user = _generateAllowlistedUser(_salt);
+
+        river.sudoDeal(user, amount);
+
+        vm.prank(user);
+        river.approve(address(redeemManager), amount);
+
+        vm.prank(user);
+        redeemManager.requestRedeem(amount, user);
+
+        vm.deal(address(this), amount);
+
+        vm.expectRevert(
+            abi.encodeWithSignature(
+                "WithdrawalExceedsRedeemDemand(uint256,uint256)", uint256(amount) + 1e18, uint256(amount)
+            )
+        );
+        river.sudoReportWithdraw{value: amount}(address(redeemManager), uint256(amount) + 1e18);
     }
 
     function testReportWithdrawMultiple(uint256 _salt) external {
@@ -1381,5 +1409,21 @@ contract RedeemManagerV1Tests is Test {
         int64[] memory withdrawalEventIds = redeemManager.resolveRedeemRequests(redeemRequestIds);
         assertEq(withdrawalEventIds.length, 1);
         assertTrue(withdrawalEventIds[0] == -1);
+    }
+
+    function testResolveRedeemRequestForZeroIds() external {
+        uint32[] memory redeemRequestIds = new uint32[](0);
+        int64[] memory withdrawalEventIds = redeemManager.resolveRedeemRequests(redeemRequestIds);
+        assert(withdrawalEventIds.length == 0);
+    }
+
+    function testPullExceedingEth() external {
+        vm.deal(address(redeemManager), 1 ether);
+        vm.store(
+            address(redeemManager),
+            bytes32(uint256(keccak256("river.state.bufferedExceedingEth")) - 1),
+            bytes32(uint256(1 ether))
+        );
+        river.pullExceedingEth(address(redeemManager), 1 ether);
     }
 }

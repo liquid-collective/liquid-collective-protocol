@@ -476,4 +476,9 @@ contract OracleManagerV1Tests is Test {
         vm.expectRevert(abi.encodeWithSignature("Unauthorized(address)", address(this)));
         oracleManager.setReportBounds(newValue);
     }
+
+    function testExternalViewFunctions() external {
+        assertEq(false, oracleManager.isValidEpoch(1));
+        assertEq(0, oracleManager.getCLValidatorCount());
+    }
 }

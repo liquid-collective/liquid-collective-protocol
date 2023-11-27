@@ -3,5 +3,8 @@ codecov:
 ignore:
   - "contracts/test/"
   - "contracts/src/mock/"
-  - "contracts/src/libraries/"
-  - "contracts/src/state/"
+  - "contracts/src/state/operatorsRegistry/Operators.1.sol"
+  - "contracts/src/state/river/CLValidatorCount.sol"
+  - "contracts/src/state/river/CLValidatorTotalBalance.sol"
+  - "contracts/src/state/river/LastOracleRoundId.sol"
+  - "contracts/src/state/shared/Version.sol"
