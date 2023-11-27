@@ -498,11 +498,11 @@ contract RiverV1Tests is RiverV1TestBase {
         vm.stopPrank();
     }
 
-    function _deny(address _who) internal {
+    function _deny(address _who, bool _status) internal {
         address[] memory toBeDenied = new address[](1);
         toBeDenied[0] = _who;
         uint256[] memory permissions = new uint256[](1);
-        permissions[0] = LibAllowlistMasks.DENY_MASK;
+        permissions[0] = _status ? LibAllowlistMasks.DENY_MASK : 0;
         allowlist.getDenier();
         vm.startPrank(denier);
         allowlist.setDenyPermissions(toBeDenied, permissions);
@@ -611,7 +611,7 @@ contract RiverV1Tests is RiverV1TestBase {
         river.deposit{value: 1000 ether}();
         vm.stopPrank();
 
-        _deny(joe);
+        _deny(joe, true);
         vm.startPrank(joe);
         vm.expectRevert(abi.encodeWithSignature("Denied(address)", joe));
         river.deposit{value: 100 ether}();
@@ -627,8 +627,8 @@ contract RiverV1Tests is RiverV1TestBase {
         vm.deal(joe, 100 ether);
         vm.deal(bob, 1000 ether);
 
-        _allow(joe, LibAllowlistMasks.DEPOSIT_MASK);
-        _allow(bob, LibAllowlistMasks.DEPOSIT_MASK);
+        _allow(joe);
+        _allow(bob);
 
         vm.startPrank(joe);
         river.deposit{value: 100 ether}();
@@ -637,15 +637,16 @@ contract RiverV1Tests is RiverV1TestBase {
         assert(river.balanceOfUnderlying(joe) == 100 ether);
 
         // A user present on denied allow list can't send
-        _deny(joe);
+        _deny(joe, true);
         vm.startPrank(joe);
         vm.expectRevert(abi.encodeWithSignature("Denied(address)", joe));
         river.transfer(bob, 100 ether);
         vm.stopPrank();
 
         // A user present on denied allow list can't receive
-        _allow(joe, LibAllowlistMasks.DEPOSIT_MASK);
-        _deny(bob);
+        _deny(joe, false);
+        _allow(joe);
+        _deny(bob, true);
         vm.startPrank(joe);
         vm.expectRevert(abi.encodeWithSignature("Denied(address)", bob));
         river.transfer(bob, 100 ether);

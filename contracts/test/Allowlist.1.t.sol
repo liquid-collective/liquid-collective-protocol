@@ -392,7 +392,7 @@ contract AllowlistV1Tests is AllowlistV1TestBase {
         vm.startPrank(allower);
         address[] memory allowees = new address[](0);
         uint256[] memory permissions = new uint256[](0);
-        vm.expectRevert(abi.encodeWithSignature("InvalidAlloweeCount()"));
-        allowlist.allow(allowees, permissions);
+        vm.expectRevert(abi.encodeWithSignature("InvalidCount()"));
+        allowlist.setAllowPermissions(allowees, permissions);
     }
 }
