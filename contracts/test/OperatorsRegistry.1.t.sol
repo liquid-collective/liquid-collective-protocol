@@ -57,7 +57,7 @@ contract RiverMock {
     }
 }
 
-contract OperatorsRegistryV1Tests is Test, BytesGenerator {
+abstract contract OperatorsRegistryV1TestBase is Test {
     UserFactory internal uf = new UserFactory();
 
     OperatorsRegistryV1 internal operatorsRegistry;
@@ -82,7 +82,27 @@ contract OperatorsRegistryV1Tests is Test, BytesGenerator {
     event AddedValidatorKeys(uint256 indexed index, uint256 amount);
     event UpdatedStoppedValidators(uint32[] stoppedValidatorCounts);
     event SetOperatorStoppedValidatorCount(uint256 indexed index, uint256 newStoppedValidatorCount);
+}
 
+contract OperatorsRegistryV1InitializationTests is OperatorsRegistryV1TestBase {
+    function setUp() public {
+        admin = makeAddr("admin");
+        river = address(new RiverMock(0));
+        operatorsRegistry = new OperatorsRegistryInitializableV1();
+        LibImplementationUnbricker.unbrick(vm, address(operatorsRegistry));
+    }
+
+    function testInitialization() public {
+        vm.expectEmit(true, true, true, true);
+        emit SetRiver(river);
+        operatorsRegistry.initOperatorsRegistryV1(admin, river);
+
+        assertEq(river, operatorsRegistry.getRiver());
+        assertEq(admin, operatorsRegistry.getAdmin());
+    }
+}
+
+contract OperatorsRegistryV1Tests is OperatorsRegistryV1TestBase, BytesGenerator {
     function setUp() public {
         admin = makeAddr("admin");
         river = address(new RiverMock(0));
@@ -1142,6 +1162,14 @@ contract OperatorsRegistryV1Tests is Test, BytesGenerator {
         operatorsRegistry.removeValidators(index, indexes);
     }
 
+    function testRemoveValidatorFail() public {
+        vm.startPrank(admin);
+        uint256 index;
+        uint256[] memory indexes = new uint256[](0);
+        vm.expectRevert(abi.encodeWithSignature("InvalidKeyCount()"));
+        operatorsRegistry.removeValidators(index, indexes);
+    }
+
     function testGetOperator(bytes32 _name, uint256 _firstAddressSalt) public {
         address _firstAddress = uf._new(_firstAddressSalt);
         vm.startPrank(admin);
@@ -1868,6 +1896,11 @@ contract OperatorsRegistryV1TestDistribution is Test {
 
         assertEq(operatorsRegistry.getCurrentValidatorExitsDemand(), 0);
         assertEq(operatorsRegistry.getTotalValidatorExitsRequested(), 250);
+    }
+
+    function testRequestValidatorNoExits() external {
+        vm.expectRevert(abi.encodeWithSignature("NoExitRequestsToPerform()"));
+        operatorsRegistry.requestValidatorExits(0);
     }
 
     function testOneExitDistribution() external {
@@ -2954,5 +2987,22 @@ contract OperatorsRegistryV1TestDistribution is Test {
         OperatorsRegistryInitializableV1(address(operatorsRegistry)).sudoStoppedValidatorCounts(
             stoppedValidatorCount, 99
         );
+    }
+
+    function testSetOperatorLimitsFail() public {
+        uint256[] memory indexes = new uint256[](0);
+        uint32[] memory limits = new uint32[](1);
+        limits[0] = 1;
+        uint32[] memory limitsZero = new uint32[](0);
+
+        vm.startPrank(admin);
+
+        vm.expectRevert(abi.encodeWithSignature("InvalidArrayLengths()"));
+        operatorsRegistry.setOperatorLimits(indexes, limits, 0);
+
+        vm.expectRevert(abi.encodeWithSignature("InvalidEmptyArray()"));
+        operatorsRegistry.setOperatorLimits(indexes, limitsZero, 0);
+
+        vm.stopPrank();
     }
 }
