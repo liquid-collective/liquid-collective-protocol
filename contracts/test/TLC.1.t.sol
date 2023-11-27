@@ -30,7 +30,9 @@ contract TLCInitializationTest is TLCTestBase {
     function testInitialization() external {
         tlc = TLCV1(
             address(
-                new TUPProxy(address(tlcImplem), admin, abi.encodeWithSelector(tlcImplem.initTLCV1.selector, initAccount))
+                new TUPProxy(
+                    address(tlcImplem), admin, abi.encodeWithSelector(tlcImplem.initTLCV1.selector, initAccount)
+                )
             )
         );
 
@@ -48,7 +50,9 @@ contract TLCTests is TLCTestBase {
         tlcImplem = new TLCV1();
         tlc = TLCV1(
             address(
-                new TUPProxy(address(tlcImplem), admin, abi.encodeWithSelector(tlcImplem.initTLCV1.selector, initAccount))
+                new TUPProxy(
+                    address(tlcImplem), admin, abi.encodeWithSelector(tlcImplem.initTLCV1.selector, initAccount)
+                )
             )
         );
         tlc.migrateVestingSchedules();

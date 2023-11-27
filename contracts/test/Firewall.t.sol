@@ -84,12 +84,8 @@ contract FirewallTests is BytesGenerator, Test {
         executorCallableAllowlistSelectors[0] = allowlist.allow.selector;
         vm.expectEmit(true, true, true, true);
         emit SetDestination(address(allowlist));
-        allowlistFirewall = new Firewall(
-            riverGovernorDAO,
-            executor,
-            address(allowlist),
-            executorCallableAllowlistSelectors
-        );
+        allowlistFirewall =
+            new Firewall(riverGovernorDAO, executor, address(allowlist), executorCallableAllowlistSelectors);
         firewalledAllowlist = AllowlistV1(payable(address(allowlistFirewall)));
         allowlist.initAllowlistV1(payable(address(allowlistFirewall)), payable(address(allowlistFirewall)));
 
@@ -97,10 +93,7 @@ contract FirewallTests is BytesGenerator, Test {
         executorCallableOperatorsRegistrySelectors[0] = operatorsRegistry.setOperatorStatus.selector;
         executorCallableOperatorsRegistrySelectors[1] = operatorsRegistry.setOperatorLimits.selector;
         operatorsRegistryFirewall = new Firewall(
-            riverGovernorDAO,
-            executor,
-            address(operatorsRegistry),
-            executorCallableOperatorsRegistrySelectors
+            riverGovernorDAO, executor, address(operatorsRegistry), executorCallableOperatorsRegistrySelectors
         );
         firewalledOperatorsRegistry = OperatorsRegistryV1(payable(address(operatorsRegistryFirewall)));
         operatorsRegistry.initOperatorsRegistryV1(address(operatorsRegistryFirewall), address(river));
