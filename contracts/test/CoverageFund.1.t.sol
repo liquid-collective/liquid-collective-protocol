@@ -69,6 +69,7 @@ contract CoverageFundTestV1 is CoverageFundV1TestBase {
         allowlist = new AllowlistV1();
         LibImplementationUnbricker.unbrick(vm, address(allowlist));
         allowlist.initAllowlistV1(admin, admin);
+        allowlist.initAllowlistV1_1(admin);
         river = new RiverMock(address(allowlist));
         coverageFund = new CoverageFundV1();
         LibImplementationUnbricker.unbrick(vm, address(coverageFund));
@@ -121,7 +122,7 @@ contract CoverageFundTestV1 is CoverageFundV1TestBase {
         accounts[0] = sender;
         uint256[] memory permissions = new uint256[](1);
         permissions[0] = LibAllowlistMasks.DONATE_MASK;
-        allowlist.allow(accounts, permissions);
+        allowlist.setAllowPermissions(accounts, permissions);
 
         vm.startPrank(sender);
         vm.expectEmit(true, true, true, true);
@@ -146,7 +147,7 @@ contract CoverageFundTestV1 is CoverageFundV1TestBase {
         accounts[0] = sender;
         uint256[] memory permissions = new uint256[](1);
         permissions[0] = LibAllowlistMasks.DONATE_MASK;
-        allowlist.allow(accounts, permissions);
+        allowlist.setAllowPermissions(accounts, permissions);
 
         vm.startPrank(sender);
         coverageFund.donate{value: _amount}();
@@ -178,7 +179,7 @@ contract CoverageFundTestV1 is CoverageFundV1TestBase {
         accounts[0] = sender;
         uint256[] memory permissions = new uint256[](1);
         permissions[0] = LibAllowlistMasks.DONATE_MASK;
-        allowlist.allow(accounts, permissions);
+        allowlist.setAllowPermissions(accounts, permissions);
 
         vm.startPrank(sender);
         vm.expectRevert(abi.encodeWithSignature("EmptyDonation()"));
@@ -196,7 +197,7 @@ contract CoverageFundTestV1 is CoverageFundV1TestBase {
         accounts[0] = sender;
         uint256[] memory permissions = new uint256[](1);
         permissions[0] = LibAllowlistMasks.DONATE_MASK;
-        allowlist.allow(accounts, permissions);
+        allowlist.setAllowPermissions(accounts, permissions);
 
         vm.startPrank(sender);
         coverageFund.donate{value: _amount}();
