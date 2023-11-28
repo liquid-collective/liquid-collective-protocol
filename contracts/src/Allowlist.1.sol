@@ -8,6 +8,7 @@ import "./Initializable.sol";
 import "./Administrable.sol";
 
 import "./state/allowlist/AllowerAddress.sol";
+import "./state/allowlist/DenierAddress.sol";
 import "./state/allowlist/Allowlist.sol";
 
 /// @title Allowlist (v1)
@@ -25,9 +26,19 @@ contract AllowlistV1 is IAllowlistV1, Initializable, Administrable {
         emit SetAllower(_allower);
     }
 
+    function initAllowlistV1_1(address _denier) external init(1) {
+        DenierAddress.set(_denier);
+        emit SetDenier(_denier);
+    }
+
     /// @inheritdoc IAllowlistV1
     function getAllower() external view returns (address) {
         return AllowerAddress.get();
+    }
+
+    /// @inheritdoc IAllowlistV1
+    function getDenier() external view returns (address) {
+        return DenierAddress.get();
     }
 
     /// @inheritdoc IAllowlistV1
@@ -72,22 +83,70 @@ contract AllowlistV1 is IAllowlistV1, Initializable, Administrable {
     }
 
     /// @inheritdoc IAllowlistV1
-    function allow(address[] calldata _accounts, uint256[] calldata _permissions) external {
-        if (msg.sender != AllowerAddress.get() && msg.sender != _getAdmin()) {
+    function setDenier(address _newDenierAddress) external onlyAdmin {
+        DenierAddress.set(_newDenierAddress);
+        emit SetDenier(_newDenierAddress);
+    }
+
+    /// @inheritdoc IAllowlistV1
+    function setAllowPermissions(address[] calldata _accounts, uint256[] calldata _permissions) external {
+        if (msg.sender != AllowerAddress.get()) {
             revert LibErrors.Unauthorized(msg.sender);
         }
 
         if (_accounts.length == 0) {
-            revert InvalidAlloweeCount();
+            revert InvalidCount();
         }
 
         if (_accounts.length != _permissions.length) {
-            revert MismatchedAlloweeAndStatusCount();
+            revert MismatchedArrayLengths();
         }
 
         for (uint256 i = 0; i < _accounts.length;) {
             LibSanitize._notZeroAddress(_accounts[i]);
+
+            // Check if account is already denied
+            if (Allowlist.get(_accounts[i]) & LibAllowlistMasks.DENY_MASK == LibAllowlistMasks.DENY_MASK) {
+                revert AttemptToRemoveDenyPermission();
+            }
+
+            // Check if DENY permission is present in new permission
+            if (_permissions[i] & LibAllowlistMasks.DENY_MASK == LibAllowlistMasks.DENY_MASK) {
+                revert AttemptToSetDenyPermission();
+            }
+
             Allowlist.set(_accounts[i], _permissions[i]);
+            unchecked {
+                ++i;
+            }
+        }
+
+        emit SetAllowlistPermissions(_accounts, _permissions);
+    }
+
+    /// @inheritdoc IAllowlistV1
+    function setDenyPermissions(address[] calldata _accounts, uint256[] calldata _permissions) external {
+        if (msg.sender != DenierAddress.get()) {
+            revert LibErrors.Unauthorized(msg.sender);
+        }
+
+        if (_accounts.length == 0) {
+            revert InvalidCount();
+        }
+
+        if (_accounts.length != _permissions.length) {
+            revert MismatchedArrayLengths();
+        }
+
+        for (uint256 i = 0; i < _accounts.length;) {
+            LibSanitize._notZeroAddress(_accounts[i]);
+            if (_permissions[i] & LibAllowlistMasks.DENY_MASK == LibAllowlistMasks.DENY_MASK) {
+                // Apply deny mask
+                Allowlist.set(_accounts[i], LibAllowlistMasks.DENY_MASK);
+            } else {
+                // Remove deny mask
+                Allowlist.set(_accounts[i], 0);
+            }
             unchecked {
                 ++i;
             }
