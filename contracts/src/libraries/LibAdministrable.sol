@@ -1,5 +1,5 @@
-//SPDX-License-Identifier: MIT
-pragma solidity 0.8.20;
+//SPDX-License-Identifier: BUSL-1.1
+pragma solidity 0.8.10;
 
 import "../state/shared/AdministratorAddress.sol";
 import "../state/shared/PendingAdministratorAddress.sol";
