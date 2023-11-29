@@ -163,7 +163,7 @@ The stored deposit contract address changed
 
 | Name | Type | Description |
 |---|---|---|
-| depositContract `indexed` | address | undefined |
+| depositContract `indexed` | address | Address of the deposit contract |
 
 ### SetDepositedValidatorCount
 
@@ -179,8 +179,8 @@ Emitted when the deposited validator count is updated
 
 | Name | Type | Description |
 |---|---|---|
-| oldDepositedValidatorCount  | uint256 | undefined |
-| newDepositedValidatorCount  | uint256 | undefined |
+| oldDepositedValidatorCount  | uint256 | The old deposited validator count value |
+| newDepositedValidatorCount  | uint256 | The new deposited validator count value |
 
 ### SetWithdrawalCredentials
 
@@ -196,7 +196,7 @@ The stored withdrawal credentials changed
 
 | Name | Type | Description |
 |---|---|---|
-| withdrawalCredentials  | bytes32 | undefined |
+| withdrawalCredentials  | bytes32 | The withdrawal credentials to use for deposits |
 
 
 

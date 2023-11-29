@@ -1,5 +1,5 @@
 //SPDX-License-Identifier: BUSL-1.1
-pragma solidity 0.8.10;
+pragma solidity 0.8.20;
 
 import "../../state/river/CLSpec.sol";
 import "../../state/river/ReportBounds.sol";

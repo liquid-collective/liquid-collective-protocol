@@ -329,9 +329,9 @@ An approval has been made
 
 | Name | Type | Description |
 |---|---|---|
-| owner `indexed` | address | undefined |
-| spender `indexed` | address | undefined |
-| value  | uint256 | undefined |
+| owner `indexed` | address | The token owner |
+| spender `indexed` | address | The account allowed by the owner |
+| value  | uint256 | The amount allowed |
 
 ### Burn
 
@@ -347,8 +347,8 @@ Tokens have been burned
 
 | Name | Type | Description |
 |---|---|---|
-| recipient `indexed` | address | undefined |
-| shares  | uint256 | undefined |
+| recipient `indexed` | address | The account that receive the underlying LsETH |
+| shares  | uint256 | The amount of LsETH that got sent back |
 
 ### Initialize
 
@@ -364,8 +364,8 @@ Emitted when the contract is properly initialized
 
 | Name | Type | Description |
 |---|---|---|
-| version  | uint256 | undefined |
-| cdata  | bytes | undefined |
+| version  | uint256 | New version of the contracts |
+| cdata  | bytes | Complete calldata that was used during the initialization |
 
 ### Mint
 
@@ -381,8 +381,8 @@ Tokens have been minted
 
 | Name | Type | Description |
 |---|---|---|
-| recipient `indexed` | address | undefined |
-| shares  | uint256 | undefined |
+| recipient `indexed` | address | The account receiving the new tokens |
+| shares  | uint256 | The amount of LsETH provided |
 
 ### SetRiver
 
@@ -398,7 +398,7 @@ The stored value of river has been changed
 
 | Name | Type | Description |
 |---|---|---|
-| river `indexed` | address | undefined |
+| river `indexed` | address | The new address of river |
 
 ### Transfer
 
@@ -414,9 +414,9 @@ A transfer has been made
 
 | Name | Type | Description |
 |---|---|---|
-| from `indexed` | address | undefined |
-| to `indexed` | address | undefined |
-| value  | uint256 | undefined |
+| from `indexed` | address | The transfer sender |
+| to `indexed` | address | The transfer recipient |
+| value  | uint256 | The amount transfered |
 
 
 
