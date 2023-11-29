@@ -6,6 +6,8 @@ import "forge-std/Test.sol";
 
 import "../../../src/TUPProxy.sol";
 import "../../../src/OperatorsRegistry.1.sol";
+import {ITransparentUpgradeableProxy} from
+    "openzeppelin-contracts/contracts/proxy/transparent/TransparentUpgradeableProxy.sol";
 
 contract OperatorsMigrationV1ToV2 is Test {
     bool internal _skip = false;
@@ -35,7 +37,7 @@ contract OperatorsMigrationV1ToV2 is Test {
         OperatorsRegistryV1 newImplementation = new OperatorsRegistryV1();
 
         vm.prank(OPERATORS_REGISTRY_MAINNET_PROXY_ADMIN_ADDRESS);
-        orProxy.upgradeToAndCall(
+        ITransparentUpgradeableProxy(address(orProxy)).upgradeToAndCall(
             address(newImplementation), abi.encodeWithSelector(OperatorsRegistryV1.initOperatorsRegistryV1_1.selector)
         );
 
