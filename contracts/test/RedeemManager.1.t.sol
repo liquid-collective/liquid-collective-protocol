@@ -95,6 +95,7 @@ contract RedeemManagerV1Tests is Test {
     UserFactory internal uf = new UserFactory();
     address internal allowlistAdmin;
     address internal allowlistAllower;
+    address internal allowlistDenier;
 
     event RequestedRedeem(address indexed owner, uint256 height, uint256 size, uint256 maxRedeemableEth, uint32 id);
     event ReportedWithdrawal(uint256 height, uint256 size, uint256 ethAmount, uint32 id);
@@ -118,11 +119,13 @@ contract RedeemManagerV1Tests is Test {
     function setUp() external {
         allowlistAdmin = makeAddr("allowlistAdmin");
         allowlistAllower = makeAddr("allowlistAllower");
+        allowlistDenier = makeAddr("allowlistDenier");
         redeemManager = new RedeemManagerV1();
         LibImplementationUnbricker.unbrick(vm, address(redeemManager));
         allowlist = new AllowlistV1();
         LibImplementationUnbricker.unbrick(vm, address(allowlist));
         allowlist.initAllowlistV1(allowlistAdmin, allowlistAllower);
+        allowlist.initAllowlistV1_1(allowlistDenier);
         river = new RiverMock(address(allowlist));
 
         redeemManager.initializeRedeemManagerV1(address(river));
@@ -132,13 +135,12 @@ contract RedeemManagerV1Tests is Test {
         address user = uf._new(_salt);
 
         address[] memory accounts = new address[](1);
-        uint256[] memory permissions = new uint256[](1);
-
         accounts[0] = user;
-        permissions[0] = LibAllowlistMasks.REDEEM_MASK;
+        uint256[] memory permissions = new uint256[](1);
+        permissions[0] = LibAllowlistMasks.REDEEM_MASK | LibAllowlistMasks.DEPOSIT_MASK;
 
         vm.prank(allowlistAllower);
-        allowlist.allow(accounts, permissions);
+        allowlist.setAllowPermissions(accounts, permissions);
 
         return user;
     }

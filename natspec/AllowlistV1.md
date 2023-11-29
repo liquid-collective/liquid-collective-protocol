@@ -21,23 +21,6 @@ Accept the transfer of ownership
 *Only callable by the pending admin. Resets the pending admin if succesful.*
 
 
-### allow
-
-```solidity
-function allow(address[] _accounts, uint256[] _permissions) external nonpayable
-```
-
-Sets the allowlisting status for one or more accounts
-
-*The permission value is overridden and not updated*
-
-#### Parameters
-
-| Name | Type | Description |
-|---|---|---|
-| _accounts | address[] | Accounts with statuses to edit |
-| _permissions | uint256[] | Allowlist permissions for each account, in the same order as _accounts |
-
 ### getAdmin
 
 ```solidity
@@ -71,6 +54,23 @@ Retrieves the allower address
 | Name | Type | Description |
 |---|---|---|
 | _0 | address | The address of the allower |
+
+### getDenier
+
+```solidity
+function getDenier() external view returns (address)
+```
+
+Retrieves the denier address
+
+
+
+
+#### Returns
+
+| Name | Type | Description |
+|---|---|---|
+| _0 | address | The address of the denier |
 
 ### getPendingAdmin
 
@@ -151,6 +151,22 @@ Initializes the allowlist
 | _admin | address | Address of the Allowlist administrator |
 | _allower | address | Address of the allower |
 
+### initAllowlistV1_1
+
+```solidity
+function initAllowlistV1_1(address _denier) external nonpayable
+```
+
+Initializes the allowlist denier
+
+
+
+#### Parameters
+
+| Name | Type | Description |
+|---|---|---|
+| _denier | address | Address of the denier |
+
 ### isAllowed
 
 ```solidity
@@ -229,6 +245,23 @@ Proposes a new address as admin
 |---|---|---|
 | _newAdmin | address | New admin address |
 
+### setAllowPermissions
+
+```solidity
+function setAllowPermissions(address[] _accounts, uint256[] _permissions) external nonpayable
+```
+
+Sets the allow permissions for one or more accounts
+
+*This function is for allocating or removing deposit, redeem or donate permissions.      This function could be used to give any permissions that we come up with in the future.      An address which was denied has to be undenied first before they could be given any permission(s).*
+
+#### Parameters
+
+| Name | Type | Description |
+|---|---|---|
+| _accounts | address[] | Accounts to update |
+| _permissions | uint256[] | New permission values |
+
 ### setAllower
 
 ```solidity
@@ -244,6 +277,39 @@ Changes the allower address
 | Name | Type | Description |
 |---|---|---|
 | _newAllowerAddress | address | New address allowed to edit the allowlist |
+
+### setDenier
+
+```solidity
+function setDenier(address _newDenierAddress) external nonpayable
+```
+
+Changes the denier address
+
+
+
+#### Parameters
+
+| Name | Type | Description |
+|---|---|---|
+| _newDenierAddress | address | New address allowed to edit the allowlist |
+
+### setDenyPermissions
+
+```solidity
+function setDenyPermissions(address[] _accounts, uint256[] _permissions) external nonpayable
+```
+
+Sets the deny permissions for one or more accounts
+
+*This function is for allocating or removing deny permissions.      An address which is undenied has to be given permissions again for them to be able to deposit, donate or redeem.*
+
+#### Parameters
+
+| Name | Type | Description |
+|---|---|---|
+| _accounts | address[] | Accounts to update |
+| _permissions | uint256[] | New permission values |
 
 
 
@@ -315,6 +381,22 @@ The permissions of several accounts have changed
 | accounts  | address[] | List of accounts |
 | permissions  | uint256[] | New permissions for each account at the same index |
 
+### SetDenier
+
+```solidity
+event SetDenier(address indexed denier)
+```
+
+The stored denier address has been changed
+
+
+
+#### Parameters
+
+| Name | Type | Description |
+|---|---|---|
+| denier `indexed` | address | undefined |
+
 ### SetPendingAdmin
 
 ```solidity
@@ -335,6 +417,28 @@ The pending admin address changed
 
 ## Errors
 
+### AttemptToRemoveDenyPermission
+
+```solidity
+error AttemptToRemoveDenyPermission()
+```
+
+Allower can&#39;t remove deny permission
+
+
+
+
+### AttemptToSetDenyPermission
+
+```solidity
+error AttemptToSetDenyPermission()
+```
+
+Invalid permission being set
+
+
+
+
 ### Denied
 
 ```solidity
@@ -351,10 +455,10 @@ The account is denied access
 |---|---|---|
 | _account | address | The denied account |
 
-### InvalidAlloweeCount
+### InvalidCount
 
 ```solidity
-error InvalidAlloweeCount()
+error InvalidCount()
 ```
 
 The provided accounts list is empty
