@@ -94,8 +94,8 @@ Emitted when the contract is properly initialized
 
 | Name | Type | Description |
 |---|---|---|
-| version  | uint256 | undefined |
-| cdata  | bytes | undefined |
+| version  | uint256 | New version of the contracts |
+| cdata  | bytes | Complete calldata that was used during the initialization |
 
 ### SetRiver
 
@@ -111,7 +111,7 @@ Emitted when the linked River address is changed
 
 | Name | Type | Description |
 |---|---|---|
-| river  | address | undefined |
+| river  | address | The new River address |
 
 
 

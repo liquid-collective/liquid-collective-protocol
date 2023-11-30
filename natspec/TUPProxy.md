@@ -144,7 +144,7 @@ event AdminChanged(address previousAdmin, address newAdmin)
 
 
 
-
+*Emitted when the admin account has changed.*
 
 #### Parameters
 
@@ -161,7 +161,7 @@ event BeaconUpgraded(address indexed beacon)
 
 
 
-
+*Emitted when the beacon is upgraded.*
 
 #### Parameters
 
@@ -209,7 +209,7 @@ event Upgraded(address indexed implementation)
 
 
 
-
+*Emitted when the implementation is upgraded.*
 
 #### Parameters
 

@@ -539,9 +539,9 @@ A new operator has been added to the registry
 
 | Name | Type | Description |
 |---|---|---|
-| index `indexed` | uint256 | undefined |
-| name  | string | undefined |
-| operatorAddress `indexed` | address | undefined |
+| index `indexed` | uint256 | The operator index |
+| name  | string | The operator display name |
+| operatorAddress `indexed` | address | The operator address |
 
 ### AddedValidatorKeys
 
@@ -551,14 +551,14 @@ event AddedValidatorKeys(uint256 indexed index, bytes publicKeysAndSignatures)
 
 The operator or the admin added new validator keys and signatures
 
-
+*The public keys and signatures are concatenatedA public key is 48 bytes longA signature is 96 bytes long[P1, S1, P2, S2, ..., PN, SN] where N is the bytes length divided by (96 + 48)*
 
 #### Parameters
 
 | Name | Type | Description |
 |---|---|---|
-| index `indexed` | uint256 | undefined |
-| publicKeysAndSignatures  | bytes | undefined |
+| index `indexed` | uint256 | The operator index |
+| publicKeysAndSignatures  | bytes | The concatenated public keys and signatures |
 
 ### FundedValidatorKeys
 
@@ -574,9 +574,9 @@ A validator key got funded on the deposit contractThis event was introduced duri
 
 | Name | Type | Description |
 |---|---|---|
-| index `indexed` | uint256 | undefined |
-| publicKeys  | bytes[] | undefined |
-| deferred  | bool | undefined |
+| index `indexed` | uint256 | The operator index |
+| publicKeys  | bytes[] | BLS Public key that got funded |
+| deferred  | bool | True if event has been replayed in the context of a migration |
 
 ### Initialize
 
@@ -592,8 +592,8 @@ Emitted when the contract is properly initialized
 
 | Name | Type | Description |
 |---|---|---|
-| version  | uint256 | undefined |
-| cdata  | bytes | undefined |
+| version  | uint256 | New version of the contracts |
+| cdata  | bytes | Complete calldata that was used during the initialization |
 
 ### OperatorEditsAfterSnapshot
 
@@ -603,17 +603,17 @@ event OperatorEditsAfterSnapshot(uint256 indexed index, uint256 currentLimit, ui
 
 The operator edited its keys after the snapshot block
 
-
+*This means that we cannot assume that its key set is checked by the snapshotThis happens only if the limit was meant to be increased*
 
 #### Parameters
 
 | Name | Type | Description |
 |---|---|---|
-| index `indexed` | uint256 | undefined |
-| currentLimit  | uint256 | undefined |
-| newLimit  | uint256 | undefined |
-| latestKeysEditBlockNumber `indexed` | uint256 | undefined |
-| snapshotBlock `indexed` | uint256 | undefined |
+| index `indexed` | uint256 | The operator index |
+| currentLimit  | uint256 | The current operator limit |
+| newLimit  | uint256 | The new operator limit that was attempted to be set |
+| latestKeysEditBlockNumber `indexed` | uint256 | The last block number at which the operator changed its keys |
+| snapshotBlock `indexed` | uint256 | The block number of the snapshot |
 
 ### OperatorLimitUnchanged
 
@@ -629,8 +629,8 @@ The call didn&#39;t alter the limit of the operator
 
 | Name | Type | Description |
 |---|---|---|
-| index `indexed` | uint256 | undefined |
-| limit  | uint256 | undefined |
+| index `indexed` | uint256 | The operator index |
+| limit  | uint256 | The limit of the operator |
 
 ### RemovedValidatorKey
 
@@ -646,8 +646,8 @@ The operator or the admin removed a public key and its signature from the regist
 
 | Name | Type | Description |
 |---|---|---|
-| index `indexed` | uint256 | undefined |
-| publicKey  | bytes | undefined |
+| index `indexed` | uint256 | The operator index |
+| publicKey  | bytes | The BLS public key that has been removed |
 
 ### RequestedValidatorExits
 
@@ -663,8 +663,8 @@ The requested exit count has been updated
 
 | Name | Type | Description |
 |---|---|---|
-| index `indexed` | uint256 | undefined |
-| count  | uint256 | undefined |
+| index `indexed` | uint256 | The operator index |
+| count  | uint256 | The count of requested exits |
 
 ### SetAdmin
 
@@ -680,7 +680,7 @@ The admin address changed
 
 | Name | Type | Description |
 |---|---|---|
-| admin `indexed` | address | undefined |
+| admin `indexed` | address | New admin address |
 
 ### SetCurrentValidatorExitsDemand
 
@@ -696,8 +696,8 @@ The exit request demand has been updated
 
 | Name | Type | Description |
 |---|---|---|
-| previousValidatorExitsDemand  | uint256 | undefined |
-| nextValidatorExitsDemand  | uint256 | undefined |
+| previousValidatorExitsDemand  | uint256 | The previous exit request demand |
+| nextValidatorExitsDemand  | uint256 | The new exit request demand |
 
 ### SetOperatorAddress
 
@@ -713,8 +713,8 @@ The operator address has been changed
 
 | Name | Type | Description |
 |---|---|---|
-| index `indexed` | uint256 | undefined |
-| newOperatorAddress `indexed` | address | undefined |
+| index `indexed` | uint256 | The operator index |
+| newOperatorAddress `indexed` | address | The new operator address |
 
 ### SetOperatorLimit
 
@@ -730,8 +730,8 @@ The operator limit has been changed
 
 | Name | Type | Description |
 |---|---|---|
-| index `indexed` | uint256 | undefined |
-| newLimit  | uint256 | undefined |
+| index `indexed` | uint256 | The operator index |
+| newLimit  | uint256 | The new operator staking limit |
 
 ### SetOperatorName
 
@@ -747,8 +747,8 @@ The operator display name has been changed
 
 | Name | Type | Description |
 |---|---|---|
-| index `indexed` | uint256 | undefined |
-| newName  | string | undefined |
+| index `indexed` | uint256 | The operator index |
+| newName  | string | The new display name |
 
 ### SetOperatorStatus
 
@@ -764,8 +764,8 @@ The operator status has been changed
 
 | Name | Type | Description |
 |---|---|---|
-| index `indexed` | uint256 | undefined |
-| active  | bool | undefined |
+| index `indexed` | uint256 | The operator index |
+| active  | bool | True if the operator is active |
 
 ### SetOperatorStoppedValidatorCount
 
@@ -781,8 +781,8 @@ The operator stopped validator count has been changed
 
 | Name | Type | Description |
 |---|---|---|
-| index `indexed` | uint256 | undefined |
-| newStoppedValidatorCount  | uint256 | undefined |
+| index `indexed` | uint256 | The operator index |
+| newStoppedValidatorCount  | uint256 | The new stopped validator count |
 
 ### SetPendingAdmin
 
@@ -798,7 +798,7 @@ The pending admin address changed
 
 | Name | Type | Description |
 |---|---|---|
-| pendingAdmin `indexed` | address | undefined |
+| pendingAdmin `indexed` | address | New pending admin address |
 
 ### SetRiver
 
@@ -814,7 +814,7 @@ The stored river address has been changed
 
 | Name | Type | Description |
 |---|---|---|
-| river `indexed` | address | undefined |
+| river `indexed` | address | The new river address |
 
 ### SetTotalValidatorExitsRequested
 
@@ -830,8 +830,8 @@ The total requested exit has been updated
 
 | Name | Type | Description |
 |---|---|---|
-| previousTotalValidatorExitsRequested  | uint256 | undefined |
-| newTotalValidatorExitsRequested  | uint256 | undefined |
+| previousTotalValidatorExitsRequested  | uint256 | The previous total requested exit |
+| newTotalValidatorExitsRequested  | uint256 | The new total requested exit |
 
 ### UpdatedRequestedValidatorExitsUponStopped
 
@@ -847,9 +847,9 @@ The requested exit count has been update to fill the gap with the reported stopp
 
 | Name | Type | Description |
 |---|---|---|
-| index `indexed` | uint256 | undefined |
-| oldRequestedExits  | uint32 | undefined |
-| newRequestedExits  | uint32 | undefined |
+| index `indexed` | uint256 | The operator index |
+| oldRequestedExits  | uint32 | The old requested exit count |
+| newRequestedExits  | uint32 | The new requested exit count |
 
 ### UpdatedStoppedValidators
 
@@ -865,7 +865,7 @@ The stopped validator array has been changedA validator is considered stopped if
 
 | Name | Type | Description |
 |---|---|---|
-| stoppedValidatorCounts  | uint32[] | undefined |
+| stoppedValidatorCounts  | uint32[] | The new stopped validator counts |
 
 
 

@@ -71,8 +71,8 @@ A donation has been made to the coverage fund
 
 | Name | Type | Description |
 |---|---|---|
-| donator `indexed` | address | undefined |
-| amount  | uint256 | undefined |
+| donator `indexed` | address | Address that performed the donation |
+| amount  | uint256 | The amount donated |
 
 ### Initialize
 
@@ -88,8 +88,8 @@ Emitted when the contract is properly initialized
 
 | Name | Type | Description |
 |---|---|---|
-| version  | uint256 | undefined |
-| cdata  | bytes | undefined |
+| version  | uint256 | New version of the contracts |
+| cdata  | bytes | Complete calldata that was used during the initialization |
 
 ### SetRiver
 
@@ -105,7 +105,7 @@ The storage river address has changed
 
 | Name | Type | Description |
 |---|---|---|
-| river `indexed` | address | undefined |
+| river `indexed` | address | The new river address |
 
 
 
