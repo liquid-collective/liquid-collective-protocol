@@ -329,8 +329,8 @@ Emitted when the contract is properly initialized
 
 | Name | Type | Description |
 |---|---|---|
-| version  | uint256 | undefined |
-| cdata  | bytes | undefined |
+| version  | uint256 | New version of the contracts |
+| cdata  | bytes | Complete calldata that was used during the initialization |
 
 ### SetAdmin
 
@@ -346,7 +346,7 @@ The admin address changed
 
 | Name | Type | Description |
 |---|---|---|
-| admin `indexed` | address | undefined |
+| admin `indexed` | address | New admin address |
 
 ### SetAllower
 
@@ -362,7 +362,7 @@ The stored allower address has been changed
 
 | Name | Type | Description |
 |---|---|---|
-| allower `indexed` | address | undefined |
+| allower `indexed` | address | The new allower address |
 
 ### SetAllowlistPermissions
 
@@ -378,8 +378,8 @@ The permissions of several accounts have changed
 
 | Name | Type | Description |
 |---|---|---|
-| accounts  | address[] | undefined |
-| permissions  | uint256[] | undefined |
+| accounts  | address[] | List of accounts |
+| permissions  | uint256[] | New permissions for each account at the same index |
 
 ### SetDenier
 
@@ -411,7 +411,7 @@ The pending admin address changed
 
 | Name | Type | Description |
 |---|---|---|
-| pendingAdmin `indexed` | address | undefined |
+| pendingAdmin `indexed` | address | New pending admin address |
 
 
 

@@ -374,7 +374,7 @@ A member has been added to the oracle member list
 
 | Name | Type | Description |
 |---|---|---|
-| member `indexed` | address | undefined |
+| member `indexed` | address | The address of the member |
 
 ### ClearedReporting
 
@@ -401,8 +401,8 @@ Emitted when the contract is properly initialized
 
 | Name | Type | Description |
 |---|---|---|
-| version  | uint256 | undefined |
-| cdata  | bytes | undefined |
+| version  | uint256 | New version of the contracts |
+| cdata  | bytes | Complete calldata that was used during the initialization |
 
 ### RemoveMember
 
@@ -418,7 +418,7 @@ A member has been removed from the oracle member list
 
 | Name | Type | Description |
 |---|---|---|
-| member `indexed` | address | undefined |
+| member `indexed` | address | The address of the member |
 
 ### ReportedConsensusLayerData
 
@@ -434,10 +434,10 @@ An oracle member performed a report
 
 | Name | Type | Description |
 |---|---|---|
-| member `indexed` | address | undefined |
-| variant `indexed` | bytes32 | undefined |
-| report  | IOracleManagerV1.ConsensusLayerReport | undefined |
-| voteCount  | uint256 | undefined |
+| member `indexed` | address | The oracle member |
+| variant `indexed` | bytes32 | The variant of the report |
+| report  | IOracleManagerV1.ConsensusLayerReport | The raw report structure |
+| voteCount  | uint256 | The vote count |
 | quorum  | uint256 | undefined |
 
 ### SetAdmin
@@ -454,7 +454,7 @@ The admin address changed
 
 | Name | Type | Description |
 |---|---|---|
-| admin `indexed` | address | undefined |
+| admin `indexed` | address | New admin address |
 
 ### SetBounds
 
@@ -470,8 +470,8 @@ The report bounds have been changed
 
 | Name | Type | Description |
 |---|---|---|
-| annualAprUpperBound  | uint256 | undefined |
-| relativeLowerBound  | uint256 | undefined |
+| annualAprUpperBound  | uint256 | The maximum allowed apr. 10% means increases in balance extrapolated to a year should not exceed 10%. |
+| relativeLowerBound  | uint256 | The maximum allowed balance decrease as a relative % of the total balance |
 
 ### SetLastReportedEpoch
 
@@ -503,8 +503,8 @@ A member address has been edited
 
 | Name | Type | Description |
 |---|---|---|
-| oldAddress `indexed` | address | undefined |
-| newAddress `indexed` | address | undefined |
+| oldAddress `indexed` | address | The previous member address |
+| newAddress `indexed` | address | The new member address |
 
 ### SetPendingAdmin
 
@@ -520,7 +520,7 @@ The pending admin address changed
 
 | Name | Type | Description |
 |---|---|---|
-| pendingAdmin `indexed` | address | undefined |
+| pendingAdmin `indexed` | address | New pending admin address |
 
 ### SetQuorum
 
@@ -536,7 +536,7 @@ The storage quorum value has been changed
 
 | Name | Type | Description |
 |---|---|---|
-| newQuorum  | uint256 | undefined |
+| newQuorum  | uint256 | The new quorum value |
 
 ### SetRiver
 
@@ -552,7 +552,7 @@ The storage river address value has been changed
 
 | Name | Type | Description |
 |---|---|---|
-| _river  | address | undefined |
+| _river  | address | The new river address |
 
 ### SetSpec
 
@@ -568,10 +568,10 @@ The consensus layer spec has been changed
 
 | Name | Type | Description |
 |---|---|---|
-| epochsPerFrame  | uint64 | undefined |
-| slotsPerEpoch  | uint64 | undefined |
-| secondsPerSlot  | uint64 | undefined |
-| genesisTime  | uint64 | undefined |
+| epochsPerFrame  | uint64 | The number of epochs inside a frame (225 = 24 hours) |
+| slotsPerEpoch  | uint64 | The number of slots inside an epoch (32 on ethereum mainnet) |
+| secondsPerSlot  | uint64 | The time between two slots (12 seconds on ethereum mainnet) |
+| genesisTime  | uint64 | The timestamp of block #0 |
 
 
 

@@ -178,7 +178,7 @@ The admin address changed
 
 | Name | Type | Description |
 |---|---|---|
-| admin `indexed` | address | undefined |
+| admin `indexed` | address | New admin address |
 
 ### SetDestination
 
@@ -194,7 +194,7 @@ The stored destination address has been changed
 
 | Name | Type | Description |
 |---|---|---|
-| destination `indexed` | address | undefined |
+| destination `indexed` | address | The new destination address |
 
 ### SetExecutor
 
@@ -210,7 +210,7 @@ The stored executor address has been changed
 
 | Name | Type | Description |
 |---|---|---|
-| executor `indexed` | address | undefined |
+| executor `indexed` | address | The new executor address |
 
 ### SetExecutorPermissions
 
@@ -226,8 +226,8 @@ The storage permission for a selector has been changed
 
 | Name | Type | Description |
 |---|---|---|
-| selector  | bytes4 | undefined |
-| status  | bool | undefined |
+| selector  | bytes4 | The 4 bytes method selector |
+| status  | bool | True if executor is allowed |
 
 ### SetPendingAdmin
 
@@ -243,7 +243,7 @@ The pending admin address changed
 
 | Name | Type | Description |
 |---|---|---|
-| pendingAdmin `indexed` | address | undefined |
+| pendingAdmin `indexed` | address | New pending admin address |
 
 
 

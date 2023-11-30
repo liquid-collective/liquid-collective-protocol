@@ -1,5 +1,5 @@
 //SPDX-License-Identifier: BUSL-1.1
-pragma solidity 0.8.10;
+pragma solidity 0.8.20;
 
 /// @title Lib Allowlist Masks
 /// @notice Holds all the mask values

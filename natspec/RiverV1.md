@@ -1325,7 +1325,7 @@ event Approval(address indexed owner, address indexed spender, uint256 value)
 
 
 
-
+*Emitted when the allowance of a `spender` for an `owner` is set by a call to {approve}. `value` is the new allowance.*
 
 #### Parameters
 
@@ -1349,9 +1349,9 @@ The consensus layer data provided by the oracle has been updated
 
 | Name | Type | Description |
 |---|---|---|
-| validatorCount  | uint256 | undefined |
-| validatorTotalBalance  | uint256 | undefined |
-| roundId  | bytes32 | undefined |
+| validatorCount  | uint256 | The new count of validators running on the consensus layer |
+| validatorTotalBalance  | uint256 | The new total balance sum of all validators |
+| roundId  | bytes32 | Round identifier |
 
 ### Initialize
 
@@ -1367,8 +1367,8 @@ Emitted when the contract is properly initialized
 
 | Name | Type | Description |
 |---|---|---|
-| version  | uint256 | undefined |
-| cdata  | bytes | undefined |
+| version  | uint256 | New version of the contracts |
+| cdata  | bytes | Complete calldata that was used during the initialization |
 
 ### ProcessedConsensusLayerReport
 
@@ -1384,8 +1384,8 @@ The provided report has beend processed
 
 | Name | Type | Description |
 |---|---|---|
-| report  | IOracleManagerV1.ConsensusLayerReport | undefined |
-| trace  | IOracleManagerV1.ConsensusLayerDataReportingTrace | undefined |
+| report  | IOracleManagerV1.ConsensusLayerReport | The report that was provided |
+| trace  | IOracleManagerV1.ConsensusLayerDataReportingTrace | The trace structure providing more insights on internals |
 
 ### PulledCLFunds
 
@@ -1401,8 +1401,8 @@ Emitted when funds are pulled from the CL recipient
 
 | Name | Type | Description |
 |---|---|---|
-| pulledSkimmedEthAmount  | uint256 | undefined |
-| pullExitedEthAmount  | uint256 | undefined |
+| pulledSkimmedEthAmount  | uint256 | The amount of skimmed ETH pulled |
+| pullExitedEthAmount  | uint256 | The amount of exited ETH pulled |
 
 ### PulledCoverageFunds
 
@@ -1418,7 +1418,7 @@ Funds have been pulled from the Coverage Fund
 
 | Name | Type | Description |
 |---|---|---|
-| amount  | uint256 | undefined |
+| amount  | uint256 | The amount pulled |
 
 ### PulledELFees
 
@@ -1434,7 +1434,7 @@ Funds have been pulled from the Execution Layer Fee Recipient
 
 | Name | Type | Description |
 |---|---|---|
-| amount  | uint256 | undefined |
+| amount  | uint256 | The amount pulled |
 
 ### PulledRedeemManagerExceedingEth
 
@@ -1450,7 +1450,7 @@ Emitted when funds are pulled from the redeem manager
 
 | Name | Type | Description |
 |---|---|---|
-| amount  | uint256 | undefined |
+| amount  | uint256 | The amount pulled |
 
 ### ReportedRedeemManager
 
@@ -1466,9 +1466,9 @@ Emitted when the redeem manager received a withdraw event report
 
 | Name | Type | Description |
 |---|---|---|
-| redeemManagerDemand  | uint256 | undefined |
-| suppliedRedeemManagerDemand  | uint256 | undefined |
-| suppliedRedeemManagerDemandInEth  | uint256 | undefined |
+| redeemManagerDemand  | uint256 | The total demand in LsETH of the redeem manager |
+| suppliedRedeemManagerDemand  | uint256 | The amount of LsETH demand actually supplied |
+| suppliedRedeemManagerDemandInEth  | uint256 | The amount in ETH of the supplied demand |
 
 ### RewardsEarned
 
@@ -1484,11 +1484,11 @@ The system underlying supply increased. This is a snapshot of the balances for a
 
 | Name | Type | Description |
 |---|---|---|
-| _collector `indexed` | address | undefined |
-| _oldTotalUnderlyingBalance  | uint256 | undefined |
-| _oldTotalSupply  | uint256 | undefined |
-| _newTotalUnderlyingBalance  | uint256 | undefined |
-| _newTotalSupply  | uint256 | undefined |
+| _collector `indexed` | address | The address of the collector during this event |
+| _oldTotalUnderlyingBalance  | uint256 | Old total ETH balance under management by River |
+| _oldTotalSupply  | uint256 | Old total supply in shares |
+| _newTotalUnderlyingBalance  | uint256 | New total ETH balance under management by River |
+| _newTotalSupply  | uint256 | New total supply in shares |
 
 ### SetAdmin
 
@@ -1504,7 +1504,7 @@ The admin address changed
 
 | Name | Type | Description |
 |---|---|---|
-| admin `indexed` | address | undefined |
+| admin `indexed` | address | New admin address |
 
 ### SetAllowlist
 
@@ -1520,7 +1520,7 @@ The stored Allowlist has been changed
 
 | Name | Type | Description |
 |---|---|---|
-| allowlist `indexed` | address | undefined |
+| allowlist `indexed` | address | The new Allowlist |
 
 ### SetBalanceCommittedToDeposit
 
@@ -1536,8 +1536,8 @@ Emitted when the balance committed to deposit
 
 | Name | Type | Description |
 |---|---|---|
-| oldAmount  | uint256 | undefined |
-| newAmount  | uint256 | undefined |
+| oldAmount  | uint256 | The old balance committed to deposit |
+| newAmount  | uint256 | The new balance committed to deposit |
 
 ### SetBalanceToDeposit
 
@@ -1553,8 +1553,8 @@ Emitted when the balance to deposit is updated
 
 | Name | Type | Description |
 |---|---|---|
-| oldAmount  | uint256 | undefined |
-| newAmount  | uint256 | undefined |
+| oldAmount  | uint256 | The old balance to deposit |
+| newAmount  | uint256 | The new balance to deposit |
 
 ### SetBalanceToRedeem
 
@@ -1570,8 +1570,8 @@ Emitted when the balance to redeem is updated
 
 | Name | Type | Description |
 |---|---|---|
-| oldAmount  | uint256 | undefined |
-| newAmount  | uint256 | undefined |
+| oldAmount  | uint256 | The old balance to redeem |
+| newAmount  | uint256 | The new balance to redeem |
 
 ### SetBounds
 
@@ -1587,8 +1587,8 @@ The Report Bounds are changed
 
 | Name | Type | Description |
 |---|---|---|
-| annualAprUpperBound  | uint256 | undefined |
-| relativeLowerBound  | uint256 | undefined |
+| annualAprUpperBound  | uint256 | The reporting upper bound |
+| relativeLowerBound  | uint256 | The reporting lower bound |
 
 ### SetCollector
 
@@ -1604,7 +1604,7 @@ The stored Collector has been changed
 
 | Name | Type | Description |
 |---|---|---|
-| collector `indexed` | address | undefined |
+| collector `indexed` | address | The new Collector |
 
 ### SetCoverageFund
 
@@ -1620,7 +1620,7 @@ The stored Coverage Fund has been changed
 
 | Name | Type | Description |
 |---|---|---|
-| coverageFund `indexed` | address | undefined |
+| coverageFund `indexed` | address | The new Coverage Fund |
 
 ### SetDepositContractAddress
 
@@ -1636,7 +1636,7 @@ The stored deposit contract address changed
 
 | Name | Type | Description |
 |---|---|---|
-| depositContract `indexed` | address | undefined |
+| depositContract `indexed` | address | Address of the deposit contract |
 
 ### SetDepositedValidatorCount
 
@@ -1652,8 +1652,8 @@ Emitted when the deposited validator count is updated
 
 | Name | Type | Description |
 |---|---|---|
-| oldDepositedValidatorCount  | uint256 | undefined |
-| newDepositedValidatorCount  | uint256 | undefined |
+| oldDepositedValidatorCount  | uint256 | The old deposited validator count value |
+| newDepositedValidatorCount  | uint256 | The new deposited validator count value |
 
 ### SetELFeeRecipient
 
@@ -1669,7 +1669,7 @@ The stored Execution Layer Fee Recipient has been changed
 
 | Name | Type | Description |
 |---|---|---|
-| elFeeRecipient `indexed` | address | undefined |
+| elFeeRecipient `indexed` | address | The new Execution Layer Fee Recipient |
 
 ### SetGlobalFee
 
@@ -1685,7 +1685,7 @@ The stored Global Fee has been changed
 
 | Name | Type | Description |
 |---|---|---|
-| fee  | uint256 | undefined |
+| fee  | uint256 | The new Global Fee |
 
 ### SetMaxDailyCommittableAmounts
 
@@ -1701,8 +1701,8 @@ Emitted when the daily committable limits are changed
 
 | Name | Type | Description |
 |---|---|---|
-| minNetAmount  | uint256 | undefined |
-| maxRelativeAmount  | uint256 | undefined |
+| minNetAmount  | uint256 | The minimum amount that must be used as the daily committable amount |
+| maxRelativeAmount  | uint256 | The maximum amount that can be used as the daily committable amount, relative to the total underlying supply |
 
 ### SetMetadataURI
 
@@ -1718,7 +1718,7 @@ The stored Metadata URI string has been changed
 
 | Name | Type | Description |
 |---|---|---|
-| metadataURI  | string | undefined |
+| metadataURI  | string | The new Metadata URI string |
 
 ### SetOperatorsRegistry
 
@@ -1734,7 +1734,7 @@ The stored Operators Registry has been changed
 
 | Name | Type | Description |
 |---|---|---|
-| operatorRegistry `indexed` | address | undefined |
+| operatorRegistry `indexed` | address | The new Operators Registry |
 
 ### SetOracle
 
@@ -1750,7 +1750,7 @@ The stored oracle address changed
 
 | Name | Type | Description |
 |---|---|---|
-| oracleAddress `indexed` | address | undefined |
+| oracleAddress `indexed` | address | The new oracle address |
 
 ### SetPendingAdmin
 
@@ -1766,7 +1766,7 @@ The pending admin address changed
 
 | Name | Type | Description |
 |---|---|---|
-| pendingAdmin `indexed` | address | undefined |
+| pendingAdmin `indexed` | address | New pending admin address |
 
 ### SetRedeemManager
 
@@ -1782,7 +1782,7 @@ Emitted when the redeem manager address is changed
 
 | Name | Type | Description |
 |---|---|---|
-| redeemManager  | address | undefined |
+| redeemManager  | address | The address of the redeem manager |
 
 ### SetSpec
 
@@ -1798,11 +1798,11 @@ The Consensus Layer Spec is changed
 
 | Name | Type | Description |
 |---|---|---|
-| epochsPerFrame  | uint64 | undefined |
-| slotsPerEpoch  | uint64 | undefined |
-| secondsPerSlot  | uint64 | undefined |
-| genesisTime  | uint64 | undefined |
-| epochsToAssumedFinality  | uint64 | undefined |
+| epochsPerFrame  | uint64 | The number of epochs inside a frame |
+| slotsPerEpoch  | uint64 | The number of slots inside an epoch |
+| secondsPerSlot  | uint64 | The number of seconds inside a slot |
+| genesisTime  | uint64 | The genesis timestamp |
+| epochsToAssumedFinality  | uint64 | The number of epochs before an epoch is considered final |
 
 ### SetTotalSupply
 
@@ -1834,7 +1834,7 @@ The stored withdrawal credentials changed
 
 | Name | Type | Description |
 |---|---|---|
-| withdrawalCredentials  | bytes32 | undefined |
+| withdrawalCredentials  | bytes32 | The withdrawal credentials to use for deposits |
 
 ### Transfer
 
@@ -1844,7 +1844,7 @@ event Transfer(address indexed from, address indexed to, uint256 value)
 
 
 
-
+*Emitted when `value` tokens are moved from one account (`from`) to another (`to`). Note that `value` may be zero.*
 
 #### Parameters
 
@@ -1868,9 +1868,9 @@ User deposited ETH in the system
 
 | Name | Type | Description |
 |---|---|---|
-| depositor `indexed` | address | undefined |
-| recipient `indexed` | address | undefined |
-| amount  | uint256 | undefined |
+| depositor `indexed` | address | Address performing the deposit |
+| recipient `indexed` | address | Address receiving the minted shares |
+| amount  | uint256 | Amount in ETH deposited |
 
 
 
