@@ -69,8 +69,8 @@ import "../libraries/LibUint256.sol";
 /// @notice On Jan 1st 2024, lock period is over and Joe can release all tokens.
 abstract contract ERC20VestableVotesUpgradeableV1 is
     Initializable,
-    IERC20VestableVotesUpgradeableV1,
-    ERC20VotesUpgradeable
+    ERC20VotesUpgradeable,
+    IERC20VestableVotesUpgradeableV1
 {
     // internal used to compute the address of the escrow
     bytes32 internal constant ESCROW = bytes32(uint256(keccak256("escrow")) - 1);
