@@ -1,6 +1,6 @@
-//SPDX-License-Identifier: MIT
+//SPDX-License-Identifier: BUSL-1.1
 
-pragma solidity 0.8.10;
+pragma solidity 0.8.20;
 
 import "forge-std/Test.sol";
 
@@ -87,7 +87,7 @@ contract RiverTokenMock {
     }
 }
 
-contract WLSETHV1Tests is Test {
+abstract contract WLSETHV1TestBase is Test {
     IRiverV1 internal river;
     WLSETHV1 internal wlseth;
     UserFactory internal uf = new UserFactory();
@@ -96,7 +96,23 @@ contract WLSETHV1Tests is Test {
     event Burn(address indexed _recipient, uint256 _value);
     event SetRiver(address indexed river);
     event Transfer(address indexed _from, address indexed _to, uint256 _value);
+}
 
+contract WLSETHV1InitializationTests is WLSETHV1TestBase {
+    function setUp() external {
+        river = IRiverV1(payable(address(new RiverTokenMock())));
+        wlseth = new WLSETHV1();
+        LibImplementationUnbricker.unbrick(vm, address(wlseth));
+    }
+
+    function testInitialization() external {
+        vm.expectEmit(true, true, true, true);
+        emit SetRiver(address(river));
+        wlseth.initWLSETHV1(address(river));
+    }
+}
+
+contract WLSETHV1Tests is WLSETHV1TestBase {
     function setUp() external {
         river = IRiverV1(payable(address(new RiverTokenMock())));
         wlseth = new WLSETHV1();
@@ -774,6 +790,11 @@ contract WLSETHV1Tests is Test {
         } else {
             assert(balance == 0 ether);
         }
+    }
+
+    function testBurnFail() external {
+        vm.expectRevert(abi.encodeWithSignature("BalanceTooLow()"));
+        wlseth.burn(address(this), 100);
     }
 
     function testMintWrappedTokensTooMuch(uint256 _guySalt, uint32 _sum) external {

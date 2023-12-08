@@ -483,7 +483,7 @@ event Approval(address indexed owner, address indexed spender, uint256 value)
 
 
 
-
+*Emitted when the allowance of a `spender` for an `owner` is set by a call to {approve}. `value` is the new allowance.*
 
 #### Parameters
 
@@ -501,7 +501,7 @@ event DelegateChanged(address indexed delegator, address indexed fromDelegate, a
 
 
 
-
+*Emitted when an account changes their delegate.*
 
 #### Parameters
 
@@ -519,7 +519,7 @@ event DelegateVotesChanged(address indexed delegate, uint256 previousBalance, ui
 
 
 
-
+*Emitted when a token transfer or delegate change results in changes to a delegate&#39;s number of votes.*
 
 #### Parameters
 
@@ -537,7 +537,7 @@ event Initialized(uint8 version)
 
 
 
-
+*Triggered when the contract has been initialized or reinitialized.*
 
 #### Parameters
 
@@ -553,7 +553,7 @@ event Transfer(address indexed from, address indexed to, uint256 value)
 
 
 
-
+*Emitted when `value` tokens are moved from one account (`from`) to another (`to`). Note that `value` may be zero.*
 
 #### Parameters
 

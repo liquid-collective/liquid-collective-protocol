@@ -1196,7 +1196,7 @@ event Approval(address indexed owner, address indexed spender, uint256 value)
 
 
 
-
+*Emitted when the allowance of a `spender` for an `owner` is set by a call to {approve}. `value` is the new allowance.*
 
 #### Parameters
 
@@ -1220,9 +1220,9 @@ The consensus layer data provided by the oracle has been updated
 
 | Name | Type | Description |
 |---|---|---|
-| validatorCount  | uint256 | undefined |
-| validatorTotalBalance  | uint256 | undefined |
-| roundId  | bytes32 | undefined |
+| validatorCount  | uint256 | The new count of validators running on the consensus layer |
+| validatorTotalBalance  | uint256 | The new total balance sum of all validators |
+| roundId  | bytes32 | Round identifier |
 
 ### ProcessedConsensusLayerReport
 
@@ -1238,8 +1238,8 @@ The provided report has beend processed
 
 | Name | Type | Description |
 |---|---|---|
-| report  | IOracleManagerV1.ConsensusLayerReport | undefined |
-| trace  | IOracleManagerV1.ConsensusLayerDataReportingTrace | undefined |
+| report  | IOracleManagerV1.ConsensusLayerReport | The report that was provided |
+| trace  | IOracleManagerV1.ConsensusLayerDataReportingTrace | The trace structure providing more insights on internals |
 
 ### PulledCLFunds
 
@@ -1425,8 +1425,8 @@ The Report Bounds are changed
 
 | Name | Type | Description |
 |---|---|---|
-| annualAprUpperBound  | uint256 | undefined |
-| relativeLowerBound  | uint256 | undefined |
+| annualAprUpperBound  | uint256 | The reporting upper bound |
+| relativeLowerBound  | uint256 | The reporting lower bound |
 
 ### SetCollector
 
@@ -1474,7 +1474,7 @@ The stored deposit contract address changed
 
 | Name | Type | Description |
 |---|---|---|
-| depositContract `indexed` | address | undefined |
+| depositContract `indexed` | address | Address of the deposit contract |
 
 ### SetDepositedValidatorCount
 
@@ -1490,8 +1490,8 @@ Emitted when the deposited validator count is updated
 
 | Name | Type | Description |
 |---|---|---|
-| oldDepositedValidatorCount  | uint256 | undefined |
-| newDepositedValidatorCount  | uint256 | undefined |
+| oldDepositedValidatorCount  | uint256 | The old deposited validator count value |
+| newDepositedValidatorCount  | uint256 | The new deposited validator count value |
 
 ### SetELFeeRecipient
 
@@ -1588,7 +1588,7 @@ The stored oracle address changed
 
 | Name | Type | Description |
 |---|---|---|
-| oracleAddress `indexed` | address | undefined |
+| oracleAddress `indexed` | address | The new oracle address |
 
 ### SetRedeemManager
 
@@ -1620,11 +1620,11 @@ The Consensus Layer Spec is changed
 
 | Name | Type | Description |
 |---|---|---|
-| epochsPerFrame  | uint64 | undefined |
-| slotsPerEpoch  | uint64 | undefined |
-| secondsPerSlot  | uint64 | undefined |
-| genesisTime  | uint64 | undefined |
-| epochsToAssumedFinality  | uint64 | undefined |
+| epochsPerFrame  | uint64 | The number of epochs inside a frame |
+| slotsPerEpoch  | uint64 | The number of slots inside an epoch |
+| secondsPerSlot  | uint64 | The number of seconds inside a slot |
+| genesisTime  | uint64 | The genesis timestamp |
+| epochsToAssumedFinality  | uint64 | The number of epochs before an epoch is considered final |
 
 ### SetTotalSupply
 
@@ -1656,7 +1656,7 @@ The stored withdrawal credentials changed
 
 | Name | Type | Description |
 |---|---|---|
-| withdrawalCredentials  | bytes32 | undefined |
+| withdrawalCredentials  | bytes32 | The withdrawal credentials to use for deposits |
 
 ### Transfer
 
@@ -1666,7 +1666,7 @@ event Transfer(address indexed from, address indexed to, uint256 value)
 
 
 
-
+*Emitted when `value` tokens are moved from one account (`from`) to another (`to`). Note that `value` may be zero.*
 
 #### Parameters
 
@@ -1690,9 +1690,9 @@ User deposited ETH in the system
 
 | Name | Type | Description |
 |---|---|---|
-| depositor `indexed` | address | undefined |
-| recipient `indexed` | address | undefined |
-| amount  | uint256 | undefined |
+| depositor `indexed` | address | Address performing the deposit |
+| recipient `indexed` | address | Address receiving the minted shares |
+| amount  | uint256 | Amount in ETH deposited |
 
 
 

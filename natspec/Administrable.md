@@ -89,7 +89,7 @@ The admin address changed
 
 | Name | Type | Description |
 |---|---|---|
-| admin `indexed` | address | undefined |
+| admin `indexed` | address | New admin address |
 
 ### SetPendingAdmin
 
@@ -105,7 +105,7 @@ The pending admin address changed
 
 | Name | Type | Description |
 |---|---|---|
-| pendingAdmin `indexed` | address | undefined |
+| pendingAdmin `indexed` | address | New pending admin address |
 
 
 

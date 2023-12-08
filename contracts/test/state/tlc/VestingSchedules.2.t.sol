@@ -1,5 +1,5 @@
 //SPDX-License-Identifier: BUSL-1.1
-pragma solidity 0.8.10;
+pragma solidity 0.8.20;
 
 import "../../../src/state/tlc/VestingSchedules.1.sol";
 import "../../../src/state/tlc/VestingSchedules.2.sol";
@@ -54,6 +54,14 @@ contract VestingSchedulesMigrationTest is Test {
             }
         }
         return VestingSchedulesV2.getCount();
+    }
+
+    function testGetRevert() public {
+        uint256 _index = 1;
+        vm.expectRevert(abi.encodeWithSignature("VestingScheduleNotFound(uint256)", _index));
+        VestingSchedulesV1.get(_index);
+        vm.expectRevert(abi.encodeWithSignature("VestingScheduleNotFound(uint256)", _index));
+        VestingSchedulesV2.get(_index);
     }
 
     function testVestingScheduleV1ToV2Compatibility(

@@ -1,6 +1,6 @@
-//SPDX-License-Identifier: MIT
+//SPDX-License-Identifier: BUSL-1.1
 
-pragma solidity 0.8.10;
+pragma solidity 0.8.20;
 
 import "forge-std/Test.sol";
 
@@ -32,7 +32,7 @@ contract RiverMock {
     }
 }
 
-contract CoverageFundTestV1 is Test {
+abstract contract CoverageFundV1TestBase is Test {
     CoverageFundV1 internal coverageFund;
 
     AllowlistV1 internal allowlist;
@@ -43,12 +43,33 @@ contract CoverageFundTestV1 is Test {
     event BalanceUpdated(uint256 amount);
     event SetRiver(address indexed river);
     event Donate(address indexed donator, uint256 amount);
+}
 
+contract CoverageFundV1InitializationTests is CoverageFundV1TestBase {
     function setUp() public {
         admin = makeAddr("admin");
         allowlist = new AllowlistV1();
         LibImplementationUnbricker.unbrick(vm, address(allowlist));
         allowlist.initAllowlistV1(admin, admin);
+        river = new RiverMock(address(allowlist));
+        coverageFund = new CoverageFundV1();
+        LibImplementationUnbricker.unbrick(vm, address(coverageFund));
+    }
+
+    function testInitialization() external {
+        vm.expectEmit(true, true, true, true);
+        emit SetRiver(address(river));
+        coverageFund.initCoverageFundV1(address(river));
+    }
+}
+
+contract CoverageFundTestV1 is CoverageFundV1TestBase {
+    function setUp() public {
+        admin = makeAddr("admin");
+        allowlist = new AllowlistV1();
+        LibImplementationUnbricker.unbrick(vm, address(allowlist));
+        allowlist.initAllowlistV1(admin, admin);
+        allowlist.initAllowlistV1_1(admin);
         river = new RiverMock(address(allowlist));
         coverageFund = new CoverageFundV1();
         LibImplementationUnbricker.unbrick(vm, address(coverageFund));
@@ -101,7 +122,7 @@ contract CoverageFundTestV1 is Test {
         accounts[0] = sender;
         uint256[] memory permissions = new uint256[](1);
         permissions[0] = LibAllowlistMasks.DONATE_MASK;
-        allowlist.allow(accounts, permissions);
+        allowlist.setAllowPermissions(accounts, permissions);
 
         vm.startPrank(sender);
         vm.expectEmit(true, true, true, true);
@@ -126,7 +147,7 @@ contract CoverageFundTestV1 is Test {
         accounts[0] = sender;
         uint256[] memory permissions = new uint256[](1);
         permissions[0] = LibAllowlistMasks.DONATE_MASK;
-        allowlist.allow(accounts, permissions);
+        allowlist.setAllowPermissions(accounts, permissions);
 
         vm.startPrank(sender);
         coverageFund.donate{value: _amount}();
@@ -158,7 +179,7 @@ contract CoverageFundTestV1 is Test {
         accounts[0] = sender;
         uint256[] memory permissions = new uint256[](1);
         permissions[0] = LibAllowlistMasks.DONATE_MASK;
-        allowlist.allow(accounts, permissions);
+        allowlist.setAllowPermissions(accounts, permissions);
 
         vm.startPrank(sender);
         vm.expectRevert(abi.encodeWithSignature("EmptyDonation()"));
@@ -176,7 +197,7 @@ contract CoverageFundTestV1 is Test {
         accounts[0] = sender;
         uint256[] memory permissions = new uint256[](1);
         permissions[0] = LibAllowlistMasks.DONATE_MASK;
-        allowlist.allow(accounts, permissions);
+        allowlist.setAllowPermissions(accounts, permissions);
 
         vm.startPrank(sender);
         coverageFund.donate{value: _amount}();
@@ -186,5 +207,20 @@ contract CoverageFundTestV1 is Test {
         vm.expectRevert(abi.encodeWithSignature("Unauthorized(address)", sender));
         coverageFund.pullCoverageFunds(address(coverageFund).balance);
         vm.stopPrank();
+    }
+
+    function testFallbackFail() external {
+        address sender = uf._new(1);
+        vm.deal(sender, 1e18);
+
+        vm.startPrank(sender);
+        vm.expectRevert(abi.encodeWithSignature("InvalidCall()"));
+        address(coverageFund).call{value: 1e18}(abi.encodeWithSignature("Hello()"));
+        vm.stopPrank();
+    }
+
+    function testNoFundPulled() external {
+        river.pullCoverageFunds(address(coverageFund), 0);
+        assertEq(0, address(river).balance);
     }
 }

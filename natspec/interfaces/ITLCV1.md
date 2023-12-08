@@ -533,7 +533,7 @@ event Approval(address indexed owner, address indexed spender, uint256 value)
 
 
 
-
+*Emitted when the allowance of a `spender` for an `owner` is set by a call to {approve}. `value` is the new allowance.*
 
 #### Parameters
 
@@ -557,10 +557,10 @@ A new vesting schedule has been created
 
 | Name | Type | Description |
 |---|---|---|
-| index  | uint256 | undefined |
-| creator `indexed` | address | undefined |
-| beneficiary `indexed` | address | undefined |
-| amount  | uint256 | undefined |
+| index  | uint256 | Vesting schedule index |
+| creator `indexed` | address | Creator of the vesting schedule |
+| beneficiary `indexed` | address | Vesting beneficiary address |
+| amount  | uint256 | Vesting schedule amount |
 
 ### DelegateChanged
 
@@ -570,7 +570,7 @@ event DelegateChanged(address indexed delegator, address indexed fromDelegate, a
 
 
 
-
+*Emitted when an account changes their delegate.*
 
 #### Parameters
 
@@ -588,7 +588,7 @@ event DelegateVotesChanged(address indexed delegate, uint256 previousBalance, ui
 
 
 
-
+*Emitted when a token transfer or delegate change results in changes to a delegate&#39;s number of votes.*
 
 #### Parameters
 
@@ -612,10 +612,10 @@ Vesting escrow has been delegated
 
 | Name | Type | Description |
 |---|---|---|
-| index  | uint256 | undefined |
-| oldDelegatee `indexed` | address | undefined |
-| newDelegatee `indexed` | address | undefined |
-| beneficiary `indexed` | address | undefined |
+| index  | uint256 | Vesting schedule index |
+| oldDelegatee `indexed` | address | old delegatee |
+| newDelegatee `indexed` | address | new delegatee |
+| beneficiary `indexed` | address | vesting schedule beneficiary |
 
 ### ReleasedVestingSchedule
 
@@ -631,8 +631,8 @@ Vesting schedule has been released
 
 | Name | Type | Description |
 |---|---|---|
-| index  | uint256 | undefined |
-| releasedAmount  | uint256 | undefined |
+| index  | uint256 | Vesting schedule index |
+| releasedAmount  | uint256 | Amount of tokens released to the beneficiary |
 
 ### RevokedVestingSchedule
 
@@ -648,9 +648,9 @@ Vesting schedule has been revoked
 
 | Name | Type | Description |
 |---|---|---|
-| index  | uint256 | undefined |
-| returnedAmount  | uint256 | undefined |
-| newEnd  | uint256 | undefined |
+| index  | uint256 | Vesting schedule index |
+| returnedAmount  | uint256 | Amount of tokens returned to the creator |
+| newEnd  | uint256 | New end timestamp after revoke action |
 
 ### Transfer
 
@@ -660,7 +660,7 @@ event Transfer(address indexed from, address indexed to, uint256 value)
 
 
 
-
+*Emitted when `value` tokens are moved from one account (`from`) to another (`to`). Note that `value` may be zero.*
 
 #### Parameters
 

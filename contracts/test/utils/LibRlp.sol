@@ -1,5 +1,5 @@
-// SPDX-License-Identifier: MIT
-pragma solidity 0.8.10;
+// SPDX-License-Identifier: BUSL-1.1
+pragma solidity 0.8.20;
 
 import {Bytes32AddressLib} from "solmate/utils/Bytes32AddressLib.sol";
 

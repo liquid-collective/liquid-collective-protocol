@@ -1,6 +1,6 @@
-//SPDX-License-Identifier: MIT
+//SPDX-License-Identifier: BUSL-1.1
 
-pragma solidity 0.8.10;
+pragma solidity 0.8.20;
 
 import "forge-std/Test.sol";
 
@@ -214,8 +214,17 @@ contract OracleManagerV1Tests is Test {
     function setUp() public {
         admin = makeAddr("admin");
         oracle = makeAddr("oracle");
-        oracleManager =
-        new OracleManagerV1ExposeInitializer(oracle, admin, epochsPerFrame, slotsPerEpoch, secondsPerSlot, genesisTime, epochsToAssumedFinality, annualAprUpperBound, relativeLowerBound);
+        oracleManager = new OracleManagerV1ExposeInitializer(
+            oracle,
+            admin,
+            epochsPerFrame,
+            slotsPerEpoch,
+            secondsPerSlot,
+            genesisTime,
+            epochsToAssumedFinality,
+            annualAprUpperBound,
+            relativeLowerBound
+        );
         LibImplementationUnbricker.unbrick(vm, address(oracleManager));
         vm.warp(genesisTime);
     }
@@ -466,5 +475,10 @@ contract OracleManagerV1Tests is Test {
 
         vm.expectRevert(abi.encodeWithSignature("Unauthorized(address)", address(this)));
         oracleManager.setReportBounds(newValue);
+    }
+
+    function testExternalViewFunctions() external {
+        assertEq(false, oracleManager.isValidEpoch(1));
+        assertEq(0, oracleManager.getCLValidatorCount());
     }
 }

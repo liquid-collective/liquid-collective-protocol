@@ -320,11 +320,11 @@ Emitted when a redeem request claim has been processed and matched at least once
 
 | Name | Type | Description |
 |---|---|---|
-| redeemRequestId `indexed` | uint32 | undefined |
-| recipient `indexed` | address | undefined |
-| ethAmount  | uint256 | undefined |
-| lsEthAmount  | uint256 | undefined |
-| remainingLsEthAmount  | uint256 | undefined |
+| redeemRequestId `indexed` | uint32 | The id of the redeem request |
+| recipient `indexed` | address | The address receiving the redeem request funds |
+| ethAmount  | uint256 | The amount of eth retrieved |
+| lsEthAmount  | uint256 | The total amount of LsETH used to redeem the eth |
+| remainingLsEthAmount  | uint256 | The amount of LsETH remaining |
 
 ### Initialize
 
@@ -340,8 +340,8 @@ Emitted when the contract is properly initialized
 
 | Name | Type | Description |
 |---|---|---|
-| version  | uint256 | undefined |
-| cdata  | bytes | undefined |
+| version  | uint256 | New version of the contracts |
+| cdata  | bytes | Complete calldata that was used during the initialization |
 
 ### ReportedWithdrawal
 
@@ -357,10 +357,10 @@ Emitted when a withdrawal event is created
 
 | Name | Type | Description |
 |---|---|---|
-| height  | uint256 | undefined |
-| amount  | uint256 | undefined |
-| ethAmount  | uint256 | undefined |
-| id  | uint32 | undefined |
+| height  | uint256 | The height of the withdrawal event in LsETH |
+| amount  | uint256 | The amount of the withdrawal event in LsETH |
+| ethAmount  | uint256 | The amount of eth to distrubute to claimers |
+| id  | uint32 | The id of the withdrawal event |
 
 ### RequestedRedeem
 
@@ -376,11 +376,11 @@ Emitted when a redeem request is created
 
 | Name | Type | Description |
 |---|---|---|
-| owner `indexed` | address | undefined |
-| height  | uint256 | undefined |
-| amount  | uint256 | undefined |
-| maxRedeemableEth  | uint256 | undefined |
-| id  | uint32 | undefined |
+| owner `indexed` | address | The owner of the redeem request |
+| height  | uint256 | The height of the redeem request in LsETH |
+| amount  | uint256 | The amount of the redeem request in LsETH |
+| maxRedeemableEth  | uint256 | The maximum amount of eth that can be redeemed from this request |
+| id  | uint32 | The id of the new redeem request |
 
 ### SatisfiedRedeemRequest
 
@@ -396,12 +396,12 @@ Emitted when a redeem request has been satisfied and filled (even partially) fro
 
 | Name | Type | Description |
 |---|---|---|
-| redeemRequestId `indexed` | uint32 | undefined |
-| withdrawalEventId `indexed` | uint32 | undefined |
-| lsEthAmountSatisfied  | uint256 | undefined |
-| ethAmountSatisfied  | uint256 | undefined |
-| lsEthAmountRemaining  | uint256 | undefined |
-| ethAmountExceeding  | uint256 | undefined |
+| redeemRequestId `indexed` | uint32 | The id of the redeem request |
+| withdrawalEventId `indexed` | uint32 | The id of the withdrawal event used to fill the request |
+| lsEthAmountSatisfied  | uint256 | The amount of LsETH filled |
+| ethAmountSatisfied  | uint256 | The amount of ETH filled |
+| lsEthAmountRemaining  | uint256 | The amount of LsETH remaining |
+| ethAmountExceeding  | uint256 | The amount of eth added to the exceeding buffer |
 
 ### SetRedeemDemand
 
@@ -417,8 +417,8 @@ Emitted when the redeem demand is set
 
 | Name | Type | Description |
 |---|---|---|
-| oldRedeemDemand  | uint256 | undefined |
-| newRedeemDemand  | uint256 | undefined |
+| oldRedeemDemand  | uint256 | The old redeem demand |
+| newRedeemDemand  | uint256 | The new redeem demand |
 
 ### SetRiver
 
@@ -434,7 +434,7 @@ Emitted when the River address is set
 
 | Name | Type | Description |
 |---|---|---|
-| river  | address | undefined |
+| river  | address | The new river address |
 
 
 

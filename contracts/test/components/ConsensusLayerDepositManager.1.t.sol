@@ -1,6 +1,6 @@
-//SPDX-License-Identifier: MIT
+//SPDX-License-Identifier: BUSL-1.1
 
-pragma solidity 0.8.10;
+pragma solidity 0.8.20;
 
 import "forge-std/Test.sol";
 
@@ -305,6 +305,11 @@ contract ConsensusLayerDepositManagerV1WithdrawalCredentialError is Test {
         ConsensusLayerDepositManagerV1ExposeInitializer(address(depositManager)).sudoSetWithdrawalCredentials(
             withdrawalCredentials
         );
+    }
+
+    function testInvalidArgumentForWithdrawalCredential() public {
+        vm.expectRevert(abi.encodeWithSignature("InvalidArgument()"));
+        ConsensusLayerDepositManagerV1ExposeInitializer(address(depositManager)).sudoSetWithdrawalCredentials(0x00);
     }
 }
 
