@@ -23,3 +23,14 @@ deployments/tenderly
 .DS_Store
 .idea
 lcov.info
+
+# certora
+certora/munged*
+.certora*
+.certora*.json
+**.last_conf*
+certora-logs
+.certora_internal*
+certora_debug_log.txt
+resource_errors.json
+.zip-output-url.txt
