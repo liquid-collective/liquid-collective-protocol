@@ -11,7 +11,7 @@ const func: DeployFunction = async function ({
   network,
 }: HardhatRuntimeEnvironment) {
   if (!["holesky", "hardhat", "local", "tenderly"].includes(network.name)) {
-    throw new Error("Invalid network for devGoerli deployment");
+    throw new Error("Invalid network for holesky deployment");
   }
   const { deployer, proxyAdministrator, governor, executor } = await getNamedAccounts();
 
