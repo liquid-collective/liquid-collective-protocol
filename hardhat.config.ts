@@ -2,7 +2,7 @@ import * as dotenv from "dotenv";
 
 import "hardhat-deploy";
 import { HardhatUserConfig } from "hardhat/config";
-import "@nomiclabs/hardhat-etherscan";
+import "@nomicfoundation/hardhat-verify";
 import "@nomiclabs/hardhat-waffle";
 import "@typechain/hardhat";
 import "hardhat-gas-reporter";
@@ -124,20 +124,30 @@ const config: HardhatUserConfig = {
       mockedGoerli: "0x027c17E24288a1EbF5f9e5Dc45fB603D70633F05",
       local: "0x7932EdA85E33D8e13f7C110ACBEb4a5A8B53dda9",
       mainnet: "0x070cbF96cac223D88401D6227577f9FA480C57C8",
-      holesky: "",// EOA
+      holesky: "", // EOA
     },
   },
   paths: {
     sources: "./contracts/src",
     cache: "./hardhat-cache",
   },
-  etherscan : {
+  etherscan: {
     apiKey: process.env.ETHERSCAN_API_KEY || "",
+    customChains: [
+      {
+        network: "holesky",
+        chainId: 17000,
+        urls: {
+          apiURL: "https://api-holesky.etherscan.io/api",
+          browserURL: "https://holesky.etherscan.io",
+        },
+      },
+    ],
   },
   tenderly: {
     project: process.env.TENDERLY_PROJECT_ID,
     username: process.env.TENDERLY_USERNAME,
-    privateVerification: false
+    privateVerification: false,
   },
 };
 
