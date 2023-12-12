@@ -12,6 +12,8 @@ export const verify = async (name: string, contractAddress: string, args: any, l
       libraries: {
         ...libs,
       },
+    }).catch((e) => {
+      console.log(e);
     });
   }
 };
