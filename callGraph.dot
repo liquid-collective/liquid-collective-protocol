@@ -1,0 +1,649 @@
+digraph G {
+  graph [ ratio = "auto", page = "100", compound =true, bgcolor = "#2e3e56" ];
+  node [ style = "filled", fillcolor = "#edad56", color = "#edad56", penwidth =3 ];
+  edge [ color = "#fcfcfc", penwidth =2, fontname = "helvetica Neue Ultra Light" ];
+subgraph "clusterIWLSETHV1" {
+  graph [ label = "IWLSETHV1  (iface)", color = "#445773", fontcolor = "#f0f0f0", style = "rounded", bgcolor = "#445773" ];
+  "IWLSETHV1.initWLSETHV1" [ label = "initWLSETHV1", color = "#ffbdb9", fillcolor = "#ffbdb9" ];
+  "IWLSETHV1.name" [ label = "name", color = "#ffbdb9", fillcolor = "#ffbdb9" ];
+  "IWLSETHV1.symbol" [ label = "symbol", color = "#ffbdb9", fillcolor = "#ffbdb9" ];
+  "IWLSETHV1.decimals" [ label = "decimals", color = "#ffbdb9", fillcolor = "#ffbdb9" ];
+  "IWLSETHV1.totalSupply" [ label = "totalSupply", color = "#ffbdb9", fillcolor = "#ffbdb9" ];
+  "IWLSETHV1.balanceOf" [ label = "balanceOf", color = "#ffbdb9", fillcolor = "#ffbdb9" ];
+  "IWLSETHV1.sharesOf" [ label = "sharesOf", color = "#ffbdb9", fillcolor = "#ffbdb9" ];
+  "IWLSETHV1.allowance" [ label = "allowance", color = "#ffbdb9", fillcolor = "#ffbdb9" ];
+  "IWLSETHV1.transfer" [ label = "transfer", color = "#ffbdb9", fillcolor = "#ffbdb9" ];
+  "IWLSETHV1.transferFrom" [ label = "transferFrom", color = "#ffbdb9", fillcolor = "#ffbdb9" ];
+  "IWLSETHV1.approve" [ label = "approve", color = "#ffbdb9", fillcolor = "#ffbdb9" ];
+  "IWLSETHV1.increaseAllowance" [ label = "increaseAllowance", color = "#ffbdb9", fillcolor = "#ffbdb9" ];
+  "IWLSETHV1.decreaseAllowance" [ label = "decreaseAllowance", color = "#ffbdb9", fillcolor = "#ffbdb9" ];
+  "IWLSETHV1.mint" [ label = "mint", color = "#ffbdb9", fillcolor = "#ffbdb9" ];
+  "IWLSETHV1.burn" [ label = "burn", color = "#ffbdb9", fillcolor = "#ffbdb9" ];
+}
+
+subgraph "clusterUserDepositManagerV1" {
+  graph [ label = "UserDepositManagerV1", color = "#445773", fontcolor = "#f0f0f0", style = "rounded", bgcolor = "#445773" ];
+  "UserDepositManagerV1._onDeposit" [ label = "_onDeposit" ];
+  "UserDepositManagerV1._setBalanceToDeposit" [ label = "_setBalanceToDeposit" ];
+  "UserDepositManagerV1.deposit" [ label = "deposit", color = "brown", fillcolor = "#ffbdb9" ];
+  "UserDepositManagerV1.depositAndTransfer" [ label = "depositAndTransfer", color = "brown", fillcolor = "#ffbdb9" ];
+  "UserDepositManagerV1.<Receive Ether>" [ label = "<Receive Ether>", color = "brown", fillcolor = "#ffbdb9" ];
+  "UserDepositManagerV1.<Fallback>" [ label = "<Fallback>", color = "brown", fillcolor = "#ffbdb9" ];
+  "UserDepositManagerV1._deposit" [ label = "_deposit" ];
+  "UserDepositManagerV1.EmptyDeposit" [ label = "EmptyDeposit" ];
+}
+
+subgraph "clusterIUserDepositManagerV1" {
+  graph [ label = "IUserDepositManagerV1  (iface)", color = "#445773", fontcolor = "#f0f0f0", style = "rounded", bgcolor = "#445773" ];
+  "IUserDepositManagerV1.deposit" [ label = "deposit", color = "brown", fillcolor = "#ffbdb9" ];
+  "IUserDepositManagerV1.depositAndTransfer" [ label = "depositAndTransfer", color = "brown", fillcolor = "#ffbdb9" ];
+  "IUserDepositManagerV1.<Receive Ether>" [ label = "<Receive Ether>", color = "brown", fillcolor = "#ffbdb9" ];
+  "IUserDepositManagerV1.<Fallback>" [ label = "<Fallback>", color = "brown", fillcolor = "#ffbdb9" ];
+}
+
+subgraph "clusterLibSanitize" {
+  graph [ label = "LibSanitize  (lib)", color = "#445773", fontcolor = "#f0f0f0", style = "rounded", bgcolor = "#445773" ];
+  "LibSanitize._notZeroAddress" [ label = "_notZeroAddress", color = "#f2c383", fillcolor = "#f2c383" ];
+  "LibSanitize._notEmptyString" [ label = "_notEmptyString", color = "#f2c383", fillcolor = "#f2c383" ];
+  "LibSanitize._validFee" [ label = "_validFee", color = "#f2c383", fillcolor = "#f2c383" ];
+}
+
+subgraph "clusterLibErrors" {
+  graph [ label = "LibErrors  (lib)", color = "#445773", fontcolor = "#f0f0f0", style = "rounded", bgcolor = "#445773" ];
+  "LibErrors.InvalidCall" [ label = "InvalidCall" ];
+  "LibErrors.InvalidZeroAddress" [ label = "InvalidZeroAddress" ];
+  "LibErrors.InvalidEmptyString" [ label = "InvalidEmptyString" ];
+  "LibErrors.InvalidFee" [ label = "InvalidFee" ];
+  "LibErrors.Unauthorized" [ label = "Unauthorized" ];
+  "LibErrors.InvalidArgument" [ label = "InvalidArgument" ];
+}
+
+subgraph "clusterLibBasisPoints" {
+  graph [ label = "LibBasisPoints  (lib)", color = "#445773", fontcolor = "#f0f0f0", style = "rounded", bgcolor = "#445773" ];
+}
+
+subgraph "clusterBalanceToDeposit" {
+  graph [ label = "BalanceToDeposit  (lib)", color = "#445773", fontcolor = "#f0f0f0", style = "rounded", bgcolor = "#445773" ];
+  "BalanceToDeposit.get" [ label = "get", color = "#f2c383", fillcolor = "#f2c383" ];
+  "BalanceToDeposit.set" [ label = "set", color = "#f2c383", fillcolor = "#f2c383" ];
+}
+
+subgraph "clusterLibUnstructuredStorage" {
+  graph [ label = "LibUnstructuredStorage  (lib)", color = "#445773", fontcolor = "#f0f0f0", style = "rounded", bgcolor = "#445773" ];
+  "LibUnstructuredStorage.getStorageUint256" [ label = "getStorageUint256", color = "#f2c383", fillcolor = "#f2c383" ];
+  "LibUnstructuredStorage.setStorageUint256" [ label = "setStorageUint256", color = "#f2c383", fillcolor = "#f2c383" ];
+  "LibUnstructuredStorage.getStorageBool" [ label = "getStorageBool", color = "#f2c383", fillcolor = "#f2c383" ];
+  "LibUnstructuredStorage.getStorageAddress" [ label = "getStorageAddress" ];
+  "LibUnstructuredStorage.getStorageBytes32" [ label = "getStorageBytes32", color = "#f2c383", fillcolor = "#f2c383" ];
+  "LibUnstructuredStorage.setStorageBool" [ label = "setStorageBool", color = "#f2c383", fillcolor = "#f2c383" ];
+  "LibUnstructuredStorage.setStorageAddress" [ label = "setStorageAddress" ];
+  "LibUnstructuredStorage.setStorageBytes32" [ label = "setStorageBytes32", color = "#f2c383", fillcolor = "#f2c383" ];
+}
+
+subgraph "clusterOracleV1" {
+  graph [ label = "OracleV1", color = "#445773", fontcolor = "#f0f0f0", style = "rounded", bgcolor = "#445773" ];
+  "OracleV1.onlyAdminOrMember" [ label = "onlyAdminOrMember", color = "#1bc6a6", shape =doubleoctagon ];
+  "OracleV1.initOracleV1" [ label = "initOracleV1", color = "#ffbdb9", fillcolor = "#ffbdb9" ];
+  "OracleV1.initOracleV1_1" [ label = "initOracleV1_1", color = "#ffbdb9", fillcolor = "#ffbdb9" ];
+  "OracleV1.getRiver" [ label = "getRiver", color = "#ffbdb9", fillcolor = "#ffbdb9" ];
+  "OracleV1.getMemberReportStatus" [ label = "getMemberReportStatus", color = "#ffbdb9", fillcolor = "#ffbdb9" ];
+  "OracleV1.getGlobalReportStatus" [ label = "getGlobalReportStatus", color = "#ffbdb9", fillcolor = "#ffbdb9" ];
+  "OracleV1.getReportVariantsCount" [ label = "getReportVariantsCount", color = "#ffbdb9", fillcolor = "#ffbdb9" ];
+  "OracleV1.getReportVariantDetails" [ label = "getReportVariantDetails", color = "#ffbdb9", fillcolor = "#ffbdb9" ];
+  "OracleV1.getQuorum" [ label = "getQuorum", color = "#ffbdb9", fillcolor = "#ffbdb9" ];
+  "OracleV1.getOracleMembers" [ label = "getOracleMembers", color = "#ffbdb9", fillcolor = "#ffbdb9" ];
+  "OracleV1.isMember" [ label = "isMember", color = "#ffbdb9", fillcolor = "#ffbdb9" ];
+  "OracleV1.getLastReportedEpochId" [ label = "getLastReportedEpochId", color = "#ffbdb9", fillcolor = "#ffbdb9" ];
+  "OracleV1.addMember" [ label = "addMember", color = "#ffbdb9", fillcolor = "#ffbdb9" ];
+  "OracleV1.removeMember" [ label = "removeMember", color = "#ffbdb9", fillcolor = "#ffbdb9" ];
+  "OracleV1.setMember" [ label = "setMember", color = "#ffbdb9", fillcolor = "#ffbdb9" ];
+  "OracleV1.setQuorum" [ label = "setQuorum", color = "#ffbdb9", fillcolor = "#ffbdb9" ];
+  "OracleV1.reportConsensusLayerData" [ label = "reportConsensusLayerData", color = "#ffbdb9", fillcolor = "#ffbdb9" ];
+  "OracleV1._clearReportsAndSetQuorum" [ label = "_clearReportsAndSetQuorum" ];
+  "OracleV1._reportChecksum" [ label = "_reportChecksum" ];
+  "OracleV1._clearReports" [ label = "_clearReports" ];
+  "OracleV1._getReportVariantIndexAndVotes" [ label = "_getReportVariantIndexAndVotes" ];
+  "OracleV1._river" [ label = "_river", color = "#f2c383", fillcolor = "#f2c383" ];
+  "OracleV1._getAdmin" [ label = "_getAdmin" ];
+  "OracleV1._setAdmin" [ label = "_setAdmin" ];
+  "OracleV1.ReportIndexOutOfBounds" [ label = "ReportIndexOutOfBounds" ];
+  "OracleV1.AddressAlreadyInUse" [ label = "AddressAlreadyInUse" ];
+  "OracleV1.EpochTooOld" [ label = "EpochTooOld" ];
+  "OracleV1.payable" [ label = "payable" ];
+  "OracleV1.InvalidEpoch" [ label = "InvalidEpoch" ];
+  "OracleV1.AlreadyReported" [ label = "AlreadyReported" ];
+}
+
+subgraph "clusterIRiverV1" {
+  graph [ label = "IRiverV1  (iface)", color = "#445773", fontcolor = "#f0f0f0", style = "rounded", bgcolor = "#445773" ];
+  "IRiverV1.isValidEpoch" [ label = "isValidEpoch" ];
+  "IRiverV1.setConsensusLayerData" [ label = "setConsensusLayerData" ];
+  "IRiverV1.initRiverV1" [ label = "initRiverV1", color = "#ffbdb9", fillcolor = "#ffbdb9" ];
+  "IRiverV1.initRiverV1_1" [ label = "initRiverV1_1", color = "#ffbdb9", fillcolor = "#ffbdb9" ];
+  "IRiverV1.initRiverV1_2" [ label = "initRiverV1_2", color = "#ffbdb9", fillcolor = "#ffbdb9" ];
+  "IRiverV1.getGlobalFee" [ label = "getGlobalFee", color = "#ffbdb9", fillcolor = "#ffbdb9" ];
+  "IRiverV1.getAllowlist" [ label = "getAllowlist", color = "#ffbdb9", fillcolor = "#ffbdb9" ];
+  "IRiverV1.getCollector" [ label = "getCollector", color = "#ffbdb9", fillcolor = "#ffbdb9" ];
+  "IRiverV1.getELFeeRecipient" [ label = "getELFeeRecipient", color = "#ffbdb9", fillcolor = "#ffbdb9" ];
+  "IRiverV1.getCoverageFund" [ label = "getCoverageFund", color = "#ffbdb9", fillcolor = "#ffbdb9" ];
+  "IRiverV1.getRedeemManager" [ label = "getRedeemManager", color = "#ffbdb9", fillcolor = "#ffbdb9" ];
+  "IRiverV1.getOperatorsRegistry" [ label = "getOperatorsRegistry", color = "#ffbdb9", fillcolor = "#ffbdb9" ];
+  "IRiverV1.getMetadataURI" [ label = "getMetadataURI", color = "#ffbdb9", fillcolor = "#ffbdb9" ];
+  "IRiverV1.getDailyCommittableLimits" [ label = "getDailyCommittableLimits", color = "#ffbdb9", fillcolor = "#ffbdb9" ];
+  "IRiverV1.resolveRedeemRequests" [ label = "resolveRedeemRequests", color = "#ffbdb9", fillcolor = "#ffbdb9" ];
+  "IRiverV1.setDailyCommittableLimits" [ label = "setDailyCommittableLimits", color = "#ffbdb9", fillcolor = "#ffbdb9" ];
+  "IRiverV1.getBalanceToRedeem" [ label = "getBalanceToRedeem", color = "#ffbdb9", fillcolor = "#ffbdb9" ];
+  "IRiverV1.requestRedeem" [ label = "requestRedeem", color = "#ffbdb9", fillcolor = "#ffbdb9" ];
+  "IRiverV1.claimRedeemRequests" [ label = "claimRedeemRequests", color = "#ffbdb9", fillcolor = "#ffbdb9" ];
+  "IRiverV1.setGlobalFee" [ label = "setGlobalFee", color = "#ffbdb9", fillcolor = "#ffbdb9" ];
+  "IRiverV1.setAllowlist" [ label = "setAllowlist", color = "#ffbdb9", fillcolor = "#ffbdb9" ];
+  "IRiverV1.setCollector" [ label = "setCollector", color = "#ffbdb9", fillcolor = "#ffbdb9" ];
+  "IRiverV1.setELFeeRecipient" [ label = "setELFeeRecipient", color = "#ffbdb9", fillcolor = "#ffbdb9" ];
+  "IRiverV1.setCoverageFund" [ label = "setCoverageFund", color = "#ffbdb9", fillcolor = "#ffbdb9" ];
+  "IRiverV1.setMetadataURI" [ label = "setMetadataURI", color = "#ffbdb9", fillcolor = "#ffbdb9" ];
+  "IRiverV1.sendELFees" [ label = "sendELFees", color = "brown", fillcolor = "#ffbdb9" ];
+  "IRiverV1.sendCLFunds" [ label = "sendCLFunds", color = "brown", fillcolor = "#ffbdb9" ];
+  "IRiverV1.sendCoverageFunds" [ label = "sendCoverageFunds", color = "brown", fillcolor = "#ffbdb9" ];
+  "IRiverV1.sendRedeemManagerExceedingFunds" [ label = "sendRedeemManagerExceedingFunds", color = "brown", fillcolor = "#ffbdb9" ];
+}
+
+subgraph "clusterDailyCommittableLimits" {
+  graph [ label = "DailyCommittableLimits  (lib)", color = "#445773", fontcolor = "#f0f0f0", style = "rounded", bgcolor = "#445773" ];
+  "DailyCommittableLimits.get" [ label = "get", color = "#f2c383", fillcolor = "#f2c383" ];
+  "DailyCommittableLimits.set" [ label = "set", color = "#f2c383", fillcolor = "#f2c383" ];
+}
+
+subgraph "clusterIConsensusLayerDepositManagerV1" {
+  graph [ label = "IConsensusLayerDepositManagerV1  (iface)", color = "#445773", fontcolor = "#f0f0f0", style = "rounded", bgcolor = "#445773" ];
+  "IConsensusLayerDepositManagerV1.getBalanceToDeposit" [ label = "getBalanceToDeposit", color = "#ffbdb9", fillcolor = "#ffbdb9" ];
+  "IConsensusLayerDepositManagerV1.getCommittedBalance" [ label = "getCommittedBalance", color = "#ffbdb9", fillcolor = "#ffbdb9" ];
+  "IConsensusLayerDepositManagerV1.getWithdrawalCredentials" [ label = "getWithdrawalCredentials", color = "#ffbdb9", fillcolor = "#ffbdb9" ];
+  "IConsensusLayerDepositManagerV1.getDepositedValidatorCount" [ label = "getDepositedValidatorCount", color = "#ffbdb9", fillcolor = "#ffbdb9" ];
+  "IConsensusLayerDepositManagerV1.depositToConsensusLayer" [ label = "depositToConsensusLayer", color = "#ffbdb9", fillcolor = "#ffbdb9" ];
+}
+
+subgraph "clusterIOracleManagerV1" {
+  graph [ label = "IOracleManagerV1  (iface)", color = "#445773", fontcolor = "#f0f0f0", style = "rounded", bgcolor = "#445773" ];
+  "IOracleManagerV1.getOracle" [ label = "getOracle", color = "#ffbdb9", fillcolor = "#ffbdb9" ];
+  "IOracleManagerV1.getCLValidatorTotalBalance" [ label = "getCLValidatorTotalBalance", color = "#ffbdb9", fillcolor = "#ffbdb9" ];
+  "IOracleManagerV1.getCLValidatorCount" [ label = "getCLValidatorCount", color = "#ffbdb9", fillcolor = "#ffbdb9" ];
+  "IOracleManagerV1.isValidEpoch" [ label = "isValidEpoch", color = "#ffbdb9", fillcolor = "#ffbdb9" ];
+  "IOracleManagerV1.getTime" [ label = "getTime", color = "#ffbdb9", fillcolor = "#ffbdb9" ];
+  "IOracleManagerV1.getExpectedEpochId" [ label = "getExpectedEpochId", color = "#ffbdb9", fillcolor = "#ffbdb9" ];
+  "IOracleManagerV1.getLastCompletedEpochId" [ label = "getLastCompletedEpochId", color = "#ffbdb9", fillcolor = "#ffbdb9" ];
+  "IOracleManagerV1.getCurrentEpochId" [ label = "getCurrentEpochId", color = "#ffbdb9", fillcolor = "#ffbdb9" ];
+  "IOracleManagerV1.getCLSpec" [ label = "getCLSpec", color = "#ffbdb9", fillcolor = "#ffbdb9" ];
+  "IOracleManagerV1.getCurrentFrame" [ label = "getCurrentFrame", color = "#ffbdb9", fillcolor = "#ffbdb9" ];
+  "IOracleManagerV1.getFrameFirstEpochId" [ label = "getFrameFirstEpochId", color = "#ffbdb9", fillcolor = "#ffbdb9" ];
+  "IOracleManagerV1.getReportBounds" [ label = "getReportBounds", color = "#ffbdb9", fillcolor = "#ffbdb9" ];
+  "IOracleManagerV1.getLastConsensusLayerReport" [ label = "getLastConsensusLayerReport", color = "#ffbdb9", fillcolor = "#ffbdb9" ];
+  "IOracleManagerV1.setOracle" [ label = "setOracle", color = "#ffbdb9", fillcolor = "#ffbdb9" ];
+  "IOracleManagerV1.setCLSpec" [ label = "setCLSpec", color = "#ffbdb9", fillcolor = "#ffbdb9" ];
+  "IOracleManagerV1.setReportBounds" [ label = "setReportBounds", color = "#ffbdb9", fillcolor = "#ffbdb9" ];
+  "IOracleManagerV1.setConsensusLayerData" [ label = "setConsensusLayerData", color = "#ffbdb9", fillcolor = "#ffbdb9" ];
+}
+
+subgraph "clusterCLSpec" {
+  graph [ label = "CLSpec  (lib)", color = "#445773", fontcolor = "#f0f0f0", style = "rounded", bgcolor = "#445773" ];
+  "CLSpec.set" [ label = "set", color = "#f2c383", fillcolor = "#f2c383" ];
+  "CLSpec.CLSpecStruct" [ label = "CLSpecStruct" ];
+  "CLSpec.get" [ label = "get", color = "#f2c383", fillcolor = "#f2c383" ];
+}
+
+subgraph "clusterReportBounds" {
+  graph [ label = "ReportBounds  (lib)", color = "#445773", fontcolor = "#f0f0f0", style = "rounded", bgcolor = "#445773" ];
+  "ReportBounds.set" [ label = "set", color = "#f2c383", fillcolor = "#f2c383" ];
+  "ReportBounds.ReportBoundsStruct" [ label = "ReportBoundsStruct" ];
+  "ReportBounds.get" [ label = "get", color = "#f2c383", fillcolor = "#f2c383" ];
+}
+
+subgraph "clusterISharesManagerV1" {
+  graph [ label = "ISharesManagerV1  (iface)", color = "#445773", fontcolor = "#f0f0f0", style = "rounded", bgcolor = "#445773" ];
+  "ISharesManagerV1.name" [ label = "name", color = "#ffbdb9", fillcolor = "#ffbdb9" ];
+  "ISharesManagerV1.symbol" [ label = "symbol", color = "#ffbdb9", fillcolor = "#ffbdb9" ];
+  "ISharesManagerV1.decimals" [ label = "decimals", color = "#ffbdb9", fillcolor = "#ffbdb9" ];
+  "ISharesManagerV1.totalSupply" [ label = "totalSupply", color = "#ffbdb9", fillcolor = "#ffbdb9" ];
+  "ISharesManagerV1.totalUnderlyingSupply" [ label = "totalUnderlyingSupply", color = "#ffbdb9", fillcolor = "#ffbdb9" ];
+  "ISharesManagerV1.balanceOf" [ label = "balanceOf", color = "#ffbdb9", fillcolor = "#ffbdb9" ];
+  "ISharesManagerV1.balanceOfUnderlying" [ label = "balanceOfUnderlying", color = "#ffbdb9", fillcolor = "#ffbdb9" ];
+  "ISharesManagerV1.underlyingBalanceFromShares" [ label = "underlyingBalanceFromShares", color = "#ffbdb9", fillcolor = "#ffbdb9" ];
+  "ISharesManagerV1.sharesFromUnderlyingBalance" [ label = "sharesFromUnderlyingBalance", color = "#ffbdb9", fillcolor = "#ffbdb9" ];
+  "ISharesManagerV1.allowance" [ label = "allowance", color = "#ffbdb9", fillcolor = "#ffbdb9" ];
+  "ISharesManagerV1.transfer" [ label = "transfer", color = "#ffbdb9", fillcolor = "#ffbdb9" ];
+  "ISharesManagerV1.transferFrom" [ label = "transferFrom", color = "#ffbdb9", fillcolor = "#ffbdb9" ];
+  "ISharesManagerV1.approve" [ label = "approve", color = "#ffbdb9", fillcolor = "#ffbdb9" ];
+  "ISharesManagerV1.increaseAllowance" [ label = "increaseAllowance", color = "#ffbdb9", fillcolor = "#ffbdb9" ];
+  "ISharesManagerV1.decreaseAllowance" [ label = "decreaseAllowance", color = "#ffbdb9", fillcolor = "#ffbdb9" ];
+}
+
+subgraph "clusterIOracleV1" {
+  graph [ label = "IOracleV1  (iface)", color = "#445773", fontcolor = "#f0f0f0", style = "rounded", bgcolor = "#445773" ];
+  "IOracleV1.initOracleV1" [ label = "initOracleV1", color = "#ffbdb9", fillcolor = "#ffbdb9" ];
+  "IOracleV1.initOracleV1_1" [ label = "initOracleV1_1", color = "#ffbdb9", fillcolor = "#ffbdb9" ];
+  "IOracleV1.getRiver" [ label = "getRiver", color = "#ffbdb9", fillcolor = "#ffbdb9" ];
+  "IOracleV1.getMemberReportStatus" [ label = "getMemberReportStatus", color = "#ffbdb9", fillcolor = "#ffbdb9" ];
+  "IOracleV1.getGlobalReportStatus" [ label = "getGlobalReportStatus", color = "#ffbdb9", fillcolor = "#ffbdb9" ];
+  "IOracleV1.getReportVariantsCount" [ label = "getReportVariantsCount", color = "#ffbdb9", fillcolor = "#ffbdb9" ];
+  "IOracleV1.getReportVariantDetails" [ label = "getReportVariantDetails", color = "#ffbdb9", fillcolor = "#ffbdb9" ];
+  "IOracleV1.getQuorum" [ label = "getQuorum", color = "#ffbdb9", fillcolor = "#ffbdb9" ];
+  "IOracleV1.getOracleMembers" [ label = "getOracleMembers", color = "#ffbdb9", fillcolor = "#ffbdb9" ];
+  "IOracleV1.isMember" [ label = "isMember", color = "#ffbdb9", fillcolor = "#ffbdb9" ];
+  "IOracleV1.getLastReportedEpochId" [ label = "getLastReportedEpochId", color = "#ffbdb9", fillcolor = "#ffbdb9" ];
+  "IOracleV1.addMember" [ label = "addMember", color = "#ffbdb9", fillcolor = "#ffbdb9" ];
+  "IOracleV1.removeMember" [ label = "removeMember", color = "#ffbdb9", fillcolor = "#ffbdb9" ];
+  "IOracleV1.setMember" [ label = "setMember", color = "#ffbdb9", fillcolor = "#ffbdb9" ];
+  "IOracleV1.setQuorum" [ label = "setQuorum", color = "#ffbdb9", fillcolor = "#ffbdb9" ];
+  "IOracleV1.reportConsensusLayerData" [ label = "reportConsensusLayerData", color = "#ffbdb9", fillcolor = "#ffbdb9" ];
+}
+
+subgraph "clusterReportsVariants" {
+  graph [ label = "ReportsVariants  (lib)", color = "#445773", fontcolor = "#f0f0f0", style = "rounded", bgcolor = "#445773" ];
+  "ReportsVariants.get" [ label = "get", color = "#f2c383", fillcolor = "#f2c383" ];
+  "ReportsVariants.ReportVariantDetails" [ label = "ReportVariantDetails" ];
+  "ReportsVariants.clear" [ label = "clear", color = "#f2c383", fillcolor = "#f2c383" ];
+  "ReportsVariants.set" [ label = "set", color = "#f2c383", fillcolor = "#f2c383" ];
+  "ReportsVariants.push" [ label = "push", color = "#f2c383", fillcolor = "#f2c383" ];
+  "ReportsVariants.indexOfReport" [ label = "indexOfReport", color = "#f2c383", fillcolor = "#f2c383" ];
+}
+
+subgraph "clusterAdministrable" {
+  graph [ label = "Administrable", color = "#445773", fontcolor = "#f0f0f0", style = "rounded", bgcolor = "#445773" ];
+  "Administrable.onlyAdmin" [ label = "onlyAdmin", color = "#1bc6a6", shape =doubleoctagon ];
+  "Administrable.onlyPendingAdmin" [ label = "onlyPendingAdmin", color = "#1bc6a6", shape =doubleoctagon ];
+  "Administrable.getAdmin" [ label = "getAdmin", color = "#ffbdb9", fillcolor = "#ffbdb9" ];
+  "Administrable.getPendingAdmin" [ label = "getPendingAdmin", color = "#ffbdb9", fillcolor = "#ffbdb9" ];
+  "Administrable.proposeAdmin" [ label = "proposeAdmin", color = "#ffbdb9", fillcolor = "#ffbdb9" ];
+  "Administrable.acceptAdmin" [ label = "acceptAdmin", color = "#ffbdb9", fillcolor = "#ffbdb9" ];
+  "Administrable._setAdmin" [ label = "_setAdmin" ];
+  "Administrable._setPendingAdmin" [ label = "_setPendingAdmin" ];
+  "Administrable._getAdmin" [ label = "_getAdmin", color = "#f2c383", fillcolor = "#f2c383" ];
+}
+
+subgraph "clusterIAdministrable" {
+  graph [ label = "IAdministrable  (iface)", color = "#445773", fontcolor = "#f0f0f0", style = "rounded", bgcolor = "#445773" ];
+  "IAdministrable.getAdmin" [ label = "getAdmin", color = "#ffbdb9", fillcolor = "#ffbdb9" ];
+  "IAdministrable.getPendingAdmin" [ label = "getPendingAdmin", color = "#ffbdb9", fillcolor = "#ffbdb9" ];
+  "IAdministrable.proposeAdmin" [ label = "proposeAdmin", color = "#ffbdb9", fillcolor = "#ffbdb9" ];
+  "IAdministrable.acceptAdmin" [ label = "acceptAdmin", color = "#ffbdb9", fillcolor = "#ffbdb9" ];
+}
+
+subgraph "clusterLibAdministrable" {
+  graph [ label = "LibAdministrable  (lib)", color = "#445773", fontcolor = "#f0f0f0", style = "rounded", bgcolor = "#445773" ];
+  "LibAdministrable._getAdmin" [ label = "_getAdmin", color = "#f2c383", fillcolor = "#f2c383" ];
+  "LibAdministrable._getPendingAdmin" [ label = "_getPendingAdmin", color = "#f2c383", fillcolor = "#f2c383" ];
+  "LibAdministrable._setAdmin" [ label = "_setAdmin", color = "#f2c383", fillcolor = "#f2c383" ];
+  "LibAdministrable._setPendingAdmin" [ label = "_setPendingAdmin", color = "#f2c383", fillcolor = "#f2c383" ];
+}
+
+subgraph "clusterAdministratorAddress" {
+  graph [ label = "AdministratorAddress  (lib)", color = "#445773", fontcolor = "#f0f0f0", style = "rounded", bgcolor = "#445773" ];
+  "AdministratorAddress.get" [ label = "get", color = "#f2c383", fillcolor = "#f2c383" ];
+  "AdministratorAddress.set" [ label = "set", color = "#f2c383", fillcolor = "#f2c383" ];
+}
+
+subgraph "clusterPendingAdministratorAddress" {
+  graph [ label = "PendingAdministratorAddress  (lib)", color = "#445773", fontcolor = "#f0f0f0", style = "rounded", bgcolor = "#445773" ];
+  "PendingAdministratorAddress.get" [ label = "get", color = "#f2c383", fillcolor = "#f2c383" ];
+  "PendingAdministratorAddress.set" [ label = "set", color = "#f2c383", fillcolor = "#f2c383" ];
+}
+
+subgraph "clusterInitializable" {
+  graph [ label = "Initializable", color = "#445773", fontcolor = "#f0f0f0", style = "rounded", bgcolor = "#445773" ];
+  "Initializable.<Constructor>" [ label = "<Constructor>", color = "#FF9797", fillcolor = "#FF9797" ];
+  "Initializable.init" [ label = "init", color = "#1bc6a6", shape =doubleoctagon ];
+  "Initializable.type" [ label = "type" ];
+  "Initializable.InvalidInitialization" [ label = "InvalidInitialization" ];
+}
+
+subgraph "clusterVersion" {
+  graph [ label = "Version  (lib)", color = "#445773", fontcolor = "#f0f0f0", style = "rounded", bgcolor = "#445773" ];
+  "Version.set" [ label = "set", color = "#f2c383", fillcolor = "#f2c383" ];
+  "Version.get" [ label = "get", color = "#f2c383", fillcolor = "#f2c383" ];
+}
+
+subgraph "clusterRiverAddress" {
+  graph [ label = "RiverAddress  (lib)", color = "#445773", fontcolor = "#f0f0f0", style = "rounded", bgcolor = "#445773" ];
+  "RiverAddress.set" [ label = "set", color = "#f2c383", fillcolor = "#f2c383" ];
+  "RiverAddress.get" [ label = "get", color = "#f2c383", fillcolor = "#f2c383" ];
+}
+
+subgraph "clusterLastEpochId" {
+  graph [ label = "LastEpochId  (lib)", color = "#445773", fontcolor = "#f0f0f0", style = "rounded", bgcolor = "#445773" ];
+  "LastEpochId.get" [ label = "get", color = "#f2c383", fillcolor = "#f2c383" ];
+  "LastEpochId.set" [ label = "set", color = "#f2c383", fillcolor = "#f2c383" ];
+}
+
+subgraph "clusterOracleMembers" {
+  graph [ label = "OracleMembers  (lib)", color = "#445773", fontcolor = "#f0f0f0", style = "rounded", bgcolor = "#445773" ];
+  "OracleMembers.indexOf" [ label = "indexOf", color = "#f2c383", fillcolor = "#f2c383" ];
+  "OracleMembers.get" [ label = "get", color = "#f2c383", fillcolor = "#f2c383" ];
+  "OracleMembers.deleteItem" [ label = "deleteItem", color = "#f2c383", fillcolor = "#f2c383" ];
+  "OracleMembers.set" [ label = "set", color = "#f2c383", fillcolor = "#f2c383" ];
+  "OracleMembers.push" [ label = "push", color = "#f2c383", fillcolor = "#f2c383" ];
+}
+
+subgraph "clusterQuorum" {
+  graph [ label = "Quorum  (lib)", color = "#445773", fontcolor = "#f0f0f0", style = "rounded", bgcolor = "#445773" ];
+  "Quorum.set" [ label = "set", color = "#f2c383", fillcolor = "#f2c383" ];
+  "Quorum.get" [ label = "get", color = "#f2c383", fillcolor = "#f2c383" ];
+}
+
+subgraph "clusterReportsPositions" {
+  graph [ label = "ReportsPositions  (lib)", color = "#445773", fontcolor = "#f0f0f0", style = "rounded", bgcolor = "#445773" ];
+  "ReportsPositions.get" [ label = "get", color = "#f2c383", fillcolor = "#f2c383" ];
+  "ReportsPositions.getRaw" [ label = "getRaw", color = "#f2c383", fillcolor = "#f2c383" ];
+  "ReportsPositions.register" [ label = "register", color = "#f2c383", fillcolor = "#f2c383" ];
+  "ReportsPositions.clear" [ label = "clear", color = "#f2c383", fillcolor = "#f2c383" ];
+}
+
+subgraph "clusterITLCV1" {
+  graph [ label = "ITLCV1  (iface)", color = "#445773", fontcolor = "#f0f0f0", style = "rounded", bgcolor = "#445773" ];
+  "ITLCV1.initTLCV1" [ label = "initTLCV1", color = "#ffbdb9", fillcolor = "#ffbdb9" ];
+  "ITLCV1.migrateVestingSchedules" [ label = "migrateVestingSchedules", color = "#ffbdb9", fillcolor = "#ffbdb9" ];
+}
+
+subgraph "clusterIERC20VestableVotesUpgradeableV1" {
+  graph [ label = "IERC20VestableVotesUpgradeableV1  (iface)", color = "#445773", fontcolor = "#f0f0f0", style = "rounded", bgcolor = "#445773" ];
+  "IERC20VestableVotesUpgradeableV1.getVestingSchedule" [ label = "getVestingSchedule", color = "#ffbdb9", fillcolor = "#ffbdb9" ];
+  "IERC20VestableVotesUpgradeableV1.isGlobalUnlockedScheduleIgnored" [ label = "isGlobalUnlockedScheduleIgnored", color = "#ffbdb9", fillcolor = "#ffbdb9" ];
+  "IERC20VestableVotesUpgradeableV1.getVestingScheduleCount" [ label = "getVestingScheduleCount", color = "#ffbdb9", fillcolor = "#ffbdb9" ];
+  "IERC20VestableVotesUpgradeableV1.vestingEscrow" [ label = "vestingEscrow", color = "#ffbdb9", fillcolor = "#ffbdb9" ];
+  "IERC20VestableVotesUpgradeableV1.computeVestingReleasableAmount" [ label = "computeVestingReleasableAmount", color = "#ffbdb9", fillcolor = "#ffbdb9" ];
+  "IERC20VestableVotesUpgradeableV1.computeVestingVestedAmount" [ label = "computeVestingVestedAmount", color = "#ffbdb9", fillcolor = "#ffbdb9" ];
+  "IERC20VestableVotesUpgradeableV1.createVestingSchedule" [ label = "createVestingSchedule", color = "#ffbdb9", fillcolor = "#ffbdb9" ];
+  "IERC20VestableVotesUpgradeableV1.revokeVestingSchedule" [ label = "revokeVestingSchedule", color = "#ffbdb9", fillcolor = "#ffbdb9" ];
+  "IERC20VestableVotesUpgradeableV1.releaseVestingSchedule" [ label = "releaseVestingSchedule", color = "#ffbdb9", fillcolor = "#ffbdb9" ];
+  "IERC20VestableVotesUpgradeableV1.delegateVestingEscrow" [ label = "delegateVestingEscrow", color = "#ffbdb9", fillcolor = "#ffbdb9" ];
+}
+
+subgraph "clusterVestingSchedulesV2" {
+  graph [ label = "VestingSchedulesV2  (lib)", color = "#445773", fontcolor = "#f0f0f0", style = "rounded", bgcolor = "#445773" ];
+  "VestingSchedulesV2.get" [ label = "get", color = "#f2c383", fillcolor = "#f2c383" ];
+  "VestingSchedulesV2.getCount" [ label = "getCount", color = "#f2c383", fillcolor = "#f2c383" ];
+  "VestingSchedulesV2.push" [ label = "push" ];
+  "VestingSchedulesV2.migrateVestingScheduleFromV1" [ label = "migrateVestingScheduleFromV1", color = "#f2c383", fillcolor = "#f2c383" ];
+  "VestingSchedulesV2.VestingScheduleNotFound" [ label = "VestingScheduleNotFound" ];
+  "VestingSchedulesV2.VestingSchedule" [ label = "VestingSchedule" ];
+}
+
+subgraph "clusterVestingSchedulesV1" {
+  graph [ label = "VestingSchedulesV1  (lib)", color = "#445773", fontcolor = "#f0f0f0", style = "rounded", bgcolor = "#445773" ];
+  "VestingSchedulesV1.get" [ label = "get", color = "#f2c383", fillcolor = "#f2c383" ];
+  "VestingSchedulesV1.getCount" [ label = "getCount", color = "#f2c383", fillcolor = "#f2c383" ];
+  "VestingSchedulesV1.push" [ label = "push", color = "#f2c383", fillcolor = "#f2c383" ];
+  "VestingSchedulesV1.VestingScheduleNotFound" [ label = "VestingScheduleNotFound" ];
+}
+
+  "UserDepositManagerV1.deposit";
+  "UserDepositManagerV1._deposit";
+  "UserDepositManagerV1.depositAndTransfer";
+  "LibSanitize._notZeroAddress";
+  "UserDepositManagerV1.<Receive Ether>";
+  "UserDepositManagerV1.<Fallback>";
+  "LibErrors.InvalidCall";
+  "UserDepositManagerV1.EmptyDeposit";
+  "UserDepositManagerV1._setBalanceToDeposit";
+  "BalanceToDeposit.get";
+  "UserDepositManagerV1._onDeposit";
+  "LibErrors.InvalidZeroAddress";
+  "LibSanitize._notEmptyString";
+  "LibErrors.InvalidEmptyString";
+  "LibSanitize._validFee";
+  "LibErrors.InvalidFee";
+  "LibUnstructuredStorage.getStorageUint256";
+  "BalanceToDeposit.set";
+  "LibUnstructuredStorage.setStorageUint256";
+  "OracleV1.onlyAdminOrMember";
+  "OracleV1._getAdmin";
+  "LibErrors.Unauthorized";
+  "OracleV1.initOracleV1";
+  "OracleV1._setAdmin";
+  "RiverAddress.set";
+  "CLSpec.set";
+  "CLSpec.CLSpecStruct";
+  "ReportBounds.set";
+  "ReportBounds.ReportBoundsStruct";
+  "Quorum.set";
+  "OracleV1.initOracleV1_1";
+  "OracleV1._clearReports";
+  "OracleV1.getRiver";
+  "RiverAddress.get";
+  "OracleV1.getMemberReportStatus";
+  "OracleMembers.indexOf";
+  "ReportsPositions.get";
+  "OracleV1.getGlobalReportStatus";
+  "ReportsPositions.getRaw";
+  "OracleV1.getReportVariantsCount";
+  "ReportsVariants.get";
+  "OracleV1.getReportVariantDetails";
+  "OracleV1.ReportIndexOutOfBounds";
+  "OracleV1.getQuorum";
+  "Quorum.get";
+  "OracleV1.getOracleMembers";
+  "OracleMembers.get";
+  "OracleV1.isMember";
+  "OracleV1.getLastReportedEpochId";
+  "LastEpochId.get";
+  "OracleV1.addMember";
+  "OracleV1.AddressAlreadyInUse";
+  "OracleV1._clearReportsAndSetQuorum";
+  "OracleV1.removeMember";
+  "OracleMembers.deleteItem";
+  "OracleV1.setMember";
+  "OracleMembers.set";
+  "OracleV1.setQuorum";
+  "LibErrors.InvalidArgument";
+  "OracleV1.reportConsensusLayerData";
+  "OracleV1.EpochTooOld";
+  "OracleV1.payable";
+  "IRiverV1.isValidEpoch";
+  "OracleV1.InvalidEpoch";
+  "LastEpochId.set";
+  "OracleV1.AlreadyReported";
+  "ReportsPositions.register";
+  "OracleV1._reportChecksum";
+  "OracleV1._getReportVariantIndexAndVotes";
+  "IRiverV1.setConsensusLayerData";
+  "ReportsVariants.ReportVariantDetails";
+  "ReportsVariants.clear";
+  "ReportsPositions.clear";
+  "OracleV1._river";
+  "Administrable.onlyAdmin";
+  "LibAdministrable._getAdmin";
+  "Administrable.onlyPendingAdmin";
+  "LibAdministrable._getPendingAdmin";
+  "Administrable.getAdmin";
+  "Administrable.getPendingAdmin";
+  "Administrable.proposeAdmin";
+  "Administrable._setPendingAdmin";
+  "Administrable.acceptAdmin";
+  "Administrable._setAdmin";
+  "LibAdministrable._setAdmin";
+  "LibAdministrable._setPendingAdmin";
+  "Administrable._getAdmin";
+  "AdministratorAddress.get";
+  "PendingAdministratorAddress.get";
+  "AdministratorAddress.set";
+  "PendingAdministratorAddress.set";
+  "LibUnstructuredStorage.getStorageAddress";
+  "LibUnstructuredStorage.setStorageAddress";
+  "Initializable.<Constructor>";
+  "Version.set";
+  "Initializable.type";
+  "Initializable.init";
+  "Version.get";
+  "Initializable.InvalidInitialization";
+  "OracleMembers.push";
+  "VestingSchedulesV2.get";
+  "VestingSchedulesV2.VestingScheduleNotFound";
+  "VestingSchedulesV2.migrateVestingScheduleFromV1";
+  "VestingSchedulesV1.get";
+  "VestingSchedulesV2.VestingSchedule";
+  "VestingSchedulesV2.push";
+  "VestingSchedulesV1.VestingScheduleNotFound";
+  "UserDepositManagerV1.deposit" -> "UserDepositManagerV1._deposit" [ color = "#1bc6a6" ];
+  "UserDepositManagerV1.depositAndTransfer" -> "LibSanitize._notZeroAddress" [ color = "white" ];
+  "UserDepositManagerV1.depositAndTransfer" -> "UserDepositManagerV1._deposit" [ color = "#1bc6a6" ];
+  "UserDepositManagerV1.<Receive Ether>" -> "UserDepositManagerV1._deposit" [ color = "#1bc6a6" ];
+  "UserDepositManagerV1.<Fallback>" -> "LibErrors.InvalidCall" [ color = "white" ];
+  "UserDepositManagerV1._deposit" -> "UserDepositManagerV1.EmptyDeposit" [ color = "#1bc6a6" ];
+  "UserDepositManagerV1._deposit" -> "UserDepositManagerV1._setBalanceToDeposit" [ color = "#1bc6a6" ];
+  "UserDepositManagerV1._deposit" -> "BalanceToDeposit.get" [ color = "white" ];
+  "UserDepositManagerV1._deposit" -> "UserDepositManagerV1._onDeposit" [ color = "#1bc6a6" ];
+  "LibSanitize._notZeroAddress" -> "LibErrors.InvalidZeroAddress" [ color = "white" ];
+  "LibSanitize._notEmptyString" -> "LibErrors.InvalidEmptyString" [ color = "white" ];
+  "LibSanitize._validFee" -> "LibErrors.InvalidFee" [ color = "white" ];
+  "BalanceToDeposit.get" -> "LibUnstructuredStorage.getStorageUint256" [ color = "white" ];
+  "BalanceToDeposit.set" -> "LibUnstructuredStorage.setStorageUint256" [ color = "white" ];
+  "OracleV1.onlyAdminOrMember" -> "OracleV1._getAdmin" [ color = "#1bc6a6" ];
+  "OracleV1.onlyAdminOrMember" -> "LibErrors.Unauthorized" [ color = "white" ];
+  "OracleV1.initOracleV1" -> "OracleV1._setAdmin" [ color = "#1bc6a6" ];
+  "OracleV1.initOracleV1" -> "RiverAddress.set" [ color = "white" ];
+  "OracleV1.initOracleV1" -> "CLSpec.set" [ color = "white" ];
+  "OracleV1.initOracleV1" -> "CLSpec.CLSpecStruct" [ color = "white" ];
+  "OracleV1.initOracleV1" -> "ReportBounds.set" [ color = "white" ];
+  "OracleV1.initOracleV1" -> "ReportBounds.ReportBoundsStruct" [ color = "white" ];
+  "OracleV1.initOracleV1" -> "Quorum.set" [ color = "white" ];
+  "OracleV1.initOracleV1_1" -> "OracleV1._clearReports" [ color = "#1bc6a6" ];
+  "OracleV1.getRiver" -> "RiverAddress.get" [ color = "white" ];
+  "OracleV1.getMemberReportStatus" -> "OracleMembers.indexOf" [ color = "white" ];
+  "OracleV1.getMemberReportStatus" -> "ReportsPositions.get" [ color = "white" ];
+  "OracleV1.getGlobalReportStatus" -> "ReportsPositions.getRaw" [ color = "white" ];
+  "OracleV1.getReportVariantsCount" -> "ReportsVariants.get" [ color = "white" ];
+  "OracleV1.getReportVariantDetails" -> "ReportsVariants.get" [ color = "white" ];
+  "OracleV1.getReportVariantDetails" -> "OracleV1.ReportIndexOutOfBounds" [ color = "#1bc6a6" ];
+  "OracleV1.getReportVariantDetails" -> "ReportsVariants.get" [ color = "white" ];
+  "OracleV1.getReportVariantDetails" -> "ReportsVariants.get" [ color = "white" ];
+  "OracleV1.getQuorum" -> "Quorum.get" [ color = "white" ];
+  "OracleV1.getOracleMembers" -> "OracleMembers.get" [ color = "white" ];
+  "OracleV1.isMember" -> "OracleMembers.indexOf" [ color = "white" ];
+  "OracleV1.getLastReportedEpochId" -> "LastEpochId.get" [ color = "white" ];
+  "OracleV1.addMember" -> "OracleMembers.indexOf" [ color = "white" ];
+  "OracleV1.addMember" -> "OracleV1.AddressAlreadyInUse" [ color = "#1bc6a6" ];
+  "OracleV1.addMember" -> "Quorum.get" [ color = "white" ];
+  "OracleV1.addMember" -> "OracleV1._clearReportsAndSetQuorum" [ color = "#1bc6a6" ];
+  "OracleV1.removeMember" -> "OracleMembers.indexOf" [ color = "white" ];
+  "OracleV1.removeMember" -> "LibErrors.InvalidCall" [ color = "white" ];
+  "OracleV1.removeMember" -> "OracleMembers.deleteItem" [ color = "white" ];
+  "OracleV1.removeMember" -> "Quorum.get" [ color = "white" ];
+  "OracleV1.removeMember" -> "OracleV1._clearReportsAndSetQuorum" [ color = "#1bc6a6" ];
+  "OracleV1.setMember" -> "LibSanitize._notZeroAddress" [ color = "white" ];
+  "OracleV1.setMember" -> "OracleMembers.indexOf" [ color = "white" ];
+  "OracleV1.setMember" -> "OracleV1.AddressAlreadyInUse" [ color = "#1bc6a6" ];
+  "OracleV1.setMember" -> "OracleMembers.indexOf" [ color = "white" ];
+  "OracleV1.setMember" -> "LibErrors.InvalidCall" [ color = "white" ];
+  "OracleV1.setMember" -> "OracleMembers.set" [ color = "white" ];
+  "OracleV1.setQuorum" -> "Quorum.get" [ color = "white" ];
+  "OracleV1.setQuorum" -> "LibErrors.InvalidArgument" [ color = "white" ];
+  "OracleV1.setQuorum" -> "OracleV1._clearReportsAndSetQuorum" [ color = "#1bc6a6" ];
+  "OracleV1.reportConsensusLayerData" -> "OracleMembers.indexOf" [ color = "white" ];
+  "OracleV1.reportConsensusLayerData" -> "LibErrors.Unauthorized" [ color = "white" ];
+  "OracleV1.reportConsensusLayerData" -> "LastEpochId.get" [ color = "white" ];
+  "OracleV1.reportConsensusLayerData" -> "OracleV1.EpochTooOld" [ color = "#1bc6a6" ];
+  "OracleV1.reportConsensusLayerData" -> "LastEpochId.get" [ color = "white" ];
+  "OracleV1.reportConsensusLayerData" -> "OracleV1.payable" [ color = "#1bc6a6" ];
+  "OracleV1.reportConsensusLayerData" -> "RiverAddress.get" [ color = "white" ];
+  "OracleV1.reportConsensusLayerData" -> "IRiverV1.isValidEpoch" [ color = "white" ];
+  "OracleV1.reportConsensusLayerData" -> "OracleV1.InvalidEpoch" [ color = "#1bc6a6" ];
+  "OracleV1.reportConsensusLayerData" -> "OracleV1._clearReports" [ color = "#1bc6a6" ];
+  "OracleV1.reportConsensusLayerData" -> "LastEpochId.set" [ color = "white" ];
+  "OracleV1.reportConsensusLayerData" -> "ReportsPositions.get" [ color = "white" ];
+  "OracleV1.reportConsensusLayerData" -> "OracleV1.AlreadyReported" [ color = "#1bc6a6" ];
+  "OracleV1.reportConsensusLayerData" -> "ReportsPositions.register" [ color = "white" ];
+  "OracleV1.reportConsensusLayerData" -> "OracleV1._reportChecksum" [ color = "#1bc6a6" ];
+  "OracleV1.reportConsensusLayerData" -> "OracleV1._getReportVariantIndexAndVotes" [ color = "#1bc6a6" ];
+  "OracleV1.reportConsensusLayerData" -> "Quorum.get" [ color = "white" ];
+  "OracleV1.reportConsensusLayerData" -> "OracleV1._clearReports" [ color = "#1bc6a6" ];
+  "OracleV1.reportConsensusLayerData" -> "LastEpochId.set" [ color = "white" ];
+  "OracleV1.reportConsensusLayerData" -> "IRiverV1.setConsensusLayerData" [ color = "white" ];
+  "OracleV1.reportConsensusLayerData" -> "ReportsVariants.ReportVariantDetails" [ color = "white" ];
+  "OracleV1.reportConsensusLayerData" -> "ReportsVariants.get" [ color = "white" ];
+  "OracleV1._clearReportsAndSetQuorum" -> "OracleMembers.get" [ color = "white" ];
+  "OracleV1._clearReportsAndSetQuorum" -> "LibErrors.InvalidArgument" [ color = "white" ];
+  "OracleV1._clearReportsAndSetQuorum" -> "OracleV1._clearReports" [ color = "#1bc6a6" ];
+  "OracleV1._clearReportsAndSetQuorum" -> "Quorum.set" [ color = "white" ];
+  "OracleV1._clearReports" -> "ReportsVariants.clear" [ color = "white" ];
+  "OracleV1._clearReports" -> "ReportsPositions.clear" [ color = "white" ];
+  "OracleV1._getReportVariantIndexAndVotes" -> "ReportsVariants.get" [ color = "white" ];
+  "OracleV1._getReportVariantIndexAndVotes" -> "ReportsVariants.get" [ color = "white" ];
+  "OracleV1._getReportVariantIndexAndVotes" -> "ReportsVariants.get" [ color = "white" ];
+  "OracleV1._river" -> "OracleV1.payable" [ color = "#1bc6a6" ];
+  "OracleV1._river" -> "RiverAddress.get" [ color = "white" ];
+  "Administrable.onlyAdmin" -> "LibAdministrable._getAdmin" [ color = "white" ];
+  "Administrable.onlyAdmin" -> "LibErrors.Unauthorized" [ color = "white" ];
+  "Administrable.onlyPendingAdmin" -> "LibAdministrable._getPendingAdmin" [ color = "white" ];
+  "Administrable.onlyPendingAdmin" -> "LibErrors.Unauthorized" [ color = "white" ];
+  "Administrable.getAdmin" -> "LibAdministrable._getAdmin" [ color = "white" ];
+  "Administrable.getPendingAdmin" -> "LibAdministrable._getPendingAdmin" [ color = "white" ];
+  "Administrable.proposeAdmin" -> "Administrable._setPendingAdmin" [ color = "#1bc6a6" ];
+  "Administrable.acceptAdmin" -> "Administrable._setAdmin" [ color = "#1bc6a6" ];
+  "Administrable.acceptAdmin" -> "LibAdministrable._getPendingAdmin" [ color = "white" ];
+  "Administrable.acceptAdmin" -> "Administrable._setPendingAdmin" [ color = "#1bc6a6" ];
+  "Administrable._setAdmin" -> "LibSanitize._notZeroAddress" [ color = "white" ];
+  "Administrable._setAdmin" -> "LibAdministrable._setAdmin" [ color = "white" ];
+  "Administrable._setPendingAdmin" -> "LibAdministrable._setPendingAdmin" [ color = "white" ];
+  "Administrable._getAdmin" -> "LibAdministrable._getAdmin" [ color = "white" ];
+  "LibAdministrable._getAdmin" -> "AdministratorAddress.get" [ color = "white" ];
+  "LibAdministrable._getPendingAdmin" -> "PendingAdministratorAddress.get" [ color = "white" ];
+  "LibAdministrable._setAdmin" -> "AdministratorAddress.set" [ color = "white" ];
+  "LibAdministrable._setPendingAdmin" -> "PendingAdministratorAddress.set" [ color = "white" ];
+  "AdministratorAddress.get" -> "LibUnstructuredStorage.getStorageAddress" [ color = "white" ];
+  "AdministratorAddress.set" -> "LibSanitize._notZeroAddress" [ color = "white" ];
+  "AdministratorAddress.set" -> "LibUnstructuredStorage.setStorageAddress" [ color = "white" ];
+  "PendingAdministratorAddress.get" -> "LibUnstructuredStorage.getStorageAddress" [ color = "white" ];
+  "PendingAdministratorAddress.set" -> "LibUnstructuredStorage.setStorageAddress" [ color = "white" ];
+  "Initializable.<Constructor>" -> "Version.set" [ color = "white" ];
+  "Initializable.<Constructor>" -> "Initializable.type" [ color = "#1bc6a6" ];
+  "Initializable.<Constructor>" -> "Initializable.type" [ color = "#1bc6a6" ];
+  "Initializable.init" -> "Version.get" [ color = "white" ];
+  "Initializable.init" -> "Initializable.InvalidInitialization" [ color = "#1bc6a6" ];
+  "Initializable.init" -> "Version.get" [ color = "white" ];
+  "Initializable.init" -> "Version.set" [ color = "white" ];
+  "Version.get" -> "LibUnstructuredStorage.getStorageUint256" [ color = "white" ];
+  "Version.set" -> "LibUnstructuredStorage.setStorageUint256" [ color = "white" ];
+  "RiverAddress.get" -> "LibUnstructuredStorage.getStorageAddress" [ color = "white" ];
+  "RiverAddress.set" -> "LibSanitize._notZeroAddress" [ color = "white" ];
+  "RiverAddress.set" -> "LibUnstructuredStorage.setStorageAddress" [ color = "white" ];
+  "LastEpochId.get" -> "LibUnstructuredStorage.getStorageUint256" [ color = "white" ];
+  "LastEpochId.set" -> "LibUnstructuredStorage.setStorageUint256" [ color = "white" ];
+  "OracleMembers.push" -> "LibSanitize._notZeroAddress" [ color = "white" ];
+  "Quorum.get" -> "LibUnstructuredStorage.getStorageUint256" [ color = "white" ];
+  "Quorum.set" -> "LibUnstructuredStorage.setStorageUint256" [ color = "white" ];
+  "ReportsPositions.get" -> "LibUnstructuredStorage.getStorageUint256" [ color = "white" ];
+  "ReportsPositions.getRaw" -> "LibUnstructuredStorage.getStorageUint256" [ color = "white" ];
+  "ReportsPositions.register" -> "LibUnstructuredStorage.setStorageUint256" [ color = "white" ];
+  "ReportsPositions.register" -> "LibUnstructuredStorage.getStorageUint256" [ color = "white" ];
+  "ReportsPositions.clear" -> "LibUnstructuredStorage.setStorageUint256" [ color = "white" ];
+  "VestingSchedulesV2.get" -> "VestingSchedulesV2.VestingScheduleNotFound" [ color = "#1bc6a6" ];
+  "VestingSchedulesV2.migrateVestingScheduleFromV1" -> "VestingSchedulesV1.get" [ color = "white" ];
+  "VestingSchedulesV2.migrateVestingScheduleFromV1" -> "VestingSchedulesV2.VestingSchedule" [ color = "white" ];
+  "VestingSchedulesV2.migrateVestingScheduleFromV1" -> "VestingSchedulesV2.push" [ color = "#1bc6a6" ];
+  "VestingSchedulesV1.get" -> "VestingSchedulesV1.VestingScheduleNotFound" [ color = "#1bc6a6" ];
+
+
+rankdir=LR
+node [shape=plaintext]
+subgraph cluster_01 { 
+label = "Legend";
+key [label=<<table border="0" cellpadding="2" cellspacing="0" cellborder="0">
+  <tr><td align="right" port="i1">Internal Call</td></tr>
+  <tr><td align="right" port="i2">External Call</td></tr>
+  <tr><td align="right" port="i3">Defined Contract</td></tr>
+  <tr><td align="right" port="i4">Undefined Contract</td></tr>
+  </table>>]
+key2 [label=<<table border="0" cellpadding="2" cellspacing="0" cellborder="0">
+  <tr><td port="i1">&nbsp;&nbsp;&nbsp;</td></tr>
+  <tr><td port="i2">&nbsp;&nbsp;&nbsp;</td></tr>
+  <tr><td port="i3" bgcolor="#445773">&nbsp;&nbsp;&nbsp;</td></tr>
+  <tr><td port="i4">
+    <table border="1" cellborder="0" cellspacing="0" cellpadding="7" color="#e8726d">
+      <tr>
+       <td></td>
+      </tr>
+     </table>
+  </td></tr>
+  </table>>]
+key:i1:e -> key2:i1:w [color="#1bc6a6"]
+key:i2:e -> key2:i2:w [color="white"]
+}
+}

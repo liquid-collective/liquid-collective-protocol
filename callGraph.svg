@@ -1,0 +1,2279 @@
+<?xml version="1.0" standalone="no"?>
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="3351pt" height="3321pt" viewBox="0.00 0.00 3351 3321">
+<g id="graph0" class="graph" transform="translate(4,3317) scale(1)" data-name="G">
+
+<polygon fill="#2e3e56" stroke="none" points="-4,4 -4,-3317 3347,-3317 3347,4 -4,4"/>
+<g id="clust1" class="cluster" data-name="clusterIWLSETHV1">
+
+<path fill="rgb(68, 87, 115)" stroke="rgb(68, 87, 115)" d="M2676.24,-2442.14C2676.24,-2442.14 2994.24,-2442.14 2994.24,-2442.14 3000.24,-2442.14 3006.24,-2448.14 3006.24,-2454.14 3006.24,-2454.14 3006.24,-2751.14 3006.24,-2751.14 3006.24,-2757.14 3000.24,-2763.14 2994.24,-2763.14 2994.24,-2763.14 2676.24,-2763.14 2676.24,-2763.14 2670.24,-2763.14 2664.24,-2757.14 2664.24,-2751.14 2664.24,-2751.14 2664.24,-2454.14 2664.24,-2454.14 2664.24,-2448.14 2670.24,-2442.14 2676.24,-2442.14"/>
+<text text-anchor="middle" x="2835.24" y="-2746.54" font-family="Times,serif" font-size="14.00" fill="#f0f0f0">IWLSETHV1  (iface)</text>
+</g>
+<g id="clust2" class="cluster" data-name="clusterUserDepositManagerV1">
+
+<path fill="rgb(68, 87, 115)" stroke="rgb(68, 87, 115)" d="M2332.42,-1842.17C2332.42,-1842.17 2691.42,-1842.17 2691.42,-1842.17 2697.42,-1842.17 2703.42,-1848.17 2703.42,-1854.17 2703.42,-1854.17 2703.42,-2136.17 2703.42,-2136.17 2703.42,-2142.17 2697.42,-2148.17 2691.42,-2148.17 2691.42,-2148.17 2332.42,-2148.17 2332.42,-2148.17 2326.42,-2148.17 2320.42,-2142.17 2320.42,-2136.17 2320.42,-2136.17 2320.42,-1854.17 2320.42,-1854.17 2320.42,-1848.17 2326.42,-1842.17 2332.42,-1842.17"/>
+<text text-anchor="middle" x="2511.92" y="-2131.57" font-family="Times,serif" font-size="14.00" fill="#f0f0f0">UserDepositManagerV1</text>
+</g>
+<g id="clust3" class="cluster" data-name="clusterIUserDepositManagerV1">
+
+<path fill="rgb(68, 87, 115)" stroke="rgb(68, 87, 115)" d="M788.74,-2219.64C788.74,-2219.64 1061.74,-2219.64 1061.74,-2219.64 1067.74,-2219.64 1073.74,-2225.64 1073.74,-2231.64 1073.74,-2231.64 1073.74,-2427.64 1073.74,-2427.64 1073.74,-2433.64 1067.74,-2439.64 1061.74,-2439.64 1061.74,-2439.64 788.74,-2439.64 788.74,-2439.64 782.74,-2439.64 776.74,-2433.64 776.74,-2427.64 776.74,-2427.64 776.74,-2231.64 776.74,-2231.64 776.74,-2225.64 782.74,-2219.64 788.74,-2219.64"/>
+<text text-anchor="middle" x="925.24" y="-2423.04" font-family="Times,serif" font-size="14.00" fill="#f0f0f0">IUserDepositManagerV1  (iface)</text>
+</g>
+<g id="clust4" class="cluster" data-name="clusterLibSanitize">
+
+<path fill="rgb(68, 87, 115)" stroke="rgb(68, 87, 115)" d="M2264.68,-1376.16C2264.68,-1376.16 2526.68,-1376.16 2526.68,-1376.16 2532.68,-1376.16 2538.68,-1382.16 2538.68,-1388.16 2538.68,-1388.16 2538.68,-1508.16 2538.68,-1508.16 2538.68,-1514.16 2532.68,-1520.16 2526.68,-1520.16 2526.68,-1520.16 2264.68,-1520.16 2264.68,-1520.16 2258.68,-1520.16 2252.68,-1514.16 2252.68,-1508.16 2252.68,-1508.16 2252.68,-1388.16 2252.68,-1388.16 2252.68,-1382.16 2258.68,-1376.16 2264.68,-1376.16"/>
+<text text-anchor="middle" x="2395.68" y="-1503.56" font-family="Times,serif" font-size="14.00" fill="#f0f0f0">LibSanitize  (lib)</text>
+</g>
+<g id="clust5" class="cluster" data-name="clusterLibErrors">
+
+<path fill="rgb(68, 87, 115)" stroke="rgb(68, 87, 115)" d="M2432.37,-1184.43C2432.37,-1184.43 2760.37,-1184.43 2760.37,-1184.43 2766.37,-1184.43 2772.37,-1190.43 2772.37,-1196.43 2772.37,-1196.43 2772.37,-1350.43 2772.37,-1350.43 2772.37,-1356.43 2766.37,-1362.43 2760.37,-1362.43 2760.37,-1362.43 2432.37,-1362.43 2432.37,-1362.43 2426.37,-1362.43 2420.37,-1356.43 2420.37,-1350.43 2420.37,-1350.43 2420.37,-1196.43 2420.37,-1196.43 2420.37,-1190.43 2426.37,-1184.43 2432.37,-1184.43"/>
+<text text-anchor="middle" x="2596.37" y="-1345.83" font-family="Times,serif" font-size="14.00" fill="#f0f0f0">LibErrors  (lib)</text>
+</g>
+<g id="clust7" class="cluster" data-name="clusterBalanceToDeposit">
+
+<path fill="rgb(68, 87, 115)" stroke="rgb(68, 87, 115)" d="M2401.27,-2465.35C2401.27,-2465.35 2528.27,-2465.35 2528.27,-2465.35 2534.27,-2465.35 2540.27,-2471.35 2540.27,-2477.35 2540.27,-2477.35 2540.27,-2577.35 2540.27,-2577.35 2540.27,-2583.35 2534.27,-2589.35 2528.27,-2589.35 2528.27,-2589.35 2401.27,-2589.35 2401.27,-2589.35 2395.27,-2589.35 2389.27,-2583.35 2389.27,-2577.35 2389.27,-2577.35 2389.27,-2477.35 2389.27,-2477.35 2389.27,-2471.35 2395.27,-2465.35 2401.27,-2465.35"/>
+<text text-anchor="middle" x="2464.77" y="-2572.75" font-family="Times,serif" font-size="14.00" fill="#f0f0f0">BalanceToDeposit  (lib)</text>
+</g><g id="clust6" class="cluster" data-name="clusterLibBasisPoints">
+
+<path fill="#445773" stroke="#445773" d="M1344.24,-1442.64C1344.24,-1442.64 1452.24,-1442.64 1452.24,-1442.64 1458.24,-1442.64 1464.24,-1448.64 1464.24,-1454.64 1464.24,-1454.64 1464.24,-1506.64 1464.24,-1506.64 1464.24,-1512.64 1458.24,-1518.64 1452.24,-1518.64 1452.24,-1518.64 1344.24,-1518.64 1344.24,-1518.64 1338.24,-1518.64 1332.24,-1512.64 1332.24,-1506.64 1332.24,-1506.64 1332.24,-1454.64 1332.24,-1454.64 1332.24,-1448.64 1338.24,-1442.64 1344.24,-1442.64" style=""/>
+<text text-anchor="middle" x="1398.24" y="-1502.04" font-family="Times,serif" font-size="14.00" fill="#f0f0f0" style="">LibBasisPoints  (lib)</text>
+</g>
+<g id="clust8" class="cluster" data-name="clusterLibUnstructuredStorage">
+
+<path fill="rgb(68, 87, 115)" stroke="rgb(68, 87, 115)" d="M1845.66,-2006.34C1845.66,-2006.34 2297.66,-2006.34 2297.66,-2006.34 2303.66,-2006.34 2309.66,-2012.34 2309.66,-2018.34 2309.66,-2018.34 2309.66,-2280.34 2309.66,-2280.34 2309.66,-2286.34 2303.66,-2292.34 2297.66,-2292.34 2297.66,-2292.34 1845.66,-2292.34 1845.66,-2292.34 1839.66,-2292.34 1833.66,-2286.34 1833.66,-2280.34 1833.66,-2280.34 1833.66,-2018.34 1833.66,-2018.34 1833.66,-2012.34 1839.66,-2006.34 1845.66,-2006.34"/>
+<text text-anchor="middle" x="2071.66" y="-2275.74" font-family="Times,serif" font-size="14.00" fill="#f0f0f0">LibUnstructuredStorage  (lib)</text>
+</g>
+<g id="clust9" class="cluster" data-name="clusterOracleV1">
+
+<path fill="rgb(68, 87, 115)" stroke="rgb(68, 87, 115)" d="M1130.79,-715.96C1130.79,-715.96 2025.79,-715.96 2025.79,-715.96 2031.79,-715.96 2037.79,-721.96 2037.79,-727.96 2037.79,-727.96 2037.79,-1273.96 2037.79,-1273.96 2037.79,-1279.96 2031.79,-1285.96 2025.79,-1285.96 2025.79,-1285.96 1130.79,-1285.96 1130.79,-1285.96 1124.79,-1285.96 1118.79,-1279.96 1118.79,-1273.96 1118.79,-1273.96 1118.79,-727.96 1118.79,-727.96 1118.79,-721.96 1124.79,-715.96 1130.79,-715.96"/>
+<text text-anchor="middle" x="1578.29" y="-1269.36" font-family="Times,serif" font-size="14.00" fill="#f0f0f0">OracleV1</text>
+</g>
+<g id="clust10" class="cluster" data-name="clusterIRiverV1">
+
+<path fill="rgb(68, 87, 115)" stroke="rgb(68, 87, 115)" d="M12.5,-360.14C12.5,-360.14 653.5,-360.14 653.5,-360.14 659.5,-360.14 665.5,-366.14 665.5,-372.14 665.5,-372.14 665.5,-974.14 665.5,-974.14 665.5,-980.14 659.5,-986.14 653.5,-986.14 653.5,-986.14 12.5,-986.14 12.5,-986.14 6.5,-986.14 0.5,-980.14 0.5,-974.14 0.5,-974.14 0.5,-372.14 0.5,-372.14 0.5,-366.14 6.5,-360.14 12.5,-360.14"/>
+<text text-anchor="middle" x="333" y="-969.54" font-family="Times,serif" font-size="14.00" fill="#f0f0f0">IRiverV1  (iface)</text>
+</g>
+<g id="clust11" class="cluster" data-name="clusterDailyCommittableLimits">
+
+<path fill="rgb(68, 87, 115)" stroke="rgb(68, 87, 115)" d="M2121.24,-2552.64C2121.24,-2552.64 2285.24,-2552.64 2285.24,-2552.64 2291.24,-2552.64 2297.24,-2558.64 2297.24,-2564.64 2297.24,-2564.64 2297.24,-2666.64 2297.24,-2666.64 2297.24,-2672.64 2291.24,-2678.64 2285.24,-2678.64 2285.24,-2678.64 2121.24,-2678.64 2121.24,-2678.64 2115.24,-2678.64 2109.24,-2672.64 2109.24,-2666.64 2109.24,-2666.64 2109.24,-2564.64 2109.24,-2564.64 2109.24,-2558.64 2115.24,-2552.64 2121.24,-2552.64"/>
+<text text-anchor="middle" x="2203.24" y="-2662.04" font-family="Times,serif" font-size="14.00" fill="#f0f0f0">DailyCommittableLimits  (lib)</text>
+</g>
+<g id="clust12" class="cluster" data-name="clusterIConsensusLayerDepositManagerV1">
+
+<path fill="rgb(68, 87, 115)" stroke="rgb(68, 87, 115)" d="M678.24,-2663.64C678.24,-2663.64 1074.24,-2663.64 1074.24,-2663.64 1080.24,-2663.64 1086.24,-2669.64 1086.24,-2675.64 1086.24,-2675.64 1086.24,-2925.64 1086.24,-2925.64 1086.24,-2931.64 1080.24,-2937.64 1074.24,-2937.64 1074.24,-2937.64 678.24,-2937.64 678.24,-2937.64 672.24,-2937.64 666.24,-2931.64 666.24,-2925.64 666.24,-2925.64 666.24,-2675.64 666.24,-2675.64 666.24,-2669.64 672.24,-2663.64 678.24,-2663.64"/>
+<text text-anchor="middle" x="876.24" y="-2921.04" font-family="Times,serif" font-size="14.00" fill="#f0f0f0">IConsensusLayerDepositManagerV1  (iface)</text>
+</g>
+<g id="clust13" class="cluster" data-name="clusterIOracleManagerV1">
+
+<path fill="rgb(68, 87, 115)" stroke="rgb(68, 87, 115)" d="M1232.74,-2219.64C1232.74,-2219.64 1731.74,-2219.64 1731.74,-2219.64 1737.74,-2219.64 1743.74,-2225.64 1743.74,-2231.64 1743.74,-2231.64 1743.74,-2661.64 1743.74,-2661.64 1743.74,-2667.64 1737.74,-2673.64 1731.74,-2673.64 1731.74,-2673.64 1232.74,-2673.64 1232.74,-2673.64 1226.74,-2673.64 1220.74,-2667.64 1220.74,-2661.64 1220.74,-2661.64 1220.74,-2231.64 1220.74,-2231.64 1220.74,-2225.64 1226.74,-2219.64 1232.74,-2219.64"/>
+<text text-anchor="middle" x="1482.24" y="-2657.04" font-family="Times,serif" font-size="14.00" fill="#f0f0f0">IOracleManagerV1  (iface)</text>
+</g>
+<g id="clust14" class="cluster" data-name="clusterCLSpec">
+
+<path fill="rgb(68, 87, 115)" stroke="rgb(68, 87, 115)" d="M1577.93,-7.12C1577.93,-7.12 1756.93,-7.12 1756.93,-7.12 1762.93,-7.12 1768.93,-13.12 1768.93,-19.12 1768.93,-19.12 1768.93,-159.12 1768.93,-159.12 1768.93,-165.12 1762.93,-171.12 1756.93,-171.12 1756.93,-171.12 1577.93,-171.12 1577.93,-171.12 1571.93,-171.12 1565.93,-165.12 1565.93,-159.12 1565.93,-159.12 1565.93,-19.12 1565.93,-19.12 1565.93,-13.12 1571.93,-7.12 1577.93,-7.12"/>
+<text text-anchor="middle" x="1667.43" y="-154.52" font-family="Times,serif" font-size="14.00" fill="#f0f0f0">CLSpec  (lib)</text>
+</g>
+<g id="clust15" class="cluster" data-name="clusterReportBounds">
+
+<path fill="rgb(68, 87, 115)" stroke="rgb(68, 87, 115)" d="M762.66,-431.02C762.66,-431.02 937.66,-431.02 937.66,-431.02 943.66,-431.02 949.66,-437.02 949.66,-443.02 949.66,-443.02 949.66,-551.02 949.66,-551.02 949.66,-557.02 943.66,-563.02 937.66,-563.02 937.66,-563.02 762.66,-563.02 762.66,-563.02 756.66,-563.02 750.66,-557.02 750.66,-551.02 750.66,-551.02 750.66,-443.02 750.66,-443.02 750.66,-437.02 756.66,-431.02 762.66,-431.02"/>
+<text text-anchor="middle" x="850.16" y="-546.42" font-family="Times,serif" font-size="14.00" fill="#f0f0f0">ReportBounds  (lib)</text>
+</g>
+<g id="clust16" class="cluster" data-name="clusterISharesManagerV1">
+
+<path fill="rgb(68, 87, 115)" stroke="rgb(68, 87, 115)" d="M789.24,-1665.14C789.24,-1665.14 1231.24,-1665.14 1231.24,-1665.14 1237.24,-1665.14 1243.24,-1671.14 1243.24,-1677.14 1243.24,-1677.14 1243.24,-2062.14 1243.24,-2062.14 1243.24,-2068.14 1237.24,-2074.14 1231.24,-2074.14 1231.24,-2074.14 789.24,-2074.14 789.24,-2074.14 783.24,-2074.14 777.24,-2068.14 777.24,-2062.14 777.24,-2062.14 777.24,-1677.14 777.24,-1677.14 777.24,-1671.14 783.24,-1665.14 789.24,-1665.14"/>
+<text text-anchor="middle" x="1010.24" y="-2057.54" font-family="Times,serif" font-size="14.00" fill="#f0f0f0">ISharesManagerV1  (iface)</text>
+</g>
+<g id="clust17" class="cluster" data-name="clusterIOracleV1">
+
+<path fill="rgb(68, 87, 115)" stroke="rgb(68, 87, 115)" d="M2675.74,-665.64C2675.74,-665.64 3152.74,-665.64 3152.74,-665.64 3158.74,-665.64 3164.74,-671.64 3164.74,-677.64 3164.74,-677.64 3164.74,-1089.64 3164.74,-1089.64 3164.74,-1095.64 3158.74,-1101.64 3152.74,-1101.64 3152.74,-1101.64 2675.74,-1101.64 2675.74,-1101.64 2669.74,-1101.64 2663.74,-1095.64 2663.74,-1089.64 2663.74,-1089.64 2663.74,-677.64 2663.74,-677.64 2663.74,-671.64 2669.74,-665.64 2675.74,-665.64"/>
+<text text-anchor="middle" x="2914.24" y="-1085.04" font-family="Times,serif" font-size="14.00" fill="#f0f0f0">IOracleV1  (iface)</text>
+</g>
+<g id="clust18" class="cluster" data-name="clusterReportsVariants">
+
+<path fill="rgb(68, 87, 115)" stroke="rgb(68, 87, 115)" d="M1013.75,0.07C1013.75,0.07 1319.75,0.07 1319.75,0.07 1325.75,0.07 1331.75,-5.93 1331.75,-11.93 1331.75,-11.93 1331.75,-184.93 1331.75,-184.93 1331.75,-190.93 1325.75,-196.93 1319.75,-196.93 1319.75,-196.93 1013.75,-196.93 1013.75,-196.93 1007.75,-196.93 1001.75,-190.93 1001.75,-184.93 1001.75,-184.93 1001.75,-11.93 1001.75,-11.93 1001.75,-5.93 1007.75,0.07 1013.75,0.07"/>
+<text text-anchor="middle" x="1166.75" y="-180.33" font-family="Times,serif" font-size="14.00" fill="#f0f0f0">ReportsVariants  (lib)</text>
+</g>
+<g id="clust19" class="cluster" data-name="clusterAdministrable">
+
+<path fill="rgb(68, 87, 115)" stroke="rgb(68, 87, 115)" d="M2839.32,-1454.67C2839.32,-1454.67 3331.32,-1454.67 3331.32,-1454.67 3337.32,-1454.67 3343.32,-1460.67 3343.32,-1466.67 3343.32,-1466.67 3343.32,-1702.67 3343.32,-1702.67 3343.32,-1708.67 3337.32,-1714.67 3331.32,-1714.67 3331.32,-1714.67 2839.32,-1714.67 2839.32,-1714.67 2833.32,-1714.67 2827.32,-1708.67 2827.32,-1702.67 2827.32,-1702.67 2827.32,-1466.67 2827.32,-1466.67 2827.32,-1460.67 2833.32,-1454.67 2839.32,-1454.67"/>
+<text text-anchor="middle" x="3085.32" y="-1698.07" font-family="Times,serif" font-size="14.00" fill="#f0f0f0">Administrable</text>
+</g>
+<g id="clust20" class="cluster" data-name="clusterIAdministrable">
+
+<path fill="rgb(68, 87, 115)" stroke="rgb(68, 87, 115)" d="M788.74,-1220.64C788.74,-1220.64 1037.74,-1220.64 1037.74,-1220.64 1043.74,-1220.64 1049.74,-1226.64 1049.74,-1232.64 1049.74,-1232.64 1049.74,-1444.64 1049.74,-1444.64 1049.74,-1450.64 1043.74,-1456.64 1037.74,-1456.64 1037.74,-1456.64 788.74,-1456.64 788.74,-1456.64 782.74,-1456.64 776.74,-1450.64 776.74,-1444.64 776.74,-1444.64 776.74,-1232.64 776.74,-1232.64 776.74,-1226.64 782.74,-1220.64 788.74,-1220.64"/>
+<text text-anchor="middle" x="913.24" y="-1440.04" font-family="Times,serif" font-size="14.00" fill="#f0f0f0">IAdministrable  (iface)</text>
+</g>
+<g id="clust21" class="cluster" data-name="clusterLibAdministrable">
+
+<path fill="rgb(68, 87, 115)" stroke="rgb(68, 87, 115)" d="M2930.29,-1732.35C2930.29,-1732.35 3245.29,-1732.35 3245.29,-1732.35 3251.29,-1732.35 3257.29,-1738.35 3257.29,-1744.35 3257.29,-1744.35 3257.29,-1890.35 3257.29,-1890.35 3257.29,-1896.35 3251.29,-1902.35 3245.29,-1902.35 3245.29,-1902.35 2930.29,-1902.35 2930.29,-1902.35 2924.29,-1902.35 2918.29,-1896.35 2918.29,-1890.35 2918.29,-1890.35 2918.29,-1744.35 2918.29,-1744.35 2918.29,-1738.35 2924.29,-1732.35 2930.29,-1732.35"/>
+<text text-anchor="middle" x="3087.79" y="-1885.75" font-family="Times,serif" font-size="14.00" fill="#f0f0f0">LibAdministrable  (lib)</text>
+</g>
+<g id="clust22" class="cluster" data-name="clusterAdministratorAddress">
+
+<path fill="rgb(68, 87, 115)" stroke="rgb(68, 87, 115)" d="M2556.05,-1709.35C2556.05,-1709.35 2704.05,-1709.35 2704.05,-1709.35 2710.05,-1709.35 2716.05,-1715.35 2716.05,-1721.35 2716.05,-1721.35 2716.05,-1821.35 2716.05,-1821.35 2716.05,-1827.35 2710.05,-1833.35 2704.05,-1833.35 2704.05,-1833.35 2556.05,-1833.35 2556.05,-1833.35 2550.05,-1833.35 2544.05,-1827.35 2544.05,-1821.35 2544.05,-1821.35 2544.05,-1721.35 2544.05,-1721.35 2544.05,-1715.35 2550.05,-1709.35 2556.05,-1709.35"/>
+<text text-anchor="middle" x="2630.05" y="-1816.75" font-family="Times,serif" font-size="14.00" fill="#f0f0f0">AdministratorAddress  (lib)</text>
+</g>
+<g id="clust23" class="cluster" data-name="clusterPendingAdministratorAddress">
+
+<path fill="rgb(68, 87, 115)" stroke="rgb(68, 87, 115)" d="M2653.12,-2158.18C2653.12,-2158.18 2845.12,-2158.18 2845.12,-2158.18 2851.12,-2158.18 2857.12,-2164.18 2857.12,-2170.18 2857.12,-2170.18 2857.12,-2230.18 2857.12,-2230.18 2857.12,-2236.18 2851.12,-2242.18 2845.12,-2242.18 2845.12,-2242.18 2653.12,-2242.18 2653.12,-2242.18 2647.12,-2242.18 2641.12,-2236.18 2641.12,-2230.18 2641.12,-2230.18 2641.12,-2170.18 2641.12,-2170.18 2641.12,-2164.18 2647.12,-2158.18 2653.12,-2158.18"/>
+<text text-anchor="middle" x="2749.12" y="-2225.58" font-family="Times,serif" font-size="14.00" fill="#f0f0f0">PendingAdministratorAddress  (lib)</text>
+</g>
+<g id="clust24" class="cluster" data-name="clusterInitializable">
+
+<path fill="rgb(68, 87, 115)" stroke="rgb(68, 87, 115)" d="M1568.91,-3147.27C1568.91,-3147.27 1895.91,-3147.27 1895.91,-3147.27 1901.91,-3147.27 1907.91,-3153.27 1907.91,-3159.27 1907.91,-3159.27 1907.91,-3301.27 1907.91,-3301.27 1907.91,-3307.27 1901.91,-3313.27 1895.91,-3313.27 1895.91,-3313.27 1568.91,-3313.27 1568.91,-3313.27 1562.91,-3313.27 1556.91,-3307.27 1556.91,-3301.27 1556.91,-3301.27 1556.91,-3159.27 1556.91,-3159.27 1556.91,-3153.27 1562.91,-3147.27 1568.91,-3147.27"/>
+<text text-anchor="middle" x="1732.41" y="-3296.67" font-family="Times,serif" font-size="14.00" fill="#f0f0f0">Initializable</text>
+</g>
+<g id="clust25" class="cluster" data-name="clusterVersion">
+
+<path fill="rgb(68, 87, 115)" stroke="rgb(68, 87, 115)" d="M1816.23,-2731.67C1816.23,-2731.67 1927.23,-2731.67 1927.23,-2731.67 1933.23,-2731.67 1939.23,-2737.67 1939.23,-2743.67 1939.23,-2743.67 1939.23,-2796.67 1939.23,-2796.67 1939.23,-2802.67 1933.23,-2808.67 1927.23,-2808.67 1927.23,-2808.67 1816.23,-2808.67 1816.23,-2808.67 1810.23,-2808.67 1804.23,-2802.67 1804.23,-2796.67 1804.23,-2796.67 1804.23,-2743.67 1804.23,-2743.67 1804.23,-2737.67 1810.23,-2731.67 1816.23,-2731.67"/>
+<text text-anchor="middle" x="1871.73" y="-2792.07" font-family="Times,serif" font-size="14.00" fill="#f0f0f0">Version  (lib)</text>
+</g>
+<g id="clust26" class="cluster" data-name="clusterRiverAddress">
+
+<path fill="rgb(68, 87, 115)" stroke="rgb(68, 87, 115)" d="M2003.26,-1556.35C2003.26,-1556.35 2120.26,-1556.35 2120.26,-1556.35 2126.26,-1556.35 2132.26,-1562.35 2132.26,-1568.35 2132.26,-1568.35 2132.26,-1643.35 2132.26,-1643.35 2132.26,-1649.35 2126.26,-1655.35 2120.26,-1655.35 2120.26,-1655.35 2003.26,-1655.35 2003.26,-1655.35 1997.26,-1655.35 1991.26,-1649.35 1991.26,-1643.35 1991.26,-1643.35 1991.26,-1568.35 1991.26,-1568.35 1991.26,-1562.35 1997.26,-1556.35 2003.26,-1556.35"/>
+<text text-anchor="middle" x="2061.76" y="-1638.75" font-family="Times,serif" font-size="14.00" fill="#f0f0f0">RiverAddress  (lib)</text>
+</g>
+<g id="clust27" class="cluster" data-name="clusterLastEpochId">
+
+<path fill="rgb(68, 87, 115)" stroke="rgb(68, 87, 115)" d="M1566.01,-1800.45C1566.01,-1800.45 1685.01,-1800.45 1685.01,-1800.45 1691.01,-1800.45 1697.01,-1806.45 1697.01,-1812.45 1697.01,-1812.45 1697.01,-1886.45 1697.01,-1886.45 1697.01,-1892.45 1691.01,-1898.45 1685.01,-1898.45 1685.01,-1898.45 1566.01,-1898.45 1566.01,-1898.45 1560.01,-1898.45 1554.01,-1892.45 1554.01,-1886.45 1554.01,-1886.45 1554.01,-1812.45 1554.01,-1812.45 1554.01,-1806.45 1560.01,-1800.45 1566.01,-1800.45"/>
+<text text-anchor="middle" x="1625.51" y="-1881.85" font-family="Times,serif" font-size="14.00" fill="#f0f0f0">LastEpochId  (lib)</text>
+</g>
+<g id="clust28" class="cluster" data-name="clusterOracleMembers">
+
+<path fill="rgb(68, 87, 115)" stroke="rgb(68, 87, 115)" d="M2306.83,-837.95C2306.83,-837.95 2501.83,-837.95 2501.83,-837.95 2507.83,-837.95 2513.83,-843.95 2513.83,-849.95 2513.83,-849.95 2513.83,-1008.95 2513.83,-1008.95 2513.83,-1014.95 2507.83,-1020.95 2501.83,-1020.95 2501.83,-1020.95 2306.83,-1020.95 2306.83,-1020.95 2300.83,-1020.95 2294.83,-1014.95 2294.83,-1008.95 2294.83,-1008.95 2294.83,-849.95 2294.83,-849.95 2294.83,-843.95 2300.83,-837.95 2306.83,-837.95"/>
+<text text-anchor="middle" x="2404.33" y="-1004.35" font-family="Times,serif" font-size="14.00" fill="#f0f0f0">OracleMembers  (lib)</text>
+</g>
+<g id="clust29" class="cluster" data-name="clusterQuorum">
+
+<path fill="rgb(68, 87, 115)" stroke="rgb(68, 87, 115)" d="M1456.69,-1852.42C1456.69,-1852.42 1526.69,-1852.42 1526.69,-1852.42 1532.69,-1852.42 1538.69,-1858.42 1538.69,-1864.42 1538.69,-1864.42 1538.69,-1963.42 1538.69,-1963.42 1538.69,-1969.42 1532.69,-1975.42 1526.69,-1975.42 1526.69,-1975.42 1456.69,-1975.42 1456.69,-1975.42 1450.69,-1975.42 1444.69,-1969.42 1444.69,-1963.42 1444.69,-1963.42 1444.69,-1864.42 1444.69,-1864.42 1444.69,-1858.42 1450.69,-1852.42 1456.69,-1852.42"/>
+<text text-anchor="middle" x="1491.69" y="-1958.82" font-family="Times,serif" font-size="14.00" fill="#f0f0f0">Quorum  (lib)</text>
+</g>
+<g id="clust30" class="cluster" data-name="clusterReportsPositions">
+
+<path fill="rgb(68, 87, 115)" stroke="rgb(68, 87, 115)" d="M1620.63,-1615.22C1620.63,-1615.22 1767.63,-1615.22 1767.63,-1615.22 1773.63,-1615.22 1779.63,-1621.22 1779.63,-1627.22 1779.63,-1627.22 1779.63,-1764.22 1779.63,-1764.22 1779.63,-1770.22 1773.63,-1776.22 1767.63,-1776.22 1767.63,-1776.22 1620.63,-1776.22 1620.63,-1776.22 1614.63,-1776.22 1608.63,-1770.22 1608.63,-1764.22 1608.63,-1764.22 1608.63,-1627.22 1608.63,-1627.22 1608.63,-1621.22 1614.63,-1615.22 1620.63,-1615.22"/>
+<text text-anchor="middle" x="1694.13" y="-1759.62" font-family="Times,serif" font-size="14.00" fill="#f0f0f0">ReportsPositions  (lib)</text>
+</g>
+<g id="clust31" class="cluster" data-name="cluster_01">
+
+<polygon fill="#2e3e56" stroke="black" points="2219.74,-555.14 2219.74,-698.14 2428.74,-698.14 2428.74,-555.14 2219.74,-555.14"/>
+<text text-anchor="middle" x="2324.24" y="-681.54" font-family="Times,serif" font-size="14.00">Legend</text>
+</g>
+<!-- IWLSETHV1.initWLSETHV1 -->
+<g id="node1" class="node" pointer-events="visible" data-name="IWLSETHV1.initWLSETHV1">
+
+<ellipse fill="rgb(255, 189, 185)" stroke="rgb(255, 189, 185)" stroke-width="3" cx="2866.48" cy="-2516.78" rx="74.74" ry="18"/>
+<text text-anchor="middle" x="2866.48" y="-2512.58" font-family="Times,serif" font-size="14.00">initWLSETHV1</text>
+</g>
+<!-- IWLSETHV1.name -->
+<g id="node2" class="node" pointer-events="visible" data-name="IWLSETHV1.name">
+
+<ellipse fill="rgb(255, 189, 185)" stroke="rgb(255, 189, 185)" stroke-width="3" cx="2872.48" cy="-2712.78" rx="31.9" ry="18"/>
+<text text-anchor="middle" x="2872.48" y="-2708.58" font-family="Times,serif" font-size="14.00">name</text>
+</g>
+<!-- IWLSETHV1.symbol -->
+<g id="node3" class="node" pointer-events="visible" data-name="IWLSETHV1.symbol">
+
+<ellipse fill="rgb(255, 189, 185)" stroke="rgb(255, 189, 185)" stroke-width="3" cx="2711.48" cy="-2467.78" rx="39.45" ry="18"/>
+<text text-anchor="middle" x="2711.48" y="-2463.58" font-family="Times,serif" font-size="14.00">symbol</text>
+</g>
+<!-- IWLSETHV1.decimals -->
+<g id="node4" class="node" pointer-events="visible" data-name="IWLSETHV1.decimals">
+
+<ellipse fill="rgb(255, 189, 185)" stroke="rgb(255, 189, 185)" stroke-width="3" cx="2836.48" cy="-2467.78" rx="45.22" ry="18"/>
+<text text-anchor="middle" x="2836.48" y="-2463.58" font-family="Times,serif" font-size="14.00">decimals</text>
+</g>
+<!-- IWLSETHV1.totalSupply -->
+<g id="node5" class="node" pointer-events="visible" data-name="IWLSETHV1.totalSupply">
+
+<ellipse fill="rgb(255, 189, 185)" stroke="rgb(255, 189, 185)" stroke-width="3" cx="2797.48" cy="-2663.78" rx="55.64" ry="18"/>
+<text text-anchor="middle" x="2797.48" y="-2659.58" font-family="Times,serif" font-size="14.00">totalSupply</text>
+</g>
+<!-- IWLSETHV1.balanceOf -->
+<g id="node6" class="node" pointer-events="visible" data-name="IWLSETHV1.balanceOf">
+
+<ellipse fill="rgb(255, 189, 185)" stroke="rgb(255, 189, 185)" stroke-width="3" cx="2757.48" cy="-2614.78" rx="50.92" ry="18"/>
+<text text-anchor="middle" x="2757.48" y="-2610.58" font-family="Times,serif" font-size="14.00">balanceOf</text>
+</g>
+<!-- IWLSETHV1.sharesOf -->
+<g id="node7" class="node" pointer-events="visible" data-name="IWLSETHV1.sharesOf">
+
+<ellipse fill="rgb(255, 189, 185)" stroke="rgb(255, 189, 185)" stroke-width="3" cx="2731.48" cy="-2516.78" rx="45.22" ry="18"/>
+<text text-anchor="middle" x="2731.48" y="-2512.58" font-family="Times,serif" font-size="14.00">sharesOf</text>
+</g>
+<!-- IWLSETHV1.allowance -->
+<g id="node8" class="node" pointer-events="visible" data-name="IWLSETHV1.allowance">
+
+<ellipse fill="rgb(255, 189, 185)" stroke="rgb(255, 189, 185)" stroke-width="3" cx="2932.48" cy="-2565.78" rx="50.36" ry="18"/>
+<text text-anchor="middle" x="2932.48" y="-2561.58" font-family="Times,serif" font-size="14.00">allowance</text>
+</g>
+<!-- IWLSETHV1.transfer -->
+<g id="node9" class="node" pointer-events="visible" data-name="IWLSETHV1.transfer">
+
+<ellipse fill="rgb(255, 189, 185)" stroke="rgb(255, 189, 185)" stroke-width="3" cx="2957.48" cy="-2712.78" rx="40.55" ry="18"/>
+<text text-anchor="middle" x="2957.48" y="-2708.58" font-family="Times,serif" font-size="14.00">transfer</text>
+</g>
+<!-- IWLSETHV1.transferFrom -->
+<g id="node10" class="node" pointer-events="visible" data-name="IWLSETHV1.transferFrom">
+
+<ellipse fill="rgb(255, 189, 185)" stroke="rgb(255, 189, 185)" stroke-width="3" cx="2929.48" cy="-2663.78" rx="61.41" ry="18"/>
+<text text-anchor="middle" x="2929.48" y="-2659.58" font-family="Times,serif" font-size="14.00">transferFrom</text>
+</g>
+<!-- IWLSETHV1.approve -->
+<g id="node11" class="node" pointer-events="visible" data-name="IWLSETHV1.approve">
+
+<ellipse fill="rgb(255, 189, 185)" stroke="rgb(255, 189, 185)" stroke-width="3" cx="2938.48" cy="-2467.78" rx="42.28" ry="18"/>
+<text text-anchor="middle" x="2938.48" y="-2463.58" font-family="Times,serif" font-size="14.00">approve</text>
+</g>
+<!-- IWLSETHV1.increaseAllowance -->
+<g id="node12" class="node" pointer-events="visible" data-name="IWLSETHV1.increaseAllowance">
+
+<ellipse fill="rgb(255, 189, 185)" stroke="rgb(255, 189, 185)" stroke-width="3" cx="2784.48" cy="-2565.78" rx="84.49" ry="18"/>
+<text text-anchor="middle" x="2784.48" y="-2561.58" font-family="Times,serif" font-size="14.00">increaseAllowance</text>
+</g>
+<!-- IWLSETHV1.decreaseAllowance -->
+<g id="node13" class="node" pointer-events="visible" data-name="IWLSETHV1.decreaseAllowance">
+
+<ellipse fill="rgb(255, 189, 185)" stroke="rgb(255, 189, 185)" stroke-width="3" cx="2905.48" cy="-2614.78" rx="86.2" ry="18"/>
+<text text-anchor="middle" x="2905.48" y="-2610.58" font-family="Times,serif" font-size="14.00">decreaseAllowance</text>
+</g>
+<!-- IWLSETHV1.mint -->
+<g id="node14" class="node" pointer-events="visible" data-name="IWLSETHV1.mint">
+
+<ellipse fill="rgb(255, 189, 185)" stroke="rgb(255, 189, 185)" stroke-width="3" cx="2701.48" cy="-2705.78" rx="28.99" ry="18"/>
+<text text-anchor="middle" x="2701.48" y="-2701.58" font-family="Times,serif" font-size="14.00">mint</text>
+</g>
+<!-- IWLSETHV1.burn -->
+<g id="node15" class="node" pointer-events="visible" data-name="IWLSETHV1.burn">
+
+<ellipse fill="rgb(255, 189, 185)" stroke="rgb(255, 189, 185)" stroke-width="3" cx="2798.48" cy="-2712.78" rx="28.98" ry="18"/>
+<text text-anchor="middle" x="2798.48" y="-2708.58" font-family="Times,serif" font-size="14.00">burn</text>
+</g>
+<!-- UserDepositManagerV1._onDeposit -->
+<g id="node16" class="node" pointer-events="visible" data-name="UserDepositManagerV1._onDeposit">
+
+<ellipse fill="rgb(237, 173, 86)" stroke="rgb(237, 173, 86)" stroke-width="3" cx="2613.66" cy="-1927.81" rx="55.63" ry="18"/>
+<text text-anchor="middle" x="2613.66" y="-1923.61" font-family="Times,serif" font-size="14.00">_onDeposit</text>
+</g>
+<!-- UserDepositManagerV1._setBalanceToDeposit -->
+<g id="node17" class="node" pointer-events="visible" data-name="UserDepositManagerV1._setBalanceToDeposit">
+
+<ellipse fill="rgb(237, 173, 86)" stroke="rgb(237, 173, 86)" stroke-width="3" cx="2596.66" cy="-2047.81" rx="98.42" ry="18"/>
+<text text-anchor="middle" x="2596.66" y="-2043.61" font-family="Times,serif" font-size="14.00">_setBalanceToDeposit</text>
+</g>
+<!-- UserDepositManagerV1.deposit -->
+<g id="node18" class="node" pointer-events="visible" data-name="UserDepositManagerV1.deposit">
+
+<ellipse fill="rgb(255, 189, 185)" stroke="rgb(165, 42, 42)" stroke-width="3" cx="2367.66" cy="-2037.81" rx="38.86" ry="18"/>
+<text text-anchor="middle" x="2367.66" y="-2033.61" font-family="Times,serif" font-size="14.00">deposit</text>
+</g>
+<!-- UserDepositManagerV1._deposit -->
+<g id="node22" class="node" pointer-events="visible" data-name="UserDepositManagerV1._deposit">
+
+<ellipse fill="rgb(237, 173, 86)" stroke="rgb(237, 173, 86)" stroke-width="3" cx="2372.06" cy="-1976.56" rx="43.52" ry="18"/>
+<text text-anchor="middle" x="2372.06" y="-1972.36" font-family="Times,serif" font-size="14.00">_deposit</text>
+</g>
+<!-- UserDepositManagerV1.deposit&#45;&gt;UserDepositManagerV1._deposit -->
+<g id="edge1" class="edge" data-name="UserDepositManagerV1.deposit-&gt;UserDepositManagerV1._deposit">
+
+<path fill="none" stroke="rgb(27, 198, 166)" stroke-width="2" d="M2369.05,-2018.43C2369.27,-2015.41 2369.5,-2012.23 2369.73,-2009.02"/>
+<polygon fill="#1bc6a6" stroke="#1bc6a6" stroke-width="2" points="2373.22,-2009.27 2370.44,-1999.04 2366.24,-2008.77 2373.22,-2009.27"/>
+</g>
+<!-- UserDepositManagerV1.depositAndTransfer -->
+<g id="node19" class="node" pointer-events="visible" data-name="UserDepositManagerV1.depositAndTransfer">
+
+<ellipse fill="rgb(255, 189, 185)" stroke="rgb(165, 42, 42)" stroke-width="3" cx="2450.52" cy="-1927.94" rx="88.04" ry="18"/>
+<text text-anchor="middle" x="2450.52" y="-1923.74" font-family="Times,serif" font-size="14.00">depositAndTransfer</text>
+</g>
+<!-- UserDepositManagerV1.depositAndTransfer&#45;&gt;UserDepositManagerV1._deposit -->
+<g id="edge3" class="edge" data-name="UserDepositManagerV1.depositAndTransfer-&gt;UserDepositManagerV1._deposit">
+
+<path fill="none" stroke="rgb(27, 198, 166)" stroke-width="2" d="M2420.86,-1946.32C2416.8,-1948.84 2412.6,-1951.44 2408.44,-1954.02"/>
+<polygon fill="#1bc6a6" stroke="#1bc6a6" stroke-width="2" points="2406.89,-1950.86 2400.23,-1959.11 2410.57,-1956.81 2406.89,-1950.86"/>
+</g>
+<!-- LibSanitize._notZeroAddress -->
+<g id="node28" class="node" pointer-events="visible" data-name="LibSanitize._notZeroAddress">
+
+<ellipse fill="rgb(242, 195, 131)" stroke="rgb(242, 195, 131)" stroke-width="3" cx="2338.29" cy="-1450.53" rx="78.17" ry="18"/>
+<text text-anchor="middle" x="2338.29" y="-1446.33" font-family="Times,serif" font-size="14.00">_notZeroAddress</text>
+</g>
+<!-- UserDepositManagerV1.depositAndTransfer&#45;&gt;LibSanitize._notZeroAddress -->
+<g id="edge2" class="edge" data-name="UserDepositManagerV1.depositAndTransfer-&gt;LibSanitize._notZeroAddress">
+
+<path fill="none" stroke="rgb(255, 255, 255)" stroke-width="2" d="M2445.99,-1908.63C2428.75,-1835.3 2367.21,-1573.57 2345.74,-1482.24"/>
+<polygon fill="white" stroke="white" stroke-width="2" points="2349.21,-1481.69 2343.51,-1472.76 2342.39,-1483.29 2349.21,-1481.69"/>
+</g>
+<!-- UserDepositManagerV1.&lt;Receive Ether&gt; -->
+<g id="node20" class="node" pointer-events="visible" data-name="UserDepositManagerV1.&lt;Receive Ether&gt;">
+
+<ellipse fill="rgb(255, 189, 185)" stroke="rgb(165, 42, 42)" stroke-width="3" cx="2404.66" cy="-2097.81" rx="76.21" ry="18"/>
+<text text-anchor="middle" x="2404.66" y="-2093.61" font-family="Times,serif" font-size="14.00">&lt;Receive Ether&gt;</text>
+</g>
+<!-- UserDepositManagerV1.&lt;Receive Ether&gt;&#45;&gt;UserDepositManagerV1._deposit -->
+<g id="edge4" class="edge" data-name="UserDepositManagerV1.&lt;Receive Ether&gt;-&gt;UserDepositManagerV1._deposit">
+
+<path fill="none" stroke="rgb(27, 198, 166)" stroke-width="2" d="M2399.49,-2078.59C2394.41,-2059.71 2386.57,-2030.54 2380.57,-2008.22"/>
+<polygon fill="#1bc6a6" stroke="#1bc6a6" stroke-width="2" points="2383.96,-2007.36 2377.98,-1998.61 2377.2,-2009.17 2383.96,-2007.36"/>
+</g>
+<!-- UserDepositManagerV1.&lt;Fallback&gt; -->
+<g id="node21" class="node" pointer-events="visible" data-name="UserDepositManagerV1.&lt;Fallback&gt;">
+
+<ellipse fill="rgb(255, 189, 185)" stroke="rgb(165, 42, 42)" stroke-width="3" cx="2484.4" cy="-1995.91" rx="55.36" ry="18"/>
+<text text-anchor="middle" x="2484.4" y="-1991.71" font-family="Times,serif" font-size="14.00">&lt;Fallback&gt;</text>
+</g>
+<!-- LibErrors.InvalidCall -->
+<g id="node31" class="node" pointer-events="visible" data-name="LibErrors.InvalidCall">
+
+<ellipse fill="rgb(237, 173, 86)" stroke="rgb(237, 173, 86)" stroke-width="3" cx="2651.53" cy="-1213.13" rx="54.47" ry="18"/>
+<text text-anchor="middle" x="2651.53" y="-1208.93" font-family="Times,serif" font-size="14.00">InvalidCall</text>
+</g>
+<!-- UserDepositManagerV1.&lt;Fallback&gt;&#45;&gt;LibErrors.InvalidCall -->
+<g id="edge5" class="edge" data-name="UserDepositManagerV1.&lt;Fallback&gt;-&gt;LibErrors.InvalidCall">
+
+<path fill="none" stroke="rgb(255, 255, 255)" stroke-width="2" d="M2488.53,-1976.56C2510.82,-1872.19 2616.71,-1376.23 2644.72,-1245.03"/>
+<polygon fill="white" stroke="white" stroke-width="2" points="2648.1,-1245.97 2646.76,-1235.46 2641.25,-1244.51 2648.1,-1245.97"/>
+</g>
+<!-- UserDepositManagerV1._deposit&#45;&gt;UserDepositManagerV1._onDeposit -->
+<g id="edge9" class="edge" data-name="UserDepositManagerV1._deposit-&gt;UserDepositManagerV1._onDeposit">
+
+<path fill="none" stroke="rgb(27, 198, 166)" stroke-width="2" d="M2412.77,-1968.35C2450.96,-1960.64 2508.58,-1949.01 2552.33,-1940.18"/>
+<polygon fill="#1bc6a6" stroke="#1bc6a6" stroke-width="2" points="2552.78,-1943.66 2561.89,-1938.25 2551.39,-1936.8 2552.78,-1943.66"/>
+</g>
+<!-- UserDepositManagerV1._deposit&#45;&gt;UserDepositManagerV1._setBalanceToDeposit -->
+<g id="edge7" class="edge" data-name="UserDepositManagerV1._deposit-&gt;UserDepositManagerV1._setBalanceToDeposit">
+
+<path fill="none" stroke="rgb(27, 198, 166)" stroke-width="2" d="M2408.14,-1988.01C2441.45,-1998.57 2491.68,-2014.51 2531.93,-2027.27"/>
+<polygon fill="#1bc6a6" stroke="#1bc6a6" stroke-width="2" points="2530.86,-2030.61 2541.45,-2030.29 2532.98,-2023.93 2530.86,-2030.61"/>
+</g>
+<!-- UserDepositManagerV1.EmptyDeposit -->
+<g id="node23" class="node" pointer-events="visible" data-name="UserDepositManagerV1.EmptyDeposit">
+
+<ellipse fill="rgb(237, 173, 86)" stroke="rgb(237, 173, 86)" stroke-width="3" cx="2505.66" cy="-1867.81" rx="66.66" ry="18"/>
+<text text-anchor="middle" x="2505.66" y="-1863.61" font-family="Times,serif" font-size="14.00">EmptyDeposit</text>
+</g>
+<!-- UserDepositManagerV1._deposit&#45;&gt;UserDepositManagerV1.EmptyDeposit -->
+<g id="edge6" class="edge" data-name="UserDepositManagerV1._deposit-&gt;UserDepositManagerV1.EmptyDeposit">
+
+<path fill="none" stroke="rgb(27, 198, 166)" stroke-width="2" d="M2392.93,-1959.57C2414.48,-1942.03 2448.37,-1914.44 2473.37,-1894.09"/>
+<polygon fill="#1bc6a6" stroke="#1bc6a6" stroke-width="2" points="2475.25,-1897.07 2480.8,-1888.04 2470.83,-1891.64 2475.25,-1897.07"/>
+</g>
+<!-- BalanceToDeposit.get -->
+<g id="node37" class="node" pointer-events="visible" data-name="BalanceToDeposit.get">
+
+<ellipse fill="rgb(242, 195, 131)" stroke="rgb(242, 195, 131)" stroke-width="3" cx="2485.8" cy="-2539.2" rx="27" ry="18"/>
+<text text-anchor="middle" x="2485.8" y="-2535" font-family="Times,serif" font-size="14.00">get</text>
+</g>
+<!-- UserDepositManagerV1._deposit&#45;&gt;BalanceToDeposit.get -->
+<g id="edge8" class="edge" data-name="UserDepositManagerV1._deposit-&gt;BalanceToDeposit.get">
+
+<path fill="none" stroke="rgb(255, 255, 255)" stroke-width="2" d="M2375.97,-1995.93C2392.72,-2078.78 2458.43,-2403.84 2479.36,-2507.36"/>
+<polygon fill="white" stroke="white" stroke-width="2" points="2475.89,-2507.84 2481.3,-2516.95 2482.75,-2506.45 2475.89,-2507.84"/>
+</g>
+<!-- IUserDepositManagerV1.deposit -->
+<g id="node24" class="node" pointer-events="visible" data-name="IUserDepositManagerV1.deposit">
+
+<ellipse fill="rgb(255, 189, 185)" stroke="rgb(165, 42, 42)" stroke-width="3" cx="855.98" cy="-2389.28" rx="38.86" ry="18"/>
+<text text-anchor="middle" x="855.98" y="-2385.08" font-family="Times,serif" font-size="14.00">deposit</text>
+</g>
+<!-- IUserDepositManagerV1.depositAndTransfer -->
+<g id="node25" class="node" pointer-events="visible" data-name="IUserDepositManagerV1.depositAndTransfer">
+
+<ellipse fill="rgb(255, 189, 185)" stroke="rgb(165, 42, 42)" stroke-width="3" cx="872.98" cy="-2301.28" rx="88.04" ry="18"/>
+<text text-anchor="middle" x="872.98" y="-2297.08" font-family="Times,serif" font-size="14.00">depositAndTransfer</text>
+</g>
+<!-- IUserDepositManagerV1.&lt;Receive Ether&gt; -->
+<g id="node26" class="node" pointer-events="visible" data-name="IUserDepositManagerV1.&lt;Receive Ether&gt;">
+
+<ellipse fill="rgb(255, 189, 185)" stroke="rgb(165, 42, 42)" stroke-width="3" cx="988.98" cy="-2357.28" rx="76.21" ry="18"/>
+<text text-anchor="middle" x="988.98" y="-2353.08" font-family="Times,serif" font-size="14.00">&lt;Receive Ether&gt;</text>
+</g>
+<!-- IUserDepositManagerV1.&lt;Fallback&gt; -->
+<g id="node27" class="node" pointer-events="visible" data-name="IUserDepositManagerV1.&lt;Fallback&gt;">
+
+<ellipse fill="rgb(255, 189, 185)" stroke="rgb(165, 42, 42)" stroke-width="3" cx="935.98" cy="-2245.28" rx="55.36" ry="18"/>
+<text text-anchor="middle" x="935.98" y="-2241.08" font-family="Times,serif" font-size="14.00">&lt;Fallback&gt;</text>
+</g>
+<!-- LibErrors.InvalidZeroAddress -->
+<g id="node32" class="node" pointer-events="visible" data-name="LibErrors.InvalidZeroAddress">
+
+<ellipse fill="rgb(237, 173, 86)" stroke="rgb(237, 173, 86)" stroke-width="3" cx="2659.46" cy="-1311.78" rx="88.04" ry="18"/>
+<text text-anchor="middle" x="2659.46" y="-1307.58" font-family="Times,serif" font-size="14.00">InvalidZeroAddress</text>
+</g>
+<!-- LibSanitize._notZeroAddress&#45;&gt;LibErrors.InvalidZeroAddress -->
+<g id="edge10" class="edge" data-name="LibSanitize._notZeroAddress-&gt;LibErrors.InvalidZeroAddress">
+
+<path fill="none" stroke="rgb(255, 255, 255)" stroke-width="2" d="M2377.35,-1433.65C2434.99,-1408.75 2542.92,-1362.13 2607.28,-1334.32"/>
+<polygon fill="white" stroke="white" stroke-width="2" points="2608.58,-1337.57 2616.38,-1330.39 2605.81,-1331.15 2608.58,-1337.57"/>
+</g>
+<!-- LibSanitize._notEmptyString -->
+<g id="node29" class="node" pointer-events="visible" data-name="LibSanitize._notEmptyString">
+
+<ellipse fill="rgb(242, 195, 131)" stroke="rgb(242, 195, 131)" stroke-width="3" cx="2429.12" cy="-1402.09" rx="77.63" ry="18"/>
+<text text-anchor="middle" x="2429.12" y="-1397.89" font-family="Times,serif" font-size="14.00">_notEmptyString</text>
+</g>
+<!-- LibErrors.InvalidEmptyString -->
+<g id="node33" class="node" pointer-events="visible" data-name="LibErrors.InvalidEmptyString">
+
+<ellipse fill="rgb(237, 173, 86)" stroke="rgb(237, 173, 86)" stroke-width="3" cx="2677.03" cy="-1262.81" rx="88" ry="18"/>
+<text text-anchor="middle" x="2677.03" y="-1258.61" font-family="Times,serif" font-size="14.00">InvalidEmptyString</text>
+</g>
+<!-- LibSanitize._notEmptyString&#45;&gt;LibErrors.InvalidEmptyString -->
+<g id="edge11" class="edge" data-name="LibSanitize._notEmptyString-&gt;LibErrors.InvalidEmptyString">
+
+<path fill="none" stroke="rgb(255, 255, 255)" stroke-width="2" d="M2460.77,-1384.31C2504.64,-1359.66 2584.09,-1315.03 2633.51,-1287.26"/>
+<polygon fill="white" stroke="white" stroke-width="2" points="2635.14,-1290.36 2642.15,-1282.41 2631.71,-1284.26 2635.14,-1290.36"/>
+</g>
+<!-- LibSanitize._validFee -->
+<g id="node30" class="node" pointer-events="visible" data-name="LibSanitize._validFee">
+
+<ellipse fill="rgb(242, 195, 131)" stroke="rgb(242, 195, 131)" stroke-width="3" cx="2481.21" cy="-1469.98" rx="49.23" ry="18"/>
+<text text-anchor="middle" x="2481.21" y="-1465.78" font-family="Times,serif" font-size="14.00">_validFee</text>
+</g>
+<!-- LibErrors.InvalidFee -->
+<g id="node34" class="node" pointer-events="visible" data-name="LibErrors.InvalidFee">
+
+<ellipse fill="rgb(237, 173, 86)" stroke="rgb(237, 173, 86)" stroke-width="3" cx="2509.78" cy="-1312.63" rx="52.17" ry="18"/>
+<text text-anchor="middle" x="2509.78" y="-1308.43" font-family="Times,serif" font-size="14.00">InvalidFee</text>
+</g>
+<!-- LibSanitize._validFee&#45;&gt;LibErrors.InvalidFee -->
+<g id="edge12" class="edge" data-name="LibSanitize._validFee-&gt;LibErrors.InvalidFee">
+
+<path fill="none" stroke="rgb(255, 255, 255)" stroke-width="2" d="M2484.72,-1450.69C2489.51,-1424.26 2498.19,-1376.47 2503.97,-1344.64"/>
+<polygon fill="white" stroke="white" stroke-width="2" points="2507.36,-1345.53 2505.7,-1335.06 2500.47,-1344.28 2507.36,-1345.53"/>
+</g>
+<!-- LibErrors.Unauthorized -->
+<g id="node35" class="node" pointer-events="visible" data-name="LibErrors.Unauthorized">
+
+<ellipse fill="rgb(237, 173, 86)" stroke="rgb(237, 173, 86)" stroke-width="3" cx="2511.99" cy="-1265.27" rx="63.69" ry="18"/>
+<text text-anchor="middle" x="2511.99" y="-1261.07" font-family="Times,serif" font-size="14.00">Unauthorized</text>
+</g>
+<!-- LibErrors.InvalidArgument -->
+<g id="node36" class="node" pointer-events="visible" data-name="LibErrors.InvalidArgument">
+
+<ellipse fill="rgb(237, 173, 86)" stroke="rgb(237, 173, 86)" stroke-width="3" cx="2505.54" cy="-1210.68" rx="77.59" ry="18"/>
+<text text-anchor="middle" x="2505.54" y="-1206.48" font-family="Times,serif" font-size="14.00">InvalidArgument</text>
+</g>
+<!-- LibUnstructuredStorage.getStorageUint256 -->
+<g id="node39" class="node" pointer-events="visible" data-name="LibUnstructuredStorage.getStorageUint256">
+
+<ellipse fill="#f2c383" stroke="#f2c383" stroke-width="3" cx="2106.95" cy="-2137.33" rx="83.97" ry="18"/>
+<text text-anchor="middle" x="2106.95" y="-2133.13" font-family="Times,serif" font-size="14.00">getStorageUint256</text>
+</g>
+<!-- BalanceToDeposit.get&#45;&gt;LibUnstructuredStorage.getStorageUint256 -->
+<g id="edge13" class="edge" data-name="BalanceToDeposit.get-&gt;LibUnstructuredStorage.getStorageUint256">
+
+<path fill="none" stroke="rgb(255, 255, 255)" stroke-width="2" d="M2470.48,-2522.95C2412.6,-2461.55 2206.82,-2243.27 2133.3,-2165.28"/>
+<polygon fill="white" stroke="white" stroke-width="2" points="2136.09,-2163.14 2126.69,-2158.27 2131,-2167.94 2136.09,-2163.14"/>
+</g>
+<!-- BalanceToDeposit.set -->
+<g id="node38" class="node" pointer-events="visible" data-name="BalanceToDeposit.set">
+
+<ellipse fill="rgb(242, 195, 131)" stroke="rgb(242, 195, 131)" stroke-width="3" cx="2442.87" cy="-2491.08" rx="27" ry="18"/>
+<text text-anchor="middle" x="2442.87" y="-2486.88" font-family="Times,serif" font-size="14.00">set</text>
+</g>
+<!-- LibUnstructuredStorage.setStorageUint256 -->
+<g id="node40" class="node" pointer-events="visible" data-name="LibUnstructuredStorage.setStorageUint256">
+
+<ellipse fill="rgb(242, 195, 131)" stroke="rgb(242, 195, 131)" stroke-width="3" cx="2034.36" cy="-2187.49" rx="82.83" ry="18"/>
+<text text-anchor="middle" x="2034.36" y="-2183.29" font-family="Times,serif" font-size="14.00">setStorageUint256</text>
+</g>
+<!-- BalanceToDeposit.set&#45;&gt;LibUnstructuredStorage.setStorageUint256 -->
+<g id="edge14" class="edge" data-name="BalanceToDeposit.set-&gt;LibUnstructuredStorage.setStorageUint256">
+
+<path fill="none" stroke="rgb(255, 255, 255)" stroke-width="2" d="M2423.71,-2476.85C2359.72,-2429.28 2152.66,-2275.41 2069.46,-2213.57"/>
+<polygon fill="white" stroke="white" stroke-width="2" points="2071.8,-2210.95 2061.68,-2207.79 2067.62,-2216.57 2071.8,-2210.95"/>
+</g>
+<!-- LibUnstructuredStorage.getStorageBool -->
+<g id="node41" class="node" pointer-events="visible" data-name="LibUnstructuredStorage.getStorageBool">
+
+<ellipse fill="rgb(242, 195, 131)" stroke="rgb(242, 195, 131)" stroke-width="3" cx="1968.9" cy="-2031.98" rx="71.23" ry="18"/>
+<text text-anchor="middle" x="1968.9" y="-2027.78" font-family="Times,serif" font-size="14.00">getStorageBool</text>
+</g>
+<!-- LibUnstructuredStorage.getStorageAddress -->
+<g id="node42" class="node" pointer-events="visible" data-name="LibUnstructuredStorage.getStorageAddress">
+
+<ellipse fill="rgb(237, 173, 86)" stroke="rgb(237, 173, 86)" stroke-width="3" cx="1925.76" cy="-2137.87" rx="83.96" ry="18"/>
+<text text-anchor="middle" x="1925.76" y="-2133.67" font-family="Times,serif" font-size="14.00">getStorageAddress</text>
+</g>
+<!-- LibUnstructuredStorage.getStorageBytes32 -->
+<g id="node43" class="node" pointer-events="visible" data-name="LibUnstructuredStorage.getStorageBytes32">
+
+<ellipse fill="rgb(242, 195, 131)" stroke="rgb(242, 195, 131)" stroke-width="3" cx="2191.9" cy="-2241.98" rx="83.97" ry="18"/>
+<text text-anchor="middle" x="2191.9" y="-2237.78" font-family="Times,serif" font-size="14.00">getStorageBytes32</text>
+</g>
+<!-- LibUnstructuredStorage.setStorageBool -->
+<g id="node44" class="node" pointer-events="visible" data-name="LibUnstructuredStorage.setStorageBool">
+
+<ellipse fill="rgb(242, 195, 131)" stroke="rgb(242, 195, 131)" stroke-width="3" cx="2009.9" cy="-2241.98" rx="70.09" ry="18"/>
+<text text-anchor="middle" x="2009.9" y="-2237.78" font-family="Times,serif" font-size="14.00">setStorageBool</text>
+</g>
+<!-- LibUnstructuredStorage.setStorageAddress -->
+<g id="node45" class="node" pointer-events="visible" data-name="LibUnstructuredStorage.setStorageAddress">
+
+<ellipse fill="rgb(237, 173, 86)" stroke="rgb(237, 173, 86)" stroke-width="3" cx="2033.28" cy="-2088.06" rx="82.82" ry="18"/>
+<text text-anchor="middle" x="2033.28" y="-2083.86" font-family="Times,serif" font-size="14.00">setStorageAddress</text>
+</g>
+<!-- LibUnstructuredStorage.setStorageBytes32 -->
+<g id="node46" class="node" pointer-events="visible" data-name="LibUnstructuredStorage.setStorageBytes32">
+
+<ellipse fill="rgb(242, 195, 131)" stroke="rgb(242, 195, 131)" stroke-width="3" cx="2218.9" cy="-2045.98" rx="82.83" ry="18"/>
+<text text-anchor="middle" x="2218.9" y="-2041.78" font-family="Times,serif" font-size="14.00">setStorageBytes32</text>
+</g>
+<!-- OracleV1.onlyAdminOrMember -->
+<g id="node47" class="node" pointer-events="visible" data-name="OracleV1.onlyAdminOrMember">
+
+<polygon fill="#edad56" stroke="#1bc6a6" stroke-width="3" points="1397.66,-1064.89 1397.66,-1079.8 1335.57,-1090.34 1247.75,-1090.34 1185.65,-1079.8 1185.65,-1064.89 1247.75,-1054.34 1335.57,-1054.34 1397.66,-1064.89"/>
+<polygon fill="none" stroke="#1bc6a6" stroke-width="3" points="1401.66,-1061.51 1401.66,-1083.18 1335.9,-1094.34 1247.41,-1094.34 1181.65,-1083.18 1181.65,-1061.51 1247.41,-1050.34 1335.9,-1050.34 1401.66,-1061.51"/>
+<text text-anchor="middle" x="1291.66" y="-1068.14" font-family="Times,serif" font-size="14.00">onlyAdminOrMember</text>
+</g>
+<!-- OracleV1.onlyAdminOrMember&#45;&gt;LibErrors.Unauthorized -->
+<g id="edge16" class="edge" data-name="OracleV1.onlyAdminOrMember-&gt;LibErrors.Unauthorized">
+
+<path fill="none" stroke="rgb(255, 255, 255)" stroke-width="2" d="M1386.14,-1087.28C1622.24,-1124.61 2233.84,-1221.3 2441.67,-1254.15"/>
+<polygon fill="white" stroke="white" stroke-width="2" points="2441.06,-1257.6 2451.49,-1255.71 2442.15,-1250.69 2441.06,-1257.6"/>
+</g>
+<!-- OracleV1._getAdmin -->
+<g id="node69" class="node" pointer-events="visible" data-name="OracleV1._getAdmin">
+
+<ellipse fill="rgb(237, 173, 86)" stroke="rgb(237, 173, 86)" stroke-width="3" cx="1599.03" cy="-741.6" rx="54.48" ry="18"/>
+<text text-anchor="middle" x="1599.03" y="-737.4" font-family="Times,serif" font-size="14.00">_getAdmin</text>
+</g>
+<!-- OracleV1.onlyAdminOrMember&#45;&gt;OracleV1._getAdmin -->
+<g id="edge15" class="edge" data-name="OracleV1.onlyAdminOrMember-&gt;OracleV1._getAdmin">
+
+<path fill="none" stroke="rgb(27, 198, 166)" stroke-width="2" d="M1313.27,-1049.09C1368.4,-989.77 1514.06,-833.03 1573.36,-769.22"/>
+<polygon fill="#1bc6a6" stroke="#1bc6a6" stroke-width="2" points="1575.81,-771.73 1580.05,-762.02 1570.68,-766.96 1575.81,-771.73"/>
+</g>
+<!-- OracleV1.initOracleV1 -->
+<g id="node48" class="node" pointer-events="visible" data-name="OracleV1.initOracleV1">
+
+<ellipse fill="rgb(255, 189, 185)" stroke="rgb(255, 189, 185)" stroke-width="3" cx="1349.25" cy="-956.64" rx="61.4" ry="18"/>
+<text text-anchor="middle" x="1349.25" y="-952.44" font-family="Times,serif" font-size="14.00">initOracleV1</text>
+</g>
+<!-- OracleV1._setAdmin -->
+<g id="node70" class="node" pointer-events="visible" data-name="OracleV1._setAdmin">
+
+<ellipse fill="rgb(237, 173, 86)" stroke="rgb(237, 173, 86)" stroke-width="3" cx="1598.03" cy="-1235.6" rx="53.34" ry="18"/>
+<text text-anchor="middle" x="1598.03" y="-1231.4" font-family="Times,serif" font-size="14.00">_setAdmin</text>
+</g>
+<!-- OracleV1.initOracleV1&#45;&gt;OracleV1._setAdmin -->
+<g id="edge17" class="edge" data-name="OracleV1.initOracleV1-&gt;OracleV1._setAdmin">
+
+<path fill="none" stroke="rgb(27, 198, 166)" stroke-width="2" d="M1365.96,-975.38C1408.82,-1023.44 1522.82,-1151.26 1573.34,-1207.91"/>
+<polygon fill="#1bc6a6" stroke="#1bc6a6" stroke-width="2" points="1570.44,-1209.92 1579.7,-1215.05 1575.66,-1205.26 1570.44,-1209.92"/>
+</g>
+<!-- CLSpec.set -->
+<g id="node130" class="node" pointer-events="visible" data-name="CLSpec.set">
+
+<ellipse fill="rgb(242, 195, 131)" stroke="rgb(242, 195, 131)" stroke-width="3" cx="1733.58" cy="-80.42" rx="27" ry="18"/>
+<text text-anchor="middle" x="1733.58" y="-76.22" font-family="Times,serif" font-size="14.00">set</text>
+</g>
+<!-- OracleV1.initOracleV1&#45;&gt;CLSpec.set -->
+<g id="edge19" class="edge" data-name="OracleV1.initOracleV1-&gt;CLSpec.set">
+
+<path fill="none" stroke="rgb(255, 255, 255)" stroke-width="2" d="M1357.64,-937.53C1406.98,-825.04 1659.41,-249.52 1720.33,-110.62"/>
+<polygon fill="white" stroke="white" stroke-width="2" points="1723.44,-112.25 1724.25,-101.69 1717.03,-109.44 1723.44,-112.25"/>
+</g>
+<!-- CLSpec.CLSpecStruct -->
+<g id="node131" class="node" pointer-events="visible" data-name="CLSpec.CLSpecStruct">
+
+<ellipse fill="rgb(237, 173, 86)" stroke="rgb(237, 173, 86)" stroke-width="3" cx="1639.01" cy="-32.71" rx="65.43" ry="18"/>
+<text text-anchor="middle" x="1639.01" y="-28.51" font-family="Times,serif" font-size="14.00">CLSpecStruct</text>
+</g>
+<!-- OracleV1.initOracleV1&#45;&gt;CLSpec.CLSpecStruct -->
+<g id="edge20" class="edge" data-name="OracleV1.initOracleV1-&gt;CLSpec.CLSpecStruct">
+
+<path fill="none" stroke="rgb(255, 255, 255)" stroke-width="2" d="M1355.31,-937.35C1391.87,-820.75 1583.28,-210.42 1629.13,-64.21"/>
+<polygon fill="white" stroke="white" stroke-width="2" points="1632.43,-65.38 1632.08,-54.79 1625.75,-63.28 1632.43,-65.38"/>
+</g>
+<!-- ReportBounds.set -->
+<g id="node133" class="node" pointer-events="visible" data-name="ReportBounds.set">
+
+<ellipse fill="rgb(242, 195, 131)" stroke="rgb(242, 195, 131)" stroke-width="3" cx="915.03" cy="-467.36" rx="27" ry="18"/>
+<text text-anchor="middle" x="915.03" y="-463.16" font-family="Times,serif" font-size="14.00">set</text>
+</g>
+<!-- OracleV1.initOracleV1&#45;&gt;ReportBounds.set -->
+<g id="edge21" class="edge" data-name="OracleV1.initOracleV1-&gt;ReportBounds.set">
+
+<path fill="none" stroke="rgb(255, 255, 255)" stroke-width="2" d="M1332.76,-938.06C1266.07,-862.91 1016.2,-581.36 938.35,-493.63"/>
+<polygon fill="white" stroke="white" stroke-width="2" points="940.99,-491.34 931.74,-486.18 935.76,-495.98 940.99,-491.34"/>
+</g>
+<!-- ReportBounds.ReportBoundsStruct -->
+<g id="node134" class="node" pointer-events="visible" data-name="ReportBounds.ReportBoundsStruct">
+
+<ellipse fill="rgb(237, 173, 86)" stroke="rgb(237, 173, 86)" stroke-width="3" cx="848.42" cy="-512.6" rx="89.8" ry="18"/>
+<text text-anchor="middle" x="848.42" y="-508.4" font-family="Times,serif" font-size="14.00">ReportBoundsStruct</text>
+</g>
+<!-- OracleV1.initOracleV1&#45;&gt;ReportBounds.ReportBoundsStruct -->
+<g id="edge22" class="edge" data-name="OracleV1.initOracleV1-&gt;ReportBounds.ReportBoundsStruct">
+
+<path fill="none" stroke="rgb(255, 255, 255)" stroke-width="2" d="M1328.69,-938.41C1250.71,-869.27 972.99,-623.05 879.44,-540.1"/>
+<polygon fill="white" stroke="white" stroke-width="2" points="881.78,-537.5 871.98,-533.49 877.14,-542.74 881.78,-537.5"/>
+</g>
+<!-- RiverAddress.set -->
+<g id="node200" class="node" pointer-events="visible" data-name="RiverAddress.set">
+
+<ellipse fill="rgb(242, 195, 131)" stroke="rgb(242, 195, 131)" stroke-width="3" cx="2097.33" cy="-1582.43" rx="27" ry="18"/>
+<text text-anchor="middle" x="2097.33" y="-1578.23" font-family="Times,serif" font-size="14.00">set</text>
+</g>
+<!-- OracleV1.initOracleV1&#45;&gt;RiverAddress.set -->
+<g id="edge18" class="edge" data-name="OracleV1.initOracleV1-&gt;RiverAddress.set">
+
+<path fill="none" stroke="rgb(255, 255, 255)" stroke-width="2" d="M1370.84,-974.7C1477.69,-1064.08 1949.73,-1458.96 2069.59,-1559.22"/>
+<polygon fill="white" stroke="white" stroke-width="2" points="2067.22,-1561.8 2077.13,-1565.53 2071.71,-1556.43 2067.22,-1561.8"/>
+</g>
+<!-- Quorum.set -->
+<g id="node209" class="node" pointer-events="visible" data-name="Quorum.set">
+
+<ellipse fill="rgb(242, 195, 131)" stroke="rgb(242, 195, 131)" stroke-width="3" cx="1482.65" cy="-1925.2" rx="27" ry="18"/>
+<text text-anchor="middle" x="1482.65" y="-1921" font-family="Times,serif" font-size="14.00">set</text>
+</g>
+<!-- OracleV1.initOracleV1&#45;&gt;Quorum.set -->
+<g id="edge23" class="edge" data-name="OracleV1.initOracleV1-&gt;Quorum.set">
+
+<path fill="none" stroke="rgb(255, 255, 255)" stroke-width="2" d="M1351.92,-975.99C1368.48,-1096.21 1457.27,-1740.92 1478.22,-1893.03"/>
+<polygon fill="white" stroke="white" stroke-width="2" points="1474.73,-1893.37 1479.57,-1902.8 1481.67,-1892.42 1474.73,-1893.37"/>
+</g>
+<!-- OracleV1.initOracleV1_1 -->
+<g id="node49" class="node" pointer-events="visible" data-name="OracleV1.initOracleV1_1">
+
+<ellipse fill="rgb(255, 189, 185)" stroke="rgb(255, 189, 185)" stroke-width="3" cx="1901.03" cy="-1235.6" rx="71.21" ry="18"/>
+<text text-anchor="middle" x="1901.03" y="-1231.4" font-family="Times,serif" font-size="14.00">initOracleV1_1</text>
+</g>
+<!-- OracleV1._clearReports -->
+<g id="node66" class="node" pointer-events="visible" data-name="OracleV1._clearReports">
+
+<ellipse fill="rgb(237, 173, 86)" stroke="rgb(237, 173, 86)" stroke-width="3" cx="1490.79" cy="-1090.95" rx="64.83" ry="18"/>
+<text text-anchor="middle" x="1490.79" y="-1086.75" font-family="Times,serif" font-size="14.00">_clearReports</text>
+</g>
+<!-- OracleV1.initOracleV1_1&#45;&gt;OracleV1._clearReports -->
+<g id="edge24" class="edge" data-name="OracleV1.initOracleV1_1-&gt;OracleV1._clearReports">
+
+<path fill="none" stroke="rgb(27, 198, 166)" stroke-width="2" d="M1857.13,-1220.12C1781.63,-1193.5 1627.42,-1139.12 1545.22,-1110.14"/>
+<polygon fill="#1bc6a6" stroke="#1bc6a6" stroke-width="2" points="1546.6,-1106.92 1536,-1106.89 1544.27,-1113.52 1546.6,-1106.92"/>
+</g>
+<!-- OracleV1.getRiver -->
+<g id="node50" class="node" pointer-events="visible" data-name="OracleV1.getRiver">
+
+<ellipse fill="rgb(255, 189, 185)" stroke="rgb(255, 189, 185)" stroke-width="3" cx="1609.05" cy="-1097.35" rx="44.08" ry="18"/>
+<text text-anchor="middle" x="1609.05" y="-1093.15" font-family="Times,serif" font-size="14.00">getRiver</text>
+</g>
+<!-- RiverAddress.get -->
+<g id="node201" class="node" pointer-events="visible" data-name="RiverAddress.get">
+
+<ellipse fill="rgb(242, 195, 131)" stroke="rgb(242, 195, 131)" stroke-width="3" cx="2026.6" cy="-1605.72" rx="27" ry="18"/>
+<text text-anchor="middle" x="2026.6" y="-1601.52" font-family="Times,serif" font-size="14.00">get</text>
+</g>
+<!-- OracleV1.getRiver&#45;&gt;RiverAddress.get -->
+<g id="edge25" class="edge" data-name="OracleV1.getRiver-&gt;RiverAddress.get">
+
+<path fill="none" stroke="rgb(255, 255, 255)" stroke-width="2" d="M1624.16,-1115.74C1687.24,-1192.55 1929.8,-1487.86 2004.55,-1578.86"/>
+<polygon fill="white" stroke="white" stroke-width="2" points="2001.83,-1581.07 2010.88,-1586.58 2007.24,-1576.63 2001.83,-1581.07"/>
+</g>
+<!-- OracleV1.getMemberReportStatus -->
+<g id="node51" class="node" pointer-events="visible" data-name="OracleV1.getMemberReportStatus">
+
+<ellipse fill="rgb(255, 189, 185)" stroke="rgb(255, 189, 185)" stroke-width="3" cx="1420.38" cy="-842.96" rx="105.38" ry="18"/>
+<text text-anchor="middle" x="1420.38" y="-838.76" font-family="Times,serif" font-size="14.00">getMemberReportStatus</text>
+</g>
+<!-- OracleMembers.indexOf -->
+<g id="node204" class="node" pointer-events="visible" data-name="OracleMembers.indexOf">
+
+<ellipse fill="rgb(242, 195, 131)" stroke="rgb(242, 195, 131)" stroke-width="3" cx="2345.6" cy="-878.09" rx="42.86" ry="18"/>
+<text text-anchor="middle" x="2345.6" y="-873.89" font-family="Times,serif" font-size="14.00">indexOf</text>
+</g>
+<!-- OracleV1.getMemberReportStatus&#45;&gt;OracleMembers.indexOf -->
+<g id="edge26" class="edge" data-name="OracleV1.getMemberReportStatus-&gt;OracleMembers.indexOf">
+
+<path fill="none" stroke="rgb(255, 255, 255)" stroke-width="2" d="M1524.72,-846.92C1720.57,-854.36 2137.18,-870.18 2288.86,-875.94"/>
+<polygon fill="white" stroke="white" stroke-width="2" points="2288.29,-879.42 2298.41,-876.3 2288.55,-872.42 2288.29,-879.42"/>
+</g>
+<!-- ReportsPositions.get -->
+<g id="node211" class="node" pointer-events="visible" data-name="ReportsPositions.get">
+
+<ellipse fill="rgb(242, 195, 131)" stroke="rgb(242, 195, 131)" stroke-width="3" cx="1643.58" cy="-1671.83" rx="27" ry="18"/>
+<text text-anchor="middle" x="1643.58" y="-1667.63" font-family="Times,serif" font-size="14.00">get</text>
+</g>
+<!-- OracleV1.getMemberReportStatus&#45;&gt;ReportsPositions.get -->
+<g id="edge27" class="edge" data-name="OracleV1.getMemberReportStatus-&gt;ReportsPositions.get">
+
+<path fill="none" stroke="rgb(255, 255, 255)" stroke-width="2" d="M1425.57,-862.22C1454.77,-970.67 1598.61,-1504.85 1635.13,-1640.48"/>
+<polygon fill="white" stroke="white" stroke-width="2" points="1631.65,-1641 1637.63,-1649.75 1638.41,-1639.18 1631.65,-1641"/>
+</g>
+<!-- OracleV1.getGlobalReportStatus -->
+<g id="node52" class="node" pointer-events="visible" data-name="OracleV1.getGlobalReportStatus">
+
+<ellipse fill="#ffbdb9" stroke="#ffbdb9" stroke-width="3" cx="1226" cy="-896.58" rx="99.02" ry="18"/>
+<text text-anchor="middle" x="1226" y="-892.38" font-family="Times,serif" font-size="14.00">getGlobalReportStatus</text>
+</g>
+<!-- ReportsPositions.getRaw -->
+<g id="node212" class="node" pointer-events="visible" data-name="ReportsPositions.getRaw">
+
+<ellipse fill="#f2c383" stroke="#f2c383" stroke-width="3" cx="1662.55" cy="-1725.85" rx="40.57" ry="18"/>
+<text text-anchor="middle" x="1662.55" y="-1721.65" font-family="Times,serif" font-size="14.00">getRaw</text>
+</g>
+<!-- OracleV1.getGlobalReportStatus&#45;&gt;ReportsPositions.getRaw -->
+<g id="edge28" class="edge" data-name="OracleV1.getGlobalReportStatus-&gt;ReportsPositions.getRaw">
+
+<path fill="none" stroke="white" stroke-width="2" d="M1236.15,-915.86C1293.44,-1024.69 1576.36,-1562.11 1646.7,-1695.73"/>
+<polygon fill="white" stroke="white" stroke-width="2" points="1643.49,-1697.14 1651.24,-1704.36 1649.68,-1693.88 1643.49,-1697.14"/>
+</g>
+<!-- OracleV1.getReportVariantsCount -->
+<g id="node53" class="node" pointer-events="visible" data-name="OracleV1.getReportVariantsCount">
+
+<ellipse fill="rgb(255, 189, 185)" stroke="rgb(255, 189, 185)" stroke-width="3" cx="1660.75" cy="-867.23" rx="105.38" ry="18"/>
+<text text-anchor="middle" x="1660.75" y="-863.03" font-family="Times,serif" font-size="14.00">getReportVariantsCount</text>
+</g>
+<!-- ReportsVariants.get -->
+<g id="node167" class="node" pointer-events="visible" data-name="ReportsVariants.get">
+
+<ellipse fill="rgb(242, 195, 131)" stroke="rgb(242, 195, 131)" stroke-width="3" cx="1139.67" cy="-95.04" rx="27" ry="18"/>
+<text text-anchor="middle" x="1139.67" y="-90.84" font-family="Times,serif" font-size="14.00">get</text>
+</g>
+<!-- OracleV1.getReportVariantsCount&#45;&gt;ReportsVariants.get -->
+<g id="edge29" class="edge" data-name="OracleV1.getReportVariantsCount-&gt;ReportsVariants.get">
+
+<path fill="none" stroke="rgb(255, 255, 255)" stroke-width="2" d="M1647.86,-848.14C1577.73,-744.2 1241.94,-246.59 1158.48,-122.91"/>
+<polygon fill="white" stroke="white" stroke-width="2" points="1161.61,-121.29 1153.11,-114.96 1155.8,-125.2 1161.61,-121.29"/>
+</g>
+<!-- OracleV1.getReportVariantDetails -->
+<g id="node54" class="node" pointer-events="visible" data-name="OracleV1.getReportVariantDetails">
+
+<ellipse fill="rgb(255, 189, 185)" stroke="rgb(255, 189, 185)" stroke-width="3" cx="1524.39" cy="-1039.92" rx="105.36" ry="18"/>
+<text text-anchor="middle" x="1524.39" y="-1035.72" font-family="Times,serif" font-size="14.00">getReportVariantDetails</text>
+</g>
+<!-- OracleV1.ReportIndexOutOfBounds -->
+<g id="node71" class="node" pointer-events="visible" data-name="OracleV1.ReportIndexOutOfBounds">
+
+<ellipse fill="rgb(237, 173, 86)" stroke="rgb(237, 173, 86)" stroke-width="3" cx="1867.03" cy="-1159.6" rx="113.49" ry="18"/>
+<text text-anchor="middle" x="1867.03" y="-1155.4" font-family="Times,serif" font-size="14.00">ReportIndexOutOfBounds</text>
+</g>
+<!-- OracleV1.getReportVariantDetails&#45;&gt;OracleV1.ReportIndexOutOfBounds -->
+<g id="edge31" class="edge" data-name="OracleV1.getReportVariantDetails-&gt;OracleV1.ReportIndexOutOfBounds">
+
+<path fill="none" stroke="rgb(27, 198, 166)" stroke-width="2" d="M1573.84,-1057.2C1634.91,-1078.53 1738.8,-1114.81 1805.11,-1137.97"/>
+<polygon fill="#1bc6a6" stroke="#1bc6a6" stroke-width="2" points="1803.58,-1141.15 1814.17,-1141.14 1805.89,-1134.54 1803.58,-1141.15"/>
+</g>
+<!-- OracleV1.getReportVariantDetails&#45;&gt;ReportsVariants.get -->
+<g id="edge30" class="edge" data-name="OracleV1.getReportVariantDetails-&gt;ReportsVariants.get">
+
+<path fill="none" stroke="rgb(255, 255, 255)" stroke-width="2" d="M1520.94,-1020.79C1485.79,-902.03 1227.69,-267.07 1156.98,-123.76"/>
+<polygon fill="white" stroke="white" stroke-width="2" points="1160.29,-122.55 1152.65,-115.21 1154.05,-125.71 1160.29,-122.55"/>
+</g>
+<!-- OracleV1.getReportVariantDetails&#45;&gt;ReportsVariants.get -->
+
+<!-- OracleV1.getReportVariantDetails&#45;&gt;ReportsVariants.get --><g id="edge32" class="edge" data-name="OracleV1.getReportVariantDetails-&gt;ReportsVariants.get">
+
+<path fill="none" stroke="white" stroke-width="2" d="M1511.98,-1020.94C1451.14,-903.24 1194.79,-274.31 1146.88,-126.24" style=""/>
+<polygon fill="white" stroke="white" stroke-width="2" points="1150.34,-125.57 1144.02,-117.07 1143.65,-127.65 1150.34,-125.57"/>
+</g>
+
+<!-- OracleV1.getQuorum --><g id="edge33" class="edge" data-name="OracleV1.getReportVariantDetails-&gt;ReportsVariants.get" data-comment="OracleV1.getQuorum">
+
+<path fill="none" stroke="white" stroke-width="2" d="M1516.53,-1020.62C1468.22,-901.98 1211.65,-271.83 1152.05,-125.44" style=""/>
+<polygon fill="white" stroke="white" stroke-width="2" points="1155.36,-124.28 1148.34,-116.34 1148.87,-126.92 1155.36,-124.28"/>
+</g>
+<g id="node55" class="node" pointer-events="visible" data-name="OracleV1.getQuorum">
+
+<ellipse fill="rgb(255, 189, 185)" stroke="rgb(255, 189, 185)" stroke-width="3" cx="1770.77" cy="-946.99" rx="55.04" ry="18"/>
+<text text-anchor="middle" x="1770.77" y="-942.79" font-family="Times,serif" font-size="14.00">getQuorum</text>
+</g>
+<!-- Quorum.get -->
+<g id="node210" class="node" pointer-events="visible" data-name="Quorum.get">
+
+<ellipse fill="rgb(242, 195, 131)" stroke="rgb(242, 195, 131)" stroke-width="3" cx="1500.36" cy="-1878.1" rx="27" ry="18"/>
+<text text-anchor="middle" x="1500.36" y="-1873.9" font-family="Times,serif" font-size="14.00">get</text>
+</g>
+<!-- OracleV1.getQuorum&#45;&gt;Quorum.get -->
+<g id="edge34" class="edge" data-name="OracleV1.getQuorum-&gt;Quorum.get">
+
+<path fill="none" stroke="rgb(255, 255, 255)" stroke-width="2" d="M1765.25,-966.01C1731.4,-1082.56 1552.09,-1699.98 1509.46,-1846.77"/>
+<polygon fill="white" stroke="white" stroke-width="2" points="1506.15,-1845.63 1506.72,-1856.21 1512.87,-1847.58 1506.15,-1845.63"/>
+</g>
+<!-- OracleV1.getOracleMembers -->
+<g id="node56" class="node" pointer-events="visible" data-name="OracleV1.getOracleMembers">
+
+<ellipse fill="rgb(255, 189, 185)" stroke="rgb(255, 189, 185)" stroke-width="3" cx="1804.73" cy="-998.55" rx="85.08" ry="18"/>
+<text text-anchor="middle" x="1804.73" y="-994.35" font-family="Times,serif" font-size="14.00">getOracleMembers</text>
+</g>
+<!-- OracleMembers.get -->
+<g id="node205" class="node" pointer-events="visible" data-name="OracleMembers.get">
+
+<ellipse fill="rgb(242, 195, 131)" stroke="rgb(242, 195, 131)" stroke-width="3" cx="2404.2" cy="-970.55" rx="27" ry="18"/>
+<text text-anchor="middle" x="2404.2" y="-966.35" font-family="Times,serif" font-size="14.00">get</text>
+</g>
+<!-- OracleV1.getOracleMembers&#45;&gt;OracleMembers.get -->
+<g id="edge35" class="edge" data-name="OracleV1.getOracleMembers-&gt;OracleMembers.get">
+
+<path fill="none" stroke="rgb(255, 255, 255)" stroke-width="2" d="M1889.35,-994.59C2019.91,-988.5 2265.57,-977.03 2362.94,-972.48"/>
+<polygon fill="white" stroke="white" stroke-width="2" points="2363.08,-975.98 2372.91,-972.01 2362.75,-968.98 2363.08,-975.98"/>
+</g>
+<!-- OracleV1.isMember -->
+<g id="node57" class="node" pointer-events="visible" data-name="OracleV1.isMember">
+
+<ellipse fill="rgb(255, 189, 185)" stroke="rgb(255, 189, 185)" stroke-width="3" cx="1647.85" cy="-993.51" rx="50.39" ry="18"/>
+<text text-anchor="middle" x="1647.85" y="-989.31" font-family="Times,serif" font-size="14.00">isMember</text>
+</g>
+<!-- OracleV1.isMember&#45;&gt;OracleMembers.indexOf -->
+<g id="edge36" class="edge" data-name="OracleV1.isMember-&gt;OracleMembers.indexOf">
+
+<path fill="none" stroke="rgb(255, 255, 255)" stroke-width="2" d="M1695.26,-985.67C1820.53,-964.95 2159.74,-908.84 2291.89,-886.98"/>
+<polygon fill="white" stroke="white" stroke-width="2" points="2292.1,-890.49 2301.4,-885.4 2290.96,-883.58 2292.1,-890.49"/>
+</g>
+<!-- OracleV1.getLastReportedEpochId -->
+<g id="node58" class="node" pointer-events="visible" data-name="OracleV1.getLastReportedEpochId">
+
+<ellipse fill="rgb(255, 189, 185)" stroke="rgb(255, 189, 185)" stroke-width="3" cx="1301.52" cy="-1003.61" rx="107.65" ry="18"/>
+<text text-anchor="middle" x="1301.52" y="-999.41" font-family="Times,serif" font-size="14.00">getLastReportedEpochId</text>
+</g>
+<!-- LastEpochId.get -->
+<g id="node202" class="node" pointer-events="visible" data-name="LastEpochId.get">
+
+<ellipse fill="rgb(242, 195, 131)" stroke="rgb(242, 195, 131)" stroke-width="3" cx="1588.68" cy="-1848.64" rx="27" ry="18"/>
+<text text-anchor="middle" x="1588.68" y="-1844.44" font-family="Times,serif" font-size="14.00">get</text>
+</g>
+<!-- OracleV1.getLastReportedEpochId&#45;&gt;LastEpochId.get -->
+<g id="edge37" class="edge" data-name="OracleV1.getLastReportedEpochId-&gt;LastEpochId.get">
+
+<path fill="none" stroke="rgb(255, 255, 255)" stroke-width="2" d="M1308.06,-1022.84C1345.38,-1132.69 1531.52,-1680.43 1578.1,-1817.5"/>
+<polygon fill="white" stroke="white" stroke-width="2" points="1574.77,-1818.59 1581.3,-1826.93 1581.4,-1816.34 1574.77,-1818.59"/>
+</g>
+<!-- OracleV1.addMember -->
+<g id="node59" class="node" pointer-events="visible" data-name="OracleV1.addMember">
+
+<ellipse fill="rgb(255, 189, 185)" stroke="rgb(255, 189, 185)" stroke-width="3" cx="1596.98" cy="-817.95" rx="57.89" ry="18"/>
+<text text-anchor="middle" x="1596.98" y="-813.75" font-family="Times,serif" font-size="14.00">addMember</text>
+</g>
+<!-- OracleV1._clearReportsAndSetQuorum -->
+<g id="node64" class="node" pointer-events="visible" data-name="OracleV1._clearReportsAndSetQuorum">
+
+<ellipse fill="rgb(237, 173, 86)" stroke="rgb(237, 173, 86)" stroke-width="3" cx="1903.54" cy="-837.32" rx="125.64" ry="18"/>
+<text text-anchor="middle" x="1903.54" y="-833.12" font-family="Times,serif" font-size="14.00">_clearReportsAndSetQuorum</text>
+</g>
+<!-- OracleV1.addMember&#45;&gt;OracleV1._clearReportsAndSetQuorum -->
+<g id="edge41" class="edge" data-name="OracleV1.addMember-&gt;OracleV1._clearReportsAndSetQuorum">
+
+<path fill="none" stroke="rgb(27, 198, 166)" stroke-width="2" d="M1655,-821.61C1688.43,-823.73 1731.89,-826.47 1773.09,-829.07"/>
+<polygon fill="#1bc6a6" stroke="#1bc6a6" stroke-width="2" points="1772.86,-832.57 1783.06,-829.7 1773.3,-825.58 1772.86,-832.57"/>
+</g>
+<!-- OracleV1.AddressAlreadyInUse -->
+<g id="node72" class="node" pointer-events="visible" data-name="OracleV1.AddressAlreadyInUse">
+
+<ellipse fill="rgb(237, 173, 86)" stroke="rgb(237, 173, 86)" stroke-width="3" cx="1623.03" cy="-1159.6" rx="96.7" ry="18"/>
+<text text-anchor="middle" x="1623.03" y="-1155.4" font-family="Times,serif" font-size="14.00">AddressAlreadyInUse</text>
+</g>
+<!-- OracleV1.addMember&#45;&gt;OracleV1.AddressAlreadyInUse -->
+<g id="edge39" class="edge" data-name="OracleV1.addMember-&gt;OracleV1.AddressAlreadyInUse">
+
+<path fill="none" stroke="rgb(27, 198, 166)" stroke-width="2" d="M1598.45,-837.29C1602.75,-893.67 1615.3,-1058.2 1620.61,-1127.86"/>
+<polygon fill="#1bc6a6" stroke="#1bc6a6" stroke-width="2" points="1617.09,-1127.74 1621.34,-1137.45 1624.07,-1127.21 1617.09,-1127.74"/>
+</g>
+<!-- OracleV1.addMember&#45;&gt;OracleMembers.indexOf -->
+<g id="edge38" class="edge" data-name="OracleV1.addMember-&gt;OracleMembers.indexOf">
+
+<path fill="none" stroke="rgb(255, 255, 255)" stroke-width="2" d="M1654.48,-822.57C1794.28,-833.8 2150.67,-862.43 2289.27,-873.57"/>
+<polygon fill="white" stroke="white" stroke-width="2" points="2288.72,-877.03 2298.97,-874.35 2289.28,-870.06 2288.72,-877.03"/>
+</g>
+<!-- OracleV1.addMember&#45;&gt;Quorum.get -->
+<g id="edge40" class="edge" data-name="OracleV1.addMember-&gt;Quorum.get">
+
+<path fill="none" stroke="rgb(255, 255, 255)" stroke-width="2" d="M1595.22,-837.25C1583.6,-964.73 1517.93,-1685.33 1503.26,-1846.24"/>
+<polygon fill="white" stroke="white" stroke-width="2" points="1499.81,-1845.56 1502.39,-1855.84 1506.78,-1846.2 1499.81,-1845.56"/>
+</g>
+<!-- OracleV1.removeMember -->
+<g id="node60" class="node" pointer-events="visible" data-name="OracleV1.removeMember">
+
+<ellipse fill="rgb(255, 189, 185)" stroke="rgb(255, 189, 185)" stroke-width="3" cx="1712.56" cy="-1042.97" rx="72.92" ry="18"/>
+<text text-anchor="middle" x="1712.56" y="-1038.77" font-family="Times,serif" font-size="14.00">removeMember</text>
+</g>
+<!-- OracleV1.removeMember&#45;&gt;LibErrors.InvalidCall -->
+<g id="edge43" class="edge" data-name="OracleV1.removeMember-&gt;LibErrors.InvalidCall">
+
+<path fill="none" stroke="rgb(255, 255, 255)" stroke-width="2" d="M1773.45,-1054.01C1942.87,-1084.71 2418.55,-1170.91 2589.43,-1201.87"/>
+<polygon fill="white" stroke="white" stroke-width="2" points="2588.71,-1205.3 2599.17,-1203.64 2589.96,-1198.41 2588.71,-1205.3"/>
+</g>
+<!-- OracleV1.removeMember&#45;&gt;OracleV1._clearReportsAndSetQuorum -->
+<g id="edge46" class="edge" data-name="OracleV1.removeMember-&gt;OracleV1._clearReportsAndSetQuorum">
+
+<path fill="none" stroke="rgb(27, 198, 166)" stroke-width="2" d="M1729.85,-1024.36C1763.34,-988.29 1837.26,-908.68 1877.01,-865.88"/>
+<polygon fill="#1bc6a6" stroke="#1bc6a6" stroke-width="2" points="1879.58,-868.26 1883.82,-858.55 1874.45,-863.5 1879.58,-868.26"/>
+</g>
+<!-- OracleV1.removeMember&#45;&gt;OracleMembers.indexOf -->
+<g id="edge42" class="edge" data-name="OracleV1.removeMember-&gt;OracleMembers.indexOf">
+
+<path fill="none" stroke="rgb(255, 255, 255)" stroke-width="2" d="M1765.18,-1029.27C1885.14,-998.02 2177.63,-921.84 2295.32,-891.19"/>
+<polygon fill="white" stroke="white" stroke-width="2" points="2296.08,-894.61 2304.87,-888.7 2294.31,-887.83 2296.08,-894.61"/>
+</g>
+<!-- OracleMembers.deleteItem -->
+<g id="node206" class="node" pointer-events="visible" data-name="OracleMembers.deleteItem">
+
+<ellipse fill="rgb(242, 195, 131)" stroke="rgb(242, 195, 131)" stroke-width="3" cx="2453.96" cy="-863.88" rx="51.57" ry="18"/>
+<text text-anchor="middle" x="2453.96" y="-859.68" font-family="Times,serif" font-size="14.00">deleteItem</text>
+</g>
+<!-- OracleV1.removeMember&#45;&gt;OracleMembers.deleteItem -->
+<g id="edge44" class="edge" data-name="OracleV1.removeMember-&gt;OracleMembers.deleteItem">
+
+<path fill="none" stroke="rgb(255, 255, 255)" stroke-width="2" d="M1767.08,-1029.8C1903.6,-996.82 2259.13,-910.94 2397.6,-877.49"/>
+<polygon fill="white" stroke="white" stroke-width="2" points="2398.08,-880.98 2406.98,-875.23 2396.44,-874.17 2398.08,-880.98"/>
+</g>
+<!-- OracleV1.removeMember&#45;&gt;Quorum.get -->
+<g id="edge45" class="edge" data-name="OracleV1.removeMember-&gt;Quorum.get">
+
+<path fill="none" stroke="rgb(255, 255, 255)" stroke-width="2" d="M1707.63,-1062.39C1679.86,-1171.66 1543.09,-1709.94 1508.38,-1846.54"/>
+<polygon fill="white" stroke="white" stroke-width="2" points="1504.99,-1845.67 1505.92,-1856.23 1511.77,-1847.4 1504.99,-1845.67"/>
+</g>
+<!-- OracleV1.setMember -->
+<g id="node61" class="node" pointer-events="visible" data-name="OracleV1.setMember">
+
+<ellipse fill="rgb(255, 189, 185)" stroke="rgb(255, 189, 185)" stroke-width="3" cx="1502.14" cy="-962.41" rx="54.46" ry="18"/>
+<text text-anchor="middle" x="1502.14" y="-958.21" font-family="Times,serif" font-size="14.00">setMember</text>
+</g>
+<!-- OracleV1.setMember&#45;&gt;LibSanitize._notZeroAddress -->
+<g id="edge47" class="edge" data-name="OracleV1.setMember-&gt;LibSanitize._notZeroAddress">
+
+<path fill="none" stroke="rgb(255, 255, 255)" stroke-width="2" d="M1530.44,-978.93C1654.32,-1051.24 2149.17,-1340.12 2296.62,-1426.2"/>
+<polygon fill="white" stroke="white" stroke-width="2" points="2294.8,-1429.19 2305.2,-1431.21 2298.33,-1423.15 2294.8,-1429.19"/>
+</g>
+<!-- OracleV1.setMember&#45;&gt;LibErrors.InvalidCall -->
+<g id="edge51" class="edge" data-name="OracleV1.setMember-&gt;LibErrors.InvalidCall">
+
+<path fill="none" stroke="rgb(255, 255, 255)" stroke-width="2" d="M1549.34,-972.7C1731.53,-1012.44 2388.84,-1155.83 2591.57,-1200.05"/>
+<polygon fill="white" stroke="white" stroke-width="2" points="2590.78,-1203.46 2601.3,-1202.17 2592.28,-1196.62 2590.78,-1203.46"/>
+</g>
+<!-- OracleV1.setMember&#45;&gt;OracleV1.AddressAlreadyInUse -->
+<g id="edge49" class="edge" data-name="OracleV1.setMember-&gt;OracleV1.AddressAlreadyInUse">
+
+<path fill="none" stroke="rgb(27, 198, 166)" stroke-width="2" d="M1513.74,-981.31C1534.76,-1015.61 1579.33,-1088.31 1604.58,-1129.49"/>
+<polygon fill="#1bc6a6" stroke="#1bc6a6" stroke-width="2" points="1601.51,-1131.18 1609.72,-1137.88 1607.47,-1127.52 1601.51,-1131.18"/>
+</g>
+<!-- OracleV1.setMember&#45;&gt;OracleMembers.indexOf -->
+<g id="edge48" class="edge" data-name="OracleV1.setMember-&gt;OracleMembers.indexOf">
+
+<path fill="none" stroke="rgb(255, 255, 255)" stroke-width="2" d="M1557.51,-960.44C1711.12,-949.38 2141.22,-906.38 2292.31,-886.95"/>
+<polygon fill="white" stroke="white" stroke-width="2" points="2292.34,-890.48 2301.8,-885.71 2291.42,-883.54 2292.34,-890.48"/>
+</g>
+<!-- OracleV1.setMember&#45;&gt;OracleMembers.indexOf -->
+
+<!-- OracleMembers.set --><g id="edge50" class="edge" data-name="OracleV1.setMember-&gt;OracleMembers.indexOf" data-comment="OracleMembers.set">
+
+<path fill="none" stroke="white" stroke-width="2" d="M1552.35,-953.95C1700.07,-934.78 2132.57,-891.49 2288.62,-880.18" style=""/>
+<polygon fill="white" stroke="white" stroke-width="2" points="2288.8,-883.67 2298.53,-879.48 2288.31,-876.69 2288.8,-883.67"/>
+</g>
+<g id="node207" class="node" pointer-events="visible" data-name="OracleMembers.set">
+
+<ellipse fill="rgb(242, 195, 131)" stroke="rgb(242, 195, 131)" stroke-width="3" cx="2454.62" cy="-913.9" rx="27" ry="18"/>
+<text text-anchor="middle" x="2454.62" y="-909.7" font-family="Times,serif" font-size="14.00">set</text>
+</g>
+<!-- OracleV1.setMember&#45;&gt;OracleMembers.set -->
+<g id="edge52" class="edge" data-name="OracleV1.setMember-&gt;OracleMembers.set">
+
+<path fill="none" stroke="rgb(255, 255, 255)" stroke-width="2" d="M1557.47,-959.59C1730.9,-950.76 2261.42,-923.74 2413.49,-916"/>
+<polygon fill="white" stroke="white" stroke-width="2" points="2413.37,-919.51 2423.18,-915.5 2413.02,-912.52 2413.37,-919.51"/>
+</g>
+<!-- OracleV1.setQuorum -->
+<g id="node62" class="node" pointer-events="visible" data-name="OracleV1.setQuorum">
+
+<ellipse fill="rgb(255, 189, 185)" stroke="rgb(255, 189, 185)" stroke-width="3" cx="1833.63" cy="-902.01" rx="53.9" ry="18"/>
+<text text-anchor="middle" x="1833.63" y="-897.81" font-family="Times,serif" font-size="14.00">setQuorum</text>
+</g>
+<!-- OracleV1.setQuorum&#45;&gt;LibErrors.InvalidArgument -->
+<g id="edge54" class="edge" data-name="OracleV1.setQuorum-&gt;LibErrors.InvalidArgument">
+
+<path fill="none" stroke="rgb(255, 255, 255)" stroke-width="2" d="M1866.95,-917.32C1976.73,-967.75 2327.39,-1128.83 2456.88,-1188.32"/>
+<polygon fill="white" stroke="white" stroke-width="2" points="2455.05,-1191.33 2465.6,-1192.33 2457.97,-1184.97 2455.05,-1191.33"/>
+</g>
+<!-- OracleV1.setQuorum&#45;&gt;OracleV1._clearReportsAndSetQuorum -->
+<g id="edge55" class="edge" data-name="OracleV1.setQuorum-&gt;OracleV1._clearReportsAndSetQuorum">
+
+<path fill="none" stroke="rgb(27, 198, 166)" stroke-width="2" d="M1853.11,-883.99C1859.55,-878.03 1866.87,-871.25 1873.9,-864.74"/>
+<polygon fill="#1bc6a6" stroke="#1bc6a6" stroke-width="2" points="1876.01,-867.56 1880.97,-858.2 1871.26,-862.42 1876.01,-867.56"/>
+</g>
+<!-- OracleV1.setQuorum&#45;&gt;Quorum.get -->
+<g id="edge53" class="edge" data-name="OracleV1.setQuorum-&gt;Quorum.get">
+
+<path fill="none" stroke="rgb(255, 255, 255)" stroke-width="2" d="M1827.13,-921.07C1786.02,-1041.46 1562.49,-1696.14 1510.96,-1847.06"/>
+<polygon fill="white" stroke="white" stroke-width="2" points="1507.67,-1845.86 1507.75,-1856.46 1514.29,-1848.12 1507.67,-1845.86"/>
+</g>
+<!-- OracleV1.reportConsensusLayerData -->
+<g id="node63" class="node" pointer-events="visible" data-name="OracleV1.reportConsensusLayerData">
+
+<ellipse fill="rgb(255, 189, 185)" stroke="rgb(255, 189, 185)" stroke-width="3" cx="1789.32" cy="-1097.45" rx="116.31" ry="18"/>
+<text text-anchor="middle" x="1789.32" y="-1093.25" font-family="Times,serif" font-size="14.00">reportConsensusLayerData</text>
+</g>
+<!-- OracleV1.reportConsensusLayerData&#45;&gt;LibErrors.Unauthorized -->
+<g id="edge57" class="edge" data-name="OracleV1.reportConsensusLayerData-&gt;LibErrors.Unauthorized">
+
+<path fill="none" stroke="rgb(255, 255, 255)" stroke-width="2" d="M1857.64,-1113.31C1997.04,-1145.69 2312.55,-1218.96 2448.12,-1250.44"/>
+<polygon fill="white" stroke="white" stroke-width="2" points="2447.19,-1253.82 2457.72,-1252.67 2448.77,-1247 2447.19,-1253.82"/>
+</g>
+<!-- OracleV1._reportChecksum -->
+<g id="node65" class="node" pointer-events="visible" data-name="OracleV1._reportChecksum">
+
+<ellipse fill="rgb(237, 173, 86)" stroke="rgb(237, 173, 86)" stroke-width="3" cx="1757.03" cy="-760.6" rx="79.88" ry="18"/>
+<text text-anchor="middle" x="1757.03" y="-756.4" font-family="Times,serif" font-size="14.00">_reportChecksum</text>
+</g>
+<!-- OracleV1.reportConsensusLayerData&#45;&gt;OracleV1._reportChecksum -->
+<g id="edge70" class="edge" data-name="OracleV1.reportConsensusLayerData-&gt;OracleV1._reportChecksum">
+
+<path fill="none" stroke="rgb(27, 198, 166)" stroke-width="2" d="M1787.49,-1078.37C1782.19,-1023.03 1766.75,-862.01 1760.12,-792.81"/>
+<polygon fill="#1bc6a6" stroke="#1bc6a6" stroke-width="2" points="1763.61,-792.52 1759.17,-782.9 1756.64,-793.19 1763.61,-792.52"/>
+</g>
+<!-- OracleV1.reportConsensusLayerData&#45;&gt;OracleV1._clearReports -->
+<g id="edge65" class="edge" data-name="OracleV1.reportConsensusLayerData-&gt;OracleV1._clearReports">
+
+<path fill="none" stroke="rgb(27, 198, 166)" stroke-width="2" d="M1684.21,-1088.68C1645.95,-1087.36 1603.43,-1086.6 1568.03,-1086.63"/>
+<polygon fill="#1bc6a6" stroke="#1bc6a6" stroke-width="2" points="1568.34,-1083.13 1558.35,-1086.67 1568.36,-1090.13 1568.34,-1083.13"/>
+</g>
+<!-- OracleV1.reportConsensusLayerData&#45;&gt;OracleV1._clearReports -->
+
+<!-- OracleV1._getReportVariantIndexAndVotes --><g id="edge73" class="edge" data-name="OracleV1.reportConsensusLayerData-&gt;OracleV1._clearReports" data-comment="OracleV1._getReportVariantIndexAndVotes">
+
+<path fill="none" stroke="#1bc6a6" stroke-width="2" d="M1674.19,-1101.53C1637.64,-1101.08 1598.2,-1100.01 1565.3,-1098.51" style=""/>
+<polygon fill="#1bc6a6" stroke="#1bc6a6" stroke-width="2" points="1565.75,-1095.03 1555.59,-1098.04 1565.41,-1102.02 1565.75,-1095.03"/>
+</g>
+<g id="node67" class="node" pointer-events="visible" data-name="OracleV1._getReportVariantIndexAndVotes">
+
+<ellipse fill="rgb(237, 173, 86)" stroke="rgb(237, 173, 86)" stroke-width="3" cx="1477.97" cy="-912.22" rx="144.1" ry="18"/>
+<text text-anchor="middle" x="1477.97" y="-908.02" font-family="Times,serif" font-size="14.00">_getReportVariantIndexAndVotes</text>
+</g>
+<!-- OracleV1.reportConsensusLayerData&#45;&gt;OracleV1._getReportVariantIndexAndVotes -->
+<g id="edge71" class="edge" data-name="OracleV1.reportConsensusLayerData-&gt;OracleV1._getReportVariantIndexAndVotes">
+
+<path fill="none" stroke="rgb(27, 198, 166)" stroke-width="2" d="M1757.76,-1078.67C1701.58,-1045.25 1584.21,-975.43 1520.81,-937.71"/>
+<polygon fill="#1bc6a6" stroke="#1bc6a6" stroke-width="2" points="1522.61,-934.71 1512.23,-932.6 1519.03,-940.72 1522.61,-934.71"/>
+</g>
+<!-- OracleV1.EpochTooOld -->
+<g id="node73" class="node" pointer-events="visible" data-name="OracleV1.EpochTooOld">
+
+<ellipse fill="rgb(237, 173, 86)" stroke="rgb(237, 173, 86)" stroke-width="3" cx="1421.03" cy="-1216.6" rx="66" ry="18"/>
+<text text-anchor="middle" x="1421.03" y="-1212.4" font-family="Times,serif" font-size="14.00">EpochTooOld</text>
+</g>
+<!-- OracleV1.reportConsensusLayerData&#45;&gt;OracleV1.EpochTooOld -->
+<g id="edge59" class="edge" data-name="OracleV1.reportConsensusLayerData-&gt;OracleV1.EpochTooOld">
+
+<path fill="none" stroke="rgb(27, 198, 166)" stroke-width="2" d="M1735.77,-1114.77C1667.08,-1137 1548.43,-1175.38 1478.09,-1198.14"/>
+<polygon fill="#1bc6a6" stroke="#1bc6a6" stroke-width="2" points="1477.28,-1194.72 1468.84,-1201.13 1479.43,-1201.38 1477.28,-1194.72"/>
+</g>
+<!-- OracleV1.payable -->
+<g id="node74" class="node" pointer-events="visible" data-name="OracleV1.payable">
+
+<ellipse fill="rgb(237, 173, 86)" stroke="rgb(237, 173, 86)" stroke-width="3" cx="1358.03" cy="-1140.6" rx="41.13" ry="18"/>
+<text text-anchor="middle" x="1358.03" y="-1136.4" font-family="Times,serif" font-size="14.00">payable</text>
+</g>
+<!-- OracleV1.reportConsensusLayerData&#45;&gt;OracleV1.payable -->
+<g id="edge61" class="edge" data-name="OracleV1.reportConsensusLayerData-&gt;OracleV1.payable">
+
+<path fill="none" stroke="rgb(27, 198, 166)" stroke-width="2" d="M1688.75,-1107.51C1602.46,-1116.14 1481.41,-1128.26 1412.23,-1135.18"/>
+<polygon fill="#1bc6a6" stroke="#1bc6a6" stroke-width="2" points="1412.13,-1131.67 1402.53,-1136.15 1412.83,-1138.63 1412.13,-1131.67"/>
+</g>
+<!-- OracleV1.InvalidEpoch -->
+<g id="node75" class="node" pointer-events="visible" data-name="OracleV1.InvalidEpoch">
+
+<ellipse fill="rgb(237, 173, 86)" stroke="rgb(237, 173, 86)" stroke-width="3" cx="1741.03" cy="-1235.6" rx="63.12" ry="18"/>
+<text text-anchor="middle" x="1741.03" y="-1231.4" font-family="Times,serif" font-size="14.00">InvalidEpoch</text>
+</g>
+<!-- OracleV1.reportConsensusLayerData&#45;&gt;OracleV1.InvalidEpoch -->
+<g id="edge64" class="edge" data-name="OracleV1.reportConsensusLayerData-&gt;OracleV1.InvalidEpoch">
+
+<path fill="none" stroke="rgb(27, 198, 166)" stroke-width="2" d="M1782.61,-1116.66C1774.68,-1139.34 1761.38,-1177.38 1751.96,-1204.33"/>
+<polygon fill="#1bc6a6" stroke="#1bc6a6" stroke-width="2" points="1748.68,-1203.1 1748.69,-1213.7 1755.29,-1205.41 1748.68,-1203.1"/>
+</g>
+<!-- OracleV1.AlreadyReported -->
+<g id="node76" class="node" pointer-events="visible" data-name="OracleV1.AlreadyReported">
+
+<ellipse fill="rgb(237, 173, 86)" stroke="rgb(237, 173, 86)" stroke-width="3" cx="1432.03" cy="-779.6" rx="77.57" ry="18"/>
+<text text-anchor="middle" x="1432.03" y="-775.4" font-family="Times,serif" font-size="14.00">AlreadyReported</text>
+</g>
+<!-- OracleV1.reportConsensusLayerData&#45;&gt;OracleV1.AlreadyReported -->
+<g id="edge68" class="edge" data-name="OracleV1.reportConsensusLayerData-&gt;OracleV1.AlreadyReported">
+
+<path fill="none" stroke="rgb(27, 198, 166)" stroke-width="2" d="M1767.78,-1078.28C1706.95,-1024.17 1533.73,-870.07 1462.85,-807.01"/>
+<polygon fill="#1bc6a6" stroke="#1bc6a6" stroke-width="2" points="1465.21,-804.43 1455.42,-800.4 1460.56,-809.66 1465.21,-804.43"/>
+</g>
+<!-- IRiverV1.isValidEpoch -->
+<g id="node77" class="node" pointer-events="visible" data-name="IRiverV1.isValidEpoch">
+
+<ellipse fill="rgb(237, 173, 86)" stroke="rgb(237, 173, 86)" stroke-width="3" cx="415" cy="-732.69" rx="63.71" ry="18"/>
+<text text-anchor="middle" x="415" y="-728.49" font-family="Times,serif" font-size="14.00">isValidEpoch</text>
+</g>
+<!-- OracleV1.reportConsensusLayerData&#45;&gt;IRiverV1.isValidEpoch -->
+<g id="edge63" class="edge" data-name="OracleV1.reportConsensusLayerData-&gt;IRiverV1.isValidEpoch">
+
+<path fill="none" stroke="rgb(255, 255, 255)" stroke-width="2" d="M1727.15,-1080.95C1498.15,-1020.17 703.26,-809.2 476.08,-748.9"/>
+<polygon fill="white" stroke="white" stroke-width="2" points="476.99,-745.52 466.42,-746.34 475.19,-752.29 476.99,-745.52"/>
+</g>
+<!-- IRiverV1.setConsensusLayerData -->
+<g id="node78" class="node" pointer-events="visible" data-name="IRiverV1.setConsensusLayerData">
+
+<ellipse fill="rgb(237, 173, 86)" stroke="rgb(237, 173, 86)" stroke-width="3" cx="412.05" cy="-686.53" rx="103.65" ry="18"/>
+<text text-anchor="middle" x="412.05" y="-682.33" font-family="Times,serif" font-size="14.00">setConsensusLayerData</text>
+</g>
+<!-- OracleV1.reportConsensusLayerData&#45;&gt;IRiverV1.setConsensusLayerData -->
+<g id="edge75" class="edge" data-name="OracleV1.reportConsensusLayerData-&gt;IRiverV1.setConsensusLayerData">
+
+<path fill="none" stroke="rgb(255, 255, 255)" stroke-width="2" d="M1732.33,-1080.44C1512.15,-1014.75 717.51,-777.67 479.73,-706.73"/>
+<polygon fill="white" stroke="white" stroke-width="2" points="480.99,-703.45 470.41,-703.94 478.99,-710.16 480.99,-703.45"/>
+</g>
+<!-- OracleV1.reportConsensusLayerData&#45;&gt;ReportsVariants.get -->
+<g id="edge77" class="edge" data-name="OracleV1.reportConsensusLayerData-&gt;ReportsVariants.get">
+
+<path fill="none" stroke="rgb(255, 255, 255)" stroke-width="2" d="M1776.93,-1078.32C1696.99,-954.98 1254.61,-272.39 1158.22,-123.66"/>
+<polygon fill="white" stroke="white" stroke-width="2" points="1161.19,-121.8 1152.81,-115.31 1155.31,-125.61 1161.19,-121.8"/>
+</g>
+<!-- ReportsVariants.ReportVariantDetails -->
+<g id="node168" class="node" pointer-events="visible" data-name="ReportsVariants.ReportVariantDetails">
+
+<ellipse fill="rgb(237, 173, 86)" stroke="rgb(237, 173, 86)" stroke-width="3" cx="1179.52" cy="-26.41" rx="93.76" ry="18"/>
+<text text-anchor="middle" x="1179.52" y="-22.21" font-family="Times,serif" font-size="14.00">ReportVariantDetails</text>
+</g>
+<!-- OracleV1.reportConsensusLayerData&#45;&gt;ReportsVariants.ReportVariantDetails -->
+<g id="edge76" class="edge" data-name="OracleV1.reportConsensusLayerData-&gt;ReportsVariants.ReportVariantDetails">
+
+<path fill="none" stroke="rgb(255, 255, 255)" stroke-width="2" d="M1778.48,-1078.4C1705.6,-950.39 1287.22,-215.58 1196.76,-56.7"/>
+<polygon fill="white" stroke="white" stroke-width="2" points="1199.86,-55.07 1191.87,-48.11 1193.78,-58.53 1199.86,-55.07"/>
+</g>
+<!-- OracleV1.reportConsensusLayerData&#45;&gt;RiverAddress.get -->
+<g id="edge62" class="edge" data-name="OracleV1.reportConsensusLayerData-&gt;RiverAddress.get">
+
+<path fill="none" stroke="rgb(255, 255, 255)" stroke-width="2" d="M1798.34,-1116.75C1834.39,-1193.98 1968.43,-1481.1 2012.48,-1575.45"/>
+<polygon fill="white" stroke="white" stroke-width="2" points="2009.28,-1576.88 2016.68,-1584.46 2015.62,-1573.92 2009.28,-1576.88"/>
+</g>
+<!-- OracleV1.reportConsensusLayerData&#45;&gt;LastEpochId.get -->
+<g id="edge58" class="edge" data-name="OracleV1.reportConsensusLayerData-&gt;LastEpochId.get">
+
+<path fill="none" stroke="rgb(255, 255, 255)" stroke-width="2" d="M1781.78,-1116.55C1748.92,-1217.6 1622.56,-1690 1594.12,-1817.09"/>
+<polygon fill="white" stroke="white" stroke-width="2" points="1590.75,-1816.1 1592.05,-1826.61 1597.59,-1817.58 1590.75,-1816.1"/>
+</g>
+<!-- OracleV1.reportConsensusLayerData&#45;&gt;LastEpochId.get -->
+
+<!-- LastEpochId.set --><g id="edge60" class="edge" data-name="OracleV1.reportConsensusLayerData-&gt;LastEpochId.get" data-comment="LastEpochId.set">
+
+<path fill="none" stroke="white" stroke-width="2" d="M1786.58,-1116.61C1765.44,-1217.92 1639.24,-1691.22 1600.02,-1817.57" style=""/>
+<polygon fill="white" stroke="white" stroke-width="2" points="1596.69,-1816.49 1597,-1827.08 1603.36,-1818.61 1596.69,-1816.49"/>
+</g>
+<g id="node203" class="node" pointer-events="visible" data-name="LastEpochId.set">
+
+<ellipse fill="rgb(242, 195, 131)" stroke="rgb(242, 195, 131)" stroke-width="3" cx="1661.57" cy="-1826.25" rx="27" ry="18"/>
+<text text-anchor="middle" x="1661.57" y="-1822.05" font-family="Times,serif" font-size="14.00">set</text>
+</g>
+<!-- OracleV1.reportConsensusLayerData&#45;&gt;LastEpochId.set -->
+<g id="edge66" class="edge" data-name="OracleV1.reportConsensusLayerData-&gt;LastEpochId.set">
+
+<path fill="none" stroke="rgb(255, 255, 255)" stroke-width="2" d="M1783.48,-1116.9C1760.32,-1216.54 1680.69,-1669.69 1664.15,-1794.41"/>
+<polygon fill="white" stroke="white" stroke-width="2" points="1660.72,-1793.65 1662.94,-1804.01 1667.66,-1794.52 1660.72,-1793.65"/>
+</g>
+<!-- OracleV1.reportConsensusLayerData&#45;&gt;LastEpochId.set -->
+
+<!-- OracleV1.reportConsensusLayerData&#45;&gt;OracleMembers.indexOf --><g id="edge74" class="edge" data-name="OracleV1.reportConsensusLayerData-&gt;LastEpochId.set" data-comment="OracleV1.reportConsensusLayerData-&gt;OracleMembers.indexOf">
+
+<path fill="none" stroke="white" stroke-width="2" d="M1788.34,-1116.6C1776.71,-1215.72 1697.19,-1670.59 1670.1,-1794.83" style=""/>
+<polygon fill="white" stroke="white" stroke-width="2" points="1666.72,-1793.89 1667.95,-1804.41 1673.55,-1795.43 1666.72,-1793.89"/>
+</g>
+<g id="edge56" class="edge" data-name="OracleV1.reportConsensusLayerData-&gt;OracleMembers.indexOf">
+
+<path fill="none" stroke="rgb(255, 255, 255)" stroke-width="2" d="M1834.85,-1079.5C1939.57,-1038.2 2196.56,-936.86 2300.69,-895.8"/>
+<polygon fill="white" stroke="white" stroke-width="2" points="2301.78,-899.14 2309.8,-892.21 2299.21,-892.62 2301.78,-899.14"/>
+</g>
+<!-- OracleV1.reportConsensusLayerData&#45;&gt;Quorum.get -->
+<g id="edge72" class="edge" data-name="OracleV1.reportConsensusLayerData-&gt;Quorum.get">
+
+<path fill="none" stroke="rgb(255, 255, 255)" stroke-width="2" d="M1782.18,-1116.74C1743.53,-1221.16 1559.4,-1718.61 1511.68,-1847.53"/>
+<polygon fill="white" stroke="white" stroke-width="2" points="1508.49,-1846.05 1508.3,-1856.64 1515.06,-1848.48 1508.49,-1846.05"/>
+</g>
+<!-- OracleV1.reportConsensusLayerData&#45;&gt;ReportsPositions.get -->
+<g id="edge67" class="edge" data-name="OracleV1.reportConsensusLayerData-&gt;ReportsPositions.get">
+
+<path fill="none" stroke="rgb(255, 255, 255)" stroke-width="2" d="M1784.39,-1116.89C1763,-1201.18 1678.16,-1535.53 1651.58,-1640.28"/>
+<polygon fill="white" stroke="white" stroke-width="2" points="1648.24,-1639.2 1649.18,-1649.76 1655.03,-1640.92 1648.24,-1639.2"/>
+</g>
+<!-- ReportsPositions.register -->
+<g id="node213" class="node" pointer-events="visible" data-name="ReportsPositions.register">
+
+<ellipse fill="rgb(242, 195, 131)" stroke="rgb(242, 195, 131)" stroke-width="3" cx="1728.93" cy="-1641.13" rx="39.99" ry="18"/>
+<text text-anchor="middle" x="1728.93" y="-1636.93" font-family="Times,serif" font-size="14.00">register</text>
+</g>
+<!-- OracleV1.reportConsensusLayerData&#45;&gt;ReportsPositions.register -->
+<g id="edge69" class="edge" data-name="OracleV1.reportConsensusLayerData-&gt;ReportsPositions.register">
+
+<path fill="none" stroke="rgb(255, 255, 255)" stroke-width="2" d="M1787.17,-1116.8C1778.21,-1197.46 1743.77,-1507.49 1732.51,-1608.85"/>
+<polygon fill="white" stroke="white" stroke-width="2" points="1729.04,-1608.39 1731.42,-1618.72 1736,-1609.16 1729.04,-1608.39"/>
+</g>
+<!-- OracleV1._clearReportsAndSetQuorum&#45;&gt;LibErrors.InvalidArgument -->
+<g id="edge79" class="edge" data-name="OracleV1._clearReportsAndSetQuorum-&gt;LibErrors.InvalidArgument">
+
+<path fill="none" stroke="rgb(255, 255, 255)" stroke-width="2" d="M1933.8,-856.09C2033.73,-918.06 2353.16,-1116.17 2465.78,-1186.01"/>
+<polygon fill="white" stroke="white" stroke-width="2" points="2463.71,-1188.85 2474.06,-1191.15 2467.4,-1182.91 2463.71,-1188.85"/>
+</g>
+<!-- OracleV1._clearReportsAndSetQuorum&#45;&gt;OracleV1._clearReports -->
+<g id="edge80" class="edge" data-name="OracleV1._clearReportsAndSetQuorum-&gt;OracleV1._clearReports">
+
+<path fill="none" stroke="rgb(27, 198, 166)" stroke-width="2" d="M1872.85,-856.17C1799.14,-901.47 1612.18,-1016.35 1530.26,-1066.69"/>
+<polygon fill="#1bc6a6" stroke="#1bc6a6" stroke-width="2" points="1528.46,-1063.69 1521.77,-1071.91 1532.13,-1069.66 1528.46,-1063.69"/>
+</g>
+<!-- OracleV1._clearReportsAndSetQuorum&#45;&gt;OracleMembers.get -->
+<g id="edge78" class="edge" data-name="OracleV1._clearReportsAndSetQuorum-&gt;OracleMembers.get">
+
+<path fill="none" stroke="rgb(255, 255, 255)" stroke-width="2" d="M1966.95,-854.19C2072.08,-882.17 2279.41,-937.34 2365.41,-960.23"/>
+<polygon fill="white" stroke="white" stroke-width="2" points="2364.41,-963.58 2374.98,-962.77 2366.21,-956.82 2364.41,-963.58"/>
+</g>
+<!-- OracleV1._clearReportsAndSetQuorum&#45;&gt;Quorum.set -->
+<g id="edge81" class="edge" data-name="OracleV1._clearReportsAndSetQuorum-&gt;Quorum.set">
+
+<path fill="none" stroke="rgb(255, 255, 255)" stroke-width="2" d="M1896.05,-856.66C1845.69,-986.83 1556.33,-1734.75 1494.34,-1894.98"/>
+<polygon fill="white" stroke="white" stroke-width="2" points="1491.25,-1893.27 1490.91,-1903.86 1497.78,-1895.79 1491.25,-1893.27"/>
+</g>
+<!-- ReportsVariants.clear -->
+<g id="node169" class="node" pointer-events="visible" data-name="ReportsVariants.clear">
+
+<ellipse fill="rgb(242, 195, 131)" stroke="rgb(242, 195, 131)" stroke-width="3" cx="1039.71" cy="-49.54" rx="29.59" ry="18"/>
+<text text-anchor="middle" x="1039.71" y="-45.34" font-family="Times,serif" font-size="14.00">clear</text>
+</g>
+<!-- OracleV1._clearReports&#45;&gt;ReportsVariants.clear -->
+<g id="edge82" class="edge" data-name="OracleV1._clearReports-&gt;ReportsVariants.clear">
+
+<path fill="none" stroke="rgb(255, 255, 255)" stroke-width="2" d="M1482.58,-1071.98C1428.22,-946.5 1120.46,-235.96 1052.85,-79.86"/>
+<polygon fill="white" stroke="white" stroke-width="2" points="1056.11,-78.6 1048.93,-70.81 1049.69,-81.38 1056.11,-78.6"/>
+</g>
+<!-- ReportsPositions.clear -->
+<g id="node214" class="node" pointer-events="visible" data-name="ReportsPositions.clear">
+
+<ellipse fill="rgb(242, 195, 131)" stroke="rgb(242, 195, 131)" stroke-width="3" cx="1741.9" cy="-1688.12" rx="29.59" ry="18"/>
+<text text-anchor="middle" x="1741.9" y="-1683.92" font-family="Times,serif" font-size="14.00">clear</text>
+</g>
+<!-- OracleV1._clearReports&#45;&gt;ReportsPositions.clear -->
+<g id="edge83" class="edge" data-name="OracleV1._clearReports-&gt;ReportsPositions.clear">
+
+<path fill="none" stroke="rgb(255, 255, 255)" stroke-width="2" d="M1498.86,-1110.14C1535.24,-1196.66 1684.17,-1550.82 1729.05,-1657.54"/>
+<polygon fill="white" stroke="white" stroke-width="2" points="1725.71,-1658.64 1732.82,-1666.51 1732.17,-1655.93 1725.71,-1658.64"/>
+</g>
+<!-- OracleV1._getReportVariantIndexAndVotes&#45;&gt;ReportsVariants.get -->
+<g id="edge84" class="edge" data-name="OracleV1._getReportVariantIndexAndVotes-&gt;ReportsVariants.get">
+
+<path fill="none" stroke="rgb(255, 255, 255)" stroke-width="2" d="M1474.59,-892.74C1442.35,-783.99 1223.08,-253.27 1157.52,-123.61"/>
+<polygon fill="white" stroke="white" stroke-width="2" points="1160.78,-122.29 1153.06,-115.03 1154.56,-125.52 1160.78,-122.29"/>
+</g>
+<!-- OracleV1._getReportVariantIndexAndVotes&#45;&gt;ReportsVariants.get -->
+
+<!-- OracleV1._getReportVariantIndexAndVotes&#45;&gt;ReportsVariants.get --><g id="edge85" class="edge" data-name="OracleV1._getReportVariantIndexAndVotes-&gt;ReportsVariants.get">
+
+<path fill="none" stroke="white" stroke-width="2" d="M1464.95,-892.99C1408.03,-785.57 1190.55,-260.9 1146.78,-126.44" style=""/>
+<polygon fill="white" stroke="white" stroke-width="2" points="1150.22,-125.73 1143.9,-117.23 1143.54,-127.81 1150.22,-125.73"/>
+</g>
+
+<!-- OracleV1._river --><g id="edge86" class="edge" data-name="OracleV1._getReportVariantIndexAndVotes-&gt;ReportsVariants.get" data-comment="OracleV1._river">
+
+<path fill="none" stroke="white" stroke-width="2" d="M1469.95,-892.83C1425.26,-784.88 1207.22,-258.19 1152.27,-125.46" style=""/>
+<polygon fill="white" stroke="white" stroke-width="2" points="1155.55,-124.24 1148.49,-116.34 1149.08,-126.91 1155.55,-124.24"/>
+</g>
+<g id="node68" class="node" pointer-events="visible" data-name="OracleV1._river">
+
+<ellipse fill="rgb(242, 195, 131)" stroke="rgb(242, 195, 131)" stroke-width="3" cx="1671.16" cy="-933.26" rx="34.19" ry="18"/>
+<text text-anchor="middle" x="1671.16" y="-929.06" font-family="Times,serif" font-size="14.00">_river</text>
+</g>
+<!-- OracleV1._river&#45;&gt;OracleV1.payable -->
+<g id="edge87" class="edge" data-name="OracleV1._river-&gt;OracleV1.payable">
+
+<path fill="none" stroke="rgb(27, 198, 166)" stroke-width="2" d="M1648.64,-948.17C1594.67,-983.91 1457.61,-1074.66 1392.89,-1117.52"/>
+<polygon fill="#1bc6a6" stroke="#1bc6a6" stroke-width="2" points="1390.98,-1114.59 1384.57,-1123.02 1394.84,-1120.42 1390.98,-1114.59"/>
+</g>
+<!-- OracleV1._river&#45;&gt;RiverAddress.get -->
+<g id="edge88" class="edge" data-name="OracleV1._river-&gt;RiverAddress.get">
+
+<path fill="none" stroke="rgb(255, 255, 255)" stroke-width="2" d="M1681.04,-951.95C1730.37,-1045.27 1950.09,-1460.96 2010.94,-1576.08"/>
+<polygon fill="white" stroke="white" stroke-width="2" points="2007.76,-1577.55 2015.53,-1584.76 2013.95,-1574.28 2007.76,-1577.55"/>
+</g>
+<!-- IRiverV1.initRiverV1 -->
+<g id="node79" class="node" pointer-events="visible" data-name="IRiverV1.initRiverV1">
+
+<ellipse fill="rgb(255, 189, 185)" stroke="rgb(255, 189, 185)" stroke-width="3" cx="195.73" cy="-385.78" rx="57.34" ry="18"/>
+<text text-anchor="middle" x="195.73" y="-381.58" font-family="Times,serif" font-size="14.00">initRiverV1</text>
+</g>
+<!-- IRiverV1.initRiverV1_1 -->
+<g id="node80" class="node" pointer-events="visible" data-name="IRiverV1.initRiverV1_1">
+
+<ellipse fill="rgb(255, 189, 185)" stroke="rgb(255, 189, 185)" stroke-width="3" cx="335.73" cy="-385.78" rx="66.66" ry="18"/>
+<text text-anchor="middle" x="335.73" y="-381.58" font-family="Times,serif" font-size="14.00">initRiverV1_1</text>
+</g>
+<!-- IRiverV1.initRiverV1_2 -->
+<g id="node81" class="node" pointer-events="visible" data-name="IRiverV1.initRiverV1_2">
+
+<ellipse fill="rgb(255, 189, 185)" stroke="rgb(255, 189, 185)" stroke-width="3" cx="385.73" cy="-885.78" rx="66.66" ry="18"/>
+<text text-anchor="middle" x="385.73" y="-881.58" font-family="Times,serif" font-size="14.00">initRiverV1_2</text>
+</g>
+<!-- IRiverV1.getGlobalFee -->
+<g id="node82" class="node" pointer-events="visible" data-name="IRiverV1.getGlobalFee">
+
+<ellipse fill="rgb(255, 189, 185)" stroke="rgb(255, 189, 185)" stroke-width="3" cx="591.73" cy="-505.78" rx="63.12" ry="18"/>
+<text text-anchor="middle" x="591.73" y="-501.58" font-family="Times,serif" font-size="14.00">getGlobalFee</text>
+</g>
+<!-- IRiverV1.getAllowlist -->
+<g id="node83" class="node" pointer-events="visible" data-name="IRiverV1.getAllowlist">
+
+<ellipse fill="rgb(255, 189, 185)" stroke="rgb(255, 189, 185)" stroke-width="3" cx="237.73" cy="-935.78" rx="58.57" ry="18"/>
+<text text-anchor="middle" x="237.73" y="-931.58" font-family="Times,serif" font-size="14.00">getAllowlist</text>
+</g>
+<!-- IRiverV1.getCollector -->
+<g id="node84" class="node" pointer-events="visible" data-name="IRiverV1.getCollector">
+
+<ellipse fill="rgb(255, 189, 185)" stroke="rgb(255, 189, 185)" stroke-width="3" cx="597.73" cy="-685.78" rx="58.54" ry="18"/>
+<text text-anchor="middle" x="597.73" y="-681.58" font-family="Times,serif" font-size="14.00">getCollector</text>
+</g>
+<!-- IRiverV1.getELFeeRecipient -->
+<g id="node85" class="node" pointer-events="visible" data-name="IRiverV1.getELFeeRecipient">
+
+<ellipse fill="rgb(255, 189, 185)" stroke="rgb(255, 189, 185)" stroke-width="3" cx="163.73" cy="-565.78" rx="85.66" ry="18"/>
+<text text-anchor="middle" x="163.73" y="-561.58" font-family="Times,serif" font-size="14.00">getELFeeRecipient</text>
+</g>
+<!-- IRiverV1.getCoverageFund -->
+<g id="node86" class="node" pointer-events="visible" data-name="IRiverV1.getCoverageFund">
+
+<ellipse fill="rgb(255, 189, 185)" stroke="rgb(255, 189, 185)" stroke-width="3" cx="547.73" cy="-845.78" rx="79.88" ry="18"/>
+<text text-anchor="middle" x="547.73" y="-841.58" font-family="Times,serif" font-size="14.00">getCoverageFund</text>
+</g>
+<!-- IRiverV1.getRedeemManager -->
+<g id="node87" class="node" pointer-events="visible" data-name="IRiverV1.getRedeemManager">
+
+<ellipse fill="rgb(255, 189, 185)" stroke="rgb(255, 189, 185)" stroke-width="3" cx="357.73" cy="-445.78" rx="88.58" ry="18"/>
+<text text-anchor="middle" x="357.73" y="-441.58" font-family="Times,serif" font-size="14.00">getRedeemManager</text>
+</g>
+<!-- IRiverV1.getOperatorsRegistry -->
+<g id="node88" class="node" pointer-events="visible" data-name="IRiverV1.getOperatorsRegistry">
+
+<ellipse fill="rgb(255, 189, 185)" stroke="rgb(255, 189, 185)" stroke-width="3" cx="191.73" cy="-705.78" rx="93.77" ry="18"/>
+<text text-anchor="middle" x="191.73" y="-701.58" font-family="Times,serif" font-size="14.00">getOperatorsRegistry</text>
+</g>
+<!-- IRiverV1.getMetadataURI -->
+<g id="node89" class="node" pointer-events="visible" data-name="IRiverV1.getMetadataURI">
+
+<ellipse fill="rgb(255, 189, 185)" stroke="rgb(255, 189, 185)" stroke-width="3" cx="143.73" cy="-445.78" rx="75.28" ry="18"/>
+<text text-anchor="middle" x="143.73" y="-441.58" font-family="Times,serif" font-size="14.00">getMetadataURI</text>
+</g>
+<!-- IRiverV1.getDailyCommittableLimits -->
+<g id="node90" class="node" pointer-events="visible" data-name="IRiverV1.getDailyCommittableLimits">
+
+<ellipse fill="rgb(255, 189, 185)" stroke="rgb(255, 189, 185)" stroke-width="3" cx="388.73" cy="-565.78" rx="119.86" ry="18"/>
+<text text-anchor="middle" x="388.73" y="-561.58" font-family="Times,serif" font-size="14.00">getDailyCommittableLimits</text>
+</g>
+<!-- IRiverV1.resolveRedeemRequests -->
+<g id="node91" class="node" pointer-events="visible" data-name="IRiverV1.resolveRedeemRequests">
+
+<ellipse fill="rgb(255, 189, 185)" stroke="rgb(255, 189, 185)" stroke-width="3" cx="513.73" cy="-785.78" rx="105.36" ry="18"/>
+<text text-anchor="middle" x="513.73" y="-781.58" font-family="Times,serif" font-size="14.00">resolveRedeemRequests</text>
+</g>
+<!-- IRiverV1.setDailyCommittableLimits -->
+<g id="node92" class="node" pointer-events="visible" data-name="IRiverV1.setDailyCommittableLimits">
+
+<ellipse fill="rgb(255, 189, 185)" stroke="rgb(255, 189, 185)" stroke-width="3" cx="387.73" cy="-505.78" rx="118.72" ry="18"/>
+<text text-anchor="middle" x="387.73" y="-501.58" font-family="Times,serif" font-size="14.00">setDailyCommittableLimits</text>
+</g>
+<!-- IRiverV1.getBalanceToRedeem -->
+<g id="node93" class="node" pointer-events="visible" data-name="IRiverV1.getBalanceToRedeem">
+
+<ellipse fill="rgb(255, 189, 185)" stroke="rgb(255, 189, 185)" stroke-width="3" cx="244.73" cy="-765.78" rx="96.1" ry="18"/>
+<text text-anchor="middle" x="244.73" y="-761.58" font-family="Times,serif" font-size="14.00">getBalanceToRedeem</text>
+</g>
+<!-- IRiverV1.requestRedeem -->
+<g id="node94" class="node" pointer-events="visible" data-name="IRiverV1.requestRedeem">
+
+<ellipse fill="rgb(255, 189, 185)" stroke="rgb(255, 189, 185)" stroke-width="3" cx="488.73" cy="-385.78" rx="70.63" ry="18"/>
+<text text-anchor="middle" x="488.73" y="-381.58" font-family="Times,serif" font-size="14.00">requestRedeem</text>
+</g>
+<!-- IRiverV1.claimRedeemRequests -->
+<g id="node95" class="node" pointer-events="visible" data-name="IRiverV1.claimRedeemRequests">
+
+<ellipse fill="rgb(255, 189, 185)" stroke="rgb(255, 189, 185)" stroke-width="3" cx="547.73" cy="-625.78" rx="98.99" ry="18"/>
+<text text-anchor="middle" x="547.73" y="-621.58" font-family="Times,serif" font-size="14.00">claimRedeemRequests</text>
+</g>
+<!-- IRiverV1.setGlobalFee -->
+<g id="node96" class="node" pointer-events="visible" data-name="IRiverV1.setGlobalFee">
+
+<ellipse fill="rgb(255, 189, 185)" stroke="rgb(255, 189, 185)" stroke-width="3" cx="590.73" cy="-905.78" rx="61.98" ry="18"/>
+<text text-anchor="middle" x="590.73" y="-901.58" font-family="Times,serif" font-size="14.00">setGlobalFee</text>
+</g>
+<!-- IRiverV1.setAllowlist -->
+<g id="node97" class="node" pointer-events="visible" data-name="IRiverV1.setAllowlist">
+
+<ellipse fill="rgb(255, 189, 185)" stroke="rgb(255, 189, 185)" stroke-width="3" cx="65.73" cy="-385.78" rx="57.93" ry="18"/>
+<text text-anchor="middle" x="65.73" y="-381.58" font-family="Times,serif" font-size="14.00">setAllowlist</text>
+</g>
+<!-- IRiverV1.setCollector -->
+<g id="node98" class="node" pointer-events="visible" data-name="IRiverV1.setCollector">
+
+<ellipse fill="rgb(255, 189, 185)" stroke="rgb(255, 189, 185)" stroke-width="3" cx="75.73" cy="-815.78" rx="57.9" ry="18"/>
+<text text-anchor="middle" x="75.73" y="-811.58" font-family="Times,serif" font-size="14.00">setCollector</text>
+</g>
+<!-- IRiverV1.setELFeeRecipient -->
+<g id="node99" class="node" pointer-events="visible" data-name="IRiverV1.setELFeeRecipient">
+
+<ellipse fill="rgb(255, 189, 185)" stroke="rgb(255, 189, 185)" stroke-width="3" cx="162.73" cy="-505.78" rx="84.52" ry="18"/>
+<text text-anchor="middle" x="162.73" y="-501.58" font-family="Times,serif" font-size="14.00">setELFeeRecipient</text>
+</g>
+<!-- IRiverV1.setCoverageFund -->
+<g id="node100" class="node" pointer-events="visible" data-name="IRiverV1.setCoverageFund">
+
+<ellipse fill="rgb(255, 189, 185)" stroke="rgb(255, 189, 185)" stroke-width="3" cx="546.73" cy="-445.78" rx="78.74" ry="18"/>
+<text text-anchor="middle" x="546.73" y="-441.58" font-family="Times,serif" font-size="14.00">setCoverageFund</text>
+</g>
+<!-- IRiverV1.setMetadataURI -->
+<g id="node101" class="node" pointer-events="visible" data-name="IRiverV1.setMetadataURI">
+
+<ellipse fill="rgb(255, 189, 185)" stroke="rgb(255, 189, 185)" stroke-width="3" cx="112.73" cy="-875.78" rx="74.14" ry="18"/>
+<text text-anchor="middle" x="112.73" y="-871.58" font-family="Times,serif" font-size="14.00">setMetadataURI</text>
+</g>
+<!-- IRiverV1.sendELFees -->
+<g id="node102" class="node" pointer-events="visible" data-name="IRiverV1.sendELFees">
+
+<ellipse fill="rgb(255, 189, 185)" stroke="rgb(165, 42, 42)" stroke-width="3" cx="96.73" cy="-935.78" rx="58.47" ry="18"/>
+<text text-anchor="middle" x="96.73" y="-931.58" font-family="Times,serif" font-size="14.00">sendELFees</text>
+</g>
+<!-- IRiverV1.sendCLFunds -->
+<g id="node103" class="node" pointer-events="visible" data-name="IRiverV1.sendCLFunds">
+
+<ellipse fill="rgb(255, 189, 185)" stroke="rgb(165, 42, 42)" stroke-width="3" cx="592.73" cy="-565.78" rx="64.88" ry="18"/>
+<text text-anchor="middle" x="592.73" y="-561.58" font-family="Times,serif" font-size="14.00">sendCLFunds</text>
+</g>
+<!-- IRiverV1.sendCoverageFunds -->
+<g id="node104" class="node" pointer-events="visible" data-name="IRiverV1.sendCoverageFunds">
+
+<ellipse fill="rgb(255, 189, 185)" stroke="rgb(165, 42, 42)" stroke-width="3" cx="297.73" cy="-825.78" rx="89.21" ry="18"/>
+<text text-anchor="middle" x="297.73" y="-821.58" font-family="Times,serif" font-size="14.00">sendCoverageFunds</text>
+</g>
+<!-- IRiverV1.sendRedeemManagerExceedingFunds -->
+<g id="node105" class="node" pointer-events="visible" data-name="IRiverV1.sendRedeemManagerExceedingFunds">
+
+<ellipse fill="rgb(255, 189, 185)" stroke="rgb(165, 42, 42)" stroke-width="3" cx="267.73" cy="-625.78" rx="159.13" ry="18"/>
+<text text-anchor="middle" x="267.73" y="-621.58" font-family="Times,serif" font-size="14.00">sendRedeemManagerExceedingFunds</text>
+</g>
+<!-- DailyCommittableLimits.get -->
+<g id="node106" class="node" pointer-events="visible" data-name="DailyCommittableLimits.get">
+
+<ellipse fill="rgb(242, 195, 131)" stroke="rgb(242, 195, 131)" stroke-width="3" cx="2173.48" cy="-2578.28" rx="27" ry="18"/>
+<text text-anchor="middle" x="2173.48" y="-2574.08" font-family="Times,serif" font-size="14.00">get</text>
+</g>
+<!-- DailyCommittableLimits.set -->
+<g id="node107" class="node" pointer-events="visible" data-name="DailyCommittableLimits.set">
+
+<ellipse fill="rgb(242, 195, 131)" stroke="rgb(242, 195, 131)" stroke-width="3" cx="2233.48" cy="-2628.28" rx="27" ry="18"/>
+<text text-anchor="middle" x="2233.48" y="-2624.08" font-family="Times,serif" font-size="14.00">set</text>
+</g>
+<!-- IConsensusLayerDepositManagerV1.getBalanceToDeposit -->
+<g id="node108" class="node" pointer-events="visible" data-name="IConsensusLayerDepositManagerV1.getBalanceToDeposit">
+
+<ellipse fill="rgb(255, 189, 185)" stroke="rgb(255, 189, 185)" stroke-width="3" cx="768.48" cy="-2887.28" rx="94.9" ry="18"/>
+<text text-anchor="middle" x="768.48" y="-2883.08" font-family="Times,serif" font-size="14.00">getBalanceToDeposit</text>
+</g>
+<!-- IConsensusLayerDepositManagerV1.getCommittedBalance -->
+<g id="node109" class="node" pointer-events="visible" data-name="IConsensusLayerDepositManagerV1.getCommittedBalance">
+
+<ellipse fill="rgb(255, 189, 185)" stroke="rgb(255, 189, 185)" stroke-width="3" cx="980.48" cy="-2854.28" rx="97.28" ry="18"/>
+<text text-anchor="middle" x="980.48" y="-2850.08" font-family="Times,serif" font-size="14.00">getCommittedBalance</text>
+</g>
+<!-- IConsensusLayerDepositManagerV1.getWithdrawalCredentials -->
+<g id="node110" class="node" pointer-events="visible" data-name="IConsensusLayerDepositManagerV1.getWithdrawalCredentials">
+
+<ellipse fill="rgb(255, 189, 185)" stroke="rgb(255, 189, 185)" stroke-width="3" cx="907.48" cy="-2689.28" rx="112.29" ry="18"/>
+<text text-anchor="middle" x="907.48" y="-2685.08" font-family="Times,serif" font-size="14.00">getWithdrawalCredentials</text>
+</g>
+<!-- IConsensusLayerDepositManagerV1.getDepositedValidatorCount -->
+<g id="node111" class="node" pointer-events="visible" data-name="IConsensusLayerDepositManagerV1.getDepositedValidatorCount">
+
+<ellipse fill="rgb(255, 189, 185)" stroke="rgb(255, 189, 185)" stroke-width="3" cx="796.48" cy="-2744.28" rx="122.14" ry="18"/>
+<text text-anchor="middle" x="796.48" y="-2740.08" font-family="Times,serif" font-size="14.00">getDepositedValidatorCount</text>
+</g>
+<!-- IConsensusLayerDepositManagerV1.depositToConsensusLayer -->
+<g id="node112" class="node" pointer-events="visible" data-name="IConsensusLayerDepositManagerV1.depositToConsensusLayer">
+
+<ellipse fill="rgb(255, 189, 185)" stroke="rgb(255, 189, 185)" stroke-width="3" cx="941.48" cy="-2799.28" rx="113.48" ry="18"/>
+<text text-anchor="middle" x="941.48" y="-2795.08" font-family="Times,serif" font-size="14.00">depositToConsensusLayer</text>
+</g>
+<!-- IOracleManagerV1.getOracle -->
+<g id="node113" class="node" pointer-events="visible" data-name="IOracleManagerV1.getOracle">
+
+<ellipse fill="rgb(255, 189, 185)" stroke="rgb(255, 189, 185)" stroke-width="3" cx="1276.98" cy="-2245.28" rx="48.63" ry="18"/>
+<text text-anchor="middle" x="1276.98" y="-2241.08" font-family="Times,serif" font-size="14.00">getOracle</text>
+</g>
+<!-- IOracleManagerV1.getCLValidatorTotalBalance -->
+<g id="node114" class="node" pointer-events="visible" data-name="IOracleManagerV1.getCLValidatorTotalBalance">
+
+<ellipse fill="rgb(255, 189, 185)" stroke="rgb(255, 189, 185)" stroke-width="3" cx="1567.98" cy="-2461.28" rx="123.24" ry="18"/>
+<text text-anchor="middle" x="1567.98" y="-2457.08" font-family="Times,serif" font-size="14.00">getCLValidatorTotalBalance</text>
+</g>
+<!-- IOracleManagerV1.getCLValidatorCount -->
+<g id="node115" class="node" pointer-events="visible" data-name="IOracleManagerV1.getCLValidatorCount">
+
+<ellipse fill="rgb(255, 189, 185)" stroke="rgb(255, 189, 185)" stroke-width="3" cx="1386.98" cy="-2542.28" rx="95" ry="18"/>
+<text text-anchor="middle" x="1386.98" y="-2538.08" font-family="Times,serif" font-size="14.00">getCLValidatorCount</text>
+</g>
+<!-- IOracleManagerV1.isValidEpoch -->
+<g id="node116" class="node" pointer-events="visible" data-name="IOracleManagerV1.isValidEpoch">
+
+<ellipse fill="rgb(255, 189, 185)" stroke="rgb(255, 189, 185)" stroke-width="3" cx="1327.98" cy="-2299.28" rx="63.71" ry="18"/>
+<text text-anchor="middle" x="1327.98" y="-2295.08" font-family="Times,serif" font-size="14.00">isValidEpoch</text>
+</g>
+<!-- IOracleManagerV1.getTime -->
+<g id="node117" class="node" pointer-events="visible" data-name="IOracleManagerV1.getTime">
+
+<ellipse fill="rgb(255, 189, 185)" stroke="rgb(255, 189, 185)" stroke-width="3" cx="1649.98" cy="-2623.28" rx="43.43" ry="18"/>
+<text text-anchor="middle" x="1649.98" y="-2619.08" font-family="Times,serif" font-size="14.00">getTime</text>
+</g>
+<!-- IOracleManagerV1.getExpectedEpochId -->
+<g id="node118" class="node" pointer-events="visible" data-name="IOracleManagerV1.getExpectedEpochId">
+
+<ellipse fill="rgb(255, 189, 185)" stroke="rgb(255, 189, 185)" stroke-width="3" cx="1643.98" cy="-2407.28" rx="91.45" ry="18"/>
+<text text-anchor="middle" x="1643.98" y="-2403.08" font-family="Times,serif" font-size="14.00">getExpectedEpochId</text>
+</g>
+<!-- IOracleManagerV1.getLastCompletedEpochId -->
+<g id="node119" class="node" pointer-events="visible" data-name="IOracleManagerV1.getLastCompletedEpochId">
+
+<ellipse fill="rgb(255, 189, 185)" stroke="rgb(255, 189, 185)" stroke-width="3" cx="1522.98" cy="-2353.28" rx="114.6" ry="18"/>
+<text text-anchor="middle" x="1522.98" y="-2349.08" font-family="Times,serif" font-size="14.00">getLastCompletedEpochId</text>
+</g>
+<!-- IOracleManagerV1.getCurrentEpochId -->
+<g id="node120" class="node" pointer-events="visible" data-name="IOracleManagerV1.getCurrentEpochId">
+
+<ellipse fill="rgb(255, 189, 185)" stroke="rgb(255, 189, 185)" stroke-width="3" cx="1637.98" cy="-2569.28" rx="85.1" ry="18"/>
+<text text-anchor="middle" x="1637.98" y="-2565.08" font-family="Times,serif" font-size="14.00">getCurrentEpochId</text>
+</g>
+<!-- IOracleManagerV1.getCLSpec -->
+<g id="node121" class="node" pointer-events="visible" data-name="IOracleManagerV1.getCLSpec">
+
+<ellipse fill="rgb(255, 189, 185)" stroke="rgb(255, 189, 185)" stroke-width="3" cx="1309.98" cy="-2596.28" rx="53.89" ry="18"/>
+<text text-anchor="middle" x="1309.98" y="-2592.08" font-family="Times,serif" font-size="14.00">getCLSpec</text>
+</g>
+<!-- IOracleManagerV1.getCurrentFrame -->
+<g id="node122" class="node" pointer-events="visible" data-name="IOracleManagerV1.getCurrentFrame">
+
+<ellipse fill="rgb(255, 189, 185)" stroke="rgb(255, 189, 185)" stroke-width="3" cx="1314.98" cy="-2353.28" rx="77.01" ry="18"/>
+<text text-anchor="middle" x="1314.98" y="-2349.08" font-family="Times,serif" font-size="14.00">getCurrentFrame</text>
+</g>
+<!-- IOracleManagerV1.getFrameFirstEpochId -->
+<g id="node123" class="node" pointer-events="visible" data-name="IOracleManagerV1.getFrameFirstEpochId">
+
+<ellipse fill="rgb(255, 189, 185)" stroke="rgb(255, 189, 185)" stroke-width="3" cx="1506.98" cy="-2299.28" rx="97.86" ry="18"/>
+<text text-anchor="middle" x="1506.98" y="-2295.08" font-family="Times,serif" font-size="14.00">getFrameFirstEpochId</text>
+</g>
+<!-- IOracleManagerV1.getReportBounds -->
+<g id="node124" class="node" pointer-events="visible" data-name="IOracleManagerV1.getReportBounds">
+
+<ellipse fill="rgb(255, 189, 185)" stroke="rgb(255, 189, 185)" stroke-width="3" cx="1351.98" cy="-2488.28" rx="78.76" ry="18"/>
+<text text-anchor="middle" x="1351.98" y="-2484.08" font-family="Times,serif" font-size="14.00">getReportBounds</text>
+</g>
+<!-- IOracleManagerV1.getLastConsensusLayerReport -->
+<g id="node125" class="node" pointer-events="visible" data-name="IOracleManagerV1.getLastConsensusLayerReport">
+
+<ellipse fill="rgb(255, 189, 185)" stroke="rgb(255, 189, 185)" stroke-width="3" cx="1402.98" cy="-2407.28" rx="129.65" ry="18"/>
+<text text-anchor="middle" x="1402.98" y="-2403.08" font-family="Times,serif" font-size="14.00">getLastConsensusLayerReport</text>
+</g>
+<!-- IOracleManagerV1.setOracle -->
+<g id="node126" class="node" pointer-events="visible" data-name="IOracleManagerV1.setOracle">
+
+<ellipse fill="rgb(255, 189, 185)" stroke="rgb(255, 189, 185)" stroke-width="3" cx="1581.98" cy="-2245.28" rx="47.49" ry="18"/>
+<text text-anchor="middle" x="1581.98" y="-2241.08" font-family="Times,serif" font-size="14.00">setOracle</text>
+</g>
+<!-- IOracleManagerV1.setCLSpec -->
+<g id="node127" class="node" pointer-events="visible" data-name="IOracleManagerV1.setCLSpec">
+
+<ellipse fill="rgb(255, 189, 185)" stroke="rgb(255, 189, 185)" stroke-width="3" cx="1461.98" cy="-2245.28" rx="52.75" ry="18"/>
+<text text-anchor="middle" x="1461.98" y="-2241.08" font-family="Times,serif" font-size="14.00">setCLSpec</text>
+</g>
+<!-- IOracleManagerV1.setReportBounds -->
+<g id="node128" class="node" pointer-events="visible" data-name="IOracleManagerV1.setReportBounds">
+
+<ellipse fill="rgb(255, 189, 185)" stroke="rgb(255, 189, 185)" stroke-width="3" cx="1458.98" cy="-2596.28" rx="77.62" ry="18"/>
+<text text-anchor="middle" x="1458.98" y="-2592.08" font-family="Times,serif" font-size="14.00">setReportBounds</text>
+</g>
+<!-- IOracleManagerV1.setConsensusLayerData -->
+<g id="node129" class="node" pointer-events="visible" data-name="IOracleManagerV1.setConsensusLayerData">
+
+<ellipse fill="rgb(255, 189, 185)" stroke="rgb(255, 189, 185)" stroke-width="3" cx="1602.98" cy="-2515.28" rx="103.65" ry="18"/>
+<text text-anchor="middle" x="1602.98" y="-2511.08" font-family="Times,serif" font-size="14.00">setConsensusLayerData</text>
+</g>
+<!-- CLSpec.get -->
+<g id="node132" class="node" pointer-events="visible" data-name="CLSpec.get">
+
+<ellipse fill="rgb(242, 195, 131)" stroke="rgb(242, 195, 131)" stroke-width="3" cx="1656.16" cy="-120.76" rx="27" ry="18"/>
+<text text-anchor="middle" x="1656.16" y="-116.56" font-family="Times,serif" font-size="14.00">get</text>
+</g>
+<!-- ReportBounds.get -->
+<g id="node135" class="node" pointer-events="visible" data-name="ReportBounds.get">
+
+<ellipse fill="rgb(242, 195, 131)" stroke="rgb(242, 195, 131)" stroke-width="3" cx="835.89" cy="-456.66" rx="27" ry="18"/>
+<text text-anchor="middle" x="835.89" y="-452.46" font-family="Times,serif" font-size="14.00">get</text>
+</g>
+<!-- ISharesManagerV1.name -->
+<g id="node136" class="node" pointer-events="visible" data-name="ISharesManagerV1.name">
+
+<ellipse fill="rgb(255, 189, 185)" stroke="rgb(255, 189, 185)" stroke-width="3" cx="970.48" cy="-1690.78" rx="31.9" ry="18"/>
+<text text-anchor="middle" x="970.48" y="-1686.58" font-family="Times,serif" font-size="14.00">name</text>
+</g>
+<!-- ISharesManagerV1.symbol -->
+<g id="node137" class="node" pointer-events="visible" data-name="ISharesManagerV1.symbol">
+
+<ellipse fill="rgb(255, 189, 185)" stroke="rgb(255, 189, 185)" stroke-width="3" cx="923.48" cy="-2023.78" rx="39.45" ry="18"/>
+<text text-anchor="middle" x="923.48" y="-2019.58" font-family="Times,serif" font-size="14.00">symbol</text>
+</g>
+<!-- ISharesManagerV1.decimals -->
+<g id="node138" class="node" pointer-events="visible" data-name="ISharesManagerV1.decimals">
+
+<ellipse fill="rgb(255, 189, 185)" stroke="rgb(255, 189, 185)" stroke-width="3" cx="1127.48" cy="-2014.78" rx="45.22" ry="18"/>
+<text text-anchor="middle" x="1127.48" y="-2010.58" font-family="Times,serif" font-size="14.00">decimals</text>
+</g>
+<!-- ISharesManagerV1.totalSupply -->
+<g id="node139" class="node" pointer-events="visible" data-name="ISharesManagerV1.totalSupply">
+
+<ellipse fill="rgb(255, 189, 185)" stroke="rgb(255, 189, 185)" stroke-width="3" cx="867.48" cy="-1798.78" rx="55.64" ry="18"/>
+<text text-anchor="middle" x="867.48" y="-1794.58" font-family="Times,serif" font-size="14.00">totalSupply</text>
+</g>
+<!-- ISharesManagerV1.totalUnderlyingSupply -->
+<g id="node140" class="node" pointer-events="visible" data-name="ISharesManagerV1.totalUnderlyingSupply">
+
+<ellipse fill="rgb(255, 189, 185)" stroke="rgb(255, 189, 185)" stroke-width="3" cx="1037.48" cy="-1798.78" rx="99.6" ry="18"/>
+<text text-anchor="middle" x="1037.48" y="-1794.58" font-family="Times,serif" font-size="14.00">totalUnderlyingSupply</text>
+</g>
+<!-- ISharesManagerV1.balanceOf -->
+<g id="node141" class="node" pointer-events="visible" data-name="ISharesManagerV1.balanceOf">
+
+<ellipse fill="rgb(255, 189, 185)" stroke="rgb(255, 189, 185)" stroke-width="3" cx="862.48" cy="-1744.78" rx="50.92" ry="18"/>
+<text text-anchor="middle" x="862.48" y="-1740.58" font-family="Times,serif" font-size="14.00">balanceOf</text>
+</g>
+<!-- ISharesManagerV1.balanceOfUnderlying -->
+<g id="node142" class="node" pointer-events="visible" data-name="ISharesManagerV1.balanceOfUnderlying">
+
+<ellipse fill="rgb(255, 189, 185)" stroke="rgb(255, 189, 185)" stroke-width="3" cx="1122.48" cy="-1960.78" rx="94.89" ry="18"/>
+<text text-anchor="middle" x="1122.48" y="-1956.58" font-family="Times,serif" font-size="14.00">balanceOfUnderlying</text>
+</g>
+<!-- ISharesManagerV1.underlyingBalanceFromShares -->
+<g id="node143" class="node" pointer-events="visible" data-name="ISharesManagerV1.underlyingBalanceFromShares">
+
+<ellipse fill="rgb(255, 189, 185)" stroke="rgb(255, 189, 185)" stroke-width="3" cx="1104.48" cy="-1906.78" rx="130.79" ry="18"/>
+<text text-anchor="middle" x="1104.48" y="-1902.58" font-family="Times,serif" font-size="14.00">underlyingBalanceFromShares</text>
+</g>
+<!-- ISharesManagerV1.sharesFromUnderlyingBalance -->
+<g id="node144" class="node" pointer-events="visible" data-name="ISharesManagerV1.sharesFromUnderlyingBalance">
+
+<ellipse fill="rgb(255, 189, 185)" stroke="rgb(255, 189, 185)" stroke-width="3" cx="934.48" cy="-1852.78" rx="131.36" ry="18"/>
+<text text-anchor="middle" x="934.48" y="-1848.58" font-family="Times,serif" font-size="14.00">sharesFromUnderlyingBalance</text>
+</g>
+<!-- ISharesManagerV1.allowance -->
+<g id="node145" class="node" pointer-events="visible" data-name="ISharesManagerV1.allowance">
+
+<ellipse fill="rgb(255, 189, 185)" stroke="rgb(255, 189, 185)" stroke-width="3" cx="1132.48" cy="-1852.78" rx="50.36" ry="18"/>
+<text text-anchor="middle" x="1132.48" y="-1848.58" font-family="Times,serif" font-size="14.00">allowance</text>
+</g>
+<!-- ISharesManagerV1.transfer -->
+<g id="node146" class="node" pointer-events="visible" data-name="ISharesManagerV1.transfer">
+
+<ellipse fill="rgb(255, 189, 185)" stroke="rgb(255, 189, 185)" stroke-width="3" cx="825.48" cy="-2023.78" rx="40.55" ry="18"/>
+<text text-anchor="middle" x="825.48" y="-2019.58" font-family="Times,serif" font-size="14.00">transfer</text>
+</g>
+<!-- ISharesManagerV1.transferFrom -->
+<g id="node147" class="node" pointer-events="visible" data-name="ISharesManagerV1.transferFrom">
+
+<ellipse fill="rgb(255, 189, 185)" stroke="rgb(255, 189, 185)" stroke-width="3" cx="891.48" cy="-1915.78" rx="61.41" ry="18"/>
+<text text-anchor="middle" x="891.48" y="-1911.58" font-family="Times,serif" font-size="14.00">transferFrom</text>
+</g>
+<!-- ISharesManagerV1.approve -->
+<g id="node148" class="node" pointer-events="visible" data-name="ISharesManagerV1.approve">
+
+<ellipse fill="rgb(255, 189, 185)" stroke="rgb(255, 189, 185)" stroke-width="3" cx="1025.48" cy="-2023.78" rx="42.28" ry="18"/>
+<text text-anchor="middle" x="1025.48" y="-2019.58" font-family="Times,serif" font-size="14.00">approve</text>
+</g>
+<!-- ISharesManagerV1.increaseAllowance -->
+<g id="node149" class="node" pointer-events="visible" data-name="ISharesManagerV1.increaseAllowance">
+
+<ellipse fill="rgb(255, 189, 185)" stroke="rgb(255, 189, 185)" stroke-width="3" cx="1022.48" cy="-1744.78" rx="84.49" ry="18"/>
+<text text-anchor="middle" x="1022.48" y="-1740.58" font-family="Times,serif" font-size="14.00">increaseAllowance</text>
+</g>
+<!-- ISharesManagerV1.decreaseAllowance -->
+<g id="node150" class="node" pointer-events="visible" data-name="ISharesManagerV1.decreaseAllowance">
+
+<ellipse fill="rgb(255, 189, 185)" stroke="rgb(255, 189, 185)" stroke-width="3" cx="925.48" cy="-1969.78" rx="86.2" ry="18"/>
+<text text-anchor="middle" x="925.48" y="-1965.58" font-family="Times,serif" font-size="14.00">decreaseAllowance</text>
+</g>
+<!-- IOracleV1.initOracleV1 -->
+<g id="node151" class="node" pointer-events="visible" data-name="IOracleV1.initOracleV1">
+
+<ellipse fill="rgb(255, 189, 185)" stroke="rgb(255, 189, 185)" stroke-width="3" cx="2768.98" cy="-799.28" rx="61.4" ry="18"/>
+<text text-anchor="middle" x="2768.98" y="-795.08" font-family="Times,serif" font-size="14.00">initOracleV1</text>
+</g>
+<!-- IOracleV1.initOracleV1_1 -->
+<g id="node152" class="node" pointer-events="visible" data-name="IOracleV1.initOracleV1_1">
+
+<ellipse fill="rgb(255, 189, 185)" stroke="rgb(255, 189, 185)" stroke-width="3" cx="3066.98" cy="-1015.28" rx="71.21" ry="18"/>
+<text text-anchor="middle" x="3066.98" y="-1011.08" font-family="Times,serif" font-size="14.00">initOracleV1_1</text>
+</g>
+<!-- IOracleV1.getRiver -->
+<g id="node153" class="node" pointer-events="visible" data-name="IOracleV1.getRiver">
+
+<ellipse fill="rgb(255, 189, 185)" stroke="rgb(255, 189, 185)" stroke-width="3" cx="2715.98" cy="-691.28" rx="44.08" ry="18"/>
+<text text-anchor="middle" x="2715.98" y="-687.08" font-family="Times,serif" font-size="14.00">getRiver</text>
+</g>
+<!-- IOracleV1.getMemberReportStatus -->
+<g id="node154" class="node" pointer-events="visible" data-name="IOracleV1.getMemberReportStatus">
+
+<ellipse fill="rgb(255, 189, 185)" stroke="rgb(255, 189, 185)" stroke-width="3" cx="3046.98" cy="-961.28" rx="105.38" ry="18"/>
+<text text-anchor="middle" x="3046.98" y="-957.08" font-family="Times,serif" font-size="14.00">getMemberReportStatus</text>
+</g>
+<!-- IOracleV1.getGlobalReportStatus -->
+<g id="node155" class="node" pointer-events="visible" data-name="IOracleV1.getGlobalReportStatus">
+
+<ellipse fill="rgb(255, 189, 185)" stroke="rgb(255, 189, 185)" stroke-width="3" cx="2824.98" cy="-997.28" rx="99.02" ry="18"/>
+<text text-anchor="middle" x="2824.98" y="-993.08" font-family="Times,serif" font-size="14.00">getGlobalReportStatus</text>
+</g>
+<!-- IOracleV1.getReportVariantsCount -->
+<g id="node156" class="node" pointer-events="visible" data-name="IOracleV1.getReportVariantsCount">
+
+<ellipse fill="rgb(255, 189, 185)" stroke="rgb(255, 189, 185)" stroke-width="3" cx="2956.98" cy="-799.28" rx="105.38" ry="18"/>
+<text text-anchor="middle" x="2956.98" y="-795.08" font-family="Times,serif" font-size="14.00">getReportVariantsCount</text>
+</g>
+<!-- IOracleV1.getReportVariantDetails -->
+<g id="node157" class="node" pointer-events="visible" data-name="IOracleV1.getReportVariantDetails">
+
+<ellipse fill="rgb(255, 189, 185)" stroke="rgb(255, 189, 185)" stroke-width="3" cx="2956.98" cy="-745.28" rx="105.36" ry="18"/>
+<text text-anchor="middle" x="2956.98" y="-741.08" font-family="Times,serif" font-size="14.00">getReportVariantDetails</text>
+</g>
+<!-- IOracleV1.getQuorum -->
+<g id="node158" class="node" pointer-events="visible" data-name="IOracleV1.getQuorum">
+
+<ellipse fill="rgb(255, 189, 185)" stroke="rgb(255, 189, 185)" stroke-width="3" cx="2780.98" cy="-745.28" rx="55.04" ry="18"/>
+<text text-anchor="middle" x="2780.98" y="-741.08" font-family="Times,serif" font-size="14.00">getQuorum</text>
+</g>
+<!-- IOracleV1.getOracleMembers -->
+<g id="node159" class="node" pointer-events="visible" data-name="IOracleV1.getOracleMembers">
+
+<ellipse fill="rgb(255, 189, 185)" stroke="rgb(255, 189, 185)" stroke-width="3" cx="3071.98" cy="-853.28" rx="85.08" ry="18"/>
+<text text-anchor="middle" x="3071.98" y="-849.08" font-family="Times,serif" font-size="14.00">getOracleMembers</text>
+</g>
+<!-- IOracleV1.isMember -->
+<g id="node160" class="node" pointer-events="visible" data-name="IOracleV1.isMember">
+
+<ellipse fill="rgb(255, 189, 185)" stroke="rgb(255, 189, 185)" stroke-width="3" cx="3036.98" cy="-691.28" rx="50.39" ry="18"/>
+<text text-anchor="middle" x="3036.98" y="-687.08" font-family="Times,serif" font-size="14.00">isMember</text>
+</g>
+<!-- IOracleV1.getLastReportedEpochId -->
+<g id="node161" class="node" pointer-events="visible" data-name="IOracleV1.getLastReportedEpochId">
+
+<ellipse fill="rgb(255, 189, 185)" stroke="rgb(255, 189, 185)" stroke-width="3" cx="2994.98" cy="-907.28" rx="107.65" ry="18"/>
+<text text-anchor="middle" x="2994.98" y="-903.08" font-family="Times,serif" font-size="14.00">getLastReportedEpochId</text>
+</g>
+<!-- IOracleV1.addMember -->
+<g id="node162" class="node" pointer-events="visible" data-name="IOracleV1.addMember">
+
+<ellipse fill="rgb(255, 189, 185)" stroke="rgb(255, 189, 185)" stroke-width="3" cx="2908.98" cy="-691.28" rx="57.89" ry="18"/>
+<text text-anchor="middle" x="2908.98" y="-687.08" font-family="Times,serif" font-size="14.00">addMember</text>
+</g>
+<!-- IOracleV1.removeMember -->
+<g id="node163" class="node" pointer-events="visible" data-name="IOracleV1.removeMember">
+
+<ellipse fill="rgb(255, 189, 185)" stroke="rgb(255, 189, 185)" stroke-width="3" cx="2797.98" cy="-943.28" rx="72.92" ry="18"/>
+<text text-anchor="middle" x="2797.98" y="-939.08" font-family="Times,serif" font-size="14.00">removeMember</text>
+</g>
+<!-- IOracleV1.setMember -->
+<g id="node164" class="node" pointer-events="visible" data-name="IOracleV1.setMember">
+
+<ellipse fill="rgb(255, 189, 185)" stroke="rgb(255, 189, 185)" stroke-width="3" cx="2923.98" cy="-1051.28" rx="54.46" ry="18"/>
+<text text-anchor="middle" x="2923.98" y="-1047.08" font-family="Times,serif" font-size="14.00">setMember</text>
+</g>
+<!-- IOracleV1.setQuorum -->
+<g id="node165" class="node" pointer-events="visible" data-name="IOracleV1.setQuorum">
+
+<ellipse fill="rgb(255, 189, 185)" stroke="rgb(255, 189, 185)" stroke-width="3" cx="2797.98" cy="-1051.28" rx="53.9" ry="18"/>
+<text text-anchor="middle" x="2797.98" y="-1047.08" font-family="Times,serif" font-size="14.00">setQuorum</text>
+</g>
+<!-- IOracleV1.reportConsensusLayerData -->
+<g id="node166" class="node" pointer-events="visible" data-name="IOracleV1.reportConsensusLayerData">
+
+<ellipse fill="rgb(255, 189, 185)" stroke="rgb(255, 189, 185)" stroke-width="3" cx="2850.98" cy="-853.28" rx="116.31" ry="18"/>
+<text text-anchor="middle" x="2850.98" y="-849.08" font-family="Times,serif" font-size="14.00">reportConsensusLayerData</text>
+</g>
+<!-- ReportsVariants.set -->
+<g id="node170" class="node" pointer-events="visible" data-name="ReportsVariants.set">
+
+<ellipse fill="rgb(242, 195, 131)" stroke="rgb(242, 195, 131)" stroke-width="3" cx="1146.99" cy="-146.58" rx="27" ry="18"/>
+<text text-anchor="middle" x="1146.99" y="-142.38" font-family="Times,serif" font-size="14.00">set</text>
+</g>
+<!-- ReportsVariants.push -->
+<g id="node171" class="node" pointer-events="visible" data-name="ReportsVariants.push">
+
+<ellipse fill="rgb(242, 195, 131)" stroke="rgb(242, 195, 131)" stroke-width="3" cx="1225.99" cy="-135.58" rx="29.06" ry="18"/>
+<text text-anchor="middle" x="1225.99" y="-131.38" font-family="Times,serif" font-size="14.00">push</text>
+</g>
+<!-- ReportsVariants.indexOfReport -->
+<g id="node172" class="node" pointer-events="visible" data-name="ReportsVariants.indexOfReport">
+
+<ellipse fill="rgb(242, 195, 131)" stroke="rgb(242, 195, 131)" stroke-width="3" cx="1254.99" cy="-80.58" rx="68.93" ry="18"/>
+<text text-anchor="middle" x="1254.99" y="-76.38" font-family="Times,serif" font-size="14.00">indexOfReport</text>
+</g>
+<!-- Administrable.onlyAdmin -->
+<g id="node173" class="node" pointer-events="visible" data-name="Administrable.onlyAdmin">
+
+<polygon fill="#edad56" stroke="#1bc6a6" stroke-width="3" points="3149.84,-1477.71 3149.84,-1492.62 3114.92,-1503.17 3065.52,-1503.17 3030.59,-1492.62 3030.59,-1477.71 3065.52,-1467.17 3114.92,-1467.17 3149.84,-1477.71"/>
+<polygon fill="none" stroke="#1bc6a6" stroke-width="3" points="3153.85,-1474.74 3153.85,-1495.59 3115.51,-1507.17 3064.93,-1507.17 3026.59,-1495.59 3026.59,-1474.74 3064.93,-1463.17 3115.51,-1463.17 3153.85,-1474.74"/>
+<text text-anchor="middle" x="3090.22" y="-1480.97" font-family="Times,serif" font-size="14.00">onlyAdmin</text>
+</g>
+<!-- Administrable.onlyAdmin&#45;&gt;LibErrors.Unauthorized -->
+<g id="edge90" class="edge" data-name="Administrable.onlyAdmin-&gt;LibErrors.Unauthorized">
+
+<path fill="none" stroke="rgb(255, 255, 255)" stroke-width="2" d="M3044.85,-1467.91C2938.99,-1427.66 2676.21,-1327.72 2564.06,-1285.07"/>
+<polygon fill="white" stroke="white" stroke-width="2" points="2565.51,-1281.88 2554.92,-1281.6 2563.03,-1288.43 2565.51,-1281.88"/>
+</g>
+<!-- LibAdministrable._getAdmin -->
+<g id="node186" class="node" pointer-events="visible" data-name="LibAdministrable._getAdmin">
+
+<ellipse fill="rgb(242, 195, 131)" stroke="rgb(242, 195, 131)" stroke-width="3" cx="3165.04" cy="-1758.62" rx="54.48" ry="18"/>
+<text text-anchor="middle" x="3165.04" y="-1754.42" font-family="Times,serif" font-size="14.00">_getAdmin</text>
+</g>
+<!-- Administrable.onlyAdmin&#45;&gt;LibAdministrable._getAdmin -->
+<g id="edge89" class="edge" data-name="Administrable.onlyAdmin-&gt;LibAdministrable._getAdmin">
+
+<path fill="none" stroke="rgb(255, 255, 255)" stroke-width="2" d="M3096.6,-1508.48C3110.01,-1557.52 3141.17,-1671.39 3156.37,-1726.97"/>
+<polygon fill="white" stroke="white" stroke-width="2" points="3152.98,-1727.81 3158.99,-1736.54 3159.73,-1725.97 3152.98,-1727.81"/>
+</g>
+<!-- Administrable.onlyPendingAdmin -->
+<g id="node174" class="node" pointer-events="visible" data-name="Administrable.onlyPendingAdmin">
+
+<polygon fill="#edad56" stroke="#1bc6a6" stroke-width="3" points="3331.3,-1535.31 3331.3,-1550.23 3276.43,-1560.77 3198.84,-1560.77 3143.98,-1550.23 3143.98,-1535.31 3198.84,-1524.77 3276.43,-1524.77 3331.3,-1535.31"/>
+<polygon fill="none" stroke="#1bc6a6" stroke-width="3" points="3335.29,-1532.01 3335.29,-1553.53 3276.81,-1564.77 3198.46,-1564.77 3139.99,-1553.53 3139.99,-1532.01 3198.46,-1520.77 3276.81,-1520.77 3335.29,-1532.01"/>
+<text text-anchor="middle" x="3237.64" y="-1538.57" font-family="Times,serif" font-size="14.00">onlyPendingAdmin</text>
+</g>
+<!-- Administrable.onlyPendingAdmin&#45;&gt;LibErrors.Unauthorized -->
+<g id="edge92" class="edge" data-name="Administrable.onlyPendingAdmin-&gt;LibErrors.Unauthorized">
+
+<path fill="none" stroke="rgb(255, 255, 255)" stroke-width="2" d="M3183.69,-1522.14C3048.48,-1470.43 2696.49,-1335.83 2563.7,-1285.05"/>
+<polygon fill="white" stroke="white" stroke-width="2" points="2565.34,-1281.92 2554.74,-1281.62 2562.84,-1288.46 2565.34,-1281.92"/>
+</g>
+<!-- LibAdministrable._getPendingAdmin -->
+<g id="node187" class="node" pointer-events="visible" data-name="LibAdministrable._getPendingAdmin">
+
+<ellipse fill="rgb(242, 195, 131)" stroke="rgb(242, 195, 131)" stroke-width="3" cx="3012.65" cy="-1791.26" rx="86.28" ry="18"/>
+<text text-anchor="middle" x="3012.65" y="-1787.06" font-family="Times,serif" font-size="14.00">_getPendingAdmin</text>
+</g>
+<!-- Administrable.onlyPendingAdmin&#45;&gt;LibAdministrable._getPendingAdmin -->
+<g id="edge91" class="edge" data-name="Administrable.onlyPendingAdmin-&gt;LibAdministrable._getPendingAdmin">
+
+<path fill="none" stroke="rgb(255, 255, 255)" stroke-width="2" d="M3216.47,-1566.15C3175.02,-1611.92 3083.3,-1713.23 3038.41,-1762.81"/>
+<polygon fill="white" stroke="white" stroke-width="2" points="3035.98,-1760.28 3031.86,-1770.04 3041.17,-1764.98 3035.98,-1760.28"/>
+</g>
+<!-- Administrable.getAdmin -->
+<g id="node175" class="node" pointer-events="visible" data-name="Administrable.getAdmin">
+
+<ellipse fill="rgb(255, 189, 185)" stroke="rgb(255, 189, 185)" stroke-width="3" cx="3110.96" cy="-1664.54" rx="49.82" ry="18"/>
+<text text-anchor="middle" x="3110.96" y="-1660.34" font-family="Times,serif" font-size="14.00">getAdmin</text>
+</g>
+<!-- Administrable.getAdmin&#45;&gt;LibAdministrable._getAdmin -->
+<g id="edge93" class="edge" data-name="Administrable.getAdmin-&gt;LibAdministrable._getAdmin">
+
+<path fill="none" stroke="rgb(255, 255, 255)" stroke-width="2" d="M3121.9,-1683.58C3129.3,-1696.46 3139.24,-1713.74 3147.71,-1728.47"/>
+<polygon fill="white" stroke="white" stroke-width="2" points="3144.58,-1730.06 3152.6,-1736.99 3150.65,-1726.57 3144.58,-1730.06"/>
+</g>
+<!-- Administrable.getPendingAdmin -->
+<g id="node176" class="node" pointer-events="visible" data-name="Administrable.getPendingAdmin">
+
+<ellipse fill="rgb(255, 189, 185)" stroke="rgb(255, 189, 185)" stroke-width="3" cx="2916.82" cy="-1583.65" rx="81.13" ry="18"/>
+<text text-anchor="middle" x="2916.82" y="-1579.45" font-family="Times,serif" font-size="14.00">getPendingAdmin</text>
+</g>
+<!-- Administrable.getPendingAdmin&#45;&gt;LibAdministrable._getPendingAdmin -->
+<g id="edge94" class="edge" data-name="Administrable.getPendingAdmin-&gt;LibAdministrable._getPendingAdmin">
+
+<path fill="none" stroke="rgb(255, 255, 255)" stroke-width="2" d="M2925.67,-1602.81C2942.28,-1638.8 2978.29,-1716.82 2998.38,-1760.34"/>
+<polygon fill="white" stroke="white" stroke-width="2" points="2995.19,-1761.79 3002.56,-1769.4 3001.55,-1758.85 2995.19,-1761.79"/>
+</g>
+<!-- Administrable.proposeAdmin -->
+<g id="node177" class="node" pointer-events="visible" data-name="Administrable.proposeAdmin">
+
+<ellipse fill="rgb(255, 189, 185)" stroke="rgb(255, 189, 185)" stroke-width="3" cx="3254.55" cy="-1480.32" rx="68.37" ry="18"/>
+<text text-anchor="middle" x="3254.55" y="-1476.12" font-family="Times,serif" font-size="14.00">proposeAdmin</text>
+</g>
+<!-- Administrable._setPendingAdmin -->
+<g id="node180" class="node" pointer-events="visible" data-name="Administrable._setPendingAdmin">
+
+<ellipse fill="rgb(237, 173, 86)" stroke="rgb(237, 173, 86)" stroke-width="3" cx="3145.06" cy="-1599.72" rx="85.14" ry="18"/>
+<text text-anchor="middle" x="3145.06" y="-1595.52" font-family="Times,serif" font-size="14.00">_setPendingAdmin</text>
+</g>
+<!-- Administrable.proposeAdmin&#45;&gt;Administrable._setPendingAdmin -->
+<g id="edge95" class="edge" data-name="Administrable.proposeAdmin-&gt;Administrable._setPendingAdmin">
+
+<path fill="none" stroke="rgb(27, 198, 166)" stroke-width="2" d="M3237.45,-1498.97C3219.63,-1518.4 3191.51,-1549.06 3170.97,-1571.46"/>
+<polygon fill="#1bc6a6" stroke="#1bc6a6" stroke-width="2" points="3168.64,-1568.83 3164.46,-1578.57 3173.8,-1573.56 3168.64,-1568.83"/>
+</g>
+<!-- Administrable.acceptAdmin -->
+<g id="node178" class="node" pointer-events="visible" data-name="Administrable.acceptAdmin">
+
+<ellipse fill="rgb(255, 189, 185)" stroke="rgb(255, 189, 185)" stroke-width="3" cx="3063.02" cy="-1536.86" rx="62.54" ry="18"/>
+<text text-anchor="middle" x="3063.02" y="-1532.66" font-family="Times,serif" font-size="14.00">acceptAdmin</text>
+</g>
+<!-- Administrable._setAdmin -->
+<g id="node179" class="node" pointer-events="visible" data-name="Administrable._setAdmin">
+
+<ellipse fill="rgb(237, 173, 86)" stroke="rgb(237, 173, 86)" stroke-width="3" cx="2992.37" cy="-1630.05" rx="53.34" ry="18"/>
+<text text-anchor="middle" x="2992.37" y="-1625.85" font-family="Times,serif" font-size="14.00">_setAdmin</text>
+</g>
+<!-- Administrable.acceptAdmin&#45;&gt;Administrable._setAdmin -->
+<g id="edge96" class="edge" data-name="Administrable.acceptAdmin-&gt;Administrable._setAdmin">
+
+<path fill="none" stroke="rgb(27, 198, 166)" stroke-width="2" d="M3048.72,-1555.72C3038.79,-1568.82 3025.38,-1586.51 3014.13,-1601.34"/>
+<polygon fill="#1bc6a6" stroke="#1bc6a6" stroke-width="2" points="3011.49,-1599.04 3008.23,-1609.13 3017.06,-1603.27 3011.49,-1599.04"/>
+</g>
+<!-- Administrable.acceptAdmin&#45;&gt;Administrable._setPendingAdmin -->
+<g id="edge98" class="edge" data-name="Administrable.acceptAdmin-&gt;Administrable._setPendingAdmin">
+
+<path fill="none" stroke="rgb(27, 198, 166)" stroke-width="2" d="M3086.31,-1554.71C3093.91,-1560.53 3102.5,-1567.11 3110.73,-1573.42"/>
+<polygon fill="#1bc6a6" stroke="#1bc6a6" stroke-width="2" points="3108.39,-1576.03 3118.45,-1579.33 3112.64,-1570.47 3108.39,-1576.03"/>
+</g>
+<!-- Administrable.acceptAdmin&#45;&gt;LibAdministrable._getPendingAdmin -->
+<g id="edge97" class="edge" data-name="Administrable.acceptAdmin-&gt;LibAdministrable._getPendingAdmin">
+
+<path fill="none" stroke="rgb(255, 255, 255)" stroke-width="2" d="M3059.23,-1555.99C3050.65,-1599.36 3029.62,-1705.57 3019,-1759.19"/>
+<polygon fill="white" stroke="white" stroke-width="2" points="3015.58,-1758.46 3017.07,-1768.95 3022.44,-1759.82 3015.58,-1758.46"/>
+</g>
+<!-- Administrable._setAdmin&#45;&gt;LibSanitize._notZeroAddress -->
+<g id="edge99" class="edge" data-name="Administrable._setAdmin-&gt;LibSanitize._notZeroAddress">
+
+<path fill="none" stroke="rgb(255, 255, 255)" stroke-width="2" d="M2949.2,-1618.2C2837.2,-1587.46 2536.76,-1505 2403.5,-1468.42"/>
+<polygon fill="white" stroke="white" stroke-width="2" points="2404.62,-1465.1 2394.05,-1465.83 2402.77,-1471.85 2404.62,-1465.1"/>
+</g>
+<!-- LibAdministrable._setAdmin -->
+<g id="node188" class="node" pointer-events="visible" data-name="LibAdministrable._setAdmin">
+
+<ellipse fill="rgb(242, 195, 131)" stroke="rgb(242, 195, 131)" stroke-width="3" cx="3195.84" cy="-1816.05" rx="53.34" ry="18"/>
+<text text-anchor="middle" x="3195.84" y="-1811.85" font-family="Times,serif" font-size="14.00">_setAdmin</text>
+</g>
+<!-- Administrable._setAdmin&#45;&gt;LibAdministrable._setAdmin -->
+<g id="edge100" class="edge" data-name="Administrable._setAdmin-&gt;LibAdministrable._setAdmin">
+
+<path fill="none" stroke="rgb(255, 255, 255)" stroke-width="2" d="M3012.25,-1648.22C3048.35,-1681.23 3124.84,-1751.14 3166.79,-1789.49"/>
+<polygon fill="white" stroke="white" stroke-width="2" points="3164.2,-1791.87 3173.95,-1796.03 3168.93,-1786.7 3164.2,-1791.87"/>
+</g>
+<!-- LibAdministrable._setPendingAdmin -->
+<g id="node189" class="node" pointer-events="visible" data-name="LibAdministrable._setPendingAdmin">
+
+<ellipse fill="rgb(242, 195, 131)" stroke="rgb(242, 195, 131)" stroke-width="3" cx="3041.28" cy="-1852.44" rx="85.14" ry="18"/>
+<text text-anchor="middle" x="3041.28" y="-1848.24" font-family="Times,serif" font-size="14.00">_setPendingAdmin</text>
+</g>
+<!-- Administrable._setPendingAdmin&#45;&gt;LibAdministrable._setPendingAdmin -->
+<g id="edge101" class="edge" data-name="Administrable._setPendingAdmin-&gt;LibAdministrable._setPendingAdmin">
+
+<path fill="none" stroke="rgb(255, 255, 255)" stroke-width="2" d="M3137.09,-1619.13C3119.2,-1662.69 3075.73,-1768.56 3054.03,-1821.39"/>
+<polygon fill="white" stroke="white" stroke-width="2" points="3050.85,-1819.93 3050.29,-1830.51 3057.32,-1822.59 3050.85,-1819.93"/>
+</g>
+<!-- Administrable._getAdmin -->
+<g id="node181" class="node" pointer-events="visible" data-name="Administrable._getAdmin">
+
+<ellipse fill="rgb(242, 195, 131)" stroke="rgb(242, 195, 131)" stroke-width="3" cx="2927.76" cy="-1524.82" rx="54.48" ry="18"/>
+<text text-anchor="middle" x="2927.76" y="-1520.62" font-family="Times,serif" font-size="14.00">_getAdmin</text>
+</g>
+<!-- Administrable._getAdmin&#45;&gt;LibAdministrable._getAdmin -->
+<g id="edge102" class="edge" data-name="Administrable._getAdmin-&gt;LibAdministrable._getAdmin">
+
+<path fill="none" stroke="rgb(255, 255, 255)" stroke-width="2" d="M2946.38,-1543.17C2987.96,-1584.14 3088.56,-1683.26 3137.45,-1731.44"/>
+<polygon fill="white" stroke="white" stroke-width="2" points="3134.77,-1733.71 3144.35,-1738.23 3139.68,-1728.72 3134.77,-1733.71"/>
+</g>
+<!-- IAdministrable.getAdmin -->
+<g id="node182" class="node" pointer-events="visible" data-name="IAdministrable.getAdmin">
+
+<ellipse fill="rgb(255, 189, 185)" stroke="rgb(255, 189, 185)" stroke-width="3" cx="841.98" cy="-1406.28" rx="49.82" ry="18"/>
+<text text-anchor="middle" x="841.98" y="-1402.08" font-family="Times,serif" font-size="14.00">getAdmin</text>
+</g>
+<!-- IAdministrable.getPendingAdmin -->
+<g id="node183" class="node" pointer-events="visible" data-name="IAdministrable.getPendingAdmin">
+
+<ellipse fill="rgb(255, 189, 185)" stroke="rgb(255, 189, 185)" stroke-width="3" cx="865.98" cy="-1302.28" rx="81.13" ry="18"/>
+<text text-anchor="middle" x="865.98" y="-1298.08" font-family="Times,serif" font-size="14.00">getPendingAdmin</text>
+</g>
+<!-- IAdministrable.proposeAdmin -->
+<g id="node184" class="node" pointer-events="visible" data-name="IAdministrable.proposeAdmin">
+
+<ellipse fill="rgb(255, 189, 185)" stroke="rgb(255, 189, 185)" stroke-width="3" cx="972.98" cy="-1358.28" rx="68.37" ry="18"/>
+<text text-anchor="middle" x="972.98" y="-1354.08" font-family="Times,serif" font-size="14.00">proposeAdmin</text>
+</g>
+<!-- IAdministrable.acceptAdmin -->
+<g id="node185" class="node" pointer-events="visible" data-name="IAdministrable.acceptAdmin">
+
+<ellipse fill="rgb(255, 189, 185)" stroke="rgb(255, 189, 185)" stroke-width="3" cx="934.98" cy="-1246.28" rx="62.54" ry="18"/>
+<text text-anchor="middle" x="934.98" y="-1242.08" font-family="Times,serif" font-size="14.00">acceptAdmin</text>
+</g>
+<!-- AdministratorAddress.get -->
+<g id="node190" class="node" pointer-events="visible" data-name="AdministratorAddress.get">
+
+<ellipse fill="rgb(242, 195, 131)" stroke="rgb(242, 195, 131)" stroke-width="3" cx="2631.94" cy="-1783.67" rx="27" ry="18"/>
+<text text-anchor="middle" x="2631.94" y="-1779.47" font-family="Times,serif" font-size="14.00">get</text>
+</g>
+<!-- LibAdministrable._getAdmin&#45;&gt;AdministratorAddress.get -->
+<g id="edge103" class="edge" data-name="LibAdministrable._getAdmin-&gt;AdministratorAddress.get">
+
+<path fill="none" stroke="rgb(255, 255, 255)" stroke-width="2" d="M3109.74,-1761.22C3002.48,-1766.26 2768.37,-1777.26 2673.3,-1781.73"/>
+<polygon fill="white" stroke="white" stroke-width="2" points="2673.17,-1778.23 2663.34,-1782.2 2673.49,-1785.23 2673.17,-1778.23"/>
+</g>
+<!-- PendingAdministratorAddress.get -->
+<g id="node192" class="node" pointer-events="visible" data-name="PendingAdministratorAddress.get">
+
+<ellipse fill="rgb(242, 195, 131)" stroke="rgb(242, 195, 131)" stroke-width="3" cx="2714.28" cy="-2192.6" rx="27" ry="18"/>
+<text text-anchor="middle" x="2714.28" y="-2188.4" font-family="Times,serif" font-size="14.00">get</text>
+</g>
+<!-- LibAdministrable._getPendingAdmin&#45;&gt;PendingAdministratorAddress.get -->
+<g id="edge104" class="edge" data-name="LibAdministrable._getPendingAdmin-&gt;PendingAdministratorAddress.get">
+
+<path fill="none" stroke="rgb(255, 255, 255)" stroke-width="2" d="M2998.46,-1810.35C2950.11,-1875.38 2791.67,-2088.5 2734.82,-2164.97"/>
+<polygon fill="white" stroke="white" stroke-width="2" points="2732.16,-2162.69 2729,-2172.8 2737.77,-2166.87 2732.16,-2162.69"/>
+</g>
+<!-- AdministratorAddress.set -->
+<g id="node191" class="node" pointer-events="visible" data-name="AdministratorAddress.set">
+
+<ellipse fill="rgb(242, 195, 131)" stroke="rgb(242, 195, 131)" stroke-width="3" cx="2627.79" cy="-1735.59" rx="27" ry="18"/>
+<text text-anchor="middle" x="2627.79" y="-1731.39" font-family="Times,serif" font-size="14.00">set</text>
+</g>
+<!-- LibAdministrable._setAdmin&#45;&gt;AdministratorAddress.set -->
+<g id="edge105" class="edge" data-name="LibAdministrable._setAdmin-&gt;AdministratorAddress.set">
+
+<path fill="none" stroke="rgb(255, 255, 255)" stroke-width="2" d="M3144.93,-1808.83C3033.38,-1793.04 2769.33,-1755.64 2668.18,-1741.31"/>
+<polygon fill="white" stroke="white" stroke-width="2" points="2668.95,-1737.89 2658.56,-1739.95 2667.97,-1744.82 2668.95,-1737.89"/>
+</g>
+<!-- PendingAdministratorAddress.set -->
+<g id="node193" class="node" pointer-events="visible" data-name="PendingAdministratorAddress.set">
+
+<ellipse fill="rgb(242, 195, 131)" stroke="rgb(242, 195, 131)" stroke-width="3" cx="2783.74" cy="-2183.96" rx="27" ry="18"/>
+<text text-anchor="middle" x="2783.74" y="-2179.76" font-family="Times,serif" font-size="14.00">set</text>
+</g>
+<!-- LibAdministrable._setPendingAdmin&#45;&gt;PendingAdministratorAddress.set -->
+<g id="edge106" class="edge" data-name="LibAdministrable._setPendingAdmin-&gt;PendingAdministratorAddress.set">
+
+<path fill="none" stroke="rgb(255, 255, 255)" stroke-width="2" d="M3026.7,-1871.21C2983.36,-1927.01 2855.21,-2091.97 2804.62,-2157.08"/>
+<polygon fill="white" stroke="white" stroke-width="2" points="2802.15,-2154.56 2798.78,-2164.6 2807.68,-2158.85 2802.15,-2154.56"/>
+</g>
+<!-- AdministratorAddress.get&#45;&gt;LibUnstructuredStorage.getStorageAddress -->
+<g id="edge107" class="edge" data-name="AdministratorAddress.get-&gt;LibUnstructuredStorage.getStorageAddress">
+
+<path fill="none" stroke="rgb(255, 255, 255)" stroke-width="2" d="M2609.24,-1795.06C2509.57,-1845.05 2109.54,-2045.69 1972.27,-2114.54"/>
+<polygon fill="white" stroke="white" stroke-width="2" points="1971.03,-2111.25 1963.66,-2118.86 1974.17,-2117.5 1971.03,-2111.25"/>
+</g>
+<!-- AdministratorAddress.set&#45;&gt;LibSanitize._notZeroAddress -->
+<g id="edge108" class="edge" data-name="AdministratorAddress.set-&gt;LibSanitize._notZeroAddress">
+
+<path fill="none" stroke="rgb(255, 255, 255)" stroke-width="2" d="M2611.81,-1719.86C2564.76,-1673.53 2426.29,-1537.18 2366.41,-1478.21"/>
+<polygon fill="white" stroke="white" stroke-width="2" points="2368.9,-1475.76 2359.32,-1471.24 2363.99,-1480.75 2368.9,-1475.76"/>
+</g>
+<!-- AdministratorAddress.set&#45;&gt;LibUnstructuredStorage.setStorageAddress -->
+<g id="edge109" class="edge" data-name="AdministratorAddress.set-&gt;LibUnstructuredStorage.setStorageAddress">
+
+<path fill="none" stroke="rgb(255, 255, 255)" stroke-width="2" d="M2606.28,-1748.35C2519.04,-1800.06 2190.77,-1994.69 2074.45,-2063.65"/>
+<polygon fill="white" stroke="white" stroke-width="2" points="2072.97,-2060.46 2066.16,-2068.57 2076.54,-2066.48 2072.97,-2060.46"/>
+</g>
+<!-- PendingAdministratorAddress.get&#45;&gt;LibUnstructuredStorage.getStorageAddress -->
+<g id="edge110" class="edge" data-name="PendingAdministratorAddress.get-&gt;LibUnstructuredStorage.getStorageAddress">
+
+<path fill="none" stroke="rgb(255, 255, 255)" stroke-width="2" d="M2686.21,-2190.65C2579.97,-2183.28 2199.4,-2156.86 2020.27,-2144.43"/>
+<polygon fill="white" stroke="white" stroke-width="2" points="2020.7,-2140.95 2010.48,-2143.75 2020.22,-2147.93 2020.7,-2140.95"/>
+</g>
+<!-- PendingAdministratorAddress.set&#45;&gt;LibUnstructuredStorage.setStorageAddress -->
+<g id="edge111" class="edge" data-name="PendingAdministratorAddress.set-&gt;LibUnstructuredStorage.setStorageAddress">
+
+<path fill="none" stroke="rgb(255, 255, 255)" stroke-width="2" d="M2756.14,-2180.43C2653.12,-2167.27 2288.33,-2120.65 2119.8,-2099.12"/>
+<polygon fill="white" stroke="white" stroke-width="2" points="2120.4,-2095.66 2110.04,-2097.87 2119.51,-2102.61 2120.4,-2095.66"/>
+</g>
+<!-- Initializable.&lt;Constructor&gt; -->
+<g id="node194" class="node" pointer-events="visible" data-name="Initializable.&lt;Constructor&gt;">
+
+<ellipse fill="rgb(255, 151, 151)" stroke="rgb(255, 151, 151)" stroke-width="3" cx="1632.83" cy="-3173.53" rx="67.55" ry="18"/>
+<text text-anchor="middle" x="1632.83" y="-3169.33" font-family="Times,serif" font-size="14.00">&lt;Constructor&gt;</text>
+</g>
+<!-- Initializable.type -->
+<g id="node196" class="node" pointer-events="visible" data-name="Initializable.type">
+
+<ellipse fill="rgb(237, 173, 86)" stroke="rgb(237, 173, 86)" stroke-width="3" cx="1672.15" cy="-3242.91" rx="27.83" ry="18"/>
+<text text-anchor="middle" x="1672.15" y="-3238.71" font-family="Times,serif" font-size="14.00">type</text>
+</g>
+<!-- Initializable.&lt;Constructor&gt;&#45;&gt;Initializable.type -->
+<g id="edge113" class="edge" data-name="Initializable.&lt;Constructor&gt;-&gt;Initializable.type">
+
+<path fill="none" stroke="rgb(27, 198, 166)" stroke-width="2" d="M1637.06,-3192.85C1640.31,-3200.12 1644.73,-3208.49 1649.37,-3216.3"/>
+<polygon fill="#1bc6a6" stroke="#1bc6a6" stroke-width="2" points="1646.3,-3217.99 1654.6,-3224.57 1652.22,-3214.25 1646.3,-3217.99"/>
+</g>
+<!-- Initializable.&lt;Constructor&gt;&#45;&gt;Initializable.type -->
+
+<!-- Version.set --><g id="edge114" class="edge" data-name="Initializable.&lt;Constructor&gt;-&gt;Initializable.type" data-comment="Version.set">
+
+<path fill="none" stroke="#1bc6a6" stroke-width="2" d="M1650.53,-3191.99C1654.59,-3198.21 1658.73,-3205.31 1662.35,-3212.2" style=""/>
+<polygon fill="#1bc6a6" stroke="#1bc6a6" stroke-width="2" points="1659.14,-3213.6 1666.67,-3221.05 1665.43,-3210.53 1659.14,-3213.6"/>
+</g>
+<g id="node198" class="node" pointer-events="visible" data-name="Version.set">
+
+<ellipse fill="rgb(242, 195, 131)" stroke="rgb(242, 195, 131)" stroke-width="3" cx="1839.48" cy="-2758.63" rx="27" ry="18"/>
+<text text-anchor="middle" x="1839.48" y="-2754.43" font-family="Times,serif" font-size="14.00">set</text>
+</g>
+<!-- Initializable.&lt;Constructor&gt;&#45;&gt;Version.set -->
+<g id="edge112" class="edge" data-name="Initializable.&lt;Constructor&gt;-&gt;Version.set">
+
+<path fill="none" stroke="rgb(255, 255, 255)" stroke-width="2" d="M1642.38,-3154.35C1675.38,-3088.09 1784.75,-2868.51 1824.7,-2788.3"/>
+<polygon fill="white" stroke="white" stroke-width="2" points="1827.82,-2789.89 1829.14,-2779.37 1821.55,-2786.76 1827.82,-2789.89"/>
+</g>
+<!-- Initializable.init -->
+<g id="node195" class="node" pointer-events="visible" data-name="Initializable.init">
+
+<polygon fill="#edad56" stroke="#1bc6a6" stroke-width="3" points="1771.42,-3191.89 1771.42,-3206.8 1755.61,-3217.35 1733.24,-3217.35 1717.42,-3206.8 1717.42,-3191.89 1733.24,-3181.35 1755.61,-3181.35 1771.42,-3191.89"/>
+<polygon fill="none" stroke="#1bc6a6" stroke-width="3" points="1775.42,-3189.75 1775.42,-3208.94 1756.82,-3221.35 1732.03,-3221.35 1713.42,-3208.94 1713.42,-3189.75 1732.03,-3177.35 1756.82,-3177.35 1775.42,-3189.75"/>
+<text text-anchor="middle" x="1744.42" y="-3195.15" font-family="Times,serif" font-size="14.00">init</text>
+</g>
+<!-- Initializable.InvalidInitialization -->
+<g id="node197" class="node" pointer-events="visible" data-name="Initializable.InvalidInitialization">
+
+<ellipse fill="rgb(237, 173, 86)" stroke="rgb(237, 173, 86)" stroke-width="3" cx="1812.15" cy="-3262.91" rx="87.96" ry="18"/>
+<text text-anchor="middle" x="1812.15" y="-3258.71" font-family="Times,serif" font-size="14.00">InvalidInitialization</text>
+</g>
+<!-- Initializable.init&#45;&gt;Initializable.InvalidInitialization -->
+<g id="edge116" class="edge" data-name="Initializable.init-&gt;Initializable.InvalidInitialization">
+
+<path fill="none" stroke="rgb(27, 198, 166)" stroke-width="2" d="M1764.38,-3218.07C1770.11,-3223.46 1776.49,-3229.44 1782.67,-3235.25"/>
+<polygon fill="#1bc6a6" stroke="#1bc6a6" stroke-width="2" points="1780.21,-3237.73 1789.9,-3242.02 1785,-3232.63 1780.21,-3237.73"/>
+</g>
+<!-- Initializable.init&#45;&gt;Version.set -->
+<g id="edge118" class="edge" data-name="Initializable.init-&gt;Version.set">
+
+<path fill="none" stroke="rgb(255, 255, 255)" stroke-width="2" d="M1749.47,-3175.96C1765.35,-3102.3 1814.39,-2874.95 1832.59,-2790.58"/>
+<polygon fill="white" stroke="white" stroke-width="2" points="1836,-2791.34 1834.69,-2780.82 1829.16,-2789.86 1836,-2791.34"/>
+</g>
+<!-- Version.get -->
+<g id="node199" class="node" pointer-events="visible" data-name="Version.get">
+
+<ellipse fill="rgb(242, 195, 131)" stroke="rgb(242, 195, 131)" stroke-width="3" cx="1904.36" cy="-2757.17" rx="27" ry="18"/>
+<text text-anchor="middle" x="1904.36" y="-2752.97" font-family="Times,serif" font-size="14.00">get</text>
+</g>
+<!-- Initializable.init&#45;&gt;Version.get -->
+<g id="edge115" class="edge" data-name="Initializable.init-&gt;Version.get">
+
+<path fill="none" stroke="rgb(255, 255, 255)" stroke-width="2" d="M1756.35,-3176.07C1787.86,-3102.15 1870.93,-2872.81 1896.85,-2788.59"/>
+<polygon fill="white" stroke="white" stroke-width="2" points="1900.12,-2789.85 1899.63,-2779.27 1893.42,-2787.85 1900.12,-2789.85"/>
+</g>
+<!-- Initializable.init&#45;&gt;Version.get -->
+
+<!-- Version.set&#45;&gt;LibUnstructuredStorage.setStorageUint256 --><g id="edge117" class="edge" data-name="Initializable.init-&gt;Version.get" data-comment="Version.set-&gt;LibUnstructuredStorage.setStorageUint256">
+
+<path fill="none" stroke="white" stroke-width="2" d="M1749.48,-3176.04C1771.52,-3101.59 1855.23,-2869.66 1889.72,-2786.89" style=""/>
+<polygon fill="white" stroke="white" stroke-width="2" points="1892.84,-2788.5 1893.54,-2777.93 1886.4,-2785.76 1892.84,-2788.5"/>
+</g>
+<g id="edge120" class="edge" data-name="Version.set-&gt;LibUnstructuredStorage.setStorageUint256">
+
+<path fill="none" stroke="rgb(255, 255, 255)" stroke-width="2" d="M1845.85,-2739.95C1874.06,-2657.26 1987.91,-2323.64 2023.6,-2219.02"/>
+<polygon fill="white" stroke="white" stroke-width="2" points="2026.85,-2220.35 2026.76,-2209.76 2020.22,-2218.09 2026.85,-2220.35"/>
+</g>
+<!-- Version.get&#45;&gt;LibUnstructuredStorage.getStorageUint256 -->
+<g id="edge119" class="edge" data-name="Version.get-&gt;LibUnstructuredStorage.getStorageUint256">
+
+<path fill="none" stroke="rgb(255, 255, 255)" stroke-width="2" d="M1910.53,-2738.28C1939.3,-2650.26 2060.35,-2279.89 2096.63,-2168.9"/>
+<polygon fill="white" stroke="white" stroke-width="2" points="2099.9,-2170.15 2099.68,-2159.56 2093.25,-2167.98 2099.9,-2170.15"/>
+</g>
+<!-- RiverAddress.set&#45;&gt;LibSanitize._notZeroAddress -->
+<g id="edge122" class="edge" data-name="RiverAddress.set-&gt;LibSanitize._notZeroAddress">
+
+<path fill="none" stroke="rgb(255, 255, 255)" stroke-width="2" d="M2119.57,-1570.25C2159.32,-1548.49 2243.22,-1502.57 2294.78,-1474.34"/>
+<polygon fill="white" stroke="white" stroke-width="2" points="2296.14,-1477.59 2303.23,-1469.72 2292.78,-1471.45 2296.14,-1477.59"/>
+</g>
+<!-- RiverAddress.set&#45;&gt;LibUnstructuredStorage.setStorageAddress -->
+<g id="edge123" class="edge" data-name="RiverAddress.set-&gt;LibUnstructuredStorage.setStorageAddress">
+
+<path fill="none" stroke="rgb(255, 255, 255)" stroke-width="2" d="M2094.9,-1601.63C2085.23,-1677.97 2049.45,-1960.43 2037.32,-2056.12"/>
+<polygon fill="white" stroke="white" stroke-width="2" points="2033.88,-2055.47 2036.09,-2065.83 2040.82,-2056.35 2033.88,-2055.47"/>
+</g>
+<!-- RiverAddress.get&#45;&gt;LibUnstructuredStorage.getStorageAddress -->
+<g id="edge121" class="edge" data-name="RiverAddress.get-&gt;LibUnstructuredStorage.getStorageAddress">
+
+<path fill="none" stroke="rgb(255, 255, 255)" stroke-width="2" d="M2022.96,-1624.97C2007.92,-1704.34 1950.63,-2006.65 1931.8,-2106.01"/>
+<polygon fill="white" stroke="white" stroke-width="2" points="1928.39,-2105.19 1929.97,-2115.66 1935.27,-2106.49 1928.39,-2105.19"/>
+</g>
+<!-- LastEpochId.get&#45;&gt;LibUnstructuredStorage.getStorageUint256 -->
+<g id="edge124" class="edge" data-name="LastEpochId.get-&gt;LibUnstructuredStorage.getStorageUint256">
+
+<path fill="none" stroke="rgb(255, 255, 255)" stroke-width="2" d="M1610.62,-1860.86C1689.17,-1904.61 1957.35,-2054 2063.34,-2113.04"/>
+<polygon fill="white" stroke="white" stroke-width="2" points="2061.47,-2116.01 2071.91,-2117.81 2064.88,-2109.89 2061.47,-2116.01"/>
+</g>
+<!-- LastEpochId.set&#45;&gt;LibUnstructuredStorage.setStorageUint256 -->
+<g id="edge125" class="edge" data-name="LastEpochId.set-&gt;LibUnstructuredStorage.setStorageUint256">
+
+<path fill="none" stroke="rgb(255, 255, 255)" stroke-width="2" d="M1677.58,-1841.78C1735.07,-1897.48 1931.49,-2087.81 2005.68,-2159.7"/>
+<polygon fill="white" stroke="white" stroke-width="2" points="2003.12,-2162.09 2012.74,-2166.53 2007.99,-2157.06 2003.12,-2162.09"/>
+</g>
+<!-- OracleMembers.push -->
+<g id="node208" class="node" pointer-events="visible" data-name="OracleMembers.push">
+
+<ellipse fill="rgb(242, 195, 131)" stroke="rgb(242, 195, 131)" stroke-width="3" cx="2333.79" cy="-933.81" rx="29.06" ry="18"/>
+<text text-anchor="middle" x="2333.79" y="-929.61" font-family="Times,serif" font-size="14.00">push</text>
+</g>
+<!-- OracleMembers.push&#45;&gt;LibSanitize._notZeroAddress -->
+<g id="edge126" class="edge" data-name="OracleMembers.push-&gt;LibSanitize._notZeroAddress">
+
+<path fill="none" stroke="rgb(255, 255, 255)" stroke-width="2" d="M2333.96,-953.13C2334.63,-1030.75 2337.15,-1320.48 2338.01,-1418.15"/>
+<polygon fill="white" stroke="white" stroke-width="2" points="2334.5,-1418.12 2338.09,-1428.09 2341.5,-1418.06 2334.5,-1418.12"/>
+</g>
+<!-- Quorum.set&#45;&gt;LibUnstructuredStorage.setStorageUint256 -->
+<g id="edge128" class="edge" data-name="Quorum.set-&gt;LibUnstructuredStorage.setStorageUint256">
+
+<path fill="none" stroke="rgb(255, 255, 255)" stroke-width="2" d="M1506,-1936.3C1589.2,-1975.85 1872.22,-2110.4 1986.21,-2164.59"/>
+<polygon fill="white" stroke="white" stroke-width="2" points="1984.39,-2167.61 1994.93,-2168.74 1987.4,-2161.28 1984.39,-2167.61"/>
+</g>
+<!-- Quorum.get&#45;&gt;LibUnstructuredStorage.getStorageUint256 -->
+<g id="edge127" class="edge" data-name="Quorum.get-&gt;LibUnstructuredStorage.getStorageUint256">
+
+<path fill="none" stroke="rgb(255, 255, 255)" stroke-width="2" d="M1524.51,-1888.43C1614.29,-1926.79 1930.01,-2061.71 2055.22,-2115.22"/>
+<polygon fill="white" stroke="white" stroke-width="2" points="2053.73,-2118.39 2064.3,-2119.1 2056.48,-2111.96 2053.73,-2118.39"/>
+</g>
+<!-- ReportsPositions.get&#45;&gt;LibUnstructuredStorage.getStorageUint256 -->
+<g id="edge129" class="edge" data-name="ReportsPositions.get-&gt;LibUnstructuredStorage.getStorageUint256">
+
+<path fill="none" stroke="rgb(255, 255, 255)" stroke-width="2" d="M1659.53,-1687.86C1727.32,-1755.97 1992.08,-2021.93 2079.07,-2109.33"/>
+<polygon fill="white" stroke="white" stroke-width="2" points="2076.42,-2111.62 2085.95,-2116.24 2081.38,-2106.68 2076.42,-2111.62"/>
+</g>
+<!-- ReportsPositions.getRaw&#45;&gt;LibUnstructuredStorage.getStorageUint256 -->
+<g id="edge130" class="edge" data-name="ReportsPositions.getRaw-&gt;LibUnstructuredStorage.getStorageUint256">
+
+<path fill="none" stroke="white" stroke-width="2" d="M1681.36,-1743.27C1750.73,-1807.49 1992.54,-2031.39 2077.31,-2109.88"/>
+<polygon fill="white" stroke="white" stroke-width="2" points="2074.68,-2112.22 2084.4,-2116.45 2079.44,-2107.09 2074.68,-2112.22"/>
+</g>
+<!-- ReportsPositions.register&#45;&gt;LibUnstructuredStorage.getStorageUint256 -->
+<g id="edge132" class="edge" data-name="ReportsPositions.register-&gt;LibUnstructuredStorage.getStorageUint256">
+
+<path fill="none" stroke="rgb(255, 255, 255)" stroke-width="2" d="M1742.83,-1659.37C1799.66,-1733.97 2014.62,-2016.14 2084.71,-2108.14"/>
+<polygon fill="white" stroke="white" stroke-width="2" points="2081.84,-2110.14 2090.68,-2115.98 2087.4,-2105.9 2081.84,-2110.14"/>
+</g>
+<!-- ReportsPositions.register&#45;&gt;LibUnstructuredStorage.setStorageUint256 -->
+<g id="edge131" class="edge" data-name="ReportsPositions.register-&gt;LibUnstructuredStorage.setStorageUint256">
+
+<path fill="none" stroke="rgb(255, 255, 255)" stroke-width="2" d="M1739.44,-1659.93C1784.5,-1740.53 1961.53,-2057.2 2017.38,-2157.12"/>
+<polygon fill="white" stroke="white" stroke-width="2" points="2014.17,-2158.53 2022.1,-2165.55 2020.28,-2155.12 2014.17,-2158.53"/>
+</g>
+<!-- ReportsPositions.clear&#45;&gt;LibUnstructuredStorage.setStorageUint256 -->
+<g id="edge133" class="edge" data-name="ReportsPositions.clear-&gt;LibUnstructuredStorage.setStorageUint256">
+
+<path fill="none" stroke="rgb(255, 255, 255)" stroke-width="2" d="M1752.49,-1706.19C1796.05,-1780.56 1961.78,-2063.55 2016.62,-2157.19"/>
+<polygon fill="white" stroke="white" stroke-width="2" points="2013.57,-2158.91 2021.64,-2165.77 2019.61,-2155.37 2013.57,-2158.91"/>
+</g>
+<!-- key -->
+<g id="node215" class="node" pointer-events="visible" data-name="key">
+
+<polygon fill="#edad56" stroke="none" stroke-width="3" points="2357.29,-666.14 2227.29,-666.14 2227.29,-578.14 2357.29,-578.14 2357.29,-666.14"/>
+<text text-anchor="start" x="2276.93" y="-647.54" font-family="Times,serif" font-size="14.00">Internal Call</text>
+<text text-anchor="start" x="2273.04" y="-627.54" font-family="Times,serif" font-size="14.00">External Call</text>
+<text text-anchor="start" x="2250.49" y="-607.54" font-family="Times,serif" font-size="14.00">Defined Contract</text>
+<text text-anchor="start" x="2236.89" y="-587.54" font-family="Times,serif" font-size="14.00">Undefined Contract</text>
+</g>
+<!-- key2 -->
+<g id="node216" class="node" pointer-events="visible" data-name="key2">
+
+<polygon fill="#edad56" stroke="none" stroke-width="3" points="2420.46,-651.03 2366.46,-651.03 2366.46,-563.03 2420.46,-563.03 2420.46,-651.03"/>
+<text text-anchor="start" x="2383.46" y="-632.43" font-family="Times,serif" font-size="14.00">   </text>
+<text text-anchor="start" x="2383.46" y="-612.43" font-family="Times,serif" font-size="14.00">   </text>
+<polygon fill="#445773" stroke="none" points="2381.46,-587.03 2381.46,-607.03 2406.46,-607.03 2406.46,-587.03 2381.46,-587.03"/>
+<text text-anchor="start" x="2383.46" y="-592.43" font-family="Times,serif" font-size="14.00">   </text>
+<polygon fill="none" stroke="#e8726d" points="2383.46,-569.03 2383.46,-585.03 2404.46,-585.03 2404.46,-569.03 2383.46,-569.03"/>
+</g>
+<!-- key&#45;&gt;key2 -->
+<g id="edge134" class="edge" data-name="key-&gt;key2">
+
+<path fill="none" stroke="rgb(27, 198, 166)" stroke-width="2" d="M2349.29,-652.14C2349.29,-652.14 2360.63,-646.81 2369.84,-642.48"/>
+<polygon fill="#1bc6a6" stroke="#1bc6a6" stroke-width="2" points="2371.15,-645.74 2378.72,-638.32 2368.18,-639.4 2371.15,-645.74"/>
+</g>
+<!-- key&#45;&gt;key2 -->
+
+<g id="edge135" class="edge" data-name="key-&gt;key2">
+
+<path fill="none" stroke="white" stroke-width="2" d="M2349.29,-632.14C2349.29,-632.14 2360.63,-626.81 2369.84,-622.48" style=""/>
+<polygon fill="white" stroke="white" stroke-width="2" points="2371.15,-625.74 2378.72,-618.32 2368.18,-619.4 2371.15,-625.74"/>
+</g>
+</g>
+</svg>
