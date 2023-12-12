@@ -1,0 +1,852 @@
+digraph G {
+  graph [ ratio = "auto", page = "100", compound =true, bgcolor = "#2e3e56" ];
+  node [ style = "filled", fillcolor = "#edad56", color = "#edad56", penwidth =3 ];
+  edge [ color = "#fcfcfc", penwidth =2, fontname = "helvetica Neue Ultra Light" ];
+subgraph "clusterLibBytes" {
+  graph [ label = "LibBytes  (lib)", color = "#445773", fontcolor = "#f0f0f0", style = "rounded", bgcolor = "#445773" ];
+  "LibBytes.slice" [ label = "slice", color = "#f2c383", fillcolor = "#f2c383" ];
+  "LibBytes.SliceOverflow" [ label = "SliceOverflow" ];
+  "LibBytes.SliceOutOfBounds" [ label = "SliceOutOfBounds" ];
+}
+
+subgraph "clusterIWithdrawV1" {
+  graph [ label = "IWithdrawV1  (iface)", color = "#445773", fontcolor = "#f0f0f0", style = "rounded", bgcolor = "#445773" ];
+  "IWithdrawV1.initializeWithdrawV1" [ label = "initializeWithdrawV1", color = "#ffbdb9", fillcolor = "#ffbdb9" ];
+  "IWithdrawV1.getCredentials" [ label = "getCredentials", color = "#ffbdb9", fillcolor = "#ffbdb9" ];
+  "IWithdrawV1.getRiver" [ label = "getRiver", color = "#ffbdb9", fillcolor = "#ffbdb9" ];
+  "IWithdrawV1.pullEth" [ label = "pullEth", color = "#ffbdb9", fillcolor = "#ffbdb9" ];
+}
+
+subgraph "clusterOracleManagerV1" {
+  graph [ label = "OracleManagerV1", color = "#445773", fontcolor = "#f0f0f0", style = "rounded", bgcolor = "#445773" ];
+  "OracleManagerV1._onEarnings" [ label = "_onEarnings" ];
+  "OracleManagerV1._pullELFees" [ label = "_pullELFees" ];
+  "OracleManagerV1._pullCoverageFunds" [ label = "_pullCoverageFunds" ];
+  "OracleManagerV1._getRiverAdmin" [ label = "_getRiverAdmin" ];
+  "OracleManagerV1._assetBalance" [ label = "_assetBalance" ];
+  "OracleManagerV1._pullCLFunds" [ label = "_pullCLFunds" ];
+  "OracleManagerV1._pullRedeemManagerExceedingEth" [ label = "_pullRedeemManagerExceedingEth" ];
+  "OracleManagerV1._reportWithdrawToRedeemManager" [ label = "_reportWithdrawToRedeemManager" ];
+  "OracleManagerV1._requestExitsBasedOnRedeemDemandAfterRebalancings" [ label = "_requestExitsBasedOnRedeemDemandAfterRebalancings" ];
+  "OracleManagerV1._skimExcessBalanceToRedeem" [ label = "_skimExcessBalanceToRedeem" ];
+  "OracleManagerV1._commitBalanceToDeposit" [ label = "_commitBalanceToDeposit" ];
+  "OracleManagerV1.onlyAdmin_OMV1" [ label = "onlyAdmin_OMV1", color = "#1bc6a6", shape =doubleoctagon ];
+  "OracleManagerV1.initOracleManagerV1" [ label = "initOracleManagerV1", color = "#f2c383", fillcolor = "#f2c383" ];
+  "OracleManagerV1.initOracleManagerV1_1" [ label = "initOracleManagerV1_1", color = "#f2c383", fillcolor = "#f2c383" ];
+  "OracleManagerV1.getOracle" [ label = "getOracle", color = "#ffbdb9", fillcolor = "#ffbdb9" ];
+  "OracleManagerV1.getCLValidatorTotalBalance" [ label = "getCLValidatorTotalBalance", color = "#ffbdb9", fillcolor = "#ffbdb9" ];
+  "OracleManagerV1.getCLValidatorCount" [ label = "getCLValidatorCount", color = "#ffbdb9", fillcolor = "#ffbdb9" ];
+  "OracleManagerV1.getExpectedEpochId" [ label = "getExpectedEpochId", color = "#ffbdb9", fillcolor = "#ffbdb9" ];
+  "OracleManagerV1.isValidEpoch" [ label = "isValidEpoch", color = "#ffbdb9", fillcolor = "#ffbdb9" ];
+  "OracleManagerV1.getTime" [ label = "getTime", color = "#ffbdb9", fillcolor = "#ffbdb9" ];
+  "OracleManagerV1.getLastCompletedEpochId" [ label = "getLastCompletedEpochId", color = "#ffbdb9", fillcolor = "#ffbdb9" ];
+  "OracleManagerV1.getCurrentEpochId" [ label = "getCurrentEpochId", color = "#ffbdb9", fillcolor = "#ffbdb9" ];
+  "OracleManagerV1.getCLSpec" [ label = "getCLSpec", color = "#ffbdb9", fillcolor = "#ffbdb9" ];
+  "OracleManagerV1.getCurrentFrame" [ label = "getCurrentFrame", color = "#ffbdb9", fillcolor = "#ffbdb9" ];
+  "OracleManagerV1.getFrameFirstEpochId" [ label = "getFrameFirstEpochId", color = "#ffbdb9", fillcolor = "#ffbdb9" ];
+  "OracleManagerV1.getReportBounds" [ label = "getReportBounds", color = "#ffbdb9", fillcolor = "#ffbdb9" ];
+  "OracleManagerV1.getLastConsensusLayerReport" [ label = "getLastConsensusLayerReport", color = "#ffbdb9", fillcolor = "#ffbdb9" ];
+  "OracleManagerV1.setOracle" [ label = "setOracle", color = "#ffbdb9", fillcolor = "#ffbdb9" ];
+  "OracleManagerV1.setCLSpec" [ label = "setCLSpec", color = "#ffbdb9", fillcolor = "#ffbdb9" ];
+  "OracleManagerV1.setReportBounds" [ label = "setReportBounds", color = "#ffbdb9", fillcolor = "#ffbdb9" ];
+  "OracleManagerV1.setConsensusLayerData" [ label = "setConsensusLayerData", color = "#ffbdb9", fillcolor = "#ffbdb9" ];
+  "OracleManagerV1._currentEpoch" [ label = "_currentEpoch" ];
+  "OracleManagerV1._isValidEpoch" [ label = "_isValidEpoch" ];
+  "OracleManagerV1._maxIncrease" [ label = "_maxIncrease" ];
+  "OracleManagerV1._maxDecrease" [ label = "_maxDecrease" ];
+  "OracleManagerV1._timeBetweenEpochs" [ label = "_timeBetweenEpochs" ];
+  "OracleManagerV1.InvalidEpoch" [ label = "InvalidEpoch" ];
+  "OracleManagerV1.InvalidDecreasingValidatorsExitedBalance" [ label = "InvalidDecreasingValidatorsExitedBalance" ];
+  "OracleManagerV1.InvalidDecreasingValidatorsSkimmedBalance" [ label = "InvalidDecreasingValidatorsSkimmedBalance" ];
+  "OracleManagerV1.InvalidValidatorCountReport" [ label = "InvalidValidatorCountReport" ];
+  "OracleManagerV1.TotalValidatorBalanceIncreaseOutOfBound" [ label = "TotalValidatorBalanceIncreaseOutOfBound" ];
+  "OracleManagerV1.TotalValidatorBalanceDecreaseOutOfBound" [ label = "TotalValidatorBalanceDecreaseOutOfBound" ];
+}
+
+subgraph "clusterIOracleManagerV1" {
+  graph [ label = "IOracleManagerV1  (iface)", color = "#445773", fontcolor = "#f0f0f0", style = "rounded", bgcolor = "#445773" ];
+  "IOracleManagerV1.getOracle" [ label = "getOracle", color = "#ffbdb9", fillcolor = "#ffbdb9" ];
+  "IOracleManagerV1.getCLValidatorTotalBalance" [ label = "getCLValidatorTotalBalance", color = "#ffbdb9", fillcolor = "#ffbdb9" ];
+  "IOracleManagerV1.getCLValidatorCount" [ label = "getCLValidatorCount", color = "#ffbdb9", fillcolor = "#ffbdb9" ];
+  "IOracleManagerV1.isValidEpoch" [ label = "isValidEpoch", color = "#ffbdb9", fillcolor = "#ffbdb9" ];
+  "IOracleManagerV1.getTime" [ label = "getTime", color = "#ffbdb9", fillcolor = "#ffbdb9" ];
+  "IOracleManagerV1.getExpectedEpochId" [ label = "getExpectedEpochId", color = "#ffbdb9", fillcolor = "#ffbdb9" ];
+  "IOracleManagerV1.getLastCompletedEpochId" [ label = "getLastCompletedEpochId", color = "#ffbdb9", fillcolor = "#ffbdb9" ];
+  "IOracleManagerV1.getCurrentEpochId" [ label = "getCurrentEpochId", color = "#ffbdb9", fillcolor = "#ffbdb9" ];
+  "IOracleManagerV1.getCLSpec" [ label = "getCLSpec", color = "#ffbdb9", fillcolor = "#ffbdb9" ];
+  "IOracleManagerV1.getCurrentFrame" [ label = "getCurrentFrame", color = "#ffbdb9", fillcolor = "#ffbdb9" ];
+  "IOracleManagerV1.getFrameFirstEpochId" [ label = "getFrameFirstEpochId", color = "#ffbdb9", fillcolor = "#ffbdb9" ];
+  "IOracleManagerV1.getReportBounds" [ label = "getReportBounds", color = "#ffbdb9", fillcolor = "#ffbdb9" ];
+  "IOracleManagerV1.getLastConsensusLayerReport" [ label = "getLastConsensusLayerReport", color = "#ffbdb9", fillcolor = "#ffbdb9" ];
+  "IOracleManagerV1.setOracle" [ label = "setOracle", color = "#ffbdb9", fillcolor = "#ffbdb9" ];
+  "IOracleManagerV1.setCLSpec" [ label = "setCLSpec", color = "#ffbdb9", fillcolor = "#ffbdb9" ];
+  "IOracleManagerV1.setReportBounds" [ label = "setReportBounds", color = "#ffbdb9", fillcolor = "#ffbdb9" ];
+  "IOracleManagerV1.setConsensusLayerData" [ label = "setConsensusLayerData", color = "#ffbdb9", fillcolor = "#ffbdb9" ];
+}
+
+subgraph "clusterCLSpec" {
+  graph [ label = "CLSpec  (lib)", color = "#445773", fontcolor = "#f0f0f0", style = "rounded", bgcolor = "#445773" ];
+  "CLSpec.set" [ label = "set", color = "#f2c383", fillcolor = "#f2c383" ];
+  "CLSpec.CLSpecStruct" [ label = "CLSpecStruct" ];
+  "CLSpec.get" [ label = "get", color = "#f2c383", fillcolor = "#f2c383" ];
+}
+
+subgraph "clusterReportBounds" {
+  graph [ label = "ReportBounds  (lib)", color = "#445773", fontcolor = "#f0f0f0", style = "rounded", bgcolor = "#445773" ];
+  "ReportBounds.set" [ label = "set", color = "#f2c383", fillcolor = "#f2c383" ];
+  "ReportBounds.ReportBoundsStruct" [ label = "ReportBoundsStruct" ];
+  "ReportBounds.get" [ label = "get", color = "#f2c383", fillcolor = "#f2c383" ];
+}
+
+subgraph "clusterIRedeemManagerV1" {
+  graph [ label = "IRedeemManagerV1  (iface)", color = "#445773", fontcolor = "#f0f0f0", style = "rounded", bgcolor = "#445773" ];
+  "IRedeemManagerV1.initializeRedeemManagerV1" [ label = "initializeRedeemManagerV1", color = "#ffbdb9", fillcolor = "#ffbdb9" ];
+  "IRedeemManagerV1.getRiver" [ label = "getRiver", color = "#ffbdb9", fillcolor = "#ffbdb9" ];
+  "IRedeemManagerV1.getRedeemRequestCount" [ label = "getRedeemRequestCount", color = "#ffbdb9", fillcolor = "#ffbdb9" ];
+  "IRedeemManagerV1.getRedeemRequestDetails" [ label = "getRedeemRequestDetails", color = "#ffbdb9", fillcolor = "#ffbdb9" ];
+  "IRedeemManagerV1.getWithdrawalEventCount" [ label = "getWithdrawalEventCount", color = "#ffbdb9", fillcolor = "#ffbdb9" ];
+  "IRedeemManagerV1.getWithdrawalEventDetails" [ label = "getWithdrawalEventDetails", color = "#ffbdb9", fillcolor = "#ffbdb9" ];
+  "IRedeemManagerV1.getBufferedExceedingEth" [ label = "getBufferedExceedingEth", color = "#ffbdb9", fillcolor = "#ffbdb9" ];
+  "IRedeemManagerV1.getRedeemDemand" [ label = "getRedeemDemand", color = "#ffbdb9", fillcolor = "#ffbdb9" ];
+  "IRedeemManagerV1.resolveRedeemRequests" [ label = "resolveRedeemRequests", color = "#ffbdb9", fillcolor = "#ffbdb9" ];
+  "IRedeemManagerV1.requestRedeem" [ label = "requestRedeem", color = "#ffbdb9", fillcolor = "#ffbdb9" ];
+  "IRedeemManagerV1.claimRedeemRequests" [ label = "claimRedeemRequests", color = "#ffbdb9", fillcolor = "#ffbdb9" ];
+  "IRedeemManagerV1.reportWithdraw" [ label = "reportWithdraw", color = "brown", fillcolor = "#ffbdb9" ];
+  "IRedeemManagerV1.pullExceedingEth" [ label = "pullExceedingEth", color = "#ffbdb9", fillcolor = "#ffbdb9" ];
+}
+
+subgraph "clusterRedeemQueue" {
+  graph [ label = "RedeemQueue  (lib)", color = "#445773", fontcolor = "#f0f0f0", style = "rounded", bgcolor = "#445773" ];
+  "RedeemQueue.get" [ label = "get", color = "#f2c383", fillcolor = "#f2c383" ];
+}
+
+subgraph "clusterWithdrawalStack" {
+  graph [ label = "WithdrawalStack  (lib)", color = "#445773", fontcolor = "#f0f0f0", style = "rounded", bgcolor = "#445773" ];
+  "WithdrawalStack.get" [ label = "get", color = "#f2c383", fillcolor = "#f2c383" ];
+}
+
+subgraph "clusterLibUint256" {
+  graph [ label = "LibUint256  (lib)", color = "#445773", fontcolor = "#f0f0f0", style = "rounded", bgcolor = "#445773" ];
+  "LibUint256.max" [ label = "max", color = "#f2c383", fillcolor = "#f2c383" ];
+  "LibUint256.min" [ label = "min", color = "#f2c383", fillcolor = "#f2c383" ];
+  "LibUint256.toLittleEndian64" [ label = "toLittleEndian64", color = "#f2c383", fillcolor = "#f2c383" ];
+  "LibUint256.ceil" [ label = "ceil", color = "#f2c383", fillcolor = "#f2c383" ];
+}
+
+subgraph "clusterLastConsensusLayerReport" {
+  graph [ label = "LastConsensusLayerReport  (lib)", color = "#445773", fontcolor = "#f0f0f0", style = "rounded", bgcolor = "#445773" ];
+  "LastConsensusLayerReport.set" [ label = "set", color = "#f2c383", fillcolor = "#f2c383" ];
+  "LastConsensusLayerReport.get" [ label = "get", color = "#f2c383", fillcolor = "#f2c383" ];
+}
+
+subgraph "clusterOracleAddress" {
+  graph [ label = "OracleAddress  (lib)", color = "#445773", fontcolor = "#f0f0f0", style = "rounded", bgcolor = "#445773" ];
+  "OracleAddress.set" [ label = "set", color = "#f2c383", fillcolor = "#f2c383" ];
+  "OracleAddress.get" [ label = "get", color = "#f2c383", fillcolor = "#f2c383" ];
+}
+
+subgraph "clusterLibUnstructuredStorage" {
+  graph [ label = "LibUnstructuredStorage  (lib)", color = "#445773", fontcolor = "#f0f0f0", style = "rounded", bgcolor = "#445773" ];
+  "LibUnstructuredStorage.getStorageAddress" [ label = "getStorageAddress", color = "#f2c383", fillcolor = "#f2c383" ];
+  "LibUnstructuredStorage.setStorageAddress" [ label = "setStorageAddress", color = "#f2c383", fillcolor = "#f2c383" ];
+  "LibUnstructuredStorage.getStorageBool" [ label = "getStorageBool", color = "#f2c383", fillcolor = "#f2c383" ];
+  "LibUnstructuredStorage.getStorageBytes32" [ label = "getStorageBytes32" ];
+  "LibUnstructuredStorage.getStorageUint256" [ label = "getStorageUint256" ];
+  "LibUnstructuredStorage.setStorageBool" [ label = "setStorageBool", color = "#f2c383", fillcolor = "#f2c383" ];
+  "LibUnstructuredStorage.setStorageBytes32" [ label = "setStorageBytes32" ];
+  "LibUnstructuredStorage.setStorageUint256" [ label = "setStorageUint256" ];
+}
+
+subgraph "clusterLibSanitize" {
+  graph [ label = "LibSanitize  (lib)", color = "#445773", fontcolor = "#f0f0f0", style = "rounded", bgcolor = "#445773" ];
+  "LibSanitize._notZeroAddress" [ label = "_notZeroAddress", color = "#f2c383", fillcolor = "#f2c383" ];
+  "LibSanitize._notEmptyString" [ label = "_notEmptyString", color = "#f2c383", fillcolor = "#f2c383" ];
+  "LibSanitize._validFee" [ label = "_validFee", color = "#f2c383", fillcolor = "#f2c383" ];
+}
+
+subgraph "clusterLibErrors" {
+  graph [ label = "LibErrors  (lib)", color = "#445773", fontcolor = "#f0f0f0", style = "rounded", bgcolor = "#445773" ];
+  "LibErrors.Unauthorized" [ label = "Unauthorized" ];
+  "LibErrors.InvalidZeroAddress" [ label = "InvalidZeroAddress" ];
+  "LibErrors.InvalidEmptyString" [ label = "InvalidEmptyString" ];
+  "LibErrors.InvalidFee" [ label = "InvalidFee" ];
+}
+
+subgraph "clusterLibBasisPoints" {
+  graph [ label = "LibBasisPoints  (lib)", color = "#445773", fontcolor = "#f0f0f0", style = "rounded", bgcolor = "#445773" ];
+}
+
+subgraph "clusterCLValidatorTotalBalance" {
+  graph [ label = "CLValidatorTotalBalance  (lib)", color = "#445773", fontcolor = "#f0f0f0", style = "rounded", bgcolor = "#445773" ];
+  "CLValidatorTotalBalance.get" [ label = "get", color = "#f2c383", fillcolor = "#f2c383" ];
+  "CLValidatorTotalBalance.set" [ label = "set", color = "#f2c383", fillcolor = "#f2c383" ];
+}
+
+subgraph "clusterCLValidatorCount" {
+  graph [ label = "CLValidatorCount  (lib)", color = "#445773", fontcolor = "#f0f0f0", style = "rounded", bgcolor = "#445773" ];
+  "CLValidatorCount.get" [ label = "get", color = "#f2c383", fillcolor = "#f2c383" ];
+  "CLValidatorCount.set" [ label = "set", color = "#f2c383", fillcolor = "#f2c383" ];
+}
+
+subgraph "clusterDepositedValidatorCount" {
+  graph [ label = "DepositedValidatorCount  (lib)", color = "#445773", fontcolor = "#f0f0f0", style = "rounded", bgcolor = "#445773" ];
+  "DepositedValidatorCount.get" [ label = "get", color = "#f2c383", fillcolor = "#f2c383" ];
+  "DepositedValidatorCount.set" [ label = "set", color = "#f2c383", fillcolor = "#f2c383" ];
+}
+
+subgraph "clusterLastOracleRoundId" {
+  graph [ label = "LastOracleRoundId  (lib)", color = "#445773", fontcolor = "#f0f0f0", style = "rounded", bgcolor = "#445773" ];
+  "LastOracleRoundId.get" [ label = "get", color = "#f2c383", fillcolor = "#f2c383" ];
+  "LastOracleRoundId.set" [ label = "set", color = "#f2c383", fillcolor = "#f2c383" ];
+}
+
+subgraph "clusterERC20VestableVotesUpgradeableV1" {
+  graph [ label = "ERC20VestableVotesUpgradeableV1", color = "#445773", fontcolor = "#f0f0f0", style = "rounded", bgcolor = "#445773" ];
+  "ERC20VestableVotesUpgradeableV1.__ERC20VestableVotes_init" [ label = "__ERC20VestableVotes_init", color = "#f2c383", fillcolor = "#f2c383" ];
+  "ERC20VestableVotesUpgradeableV1.__ERC20VestableVotes_init_unchained" [ label = "__ERC20VestableVotes_init_unchained", color = "#f2c383", fillcolor = "#f2c383" ];
+  "ERC20VestableVotesUpgradeableV1.migrateVestingSchedulesFromV1ToV2" [ label = "migrateVestingSchedulesFromV1ToV2", color = "#f2c383", fillcolor = "#f2c383" ];
+  "ERC20VestableVotesUpgradeableV1.getVestingSchedule" [ label = "getVestingSchedule", color = "#ffbdb9", fillcolor = "#ffbdb9" ];
+  "ERC20VestableVotesUpgradeableV1.isGlobalUnlockedScheduleIgnored" [ label = "isGlobalUnlockedScheduleIgnored", color = "#ffbdb9", fillcolor = "#ffbdb9" ];
+  "ERC20VestableVotesUpgradeableV1.getVestingScheduleCount" [ label = "getVestingScheduleCount", color = "#ffbdb9", fillcolor = "#ffbdb9" ];
+  "ERC20VestableVotesUpgradeableV1.vestingEscrow" [ label = "vestingEscrow", color = "#ffbdb9", fillcolor = "#ffbdb9" ];
+  "ERC20VestableVotesUpgradeableV1.computeVestingReleasableAmount" [ label = "computeVestingReleasableAmount", color = "#ffbdb9", fillcolor = "#ffbdb9" ];
+  "ERC20VestableVotesUpgradeableV1.computeVestingVestedAmount" [ label = "computeVestingVestedAmount", color = "#ffbdb9", fillcolor = "#ffbdb9" ];
+  "ERC20VestableVotesUpgradeableV1.createVestingSchedule" [ label = "createVestingSchedule", color = "#ffbdb9", fillcolor = "#ffbdb9" ];
+  "ERC20VestableVotesUpgradeableV1.revokeVestingSchedule" [ label = "revokeVestingSchedule", color = "#ffbdb9", fillcolor = "#ffbdb9" ];
+  "ERC20VestableVotesUpgradeableV1.releaseVestingSchedule" [ label = "releaseVestingSchedule", color = "#ffbdb9", fillcolor = "#ffbdb9" ];
+  "ERC20VestableVotesUpgradeableV1.delegateVestingEscrow" [ label = "delegateVestingEscrow", color = "#ffbdb9", fillcolor = "#ffbdb9" ];
+  "ERC20VestableVotesUpgradeableV1._createVestingSchedule" [ label = "_createVestingSchedule" ];
+  "ERC20VestableVotesUpgradeableV1._revokeVestingSchedule" [ label = "_revokeVestingSchedule" ];
+  "ERC20VestableVotesUpgradeableV1._releaseVestingSchedule" [ label = "_releaseVestingSchedule" ];
+  "ERC20VestableVotesUpgradeableV1._delegateVestingEscrow" [ label = "_delegateVestingEscrow" ];
+  "ERC20VestableVotesUpgradeableV1._deterministicVestingEscrow" [ label = "_deterministicVestingEscrow" ];
+  "ERC20VestableVotesUpgradeableV1._computeVestingReleasableAmount" [ label = "_computeVestingReleasableAmount" ];
+  "ERC20VestableVotesUpgradeableV1._computeVestedAmount" [ label = "_computeVestedAmount" ];
+  "ERC20VestableVotesUpgradeableV1._computeGlobalUnlocked" [ label = "_computeGlobalUnlocked" ];
+  "ERC20VestableVotesUpgradeableV1._getCurrentTime" [ label = "_getCurrentTime" ];
+  "ERC20VestableVotesUpgradeableV1.balanceOf" [ label = "balanceOf" ];
+  "ERC20VestableVotesUpgradeableV1.UnsufficientVestingScheduleCreatorBalance" [ label = "UnsufficientVestingScheduleCreatorBalance" ];
+  "ERC20VestableVotesUpgradeableV1.InvalidVestingScheduleParameter" [ label = "InvalidVestingScheduleParameter" ];
+  "ERC20VestableVotesUpgradeableV1._transfer" [ label = "_transfer" ];
+  "ERC20VestableVotesUpgradeableV1._delegate" [ label = "_delegate" ];
+  "ERC20VestableVotesUpgradeableV1.VestingScheduleNotRevocableInPast" [ label = "VestingScheduleNotRevocableInPast" ];
+  "ERC20VestableVotesUpgradeableV1.VestingScheduleNotRevocable" [ label = "VestingScheduleNotRevocable" ];
+  "ERC20VestableVotesUpgradeableV1.InvalidRevokedVestingScheduleEnd" [ label = "InvalidRevokedVestingScheduleEnd" ];
+  "ERC20VestableVotesUpgradeableV1.ZeroReleasableAmount" [ label = "ZeroReleasableAmount" ];
+  "ERC20VestableVotesUpgradeableV1.delegates" [ label = "delegates" ];
+  "ERC20VestableVotesUpgradeableV1.VestingScheduleIsLocked" [ label = "VestingScheduleIsLocked" ];
+  "ERC20VestableVotesUpgradeableV1.GlobalUnlockUnderlfow" [ label = "GlobalUnlockUnderlfow" ];
+}
+
+subgraph "clusterIERC20VestableVotesUpgradeableV1" {
+  graph [ label = "IERC20VestableVotesUpgradeableV1  (iface)", color = "#445773", fontcolor = "#f0f0f0", style = "rounded", bgcolor = "#445773" ];
+  "IERC20VestableVotesUpgradeableV1.getVestingSchedule" [ label = "getVestingSchedule", color = "#ffbdb9", fillcolor = "#ffbdb9" ];
+  "IERC20VestableVotesUpgradeableV1.isGlobalUnlockedScheduleIgnored" [ label = "isGlobalUnlockedScheduleIgnored", color = "#ffbdb9", fillcolor = "#ffbdb9" ];
+  "IERC20VestableVotesUpgradeableV1.getVestingScheduleCount" [ label = "getVestingScheduleCount", color = "#ffbdb9", fillcolor = "#ffbdb9" ];
+  "IERC20VestableVotesUpgradeableV1.vestingEscrow" [ label = "vestingEscrow", color = "#ffbdb9", fillcolor = "#ffbdb9" ];
+  "IERC20VestableVotesUpgradeableV1.computeVestingReleasableAmount" [ label = "computeVestingReleasableAmount", color = "#ffbdb9", fillcolor = "#ffbdb9" ];
+  "IERC20VestableVotesUpgradeableV1.computeVestingVestedAmount" [ label = "computeVestingVestedAmount", color = "#ffbdb9", fillcolor = "#ffbdb9" ];
+  "IERC20VestableVotesUpgradeableV1.createVestingSchedule" [ label = "createVestingSchedule", color = "#ffbdb9", fillcolor = "#ffbdb9" ];
+  "IERC20VestableVotesUpgradeableV1.revokeVestingSchedule" [ label = "revokeVestingSchedule", color = "#ffbdb9", fillcolor = "#ffbdb9" ];
+  "IERC20VestableVotesUpgradeableV1.releaseVestingSchedule" [ label = "releaseVestingSchedule", color = "#ffbdb9", fillcolor = "#ffbdb9" ];
+  "IERC20VestableVotesUpgradeableV1.delegateVestingEscrow" [ label = "delegateVestingEscrow", color = "#ffbdb9", fillcolor = "#ffbdb9" ];
+}
+
+subgraph "clusterVestingSchedulesV2" {
+  graph [ label = "VestingSchedulesV2  (lib)", color = "#445773", fontcolor = "#f0f0f0", style = "rounded", bgcolor = "#445773" ];
+  "VestingSchedulesV2.getCount" [ label = "getCount", color = "#f2c383", fillcolor = "#f2c383" ];
+  "VestingSchedulesV2.migrateVestingScheduleFromV1" [ label = "migrateVestingScheduleFromV1", color = "#f2c383", fillcolor = "#f2c383" ];
+  "VestingSchedulesV2.get" [ label = "get", color = "#f2c383", fillcolor = "#f2c383" ];
+  "VestingSchedulesV2.VestingSchedule" [ label = "VestingSchedule" ];
+  "VestingSchedulesV2.push" [ label = "push" ];
+  "VestingSchedulesV2.VestingScheduleNotFound" [ label = "VestingScheduleNotFound" ];
+}
+
+subgraph "clusterVestingSchedulesV1" {
+  graph [ label = "VestingSchedulesV1  (lib)", color = "#445773", fontcolor = "#f0f0f0", style = "rounded", bgcolor = "#445773" ];
+  "VestingSchedulesV1.getCount" [ label = "getCount", color = "#f2c383", fillcolor = "#f2c383" ];
+  "VestingSchedulesV1.get" [ label = "get", color = "#f2c383", fillcolor = "#f2c383" ];
+  "VestingSchedulesV1.push" [ label = "push", color = "#f2c383", fillcolor = "#f2c383" ];
+  "VestingSchedulesV1.VestingScheduleNotFound" [ label = "VestingScheduleNotFound" ];
+}
+
+subgraph "clusterIgnoreGlobalUnlockSchedule" {
+  graph [ label = "IgnoreGlobalUnlockSchedule  (lib)", color = "#445773", fontcolor = "#f0f0f0", style = "rounded", bgcolor = "#445773" ];
+  "IgnoreGlobalUnlockSchedule.get" [ label = "get", color = "#f2c383", fillcolor = "#f2c383" ];
+  "IgnoreGlobalUnlockSchedule.set" [ label = "set", color = "#f2c383", fillcolor = "#f2c383" ];
+}
+
+subgraph "clusterAllowlistV1" {
+  graph [ label = "AllowlistV1", color = "#445773", fontcolor = "#f0f0f0", style = "rounded", bgcolor = "#445773" ];
+  "AllowlistV1.initAllowlistV1" [ label = "initAllowlistV1", color = "#ffbdb9", fillcolor = "#ffbdb9" ];
+  "AllowlistV1.initAllowlistV1_1" [ label = "initAllowlistV1_1", color = "#ffbdb9", fillcolor = "#ffbdb9" ];
+  "AllowlistV1.getAllower" [ label = "getAllower", color = "#ffbdb9", fillcolor = "#ffbdb9" ];
+  "AllowlistV1.getDenier" [ label = "getDenier", color = "#ffbdb9", fillcolor = "#ffbdb9" ];
+  "AllowlistV1.isAllowed" [ label = "isAllowed", color = "#ffbdb9", fillcolor = "#ffbdb9" ];
+  "AllowlistV1.isDenied" [ label = "isDenied", color = "#ffbdb9", fillcolor = "#ffbdb9" ];
+  "AllowlistV1.hasPermission" [ label = "hasPermission", color = "#ffbdb9", fillcolor = "#ffbdb9" ];
+  "AllowlistV1.getPermissions" [ label = "getPermissions", color = "#ffbdb9", fillcolor = "#ffbdb9" ];
+  "AllowlistV1.onlyAllowed" [ label = "onlyAllowed", color = "#ffbdb9", fillcolor = "#ffbdb9" ];
+  "AllowlistV1.setAllower" [ label = "setAllower", color = "#ffbdb9", fillcolor = "#ffbdb9" ];
+  "AllowlistV1.setDenier" [ label = "setDenier", color = "#ffbdb9", fillcolor = "#ffbdb9" ];
+  "AllowlistV1.setAllowPermissions" [ label = "setAllowPermissions", color = "#ffbdb9", fillcolor = "#ffbdb9" ];
+  "AllowlistV1.setDenyPermissions" [ label = "setDenyPermissions", color = "#ffbdb9", fillcolor = "#ffbdb9" ];
+  "AllowlistV1._setAdmin" [ label = "_setAdmin" ];
+  "AllowlistV1.Denied" [ label = "Denied" ];
+  "AllowlistV1.InvalidCount" [ label = "InvalidCount" ];
+  "AllowlistV1.MismatchedArrayLengths" [ label = "MismatchedArrayLengths" ];
+  "AllowlistV1.AttemptToRemoveDenyPermission" [ label = "AttemptToRemoveDenyPermission" ];
+  "AllowlistV1.AttemptToSetDenyPermission" [ label = "AttemptToSetDenyPermission" ];
+}
+
+subgraph "clusterIAllowlistV1" {
+  graph [ label = "IAllowlistV1  (iface)", color = "#445773", fontcolor = "#f0f0f0", style = "rounded", bgcolor = "#445773" ];
+  "IAllowlistV1.initAllowlistV1" [ label = "initAllowlistV1", color = "#ffbdb9", fillcolor = "#ffbdb9" ];
+  "IAllowlistV1.initAllowlistV1_1" [ label = "initAllowlistV1_1", color = "#ffbdb9", fillcolor = "#ffbdb9" ];
+  "IAllowlistV1.getAllower" [ label = "getAllower", color = "#ffbdb9", fillcolor = "#ffbdb9" ];
+  "IAllowlistV1.getDenier" [ label = "getDenier", color = "#ffbdb9", fillcolor = "#ffbdb9" ];
+  "IAllowlistV1.isAllowed" [ label = "isAllowed", color = "#ffbdb9", fillcolor = "#ffbdb9" ];
+  "IAllowlistV1.isDenied" [ label = "isDenied", color = "#ffbdb9", fillcolor = "#ffbdb9" ];
+  "IAllowlistV1.hasPermission" [ label = "hasPermission", color = "#ffbdb9", fillcolor = "#ffbdb9" ];
+  "IAllowlistV1.getPermissions" [ label = "getPermissions", color = "#ffbdb9", fillcolor = "#ffbdb9" ];
+  "IAllowlistV1.onlyAllowed" [ label = "onlyAllowed", color = "#ffbdb9", fillcolor = "#ffbdb9" ];
+  "IAllowlistV1.setAllower" [ label = "setAllower", color = "#ffbdb9", fillcolor = "#ffbdb9" ];
+  "IAllowlistV1.setDenier" [ label = "setDenier", color = "#ffbdb9", fillcolor = "#ffbdb9" ];
+  "IAllowlistV1.setAllowPermissions" [ label = "setAllowPermissions", color = "#ffbdb9", fillcolor = "#ffbdb9" ];
+  "IAllowlistV1.setDenyPermissions" [ label = "setDenyPermissions", color = "#ffbdb9", fillcolor = "#ffbdb9" ];
+}
+
+subgraph "clusterLibAllowlistMasks" {
+  graph [ label = "LibAllowlistMasks  (lib)", color = "#445773", fontcolor = "#f0f0f0", style = "rounded", bgcolor = "#445773" ];
+}
+
+subgraph "clusterInitializable" {
+  graph [ label = "Initializable", color = "#445773", fontcolor = "#f0f0f0", style = "rounded", bgcolor = "#445773" ];
+  "Initializable.<Constructor>" [ label = "<Constructor>", color = "#FF9797", fillcolor = "#FF9797" ];
+  "Initializable.init" [ label = "init", color = "#1bc6a6", shape =doubleoctagon ];
+  "Initializable.type" [ label = "type" ];
+  "Initializable.InvalidInitialization" [ label = "InvalidInitialization" ];
+}
+
+subgraph "clusterVersion" {
+  graph [ label = "Version  (lib)", color = "#445773", fontcolor = "#f0f0f0", style = "rounded", bgcolor = "#445773" ];
+  "Version.set" [ label = "set", color = "#f2c383", fillcolor = "#f2c383" ];
+  "Version.get" [ label = "get", color = "#f2c383", fillcolor = "#f2c383" ];
+}
+
+subgraph "clusterAdministrable" {
+  graph [ label = "Administrable", color = "#445773", fontcolor = "#f0f0f0", style = "rounded", bgcolor = "#445773" ];
+  "Administrable.onlyAdmin" [ label = "onlyAdmin", color = "#1bc6a6", shape =doubleoctagon ];
+  "Administrable.onlyPendingAdmin" [ label = "onlyPendingAdmin", color = "#1bc6a6", shape =doubleoctagon ];
+  "Administrable.getAdmin" [ label = "getAdmin", color = "#ffbdb9", fillcolor = "#ffbdb9" ];
+  "Administrable.getPendingAdmin" [ label = "getPendingAdmin", color = "#ffbdb9", fillcolor = "#ffbdb9" ];
+  "Administrable.proposeAdmin" [ label = "proposeAdmin", color = "#ffbdb9", fillcolor = "#ffbdb9" ];
+  "Administrable.acceptAdmin" [ label = "acceptAdmin", color = "#ffbdb9", fillcolor = "#ffbdb9" ];
+  "Administrable._setAdmin" [ label = "_setAdmin" ];
+  "Administrable._setPendingAdmin" [ label = "_setPendingAdmin" ];
+  "Administrable._getAdmin" [ label = "_getAdmin", color = "#f2c383", fillcolor = "#f2c383" ];
+}
+
+subgraph "clusterIAdministrable" {
+  graph [ label = "IAdministrable  (iface)", color = "#445773", fontcolor = "#f0f0f0", style = "rounded", bgcolor = "#445773" ];
+  "IAdministrable.getAdmin" [ label = "getAdmin", color = "#ffbdb9", fillcolor = "#ffbdb9" ];
+  "IAdministrable.getPendingAdmin" [ label = "getPendingAdmin", color = "#ffbdb9", fillcolor = "#ffbdb9" ];
+  "IAdministrable.proposeAdmin" [ label = "proposeAdmin", color = "#ffbdb9", fillcolor = "#ffbdb9" ];
+  "IAdministrable.acceptAdmin" [ label = "acceptAdmin", color = "#ffbdb9", fillcolor = "#ffbdb9" ];
+}
+
+subgraph "clusterLibAdministrable" {
+  graph [ label = "LibAdministrable  (lib)", color = "#445773", fontcolor = "#f0f0f0", style = "rounded", bgcolor = "#445773" ];
+  "LibAdministrable._getAdmin" [ label = "_getAdmin", color = "#f2c383", fillcolor = "#f2c383" ];
+  "LibAdministrable._getPendingAdmin" [ label = "_getPendingAdmin", color = "#f2c383", fillcolor = "#f2c383" ];
+  "LibAdministrable._setAdmin" [ label = "_setAdmin", color = "#f2c383", fillcolor = "#f2c383" ];
+  "LibAdministrable._setPendingAdmin" [ label = "_setPendingAdmin", color = "#f2c383", fillcolor = "#f2c383" ];
+}
+
+subgraph "clusterAdministratorAddress" {
+  graph [ label = "AdministratorAddress  (lib)", color = "#445773", fontcolor = "#f0f0f0", style = "rounded", bgcolor = "#445773" ];
+  "AdministratorAddress.get" [ label = "get", color = "#f2c383", fillcolor = "#f2c383" ];
+  "AdministratorAddress.set" [ label = "set", color = "#f2c383", fillcolor = "#f2c383" ];
+}
+
+subgraph "clusterPendingAdministratorAddress" {
+  graph [ label = "PendingAdministratorAddress  (lib)", color = "#445773", fontcolor = "#f0f0f0", style = "rounded", bgcolor = "#445773" ];
+  "PendingAdministratorAddress.get" [ label = "get", color = "#f2c383", fillcolor = "#f2c383" ];
+  "PendingAdministratorAddress.set" [ label = "set", color = "#f2c383", fillcolor = "#f2c383" ];
+}
+
+subgraph "clusterAllowerAddress" {
+  graph [ label = "AllowerAddress  (lib)", color = "#445773", fontcolor = "#f0f0f0", style = "rounded", bgcolor = "#445773" ];
+  "AllowerAddress.set" [ label = "set", color = "#f2c383", fillcolor = "#f2c383" ];
+  "AllowerAddress.get" [ label = "get", color = "#f2c383", fillcolor = "#f2c383" ];
+}
+
+subgraph "clusterDenierAddress" {
+  graph [ label = "DenierAddress  (lib)", color = "#445773", fontcolor = "#f0f0f0", style = "rounded", bgcolor = "#445773" ];
+  "DenierAddress.set" [ label = "set", color = "#f2c383", fillcolor = "#f2c383" ];
+  "DenierAddress.get" [ label = "get", color = "#f2c383", fillcolor = "#f2c383" ];
+}
+
+subgraph "clusterAllowlist" {
+  graph [ label = "Allowlist  (lib)", color = "#445773", fontcolor = "#f0f0f0", style = "rounded", bgcolor = "#445773" ];
+  "Allowlist.get" [ label = "get", color = "#f2c383", fillcolor = "#f2c383" ];
+  "Allowlist.set" [ label = "set", color = "#f2c383", fillcolor = "#f2c383" ];
+}
+
+subgraph "clusterFirewall" {
+  graph [ label = "Firewall", color = "#445773", fontcolor = "#f0f0f0", style = "rounded", bgcolor = "#445773" ];
+  "Firewall.<Constructor>" [ label = "<Constructor>", color = "#FF9797", fillcolor = "#FF9797" ];
+  "Firewall.onlyAdminOrExecutor" [ label = "onlyAdminOrExecutor", color = "#1bc6a6", shape =doubleoctagon ];
+  "Firewall.setExecutor" [ label = "setExecutor", color = "#ffbdb9", fillcolor = "#ffbdb9" ];
+  "Firewall.allowExecutor" [ label = "allowExecutor", color = "#ffbdb9", fillcolor = "#ffbdb9" ];
+  "Firewall.<Fallback>" [ label = "<Fallback>", color = "brown", fillcolor = "#ffbdb9" ];
+  "Firewall.<Receive Ether>" [ label = "<Receive Ether>", color = "brown", fillcolor = "#ffbdb9" ];
+  "Firewall._checkCallerRole" [ label = "_checkCallerRole", color = "#f2c383", fillcolor = "#f2c383" ];
+  "Firewall._forward" [ label = "_forward" ];
+  "Firewall._fallback" [ label = "_fallback" ];
+}
+
+subgraph "clusterIFirewall" {
+  graph [ label = "IFirewall  (iface)", color = "#445773", fontcolor = "#f0f0f0", style = "rounded", bgcolor = "#445773" ];
+  "IFirewall.executor" [ label = "executor", color = "#ffbdb9", fillcolor = "#ffbdb9" ];
+  "IFirewall.destination" [ label = "destination", color = "#ffbdb9", fillcolor = "#ffbdb9" ];
+  "IFirewall.executorCanCall" [ label = "executorCanCall", color = "#ffbdb9", fillcolor = "#ffbdb9" ];
+  "IFirewall.setExecutor" [ label = "setExecutor", color = "#ffbdb9", fillcolor = "#ffbdb9" ];
+  "IFirewall.allowExecutor" [ label = "allowExecutor", color = "#ffbdb9", fillcolor = "#ffbdb9" ];
+  "IFirewall.<Fallback>" [ label = "<Fallback>", color = "brown", fillcolor = "#ffbdb9" ];
+  "IFirewall.<Receive Ether>" [ label = "<Receive Ether>", color = "brown", fillcolor = "#ffbdb9" ];
+}
+
+  "LibBytes.slice";
+  "LibBytes.SliceOverflow";
+  "LibBytes.SliceOutOfBounds";
+  "OracleManagerV1.onlyAdmin_OMV1";
+  "OracleManagerV1._getRiverAdmin";
+  "LibErrors.Unauthorized";
+  "OracleManagerV1.initOracleManagerV1";
+  "OracleAddress.set";
+  "OracleManagerV1.initOracleManagerV1_1";
+  "CLSpec.set";
+  "CLSpec.CLSpecStruct";
+  "ReportBounds.set";
+  "ReportBounds.ReportBoundsStruct";
+  "LastOracleRoundId.get";
+  "CLValidatorTotalBalance.get";
+  "CLValidatorCount.get";
+  "LastConsensusLayerReport.set";
+  "OracleManagerV1.getOracle";
+  "OracleAddress.get";
+  "OracleManagerV1.getCLValidatorTotalBalance";
+  "LastConsensusLayerReport.get";
+  "OracleManagerV1.getCLValidatorCount";
+  "OracleManagerV1.getExpectedEpochId";
+  "CLSpec.get";
+  "OracleManagerV1._currentEpoch";
+  "LibUint256.max";
+  "OracleManagerV1.isValidEpoch";
+  "OracleManagerV1._isValidEpoch";
+  "OracleManagerV1.getLastCompletedEpochId";
+  "OracleManagerV1.getCurrentEpochId";
+  "OracleManagerV1.getCLSpec";
+  "OracleManagerV1.getCurrentFrame";
+  "OracleManagerV1.getFrameFirstEpochId";
+  "OracleManagerV1.getReportBounds";
+  "ReportBounds.get";
+  "OracleManagerV1.getLastConsensusLayerReport";
+  "OracleManagerV1.setOracle";
+  "OracleManagerV1.setCLSpec";
+  "OracleManagerV1.setReportBounds";
+  "OracleManagerV1.setConsensusLayerData";
+  "OracleManagerV1.InvalidEpoch";
+  "OracleManagerV1.InvalidDecreasingValidatorsExitedBalance";
+  "OracleManagerV1.InvalidDecreasingValidatorsSkimmedBalance";
+  "DepositedValidatorCount.get";
+  "OracleManagerV1.InvalidValidatorCountReport";
+  "OracleManagerV1._timeBetweenEpochs";
+  "OracleManagerV1._assetBalance";
+  "OracleManagerV1._pullCLFunds";
+  "OracleManagerV1._maxIncrease";
+  "OracleManagerV1.TotalValidatorBalanceIncreaseOutOfBound";
+  "OracleManagerV1._maxDecrease";
+  "LibUint256.min";
+  "OracleManagerV1.TotalValidatorBalanceDecreaseOutOfBound";
+  "OracleManagerV1._pullELFees";
+  "OracleManagerV1._pullRedeemManagerExceedingEth";
+  "OracleManagerV1._pullCoverageFunds";
+  "OracleManagerV1._onEarnings";
+  "OracleManagerV1._requestExitsBasedOnRedeemDemandAfterRebalancings";
+  "OracleManagerV1._reportWithdrawToRedeemManager";
+  "OracleManagerV1._skimExcessBalanceToRedeem";
+  "OracleManagerV1._commitBalanceToDeposit";
+  "LibUnstructuredStorage.getStorageAddress";
+  "LibSanitize._notZeroAddress";
+  "LibUnstructuredStorage.setStorageAddress";
+  "LibErrors.InvalidZeroAddress";
+  "LibSanitize._notEmptyString";
+  "LibErrors.InvalidEmptyString";
+  "LibSanitize._validFee";
+  "LibErrors.InvalidFee";
+  "LibUnstructuredStorage.getStorageUint256";
+  "CLValidatorTotalBalance.set";
+  "LibUnstructuredStorage.setStorageUint256";
+  "CLValidatorCount.set";
+  "DepositedValidatorCount.set";
+  "LibUnstructuredStorage.getStorageBytes32";
+  "LastOracleRoundId.set";
+  "LibUnstructuredStorage.setStorageBytes32";
+  "ERC20VestableVotesUpgradeableV1.migrateVestingSchedulesFromV1ToV2";
+  "VestingSchedulesV2.getCount";
+  "VestingSchedulesV1.getCount";
+  "VestingSchedulesV1.get";
+  "ERC20VestableVotesUpgradeableV1.balanceOf";
+  "ERC20VestableVotesUpgradeableV1._deterministicVestingEscrow";
+  "VestingSchedulesV2.migrateVestingScheduleFromV1";
+  "ERC20VestableVotesUpgradeableV1.getVestingSchedule";
+  "VestingSchedulesV2.get";
+  "ERC20VestableVotesUpgradeableV1.isGlobalUnlockedScheduleIgnored";
+  "IgnoreGlobalUnlockSchedule.get";
+  "ERC20VestableVotesUpgradeableV1.getVestingScheduleCount";
+  "ERC20VestableVotesUpgradeableV1.vestingEscrow";
+  "ERC20VestableVotesUpgradeableV1.computeVestingReleasableAmount";
+  "ERC20VestableVotesUpgradeableV1._computeVestingReleasableAmount";
+  "ERC20VestableVotesUpgradeableV1.computeVestingVestedAmount";
+  "ERC20VestableVotesUpgradeableV1._computeVestedAmount";
+  "ERC20VestableVotesUpgradeableV1._getCurrentTime";
+  "ERC20VestableVotesUpgradeableV1.createVestingSchedule";
+  "ERC20VestableVotesUpgradeableV1._createVestingSchedule";
+  "ERC20VestableVotesUpgradeableV1.revokeVestingSchedule";
+  "ERC20VestableVotesUpgradeableV1._revokeVestingSchedule";
+  "ERC20VestableVotesUpgradeableV1.releaseVestingSchedule";
+  "ERC20VestableVotesUpgradeableV1._releaseVestingSchedule";
+  "ERC20VestableVotesUpgradeableV1.delegateVestingEscrow";
+  "ERC20VestableVotesUpgradeableV1._delegateVestingEscrow";
+  "ERC20VestableVotesUpgradeableV1.UnsufficientVestingScheduleCreatorBalance";
+  "ERC20VestableVotesUpgradeableV1.InvalidVestingScheduleParameter";
+  "VestingSchedulesV2.VestingSchedule";
+  "IgnoreGlobalUnlockSchedule.set";
+  "ERC20VestableVotesUpgradeableV1._transfer";
+  "ERC20VestableVotesUpgradeableV1._delegate";
+  "ERC20VestableVotesUpgradeableV1.VestingScheduleNotRevocableInPast";
+  "ERC20VestableVotesUpgradeableV1.VestingScheduleNotRevocable";
+  "ERC20VestableVotesUpgradeableV1.InvalidRevokedVestingScheduleEnd";
+  "ERC20VestableVotesUpgradeableV1.ZeroReleasableAmount";
+  "ERC20VestableVotesUpgradeableV1.delegates";
+  "ERC20VestableVotesUpgradeableV1.VestingScheduleIsLocked";
+  "ERC20VestableVotesUpgradeableV1._computeGlobalUnlocked";
+  "ERC20VestableVotesUpgradeableV1.GlobalUnlockUnderlfow";
+  "VestingSchedulesV2.VestingScheduleNotFound";
+  "VestingSchedulesV2.push";
+  "VestingSchedulesV1.VestingScheduleNotFound";
+  "AllowlistV1.initAllowlistV1";
+  "AllowlistV1._setAdmin";
+  "AllowerAddress.set";
+  "AllowlistV1.initAllowlistV1_1";
+  "DenierAddress.set";
+  "AllowlistV1.getAllower";
+  "AllowerAddress.get";
+  "AllowlistV1.getDenier";
+  "DenierAddress.get";
+  "AllowlistV1.isAllowed";
+  "Allowlist.get";
+  "AllowlistV1.isDenied";
+  "AllowlistV1.hasPermission";
+  "AllowlistV1.getPermissions";
+  "AllowlistV1.onlyAllowed";
+  "AllowlistV1.Denied";
+  "AllowlistV1.setAllower";
+  "AllowlistV1.setDenier";
+  "AllowlistV1.setAllowPermissions";
+  "AllowlistV1.InvalidCount";
+  "AllowlistV1.MismatchedArrayLengths";
+  "AllowlistV1.AttemptToRemoveDenyPermission";
+  "AllowlistV1.AttemptToSetDenyPermission";
+  "Allowlist.set";
+  "AllowlistV1.setDenyPermissions";
+  "Initializable.<Constructor>";
+  "Version.set";
+  "Initializable.type";
+  "Initializable.init";
+  "Version.get";
+  "Initializable.InvalidInitialization";
+  "Administrable.onlyAdmin";
+  "LibAdministrable._getAdmin";
+  "Administrable.onlyPendingAdmin";
+  "LibAdministrable._getPendingAdmin";
+  "Administrable.getAdmin";
+  "Administrable.getPendingAdmin";
+  "Administrable.proposeAdmin";
+  "Administrable._setPendingAdmin";
+  "Administrable.acceptAdmin";
+  "Administrable._setAdmin";
+  "LibAdministrable._setAdmin";
+  "LibAdministrable._setPendingAdmin";
+  "Administrable._getAdmin";
+  "AdministratorAddress.get";
+  "PendingAdministratorAddress.get";
+  "AdministratorAddress.set";
+  "PendingAdministratorAddress.set";
+  "Firewall.<Constructor>";
+  "Firewall.onlyAdminOrExecutor";
+  "Firewall.setExecutor";
+  "Firewall.<Fallback>";
+  "Firewall._fallback";
+  "Firewall.<Receive Ether>";
+  "Firewall._checkCallerRole";
+  "Firewall._forward";
+  "LibBytes.slice" -> "LibBytes.SliceOverflow" [ color = "#1bc6a6" ];
+  "LibBytes.slice" -> "LibBytes.SliceOutOfBounds" [ color = "#1bc6a6" ];
+  "OracleManagerV1.onlyAdmin_OMV1" -> "OracleManagerV1._getRiverAdmin" [ color = "#1bc6a6" ];
+  "OracleManagerV1.onlyAdmin_OMV1" -> "LibErrors.Unauthorized" [ color = "white" ];
+  "OracleManagerV1.initOracleManagerV1" -> "OracleAddress.set" [ color = "white" ];
+  "OracleManagerV1.initOracleManagerV1_1" -> "CLSpec.set" [ color = "white" ];
+  "OracleManagerV1.initOracleManagerV1_1" -> "CLSpec.CLSpecStruct" [ color = "white" ];
+  "OracleManagerV1.initOracleManagerV1_1" -> "ReportBounds.set" [ color = "white" ];
+  "OracleManagerV1.initOracleManagerV1_1" -> "ReportBounds.ReportBoundsStruct" [ color = "white" ];
+  "OracleManagerV1.initOracleManagerV1_1" -> "LastOracleRoundId.get" [ color = "white" ];
+  "OracleManagerV1.initOracleManagerV1_1" -> "CLValidatorTotalBalance.get" [ color = "white" ];
+  "OracleManagerV1.initOracleManagerV1_1" -> "CLValidatorCount.get" [ color = "white" ];
+  "OracleManagerV1.initOracleManagerV1_1" -> "LastConsensusLayerReport.set" [ color = "white" ];
+  "OracleManagerV1.getOracle" -> "OracleAddress.get" [ color = "white" ];
+  "OracleManagerV1.getCLValidatorTotalBalance" -> "LastConsensusLayerReport.get" [ color = "white" ];
+  "OracleManagerV1.getCLValidatorCount" -> "LastConsensusLayerReport.get" [ color = "white" ];
+  "OracleManagerV1.getExpectedEpochId" -> "CLSpec.get" [ color = "white" ];
+  "OracleManagerV1.getExpectedEpochId" -> "OracleManagerV1._currentEpoch" [ color = "#1bc6a6" ];
+  "OracleManagerV1.getExpectedEpochId" -> "LibUint256.max" [ color = "white" ];
+  "OracleManagerV1.getExpectedEpochId" -> "LastConsensusLayerReport.get" [ color = "white" ];
+  "OracleManagerV1.isValidEpoch" -> "OracleManagerV1._isValidEpoch" [ color = "#1bc6a6" ];
+  "OracleManagerV1.isValidEpoch" -> "CLSpec.get" [ color = "white" ];
+  "OracleManagerV1.getLastCompletedEpochId" -> "LastConsensusLayerReport.get" [ color = "white" ];
+  "OracleManagerV1.getCurrentEpochId" -> "OracleManagerV1._currentEpoch" [ color = "#1bc6a6" ];
+  "OracleManagerV1.getCurrentEpochId" -> "CLSpec.get" [ color = "white" ];
+  "OracleManagerV1.getCLSpec" -> "CLSpec.get" [ color = "white" ];
+  "OracleManagerV1.getCurrentFrame" -> "CLSpec.get" [ color = "white" ];
+  "OracleManagerV1.getCurrentFrame" -> "OracleManagerV1._currentEpoch" [ color = "#1bc6a6" ];
+  "OracleManagerV1.getFrameFirstEpochId" -> "CLSpec.get" [ color = "white" ];
+  "OracleManagerV1.getReportBounds" -> "ReportBounds.get" [ color = "white" ];
+  "OracleManagerV1.getLastConsensusLayerReport" -> "LastConsensusLayerReport.get" [ color = "white" ];
+  "OracleManagerV1.setOracle" -> "OracleAddress.set" [ color = "white" ];
+  "OracleManagerV1.setCLSpec" -> "CLSpec.set" [ color = "white" ];
+  "OracleManagerV1.setReportBounds" -> "ReportBounds.set" [ color = "white" ];
+  "OracleManagerV1.setConsensusLayerData" -> "OracleAddress.get" [ color = "white" ];
+  "OracleManagerV1.setConsensusLayerData" -> "LibErrors.Unauthorized" [ color = "white" ];
+  "OracleManagerV1.setConsensusLayerData" -> "CLSpec.get" [ color = "white" ];
+  "OracleManagerV1.setConsensusLayerData" -> "OracleManagerV1._isValidEpoch" [ color = "#1bc6a6" ];
+  "OracleManagerV1.setConsensusLayerData" -> "OracleManagerV1.InvalidEpoch" [ color = "#1bc6a6" ];
+  "OracleManagerV1.setConsensusLayerData" -> "LastConsensusLayerReport.get" [ color = "white" ];
+  "OracleManagerV1.setConsensusLayerData" -> "OracleManagerV1.InvalidDecreasingValidatorsExitedBalance" [ color = "#1bc6a6" ];
+  "OracleManagerV1.setConsensusLayerData" -> "OracleManagerV1.InvalidDecreasingValidatorsSkimmedBalance" [ color = "#1bc6a6" ];
+  "OracleManagerV1.setConsensusLayerData" -> "DepositedValidatorCount.get" [ color = "white" ];
+  "OracleManagerV1.setConsensusLayerData" -> "OracleManagerV1.InvalidValidatorCountReport" [ color = "#1bc6a6" ];
+  "OracleManagerV1.setConsensusLayerData" -> "DepositedValidatorCount.get" [ color = "white" ];
+  "OracleManagerV1.setConsensusLayerData" -> "OracleManagerV1._timeBetweenEpochs" [ color = "#1bc6a6" ];
+  "OracleManagerV1.setConsensusLayerData" -> "OracleManagerV1._assetBalance" [ color = "#1bc6a6" ];
+  "OracleManagerV1.setConsensusLayerData" -> "OracleManagerV1._pullCLFunds" [ color = "#1bc6a6" ];
+  "OracleManagerV1.setConsensusLayerData" -> "LastConsensusLayerReport.set" [ color = "white" ];
+  "OracleManagerV1.setConsensusLayerData" -> "ReportBounds.get" [ color = "white" ];
+  "OracleManagerV1.setConsensusLayerData" -> "OracleManagerV1._maxIncrease" [ color = "#1bc6a6" ];
+  "OracleManagerV1.setConsensusLayerData" -> "OracleManagerV1._assetBalance" [ color = "#1bc6a6" ];
+  "OracleManagerV1.setConsensusLayerData" -> "OracleManagerV1.TotalValidatorBalanceIncreaseOutOfBound" [ color = "#1bc6a6" ];
+  "OracleManagerV1.setConsensusLayerData" -> "OracleManagerV1._maxDecrease" [ color = "#1bc6a6" ];
+  "OracleManagerV1.setConsensusLayerData" -> "LibUint256.min" [ color = "white" ];
+  "OracleManagerV1.setConsensusLayerData" -> "OracleManagerV1.TotalValidatorBalanceDecreaseOutOfBound" [ color = "#1bc6a6" ];
+  "OracleManagerV1.setConsensusLayerData" -> "OracleManagerV1._pullELFees" [ color = "#1bc6a6" ];
+  "OracleManagerV1.setConsensusLayerData" -> "OracleManagerV1._pullRedeemManagerExceedingEth" [ color = "#1bc6a6" ];
+  "OracleManagerV1.setConsensusLayerData" -> "OracleManagerV1._pullCoverageFunds" [ color = "#1bc6a6" ];
+  "OracleManagerV1.setConsensusLayerData" -> "OracleManagerV1._onEarnings" [ color = "#1bc6a6" ];
+  "OracleManagerV1.setConsensusLayerData" -> "OracleManagerV1._requestExitsBasedOnRedeemDemandAfterRebalancings" [ color = "#1bc6a6" ];
+  "OracleManagerV1.setConsensusLayerData" -> "OracleManagerV1._reportWithdrawToRedeemManager" [ color = "#1bc6a6" ];
+  "OracleManagerV1.setConsensusLayerData" -> "OracleManagerV1._skimExcessBalanceToRedeem" [ color = "#1bc6a6" ];
+  "OracleManagerV1.setConsensusLayerData" -> "OracleManagerV1._commitBalanceToDeposit" [ color = "#1bc6a6" ];
+  "OracleManagerV1._isValidEpoch" -> "OracleManagerV1._currentEpoch" [ color = "#1bc6a6" ];
+  "OracleManagerV1._isValidEpoch" -> "LastConsensusLayerReport.get" [ color = "white" ];
+  "OracleAddress.get" -> "LibUnstructuredStorage.getStorageAddress" [ color = "white" ];
+  "OracleAddress.set" -> "LibSanitize._notZeroAddress" [ color = "white" ];
+  "OracleAddress.set" -> "LibUnstructuredStorage.setStorageAddress" [ color = "white" ];
+  "LibSanitize._notZeroAddress" -> "LibErrors.InvalidZeroAddress" [ color = "white" ];
+  "LibSanitize._notEmptyString" -> "LibErrors.InvalidEmptyString" [ color = "white" ];
+  "LibSanitize._validFee" -> "LibErrors.InvalidFee" [ color = "white" ];
+  "CLValidatorTotalBalance.get" -> "LibUnstructuredStorage.getStorageUint256" [ color = "white" ];
+  "CLValidatorTotalBalance.set" -> "LibUnstructuredStorage.setStorageUint256" [ color = "white" ];
+  "CLValidatorCount.get" -> "LibUnstructuredStorage.getStorageUint256" [ color = "white" ];
+  "CLValidatorCount.set" -> "LibUnstructuredStorage.setStorageUint256" [ color = "white" ];
+  "DepositedValidatorCount.get" -> "LibUnstructuredStorage.getStorageUint256" [ color = "white" ];
+  "DepositedValidatorCount.set" -> "LibUnstructuredStorage.setStorageUint256" [ color = "white" ];
+  "LastOracleRoundId.get" -> "LibUnstructuredStorage.getStorageBytes32" [ color = "white" ];
+  "LastOracleRoundId.set" -> "LibUnstructuredStorage.setStorageBytes32" [ color = "white" ];
+  "ERC20VestableVotesUpgradeableV1.migrateVestingSchedulesFromV1ToV2" -> "VestingSchedulesV2.getCount" [ color = "white" ];
+  "ERC20VestableVotesUpgradeableV1.migrateVestingSchedulesFromV1ToV2" -> "VestingSchedulesV1.getCount" [ color = "white" ];
+  "ERC20VestableVotesUpgradeableV1.migrateVestingSchedulesFromV1ToV2" -> "VestingSchedulesV1.get" [ color = "white" ];
+  "ERC20VestableVotesUpgradeableV1.migrateVestingSchedulesFromV1ToV2" -> "LibUint256.min" [ color = "white" ];
+  "ERC20VestableVotesUpgradeableV1.migrateVestingSchedulesFromV1ToV2" -> "ERC20VestableVotesUpgradeableV1.balanceOf" [ color = "#1bc6a6" ];
+  "ERC20VestableVotesUpgradeableV1.migrateVestingSchedulesFromV1ToV2" -> "ERC20VestableVotesUpgradeableV1._deterministicVestingEscrow" [ color = "#1bc6a6" ];
+  "ERC20VestableVotesUpgradeableV1.migrateVestingSchedulesFromV1ToV2" -> "VestingSchedulesV2.migrateVestingScheduleFromV1" [ color = "white" ];
+  "ERC20VestableVotesUpgradeableV1.getVestingSchedule" -> "VestingSchedulesV2.get" [ color = "white" ];
+  "ERC20VestableVotesUpgradeableV1.isGlobalUnlockedScheduleIgnored" -> "IgnoreGlobalUnlockSchedule.get" [ color = "white" ];
+  "ERC20VestableVotesUpgradeableV1.getVestingScheduleCount" -> "VestingSchedulesV2.getCount" [ color = "white" ];
+  "ERC20VestableVotesUpgradeableV1.vestingEscrow" -> "ERC20VestableVotesUpgradeableV1._deterministicVestingEscrow" [ color = "#1bc6a6" ];
+  "ERC20VestableVotesUpgradeableV1.computeVestingReleasableAmount" -> "VestingSchedulesV2.get" [ color = "white" ];
+  "ERC20VestableVotesUpgradeableV1.computeVestingReleasableAmount" -> "ERC20VestableVotesUpgradeableV1._computeVestingReleasableAmount" [ color = "#1bc6a6" ];
+  "ERC20VestableVotesUpgradeableV1.computeVestingVestedAmount" -> "VestingSchedulesV2.get" [ color = "white" ];
+  "ERC20VestableVotesUpgradeableV1.computeVestingVestedAmount" -> "ERC20VestableVotesUpgradeableV1._computeVestedAmount" [ color = "#1bc6a6" ];
+  "ERC20VestableVotesUpgradeableV1.computeVestingVestedAmount" -> "LibUint256.min" [ color = "white" ];
+  "ERC20VestableVotesUpgradeableV1.computeVestingVestedAmount" -> "ERC20VestableVotesUpgradeableV1._getCurrentTime" [ color = "#1bc6a6" ];
+  "ERC20VestableVotesUpgradeableV1.createVestingSchedule" -> "ERC20VestableVotesUpgradeableV1._createVestingSchedule" [ color = "#1bc6a6" ];
+  "ERC20VestableVotesUpgradeableV1.revokeVestingSchedule" -> "ERC20VestableVotesUpgradeableV1._revokeVestingSchedule" [ color = "#1bc6a6" ];
+  "ERC20VestableVotesUpgradeableV1.releaseVestingSchedule" -> "ERC20VestableVotesUpgradeableV1._releaseVestingSchedule" [ color = "#1bc6a6" ];
+  "ERC20VestableVotesUpgradeableV1.delegateVestingEscrow" -> "ERC20VestableVotesUpgradeableV1._delegateVestingEscrow" [ color = "#1bc6a6" ];
+  "ERC20VestableVotesUpgradeableV1._createVestingSchedule" -> "ERC20VestableVotesUpgradeableV1.balanceOf" [ color = "#1bc6a6" ];
+  "ERC20VestableVotesUpgradeableV1._createVestingSchedule" -> "ERC20VestableVotesUpgradeableV1.UnsufficientVestingScheduleCreatorBalance" [ color = "#1bc6a6" ];
+  "ERC20VestableVotesUpgradeableV1._createVestingSchedule" -> "ERC20VestableVotesUpgradeableV1.InvalidVestingScheduleParameter" [ color = "#1bc6a6" ];
+  "ERC20VestableVotesUpgradeableV1._createVestingSchedule" -> "ERC20VestableVotesUpgradeableV1.InvalidVestingScheduleParameter" [ color = "#1bc6a6" ];
+  "ERC20VestableVotesUpgradeableV1._createVestingSchedule" -> "ERC20VestableVotesUpgradeableV1.InvalidVestingScheduleParameter" [ color = "#1bc6a6" ];
+  "ERC20VestableVotesUpgradeableV1._createVestingSchedule" -> "ERC20VestableVotesUpgradeableV1.InvalidVestingScheduleParameter" [ color = "#1bc6a6" ];
+  "ERC20VestableVotesUpgradeableV1._createVestingSchedule" -> "ERC20VestableVotesUpgradeableV1.InvalidVestingScheduleParameter" [ color = "#1bc6a6" ];
+  "ERC20VestableVotesUpgradeableV1._createVestingSchedule" -> "ERC20VestableVotesUpgradeableV1.InvalidVestingScheduleParameter" [ color = "#1bc6a6" ];
+  "ERC20VestableVotesUpgradeableV1._createVestingSchedule" -> "ERC20VestableVotesUpgradeableV1.InvalidVestingScheduleParameter" [ color = "#1bc6a6" ];
+  "ERC20VestableVotesUpgradeableV1._createVestingSchedule" -> "ERC20VestableVotesUpgradeableV1.InvalidVestingScheduleParameter" [ color = "#1bc6a6" ];
+  "ERC20VestableVotesUpgradeableV1._createVestingSchedule" -> "VestingSchedulesV2.VestingSchedule" [ color = "white" ];
+  "ERC20VestableVotesUpgradeableV1._createVestingSchedule" -> "IgnoreGlobalUnlockSchedule.set" [ color = "white" ];
+  "ERC20VestableVotesUpgradeableV1._createVestingSchedule" -> "ERC20VestableVotesUpgradeableV1._deterministicVestingEscrow" [ color = "#1bc6a6" ];
+  "ERC20VestableVotesUpgradeableV1._createVestingSchedule" -> "ERC20VestableVotesUpgradeableV1._transfer" [ color = "#1bc6a6" ];
+  "ERC20VestableVotesUpgradeableV1._createVestingSchedule" -> "ERC20VestableVotesUpgradeableV1._delegate" [ color = "#1bc6a6" ];
+  "ERC20VestableVotesUpgradeableV1._createVestingSchedule" -> "ERC20VestableVotesUpgradeableV1._delegate" [ color = "#1bc6a6" ];
+  "ERC20VestableVotesUpgradeableV1._revokeVestingSchedule" -> "ERC20VestableVotesUpgradeableV1.VestingScheduleNotRevocableInPast" [ color = "#1bc6a6" ];
+  "ERC20VestableVotesUpgradeableV1._revokeVestingSchedule" -> "VestingSchedulesV2.get" [ color = "white" ];
+  "ERC20VestableVotesUpgradeableV1._revokeVestingSchedule" -> "ERC20VestableVotesUpgradeableV1.VestingScheduleNotRevocable" [ color = "#1bc6a6" ];
+  "ERC20VestableVotesUpgradeableV1._revokeVestingSchedule" -> "ERC20VestableVotesUpgradeableV1.InvalidRevokedVestingScheduleEnd" [ color = "#1bc6a6" ];
+  "ERC20VestableVotesUpgradeableV1._revokeVestingSchedule" -> "LibErrors.Unauthorized" [ color = "white" ];
+  "ERC20VestableVotesUpgradeableV1._revokeVestingSchedule" -> "ERC20VestableVotesUpgradeableV1._computeVestedAmount" [ color = "#1bc6a6" ];
+  "ERC20VestableVotesUpgradeableV1._revokeVestingSchedule" -> "ERC20VestableVotesUpgradeableV1._computeVestedAmount" [ color = "#1bc6a6" ];
+  "ERC20VestableVotesUpgradeableV1._revokeVestingSchedule" -> "ERC20VestableVotesUpgradeableV1._deterministicVestingEscrow" [ color = "#1bc6a6" ];
+  "ERC20VestableVotesUpgradeableV1._revokeVestingSchedule" -> "ERC20VestableVotesUpgradeableV1._transfer" [ color = "#1bc6a6" ];
+  "ERC20VestableVotesUpgradeableV1._releaseVestingSchedule" -> "VestingSchedulesV2.get" [ color = "white" ];
+  "ERC20VestableVotesUpgradeableV1._releaseVestingSchedule" -> "LibErrors.Unauthorized" [ color = "white" ];
+  "ERC20VestableVotesUpgradeableV1._releaseVestingSchedule" -> "ERC20VestableVotesUpgradeableV1._computeVestingReleasableAmount" [ color = "#1bc6a6" ];
+  "ERC20VestableVotesUpgradeableV1._releaseVestingSchedule" -> "ERC20VestableVotesUpgradeableV1.ZeroReleasableAmount" [ color = "#1bc6a6" ];
+  "ERC20VestableVotesUpgradeableV1._releaseVestingSchedule" -> "ERC20VestableVotesUpgradeableV1._deterministicVestingEscrow" [ color = "#1bc6a6" ];
+  "ERC20VestableVotesUpgradeableV1._releaseVestingSchedule" -> "ERC20VestableVotesUpgradeableV1._transfer" [ color = "#1bc6a6" ];
+  "ERC20VestableVotesUpgradeableV1._delegateVestingEscrow" -> "VestingSchedulesV2.get" [ color = "white" ];
+  "ERC20VestableVotesUpgradeableV1._delegateVestingEscrow" -> "LibErrors.Unauthorized" [ color = "white" ];
+  "ERC20VestableVotesUpgradeableV1._delegateVestingEscrow" -> "ERC20VestableVotesUpgradeableV1._deterministicVestingEscrow" [ color = "#1bc6a6" ];
+  "ERC20VestableVotesUpgradeableV1._delegateVestingEscrow" -> "ERC20VestableVotesUpgradeableV1.delegates" [ color = "#1bc6a6" ];
+  "ERC20VestableVotesUpgradeableV1._delegateVestingEscrow" -> "ERC20VestableVotesUpgradeableV1._delegate" [ color = "#1bc6a6" ];
+  "ERC20VestableVotesUpgradeableV1._computeVestingReleasableAmount" -> "ERC20VestableVotesUpgradeableV1._getCurrentTime" [ color = "#1bc6a6" ];
+  "ERC20VestableVotesUpgradeableV1._computeVestingReleasableAmount" -> "ERC20VestableVotesUpgradeableV1.VestingScheduleIsLocked" [ color = "#1bc6a6" ];
+  "ERC20VestableVotesUpgradeableV1._computeVestingReleasableAmount" -> "ERC20VestableVotesUpgradeableV1._computeVestedAmount" [ color = "#1bc6a6" ];
+  "ERC20VestableVotesUpgradeableV1._computeVestingReleasableAmount" -> "IgnoreGlobalUnlockSchedule.get" [ color = "white" ];
+  "ERC20VestableVotesUpgradeableV1._computeVestingReleasableAmount" -> "ERC20VestableVotesUpgradeableV1._computeGlobalUnlocked" [ color = "#1bc6a6" ];
+  "ERC20VestableVotesUpgradeableV1._computeVestingReleasableAmount" -> "ERC20VestableVotesUpgradeableV1.GlobalUnlockUnderlfow" [ color = "#1bc6a6" ];
+  "ERC20VestableVotesUpgradeableV1._computeVestingReleasableAmount" -> "LibUint256.min" [ color = "white" ];
+  "VestingSchedulesV2.get" -> "VestingSchedulesV2.VestingScheduleNotFound" [ color = "#1bc6a6" ];
+  "VestingSchedulesV2.migrateVestingScheduleFromV1" -> "VestingSchedulesV1.get" [ color = "white" ];
+  "VestingSchedulesV2.migrateVestingScheduleFromV1" -> "VestingSchedulesV2.VestingSchedule" [ color = "white" ];
+  "VestingSchedulesV2.migrateVestingScheduleFromV1" -> "VestingSchedulesV2.push" [ color = "#1bc6a6" ];
+  "VestingSchedulesV1.get" -> "VestingSchedulesV1.VestingScheduleNotFound" [ color = "#1bc6a6" ];
+  "AllowlistV1.initAllowlistV1" -> "AllowlistV1._setAdmin" [ color = "#1bc6a6" ];
+  "AllowlistV1.initAllowlistV1" -> "AllowerAddress.set" [ color = "white" ];
+  "AllowlistV1.initAllowlistV1_1" -> "DenierAddress.set" [ color = "white" ];
+  "AllowlistV1.getAllower" -> "AllowerAddress.get" [ color = "white" ];
+  "AllowlistV1.getDenier" -> "DenierAddress.get" [ color = "white" ];
+  "AllowlistV1.isAllowed" -> "Allowlist.get" [ color = "white" ];
+  "AllowlistV1.isDenied" -> "Allowlist.get" [ color = "white" ];
+  "AllowlistV1.hasPermission" -> "Allowlist.get" [ color = "white" ];
+  "AllowlistV1.getPermissions" -> "Allowlist.get" [ color = "white" ];
+  "AllowlistV1.onlyAllowed" -> "Allowlist.get" [ color = "white" ];
+  "AllowlistV1.onlyAllowed" -> "AllowlistV1.Denied" [ color = "#1bc6a6" ];
+  "AllowlistV1.onlyAllowed" -> "LibErrors.Unauthorized" [ color = "white" ];
+  "AllowlistV1.setAllower" -> "AllowerAddress.set" [ color = "white" ];
+  "AllowlistV1.setDenier" -> "DenierAddress.set" [ color = "white" ];
+  "AllowlistV1.setAllowPermissions" -> "AllowerAddress.get" [ color = "white" ];
+  "AllowlistV1.setAllowPermissions" -> "LibErrors.Unauthorized" [ color = "white" ];
+  "AllowlistV1.setAllowPermissions" -> "AllowlistV1.InvalidCount" [ color = "#1bc6a6" ];
+  "AllowlistV1.setAllowPermissions" -> "AllowlistV1.MismatchedArrayLengths" [ color = "#1bc6a6" ];
+  "AllowlistV1.setAllowPermissions" -> "LibSanitize._notZeroAddress" [ color = "white" ];
+  "AllowlistV1.setAllowPermissions" -> "Allowlist.get" [ color = "white" ];
+  "AllowlistV1.setAllowPermissions" -> "AllowlistV1.AttemptToRemoveDenyPermission" [ color = "#1bc6a6" ];
+  "AllowlistV1.setAllowPermissions" -> "AllowlistV1.AttemptToSetDenyPermission" [ color = "#1bc6a6" ];
+  "AllowlistV1.setAllowPermissions" -> "Allowlist.set" [ color = "white" ];
+  "AllowlistV1.setDenyPermissions" -> "DenierAddress.get" [ color = "white" ];
+  "AllowlistV1.setDenyPermissions" -> "LibErrors.Unauthorized" [ color = "white" ];
+  "AllowlistV1.setDenyPermissions" -> "AllowlistV1.InvalidCount" [ color = "#1bc6a6" ];
+  "AllowlistV1.setDenyPermissions" -> "AllowlistV1.MismatchedArrayLengths" [ color = "#1bc6a6" ];
+  "AllowlistV1.setDenyPermissions" -> "LibSanitize._notZeroAddress" [ color = "white" ];
+  "AllowlistV1.setDenyPermissions" -> "Allowlist.set" [ color = "white" ];
+  "AllowlistV1.setDenyPermissions" -> "Allowlist.set" [ color = "white" ];
+  "Initializable.<Constructor>" -> "Version.set" [ color = "white" ];
+  "Initializable.<Constructor>" -> "Initializable.type" [ color = "#1bc6a6" ];
+  "Initializable.<Constructor>" -> "Initializable.type" [ color = "#1bc6a6" ];
+  "Initializable.init" -> "Version.get" [ color = "white" ];
+  "Initializable.init" -> "Initializable.InvalidInitialization" [ color = "#1bc6a6" ];
+  "Initializable.init" -> "Version.get" [ color = "white" ];
+  "Initializable.init" -> "Version.set" [ color = "white" ];
+  "Version.get" -> "LibUnstructuredStorage.getStorageUint256" [ color = "white" ];
+  "Version.set" -> "LibUnstructuredStorage.setStorageUint256" [ color = "white" ];
+  "Administrable.onlyAdmin" -> "LibAdministrable._getAdmin" [ color = "white" ];
+  "Administrable.onlyAdmin" -> "LibErrors.Unauthorized" [ color = "white" ];
+  "Administrable.onlyPendingAdmin" -> "LibAdministrable._getPendingAdmin" [ color = "white" ];
+  "Administrable.onlyPendingAdmin" -> "LibErrors.Unauthorized" [ color = "white" ];
+  "Administrable.getAdmin" -> "LibAdministrable._getAdmin" [ color = "white" ];
+  "Administrable.getPendingAdmin" -> "LibAdministrable._getPendingAdmin" [ color = "white" ];
+  "Administrable.proposeAdmin" -> "Administrable._setPendingAdmin" [ color = "#1bc6a6" ];
+  "Administrable.acceptAdmin" -> "Administrable._setAdmin" [ color = "#1bc6a6" ];
+  "Administrable.acceptAdmin" -> "LibAdministrable._getPendingAdmin" [ color = "white" ];
+  "Administrable.acceptAdmin" -> "Administrable._setPendingAdmin" [ color = "#1bc6a6" ];
+  "Administrable._setAdmin" -> "LibSanitize._notZeroAddress" [ color = "white" ];
+  "Administrable._setAdmin" -> "LibAdministrable._setAdmin" [ color = "white" ];
+  "Administrable._setPendingAdmin" -> "LibAdministrable._setPendingAdmin" [ color = "white" ];
+  "Administrable._getAdmin" -> "LibAdministrable._getAdmin" [ color = "white" ];
+  "LibAdministrable._getAdmin" -> "AdministratorAddress.get" [ color = "white" ];
+  "LibAdministrable._getPendingAdmin" -> "PendingAdministratorAddress.get" [ color = "white" ];
+  "LibAdministrable._setAdmin" -> "AdministratorAddress.set" [ color = "white" ];
+  "LibAdministrable._setPendingAdmin" -> "PendingAdministratorAddress.set" [ color = "white" ];
+  "AdministratorAddress.get" -> "LibUnstructuredStorage.getStorageAddress" [ color = "white" ];
+  "AdministratorAddress.set" -> "LibSanitize._notZeroAddress" [ color = "white" ];
+  "AdministratorAddress.set" -> "LibUnstructuredStorage.setStorageAddress" [ color = "white" ];
+  "PendingAdministratorAddress.get" -> "LibUnstructuredStorage.getStorageAddress" [ color = "white" ];
+  "PendingAdministratorAddress.set" -> "LibUnstructuredStorage.setStorageAddress" [ color = "white" ];
+  "AllowerAddress.get" -> "LibUnstructuredStorage.getStorageAddress" [ color = "white" ];
+  "AllowerAddress.set" -> "LibSanitize._notZeroAddress" [ color = "white" ];
+  "AllowerAddress.set" -> "LibUnstructuredStorage.setStorageAddress" [ color = "white" ];
+  "DenierAddress.get" -> "LibUnstructuredStorage.getStorageAddress" [ color = "white" ];
+  "DenierAddress.set" -> "LibSanitize._notZeroAddress" [ color = "white" ];
+  "DenierAddress.set" -> "LibUnstructuredStorage.setStorageAddress" [ color = "white" ];
+  "Firewall.<Constructor>" -> "LibSanitize._notZeroAddress" [ color = "white" ];
+  "Firewall.<Constructor>" -> "LibSanitize._notZeroAddress" [ color = "white" ];
+  "Firewall.<Constructor>" -> "Administrable._setAdmin" [ color = "#1bc6a6" ];
+  "Firewall.onlyAdminOrExecutor" -> "Administrable._getAdmin" [ color = "#1bc6a6" ];
+  "Firewall.onlyAdminOrExecutor" -> "LibErrors.Unauthorized" [ color = "white" ];
+  "Firewall.setExecutor" -> "LibSanitize._notZeroAddress" [ color = "white" ];
+  "Firewall.<Fallback>" -> "Firewall._fallback" [ color = "#1bc6a6" ];
+  "Firewall.<Receive Ether>" -> "Firewall._fallback" [ color = "#1bc6a6" ];
+  "Firewall._checkCallerRole" -> "Administrable._getAdmin" [ color = "#1bc6a6" ];
+  "Firewall._checkCallerRole" -> "LibErrors.Unauthorized" [ color = "white" ];
+  "Firewall._fallback" -> "Firewall._checkCallerRole" [ color = "#1bc6a6" ];
+  "Firewall._fallback" -> "Firewall._forward" [ color = "#1bc6a6" ];
+
+
+rankdir=LR
+node [shape=plaintext]
+subgraph cluster_01 { 
+label = "Legend";
+key [label=<<table border="0" cellpadding="2" cellspacing="0" cellborder="0">
+  <tr><td align="right" port="i1">Internal Call</td></tr>
+  <tr><td align="right" port="i2">External Call</td></tr>
+  <tr><td align="right" port="i3">Defined Contract</td></tr>
+  <tr><td align="right" port="i4">Undefined Contract</td></tr>
+  </table>>]
+key2 [label=<<table border="0" cellpadding="2" cellspacing="0" cellborder="0">
+  <tr><td port="i1">&nbsp;&nbsp;&nbsp;</td></tr>
+  <tr><td port="i2">&nbsp;&nbsp;&nbsp;</td></tr>
+  <tr><td port="i3" bgcolor="#445773">&nbsp;&nbsp;&nbsp;</td></tr>
+  <tr><td port="i4">
+    <table border="1" cellborder="0" cellspacing="0" cellpadding="7" color="#e8726d">
+      <tr>
+       <td></td>
+      </tr>
+     </table>
+  </td></tr>
+  </table>>]
+key:i1:e -> key2:i1:w [color="#1bc6a6"]
+key:i2:e -> key2:i2:w [color="white"]
+}
+}

@@ -1,0 +1,272 @@
+digraph G {
+  graph [ ratio = "auto", page = "100", compound =true, bgcolor = "#2e3e56" ];
+  node [ style = "filled", fillcolor = "#edad56", color = "#edad56", penwidth =3 ];
+  edge [ color = "#fcfcfc", penwidth =2, fontname = "helvetica Neue Ultra Light" ];
+subgraph "clusterOracleManagerV1" {
+  graph [ label = "OracleManagerV1", color = "#445773", fontcolor = "#f0f0f0", style = "rounded", bgcolor = "#445773" ];
+  "OracleManagerV1._onEarnings" [ label = "_onEarnings" ];
+  "OracleManagerV1._pullELFees" [ label = "_pullELFees" ];
+  "OracleManagerV1._pullCoverageFunds" [ label = "_pullCoverageFunds" ];
+  "OracleManagerV1._getRiverAdmin" [ label = "_getRiverAdmin" ];
+  "OracleManagerV1._assetBalance" [ label = "_assetBalance" ];
+  "OracleManagerV1._pullCLFunds" [ label = "_pullCLFunds" ];
+  "OracleManagerV1._pullRedeemManagerExceedingEth" [ label = "_pullRedeemManagerExceedingEth" ];
+  "OracleManagerV1._reportWithdrawToRedeemManager" [ label = "_reportWithdrawToRedeemManager" ];
+  "OracleManagerV1._requestExitsBasedOnRedeemDemandAfterRebalancings" [ label = "_requestExitsBasedOnRedeemDemandAfterRebalancings" ];
+  "OracleManagerV1._skimExcessBalanceToRedeem" [ label = "_skimExcessBalanceToRedeem" ];
+  "OracleManagerV1._commitBalanceToDeposit" [ label = "_commitBalanceToDeposit" ];
+  "OracleManagerV1.onlyAdmin_OMV1" [ label = "onlyAdmin_OMV1", color = "#1bc6a6", shape =doubleoctagon ];
+  "OracleManagerV1.initOracleManagerV1" [ label = "initOracleManagerV1", color = "#f2c383", fillcolor = "#f2c383" ];
+  "OracleManagerV1.initOracleManagerV1_1" [ label = "initOracleManagerV1_1", color = "#f2c383", fillcolor = "#f2c383" ];
+  "OracleManagerV1.getOracle" [ label = "getOracle", color = "#ffbdb9", fillcolor = "#ffbdb9" ];
+  "OracleManagerV1.getCLValidatorTotalBalance" [ label = "getCLValidatorTotalBalance", color = "#ffbdb9", fillcolor = "#ffbdb9" ];
+  "OracleManagerV1.getCLValidatorCount" [ label = "getCLValidatorCount", color = "#ffbdb9", fillcolor = "#ffbdb9" ];
+  "OracleManagerV1.getExpectedEpochId" [ label = "getExpectedEpochId", color = "#ffbdb9", fillcolor = "#ffbdb9" ];
+  "OracleManagerV1.isValidEpoch" [ label = "isValidEpoch", color = "#ffbdb9", fillcolor = "#ffbdb9" ];
+  "OracleManagerV1.getTime" [ label = "getTime", color = "#ffbdb9", fillcolor = "#ffbdb9" ];
+  "OracleManagerV1.getLastCompletedEpochId" [ label = "getLastCompletedEpochId", color = "#ffbdb9", fillcolor = "#ffbdb9" ];
+  "OracleManagerV1.getCurrentEpochId" [ label = "getCurrentEpochId", color = "#ffbdb9", fillcolor = "#ffbdb9" ];
+  "OracleManagerV1.getCLSpec" [ label = "getCLSpec", color = "#ffbdb9", fillcolor = "#ffbdb9" ];
+  "OracleManagerV1.getCurrentFrame" [ label = "getCurrentFrame", color = "#ffbdb9", fillcolor = "#ffbdb9" ];
+  "OracleManagerV1.getFrameFirstEpochId" [ label = "getFrameFirstEpochId", color = "#ffbdb9", fillcolor = "#ffbdb9" ];
+  "OracleManagerV1.getReportBounds" [ label = "getReportBounds", color = "#ffbdb9", fillcolor = "#ffbdb9" ];
+  "OracleManagerV1.getLastConsensusLayerReport" [ label = "getLastConsensusLayerReport", color = "#ffbdb9", fillcolor = "#ffbdb9" ];
+  "OracleManagerV1.setOracle" [ label = "setOracle", color = "#ffbdb9", fillcolor = "#ffbdb9" ];
+  "OracleManagerV1.setCLSpec" [ label = "setCLSpec", color = "#ffbdb9", fillcolor = "#ffbdb9" ];
+  "OracleManagerV1.setReportBounds" [ label = "setReportBounds", color = "#ffbdb9", fillcolor = "#ffbdb9" ];
+  "OracleManagerV1.setConsensusLayerData" [ label = "setConsensusLayerData", color = "#ffbdb9", fillcolor = "#ffbdb9" ];
+  "OracleManagerV1._currentEpoch" [ label = "_currentEpoch" ];
+  "OracleManagerV1._isValidEpoch" [ label = "_isValidEpoch" ];
+  "OracleManagerV1._maxIncrease" [ label = "_maxIncrease" ];
+  "OracleManagerV1._maxDecrease" [ label = "_maxDecrease" ];
+  "OracleManagerV1._timeBetweenEpochs" [ label = "_timeBetweenEpochs" ];
+  "OracleManagerV1.SetOracle" [ label = "SetOracle" ];
+  "OracleManagerV1.SetSpec" [ label = "SetSpec" ];
+  "OracleManagerV1.SetBounds" [ label = "SetBounds" ];
+  "OracleManagerV1.InvalidEpoch" [ label = "InvalidEpoch" ];
+  "OracleManagerV1.InvalidDecreasingValidatorsExitedBalance" [ label = "InvalidDecreasingValidatorsExitedBalance" ];
+  "OracleManagerV1.InvalidDecreasingValidatorsSkimmedBalance" [ label = "InvalidDecreasingValidatorsSkimmedBalance" ];
+  "OracleManagerV1.InvalidValidatorCountReport" [ label = "InvalidValidatorCountReport" ];
+  "OracleManagerV1.TotalValidatorBalanceIncreaseOutOfBound" [ label = "TotalValidatorBalanceIncreaseOutOfBound" ];
+  "OracleManagerV1.TotalValidatorBalanceDecreaseOutOfBound" [ label = "TotalValidatorBalanceDecreaseOutOfBound" ];
+  "OracleManagerV1.ProcessedConsensusLayerReport" [ label = "ProcessedConsensusLayerReport" ];
+}
+
+subgraph "clusterLibErrors" {
+  graph [ label = "LibErrors", color = "#e8726d", fontcolor = "#f0f0f0", style = "rounded,dashed", bgcolor = "#3b4b63" ];
+  "LibErrors.Unauthorized" [ label = "Unauthorized" ];
+}
+
+subgraph "clusterOracleAddress" {
+  graph [ label = "OracleAddress", color = "#e8726d", fontcolor = "#f0f0f0", style = "rounded,dashed", bgcolor = "#3b4b63" ];
+  "OracleAddress.set" [ label = "set" ];
+  "OracleAddress.get" [ label = "get" ];
+}
+
+subgraph "clusterCLSpec" {
+  graph [ label = "CLSpec", color = "#e8726d", fontcolor = "#f0f0f0", style = "rounded,dashed", bgcolor = "#3b4b63" ];
+  "CLSpec.set" [ label = "set" ];
+  "CLSpec.CLSpecStruct" [ label = "CLSpecStruct" ];
+  "CLSpec.get" [ label = "get" ];
+}
+
+subgraph "clusterReportBounds" {
+  graph [ label = "ReportBounds", color = "#e8726d", fontcolor = "#f0f0f0", style = "rounded,dashed", bgcolor = "#3b4b63" ];
+  "ReportBounds.set" [ label = "set" ];
+  "ReportBounds.ReportBoundsStruct" [ label = "ReportBoundsStruct" ];
+  "ReportBounds.get" [ label = "get" ];
+}
+
+subgraph "clusterLastOracleRoundId" {
+  graph [ label = "LastOracleRoundId", color = "#e8726d", fontcolor = "#f0f0f0", style = "rounded,dashed", bgcolor = "#3b4b63" ];
+  "LastOracleRoundId.get" [ label = "get" ];
+}
+
+subgraph "clusterCLValidatorTotalBalance" {
+  graph [ label = "CLValidatorTotalBalance", color = "#e8726d", fontcolor = "#f0f0f0", style = "rounded,dashed", bgcolor = "#3b4b63" ];
+  "CLValidatorTotalBalance.get" [ label = "get" ];
+}
+
+subgraph "clusterCLValidatorCount" {
+  graph [ label = "CLValidatorCount", color = "#e8726d", fontcolor = "#f0f0f0", style = "rounded,dashed", bgcolor = "#3b4b63" ];
+  "CLValidatorCount.get" [ label = "get" ];
+}
+
+subgraph "clusterLastConsensusLayerReport" {
+  graph [ label = "LastConsensusLayerReport", color = "#e8726d", fontcolor = "#f0f0f0", style = "rounded,dashed", bgcolor = "#3b4b63" ];
+  "LastConsensusLayerReport.set" [ label = "set" ];
+  "LastConsensusLayerReport.get" [ label = "get" ];
+}
+
+subgraph "clusterLibUint256" {
+  graph [ label = "LibUint256", color = "#e8726d", fontcolor = "#f0f0f0", style = "rounded,dashed", bgcolor = "#3b4b63" ];
+  "LibUint256.max" [ label = "max" ];
+  "LibUint256.min" [ label = "min" ];
+}
+
+subgraph "clusterDepositedValidatorCount" {
+  graph [ label = "DepositedValidatorCount", color = "#e8726d", fontcolor = "#f0f0f0", style = "rounded,dashed", bgcolor = "#3b4b63" ];
+  "DepositedValidatorCount.get" [ label = "get" ];
+}
+
+  "OracleManagerV1.onlyAdmin_OMV1";
+  "OracleManagerV1._getRiverAdmin";
+  "LibErrors.Unauthorized";
+  "OracleManagerV1.initOracleManagerV1";
+  "OracleAddress.set";
+  "OracleManagerV1.SetOracle";
+  "OracleManagerV1.initOracleManagerV1_1";
+  "CLSpec.set";
+  "CLSpec.CLSpecStruct";
+  "OracleManagerV1.SetSpec";
+  "ReportBounds.set";
+  "ReportBounds.ReportBoundsStruct";
+  "OracleManagerV1.SetBounds";
+  "LastOracleRoundId.get";
+  "CLValidatorTotalBalance.get";
+  "CLValidatorCount.get";
+  "LastConsensusLayerReport.set";
+  "OracleManagerV1.getOracle";
+  "OracleAddress.get";
+  "OracleManagerV1.getCLValidatorTotalBalance";
+  "LastConsensusLayerReport.get";
+  "OracleManagerV1.getCLValidatorCount";
+  "OracleManagerV1.getExpectedEpochId";
+  "CLSpec.get";
+  "OracleManagerV1._currentEpoch";
+  "LibUint256.max";
+  "OracleManagerV1.isValidEpoch";
+  "OracleManagerV1._isValidEpoch";
+  "OracleManagerV1.getLastCompletedEpochId";
+  "OracleManagerV1.getCurrentEpochId";
+  "OracleManagerV1.getCLSpec";
+  "OracleManagerV1.getCurrentFrame";
+  "OracleManagerV1.getFrameFirstEpochId";
+  "OracleManagerV1.getReportBounds";
+  "ReportBounds.get";
+  "OracleManagerV1.getLastConsensusLayerReport";
+  "OracleManagerV1.setOracle";
+  "OracleManagerV1.setCLSpec";
+  "OracleManagerV1.setReportBounds";
+  "OracleManagerV1.setConsensusLayerData";
+  "OracleManagerV1.InvalidEpoch";
+  "OracleManagerV1.InvalidDecreasingValidatorsExitedBalance";
+  "OracleManagerV1.InvalidDecreasingValidatorsSkimmedBalance";
+  "DepositedValidatorCount.get";
+  "OracleManagerV1.InvalidValidatorCountReport";
+  "OracleManagerV1._timeBetweenEpochs";
+  "OracleManagerV1._assetBalance";
+  "OracleManagerV1._pullCLFunds";
+  "OracleManagerV1._maxIncrease";
+  "OracleManagerV1.TotalValidatorBalanceIncreaseOutOfBound";
+  "OracleManagerV1._maxDecrease";
+  "LibUint256.min";
+  "OracleManagerV1.TotalValidatorBalanceDecreaseOutOfBound";
+  "OracleManagerV1._pullELFees";
+  "OracleManagerV1._pullRedeemManagerExceedingEth";
+  "OracleManagerV1._pullCoverageFunds";
+  "OracleManagerV1._onEarnings";
+  "OracleManagerV1._requestExitsBasedOnRedeemDemandAfterRebalancings";
+  "OracleManagerV1._reportWithdrawToRedeemManager";
+  "OracleManagerV1._skimExcessBalanceToRedeem";
+  "OracleManagerV1._commitBalanceToDeposit";
+  "OracleManagerV1.ProcessedConsensusLayerReport";
+  "OracleManagerV1.onlyAdmin_OMV1" -> "OracleManagerV1._getRiverAdmin" [ color = "#1bc6a6" ];
+  "OracleManagerV1.onlyAdmin_OMV1" -> "LibErrors.Unauthorized" [ color = "white" ];
+  "OracleManagerV1.initOracleManagerV1" -> "OracleAddress.set" [ color = "white" ];
+  "OracleManagerV1.initOracleManagerV1" -> "OracleManagerV1.SetOracle" [ color = "#1bc6a6" ];
+  "OracleManagerV1.initOracleManagerV1_1" -> "CLSpec.set" [ color = "white" ];
+  "OracleManagerV1.initOracleManagerV1_1" -> "CLSpec.CLSpecStruct" [ color = "white" ];
+  "OracleManagerV1.initOracleManagerV1_1" -> "OracleManagerV1.SetSpec" [ color = "#1bc6a6" ];
+  "OracleManagerV1.initOracleManagerV1_1" -> "ReportBounds.set" [ color = "white" ];
+  "OracleManagerV1.initOracleManagerV1_1" -> "ReportBounds.ReportBoundsStruct" [ color = "white" ];
+  "OracleManagerV1.initOracleManagerV1_1" -> "OracleManagerV1.SetBounds" [ color = "#1bc6a6" ];
+  "OracleManagerV1.initOracleManagerV1_1" -> "LastOracleRoundId.get" [ color = "white" ];
+  "OracleManagerV1.initOracleManagerV1_1" -> "CLValidatorTotalBalance.get" [ color = "white" ];
+  "OracleManagerV1.initOracleManagerV1_1" -> "CLValidatorCount.get" [ color = "white" ];
+  "OracleManagerV1.initOracleManagerV1_1" -> "LastConsensusLayerReport.set" [ color = "white" ];
+  "OracleManagerV1.getOracle" -> "OracleAddress.get" [ color = "white" ];
+  "OracleManagerV1.getCLValidatorTotalBalance" -> "LastConsensusLayerReport.get" [ color = "white" ];
+  "OracleManagerV1.getCLValidatorCount" -> "LastConsensusLayerReport.get" [ color = "white" ];
+  "OracleManagerV1.getExpectedEpochId" -> "CLSpec.get" [ color = "white" ];
+  "OracleManagerV1.getExpectedEpochId" -> "OracleManagerV1._currentEpoch" [ color = "#1bc6a6" ];
+  "OracleManagerV1.getExpectedEpochId" -> "LibUint256.max" [ color = "white" ];
+  "OracleManagerV1.getExpectedEpochId" -> "LastConsensusLayerReport.get" [ color = "white" ];
+  "OracleManagerV1.isValidEpoch" -> "OracleManagerV1._isValidEpoch" [ color = "#1bc6a6" ];
+  "OracleManagerV1.isValidEpoch" -> "CLSpec.get" [ color = "white" ];
+  "OracleManagerV1.getLastCompletedEpochId" -> "LastConsensusLayerReport.get" [ color = "white" ];
+  "OracleManagerV1.getCurrentEpochId" -> "OracleManagerV1._currentEpoch" [ color = "#1bc6a6" ];
+  "OracleManagerV1.getCurrentEpochId" -> "CLSpec.get" [ color = "white" ];
+  "OracleManagerV1.getCLSpec" -> "CLSpec.get" [ color = "white" ];
+  "OracleManagerV1.getCurrentFrame" -> "CLSpec.get" [ color = "white" ];
+  "OracleManagerV1.getCurrentFrame" -> "OracleManagerV1._currentEpoch" [ color = "#1bc6a6" ];
+  "OracleManagerV1.getFrameFirstEpochId" -> "CLSpec.get" [ color = "white" ];
+  "OracleManagerV1.getReportBounds" -> "ReportBounds.get" [ color = "white" ];
+  "OracleManagerV1.getLastConsensusLayerReport" -> "LastConsensusLayerReport.get" [ color = "white" ];
+  "OracleManagerV1.setOracle" -> "OracleAddress.set" [ color = "white" ];
+  "OracleManagerV1.setOracle" -> "OracleManagerV1.SetOracle" [ color = "#1bc6a6" ];
+  "OracleManagerV1.setCLSpec" -> "CLSpec.set" [ color = "white" ];
+  "OracleManagerV1.setCLSpec" -> "OracleManagerV1.SetSpec" [ color = "#1bc6a6" ];
+  "OracleManagerV1.setReportBounds" -> "ReportBounds.set" [ color = "white" ];
+  "OracleManagerV1.setReportBounds" -> "OracleManagerV1.SetBounds" [ color = "#1bc6a6" ];
+  "OracleManagerV1.setConsensusLayerData" -> "OracleAddress.get" [ color = "white" ];
+  "OracleManagerV1.setConsensusLayerData" -> "LibErrors.Unauthorized" [ color = "white" ];
+  "OracleManagerV1.setConsensusLayerData" -> "CLSpec.get" [ color = "white" ];
+  "OracleManagerV1.setConsensusLayerData" -> "OracleManagerV1._isValidEpoch" [ color = "#1bc6a6" ];
+  "OracleManagerV1.setConsensusLayerData" -> "OracleManagerV1.InvalidEpoch" [ color = "#1bc6a6" ];
+  "OracleManagerV1.setConsensusLayerData" -> "LastConsensusLayerReport.get" [ color = "white" ];
+  "OracleManagerV1.setConsensusLayerData" -> "OracleManagerV1.InvalidDecreasingValidatorsExitedBalance" [ color = "#1bc6a6" ];
+  "OracleManagerV1.setConsensusLayerData" -> "OracleManagerV1.InvalidDecreasingValidatorsSkimmedBalance" [ color = "#1bc6a6" ];
+  "OracleManagerV1.setConsensusLayerData" -> "DepositedValidatorCount.get" [ color = "white" ];
+  "OracleManagerV1.setConsensusLayerData" -> "OracleManagerV1.InvalidValidatorCountReport" [ color = "#1bc6a6" ];
+  "OracleManagerV1.setConsensusLayerData" -> "DepositedValidatorCount.get" [ color = "white" ];
+  "OracleManagerV1.setConsensusLayerData" -> "OracleManagerV1._timeBetweenEpochs" [ color = "#1bc6a6" ];
+  "OracleManagerV1.setConsensusLayerData" -> "OracleManagerV1._assetBalance" [ color = "#1bc6a6" ];
+  "OracleManagerV1.setConsensusLayerData" -> "OracleManagerV1._pullCLFunds" [ color = "#1bc6a6" ];
+  "OracleManagerV1.setConsensusLayerData" -> "LastConsensusLayerReport.set" [ color = "white" ];
+  "OracleManagerV1.setConsensusLayerData" -> "ReportBounds.get" [ color = "white" ];
+  "OracleManagerV1.setConsensusLayerData" -> "OracleManagerV1._maxIncrease" [ color = "#1bc6a6" ];
+  "OracleManagerV1.setConsensusLayerData" -> "OracleManagerV1._assetBalance" [ color = "#1bc6a6" ];
+  "OracleManagerV1.setConsensusLayerData" -> "OracleManagerV1.TotalValidatorBalanceIncreaseOutOfBound" [ color = "#1bc6a6" ];
+  "OracleManagerV1.setConsensusLayerData" -> "OracleManagerV1._maxDecrease" [ color = "#1bc6a6" ];
+  "OracleManagerV1.setConsensusLayerData" -> "LibUint256.min" [ color = "white" ];
+  "OracleManagerV1.setConsensusLayerData" -> "OracleManagerV1.TotalValidatorBalanceDecreaseOutOfBound" [ color = "#1bc6a6" ];
+  "OracleManagerV1.setConsensusLayerData" -> "OracleManagerV1._pullELFees" [ color = "#1bc6a6" ];
+  "OracleManagerV1.setConsensusLayerData" -> "OracleManagerV1._pullRedeemManagerExceedingEth" [ color = "#1bc6a6" ];
+  "OracleManagerV1.setConsensusLayerData" -> "OracleManagerV1._pullCoverageFunds" [ color = "#1bc6a6" ];
+  "OracleManagerV1.setConsensusLayerData" -> "OracleManagerV1._onEarnings" [ color = "#1bc6a6" ];
+  "OracleManagerV1.setConsensusLayerData" -> "OracleManagerV1._requestExitsBasedOnRedeemDemandAfterRebalancings" [ color = "#1bc6a6" ];
+  "OracleManagerV1.setConsensusLayerData" -> "OracleManagerV1._reportWithdrawToRedeemManager" [ color = "#1bc6a6" ];
+  "OracleManagerV1.setConsensusLayerData" -> "OracleManagerV1._skimExcessBalanceToRedeem" [ color = "#1bc6a6" ];
+  "OracleManagerV1.setConsensusLayerData" -> "OracleManagerV1._commitBalanceToDeposit" [ color = "#1bc6a6" ];
+  "OracleManagerV1.setConsensusLayerData" -> "OracleManagerV1.ProcessedConsensusLayerReport" [ color = "#1bc6a6" ];
+  "OracleManagerV1._isValidEpoch" -> "OracleManagerV1._currentEpoch" [ color = "#1bc6a6" ];
+  "OracleManagerV1._isValidEpoch" -> "LastConsensusLayerReport.get" [ color = "white" ];
+
+
+rankdir=LR
+node [shape=plaintext]
+subgraph cluster_01 { 
+label = "Legend";
+key [label=<<table border="0" cellpadding="2" cellspacing="0" cellborder="0">
+  <tr><td align="right" port="i1">Internal Call</td></tr>
+  <tr><td align="right" port="i2">External Call</td></tr>
+  <tr><td align="right" port="i3">Defined Contract</td></tr>
+  <tr><td align="right" port="i4">Undefined Contract</td></tr>
+  </table>>]
+key2 [label=<<table border="0" cellpadding="2" cellspacing="0" cellborder="0">
+  <tr><td port="i1">&nbsp;&nbsp;&nbsp;</td></tr>
+  <tr><td port="i2">&nbsp;&nbsp;&nbsp;</td></tr>
+  <tr><td port="i3" bgcolor="#445773">&nbsp;&nbsp;&nbsp;</td></tr>
+  <tr><td port="i4">
+    <table border="1" cellborder="0" cellspacing="0" cellpadding="7" color="#e8726d">
+      <tr>
+       <td></td>
+      </tr>
+     </table>
+  </td></tr>
+  </table>>]
+key:i1:e -> key2:i1:w [color="#1bc6a6"]
+key:i2:e -> key2:i2:w [color="white"]
+}
+}
