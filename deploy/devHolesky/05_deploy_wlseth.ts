@@ -3,7 +3,10 @@ import { HardhatRuntimeEnvironment } from "hardhat/types";
 import { isDeployed, logStep, logStepEnd } from "../../ts-utils/helpers/index";
 import { verify } from "../../scripts/helpers";
 
-const func: DeployFunction = async function ({ deployments, getNamedAccounts }: HardhatRuntimeEnvironment) {
+const func: DeployFunction = async function ({ deployments, getNamedAccounts, network }: HardhatRuntimeEnvironment) {
+  if (!["holesky", "hardhat", "local", "tenderly", "devHolesky"].includes(network.name)) {
+    throw new Error("Invalid network for holesky deployment");
+  }
   const { deployer, proxyAdministrator } = await getNamedAccounts();
 
   const riverDeployment = await deployments.get("River");
@@ -23,7 +26,7 @@ const func: DeployFunction = async function ({ deployments, getNamedAccounts }: 
     },
   });
 
-  await verify("TUPProxy", deployResult.address, []);
+  await verify("TUPProxy", deployResult.address, deployResult.args, deployResult.libraries);
   await verify("WLSETHV1", deployResult.implementation, []);
 
   logStepEnd(__filename);
@@ -40,4 +43,3 @@ func.skip = async function ({ deployments, network }: HardhatRuntimeEnvironment)
 };
 
 export default func;
-

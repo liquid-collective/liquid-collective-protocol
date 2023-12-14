@@ -10,7 +10,7 @@ const func: DeployFunction = async function ({
   ethers,
   network,
 }: HardhatRuntimeEnvironment) {
-  if (!["holesky", "hardhat", "local", "tenderly"].includes(network.name)) {
+  if (!["holesky", "hardhat", "local", "tenderly", "devHolesky"].includes(network.name)) {
     throw new Error("Invalid network for holesky deployment");
   }
   const { deployer, proxyAdministrator, governor, executor } = await getNamedAccounts();
@@ -19,9 +19,12 @@ const func: DeployFunction = async function ({
 
   const txCount = await signer.getTransactionCount();
 
+  const proxyArtifact = await deployments.getArtifact("TUPProxy");
+  const proxyInterface = new ethers.utils.Interface(proxyArtifact.abi);
+
   const futureAllowlistAddress = getContractAddress({
     from: deployer,
-    nonce: txCount + 2, // proxy is in 3 txs
+    nonce: txCount + 3, // proxy is in 4 txs
   });
 
   const firewallDeployment = await deployments.deploy("AllowlistFirewall", {
@@ -33,12 +36,20 @@ const func: DeployFunction = async function ({
 
   await verify("Firewall", firewallDeployment.address, [governor, executor, futureAllowlistAddress, []]);
 
+  const allowlistProxyFirewallDeployment = await deployments.deploy("AllowlistProxyFirewall", {
+    contract: "Firewall",
+    from: deployer,
+    log: true,
+    args: [proxyAdministrator, executor, futureAllowlistAddress, [proxyInterface.getSighash("pause()")]],
+  });
+  await verify("Firewall", allowlistProxyFirewallDeployment.address, allowlistProxyFirewallDeployment.args);
+
   const allowlistDeployment = await deployments.deploy("Allowlist", {
     contract: "AllowlistV1",
     from: deployer,
     log: true,
     proxy: {
-      owner: proxyAdministrator,
+      owner: allowlistProxyFirewallDeployment.address,
       proxyContract: "TUPProxy",
       implementationName: "AllowlistV1_Implementation_0_2_2",
       execute: {
@@ -48,7 +59,7 @@ const func: DeployFunction = async function ({
     },
   });
 
-  await verify("TUPProxy", allowlistDeployment.address, []);
+  await verify("TUPProxy", allowlistDeployment.address, allowlistDeployment.args, allowlistDeployment.libraries);
   await verify("AllowlistV1", allowlistDeployment.implementation, []);
 
   if (allowlistDeployment.address !== futureAllowlistAddress) {
@@ -69,4 +80,3 @@ func.skip = async function ({ deployments }: HardhatRuntimeEnvironment): Promise
 };
 
 export default func;
-

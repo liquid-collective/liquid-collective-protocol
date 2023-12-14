@@ -4,7 +4,15 @@ import { isDeployed, logStep, logStepEnd } from "../../ts-utils/helpers/index";
 import { getContractAddress } from "ethers/lib/utils";
 import { verify } from "../../scripts/helpers";
 
-const func: DeployFunction = async function ({ deployments, getNamedAccounts, ethers }: HardhatRuntimeEnvironment) {
+const func: DeployFunction = async function ({
+  deployments,
+  getNamedAccounts,
+  ethers,
+  network,
+}: HardhatRuntimeEnvironment) {
+  if (!["holesky", "hardhat", "local", "tenderly", "devHolesky"].includes(network.name)) {
+    throw new Error("Invalid network for holesky deployment");
+  }
   const { deployer, executor, proxyAdministrator, tlcMintAccount } = await getNamedAccounts();
 
   const signer = await ethers.getSigner(deployer);
@@ -12,7 +20,7 @@ const func: DeployFunction = async function ({ deployments, getNamedAccounts, et
   const txCount = await signer.getTransactionCount();
   const futureTLCAddress = getContractAddress({
     from: deployer,
-    nonce: txCount + 2, // proxy is in 8 txs
+    nonce: txCount + 2, // proxy is in 3 txs
   });
 
   const proxyArtifact = await deployments.getArtifact("TUPProxy");
@@ -47,8 +55,8 @@ const func: DeployFunction = async function ({ deployments, getNamedAccounts, et
     },
   });
 
-  await verify("TUPProxy", tlcDeployment.address, []);
-  await verify("TLCV1", tlcDeployment.implementation, []);
+  const verifyProxy = await verify("TUPProxy", tlcDeployment.address, tlcDeployment.args, tlcDeployment.libraries);
+  const verifyImplementation = await verify("TLCV1", tlcDeployment.implementation, []);
 
   if (tlcDeployment.address !== futureTLCAddress) {
     throw new Error(`Invalid future tlc address computation ${futureTLCAddress} != ${tlcDeployment.address}`);
@@ -68,4 +76,3 @@ func.skip = async function ({ deployments }: HardhatRuntimeEnvironment): Promise
 };
 
 export default func;
-

@@ -5,11 +5,11 @@ import { isDeployed, logStep, logStepEnd } from "../../ts-utils/helpers/index";
 import { verify } from "../../scripts/helpers";
 
 // Deploy the following contracts:
-// 1. River (River + TUPProxy + Firewall)
-// 2. Oracle (Oracle + TUPProxy + Firewall)
-// 3. OperatorsRegistry (OperatorsRegistry + TUPProxy + Firewall)
+// 1. River (River + TUPProxy + Firewall + ProxyFirewall)
+// 2. Oracle (Oracle + TUPProxy + Firewall + ProxyFirewall)
+// 3. OperatorsRegistry (OperatorsRegistry + TUPProxy + Firewall + ProxyFirewall)
 // 4. ELFeeRecipient (ELFeeRecipient + TUPProxy)
-// 5. RedeemManager (RedeemManager + TUPProxy)
+// 5. RedeemManager (RedeemManager + TUPProxy + ProxyFirewall)
 //
 // Run initializations
 // 1. initializeWithdrawV1 on Withdraw
@@ -22,7 +22,7 @@ const func: DeployFunction = async function ({
   ethers,
   network,
 }: HardhatRuntimeEnvironment) {
-  if (!["holesky", "hardhat", "local", "tenderly"].includes(network.name)) {
+  if (!["holesky", "hardhat", "local", "tenderly", "devHolesky"].includes(network.name)) {
     throw new Error("Invalid network for holesky deployment");
   }
   const genesisTimestamp = 1695902400;
@@ -35,6 +35,8 @@ const func: DeployFunction = async function ({
   const withdrawDeployment = await deployments.get("Withdraw");
   const WithdrawContract = await ethers.getContractAt("WithdrawV1", withdrawDeployment.address);
   const withdrawalCredentials = await WithdrawContract.getCredentials();
+  const proxyArtifact = await deployments.getArtifact("TUPProxy");
+  const proxyInterface = new ethers.utils.Interface(proxyArtifact.abi);
 
   const signer = await ethers.getSigner(deployer);
 
@@ -42,22 +44,22 @@ const func: DeployFunction = async function ({
 
   const futureELFeeRecipientAddress = getContractAddress({
     from: deployer,
-    nonce: txCount + 10, // proxy is in 8 txs
+    nonce: txCount + 13, // proxy is in 14 txs
   });
 
   const futureOperatorsRegistryAddress = getContractAddress({
     from: deployer,
-    nonce: txCount + 8, // proxy is in 8 txs
+    nonce: txCount + 11, // proxy is in 12 txs
   });
 
   const futureOracleAddress = getContractAddress({
     from: deployer,
-    nonce: txCount + 5, // proxy is in 6 txs
+    nonce: txCount + 7, // proxy is in 8 txs
   });
 
   const futureRiverAddress = getContractAddress({
     from: deployer,
-    nonce: txCount + 2, // proxy is in 3 txs
+    nonce: txCount + 3, // proxy is in 4 txs
   });
 
   const riverArtifact = await deployments.getArtifact("RiverV1");
@@ -69,6 +71,15 @@ const func: DeployFunction = async function ({
     log: true,
     args: [governor, executor, futureRiverAddress, [riverInterface.getSighash("depositToConsensusLayer")]],
   });
+  await verify("Firewall", riverFirewallDeployment.address, riverFirewallDeployment.args);
+
+  const riverProxyFirewallDeployment = await deployments.deploy("RiverProxyFirewall", {
+    contract: "Firewall",
+    from: deployer,
+    log: true,
+    args: [proxyAdministrator, executor, futureRiverAddress, [proxyInterface.getSighash("pause()")]],
+  });
+  await verify("Firewall", riverProxyFirewallDeployment.address, riverProxyFirewallDeployment.args);
 
   const allowlistDeployment = await deployments.get("Allowlist");
 
@@ -77,7 +88,7 @@ const func: DeployFunction = async function ({
     from: deployer,
     log: true,
     proxy: {
-      owner: proxyAdministrator,
+      owner: riverProxyFirewallDeployment.address,
       proxyContract: "TUPProxy",
       implementationName: "RiverV1_Implementation_1_0_1",
       execute: {
@@ -97,7 +108,7 @@ const func: DeployFunction = async function ({
     },
   });
 
-  await verify("TUPProxy", riverDeployment.address, []);
+  await verify("TUPProxy", riverDeployment.address, riverDeployment.args, riverDeployment.libraries);
   await verify("RiverV1", riverDeployment.implementation, []);
 
   const oracleArtifact = await deployments.getArtifact("OracleV1");
@@ -116,13 +127,20 @@ const func: DeployFunction = async function ({
     futureOracleAddress,
     [oracleInterface.getSighash("removeMember")],
   ]);
+  const oracleProxyFirewall = await deployments.deploy("OracleProxyFirewall", {
+    contract: "Firewall",
+    from: deployer,
+    log: true,
+    args: [proxyAdministrator, executor, futureOracleAddress, [proxyInterface.getSighash("pause()")]],
+  });
+  await verify("Firewall", oracleProxyFirewall.address, oracleProxyFirewall.args);
 
   const oracleDeployment = await deployments.deploy("Oracle", {
     contract: "OracleV1",
     from: deployer,
     log: true,
     proxy: {
-      owner: proxyAdministrator,
+      owner: oracleProxyFirewall.address,
       proxyContract: "TUPProxy",
       implementationName: "OracleV1_Implementation_1_0_0",
       execute: {
@@ -132,11 +150,11 @@ const func: DeployFunction = async function ({
     },
   });
 
-  await verify("TUPProxy", oracleDeployment.address, []);
+  await verify("TUPProxy", oracleDeployment.address, oracleDeployment.args, oracleDeployment.libraries);
   await verify("OracleV1", oracleDeployment.implementation, []);
 
   const operatorsRegistryArtifact = await deployments.getArtifact("OperatorsRegistryV1");
-  const operatorsRegsitryInterface = new ethers.utils.Interface(operatorsRegistryArtifact.abi);
+  const operatorsRegistryInterface = new ethers.utils.Interface(operatorsRegistryArtifact.abi);
 
   const operatorsRegistryFirewallDeployment = await deployments.deploy("OperatorsRegistryFirewall", {
     contract: "Firewall",
@@ -147,9 +165,9 @@ const func: DeployFunction = async function ({
       executor,
       futureOperatorsRegistryAddress,
       [
-        operatorsRegsitryInterface.getSighash("setOperatorStatus"),
-        operatorsRegsitryInterface.getSighash("setOperatorName"),
-        operatorsRegsitryInterface.getSighash("setOperatorLimits"),
+        operatorsRegistryInterface.getSighash("setOperatorStatus"),
+        operatorsRegistryInterface.getSighash("setOperatorName"),
+        operatorsRegistryInterface.getSighash("setOperatorLimits"),
       ],
     ],
   });
@@ -159,18 +177,30 @@ const func: DeployFunction = async function ({
     executor,
     futureOperatorsRegistryAddress,
     [
-      operatorsRegsitryInterface.getSighash("setOperatorStatus"),
-      operatorsRegsitryInterface.getSighash("setOperatorName"),
-      operatorsRegsitryInterface.getSighash("setOperatorLimits"),
+      operatorsRegistryInterface.getSighash("setOperatorStatus"),
+      operatorsRegistryInterface.getSighash("setOperatorName"),
+      operatorsRegistryInterface.getSighash("setOperatorLimits"),
     ],
   ]);
+
+  const operatorsRegistryProxyFirewallDeployment = await deployments.deploy("OperatorsRegistryProxyFirewall", {
+    contract: "Firewall",
+    from: deployer,
+    log: true,
+    args: [proxyAdministrator, executor, futureOperatorsRegistryAddress, [proxyInterface.getSighash("pause()")]],
+  });
+  await verify(
+    "Firewall",
+    operatorsRegistryProxyFirewallDeployment.address,
+    operatorsRegistryProxyFirewallDeployment.args
+  );
 
   const operatorsRegistryDeployment = await deployments.deploy("OperatorsRegistry", {
     contract: "OperatorsRegistryV1",
     from: deployer,
     log: true,
     proxy: {
-      owner: proxyAdministrator,
+      owner: operatorsRegistryProxyFirewallDeployment.address,
       proxyContract: "TUPProxy",
       implementationName: "OperatorsRegistryV1_Implementation_1_1_0",
       execute: {
@@ -180,7 +210,12 @@ const func: DeployFunction = async function ({
     },
   });
 
-  await verify("TUPProxy", operatorsRegistryDeployment.address, []);
+  await verify(
+    "TUPProxy",
+    operatorsRegistryDeployment.address,
+    operatorsRegistryDeployment.args,
+    operatorsRegistryDeployment.libraries
+  );
   await verify("OperatorsRegistryV1", operatorsRegistryDeployment.implementation, []);
 
   const elFeeRecipientDeployment = await deployments.deploy("ELFeeRecipient", {
@@ -198,7 +233,12 @@ const func: DeployFunction = async function ({
     },
   });
 
-  await verify("TUPProxy", elFeeRecipientDeployment.address, []);
+  await verify(
+    "TUPProxy",
+    elFeeRecipientDeployment.address,
+    elFeeRecipientDeployment.args,
+    elFeeRecipientDeployment.libraries
+  );
   await verify("ELFeeRecipientV1", elFeeRecipientDeployment.implementation, []);
 
   if (riverDeployment.address !== futureRiverAddress) {
@@ -233,12 +273,26 @@ const func: DeployFunction = async function ({
     throw new Error(`Invalid river address provided by Oracle`);
   }
 
+  const futureRedeemManagerAddress = getContractAddress({
+    from: deployer,
+    nonce: (await signer.getTransactionCount()) + 2,
+  });
+
+  const redeemManagerProxyFirewall = await deployments.deploy("RedeemManagerProxyFirewall", {
+    contract: "Firewall",
+    from: deployer,
+    log: true,
+    args: [proxyAdministrator, executor, futureRedeemManagerAddress, [proxyInterface.getSighash("pause()")]],
+  });
+
+  await verify("Firewall", redeemManagerProxyFirewall.address, redeemManagerProxyFirewall.args);
+
   const redeemManagerDeployment = await deployments.deploy("RedeemManager", {
     contract: "RedeemManagerV1",
     from: deployer,
     log: true,
     proxy: {
-      owner: proxyAdministrator,
+      owner: redeemManagerProxyFirewall.address,
       proxyContract: "TUPProxy",
       implementationName: "RedeemManagerV1_Implementation_1_1_0",
       execute: {
@@ -248,7 +302,18 @@ const func: DeployFunction = async function ({
     },
   });
 
-  await verify("TUPProxy", redeemManagerDeployment.address, []);
+  if (redeemManagerDeployment.address !== futureRedeemManagerAddress) {
+    throw new Error(
+      `Invalid future redeem manager address computation ${futureRedeemManagerAddress} != ${redeemManagerDeployment.address}`
+    );
+  }
+
+  await verify(
+    "TUPProxy",
+    redeemManagerDeployment.address,
+    redeemManagerDeployment.args,
+    redeemManagerDeployment.libraries
+  );
   await verify("RedeemManagerV1", redeemManagerDeployment.implementation, []);
 
   // Initializations
@@ -325,4 +390,3 @@ func.skip = async function ({ deployments }: HardhatRuntimeEnvironment): Promise
 };
 
 export default func;
-
