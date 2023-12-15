@@ -64,7 +64,10 @@ methods {
     function OR.getStoppedAndRequestedExitCounts() external returns (uint32, uint256) envfree;
     function _.getStoppedAndRequestedExitCounts() external => DISPATCHER(true);
     function _.demandValidatorExits(uint256, uint256) external => DISPATCHER(true);
-    function _.pickNextValidatorsToDeposit(uint256) external => DISPATCHER(true);
+    // function OR.pickNextValidatorsToDeposit(uint256) internal returns (bytes[], bytes[]);
+    // function _.pickNextValidatorsToDeposit(uint256) internal;
+
+    // function _.encodePacked(bytes32) internal;
 }
 
 
