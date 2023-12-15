@@ -13,7 +13,7 @@ export const verify = async (name: string, contractAddress: string, args: any, l
         ...libs,
       },
     }).catch((e) => {
-      console.log(e);
+      console.log(e.message);
     });
   }
 };
@@ -26,4 +26,3 @@ const tenderlyVerify = async (name: string, contractAddress: string) => {
     });
   }
 };
-
