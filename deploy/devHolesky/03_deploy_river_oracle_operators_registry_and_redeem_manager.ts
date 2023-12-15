@@ -69,7 +69,7 @@ const func: DeployFunction = async function ({
     contract: "Firewall",
     from: deployer,
     log: true,
-    args: [governor, executor, futureRiverAddress, [riverInterface.getSighash("depositToConsensusLayer")]],
+    args: [governor, executor, futureRiverAddress, []],
   });
   await verify("Firewall", riverFirewallDeployment.address, riverFirewallDeployment.args);
 
@@ -118,14 +118,14 @@ const func: DeployFunction = async function ({
     contract: "Firewall",
     from: deployer,
     log: true,
-    args: [governor, executor, futureOracleAddress, [oracleInterface.getSighash("removeMember")]],
+    args: [governor, executor, futureOracleAddress, []],
   });
 
   await verify("Firewall", oracleFirewallDeployment.address, [
     governor,
     executor,
     futureOracleAddress,
-    [oracleInterface.getSighash("removeMember")],
+    [],
   ]);
   const oracleProxyFirewall = await deployments.deploy("OracleProxyFirewall", {
     contract: "Firewall",
@@ -165,8 +165,7 @@ const func: DeployFunction = async function ({
       executor,
       futureOperatorsRegistryAddress,
       [
-        operatorsRegistryInterface.getSighash("setOperatorStatus"),
-        operatorsRegistryInterface.getSighash("setOperatorName"),
+        
         operatorsRegistryInterface.getSighash("setOperatorLimits"),
       ],
     ],
@@ -177,8 +176,7 @@ const func: DeployFunction = async function ({
     executor,
     futureOperatorsRegistryAddress,
     [
-      operatorsRegistryInterface.getSighash("setOperatorStatus"),
-      operatorsRegistryInterface.getSighash("setOperatorName"),
+      
       operatorsRegistryInterface.getSighash("setOperatorLimits"),
     ],
   ]);
