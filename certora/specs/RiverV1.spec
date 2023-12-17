@@ -2,6 +2,7 @@ import "Sanity.spec";
 
 using AllowlistV1 as AL;
 using CoverageFundV1 as CF;
+// using DepositContractMock as DCM;
 using ELFeeRecipientV1 as ELFR;
 using OperatorsRegistryV1 as OR;
 using RedeemManagerV1 as RM;
