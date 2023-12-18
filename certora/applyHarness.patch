@@ -1,0 +1,134 @@
+--- ../contracts/src/River.1.sol	2024-01-04 13:43:23
++++ 	2024-01-08 13:59:21
+@@ -1,32 +1,37 @@
+ //SPDX-License-Identifier: BUSL-1.1
+ pragma solidity 0.8.20;
+ 
+-import "./interfaces/IAllowlist.1.sol";
+-import "./interfaces/IOperatorRegistry.1.sol";
+-import "./interfaces/IRiver.1.sol";
+-import "./interfaces/IWithdraw.1.sol";
+-import "./interfaces/IELFeeRecipient.1.sol";
+-import "./interfaces/ICoverageFund.1.sol";
++import "../../contracts/src/interfaces/IAllowlist.1.sol";
++import "../../contracts/src/interfaces/IOperatorRegistry.1.sol";
++import "../../contracts/src/interfaces/IRiver.1.sol";
++import "../../contracts/src/interfaces/IWithdraw.1.sol";
++import "../../contracts/src/interfaces/IELFeeRecipient.1.sol";
++import "../../contracts/src/interfaces/ICoverageFund.1.sol";
+ 
+-import "./components/ConsensusLayerDepositManager.1.sol";
+-import "./components/UserDepositManager.1.sol";
+-import "./components/SharesManager.1.sol";
+-import "./components/OracleManager.1.sol";
+-import "./Initializable.sol";
+-import "./Administrable.sol";
++import "../../contracts/src/components/ConsensusLayerDepositManager.1.sol";
++import "../../contracts/src/components/UserDepositManager.1.sol";
++import "./SharesManager.1.sol";
++import "../../contracts/src/components/OracleManager.1.sol";
++import "../../contracts/src/Initializable.sol";
++import "../../contracts/src/Administrable.sol";
+ 
+-import "./libraries/LibAllowlistMasks.sol";
++import "../../contracts/src/libraries/LibAllowlistMasks.sol";
++
++import "../../contracts/src/state/river/AllowlistAddress.sol";
++import "../../contracts/src/state/river/RedeemManagerAddress.sol";
++import "../../contracts/src/state/river/OperatorsRegistryAddress.sol";
++import "../../contracts/src/state/river/CollectorAddress.sol";
++import "../../contracts/src/state/river/ELFeeRecipientAddress.sol";
++import "../../contracts/src/state/river/CoverageFundAddress.sol";
++import "../../contracts/src/state/river/BalanceToRedeem.sol";
++import "../../contracts/src/state/river/GlobalFee.sol";
++import "../../contracts/src/state/river/MetadataURI.sol";
++import "../../contracts/src/state/river/LastConsensusLayerReport.sol";
+ 
+-import "./state/river/AllowlistAddress.sol";
+-import "./state/river/RedeemManagerAddress.sol";
+-import "./state/river/OperatorsRegistryAddress.sol";
+-import "./state/river/CollectorAddress.sol";
+-import "./state/river/ELFeeRecipientAddress.sol";
+-import "./state/river/CoverageFundAddress.sol";
+-import "./state/river/BalanceToRedeem.sol";
+-import "./state/river/GlobalFee.sol";
+-import "./state/river/MetadataURI.sol";
+-import "./state/river/LastConsensusLayerReport.sol";
++// munged by certora
++interface ICVL {
++    function increment_onDepositCounter() external view returns(bool);
++}
+ 
+ /// @title River (v1)
+ /// @author Kiln
+@@ -302,6 +307,7 @@
+     /// @param _depositor User address that made the deposit
+     /// @param _amount Amount of ETH deposited
+     function _onDeposit(address _depositor, address _recipient, uint256 _amount) internal override {
++        ICVL(address(0xdeadc0de)).increment_onDepositCounter();
+         uint256 mintedShares = SharesManagerV1._mintShares(_depositor, _amount);
+         IAllowlistV1 allowlist = IAllowlistV1(AllowlistAddress.get());
+         if (_depositor == _recipient) {
+--- ../contracts/src/components/SharesManager.1.sol	2023-12-11 15:38:07
++++ 	2024-01-08 14:14:40
+@@ -1,13 +1,13 @@
+ //SPDX-License-Identifier: BUSL-1.1
+ pragma solidity 0.8.20;
+ 
+-import "../interfaces/components/ISharesManager.1.sol";
++import "../../contracts/src/interfaces/components/ISharesManager.1.sol";
+ 
+-import "../libraries/LibSanitize.sol";
++import "../../contracts/src/libraries/LibSanitize.sol";
+ 
+-import "../state/river/Shares.sol";
+-import "../state/river/SharesPerOwner.sol";
+-import "../state/shared/ApprovalsPerOwner.sol";
++import "../../contracts/src/state/river/Shares.sol";
++import "../../contracts/src/state/river/SharesPerOwner.sol";
++import "../../contracts/src/state/shared/ApprovalsPerOwner.sol";
+ 
+ /// @title Shares Manager (v1)
+ /// @author Kiln
+@@ -190,6 +190,11 @@
+         emit Transfer(_from, _to, _value);
+ 
+         return true;
++    }
++
++    function mulDivDown(uint256 a, uint256 b, uint256 c) internal pure returns (uint256 res)
++    {
++        res = a * b / c;
+     }
+ 
+     /// @notice Internal utility to retrieve the underlying asset balance for the given shares
+@@ -202,7 +207,8 @@
+             return 0;
+         }
+ 
+-        return ((_shares * _assetBalance())) / _totalSharesValue;
++        // return ((_shares * _assetBalance())) / _totalSharesValue;
++        return mulDivDown(_shares , _assetBalance(), _totalSharesValue); // Munged by Certora
+     }
+ 
+     /// @notice Internal utility to retrieve the shares count for a given underlying asset amount
+@@ -215,7 +221,8 @@
+             return 0;
+         }
+ 
+-        return (_balance * _totalSharesValue) / _assetBalance();
++        // return (_balance * _totalSharesValue) / _assetBalance();
++        return mulDivDown(_balance, _totalSharesValue, _assetBalance()); // Munged by Certora
+     }
+ 
+     /// @notice Internal utility to mint shares for the specified user
+@@ -230,7 +237,8 @@
+             sharesToMint = _underlyingAssetValue;
+             _mintRawShares(_owner, _underlyingAssetValue);
+         } else {
+-            sharesToMint = (_underlyingAssetValue * _totalSupply()) / oldTotalAssetBalance;
++            // sharesToMint = (_underlyingAssetValue * _totalSupply()) / oldTotalAssetBalance;
++            sharesToMint = mulDivDown(_underlyingAssetValue, _totalSupply(), oldTotalAssetBalance); // Munged by Certora
+             _mintRawShares(_owner, sharesToMint);
+         }
+     }
