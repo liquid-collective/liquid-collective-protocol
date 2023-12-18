@@ -26,7 +26,6 @@ methods {
     function RM.resolveRedeemRequests(uint32[]) external returns(int64[]) envfree;
     function _.resolveRedeemRequests(uint32[]) external => DISPATCHER(true);
      // requestRedeem function is also defined in River:
-    function _.requestRedeem(uint256, address) external => DISPATCHER(true);
     function _.requestRedeem(uint256) external => DISPATCHER(true);
     function _.claimRedeemRequests(uint32[], uint32[], bool, uint16) external => DISPATCHER(true);
     function _.claimRedeemRequests(uint32[], uint32[]) external => DISPATCHER(true);
