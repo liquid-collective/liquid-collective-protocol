@@ -9,7 +9,8 @@ using OperatorsRegistryV1 as OR;
 using RedeemManagerV1 as RM;
 using WithdrawV1 as Wd;
 
-use rule sanity;
+use rule method_reachability;
+
 // sanity passes here:
 // https://prover.certora.com/output/40577/2031abdd92254bafb49b487cb7466b12?anonymousKey=cef84e43b9a622eb29ce44539dba2dd9a9721096
 // sanity with less unresolved calls here:
@@ -17,6 +18,8 @@ use rule sanity;
 
 
 methods {
+
+
     // AllowlistV1
     function AllowlistV1.onlyAllowed(address, uint256) external envfree;
     function _.onlyAllowed(address, uint256) external => DISPATCHER(true);
