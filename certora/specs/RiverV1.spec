@@ -8,7 +8,8 @@ using OperatorsRegistryV1 as OR;
 using RedeemManagerV1 as RM;
 using WithdrawV1 as Wd;
 
-use rule sanity;
+use rule method_reachability;
+
 // sanity passes here:
 // https://prover.certora.com/output/40577/2031abdd92254bafb49b487cb7466b12?anonymousKey=cef84e43b9a622eb29ce44539dba2dd9a9721096
 // sanity with less unresolved calls here:
@@ -16,37 +17,41 @@ use rule sanity;
 
 
 methods {
+
+
     // AllowlistV1
-    function AL.onlyAllowed(address, uint256) external envfree;
+    function AllowlistV1.onlyAllowed(address, uint256) external envfree;
     function _.onlyAllowed(address, uint256) external => DISPATCHER(true);
-    function AL.isDenied(address) external returns (bool) envfree;
+    function AllowlistV1.isDenied(address) external returns (bool) envfree;
     function _.isDenied(address) external => DISPATCHER(true);
 
     // RedeemManagerV1
-    function RM.resolveRedeemRequests(uint32[]) external returns(int64[]) envfree;
-    function _.resolveRedeemRequests(uint32[]) external => DISPATCHER(true);
+    function RedeemManagerV1.resolveRedeemRequests(uint32[]) external returns(int64[]) envfree;
+    function _.resolveRedeemRequests(uint32[]) external => DISPATCHER(true); 
      // requestRedeem function is also defined in River:
-    function _.requestRedeem(uint256) external => DISPATCHER(true);
+    // function _.requestRedeem(uint256) external => DISPATCHER(true); //not required, todo: remove
+    function _.requestRedeem(uint256 _lsETHAmount, address _recipient) external => DISPATCHER(true);
     function _.claimRedeemRequests(uint32[], uint32[], bool, uint16) external => DISPATCHER(true);
-    function _.claimRedeemRequests(uint32[], uint32[]) external => DISPATCHER(true);
+    // function _.claimRedeemRequests(uint32[], uint32[]) external => DISPATCHER(true); //not required, todo: remove
     function _.pullExceedingEth(uint256) external => DISPATCHER(true);
     function _.reportWithdraw(uint256) external => DISPATCHER(true);
-    function RM.getRedeemDemand() external returns (uint256) envfree;
+    function RedeemManagerV1.getRedeemDemand() external returns (uint256) envfree;
     function _.getRedeemDemand() external => DISPATCHER(true);
 
     // RiverV1
     function _.sendRedeemManagerExceedingFunds() external => DISPATCHER(true);
     function _.getAllowlist() external => DISPATCHER(true);
-    function currentContract.getAllowlist() external returns(address) envfree;
+    function RiverV1Harness.getAllowlist() external returns(address) envfree;
     function _.sendCLFunds() external => DISPATCHER(true);
     function _.sendCoverageFunds() external => DISPATCHER(true);
     function _.sendELFees() external => DISPATCHER(true);
+    
     // RiverV1 : SharesManagerV1
     function _.transferFrom(address, address, uint256) external => DISPATCHER(true);
     function _.underlyingBalanceFromShares(uint256) external => DISPATCHER(true);
-    function currentContract.underlyingBalanceFromShares(uint256) external returns(uint256) envfree;
+    function RiverV1Harness.underlyingBalanceFromShares(uint256) external returns(uint256) envfree;
     // RiverV1 : OracleManagerV1
-    function _.setConsensusLayerData(IOracleManagerV1.ConsensusLayerReport) external => DISPATCHER(true);
+    function _.setConsensusLayerData(IOracleManagerV1.ConsensusLayerReport) external => DISPATCHER(true); 
     // RiverV1 : ConsensusLayerDepositManagerV1
     function _.depositToConsensusLayer(uint256) external => DISPATCHER(true);
 
@@ -61,13 +66,30 @@ methods {
 
     // OperatorsRegistryV1
     function _.reportStoppedValidatorCounts(uint32[], uint256) external => DISPATCHER(true);
-    function OR.getStoppedAndRequestedExitCounts() external returns (uint32, uint256) envfree;
+    function OperatorsRegistryV1.getStoppedAndRequestedExitCounts() external returns (uint32, uint256) envfree;
     function _.getStoppedAndRequestedExitCounts() external => DISPATCHER(true);
     function _.demandValidatorExits(uint256, uint256) external => DISPATCHER(true);
-    // function OR.pickNextValidatorsToDeposit(uint256) internal returns (bytes[], bytes[]);
-    // function _.pickNextValidatorsToDeposit(uint256) internal;
+    function _.pickNextValidatorsToDeposit(uint256) external => DISPATCHER(true); // has no effect - CERT-4615
 
-    // function _.encodePacked(bytes32) internal;
+    function _.deposit(bytes,bytes,bytes,bytes32) external => DISPATCHER(true); // has no effect - CERT-4615 
+ 
+    // TODO: remove.  called by OperatorsRegistryV1.addValidators(); implemented in library LibBytes
+   //unction _.slice(bytes memory _bytes, uint256 _start, uint256 _length) internal => dummy_slice(_bytes, _start, _length) expect (bytes memory); 
+ }
+
+
+//todo: remove
+// function dummy_slice(bytes _bytes, uint256 _start, uint256 _length) returns bytes 
+// {
+//     bytes to_return;
+//     return to_return;
+// }
+
+//todo: debug fail.
+// why addValidators() always reverts?
+rule addValidators_reachability {
+    env e;
+    calldataarg args;
+    OR.addValidators(e, args);
+    satisfy true;
 }
-
-
