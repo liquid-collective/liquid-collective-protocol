@@ -73,23 +73,6 @@ methods {
 
     function _.deposit(bytes,bytes,bytes,bytes32) external => DISPATCHER(true); // has no effect - CERT-4615 
  
-    // TODO: remove.  called by OperatorsRegistryV1.addValidators(); implemented in library LibBytes
-   //unction _.slice(bytes memory _bytes, uint256 _start, uint256 _length) internal => dummy_slice(_bytes, _start, _length) expect (bytes memory); 
  }
 
 
-//todo: remove
-// function dummy_slice(bytes _bytes, uint256 _start, uint256 _length) returns bytes 
-// {
-//     bytes to_return;
-//     return to_return;
-// }
-
-//todo: debug fail.
-// why addValidators() always reverts?
-rule addValidators_reachability {
-    env e;
-    calldataarg args;
-    OR.addValidators(e, args);
-    satisfy true;
-}
