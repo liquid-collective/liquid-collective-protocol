@@ -5,7 +5,7 @@ using CoverageFundV1 as CF;
 // using DepositContractMock as DCM;
 using ELFeeRecipientV1 as ELFR;
 using OperatorsRegistryV1 as OR;
-using RedeemManagerV1 as RM;
+using RedeemManagerV1Harness as RM;
 using WithdrawV1 as Wd;
 
 use rule method_reachability;
@@ -26,7 +26,7 @@ methods {
     function _.isDenied(address) external => DISPATCHER(true);
 
     // RedeemManagerV1
-    function RedeemManagerV1.resolveRedeemRequests(uint32[]) external returns(int64[]) envfree;
+    function RedeemManagerV1Harness.resolveRedeemRequests(uint32[]) external returns(int64[]) envfree;
     function _.resolveRedeemRequests(uint32[]) external => DISPATCHER(true); 
      // requestRedeem function is also defined in River:
     // function _.requestRedeem(uint256) external => DISPATCHER(true); //not required, todo: remove
@@ -35,7 +35,7 @@ methods {
     // function _.claimRedeemRequests(uint32[], uint32[]) external => DISPATCHER(true); //not required, todo: remove
     function _.pullExceedingEth(uint256) external => DISPATCHER(true);
     function _.reportWithdraw(uint256) external => DISPATCHER(true);
-    function RedeemManagerV1.getRedeemDemand() external returns (uint256) envfree;
+    function RedeemManagerV1Harness.getRedeemDemand() external returns (uint256) envfree;
     function _.getRedeemDemand() external => DISPATCHER(true);
 
     // RiverV1
