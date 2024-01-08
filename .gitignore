@@ -4,6 +4,9 @@ coverage
 coverage.json
 typechain
 .vscode
+package-lock.json
+runOperatorRegistry.sh
+yarn.lock
 
 #Hardhat files
 hardhat-cache
@@ -34,3 +37,6 @@ certora-logs
 certora_debug_log.txt
 resource_errors.json
 .zip-output-url.txt
+
+
+yarn.lock
