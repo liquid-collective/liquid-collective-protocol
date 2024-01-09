@@ -145,6 +145,23 @@ rule conversionRateStable(env e, method f) filtered {
     assert totalETHBefore * totalLsETHAfter == totalETHAfter * totalLsETHBefore;
 }
 
+rule conversionRateStableRewardsFeesPenalties(env e, method f) filtered {
+    f -> !f.isView
+        // && f.selector == sig:RiverV1Harness.depositToConsensusLayer(uint256).selector
+} {
+    calldataarg args;
+
+    mathint totalETHBefore = totalSupply();
+    mathint totalLsETHBefore = totalUnderlyingSupply();
+
+    f(e, args);
+
+    mathint totalETHAfter = totalSupply();
+    mathint totalLsETHAfter = totalUnderlyingSupply();
+
+    assert false;
+}
+
 // @title After transfer from, balances are updated accordingly, but not of any other user. Also, totalSupply stays the same.
 // Proved:
 // https://prover.certora.com/output/40577/0d75136142bd4b458c77e73f4394f101/?anonymousKey=7c99f012e75eb4143a0c3f5dbc180eda79a0c0db
