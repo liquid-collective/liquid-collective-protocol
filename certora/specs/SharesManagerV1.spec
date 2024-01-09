@@ -1,5 +1,7 @@
 import "RiverV1.spec";
 
+use rule sanity;
+
 methods {
     // function _.requestRedeem(uint256, address) external => DISPATCHER(true);
 
