@@ -55,11 +55,11 @@ methods {
     function RiverV1Harness.totalSupply() external returns(uint256) envfree;
     function RiverV1Harness.totalUnderlyingSupply() external returns(uint256) envfree;
     function RiverV1Harness.balanceOf(address) external returns(uint256) envfree;
-    function balanceOfUnderlying(address) external returns(uint256) envfree;
-    function totalSupply() external returns(uint256) envfree;
-    function totalUnderlyingSupply() external returns(uint256) envfree;
-    function sharesFromUnderlyingBalance(uint256) external returns(uint256) envfree;
-    function balanceOf(address) external returns(uint256) envfree;
+    function RiverV1Harness.balanceOfUnderlying(address) external returns(uint256) envfree;
+    function RiverV1Harness.totalSupply() external returns(uint256) envfree;
+    function RiverV1Harness.totalUnderlyingSupply() external returns(uint256) envfree;
+    function RiverV1Harness.sharesFromUnderlyingBalance(uint256) external returns(uint256) envfree;
+    function RiverV1Harness.balanceOf(address) external returns(uint256) envfree;
     // RiverV1 : OracleManagerV1
     function _.setConsensusLayerData(IOracleManagerV1.ConsensusLayerReport) external => DISPATCHER(true); 
     // RiverV1 : ConsensusLayerDepositManagerV1
