@@ -1,6 +1,6 @@
 diff -ruN src/Administrable.sol Administrable.sol
 --- src/Administrable.sol	2023-12-15 12:41:00
-+++ Administrable.sol	2024-01-09 13:47:44
++++ Administrable.sol	2024-01-09 14:40:45
 @@ -1,70 +0,0 @@
 -//SPDX-License-Identifier: BUSL-1.1
 -pragma solidity 0.8.20;
@@ -74,7 +74,7 @@ diff -ruN src/Administrable.sol Administrable.sol
 -}
 diff -ruN src/Allowlist.1.sol Allowlist.1.sol
 --- src/Allowlist.1.sol	2023-12-11 15:38:07
-+++ Allowlist.1.sol	2024-01-09 13:47:44
++++ Allowlist.1.sol	2024-01-09 14:40:45
 @@ -1,157 +0,0 @@
 -//SPDX-License-Identifier: BUSL-1.1
 -pragma solidity 0.8.20;
@@ -235,7 +235,7 @@ diff -ruN src/Allowlist.1.sol Allowlist.1.sol
 -}
 diff -ruN src/CoverageFund.1.sol CoverageFund.1.sol
 --- src/CoverageFund.1.sol	2023-12-11 15:38:07
-+++ CoverageFund.1.sol	2024-01-09 13:47:44
++++ CoverageFund.1.sol	2024-01-09 14:40:45
 @@ -1,74 +0,0 @@
 -//SPDX-License-Identifier: BUSL-1.1
 -pragma solidity 0.8.20;
@@ -313,7 +313,7 @@ diff -ruN src/CoverageFund.1.sol CoverageFund.1.sol
 -}
 diff -ruN src/ELFeeRecipient.1.sol ELFeeRecipient.1.sol
 --- src/ELFeeRecipient.1.sol	2023-12-11 15:38:07
-+++ ELFeeRecipient.1.sol	2024-01-09 13:47:44
++++ ELFeeRecipient.1.sol	2024-01-09 14:40:45
 @@ -1,45 +0,0 @@
 -//SPDX-License-Identifier: BUSL-1.1
 -pragma solidity 0.8.20;
@@ -362,7 +362,7 @@ diff -ruN src/ELFeeRecipient.1.sol ELFeeRecipient.1.sol
 -}
 diff -ruN src/Firewall.sol Firewall.sol
 --- src/Firewall.sol	2023-12-11 15:38:07
-+++ Firewall.sol	2024-01-09 13:47:44
++++ Firewall.sol	2024-01-09 14:40:45
 @@ -1,118 +0,0 @@
 -//SPDX-License-Identifier: BUSL-1.1
 -pragma solidity 0.8.20;
@@ -484,7 +484,7 @@ diff -ruN src/Firewall.sol Firewall.sol
 -}
 diff -ruN src/Initializable.sol Initializable.sol
 --- src/Initializable.sol	2023-12-11 15:38:07
-+++ Initializable.sol	2024-01-09 13:47:44
++++ Initializable.sol	2024-01-09 14:40:45
 @@ -1,36 +0,0 @@
 -//SPDX-License-Identifier: BUSL-1.1
 -pragma solidity 0.8.20;
@@ -524,7 +524,7 @@ diff -ruN src/Initializable.sol Initializable.sol
 -}
 diff -ruN src/OperatorsRegistry.1.sol OperatorsRegistry.1.sol
 --- src/OperatorsRegistry.1.sol	2023-12-11 15:38:07
-+++ OperatorsRegistry.1.sol	2024-01-09 13:47:44
++++ OperatorsRegistry.1.sol	2024-01-09 14:40:45
 @@ -1,858 +0,0 @@
 -//SPDX-License-Identifier: BUSL-1.1
 -pragma solidity 0.8.20;
@@ -1386,7 +1386,7 @@ diff -ruN src/OperatorsRegistry.1.sol OperatorsRegistry.1.sol
 -}
 diff -ruN src/Oracle.1.sol Oracle.1.sol
 --- src/Oracle.1.sol	2023-12-11 15:38:07
-+++ Oracle.1.sol	2024-01-09 13:47:44
++++ Oracle.1.sol	2024-01-09 14:40:45
 @@ -1,283 +0,0 @@
 -//SPDX-License-Identifier: BUSL-1.1
 -pragma solidity 0.8.20;
@@ -1673,7 +1673,7 @@ diff -ruN src/Oracle.1.sol Oracle.1.sol
 -}
 diff -ruN src/RedeemManager.1.sol RedeemManager.1.sol
 --- src/RedeemManager.1.sol	2023-12-15 14:04:57
-+++ RedeemManager.1.sol	2024-01-09 13:47:44
++++ RedeemManager.1.sol	2024-01-09 14:40:45
 @@ -1,531 +0,0 @@
 -//SPDX-License-Identifier: BUSL-1.1
 -pragma solidity 0.8.20;
@@ -2208,7 +2208,7 @@ diff -ruN src/RedeemManager.1.sol RedeemManager.1.sol
 -}
 diff -ruN src/River.1.sol River.1.sol
 --- src/River.1.sol	2024-01-04 13:43:23
-+++ River.1.sol	2024-01-09 13:47:44
++++ River.1.sol	2024-01-09 14:40:45
 @@ -1,606 +0,0 @@
 -//SPDX-License-Identifier: BUSL-1.1
 -pragma solidity 0.8.20;
@@ -2818,7 +2818,7 @@ diff -ruN src/River.1.sol River.1.sol
 -}
 diff -ruN src/TLC.1.sol TLC.1.sol
 --- src/TLC.1.sol	2023-12-11 15:38:07
-+++ TLC.1.sol	2024-01-09 13:47:44
++++ TLC.1.sol	2024-01-09 14:40:45
 @@ -1,38 +0,0 @@
 -//SPDX-License-Identifier: BUSL-1.1
 -pragma solidity 0.8.20;
@@ -2860,7 +2860,7 @@ diff -ruN src/TLC.1.sol TLC.1.sol
 -}
 diff -ruN src/TUPProxy.sol TUPProxy.sol
 --- src/TUPProxy.sol	2023-12-11 15:38:07
-+++ TUPProxy.sol	2024-01-09 13:47:44
++++ TUPProxy.sol	2024-01-09 14:40:45
 @@ -1,68 +0,0 @@
 -//SPDX-License-Identifier: BUSL-1.1
 -pragma solidity 0.8.20;
@@ -2932,7 +2932,7 @@ diff -ruN src/TUPProxy.sol TUPProxy.sol
 -}
 diff -ruN src/WLSETH.1.sol WLSETH.1.sol
 --- src/WLSETH.1.sol	2023-12-11 15:38:07
-+++ WLSETH.1.sol	2024-01-09 13:47:44
++++ WLSETH.1.sol	2024-01-09 14:40:45
 @@ -1,196 +0,0 @@
 -//SPDX-License-Identifier: BUSL-1.1
 -pragma solidity 0.8.20;
@@ -3132,7 +3132,7 @@ diff -ruN src/WLSETH.1.sol WLSETH.1.sol
 -}
 diff -ruN src/Withdraw.1.sol Withdraw.1.sol
 --- src/Withdraw.1.sol	2023-12-11 15:38:07
-+++ Withdraw.1.sol	2024-01-09 13:47:44
++++ Withdraw.1.sol	2024-01-09 14:40:45
 @@ -1,54 +0,0 @@
 -//SPDX-License-Identifier: BUSL-1.1
 -pragma solidity 0.8.20;
@@ -3190,7 +3190,7 @@ diff -ruN src/Withdraw.1.sol Withdraw.1.sol
 -}
 diff -ruN src/components/ConsensusLayerDepositManager.1.sol components/ConsensusLayerDepositManager.1.sol
 --- src/components/ConsensusLayerDepositManager.1.sol	2023-12-11 15:38:07
-+++ components/ConsensusLayerDepositManager.1.sol	2024-01-09 13:47:44
++++ components/ConsensusLayerDepositManager.1.sol	2024-01-09 14:40:45
 @@ -1,165 +0,0 @@
 -//SPDX-License-Identifier: BUSL-1.1
 -pragma solidity 0.8.20;
@@ -3359,7 +3359,7 @@ diff -ruN src/components/ConsensusLayerDepositManager.1.sol components/Consensus
 -}
 diff -ruN src/components/ERC20VestableVotesUpgradeable.1.sol components/ERC20VestableVotesUpgradeable.1.sol
 --- src/components/ERC20VestableVotesUpgradeable.1.sol	2023-12-11 15:38:07
-+++ components/ERC20VestableVotesUpgradeable.1.sol	2024-01-09 13:47:44
++++ components/ERC20VestableVotesUpgradeable.1.sol	2024-01-09 14:40:45
 @@ -1,471 +0,0 @@
 -//SPDX-License-Identifier: BUSL-1.1
 -pragma solidity 0.8.20;
@@ -3834,7 +3834,7 @@ diff -ruN src/components/ERC20VestableVotesUpgradeable.1.sol components/ERC20Ves
 -}
 diff -ruN src/components/OracleManager.1.sol components/OracleManager.1.sol
 --- src/components/OracleManager.1.sol	2023-12-15 14:57:00
-+++ components/OracleManager.1.sol	2024-01-09 13:47:44
++++ components/OracleManager.1.sol	2024-01-09 14:40:45
 @@ -1,497 +0,0 @@
 -//SPDX-License-Identifier: BUSL-1.1
 -pragma solidity 0.8.20;
@@ -4335,7 +4335,7 @@ diff -ruN src/components/OracleManager.1.sol components/OracleManager.1.sol
 -}
 diff -ruN src/components/SharesManager.1.sol components/SharesManager.1.sol
 --- src/components/SharesManager.1.sol	2023-12-11 15:38:07
-+++ components/SharesManager.1.sol	2024-01-09 13:47:44
++++ components/SharesManager.1.sol	2024-01-09 14:40:45
 @@ -1,269 +0,0 @@
 -//SPDX-License-Identifier: BUSL-1.1
 -pragma solidity 0.8.20;
@@ -4608,7 +4608,7 @@ diff -ruN src/components/SharesManager.1.sol components/SharesManager.1.sol
 -}
 diff -ruN src/components/UserDepositManager.1.sol components/UserDepositManager.1.sol
 --- src/components/UserDepositManager.1.sol	2023-12-13 16:26:45
-+++ components/UserDepositManager.1.sol	2024-01-09 13:47:44
++++ components/UserDepositManager.1.sol	2024-01-09 14:40:45
 @@ -1,56 +0,0 @@
 -//SPDX-License-Identifier: BUSL-1.1
 -pragma solidity 0.8.20;
@@ -4668,7 +4668,7 @@ diff -ruN src/components/UserDepositManager.1.sol components/UserDepositManager.
 -}
 diff -ruN src/contracts/src/Administrable.sol contracts/src/Administrable.sol
 --- src/contracts/src/Administrable.sol	1970-01-01 01:00:00
-+++ contracts/src/Administrable.sol	2024-01-09 13:47:44
++++ contracts/src/Administrable.sol	2024-01-09 14:40:45
 @@ -0,0 +1,70 @@
 +//SPDX-License-Identifier: BUSL-1.1
 +pragma solidity 0.8.20;
@@ -4742,7 +4742,7 @@ diff -ruN src/contracts/src/Administrable.sol contracts/src/Administrable.sol
 +}
 diff -ruN src/contracts/src/Allowlist.1.sol contracts/src/Allowlist.1.sol
 --- src/contracts/src/Allowlist.1.sol	1970-01-01 01:00:00
-+++ contracts/src/Allowlist.1.sol	2024-01-09 13:47:44
++++ contracts/src/Allowlist.1.sol	2024-01-09 14:40:45
 @@ -0,0 +1,157 @@
 +//SPDX-License-Identifier: BUSL-1.1
 +pragma solidity 0.8.20;
@@ -4903,7 +4903,7 @@ diff -ruN src/contracts/src/Allowlist.1.sol contracts/src/Allowlist.1.sol
 +}
 diff -ruN src/contracts/src/CoverageFund.1.sol contracts/src/CoverageFund.1.sol
 --- src/contracts/src/CoverageFund.1.sol	1970-01-01 01:00:00
-+++ contracts/src/CoverageFund.1.sol	2024-01-09 13:47:44
++++ contracts/src/CoverageFund.1.sol	2024-01-09 14:40:45
 @@ -0,0 +1,74 @@
 +//SPDX-License-Identifier: BUSL-1.1
 +pragma solidity 0.8.20;
@@ -4981,7 +4981,7 @@ diff -ruN src/contracts/src/CoverageFund.1.sol contracts/src/CoverageFund.1.sol
 +}
 diff -ruN src/contracts/src/ELFeeRecipient.1.sol contracts/src/ELFeeRecipient.1.sol
 --- src/contracts/src/ELFeeRecipient.1.sol	1970-01-01 01:00:00
-+++ contracts/src/ELFeeRecipient.1.sol	2024-01-09 13:47:44
++++ contracts/src/ELFeeRecipient.1.sol	2024-01-09 14:40:45
 @@ -0,0 +1,45 @@
 +//SPDX-License-Identifier: BUSL-1.1
 +pragma solidity 0.8.20;
@@ -5030,7 +5030,7 @@ diff -ruN src/contracts/src/ELFeeRecipient.1.sol contracts/src/ELFeeRecipient.1.
 +}
 diff -ruN src/contracts/src/Firewall.sol contracts/src/Firewall.sol
 --- src/contracts/src/Firewall.sol	1970-01-01 01:00:00
-+++ contracts/src/Firewall.sol	2024-01-09 13:47:44
++++ contracts/src/Firewall.sol	2024-01-09 14:40:45
 @@ -0,0 +1,118 @@
 +//SPDX-License-Identifier: BUSL-1.1
 +pragma solidity 0.8.20;
@@ -5152,7 +5152,7 @@ diff -ruN src/contracts/src/Firewall.sol contracts/src/Firewall.sol
 +}
 diff -ruN src/contracts/src/Initializable.sol contracts/src/Initializable.sol
 --- src/contracts/src/Initializable.sol	1970-01-01 01:00:00
-+++ contracts/src/Initializable.sol	2024-01-09 13:47:44
++++ contracts/src/Initializable.sol	2024-01-09 14:40:45
 @@ -0,0 +1,36 @@
 +//SPDX-License-Identifier: BUSL-1.1
 +pragma solidity 0.8.20;
@@ -5192,7 +5192,7 @@ diff -ruN src/contracts/src/Initializable.sol contracts/src/Initializable.sol
 +}
 diff -ruN src/contracts/src/OperatorsRegistry.1.sol contracts/src/OperatorsRegistry.1.sol
 --- src/contracts/src/OperatorsRegistry.1.sol	1970-01-01 01:00:00
-+++ contracts/src/OperatorsRegistry.1.sol	2024-01-09 13:47:44
++++ contracts/src/OperatorsRegistry.1.sol	2024-01-09 14:40:45
 @@ -0,0 +1,858 @@
 +//SPDX-License-Identifier: BUSL-1.1
 +pragma solidity 0.8.20;
@@ -6054,7 +6054,7 @@ diff -ruN src/contracts/src/OperatorsRegistry.1.sol contracts/src/OperatorsRegis
 +}
 diff -ruN src/contracts/src/Oracle.1.sol contracts/src/Oracle.1.sol
 --- src/contracts/src/Oracle.1.sol	1970-01-01 01:00:00
-+++ contracts/src/Oracle.1.sol	2024-01-09 13:47:44
++++ contracts/src/Oracle.1.sol	2024-01-09 14:40:45
 @@ -0,0 +1,283 @@
 +//SPDX-License-Identifier: BUSL-1.1
 +pragma solidity 0.8.20;
@@ -6341,7 +6341,7 @@ diff -ruN src/contracts/src/Oracle.1.sol contracts/src/Oracle.1.sol
 +}
 diff -ruN src/contracts/src/RedeemManager.1.sol contracts/src/RedeemManager.1.sol
 --- src/contracts/src/RedeemManager.1.sol	1970-01-01 01:00:00
-+++ contracts/src/RedeemManager.1.sol	2024-01-09 13:47:44
++++ contracts/src/RedeemManager.1.sol	2024-01-09 14:40:45
 @@ -0,0 +1,531 @@
 +//SPDX-License-Identifier: BUSL-1.1
 +pragma solidity 0.8.20;
@@ -6876,7 +6876,7 @@ diff -ruN src/contracts/src/RedeemManager.1.sol contracts/src/RedeemManager.1.so
 +}
 diff -ruN src/contracts/src/River.1.sol contracts/src/River.1.sol
 --- src/contracts/src/River.1.sol	1970-01-01 01:00:00
-+++ contracts/src/River.1.sol	2024-01-09 13:51:41
++++ contracts/src/River.1.sol	2024-01-10 15:35:39
 @@ -0,0 +1,612 @@
 +//SPDX-License-Identifier: BUSL-1.1
 +pragma solidity 0.8.20;
@@ -6909,9 +6909,9 @@ diff -ruN src/contracts/src/River.1.sol contracts/src/River.1.sol
 +import "./state/river/LastConsensusLayerReport.sol";
 +
 +// munged by certora
-+interface ICVL {
-+    function increment_onDepositCounter() external view returns(bool);
-+}
++// interface ICVL {
++//     function increment_onDepositCounter() external view returns(bool);
++// }
 +
 +/// @title River (v1)
 +/// @author Kiln
@@ -7187,7 +7187,7 @@ diff -ruN src/contracts/src/River.1.sol contracts/src/River.1.sol
 +    /// @param _depositor User address that made the deposit
 +    /// @param _amount Amount of ETH deposited
 +    function _onDeposit(address _depositor, address _recipient, uint256 _amount) internal override {
-+        ICVL(address(0xdeadc0de)).increment_onDepositCounter();
++        // ICVL(address(0xdeadc0de)).increment_onDepositCounter();
 +        uint256 mintedShares = SharesManagerV1._mintShares(_depositor, _amount);
 +        IAllowlistV1 allowlist = IAllowlistV1(AllowlistAddress.get());
 +        if (_depositor == _recipient) {
@@ -7492,7 +7492,7 @@ diff -ruN src/contracts/src/River.1.sol contracts/src/River.1.sol
 +}
 diff -ruN src/contracts/src/TLC.1.sol contracts/src/TLC.1.sol
 --- src/contracts/src/TLC.1.sol	1970-01-01 01:00:00
-+++ contracts/src/TLC.1.sol	2024-01-09 13:47:44
++++ contracts/src/TLC.1.sol	2024-01-09 14:40:45
 @@ -0,0 +1,38 @@
 +//SPDX-License-Identifier: BUSL-1.1
 +pragma solidity 0.8.20;
@@ -7534,7 +7534,7 @@ diff -ruN src/contracts/src/TLC.1.sol contracts/src/TLC.1.sol
 +}
 diff -ruN src/contracts/src/TUPProxy.sol contracts/src/TUPProxy.sol
 --- src/contracts/src/TUPProxy.sol	1970-01-01 01:00:00
-+++ contracts/src/TUPProxy.sol	2024-01-09 13:47:44
++++ contracts/src/TUPProxy.sol	2024-01-09 14:40:45
 @@ -0,0 +1,68 @@
 +//SPDX-License-Identifier: BUSL-1.1
 +pragma solidity 0.8.20;
@@ -7606,7 +7606,7 @@ diff -ruN src/contracts/src/TUPProxy.sol contracts/src/TUPProxy.sol
 +}
 diff -ruN src/contracts/src/WLSETH.1.sol contracts/src/WLSETH.1.sol
 --- src/contracts/src/WLSETH.1.sol	1970-01-01 01:00:00
-+++ contracts/src/WLSETH.1.sol	2024-01-09 13:47:44
++++ contracts/src/WLSETH.1.sol	2024-01-09 14:40:45
 @@ -0,0 +1,196 @@
 +//SPDX-License-Identifier: BUSL-1.1
 +pragma solidity 0.8.20;
@@ -7806,7 +7806,7 @@ diff -ruN src/contracts/src/WLSETH.1.sol contracts/src/WLSETH.1.sol
 +}
 diff -ruN src/contracts/src/Withdraw.1.sol contracts/src/Withdraw.1.sol
 --- src/contracts/src/Withdraw.1.sol	1970-01-01 01:00:00
-+++ contracts/src/Withdraw.1.sol	2024-01-09 13:47:44
++++ contracts/src/Withdraw.1.sol	2024-01-09 14:40:45
 @@ -0,0 +1,54 @@
 +//SPDX-License-Identifier: BUSL-1.1
 +pragma solidity 0.8.20;
@@ -7864,7 +7864,7 @@ diff -ruN src/contracts/src/Withdraw.1.sol contracts/src/Withdraw.1.sol
 +}
 diff -ruN src/contracts/src/components/ConsensusLayerDepositManager.1.sol contracts/src/components/ConsensusLayerDepositManager.1.sol
 --- src/contracts/src/components/ConsensusLayerDepositManager.1.sol	1970-01-01 01:00:00
-+++ contracts/src/components/ConsensusLayerDepositManager.1.sol	2024-01-09 13:47:44
++++ contracts/src/components/ConsensusLayerDepositManager.1.sol	2024-01-09 14:40:45
 @@ -0,0 +1,165 @@
 +//SPDX-License-Identifier: BUSL-1.1
 +pragma solidity 0.8.20;
@@ -8033,7 +8033,7 @@ diff -ruN src/contracts/src/components/ConsensusLayerDepositManager.1.sol contra
 +}
 diff -ruN src/contracts/src/components/ERC20VestableVotesUpgradeable.1.sol contracts/src/components/ERC20VestableVotesUpgradeable.1.sol
 --- src/contracts/src/components/ERC20VestableVotesUpgradeable.1.sol	1970-01-01 01:00:00
-+++ contracts/src/components/ERC20VestableVotesUpgradeable.1.sol	2024-01-09 13:47:44
++++ contracts/src/components/ERC20VestableVotesUpgradeable.1.sol	2024-01-09 14:40:45
 @@ -0,0 +1,471 @@
 +//SPDX-License-Identifier: BUSL-1.1
 +pragma solidity 0.8.20;
@@ -8508,7 +8508,7 @@ diff -ruN src/contracts/src/components/ERC20VestableVotesUpgradeable.1.sol contr
 +}
 diff -ruN src/contracts/src/components/OracleManager.1.sol contracts/src/components/OracleManager.1.sol
 --- src/contracts/src/components/OracleManager.1.sol	1970-01-01 01:00:00
-+++ contracts/src/components/OracleManager.1.sol	2024-01-09 13:47:44
++++ contracts/src/components/OracleManager.1.sol	2024-01-09 14:40:45
 @@ -0,0 +1,497 @@
 +//SPDX-License-Identifier: BUSL-1.1
 +pragma solidity 0.8.20;
@@ -9009,7 +9009,7 @@ diff -ruN src/contracts/src/components/OracleManager.1.sol contracts/src/compone
 +}
 diff -ruN src/contracts/src/components/SharesManager.1.sol contracts/src/components/SharesManager.1.sol
 --- src/contracts/src/components/SharesManager.1.sol	1970-01-01 01:00:00
-+++ contracts/src/components/SharesManager.1.sol	2024-01-09 13:53:17
++++ contracts/src/components/SharesManager.1.sol	2024-01-09 14:40:45
 @@ -0,0 +1,277 @@
 +//SPDX-License-Identifier: BUSL-1.1
 +pragma solidity 0.8.20;
@@ -9290,7 +9290,7 @@ diff -ruN src/contracts/src/components/SharesManager.1.sol contracts/src/compone
 +}
 diff -ruN src/contracts/src/components/UserDepositManager.1.sol contracts/src/components/UserDepositManager.1.sol
 --- src/contracts/src/components/UserDepositManager.1.sol	1970-01-01 01:00:00
-+++ contracts/src/components/UserDepositManager.1.sol	2024-01-09 13:47:44
++++ contracts/src/components/UserDepositManager.1.sol	2024-01-09 14:40:45
 @@ -0,0 +1,56 @@
 +//SPDX-License-Identifier: BUSL-1.1
 +pragma solidity 0.8.20;
@@ -9350,7 +9350,7 @@ diff -ruN src/contracts/src/components/UserDepositManager.1.sol contracts/src/co
 +}
 diff -ruN src/contracts/src/interfaces/IAdministrable.sol contracts/src/interfaces/IAdministrable.sol
 --- src/contracts/src/interfaces/IAdministrable.sol	1970-01-01 01:00:00
-+++ contracts/src/interfaces/IAdministrable.sol	2024-01-09 13:47:44
++++ contracts/src/interfaces/IAdministrable.sol	2024-01-09 14:40:45
 @@ -0,0 +1,34 @@
 +//SPDX-License-Identifier: BUSL-1.1
 +pragma solidity 0.8.20;
@@ -9388,7 +9388,7 @@ diff -ruN src/contracts/src/interfaces/IAdministrable.sol contracts/src/interfac
 +}
 diff -ruN src/contracts/src/interfaces/IAllowlist.1.sol contracts/src/interfaces/IAllowlist.1.sol
 --- src/contracts/src/interfaces/IAllowlist.1.sol	1970-01-01 01:00:00
-+++ contracts/src/interfaces/IAllowlist.1.sol	2024-01-09 13:47:44
++++ contracts/src/interfaces/IAllowlist.1.sol	2024-01-09 14:40:45
 @@ -0,0 +1,107 @@
 +//SPDX-License-Identifier: BUSL-1.1
 +pragma solidity 0.8.20;
@@ -9499,7 +9499,7 @@ diff -ruN src/contracts/src/interfaces/IAllowlist.1.sol contracts/src/interfaces
 +}
 diff -ruN src/contracts/src/interfaces/ICoverageFund.1.sol contracts/src/interfaces/ICoverageFund.1.sol
 --- src/contracts/src/interfaces/ICoverageFund.1.sol	1970-01-01 01:00:00
-+++ contracts/src/interfaces/ICoverageFund.1.sol	2024-01-09 13:47:44
++++ contracts/src/interfaces/ICoverageFund.1.sol	2024-01-09 14:40:45
 @@ -0,0 +1,40 @@
 +//SPDX-License-Identifier: BUSL-1.1
 +pragma solidity 0.8.20;
@@ -9543,7 +9543,7 @@ diff -ruN src/contracts/src/interfaces/ICoverageFund.1.sol contracts/src/interfa
 +}
 diff -ruN src/contracts/src/interfaces/IDepositContract.sol contracts/src/interfaces/IDepositContract.sol
 --- src/contracts/src/interfaces/IDepositContract.sol	1970-01-01 01:00:00
-+++ contracts/src/interfaces/IDepositContract.sol	2024-01-09 13:47:44
++++ contracts/src/interfaces/IDepositContract.sol	2024-01-09 14:40:45
 @@ -0,0 +1,18 @@
 +//SPDX-License-Identifier: BUSL-1.1
 +pragma solidity 0.8.20;
@@ -9565,7 +9565,7 @@ diff -ruN src/contracts/src/interfaces/IDepositContract.sol contracts/src/interf
 +}
 diff -ruN src/contracts/src/interfaces/IELFeeRecipient.1.sol contracts/src/interfaces/IELFeeRecipient.1.sol
 --- src/contracts/src/interfaces/IELFeeRecipient.1.sol	1970-01-01 01:00:00
-+++ contracts/src/interfaces/IELFeeRecipient.1.sol	2024-01-09 13:47:44
++++ contracts/src/interfaces/IELFeeRecipient.1.sol	2024-01-09 14:40:45
 @@ -0,0 +1,29 @@
 +//SPDX-License-Identifier: BUSL-1.1
 +pragma solidity 0.8.20;
@@ -9598,7 +9598,7 @@ diff -ruN src/contracts/src/interfaces/IELFeeRecipient.1.sol contracts/src/inter
 +}
 diff -ruN src/contracts/src/interfaces/IFirewall.sol contracts/src/interfaces/IFirewall.sol
 --- src/contracts/src/interfaces/IFirewall.sol	1970-01-01 01:00:00
-+++ contracts/src/interfaces/IFirewall.sol	2024-01-09 13:47:44
++++ contracts/src/interfaces/IFirewall.sol	2024-01-09 14:40:45
 @@ -0,0 +1,48 @@
 +//SPDX-License-Identifier: BUSL-1.1
 +pragma solidity 0.8.20;
@@ -9650,7 +9650,7 @@ diff -ruN src/contracts/src/interfaces/IFirewall.sol contracts/src/interfaces/IF
 +}
 diff -ruN src/contracts/src/interfaces/IOperatorRegistry.1.sol contracts/src/interfaces/IOperatorRegistry.1.sol
 --- src/contracts/src/interfaces/IOperatorRegistry.1.sol	1970-01-01 01:00:00
-+++ contracts/src/interfaces/IOperatorRegistry.1.sol	2024-01-09 13:47:44
++++ contracts/src/interfaces/IOperatorRegistry.1.sol	2024-01-09 14:40:45
 @@ -0,0 +1,333 @@
 +//SPDX-License-Identifier: BUSL-1.1
 +pragma solidity 0.8.20;
@@ -9987,7 +9987,7 @@ diff -ruN src/contracts/src/interfaces/IOperatorRegistry.1.sol contracts/src/int
 +}
 diff -ruN src/contracts/src/interfaces/IOracle.1.sol contracts/src/interfaces/IOracle.1.sol
 --- src/contracts/src/interfaces/IOracle.1.sol	1970-01-01 01:00:00
-+++ contracts/src/interfaces/IOracle.1.sol	2024-01-09 13:47:44
++++ contracts/src/interfaces/IOracle.1.sol	2024-01-09 14:40:45
 @@ -0,0 +1,184 @@
 +//SPDX-License-Identifier: BUSL-1.1
 +pragma solidity 0.8.20;
@@ -10175,7 +10175,7 @@ diff -ruN src/contracts/src/interfaces/IOracle.1.sol contracts/src/interfaces/IO
 +}
 diff -ruN src/contracts/src/interfaces/IRedeemManager.1.sol contracts/src/interfaces/IRedeemManager.1.sol
 --- src/contracts/src/interfaces/IRedeemManager.1.sol	1970-01-01 01:00:00
-+++ contracts/src/interfaces/IRedeemManager.1.sol	2024-01-09 13:47:44
++++ contracts/src/interfaces/IRedeemManager.1.sol	2024-01-09 14:40:45
 @@ -0,0 +1,190 @@
 +//SPDX-License-Identifier: BUSL-1.1
 +pragma solidity 0.8.20;
@@ -10369,7 +10369,7 @@ diff -ruN src/contracts/src/interfaces/IRedeemManager.1.sol contracts/src/interf
 +}
 diff -ruN src/contracts/src/interfaces/IRiver.1.sol contracts/src/interfaces/IRiver.1.sol
 --- src/contracts/src/interfaces/IRiver.1.sol	1970-01-01 01:00:00
-+++ contracts/src/interfaces/IRiver.1.sol	2024-01-09 13:47:44
++++ contracts/src/interfaces/IRiver.1.sol	2024-01-09 14:40:45
 @@ -0,0 +1,271 @@
 +//SPDX-License-Identifier: BUSL-1.1
 +pragma solidity 0.8.20;
@@ -10644,7 +10644,7 @@ diff -ruN src/contracts/src/interfaces/IRiver.1.sol contracts/src/interfaces/IRi
 +}
 diff -ruN src/contracts/src/interfaces/ITLC.1.sol contracts/src/interfaces/ITLC.1.sol
 --- src/contracts/src/interfaces/ITLC.1.sol	1970-01-01 01:00:00
-+++ contracts/src/interfaces/ITLC.1.sol	2024-01-09 13:47:44
++++ contracts/src/interfaces/ITLC.1.sol	2024-01-09 14:40:45
 @@ -0,0 +1,19 @@
 +//SPDX-License-Identifier: BUSL-1.1
 +pragma solidity 0.8.20;
@@ -10667,7 +10667,7 @@ diff -ruN src/contracts/src/interfaces/ITLC.1.sol contracts/src/interfaces/ITLC.
 +}
 diff -ruN src/contracts/src/interfaces/IWLSETH.1.sol contracts/src/interfaces/IWLSETH.1.sol
 --- src/contracts/src/interfaces/IWLSETH.1.sol	1970-01-01 01:00:00
-+++ contracts/src/interfaces/IWLSETH.1.sol	2024-01-09 13:47:44
++++ contracts/src/interfaces/IWLSETH.1.sol	2024-01-09 14:40:45
 @@ -0,0 +1,138 @@
 +//SPDX-License-Identifier: BUSL-1.1
 +pragma solidity 0.8.20;
@@ -10809,7 +10809,7 @@ diff -ruN src/contracts/src/interfaces/IWLSETH.1.sol contracts/src/interfaces/IW
 +}
 diff -ruN src/contracts/src/interfaces/IWithdraw.1.sol contracts/src/interfaces/IWithdraw.1.sol
 --- src/contracts/src/interfaces/IWithdraw.1.sol	1970-01-01 01:00:00
-+++ contracts/src/interfaces/IWithdraw.1.sol	2024-01-09 13:47:44
++++ contracts/src/interfaces/IWithdraw.1.sol	2024-01-09 14:40:45
 @@ -0,0 +1,26 @@
 +//SPDX-License-Identifier: BUSL-1.1
 +pragma solidity 0.8.20;
@@ -10839,7 +10839,7 @@ diff -ruN src/contracts/src/interfaces/IWithdraw.1.sol contracts/src/interfaces/
 +}
 diff -ruN src/contracts/src/interfaces/components/IConsensusLayerDepositManager.1.sol contracts/src/interfaces/components/IConsensusLayerDepositManager.1.sol
 --- src/contracts/src/interfaces/components/IConsensusLayerDepositManager.1.sol	1970-01-01 01:00:00
-+++ contracts/src/interfaces/components/IConsensusLayerDepositManager.1.sol	2024-01-09 13:47:44
++++ contracts/src/interfaces/components/IConsensusLayerDepositManager.1.sol	2024-01-09 14:40:45
 @@ -0,0 +1,64 @@
 +//SPDX-License-Identifier: BUSL-1.1
 +pragma solidity 0.8.20;
@@ -10907,7 +10907,7 @@ diff -ruN src/contracts/src/interfaces/components/IConsensusLayerDepositManager.
 +}
 diff -ruN src/contracts/src/interfaces/components/IERC20VestableVotesUpgradeable.1.sol contracts/src/interfaces/components/IERC20VestableVotesUpgradeable.1.sol
 --- src/contracts/src/interfaces/components/IERC20VestableVotesUpgradeable.1.sol	1970-01-01 01:00:00
-+++ contracts/src/interfaces/components/IERC20VestableVotesUpgradeable.1.sol	2024-01-09 13:47:44
++++ contracts/src/interfaces/components/IERC20VestableVotesUpgradeable.1.sol	2024-01-09 14:40:45
 @@ -0,0 +1,140 @@
 +//SPDX-License-Identifier: BUSL-1.1
 +pragma solidity 0.8.20;
@@ -11051,7 +11051,7 @@ diff -ruN src/contracts/src/interfaces/components/IERC20VestableVotesUpgradeable
 +}
 diff -ruN src/contracts/src/interfaces/components/IOracleManager.1.sol contracts/src/interfaces/components/IOracleManager.1.sol
 --- src/contracts/src/interfaces/components/IOracleManager.1.sol	1970-01-01 01:00:00
-+++ contracts/src/interfaces/components/IOracleManager.1.sol	2024-01-09 13:47:44
++++ contracts/src/interfaces/components/IOracleManager.1.sol	2024-01-09 14:40:45
 @@ -0,0 +1,237 @@
 +//SPDX-License-Identifier: BUSL-1.1
 +pragma solidity 0.8.20;
@@ -11292,7 +11292,7 @@ diff -ruN src/contracts/src/interfaces/components/IOracleManager.1.sol contracts
 +}
 diff -ruN src/contracts/src/interfaces/components/ISharesManager.1.sol contracts/src/interfaces/components/ISharesManager.1.sol
 --- src/contracts/src/interfaces/components/ISharesManager.1.sol	1970-01-01 01:00:00
-+++ contracts/src/interfaces/components/ISharesManager.1.sol	2024-01-09 13:47:44
++++ contracts/src/interfaces/components/ISharesManager.1.sol	2024-01-09 14:40:45
 @@ -0,0 +1,108 @@
 +//SPDX-License-Identifier: BUSL-1.1
 +pragma solidity 0.8.20;
@@ -11404,7 +11404,7 @@ diff -ruN src/contracts/src/interfaces/components/ISharesManager.1.sol contracts
 +}
 diff -ruN src/contracts/src/interfaces/components/IUserDepositManager.1.sol contracts/src/interfaces/components/IUserDepositManager.1.sol
 --- src/contracts/src/interfaces/components/IUserDepositManager.1.sol	1970-01-01 01:00:00
-+++ contracts/src/interfaces/components/IUserDepositManager.1.sol	2024-01-09 13:47:44
++++ contracts/src/interfaces/components/IUserDepositManager.1.sol	2024-01-09 14:40:45
 @@ -0,0 +1,29 @@
 +//SPDX-License-Identifier: BUSL-1.1
 +pragma solidity 0.8.20;
@@ -11437,7 +11437,7 @@ diff -ruN src/contracts/src/interfaces/components/IUserDepositManager.1.sol cont
 +}
 diff -ruN src/contracts/src/libraries/LibAdministrable.sol contracts/src/libraries/LibAdministrable.sol
 --- src/contracts/src/libraries/LibAdministrable.sol	1970-01-01 01:00:00
-+++ contracts/src/libraries/LibAdministrable.sol	2024-01-09 13:47:44
++++ contracts/src/libraries/LibAdministrable.sol	2024-01-09 14:40:45
 @@ -0,0 +1,34 @@
 +//SPDX-License-Identifier: BUSL-1.1
 +pragma solidity 0.8.20;
@@ -11475,7 +11475,7 @@ diff -ruN src/contracts/src/libraries/LibAdministrable.sol contracts/src/librari
 +}
 diff -ruN src/contracts/src/libraries/LibAllowlistMasks.sol contracts/src/libraries/LibAllowlistMasks.sol
 --- src/contracts/src/libraries/LibAllowlistMasks.sol	1970-01-01 01:00:00
-+++ contracts/src/libraries/LibAllowlistMasks.sol	2024-01-09 13:47:44
++++ contracts/src/libraries/LibAllowlistMasks.sol	2024-01-09 14:40:45
 @@ -0,0 +1,15 @@
 +//SPDX-License-Identifier: BUSL-1.1
 +pragma solidity 0.8.20;
@@ -11494,7 +11494,7 @@ diff -ruN src/contracts/src/libraries/LibAllowlistMasks.sol contracts/src/librar
 +}
 diff -ruN src/contracts/src/libraries/LibBasisPoints.sol contracts/src/libraries/LibBasisPoints.sol
 --- src/contracts/src/libraries/LibBasisPoints.sol	1970-01-01 01:00:00
-+++ contracts/src/libraries/LibBasisPoints.sol	2024-01-09 13:47:44
++++ contracts/src/libraries/LibBasisPoints.sol	2024-01-09 14:40:45
 @@ -0,0 +1,9 @@
 +//SPDX-License-Identifier: BUSL-1.1
 +pragma solidity 0.8.20;
@@ -11507,7 +11507,7 @@ diff -ruN src/contracts/src/libraries/LibBasisPoints.sol contracts/src/libraries
 +}
 diff -ruN src/contracts/src/libraries/LibBytes.sol contracts/src/libraries/LibBytes.sol
 --- src/contracts/src/libraries/LibBytes.sol	1970-01-01 01:00:00
-+++ contracts/src/libraries/LibBytes.sol	2024-01-09 13:47:44
++++ contracts/src/libraries/LibBytes.sol	2024-01-09 14:40:45
 @@ -0,0 +1,83 @@
 +//SPDX-License-Identifier: BUSL-1.1
 +pragma solidity 0.8.20;
@@ -11594,7 +11594,7 @@ diff -ruN src/contracts/src/libraries/LibBytes.sol contracts/src/libraries/LibBy
 +}
 diff -ruN src/contracts/src/libraries/LibErrors.sol contracts/src/libraries/LibErrors.sol
 --- src/contracts/src/libraries/LibErrors.sol	1970-01-01 01:00:00
-+++ contracts/src/libraries/LibErrors.sol	2024-01-09 13:47:44
++++ contracts/src/libraries/LibErrors.sol	2024-01-09 14:40:45
 @@ -0,0 +1,25 @@
 +//SPDX-License-Identifier: BUSL-1.1
 +pragma solidity 0.8.20;
@@ -11623,7 +11623,7 @@ diff -ruN src/contracts/src/libraries/LibErrors.sol contracts/src/libraries/LibE
 +}
 diff -ruN src/contracts/src/libraries/LibSanitize.sol contracts/src/libraries/LibSanitize.sol
 --- src/contracts/src/libraries/LibSanitize.sol	1970-01-01 01:00:00
-+++ contracts/src/libraries/LibSanitize.sol	2024-01-09 13:47:44
++++ contracts/src/libraries/LibSanitize.sol	2024-01-09 14:40:45
 @@ -0,0 +1,33 @@
 +//SPDX-License-Identifier: BUSL-1.1
 +pragma solidity 0.8.20;
@@ -11660,7 +11660,7 @@ diff -ruN src/contracts/src/libraries/LibSanitize.sol contracts/src/libraries/Li
 +}
 diff -ruN src/contracts/src/libraries/LibUint256.sol contracts/src/libraries/LibUint256.sol
 --- src/contracts/src/libraries/LibUint256.sol	1970-01-01 01:00:00
-+++ contracts/src/libraries/LibUint256.sol	2024-01-09 13:47:44
++++ contracts/src/libraries/LibUint256.sol	2024-01-09 14:40:45
 @@ -0,0 +1,64 @@
 +//SPDX-License-Identifier: BUSL-1.1
 +pragma solidity 0.8.20;
@@ -11728,7 +11728,7 @@ diff -ruN src/contracts/src/libraries/LibUint256.sol contracts/src/libraries/Lib
 +}
 diff -ruN src/contracts/src/libraries/LibUnstructuredStorage.sol contracts/src/libraries/LibUnstructuredStorage.sol
 --- src/contracts/src/libraries/LibUnstructuredStorage.sol	1970-01-01 01:00:00
-+++ contracts/src/libraries/LibUnstructuredStorage.sol	2024-01-09 13:47:44
++++ contracts/src/libraries/LibUnstructuredStorage.sol	2024-01-09 14:40:45
 @@ -0,0 +1,87 @@
 +// SPDX-License-Identifier: BUSL-1.1
 +
@@ -11819,7 +11819,7 @@ diff -ruN src/contracts/src/libraries/LibUnstructuredStorage.sol contracts/src/l
 +}
 diff -ruN src/contracts/src/migration/TLC_globalUnlockScheduleMigration.sol contracts/src/migration/TLC_globalUnlockScheduleMigration.sol
 --- src/contracts/src/migration/TLC_globalUnlockScheduleMigration.sol	1970-01-01 01:00:00
-+++ contracts/src/migration/TLC_globalUnlockScheduleMigration.sol	2024-01-09 13:47:44
++++ contracts/src/migration/TLC_globalUnlockScheduleMigration.sol	2024-01-09 14:40:45
 @@ -0,0 +1,416 @@
 +//SPDX-License-Identifier: BUSL-1.1
 +pragma solidity 0.8.20;
@@ -12239,7 +12239,7 @@ diff -ruN src/contracts/src/migration/TLC_globalUnlockScheduleMigration.sol cont
 +}
 diff -ruN src/contracts/src/mock/DepositContractMock.sol contracts/src/mock/DepositContractMock.sol
 --- src/contracts/src/mock/DepositContractMock.sol	1970-01-01 01:00:00
-+++ contracts/src/mock/DepositContractMock.sol	2024-01-09 13:47:44
++++ contracts/src/mock/DepositContractMock.sol	2024-01-09 14:40:45
 @@ -0,0 +1,45 @@
 +//SPDX-License-Identifier: BUSL-1.1
 +pragma solidity 0.8.20;
@@ -12288,7 +12288,7 @@ diff -ruN src/contracts/src/mock/DepositContractMock.sol contracts/src/mock/Depo
 +}
 diff -ruN src/contracts/src/state/allowlist/AllowerAddress.sol contracts/src/state/allowlist/AllowerAddress.sol
 --- src/contracts/src/state/allowlist/AllowerAddress.sol	1970-01-01 01:00:00
-+++ contracts/src/state/allowlist/AllowerAddress.sol	2024-01-09 13:47:44
++++ contracts/src/state/allowlist/AllowerAddress.sol	2024-01-09 14:40:45
 @@ -0,0 +1,25 @@
 +//SPDX-License-Identifier: BUSL-1.1
 +pragma solidity 0.8.20;
@@ -12317,7 +12317,7 @@ diff -ruN src/contracts/src/state/allowlist/AllowerAddress.sol contracts/src/sta
 +}
 diff -ruN src/contracts/src/state/allowlist/Allowlist.sol contracts/src/state/allowlist/Allowlist.sol
 --- src/contracts/src/state/allowlist/Allowlist.sol	1970-01-01 01:00:00
-+++ contracts/src/state/allowlist/Allowlist.sol	2024-01-09 13:47:44
++++ contracts/src/state/allowlist/Allowlist.sol	2024-01-09 14:40:45
 @@ -0,0 +1,47 @@
 +//SPDX-License-Identifier: BUSL-1.1
 +pragma solidity 0.8.20;
@@ -12368,7 +12368,7 @@ diff -ruN src/contracts/src/state/allowlist/Allowlist.sol contracts/src/state/al
 +}
 diff -ruN src/contracts/src/state/allowlist/DenierAddress.sol contracts/src/state/allowlist/DenierAddress.sol
 --- src/contracts/src/state/allowlist/DenierAddress.sol	1970-01-01 01:00:00
-+++ contracts/src/state/allowlist/DenierAddress.sol	2024-01-09 13:47:44
++++ contracts/src/state/allowlist/DenierAddress.sol	2024-01-09 14:40:45
 @@ -0,0 +1,25 @@
 +//SPDX-License-Identifier: BUSL-1.1
 +pragma solidity 0.8.20;
@@ -12397,7 +12397,7 @@ diff -ruN src/contracts/src/state/allowlist/DenierAddress.sol contracts/src/stat
 +}
 diff -ruN src/contracts/src/state/migration/OperatorsRegistry_FundedKeyEventRebroadcasting_KeyIndex.sol contracts/src/state/migration/OperatorsRegistry_FundedKeyEventRebroadcasting_KeyIndex.sol
 --- src/contracts/src/state/migration/OperatorsRegistry_FundedKeyEventRebroadcasting_KeyIndex.sol	1970-01-01 01:00:00
-+++ contracts/src/state/migration/OperatorsRegistry_FundedKeyEventRebroadcasting_KeyIndex.sol	2024-01-09 13:47:44
++++ contracts/src/state/migration/OperatorsRegistry_FundedKeyEventRebroadcasting_KeyIndex.sol	2024-01-09 14:40:45
 @@ -0,0 +1,17 @@
 +//SPDX-License-Identifier: BUSL-1.1
 +pragma solidity 0.8.20;
@@ -12418,7 +12418,7 @@ diff -ruN src/contracts/src/state/migration/OperatorsRegistry_FundedKeyEventRebr
 +}
 diff -ruN src/contracts/src/state/migration/OperatorsRegistry_FundedKeyEventRebroadcasting_OperatorIndex.sol contracts/src/state/migration/OperatorsRegistry_FundedKeyEventRebroadcasting_OperatorIndex.sol
 --- src/contracts/src/state/migration/OperatorsRegistry_FundedKeyEventRebroadcasting_OperatorIndex.sol	1970-01-01 01:00:00
-+++ contracts/src/state/migration/OperatorsRegistry_FundedKeyEventRebroadcasting_OperatorIndex.sol	2024-01-09 13:47:44
++++ contracts/src/state/migration/OperatorsRegistry_FundedKeyEventRebroadcasting_OperatorIndex.sol	2024-01-09 14:40:45
 @@ -0,0 +1,18 @@
 +//SPDX-License-Identifier: BUSL-1.1
 +pragma solidity 0.8.20;
@@ -12440,7 +12440,7 @@ diff -ruN src/contracts/src/state/migration/OperatorsRegistry_FundedKeyEventRebr
 +}
 diff -ruN src/contracts/src/state/operatorsRegistry/CurrentValidatorExitsDemand.sol contracts/src/state/operatorsRegistry/CurrentValidatorExitsDemand.sol
 --- src/contracts/src/state/operatorsRegistry/CurrentValidatorExitsDemand.sol	1970-01-01 01:00:00
-+++ contracts/src/state/operatorsRegistry/CurrentValidatorExitsDemand.sol	2024-01-09 13:47:44
++++ contracts/src/state/operatorsRegistry/CurrentValidatorExitsDemand.sol	2024-01-09 14:40:45
 @@ -0,0 +1,26 @@
 +//SPDX-License-Identifier: BUSL-1.1
 +pragma solidity 0.8.20;
@@ -12470,7 +12470,7 @@ diff -ruN src/contracts/src/state/operatorsRegistry/CurrentValidatorExitsDemand.
 +}
 diff -ruN src/contracts/src/state/operatorsRegistry/Operators.1.sol contracts/src/state/operatorsRegistry/Operators.1.sol
 --- src/contracts/src/state/operatorsRegistry/Operators.1.sol	1970-01-01 01:00:00
-+++ contracts/src/state/operatorsRegistry/Operators.1.sol	2024-01-09 13:47:44
++++ contracts/src/state/operatorsRegistry/Operators.1.sol	2024-01-09 14:40:45
 @@ -0,0 +1,239 @@
 +//SPDX-License-Identifier: BUSL-1.1
 +pragma solidity 0.8.20;
@@ -12713,7 +12713,7 @@ diff -ruN src/contracts/src/state/operatorsRegistry/Operators.1.sol contracts/sr
 +}
 diff -ruN src/contracts/src/state/operatorsRegistry/Operators.2.sol contracts/src/state/operatorsRegistry/Operators.2.sol
 --- src/contracts/src/state/operatorsRegistry/Operators.2.sol	1970-01-01 01:00:00
-+++ contracts/src/state/operatorsRegistry/Operators.2.sol	2024-01-09 13:47:44
++++ contracts/src/state/operatorsRegistry/Operators.2.sol	2024-01-09 14:40:45
 @@ -0,0 +1,347 @@
 +//SPDX-License-Identifier: BUSL-1.1
 +pragma solidity 0.8.20;
@@ -13064,7 +13064,7 @@ diff -ruN src/contracts/src/state/operatorsRegistry/Operators.2.sol contracts/sr
 +}
 diff -ruN src/contracts/src/state/operatorsRegistry/TotalValidatorExitsRequested.sol contracts/src/state/operatorsRegistry/TotalValidatorExitsRequested.sol
 --- src/contracts/src/state/operatorsRegistry/TotalValidatorExitsRequested.sol	1970-01-01 01:00:00
-+++ contracts/src/state/operatorsRegistry/TotalValidatorExitsRequested.sol	2024-01-09 13:47:44
++++ contracts/src/state/operatorsRegistry/TotalValidatorExitsRequested.sol	2024-01-09 14:40:45
 @@ -0,0 +1,25 @@
 +//SPDX-License-Identifier: BUSL-1.1
 +pragma solidity 0.8.20;
@@ -13093,7 +13093,7 @@ diff -ruN src/contracts/src/state/operatorsRegistry/TotalValidatorExitsRequested
 +}
 diff -ruN src/contracts/src/state/operatorsRegistry/ValidatorKeys.sol contracts/src/state/operatorsRegistry/ValidatorKeys.sol
 --- src/contracts/src/state/operatorsRegistry/ValidatorKeys.sol	1970-01-01 01:00:00
-+++ contracts/src/state/operatorsRegistry/ValidatorKeys.sol	2024-01-09 13:47:44
++++ contracts/src/state/operatorsRegistry/ValidatorKeys.sol	2024-01-09 14:40:45
 @@ -0,0 +1,121 @@
 +//SPDX-License-Identifier: BUSL-1.1
 +pragma solidity 0.8.20;
@@ -13218,7 +13218,7 @@ diff -ruN src/contracts/src/state/operatorsRegistry/ValidatorKeys.sol contracts/
 +}
 diff -ruN src/contracts/src/state/oracle/LastEpochId.sol contracts/src/state/oracle/LastEpochId.sol
 --- src/contracts/src/state/oracle/LastEpochId.sol	1970-01-01 01:00:00
-+++ contracts/src/state/oracle/LastEpochId.sol	2024-01-09 13:47:44
++++ contracts/src/state/oracle/LastEpochId.sol	2024-01-09 14:40:45
 @@ -0,0 +1,23 @@
 +//SPDX-License-Identifier: BUSL-1.1
 +pragma solidity 0.8.20;
@@ -13245,7 +13245,7 @@ diff -ruN src/contracts/src/state/oracle/LastEpochId.sol contracts/src/state/ora
 +}
 diff -ruN src/contracts/src/state/oracle/OracleMembers.sol contracts/src/state/oracle/OracleMembers.sol
 --- src/contracts/src/state/oracle/OracleMembers.sol	1970-01-01 01:00:00
-+++ contracts/src/state/oracle/OracleMembers.sol	2024-01-09 13:47:44
++++ contracts/src/state/oracle/OracleMembers.sol	2024-01-09 14:40:45
 @@ -0,0 +1,111 @@
 +//SPDX-License-Identifier: BUSL-1.1
 +pragma solidity 0.8.20;
@@ -13360,7 +13360,7 @@ diff -ruN src/contracts/src/state/oracle/OracleMembers.sol contracts/src/state/o
 +}
 diff -ruN src/contracts/src/state/oracle/Quorum.sol contracts/src/state/oracle/Quorum.sol
 --- src/contracts/src/state/oracle/Quorum.sol	1970-01-01 01:00:00
-+++ contracts/src/state/oracle/Quorum.sol	2024-01-09 13:47:44
++++ contracts/src/state/oracle/Quorum.sol	2024-01-09 14:40:45
 @@ -0,0 +1,23 @@
 +//SPDX-License-Identifier: BUSL-1.1
 +pragma solidity 0.8.20;
@@ -13387,7 +13387,7 @@ diff -ruN src/contracts/src/state/oracle/Quorum.sol contracts/src/state/oracle/Q
 +}
 diff -ruN src/contracts/src/state/oracle/ReportsPositions.sol contracts/src/state/oracle/ReportsPositions.sol
 --- src/contracts/src/state/oracle/ReportsPositions.sol	1970-01-01 01:00:00
-+++ contracts/src/state/oracle/ReportsPositions.sol	2024-01-09 13:47:44
++++ contracts/src/state/oracle/ReportsPositions.sol	2024-01-09 14:40:45
 @@ -0,0 +1,40 @@
 +//SPDX-License-Identifier: BUSL-1.1
 +pragma solidity 0.8.20;
@@ -13431,7 +13431,7 @@ diff -ruN src/contracts/src/state/oracle/ReportsPositions.sol contracts/src/stat
 +}
 diff -ruN src/contracts/src/state/oracle/ReportsVariants.sol contracts/src/state/oracle/ReportsVariants.sol
 --- src/contracts/src/state/oracle/ReportsVariants.sol	1970-01-01 01:00:00
-+++ contracts/src/state/oracle/ReportsVariants.sol	2024-01-09 13:47:44
++++ contracts/src/state/oracle/ReportsVariants.sol	2024-01-09 14:40:45
 @@ -0,0 +1,105 @@
 +//SPDX-License-Identifier: BUSL-1.1
 +pragma solidity 0.8.20;
@@ -13540,7 +13540,7 @@ diff -ruN src/contracts/src/state/oracle/ReportsVariants.sol contracts/src/state
 +}
 diff -ruN src/contracts/src/state/redeemManager/BufferedExceedingEth.sol contracts/src/state/redeemManager/BufferedExceedingEth.sol
 --- src/contracts/src/state/redeemManager/BufferedExceedingEth.sol	1970-01-01 01:00:00
-+++ contracts/src/state/redeemManager/BufferedExceedingEth.sol	2024-01-09 13:47:44
++++ contracts/src/state/redeemManager/BufferedExceedingEth.sol	2024-01-09 14:40:45
 @@ -0,0 +1,24 @@
 +//SPDX-License-Identifier: BUSL-1.1
 +pragma solidity 0.8.20;
@@ -13568,7 +13568,7 @@ diff -ruN src/contracts/src/state/redeemManager/BufferedExceedingEth.sol contrac
 +}
 diff -ruN src/contracts/src/state/redeemManager/RedeemDemand.sol contracts/src/state/redeemManager/RedeemDemand.sol
 --- src/contracts/src/state/redeemManager/RedeemDemand.sol	1970-01-01 01:00:00
-+++ contracts/src/state/redeemManager/RedeemDemand.sol	2024-01-09 13:47:44
++++ contracts/src/state/redeemManager/RedeemDemand.sol	2024-01-09 14:40:45
 @@ -0,0 +1,23 @@
 +//SPDX-License-Identifier: BUSL-1.1
 +pragma solidity 0.8.20;
@@ -13595,7 +13595,7 @@ diff -ruN src/contracts/src/state/redeemManager/RedeemDemand.sol contracts/src/s
 +}
 diff -ruN src/contracts/src/state/redeemManager/RedeemQueue.sol contracts/src/state/redeemManager/RedeemQueue.sol
 --- src/contracts/src/state/redeemManager/RedeemQueue.sol	1970-01-01 01:00:00
-+++ contracts/src/state/redeemManager/RedeemQueue.sol	2024-01-09 13:47:44
++++ contracts/src/state/redeemManager/RedeemQueue.sol	2024-01-09 14:40:45
 @@ -0,0 +1,30 @@
 +//SPDX-License-Identifier: BUSL-1.1
 +pragma solidity 0.8.20;
@@ -13629,7 +13629,7 @@ diff -ruN src/contracts/src/state/redeemManager/RedeemQueue.sol contracts/src/st
 +}
 diff -ruN src/contracts/src/state/redeemManager/WithdrawalStack.sol contracts/src/state/redeemManager/WithdrawalStack.sol
 --- src/contracts/src/state/redeemManager/WithdrawalStack.sol	1970-01-01 01:00:00
-+++ contracts/src/state/redeemManager/WithdrawalStack.sol	2024-01-09 13:47:44
++++ contracts/src/state/redeemManager/WithdrawalStack.sol	2024-01-09 14:40:45
 @@ -0,0 +1,28 @@
 +//SPDX-License-Identifier: BUSL-1.1
 +pragma solidity 0.8.20;
@@ -13661,7 +13661,7 @@ diff -ruN src/contracts/src/state/redeemManager/WithdrawalStack.sol contracts/sr
 +}
 diff -ruN src/contracts/src/state/river/AllowlistAddress.sol contracts/src/state/river/AllowlistAddress.sol
 --- src/contracts/src/state/river/AllowlistAddress.sol	1970-01-01 01:00:00
-+++ contracts/src/state/river/AllowlistAddress.sol	2024-01-09 13:47:44
++++ contracts/src/state/river/AllowlistAddress.sol	2024-01-09 14:40:45
 @@ -0,0 +1,25 @@
 +//SPDX-License-Identifier: BUSL-1.1
 +pragma solidity 0.8.20;
@@ -13690,7 +13690,7 @@ diff -ruN src/contracts/src/state/river/AllowlistAddress.sol contracts/src/state
 +}
 diff -ruN src/contracts/src/state/river/BalanceToDeposit.sol contracts/src/state/river/BalanceToDeposit.sol
 --- src/contracts/src/state/river/BalanceToDeposit.sol	1970-01-01 01:00:00
-+++ contracts/src/state/river/BalanceToDeposit.sol	2024-01-09 13:47:44
++++ contracts/src/state/river/BalanceToDeposit.sol	2024-01-09 14:40:45
 @@ -0,0 +1,16 @@
 +//SPDX-License-Identifier: BUSL-1.1
 +pragma solidity 0.8.20;
@@ -13710,7 +13710,7 @@ diff -ruN src/contracts/src/state/river/BalanceToDeposit.sol contracts/src/state
 +}
 diff -ruN src/contracts/src/state/river/BalanceToRedeem.sol contracts/src/state/river/BalanceToRedeem.sol
 --- src/contracts/src/state/river/BalanceToRedeem.sol	1970-01-01 01:00:00
-+++ contracts/src/state/river/BalanceToRedeem.sol	2024-01-09 13:47:44
++++ contracts/src/state/river/BalanceToRedeem.sol	2024-01-09 14:40:45
 @@ -0,0 +1,16 @@
 +//SPDX-License-Identifier: BUSL-1.1
 +pragma solidity 0.8.20;
@@ -13730,7 +13730,7 @@ diff -ruN src/contracts/src/state/river/BalanceToRedeem.sol contracts/src/state/
 +}
 diff -ruN src/contracts/src/state/river/CLSpec.sol contracts/src/state/river/CLSpec.sol
 --- src/contracts/src/state/river/CLSpec.sol	1970-01-01 01:00:00
-+++ contracts/src/state/river/CLSpec.sol	2024-01-09 13:47:44
++++ contracts/src/state/river/CLSpec.sol	2024-01-09 14:40:45
 @@ -0,0 +1,59 @@
 +//SPDX-License-Identifier: BUSL-1.1
 +pragma solidity 0.8.20;
@@ -13793,7 +13793,7 @@ diff -ruN src/contracts/src/state/river/CLSpec.sol contracts/src/state/river/CLS
 +}
 diff -ruN src/contracts/src/state/river/CLValidatorCount.sol contracts/src/state/river/CLValidatorCount.sol
 --- src/contracts/src/state/river/CLValidatorCount.sol	1970-01-01 01:00:00
-+++ contracts/src/state/river/CLValidatorCount.sol	2024-01-09 13:47:44
++++ contracts/src/state/river/CLValidatorCount.sol	2024-01-09 14:40:45
 @@ -0,0 +1,24 @@
 +//SPDX-License-Identifier: BUSL-1.1
 +pragma solidity 0.8.20;
@@ -13821,7 +13821,7 @@ diff -ruN src/contracts/src/state/river/CLValidatorCount.sol contracts/src/state
 +}
 diff -ruN src/contracts/src/state/river/CLValidatorTotalBalance.sol contracts/src/state/river/CLValidatorTotalBalance.sol
 --- src/contracts/src/state/river/CLValidatorTotalBalance.sol	1970-01-01 01:00:00
-+++ contracts/src/state/river/CLValidatorTotalBalance.sol	2024-01-09 13:47:44
++++ contracts/src/state/river/CLValidatorTotalBalance.sol	2024-01-09 14:40:45
 @@ -0,0 +1,25 @@
 +//SPDX-License-Identifier: BUSL-1.1
 +pragma solidity 0.8.20;
@@ -13850,7 +13850,7 @@ diff -ruN src/contracts/src/state/river/CLValidatorTotalBalance.sol contracts/sr
 +}
 diff -ruN src/contracts/src/state/river/CollectorAddress.sol contracts/src/state/river/CollectorAddress.sol
 --- src/contracts/src/state/river/CollectorAddress.sol	1970-01-01 01:00:00
-+++ contracts/src/state/river/CollectorAddress.sol	2024-01-09 13:47:44
++++ contracts/src/state/river/CollectorAddress.sol	2024-01-09 14:40:45
 @@ -0,0 +1,25 @@
 +//SPDX-License-Identifier: BUSL-1.1
 +pragma solidity 0.8.20;
@@ -13879,7 +13879,7 @@ diff -ruN src/contracts/src/state/river/CollectorAddress.sol contracts/src/state
 +}
 diff -ruN src/contracts/src/state/river/CommittedBalance.sol contracts/src/state/river/CommittedBalance.sol
 --- src/contracts/src/state/river/CommittedBalance.sol	1970-01-01 01:00:00
-+++ contracts/src/state/river/CommittedBalance.sol	2024-01-09 13:47:44
++++ contracts/src/state/river/CommittedBalance.sol	2024-01-09 14:40:45
 @@ -0,0 +1,16 @@
 +//SPDX-License-Identifier: BUSL-1.1
 +pragma solidity 0.8.20;
@@ -13899,7 +13899,7 @@ diff -ruN src/contracts/src/state/river/CommittedBalance.sol contracts/src/state
 +}
 diff -ruN src/contracts/src/state/river/CoverageFundAddress.sol contracts/src/state/river/CoverageFundAddress.sol
 --- src/contracts/src/state/river/CoverageFundAddress.sol	1970-01-01 01:00:00
-+++ contracts/src/state/river/CoverageFundAddress.sol	2024-01-09 13:47:44
++++ contracts/src/state/river/CoverageFundAddress.sol	2024-01-09 14:40:45
 @@ -0,0 +1,26 @@
 +//SPDX-License-Identifier: BUSL-1.1
 +pragma solidity 0.8.20;
@@ -13929,7 +13929,7 @@ diff -ruN src/contracts/src/state/river/CoverageFundAddress.sol contracts/src/st
 +}
 diff -ruN src/contracts/src/state/river/DailyCommittableLimits.sol contracts/src/state/river/DailyCommittableLimits.sol
 --- src/contracts/src/state/river/DailyCommittableLimits.sol	1970-01-01 01:00:00
-+++ contracts/src/state/river/DailyCommittableLimits.sol	2024-01-09 13:47:44
++++ contracts/src/state/river/DailyCommittableLimits.sol	2024-01-09 14:40:45
 @@ -0,0 +1,54 @@
 +//SPDX-License-Identifier: BUSL-1.1
 +pragma solidity 0.8.20;
@@ -13987,7 +13987,7 @@ diff -ruN src/contracts/src/state/river/DailyCommittableLimits.sol contracts/src
 +}
 diff -ruN src/contracts/src/state/river/DepositContractAddress.sol contracts/src/state/river/DepositContractAddress.sol
 --- src/contracts/src/state/river/DepositContractAddress.sol	1970-01-01 01:00:00
-+++ contracts/src/state/river/DepositContractAddress.sol	2024-01-09 13:47:44
++++ contracts/src/state/river/DepositContractAddress.sol	2024-01-09 14:40:45
 @@ -0,0 +1,26 @@
 +//SPDX-License-Identifier: BUSL-1.1
 +pragma solidity 0.8.20;
@@ -14017,7 +14017,7 @@ diff -ruN src/contracts/src/state/river/DepositContractAddress.sol contracts/src
 +}
 diff -ruN src/contracts/src/state/river/DepositedValidatorCount.sol contracts/src/state/river/DepositedValidatorCount.sol
 --- src/contracts/src/state/river/DepositedValidatorCount.sol	1970-01-01 01:00:00
-+++ contracts/src/state/river/DepositedValidatorCount.sol	2024-01-09 13:47:44
++++ contracts/src/state/river/DepositedValidatorCount.sol	2024-01-09 14:40:45
 @@ -0,0 +1,24 @@
 +//SPDX-License-Identifier: BUSL-1.1
 +pragma solidity 0.8.20;
@@ -14045,7 +14045,7 @@ diff -ruN src/contracts/src/state/river/DepositedValidatorCount.sol contracts/sr
 +}
 diff -ruN src/contracts/src/state/river/ELFeeRecipientAddress.sol contracts/src/state/river/ELFeeRecipientAddress.sol
 --- src/contracts/src/state/river/ELFeeRecipientAddress.sol	1970-01-01 01:00:00
-+++ contracts/src/state/river/ELFeeRecipientAddress.sol	2024-01-09 13:47:44
++++ contracts/src/state/river/ELFeeRecipientAddress.sol	2024-01-09 14:40:45
 @@ -0,0 +1,26 @@
 +//SPDX-License-Identifier: BUSL-1.1
 +pragma solidity 0.8.20;
@@ -14075,7 +14075,7 @@ diff -ruN src/contracts/src/state/river/ELFeeRecipientAddress.sol contracts/src/
 +}
 diff -ruN src/contracts/src/state/river/GlobalFee.sol contracts/src/state/river/GlobalFee.sol
 --- src/contracts/src/state/river/GlobalFee.sol	1970-01-01 01:00:00
-+++ contracts/src/state/river/GlobalFee.sol	2024-01-09 13:47:44
++++ contracts/src/state/river/GlobalFee.sol	2024-01-09 14:40:45
 @@ -0,0 +1,25 @@
 +//SPDX-License-Identifier: BUSL-1.1
 +pragma solidity 0.8.20;
@@ -14104,7 +14104,7 @@ diff -ruN src/contracts/src/state/river/GlobalFee.sol contracts/src/state/river/
 +}
 diff -ruN src/contracts/src/state/river/LastConsensusLayerReport.sol contracts/src/state/river/LastConsensusLayerReport.sol
 --- src/contracts/src/state/river/LastConsensusLayerReport.sol	1970-01-01 01:00:00
-+++ contracts/src/state/river/LastConsensusLayerReport.sol	2024-01-09 13:47:44
++++ contracts/src/state/river/LastConsensusLayerReport.sol	2024-01-09 14:40:45
 @@ -0,0 +1,48 @@
 +//SPDX-License-Identifier: BUSL-1.1
 +pragma solidity 0.8.20;
@@ -14156,7 +14156,7 @@ diff -ruN src/contracts/src/state/river/LastConsensusLayerReport.sol contracts/s
 +}
 diff -ruN src/contracts/src/state/river/LastOracleRoundId.sol contracts/src/state/river/LastOracleRoundId.sol
 --- src/contracts/src/state/river/LastOracleRoundId.sol	1970-01-01 01:00:00
-+++ contracts/src/state/river/LastOracleRoundId.sol	2024-01-09 13:47:44
++++ contracts/src/state/river/LastOracleRoundId.sol	2024-01-09 14:40:45
 @@ -0,0 +1,25 @@
 +//SPDX-License-Identifier: BUSL-1.1
 +pragma solidity 0.8.20;
@@ -14185,7 +14185,7 @@ diff -ruN src/contracts/src/state/river/LastOracleRoundId.sol contracts/src/stat
 +}
 diff -ruN src/contracts/src/state/river/MetadataURI.sol contracts/src/state/river/MetadataURI.sol
 --- src/contracts/src/state/river/MetadataURI.sol	1970-01-01 01:00:00
-+++ contracts/src/state/river/MetadataURI.sol	2024-01-09 13:47:44
++++ contracts/src/state/river/MetadataURI.sol	2024-01-09 14:40:45
 @@ -0,0 +1,45 @@
 +//SPDX-License-Identifier: BUSL-1.1
 +pragma solidity 0.8.20;
@@ -14234,7 +14234,7 @@ diff -ruN src/contracts/src/state/river/MetadataURI.sol contracts/src/state/rive
 +}
 diff -ruN src/contracts/src/state/river/OperatorsRegistryAddress.sol contracts/src/state/river/OperatorsRegistryAddress.sol
 --- src/contracts/src/state/river/OperatorsRegistryAddress.sol	1970-01-01 01:00:00
-+++ contracts/src/state/river/OperatorsRegistryAddress.sol	2024-01-09 13:47:44
++++ contracts/src/state/river/OperatorsRegistryAddress.sol	2024-01-09 14:40:45
 @@ -0,0 +1,26 @@
 +//SPDX-License-Identifier: BUSL-1.1
 +pragma solidity 0.8.20;
@@ -14264,7 +14264,7 @@ diff -ruN src/contracts/src/state/river/OperatorsRegistryAddress.sol contracts/s
 +}
 diff -ruN src/contracts/src/state/river/OracleAddress.sol contracts/src/state/river/OracleAddress.sol
 --- src/contracts/src/state/river/OracleAddress.sol	1970-01-01 01:00:00
-+++ contracts/src/state/river/OracleAddress.sol	2024-01-09 13:47:44
++++ contracts/src/state/river/OracleAddress.sol	2024-01-09 14:40:45
 @@ -0,0 +1,25 @@
 +//SPDX-License-Identifier: BUSL-1.1
 +pragma solidity 0.8.20;
@@ -14293,7 +14293,7 @@ diff -ruN src/contracts/src/state/river/OracleAddress.sol contracts/src/state/ri
 +}
 diff -ruN src/contracts/src/state/river/RedeemManagerAddress.sol contracts/src/state/river/RedeemManagerAddress.sol
 --- src/contracts/src/state/river/RedeemManagerAddress.sol	1970-01-01 01:00:00
-+++ contracts/src/state/river/RedeemManagerAddress.sol	2024-01-09 13:47:44
++++ contracts/src/state/river/RedeemManagerAddress.sol	2024-01-09 14:40:45
 @@ -0,0 +1,26 @@
 +//SPDX-License-Identifier: BUSL-1.1
 +pragma solidity 0.8.20;
@@ -14323,7 +14323,7 @@ diff -ruN src/contracts/src/state/river/RedeemManagerAddress.sol contracts/src/s
 +}
 diff -ruN src/contracts/src/state/river/ReportBounds.sol contracts/src/state/river/ReportBounds.sol
 --- src/contracts/src/state/river/ReportBounds.sol	1970-01-01 01:00:00
-+++ contracts/src/state/river/ReportBounds.sol	2024-01-09 13:47:44
++++ contracts/src/state/river/ReportBounds.sol	2024-01-09 14:40:45
 @@ -0,0 +1,53 @@
 +//SPDX-License-Identifier: BUSL-1.1
 +pragma solidity 0.8.20;
@@ -14380,7 +14380,7 @@ diff -ruN src/contracts/src/state/river/ReportBounds.sol contracts/src/state/riv
 +}
 diff -ruN src/contracts/src/state/river/Shares.sol contracts/src/state/river/Shares.sol
 --- src/contracts/src/state/river/Shares.sol	1970-01-01 01:00:00
-+++ contracts/src/state/river/Shares.sol	2024-01-09 13:47:44
++++ contracts/src/state/river/Shares.sol	2024-01-09 14:40:45
 @@ -0,0 +1,23 @@
 +//SPDX-License-Identifier: BUSL-1.1
 +pragma solidity 0.8.20;
@@ -14407,7 +14407,7 @@ diff -ruN src/contracts/src/state/river/Shares.sol contracts/src/state/river/Sha
 +}
 diff -ruN src/contracts/src/state/river/SharesPerOwner.sol contracts/src/state/river/SharesPerOwner.sol
 --- src/contracts/src/state/river/SharesPerOwner.sol	1970-01-01 01:00:00
-+++ contracts/src/state/river/SharesPerOwner.sol	2024-01-09 13:47:44
++++ contracts/src/state/river/SharesPerOwner.sol	2024-01-09 14:40:45
 @@ -0,0 +1,47 @@
 +//SPDX-License-Identifier: BUSL-1.1
 +pragma solidity 0.8.20;
@@ -14458,7 +14458,7 @@ diff -ruN src/contracts/src/state/river/SharesPerOwner.sol contracts/src/state/r
 +}
 diff -ruN src/contracts/src/state/river/WithdrawalCredentials.sol contracts/src/state/river/WithdrawalCredentials.sol
 --- src/contracts/src/state/river/WithdrawalCredentials.sol	1970-01-01 01:00:00
-+++ contracts/src/state/river/WithdrawalCredentials.sol	2024-01-09 13:47:44
++++ contracts/src/state/river/WithdrawalCredentials.sol	2024-01-09 14:40:45
 @@ -0,0 +1,34 @@
 +//SPDX-License-Identifier: BUSL-1.1
 +pragma solidity 0.8.20;
@@ -14496,7 +14496,7 @@ diff -ruN src/contracts/src/state/river/WithdrawalCredentials.sol contracts/src/
 +}
 diff -ruN src/contracts/src/state/shared/AdministratorAddress.sol contracts/src/state/shared/AdministratorAddress.sol
 --- src/contracts/src/state/shared/AdministratorAddress.sol	1970-01-01 01:00:00
-+++ contracts/src/state/shared/AdministratorAddress.sol	2024-01-09 13:47:44
++++ contracts/src/state/shared/AdministratorAddress.sol	2024-01-09 14:40:45
 @@ -0,0 +1,26 @@
 +//SPDX-License-Identifier: BUSL-1.1
 +pragma solidity 0.8.20;
@@ -14526,7 +14526,7 @@ diff -ruN src/contracts/src/state/shared/AdministratorAddress.sol contracts/src/
 +}
 diff -ruN src/contracts/src/state/shared/ApprovalsPerOwner.sol contracts/src/state/shared/ApprovalsPerOwner.sol
 --- src/contracts/src/state/shared/ApprovalsPerOwner.sol	1970-01-01 01:00:00
-+++ contracts/src/state/shared/ApprovalsPerOwner.sol	2024-01-09 13:47:44
++++ contracts/src/state/shared/ApprovalsPerOwner.sol	2024-01-09 14:40:45
 @@ -0,0 +1,50 @@
 +//SPDX-License-Identifier: BUSL-1.1
 +pragma solidity 0.8.20;
@@ -14580,7 +14580,7 @@ diff -ruN src/contracts/src/state/shared/ApprovalsPerOwner.sol contracts/src/sta
 +}
 diff -ruN src/contracts/src/state/shared/PendingAdministratorAddress.sol contracts/src/state/shared/PendingAdministratorAddress.sol
 --- src/contracts/src/state/shared/PendingAdministratorAddress.sol	1970-01-01 01:00:00
-+++ contracts/src/state/shared/PendingAdministratorAddress.sol	2024-01-09 13:47:44
++++ contracts/src/state/shared/PendingAdministratorAddress.sol	2024-01-09 14:40:45
 @@ -0,0 +1,24 @@
 +//SPDX-License-Identifier: BUSL-1.1
 +pragma solidity 0.8.20;
@@ -14608,7 +14608,7 @@ diff -ruN src/contracts/src/state/shared/PendingAdministratorAddress.sol contrac
 +}
 diff -ruN src/contracts/src/state/shared/RiverAddress.sol contracts/src/state/shared/RiverAddress.sol
 --- src/contracts/src/state/shared/RiverAddress.sol	1970-01-01 01:00:00
-+++ contracts/src/state/shared/RiverAddress.sol	2024-01-09 13:47:44
++++ contracts/src/state/shared/RiverAddress.sol	2024-01-09 14:40:45
 @@ -0,0 +1,25 @@
 +//SPDX-License-Identifier: BUSL-1.1
 +pragma solidity 0.8.20;
@@ -14637,7 +14637,7 @@ diff -ruN src/contracts/src/state/shared/RiverAddress.sol contracts/src/state/sh
 +}
 diff -ruN src/contracts/src/state/shared/Version.sol contracts/src/state/shared/Version.sol
 --- src/contracts/src/state/shared/Version.sol	1970-01-01 01:00:00
-+++ contracts/src/state/shared/Version.sol	2024-01-09 13:47:44
++++ contracts/src/state/shared/Version.sol	2024-01-09 14:40:45
 @@ -0,0 +1,23 @@
 +//SPDX-License-Identifier: BUSL-1.1
 +pragma solidity 0.8.20;
@@ -14664,7 +14664,7 @@ diff -ruN src/contracts/src/state/shared/Version.sol contracts/src/state/shared/
 +}
 diff -ruN src/contracts/src/state/slashingCoverage/BalanceForCoverage.sol contracts/src/state/slashingCoverage/BalanceForCoverage.sol
 --- src/contracts/src/state/slashingCoverage/BalanceForCoverage.sol	1970-01-01 01:00:00
-+++ contracts/src/state/slashingCoverage/BalanceForCoverage.sol	2024-01-09 13:47:44
++++ contracts/src/state/slashingCoverage/BalanceForCoverage.sol	2024-01-09 14:40:45
 @@ -0,0 +1,24 @@
 +//SPDX-License-Identifier: BUSL-1.1
 +pragma solidity 0.8.20;
@@ -14692,7 +14692,7 @@ diff -ruN src/contracts/src/state/slashingCoverage/BalanceForCoverage.sol contra
 +}
 diff -ruN src/contracts/src/state/tlc/IgnoreGlobalUnlockSchedule.sol contracts/src/state/tlc/IgnoreGlobalUnlockSchedule.sol
 --- src/contracts/src/state/tlc/IgnoreGlobalUnlockSchedule.sol	1970-01-01 01:00:00
-+++ contracts/src/state/tlc/IgnoreGlobalUnlockSchedule.sol	2024-01-09 13:47:44
++++ contracts/src/state/tlc/IgnoreGlobalUnlockSchedule.sol	2024-01-09 14:40:45
 @@ -0,0 +1,49 @@
 +//SPDX-License-Identifier: BUSL-1.1
 +pragma solidity 0.8.20;
@@ -14745,7 +14745,7 @@ diff -ruN src/contracts/src/state/tlc/IgnoreGlobalUnlockSchedule.sol contracts/s
 +}
 diff -ruN src/contracts/src/state/tlc/VestingSchedules.1.sol contracts/src/state/tlc/VestingSchedules.1.sol
 --- src/contracts/src/state/tlc/VestingSchedules.1.sol	1970-01-01 01:00:00
-+++ contracts/src/state/tlc/VestingSchedules.1.sol	2024-01-09 13:47:44
++++ contracts/src/state/tlc/VestingSchedules.1.sol	2024-01-09 14:40:45
 @@ -0,0 +1,97 @@
 +//SPDX-License-Identifier: BUSL-1.1
 +pragma solidity 0.8.20;
@@ -14846,7 +14846,7 @@ diff -ruN src/contracts/src/state/tlc/VestingSchedules.1.sol contracts/src/state
 +}
 diff -ruN src/contracts/src/state/tlc/VestingSchedules.2.sol contracts/src/state/tlc/VestingSchedules.2.sol
 --- src/contracts/src/state/tlc/VestingSchedules.2.sol	1970-01-01 01:00:00
-+++ contracts/src/state/tlc/VestingSchedules.2.sol	2024-01-09 13:47:44
++++ contracts/src/state/tlc/VestingSchedules.2.sol	2024-01-09 14:40:45
 @@ -0,0 +1,125 @@
 +//SPDX-License-Identifier: BUSL-1.1
 +pragma solidity 0.8.20;
@@ -14975,7 +14975,7 @@ diff -ruN src/contracts/src/state/tlc/VestingSchedules.2.sol contracts/src/state
 +}
 diff -ruN src/contracts/src/state/wlseth/BalanceOf.sol contracts/src/state/wlseth/BalanceOf.sol
 --- src/contracts/src/state/wlseth/BalanceOf.sol	1970-01-01 01:00:00
-+++ contracts/src/state/wlseth/BalanceOf.sol	2024-01-09 13:47:44
++++ contracts/src/state/wlseth/BalanceOf.sol	2024-01-09 14:40:45
 @@ -0,0 +1,47 @@
 +//SPDX-License-Identifier: BUSL-1.1
 +pragma solidity 0.8.20;
@@ -15026,7 +15026,7 @@ diff -ruN src/contracts/src/state/wlseth/BalanceOf.sol contracts/src/state/wlset
 +}
 diff -ruN src/interfaces/IAdministrable.sol interfaces/IAdministrable.sol
 --- src/interfaces/IAdministrable.sol	2023-12-11 15:38:07
-+++ interfaces/IAdministrable.sol	2024-01-09 13:47:44
++++ interfaces/IAdministrable.sol	2024-01-09 14:40:45
 @@ -1,34 +0,0 @@
 -//SPDX-License-Identifier: BUSL-1.1
 -pragma solidity 0.8.20;
@@ -15064,7 +15064,7 @@ diff -ruN src/interfaces/IAdministrable.sol interfaces/IAdministrable.sol
 -}
 diff -ruN src/interfaces/IAllowlist.1.sol interfaces/IAllowlist.1.sol
 --- src/interfaces/IAllowlist.1.sol	2023-12-11 15:38:07
-+++ interfaces/IAllowlist.1.sol	2024-01-09 13:47:44
++++ interfaces/IAllowlist.1.sol	2024-01-09 14:40:45
 @@ -1,107 +0,0 @@
 -//SPDX-License-Identifier: BUSL-1.1
 -pragma solidity 0.8.20;
@@ -15175,7 +15175,7 @@ diff -ruN src/interfaces/IAllowlist.1.sol interfaces/IAllowlist.1.sol
 -}
 diff -ruN src/interfaces/ICoverageFund.1.sol interfaces/ICoverageFund.1.sol
 --- src/interfaces/ICoverageFund.1.sol	2023-12-11 15:38:07
-+++ interfaces/ICoverageFund.1.sol	2024-01-09 13:47:44
++++ interfaces/ICoverageFund.1.sol	2024-01-09 14:40:45
 @@ -1,40 +0,0 @@
 -//SPDX-License-Identifier: BUSL-1.1
 -pragma solidity 0.8.20;
@@ -15219,7 +15219,7 @@ diff -ruN src/interfaces/ICoverageFund.1.sol interfaces/ICoverageFund.1.sol
 -}
 diff -ruN src/interfaces/IDepositContract.sol interfaces/IDepositContract.sol
 --- src/interfaces/IDepositContract.sol	2023-12-11 15:38:07
-+++ interfaces/IDepositContract.sol	2024-01-09 13:47:44
++++ interfaces/IDepositContract.sol	2024-01-09 14:40:45
 @@ -1,18 +0,0 @@
 -//SPDX-License-Identifier: BUSL-1.1
 -pragma solidity 0.8.20;
@@ -15241,7 +15241,7 @@ diff -ruN src/interfaces/IDepositContract.sol interfaces/IDepositContract.sol
 -}
 diff -ruN src/interfaces/IELFeeRecipient.1.sol interfaces/IELFeeRecipient.1.sol
 --- src/interfaces/IELFeeRecipient.1.sol	2023-12-11 15:38:07
-+++ interfaces/IELFeeRecipient.1.sol	2024-01-09 13:47:44
++++ interfaces/IELFeeRecipient.1.sol	2024-01-09 14:40:45
 @@ -1,29 +0,0 @@
 -//SPDX-License-Identifier: BUSL-1.1
 -pragma solidity 0.8.20;
@@ -15274,7 +15274,7 @@ diff -ruN src/interfaces/IELFeeRecipient.1.sol interfaces/IELFeeRecipient.1.sol
 -}
 diff -ruN src/interfaces/IFirewall.sol interfaces/IFirewall.sol
 --- src/interfaces/IFirewall.sol	2023-12-11 15:38:07
-+++ interfaces/IFirewall.sol	2024-01-09 13:47:44
++++ interfaces/IFirewall.sol	2024-01-09 14:40:45
 @@ -1,48 +0,0 @@
 -//SPDX-License-Identifier: BUSL-1.1
 -pragma solidity 0.8.20;
@@ -15326,7 +15326,7 @@ diff -ruN src/interfaces/IFirewall.sol interfaces/IFirewall.sol
 -}
 diff -ruN src/interfaces/IOperatorRegistry.1.sol interfaces/IOperatorRegistry.1.sol
 --- src/interfaces/IOperatorRegistry.1.sol	2023-12-11 15:38:07
-+++ interfaces/IOperatorRegistry.1.sol	2024-01-09 13:47:44
++++ interfaces/IOperatorRegistry.1.sol	2024-01-09 14:40:45
 @@ -1,333 +0,0 @@
 -//SPDX-License-Identifier: BUSL-1.1
 -pragma solidity 0.8.20;
@@ -15663,7 +15663,7 @@ diff -ruN src/interfaces/IOperatorRegistry.1.sol interfaces/IOperatorRegistry.1.
 -}
 diff -ruN src/interfaces/IOracle.1.sol interfaces/IOracle.1.sol
 --- src/interfaces/IOracle.1.sol	2023-12-11 15:38:07
-+++ interfaces/IOracle.1.sol	2024-01-09 13:47:44
++++ interfaces/IOracle.1.sol	2024-01-09 14:40:45
 @@ -1,184 +0,0 @@
 -//SPDX-License-Identifier: BUSL-1.1
 -pragma solidity 0.8.20;
@@ -15851,7 +15851,7 @@ diff -ruN src/interfaces/IOracle.1.sol interfaces/IOracle.1.sol
 -}
 diff -ruN src/interfaces/IRedeemManager.1.sol interfaces/IRedeemManager.1.sol
 --- src/interfaces/IRedeemManager.1.sol	2023-12-11 15:38:07
-+++ interfaces/IRedeemManager.1.sol	2024-01-09 13:47:44
++++ interfaces/IRedeemManager.1.sol	2024-01-09 14:40:45
 @@ -1,190 +0,0 @@
 -//SPDX-License-Identifier: BUSL-1.1
 -pragma solidity 0.8.20;
@@ -16045,7 +16045,7 @@ diff -ruN src/interfaces/IRedeemManager.1.sol interfaces/IRedeemManager.1.sol
 -}
 diff -ruN src/interfaces/IRiver.1.sol interfaces/IRiver.1.sol
 --- src/interfaces/IRiver.1.sol	2023-12-11 15:38:07
-+++ interfaces/IRiver.1.sol	2024-01-09 13:47:44
++++ interfaces/IRiver.1.sol	2024-01-09 14:40:45
 @@ -1,271 +0,0 @@
 -//SPDX-License-Identifier: BUSL-1.1
 -pragma solidity 0.8.20;
@@ -16320,7 +16320,7 @@ diff -ruN src/interfaces/IRiver.1.sol interfaces/IRiver.1.sol
 -}
 diff -ruN src/interfaces/ITLC.1.sol interfaces/ITLC.1.sol
 --- src/interfaces/ITLC.1.sol	2023-12-11 15:38:07
-+++ interfaces/ITLC.1.sol	2024-01-09 13:47:44
++++ interfaces/ITLC.1.sol	2024-01-09 14:40:45
 @@ -1,19 +0,0 @@
 -//SPDX-License-Identifier: BUSL-1.1
 -pragma solidity 0.8.20;
@@ -16343,7 +16343,7 @@ diff -ruN src/interfaces/ITLC.1.sol interfaces/ITLC.1.sol
 -}
 diff -ruN src/interfaces/IWLSETH.1.sol interfaces/IWLSETH.1.sol
 --- src/interfaces/IWLSETH.1.sol	2023-12-11 15:38:07
-+++ interfaces/IWLSETH.1.sol	2024-01-09 13:47:44
++++ interfaces/IWLSETH.1.sol	2024-01-09 14:40:45
 @@ -1,138 +0,0 @@
 -//SPDX-License-Identifier: BUSL-1.1
 -pragma solidity 0.8.20;
@@ -16485,7 +16485,7 @@ diff -ruN src/interfaces/IWLSETH.1.sol interfaces/IWLSETH.1.sol
 -}
 diff -ruN src/interfaces/IWithdraw.1.sol interfaces/IWithdraw.1.sol
 --- src/interfaces/IWithdraw.1.sol	2023-12-11 15:38:07
-+++ interfaces/IWithdraw.1.sol	2024-01-09 13:47:44
++++ interfaces/IWithdraw.1.sol	2024-01-09 14:40:45
 @@ -1,26 +0,0 @@
 -//SPDX-License-Identifier: BUSL-1.1
 -pragma solidity 0.8.20;
@@ -16515,7 +16515,7 @@ diff -ruN src/interfaces/IWithdraw.1.sol interfaces/IWithdraw.1.sol
 -}
 diff -ruN src/interfaces/components/IConsensusLayerDepositManager.1.sol interfaces/components/IConsensusLayerDepositManager.1.sol
 --- src/interfaces/components/IConsensusLayerDepositManager.1.sol	2023-12-11 15:38:07
-+++ interfaces/components/IConsensusLayerDepositManager.1.sol	2024-01-09 13:47:44
++++ interfaces/components/IConsensusLayerDepositManager.1.sol	2024-01-09 14:40:45
 @@ -1,64 +0,0 @@
 -//SPDX-License-Identifier: BUSL-1.1
 -pragma solidity 0.8.20;
@@ -16583,7 +16583,7 @@ diff -ruN src/interfaces/components/IConsensusLayerDepositManager.1.sol interfac
 -}
 diff -ruN src/interfaces/components/IERC20VestableVotesUpgradeable.1.sol interfaces/components/IERC20VestableVotesUpgradeable.1.sol
 --- src/interfaces/components/IERC20VestableVotesUpgradeable.1.sol	2023-12-11 15:38:07
-+++ interfaces/components/IERC20VestableVotesUpgradeable.1.sol	2024-01-09 13:47:44
++++ interfaces/components/IERC20VestableVotesUpgradeable.1.sol	2024-01-09 14:40:45
 @@ -1,140 +0,0 @@
 -//SPDX-License-Identifier: BUSL-1.1
 -pragma solidity 0.8.20;
@@ -16727,7 +16727,7 @@ diff -ruN src/interfaces/components/IERC20VestableVotesUpgradeable.1.sol interfa
 -}
 diff -ruN src/interfaces/components/IOracleManager.1.sol interfaces/components/IOracleManager.1.sol
 --- src/interfaces/components/IOracleManager.1.sol	2023-12-11 15:38:07
-+++ interfaces/components/IOracleManager.1.sol	2024-01-09 13:47:44
++++ interfaces/components/IOracleManager.1.sol	2024-01-09 14:40:45
 @@ -1,237 +0,0 @@
 -//SPDX-License-Identifier: BUSL-1.1
 -pragma solidity 0.8.20;
@@ -16968,7 +16968,7 @@ diff -ruN src/interfaces/components/IOracleManager.1.sol interfaces/components/I
 -}
 diff -ruN src/interfaces/components/ISharesManager.1.sol interfaces/components/ISharesManager.1.sol
 --- src/interfaces/components/ISharesManager.1.sol	2023-12-15 12:39:37
-+++ interfaces/components/ISharesManager.1.sol	2024-01-09 13:47:44
++++ interfaces/components/ISharesManager.1.sol	2024-01-09 14:40:45
 @@ -1,108 +0,0 @@
 -//SPDX-License-Identifier: BUSL-1.1
 -pragma solidity 0.8.20;
@@ -17080,7 +17080,7 @@ diff -ruN src/interfaces/components/ISharesManager.1.sol interfaces/components/I
 -}
 diff -ruN src/interfaces/components/IUserDepositManager.1.sol interfaces/components/IUserDepositManager.1.sol
 --- src/interfaces/components/IUserDepositManager.1.sol	2023-12-11 15:38:07
-+++ interfaces/components/IUserDepositManager.1.sol	2024-01-09 13:47:44
++++ interfaces/components/IUserDepositManager.1.sol	2024-01-09 14:40:45
 @@ -1,29 +0,0 @@
 -//SPDX-License-Identifier: BUSL-1.1
 -pragma solidity 0.8.20;
@@ -17113,7 +17113,7 @@ diff -ruN src/interfaces/components/IUserDepositManager.1.sol interfaces/compone
 -}
 diff -ruN src/libraries/LibAdministrable.sol libraries/LibAdministrable.sol
 --- src/libraries/LibAdministrable.sol	2023-12-11 15:38:07
-+++ libraries/LibAdministrable.sol	2024-01-09 13:47:44
++++ libraries/LibAdministrable.sol	2024-01-09 14:40:45
 @@ -1,34 +0,0 @@
 -//SPDX-License-Identifier: BUSL-1.1
 -pragma solidity 0.8.20;
@@ -17151,7 +17151,7 @@ diff -ruN src/libraries/LibAdministrable.sol libraries/LibAdministrable.sol
 -}
 diff -ruN src/libraries/LibAllowlistMasks.sol libraries/LibAllowlistMasks.sol
 --- src/libraries/LibAllowlistMasks.sol	2023-12-11 15:38:07
-+++ libraries/LibAllowlistMasks.sol	2024-01-09 13:47:44
++++ libraries/LibAllowlistMasks.sol	2024-01-09 14:40:45
 @@ -1,15 +0,0 @@
 -//SPDX-License-Identifier: BUSL-1.1
 -pragma solidity 0.8.20;
@@ -17170,7 +17170,7 @@ diff -ruN src/libraries/LibAllowlistMasks.sol libraries/LibAllowlistMasks.sol
 -}
 diff -ruN src/libraries/LibBasisPoints.sol libraries/LibBasisPoints.sol
 --- src/libraries/LibBasisPoints.sol	2023-12-11 15:38:07
-+++ libraries/LibBasisPoints.sol	2024-01-09 13:47:44
++++ libraries/LibBasisPoints.sol	2024-01-09 14:40:45
 @@ -1,9 +0,0 @@
 -//SPDX-License-Identifier: BUSL-1.1
 -pragma solidity 0.8.20;
@@ -17183,7 +17183,7 @@ diff -ruN src/libraries/LibBasisPoints.sol libraries/LibBasisPoints.sol
 -}
 diff -ruN src/libraries/LibBytes.sol libraries/LibBytes.sol
 --- src/libraries/LibBytes.sol	2023-12-11 15:38:07
-+++ libraries/LibBytes.sol	2024-01-09 13:47:44
++++ libraries/LibBytes.sol	2024-01-09 14:40:45
 @@ -1,83 +0,0 @@
 -//SPDX-License-Identifier: BUSL-1.1
 -pragma solidity 0.8.20;
@@ -17270,7 +17270,7 @@ diff -ruN src/libraries/LibBytes.sol libraries/LibBytes.sol
 -}
 diff -ruN src/libraries/LibErrors.sol libraries/LibErrors.sol
 --- src/libraries/LibErrors.sol	2023-12-11 15:38:07
-+++ libraries/LibErrors.sol	2024-01-09 13:47:44
++++ libraries/LibErrors.sol	2024-01-09 14:40:45
 @@ -1,25 +0,0 @@
 -//SPDX-License-Identifier: BUSL-1.1
 -pragma solidity 0.8.20;
@@ -17299,7 +17299,7 @@ diff -ruN src/libraries/LibErrors.sol libraries/LibErrors.sol
 -}
 diff -ruN src/libraries/LibSanitize.sol libraries/LibSanitize.sol
 --- src/libraries/LibSanitize.sol	2023-12-11 15:38:07
-+++ libraries/LibSanitize.sol	2024-01-09 13:47:44
++++ libraries/LibSanitize.sol	2024-01-09 14:40:45
 @@ -1,33 +0,0 @@
 -//SPDX-License-Identifier: BUSL-1.1
 -pragma solidity 0.8.20;
@@ -17336,7 +17336,7 @@ diff -ruN src/libraries/LibSanitize.sol libraries/LibSanitize.sol
 -}
 diff -ruN src/libraries/LibUint256.sol libraries/LibUint256.sol
 --- src/libraries/LibUint256.sol	2023-12-11 15:38:07
-+++ libraries/LibUint256.sol	2024-01-09 13:47:44
++++ libraries/LibUint256.sol	2024-01-09 14:40:45
 @@ -1,64 +0,0 @@
 -//SPDX-License-Identifier: BUSL-1.1
 -pragma solidity 0.8.20;
@@ -17404,7 +17404,7 @@ diff -ruN src/libraries/LibUint256.sol libraries/LibUint256.sol
 -}
 diff -ruN src/libraries/LibUnstructuredStorage.sol libraries/LibUnstructuredStorage.sol
 --- src/libraries/LibUnstructuredStorage.sol	2023-12-11 15:38:07
-+++ libraries/LibUnstructuredStorage.sol	2024-01-09 13:47:44
++++ libraries/LibUnstructuredStorage.sol	2024-01-09 14:40:45
 @@ -1,87 +0,0 @@
 -// SPDX-License-Identifier: BUSL-1.1
 -
@@ -17495,7 +17495,7 @@ diff -ruN src/libraries/LibUnstructuredStorage.sol libraries/LibUnstructuredStor
 -}
 diff -ruN src/migration/TLC_globalUnlockScheduleMigration.sol migration/TLC_globalUnlockScheduleMigration.sol
 --- src/migration/TLC_globalUnlockScheduleMigration.sol	2023-12-15 08:57:43
-+++ migration/TLC_globalUnlockScheduleMigration.sol	2024-01-09 13:47:44
++++ migration/TLC_globalUnlockScheduleMigration.sol	2024-01-09 14:40:45
 @@ -1,416 +0,0 @@
 -//SPDX-License-Identifier: BUSL-1.1
 -pragma solidity 0.8.20;
@@ -17915,7 +17915,7 @@ diff -ruN src/migration/TLC_globalUnlockScheduleMigration.sol migration/TLC_glob
 -}
 diff -ruN src/mock/DepositContractMock.sol mock/DepositContractMock.sol
 --- src/mock/DepositContractMock.sol	2023-12-11 15:38:07
-+++ mock/DepositContractMock.sol	2024-01-09 13:47:44
++++ mock/DepositContractMock.sol	2024-01-09 14:40:45
 @@ -1,45 +0,0 @@
 -//SPDX-License-Identifier: BUSL-1.1
 -pragma solidity 0.8.20;
@@ -17964,7 +17964,7 @@ diff -ruN src/mock/DepositContractMock.sol mock/DepositContractMock.sol
 -}
 diff -ruN src/state/allowlist/AllowerAddress.sol state/allowlist/AllowerAddress.sol
 --- src/state/allowlist/AllowerAddress.sol	2023-12-11 15:38:07
-+++ state/allowlist/AllowerAddress.sol	2024-01-09 13:47:44
++++ state/allowlist/AllowerAddress.sol	2024-01-09 14:40:45
 @@ -1,25 +0,0 @@
 -//SPDX-License-Identifier: BUSL-1.1
 -pragma solidity 0.8.20;
@@ -17993,7 +17993,7 @@ diff -ruN src/state/allowlist/AllowerAddress.sol state/allowlist/AllowerAddress.
 -}
 diff -ruN src/state/allowlist/Allowlist.sol state/allowlist/Allowlist.sol
 --- src/state/allowlist/Allowlist.sol	2023-12-11 15:38:07
-+++ state/allowlist/Allowlist.sol	2024-01-09 13:47:44
++++ state/allowlist/Allowlist.sol	2024-01-09 14:40:45
 @@ -1,47 +0,0 @@
 -//SPDX-License-Identifier: BUSL-1.1
 -pragma solidity 0.8.20;
@@ -18044,7 +18044,7 @@ diff -ruN src/state/allowlist/Allowlist.sol state/allowlist/Allowlist.sol
 -}
 diff -ruN src/state/allowlist/DenierAddress.sol state/allowlist/DenierAddress.sol
 --- src/state/allowlist/DenierAddress.sol	2023-12-11 15:38:07
-+++ state/allowlist/DenierAddress.sol	2024-01-09 13:47:44
++++ state/allowlist/DenierAddress.sol	2024-01-09 14:40:45
 @@ -1,25 +0,0 @@
 -//SPDX-License-Identifier: BUSL-1.1
 -pragma solidity 0.8.20;
@@ -18073,7 +18073,7 @@ diff -ruN src/state/allowlist/DenierAddress.sol state/allowlist/DenierAddress.so
 -}
 diff -ruN src/state/migration/OperatorsRegistry_FundedKeyEventRebroadcasting_KeyIndex.sol state/migration/OperatorsRegistry_FundedKeyEventRebroadcasting_KeyIndex.sol
 --- src/state/migration/OperatorsRegistry_FundedKeyEventRebroadcasting_KeyIndex.sol	2023-12-11 15:38:07
-+++ state/migration/OperatorsRegistry_FundedKeyEventRebroadcasting_KeyIndex.sol	2024-01-09 13:47:44
++++ state/migration/OperatorsRegistry_FundedKeyEventRebroadcasting_KeyIndex.sol	2024-01-09 14:40:45
 @@ -1,17 +0,0 @@
 -//SPDX-License-Identifier: BUSL-1.1
 -pragma solidity 0.8.20;
@@ -18094,7 +18094,7 @@ diff -ruN src/state/migration/OperatorsRegistry_FundedKeyEventRebroadcasting_Key
 -}
 diff -ruN src/state/migration/OperatorsRegistry_FundedKeyEventRebroadcasting_OperatorIndex.sol state/migration/OperatorsRegistry_FundedKeyEventRebroadcasting_OperatorIndex.sol
 --- src/state/migration/OperatorsRegistry_FundedKeyEventRebroadcasting_OperatorIndex.sol	2023-12-11 15:38:07
-+++ state/migration/OperatorsRegistry_FundedKeyEventRebroadcasting_OperatorIndex.sol	2024-01-09 13:47:44
++++ state/migration/OperatorsRegistry_FundedKeyEventRebroadcasting_OperatorIndex.sol	2024-01-09 14:40:45
 @@ -1,18 +0,0 @@
 -//SPDX-License-Identifier: BUSL-1.1
 -pragma solidity 0.8.20;
@@ -18116,7 +18116,7 @@ diff -ruN src/state/migration/OperatorsRegistry_FundedKeyEventRebroadcasting_Ope
 -}
 diff -ruN src/state/operatorsRegistry/CurrentValidatorExitsDemand.sol state/operatorsRegistry/CurrentValidatorExitsDemand.sol
 --- src/state/operatorsRegistry/CurrentValidatorExitsDemand.sol	2023-12-11 15:38:07
-+++ state/operatorsRegistry/CurrentValidatorExitsDemand.sol	2024-01-09 13:47:44
++++ state/operatorsRegistry/CurrentValidatorExitsDemand.sol	2024-01-09 14:40:45
 @@ -1,26 +0,0 @@
 -//SPDX-License-Identifier: BUSL-1.1
 -pragma solidity 0.8.20;
@@ -18146,7 +18146,7 @@ diff -ruN src/state/operatorsRegistry/CurrentValidatorExitsDemand.sol state/oper
 -}
 diff -ruN src/state/operatorsRegistry/Operators.1.sol state/operatorsRegistry/Operators.1.sol
 --- src/state/operatorsRegistry/Operators.1.sol	2023-12-11 15:38:07
-+++ state/operatorsRegistry/Operators.1.sol	2024-01-09 13:47:44
++++ state/operatorsRegistry/Operators.1.sol	2024-01-09 14:40:45
 @@ -1,239 +0,0 @@
 -//SPDX-License-Identifier: BUSL-1.1
 -pragma solidity 0.8.20;
@@ -18389,7 +18389,7 @@ diff -ruN src/state/operatorsRegistry/Operators.1.sol state/operatorsRegistry/Op
 -}
 diff -ruN src/state/operatorsRegistry/Operators.2.sol state/operatorsRegistry/Operators.2.sol
 --- src/state/operatorsRegistry/Operators.2.sol	2023-12-11 15:38:07
-+++ state/operatorsRegistry/Operators.2.sol	2024-01-09 13:47:44
++++ state/operatorsRegistry/Operators.2.sol	2024-01-09 14:40:45
 @@ -1,347 +0,0 @@
 -//SPDX-License-Identifier: BUSL-1.1
 -pragma solidity 0.8.20;
@@ -18740,7 +18740,7 @@ diff -ruN src/state/operatorsRegistry/Operators.2.sol state/operatorsRegistry/Op
 -}
 diff -ruN src/state/operatorsRegistry/TotalValidatorExitsRequested.sol state/operatorsRegistry/TotalValidatorExitsRequested.sol
 --- src/state/operatorsRegistry/TotalValidatorExitsRequested.sol	2023-12-11 15:38:07
-+++ state/operatorsRegistry/TotalValidatorExitsRequested.sol	2024-01-09 13:47:44
++++ state/operatorsRegistry/TotalValidatorExitsRequested.sol	2024-01-09 14:40:45
 @@ -1,25 +0,0 @@
 -//SPDX-License-Identifier: BUSL-1.1
 -pragma solidity 0.8.20;
@@ -18769,7 +18769,7 @@ diff -ruN src/state/operatorsRegistry/TotalValidatorExitsRequested.sol state/ope
 -}
 diff -ruN src/state/operatorsRegistry/ValidatorKeys.sol state/operatorsRegistry/ValidatorKeys.sol
 --- src/state/operatorsRegistry/ValidatorKeys.sol	2023-12-11 15:38:07
-+++ state/operatorsRegistry/ValidatorKeys.sol	2024-01-09 13:47:44
++++ state/operatorsRegistry/ValidatorKeys.sol	2024-01-09 14:40:45
 @@ -1,121 +0,0 @@
 -//SPDX-License-Identifier: BUSL-1.1
 -pragma solidity 0.8.20;
@@ -18894,7 +18894,7 @@ diff -ruN src/state/operatorsRegistry/ValidatorKeys.sol state/operatorsRegistry/
 -}
 diff -ruN src/state/oracle/LastEpochId.sol state/oracle/LastEpochId.sol
 --- src/state/oracle/LastEpochId.sol	2023-12-11 15:38:07
-+++ state/oracle/LastEpochId.sol	2024-01-09 13:47:44
++++ state/oracle/LastEpochId.sol	2024-01-09 14:40:45
 @@ -1,23 +0,0 @@
 -//SPDX-License-Identifier: BUSL-1.1
 -pragma solidity 0.8.20;
@@ -18921,7 +18921,7 @@ diff -ruN src/state/oracle/LastEpochId.sol state/oracle/LastEpochId.sol
 -}
 diff -ruN src/state/oracle/OracleMembers.sol state/oracle/OracleMembers.sol
 --- src/state/oracle/OracleMembers.sol	2023-12-11 15:38:07
-+++ state/oracle/OracleMembers.sol	2024-01-09 13:47:44
++++ state/oracle/OracleMembers.sol	2024-01-09 14:40:45
 @@ -1,111 +0,0 @@
 -//SPDX-License-Identifier: BUSL-1.1
 -pragma solidity 0.8.20;
@@ -19036,7 +19036,7 @@ diff -ruN src/state/oracle/OracleMembers.sol state/oracle/OracleMembers.sol
 -}
 diff -ruN src/state/oracle/Quorum.sol state/oracle/Quorum.sol
 --- src/state/oracle/Quorum.sol	2023-12-11 15:38:07
-+++ state/oracle/Quorum.sol	2024-01-09 13:47:44
++++ state/oracle/Quorum.sol	2024-01-09 14:40:45
 @@ -1,23 +0,0 @@
 -//SPDX-License-Identifier: BUSL-1.1
 -pragma solidity 0.8.20;
@@ -19063,7 +19063,7 @@ diff -ruN src/state/oracle/Quorum.sol state/oracle/Quorum.sol
 -}
 diff -ruN src/state/oracle/ReportsPositions.sol state/oracle/ReportsPositions.sol
 --- src/state/oracle/ReportsPositions.sol	2023-12-11 15:38:07
-+++ state/oracle/ReportsPositions.sol	2024-01-09 13:47:44
++++ state/oracle/ReportsPositions.sol	2024-01-09 14:40:45
 @@ -1,40 +0,0 @@
 -//SPDX-License-Identifier: BUSL-1.1
 -pragma solidity 0.8.20;
@@ -19107,7 +19107,7 @@ diff -ruN src/state/oracle/ReportsPositions.sol state/oracle/ReportsPositions.so
 -}
 diff -ruN src/state/oracle/ReportsVariants.sol state/oracle/ReportsVariants.sol
 --- src/state/oracle/ReportsVariants.sol	2023-12-11 15:38:07
-+++ state/oracle/ReportsVariants.sol	2024-01-09 13:47:44
++++ state/oracle/ReportsVariants.sol	2024-01-09 14:40:45
 @@ -1,105 +0,0 @@
 -//SPDX-License-Identifier: BUSL-1.1
 -pragma solidity 0.8.20;
@@ -19216,7 +19216,7 @@ diff -ruN src/state/oracle/ReportsVariants.sol state/oracle/ReportsVariants.sol
 -}
 diff -ruN src/state/redeemManager/BufferedExceedingEth.sol state/redeemManager/BufferedExceedingEth.sol
 --- src/state/redeemManager/BufferedExceedingEth.sol	2023-12-11 15:38:07
-+++ state/redeemManager/BufferedExceedingEth.sol	2024-01-09 13:47:44
++++ state/redeemManager/BufferedExceedingEth.sol	2024-01-09 14:40:45
 @@ -1,24 +0,0 @@
 -//SPDX-License-Identifier: BUSL-1.1
 -pragma solidity 0.8.20;
@@ -19244,7 +19244,7 @@ diff -ruN src/state/redeemManager/BufferedExceedingEth.sol state/redeemManager/B
 -}
 diff -ruN src/state/redeemManager/RedeemDemand.sol state/redeemManager/RedeemDemand.sol
 --- src/state/redeemManager/RedeemDemand.sol	2023-12-11 15:38:07
-+++ state/redeemManager/RedeemDemand.sol	2024-01-09 13:47:44
++++ state/redeemManager/RedeemDemand.sol	2024-01-09 14:40:45
 @@ -1,23 +0,0 @@
 -//SPDX-License-Identifier: BUSL-1.1
 -pragma solidity 0.8.20;
@@ -19271,7 +19271,7 @@ diff -ruN src/state/redeemManager/RedeemDemand.sol state/redeemManager/RedeemDem
 -}
 diff -ruN src/state/redeemManager/RedeemQueue.sol state/redeemManager/RedeemQueue.sol
 --- src/state/redeemManager/RedeemQueue.sol	2023-12-11 15:38:07
-+++ state/redeemManager/RedeemQueue.sol	2024-01-09 13:47:44
++++ state/redeemManager/RedeemQueue.sol	2024-01-09 14:40:45
 @@ -1,30 +0,0 @@
 -//SPDX-License-Identifier: BUSL-1.1
 -pragma solidity 0.8.20;
@@ -19305,7 +19305,7 @@ diff -ruN src/state/redeemManager/RedeemQueue.sol state/redeemManager/RedeemQueu
 -}
 diff -ruN src/state/redeemManager/WithdrawalStack.sol state/redeemManager/WithdrawalStack.sol
 --- src/state/redeemManager/WithdrawalStack.sol	2023-12-11 15:38:07
-+++ state/redeemManager/WithdrawalStack.sol	2024-01-09 13:47:44
++++ state/redeemManager/WithdrawalStack.sol	2024-01-09 14:40:45
 @@ -1,28 +0,0 @@
 -//SPDX-License-Identifier: BUSL-1.1
 -pragma solidity 0.8.20;
@@ -19337,7 +19337,7 @@ diff -ruN src/state/redeemManager/WithdrawalStack.sol state/redeemManager/Withdr
 -}
 diff -ruN src/state/river/AllowlistAddress.sol state/river/AllowlistAddress.sol
 --- src/state/river/AllowlistAddress.sol	2023-12-11 15:38:07
-+++ state/river/AllowlistAddress.sol	2024-01-09 13:47:44
++++ state/river/AllowlistAddress.sol	2024-01-09 14:40:45
 @@ -1,25 +0,0 @@
 -//SPDX-License-Identifier: BUSL-1.1
 -pragma solidity 0.8.20;
@@ -19366,7 +19366,7 @@ diff -ruN src/state/river/AllowlistAddress.sol state/river/AllowlistAddress.sol
 -}
 diff -ruN src/state/river/BalanceToDeposit.sol state/river/BalanceToDeposit.sol
 --- src/state/river/BalanceToDeposit.sol	2023-12-11 15:38:07
-+++ state/river/BalanceToDeposit.sol	2024-01-09 13:47:44
++++ state/river/BalanceToDeposit.sol	2024-01-09 14:40:45
 @@ -1,16 +0,0 @@
 -//SPDX-License-Identifier: BUSL-1.1
 -pragma solidity 0.8.20;
@@ -19386,7 +19386,7 @@ diff -ruN src/state/river/BalanceToDeposit.sol state/river/BalanceToDeposit.sol
 -}
 diff -ruN src/state/river/BalanceToRedeem.sol state/river/BalanceToRedeem.sol
 --- src/state/river/BalanceToRedeem.sol	2023-12-11 15:38:07
-+++ state/river/BalanceToRedeem.sol	2024-01-09 13:47:44
++++ state/river/BalanceToRedeem.sol	2024-01-09 14:40:45
 @@ -1,16 +0,0 @@
 -//SPDX-License-Identifier: BUSL-1.1
 -pragma solidity 0.8.20;
@@ -19406,7 +19406,7 @@ diff -ruN src/state/river/BalanceToRedeem.sol state/river/BalanceToRedeem.sol
 -}
 diff -ruN src/state/river/CLSpec.sol state/river/CLSpec.sol
 --- src/state/river/CLSpec.sol	2023-12-11 15:38:07
-+++ state/river/CLSpec.sol	2024-01-09 13:47:44
++++ state/river/CLSpec.sol	2024-01-09 14:40:45
 @@ -1,59 +0,0 @@
 -//SPDX-License-Identifier: BUSL-1.1
 -pragma solidity 0.8.20;
@@ -19469,7 +19469,7 @@ diff -ruN src/state/river/CLSpec.sol state/river/CLSpec.sol
 -}
 diff -ruN src/state/river/CLValidatorCount.sol state/river/CLValidatorCount.sol
 --- src/state/river/CLValidatorCount.sol	2023-12-11 15:38:07
-+++ state/river/CLValidatorCount.sol	2024-01-09 13:47:44
++++ state/river/CLValidatorCount.sol	2024-01-09 14:40:45
 @@ -1,24 +0,0 @@
 -//SPDX-License-Identifier: BUSL-1.1
 -pragma solidity 0.8.20;
@@ -19497,7 +19497,7 @@ diff -ruN src/state/river/CLValidatorCount.sol state/river/CLValidatorCount.sol
 -}
 diff -ruN src/state/river/CLValidatorTotalBalance.sol state/river/CLValidatorTotalBalance.sol
 --- src/state/river/CLValidatorTotalBalance.sol	2023-12-11 15:38:07
-+++ state/river/CLValidatorTotalBalance.sol	2024-01-09 13:47:44
++++ state/river/CLValidatorTotalBalance.sol	2024-01-09 14:40:45
 @@ -1,25 +0,0 @@
 -//SPDX-License-Identifier: BUSL-1.1
 -pragma solidity 0.8.20;
@@ -19526,7 +19526,7 @@ diff -ruN src/state/river/CLValidatorTotalBalance.sol state/river/CLValidatorTot
 -}
 diff -ruN src/state/river/CollectorAddress.sol state/river/CollectorAddress.sol
 --- src/state/river/CollectorAddress.sol	2023-12-11 15:38:07
-+++ state/river/CollectorAddress.sol	2024-01-09 13:47:44
++++ state/river/CollectorAddress.sol	2024-01-09 14:40:45
 @@ -1,25 +0,0 @@
 -//SPDX-License-Identifier: BUSL-1.1
 -pragma solidity 0.8.20;
@@ -19555,7 +19555,7 @@ diff -ruN src/state/river/CollectorAddress.sol state/river/CollectorAddress.sol
 -}
 diff -ruN src/state/river/CommittedBalance.sol state/river/CommittedBalance.sol
 --- src/state/river/CommittedBalance.sol	2023-12-11 15:38:07
-+++ state/river/CommittedBalance.sol	2024-01-09 13:47:44
++++ state/river/CommittedBalance.sol	2024-01-09 14:40:45
 @@ -1,16 +0,0 @@
 -//SPDX-License-Identifier: BUSL-1.1
 -pragma solidity 0.8.20;
@@ -19575,7 +19575,7 @@ diff -ruN src/state/river/CommittedBalance.sol state/river/CommittedBalance.sol
 -}
 diff -ruN src/state/river/CoverageFundAddress.sol state/river/CoverageFundAddress.sol
 --- src/state/river/CoverageFundAddress.sol	2023-12-11 15:38:07
-+++ state/river/CoverageFundAddress.sol	2024-01-09 13:47:44
++++ state/river/CoverageFundAddress.sol	2024-01-09 14:40:45
 @@ -1,26 +0,0 @@
 -//SPDX-License-Identifier: BUSL-1.1
 -pragma solidity 0.8.20;
@@ -19605,7 +19605,7 @@ diff -ruN src/state/river/CoverageFundAddress.sol state/river/CoverageFundAddres
 -}
 diff -ruN src/state/river/DailyCommittableLimits.sol state/river/DailyCommittableLimits.sol
 --- src/state/river/DailyCommittableLimits.sol	2023-12-11 15:38:07
-+++ state/river/DailyCommittableLimits.sol	2024-01-09 13:47:44
++++ state/river/DailyCommittableLimits.sol	2024-01-09 14:40:45
 @@ -1,54 +0,0 @@
 -//SPDX-License-Identifier: BUSL-1.1
 -pragma solidity 0.8.20;
@@ -19663,7 +19663,7 @@ diff -ruN src/state/river/DailyCommittableLimits.sol state/river/DailyCommittabl
 -}
 diff -ruN src/state/river/DepositContractAddress.sol state/river/DepositContractAddress.sol
 --- src/state/river/DepositContractAddress.sol	2023-12-11 15:38:07
-+++ state/river/DepositContractAddress.sol	2024-01-09 13:47:44
++++ state/river/DepositContractAddress.sol	2024-01-09 14:40:45
 @@ -1,26 +0,0 @@
 -//SPDX-License-Identifier: BUSL-1.1
 -pragma solidity 0.8.20;
@@ -19693,7 +19693,7 @@ diff -ruN src/state/river/DepositContractAddress.sol state/river/DepositContract
 -}
 diff -ruN src/state/river/DepositedValidatorCount.sol state/river/DepositedValidatorCount.sol
 --- src/state/river/DepositedValidatorCount.sol	2023-12-11 15:38:07
-+++ state/river/DepositedValidatorCount.sol	2024-01-09 13:47:44
++++ state/river/DepositedValidatorCount.sol	2024-01-09 14:40:45
 @@ -1,24 +0,0 @@
 -//SPDX-License-Identifier: BUSL-1.1
 -pragma solidity 0.8.20;
@@ -19721,7 +19721,7 @@ diff -ruN src/state/river/DepositedValidatorCount.sol state/river/DepositedValid
 -}
 diff -ruN src/state/river/ELFeeRecipientAddress.sol state/river/ELFeeRecipientAddress.sol
 --- src/state/river/ELFeeRecipientAddress.sol	2023-12-11 15:38:07
-+++ state/river/ELFeeRecipientAddress.sol	2024-01-09 13:47:44
++++ state/river/ELFeeRecipientAddress.sol	2024-01-09 14:40:45
 @@ -1,26 +0,0 @@
 -//SPDX-License-Identifier: BUSL-1.1
 -pragma solidity 0.8.20;
@@ -19751,7 +19751,7 @@ diff -ruN src/state/river/ELFeeRecipientAddress.sol state/river/ELFeeRecipientAd
 -}
 diff -ruN src/state/river/GlobalFee.sol state/river/GlobalFee.sol
 --- src/state/river/GlobalFee.sol	2023-12-11 15:38:07
-+++ state/river/GlobalFee.sol	2024-01-09 13:47:44
++++ state/river/GlobalFee.sol	2024-01-09 14:40:45
 @@ -1,25 +0,0 @@
 -//SPDX-License-Identifier: BUSL-1.1
 -pragma solidity 0.8.20;
@@ -19780,7 +19780,7 @@ diff -ruN src/state/river/GlobalFee.sol state/river/GlobalFee.sol
 -}
 diff -ruN src/state/river/LastConsensusLayerReport.sol state/river/LastConsensusLayerReport.sol
 --- src/state/river/LastConsensusLayerReport.sol	2023-12-11 15:38:07
-+++ state/river/LastConsensusLayerReport.sol	2024-01-09 13:47:44
++++ state/river/LastConsensusLayerReport.sol	2024-01-09 14:40:45
 @@ -1,48 +0,0 @@
 -//SPDX-License-Identifier: BUSL-1.1
 -pragma solidity 0.8.20;
@@ -19832,7 +19832,7 @@ diff -ruN src/state/river/LastConsensusLayerReport.sol state/river/LastConsensus
 -}
 diff -ruN src/state/river/LastOracleRoundId.sol state/river/LastOracleRoundId.sol
 --- src/state/river/LastOracleRoundId.sol	2023-12-11 15:38:07
-+++ state/river/LastOracleRoundId.sol	2024-01-09 13:47:44
++++ state/river/LastOracleRoundId.sol	2024-01-09 14:40:45
 @@ -1,25 +0,0 @@
 -//SPDX-License-Identifier: BUSL-1.1
 -pragma solidity 0.8.20;
@@ -19861,7 +19861,7 @@ diff -ruN src/state/river/LastOracleRoundId.sol state/river/LastOracleRoundId.so
 -}
 diff -ruN src/state/river/MetadataURI.sol state/river/MetadataURI.sol
 --- src/state/river/MetadataURI.sol	2023-12-11 15:38:07
-+++ state/river/MetadataURI.sol	2024-01-09 13:47:44
++++ state/river/MetadataURI.sol	2024-01-09 14:40:45
 @@ -1,45 +0,0 @@
 -//SPDX-License-Identifier: BUSL-1.1
 -pragma solidity 0.8.20;
@@ -19910,7 +19910,7 @@ diff -ruN src/state/river/MetadataURI.sol state/river/MetadataURI.sol
 -}
 diff -ruN src/state/river/OperatorsRegistryAddress.sol state/river/OperatorsRegistryAddress.sol
 --- src/state/river/OperatorsRegistryAddress.sol	2023-12-11 15:38:07
-+++ state/river/OperatorsRegistryAddress.sol	2024-01-09 13:47:44
++++ state/river/OperatorsRegistryAddress.sol	2024-01-09 14:40:45
 @@ -1,26 +0,0 @@
 -//SPDX-License-Identifier: BUSL-1.1
 -pragma solidity 0.8.20;
@@ -19940,7 +19940,7 @@ diff -ruN src/state/river/OperatorsRegistryAddress.sol state/river/OperatorsRegi
 -}
 diff -ruN src/state/river/OracleAddress.sol state/river/OracleAddress.sol
 --- src/state/river/OracleAddress.sol	2023-12-11 15:38:07
-+++ state/river/OracleAddress.sol	2024-01-09 13:47:44
++++ state/river/OracleAddress.sol	2024-01-09 14:40:45
 @@ -1,25 +0,0 @@
 -//SPDX-License-Identifier: BUSL-1.1
 -pragma solidity 0.8.20;
@@ -19969,7 +19969,7 @@ diff -ruN src/state/river/OracleAddress.sol state/river/OracleAddress.sol
 -}
 diff -ruN src/state/river/RedeemManagerAddress.sol state/river/RedeemManagerAddress.sol
 --- src/state/river/RedeemManagerAddress.sol	2023-12-11 15:38:07
-+++ state/river/RedeemManagerAddress.sol	2024-01-09 13:47:44
++++ state/river/RedeemManagerAddress.sol	2024-01-09 14:40:45
 @@ -1,26 +0,0 @@
 -//SPDX-License-Identifier: BUSL-1.1
 -pragma solidity 0.8.20;
@@ -19999,7 +19999,7 @@ diff -ruN src/state/river/RedeemManagerAddress.sol state/river/RedeemManagerAddr
 -}
 diff -ruN src/state/river/ReportBounds.sol state/river/ReportBounds.sol
 --- src/state/river/ReportBounds.sol	2023-12-11 15:38:07
-+++ state/river/ReportBounds.sol	2024-01-09 13:47:44
++++ state/river/ReportBounds.sol	2024-01-09 14:40:45
 @@ -1,53 +0,0 @@
 -//SPDX-License-Identifier: BUSL-1.1
 -pragma solidity 0.8.20;
@@ -20056,7 +20056,7 @@ diff -ruN src/state/river/ReportBounds.sol state/river/ReportBounds.sol
 -}
 diff -ruN src/state/river/Shares.sol state/river/Shares.sol
 --- src/state/river/Shares.sol	2023-12-11 15:38:07
-+++ state/river/Shares.sol	2024-01-09 13:47:44
++++ state/river/Shares.sol	2024-01-09 14:40:45
 @@ -1,23 +0,0 @@
 -//SPDX-License-Identifier: BUSL-1.1
 -pragma solidity 0.8.20;
@@ -20083,7 +20083,7 @@ diff -ruN src/state/river/Shares.sol state/river/Shares.sol
 -}
 diff -ruN src/state/river/SharesPerOwner.sol state/river/SharesPerOwner.sol
 --- src/state/river/SharesPerOwner.sol	2023-12-11 15:38:07
-+++ state/river/SharesPerOwner.sol	2024-01-09 13:47:44
++++ state/river/SharesPerOwner.sol	2024-01-09 14:40:45
 @@ -1,47 +0,0 @@
 -//SPDX-License-Identifier: BUSL-1.1
 -pragma solidity 0.8.20;
@@ -20134,7 +20134,7 @@ diff -ruN src/state/river/SharesPerOwner.sol state/river/SharesPerOwner.sol
 -}
 diff -ruN src/state/river/WithdrawalCredentials.sol state/river/WithdrawalCredentials.sol
 --- src/state/river/WithdrawalCredentials.sol	2023-12-11 15:38:07
-+++ state/river/WithdrawalCredentials.sol	2024-01-09 13:47:44
++++ state/river/WithdrawalCredentials.sol	2024-01-09 14:40:45
 @@ -1,34 +0,0 @@
 -//SPDX-License-Identifier: BUSL-1.1
 -pragma solidity 0.8.20;
@@ -20172,7 +20172,7 @@ diff -ruN src/state/river/WithdrawalCredentials.sol state/river/WithdrawalCreden
 -}
 diff -ruN src/state/shared/AdministratorAddress.sol state/shared/AdministratorAddress.sol
 --- src/state/shared/AdministratorAddress.sol	2023-12-11 15:38:07
-+++ state/shared/AdministratorAddress.sol	2024-01-09 13:47:44
++++ state/shared/AdministratorAddress.sol	2024-01-09 14:40:45
 @@ -1,26 +0,0 @@
 -//SPDX-License-Identifier: BUSL-1.1
 -pragma solidity 0.8.20;
@@ -20202,7 +20202,7 @@ diff -ruN src/state/shared/AdministratorAddress.sol state/shared/AdministratorAd
 -}
 diff -ruN src/state/shared/ApprovalsPerOwner.sol state/shared/ApprovalsPerOwner.sol
 --- src/state/shared/ApprovalsPerOwner.sol	2023-12-11 15:38:07
-+++ state/shared/ApprovalsPerOwner.sol	2024-01-09 13:47:44
++++ state/shared/ApprovalsPerOwner.sol	2024-01-09 14:40:45
 @@ -1,50 +0,0 @@
 -//SPDX-License-Identifier: BUSL-1.1
 -pragma solidity 0.8.20;
@@ -20256,7 +20256,7 @@ diff -ruN src/state/shared/ApprovalsPerOwner.sol state/shared/ApprovalsPerOwner.
 -}
 diff -ruN src/state/shared/PendingAdministratorAddress.sol state/shared/PendingAdministratorAddress.sol
 --- src/state/shared/PendingAdministratorAddress.sol	2023-12-11 15:38:07
-+++ state/shared/PendingAdministratorAddress.sol	2024-01-09 13:47:44
++++ state/shared/PendingAdministratorAddress.sol	2024-01-09 14:40:45
 @@ -1,24 +0,0 @@
 -//SPDX-License-Identifier: BUSL-1.1
 -pragma solidity 0.8.20;
@@ -20284,7 +20284,7 @@ diff -ruN src/state/shared/PendingAdministratorAddress.sol state/shared/PendingA
 -}
 diff -ruN src/state/shared/RiverAddress.sol state/shared/RiverAddress.sol
 --- src/state/shared/RiverAddress.sol	2023-12-11 15:38:07
-+++ state/shared/RiverAddress.sol	2024-01-09 13:47:44
++++ state/shared/RiverAddress.sol	2024-01-09 14:40:45
 @@ -1,25 +0,0 @@
 -//SPDX-License-Identifier: BUSL-1.1
 -pragma solidity 0.8.20;
@@ -20313,7 +20313,7 @@ diff -ruN src/state/shared/RiverAddress.sol state/shared/RiverAddress.sol
 -}
 diff -ruN src/state/shared/Version.sol state/shared/Version.sol
 --- src/state/shared/Version.sol	2023-12-11 15:38:07
-+++ state/shared/Version.sol	2024-01-09 13:47:44
++++ state/shared/Version.sol	2024-01-09 14:40:45
 @@ -1,23 +0,0 @@
 -//SPDX-License-Identifier: BUSL-1.1
 -pragma solidity 0.8.20;
@@ -20340,7 +20340,7 @@ diff -ruN src/state/shared/Version.sol state/shared/Version.sol
 -}
 diff -ruN src/state/slashingCoverage/BalanceForCoverage.sol state/slashingCoverage/BalanceForCoverage.sol
 --- src/state/slashingCoverage/BalanceForCoverage.sol	2023-12-11 15:38:07
-+++ state/slashingCoverage/BalanceForCoverage.sol	2024-01-09 13:47:44
++++ state/slashingCoverage/BalanceForCoverage.sol	2024-01-09 14:40:45
 @@ -1,24 +0,0 @@
 -//SPDX-License-Identifier: BUSL-1.1
 -pragma solidity 0.8.20;
@@ -20368,7 +20368,7 @@ diff -ruN src/state/slashingCoverage/BalanceForCoverage.sol state/slashingCovera
 -}
 diff -ruN src/state/tlc/IgnoreGlobalUnlockSchedule.sol state/tlc/IgnoreGlobalUnlockSchedule.sol
 --- src/state/tlc/IgnoreGlobalUnlockSchedule.sol	2023-12-11 15:38:07
-+++ state/tlc/IgnoreGlobalUnlockSchedule.sol	2024-01-09 13:47:44
++++ state/tlc/IgnoreGlobalUnlockSchedule.sol	2024-01-09 14:40:45
 @@ -1,49 +0,0 @@
 -//SPDX-License-Identifier: BUSL-1.1
 -pragma solidity 0.8.20;
@@ -20421,7 +20421,7 @@ diff -ruN src/state/tlc/IgnoreGlobalUnlockSchedule.sol state/tlc/IgnoreGlobalUnl
 -}
 diff -ruN src/state/tlc/VestingSchedules.1.sol state/tlc/VestingSchedules.1.sol
 --- src/state/tlc/VestingSchedules.1.sol	2023-12-11 15:38:07
-+++ state/tlc/VestingSchedules.1.sol	2024-01-09 13:47:44
++++ state/tlc/VestingSchedules.1.sol	2024-01-09 14:40:45
 @@ -1,97 +0,0 @@
 -//SPDX-License-Identifier: BUSL-1.1
 -pragma solidity 0.8.20;
@@ -20522,7 +20522,7 @@ diff -ruN src/state/tlc/VestingSchedules.1.sol state/tlc/VestingSchedules.1.sol
 -}
 diff -ruN src/state/tlc/VestingSchedules.2.sol state/tlc/VestingSchedules.2.sol
 --- src/state/tlc/VestingSchedules.2.sol	2023-12-11 15:38:07
-+++ state/tlc/VestingSchedules.2.sol	2024-01-09 13:47:44
++++ state/tlc/VestingSchedules.2.sol	2024-01-09 14:40:45
 @@ -1,125 +0,0 @@
 -//SPDX-License-Identifier: BUSL-1.1
 -pragma solidity 0.8.20;
@@ -20651,7 +20651,7 @@ diff -ruN src/state/tlc/VestingSchedules.2.sol state/tlc/VestingSchedules.2.sol
 -}
 diff -ruN src/state/wlseth/BalanceOf.sol state/wlseth/BalanceOf.sol
 --- src/state/wlseth/BalanceOf.sol	2023-12-11 15:38:07
-+++ state/wlseth/BalanceOf.sol	2024-01-09 13:47:44
++++ state/wlseth/BalanceOf.sol	2024-01-09 14:40:45
 @@ -1,47 +0,0 @@
 -//SPDX-License-Identifier: BUSL-1.1
 -pragma solidity 0.8.20;
