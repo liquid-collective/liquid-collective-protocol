@@ -78,7 +78,7 @@ methods {
     function _.increment_onDepositCounter() external => ghostUpdate_onDepositCounter() expect bool ALL;
 
     // MathSummarizations
-    function _.mulDivDown(uint256 a, uint256 b, uint256 c) internal => mulDivDownAbstractPlus(a, c, b) expect uint256 ALL;
+    function _.mulDivDown(uint256 a, uint256 b, uint256 c) internal => mulDivDownAbstractPlus(a, b, c) expect uint256 ALL;
 }
 
 ghost mathint counter_onDeposit; // counter checking number of calls to _onDeposit
@@ -123,9 +123,9 @@ rule depositHandlerFunctional(env env_for_f, method f, calldataarg args) filtere
     assert env_for_f.msg.value > 0 => counter_onDeposit_before != counter_onDeposit_after;
 }
 
-// @title It is never benefitial for any user to deposit in multiple smaller patches instead of one big patch.
+// @title When user deposits, there is no additional gift component to the deposit.
 // Passing here:
-// https://prover.certora.com/output/40577/e13b1896240940a28995c714b1f95f9b?anonymousKey=cf45e302ae9fff7cea2e1f3892673657838ccaae
+// https://prover.certora.com/output/40577/ab8a00d9e5804d6eb56316149457cbf8/?anonymousKey=224f9317520c66cc0c214cb632a02918577a85ef
 rule depositAdditivityNoGiftsToEachDeposit(env e1, env e2, env eSum) {
     mathint amount1;
     mathint amount2;
@@ -151,7 +151,7 @@ rule depositAdditivityNoGiftsToEachDeposit(env e1, env e2, env eSum) {
     assert shares1 + shares2 <= sharesSum + sharesBefore;
 }
 
-// @title It is never benefitial to split your deposits into smaller patches
+// @title It is never benefitial for any user to deposit in multiple smaller patches instead of one big patch.
 rule depositAdditivitySplittingNotProfitable(env e1, env e2, env eSum) {
     mathint amount1;
     mathint amount2;
@@ -160,6 +160,8 @@ rule depositAdditivitySplittingNotProfitable(env e1, env e2, env eSum) {
     require amount1 == to_mathint(e1.msg.value);
     require amount2 == to_mathint(e2.msg.value);
     require amount1 + amount2 == to_mathint(eSum.msg.value);
+    // require amount1 == 500;
+    // require amount2 == 600;
 
     mathint sharesBefore = balanceOf(recipient);
 
@@ -174,7 +176,8 @@ rule depositAdditivitySplittingNotProfitable(env e1, env e2, env eSum) {
     depositAndTransfer(eSum, recipient) at initial;
     mathint sharesSum = balanceOf(recipient);
 
-    assert shares1 + shares2 <= sharesSum + sharesBefore;
+    assert shares2 >= shares1;
+    assert shares2 <= sharesSum;
 }
 
 // @title Up to off by one it is not benefitial to batch more deposits into one chunk
@@ -200,5 +203,5 @@ rule depositAdditivityBatchingNotExtremelyProfitable(env e1, env e2, env eSum) {
     depositAndTransfer(eSum, recipient) at initial;
     mathint sharesSum = balanceOf(recipient);
 
-    assert shares1 + shares2 + 1 >= sharesSum + sharesBefore;
+    assert shares2 + 1 >= sharesSum;
 }
