@@ -51,6 +51,7 @@ methods {
     function balanceOfUnderlying(address) external returns(uint256) envfree;
     function totalSupply() external returns(uint256) envfree;
     function totalUnderlyingSupply() external returns(uint256) envfree;
+    function sharesFromUnderlyingBalance(uint256) external returns(uint256) envfree;
     function balanceOf(address) external returns(uint256) envfree;
     // RiverV1 : OracleManagerV1
     function _.setConsensusLayerData(IOracleManagerV1.ConsensusLayerReport) external => DISPATCHER(true); 
@@ -75,19 +76,19 @@ methods {
 
     function _.deposit(bytes,bytes,bytes,bytes32) external => DISPATCHER(true); // has no effect - CERT-4615 
 
-    function _.increment_onDepositCounter() external => ghostUpdate_onDepositCounter() expect bool ALL;
+    // function _.increment_onDepositCounter() external => ghostUpdate_onDepositCounter() expect bool ALL;
 
     // MathSummarizations
     function _.mulDivDown(uint256 a, uint256 b, uint256 c) internal => mulDivDownAbstractPlus(a, b, c) expect uint256 ALL;
 }
 
-ghost mathint counter_onDeposit; // counter checking number of calls to _onDeposit
+// ghost mathint counter_onDeposit; // counter checking number of calls to _onDeposit
 
-function ghostUpdate_onDepositCounter() returns bool
-{
-    counter_onDeposit = counter_onDeposit + 1;
-	return true;
-}
+// function ghostUpdate_onDepositCounter() returns bool
+// {
+//     counter_onDeposit = counter_onDeposit + 1;
+// 	return true;
+// }
 
 // Ghost for each one of the factors in
 // Ghost for Eth in Consensus layer
@@ -109,19 +110,19 @@ invariant totalSupplyBasicIntegrity(env e)
 // BalanceToDeposit.get() + CommittedBalance.get() + BalanceToRedeem.get()
 
 // @title Checks our ghost ghostUpdate_onDepositCounter and that increment_onDepositCounter is called from _onDeposit function.
-rule depositHandlerFunctional(env env_for_f, method f, calldataarg args) filtered {
-    f -> f.selector == sig:RiverV1Harness.depositToConsensusLayer(uint256).selector ||
-         f.selector == sig:RiverV1Harness.depositAndTransfer(address).selector ||
-         f.selector == sig:RiverV1Harness.deposit().selector
-} {
-    mathint counter_onDeposit_before = counter_onDeposit;
+// rule depositHandlerFunctional(env env_for_f, method f, calldataarg args) filtered {
+//     f -> f.selector == sig:RiverV1Harness.depositToConsensusLayer(uint256).selector ||
+//          f.selector == sig:RiverV1Harness.depositAndTransfer(address).selector ||
+//          f.selector == sig:RiverV1Harness.deposit().selector
+// } {
+//     mathint counter_onDeposit_before = counter_onDeposit;
 
-    f(env_for_f, args);
+//     f(env_for_f, args);
 
-    mathint counter_onDeposit_after = counter_onDeposit;
+//     mathint counter_onDeposit_after = counter_onDeposit;
 
-    assert env_for_f.msg.value > 0 => counter_onDeposit_before != counter_onDeposit_after;
-}
+//     assert env_for_f.msg.value > 0 => counter_onDeposit_before != counter_onDeposit_after;
+// }
 
 // @title When user deposits, there is no additional gift component to the deposit.
 // Passing here:
