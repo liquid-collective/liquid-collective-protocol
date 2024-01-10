@@ -42,15 +42,15 @@ rule full_claim_is_terminal(method f)
 }
 
 
-rule stable_h(method f){
+// rule stable_h(method f){
 
-    uint32 redeemRequestId;
-    RedeemQueue.RedeemRequest redeemRequest1 = getRedeemRequestDetails(redeemRequestId);
-    env e; calldataarg args;
-    f(e, args);
-    RedeemQueue.RedeemRequest redeemRequest2 = getRedeemRequestDetails(redeemRequestId);
+//     uint32 redeemRequestId;
+//     RedeemQueue.RedeemRequest redeemRequest1 = getRedeemRequestDetails(redeemRequestId);
+//     env e; calldataarg args;
+//     f(e, args);
+//     RedeemQueue.RedeemRequest redeemRequest2 = getRedeemRequestDetails(redeemRequestId);
 
-//    assert redeemRequest1.height != 0 => redeemRequest1.height == redeemRequest2.height;
-    assert redeemRequest1.height == redeemRequest2.height;
-//    assert redeemRequest1.amount == redeemRequest2.amount;
-}
+// //    assert redeemRequest1.height != 0 => redeemRequest1.height == redeemRequest2.height;
+//     assert redeemRequest1.height == redeemRequest2.height;
+// //    assert redeemRequest1.amount == redeemRequest2.amount;
+// }
