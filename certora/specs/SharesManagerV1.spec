@@ -27,16 +27,11 @@ rule allowanceChangesRestrictively(method f) filtered {
     address owner;
     address spender;
     uint256 allowance_before = allowance(owner, spender);
-<<<<<<< HEAD
     // require allowance_before == 12345;
     require owner != spender;
     f(e, args);
     uint256 allowance_after = allowance(owner, spender);
     // require allowance_after == 23456;
-=======
-    f(e, args);
-    uint256 allowance_after = allowance(owner, spender);
->>>>>>> 14a9242 (Add many rules for SharesManager)
     assert allowance_after == allowance_before;
 }
 
@@ -130,7 +125,6 @@ rule pricePerShareChangesRespectively(method f) filtered {
     assert shares_balance_before == shares_balance_after => underlying_balance_before == underlying_balance_after;
 }
 
-<<<<<<< HEAD
 rule conversionRateStable(env e, method f) filtered {
     f -> !f.isView
         // && f.selector == sig:RiverV1Harness.depositToConsensusLayer(uint256).selector
@@ -165,8 +159,6 @@ rule conversionRateStableRewardsFeesPenalties(env e, method f) filtered {
     assert false;
 }
 
-=======
->>>>>>> 14a9242 (Add many rules for SharesManager)
 // @title After transfer from, balances are updated accordingly, but not of any other user. Also, totalSupply stays the same.
 // Proved:
 // https://prover.certora.com/output/40577/0d75136142bd4b458c77e73f4394f101/?anonymousKey=7c99f012e75eb4143a0c3f5dbc180eda79a0c0db
