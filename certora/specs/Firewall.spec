@@ -1,6 +1,6 @@
 import "Sanity.spec";
 
-use rule sanity;
+use rule method_reachability;
 
 methods {
 }

@@ -1,6 +1,6 @@
 import "RiverV1.spec";
 
-use rule sanity;
+use rule method_reachability;
 
 methods {
 }

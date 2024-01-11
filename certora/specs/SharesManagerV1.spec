@@ -1,12 +1,9 @@
 import "RiverV1.spec";
 
-use rule sanity;
-
 methods {
-    // function _.requestRedeem(uint256, address) external => DISPATCHER(true);
-
     function allowance(address, address) external returns(uint256) envfree;
-    function totalUnderlyingSupply() external returns(uint256) envfree;
+    function balanceOf(address) external returns(uint256) envfree;
+    function balanceOfUnderlying(address) external returns(uint256) envfree;
     function totalSupply() external returns(uint256) envfree;
 }
 
