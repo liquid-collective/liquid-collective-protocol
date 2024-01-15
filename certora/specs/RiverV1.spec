@@ -18,8 +18,7 @@ use rule method_reachability;
 
 
 methods {
-
-
+	
     // AllowlistV1
     function AllowlistV1.onlyAllowed(address, uint256) external envfree;
     function _.onlyAllowed(address, uint256) external => DISPATCHER(true);
@@ -83,6 +82,21 @@ methods {
 
     // MathSummarizations
     function _.mulDivDown(uint256 a, uint256 b, uint256 c) internal => mulDivDownAbstractPlus(a, b, c) expect uint256 ALL;
+
+    //workaroun per CERT-4615 
+    function LibBytes.slice(bytes memory _bytes, uint256 _start, uint256 _length) internal returns (bytes memory) => bytesSliceSummary(_bytes, _start, _length);
+
+}
+
+ghost mapping(bytes32 => mapping(uint => bytes32)) sliceGhost;
+
+function bytesSliceSummary(bytes buffer, uint256 start, uint256 len) returns bytes {
+	bytes to_ret;
+	require(to_ret.length == len);
+	require(buffer.length < require_uint256(start + len));
+	bytes32 buffer_hash = keccak256(buffer);
+	require keccak256(to_ret) == sliceGhost[buffer_hash][start];
+	return to_ret;
 }
 
 // ghost mathint counter_onDeposit; // counter checking number of calls to _onDeposit
