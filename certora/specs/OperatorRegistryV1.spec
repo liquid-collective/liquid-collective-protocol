@@ -1,4 +1,5 @@
 import "Sanity.spec";
+import "CVLMath.spec";
 
 //using AllowlistV1 as AL;
 //using CoverageFundV1 as CF;
@@ -32,6 +33,20 @@ methods {
     function OR.pickNextValidatorsToDeposit(uint256) external returns (bytes[] memory, bytes[] memory) envfree;
     function OR.requestValidatorExits(uint256) external;
     function OR.getOperatorsSaturationDiscrepancy(uint256, uint256) external returns (uint256) envfree;
+
+    //workaroun per CERT-4615 
+    function LibBytes.slice(bytes memory _bytes, uint256 _start, uint256 _length) internal returns (bytes memory) => bytesSliceSummary(_bytes, _start, _length);
+
+}
+
+ghost mapping(bytes32 => mapping(uint => bytes32)) sliceGhost;
+function bytesSliceSummary(bytes buffer, uint256 start, uint256 len) returns bytes {
+	bytes to_ret;
+	require(to_ret.length == len);
+	require(buffer.length < require_uint256(start + len));
+	bytes32 buffer_hash = keccak256(buffer);
+	require keccak256(to_ret) == sliceGhost[buffer_hash][start];
+	return to_ret;
 }
 
 invariant inactiveOperatorsRemainNonFunded(uint opIndex)
