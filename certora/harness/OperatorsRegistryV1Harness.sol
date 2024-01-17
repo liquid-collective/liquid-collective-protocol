@@ -10,6 +10,14 @@ contract OperatorsRegistryV1Harness is OperatorsRegistryV1 {
         return op.operator;
     }
 
+    function getOperatorsCount() external view returns (uint256) {
+        return OperatorsV2.getCount();
+    }
+
+    function getActiveOperatorsCount() external view returns (uint256) {
+        return OperatorsV2.getAllActive().length;
+    }
+
     function operatorStateIsValid(uint256 opIndex) external view returns (bool) {
         OperatorsV2.Operator memory op = OperatorsV2.get(opIndex);
         return op.keys >= op.limit &&
@@ -27,34 +35,49 @@ contract OperatorsRegistryV1Harness is OperatorsRegistryV1 {
         return publicKey;
     }
 
-    function getActiveValidatorsCount(OperatorsV2.CachedOperator memory operator) internal
+    function compare(bytes memory b1, bytes memory b2) external pure returns (bool) {
+        return keccak256(abi.encodePacked(b1)) == keccak256(abi.encodePacked(b2));
+    }
+
+    function getActiveValidatorsCount(OperatorsV2.Operator memory operator) internal view
         returns (uint256)
     {
         return operator.funded - operator.requestedExits;// + operator.picked;
     }
 
-    function getOperatorsSaturationDiscrepancy() internal
-        returns (uint256)
+    function getOperatorsSaturationDiscrepancy() external returns (uint256)
     {
-        //TODO we need to also check the saturated operators for the upper limit
-        (OperatorsV2.CachedOperator[] memory operators, uint256 fundableOperatorCount) = OperatorsV2.getAllFundable();
+        OperatorsV2.Operator[] memory ops = OperatorsV2.getAllActive();
+        uint256 count = ops.length;
 
-        if (fundableOperatorCount <= 1) {
-            return 0;
-        }
-        uint256 minSaturation = getActiveValidatorsCount(operators[0]);
-        uint256 maxSaturation = minSaturation;
+        uint256 minSaturation = type(uint256).max;
+        uint256 maxSaturation = type(uint256).min;
 
-        for (uint256 idx = 1; idx < fundableOperatorCount; ++idx) {
-            uint256 saturation = getActiveValidatorsCount(operators[idx]);
+        for (uint256 idx = 0; idx < count; ++idx) {
+            uint256 saturation = getActiveValidatorsCount(ops[idx]);
             if (saturation > maxSaturation) {
                 maxSaturation = saturation;
             }
-            if (saturation < minSaturation) {
+            if (saturation < minSaturation && ops[idx].limit > ops[idx].funded) {
                 minSaturation = saturation;
             }
         }
         return maxSaturation - minSaturation;
+    }
+
+    function getOperatorsSaturationDiscrepancy(uint256 index1, uint256 index2) external view returns (uint256)
+    {
+        OperatorsV2.Operator[] memory ops = OperatorsV2.getAllActive();
+        uint256 saturation1 = getActiveValidatorsCount(ops[index1]);
+        bool isSaturated1 = ops[index1].limit <= ops[index1].funded;
+        uint256 saturation2 = getActiveValidatorsCount(ops[index2]);
+        bool isSaturated2 = ops[index2].limit <= ops[index2].funded;
+        if (saturation1 == saturation2) return 0;
+        if (saturation1 > saturation2 && !isSaturated2)
+            return saturation1 - saturation2;
+        if (saturation1 < saturation2 && !isSaturated1)
+            return saturation2 - saturation1;
+        return 0;   //means that the less populated one is already fully saturated
     }
 
 }
