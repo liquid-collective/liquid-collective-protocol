@@ -27,8 +27,11 @@ rule allowanceChangesRestrictively(method f) filtered {
     address owner;
     address spender;
     uint256 allowance_before = allowance(owner, spender);
+    // require allowance_before == 12345;
+    require owner != spender;
     f(e, args);
     uint256 allowance_after = allowance(owner, spender);
+    // require allowance_after == 23456;
     assert allowance_after == allowance_before;
 }
 
@@ -120,6 +123,40 @@ rule pricePerShareChangesRespectively(method f) filtered {
     uint256 shares_balance_after = balanceOf(owner);
     uint256 underlying_balance_after = balanceOfUnderlying(owner);
     assert shares_balance_before == shares_balance_after => underlying_balance_before == underlying_balance_after;
+}
+
+rule conversionRateStable(env e, method f) filtered {
+    f -> !f.isView
+        // && f.selector == sig:RiverV1Harness.depositToConsensusLayer(uint256).selector
+} {
+    calldataarg args;
+
+    mathint totalETHBefore = totalSupply();
+    mathint totalLsETHBefore = totalUnderlyingSupply();
+
+    f(e, args);
+
+    mathint totalETHAfter = totalSupply();
+    mathint totalLsETHAfter = totalUnderlyingSupply();
+
+    assert totalETHBefore * totalLsETHAfter == totalETHAfter * totalLsETHBefore;
+}
+
+rule conversionRateStableRewardsFeesPenalties(env e, method f) filtered {
+    f -> !f.isView
+        // && f.selector == sig:RiverV1Harness.depositToConsensusLayer(uint256).selector
+} {
+    calldataarg args;
+
+    mathint totalETHBefore = totalSupply();
+    mathint totalLsETHBefore = totalUnderlyingSupply();
+
+    f(e, args);
+
+    mathint totalETHAfter = totalSupply();
+    mathint totalLsETHAfter = totalUnderlyingSupply();
+
+    assert false;
 }
 
 // @title After transfer from, balances are updated accordingly, but not of any other user. Also, totalSupply stays the same.
