@@ -25,6 +25,12 @@ contract OperatorsRegistryV1Harness is OperatorsRegistryV1 {
             op.funded >= op.requestedExits;
     }
 
+    function getOperatorState(uint256 opIndex) external view 
+        returns (uint256, uint256, uint256, uint256, bool, address) {
+        OperatorsV2.Operator memory op = OperatorsV2.get(opIndex);
+        return (op.keys, op.limit, op.funded, op.requestedExits, op.active, op.operator);
+    }
+
     function operatorIsActive(uint256 opIndex) external view returns (bool) {
         OperatorsV2.Operator memory op = OperatorsV2.get(opIndex);
         return op.active;
@@ -45,7 +51,7 @@ contract OperatorsRegistryV1Harness is OperatorsRegistryV1 {
         return operator.funded - operator.requestedExits;// + operator.picked;
     }
 
-    function getOperatorsSaturationDiscrepancy() external returns (uint256)
+    function getOperatorsSaturationDiscrepancy() external view returns (uint256)
     {
         OperatorsV2.Operator[] memory ops = OperatorsV2.getAllActive();
         uint256 count = ops.length;
@@ -79,5 +85,4 @@ contract OperatorsRegistryV1Harness is OperatorsRegistryV1 {
             return saturation2 - saturation1;
         return 0;   //means that the less populated one is already fully saturated
     }
-
 }
