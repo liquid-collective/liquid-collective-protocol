@@ -23,6 +23,11 @@ contract ConsensusLayerDepositManagerV1ExposeInitializer is ConsensusLayerDeposi
         ConsensusLayerDepositManagerV1.initConsensusLayerDepositManagerV1(
             _depositContractAddress, _withdrawalCredentials
         );
+        _setKeeper(address(0x1));
+    }
+
+    function setKeeper(address _keeper) external {
+        _setKeeper(_keeper);
     }
 
     bytes public _publicKeys =
@@ -112,16 +117,16 @@ contract ConsensusLayerDepositManagerV1Tests is Test {
         vm.deal(address(depositManager), 31.9 ether);
         ConsensusLayerDepositManagerV1ExposeInitializer(address(depositManager)).sudoSyncBalance();
         vm.expectRevert(abi.encodeWithSignature("NotEnoughFunds()"));
-        vm.prank(address(0));
-        depositManager.depositToConsensusLayer(5);
+        vm.prank(address(0x1));
+        depositManager.depositToConsensusLayer(5, bytes32(0));
     }
 
     function testDepositTenValidators() public {
         vm.deal(address(depositManager), 320 ether);
         ConsensusLayerDepositManagerV1ExposeInitializer(address(depositManager)).sudoSyncBalance();
         assert(address(depositManager).balance == 320 ether);
-        vm.prank(address(0));
-        depositManager.depositToConsensusLayer(10);
+        vm.prank(address(0x1));
+        depositManager.depositToConsensusLayer(10, bytes32(0));
         assert(address(depositManager).balance == 0);
     }
 
@@ -129,8 +134,8 @@ contract ConsensusLayerDepositManagerV1Tests is Test {
         vm.deal(address(depositManager), 640 ether);
         ConsensusLayerDepositManagerV1ExposeInitializer(address(depositManager)).sudoSyncBalance();
         assert(address(depositManager).balance == 640 ether);
-        vm.prank(address(0));
-        depositManager.depositToConsensusLayer(20);
+        vm.prank(address(0x1));
+        depositManager.depositToConsensusLayer(20, bytes32(0));
         assert(address(depositManager).balance == 320 ether);
     }
 }
@@ -147,6 +152,11 @@ contract ConsensusLayerDepositManagerV1ControllableValidatorKeyRequest is Consen
         ConsensusLayerDepositManagerV1.initConsensusLayerDepositManagerV1(
             _depositContractAddress, _withdrawalCredentials
         );
+        _setKeeper(address(0x1));
+    }
+
+    function setKeeper(address _keeper) external {
+        _setKeeper(_keeper);
     }
 
     bytes public _publicKeys =
@@ -250,8 +260,8 @@ contract ConsensusLayerDepositManagerV1ErrorTests is Test {
         ConsensusLayerDepositManagerV1ControllableValidatorKeyRequest(address(depositManager)).sudoSyncBalance();
         ConsensusLayerDepositManagerV1ControllableValidatorKeyRequest(address(depositManager)).setScenario(1);
         vm.expectRevert(abi.encodeWithSignature("InconsistentPublicKeys()"));
-        vm.prank(address(0));
-        depositManager.depositToConsensusLayer(5);
+        vm.prank(address(0x1));
+        depositManager.depositToConsensusLayer(5, bytes32(0));
     }
 
     function testInconsistentSignature() public {
@@ -259,8 +269,8 @@ contract ConsensusLayerDepositManagerV1ErrorTests is Test {
         ConsensusLayerDepositManagerV1ControllableValidatorKeyRequest(address(depositManager)).sudoSyncBalance();
         ConsensusLayerDepositManagerV1ControllableValidatorKeyRequest(address(depositManager)).setScenario(2);
         vm.expectRevert(abi.encodeWithSignature("InconsistentSignatures()"));
-        vm.prank(address(0));
-        depositManager.depositToConsensusLayer(5);
+        vm.prank(address(0x1));
+        depositManager.depositToConsensusLayer(5, bytes32(0));
     }
 
     function testUnavailableKeys() public {
@@ -268,8 +278,8 @@ contract ConsensusLayerDepositManagerV1ErrorTests is Test {
         ConsensusLayerDepositManagerV1ControllableValidatorKeyRequest(address(depositManager)).sudoSyncBalance();
         ConsensusLayerDepositManagerV1ControllableValidatorKeyRequest(address(depositManager)).setScenario(3);
         vm.expectRevert(abi.encodeWithSignature("NoAvailableValidatorKeys()"));
-        vm.prank(address(0));
-        depositManager.depositToConsensusLayer(5);
+        vm.prank(address(0x1));
+        depositManager.depositToConsensusLayer(5, bytes32(0));
     }
 
     function testInvalidPublicKeyCount() public {
@@ -277,8 +287,8 @@ contract ConsensusLayerDepositManagerV1ErrorTests is Test {
         ConsensusLayerDepositManagerV1ControllableValidatorKeyRequest(address(depositManager)).sudoSyncBalance();
         ConsensusLayerDepositManagerV1ControllableValidatorKeyRequest(address(depositManager)).setScenario(4);
         vm.expectRevert(abi.encodeWithSignature("InvalidPublicKeyCount()"));
-        vm.prank(address(0));
-        depositManager.depositToConsensusLayer(5);
+        vm.prank(address(0x1));
+        depositManager.depositToConsensusLayer(5, bytes32(0));
     }
 }
 
@@ -292,6 +302,7 @@ contract ConsensusLayerDepositManagerV1WithdrawalCredentialError is Test {
         depositContract = new DepositContractMock();
 
         depositManager = new ConsensusLayerDepositManagerV1ControllableValidatorKeyRequest();
+        vm.store(address(depositManager), bytes32(uint256(keccak256("river.state.depositContractAddress")) - 1), bytes32(uint256(uint160(address(depositContract)))));
         LibImplementationUnbricker.unbrick(vm, address(depositManager));
     }
 
@@ -299,9 +310,10 @@ contract ConsensusLayerDepositManagerV1WithdrawalCredentialError is Test {
         vm.deal(address(depositManager), 32 ether);
         ConsensusLayerDepositManagerV1ControllableValidatorKeyRequest(address(depositManager)).sudoSyncBalance();
         ConsensusLayerDepositManagerV1ControllableValidatorKeyRequest(address(depositManager)).setScenario(0);
+        ConsensusLayerDepositManagerV1ControllableValidatorKeyRequest(address(depositManager)).setKeeper(address(0x1));
         vm.expectRevert(abi.encodeWithSignature("InvalidWithdrawalCredentials()"));
-        vm.prank(address(0));
-        depositManager.depositToConsensusLayer(5);
+        vm.prank(address(0x1));
+        depositManager.depositToConsensusLayer(5, bytes32(0));
         ConsensusLayerDepositManagerV1ExposeInitializer(address(depositManager)).sudoSetWithdrawalCredentials(
             withdrawalCredentials
         );
@@ -326,6 +338,7 @@ contract ConsensusLayerDepositManagerV1ValidKeys is ConsensusLayerDepositManager
         ConsensusLayerDepositManagerV1.initConsensusLayerDepositManagerV1(
             _depositContractAddress, _withdrawalCredentials
         );
+        _setKeeper(address(0x1));
     }
 
     bytes public _publicKeys =
@@ -384,8 +397,9 @@ contract ConsensusLayerDepositManagerV1ValidKeysTest is Test {
     function testDepositValidKey() external {
         vm.deal(address(depositManager), 32 ether);
         ConsensusLayerDepositManagerV1ValidKeys(address(depositManager)).sudoSyncBalance();
-        vm.prank(address(0));
-        depositManager.depositToConsensusLayer(1);
+        vm.store(address(depositManager), bytes32(uint256(keccak256("river.state.KeeperAddress")) - 1), bytes32(uint256(uint160(address(0x1))) ));
+        vm.startPrank(address(0x0000000000000000000000000000000000000001));
+        depositManager.depositToConsensusLayer(1, depositContract.get_deposit_root());
         assert(DepositContractEnhancedMock(address(depositContract)).debug_getLastDepositDataRoot() == depositDataRoot);
     }
 }
@@ -410,7 +424,7 @@ contract ConsensusLayerDepositManagerV1InvalidDepositContract is Test {
         vm.deal(address(depositManager), 32 ether);
         ConsensusLayerDepositManagerV1ValidKeys(address(depositManager)).sudoSyncBalance();
         vm.expectRevert(abi.encodeWithSignature("ErrorOnDeposit()"));
-        vm.prank(address(0));
-        depositManager.depositToConsensusLayer(1);
+        vm.prank(address(0x1));
+        depositManager.depositToConsensusLayer(1, bytes32(0));
     }
 }

@@ -12,6 +12,7 @@ import "../state/river/WithdrawalCredentials.sol";
 import "../state/river/DepositedValidatorCount.sol";
 import "../state/river/BalanceToDeposit.sol";
 import "../state/river/CommittedBalance.sol";
+import "../state/river/KeeperAddress.sol";
 
 /// @title Consensus Layer Deposit Manager (v1)
 /// @author Kiln
@@ -27,6 +28,11 @@ abstract contract ConsensusLayerDepositManagerV1 is IConsensusLayerDepositManage
     uint256 public constant SIGNATURE_LENGTH = 96;
     /// @notice Size of a deposit in ETH
     uint256 public constant DEPOSIT_SIZE = 32 ether;
+
+    modifier onlyKeeper() {
+        require(msg.sender == KeeperAddress.get(), "only keeper");
+        _;
+    }
 
     /// @notice Handler called to retrieve the internal River admin address
     /// @dev Must be Overridden
@@ -57,6 +63,10 @@ abstract contract ConsensusLayerDepositManagerV1 is IConsensusLayerDepositManage
         emit SetWithdrawalCredentials(_withdrawalCredentials);
     }
 
+    function _setKeeper(address _keeper) internal {
+        KeeperAddress.set(_keeper);
+    }
+
     /// @inheritdoc IConsensusLayerDepositManagerV1
     function getCommittedBalance() external view returns (uint256) {
         return CommittedBalance.get();
@@ -78,7 +88,11 @@ abstract contract ConsensusLayerDepositManagerV1 is IConsensusLayerDepositManage
     }
 
     /// @inheritdoc IConsensusLayerDepositManagerV1
-    function depositToConsensusLayer(uint256 _maxCount) external {
+    function depositToConsensusLayer(uint256 _maxCount, bytes32 _depositRoot) external onlyKeeper {
+        if(IDepositContract(DepositContractAddress.get()).get_deposit_root()!= _depositRoot) {
+            revert InvalidDepositRoot();
+        }
+
         uint256 committedBalance = CommittedBalance.get();
         uint256 keyToDepositCount = LibUint256.min(committedBalance / DEPOSIT_SIZE, _maxCount);
 

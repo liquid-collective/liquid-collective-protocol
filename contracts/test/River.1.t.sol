@@ -170,9 +170,11 @@ contract RiverV1Tests is RiverV1TestBase {
             500
         );
         oracle.initOracleV1(address(river), admin, 225, 32, 12, 0, 1000, 500);
+        
 
         vm.startPrank(admin);
         river.setCoverageFund(address(coverageFund));
+        river.setKeeper(admin);
         oracle.addMember(oracleMember, 1);
         // ===================
 
@@ -540,9 +542,9 @@ contract RiverV1Tests is RiverV1TestBase {
         river.debug_moveDepositToCommitted();
 
         vm.prank(admin);
-        river.depositToConsensusLayer(17);
+        river.depositToConsensusLayer(17, bytes32(0));
         vm.prank(admin);
-        river.depositToConsensusLayer(17);
+        river.depositToConsensusLayer(17, bytes32(0));
 
         OperatorsV2.Operator memory op1 = operatorsRegistry.getOperator(operatorOneIndex);
         OperatorsV2.Operator memory op2 = operatorsRegistry.getOperator(operatorTwoIndex);
@@ -579,9 +581,9 @@ contract RiverV1Tests is RiverV1TestBase {
         river.debug_moveDepositToCommitted();
 
         vm.prank(admin);
-        river.depositToConsensusLayer(17);
+        river.depositToConsensusLayer(17, bytes32(0));
         vm.prank(admin);
-        river.depositToConsensusLayer(17);
+        river.depositToConsensusLayer(17, bytes32(0));
 
         OperatorsV2.Operator memory op1 = operatorsRegistry.getOperator(operatorOneIndex);
         OperatorsV2.Operator memory op2 = operatorsRegistry.getOperator(operatorTwoIndex);
@@ -675,9 +677,9 @@ contract RiverV1Tests is RiverV1TestBase {
         river.debug_moveDepositToCommitted();
 
         vm.prank(admin);
-        river.depositToConsensusLayer(17);
+        river.depositToConsensusLayer(17, bytes32(0));
         vm.prank(admin);
-        river.depositToConsensusLayer(17);
+        river.depositToConsensusLayer(17, bytes32(0));
 
         OperatorsV2.Operator memory op1 = operatorsRegistry.getOperator(operatorOneIndex);
         OperatorsV2.Operator memory op2 = operatorsRegistry.getOperator(operatorTwoIndex);
@@ -722,11 +724,11 @@ contract RiverV1Tests is RiverV1TestBase {
         river.debug_moveDepositToCommitted();
 
         vm.prank(admin);
-        river.depositToConsensusLayer(1);
+        river.depositToConsensusLayer(1, bytes32(0));
         vm.prank(admin);
-        river.depositToConsensusLayer(2);
+        river.depositToConsensusLayer(2, bytes32(0));
         vm.prank(admin);
-        river.depositToConsensusLayer(31);
+        river.depositToConsensusLayer(31, bytes32(0));
 
         OperatorsV2.Operator memory op1 = operatorsRegistry.getOperator(operatorOneIndex);
         OperatorsV2.Operator memory op2 = operatorsRegistry.getOperator(operatorTwoIndex);
@@ -763,14 +765,14 @@ contract RiverV1Tests is RiverV1TestBase {
         river.debug_moveDepositToCommitted();
 
         vm.prank(admin);
-        river.depositToConsensusLayer(20);
+        river.depositToConsensusLayer(20, bytes32(0));
         uint32[] memory stoppedCounts = new uint32[](3);
         stoppedCounts[0] = 10;
         stoppedCounts[1] = 10;
         stoppedCounts[2] = 0;
         operatorsRegistry.sudoStoppedValidatorCounts(stoppedCounts, 20);
         vm.prank(admin);
-        river.depositToConsensusLayer(10);
+        river.depositToConsensusLayer(10, bytes32(0));
 
         OperatorsV2.Operator memory op1 = operatorsRegistry.getOperator(operatorOneIndex);
         OperatorsV2.Operator memory op2 = operatorsRegistry.getOperator(operatorTwoIndex);
@@ -844,7 +846,7 @@ contract RiverV1TestsReport_HEAVY_FUZZING is RiverV1TestBase {
 
         oracle.addMember(oracleMember, 1);
         river.setCoverageFund(address(coverageFund));
-
+        river.setKeeper(admin);
         vm.stopPrank();
     }
 
@@ -949,7 +951,7 @@ contract RiverV1TestsReport_HEAVY_FUZZING is RiverV1TestBase {
         }
 
         vm.prank(admin);
-        river.depositToConsensusLayer(depositCount);
+        river.depositToConsensusLayer(depositCount, bytes32(0));
 
         _newSalt = _salt;
     }
@@ -1744,7 +1746,7 @@ contract RiverV1TestsReport_HEAVY_FUZZING is RiverV1TestBase {
         river.debug_moveDepositToCommitted();
 
         vm.prank(admin);
-        river.depositToConsensusLayer(count);
+        river.depositToConsensusLayer(count, bytes32(0));
 
         return _salt;
     }
