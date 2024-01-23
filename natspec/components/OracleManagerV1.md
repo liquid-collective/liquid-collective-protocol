@@ -342,9 +342,9 @@ The consensus layer data provided by the oracle has been updated
 
 | Name | Type | Description |
 |---|---|---|
-| validatorCount  | uint256 | undefined |
-| validatorTotalBalance  | uint256 | undefined |
-| roundId  | bytes32 | undefined |
+| validatorCount  | uint256 | The new count of validators running on the consensus layer |
+| validatorTotalBalance  | uint256 | The new total balance sum of all validators |
+| roundId  | bytes32 | Round identifier |
 
 ### ProcessedConsensusLayerReport
 
@@ -360,8 +360,8 @@ The provided report has beend processed
 
 | Name | Type | Description |
 |---|---|---|
-| report  | IOracleManagerV1.ConsensusLayerReport | undefined |
-| trace  | IOracleManagerV1.ConsensusLayerDataReportingTrace | undefined |
+| report  | IOracleManagerV1.ConsensusLayerReport | The report that was provided |
+| trace  | IOracleManagerV1.ConsensusLayerDataReportingTrace | The trace structure providing more insights on internals |
 
 ### SetBounds
 
@@ -377,8 +377,8 @@ The Report Bounds are changed
 
 | Name | Type | Description |
 |---|---|---|
-| annualAprUpperBound  | uint256 | undefined |
-| relativeLowerBound  | uint256 | undefined |
+| annualAprUpperBound  | uint256 | The reporting upper bound |
+| relativeLowerBound  | uint256 | The reporting lower bound |
 
 ### SetOracle
 
@@ -394,7 +394,7 @@ The stored oracle address changed
 
 | Name | Type | Description |
 |---|---|---|
-| oracleAddress `indexed` | address | undefined |
+| oracleAddress `indexed` | address | The new oracle address |
 
 ### SetSpec
 
@@ -410,11 +410,11 @@ The Consensus Layer Spec is changed
 
 | Name | Type | Description |
 |---|---|---|
-| epochsPerFrame  | uint64 | undefined |
-| slotsPerEpoch  | uint64 | undefined |
-| secondsPerSlot  | uint64 | undefined |
-| genesisTime  | uint64 | undefined |
-| epochsToAssumedFinality  | uint64 | undefined |
+| epochsPerFrame  | uint64 | The number of epochs inside a frame |
+| slotsPerEpoch  | uint64 | The number of slots inside an epoch |
+| secondsPerSlot  | uint64 | The number of seconds inside a slot |
+| genesisTime  | uint64 | The genesis timestamp |
+| epochsToAssumedFinality  | uint64 | The number of epochs before an epoch is considered final |
 
 
 

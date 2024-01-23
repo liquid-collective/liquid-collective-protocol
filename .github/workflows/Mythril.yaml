@@ -11,11 +11,16 @@ jobs:
     strategy:
       matrix:
         contract:
-          - { file: River.1.sol, name: RiverV1}
+          - { file: River.1.sol, name: RiverV1 }
           - { file: Oracle.1.sol, name: OracleV1 }
-          - { file: Withdraw.1.sol, name: WithdrawV1}
-          - { file: Allowlist.1.sol, name: AllowlistV1}
-          - { file: Firewall.sol, name: Firewall}
+          - { file: Withdraw.1.sol, name: WithdrawV1 }
+          - { file: Allowlist.1.sol, name: AllowlistV1 }
+          - { file: Firewall.sol, name: Firewall }
+          - { file: RedeemManager.1.sol, name: RedeemManagerV1 }
+          - { file: ELFeeRecipient.1.sol, name: ELFeeRecipientV1 }
+          - { file: OperatorsRegistry.1.sol, name: OperatorsRegistryV1 }
+          - { file: CoverageFund.1.sol, name: CoverageFundV1 }
+          - { file: TLC.1.sol, name: TLCV1 }
     steps:
       - uses: actions/checkout@v3
         with:
@@ -24,7 +29,9 @@ jobs:
       - name: Mythril analysis
         uses: ./actions/mythril
         with:
+          command: yarn link_contracts
           contract: "./contracts/src/${{ matrix.contract.file }}:${{ matrix.contract.name }}"
+          fail_ci_if_error: true
 
       - name: Rename output artifact
         run: mv mythril_output.md ${{ matrix.contract.name }}.mythril.md

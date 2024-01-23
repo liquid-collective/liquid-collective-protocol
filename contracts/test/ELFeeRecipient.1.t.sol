@@ -1,6 +1,6 @@
-//SPDX-License-Identifier: MIT
+//SPDX-License-Identifier: BUSL-1.1
 
-pragma solidity 0.8.10;
+pragma solidity 0.8.20;
 
 import "forge-std/Test.sol";
 
@@ -21,7 +21,7 @@ contract RiverDonationMock {
     }
 }
 
-contract ELFeeRecipientV1Test is Test {
+abstract contract ELFeeRecipientV1TestBase is Test {
     ELFeeRecipientV1 internal feeRecipient;
 
     RiverDonationMock internal river;
@@ -29,7 +29,23 @@ contract ELFeeRecipientV1Test is Test {
 
     event BalanceUpdated(uint256 amount);
     event SetRiver(address indexed river);
+}
 
+contract ELFeeRecipientV1InitializationTests is ELFeeRecipientV1TestBase {
+    function setUp() public {
+        river = new RiverDonationMock();
+        feeRecipient = new ELFeeRecipientV1();
+        LibImplementationUnbricker.unbrick(vm, address(feeRecipient));
+    }
+
+    function testInitialization() external {
+        vm.expectEmit(true, true, true, true);
+        emit SetRiver(address(river));
+        feeRecipient.initELFeeRecipientV1(address(river));
+    }
+}
+
+contract ELFeeRecipientV1Test is ELFeeRecipientV1TestBase {
     function setUp() public {
         river = new RiverDonationMock();
         feeRecipient = new ELFeeRecipientV1();
@@ -101,6 +117,12 @@ contract ELFeeRecipientV1Test is Test {
         river.pullELFees(address(feeRecipient), address(feeRecipient).balance / 2);
     }
 
+    function testNoFundPulled() external {
+        vm.deal(address(feeRecipient), 0);
+        river.pullELFees(address(feeRecipient), 0);
+        assertEq(0, address(river).balance);
+    }
+
     function testPullFundsUnauthorized(uint256 _senderSalt, uint256 _amount) external {
         address sender = uf._new(_senderSalt);
         vm.deal(sender, _amount);
@@ -110,6 +132,16 @@ contract ELFeeRecipientV1Test is Test {
 
         vm.expectRevert(abi.encodeWithSignature("Unauthorized(address)", sender));
         feeRecipient.pullELFees(address(feeRecipient).balance);
+        vm.stopPrank();
+    }
+
+    function testFallbackFail() external {
+        address sender = uf._new(1);
+        vm.deal(sender, 1e18);
+
+        vm.startPrank(sender);
+        vm.expectRevert(abi.encodeWithSignature("InvalidCall()"));
+        address(feeRecipient).call{value: 1e18}(abi.encodeWithSignature("Hello()"));
         vm.stopPrank();
     }
 }

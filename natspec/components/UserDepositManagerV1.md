@@ -55,9 +55,9 @@ User deposited ETH in the system
 
 | Name | Type | Description |
 |---|---|---|
-| depositor `indexed` | address | undefined |
-| recipient `indexed` | address | undefined |
-| amount  | uint256 | undefined |
+| depositor `indexed` | address | Address performing the deposit |
+| recipient `indexed` | address | Address receiving the minted shares |
+| amount  | uint256 | Amount in ETH deposited |
 
 
 

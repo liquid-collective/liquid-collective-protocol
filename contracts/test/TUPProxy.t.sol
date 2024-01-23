@@ -1,11 +1,13 @@
 //SPDX-License-Identifier: BUSL-1.1
-pragma solidity >=0.8.10;
+pragma solidity 0.8.20;
 
 import "forge-std/Test.sol";
 import "./utils/LibRlp.sol";
 
 import "../src/TUPProxy.sol";
 import "../src/Firewall.sol";
+import {ITransparentUpgradeableProxy} from
+    "openzeppelin-contracts/contracts/proxy/transparent/TransparentUpgradeableProxy.sol";
 
 contract DummyCounter {
     error BigError(uint256);
@@ -95,7 +97,9 @@ contract TUPProxyTest is Test {
     function testUpgradeToAndCall() public {
         assert(DummyCounter(address(proxy)).i() == 0);
         vm.startPrank(admin);
-        proxy.upgradeToAndCall(address(implemEvolved), abi.encodeWithSignature("initEvolved(uint256)", 5));
+        ITransparentUpgradeableProxy(address(proxy)).upgradeToAndCall(
+            address(implemEvolved), abi.encodeWithSignature("initEvolved(uint256)", 5)
+        );
         vm.stopPrank();
         assert(DummyCounterEvolved(address(proxy)).i() == 5);
         DummyCounterEvolved(address(proxy)).superInc();
@@ -208,7 +212,7 @@ contract TUPProxyBehindFirewallTest is Test {
     function testUpgradeToAndCallFromGovernor() public {
         assert(DummyCounter(address(proxy)).i() == 0);
         vm.prank(governor);
-        TUPProxy(payable(address(firewall))).upgradeToAndCall(
+        ITransparentUpgradeableProxy(payable(address(firewall))).upgradeToAndCall(
             address(implemEvolved), abi.encodeWithSignature("initEvolved(uint256)", 5)
         );
         assert(DummyCounterEvolved(address(proxy)).i() == 5);
@@ -221,7 +225,7 @@ contract TUPProxyBehindFirewallTest is Test {
         assert(DummyCounter(address(proxy)).i() == 0);
         vm.prank(executor);
         vm.expectRevert(abi.encodeWithSignature("Unauthorized(address)", executor));
-        TUPProxy(payable(address(firewall))).upgradeToAndCall(
+        ITransparentUpgradeableProxy(payable(address(firewall))).upgradeToAndCall(
             address(implemEvolved), abi.encodeWithSignature("initEvolved(uint256)", 5)
         );
     }

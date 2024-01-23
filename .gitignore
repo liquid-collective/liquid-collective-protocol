@@ -17,7 +17,9 @@ out
 
 deployment.local.json
 deployments/local
+deployments/localhost
 deployments/tenderly
 
 .DS_Store
 .idea
+lcov.info

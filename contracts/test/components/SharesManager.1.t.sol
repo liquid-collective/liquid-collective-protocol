@@ -1,6 +1,6 @@
-//SPDX-License-Identifier: MIT
+//SPDX-License-Identifier: BUSL-1.1
 
-pragma solidity 0.8.10;
+pragma solidity 0.8.20;
 
 import "forge-std/Test.sol";
 
@@ -82,6 +82,10 @@ contract SharesManagerV1Tests is Test {
         uint256 expectedBalance = (supply * 10 ether) / (shares + 10 ether);
 
         assert(sharesManager.balanceOfUnderlying(_user) == expectedBalance);
+    }
+
+    function testUnderlyingBalanceFromShares(uint256 _userSalt) public {
+        assert(sharesManager.underlyingBalanceFromShares(_userSalt) == 0);
     }
 
     function testBalanceOf(uint256 _userSalt, uint256 _anotherUserSalt) public {
@@ -559,5 +563,9 @@ contract SharesManagerV1Tests is Test {
         vm.expectRevert(abi.encodeWithSignature("BalanceTooLow()"));
         sharesManager.transfer(_userTwo, 1);
         vm.stopPrank();
+    }
+
+    function testExternalViewFunctions() external {
+        assert(0 == sharesManager.sharesFromUnderlyingBalance(1));
     }
 }

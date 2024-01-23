@@ -1,12 +1,14 @@
-//SPDX-License-Identifier: MIT
+//SPDX-License-Identifier: BUSL-1.1
 
-pragma solidity 0.8.10;
+pragma solidity 0.8.20;
 
 import "forge-std/Test.sol";
 
 import "../../../src/TUPProxy.sol";
 import "../../../src/TLC.1.sol";
 import "../../../src/state/tlc/VestingSchedules.2.sol";
+import {ITransparentUpgradeableProxy} from
+    "openzeppelin-contracts/contracts/proxy/transparent/TransparentUpgradeableProxy.sol";
 
 contract VestingSchedulesMigrationV1ToV2 is Test {
     bool internal _skip = false;
@@ -35,7 +37,7 @@ contract VestingSchedulesMigrationV1ToV2 is Test {
         TLCV1 newImplementation = new TLCV1();
 
         vm.prank(TLC_MAINNET_PROXY_ADMIN_ADDRESS);
-        tlcProxy.upgradeToAndCall(
+        ITransparentUpgradeableProxy(address(tlcProxy)).upgradeToAndCall(
             address(newImplementation), abi.encodeWithSelector(TLCV1.migrateVestingSchedules.selector)
         );
 

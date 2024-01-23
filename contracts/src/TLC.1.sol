@@ -1,5 +1,5 @@
 //SPDX-License-Identifier: BUSL-1.1
-pragma solidity 0.8.10;
+pragma solidity 0.8.20;
 
 import "./components/ERC20VestableVotesUpgradeable.1.sol";
 import "./interfaces/ITLC.1.sol";
@@ -10,7 +10,7 @@ import "./interfaces/ITLC.1.sol";
 /// @notice Upon deployment, all minted tokens are send to account provided at construction, in charge of creating the vesting schedules
 /// @notice The contract is based on ERC20Votes by OpenZeppelin. Users need to delegate their voting power to someone or themselves to be able to vote.
 /// @notice The contract contains vesting logics allowing vested users to still be able to delegate their voting power while their tokens are held in an escrow
-contract TLCV1 is ERC20VestableVotesUpgradeableV1, ITLCV1 {
+contract TLCV1 is ITLCV1, ERC20VestableVotesUpgradeableV1 {
     // Token information
     string internal constant NAME = "Liquid Collective";
     string internal constant SYMBOL = "TLC";

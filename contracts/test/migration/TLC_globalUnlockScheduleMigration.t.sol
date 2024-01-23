@@ -1,5 +1,5 @@
 //SPDX-License-Identifier: BUSL-1.1
-pragma solidity 0.8.10;
+pragma solidity 0.8.20;
 
 import "forge-std/Test.sol";
 
@@ -9,13 +9,18 @@ import "../../src/TLC.1.sol";
 contract TlcMigrationTest is Test {
     TlcMigration migrationsContract;
     TLCV1 tlc;
+    string rpc;
+
+    function setUp() public {
+        rpc = vm.rpcUrl("mainnet");
+    }
 
     function testCreate() public {
         migrationsContract = new TlcMigration();
     }
 
     function testGas() public {
-        vm.createSelectFork("http://127.0.0.1:8545", 18063740);
+        vm.createSelectFork(rpc, 18063740);
 
         migrationsContract = new TlcMigration();
         proxy tlcProxy = proxy(0xb5Fe6946836D687848B5aBd42dAbF531d5819632);
@@ -25,7 +30,7 @@ contract TlcMigrationTest is Test {
 
     function testMigrate() public {
         // Significantly faster when cached locally, run a local fork for best perf (anvil recommended)
-        vm.createSelectFork("http://127.0.0.1:8545", 18063740);
+        vm.createSelectFork(rpc, 18063740);
 
         proxy tlcProxy = proxy(0xb5Fe6946836D687848B5aBd42dAbF531d5819632);
         assertEq(tlcProxy.getVestingScheduleCount(), 67);
