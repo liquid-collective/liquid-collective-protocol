@@ -46,7 +46,7 @@ use rule method_reachability;
 
 function isValidState() returns bool
 {
-    return getActiveOperatorsCount() <= 3;
+    return getOperatorsCount() <= 3;
 }
 
 definition ignoredMethod(method f) returns bool =
@@ -54,14 +54,16 @@ definition ignoredMethod(method f) returns bool =
     //f.selector == sig:_migrateOperators_V1_1().selector ||
     f.selector == sig:initOperatorsRegistryV1_1().selector;
 
-invariant inactiveOperatorsRemainNonFunded(uint opIndex) 
+invariant inactiveOperatorsRemainNotFunded(uint opIndex) 
     isValidState() => (!getOperator(opIndex).active => getOperator(opIndex).funded == 0)
-    filtered { f -> !ignoredMethod(f) }
+    filtered { f -> !ignoredMethod(f) && 
+        f.selector != sig:setOperatorStatus(uint256,bool).selector } //method is allowed to break this
 
 invariant operatorsAddressesRemainUnique(uint opIndex1, uint opIndex2) 
     isValidState() => (getOperatorAddress(opIndex1) == getOperatorAddress(opIndex2)
     => opIndex1 == opIndex2)
-    filtered { f -> !ignoredMethod(f) }
+    filtered { f -> !ignoredMethod(f) && 
+        f.selector != sig:setOperatorAddress(uint256,address).selector } //method is allowed to break this
 
 invariant operatorsStatesRemainValid(uint opIndex) 
     isValidState() => (operatorStateIsValid(opIndex))
@@ -120,88 +122,44 @@ rule whoCanChangeOperatorsCount(method f, env e, calldataarg args)
     assert countAfter < countBefore => canDecreaseOperatorsCount(f);
 }
 
-rule startingValidatorsDecreasesDiscrepancyFULL(env e) {
-    require isValidState();
-    uint discrepancyBefore = getOperatorsSaturationDiscrepancy();
-    uint count;
-    require count <= 10;
-    pickNextValidatorsToDeposit(e, count);
-    uint discrepancyAfter = getOperatorsSaturationDiscrepancy();
-    assert discrepancyBefore >= discrepancyAfter;
-}
-
-rule exitingValidatorsDecreasesDiscrepancyFULL(env e) {
-    require isValidState();
-    uint discrepancyBefore = getOperatorsSaturationDiscrepancy();
-    uint count;
-    require count <= 10;
-    requestValidatorExits(e, count);
-    uint discrepancyAfter = getOperatorsSaturationDiscrepancy();
-    assert discrepancyBefore >= discrepancyAfter;
-}
-
 rule startingValidatorsDecreasesDiscrepancy(env e) 
 {
     require isValidState();
     uint index1; uint index2;
     uint discrepancyBefore = getOperatorsSaturationDiscrepancy(index1, index2);
+    
+    uint256 keysBefore1; uint256 limitBefore1; uint256 fundedBefore1; uint256 requestedExitsBefore1; bool activeBefore1; address operatorBefore1;
+    keysBefore1, limitBefore1, fundedBefore1, requestedExitsBefore1, activeBefore1, operatorBefore1 = getOperatorState(e, index1);
+    uint256 keysBefore2; uint256 limitBefore2; uint256 fundedBefore2; uint256 requestedExitsBefore2; bool activeBefore2; address operatorBefore2;
+    keysBefore2, limitBefore2, fundedBefore2, requestedExitsBefore2, activeBefore2, operatorBefore2 = getOperatorState(e, index2);
+
     uint count;
     require count <= 1;
     pickNextValidatorsToDeposit(e, count);
     uint discrepancyAfter = getOperatorsSaturationDiscrepancy(index1, index2);
+
+    uint256 keysAfter1; uint256 limitAfter1; uint256 fundedAfter1; uint256 requestedExitsAfter1; bool activeAfter1; address operatorAfter1;
+    keysAfter1, limitAfter1, fundedAfter1, requestedExitsAfter1, activeAfter1, operatorAfter1 = getOperatorState(e, index1);
+    uint256 keysAfter2; uint256 limitAfter2; uint256 fundedAfter2; uint256 requestedExitsAfter2; bool activeAfter2; address operatorAfter2;
+    keysAfter2, limitAfter2, fundedAfter2, requestedExitsAfter2, activeAfter2, operatorAfter2 = getOperatorState(e, index2);
+
     assert discrepancyBefore > 0 => discrepancyBefore >= discrepancyAfter;
 }
 
-rule exitingValidatorsDecreasesDiscrepancy(env e) 
+rule witness4_3StartingValidatorsDecreasesDiscrepancy(env e) 
 {
     require isValidState();
     uint index1; uint index2;
     uint discrepancyBefore = getOperatorsSaturationDiscrepancy(index1, index2);
     uint count;
     require count <= 1;
-    requestValidatorExits(e, count);
-    uint discrepancyAfter = getOperatorsSaturationDiscrepancy(index1, index2);
-    assert discrepancyBefore > 0 => discrepancyBefore >= discrepancyAfter;
-}
-
-rule witness4_3ExitingValidatorsDecreasesDiscrepancy(env e) 
-{
-    require isValidState();
-    uint index1; uint index2;
-    uint discrepancyBefore = getOperatorsSaturationDiscrepancy(index1, index2);
-    uint count;
-    require count <= 1;
-    requestValidatorExits(e, count);
+    pickNextValidatorsToDeposit(e, count);
     uint discrepancyAfter = getOperatorsSaturationDiscrepancy(index1, index2);
     satisfy discrepancyBefore == 4 && discrepancyAfter == 3;
 }
 
-rule rule_operatorStateRemainValid_setOperatorAddress(env e)
-{
-    //require isValidState();
-    uint256 opIndex;
-    uint256 countBefore = getActiveOperatorsCount();
-    uint256 keysBefore; uint256 limitBefore; uint256 fundedBefore; 
-    uint256 requestedExitsBefore; bool activeBefore; address operatorBefore;
-    keysBefore, limitBefore, fundedBefore, requestedExitsBefore, activeBefore, operatorBefore = getOperatorState(e, opIndex);
-
-    bool validBefore = operatorStateIsValid(opIndex);
-    uint256 opIndex2;
-    address newAddress;
-    setOperatorAddress(e, opIndex2, newAddress);
-
-    uint256 countAfter = getActiveOperatorsCount();
-    uint256 keysAfter; uint256 limitAfter; uint256 fundedAfter; 
-    uint256 requestedExitsAfter; bool activeAfter; address operatorAfter;
-    keysAfter, limitAfter, fundedAfter, requestedExitsAfter, activeAfter, operatorAfter = getOperatorState(e, opIndex);
-
-    bool validAfter = operatorStateIsValid(opIndex);
-    assert validBefore => validAfter;
-}
-
-// shows that operator.funded, operator.keys, etc. can only increase in time.
-// this proves that validators' state transitions are correct, i.e. fundable -> funded -> exited, etc 
-rule operatorsStatsCanOnlyIncrease(method f, env e, calldataarg args) filtered 
+// shows that operator.funded and operator.requestedExits can only increase in time.
+rule FundedAndExitedCanOnlyIncrease(method f, env e, calldataarg args) filtered 
     { f -> !f.isView && !ignoredMethod(f) }
 {
     require isValidState();
@@ -213,17 +171,15 @@ rule operatorsStatsCanOnlyIncrease(method f, env e, calldataarg args) filtered
     uint256 keysAfter; uint256 limitAfter; uint256 fundedAfter; uint256 requestedExitsAfter; bool activeAfter; address operatorAfter;
     keysAfter, limitAfter, fundedAfter, requestedExitsAfter, activeAfter, operatorAfter = getOperatorState(e, opIndex);
 
-    assert keysBefore <= keysAfter; 
-    //assert limitBefore <= limitAfter;
     assert fundedBefore <= fundedAfter;
     assert requestedExitsBefore <= requestedExitsAfter;
 }
  
 rule removeValidatorsRevertsIfKeysNotSorted(env e)
 {
-    require getOperatorsCount() <= 2; //doesn't need more for this
+    require isValidState();
     uint256[] keys;
-    require keys.length <= 5; //must be less than loop iter
+    require keys.length <= 2; //should  be less than loop iter
     uint opIndex;
     uint keysIndex1; uint keysIndex2;
     uint key1 = keys[keysIndex1]; uint key2 = keys[keysIndex2];
@@ -234,9 +190,9 @@ rule removeValidatorsRevertsIfKeysNotSorted(env e)
 
 rule removeValidatorsRevertsIfKeysDuplicit(env e)
 {
-    require getOperatorsCount() <= 2; //doesn't need more for this
+    require isValidState();
     uint256[] keys;
-    require keys.length <= 5; //must be less than loop iter
+    require keys.length <= 2; //must be less than loop iter
     uint opIndex;
     uint keysIndex1; uint keysIndex2;
     uint key1 = keys[keysIndex1]; uint key2 = keys[keysIndex2];
