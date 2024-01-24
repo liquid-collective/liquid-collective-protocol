@@ -73,8 +73,9 @@ contract OperatorsRegistryV1Harness is OperatorsRegistryV1 {
 
     function getOperatorsSaturationDiscrepancy(uint256 index1, uint256 index2) external view returns (uint256)
     {
-        OperatorsV2.Operator[] memory ops = OperatorsV2.getAll();
+        OperatorsV2.Operator[] storage ops = OperatorsV2.getAll();
         if (!ops[index1].active || !ops[index2].active) return 0;   //inactive operators are not included in this
+        
         uint256 saturation1 = getActiveValidatorsCount(ops[index1]);
         bool isSaturated1 = ops[index1].limit <= ops[index1].funded;
         uint256 saturation2 = getActiveValidatorsCount(ops[index2]);
