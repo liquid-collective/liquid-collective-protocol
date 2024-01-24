@@ -1,5 +1,6 @@
 import "Sanity.spec";
 import "CVLMath.spec";
+//import "OperatorRegistryV1_base.spec";
 
 using OperatorsRegistryV1Harness as OR;
 
@@ -36,13 +37,20 @@ ghost mapping(bytes32 => mapping(uint => bytes32)) sliceGhost;
 function bytesSliceSummary(bytes buffer, uint256 start, uint256 len) returns bytes {
 	bytes to_ret;
 	require(to_ret.length == len);
-	require(buffer.length < require_uint256(start + len));
+	require(buffer.length <= require_uint256(start + len));
 	bytes32 buffer_hash = keccak256(buffer);
 	require keccak256(to_ret) == sliceGhost[buffer_hash][start];
 	return to_ret;
 }
 
 use rule method_reachability;
+
+//these methods require loopiter of 4
+// LI3: https://prover.certora.com/output/6893/452145271ff04d63a8db8ccc56dde1ff/?anonymousKey=fdd8d20db9a84dc5c1d5be848cb14ef6c6f6705b
+// LI4: https://prover.certora.com/output/6893/53cc556c787641b8b4f46582b884927d/?anonymousKey=926967facfef0c6ba24b2a0e6db960f5bca93584
+definition needsLoopIter4(method f) returns bool =
+    f.selector == sig:addValidators(uint256,uint32,bytes).selector ||
+    f.selector == sig:reportStoppedValidatorCounts(uint32[],uint256).selector;
 
 function isValidState() returns bool
 {
@@ -126,6 +134,9 @@ rule startingValidatorsDecreasesDiscrepancy(env e)
 {
     require isValidState();
     uint index1; uint index2;
+    requireInvariant operatorsStatesRemainValid(index1);
+    requireInvariant operatorsStatesRemainValid(index2);
+
     uint discrepancyBefore = getOperatorsSaturationDiscrepancy(index1, index2);
     
     uint256 keysBefore1; uint256 limitBefore1; uint256 fundedBefore1; uint256 requestedExitsBefore1; bool activeBefore1; address operatorBefore1;
@@ -150,6 +161,9 @@ rule witness4_3StartingValidatorsDecreasesDiscrepancy(env e)
 {
     require isValidState();
     uint index1; uint index2;
+    requireInvariant operatorsStatesRemainValid(index1);
+    requireInvariant operatorsStatesRemainValid(index2);
+    
     uint discrepancyBefore = getOperatorsSaturationDiscrepancy(index1, index2);
     uint count;
     require count <= 1;

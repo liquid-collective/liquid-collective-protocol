@@ -54,6 +54,8 @@ definition ignoredMethod(method f) returns bool =
     //f.selector == sig:_migrateOperators_V1_1().selector ||
     f.selector == sig:initOperatorsRegistryV1_1().selector;
 
+//Holds for loop iter 3 and at most 3 operators
+//https://prover.certora.com/output/6893/3a9868a0e6644417a20fc6ab467b2674/?anonymousKey=9120cd1a469c6f54a750187052fdd95efdd53c9f
 rule exitingValidatorsDecreasesDiscrepancy(env e) 
 {
     require isValidState();
