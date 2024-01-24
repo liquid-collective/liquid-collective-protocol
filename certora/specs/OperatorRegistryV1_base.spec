@@ -41,8 +41,8 @@ function bytesSliceSummary(bytes buffer, uint256 start, uint256 len) returns byt
 	return to_ret;
 }
 
-//these methods require loopiter of 4
-// LI3: https://prover.certora.com/output/6893/452145271ff04d63a8db8ccc56dde1ff/?anonymousKey=fdd8d20db9a84dc5c1d5be848cb14ef6c6f6705b
+//these methods require loopiter of 4. All the other require just 2.
+// LI2: https://prover.certora.com/output/6893/3d347a54f192495b92462196b66a30d3/?anonymousKey=d426e148bff7c5bac48c4f68cec38b84ad2d5a2a
 // LI4: https://prover.certora.com/output/6893/53cc556c787641b8b4f46582b884927d/?anonymousKey=926967facfef0c6ba24b2a0e6db960f5bca93584
 definition needsLoopIter4(method f) returns bool =
     f.selector == sig:addValidators(uint256,uint32,bytes).selector ||

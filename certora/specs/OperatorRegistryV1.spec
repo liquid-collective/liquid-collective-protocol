@@ -4,20 +4,34 @@ import "OperatorRegistryV1_base.spec";
 
 use rule method_reachability;
 
-invariant inactiveOperatorsRemainNotFunded(uint opIndex) 
+invariant inactiveOperatorsRemainNotFunded_LI2(uint opIndex) 
     isValidState() => (!getOperator(opIndex).active => getOperator(opIndex).funded == 0)
-    filtered { f -> !ignoredMethod(f) && 
+    filtered { f -> !ignoredMethod(f) && !needsLoopIter4(f) && 
         f.selector != sig:setOperatorStatus(uint256,bool).selector } //method is allowed to break this
 
-invariant operatorsAddressesRemainUnique(uint opIndex1, uint opIndex2) 
-    isValidState() => (getOperatorAddress(opIndex1) == getOperatorAddress(opIndex2)
-    => opIndex1 == opIndex2)
-    filtered { f -> !ignoredMethod(f) && 
-        f.selector != sig:setOperatorAddress(uint256,address).selector } //method is allowed to break this
+invariant inactiveOperatorsRemainNotFunded_LI4(uint opIndex) 
+    isValidState() => (!getOperator(opIndex).active => getOperator(opIndex).funded == 0)
+    filtered { f -> !ignoredMethod(f) && needsLoopIter4(f) && 
+        f.selector != sig:setOperatorStatus(uint256,bool).selector } //method is allowed to break this
 
-invariant operatorsStatesRemainValid(uint opIndex) 
+invariant operatorsStatesRemainValid_LI2_hardMethods(uint opIndex) 
     isValidState() => (operatorStateIsValid(opIndex))
-    filtered { f -> !ignoredMethod(f) }
+    filtered { f -> !ignoredMethod(f) && 
+    !needsLoopIter4(f) && 
+    f.selector == sig:requestValidatorExits(uint256).selector ||
+    f.selector == sig:pickNextValidatorsToDeposit(uint256).selector ||
+    f.selector == sig:removeValidators(uint256,uint256[]).selector
+    }
+
+invariant operatorsStatesRemainValid_LI4_m1(uint opIndex) 
+    isValidState() => (operatorStateIsValid(opIndex))
+    filtered { f -> !ignoredMethod(f) && 
+    f.selector != sig:reportStoppedValidatorCounts(uint32[],uint256).selector }
+
+invariant operatorsStatesRemainValid_LI4_m2(uint opIndex) 
+    isValidState() => (operatorStateIsValid(opIndex))
+    filtered { f -> !ignoredMethod(f) && 
+    f.selector != sig:addValidators(uint256,uint32,bytes).selector }
 
 invariant validatorKeysRemainUnique(
     uint opIndex1, uint valIndex1,
@@ -27,8 +41,9 @@ invariant validatorKeysRemainUnique(
         (opIndex1 == opIndex2 && valIndex1 == valIndex2))
     filtered { f -> !ignoredMethod(f) }
 
-rule whoCanDeactivateOperator(method f, env e, calldataarg args)
-    filtered { f -> f.contract == currentContract && !ignoredMethod(f) } 
+rule whoCanDeactivateOperator_LI2(method f, env e, calldataarg args)
+    filtered { f -> f.contract == currentContract 
+        && !ignoredMethod(f) && !needsLoopIter4(f) } 
 {
     require isValidState();
     uint opIndex;
@@ -39,23 +54,27 @@ rule whoCanDeactivateOperator(method f, env e, calldataarg args)
     assert (!isActiveBefore && isActiveAfter) => canActivateOperators(f);
 }
 
-rule whoCanChangeOperatorsCount(method f, env e, calldataarg args) 
-    filtered { f -> f.contract == currentContract && !ignoredMethod(f) } 
+rule whoCanDeactivateOperator_LI4(method f, env e, calldataarg args)
+    filtered { f -> f.contract == currentContract && 
+        !ignoredMethod(f) && needsLoopIter4(f) } 
 {
     require isValidState();
-    uint countBefore = getOperatorsCount();
+    uint opIndex;
+    bool isActiveBefore = operatorIsActive(opIndex);
     f(e, args);
-    uint countAfter = getOperatorsCount();
-    assert countAfter > countBefore => canIncreaseOperatorsCount(f);
-    assert countAfter < countBefore => canDecreaseOperatorsCount(f);
+    bool isActiveAfter = operatorIsActive(opIndex);
+    assert (isActiveBefore && !isActiveAfter) => canDeactivateOperators(f);
+    assert (!isActiveBefore && isActiveAfter) => canActivateOperators(f);
 }
+
+
 
 rule startingValidatorsDecreasesDiscrepancy(env e) 
 {
     require isValidState();
     uint index1; uint index2;
-    requireInvariant operatorsStatesRemainValid(index1);
-    requireInvariant operatorsStatesRemainValid(index2);
+    require operatorStateIsValid(index1);
+    require operatorStateIsValid(index1);
 
     uint discrepancyBefore = getOperatorsSaturationDiscrepancy(index1, index2);
     
@@ -81,8 +100,8 @@ rule witness4_3StartingValidatorsDecreasesDiscrepancy(env e)
 {
     require isValidState();
     uint index1; uint index2;
-    requireInvariant operatorsStatesRemainValid(index1);
-    requireInvariant operatorsStatesRemainValid(index2);
+    require operatorStateIsValid(index1);
+    require operatorStateIsValid(index1);
     
     uint discrepancyBefore = getOperatorsSaturationDiscrepancy(index1, index2);
     uint count;
@@ -93,8 +112,25 @@ rule witness4_3StartingValidatorsDecreasesDiscrepancy(env e)
 }
 
 // shows that operator.funded and operator.requestedExits can only increase in time.
-rule FundedAndExitedCanOnlyIncrease(method f, env e, calldataarg args) filtered 
-    { f -> !f.isView && !ignoredMethod(f) }
+rule fundedAndExitedCanOnlyIncrease_IL2(method f, env e, calldataarg args) filtered 
+    { f -> !f.isView && !ignoredMethod(f) && !needsLoopIter4(f) }
+{
+    require isValidState();
+    uint256 opIndex;
+    uint256 keysBefore; uint256 limitBefore; uint256 fundedBefore; uint256 requestedExitsBefore; bool activeBefore; address operatorBefore;
+    keysBefore, limitBefore, fundedBefore, requestedExitsBefore, activeBefore, operatorBefore = getOperatorState(e, opIndex);
+
+    f(e, args);
+    uint256 keysAfter; uint256 limitAfter; uint256 fundedAfter; uint256 requestedExitsAfter; bool activeAfter; address operatorAfter;
+    keysAfter, limitAfter, fundedAfter, requestedExitsAfter, activeAfter, operatorAfter = getOperatorState(e, opIndex);
+
+    assert fundedBefore <= fundedAfter;
+    assert requestedExitsBefore <= requestedExitsAfter;
+}
+
+// shows that operator.funded and operator.requestedExits can only increase in time.
+rule fundedAndExitedCanOnlyIncrease_IL4(method f, env e, calldataarg args) filtered 
+    { f -> !f.isView && !ignoredMethod(f) && needsLoopIter4(f) }
 {
     require isValidState();
     uint256 opIndex;
