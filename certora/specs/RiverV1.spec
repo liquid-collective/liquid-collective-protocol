@@ -90,10 +90,12 @@ methods {
 
 ghost mapping(bytes32 => mapping(uint => bytes32)) sliceGhost;
 
+
+
 function bytesSliceSummary(bytes buffer, uint256 start, uint256 len) returns bytes {
 	bytes to_ret;
 	require(to_ret.length == len);
-	require(buffer.length < require_uint256(start + len));
+	require(buffer.length <= require_uint256(start + len));
 	bytes32 buffer_hash = keccak256(buffer);
 	require keccak256(to_ret) == sliceGhost[buffer_hash][start];
 	return to_ret;
