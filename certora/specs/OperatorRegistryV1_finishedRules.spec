@@ -68,6 +68,35 @@ rule whoCanChangeOperatorsCount_IL4(method f, env e, calldataarg args)
     assert countAfter < countBefore => canDecreaseOperatorsCount(f);
 }
 
+// https://prover.certora.com/output/6893/bbc5621023d04a75a04fe98fb76940b9/?anonymousKey=eb4b48fcd1912b632d79a6b325063023ecab3d40
+rule whoCanDeactivateOperator_LI2(method f, env e, calldataarg args)
+    filtered { f -> f.contract == currentContract 
+        && !ignoredMethod(f) && !needsLoopIter4(f) } 
+{
+    require isValidState();
+    uint opIndex;
+    bool isActiveBefore = operatorIsActive(opIndex);
+    f(e, args);
+    bool isActiveAfter = operatorIsActive(opIndex);
+    assert (isActiveBefore && !isActiveAfter) => canDeactivateOperators(f);
+    assert (!isActiveBefore && isActiveAfter) => canActivateOperators(f);
+}
+
+// requires a specific conf! depth: 0
+// https://prover.certora.com/output/6893/3764dc7b05e84c6c89dcc879fcfe63dc/?anonymousKey=f68a1cff027251750c8b662638cadd81b9e03938
+rule whoCanDeactivateOperator_LI4(method f, env e, calldataarg args)
+    filtered { f -> f.contract == currentContract && 
+        !ignoredMethod(f) && needsLoopIter4(f) } 
+{
+    require isValidState();
+    uint opIndex;
+    bool isActiveBefore = operatorIsActive(opIndex);
+    f(e, args);
+    bool isActiveAfter = operatorIsActive(opIndex);
+    assert (isActiveBefore && !isActiveAfter) => canDeactivateOperators(f);
+    assert (!isActiveBefore && isActiveAfter) => canActivateOperators(f);
+}
+
 // https://prover.certora.com/output/6893/bfd27cb65484472da1ead2b8178d7bb5/?anonymousKey=66caae5f45e04af246224f114442200d9e7fa8c0
 invariant operatorsStatesRemainValid_LI2_easyMethods(uint opIndex) 
     isValidState() => (operatorStateIsValid(opIndex))

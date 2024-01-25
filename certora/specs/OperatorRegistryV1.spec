@@ -26,12 +26,12 @@ invariant operatorsStatesRemainValid_LI2_hardMethods(uint opIndex)
 invariant operatorsStatesRemainValid_LI4_m1(uint opIndex) 
     isValidState() => (operatorStateIsValid(opIndex))
     filtered { f -> !ignoredMethod(f) && 
-    f.selector != sig:reportStoppedValidatorCounts(uint32[],uint256).selector }
+    f.selector == sig:reportStoppedValidatorCounts(uint32[],uint256).selector }
 
 invariant operatorsStatesRemainValid_LI4_m2(uint opIndex) 
     isValidState() => (operatorStateIsValid(opIndex))
     filtered { f -> !ignoredMethod(f) && 
-    f.selector != sig:addValidators(uint256,uint32,bytes).selector }
+    f.selector == sig:addValidators(uint256,uint32,bytes).selector }
 
 invariant validatorKeysRemainUnique(
     uint opIndex1, uint valIndex1,
@@ -41,31 +41,9 @@ invariant validatorKeysRemainUnique(
         (opIndex1 == opIndex2 && valIndex1 == valIndex2))
     filtered { f -> !ignoredMethod(f) }
 
-rule whoCanDeactivateOperator_LI2(method f, env e, calldataarg args)
-    filtered { f -> f.contract == currentContract 
-        && !ignoredMethod(f) && !needsLoopIter4(f) } 
-{
-    require isValidState();
-    uint opIndex;
-    bool isActiveBefore = operatorIsActive(opIndex);
-    f(e, args);
-    bool isActiveAfter = operatorIsActive(opIndex);
-    assert (isActiveBefore && !isActiveAfter) => canDeactivateOperators(f);
-    assert (!isActiveBefore && isActiveAfter) => canActivateOperators(f);
-}
 
-rule whoCanDeactivateOperator_LI4(method f, env e, calldataarg args)
-    filtered { f -> f.contract == currentContract && 
-        !ignoredMethod(f) && needsLoopIter4(f) } 
-{
-    require isValidState();
-    uint opIndex;
-    bool isActiveBefore = operatorIsActive(opIndex);
-    f(e, args);
-    bool isActiveAfter = operatorIsActive(opIndex);
-    assert (isActiveBefore && !isActiveAfter) => canDeactivateOperators(f);
-    assert (!isActiveBefore && isActiveAfter) => canActivateOperators(f);
-}
+
+
 
 
 
