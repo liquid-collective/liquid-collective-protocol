@@ -19,6 +19,7 @@ methods {
     function OR.getOperator(uint256) external returns(OperatorsV2.Operator memory) envfree;
     function OR.compare(bytes,bytes) external returns (bool) envfree;
     function OR.getOperatorsCount() external returns (uint256) envfree;
+    function OR.getFundableOperatorsCount() external returns (uint256) envfree;
     function OR.getActiveOperatorsCount() external returns (uint256) envfree;
     function OR.getOperatorsSaturationDiscrepancy() external returns (uint256) envfree;
     function OR.pickNextValidatorsToDeposit(uint256) external returns (bytes[] memory, bytes[] memory);

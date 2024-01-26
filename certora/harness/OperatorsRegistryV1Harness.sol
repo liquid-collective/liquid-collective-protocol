@@ -18,6 +18,11 @@ contract OperatorsRegistryV1Harness is OperatorsRegistryV1 {
         return OperatorsV2.getAllActive().length;
     }
 
+    function getFundableOperatorsCount() external view returns (uint256) {
+        (OperatorsV2.CachedOperator[] memory operators, uint256 fundableOperatorCount) = OperatorsV2.getAllFundable();
+        return fundableOperatorCount;
+    }
+
     function operatorStateIsValid(uint256 opIndex) external view returns (bool) {
         OperatorsV2.Operator memory op = OperatorsV2.get(opIndex);
         return op.keys >= op.limit &&
@@ -26,9 +31,11 @@ contract OperatorsRegistryV1Harness is OperatorsRegistryV1 {
     }
 
     function getOperatorState(uint256 opIndex) external view 
-        returns (uint256, uint256, uint256, uint256, bool, address) {
+        returns (uint256, uint256, uint256, uint256, uint32, bool, address) {
         OperatorsV2.Operator memory op = OperatorsV2.get(opIndex);
-        return (op.keys, op.limit, op.funded, op.requestedExits, op.active, op.operator);
+        uint32 stoppedCount = _getStoppedValidatorsCount(opIndex);
+        return (op.keys, op.limit, op.funded, op.requestedExits, 
+            stoppedCount, op.active, op.operator);
     }
 
     function operatorIsActive(uint256 opIndex) external view returns (bool) {
@@ -75,7 +82,10 @@ contract OperatorsRegistryV1Harness is OperatorsRegistryV1 {
     {
         OperatorsV2.Operator[] storage ops = OperatorsV2.getAll();
         if (!ops[index1].active || !ops[index2].active) return 0;   //inactive operators are not included in this
-        
+        if (_getStoppedValidatorsCount(index1) < ops[index1].requestedExits ||
+            _getStoppedValidatorsCount(index2) < ops[index2].requestedExits) 
+            return 0;   //validator that didn't comply to exit requests are discarted
+
         uint256 saturation1 = getActiveValidatorsCount(ops[index1]);
         bool isSaturated1 = ops[index1].limit <= ops[index1].funded;
         uint256 saturation2 = getActiveValidatorsCount(ops[index2]);
