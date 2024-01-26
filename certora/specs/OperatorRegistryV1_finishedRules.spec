@@ -106,3 +106,19 @@ invariant operatorsStatesRemainValid_LI2_easyMethods(uint opIndex)
     f.selector != sig:pickNextValidatorsToDeposit(uint256).selector &&
     f.selector != sig:removeValidators(uint256,uint256[]).selector
     }
+
+// proves the invariant for reportStoppedValidatorCounts
+// requires special configuration!
+// https://prover.certora.com/output/6893/06b7de4c27ad4ef8b519282a831c3823/?anonymousKey=35f5112dd9eac39c2e9aa81dd87a3edc1a452670
+invariant operatorsStatesRemainValid_LI4_m1(uint opIndex) 
+    isValidState() => (operatorStateIsValid(opIndex))
+    filtered { f -> !ignoredMethod(f) && 
+    f.selector == sig:reportStoppedValidatorCounts(uint32[],uint256).selector }
+
+// proves the invariant for addValidators
+// requires special configuration!
+// https://prover.certora.com/output/6893/850c24ab14cc4a2eb3a372abcebc9069/?anonymousKey=c697aaa0f8f6c857e14b8820888fb657caa89e70
+invariant operatorsStatesRemainValid_LI4_m2(uint opIndex) 
+    isValidState() => (operatorStateIsValid(opIndex))
+    filtered { f -> !ignoredMethod(f) && 
+    f.selector == sig:addValidators(uint256,uint32,bytes).selector }
