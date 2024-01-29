@@ -23,6 +23,7 @@ help:
 	@echo "  make record: record a new patch file capturing the differences between $(file1_munged) and $(file1_origin)"
 
 munge:
+	mkdir -p $(MUNGED_DIR)
 	cp $(file1_origin) $(file1_munged)
 	cp $(file1_origin) $(file1_copy)
 	cp $(file2_origin) $(file2_munged)
