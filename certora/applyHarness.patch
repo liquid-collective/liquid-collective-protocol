@@ -1,5 +1,5 @@
---- ../contracts/src/RedeemManager.1.sol	2024-01-29 14:26:37.854553848 +0200
-+++ 	2024-01-29 14:40:35.744454296 +0200
+--- ../contracts/src/RedeemManager.1.sol	2024-01-29 15:39:54.964002324 +0200
++++ 	2024-01-29 15:48:14.633945763 +0200
 @@ -26,11 +26,11 @@
      int64 internal constant RESOLVE_FULLY_CLAIMED = -3;
  
@@ -42,8 +42,8 @@
 +        return (x * y) / z;
 +    }
 +}
---- ../contracts/src/River.1.sol	2024-01-29 14:26:37.854553848 +0200
-+++ 	2024-01-29 14:37:42.534475205 +0200
+--- ../contracts/src/River.1.sol	2024-01-29 15:39:54.964002324 +0200
++++ 	2024-01-29 15:48:14.633945763 +0200
 @@ -369,9 +369,11 @@
          }
          uint256 newTotalBalance = _assetBalance();
@@ -77,8 +77,8 @@
          // we only commit multiples of 32 ETH
          currentMaxCommittableAmount = (currentMaxCommittableAmount / DEPOSIT_SIZE) * DEPOSIT_SIZE;
  
---- ../contracts/src/components/SharesManager.1.sol	2024-01-29 14:26:37.864553848 +0200
-+++ 	2024-01-29 14:37:42.544475203 +0200
+--- ../contracts/src/components/SharesManager.1.sol	2024-01-29 15:39:54.974002324 +0200
++++ 	2024-01-29 15:48:14.643945761 +0200
 @@ -202,7 +202,8 @@
              return 0;
          }
@@ -120,225 +120,18 @@
 +    }
 +}
 +
---- ../contracts/src/components/OracleManager.1.sol	2024-01-29 14:26:37.874553846 +0200
-+++ 	2024-01-29 14:37:42.544475203 +0200
-@@ -255,13 +255,7 @@
-         ConsensusLayerDataReportingTrace trace;
+--- ../contracts/src/components/OracleManager.1.sol	2024-01-29 15:39:54.974002324 +0200
++++ 	2024-01-29 15:48:14.643945761 +0200
+@@ -256,7 +256,7 @@
      }
  
--    /// @inheritdoc IOracleManagerV1
+     /// @inheritdoc IOracleManagerV1
 -    function setConsensusLayerData(IOracleManagerV1.ConsensusLayerReport calldata _report) external {
--        // only the oracle is allowed to call this endpoint
--        if (msg.sender != OracleAddress.get()) {
--            revert LibErrors.Unauthorized(msg.sender);
--        }
--
-+    function helper1_fillUpVarsAndPullCL(IOracleManagerV1.ConsensusLayerReport calldata _report) public returns (ConsensusLayerDataReportingVariables memory) {
-         CLSpec.CLSpecStruct memory cls = CLSpec.get();
- 
-         // we start by verifying that the reported epoch is valid based on the consensus layer spec
-@@ -320,20 +314,108 @@
-             _pullCLFunds(vars.skimmedAmountIncrease, vars.exitedAmountIncrease);
-         }
- 
--        {
--            // we update the system parameters, this will have an impact on how the total underlying balance is computed
--            IOracleManagerV1.StoredConsensusLayerReport memory storedReport;
-+        return vars;
-+    }
-+
-+    function helper2_updateLastReport(IOracleManagerV1.ConsensusLayerReport calldata _report) public {
-+        // we update the system parameters, this will have an impact on how the total underlying balance is computed
-+        IOracleManagerV1.StoredConsensusLayerReport memory storedReport;
-+
-+        storedReport.epoch = _report.epoch;
-+        storedReport.validatorsBalance = _report.validatorsBalance;
-+        storedReport.validatorsSkimmedBalance = _report.validatorsSkimmedBalance;
-+        storedReport.validatorsExitedBalance = _report.validatorsExitedBalance;
-+        storedReport.validatorsExitingBalance = _report.validatorsExitingBalance;
-+        storedReport.validatorsCount = _report.validatorsCount;
-+        storedReport.rebalanceDepositToRedeemMode = _report.rebalanceDepositToRedeemMode;
-+        storedReport.slashingContainmentMode = _report.slashingContainmentMode;
-+        LastConsensusLayerReport.set(storedReport);
-+    }
-+
-+    function helper3_checkBounds(ConsensusLayerDataReportingVariables memory vars, ReportBounds.ReportBoundsStruct memory rb, uint256 maxDecrease) public {
-+        if (
-+                vars.postReportUnderlyingBalance
-+                    < vars.preReportUnderlyingBalance - LibUint256.min(maxDecrease, vars.preReportUnderlyingBalance)
-+        ) {
-+            revert TotalValidatorBalanceDecreaseOutOfBound(
-+                vars.preReportUnderlyingBalance,
-+                vars.postReportUnderlyingBalance,
-+                vars.timeElapsedSinceLastReport,
-+                rb.relativeLowerBound
-+            );
-+        }
-+    }
-+
-+    function helper4_pullELFees(ConsensusLayerDataReportingVariables memory vars) public returns (ConsensusLayerDataReportingVariables memory) {
-+        // if we have available amount to upper bound after the reporting values are applied
-+        if (vars.availableAmountToUpperBound > 0) {
-+            // we pull the funds from the execution layer fee recipient
-+            vars.trace.pulledELFees = _pullELFees(vars.availableAmountToUpperBound);
-+            // we update the rewards
-+            vars.trace.rewards += vars.trace.pulledELFees;
-+            // we update the available amount accordingly
-+            vars.availableAmountToUpperBound -= vars.trace.pulledELFees;
-+        }
-+        return vars;
-+    }
-+
-+    function helper5_pullRedeemManagerExceedingEth(ConsensusLayerDataReportingVariables memory vars) public {
-+        // if we have available amount to upper bound after the execution layer fees are pulled
-+        if (vars.availableAmountToUpperBound > 0) {
-+            // we pull the funds from the exceeding eth buffer of the redeem manager
-+            vars.trace.pulledRedeemManagerExceedingEthBuffer =
-+                _pullRedeemManagerExceedingEth(vars.availableAmountToUpperBound);
-+            // we update the available amount accordingly
-+            vars.availableAmountToUpperBound -= vars.trace.pulledRedeemManagerExceedingEthBuffer;
-+        }
-+    }
- 
--            storedReport.epoch = _report.epoch;
--            storedReport.validatorsBalance = _report.validatorsBalance;
--            storedReport.validatorsSkimmedBalance = _report.validatorsSkimmedBalance;
--            storedReport.validatorsExitedBalance = _report.validatorsExitedBalance;
--            storedReport.validatorsExitingBalance = _report.validatorsExitingBalance;
--            storedReport.validatorsCount = _report.validatorsCount;
--            storedReport.rebalanceDepositToRedeemMode = _report.rebalanceDepositToRedeemMode;
--            storedReport.slashingContainmentMode = _report.slashingContainmentMode;
--            LastConsensusLayerReport.set(storedReport);
-+    function helper6_pullCoverageFunds(ConsensusLayerDataReportingVariables memory vars) public {
-+        // if we have available amount to upper bound after pulling the exceeding eth buffer, we attempt to pull coverage funds
-+        if (vars.availableAmountToUpperBound > 0) {
-+            // we pull the funds from the coverage recipient
-+            vars.trace.pulledCoverageFunds = _pullCoverageFunds(vars.availableAmountToUpperBound);
-+            // we do not update the rewards as coverage is not considered rewards
-+            // we do not update the available amount as there are no more pulling actions to perform afterwards
-         }
-+    }
-+
-+    function helper7_onEarnings(ConsensusLayerDataReportingVariables memory vars) public {
-+        // if our rewards are not null, we dispatch the fee to the collector
-+        if (vars.trace.rewards > 0) {
-+            _onEarnings(vars.trace.rewards);
-+        }
-+    }
-+    function helper8_requestExitsBasedOnRedeemDemandAfterRebalancings(ConsensusLayerDataReportingVariables memory vars, IOracleManagerV1.ConsensusLayerReport calldata _report) public {
-+        _requestExitsBasedOnRedeemDemandAfterRebalancings(
-+            _report.validatorsExitingBalance,
-+            _report.stoppedValidatorCountPerOperator,
-+            _report.rebalanceDepositToRedeemMode,
-+            _report.slashingContainmentMode
-+        );
-+    }
-+    function helper9_reportWithdrawToRedeemManager(ConsensusLayerDataReportingVariables memory vars) public {
-+        // we use the updated balanceToRedeem value to report a withdraw event on the redeem manager
-+        _reportWithdrawToRedeemManager();
-+    }
-+    function helper10_skimExcessBalanceToRedeem(ConsensusLayerDataReportingVariables memory vars) public {
-+        // if funds are left in the balance to redeem, we move them to the deposit balance
-+        _skimExcessBalanceToRedeem();
-+    }
-+    function helper11_commitBalanceToDeposit(ConsensusLayerDataReportingVariables memory vars) public {
-+        // we update the committable amount based on daily maximum allowed
-+        _commitBalanceToDeposit(vars.timeElapsedSinceLastReport);
-+    }
-+
-+    /// @inheritdoc IOracleManagerV1
-+    function setConsensusLayerData(IOracleManagerV1.ConsensusLayerReport calldata _report) external {
-+        // only the oracle is allowed to call this endpoint
-+        if (msg.sender != OracleAddress.get()) {
-+            revert LibErrors.Unauthorized(msg.sender);
-+        }
-+        ConsensusLayerDataReportingVariables memory vars = helper1_fillUpVarsAndPullCL(_report);
-+
-+        helper2_updateLastReport(_report);
- 
-         ReportBounds.ReportBoundsStruct memory rb = ReportBounds.get();
- 
-@@ -370,70 +452,28 @@
-             uint256 maxDecrease = _maxDecrease(rb, vars.preReportUnderlyingBalance);
- 
-             // we verify that the bound is not crossed
--            if (
--                vars.postReportUnderlyingBalance
--                    < vars.preReportUnderlyingBalance - LibUint256.min(maxDecrease, vars.preReportUnderlyingBalance)
--            ) {
--                revert TotalValidatorBalanceDecreaseOutOfBound(
--                    vars.preReportUnderlyingBalance,
--                    vars.postReportUnderlyingBalance,
--                    vars.timeElapsedSinceLastReport,
--                    rb.relativeLowerBound
--                );
--            }
-+            helper3_checkBounds(vars, rb, maxDecrease);
- 
-             // we update the available amount to upper bound to be equal to the maximum allowed increase plus the negative delta due to the loss
-             vars.availableAmountToUpperBound =
-                 maxIncrease + (vars.preReportUnderlyingBalance - vars.postReportUnderlyingBalance);
-         }
- 
--        // if we have available amount to upper bound after the reporting values are applied
--        if (vars.availableAmountToUpperBound > 0) {
--            // we pull the funds from the execution layer fee recipient
--            vars.trace.pulledELFees = _pullELFees(vars.availableAmountToUpperBound);
--            // we update the rewards
--            vars.trace.rewards += vars.trace.pulledELFees;
--            // we update the available amount accordingly
--            vars.availableAmountToUpperBound -= vars.trace.pulledELFees;
--        }
-+        helper4_pullELFees(vars);
- 
--        // if we have available amount to upper bound after the execution layer fees are pulled
--        if (vars.availableAmountToUpperBound > 0) {
--            // we pull the funds from the exceeding eth buffer of the redeem manager
--            vars.trace.pulledRedeemManagerExceedingEthBuffer =
--                _pullRedeemManagerExceedingEth(vars.availableAmountToUpperBound);
--            // we update the available amount accordingly
--            vars.availableAmountToUpperBound -= vars.trace.pulledRedeemManagerExceedingEthBuffer;
--        }
-+        helper5_pullRedeemManagerExceedingEth(vars);
- 
--        // if we have available amount to upper bound after pulling the exceeding eth buffer, we attempt to pull coverage funds
--        if (vars.availableAmountToUpperBound > 0) {
--            // we pull the funds from the coverage recipient
--            vars.trace.pulledCoverageFunds = _pullCoverageFunds(vars.availableAmountToUpperBound);
--            // we do not update the rewards as coverage is not considered rewards
--            // we do not update the available amount as there are no more pulling actions to perform afterwards
--        }
-+        helper6_pullCoverageFunds(vars);
- 
--        // if our rewards are not null, we dispatch the fee to the collector
--        if (vars.trace.rewards > 0) {
--            _onEarnings(vars.trace.rewards);
--        }
-+        helper7_onEarnings(vars);
- 
--        _requestExitsBasedOnRedeemDemandAfterRebalancings(
--            _report.validatorsExitingBalance,
--            _report.stoppedValidatorCountPerOperator,
--            _report.rebalanceDepositToRedeemMode,
--            _report.slashingContainmentMode
--        );
-+        helper8_requestExitsBasedOnRedeemDemandAfterRebalancings(vars, _report);
- 
--        // we use the updated balanceToRedeem value to report a withdraw event on the redeem manager
--        _reportWithdrawToRedeemManager();
-+        helper9_reportWithdrawToRedeemManager(vars);
- 
--        // if funds are left in the balance to redeem, we move them to the deposit balance
--        _skimExcessBalanceToRedeem();
-+        helper10_skimExcessBalanceToRedeem(vars);
- 
--        // we update the committable amount based on daily maximum allowed
--        _commitBalanceToDeposit(vars.timeElapsedSinceLastReport);
-+        helper11_commitBalanceToDeposit(vars);
- 
-         // we emit a summary event with all the reporting details
-         emit ProcessedConsensusLayerReport(_report, vars.trace);
-@@ -494,4 +534,4 @@
++    function setConsensusLayerData(IOracleManagerV1.ConsensusLayerReport calldata _report) external virtual {
+         // only the oracle is allowed to call this endpoint
+         if (msg.sender != OracleAddress.get()) {
+             revert LibErrors.Unauthorized(msg.sender);
+@@ -494,4 +494,4 @@
      {
          return (_epochNow - _epochPast) * (_cls.secondsPerSlot * _cls.slotsPerEpoch);
      }
