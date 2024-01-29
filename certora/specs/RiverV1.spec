@@ -1,14 +1,8 @@
 import "Sanity.spec";
 import "CVLMath.spec";
 import "MathSummaries.spec";
+import "Base.spec";
 
-using AllowlistV1 as AL;
-using CoverageFundV1 as CF;
-// using DepositContractMock as DCM;
-using ELFeeRecipientV1 as ELFR;
-using OperatorsRegistryV1 as OR;
-using RedeemManagerV1Harness as RM;
-using WithdrawV1 as Wd;
 
 use rule method_reachability;
 
@@ -19,95 +13,12 @@ use rule method_reachability;
 
 
 methods {
-    // AllowlistV1
-    function AllowlistV1.onlyAllowed(address, uint256) external envfree;
-    function _.onlyAllowed(address, uint256) external => DISPATCHER(true);
-    function AllowlistV1.isDenied(address) external returns (bool) envfree;
-    function _.isDenied(address) external => DISPATCHER(true);
-
-    // RedeemManagerV1
-    function RedeemManagerV1Harness.resolveRedeemRequests(uint32[]) external returns(int64[]) envfree;
-    function _.resolveRedeemRequests(uint32[]) external => DISPATCHER(true);
-     // requestRedeem function is also defined in River:
-    // function _.requestRedeem(uint256) external => DISPATCHER(true); //not required, todo: remove
-    function _.requestRedeem(uint256 _lsETHAmount, address _recipient) external => DISPATCHER(true);
-    function _.claimRedeemRequests(uint32[], uint32[], bool, uint16) external => DISPATCHER(true);
-    // function _.claimRedeemRequests(uint32[], uint32[]) external => DISPATCHER(true); //not required, todo: remove
-    function _.pullExceedingEth(uint256) external => DISPATCHER(true);
-    function _.reportWithdraw(uint256) external => DISPATCHER(true);
-    function RedeemManagerV1Harness.getRedeemDemand() external returns (uint256) envfree;
-    function _.getRedeemDemand() external => DISPATCHER(true);
-
-    // RiverV1
-    function getBalanceToDeposit() external returns(uint256) envfree;
-    function getCommittedBalance() external returns(uint256) envfree;
-    function getBalanceToRedeem() external returns(uint256) envfree;
-    function consensusLayerDepositSize() external returns(uint256) envfree;
-    function riverEthBalance() external returns(uint256) envfree;
-    function _.sendRedeemManagerExceedingFunds() external => DISPATCHER(true);
-    function _.getAllowlist() external => DISPATCHER(true);
-    function RiverV1Harness.getAllowlist() external returns(address) envfree;
-    function _.sendCLFunds() external => DISPATCHER(true);
-    function _.sendCoverageFunds() external => DISPATCHER(true);
-    function _.sendELFees() external => DISPATCHER(true);
-
-    // RiverV1 : SharesManagerV1
-    function _.transferFrom(address, address, uint256) external => DISPATCHER(true);
-    function _.underlyingBalanceFromShares(uint256) external => DISPATCHER(true);
-    function RiverV1Harness.underlyingBalanceFromShares(uint256) external returns(uint256) envfree;
-    function RiverV1Harness.balanceOfUnderlying(address) external returns(uint256) envfree;
-    function RiverV1Harness.totalSupply() external returns(uint256) envfree;
-    function RiverV1Harness.totalUnderlyingSupply() external returns(uint256) envfree;
-    function RiverV1Harness.sharesFromUnderlyingBalance(uint256) external returns(uint256) envfree;
-    function RiverV1Harness.balanceOf(address) external returns(uint256) envfree;
-    function RiverV1Harness.consensusLayerEthBalance() external returns(uint256) envfree;
-    // RiverV1 : OracleManagerV1
-    function _.setConsensusLayerData(IOracleManagerV1.ConsensusLayerReport) external => DISPATCHER(true);
-    function RiverV1Harness.getCLValidatorCount() external returns(uint256) envfree;
-    // RiverV1 : ConsensusLayerDepositManagerV1
-    function _.depositToConsensusLayer(uint256) external => DISPATCHER(true);
-    function RiverV1Harness.getDepositedValidatorCount() external returns(uint256) envfree;
-
-    // WithdrawV1
-    function _.pullEth(uint256) external => DISPATCHER(true);
-
-    // ELFeeRecipientV1
-    function _.pullELFees(uint256) external => DISPATCHER(true);
-
-    // CoverageFundV1
-    function _.pullCoverageFunds(uint256) external => DISPATCHER(true);
-
-    // OperatorsRegistryV1
-    function _.reportStoppedValidatorCounts(uint32[], uint256) external => DISPATCHER(true);
-    function OperatorsRegistryV1.getStoppedAndRequestedExitCounts() external returns (uint32, uint256) envfree;
-    function _.getStoppedAndRequestedExitCounts() external => DISPATCHER(true);
-    function _.demandValidatorExits(uint256, uint256) external => DISPATCHER(true);
-    function _.pickNextValidatorsToDeposit(uint256) external => DISPATCHER(true); // has no effect - CERT-4615
-
-    function _.deposit(bytes,bytes,bytes,bytes32) external => DISPATCHER(true); // has no effect - CERT-4615
-
-    // function _.increment_onDepositCounter() external => ghostUpdate_onDepositCounter() expect bool ALL;
-
     // MathSummarizations
     function _.mulDivDown(uint256 a, uint256 b, uint256 c) internal => mulDivDownAbstractPlus(a, b, c) expect uint256 ALL;
 
-    //workaroun per CERT-4615
-    function LibBytes.slice(bytes memory _bytes, uint256 _start, uint256 _length) internal returns (bytes memory) => bytesSliceSummary(_bytes, _start, _length);
-
 }
 
-ghost mapping(bytes32 => mapping(uint => bytes32)) sliceGhost;
 
-
-
-function bytesSliceSummary(bytes buffer, uint256 start, uint256 len) returns bytes {
-	bytes to_ret;
-	require(to_ret.length == len);
-	require(buffer.length <= require_uint256(start + len));
-	bytes32 buffer_hash = keccak256(buffer);
-	require keccak256(to_ret) == sliceGhost[buffer_hash][start];
-	return to_ret;
-}
 
 // Ghost for each one of the factors in
 // Ghost for Eth in Consensus layer
@@ -153,7 +64,7 @@ rule memoryVarsCanBeModifiedFromWithinFunction(env e)
     OracleManagerV1.ConsensusLayerDataReportingVariables vars;
     uint256 a;
     require a == vars.trace.rewards;
-    pullELFees(e, vars);
+    helper4_pullELFees(e, vars);
     satisfy vars.trace.rewards != a;
 }
 
@@ -172,12 +83,12 @@ rule riverBalanceIsSumOf_ToDeposit_Commmitted_ToRedeem_for_helper2_helper7(env e
     // require toRedeem_before == 0;
 
     IOracleManagerV1.ConsensusLayerReport report;
-    OracleManagerV1.ConsensusLayerDataReportingVariables vars1 = fillUpVarsAndPullCL(e, report);
+    OracleManagerV1.ConsensusLayerDataReportingVariables vars1 = helper1_fillUpVarsAndPullCL(e, report);
     // OracleManagerV1.ConsensusLayerDataReportingVariables vars2;
 
     // require vars1.preReportUnderlyingBalance == totalUnderlyingSupply();
 
-    updateLastReport(e, report); // Just reports, no changes to argument.
+    helper2_updateLastReport(e, report); // Just reports, no changes to argument.
 
     uint256 totalSupplyMidterm = totalUnderlyingSupply();
     uint256 val_balance_midterm = report.validatorsBalance;
@@ -201,14 +112,14 @@ rule riverBalanceIsSumOf_ToDeposit_Commmitted_ToRedeem_for_helper2_helper7(env e
     // require vars1.redeemManagerDemand == vars2.redeemManagerDemand;
     // require vars1.redeemManagerDemand == 100000;
 
-    OracleManagerV1.ConsensusLayerDataReportingVariables vars4 = pullELFees(e, vars1); // Also changes vars
+    OracleManagerV1.ConsensusLayerDataReportingVariables vars4 = helper4_pullELFees(e, vars1); // Also changes vars
 
 
     // require to_mathint(vars2.trace.rewards) == vars1.trace.rewards + rewards_delta;
     // require rewards_delta == vars1.availableAmountToUpperBound;
     // require vars2.trace.rewards == vars2.postReportUnderlyingBalance - vars.preReportUnderlyingBalance;
 
-    onEarnings(e, vars4); // Just pull on earnings, no changes to argument
+    helper7_onEarnings(e, vars4); // Just pull on earnings, no changes to argument
 
     mathint assets_after = totalUnderlyingSupply();
     uint256 toDeposit_after = getBalanceToDeposit();

@@ -34,9 +34,9 @@ contract RiverV1Harness is RiverV1 {
         if (msg.sender != OracleAddress.get()) {
             revert LibErrors.Unauthorized(msg.sender);
         }
-        ConsensusLayerDataReportingVariables memory vars = fillUpVarsAndPullCL(_report);
+        ConsensusLayerDataReportingVariables memory vars = helper1_fillUpVarsAndPullCL(_report);
 
-        updateLastReport(_report);
+        helper2_updateLastReport(_report);
 
         ReportBounds.ReportBoundsStruct memory rb = ReportBounds.get();
 
@@ -73,35 +73,35 @@ contract RiverV1Harness is RiverV1 {
             uint256 maxDecrease = _maxDecrease(rb, vars.preReportUnderlyingBalance);
 
             // we verify that the bound is not crossed
-            checkBounds(vars, rb, maxDecrease);
+            helper3_checkBounds(vars, rb, maxDecrease);
 
             // we update the available amount to upper bound to be equal to the maximum allowed increase plus the negative delta due to the loss
             vars.availableAmountToUpperBound =
                 maxIncrease + (vars.preReportUnderlyingBalance - vars.postReportUnderlyingBalance);
         }
 
-        pullELFees(vars);
+        helper4_pullELFees(vars);
 
-        pullRedeemManagerExceedingEth(vars);
+        helper5_pullRedeemManagerExceedingEth(vars);
 
-        pullCoverageFunds(vars);
+        helper6_pullCoverageFunds(vars);
 
-        onEarnings(vars);
+        helper7_onEarnings(vars);
 
-        requestExitsBasedOnRedeemDemandAfterRebalancings(vars, _report);
+        helper8_requestExitsBasedOnRedeemDemandAfterRebalancings(vars, _report);
 
-        reportWithdrawToRedeemManager(vars);
+        helper9_reportWithdrawToRedeemManager(vars);
 
-        skimExcessBalanceToRedeem(vars);
+        helper10_skimExcessBalanceToRedeem(vars);
 
-        commitBalanceToDeposit(vars);
+        helper11_commitBalanceToDeposit(vars);
 
         // we emit a summary event with all the reporting details
         emit ProcessedConsensusLayerReport(_report, vars.trace);
     }
     
     /// @notice helper1
-    function fillUpVarsAndPullCL(IOracleManagerV1.ConsensusLayerReport calldata _report) public returns (ConsensusLayerDataReportingVariables memory) {
+    function helper1_fillUpVarsAndPullCL(IOracleManagerV1.ConsensusLayerReport calldata _report) public returns (ConsensusLayerDataReportingVariables memory) {
         CLSpec.CLSpecStruct memory cls = CLSpec.get();
 
         // we start by verifying that the reported epoch is valid based on the consensus layer spec
@@ -164,7 +164,7 @@ contract RiverV1Harness is RiverV1 {
     }
 
     /// @notice helper 2
-    function updateLastReport(IOracleManagerV1.ConsensusLayerReport calldata _report) public {
+    function helper2_updateLastReport(IOracleManagerV1.ConsensusLayerReport calldata _report) public {
         // we update the system parameters, this will have an impact on how the total underlying balance is computed
         IOracleManagerV1.StoredConsensusLayerReport memory storedReport;
 
@@ -180,7 +180,7 @@ contract RiverV1Harness is RiverV1 {
     }
 
     /// @notice helper 3
-    function checkBounds(ConsensusLayerDataReportingVariables memory vars, ReportBounds.ReportBoundsStruct memory rb, uint256 maxDecrease) public {
+    function helper3_checkBounds(ConsensusLayerDataReportingVariables memory vars, ReportBounds.ReportBoundsStruct memory rb, uint256 maxDecrease) public {
         if (
                 vars.postReportUnderlyingBalance
                     < vars.preReportUnderlyingBalance - LibUint256.min(maxDecrease, vars.preReportUnderlyingBalance)
@@ -195,7 +195,7 @@ contract RiverV1Harness is RiverV1 {
     }
 
     /// @notice helper 4
-    function pullELFees(ConsensusLayerDataReportingVariables memory vars) public returns (ConsensusLayerDataReportingVariables memory) {
+    function helper4_pullELFees(ConsensusLayerDataReportingVariables memory vars) public returns (ConsensusLayerDataReportingVariables memory) {
         // if we have available amount to upper bound after the reporting values are applied
         if (vars.availableAmountToUpperBound > 0) {
             // we pull the funds from the execution layer fee recipient
@@ -209,7 +209,7 @@ contract RiverV1Harness is RiverV1 {
     }
 
     /// @notice helper 5
-    function pullRedeemManagerExceedingEth(ConsensusLayerDataReportingVariables memory vars) public {
+    function helper5_pullRedeemManagerExceedingEth(ConsensusLayerDataReportingVariables memory vars) public {
         // if we have available amount to upper bound after the execution layer fees are pulled
         if (vars.availableAmountToUpperBound > 0) {
             // we pull the funds from the exceeding eth buffer of the redeem manager
@@ -221,7 +221,7 @@ contract RiverV1Harness is RiverV1 {
     }
 
     /// @notice helper 6
-    function pullCoverageFunds(ConsensusLayerDataReportingVariables memory vars) public {
+    function helper6_pullCoverageFunds(ConsensusLayerDataReportingVariables memory vars) public {
         // if we have available amount to upper bound after pulling the exceeding eth buffer, we attempt to pull coverage funds
         if (vars.availableAmountToUpperBound > 0) {
             // we pull the funds from the coverage recipient
@@ -232,7 +232,7 @@ contract RiverV1Harness is RiverV1 {
     }
 
     /// @notice helper 7
-    function onEarnings(ConsensusLayerDataReportingVariables memory vars) public {
+    function helper7_onEarnings(ConsensusLayerDataReportingVariables memory vars) public {
         // if our rewards are not null, we dispatch the fee to the collector
         if (vars.trace.rewards > 0) {
             _onEarnings(vars.trace.rewards);
@@ -240,7 +240,7 @@ contract RiverV1Harness is RiverV1 {
     }
 
     /// @notice helper 8
-    function requestExitsBasedOnRedeemDemandAfterRebalancings(ConsensusLayerDataReportingVariables memory vars, IOracleManagerV1.ConsensusLayerReport calldata _report) public {
+    function helper8_requestExitsBasedOnRedeemDemandAfterRebalancings(ConsensusLayerDataReportingVariables memory vars, IOracleManagerV1.ConsensusLayerReport calldata _report) public {
         _requestExitsBasedOnRedeemDemandAfterRebalancings(
             _report.validatorsExitingBalance,
             _report.stoppedValidatorCountPerOperator,
@@ -250,19 +250,19 @@ contract RiverV1Harness is RiverV1 {
     }
 
     /// @notice helper 9
-    function reportWithdrawToRedeemManager(ConsensusLayerDataReportingVariables memory vars) public {
+    function helper9_reportWithdrawToRedeemManager(ConsensusLayerDataReportingVariables memory vars) public {
         // we use the updated balanceToRedeem value to report a withdraw event on the redeem manager
         _reportWithdrawToRedeemManager();
     }
 
     /// @notice helper 10
-    function skimExcessBalanceToRedeem(ConsensusLayerDataReportingVariables memory vars) public {
+    function helper10_skimExcessBalanceToRedeem(ConsensusLayerDataReportingVariables memory vars) public {
         // if funds are left in the balance to redeem, we move them to the deposit balance
         _skimExcessBalanceToRedeem();
     }
 
     /// @notice helper 11
-    function commitBalanceToDeposit(ConsensusLayerDataReportingVariables memory vars) public {
+    function helper11_commitBalanceToDeposit(ConsensusLayerDataReportingVariables memory vars) public {
         // we update the committable amount based on daily maximum allowed
         _commitBalanceToDeposit(vars.timeElapsedSinceLastReport);
     }
