@@ -1,5 +1,6 @@
 import "Sanity.spec";
 import "CVLMath.spec";
+import "MathSummaries.spec";
 
 using AllowlistV1 as AL;
 using CoverageFundV1 as CF;
