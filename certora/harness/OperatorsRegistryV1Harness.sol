@@ -23,11 +23,52 @@ contract OperatorsRegistryV1Harness is OperatorsRegistryV1 {
         return fundableOperatorCount;
     }
 
+    //Returns current state of given validator with respect to given operator
+    //0 = not present
+    //1 = available = present but not fundable
+    //2 = fundable
+    //3 = funded, not exited
+    //4 = exited (funded in the past)
+    function getValidatorState(uint256 opIndex, bytes memory publicKeyAndSignature) external view returns (uint256) 
+    {
+        OperatorsV2.Operator memory op = OperatorsV2.get(opIndex);
+        uint256 valIndex = 0;
+        bytes32 validatorDataHash = keccak256(abi.encodePacked(publicKeyAndSignature));
+        for (; valIndex < op.keys;) 
+        {
+            (bytes memory valData) = ValidatorKeys.getRaw(opIndex, valIndex);
+            if (validatorDataHash == keccak256(abi.encodePacked(valData)))  //element found
+            {
+                if (valIndex < op.requestedExits) return 4; //exited
+                if (valIndex < op.funded) return 3; //funded
+                if (valIndex < op.limit) return 2; //fundable
+                return 1; //available
+            }
+        }
+        return 0;   //not present in the list
+    }
+
     function operatorStateIsValid(uint256 opIndex) external view returns (bool) {
+        if (opIndex >= OperatorsV2.getAll().length) return false;
         OperatorsV2.Operator memory op = OperatorsV2.get(opIndex);
         return op.keys >= op.limit &&
             op.limit >= op.funded &&
             op.funded >= op.requestedExits;
+    }
+
+    function operatorStateIsValid_cond1(uint256 opIndex) external view returns (bool) {
+        OperatorsV2.Operator memory op = OperatorsV2.get(opIndex);
+        return op.keys >= op.limit;
+    }
+
+    function operatorStateIsValid_cond2(uint256 opIndex) external view returns (bool) {
+        OperatorsV2.Operator memory op = OperatorsV2.get(opIndex);
+        return op.limit >= op.funded;
+    }
+
+    function operatorStateIsValid_cond3(uint256 opIndex) external view returns (bool) {
+        OperatorsV2.Operator memory op = OperatorsV2.get(opIndex);
+        return op.funded >= op.requestedExits;
     }
 
     function getOperatorState(uint256 opIndex) external view 
@@ -48,7 +89,7 @@ contract OperatorsRegistryV1Harness is OperatorsRegistryV1 {
         return publicKey;
     }
 
-    function compare(bytes memory b1, bytes memory b2) external pure returns (bool) {
+    function equals(bytes memory b1, bytes memory b2) external pure returns (bool) {
         return keccak256(abi.encodePacked(b1)) == keccak256(abi.encodePacked(b2));
     }
 
@@ -56,6 +97,13 @@ contract OperatorsRegistryV1Harness is OperatorsRegistryV1 {
         returns (uint256)
     {
         return operator.funded - operator.requestedExits;// + operator.picked;
+    }
+
+    function getKeysCount(uint256 opIndex) external view
+        returns (uint256)
+    {
+        OperatorsV2.Operator memory op = OperatorsV2.get(opIndex);
+        return op.keys;
     }
 
     function getOperatorsSaturationDiscrepancy() external view returns (uint256)
