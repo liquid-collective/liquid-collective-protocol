@@ -14,14 +14,19 @@ methods {
     function _.deposit(bytes,bytes,bytes,bytes32) external => DISPATCHER(true); // has no effect - CERT-4615 
     function OR.getOperatorAddress(uint256) external returns(address) envfree;
     function OR.operatorStateIsValid(uint256) external returns(bool) envfree;
+    function OR.operatorStateIsValid_cond1(uint256) external returns(bool) envfree;
+    function OR.operatorStateIsValid_cond2(uint256) external returns(bool) envfree;
+    function OR.operatorStateIsValid_cond3(uint256) external returns(bool) envfree;
     function OR.operatorIsActive(uint256) external returns(bool) envfree;
     function OR.getValidatorKey(uint256,uint256) external returns(bytes) envfree;
     function OR.getOperator(uint256) external returns(OperatorsV2.Operator memory) envfree;
-    function OR.compare(bytes,bytes) external returns (bool) envfree;
+    function OR.equals(bytes,bytes) external returns (bool) envfree;
+    function OR.getValidatorState(uint256,bytes) external returns (uint256) envfree;
     function OR.getOperatorsCount() external returns (uint256) envfree;
     function OR.getFundableOperatorsCount() external returns (uint256) envfree;
     function OR.getActiveOperatorsCount() external returns (uint256) envfree;
     function OR.getOperatorsSaturationDiscrepancy() external returns (uint256) envfree;
+    function OR.getKeysCount(uint256) external returns (uint256) envfree;
     function OR.pickNextValidatorsToDeposit(uint256) external returns (bytes[] memory, bytes[] memory);
     function OR.requestValidatorExits(uint256) external;
     function OR.setOperatorAddress(uint256, address) external;   
@@ -51,8 +56,26 @@ definition needsLoopIter4(method f) returns bool =
 
 function isValidState() returns bool
 {
-    return getOperatorsCount() <= 3;
+    return getOperatorsCount() <= 2;
 }
+definition isMethodID(method f, uint ID) returns bool =
+    (f.selector == sig:acceptAdmin().selector && ID == 1) ||
+    (f.selector == sig:acceptAdmin().selector && ID == 2) ||
+    (f.selector == sig:acceptAdmin().selector && ID == 3) ||
+    (f.selector == sig:addOperator(string,address).selector && ID == 4) ||
+    (f.selector == sig:demandValidatorExits(uint256,uint256).selector && ID == 5) ||
+    (f.selector == sig:initOperatorsRegistryV1(address,address).selector && ID == 6) ||
+    (f.selector == sig:pickNextValidatorsToDeposit(uint256).selector && ID == 7) ||
+    (f.selector == sig:proposeAdmin(address).selector && ID == 8) ||
+    (f.selector == sig:removeValidators(uint256,uint256[]).selector && ID == 9) ||
+    (f.selector == sig:requestValidatorExits(uint256).selector && ID == 10) ||
+    (f.selector == sig:setOperatorAddress(uint256,address).selector && ID == 11) ||
+    (f.selector == sig:setOperatorLimits(uint256[],uint32[],uint256).selector && ID == 12) ||
+    (f.selector == sig:setOperatorName(uint256,string).selector && ID == 13) ||
+    (f.selector == sig:setOperatorStatus(uint256,bool).selector && ID == 14) ||
+    (f.selector == sig:reportStoppedValidatorCounts(uint32[],uint256).selector && ID == 15) ||
+    (f.selector == sig:addValidators(uint256,uint32,bytes).selector && ID == 16);
+
 
 definition ignoredMethod(method f) returns bool =
     f.selector == sig:forceFundedValidatorKeysEventEmission(uint256).selector ||
