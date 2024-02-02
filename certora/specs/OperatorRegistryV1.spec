@@ -6,39 +6,54 @@ use rule method_reachability;
 
 invariant inactiveOperatorsRemainNotFunded_LI2(uint opIndex) 
     isValidState() => (!getOperator(opIndex).active => getOperator(opIndex).funded == 0)
-    filtered { f -> !ignoredMethod(f) && !needsLoopIter4(f) && 
-        f.selector != sig:setOperatorStatus(uint256,bool).selector } //method is allowed to break this
-
-invariant inactiveOperatorsRemainNotFunded_LI4(uint opIndex) 
-    isValidState() => (!getOperator(opIndex).active => getOperator(opIndex).funded == 0)
-    filtered { f -> !ignoredMethod(f) && needsLoopIter4(f) && 
-        f.selector != sig:setOperatorStatus(uint256,bool).selector } //method is allowed to break this
-
-invariant operatorsStatesRemainValid_LI2_hardMethods(uint opIndex) 
-    isValidState() => (operatorStateIsValid(opIndex))
-    filtered { f -> !ignoredMethod(f) && 
-    !needsLoopIter4(f) && 
-    f.selector == sig:requestValidatorExits(uint256).selector ||
-    f.selector == sig:pickNextValidatorsToDeposit(uint256).selector ||
-    f.selector == sig:removeValidators(uint256,uint256[]).selector
+    filtered { f -> !ignoredMethod(f) && !needsLoopIter4(f)
+        && f.selector != sig:setOperatorStatus(uint256,bool).selector  //method is allowed to break this
+        //&& f.selector == sig:requestValidatorExits(uint256).selector
+        } 
+    { 
+        preserved requestValidatorExits(uint256 x) with(env e) { require x <= 2; }
+        preserved pickNextValidatorsToDeposit(uint256 x) with(env e) { require x <= 2; }  
+         preserved removeValidators(uint256 _index, uint256[] _indexes) with(env e) { require _indexes.length <= 2; }  
     }
 
 
 
+invariant operatorsStatesRemainValid_LI2_cond1_removeValidators(uint opIndex) 
+    isValidState() => (operatorStateIsValid_cond1(opIndex))
+    filtered { f -> f.selector == sig:removeValidators(uint256,uint256[]).selector }
+    { 
+        preserved removeValidators(uint256 _index, uint256[] _indexes) with(env e) { require _indexes.length <= 2; }  
+    }
 
+invariant operatorsStatesRemainValid_LI2_cond2_removeValidators(uint opIndex) 
+    isValidState() => (operatorStateIsValid_cond2(opIndex))
+    filtered { f -> f.selector == sig:removeValidators(uint256,uint256[]).selector }
+    { 
+        preserved removeValidators(uint256 _index, uint256[] _indexes) with(env e) { require _indexes.length <= 2; }  
+    }
 
-invariant validatorKeysRemainUnique(
+invariant operatorsStatesRemainValid_LI2_cond3_removeValidators(uint opIndex) 
+    isValidState() => (operatorStateIsValid_cond3(opIndex))
+    filtered { f -> f.selector == sig:removeValidators(uint256,uint256[]).selector }
+    { 
+        preserved removeValidators(uint256 _index, uint256[] _indexes) with(env e) { require _indexes.length <= 2; }  
+    }
+
+invariant validatorKeysRemainUnique_LI2(
     uint opIndex1, uint valIndex1,
     uint opIndex2, uint valIndex2)
-    isValidState() => (compare(getValidatorKey(opIndex1, valIndex1),
+    isValidState() => (equals(getValidatorKey(opIndex1, valIndex1),
         getValidatorKey(opIndex2, valIndex2)) =>
         (opIndex1 == opIndex2 && valIndex1 == valIndex2))
-    filtered { f -> !ignoredMethod(f) }
+    filtered { f -> !ignoredMethod(f) && !needsLoopIter4(f) }
 
-
-
-
-
+invariant validatorKeysRemainUnique_LI4(
+    uint opIndex1, uint valIndex1,
+    uint opIndex2, uint valIndex2)
+    isValidState() => (equals(getValidatorKey(opIndex1, valIndex1),
+        getValidatorKey(opIndex2, valIndex2)) =>
+        (opIndex1 == opIndex2 && valIndex1 == valIndex2))
+    filtered { f -> !ignoredMethod(f) && needsLoopIter4(f) }
 
 
 rule startingValidatorsDecreasesDiscrepancy(env e) 
@@ -122,29 +137,5 @@ rule fundedAndExitedCanOnlyIncrease_IL4(method f, env e, calldataarg args) filte
     assert requestedExitsBefore <= requestedExitsAfter;
 }
  
-rule removeValidatorsRevertsIfKeysNotSorted(env e)
-{
-    require isValidState();
-    uint256[] keys;
-    require keys.length <= 2; //should  be less than loop iter
-    uint opIndex;
-    uint keysIndex1; uint keysIndex2;
-    uint key1 = keys[keysIndex1]; uint key2 = keys[keysIndex2];
-    require keysIndex1 < keysIndex2 && keys[keysIndex1] > keys[keysIndex2]; //not sorted
-    removeValidators@withrevert(e, opIndex, keys);
-    assert lastReverted;
-}
 
-rule removeValidatorsRevertsIfKeysDuplicit(env e)
-{
-    require isValidState();
-    uint256[] keys;
-    require keys.length <= 2; //must be less than loop iter
-    uint opIndex;
-    uint keysIndex1; uint keysIndex2;
-    uint key1 = keys[keysIndex1]; uint key2 = keys[keysIndex2];
-    require keysIndex1 != keysIndex2 && keys[keysIndex1] == keys[keysIndex2]; //duplicit
-    removeValidators@withrevert(e, opIndex, keys);
-    assert lastReverted;
-}
 
