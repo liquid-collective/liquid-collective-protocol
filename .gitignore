@@ -38,7 +38,6 @@ certora-logs
 certora_debug_log.txt
 resource_errors.json
 .zip-output-url.txt
-
-
-yarn.lock
 timeoutsToInvestigate/*
+
+
