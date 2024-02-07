@@ -14,6 +14,10 @@ contract OperatorsRegistryV1Harness is OperatorsRegistryV1 {
         return OperatorsV2.getCount();
     }
 
+    function getStoppedValidatorsLength() external view returns (uint256) {
+        return OperatorsV2.getStoppedValidators().length;
+    }
+
     function getActiveOperatorsCount() external view returns (uint256) {
         return OperatorsV2.getAllActive().length;
     }
@@ -45,6 +49,22 @@ contract OperatorsRegistryV1Harness is OperatorsRegistryV1 {
                 return 1; //available
             }
         }
+        return 0;   //not present in the list
+    }
+
+    //Returns current state of given validator with respect to given operator
+    //0 = not present
+    //1 = available = present but not fundable
+    //2 = fundable
+    //3 = funded, not exited
+    //4 = exited (funded in the past)
+    function getValidatorStateByIndex(uint256 opIndex, uint256 valIndex) external view returns (uint256) 
+    {
+        OperatorsV2.Operator memory op = OperatorsV2.get(opIndex);
+        if (valIndex < op.requestedExits) return 4; //exited
+        if (valIndex < op.funded) return 3; //funded
+        if (valIndex < op.limit) return 2; //fundable
+        if (valIndex < op.keys) return 1; //available
         return 0;   //not present in the list
     }
 

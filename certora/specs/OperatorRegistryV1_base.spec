@@ -22,7 +22,9 @@ methods {
     function OR.getOperator(uint256) external returns(OperatorsV2.Operator memory) envfree;
     function OR.equals(bytes,bytes) external returns (bool) envfree;
     function OR.getValidatorState(uint256,bytes) external returns (uint256) envfree;
+    function OR.getValidatorStateByIndex(uint256,uint256) external returns (uint256) envfree;
     function OR.getOperatorsCount() external returns (uint256) envfree;
+    function OR.getStoppedValidatorsLength() external returns (uint256) envfree;
     function OR.getFundableOperatorsCount() external returns (uint256) envfree;
     function OR.getActiveOperatorsCount() external returns (uint256) envfree;
     function OR.getOperatorsSaturationDiscrepancy() external returns (uint256) envfree;
@@ -31,6 +33,7 @@ methods {
     function OR.requestValidatorExits(uint256) external;
     function OR.setOperatorAddress(uint256, address) external;   
     function OR.getOperatorsSaturationDiscrepancy(uint256, uint256) external returns (uint256) envfree;
+    function OR.removeValidators(uint256,uint256[]) external envfree;
 
     //workaroun per CERT-4615 
     function LibBytes.slice(bytes memory _bytes, uint256 _start, uint256 _length) internal returns (bytes memory) => bytesSliceSummary(_bytes, _start, _length);
@@ -56,8 +59,20 @@ definition needsLoopIter4(method f) returns bool =
 
 function isValidState() returns bool
 {
-    return getOperatorsCount() <= 2;
+    uint opCount = getOperatorsCount();
+    uint stoppedValLength = getStoppedValidatorsLength();
+    return getOperatorsCount() <= 2 && opCount == stoppedValLength;
 }
+function isOpIndexInBounds(uint opIndex) returns bool
+{
+    return opIndex < getOperatorsCount();
+}
+function isValIndexInBounds(uint opIndex, uint valIndex) returns bool
+{
+    return isOpIndexInBounds(opIndex) && valIndex < getKeysCount(opIndex);
+}
+
+
 definition isMethodID(method f, uint ID) returns bool =
     (f.selector == sig:acceptAdmin().selector && ID == 1) ||
     (f.selector == sig:acceptAdmin().selector && ID == 2) ||
@@ -91,8 +106,8 @@ definition canActivateOperators(method f) returns bool =
 definition canDeactivateOperators(method f) returns bool =
     //f.selector == sig:RM.claimRedeemRequests(uint32[],uint32[]).selector || 
     //f.selector == sig:setConsensusLayerData(uint256,uint256,uint256,uint256,uint256,uint32,uint32[],bool,bool).selector ||
-    f.selector == sig:requestValidatorExits(uint256).selector || 
-    f.selector == sig:removeValidators(uint256,uint256[]).selector || 
+    //f.selector == sig:requestValidatorExits(uint256).selector || 
+    //f.selector == sig:removeValidators(uint256,uint256[]).selector || 
     f.selector == sig:initOperatorsRegistryV1_1().selector ||
     f.selector == sig:setOperatorStatus(uint256,bool).selector;
 
