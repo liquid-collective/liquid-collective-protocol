@@ -29,6 +29,7 @@ lcov.info
 
 # certora
 certora/munged*
+certora/diagrams*
 .certora*
 .certora*.json
 **.last_conf*
