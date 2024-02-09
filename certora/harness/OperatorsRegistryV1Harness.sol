@@ -113,10 +113,10 @@ contract OperatorsRegistryV1Harness is OperatorsRegistryV1 {
         return keccak256(abi.encodePacked(b1)) == keccak256(abi.encodePacked(b2));
     }
 
-    function getActiveValidatorsCount(OperatorsV2.Operator memory operator) internal view
+    function getActiveValidatorsCount(OperatorsV2.Operator memory operator, uint256 opIndex) internal view
         returns (uint256)
     {
-        return operator.funded - operator.requestedExits;// + operator.picked;
+        return operator.funded - _getStoppedValidatorsCount(opIndex);
     }
 
     function getKeysCount(uint256 opIndex) external view
@@ -135,7 +135,7 @@ contract OperatorsRegistryV1Harness is OperatorsRegistryV1 {
         uint256 maxSaturation = type(uint256).min;
 
         for (uint256 idx = 0; idx < count; ++idx) {
-            uint256 saturation = getActiveValidatorsCount(ops[idx]);
+            uint256 saturation = getActiveValidatorsCount(ops[idx], idx);
             if (saturation > maxSaturation) {
                 maxSaturation = saturation;
             }
@@ -154,9 +154,9 @@ contract OperatorsRegistryV1Harness is OperatorsRegistryV1 {
             _getStoppedValidatorsCount(index2) < ops[index2].requestedExits) 
             return 0;   //validator that didn't comply to exit requests are discarted
 
-        uint256 saturation1 = getActiveValidatorsCount(ops[index1]);
+        uint256 saturation1 = getActiveValidatorsCount(ops[index1], index1);
         bool isSaturated1 = ops[index1].limit <= ops[index1].funded;
-        uint256 saturation2 = getActiveValidatorsCount(ops[index2]);
+        uint256 saturation2 = getActiveValidatorsCount(ops[index2], index2);
         bool isSaturated2 = ops[index2].limit <= ops[index2].funded;
         if (saturation1 == saturation2) return 0;
         if (saturation1 > saturation2 && !isSaturated2)
