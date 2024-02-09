@@ -60,8 +60,8 @@ definition needsLoopIter4(method f) returns bool =
 function isValidState() returns bool
 {
     uint opCount = getOperatorsCount();
-    uint stoppedValLength = getStoppedValidatorsLength();
-    return getOperatorsCount() <= 2 && opCount == stoppedValLength;
+    //uint stoppedValLength = getStoppedValidatorsLength();
+    return getOperatorsCount() <= 2;// && opCount == stoppedValLength;
 }
 function isOpIndexInBounds(uint opIndex) returns bool
 {

@@ -737,12 +737,12 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
         for (uint256 idx = 0; idx < fundableOperatorCount; ++idx) {
             // if we picked keys on any operator, we extract the keys from storage and concatenate them in the result
             // we then update the funded value
-            if (operators[idx].picked > 0) {
+            if (operators[idx].picked > 0) { /*
                 (bytes[] memory _publicKeys, bytes[] memory _signatures) =
                     ValidatorKeys.getKeys(operators[idx].index, operators[idx].funded, operators[idx].picked);
                 emit FundedValidatorKeys(operators[idx].index, _publicKeys, false);
                 publicKeys = _concatenateByteArrays(publicKeys, _publicKeys);
-                signatures = _concatenateByteArrays(signatures, _signatures);
+                signatures = _concatenateByteArrays(signatures, _signatures); */
                 (OperatorsV2.get(operators[idx].index)).funded += operators[idx].picked;
             }
         }

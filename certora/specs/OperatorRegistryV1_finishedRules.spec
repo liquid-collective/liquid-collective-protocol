@@ -43,12 +43,22 @@ invariant operatorsAddressesRemainUnique_LI2(uint opIndex1, uint opIndex2)
     filtered { f -> !ignoredMethod(f) && !needsLoopIter4(f) && 
         f.selector != sig:setOperatorAddress(uint256,address).selector } //method is allowed to break this
 // ------------ inactiveOperatorsRemainNotFunded
+// variant for the training
+invariant inactiveOperatorsRemainNotFunded(uint opIndex) 
+    (isValidState() && isOpIndexInBounds(opIndex)) => 
+        (!getOperator(opIndex).active => getOperator(opIndex).funded == 0)
+    { 
+        preserved requestValidatorExits(uint256 x) with(env e) { require x <= 2; }
+        preserved pickNextValidatorsToDeposit(uint256 x) with(env e) { require x <= 1; }  
+        preserved removeValidators(uint256 _index, uint256[] _indexes) with(env e) { require _indexes.length <= 1; }  
+    }
 
 // https://prover.certora.com/output/6893/6e9b0f3a147f4d048c25b70ed8627816/?anonymousKey=f35fa72ed7c790162056f0c77606e348fccc7435
 invariant inactiveOperatorsRemainNotFunded_LI4(uint opIndex) 
     isValidState() => (!getOperator(opIndex).active => getOperator(opIndex).funded == 0)
     filtered { f -> !ignoredMethod(f) && needsLoopIter4(f) && 
         f.selector != sig:setOperatorStatus(uint256,bool).selector } //method is allowed to break this
+
 // https://prover.certora.com/output/6893/a3abe3a68a254531a6bfa6703f5ecd5b/?anonymousKey=7dc68513575b3f3686b6d39523c6067c266e0cbf
 invariant inactiveOperatorsRemainNotFunded_LI2(uint opIndex) 
     isValidState() => (!getOperator(opIndex).active => getOperator(opIndex).funded == 0)
@@ -63,6 +73,16 @@ invariant inactiveOperatorsRemainNotFunded_LI2(uint opIndex)
     }
 
 // ------------ whoCanChangeOperatorsCount
+// version for the training
+rule whoCanChangeOperatorsCount(method f, env e, calldataarg args)
+{
+    uint countBefore = getOperatorsCount();
+    f(e, args);
+    uint countAfter = getOperatorsCount();
+    assert countAfter > countBefore => canIncreaseOperatorsCount(f);
+    assert countAfter < countBefore => canDecreaseOperatorsCount(f);
+}
+
 // https://prover.certora.com/output/6893/360d2ea0c38c48f88ba600ce16e5b4f0/?anonymousKey=b52535f640d13bdae23463ed46a8496081887813
 rule whoCanChangeOperatorsCount_IL2(method f, env e, calldataarg args) 
     filtered { f -> f.contract == currentContract && 
