@@ -15,8 +15,7 @@ methods {
     function getOperatorAddress(uint256) external returns(address) envfree;
     function getLatestKeysEditBlockNumber(uint256 opIndex) external 
         returns (uint64) envfree;
-    function getOperatorState(uint256 opIndex) external 
-        returns (uint32, uint32, uint32, uint32, uint32, bool, address) envfree;
+    function getOperator(uint256 _index) external returns (OperatorsV2.Operator) envfree;
     function getAdmin() external returns (address) envfree;
     
 }
@@ -38,8 +37,7 @@ rule integritySetOperatorLimits() {
     require i < operatorIndexes.length;
     uint256 opIndex = operatorIndexes[i];
     
-    uint32 limitAfter;
-    _, limitAfter, _, _, _, _, _ = getOperatorState(e, opIndex);
+    uint32 limitAfter = getOperator(opIndex).limit;
     setOperatorLimits(e, operatorIndexes, newLimits, snapshotBlock );
 
     assert limitAfter == newLimits[i];
@@ -81,16 +79,13 @@ rule witnessSetOperatorLimits() {
     uint256 opIndex = operatorIndexes[i];
     env e;
 
-    uint32 limitBefore;
-    uint256 latestKeysEditBlockNumber;
-
-    _, limitBefore, _, _, _, _, _ = getOperatorState(opIndex);
-    latestKeysEditBlockNumber = getLatestKeysEditBlockNumber(opIndex);
+    uint32 limitBefore = getOperator(opIndex).limit;
+    uint256 latestKeysEditBlockNumber = getOperator(opIndex).latestKeysEditBlockNumber;
 
     setOperatorLimits(e, operatorIndexes, newLimits, snapshotBlock );
-    
-    uint32 limitAfter;
-    _, limitAfter, _, _, _, _, _ = getOperatorState(opIndex);
+
+    uint32 limitAfter = getOperator(opIndex).limit;
+
     satisfy limitAfter == limitBefore;
 
 }
