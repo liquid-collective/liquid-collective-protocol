@@ -17,8 +17,15 @@ methods {
         returns (uint64) envfree;
     function getOperator(uint256 _index) external returns (OperatorsV2.Operator) envfree;
     function getAdmin() external returns (address) envfree;
-    
+
+    function LibBytes.slice(bytes memory _bytes, uint256 _start, uint256 _length) internal returns (bytes memory) => bytesSliceSummary(_bytes, _start, _length);
 }
+
+function bytesSliceSummary(bytes buffer, uint256 start, uint256 len) returns bytes {
+	bytes to_ret;
+	return to_ret;
+}
+
 
 /**
     @title - integrity of a successful (non reverting) to setOperatorLimits()
@@ -37,8 +44,8 @@ rule integritySetOperatorLimits() {
     require i < operatorIndexes.length;
     uint256 opIndex = operatorIndexes[i];
     
-    uint32 limitAfter = getOperator(opIndex).limit;
     setOperatorLimits(e, operatorIndexes, newLimits, snapshotBlock );
+    uint32 limitAfter = getOperator(opIndex).limit;
 
     assert limitAfter == newLimits[i];
     
@@ -110,3 +117,11 @@ rule compare() {
 
 
 } 
+
+
+rule justAStart() {
+    env e;
+    calldataarg args; 
+    removeValidators(e,args);
+    satisfy true; 
+}
