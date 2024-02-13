@@ -5,8 +5,18 @@
 methods {
     function getOperatorsCount() external returns (uint256) envfree;
     function operatorIsActive(uint256) external returns (bool) envfree;
-    function getOperatorState(uint256 opIndex) external
-        returns (uint32, uint32, uint32, uint32, uint32, bool, address) envfree;
+    function getOperator(uint256) external returns (OperatorsV2.Operator) envfree;
+    function getValidatorStateByIndex(uint256, uint256) external returns (uint256) envfree;
+    
+    function LibBytes.slice(
+        bytes memory _bytes, uint256 _start, uint256 _length
+    ) internal returns (bytes memory) => bytesSliceSummary(_bytes, _start, _length);
+}
+
+
+function bytesSliceSummary(bytes buffer, uint256 start, uint256 len) returns bytes {
+    bytes to_ret;
+    return to_ret;
 }
 
 
@@ -72,20 +82,16 @@ rule numOperatorsOnlyIncreasesByOne(method f) filtered {
 // Needed for speed-up and some vacuity issues
 definition isIgnoredMethod_Invariant(method f) returns bool = (
     f.selector == sig:addValidators(uint256,uint32,bytes).selector ||
-    f.selector == sig:forceFundedValidatorKeysEventEmission(uint256).selector ||
     f.selector == sig:pickNextValidatorsToDeposit(uint256).selector ||
     f.selector == sig:removeValidators(uint256, uint256[]).selector ||
-    f.selector == sig:reportStoppedValidatorCounts(uint32[],uint256).selector ||
     f.selector == sig:requestValidatorExits(uint256).selector
 );
 
 
 /// @title Checks that limit is not less than number of funded
 function isValidlyFundedOperator(uint256 opIndex) returns bool {
-    uint32 limit;
-    uint32 funded;
-    _, limit, funded, _, _, _, _ = getOperatorState(opIndex);
-    return limit >= funded;
+    OperatorsV2.Operator operator = getOperator(opIndex);
+    return operator.limit >= operator.funded;
 }
 
 
@@ -103,10 +109,19 @@ invariant operatorsAreValidlyFunded(uint256 opIndex)
         }
     }
 
-// -- Parametric vs invariant -------------------------------------------------
+// -- Parametric vs invariant 1 ------------------------------------------------
+
+// Needed for speed-up and some vacuity issues
+definition isIgnoredMethod_PvsI(method f) returns bool = (
+    f.selector == sig:addValidators(uint256,uint32,bytes).selector ||
+    f.selector == sig:forceFundedValidatorKeysEventEmission(uint256).selector ||
+    f.selector == sig:pickNextValidatorsToDeposit(uint256).selector ||
+    f.selector == sig:removeValidators(uint256, uint256[]).selector ||
+    f.selector == sig:requestValidatorExits(uint256).selector
+);
 
 rule badParametricRule(method f) filtered {
-    f -> !(isIgnoredMethod_Invariant(f) || f.isView)
+    f -> !(isIgnoredMethod_PvsI(f) || f.isView)
 } {
     require getOperatorsCount() < 2^5;
     require getOperatorsCount() >= 1;  // Pre-condition
@@ -122,7 +137,7 @@ rule badParametricRule(method f) filtered {
 invariant goodInvariant()
     getOperatorsCount() >= 1
     filtered {
-        f -> !isIgnoredMethod_Invariant(f)
+        f -> !isIgnoredMethod_PvsI(f)
     }
     {
         preserved {
@@ -130,19 +145,19 @@ invariant goodInvariant()
         }
     }
 
+// -- State machine ------------------------------------------------------------
 
-/*
 /// @title Is operator in a valid state
 function isValidOperatorState(uint256 opIndex) returns bool {
     uint32 keys;
     uint32 limit;
     uint32 funded;
     uint32 requestedExits;
-    keys, limit, funded, requestedExits, _, _, _ = getOperatorState(opIndex);
+    OperatorsV2.Operator operator = getOperator(opIndex);
     return (
-        keys >= limit &&
-        limit >= funded &&
-        funded >= requestedExits &&
+        operator.keys >= operator.limit &&
+        operator.limit >= operator.funded &&
+        operator.funded >= operator.requestedExits &&
         opIndex < getOperatorsCount()
     );
 }
@@ -151,7 +166,6 @@ function isValidOperatorState(uint256 opIndex) returns bool {
 /**
     @title Valid operator state
 **/
-/*
 invariant operatorIsInValidState(uint256 opIndex)
     isValidOperatorState(opIndex)
     filtered {
@@ -167,10 +181,10 @@ invariant operatorIsInValidState(uint256 opIndex)
 /**
     @title Fundable-> Exited validator state change rule
 **/
-/*
 rule fundedToExitedValidatorStateChange(uint256 opIndex, uint256 valIndex, method f) {
     // Require that we be in a valid state
     requireInvariant operatorIsInValidState(opIndex);
+    require getOperatorsCount() < 2^5;
 
     // Pre-condition
     require getValidatorStateByIndex(opIndex, valIndex) == 3;
