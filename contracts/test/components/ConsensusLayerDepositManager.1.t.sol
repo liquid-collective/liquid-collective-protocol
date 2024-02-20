@@ -302,7 +302,11 @@ contract ConsensusLayerDepositManagerV1WithdrawalCredentialError is Test {
         depositContract = new DepositContractMock();
 
         depositManager = new ConsensusLayerDepositManagerV1ControllableValidatorKeyRequest();
-        vm.store(address(depositManager), bytes32(uint256(keccak256("river.state.depositContractAddress")) - 1), bytes32(uint256(uint160(address(depositContract)))));
+        vm.store(
+            address(depositManager),
+            bytes32(uint256(keccak256("river.state.depositContractAddress")) - 1),
+            bytes32(uint256(uint160(address(depositContract))))
+        );
         LibImplementationUnbricker.unbrick(vm, address(depositManager));
     }
 
@@ -397,8 +401,12 @@ contract ConsensusLayerDepositManagerV1ValidKeysTest is Test {
     function testDepositValidKey() external {
         vm.deal(address(depositManager), 32 ether);
         ConsensusLayerDepositManagerV1ValidKeys(address(depositManager)).sudoSyncBalance();
-        vm.store(address(depositManager), bytes32(uint256(keccak256("river.state.KeeperAddress")) - 1), bytes32(uint256(uint160(address(0x1))) ));
-        vm.startPrank(address(0x0000000000000000000000000000000000000001));
+        vm.store(
+            address(depositManager),
+            bytes32(uint256(keccak256("river.state.KeeperAddress")) - 1),
+            bytes32(uint256(uint160(address(0x1))))
+        );
+        vm.startPrank(address(0x1));
         depositManager.depositToConsensusLayer(1, depositContract.get_deposit_root());
         assert(DepositContractEnhancedMock(address(depositContract)).debug_getLastDepositDataRoot() == depositDataRoot);
     }

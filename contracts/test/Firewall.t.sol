@@ -285,7 +285,7 @@ contract FirewallTests is BytesGenerator, Test {
     function testGovernorCannotDepositToConsensusLayer() public {
         // Assert this by expecting NotEnoughFunds, NOT Unauthorized
         vm.startPrank(riverGovernorDAO);
-        vm.expectRevert(abi.encodeWithSignature("InvalidDepositRoot()"));
+        vm.expectRevert(abi.encodeWithSignature("NotEnoughFunds()"));
         firewalledRiver.depositToConsensusLayer(10, bytes32(0));
         vm.stopPrank();
     }
@@ -293,7 +293,7 @@ contract FirewallTests is BytesGenerator, Test {
     function testExecutorCannotDepositToConsensusLayer() public {
         // Assert this by expecting NotEnoughFunds, NOT Unauthorized
         vm.startPrank(executor);
-        vm.expectRevert(abi.encodeWithSignature("InvalidDepositRoot()"));
+        vm.expectRevert(abi.encodeWithSignature("NotEnoughFunds()"));
         firewalledRiver.depositToConsensusLayer(10, bytes32(0));
         vm.stopPrank();
     }
