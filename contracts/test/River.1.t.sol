@@ -170,7 +170,6 @@ contract RiverV1Tests is RiverV1TestBase {
             500
         );
         oracle.initOracleV1(address(river), admin, 225, 32, 12, 0, 1000, 500);
-        
 
         vm.startPrank(admin);
         river.setCoverageFund(address(coverageFund));

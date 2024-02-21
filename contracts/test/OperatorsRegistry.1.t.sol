@@ -3005,4 +3005,43 @@ contract OperatorsRegistryV1TestDistribution is Test {
 
         vm.stopPrank();
     }
+
+    function testGetNextValidatorsToDepositFromActiveOperators() public {
+        bytes[] memory rawKeys = new bytes[](5);
+
+        rawKeys[0] = genBytes((48 + 96) * 50);
+        rawKeys[1] = genBytes((48 + 96) * 50);
+        rawKeys[2] = genBytes((48 + 96) * 50);
+        rawKeys[3] = genBytes((48 + 96) * 50);
+        rawKeys[4] = genBytes((48 + 96) * 50);
+
+        vm.startPrank(admin);
+        operatorsRegistry.addValidators(0, 50, rawKeys[0]);
+        operatorsRegistry.addValidators(1, 50, rawKeys[1]);
+        operatorsRegistry.addValidators(2, 50, rawKeys[2]);
+        operatorsRegistry.addValidators(3, 50, rawKeys[3]);
+        operatorsRegistry.addValidators(4, 50, rawKeys[4]);
+        vm.stopPrank();
+
+        uint32[] memory limits = new uint32[](5);
+        limits[0] = 50;
+        limits[1] = 50;
+        limits[2] = 50;
+        limits[3] = 50;
+        limits[4] = 50;
+
+        uint256[] memory operators = new uint256[](5);
+        operators[0] = 0;
+        operators[1] = 1;
+        operators[2] = 2;
+        operators[3] = 3;
+        operators[4] = 4;
+
+        vm.prank(admin);
+        operatorsRegistry.setOperatorLimits(operators, limits, block.number);
+        
+        (bytes[] memory publicKeys, bytes[] memory signatures) = operatorsRegistry.getNextValidatorsToDepositFromActiveOperators(5);
+        assert(publicKeys.length == 5);
+        assert(signatures.length == 5);
+    }
 }
