@@ -199,6 +199,17 @@ contract RiverV1Tests is RiverV1TestBase {
         vm.stopPrank();
     }
 
+    function testOnlyAdminCanSetKeeper() public {
+        address keeper = makeAddr("keeper");
+        assert(river.getKeeper() == admin);
+        vm.prank(admin);
+        river.setKeeper(keeper);
+        assert(river.getKeeper() == keeper);
+
+        vm.expectRevert(abi.encodeWithSignature("Unauthorized(address)", address(this)));
+        river.setKeeper(address(0));
+    }
+
     function testInitWithZeroAddressValue() public {
         withdraw = new WithdrawV1();
         bytes32 withdrawalCredentials = withdraw.getCredentials();

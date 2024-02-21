@@ -61,6 +61,10 @@ interface IConsensusLayerDepositManagerV1 {
     /// @return The deposited validator count
     function getDepositedValidatorCount() external view returns (uint256);
 
+    /// @notice Get the keeper address
+    /// @return The keeper address
+    function getKeeper() external view returns (address);
+
     /// @notice Deposits current balance to the Consensus Layer by batches of 32 ETH
     /// @param _maxCount The maximum amount of validator keys to fund
     /// @param _depositRoot The root of the deposit tree

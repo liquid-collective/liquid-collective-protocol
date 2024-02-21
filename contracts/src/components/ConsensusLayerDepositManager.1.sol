@@ -88,6 +88,11 @@ abstract contract ConsensusLayerDepositManagerV1 is IConsensusLayerDepositManage
     }
 
     /// @inheritdoc IConsensusLayerDepositManagerV1
+    function getKeeper() external view returns (address) {
+        return KeeperAddress.get();
+    }
+
+    /// @inheritdoc IConsensusLayerDepositManagerV1
     function depositToConsensusLayer(uint256 _maxCount, bytes32 _depositRoot) external onlyKeeper {
         if (IDepositContract(DepositContractAddress.get()).get_deposit_root() != _depositRoot) {
             revert InvalidDepositRoot();

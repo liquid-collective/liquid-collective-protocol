@@ -207,7 +207,11 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
         funded = _validatorIndex < OperatorsV2.get(_operatorIndex).funded;
     }
 
-    function getNextValidatorsToDepositFromActiveOperators(uint256 _count) external view returns (bytes[] memory publicKeys, bytes[] memory signatures) {
+    function getNextValidatorsToDepositFromActiveOperators(uint256 _count)
+        external
+        view
+        returns (bytes[] memory publicKeys, bytes[] memory signatures)
+    {
         (OperatorsV2.CachedOperator[] memory operators, uint256 fundableOperatorCount) = OperatorsV2.getAllFundable();
 
         if (fundableOperatorCount == 0) {
@@ -236,9 +240,15 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
             // we start from the next operator and we try to find one that has fundable keys but a lower (funded + picked) - stopped value
             for (uint256 idx = selectedOperatorIndex + 1; idx < fundableOperatorCount;) {
                 if (
-                    ((_pickedCounts[idx] + operators[idx].funded + operators[idx].picked) - _getStoppedValidatorsCount(idx))
-                        < ((_pickedCounts[selectedOperatorIndex] + operators[selectedOperatorIndex].funded + operators[selectedOperatorIndex].picked) - _getStoppedValidatorsCount(selectedOperatorIndex))
-                        && _hasFundableKeys(operators[idx])
+                    (
+                        (_pickedCounts[idx] + operators[idx].funded + operators[idx].picked)
+                            - _getStoppedValidatorsCount(idx)
+                    )
+                        < (
+                            (_pickedCounts[selectedOperatorIndex] + operators[selectedOperatorIndex].funded
+                                + operators[selectedOperatorIndex].picked
+                            ) - _getStoppedValidatorsCount(selectedOperatorIndex)
+                        ) && _hasFundableKeys(operators[idx])
                 ) {
                     selectedOperatorIndex = idx;
                 }
@@ -269,8 +279,9 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
             // if we picked keys on any operator, we extract the keys from storage and concatenate them in the result
             // we then update the funded value
             if (_pickedCounts[idx] > 0) {
-                (bytes[] memory _publicKeys, bytes[] memory _signatures) =
-                    ValidatorKeys.getKeys(operators[idx].index, operators[idx].funded, operators[idx].picked + _pickedCounts[idx]);
+                (bytes[] memory _publicKeys, bytes[] memory _signatures) = ValidatorKeys.getKeys(
+                    operators[idx].index, operators[idx].funded, operators[idx].picked + _pickedCounts[idx]
+                );
                 publicKeys = _concatenateByteArrays(publicKeys, _publicKeys);
                 signatures = _concatenateByteArrays(signatures, _signatures);
             }

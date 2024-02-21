@@ -410,6 +410,17 @@ contract ConsensusLayerDepositManagerV1ValidKeysTest is Test {
         depositManager.depositToConsensusLayer(1, depositContract.get_deposit_root());
         assert(DepositContractEnhancedMock(address(depositContract)).debug_getLastDepositDataRoot() == depositDataRoot);
     }
+
+    function testDepositFailsWithInvalidDepositRoot() public {
+        vm.store(
+            address(depositManager),
+            bytes32(uint256(keccak256("river.state.KeeperAddress")) - 1),
+            bytes32(uint256(uint160(address(0x1))))
+        );
+        vm.startPrank(address(0x1));
+        vm.expectRevert(abi.encodeWithSignature("InvalidDepositRoot()"));
+        depositManager.depositToConsensusLayer(1, bytes32(0));
+    }
 }
 
 contract ConsensusLayerDepositManagerV1InvalidDepositContract is Test {
