@@ -1426,4 +1426,91 @@ contract RedeemManagerV1Tests is Test {
         );
         river.pullExceedingEth(address(redeemManager), 1 ether);
     }
+
+    function testRedeemRequestClaimCouldBeTransfered(uint256 _salt) external {
+        uint128 amount = uint128(bound(_salt, 1, type(uint128).max));
+
+        address user = _generateAllowlistedUser(1);
+        address recipient = _generateAllowlistedUser(1 + 1);
+
+        river.sudoDeal(user, uint256(amount));
+
+        vm.prank(user);
+        river.approve(address(redeemManager), uint256(amount));
+
+        vm.prank(user);
+        uint32 redeemRequestId = redeemManager.requestRedeem(amount, user);
+
+        vm.prank(user);
+        redeemManager.transferRedeemRequest(redeemRequestId, recipient);
+
+        vm.deal(address(this), amount);
+        river.sudoReportWithdraw{value: amount}(address(redeemManager), amount);
+
+        assertEq(redeemManager.getWithdrawalEventCount(), 1);
+        assertEq(redeemManager.getRedeemRequestCount(), 1);
+
+        {
+            RedeemQueue.RedeemRequest memory rr = redeemManager.getRedeemRequestDetails(0);
+
+            assertEq(rr.height, 0);
+            assertEq(rr.amount, amount);
+            assertEq(rr.owner, recipient);
+        }
+
+        {
+            WithdrawalStack.WithdrawalEvent memory we = redeemManager.getWithdrawalEventDetails(0);
+
+            assertEq(we.height, 0);
+            assertEq(we.amount, amount);
+            assertEq(we.withdrawnEth, amount);
+        }
+
+        uint32[] memory redeemRequestIds = new uint32[](1);
+        uint32[] memory withdrawEventIds = new uint32[](1);
+
+        redeemRequestIds[0] = 0;
+        withdrawEventIds[0] = 0;
+
+        assertEq(address(redeemManager).balance, amount);
+        assertEq(user.balance, 0);
+
+        int64[] memory resolvedRedeemRequests = redeemManager.resolveRedeemRequests(redeemRequestIds);
+
+        assertEq(resolvedRedeemRequests.length, 1);
+        assertEq(resolvedRedeemRequests[0], 0);
+
+        vm.startPrank(recipient);
+        vm.expectEmit(true, true, true, true);
+        emit SatisfiedRedeemRequest(0, 0, amount, amount, 0, 0);
+        vm.expectEmit(true, true, true, true);
+        emit ClaimedRedeemRequest(0, recipient, amount, amount, 0);
+        redeemManager.claimRedeemRequests(redeemRequestIds, withdrawEventIds, true, type(uint16).max);
+        vm.stopPrank();
+
+        assertEq(redeemManager.getBufferedExceedingEth(), 0);
+        assertEq(address(redeemManager).balance, 0);
+        assertEq(recipient.balance, amount);
+
+        resolvedRedeemRequests = redeemManager.resolveRedeemRequests(redeemRequestIds);
+
+        assertEq(resolvedRedeemRequests.length, 1);
+        assertEq(resolvedRedeemRequests[0], -3);
+
+        {
+            RedeemQueue.RedeemRequest memory rr = redeemManager.getRedeemRequestDetails(0);
+
+            assertEq(rr.height, amount);
+            assertEq(rr.amount, 0);
+            assertEq(rr.owner, recipient);
+        }
+
+        {
+            WithdrawalStack.WithdrawalEvent memory we = redeemManager.getWithdrawalEventDetails(0);
+
+            assertEq(we.height, 0);
+            assertEq(we.amount, amount);
+            assertEq(we.withdrawnEth, amount);
+        }
+    }
 }

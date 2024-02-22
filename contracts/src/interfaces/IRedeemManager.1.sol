@@ -62,6 +62,12 @@ interface IRedeemManagerV1 {
     /// @param river The new river address
     event SetRiver(address river);
 
+    event RedeemRequestClaimTransfered(
+        uint32 indexed redeemRequestId,
+        address indexed owner,
+        address indexed recipient
+    );
+
     /// @notice Thrown When a zero value is provided
     error InvalidZeroAmount();
 
@@ -97,6 +103,9 @@ interface IRedeemManagerV1 {
     /// @param recipient The recipient of the payment
     /// @param rdata The revert data
     error ClaimRedeemFailed(address recipient, bytes rdata);
+
+    /// @notice Thrown when the user other than the owner tries to transfer a redeem request
+    error NotOwner();
 
     /// @param _river The address of the River contract
     function initializeRedeemManagerV1(address _river) external;

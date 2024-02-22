@@ -156,6 +156,17 @@ contract RedeemManagerV1 is Initializable, IRedeemManagerV1 {
         return _claimRedeemRequests(_redeemRequestIds, _withdrawalEventIds, true, type(uint16).max);
     }
 
+    function transferRedeemRequest(uint32 _redeemRequestId, address _newRecipient) external {
+        LibSanitize._notZeroAddress(_newRecipient);
+        RedeemQueue.RedeemRequest[] storage redeemRequests = RedeemQueue.get();
+        RedeemQueue.RedeemRequest storage redeemRequest = redeemRequests[_redeemRequestId];
+        if(redeemRequest.owner!= msg.sender) {
+            revert NotOwner();
+        }
+        redeemRequest.owner = _newRecipient;
+        emit RedeemRequestClaimTransfered(_redeemRequestId, msg.sender, _newRecipient);
+    }
+
     /// @inheritdoc IRedeemManagerV1
     function reportWithdraw(uint256 _lsETHWithdrawable) external payable onlyRiver {
         uint256 redeemDemand = RedeemDemand.get();
