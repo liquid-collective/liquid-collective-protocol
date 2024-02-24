@@ -402,12 +402,12 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
 
             uint256 lastKeyIndex = totalKeys - idx;
 
-            (bytes memory removedPublicKey,) = ValidatorKeys.get(_index, keyIndex);
+            //(bytes memory removedPublicKey,) = ValidatorKeys.get(_index, keyIndex);
             (bytes memory lastPublicKeyAndSignature) = ValidatorKeys.getRaw(_index, lastKeyIndex);
             ValidatorKeys.set(_index, keyIndex, lastPublicKeyAndSignature);
             ValidatorKeys.set(_index, lastKeyIndex, new bytes(0));
 
-            emit RemovedValidatorKey(_index, removedPublicKey);
+            //emit RemovedValidatorKey(_index, removedPublicKey);
         }
 
         if (limitEqualsKeyCount) {
@@ -737,12 +737,13 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
         for (uint256 idx = 0; idx < fundableOperatorCount; ++idx) {
             // if we picked keys on any operator, we extract the keys from storage and concatenate them in the result
             // we then update the funded value
-            if (operators[idx].picked > 0) { /*
+            if (operators[idx].picked > 0) { 
                 (bytes[] memory _publicKeys, bytes[] memory _signatures) =
                     ValidatorKeys.getKeys(operators[idx].index, operators[idx].funded, operators[idx].picked);
                 emit FundedValidatorKeys(operators[idx].index, _publicKeys, false);
                 publicKeys = _concatenateByteArrays(publicKeys, _publicKeys);
-                signatures = _concatenateByteArrays(signatures, _signatures); */
+                signatures = _concatenateByteArrays(signatures, _signatures);
+
                 (OperatorsV2.get(operators[idx].index)).funded += operators[idx].picked;
             }
         }

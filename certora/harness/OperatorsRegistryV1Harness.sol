@@ -14,6 +14,10 @@ contract OperatorsRegistryV1Harness is OperatorsRegistryV1 {
         return OperatorsV2.getCount();
     }
 
+    function getMaxValidatorAttributionPerRound() external view returns (uint256) {
+        return MAX_VALIDATOR_ATTRIBUTION_PER_ROUND;
+    }
+
     function getStoppedValidatorsLength() external view returns (uint256) {
         return OperatorsV2.getStoppedValidators().length;
     }
@@ -68,6 +72,11 @@ contract OperatorsRegistryV1Harness is OperatorsRegistryV1 {
         return 0;   //not present in the list
     }
 
+    function getRawValidator(uint256 opIndex, uint256 valIndex) external view returns (bytes memory valData)
+    {
+        return ValidatorKeys.getRaw(opIndex, valIndex);
+    }
+
     function operatorStateIsValid(uint256 opIndex) external view returns (bool) {
         if (opIndex >= OperatorsV2.getAll().length) return false;
         OperatorsV2.Operator memory op = OperatorsV2.get(opIndex);
@@ -110,7 +119,11 @@ contract OperatorsRegistryV1Harness is OperatorsRegistryV1 {
     }
 
     function equals(bytes memory b1, bytes memory b2) external pure returns (bool) {
-        return keccak256(abi.encodePacked(b1)) == keccak256(abi.encodePacked(b2));
+        return keccak256(abi.encode(b1)) == keccak256(abi.encode(b2));
+    }
+
+    function getHash(bytes memory b) external pure returns (bytes32) {
+        return keccak256(abi.encode(b));
     }
 
     function getActiveValidatorsCount(OperatorsV2.Operator memory operator, uint256 opIndex) internal view

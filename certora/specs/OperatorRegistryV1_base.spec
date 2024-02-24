@@ -34,6 +34,7 @@ methods {
     function OR.setOperatorAddress(uint256, address) external;   
     function OR.getOperatorsSaturationDiscrepancy(uint256, uint256) external returns (uint256) envfree;
     function OR.removeValidators(uint256,uint256[]) external envfree;
+    function OR.getHash(bytes) external returns (bytes32) envfree;
 
     //workaroun per CERT-4615 
     function LibBytes.slice(bytes memory _bytes, uint256 _start, uint256 _length) internal returns (bytes memory) => bytesSliceSummary(_bytes, _start, _length);
@@ -44,7 +45,7 @@ ghost mapping(bytes32 => mapping(uint => bytes32)) sliceGhost;
 function bytesSliceSummary(bytes buffer, uint256 start, uint256 len) returns bytes {
 	bytes to_ret;
 	require(to_ret.length == len);
-	require(buffer.length <= require_uint256(start + len));
+	require(buffer.length >= require_uint256(start + len));
 	bytes32 buffer_hash = keccak256(buffer);
 	require keccak256(to_ret) == sliceGhost[buffer_hash][start];
 	return to_ret;
@@ -56,6 +57,12 @@ function bytesSliceSummary(bytes buffer, uint256 start, uint256 len) returns byt
 definition needsLoopIter4(method f) returns bool =
     f.selector == sig:addValidators(uint256,uint32,bytes).selector ||
     f.selector == sig:reportStoppedValidatorCounts(uint32[],uint256).selector;
+
+definition canRemoveValidators(method f) returns bool =
+    f.selector == sig:removeValidators(uint256,uint256[]).selector;
+definition canAddValidators(method f) returns bool =
+    f.selector == sig:addValidators(uint256,uint32,bytes).selector;
+
 
 function isValidState() returns bool
 {

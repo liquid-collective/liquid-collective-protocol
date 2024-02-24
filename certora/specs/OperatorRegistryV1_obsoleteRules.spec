@@ -48,4 +48,21 @@ rule rule_operatorStateRemainValid_setOperatorAddress(env e)
     assert validBefore => validAfter;
 }
 
+rule test_equals(env e) 
+{
+    uint256 opIndex = 0;
+    require getKeysCount(opIndex) == 2;
+    uint256 valIndex = 0;
+    bytes val1 = getRawValidator(e, opIndex, valIndex);
+    bytes32 hash_1 = getHash(val1);
+    bytes val2 = getRawValidator(e, opIndex, valIndex);
+    bytes32 hash_2 = getHash(val2);
+    require val1.length <= 1000;
+    require val2.length <= 1000;
+    bool equals_func = equals(val1, val2);
+    bool equals_direct = hash_1 == hash_2;
+
+    assert equals_direct => equals_func;
+}
+
 

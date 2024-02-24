@@ -393,3 +393,16 @@ rule depositAdditivityBatchingNotExtremelyProfitable(env e1, env e2, env eSum) {
 
     assert shares2 + shares2 + 4 >= sharesSum;
 }
+
+rule onlyOneAddressCanCall(method f, calldataarg args)
+{
+    env e1;
+    env e2;
+    require e1.msg.sender != e2.msg.sender;
+    storage initStorage = lastStorage;
+    f@withrevert(e1, args);
+    bool reverted1 = lastReverted;
+    f@withrevert(e2, args);
+    bool reverted2 = lastReverted;
+    assert !reverted1 => reverted2;
+}
