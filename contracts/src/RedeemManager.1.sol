@@ -117,7 +117,7 @@ contract RedeemManagerV1 is Initializable, IRedeemManagerV1 {
         WithdrawalStack.WithdrawalEvent[] storage withdrawalEvents = WithdrawalStack.get();
         uint256 withdrawalEventsLength = withdrawalEvents.length;
         if (withdrawalEventsLength > 0) {
-            lastWithdrawalEvent = withdrawalEvents[withdrawalEventsLength - 1];
+            unchecked { lastWithdrawalEvent = withdrawalEvents[withdrawalEventsLength - 1]; }
         }
         for (uint256 idx = 0; idx < _redeemRequestIds.length; ++idx) {
             withdrawalEventIds[idx] = _resolveRedeemRequestId(_redeemRequestIds[idx], lastWithdrawalEvent);
@@ -173,7 +173,7 @@ contract RedeemManagerV1 is Initializable, IRedeemManagerV1 {
         withdrawalEvents.push(
             WithdrawalStack.WithdrawalEvent({height: height, amount: _lsETHWithdrawable, withdrawnEth: msgValue})
         );
-        _setRedeemDemand(redeemDemand - _lsETHWithdrawable);
+        unchecked { _setRedeemDemand(redeemDemand - _lsETHWithdrawable); }
         emit ReportedWithdrawal(height, _lsETHWithdrawable, msgValue, withdrawalEventId);
     }
 
@@ -318,14 +318,14 @@ contract RedeemManagerV1 is Initializable, IRedeemManagerV1 {
 
     /// @notice Internal structure used to optimize stack usage in _claimRedeemRequest
     struct ClaimRedeemRequestParameters {
-        /// @custom:attribute The id of the redeem request to claim
-        uint32 redeemRequestId;
         /// @custom:attribute The structure of the redeem request to claim
         RedeemQueue.RedeemRequest redeemRequest;
-        /// @custom:attribute The id of the withdrawal event to use to claim the redeem request
-        uint32 withdrawalEventId;
         /// @custom:attribute The structure of the withdrawal event to use to claim the redeem request
         WithdrawalStack.WithdrawalEvent withdrawalEvent;
+        /// @custom:attribute The id of the redeem request to claim
+        uint32 redeemRequestId;
+        /// @custom:attribute The id of the withdrawal event to use to claim the redeem request
+        uint32 withdrawalEventId;
         /// @custom:attribute The count of withdrawal events
         uint32 withdrawalEventCount;
         /// @custom:attribute The current depth of the recursive call
@@ -377,7 +377,9 @@ contract RedeemManagerV1 is Initializable, IRedeemManagerV1 {
                 (vars.matchingAmount * _params.redeemRequest.maxRedeemableEth) / _params.redeemRequest.amount;
 
             if (maxRedeemableEthAmount < vars.ethAmount) {
-                vars.exceedingEthAmount = vars.ethAmount - maxRedeemableEthAmount;
+                unchecked { 
+                    vars.exceedingEthAmount = vars.ethAmount - maxRedeemableEthAmount;
+                }
                 BufferedExceedingEth.set(BufferedExceedingEth.get() + vars.exceedingEthAmount);
                 vars.ethAmount = maxRedeemableEthAmount;
             }
@@ -418,9 +420,9 @@ contract RedeemManagerV1 is Initializable, IRedeemManagerV1 {
         ) {
             WithdrawalStack.WithdrawalEvent[] storage withdrawalEvents = WithdrawalStack.get();
 
-            ++_params.withdrawalEventId;
+            unchecked { ++_params.withdrawalEventId; }
             _params.withdrawalEvent = withdrawalEvents[_params.withdrawalEventId];
-            --_params.depth;
+            unchecked { --_params.depth; }
 
             _claimRedeemRequest(_params);
         } else {
