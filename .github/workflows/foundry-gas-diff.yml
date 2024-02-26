@@ -2,16 +2,10 @@ name: Report gas diff
 
 on:
   push:
-    branches:
-      - main
-  pull_request:
-    # Optionally configure to run only for changes in specific files. For example:
     paths:
-    - contracts/src/**
-    # - test/**
-    # - foundry.toml
-    # - remappings.txt
-    # - .github/workflows/foundry-gas-diff.yml
+      - "contracts/**"
+      - "lib/**"
+      - ".github/**"
 
 jobs:
   compare_gas_reports:
