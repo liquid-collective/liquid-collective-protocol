@@ -220,7 +220,7 @@ library OperatorsV2 {
             }
         }
 
-        assembly("memory-safe") {
+        assembly ("memory-safe") {
             mstore(fundableOperators, fundableCount)
         }
 
@@ -265,7 +265,7 @@ library OperatorsV2 {
             }
         }
 
-        assembly("memory-safe") {
+        assembly ("memory-safe") {
             mstore(exitableOperators, exitableCount)
         }
 
