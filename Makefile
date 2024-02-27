@@ -38,6 +38,3 @@ artifacts-goerli:
 artifacts-mockedGoerli:
 	yarn hh run gen_root_artifacts.ts --network mockedGoerli
 	yarn hh run gen_meta_artifacts.ts --network mockedGoerli
-
-gas-report:
-	@forge test --gas-report
