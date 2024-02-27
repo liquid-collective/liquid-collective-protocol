@@ -220,6 +220,10 @@ library OperatorsV2 {
             }
         }
 
+        assembly("memory-safe") {
+            mstore(fundableOperators, fundableCount)
+        }
+
         return (fundableOperators, fundableCount);
     }
 
@@ -259,6 +263,10 @@ library OperatorsV2 {
             unchecked {
                 ++idx;
             }
+        }
+
+        assembly("memory-safe") {
+            mstore(exitableOperators, exitableCount)
         }
 
         return (exitableOperators, exitableCount);
