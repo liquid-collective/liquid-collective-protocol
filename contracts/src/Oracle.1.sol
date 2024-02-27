@@ -229,7 +229,7 @@ contract OracleV1 is IOracleV1, Initializable, Administrable {
     /// @dev Ensures that the quorum respects invariants
     /// @dev The admin is in charge of providing a proper quorum based on the oracle member count
     /// @dev The quorum value Q should respect the following invariant, where O is oracle member count
-    /// @dev (O / 2) + 1 <= Q <= O
+    /// @dev 1 <= Q <= O
     /// @param _newQuorum New quorum value
     /// @param _previousQuorum The old quorum value
     function _clearReportsAndSetQuorum(uint256 _newQuorum, uint256 _previousQuorum) internal {
