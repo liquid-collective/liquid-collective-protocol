@@ -1,6 +1,8 @@
 //SPDX-License-Identifier: BUSL-1.1
 pragma solidity 0.8.20;
 
+import { FixedPointMathLib } from "solmate/utils/FixedPointMathLib.sol";
+
 import "../interfaces/components/ISharesManager.1.sol";
 
 import "../libraries/LibSanitize.sol";
@@ -215,7 +217,7 @@ abstract contract SharesManagerV1 is ISharesManagerV1 {
             return 0;
         }
 
-        return (_balance * _totalSharesValue) / _assetBalance();
+        return FixedPointMathLib.mulDivDown(_balance, _totalSharesValue, _assetBalance());
     }
 
     /// @notice Internal utility to mint shares for the specified user
