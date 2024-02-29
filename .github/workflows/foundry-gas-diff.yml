@@ -37,6 +37,7 @@ jobs:
           sortCriteria: avg,max # sort diff rows by criteria
           sortOrders: desc,asc # and directions
           ignore: test-foundry/**/*,test/**/* # filter out gas reports from specific paths (test/ is included by default)
+          base: main # branch to compare against (defaults to current branch)
         id: gas_diff
 
       - name: Add gas diff to sticky comment
