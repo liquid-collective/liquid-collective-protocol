@@ -700,6 +700,9 @@ const func: DeployFunction = async function ({
   } else {
     console.log("Executor should not have permission to call depositToConsensusLayer");
   }
+
+  //TODO: Also add tests for checking correct initialization of the contracts
+  // EG: Check if redeem manager, elfeerecepient, etc. have been set correctly on river,etc.
 };
 
 func.skip = async function ({ deployments }: HardhatRuntimeEnvironment): Promise<boolean> {

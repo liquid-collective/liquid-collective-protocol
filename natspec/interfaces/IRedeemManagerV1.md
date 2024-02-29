@@ -1,6 +1,6 @@
 # IRedeemManagerV1
 
-*Kiln*
+**Kiln**
 
 > Redeem Manager Interface (v1)
 
