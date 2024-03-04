@@ -456,6 +456,8 @@ contract RedeemManagerV1 is Initializable, IRedeemManagerV1 {
         params.withdrawalEventCount = uint32(withdrawalEvents.length);
         uint32 redeemRequestCount = uint32(redeemRequests.length);
 
+        IAllowlistV1 allowList = IAllowlistV1(_castedRiver().getAllowlist());
+
         for (uint256 idx = 0; idx < redeemRequestIdsLength;) {
             // both ids are loaded into params
             params.redeemRequestId = _redeemRequestIds[idx];
@@ -473,6 +475,9 @@ contract RedeemManagerV1 is Initializable, IRedeemManagerV1 {
 
             // we load the redeem request in memory
             params.redeemRequest = redeemRequests[_redeemRequestIds[idx]];
+
+            if (allowList.isDenied(params.redeemRequest.owner))
+                revert ClaimOwnerIsDenied();
 
             // we check that the redeem request is not already claimed
             if (params.redeemRequest.amount == 0) {
