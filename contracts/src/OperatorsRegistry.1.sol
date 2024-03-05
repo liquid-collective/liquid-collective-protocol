@@ -274,13 +274,14 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
         uint32[] calldata _newLimits,
         uint256 _snapshotBlock
     ) external onlyAdmin {
-        if (_operatorIndexes.length != _newLimits.length) {
+        uint _operatorIndexesLength = _operatorIndexes.length;
+        if (_operatorIndexesLength != _newLimits.length) {
             revert InvalidArrayLengths();
         }
-        if (_operatorIndexes.length == 0) {
+        if (_operatorIndexesLength == 0) {
             revert InvalidEmptyArray();
         }
-        for (uint256 idx = 0; idx < _operatorIndexes.length;) {
+        for (uint256 idx = 0; idx < _operatorIndexesLength;) {
             uint256 operatorIndex = _operatorIndexes[idx];
             uint32 newLimit = _newLimits[idx];
 
