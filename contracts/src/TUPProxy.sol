@@ -38,7 +38,7 @@ contract TUPProxy is TransparentUpgradeableProxy {
 
     /// @dev Retrieves Paused state
     /// @return Paused state
-    function paused() external ifAdmin returns (bool) {
+    function paused() external view returns (bool) {
         return StorageSlot.getBooleanSlot(_PAUSE_SLOT).value;
     }
 
