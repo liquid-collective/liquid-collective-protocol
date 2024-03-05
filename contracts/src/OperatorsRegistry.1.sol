@@ -245,7 +245,8 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
                             - _getStoppedValidatorsCount(idx)
                     )
                         < (
-                            (_pickedCounts[selectedOperatorIndex] + operators[selectedOperatorIndex].funded
+                            (
+                                _pickedCounts[selectedOperatorIndex] + operators[selectedOperatorIndex].funded
                                 + operators[selectedOperatorIndex].picked
                             ) - _getStoppedValidatorsCount(selectedOperatorIndex)
                         ) && _hasFundableKeys(operators[idx])
@@ -261,7 +262,10 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
             uint256 pickedKeyCount = LibUint256.min(
                 LibUint256.min(
                     operators[selectedOperatorIndex].limit
-                        - (operators[selectedOperatorIndex].funded + operators[selectedOperatorIndex].picked + _pickedCounts[selectedOperatorIndex]),
+                        - (
+                            operators[selectedOperatorIndex].funded + operators[selectedOperatorIndex].picked
+                                + _pickedCounts[selectedOperatorIndex]
+                        ),
                     MAX_VALIDATOR_ATTRIBUTION_PER_ROUND
                 ),
                 _count
