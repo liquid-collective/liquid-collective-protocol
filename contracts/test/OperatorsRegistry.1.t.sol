@@ -3039,9 +3039,9 @@ contract OperatorsRegistryV1TestDistribution is Test {
 
         vm.prank(admin);
         operatorsRegistry.setOperatorLimits(operators, limits, block.number);
-        
+
         (bytes[] memory publicKeys, bytes[] memory signatures) =
-operatorsRegistry.getNextValidatorsToDepositFromActiveOperators(5);
+            operatorsRegistry.getNextValidatorsToDepositFromActiveOperators(5);
         assert(publicKeys.length == 5);
         assert(signatures.length == 5);
     }
