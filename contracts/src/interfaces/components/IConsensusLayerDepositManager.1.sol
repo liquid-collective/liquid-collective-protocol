@@ -45,6 +45,9 @@ interface IConsensusLayerDepositManagerV1 {
     /// @notice Invalid deposit root
     error InvalidDepositRoot();
 
+    // @notice Not keeper
+    error OnlyKeeper();
+
     /// @notice Returns the amount of ETH not yet committed for deposit
     /// @return The amount of ETH not yet committed for deposit
     function getBalanceToDeposit() external view returns (uint256);

@@ -29,11 +29,6 @@ abstract contract ConsensusLayerDepositManagerV1 is IConsensusLayerDepositManage
     /// @notice Size of a deposit in ETH
     uint256 public constant DEPOSIT_SIZE = 32 ether;
 
-    modifier onlyKeeper() {
-        require(msg.sender == KeeperAddress.get(), "only keeper");
-        _;
-    }
-
     /// @notice Handler called to retrieve the internal River admin address
     /// @dev Must be Overridden
     function _getRiverAdmin() internal view virtual returns (address);
@@ -93,7 +88,11 @@ abstract contract ConsensusLayerDepositManagerV1 is IConsensusLayerDepositManage
     }
 
     /// @inheritdoc IConsensusLayerDepositManagerV1
-    function depositToConsensusLayer(uint256 _maxCount, bytes32 _depositRoot) external onlyKeeper {
+    function depositToConsensusLayer(uint256 _maxCount, bytes32 _depositRoot) external {
+        if (msg.sender != KeeperAddress.get()) {
+            revert OnlyKeeper();
+        }
+
         if (IDepositContract(DepositContractAddress.get()).get_deposit_root() != _depositRoot) {
             revert InvalidDepositRoot();
         }

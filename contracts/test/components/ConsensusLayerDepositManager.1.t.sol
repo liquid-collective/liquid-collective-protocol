@@ -447,3 +447,53 @@ contract ConsensusLayerDepositManagerV1InvalidDepositContract is Test {
         depositManager.depositToConsensusLayer(1, bytes32(0));
     }
 }
+
+contract ConsensusLayerDepositManagerV1KeeperTest is Test {
+    ConsensusLayerDepositManagerV1 internal depositManager;
+    IDepositContract internal depositContract;
+
+    bytes32 internal withdrawalCredentials = bytes32(
+        uint256(uint160(0xd74E967a7D771D7C6757eDb129229C3C8364A584))
+            + 0x0100000000000000000000000000000000000000000000000000000000000000
+    );
+
+    // value is coming from this tx https://etherscan.io/tx/0x87eb1df9b26c7e655c9eb568e38009c7c2b0e10b397708ea63dffccd93c6626a that was picked randomly
+    bytes32 internal depositDataRoot = 0x306fbdcbdbb43ac873b85aea54b2035b10b3b28d55d3869fb499f0b7f7811247;
+
+    function setUp() public {
+        depositContract = IDepositContract(address(new DepositContractEnhancedMock()));
+
+        depositManager = new ConsensusLayerDepositManagerV1ValidKeys();
+        LibImplementationUnbricker.unbrick(vm, address(depositManager));
+        ConsensusLayerDepositManagerV1ValidKeys(address(depositManager)).publicConsensusLayerDepositManagerInitializeV1(
+            address(depositContract), withdrawalCredentials
+        );
+    }
+
+    function testDepositValidKeeper() external {
+        vm.deal(address(depositManager), 32 ether);
+        ConsensusLayerDepositManagerV1ValidKeys(address(depositManager)).sudoSyncBalance();
+        vm.store(
+            address(depositManager),
+            bytes32(uint256(keccak256("river.state.KeeperAddress")) - 1),
+            bytes32(uint256(uint160(address(0x1))))
+        );
+        vm.startPrank(address(0x1));
+        depositManager.depositToConsensusLayer(1, depositContract.get_deposit_root());
+        assert(DepositContractEnhancedMock(address(depositContract)).debug_getLastDepositDataRoot() == depositDataRoot);
+    }
+
+    function testDepositInvalidKeeper() external {
+        vm.deal(address(depositManager), 32 ether);
+        ConsensusLayerDepositManagerV1ValidKeys(address(depositManager)).sudoSyncBalance();
+        vm.store(
+            address(depositManager),
+            bytes32(uint256(keccak256("river.state.KeeperAddress")) - 1),
+            bytes32(uint256(uint160(address(0x2))))
+        );
+        bytes32 depositRoot = depositContract.get_deposit_root();
+        vm.expectRevert(abi.encodeWithSignature("OnlyKeeper()"));
+        vm.prank(address(0x1));
+        depositManager.depositToConsensusLayer(1, depositRoot);
+    }
+}
