@@ -117,7 +117,9 @@ contract RiverV1 is
         // force committed balance to a multiple of 32 ETH and
         // move extra funds back to the deposit buffer
         uint256 dustToUncommit = CommittedBalance.get() % DEPOSIT_SIZE;
-        unchecked { _setCommittedBalance(CommittedBalance.get() - dustToUncommit); }
+        unchecked {
+            _setCommittedBalance(CommittedBalance.get() - dustToUncommit);
+        }
         _setBalanceToDeposit(BalanceToDeposit.get() + dustToUncommit);
     }
 
@@ -482,7 +484,9 @@ contract RiverV1 is
 
             if (suppliedRedeemManagerDemandInEth > 0) {
                 // the available balance to redeem is updated
-                unchecked { _setBalanceToRedeem(availableBalanceToRedeem - suppliedRedeemManagerDemandInEth); }
+                unchecked {
+                    _setBalanceToRedeem(availableBalanceToRedeem - suppliedRedeemManagerDemandInEth);
+                }
 
                 // we burn the shares of the redeem manager associated with the amount of eth provided
                 _burnRawShares(address(redeemManager_), suppliedRedeemManagerDemand);

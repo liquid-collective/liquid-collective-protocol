@@ -117,7 +117,9 @@ contract RedeemManagerV1 is Initializable, IRedeemManagerV1 {
         WithdrawalStack.WithdrawalEvent[] storage withdrawalEvents = WithdrawalStack.get();
         uint256 withdrawalEventsLength = withdrawalEvents.length;
         if (withdrawalEventsLength > 0) {
-            unchecked { lastWithdrawalEvent = withdrawalEvents[withdrawalEventsLength - 1]; }
+            unchecked {
+                lastWithdrawalEvent = withdrawalEvents[withdrawalEventsLength - 1];
+            }
         }
         for (uint256 idx = 0; idx < _redeemRequestIds.length; ++idx) {
             withdrawalEventIds[idx] = _resolveRedeemRequestId(_redeemRequestIds[idx], lastWithdrawalEvent);
@@ -173,7 +175,9 @@ contract RedeemManagerV1 is Initializable, IRedeemManagerV1 {
         withdrawalEvents.push(
             WithdrawalStack.WithdrawalEvent({height: height, amount: _lsETHWithdrawable, withdrawnEth: msgValue})
         );
-        unchecked { _setRedeemDemand(redeemDemand - _lsETHWithdrawable); }
+        unchecked {
+            _setRedeemDemand(redeemDemand - _lsETHWithdrawable);
+        }
         emit ReportedWithdrawal(height, _lsETHWithdrawable, msgValue, withdrawalEventId);
     }
 
@@ -377,7 +381,7 @@ contract RedeemManagerV1 is Initializable, IRedeemManagerV1 {
                 (vars.matchingAmount * _params.redeemRequest.maxRedeemableEth) / _params.redeemRequest.amount;
 
             if (maxRedeemableEthAmount < vars.ethAmount) {
-                unchecked { 
+                unchecked {
                     vars.exceedingEthAmount = vars.ethAmount - maxRedeemableEthAmount;
                 }
                 BufferedExceedingEth.set(BufferedExceedingEth.get() + vars.exceedingEthAmount);
@@ -420,9 +424,13 @@ contract RedeemManagerV1 is Initializable, IRedeemManagerV1 {
         ) {
             WithdrawalStack.WithdrawalEvent[] storage withdrawalEvents = WithdrawalStack.get();
 
-            unchecked { ++_params.withdrawalEventId; }
+            unchecked {
+                ++_params.withdrawalEventId;
+            }
             _params.withdrawalEvent = withdrawalEvents[_params.withdrawalEventId];
-            unchecked { --_params.depth; }
+            unchecked {
+                --_params.depth;
+            }
 
             _claimRedeemRequest(_params);
         } else {

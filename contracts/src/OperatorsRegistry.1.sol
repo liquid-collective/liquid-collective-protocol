@@ -91,7 +91,9 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
                 if (operatorIndex == OperatorsV2.getCount() - 1) {
                     operatorIndex = type(uint256).max;
                 } else {
-                    unchecked{ ++operatorIndex; }
+                    unchecked {
+                        ++operatorIndex;
+                    }
                 }
             } else {
                 keyIndex += publicKeys.length;
@@ -783,7 +785,9 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
                 uint32 activeCount = _getActiveValidatorCountForExitRequests(operators[idx]);
 
                 if (activeCount == highestActiveCount) {
-                    unchecked{ ++siblings; }
+                    unchecked {
+                        ++siblings;
+                    }
                 } else if (activeCount > highestActiveCount) {
                     secondHighestActiveCount = highestActiveCount;
                     highestActiveCount = activeCount;
@@ -814,7 +818,9 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
                     uint32 additionalRequestedExits = baseExitRequestAmount + (rest > 0 ? 1 : 0);
                     operators[idx].picked += additionalRequestedExits;
                     if (rest > 0) {
-                        unchecked { --rest; }
+                        unchecked {
+                            --rest;
+                        }
                     }
                 }
                 unchecked {
