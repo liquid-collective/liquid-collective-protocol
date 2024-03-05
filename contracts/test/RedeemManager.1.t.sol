@@ -1491,7 +1491,7 @@ contract RedeemManagerV1Tests is Test {
         // A user can't claim if the owner is denied
         vm.expectRevert(abi.encodeWithSignature("ClaimOwnerIsDenied()"));
         redeemManager.claimRedeemRequests(redeemRequestIds, withdrawEventIds, true, type(uint16).max);
-        
+
         // The denied user can't claim
         vm.expectRevert(abi.encodeWithSignature("ClaimOwnerIsDenied()"));
         vm.prank(user);

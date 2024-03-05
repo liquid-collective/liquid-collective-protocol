@@ -476,8 +476,9 @@ contract RedeemManagerV1 is Initializable, IRedeemManagerV1 {
             // we load the redeem request in memory
             params.redeemRequest = redeemRequests[_redeemRequestIds[idx]];
 
-            if (allowList.isDenied(params.redeemRequest.owner))
+            if (allowList.isDenied(params.redeemRequest.owner)) {
                 revert ClaimOwnerIsDenied();
+            }
 
             // we check that the redeem request is not already claimed
             if (params.redeemRequest.amount == 0) {
