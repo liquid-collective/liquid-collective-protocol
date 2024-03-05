@@ -246,8 +246,7 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
                     )
                         < (
                             (
-                                _pickedCounts[selectedOperatorIndex] + operators[selectedOperatorIndex].funded
-                                + operators[selectedOperatorIndex].picked
+                                _pickedCounts[selectedOperatorIndex] + operators[selectedOperatorIndex].funded + operators[selectedOperatorIndex].picked
                             ) - _getStoppedValidatorsCount(selectedOperatorIndex)
                         ) && _hasFundableKeys(operators[idx])
                 ) {
