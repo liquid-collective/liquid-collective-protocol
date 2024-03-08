@@ -98,6 +98,9 @@ interface IRedeemManagerV1 {
     /// @param rdata The revert data
     error ClaimRedeemFailed(address recipient, bytes rdata);
 
+    /// @notice Thrown when the claim owner is denied
+    error ClaimOwnerIsDenied();
+
     /// @param _river The address of the River contract
     function initializeRedeemManagerV1(address _river) external;
 
