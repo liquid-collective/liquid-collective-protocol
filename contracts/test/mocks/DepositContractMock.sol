@@ -9,6 +9,10 @@ contract DepositContractMock is IDepositContract {
 
     uint256 internal counter;
 
+    function get_deposit_root() external view returns (bytes32) {
+        return bytes32(0);
+    }
+
     function to_little_endian_64(uint64 value) internal pure returns (bytes memory ret) {
         ret = new bytes(8);
         bytes8 bytesValue = bytes8(value);

@@ -173,6 +173,10 @@ contract RiverV1 is
         _setDailyCommittableLimits(_dcl);
     }
 
+    function setKeeper(address _keeper) external onlyAdmin {
+        _setKeeper(_keeper);
+    }
+
     /// @inheritdoc IRiverV1
     function getBalanceToRedeem() external view returns (uint256) {
         return BalanceToRedeem.get();
