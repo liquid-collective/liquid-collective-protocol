@@ -8,7 +8,6 @@ library LibUint256 {
     /// @param _value The value to convert
     /// @return result The converted value
     function toLittleEndian64(uint256 _value) internal pure returns (uint256 result) {
-        result = 0;
         uint256 tempValue = _value;
         result = tempValue & 0xFF;
         tempValue >>= 8;

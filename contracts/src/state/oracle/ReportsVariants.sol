@@ -77,7 +77,9 @@ library ReportsVariants {
             r.slot := slot
         }
 
-        for (uint256 idx = 0; idx < r.value.length;) {
+        uint256 length = r.value.length;
+
+        for (uint256 idx = 0; idx < length;) {
             if (r.value[idx].variant == _variant) {
                 return int256(idx);
             }
