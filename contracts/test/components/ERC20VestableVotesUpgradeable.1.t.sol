@@ -113,7 +113,7 @@ contract ERC20VestableVotesUpgradeableV1ToV2Migration is Test {
         );
         tt.migrateVestingSchedules();
         {
-            (VestingSchedulesV2.VestingSchedule memory vs0, ) = tt.getVestingSchedule(0);
+            (VestingSchedulesV2.VestingSchedule memory vs0,) = tt.getVestingSchedule(0);
             assertEq(vs0.start, start);
             assertEq(vs0.end, end);
             assertEq(vs0.cliffDuration, cliffDuration);
@@ -127,7 +127,7 @@ contract ERC20VestableVotesUpgradeableV1ToV2Migration is Test {
             assertEq(vs0.releasedAmount, 0);
         }
         {
-            (VestingSchedulesV2.VestingSchedule memory vs1, ) = tt.getVestingSchedule(1);
+            (VestingSchedulesV2.VestingSchedule memory vs1,) = tt.getVestingSchedule(1);
             assertEq(vs1.start, start);
             assertEq(vs1.end, end);
             assertEq(vs1.cliffDuration, cliffDuration);
@@ -370,7 +370,7 @@ contract ERC20VestableVotesUpgradeableV1Tests is Test {
         assert(tt.balanceOf(joe) == 0);
 
         // Verify vesting schedule object has been properly created
-        (VestingSchedulesV2.VestingSchedule memory vestingSchedule, ) = tt.getVestingSchedule(0);
+        (VestingSchedulesV2.VestingSchedule memory vestingSchedule,) = tt.getVestingSchedule(0);
 
         assert(vestingSchedule.start == block.timestamp);
         assert(vestingSchedule.cliffDuration == 365 * 24 * 3600);
@@ -415,7 +415,7 @@ contract ERC20VestableVotesUpgradeableV1Tests is Test {
         assert(tt.balanceOf(joe) == 0);
 
         // Verify vesting schedule object has been properly created
-        (VestingSchedulesV2.VestingSchedule memory vestingSchedule, ) = tt.getVestingSchedule(0);
+        (VestingSchedulesV2.VestingSchedule memory vestingSchedule,) = tt.getVestingSchedule(0);
 
         assert(vestingSchedule.start == block.timestamp);
         assert(vestingSchedule.cliffDuration == 365 * 24 * 3600);
@@ -462,7 +462,7 @@ contract ERC20VestableVotesUpgradeableV1Tests is Test {
         assert(tt.balanceOf(joe) == 0);
 
         // Verify vesting schedule object has been properly created
-        (VestingSchedulesV2.VestingSchedule memory vestingSchedule, ) = tt.getVestingSchedule(0);
+        (VestingSchedulesV2.VestingSchedule memory vestingSchedule,) = tt.getVestingSchedule(0);
 
         assert(vestingSchedule.start == block.timestamp);
         assert(vestingSchedule.lockDuration == 365 * 24 * 3600);
@@ -632,7 +632,7 @@ contract ERC20VestableVotesUpgradeableV1Tests is Test {
         vm.stopPrank();
 
         // Verify vesting schedule object has been properly created
-        (VestingSchedulesV2.VestingSchedule memory vestingSchedule, ) = tt.getVestingSchedule(0);
+        (VestingSchedulesV2.VestingSchedule memory vestingSchedule,) = tt.getVestingSchedule(0);
 
         assert(vestingSchedule.start == start);
     }
@@ -1026,7 +1026,7 @@ contract ERC20VestableVotesUpgradeableV1Tests is Test {
         assert(tt.balanceOf(joe) == 0);
 
         // Verify vesting schedule object has been properly updated
-        (VestingSchedulesV2.VestingSchedule memory vestingSchedule, ) = tt.getVestingSchedule(0);
+        (VestingSchedulesV2.VestingSchedule memory vestingSchedule,) = tt.getVestingSchedule(0);
         assert(vestingSchedule.end == 365 * 24 * 3600 - 1);
     }
 
@@ -1052,7 +1052,7 @@ contract ERC20VestableVotesUpgradeableV1Tests is Test {
         assert(tt.balanceOf(joe) == 0);
 
         // Verify vesting schedule object has been properly updated
-        (VestingSchedulesV2.VestingSchedule memory vestingSchedule, ) = tt.getVestingSchedule(0);
+        (VestingSchedulesV2.VestingSchedule memory vestingSchedule,) = tt.getVestingSchedule(0);
         assert(vestingSchedule.end == 365 * 24 * 3600);
     }
 
@@ -1077,7 +1077,7 @@ contract ERC20VestableVotesUpgradeableV1Tests is Test {
         assert(tt.balanceOf(tt.vestingEscrow(0)) == 10_000e18);
 
         // Verify vesting schedule object has been properly updated
-        (VestingSchedulesV2.VestingSchedule memory vestingSchedule, ) = tt.getVestingSchedule(0);
+        (VestingSchedulesV2.VestingSchedule memory vestingSchedule,) = tt.getVestingSchedule(0);
         assert(vestingSchedule.end == 4 * 365 * 24 * 3600);
     }
 
@@ -1104,7 +1104,7 @@ contract ERC20VestableVotesUpgradeableV1Tests is Test {
         assert(tt.balanceOf(tt.vestingEscrow(0)) == 5_000e18);
 
         // Verify vesting schedule object has been properly updated
-        (VestingSchedulesV2.VestingSchedule memory vestingSchedule, ) = tt.getVestingSchedule(0);
+        (VestingSchedulesV2.VestingSchedule memory vestingSchedule,) = tt.getVestingSchedule(0);
         assert(vestingSchedule.end == 2 * 365 * 24 * 3600);
     }
 
@@ -1386,11 +1386,8 @@ contract ERC20VestableVotesUpgradeableV1Tests is Test {
                         == 1_000_000_000e18
                 );
             }
-            (VestingSchedulesV2.VestingSchedule memory schedule, ) = tt.getVestingSchedule(0);
-            if (
-                releaseAt >= ((schedule.end / periodDuration) * periodDuration)
-                    && (releaseAt >= lockDuration)
-            ) {
+            (VestingSchedulesV2.VestingSchedule memory schedule,) = tt.getVestingSchedule(0);
+            if (releaseAt >= ((schedule.end / periodDuration) * periodDuration) && (releaseAt >= lockDuration)) {
                 // we got into the end period and passed the lock duration so all tokens should have been released
                 assert(tt.balanceOf(tt.vestingEscrow(0)) == 0);
                 break;

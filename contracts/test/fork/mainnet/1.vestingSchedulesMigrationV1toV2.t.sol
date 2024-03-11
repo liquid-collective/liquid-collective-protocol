@@ -49,7 +49,7 @@ contract VestingSchedulesMigrationV1ToV2 is Test {
         assertEq(count, expectedVestingSchedules.length);
 
         for (uint256 idx = 0; idx < tlc.getVestingScheduleCount(); ++idx) {
-            (VestingSchedulesV2.VestingSchedule memory vs, ) = tlc.getVestingSchedule(idx);
+            (VestingSchedulesV2.VestingSchedule memory vs,) = tlc.getVestingSchedule(idx);
 
             assertEq(vs.start, expectedVestingSchedules[idx].start);
             assertEq(vs.end, expectedVestingSchedules[idx].end);
