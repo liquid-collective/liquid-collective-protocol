@@ -97,8 +97,12 @@ abstract contract ERC20VestableVotesUpgradeableV1 is
     }
 
     /// @inheritdoc IERC20VestableVotesUpgradeableV1
-    function getVestingSchedule(uint256 _index) external view returns (VestingSchedulesV2.VestingSchedule memory) {
-        return VestingSchedulesV2.get(_index);
+    function getVestingSchedule(uint256 _index)
+        external
+        view
+        returns (VestingSchedulesV2.VestingSchedule memory, bool)
+    {
+        return (VestingSchedulesV2.get(_index), IgnoreGlobalUnlockSchedule.get(_index));
     }
 
     /// @inheritdoc IERC20VestableVotesUpgradeableV1
