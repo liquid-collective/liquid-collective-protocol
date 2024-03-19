@@ -2216,8 +2216,15 @@ contract RiverEigenTest is Test {
     RiverV1 river;
     string rpc;
     address user = 0x7e6355841F5F83f875Ed5f40e937507C4d8c2359;
-
     address riverImplementation = 0x48D93d8C45Fb25125F13cdd40529BbeaA97A6565;
+    address eigenStrategy = 0xAe60d8180437b5C34bB956822ac2710972584473;
+    address eigenStrategyManager = 0x858646372CC42E1A627fcE94aa7A7033e7CF075A;
+
+    /// @notice The EIP-712 typehash for the deposit struct used by the contract
+    bytes32 public constant DEPOSIT_TYPEHASH =
+        keccak256("Deposit(address staker,address strategy,address token,uint256 amount,uint256 nonce,uint256 expiry)");
+
+    event Deposit(address depositor, address token, address strategy, uint256 shares);
 
     function setUp() external {
         rpc = vm.rpcUrl("mainnet");
@@ -2228,15 +2235,52 @@ contract RiverEigenTest is Test {
 
         river = RiverV1(payable(0x8c1BEd5b9a0928467c9B1341Da1D7BD5e10b6549));
         vm.startPrank(0xd745A68c705F5aa75DFf528540678288ed2aD9eE);
-        river.setEigenStrategyManager(0x858646372CC42E1A627fcE94aa7A7033e7CF075A);
-        river.setEigenStrategy(0xAe60d8180437b5C34bB956822ac2710972584473);
+        river.setEigenStrategyManager(eigenStrategyManager);
+        river.setEigenStrategy(eigenStrategy);
         vm.stopPrank();
+
+        DummySignatory dummySignatory = new DummySignatory();
+        vm.etch(user, address(dummySignatory).code);
     }
 
     function testRestaking() external {
+        // Get signature
+        uint256 nonceBefore = StrategyManager(eigenStrategyManager).nonces(address(this));
+        bytes32 structHash = keccak256(
+            abi.encode(
+                DEPOSIT_TYPEHASH,
+                address(this),
+                eigenStrategy,
+                address(river),
+                river.sharesFromUnderlyingBalance(1 ether),
+                nonceBefore,
+                type(uint256).max
+            )
+        );
+        bytes32 digestHash = keccak256(
+            abi.encodePacked(
+                "\x19\x01", bytes32(0xdaba058ab21f198a04ec80cf0d39f943660a92a99bda5de5016f923f7e4962ef), structHash
+            )
+        );
+        bytes memory signature = bytes(abi.encodePacked(digestHash)); // dummy sig data
+
         vm.startPrank(user);
         vm.deal(user, 1 ether);
-        river.depositAndRestake{value: 1 ether}();
+        vm.expectEmit(true, true, true, true);
+        emit Deposit(user, address(river), eigenStrategy, river.sharesFromUnderlyingBalance(1 ether));
+        river.depositAndRestake{value: 1 ether}(type(uint256).max, signature);
         vm.stopPrank();
+    }
+}
+
+interface StrategyManager {
+    function nonces(address user) external view returns (uint256);
+}
+
+contract DummySignatory {
+    bytes4 internal constant MAGIC_VALUE = 0x1626ba7e;
+
+    function isValidSignature(bytes32 hash, bytes memory) external view returns (bytes4) {
+        return MAGIC_VALUE;
     }
 }
