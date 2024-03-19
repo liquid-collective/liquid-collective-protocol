@@ -7,6 +7,7 @@ import "./interfaces/IRiver.1.sol";
 import "./interfaces/IWithdraw.1.sol";
 import "./interfaces/IELFeeRecipient.1.sol";
 import "./interfaces/ICoverageFund.1.sol";
+import "./interfaces/IEigenStrategyManager.sol";
 
 import "./components/ConsensusLayerDepositManager.1.sol";
 import "./components/UserDepositManager.1.sol";
@@ -27,6 +28,8 @@ import "./state/river/BalanceToRedeem.sol";
 import "./state/river/GlobalFee.sol";
 import "./state/river/MetadataURI.sol";
 import "./state/river/LastConsensusLayerReport.sol";
+import "./state/river/EigenStrategyAddress.sol";
+import "./state/river/EigenStrategyManagerAddress.sol";
 
 /// @title River (v1)
 /// @author Kiln
@@ -171,6 +174,25 @@ contract RiverV1 is
         onlyAdmin
     {
         _setDailyCommittableLimits(_dcl);
+    }
+
+    function setEigenStrategyManager(address _eigenStrategyManager) external onlyAdmin {
+        EigenStrategyManagerAddress.set(_eigenStrategyManager);
+    }
+
+    function setEigenStrategy(address _eigenStrategy) external onlyAdmin {
+        EigenStrategyAddress.set(_eigenStrategy);
+    }
+
+    function depositAndRestake() external payable {
+        address lsETH = address(this);
+        _deposit(lsETH);
+        uint256 sharesMinted = _sharesFromBalance(msg.value);
+        address eigenstrategymanager = EigenStrategyManagerAddress.get();
+        _approve(lsETH, eigenstrategymanager, sharesMinted);
+        IEigenStrategyManager(eigenstrategymanager).depositIntoStrategy(
+            EigenStrategyAddress.get(), IERC20(lsETH), sharesMinted
+        );
     }
 
     /// @inheritdoc IRiverV1

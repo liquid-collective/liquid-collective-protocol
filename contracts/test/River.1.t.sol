@@ -2211,3 +2211,32 @@ contract RiverV1TestsReport_HEAVY_FUZZING is RiverV1TestBase {
         assertEq(address(redeemManager), river.getRedeemManager());
     }
 }
+
+contract RiverEigenTest is Test {
+    RiverV1 river;
+    string rpc;
+    address user = 0x7e6355841F5F83f875Ed5f40e937507C4d8c2359;
+
+    address riverImplementation = 0x48D93d8C45Fb25125F13cdd40529BbeaA97A6565;
+
+    function setUp() external {
+        rpc = vm.rpcUrl("mainnet");
+        vm.createSelectFork(rpc, 19191765);
+        // Etching the contract
+        RiverV1 dummyRiver = new RiverV1();
+        vm.etch(riverImplementation, address(dummyRiver).code);
+
+        river = RiverV1(payable(0x8c1BEd5b9a0928467c9B1341Da1D7BD5e10b6549));
+        vm.startPrank(0xd745A68c705F5aa75DFf528540678288ed2aD9eE);
+        river.setEigenStrategyManager(0x858646372CC42E1A627fcE94aa7A7033e7CF075A);
+        river.setEigenStrategy(0xAe60d8180437b5C34bB956822ac2710972584473);
+        vm.stopPrank();
+    }
+
+    function testRestaking() external {
+        vm.startPrank(user);
+        vm.deal(user, 1 ether);
+        river.depositAndRestake{value: 1 ether}();
+        vm.stopPrank();
+    }
+}
