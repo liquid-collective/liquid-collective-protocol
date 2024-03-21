@@ -184,13 +184,20 @@ contract RiverV1 is
         EigenStrategyAddress.set(_eigenStrategy);
     }
 
-    function depositAndRestake(uint256 expiry, bytes calldata signature) external payable {
+    function depositAndRestake(uint256 expiry, bytes calldata signature)
+        external
+        payable
+        returns (uint256 sharesMinted)
+    {
         address lsETH = address(this);
+
         _deposit(lsETH);
+
         uint256 sharesMinted = _sharesFromBalance(msg.value);
         address eigenstrategymanager = EigenStrategyManagerAddress.get();
+
         _approve(lsETH, eigenstrategymanager, sharesMinted);
-        IEigenStrategyManager(eigenstrategymanager).depositIntoStrategyWithSignature(
+        sharesMinted = IEigenStrategyManager(eigenstrategymanager).depositIntoStrategyWithSignature(
             EigenStrategyAddress.get(), IERC20(lsETH), sharesMinted, msg.sender, expiry, signature
         );
     }

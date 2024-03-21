@@ -2,6 +2,7 @@ pragma solidity 0.8.20;
 
 import "openzeppelin-contracts/contracts/token/ERC20/IERC20.sol";
 
+// https://github.com/Layr-Labs/eigenlayer-contracts/blob/dev/src/contracts/interfaces/IStrategyManager.sol#L72
 interface IEigenStrategyManager {
     /**
      * @notice Used for depositing an asset into the specified strategy with the resultant shares credited to `staker`,
