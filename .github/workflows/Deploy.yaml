@@ -29,9 +29,7 @@ jobs:
           ssh://git@github.com/
 
       - name: install foundry
-        uses: onbjerg/foundry-toolchain@v1
-        with:
-          version: nightly
+        uses: onbjerg/foundry-toolchain@v1.2.0
 
       - name: install nodejs
         uses: actions/setup-node@v3
