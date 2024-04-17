@@ -238,18 +238,18 @@ function delegates(address account) external view returns (address)
 ### getPastTotalSupply
 
 ```solidity
-function getPastTotalSupply(uint256 blockNumber) external view returns (uint256)
+function getPastTotalSupply(uint256 timepoint) external view returns (uint256)
 ```
 
 
 
-*Returns the total supply of votes available at the end of a past block (`blockNumber`). NOTE: This value is the sum of all available votes, which is not necessarily the sum of all delegated votes. Votes that have not been delegated are still part of total supply, even though they would not participate in a vote.*
+*Returns the total supply of votes available at a specific moment in the past. If the `clock()` is configured to use block numbers, this will return the value at the end of the corresponding block. NOTE: This value is the sum of all available votes, which is not necessarily the sum of all delegated votes. Votes that have not been delegated are still part of total supply, even though they would not participate in a vote.*
 
 #### Parameters
 
 | Name | Type | Description |
 |---|---|---|
-| blockNumber | uint256 | undefined |
+| timepoint | uint256 | undefined |
 
 #### Returns
 
@@ -260,19 +260,19 @@ function getPastTotalSupply(uint256 blockNumber) external view returns (uint256)
 ### getPastVotes
 
 ```solidity
-function getPastVotes(address account, uint256 blockNumber) external view returns (uint256)
+function getPastVotes(address account, uint256 timepoint) external view returns (uint256)
 ```
 
 
 
-*Returns the amount of votes that `account` had at the end of a past block (`blockNumber`).*
+*Returns the amount of votes that `account` had at a specific moment in the past. If the `clock()` is configured to use block numbers, this will return the value at the end of the corresponding block.*
 
 #### Parameters
 
 | Name | Type | Description |
 |---|---|---|
 | account | address | undefined |
-| blockNumber | uint256 | undefined |
+| timepoint | uint256 | undefined |
 
 #### Returns
 
