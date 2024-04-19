@@ -45,3 +45,4 @@ For guidance on setting up a development environment and how to make a contribut
 ## Licensing
 
 The primary license for Liquid Collective is the Business Source License 1.1 (`BUSL-1.1`), see [`LICENSE`](./LICENSE). However, some files are dual licensed as indicated in its SPDX header.
+
