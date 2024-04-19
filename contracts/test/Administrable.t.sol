@@ -84,4 +84,3 @@ contract AdministrableTest is Test {
         assertEq(wa.getPendingAdmin(), address(0));
     }
 }
-
