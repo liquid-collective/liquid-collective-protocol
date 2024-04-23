@@ -29,14 +29,17 @@ jobs:
           ssh://git@github.com/
 
       - name: install foundry
-        uses: onbjerg/foundry-toolchain@v1
+        uses: foundry-rs/foundry-toolchain@v1
         with:
-          version: nightly
-
+          version: nightly-de33b6af53005037b463318d2628b5cfcaf39916
+        
       - name: install nodejs
         uses: actions/setup-node@v3
         with:
           node-version: 16
+
+      - name: Install Yarn
+        run: npm install -g yarn
 
       - name: cache node_modules
         uses: actions/cache@v2
