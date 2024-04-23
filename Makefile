@@ -31,11 +31,7 @@ artifacts-mainnet:
 	yarn hh run gen_root_artifacts.ts --network mainnet
 	yarn hh run gen_meta_artifacts.ts --network mainnet
 
-artifacts-goerli:
-	yarn hh run gen_root_artifacts.ts --network goerli
-	yarn hh run gen_meta_artifacts.ts --network goerli
-
-artifacts-mockedGoerli:
-	yarn hh run gen_root_artifacts.ts --network mockedGoerli
-	yarn hh run gen_meta_artifacts.ts --network mockedGoerli
+artifacts-holesky:
+	yarn hh run gen_root_artifacts.ts --network holesky
+	yarn hh run gen_meta_artifacts.ts --network holesky
 
