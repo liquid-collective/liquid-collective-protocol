@@ -324,7 +324,7 @@ Allower can&#39;t remove deny permission
 error AttemptToSetDenyPermission()
 ```
 
-Invalid permission being set
+Allower can&#39;t set deny permission
 
 
 
@@ -356,10 +356,10 @@ The provided accounts list is empty
 
 
 
-### MismatchedAlloweeAndStatusCount
+### MismatchedArrayLengths
 
 ```solidity
-error MismatchedAlloweeAndStatusCount()
+error MismatchedArrayLengths()
 ```
 
 The provided accounts and permissions list have different lengths

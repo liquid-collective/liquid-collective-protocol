@@ -53,17 +53,12 @@ To deploy the contracts in an ephemeral EVM instance, run
 yarn hh deploy
 ```
 
-#### Goerli
-Deployment on the goerli test network using the Prater Beacon test chain.
+#### Holesky
+Deployment on the Holesky test network using the Prater Beacon test chain.
 ```
-yarn hh --network goerli
+yarn hh --network holesky
 ```
 
-#### Goerli with mocked DepositContract
-Deployment on the goerli test network using a mocked DepositContract that emits the same event as the real DepositContract, but transfers back the funds to the treasury address.
-```
-yarn hh --network mockedGoerli
-```
 ### Submodules
 Submodules should only be updated by maintainers. If you happen to have submodules included in your PR, please run the following:
 ```
