@@ -124,7 +124,7 @@ contract WLSETHV1Tests is WLSETHV1TestBase {
     }
 
     function testAlreadyInitialized() external {
-        vm.expectRevert(abi.encodeWithSignature("InvalidInitialization(uint256,uint256)", 0, 1));
+        vm.expectRevert("Initializable: contract is already initialized");
         wlseth.initWLSETHV1(address(river));
     }
 
