@@ -1,12 +1,10 @@
 //SPDX-License-Identifier: BUSL-1.1
 pragma solidity 0.8.20;
 
-import "openzeppelin-contracts/contracts/security/ReentrancyGuard.sol";
+import "openzeppelin-contracts-upgradeable/contracts/security/ReentrancyGuardUpgradeable.sol";
 
 import "./interfaces/IRiver.1.sol";
 import "./interfaces/IWLSETH.1.sol";
-
-import "./Initializable.sol";
 
 import "./state/shared/RiverAddress.sol";
 import "./state/shared/ApprovalsPerOwner.sol";
@@ -16,7 +14,7 @@ import "./state/wlseth/BalanceOf.sol";
 /// @author Kiln
 /// @notice This contract wraps the LsETH token into a rebase token, more suitable for some DeFi use-cases
 ///         like stable swaps.
-contract WLSETHV1 is IWLSETHV1, Initializable, ReentrancyGuard {
+contract WLSETHV1 is IWLSETHV1, Initializable, ReentrancyGuardUpgradeable {
     /// @notice Ensures that the value is not 0
     /// @param _value Value that must be > 0
     modifier isNotNull(uint256 _value) {
@@ -37,7 +35,7 @@ contract WLSETHV1 is IWLSETHV1, Initializable, ReentrancyGuard {
     }
 
     /// @inheritdoc IWLSETHV1
-    function initWLSETHV1(address _river) external init(0) {
+    function initWLSETHV1(address _river) external initializer {
         RiverAddress.set(_river);
         emit SetRiver(_river);
     }
