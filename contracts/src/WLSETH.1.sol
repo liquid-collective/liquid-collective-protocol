@@ -6,8 +6,6 @@ import "openzeppelin-contracts-upgradeable/contracts/security/ReentrancyGuardUpg
 import "./interfaces/IRiver.1.sol";
 import "./interfaces/IWLSETH.1.sol";
 
-// import "./Initializable.sol";
-
 import "./state/shared/RiverAddress.sol";
 import "./state/shared/ApprovalsPerOwner.sol";
 import "./state/wlseth/BalanceOf.sol";
