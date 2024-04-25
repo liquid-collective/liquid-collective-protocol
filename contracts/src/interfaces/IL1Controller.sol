@@ -1,7 +1,7 @@
 //SPDX-License-Identifier: BUSL-1.1
 pragma solidity 0.8.20;
 
-interface IKrakenController {
+interface IL1Controller {
     /// @notice Used to mint LsETH equivalent to ETH being supplied
     function mint() external payable;
 
