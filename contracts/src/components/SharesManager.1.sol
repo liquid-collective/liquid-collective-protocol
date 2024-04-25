@@ -195,7 +195,7 @@ abstract contract SharesManagerV1 is ISharesManagerV1 {
     /// @notice Internal utility to retrieve the underlying asset balance for the given shares
     /// @param _shares Amount of shares to convert
     /// @return The balance from the given shares
-    function _balanceFromShares(uint256 _shares) internal view returns (uint256) {
+    function _balanceFromShares(uint256 _shares) internal view virtual returns (uint256) {
         uint256 _totalSharesValue = Shares.get();
 
         if (_totalSharesValue == 0) {
@@ -208,7 +208,7 @@ abstract contract SharesManagerV1 is ISharesManagerV1 {
     /// @notice Internal utility to retrieve the shares count for a given underlying asset amount
     /// @param _balance Amount of underlying asset balance to convert
     /// @return The shares from the given balance
-    function _sharesFromBalance(uint256 _balance) internal view returns (uint256) {
+    function _sharesFromBalance(uint256 _balance) internal view virtual returns (uint256) {
         uint256 _totalSharesValue = Shares.get();
 
         if (_totalSharesValue == 0) {
@@ -223,7 +223,11 @@ abstract contract SharesManagerV1 is ISharesManagerV1 {
     /// @param _owner Account that should receive the new shares
     /// @param _underlyingAssetValue Value of underlying asset received, to convert into shares
     /// @return sharesToMint The amnount of minted shares
-    function _mintShares(address _owner, uint256 _underlyingAssetValue) internal returns (uint256 sharesToMint) {
+    function _mintShares(address _owner, uint256 _underlyingAssetValue)
+        internal
+        virtual
+        returns (uint256 sharesToMint)
+    {
         uint256 oldTotalAssetBalance = _assetBalance() - _underlyingAssetValue;
 
         if (oldTotalAssetBalance == 0) {
@@ -245,7 +249,7 @@ abstract contract SharesManagerV1 is ISharesManagerV1 {
     /// @notice Internal utility to mint shares without any conversion, and emits a mint Transfer event
     /// @param _owner Account that should receive the new shares
     /// @param _value Amount of shares to mint
-    function _mintRawShares(address _owner, uint256 _value) internal {
+    function _mintRawShares(address _owner, uint256 _value) internal virtual {
         _setTotalSupply(Shares.get() + _value);
         SharesPerOwner.set(_owner, SharesPerOwner.get(_owner) + _value);
         emit Transfer(address(0), _owner, _value);
@@ -254,7 +258,7 @@ abstract contract SharesManagerV1 is ISharesManagerV1 {
     /// @notice Internal utility to burn shares without any conversion, and emits a burn Transfer event
     /// @param _owner Account that should burn its shares
     /// @param _value Amount of shares to burn
-    function _burnRawShares(address _owner, uint256 _value) internal {
+    function _burnRawShares(address _owner, uint256 _value) internal virtual {
         _setTotalSupply(Shares.get() - _value);
         SharesPerOwner.set(_owner, SharesPerOwner.get(_owner) - _value);
         emit Transfer(_owner, address(0), _value);
