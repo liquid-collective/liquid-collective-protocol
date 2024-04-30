@@ -1,0 +1,1332 @@
+No files changed, compilation skipped
+
+Ran 1 test for contracts/test/TLC.1.t.sol:TLCInitializationTest
+[32m[PASS][0m testInitialization() (gas: 897149)
+Test result: [32mok[0m. [32m1[0m passed; [31m0[0m failed; [33m0[0m skipped; finished in 725.38µs
+
+Ran 1 test for contracts/test/ELFeeRecipient.1.t.sol:ELFeeRecipientV1InitializationTests
+[32m[PASS][0m testInitialization() (gas: 59827)
+Test result: [32mok[0m. [32m1[0m passed; [31m0[0m failed; [33m0[0m skipped; finished in 541.96µs
+
+Ran 2 tests for contracts/test/components/ConsensusLayerDepositManager.1.t.sol:ConsensusLayerDepositManagerV1WithdrawalCredentialError
+[32m[PASS][0m testInvalidArgumentForWithdrawalCredential() (gas: 8826)
+[32m[PASS][0m testInvalidWithdrawalCredential() (gas: 165191)
+Test result: [32mok[0m. [32m2[0m passed; [31m0[0m failed; [33m0[0m skipped; finished in 1.01ms
+
+Ran 4 tests for contracts/test/TLC.1.t.sol:TLCTests
+[32m[PASS][0m testImplementationInitialization() (gas: 13226)
+[32m[PASS][0m testInitialSupplyAndBalance() (gas: 25485)
+[32m[PASS][0m testName() (gas: 18508)
+[32m[PASS][0m testSymbol() (gas: 18684)
+Test result: [32mok[0m. [32m4[0m passed; [31m0[0m failed; [33m0[0m skipped; finished in 2.10ms
+
+Ran 6 tests for contracts/test/LibSanitize.t.sol:SanitizeTest
+[32m[PASS][0m testSetEmptyString() (gas: 9135)
+[32m[PASS][0m testSetFeeTooHigh() (gas: 8799)
+[32m[PASS][0m testSetNonEmptyString() (gas: 6183)
+[32m[PASS][0m testSetNonZeroAddress() (gas: 9678)
+[32m[PASS][0m testSetValidFee() (gas: 5565)
+[32m[PASS][0m testSetZeroAddress() (gas: 8821)
+Test result: [32mok[0m. [32m6[0m passed; [31m0[0m failed; [33m0[0m skipped; finished in 479.21µs
+
+Ran 4 tests for contracts/test/LibUnstructuredStorage.t.sol:LibUnstructuredStorageTest
+[32m[PASS][0m testAddressSetterAndGetter() (gas: 30935)
+[32m[PASS][0m testBoolSetterAndGetter() (gas: 30765)
+[32m[PASS][0m testBytes32SetterAndGetter() (gas: 30668)
+[32m[PASS][0m testUint256SetterAndGetter() (gas: 30897)
+Test result: [32mok[0m. [32m4[0m passed; [31m0[0m failed; [33m0[0m skipped; finished in 618.79µs
+
+Ran 1 test for contracts/test/OperatorsRegistry.1.t.sol:OperatorsRegistryV1InitializationTests
+[32m[PASS][0m testInitialization() (gas: 88736)
+Test result: [32mok[0m. [32m1[0m passed; [31m0[0m failed; [33m0[0m skipped; finished in 600.46µs
+
+Ran 2 tests for contracts/test/components/ERC20VestableVotesUpgradeable.1.t.sol:ERC20VestableVotesUpgradeableV1ToV2Migration
+[32m[PASS][0m test_migrateAndInspectVestingSchedules(uint64,uint64,uint32,uint32,uint32,uint32,uint128,address,address,bool) (runs: 256, μ: 510951, ~: 516323)
+[32m[PASS][0m test_migrateTwice() (gas: 20792)
+Test result: [32mok[0m. [32m2[0m passed; [31m0[0m failed; [33m0[0m skipped; finished in 53.95ms
+
+Ran 3 tests for contracts/test/LibBytes.t.sol:BytesTest
+[32m[PASS][0m testSlice() (gas: 8461)
+[32m[PASS][0m testSliceOutOfBounds() (gas: 11389)
+[32m[PASS][0m testSliceOverflow() (gas: 11269)
+Test result: [32mok[0m. [32m3[0m passed; [31m0[0m failed; [33m0[0m skipped; finished in 326.25µs
+
+Ran 37 tests for contracts/test/Firewall.t.sol:FirewallTests
+[32m[PASS][0m testExecutorCanAddMember() (gas: 107069)
+[32m[PASS][0m testExecutorCanChangeExecutor() (gas: 49445)
+[32m[PASS][0m testExecutorCanDepositToConsensusLayer() (gas: 25996)
+[32m[PASS][0m testExecutorCanRemoveMember() (gas: 91388)
+[32m[PASS][0m testExecutorCanSetOperatorLimit() (gas: 1655782)
+[32m[PASS][0m testExecutorCanSetOperatorStatus() (gas: 134778)
+[32m[PASS][0m testExecutorCanSetOracle() (gas: 37014)
+[32m[PASS][0m testExecutorCanSetQuorum() (gas: 146805)
+[32m[PASS][0m testExecutorCannotAddOperator() (gas: 25949)
+[32m[PASS][0m testExecutorCannotChangePermissions() (gas: 20703)
+[32m[PASS][0m testExecutorCannotSetAllower() (gas: 22862)
+[32m[PASS][0m testExecutorCannotSetGlobalFee() (gas: 22801)
+[32m[PASS][0m testGovernorCanAddMember() (gas: 102720)
+[32m[PASS][0m testGovernorCanAddOperator() (gas: 116294)
+[32m[PASS][0m testGovernorCanChangeExecutor() (gas: 49271)
+[32m[PASS][0m testGovernorCanDepositToConsensusLayer() (gas: 21628)
+[32m[PASS][0m testGovernorCanRemoveMember() (gas: 85995)
+[32m[PASS][0m testGovernorCanSetAllower() (gas: 32594)
+[32m[PASS][0m testGovernorCanSetGlobalFee() (gas: 27038)
+[32m[PASS][0m testGovernorCanSetOperatorLimit() (gas: 1649456)
+[32m[PASS][0m testGovernorCanSetOperatorStatus() (gas: 128419)
+[32m[PASS][0m testGovernorCanSetOracle() (gas: 32664)
+[32m[PASS][0m testGovernorCanSetQuorum() (gas: 139564)
+[32m[PASS][0m testMakingFunctionGovernorOnly() (gas: 168501)
+[32m[PASS][0m testMakingFunctionGovernorOrExecutor() (gas: 66736)
+[32m[PASS][0m testRandomCallerCannotAddMember() (gas: 27059)
+[32m[PASS][0m testRandomCallerCannotAddOperator() (gas: 23820)
+[32m[PASS][0m testRandomCallerCannotChangeExecutor() (gas: 24822)
+[32m[PASS][0m testRandomCallerCannotChangePermissions() (gas: 20818)
+[32m[PASS][0m testRandomCallerCannotDepositToConsensusLayer() (gas: 24962)
+[32m[PASS][0m testRandomCallerCannotRemoveMember() (gas: 118580)
+[32m[PASS][0m testRandomCallerCannotSetAllower() (gas: 20839)
+[32m[PASS][0m testRandomCallerCannotSetGlobalFee() (gas: 22757)
+[32m[PASS][0m testRandomCallerCannotSetOperatorLimit() (gas: 132862)
+[32m[PASS][0m testRandomCallerCannotSetOperatorStatus() (gas: 132056)
+[32m[PASS][0m testRandomCallerCannotSetOracle() (gas: 27063)
+[32m[PASS][0m testRandomCallerCannotSetQuorum() (gas: 144286)
+Test result: [32mok[0m. [32m37[0m passed; [31m0[0m failed; [33m0[0m skipped; finished in 5.79ms
+
+Ran 7 tests for contracts/test/ELFeeRecipient.1.t.sol:ELFeeRecipientV1Test
+[32m[PASS][0m testFallbackFail() (gas: 91750)
+[32m[PASS][0m testNoFundPulled() (gas: 14117)
+[32m[PASS][0m testPullFundsFromCall(uint256,uint256) (runs: 256, μ: 106649, ~: 107230)
+[32m[PASS][0m testPullFundsFromSend(uint256,uint256) (runs: 256, μ: 106572, ~: 107153)
+[32m[PASS][0m testPullFundsFromTransfer(uint256,uint256) (runs: 256, μ: 106332, ~: 107300)
+[32m[PASS][0m testPullFundsUnauthorized(uint256,uint256) (runs: 256, μ: 92681, ~: 92969)
+[32m[PASS][0m testPullHalfFunds(uint256,uint256) (runs: 256, μ: 106513, ~: 107467)
+Test result: [32mok[0m. [32m7[0m passed; [31m0[0m failed; [33m0[0m skipped; finished in 161.89ms
+
+Ran 1 test for contracts/test/components/ConsensusLayerDepositManager.1.t.sol:ConsensusLayerDepositManagerV1InvalidDepositContract
+[32m[PASS][0m testDepositInvalidDepositContract() (gas: 103613)
+Test result: [32mok[0m. [32m1[0m passed; [31m0[0m failed; [33m0[0m skipped; finished in 415.79µs
+
+Ran 4 tests for contracts/test/components/ConsensusLayerDepositManager.1.t.sol:ConsensusLayerDepositManagerV1Tests
+[32m[PASS][0m testDepositNotEnoughFunds() (gas: 30578)
+[32m[PASS][0m testDepositTenValidators() (gas: 514150)
+[32m[PASS][0m testDepositTwentyValidators() (gas: 534109)
+[32m[PASS][0m testRetrieveWithdrawalCredentials() (gas: 9688)
+Test result: [32mok[0m. [32m4[0m passed; [31m0[0m failed; [33m0[0m skipped; finished in 1.95ms
+
+Ran 1 test for contracts/test/components/ConsensusLayerDepositManager.1.t.sol:ConsensusLayerDepositManagerV1ValidKeysTest
+[32m[PASS][0m testDepositValidKey() (gas: 162776)
+Test result: [32mok[0m. [32m1[0m passed; [31m0[0m failed; [33m0[0m skipped; finished in 590.17µs
+
+Ran 1 test for contracts/test/CoverageFund.1.t.sol:CoverageFundV1InitializationTests
+[32m[PASS][0m testInitialization() (gas: 59856)
+Test result: [32mok[0m. [32m1[0m passed; [31m0[0m failed; [33m0[0m skipped; finished in 359.04µs
+
+Ran 4 tests for contracts/test/components/ConsensusLayerDepositManager.1.t.sol:ConsensusLayerDepositManagerV1ErrorTests
+[32m[PASS][0m testInconsistentPublicKey() (gas: 159900)
+[32m[PASS][0m testInconsistentSignature() (gas: 160054)
+[32m[PASS][0m testInvalidPublicKeyCount() (gas: 167263)
+[32m[PASS][0m testUnavailableKeys() (gas: 54169)
+Test result: [32mok[0m. [32m4[0m passed; [31m0[0m failed; [33m0[0m skipped; finished in 651.21µs
+
+Ran 2 tests for contracts/test/components/ConsensusLayerDepositManager.1.t.sol:ConsensusLayerDepositManagerV1InitTests
+[32m[PASS][0m testDepositContractEvent() (gas: 2345177)
+[32m[PASS][0m testWithdrawalCredentialsEvent() (gas: 2345157)
+Test result: [32mok[0m. [32m2[0m passed; [31m0[0m failed; [33m0[0m skipped; finished in 406.58µs
+
+Ran 1 test for contracts/test/Oracle.1.t.sol:OracleV1InitializationTests
+[32m[PASS][0m testInitialization() (gas: 179863)
+Test result: [32mok[0m. [32m1[0m passed; [31m0[0m failed; [33m0[0m skipped; finished in 361.21µs
+
+Ran 10 tests for contracts/test/CoverageFund.1.t.sol:CoverageFundTestV1
+[32m[PASS][0m testCallInvalidCall(uint256,uint256) (runs: 256, μ: 90744, ~: 90744)
+[32m[PASS][0m testDonateUnauthorized(uint256,uint256) (runs: 256, μ: 126075, ~: 126075)
+[32m[PASS][0m testDonateZero(uint256) (runs: 256, μ: 120639, ~: 120639)
+[32m[PASS][0m testFallbackFail() (gas: 91640)
+[32m[PASS][0m testNoFundPulled() (gas: 15697)
+[32m[PASS][0m testPullFundsFromDonate(uint256,uint256) (runs: 256, μ: 156359, ~: 156359)
+[32m[PASS][0m testPullFundsUnauthorized(uint256,uint256) (runs: 256, μ: 162665, ~: 162665)
+[32m[PASS][0m testPullHalfFundsFromDonate(uint256,uint256) (runs: 256, μ: 174053, ~: 174500)
+[32m[PASS][0m testSendInvalidCall(uint256,uint256) (runs: 256, μ: 90087, ~: 90087)
+[32m[PASS][0m testTransferInvalidCall(uint256,uint256) (runs: 256, μ: 90060, ~: 90060)
+Test result: [32mok[0m. [32m10[0m passed; [31m0[0m failed; [33m0[0m skipped; finished in 245.51ms
+
+Ran 2 tests for contracts/test/state/oracle/ReportsVariants.t.sol:ReportsVariantsTest
+[32m[PASS][0m testIndexOfReport() (gas: 68506)
+[32m[PASS][0m testSetReportsVariants() (gas: 24361)
+Test result: [32mok[0m. [32m2[0m passed; [31m0[0m failed; [33m0[0m skipped; finished in 290.67µs
+
+Ran 1 test for contracts/test/River.1.t.sol:RiverV1InitializationTests
+[32m[PASS][0m testInitialization() (gas: 275251)
+Test result: [32mok[0m. [32m1[0m passed; [31m0[0m failed; [33m0[0m skipped; finished in 1.82ms
+
+Ran 21 tests for contracts/test/Allowlist.1.t.sol:AllowlistV1Tests
+[32m[PASS][0m testAllowFail() (gas: 14619)
+[32m[PASS][0m testAllowerCantUndeny(uint256) (runs: 256, μ: 123938, ~: 123938)
+[32m[PASS][0m testDenyPermissionBeingSetByAllower(uint256) (runs: 256, μ: 96737, ~: 96737)
+[32m[PASS][0m testGetRawPermissions(uint256) (runs: 256, μ: 126749, ~: 126749)
+[32m[PASS][0m testRevertsOnIncorrectParameters(uint256) (runs: 256, μ: 107718, ~: 107718)
+[32m[PASS][0m testSetAllower(uint256,uint256) (runs: 256, μ: 147361, ~: 147361)
+[32m[PASS][0m testSetAllowerUnauthorized(uint256,uint256) (runs: 256, μ: 134288, ~: 134288)
+[32m[PASS][0m testSetAllowlistRevertForMismatch(uint256,uint256,uint256) (runs: 256, μ: 182563, ~: 182563)
+[32m[PASS][0m testSetAllowlistStatus() (gas: 124151)
+[32m[PASS][0m testSetAllowlistStatus(uint256) (runs: 256, μ: 124167, ~: 124167)
+[32m[PASS][0m testSetAllowlistStatusComplicatedMask(uint256,uint256) (runs: 256, μ: 205088, ~: 205088)
+[32m[PASS][0m testSetAllowlistStatusMultipleDifferent(uint256,uint256,uint256) (runs: 256, μ: 225938, ~: 225938)
+[32m[PASS][0m testSetAllowlistStatusMultipleSame(uint256,uint256,uint256) (runs: 256, μ: 270291, ~: 270291)
+[32m[PASS][0m testSetAllowlistStatusUnauthorized(uint256) (runs: 256, μ: 90546, ~: 90546)
+[32m[PASS][0m testSetAllowlistStatusZeroAddress() (gas: 19447)
+[32m[PASS][0m testSetDenier(uint256,uint256) (runs: 256, μ: 147425, ~: 147425)
+[32m[PASS][0m testSetDenierUnauthorized(uint256,uint256) (runs: 256, μ: 134200, ~: 134200)
+[32m[PASS][0m testSetDenylistStatusUnauthorized(uint256) (runs: 256, μ: 90524, ~: 90524)
+[32m[PASS][0m testSetUserDenied(uint256) (runs: 256, μ: 140256, ~: 140256)
+[32m[PASS][0m testUnauthorizedPermission(uint256) (runs: 256, μ: 84883, ~: 84883)
+[32m[PASS][0m testUndeny(uint256) (runs: 256, μ: 119661, ~: 119661)
+Test result: [32mok[0m. [32m21[0m passed; [31m0[0m failed; [33m0[0m skipped; finished in 602.45ms
+
+Ran 4 tests for contracts/test/components/UserDepositManager.1.t.sol:UserDepositManagerV1DepositTests
+[32m[PASS][0m testDepositToAnotherUserWithDedicatedMethod(uint256,uint256,uint256) (runs: 256, μ: 163096, ~: 164643)
+[32m[PASS][0m testDepositWithCalldataFallback(uint256,uint256) (runs: 256, μ: 88734, ~: 88970)
+[32m[PASS][0m testDepositWithDedicatedMethod(uint256,uint256) (runs: 256, μ: 115823, ~: 117650)
+[32m[PASS][0m testDepositWithReceiveFallback(uint256,uint256) (runs: 256, μ: 116318, ~: 117522)
+Test result: [32mok[0m. [32m4[0m passed; [31m0[0m failed; [33m0[0m skipped; finished in 91.49ms
+
+Ran 2 tests for contracts/test/state/tlc/VestingSchedules.2.t.sol:VestingSchedulesMigrationTest
+[32m[PASS][0m testGetRevert() (gas: 5889)
+[32m[PASS][0m testVestingScheduleV1ToV2Compatibility(uint64,uint64,uint32,uint32,uint32,uint32,bool,uint256,uint256) (runs: 256, μ: 472355, ~: 476553)
+Test result: [32mok[0m. [32m2[0m passed; [31m0[0m failed; [33m0[0m skipped; finished in 31.19ms
+
+Ran 1 test for contracts/test/WLSETH.1.t.sol:WLSETHV1InitializationTests
+[32m[PASS][0m testInitialization() (gas: 59929)
+Test result: [32mok[0m. [32m1[0m passed; [31m0[0m failed; [33m0[0m skipped; finished in 318.92µs
+
+Ran 39 tests for contracts/test/components/ERC20VestableVotesUpgradeable.1.t.sol:ERC20VestableVotesUpgradeableV1Tests
+[32m[PASS][0m testCheckpoints() (gas: 268127)
+[32m[PASS][0m testCreateInvalidVestingAmountTooLowForPeriodAndDuration() (gas: 19530)
+[32m[PASS][0m testCreateInvalidVestingPeriodDoesNotDivideCliffDuration() (gas: 19245)
+[32m[PASS][0m testCreateInvalidVestingPeriodDoesNotDivideDuration() (gas: 19180)
+[32m[PASS][0m testCreateInvalidVestingZeroAmount() (gas: 19030)
+[32m[PASS][0m testCreateInvalidVestingZeroBeneficiary() (gas: 16877)
+[32m[PASS][0m testCreateInvalidVestingZeroDuration() (gas: 19027)
+[32m[PASS][0m testCreateInvalidVestingZeroPeriod() (gas: 19037)
+[32m[PASS][0m testCreateMultipleVestings() (gas: 490660)
+[32m[PASS][0m testCreateVesting() (gas: 277951)
+[32m[PASS][0m testCreateVestingDefaultStart(uint40) (runs: 256, μ: 263200, ~: 263200)
+[32m[PASS][0m testCreateVestingWithDelegatee() (gas: 278686)
+[32m[PASS][0m testCreateVestingWithGlobalUnlock() (gas: 258031)
+[32m[PASS][0m testDOSComputeVestingReleasableAmount() (gas: 284992)
+[32m[PASS][0m testDOSReleaseVestingSchedule() (gas: 349844)
+[32m[PASS][0m testDOSRevokeVestingSchedule() (gas: 292574)
+[32m[PASS][0m testDelegate() (gas: 124896)
+[32m[PASS][0m testDelegateAndTransfer() (gas: 261201)
+[32m[PASS][0m testDelegateVestingEscrow() (gas: 327202)
+[32m[PASS][0m testDelegateVestingEscrowFromInvalidAccount() (gas: 267767)
+[32m[PASS][0m testReleaseVestingScheduleAfterCliffButBeforeLock() (gas: 264393)
+[32m[PASS][0m testReleaseVestingScheduleAfterLockDuration() (gas: 321780)
+[32m[PASS][0m testReleaseVestingScheduleAfterRevoke() (gas: 338775)
+[32m[PASS][0m testReleaseVestingScheduleAfterVestingBeforeGlobalUnlock() (gas: 312663)
+[32m[PASS][0m testReleaseVestingScheduleAtLockDuration() (gas: 321802)
+[32m[PASS][0m testReleaseVestingScheduleBeforeCliff() (gas: 264730)
+[32m[PASS][0m testReleaseVestingScheduleFromInvalidAccount() (gas: 265667)
+[32m[PASS][0m testRevokeAtCliff() (gas: 287265)
+[32m[PASS][0m testRevokeAtDuration() (gas: 276865)
+[32m[PASS][0m testRevokeBeforeCliff() (gas: 263931)
+[32m[PASS][0m testRevokeDefault() (gas: 284391)
+[32m[PASS][0m testRevokeFromInvalidAccount() (gas: 264007)
+[32m[PASS][0m testRevokeNotRevokable() (gas: 263082)
+[32m[PASS][0m testRevokeTwice() (gas: 296874)
+[32m[PASS][0m testRevokeTwiceAfterEnd() (gas: 278627)
+[32m[PASS][0m testTransfer() (gas: 49871)
+[32m[PASS][0m testVestingScheduleFuzzing(uint24,uint32,uint8,uint8,uint256,uint256,uint256) (runs: 256, μ: 1298259, ~: 362719)
+[32m[PASS][0m testcomputeVestingAmounts() (gas: 360807)
+[32m[PASS][0m testcomputeVestingAmountsWithGlobalUnlockSchedule() (gas: 349493)
+Test result: [32mok[0m. [32m39[0m passed; [31m0[0m failed; [33m0[0m skipped; finished in 684.55ms
+
+Ran 12 tests for contracts/test/TUPProxy.t.sol:TUPProxyBehindFirewallTest
+[32m[PASS][0m testAdminFuncAsLambda() (gas: 18507)
+[32m[PASS][0m testFunc() (gas: 40738)
+[32m[PASS][0m testFuncAsAdmin() (gas: 23823)
+[32m[PASS][0m testPauseAddressZeroFallback() (gas: 80193)
+[32m[PASS][0m testPauseFromExecutor() (gas: 85534)
+[32m[PASS][0m testPauseFromGovernor() (gas: 81207)
+[32m[PASS][0m testRevert() (gas: 55631)
+[32m[PASS][0m testUnPauseFromExecutor() (gas: 94442)
+[32m[PASS][0m testUnPauseFromGovernor() (gas: 72308)
+[32m[PASS][0m testUpgradeToAndCallFromExecutor() (gas: 35818)
+[32m[PASS][0m testUpgradeToAndCallFromGovernor() (gas: 94530)
+[32m[PASS][0m testViewFunc() (gas: 17084)
+Test result: [32mok[0m. [32m12[0m passed; [31m0[0m failed; [33m0[0m skipped; finished in 1.44ms
+
+Ran 9 tests for contracts/test/TUPProxy.t.sol:TUPProxyTest
+[32m[PASS][0m testAdminFuncAsLambda() (gas: 18459)
+[32m[PASS][0m testFunc() (gas: 40738)
+[32m[PASS][0m testFuncAsAdmin() (gas: 23879)
+[32m[PASS][0m testPause() (gas: 72084)
+[32m[PASS][0m testPauseAddressZeroFallback() (gas: 71129)
+[32m[PASS][0m testRevert() (gas: 55601)
+[32m[PASS][0m testUnPause() (gas: 61585)
+[32m[PASS][0m testUpgradeToAndCall() (gas: 85410)
+[32m[PASS][0m testViewFunc() (gas: 17040)
+Test result: [32mok[0m. [32m9[0m passed; [31m0[0m failed; [33m0[0m skipped; finished in 1.02ms
+
+Ran 2 tests for contracts/test/components/UserDepositManager.1.t.sol:UserDepositManagerV1CallbackTests
+[32m[PASS][0m testDepositInternalCallback(uint256,uint256) (runs: 256, μ: 117408, ~: 118657)
+[32m[PASS][0m testDepositToAnotherUserInternalCallback(uint256,uint256,uint256) (runs: 256, μ: 164790, ~: 165623)
+Test result: [32mok[0m. [32m2[0m passed; [31m0[0m failed; [33m0[0m skipped; finished in 39.38ms
+
+Ran 8 tests for contracts/test/components/OracleManager.1.t.sol:OracleManagerV1Tests
+[32m[PASS][0m testExternalViewFunctions() (gas: 13919)
+[32m[PASS][0m testFuzzedReporting(uint256) (runs: 256, μ: 369893, ~: 377058)
+[32m[PASS][0m testSetCLSpec(uint64,uint64,uint64,uint64,uint64) (runs: 256, μ: 33321, ~: 33509)
+[32m[PASS][0m testSetCLSpecUnauthorized(uint64,uint64,uint64,uint64,uint64) (runs: 256, μ: 12389, ~: 12389)
+[32m[PASS][0m testSetOracle(uint256) (runs: 256, μ: 98582, ~: 98582)
+[32m[PASS][0m testSetOracleUnauthorized(uint256) (runs: 256, μ: 90080, ~: 90080)
+[32m[PASS][0m testSetReportBounds(uint256,uint256) (runs: 256, μ: 27841, ~: 28160)
+[32m[PASS][0m testSetReportBoundsUnauthorized(uint256,uint256) (runs: 256, μ: 11600, ~: 11600)
+Test result: [32mok[0m. [32m8[0m passed; [31m0[0m failed; [33m0[0m skipped; finished in 195.94ms
+
+Ran 6 tests for contracts/test/Administrable.t.sol:AdministrableTest
+[32m[PASS][0m testAcceptAdmin() (gas: 39164)
+[32m[PASS][0m testAcceptAdminUnauthorized() (gas: 39961)
+[32m[PASS][0m testCancelTransferAdmin() (gas: 34474)
+[32m[PASS][0m testGetAdmin() (gas: 9959)
+[32m[PASS][0m testProposeAdmin() (gas: 44292)
+[32m[PASS][0m testProposeAdminUnauthorized() (gas: 13090)
+Test result: [32mok[0m. [32m6[0m passed; [31m0[0m failed; [33m0[0m skipped; finished in 883.58µs
+
+Ran 1 test for contracts/test/Allowlist.1.t.sol:AllowlistV1InitializationTests
+[32m[PASS][0m testInitialization() (gas: 88522)
+Test result: [32mok[0m. [32m1[0m passed; [31m0[0m failed; [33m0[0m skipped; finished in 310.92µs
+
+Ran 1 test for contracts/test/fork/mainnet/2.operatorsMigrationV1toV2.t.sol:OperatorsMigrationV1ToV2
+[32m[PASS][0m test_migration() (gas: 4755542)
+Test result: [32mok[0m. [32m1[0m passed; [31m0[0m failed; [33m0[0m skipped; finished in 1.48s
+
+Ran 2 tests for contracts/test/fork/mainnet/3.operatorsFundedEventEmission.t.sol:OperatorsEventsMigrationV1ToV2
+[32m[PASS][0m test_migration_allValidatorsInOneCall() (gas: 4900839)
+[32m[PASS][0m test_migration_oneValidatorPerCall() (gas: 4950216)
+Test result: [32mok[0m. [32m2[0m passed; [31m0[0m failed; [33m0[0m skipped; finished in 1.49s
+
+Ran 1 test for contracts/test/fork/mainnet/1.vestingSchedulesMigrationV1toV2.t.sol:VestingSchedulesMigrationV1ToV2
+[32m[PASS][0m test_migration() (gas: 4973655)
+Test result: [32mok[0m. [32m1[0m passed; [31m0[0m failed; [33m0[0m skipped; finished in 1.50s
+
+Ran 1 test for contracts/test/Withdraw.1.t.sol:WithdrawV1InitializationTests
+[32m[PASS][0m testInitialization() (gas: 56873)
+Test result: [32mok[0m. [32m1[0m passed; [31m0[0m failed; [33m0[0m skipped; finished in 249.79µs
+
+Ran 10 tests for contracts/test/Withdraw.1.t.sol:WithdrawV1Tests
+[32m[PASS][0m testGetCredentials() (gas: 5679)
+[32m[PASS][0m testGetRiver() (gas: 9968)
+[32m[PASS][0m testNoFundPulled() (gas: 13548)
+[32m[PASS][0m testPullFundsAmountTooHigh(uint256) (runs: 256, μ: 27751, ~: 27506)
+[32m[PASS][0m testPullFundsAsRandom(uint256) (runs: 256, μ: 83090, ~: 83090)
+[32m[PASS][0m testPullFundsAsRiver() (gas: 22489)
+[32m[PASS][0m testPullFundsAsRiverPullAll(uint256) (runs: 256, μ: 24590, ~: 24901)
+[32m[PASS][0m testPullFundsAsRiverPullPartial(uint256,uint256) (runs: 256, μ: 29592, ~: 29554)
+[32m[PASS][0m testReinitialize() (gas: 13658)
+[32m[PASS][0m testSendingFundsReverting(uint256) (runs: 256, μ: 104200, ~: 105217)
+Test result: [32mok[0m. [32m10[0m passed; [31m0[0m failed; [33m0[0m skipped; finished in 137.66ms
+
+Ran 31 tests for contracts/test/WLSETH.1.t.sol:WLSETHV1Tests
+[32m[PASS][0m testAlreadyInitialized() (gas: 13804)
+[32m[PASS][0m testApprove(uint256,uint256,uint32) (runs: 256, μ: 245417, ~: 252104)
+[32m[PASS][0m testApproveZero(uint256,uint32) (runs: 256, μ: 175648, ~: 181105)
+[32m[PASS][0m testBalanceOfEdits(uint256,uint32) (runs: 256, μ: 201255, ~: 209541)
+[32m[PASS][0m testBalanceOfEditsMultiBurnsAndRebase(uint256) (runs: 256, μ: 271616, ~: 271636)
+[32m[PASS][0m testBalanceOfEditsMultiBurnsMultiUserAndRebase(uint256,uint256) (runs: 256, μ: 379177, ~: 379180)
+[32m[PASS][0m testBurnFail() (gas: 16337)
+[32m[PASS][0m testBurnWrappedTokens(uint256,uint32) (runs: 256, μ: 201429, ~: 207673)
+[32m[PASS][0m testBurnWrappedTokensCheckTransfer(uint256,uint32) (runs: 256, μ: 200292, ~: 207992)
+[32m[PASS][0m testBurnWrappedTokensInvalidTransfer(uint256,uint32) (runs: 256, μ: 194699, ~: 203007)
+[32m[PASS][0m testBurnWrappedTokensWithRebase(uint256,uint32) (runs: 256, μ: 199870, ~: 211226)
+[32m[PASS][0m testMintWrappedTokens(uint256,uint32) (runs: 256, μ: 179972, ~: 183832)
+[32m[PASS][0m testMintWrappedTokensCheckTransfer(uint256,uint32) (runs: 256, μ: 180306, ~: 184180)
+[32m[PASS][0m testMintWrappedTokensInvalidTransfer(uint256,uint32) (runs: 256, μ: 178444, ~: 183847)
+[32m[PASS][0m testMintWrappedTokensTooMuch(uint256,uint32) (runs: 256, μ: 186612, ~: 192048)
+[32m[PASS][0m testTokenDecimals() (gas: 5557)
+[32m[PASS][0m testTokenName() (gas: 6202)
+[32m[PASS][0m testTokenSymbol() (gas: 6322)
+[32m[PASS][0m testTotalSupplyEdits(uint256,uint32) (runs: 256, μ: 204077, ~: 207936)
+[32m[PASS][0m testTotalSupplyEditsMultiBurnsAndRebase(uint256) (runs: 256, μ: 269204, ~: 269226)
+[32m[PASS][0m testTransfer(uint256,uint256,uint32) (runs: 256, μ: 264068, ~: 271755)
+[32m[PASS][0m testTransferFrom(uint256,uint256,uint256,uint32) (runs: 256, μ: 326591, ~: 335117)
+[32m[PASS][0m testTransferFromAfterIncreasedAllowance(uint256,uint256,uint256,uint32) (runs: 256, μ: 322300, ~: 335444)
+[32m[PASS][0m testTransferFromAfterIncreasedAndDecreasedAllowance(uint256,uint256,uint256,uint32) (runs: 256, μ: 334981, ~: 341802)
+[32m[PASS][0m testTransferFromApprovalTooLow(uint256,uint256,uint256,uint32) (runs: 256, μ: 302951, ~: 311400)
+[32m[PASS][0m testTransferFromMsgSender(uint256,uint256,uint32) (runs: 256, μ: 226358, ~: 231566)
+[32m[PASS][0m testTransferFromToZeroAddress(uint256,uint256,uint256,uint32) (runs: 256, μ: 306721, ~: 312391)
+[32m[PASS][0m testTransferFromTooMuch(uint256,uint256,uint256,uint32) (runs: 256, μ: 304230, ~: 310384)
+[32m[PASS][0m testTransferFromUnlimitedAllowance(uint256,uint256,uint256,uint32) (runs: 256, μ: 320172, ~: 333130)
+[32m[PASS][0m testTransferTooMuch(uint256,uint256,uint32) (runs: 256, μ: 224588, ~: 229711)
+[32m[PASS][0m testTransferZero(uint256,uint32) (runs: 256, μ: 176957, ~: 184770)
+Test result: [32mok[0m. [32m31[0m passed; [31m0[0m failed; [33m0[0m skipped; finished in 1.75s
+
+Ran 39 tests for contracts/test/Oracle.1.t.sol:OracleV1Tests
+[32m[PASS][0m testAddMember(uint256) (runs: 256, μ: 166816, ~: 166816)
+[32m[PASS][0m testAddMemberExisting(uint256) (runs: 256, μ: 165149, ~: 165149)
+[32m[PASS][0m testAddMemberQuorumEvent(uint256) (runs: 256, μ: 167698, ~: 167698)
+[32m[PASS][0m testAddMemberQuorumZero() (gas: 134893)
+[32m[PASS][0m testAddMemberUnauthorized(uint256) (runs: 256, μ: 85263, ~: 85263)
+[32m[PASS][0m testEditMember(uint256,uint256) (runs: 256, μ: 227120, ~: 227120)
+[32m[PASS][0m testEditMemberAlreadyInUse(uint256) (runs: 256, μ: 165841, ~: 165841)
+[32m[PASS][0m testEditMemberAsMember(uint256,uint256) (runs: 256, μ: 223638, ~: 223638)
+[32m[PASS][0m testEditMemberNotFound(uint256,uint256) (runs: 256, μ: 219471, ~: 219471)
+[32m[PASS][0m testEditMemberUnauthorized(uint256,uint256) (runs: 256, μ: 218790, ~: 218790)
+[32m[PASS][0m testEditMemberZero(uint256) (runs: 256, μ: 165704, ~: 165704)
+[32m[PASS][0m testExternalViewFunctions() (gas: 15339)
+[32m[PASS][0m testGetAdmin() (gas: 10120)
+[32m[PASS][0m testGetMemberStatusRandomAddress(uint256) (runs: 256, μ: 81349, ~: 81349)
+[32m[PASS][0m testGetReportVariantCount() (gas: 7923)
+[32m[PASS][0m testGetReportVariantDetails() (gas: 505088)
+[32m[PASS][0m testGetReportVariantDetailsFail() (gas: 13741)
+[32m[PASS][0m testGetRiver() (gas: 10040)
+[32m[PASS][0m testRemoveMember(uint256) (runs: 256, μ: 136241, ~: 136263)
+[32m[PASS][0m testRemoveMemberInvalidCall() (gas: 136209)
+[32m[PASS][0m testRemoveMemberQuorumEvent(uint256) (runs: 256, μ: 136223, ~: 136244)
+[32m[PASS][0m testRemoveMemberQuorumZero() (gas: 225286)
+[32m[PASS][0m testRemoveMemberUnauthorized(uint256) (runs: 256, μ: 168311, ~: 168311)
+[32m[PASS][0m testReportEpochInvalidEpoch(uint256) (runs: 256, μ: 204134, ~: 204134)
+[32m[PASS][0m testReportEpochTooOld(uint256) (runs: 256, μ: 232435, ~: 232435)
+[32m[PASS][0m testReportUnauthorized(uint256) (runs: 256, μ: 90626, ~: 90626)
+[32m[PASS][0m testRevoteAfterSetMember(uint256) (runs: 256, μ: 385299, ~: 385299)
+[32m[PASS][0m testSetQuorum(uint256,uint256) (runs: 256, μ: 245577, ~: 245577)
+[32m[PASS][0m testSetQuorumRedundant(uint256) (runs: 256, μ: 164629, ~: 164629)
+[32m[PASS][0m testSetQuorumTooHigh() (gas: 18803)
+[32m[PASS][0m testSetQuorumUnauthorized(uint256,uint256) (runs: 256, μ: 241328, ~: 241328)
+[32m[PASS][0m testValidReport(uint256) (runs: 256, μ: 225367, ~: 225367)
+[32m[PASS][0m testValidReportAlreadyReported(uint256) (runs: 256, μ: 360955, ~: 360955)
+[32m[PASS][0m testValidReportClearOnNewReport(uint256) (runs: 256, μ: 481833, ~: 481853)
+[32m[PASS][0m testValidReportClearedAfterMemberRemoved(uint256) (runs: 256, μ: 354698, ~: 354716)
+[32m[PASS][0m testValidReportClearedAfterNewMemberAdded(uint256) (runs: 256, μ: 359170, ~: 359170)
+[32m[PASS][0m testValidReportEpochTooOldAfterClear(uint256) (runs: 256, μ: 401205, ~: 401205)
+[32m[PASS][0m testValidReportMultiVote(uint256) (runs: 256, μ: 326716, ~: 326716)
+[32m[PASS][0m testVoteFuzzing(uint256) (runs: 256, μ: 25786239, ~: 20448107)
+Test result: [32mok[0m. [32m39[0m passed; [31m0[0m failed; [33m0[0m skipped; finished in 10.79s
+
+Ran 22 tests for contracts/test/OperatorsRegistry.1.t.sol:OperatorsRegistryV1TestDistribution
+[32m[PASS][0m testDecreasingStoppedValidatorCounts(uint8,uint8[5]) (runs: 256, μ: 13225653, ~: 10457359)
+[32m[PASS][0m testDecreasingStoppedValidatorCountsSum(uint16[5]) (runs: 256, μ: 21200377, ~: 20909405)
+[32m[PASS][0m testDepositDistributionWithOperatorsWithPositiveStoppedDelta() (gas: 82756475)
+[32m[PASS][0m testExitDistributionUnevenFunded() (gas: 38509938)
+[32m[PASS][0m testExitDistributionWithCatchupToStopped() (gas: 85889752)
+[32m[PASS][0m testExitDistributionWithCatchupToStoppedAlreadyExistingArray() (gas: 86085466)
+[32m[PASS][0m testExitDistributionWithCatchupToStoppedAndUnexitableOperators() (gas: 42496115)
+[32m[PASS][0m testExitDistributionWithUnsollicitedExits() (gas: 85741484)
+[32m[PASS][0m testInactiveDepositDistribution() (gas: 83283086)
+[32m[PASS][0m testMoreThanMaxExitDistribution() (gas: 85595743)
+[32m[PASS][0m testMoreThanMaxExitDistributionOnUnevenSetup() (gas: 35115993)
+[32m[PASS][0m testOneExitDistribution() (gas: 85575398)
+[32m[PASS][0m testRegularDepositDistribution() (gas: 86721357)
+[32m[PASS][0m testRegularExitDistribution() (gas: 85639807)
+[32m[PASS][0m testRequestValidatorNoExits() (gas: 11279)
+[32m[PASS][0m testSetOperatorLimitsFail() (gas: 20120)
+[32m[PASS][0m testStoppedDepositDistribution() (gas: 83166168)
+[32m[PASS][0m testStoppedValidatorCountAboveFundedCount(uint8,uint8[5]) (runs: 256, μ: 14251672, ~: 11725542)
+[32m[PASS][0m testStoppedValidatorCountAboveFundedCountOnNewArrayElements(uint8[5]) (runs: 256, μ: 12632969, ~: 9499633)
+[32m[PASS][0m testStoppedValidatorCountArrayShrinking(uint8[5]) (runs: 256, μ: 12839684, ~: 9168111)
+[32m[PASS][0m testStoppedValidatorCountHigherThanDepositCount() (gas: 18490926)
+[32m[PASS][0m testUnevenExitDistribution() (gas: 85593437)
+Test result: [32mok[0m. [32m22[0m passed; [31m0[0m failed; [33m0[0m skipped; finished in 13.37s
+
+Ran 3 tests for contracts/test/migration/TLC_globalUnlockScheduleMigration.t.sol:TlcMigrationTest
+[32m[PASS][0m testCreate() (gas: 997427)
+[32m[PASS][0m testGas() (gas: 1782860)
+[32m[PASS][0m testMigrate() (gas: 6499106)
+Test result: [32mok[0m. [32m3[0m passed; [31m0[0m failed; [33m0[0m skipped; finished in 13.33s
+
+Ran 57 tests for contracts/test/OperatorsRegistry.1.t.sol:OperatorsRegistryV1Tests
+[32m[PASS][0m testAddNodeOperator(uint256,bytes32) (runs: 256, μ: 207458, ~: 207458)
+[32m[PASS][0m testAddNodeOperatorInvalidAddress(bytes32) (runs: 256, μ: 15144, ~: 15144)
+[32m[PASS][0m testAddNodeOperatorInvalidName(uint256) (runs: 256, μ: 88062, ~: 88062)
+[32m[PASS][0m testAddNodeWhileNotAdminOperator(uint256,bytes32) (runs: 256, μ: 85533, ~: 85533)
+[32m[PASS][0m testAddValidatorsAsAdmin(bytes32,uint256) (runs: 256, μ: 1741183, ~: 1741183)
+[32m[PASS][0m testAddValidatorsAsAdminUnknownOperator(uint256) (runs: 256, μ: 162325, ~: 162325)
+[32m[PASS][0m testAddValidatorsAsOperator(bytes32,uint256) (runs: 256, μ: 1776766, ~: 1776766)
+[32m[PASS][0m testAddValidatorsAsUnauthorized(bytes32,uint256) (runs: 256, μ: 351839, ~: 351839)
+[32m[PASS][0m testAddValidatorsInvalidCount(bytes32,uint256) (runs: 256, μ: 204473, ~: 204473)
+[32m[PASS][0m testAddValidatorsInvalidKeySize(bytes32,uint256) (runs: 256, μ: 333268, ~: 333268)
+[32m[PASS][0m testGetAllActiveOperators(bytes32,uint256) (runs: 256, μ: 209711, ~: 209711)
+[32m[PASS][0m testGetAllActiveOperatorsWithInactiveOnes(bytes32,uint256) (runs: 256, μ: 208308, ~: 208308)
+[32m[PASS][0m testGetKeysAsRiver(bytes32,uint256) (runs: 256, μ: 1824287, ~: 1824287)
+[32m[PASS][0m testGetKeysAsRiverLimitTest(bytes32,uint256) (runs: 256, μ: 1786097, ~: 1786097)
+[32m[PASS][0m testGetKeysAsRiverNoKeys() (gas: 17468)
+[32m[PASS][0m testGetKeysAsUnauthorized() (gas: 13878)
+[32m[PASS][0m testGetKeysDistribution(uint256,uint256,uint256) (runs: 256, μ: 42826484, ~: 42826484)
+[32m[PASS][0m testGetOperator(bytes32,uint256) (runs: 256, μ: 207282, ~: 207282)
+[32m[PASS][0m testGetOperatorCount(bytes32,uint256) (runs: 256, μ: 204409, ~: 204409)
+[32m[PASS][0m testGetStoppedValidatorCounts() (gas: 9339)
+[32m[PASS][0m testInitializeTwice() (gas: 16036)
+[32m[PASS][0m testInternalSetKeys(uint256,bytes32,uint32,uint32) (runs: 256, μ: 215007, ~: 215007)
+[32m[PASS][0m testRemoveHalfValidatorsConservativeCaseAsOperator(bytes32,uint256) (runs: 256, μ: 2533568, ~: 2533568)
+[32m[PASS][0m testRemoveHalfValidatorsEvenCaseAsOperator(bytes32,uint256) (runs: 256, μ: 2533410, ~: 2533410)
+[32m[PASS][0m testRemoveValidatorFail() (gas: 14286)
+[32m[PASS][0m testRemoveValidatorsAndRetrieveAsAdmin(bytes32,uint256) (runs: 256, μ: 1643271, ~: 1643271)
+[32m[PASS][0m testRemoveValidatorsAsAdmin(bytes32,uint256) (runs: 256, μ: 2490234, ~: 2490235)
+[32m[PASS][0m testRemoveValidatorsAsOperator(bytes32,uint256) (runs: 256, μ: 2495769, ~: 2495769)
+[32m[PASS][0m testRemoveValidatorsFundedKeyRemovalAttempt(bytes32,uint256) (runs: 256, μ: 1730945, ~: 1730945)
+[32m[PASS][0m testRemoveValidatorsKeyOutOfBounds(bytes32,uint256) (runs: 256, μ: 1728884, ~: 1728884)
+[32m[PASS][0m testRemoveValidatorsUnauthorized(bytes32,uint256) (runs: 256, μ: 1730012, ~: 1730012)
+[32m[PASS][0m testRemoveValidatorsUnsortedIndexes(bytes32,uint256) (runs: 256, μ: 1517248, ~: 1517248)
+[32m[PASS][0m testReportStoppedValidatorCounts(uint8,uint8) (runs: 256, μ: 117943307, ~: 42162101)
+[32m[PASS][0m testReportStoppedValidatorCountsEmptyArray() (gas: 14520)
+[32m[PASS][0m testReportStoppedValidatorCountsInvalidSum(uint8,uint8) (runs: 256, μ: 106081561, ~: 32633612)
+[32m[PASS][0m testReportStoppedValidatorCountsMoreElementsThanOperators() (gas: 17008)
+[32m[PASS][0m testReportStoppedValidatorCountsUnauthorized(uint256,uint32,uint8) (runs: 256, μ: 9526874, ~: 6001762)
+[32m[PASS][0m testSetOperatorAddressAsOperator(bytes32,uint256,uint256) (runs: 256, μ: 265173, ~: 265173)
+[32m[PASS][0m testSetOperatorAddressAsUnauthorized(bytes32,uint256,uint256) (runs: 256, μ: 258722, ~: 258722)
+[32m[PASS][0m testSetOperatorAddressZeroAddr(bytes32,uint256) (runs: 256, μ: 211621, ~: 211621)
+[32m[PASS][0m testSetOperatorAddressesAsAdmin(bytes32,uint256,uint256) (runs: 256, μ: 263538, ~: 263538)
+[32m[PASS][0m testSetOperatorInvariantChecksSkipped(uint256) (runs: 256, μ: 190089, ~: 190089)
+[32m[PASS][0m testSetOperatorLimitCountAsAdmin(bytes32,uint256,uint32) (runs: 256, μ: 1745783, ~: 1746027)
+[32m[PASS][0m testSetOperatorLimitCountAsUnauthorized(bytes32,uint256,uint32) (runs: 256, μ: 211841, ~: 211841)
+[32m[PASS][0m testSetOperatorLimitCountNoOp(bytes32,uint256,uint32) (runs: 256, μ: 1747438, ~: 1747438)
+[32m[PASS][0m testSetOperatorLimitCountSnapshotTooLow(bytes32,uint256,uint32) (runs: 256, μ: 1739515, ~: 1739515)
+[32m[PASS][0m testSetOperatorLimitDecreaseSkipsSnapshotCheck(bytes32,uint256) (runs: 256, μ: 1750168, ~: 1750168)
+[32m[PASS][0m testSetOperatorLimitDuplicateOperators(bytes32,uint256) (runs: 256, μ: 209121, ~: 209121)
+[32m[PASS][0m testSetOperatorLimitTooHigh(uint256) (runs: 256, μ: 185554, ~: 185554)
+[32m[PASS][0m testSetOperatorLimitTooLow(uint256) (runs: 256, μ: 366400, ~: 366400)
+[32m[PASS][0m testSetOperatorLimitUnorderedOperators(bytes32,uint256,uint256) (runs: 256, μ: 351082, ~: 351082)
+[32m[PASS][0m testSetOperatorNameAsAdmin(bytes32,uint256) (runs: 256, μ: 218972, ~: 218972)
+[32m[PASS][0m testSetOperatorNameAsOperator(bytes32,uint256) (runs: 256, μ: 220680, ~: 220680)
+[32m[PASS][0m testSetOperatorNameAsUnauthorized(bytes32,uint256) (runs: 256, μ: 212474, ~: 212474)
+[32m[PASS][0m testSetOperatorNameEmptyString(bytes32,uint256) (runs: 256, μ: 211976, ~: 211976)
+[32m[PASS][0m testSetOperatorStatusAsAdmin(bytes32,uint256) (runs: 256, μ: 224432, ~: 224432)
+[32m[PASS][0m testSetOperatorStatusAsUnauthorized(bytes32,uint256) (runs: 256, μ: 210381, ~: 210381)
+Test result: [32mok[0m. [32m57[0m passed; [31m0[0m failed; [33m0[0m skipped; finished in 12.65s
+
+Ran 31 tests for contracts/test/components/SharesManager.1.t.sol:SharesManagerV1Tests
+[32m[PASS][0m testApprove(uint256,uint256,uint256) (runs: 256, μ: 200589, ~: 203621)
+[32m[PASS][0m testApproveAndTransferAboveAllowance(uint256,uint256,uint128) (runs: 256, μ: 229181, ~: 234683)
+[32m[PASS][0m testApproveAndTransferAboveBalance(uint256,uint256,uint128) (runs: 256, μ: 226362, ~: 232494)
+[32m[PASS][0m testApproveAndTransferMsgSender(uint256,uint256,uint128) (runs: 256, μ: 184516, ~: 186202)
+[32m[PASS][0m testApproveAndTransferPartial(uint256,uint256,uint128) (runs: 256, μ: 270864, ~: 277467)
+[32m[PASS][0m testApproveAndTransferTotal(uint256,uint256,uint128) (runs: 256, μ: 227746, ~: 231418)
+[32m[PASS][0m testApproveAndTransferUnauthorized(uint256,uint256,uint128) (runs: 256, μ: 206178, ~: 209063)
+[32m[PASS][0m testApproveAndTransferUnauthorizedReceiver(uint256,uint256,uint128) (runs: 256, μ: 258148, ~: 262179)
+[32m[PASS][0m testApproveAndTransferUnauthorizedSender(uint256,uint256,uint128) (runs: 256, μ: 256650, ~: 259922)
+[32m[PASS][0m testApproveAndTransferZero(uint256,uint256,uint128) (runs: 256, μ: 229747, ~: 233168)
+[32m[PASS][0m testApproveAndTransferZeroAddress(uint256,uint256,uint128) (runs: 256, μ: 204239, ~: 208092)
+[32m[PASS][0m testApproveZeroAddress(uint256,uint256) (runs: 256, μ: 129980, ~: 131224)
+[32m[PASS][0m testBalanceOf(uint256,uint256) (runs: 256, μ: 217254, ~: 217254)
+[32m[PASS][0m testBalanceOfMultiRebasings(uint256,uint256) (runs: 256, μ: 235956, ~: 235956)
+[32m[PASS][0m testBalanceOfUnderlying(uint256) (runs: 256, μ: 153554, ~: 153554)
+[32m[PASS][0m testDecimals() (gas: 5447)
+[32m[PASS][0m testExternalViewFunctions() (gas: 7795)
+[32m[PASS][0m testIncreaseAllowanceAndTransferFrom(uint256,uint256,uint128) (runs: 256, μ: 195624, ~: 197610)
+[32m[PASS][0m testIncreaseDecreaseAllowanceAndTransferFrom(uint256,uint256,uint128) (runs: 256, μ: 199896, ~: 202102)
+[32m[PASS][0m testName() (gas: 6223)
+[32m[PASS][0m testSymbol() (gas: 6344)
+[32m[PASS][0m testTotalSupply(uint256,uint128,uint128) (runs: 256, μ: 112592, ~: 113917)
+[32m[PASS][0m testTotalSupplyEvent(uint256,uint256) (runs: 256, μ: 241468, ~: 241468)
+[32m[PASS][0m testTransferPartial(uint256,uint256,uint128) (runs: 256, μ: 238399, ~: 242241)
+[32m[PASS][0m testTransferTotal(uint256,uint256,uint128) (runs: 256, μ: 212588, ~: 215116)
+[32m[PASS][0m testTransferTransferBalanceTooLow(uint256,uint256) (runs: 256, μ: 141037, ~: 141037)
+[32m[PASS][0m testTransferTransferZero(uint256,uint256,uint128) (runs: 256, μ: 206442, ~: 208775)
+[32m[PASS][0m testTransferUnauthorizedReceiver(uint256,uint256,uint128) (runs: 256, μ: 228631, ~: 231428)
+[32m[PASS][0m testTransferUnauthorizedSender(uint256,uint256,uint128) (runs: 256, μ: 227786, ~: 229260)
+[32m[PASS][0m testTransferZeroAddress(uint256,uint256,uint128) (runs: 256, μ: 209638, ~: 210896)
+[32m[PASS][0m testUnderlyingBalanceFromShares(uint256) (runs: 256, μ: 8007, ~: 8007)
+Test result: [32mok[0m. [32m31[0m passed; [31m0[0m failed; [33m0[0m skipped; finished in 13.05s
+
+Ran 36 tests for contracts/test/River.1.t.sol:RiverV1Tests
+[32m[PASS][0m testAdditionalInit() (gas: 33503)
+[32m[PASS][0m testDeniedUser() (gas: 273563)
+[32m[PASS][0m testGetAdministrator() (gas: 15516)
+[32m[PASS][0m testGetOperatorsRegistry() (gas: 10018)
+[32m[PASS][0m testInit2(uint128,uint96) (runs: 256, μ: 2185307, ~: 2180721)
+[32m[PASS][0m testInitWithZeroAddressValue() (gas: 5365398)
+[32m[PASS][0m testOnTransferFailsForAllowlistDenied() (gas: 231972)
+[32m[PASS][0m testSendCLFunds(uint256) (runs: 256, μ: 20856, ~: 21171)
+[32m[PASS][0m testSendCLFundsUnauthorized(uint256) (runs: 256, μ: 85340, ~: 85340)
+[32m[PASS][0m testSendCoverageFundsUnauthorized(uint256) (runs: 256, μ: 85580, ~: 85580)
+[32m[PASS][0m testSendELFundsUnauthorized(uint256) (runs: 256, μ: 85425, ~: 85425)
+[32m[PASS][0m testSendRedeemManagerUnauthorizedCall() (gas: 11339)
+[32m[PASS][0m testSetAllowlist() (gas: 28283)
+[32m[PASS][0m testSetAllowlistUnauthorized() (gas: 13697)
+[32m[PASS][0m testSetCollector() (gas: 28306)
+[32m[PASS][0m testSetCollectorUnauthorized() (gas: 13718)
+[32m[PASS][0m testSetCoverageFund(uint256) (runs: 256, μ: 99139, ~: 99139)
+[32m[PASS][0m testSetCoverageFundUnauthorized(uint256) (runs: 256, μ: 90075, ~: 90075)
+[32m[PASS][0m testSetCoverageFundZero() (gas: 19254)
+[32m[PASS][0m testSetDailyCommittableLimits(uint128,uint128) (runs: 256, μ: 40834, ~: 40912)
+[32m[PASS][0m testSetDailyCommittableLimitsUnauthorized(uint128,uint128) (runs: 256, μ: 12224, ~: 12224)
+[32m[PASS][0m testSetELFeeRecipient(uint256) (runs: 256, μ: 99094, ~: 99094)
+[32m[PASS][0m testSetELFeeRecipientUnauthorized(uint256) (runs: 256, μ: 90096, ~: 90096)
+[32m[PASS][0m testSetELFeeRecipientZero() (gas: 19550)
+[32m[PASS][0m testSetGlobalFee() (gas: 22290)
+[32m[PASS][0m testSetGlobalFeeHigherThanBase() (gas: 14201)
+[32m[PASS][0m testSetGlobalFeeUnauthorized() (gas: 14493)
+[32m[PASS][0m testSetMetadataURI(string) (runs: 256, μ: 71160, ~: 70193)
+[32m[PASS][0m testSetMetadataURIEmpty() (gas: 14676)
+[32m[PASS][0m testSetMetadataURIUnauthorized(string,uint256) (runs: 256, μ: 86449, ~: 86421)
+[32m[PASS][0m testUnauthorizedDeposit() (gas: 111166)
+[32m[PASS][0m testUserDeposits() (gas: 1958642)
+[32m[PASS][0m testUserDepositsForAnotherUser() (gas: 1963596)
+[32m[PASS][0m testUserDepositsFullAllowance() (gas: 1954981)
+[32m[PASS][0m testUserDepositsOperatorWithStoppedValidators() (gas: 1857623)
+[32m[PASS][0m testUserDepositsUnconventionalDeposits() (gas: 1979383)
+Test result: [32mok[0m. [32m36[0m passed; [31m0[0m failed; [33m0[0m skipped; finished in 13.29s
+
+Ran 29 tests for contracts/test/RedeemManager.1.t.sol:RedeemManagerV1Tests
+[32m[PASS][0m testClaimMultiRate() (gas: 1818688)
+[32m[PASS][0m testClaimRedeemRequest(uint256) (runs: 256, μ: 414722, ~: 414482)
+[32m[PASS][0m testClaimRedeemRequestIncompatibleArrayLengths(uint256) (runs: 256, μ: 404609, ~: 404381)
+[32m[PASS][0m testClaimRedeemRequestNotMatching(uint256) (runs: 256, μ: 511575, ~: 511290)
+[32m[PASS][0m testClaimRedeemRequestOnMultipleEventsCustomDepths(uint256) (runs: 256, μ: 1330732, ~: 1330721)
+[32m[PASS][0m testClaimRedeemRequestOnTwoEvents(uint256) (runs: 256, μ: 516313, ~: 516060)
+[32m[PASS][0m testClaimRedeemRequestOutOfBounds() (gas: 18319)
+[32m[PASS][0m testClaimRedeemRequestTwiceBigger(uint256) (runs: 256, μ: 474029, ~: 473812)
+[32m[PASS][0m testClaimRedeemRequestTwiceWithSkipFlag(uint256) (runs: 256, μ: 442635, ~: 442389)
+[32m[PASS][0m testClaimRedeemRequestTwiceWithoutSkipFlag(uint256) (runs: 256, μ: 408051, ~: 407783)
+[32m[PASS][0m testClaimRedeemRequestTwoRequestsOnOneEvent(uint256) (runs: 256, μ: 540042, ~: 539789)
+[32m[PASS][0m testClaimRedeemRequestWithImplicitSkipFlag(uint256) (runs: 256, μ: 431373, ~: 431126)
+[32m[PASS][0m testClaimRedeemRequestWithdrawalEventOutOfBounds(uint256) (runs: 256, μ: 339511, ~: 339245)
+[32m[PASS][0m testFillingBothQueues(uint256) (runs: 256, μ: 80530513, ~: 79082202)
+[32m[PASS][0m testGetRiver() (gas: 10021)
+[32m[PASS][0m testPullExceedingEth() (gas: 14004)
+[32m[PASS][0m testReportWithdraw(uint256) (runs: 256, μ: 385167, ~: 384922)
+[32m[PASS][0m testReportWithdrawFail(uint256) (runs: 256, μ: 327710, ~: 327498)
+[32m[PASS][0m testReportWithdrawMultiple(uint256) (runs: 256, μ: 477825, ~: 477591)
+[32m[PASS][0m testRequestRedeem(uint256) (runs: 256, μ: 319409, ~: 319184)
+[32m[PASS][0m testRequestRedeemAmountZero(uint256) (runs: 256, μ: 133306, ~: 133306)
+[32m[PASS][0m testRequestRedeemApproveTooLow(uint256) (runs: 256, μ: 208592, ~: 210094)
+[32m[PASS][0m testRequestRedeemImplicitRecipient(uint256) (runs: 256, μ: 319263, ~: 319028)
+[32m[PASS][0m testRequestRedeemMultiple(uint256) (runs: 256, μ: 510757, ~: 510455)
+[32m[PASS][0m testRequestRedeemUnauthorizedUser(uint256) (runs: 256, μ: 171813, ~: 171591)
+[32m[PASS][0m testRequestRedeemZeroRecipient(uint256) (runs: 256, μ: 208909, ~: 208623)
+[32m[PASS][0m testResolveOutOfBounds() (gas: 12398)
+[32m[PASS][0m testResolveRedeemRequestForZeroIds() (gas: 9166)
+[32m[PASS][0m testResolveUnsatisfied(uint256) (runs: 256, μ: 357070, ~: 356842)
+Test result: [32mok[0m. [32m29[0m passed; [31m0[0m failed; [33m0[0m skipped; finished in 18.25s
+
+Ran 17 tests for contracts/test/River.1.t.sol:RiverV1TestsReport_HEAVY_FUZZING
+[32m[PASS][0m testExternalViewFunctions() (gas: 10860)
+[32m[PASS][0m testReportingError_InvalidDecreasingValidatorsExitedBalance(uint256) (runs: 256, μ: 3913224, ~: 3856193)
+[32m[PASS][0m testReportingError_InvalidDecreasingValidatorsSkimmedBalance(uint256) (runs: 256, μ: 3835045, ~: 3644760)
+[32m[PASS][0m testReportingError_InvalidEpoch(uint256) (runs: 256, μ: 27538, ~: 27369)
+[32m[PASS][0m testReportingError_InvalidPulledClFundsAmount(uint256) (runs: 256, μ: 3812271, ~: 3746097)
+[32m[PASS][0m testReportingError_InvalidValidatorCountReport(uint256) (runs: 256, μ: 3546488, ~: 3112702)
+[32m[PASS][0m testReportingError_StoppedValidatorCountDecreasing(uint256) (runs: 256, μ: 4017574, ~: 3672764)
+[32m[PASS][0m testReportingError_TotalValidatorBalanceDecreaseOutOfBound(uint256) (runs: 256, μ: 4001564, ~: 3912267)
+[32m[PASS][0m testReportingError_TotalValidatorBalanceIncreaseOutOfBound(uint256) (runs: 256, μ: 4062147, ~: 3913101)
+[32m[PASS][0m testReportingError_Unauthorized(uint256) (runs: 256, μ: 86211, ~: 86211)
+[32m[PASS][0m testReportingError_ValidatorCountDecreasing(uint256) (runs: 256, μ: 4013853, ~: 3896752)
+[32m[PASS][0m testReportingError_ValidatorCountHigherThanDeposits(uint256) (runs: 256, μ: 4060778, ~: 3997873)
+[32m[PASS][0m testReportingFuzzing(uint256) (runs: 256, μ: 72718468, ~: 75205402)
+[32m[PASS][0m testReportingSuccess_AssertCommittedAmountAfterCoverage(uint256) (runs: 256, μ: 4316405, ~: 4466389)
+[32m[PASS][0m testReportingSuccess_AssertCommittedAmountAfterELFees(uint256) (runs: 256, μ: 4273584, ~: 4392194)
+[32m[PASS][0m testReportingSuccess_AssertCommittedAmountAfterMultiPulling(uint256) (runs: 256, μ: 4056717, ~: 3924147)
+[32m[PASS][0m testReportingSuccess_AssertCommittedAmountAfterSkimming(uint256) (runs: 256, μ: 4111660, ~: 3993900)
+Test result: [32mok[0m. [32m17[0m passed; [31m0[0m failed; [33m0[0m skipped; finished in 27.81s
+| TLCV1 contract          |                 |       |        |       |         |
+|-------------------------|-----------------|-------|--------|-------|---------|
+| Deployment Cost         | Deployment Size |       |        |       |         |
+| 0                       | 0               |       |        |       |         |
+| Function Name           | min             | avg   | median | max   | # calls |
+| getVestingSchedule      | 12579           | 12579 | 12579  | 12579 | 67      |
+| getVestingScheduleCount | 2563            | 2563  | 2563   | 2563  | 1       |
+
+
+| TUPProxy contract                |                 |        |        |         |         |
+|----------------------------------|-----------------|--------|--------|---------|---------|
+| Deployment Cost                  | Deployment Size |        |        |         |         |
+| 0                                | 0               |        |        |         |         |
+| Function Name                    | min             | avg    | median | max     | # calls |
+| getOperator                      | 4190            | 4190   | 4190   | 4190    | 3       |
+| getOperatorCount                 | 3735            | 3735   | 3735   | 3735    | 1       |
+| getOperatorStoppedValidatorCount | 1920            | 1920   | 1920   | 1920    | 3       |
+| getTotalStoppedValidatorCount    | 3782            | 3782   | 3782   | 3782    | 1       |
+| getVestingSchedule               | 3830            | 3830   | 3830   | 3830    | 14      |
+| getVestingScheduleCount          | 1778            | 1903   | 1778   | 3778    | 16      |
+| upgradeToAndCall                 | 301704          | 915822 | 915822 | 1529940 | 2       |
+
+
+| contracts/src/Allowlist.1.sol:AllowlistV1 contract |                 |       |        |       |         |
+|----------------------------------------------------|-----------------|-------|--------|-------|---------|
+| Deployment Cost                                    | Deployment Size |       |        |       |         |
+| 810977                                             | 4188            |       |        |       |         |
+| Function Name                                      | min             | avg   | median | max   | # calls |
+| getAllower                                         | 505             | 505   | 505    | 505   | 2       |
+| getDenier                                          | 504             | 1504  | 1504   | 2504  | 4       |
+| initAllowlistV1                                    | 70444           | 70444 | 70444  | 70444 | 131     |
+| initAllowlistV1_1                                  | 26560           | 26560 | 26560  | 26560 | 130     |
+| isDenied                                           | 864             | 876   | 864    | 2864  | 333     |
+| onlyAllowed                                        | 715             | 726   | 715    | 2828  | 542     |
+| setAllowPermissions                                | 25420           | 27850 | 27420  | 29420 | 223     |
+| setAllower                                         | 2868            | 5986  | 5986   | 9105  | 4       |
+| setDenyPermissions                                 | 4866            | 4878  | 4883   | 4883  | 4       |
+
+
+| contracts/src/CoverageFund.1.sol:CoverageFundV1 contract |                 |       |        |       |         |
+|----------------------------------------------------------|-----------------|-------|--------|-------|---------|
+| Deployment Cost                                          | Deployment Size |       |        |       |         |
+| 336108                                                   | 1816            |       |        |       |         |
+| Function Name                                            | min             | avg   | median | max   | # calls |
+| donate                                                   | 205             | 26857 | 30484  | 35747 | 8       |
+| initCoverageFundV1                                       | 46431           | 46461 | 46431  | 48431 | 65      |
+| pullCoverageFunds                                        | 564             | 6022  | 4826   | 9615  | 15      |
+| receive                                                  | 106             | 106   | 106    | 106   | 3       |
+
+
+| contracts/src/ELFeeRecipient.1.sol:ELFeeRecipientV1 contract |                 |       |        |       |         |
+|--------------------------------------------------------------|-----------------|-------|--------|-------|---------|
+| Deployment Cost                                              | Deployment Size |       |        |       |         |
+| 231410                                                       | 1293            |       |        |       |         |
+| Function Name                                                | min             | avg   | median | max   | # calls |
+| initELFeeRecipientV1                                         | 46402           | 46422 | 46402  | 48402 | 99      |
+| pullELFees                                                   | 606             | 4251  | 2606   | 10829 | 18      |
+| receive                                                      | 55              | 55    | 55     | 55    | 5       |
+
+
+| contracts/src/Firewall.sol:Firewall contract |                 |       |        |        |         |
+|----------------------------------------------|-----------------|-------|--------|--------|---------|
+| Deployment Cost                              | Deployment Size |       |        |        |         |
+| 464288                                       | 3105            |       |        |        |         |
+| Function Name                                | min             | avg   | median | max    | # calls |
+| addMember                                    | 7137            | 65926 | 86028  | 90376  | 12      |
+| addOperator                                  | 5009            | 83737 | 103419 | 103419 | 10      |
+| allowExecutor                                | 2776            | 9227  | 3952   | 26228  | 4       |
+| depositToConsensusLayer                      | 7137            | 10642 | 10221  | 14569  | 3       |
+| pause                                        | 26718           | 28457 | 26718  | 31066  | 5       |
+| removeMember                                 | 5137            | 7827  | 7999   | 10347  | 3       |
+| setAllower                                   | 16589           | 16763 | 16763  | 16937  | 2       |
+| setExecutor                                  | 4918            | 7641  | 8938   | 9069   | 3       |
+| setGlobalFee                                 | 5009            | 8792  | 5009   | 16358  | 3       |
+| setOperatorLimits                            | 5137            | 6779  | 5427   | 9775   | 3       |
+| setOperatorStatus                            | 1009            | 4851  | 3823   | 8171   | 7       |
+| setOracle                                    | 7137            | 15693 | 16919  | 20919  | 5       |
+| setQuorum                                    | 5137            | 6873  | 5568   | 9916   | 3       |
+| unpause                                      | 2774            | 2891  | 2891   | 3009   | 2       |
+| upgradeToAndCall                             | 5009            | 30823 | 30823  | 56638  | 2       |
+
+
+| contracts/src/OperatorsRegistry.1.sol:OperatorsRegistryV1 contract |                 |         |         |         |         |
+|--------------------------------------------------------------------|-----------------|---------|---------|---------|---------|
+| Deployment Cost                                                    | Deployment Size |         |         |         |         |
+| 4370984                                                            | 21978           |         |         |         |         |
+| Function Name                                                      | min             | avg     | median  | max     | # calls |
+| addOperator                                                        | 95917           | 95917   | 95917   | 95917   | 8       |
+| addValidators                                                      | 1371819         | 1371819 | 1371819 | 1371819 | 2       |
+| forceFundedValidatorKeysEventEmission                              | 675             | 36435   | 23240   | 156550  | 10      |
+| getOperator                                                        | 2970            | 2970    | 2970    | 2970    | 10      |
+| getOperatorCount                                                   | 572             | 572     | 572     | 572     | 1       |
+| getOperatorStoppedValidatorCount                                   | 754             | 754     | 754     | 754     | 3       |
+| getTotalStoppedValidatorCount                                      | 2619            | 2619    | 2619    | 2619    | 1       |
+| initOperatorsRegistryV1                                            | 70586           | 70586   | 70586   | 70586   | 37      |
+| initOperatorsRegistryV1_1                                          | 291395          | 291395  | 291395  | 291395  | 3       |
+| setOperatorLimits                                                  | 4410            | 4410    | 4410    | 4410    | 2       |
+| setOperatorStatus                                                  | 2836            | 2836    | 2836    | 2836    | 5       |
+
+
+| contracts/src/Oracle.1.sol:OracleV1 contract |                 |        |        |         |         |
+|----------------------------------------------|-----------------|--------|--------|---------|---------|
+| Deployment Cost                              | Deployment Size |        |        |         |         |
+| 1458852                                      | 7435            |        |        |         |         |
+| Function Name                                | min             | avg    | median | max     | # calls |
+| addMember                                    | 1453            | 61793  | 74541  | 78541   | 129     |
+| getAdmin                                     | 2628            | 2628   | 2628   | 2628    | 1       |
+| getGlobalReportStatus                        | 2582            | 2582   | 2582   | 2582    | 1       |
+| getLastReportedEpochId                       | 2526            | 2526   | 2526   | 2526    | 1       |
+| getMemberReportStatus                        | 2769            | 2769   | 2769   | 2769    | 1       |
+| getOracleMembers                             | 2802            | 2802   | 2802   | 2802    | 1       |
+| getQuorum                                    | 481             | 1441   | 481    | 2481    | 25      |
+| getReportVariantDetails                      | 935             | 1120   | 1120   | 1305    | 2       |
+| getReportVariantsCount                       | 2570            | 2570   | 2570   | 2570    | 2       |
+| getRiver                                     | 549             | 1549   | 1549   | 2549    | 2       |
+| initOracleV1                                 | 148410          | 148425 | 148410 | 150410  | 130     |
+| initOracleV1_1                               | 8426            | 8426   | 8426   | 8426    | 40      |
+| isMember                                     | 733             | 1511   | 1074   | 2733    | 76      |
+| removeMember                                 | 779             | 5821   | 7012   | 8669    | 8       |
+| reportConsensusLayerData                     | 772             | 70615  | 9731   | 1202647 | 44      |
+| setMember                                    | 944             | 2952   | 2599   | 5150    | 7       |
+| setQuorum                                    | 676             | 4333   | 4584   | 7717    | 7       |
+
+
+| contracts/src/RedeemManager.1.sol:RedeemManagerV1 contract |                 |        |        |         |         |
+|------------------------------------------------------------|-----------------|--------|--------|---------|---------|
+| Deployment Cost                                            | Deployment Size |        |        |         |         |
+| 1723544                                                    | 8757            |        |        |         |         |
+| Function Name                                              | min             | avg    | median | max     | # calls |
+| claimRedeemRequests(uint32[],uint32[])                     | 39873           | 439390 | 237828 | 1040470 | 3       |
+| claimRedeemRequests(uint32[],uint32[],bool,uint16)         | 1106            | 204709 | 38224  | 2855443 | 16      |
+| getBufferedExceedingEth                                    | 515             | 915    | 515    | 2515    | 5       |
+| getRedeemDemand                                            | 449             | 1207   | 449    | 2449    | 29      |
+| getRedeemRequestCount                                      | 483             | 883    | 483    | 2483    | 15      |
+| getRedeemRequestDetails                                    | 1522            | 1522   | 1522   | 1522    | 32      |
+| getRiver                                                   | 2570            | 2570   | 2570   | 2570    | 1       |
+| getWithdrawalEventCount                                    | 416             | 416    | 416    | 416     | 10      |
+| getWithdrawalEventDetails                                  | 1220            | 1220   | 1220   | 1220    | 20      |
+| initializeRedeemManagerV1                                  | 46548           | 46548  | 46548  | 46548   | 47      |
+| pullExceedingEth                                           | 842             | 4843   | 4842   | 10862   | 12      |
+| reportWithdraw                                             | 963             | 71491  | 72430  | 73628   | 57      |
+| requestRedeem(uint256)                                     | 111585          | 112736 | 111585 | 160432  | 78      |
+| requestRedeem(uint256,address)                             | 6721            | 105770 | 101790 | 152637  | 263     |
+| resolveRedeemRequests                                      | 3283            | 116482 | 5192   | 1218076 | 19      |
+
+
+| contracts/src/River.1.sol:RiverV1 contract |                 |        |        |        |         |
+|--------------------------------------------|-----------------|--------|--------|--------|---------|
+| Deployment Cost                            | Deployment Size |        |        |        |         |
+| 4990642                                    | 25072           |        |        |        |         |
+| Function Name                              | min             | avg    | median | max    | # calls |
+| depositToConsensusLayer                    | 2733            | 2733   | 2733   | 2733   | 2       |
+| getOracle                                  | 549             | 549    | 549    | 549    | 4       |
+| initRiverV1                                | 236833          | 236833 | 236833 | 236833 | 37      |
+| setGlobalFee                               | 8874            | 8874   | 8874   | 8874   | 1       |
+| setOracle                                  | 9087            | 9087   | 9087   | 9087   | 4       |
+
+
+| contracts/src/TLC.1.sol:TLCV1 contract |                 |        |        |         |         |
+|----------------------------------------|-----------------|--------|--------|---------|---------|
+| Deployment Cost                        | Deployment Size |        |        |         |         |
+| 3248260                                | 16349           |        |        |         |         |
+| Function Name                          | min             | avg    | median | max     | # calls |
+| balanceOf                              | 2748            | 2748   | 2748   | 2748    | 1       |
+| getVestingSchedule                     | 2610            | 2610   | 2610   | 2610    | 86      |
+| getVestingScheduleCount                | 615             | 615    | 615    | 615     | 17      |
+| initTLCV1                              | 3014            | 180489 | 215984 | 215984  | 6       |
+| isGlobalUnlockedScheduleIgnored        | 651             | 1851   | 2651   | 2651    | 5       |
+| migrateVestingSchedules                | 6633            | 309232 | 6633   | 1519631 | 5       |
+| name                                   | 3241            | 3241   | 3241   | 3241    | 1       |
+| symbol                                 | 3394            | 3394   | 3394   | 3394    | 1       |
+| totalSupply                            | 349             | 1015   | 349    | 2349    | 3       |
+
+
+| contracts/src/TUPProxy.sol:TUPProxy contract |                 |       |        |       |         |
+|----------------------------------------------|-----------------|-------|--------|-------|---------|
+| Deployment Cost                              | Deployment Size |       |        |       |         |
+| 611563                                       | 4402            |       |        |       |         |
+| Function Name                                | min             | avg   | median | max   | # calls |
+| balanceOf                                    | 3782            | 3782  | 3782   | 3782  | 1       |
+| fail                                         | 1379            | 6629  | 6629   | 11879 | 4       |
+| i                                            | 1358            | 6465  | 1424   | 11858 | 35      |
+| inc                                          | 692             | 12442 | 21331  | 31831 | 23      |
+| migrateVestingSchedules                      | 9661            | 9661  | 9661   | 9661  | 4       |
+| name                                         | 12778           | 12778 | 12778  | 12778 | 1       |
+| pause                                        | 21737           | 21737 | 21737  | 21737 | 8       |
+| paused                                       | 628             | 2951  | 628    | 9921  | 8       |
+| superI                                       | 1403            | 1403  | 1403   | 1403  | 2       |
+| superInc                                     | 1825            | 1825  | 1825   | 1825  | 2       |
+| symbol                                       | 12931           | 12931 | 12931  | 12931 | 1       |
+| totalSupply                                  | 1380            | 5546  | 3380   | 11880 | 3       |
+| unpause                                      | 1793            | 1793  | 1793   | 1793  | 2       |
+| upgradeToAndCall                             | 51633           | 51633 | 51633  | 51633 | 2       |
+
+
+| contracts/src/WLSETH.1.sol:WLSETHV1 contract |                 |       |        |       |         |
+|----------------------------------------------|-----------------|-------|--------|-------|---------|
+| Deployment Cost                              | Deployment Size |       |        |       |         |
+| 850703                                       | 4281            |       |        |       |         |
+| Function Name                                | min             | avg   | median | max   | # calls |
+| allowance                                    | 994             | 994   | 994    | 994   | 10      |
+| approve                                      | 530             | 21366 | 24839  | 24839 | 7       |
+| balanceOf                                    | 2217            | 2748  | 2217   | 6217  | 64      |
+| burn                                         | 7830            | 19890 | 10890  | 32790 | 29      |
+| decimals                                     | 288             | 288   | 288    | 288   | 1       |
+| decreaseAllowance                            | 3364            | 3364  | 3364   | 3364  | 1       |
+| increaseAllowance                            | 3409            | 18009 | 25309  | 25309 | 3       |
+| initWLSETHV1                                 | 2904            | 45243 | 46504  | 48504 | 33      |
+| mint                                         | 31682           | 60360 | 63582  | 63582 | 25      |
+| name                                         | 471             | 471   | 471    | 471   | 1       |
+| sharesOf                                     | 840             | 840   | 840    | 840   | 13      |
+| symbol                                       | 525             | 525   | 525    | 525   | 1       |
+| totalSupply                                  | 1905            | 2571  | 1905   | 5905  | 12      |
+| transfer                                     | 2354            | 10626 | 2436   | 27090 | 3       |
+| transferFrom                                 | 2435            | 16383 | 16336  | 30137 | 8       |
+
+
+| contracts/src/Withdraw.1.sol:WithdrawV1 contract |                 |       |        |       |         |
+|--------------------------------------------------|-----------------|-------|--------|-------|---------|
+| Deployment Cost                                  | Deployment Size |       |        |       |         |
+| 251828                                           | 1395            |       |        |       |         |
+| Function Name                                    | min             | avg   | median | max   | # calls |
+| fallback                                         | 45              | 45    | 45     | 45    | 3       |
+| getCredentials                                   | 259             | 259   | 259    | 259   | 94      |
+| getRiver                                         | 482             | 1482  | 1482   | 2482  | 2       |
+| initializeWithdrawV1                             | 2846            | 44982 | 46416  | 48416 | 29      |
+| pullEth                                          | 2663            | 9417  | 10389  | 11097 | 13      |
+
+
+| contracts/src/migration/TLC_globalUnlockScheduleMigration.sol:TlcMigration contract |                 |        |        |        |         |
+|-------------------------------------------------------------------------------------|-----------------|--------|--------|--------|---------|
+| Deployment Cost                                                                     | Deployment Size |        |        |        |         |
+| 941981                                                                              | 4737            |        |        |        |         |
+| Function Name                                                                       | min             | avg    | median | max    | # calls |
+| migrate                                                                             | 625580          | 693580 | 693580 | 761580 | 2       |
+
+
+| contracts/test/Administrable.t.sol:WithAdmin contract |                 |       |        |       |         |
+|-------------------------------------------------------|-----------------|-------|--------|-------|---------|
+| Deployment Cost                                       | Deployment Size |       |        |       |         |
+| 207371                                                | 1292            |       |        |       |         |
+| Function Name                                         | min             | avg   | median | max   | # calls |
+| acceptAdmin                                           | 555             | 3535  | 3535   | 6516  | 2       |
+| getAdmin                                              | 539             | 1427  | 539    | 2539  | 9       |
+| getPendingAdmin                                       | 550             | 1300  | 550    | 2550  | 8       |
+| proposeAdmin                                          | 2031            | 16092 | 21931  | 26031 | 6       |
+
+
+| contracts/test/Allowlist.1.t.sol:AllowlistV1Sudo contract |                 |       |        |       |         |
+|-----------------------------------------------------------|-----------------|-------|--------|-------|---------|
+| Deployment Cost                                           | Deployment Size |       |        |       |         |
+| 818790                                                    | 4227            |       |        |       |         |
+| Function Name                                             | min             | avg   | median | max   | # calls |
+| getAdmin                                                  | 583             | 583   | 583    | 583   | 1       |
+| getAllower                                                | 505             | 1171  | 505    | 2505  | 3       |
+| getDenier                                                 | 504             | 1504  | 1504   | 2504  | 2       |
+| getPermissions                                            | 775             | 775   | 775    | 775   | 1       |
+| hasPermission                                             | 815             | 815   | 815    | 815   | 2       |
+| initAllowlistV1                                           | 70444           | 70534 | 70444  | 72444 | 22      |
+| initAllowlistV1_1                                         | 26560           | 26560 | 26560  | 26560 | 21      |
+| isAllowed                                                 | 947             | 1572  | 947    | 2947  | 32      |
+| isDenied                                                  | 864             | 1721  | 864    | 2864  | 7       |
+| onlyAllowed                                               | 799             | 1813  | 1813   | 2828  | 2       |
+| setAllowPermissions                                       | 3211            | 20026 | 15815  | 71724 | 16      |
+| setAllower                                                | 2890            | 3958  | 3958   | 5027  | 2       |
+| setDenier                                                 | 2845            | 3913  | 3913   | 4982  | 2       |
+| setDenyPermissions                                        | 3167            | 8168  | 4888   | 28905 | 7       |
+| sudoSetAdmin                                              | 5630            | 5630  | 5630   | 5630  | 2       |
+
+
+| contracts/test/CoverageFund.1.t.sol:RiverMock contract |                 |      |        |       |         |
+|--------------------------------------------------------|-----------------|------|--------|-------|---------|
+| Deployment Cost                                        | Deployment Size |      |        |       |         |
+| 102478                                                 | 579             |      |        |       |         |
+| Function Name                                          | min             | avg  | median | max   | # calls |
+| getAllowlist                                           | 2292            | 2292 | 2292   | 2292  | 4       |
+| pullCoverageFunds                                      | 7978            | 9497 | 10257  | 10257 | 3       |
+| sendCoverageFunds                                      | 1201            | 1201 | 1201   | 1201  | 2       |
+
+
+| contracts/test/ELFeeRecipient.1.t.sol:RiverDonationMock contract |                 |      |        |       |         |
+|------------------------------------------------------------------|-----------------|------|--------|-------|---------|
+| Deployment Cost                                                  | Deployment Size |      |        |       |         |
+| 69117                                                            | 377             |      |        |       |         |
+| Function Name                                                    | min             | avg  | median | max   | # calls |
+| pullELFees                                                       | 3280            | 6565 | 3280   | 11493 | 5       |
+| sendELFees                                                       | 1157            | 1157 | 1157   | 1157  | 2       |
+
+
+| contracts/test/LibBytes.t.sol:BytesInputs contract |                 |     |        |      |         |
+|----------------------------------------------------|-----------------|-----|--------|------|---------|
+| Deployment Cost                                    | Deployment Size |     |        |      |         |
+| 138983                                             | 726             |     |        |      |         |
+| Function Name                                      | min             | avg | median | max  | # calls |
+| slice                                              | 666             | 912 | 767    | 1304 | 3       |
+
+
+| contracts/test/LibSanitize.t.sol:SanitizedInputs contract |                 |     |        |     |         |
+|-----------------------------------------------------------|-----------------|-----|--------|-----|---------|
+| Deployment Cost                                           | Deployment Size |     |        |     |         |
+| 113359                                                    | 598             |     |        |     |         |
+| Function Name                                             | min             | avg | median | max | # calls |
+| setAddress                                                | 355             | 369 | 369    | 383 | 2       |
+| setFee                                                    | 256             | 270 | 270    | 284 | 2       |
+| setString                                                 | 614             | 621 | 621    | 628 | 2       |
+
+
+| contracts/test/LibUnstructuredStorage.t.sol:LibUnstructuredStorageInputs contract |                 |       |        |       |         |
+|-----------------------------------------------------------------------------------|-----------------|-------|--------|-------|---------|
+| Deployment Cost                                                                   | Deployment Size |       |        |       |         |
+| 102147                                                                            | 542             |       |        |       |         |
+| Function Name                                                                     | min             | avg   | median | max   | # calls |
+| getStorageAddress                                                                 | 562             | 562   | 562    | 562   | 1       |
+| getStorageBool                                                                    | 459             | 459   | 459    | 459   | 1       |
+| getStorageBytes32                                                                 | 398             | 398   | 398    | 398   | 1       |
+| getStorageUint256                                                                 | 486             | 486   | 486    | 486   | 1       |
+| setStorageAddress                                                                 | 22455           | 22455 | 22455  | 22455 | 1       |
+| setStorageBool                                                                    | 22355           | 22355 | 22355  | 22355 | 1       |
+| setStorageBytes32                                                                 | 22357           | 22357 | 22357  | 22357 | 1       |
+| setStorageUint256                                                                 | 22445           | 22445 | 22445  | 22445 | 1       |
+
+
+| contracts/test/OperatorsRegistry.1.t.sol:OperatorsRegistryInitializableV1 contract |                 |         |         |          |         |
+|------------------------------------------------------------------------------------|-----------------|---------|---------|----------|---------|
+| Deployment Cost                                                                    | Deployment Size |         |         |          |         |
+| 4440079                                                                            | 22323           |         |         |          |         |
+| Function Name                                                                      | min             | avg     | median  | max      | # calls |
+| addOperator                                                                        | 3133            | 91729   | 94235   | 118135   | 506     |
+| addValidators                                                                      | 1081            | 1801129 | 277464  | 7169146  | 352     |
+| debugGetNextValidatorsToDepositFromActiveOperators                                 | 357852          | 2694935 | 1098739 | 20367257 | 26      |
+| debugGetNextValidatorsToExitFromActiveOperators                                    | 21846           | 50110   | 57014   | 83626    | 15      |
+| demandValidatorExits                                                               | 24859           | 24859   | 24859   | 24859    | 2       |
+| getAdmin                                                                           | 606             | 606     | 606     | 606      | 1       |
+| getCurrentValidatorExitsDemand                                                     | 503             | 866     | 503     | 2503     | 11      |
+| getOperator                                                                        | 2970            | 2983    | 2970    | 3032     | 228     |
+| getOperatorCount                                                                   | 616             | 1282    | 616     | 2616     | 3       |
+| getOperatorStoppedValidatorCount                                                   | 1170            | 1229    | 1220    | 2754     | 101     |
+| getRiver                                                                           | 526             | 526     | 526     | 526      | 1       |
+| getStoppedValidatorCountPerOperator                                                | 38953           | 38953   | 38953   | 38953    | 1       |
+| getTotalStoppedValidatorCount                                                      | 619             | 795     | 795     | 972      | 2       |
+| getTotalValidatorExitsRequested                                                    | 636             | 871     | 636     | 2636     | 17      |
+| getValidator                                                                       | 6086            | 6086    | 6086    | 6086     | 6       |
+| initOperatorsRegistryV1                                                            | 3127            | 69799   | 70608   | 72608    | 81      |
+| listActiveOperators                                                                | 1773            | 3111    | 3111    | 4449     | 2       |
+| pickNextValidatorsToDeposit                                                        | 2648            | 166404  | 68959   | 568072   | 8       |
+| removeValidators                                                                   | 1726            | 45347   | 22419   | 132214   | 10      |
+| reportStoppedValidatorCounts                                                       | 2978            | 422857  | 5538    | 1155191  | 5       |
+| requestValidatorExits                                                              | 2741            | 32237   | 37035   | 56935    | 3       |
+| setOperatorAddress                                                                 | 1725            | 2673    | 2480    | 4007     | 4       |
+| setOperatorLimits                                                                  | 1241            | 26617   | 7778    | 419336   | 45      |
+| setOperatorName                                                                    | 1819            | 3518    | 3350    | 5553     | 4       |
+| setOperatorStatus                                                                  | 742             | 2487    | 2836    | 2836     | 6       |
+| sudoSetFunded                                                                      | 1278            | 1278    | 1278    | 1278     | 3       |
+| sudoSetKeys                                                                        | 1268            | 1268    | 1268    | 1268     | 1       |
+| sudoStoppedValidatorCounts                                                         | 3493            | 70637   | 71478   | 114818   | 18      |
+
+
+| contracts/test/OperatorsRegistry.1.t.sol:RiverMock contract |                 |       |        |       |         |
+|-------------------------------------------------------------|-----------------|-------|--------|-------|---------|
+| Deployment Cost                                             | Deployment Size |       |        |       |         |
+| 37824                                                       | 303             |       |        |       |         |
+| Function Name                                               | min             | avg   | median | max   | # calls |
+| sudoSetDepositedValidatorsCount                             | 22312           | 22312 | 22312  | 22312 | 13      |
+
+
+| contracts/test/RedeemManager.1.t.sol:RiverMock contract |                 |       |        |       |         |
+|---------------------------------------------------------|-----------------|-------|--------|-------|---------|
+| Deployment Cost                                         | Deployment Size |       |        |       |         |
+| 376423                                                  | 1849            |       |        |       |         |
+| Function Name                                           | min             | avg   | median | max   | # calls |
+| approve                                                 | 20507           | 20795 | 20507  | 22607 | 175     |
+| balanceOf                                               | 573             | 573   | 573    | 573   | 8       |
+| getAllowlist                                            | 389             | 658   | 389    | 2389  | 178     |
+| pullExceedingEth                                        | 11583           | 11583 | 11583  | 11583 | 1       |
+| sendRedeemManagerExceedingFunds                         | 185             | 185   | 185    | 185   | 1       |
+| sudoDeal                                                | 21215           | 24361 | 21215  | 45115 | 176     |
+| sudoReportWithdraw                                      | 8412            | 78901 | 79878  | 81076 | 56      |
+| sudoSetRate                                             | 312             | 802   | 312    | 3112  | 10      |
+| transferFrom                                            | 838             | 4901  | 2408   | 24308 | 175     |
+| underlyingBalanceFromShares                             | 650             | 868   | 650    | 2650  | 174     |
+
+
+| contracts/test/River.1.t.sol:OperatorsRegistryWithOverridesV1 contract |                 |         |        |          |         |
+|------------------------------------------------------------------------|-----------------|---------|--------|----------|---------|
+| Deployment Cost                                                        | Deployment Size |         |        |          |         |
+| 4376993                                                                | 22008           |         |        |          |         |
+| Function Name                                                          | min             | avg     | median | max      | # calls |
+| addOperator                                                            | 72039           | 91488   | 94235  | 118135   | 173     |
+| addValidators                                                          | 142005          | 7771359 | 278248 | 18065137 | 173     |
+| demandValidatorExits                                                   | 22859           | 22859   | 22859  | 22859    | 1       |
+| getOperator                                                            | 2970            | 2970    | 2970   | 2970     | 10      |
+| getOperatorStoppedValidatorCount                                       | 1220            | 1220    | 1220   | 1220     | 1       |
+| getStoppedAndRequestedExitCounts                                       | 1533            | 1533    | 1533   | 1533     | 1       |
+| initOperatorsRegistryV1                                                | 70608           | 70608   | 70608  | 70608    | 54      |
+| pickNextValidatorsToDeposit                                            | 32838           | 659589  | 188146 | 11647782 | 25      |
+| reportStoppedValidatorCounts                                           | 3734            | 87517   | 34774  | 755028   | 14      |
+| setOperatorLimits                                                      | 4432            | 5311    | 4432   | 7778     | 137     |
+| sudoStoppedValidatorCounts                                             | 87471           | 87471   | 87471  | 87471    | 1       |
+
+
+| contracts/test/River.1.t.sol:RiverV1ForceCommittable contract |                 |         |        |          |         |
+|---------------------------------------------------------------|-----------------|---------|--------|----------|---------|
+| Deployment Cost                                               | Deployment Size |         |        |          |         |
+| 5006060                                                       | 25149           |         |        |          |         |
+| Function Name                                                 | min             | avg     | median | max      | # calls |
+| approve                                                       | 24973           | 24973   | 24973  | 24973    | 77      |
+| balanceOf                                                     | 849             | 855     | 849    | 2849     | 330     |
+| balanceOfUnderlying                                           | 2742            | 2868    | 2985   | 2985     | 23      |
+| debug_moveDepositToCommitted                                  | 24237           | 24237   | 24237  | 24237    | 20      |
+| deposit                                                       | 10363           | 40243   | 34046  | 92192    | 192     |
+| depositAndTransfer                                            | 11862           | 64012   | 64012  | 116162   | 2       |
+| depositToConsensusLayer                                       | 115640          | 1231386 | 807083 | 14947733 | 25      |
+| getAdmin                                                      | 2629            | 2629    | 2629   | 2629     | 1       |
+| getAllowlist                                                  | 637             | 661     | 637    | 2637     | 82      |
+| getBalanceToDeposit                                           | 517             | 517     | 517    | 517      | 6       |
+| getBalanceToRedeem                                            | 560             | 560     | 560    | 560      | 1       |
+| getCLSpec                                                     | 5383            | 5383    | 5383   | 5383     | 1       |
+| getCollector                                                  | 616             | 1616    | 1616   | 2616     | 2       |
+| getCommittedBalance                                           | 580             | 580     | 580    | 580      | 15      |
+| getCoverageFund                                               | 616             | 2116    | 2616   | 2616     | 4       |
+| getDailyCommittableLimits                                     | 816             | 816     | 816    | 816      | 1       |
+| getDepositedValidatorCount                                    | 560             | 560     | 560    | 560      | 10      |
+| getELFeeRecipient                                             | 594             | 2094    | 2594   | 2594     | 4       |
+| getExpectedEpochId                                            | 1893            | 1893    | 1893   | 1893     | 1       |
+| getGlobalFee                                                  | 648             | 648     | 648    | 648      | 1       |
+| getLastCompletedEpochId                                       | 572             | 572     | 572    | 572      | 1       |
+| getMetadataURI                                                | 1485            | 2363    | 2363   | 3242     | 2       |
+| getOperatorsRegistry                                          | 2593            | 2593    | 2593   | 2593     | 1       |
+| getRedeemManager                                              | 2572            | 2572    | 2572   | 2572     | 1       |
+| getReportBounds                                               | 876             | 4076    | 4876   | 4876     | 10      |
+| getTime                                                       | 269             | 269     | 269    | 269      | 1       |
+| initRiverV1                                                   | 3578            | 228859  | 236833 | 238833   | 56      |
+| initRiverV1_1                                                 | 191346          | 191612  | 191346 | 196146   | 18      |
+| initRiverV1_2                                                 | 7278            | 11055   | 11278  | 11278    | 18      |
+| isValidEpoch                                                  | 1919            | 2919    | 2919   | 3919     | 2       |
+| requestRedeem                                                 | 132944          | 133037  | 132944 | 140944   | 86      |
+| resolveRedeemRequests                                         | 370418          | 370418  | 370418 | 370418   | 1       |
+| sendCLFunds                                                   | 446             | 903     | 446    | 2564     | 9       |
+| sendCoverageFunds                                             | 621             | 1150    | 621    | 2739     | 4       |
+| sendELFees                                                    | 533             | 1239    | 533    | 2651     | 3       |
+| sendRedeemManagerExceedingFunds                               | 2631            | 2631    | 2631   | 2631     | 1       |
+| setAllowlist                                                  | 2890            | 4958    | 4958   | 7027     | 2       |
+| setCollector                                                  | 2867            | 4935    | 4935   | 7004     | 2       |
+| setConsensusLayerData                                         | 2855            | 167220  | 177397 | 1099441  | 24      |
+| setCoverageFund                                               | 2776            | 23049   | 24119  | 24119    | 56      |
+| setDailyCommittableLimits                                     | 3059            | 14859   | 14859  | 26659    | 2       |
+| setELFeeRecipient                                             | 2775            | 4158    | 2781   | 6918     | 3       |
+| setGlobalFee                                                  | 2729            | 4782    | 2744   | 8874     | 3       |
+| setMetadataURI                                                | 3201            | 10706   | 3246   | 25673    | 3       |
+| totalSupply                                                   | 661             | 661     | 661    | 661      | 2       |
+| totalUnderlyingSupply                                         | 1841            | 1953    | 1841   | 2084     | 26      |
+| transfer                                                      | 2140            | 4307    | 3506   | 7275     | 3       |
+| transferFrom                                                  | 7841            | 9184    | 7841   | 34223    | 163     |
+| underlyingBalanceFromShares                                   | 2370            | 2370    | 2370   | 2370     | 163     |
+
+
+| contracts/test/TUPProxy.t.sol:DummyCounter contract |                 |       |        |       |         |
+|-----------------------------------------------------|-----------------|-------|--------|-------|---------|
+| Deployment Cost                                     | Deployment Size |       |        |       |         |
+| 59111                                               | 327             |       |        |       |         |
+| Function Name                                       | min             | avg   | median | max   | # calls |
+| fail                                                | 344             | 1344  | 1344   | 2344  | 4       |
+| i                                                   | 327             | 1423  | 2327   | 2327  | 31      |
+| inc                                                 | 403             | 17745 | 20303  | 22303 | 14      |
+| paused                                              | 186             | 186   | 186    | 186   | 2       |
+
+
+| contracts/test/TUPProxy.t.sol:DummyCounterEvolved contract |                 |       |        |       |         |
+|------------------------------------------------------------|-----------------|-------|--------|-------|---------|
+| Deployment Cost                                            | Deployment Size |       |        |       |         |
+| 115965                                                     | 611             |       |        |       |         |
+| Function Name                                              | min             | avg   | median | max   | # calls |
+| i                                                          | 393             | 393   | 393    | 393   | 4       |
+| initEvolved                                                | 42474           | 42474 | 42474  | 42474 | 2       |
+| superI                                                     | 372             | 372   | 372    | 372   | 2       |
+| superInc                                                   | 797             | 797   | 797    | 797   | 2       |
+
+
+| contracts/test/WLSETH.1.t.sol:RiverTokenMock contract |                 |       |        |       |         |
+|-------------------------------------------------------|-----------------|-------|--------|-------|---------|
+| Deployment Cost                                       | Deployment Size |       |        |       |         |
+| 346086                                                | 1663            |       |        |       |         |
+| Function Name                                         | min             | avg   | median | max   | # calls |
+| approve                                               | 22585           | 22585 | 22585  | 22585 | 25      |
+| balanceOf                                             | 551             | 1235  | 551    | 2551  | 38      |
+| balanceOfUnderlying                                   | 486             | 2030  | 3034   | 3034  | 25      |
+| sharesFromUnderlyingBalance                           | 804             | 804   | 804    | 804   | 5       |
+| sudoSetBalance                                        | 5346            | 40423 | 43146  | 45146 | 27      |
+| sudoSetRetVal                                         | 3371            | 4371  | 4371   | 5371  | 2       |
+| sudoSetUnderlyingTotal                                | 3178            | 20183 | 22378  | 22378 | 35      |
+| transfer                                              | 1368            | 10964 | 1368   | 23268 | 28      |
+| transferFrom                                          | 2340            | 25044 | 26240  | 26240 | 25      |
+| underlyingBalanceFromShares                           | 870             | 1076  | 870    | 2870  | 126     |
+
+
+| contracts/test/Withdraw.1.t.sol:RiverMock contract |                 |       |        |       |         |
+|----------------------------------------------------|-----------------|-------|--------|-------|---------|
+| Deployment Cost                                    | Deployment Size |       |        |       |         |
+| 69117                                              | 377             |       |        |       |         |
+| Function Name                                      | min             | avg   | median | max   | # calls |
+| debug_pullFunds                                    | 5829            | 10572 | 11761  | 11761 | 5       |
+| sendCLFunds                                        | 1154            | 1154  | 1154   | 1154  | 4       |
+
+
+| contracts/test/components/ConsensusLayerDepositManager.1.t.sol:ConsensusLayerDepositManagerV1ControllableValidatorKeyRequest contract |                 |       |        |        |         |
+|---------------------------------------------------------------------------------------------------------------------------------------|-----------------|-------|--------|--------|---------|
+| Deployment Cost                                                                                                                       | Deployment Size |       |        |        |         |
+| 2315980                                                                                                                               | 8282            |       |        |        |         |
+| Function Name                                                                                                                         | min             | avg   | median | max    | # calls |
+| depositToConsensusLayer                                                                                                               | 1422            | 87554 | 107308 | 114559 | 5       |
+| publicConsensusLayerDepositManagerInitializeV1                                                                                        | 47163           | 47163 | 47163  | 47163  | 4       |
+| setScenario                                                                                                                           | 2478            | 18398 | 22378  | 22378  | 5       |
+| sudoSetWithdrawalCredentials                                                                                                          | 429             | 11511 | 11511  | 22594  | 2       |
+| sudoSyncBalance                                                                                                                       | 22486           | 22486 | 22486  | 22486  | 5       |
+
+
+| contracts/test/components/ConsensusLayerDepositManager.1.t.sol:ConsensusLayerDepositManagerV1ExposeInitializer contract |                 |        |        |        |         |
+|-------------------------------------------------------------------------------------------------------------------------|-----------------|--------|--------|--------|---------|
+| Deployment Cost                                                                                                         | Deployment Size |        |        |        |         |
+| 1933180                                                                                                                 | 6370            |        |        |        |         |
+| Function Name                                                                                                           | min             | avg    | median | max    | # calls |
+| depositToConsensusLayer                                                                                                 | 692             | 336528 | 504441 | 504451 | 3       |
+| getWithdrawalCredentials                                                                                                | 2426            | 2426   | 2426   | 2426   | 1       |
+| publicConsensusLayerDepositManagerInitializeV1                                                                          | 47141           | 47141  | 47141  | 47141  | 6       |
+| sudoSyncBalance                                                                                                         | 22486           | 22486  | 22486  | 22486  | 3       |
+
+
+| contracts/test/components/ConsensusLayerDepositManager.1.t.sol:ConsensusLayerDepositManagerV1ValidKeys contract |                 |        |        |        |         |
+|-----------------------------------------------------------------------------------------------------------------|-----------------|--------|--------|--------|---------|
+| Deployment Cost                                                                                                 | Deployment Size |        |        |        |         |
+| 1045623                                                                                                         | 5069            |        |        |        |         |
+| Function Name                                                                                                   | min             | avg    | median | max    | # calls |
+| depositToConsensusLayer                                                                                         | 73831           | 111255 | 111255 | 148679 | 2       |
+| publicConsensusLayerDepositManagerInitializeV1                                                                  | 47141           | 47141  | 47141  | 47141  | 2       |
+| sudoSyncBalance                                                                                                 | 22486           | 22486  | 22486  | 22486  | 2       |
+
+
+| contracts/test/components/ERC20VestableVotesUpgradeable.1.t.sol:TestToken contract |                 |        |        |        |         |
+|------------------------------------------------------------------------------------|-----------------|--------|--------|--------|---------|
+| Deployment Cost                                                                    | Deployment Size |        |        |        |         |
+| 3365147                                                                            | 16839           |        |        |        |         |
+| Function Name                                                                      | min             | avg    | median | max    | # calls |
+| balanceOf                                                                          | 638             | 860    | 638    | 2638   | 63      |
+| computeVestingReleasableAmount                                                     | 2076            | 2834   | 2892   | 3644   | 34      |
+| computeVestingVestedAmount                                                         | 2198            | 2452   | 2360   | 2830   | 32      |
+| createVestingSchedule                                                              | 3640            | 195095 | 245083 | 245090 | 36      |
+| debugPushV1VestingSchedule                                                         | 120128          | 137878 | 137878 | 155628 | 2       |
+| delegate                                                                           | 68198           | 68998  | 68198  | 70198  | 5       |
+| delegateVestingEscrow                                                              | 1237            | 29152  | 29152  | 57068  | 2       |
+| delegates                                                                          | 715             | 715    | 715    | 715    | 6       |
+| getPastVotes                                                                       | 1362            | 1647   | 1635   | 2088   | 7       |
+| getVestingSchedule                                                                 | 2610            | 2610   | 2610   | 2610   | 11      |
+| getVestingScheduleCount                                                            | 571             | 571    | 571    | 571    | 4       |
+| getVotes                                                                           | 1188            | 1616   | 1188   | 2758   | 11      |
+| initTestTokenV1                                                                    | 216027          | 216027 | 216027 | 216027 | 41      |
+| isGlobalUnlockedScheduleIgnored                                                    | 607             | 607    | 607    | 607    | 2       |
+| migrateVestingSchedules                                                            | 719             | 11746  | 6644   | 222063 | 42      |
+| releaseVestingSchedule                                                             | 1105            | 25004  | 11957  | 55757  | 13      |
+| revokeVestingSchedule                                                              | 1242            | 10218  | 13058  | 14144  | 13      |
+| transfer                                                                           | 6874            | 27329  | 34401  | 53117  | 13      |
+| vestingEscrow                                                                      | 744             | 744    | 744    | 744    | 31      |
+
+
+| contracts/test/components/OracleManager.1.t.sol:OracleManagerV1ExposeInitializer contract |                 |        |        |        |         |
+|-------------------------------------------------------------------------------------------|-----------------|--------|--------|--------|---------|
+| Deployment Cost                                                                           | Deployment Size |        |        |        |         |
+| 1731043                                                                                   | 9824            |        |        |        |         |
+| Function Name                                                                             | min             | avg    | median | max    | # calls |
+| coverageFundAvailable                                                                     | 394             | 394    | 394    | 394    | 1       |
+| debug_getTotalUnderlyingBalance                                                           | 1662            | 3662   | 3662   | 5662   | 2       |
+| elFeesAvailable                                                                           | 439             | 439    | 439    | 439    | 3       |
+| exceedingEth                                                                              | 461             | 461    | 461    | 461    | 2       |
+| getCLSpec                                                                                 | 1250            | 3250   | 3250   | 5250   | 2       |
+| getCLValidatorCount                                                                       | 2474            | 2474   | 2474   | 2474   | 1       |
+| getCurrentEpochId                                                                         | 1247            | 1247   | 1247   | 1247   | 1       |
+| getCurrentFrame                                                                           | 2159            | 2159   | 2159   | 2159   | 1       |
+| getExpectedEpochId                                                                        | 1870            | 1870   | 1870   | 1870   | 1       |
+| getFrameFirstEpochId                                                                      | 1247            | 1247   | 1247   | 1247   | 1       |
+| getLastCompletedEpochId                                                                   | 549             | 549    | 549    | 549    | 1       |
+| getOracle                                                                                 | 571             | 1904   | 2571   | 2571   | 3       |
+| getReportBounds                                                                           | 765             | 2765   | 2765   | 4765   | 2       |
+| isValidEpoch                                                                              | 5652            | 5652   | 5652   | 5652   | 1       |
+| setCLSpec                                                                                 | 2702            | 9721   | 9721   | 16741  | 2       |
+| setConsensusLayerData                                                                     | 167209          | 167209 | 167209 | 167209 | 1       |
+| setOracle                                                                                 | 2767            | 4835   | 4835   | 6904   | 2       |
+| setReportBounds                                                                           | 2725            | 8522   | 8522   | 14319  | 2       |
+| sudoSetCoverageFundAvailable                                                              | 22336           | 22336  | 22336  | 22336  | 1       |
+| sudoSetElFeesAvailable                                                                    | 22446           | 22446  | 22446  | 22446  | 1       |
+| sudoSetExceedingEth                                                                       | 22402           | 22402  | 22402  | 22402  | 1       |
+| supersedeDepositedValidatorCount                                                          | 22512           | 22512  | 22512  | 22512  | 1       |
+| supersedeReportedBalanceSum                                                               | 22623           | 22623  | 22623  | 22623  | 1       |
+| supersedeReportedValidatorCount                                                           | 22644           | 22644  | 22644  | 22644  | 1       |
+
+
+| contracts/test/components/SharesManager.1.t.sol:SharesManagerPublicDeal contract |                 |       |        |       |         |
+|----------------------------------------------------------------------------------|-----------------|-------|--------|-------|---------|
+| Deployment Cost                                                                  | Deployment Size |       |        |       |         |
+| 703134                                                                           | 3544            |       |        |       |         |
+| Function Name                                                                    | min             | avg   | median | max   | # calls |
+| allowance                                                                        | 928             | 1761  | 928    | 2928  | 12      |
+| approve                                                                          | 553             | 21381 | 22762  | 24862 | 10      |
+| balanceOf                                                                        | 837             | 1418  | 837    | 2837  | 55      |
+| balanceOfUnderlying                                                              | 1420            | 1420  | 1420   | 1420  | 5       |
+| deal                                                                             | 42552           | 46279 | 46552  | 46552 | 22      |
+| decimals                                                                         | 200             | 200   | 200    | 200   | 1       |
+| decreaseAllowance                                                                | 3343            | 3343  | 3343   | 3343  | 1       |
+| increaseAllowance                                                                | 25221           | 25221 | 25221  | 25221 | 2       |
+| mint                                                                             | 27283           | 37033 | 37033  | 46783 | 4       |
+| name                                                                             | 494             | 494   | 494    | 494   | 1       |
+| receive                                                                          | 55              | 55    | 55     | 55    | 1       |
+| setDenied                                                                        | 22598           | 22598 | 22598  | 22598 | 4       |
+| setValidatorBalance                                                              | 334             | 18416 | 22334  | 22334 | 23      |
+| sharesFromUnderlyingBalance                                                      | 2614            | 2614  | 2614   | 2614  | 1       |
+| symbol                                                                           | 526             | 526   | 526    | 526   | 1       |
+| totalSupply                                                                      | 562             | 962   | 562    | 2562  | 5       |
+| totalUnderlyingSupply                                                            | 498             | 748   | 498    | 2498  | 8       |
+| transfer                                                                         | 743             | 13405 | 6370   | 28620 | 8       |
+| transferFrom                                                                     | 868             | 14415 | 7037   | 33712 | 12      |
+| underlyingBalanceFromShares                                                      | 2701            | 2701  | 2701   | 2701  | 1       |
+
+
+| contracts/test/components/UserDepositManager.1.t.sol:UserDepositManagerV1CatchableDeposit contract |                 |       |        |       |         |
+|----------------------------------------------------------------------------------------------------|-----------------|-------|--------|-------|---------|
+| Deployment Cost                                                                                    | Deployment Size |       |        |       |         |
+| 150396                                                                                             | 783             |       |        |       |         |
+| Function Name                                                                                      | min             | avg   | median | max   | # calls |
+| deposit                                                                                            | 27668           | 27668 | 27668  | 27668 | 1       |
+| depositAndTransfer                                                                                 | 27836           | 27836 | 27836  | 27836 | 1       |
+
+
+| contracts/test/components/UserDepositManager.1.t.sol:UserDepositManagerV1EmptyDeposit contract |                 |       |        |       |         |
+|------------------------------------------------------------------------------------------------|-----------------|-------|--------|-------|---------|
+| Deployment Cost                                                                                | Deployment Size |       |        |       |         |
+| 132177                                                                                         | 692             |       |        |       |         |
+| Function Name                                                                                  | min             | avg   | median | max   | # calls |
+| deposit                                                                                        | 26005           | 26005 | 26005  | 26005 | 1       |
+| depositAndTransfer                                                                             | 26173           | 26173 | 26173  | 26173 | 1       |
+| receive                                                                                        | 144             | 144   | 144    | 144   | 1       |
+
+
+| contracts/test/mocks/DepositContractEnhancedMock.sol:DepositContractEnhancedMock contract |                 |       |        |       |         |
+|-------------------------------------------------------------------------------------------|-----------------|-------|--------|-------|---------|
+| Deployment Cost                                                                           | Deployment Size |       |        |       |         |
+| 1716348                                                                                   | 5429            |       |        |       |         |
+| Function Name                                                                             | min             | avg   | median | max   | # calls |
+| debug_getLastDepositDataRoot                                                              | 359             | 359   | 359    | 359   | 1       |
+| deposit                                                                                   | 82894           | 82894 | 82894  | 82894 | 1       |
+
+
+| contracts/test/mocks/DepositContractInvalidMock.sol:DepositContractInvalidMock contract |                 |       |        |       |         |
+|-----------------------------------------------------------------------------------------|-----------------|-------|--------|-------|---------|
+| Deployment Cost                                                                         | Deployment Size |       |        |       |         |
+| 821675                                                                                  | 3944            |       |        |       |         |
+| Function Name                                                                           | min             | avg   | median | max   | # calls |
+| deposit                                                                                 | 32344           | 32344 | 32344  | 32344 | 1       |
+
+
+| contracts/test/mocks/DepositContractMock.sol:DepositContractMock contract |                 |       |        |       |         |
+|---------------------------------------------------------------------------|-----------------|-------|--------|-------|---------|
+| Deployment Cost                                                           | Deployment Size |       |        |       |         |
+| 247287                                                                    | 1267            |       |        |       |         |
+| Function Name                                                             | min             | avg   | median | max   | # calls |
+| deposit                                                                   | 9786            | 10703 | 9786   | 31686 | 501     |
+
+
+| contracts/test/mocks/RiverMock.sol:RiverMock contract |                 |       |        |       |         |
+|-------------------------------------------------------|-----------------|-------|--------|-------|---------|
+| Deployment Cost                                       | Deployment Size |       |        |       |         |
+| 221063                                                | 1136            |       |        |       |         |
+| Function Name                                         | min             | avg   | median | max   | # calls |
+| isValidEpoch                                          | 541             | 1941  | 2541   | 2541  | 20      |
+| setConsensusLayerData                                 | 5653            | 5653  | 5653   | 5653  | 6       |
+| sudoSetInvalidEpoch                                   | 22421           | 22421 | 22421  | 22421 | 1       |
+
+
+| contracts/test/state/oracle/ReportsVariants.t.sol:ReportsVariantsInputs contract |                 |       |        |       |         |
+|----------------------------------------------------------------------------------|-----------------|-------|--------|-------|---------|
+| Deployment Cost                                                                  | Deployment Size |       |        |       |         |
+| 208851                                                                           | 1075            |       |        |       |         |
+| Function Name                                                                    | min             | avg   | median | max   | # calls |
+| getReportAtIndex                                                                 | 1046            | 1046  | 1046   | 1046  | 1       |
+| indexOfReport                                                                    | 1344            | 3186  | 3186   | 5028  | 2       |
+| push                                                                             | 47976           | 60709 | 67076  | 67076 | 3       |
+| set                                                                              | 10163           | 10163 | 10163  | 10163 | 1       |
+
+
+| contracts/test/utils/AllowlistHelper.sol:AllowlistHelper contract |                 |     |        |      |         |
+|-------------------------------------------------------------------|-----------------|-----|--------|------|---------|
+| Deployment Cost                                                   | Deployment Size |     |        |      |         |
+| 95769                                                             | 536             |     |        |      |         |
+| Function Name                                                     | min             | avg | median | max  | # calls |
+| batchAllowees                                                     | 852             | 918 | 852    | 1384 | 12      |
+
+
+| contracts/test/utils/UserFactory.sol:User contract |                 |     |        |     |         |
+|----------------------------------------------------|-----------------|-----|--------|-----|---------|
+| Deployment Cost                                    | Deployment Size |     |        |     |         |
+| 13269                                              | 95              |     |        |     |         |
+| Function Name                                      | min             | avg | median | max | # calls |
+| receive                                            | 33              | 33  | 33     | 33  | 165     |
+
+
+| contracts/test/utils/UserFactory.sol:UserFactory contract |                 |       |        |       |         |
+|-----------------------------------------------------------|-----------------|-------|--------|-------|---------|
+| Deployment Cost                                           | Deployment Size |       |        |       |         |
+| 88535                                                     | 474             |       |        |       |         |
+| Function Name                                             | min             | avg   | median | max   | # calls |
+| _new                                                      | 46246           | 60545 | 68146  | 68146 | 340     |
+
+
+
+
+Ran 46 test suites in 131.03s: [32m480[0m tests passed, [31m0[0m failed, [33m0[0m skipped (480 total tests)
