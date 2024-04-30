@@ -21,7 +21,9 @@ import {OPWETHAddress} from "./state/lseth2/OPWETHAddress.sol";
 contract LsETH is FloatManagerL2, ILsETH2, IOptimismMintableERC20, SharesManagerL2, Initializable, Administrable {
     /// @notice A modifier that only allows the bridge to call.
     modifier onlyBridge() {
-        require(msg.sender == BridgeAddress.get(), "MyCustomL2Token: only bridge can mint and burn");
+        if (msg.sender != BridgeAddress.get()) {
+            revert OnlyBridge();
+        }
         _;
     }
 
@@ -29,10 +31,11 @@ contract LsETH is FloatManagerL2, ILsETH2, IOptimismMintableERC20, SharesManager
     /// @param _bridge Address of the bridge contract on L2
     /// @param _remoteToken Address of the remote token contract on L1
     /// @param _opWETH Address of the OPWETH contract on L2
-    function initialize(address _bridge, address _remoteToken, address _opWETH) external init(0) {
+    function initialize(address _bridge, address _remoteToken, address _opWETH, address _admin) external init(0) {
         BridgeAddress.set(_bridge);
         RemoteTokenAddress.set(_remoteToken);
         OPWETHAddress.set(_opWETH);
+        _setAdmin(_admin);
     }
 
     // LSETH functions
@@ -84,7 +87,7 @@ contract LsETH is FloatManagerL2, ILsETH2, IOptimismMintableERC20, SharesManager
     /// @notice This function updates the exchange rate of LsETH/ETH
     ///         Is called from L1 once a day after oracle Update on L1
     /// @param _rate The LsETH to ETH exchange rate
-    function exchangeRateUpdate(uint256 _rate) external {
+    function exchangeRateUpdate(uint256 _rate) external onlyAdmin {
         ExchangeRate.set(_rate);
     }
 
@@ -124,6 +127,9 @@ contract LsETH is FloatManagerL2, ILsETH2, IOptimismMintableERC20, SharesManager
     }
 
     //--------------- Shares Manager ------------------
+
+    /// @notice Internal function to put control checks when transfers happen.
+    ///         Currently undefined as we don't have any special transfer logic
     function _onTransfer(address _from, address _to) internal view override {}
 
     function _assetBalance() internal view override returns (uint256) {
@@ -146,7 +152,7 @@ contract LsETH is FloatManagerL2, ILsETH2, IOptimismMintableERC20, SharesManager
         return (_balance * 1e18) / ExchangeRate.get();
     }
 
-    // FLOAT OPERATIONS
+    //-------------- Float Operations --------------
     function _onFloatOperation() internal override onlyAdmin {}
 
     function _bridgeOperation(address _to, uint256 _amount, uint32 _minGasLimit, bytes calldata _extraData)

@@ -8,6 +8,8 @@ import {IERC165} from "@openzeppelin/contracts/utils/introspection/IERC165.sol";
 ///         We declare it as a separate interface so that it can be used in
 ///         custom implementations of OptimismMintableERC20.
 interface IOptimismMintableERC20 is IERC165 {
+    error OnlyBridge();
+
     function remoteToken() external view returns (address);
 
     function bridge() external returns (address);

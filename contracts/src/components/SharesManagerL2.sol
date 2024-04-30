@@ -22,7 +22,7 @@ abstract contract SharesManagerL2 is SharesManagerV1 {
     }
 
     /// @notice Internal utility to mint shares without any conversion, and emits a mint Transfer event
-    /// @notice Used
+    /// @notice Used only by the bridge to create LsETH on L2
     /// @param _owner Account that should receive the new shares
     /// @param _value Amount of shares to mint
     function _mintRawShares(address _owner, uint256 _value) internal override {
