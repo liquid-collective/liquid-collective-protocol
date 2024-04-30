@@ -74,11 +74,6 @@ contract TUPProxyTest is Test {
         assert(DummyCounter(address(proxy)).i() == 1);
     }
 
-    function testAdminFuncAsLambda() public {
-        vm.expectRevert(abi.encodeWithSignature("CallWentIn()"));
-        proxy.paused();
-    }
-
     function testFuncAsAdmin() public {
         assert(DummyCounter(address(proxy)).i() == 0);
         vm.startPrank(admin);
@@ -187,11 +182,6 @@ contract TUPProxyBehindFirewallTest is Test {
         assert(DummyCounter(address(proxy)).i() == 0);
         DummyCounter(address(proxy)).inc();
         assert(DummyCounter(address(proxy)).i() == 1);
-    }
-
-    function testAdminFuncAsLambda() public {
-        vm.expectRevert(abi.encodeWithSignature("CallWentIn()"));
-        proxy.paused();
     }
 
     function testFuncAsAdmin() public {

@@ -5,6 +5,9 @@ coverage.json
 typechain
 .vscode
 
+#nvm
+.nvmrc
+
 #Hardhat files
 hardhat-cache
 artifacts

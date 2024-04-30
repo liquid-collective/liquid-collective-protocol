@@ -211,13 +211,13 @@ abstract contract SharesManagerV1 is ISharesManagerV1 {
     /// @param _balance Amount of underlying asset balance to convert
     /// @return The shares from the given balance
     function _sharesFromBalance(uint256 _balance) internal view returns (uint256) {
-        uint256 _totalSharesValue = Shares.get();
+        uint256 _totalUnderlyingSupply = _assetBalance();
 
-        if (_totalSharesValue == 0) {
+        if (_totalUnderlyingSupply == 0) {
             return 0;
         }
 
-        return (_balance * _totalSharesValue) / _assetBalance();
+        return (_balance * Shares.get()) / _totalUnderlyingSupply;
     }
 
     /// @notice Internal utility to mint shares for the specified user

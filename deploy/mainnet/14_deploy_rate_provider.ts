@@ -1,25 +1,20 @@
 import { DeployFunction } from "hardhat-deploy/dist/types";
 import { HardhatRuntimeEnvironment } from "hardhat/types";
+import { getContractAddress } from "ethers/lib/utils";
 import { isDeployed, logStep, logStepEnd } from "../../ts-utils/helpers/index";
 
 const func: DeployFunction = async function ({ deployments, getNamedAccounts, ethers }: HardhatRuntimeEnvironment) {
-  const { deployer, proxyAdministrator } = await getNamedAccounts();
+  const { deployer, proxyAdministrator, governor, executor } = await getNamedAccounts();
+
+  const signer = await ethers.getSigner(deployer);
 
   const riverDeployment = await deployments.get("River");
 
-  await deployments.deploy("CoverageFund", {
-    contract: "CoverageFundV1",
+  await deployments.deploy("RateProvider", {
+    contract: "RateProvider",
     from: deployer,
     log: true,
-    proxy: {
-      owner: proxyAdministrator,
-      proxyContract: "TUPProxy",
-      implementationName: "CoverageFundV1_Implementation_0_5_0",
-      execute: {
-        methodName: "initCoverageFundV1",
-        args: [riverDeployment.address],
-      },
-    },
+    args: [riverDeployment.address],
   });
 
   logStepEnd(__filename);
@@ -27,7 +22,7 @@ const func: DeployFunction = async function ({ deployments, getNamedAccounts, et
 
 func.skip = async function ({ deployments }: HardhatRuntimeEnvironment): Promise<boolean> {
   logStep(__filename);
-  const shouldSkip = await isDeployed("CoverageFund", deployments, __filename);
+  const shouldSkip = await isDeployed("RateProvider", deployments, __filename);
   if (shouldSkip) {
     console.log("Skipped");
     logStepEnd(__filename);
