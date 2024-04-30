@@ -36,7 +36,7 @@ event BeaconUpgraded(address indexed beacon)
 
 
 
-*Emitted when the beacon is upgraded.*
+*Emitted when the beacon is changed.*
 
 #### Parameters
 
