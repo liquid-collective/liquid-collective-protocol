@@ -10,11 +10,19 @@ const func: DeployFunction = async function ({ deployments, getNamedAccounts, et
 
   const riverDeployment = await deployments.get("River");
 
-  await deployments.deploy("RateProvider", {
-    contract: "RateProvider",
+  await deployments.deploy("ProtocolMetrics", {
+    contract: "ProtocolMetricsV1",
     from: deployer,
     log: true,
-    args: [riverDeployment.address],
+    proxy: {
+      owner: proxyAdministrator,
+      proxyContract: "TUPProxy",
+      implementationName: "ProtocolMetricsV1",
+      execute: {
+        methodName: "initProtocolMetricsV1",
+        args: [riverDeployment.address],
+      },
+    },
   });
 
   logStepEnd(__filename);
