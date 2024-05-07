@@ -145,6 +145,26 @@ contract RedeemManagerV1Tests is Test {
         return user;
     }
 
+    function _denyUser(address user) internal {
+        address[] memory accounts = new address[](1);
+        accounts[0] = user;
+        uint256[] memory permissions = new uint256[](1);
+        permissions[0] = LibAllowlistMasks.DENY_MASK;
+
+        vm.prank(allowlistDenier);
+        allowlist.setDenyPermissions(accounts, permissions);
+    }
+
+    function _unDenyUser(address user) internal {
+        address[] memory accounts = new address[](1);
+        accounts[0] = user;
+        uint256[] memory permissions = new uint256[](1);
+        permissions[0] = 0;
+
+        vm.prank(allowlistDenier);
+        allowlist.setDenyPermissions(accounts, permissions);
+    }
+
     function testGetRiver() public view {
         assert(redeemManager.getRiver() == address(river));
     }
@@ -1425,5 +1445,231 @@ contract RedeemManagerV1Tests is Test {
             bytes32(uint256(1 ether))
         );
         river.pullExceedingEth(address(redeemManager), 1 ether);
+    }
+
+    function testClaimRedeemRequestFailsWithDeniedUser(uint256 _salt) external {
+        uint128 amount = uint128(bound(_salt, 1, type(uint128).max));
+
+        address user = _generateAllowlistedUser(_salt);
+
+        river.sudoDeal(user, uint256(amount));
+
+        vm.prank(user);
+        river.approve(address(redeemManager), uint256(amount));
+
+        vm.prank(user);
+        redeemManager.requestRedeem(amount, user);
+
+        vm.deal(address(this), amount);
+        river.sudoReportWithdraw{value: amount}(address(redeemManager), amount);
+
+        assertEq(redeemManager.getWithdrawalEventCount(), 1);
+        assertEq(redeemManager.getRedeemRequestCount(), 1);
+
+        {
+            RedeemQueue.RedeemRequest memory rr = redeemManager.getRedeemRequestDetails(0);
+
+            assertEq(rr.height, 0);
+            assertEq(rr.amount, amount);
+            assertEq(rr.owner, user);
+        }
+
+        {
+            WithdrawalStack.WithdrawalEvent memory we = redeemManager.getWithdrawalEventDetails(0);
+
+            assertEq(we.height, 0);
+            assertEq(we.amount, amount);
+            assertEq(we.withdrawnEth, amount);
+        }
+
+        uint32[] memory redeemRequestIds = new uint32[](1);
+        uint32[] memory withdrawEventIds = new uint32[](1);
+
+        redeemRequestIds[0] = 0;
+        withdrawEventIds[0] = 0;
+
+        assertEq(address(redeemManager).balance, amount);
+        assertEq(user.balance, 0);
+
+        int64[] memory resolvedRedeemRequests = redeemManager.resolveRedeemRequests(redeemRequestIds);
+
+        assertEq(resolvedRedeemRequests.length, 1);
+        assertEq(resolvedRedeemRequests[0], 0);
+
+        _denyUser(user);
+
+        // A user can't claim if the owner is denied
+        vm.expectRevert(abi.encodeWithSignature("ClaimOwnerIsDenied()"));
+        redeemManager.claimRedeemRequests(redeemRequestIds, withdrawEventIds, true, type(uint16).max);
+
+        // The denied user can't claim
+        vm.expectRevert(abi.encodeWithSignature("ClaimOwnerIsDenied()"));
+        vm.prank(user);
+        redeemManager.claimRedeemRequests(redeemRequestIds, withdrawEventIds, true, type(uint16).max);
+    }
+
+    // A denied user when undenied would be able to claim the ETH
+    function testClaimRedeemRequestClaimsWithDeniedUserUndenied(uint256 _salt) external {
+        uint128 amount = uint128(bound(_salt, 1, type(uint128).max));
+
+        address user = _generateAllowlistedUser(_salt);
+
+        river.sudoDeal(user, uint256(amount));
+
+        vm.prank(user);
+        river.approve(address(redeemManager), uint256(amount));
+
+        vm.prank(user);
+        redeemManager.requestRedeem(amount, user);
+
+        vm.deal(address(this), amount);
+        river.sudoReportWithdraw{value: amount}(address(redeemManager), amount);
+
+        assertEq(redeemManager.getWithdrawalEventCount(), 1);
+        assertEq(redeemManager.getRedeemRequestCount(), 1);
+
+        {
+            RedeemQueue.RedeemRequest memory rr = redeemManager.getRedeemRequestDetails(0);
+
+            assertEq(rr.height, 0);
+            assertEq(rr.amount, amount);
+            assertEq(rr.owner, user);
+        }
+
+        {
+            WithdrawalStack.WithdrawalEvent memory we = redeemManager.getWithdrawalEventDetails(0);
+
+            assertEq(we.height, 0);
+            assertEq(we.amount, amount);
+            assertEq(we.withdrawnEth, amount);
+        }
+
+        uint32[] memory redeemRequestIds = new uint32[](1);
+        uint32[] memory withdrawEventIds = new uint32[](1);
+
+        redeemRequestIds[0] = 0;
+        withdrawEventIds[0] = 0;
+
+        assertEq(address(redeemManager).balance, amount);
+        assertEq(user.balance, 0);
+
+        int64[] memory resolvedRedeemRequests = redeemManager.resolveRedeemRequests(redeemRequestIds);
+
+        assertEq(resolvedRedeemRequests.length, 1);
+        assertEq(resolvedRedeemRequests[0], 0);
+
+        _denyUser(user);
+
+        // A user can't claim if the owner is denied
+        vm.expectRevert(abi.encodeWithSignature("ClaimOwnerIsDenied()"));
+        redeemManager.claimRedeemRequests(redeemRequestIds, withdrawEventIds, true, type(uint16).max);
+
+        // The denied user can't claim
+        vm.expectRevert(abi.encodeWithSignature("ClaimOwnerIsDenied()"));
+        vm.prank(user);
+        redeemManager.claimRedeemRequests(redeemRequestIds, withdrawEventIds, true, type(uint16).max);
+
+        _unDenyUser(user);
+
+        vm.expectEmit(true, true, true, true);
+        emit SatisfiedRedeemRequest(0, 0, amount, amount, 0, 0);
+        vm.expectEmit(true, true, true, true);
+        emit ClaimedRedeemRequest(0, user, amount, amount, 0);
+        redeemManager.claimRedeemRequests(redeemRequestIds, withdrawEventIds, true, type(uint16).max);
+
+        assertEq(redeemManager.getBufferedExceedingEth(), 0);
+        assertEq(address(redeemManager).balance, 0);
+        assertEq(user.balance, amount);
+
+        resolvedRedeemRequests = redeemManager.resolveRedeemRequests(redeemRequestIds);
+
+        assertEq(resolvedRedeemRequests.length, 1);
+        assertEq(resolvedRedeemRequests[0], -3);
+
+        {
+            RedeemQueue.RedeemRequest memory rr = redeemManager.getRedeemRequestDetails(0);
+
+            assertEq(rr.height, amount);
+            assertEq(rr.amount, 0);
+            assertEq(rr.owner, user);
+        }
+
+        {
+            WithdrawalStack.WithdrawalEvent memory we = redeemManager.getWithdrawalEventDetails(0);
+
+            assertEq(we.height, 0);
+            assertEq(we.amount, amount);
+            assertEq(we.withdrawnEth, amount);
+        }
+    }
+
+    // The ETH remains behind in the protocol
+    // Submit 2 different redeem requests from different users
+    // One user gets denied
+    // Other user claims
+    // The balance of redeem manager shows the unclaimable ETH
+    function testUnclaimableDeniedETHRemainsInProtocol(uint256 _salt, uint256 _salt2) external {
+        vm.assume(_salt != _salt2);
+
+        uint128 amount = uint128(bound(_salt, 1, type(uint64).max));
+
+        address user = _generateAllowlistedUser(_salt);
+        address user2 = _generateAllowlistedUser(_salt2);
+
+        {
+            river.sudoDeal(user, uint256(amount));
+            river.sudoDeal(user2, uint256(amount));
+
+            vm.prank(user);
+            river.approve(address(redeemManager), uint256(amount));
+
+            vm.prank(user);
+            redeemManager.requestRedeem(amount, user);
+
+            vm.prank(user2);
+            river.approve(address(redeemManager), uint256(amount));
+
+            vm.prank(user2);
+            redeemManager.requestRedeem(amount, user2);
+
+            vm.deal(address(this), amount);
+            river.sudoReportWithdraw{value: amount}(address(redeemManager), amount);
+
+            vm.deal(address(this), amount);
+            river.sudoReportWithdraw{value: amount}(address(redeemManager), amount);
+        }
+
+        assertEq(redeemManager.getWithdrawalEventCount(), 2);
+        assertEq(redeemManager.getRedeemRequestCount(), 2);
+
+        uint32[] memory redeemRequestIds = new uint32[](1);
+        uint32[] memory withdrawEventIds = new uint32[](1);
+
+        redeemRequestIds[0] = 0;
+        withdrawEventIds[0] = 0;
+
+        assertEq(address(redeemManager).balance, amount * 2);
+        assertEq(user.balance, 0);
+
+        int64[] memory resolvedRedeemRequests = redeemManager.resolveRedeemRequests(redeemRequestIds);
+
+        assertEq(resolvedRedeemRequests.length, 1);
+        assertEq(resolvedRedeemRequests[0], 0);
+
+        _denyUser(user2);
+
+        vm.prank(user);
+        redeemManager.claimRedeemRequests(redeemRequestIds, withdrawEventIds, true, type(uint16).max);
+
+        assertEq(redeemManager.getBufferedExceedingEth(), 0);
+        assertEq(address(redeemManager).balance, amount);
+        assertEq(user.balance, amount);
+
+        redeemRequestIds[0] = 1;
+        withdrawEventIds[0] = 1;
+
+        vm.expectRevert(abi.encodeWithSignature("ClaimOwnerIsDenied()"));
+        vm.prank(user2);
+        redeemManager.claimRedeemRequests(redeemRequestIds, withdrawEventIds, true, type(uint16).max);
     }
 }
