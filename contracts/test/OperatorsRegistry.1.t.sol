@@ -894,48 +894,48 @@ contract OperatorsRegistryV1Tests is OperatorsRegistryV1TestBase, BytesGenerator
         assert(operator.keys == 10);
     }
 
-    // function testRemoveHalfValidatorsEvenCaseAsOperator(bytes32 _name, uint256 _firstAddressSalt) public {
-    //     address _firstAddress = uf._new(_firstAddressSalt);
-    //     vm.startPrank(admin);
-    //     uint256 index = operatorsRegistry.addOperator(string(abi.encodePacked(_name)), _firstAddress);
+    function testRemoveHalfValidatorsEvenCaseAsOperator(bytes32 _name, uint256 _firstAddressSalt) public {
+        address _firstAddress = uf._new(_firstAddressSalt);
+        vm.startPrank(admin);
+        uint256 index = operatorsRegistry.addOperator(string(abi.encodePacked(_name)), _firstAddress);
 
-    //     bytes memory tenKeys = genBytes((48 + 96) * 10);
+        bytes memory tenKeys = genBytes((48 + 96) * 10);
 
-    //     vm.stopPrank();
-    //     vm.startPrank(_firstAddress);
-    //     operatorsRegistry.addValidators(index, 10, tenKeys);
-    //     vm.stopPrank();
-    //     vm.startPrank(admin);
-    //     uint256[] memory operators = new uint256[](1);
-    //     uint32[] memory limits = new uint32[](1);
-    //     operators[0] = index;
-    //     limits[0] = 10;
-    //     operatorsRegistry.setOperatorLimits(operators, limits, block.number);
-    //     vm.stopPrank();
-    //     vm.startPrank(_firstAddress);
+        vm.stopPrank();
+        vm.startPrank(_firstAddress);
+        operatorsRegistry.addValidators(index, 10, tenKeys);
+        vm.stopPrank();
+        vm.startPrank(admin);
+        uint256[] memory operators = new uint256[](1);
+        uint32[] memory limits = new uint32[](1);
+        operators[0] = index;
+        limits[0] = 10;
+        operatorsRegistry.setOperatorLimits(operators, limits, block.number);
+        vm.stopPrank();
+        vm.startPrank(_firstAddress);
 
-    //     OperatorsV2.Operator memory operator = operatorsRegistry.getOperator(index);
-    //     assert(operator.keys == 10);
+        OperatorsV2.Operator memory operator = operatorsRegistry.getOperator(index);
+        assert(operator.keys == 10);
 
-    //     uint256[] memory indexes = new uint256[](5);
+        uint256[] memory indexes = new uint256[](5);
 
-    //     indexes[0] = 8;
-    //     indexes[1] = 6;
-    //     indexes[2] = 4;
-    //     indexes[3] = 2;
-    //     indexes[4] = 0;
+        indexes[0] = 8;
+        indexes[1] = 6;
+        indexes[2] = 4;
+        indexes[3] = 2;
+        indexes[4] = 0;
 
-    //     vm.expectEmit(true, true, true, true);
-    //     emit RemovedValidatorKey(index, LibBytes.slice(tenKeys, 0, 48));
-    //     operatorsRegistry.removeValidators(index, indexes);
-    //     operator = operatorsRegistry.getOperator(index);
-    //     assert(operator.keys == 5);
-    //     assert(operator.limit == 5);
+        vm.expectEmit(true, true, true, true);
+        emit RemovedValidatorKey(index, LibBytes.slice(tenKeys, 0, 48));
+        operatorsRegistry.removeValidators(index, indexes);
+        operator = operatorsRegistry.getOperator(index);
+        assert(operator.keys == 5);
+        assert(operator.limit == 5);
 
-    //     operatorsRegistry.addValidators(index, 10, tenKeys);
-    //     operator = operatorsRegistry.getOperator(index);
-    //     assert(operator.keys == 15);
-    // }
+        operatorsRegistry.addValidators(index, 10, tenKeys);
+        operator = operatorsRegistry.getOperator(index);
+        assert(operator.keys == 15);
+    }
 
     function testRemoveHalfValidatorsConservativeCaseAsOperator(bytes32 _name, uint256 _firstAddressSalt) public {
         address _firstAddress = uf._new(_firstAddressSalt);

@@ -414,7 +414,7 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
         }
 
         if (limitEqualsKeyCount) {
-            operator.limit = totalKeys;
+            operator.limit = operator.keys;
         } else if (lastIndex < operator.limit) {
             operator.limit = uint32(lastIndex);
         }
