@@ -119,8 +119,8 @@ contract RiverV1 is
         uint256 dustToUncommit = CommittedBalance.get() % DEPOSIT_SIZE;
         unchecked {
             _setCommittedBalance(CommittedBalance.get() - dustToUncommit);
+            _setBalanceToDeposit(BalanceToDeposit.get() + dustToUncommit);
         }
-        _setBalanceToDeposit(BalanceToDeposit.get() + dustToUncommit);
     }
 
     /// @inheritdoc IRiverV1
