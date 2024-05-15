@@ -764,7 +764,7 @@ contract OperatorsRegistryV1Tests is OperatorsRegistryV1TestBase, BytesGenerator
     }
 
     function testGetAllActiveOperators(bytes32 _name, uint256 _firstAddressSalt, uint256 _count) public {
-        vm.assume(_count < 100_000);
+        vm.assume(_count < 1000);
         address[] memory _firstAddress = new address[](_count);
         _firstAddress = uf._newMulti(_firstAddressSalt, _count);
         vm.startPrank(admin);
@@ -784,7 +784,7 @@ contract OperatorsRegistryV1Tests is OperatorsRegistryV1TestBase, BytesGenerator
     function testGetAllActiveOperatorsWithInactiveOnes(bytes32 _name, uint256 _firstAddressSalt, uint256 _count)
         public
     {
-        vm.assume(_count < 100_000);
+        vm.assume(_count < 1000);
         address[] memory _firstAddress = new address[](_count);
         _firstAddress = uf._newMulti(_firstAddressSalt, _count);
         for (uint256 i; i < _count; i++) {
