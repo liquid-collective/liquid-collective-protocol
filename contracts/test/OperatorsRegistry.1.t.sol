@@ -763,24 +763,36 @@ contract OperatorsRegistryV1Tests is OperatorsRegistryV1TestBase, BytesGenerator
         }
     }
 
-    function testGetAllActiveOperators(bytes32 _name, uint256 _firstAddressSalt) public {
-        address _firstAddress = uf._new(_firstAddressSalt);
+    function testGetAllActiveOperators(bytes32 _name, uint256 _firstAddressSalt, uint256 _count) public {
+        vm.assume(_count < 1000);
+        address[] memory _firstAddress = new address[](_count);
+        _firstAddress = uf._newMulti(_firstAddressSalt, _count);
         vm.startPrank(admin);
-        operatorsRegistry.addOperator(string(abi.encodePacked(_name)), _firstAddress);
+        for (uint256 i; i < _count; i++) {
+            operatorsRegistry.addOperator(string(abi.encodePacked(_name)), _firstAddress[i]);
+        }
 
         OperatorsV2.Operator[] memory operators = operatorsRegistry.listActiveOperators();
 
-        assert(operators.length == 1);
-        assert(keccak256(bytes(operators[0].name)) == keccak256(abi.encodePacked(_name)));
-        assert(operators[0].operator == _firstAddress);
+        assert(operators.length == _count);
+        for (uint256 i; i < _count; i++) {
+            assert(keccak256(bytes(operators[i].name)) == keccak256(abi.encodePacked(_name)));
+            assert(operators[i].operator == _firstAddress[i]);
+        }
     }
 
-    function testGetAllActiveOperatorsWithInactiveOnes(bytes32 _name, uint256 _firstAddressSalt) public {
-        address _firstAddress = uf._new(_firstAddressSalt);
-        vm.startPrank(admin);
-        uint256 index = operatorsRegistry.addOperator(string(abi.encodePacked(_name)), _firstAddress);
+    function testGetAllActiveOperatorsWithInactiveOnes(bytes32 _name, uint256 _firstAddressSalt, uint256 _count)
+        public
+    {
+        vm.assume(_count < 1000);
+        address[] memory _firstAddress = new address[](_count);
+        _firstAddress = uf._newMulti(_firstAddressSalt, _count);
+        for (uint256 i; i < _count; i++) {
+            vm.startPrank(admin);
+            uint256 index = operatorsRegistry.addOperator(string(abi.encodePacked(_name)), _firstAddress[i]);
 
-        operatorsRegistry.setOperatorStatus(index, false);
+            operatorsRegistry.setOperatorStatus(index, false);
+        }
 
         OperatorsV2.Operator[] memory operators = operatorsRegistry.listActiveOperators();
 

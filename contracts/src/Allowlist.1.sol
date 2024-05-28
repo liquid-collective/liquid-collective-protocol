@@ -94,15 +94,17 @@ contract AllowlistV1 is IAllowlistV1, Initializable, Administrable {
             revert LibErrors.Unauthorized(msg.sender);
         }
 
-        if (_accounts.length == 0) {
+        uint256 accountsLength = _accounts.length;
+
+        if (accountsLength == 0) {
             revert InvalidCount();
         }
 
-        if (_accounts.length != _permissions.length) {
+        if (accountsLength != _permissions.length) {
             revert MismatchedArrayLengths();
         }
 
-        for (uint256 i = 0; i < _accounts.length;) {
+        for (uint256 i = 0; i < accountsLength;) {
             LibSanitize._notZeroAddress(_accounts[i]);
 
             // Check if account is already denied
@@ -130,15 +132,17 @@ contract AllowlistV1 is IAllowlistV1, Initializable, Administrable {
             revert LibErrors.Unauthorized(msg.sender);
         }
 
-        if (_accounts.length == 0) {
+        uint256 accountsLength = _accounts.length;
+
+        if (accountsLength == 0) {
             revert InvalidCount();
         }
 
-        if (_accounts.length != _permissions.length) {
+        if (accountsLength != _permissions.length) {
             revert MismatchedArrayLengths();
         }
 
-        for (uint256 i = 0; i < _accounts.length;) {
+        for (uint256 i = 0; i < accountsLength;) {
             LibSanitize._notZeroAddress(_accounts[i]);
             if (_permissions[i] & LibAllowlistMasks.DENY_MASK == LibAllowlistMasks.DENY_MASK) {
                 // Apply deny mask
