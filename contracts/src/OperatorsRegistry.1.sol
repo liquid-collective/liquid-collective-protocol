@@ -91,7 +91,9 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
                 if (operatorIndex == OperatorsV2.getCount() - 1) {
                     operatorIndex = type(uint256).max;
                 } else {
-                    ++operatorIndex;
+                    unchecked {
+                        ++operatorIndex;
+                    }
                 }
             } else {
                 keyIndex += publicKeys.length;
@@ -357,13 +359,14 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
         uint32[] calldata _newLimits,
         uint256 _snapshotBlock
     ) external onlyAdmin {
-        if (_operatorIndexes.length != _newLimits.length) {
+        uint256 _operatorIndexesLength = _operatorIndexes.length;
+        if (_operatorIndexesLength != _newLimits.length) {
             revert InvalidArrayLengths();
         }
-        if (_operatorIndexes.length == 0) {
+        if (_operatorIndexesLength == 0) {
             revert InvalidEmptyArray();
         }
-        for (uint256 idx = 0; idx < _operatorIndexes.length;) {
+        for (uint256 idx = 0; idx < _operatorIndexesLength;) {
             uint256 operatorIndex = _operatorIndexes[idx];
             uint32 newLimit = _newLimits[idx];
 
@@ -432,19 +435,19 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
         }
 
         OperatorsV2.Operator storage operator = OperatorsV2.get(_index);
-
+        uint256 totalKeys = uint256(operator.keys);
         for (uint256 idx = 0; idx < _keyCount;) {
             bytes memory publicKeyAndSignature = LibBytes.slice(
                 _publicKeysAndSignatures,
                 idx * (ValidatorKeys.PUBLIC_KEY_LENGTH + ValidatorKeys.SIGNATURE_LENGTH),
                 ValidatorKeys.PUBLIC_KEY_LENGTH + ValidatorKeys.SIGNATURE_LENGTH
             );
-            ValidatorKeys.set(_index, operator.keys + idx, publicKeyAndSignature);
+            ValidatorKeys.set(_index, totalKeys + idx, publicKeyAndSignature);
             unchecked {
                 ++idx;
             }
         }
-        OperatorsV2.setKeys(_index, operator.keys + _keyCount);
+        OperatorsV2.setKeys(_index, uint32(totalKeys) + _keyCount);
 
         emit AddedValidatorKeys(_index, _publicKeysAndSignatures);
     }
@@ -470,7 +473,7 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
             revert InvalidFundedKeyDeletionAttempt();
         }
 
-        bool limitEqualsKeyCount = operator.keys == operator.limit;
+        bool limitEqualsKeyCount = totalKeys == operator.limit;
         OperatorsV2.setKeys(_index, totalKeys - uint32(indexesLength));
 
         uint256 idx;
@@ -767,7 +770,7 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
         (OperatorsV2.CachedOperator[] memory operators, uint256 fundableOperatorCount) = OperatorsV2.getAllFundable();
 
         if (fundableOperatorCount == 0) {
-            return (new bytes[](0), new bytes[](0));
+            return (publicKeys, signatures);
         }
 
         while (_count > 0) {
@@ -868,7 +871,9 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
                 uint32 activeCount = _getActiveValidatorCountForExitRequests(operators[idx]);
 
                 if (activeCount == highestActiveCount) {
-                    ++siblings;
+                    unchecked {
+                        ++siblings;
+                    }
                 } else if (activeCount > highestActiveCount) {
                     secondHighestActiveCount = highestActiveCount;
                     highestActiveCount = activeCount;
@@ -899,7 +904,9 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
                     uint32 additionalRequestedExits = baseExitRequestAmount + (rest > 0 ? 1 : 0);
                     operators[idx].picked += additionalRequestedExits;
                     if (rest > 0) {
-                        --rest;
+                        unchecked {
+                            --rest;
+                        }
                     }
                 }
                 unchecked {

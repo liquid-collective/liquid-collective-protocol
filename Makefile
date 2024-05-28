@@ -34,4 +34,3 @@ artifacts-mainnet:
 artifacts-holesky:
 	yarn hh run gen_root_artifacts.ts --network holesky
 	yarn hh run gen_meta_artifacts.ts --network holesky
-

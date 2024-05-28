@@ -117,8 +117,10 @@ contract RiverV1 is
         // force committed balance to a multiple of 32 ETH and
         // move extra funds back to the deposit buffer
         uint256 dustToUncommit = CommittedBalance.get() % DEPOSIT_SIZE;
-        _setCommittedBalance(CommittedBalance.get() - dustToUncommit);
-        _setBalanceToDeposit(BalanceToDeposit.get() + dustToUncommit);
+        unchecked {
+            _setCommittedBalance(CommittedBalance.get() - dustToUncommit);
+            _setBalanceToDeposit(BalanceToDeposit.get() + dustToUncommit);
+        }
     }
 
     /// @inheritdoc IRiverV1
@@ -308,10 +310,8 @@ contract RiverV1 is
     function _onDeposit(address _depositor, address _recipient, uint256 _amount) internal override {
         uint256 mintedShares = SharesManagerV1._mintShares(_depositor, _amount);
         IAllowlistV1 allowlist = IAllowlistV1(AllowlistAddress.get());
-        if (_depositor == _recipient) {
-            allowlist.onlyAllowed(_depositor, LibAllowlistMasks.DEPOSIT_MASK); // this call reverts if unauthorized or denied
-        } else {
-            allowlist.onlyAllowed(_depositor, LibAllowlistMasks.DEPOSIT_MASK); // this call reverts if unauthorized or denied
+        allowlist.onlyAllowed(_depositor, LibAllowlistMasks.DEPOSIT_MASK); // this call reverts if unauthorized or denied
+        if (_depositor != _recipient) {
             if (allowlist.isDenied(_recipient)) {
                 revert Denied(_recipient);
             }
@@ -488,7 +488,9 @@ contract RiverV1 is
 
             if (suppliedRedeemManagerDemandInEth > 0) {
                 // the available balance to redeem is updated
-                _setBalanceToRedeem(availableBalanceToRedeem - suppliedRedeemManagerDemandInEth);
+                unchecked {
+                    _setBalanceToRedeem(availableBalanceToRedeem - suppliedRedeemManagerDemandInEth);
+                }
 
                 // we burn the shares of the redeem manager associated with the amount of eth provided
                 _burnRawShares(address(redeemManager_), suppliedRedeemManagerDemand);

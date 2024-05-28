@@ -19,7 +19,7 @@ contract Firewall is IFirewall, Administrable {
     address public executor;
 
     /// @inheritdoc IFirewall
-    address public destination;
+    address public immutable destination;
 
     /// @inheritdoc IFirewall
     mapping(bytes4 => bool) public executorCanCall;
