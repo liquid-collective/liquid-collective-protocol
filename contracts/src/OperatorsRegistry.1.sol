@@ -19,8 +19,6 @@ import "./state/shared/RiverAddress.sol";
 import "./state/migration/OperatorsRegistry_FundedKeyEventRebroadcasting_KeyIndex.sol";
 import "./state/migration/OperatorsRegistry_FundedKeyEventRebroadcasting_OperatorIndex.sol";
 
-import "forge-std/console.sol";
-
 /// @title Operators Registry (v1)
 /// @author Kiln
 /// @notice This contract handles the list of operators and their keys
@@ -229,10 +227,14 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
             // loop on operators to find the first that has fundable keys, taking into account previous loop round attributions
             uint256 selectedOperatorIndex = 0;
             for (; selectedOperatorIndex < fundableOperatorCount;) {
-                if (_hasFundableKeys(operators[selectedOperatorIndex])) {
+                if (
+                    (
+                        _pickedCounts[selectedOperatorIndex] + operators[selectedOperatorIndex].funded
+                            + operators[selectedOperatorIndex].picked
+                    ) < operators[selectedOperatorIndex].limit
+                ) {
                     break;
                 }
-                console.log("First");
                 unchecked {
                     ++selectedOperatorIndex;
                 }
@@ -240,7 +242,6 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
 
             // if we reach the end, we have allocated all keys
             if (selectedOperatorIndex == fundableOperatorCount) {
-                console.log("second");
                 break;
             }
 

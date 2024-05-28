@@ -4,6 +4,7 @@ pragma solidity 0.8.20;
 
 import "forge-std/Test.sol";
 
+import "../src/libraries/LibBytes.sol";
 import "./utils/UserFactory.sol";
 import "./utils/BytesGenerator.sol";
 import "./utils/LibImplementationUnbricker.sol";
@@ -3021,26 +3022,26 @@ contract OperatorsRegistryV1TestDistribution is Test {
     function testGetNextValidatorsToDepositFromActiveOperators() public {
         bytes[] memory rawKeys = new bytes[](5);
 
-        rawKeys[0] = genBytes((48 + 96) * 50);
-        rawKeys[1] = genBytes((48 + 96) * 50);
-        rawKeys[2] = genBytes((48 + 96) * 50);
-        rawKeys[3] = genBytes((48 + 96) * 50);
-        rawKeys[4] = genBytes((48 + 96) * 50);
+        rawKeys[0] = genBytes((48 + 96) * 10);
+        rawKeys[1] = genBytes((48 + 96) * 10);
+        rawKeys[2] = genBytes((48 + 96) * 10);
+        rawKeys[3] = genBytes((48 + 96) * 10);
+        rawKeys[4] = genBytes((48 + 96) * 10);
 
         vm.startPrank(admin);
-        operatorsRegistry.addValidators(0, 50, rawKeys[0]);
-        operatorsRegistry.addValidators(1, 50, rawKeys[1]);
-        operatorsRegistry.addValidators(2, 50, rawKeys[2]);
-        operatorsRegistry.addValidators(3, 50, rawKeys[3]);
-        operatorsRegistry.addValidators(4, 50, rawKeys[4]);
+        operatorsRegistry.addValidators(0, 10, rawKeys[0]);
+        operatorsRegistry.addValidators(1, 10, rawKeys[1]);
+        operatorsRegistry.addValidators(2, 10, rawKeys[2]);
+        operatorsRegistry.addValidators(3, 10, rawKeys[3]);
+        operatorsRegistry.addValidators(4, 10, rawKeys[4]);
         vm.stopPrank();
 
         uint32[] memory limits = new uint32[](5);
-        limits[0] = 0;
-        limits[1] = 50;
-        limits[2] = 50;
-        limits[3] = 50;
-        limits[4] = 50;
+        limits[0] = 10;
+        limits[1] = 10;
+        limits[2] = 10;
+        limits[3] = 10;
+        limits[4] = 10;
 
         uint256[] memory operators = new uint256[](5);
         operators[0] = 0;
@@ -3053,9 +3054,20 @@ contract OperatorsRegistryV1TestDistribution is Test {
         operatorsRegistry.setOperatorLimits(operators, limits, block.number);
 
         (bytes[] memory publicKeys, bytes[] memory signatures) =
-            operatorsRegistry.getNextValidatorsToDepositFromActiveOperators(201);
-        assert(publicKeys.length == 200);
-        assert(signatures.length == 200);
+            operatorsRegistry.getNextValidatorsToDepositFromActiveOperators(51);
+        assert(publicKeys.length == 50);
+        assert(signatures.length == 50);
+
+        bytes memory receivedKeys;
+        bytes memory originalKeys;
+        for (uint256 i; i < 50; i++) {
+            receivedKeys = bytes.concat(receivedKeys, bytes.concat(publicKeys[i], signatures[i]));
+        }
+        for (uint256 i; i < 5; i++) {
+            originalKeys = bytes.concat(originalKeys, rawKeys[i]);
+        }
+
+        assert(keccak256(receivedKeys) == keccak256(originalKeys));
     }
 
     function testGetNextValidatorsToDepositFromActiveOperatorsForNoOperators() public {
