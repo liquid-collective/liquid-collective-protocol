@@ -19,6 +19,8 @@ import "./state/shared/RiverAddress.sol";
 import "./state/migration/OperatorsRegistry_FundedKeyEventRebroadcasting_KeyIndex.sol";
 import "./state/migration/OperatorsRegistry_FundedKeyEventRebroadcasting_OperatorIndex.sol";
 
+import "forge-std/console.sol";
+
 /// @title Operators Registry (v1)
 /// @author Kiln
 /// @notice This contract handles the list of operators and their keys
@@ -209,6 +211,7 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
         funded = _validatorIndex < OperatorsV2.get(_operatorIndex).funded;
     }
 
+    /// @inheritdoc IOperatorsRegistryV1
     function getNextValidatorsToDepositFromActiveOperators(uint256 _count)
         external
         view
@@ -229,6 +232,7 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
                 if (_hasFundableKeys(operators[selectedOperatorIndex])) {
                     break;
                 }
+                console.log("First");
                 unchecked {
                     ++selectedOperatorIndex;
                 }
@@ -236,6 +240,7 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
 
             // if we reach the end, we have allocated all keys
             if (selectedOperatorIndex == fundableOperatorCount) {
+                console.log("second");
                 break;
             }
 

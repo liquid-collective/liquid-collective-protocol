@@ -3036,7 +3036,7 @@ contract OperatorsRegistryV1TestDistribution is Test {
         vm.stopPrank();
 
         uint32[] memory limits = new uint32[](5);
-        limits[0] = 50;
+        limits[0] = 0;
         limits[1] = 50;
         limits[2] = 50;
         limits[3] = 50;
@@ -3053,8 +3053,15 @@ contract OperatorsRegistryV1TestDistribution is Test {
         operatorsRegistry.setOperatorLimits(operators, limits, block.number);
 
         (bytes[] memory publicKeys, bytes[] memory signatures) =
+            operatorsRegistry.getNextValidatorsToDepositFromActiveOperators(201);
+        assert(publicKeys.length == 200);
+        assert(signatures.length == 200);
+    }
+
+    function testGetNextValidatorsToDepositFromActiveOperatorsForNoOperators() public {
+        (bytes[] memory publicKeys, bytes[] memory signatures) =
             operatorsRegistry.getNextValidatorsToDepositFromActiveOperators(5);
-        assert(publicKeys.length == 5);
-        assert(signatures.length == 5);
+        assert(publicKeys.length == 0);
+        assert(signatures.length == 0);
     }
 }

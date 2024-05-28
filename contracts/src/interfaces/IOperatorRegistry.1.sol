@@ -240,6 +240,15 @@ interface IOperatorsRegistryV1 {
         view
         returns (bytes memory publicKey, bytes memory signature, bool funded);
 
+    /// @notice Get the next validators that would be funded
+    /// @param _count Count of validators that would be funded next
+    /// @return publicKeys An array of fundable public keys
+    /// @return signatures An array of signatures linked to the public keys
+    function getNextValidatorsToDepositFromActiveOperators(uint256 _count)
+        external
+        view
+        returns (bytes[] memory publicKeys, bytes[] memory signatures);
+
     /// @notice Retrieve the active operator set
     /// @return The list of active operators and their details
     function listActiveOperators() external view returns (OperatorsV2.Operator[] memory);
