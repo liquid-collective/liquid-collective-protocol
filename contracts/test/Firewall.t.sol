@@ -117,6 +117,9 @@ contract FirewallTests is BytesGenerator, Test {
             5000
         );
 
+        vm.prank(address(riverFirewall));
+        river.setKeeper(address(riverFirewall));
+
         bytes4[] memory executorCallableOracleSelectors = new bytes4[](3);
         executorCallableOracleSelectors[0] = oracle.addMember.selector;
         executorCallableOracleSelectors[1] = oracle.removeMember.selector;
@@ -279,26 +282,26 @@ contract FirewallTests is BytesGenerator, Test {
         vm.stopPrank();
     }
 
-    function testGovernorCanDepositToConsensusLayer() public {
+    function testGovernorCannotDepositToConsensusLayer() public {
         // Assert this by expecting NotEnoughFunds, NOT Unauthorized
         vm.startPrank(riverGovernorDAO);
         vm.expectRevert(abi.encodeWithSignature("NotEnoughFunds()"));
-        firewalledRiver.depositToConsensusLayer(10);
+        firewalledRiver.depositToConsensusLayer(10, bytes32(0));
         vm.stopPrank();
     }
 
-    function testExecutorCanDepositToConsensusLayer() public {
+    function testExecutorCannotDepositToConsensusLayer() public {
         // Assert this by expecting NotEnoughFunds, NOT Unauthorized
         vm.startPrank(executor);
         vm.expectRevert(abi.encodeWithSignature("NotEnoughFunds()"));
-        firewalledRiver.depositToConsensusLayer(10);
+        firewalledRiver.depositToConsensusLayer(10, bytes32(0));
         vm.stopPrank();
     }
 
     function testRandomCallerCannotDepositToConsensusLayer() public {
         vm.startPrank(joe);
         vm.expectRevert(unauthJoe);
-        firewalledRiver.depositToConsensusLayer(10);
+        firewalledRiver.depositToConsensusLayer(10, bytes32(0));
         vm.stopPrank();
     }
 
