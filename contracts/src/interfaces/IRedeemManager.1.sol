@@ -101,6 +101,9 @@ interface IRedeemManagerV1 {
     /// @notice Thrown when the claim owner is denied
     error ClaimOwnerIsDenied();
 
+    /// @notice Thrown when the recipient of redeemRequest is denied
+    error RecipientIsDenied();
+
     /// @param _river The address of the River contract
     function initializeRedeemManagerV1(address _river) external;
 
