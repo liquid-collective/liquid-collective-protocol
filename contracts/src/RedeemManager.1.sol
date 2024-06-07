@@ -132,6 +132,10 @@ contract RedeemManagerV1 is Initializable, IRedeemManagerV1 {
         onlyRedeemerOrRiver
         returns (uint32 redeemRequestId)
     {
+        IRiverV1 river = _castedRiver();
+        if (IAllowlistV1(river.getAllowlist()).isDenied(_recipient)) {
+            revert RecipientIsDenied();
+        }
         return _requestRedeem(_lsETHAmount, _recipient);
     }
 

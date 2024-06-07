@@ -254,6 +254,56 @@ contract RedeemManagerV1Tests is Test {
         redeemManager.requestRedeem(amount, user);
     }
 
+    function testRequestRedeemWithAuthorizedRecipient(uint256 _salt, uint256 _salt2) external {
+        vm.assume(_salt != _salt2);
+        address user = _generateAllowlistedUser(_salt);
+        address recipient = uf._new(_salt2);
+
+        uint128 amount = uint128(bound(_salt, 1, type(uint128).max));
+
+        river.sudoDeal(user, amount);
+
+        vm.prank(user);
+        river.approve(address(redeemManager), amount);
+
+        assertEq(river.balanceOf(user), amount);
+
+        vm.prank(user);
+        vm.expectEmit(true, true, true, true);
+        emit RequestedRedeem(recipient, 0, amount, amount, 0);
+        redeemManager.requestRedeem(amount, recipient);
+
+        uint32[] memory requests = new uint32[](1);
+        requests[0] = 0;
+
+        assertEq(requests[0], 0);
+
+        {
+            RedeemQueue.RedeemRequest memory rr = redeemManager.getRedeemRequestDetails(0);
+
+            assertEq(rr.height, 0);
+            assertEq(rr.amount, amount);
+            assertEq(rr.owner, recipient);
+            assertEq(rr.maxRedeemableEth, amount);
+        }
+
+        assertEq(river.balanceOf(user), 0);
+        assertEq(redeemManager.getRedeemRequestCount(), 1);
+    }
+
+    function testRequestRedeemUnauthorizedRecipient(uint256 _salt, uint256 _salt2) external {
+        vm.assume(_salt != _salt2);
+        address user = _generateAllowlistedUser(_salt);
+        address recipient = uf._new(_salt2);
+        uint128 amount = uint128(bound(_salt, 1, type(uint128).max));
+
+        _denyUser(recipient);
+
+        vm.prank(user);
+        vm.expectRevert(abi.encodeWithSignature("RecipientIsDenied()"));
+        redeemManager.requestRedeem(amount, recipient);
+    }
+
     function testRequestRedeemMultiple(uint256 _salt) external {
         address user0 = _generateAllowlistedUser(_salt);
         address user1 = _generateAllowlistedUser(uint256(keccak256(abi.encode(_salt))));
