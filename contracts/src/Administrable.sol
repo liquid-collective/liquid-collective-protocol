@@ -50,7 +50,6 @@ abstract contract Administrable is IAdministrable {
     /// @notice Internal utility to set the admin address
     /// @param _admin Address to set as admin
     function _setAdmin(address _admin) internal {
-        LibSanitize._notZeroAddress(_admin);
         LibAdministrable._setAdmin(_admin);
         emit SetAdmin(_admin);
     }
