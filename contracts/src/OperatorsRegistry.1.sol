@@ -218,7 +218,7 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
         (OperatorsV2.CachedOperator[] memory operators, uint256 fundableOperatorCount) = OperatorsV2.getAllFundable();
 
         if (fundableOperatorCount == 0) {
-            return (new bytes[](0), new bytes[](0));
+            return (publicKeys, signatures);
         }
 
         _getCountOfValidatorsFromEachOperator(operators, fundableOperatorCount, _count);
