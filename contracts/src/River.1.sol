@@ -7,6 +7,7 @@ import "./interfaces/IRiver.1.sol";
 import "./interfaces/IWithdraw.1.sol";
 import "./interfaces/IELFeeRecipient.1.sol";
 import "./interfaces/ICoverageFund.1.sol";
+import "./interfaces/IVersion.sol";
 
 import "./components/ConsensusLayerDepositManager.1.sol";
 import "./components/UserDepositManager.1.sol";
@@ -38,7 +39,8 @@ contract RiverV1 is
     OracleManagerV1,
     Initializable,
     Administrable,
-    IRiverV1
+    IRiverV1,
+    IVersionV1
 {
     /// @inheritdoc IRiverV1
     function initRiverV1(
@@ -608,5 +610,10 @@ contract RiverV1 is
             _setCommittedBalance(CommittedBalance.get() + currentMaxCommittableAmount);
             _setBalanceToDeposit(currentBalanceToDeposit - currentMaxCommittableAmount);
         }
+    }
+
+    /// @inheritdoc IVersionV1
+    function version() external pure returns (string memory) {
+        return "1.0.0";
     }
 }
