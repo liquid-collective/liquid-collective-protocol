@@ -199,6 +199,10 @@ contract RiverV1Tests is RiverV1TestBase {
         vm.stopPrank();
     }
 
+    function testVersion() external {
+        assertEq(river.version(), "1.0.0");
+    }
+
     function testOnlyAdminCanSetKeeper() public {
         address keeper = makeAddr("keeper");
         assert(river.getKeeper() == admin);

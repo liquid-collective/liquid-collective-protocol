@@ -503,4 +503,8 @@ contract FirewallTests is BytesGenerator, Test {
         riverFirewall.setExecutor(don);
         vm.stopPrank();
     }
+
+    function testVersion() external {
+        assertEq(riverFirewall.version(), "1.0.0");
+    }
 }

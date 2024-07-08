@@ -223,4 +223,8 @@ contract CoverageFundTestV1 is CoverageFundV1TestBase {
         river.pullCoverageFunds(address(coverageFund), 0);
         assertEq(0, address(river).balance);
     }
+
+    function testVersion() external {
+        assertEq(coverageFund.version(), "1.0.0");
+    }
 }
