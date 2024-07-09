@@ -55,6 +55,6 @@ contract WithdrawV1 is IWithdrawV1, Initializable, IVersionV1 {
 
     /// @inheritdoc IVersionV1
     function version() external pure returns (string memory) {
-        return "1.0.0";
+        return "1.1.0";
     }
 }

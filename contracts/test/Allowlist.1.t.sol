@@ -397,6 +397,6 @@ contract AllowlistV1Tests is AllowlistV1TestBase {
     }
 
     function testVersion() external {
-        assertEq(allowlist.version(), "1.0.0");
+        assertEq(allowlist.version(), "1.1.0");
     }
 }
