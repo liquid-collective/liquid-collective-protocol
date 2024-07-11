@@ -3076,4 +3076,8 @@ contract OperatorsRegistryV1TestDistribution is Test {
         assert(publicKeys.length == 0);
         assert(signatures.length == 0);
     }
+
+    function testVersion() external {
+        assertEq(operatorsRegistry.version(), "1.1.0");
+    }
 }

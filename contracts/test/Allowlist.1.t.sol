@@ -395,4 +395,8 @@ contract AllowlistV1Tests is AllowlistV1TestBase {
         vm.expectRevert(abi.encodeWithSignature("InvalidCount()"));
         allowlist.setAllowPermissions(allowees, permissions);
     }
+
+    function testVersion() external {
+        assertEq(allowlist.version(), "1.1.0");
+    }
 }

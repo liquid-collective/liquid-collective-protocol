@@ -1722,4 +1722,8 @@ contract RedeemManagerV1Tests is Test {
         vm.prank(user2);
         redeemManager.claimRedeemRequests(redeemRequestIds, withdrawEventIds, true, type(uint16).max);
     }
+
+    function testVersion() external {
+        assertEq(redeemManager.version(), "1.1.0");
+    }
 }

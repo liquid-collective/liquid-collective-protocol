@@ -144,4 +144,8 @@ contract ELFeeRecipientV1Test is ELFeeRecipientV1TestBase {
         address(feeRecipient).call{value: 1e18}(abi.encodeWithSignature("Hello()"));
         vm.stopPrank();
     }
+
+    function testVersion() external {
+        assertEq(feeRecipient.version(), "1.1.0");
+    }
 }
