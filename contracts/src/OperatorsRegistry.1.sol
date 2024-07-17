@@ -737,7 +737,7 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, IVersionV1, Initializable,
         OperatorsV2.CachedOperator[] memory operators,
         uint256 fundableOperatorCount,
         uint256 _count
-    ) internal view returns (uint256[] memory _pickedCounts) {
+    ) internal view {
         while (_count > 0) {
             // loop on operators to find the first that has fundable keys, taking into account previous loop round attributions
             uint256 selectedOperatorIndex = 0;
