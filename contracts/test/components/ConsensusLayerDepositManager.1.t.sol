@@ -118,7 +118,7 @@ contract ConsensusLayerDepositManagerV1Tests is Test {
         ConsensusLayerDepositManagerV1ExposeInitializer(address(depositManager)).sudoSyncBalance();
         vm.expectRevert(abi.encodeWithSignature("NotEnoughFunds()"));
         vm.prank(address(0x1));
-        depositManager.depositToConsensusLayer(5, bytes32(0));
+        depositManager.depositToConsensusLayerWithDepositRoot(5, bytes32(0));
     }
 
     function testDepositTenValidators() public {
@@ -126,7 +126,7 @@ contract ConsensusLayerDepositManagerV1Tests is Test {
         ConsensusLayerDepositManagerV1ExposeInitializer(address(depositManager)).sudoSyncBalance();
         assert(address(depositManager).balance == 320 ether);
         vm.prank(address(0x1));
-        depositManager.depositToConsensusLayer(10, bytes32(0));
+        depositManager.depositToConsensusLayerWithDepositRoot(10, bytes32(0));
         assert(address(depositManager).balance == 0);
     }
 
@@ -135,7 +135,7 @@ contract ConsensusLayerDepositManagerV1Tests is Test {
         ConsensusLayerDepositManagerV1ExposeInitializer(address(depositManager)).sudoSyncBalance();
         assert(address(depositManager).balance == 640 ether);
         vm.prank(address(0x1));
-        depositManager.depositToConsensusLayer(20, bytes32(0));
+        depositManager.depositToConsensusLayerWithDepositRoot(20, bytes32(0));
         assert(address(depositManager).balance == 320 ether);
     }
 }
@@ -261,7 +261,7 @@ contract ConsensusLayerDepositManagerV1ErrorTests is Test {
         ConsensusLayerDepositManagerV1ControllableValidatorKeyRequest(address(depositManager)).setScenario(1);
         vm.expectRevert(abi.encodeWithSignature("InconsistentPublicKeys()"));
         vm.prank(address(0x1));
-        depositManager.depositToConsensusLayer(5, bytes32(0));
+        depositManager.depositToConsensusLayerWithDepositRoot(5, bytes32(0));
     }
 
     function testInconsistentSignature() public {
@@ -270,7 +270,7 @@ contract ConsensusLayerDepositManagerV1ErrorTests is Test {
         ConsensusLayerDepositManagerV1ControllableValidatorKeyRequest(address(depositManager)).setScenario(2);
         vm.expectRevert(abi.encodeWithSignature("InconsistentSignatures()"));
         vm.prank(address(0x1));
-        depositManager.depositToConsensusLayer(5, bytes32(0));
+        depositManager.depositToConsensusLayerWithDepositRoot(5, bytes32(0));
     }
 
     function testUnavailableKeys() public {
@@ -279,7 +279,7 @@ contract ConsensusLayerDepositManagerV1ErrorTests is Test {
         ConsensusLayerDepositManagerV1ControllableValidatorKeyRequest(address(depositManager)).setScenario(3);
         vm.expectRevert(abi.encodeWithSignature("NoAvailableValidatorKeys()"));
         vm.prank(address(0x1));
-        depositManager.depositToConsensusLayer(5, bytes32(0));
+        depositManager.depositToConsensusLayerWithDepositRoot(5, bytes32(0));
     }
 
     function testInvalidPublicKeyCount() public {
@@ -288,7 +288,7 @@ contract ConsensusLayerDepositManagerV1ErrorTests is Test {
         ConsensusLayerDepositManagerV1ControllableValidatorKeyRequest(address(depositManager)).setScenario(4);
         vm.expectRevert(abi.encodeWithSignature("InvalidPublicKeyCount()"));
         vm.prank(address(0x1));
-        depositManager.depositToConsensusLayer(5, bytes32(0));
+        depositManager.depositToConsensusLayerWithDepositRoot(5, bytes32(0));
     }
 }
 
@@ -317,7 +317,7 @@ contract ConsensusLayerDepositManagerV1WithdrawalCredentialError is Test {
         ConsensusLayerDepositManagerV1ControllableValidatorKeyRequest(address(depositManager)).setKeeper(address(0x1));
         vm.expectRevert(abi.encodeWithSignature("InvalidWithdrawalCredentials()"));
         vm.prank(address(0x1));
-        depositManager.depositToConsensusLayer(5, bytes32(0));
+        depositManager.depositToConsensusLayerWithDepositRoot(5, bytes32(0));
         ConsensusLayerDepositManagerV1ExposeInitializer(address(depositManager)).sudoSetWithdrawalCredentials(
             withdrawalCredentials
         );
@@ -407,7 +407,7 @@ contract ConsensusLayerDepositManagerV1ValidKeysTest is Test {
             bytes32(uint256(uint160(address(0x1))))
         );
         vm.startPrank(address(0x1));
-        depositManager.depositToConsensusLayer(1, depositContract.get_deposit_root());
+        depositManager.depositToConsensusLayerWithDepositRoot(1, depositContract.get_deposit_root());
         assert(DepositContractEnhancedMock(address(depositContract)).debug_getLastDepositDataRoot() == depositDataRoot);
     }
 
@@ -419,7 +419,7 @@ contract ConsensusLayerDepositManagerV1ValidKeysTest is Test {
         );
         vm.startPrank(address(0x1));
         vm.expectRevert(abi.encodeWithSignature("InvalidDepositRoot()"));
-        depositManager.depositToConsensusLayer(1, bytes32(0));
+        depositManager.depositToConsensusLayerWithDepositRoot(1, bytes32(0));
     }
 }
 
@@ -444,7 +444,7 @@ contract ConsensusLayerDepositManagerV1InvalidDepositContract is Test {
         ConsensusLayerDepositManagerV1ValidKeys(address(depositManager)).sudoSyncBalance();
         vm.expectRevert(abi.encodeWithSignature("ErrorOnDeposit()"));
         vm.prank(address(0x1));
-        depositManager.depositToConsensusLayer(1, bytes32(0));
+        depositManager.depositToConsensusLayerWithDepositRoot(1, bytes32(0));
     }
 }
 
@@ -479,7 +479,7 @@ contract ConsensusLayerDepositManagerV1KeeperTest is Test {
             bytes32(uint256(uint160(address(0x1))))
         );
         vm.startPrank(address(0x1));
-        depositManager.depositToConsensusLayer(1, depositContract.get_deposit_root());
+        depositManager.depositToConsensusLayerWithDepositRoot(1, depositContract.get_deposit_root());
         assert(DepositContractEnhancedMock(address(depositContract)).debug_getLastDepositDataRoot() == depositDataRoot);
     }
 
@@ -494,6 +494,6 @@ contract ConsensusLayerDepositManagerV1KeeperTest is Test {
         bytes32 depositRoot = depositContract.get_deposit_root();
         vm.expectRevert(abi.encodeWithSignature("OnlyKeeper()"));
         vm.prank(address(0x1));
-        depositManager.depositToConsensusLayer(1, depositRoot);
+        depositManager.depositToConsensusLayerWithDepositRoot(1, depositRoot);
     }
 }

@@ -71,5 +71,5 @@ interface IConsensusLayerDepositManagerV1 {
     /// @notice Deposits current balance to the Consensus Layer by batches of 32 ETH
     /// @param _maxCount The maximum amount of validator keys to fund
     /// @param _depositRoot The root of the deposit tree
-    function depositToConsensusLayer(uint256 _maxCount, bytes32 _depositRoot) external;
+    function depositToConsensusLayerWithDepositRoot(uint256 _maxCount, bytes32 _depositRoot) external;
 }
