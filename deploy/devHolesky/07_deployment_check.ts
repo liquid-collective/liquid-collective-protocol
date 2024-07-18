@@ -694,11 +694,11 @@ const func: DeployFunction = async function ({
   } else {
     console.log("Executor should not have permission to call setConsensusLayerData");
   }
-  // River Executor should not have permission to call legacy depositToConsensusLayer = $(cast call ${RIVER_FIREWALL} "executorCanCall(bytes4)(bool)" $(cast sig "depositToConsensusLayer(uint256)"))"
-  if (await RiverFirewallContract.callStatic.executorCanCall(RiverContract.interface.getSighash("depositToConsensusLayer(uint256)"))) {
-    throw new Error("Executor have permission to call depositToConsensusLayer");
+  // River Executor should not have permission to call legacy depositToConsensusLayerWithDepositRoot = $(cast call ${RIVER_FIREWALL} "executorCanCall(bytes4)(bool)" $(cast sig "depositToConsensusLayerWithDepositRoot(uint256)"))"
+  if (await RiverFirewallContract.callStatic.executorCanCall(RiverContract.interface.getSighash("depositToConsensusLayerWithDepositRoot(uint256)"))) {
+    throw new Error("Executor have permission to call depositToConsensusLayerWithDepositRoot");
   } else {
-    console.log("Executor should not have permission to call depositToConsensusLayer");
+    console.log("Executor should not have permission to call depositToConsensusLayerWithDepositRoot");
   }
 
   //TODO: Also add tests for checking correct initialization of the contracts
