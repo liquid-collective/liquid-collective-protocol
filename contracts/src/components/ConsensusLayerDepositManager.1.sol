@@ -88,7 +88,7 @@ abstract contract ConsensusLayerDepositManagerV1 is IConsensusLayerDepositManage
     }
 
     /// @inheritdoc IConsensusLayerDepositManagerV1
-    function depositToConsensusLayer(uint256 _maxCount, bytes32 _depositRoot) external {
+    function depositToConsensusLayerWithDepositRoot(uint256 _maxCount, bytes32 _depositRoot) external {
         if (msg.sender != KeeperAddress.get()) {
             revert OnlyKeeper();
         }
