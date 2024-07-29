@@ -146,6 +146,6 @@ contract ELFeeRecipientV1Test is ELFeeRecipientV1TestBase {
     }
 
     function testVersion() external {
-        assertEq(feeRecipient.version(), "1.1.0");
+        assertEq(feeRecipient.version(), "1.2.0");
     }
 }

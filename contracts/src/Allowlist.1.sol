@@ -2,7 +2,7 @@
 pragma solidity 0.8.20;
 
 import "./interfaces/IAllowlist.1.sol";
-import "./interfaces/IVersion.sol";
+import "./ProtocolVersion.sol";
 
 import "./libraries/LibAllowlistMasks.sol";
 import "./Initializable.sol";
@@ -19,7 +19,7 @@ import "./state/allowlist/Allowlist.sol";
 /// @notice each bit represents a right in the system. The DENY_MASK defined the mask
 /// @notice used to identify if the denied bit is on, preventing users from interacting
 /// @notice with the system
-contract AllowlistV1 is IAllowlistV1, IVersionV1, Initializable, Administrable {
+contract AllowlistV1 is IAllowlistV1, Initializable, Administrable, ProtocolVersionV1 {
     /// @inheritdoc IAllowlistV1
     function initAllowlistV1(address _admin, address _allower) external init(0) {
         _setAdmin(_admin);
@@ -158,10 +158,5 @@ contract AllowlistV1 is IAllowlistV1, IVersionV1, Initializable, Administrable {
         }
 
         emit SetAllowlistPermissions(_accounts, _permissions);
-    }
-
-    /// @inheritdoc IVersionV1
-    function version() external pure returns (string memory) {
-        return "1.1.0";
     }
 }

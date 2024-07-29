@@ -3078,6 +3078,6 @@ contract OperatorsRegistryV1TestDistribution is Test {
     }
 
     function testVersion() external {
-        assertEq(operatorsRegistry.version(), "1.1.0");
+        assertEq(operatorsRegistry.version(), "1.2.0");
     }
 }
