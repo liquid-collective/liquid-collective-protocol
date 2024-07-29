@@ -29,7 +29,7 @@ import "./state/slashingCoverage/BalanceForCoverage.sol";
 /// @notice the coverage fund will be pulled after the revenue stream, and there won't be any commission on the eth pulled.
 /// @notice Once a Slashing event occurs, the team will do its best to inject the recovery funds in at maximum 365 days
 /// @notice The entities allowed to donate are selected by the team. It will mainly be treasury entities or insurance protocols able to fill this coverage fund properly.
-contract CoverageFundV1 is Initializable, ICoverageFundV1, ProtocolVersionV1 {
+contract CoverageFundV1 is Initializable, ICoverageFundV1, ProtocolVersion {
     /// @inheritdoc ICoverageFundV1
     function initCoverageFundV1(address _riverAddress) external init(0) {
         RiverAddress.set(_riverAddress);

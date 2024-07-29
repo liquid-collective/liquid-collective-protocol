@@ -19,7 +19,7 @@ import "./state/allowlist/Allowlist.sol";
 /// @notice each bit represents a right in the system. The DENY_MASK defined the mask
 /// @notice used to identify if the denied bit is on, preventing users from interacting
 /// @notice with the system
-contract AllowlistV1 is IAllowlistV1, Initializable, Administrable, ProtocolVersionV1 {
+contract AllowlistV1 is IAllowlistV1, Initializable, Administrable, ProtocolVersion {
     /// @inheritdoc IAllowlistV1
     function initAllowlistV1(address _admin, address _allower) external init(0) {
         _setAdmin(_admin);

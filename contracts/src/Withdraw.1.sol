@@ -13,7 +13,7 @@ import "./state/shared/RiverAddress.sol";
 /// @title Withdraw (v1)
 /// @author Kiln
 /// @notice This contract is in charge of holding the exit and skimming funds and allow river to pull these funds
-contract WithdrawV1 is IWithdrawV1, Initializable, ProtocolVersionV1 {
+contract WithdrawV1 is IWithdrawV1, Initializable, ProtocolVersion {
     modifier onlyRiver() {
         if (msg.sender != RiverAddress.get()) {
             revert LibErrors.Unauthorized(msg.sender);

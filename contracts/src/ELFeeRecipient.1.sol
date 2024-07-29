@@ -14,7 +14,7 @@ import "./state/shared/RiverAddress.sol";
 /// @title Execution Layer Fee Recipient (v1)
 /// @author Kiln
 /// @notice This contract receives all the execution layer fees from the proposed blocks + bribes
-contract ELFeeRecipientV1 is Initializable, IELFeeRecipientV1, ProtocolVersionV1 {
+contract ELFeeRecipientV1 is Initializable, IELFeeRecipientV1, ProtocolVersion {
     /// @inheritdoc IELFeeRecipientV1
     function initELFeeRecipientV1(address _riverAddress) external init(0) {
         RiverAddress.set(_riverAddress);

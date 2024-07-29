@@ -23,7 +23,7 @@ import "./state/migration/OperatorsRegistry_FundedKeyEventRebroadcasting_Operato
 /// @title Operators Registry (v1)
 /// @author Kiln
 /// @notice This contract handles the list of operators and their keys
-contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrable, ProtocolVersionV1 {
+contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrable, ProtocolVersion {
     /// @notice Maximum validators given to an operator per selection loop round
     uint256 internal constant MAX_VALIDATOR_ATTRIBUTION_PER_ROUND = 5;
 

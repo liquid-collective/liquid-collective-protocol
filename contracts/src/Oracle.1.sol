@@ -18,7 +18,7 @@ import "./state/oracle/ReportsPositions.sol";
 /// @title Oracle (v1)
 /// @author Kiln
 /// @notice This contract handles the input from the allowed oracle members. Highly inspired by Lido's implementation.
-contract OracleV1 is IOracleV1, Initializable, Administrable, ProtocolVersionV1 {
+contract OracleV1 is IOracleV1, Initializable, Administrable, ProtocolVersion {
     modifier onlyAdminOrMember(address _oracleMember) {
         if (msg.sender != _getAdmin() && msg.sender != _oracleMember) {
             revert LibErrors.Unauthorized(msg.sender);

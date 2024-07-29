@@ -18,7 +18,7 @@ import "./state/redeemManager/RedeemDemand.sol";
 /// @title Redeem Manager (v1)
 /// @author Kiln
 /// @notice This contract handles the redeem requests of all users
-contract RedeemManagerV1 is Initializable, IRedeemManagerV1, ProtocolVersionV1 {
+contract RedeemManagerV1 is Initializable, IRedeemManagerV1, ProtocolVersion {
     /// @notice Value returned when resolving a redeem request that is unsatisfied
     int64 internal constant RESOLVE_UNSATISFIED = -1;
     /// @notice Value returned when resolving a redeem request that is out of bounds

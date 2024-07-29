@@ -39,7 +39,7 @@ contract RiverV1 is
     OracleManagerV1,
     Initializable,
     Administrable,
-    ProtocolVersionV1,
+    ProtocolVersion,
     IRiverV1
 {
     /// @inheritdoc IRiverV1
