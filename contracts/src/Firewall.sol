@@ -2,7 +2,7 @@
 pragma solidity 0.8.20;
 
 import "./interfaces/IFirewall.sol";
-import "./interfaces/IVersion.sol";
+import "./interfaces/IProtocolVersion.sol";
 
 import "./Administrable.sol";
 
@@ -15,7 +15,7 @@ import "./Administrable.sol";
 ///         Random callers cannot call anything through this contract, even if the underlying function
 ///         is unpermissioned in the underlying contract.
 ///         Calls to non-admin functions should be called at the underlying contract directly.
-contract Firewall is IFirewall, IVersionV1, Administrable {
+contract Firewall is IFirewall, IProtocolVersion, Administrable {
     /// @inheritdoc IFirewall
     address public executor;
 
@@ -117,8 +117,8 @@ contract Firewall is IFirewall, IVersionV1, Administrable {
         _forward(destination, msg.value);
     }
 
-    /// @inheritdoc IVersionV1
+    /// @inheritdoc IProtocolVersion
     function version() external pure returns (string memory) {
-        return "1.1.0";
+        return "1.2.0";
     }
 }

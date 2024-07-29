@@ -74,6 +74,15 @@ const func: DeployFunction = async function ({
   const tlcFirewallDeployment = await deployments.get("TLCProxyFirewall");
   const tlcFirewallContract = await ethers.getContractAt("Firewall", tlcFirewallDeployment.address);
 
+  const withdrawDeployment = await deployments.get("Withdraw");
+  const withdrawContract = await ethers.getContractAt("WithdrawV1", withdrawDeployment.address);
+
+  const coverageFundDeployment = await deployments.get("CoverageFund");
+  const coverageFundContract = await ethers.getContractAt("CoverageFundV1", coverageFundDeployment.address);
+
+  const elFeeRecipientDeployment = await deployments.get("ELFeeRecipient");
+  const elFeeRecipientContract = await ethers.getContractAt("ELFeeRecipientV1", elFeeRecipientDeployment.address);
+
   if (riverFirewallDeployment.address != (await RiverContract.callStatic.getAdmin())) {
     throw new Error("RiverFirewall address does not match River address");
   } else {
@@ -699,6 +708,20 @@ const func: DeployFunction = async function ({
     throw new Error("Executor have permission to call depositToConsensusLayerWithDepositRoot");
   } else {
     console.log("Executor should not have permission to call depositToConsensusLayerWithDepositRoot");
+  }
+
+  if (
+    (await allowlistContract.callStatic.version()) != (await RiverContract.callStatic.version()) &&
+    (await allowlistContract.callStatic.version()) != (await coverageFundContract.callStatic.version()) &&
+    (await allowlistContract.callStatic.version()) != (await elFeeRecipientContract.callStatic.version()) &&
+    (await allowlistContract.callStatic.version()) != (await operatorsRegistryContract.callStatic.version()) &&
+    (await allowlistContract.callStatic.version()) != (await oracleContract.callStatic.version()) &&
+    (await allowlistContract.callStatic.version()) != (await redeemManagerContract.callStatic.version()) &&
+    (await allowlistContract.callStatic.version()) != (await withdrawContract.callStatic.version())
+  ) {
+    throw new Error("Version numbers are not the same");
+  } else {
+    console.log("Version numbers are the same");
   }
 
   //TODO: Also add tests for checking correct initialization of the contracts

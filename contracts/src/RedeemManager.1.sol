@@ -4,7 +4,7 @@ pragma solidity 0.8.20;
 import "./interfaces/IAllowlist.1.sol";
 import "./interfaces/IRiver.1.sol";
 import "./interfaces/IRedeemManager.1.sol";
-import "./interfaces/IVersion.sol";
+import "./ProtocolVersion.sol";
 import "./libraries/LibAllowlistMasks.sol";
 import "./libraries/LibUint256.sol";
 import "./Initializable.sol";
@@ -18,7 +18,7 @@ import "./state/redeemManager/RedeemDemand.sol";
 /// @title Redeem Manager (v1)
 /// @author Kiln
 /// @notice This contract handles the redeem requests of all users
-contract RedeemManagerV1 is Initializable, IRedeemManagerV1, IVersionV1 {
+contract RedeemManagerV1 is Initializable, IRedeemManagerV1, ProtocolVersion {
     /// @notice Value returned when resolving a redeem request that is unsatisfied
     int64 internal constant RESOLVE_UNSATISFIED = -1;
     /// @notice Value returned when resolving a redeem request that is out of bounds
@@ -548,10 +548,5 @@ contract RedeemManagerV1 is Initializable, IRedeemManagerV1, IVersionV1 {
     function _setRedeemDemand(uint256 _newValue) internal {
         emit SetRedeemDemand(RedeemDemand.get(), _newValue);
         RedeemDemand.set(_newValue);
-    }
-
-    /// @inheritdoc IVersionV1
-    function version() external pure returns (string memory) {
-        return "1.1.0";
     }
 }
