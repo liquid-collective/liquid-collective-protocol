@@ -101,7 +101,7 @@ interface IRedeemManagerV1 {
     /// @notice Thrown when the claim owner is denied
     error ClaimOwnerIsDenied();
 
-    /// @notice Thrown when the claim initiator is denied   
+    /// @notice Thrown when the claim initiator is denied
     error ClaimInitiatorIsDenied();
 
     /// @notice Thrown when the recipient of redeemRequest is denied

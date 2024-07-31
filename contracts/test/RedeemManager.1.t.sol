@@ -1622,7 +1622,6 @@ contract RedeemManagerV1Tests is Test {
         redeemManager.claimRedeemRequests(redeemRequestIds, withdrawEventIds, true, type(uint16).max);
     }
 
-
     // A denied user when undenied would be able to claim the ETH
     function testClaimRedeemRequestClaimsWithDeniedUserUndenied(uint256 _salt) external {
         uint128 amount = uint128(bound(_salt, 1, type(uint128).max));
