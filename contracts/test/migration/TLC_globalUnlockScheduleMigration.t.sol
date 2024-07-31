@@ -37,7 +37,7 @@ contract TlcMigrationTest is Test {
 
         VestingSchedulesV2.VestingSchedule[] memory schedulesBefore = new VestingSchedulesV2.VestingSchedule[](67);
         for (uint256 i = 0; i < 67; i++) {
-            schedulesBefore[i] = TLCV1(address(tlcProxy)).getVestingSchedule(i);
+            (schedulesBefore[i],) = TLCV1(address(tlcProxy)).getVestingSchedule(i);
             //console.log("%s,%s,%s", i, schedulesBefore[i].start, schedulesBefore[i].end);
         }
 
@@ -53,7 +53,7 @@ contract TlcMigrationTest is Test {
 
         // Check that the all the values that shouldn't change didn't
         for (uint256 i = 0; i < 67; i++) {
-            VestingSchedulesV2.VestingSchedule memory schedule = TLCV1(address(tlcProxy)).getVestingSchedule(i);
+            (VestingSchedulesV2.VestingSchedule memory schedule,) = TLCV1(address(tlcProxy)).getVestingSchedule(i);
             assertEq(schedule.amount, schedulesBefore[i].amount);
             assertEq(schedule.creator, schedulesBefore[i].creator);
             assertEq(schedule.beneficiary, schedulesBefore[i].beneficiary);
@@ -62,7 +62,7 @@ contract TlcMigrationTest is Test {
         }
         // Check that the value we should have changed did change
         // Schedule 0
-        VestingSchedulesV2.VestingSchedule memory schedule = TLCV1(address(tlcProxy)).getVestingSchedule(0);
+        (VestingSchedulesV2.VestingSchedule memory schedule,) = TLCV1(address(tlcProxy)).getVestingSchedule(0);
         assertEq(schedule.start, schedulesBefore[0].start);
         assertEq(schedule.end, schedulesBefore[0].end);
         assertEq(schedule.lockDuration, 75772800);
@@ -72,7 +72,7 @@ contract TlcMigrationTest is Test {
         assertFalse(TLCV1(address(tlcProxy)).isGlobalUnlockedScheduleIgnored(0));
 
         // Schedule 17
-        schedule = TLCV1(address(tlcProxy)).getVestingSchedule(17);
+        (schedule,) = TLCV1(address(tlcProxy)).getVestingSchedule(17);
         assertEq(schedule.start, schedulesBefore[17].start);
         assertEq(schedule.end, schedulesBefore[17].end);
         assertEq(schedule.lockDuration, 53740800);
@@ -82,7 +82,7 @@ contract TlcMigrationTest is Test {
         assertTrue(TLCV1(address(tlcProxy)).isGlobalUnlockedScheduleIgnored(17));
 
         // Schedule 36
-        schedule = TLCV1(address(tlcProxy)).getVestingSchedule(36);
+        (schedule,) = TLCV1(address(tlcProxy)).getVestingSchedule(36);
         assertEq(schedule.start, 1686175200);
         assertEq(schedule.end, 1686261600);
         assertEq(schedule.lockDuration, 42861600);
@@ -92,7 +92,7 @@ contract TlcMigrationTest is Test {
         assertFalse(TLCV1(address(tlcProxy)).isGlobalUnlockedScheduleIgnored(36));
 
         // Schedule 60
-        schedule = TLCV1(address(tlcProxy)).getVestingSchedule(60);
+        (schedule,) = TLCV1(address(tlcProxy)).getVestingSchedule(60);
         assertEq(schedule.start, 1686175200);
         assertEq(schedule.end, 1686261600);
         assertEq(schedule.lockDuration, 42861600);
@@ -102,7 +102,7 @@ contract TlcMigrationTest is Test {
         assertFalse(TLCV1(address(tlcProxy)).isGlobalUnlockedScheduleIgnored(60));
 
         // Schedule 66
-        schedule = TLCV1(address(tlcProxy)).getVestingSchedule(66);
+        (schedule,) = TLCV1(address(tlcProxy)).getVestingSchedule(66);
         assertEq(schedule.start, schedulesBefore[66].start);
         assertEq(schedule.end, schedulesBefore[66].end);
         assertEq(schedule.lockDuration, 38188800);
