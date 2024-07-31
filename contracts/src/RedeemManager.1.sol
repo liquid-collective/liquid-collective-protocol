@@ -316,6 +316,7 @@ contract RedeemManagerV1 is Initializable, IRedeemManagerV1, ProtocolVersion {
                 height: height,
                 amount: _lsETHAmount,
                 owner: _recipient,
+                initiator: msg.sender,
                 maxRedeemableEth: maxRedeemableEth
             })
         );
@@ -493,6 +494,9 @@ contract RedeemManagerV1 is Initializable, IRedeemManagerV1, ProtocolVersion {
 
             if (allowList.isDenied(params.redeemRequest.owner)) {
                 revert ClaimOwnerIsDenied();
+            }
+            if (allowList.isDenied(params.redeemRequest.initiator)) {
+                revert ClaimInitiatorIsDenied();
             }
 
             // we check that the redeem request is not already claimed

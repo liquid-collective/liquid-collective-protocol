@@ -1558,6 +1558,71 @@ contract RedeemManagerV1Tests is Test {
         redeemManager.claimRedeemRequests(redeemRequestIds, withdrawEventIds, true, type(uint16).max);
     }
 
+    // A claimRedeemRequest for a redeemRequest whose initiator is denied should fail
+    function testClaimRedeemRequestFailsWithDeniedInitiator(uint256 _salt, uint256 _salt2) external {
+        uint128 amount = uint128(bound(_salt, 1, type(uint128).max));
+
+        address user = _generateAllowlistedUser(_salt);
+        address initiator = _generateAllowlistedUser(_salt2); // Generate a different initiator
+
+        river.sudoDeal(initiator, uint256(amount));
+
+        vm.prank(initiator);
+        river.approve(address(redeemManager), uint256(amount));
+
+        vm.prank(initiator);
+        redeemManager.requestRedeem(amount, user);
+
+        vm.deal(address(this), amount);
+        river.sudoReportWithdraw{value: amount}(address(redeemManager), amount);
+
+        assertEq(redeemManager.getWithdrawalEventCount(), 1);
+        assertEq(redeemManager.getRedeemRequestCount(), 1);
+
+        {
+            RedeemQueue.RedeemRequest memory rr = redeemManager.getRedeemRequestDetails(0);
+
+            assertEq(rr.height, 0);
+            assertEq(rr.amount, amount);
+            assertEq(rr.owner, user);
+            assertEq(rr.initiator, initiator); // Check the initiator
+        }
+
+        {
+            WithdrawalStack.WithdrawalEvent memory we = redeemManager.getWithdrawalEventDetails(0);
+
+            assertEq(we.height, 0);
+            assertEq(we.amount, amount);
+            assertEq(we.withdrawnEth, amount);
+        }
+
+        uint32[] memory redeemRequestIds = new uint32[](1);
+        uint32[] memory withdrawEventIds = new uint32[](1);
+
+        redeemRequestIds[0] = 0;
+        withdrawEventIds[0] = 0;
+
+        assertEq(address(redeemManager).balance, amount);
+        assertEq(user.balance, 0);
+
+        int64[] memory resolvedRedeemRequests = redeemManager.resolveRedeemRequests(redeemRequestIds);
+
+        assertEq(resolvedRedeemRequests.length, 1);
+        assertEq(resolvedRedeemRequests[0], 0);
+
+        _denyUser(initiator);
+
+        // A user can't claim if the initiator is denied
+        vm.expectRevert(abi.encodeWithSignature("ClaimInitiatorIsDenied()"));
+        redeemManager.claimRedeemRequests(redeemRequestIds, withdrawEventIds, true, type(uint16).max);
+
+        // The allowed owner can't claim, if the initiator is denied
+        vm.expectRevert(abi.encodeWithSignature("ClaimInitiatorIsDenied()"));
+        vm.prank(user);
+        redeemManager.claimRedeemRequests(redeemRequestIds, withdrawEventIds, true, type(uint16).max);
+    }
+
+
     // A denied user when undenied would be able to claim the ETH
     function testClaimRedeemRequestClaimsWithDeniedUserUndenied(uint256 _salt) external {
         uint128 amount = uint128(bound(_salt, 1, type(uint128).max));

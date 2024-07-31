@@ -15,6 +15,8 @@ library RedeemQueue {
         uint256 maxRedeemableEth;
         /// @custom:attribute The owner of the redeem request
         address owner;
+        /// @custom:attribute The initiator of the redeem request
+        address initiator;
         /// @custom:attribute The height is the cumulative sum of all the sizes of preceding redeem requests
         uint256 height;
     }
