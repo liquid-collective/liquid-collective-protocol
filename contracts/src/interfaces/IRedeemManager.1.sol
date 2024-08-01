@@ -14,7 +14,9 @@ interface IRedeemManagerV1 {
     /// @param amount The amount of the redeem request in LsETH
     /// @param maxRedeemableEth The maximum amount of eth that can be redeemed from this request
     /// @param id The id of the new redeem request
-    event RequestedRedeem(address indexed recipient, uint256 height, uint256 amount, uint256 maxRedeemableEth, uint32 id);
+    event RequestedRedeem(
+        address indexed recipient, uint256 height, uint256 amount, uint256 maxRedeemableEth, uint32 id
+    );
 
     /// @notice Emitted when a withdrawal event is created
     /// @param height The height of the withdrawal event in LsETH
