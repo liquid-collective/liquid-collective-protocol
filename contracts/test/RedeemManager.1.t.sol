@@ -97,7 +97,7 @@ contract RedeemManagerV1Tests is Test {
     address internal allowlistAllower;
     address internal allowlistDenier;
 
-    event RequestedRedeem(address indexed owner, uint256 height, uint256 size, uint256 maxRedeemableEth, uint32 id);
+    event RequestedRedeem(address indexed recipient, uint256 height, uint256 size, uint256 maxRedeemableEth, uint32 id);
     event ReportedWithdrawal(uint256 height, uint256 size, uint256 ethAmount, uint32 id);
     event SatisfiedRedeemRequest(
         uint32 indexed redeemRequestId,
@@ -196,7 +196,7 @@ contract RedeemManagerV1Tests is Test {
 
             assertEq(rr.height, 0);
             assertEq(rr.amount, amount);
-            assertEq(rr.owner, user);
+            assertEq(rr.recipient, user);
             assertEq(rr.maxRedeemableEth, amount);
         }
 
@@ -231,7 +231,7 @@ contract RedeemManagerV1Tests is Test {
 
             assertEq(rr.height, 0);
             assertEq(rr.amount, amount);
-            assertEq(rr.owner, user);
+            assertEq(rr.recipient, user);
             assertEq(rr.maxRedeemableEth, amount);
         }
 
@@ -283,7 +283,7 @@ contract RedeemManagerV1Tests is Test {
 
             assertEq(rr.height, 0);
             assertEq(rr.amount, amount);
-            assertEq(rr.owner, recipient);
+            assertEq(rr.recipient, recipient);
             assertEq(rr.maxRedeemableEth, amount);
         }
 
@@ -344,7 +344,7 @@ contract RedeemManagerV1Tests is Test {
 
             assertEq(rr.height, 0);
             assertEq(rr.amount, amount0);
-            assertEq(rr.owner, user0);
+            assertEq(rr.recipient, user0);
         }
 
         {
@@ -352,7 +352,7 @@ contract RedeemManagerV1Tests is Test {
 
             assertEq(rr.height, amount0);
             assertEq(rr.amount, amount1);
-            assertEq(rr.owner, user1);
+            assertEq(rr.recipient, user1);
         }
 
         assertEq(redeemManager.getRedeemRequestCount(), 2);
@@ -522,7 +522,7 @@ contract RedeemManagerV1Tests is Test {
 
             assertEq(rr.height, 0);
             assertEq(rr.amount, amount);
-            assertEq(rr.owner, user);
+            assertEq(rr.recipient, user);
         }
 
         {
@@ -567,7 +567,7 @@ contract RedeemManagerV1Tests is Test {
 
             assertEq(rr.height, amount);
             assertEq(rr.amount, 0);
-            assertEq(rr.owner, user);
+            assertEq(rr.recipient, user);
         }
 
         {
@@ -603,7 +603,7 @@ contract RedeemManagerV1Tests is Test {
 
             assertEq(rr.height, 0);
             assertEq(rr.amount, amount);
-            assertEq(rr.owner, user);
+            assertEq(rr.recipient, user);
         }
 
         {
@@ -647,7 +647,7 @@ contract RedeemManagerV1Tests is Test {
 
             assertEq(rr.height, amount);
             assertEq(rr.amount, 0);
-            assertEq(rr.owner, user);
+            assertEq(rr.recipient, user);
         }
 
         {
@@ -683,7 +683,7 @@ contract RedeemManagerV1Tests is Test {
 
             assertEq(rr.height, 0);
             assertEq(rr.amount, amount);
-            assertEq(rr.owner, user);
+            assertEq(rr.recipient, user);
         }
 
         {
@@ -741,7 +741,7 @@ contract RedeemManagerV1Tests is Test {
 
             assertEq(rr.height, amount);
             assertEq(rr.amount, 0);
-            assertEq(rr.owner, user);
+            assertEq(rr.recipient, user);
         }
 
         {
@@ -811,7 +811,7 @@ contract RedeemManagerV1Tests is Test {
 
             assertEq(rr.height, 0);
             assertEq(rr.amount, amount);
-            assertEq(rr.owner, user);
+            assertEq(rr.recipient, user);
         }
 
         {
@@ -858,7 +858,7 @@ contract RedeemManagerV1Tests is Test {
 
             assertEq(rr.height, amount / 2);
             assertEq(rr.amount, amount - (amount / 2));
-            assertEq(rr.owner, user);
+            assertEq(rr.recipient, user);
         }
 
         {
@@ -1008,7 +1008,7 @@ contract RedeemManagerV1Tests is Test {
 
             assertEq(rr.height, 0);
             assertEq(rr.amount, amount);
-            assertEq(rr.owner, user);
+            assertEq(rr.recipient, user);
         }
 
         {
@@ -1062,7 +1062,7 @@ contract RedeemManagerV1Tests is Test {
 
             assertEq(rr.height, amount);
             assertEq(rr.amount, 0);
-            assertEq(rr.owner, user);
+            assertEq(rr.recipient, user);
         }
 
         {
@@ -1113,7 +1113,7 @@ contract RedeemManagerV1Tests is Test {
 
             assertEq(rr.height, 0);
             assertEq(rr.amount, amount);
-            assertEq(rr.owner, user);
+            assertEq(rr.recipient, user);
         }
 
         {
@@ -1121,7 +1121,7 @@ contract RedeemManagerV1Tests is Test {
 
             assertEq(rr.height, amount);
             assertEq(rr.amount, amount);
-            assertEq(rr.owner, userB);
+            assertEq(rr.recipient, userB);
         }
 
         {
@@ -1164,7 +1164,7 @@ contract RedeemManagerV1Tests is Test {
 
             assertEq(rr.height, amount);
             assertEq(rr.amount, 0);
-            assertEq(rr.owner, user);
+            assertEq(rr.recipient, user);
         }
 
         {
@@ -1172,7 +1172,7 @@ contract RedeemManagerV1Tests is Test {
 
             assertEq(rr.height, amount * 2);
             assertEq(rr.amount, 0);
-            assertEq(rr.owner, userB);
+            assertEq(rr.recipient, userB);
         }
 
         {
@@ -1397,7 +1397,7 @@ contract RedeemManagerV1Tests is Test {
 
             assertEq(redeemRequest.height, idx * 30e18);
             assertEq(redeemRequest.amount, 30e18);
-            assertEq(redeemRequest.owner, user);
+            assertEq(redeemRequest.recipient, user);
             assertEq(redeemRequest.maxRedeemableEth, applyRate(30e18, rates[idx]));
         }
 
@@ -1521,7 +1521,7 @@ contract RedeemManagerV1Tests is Test {
 
             assertEq(rr.height, 0);
             assertEq(rr.amount, amount);
-            assertEq(rr.owner, user);
+            assertEq(rr.recipient, user);
         }
 
         {
@@ -1548,12 +1548,12 @@ contract RedeemManagerV1Tests is Test {
 
         _denyUser(user);
 
-        // A user can't claim if the owner is denied
-        vm.expectRevert(abi.encodeWithSignature("ClaimOwnerIsDenied()"));
+        // A user can't claim if the recipient is denied
+        vm.expectRevert(abi.encodeWithSignature("ClaimRecipientIsDenied()"));
         redeemManager.claimRedeemRequests(redeemRequestIds, withdrawEventIds, true, type(uint16).max);
 
         // The denied user can't claim
-        vm.expectRevert(abi.encodeWithSignature("ClaimOwnerIsDenied()"));
+        vm.expectRevert(abi.encodeWithSignature("ClaimRecipientIsDenied()"));
         vm.prank(user);
         redeemManager.claimRedeemRequests(redeemRequestIds, withdrawEventIds, true, type(uint16).max);
     }
@@ -1584,7 +1584,7 @@ contract RedeemManagerV1Tests is Test {
 
             assertEq(rr.height, 0);
             assertEq(rr.amount, amount);
-            assertEq(rr.owner, user);
+            assertEq(rr.recipient, user);
             assertEq(rr.initiator, initiator); // Check the initiator
         }
 
@@ -1616,7 +1616,7 @@ contract RedeemManagerV1Tests is Test {
         vm.expectRevert(abi.encodeWithSignature("ClaimInitiatorIsDenied()"));
         redeemManager.claimRedeemRequests(redeemRequestIds, withdrawEventIds, true, type(uint16).max);
 
-        // The allowed owner can't claim, if the initiator is denied
+        // The allowed recipient can't claim, if the initiator is denied
         vm.expectRevert(abi.encodeWithSignature("ClaimInitiatorIsDenied()"));
         vm.prank(user);
         redeemManager.claimRedeemRequests(redeemRequestIds, withdrawEventIds, true, type(uint16).max);
@@ -1647,7 +1647,7 @@ contract RedeemManagerV1Tests is Test {
 
             assertEq(rr.height, 0);
             assertEq(rr.amount, amount);
-            assertEq(rr.owner, user);
+            assertEq(rr.recipient, user);
         }
 
         {
@@ -1674,12 +1674,12 @@ contract RedeemManagerV1Tests is Test {
 
         _denyUser(user);
 
-        // A user can't claim if the owner is denied
-        vm.expectRevert(abi.encodeWithSignature("ClaimOwnerIsDenied()"));
+        // A user can't claim if the recipient is denied
+        vm.expectRevert(abi.encodeWithSignature("ClaimRecipientIsDenied()"));
         redeemManager.claimRedeemRequests(redeemRequestIds, withdrawEventIds, true, type(uint16).max);
 
         // The denied user can't claim
-        vm.expectRevert(abi.encodeWithSignature("ClaimOwnerIsDenied()"));
+        vm.expectRevert(abi.encodeWithSignature("ClaimRecipientIsDenied()"));
         vm.prank(user);
         redeemManager.claimRedeemRequests(redeemRequestIds, withdrawEventIds, true, type(uint16).max);
 
@@ -1705,7 +1705,7 @@ contract RedeemManagerV1Tests is Test {
 
             assertEq(rr.height, amount);
             assertEq(rr.amount, 0);
-            assertEq(rr.owner, user);
+            assertEq(rr.recipient, user);
         }
 
         {
@@ -1782,7 +1782,7 @@ contract RedeemManagerV1Tests is Test {
         redeemRequestIds[0] = 1;
         withdrawEventIds[0] = 1;
 
-        vm.expectRevert(abi.encodeWithSignature("ClaimOwnerIsDenied()"));
+        vm.expectRevert(abi.encodeWithSignature("ClaimRecipientIsDenied()"));
         vm.prank(user2);
         redeemManager.claimRedeemRequests(redeemRequestIds, withdrawEventIds, true, type(uint16).max);
     }
