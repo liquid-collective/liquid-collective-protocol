@@ -11,6 +11,8 @@ import "../src/state/redeemManager/RedeemQueue.sol";
 import "../src/state/redeemManager/WithdrawalStack.sol";
 import "../src/RedeemManager.1.sol";
 import "../src/Allowlist.1.sol";
+import "./mocks/RejectEtherMock.sol";
+
 
 contract RiverMock {
     mapping(address => uint256) internal balances;
@@ -131,9 +133,8 @@ contract RedeemManagerV1Tests is Test {
         redeemManager.initializeRedeemManagerV1(address(river));
     }
 
-    function _generateAllowlistedUser(uint256 _salt) internal returns (address) {
-        address user = uf._new(_salt);
-
+    // allowlist a user
+    function _allowlistUser(address user) internal {
         address[] memory accounts = new address[](1);
         accounts[0] = user;
         uint256[] memory permissions = new uint256[](1);
@@ -141,7 +142,12 @@ contract RedeemManagerV1Tests is Test {
 
         vm.prank(allowlistAllower);
         allowlist.setAllowPermissions(accounts, permissions);
+    }
+    
 
+    function _generateAllowlistedUser(uint256 _salt) internal returns (address) {
+        address user = uf._new(_salt);
+        _allowlistUser(user);
         return user;
     }
 
@@ -1841,6 +1847,67 @@ contract RedeemManagerV1Tests is Test {
         emit ClaimedRedeemRequest(0, initiator, amount, amount, 0);
         redeemManager.claimRedeemRequests(redeemRequestIds, withdrawEventIds, true, type(uint16).max);
     }
+
+    function testClaimRedeemRequestRevertsOnFailedEtherTransferToRecipient(uint256 _salt) external {
+        uint128 amount = uint128(bound(_salt, 1, type(uint128).max));
+
+        address initiator = _generateAllowlistedUser(_salt);
+
+        // Deploy the RejectEtherMock contract for recipient
+        address recipient = address(new RejectEtherMock());
+        _allowlistUser(recipient);
+
+        // Fund the initiator
+        river.sudoDeal(initiator, uint256(amount));
+
+        // Approve and request redeem with the initiator
+        vm.prank(initiator);
+        river.approve(address(redeemManager), uint256(amount));
+
+        vm.prank(initiator);
+        redeemManager.requestRedeem(amount, recipient);
+
+        vm.deal(address(this), amount);
+        river.sudoReportWithdraw{value: amount}(address(redeemManager), amount);
+
+        assertEq(redeemManager.getWithdrawalEventCount(), 1);
+        assertEq(redeemManager.getRedeemRequestCount(), 1);
+
+        {
+            RedeemQueue.RedeemRequest memory rr = redeemManager.getRedeemRequestDetails(0);
+
+            assertEq(rr.height, 0);
+            assertEq(rr.amount, amount);
+            assertEq(rr.recipient, recipient);
+        }
+
+        {
+            WithdrawalStack.WithdrawalEvent memory we = redeemManager.getWithdrawalEventDetails(0);
+
+            assertEq(we.height, 0);
+            assertEq(we.amount, amount);
+            assertEq(we.withdrawnEth, amount);
+        }
+
+        uint32[] memory redeemRequestIds = new uint32[](1);
+        uint32[] memory withdrawEventIds = new uint32[](1);
+
+        redeemRequestIds[0] = 0;
+        withdrawEventIds[0] = 0;
+
+        assertEq(address(redeemManager).balance, amount);
+        assertEq(initiator.balance, 0);
+
+        int64[] memory resolvedRedeemRequests = redeemManager.resolveRedeemRequests(redeemRequestIds);
+
+        assertEq(resolvedRedeemRequests.length, 1);
+        assertEq(resolvedRedeemRequests[0], 0);
+
+        // Attempt to claim the redeem request and expect it to fail
+        vm.expectRevert(abi.encodeWithSignature("ClaimRedeemFailed(address,bytes)", recipient, new bytes(0)));
+        redeemManager.claimRedeemRequests(redeemRequestIds, withdrawEventIds, true, type(uint16).max);
+    }
+
 
     function testVersion() external {
         assertEq(redeemManager.version(), "1.2.0");
