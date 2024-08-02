@@ -13,7 +13,6 @@ import "../src/RedeemManager.1.sol";
 import "../src/Allowlist.1.sol";
 import "./mocks/RejectEtherMock.sol";
 
-
 contract RiverMock {
     mapping(address => uint256) internal balances;
     mapping(address => mapping(address => uint256)) internal approvals;
@@ -143,7 +142,6 @@ contract RedeemManagerV1Tests is Test {
         vm.prank(allowlistAllower);
         allowlist.setAllowPermissions(accounts, permissions);
     }
-    
 
     function _generateAllowlistedUser(uint256 _salt) internal returns (address) {
         address user = uf._new(_salt);
@@ -1907,7 +1905,6 @@ contract RedeemManagerV1Tests is Test {
         vm.expectRevert(abi.encodeWithSignature("ClaimRedeemFailed(address,bytes)", recipient, new bytes(0)));
         redeemManager.claimRedeemRequests(redeemRequestIds, withdrawEventIds, true, type(uint16).max);
     }
-
 
     function testVersion() external {
         assertEq(redeemManager.version(), "1.2.0");
