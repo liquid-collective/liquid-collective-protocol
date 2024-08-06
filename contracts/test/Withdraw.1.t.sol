@@ -166,6 +166,6 @@ contract WithdrawV1Tests is WithdrawV1TestBase {
     }
 
     function testVersion() external {
-        assertEq(withdraw.version(), "1.2.0");
+        assertEq(withdraw.version(), "2.0.0");
     }
 }

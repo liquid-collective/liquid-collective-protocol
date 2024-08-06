@@ -505,6 +505,6 @@ contract FirewallTests is BytesGenerator, Test {
     }
 
     function testVersion() external {
-        assertEq(riverFirewall.version(), "1.2.0");
+        assertEq(riverFirewall.version(), "2.0.0");
     }
 }

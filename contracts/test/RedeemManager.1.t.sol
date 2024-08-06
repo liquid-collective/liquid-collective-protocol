@@ -1724,6 +1724,6 @@ contract RedeemManagerV1Tests is Test {
     }
 
     function testVersion() external {
-        assertEq(redeemManager.version(), "1.2.0");
+        assertEq(redeemManager.version(), "2.0.0");
     }
 }
