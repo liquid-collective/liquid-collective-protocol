@@ -315,7 +315,8 @@ contract RedeemManagerV1 is Initializable, IRedeemManagerV1, IProtocolVersion {
             RedeemQueue.RedeemRequest({
                 height: height,
                 amount: _lsETHAmount,
-                owner: _recipient,
+                recipient: _recipient,
+                initiator: msg.sender,
                 maxRedeemableEth: maxRedeemableEth
             })
         );
@@ -491,8 +492,11 @@ contract RedeemManagerV1 is Initializable, IRedeemManagerV1, IProtocolVersion {
             // we load the redeem request in memory
             params.redeemRequest = redeemRequests[_redeemRequestIds[idx]];
 
-            if (allowList.isDenied(params.redeemRequest.owner)) {
-                revert ClaimOwnerIsDenied();
+            if (allowList.isDenied(params.redeemRequest.recipient)) {
+                revert ClaimRecipientIsDenied();
+            }
+            if (allowList.isDenied(params.redeemRequest.initiator)) {
+                revert ClaimInitiatorIsDenied();
             }
 
             // we check that the redeem request is not already claimed
@@ -524,14 +528,14 @@ contract RedeemManagerV1 is Initializable, IRedeemManagerV1, IProtocolVersion {
             claimStatuses[idx] = params.redeemRequest.amount == 0 ? CLAIM_FULLY_CLAIMED : CLAIM_PARTIALLY_CLAIMED;
 
             {
-                (bool success, bytes memory rdata) = params.redeemRequest.owner.call{value: params.ethAmount}("");
+                (bool success, bytes memory rdata) = params.redeemRequest.recipient.call{value: params.ethAmount}("");
                 if (!success) {
-                    revert ClaimRedeemFailed(params.redeemRequest.owner, rdata);
+                    revert ClaimRedeemFailed(params.redeemRequest.recipient, rdata);
                 }
             }
             emit ClaimedRedeemRequest(
                 _redeemRequestIds[idx],
-                params.redeemRequest.owner,
+                params.redeemRequest.recipient,
                 params.ethAmount,
                 params.lsETHAmount,
                 params.redeemRequest.amount
