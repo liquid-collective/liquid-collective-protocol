@@ -3,7 +3,7 @@ pragma solidity 0.8.20;
 
 import "./interfaces/IRiver.1.sol";
 import "./interfaces/IELFeeRecipient.1.sol";
-import "./ProtocolVersion.sol";
+import "./interfaces/IProtocolVersion.sol";
 
 import "./libraries/LibUint256.sol";
 
@@ -14,7 +14,7 @@ import "./state/shared/RiverAddress.sol";
 /// @title Execution Layer Fee Recipient (v1)
 /// @author Kiln
 /// @notice This contract receives all the execution layer fees from the proposed blocks + bribes
-contract ELFeeRecipientV1 is Initializable, IELFeeRecipientV1, ProtocolVersion {
+contract ELFeeRecipientV1 is Initializable, IELFeeRecipientV1, IProtocolVersion {
     /// @inheritdoc IELFeeRecipientV1
     function initELFeeRecipientV1(address _riverAddress) external init(0) {
         RiverAddress.set(_riverAddress);
@@ -42,5 +42,9 @@ contract ELFeeRecipientV1 is Initializable, IELFeeRecipientV1, ProtocolVersion {
     /// @inheritdoc IELFeeRecipientV1
     fallback() external payable {
         revert InvalidCall();
+    }
+
+    function version() external pure returns (string memory) {
+        return "1.2.0";
     }
 }
