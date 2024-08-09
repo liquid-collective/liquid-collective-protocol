@@ -613,6 +613,6 @@ contract RiverV1 is
     }
 
     function version() external pure returns (string memory) {
-        return "2.0.0";
+        return "1.2.0";
     }
 }

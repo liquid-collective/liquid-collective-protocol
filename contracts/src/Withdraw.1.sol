@@ -54,6 +54,6 @@ contract WithdrawV1 is IWithdrawV1, Initializable, IProtocolVersion {
     }
 
     function version() external pure returns (string memory) {
-        return "2.0.0";
+        return "1.2.0";
     }
 }
