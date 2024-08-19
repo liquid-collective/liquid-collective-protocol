@@ -30,7 +30,7 @@ import "./state/river/MetadataURI.sol";
 import "./state/river/LastConsensusLayerReport.sol";
 
 /// @title River (v1)
-/// @author Kiln
+/// @author Alluvial Finance Inc.
 /// @notice This contract merges all the manager contracts and implements all the virtual methods stitching all components together
 contract RiverV1 is
     ConsensusLayerDepositManagerV1,

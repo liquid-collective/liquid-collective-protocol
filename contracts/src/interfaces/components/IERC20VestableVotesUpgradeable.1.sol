@@ -4,7 +4,7 @@ pragma solidity 0.8.20;
 import "../../state/tlc/VestingSchedules.2.sol";
 
 /// @title ERC20 Vestable Votes Upgradeable Interface(v1)
-/// @author Alluvial
+/// @author Alluvial Finance Inc.
 /// @notice This interface exposes methods to manage vestings
 interface IERC20VestableVotesUpgradeableV1 {
     /// @notice A new vesting schedule has been created

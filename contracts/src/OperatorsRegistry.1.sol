@@ -21,7 +21,7 @@ import "./state/migration/OperatorsRegistry_FundedKeyEventRebroadcasting_KeyInde
 import "./state/migration/OperatorsRegistry_FundedKeyEventRebroadcasting_OperatorIndex.sol";
 
 /// @title Operators Registry (v1)
-/// @author Kiln
+/// @author Alluvial Finance Inc.
 /// @notice This contract handles the list of operators and their keys
 contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrable, IProtocolVersion {
     /// @notice Maximum validators given to an operator per selection loop round

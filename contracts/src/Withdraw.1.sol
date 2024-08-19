@@ -11,7 +11,7 @@ import "./libraries/LibUint256.sol";
 import "./state/shared/RiverAddress.sol";
 
 /// @title Withdraw (v1)
-/// @author Kiln
+/// @author Alluvial Finance Inc.
 /// @notice This contract is in charge of holding the exit and skimming funds and allow river to pull these funds
 contract WithdrawV1 is IWithdrawV1, Initializable, IProtocolVersion {
     modifier onlyRiver() {

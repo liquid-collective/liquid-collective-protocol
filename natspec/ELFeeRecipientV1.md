@@ -1,6 +1,6 @@
 # ELFeeRecipientV1
 
-*Kiln*
+*Alluvial Finance Inc.*
 
 > Execution Layer Fee Recipient (v1)
 
@@ -41,6 +41,23 @@ Pulls ETH to the River contract
 | Name | Type | Description |
 |---|---|---|
 | _maxAmount | uint256 | The maximum amount to pull into the system |
+
+### version
+
+```solidity
+function version() external pure returns (string)
+```
+
+Retrieves the version of the contract
+
+
+
+
+#### Returns
+
+| Name | Type | Description |
+|---|---|---|
+| _0 | string | Version of the contract |
 
 
 

@@ -1,6 +1,6 @@
 # IUserDepositManagerV1
 
-*Kiln*
+*Alluvial Finance Inc.*
 
 > User Deposit Manager (v1)
 

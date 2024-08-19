@@ -15,7 +15,7 @@ import "./state/shared/RiverAddress.sol";
 import "./state/slashingCoverage/BalanceForCoverage.sol";
 
 /// @title Coverage Fund (v1)
-/// @author Kiln
+/// @author Alluvial Finance Inc.
 /// @notice This contract receive donations for the slashing coverage fund and pull the funds into river
 /// @notice This contract acts as a temporary buffer for funds that should be pulled in case of a loss of money on the consensus layer due to slashing events.
 /// @notice There is no fee taken on these funds, they are entirely distributed to the LsETH holders, and no shares will get minted.

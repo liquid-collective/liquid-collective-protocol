@@ -2,7 +2,7 @@
 pragma solidity 0.8.20;
 
 /// @title User Deposit Manager (v1)
-/// @author Kiln
+/// @author Alluvial Finance Inc.
 /// @notice This interface exposes methods to handle the inbound transfers cases or the explicit submissions
 interface IUserDepositManagerV1 {
     /// @notice User deposited ETH in the system

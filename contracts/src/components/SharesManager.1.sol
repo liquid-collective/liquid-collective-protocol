@@ -10,7 +10,7 @@ import "../state/river/SharesPerOwner.sol";
 import "../state/shared/ApprovalsPerOwner.sol";
 
 /// @title Shares Manager (v1)
-/// @author Kiln
+/// @author Alluvial Finance Inc.
 /// @notice This contract handles the shares of the depositor and the ERC20 interface
 abstract contract SharesManagerV1 is ISharesManagerV1 {
     /// @notice Internal hook triggered on the external transfer call
@@ -227,13 +227,13 @@ abstract contract SharesManagerV1 is ISharesManagerV1 {
     /// @return sharesToMint The amnount of minted shares
     function _mintShares(address _owner, uint256 _underlyingAssetValue) internal returns (uint256 sharesToMint) {
         uint256 oldTotalAssetBalance = _assetBalance() - _underlyingAssetValue;
-        uint256 totalSupply = _totalSupply();
+        uint256 tSupply = _totalSupply();
 
-        if (oldTotalAssetBalance == 0 || totalSupply == 0) {
+        if (oldTotalAssetBalance == 0 || tSupply == 0) {
             sharesToMint = _underlyingAssetValue;
             _mintRawShares(_owner, _underlyingAssetValue);
         } else {
-            sharesToMint = (_underlyingAssetValue * totalSupply) / oldTotalAssetBalance;
+            sharesToMint = (_underlyingAssetValue * tSupply) / oldTotalAssetBalance;
             _mintRawShares(_owner, sharesToMint);
         }
     }

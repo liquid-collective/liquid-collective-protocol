@@ -2,7 +2,7 @@
 pragma solidity 0.8.20;
 
 /// @title Execution Layer Fee Recipient Interface (v1)
-/// @author Kiln
+/// @author Alluvial Finance Inc.
 /// @notice This interface exposes methods to receive all the execution layer fees from the proposed blocks + bribes
 interface IELFeeRecipientV1 {
     /// @notice The storage river address has changed

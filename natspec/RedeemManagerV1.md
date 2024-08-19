@@ -1,6 +1,6 @@
 # RedeemManagerV1
 
-*Kiln*
+*Alluvial Finance Inc.*
 
 > Redeem Manager (v1)
 
@@ -302,6 +302,23 @@ Resolves the provided list of redeem request ids
 |---|---|---|
 | withdrawalEventIds | int64[] | The list of withdrawal events matching every redeem request (or error codes) |
 
+### version
+
+```solidity
+function version() external pure returns (string)
+```
+
+Retrieves the version of the contract
+
+
+
+
+#### Returns
+
+| Name | Type | Description |
+|---|---|---|
+| _0 | string | Version of the contract |
+
 
 
 ## Events
@@ -365,7 +382,7 @@ Emitted when a withdrawal event is created
 ### RequestedRedeem
 
 ```solidity
-event RequestedRedeem(address indexed owner, uint256 height, uint256 amount, uint256 maxRedeemableEth, uint32 id)
+event RequestedRedeem(address indexed recipient, uint256 height, uint256 amount, uint256 maxRedeemableEth, uint32 id)
 ```
 
 Emitted when a redeem request is created
@@ -376,7 +393,7 @@ Emitted when a redeem request is created
 
 | Name | Type | Description |
 |---|---|---|
-| owner `indexed` | address | The owner of the redeem request |
+| recipient `indexed` | address | The recipient of the redeem request |
 | height  | uint256 | The height of the redeem request in LsETH |
 | amount  | uint256 | The amount of the redeem request in LsETH |
 | maxRedeemableEth  | uint256 | The maximum amount of eth that can be redeemed from this request |
@@ -439,6 +456,28 @@ Emitted when the River address is set
 
 
 ## Errors
+
+### ClaimInitiatorIsDenied
+
+```solidity
+error ClaimInitiatorIsDenied()
+```
+
+Thrown when the claim initiator is denied
+
+
+
+
+### ClaimRecipientIsDenied
+
+```solidity
+error ClaimRecipientIsDenied()
+```
+
+Thrown when the claim recipient is denied
+
+
+
 
 ### ClaimRedeemFailed
 
@@ -520,6 +559,17 @@ error InvalidZeroAmount()
 ```
 
 Thrown When a zero value is provided
+
+
+
+
+### RecipientIsDenied
+
+```solidity
+error RecipientIsDenied()
+```
+
+Thrown when the recipient of redeemRequest is denied
 
 
 

@@ -16,7 +16,7 @@ import "./state/oracle/Quorum.sol";
 import "./state/oracle/ReportsPositions.sol";
 
 /// @title Oracle (v1)
-/// @author Kiln
+/// @author Alluvial Finance Inc.
 /// @notice This contract handles the input from the allowed oracle members. Highly inspired by Lido's implementation.
 contract OracleV1 is IOracleV1, Initializable, Administrable, IProtocolVersion {
     modifier onlyAdminOrMember(address _oracleMember) {
