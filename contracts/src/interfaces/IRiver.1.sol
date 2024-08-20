@@ -9,7 +9,7 @@ import "./components/ISharesManager.1.sol";
 import "./components/IUserDepositManager.1.sol";
 
 /// @title River Interface (v1)
-/// @author Kiln
+/// @author Alluvial Finance Inc.
 /// @notice The main system interface
 interface IRiverV1 is IConsensusLayerDepositManagerV1, IUserDepositManagerV1, ISharesManagerV1, IOracleManagerV1 {
     /// @notice Funds have been pulled from the Execution Layer Fee Recipient

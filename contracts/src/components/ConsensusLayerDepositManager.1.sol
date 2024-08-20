@@ -12,9 +12,10 @@ import "../state/river/WithdrawalCredentials.sol";
 import "../state/river/DepositedValidatorCount.sol";
 import "../state/river/BalanceToDeposit.sol";
 import "../state/river/CommittedBalance.sol";
+import "../state/river/KeeperAddress.sol";
 
 /// @title Consensus Layer Deposit Manager (v1)
-/// @author Kiln
+/// @author Alluvial Finance Inc.
 /// @notice This contract handles the interactions with the official deposit contract, funding all validators
 /// @notice Whenever a deposit to the consensus layer is requested, this contract computed the amount of keys
 /// @notice that could be deposited depending on the amount available in the contract. It then tries to retrieve
@@ -57,6 +58,10 @@ abstract contract ConsensusLayerDepositManagerV1 is IConsensusLayerDepositManage
         emit SetWithdrawalCredentials(_withdrawalCredentials);
     }
 
+    function _setKeeper(address _keeper) internal {
+        KeeperAddress.set(_keeper);
+    }
+
     /// @inheritdoc IConsensusLayerDepositManagerV1
     function getCommittedBalance() external view returns (uint256) {
         return CommittedBalance.get();
@@ -78,7 +83,20 @@ abstract contract ConsensusLayerDepositManagerV1 is IConsensusLayerDepositManage
     }
 
     /// @inheritdoc IConsensusLayerDepositManagerV1
-    function depositToConsensusLayer(uint256 _maxCount) external {
+    function getKeeper() external view returns (address) {
+        return KeeperAddress.get();
+    }
+
+    /// @inheritdoc IConsensusLayerDepositManagerV1
+    function depositToConsensusLayerWithDepositRoot(uint256 _maxCount, bytes32 _depositRoot) external {
+        if (msg.sender != KeeperAddress.get()) {
+            revert OnlyKeeper();
+        }
+
+        if (IDepositContract(DepositContractAddress.get()).get_deposit_root() != _depositRoot) {
+            revert InvalidDepositRoot();
+        }
+
         uint256 committedBalance = CommittedBalance.get();
         uint256 keyToDepositCount = LibUint256.min(committedBalance / DEPOSIT_SIZE, _maxCount);
 

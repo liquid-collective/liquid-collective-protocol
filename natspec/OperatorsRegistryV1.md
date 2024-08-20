@@ -1,6 +1,6 @@
 # OperatorsRegistryV1
 
-*Kiln*
+*Alluvial Finance Inc.*
 
 > Operators Registry (v1)
 
@@ -128,6 +128,29 @@ Get the current exit request demand waiting to be triggeredThis value is the amo
 | Name | Type | Description |
 |---|---|---|
 | _0 | uint256 | The current exit request demand |
+
+### getNextValidatorsToDepositFromActiveOperators
+
+```solidity
+function getNextValidatorsToDepositFromActiveOperators(uint256 _count) external view returns (bytes[] publicKeys, bytes[] signatures)
+```
+
+Get the next validators that would be funded
+
+
+
+#### Parameters
+
+| Name | Type | Description |
+|---|---|---|
+| _count | uint256 | Count of validators that would be funded next |
+
+#### Returns
+
+| Name | Type | Description |
+|---|---|---|
+| publicKeys | bytes[] | An array of fundable public keys |
+| signatures | bytes[] | An array of signatures linked to the public keys |
 
 ### getOperator
 
@@ -520,6 +543,23 @@ Changes the operator status
 |---|---|---|
 | _index | uint256 | The operator index |
 | _newStatus | bool | The new status of the operator |
+
+### version
+
+```solidity
+function version() external pure returns (string)
+```
+
+Retrieves the version of the contract
+
+
+
+
+#### Returns
+
+| Name | Type | Description |
+|---|---|---|
+| _0 | string | Version of the contract |
 
 
 

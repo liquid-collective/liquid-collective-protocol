@@ -164,4 +164,8 @@ contract WithdrawV1Tests is WithdrawV1TestBase {
         river.debug_pullFunds(address(withdraw), 0);
         assertEq(0, address(river).balance);
     }
+
+    function testVersion() external {
+        assertEq(withdraw.version(), "1.2.0");
+    }
 }

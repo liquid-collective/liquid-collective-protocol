@@ -1,6 +1,6 @@
 # IConsensusLayerDepositManagerV1
 
-*Kiln*
+*Alluvial Finance Inc.*
 
 > Consensys Layer Deposit Manager Interface (v1)
 
@@ -10,10 +10,10 @@ This interface exposes methods to handle the interactions with the official depo
 
 ## Methods
 
-### depositToConsensusLayer
+### depositToConsensusLayerWithDepositRoot
 
 ```solidity
-function depositToConsensusLayer(uint256 _maxCount) external nonpayable
+function depositToConsensusLayerWithDepositRoot(uint256 _maxCount, bytes32 _depositRoot) external nonpayable
 ```
 
 Deposits current balance to the Consensus Layer by batches of 32 ETH
@@ -25,6 +25,7 @@ Deposits current balance to the Consensus Layer by batches of 32 ETH
 | Name | Type | Description |
 |---|---|---|
 | _maxCount | uint256 | The maximum amount of validator keys to fund |
+| _depositRoot | bytes32 | The root of the deposit tree |
 
 ### getBalanceToDeposit
 
@@ -76,6 +77,23 @@ Get the deposited validator count (the count of deposits made by the contract)
 | Name | Type | Description |
 |---|---|---|
 | _0 | uint256 | The deposited validator count |
+
+### getKeeper
+
+```solidity
+function getKeeper() external view returns (address)
+```
+
+Get the keeper address
+
+
+
+
+#### Returns
+
+| Name | Type | Description |
+|---|---|---|
+| _0 | address | The keeper address |
 
 ### getWithdrawalCredentials
 
@@ -184,6 +202,17 @@ The length of the BLS Signature is invalid during deposit
 
 
 
+### InvalidDepositRoot
+
+```solidity
+error InvalidDepositRoot()
+```
+
+Invalid deposit root
+
+
+
+
 ### InvalidPublicKeyCount
 
 ```solidity
@@ -235,6 +264,17 @@ error NotEnoughFunds()
 ```
 
 Not enough funds to deposit one validator
+
+
+
+
+### OnlyKeeper
+
+```solidity
+error OnlyKeeper()
+```
+
+
 
 
 

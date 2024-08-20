@@ -10,7 +10,7 @@ import "../state/river/SharesPerOwner.sol";
 import "../state/shared/ApprovalsPerOwner.sol";
 
 /// @title Shares Manager (v1)
-/// @author Kiln
+/// @author Alluvial Finance Inc.
 /// @notice This contract handles the shares of the depositor and the ERC20 interface
 abstract contract SharesManagerV1 is ISharesManagerV1 {
     /// @notice Internal hook triggered on the external transfer call
@@ -157,7 +157,9 @@ abstract contract SharesManagerV1 is ISharesManagerV1 {
             revert AllowanceTooLow(_from, msg.sender, currentAllowance, _value);
         }
         if (currentAllowance != type(uint256).max) {
-            _approve(_from, msg.sender, currentAllowance - _value);
+            unchecked {
+                _approve(_from, msg.sender, currentAllowance - _value);
+            }
         }
     }
 
@@ -209,13 +211,13 @@ abstract contract SharesManagerV1 is ISharesManagerV1 {
     /// @param _balance Amount of underlying asset balance to convert
     /// @return The shares from the given balance
     function _sharesFromBalance(uint256 _balance) internal view returns (uint256) {
-        uint256 _totalSharesValue = Shares.get();
+        uint256 _totalUnderlyingSupply = _assetBalance();
 
-        if (_totalSharesValue == 0) {
+        if (_totalUnderlyingSupply == 0) {
             return 0;
         }
 
-        return (_balance * _totalSharesValue) / _assetBalance();
+        return (_balance * Shares.get()) / _totalUnderlyingSupply;
     }
 
     /// @notice Internal utility to mint shares for the specified user
@@ -225,12 +227,13 @@ abstract contract SharesManagerV1 is ISharesManagerV1 {
     /// @return sharesToMint The amnount of minted shares
     function _mintShares(address _owner, uint256 _underlyingAssetValue) internal returns (uint256 sharesToMint) {
         uint256 oldTotalAssetBalance = _assetBalance() - _underlyingAssetValue;
+        uint256 tSupply = _totalSupply();
 
-        if (oldTotalAssetBalance == 0) {
+        if (oldTotalAssetBalance == 0 || tSupply == 0) {
             sharesToMint = _underlyingAssetValue;
             _mintRawShares(_owner, _underlyingAssetValue);
         } else {
-            sharesToMint = (_underlyingAssetValue * _totalSupply()) / oldTotalAssetBalance;
+            sharesToMint = (_underlyingAssetValue * tSupply) / oldTotalAssetBalance;
             _mintRawShares(_owner, sharesToMint);
         }
     }

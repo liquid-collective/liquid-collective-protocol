@@ -4,7 +4,7 @@ pragma solidity 0.8.20;
 import "../state/operatorsRegistry/Operators.2.sol";
 
 /// @title Operators Registry Interface (v1)
-/// @author Kiln
+/// @author Alluvial Finance Inc.
 /// @notice This interface exposes methods to handle the list of operators and their keys
 interface IOperatorsRegistryV1 {
     /// @notice A new operator has been added to the registry
@@ -239,6 +239,15 @@ interface IOperatorsRegistryV1 {
         external
         view
         returns (bytes memory publicKey, bytes memory signature, bool funded);
+
+    /// @notice Get the next validators that would be funded
+    /// @param _count Count of validators that would be funded next
+    /// @return publicKeys An array of fundable public keys
+    /// @return signatures An array of signatures linked to the public keys
+    function getNextValidatorsToDepositFromActiveOperators(uint256 _count)
+        external
+        view
+        returns (bytes[] memory publicKeys, bytes[] memory signatures);
 
     /// @notice Retrieve the active operator set
     /// @return The list of active operators and their details

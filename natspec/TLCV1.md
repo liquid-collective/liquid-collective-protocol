@@ -1,6 +1,6 @@
 # TLCV1
 
-*Alluvial*
+*Alluvial Finance Inc.*
 
 > TLC (v1)
 
@@ -9,6 +9,23 @@ The TLC token has a max supply of 1,000,000,000 and 18 decimal places.Upon deplo
 
 
 ## Methods
+
+### CLOCK_MODE
+
+```solidity
+function CLOCK_MODE() external view returns (string)
+```
+
+
+
+*Description of the clock*
+
+
+#### Returns
+
+| Name | Type | Description |
+|---|---|---|
+| _0 | string | undefined |
 
 ### DOMAIN_SEPARATOR
 
@@ -118,6 +135,23 @@ function checkpoints(address account, uint32 pos) external view returns (struct 
 |---|---|---|
 | _0 | ERC20VotesUpgradeable.Checkpoint | undefined |
 
+### clock
+
+```solidity
+function clock() external view returns (uint48)
+```
+
+
+
+*Clock used for flagging checkpoints. Can be overridden to implement timestamp based checkpoints (and voting).*
+
+
+#### Returns
+
+| Name | Type | Description |
+|---|---|---|
+| _0 | uint48 | undefined |
+
 ### computeVestingReleasableAmount
 
 ```solidity
@@ -201,7 +235,7 @@ function decimals() external view returns (uint8)
 
 
 
-*Returns the number of decimals used to get its user representation. For example, if `decimals` equals `2`, a balance of `505` tokens should be displayed to a user as `5.05` (`505 / 10 ** 2`). Tokens usually opt for a value of 18, imitating the relationship between Ether and Wei. This is the value {ERC20} uses, unless this function is overridden; NOTE: This information is only used for _display_ purposes: it in no way affects any of the arithmetic of the contract, including {IERC20-balanceOf} and {IERC20-transfer}.*
+*Returns the number of decimals used to get its user representation. For example, if `decimals` equals `2`, a balance of `505` tokens should be displayed to a user as `5.05` (`505 / 10 ** 2`). Tokens usually opt for a value of 18, imitating the relationship between Ether and Wei. This is the default value returned by this function, unless it&#39;s overridden. NOTE: This information is only used for _display_ purposes: it in no way affects any of the arithmetic of the contract, including {IERC20-balanceOf} and {IERC20-transfer}.*
 
 
 #### Returns
@@ -315,21 +349,44 @@ function delegates(address account) external view returns (address)
 |---|---|---|
 | _0 | address | undefined |
 
-### getPastTotalSupply
+### eip712Domain
 
 ```solidity
-function getPastTotalSupply(uint256 blockNumber) external view returns (uint256)
+function eip712Domain() external view returns (bytes1 fields, string name, string version, uint256 chainId, address verifyingContract, bytes32 salt, uint256[] extensions)
 ```
 
 
 
-*Retrieve the `totalSupply` at the end of `blockNumber`. Note, this value is the sum of all balances. It is but NOT the sum of all the delegated votes! Requirements: - `blockNumber` must have been already mined*
+*See {EIP-5267}. _Available since v4.9._*
+
+
+#### Returns
+
+| Name | Type | Description |
+|---|---|---|
+| fields | bytes1 | undefined |
+| name | string | undefined |
+| version | string | undefined |
+| chainId | uint256 | undefined |
+| verifyingContract | address | undefined |
+| salt | bytes32 | undefined |
+| extensions | uint256[] | undefined |
+
+### getPastTotalSupply
+
+```solidity
+function getPastTotalSupply(uint256 timepoint) external view returns (uint256)
+```
+
+
+
+*Retrieve the `totalSupply` at the end of `timepoint`. Note, this value is the sum of all balances. It is NOT the sum of all the delegated votes! Requirements: - `timepoint` must be in the past*
 
 #### Parameters
 
 | Name | Type | Description |
 |---|---|---|
-| blockNumber | uint256 | undefined |
+| timepoint | uint256 | undefined |
 
 #### Returns
 
@@ -340,19 +397,19 @@ function getPastTotalSupply(uint256 blockNumber) external view returns (uint256)
 ### getPastVotes
 
 ```solidity
-function getPastVotes(address account, uint256 blockNumber) external view returns (uint256)
+function getPastVotes(address account, uint256 timepoint) external view returns (uint256)
 ```
 
 
 
-*Retrieve the number of votes for `account` at the end of `blockNumber`. Requirements: - `blockNumber` must have been already mined*
+*Retrieve the number of votes for `account` at the end of `timepoint`. Requirements: - `timepoint` must be in the past*
 
 #### Parameters
 
 | Name | Type | Description |
 |---|---|---|
 | account | address | undefined |
-| blockNumber | uint256 | undefined |
+| timepoint | uint256 | undefined |
 
 #### Returns
 
@@ -819,6 +876,17 @@ Vesting escrow has been delegated
 | oldDelegatee `indexed` | address | old delegatee |
 | newDelegatee `indexed` | address | new delegatee |
 | beneficiary `indexed` | address | vesting schedule beneficiary |
+
+### EIP712DomainChanged
+
+```solidity
+event EIP712DomainChanged()
+```
+
+
+
+*MAY be emitted to signal that the domain could have changed.*
+
 
 ### Initialized
 

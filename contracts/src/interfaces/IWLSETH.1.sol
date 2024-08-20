@@ -2,7 +2,7 @@
 pragma solidity 0.8.20;
 
 /// @title Wrapped LsETH Interface (v1)
-/// @author Kiln
+/// @author Alluvial Finance Inc.
 /// @notice This interface exposes methods to wrap the LsETH token into a rebase token.
 interface IWLSETHV1 {
     /// @notice A transfer has been made

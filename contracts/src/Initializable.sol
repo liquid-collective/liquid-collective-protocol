@@ -4,7 +4,7 @@ pragma solidity 0.8.20;
 import "./state/shared/Version.sol";
 
 /// @title Initializable
-/// @author Kiln
+/// @author Alluvial Finance Inc.
 /// @notice This contract ensures that initializers are called only once per version
 contract Initializable {
     /// @notice Disable initialization on implementations

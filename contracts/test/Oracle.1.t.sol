@@ -742,4 +742,8 @@ contract OracleV1Tests is OracleV1TestBase {
     function testGetReportVariantCount() external {
         assertEq(0, oracle.getReportVariantsCount());
     }
+
+    function testVersion() external {
+        assertEq(oracle.version(), "1.2.0");
+    }
 }

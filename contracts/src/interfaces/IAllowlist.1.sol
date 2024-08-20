@@ -2,7 +2,7 @@
 pragma solidity 0.8.20;
 
 /// @title Allowlist Interface (v1)
-/// @author Kiln
+/// @author Alluvial Finance Inc.
 /// @notice This interface exposes methods to handle the list of allowed recipients.
 interface IAllowlistV1 {
     /// @notice The permissions of several accounts have changed

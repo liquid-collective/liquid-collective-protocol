@@ -2,7 +2,7 @@
 pragma solidity 0.8.20;
 
 /// @title Withdraw Interface (V1)
-/// @author Kiln
+/// @author Alluvial Finance Inc.
 /// @notice This contract is in charge of holding the exit and skimming funds and allow river to pull these funds
 interface IWithdrawV1 {
     /// @notice Emitted when the linked River address is changed
