@@ -5,7 +5,7 @@ import "./components/ERC20VestableVotesUpgradeable.1.sol";
 import "./interfaces/ITLC.1.sol";
 
 /// @title TLC (v1)
-/// @author Alluvial
+/// @author Alluvial Finance Inc.
 /// @notice The TLC token has a max supply of 1,000,000,000 and 18 decimal places.
 /// @notice Upon deployment, all minted tokens are send to account provided at construction, in charge of creating the vesting schedules
 /// @notice The contract is based on ERC20Votes by OpenZeppelin. Users need to delegate their voting power to someone or themselves to be able to vote.

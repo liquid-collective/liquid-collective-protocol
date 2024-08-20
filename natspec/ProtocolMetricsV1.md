@@ -1,11 +1,47 @@
-# Initializable
+# ProtocolMetricsV1
 
-*Alluvial Finance Inc.*
 
-> Initializable
 
-This contract ensures that initializers are called only once per version
 
+
+
+
+
+
+## Methods
+
+### getRate
+
+```solidity
+function getRate() external view returns (uint256)
+```
+
+
+
+
+
+
+#### Returns
+
+| Name | Type | Description |
+|---|---|---|
+| _0 | uint256 | undefined |
+
+### initProtocolMetricsV1
+
+```solidity
+function initProtocolMetricsV1(address river) external nonpayable
+```
+
+
+
+
+
+#### Parameters
+
+| Name | Type | Description |
+|---|---|---|
+| river | address | undefined |
 
 
 
@@ -48,5 +84,16 @@ An error occured during the initialization
 |---|---|---|
 | version | uint256 | The version that was attempting to be initialized |
 | expectedVersion | uint256 | The version that was expected |
+
+### InvalidZeroAddress
+
+```solidity
+error InvalidZeroAddress()
+```
+
+The address is zero
+
+
+
 
 

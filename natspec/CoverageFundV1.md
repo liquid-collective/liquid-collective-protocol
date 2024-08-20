@@ -1,6 +1,6 @@
 # CoverageFundV1
 
-*Kiln*
+*Alluvial Finance Inc.*
 
 > Coverage Fund (v1)
 
@@ -52,6 +52,23 @@ Pulls ETH into the River contract
 | Name | Type | Description |
 |---|---|---|
 | _maxAmount | uint256 | The maximum amount to pull into the system |
+
+### version
+
+```solidity
+function version() external pure returns (string)
+```
+
+Retrieves the version of the contract
+
+
+
+
+#### Returns
+
+| Name | Type | Description |
+|---|---|---|
+| _0 | string | Version of the contract |
 
 
 

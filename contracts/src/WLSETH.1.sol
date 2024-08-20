@@ -11,7 +11,7 @@ import "./state/shared/ApprovalsPerOwner.sol";
 import "./state/wlseth/BalanceOf.sol";
 
 /// @title Wrapped LsETH (v1)
-/// @author Kiln
+/// @author Alluvial Finance Inc.
 /// @notice This contract wraps the LsETH token into a rebase token, more suitable for some DeFi use-cases
 ///         like stable swaps.
 contract WLSETHV1 is IWLSETHV1, Initializable, ReentrancyGuardUpgradeable {

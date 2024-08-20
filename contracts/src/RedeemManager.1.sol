@@ -16,7 +16,7 @@ import "./state/redeemManager/BufferedExceedingEth.sol";
 import "./state/redeemManager/RedeemDemand.sol";
 
 /// @title Redeem Manager (v1)
-/// @author Kiln
+/// @author Alluvial Finance Inc.
 /// @notice This contract handles the redeem requests of all users
 contract RedeemManagerV1 is Initializable, IRedeemManagerV1, IProtocolVersion {
     /// @notice Value returned when resolving a redeem request that is unsatisfied

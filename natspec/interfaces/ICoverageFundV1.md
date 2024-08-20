@@ -1,6 +1,6 @@
 # ICoverageFundV1
 
-*Kiln*
+*Alluvial Finance Inc.*
 
 > Coverage Fund Interface (v1)
 

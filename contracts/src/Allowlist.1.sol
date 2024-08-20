@@ -13,7 +13,7 @@ import "./state/allowlist/DenierAddress.sol";
 import "./state/allowlist/Allowlist.sol";
 
 /// @title Allowlist (v1)
-/// @author Kiln
+/// @author Alluvial Finance Inc.
 /// @notice This contract handles the list of allowed recipients.
 /// @notice All accounts have an uint256 value associated with their addresses where
 /// @notice each bit represents a right in the system. The DENY_MASK defined the mask

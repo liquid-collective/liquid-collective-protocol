@@ -4,7 +4,7 @@ pragma solidity 0.8.20;
 import "openzeppelin-contracts/contracts/proxy/transparent/TransparentUpgradeableProxy.sol";
 
 /// @title TUPProxy (Transparent Upgradeable Pausable Proxy)
-/// @author Kiln
+/// @author Alluvial Finance Inc.
 /// @notice This contract extends the Transparent Upgradeable proxy and adds a system wide pause feature.
 ///         When the system is paused, the fallback will fail no matter what calls are made.
 ///         Address Zero is allowed to perform calls even if paused to allow view calls made

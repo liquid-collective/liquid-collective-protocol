@@ -2,7 +2,7 @@
 pragma solidity 0.8.20;
 
 /// @title Consensys Layer Deposit Manager Interface (v1)
-/// @author Kiln
+/// @author Alluvial Finance Inc.
 /// @notice This interface exposes methods to handle the interactions with the official deposit contract
 interface IConsensusLayerDepositManagerV1 {
     /// @notice The stored deposit contract address changed

@@ -7,7 +7,7 @@ import "./libraries/LibAdministrable.sol";
 import "./libraries/LibSanitize.sol";
 
 /// @title Administrable
-/// @author Kiln
+/// @author Alluvial Finance Inc.
 /// @notice This contract handles the administration of the contracts
 abstract contract Administrable is IAdministrable {
     /// @notice Prevents unauthorized calls

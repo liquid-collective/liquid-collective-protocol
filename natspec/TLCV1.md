@@ -1,6 +1,6 @@
 # TLCV1
 
-*Alluvial*
+*Alluvial Finance Inc.*
 
 > TLC (v1)
 

@@ -1,6 +1,6 @@
 # AllowlistV1
 
-*Kiln*
+*Alluvial Finance Inc.*
 
 > Allowlist (v1)
 
@@ -310,6 +310,23 @@ Sets the deny permissions for one or more accounts
 |---|---|---|
 | _accounts | address[] | Accounts to update |
 | _permissions | uint256[] | New permission values |
+
+### version
+
+```solidity
+function version() external pure returns (string)
+```
+
+Retrieves the version of the contract
+
+
+
+
+#### Returns
+
+| Name | Type | Description |
+|---|---|---|
+| _0 | string | Version of the contract |
 
 
 

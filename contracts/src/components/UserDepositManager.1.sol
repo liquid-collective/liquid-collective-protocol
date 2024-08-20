@@ -8,7 +8,7 @@ import "../libraries/LibSanitize.sol";
 import "../state/river/BalanceToDeposit.sol";
 
 /// @title User Deposit Manager (v1)
-/// @author Kiln
+/// @author Alluvial Finance Inc.
 /// @notice This contract handles the inbound transfers cases or the explicit submissions
 abstract contract UserDepositManagerV1 is IUserDepositManagerV1 {
     /// @notice Handler called whenever a user has sent funds to the contract

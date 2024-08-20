@@ -1,6 +1,6 @@
 # IAllowlistV1
 
-*Kiln*
+*Alluvial Finance Inc.*
 
 > Allowlist Interface (v1)
 

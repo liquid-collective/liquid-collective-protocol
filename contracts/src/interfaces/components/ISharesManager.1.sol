@@ -4,7 +4,7 @@ pragma solidity 0.8.20;
 import "openzeppelin-contracts/contracts/token/ERC20/IERC20.sol";
 
 /// @title Shares Manager Interface (v1)
-/// @author Kiln
+/// @author Alluvial Finance Inc.
 /// @notice This interface exposes methods to handle the shares of the depositor and the ERC20 interface
 interface ISharesManagerV1 is IERC20 {
     /// @notice Emitted when the total supply is changed
