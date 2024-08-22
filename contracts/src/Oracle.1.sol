@@ -3,7 +3,7 @@ pragma solidity 0.8.20;
 
 import "./interfaces/IRiver.1.sol";
 import "./interfaces/IOracle.1.sol";
-import "./ProtocolVersion.sol";
+import "./interfaces/IProtocolVersion.sol";
 
 import "./Administrable.sol";
 import "./Initializable.sol";
@@ -16,9 +16,9 @@ import "./state/oracle/Quorum.sol";
 import "./state/oracle/ReportsPositions.sol";
 
 /// @title Oracle (v1)
-/// @author Kiln
+/// @author Alluvial Finance Inc.
 /// @notice This contract handles the input from the allowed oracle members. Highly inspired by Lido's implementation.
-contract OracleV1 is IOracleV1, Initializable, Administrable, ProtocolVersion {
+contract OracleV1 is IOracleV1, Initializable, Administrable, IProtocolVersion {
     modifier onlyAdminOrMember(address _oracleMember) {
         if (msg.sender != _getAdmin() && msg.sender != _oracleMember) {
             revert LibErrors.Unauthorized(msg.sender);
@@ -280,5 +280,9 @@ contract OracleV1 is IOracleV1, Initializable, Administrable, ProtocolVersion {
     /// @return The casted River interface
     function _river() internal view returns (IRiverV1) {
         return IRiverV1(payable(RiverAddress.get()));
+    }
+
+    function version() external pure returns (string memory) {
+        return "1.2.0";
     }
 }

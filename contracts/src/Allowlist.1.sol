@@ -2,7 +2,7 @@
 pragma solidity 0.8.20;
 
 import "./interfaces/IAllowlist.1.sol";
-import "./ProtocolVersion.sol";
+import "./interfaces/IProtocolVersion.sol";
 
 import "./libraries/LibAllowlistMasks.sol";
 import "./Initializable.sol";
@@ -13,13 +13,13 @@ import "./state/allowlist/DenierAddress.sol";
 import "./state/allowlist/Allowlist.sol";
 
 /// @title Allowlist (v1)
-/// @author Kiln
+/// @author Alluvial Finance Inc.
 /// @notice This contract handles the list of allowed recipients.
 /// @notice All accounts have an uint256 value associated with their addresses where
 /// @notice each bit represents a right in the system. The DENY_MASK defined the mask
 /// @notice used to identify if the denied bit is on, preventing users from interacting
 /// @notice with the system
-contract AllowlistV1 is IAllowlistV1, Initializable, Administrable, ProtocolVersion {
+contract AllowlistV1 is IAllowlistV1, Initializable, Administrable, IProtocolVersion {
     /// @inheritdoc IAllowlistV1
     function initAllowlistV1(address _admin, address _allower) external init(0) {
         _setAdmin(_admin);
@@ -158,5 +158,9 @@ contract AllowlistV1 is IAllowlistV1, Initializable, Administrable, ProtocolVers
         }
 
         emit SetAllowlistPermissions(_accounts, _permissions);
+    }
+
+    function version() external pure returns (string memory) {
+        return "1.2.0";
     }
 }

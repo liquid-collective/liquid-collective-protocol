@@ -3,7 +3,7 @@ pragma solidity 0.8.20;
 
 import "./interfaces/IOperatorRegistry.1.sol";
 import "./interfaces/IRiver.1.sol";
-import "./ProtocolVersion.sol";
+import "./interfaces/IProtocolVersion.sol";
 
 import "./libraries/LibUint256.sol";
 
@@ -21,9 +21,9 @@ import "./state/migration/OperatorsRegistry_FundedKeyEventRebroadcasting_KeyInde
 import "./state/migration/OperatorsRegistry_FundedKeyEventRebroadcasting_OperatorIndex.sol";
 
 /// @title Operators Registry (v1)
-/// @author Kiln
+/// @author Alluvial Finance Inc.
 /// @notice This contract handles the list of operators and their keys
-contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrable, ProtocolVersion {
+contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrable, IProtocolVersion {
     /// @notice Maximum validators given to an operator per selection loop round
     uint256 internal constant MAX_VALIDATOR_ATTRIBUTION_PER_ROUND = 5;
 
@@ -897,5 +897,9 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
     function _setTotalValidatorExitsRequested(uint256 _currentValue, uint256 _newValue) internal {
         TotalValidatorExitsRequested.set(_newValue);
         emit SetTotalValidatorExitsRequested(_currentValue, _newValue);
+    }
+
+    function version() external pure returns (string memory) {
+        return "1.2.0";
     }
 }

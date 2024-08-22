@@ -2,7 +2,7 @@
 pragma solidity 0.8.20;
 
 /// @title Coverage Fund Interface (v1)
-/// @author Kiln
+/// @author Alluvial Finance Inc.
 /// @notice This interface exposes methods to receive donations for the slashing coverage fund and pull the funds into river
 interface ICoverageFundV1 {
     /// @notice The storage river address has changed

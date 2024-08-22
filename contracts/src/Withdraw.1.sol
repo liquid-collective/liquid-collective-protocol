@@ -4,16 +4,16 @@ pragma solidity 0.8.20;
 import "./Initializable.sol";
 import "./interfaces/IRiver.1.sol";
 import "./interfaces/IWithdraw.1.sol";
-import "./ProtocolVersion.sol";
+import "./interfaces/IProtocolVersion.sol";
 import "./libraries/LibErrors.sol";
 import "./libraries/LibUint256.sol";
 
 import "./state/shared/RiverAddress.sol";
 
 /// @title Withdraw (v1)
-/// @author Kiln
+/// @author Alluvial Finance Inc.
 /// @notice This contract is in charge of holding the exit and skimming funds and allow river to pull these funds
-contract WithdrawV1 is IWithdrawV1, Initializable, ProtocolVersion {
+contract WithdrawV1 is IWithdrawV1, Initializable, IProtocolVersion {
     modifier onlyRiver() {
         if (msg.sender != RiverAddress.get()) {
             revert LibErrors.Unauthorized(msg.sender);
@@ -51,5 +51,10 @@ contract WithdrawV1 is IWithdrawV1, Initializable, ProtocolVersion {
     function _setRiver(address _river) internal {
         RiverAddress.set(_river);
         emit SetRiver(_river);
+    }
+
+    /// @inheritdoc IProtocolVersion
+    function version() external pure returns (string memory) {
+        return "1.2.0";
     }
 }

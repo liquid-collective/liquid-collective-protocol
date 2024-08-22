@@ -1,6 +1,6 @@
 # IOracleManagerV1
 
-*Kiln*
+*Alluvial Finance Inc.*
 
 > Oracle Manager (v1)
 

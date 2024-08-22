@@ -7,7 +7,7 @@ import "./interfaces/IRiver.1.sol";
 import "./interfaces/IWithdraw.1.sol";
 import "./interfaces/IELFeeRecipient.1.sol";
 import "./interfaces/ICoverageFund.1.sol";
-import "./ProtocolVersion.sol";
+import "./interfaces/IProtocolVersion.sol";
 
 import "./components/ConsensusLayerDepositManager.1.sol";
 import "./components/UserDepositManager.1.sol";
@@ -30,7 +30,7 @@ import "./state/river/MetadataURI.sol";
 import "./state/river/LastConsensusLayerReport.sol";
 
 /// @title River (v1)
-/// @author Kiln
+/// @author Alluvial Finance Inc.
 /// @notice This contract merges all the manager contracts and implements all the virtual methods stitching all components together
 contract RiverV1 is
     ConsensusLayerDepositManagerV1,
@@ -39,7 +39,7 @@ contract RiverV1 is
     OracleManagerV1,
     Initializable,
     Administrable,
-    ProtocolVersion,
+    IProtocolVersion,
     IRiverV1
 {
     /// @inheritdoc IRiverV1
@@ -610,5 +610,9 @@ contract RiverV1 is
             _setCommittedBalance(CommittedBalance.get() + currentMaxCommittableAmount);
             _setBalanceToDeposit(currentBalanceToDeposit - currentMaxCommittableAmount);
         }
+    }
+
+    function version() external pure returns (string memory) {
+        return "1.2.0";
     }
 }

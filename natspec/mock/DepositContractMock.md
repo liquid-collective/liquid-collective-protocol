@@ -46,6 +46,23 @@ function depositCount() external view returns (uint256)
 |---|---|---|
 | _0 | uint256 | undefined |
 
+### get_deposit_root
+
+```solidity
+function get_deposit_root() external view returns (bytes32)
+```
+
+Query the current deposit root hash.
+
+
+
+
+#### Returns
+
+| Name | Type | Description |
+|---|---|---|
+| _0 | bytes32 | The deposit root hash. |
+
 ### receiver
 
 ```solidity

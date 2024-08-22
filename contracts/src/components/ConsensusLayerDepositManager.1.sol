@@ -15,7 +15,7 @@ import "../state/river/CommittedBalance.sol";
 import "../state/river/KeeperAddress.sol";
 
 /// @title Consensus Layer Deposit Manager (v1)
-/// @author Kiln
+/// @author Alluvial Finance Inc.
 /// @notice This contract handles the interactions with the official deposit contract, funding all validators
 /// @notice Whenever a deposit to the consensus layer is requested, this contract computed the amount of keys
 /// @notice that could be deposited depending on the amount available in the contract. It then tries to retrieve

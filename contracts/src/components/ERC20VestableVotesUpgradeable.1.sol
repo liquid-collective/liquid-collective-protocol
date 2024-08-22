@@ -13,7 +13,7 @@ import "../libraries/LibSanitize.sol";
 import "../libraries/LibUint256.sol";
 
 /// @title ERC20VestableVotesUpgradeableV1
-/// @author Alluvial
+/// @author Alluvial Finance Inc.
 /// @notice This is an ERC20 extension that
 /// @notice   - can be used as source of vote power (inherited from OpenZeppelin ERC20VotesUpgradeable)
 /// @notice   - can delegate vote power from an account to another account (inherited from OpenZeppelin ERC20VotesUpgradeable)

@@ -1,6 +1,6 @@
 # RiverV1
 
-*Kiln*
+*Alluvial Finance Inc.*
 
 > River (v1)
 
@@ -269,10 +269,10 @@ Explicit deposit method to mint on msg.sender and transfer to _recipient
 |---|---|---|
 | _recipient | address | Address receiving the minted LsETH |
 
-### depositToConsensusLayer
+### depositToConsensusLayerWithDepositRoot
 
 ```solidity
-function depositToConsensusLayer(uint256 _maxCount) external nonpayable
+function depositToConsensusLayerWithDepositRoot(uint256 _maxCount, bytes32 _depositRoot) external nonpayable
 ```
 
 Deposits current balance to the Consensus Layer by batches of 32 ETH
@@ -284,6 +284,7 @@ Deposits current balance to the Consensus Layer by batches of 32 ETH
 | Name | Type | Description |
 |---|---|---|
 | _maxCount | uint256 | The maximum amount of validator keys to fund |
+| _depositRoot | bytes32 | The root of the deposit tree |
 
 ### getAdmin
 
@@ -597,6 +598,23 @@ Get the current global fee
 | Name | Type | Description |
 |---|---|---|
 | _0 | uint256 | The global fee |
+
+### getKeeper
+
+```solidity
+function getKeeper() external view returns (address)
+```
+
+Get the keeper address
+
+
+
+
+#### Returns
+
+| Name | Type | Description |
+|---|---|---|
+| _0 | address | The keeper address |
 
 ### getLastCompletedEpochId
 
@@ -1123,6 +1141,22 @@ Changes the global fee parameter
 |---|---|---|
 | _newFee | uint256 | New fee value |
 
+### setKeeper
+
+```solidity
+function setKeeper(address _keeper) external nonpayable
+```
+
+
+
+
+
+#### Parameters
+
+| Name | Type | Description |
+|---|---|---|
+| _keeper | address | undefined |
+
 ### setMetadataURI
 
 ```solidity
@@ -1312,6 +1346,23 @@ Retrieve the underlying asset balance from an amount of shares
 | Name | Type | Description |
 |---|---|---|
 | _0 | uint256 | The underlying asset balance represented by the shares |
+
+### version
+
+```solidity
+function version() external pure returns (string)
+```
+
+Retrieves the version of the contract
+
+
+
+
+#### Returns
+
+| Name | Type | Description |
+|---|---|---|
+| _0 | string | Version of the contract |
 
 
 
@@ -2022,6 +2073,17 @@ The total skimmed balance decreased
 | currentValidatorsSkimmedBalance | uint256 | The current exited balance |
 | newValidatorsSkimmedBalance | uint256 | The new exited balance |
 
+### InvalidDepositRoot
+
+```solidity
+error InvalidDepositRoot()
+```
+
+Invalid deposit root
+
+
+
+
 ### InvalidEmptyString
 
 ```solidity
@@ -2185,6 +2247,17 @@ error NullTransfer()
 ```
 
 Invalid empty transfer
+
+
+
+
+### OnlyKeeper
+
+```solidity
+error OnlyKeeper()
+```
+
+
 
 
 

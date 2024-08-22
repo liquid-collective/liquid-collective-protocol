@@ -5,7 +5,7 @@ import "../state/redeemManager/RedeemQueue.sol";
 import "../state/redeemManager/WithdrawalStack.sol";
 
 /// @title Redeem Manager Interface (v1)
-/// @author Kiln
+/// @author Alluvial Finance Inc.
 /// @notice This contract handles the redeem requests of all users
 interface IRedeemManagerV1 {
     /// @notice Emitted when a redeem request is created

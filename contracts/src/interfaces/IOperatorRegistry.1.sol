@@ -4,7 +4,7 @@ pragma solidity 0.8.20;
 import "../state/operatorsRegistry/Operators.2.sol";
 
 /// @title Operators Registry Interface (v1)
-/// @author Kiln
+/// @author Alluvial Finance Inc.
 /// @notice This interface exposes methods to handle the list of operators and their keys
 interface IOperatorsRegistryV1 {
     /// @notice A new operator has been added to the registry
