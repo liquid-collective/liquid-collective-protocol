@@ -13,6 +13,8 @@ const func: DeployFunction = async function ({
   const { deployer, governor, executor, proxyAdministrator, collector } = await getNamedAccounts();
   let proxyArtifact = await deployments.getArtifact("TUPProxy");
   let proxyInterface = new ethers.utils.Interface(proxyArtifact.abi);
+  let transparentUpgradeableProxyArtifact = await deployments.getArtifact("ITransparentUpgradeableProxy");
+  let transparentUpgradeableProxyInterface = new ethers.utils.Interface(transparentUpgradeableProxyArtifact.abi);
 
   const riverDeployment = await deployments.get("River");
   const RiverContract = await ethers.getContractAt("RiverV1", riverDeployment.address);
@@ -286,7 +288,7 @@ const func: DeployFunction = async function ({
   //   Check if executor should not have permission to call changeAdmin
   if (
     await operatorsRegistryProxyFirewallContract.callStatic.executorCanCall(
-      proxyInterface.getSighash("changeAdmin(address)")
+      transparentUpgradeableProxyInterface.getSighash("changeAdmin(address)")
     )
   ) {
     throw new Error("Executor have permission to call changeAdmin");
@@ -296,7 +298,7 @@ const func: DeployFunction = async function ({
   // Check if executor should not have permission to call upgrade
   if (
     await operatorsRegistryProxyFirewallContract.callStatic.executorCanCall(
-      proxyInterface.getSighash("upgradeTo(address)")
+      transparentUpgradeableProxyInterface.getSighash("upgradeTo(address)")
     )
   ) {
     throw new Error("Executor have permission to call upgradeToAndCall");
@@ -306,7 +308,7 @@ const func: DeployFunction = async function ({
   // Check if executor should not have permission to call upgradeToAndCall
   if (
     await operatorsRegistryProxyFirewallContract.callStatic.executorCanCall(
-      proxyInterface.getSighash("upgradeToAndCall(address,bytes)")
+      transparentUpgradeableProxyInterface.getSighash("upgradeToAndCall(address,bytes)")
     )
   ) {
     throw new Error("Executor have permission to call upgradeToAndCall");
@@ -399,14 +401,14 @@ const func: DeployFunction = async function ({
     console.log("Executor should not have permission to call unpause");
   }
   // Oracle Executor should not have permission to call changeAdmin
-  if (await oracleFirewallContract.callStatic.executorCanCall(proxyInterface.getSighash("changeAdmin(address)"))) {
+  if (await oracleFirewallContract.callStatic.executorCanCall(transparentUpgradeableProxyInterface.getSighash("changeAdmin(address)"))) {
     throw new Error("Executor have permission to call changeAdmin");
   } else {
     console.log("Executor should not have permission to call changeAdmin");
   }
 
   // Oracle Executor should not have permission to call upgrade
-  if (await oracleFirewallContract.callStatic.executorCanCall(proxyInterface.getSighash("upgradeTo(address)"))) {
+  if (await oracleFirewallContract.callStatic.executorCanCall(transparentUpgradeableProxyInterface.getSighash("upgradeTo(address)"))) {
     throw new Error("Executor have permission to call upgradeToAndCall");
   } else {
     console.log("Executor should not have permission to call upgradeToAndCall");
@@ -414,7 +416,7 @@ const func: DeployFunction = async function ({
   // Oracle Executor should not have permission to call upgradeToAndCall
   if (
     await oracleFirewallContract.callStatic.executorCanCall(
-      proxyInterface.getSighash("upgradeToAndCall(address,bytes)")
+      transparentUpgradeableProxyInterface.getSighash("upgradeToAndCall(address,bytes)")
     )
   ) {
     throw new Error("Executor have permission to call upgradeToAndCall");
@@ -436,7 +438,7 @@ const func: DeployFunction = async function ({
   // Allowlist Executor should not have permission to call allow
   if (
     await allowlistFirewallContract.callStatic.executorCanCall(
-      allowlistContract.interface.getSighash("allow(address[],uint256[])")
+      allowlistContract.interface.getSighash("setAllowPermissions(address[],uint256[])")
     )
   ) {
     throw new Error("Executor have permission to call allow");
@@ -459,14 +461,14 @@ const func: DeployFunction = async function ({
   }
 
   // Allowlist Executor should not have permission to call changeAdmin
-  if (await allowlistFirewallContract.callStatic.executorCanCall(proxyInterface.getSighash("changeAdmin(address)"))) {
+  if (await allowlistFirewallContract.callStatic.executorCanCall(transparentUpgradeableProxyInterface.getSighash("changeAdmin(address)"))) {
     throw new Error("Executor have permission to call changeAdmin");
   } else {
     console.log("Executor should not have permission to call changeAdmin");
   }
 
   // Allowlist Executor should not have permission to call upgrade
-  if (await allowlistFirewallContract.callStatic.executorCanCall(proxyInterface.getSighash("upgradeTo(address)"))) {
+  if (await allowlistFirewallContract.callStatic.executorCanCall(transparentUpgradeableProxyInterface.getSighash("upgradeTo(address)"))) {
     throw new Error("Executor have permission to call upgradeToAndCall");
   } else {
     console.log("Executor should not have permission to call upgradeToAndCall");
@@ -474,7 +476,7 @@ const func: DeployFunction = async function ({
   // Allowlist Executor should not have permission to call upgradeToAndCall
   if (
     await allowlistFirewallContract.callStatic.executorCanCall(
-      proxyInterface.getSighash("upgradeToAndCall(address,bytes)")
+      transparentUpgradeableProxyInterface.getSighash("upgradeToAndCall(address,bytes)")
     )
   ) {
     throw new Error("Executor have permission to call upgradeToAndCall");
@@ -589,19 +591,19 @@ const func: DeployFunction = async function ({
     console.log("Executor should not have permission to call unpause");
   }
   // River Executor should not have permission to call changeAdmin
-  if (await RiverFirewallContract.callStatic.executorCanCall(proxyInterface.getSighash("changeAdmin(address)"))) {
+  if (await RiverFirewallContract.callStatic.executorCanCall(transparentUpgradeableProxyInterface.getSighash("changeAdmin(address)"))) {
     throw new Error("Executor have permission to call changeAdmin");
   } else {
     console.log("Executor should not have permission to call changeAdmin");
   }
   // River Executor should not have permission to call upgrade
-  if (await RiverFirewallContract.callStatic.executorCanCall(proxyInterface.getSighash("upgradeTo(address)"))) {
+  if (await RiverFirewallContract.callStatic.executorCanCall(transparentUpgradeableProxyInterface.getSighash("upgradeTo(address)"))) {
     throw new Error("Executor have permission to call upgrade");
   } else {
     console.log("Executor should not have permission to call upgrade");
   }
   // River Executor should not have permission to call upgradeToAndCall
-  if (await RiverFirewallContract.callStatic.executorCanCall(proxyInterface.getSighash("upgradeToAndCall(address,bytes)"))) {
+  if (await RiverFirewallContract.callStatic.executorCanCall(transparentUpgradeableProxyInterface.getSighash("upgradeToAndCall(address,bytes)"))) {
     throw new Error("Executor have permission to call upgradeToAndCall");
   } else {
     console.log("Executor should not have permission to call upgradeToAndCall");
@@ -623,19 +625,19 @@ const func: DeployFunction = async function ({
   }
   
   // Redeem Manager Executor should not have permission to call changeAdmin
-  if (await redeemManagerFirewallContract.callStatic.executorCanCall(proxyInterface.getSighash("changeAdmin(address)"))) {
+  if (await redeemManagerFirewallContract.callStatic.executorCanCall(transparentUpgradeableProxyInterface.getSighash("changeAdmin(address)"))) {
     throw new Error("Executor have permission to call changeAdmin");
   } else {
     console.log("Executor should not have permission to call changeAdmin");
   }
   // Redeem Manager Executor should not have permission to call upgrade
-  if (await redeemManagerFirewallContract.callStatic.executorCanCall(proxyInterface.getSighash("upgradeTo(address)"))) {
+  if (await redeemManagerFirewallContract.callStatic.executorCanCall(transparentUpgradeableProxyInterface.getSighash("upgradeTo(address)"))) {
     throw new Error("Executor have permission to call upgrade");
   } else {
     console.log("Executor should not have permission to call upgrade");
   }
   // Redeem Manager Executor should not have permission to call upgradeToAndCall
-  if (await redeemManagerFirewallContract.callStatic.executorCanCall(proxyInterface.getSighash("upgradeToAndCall(address,bytes)"))) {
+  if (await redeemManagerFirewallContract.callStatic.executorCanCall(transparentUpgradeableProxyInterface.getSighash("upgradeToAndCall(address,bytes)"))) {
     throw new Error("Executor have permission to call upgradeToAndCall");
   } else {
     console.log("Executor should not have permission to call upgradeToAndCall");
@@ -654,19 +656,19 @@ const func: DeployFunction = async function ({
     console.log("Executor should not have permission to call unpause");
   }
   // TLC Executor should not have permission to call changeAdmin
-  if (await tlcFirewallContract.callStatic.executorCanCall(proxyInterface.getSighash("changeAdmin(address)"))) {
+  if (await tlcFirewallContract.callStatic.executorCanCall(transparentUpgradeableProxyInterface.getSighash("changeAdmin(address)"))) {
     throw new Error("Executor have permission to call changeAdmin");
   } else {
     console.log("Executor should not have permission to call changeAdmin");
   }
   // TLC Executor should not have permission to call upgrade
-  if (await tlcFirewallContract.callStatic.executorCanCall(proxyInterface.getSighash("upgradeTo(address)"))) {
+  if (await tlcFirewallContract.callStatic.executorCanCall(transparentUpgradeableProxyInterface.getSighash("upgradeTo(address)"))) {
     throw new Error("Executor have permission to call upgrade");
   } else {
     console.log("Executor should not have permission to call upgrade");
   }
   // TLC Executor should not have permission to call upgradeToAndCall
-  if (await tlcFirewallContract.callStatic.executorCanCall(proxyInterface.getSighash("upgradeToAndCall(address,bytes)"))) {
+  if (await tlcFirewallContract.callStatic.executorCanCall(transparentUpgradeableProxyInterface.getSighash("upgradeToAndCall(address,bytes)"))) {
     throw new Error("Executor have permission to call upgradeToAndCall");
   } else {
     console.log("Executor should not have permission to call upgradeToAndCall");
@@ -704,7 +706,7 @@ const func: DeployFunction = async function ({
     console.log("Executor should not have permission to call setConsensusLayerData");
   }
   // River Executor should not have permission to call legacy depositToConsensusLayerWithDepositRoot = $(cast call ${RIVER_FIREWALL} "executorCanCall(bytes4)(bool)" $(cast sig "depositToConsensusLayerWithDepositRoot(uint256)"))"
-  if (await RiverFirewallContract.callStatic.executorCanCall(RiverContract.interface.getSighash("depositToConsensusLayerWithDepositRoot(uint256)"))) {
+  if (await RiverFirewallContract.callStatic.executorCanCall(RiverContract.interface.getSighash("depositToConsensusLayerWithDepositRoot(uint256,bytes32)"))) {
     throw new Error("Executor have permission to call depositToConsensusLayerWithDepositRoot");
   } else {
     console.log("Executor should not have permission to call depositToConsensusLayerWithDepositRoot");
