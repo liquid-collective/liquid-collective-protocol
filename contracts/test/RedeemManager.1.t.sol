@@ -7,7 +7,8 @@ import "forge-std/Test.sol";
 import "./utils/UserFactory.sol";
 import "./utils/LibImplementationUnbricker.sol";
 
-import "../src/state/redeemManager/RedeemQueue.sol";
+import "../src/state/redeemManager/RedeemQueue.1.sol";
+import "../src/state/redeemManager/RedeemQueue.2.sol";
 import "../src/state/redeemManager/WithdrawalStack.sol";
 import "../src/RedeemManager.1.sol";
 import "../src/Allowlist.1.sol";
@@ -196,7 +197,7 @@ contract RedeemManagerV1Tests is Test {
         assertEq(requests[0], 0);
 
         {
-            RedeemQueue.RedeemRequest memory rr = redeemManager.getRedeemRequestDetails(0);
+            RedeemQueueV2.RedeemRequest memory rr = redeemManager.getRedeemRequestDetails(0);
 
             assertEq(rr.height, 0);
             assertEq(rr.amount, amount);
@@ -231,7 +232,7 @@ contract RedeemManagerV1Tests is Test {
         assertEq(requests[0], 0);
 
         {
-            RedeemQueue.RedeemRequest memory rr = redeemManager.getRedeemRequestDetails(0);
+            RedeemQueueV2.RedeemRequest memory rr = redeemManager.getRedeemRequestDetails(0);
 
             assertEq(rr.height, 0);
             assertEq(rr.amount, amount);
@@ -283,7 +284,7 @@ contract RedeemManagerV1Tests is Test {
         assertEq(requests[0], 0);
 
         {
-            RedeemQueue.RedeemRequest memory rr = redeemManager.getRedeemRequestDetails(0);
+            RedeemQueueV2.RedeemRequest memory rr = redeemManager.getRedeemRequestDetails(0);
 
             assertEq(rr.height, 0);
             assertEq(rr.amount, amount);
@@ -344,7 +345,7 @@ contract RedeemManagerV1Tests is Test {
         assertEq(requests[1], 1);
 
         {
-            RedeemQueue.RedeemRequest memory rr = redeemManager.getRedeemRequestDetails(0);
+            RedeemQueueV2.RedeemRequest memory rr = redeemManager.getRedeemRequestDetails(0);
 
             assertEq(rr.height, 0);
             assertEq(rr.amount, amount0);
@@ -352,7 +353,7 @@ contract RedeemManagerV1Tests is Test {
         }
 
         {
-            RedeemQueue.RedeemRequest memory rr = redeemManager.getRedeemRequestDetails(1);
+            RedeemQueueV2.RedeemRequest memory rr = redeemManager.getRedeemRequestDetails(1);
 
             assertEq(rr.height, amount0);
             assertEq(rr.amount, amount1);
@@ -522,7 +523,7 @@ contract RedeemManagerV1Tests is Test {
         assertEq(redeemManager.getRedeemRequestCount(), 1);
 
         {
-            RedeemQueue.RedeemRequest memory rr = redeemManager.getRedeemRequestDetails(0);
+            RedeemQueueV2.RedeemRequest memory rr = redeemManager.getRedeemRequestDetails(0);
 
             assertEq(rr.height, 0);
             assertEq(rr.amount, amount);
@@ -567,7 +568,7 @@ contract RedeemManagerV1Tests is Test {
         assertEq(resolvedRedeemRequests[0], -3);
 
         {
-            RedeemQueue.RedeemRequest memory rr = redeemManager.getRedeemRequestDetails(0);
+            RedeemQueueV2.RedeemRequest memory rr = redeemManager.getRedeemRequestDetails(0);
 
             assertEq(rr.height, amount);
             assertEq(rr.amount, 0);
@@ -603,7 +604,7 @@ contract RedeemManagerV1Tests is Test {
         assertEq(redeemManager.getRedeemRequestCount(), 1);
 
         {
-            RedeemQueue.RedeemRequest memory rr = redeemManager.getRedeemRequestDetails(0);
+            RedeemQueueV2.RedeemRequest memory rr = redeemManager.getRedeemRequestDetails(0);
 
             assertEq(rr.height, 0);
             assertEq(rr.amount, amount);
@@ -647,7 +648,7 @@ contract RedeemManagerV1Tests is Test {
         assertEq(resolvedRedeemRequests[0], -3);
 
         {
-            RedeemQueue.RedeemRequest memory rr = redeemManager.getRedeemRequestDetails(0);
+            RedeemQueueV2.RedeemRequest memory rr = redeemManager.getRedeemRequestDetails(0);
 
             assertEq(rr.height, amount);
             assertEq(rr.amount, 0);
@@ -683,7 +684,7 @@ contract RedeemManagerV1Tests is Test {
         assertEq(redeemManager.getRedeemRequestCount(), 1);
 
         {
-            RedeemQueue.RedeemRequest memory rr = redeemManager.getRedeemRequestDetails(0);
+            RedeemQueueV2.RedeemRequest memory rr = redeemManager.getRedeemRequestDetails(0);
 
             assertEq(rr.height, 0);
             assertEq(rr.amount, amount);
@@ -741,7 +742,7 @@ contract RedeemManagerV1Tests is Test {
         assertEq(resolvedRedeemRequests[0], -3);
 
         {
-            RedeemQueue.RedeemRequest memory rr = redeemManager.getRedeemRequestDetails(0);
+            RedeemQueueV2.RedeemRequest memory rr = redeemManager.getRedeemRequestDetails(0);
 
             assertEq(rr.height, amount);
             assertEq(rr.amount, 0);
@@ -811,7 +812,7 @@ contract RedeemManagerV1Tests is Test {
         assertEq(redeemManager.getRedeemRequestCount(), 1);
 
         {
-            RedeemQueue.RedeemRequest memory rr = redeemManager.getRedeemRequestDetails(0);
+            RedeemQueueV2.RedeemRequest memory rr = redeemManager.getRedeemRequestDetails(0);
 
             assertEq(rr.height, 0);
             assertEq(rr.amount, amount);
@@ -858,7 +859,7 @@ contract RedeemManagerV1Tests is Test {
         assertEq(resolvedRedeemRequests[0], -1);
 
         {
-            RedeemQueue.RedeemRequest memory rr = redeemManager.getRedeemRequestDetails(0);
+            RedeemQueueV2.RedeemRequest memory rr = redeemManager.getRedeemRequestDetails(0);
 
             assertEq(rr.height, amount / 2);
             assertEq(rr.amount, amount - (amount / 2));
@@ -920,7 +921,7 @@ contract RedeemManagerV1Tests is Test {
         emit ClaimedRedeemRequest(0, user, amount / 10, amount / 10, remaining);
         redeemManager.claimRedeemRequests(redeemRequestIds, withdrawEventIds, true, 0);
 
-        RedeemQueue.RedeemRequest memory redeemRequest = redeemManager.getRedeemRequestDetails(0);
+        RedeemQueueV2.RedeemRequest memory redeemRequest = redeemManager.getRedeemRequestDetails(0);
         assertEq(redeemRequest.height, amount - remaining);
         assertEq(redeemRequest.amount, remaining);
 
@@ -1008,7 +1009,7 @@ contract RedeemManagerV1Tests is Test {
         assertEq(redeemManager.getRedeemRequestCount(), 1);
 
         {
-            RedeemQueue.RedeemRequest memory rr = redeemManager.getRedeemRequestDetails(0);
+            RedeemQueueV2.RedeemRequest memory rr = redeemManager.getRedeemRequestDetails(0);
 
             assertEq(rr.height, 0);
             assertEq(rr.amount, amount);
@@ -1062,7 +1063,7 @@ contract RedeemManagerV1Tests is Test {
         assertEq(resolvedRedeemRequests[0], -3);
 
         {
-            RedeemQueue.RedeemRequest memory rr = redeemManager.getRedeemRequestDetails(0);
+            RedeemQueueV2.RedeemRequest memory rr = redeemManager.getRedeemRequestDetails(0);
 
             assertEq(rr.height, amount);
             assertEq(rr.amount, 0);
@@ -1113,7 +1114,7 @@ contract RedeemManagerV1Tests is Test {
         assertEq(redeemManager.getRedeemRequestCount(), 2);
 
         {
-            RedeemQueue.RedeemRequest memory rr = redeemManager.getRedeemRequestDetails(0);
+            RedeemQueueV2.RedeemRequest memory rr = redeemManager.getRedeemRequestDetails(0);
 
             assertEq(rr.height, 0);
             assertEq(rr.amount, amount);
@@ -1121,7 +1122,7 @@ contract RedeemManagerV1Tests is Test {
         }
 
         {
-            RedeemQueue.RedeemRequest memory rr = redeemManager.getRedeemRequestDetails(1);
+            RedeemQueueV2.RedeemRequest memory rr = redeemManager.getRedeemRequestDetails(1);
 
             assertEq(rr.height, amount);
             assertEq(rr.amount, amount);
@@ -1164,7 +1165,7 @@ contract RedeemManagerV1Tests is Test {
         assertEq(userB.balance, amount);
 
         {
-            RedeemQueue.RedeemRequest memory rr = redeemManager.getRedeemRequestDetails(0);
+            RedeemQueueV2.RedeemRequest memory rr = redeemManager.getRedeemRequestDetails(0);
 
             assertEq(rr.height, amount);
             assertEq(rr.amount, 0);
@@ -1172,7 +1173,7 @@ contract RedeemManagerV1Tests is Test {
         }
 
         {
-            RedeemQueue.RedeemRequest memory rr = redeemManager.getRedeemRequestDetails(1);
+            RedeemQueueV2.RedeemRequest memory rr = redeemManager.getRedeemRequestDetails(1);
 
             assertEq(rr.height, amount * 2);
             assertEq(rr.amount, 0);
@@ -1397,7 +1398,7 @@ contract RedeemManagerV1Tests is Test {
             vm.prank(user);
             redeemManager.requestRedeem(30e18, user);
 
-            RedeemQueue.RedeemRequest memory redeemRequest = redeemManager.getRedeemRequestDetails(uint32(idx));
+            RedeemQueueV2.RedeemRequest memory redeemRequest = redeemManager.getRedeemRequestDetails(uint32(idx));
 
             assertEq(redeemRequest.height, idx * 30e18);
             assertEq(redeemRequest.amount, 30e18);
@@ -1521,7 +1522,7 @@ contract RedeemManagerV1Tests is Test {
         assertEq(redeemManager.getRedeemRequestCount(), 1);
 
         {
-            RedeemQueue.RedeemRequest memory rr = redeemManager.getRedeemRequestDetails(0);
+            RedeemQueueV2.RedeemRequest memory rr = redeemManager.getRedeemRequestDetails(0);
 
             assertEq(rr.height, 0);
             assertEq(rr.amount, amount);
@@ -1584,7 +1585,7 @@ contract RedeemManagerV1Tests is Test {
         assertEq(redeemManager.getRedeemRequestCount(), 1);
 
         {
-            RedeemQueue.RedeemRequest memory rr = redeemManager.getRedeemRequestDetails(0);
+            RedeemQueueV2.RedeemRequest memory rr = redeemManager.getRedeemRequestDetails(0);
 
             assertEq(rr.height, 0);
             assertEq(rr.amount, amount);
@@ -1647,7 +1648,7 @@ contract RedeemManagerV1Tests is Test {
         assertEq(redeemManager.getRedeemRequestCount(), 1);
 
         {
-            RedeemQueue.RedeemRequest memory rr = redeemManager.getRedeemRequestDetails(0);
+            RedeemQueueV2.RedeemRequest memory rr = redeemManager.getRedeemRequestDetails(0);
 
             assertEq(rr.height, 0);
             assertEq(rr.amount, amount);
@@ -1705,7 +1706,7 @@ contract RedeemManagerV1Tests is Test {
         assertEq(resolvedRedeemRequests[0], -3);
 
         {
-            RedeemQueue.RedeemRequest memory rr = redeemManager.getRedeemRequestDetails(0);
+            RedeemQueueV2.RedeemRequest memory rr = redeemManager.getRedeemRequestDetails(0);
 
             assertEq(rr.height, amount);
             assertEq(rr.amount, 0);
@@ -1811,7 +1812,7 @@ contract RedeemManagerV1Tests is Test {
         assertEq(redeemManager.getRedeemRequestCount(), 1);
 
         {
-            RedeemQueue.RedeemRequest memory rr = redeemManager.getRedeemRequestDetails(0);
+            RedeemQueueV2.RedeemRequest memory rr = redeemManager.getRedeemRequestDetails(0);
 
             assertEq(rr.height, 0);
             assertEq(rr.amount, amount);
@@ -1872,7 +1873,7 @@ contract RedeemManagerV1Tests is Test {
         assertEq(redeemManager.getRedeemRequestCount(), 1);
 
         {
-            RedeemQueue.RedeemRequest memory rr = redeemManager.getRedeemRequestDetails(0);
+            RedeemQueueV2.RedeemRequest memory rr = redeemManager.getRedeemRequestDetails(0);
 
             assertEq(rr.height, 0);
             assertEq(rr.amount, amount);
