@@ -87,6 +87,11 @@ contract RedeemManagerV1 is Initializable, IRedeemManagerV1, IProtocolVersion {
             newQueue[i].height = currentQueue[i].height;
             newQueue[i].initiator = _prevInitiators[i];
         }
+            console.log("call 12 > ", newQueue[2].amount);
+            console.log("call 13 > ", newQueue[2].maxRedeemableEth);
+            console.log("call 14 > ", newQueue[2].recipient);
+            console.log("call 15 > ", newQueue[2].height);
+            console.log("call 16 > ", newQueue[2].initiator);
     }
 
     /// @inheritdoc IRedeemManagerV1
