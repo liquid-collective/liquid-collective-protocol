@@ -1,7 +1,7 @@
 //SPDX-License-Identifier: BUSL-1.1
 pragma solidity 0.8.20;
 
-import "../state/redeemManager/RedeemQueue.sol";
+import "../state/redeemManager/RedeemQueue.2.sol";
 import "../state/redeemManager/WithdrawalStack.sol";
 
 /// @title Redeem Manager Interface (v1)
@@ -125,7 +125,7 @@ interface IRedeemManagerV1 {
     function getRedeemRequestDetails(uint32 _redeemRequestId)
         external
         view
-        returns (RedeemQueue.RedeemRequest memory);
+        returns (RedeemQueueV2.RedeemRequest memory);
 
     /// @notice Retrieve the global count of withdrawal events
     function getWithdrawalEventCount() external view returns (uint256);

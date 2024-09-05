@@ -3,7 +3,7 @@ pragma solidity 0.8.20;
 
 /// @title Redeem Manager Redeem Queue storage
 /// @notice Utility to manage the Redeem Queue in the Redeem Manager
-library RedeemQueue {
+library RedeemQueueV1 {
     /// @notice Storage slot of the Redeem Queue
     bytes32 internal constant REDEEM_QUEUE_ID_SLOT = bytes32(uint256(keccak256("river.state.redeemQueue")) - 1);
 
@@ -15,8 +15,6 @@ library RedeemQueue {
         uint256 maxRedeemableEth;
         /// @custom:attribute The recipient of the redeem request
         address recipient;
-        /// @custom:attribute The initiator of the redeem request
-        address initiator;
         /// @custom:attribute The height is the cumulative sum of all the sizes of preceding redeem requests
         uint256 height;
     }
