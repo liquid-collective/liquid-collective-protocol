@@ -112,7 +112,7 @@ Retrieve the global count of redeem requests
 ### getRedeemRequestDetails
 
 ```solidity
-function getRedeemRequestDetails(uint32 _redeemRequestId) external view returns (struct RedeemQueue.RedeemRequest)
+function getRedeemRequestDetails(uint32 _redeemRequestId) external view returns (struct RedeemQueueV2.RedeemRequest)
 ```
 
 Retrieve the details of a specific redeem request
@@ -129,7 +129,7 @@ Retrieve the details of a specific redeem request
 
 | Name | Type | Description |
 |---|---|---|
-| _0 | RedeemQueue.RedeemRequest | The redeem request details |
+| _0 | RedeemQueueV2.RedeemRequest | The redeem request details |
 
 ### getRiver
 
