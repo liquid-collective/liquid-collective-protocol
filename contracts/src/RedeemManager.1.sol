@@ -15,7 +15,6 @@ import "./state/redeemManager/RedeemQueue.2.sol";
 import "./state/redeemManager/WithdrawalStack.sol";
 import "./state/redeemManager/BufferedExceedingEth.sol";
 import "./state/redeemManager/RedeemDemand.sol";
-import "forge-std/console.sol";
 
 /// @title Redeem Manager (v1)
 /// @author Alluvial Finance Inc.
@@ -68,30 +67,24 @@ contract RedeemManagerV1 is Initializable, IRedeemManagerV1, IProtocolVersion {
 
     function initializeRedeemManagerV1_2(address[] calldata _prevInitiators) external init(1) {
         _redeemQueueMigrationV1_2(_prevInitiators);
-    } 
+    }
 
     function _redeemQueueMigrationV1_2(address[] memory _prevInitiators) internal {
-
         RedeemQueueV1.RedeemRequest[] memory currentQueue = RedeemQueueV1.get();
         uint256 currentQueueLen = currentQueue.length;
         RedeemQueueV2.RedeemRequest[] storage newQueue = RedeemQueueV2.get();
 
-        if (_prevInitiators.length != currentQueueLen){
+        if (_prevInitiators.length != currentQueueLen) {
             revert IncompatibleArrayLengths();
         }
 
-        for (uint i = 0; i < currentQueueLen; i++) {
+        for (uint256 i = 0; i < currentQueueLen; i++) {
             newQueue[i].amount = currentQueue[i].amount;
             newQueue[i].maxRedeemableEth = currentQueue[i].maxRedeemableEth;
             newQueue[i].recipient = currentQueue[i].recipient;
             newQueue[i].height = currentQueue[i].height;
             newQueue[i].initiator = _prevInitiators[i];
         }
-            console.log("call 12 > ", newQueue[2].amount);
-            console.log("call 13 > ", newQueue[2].maxRedeemableEth);
-            console.log("call 14 > ", newQueue[2].recipient);
-            console.log("call 15 > ", newQueue[2].height);
-            console.log("call 16 > ", newQueue[2].initiator);
     }
 
     /// @inheritdoc IRedeemManagerV1
@@ -103,7 +96,7 @@ contract RedeemManagerV1 is Initializable, IRedeemManagerV1, IProtocolVersion {
     function getRedeemRequestCount() external view returns (uint256) {
         return RedeemQueueV2.get().length;
     }
-    
+
     /// @inheritdoc IRedeemManagerV1
     function getRedeemRequestDetails(uint32 _redeemRequestId)
         external

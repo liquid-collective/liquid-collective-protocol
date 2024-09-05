@@ -6,8 +6,8 @@ pragma solidity 0.8.20;
 library RedeemQueueV2 {
     /// @notice Storage slot of the Redeem Queue
     bytes32 internal constant REDEEM_QUEUE_ID_SLOT = bytes32(uint256(keccak256("river.state.redeemQueue")) - 1);
-    
-       /// @notice The updated V1_2 Redeemer structure represents the redeem request made by a user
+
+    /// @notice The updated V1_2 Redeemer structure represents the redeem request made by a user
     struct RedeemRequest {
         /// @custom:attribute The amount of the redeem request in LsETH
         uint256 amount;
