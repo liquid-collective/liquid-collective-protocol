@@ -19,8 +19,16 @@ const func: DeployFunction = async function ({ deployments, getNamedAccounts, et
     const redeemManagerProxyFirewallDeployment = await deployments.get("RedeemManagerProxyFirewall");
     const proxyAdministratorSigner = await ethers.getSigner(proxyAdministrator);
 
-    // Generate 68 random addresses
-    const prevInitiators = [] // Get addresses from indexer
+    // initiator addresses for the initial 7 redeem requests created before initiator was introduced.
+    const prevInitiators = [
+      "0x4d1bed3a669186130daaf5859b242f3c788d736a",
+      "0xffc58b6a27f6354eba6bb8f39fe163a1625c4b5b",
+      "0xffc58b6a27f6354eba6bb8f39fe163a1625c4b5b",
+      "0xffc58b6a27f6354eba6bb8f39fe163a1625c4b5b",
+      "0xffc58b6a27f6354eba6bb8f39fe163a1625c4b5b",
+      "0xce8dad716539e764895cf30e64466e4e82f278bc",
+      "0xffc58b6a27f6354eba6bb8f39fe163a1625c4b5b",
+    ] // addresses gotten onchain
 
     // Call the `upgradeToAndCall` function and pass the encoded initialization data.
     await upgradeToAndCall(
@@ -37,8 +45,7 @@ const func: DeployFunction = async function ({ deployments, getNamedAccounts, et
     logStepEnd(__filename);
   
   } catch (error) {
-    console.error('Error during deployment:', error);
-    throw error;
+    console.error("Upgrade failed:", error);
   }
 };
 
@@ -63,7 +70,7 @@ async function upgradeToAndCall(deployments, ethers, newImplementationAddress, s
   const tx = await signer.sendTransaction({
     to: proxyAddress,
     data: upgradeData,
-    nonce: txCount,
+    nonce: txCount
   });
   await tx.wait();
   console.log("tx >> ", tx);
@@ -74,7 +81,7 @@ async function upgradeToAndCall(deployments, ethers, newImplementationAddress, s
 
 func.skip = async function ({ deployments, network }: HardhatRuntimeEnvironment): Promise<boolean> {
   logStep(__filename);
-  const shouldSkip = ["mainnet"].includes(network.name) || (await isDeployed("RedeemManagerV1", deployments, __filename));
+  const shouldSkip = ["mainnet", "holesky", "devHolesky"].includes(network.name) || (await isDeployed("RedeemManagerV1", deployments, __filename));
   if (shouldSkip) {
     console.log("Skipped");
     logStepEnd(__filename);

@@ -217,7 +217,7 @@ function initializeRedeemManagerV1_2(address[] _prevInitiators) external nonpaya
 
 | Name | Type | Description |
 |---|---|---|
-| _prevInitiators | address[] | undefined |
+| _prevInitiators | address[] | The address of initiators for existing requests |
 
 ### pullExceedingEth
 
