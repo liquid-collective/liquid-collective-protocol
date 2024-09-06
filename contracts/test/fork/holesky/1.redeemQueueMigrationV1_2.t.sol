@@ -8,7 +8,7 @@ import "../../../src/TUPProxy.sol";
 import "../../../src/RedeemManager.1.sol";
 import "../../../src/state/redeemManager/RedeemQueue.1.sol";
 import "../../../src/state/redeemManager/RedeemQueue.2.sol";
-import "../../../src/state/redeemManager/RedeemQueue.1.2.sol"; 
+import "../../../src/state/redeemManager/RedeemQueue.1.2.sol";
 import "../../../src/state/redeemManager/WithdrawalStack.sol";
 import {ITransparentUpgradeableProxy} from
     "openzeppelin-contracts/contracts/proxy/transparent/TransparentUpgradeableProxy.sol";
@@ -182,6 +182,5 @@ contract RedeemQueueMigrationV1_2 is Test {
             assertEq(newRequest.height, 3733452766809450500 + heightDeficit);
             assertEq(newRequest.initiator, 0xFFC58B6a27f6354eba6BB8F39fE163a1625C4B5B); // Direct address use
         }
-
     }
 }

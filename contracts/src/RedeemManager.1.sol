@@ -12,7 +12,7 @@ import "./Initializable.sol";
 import "./state/shared/RiverAddress.sol";
 import "./state/redeemManager/RedeemQueue.1.sol";
 import "./state/redeemManager/RedeemQueue.2.sol";
-import "./state/redeemManager/RedeemQueue.1.2.sol"; 
+import "./state/redeemManager/RedeemQueue.1.2.sol";
 import "./state/redeemManager/WithdrawalStack.sol";
 import "./state/redeemManager/BufferedExceedingEth.sol";
 import "./state/redeemManager/RedeemDemand.sol";
@@ -77,7 +77,7 @@ contract RedeemManagerV1 is Initializable, IRedeemManagerV1, IProtocolVersion {
         RedeemQueueV2.RedeemRequest[] storage newQueue = RedeemQueueV2.get();
 
         //TODO: Remove after dev upgrade, not needed for staging/prod
-        if (_prevInitiators.length != 7) { 
+        if (_prevInitiators.length != 7) {
             revert IncompatibleArrayLengths();
         }
 
