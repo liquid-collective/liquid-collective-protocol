@@ -17,7 +17,6 @@ import "../src/state/redeemManager/WithdrawalStack.sol";
 import "../src/RedeemManager.1.sol";
 import "../src/TUPProxy.sol";
 import "../src/Initializable.sol";
-// import "../src/interfaces/IRedeemManager.1.sol";
 import "../src/Allowlist.1.sol";
 import "./mocks/RejectEtherMock.sol";
 
@@ -130,7 +129,7 @@ contract RedeeManagerV1TestBase is Test {
 contract RedeemManagerV1Tests is RedeeManagerV1TestBase {
     RedeemManagerV1 internal redeemManager;
 
-    function setUp() external virtual {
+    function setUp() external {
         allowlistAdmin = makeAddr("allowlistAdmin");
         allowlistAllower = makeAddr("allowlistAllower");
         allowlistDenier = makeAddr("allowlistDenier");
@@ -2096,8 +2095,11 @@ contract MockRedeemManagerV2 is MockRedeemManagerV1Base {
         uint256 currentQueueLen = currentQueue.length;
         RedeemQueueV2.RedeemRequest[] storage newQueue = RedeemQueueV2.get();
 
+        if (currentQueue.length == 0) {
+            return;
+        }
+
         //TODO: Remove after dev upgrade, not needed for staging/prod
-        console.log("in contract length ", _prevInitiators.length);
         if (_prevInitiators.length != 7) {
             revert IncompatibleArrayLengths();
         }
@@ -2263,24 +2265,35 @@ contract InitializeRedeemManagerV1_2Test is RedeeManagerV1TestBase {
         }
     }
 
+
+    function testInitializeTwice() public {
+        RedeemManagerV1 redeemQueueImplV2 = new RedeemManagerV1();
+        vm.store(redeemManager, IMPLEMENTATION_SLOT, bytes32(uint256(uint160(address(redeemQueueImplV2)))));
+        RedeemManagerV1(redeemManager).initializeRedeemManagerV1_2(prevInitiators);
+
+        vm.expectRevert(abi.encodeWithSignature("InvalidInitialization(uint256,uint256)", 1, 2));
+        RedeemManagerV1(redeemManager).initializeRedeemManagerV1_2(prevInitiators);
+    }
+
+
     function testRedeemQueueMigrationV1_2() public {
         // Call the migration function
-        MockRedeemManagerV2 redeemQueueImplV2 = new MockRedeemManagerV2();
+        RedeemManagerV1 redeemQueueImplV2 = new RedeemManagerV1();
         vm.store(redeemManager, IMPLEMENTATION_SLOT, bytes32(uint256(uint160(address(redeemQueueImplV2)))));
-        MockRedeemManagerV2(redeemManager).initializeRedeemManagerV1_2(prevInitiators);
+        RedeemManagerV1(redeemManager).initializeRedeemManagerV1_2(prevInitiators);
 
         // Check the first 7 entries (from initialQueue)
         for (uint256 i = 0; i < 7; i++) {
             RedeemQueueV2.RedeemRequest memory current =
-                MockRedeemManagerV2(redeemManager).getRedeemRequestDetails(uint32(i));
+                RedeemManagerV1(redeemManager).getRedeemRequestDetails(uint32(i));
             assertEq(current.amount, (i + 1) * 1e18);
             // assertEq(current.maxRedeemableEth, i * 2e18);
             assertEq(current.recipient, address(uint160(i + 100)));
             if (i == 0) {
                 assertEq(current.height, 0);
             } else {
-                uint256 prevHeight = MockRedeemManagerV2(redeemManager).getRedeemRequestDetails(uint32(i - 1)).height;
-                uint256 prevAmount = MockRedeemManagerV2(redeemManager).getRedeemRequestDetails(uint32(i - 1)).amount;
+                uint256 prevHeight = RedeemManagerV1(redeemManager).getRedeemRequestDetails(uint32(i - 1)).height;
+                uint256 prevAmount = RedeemManagerV1(redeemManager).getRedeemRequestDetails(uint32(i - 1)).amount;
                 assertEq(current.height, prevHeight + prevAmount);
             }
             assertEq(current.initiator, prevInitiators[i]);
@@ -2289,17 +2302,17 @@ contract InitializeRedeemManagerV1_2Test is RedeeManagerV1TestBase {
         // Check the remaining entries (from currentQueue)
         for (uint256 i = 7; i < 15; i++) {
             RedeemQueueV2.RedeemRequest memory current =
-                MockRedeemManagerV2(redeemManager).getRedeemRequestDetails(uint32(i));
+                RedeemManagerV1(redeemManager).getRedeemRequestDetails(uint32(i));
             assertEq(current.amount, ((i - 7) + 2) * 1e18);
             // assertEq(current.maxRedeemableEth, (i - 7) * 2e18);
             assertEq(current.recipient, address(uint160((i - 7) + 200)));
-            uint256 prevHeight = MockRedeemManagerV2(redeemManager).getRedeemRequestDetails(uint32(i - 1)).height;
-            uint256 prevAmount = MockRedeemManagerV2(redeemManager).getRedeemRequestDetails(uint32(i - 1)).amount;
+            uint256 prevHeight = RedeemManagerV1(redeemManager).getRedeemRequestDetails(uint32(i - 1)).height;
+            uint256 prevAmount = RedeemManagerV1(redeemManager).getRedeemRequestDetails(uint32(i - 1)).amount;
             assertEq(current.initiator, current.recipient);
         }
 
         // Check total length
-        assertEq(MockRedeemManagerV2(redeemManager).getRedeemRequestCount(), 15);
+        assertEq(RedeemManagerV1(redeemManager).getRedeemRequestCount(), 15);
     }
 
     function testRedeemQueueMigrationV2_IncompatibleArrayLengths() public {
@@ -2307,9 +2320,10 @@ contract InitializeRedeemManagerV1_2Test is RedeeManagerV1TestBase {
         address[] memory invalidInitiators = new address[](6);
 
         // Call the migration function
-        MockRedeemManagerV2 redeemQueueImplV2 = new MockRedeemManagerV2();
+        RedeemManagerV1 redeemQueueImplV2 = new RedeemManagerV1();
         vm.store(redeemManager, IMPLEMENTATION_SLOT, bytes32(uint256(uint160(address(redeemQueueImplV2)))));
         vm.expectRevert(abi.encodeWithSignature("IncompatibleArrayLengths()"));
-        MockRedeemManagerV2(redeemManager).initializeRedeemManagerV1_2(invalidInitiators);
+        RedeemManagerV1(redeemManager).initializeRedeemManagerV1_2(invalidInitiators);
     }
+
 }
