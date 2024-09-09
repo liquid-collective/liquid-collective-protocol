@@ -2265,7 +2265,6 @@ contract InitializeRedeemManagerV1_2Test is RedeeManagerV1TestBase {
         }
     }
 
-
     function testInitializeTwice() public {
         RedeemManagerV1 redeemQueueImplV2 = new RedeemManagerV1();
         vm.store(redeemManager, IMPLEMENTATION_SLOT, bytes32(uint256(uint160(address(redeemQueueImplV2)))));
@@ -2274,7 +2273,6 @@ contract InitializeRedeemManagerV1_2Test is RedeeManagerV1TestBase {
         vm.expectRevert(abi.encodeWithSignature("InvalidInitialization(uint256,uint256)", 1, 2));
         RedeemManagerV1(redeemManager).initializeRedeemManagerV1_2(prevInitiators);
     }
-
 
     function testRedeemQueueMigrationV1_2() public {
         // Call the migration function
@@ -2325,5 +2323,4 @@ contract InitializeRedeemManagerV1_2Test is RedeeManagerV1TestBase {
         vm.expectRevert(abi.encodeWithSignature("IncompatibleArrayLengths()"));
         RedeemManagerV1(redeemManager).initializeRedeemManagerV1_2(invalidInitiators);
     }
-
 }
