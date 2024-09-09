@@ -85,7 +85,7 @@ const func: DeployFunction = async function ({
     contract: "Firewall",
     from: deployer,
     log: true,
-    args: [governor, executor, futureRiverAddress, [riverInterface.getSighash("depositToConsensusLayer")]],
+    args: [governor, executor, futureRiverAddress, [riverInterface.getSighash("depositToConsensusLayerWithDepositRoot")]],
   });
 
   const allowlistDeployment = await deployments.get("Allowlist");

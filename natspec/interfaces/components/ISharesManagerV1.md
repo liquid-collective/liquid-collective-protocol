@@ -1,6 +1,6 @@
 # ISharesManagerV1
 
-*Kiln*
+*Alluvial Finance Inc.*
 
 > Shares Manager Interface (v1)
 

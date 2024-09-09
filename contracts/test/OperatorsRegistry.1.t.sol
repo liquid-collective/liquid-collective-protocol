@@ -4,6 +4,7 @@ pragma solidity 0.8.20;
 
 import "forge-std/Test.sol";
 
+import "../src/libraries/LibBytes.sol";
 import "./utils/UserFactory.sol";
 import "./utils/BytesGenerator.sol";
 import "./utils/LibImplementationUnbricker.sol";
@@ -763,24 +764,36 @@ contract OperatorsRegistryV1Tests is OperatorsRegistryV1TestBase, BytesGenerator
         }
     }
 
-    function testGetAllActiveOperators(bytes32 _name, uint256 _firstAddressSalt) public {
-        address _firstAddress = uf._new(_firstAddressSalt);
+    function testGetAllActiveOperators(bytes32 _name, uint256 _firstAddressSalt, uint256 _count) public {
+        vm.assume(_count < 1000);
+        address[] memory _firstAddress = new address[](_count);
+        _firstAddress = uf._newMulti(_firstAddressSalt, _count);
         vm.startPrank(admin);
-        operatorsRegistry.addOperator(string(abi.encodePacked(_name)), _firstAddress);
+        for (uint256 i; i < _count; i++) {
+            operatorsRegistry.addOperator(string(abi.encodePacked(_name)), _firstAddress[i]);
+        }
 
         OperatorsV2.Operator[] memory operators = operatorsRegistry.listActiveOperators();
 
-        assert(operators.length == 1);
-        assert(keccak256(bytes(operators[0].name)) == keccak256(abi.encodePacked(_name)));
-        assert(operators[0].operator == _firstAddress);
+        assert(operators.length == _count);
+        for (uint256 i; i < _count; i++) {
+            assert(keccak256(bytes(operators[i].name)) == keccak256(abi.encodePacked(_name)));
+            assert(operators[i].operator == _firstAddress[i]);
+        }
     }
 
-    function testGetAllActiveOperatorsWithInactiveOnes(bytes32 _name, uint256 _firstAddressSalt) public {
-        address _firstAddress = uf._new(_firstAddressSalt);
-        vm.startPrank(admin);
-        uint256 index = operatorsRegistry.addOperator(string(abi.encodePacked(_name)), _firstAddress);
+    function testGetAllActiveOperatorsWithInactiveOnes(bytes32 _name, uint256 _firstAddressSalt, uint256 _count)
+        public
+    {
+        vm.assume(_count < 1000);
+        address[] memory _firstAddress = new address[](_count);
+        _firstAddress = uf._newMulti(_firstAddressSalt, _count);
+        for (uint256 i; i < _count; i++) {
+            vm.startPrank(admin);
+            uint256 index = operatorsRegistry.addOperator(string(abi.encodePacked(_name)), _firstAddress[i]);
 
-        operatorsRegistry.setOperatorStatus(index, false);
+            operatorsRegistry.setOperatorStatus(index, false);
+        }
 
         OperatorsV2.Operator[] memory operators = operatorsRegistry.listActiveOperators();
 
@@ -3004,5 +3017,67 @@ contract OperatorsRegistryV1TestDistribution is Test {
         operatorsRegistry.setOperatorLimits(indexes, limitsZero, 0);
 
         vm.stopPrank();
+    }
+
+    function testGetNextValidatorsToDepositFromActiveOperators() public {
+        bytes[] memory rawKeys = new bytes[](5);
+
+        rawKeys[0] = genBytes((48 + 96) * 10);
+        rawKeys[1] = genBytes((48 + 96) * 10);
+        rawKeys[2] = genBytes((48 + 96) * 10);
+        rawKeys[3] = genBytes((48 + 96) * 10);
+        rawKeys[4] = genBytes((48 + 96) * 10);
+
+        vm.startPrank(admin);
+        operatorsRegistry.addValidators(0, 10, rawKeys[0]);
+        operatorsRegistry.addValidators(1, 10, rawKeys[1]);
+        operatorsRegistry.addValidators(2, 10, rawKeys[2]);
+        operatorsRegistry.addValidators(3, 10, rawKeys[3]);
+        operatorsRegistry.addValidators(4, 10, rawKeys[4]);
+        vm.stopPrank();
+
+        uint32[] memory limits = new uint32[](5);
+        limits[0] = 10;
+        limits[1] = 10;
+        limits[2] = 10;
+        limits[3] = 10;
+        limits[4] = 10;
+
+        uint256[] memory operators = new uint256[](5);
+        operators[0] = 0;
+        operators[1] = 1;
+        operators[2] = 2;
+        operators[3] = 3;
+        operators[4] = 4;
+
+        vm.prank(admin);
+        operatorsRegistry.setOperatorLimits(operators, limits, block.number);
+
+        (bytes[] memory publicKeys, bytes[] memory signatures) =
+            operatorsRegistry.getNextValidatorsToDepositFromActiveOperators(51);
+        assert(publicKeys.length == 50);
+        assert(signatures.length == 50);
+
+        bytes memory receivedKeys;
+        bytes memory originalKeys;
+        for (uint256 i; i < 50; i++) {
+            receivedKeys = bytes.concat(receivedKeys, bytes.concat(publicKeys[i], signatures[i]));
+        }
+        for (uint256 i; i < 5; i++) {
+            originalKeys = bytes.concat(originalKeys, rawKeys[i]);
+        }
+
+        assert(keccak256(receivedKeys) == keccak256(originalKeys));
+    }
+
+    function testGetNextValidatorsToDepositFromActiveOperatorsForNoOperators() public {
+        (bytes[] memory publicKeys, bytes[] memory signatures) =
+            operatorsRegistry.getNextValidatorsToDepositFromActiveOperators(5);
+        assert(publicKeys.length == 0);
+        assert(signatures.length == 0);
+    }
+
+    function testVersion() external {
+        assertEq(operatorsRegistry.version(), "1.2.0");
     }
 }

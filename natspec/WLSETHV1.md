@@ -1,6 +1,6 @@
 # WLSETHV1
 
-*Kiln*
+*Alluvial Finance Inc.*
 
 > Wrapped LsETH (v1)
 
@@ -350,22 +350,21 @@ Tokens have been burned
 | recipient `indexed` | address | The account that receive the underlying LsETH |
 | shares  | uint256 | The amount of LsETH that got sent back |
 
-### Initialize
+### Initialized
 
 ```solidity
-event Initialize(uint256 version, bytes cdata)
+event Initialized(uint8 version)
 ```
 
-Emitted when the contract is properly initialized
 
 
+*Triggered when the contract has been initialized or reinitialized.*
 
 #### Parameters
 
 | Name | Type | Description |
 |---|---|---|
-| version  | uint256 | New version of the contracts |
-| cdata  | bytes | Complete calldata that was used during the initialization |
+| version  | uint8 | undefined |
 
 ### Mint
 
@@ -451,23 +450,6 @@ Balance too low to perform operation
 
 
 
-
-### InvalidInitialization
-
-```solidity
-error InvalidInitialization(uint256 version, uint256 expectedVersion)
-```
-
-An error occured during the initialization
-
-
-
-#### Parameters
-
-| Name | Type | Description |
-|---|---|---|
-| version | uint256 | The version that was attempting to be initialized |
-| expectedVersion | uint256 | The version that was expected |
 
 ### InvalidZeroAddress
 

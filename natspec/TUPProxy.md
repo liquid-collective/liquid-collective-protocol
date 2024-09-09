@@ -1,6 +1,6 @@
 # TUPProxy
 
-*Kiln*
+*Alluvial Finance Inc.*
 
 > TUPProxy (Transparent Upgradeable Pausable Proxy)
 
@@ -24,7 +24,7 @@ function pause() external nonpayable
 ### paused
 
 ```solidity
-function paused() external nonpayable returns (bool)
+function paused() external view returns (bool)
 ```
 
 

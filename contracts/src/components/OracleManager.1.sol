@@ -14,7 +14,7 @@ import "../state/river/DepositedValidatorCount.sol";
 import "../state/river/LastOracleRoundId.sol";
 
 /// @title Oracle Manager (v1)
-/// @author Kiln
+/// @author Alluvial Finance Inc.
 /// @notice This contract handles the inputs provided by the oracle
 /// @notice The Oracle contract is plugged to this contract and is in charge of pushing
 /// @notice data whenever a new report has been deemed valid. The report consists in two

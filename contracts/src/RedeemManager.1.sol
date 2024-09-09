@@ -4,6 +4,7 @@ pragma solidity 0.8.20;
 import "./interfaces/IAllowlist.1.sol";
 import "./interfaces/IRiver.1.sol";
 import "./interfaces/IRedeemManager.1.sol";
+import "./interfaces/IProtocolVersion.sol";
 import "./libraries/LibAllowlistMasks.sol";
 import "./libraries/LibUint256.sol";
 import "./Initializable.sol";
@@ -15,9 +16,9 @@ import "./state/redeemManager/BufferedExceedingEth.sol";
 import "./state/redeemManager/RedeemDemand.sol";
 
 /// @title Redeem Manager (v1)
-/// @author Kiln
+/// @author Alluvial Finance Inc.
 /// @notice This contract handles the redeem requests of all users
-contract RedeemManagerV1 is Initializable, IRedeemManagerV1 {
+contract RedeemManagerV1 is Initializable, IRedeemManagerV1, IProtocolVersion {
     /// @notice Value returned when resolving a redeem request that is unsatisfied
     int64 internal constant RESOLVE_UNSATISFIED = -1;
     /// @notice Value returned when resolving a redeem request that is out of bounds
@@ -117,7 +118,9 @@ contract RedeemManagerV1 is Initializable, IRedeemManagerV1 {
         WithdrawalStack.WithdrawalEvent[] storage withdrawalEvents = WithdrawalStack.get();
         uint256 withdrawalEventsLength = withdrawalEvents.length;
         if (withdrawalEventsLength > 0) {
-            lastWithdrawalEvent = withdrawalEvents[withdrawalEventsLength - 1];
+            unchecked {
+                lastWithdrawalEvent = withdrawalEvents[withdrawalEventsLength - 1];
+            }
         }
         for (uint256 idx = 0; idx < _redeemRequestIds.length; ++idx) {
             withdrawalEventIds[idx] = _resolveRedeemRequestId(_redeemRequestIds[idx], lastWithdrawalEvent);
@@ -130,6 +133,10 @@ contract RedeemManagerV1 is Initializable, IRedeemManagerV1 {
         onlyRedeemerOrRiver
         returns (uint32 redeemRequestId)
     {
+        IRiverV1 river = _castedRiver();
+        if (IAllowlistV1(river.getAllowlist()).isDenied(_recipient)) {
+            revert RecipientIsDenied();
+        }
         return _requestRedeem(_lsETHAmount, _recipient);
     }
 
@@ -173,7 +180,9 @@ contract RedeemManagerV1 is Initializable, IRedeemManagerV1 {
         withdrawalEvents.push(
             WithdrawalStack.WithdrawalEvent({height: height, amount: _lsETHWithdrawable, withdrawnEth: msgValue})
         );
-        _setRedeemDemand(redeemDemand - _lsETHWithdrawable);
+        unchecked {
+            _setRedeemDemand(redeemDemand - _lsETHWithdrawable);
+        }
         emit ReportedWithdrawal(height, _lsETHWithdrawable, msgValue, withdrawalEventId);
     }
 
@@ -306,7 +315,8 @@ contract RedeemManagerV1 is Initializable, IRedeemManagerV1 {
             RedeemQueue.RedeemRequest({
                 height: height,
                 amount: _lsETHAmount,
-                owner: _recipient,
+                recipient: _recipient,
+                initiator: msg.sender,
                 maxRedeemableEth: maxRedeemableEth
             })
         );
@@ -318,14 +328,14 @@ contract RedeemManagerV1 is Initializable, IRedeemManagerV1 {
 
     /// @notice Internal structure used to optimize stack usage in _claimRedeemRequest
     struct ClaimRedeemRequestParameters {
-        /// @custom:attribute The id of the redeem request to claim
-        uint32 redeemRequestId;
         /// @custom:attribute The structure of the redeem request to claim
         RedeemQueue.RedeemRequest redeemRequest;
-        /// @custom:attribute The id of the withdrawal event to use to claim the redeem request
-        uint32 withdrawalEventId;
         /// @custom:attribute The structure of the withdrawal event to use to claim the redeem request
         WithdrawalStack.WithdrawalEvent withdrawalEvent;
+        /// @custom:attribute The id of the redeem request to claim
+        uint32 redeemRequestId;
+        /// @custom:attribute The id of the withdrawal event to use to claim the redeem request
+        uint32 withdrawalEventId;
         /// @custom:attribute The count of withdrawal events
         uint32 withdrawalEventCount;
         /// @custom:attribute The current depth of the recursive call
@@ -377,7 +387,9 @@ contract RedeemManagerV1 is Initializable, IRedeemManagerV1 {
                 (vars.matchingAmount * _params.redeemRequest.maxRedeemableEth) / _params.redeemRequest.amount;
 
             if (maxRedeemableEthAmount < vars.ethAmount) {
-                vars.exceedingEthAmount = vars.ethAmount - maxRedeemableEthAmount;
+                unchecked {
+                    vars.exceedingEthAmount = vars.ethAmount - maxRedeemableEthAmount;
+                }
                 BufferedExceedingEth.set(BufferedExceedingEth.get() + vars.exceedingEthAmount);
                 vars.ethAmount = maxRedeemableEthAmount;
             }
@@ -418,9 +430,13 @@ contract RedeemManagerV1 is Initializable, IRedeemManagerV1 {
         ) {
             WithdrawalStack.WithdrawalEvent[] storage withdrawalEvents = WithdrawalStack.get();
 
-            ++_params.withdrawalEventId;
+            unchecked {
+                ++_params.withdrawalEventId;
+            }
             _params.withdrawalEvent = withdrawalEvents[_params.withdrawalEventId];
-            --_params.depth;
+            unchecked {
+                --_params.depth;
+            }
 
             _claimRedeemRequest(_params);
         } else {
@@ -456,6 +472,8 @@ contract RedeemManagerV1 is Initializable, IRedeemManagerV1 {
         params.withdrawalEventCount = uint32(withdrawalEvents.length);
         uint32 redeemRequestCount = uint32(redeemRequests.length);
 
+        IAllowlistV1 allowList = IAllowlistV1(_castedRiver().getAllowlist());
+
         for (uint256 idx = 0; idx < redeemRequestIdsLength;) {
             // both ids are loaded into params
             params.redeemRequestId = _redeemRequestIds[idx];
@@ -473,6 +491,13 @@ contract RedeemManagerV1 is Initializable, IRedeemManagerV1 {
 
             // we load the redeem request in memory
             params.redeemRequest = redeemRequests[_redeemRequestIds[idx]];
+
+            if (allowList.isDenied(params.redeemRequest.recipient)) {
+                revert ClaimRecipientIsDenied();
+            }
+            if (allowList.isDenied(params.redeemRequest.initiator)) {
+                revert ClaimInitiatorIsDenied();
+            }
 
             // we check that the redeem request is not already claimed
             if (params.redeemRequest.amount == 0) {
@@ -503,14 +528,14 @@ contract RedeemManagerV1 is Initializable, IRedeemManagerV1 {
             claimStatuses[idx] = params.redeemRequest.amount == 0 ? CLAIM_FULLY_CLAIMED : CLAIM_PARTIALLY_CLAIMED;
 
             {
-                (bool success, bytes memory rdata) = params.redeemRequest.owner.call{value: params.ethAmount}("");
+                (bool success, bytes memory rdata) = params.redeemRequest.recipient.call{value: params.ethAmount}("");
                 if (!success) {
-                    revert ClaimRedeemFailed(params.redeemRequest.owner, rdata);
+                    revert ClaimRedeemFailed(params.redeemRequest.recipient, rdata);
                 }
             }
             emit ClaimedRedeemRequest(
                 _redeemRequestIds[idx],
-                params.redeemRequest.owner,
+                params.redeemRequest.recipient,
                 params.ethAmount,
                 params.lsETHAmount,
                 params.redeemRequest.amount
@@ -527,5 +552,9 @@ contract RedeemManagerV1 is Initializable, IRedeemManagerV1 {
     function _setRedeemDemand(uint256 _newValue) internal {
         emit SetRedeemDemand(RedeemDemand.get(), _newValue);
         RedeemDemand.set(_newValue);
+    }
+
+    function version() external pure returns (string memory) {
+        return "1.2.0";
     }
 }

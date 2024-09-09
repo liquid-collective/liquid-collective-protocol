@@ -5,7 +5,7 @@ import "../../state/river/CLSpec.sol";
 import "../../state/river/ReportBounds.sol";
 
 /// @title Oracle Manager (v1)
-/// @author Kiln
+/// @author Alluvial Finance Inc.
 /// @notice This interface exposes methods to handle the inputs provided by the oracle
 interface IOracleManagerV1 {
     /// @notice The stored oracle address changed

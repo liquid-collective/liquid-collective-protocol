@@ -1,6 +1,6 @@
 # IERC20VestableVotesUpgradeableV1
 
-*Alluvial*
+*Alluvial Finance Inc.*
 
 > ERC20 Vestable Votes Upgradeable Interface(v1)
 

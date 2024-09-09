@@ -1,6 +1,6 @@
 # IELFeeRecipientV1
 
-*Kiln*
+*Alluvial Finance Inc.*
 
 > Execution Layer Fee Recipient Interface (v1)
 

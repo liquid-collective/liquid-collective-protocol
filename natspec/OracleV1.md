@@ -1,6 +1,6 @@
 # OracleV1
 
-*Kiln*
+*Alluvial Finance Inc.*
 
 > Oracle (v1)
 
@@ -355,6 +355,23 @@ Edits the quorum required to forward cl data to River
 | Name | Type | Description |
 |---|---|---|
 | _newQuorum | uint256 | New quorum parameter |
+
+### version
+
+```solidity
+function version() external pure returns (string)
+```
+
+Retrieves the version of the contract
+
+
+
+
+#### Returns
+
+| Name | Type | Description |
+|---|---|---|
+| _0 | string | Version of the contract |
 
 
 

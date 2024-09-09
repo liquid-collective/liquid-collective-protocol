@@ -7,7 +7,7 @@ import "openzeppelin-contracts-upgradeable/contracts/governance/utils/IVotesUpgr
 import "./components/IERC20VestableVotesUpgradeable.1.sol";
 
 /// @title TLC Interface (v1)
-/// @author Alluvial
+/// @author Alluvial Finance Inc.
 /// @notice TLC token interface
 interface ITLCV1 is IERC20Upgradeable, IVotesUpgradeable, IERC20VestableVotesUpgradeableV1 {
     /// @notice Initializes the TLC Token
