@@ -37,7 +37,9 @@ contract TlcMigrationTest is Test {
 
         VestingSchedulesV2.VestingSchedule[] memory schedulesBefore = new VestingSchedulesV2.VestingSchedule[](67);
         for (uint256 i = 0; i < 67; i++) {
-            (schedulesBefore[i],) = TLCV1(address(tlcProxy)).getVestingSchedule(i);
+            // (schedulesBefore[i],) = TLCV1(address(tlcProxy)).getVestingSchedule(i);
+            (, bytes memory data) = address(tlcProxy).call(abi.encodeWithSignature("getVestingSchedule(uint256)", i));
+            schedulesBefore[i] = abi.decode(data, (VestingSchedulesV2.VestingSchedule));
             //console.log("%s,%s,%s", i, schedulesBefore[i].start, schedulesBefore[i].end);
         }
 
