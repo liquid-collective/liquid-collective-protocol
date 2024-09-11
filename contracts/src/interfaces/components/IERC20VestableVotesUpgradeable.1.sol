@@ -63,6 +63,8 @@ interface IERC20VestableVotesUpgradeableV1 {
     /// @dev vesting details of a beneficiary at all times. The values won't change even after tokens are released.
     /// @dev The only dynamic field of the structure is end, and is updated whenever a vesting schedule is revoked
     /// @param _index Index of the vesting schedule
+    /// @return vesting schedule Returns the vesting schedule for the choosen index
+    /// @return IgnoreGlobalUnlockSchedule Returns if the vesting schedule is ignoring the global unlock schedule
     function getVestingSchedule(uint256 _index)
         external
         view
