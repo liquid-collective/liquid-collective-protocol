@@ -193,6 +193,10 @@ contract RedeemManagerV1 is Initializable, IRedeemManagerV1, IProtocolVersion {
         return _requestRedeem(_lsETHAmount, msg.sender);
     }
 
+matchingAmount
+maxRedeemableAmount
+ethAmount
+
     /// @inheritdoc IRedeemManagerV1
     function claimRedeemRequests(
         uint32[] calldata redeemRequestIds,
@@ -603,6 +607,6 @@ contract RedeemManagerV1 is Initializable, IRedeemManagerV1, IProtocolVersion {
     }
 
     function version() external pure returns (string memory) {
-        return "1.2.0";
+        return "1.2.1";
     }
 }

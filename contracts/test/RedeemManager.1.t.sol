@@ -1919,7 +1919,7 @@ contract RedeemManagerV1Tests is RedeeManagerV1TestBase {
     }
 
     function testVersion() external {
-        assertEq(redeemManager.version(), "1.2.0");
+        assertEq(redeemManager.version(), "1.2.1");
     }
 }
 
