@@ -1919,7 +1919,7 @@ contract RedeemManagerV1Tests is RedeeManagerV1TestBase {
     }
 
     function testVersion() external {
-        assertEq(redeemManager.version(), "1.2.0");
+        assertEq(redeemManager.version(), "1.2.1");
     }
 }
 
@@ -2070,115 +2070,6 @@ contract MockRedeemManagerV1_2 is MockRedeemManagerV1Base {
 
         redeemRequests.push(
             RedeemQueueV1_2.RedeemRequest({
-                height: height,
-                amount: _lsETHAmount,
-                recipient: _recipient,
-                initiator: msg.sender,
-                maxRedeemableEth: maxRedeemableEth
-            })
-        );
-
-        _setRedeemDemand(RedeemDemand.get() + _lsETHAmount);
-
-        emit RequestedRedeem(_recipient, height, _lsETHAmount, maxRedeemableEth, redeemRequestId);
-    }
-}
-
-contract MockRedeemManagerV2 is MockRedeemManagerV1Base {
-    function initializeRedeemManagerV1_2(address[] calldata _prevInitiators) external init(1) {
-        _redeemQueueMigrationV1_2(_prevInitiators);
-    }
-
-    function _redeemQueueMigrationV1_2(address[] memory _prevInitiators) internal {
-        RedeemQueueV1.RedeemRequest[] memory initialQueue = RedeemQueueV1.get();
-        RedeemQueueV1_2.RedeemRequest[] memory currentQueue = RedeemQueueV1_2.get(); //TODO: Remove after dev upgrade, not needed for staging/prod
-        uint256 currentQueueLen = currentQueue.length;
-        RedeemQueueV2.RedeemRequest[] storage newQueue = RedeemQueueV2.get();
-
-        if (currentQueue.length == 0) {
-            return;
-        }
-
-        //TODO: Remove after dev upgrade, not needed for staging/prod
-        if (_prevInitiators.length != 7) {
-            revert IncompatibleArrayLengths();
-        }
-
-        //TODO: Remove after dev upgrade, not needed for staging/prod
-        for (uint256 i = 0; i < 7;) {
-            newQueue[i] = RedeemQueueV2.RedeemRequest({
-                amount: initialQueue[i].amount,
-                maxRedeemableEth: initialQueue[i].maxRedeemableEth,
-                recipient: initialQueue[i].recipient,
-                height: initialQueue[i].height,
-                initiator: _prevInitiators[i] // Assign the provided initiators
-            });
-
-            unchecked {
-                ++i;
-            }
-        }
-
-        uint256 heightDeficit = initialQueue[6].height + initialQueue[6].amount;
-        for (uint256 i = 7; i < currentQueueLen;) {
-            newQueue[i] = RedeemQueueV2.RedeemRequest({
-                amount: currentQueue[i].amount,
-                maxRedeemableEth: currentQueue[i].maxRedeemableEth,
-                recipient: currentQueue[i].recipient,
-                height: currentQueue[i].height + heightDeficit,
-                initiator: currentQueue[i].initiator // Reuse the initiator from the current queue
-            });
-
-            unchecked {
-                ++i;
-            }
-        }
-    }
-
-    function getRedeemRequestCount() external view returns (uint256) {
-        return RedeemQueueV2.get().length;
-    }
-
-    function getRedeemRequestDetails(uint32 _redeemRequestId)
-        external
-        view
-        returns (RedeemQueueV2.RedeemRequest memory)
-    {
-        return RedeemQueueV2.get()[_redeemRequestId];
-    }
-
-    function requestRedeem(uint256 _lsETHAmount, address _recipient)
-        external
-        onlyRedeemerOrRiver
-        returns (uint32 redeemRequestId)
-    {
-        IRiverV1 river = _castedRiver();
-        if (IAllowlistV1(river.getAllowlist()).isDenied(_recipient)) {
-            revert RecipientIsDenied();
-        }
-        return _requestRedeem(_lsETHAmount, _recipient);
-    }
-
-    function _requestRedeem(uint256 _lsETHAmount, address _recipient) internal returns (uint32 redeemRequestId) {
-        LibSanitize._notZeroAddress(_recipient);
-        if (_lsETHAmount == 0) {
-            revert InvalidZeroAmount();
-        }
-        if (!_castedRiver().transferFrom(msg.sender, address(this), _lsETHAmount)) {
-            revert TransferError();
-        }
-        RedeemQueueV2.RedeemRequest[] storage redeemRequests = RedeemQueueV2.get();
-        redeemRequestId = uint32(redeemRequests.length);
-        uint256 height = 0;
-        if (redeemRequestId != 0) {
-            RedeemQueueV2.RedeemRequest memory previousRedeemRequest = redeemRequests[redeemRequestId - 1];
-            height = previousRedeemRequest.height + previousRedeemRequest.amount;
-        }
-
-        uint256 maxRedeemableEth = _castedRiver().underlyingBalanceFromShares(_lsETHAmount);
-
-        redeemRequests.push(
-            RedeemQueueV2.RedeemRequest({
                 height: height,
                 amount: _lsETHAmount,
                 recipient: _recipient,

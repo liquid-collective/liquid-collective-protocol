@@ -744,6 +744,6 @@ contract OracleV1Tests is OracleV1TestBase {
     }
 
     function testVersion() external {
-        assertEq(oracle.version(), "1.2.0");
+        assertEq(oracle.version(), "1.2.1");
     }
 }
