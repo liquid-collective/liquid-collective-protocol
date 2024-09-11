@@ -119,6 +119,6 @@ contract Firewall is IFirewall, IProtocolVersion, Administrable {
 
     /// @inheritdoc IProtocolVersion
     function version() external pure returns (string memory) {
-        return "1.2.0";
+        return "1.2.1";
     }
 }
