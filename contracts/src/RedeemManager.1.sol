@@ -193,10 +193,6 @@ contract RedeemManagerV1 is Initializable, IRedeemManagerV1, IProtocolVersion {
         return _requestRedeem(_lsETHAmount, msg.sender);
     }
 
-matchingAmount
-maxRedeemableAmount
-ethAmount
-
     /// @inheritdoc IRedeemManagerV1
     function claimRedeemRequests(
         uint32[] calldata redeemRequestIds,
