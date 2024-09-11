@@ -37,7 +37,8 @@ contract TlcMigrationTest is Test {
 
         VestingSchedulesV2.VestingSchedule[] memory schedulesBefore = new VestingSchedulesV2.VestingSchedule[](67);
         for (uint256 i = 0; i < 67; i++) {
-            // (schedulesBefore[i],) = TLCV1(address(tlcProxy)).getVestingSchedule(i);
+            // We use the following method since, the function which also returns the IgnoreGlobalUnlockSchedule is not
+            // available at the point of forking.
             (, bytes memory data) = address(tlcProxy).call(abi.encodeWithSignature("getVestingSchedule(uint256)", i));
             schedulesBefore[i] = abi.decode(data, (VestingSchedulesV2.VestingSchedule));
             //console.log("%s,%s,%s", i, schedulesBefore[i].start, schedulesBefore[i].end);
