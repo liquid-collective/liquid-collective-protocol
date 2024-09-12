@@ -899,6 +899,7 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
         emit SetTotalValidatorExitsRequested(_currentValue, _newValue);
     }
 
+    /// @inheritdoc IProtocolVersion
     function version() external pure returns (string memory) {
         return "1.2.1";
     }
