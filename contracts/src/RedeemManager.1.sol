@@ -72,38 +72,20 @@ contract RedeemManagerV1 is Initializable, IRedeemManagerV1, IProtocolVersion {
 
     function _redeemQueueMigrationV1_2(address[] memory _prevInitiators) internal {
         RedeemQueueV1.RedeemRequest[] memory initialQueue = RedeemQueueV1.get();
-        RedeemQueueV1_2.RedeemRequest[] memory currentQueue = RedeemQueueV1_2.get(); //TODO: Remove after dev upgrade, not needed for staging/prod
-        uint256 currentQueueLen = currentQueue.length;
+        uint256 currentQueueLen = initialQueue.length;
         RedeemQueueV2.RedeemRequest[] storage newQueue = RedeemQueueV2.get();
 
-        //TODO: Remove after dev upgrade, not needed for staging/prod
-        if (_prevInitiators.length != 7) {
+        if (_prevInitiators.length != currentQueueLen) {
             revert IncompatibleArrayLengths();
         }
-
-        //TODO: Remove after dev upgrade, not needed for staging/prod
-        for (uint256 i = 0; i < 7;) {
+        // Migrate from v1 to v2
+        for (uint256 i = 0; i < currentQueueLen;) {
             newQueue[i] = RedeemQueueV2.RedeemRequest({
                 amount: initialQueue[i].amount,
                 maxRedeemableEth: initialQueue[i].maxRedeemableEth,
                 recipient: initialQueue[i].recipient,
                 height: initialQueue[i].height,
                 initiator: _prevInitiators[i] // Assign the provided initiators
-            });
-
-            unchecked {
-                ++i;
-            }
-        }
-
-        uint256 heightDeficit = initialQueue[6].height + initialQueue[6].amount;
-        for (uint256 i = 7; i < currentQueueLen;) {
-            newQueue[i] = RedeemQueueV2.RedeemRequest({
-                amount: currentQueue[i].amount,
-                maxRedeemableEth: currentQueue[i].maxRedeemableEth,
-                recipient: currentQueue[i].recipient,
-                height: currentQueue[i].height + heightDeficit,
-                initiator: currentQueue[i].initiator // Reuse the initiator from the current queue
             });
 
             unchecked {

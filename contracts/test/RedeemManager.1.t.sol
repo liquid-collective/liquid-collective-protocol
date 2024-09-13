@@ -2121,12 +2121,12 @@ contract InitializeRedeemManagerV1_2Test is RedeeManagerV1TestBase {
         redeemManager = address(proxy);
 
         // Setup prevInitiators
-        for (uint256 i = 0; i < 7; i++) {
+        for (uint256 i = 0; i < 30; i++) {
             prevInitiators.push(address(uint160(i + 1)));
         }
 
         // Setup initial queue (RedeemQueueV1)
-        for (uint256 i = 0; i < 7; i++) {
+        for (uint256 i = 0; i < 30; i++) {
             address user = address(uint160(i + 100));
             _allowlistUser(user);
             uint128 amount = uint128((i + 1) * 1e18);
@@ -2137,22 +2137,6 @@ contract InitializeRedeemManagerV1_2Test is RedeeManagerV1TestBase {
             assertEq(river.balanceOf(user), amount);
             vm.prank(user);
             MockRedeemManagerV1(redeemManager).requestRedeem(amount, user);
-        }
-
-        // Setup current queue (RedeemQueueV1_2)
-        MockRedeemManagerV1_2 redeemQueueImplV1_2 = new MockRedeemManagerV1_2();
-        vm.store(redeemManager, IMPLEMENTATION_SLOT, bytes32(uint256(uint160(address(redeemQueueImplV1_2)))));
-        for (uint256 i = 0; i < 8; i++) {
-            address user = address(uint160(i + 200));
-            _allowlistUser(user);
-            uint128 amount = uint128((i + 2) * 1e18);
-            river.sudoDeal(user, amount);
-
-            vm.prank(user);
-            river.approve(address(redeemManager), amount);
-            assertEq(river.balanceOf(user), amount);
-            vm.prank(user);
-            MockRedeemManagerV1_2(redeemManager).requestRedeem(amount, user);
         }
     }
 
@@ -2171,12 +2155,11 @@ contract InitializeRedeemManagerV1_2Test is RedeeManagerV1TestBase {
         vm.store(redeemManager, IMPLEMENTATION_SLOT, bytes32(uint256(uint160(address(redeemQueueImplV2)))));
         RedeemManagerV1(redeemManager).initializeRedeemManagerV1_2(prevInitiators);
 
-        // Check the first 7 entries (from initialQueue)
-        for (uint256 i = 0; i < 7; i++) {
+        // Check all existing redeemRequests are intact after the migration  (from initialQueue)
+        for (uint256 i = 0; i < 30; i++) {
             RedeemQueueV2.RedeemRequest memory current =
                 RedeemManagerV1(redeemManager).getRedeemRequestDetails(uint32(i));
             assertEq(current.amount, (i + 1) * 1e18);
-            // assertEq(current.maxRedeemableEth, i * 2e18);
             assertEq(current.recipient, address(uint160(i + 100)));
             if (i == 0) {
                 assertEq(current.height, 0);
@@ -2188,20 +2171,8 @@ contract InitializeRedeemManagerV1_2Test is RedeeManagerV1TestBase {
             assertEq(current.initiator, prevInitiators[i]);
         }
 
-        // Check the remaining entries (from currentQueue)
-        for (uint256 i = 7; i < 15; i++) {
-            RedeemQueueV2.RedeemRequest memory current =
-                RedeemManagerV1(redeemManager).getRedeemRequestDetails(uint32(i));
-            assertEq(current.amount, ((i - 7) + 2) * 1e18);
-            // assertEq(current.maxRedeemableEth, (i - 7) * 2e18);
-            assertEq(current.recipient, address(uint160((i - 7) + 200)));
-            uint256 prevHeight = RedeemManagerV1(redeemManager).getRedeemRequestDetails(uint32(i - 1)).height;
-            uint256 prevAmount = RedeemManagerV1(redeemManager).getRedeemRequestDetails(uint32(i - 1)).amount;
-            assertEq(current.initiator, current.recipient);
-        }
-
         // Check total length
-        assertEq(RedeemManagerV1(redeemManager).getRedeemRequestCount(), 15);
+        assertEq(RedeemManagerV1(redeemManager).getRedeemRequestCount(), 30);
     }
 
     function testRedeemQueueMigrationV2_IncompatibleArrayLengths() public {
