@@ -70,20 +70,20 @@ contract RedeemManagerV1 is Initializable, IRedeemManagerV1, IProtocolVersion {
     }
 
     function _redeemQueueMigrationV1_2(address[] memory _prevInitiators) internal {
-        RedeemQueueV1.RedeemRequest[] memory initialQueue = RedeemQueueV1.get();
-        uint256 currentQueueLen = initialQueue.length;
+        RedeemQueueV1.RedeemRequest[] memory oldQueue = RedeemQueueV1.get();
+        uint256 oldQueueLen = oldQueue.length;
         RedeemQueueV2.RedeemRequest[] storage newQueue = RedeemQueueV2.get();
 
-        if (_prevInitiators.length != currentQueueLen) {
+        if (_prevInitiators.length != oldQueueLen) {
             revert IncompatibleArrayLengths();
         }
         // Migrate from v1 to v2
-        for (uint256 i = 0; i < currentQueueLen;) {
+        for (uint256 i = 0; i < oldQueueLen;) {
             newQueue[i] = RedeemQueueV2.RedeemRequest({
-                amount: initialQueue[i].amount,
-                maxRedeemableEth: initialQueue[i].maxRedeemableEth,
-                recipient: initialQueue[i].recipient,
-                height: initialQueue[i].height,
+                amount: oldQueue[i].amount,
+                maxRedeemableEth: oldQueue[i].maxRedeemableEth,
+                recipient: oldQueue[i].recipient,
+                height: oldQueue[i].height,
                 initiator: _prevInitiators[i] // Assign the provided initiators
             });
 

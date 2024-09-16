@@ -2099,7 +2099,7 @@ contract InitializeRedeemManagerV1_2Test is RedeeManagerV1TestBase {
         vm.store(redeemManager, IMPLEMENTATION_SLOT, bytes32(uint256(uint160(address(redeemQueueImplV2)))));
         RedeemManagerV1(redeemManager).initializeRedeemManagerV1_2(prevInitiators);
 
-        // Check all existing redeemRequests are intact after the migration  (from initialQueue)
+        // Check all existing redeemRequests are intact after the migration  (from oldQueue)
         for (uint256 i = 0; i < 30; i++) {
             RedeemQueueV2.RedeemRequest memory current =
                 RedeemManagerV1(redeemManager).getRedeemRequestDetails(uint32(i));

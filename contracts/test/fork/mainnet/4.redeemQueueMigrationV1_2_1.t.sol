@@ -57,19 +57,23 @@ contract RedeemQueueMigrationV1_2 is Test {
         }
     }
 
-    function test_migrate_allRequestInOneCall() external shouldSkip {
-        // Setting up the Redeem Manager
+    function test_migrate_allRedeemRequestsInOneCall() external shouldSkip {
+        // Getting the RedeemManager proxy instance
         TUPProxy redeemManagerProxy = TUPProxy(payable(REDEEM_MANAGER_MAINNET_ADDRESS));
 
+        // Getting RedeemManagerV1 instance before the upgrade
         MockIRedeemManagerV1 RedeemManager = MockIRedeemManagerV1(REDEEM_MANAGER_MAINNET_ADDRESS);
+        // Getting all redeem request details, and count before the upgrade
         uint256 oldCount = RedeemManager.getRedeemRequestCount();
-        RedeemQueueV1.RedeemRequest memory oldRequest0 = RedeemManager.getRedeemRequestDetails(0);
-        RedeemQueueV1.RedeemRequest memory oldRequest1 = RedeemManager.getRedeemRequestDetails(1);
-        RedeemQueueV1.RedeemRequest memory oldRequestN = RedeemManager.getRedeemRequestDetails(uint32(oldCount - 1));
+        RedeemQueueV1.RedeemRequest[33] memory oldRequests;
+        for (uint256 i = 0; i < 33; i++) {
+            oldRequests[i] = RedeemManager.getRedeemRequestDetails(uint32(i));
+        }
 
+        // Generating mock initiators
         address[] memory mockInitiators = _generateRandomAddress(oldCount);
 
-        // Set up the fork at a new block for testing the upgrade
+        // Set up the fork at a new block for making the v1_2_1 upgrade, and testing
         vm.createSelectFork(_rpcUrl, 20678000);
         // Upgrade the RedeemManager
         RedeemManagerV1 newImplementation = new RedeemManagerV1();
@@ -81,32 +85,17 @@ contract RedeemQueueMigrationV1_2 is Test {
 
         // After upgrade: check that state before the upgrade, and state after upgrade are same.
         RedeemManagerV1 RManager = RedeemManagerV1(REDEEM_MANAGER_MAINNET_ADDRESS);
-        uint256 newCount = RedeemManager.getRedeemRequestCount();
+        uint256 newCount = RManager.getRedeemRequestCount();
         assertEq(newCount, oldCount);
 
-        {
-            RedeemQueueV2.RedeemRequest memory newRequest = RManager.getRedeemRequestDetails(0);
-            assertEq(newRequest.amount, oldRequest0.amount);
-            assertEq(newRequest.maxRedeemableEth, oldRequest0.maxRedeemableEth);
-            assertEq(newRequest.recipient, oldRequest0.recipient);
-            assertEq(newRequest.height, oldRequest0.height);
-            assertEq(newRequest.initiator, mockInitiators[0]);
-        }
-        {
-            RedeemQueueV2.RedeemRequest memory newRequest = RManager.getRedeemRequestDetails(1);
-            assertEq(newRequest.amount, oldRequest1.amount);
-            assertEq(newRequest.maxRedeemableEth, oldRequest1.maxRedeemableEth);
-            assertEq(newRequest.recipient, oldRequest1.recipient);
-            assertEq(newRequest.height, oldRequest1.height);
-            assertEq(newRequest.initiator, mockInitiators[1]);
-        }
-        {
-            RedeemQueueV2.RedeemRequest memory newRequest = RManager.getRedeemRequestDetails(uint32(newCount - 1));
-            assertEq(newRequest.amount, oldRequestN.amount);
-            assertEq(newRequest.maxRedeemableEth, oldRequestN.maxRedeemableEth);
-            assertEq(newRequest.recipient, oldRequestN.recipient);
-            assertEq(newRequest.height, oldRequestN.height);
-            assertEq(newRequest.initiator, mockInitiators[newCount - 1]);
+        for (uint32 i = 0; i < newCount; i++) {
+            RedeemQueueV2.RedeemRequest memory newRequest = RManager.getRedeemRequestDetails(i);
+
+            assertEq(newRequest.amount, oldRequests[i].amount);
+            assertEq(newRequest.maxRedeemableEth, oldRequests[i].maxRedeemableEth);
+            assertEq(newRequest.recipient, oldRequests[i].recipient);
+            assertEq(newRequest.height, oldRequests[i].height);
+            assertEq(newRequest.initiator, mockInitiators[i]);
         }
     }
 }
