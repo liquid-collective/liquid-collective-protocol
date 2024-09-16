@@ -12,7 +12,6 @@ import "./Initializable.sol";
 import "./state/shared/RiverAddress.sol";
 import "./state/redeemManager/RedeemQueue.1.sol";
 import "./state/redeemManager/RedeemQueue.2.sol";
-import "./state/redeemManager/RedeemQueue.1.2.sol";
 import "./state/redeemManager/WithdrawalStack.sol";
 import "./state/redeemManager/BufferedExceedingEth.sol";
 import "./state/redeemManager/RedeemDemand.sol";
