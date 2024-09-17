@@ -10,7 +10,9 @@ import "./libraries/LibUint256.sol";
 import "./Initializable.sol";
 
 import "./state/shared/RiverAddress.sol";
-import "./state/redeemManager/RedeemQueue.sol";
+import "./state/redeemManager/RedeemQueue.1.sol";
+import "./state/redeemManager/RedeemQueue.2.sol";
+import "./state/redeemManager/RedeemQueue.1.2.sol";
 import "./state/redeemManager/WithdrawalStack.sol";
 import "./state/redeemManager/BufferedExceedingEth.sol";
 import "./state/redeemManager/RedeemDemand.sol";
@@ -64,6 +66,52 @@ contract RedeemManagerV1 is Initializable, IRedeemManagerV1, IProtocolVersion {
         emit SetRiver(_river);
     }
 
+    function initializeRedeemManagerV1_2(address[] calldata _prevInitiators) external init(1) {
+        _redeemQueueMigrationV1_2(_prevInitiators);
+    }
+
+    function _redeemQueueMigrationV1_2(address[] memory _prevInitiators) internal {
+        RedeemQueueV1.RedeemRequest[] memory initialQueue = RedeemQueueV1.get();
+        RedeemQueueV1_2.RedeemRequest[] memory currentQueue = RedeemQueueV1_2.get(); //TODO: Remove after dev upgrade, not needed for staging/prod
+        uint256 currentQueueLen = currentQueue.length;
+        RedeemQueueV2.RedeemRequest[] storage newQueue = RedeemQueueV2.get();
+
+        //TODO: Remove after dev upgrade, not needed for staging/prod
+        if (_prevInitiators.length != 7) {
+            revert IncompatibleArrayLengths();
+        }
+
+        //TODO: Remove after dev upgrade, not needed for staging/prod
+        for (uint256 i = 0; i < 7;) {
+            newQueue[i] = RedeemQueueV2.RedeemRequest({
+                amount: initialQueue[i].amount,
+                maxRedeemableEth: initialQueue[i].maxRedeemableEth,
+                recipient: initialQueue[i].recipient,
+                height: initialQueue[i].height,
+                initiator: _prevInitiators[i] // Assign the provided initiators
+            });
+
+            unchecked {
+                ++i;
+            }
+        }
+
+        uint256 heightDeficit = initialQueue[6].height + initialQueue[6].amount;
+        for (uint256 i = 7; i < currentQueueLen;) {
+            newQueue[i] = RedeemQueueV2.RedeemRequest({
+                amount: currentQueue[i].amount,
+                maxRedeemableEth: currentQueue[i].maxRedeemableEth,
+                recipient: currentQueue[i].recipient,
+                height: currentQueue[i].height + heightDeficit,
+                initiator: currentQueue[i].initiator // Reuse the initiator from the current queue
+            });
+
+            unchecked {
+                ++i;
+            }
+        }
+    }
+
     /// @inheritdoc IRedeemManagerV1
     function getRiver() external view returns (address) {
         return RiverAddress.get();
@@ -71,16 +119,16 @@ contract RedeemManagerV1 is Initializable, IRedeemManagerV1, IProtocolVersion {
 
     /// @inheritdoc IRedeemManagerV1
     function getRedeemRequestCount() external view returns (uint256) {
-        return RedeemQueue.get().length;
+        return RedeemQueueV2.get().length;
     }
 
     /// @inheritdoc IRedeemManagerV1
     function getRedeemRequestDetails(uint32 _redeemRequestId)
         external
         view
-        returns (RedeemQueue.RedeemRequest memory)
+        returns (RedeemQueueV2.RedeemRequest memory)
     {
-        return RedeemQueue.get()[_redeemRequestId];
+        return RedeemQueueV2.get()[_redeemRequestId];
     }
 
     /// @inheritdoc IRedeemManagerV1
@@ -206,7 +254,7 @@ contract RedeemManagerV1 is Initializable, IRedeemManagerV1, IProtocolVersion {
     /// @param _withdrawalEvent The load withdrawal event
     /// @return True if matching
     function _isMatch(
-        RedeemQueue.RedeemRequest memory _redeemRequest,
+        RedeemQueueV2.RedeemRequest memory _redeemRequest,
         WithdrawalStack.WithdrawalEvent memory _withdrawalEvent
     ) internal pure returns (bool) {
         return (
@@ -218,7 +266,7 @@ contract RedeemManagerV1 is Initializable, IRedeemManagerV1, IProtocolVersion {
     /// @notice Internal utility to perform a dichotomic search of the withdrawal event to use to claim the redeem request
     /// @param _redeemRequest The redeem request to resolve
     /// @return The matching withdrawal event
-    function _performDichotomicResolution(RedeemQueue.RedeemRequest memory _redeemRequest)
+    function _performDichotomicResolution(RedeemQueueV2.RedeemRequest memory _redeemRequest)
         internal
         view
         returns (int64)
@@ -266,12 +314,12 @@ contract RedeemManagerV1 is Initializable, IRedeemManagerV1, IProtocolVersion {
         uint32 _redeemRequestId,
         WithdrawalStack.WithdrawalEvent memory _lastWithdrawalEvent
     ) internal view returns (int64 withdrawalEventId) {
-        RedeemQueue.RedeemRequest[] storage redeemRequests = RedeemQueue.get();
+        RedeemQueueV2.RedeemRequest[] storage redeemRequests = RedeemQueueV2.get();
         // if the redeem request id is >= than the size of requests, we know it's out of bounds and doesn't exist
         if (_redeemRequestId >= redeemRequests.length) {
             return RESOLVE_OUT_OF_BOUNDS;
         }
-        RedeemQueue.RedeemRequest memory redeemRequest = redeemRequests[_redeemRequestId];
+        RedeemQueueV2.RedeemRequest memory redeemRequest = redeemRequests[_redeemRequestId];
         // if the redeem request remaining amount is 0, we know that the request has been entirely claimed
         if (redeemRequest.amount == 0) {
             return RESOLVE_FULLY_CLAIMED;
@@ -301,18 +349,18 @@ contract RedeemManagerV1 is Initializable, IRedeemManagerV1, IProtocolVersion {
         if (!_castedRiver().transferFrom(msg.sender, address(this), _lsETHAmount)) {
             revert TransferError();
         }
-        RedeemQueue.RedeemRequest[] storage redeemRequests = RedeemQueue.get();
+        RedeemQueueV2.RedeemRequest[] storage redeemRequests = RedeemQueueV2.get();
         redeemRequestId = uint32(redeemRequests.length);
         uint256 height = 0;
         if (redeemRequestId != 0) {
-            RedeemQueue.RedeemRequest memory previousRedeemRequest = redeemRequests[redeemRequestId - 1];
+            RedeemQueueV2.RedeemRequest memory previousRedeemRequest = redeemRequests[redeemRequestId - 1];
             height = previousRedeemRequest.height + previousRedeemRequest.amount;
         }
 
         uint256 maxRedeemableEth = _castedRiver().underlyingBalanceFromShares(_lsETHAmount);
 
         redeemRequests.push(
-            RedeemQueue.RedeemRequest({
+            RedeemQueueV2.RedeemRequest({
                 height: height,
                 amount: _lsETHAmount,
                 recipient: _recipient,
@@ -329,7 +377,7 @@ contract RedeemManagerV1 is Initializable, IRedeemManagerV1, IProtocolVersion {
     /// @notice Internal structure used to optimize stack usage in _claimRedeemRequest
     struct ClaimRedeemRequestParameters {
         /// @custom:attribute The structure of the redeem request to claim
-        RedeemQueue.RedeemRequest redeemRequest;
+        RedeemQueueV2.RedeemRequest redeemRequest;
         /// @custom:attribute The structure of the withdrawal event to use to claim the redeem request
         WithdrawalStack.WithdrawalEvent withdrawalEvent;
         /// @custom:attribute The id of the redeem request to claim
@@ -359,7 +407,7 @@ contract RedeemManagerV1 is Initializable, IRedeemManagerV1, IProtocolVersion {
     /// @notice Internal utility to save a redeem request to storage
     /// @param _params The parameters of the claim redeem request call
     function _saveRedeemRequest(ClaimRedeemRequestParameters memory _params) internal {
-        RedeemQueue.RedeemRequest[] storage redeemRequests = RedeemQueue.get();
+        RedeemQueueV2.RedeemRequest[] storage redeemRequests = RedeemQueueV2.get();
         redeemRequests[_params.redeemRequestId].height = _params.redeemRequest.height;
         redeemRequests[_params.redeemRequestId].amount = _params.redeemRequest.amount;
         redeemRequests[_params.redeemRequestId].maxRedeemableEth = _params.redeemRequest.maxRedeemableEth;
@@ -465,7 +513,7 @@ contract RedeemManagerV1 is Initializable, IRedeemManagerV1, IProtocolVersion {
         }
         claimStatuses = new uint8[](redeemRequestIdsLength);
 
-        RedeemQueue.RedeemRequest[] storage redeemRequests = RedeemQueue.get();
+        RedeemQueueV2.RedeemRequest[] storage redeemRequests = RedeemQueueV2.get();
         WithdrawalStack.WithdrawalEvent[] storage withdrawalEvents = WithdrawalStack.get();
 
         ClaimRedeemRequestParameters memory params;
@@ -555,6 +603,6 @@ contract RedeemManagerV1 is Initializable, IRedeemManagerV1, IProtocolVersion {
     }
 
     function version() external pure returns (string memory) {
-        return "1.2.0";
+        return "1.2.1";
     }
 }

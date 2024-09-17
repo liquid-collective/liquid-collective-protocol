@@ -7,9 +7,16 @@ import "forge-std/Test.sol";
 import "./utils/UserFactory.sol";
 import "./utils/LibImplementationUnbricker.sol";
 
-import "../src/state/redeemManager/RedeemQueue.sol";
+import "../src/state/shared/RiverAddress.sol";
+import "../src/state/redeemManager/RedeemDemand.sol";
+import "../src/state/redeemManager/RedeemQueue.1.sol";
+import "../src/state/redeemManager/RedeemQueue.2.sol";
+import "../src/state/redeemManager/RedeemQueue.1.2.sol";
+
 import "../src/state/redeemManager/WithdrawalStack.sol";
 import "../src/RedeemManager.1.sol";
+import "../src/TUPProxy.sol";
+import "../src/Initializable.sol";
 import "../src/Allowlist.1.sol";
 import "./mocks/RejectEtherMock.sol";
 
@@ -89,14 +96,15 @@ contract RiverMock {
     fallback() external payable {}
 }
 
-contract RedeemManagerV1Tests is Test {
-    RedeemManagerV1 internal redeemManager;
+contract RedeeManagerV1TestBase is Test {
     AllowlistV1 internal allowlist;
     RiverMock internal river;
     UserFactory internal uf = new UserFactory();
     address internal allowlistAdmin;
     address internal allowlistAllower;
     address internal allowlistDenier;
+    address public mockRiverAddress;
+    bytes32 internal constant REDEEM_QUEUE_ID_SLOT = bytes32(uint256(keccak256("river.state.redeemQueue")) - 1);
 
     event RequestedRedeem(address indexed recipient, uint256 height, uint256 size, uint256 maxRedeemableEth, uint32 id);
     event ReportedWithdrawal(uint256 height, uint256 size, uint256 ethAmount, uint32 id);
@@ -116,6 +124,10 @@ contract RedeemManagerV1Tests is Test {
         uint256 lsEthAmount,
         uint256 remainingLsEthAmount
     );
+}
+
+contract RedeemManagerV1Tests is RedeeManagerV1TestBase {
+    RedeemManagerV1 internal redeemManager;
 
     function setUp() external {
         allowlistAdmin = makeAddr("allowlistAdmin");
@@ -196,7 +208,7 @@ contract RedeemManagerV1Tests is Test {
         assertEq(requests[0], 0);
 
         {
-            RedeemQueue.RedeemRequest memory rr = redeemManager.getRedeemRequestDetails(0);
+            RedeemQueueV2.RedeemRequest memory rr = redeemManager.getRedeemRequestDetails(0);
 
             assertEq(rr.height, 0);
             assertEq(rr.amount, amount);
@@ -231,7 +243,7 @@ contract RedeemManagerV1Tests is Test {
         assertEq(requests[0], 0);
 
         {
-            RedeemQueue.RedeemRequest memory rr = redeemManager.getRedeemRequestDetails(0);
+            RedeemQueueV2.RedeemRequest memory rr = redeemManager.getRedeemRequestDetails(0);
 
             assertEq(rr.height, 0);
             assertEq(rr.amount, amount);
@@ -283,7 +295,7 @@ contract RedeemManagerV1Tests is Test {
         assertEq(requests[0], 0);
 
         {
-            RedeemQueue.RedeemRequest memory rr = redeemManager.getRedeemRequestDetails(0);
+            RedeemQueueV2.RedeemRequest memory rr = redeemManager.getRedeemRequestDetails(0);
 
             assertEq(rr.height, 0);
             assertEq(rr.amount, amount);
@@ -344,7 +356,7 @@ contract RedeemManagerV1Tests is Test {
         assertEq(requests[1], 1);
 
         {
-            RedeemQueue.RedeemRequest memory rr = redeemManager.getRedeemRequestDetails(0);
+            RedeemQueueV2.RedeemRequest memory rr = redeemManager.getRedeemRequestDetails(0);
 
             assertEq(rr.height, 0);
             assertEq(rr.amount, amount0);
@@ -352,7 +364,7 @@ contract RedeemManagerV1Tests is Test {
         }
 
         {
-            RedeemQueue.RedeemRequest memory rr = redeemManager.getRedeemRequestDetails(1);
+            RedeemQueueV2.RedeemRequest memory rr = redeemManager.getRedeemRequestDetails(1);
 
             assertEq(rr.height, amount0);
             assertEq(rr.amount, amount1);
@@ -522,7 +534,7 @@ contract RedeemManagerV1Tests is Test {
         assertEq(redeemManager.getRedeemRequestCount(), 1);
 
         {
-            RedeemQueue.RedeemRequest memory rr = redeemManager.getRedeemRequestDetails(0);
+            RedeemQueueV2.RedeemRequest memory rr = redeemManager.getRedeemRequestDetails(0);
 
             assertEq(rr.height, 0);
             assertEq(rr.amount, amount);
@@ -567,7 +579,7 @@ contract RedeemManagerV1Tests is Test {
         assertEq(resolvedRedeemRequests[0], -3);
 
         {
-            RedeemQueue.RedeemRequest memory rr = redeemManager.getRedeemRequestDetails(0);
+            RedeemQueueV2.RedeemRequest memory rr = redeemManager.getRedeemRequestDetails(0);
 
             assertEq(rr.height, amount);
             assertEq(rr.amount, 0);
@@ -603,7 +615,7 @@ contract RedeemManagerV1Tests is Test {
         assertEq(redeemManager.getRedeemRequestCount(), 1);
 
         {
-            RedeemQueue.RedeemRequest memory rr = redeemManager.getRedeemRequestDetails(0);
+            RedeemQueueV2.RedeemRequest memory rr = redeemManager.getRedeemRequestDetails(0);
 
             assertEq(rr.height, 0);
             assertEq(rr.amount, amount);
@@ -647,7 +659,7 @@ contract RedeemManagerV1Tests is Test {
         assertEq(resolvedRedeemRequests[0], -3);
 
         {
-            RedeemQueue.RedeemRequest memory rr = redeemManager.getRedeemRequestDetails(0);
+            RedeemQueueV2.RedeemRequest memory rr = redeemManager.getRedeemRequestDetails(0);
 
             assertEq(rr.height, amount);
             assertEq(rr.amount, 0);
@@ -683,7 +695,7 @@ contract RedeemManagerV1Tests is Test {
         assertEq(redeemManager.getRedeemRequestCount(), 1);
 
         {
-            RedeemQueue.RedeemRequest memory rr = redeemManager.getRedeemRequestDetails(0);
+            RedeemQueueV2.RedeemRequest memory rr = redeemManager.getRedeemRequestDetails(0);
 
             assertEq(rr.height, 0);
             assertEq(rr.amount, amount);
@@ -741,7 +753,7 @@ contract RedeemManagerV1Tests is Test {
         assertEq(resolvedRedeemRequests[0], -3);
 
         {
-            RedeemQueue.RedeemRequest memory rr = redeemManager.getRedeemRequestDetails(0);
+            RedeemQueueV2.RedeemRequest memory rr = redeemManager.getRedeemRequestDetails(0);
 
             assertEq(rr.height, amount);
             assertEq(rr.amount, 0);
@@ -811,7 +823,7 @@ contract RedeemManagerV1Tests is Test {
         assertEq(redeemManager.getRedeemRequestCount(), 1);
 
         {
-            RedeemQueue.RedeemRequest memory rr = redeemManager.getRedeemRequestDetails(0);
+            RedeemQueueV2.RedeemRequest memory rr = redeemManager.getRedeemRequestDetails(0);
 
             assertEq(rr.height, 0);
             assertEq(rr.amount, amount);
@@ -858,7 +870,7 @@ contract RedeemManagerV1Tests is Test {
         assertEq(resolvedRedeemRequests[0], -1);
 
         {
-            RedeemQueue.RedeemRequest memory rr = redeemManager.getRedeemRequestDetails(0);
+            RedeemQueueV2.RedeemRequest memory rr = redeemManager.getRedeemRequestDetails(0);
 
             assertEq(rr.height, amount / 2);
             assertEq(rr.amount, amount - (amount / 2));
@@ -920,7 +932,7 @@ contract RedeemManagerV1Tests is Test {
         emit ClaimedRedeemRequest(0, user, amount / 10, amount / 10, remaining);
         redeemManager.claimRedeemRequests(redeemRequestIds, withdrawEventIds, true, 0);
 
-        RedeemQueue.RedeemRequest memory redeemRequest = redeemManager.getRedeemRequestDetails(0);
+        RedeemQueueV2.RedeemRequest memory redeemRequest = redeemManager.getRedeemRequestDetails(0);
         assertEq(redeemRequest.height, amount - remaining);
         assertEq(redeemRequest.amount, remaining);
 
@@ -1008,7 +1020,7 @@ contract RedeemManagerV1Tests is Test {
         assertEq(redeemManager.getRedeemRequestCount(), 1);
 
         {
-            RedeemQueue.RedeemRequest memory rr = redeemManager.getRedeemRequestDetails(0);
+            RedeemQueueV2.RedeemRequest memory rr = redeemManager.getRedeemRequestDetails(0);
 
             assertEq(rr.height, 0);
             assertEq(rr.amount, amount);
@@ -1062,7 +1074,7 @@ contract RedeemManagerV1Tests is Test {
         assertEq(resolvedRedeemRequests[0], -3);
 
         {
-            RedeemQueue.RedeemRequest memory rr = redeemManager.getRedeemRequestDetails(0);
+            RedeemQueueV2.RedeemRequest memory rr = redeemManager.getRedeemRequestDetails(0);
 
             assertEq(rr.height, amount);
             assertEq(rr.amount, 0);
@@ -1113,7 +1125,7 @@ contract RedeemManagerV1Tests is Test {
         assertEq(redeemManager.getRedeemRequestCount(), 2);
 
         {
-            RedeemQueue.RedeemRequest memory rr = redeemManager.getRedeemRequestDetails(0);
+            RedeemQueueV2.RedeemRequest memory rr = redeemManager.getRedeemRequestDetails(0);
 
             assertEq(rr.height, 0);
             assertEq(rr.amount, amount);
@@ -1121,7 +1133,7 @@ contract RedeemManagerV1Tests is Test {
         }
 
         {
-            RedeemQueue.RedeemRequest memory rr = redeemManager.getRedeemRequestDetails(1);
+            RedeemQueueV2.RedeemRequest memory rr = redeemManager.getRedeemRequestDetails(1);
 
             assertEq(rr.height, amount);
             assertEq(rr.amount, amount);
@@ -1164,7 +1176,7 @@ contract RedeemManagerV1Tests is Test {
         assertEq(userB.balance, amount);
 
         {
-            RedeemQueue.RedeemRequest memory rr = redeemManager.getRedeemRequestDetails(0);
+            RedeemQueueV2.RedeemRequest memory rr = redeemManager.getRedeemRequestDetails(0);
 
             assertEq(rr.height, amount);
             assertEq(rr.amount, 0);
@@ -1172,7 +1184,7 @@ contract RedeemManagerV1Tests is Test {
         }
 
         {
-            RedeemQueue.RedeemRequest memory rr = redeemManager.getRedeemRequestDetails(1);
+            RedeemQueueV2.RedeemRequest memory rr = redeemManager.getRedeemRequestDetails(1);
 
             assertEq(rr.height, amount * 2);
             assertEq(rr.amount, 0);
@@ -1397,7 +1409,7 @@ contract RedeemManagerV1Tests is Test {
             vm.prank(user);
             redeemManager.requestRedeem(30e18, user);
 
-            RedeemQueue.RedeemRequest memory redeemRequest = redeemManager.getRedeemRequestDetails(uint32(idx));
+            RedeemQueueV2.RedeemRequest memory redeemRequest = redeemManager.getRedeemRequestDetails(uint32(idx));
 
             assertEq(redeemRequest.height, idx * 30e18);
             assertEq(redeemRequest.amount, 30e18);
@@ -1521,7 +1533,7 @@ contract RedeemManagerV1Tests is Test {
         assertEq(redeemManager.getRedeemRequestCount(), 1);
 
         {
-            RedeemQueue.RedeemRequest memory rr = redeemManager.getRedeemRequestDetails(0);
+            RedeemQueueV2.RedeemRequest memory rr = redeemManager.getRedeemRequestDetails(0);
 
             assertEq(rr.height, 0);
             assertEq(rr.amount, amount);
@@ -1584,7 +1596,7 @@ contract RedeemManagerV1Tests is Test {
         assertEq(redeemManager.getRedeemRequestCount(), 1);
 
         {
-            RedeemQueue.RedeemRequest memory rr = redeemManager.getRedeemRequestDetails(0);
+            RedeemQueueV2.RedeemRequest memory rr = redeemManager.getRedeemRequestDetails(0);
 
             assertEq(rr.height, 0);
             assertEq(rr.amount, amount);
@@ -1647,7 +1659,7 @@ contract RedeemManagerV1Tests is Test {
         assertEq(redeemManager.getRedeemRequestCount(), 1);
 
         {
-            RedeemQueue.RedeemRequest memory rr = redeemManager.getRedeemRequestDetails(0);
+            RedeemQueueV2.RedeemRequest memory rr = redeemManager.getRedeemRequestDetails(0);
 
             assertEq(rr.height, 0);
             assertEq(rr.amount, amount);
@@ -1705,7 +1717,7 @@ contract RedeemManagerV1Tests is Test {
         assertEq(resolvedRedeemRequests[0], -3);
 
         {
-            RedeemQueue.RedeemRequest memory rr = redeemManager.getRedeemRequestDetails(0);
+            RedeemQueueV2.RedeemRequest memory rr = redeemManager.getRedeemRequestDetails(0);
 
             assertEq(rr.height, amount);
             assertEq(rr.amount, 0);
@@ -1811,7 +1823,7 @@ contract RedeemManagerV1Tests is Test {
         assertEq(redeemManager.getRedeemRequestCount(), 1);
 
         {
-            RedeemQueue.RedeemRequest memory rr = redeemManager.getRedeemRequestDetails(0);
+            RedeemQueueV2.RedeemRequest memory rr = redeemManager.getRedeemRequestDetails(0);
 
             assertEq(rr.height, 0);
             assertEq(rr.amount, amount);
@@ -1872,7 +1884,7 @@ contract RedeemManagerV1Tests is Test {
         assertEq(redeemManager.getRedeemRequestCount(), 1);
 
         {
-            RedeemQueue.RedeemRequest memory rr = redeemManager.getRedeemRequestDetails(0);
+            RedeemQueueV2.RedeemRequest memory rr = redeemManager.getRedeemRequestDetails(0);
 
             assertEq(rr.height, 0);
             assertEq(rr.amount, amount);
@@ -1907,6 +1919,299 @@ contract RedeemManagerV1Tests is Test {
     }
 
     function testVersion() external {
-        assertEq(redeemManager.version(), "1.2.0");
+        assertEq(redeemManager.version(), "1.2.1");
+    }
+}
+
+interface IRedeemManagerV1Mock {
+    event RequestedRedeem(
+        address indexed recipient, uint256 height, uint256 amount, uint256 maxRedeemableEth, uint32 id
+    );
+
+    event SetRedeemDemand(uint256 oldRedeemDemand, uint256 newRedeemDemand);
+
+    event SetRiver(address river);
+
+    /// @notice Thrown When a zero value is provided
+    error InvalidZeroAmount();
+
+    /// @notice Thrown when a transfer error occured with LsETH
+    error TransferError();
+
+    /// @notice Thrown when the provided arrays don't have matching lengths
+    error IncompatibleArrayLengths();
+
+    error RedeemRequestOutOfBounds(uint256 id);
+
+    error DoesNotMatch(uint256 redeemRequestId, uint256 withdrawalEventId);
+
+    /// @notice Thrown when the recipient of redeemRequest is denied
+    error RecipientIsDenied();
+}
+
+contract MockRedeemManagerV1Base is Initializable, IRedeemManagerV1Mock {
+    modifier onlyRedeemerOrRiver() {
+        {
+            IRiverV1 river = _castedRiver();
+            if (msg.sender != address(river)) {
+                IAllowlistV1(river.getAllowlist()).onlyAllowed(msg.sender, LibAllowlistMasks.REDEEM_MASK);
+            }
+        }
+        _;
+    }
+
+    function initializeRedeemManagerV1(address _river) external init(0) {
+        RiverAddress.set(_river);
+        emit SetRiver(_river);
+    }
+
+    function _setRedeemDemand(uint256 _newValue) internal {
+        emit SetRedeemDemand(RedeemDemand.get(), _newValue);
+        RedeemDemand.set(_newValue);
+    }
+
+    function _castedRiver() internal view returns (IRiverV1) {
+        return IRiverV1(payable(RiverAddress.get()));
+    }
+}
+
+contract MockRedeemManagerV1 is MockRedeemManagerV1Base {
+    function getRedeemRequestDetails(uint32 _redeemRequestId)
+        external
+        view
+        returns (RedeemQueueV1.RedeemRequest memory)
+    {
+        return RedeemQueueV1.get()[_redeemRequestId];
+    }
+
+    function requestRedeem(uint256 _lsETHAmount, address _recipient)
+        external
+        onlyRedeemerOrRiver
+        returns (uint32 redeemRequestId)
+    {
+        IRiverV1 river = _castedRiver();
+        if (IAllowlistV1(river.getAllowlist()).isDenied(_recipient)) {
+            revert RecipientIsDenied();
+        }
+        return _requestRedeem(_lsETHAmount, _recipient);
+    }
+
+    function _requestRedeem(uint256 _lsETHAmount, address _recipient) internal returns (uint32 redeemRequestId) {
+        LibSanitize._notZeroAddress(_recipient);
+        if (_lsETHAmount == 0) {
+            revert InvalidZeroAmount();
+        }
+        if (!_castedRiver().transferFrom(msg.sender, address(this), _lsETHAmount)) {
+            revert TransferError();
+        }
+        RedeemQueueV1.RedeemRequest[] storage redeemRequests = RedeemQueueV1.get();
+        redeemRequestId = uint32(redeemRequests.length);
+        uint256 height = 0;
+        if (redeemRequestId != 0) {
+            RedeemQueueV1.RedeemRequest memory previousRedeemRequest = redeemRequests[redeemRequestId - 1];
+            height = previousRedeemRequest.height + previousRedeemRequest.amount;
+        }
+
+        uint256 maxRedeemableEth = _castedRiver().underlyingBalanceFromShares(_lsETHAmount);
+
+        redeemRequests.push(
+            RedeemQueueV1.RedeemRequest({
+                height: height,
+                amount: _lsETHAmount,
+                recipient: _recipient,
+                maxRedeemableEth: maxRedeemableEth
+            })
+        );
+
+        _setRedeemDemand(RedeemDemand.get() + _lsETHAmount);
+
+        emit RequestedRedeem(_recipient, height, _lsETHAmount, maxRedeemableEth, redeemRequestId);
+    }
+}
+
+contract MockRedeemManagerV1_2 is MockRedeemManagerV1Base {
+    function getRedeemRequestDetails(uint32 _redeemRequestId)
+        external
+        view
+        returns (RedeemQueueV1_2.RedeemRequest memory)
+    {
+        return RedeemQueueV1_2.get()[_redeemRequestId];
+    }
+
+    function requestRedeem(uint256 _lsETHAmount, address _recipient)
+        external
+        onlyRedeemerOrRiver
+        returns (uint32 redeemRequestId)
+    {
+        IRiverV1 river = _castedRiver();
+        if (IAllowlistV1(river.getAllowlist()).isDenied(_recipient)) {
+            revert RecipientIsDenied();
+        }
+        return _requestRedeem(_lsETHAmount, _recipient);
+    }
+
+    function _requestRedeem(uint256 _lsETHAmount, address _recipient) internal returns (uint32 redeemRequestId) {
+        LibSanitize._notZeroAddress(_recipient);
+        if (_lsETHAmount == 0) {
+            revert InvalidZeroAmount();
+        }
+        if (!_castedRiver().transferFrom(msg.sender, address(this), _lsETHAmount)) {
+            revert TransferError();
+        }
+        RedeemQueueV1_2.RedeemRequest[] storage redeemRequests = RedeemQueueV1_2.get();
+        redeemRequestId = uint32(redeemRequests.length);
+        uint256 height = 0;
+        if (redeemRequestId != 0) {
+            RedeemQueueV1_2.RedeemRequest memory previousRedeemRequest = redeemRequests[redeemRequestId - 1];
+            height = previousRedeemRequest.height + previousRedeemRequest.amount;
+        }
+
+        uint256 maxRedeemableEth = _castedRiver().underlyingBalanceFromShares(_lsETHAmount);
+
+        redeemRequests.push(
+            RedeemQueueV1_2.RedeemRequest({
+                height: height,
+                amount: _lsETHAmount,
+                recipient: _recipient,
+                initiator: msg.sender,
+                maxRedeemableEth: maxRedeemableEth
+            })
+        );
+
+        _setRedeemDemand(RedeemDemand.get() + _lsETHAmount);
+
+        emit RequestedRedeem(_recipient, height, _lsETHAmount, maxRedeemableEth, redeemRequestId);
+    }
+}
+
+contract InitializeRedeemManagerV1_2Test is RedeeManagerV1TestBase {
+    address[] public prevInitiators;
+    address public admin = address(0x123);
+    address redeemManager;
+
+    bytes32 constant REDEEM_QUEUE_V1_SLOT = bytes32(uint256(keccak256("river.state.redeemQueue")) - 1);
+    bytes32 constant INITIALIZABLE_STORAGE_SLOT = bytes32(uint256(keccak256("openzeppelin.storage.Initializable")) - 1);
+    bytes32 internal constant IMPLEMENTATION_SLOT = 0x360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc;
+
+    // allowlist a user
+    function _allowlistUser(address user) internal {
+        address[] memory accounts = new address[](1);
+        accounts[0] = user;
+        uint256[] memory permissions = new uint256[](1);
+        permissions[0] = LibAllowlistMasks.REDEEM_MASK | LibAllowlistMasks.DEPOSIT_MASK;
+
+        vm.prank(allowlistAllower);
+        allowlist.setAllowPermissions(accounts, permissions);
+    }
+
+    function setUp() public {
+        allowlistAdmin = makeAddr("allowlistAdmin");
+        allowlistAllower = makeAddr("allowlistAllower");
+        allowlistDenier = makeAddr("allowlistDenier");
+        allowlist = new AllowlistV1();
+        LibImplementationUnbricker.unbrick(vm, address(allowlist));
+        allowlist.initAllowlistV1(allowlistAdmin, allowlistAllower);
+        allowlist.initAllowlistV1_1(allowlistDenier);
+        river = new RiverMock(address(allowlist));
+
+        MockRedeemManagerV1 redeemQueueImplV1 = new MockRedeemManagerV1();
+        TUPProxy proxy = new TUPProxy(
+            address(redeemQueueImplV1), admin, abi.encodeWithSignature("initializeRedeemManagerV1(address)", river)
+        );
+        redeemManager = address(proxy);
+
+        // Setup prevInitiators
+        for (uint256 i = 0; i < 7; i++) {
+            prevInitiators.push(address(uint160(i + 1)));
+        }
+
+        // Setup initial queue (RedeemQueueV1)
+        for (uint256 i = 0; i < 7; i++) {
+            address user = address(uint160(i + 100));
+            _allowlistUser(user);
+            uint128 amount = uint128((i + 1) * 1e18);
+            river.sudoDeal(user, amount);
+
+            vm.prank(user);
+            river.approve(address(redeemManager), amount);
+            assertEq(river.balanceOf(user), amount);
+            vm.prank(user);
+            MockRedeemManagerV1(redeemManager).requestRedeem(amount, user);
+        }
+
+        // Setup current queue (RedeemQueueV1_2)
+        MockRedeemManagerV1_2 redeemQueueImplV1_2 = new MockRedeemManagerV1_2();
+        vm.store(redeemManager, IMPLEMENTATION_SLOT, bytes32(uint256(uint160(address(redeemQueueImplV1_2)))));
+        for (uint256 i = 0; i < 8; i++) {
+            address user = address(uint160(i + 200));
+            _allowlistUser(user);
+            uint128 amount = uint128((i + 2) * 1e18);
+            river.sudoDeal(user, amount);
+
+            vm.prank(user);
+            river.approve(address(redeemManager), amount);
+            assertEq(river.balanceOf(user), amount);
+            vm.prank(user);
+            MockRedeemManagerV1_2(redeemManager).requestRedeem(amount, user);
+        }
+    }
+
+    function testInitializeTwice() public {
+        RedeemManagerV1 redeemQueueImplV2 = new RedeemManagerV1();
+        vm.store(redeemManager, IMPLEMENTATION_SLOT, bytes32(uint256(uint160(address(redeemQueueImplV2)))));
+        RedeemManagerV1(redeemManager).initializeRedeemManagerV1_2(prevInitiators);
+
+        vm.expectRevert(abi.encodeWithSignature("InvalidInitialization(uint256,uint256)", 1, 2));
+        RedeemManagerV1(redeemManager).initializeRedeemManagerV1_2(prevInitiators);
+    }
+
+    function testRedeemQueueMigrationV1_2() public {
+        // Call the migration function
+        RedeemManagerV1 redeemQueueImplV2 = new RedeemManagerV1();
+        vm.store(redeemManager, IMPLEMENTATION_SLOT, bytes32(uint256(uint160(address(redeemQueueImplV2)))));
+        RedeemManagerV1(redeemManager).initializeRedeemManagerV1_2(prevInitiators);
+
+        // Check the first 7 entries (from initialQueue)
+        for (uint256 i = 0; i < 7; i++) {
+            RedeemQueueV2.RedeemRequest memory current =
+                RedeemManagerV1(redeemManager).getRedeemRequestDetails(uint32(i));
+            assertEq(current.amount, (i + 1) * 1e18);
+            // assertEq(current.maxRedeemableEth, i * 2e18);
+            assertEq(current.recipient, address(uint160(i + 100)));
+            if (i == 0) {
+                assertEq(current.height, 0);
+            } else {
+                uint256 prevHeight = RedeemManagerV1(redeemManager).getRedeemRequestDetails(uint32(i - 1)).height;
+                uint256 prevAmount = RedeemManagerV1(redeemManager).getRedeemRequestDetails(uint32(i - 1)).amount;
+                assertEq(current.height, prevHeight + prevAmount);
+            }
+            assertEq(current.initiator, prevInitiators[i]);
+        }
+
+        // Check the remaining entries (from currentQueue)
+        for (uint256 i = 7; i < 15; i++) {
+            RedeemQueueV2.RedeemRequest memory current =
+                RedeemManagerV1(redeemManager).getRedeemRequestDetails(uint32(i));
+            assertEq(current.amount, ((i - 7) + 2) * 1e18);
+            // assertEq(current.maxRedeemableEth, (i - 7) * 2e18);
+            assertEq(current.recipient, address(uint160((i - 7) + 200)));
+            uint256 prevHeight = RedeemManagerV1(redeemManager).getRedeemRequestDetails(uint32(i - 1)).height;
+            uint256 prevAmount = RedeemManagerV1(redeemManager).getRedeemRequestDetails(uint32(i - 1)).amount;
+            assertEq(current.initiator, current.recipient);
+        }
+
+        // Check total length
+        assertEq(RedeemManagerV1(redeemManager).getRedeemRequestCount(), 15);
+    }
+
+    function testRedeemQueueMigrationV2_IncompatibleArrayLengths() public {
+        // Test with incompatible array length
+        address[] memory invalidInitiators = new address[](6);
+
+        // Call the migration function
+        RedeemManagerV1 redeemQueueImplV2 = new RedeemManagerV1();
+        vm.store(redeemManager, IMPLEMENTATION_SLOT, bytes32(uint256(uint160(address(redeemQueueImplV2)))));
+        vm.expectRevert(abi.encodeWithSignature("IncompatibleArrayLengths()"));
+        RedeemManagerV1(redeemManager).initializeRedeemManagerV1_2(invalidInitiators);
     }
 }

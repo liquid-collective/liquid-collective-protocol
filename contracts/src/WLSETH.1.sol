@@ -36,6 +36,7 @@ contract WLSETHV1 is IWLSETHV1, Initializable, ReentrancyGuardUpgradeable {
 
     /// @inheritdoc IWLSETHV1
     function initWLSETHV1(address _river) external initializer {
+        __ReentrancyGuard_init();
         RiverAddress.set(_river);
         emit SetRiver(_river);
     }

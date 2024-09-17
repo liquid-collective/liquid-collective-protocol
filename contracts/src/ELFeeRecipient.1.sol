@@ -45,6 +45,6 @@ contract ELFeeRecipientV1 is Initializable, IELFeeRecipientV1, IProtocolVersion 
     }
 
     function version() external pure returns (string memory) {
-        return "1.2.0";
+        return "1.2.1";
     }
 }

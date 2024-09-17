@@ -112,7 +112,7 @@ Retrieve the global count of redeem requests
 ### getRedeemRequestDetails
 
 ```solidity
-function getRedeemRequestDetails(uint32 _redeemRequestId) external view returns (struct RedeemQueue.RedeemRequest)
+function getRedeemRequestDetails(uint32 _redeemRequestId) external view returns (struct RedeemQueueV2.RedeemRequest)
 ```
 
 Retrieve the details of a specific redeem request
@@ -129,7 +129,7 @@ Retrieve the details of a specific redeem request
 
 | Name | Type | Description |
 |---|---|---|
-| _0 | RedeemQueue.RedeemRequest | The redeem request details |
+| _0 | RedeemQueueV2.RedeemRequest | The redeem request details |
 
 ### getRiver
 
@@ -202,6 +202,22 @@ function initializeRedeemManagerV1(address _river) external nonpayable
 | Name | Type | Description |
 |---|---|---|
 | _river | address | The address of the River contract |
+
+### initializeRedeemManagerV1_2
+
+```solidity
+function initializeRedeemManagerV1_2(address[] _prevInitiators) external nonpayable
+```
+
+
+
+
+
+#### Parameters
+
+| Name | Type | Description |
+|---|---|---|
+| _prevInitiators | address[] | The address of initiators for existing requests |
 
 ### pullExceedingEth
 
