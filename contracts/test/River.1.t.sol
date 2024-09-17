@@ -3,12 +3,14 @@
 pragma solidity 0.8.20;
 
 import "forge-std/Test.sol";
+// fixtures
+import "./fixtures/RiverV1ForceCommittable.sol";
+import "./fixtures/OperatorsRegistryWithOverridesV1.sol";
+import "./fixtures/RiverV1TestBase.sol";
 
-import "./utils/UserFactory.sol";
-import "./utils/BytesGenerator.sol";
-import "./utils/LibImplementationUnbricker.sol";
+// mocks 
 import "./mocks/DepositContractMock.sol";
-
+// contracts
 import "../src/libraries/LibAllowlistMasks.sol";
 import "../src/Allowlist.1.sol";
 import "../src/River.1.sol";
@@ -19,113 +21,104 @@ import "../src/ELFeeRecipient.1.sol";
 import "../src/OperatorsRegistry.1.sol";
 import "../src/CoverageFund.1.sol";
 import "../src/RedeemManager.1.sol";
+// utils
+import "./utils/UserFactory.sol";
+import "./utils/BytesGenerator.sol";
+import "./utils/LibImplementationUnbricker.sol";
+import "./utils/RiverHelper.sol";
 
-contract OperatorsRegistryWithOverridesV1 is OperatorsRegistryV1 {
-    function sudoStoppedValidatorCounts(uint32[] calldata stoppedValidatorCounts, uint256 depositedValidatorCount)
-        external
-    {
-        _setStoppedValidatorCounts(stoppedValidatorCounts, depositedValidatorCount);
-    }
-}
 
-contract RiverV1ForceCommittable is RiverV1 {
-    function debug_moveDepositToCommitted() external {
-        _setCommittedBalance(CommittedBalance.get() + BalanceToDeposit.get());
-        _setBalanceToDeposit(0);
-    }
-}
+// abstract contract RiverV1TestBase is Test, BytesGenerator {
+//     UserFactory internal uf = new UserFactory();
 
-abstract contract RiverV1TestBase is Test, BytesGenerator {
-    UserFactory internal uf = new UserFactory();
+//     RiverV1ForceCommittable internal river;
+//     IDepositContract internal deposit;
+//     WithdrawV1 internal withdraw;
+//     OracleV1 internal oracle;
+//     ELFeeRecipientV1 internal elFeeRecipient;
+//     CoverageFundV1 internal coverageFund;
+//     AllowlistV1 internal allowlist;
+//     OperatorsRegistryWithOverridesV1 internal operatorsRegistry;
 
-    RiverV1ForceCommittable internal river;
-    IDepositContract internal deposit;
-    WithdrawV1 internal withdraw;
-    OracleV1 internal oracle;
-    ELFeeRecipientV1 internal elFeeRecipient;
-    CoverageFundV1 internal coverageFund;
-    AllowlistV1 internal allowlist;
-    OperatorsRegistryWithOverridesV1 internal operatorsRegistry;
+//     address internal admin;
+//     address internal newAdmin;
+//     address internal denier;
+//     address internal collector;
+//     address internal newCollector;
+//     address internal allower;
+//     address internal oracleMember;
+//     address internal newAllowlist;
+//     address internal operatorOne;
+//     address internal operatorOneFeeRecipient;
+//     address internal operatorTwo;
+//     address internal operatorTwoFeeRecipient;
+//     address internal bob;
+//     address internal joe;
 
-    address internal admin;
-    address internal newAdmin;
-    address internal denier;
-    address internal collector;
-    address internal newCollector;
-    address internal allower;
-    address internal oracleMember;
-    address internal newAllowlist;
-    address internal operatorOne;
-    address internal operatorOneFeeRecipient;
-    address internal operatorTwo;
-    address internal operatorTwoFeeRecipient;
-    address internal bob;
-    address internal joe;
+//     string internal operatorOneName = "NodeMasters";
+//     string internal operatorTwoName = "StakePros";
 
-    string internal operatorOneName = "NodeMasters";
-    string internal operatorTwoName = "StakePros";
+//     uint256 internal operatorOneIndex;
+//     uint256 internal operatorTwoIndex;
 
-    uint256 internal operatorOneIndex;
-    uint256 internal operatorTwoIndex;
+//     event PulledELFees(uint256 amount);
+//     event SetELFeeRecipient(address indexed elFeeRecipient);
+//     event SetCollector(address indexed collector);
+//     event SetCoverageFund(address indexed coverageFund);
+//     event SetAllowlist(address indexed allowlist);
+//     event SetGlobalFee(uint256 fee);
+//     event SetOperatorsRegistry(address indexed operatorsRegistry);
 
-    event PulledELFees(uint256 amount);
-    event SetELFeeRecipient(address indexed elFeeRecipient);
-    event SetCollector(address indexed collector);
-    event SetCoverageFund(address indexed coverageFund);
-    event SetAllowlist(address indexed allowlist);
-    event SetGlobalFee(uint256 fee);
-    event SetOperatorsRegistry(address indexed operatorsRegistry);
+//     uint64 constant epochsPerFrame = 225;
+//     uint64 constant slotsPerEpoch = 32;
+//     uint64 constant secondsPerSlot = 12;
+//     uint64 constant epochsUntilFinal = 4;
 
-    uint64 constant epochsPerFrame = 225;
-    uint64 constant slotsPerEpoch = 32;
-    uint64 constant secondsPerSlot = 12;
-    uint64 constant epochsUntilFinal = 4;
+//     uint128 constant maxDailyNetCommittableAmount = 3200 ether;
+//     uint128 constant maxDailyRelativeCommittableAmount = 2000;
 
-    uint128 constant maxDailyNetCommittableAmount = 3200 ether;
-    uint128 constant maxDailyRelativeCommittableAmount = 2000;
+//     function setUp() public virtual {
+//         admin = makeAddr("admin");
+//         newAdmin = makeAddr("newAdmin");
+//         denier = makeAddr("denier");
+//         collector = makeAddr("collector");
+//         newCollector = makeAddr("newCollector");
+//         allower = makeAddr("allower");
+//         oracleMember = makeAddr("oracleMember");
+//         newAllowlist = makeAddr("newAllowlist");
+//         operatorOne = makeAddr("operatorOne");
+//         operatorTwo = makeAddr("operatorTwo");
+//         bob = makeAddr("bob");
+//         joe = makeAddr("joe");
 
-    function setUp() public virtual {
-        admin = makeAddr("admin");
-        newAdmin = makeAddr("newAdmin");
-        denier = makeAddr("denier");
-        collector = makeAddr("collector");
-        newCollector = makeAddr("newCollector");
-        allower = makeAddr("allower");
-        oracleMember = makeAddr("oracleMember");
-        newAllowlist = makeAddr("newAllowlist");
-        operatorOne = makeAddr("operatorOne");
-        operatorTwo = makeAddr("operatorTwo");
-        bob = makeAddr("bob");
-        joe = makeAddr("joe");
+//         vm.warp(857034746);
 
-        vm.warp(857034746);
+//         elFeeRecipient = new ELFeeRecipientV1();
+//         LibImplementationUnbricker.unbrick(vm, address(elFeeRecipient));
+//         coverageFund = new CoverageFundV1();
+//         LibImplementationUnbricker.unbrick(vm, address(coverageFund));
+//         oracle = new OracleV1();
+//         LibImplementationUnbricker.unbrick(vm, address(oracle));
+//         allowlist = new AllowlistV1();
+//         LibImplementationUnbricker.unbrick(vm, address(allowlist));
+//         deposit = new DepositContractMock();
+//         LibImplementationUnbricker.unbrick(vm, address(deposit));
+//         withdraw = new WithdrawV1();
+//         LibImplementationUnbricker.unbrick(vm, address(withdraw));
+//         river = new RiverV1ForceCommittable();
+//         LibImplementationUnbricker.unbrick(vm, address(river));
+//         operatorsRegistry = new OperatorsRegistryWithOverridesV1();
+//         LibImplementationUnbricker.unbrick(vm, address(operatorsRegistry));
 
-        elFeeRecipient = new ELFeeRecipientV1();
-        LibImplementationUnbricker.unbrick(vm, address(elFeeRecipient));
-        coverageFund = new CoverageFundV1();
-        LibImplementationUnbricker.unbrick(vm, address(coverageFund));
-        oracle = new OracleV1();
-        LibImplementationUnbricker.unbrick(vm, address(oracle));
-        allowlist = new AllowlistV1();
-        LibImplementationUnbricker.unbrick(vm, address(allowlist));
-        deposit = new DepositContractMock();
-        LibImplementationUnbricker.unbrick(vm, address(deposit));
-        withdraw = new WithdrawV1();
-        LibImplementationUnbricker.unbrick(vm, address(withdraw));
-        river = new RiverV1ForceCommittable();
-        LibImplementationUnbricker.unbrick(vm, address(river));
-        operatorsRegistry = new OperatorsRegistryWithOverridesV1();
-        LibImplementationUnbricker.unbrick(vm, address(operatorsRegistry));
+//         allowlist.initAllowlistV1(admin, allower);
+//         allowlist.initAllowlistV1_1(denier);
+//         operatorsRegistry.initOperatorsRegistryV1(admin, address(river));
+//         elFeeRecipient.initELFeeRecipientV1(address(river));
+//         coverageFund.initCoverageFundV1(address(river));
+//     }
+// }
 
-        allowlist.initAllowlistV1(admin, allower);
-        allowlist.initAllowlistV1_1(denier);
-        operatorsRegistry.initOperatorsRegistryV1(admin, address(river));
-        elFeeRecipient.initELFeeRecipientV1(address(river));
-        coverageFund.initCoverageFundV1(address(river));
-    }
-}
-
-contract RiverV1InitializationTests is RiverV1TestBase {
+contract RiverV1InitializationTests is RiverV1TestBase, RiverHelper {
     function testInitialization() public {
         bytes32 withdrawalCredentials = withdraw.getCredentials();
         vm.expectEmit(true, true, true, true);
@@ -152,9 +145,13 @@ contract RiverV1InitializationTests is RiverV1TestBase {
     }
 }
 
-contract RiverV1Tests is RiverV1TestBase {
+contract RiverV1Tests is RiverV1TestBase, RiverHelper {
+    uint128 constant maxDailyNetCommittableAmount = 3200 ether;
+    uint128 constant maxDailyRelativeCommittableAmount = 2000;
+
     function setUp() public override {
         super.setUp();
+
         bytes32 withdrawalCredentials = withdraw.getCredentials();
         vm.expectEmit(true, true, true, true);
         emit SetOperatorsRegistry(address(operatorsRegistry));
@@ -818,8 +815,11 @@ contract RiverV1Tests is RiverV1TestBase {
     }
 }
 
-contract RiverV1TestsReport_HEAVY_FUZZING is RiverV1TestBase {
-    RedeemManagerV1 redeemManager;
+contract RiverV1TestsReport_HEAVY_FUZZING is RiverV1TestBase, RiverHelper {
+    uint128 constant maxDailyNetCommittableAmount = 3200 ether;
+    uint128 constant maxDailyRelativeCommittableAmount = 2000;
+
+    // RedeemManagerV1 redeemManager;
 
     function setUp() public override {
         super.setUp();
@@ -885,10 +885,6 @@ contract RiverV1TestsReport_HEAVY_FUZZING is RiverV1TestBase {
         vm.startPrank(allower);
         allowlist.setAllowPermissions(allowees, permissions);
         vm.stopPrank();
-    }
-
-    function _next(uint256 _salt) internal pure returns (uint256 _newSalt) {
-        return uint256(keccak256(abi.encode(_salt)));
     }
 
     function _performFakeDeposits(uint8 userCount, uint256 _salt)
@@ -1682,13 +1678,13 @@ contract RiverV1TestsReport_HEAVY_FUZZING is RiverV1TestBase {
         }
     }
 
-    function debug_maxIncrease(ReportBounds.ReportBoundsStruct memory rb, uint256 _prevTotalEth, uint256 _timeElapsed)
-        internal
-        pure
-        returns (uint256)
-    {
-        return (_prevTotalEth * rb.annualAprUpperBound * _timeElapsed) / (LibBasisPoints.BASIS_POINTS_MAX * 365 days);
-    }
+    // function debug_maxIncrease(ReportBounds.ReportBoundsStruct memory rb, uint256 _prevTotalEth, uint256 _timeElapsed)
+    //     internal
+    //     pure
+    //     returns (uint256)
+    // {
+    //     return (_prevTotalEth * rb.annualAprUpperBound * _timeElapsed) / (LibBasisPoints.BASIS_POINTS_MAX * 365 days);
+    // }
 
     function debug_maxDecrease(ReportBounds.ReportBoundsStruct memory rb, uint256 _prevTotalEth)
         internal
@@ -1704,11 +1700,6 @@ contract RiverV1TestsReport_HEAVY_FUZZING is RiverV1TestBase {
         returns (uint256)
     {
         return (epochNow - epochPast) * (cls.secondsPerSlot * cls.slotsPerEpoch);
-    }
-
-    function _generateEmptyReport() internal pure returns (IOracleManagerV1.ConsensusLayerReport memory clr) {
-        clr.stoppedValidatorCountPerOperator = new uint32[](1);
-        clr.stoppedValidatorCountPerOperator[0] = 0;
     }
 
     function testReportingError_Unauthorized(uint256 _salt) external {

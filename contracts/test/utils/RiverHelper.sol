@@ -4,30 +4,25 @@ pragma solidity 0.8.20;
 
 import "forge-std/Test.sol";
 
+// fixtures
+import "../fixtures/RiverV1ForceCommittable.sol";
+// utils
 import "./BytesGenerator.sol";
 import "./UserFactory.sol";
 
 import "../../src/libraries/LibAllowlistMasks.sol";
-
 import "../../src/interfaces/IOperatorRegistry.1.sol";
 import "../../src/interfaces/IRiver.1.sol";
 import "../../src/interfaces/IAllowlist.1.sol";
-
 import "../../src/River.1.sol";
 
 abstract contract RiverHelperTestBase is Test, BytesGenerator {
     UserFactory internal uf = new UserFactory();
 }
 
-contract RiverV1ForceCommittable is RiverV1 {
-    function debug_moveDepositToCommitted() external {
-        _setCommittedBalance(CommittedBalance.get() + BalanceToDeposit.get());
-        _setBalanceToDeposit(0);
-    }
-}
-
+/// @title RiverHelper
+/// @notice Helper functions for testing River contract functionality
 contract RiverHelper is RiverHelperTestBase {
-    // RedeemManagerV1 redeemManager;
 
     function _next(uint256 _salt) internal pure returns (uint256 _newSalt) {
         return uint256(keccak256(abi.encode(_salt)));
@@ -77,5 +72,26 @@ contract RiverHelper is RiverHelperTestBase {
         river.depositToConsensusLayerWithDepositRoot(count, bytes32(0));
 
         return _salt;
+    }
+
+    function _generateEmptyReport() internal pure returns (IOracleManagerV1.ConsensusLayerReport memory clr) {
+        clr.stoppedValidatorCountPerOperator = new uint32[](1);
+        clr.stoppedValidatorCountPerOperator[0] = 0;
+    }
+
+    function _generateEmptyReport(uint256 stoppedValidatorsCountElements)
+        internal
+        pure
+        returns (IOracleManagerV1.ConsensusLayerReport memory clr)
+    {
+        clr.stoppedValidatorCountPerOperator = new uint32[](stoppedValidatorsCountElements);
+    }
+
+    function debug_maxIncrease(ReportBounds.ReportBoundsStruct memory rb, uint256 _prevTotalEth, uint256 _timeElapsed)
+        internal
+        pure
+        returns (uint256)
+    {
+        return (_prevTotalEth * rb.annualAprUpperBound * _timeElapsed) / (LibBasisPoints.BASIS_POINTS_MAX * 365 days);
     }
 }
