@@ -1,19 +1,21 @@
 import { DeployFunction } from "hardhat-deploy/dist/types";
 import { HardhatRuntimeEnvironment } from "hardhat/types";
 
+const version = "1_2_1"
+
 const func: DeployFunction = async function ({ deployments, getNamedAccounts, ethers }: HardhatRuntimeEnvironment) {
   const { proxyAdministrator, governor } = await getNamedAccounts();
 
-  const allowlistNewImplementationDeployment = await deployments.get("AllowlistV1_Implementation_1_2_1");
-  const coverageFundNewImplementationDeployment = await deployments.get("CoverageFundV1_Implementation_1_2_1");
-  const elFeeRecipientNewImplementationDeployment = await deployments.get("ELFeeRecipientV1_Implementation_1_2_1");
+  const allowlistNewImplementationDeployment = await deployments.get(`AllowlistV1_Implementation_${version}`);
+  const coverageFundNewImplementationDeployment = await deployments.get(`CoverageFundV1_Implementation_${version}`);
+  const elFeeRecipientNewImplementationDeployment = await deployments.get(`ELFeeRecipientV1_Implementation_${version}`);
   const operatorsRegistryNewImplementationDeployment = await deployments.get(
-    "OperatorsRegistryV1_Implementation_1_2_1"
+    `OperatorsRegistryV1_Implementation_${version}`
   );
-  const oracleNewImplementationDeployment = await deployments.get("OracleV1_Implementation_1_2_1");
-  const redeemManagerNewImplementationDeployment = await deployments.get("RedeemManagerV1_Implementation_1_2_1");
-  const riverNewImplementationDeployment = await deployments.get("RiverV1_Implementation_1_2_1");
-  const withdrawNewImplementationDeployment = await deployments.get("WithdrawV1_Implementation_1_2_1");
+  const oracleNewImplementationDeployment = await deployments.get(`OracleV1_Implementation_${version}`);
+  const redeemManagerNewImplementationDeployment = await deployments.get(`RedeemManagerV1_Implementation_${version}`);
+  const riverNewImplementationDeployment = await deployments.get(`RiverV1_Implementation_${version}`);
+  const withdrawNewImplementationDeployment = await deployments.get(`WithdrawV1_Implementation_${version}`);
 
   const riverProxyFirewallDeployment = await deployments.get("RiverProxyFirewall");
   const operatorsRegistryFirewallDeployment = await deployments.get("OperatorsRegistryProxyFirewall");
