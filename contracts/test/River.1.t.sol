@@ -27,97 +27,6 @@ import "./utils/BytesGenerator.sol";
 import "./utils/LibImplementationUnbricker.sol";
 import "./utils/RiverHelper.sol";
 
-
-// abstract contract RiverV1TestBase is Test, BytesGenerator {
-//     UserFactory internal uf = new UserFactory();
-
-//     RiverV1ForceCommittable internal river;
-//     IDepositContract internal deposit;
-//     WithdrawV1 internal withdraw;
-//     OracleV1 internal oracle;
-//     ELFeeRecipientV1 internal elFeeRecipient;
-//     CoverageFundV1 internal coverageFund;
-//     AllowlistV1 internal allowlist;
-//     OperatorsRegistryWithOverridesV1 internal operatorsRegistry;
-
-//     address internal admin;
-//     address internal newAdmin;
-//     address internal denier;
-//     address internal collector;
-//     address internal newCollector;
-//     address internal allower;
-//     address internal oracleMember;
-//     address internal newAllowlist;
-//     address internal operatorOne;
-//     address internal operatorOneFeeRecipient;
-//     address internal operatorTwo;
-//     address internal operatorTwoFeeRecipient;
-//     address internal bob;
-//     address internal joe;
-
-//     string internal operatorOneName = "NodeMasters";
-//     string internal operatorTwoName = "StakePros";
-
-//     uint256 internal operatorOneIndex;
-//     uint256 internal operatorTwoIndex;
-
-//     event PulledELFees(uint256 amount);
-//     event SetELFeeRecipient(address indexed elFeeRecipient);
-//     event SetCollector(address indexed collector);
-//     event SetCoverageFund(address indexed coverageFund);
-//     event SetAllowlist(address indexed allowlist);
-//     event SetGlobalFee(uint256 fee);
-//     event SetOperatorsRegistry(address indexed operatorsRegistry);
-
-//     uint64 constant epochsPerFrame = 225;
-//     uint64 constant slotsPerEpoch = 32;
-//     uint64 constant secondsPerSlot = 12;
-//     uint64 constant epochsUntilFinal = 4;
-
-//     uint128 constant maxDailyNetCommittableAmount = 3200 ether;
-//     uint128 constant maxDailyRelativeCommittableAmount = 2000;
-
-//     function setUp() public virtual {
-//         admin = makeAddr("admin");
-//         newAdmin = makeAddr("newAdmin");
-//         denier = makeAddr("denier");
-//         collector = makeAddr("collector");
-//         newCollector = makeAddr("newCollector");
-//         allower = makeAddr("allower");
-//         oracleMember = makeAddr("oracleMember");
-//         newAllowlist = makeAddr("newAllowlist");
-//         operatorOne = makeAddr("operatorOne");
-//         operatorTwo = makeAddr("operatorTwo");
-//         bob = makeAddr("bob");
-//         joe = makeAddr("joe");
-
-//         vm.warp(857034746);
-
-//         elFeeRecipient = new ELFeeRecipientV1();
-//         LibImplementationUnbricker.unbrick(vm, address(elFeeRecipient));
-//         coverageFund = new CoverageFundV1();
-//         LibImplementationUnbricker.unbrick(vm, address(coverageFund));
-//         oracle = new OracleV1();
-//         LibImplementationUnbricker.unbrick(vm, address(oracle));
-//         allowlist = new AllowlistV1();
-//         LibImplementationUnbricker.unbrick(vm, address(allowlist));
-//         deposit = new DepositContractMock();
-//         LibImplementationUnbricker.unbrick(vm, address(deposit));
-//         withdraw = new WithdrawV1();
-//         LibImplementationUnbricker.unbrick(vm, address(withdraw));
-//         river = new RiverV1ForceCommittable();
-//         LibImplementationUnbricker.unbrick(vm, address(river));
-//         operatorsRegistry = new OperatorsRegistryWithOverridesV1();
-//         LibImplementationUnbricker.unbrick(vm, address(operatorsRegistry));
-
-//         allowlist.initAllowlistV1(admin, allower);
-//         allowlist.initAllowlistV1_1(denier);
-//         operatorsRegistry.initOperatorsRegistryV1(admin, address(river));
-//         elFeeRecipient.initELFeeRecipientV1(address(river));
-//         coverageFund.initCoverageFundV1(address(river));
-//     }
-// }
-
 contract RiverV1InitializationTests is RiverV1TestBase, RiverHelper {
     function testInitialization() public {
         bytes32 withdrawalCredentials = withdraw.getCredentials();
@@ -1677,14 +1586,6 @@ contract RiverV1TestsReport_HEAVY_FUZZING is RiverV1TestBase, RiverHelper {
             }
         }
     }
-
-    // function debug_maxIncrease(ReportBounds.ReportBoundsStruct memory rb, uint256 _prevTotalEth, uint256 _timeElapsed)
-    //     internal
-    //     pure
-    //     returns (uint256)
-    // {
-    //     return (_prevTotalEth * rb.annualAprUpperBound * _timeElapsed) / (LibBasisPoints.BASIS_POINTS_MAX * 365 days);
-    // }
 
     function debug_maxDecrease(ReportBounds.ReportBoundsStruct memory rb, uint256 _prevTotalEth)
         internal

@@ -29,12 +29,11 @@ import "./components/OracleManager.1.t.sol";
 
 contract DeploymentTest is Test, DeploymentFixture {
     /// @notice Test that the deployment setup is as intended
-    function testAssertCorrectDeployment(uint256 _salt) public {
+    function testCheckDeployment(uint256 _salt) public {
         // Withdraw
-        // check withdraw
         assertEq(WithdrawV1(address(withdrawProxy)).getRiver(), address(riverProxy), "Withdraw: river contract incorrectly set");
+        
         // Allowlist
-        // check allowlist firewall
         assert(address(allowlistFirewall) != address(0));
         assertEq(allowlistFirewall.executor(), executor, "AllowlistFirewall: executor address mismatch");
         // check allowlist proxy
@@ -45,10 +44,9 @@ contract DeploymentTest is Test, DeploymentFixture {
         assertEq(AllowlistV1(address(allowlistProxy)).getDenier(), denier, "Allowlist: denier incorrectly set");
 
         // River
-        // check River deployed correctly
         address riverAllowlist = RiverV1(payable(address(riverProxy))).getAllowlist();
         assertEq(address(riverAllowlist), address(allowlistProxy), "River: allowlist incorrectly set");
-
+        // Oracle
         address riverOracle = OracleManagerV1(payable(address(riverProxy))).getOracle(); // should return proxy
         assertTrue(riverOracle == address(oracleProxy), "River: oracle incorrectly set.");
         assertTrue(OracleManagerV1(payable(address(riverProxy))).getOracle() == address(oracleProxy), "River: oracle incorrectly set.");
