@@ -450,7 +450,7 @@ abstract contract OracleManagerV1 is IOracleManagerV1 {
     /// @param _cls The consensus layer spec struct
     /// @param _epoch The epoch to verify
     /// @return True if valid
-    function _isValidEpoch(CLSpec.CLSpecStruct memory _cls, uint256 _epoch) internal view returns (bool) {
+    function _isValidEpoch(CLSpec.CLSpecStruct memory _cls, uint256 _epoch) internal view virtual returns (bool) {
         return (
             _currentEpoch(_cls) >= _epoch + _cls.epochsToAssumedFinality
                 && _epoch > LastConsensusLayerReport.get().epoch && _epoch % _cls.epochsPerFrame == 0

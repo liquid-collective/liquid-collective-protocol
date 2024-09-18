@@ -5,7 +5,7 @@ pragma solidity 0.8.20;
 import "forge-std/Test.sol";
 
 // fixtures
-import "../fixtures/OracleManagerV1ExposeInitializer.sol";
+import "../fixtures/OracleManagerWithOverridesV1.sol";
 
 // contracts
 import "../../src/components/OracleManager.1.sol";
@@ -49,7 +49,7 @@ contract OracleManagerV1Tests is Test {
     function setUp() public {
         admin = makeAddr("admin");
         oracle = makeAddr("oracle");
-        oracleManager = new OracleManagerV1ExposeInitializer(
+        oracleManager = new OracleManagerWithOverridesV1(
             oracle,
             admin,
             epochsPerFrame,
@@ -100,7 +100,7 @@ contract OracleManagerV1Tests is Test {
 
     function testFuzzedReporting(uint256 _salt) external {
         ReportingVars memory v;
-        OracleManagerV1ExposeInitializer om = OracleManagerV1ExposeInitializer(address(oracleManager));
+        OracleManagerWithOverridesV1 om = OracleManagerWithOverridesV1(address(oracleManager));
         v.cls = om.getCLSpec();
         v.rb = om.getReportBounds();
 

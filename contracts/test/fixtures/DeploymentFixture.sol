@@ -19,11 +19,8 @@ import "../../src/OperatorsRegistry.1.sol";
 import "../../src/ELFeeRecipient.1.sol";
 import "../../src/RedeemManager.1.sol";
 import "../../src/CoverageFund.1.sol";
-import "../../src/interfaces/IWLSETH.1.sol";
-import "../../src/components/OracleManager.1.sol";
 import "../../src/Firewall.sol";
 import "../../src/TUPProxy.sol";
-import "../components/OracleManager.1.t.sol";
 
 /// @title DeploymentFixture
 /// @author Alluvial Finance Inc.
@@ -78,7 +75,7 @@ contract DeploymentFixture is RiverV1TestBase {
     address futureRiverAddress;
     address futureRedeemManagerAddress;
 
-    function setUp() public override {
+    function setUp() public virtual override {
         super.setUp();
 
         // Fund the addresses with Ether for gas fees
@@ -189,7 +186,7 @@ contract DeploymentFixture is RiverV1TestBase {
             withdrawalCredentials,
             futureOracleAddress, 
             address(riverProxyFirewall),
-            address(allowlistProxyFirewall),
+            address(allowlistProxy),
             futureOperatorsRegistryAddress,
             collector,
             grossFee)
@@ -215,7 +212,7 @@ contract DeploymentFixture is RiverV1TestBase {
             address(oracle), // implementation
             proxyAdministrator, // proxy admin 
             abi.encodeWithSignature("initOracleV1(address,address,uint64,uint64,uint64,uint64,uint256,uint256)", 
-            address(riverProxyFirewall), address(admin), 225, 32, 12, genesisTimestamp, 1000, 500)
+            address(riverProxy), address(admin), 225, 32, 12, genesisTimestamp, 1000, 500)
         );
         emit log_named_address("Oracle deployed at:", address(oracleProxy));
         require(address(oracleProxy) == futureOracleAddress, "Invalid future address computation");

@@ -45,8 +45,12 @@ contract DeploymentTest is Test, DeploymentFixture {
         assertEq(AllowlistV1(address(allowlistProxy)).getDenier(), denier, "Allowlist: denier incorrectly set");
 
         // River
-        // assert River deployed correctly
+        // check River deployed correctly
         address riverAllowlist = RiverV1(payable(address(riverProxy))).getAllowlist();
-        assertEq(address(riverAllowlist), address(allowlistProxyFirewall), "River: allowlist incorrectly set");
+        assertEq(address(riverAllowlist), address(allowlistProxy), "River: allowlist incorrectly set");
+
+        address riverOracle = OracleManagerV1(payable(address(riverProxy))).getOracle(); // should return proxy
+        assertTrue(riverOracle == address(oracleProxy), "River: oracle incorrectly set.");
+        assertTrue(OracleManagerV1(payable(address(riverProxy))).getOracle() == address(oracleProxy), "River: oracle incorrectly set.");
     }
 }

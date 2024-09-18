@@ -6,7 +6,7 @@ import "forge-std/Test.sol";
 // fixtures
 import "./RiverV1ForceCommittable.sol";
 import "./OperatorsRegistryWithOverridesV1.sol";
-import "./OracleManagerV1ExposeInitializer.sol";
+import "./OracleManagerWithOverridesV1.sol";
 // mocks
 import "../mocks/DepositContractMock.sol";
 // contracts
@@ -36,7 +36,7 @@ abstract contract RiverV1TestBase is Test, BytesGenerator, RiverEvents {
     CoverageFundV1 internal coverageFund;
     AllowlistV1 internal allowlist;
     OperatorsRegistryWithOverridesV1 internal operatorsRegistry;
-    OracleManagerV1 internal oracleManager;
+    OracleManagerWithOverridesV1 internal oracleManager;
     RedeemManagerV1 internal redeemManager;
 
     address internal admin;
@@ -103,7 +103,7 @@ abstract contract RiverV1TestBase is Test, BytesGenerator, RiverEvents {
         LibImplementationUnbricker.unbrick(vm, address(river));
         operatorsRegistry = new OperatorsRegistryWithOverridesV1();
         LibImplementationUnbricker.unbrick(vm, address(operatorsRegistry));
-        oracleManager = new OracleManagerV1ExposeInitializer(
+        oracleManager = new OracleManagerWithOverridesV1(
             address(oracle),
             admin,
             epochsPerFrame,

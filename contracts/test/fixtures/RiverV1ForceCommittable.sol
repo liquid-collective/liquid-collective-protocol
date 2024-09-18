@@ -9,4 +9,8 @@ contract RiverV1ForceCommittable is RiverV1 {
         _setCommittedBalance(CommittedBalance.get() + BalanceToDeposit.get());
         _setBalanceToDeposit(0);
     }
+
+    function _isValidEpoch(CLSpec.CLSpecStruct memory _cls, uint256 _epoch) internal view override returns (bool) {
+        return true;
+    }
 }

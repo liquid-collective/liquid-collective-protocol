@@ -6,7 +6,7 @@ import "../../src/components/OracleManager.1.sol";
 import "../../src/state/shared/AdministratorAddress.sol";
 
 
-contract OracleManagerV1ExposeInitializer is OracleManagerV1 {
+contract OracleManagerWithOverridesV1 is OracleManagerV1 {
     function supersedeReportedBalanceSum(uint256 amount) external {
         LastConsensusLayerReport.get().validatorsBalance = amount;
     }
