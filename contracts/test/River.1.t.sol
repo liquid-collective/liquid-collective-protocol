@@ -7,8 +7,7 @@ import "forge-std/Test.sol";
 import "./fixtures/RiverV1ForceCommittable.sol";
 import "./fixtures/OperatorsRegistryWithOverridesV1.sol";
 import "./fixtures/RiverV1TestBase.sol";
-
-// mocks 
+// mocks
 import "./mocks/DepositContractMock.sol";
 // contracts
 import "../src/libraries/LibAllowlistMasks.sol";

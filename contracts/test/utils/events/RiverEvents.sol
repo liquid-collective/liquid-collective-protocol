@@ -19,7 +19,8 @@ contract RiverEvents {
     event SetOperatorsRegistry(address indexed operatorsRegistry);
     event SetBalanceToDeposit(uint256 oldAmount, uint256 newAmount);
     event ProcessedConsensusLayerReport(
-        IOracleManagerV1.ConsensusLayerReport report, IOracleManagerV1.ConsensusLayerDataReportingTrace trace
+        IOracleManagerV1.ConsensusLayerReport report,
+        IOracleManagerV1.ConsensusLayerDataReportingTrace trace
     );
     event ReportedConsensusLayerData(
         address indexed member,
@@ -28,5 +29,4 @@ contract RiverEvents {
         uint256 voteCount,
         uint256 quorum
     );
-
 }
