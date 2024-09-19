@@ -1,6 +1,7 @@
 //SPDX-License-Identifier: BUSL-1.1
 pragma solidity 0.8.20;
 
+import "forge-std/console.sol";
 import "../interfaces/components/IOracleManager.1.sol";
 import "../interfaces/IRedeemManager.1.sol";
 
@@ -443,6 +444,13 @@ abstract contract OracleManagerV1 is IOracleManagerV1 {
     /// @param _cls The consensus layer spec struct
     /// @return The current epoch
     function _currentEpoch(CLSpec.CLSpecStruct memory _cls) internal view returns (uint256) {
+        console.log("_____ currentEpoch _____ ");
+        console.log("block.timestamp: ", block.timestamp);
+        console.log("genesis time: ", _cls.genesisTime);
+        console.log("seconds per slot: ", _cls.secondsPerSlot);
+        console.log("slots per epoch: ", _cls.slotsPerEpoch);
+        uint256 result = ((block.timestamp - _cls.genesisTime) / _cls.secondsPerSlot) / _cls.slotsPerEpoch;
+        console.log("result: ", result);
         return ((block.timestamp - _cls.genesisTime) / _cls.secondsPerSlot) / _cls.slotsPerEpoch;
     }
 
@@ -451,6 +459,17 @@ abstract contract OracleManagerV1 is IOracleManagerV1 {
     /// @param _epoch The epoch to verify
     /// @return True if valid
     function _isValidEpoch(CLSpec.CLSpecStruct memory _cls, uint256 _epoch) internal view returns (bool) {
+        console.log("______ inside _isValidEpoch ______");
+        console.log("curE: ", _currentEpoch(_cls));
+        console.log("curE >= e + epochsToAssumedFinality:", _currentEpoch(_cls) >= _epoch + _cls.epochsToAssumedFinality);
+        console.log("e:", _epoch);
+        console.log("cl e:", LastConsensusLayerReport.get().epoch);
+        console.log("cl e < e:", LastConsensusLayerReport.get().epoch < _epoch);
+        console.log("e % frames == 0:", _epoch % _cls.epochsPerFrame == 0);
+        console.log("cl e < e < curE:", LastConsensusLayerReport.get().epoch, _epoch, _currentEpoch(_cls));
+        // curEpoch >= e + cls.assumedFinality
+        // e > cl(e)
+        // e % cls.frames == 0
         return (
             _currentEpoch(_cls) >= _epoch + _cls.epochsToAssumedFinality
                 && _epoch > LastConsensusLayerReport.get().epoch && _epoch % _cls.epochsPerFrame == 0

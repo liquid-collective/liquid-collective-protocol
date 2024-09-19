@@ -63,7 +63,7 @@ abstract contract RiverV1TestBase is Test, BytesGenerator, RiverEvents {
     uint64 internal constant epochsPerFrame = 225;
     uint64 internal constant slotsPerEpoch = 32;
     uint64 internal constant secondsPerSlot = 12;
-    uint64 internal constant genesisTime = 12345;
+    uint64 internal constant genesisTime = 1695902400;
     uint64 internal constant epochsToAssumedFinality = 4;
     uint256 internal constant annualAprUpperBound = 1000;
     uint256 internal constant relativeLowerBound = 250;
