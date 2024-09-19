@@ -11,7 +11,8 @@ methods {
     function _.demandValidatorExits(uint256, uint256) external => DISPATCHER(true);
     //function _.pickNextValidatorsToDeposit(uint256) external => DISPATCHER(true); // has no effect - CERT-4615
 
-    function _.deposit(bytes,bytes,bytes,bytes32) external => DISPATCHER(true); // has no effect - CERT-4615 
+    //function _.deposit(bytes,bytes,bytes,bytes32) external => DISPATCHER(true); // has no effect - CERT-4615 
+    
     function OR.getOperatorAddress(uint256) external returns(address) envfree;
     function OR.operatorStateIsValid(uint256) external returns(bool) envfree;
     function OR.operatorStateIsValid_cond1(uint256) external returns(bool) envfree;

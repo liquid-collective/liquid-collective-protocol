@@ -1,14 +1,15 @@
 // SPDX-License-Identifier: BUSL-1.1
 pragma solidity 0.8.20;
 
-import { RedeemManagerV1, WithdrawalStack, RedeemQueue } from "contracts/src/RedeemManager.1.sol";
+import { RedeemManagerV1, WithdrawalStack } from "contracts/src/RedeemManager.1.sol";
+import "contracts/src/state/redeemManager/RedeemQueue.2.sol";
 
 contract RedeemManagerV1Harness is RedeemManagerV1 {
 
     function isMatchByID(uint32 requestID, uint32 eventID) external view returns (bool) {
         if (eventID >= WithdrawalStack.get().length) return false;
-        if (requestID >= RedeemQueue.get().length) return false;
-        return _isMatch(RedeemQueue.get()[requestID], WithdrawalStack.get()[eventID]);
+        if (requestID >= RedeemQueueV2.get().length) return false;
+        return _isMatch(RedeemQueueV2.get()[requestID], WithdrawalStack.get()[eventID]);
     }
 
     function getWithdrawalEventHeight(uint32 id) external view returns (uint256) {
@@ -24,14 +25,14 @@ contract RedeemManagerV1Harness is RedeemManagerV1 {
     }
 
     function getRedeemRequestHeight(uint32 id) external view returns (uint256) {    
-        if (id >= RedeemQueue.get().length) return 0;
-        RedeemQueue.RedeemRequest storage _request = RedeemQueue.get()[id];
+        if (id >= RedeemQueueV2.get().length) return 0;
+        RedeemQueueV2.RedeemRequest storage _request = RedeemQueueV2.get()[id];
         return _request.height;
     }
 
     function getRedeemRequestAmount(uint32 id) external view returns (uint256) {    
-        if (id >= RedeemQueue.get().length) return 0;
-        RedeemQueue.RedeemRequest storage _request = RedeemQueue.get()[id];
+        if (id >= RedeemQueueV2.get().length) return 0;
+        RedeemQueueV2.RedeemRequest storage _request = RedeemQueueV2.get()[id];
         return _request.amount;
     }
 }

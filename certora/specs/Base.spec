@@ -63,8 +63,9 @@ methods {
     // RiverV1 : OracleManagerV1
     function _.setConsensusLayerData(IOracleManagerV1.ConsensusLayerReport) external => DISPATCHER(true);
     function RiverV1Harness.getCLValidatorCount() external returns(uint256) envfree;
+    
     // RiverV1 : ConsensusLayerDepositManagerV1
-    function _.depositToConsensusLayer(uint256) external => DISPATCHER(true);
+    function _.depositToConsensusLayerWithDepositRoot(uint256, bytes32) external => DISPATCHER(true);
     function RiverV1Harness.getDepositedValidatorCount() external returns(uint256) envfree;
 
     // WithdrawV1
@@ -105,9 +106,9 @@ function bytesSliceSummary(bytes buffer, uint256 start, uint256 len) returns byt
 	return to_ret;
 }
 
-function mulDivSummariztion(uint256 x, uint256 y, uint256 z) returns uint256
+function mulDivSummarization(uint256 x, uint256 y, uint256 z) returns uint256
 {
-	if (x == 0) || (y == 0)
+	if (x == 0 || y == 0)
 	{
 		return 0;
 	}
@@ -124,25 +125,25 @@ function mulDivSummariztion(uint256 x, uint256 y, uint256 z) returns uint256
 	{
 		if (y > z)
 		{
-			require mulDivSummariztionValues[y][x] >= x;
+			require mulDivSummarizationValues[y][x] >= x;
 		}
 		if (x > z)
 		{
-			require mulDivSummariztionValues[y][x] >= y;
+			require mulDivSummarizationValues[y][x] >= y;
 		}
-		return mulDivSummariztionValues[y][x];
+		return mulDivSummarizationValues[y][x];
 	}
 	else{
 		if (x > z)
 		{
-			require mulDivSummariztionValues[x][y] >= y;
+			require mulDivSummarizationValues[x][y] >= y;
 		}
 		if (y > z)
 		{
-			require mulDivSummariztionValues[x][y] >= x;
+			require mulDivSummarizationValues[x][y] >= x;
 		}
-		return mulDivSummariztionValues[x][y];
+		return mulDivSummarizationValues[x][y];
 	}
 }
 
-ghost mapping(uint256 => mapping(uint256 => uint256)) mulDivSummariztionValues;
+ghost mapping(uint256 => mapping(uint256 => uint256)) mulDivSummarizationValues;
