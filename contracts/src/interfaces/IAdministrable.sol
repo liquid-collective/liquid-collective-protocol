@@ -2,7 +2,7 @@
 pragma solidity 0.8.20;
 
 /// @title Administrable Interface
-/// @author Kiln
+/// @author Alluvial Finance Inc.
 /// @notice This interface exposes methods to handle the ownership of the contracts
 interface IAdministrable {
     /// @notice The pending admin address changed

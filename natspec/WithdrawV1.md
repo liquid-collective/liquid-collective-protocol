@@ -1,6 +1,6 @@
 # WithdrawV1
 
-*Kiln*
+*Alluvial Finance Inc.*
 
 > Withdraw (v1)
 
@@ -75,6 +75,23 @@ Callable by River, sends the specified amount of ETH to River
 | Name | Type | Description |
 |---|---|---|
 | _max | uint256 | undefined |
+
+### version
+
+```solidity
+function version() external pure returns (string)
+```
+
+Retrieves the version of the contract
+
+
+
+
+#### Returns
+
+| Name | Type | Description |
+|---|---|---|
+| _0 | string | Version of the contract |
 
 
 

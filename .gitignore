@@ -8,6 +8,9 @@ package-lock.json
 runOperatorRegistry.sh
 yarn.lock
 
+#nvm
+.nvmrc
+
 #Hardhat files
 hardhat-cache
 artifacts

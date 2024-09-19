@@ -4,6 +4,7 @@ pragma solidity 0.8.20;
 import "./interfaces/IRiver.1.sol";
 import "./interfaces/IAllowlist.1.sol";
 import "./interfaces/ICoverageFund.1.sol";
+import "./interfaces/IProtocolVersion.sol";
 
 import "./libraries/LibUint256.sol";
 import "./libraries/LibAllowlistMasks.sol";
@@ -14,7 +15,7 @@ import "./state/shared/RiverAddress.sol";
 import "./state/slashingCoverage/BalanceForCoverage.sol";
 
 /// @title Coverage Fund (v1)
-/// @author Kiln
+/// @author Alluvial Finance Inc.
 /// @notice This contract receive donations for the slashing coverage fund and pull the funds into river
 /// @notice This contract acts as a temporary buffer for funds that should be pulled in case of a loss of money on the consensus layer due to slashing events.
 /// @notice There is no fee taken on these funds, they are entirely distributed to the LsETH holders, and no shares will get minted.
@@ -28,7 +29,7 @@ import "./state/slashingCoverage/BalanceForCoverage.sol";
 /// @notice the coverage fund will be pulled after the revenue stream, and there won't be any commission on the eth pulled.
 /// @notice Once a Slashing event occurs, the team will do its best to inject the recovery funds in at maximum 365 days
 /// @notice The entities allowed to donate are selected by the team. It will mainly be treasury entities or insurance protocols able to fill this coverage fund properly.
-contract CoverageFundV1 is Initializable, ICoverageFundV1 {
+contract CoverageFundV1 is Initializable, ICoverageFundV1, IProtocolVersion {
     /// @inheritdoc ICoverageFundV1
     function initCoverageFundV1(address _riverAddress) external init(0) {
         RiverAddress.set(_riverAddress);
@@ -70,5 +71,9 @@ contract CoverageFundV1 is Initializable, ICoverageFundV1 {
     /// @inheritdoc ICoverageFundV1
     fallback() external payable {
         revert InvalidCall();
+    }
+
+    function version() external pure returns (string memory) {
+        return "1.2.1";
     }
 }

@@ -101,7 +101,7 @@ contract FirewallTests is BytesGenerator, Test {
 
         bytes32 withdrawalCredentials = withdraw.getCredentials();
         bytes4[] memory executorCallableRiverSelectors = new bytes4[](2);
-        executorCallableRiverSelectors[0] = river.depositToConsensusLayer.selector;
+        executorCallableRiverSelectors[0] = river.depositToConsensusLayerWithDepositRoot.selector;
         executorCallableRiverSelectors[1] = river.setOracle.selector;
         riverFirewall = new Firewall(riverGovernorDAO, executor, address(river), executorCallableRiverSelectors);
         firewalledRiver = RiverV1(payable(address(riverFirewall)));
@@ -116,6 +116,9 @@ contract FirewallTests is BytesGenerator, Test {
             collector,
             5000
         );
+
+        vm.prank(address(riverFirewall));
+        river.setKeeper(address(riverFirewall));
 
         bytes4[] memory executorCallableOracleSelectors = new bytes4[](3);
         executorCallableOracleSelectors[0] = oracle.addMember.selector;
@@ -279,26 +282,26 @@ contract FirewallTests is BytesGenerator, Test {
         vm.stopPrank();
     }
 
-    function testGovernorCanDepositToConsensusLayer() public {
+    function testGovernorCannotdepositToConsensusLayerWithDepositRoot() public {
         // Assert this by expecting NotEnoughFunds, NOT Unauthorized
         vm.startPrank(riverGovernorDAO);
         vm.expectRevert(abi.encodeWithSignature("NotEnoughFunds()"));
-        firewalledRiver.depositToConsensusLayer(10);
+        firewalledRiver.depositToConsensusLayerWithDepositRoot(10, bytes32(0));
         vm.stopPrank();
     }
 
-    function testExecutorCanDepositToConsensusLayer() public {
+    function testExecutorCannotdepositToConsensusLayerWithDepositRoot() public {
         // Assert this by expecting NotEnoughFunds, NOT Unauthorized
         vm.startPrank(executor);
         vm.expectRevert(abi.encodeWithSignature("NotEnoughFunds()"));
-        firewalledRiver.depositToConsensusLayer(10);
+        firewalledRiver.depositToConsensusLayerWithDepositRoot(10, bytes32(0));
         vm.stopPrank();
     }
 
-    function testRandomCallerCannotDepositToConsensusLayer() public {
+    function testRandomCallerCannotdepositToConsensusLayerWithDepositRoot() public {
         vm.startPrank(joe);
         vm.expectRevert(unauthJoe);
-        firewalledRiver.depositToConsensusLayer(10);
+        firewalledRiver.depositToConsensusLayerWithDepositRoot(10, bytes32(0));
         vm.stopPrank();
     }
 
@@ -499,5 +502,9 @@ contract FirewallTests is BytesGenerator, Test {
         vm.expectRevert(unauthJoe);
         riverFirewall.setExecutor(don);
         vm.stopPrank();
+    }
+
+    function testVersion() external {
+        assertEq(riverFirewall.version(), "1.2.1");
     }
 }

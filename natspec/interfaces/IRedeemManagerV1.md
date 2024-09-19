@@ -1,6 +1,6 @@
 # IRedeemManagerV1
 
-*Kiln*
+*Alluvial Finance Inc.*
 
 > Redeem Manager Interface (v1)
 
@@ -112,7 +112,7 @@ Retrieve the global count of redeem requests
 ### getRedeemRequestDetails
 
 ```solidity
-function getRedeemRequestDetails(uint32 _redeemRequestId) external view returns (struct RedeemQueue.RedeemRequest)
+function getRedeemRequestDetails(uint32 _redeemRequestId) external view returns (struct RedeemQueueV2.RedeemRequest)
 ```
 
 Retrieve the details of a specific redeem request
@@ -129,7 +129,7 @@ Retrieve the details of a specific redeem request
 
 | Name | Type | Description |
 |---|---|---|
-| _0 | RedeemQueue.RedeemRequest | The redeem request details |
+| _0 | RedeemQueueV2.RedeemRequest | The redeem request details |
 
 ### getRiver
 
@@ -202,6 +202,22 @@ function initializeRedeemManagerV1(address _river) external nonpayable
 | Name | Type | Description |
 |---|---|---|
 | _river | address | The address of the River contract |
+
+### initializeRedeemManagerV1_2
+
+```solidity
+function initializeRedeemManagerV1_2(address[] _prevInitiators) external nonpayable
+```
+
+
+
+
+
+#### Parameters
+
+| Name | Type | Description |
+|---|---|---|
+| _prevInitiators | address[] | The address of initiators for existing requests |
 
 ### pullExceedingEth
 
@@ -348,7 +364,7 @@ Emitted when a withdrawal event is created
 ### RequestedRedeem
 
 ```solidity
-event RequestedRedeem(address indexed owner, uint256 height, uint256 amount, uint256 maxRedeemableEth, uint32 id)
+event RequestedRedeem(address indexed recipient, uint256 height, uint256 amount, uint256 maxRedeemableEth, uint32 id)
 ```
 
 Emitted when a redeem request is created
@@ -359,7 +375,7 @@ Emitted when a redeem request is created
 
 | Name | Type | Description |
 |---|---|---|
-| owner `indexed` | address | The owner of the redeem request |
+| recipient `indexed` | address | The recipient of the redeem request |
 | height  | uint256 | The height of the redeem request in LsETH |
 | amount  | uint256 | The amount of the redeem request in LsETH |
 | maxRedeemableEth  | uint256 | The maximum amount of eth that can be redeemed from this request |
@@ -423,6 +439,28 @@ Emitted when the River address is set
 
 ## Errors
 
+### ClaimInitiatorIsDenied
+
+```solidity
+error ClaimInitiatorIsDenied()
+```
+
+Thrown when the claim initiator is denied
+
+
+
+
+### ClaimRecipientIsDenied
+
+```solidity
+error ClaimRecipientIsDenied()
+```
+
+Thrown when the claim recipient is denied
+
+
+
+
 ### ClaimRedeemFailed
 
 ```solidity
@@ -475,6 +513,17 @@ error InvalidZeroAmount()
 ```
 
 Thrown When a zero value is provided
+
+
+
+
+### RecipientIsDenied
+
+```solidity
+error RecipientIsDenied()
+```
+
+Thrown when the recipient of redeemRequest is denied
 
 
 

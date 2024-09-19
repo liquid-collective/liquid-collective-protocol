@@ -132,9 +132,11 @@ library OperatorsV2 {
 
         uint256 activeCount = 0;
         uint256 operatorCount = r.value.length;
+        Operator[] memory activeOperators = new Operator[](operatorCount);
 
         for (uint256 idx = 0; idx < operatorCount;) {
             if (r.value[idx].active) {
+                activeOperators[activeCount] = r.value[idx];
                 unchecked {
                     ++activeCount;
                 }
@@ -143,20 +145,8 @@ library OperatorsV2 {
                 ++idx;
             }
         }
-
-        Operator[] memory activeOperators = new Operator[](activeCount);
-
-        uint256 activeIdx = 0;
-        for (uint256 idx = 0; idx < operatorCount;) {
-            if (r.value[idx].active) {
-                activeOperators[activeIdx] = r.value[idx];
-                unchecked {
-                    ++activeIdx;
-                }
-            }
-            unchecked {
-                ++idx;
-            }
+        assembly ("memory-safe") {
+            mstore(activeOperators, activeCount)
         }
 
         return activeOperators;
@@ -220,6 +210,10 @@ library OperatorsV2 {
             }
         }
 
+        assembly ("memory-safe") {
+            mstore(fundableOperators, fundableCount)
+        }
+
         return (fundableOperators, fundableCount);
     }
 
@@ -259,6 +253,10 @@ library OperatorsV2 {
             unchecked {
                 ++idx;
             }
+        }
+
+        assembly ("memory-safe") {
+            mstore(exitableOperators, exitableCount)
         }
 
         return (exitableOperators, exitableCount);

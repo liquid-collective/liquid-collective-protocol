@@ -5,7 +5,7 @@ import "./IRiver.1.sol";
 import "../state/oracle/ReportsVariants.sol";
 
 /// @title Oracle Interface (v1)
-/// @author Kiln
+/// @author Alluvial Finance Inc.
 /// @notice This interface exposes methods to handle the input from the allowed oracle members.
 /// @notice Highly inspired by Lido's implementation.
 interface IOracleV1 {

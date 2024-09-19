@@ -5,7 +5,7 @@ import "../state/shared/AdministratorAddress.sol";
 import "../state/shared/PendingAdministratorAddress.sol";
 
 /// @title Lib Administrable
-/// @author Kiln
+/// @author Alluvial Finance Inc.
 /// @notice This library handles the admin and pending admin storage vars
 library LibAdministrable {
     /// @notice Retrieve the system admin

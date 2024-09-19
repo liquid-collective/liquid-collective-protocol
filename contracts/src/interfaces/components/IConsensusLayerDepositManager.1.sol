@@ -2,7 +2,7 @@
 pragma solidity 0.8.20;
 
 /// @title Consensys Layer Deposit Manager Interface (v1)
-/// @author Kiln
+/// @author Alluvial Finance Inc.
 /// @notice This interface exposes methods to handle the interactions with the official deposit contract
 interface IConsensusLayerDepositManagerV1 {
     /// @notice The stored deposit contract address changed
@@ -42,6 +42,12 @@ interface IConsensusLayerDepositManagerV1 {
     /// @notice An error occured during the deposit
     error ErrorOnDeposit();
 
+    /// @notice Invalid deposit root
+    error InvalidDepositRoot();
+
+    // @notice Not keeper
+    error OnlyKeeper();
+
     /// @notice Returns the amount of ETH not yet committed for deposit
     /// @return The amount of ETH not yet committed for deposit
     function getBalanceToDeposit() external view returns (uint256);
@@ -58,7 +64,12 @@ interface IConsensusLayerDepositManagerV1 {
     /// @return The deposited validator count
     function getDepositedValidatorCount() external view returns (uint256);
 
+    /// @notice Get the keeper address
+    /// @return The keeper address
+    function getKeeper() external view returns (address);
+
     /// @notice Deposits current balance to the Consensus Layer by batches of 32 ETH
     /// @param _maxCount The maximum amount of validator keys to fund
-    function depositToConsensusLayer(uint256 _maxCount) external;
+    /// @param _depositRoot The root of the deposit tree
+    function depositToConsensusLayerWithDepositRoot(uint256 _maxCount, bytes32 _depositRoot) external;
 }

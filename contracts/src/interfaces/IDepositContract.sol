@@ -15,4 +15,8 @@ interface IDepositContract {
         bytes calldata signature,
         bytes32 depositDataRoot
     ) external payable;
+
+    /// @notice Query the current deposit root hash.
+    /// @return The deposit root hash.
+    function get_deposit_root() external view returns (bytes32);
 }

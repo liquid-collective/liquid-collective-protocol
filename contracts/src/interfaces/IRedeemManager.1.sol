@@ -1,20 +1,22 @@
 //SPDX-License-Identifier: BUSL-1.1
 pragma solidity 0.8.20;
 
-import "../state/redeemManager/RedeemQueue.sol";
+import "../state/redeemManager/RedeemQueue.2.sol";
 import "../state/redeemManager/WithdrawalStack.sol";
 
 /// @title Redeem Manager Interface (v1)
-/// @author Kiln
+/// @author Alluvial Finance Inc.
 /// @notice This contract handles the redeem requests of all users
 interface IRedeemManagerV1 {
     /// @notice Emitted when a redeem request is created
-    /// @param owner The owner of the redeem request
+    /// @param recipient The recipient of the redeem request
     /// @param height The height of the redeem request in LsETH
     /// @param amount The amount of the redeem request in LsETH
     /// @param maxRedeemableEth The maximum amount of eth that can be redeemed from this request
     /// @param id The id of the new redeem request
-    event RequestedRedeem(address indexed owner, uint256 height, uint256 amount, uint256 maxRedeemableEth, uint32 id);
+    event RequestedRedeem(
+        address indexed recipient, uint256 height, uint256 amount, uint256 maxRedeemableEth, uint32 id
+    );
 
     /// @notice Emitted when a withdrawal event is created
     /// @param height The height of the withdrawal event in LsETH
@@ -98,8 +100,20 @@ interface IRedeemManagerV1 {
     /// @param rdata The revert data
     error ClaimRedeemFailed(address recipient, bytes rdata);
 
+    /// @notice Thrown when the claim recipient is denied
+    error ClaimRecipientIsDenied();
+
+    /// @notice Thrown when the claim initiator is denied
+    error ClaimInitiatorIsDenied();
+
+    /// @notice Thrown when the recipient of redeemRequest is denied
+    error RecipientIsDenied();
+
     /// @param _river The address of the River contract
     function initializeRedeemManagerV1(address _river) external;
+
+    /// @param _prevInitiators The address of initiators for existing requests
+    function initializeRedeemManagerV1_2(address[] calldata _prevInitiators) external;
 
     /// @notice Retrieve River address
     /// @return The address of River
@@ -114,7 +128,7 @@ interface IRedeemManagerV1 {
     function getRedeemRequestDetails(uint32 _redeemRequestId)
         external
         view
-        returns (RedeemQueue.RedeemRequest memory);
+        returns (RedeemQueueV2.RedeemRequest memory);
 
     /// @notice Retrieve the global count of withdrawal events
     function getWithdrawalEventCount() external view returns (uint256);
