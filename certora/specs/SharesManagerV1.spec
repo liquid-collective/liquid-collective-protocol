@@ -176,7 +176,7 @@ rule sharesBalanceChangesRestrictively(method f) filtered {
 rule pricePerShareChangesRespectively(method f) filtered {
     f -> !f.isView
         && f.selector != sig:initRiverV1_1(address,uint64,uint64,uint64,uint64,uint64,uint256,uint256,uint128,uint128).selector
-        && f.selector != sig:depositToConsensusLayer(uint256).selector
+        && f.selector != sig:depositToConsensusLayerWithDepositRoot(uint256, bytes32).selector
         && f.selector != sig:claimRedeemRequests(uint32[],uint32[]).selector
         && f.selector != sig:deposit().selector
         && f.selector != sig:depositAndTransfer(address).selector

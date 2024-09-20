@@ -84,7 +84,7 @@ methods {
     function _.demandValidatorExits(uint256, uint256) external => DISPATCHER(true);
     function _.pickNextValidatorsToDeposit(uint256) external => DISPATCHER(true); // has no effect - CERT-4615
 
-    function _.deposit(bytes,bytes,bytes,bytes32) external => DISPATCHER(true); // has no effect - CERT-4615
+    //function _.deposit(bytes,bytes,bytes,bytes32) external => DISPATCHER(true); // has no effect - CERT-4615
 
     // function _.increment_onDepositCounter() external => ghostUpdate_onDepositCounter() expect bool ALL;
 
