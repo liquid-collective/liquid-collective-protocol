@@ -82,7 +82,7 @@ contract OracleIntegrationTest is Test, DeploymentFixture, RiverHelper, OracleEv
         OracleV1(address(oracleProxy)).addMember(member, 1);
 
         // 1st condition: _currentEpoch(_cls) >= _epoch + _cls.epochsToAssumedFinality
-        uint256 blockTimestamp = 1726660451;  
+        uint256 blockTimestamp = 1726660451;  // vm.assume()
         vm.warp(blockTimestamp);
         uint256 calcCurE =((blockTimestamp - genesisTime) / secondsPerSlot) / slotsPerEpoch;
         console.log("calcCurE: ", calcCurE);
@@ -101,8 +101,8 @@ contract OracleIntegrationTest is Test, DeploymentFixture, RiverHelper, OracleEv
         // Mock the storage for LastConsensusLayerReport.get().epoch
         bytes32 baseSlot = LastConsensusLayerReport.LAST_CONSENSUS_LAYER_REPORT_SLOT;
         uint256 mockEpochValue = clr.epoch-1; // Example value
-        vm.store(address(oracleManager), baseSlot, bytes32(mockEpochValue));
-        uint256 lastConsensusEpoch = oracleManager.getLastCompletedEpochId();
+        vm.store(address(riverProxy), baseSlot, bytes32(mockEpochValue));
+        uint256 lastConsensusEpoch = IOracleManagerV1(address(riverProxy)).getLastCompletedEpochId();
         // e > cl(e)
         assert(clr.epoch > lastConsensusEpoch);
         console.log("second condition passed successfully");
@@ -113,8 +113,6 @@ contract OracleIntegrationTest is Test, DeploymentFixture, RiverHelper, OracleEv
         console.log("third condition passed successfully");
 
         console.log("[test] cl e < e < curE: ", lastConsensusEpoch, clr.epoch, currentEpoch);
-        
-        // suddenly cl e is 0 and curE is tiny
         vm.prank(member);
         OracleV1(address(oracleProxy)).reportConsensusLayerData(clr);
     }

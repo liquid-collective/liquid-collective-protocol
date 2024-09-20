@@ -50,6 +50,10 @@ contract DeploymentTest is Test, DeploymentFixture {
         // River
         address riverAllowlist = RiverV1(payable(address(riverProxy))).getAllowlist();
         assertEq(address(riverAllowlist), address(allowlistProxy), "River: allowlist incorrectly set");
+
+        address riverAdmin = RiverV1(payable(address(riverProxy))).getAdmin();
+        assertEq(address(riverProxyFirewall), riverAdmin, "River: admin incorrectly set");
+
         // Oracle
         address riverOracle = OracleManagerV1(payable(address(riverProxy))).getOracle(); // should return proxy
         assertTrue(riverOracle == address(oracleProxy), "River: oracle incorrectly set.");
