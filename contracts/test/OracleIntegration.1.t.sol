@@ -33,107 +33,80 @@ import "./mocks/DepositContractMock.sol";
 import "./mocks/RiverMock.sol";
 
 contract OracleIntegrationTest is Test, DeploymentFixture, RiverHelper, OracleEvents {
-    IRiverV1 riverImpl;
-    IOracleV1 oracleImpl;
-
     function setUp() public override {
         super.setUp();
-        riverImpl = RiverV1ForceCommittable(payable(address(riverProxy)));
-        oracleImpl = OracleV1(address(oracleProxy));
-
     }
 
     /// @notice This test is to check the Oracle integration with the River contract
-    function testOracleIntegration(uint256 _salt) external {
+    function testOracleReportsUpdateOnQuorum(uint256 _salt, uint256 _frame) external {
+        vm.assume(_frame <= 255);
         uint8 depositCount = uint8(bound(_salt, 2, 32));
         IOracleManagerV1.ConsensusLayerReport memory clr = _generateEmptyReport();
 
         vm.prank(address(riverProxyFirewall));
-        riverImpl = RiverV1ForceCommittable(payable(address(riverProxy)));
-        riverImpl.setCoverageFund(address(coverageFundProxy));
+        RiverV1(payable(address(riverProxy))).setCoverageFund(address(coverageFundProxy));
 
-        // operators registry admin
+        // EL rewards accrue
         address operatorsRegistryAdmin = address(operatorsRegistryFirewall);
         vm.prank(address(riverProxyFirewall));
-        RiverV1(payable(address(riverProxy))).setKeeper(operatorsRegistryAdmin);
-        _salt = _depositValidators(AllowlistV1(address(allowlistProxy)), allower, OperatorsRegistryV1(address(operatorsRegistryProxy)), RiverV1ForceCommittable(payable(address(riverProxy))), operatorsRegistryAdmin, depositCount, _salt);
+        RiverV1(payable(address(riverProxy))).setKeeper(address(operatorsRegistryFirewall));
+        _salt = _depositValidators(
+            AllowlistV1(address(allowlistProxy)),
+            allower,
+            OperatorsRegistryV1(address(operatorsRegistryProxy)),
+            RiverV1ForceCommittable(payable(address(riverProxy))),
+            address(operatorsRegistryFirewall),
+            depositCount,
+            _salt
+        );
         _salt = uint256(keccak256(abi.encode(_salt)));
         uint256 framesBetween = bound(_salt, 1, 1_000_000);
         uint256 timeBetween = framesBetween * secondsPerSlot * slotsPerEpoch * epochsPerFrame;
-        uint256 maxIncrease = debug_maxIncrease(IOracleManagerV1(river).getReportBounds(),  ISharesManagerV1(river).totalUnderlyingSupply(), timeBetween);
+        uint256 maxIncrease = debug_maxIncrease(
+            IOracleManagerV1(river).getReportBounds(),
+            ISharesManagerV1(river).totalUnderlyingSupply(),
+            timeBetween
+        );
         vm.deal(address(elFeeRecipientProxy), maxIncrease);
 
-        // Mock oracle report
+        // add oracle members
+        address member = uf._new(_salt);
+        vm.prank(admin);
+        OracleV1(address(oracleProxy)).addMember(member, 1);
+
+        address member2 = uf._new(_salt);
+        vm.prank(admin);
+        OracleV1(address(oracleProxy)).addMember(member2, 2);
+        assertEq(OracleV1(address(oracleProxy)).getQuorum(), 2);
+
+        // set the current epoch
+        uint256 blockTimestamp = 1726660451 + _frame;
+        vm.warp(blockTimestamp);
+        uint256 expectedEpoch = RiverV1(payable(address(riverProxy))).getExpectedEpochId();
+
+        // mock oracle report
         clr.validatorsCount = depositCount;
         clr.validatorsBalance = 32 ether * (depositCount);
         clr.validatorsExitingBalance = 0;
         clr.validatorsSkimmedBalance = 0;
         clr.validatorsExitedBalance = 0;
-        // clr.epoch = // TBD; 
+        clr.epoch = expectedEpoch; // set the oracle report epoch
 
-        // 3 conditions to check:
-        // curEpoch >= e + cls.assumedFinality
-        // e > cl(e)
-        // e % cls.frames == 0
+        // set the storage for the LastConsensusLayerReport.get().epoch
+        bytes32 storageSlot = LastConsensusLayerReport.LAST_CONSENSUS_LAYER_REPORT_SLOT;
+        uint256 mockLastCLEpoch = clr.epoch - 1;
+        vm.store(address(riverProxy), storageSlot, bytes32(mockLastCLEpoch));
 
-        // add oracle member
-        address member = uf._new(_salt);
-        vm.prank(admin);
-        OracleV1(address(oracleProxy)).addMember(member, 1);
-
-        // 1st condition: _currentEpoch(_cls) >= _epoch + _cls.epochsToAssumedFinality
-        uint256 blockTimestamp = 1726660451;  // vm.assume()
-        vm.warp(blockTimestamp);
-        uint256 calcCurE =((blockTimestamp - genesisTime) / secondsPerSlot) / slotsPerEpoch;
-        console.log("calcCurE: ", calcCurE);
-        console.log("block time vs. oracleManagerTime", blockTimestamp, oracleManager.getTime());
-        uint256 currentEpoch = oracleManager.getCurrentEpochId();
-        uint256 expectedEpoch = oracleManager.getExpectedEpochId();
-        console.log("current Epoch: ", currentEpoch);
-        clr.epoch = expectedEpoch;
-        console.log("expected Epoch: ", expectedEpoch);
-        // assert
-        assert(currentEpoch > clr.epoch+ epochsToAssumedFinality);
-        console.log("first condition passed successfully");
-
-        // 2nd condition
-        // satisfy last cl epoch condition
-        // Mock the storage for LastConsensusLayerReport.get().epoch
-        bytes32 baseSlot = LastConsensusLayerReport.LAST_CONSENSUS_LAYER_REPORT_SLOT;
-        uint256 mockEpochValue = clr.epoch-1; // Example value
-        vm.store(address(riverProxy), baseSlot, bytes32(mockEpochValue));
-        uint256 lastConsensusEpoch = IOracleManagerV1(address(riverProxy)).getLastCompletedEpochId();
-        // e > cl(e)
-        assert(clr.epoch > lastConsensusEpoch);
-        console.log("second condition passed successfully");
-
-        // 3rd condition
-        // e % cls.frames == 0
-        assert(clr.epoch % epochsPerFrame == 0);
-        console.log("third condition passed successfully");
-
-        console.log("[test] cl e < e < curE: ", lastConsensusEpoch, clr.epoch, currentEpoch);
+        uint256 initialBalance = address(riverProxy).balance;
         vm.prank(member);
         OracleV1(address(oracleProxy)).reportConsensusLayerData(clr);
-    }
+        // no balance change (quorum not met)
+        assertEq(address(riverProxy).balance, initialBalance);
+        assertEq(OracleV1(address(oracleProxy)).getLastReportedEpochId(), clr.epoch);
 
-    function testEpoch() external {
-        uint256 currentEpoch = oracleManager.getCurrentEpochId();
-        console.log("currentEpoch", currentEpoch);
-        uint256 blockTimestamp = 1726660451; 
-        // set the current epoch:
-        // vm.roll(blockNumber);
-        vm.warp(blockTimestamp);
-        // 1st condition _currentEpoch(_cls) >= _epoch + _cls.epochsToAssumedFinality
-        currentEpoch = oracleManager.getCurrentEpochId();
-        console.log("currentEpoch", currentEpoch);
-
-        bytes32 baseSlot = LastConsensusLayerReport.LAST_CONSENSUS_LAYER_REPORT_SLOT;
-        // bytes32 epochSlot = keccak256(abi.encodePacked(baseSlot));
-        uint256 mockEpochValue = 123456; // Example value
-        vm.store(address(oracleManager), baseSlot, bytes32(mockEpochValue));
-
-        uint256 lastConsensusEpoch = oracleManager.getLastCompletedEpochId(); 
-        console.log("consensus", lastConsensusEpoch);
+        vm.prank(member2);
+        OracleV1(address(oracleProxy)).reportConsensusLayerData(clr);
+        // balance changed (quorum reached)
+        assertEq(address(riverProxy).balance - maxIncrease, initialBalance);
     }
 }
