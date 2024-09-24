@@ -727,8 +727,6 @@ contract RiverV1TestsReport_HEAVY_FUZZING is RiverUnitTestBase, RiverHelper {
     uint128 constant maxDailyNetCommittableAmount = 3200 ether;
     uint128 constant maxDailyRelativeCommittableAmount = 2000;
 
-    // RedeemManagerV1 redeemManager;
-
     function setUp() public override {
         super.setUp();
         bytes32 withdrawalCredentials = withdraw.getCredentials();

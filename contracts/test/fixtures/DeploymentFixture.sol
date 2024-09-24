@@ -149,7 +149,7 @@ contract DeploymentFixture is RiverUnitTestBase {
         allowlistProxy = new TUPProxy(
             address(allowlist), // implementation
             proxyAdministrator, // proxy admin
-            abi.encodeWithSignature("initAllowlistV1(address,address)", address(allowlistFirewall), address(allower)) // TODO admin, allower
+            abi.encodeWithSignature("initAllowlistV1(address,address)", address(allowlistFirewall), address(allower))
         );
         emit log_named_address("Allowlist deployed at:", address(allowlistProxy));
 
