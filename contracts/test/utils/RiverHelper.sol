@@ -1,4 +1,4 @@
-//SPDX-License-Identifier: BUSL-1.1
+// SPDX-License-Identifier: BUSL-1.1
 
 pragma solidity 0.8.20;
 
@@ -85,17 +85,19 @@ contract RiverHelper is RiverHelperTestBase {
         clr.stoppedValidatorCountPerOperator[0] = 0;
     }
 
-    function _generateEmptyReport(
-        uint256 stoppedValidatorsCountElements
-    ) internal pure returns (IOracleManagerV1.ConsensusLayerReport memory clr) {
+    function _generateEmptyReport(uint256 stoppedValidatorsCountElements)
+        internal
+        pure
+        returns (IOracleManagerV1.ConsensusLayerReport memory clr)
+    {
         clr.stoppedValidatorCountPerOperator = new uint32[](stoppedValidatorsCountElements);
     }
 
-    function debug_maxIncrease(
-        ReportBounds.ReportBoundsStruct memory rb,
-        uint256 _prevTotalEth,
-        uint256 _timeElapsed
-    ) internal pure returns (uint256) {
+    function debug_maxIncrease(ReportBounds.ReportBoundsStruct memory rb, uint256 _prevTotalEth, uint256 _timeElapsed)
+        internal
+        pure
+        returns (uint256)
+    {
         return (_prevTotalEth * rb.annualAprUpperBound * _timeElapsed) / (LibBasisPoints.BASIS_POINTS_MAX * 365 days);
     }
 }

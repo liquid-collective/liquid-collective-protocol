@@ -3,7 +3,7 @@ pragma solidity ^0.8.13;
 
 import "forge-std/Test.sol";
 // fixtures
-import "./fixtures/RiverV1TestBase.sol";
+import "./fixtures/RiverUnitTestBase.sol";
 import "./fixtures/DeploymentFixture.sol";
 // mocks
 import "./mocks/DepositContractMock.sol";

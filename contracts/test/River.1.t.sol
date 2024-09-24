@@ -1,4 +1,4 @@
-//SPDX-License-Identifier: BUSL-1.1
+// SPDX-License-Identifier: BUSL-1.1
 
 pragma solidity 0.8.20;
 
@@ -6,7 +6,7 @@ import "forge-std/Test.sol";
 // fixtures
 import "./fixtures/RiverV1ForceCommittable.sol";
 import "./fixtures/OperatorsRegistryWithOverridesV1.sol";
-import "./fixtures/RiverV1TestBase.sol";
+import "./fixtures/RiverUnitTestBase.sol";
 // mocks
 import "./mocks/DepositContractMock.sol";
 // contracts
@@ -26,7 +26,7 @@ import "./utils/BytesGenerator.sol";
 import "./utils/LibImplementationUnbricker.sol";
 import "./utils/RiverHelper.sol";
 
-contract RiverV1InitializationTests is RiverV1TestBase, RiverHelper {
+contract RiverV1InitializationTests is RiverUnitTestBase, RiverHelper {
     function testInitialization() public {
         bytes32 withdrawalCredentials = withdraw.getCredentials();
         vm.expectEmit(true, true, true, true);
@@ -53,7 +53,7 @@ contract RiverV1InitializationTests is RiverV1TestBase, RiverHelper {
     }
 }
 
-contract RiverV1Tests is RiverV1TestBase, RiverHelper {
+contract RiverV1Tests is RiverUnitTestBase, RiverHelper {
     uint128 constant maxDailyNetCommittableAmount = 3200 ether;
     uint128 constant maxDailyRelativeCommittableAmount = 2000;
 
@@ -723,7 +723,7 @@ contract RiverV1Tests is RiverV1TestBase, RiverHelper {
     }
 }
 
-contract RiverV1TestsReport_HEAVY_FUZZING is RiverV1TestBase, RiverHelper {
+contract RiverV1TestsReport_HEAVY_FUZZING is RiverUnitTestBase, RiverHelper {
     uint128 constant maxDailyNetCommittableAmount = 3200 ether;
     uint128 constant maxDailyRelativeCommittableAmount = 2000;
 
@@ -1959,7 +1959,7 @@ contract RiverV1TestsReport_HEAVY_FUZZING is RiverV1TestBase, RiverHelper {
             extraBalanceToDeposit,
             LibUint256.min(river.totalUnderlyingSupply(), (maxCommittedBalanceDailyIncrease * period) / 1 days)
         );
-        maxCommittedBalanceIncrease = maxCommittedBalanceIncrease / 32 ether * 32 ether;
+        maxCommittedBalanceIncrease = (maxCommittedBalanceIncrease / 32 ether) * 32 ether;
 
         return initialCommittedAmount + maxCommittedBalanceIncrease;
     }

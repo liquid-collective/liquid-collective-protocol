@@ -1,4 +1,4 @@
-//SPDX-License-Identifier: BUSL-1.1
+// SPDX-License-Identifier: BUSL-1.1
 
 pragma solidity 0.8.20;
 
@@ -23,11 +23,10 @@ import "../utils/events/RiverEvents.sol";
 import "../utils/LibImplementationUnbricker.sol";
 import "../utils/UserFactory.sol";
 
-/// @title RiverV1TestBase
+/// @title RiverUnitTestBase
 /// @author Alluvial Finance Inc.
 /// @notice Basic deployment of LC contracts for unit testing
-abstract contract RiverV1TestBase is Test, BytesGenerator, RiverEvents {
-
+abstract contract RiverUnitTestBase is Test, BytesGenerator, RiverEvents {
     RiverV1ForceCommittable internal river;
     IDepositContract internal deposit;
     WithdrawV1 internal withdraw;
@@ -72,18 +71,7 @@ abstract contract RiverV1TestBase is Test, BytesGenerator, RiverEvents {
     uint128 internal constant maxDailyRelativeCommittable = 2000;
 
     function setUp() public virtual {
-        admin = makeAddr("admin");
-        newAdmin = makeAddr("newAdmin");
-        denier = makeAddr("denier");
-        collector = makeAddr("collector");
-        newCollector = makeAddr("newCollector");
-        allower = makeAddr("allower");
-        oracleMember = makeAddr("oracleMember");
-        newAllowlist = makeAddr("newAllowlist");
-        operatorOne = makeAddr("operatorOne");
-        operatorTwo = makeAddr("operatorTwo");
-        bob = makeAddr("bob");
-        joe = makeAddr("joe");
+        setupAddresses();
 
         vm.warp(857034746);
 
@@ -115,11 +103,26 @@ abstract contract RiverV1TestBase is Test, BytesGenerator, RiverEvents {
             relativeLowerBound
         );
         LibImplementationUnbricker.unbrick(vm, address(oracleManager));
-
         allowlist.initAllowlistV1(admin, allower);
         allowlist.initAllowlistV1_1(denier);
         operatorsRegistry.initOperatorsRegistryV1(admin, address(river));
         elFeeRecipient.initELFeeRecipientV1(address(river));
-        coverageFund.initCoverageFundV1(address(river));  
+        coverageFund.initCoverageFundV1(address(river));
+    }
+
+    /// @notice Setup the addresses for testing
+    function setupAddresses() internal {
+        admin = makeAddr("admin");
+        newAdmin = makeAddr("newAdmin");
+        denier = makeAddr("denier");
+        collector = makeAddr("collector");
+        newCollector = makeAddr("newCollector");
+        allower = makeAddr("allower");
+        oracleMember = makeAddr("oracleMember");
+        newAllowlist = makeAddr("newAllowlist");
+        operatorOne = makeAddr("operatorOne");
+        operatorTwo = makeAddr("operatorTwo");
+        bob = makeAddr("bob");
+        joe = makeAddr("joe");
     }
 }
