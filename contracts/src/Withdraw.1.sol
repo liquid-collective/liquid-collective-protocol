@@ -9,7 +9,6 @@ import "./libraries/LibErrors.sol";
 import "./libraries/LibUint256.sol";
 
 import "./state/shared/RiverAddress.sol";
-import "forge-std/console.sol";
 
 /// @title Withdraw (v1)
 /// @author Alluvial Finance Inc.
@@ -17,8 +16,6 @@ import "forge-std/console.sol";
 contract WithdrawV1 is IWithdrawV1, Initializable, IProtocolVersion {
     modifier onlyRiver() {
         if (msg.sender != RiverAddress.get()) {
-            console.log("msg.sender: %s", msg.sender);
-            console.log("RiverAddress.get(): %s", RiverAddress.get());
             revert LibErrors.Unauthorized(msg.sender);
         }
         _;

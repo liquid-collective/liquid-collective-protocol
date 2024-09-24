@@ -14,7 +14,6 @@ import "../state/river/BalanceToDeposit.sol";
 import "../state/river/CommittedBalance.sol";
 import "../state/river/KeeperAddress.sol";
 
-import "forge-std/console.sol";
 
 /// @title Consensus Layer Deposit Manager (v1)
 /// @author Alluvial Finance Inc.
@@ -101,10 +100,6 @@ abstract contract ConsensusLayerDepositManagerV1 is IConsensusLayerDepositManage
 
         uint256 committedBalance = CommittedBalance.get();
         uint256 keyToDepositCount = LibUint256.min(committedBalance / DEPOSIT_SIZE, _maxCount);
-        console.log("committedBalance", committedBalance);
-        console.log("DEPOSIT_SIZE", DEPOSIT_SIZE);
-        console.log("_maxCount", _maxCount);
-        console.log("keyToDepositCount", keyToDepositCount);
 
         if (keyToDepositCount == 0) {
             revert NotEnoughFunds();
