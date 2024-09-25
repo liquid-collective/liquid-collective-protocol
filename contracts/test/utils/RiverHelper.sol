@@ -3,13 +3,9 @@
 pragma solidity 0.8.20;
 
 import "forge-std/Test.sol";
-
-// fixtures
 import "../fixtures/RiverV1ForceCommittable.sol";
-// utils
 import "./BytesGenerator.sol";
 import "./UserFactory.sol";
-
 import "../../src/libraries/LibAllowlistMasks.sol";
 import "../../src/interfaces/IOperatorRegistry.1.sol";
 import "../../src/interfaces/IRiver.1.sol";
