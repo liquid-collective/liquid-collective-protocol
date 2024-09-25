@@ -42,7 +42,6 @@ contract OracleIntegrationTest is Test, DeploymentFixture, RiverHelper, OracleEv
         vm.prank(address(riverProxyFirewall));
         RiverV1(payable(address(riverProxy))).setCoverageFund(address(coverageFundProxy));
 
-        // EL rewards accrue
         address operatorsRegistryAdmin = address(operatorsRegistryFirewall);
         vm.prank(address(riverProxyFirewall));
         RiverV1(payable(address(riverProxy))).setKeeper(address(operatorsRegistryFirewall));
@@ -66,7 +65,7 @@ contract OracleIntegrationTest is Test, DeploymentFixture, RiverHelper, OracleEv
         // add oracle members
         address member;
         address member2;
-        (member, member2) = setUpOracleMembers(_salt);
+        (member, member2) = setUpTwoOracleMembers(_salt);
 
         // mock oracle report
         clr.validatorsCount = depositCount;
@@ -94,7 +93,7 @@ contract OracleIntegrationTest is Test, DeploymentFixture, RiverHelper, OracleEv
         assertEq(address(riverProxy).balance - maxIncrease, initialBalance);
     }
 
-    function setUpOracleMembers(uint256 _salt) internal returns (address, address) {
+    function setUpTwoOracleMembers(uint256 _salt) internal returns (address, address) {
         address member = uf._new(_salt);
         vm.prank(admin);
         OracleV1(address(oracleProxy)).addMember(member, 1);

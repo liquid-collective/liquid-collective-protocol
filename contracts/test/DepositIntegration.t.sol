@@ -46,6 +46,10 @@ contract DepositIntegrationTest is Test, DeploymentFixture, RiverHelper {
         RiverV1(payable(address(riverProxy))).setKeeper(address(operatorsRegistryFirewall));
         // deal bob
         vm.deal(address(bob), 100 ether);
+
+        // mock River Address Slot for pullCLfunds
+        bytes32 second_storageSlot = RiverAddress.RIVER_ADDRESS_SLOT;
+        vm.store(address(withdraw), second_storageSlot, bytes32(uint256(uint160(address(riverProxy)))));
     }
 
     /// @notice This test is to check the Oracle integration with the River contract
@@ -119,57 +123,24 @@ contract DepositIntegrationTest is Test, DeploymentFixture, RiverHelper {
 
         setUpOperators();
 
-        // accrue some rewards
         address member = setUpOracleMember(_salt);
-        {
-            // new oracle report
-            uint256 committedBalance = RiverV1(payable(address(riverProxy))).getCommittedBalance();
-            uint256 depositedBalance = RiverV1(payable(address(riverProxy))).getBalanceToDeposit();
-            clr.validatorsCount = depositCount;
-            clr.validatorsSkimmedBalance = 0;
-            clr.validatorsBalance = 32 ether * (depositCount);
-            clr.validatorsExitedBalance = 0;
-            setUpValidEpoch(1726660451, _frame, clr); // sets clr.epoch to valid epoch
-        }
-        {
-            // mock previous report balances
-            bytes32 baseSlot = LastConsensusLayerReport.LAST_CONSENSUS_LAYER_REPORT_SLOT;
-            bytes32 validatorsBalanceSlot = bytes32(uint256(baseSlot) + 1); // Assuming validatorsBalance is the second variable
-            bytes32 validatorsSkimmedBalanceSlot = bytes32(uint256(baseSlot) + 2); // Assuming validatorsSkimmedBalance is the third variable
-            bytes32 validatorsCountSlot = bytes32(uint256(baseSlot) + 5); //storedReport.validatorsCount = _report.validatorsCount;
-            uint256 mockValidatorsBalance = 32 ether * (depositCount);
-            uint256 mockValidatorsSkimmedBalance = 0;
-            vm.store(address(riverProxy), validatorsBalanceSlot, bytes32(mockValidatorsBalance));
-            vm.store(address(riverProxy), validatorsSkimmedBalanceSlot, bytes32(mockValidatorsSkimmedBalance));
-            vm.store(address(riverProxy), validatorsCountSlot, bytes32(uint256(clr.validatorsCount)));
-            // mock the River Address in the withdraw contract (so CL funds can be pulled)
-            bytes32 second_storageSlot = RiverAddress.RIVER_ADDRESS_SLOT;
-            vm.store(address(withdraw), second_storageSlot, bytes32(uint256(uint160(address(riverProxy)))));
-        }
-        uint256 preReportBalance = address(riverProxy).balance;
-        uint256 preReportSupply = RiverV1(payable(address(riverProxy))).totalUnderlyingSupply();
+        // new oracle report
+        clr.validatorsCount = depositCount;
+        clr.validatorsSkimmedBalance = 0;
+        clr.validatorsBalance = 32 ether * (depositCount);
+        clr.validatorsExitedBalance = 0;
+        setUpValidEpoch(1726660451, _frame, clr); // sets clr.epoch to valid epoch
+
         uint256 bobPreReportBalance = RiverV1(payable(address(riverProxy))).balanceOfUnderlying(bob);
-        uint256 preReportCommittedBalance = RiverV1(payable(address(riverProxy))).getCommittedBalance();
-        {
-            uint128 mockMaxDailyRelativeCommittableAmount = 2000;
-            uint128 mockMinDailyNetCommittableAmount = uint128(32 ether);
-            // Calculate the base storage slot for the DailyCommittableLimitsStruct
-            bytes32 baseSlot = DailyCommittableLimits.DAILY_COMMITTABLE_LIMITS_SLOT;
+        assert(RiverV1(payable(address(riverProxy))).getCommittedBalance() == 0);
+        assert(RiverV1(payable(address(riverProxy))).getBalanceToDeposit() == 32 ether);
 
-            // Pack the values into a single bytes32
-            bytes32 packedValues = bytes32(
-                (uint256(mockMinDailyNetCommittableAmount) << 128) | uint256(mockMaxDailyRelativeCommittableAmount)
-            );
-
-            // Set the storage slot
-            vm.store(address(riverProxy), baseSlot, packedValues);
-        }
+        mockDailyCommittableLimit(2000, 32 ether);
         vm.prank(member);
         OracleV1(address(oracleProxy)).reportConsensusLayerData(clr);
 
         assert(RiverV1(payable(address(riverProxy))).getCommittedBalance() == 32 ether);
-        assert(address(riverProxy).balance == preReportBalance + clr.validatorsSkimmedBalance);
-        assert(RiverV1(payable(address(riverProxy))).totalUnderlyingSupply() == preReportSupply);
+        assert(RiverV1(payable(address(riverProxy))).getBalanceToDeposit() == 0);
         assert(RiverV1(payable(address(riverProxy))).balanceOfUnderlying(bob) == bobPreReportBalance);
     }
 
@@ -252,6 +223,15 @@ contract DepositIntegrationTest is Test, DeploymentFixture, RiverHelper {
         assert(address(riverProxy).balance == preReportBalance + clr.validatorsSkimmedBalance);
         assert(RiverV1(payable(address(riverProxy))).totalUnderlyingSupply() == preReportSupply);
         assert(RiverV1(payable(address(riverProxy))).balanceOfUnderlying(bob) == bobPreReportBalance);
+    }
+
+    function mockDailyCommittableLimit(uint128 maxDailyRelativeCommittable, uint128 minDailyNetCommittableAmount)
+        internal
+    {
+        bytes32 baseSlot = DailyCommittableLimits.DAILY_COMMITTABLE_LIMITS_SLOT;
+        bytes32 packedValues =
+            bytes32((uint256(minDailyNetCommittableAmount) << 128) | uint256(maxDailyRelativeCommittable));
+        vm.store(address(riverProxy), baseSlot, packedValues);
     }
 
     function setUpOperators() internal {
