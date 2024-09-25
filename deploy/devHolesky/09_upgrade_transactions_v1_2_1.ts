@@ -1,19 +1,21 @@
 import { DeployFunction } from "hardhat-deploy/dist/types";
 import { HardhatRuntimeEnvironment } from "hardhat/types";
 
+const version = "1_2_1"
+
 const func: DeployFunction = async function ({ deployments, getNamedAccounts, ethers }: HardhatRuntimeEnvironment) {
   const { proxyAdministrator, governor } = await getNamedAccounts();
 
-  const allowlistNewImplementationDeployment = await deployments.get("AllowlistV1_Implementation_1_2_0");
-  const coverageFundNewImplementationDeployment = await deployments.get("CoverageFundV1_Implementation_1_2_0");
-  const elFeeRecipientNewImplementationDeployment = await deployments.get("ELFeeRecipientV1_Implementation_1_2_0");
+  const allowlistNewImplementationDeployment = await deployments.get(`AllowlistV1_Implementation_${version}`);
+  const coverageFundNewImplementationDeployment = await deployments.get(`CoverageFundV1_Implementation_${version}`);
+  const elFeeRecipientNewImplementationDeployment = await deployments.get(`ELFeeRecipientV1_Implementation_${version}`);
   const operatorsRegistryNewImplementationDeployment = await deployments.get(
-    "OperatorsRegistryV1_Implementation_1_2_0"
+    `OperatorsRegistryV1_Implementation_${version}`
   );
-  const oracleNewImplementationDeployment = await deployments.get("OracleV1_Implementation_1_2_0");
-  const redeemManagerNewImplementationDeployment = await deployments.get("RedeemManagerV1_Implementation_1_2_0");
-  const riverNewImplementationDeployment = await deployments.get("RiverV1_Implementation_1_2_0");
-  const withdrawNewImplementationDeployment = await deployments.get("WithdrawV1_Implementation_1_2_0");
+  const oracleNewImplementationDeployment = await deployments.get(`OracleV1_Implementation_${version}`);
+  const redeemManagerNewImplementationDeployment = await deployments.get(`RedeemManagerV1_Implementation_${version}`);
+  const riverNewImplementationDeployment = await deployments.get(`RiverV1_Implementation_${version}`);
+  const withdrawNewImplementationDeployment = await deployments.get(`WithdrawV1_Implementation_${version}`);
 
   const riverProxyFirewallDeployment = await deployments.get("RiverProxyFirewall");
   const operatorsRegistryFirewallDeployment = await deployments.get("OperatorsRegistryProxyFirewall");
@@ -73,15 +75,6 @@ const func: DeployFunction = async function ({ deployments, getNamedAccounts, et
   await upgradeTo(
     deployments,
     ethers,
-    redeemManagerNewImplementationDeployment,
-    proxyAdministratorSigner,
-    redeemManagerProxyFirewallDeployment.address,
-    "RedeemManager"
-  );
-
-  await upgradeTo(
-    deployments,
-    ethers,
     riverNewImplementationDeployment,
     proxyAdministratorSigner,
     riverProxyFirewallDeployment.address,
@@ -94,6 +87,29 @@ const func: DeployFunction = async function ({ deployments, getNamedAccounts, et
     proxyAdministratorSigner,
     withdrawProxyDeployment.address,
     "Withdraw"
+  );
+
+  // initiator addresses for the initial 7 redeem requests created before initiator was introduced.
+  const prevInitiators = [
+    "0x4d1bed3a669186130daaf5859b242f3c788d736a",
+    "0xffc58b6a27f6354eba6bb8f39fe163a1625c4b5b",
+    "0xffc58b6a27f6354eba6bb8f39fe163a1625c4b5b",
+    "0xffc58b6a27f6354eba6bb8f39fe163a1625c4b5b",
+    "0xffc58b6a27f6354eba6bb8f39fe163a1625c4b5b",
+    "0xce8dad716539e764895cf30e64466e4e82f278bc",
+    "0xffc58b6a27f6354eba6bb8f39fe163a1625c4b5b",
+  ] // addresses gotten onchain
+  const redeemManagerInterface = new ethers.utils.Interface(redeemManagerNewImplementationDeployment.abi);
+  const initData = redeemManagerInterface.encodeFunctionData("initializeRedeemManagerV1_2",[prevInitiators]);
+  // Call the `upgradeToAndCall` function and pass the encoded initialization data.
+  await upgradeToAndCall(
+    deployments,
+    ethers,
+    redeemManagerNewImplementationDeployment.address,
+    proxyAdministratorSigner,
+    redeemManagerProxyFirewallDeployment.address,
+    initData,
+    "RedeemManager"
   );
 
   // TODO: Have to add a keeper transaction setKeeper
@@ -112,6 +128,30 @@ async function upgradeTo(deployments, ethers, newImplementation, signer, sendTo,
   await tx.wait();
   console.log("tx >> ", tx);
   console.log(`${upgrading} Proxy upgraded to ${newImplementation.address}`);
+}
+
+async function upgradeToAndCall(deployments, ethers, newImplementationAddress, signer, sendTo, initData, upgrading) {
+  
+  // Get the ABI for the TransparentUpgradeableProxy
+  const proxyTransparentArtifact = await deployments.getArtifact("ITransparentUpgradeableProxy");
+  const proxyTransparentInterface = new ethers.utils.Interface(proxyTransparentArtifact.abi);
+
+  const upgradeData = proxyTransparentInterface.encodeFunctionData("upgradeToAndCall", [
+    newImplementationAddress,
+    initData,
+  ]);
+
+  // Send the transaction
+  const txCount = await signer.getTransactionCount();
+  const tx = await signer.sendTransaction({
+    to: sendTo,
+    data: upgradeData,
+    nonce: txCount
+  });
+  await tx.wait();
+  console.log("tx >> ", tx);
+  console.log(`${upgrading} proxy upgraded to ${newImplementationAddress} with initialization`);
+
 }
 
 export default func;
