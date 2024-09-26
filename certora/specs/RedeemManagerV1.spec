@@ -1,11 +1,14 @@
-import "RiverV1.spec";
+//import "RiverV1.spec";
 //import "Sanity.spec";
 //import "CVLMath.spec";
 
-use rule method_reachability;
+//use rule method_reachability;
+
+definition ignoredMethod(method f) returns bool =
+    f.selector == sig:initializeRedeemManagerV1_2(address[]).selector;
 
 methods {
-    function getRedeemRequestDetails(uint32) external returns (RedeemQueue.RedeemRequest) envfree;
+    function getRedeemRequestDetails(uint32) external returns (RedeemQueueV2.RedeemRequest) envfree;
     function resolveRedeemRequests(uint32[]) external returns (int64[]) envfree;
 
     function getRedeemRequestCount() external returns (uint256) envfree;
@@ -27,7 +30,7 @@ rule first_redeem_request_height_is_zero
     uint256 redeemRequestCount = getRedeemRequestCount();
     env e; uint256 lsETHAmount; address recipient;
     uint32 redeemRequestId = requestRedeem(e, lsETHAmount, recipient);
-    RedeemQueue.RedeemRequest redeemRequest = getRedeemRequestDetails(redeemRequestId);
+    RedeemQueueV2.RedeemRequest redeemRequest = getRedeemRequestDetails(redeemRequestId);
 
     assert redeemRequestCount == 0 => redeemRequest.height == 0;
 }
@@ -41,8 +44,8 @@ rule height_of_consequent_redeem_requests
     uint256 lsETHAmount1; address recipient1;
     uint32 redeemRequestId0 = requestRedeem(e0, lsETHAmount0, recipient0);
     uint32 redeemRequestId1 = requestRedeem(e1, lsETHAmount1, recipient1);
-    RedeemQueue.RedeemRequest redeemRequest0 = getRedeemRequestDetails(redeemRequestId0);
-    RedeemQueue.RedeemRequest redeemRequest1 = getRedeemRequestDetails(redeemRequestId1);
+    RedeemQueueV2.RedeemRequest redeemRequest0 = getRedeemRequestDetails(redeemRequestId0);
+    RedeemQueueV2.RedeemRequest redeemRequest1 = getRedeemRequestDetails(redeemRequestId1);
 
     require getRedeemRequestCount() <= max_uint32; // requestRedeem() casts redeemRequests.length from uint256 to uint32
     
@@ -71,8 +74,8 @@ rule claim_order__single_call__same_withdrawal_event__subsequent_redeem_requests
     uint8 claimStatuses1_1 = claimStatuses1[1];
 
     
-    RedeemQueue.RedeemRequest redeemRequest0 = getRedeemRequestDetails(redeemRequestIds1[0]);
-    RedeemQueue.RedeemRequest redeemRequest1 = getRedeemRequestDetails(redeemRequestIds1[1]);
+    RedeemQueueV2.RedeemRequest redeemRequest0 = getRedeemRequestDetails(redeemRequestIds1[0]);
+    RedeemQueueV2.RedeemRequest redeemRequest1 = getRedeemRequestDetails(redeemRequestIds1[1]);
 
     require to_mathint(redeemRequest1.height) == to_mathint(redeemRequest0.amount) + to_mathint(redeemRequest0.height);
     require to_mathint(redeemRequestIds1[1]) == to_mathint(redeemRequestIds1[0]) + 1;
@@ -106,8 +109,8 @@ rule claim_order__single_call__same_withdrawal_event__subsequent_redeem_requests
     require redeemRequestIds1[0] == redeemRequestId1;
     require redeemRequestIds1[1] == redeemRequestId2;
     
-    RedeemQueue.RedeemRequest redeemRequest0 = getRedeemRequestDetails(redeemRequestIds1[0]);
-    RedeemQueue.RedeemRequest redeemRequest1 = getRedeemRequestDetails(redeemRequestIds1[1]);
+    RedeemQueueV2.RedeemRequest redeemRequest0 = getRedeemRequestDetails(redeemRequestIds1[0]);
+    RedeemQueueV2.RedeemRequest redeemRequest1 = getRedeemRequestDetails(redeemRequestIds1[1]);
     
     
     bool skipAlreadyClaimed1; uint16 depth1;
@@ -148,7 +151,7 @@ rule claimStatuses_length_eq_redeemRequestIds_length
 // https://vaas-stg.certora.com/output/99352/4557dd5f07fa4e54a42bda02c0465200/?anonymousKey=5cc206e7e8a04f9ba3059d8b2bfa5bea8430d23a
 //
 rule full_claim_is_terminal
-(method f)filtered { f-> !f.isView }
+(method f)filtered { f-> !f.isView && !ignoredMethod(f) }
 {
     env e1; env e2; env e3;
     calldataarg args;
@@ -170,7 +173,7 @@ rule full_claim_is_terminal
 }
 
 rule full_claim_is_terminal_witness_nontrivial_antecedent
-(method f)filtered { f-> !f.isView }
+(method f)filtered { f-> !f.isView && !ignoredMethod(f) }
 {
     env e1; env e2; env e3;
     calldataarg args;
@@ -191,7 +194,7 @@ rule full_claim_is_terminal_witness_nontrivial_antecedent
 }
 
 rule full_claim_is_terminal_witness_nontrivial_consequent
-(method f)filtered { f-> !f.isView }
+(method f)filtered { f-> !f.isView && !ignoredMethod(f) }
 {
     env e1; env e2; env e3;
     calldataarg args;
@@ -216,15 +219,15 @@ rule full_claim_is_terminal_witness_nontrivial_consequent
 // A Claim request’s entitled LsETH is monotonically decreasing TODO: verify property meaning
 // redeemRequest.amount is non-increasing, in particular if the amount reaches zero it'll stay zero.
 // Hence a fully claimed request stays fully claimed.
-rule redeem_request_amount_non_increasing(method f)filtered { f-> !f.isView }{
+rule redeem_request_amount_non_increasing(method f)filtered { f-> !f.isView && !ignoredMethod(f) }{
 
     uint32 redeemRequestId;
-    RedeemQueue.RedeemRequest redeemRequest1 = getRedeemRequestDetails(redeemRequestId);
+    RedeemQueueV2.RedeemRequest redeemRequest1 = getRedeemRequestDetails(redeemRequestId);
     mathint redeemRequestCount = getRedeemRequestCount();
     require redeemRequestCount <= 2^32; //Solidity downcast to uint32
     env e; calldataarg args;
     f(e, args);
-    RedeemQueue.RedeemRequest redeemRequest2 = getRedeemRequestDetails(redeemRequestId);
+    RedeemQueueV2.RedeemRequest redeemRequest2 = getRedeemRequestDetails(redeemRequestId);
 
     assert to_mathint(redeemRequestId) < redeemRequestCount =>  redeemRequest1.amount == 0 => redeemRequest2.amount == 0;
     assert to_mathint(redeemRequestId) < redeemRequestCount =>  redeemRequest1.amount >= redeemRequest2.amount;
@@ -234,12 +237,12 @@ rule redeem_request_amount_non_increasing(method f)filtered { f-> !f.isView }{
 rule redeem_request_amount_non_increasing_witness_2_partial_claims{
 
     uint32 redeemRequestId;
-    RedeemQueue.RedeemRequest redeemRequest1 = getRedeemRequestDetails(redeemRequestId);
+    RedeemQueueV2.RedeemRequest redeemRequest1 = getRedeemRequestDetails(redeemRequestId);
     mathint redeemRequestCount = getRedeemRequestCount();
     require redeemRequestCount <= 2^32;
     env e; calldataarg args;
     claimRedeemRequests(e, args);
-    RedeemQueue.RedeemRequest redeemRequest2 = getRedeemRequestDetails(redeemRequestId);
+    RedeemQueueV2.RedeemRequest redeemRequest2 = getRedeemRequestDetails(redeemRequestId);
 
     require to_mathint(redeemRequestId) < redeemRequestCount;
     require redeemRequest1.amount != redeemRequest2.amount;

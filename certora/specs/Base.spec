@@ -5,7 +5,8 @@ using AllowlistV1 as AL;
 using CoverageFundV1 as CF;
 // using DepositContractMock as DCM;
 using ELFeeRecipientV1 as ELFR;
-using OperatorsRegistryV1 as OR;
+//using OperatorsRegistryV1 as OR;
+using OperatorsRegistryV1Harness as OR;
 using RedeemManagerV1Harness as RM;
 using WithdrawV1 as Wd;
 
@@ -38,11 +39,11 @@ methods {
     function _.getRedeemDemand() external => DISPATCHER(true);
 
     // RiverV1
-    function getBalanceToDeposit() external returns(uint256) envfree;
-    function getCommittedBalance() external returns(uint256) envfree;
-    function getBalanceToRedeem() external returns(uint256) envfree;
-    function consensusLayerDepositSize() external returns(uint256) envfree;
-    function riverEthBalance() external returns(uint256) envfree;
+    function RiverV1Harness.getBalanceToDeposit() external returns(uint256) envfree;
+    function RiverV1Harness.getCommittedBalance() external returns(uint256) envfree;
+    function RiverV1Harness.getBalanceToRedeem() external returns(uint256) envfree;
+    function RiverV1Harness.consensusLayerDepositSize() external returns(uint256) envfree;
+    function RiverV1Harness.riverEthBalance() external returns(uint256) envfree;
     function _.sendRedeemManagerExceedingFunds() external => DISPATCHER(true);
     function _.getAllowlist() external => DISPATCHER(true);
     function RiverV1Harness.getAllowlist() external returns(address) envfree;
@@ -79,7 +80,7 @@ methods {
 
     // OperatorsRegistryV1
     function _.reportStoppedValidatorCounts(uint32[], uint256) external => DISPATCHER(true);
-    function OperatorsRegistryV1.getStoppedAndRequestedExitCounts() external returns (uint32, uint256) envfree;
+    function OR.getStoppedAndRequestedExitCounts() external returns (uint32, uint256) envfree;
     function _.getStoppedAndRequestedExitCounts() external => DISPATCHER(true);
     function _.demandValidatorExits(uint256, uint256) external => DISPATCHER(true);
     function _.pickNextValidatorsToDeposit(uint256) external => DISPATCHER(true); // has no effect - CERT-4615

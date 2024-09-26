@@ -119,7 +119,7 @@ rule validatorStateTransition_3in_M9(env e)
     uint stateBefore = getValidatorState(opIndex, validatorData);
     uint256[] _indexes;
     require _indexes.length <= 2;
-    removeValidators(opIndex, _indexes);
+    removeValidators(e, opIndex, _indexes);
     uint stateAfter = getValidatorState(opIndex, validatorData);
     assert (stateAfter == 3) =>
         (stateBefore == 3 || stateBefore == 2);
@@ -165,7 +165,7 @@ rule validatorStateTransition_2in_M9(env e)
     uint stateBefore = getValidatorState(opIndex, validatorData);
     uint256[] _indexes;
     require _indexes.length <= 2;
-    removeValidators(opIndex, _indexes);
+    removeValidators(e, opIndex, _indexes);
     uint stateAfter = getValidatorState(opIndex, validatorData);
     assert (stateAfter == 2) =>
         (stateBefore == 2 || stateBefore == 1);
@@ -211,7 +211,7 @@ rule validatorStateTransition_1in_M9(env e)
     uint stateBefore = getValidatorState(opIndex, validatorData);
     uint256[] _indexes;
     require _indexes.length <= 2;
-    removeValidators(opIndex, _indexes);
+    removeValidators(e, opIndex, _indexes);
     uint stateAfter = getValidatorState(opIndex, validatorData);
     assert (stateAfter == 1) =>
         (stateBefore == 2 || stateBefore == 1 || stateBefore == 0);
@@ -364,7 +364,7 @@ rule validatorStateTransition_4in_M9(env e)
     uint stateBefore = getValidatorState(opIndex, validatorData);
     uint256[] _indexes;
     require _indexes.length <= 2;
-    removeValidators(opIndex, _indexes);
+    removeValidators(e, opIndex, _indexes);
     uint stateAfter = getValidatorState(opIndex, validatorData);
     assert (stateBefore == 3) =>
         (stateAfter == 3 || stateAfter == 4);
@@ -487,7 +487,7 @@ rule validatorStateTransition_4_3_M15(env e)
     uint stateBefore = getValidatorState(opIndex, validatorData);
     uint256[] _indexes;
     require _indexes.length <= 2;
-    removeValidators(opIndex, _indexes);
+    removeValidators(e, opIndex, _indexes);
     uint stateAfter = getValidatorState(opIndex, validatorData);
     assert (stateAfter == 4) =>
         (stateBefore == 3 || stateBefore == 4);

@@ -427,7 +427,7 @@ rule fundedKeysCantBeChanged(env e)
     bytes valBefore = getRawValidator(e, opIndex, valIndex);
     uint256[] _indexes;
     require _indexes.length <= 1;
-    removeValidators(opIndex, _indexes);
+    removeValidators(e, opIndex, _indexes);
     bytes valAfter = getRawValidator(e, opIndex, valIndex);
     assert valIndex < require_uint256(getOperator(opIndex).funded) => equals(valBefore, valAfter);
 }

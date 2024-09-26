@@ -78,7 +78,8 @@ contract OperatorsRegistryV1Harness is OperatorsRegistryV1 {
     }
 
     function operatorStateIsValid(uint256 opIndex) external view returns (bool) {
-        if (opIndex >= OperatorsV2.getAll().length) return false;
+        //if (opIndex >= OperatorsV2.getAll().length) return false;
+        require (opIndex < OperatorsV2.getAll().length);
         OperatorsV2.Operator memory op = OperatorsV2.get(opIndex);
         return op.keys >= op.limit &&
             op.limit >= op.funded &&

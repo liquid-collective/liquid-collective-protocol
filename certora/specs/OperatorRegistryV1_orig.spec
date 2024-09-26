@@ -105,9 +105,6 @@ rule startingValidatorsNeverUsesSameValidatorTwice(env e)
         !equals(keys[resIndex1], keys[resIndex2]) || !equals(signatures[resIndex1], signatures[resIndex2]);
 }
 
-
-
-
 rule fundedKeysCantBeChanged(env e) 
 {
     require getOperatorsCount() == 1;   //single op is sufficient
@@ -119,7 +116,7 @@ rule fundedKeysCantBeChanged(env e)
     bytes valBefore = getRawValidator(e, opIndex, valIndex);
     uint256[] _indexes;
     require _indexes.length <= 1;
-    removeValidators(opIndex, _indexes);
+    removeValidators(e, opIndex, _indexes);
     bytes valAfter = getRawValidator(e, opIndex, valIndex);
     assert valIndex < require_uint256(getOperator(opIndex).funded) => equals(valBefore, valAfter);
 }
@@ -150,7 +147,7 @@ rule fundedAndExitedCanOnlyIncrease_removeValidators(env e)
     uint256[] _indexes;
     require _indexes.length <= 2;
     //require isOpIndexInBounds(_index);
-    removeValidators(opIndex, _indexes);
+    removeValidators(e, opIndex, _indexes);
     uint256 keysAfter; uint256 limitAfter; uint256 fundedAfter; uint256 requestedExitsAfter; bool activeAfter; address operatorAfter;
     keysAfter, limitAfter, fundedAfter, requestedExitsAfter, _, activeAfter, operatorAfter = getOperatorState(e, opIndex);
 

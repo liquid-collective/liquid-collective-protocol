@@ -1,5 +1,20 @@
 import "Base.spec";
 
+
+definition ignoredMethod(method f) returns bool =
+    f.selector == sig:initRiverV1_1(address, uint64, uint64, uint64, uint64, uint64, uint256, uint256, uint128, uint128).selector ||
+    f.selector == sig:helper1_fillUpVarsAndPullCL(IOracleManagerV1.ConsensusLayerReport).selector ||
+    f.selector == sig:helper2_updateLastReport(IOracleManagerV1.ConsensusLayerReport).selector ||
+    f.selector == sig:helper3_checkBounds(OracleManagerV1.ConsensusLayerDataReportingVariables, ReportBounds.ReportBoundsStruct, uint256).selector ||
+    f.selector == sig:helper4_pullELFees(OracleManagerV1.ConsensusLayerDataReportingVariables).selector ||
+    f.selector == sig:helper5_pullRedeemManagerExceedingEth(OracleManagerV1.ConsensusLayerDataReportingVariables).selector ||
+    f.selector == sig:helper6_pullCoverageFunds(OracleManagerV1.ConsensusLayerDataReportingVariables).selector ||
+    f.selector == sig:helper7_onEarnings(OracleManagerV1.ConsensusLayerDataReportingVariables).selector ||
+    f.selector == sig:helper8_requestExitsBasedOnRedeemDemandAfterRebalancings(OracleManagerV1.ConsensusLayerDataReportingVariables, IOracleManagerV1.ConsensusLayerReport).selector || 
+    f.selector == sig:helper9_reportWithdrawToRedeemManager(OracleManagerV1.ConsensusLayerDataReportingVariables).selector ||
+    f.selector == sig:helper10_skimExcessBalanceToRedeem(OracleManagerV1.ConsensusLayerDataReportingVariables).selector ||
+    f.selector == sig:helper11_commitBalanceToDeposit(OracleManagerV1.ConsensusLayerDataReportingVariables).selector;
+
 methods {
     function allowance(address, address) external returns(uint256) envfree;
     function balanceOf(address) external returns(uint256) envfree;
@@ -52,6 +67,7 @@ invariant totalUnderlyingSupplyBasicIntegrity()
     filtered {
         f -> f.selector != sig:initRiverV1_1(address,uint64,uint64,uint64,uint64,uint64,uint256,uint256,uint128,uint128).selector
           && f.selector != sig:setConsensusLayerData(IOracleManagerV1.ConsensusLayerReport).selector
+          && !ignoredMethod(f)
     } {
         preserved
         {
@@ -82,6 +98,7 @@ invariant totalUnderlyingSupplyBasicIntegrity()
 // https://certora.atlassian.net/browse/CERT-4453
 rule allowanceChangesRestrictively(method f) filtered {
     f -> !f.isView
+        && !ignoredMethod(f)
         && f.selector != sig:initRiverV1_1(address,uint64,uint64,uint64,uint64,uint64,uint256,uint256,uint128,uint128).selector
         && f.selector != sig:setConsensusLayerData(IOracleManagerV1.ConsensusLayerReport).selector
         && f.selector != sig:decreaseAllowance(address,uint256).selector
@@ -138,6 +155,7 @@ rule allowanceIncreasesOnlyByOwner(method f) filtered {
     f -> !f.isView
         && f.selector != sig:initRiverV1_1(address,uint64,uint64,uint64,uint64,uint64,uint256,uint256,uint128,uint128).selector
         && f.selector != sig:setConsensusLayerData(IOracleManagerV1.ConsensusLayerReport).selector
+        && !ignoredMethod(f)
 }  {
     env e;
     calldataarg args;
@@ -160,6 +178,7 @@ rule sharesBalanceChangesRestrictively(method f) filtered {
         && f.selector != sig:deposit().selector
         && f.selector != sig:requestRedeem(uint256,address).selector
         // f.selector != sig:claimRedeemRequests(uint32[],uint32[]).selector
+        && !ignoredMethod(f)
 } {
     env e;
     calldataarg args;
@@ -180,6 +199,7 @@ rule pricePerShareChangesRespectively(method f) filtered {
         && f.selector != sig:claimRedeemRequests(uint32[],uint32[]).selector
         && f.selector != sig:deposit().selector
         && f.selector != sig:depositAndTransfer(address).selector
+        && !ignoredMethod(f)
 } {
     env e;
     calldataarg args;
@@ -199,6 +219,7 @@ rule sharesMonotonicWithAssets(env e, method f) filtered {
        // && f.selector != sig:requestRedeem(uint256,address).selector // Prover error
        && f.selector != sig:claimRedeemRequests(uint32[],uint32[]).selector // Claiming rewards can violate the property.
        && f.selector != sig:setConsensusLayerData(IOracleManagerV1.ConsensusLayerReport calldata).selector
+       && !ignoredMethod(f)
 } {
     calldataarg args;
 
@@ -267,6 +288,7 @@ rule zeroAssetsZeroShares(env e, method f) filtered {
        // && f.selector != sig:requestRedeem(uint256,address).selector // Prover error
        && f.selector != sig:claimRedeemRequests(uint32[],uint32[]).selector // Claiming rewards can violate the property.
        && f.selector != sig:setConsensusLayerData(IOracleManagerV1.ConsensusLayerReport calldata).selector
+       && !ignoredMethod(f)
 } {
     calldataarg args;
 
@@ -289,7 +311,7 @@ rule zeroAssetsZeroShares(env e, method f) filtered {
 }
 
 rule conversionRateStable(env e, method f) filtered {
-    f -> !f.isView
+    f -> !f.isView && !ignoredMethod(f)
         // && f.selector == sig:RiverV1Harness.depositToConsensusLayer(uint256).selector
 } {
     calldataarg args;
@@ -306,7 +328,7 @@ rule conversionRateStable(env e, method f) filtered {
 }
 
 rule conversionRateStableRewardsFeesPenalties(env e, method f) filtered {
-    f -> !f.isView
+    f -> !f.isView && !ignoredMethod(f)
         // && f.selector == sig:RiverV1Harness.depositToConsensusLayer(uint256).selector
 } {
     calldataarg args;

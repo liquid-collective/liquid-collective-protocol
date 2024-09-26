@@ -35,4 +35,19 @@ contract RedeemManagerV1Harness is RedeemManagerV1 {
         RedeemQueueV2.RedeemRequest storage _request = RedeemQueueV2.get()[id];
         return _request.amount;
     }
+
+    function get_CLAIM_FULLY_CLAIMED() external view returns (uint8)
+    {
+        return CLAIM_FULLY_CLAIMED;
+    }
+
+    function get_CLAIM_PARTIALLY_CLAIMED() external view returns (uint8)
+    {
+        return CLAIM_PARTIALLY_CLAIMED;
+    }
+
+    function get_CLAIM_SKIPPED() external view returns (uint8)
+    {
+        return CLAIM_SKIPPED;
+    }
 }
