@@ -2152,5 +2152,4 @@ contract InitializeRedeemManagerV1_2Test is RedeeManagerV1TestBase {
         // Check total length
         assertEq(RedeemManagerV1(redeemManager).getRedeemRequestCount(), 60);
     }
-
 }
