@@ -2112,4 +2112,45 @@ contract InitializeRedeemManagerV1_2Test is RedeeManagerV1TestBase {
         // Check total length
         assertEq(RedeemManagerV1(redeemManager).getRedeemRequestCount(), 30);
     }
+
+    function testRedeemQueueMigrationV1_2WithMoreRequests() public {
+        // Add more requests
+        for (uint256 i = 30; i < 60; i++) {
+            address user = address(uint160(i + 100));
+            _allowlistUser(user);
+            uint128 amount = uint128((i + 1) * 1e18);
+            river.sudoDeal(user, amount);
+
+            vm.prank(user);
+            river.approve(address(redeemManager), amount);
+            assertEq(river.balanceOf(user), amount);
+            vm.prank(user);
+            MockRedeemManagerV1(redeemManager).requestRedeem(amount, user);
+        }
+
+        // Call the migration function
+        RedeemManagerV1 redeemQueueImplV2 = new RedeemManagerV1();
+        vm.store(redeemManager, IMPLEMENTATION_SLOT, bytes32(uint256(uint160(address(redeemQueueImplV2)))));
+        RedeemManagerV1(redeemManager).initializeRedeemManagerV1_2();
+
+        // Check all existing redeemRequests are intact after the migration  (from oldQueue)
+        for (uint256 i = 0; i < 60; i++) {
+            RedeemQueueV2.RedeemRequest memory current =
+                RedeemManagerV1(redeemManager).getRedeemRequestDetails(uint32(i));
+            assertEq(current.amount, (i + 1) * 1e18);
+            assertEq(current.recipient, address(uint160(i + 100)));
+            if (i == 0) {
+                assertEq(current.height, 0);
+            } else {
+                uint256 prevHeight = RedeemManagerV1(redeemManager).getRedeemRequestDetails(uint32(i - 1)).height;
+                uint256 prevAmount = RedeemManagerV1(redeemManager).getRedeemRequestDetails(uint32(i - 1)).amount;
+                assertEq(current.height, prevHeight + prevAmount);
+            }
+            assertEq(current.initiator, current.recipient);
+        }
+
+        // Check total length
+        assertEq(RedeemManagerV1(redeemManager).getRedeemRequestCount(), 60);
+    }
+
 }
