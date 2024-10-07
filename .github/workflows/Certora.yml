@@ -1,0 +1,60 @@
+name: Certora verification
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.set-matrix.outputs.matrix }}
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Install Foundry
+        uses: foundry-rs/foundry-toolchain@v1
+        with:
+          version: nightly
+      - name: Install forge dependencies
+        run: forge install
+
+      - name: Install python
+        uses: actions/setup-python@v2
+        with:
+          python-version: '3.10'
+          cache: 'pip'
+
+      - name: Install certora
+        run: pip3 install certora-cli
+
+      - name: Install solc
+        run: |
+          pip install solc-select
+          solc-select install 0.8.20
+          solc-select use 0.8.20
+
+      - name: Verify conf ${{ matrix.params.name }}
+        run: >
+          message="$(git log -n 1 --pretty=format:'CI ${{matrix.params.name}} %h .... %s')";
+          certoraRun \
+            certora/confs_for_CI/${{ matrix.params.command }} \
+            --msg "$(echo $message | sed 's/[^a-zA-Z0-9., _-]/ /g')"
+        env:
+          CERTORAKEY: ${{ secrets.CERTORAKEY }}
+
+    strategy:
+      fail-fast: false
+      max-parallel: 4
+      matrix:
+        params: 
+          - {name: AllowlistV1, command: 'AllowlistV1.conf'} 
+          - {name: RiverV1, command: 'RiverV1.conf'} 
+          - {name: ShareManagerV1, command: 'ShareManagerV1.conf'}
+          - {name: RedeemManagerV1, command: 'RedeemManagerV1.conf'}
+          - {name: OperatorRegistryV1_1, command: 'OperatorRegistryV1_1.conf'}
+          - {name: OperatorRegistryV1_2, command: 'OperatorRegistryV1_2.conf'}
+          - {name: OperatorRegistryV1_31, command: 'OperatorRegistryV1_31.conf'}
+          - {name: OperatorRegistryV1_33, command: 'OperatorRegistryV1_33.conf'}
+          - {name: OperatorRegistryV1_34, command: 'OperatorRegistryV1_34.conf'}
+          - {name: OperatorRegistryV1_35, command: 'OperatorRegistryV1_35.conf'}
+
+          
+          
+
