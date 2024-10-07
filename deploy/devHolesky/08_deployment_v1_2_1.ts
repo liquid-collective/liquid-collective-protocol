@@ -2,7 +2,6 @@ import { DeployFunction } from "hardhat-deploy/dist/types";
 import { HardhatRuntimeEnvironment } from "hardhat/types";
 import { isDeployed, logStep, logStepEnd } from "../../ts-utils/helpers/index";
 import { verify } from "../../scripts/helpers";
-
 const version = "1_2_1"
 
 const func: DeployFunction = async function ({ deployments, getNamedAccounts }: HardhatRuntimeEnvironment) {
