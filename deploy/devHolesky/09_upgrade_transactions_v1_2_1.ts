@@ -4,7 +4,7 @@ import { HardhatRuntimeEnvironment } from "hardhat/types";
 const version = "1_2_1"
 
 const func: DeployFunction = async function ({ deployments, getNamedAccounts, ethers }: HardhatRuntimeEnvironment) {
-  const { proxyAdministrator, governor } = await getNamedAccounts();
+  const { proxyAdministrator } = await getNamedAccounts();
 
   const allowlistNewImplementationDeployment = await deployments.get(`AllowlistV1_Implementation_${version}`);
   const coverageFundNewImplementationDeployment = await deployments.get(`CoverageFundV1_Implementation_${version}`);
