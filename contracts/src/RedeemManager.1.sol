@@ -12,7 +12,6 @@ import "./Initializable.sol";
 import "./state/shared/RiverAddress.sol";
 import "./state/redeemManager/RedeemQueue.1.sol";
 import "./state/redeemManager/RedeemQueue.2.sol";
-import "./state/redeemManager/RedeemQueue.1.2.sol";
 import "./state/redeemManager/WithdrawalStack.sol";
 import "./state/redeemManager/BufferedExceedingEth.sol";
 import "./state/redeemManager/RedeemDemand.sol";
@@ -66,44 +65,23 @@ contract RedeemManagerV1 is Initializable, IRedeemManagerV1, IProtocolVersion {
         emit SetRiver(_river);
     }
 
-    function initializeRedeemManagerV1_2(address[] calldata _prevInitiators) external init(1) {
-        _redeemQueueMigrationV1_2(_prevInitiators);
+    function initializeRedeemManagerV1_2() external init(1) {
+        _redeemQueueMigrationV1_2();
     }
 
-    function _redeemQueueMigrationV1_2(address[] memory _prevInitiators) internal {
-        RedeemQueueV1.RedeemRequest[] memory initialQueue = RedeemQueueV1.get();
-        RedeemQueueV1_2.RedeemRequest[] memory currentQueue = RedeemQueueV1_2.get(); //TODO: Remove after dev upgrade, not needed for staging/prod
-        uint256 currentQueueLen = currentQueue.length;
+    function _redeemQueueMigrationV1_2() internal {
+        RedeemQueueV1.RedeemRequest[] memory oldQueue = RedeemQueueV1.get();
+        uint256 oldQueueLen = oldQueue.length;
         RedeemQueueV2.RedeemRequest[] storage newQueue = RedeemQueueV2.get();
 
-        //TODO: Remove after dev upgrade, not needed for staging/prod
-        if (_prevInitiators.length != 7) {
-            revert IncompatibleArrayLengths();
-        }
-
-        //TODO: Remove after dev upgrade, not needed for staging/prod
-        for (uint256 i = 0; i < 7;) {
+        // Migrate from v1 to v2
+        for (uint256 i = 0; i < oldQueueLen;) {
             newQueue[i] = RedeemQueueV2.RedeemRequest({
-                amount: initialQueue[i].amount,
-                maxRedeemableEth: initialQueue[i].maxRedeemableEth,
-                recipient: initialQueue[i].recipient,
-                height: initialQueue[i].height,
-                initiator: _prevInitiators[i] // Assign the provided initiators
-            });
-
-            unchecked {
-                ++i;
-            }
-        }
-
-        uint256 heightDeficit = initialQueue[6].height + initialQueue[6].amount;
-        for (uint256 i = 7; i < currentQueueLen;) {
-            newQueue[i] = RedeemQueueV2.RedeemRequest({
-                amount: currentQueue[i].amount,
-                maxRedeemableEth: currentQueue[i].maxRedeemableEth,
-                recipient: currentQueue[i].recipient,
-                height: currentQueue[i].height + heightDeficit,
-                initiator: currentQueue[i].initiator // Reuse the initiator from the current queue
+                amount: oldQueue[i].amount,
+                maxRedeemableEth: oldQueue[i].maxRedeemableEth,
+                recipient: oldQueue[i].recipient,
+                height: oldQueue[i].height,
+                initiator: oldQueue[i].recipient
             });
 
             unchecked {
