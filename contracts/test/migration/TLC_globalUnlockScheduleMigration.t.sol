@@ -5,6 +5,7 @@ import "forge-std/Test.sol";
 
 import "../../src/migration/TLC_globalUnlockScheduleMigration.sol";
 import "../../src/TLC.1.sol";
+import {ERC20VestableVotesUpgradeableV1} from "contracts/src/components/ERC20VestableVotesUpgradeable.1.sol";
 
 contract TlcMigrationTest is Test {
     TlcMigration migrationsContract;
@@ -117,6 +118,8 @@ contract TlcMigrationTest is Test {
         36979200
     ];
 
+    bool[] isGlobalUnlockedScheduleIgnoredOld;
+
     function setUp() public {
         rpc = vm.rpcUrl("mainnet");
         vm.createFork(rpc);
@@ -144,6 +147,9 @@ contract TlcMigrationTest is Test {
         VestingSchedulesV2.VestingSchedule[] memory schedulesBefore = new VestingSchedulesV2.VestingSchedule[](103);
         for (uint256 i = 0; i < 103; i++) {
             schedulesBefore[i] = TLCV1(address(tlcProxy)).getVestingSchedule(i);
+            isGlobalUnlockedScheduleIgnoredOld.push(
+                ERC20VestableVotesUpgradeableV1(address(tlcProxy)).isGlobalUnlockedScheduleIgnored(i)
+            );
             //console.log("%s,%s,%s", i, schedulesBefore[i].start, schedulesBefore[i].end);
         }
 
@@ -170,6 +176,10 @@ contract TlcMigrationTest is Test {
             assertEq(schedule.beneficiary, schedulesBefore[i].beneficiary);
             assertEq(schedule.revocable, schedulesBefore[i].revocable);
             assertEq(schedule.releasedAmount, schedulesBefore[i].releasedAmount);
+            assertEq(
+                isGlobalUnlockedScheduleIgnoredOld[i],
+                ERC20VestableVotesUpgradeableV1(address(tlcProxy)).isGlobalUnlockedScheduleIgnored(i)
+            );
         }
         // Check that the value we should have changed did change
         for (uint256 i = 0; i < tlcProxy.getVestingScheduleCount(); i++) {
