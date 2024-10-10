@@ -89,18 +89,8 @@ const func: DeployFunction = async function ({ deployments, getNamedAccounts, et
     "Withdraw"
   );
 
-  // initiator addresses for the initial 7 redeem requests created before initiator was introduced.
-  const prevInitiators = [
-    "0x4d1bed3a669186130daaf5859b242f3c788d736a",
-    "0xffc58b6a27f6354eba6bb8f39fe163a1625c4b5b",
-    "0xffc58b6a27f6354eba6bb8f39fe163a1625c4b5b",
-    "0xffc58b6a27f6354eba6bb8f39fe163a1625c4b5b",
-    "0xffc58b6a27f6354eba6bb8f39fe163a1625c4b5b",
-    "0xce8dad716539e764895cf30e64466e4e82f278bc",
-    "0xffc58b6a27f6354eba6bb8f39fe163a1625c4b5b",
-  ] // addresses gotten onchain
   const redeemManagerInterface = new ethers.utils.Interface(redeemManagerNewImplementationDeployment.abi);
-  const initData = redeemManagerInterface.encodeFunctionData("initializeRedeemManagerV1_2",[prevInitiators]);
+  const initData = redeemManagerInterface.encodeFunctionData("initializeRedeemManagerV1_2");
   // Call the `upgradeToAndCall` function and pass the encoded initialization data.
   await upgradeToAndCall(
     deployments,

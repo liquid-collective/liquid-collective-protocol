@@ -206,18 +206,13 @@ function initializeRedeemManagerV1(address _river) external nonpayable
 ### initializeRedeemManagerV1_2
 
 ```solidity
-function initializeRedeemManagerV1_2(address[] _prevInitiators) external nonpayable
+function initializeRedeemManagerV1_2() external nonpayable
 ```
 
 
 
 
 
-#### Parameters
-
-| Name | Type | Description |
-|---|---|---|
-| _prevInitiators | address[] | The address of initiators for existing requests |
 
 ### pullExceedingEth
 

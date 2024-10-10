@@ -65,18 +65,15 @@ contract RedeemManagerV1 is Initializable, IRedeemManagerV1, IProtocolVersion {
         emit SetRiver(_river);
     }
 
-    function initializeRedeemManagerV1_2(address[] calldata _prevInitiators) external init(1) {
-        _redeemQueueMigrationV1_2(_prevInitiators);
+    function initializeRedeemManagerV1_2() external init(1) {
+        _redeemQueueMigrationV1_2();
     }
 
-    function _redeemQueueMigrationV1_2(address[] memory _prevInitiators) internal {
+    function _redeemQueueMigrationV1_2() internal {
         RedeemQueueV1.RedeemRequest[] memory oldQueue = RedeemQueueV1.get();
         uint256 oldQueueLen = oldQueue.length;
         RedeemQueueV2.RedeemRequest[] storage newQueue = RedeemQueueV2.get();
 
-        if (_prevInitiators.length != oldQueueLen) {
-            revert IncompatibleArrayLengths();
-        }
         // Migrate from v1 to v2
         for (uint256 i = 0; i < oldQueueLen;) {
             newQueue[i] = RedeemQueueV2.RedeemRequest({
@@ -84,7 +81,7 @@ contract RedeemManagerV1 is Initializable, IRedeemManagerV1, IProtocolVersion {
                 maxRedeemableEth: oldQueue[i].maxRedeemableEth,
                 recipient: oldQueue[i].recipient,
                 height: oldQueue[i].height,
-                initiator: _prevInitiators[i] // Assign the provided initiators
+                initiator: oldQueue[i].recipient
             });
 
             unchecked {
