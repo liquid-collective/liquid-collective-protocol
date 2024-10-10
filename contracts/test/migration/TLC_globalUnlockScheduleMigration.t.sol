@@ -119,6 +119,7 @@ contract TlcMigrationTest is Test {
 
     function setUp() public {
         rpc = vm.rpcUrl("mainnet");
+        vm.createFork(rpc);
     }
 
     function testCreate() public {
@@ -126,8 +127,7 @@ contract TlcMigrationTest is Test {
     }
 
     function testGas() public {
-        vm.createSelectFork(rpc, 20834412);
-
+        vm.createSelectFork(rpc, 20934540);
         migrationsContract = new TlcMigration();
         proxy tlcProxy = proxy(0xb5Fe6946836D687848B5aBd42dAbF531d5819632);
         vm.prank(0x0D1dE267015a75F5069fD1c9ed382210B3002cEb);
@@ -136,7 +136,7 @@ contract TlcMigrationTest is Test {
 
     function testMigrate() public {
         // Significantly faster when cached locally, run a local fork for best perf (anvil recommended)
-        vm.createSelectFork(rpc, 20834412);
+        vm.createSelectFork(rpc, 20934540);
 
         proxy tlcProxy = proxy(0xb5Fe6946836D687848B5aBd42dAbF531d5819632);
         assertEq(tlcProxy.getVestingScheduleCount(), 103);
@@ -153,7 +153,7 @@ contract TlcMigrationTest is Test {
 
         tlc = new TLCV1();
         vm.prank(0x0D1dE267015a75F5069fD1c9ed382210B3002cEb);
-        tlcProxy.upgradeTo(address(tlc));
+        tlcProxy.upgradeTo(address(0xF8745c392feF5c91fa1cdB0202efF7Ca08dF55ce));
 
         assertEq(tlcProxy.getVestingScheduleCount(), 103);
 
@@ -165,6 +165,10 @@ contract TlcMigrationTest is Test {
             assertEq(schedule.beneficiary, schedulesBefore[i].beneficiary);
             assertEq(schedule.revocable, schedulesBefore[i].revocable);
             assertEq(schedule.releasedAmount, schedulesBefore[i].releasedAmount);
+            assertEq(schedule.cliffDuration, schedulesBefore[i].cliffDuration);
+            assertEq(schedule.amount, schedulesBefore[i].amount);
+            assertEq(schedule.start, schedulesBefore[i].start);
+            assertEq(schedule.end, schedulesBefore[i].end);
         }
         // Check that the value we should have changed did change
         for (uint256 i = 0; i < tlcProxy.getVestingScheduleCount(); i++) {
