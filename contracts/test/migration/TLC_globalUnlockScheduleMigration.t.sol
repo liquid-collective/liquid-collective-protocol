@@ -160,15 +160,16 @@ contract TlcMigrationTest is Test {
         // Check that the all the values that shouldn't change didn't
         for (uint256 i = 0; i < tlcProxy.getVestingScheduleCount(); i++) {
             VestingSchedulesV2.VestingSchedule memory schedule = TLCV1(address(tlcProxy)).getVestingSchedule(i);
+            assertEq(schedule.start, schedulesBefore[i].start);
+            assertEq(schedule.end, schedulesBefore[i].end);
+            assertEq(schedule.cliffDuration, schedulesBefore[i].cliffDuration);
+            assertEq(schedule.duration, schedulesBefore[i].duration);
+            assertEq(schedule.periodDuration, schedulesBefore[i].periodDuration);
             assertEq(schedule.amount, schedulesBefore[i].amount);
             assertEq(schedule.creator, schedulesBefore[i].creator);
             assertEq(schedule.beneficiary, schedulesBefore[i].beneficiary);
             assertEq(schedule.revocable, schedulesBefore[i].revocable);
             assertEq(schedule.releasedAmount, schedulesBefore[i].releasedAmount);
-            assertEq(schedule.cliffDuration, schedulesBefore[i].cliffDuration);
-            assertEq(schedule.amount, schedulesBefore[i].amount);
-            assertEq(schedule.start, schedulesBefore[i].start);
-            assertEq(schedule.end, schedulesBefore[i].end);
         }
         // Check that the value we should have changed did change
         for (uint256 i = 0; i < tlcProxy.getVestingScheduleCount(); i++) {
