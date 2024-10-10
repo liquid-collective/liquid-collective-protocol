@@ -19,21 +19,7 @@ const func: DeployFunction = async function ({ deployments, network, getNamedAcc
     from: deployer,
     log: true,
   });
-  const proxyAdministratorSigner = await ethers.getSigner(proxyAdministrator);
-  const tlcMigrationInterface = new ethers.utils.Interface(tlcMigrationDeployment.abi);
-  const initData = tlcMigrationInterface.encodeFunctionData("migrate");
-  // Call the `upgradeToAndCall` function and pass the encoded initialization data.
-  await upgradeToAndCall(
-    deployments,
-    ethers,
-    tlcMigrationDeployment.address,
-    proxyAdministratorSigner,
-    tlcProxyFirewall.address,
-    initData,
-    "TLC"
-  );
 
-  await upgradeTo(deployments, ethers, tlcImplementation, proxyAdministratorSigner, tlcProxyFirewall.address, "TLC");
   // migration and upgrade steps
   // 1. upgradeToAndCall  TlcMigration + TlcMigration.migrate()
   // 2. upgradeTo         TLCV1_Implementation_1_1_0
