@@ -4,6 +4,9 @@ coverage
 coverage.json
 typechain
 .vscode
+package-lock.json
+runOperatorRegistry.sh
+yarn.lock
 
 #nvm
 .nvmrc
@@ -26,3 +29,19 @@ deployments/tenderly
 .DS_Store
 .idea
 lcov.info
+
+# certora
+certora/munged*
+certora/diagrams*
+.certora*
+.certora*.json
+**.last_conf*
+certora-logs
+.certora_internal*
+certora_debug_log.txt
+resource_errors.json
+.zip-output-url.txt
+timeoutsToInvestigate/*
+emv-**/*
+
+runRiver.sh

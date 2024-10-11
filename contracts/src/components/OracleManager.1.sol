@@ -256,7 +256,7 @@ abstract contract OracleManagerV1 is IOracleManagerV1 {
     }
 
     /// @inheritdoc IOracleManagerV1
-    function setConsensusLayerData(IOracleManagerV1.ConsensusLayerReport calldata _report) external {
+    function setConsensusLayerData(IOracleManagerV1.ConsensusLayerReport calldata _report) external virtual {
         // only the oracle is allowed to call this endpoint
         if (msg.sender != OracleAddress.get()) {
             revert LibErrors.Unauthorized(msg.sender);

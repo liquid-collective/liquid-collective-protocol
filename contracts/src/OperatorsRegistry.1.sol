@@ -433,12 +433,12 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
 
             uint256 lastKeyIndex = totalKeys - idx;
 
-            (bytes memory removedPublicKey,) = ValidatorKeys.get(_index, keyIndex);
+            //(bytes memory removedPublicKey,) = ValidatorKeys.get(_index, keyIndex);
             (bytes memory lastPublicKeyAndSignature) = ValidatorKeys.getRaw(_index, lastKeyIndex);
             ValidatorKeys.set(_index, keyIndex, lastPublicKeyAndSignature);
             ValidatorKeys.set(_index, lastKeyIndex, new bytes(0));
 
-            emit RemovedValidatorKey(_index, removedPublicKey);
+            //emit RemovedValidatorKey(_index, removedPublicKey);
         }
 
         if (limitEqualsKeyCount) {

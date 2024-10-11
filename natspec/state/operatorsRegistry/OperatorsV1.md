@@ -4,7 +4,7 @@
 
 > Operators Storage
 
-Utility to manage the Operators in storageThis state variable is deprecated and was kept due to migration logic needs
+Utility to manage the Operators in storage. This state variable is deprecated and was kept due to migration logic needs
 
 
 
