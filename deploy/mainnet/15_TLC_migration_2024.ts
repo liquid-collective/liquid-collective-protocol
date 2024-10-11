@@ -1,7 +1,7 @@
 import { DeployFunction } from "hardhat-deploy/dist/types";
 import { HardhatRuntimeEnvironment } from "hardhat/types";
 import { isDeployed, logStep, logStepEnd } from "../../ts-utils/helpers/index";
-import { upgradeTo, upgradeToAndCall } from "../../scripts/helpers";
+import { upgradeTo, upgradeToAndCall, verify } from "../../scripts/helpers";
 import { ethers } from "hardhat";
 
 const func: DeployFunction = async function ({ deployments, network, getNamedAccounts }: HardhatRuntimeEnvironment) {
@@ -13,13 +13,14 @@ const func: DeployFunction = async function ({ deployments, network, getNamedAcc
   const tlc = await deployments.get("TLC");
   const tlcImplementation = await deployments.get("TLCV1_Implementation_1_1_0");
   const tlcProxyFirewall = await deployments.get("TLCProxyFirewall");
-  
+
   const tlcMigrationDeployment = await deployments.deploy("TLC_GlobalUnlockSchedule_Migration_2", {
     contract: "TlcMigration",
     from: deployer,
     log: true,
   });
 
+  await verify("TlcMigration", tlcMigrationDeployment.address, []);
   // migration and upgrade steps
   // 1. upgradeToAndCall  TlcMigration + TlcMigration.migrate()
   // 2. upgradeTo         TLCV1_Implementation_1_1_0
