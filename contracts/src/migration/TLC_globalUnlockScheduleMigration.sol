@@ -23,7 +23,7 @@ struct VestingScheduleMigration {
     bool ignoreGlobalUnlock;
 }
 
-uint256 constant OCTOBER_16_2024 = 1729036800;
+uint256 constant OCTOBER_31_2025 = 1761868800;
 
 contract TlcMigration {
     error CliffTooLong(uint256 i);
@@ -31,13 +31,13 @@ contract TlcMigration {
     error WrongEnd(uint256 i);
 
     function migrate() external {
-        VestingScheduleMigration[] memory migrations = new VestingScheduleMigration[](30);
+        VestingScheduleMigration[] memory migrations = new VestingScheduleMigration[](60);
         // 0 -> 6
         migrations[0] = VestingScheduleMigration({
             scheduleCount: 7,
             newStart: 0,
             newEnd: 0,
-            newLockDuration: 75772800,
+            newLockDuration: 108604800, // 75772800
             setCliff: false,
             setDuration: false,
             setPeriodDuration: false,
@@ -48,7 +48,7 @@ contract TlcMigration {
             scheduleCount: 1,
             newStart: 0,
             newEnd: 0,
-            newLockDuration: 70329600,
+            newLockDuration: 103161600, // 70329600
             setCliff: false,
             setDuration: false,
             setPeriodDuration: false,
@@ -59,7 +59,7 @@ contract TlcMigration {
             scheduleCount: 1,
             newStart: 0,
             newEnd: 0,
-            newLockDuration: 65491200,
+            newLockDuration: 98323200, // 65491200
             setCliff: false,
             setDuration: false,
             setPeriodDuration: false,
@@ -69,11 +69,11 @@ contract TlcMigration {
         migrations[3] = VestingScheduleMigration({
             scheduleCount: 4,
             newStart: 0,
-            newEnd: 1656720000,
-            newLockDuration: 72403200,
-            setCliff: true,
-            setDuration: true,
-            setPeriodDuration: true,
+            newEnd: 0,
+            newLockDuration: 105235200, // 72403200
+            setCliff: false,
+            setDuration: false,
+            setPeriodDuration: false,
             ignoreGlobalUnlock: false
         });
         // 13
@@ -81,7 +81,7 @@ contract TlcMigration {
             scheduleCount: 1,
             newStart: 0,
             newEnd: 0,
-            newLockDuration: 67046400,
+            newLockDuration: 99878400, // 67046400
             setCliff: false,
             setDuration: false,
             setPeriodDuration: false,
@@ -92,7 +92,7 @@ contract TlcMigration {
             scheduleCount: 1,
             newStart: 0,
             newEnd: 0,
-            newLockDuration: 56505600,
+            newLockDuration: 89337600, // 56505600
             setCliff: false,
             setDuration: false,
             setPeriodDuration: false,
@@ -103,7 +103,7 @@ contract TlcMigration {
             scheduleCount: 1,
             newStart: 0,
             newEnd: 0,
-            newLockDuration: 58233600,
+            newLockDuration: 91065600, // 58233600
             setCliff: false,
             setDuration: false,
             setPeriodDuration: false,
@@ -114,7 +114,7 @@ contract TlcMigration {
             scheduleCount: 1,
             newStart: 0,
             newEnd: 0,
-            newLockDuration: 57974400,
+            newLockDuration: 90806400, // 57974400
             setCliff: false,
             setDuration: false,
             setPeriodDuration: false,
@@ -125,7 +125,7 @@ contract TlcMigration {
             scheduleCount: 1,
             newStart: 0,
             newEnd: 0,
-            newLockDuration: 53740800,
+            newLockDuration: 86572800, // 53740800
             setCliff: false,
             setDuration: false,
             setPeriodDuration: false,
@@ -136,7 +136,7 @@ contract TlcMigration {
             scheduleCount: 1,
             newStart: 0,
             newEnd: 0,
-            newLockDuration: 75772800,
+            newLockDuration: 108604800, // 75772800
             setCliff: false,
             setDuration: false,
             setPeriodDuration: false,
@@ -147,7 +147,7 @@ contract TlcMigration {
             scheduleCount: 1,
             newStart: 0,
             newEnd: 0,
-            newLockDuration: 49474800,
+            newLockDuration: 82306800, // 49474800
             setCliff: false,
             setDuration: false,
             setPeriodDuration: false,
@@ -158,7 +158,7 @@ contract TlcMigration {
             scheduleCount: 1,
             newStart: 0,
             newEnd: 0,
-            newLockDuration: 75772800,
+            newLockDuration: 108604800, // 75772800
             setCliff: false,
             setDuration: false,
             setPeriodDuration: false,
@@ -169,7 +169,7 @@ contract TlcMigration {
             scheduleCount: 1,
             newStart: 0,
             newEnd: 0,
-            newLockDuration: 49474800,
+            newLockDuration: 82306800, // 49474800
             setCliff: false,
             setDuration: false,
             setPeriodDuration: false,
@@ -180,7 +180,7 @@ contract TlcMigration {
             scheduleCount: 1,
             newStart: 0,
             newEnd: 0,
-            newLockDuration: 75772800,
+            newLockDuration: 108604800, // 75772800
             setCliff: false,
             setDuration: false,
             setPeriodDuration: false,
@@ -191,7 +191,7 @@ contract TlcMigration {
             scheduleCount: 1,
             newStart: 0,
             newEnd: 0,
-            newLockDuration: 49474800,
+            newLockDuration: 82306800, // 49474800
             setCliff: false,
             setDuration: false,
             setPeriodDuration: false,
@@ -202,7 +202,7 @@ contract TlcMigration {
             scheduleCount: 3,
             newStart: 0,
             newEnd: 0,
-            newLockDuration: 75772800,
+            newLockDuration: 108604800, // 75772800
             setCliff: false,
             setDuration: false,
             setPeriodDuration: false,
@@ -213,7 +213,7 @@ contract TlcMigration {
             scheduleCount: 1,
             newStart: 0,
             newEnd: 0,
-            newLockDuration: 70329600,
+            newLockDuration: 103161600, // 70329600
             setCliff: false,
             setDuration: false,
             setPeriodDuration: false,
@@ -224,7 +224,7 @@ contract TlcMigration {
             scheduleCount: 2,
             newStart: 0,
             newEnd: 0,
-            newLockDuration: 50371200,
+            newLockDuration: 83203200, // 50371200
             setCliff: false,
             setDuration: false,
             setPeriodDuration: false,
@@ -235,7 +235,7 @@ contract TlcMigration {
             scheduleCount: 1,
             newStart: 0,
             newEnd: 0,
-            newLockDuration: 50716800,
+            newLockDuration: 83548800, // 50716800
             setCliff: false,
             setDuration: false,
             setPeriodDuration: false,
@@ -246,7 +246,7 @@ contract TlcMigration {
             scheduleCount: 1,
             newStart: 0,
             newEnd: 0,
-            newLockDuration: 50803200,
+            newLockDuration: 83635200, // 50803200
             setCliff: false,
             setDuration: false,
             setPeriodDuration: false,
@@ -257,7 +257,7 @@ contract TlcMigration {
             scheduleCount: 1,
             newStart: 0,
             newEnd: 0,
-            newLockDuration: 50889600,
+            newLockDuration: 83721600, // 50889600
             setCliff: false,
             setDuration: false,
             setPeriodDuration: false,
@@ -268,7 +268,7 @@ contract TlcMigration {
             scheduleCount: 1,
             newStart: 0,
             newEnd: 0,
-            newLockDuration: 50716800,
+            newLockDuration: 83548800, // 50716800
             setCliff: false,
             setDuration: false,
             setPeriodDuration: false,
@@ -279,7 +279,7 @@ contract TlcMigration {
             scheduleCount: 2,
             newStart: 0,
             newEnd: 0,
-            newLockDuration: 50889600,
+            newLockDuration: 83721600, // 50889600
             setCliff: false,
             setDuration: false,
             setPeriodDuration: false,
@@ -288,12 +288,12 @@ contract TlcMigration {
         // 36 -> 60
         migrations[23] = VestingScheduleMigration({
             scheduleCount: 25,
-            newStart: 1686175200,
-            newEnd: 1686261600,
-            newLockDuration: 42861600,
+            newStart: 0,
+            newEnd: 0,
+            newLockDuration: 75693600, // 42861600
             setCliff: false,
-            setDuration: true,
-            setPeriodDuration: true,
+            setDuration: false,
+            setPeriodDuration: false,
             ignoreGlobalUnlock: false
         });
         // 61
@@ -301,7 +301,7 @@ contract TlcMigration {
             scheduleCount: 1,
             newStart: 0,
             newEnd: 0,
-            newLockDuration: 40953600,
+            newLockDuration: 73785600, // 40953600
             setCliff: false,
             setDuration: false,
             setPeriodDuration: false,
@@ -312,7 +312,7 @@ contract TlcMigration {
             scheduleCount: 1,
             newStart: 0,
             newEnd: 0,
-            newLockDuration: 48729600,
+            newLockDuration: 81561600, // 48729600
             setCliff: false,
             setDuration: false,
             setPeriodDuration: false,
@@ -323,7 +323,7 @@ contract TlcMigration {
             scheduleCount: 1,
             newStart: 0,
             newEnd: 0,
-            newLockDuration: 41644800,
+            newLockDuration: 74476800, // 41644800
             setCliff: false,
             setDuration: false,
             setPeriodDuration: false,
@@ -334,7 +334,7 @@ contract TlcMigration {
             scheduleCount: 1,
             newStart: 0,
             newEnd: 0,
-            newLockDuration: 47001600,
+            newLockDuration: 79833600, // 47001600
             setCliff: false,
             setDuration: false,
             setPeriodDuration: false,
@@ -345,7 +345,7 @@ contract TlcMigration {
             scheduleCount: 1,
             newStart: 0,
             newEnd: 0,
-            newLockDuration: 45014400,
+            newLockDuration: 77846400, // 45014400
             setCliff: false,
             setDuration: false,
             setPeriodDuration: false,
@@ -356,12 +356,343 @@ contract TlcMigration {
             scheduleCount: 1,
             newStart: 0,
             newEnd: 0,
-            newLockDuration: 38188800,
+            newLockDuration: 71020800, // 38188800
             setCliff: false,
             setDuration: false,
             setPeriodDuration: false,
             ignoreGlobalUnlock: true
         });
+        // 67 -> 69
+        migrations[30] = VestingScheduleMigration({
+            scheduleCount: 3,
+            newStart: 0,
+            newEnd: 0,
+            newLockDuration: 75693600, // 42861600
+            setCliff: false,
+            setDuration: false,
+            setPeriodDuration: false,
+            ignoreGlobalUnlock: false
+        });
+        // 70
+        migrations[31] = VestingScheduleMigration({
+            scheduleCount: 1,
+            newStart: 0,
+            newEnd: 0,
+            newLockDuration: 63763200, // 33004800
+            setCliff: false,
+            setDuration: false,
+            setPeriodDuration: false,
+            ignoreGlobalUnlock: false
+        });
+        // 71
+        migrations[32] = VestingScheduleMigration({
+            scheduleCount: 1,
+            newStart: 0,
+            newEnd: 0,
+            newLockDuration: 64972800, // 34214400
+            setCliff: false,
+            setDuration: false,
+            setPeriodDuration: false,
+            ignoreGlobalUnlock: false
+        });
+        // 72
+        migrations[33] = VestingScheduleMigration({
+            scheduleCount: 1,
+            newStart: 0,
+            newEnd: 0,
+            newLockDuration: 64713600, // 33955200
+            setCliff: false,
+            setDuration: false,
+            setPeriodDuration: false,
+            ignoreGlobalUnlock: false
+        });
+        // 73
+        migrations[34] = VestingScheduleMigration({
+            scheduleCount: 1,
+            newStart: 0,
+            newEnd: 0,
+            newLockDuration: 69811200, // 39052800
+            setCliff: false,
+            setDuration: false,
+            setPeriodDuration: false,
+            ignoreGlobalUnlock: true
+        });
+        // 74
+        migrations[35] = VestingScheduleMigration({
+            scheduleCount: 1,
+            newStart: 0,
+            newEnd: 0,
+            newLockDuration: 69897600, // 41731200
+            setCliff: false,
+            setDuration: false,
+            setPeriodDuration: false,
+            ignoreGlobalUnlock: false
+        });
+        // 75
+        migrations[36] = VestingScheduleMigration({
+            scheduleCount: 1,
+            newStart: 0,
+            newEnd: 0,
+            newLockDuration: 68688000, // 40521600
+            setCliff: false,
+            setDuration: false,
+            setPeriodDuration: false,
+            ignoreGlobalUnlock: false
+        });
+        // 76
+        migrations[37] = VestingScheduleMigration({
+            scheduleCount: 1,
+            newStart: 0,
+            newEnd: 0,
+            newLockDuration: 67478400, // 39312900
+            setCliff: false,
+            setDuration: false,
+            setPeriodDuration: false,
+            ignoreGlobalUnlock: false
+        });
+        // 77
+        migrations[38] = VestingScheduleMigration({
+            scheduleCount: 1,
+            newStart: 0,
+            newEnd: 0,
+            newLockDuration: 65059200, // 36892800
+            setCliff: false,
+            setDuration: false,
+            setPeriodDuration: false,
+            ignoreGlobalUnlock: false
+        });
+        // 78 -> 79
+        migrations[39] = VestingScheduleMigration({
+            scheduleCount: 2,
+            newStart: 0,
+            newEnd: 0,
+            newLockDuration: 64454400, // 36288000
+            setCliff: false,
+            setDuration: false,
+            setPeriodDuration: false,
+            ignoreGlobalUnlock: false
+        });
+        // 80
+        migrations[40] = VestingScheduleMigration({
+            scheduleCount: 1,
+            newStart: 0,
+            newEnd: 0,
+            newLockDuration: 59356800, // 33523200
+            setCliff: false,
+            setDuration: false,
+            setPeriodDuration: false,
+            ignoreGlobalUnlock: false
+        });
+        // 81 -> 82
+        migrations[41] = VestingScheduleMigration({
+            scheduleCount: 2,
+            newStart: 0,
+            newEnd: 0,
+            newLockDuration: 58924800, // 33091200
+            setCliff: false,
+            setDuration: false,
+            setPeriodDuration: false,
+            ignoreGlobalUnlock: true
+        });
+        // 83
+        migrations[42] = VestingScheduleMigration({
+            scheduleCount: 1,
+            newStart: 0,
+            newEnd: 0,
+            newLockDuration: 57801600, // 38016000
+            setCliff: false,
+            setDuration: false,
+            setPeriodDuration: false,
+            ignoreGlobalUnlock: true
+        });
+        // 84
+        migrations[43] = VestingScheduleMigration({
+            scheduleCount: 1,
+            newStart: 0,
+            newEnd: 0,
+            newLockDuration: 57110400, // 37324800
+            setCliff: false,
+            setDuration: false,
+            setPeriodDuration: false,
+            ignoreGlobalUnlock: false
+        });
+        // 85
+        migrations[44] = VestingScheduleMigration({
+            scheduleCount: 1,
+            newStart: 0,
+            newEnd: 0,
+            newLockDuration: 54086400, // 34300800
+            setCliff: false,
+            setDuration: false,
+            setPeriodDuration: false,
+            ignoreGlobalUnlock: false
+        });
+        // 86
+        migrations[45] = VestingScheduleMigration({
+            scheduleCount: 1,
+            newStart: 0,
+            newEnd: 0,
+            newLockDuration: 57196800, // 39571200
+            setCliff: false,
+            setDuration: false,
+            setPeriodDuration: false,
+            ignoreGlobalUnlock: false
+        });
+        // 87
+        migrations[46] = VestingScheduleMigration({
+            scheduleCount: 1,
+            newStart: 0,
+            newEnd: 0,
+            newLockDuration: 55641600, // 38016000
+            setCliff: false,
+            setDuration: false,
+            setPeriodDuration: false,
+            ignoreGlobalUnlock: false
+        });
+        // 88
+        migrations[47] = VestingScheduleMigration({
+            scheduleCount: 1,
+            newStart: 0,
+            newEnd: 0,
+            newLockDuration: 52963200, // 35337600
+            setCliff: false,
+            setDuration: false,
+            setPeriodDuration: false,
+            ignoreGlobalUnlock: false
+        });
+        // 89
+        migrations[48] = VestingScheduleMigration({
+            scheduleCount: 1,
+            newStart: 0,
+            newEnd: 0,
+            newLockDuration: 55641600, // 38016000
+            setCliff: false,
+            setDuration: false,
+            setPeriodDuration: false,
+            ignoreGlobalUnlock: false
+        });
+        // 90 -> 91
+        migrations[49] = VestingScheduleMigration({
+            scheduleCount: 2,
+            newStart: 0,
+            newEnd: 0,
+            newLockDuration: 83116800, // 65491200
+            setCliff: false,
+            setDuration: false,
+            setPeriodDuration: false,
+            ignoreGlobalUnlock: false
+        });
+        // 92
+        migrations[50] = VestingScheduleMigration({
+            scheduleCount: 1,
+            newStart: 0,
+            newEnd: 0,
+            newLockDuration: 54172800, // 36547200
+            setCliff: false,
+            setDuration: false,
+            setPeriodDuration: false,
+            ignoreGlobalUnlock: false
+        });
+        // 93
+        migrations[51] = VestingScheduleMigration({
+            scheduleCount: 1,
+            newStart: 0,
+            newEnd: 0,
+            newLockDuration: 55641600, // 38016000
+            setCliff: false,
+            setDuration: false,
+            setPeriodDuration: false,
+            ignoreGlobalUnlock: false
+        });
+        // 94
+        migrations[52] = VestingScheduleMigration({
+            scheduleCount: 1,
+            newStart: 0,
+            newEnd: 0,
+            newLockDuration: 74131200, // 56505600
+            setCliff: false,
+            setDuration: false,
+            setPeriodDuration: false,
+            ignoreGlobalUnlock: false
+        });
+        // 95
+        migrations[53] = VestingScheduleMigration({
+            scheduleCount: 1,
+            newStart: 0,
+            newEnd: 0,
+            newLockDuration: 49939200, // 35424000
+            setCliff: false,
+            setDuration: false,
+            setPeriodDuration: false,
+            ignoreGlobalUnlock: true
+        });
+        // 96
+        migrations[54] = VestingScheduleMigration({
+            scheduleCount: 1,
+            newStart: 0,
+            newEnd: 0,
+            newLockDuration: 49334400, // 34819200
+            setCliff: false,
+            setDuration: false,
+            setPeriodDuration: false,
+            ignoreGlobalUnlock: false
+        });
+        // 97 -> 98
+        migrations[55] = VestingScheduleMigration({
+            scheduleCount: 2,
+            newStart: 0,
+            newEnd: 0,
+            newLockDuration: 47952000, // 36547200
+            setCliff: false,
+            setDuration: false,
+            setPeriodDuration: false,
+            ignoreGlobalUnlock: false
+        });
+        // 99
+        migrations[56] = VestingScheduleMigration({
+            scheduleCount: 1,
+            newStart: 0,
+            newEnd: 0,
+            newLockDuration: 43286400, // 33696000
+            setCliff: false,
+            setDuration: false,
+            setPeriodDuration: false,
+            ignoreGlobalUnlock: false
+        });
+        // 100
+        migrations[57] = VestingScheduleMigration({
+            scheduleCount: 1,
+            newStart: 0,
+            newEnd: 0,
+            newLockDuration: 42076800, // 32486400
+            setCliff: false,
+            setDuration: false,
+            setPeriodDuration: false,
+            ignoreGlobalUnlock: false
+        });
+        // 101
+        migrations[58] = VestingScheduleMigration({
+            scheduleCount: 1,
+            newStart: 0,
+            newEnd: 0,
+            newLockDuration: 46915200, // 37324800
+            setCliff: false,
+            setDuration: false,
+            setPeriodDuration: false,
+            ignoreGlobalUnlock: false
+        });
+        // 102
+        migrations[59] = VestingScheduleMigration({
+            scheduleCount: 1,
+            newStart: 0,
+            newEnd: 0,
+            newLockDuration: 36979200, // 32918400
+            setCliff: false,
+            setDuration: false,
+            setPeriodDuration: false,
+            ignoreGlobalUnlock: true
+        });
+
         // All schedules covered
 
         uint256 index = 0;
@@ -404,8 +735,8 @@ contract TlcMigration {
                 if (!isRevoked && (sch.end != sch.start + sch.duration)) {
                     revert WrongEnd(index);
                 }
-                // check all the schedules are locked until unix : 1729036800
-                if (sch.start + sch.lockDuration != OCTOBER_16_2024) {
+                // check all the schedules are locked until unix : 1761868800
+                if (sch.start + sch.lockDuration != OCTOBER_31_2025) {
                     revert WrongUnlockDate(index);
                 }
 

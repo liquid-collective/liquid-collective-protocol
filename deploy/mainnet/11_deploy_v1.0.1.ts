@@ -3,7 +3,7 @@ import { HardhatRuntimeEnvironment } from "hardhat/types";
 import { isDeployed, logStep, logStepEnd } from "../../ts-utils/helpers/index";
 
 const func: DeployFunction = async function ({ deployments, network, getNamedAccounts }: HardhatRuntimeEnvironment) {
-  if (!["mainnet", "hardhat"].includes(network.name)) {
+  if (!["mainnet", "hardhat", "tenderly"].includes(network.name)) {
     throw new Error("Invalid network for mainnet deployment");
   }
 
