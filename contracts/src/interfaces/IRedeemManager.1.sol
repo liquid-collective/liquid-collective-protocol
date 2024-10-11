@@ -112,8 +112,7 @@ interface IRedeemManagerV1 {
     /// @param _river The address of the River contract
     function initializeRedeemManagerV1(address _river) external;
 
-    /// @param _prevInitiators The address of initiators for existing requests
-    function initializeRedeemManagerV1_2(address[] calldata _prevInitiators) external;
+    function initializeRedeemManagerV1_2() external;
 
     /// @notice Retrieve River address
     /// @return The address of River

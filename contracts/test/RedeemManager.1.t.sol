@@ -2029,7 +2029,6 @@ contract MockRedeemManagerV1 is MockRedeemManagerV1Base {
 }
 
 contract InitializeRedeemManagerV1_2Test is RedeeManagerV1TestBase {
-    address[] public prevInitiators;
     address public admin = address(0x123);
     address redeemManager;
 
@@ -2064,12 +2063,7 @@ contract InitializeRedeemManagerV1_2Test is RedeeManagerV1TestBase {
         );
         redeemManager = address(proxy);
 
-        // Setup prevInitiators
-        for (uint256 i = 0; i < 30; i++) {
-            prevInitiators.push(address(uint160(i + 1)));
-        }
-
-        // Setup initial queue (RedeemQueueV1)
+        // Setup initial queue (RedeemQueueV1) -> Create 30 random redeem requests to populate the queue before the upgrade/migration
         for (uint256 i = 0; i < 30; i++) {
             address user = address(uint160(i + 100));
             _allowlistUser(user);
@@ -2087,19 +2081,19 @@ contract InitializeRedeemManagerV1_2Test is RedeeManagerV1TestBase {
     function testInitializeTwice() public {
         RedeemManagerV1 redeemQueueImplV2 = new RedeemManagerV1();
         vm.store(redeemManager, IMPLEMENTATION_SLOT, bytes32(uint256(uint160(address(redeemQueueImplV2)))));
-        RedeemManagerV1(redeemManager).initializeRedeemManagerV1_2(prevInitiators);
+        RedeemManagerV1(redeemManager).initializeRedeemManagerV1_2();
 
         vm.expectRevert(abi.encodeWithSignature("InvalidInitialization(uint256,uint256)", 1, 2));
-        RedeemManagerV1(redeemManager).initializeRedeemManagerV1_2(prevInitiators);
+        RedeemManagerV1(redeemManager).initializeRedeemManagerV1_2();
     }
 
     function testRedeemQueueMigrationV1_2() public {
         // Call the migration function
         RedeemManagerV1 redeemQueueImplV2 = new RedeemManagerV1();
         vm.store(redeemManager, IMPLEMENTATION_SLOT, bytes32(uint256(uint160(address(redeemQueueImplV2)))));
-        RedeemManagerV1(redeemManager).initializeRedeemManagerV1_2(prevInitiators);
+        RedeemManagerV1(redeemManager).initializeRedeemManagerV1_2();
 
-        // Check all existing redeemRequests are intact after the migration  (from oldQueue)
+        // Check all existing redeemRequests are intact after the migration (from oldQueue)
         for (uint256 i = 0; i < 30; i++) {
             RedeemQueueV2.RedeemRequest memory current =
                 RedeemManagerV1(redeemManager).getRedeemRequestDetails(uint32(i));
@@ -2112,21 +2106,50 @@ contract InitializeRedeemManagerV1_2Test is RedeeManagerV1TestBase {
                 uint256 prevAmount = RedeemManagerV1(redeemManager).getRedeemRequestDetails(uint32(i - 1)).amount;
                 assertEq(current.height, prevHeight + prevAmount);
             }
-            assertEq(current.initiator, prevInitiators[i]);
+            assertEq(current.initiator, current.recipient);
         }
 
         // Check total length
         assertEq(RedeemManagerV1(redeemManager).getRedeemRequestCount(), 30);
     }
 
-    function testRedeemQueueMigrationV2_IncompatibleArrayLengths() public {
-        // Test with incompatible array length
-        address[] memory invalidInitiators = new address[](6);
-
+    function testRedeemQueueV1_2PostMigrationWithNewRequests() public {
         // Call the migration function
         RedeemManagerV1 redeemQueueImplV2 = new RedeemManagerV1();
         vm.store(redeemManager, IMPLEMENTATION_SLOT, bytes32(uint256(uint160(address(redeemQueueImplV2)))));
-        vm.expectRevert(abi.encodeWithSignature("IncompatibleArrayLengths()"));
-        RedeemManagerV1(redeemManager).initializeRedeemManagerV1_2(invalidInitiators);
+        RedeemManagerV1(redeemManager).initializeRedeemManagerV1_2();
+
+        // Add new 30 random redeem requests after upgrade / migration. Note: 30 is just a random number
+        for (uint256 i = 30; i < 60; i++) {
+            address user = address(uint160(i + 100));
+            _allowlistUser(user);
+            uint128 amount = uint128((i + 1) * 1e18);
+            river.sudoDeal(user, amount);
+
+            vm.prank(user);
+            river.approve(address(redeemManager), amount);
+            assertEq(river.balanceOf(user), amount);
+            vm.prank(user);
+            RedeemManagerV1(redeemManager).requestRedeem(amount, user);
+        }
+
+        // Check all existing and new redeemRequests are intact after the migration
+        for (uint256 i = 0; i < 60; i++) {
+            RedeemQueueV2.RedeemRequest memory current =
+                RedeemManagerV1(redeemManager).getRedeemRequestDetails(uint32(i));
+            assertEq(current.amount, (i + 1) * 1e18);
+            assertEq(current.recipient, address(uint160(i + 100)));
+            if (i == 0) {
+                assertEq(current.height, 0);
+            } else {
+                uint256 prevHeight = RedeemManagerV1(redeemManager).getRedeemRequestDetails(uint32(i - 1)).height;
+                uint256 prevAmount = RedeemManagerV1(redeemManager).getRedeemRequestDetails(uint32(i - 1)).amount;
+                assertEq(current.height, prevHeight + prevAmount);
+            }
+            assertEq(current.initiator, current.recipient);
+        }
+
+        // Check total length
+        assertEq(RedeemManagerV1(redeemManager).getRedeemRequestCount(), 60);
     }
 }
