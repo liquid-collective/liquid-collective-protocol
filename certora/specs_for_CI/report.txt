@@ -1,0 +1,19 @@
+Rules for Alluvial CI:
+
+confs: certora/confs_for_CI
+specs: certora/specs_for_CI
+ - references other specs from certora/specs
+
+The rules:
+I used all existing rules that are verified on current version of the code
+Rules that timeout or cause errors have been discarted
+Parametric rules that timeout on a particular method have been adjusted: the timing out methods will not be run. There are two such adjustments: 
+    - RedeemManagerV1_for_CI.spec > full_claim_is_terminal_witness_nontrivial_consequent
+	    method claimRedeemRequests(uint32[],uint32[]) was filtered out in the rules
+    - SharesManagerV1_for_CI.spec
+        there's a predicate excludedInCI(method f) used as a filter in parametric rules
+        the predicate excludes method depositToConsensusLayerWithDepositRoot
+
+runCI_confs.sh: simple script for running all the confs. For each conf there is a recent run link included
+
+Currently, the certora/specs_for_CI/OperatorRegistryV1_for_CI_3.spec times out for there are too many rules. I'll split it into several smaller ones.
