@@ -44,7 +44,7 @@ jobs:
             certora/confs_for_CI/${{ matrix.params.command }} \
             --msg "$(echo $message | sed 's/[^a-zA-Z0-9., _-]/ /g')"
         env:
-          CERTORAKEY: ${{ secrets.CERTORAKEY }}
+          CERTORAKEY: ${{ secrets.CERTORA_KEY }}
 
     strategy:
       fail-fast: false
