@@ -14,7 +14,7 @@ interface IRedeemManagerV1Mock {
 }
 
 contract RedeemManagerV1Mock is RedeemManagerV1 {
-    // Error we are testing for
+    // The error we are testing for
     function redeem(uint256 _lsETHAmount) external onlyRedeemerOrRiver {
         if (!_castedRiver().transferFrom(msg.sender, address(this), _lsETHAmount)) {
             revert TransferError();
@@ -107,7 +107,6 @@ contract RedeemManagerTest is Test {
     RedeemManagerV1Mock internal redeemManager;
     AllowlistV1 internal allowlist;
     RiverMock internal river;
-    // UserFactory internal uf = new UserFactory();
     address internal allowlistAdmin;
     address internal allowlistAllower;
     address internal allowlistDenier;
@@ -129,13 +128,10 @@ contract RedeemManagerTest is Test {
     }
 
     function testTransferError() public {
-        // Set up the mock to fail the transferFrom function
+        // make the transferFrom fail
         river.setTransferFromFail(true);
 
-        // Expect the TransferError revert
         vm.expectRevert(IRedeemManagerV1Mock.TransferError.selector);
-
-        // Call the function that triggers the transferFrom
         vm.prank(address(river));
         redeemManager.redeem(100 ether);
     }
