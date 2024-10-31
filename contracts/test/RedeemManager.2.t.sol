@@ -9,10 +9,8 @@ import "../src/Allowlist.1.sol";
 import "./utils/LibImplementationUnbricker.sol";
 
 interface IRedeemManagerV1Mock {
-
     /// @notice Thrown when a transfer error occured with LsETH
     error TransferError();
-
 }
 
 contract RedeemManagerV1Mock is RedeemManagerV1 {
@@ -35,7 +33,7 @@ contract RiverMock is MockERC20 {
         allowlist = _allowlist;
     }
 
-    function approve(address to, uint256 amount) public virtual override returns(bool) {
+    function approve(address to, uint256 amount) public virtual override returns (bool) {
         approvals[msg.sender][to] = amount;
         return true;
     }
