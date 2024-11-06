@@ -7,20 +7,20 @@ const func: DeployFunction = async function ({ deployments, getNamedAccounts }: 
 
   const riverDeployment = await deployments.get("River");
 
-  await deployments.deploy("WLSETH", {
-    contract: "WLSETHV1",
-    from: deployer,
-    log: true,
-    proxy: {
-      implementationName: "WLSETHV1_Implementation_0_2_2",
-      owner: proxyAdministrator,
-      proxyContract: "TUPProxy",
-      execute: {
-        methodName: "initWLSETHV1",
-        args: [riverDeployment.address],
-      },
-    },
-  });
+  // await deployments.deploy("WLSETH", {
+  //   contract: "WLSETHV1",
+  //   from: deployer,
+  //   log: true,
+  //   proxy: {
+  //     implementationName: "WLSETHV1_Implementation_0_2_2",
+  //     owner: proxyAdministrator,
+  //     proxyContract: "TUPProxy",
+  //     execute: {
+  //       methodName: "initWLSETHV1",
+  //       args: [riverDeployment.address],
+  //     },
+  //   },
+  // });
 
   logStepEnd(__filename);
 };
