@@ -25,7 +25,7 @@ const func: DeployFunction = async function ({ deployments, getNamedAccounts, et
       },
     },
   });
-  await verify("WithdrawV1", deployment.address, deployment.args);
+  await verify("ProtocolMetricsV1", deployment.address, deployment.args);
 
   logStepEnd(__filename);
 };
