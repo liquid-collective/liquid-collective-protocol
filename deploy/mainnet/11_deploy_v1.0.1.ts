@@ -9,17 +9,17 @@ const func: DeployFunction = async function ({ deployments, network, getNamedAcc
 
   const { deployer } = await getNamedAccounts();
 
-  await deployments.deploy("RiverV1_Implementation_1_0_1", {
-    contract: "RiverV1",
-    from: deployer,
-    log: true,
-  });
+  // await deployments.deploy("RiverV1_Implementation_1_0_1", {
+  //   contract: "RiverV1",
+  //   from: deployer,
+  //   log: true,
+  // });
   
-  await deployments.deploy("OperatorsRegistryV1_Implementation_1_0_1", {
-    contract: "OperatorsRegistryV1",
-    from: deployer,
-    log: true,
-  });
+  // await deployments.deploy("OperatorsRegistryV1_Implementation_1_0_1", {
+  //   contract: "OperatorsRegistryV1",
+  //   from: deployer,
+  //   log: true,
+  // });
 
   // migration and upgrade steps
   // 1. upgradeTo OperatorsRegistry 
