@@ -6,15 +6,17 @@ export const verify = async (name: string, contractAddress: string, args: any, l
   if (network.name == "localhost" || network.name == "local") return;
   else if (network.name == "tenderly") tenderlyVerify(name, contractAddress);
   else {
-    await hre.run("verify:verify", {
-      address: contractAddress,
-      constructorArguments: args,
-      libraries: {
-        ...libs,
-      },
-    }).catch((e) => {
-      console.log(e.message);
-    });
+    await hre
+      .run("verify:verify", {
+        address: contractAddress,
+        constructorArguments: args,
+        libraries: {
+          ...libs,
+        },
+      })
+      .catch((e) => {
+        console.log(e.message);
+      });
   }
 };
 
@@ -26,3 +28,48 @@ const tenderlyVerify = async (name: string, contractAddress: string) => {
     });
   }
 };
+
+export async function upgradeToAndCall(
+  deployments,
+  ethers,
+  newImplementationAddress,
+  signer,
+  sendTo,
+  initData,
+  upgrading
+) {
+  // Get the ABI for the TransparentUpgradeableProxy
+  const proxyTransparentArtifact = await deployments.getArtifact("ITransparentUpgradeableProxy");
+  const proxyTransparentInterface = new ethers.utils.Interface(proxyTransparentArtifact.abi);
+
+  const upgradeData = proxyTransparentInterface.encodeFunctionData("upgradeToAndCall", [
+    newImplementationAddress,
+    initData,
+  ]);
+
+  // Send the transaction
+  const txCount = await signer.getTransactionCount();
+  const tx = await signer.sendTransaction({
+    to: sendTo,
+    data: upgradeData,
+    nonce: txCount,
+  });
+  await tx.wait();
+  console.log("tx >> ", tx);
+  console.log(`${upgrading} proxy upgraded to ${newImplementationAddress} with initialization`);
+}
+
+export async function upgradeTo(deployments, ethers, newImplementation, signer, sendTo, upgrading) {
+  const proxyTransparentArtifact = await deployments.getArtifact("ITransparentUpgradeableProxy");
+  const proxyTransparentInterface = new ethers.utils.Interface(proxyTransparentArtifact.abi);
+  let upgradeData = proxyTransparentInterface.encodeFunctionData("upgradeTo", [newImplementation.address]);
+  let txCount = await signer.getTransactionCount();
+  let tx = await signer.sendTransaction({
+    to: sendTo,
+    data: upgradeData,
+    nonce: txCount,
+  });
+  await tx.wait();
+  console.log("tx >> ", tx);
+  console.log(`${upgrading} Proxy upgraded to ${newImplementation.address}`);
+}

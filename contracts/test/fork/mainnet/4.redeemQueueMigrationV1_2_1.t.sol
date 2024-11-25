@@ -38,19 +38,6 @@ contract RedeemQueueMigrationV1_2 is Test {
         }
     }
 
-    function _generateRandomAddress(uint256 length) internal view returns (address[] memory) {
-        // Generate a random 20-byte address
-        address[] memory randomAddresses = new address[](length);
-
-        // Populate the array with random addresses
-        for (uint256 i = 0; i < length; i++) {
-            randomAddresses[i] =
-                address(uint160(uint256(keccak256(abi.encodePacked(block.timestamp, block.prevrandao, i)))));
-        }
-
-        return randomAddresses;
-    }
-
     modifier shouldSkip() {
         if (!_skip) {
             _;
@@ -70,17 +57,13 @@ contract RedeemQueueMigrationV1_2 is Test {
             oldRequests[i] = RedeemManager.getRedeemRequestDetails(uint32(i));
         }
 
-        // Generating mock initiators
-        address[] memory mockInitiators = _generateRandomAddress(oldCount);
-
         // Set up the fork at a new block for making the v1_2_1 upgrade, and testing
         vm.createSelectFork(_rpcUrl, 20678000);
         // Upgrade the RedeemManager
         RedeemManagerV1 newImplementation = new RedeemManagerV1();
         vm.prank(REDEEM_MANAGER_MAINNET_PROXY_ADMIN_ADDRESS);
         ITransparentUpgradeableProxy(address(redeemManagerProxy)).upgradeToAndCall(
-            address(newImplementation),
-            abi.encodeWithSelector(RedeemManagerV1.initializeRedeemManagerV1_2.selector, mockInitiators)
+            address(newImplementation), abi.encodeWithSelector(RedeemManagerV1.initializeRedeemManagerV1_2.selector)
         );
 
         // After upgrade: check that state before the upgrade, and state after upgrade are same.
@@ -95,7 +78,7 @@ contract RedeemQueueMigrationV1_2 is Test {
             assertEq(newRequest.maxRedeemableEth, oldRequests[i].maxRedeemableEth);
             assertEq(newRequest.recipient, oldRequests[i].recipient);
             assertEq(newRequest.height, oldRequests[i].height);
-            assertEq(newRequest.initiator, mockInitiators[i]);
+            assertEq(newRequest.initiator, newRequest.recipient);
         }
     }
 }

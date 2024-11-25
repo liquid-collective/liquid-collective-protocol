@@ -1,0 +1,140 @@
+--- ../contracts/src/RedeemManager.1.sol	2024-01-29 15:39:54.964002324 +0200
++++ 	2024-01-29 15:48:14.633945763 +0200
+@@ -26,11 +26,11 @@
+     int64 internal constant RESOLVE_FULLY_CLAIMED = -3;
+ 
+     /// @notice Status value returned when fully claiming a redeem request
+-    uint8 internal constant CLAIM_FULLY_CLAIMED = 0;
++    uint8 public constant CLAIM_FULLY_CLAIMED = 0;
+     /// @notice Status value returned when partially claiming a redeem request
+-    uint8 internal constant CLAIM_PARTIALLY_CLAIMED = 1;
++    uint8 public constant CLAIM_PARTIALLY_CLAIMED = 1;
+     /// @notice Status value returned when a redeem request is already claimed and skipped during a claim
+-    uint8 internal constant CLAIM_SKIPPED = 2;
++    uint8 public constant CLAIM_SKIPPED = 2;
+ 
+     modifier onlyRiver() {
+         if (msg.sender != RiverAddress.get()) {
+@@ -369,12 +369,14 @@
+                 LibUint256.min(_params.redeemRequest.amount, withdrawalEventEndPosition - _params.redeemRequest.height);
+             // we can now compute the equivalent eth amount based on the withdrawal event details
+             vars.ethAmount =
+-                (vars.matchingAmount * _params.withdrawalEvent.withdrawnEth) / _params.withdrawalEvent.amount;
++            //    (vars.matchingAmount * _params.withdrawalEvent.withdrawnEth) / _params.withdrawalEvent.amount;
++            math.mulDiv(vars.matchingAmount, _params.withdrawalEvent.withdrawnEth, _params.withdrawalEvent.amount);
+ 
+             // as each request has a maximum withdrawable amount, we verify that the eth amount is not exceeding this amount, pro rata
+             // the amount that is matched
+             uint256 maxRedeemableEthAmount =
+-                (vars.matchingAmount * _params.redeemRequest.maxRedeemableEth) / _params.redeemRequest.amount;
++            //    (vars.matchingAmount * _params.redeemRequest.maxRedeemableEth) / _params.redeemRequest.amount;
++            math.mulDiv(vars.matchingAmount, _params.redeemRequest.maxRedeemableEth, _params.redeemRequest.amount);
+ 
+             if (maxRedeemableEthAmount < vars.ethAmount) {
+                 vars.exceedingEthAmount = vars.ethAmount - maxRedeemableEthAmount;
+@@ -529,3 +531,9 @@
+         RedeemDemand.set(_newValue);
+     }
+ }
++
++library math {
++    function mulDiv(uint256 x, uint256 y, uint256 z) internal pure returns (uint256) {
++        return (x * y) / z;
++    }
++}
+--- ../contracts/src/River.1.sol	2024-01-29 15:39:54.964002324 +0200
++++ 	2024-01-29 15:48:14.633945763 +0200
+@@ -369,9 +369,11 @@
+         }
+         uint256 newTotalBalance = _assetBalance();
+         uint256 globalFee = GlobalFee.get();
+-        uint256 numerator = _amount * oldTotalSupply * globalFee;
++        //uint256 numerator = _amount * oldTotalSupply * globalFee;
++        //uint256 denominator = (newTotalBalance * LibBasisPoints.BASIS_POINTS_MAX) - (_amount * globalFee);
++        //uint256 sharesToMint = denominator == 0 ? 0 : (numerator / denominator);
+         uint256 denominator = (newTotalBalance * LibBasisPoints.BASIS_POINTS_MAX) - (_amount * globalFee);
+-        uint256 sharesToMint = denominator == 0 ? 0 : (numerator / denominator);
++        uint256 sharesToMint = denominator == 0 ? 0 : math.mulDiv(_amount * oldTotalSupply, globalFee, denominator);
+ 
+         if (sharesToMint > 0) {
+             address collector = CollectorAddress.get();
+@@ -589,12 +591,15 @@
+         // this value is computed by subtracting the current balance to deposit from the underlying asset balance
+         uint256 currentMaxDailyCommittableAmount = LibUint256.max(
+             dcl.minDailyNetCommittableAmount,
+-            (uint256(dcl.maxDailyRelativeCommittableAmount) * (underlyingAssetBalance - currentBalanceToDeposit))
+-                / LibBasisPoints.BASIS_POINTS_MAX
++            //(uint256(dcl.maxDailyRelativeCommittableAmount) * (underlyingAssetBalance - currentBalanceToDeposit))
++            //    / LibBasisPoints.BASIS_POINTS_MAX
++            math.mulDiv(uint256(dcl.maxDailyRelativeCommittableAmount), 
++                underlyingAssetBalance - currentBalanceToDeposit, LibBasisPoints.BASIS_POINTS_MAX)
+         );
+         // we adapt the value for the reporting period by using the asset balance as upper bound
+         uint256 currentMaxCommittableAmount =
+-            LibUint256.min((currentMaxDailyCommittableAmount * _period) / 1 days, currentBalanceToDeposit);
++            //LibUint256.min((currentMaxDailyCommittableAmount * _period) / 1 days, currentBalanceToDeposit);
++            LibUint256.min(math.mulDiv(currentMaxDailyCommittableAmount, _period, 1 days), currentBalanceToDeposit);
+         // we only commit multiples of 32 ETH
+         currentMaxCommittableAmount = (currentMaxCommittableAmount / DEPOSIT_SIZE) * DEPOSIT_SIZE;
+ 
+--- ../contracts/src/components/SharesManager.1.sol	2024-01-29 15:39:54.974002324 +0200
++++ 	2024-01-29 15:48:14.643945761 +0200
+@@ -202,7 +202,8 @@
+             return 0;
+         }
+ 
+-        return ((_shares * _assetBalance())) / _totalSharesValue;
++        //return ((_shares * _assetBalance())) / _totalSharesValue;
++        return math.mulDiv(_shares, _assetBalance(), _totalSharesValue);
+     }
+ 
+     /// @notice Internal utility to retrieve the shares count for a given underlying asset amount
+@@ -215,7 +216,8 @@
+             return 0;
+         }
+ 
+-        return (_balance * _totalSharesValue) / _assetBalance();
++        //return (_balance * _totalSharesValue) / _assetBalance();
++        return  math.mulDiv(_balance, _totalSharesValue, _assetBalance());
+     }
+ 
+     /// @notice Internal utility to mint shares for the specified user
+@@ -230,7 +232,8 @@
+             sharesToMint = _underlyingAssetValue;
+             _mintRawShares(_owner, _underlyingAssetValue);
+         } else {
+-            sharesToMint = (_underlyingAssetValue * _totalSupply()) / oldTotalAssetBalance;
++            //sharesToMint = (_underlyingAssetValue * _totalSupply()) / oldTotalAssetBalance;
++            sharesToMint = math.mulDiv(_underlyingAssetValue, _totalSupply(), oldTotalAssetBalance);
+             _mintRawShares(_owner, sharesToMint);
+         }
+     }
+@@ -267,3 +270,10 @@
+         emit SetTotalSupply(newTotalSupply);
+     }
+ }
++
++library math {
++    function mulDiv(uint256 x, uint256 y, uint256 z) internal pure returns (uint256) {
++        return (x * y) / z;
++    }
++}
++
+--- ../contracts/src/components/OracleManager.1.sol	2024-01-29 15:39:54.974002324 +0200
++++ 	2024-01-29 15:48:14.643945761 +0200
+@@ -256,7 +256,7 @@
+     }
+ 
+     /// @inheritdoc IOracleManagerV1
+-    function setConsensusLayerData(IOracleManagerV1.ConsensusLayerReport calldata _report) external {
++    function setConsensusLayerData(IOracleManagerV1.ConsensusLayerReport calldata _report) external virtual {
+         // only the oracle is allowed to call this endpoint
+         if (msg.sender != OracleAddress.get()) {
+             revert LibErrors.Unauthorized(msg.sender);
+@@ -494,4 +494,4 @@
+     {
+         return (_epochNow - _epochPast) * (_cls.secondsPerSlot * _cls.slotsPerEpoch);
+     }
+-}
++}
+\ No newline at end of file

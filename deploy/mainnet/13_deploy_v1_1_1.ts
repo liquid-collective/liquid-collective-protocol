@@ -16,12 +16,12 @@ const func: DeployFunction = async function ({
 
   const signer = await ethers.getSigner(executor);
 
-  const allowlistNewImplementationDeployment = await deployments.deploy("AllowlistV1_Implementation_1_1_1", {
-    contract: "AllowlistV1",
-    from: deployer,
-    log: true,
-  });
-  console.log(allowlistNewImplementationDeployment.address);
+  // const allowlistNewImplementationDeployment = await deployments.deploy("AllowlistV1_Implementation_1_1_1", {
+  //   contract: "AllowlistV1",
+  //   from: deployer,
+  //   log: true,
+  // });
+  // console.log(allowlistNewImplementationDeployment.address);
 
   // upgrade steps
   // upgradeToAndCall
