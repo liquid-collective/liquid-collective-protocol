@@ -96,7 +96,7 @@ const config: HardhatUserConfig = {
       mainnet: "0x8EE3fC0Bcd7B57429203751C5bE5fdf1AB8409f3",
       holesky: "0x80Cf8bD4abf6C078C313f72588720AB86d45c5E6",
       devHolesky: "0x0FdEe4562D7e6dbA05A9f892D2Be04B83f3E7579",
-      tenderly: "0x80Cf8bD4abf6C078C313f72588720AB86d45c5E6",
+      tenderly: "0x8EE3fC0Bcd7B57429203751C5bE5fdf1AB8409f3",
     },
     collector: {
       default: 1,

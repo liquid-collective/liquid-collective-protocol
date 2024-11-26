@@ -1,0 +1,118 @@
+thinking of properties on River
+
+// types of properties
+1. unit test
+    - props. of single function, based on it arguments, revert cases, ...
+        - monotonicity: x <= y -> f(x) <= f(y)
+        - additivity: f(x) (+) f(y) ~ f(x+y)
+        - injectivity: x != y -> f(x) != f(y)
+        - surjectivity: forall y exists x, s.t. f(x) = y
+        - non-diminishing: f(x) >= x
+        
+balanceFromShares is monotone: x <= y -> balanceFromShares(x) <= balanceFromShares(y)
+
+
+2. valid states
+    - invariants that should always hold in the system, bounds on variables, related variables, ...
+
+
+
+3. variable transition
+    - when can change, who can change, when must it change, when should not change
+    - valid change: increase only, under some condition, 
+4. state transition
+    - valid states, transitions, under which condition, ..
+5. high level properties
+    - interaction with other contracts
+6. risk assessment
+    - catastrophic behavior, existence of good behavior (satisfy)
+
+// properties:
+
+Additivity of deposits: (1)
+    - Splitting is not profitable (https://github.com/Certora/liquid-collective-protocol/blob/2d73b411165b46cd46a9d7282670f3817e4f01ed/certora/specs/RiverV1.spec#L344)
+    - Batching is not extremely profitable (https://github.com/Certora/liquid-collective-protocol/blob/2d73b411165b46cd46a9d7282670f3817e4f01ed/certora/specs/RiverV1.spec#L376)
+
+LsETH vs. ETH, (2)
+    - increase <-> increase,    (https://github.com/Certora/liquid-collective-protocol/blob/2d73b411165b46cd46a9d7282670f3817e4f01ed/certora/specs/SharesManagerV1.spec#L227)
+    - LsETH == 0 iff total protocol ETH == 0  (https://github.com/Certora/liquid-collective-protocol/blob/a917c412c2370192b327d77a77e102a8d4e7b698/certora/specs/SharesManagerV1.spec#L268)
+    - totalSupply == sharesFromBalance(totalUnderlyingBalance()) (https://prover.certora.com/output/40577/a451e923be1144ae88f125ac4f7b7a60?anonymousKey=69814a5c38c0f7720859be747546bbbde3f79191)
+
+Rebalance between Deposit Buffer and Withdrawal Stack (2)
+    - If either amount is zero the other amount is unchanged 
+    - No new deposit/withdraw request is processed between the oracle report and rebalancing  
+
+daily committable amount <= max  (2)       
+    "we compute the max daily committable amount by taking the asset balance without the balance to deposit into account"
+
+converion rate (3)
+    - can only be changed by report update (https://prover.certora.com/output/40577/e672f8b8a31249d9a0d71b515266a455/?anonymousKey=3652aca44f658a32892e06b3ccab000c6d3cce10)   
+    - doesn’t vary more than rate_variation_bound
+   
+River balance (3)
+    - equals to BalanceToDeposit.get() + CommittedBalance.get() + BalanceToRedeem.get() (https://github.com/Certora/liquid-collective-protocol/blob/a917c412c2370192b327d77a77e102a8d4e7b698/certora/specs/RiverV1.spec#L91)
+
+If some validator has received some fees, then some rewards were received (3)
+
+where are the funds, where can they go (5)
+    Users can get funds from the protocol only via the claim() function
+
+total assets of user ETH
+
+conversion rate can increase, can decrease (6 satisfy)
+
+LsETH balances of a user can increase, i.e. can deposit (6 satisfy)
+
+Edge case - what happens to conversion rate when one operator losses as much as the only other gains (6)
+    (rewards==fees+slashes)
+
+something about _commitBalanceToDeposit there is math
+
+Exit requests for validators are correct (not requesting too many validators to exit) (??)
+
+
+_balanceFromShares vs. _sharesFromBalance correspondence
+
+
+
+
+
+
+
+
+
+Intro, basic types of rules
+ - fundamental aspects of formal verification
+ - write rules for some of the functions
+ - how to interpret violations reported by the Certora Prover
+
+Parametric rules and invariants
+ - induction theory, proving properties on all possible transactions by induction
+
+Set up and multi-contract
+ - how to reason about more than one contract
+ - how to choose the right boundaries for verification.
+ - unresolved calls: linking, NONDET, dispatcher, summary
+ - safe approximations
+
+Properties thinking methodology
+    1. unit test
+        - props. of single function, based on it arguments, revert cases, e.g., monotonicity
+    2. valid states
+        - invariants that should always hold in the system, bounds on variables, related variables, ...
+    3. variable transition
+        - when can change, who can change, when must it change, when should not change
+        - valid change: increase only, under some conditions, ...
+    4. state transition
+        - valid states of objects, transitions, under which conditions, ..
+    5. high level properties
+        - interaction with other contracts
+    6. risk assessment
+        - catastrophic behavior, existence of a good behavior (satisfy)
+ 
+Advanced topics
+ - ghosts, hooks, quantifiers
+ - modular verification, summarization and other techniques
+ - checking the specification, coverage information
+
+

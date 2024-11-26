@@ -21,7 +21,7 @@ Liquid Collective enables users to stake ETH and mint LsETH. The LsETH liquid st
 
 ## Deployment Addresses
 
-| Contract                                                                                                                             |                                                         Mainnet                                                         |                                                          Holesky                                                                |
+| Contract                                                                                                                             |                                                         Mainnet                                                         |                                                             Holesky                                                             |
 | ------------------------------------------------------------------------------------------------------------------------------------ | :---------------------------------------------------------------------------------------------------------------------: | :-----------------------------------------------------------------------------------------------------------------------------: |
 | [TLC](https://github.com/liquid-collective/liquid-collective-protocol/blob/main/contracts/src/TLC.1.sol)                             | [`0xb5Fe6946836D687848B5aBd42dAbF531d5819632`](https://etherscan.io/address/0xb5Fe6946836D687848B5aBd42dAbF531d5819632) | [`0x1dA1B892575dc5fABbef28FA0F62fE302ED39E83`](https://holesky.etherscan.io/address/0x1dA1B892575dc5fABbef28FA0F62fE302ED39E83) |
 | [River (LsETH)](https://github.com/liquid-collective/liquid-collective-protocol/blob/main/contracts/src/River.1.sol)                 | [`0x8c1BEd5b9a0928467c9B1341Da1D7BD5e10b6549`](https://etherscan.io/address/0x8c1BEd5b9a0928467c9B1341Da1D7BD5e10b6549) | [`0x1d8b30cC38Dba8aBce1ac29Ea27d9cFd05379A09`](https://holesky.etherscan.io/address/0x1d8b30cC38Dba8aBce1ac29Ea27d9cFd05379A09) |
@@ -33,6 +33,7 @@ Liquid Collective enables users to stake ETH and mint LsETH. The LsETH liquid st
 | [ELFeeRecipient](https://github.com/liquid-collective/liquid-collective-protocol/blob/main/contracts/src/ELFeeRecipient.1.sol)       | [`0x7D16d2c4e96BCFC8f815E15b771aC847EcbDB48b`](https://etherscan.io/address/0x7D16d2c4e96BCFC8f815E15b771aC847EcbDB48b) | [`0x4E44868856A26F4cbB431cC144318D4E7F39a585`](https://holesky.etherscan.io/address/0x4E44868856A26F4cbB431cC144318D4E7F39a585) |
 | [RedeemManager](https://github.com/liquid-collective/liquid-collective-protocol/blob/main/contracts/src/RedeemManager.1.sol)         | [`0x080b3a41390b357Ad7e8097644d1DEDf57AD3375`](https://etherscan.io/address/0x080b3a41390b357Ad7e8097644d1DEDf57AD3375) | [`0x0693875efbF04dDAd955c04332bA3324472DF980`](https://holesky.etherscan.io/address/0x0693875efbF04dDAd955c04332bA3324472DF980) |
 | [WLSETH](https://github.com/liquid-collective/liquid-collective-protocol/blob/main/contracts/src/WLSETH.1.sol)                       |                                                           n/a                                                           | [`0x21ae523bf67C81c8e4F640d8f76F9c7B77eCc0bf`](https://holesky.etherscan.io/address/0x21ae523bf67C81c8e4F640d8f76F9c7B77eCc0bf) |
+| [Protocol Metrics](https://github.com/liquid-collective/liquid-collective-protocol/blob/main/contracts/src/ProtocolMetrics.1.sol)    | [`0xf19345EabC46ADF82e85CC2293A657A2dBa5c7d4`](https://etherscan.io/address/0xf19345EabC46ADF82e85CC2293A657A2dBa5c7d4) |                                                                                                                                 |
 
 ## Security
 
@@ -45,4 +46,3 @@ For guidance on setting up a development environment and how to make a contribut
 ## Licensing
 
 The primary license for Liquid Collective is the Business Source License 1.1 (`BUSL-1.1`), see [`LICENSE`](./LICENSE). However, some files are dual licensed as indicated in its SPDX header.
-
