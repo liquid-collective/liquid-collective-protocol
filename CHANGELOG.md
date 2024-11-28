@@ -1,5 +1,20 @@
 # Staking Contracts changelog
 
+## v1.2.1 (November 20th 2024)
+
+- [[contracts] Feat: RedeemManager Migration - Assumes initiator equals recipient](https://github.com/liquid-collective/liquid-collective-protocol/pull/299)
+- [[contracts] Allowlist permission separation](https://github.com/liquid-collective/liquid-collective-protocol/pull/239)
+- [[contracts] Oracle Invariant comment update](https://github.com/liquid-collective/liquid-collective-protocol/pull/260)
+- [[contracts] Fix for wrong check in shares manager](https://github.com/liquid-collective/liquid-collective-protocol/pull/255)
+- [[contracts] Upgradeable ReentrancyGuard for WLSETH](https://github.com/liquid-collective/liquid-collective-protocol/pull/258)
+- [[contracts] Fixed internal returned array size in OperatorsRegistry](https://github.com/liquid-collective/liquid-collective-protocol/pull/259)
+- [[contracts] Claim Freeze for denied user](https://github.com/liquid-collective/liquid-collective-protocol/pull/261)
+- [[contracts] Edge case for minting logic addressed](https://github.com/liquid-collective/liquid-collective-protocol/pull/256)
+- [[contracts] Gas optimization as per Certora](https://github.com/liquid-collective/liquid-collective-protocol/pull/252)
+- [[contracts] FrontRun mitigation](https://github.com/liquid-collective/liquid-collective-protocol/pull/249)
+- [[contracts] Added denylist check for `recipient` during `redeemRequest`](https://github.com/liquid-collective/liquid-collective-protocol/pull/267)
+
+
 ## v1.1.0 (Ocotber 3rd 2023)
 
 - [[contracts] TLC global unlock schedule + minor fixes](https://github.com/liquid-collective/liquid-collective-protocol/pull/232)
