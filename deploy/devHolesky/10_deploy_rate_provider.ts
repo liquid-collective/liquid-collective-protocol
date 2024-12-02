@@ -2,7 +2,6 @@ import { DeployFunction } from "hardhat-deploy/dist/types";
 import { HardhatRuntimeEnvironment } from "hardhat/types";
 import { getContractAddress } from "ethers/lib/utils";
 import { isDeployed, logStep, logStepEnd } from "../../ts-utils/helpers/index";
-import { verify } from "../../scripts/helpers";
 
 const func: DeployFunction = async function ({ deployments, getNamedAccounts, ethers }: HardhatRuntimeEnvironment) {
   const { deployer, proxyAdministrator, governor, executor } = await getNamedAccounts();
@@ -11,7 +10,7 @@ const func: DeployFunction = async function ({ deployments, getNamedAccounts, et
 
   const riverDeployment = await deployments.get("River");
 
-  const deployment = await deployments.deploy("ProtocolMetrics", {
+  await deployments.deploy("ProtocolMetrics", {
     contract: "ProtocolMetricsV1",
     from: deployer,
     log: true,
@@ -25,7 +24,6 @@ const func: DeployFunction = async function ({ deployments, getNamedAccounts, et
       },
     },
   });
-  await verify("ProtocolMetricsV1", deployment.address, deployment.args);
 
   logStepEnd(__filename);
 };
