@@ -1,0 +1,777 @@
+{
+  "address": "0xB10788719333cDe41519694CA1Fd08866a9e46F5",
+  "abi": [
+    {
+      "inputs": [],
+      "name": "AttemptToRemoveDenyPermission",
+      "type": "error"
+    },
+    {
+      "inputs": [],
+      "name": "AttemptToSetDenyPermission",
+      "type": "error"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "_account",
+          "type": "address"
+        }
+      ],
+      "name": "Denied",
+      "type": "error"
+    },
+    {
+      "inputs": [],
+      "name": "InvalidCount",
+      "type": "error"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "version",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint256",
+          "name": "expectedVersion",
+          "type": "uint256"
+        }
+      ],
+      "name": "InvalidInitialization",
+      "type": "error"
+    },
+    {
+      "inputs": [],
+      "name": "InvalidZeroAddress",
+      "type": "error"
+    },
+    {
+      "inputs": [],
+      "name": "MismatchedArrayLengths",
+      "type": "error"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "caller",
+          "type": "address"
+        }
+      ],
+      "name": "Unauthorized",
+      "type": "error"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": false,
+          "internalType": "uint256",
+          "name": "version",
+          "type": "uint256"
+        },
+        {
+          "indexed": false,
+          "internalType": "bytes",
+          "name": "cdata",
+          "type": "bytes"
+        }
+      ],
+      "name": "Initialize",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "admin",
+          "type": "address"
+        }
+      ],
+      "name": "SetAdmin",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "allower",
+          "type": "address"
+        }
+      ],
+      "name": "SetAllower",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": false,
+          "internalType": "address[]",
+          "name": "accounts",
+          "type": "address[]"
+        },
+        {
+          "indexed": false,
+          "internalType": "uint256[]",
+          "name": "permissions",
+          "type": "uint256[]"
+        }
+      ],
+      "name": "SetAllowlistPermissions",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "denier",
+          "type": "address"
+        }
+      ],
+      "name": "SetDenier",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "pendingAdmin",
+          "type": "address"
+        }
+      ],
+      "name": "SetPendingAdmin",
+      "type": "event"
+    },
+    {
+      "inputs": [],
+      "name": "acceptAdmin",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "getAdmin",
+      "outputs": [
+        {
+          "internalType": "address",
+          "name": "",
+          "type": "address"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "getAllower",
+      "outputs": [
+        {
+          "internalType": "address",
+          "name": "",
+          "type": "address"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "getDenier",
+      "outputs": [
+        {
+          "internalType": "address",
+          "name": "",
+          "type": "address"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "getPendingAdmin",
+      "outputs": [
+        {
+          "internalType": "address",
+          "name": "",
+          "type": "address"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "_account",
+          "type": "address"
+        }
+      ],
+      "name": "getPermissions",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "_account",
+          "type": "address"
+        },
+        {
+          "internalType": "uint256",
+          "name": "_mask",
+          "type": "uint256"
+        }
+      ],
+      "name": "hasPermission",
+      "outputs": [
+        {
+          "internalType": "bool",
+          "name": "",
+          "type": "bool"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "_admin",
+          "type": "address"
+        },
+        {
+          "internalType": "address",
+          "name": "_allower",
+          "type": "address"
+        }
+      ],
+      "name": "initAllowlistV1",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "_denier",
+          "type": "address"
+        }
+      ],
+      "name": "initAllowlistV1_1",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "_account",
+          "type": "address"
+        },
+        {
+          "internalType": "uint256",
+          "name": "_mask",
+          "type": "uint256"
+        }
+      ],
+      "name": "isAllowed",
+      "outputs": [
+        {
+          "internalType": "bool",
+          "name": "",
+          "type": "bool"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "_account",
+          "type": "address"
+        }
+      ],
+      "name": "isDenied",
+      "outputs": [
+        {
+          "internalType": "bool",
+          "name": "",
+          "type": "bool"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "_account",
+          "type": "address"
+        },
+        {
+          "internalType": "uint256",
+          "name": "_mask",
+          "type": "uint256"
+        }
+      ],
+      "name": "onlyAllowed",
+      "outputs": [],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "_newAdmin",
+          "type": "address"
+        }
+      ],
+      "name": "proposeAdmin",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address[]",
+          "name": "_accounts",
+          "type": "address[]"
+        },
+        {
+          "internalType": "uint256[]",
+          "name": "_permissions",
+          "type": "uint256[]"
+        }
+      ],
+      "name": "setAllowPermissions",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "_newAllowerAddress",
+          "type": "address"
+        }
+      ],
+      "name": "setAllower",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "_newDenierAddress",
+          "type": "address"
+        }
+      ],
+      "name": "setDenier",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address[]",
+          "name": "_accounts",
+          "type": "address[]"
+        },
+        {
+          "internalType": "uint256[]",
+          "name": "_permissions",
+          "type": "uint256[]"
+        }
+      ],
+      "name": "setDenyPermissions",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "version",
+      "outputs": [
+        {
+          "internalType": "string",
+          "name": "",
+          "type": "string"
+        }
+      ],
+      "stateMutability": "pure",
+      "type": "function"
+    }
+  ],
+  "transactionHash": "0xcccca7a7e4e1babac73783855ce0b5419dc8664e34e712f13d5c569e0bd05ed7",
+  "receipt": {
+    "to": null,
+    "from": "0x341C40B94bF2afBFa42573cB78f16Ee15a056238",
+    "contractAddress": "0xB10788719333cDe41519694CA1Fd08866a9e46F5",
+    "transactionIndex": 0,
+    "gasUsed": "846604",
+    "logsBloom": "0x00000000000000000000000000000000000000000000000000000000001000000000000000000000000000000000000000000000000020000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000020000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000010000100000000000000000000000000000000000000001000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+    "blockHash": "0xb2745a2ebaad1df9e32984f969118a3c6f35ac47464c0e8b6967a71a0846a595",
+    "transactionHash": "0xcccca7a7e4e1babac73783855ce0b5419dc8664e34e712f13d5c569e0bd05ed7",
+    "logs": [
+      {
+        "transactionIndex": 0,
+        "blockNumber": 307744,
+        "transactionHash": "0xcccca7a7e4e1babac73783855ce0b5419dc8664e34e712f13d5c569e0bd05ed7",
+        "address": "0xB10788719333cDe41519694CA1Fd08866a9e46F5",
+        "topics": [
+          "0x1809e49bba43f2d39fa57894b50cd6ccb428cc438230e065cac3eb24a1355a71"
+        ],
+        "data": "0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff00000000000000000000000000000000000000000000000000000000000000400000000000000000000000000000000000000000000000000000000000000000",
+        "logIndex": 0,
+        "blockHash": "0xb2745a2ebaad1df9e32984f969118a3c6f35ac47464c0e8b6967a71a0846a595"
+      }
+    ],
+    "blockNumber": 307744,
+    "cumulativeGasUsed": "846604",
+    "status": 1,
+    "byzantium": true
+  },
+  "args": [],
+  "numDeployments": 1,
+  "solcInputHash": "762834da2cfe67e977958281c99d1a0e",
+  "metadata": "{\"compiler\":{\"version\":\"0.8.20+commit.a1b79de6\"},\"language\":\"Solidity\",\"output\":{\"abi\":[{\"inputs\":[],\"name\":\"AttemptToRemoveDenyPermission\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"AttemptToSetDenyPermission\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"_account\",\"type\":\"address\"}],\"name\":\"Denied\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"InvalidCount\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"version\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"expectedVersion\",\"type\":\"uint256\"}],\"name\":\"InvalidInitialization\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"InvalidZeroAddress\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"MismatchedArrayLengths\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"caller\",\"type\":\"address\"}],\"name\":\"Unauthorized\",\"type\":\"error\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"version\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"bytes\",\"name\":\"cdata\",\"type\":\"bytes\"}],\"name\":\"Initialize\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"admin\",\"type\":\"address\"}],\"name\":\"SetAdmin\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"allower\",\"type\":\"address\"}],\"name\":\"SetAllower\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"address[]\",\"name\":\"accounts\",\"type\":\"address[]\"},{\"indexed\":false,\"internalType\":\"uint256[]\",\"name\":\"permissions\",\"type\":\"uint256[]\"}],\"name\":\"SetAllowlistPermissions\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"denier\",\"type\":\"address\"}],\"name\":\"SetDenier\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"pendingAdmin\",\"type\":\"address\"}],\"name\":\"SetPendingAdmin\",\"type\":\"event\"},{\"inputs\":[],\"name\":\"acceptAdmin\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"getAdmin\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"getAllower\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"getDenier\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"getPendingAdmin\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"_account\",\"type\":\"address\"}],\"name\":\"getPermissions\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"_account\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"_mask\",\"type\":\"uint256\"}],\"name\":\"hasPermission\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"_admin\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"_allower\",\"type\":\"address\"}],\"name\":\"initAllowlistV1\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"_denier\",\"type\":\"address\"}],\"name\":\"initAllowlistV1_1\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"_account\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"_mask\",\"type\":\"uint256\"}],\"name\":\"isAllowed\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"_account\",\"type\":\"address\"}],\"name\":\"isDenied\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"_account\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"_mask\",\"type\":\"uint256\"}],\"name\":\"onlyAllowed\",\"outputs\":[],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"_newAdmin\",\"type\":\"address\"}],\"name\":\"proposeAdmin\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address[]\",\"name\":\"_accounts\",\"type\":\"address[]\"},{\"internalType\":\"uint256[]\",\"name\":\"_permissions\",\"type\":\"uint256[]\"}],\"name\":\"setAllowPermissions\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"_newAllowerAddress\",\"type\":\"address\"}],\"name\":\"setAllower\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"_newDenierAddress\",\"type\":\"address\"}],\"name\":\"setDenier\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address[]\",\"name\":\"_accounts\",\"type\":\"address[]\"},{\"internalType\":\"uint256[]\",\"name\":\"_permissions\",\"type\":\"uint256[]\"}],\"name\":\"setDenyPermissions\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"version\",\"outputs\":[{\"internalType\":\"string\",\"name\":\"\",\"type\":\"string\"}],\"stateMutability\":\"pure\",\"type\":\"function\"}],\"devdoc\":{\"author\":\"Alluvial Finance Inc.\",\"errors\":{\"Denied(address)\":[{\"params\":{\"_account\":\"The denied account\"}}],\"InvalidInitialization(uint256,uint256)\":[{\"params\":{\"expectedVersion\":\"The version that was expected\",\"version\":\"The version that was attempting to be initialized\"}}],\"Unauthorized(address)\":[{\"params\":{\"caller\":\"Address performing the call\"}}]},\"events\":{\"Initialize(uint256,bytes)\":{\"params\":{\"cdata\":\"Complete calldata that was used during the initialization\",\"version\":\"New version of the contracts\"}},\"SetAdmin(address)\":{\"params\":{\"admin\":\"New admin address\"}},\"SetAllower(address)\":{\"params\":{\"allower\":\"The new allower address\"}},\"SetAllowlistPermissions(address[],uint256[])\":{\"params\":{\"accounts\":\"List of accounts\",\"permissions\":\"New permissions for each account at the same index\"}},\"SetDenier(address)\":{\"params\":{\"denier\":\"The new denier address\"}},\"SetPendingAdmin(address)\":{\"params\":{\"pendingAdmin\":\"New pending admin address\"}}},\"kind\":\"dev\",\"methods\":{\"acceptAdmin()\":{\"details\":\"Only callable by the pending admin. Resets the pending admin if succesful.\"},\"getAdmin()\":{\"returns\":{\"_0\":\"The admin address\"}},\"getAllower()\":{\"returns\":{\"_0\":\"The address of the allower\"}},\"getDenier()\":{\"returns\":{\"_0\":\"The address of the denier\"}},\"getPendingAdmin()\":{\"returns\":{\"_0\":\"The pending admin address\"}},\"getPermissions(address)\":{\"params\":{\"_account\":\"Recipient to verify\"},\"returns\":{\"_0\":\"The raw permissions value of the account\"}},\"hasPermission(address,uint256)\":{\"params\":{\"_account\":\"Recipient to verify\",\"_mask\":\"Combination of permissions to verify\"},\"returns\":{\"_0\":\"True if mask is respected\"}},\"initAllowlistV1(address,address)\":{\"params\":{\"_admin\":\"Address of the Allowlist administrator\",\"_allower\":\"Address of the allower\"}},\"initAllowlistV1_1(address)\":{\"params\":{\"_denier\":\"Address of the denier\"}},\"isAllowed(address,uint256)\":{\"params\":{\"_account\":\"Recipient to verify\",\"_mask\":\"Combination of permissions to verify\"},\"returns\":{\"_0\":\"True if mask is respected and user is allowed\"}},\"isDenied(address)\":{\"params\":{\"_account\":\"Recipient to verify\"},\"returns\":{\"_0\":\"True if user is denied access\"}},\"onlyAllowed(address,uint256)\":{\"params\":{\"_account\":\"Recipient to verify\",\"_mask\":\"Combination of permissions to verify\"}},\"proposeAdmin(address)\":{\"details\":\"This security prevents setting an invalid address as an admin. The pendingadmin has to claim its ownership of the contract, and prove that the newaddress is able to perform regular transactions.\",\"params\":{\"_newAdmin\":\"New admin address\"}},\"setAllowPermissions(address[],uint256[])\":{\"details\":\"This function is for allocating or removing deposit, redeem or donate permissions.      This function could be used to give any permissions that we come up with in the future.      An address which was denied has to be undenied first before they could be given any permission(s).\",\"params\":{\"_accounts\":\"Accounts to update\",\"_permissions\":\"New permission values\"}},\"setAllower(address)\":{\"params\":{\"_newAllowerAddress\":\"New address allowed to edit the allowlist\"}},\"setDenier(address)\":{\"params\":{\"_newDenierAddress\":\"New address allowed to edit the allowlist\"}},\"setDenyPermissions(address[],uint256[])\":{\"details\":\"This function is for allocating or removing deny permissions.      An address which is undenied has to be given permissions again for them to be able to deposit, donate or redeem.\",\"params\":{\"_accounts\":\"Accounts to update\",\"_permissions\":\"New permission values\"}},\"version()\":{\"returns\":{\"_0\":\"Version of the contract\"}}},\"title\":\"Allowlist (v1)\",\"version\":1},\"userdoc\":{\"errors\":{\"AttemptToRemoveDenyPermission()\":[{\"notice\":\"Allower can't remove deny permission\"}],\"AttemptToSetDenyPermission()\":[{\"notice\":\"Allower can't set deny permission\"}],\"Denied(address)\":[{\"notice\":\"The account is denied access\"}],\"InvalidCount()\":[{\"notice\":\"The provided accounts list is empty\"}],\"InvalidInitialization(uint256,uint256)\":[{\"notice\":\"An error occured during the initialization\"}],\"InvalidZeroAddress()\":[{\"notice\":\"The address is zero\"}],\"MismatchedArrayLengths()\":[{\"notice\":\"The provided accounts and permissions list have different lengths\"}],\"Unauthorized(address)\":[{\"notice\":\"The operator is unauthorized for the caller\"}]},\"events\":{\"Initialize(uint256,bytes)\":{\"notice\":\"Emitted when the contract is properly initialized\"},\"SetAdmin(address)\":{\"notice\":\"The admin address changed\"},\"SetAllower(address)\":{\"notice\":\"The stored allower address has been changed\"},\"SetAllowlistPermissions(address[],uint256[])\":{\"notice\":\"The permissions of several accounts have changed\"},\"SetDenier(address)\":{\"notice\":\"The stored denier address has been changed\"},\"SetPendingAdmin(address)\":{\"notice\":\"The pending admin address changed\"}},\"kind\":\"user\",\"methods\":{\"acceptAdmin()\":{\"notice\":\"Accept the transfer of ownership\"},\"getAdmin()\":{\"notice\":\"Retrieves the current admin address\"},\"getAllower()\":{\"notice\":\"Retrieves the allower address\"},\"getDenier()\":{\"notice\":\"Retrieves the denier address\"},\"getPendingAdmin()\":{\"notice\":\"Retrieve the current pending admin address\"},\"getPermissions(address)\":{\"notice\":\"This method retrieves the raw permission value\"},\"hasPermission(address,uint256)\":{\"notice\":\"This method returns true if the user has the expected permission         ignoring any deny list membership\"},\"initAllowlistV1(address,address)\":{\"notice\":\"Initializes the allowlist\"},\"initAllowlistV1_1(address)\":{\"notice\":\"Initializes the allowlist denier\"},\"isAllowed(address,uint256)\":{\"notice\":\"This method returns true if the user has the expected permission and         is not in the deny list\"},\"isDenied(address)\":{\"notice\":\"This method returns true if the user is in the deny list\"},\"onlyAllowed(address,uint256)\":{\"notice\":\"This method should be used as a modifier and is expected to revert         if the user hasn't got the required permission or if the user is         in the deny list.\"},\"proposeAdmin(address)\":{\"notice\":\"Proposes a new address as admin\"},\"setAllowPermissions(address[],uint256[])\":{\"notice\":\"Sets the allow permissions for one or more accounts\"},\"setAllower(address)\":{\"notice\":\"Changes the allower address\"},\"setDenier(address)\":{\"notice\":\"Changes the denier address\"},\"setDenyPermissions(address[],uint256[])\":{\"notice\":\"Sets the deny permissions for one or more accounts\"},\"version()\":{\"notice\":\"Retrieves the version of the contract\"}},\"notice\":\"This contract handles the list of allowed recipients.All accounts have an uint256 value associated with their addresses whereeach bit represents a right in the system. The DENY_MASK defined the maskused to identify if the denied bit is on, preventing users from interactingwith the system\",\"version\":1}},\"settings\":{\"compilationTarget\":{\"contracts/src/Allowlist.1.sol\":\"AllowlistV1\"},\"evmVersion\":\"paris\",\"libraries\":{},\"metadata\":{\"bytecodeHash\":\"ipfs\",\"useLiteralContent\":true},\"optimizer\":{\"enabled\":true,\"runs\":100},\"remappings\":[],\"viaIR\":true},\"sources\":{\"contracts/src/Administrable.sol\":{\"content\":\"//SPDX-License-Identifier: BUSL-1.1\\npragma solidity 0.8.20;\\n\\nimport \\\"./interfaces/IAdministrable.sol\\\";\\n\\nimport \\\"./libraries/LibAdministrable.sol\\\";\\nimport \\\"./libraries/LibSanitize.sol\\\";\\n\\n/// @title Administrable\\n/// @author Alluvial Finance Inc.\\n/// @notice This contract handles the administration of the contracts\\nabstract contract Administrable is IAdministrable {\\n    /// @notice Prevents unauthorized calls\\n    modifier onlyAdmin() {\\n        if (msg.sender != LibAdministrable._getAdmin()) {\\n            revert LibErrors.Unauthorized(msg.sender);\\n        }\\n        _;\\n    }\\n\\n    /// @notice Prevents unauthorized calls\\n    modifier onlyPendingAdmin() {\\n        if (msg.sender != LibAdministrable._getPendingAdmin()) {\\n            revert LibErrors.Unauthorized(msg.sender);\\n        }\\n        _;\\n    }\\n\\n    /// @inheritdoc IAdministrable\\n    function getAdmin() external view returns (address) {\\n        return LibAdministrable._getAdmin();\\n    }\\n\\n    /// @inheritdoc IAdministrable\\n    function getPendingAdmin() external view returns (address) {\\n        return LibAdministrable._getPendingAdmin();\\n    }\\n\\n    /// @inheritdoc IAdministrable\\n    function proposeAdmin(address _newAdmin) external onlyAdmin {\\n        _setPendingAdmin(_newAdmin);\\n    }\\n\\n    /// @inheritdoc IAdministrable\\n    function acceptAdmin() external onlyPendingAdmin {\\n        _setAdmin(LibAdministrable._getPendingAdmin());\\n        _setPendingAdmin(address(0));\\n    }\\n\\n    /// @notice Internal utility to set the admin address\\n    /// @param _admin Address to set as admin\\n    function _setAdmin(address _admin) internal {\\n        LibAdministrable._setAdmin(_admin);\\n        emit SetAdmin(_admin);\\n    }\\n\\n    /// @notice Internal utility to set the pending admin address\\n    /// @param _pendingAdmin Address to set as pending admin\\n    function _setPendingAdmin(address _pendingAdmin) internal {\\n        LibAdministrable._setPendingAdmin(_pendingAdmin);\\n        emit SetPendingAdmin(_pendingAdmin);\\n    }\\n\\n    /// @notice Internal utility to retrieve the address of the current admin\\n    /// @return The address of admin\\n    function _getAdmin() internal view returns (address) {\\n        return LibAdministrable._getAdmin();\\n    }\\n}\\n\",\"keccak256\":\"0xe844d17bbc5f95455be27819600a504f83891e7f9fde030fb88c4a4cbb272f76\",\"license\":\"BUSL-1.1\"},\"contracts/src/Allowlist.1.sol\":{\"content\":\"//SPDX-License-Identifier: BUSL-1.1\\npragma solidity 0.8.20;\\n\\nimport \\\"./interfaces/IAllowlist.1.sol\\\";\\nimport \\\"./interfaces/IProtocolVersion.sol\\\";\\n\\nimport \\\"./libraries/LibAllowlistMasks.sol\\\";\\nimport \\\"./Initializable.sol\\\";\\nimport \\\"./Administrable.sol\\\";\\n\\nimport \\\"./state/allowlist/AllowerAddress.sol\\\";\\nimport \\\"./state/allowlist/DenierAddress.sol\\\";\\nimport \\\"./state/allowlist/Allowlist.sol\\\";\\n\\n/// @title Allowlist (v1)\\n/// @author Alluvial Finance Inc.\\n/// @notice This contract handles the list of allowed recipients.\\n/// @notice All accounts have an uint256 value associated with their addresses where\\n/// @notice each bit represents a right in the system. The DENY_MASK defined the mask\\n/// @notice used to identify if the denied bit is on, preventing users from interacting\\n/// @notice with the system\\ncontract AllowlistV1 is IAllowlistV1, Initializable, Administrable, IProtocolVersion {\\n    /// @inheritdoc IAllowlistV1\\n    function initAllowlistV1(address _admin, address _allower) external init(0) {\\n        _setAdmin(_admin);\\n        AllowerAddress.set(_allower);\\n        emit SetAllower(_allower);\\n    }\\n\\n    function initAllowlistV1_1(address _denier) external init(1) {\\n        DenierAddress.set(_denier);\\n        emit SetDenier(_denier);\\n    }\\n\\n    /// @inheritdoc IAllowlistV1\\n    function getAllower() external view returns (address) {\\n        return AllowerAddress.get();\\n    }\\n\\n    /// @inheritdoc IAllowlistV1\\n    function getDenier() external view returns (address) {\\n        return DenierAddress.get();\\n    }\\n\\n    /// @inheritdoc IAllowlistV1\\n    function isAllowed(address _account, uint256 _mask) external view returns (bool) {\\n        uint256 userPermissions = Allowlist.get(_account);\\n        if (userPermissions & LibAllowlistMasks.DENY_MASK == LibAllowlistMasks.DENY_MASK) {\\n            return false;\\n        }\\n        return userPermissions & _mask == _mask;\\n    }\\n\\n    /// @inheritdoc IAllowlistV1\\n    function isDenied(address _account) external view returns (bool) {\\n        return Allowlist.get(_account) & LibAllowlistMasks.DENY_MASK == LibAllowlistMasks.DENY_MASK;\\n    }\\n\\n    /// @inheritdoc IAllowlistV1\\n    function hasPermission(address _account, uint256 _mask) external view returns (bool) {\\n        return Allowlist.get(_account) & _mask == _mask;\\n    }\\n\\n    /// @inheritdoc IAllowlistV1\\n    function getPermissions(address _account) external view returns (uint256) {\\n        return Allowlist.get(_account);\\n    }\\n\\n    /// @inheritdoc IAllowlistV1\\n    function onlyAllowed(address _account, uint256 _mask) external view {\\n        uint256 userPermissions = Allowlist.get(_account);\\n        if (userPermissions & LibAllowlistMasks.DENY_MASK == LibAllowlistMasks.DENY_MASK) {\\n            revert Denied(_account);\\n        }\\n        if (userPermissions & _mask != _mask) {\\n            revert LibErrors.Unauthorized(_account);\\n        }\\n    }\\n\\n    /// @inheritdoc IAllowlistV1\\n    function setAllower(address _newAllowerAddress) external onlyAdmin {\\n        AllowerAddress.set(_newAllowerAddress);\\n        emit SetAllower(_newAllowerAddress);\\n    }\\n\\n    /// @inheritdoc IAllowlistV1\\n    function setDenier(address _newDenierAddress) external onlyAdmin {\\n        DenierAddress.set(_newDenierAddress);\\n        emit SetDenier(_newDenierAddress);\\n    }\\n\\n    /// @inheritdoc IAllowlistV1\\n    function setAllowPermissions(address[] calldata _accounts, uint256[] calldata _permissions) external {\\n        if (msg.sender != AllowerAddress.get()) {\\n            revert LibErrors.Unauthorized(msg.sender);\\n        }\\n\\n        uint256 accountsLength = _accounts.length;\\n\\n        if (accountsLength == 0) {\\n            revert InvalidCount();\\n        }\\n\\n        if (accountsLength != _permissions.length) {\\n            revert MismatchedArrayLengths();\\n        }\\n\\n        for (uint256 i = 0; i < accountsLength;) {\\n            LibSanitize._notZeroAddress(_accounts[i]);\\n\\n            // Check if account is already denied\\n            if (Allowlist.get(_accounts[i]) & LibAllowlistMasks.DENY_MASK == LibAllowlistMasks.DENY_MASK) {\\n                revert AttemptToRemoveDenyPermission();\\n            }\\n\\n            // Check if DENY permission is present in new permission\\n            if (_permissions[i] & LibAllowlistMasks.DENY_MASK == LibAllowlistMasks.DENY_MASK) {\\n                revert AttemptToSetDenyPermission();\\n            }\\n\\n            Allowlist.set(_accounts[i], _permissions[i]);\\n            unchecked {\\n                ++i;\\n            }\\n        }\\n\\n        emit SetAllowlistPermissions(_accounts, _permissions);\\n    }\\n\\n    /// @inheritdoc IAllowlistV1\\n    function setDenyPermissions(address[] calldata _accounts, uint256[] calldata _permissions) external {\\n        if (msg.sender != DenierAddress.get()) {\\n            revert LibErrors.Unauthorized(msg.sender);\\n        }\\n\\n        uint256 accountsLength = _accounts.length;\\n\\n        if (accountsLength == 0) {\\n            revert InvalidCount();\\n        }\\n\\n        if (accountsLength != _permissions.length) {\\n            revert MismatchedArrayLengths();\\n        }\\n\\n        for (uint256 i = 0; i < accountsLength;) {\\n            LibSanitize._notZeroAddress(_accounts[i]);\\n            if (_permissions[i] & LibAllowlistMasks.DENY_MASK == LibAllowlistMasks.DENY_MASK) {\\n                // Apply deny mask\\n                Allowlist.set(_accounts[i], LibAllowlistMasks.DENY_MASK);\\n            } else {\\n                // Remove deny mask\\n                Allowlist.set(_accounts[i], 0);\\n            }\\n            unchecked {\\n                ++i;\\n            }\\n        }\\n\\n        emit SetAllowlistPermissions(_accounts, _permissions);\\n    }\\n\\n    function version() external pure returns (string memory) {\\n        return \\\"1.2.1\\\";\\n    }\\n}\\n\",\"keccak256\":\"0x2fba0e5f6caa7d791de3a38a483f13596ee12b1d8453de2d475796059f043978\",\"license\":\"BUSL-1.1\"},\"contracts/src/Initializable.sol\":{\"content\":\"//SPDX-License-Identifier: BUSL-1.1\\npragma solidity 0.8.20;\\n\\nimport \\\"./state/shared/Version.sol\\\";\\n\\n/// @title Initializable\\n/// @author Alluvial Finance Inc.\\n/// @notice This contract ensures that initializers are called only once per version\\ncontract Initializable {\\n    /// @notice Disable initialization on implementations\\n    constructor() {\\n        Version.set(type(uint256).max);\\n        emit Initialize(type(uint256).max, msg.data);\\n    }\\n\\n    /// @notice An error occured during the initialization\\n    /// @param version The version that was attempting to be initialized\\n    /// @param expectedVersion The version that was expected\\n    error InvalidInitialization(uint256 version, uint256 expectedVersion);\\n\\n    /// @notice Emitted when the contract is properly initialized\\n    /// @param version New version of the contracts\\n    /// @param cdata Complete calldata that was used during the initialization\\n    event Initialize(uint256 version, bytes cdata);\\n\\n    /// @notice Use this modifier on initializers along with a hard-coded version number\\n    /// @param _version Version to initialize\\n    modifier init(uint256 _version) {\\n        if (_version != Version.get()) {\\n            revert InvalidInitialization(_version, Version.get());\\n        }\\n        Version.set(_version + 1); // prevents reentrency on the called method\\n        _;\\n        emit Initialize(_version, msg.data);\\n    }\\n}\\n\",\"keccak256\":\"0xd371aeefbb5ed0d3d3b6efdd70044eb949161e6f534730fd0868f85a204c76c9\",\"license\":\"BUSL-1.1\"},\"contracts/src/interfaces/IAdministrable.sol\":{\"content\":\"//SPDX-License-Identifier: BUSL-1.1\\npragma solidity 0.8.20;\\n\\n/// @title Administrable Interface\\n/// @author Alluvial Finance Inc.\\n/// @notice This interface exposes methods to handle the ownership of the contracts\\ninterface IAdministrable {\\n    /// @notice The pending admin address changed\\n    /// @param pendingAdmin New pending admin address\\n    event SetPendingAdmin(address indexed pendingAdmin);\\n\\n    /// @notice The admin address changed\\n    /// @param admin New admin address\\n    event SetAdmin(address indexed admin);\\n\\n    /// @notice Retrieves the current admin address\\n    /// @return The admin address\\n    function getAdmin() external view returns (address);\\n\\n    /// @notice Retrieve the current pending admin address\\n    /// @return The pending admin address\\n    function getPendingAdmin() external view returns (address);\\n\\n    /// @notice Proposes a new address as admin\\n    /// @dev This security prevents setting an invalid address as an admin. The pending\\n    /// @dev admin has to claim its ownership of the contract, and prove that the new\\n    /// @dev address is able to perform regular transactions.\\n    /// @param _newAdmin New admin address\\n    function proposeAdmin(address _newAdmin) external;\\n\\n    /// @notice Accept the transfer of ownership\\n    /// @dev Only callable by the pending admin. Resets the pending admin if succesful.\\n    function acceptAdmin() external;\\n}\\n\",\"keccak256\":\"0xa125890056d930c3f1bfe09ea58b81fa01a1d1526092d0bcce9d38cd35aeec58\",\"license\":\"BUSL-1.1\"},\"contracts/src/interfaces/IAllowlist.1.sol\":{\"content\":\"//SPDX-License-Identifier: BUSL-1.1\\npragma solidity 0.8.20;\\n\\n/// @title Allowlist Interface (v1)\\n/// @author Alluvial Finance Inc.\\n/// @notice This interface exposes methods to handle the list of allowed recipients.\\ninterface IAllowlistV1 {\\n    /// @notice The permissions of several accounts have changed\\n    /// @param accounts List of accounts\\n    /// @param permissions New permissions for each account at the same index\\n    event SetAllowlistPermissions(address[] accounts, uint256[] permissions);\\n\\n    /// @notice The stored allower address has been changed\\n    /// @param allower The new allower address\\n    event SetAllower(address indexed allower);\\n\\n    /// @notice The stored denier address has been changed\\n    /// @param denier The new denier address\\n    event SetDenier(address indexed denier);\\n\\n    /// @notice The provided accounts list is empty\\n    error InvalidCount();\\n\\n    /// @notice The account is denied access\\n    /// @param _account The denied account\\n    error Denied(address _account);\\n\\n    /// @notice The provided accounts and permissions list have different lengths\\n    error MismatchedArrayLengths();\\n\\n    /// @notice Allower can't set deny permission\\n    error AttemptToSetDenyPermission();\\n\\n    /// @notice Allower can't remove deny permission\\n    error AttemptToRemoveDenyPermission();\\n\\n    /// @notice Initializes the allowlist\\n    /// @param _admin Address of the Allowlist administrator\\n    /// @param _allower Address of the allower\\n    function initAllowlistV1(address _admin, address _allower) external;\\n\\n    /// @notice Initializes the allowlist denier\\n    /// @param _denier Address of the denier\\n    function initAllowlistV1_1(address _denier) external;\\n\\n    /// @notice Retrieves the allower address\\n    /// @return The address of the allower\\n    function getAllower() external view returns (address);\\n\\n    /// @notice Retrieves the denier address\\n    /// @return The address of the denier\\n    function getDenier() external view returns (address);\\n\\n    /// @notice This method returns true if the user has the expected permission and\\n    ///         is not in the deny list\\n    /// @param _account Recipient to verify\\n    /// @param _mask Combination of permissions to verify\\n    /// @return True if mask is respected and user is allowed\\n    function isAllowed(address _account, uint256 _mask) external view returns (bool);\\n\\n    /// @notice This method returns true if the user is in the deny list\\n    /// @param _account Recipient to verify\\n    /// @return True if user is denied access\\n    function isDenied(address _account) external view returns (bool);\\n\\n    /// @notice This method returns true if the user has the expected permission\\n    ///         ignoring any deny list membership\\n    /// @param _account Recipient to verify\\n    /// @param _mask Combination of permissions to verify\\n    /// @return True if mask is respected\\n    function hasPermission(address _account, uint256 _mask) external view returns (bool);\\n\\n    /// @notice This method retrieves the raw permission value\\n    /// @param _account Recipient to verify\\n    /// @return The raw permissions value of the account\\n    function getPermissions(address _account) external view returns (uint256);\\n\\n    /// @notice This method should be used as a modifier and is expected to revert\\n    ///         if the user hasn't got the required permission or if the user is\\n    ///         in the deny list.\\n    /// @param _account Recipient to verify\\n    /// @param _mask Combination of permissions to verify\\n    function onlyAllowed(address _account, uint256 _mask) external view;\\n\\n    /// @notice Changes the allower address\\n    /// @param _newAllowerAddress New address allowed to edit the allowlist\\n    function setAllower(address _newAllowerAddress) external;\\n\\n    /// @notice Changes the denier address\\n    /// @param _newDenierAddress New address allowed to edit the allowlist\\n    function setDenier(address _newDenierAddress) external;\\n\\n    /// @notice Sets the allow permissions for one or more accounts\\n    /// @dev This function is for allocating or removing deposit, redeem or donate permissions.\\n    ///      This function could be used to give any permissions that we come up with in the future.\\n    ///      An address which was denied has to be undenied first before they could be given any permission(s).\\n    /// @param _accounts Accounts to update\\n    /// @param _permissions New permission values\\n    function setAllowPermissions(address[] calldata _accounts, uint256[] calldata _permissions) external;\\n\\n    /// @notice Sets the deny permissions for one or more accounts\\n    /// @dev This function is for allocating or removing deny permissions.\\n    ///      An address which is undenied has to be given permissions again for them to be able to deposit, donate or redeem.\\n    /// @param _accounts Accounts to update\\n    /// @param _permissions New permission values\\n    function setDenyPermissions(address[] calldata _accounts, uint256[] calldata _permissions) external;\\n}\\n\",\"keccak256\":\"0xa091d5674c42bcfc05e5e35206dfd1235325a630aae6aeae60ff5df8864deab9\",\"license\":\"BUSL-1.1\"},\"contracts/src/interfaces/IProtocolVersion.sol\":{\"content\":\"//SPDX-License-Identifier: BUSL-1.1\\npragma solidity 0.8.20;\\n\\ninterface IProtocolVersion {\\n    /// @notice Retrieves the version of the contract\\n    /// @return Version of the contract\\n    function version() external pure returns (string memory);\\n}\\n\",\"keccak256\":\"0x2fc810a5c001d641d4b19c28631dac46201e3780e91dfeb5dc836f92f1aee8b3\",\"license\":\"BUSL-1.1\"},\"contracts/src/libraries/LibAdministrable.sol\":{\"content\":\"//SPDX-License-Identifier: BUSL-1.1\\npragma solidity 0.8.20;\\n\\nimport \\\"../state/shared/AdministratorAddress.sol\\\";\\nimport \\\"../state/shared/PendingAdministratorAddress.sol\\\";\\n\\n/// @title Lib Administrable\\n/// @author Alluvial Finance Inc.\\n/// @notice This library handles the admin and pending admin storage vars\\nlibrary LibAdministrable {\\n    /// @notice Retrieve the system admin\\n    /// @return The address of the system admin\\n    function _getAdmin() internal view returns (address) {\\n        return AdministratorAddress.get();\\n    }\\n\\n    /// @notice Retrieve the pending system admin\\n    /// @return The adress of the pending system admin\\n    function _getPendingAdmin() internal view returns (address) {\\n        return PendingAdministratorAddress.get();\\n    }\\n\\n    /// @notice Sets the system admin\\n    /// @param _admin New system admin\\n    function _setAdmin(address _admin) internal {\\n        AdministratorAddress.set(_admin);\\n    }\\n\\n    /// @notice Sets the pending system admin\\n    /// @param _pendingAdmin New pending system admin\\n    function _setPendingAdmin(address _pendingAdmin) internal {\\n        PendingAdministratorAddress.set(_pendingAdmin);\\n    }\\n}\\n\",\"keccak256\":\"0x09f683441ee60515cb51439c3e98d94e0ee356381e82ce6b12ee7d4ab41f7448\",\"license\":\"BUSL-1.1\"},\"contracts/src/libraries/LibAllowlistMasks.sol\":{\"content\":\"//SPDX-License-Identifier: BUSL-1.1\\npragma solidity 0.8.20;\\n\\n/// @title Lib Allowlist Masks\\n/// @notice Holds all the mask values\\nlibrary LibAllowlistMasks {\\n    /// @notice Mask used for denied accounts\\n    uint256 internal constant DENY_MASK = 0x1 << 255;\\n    /// @notice The mask for the deposit right\\n    uint256 internal constant DEPOSIT_MASK = 0x1;\\n    /// @notice The mask for the donation right\\n    uint256 internal constant DONATE_MASK = 0x1 << 1;\\n    /// @notice The mask for the redeem right\\n    uint256 internal constant REDEEM_MASK = 0x1 << 2;\\n}\\n\",\"keccak256\":\"0xa72bc9ec8a96a0eb01f207da9ac1c384415d43490cf2f53b89a190713ff8c359\",\"license\":\"BUSL-1.1\"},\"contracts/src/libraries/LibBasisPoints.sol\":{\"content\":\"//SPDX-License-Identifier: BUSL-1.1\\npragma solidity 0.8.20;\\n\\n/// @title Lib Basis Points\\n/// @notice Holds the basis points max value\\nlibrary LibBasisPoints {\\n    /// @notice The max value for basis points (represents 100%)\\n    uint256 internal constant BASIS_POINTS_MAX = 10_000;\\n}\\n\",\"keccak256\":\"0x87e0393c2317b33ae449221747b42f7237362adf9b7a0902433d57574473303a\",\"license\":\"BUSL-1.1\"},\"contracts/src/libraries/LibErrors.sol\":{\"content\":\"//SPDX-License-Identifier: BUSL-1.1\\npragma solidity 0.8.20;\\n\\n/// @title Lib Errors\\n/// @notice Library of common errors\\nlibrary LibErrors {\\n    /// @notice The operator is unauthorized for the caller\\n    /// @param caller Address performing the call\\n    error Unauthorized(address caller);\\n\\n    /// @notice The call was invalid\\n    error InvalidCall();\\n\\n    /// @notice The argument was invalid\\n    error InvalidArgument();\\n\\n    /// @notice The address is zero\\n    error InvalidZeroAddress();\\n\\n    /// @notice The string is empty\\n    error InvalidEmptyString();\\n\\n    /// @notice The fee is invalid\\n    error InvalidFee();\\n}\\n\",\"keccak256\":\"0xc6f936719c01ce7ee4ba9ef66e8af75ca8a09b216efd38c0d66d87d08b05bc95\",\"license\":\"BUSL-1.1\"},\"contracts/src/libraries/LibSanitize.sol\":{\"content\":\"//SPDX-License-Identifier: BUSL-1.1\\npragma solidity 0.8.20;\\n\\nimport \\\"./LibErrors.sol\\\";\\nimport \\\"./LibBasisPoints.sol\\\";\\n\\n/// @title Lib Sanitize\\n/// @notice Utilities to sanitize input values\\nlibrary LibSanitize {\\n    /// @notice Reverts if address is 0\\n    /// @param _address Address to check\\n    function _notZeroAddress(address _address) internal pure {\\n        if (_address == address(0)) {\\n            revert LibErrors.InvalidZeroAddress();\\n        }\\n    }\\n\\n    /// @notice Reverts if string is empty\\n    /// @param _string String to check\\n    function _notEmptyString(string memory _string) internal pure {\\n        if (bytes(_string).length == 0) {\\n            revert LibErrors.InvalidEmptyString();\\n        }\\n    }\\n\\n    /// @notice Reverts if fee is invalid\\n    /// @param _fee Fee to check\\n    function _validFee(uint256 _fee) internal pure {\\n        if (_fee > LibBasisPoints.BASIS_POINTS_MAX) {\\n            revert LibErrors.InvalidFee();\\n        }\\n    }\\n}\\n\",\"keccak256\":\"0xce078083ab565058f68cd7be35ffeb0d88ab990a769c905094520a46edbccfee\",\"license\":\"BUSL-1.1\"},\"contracts/src/libraries/LibUnstructuredStorage.sol\":{\"content\":\"// SPDX-License-Identifier: BUSL-1.1\\n\\npragma solidity 0.8.20;\\n\\n/// @title Lib Unstructured Storage\\n/// @notice Utilities to work with unstructured storage\\nlibrary LibUnstructuredStorage {\\n    /// @notice Retrieve a bool value at a storage slot\\n    /// @param _position The storage slot to retrieve\\n    /// @return data The bool value\\n    function getStorageBool(bytes32 _position) internal view returns (bool data) {\\n        // solhint-disable-next-line no-inline-assembly\\n        assembly {\\n            data := sload(_position)\\n        }\\n    }\\n\\n    /// @notice Retrieve an address value at a storage slot\\n    /// @param _position The storage slot to retrieve\\n    /// @return data The address value\\n    function getStorageAddress(bytes32 _position) internal view returns (address data) {\\n        // solhint-disable-next-line no-inline-assembly\\n        assembly {\\n            data := sload(_position)\\n        }\\n    }\\n\\n    /// @notice Retrieve a bytes32 value at a storage slot\\n    /// @param _position The storage slot to retrieve\\n    /// @return data The bytes32 value\\n    function getStorageBytes32(bytes32 _position) internal view returns (bytes32 data) {\\n        // solhint-disable-next-line no-inline-assembly\\n        assembly {\\n            data := sload(_position)\\n        }\\n    }\\n\\n    /// @notice Retrieve an uint256 value at a storage slot\\n    /// @param _position The storage slot to retrieve\\n    /// @return data The uint256 value\\n    function getStorageUint256(bytes32 _position) internal view returns (uint256 data) {\\n        // solhint-disable-next-line no-inline-assembly\\n        assembly {\\n            data := sload(_position)\\n        }\\n    }\\n\\n    /// @notice Sets a bool value at a storage slot\\n    /// @param _position The storage slot to set\\n    /// @param _data The bool value to set\\n    function setStorageBool(bytes32 _position, bool _data) internal {\\n        // solhint-disable-next-line no-inline-assembly\\n        assembly {\\n            sstore(_position, _data)\\n        }\\n    }\\n\\n    /// @notice Sets an address value at a storage slot\\n    /// @param _position The storage slot to set\\n    /// @param _data The address value to set\\n    function setStorageAddress(bytes32 _position, address _data) internal {\\n        // solhint-disable-next-line no-inline-assembly\\n        assembly {\\n            sstore(_position, _data)\\n        }\\n    }\\n\\n    /// @notice Sets a bytes32 value at a storage slot\\n    /// @param _position The storage slot to set\\n    /// @param _data The bytes32 value to set\\n    function setStorageBytes32(bytes32 _position, bytes32 _data) internal {\\n        // solhint-disable-next-line no-inline-assembly\\n        assembly {\\n            sstore(_position, _data)\\n        }\\n    }\\n\\n    /// @notice Sets an uint256 value at a storage slot\\n    /// @param _position The storage slot to set\\n    /// @param _data The uint256 value to set\\n    function setStorageUint256(bytes32 _position, uint256 _data) internal {\\n        // solhint-disable-next-line no-inline-assembly\\n        assembly {\\n            sstore(_position, _data)\\n        }\\n    }\\n}\\n\",\"keccak256\":\"0xe48b249b789acdd6f9e1b80f6b1dc3fc69d5593c8b836fad803b7d9fd10dd841\",\"license\":\"BUSL-1.1\"},\"contracts/src/state/allowlist/AllowerAddress.sol\":{\"content\":\"//SPDX-License-Identifier: BUSL-1.1\\npragma solidity 0.8.20;\\n\\nimport \\\"../../libraries/LibUnstructuredStorage.sol\\\";\\nimport \\\"../../libraries/LibSanitize.sol\\\";\\n\\n/// @title Allower Address Storage\\n/// @notice Utility to manage the Allower Address in storage\\nlibrary AllowerAddress {\\n    /// @notice Storage slot of the Allower Address\\n    bytes32 internal constant ALLOWER_ADDRESS_SLOT = bytes32(uint256(keccak256(\\\"river.state.allowerAddress\\\")) - 1);\\n\\n    /// @notice Retrieve the Allower Address\\n    /// @return The Allower Address\\n    function get() internal view returns (address) {\\n        return LibUnstructuredStorage.getStorageAddress(ALLOWER_ADDRESS_SLOT);\\n    }\\n\\n    /// @notice Sets the Allower Address\\n    /// @param _newValue New Allower Address\\n    function set(address _newValue) internal {\\n        LibSanitize._notZeroAddress(_newValue);\\n        LibUnstructuredStorage.setStorageAddress(ALLOWER_ADDRESS_SLOT, _newValue);\\n    }\\n}\\n\",\"keccak256\":\"0x4f3df3f7c48c625c4e8d93e4d8f6b7b86800a374c21d0ee445b93e6634e6b0f9\",\"license\":\"BUSL-1.1\"},\"contracts/src/state/allowlist/Allowlist.sol\":{\"content\":\"//SPDX-License-Identifier: BUSL-1.1\\npragma solidity 0.8.20;\\n\\n/// @title Allowlist Storage\\n/// @notice Utility to manage the Allowlist mapping in storage\\nlibrary Allowlist {\\n    /// @notice Storage slot of the Allowlist mapping\\n    bytes32 internal constant ALLOWLIST_SLOT = bytes32(uint256(keccak256(\\\"river.state.allowlist\\\")) - 1);\\n\\n    /// @notice Structure stored in storage slot\\n    struct Slot {\\n        /// @custom:attribute Mapping keeping track of permissions per account\\n        mapping(address => uint256) value;\\n    }\\n\\n    /// @notice Retrieve the Allowlist value of an account\\n    /// @param _account The account to verify\\n    /// @return The Allowlist value\\n    function get(address _account) internal view returns (uint256) {\\n        bytes32 slot = ALLOWLIST_SLOT;\\n\\n        Slot storage r;\\n\\n        // solhint-disable-next-line no-inline-assembly\\n        assembly {\\n            r.slot := slot\\n        }\\n\\n        return r.value[_account];\\n    }\\n\\n    /// @notice Sets the Allowlist value of an account\\n    /// @param _account The account value to set\\n    /// @param _status The value to set\\n    function set(address _account, uint256 _status) internal {\\n        bytes32 slot = ALLOWLIST_SLOT;\\n\\n        Slot storage r;\\n\\n        // solhint-disable-next-line no-inline-assembly\\n        assembly {\\n            r.slot := slot\\n        }\\n\\n        r.value[_account] = _status;\\n    }\\n}\\n\",\"keccak256\":\"0xff97ebd1fc0ea1b08710b1b6bd199923c5c6305803e661b161d3271648939047\",\"license\":\"BUSL-1.1\"},\"contracts/src/state/allowlist/DenierAddress.sol\":{\"content\":\"//SPDX-License-Identifier: BUSL-1.1\\npragma solidity 0.8.20;\\n\\nimport \\\"../../libraries/LibUnstructuredStorage.sol\\\";\\nimport \\\"../../libraries/LibSanitize.sol\\\";\\n\\n/// @title Denier Address Storage\\n/// @notice Utility to manage the Denier Address in storage\\nlibrary DenierAddress {\\n    /// @notice Storage slot of the Denier Address\\n    bytes32 internal constant DENIER_ADDRESS_SLOT = bytes32(uint256(keccak256(\\\"river.state.denierAddress\\\")) - 1);\\n\\n    /// @notice Retrieve the Denier Address\\n    /// @return The Denier Address\\n    function get() internal view returns (address) {\\n        return LibUnstructuredStorage.getStorageAddress(DENIER_ADDRESS_SLOT);\\n    }\\n\\n    /// @notice Sets the Denier Address\\n    /// @param _newValue New Denier Address\\n    function set(address _newValue) internal {\\n        LibSanitize._notZeroAddress(_newValue);\\n        LibUnstructuredStorage.setStorageAddress(DENIER_ADDRESS_SLOT, _newValue);\\n    }\\n}\\n\",\"keccak256\":\"0x030a5f9e9cc5f5e830a78f13c128288b82f2a8712773ed14010b0d809abd4d7e\",\"license\":\"BUSL-1.1\"},\"contracts/src/state/shared/AdministratorAddress.sol\":{\"content\":\"//SPDX-License-Identifier: BUSL-1.1\\npragma solidity 0.8.20;\\n\\nimport \\\"../../libraries/LibUnstructuredStorage.sol\\\";\\nimport \\\"../../libraries/LibSanitize.sol\\\";\\n\\n/// @title Administrator Address Storage\\n/// @notice Utility to manage the Administrator Address in storage\\nlibrary AdministratorAddress {\\n    /// @notice Storage slot of the Administrator Address\\n    bytes32 public constant ADMINISTRATOR_ADDRESS_SLOT =\\n        bytes32(uint256(keccak256(\\\"river.state.administratorAddress\\\")) - 1);\\n\\n    /// @notice Retrieve the Administrator Address\\n    /// @return The Administrator Address\\n    function get() internal view returns (address) {\\n        return LibUnstructuredStorage.getStorageAddress(ADMINISTRATOR_ADDRESS_SLOT);\\n    }\\n\\n    /// @notice Sets the Administrator Address\\n    /// @param _newValue New Administrator Address\\n    function set(address _newValue) internal {\\n        LibSanitize._notZeroAddress(_newValue);\\n        LibUnstructuredStorage.setStorageAddress(ADMINISTRATOR_ADDRESS_SLOT, _newValue);\\n    }\\n}\\n\",\"keccak256\":\"0x9a8ea493ee319ecf7bb3955c0fcb7108c89193084b642f441f2858316d2dc7ae\",\"license\":\"BUSL-1.1\"},\"contracts/src/state/shared/PendingAdministratorAddress.sol\":{\"content\":\"//SPDX-License-Identifier: BUSL-1.1\\npragma solidity 0.8.20;\\n\\nimport \\\"../../libraries/LibUnstructuredStorage.sol\\\";\\n\\n/// @title Pending Administrator Address Storage\\n/// @notice Utility to manage the Pending Administrator Address in storage\\nlibrary PendingAdministratorAddress {\\n    /// @notice Storage slot of the Pending Administrator Address\\n    bytes32 public constant PENDING_ADMINISTRATOR_ADDRESS_SLOT =\\n        bytes32(uint256(keccak256(\\\"river.state.pendingAdministratorAddress\\\")) - 1);\\n\\n    /// @notice Retrieve the Pending Administrator Address\\n    /// @return The Pending Administrator Address\\n    function get() internal view returns (address) {\\n        return LibUnstructuredStorage.getStorageAddress(PENDING_ADMINISTRATOR_ADDRESS_SLOT);\\n    }\\n\\n    /// @notice Sets the Pending Administrator Address\\n    /// @param _newValue New Pending Administrator Address\\n    function set(address _newValue) internal {\\n        LibUnstructuredStorage.setStorageAddress(PENDING_ADMINISTRATOR_ADDRESS_SLOT, _newValue);\\n    }\\n}\\n\",\"keccak256\":\"0xeb7b867d4df38b08393f42a7fd5d93dbb1ade1f9d30d47551f63ffc77816685b\",\"license\":\"BUSL-1.1\"},\"contracts/src/state/shared/Version.sol\":{\"content\":\"//SPDX-License-Identifier: BUSL-1.1\\npragma solidity 0.8.20;\\n\\nimport \\\"../../libraries/LibUnstructuredStorage.sol\\\";\\n\\n/// @title Version Storage\\n/// @notice Utility to manage the Version in storage\\nlibrary Version {\\n    /// @notice Storage slot of the Version\\n    bytes32 public constant VERSION_SLOT = bytes32(uint256(keccak256(\\\"river.state.version\\\")) - 1);\\n\\n    /// @notice Retrieve the Version\\n    /// @return The Version\\n    function get() internal view returns (uint256) {\\n        return LibUnstructuredStorage.getStorageUint256(VERSION_SLOT);\\n    }\\n\\n    /// @notice Sets the Version\\n    /// @param _newValue New Version\\n    function set(uint256 _newValue) internal {\\n        LibUnstructuredStorage.setStorageUint256(VERSION_SLOT, _newValue);\\n    }\\n}\\n\",\"keccak256\":\"0x011c09f065ea555f6fbaa99710c1388bcb047afef30ab6558ca1ee81980ebf01\",\"license\":\"BUSL-1.1\"}},\"version\":1}",
+  "bytecode": "0x60808060405234610092577f1809e49bba43f2d39fa57894b50cd6ccb428cc438230e065cac3eb24a1355a7190600019807f82055909238c0f5e63d6f174068ebb8f51bcec9bd37de63bb68f6551feec0cfc558152604060208201523660408201523660006060830137600060603683010152606081601f19601f3601168101030190a1604051610ddf90816100988239f35b600080fdfe608060408181526004918236101561001657600080fd5b600092833560e01c918263029baf5614610a595750816307a4000814610a235781630e18b68114610968578163147bf6c4146108ed578163160a7925146108a85781633daee8e9146107695781634679a9e1146106e557816354fd4d501461064957816355b3cd94146104d45781635a4091021461044c5781636231bd4a146104165781636e8cac11146102c35781636e9960c31461028d5781638d944fd91461024157816391df0bdf146101a257508063d04681561461016d578063e838dfbb1461011f5763f8350ed0146100eb57600080fd5b3461011b578060031936011261011b57602090610112610109610b62565b60243590610bf9565b90519015158152f35b5080fd5b503461011b57602036600319011261011b5760209181906001600160a01b03610146610b62565b168152600080516020610d2a833981519152845220549051600160ff1b9182169091148152f35b503461011b578160031936011261011b57600080516020610d4a8339815191525490516001600160a01b039091168152602090f35b90503461023d57602036600319011261023d576101bd610b62565b600080516020610d6a833981519152546001600160a01b039391929190841633036102265750506101ed81610ce7565b80600080516020610d0a83398151915255167f19cda96968bca1626d03a55a2075bba1bb7a09e2dd1aa05c6db5fa64e667f1ff8280a280f35b60249250519063472511eb60e11b82523390820152fd5b8280fd5b50503461011b578060031936011261011b5760209161025e610b62565b6001600160a01b03168152600080516020610d2a83398151915283528190205490516024359182169091148152f35b50503461011b578160031936011261011b57600080516020610d6a8339815191525490516001600160a01b039091168152602090f35b83833461011b578060031936011261011b576102dd610b62565b6024356001600160a01b038181169392848303610412577f82055909238c0f5e63d6f174068ebb8f51bcec9bd37de63bb68f6551feec0cfc968754806103f557505060017f1809e49bba43f2d39fa57894b50cd6ccb428cc438230e065cac3eb24a1355a7196975561034e81610ce7565b80600080516020610d6a83398151915255167f5a272403b402d892977df56625f4164ccaf70ca3863991c43ecfe76a6905b0a18680a261038d81610ce7565b600080516020610d8a833981519152558051917fb96ab8443049f385aba7fbc2899e3fcdfba4d80ac8458847f40b7d426bae2dcf8580a28382528060208301523690820152368360608301378260603683010152606081601f19601f3601168101030190a180f35b8551631cfd276760e31b8152918201889052602482015260449150fd5b8580fd5b50503461011b578160031936011261011b57600080516020610d0a8339815191525490516001600160a01b039091168152602090f35b9190503461023d578060031936011261023d57610467610b62565b6001600160a01b0316808452600080516020610d2a8339815191526020528184205490919060243590600160ff1b808216146104bd578116036104a8578380f35b5163472511eb60e11b81529182015260249150fd5b50505163e7d05e2760e01b81529182015260249150fd5b8391503461011b576104e536610bae565b600080516020610d8a83398151915254909692949192916001600160a01b0391821633036106325785156106245787860361061657865b86811061055e5750505094610558917f649636a73c855dfe2014a555a98949d77640be8f4eb6702749d5f83c9aa6fcd095965194859485610c72565b0390a180f35b61057961057461056f838a8a610c38565b610c5e565b610ce7565b8261058861056f838a8a610c38565b168852600080516020610d2a8339815191526020818152858a2054600160ff1b908116811461060657806105bd858e8b610c38565b3516146105f65782918b91866105e6856105df61056f8f998f9a60019b610c38565b958c610c38565b3593168c5252858a20550161051c565b855163d93c678560e01b81528490fd5b865163234817a360e01b81528590fd5b8251632b477e7160e11b8152fd5b8251631a49577b60e11b8152fd5b60249083519063472511eb60e11b82523390820152fd5b90503461023d578260031936011261023d578151908282019082821067ffffffffffffffff8311176106d2575082526005815260209064312e322e3160d81b8282015282519382859384528251928382860152825b8481106106bc57505050828201840152601f01601f19168101030190f35b818101830151888201880152879550820161069e565b634e487b7160e01b855260419052602484fd5b90503461023d57602036600319011261023d57610700610b62565b600080516020610d6a833981519152546001600160a01b0393919291908416330361022657505061073081610ce7565b80600080516020610d8a83398151915255167fb96ab8443049f385aba7fbc2899e3fcdfba4d80ac8458847f40b7d426bae2dcf8280a280f35b8391503461011b5761077a36610bae565b600080516020610d0a83398151915254929490926001600160a01b03919082163303610891578515610883578386036108755750855b8581106107eb57505090610558917f649636a73c855dfe2014a555a98949d77640be8f4eb6702749d5f83c9aa6fcd095965194859485610c72565b806107ff61057461056f6001948a8a610c38565b8160ff1b8080610810848989610c38565b351603610846578361082661056f848b8b610c38565b168952600080516020610d2a833981519152602052898920555b016107b0565b508261085661056f838a8a610c38565b168852600080516020610d2a8339815191526020528789812055610840565b8751632b477e7160e11b8152fd5b8751631a49577b60e11b8152fd5b60249088519063472511eb60e11b82523390820152fd5b50503461011b57602036600319011261011b5760209181906001600160a01b036108d0610b62565b168152600080516020610d2a833981519152845220549051908152f35b90503461023d57602036600319011261023d57610908610b62565b600080516020610d6a833981519152546001600160a01b0393919291908416330361022657505080600080516020610d4a83398151915255167f2a0f8515de3fa34ef68b99300347b8793c01683350743e96fe440594528298f48280a280f35b8391503461011b578160031936011261011b57600080516020610d4a833981519152805490916001600160a01b038216919033839003610a0c57508394506109af81610ce7565b600080516020610d6a833981519152557f5a272403b402d892977df56625f4164ccaf70ca3863991c43ecfe76a6905b0a18380a255807f2a0f8515de3fa34ef68b99300347b8793c01683350743e96fe440594528298f48180a280f35b60249086519063472511eb60e11b82523390820152fd5b50503461011b578160031936011261011b57600080516020610d8a8339815191525490516001600160a01b039091168152602090f35b8385913461023d57602036600319011261023d57610a75610b62565b907f82055909238c0f5e63d6f174068ebb8f51bcec9bd37de63bb68f6551feec0cfc90815480600103610b4757857f1809e49bba43f2d39fa57894b50cd6ccb428cc438230e065cac3eb24a1355a71868660028755610ad381610ce7565b600080516020610d0a8339815191528190556001600160a01b03167f19cda96968bca1626d03a55a2075bba1bb7a09e2dd1aa05c6db5fa64e667f1ff8480a2805190600182528060208301523690820152368360608301378260603683010152606081601f19601f3601168101030190a180f35b631cfd276760e31b8252600182880152602482015260449150fd5b600435906001600160a01b0382168203610b7857565b600080fd5b9181601f84011215610b785782359167ffffffffffffffff8311610b78576020808501948460051b010111610b7857565b6040600319820112610b785767ffffffffffffffff91600435838111610b785782610bdb91600401610b7d565b93909392602435918211610b7857610bf591600401610b7d565b9091565b6001600160a01b03166000908152600080516020610d2a8339815191526020526040902054600160ff1b80821614610c315781161490565b5050600090565b9190811015610c485760051b0190565b634e487b7160e01b600052603260045260246000fd5b356001600160a01b0381168103610b785790565b9091806040830160408452526060820192906000905b808210610cbd575050508082036020909101528281526001600160fb1b038311610b785760209260051b809284830137010190565b90919384359060018060a01b038216809203610b7857600191815260208091019501920190610c88565b6001600160a01b031615610cf757565b60405163f6b2911f60e01b8152600490fdfe8903d9e1ebb78d6e769aff34517c83745b66dd8832ab7766ebf6fe8bab2a7099f13551d5cf1b23afc8669eb5ef15070e351923179334eb1a5aa569477f4a41346e6ab8b7c7aaba79eef8cc633522d606bb008c101cf9832c9ad05d10a9847280b5b37715a3e346e996104f0086703f19825def429233930fd9399c38e05fb1123d8762f71ac4675044de4231ebed7df0f8a8819893c6b6278d0461fc4a979b7fa26469706673582212204a076d4ffc4a9e4a71ed7e7489a48c51cc6227c86a1d6ee6ae73c05d0ae0b79a64736f6c63430008140033",
+  "deployedBytecode": "0x608060408181526004918236101561001657600080fd5b600092833560e01c918263029baf5614610a595750816307a4000814610a235781630e18b68114610968578163147bf6c4146108ed578163160a7925146108a85781633daee8e9146107695781634679a9e1146106e557816354fd4d501461064957816355b3cd94146104d45781635a4091021461044c5781636231bd4a146104165781636e8cac11146102c35781636e9960c31461028d5781638d944fd91461024157816391df0bdf146101a257508063d04681561461016d578063e838dfbb1461011f5763f8350ed0146100eb57600080fd5b3461011b578060031936011261011b57602090610112610109610b62565b60243590610bf9565b90519015158152f35b5080fd5b503461011b57602036600319011261011b5760209181906001600160a01b03610146610b62565b168152600080516020610d2a833981519152845220549051600160ff1b9182169091148152f35b503461011b578160031936011261011b57600080516020610d4a8339815191525490516001600160a01b039091168152602090f35b90503461023d57602036600319011261023d576101bd610b62565b600080516020610d6a833981519152546001600160a01b039391929190841633036102265750506101ed81610ce7565b80600080516020610d0a83398151915255167f19cda96968bca1626d03a55a2075bba1bb7a09e2dd1aa05c6db5fa64e667f1ff8280a280f35b60249250519063472511eb60e11b82523390820152fd5b8280fd5b50503461011b578060031936011261011b5760209161025e610b62565b6001600160a01b03168152600080516020610d2a83398151915283528190205490516024359182169091148152f35b50503461011b578160031936011261011b57600080516020610d6a8339815191525490516001600160a01b039091168152602090f35b83833461011b578060031936011261011b576102dd610b62565b6024356001600160a01b038181169392848303610412577f82055909238c0f5e63d6f174068ebb8f51bcec9bd37de63bb68f6551feec0cfc968754806103f557505060017f1809e49bba43f2d39fa57894b50cd6ccb428cc438230e065cac3eb24a1355a7196975561034e81610ce7565b80600080516020610d6a83398151915255167f5a272403b402d892977df56625f4164ccaf70ca3863991c43ecfe76a6905b0a18680a261038d81610ce7565b600080516020610d8a833981519152558051917fb96ab8443049f385aba7fbc2899e3fcdfba4d80ac8458847f40b7d426bae2dcf8580a28382528060208301523690820152368360608301378260603683010152606081601f19601f3601168101030190a180f35b8551631cfd276760e31b8152918201889052602482015260449150fd5b8580fd5b50503461011b578160031936011261011b57600080516020610d0a8339815191525490516001600160a01b039091168152602090f35b9190503461023d578060031936011261023d57610467610b62565b6001600160a01b0316808452600080516020610d2a8339815191526020528184205490919060243590600160ff1b808216146104bd578116036104a8578380f35b5163472511eb60e11b81529182015260249150fd5b50505163e7d05e2760e01b81529182015260249150fd5b8391503461011b576104e536610bae565b600080516020610d8a83398151915254909692949192916001600160a01b0391821633036106325785156106245787860361061657865b86811061055e5750505094610558917f649636a73c855dfe2014a555a98949d77640be8f4eb6702749d5f83c9aa6fcd095965194859485610c72565b0390a180f35b61057961057461056f838a8a610c38565b610c5e565b610ce7565b8261058861056f838a8a610c38565b168852600080516020610d2a8339815191526020818152858a2054600160ff1b908116811461060657806105bd858e8b610c38565b3516146105f65782918b91866105e6856105df61056f8f998f9a60019b610c38565b958c610c38565b3593168c5252858a20550161051c565b855163d93c678560e01b81528490fd5b865163234817a360e01b81528590fd5b8251632b477e7160e11b8152fd5b8251631a49577b60e11b8152fd5b60249083519063472511eb60e11b82523390820152fd5b90503461023d578260031936011261023d578151908282019082821067ffffffffffffffff8311176106d2575082526005815260209064312e322e3160d81b8282015282519382859384528251928382860152825b8481106106bc57505050828201840152601f01601f19168101030190f35b818101830151888201880152879550820161069e565b634e487b7160e01b855260419052602484fd5b90503461023d57602036600319011261023d57610700610b62565b600080516020610d6a833981519152546001600160a01b0393919291908416330361022657505061073081610ce7565b80600080516020610d8a83398151915255167fb96ab8443049f385aba7fbc2899e3fcdfba4d80ac8458847f40b7d426bae2dcf8280a280f35b8391503461011b5761077a36610bae565b600080516020610d0a83398151915254929490926001600160a01b03919082163303610891578515610883578386036108755750855b8581106107eb57505090610558917f649636a73c855dfe2014a555a98949d77640be8f4eb6702749d5f83c9aa6fcd095965194859485610c72565b806107ff61057461056f6001948a8a610c38565b8160ff1b8080610810848989610c38565b351603610846578361082661056f848b8b610c38565b168952600080516020610d2a833981519152602052898920555b016107b0565b508261085661056f838a8a610c38565b168852600080516020610d2a8339815191526020528789812055610840565b8751632b477e7160e11b8152fd5b8751631a49577b60e11b8152fd5b60249088519063472511eb60e11b82523390820152fd5b50503461011b57602036600319011261011b5760209181906001600160a01b036108d0610b62565b168152600080516020610d2a833981519152845220549051908152f35b90503461023d57602036600319011261023d57610908610b62565b600080516020610d6a833981519152546001600160a01b0393919291908416330361022657505080600080516020610d4a83398151915255167f2a0f8515de3fa34ef68b99300347b8793c01683350743e96fe440594528298f48280a280f35b8391503461011b578160031936011261011b57600080516020610d4a833981519152805490916001600160a01b038216919033839003610a0c57508394506109af81610ce7565b600080516020610d6a833981519152557f5a272403b402d892977df56625f4164ccaf70ca3863991c43ecfe76a6905b0a18380a255807f2a0f8515de3fa34ef68b99300347b8793c01683350743e96fe440594528298f48180a280f35b60249086519063472511eb60e11b82523390820152fd5b50503461011b578160031936011261011b57600080516020610d8a8339815191525490516001600160a01b039091168152602090f35b8385913461023d57602036600319011261023d57610a75610b62565b907f82055909238c0f5e63d6f174068ebb8f51bcec9bd37de63bb68f6551feec0cfc90815480600103610b4757857f1809e49bba43f2d39fa57894b50cd6ccb428cc438230e065cac3eb24a1355a71868660028755610ad381610ce7565b600080516020610d0a8339815191528190556001600160a01b03167f19cda96968bca1626d03a55a2075bba1bb7a09e2dd1aa05c6db5fa64e667f1ff8480a2805190600182528060208301523690820152368360608301378260603683010152606081601f19601f3601168101030190a180f35b631cfd276760e31b8252600182880152602482015260449150fd5b600435906001600160a01b0382168203610b7857565b600080fd5b9181601f84011215610b785782359167ffffffffffffffff8311610b78576020808501948460051b010111610b7857565b6040600319820112610b785767ffffffffffffffff91600435838111610b785782610bdb91600401610b7d565b93909392602435918211610b7857610bf591600401610b7d565b9091565b6001600160a01b03166000908152600080516020610d2a8339815191526020526040902054600160ff1b80821614610c315781161490565b5050600090565b9190811015610c485760051b0190565b634e487b7160e01b600052603260045260246000fd5b356001600160a01b0381168103610b785790565b9091806040830160408452526060820192906000905b808210610cbd575050508082036020909101528281526001600160fb1b038311610b785760209260051b809284830137010190565b90919384359060018060a01b038216809203610b7857600191815260208091019501920190610c88565b6001600160a01b031615610cf757565b60405163f6b2911f60e01b8152600490fdfe8903d9e1ebb78d6e769aff34517c83745b66dd8832ab7766ebf6fe8bab2a7099f13551d5cf1b23afc8669eb5ef15070e351923179334eb1a5aa569477f4a41346e6ab8b7c7aaba79eef8cc633522d606bb008c101cf9832c9ad05d10a9847280b5b37715a3e346e996104f0086703f19825def429233930fd9399c38e05fb1123d8762f71ac4675044de4231ebed7df0f8a8819893c6b6278d0461fc4a979b7fa26469706673582212204a076d4ffc4a9e4a71ed7e7489a48c51cc6227c86a1d6ee6ae73c05d0ae0b79a64736f6c63430008140033",
+  "devdoc": {
+    "author": "Alluvial Finance Inc.",
+    "errors": {
+      "Denied(address)": [
+        {
+          "params": {
+            "_account": "The denied account"
+          }
+        }
+      ],
+      "InvalidInitialization(uint256,uint256)": [
+        {
+          "params": {
+            "expectedVersion": "The version that was expected",
+            "version": "The version that was attempting to be initialized"
+          }
+        }
+      ],
+      "Unauthorized(address)": [
+        {
+          "params": {
+            "caller": "Address performing the call"
+          }
+        }
+      ]
+    },
+    "events": {
+      "Initialize(uint256,bytes)": {
+        "params": {
+          "cdata": "Complete calldata that was used during the initialization",
+          "version": "New version of the contracts"
+        }
+      },
+      "SetAdmin(address)": {
+        "params": {
+          "admin": "New admin address"
+        }
+      },
+      "SetAllower(address)": {
+        "params": {
+          "allower": "The new allower address"
+        }
+      },
+      "SetAllowlistPermissions(address[],uint256[])": {
+        "params": {
+          "accounts": "List of accounts",
+          "permissions": "New permissions for each account at the same index"
+        }
+      },
+      "SetDenier(address)": {
+        "params": {
+          "denier": "The new denier address"
+        }
+      },
+      "SetPendingAdmin(address)": {
+        "params": {
+          "pendingAdmin": "New pending admin address"
+        }
+      }
+    },
+    "kind": "dev",
+    "methods": {
+      "acceptAdmin()": {
+        "details": "Only callable by the pending admin. Resets the pending admin if succesful."
+      },
+      "getAdmin()": {
+        "returns": {
+          "_0": "The admin address"
+        }
+      },
+      "getAllower()": {
+        "returns": {
+          "_0": "The address of the allower"
+        }
+      },
+      "getDenier()": {
+        "returns": {
+          "_0": "The address of the denier"
+        }
+      },
+      "getPendingAdmin()": {
+        "returns": {
+          "_0": "The pending admin address"
+        }
+      },
+      "getPermissions(address)": {
+        "params": {
+          "_account": "Recipient to verify"
+        },
+        "returns": {
+          "_0": "The raw permissions value of the account"
+        }
+      },
+      "hasPermission(address,uint256)": {
+        "params": {
+          "_account": "Recipient to verify",
+          "_mask": "Combination of permissions to verify"
+        },
+        "returns": {
+          "_0": "True if mask is respected"
+        }
+      },
+      "initAllowlistV1(address,address)": {
+        "params": {
+          "_admin": "Address of the Allowlist administrator",
+          "_allower": "Address of the allower"
+        }
+      },
+      "initAllowlistV1_1(address)": {
+        "params": {
+          "_denier": "Address of the denier"
+        }
+      },
+      "isAllowed(address,uint256)": {
+        "params": {
+          "_account": "Recipient to verify",
+          "_mask": "Combination of permissions to verify"
+        },
+        "returns": {
+          "_0": "True if mask is respected and user is allowed"
+        }
+      },
+      "isDenied(address)": {
+        "params": {
+          "_account": "Recipient to verify"
+        },
+        "returns": {
+          "_0": "True if user is denied access"
+        }
+      },
+      "onlyAllowed(address,uint256)": {
+        "params": {
+          "_account": "Recipient to verify",
+          "_mask": "Combination of permissions to verify"
+        }
+      },
+      "proposeAdmin(address)": {
+        "details": "This security prevents setting an invalid address as an admin. The pendingadmin has to claim its ownership of the contract, and prove that the newaddress is able to perform regular transactions.",
+        "params": {
+          "_newAdmin": "New admin address"
+        }
+      },
+      "setAllowPermissions(address[],uint256[])": {
+        "details": "This function is for allocating or removing deposit, redeem or donate permissions.      This function could be used to give any permissions that we come up with in the future.      An address which was denied has to be undenied first before they could be given any permission(s).",
+        "params": {
+          "_accounts": "Accounts to update",
+          "_permissions": "New permission values"
+        }
+      },
+      "setAllower(address)": {
+        "params": {
+          "_newAllowerAddress": "New address allowed to edit the allowlist"
+        }
+      },
+      "setDenier(address)": {
+        "params": {
+          "_newDenierAddress": "New address allowed to edit the allowlist"
+        }
+      },
+      "setDenyPermissions(address[],uint256[])": {
+        "details": "This function is for allocating or removing deny permissions.      An address which is undenied has to be given permissions again for them to be able to deposit, donate or redeem.",
+        "params": {
+          "_accounts": "Accounts to update",
+          "_permissions": "New permission values"
+        }
+      },
+      "version()": {
+        "returns": {
+          "_0": "Version of the contract"
+        }
+      }
+    },
+    "title": "Allowlist (v1)",
+    "version": 1
+  },
+  "userdoc": {
+    "errors": {
+      "AttemptToRemoveDenyPermission()": [
+        {
+          "notice": "Allower can't remove deny permission"
+        }
+      ],
+      "AttemptToSetDenyPermission()": [
+        {
+          "notice": "Allower can't set deny permission"
+        }
+      ],
+      "Denied(address)": [
+        {
+          "notice": "The account is denied access"
+        }
+      ],
+      "InvalidCount()": [
+        {
+          "notice": "The provided accounts list is empty"
+        }
+      ],
+      "InvalidInitialization(uint256,uint256)": [
+        {
+          "notice": "An error occured during the initialization"
+        }
+      ],
+      "InvalidZeroAddress()": [
+        {
+          "notice": "The address is zero"
+        }
+      ],
+      "MismatchedArrayLengths()": [
+        {
+          "notice": "The provided accounts and permissions list have different lengths"
+        }
+      ],
+      "Unauthorized(address)": [
+        {
+          "notice": "The operator is unauthorized for the caller"
+        }
+      ]
+    },
+    "events": {
+      "Initialize(uint256,bytes)": {
+        "notice": "Emitted when the contract is properly initialized"
+      },
+      "SetAdmin(address)": {
+        "notice": "The admin address changed"
+      },
+      "SetAllower(address)": {
+        "notice": "The stored allower address has been changed"
+      },
+      "SetAllowlistPermissions(address[],uint256[])": {
+        "notice": "The permissions of several accounts have changed"
+      },
+      "SetDenier(address)": {
+        "notice": "The stored denier address has been changed"
+      },
+      "SetPendingAdmin(address)": {
+        "notice": "The pending admin address changed"
+      }
+    },
+    "kind": "user",
+    "methods": {
+      "acceptAdmin()": {
+        "notice": "Accept the transfer of ownership"
+      },
+      "getAdmin()": {
+        "notice": "Retrieves the current admin address"
+      },
+      "getAllower()": {
+        "notice": "Retrieves the allower address"
+      },
+      "getDenier()": {
+        "notice": "Retrieves the denier address"
+      },
+      "getPendingAdmin()": {
+        "notice": "Retrieve the current pending admin address"
+      },
+      "getPermissions(address)": {
+        "notice": "This method retrieves the raw permission value"
+      },
+      "hasPermission(address,uint256)": {
+        "notice": "This method returns true if the user has the expected permission         ignoring any deny list membership"
+      },
+      "initAllowlistV1(address,address)": {
+        "notice": "Initializes the allowlist"
+      },
+      "initAllowlistV1_1(address)": {
+        "notice": "Initializes the allowlist denier"
+      },
+      "isAllowed(address,uint256)": {
+        "notice": "This method returns true if the user has the expected permission and         is not in the deny list"
+      },
+      "isDenied(address)": {
+        "notice": "This method returns true if the user is in the deny list"
+      },
+      "onlyAllowed(address,uint256)": {
+        "notice": "This method should be used as a modifier and is expected to revert         if the user hasn't got the required permission or if the user is         in the deny list."
+      },
+      "proposeAdmin(address)": {
+        "notice": "Proposes a new address as admin"
+      },
+      "setAllowPermissions(address[],uint256[])": {
+        "notice": "Sets the allow permissions for one or more accounts"
+      },
+      "setAllower(address)": {
+        "notice": "Changes the allower address"
+      },
+      "setDenier(address)": {
+        "notice": "Changes the denier address"
+      },
+      "setDenyPermissions(address[],uint256[])": {
+        "notice": "Sets the deny permissions for one or more accounts"
+      },
+      "version()": {
+        "notice": "Retrieves the version of the contract"
+      }
+    },
+    "notice": "This contract handles the list of allowed recipients.All accounts have an uint256 value associated with their addresses whereeach bit represents a right in the system. The DENY_MASK defined the maskused to identify if the denied bit is on, preventing users from interactingwith the system",
+    "version": 1
+  },
+  "storageLayout": {
+    "storage": [],
+    "types": null
+  }
+}
