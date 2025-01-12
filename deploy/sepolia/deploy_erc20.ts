@@ -35,5 +35,5 @@ func.skip = async function ({ deployments }: HardhatRuntimeEnvironment): Promise
   }
   return shouldSkip;
 };
-
+func.tags = ["deploy_base"];
 export default func;
