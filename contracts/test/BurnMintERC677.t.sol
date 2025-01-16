@@ -10,6 +10,7 @@ import {BurnMintERC677} from "../src/token/BurnMintERC677.sol";
 import {IERC165} from "openzeppelin-contracts/contracts/utils/introspection/IERC165.sol";
 import {IERC20} from "openzeppelin-contracts/contracts/token/ERC20/IERC20.sol";
 import "./utils/LibImplementationUnbricker.sol";
+
 contract BaseTest is Test {
     bool private s_baseTestInitialized;
     address internal constant OWNER = 0x72da681452Ab957d1020c25fFaCA47B43980b7C3;
@@ -120,7 +121,7 @@ contract BurnMintERC677_mint is BurnMintERC677Setup {
 
         s_burnMintERC677.grantMintAndBurnRoles(OWNER);
 
-        vm.expectEmit(true,true,true,true);
+        vm.expectEmit(true, true, true, true);
         emit Transfer(address(0), OWNER, s_amount);
 
         s_burnMintERC677.mint(OWNER, s_amount);
@@ -141,7 +142,7 @@ contract BurnMintERC677_burn is BurnMintERC677Setup {
         s_burnMintERC677.grantBurnRole(OWNER);
         deal(address(s_burnMintERC677), OWNER, s_amount);
 
-        vm.expectEmit(true,true,true,true);
+        vm.expectEmit(true, true, true, true);
         emit Transfer(OWNER, address(0), s_amount);
 
         s_burnMintERC677.burn(s_amount);
@@ -263,14 +264,14 @@ contract BurnMintERC677_grantRole is BurnMintERC677Setup {
     function testGrantMintAccessSuccess() public {
         assertFalse(s_burnMintERC677.isMinter(STRANGER));
 
-        vm.expectEmit(true,true,true,true);
+        vm.expectEmit(true, true, true, true);
         emit MintAccessGranted(STRANGER);
 
         s_burnMintERC677.grantMintAndBurnRoles(STRANGER);
 
         assertTrue(s_burnMintERC677.isMinter(STRANGER));
 
-        vm.expectEmit(true,true,true,true);
+        vm.expectEmit(true, true, true, true);
         emit MintAccessRevoked(STRANGER);
 
         s_burnMintERC677.revokeMintRole(STRANGER);
@@ -281,14 +282,14 @@ contract BurnMintERC677_grantRole is BurnMintERC677Setup {
     function testGrantBurnAccessSuccess() public {
         assertFalse(s_burnMintERC677.isBurner(STRANGER));
 
-        vm.expectEmit(true,true,true,true);
+        vm.expectEmit(true, true, true, true);
         emit BurnAccessGranted(STRANGER);
 
         s_burnMintERC677.grantBurnRole(STRANGER);
 
         assertTrue(s_burnMintERC677.isBurner(STRANGER));
 
-        vm.expectEmit(true,true,true,true);
+        vm.expectEmit(true, true, true, true);
         emit BurnAccessRevoked(STRANGER);
 
         s_burnMintERC677.revokeBurnRole(STRANGER);
@@ -316,9 +317,9 @@ contract BurnMintERC677_grantMintAndBurnRoles is BurnMintERC677Setup {
         assertFalse(s_burnMintERC677.isMinter(STRANGER));
         assertFalse(s_burnMintERC677.isBurner(STRANGER));
 
-        vm.expectEmit(true,true,true,true);
+        vm.expectEmit(true, true, true, true);
         emit MintAccessGranted(STRANGER);
-        vm.expectEmit(true,true,true,true);
+        vm.expectEmit(true, true, true, true);
         emit BurnAccessGranted(STRANGER);
 
         s_burnMintERC677.grantMintAndBurnRoles(STRANGER);
