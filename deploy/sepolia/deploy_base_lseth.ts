@@ -10,13 +10,17 @@ const func: DeployFunction = async function ({ deployments, getNamedAccounts, ne
   const { deployer, proxyAdministrator } = await getNamedAccounts();
 
   const deployResult = await deployments.deploy("LsETH_Base", {
-    contract: "BurnMintERC20",
+    contract: "BurnMintERC677",// "CustomCrossChainToken"
     from: deployer,
     log: true,
     proxy: {
       owner: proxyAdministrator,
       proxyContract: "TUPProxy",
       implementationName: "BurnMintERC20",
+      execute: {
+        methodName: "initialize",
+        args: ["Liquid Staked ETH", "LsETH"],
+      },
     },
   });
 
