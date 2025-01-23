@@ -3,12 +3,10 @@ pragma solidity 0.8.20;
 
 import "forge-std/Test.sol";
 
-import {IBurnMintERC20} from "../src/token/IBurnMintERC20.sol";
-import {IERC677} from "../src/token/IERC677.sol";
-
+import {IBurnMintERC20} from "../src/l2-token/IBurnMintERC20.sol";
 import {IERC165} from "openzeppelin-contracts/contracts/utils/introspection/IERC165.sol";
 import {IERC20} from "openzeppelin-contracts/contracts/token/ERC20/IERC20.sol";
-import {CustomCrossChainToken} from "contracts/src/token/CustomCrossChainToken.sol";
+import {CustomCrossChainToken} from "contracts/src/l2-token/CustomCrossChainToken.sol";
 import "./utils/LibImplementationUnbricker.sol";
 
 contract BaseTest is Test {
@@ -355,7 +353,6 @@ contract CustomCrossChainToken_increaseApproval is CustomCrossChainTokenSetup {
 contract CustomCrossChainToken_supportsInterface is CustomCrossChainTokenSetup {
     function testConstructorSuccess() public {
         assertTrue(s_customCrossChainToken.supportsInterface(type(IERC20).interfaceId));
-        assertTrue(s_customCrossChainToken.supportsInterface(type(IERC677).interfaceId));
         assertTrue(s_customCrossChainToken.supportsInterface(type(IBurnMintERC20).interfaceId));
         assertTrue(s_customCrossChainToken.supportsInterface(type(IERC165).interfaceId));
     }

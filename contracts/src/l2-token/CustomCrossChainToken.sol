@@ -13,8 +13,8 @@ contract CustomCrossChainToken is OwnableUpgradeable, ERC20BurnableUpgradeable, 
 
     function initialize(string memory _name, string memory _symbol) external initializer {
         __Ownable_init();
-        __ERC20Burnable_init();
         __ERC20_init(_name, _symbol);
+        __ERC20Burnable_init();
         __AccessControl_init();
         _grantRole(DEFAULT_ADMIN_ROLE, _msgSender());
         _setupRole(BURNER_ROLE, _msgSender());
