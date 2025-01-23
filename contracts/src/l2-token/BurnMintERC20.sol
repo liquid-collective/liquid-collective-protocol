@@ -29,7 +29,6 @@ contract BurnMintERC20 is IBurnMintERC20, IGetCCIPAdmin, IERC165, ERC20BurnableU
 
     function initialize(string memory _name, string memory _symbol) public initializer {
         __AccessControl_init();
-        __ERC20Burnable_init();
         __ERC20_init(_name, _symbol);
         CCIPAdminAddress.set(msg.sender);
         // Set up the owner as the initial minter and burner
