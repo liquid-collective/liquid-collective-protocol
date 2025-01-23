@@ -1,35 +1,24 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.20;
 
+import {CCIPAdminAddress} from "contracts/src/l2-token/state/CCIPAdminAddress.sol";
+
 import {IBurnMintERC20} from "./IBurnMintERC20.sol";
 import {IGetCCIPAdmin} from "contracts/src/l2-token/IGetCCIPAdmin.sol";
-import {IAccessControlUpgradeable} from
-    "openzeppelin-contracts-upgradeable/contracts/access/IAccessControlUpgradeable.sol";
-import {OwnableUpgradeable} from "openzeppelin-contracts-upgradeable/contracts/access/OwnableUpgradeable.sol";
-import {AccessControlUpgradeable} from
-    "openzeppelin-contracts-upgradeable/contracts/access/AccessControlUpgradeable.sol";
+import {IAccessControl} from "openzeppelin-contracts/contracts/access/IAccessControl.sol";
 import {IERC165} from "openzeppelin-contracts/contracts/utils/introspection/IERC165.sol";
 import {IERC20} from "openzeppelin-contracts/contracts/token/ERC20/IERC20.sol";
+import {AccessControlUpgradeable} from
+    "openzeppelin-contracts-upgradeable/contracts/access/AccessControlUpgradeable.sol";
 import {ERC20BurnableUpgradeable} from
     "openzeppelin-contracts-upgradeable/contracts/token/ERC20/extensions/ERC20BurnableUpgradeable.sol";
 
 /// @notice A basic ERC20 compatible token contract with burn and minting roles.
 /// @dev This contract has not been audited and is not yet approved for production use.
-contract BurnMintERC20 is
-    IBurnMintERC20,
-    IGetCCIPAdmin,
-    IERC165,
-    ERC20BurnableUpgradeable,
-    OwnableUpgradeable,
-    AccessControlUpgradeable
-{
+contract BurnMintERC20 is IBurnMintERC20, IGetCCIPAdmin, IERC165, ERC20BurnableUpgradeable, AccessControlUpgradeable {
     error InvalidRecipient(address recipient);
 
     event CCIPAdminTransferred(address indexed previousAdmin, address indexed newAdmin);
-
-    /// @dev the CCIPAdmin can be used to register with the CCIP token admin registry, but has no other special powers,
-    /// and can only be transferred by the owner.
-    address internal s_ccipAdmin;
 
     bytes32 public constant MINTER_ROLE = keccak256("MINTER_ROLE");
     bytes32 public constant BURNER_ROLE = keccak256("BURNER_ROLE");
@@ -39,9 +28,10 @@ contract BurnMintERC20 is
     }
 
     function initialize(string memory _name, string memory _symbol) public initializer {
-        __Ownable_init();
+        __AccessControl_init();
+        __ERC20Burnable_init();
         __ERC20_init(_name, _symbol);
-        s_ccipAdmin = msg.sender;
+        CCIPAdminAddress.set(msg.sender);
         // Set up the owner as the initial minter and burner
         _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
     }
@@ -55,7 +45,7 @@ contract BurnMintERC20 is
         returns (bool)
     {
         return interfaceId == type(IERC20).interfaceId || interfaceId == type(IBurnMintERC20).interfaceId
-            || interfaceId == type(IERC165).interfaceId || interfaceId == type(IAccessControlUpgradeable).interfaceId
+            || interfaceId == type(IERC165).interfaceId || interfaceId == type(IAccessControl).interfaceId
             || interfaceId == type(IGetCCIPAdmin).interfaceId;
     }
 
@@ -132,7 +122,7 @@ contract BurnMintERC20 is
 
     /// @notice Returns the current CCIPAdmin
     function getCCIPAdmin() external view returns (address) {
-        return s_ccipAdmin;
+        return CCIPAdminAddress.get();
     }
 
     /// @notice Transfers the CCIPAdmin role to a new address
@@ -140,9 +130,9 @@ contract BurnMintERC20 is
     /// @param newAdmin The address to transfer the CCIPAdmin role to. Setting to address(0) is a valid way to revoke
     /// the role
     function setCCIPAdmin(address newAdmin) public onlyRole(DEFAULT_ADMIN_ROLE) {
-        address currentAdmin = s_ccipAdmin;
+        address currentAdmin = CCIPAdminAddress.get();
 
-        s_ccipAdmin = newAdmin;
+        CCIPAdminAddress.set(newAdmin);
 
         emit CCIPAdminTransferred(currentAdmin, newAdmin);
     }
