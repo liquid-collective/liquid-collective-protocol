@@ -19,7 +19,6 @@ library CCIPAdminAddress {
     /// @notice Sets the CCIPAdmin Address
     /// @param _newValue New CCIPAdmin Address
     function set(address _newValue) internal {
-        LibSanitize._notZeroAddress(_newValue);
         LibUnstructuredStorage.setStorageAddress(CCIP_ADMIN_ADDRESS_SLOT, _newValue);
     }
 }
