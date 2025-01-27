@@ -58,6 +58,9 @@ interface IERC20VestableVotesUpgradeableV1 {
     /// @notice Underflow in global unlock logic (should never happen)
     error GlobalUnlockUnderlfow();
 
+    /// @notice Attempt to delegate voting power to self or third party
+    error DelegationNotAllowed();
+
     /// @notice Get vesting schedule
     /// @dev The vesting schedule structure represents a static configuration used to compute the desired
     /// @dev vesting details of a beneficiary at all times. The values won't change even after tokens are released.

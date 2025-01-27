@@ -156,6 +156,23 @@ abstract contract ERC20VestableVotesUpgradeableV1 is
         );
     }
 
+    /// @notice Disable direct delegation of voting power
+    function delegate(address delegatee) public override {
+        revert DelegationNotAllowed();
+    }
+
+    /// @notice Disable direct delegation of voting power
+    function delegateBySig(
+        address delegatee,
+        uint256 nonce,
+        uint256 expiry,
+        uint8 v,
+        bytes32 r,
+        bytes32 s
+    ) public override {
+        revert DelegationNotAllowed();
+    }
+
     /// @inheritdoc IERC20VestableVotesUpgradeableV1
     function revokeVestingSchedule(uint256 _index, uint64 _end) external returns (uint256) {
         return _revokeVestingSchedule(_index, _end);
