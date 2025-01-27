@@ -162,14 +162,10 @@ abstract contract ERC20VestableVotesUpgradeableV1 is
     }
 
     /// @notice Disable direct delegation of voting power
-    function delegateBySig(
-        address delegatee,
-        uint256 nonce,
-        uint256 expiry,
-        uint8 v,
-        bytes32 r,
-        bytes32 s
-    ) public override {
+    function delegateBySig(address delegatee, uint256 nonce, uint256 expiry, uint8 v, bytes32 r, bytes32 s)
+        public
+        override
+    {
         revert DelegationNotAllowed();
     }
 

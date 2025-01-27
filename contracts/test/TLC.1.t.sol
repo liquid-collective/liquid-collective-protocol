@@ -17,10 +17,9 @@ abstract contract TLCTestBase is Test {
     address internal admin;
 
     bytes32 internal constant DELEGATION_TYPEHASH =
-    keccak256("Delegation(address delegatee,uint256 nonce,uint256 expiry)");
+        keccak256("Delegation(address delegatee,uint256 nonce,uint256 expiry)");
 
     uint256 internal constant PRIVATE_KEY = 0x7aca0a9d453404a0469898a3df5c3673cbcf5045e294ae50131d8fc6b9ec5152;
-
 }
 
 contract TLCInitializationTest is TLCTestBase {
@@ -84,9 +83,8 @@ contract TLCTests is TLCTestBase {
 }
 
 contract TLCDelegationTest is TLCTests {
-
     function testDirectDelegateeNotAllowed() public {
-        vm.expectRevert(abi.encodeWithSignature("DelegationNotAllowed()")); 
+        vm.expectRevert(abi.encodeWithSignature("DelegationNotAllowed()"));
         tlc.delegate(bob);
     }
 
@@ -109,8 +107,7 @@ contract TLCDelegationTest is TLCTests {
 
         // Step 5: Expect revert for direct delegation not allowed
         vm.prank(signer); // Simulate the signer
-        vm.expectRevert(abi.encodeWithSignature("DelegationNotAllowed()")); 
+        vm.expectRevert(abi.encodeWithSignature("DelegationNotAllowed()"));
         tlc.delegateBySig(delegatee, nonce, expiry, v, r, s);
-}
-
+    }
 }
