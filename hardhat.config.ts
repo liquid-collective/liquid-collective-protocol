@@ -65,6 +65,7 @@ const config: HardhatUserConfig = {
     sepolia: {
       url: process.env.RPC_URL || "",
       accounts: [process.env.PRIVATE_KEY || "0x0000000000000000000000000000000000000000000000000000000000000000"],
+      gas: 5000000,
     },
     tenderly: {
       url: process.env.TENDERLY_URL || "",
@@ -155,6 +156,14 @@ const config: HardhatUserConfig = {
         urls: {
           apiURL: "https://api-sepolia.etherscan.io/api",
           browserURL: "https://sepolia.etherscan.io",
+        },
+      },
+      {
+        network: "base",
+        chainId: 8453,
+        urls: {
+          apiURL: "https://api.basescan.org/api",
+          browserURL: "https://basescan.org",
         },
       }
     ],
