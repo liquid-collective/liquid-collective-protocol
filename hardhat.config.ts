@@ -58,6 +58,14 @@ const config: HardhatUserConfig = {
       url: "http://localhost:8545", // anvil --port 8888
       accounts: ["0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80"], // default anvil private key
     },
+    baseSepolia: {
+      url: process.env.RPC_URL || "",
+      accounts: [process.env.PRIVATE_KEY || "0x0000000000000000000000000000000000000000000000000000000000000000"],
+    },
+    sepolia: {
+      url: process.env.RPC_URL || "",
+      accounts: [process.env.PRIVATE_KEY || "0x0000000000000000000000000000000000000000000000000000000000000000"],
+    },
     tenderly: {
       url: process.env.TENDERLY_URL || "",
     },
@@ -80,6 +88,7 @@ const config: HardhatUserConfig = {
       mainnet: "0xE3208Aa9d1186c1D1C8A5b76E794b2B68E6cb3a5",
       holesky: "0x9F84E1a8749D331C68Fb0322C9E24a5FB3334398",
       devHolesky: "0x0e9eAd2FEB500DB46E6EB95b352FA4a86aC13dBE",
+      baseSepolia: "",
       tenderly: "0x0e9eAd2FEB500DB46E6EB95b352FA4a86aC13dBE",
     },
     executor: {
@@ -88,6 +97,7 @@ const config: HardhatUserConfig = {
       mainnet: "0xDE55C9dc78f985fE1502484Cb98EBfAB66A56B62",
       holesky: "0xE22F86Be928E03D50411C588d689C0f33900bb4c",
       devHolesky: "0xe953E4df3dDd575D2C1E1950ec4Fa33CF89947DA",
+      baseSepolia: "",
       tenderly: "0xe953E4df3dDd575D2C1E1950ec4Fa33CF89947DA",
     },
     proxyAdministrator: {
@@ -96,6 +106,7 @@ const config: HardhatUserConfig = {
       mainnet: "0x8EE3fC0Bcd7B57429203751C5bE5fdf1AB8409f3",
       holesky: "0x80Cf8bD4abf6C078C313f72588720AB86d45c5E6",
       devHolesky: "0x0FdEe4562D7e6dbA05A9f892D2Be04B83f3E7579",
+      baseSepolia: "",
       tenderly: "0x8EE3fC0Bcd7B57429203751C5bE5fdf1AB8409f3",
     },
     collector: {
@@ -130,6 +141,22 @@ const config: HardhatUserConfig = {
           browserURL: "https://holesky.etherscan.io",
         },
       },
+      {
+        network: "baseSepolia",
+        chainId: 84531,
+        urls: {
+          apiURL: "https://api-sepolia.basescan.org/api",
+          browserURL: "https://sepolia.basescan.org",
+        },
+      },
+      {
+        network: "sepolia",
+        chainId: 11155111,
+        urls: {
+          apiURL: "https://api-sepolia.etherscan.io/api",
+          browserURL: "https://sepolia.etherscan.io",
+        },
+      }
     ],
   },
   tenderly: {
