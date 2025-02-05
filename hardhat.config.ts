@@ -126,6 +126,11 @@ const config: HardhatUserConfig = {
       devHolesky: "0x67AB27C56cDB02C6c0f8B89948350Ebbb1837577", // EOA
       tenderly: "0x67AB27C56cDB02C6c0f8B89948350Ebbb1837577", // EOA
     },
+    baseTokenAdmin:  {
+      default: 1,
+      base: "0x00000000219ab540356cBB839Cbe05303d7705Fa",
+      baseSepolia: "0x00000000219ab540356cBB839Cbe05303d7705Fa",
+    }
   },
   paths: {
     sources: "./contracts/src",
