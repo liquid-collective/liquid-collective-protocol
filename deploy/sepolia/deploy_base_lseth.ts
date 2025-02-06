@@ -20,10 +20,10 @@ const func: DeployFunction = async function ({ deployments, getNamedAccounts, ne
       implementationName: "BurnMintERC20",
       execute: {
         methodName: "initialize",
-        args: ["Liquid Staked ETH", "bsLsETH", baseTokenAdmin],
+        args: ["Liquid Staked ETH", "LsETH", baseTokenAdmin],
       },
     },
-    gasLimit: 5000000,
+    gasLimit: 5_000_000,
   });
 
   await verify("TUPProxy", deployResult.address, deployResult.args, deployResult.libraries);

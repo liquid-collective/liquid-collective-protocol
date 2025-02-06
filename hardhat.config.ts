@@ -107,7 +107,8 @@ const config: HardhatUserConfig = {
       mainnet: "0x8EE3fC0Bcd7B57429203751C5bE5fdf1AB8409f3",
       holesky: "0x80Cf8bD4abf6C078C313f72588720AB86d45c5E6",
       devHolesky: "0x0FdEe4562D7e6dbA05A9f892D2Be04B83f3E7579",
-      baseSepolia: "",
+      sepolia: "0x341C40B94bF2afBFa42573cB78f16Ee15a056238",
+      baseSepolia: "0x341C40B94bF2afBFa42573cB78f16Ee15a056238",
       tenderly: "0x8EE3fC0Bcd7B57429203751C5bE5fdf1AB8409f3",
     },
     collector: {
@@ -126,11 +127,13 @@ const config: HardhatUserConfig = {
       devHolesky: "0x67AB27C56cDB02C6c0f8B89948350Ebbb1837577", // EOA
       tenderly: "0x67AB27C56cDB02C6c0f8B89948350Ebbb1837577", // EOA
     },
-    baseTokenAdmin:  {
+    baseTokenAdmin: {
       default: 1,
-      base: "0x00000000219ab540356cBB839Cbe05303d7705Fa",
-      baseSepolia: "0x00000000219ab540356cBB839Cbe05303d7705Fa",
-    }
+      base: "",
+      baseSepolia: "0x726Da59a3cF0966BeF383d3A00Ac002a66Fece30",
+      sepolia: "0x726Da59a3cF0966BeF383d3A00Ac002a66Fece30",
+      tenderly: "0x726Da59a3cF0966BeF383d3A00Ac002a66Fece30",
+    },
   },
   paths: {
     sources: "./contracts/src",
@@ -149,7 +152,7 @@ const config: HardhatUserConfig = {
       },
       {
         network: "baseSepolia",
-        chainId: 84531,
+        chainId: 84532,
         urls: {
           apiURL: "https://api-sepolia.basescan.org/api",
           browserURL: "https://sepolia.basescan.org",
@@ -170,7 +173,7 @@ const config: HardhatUserConfig = {
           apiURL: "https://api.basescan.org/api",
           browserURL: "https://basescan.org",
         },
-      }
+      },
     ],
   },
   tenderly: {
