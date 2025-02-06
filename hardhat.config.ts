@@ -38,6 +38,10 @@ const config: HardhatUserConfig = {
       url: process.env.RPC_URL || "",
       accounts: [process.env.PRIVATE_KEY || "0x0000000000000000000000000000000000000000000000000000000000000000"],
     },
+    base: {
+      url: process.env.RPC_URL || "",
+      accounts: [process.env.PRIVATE_KEY || "0x0000000000000000000000000000000000000000000000000000000000000000"],
+    },
     holesky: {
       url: process.env.RPC_URL || "",
       accounts: [process.env.PRIVATE_KEY || "0x0000000000000000000000000000000000000000000000000000000000000000"],
@@ -85,6 +89,7 @@ const config: HardhatUserConfig = {
     },
     governor: {
       default: 1,
+      base: "0x43904DAaDb29Ff02e5C72B2707a721095dfb93A6",
       local: "0x71c9DAb681C209bb82270906e3B49388b2C15404",
       mainnet: "0xE3208Aa9d1186c1D1C8A5b76E794b2B68E6cb3a5",
       holesky: "0x9F84E1a8749D331C68Fb0322C9E24a5FB3334398",
@@ -103,6 +108,7 @@ const config: HardhatUserConfig = {
     },
     proxyAdministrator: {
       default: 2,
+      base: "0x078Fb5A53Ac625eD6C8Eff5C8E316fb911Bf2b16",
       local: "0x07706A7D768054c10eB4FC9103Ea322f62831cb9",
       mainnet: "0x8EE3fC0Bcd7B57429203751C5bE5fdf1AB8409f3",
       holesky: "0x80Cf8bD4abf6C078C313f72588720AB86d45c5E6",
@@ -129,7 +135,7 @@ const config: HardhatUserConfig = {
     },
     baseTokenAdmin: {
       default: 1,
-      base: "",
+      base: "0xBFa8549887E6ddef8Cdf83Cda1Ad24856496fd00",
       baseSepolia: "0x726Da59a3cF0966BeF383d3A00Ac002a66Fece30",
       sepolia: "0x726Da59a3cF0966BeF383d3A00Ac002a66Fece30",
       tenderly: "0x726Da59a3cF0966BeF383d3A00Ac002a66Fece30",

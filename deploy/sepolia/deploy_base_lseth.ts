@@ -5,7 +5,7 @@ import { verify } from "../../scripts/helpers";
 import { ethers } from "hardhat";
 
 const func: DeployFunction = async function ({ deployments, getNamedAccounts, network }: HardhatRuntimeEnvironment) {
-  if (!["sepolia", "baseSepolia", "hardhat", "local", "tenderly"].includes(network.name)) {
+  if (!["sepolia", "baseSepolia","base", "hardhat", "local", "tenderly"].includes(network.name)) {
     throw new Error("Invalid network for sepolia deployment");
   }
   const { deployer, proxyAdministrator, baseTokenAdmin } = await getNamedAccounts();
@@ -23,7 +23,6 @@ const func: DeployFunction = async function ({ deployments, getNamedAccounts, ne
         args: ["Liquid Staked ETH", "LsETH", baseTokenAdmin],
       },
     },
-    gasLimit: 5_000_000,
   });
 
   await verify("TUPProxy", deployResult.address, deployResult.args, deployResult.libraries);
