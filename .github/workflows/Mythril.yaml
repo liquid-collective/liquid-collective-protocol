@@ -22,7 +22,7 @@ jobs:
           - { file: CoverageFund.1.sol, name: CoverageFundV1 }
           - { file: TLC.1.sol, name: TLCV1 }
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           submodules: recursive
 
@@ -37,7 +37,7 @@ jobs:
         run: mv mythril_output.md ${{ matrix.contract.name }}.mythril.md
 
       - name: Upload output artifact
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.contract.name }}.mythril.md
           path: ${{ matrix.contract.name }}.mythril.md
