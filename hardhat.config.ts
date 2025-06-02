@@ -61,6 +61,11 @@ const config: HardhatUserConfig = {
     tenderly: {
       url: process.env.TENDERLY_URL || "",
     },
+    hoodi: {
+      url: process.env.RPC_URL || "",
+      accounts: [process.env.PRIVATE_KEY || "0x0000000000000000000000000000000000000000000000000000000000000000"],
+      gas: 5000000,
+    },
   },
   namedAccounts: {
     deployer: {
@@ -73,6 +78,7 @@ const config: HardhatUserConfig = {
       holesky: "0x4242424242424242424242424242424242424242",
       devHolesky: "0x4242424242424242424242424242424242424242",
       tenderly: "0x4242424242424242424242424242424242424242",
+      hoodi: "0x00000000219ab540356cBB839Cbe05303d7705Fa",
     },
     governor: {
       default: 1,
@@ -81,6 +87,7 @@ const config: HardhatUserConfig = {
       holesky: "0x9F84E1a8749D331C68Fb0322C9E24a5FB3334398",
       devHolesky: "0x0e9eAd2FEB500DB46E6EB95b352FA4a86aC13dBE",
       tenderly: "0x0e9eAd2FEB500DB46E6EB95b352FA4a86aC13dBE",
+      hoodi: "0xF733B0eCf2141db2956d8Ea9ab98e5Cc33CA2f80",
     },
     executor: {
       default: 1,
@@ -89,6 +96,7 @@ const config: HardhatUserConfig = {
       holesky: "0xE22F86Be928E03D50411C588d689C0f33900bb4c",
       devHolesky: "0xe953E4df3dDd575D2C1E1950ec4Fa33CF89947DA",
       tenderly: "0xe953E4df3dDd575D2C1E1950ec4Fa33CF89947DA",
+      hoodi: "0xF733B0eCf2141db2956d8Ea9ab98e5Cc33CA2f80",
     },
     proxyAdministrator: {
       default: 2,
@@ -97,6 +105,7 @@ const config: HardhatUserConfig = {
       holesky: "0x80Cf8bD4abf6C078C313f72588720AB86d45c5E6",
       devHolesky: "0x0FdEe4562D7e6dbA05A9f892D2Be04B83f3E7579",
       tenderly: "0x8EE3fC0Bcd7B57429203751C5bE5fdf1AB8409f3",
+      hoodi: "0xF733B0eCf2141db2956d8Ea9ab98e5Cc33CA2f80",
     },
     collector: {
       default: 1,
@@ -105,6 +114,7 @@ const config: HardhatUserConfig = {
       holesky: "0x47f049e943ABFbd27Bb11aF3195FEc153A28598b",
       devHolesky: "0xc5DB3C539900B1A2889c37BEaE789D0EB57e8681",
       tenderly: "0xc5DB3C539900B1A2889c37BEaE789D0EB57e8681",
+      hoodi: "0xF733B0eCf2141db2956d8Ea9ab98e5Cc33CA2f80",
     },
     tlcMintAccount: {
       default: 1,
@@ -128,6 +138,14 @@ const config: HardhatUserConfig = {
         urls: {
           apiURL: "https://api-holesky.etherscan.io/api",
           browserURL: "https://holesky.etherscan.io",
+        },
+      },
+      {
+        network: "hoodi",
+        chainId: 560048,
+        urls: {
+          apiURL: "https://api-hoodi.etherscan.io/api",
+          browserURL: "https://hoodi.etherscan.io",
         },
       },
     ],
