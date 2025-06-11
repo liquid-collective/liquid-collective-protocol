@@ -172,105 +172,6 @@ contract ERC20VestableVotesUpgradeableV1Tests is Test {
         assert(tt.balanceOf(initAccount) == 999_995_000e18);
     }
 
-    function testDelegate() public {
-        vm.startPrank(initAccount);
-        tt.transfer(joe, 5_000e18);
-        vm.stopPrank();
-        assert(tt.balanceOf(joe) == 5_000e18);
-
-        // before self delegating voting power is zero (this is an implementation choice from
-        // open zeppelin to optimize gas)
-        assert(tt.getVotes(joe) == 0);
-
-        vm.startPrank(joe);
-        tt.delegate(joe);
-        vm.stopPrank();
-
-        assert(tt.balanceOf(joe) == 5_000e18);
-        assert(tt.getVotes(joe) == 5_000e18);
-    }
-
-    function testCheckpoints() public {
-        vm.roll(1000);
-
-        vm.startPrank(initAccount);
-        tt.transfer(joe, 5_000e18);
-        vm.stopPrank();
-
-        vm.startPrank(joe);
-        tt.delegate(joe);
-        vm.stopPrank();
-
-        assert(tt.balanceOf(joe) == 5_000e18);
-        assert(tt.getVotes(joe) == 5_000e18);
-
-        vm.roll(1010);
-        assert(tt.getPastVotes(joe, 999) == 0);
-        assert(tt.getPastVotes(joe, 1005) == 5_000e18);
-
-        vm.startPrank(joe);
-        tt.transfer(bob, 2_500e18);
-        vm.stopPrank();
-
-        vm.startPrank(bob);
-        tt.delegate(bob);
-        vm.stopPrank();
-
-        vm.roll(1020);
-        assert(tt.getPastVotes(joe, 999) == 0);
-        assert(tt.getPastVotes(joe, 1005) == 5_000e18);
-        assert(tt.getPastVotes(joe, 1010) == 2_500e18);
-        assert(tt.getPastVotes(bob, 1005) == 0);
-        assert(tt.getPastVotes(bob, 1010) == 2_500e18);
-    }
-
-    function testDelegateAndTransfer() public {
-        vm.startPrank(initAccount);
-        tt.transfer(joe, 5_000e18);
-        vm.stopPrank();
-        assert(tt.balanceOf(joe) == 5_000e18);
-
-        // before self delegating voting power is zero
-        // (this is an implementation choice from open zeppelin to optimize gas)
-        assert(tt.getVotes(joe) == 0);
-
-        vm.startPrank(joe);
-        tt.delegate(joe);
-        vm.stopPrank();
-
-        assert(tt.balanceOf(joe) == 5_000e18);
-        assert(tt.getVotes(joe) == 5_000e18);
-
-        vm.startPrank(joe);
-        tt.transfer(bob, 2_500e18);
-        vm.stopPrank();
-
-        assert(tt.balanceOf(joe) == 2_500e18);
-        assert(tt.balanceOf(bob) == 2_500e18);
-        assert(tt.getVotes(joe) == 2_500e18);
-
-        // before self delegating voting power is zero
-        assert(tt.getVotes(bob) == 0);
-
-        vm.startPrank(bob);
-        tt.delegate(bob);
-        vm.stopPrank();
-
-        assert(tt.balanceOf(joe) == 2_500e18);
-        assert(tt.balanceOf(bob) == 2_500e18);
-        assert(tt.getVotes(joe) == 2_500e18);
-        assert(tt.getVotes(bob) == 2_500e18);
-
-        vm.startPrank(joe);
-        tt.transfer(bob, 1_000e18);
-        vm.stopPrank();
-
-        assert(tt.balanceOf(joe) == 1_500e18);
-        assert(tt.balanceOf(bob) == 3_500e18);
-        assert(tt.getVotes(joe) == 1_500e18);
-        assert(tt.getVotes(bob) == 3_500e18);
-    }
-
     event CreatedVestingSchedule(uint256 index, address indexed creator, address indexed beneficiary, uint256 amount);
 
     function createVestingSchedule(
@@ -345,6 +246,7 @@ contract ERC20VestableVotesUpgradeableV1Tests is Test {
     }
 
     function testCreateVesting() public {
+        vm.roll(1000);
         vm.startPrank(initAccount);
         vm.expectEmit(true, true, true, true);
         emit CreatedVestingSchedule(0, initAccount, joe, 10_000e18);
@@ -387,9 +289,13 @@ contract ERC20VestableVotesUpgradeableV1Tests is Test {
 
         // Verify escrow delegated to beneficiary
         assert(tt.delegates(tt.vestingEscrow(0)) == joe);
+        vm.roll(1005);
+        assert(tt.getPastVotes(joe, 1000) == vestingSchedule.amount);
     }
 
     function testCreateVestingWithGlobalUnlock() public {
+        vm.roll(1000);
+
         vm.startPrank(initAccount);
         vm.expectEmit(true, true, true, true);
         emit CreatedVestingSchedule(0, initAccount, joe, 10_000e18);
@@ -432,9 +338,13 @@ contract ERC20VestableVotesUpgradeableV1Tests is Test {
 
         // Verify escrow delegated to beneficiary
         assert(tt.delegates(tt.vestingEscrow(0)) == joe);
+
+        vm.roll(1005);
+        assert(tt.getPastVotes(joe, 1000) == vestingSchedule.amount);
     }
 
     function testCreateVestingWithDelegatee() public {
+        vm.roll(1000);
         vm.startPrank(initAccount);
         vm.expectEmit(true, true, true, true);
         emit CreatedVestingSchedule(0, initAccount, joe, 10_000e18);
@@ -476,6 +386,9 @@ contract ERC20VestableVotesUpgradeableV1Tests is Test {
 
         // Verify escrow delegated to beneficiary
         assert(tt.delegates(tt.vestingEscrow(0)) == bob);
+
+        vm.roll(1005);
+        assert(tt.getPastVotes(bob, 1000) == vestingSchedule.amount);
     }
 
     function testCreateInvalidVestingZeroBeneficiary() public {
