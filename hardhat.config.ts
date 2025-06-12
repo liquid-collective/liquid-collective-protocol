@@ -56,6 +56,11 @@ const config: HardhatUserConfig = {
       accounts: [process.env.PRIVATE_KEY || "0x0000000000000000000000000000000000000000000000000000000000000000"],
       gas: 5000000,
     },
+    devHoodi: {
+      url: process.env.RPC_URL || "",
+      accounts: [process.env.PRIVATE_KEY || "0x0000000000000000000000000000000000000000000000000000000000000000"],
+      gas: 5000000,
+    },
   },
   namedAccounts: {
     deployer: {
@@ -67,6 +72,7 @@ const config: HardhatUserConfig = {
       mainnet: "0x00000000219ab540356cBB839Cbe05303d7705Fa",
       tenderly: "0x4242424242424242424242424242424242424242",
       hoodi: "0x00000000219ab540356cBB839Cbe05303d7705Fa",
+      devHoodi: "0x00000000219ab540356cBB839Cbe05303d7705Fa",
     },
     governor: {
       default: 1,
@@ -74,6 +80,7 @@ const config: HardhatUserConfig = {
       mainnet: "0xE3208Aa9d1186c1D1C8A5b76E794b2B68E6cb3a5",
       tenderly: "0x0e9eAd2FEB500DB46E6EB95b352FA4a86aC13dBE",
       hoodi: "0xF733B0eCf2141db2956d8Ea9ab98e5Cc33CA2f80",
+      devHoodi: "0x4B58E6B3D16c3203d4aa5C9Ad86692230FbCb5F6",
     },
     executor: {
       default: 1,
@@ -81,6 +88,7 @@ const config: HardhatUserConfig = {
       mainnet: "0xDE55C9dc78f985fE1502484Cb98EBfAB66A56B62",
       tenderly: "0xe953E4df3dDd575D2C1E1950ec4Fa33CF89947DA",
       hoodi: "0xF733B0eCf2141db2956d8Ea9ab98e5Cc33CA2f80",
+      devHoodi: "0x4B58E6B3D16c3203d4aa5C9Ad86692230FbCb5F6",
     },
     proxyAdministrator: {
       default: 2,
@@ -88,6 +96,7 @@ const config: HardhatUserConfig = {
       mainnet: "0x8EE3fC0Bcd7B57429203751C5bE5fdf1AB8409f3",
       tenderly: "0x8EE3fC0Bcd7B57429203751C5bE5fdf1AB8409f3",
       hoodi: "0xF733B0eCf2141db2956d8Ea9ab98e5Cc33CA2f80",
+      devHoodi: "0x4B58E6B3D16c3203d4aa5C9Ad86692230FbCb5F6",
     },
     collector: {
       default: 1,
@@ -95,6 +104,7 @@ const config: HardhatUserConfig = {
       mainnet: "0xE3208Aa9d1186c1D1C8A5b76E794b2B68E6cb3a5",
       tenderly: "0xc5DB3C539900B1A2889c37BEaE789D0EB57e8681",
       hoodi: "0xF733B0eCf2141db2956d8Ea9ab98e5Cc33CA2f80",
+      devHoodi: "0x4B58E6B3D16c3203d4aa5C9Ad86692230FbCb5F6",
     },
     tlcMintAccount: {
       default: 1,
@@ -112,6 +122,14 @@ const config: HardhatUserConfig = {
     customChains: [
       {
         network: "hoodi",
+        chainId: 560048,
+        urls: {
+          apiURL: "https://api-hoodi.etherscan.io/api",
+          browserURL: "https://hoodi.etherscan.io",
+        },
+      },
+      {
+        network: "devHoodi",
         chainId: 560048,
         urls: {
           apiURL: "https://api-hoodi.etherscan.io/api",
