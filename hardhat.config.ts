@@ -74,6 +74,16 @@ const config: HardhatUserConfig = {
     tenderly: {
       url: process.env.TENDERLY_URL || "",
     },
+    hoodi: {
+      url: process.env.RPC_URL || "",
+      accounts: [process.env.PRIVATE_KEY || "0x0000000000000000000000000000000000000000000000000000000000000000"],
+      gas: 5000000,
+    },
+    devHoodi: {
+      url: process.env.RPC_URL || "",
+      accounts: [process.env.PRIVATE_KEY || "0x0000000000000000000000000000000000000000000000000000000000000000"],
+      gas: 5000000,
+    },
   },
   namedAccounts: {
     deployer: {
@@ -83,9 +93,9 @@ const config: HardhatUserConfig = {
       default: "0x00000000219ab540356cBB839Cbe05303d7705Fa",
       local: "0x00000000219ab540356cBB839Cbe05303d7705Fa",
       mainnet: "0x00000000219ab540356cBB839Cbe05303d7705Fa",
-      holesky: "0x4242424242424242424242424242424242424242",
-      devHolesky: "0x4242424242424242424242424242424242424242",
       tenderly: "0x4242424242424242424242424242424242424242",
+      hoodi: "0x00000000219ab540356cBB839Cbe05303d7705Fa",
+      devHoodi: "0x00000000219ab540356cBB839Cbe05303d7705Fa",
     },
     governor: {
       default: 1,
@@ -96,6 +106,8 @@ const config: HardhatUserConfig = {
       devHolesky: "0x0e9eAd2FEB500DB46E6EB95b352FA4a86aC13dBE",
       baseSepolia: "",
       tenderly: "0x0e9eAd2FEB500DB46E6EB95b352FA4a86aC13dBE",
+      hoodi: "0xF733B0eCf2141db2956d8Ea9ab98e5Cc33CA2f80",
+      devHoodi: "0x4B58E6B3D16c3203d4aa5C9Ad86692230FbCb5F6",
     },
     executor: {
       default: 1,
@@ -105,6 +117,8 @@ const config: HardhatUserConfig = {
       devHolesky: "0xe953E4df3dDd575D2C1E1950ec4Fa33CF89947DA",
       baseSepolia: "",
       tenderly: "0xe953E4df3dDd575D2C1E1950ec4Fa33CF89947DA",
+      hoodi: "0xF733B0eCf2141db2956d8Ea9ab98e5Cc33CA2f80",
+      devHoodi: "0x4B58E6B3D16c3203d4aa5C9Ad86692230FbCb5F6",
     },
     proxyAdministrator: {
       default: 2,
@@ -116,21 +130,21 @@ const config: HardhatUserConfig = {
       sepolia: "0x341C40B94bF2afBFa42573cB78f16Ee15a056238",
       baseSepolia: "0x341C40B94bF2afBFa42573cB78f16Ee15a056238",
       tenderly: "0x8EE3fC0Bcd7B57429203751C5bE5fdf1AB8409f3",
+      hoodi: "0xF733B0eCf2141db2956d8Ea9ab98e5Cc33CA2f80",
+      devHoodi: "0x4B58E6B3D16c3203d4aa5C9Ad86692230FbCb5F6",
     },
     collector: {
       default: 1,
       local: "0x71c9DAb681C209bb82270906e3B49388b2C15404",
       mainnet: "0xE3208Aa9d1186c1D1C8A5b76E794b2B68E6cb3a5",
-      holesky: "0x47f049e943ABFbd27Bb11aF3195FEc153A28598b",
-      devHolesky: "0xc5DB3C539900B1A2889c37BEaE789D0EB57e8681",
       tenderly: "0xc5DB3C539900B1A2889c37BEaE789D0EB57e8681",
+      hoodi: "0xF733B0eCf2141db2956d8Ea9ab98e5Cc33CA2f80",
+      devHoodi: "0x4B58E6B3D16c3203d4aa5C9Ad86692230FbCb5F6",
     },
     tlcMintAccount: {
       default: 1,
       local: "0x7932EdA85E33D8e13f7C110ACBEb4a5A8B53dda9",
       mainnet: "0x070cbF96cac223D88401D6227577f9FA480C57C8",
-      holesky: "0xb85f6480A2BffF946Ca1874ad6E2bB55a4CF5059", // EOA
-      devHolesky: "0x67AB27C56cDB02C6c0f8B89948350Ebbb1837577", // EOA
       tenderly: "0x67AB27C56cDB02C6c0f8B89948350Ebbb1837577", // EOA
     },
     baseTokenAdmin: {
@@ -149,11 +163,19 @@ const config: HardhatUserConfig = {
     apiKey: process.env.ETHERSCAN_API_KEY || "",
     customChains: [
       {
-        network: "holesky",
-        chainId: 17000,
+        network: "hoodi",
+        chainId: 560048,
         urls: {
-          apiURL: "https://api-holesky.etherscan.io/api",
-          browserURL: "https://holesky.etherscan.io",
+          apiURL: "https://api-hoodi.etherscan.io/api",
+          browserURL: "https://hoodi.etherscan.io",
+        },
+      },
+      {
+        network: "devHoodi",
+        chainId: 560048,
+        urls: {
+          apiURL: "https://api-hoodi.etherscan.io/api",
+          browserURL: "https://hoodi.etherscan.io",
         },
       },
       {

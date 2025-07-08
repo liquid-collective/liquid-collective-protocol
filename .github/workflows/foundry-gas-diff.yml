@@ -11,7 +11,7 @@ jobs:
   compare_gas_reports:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           submodules: recursive
 
@@ -30,7 +30,7 @@ jobs:
           MAINNET_FORK_RPC_URL: ${{ secrets.MAINNET_FORK_RPC_URL }}
 
       - name: Compare gas reports
-        uses: Rubilmax/foundry-gas-diff@v3.16
+        uses: Rubilmax/foundry-gas-diff@v3.21
         with:
           summaryQuantile: 0.01 # only display the 10% most significant gas diffs in the summary (defaults to 20%)
           sortCriteria: avg,max # sort diff rows by criteria

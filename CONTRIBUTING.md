@@ -53,10 +53,10 @@ To deploy the contracts in an ephemeral EVM instance, run
 yarn hh deploy
 ```
 
-#### Holesky
-Deployment on the Holesky test network using the Prater Beacon test chain.
+#### Hoodi
+Deployment on the Hoodi test network using the Hoodi test chain.
 ```
-yarn hh --network holesky
+yarn hh --network hoodi
 ```
 
 ### Submodules
