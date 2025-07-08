@@ -14,7 +14,7 @@ contract BurnMintERC20_initializer is BurnMintERC20Setup {
         uint8 decimals = 18;
 
         s_burnMintERC20 = BurnMintERC20(address(new TUPProxy(implementation, address(this), new bytes(0))));
-        s_burnMintERC20.initialize("Chainlink token v2", "LINK2", address(this));
+        s_burnMintERC20.initialize("Chainlink token v2", "LINK2", s_alice);
 
         assertEq(name, s_burnMintERC20.name());
         assertEq(symbol, s_burnMintERC20.symbol());

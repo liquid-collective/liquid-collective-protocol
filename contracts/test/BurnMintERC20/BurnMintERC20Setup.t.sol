@@ -22,7 +22,7 @@ contract BurnMintERC20Setup is BaseTest {
 
         implementation = address(new BurnMintERC20());
         s_burnMintERC20 = BurnMintERC20(address(new TUPProxy(implementation, address(this), new bytes(0))));
-        s_burnMintERC20.initialize("Chainlink Token", "LINK", address(this));
+        s_burnMintERC20.initialize("Chainlink Token", "LINK", OWNER);
         // Set s_mockPool to be a burner and minter
         s_burnMintERC20.grantMintAndBurnRoles(s_mockPool);
         deal(address(s_burnMintERC20), OWNER, s_amount);
