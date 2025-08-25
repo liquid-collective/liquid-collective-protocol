@@ -119,6 +119,7 @@ contract FirewallTests is BytesGenerator, Test {
 
         vm.prank(address(riverFirewall));
         river.setKeeper(address(riverFirewall));
+        river.setDepositSize(32 ether);
 
         bytes4[] memory executorCallableOracleSelectors = new bytes4[](3);
         executorCallableOracleSelectors[0] = oracle.addMember.selector;

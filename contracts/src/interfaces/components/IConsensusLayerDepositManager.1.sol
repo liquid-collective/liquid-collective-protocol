@@ -18,6 +18,10 @@ interface IConsensusLayerDepositManagerV1 {
     /// @param newDepositedValidatorCount The new deposited validator count value
     event SetDepositedValidatorCount(uint256 oldDepositedValidatorCount, uint256 newDepositedValidatorCount);
 
+    /// @notice The stored deposit size changed
+    /// @param depositSize The new deposit size
+    event DepositSizeUpdated(uint256 depositSize);
+
     /// @notice Not enough funds to deposit one validator
     error NotEnoughFunds();
 
@@ -67,6 +71,10 @@ interface IConsensusLayerDepositManagerV1 {
     /// @notice Get the keeper address
     /// @return The keeper address
     function getKeeper() external view returns (address);
+
+    /// @notice Get the deposit size
+    /// @return The deposit size
+    function getDepositSize() external view returns (uint256);
 
     /// @notice Deposits current balance to the Consensus Layer by batches of 32 ETH
     /// @param _maxCount The maximum amount of validator keys to fund

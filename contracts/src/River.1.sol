@@ -28,6 +28,7 @@ import "./state/river/BalanceToRedeem.sol";
 import "./state/river/GlobalFee.sol";
 import "./state/river/MetadataURI.sol";
 import "./state/river/LastConsensusLayerReport.sol";
+import "./state/river/DepositSize.sol";
 
 /// @title River (v1)
 /// @author Alluvial Finance Inc.
@@ -118,7 +119,7 @@ contract RiverV1 is
     function initRiverV1_2() external init(2) {
         // force committed balance to a multiple of 32 ETH and
         // move extra funds back to the deposit buffer
-        uint256 dustToUncommit = CommittedBalance.get() % DEPOSIT_SIZE;
+        uint256 dustToUncommit = CommittedBalance.get() % DepositSize.get();
         unchecked {
             _setCommittedBalance(CommittedBalance.get() - dustToUncommit);
             _setBalanceToDeposit(BalanceToDeposit.get() + dustToUncommit);
@@ -179,6 +180,10 @@ contract RiverV1 is
 
     function setKeeper(address _keeper) external onlyAdmin {
         _setKeeper(_keeper);
+    }
+
+    function setDepositSize(uint256 _depositSize) external onlyAdmin {
+        _setDepositSize(_depositSize);
     }
 
     /// @inheritdoc IRiverV1
@@ -396,8 +401,7 @@ contract RiverV1 is
         uint256 depositedValidatorCount = DepositedValidatorCount.get();
         if (clValidatorCount < depositedValidatorCount) {
             return storedReport.validatorsBalance + BalanceToDeposit.get() + CommittedBalance.get()
-                + BalanceToRedeem.get()
-                + (depositedValidatorCount - clValidatorCount) * ConsensusLayerDepositManagerV1.DEPOSIT_SIZE;
+                + BalanceToRedeem.get() + (depositedValidatorCount - clValidatorCount) * DepositSize.get();
         } else {
             return
                 storedReport.validatorsBalance + BalanceToDeposit.get() + CommittedBalance.get() + BalanceToRedeem.get();
@@ -554,12 +558,12 @@ contract RiverV1 is
                     totalRequestedExitsCount > totalStoppedValidatorCount
                         ? (totalRequestedExitsCount - totalStoppedValidatorCount)
                         : 0
-                ) * DEPOSIT_SIZE;
+                ) * DepositSize.get();
 
                 if (availableBalanceToRedeem + _exitingBalance + preExitingBalance < redeemManagerDemandInEth) {
                     uint256 validatorCountToExit = LibUint256.ceil(
                         redeemManagerDemandInEth - (availableBalanceToRedeem + _exitingBalance + preExitingBalance),
-                        DEPOSIT_SIZE
+                        DepositSize.get()
                     );
 
                     or.demandValidatorExits(validatorCountToExit, DepositedValidatorCount.get());
@@ -604,7 +608,7 @@ contract RiverV1 is
         uint256 currentMaxCommittableAmount =
             LibUint256.min((currentMaxDailyCommittableAmount * _period) / 1 days, currentBalanceToDeposit);
         // we only commit multiples of 32 ETH
-        currentMaxCommittableAmount = (currentMaxCommittableAmount / DEPOSIT_SIZE) * DEPOSIT_SIZE;
+        currentMaxCommittableAmount = (currentMaxCommittableAmount / DepositSize.get()) * DepositSize.get();
 
         if (currentMaxCommittableAmount > 0) {
             _setCommittedBalance(CommittedBalance.get() + currentMaxCommittableAmount);

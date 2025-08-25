@@ -13,6 +13,7 @@ import "../state/river/DepositedValidatorCount.sol";
 import "../state/river/BalanceToDeposit.sol";
 import "../state/river/CommittedBalance.sol";
 import "../state/river/KeeperAddress.sol";
+import "../state/river/DepositSize.sol";
 
 /// @title Consensus Layer Deposit Manager (v1)
 /// @author Alluvial Finance Inc.
@@ -26,8 +27,6 @@ abstract contract ConsensusLayerDepositManagerV1 is IConsensusLayerDepositManage
     uint256 public constant PUBLIC_KEY_LENGTH = 48;
     /// @notice Size of a BLS Signature in bytes
     uint256 public constant SIGNATURE_LENGTH = 96;
-    /// @notice Size of a deposit in ETH
-    uint256 public constant DEPOSIT_SIZE = 32 ether;
 
     /// @notice Handler called to retrieve the internal River admin address
     /// @dev Must be Overridden
@@ -62,6 +61,11 @@ abstract contract ConsensusLayerDepositManagerV1 is IConsensusLayerDepositManage
         KeeperAddress.set(_keeper);
     }
 
+    function _setDepositSize(uint256 _depositSize) internal {
+        DepositSize.set(_depositSize);
+        emit DepositSizeUpdated(_depositSize);
+    }
+
     /// @inheritdoc IConsensusLayerDepositManagerV1
     function getCommittedBalance() external view returns (uint256) {
         return CommittedBalance.get();
@@ -88,6 +92,11 @@ abstract contract ConsensusLayerDepositManagerV1 is IConsensusLayerDepositManage
     }
 
     /// @inheritdoc IConsensusLayerDepositManagerV1
+    function getDepositSize() external view returns (uint256) {
+        return DepositSize.get();
+    }
+
+    /// @inheritdoc IConsensusLayerDepositManagerV1
     function depositToConsensusLayerWithDepositRoot(uint256 _maxCount, bytes32 _depositRoot) external {
         if (msg.sender != KeeperAddress.get()) {
             revert OnlyKeeper();
@@ -98,7 +107,7 @@ abstract contract ConsensusLayerDepositManagerV1 is IConsensusLayerDepositManage
         }
 
         uint256 committedBalance = CommittedBalance.get();
-        uint256 keyToDepositCount = LibUint256.min(committedBalance / DEPOSIT_SIZE, _maxCount);
+        uint256 keyToDepositCount = LibUint256.min(committedBalance / DepositSize.get(), _maxCount);
 
         if (keyToDepositCount == 0) {
             revert NotEnoughFunds();
@@ -130,7 +139,7 @@ abstract contract ConsensusLayerDepositManagerV1 is IConsensusLayerDepositManage
                 ++idx;
             }
         }
-        _setCommittedBalance(committedBalance - DEPOSIT_SIZE * receivedPublicKeyCount);
+        _setCommittedBalance(committedBalance - DepositSize.get() * receivedPublicKeyCount);
         uint256 currentDepositedValidatorCount = DepositedValidatorCount.get();
         DepositedValidatorCount.set(currentDepositedValidatorCount + receivedPublicKeyCount);
         emit SetDepositedValidatorCount(
@@ -152,7 +161,7 @@ abstract contract ConsensusLayerDepositManagerV1 is IConsensusLayerDepositManage
         if (_signature.length != SIGNATURE_LENGTH) {
             revert InconsistentSignatures();
         }
-        uint256 value = DEPOSIT_SIZE;
+        uint256 value = DepositSize.get();
 
         uint256 depositAmount = value / 1 gwei;
 

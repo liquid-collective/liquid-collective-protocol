@@ -22,8 +22,6 @@ import "../state/river/LastOracleRoundId.sol";
 /// @notice validators that have been activated on the consensus layer.
 abstract contract OracleManagerV1 is IOracleManagerV1 {
     uint256 internal constant ONE_YEAR = 365 days;
-    /// @notice Size of a deposit in ETH
-    uint256 public constant _DEPOSIT_SIZE = 32 ether;
 
     /// @notice Handler called if the delta between the last and new validator balance sum is positive
     /// @dev Must be overridden

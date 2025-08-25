@@ -24,10 +24,15 @@ contract ConsensusLayerDepositManagerV1ExposeInitializer is ConsensusLayerDeposi
             _depositContractAddress, _withdrawalCredentials
         );
         _setKeeper(address(0x1));
+        _setDepositSize(32 ether);
     }
 
     function setKeeper(address _keeper) external {
         _setKeeper(_keeper);
+    }
+
+    function setDepositSize(uint256 _depositSize) external {
+        _setDepositSize(_depositSize);
     }
 
     bytes public _publicKeys =
@@ -153,10 +158,15 @@ contract ConsensusLayerDepositManagerV1ControllableValidatorKeyRequest is Consen
             _depositContractAddress, _withdrawalCredentials
         );
         _setKeeper(address(0x1));
+        _setDepositSize(32 ether);
     }
 
     function setKeeper(address _keeper) external {
         _setKeeper(_keeper);
+    }
+
+    function setDepositSize(uint256 _depositSize) external {
+        _setDepositSize(_depositSize);
     }
 
     bytes public _publicKeys =
@@ -315,6 +325,7 @@ contract ConsensusLayerDepositManagerV1WithdrawalCredentialError is Test {
         ConsensusLayerDepositManagerV1ControllableValidatorKeyRequest(address(depositManager)).sudoSyncBalance();
         ConsensusLayerDepositManagerV1ControllableValidatorKeyRequest(address(depositManager)).setScenario(0);
         ConsensusLayerDepositManagerV1ControllableValidatorKeyRequest(address(depositManager)).setKeeper(address(0x1));
+        ConsensusLayerDepositManagerV1ControllableValidatorKeyRequest(address(depositManager)).setDepositSize(32 ether);
         vm.expectRevert(abi.encodeWithSignature("InvalidWithdrawalCredentials()"));
         vm.prank(address(0x1));
         depositManager.depositToConsensusLayerWithDepositRoot(5, bytes32(0));
@@ -343,6 +354,7 @@ contract ConsensusLayerDepositManagerV1ValidKeys is ConsensusLayerDepositManager
             _depositContractAddress, _withdrawalCredentials
         );
         _setKeeper(address(0x1));
+        _setDepositSize(32 ether);
     }
 
     bytes public _publicKeys =

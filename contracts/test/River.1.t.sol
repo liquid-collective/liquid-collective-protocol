@@ -174,6 +174,7 @@ contract RiverV1Tests is RiverV1TestBase {
         vm.startPrank(admin);
         river.setCoverageFund(address(coverageFund));
         river.setKeeper(admin);
+        river.setDepositSize(32 ether);
         oracle.addMember(oracleMember, 1);
         // ===================
 
@@ -212,6 +213,13 @@ contract RiverV1Tests is RiverV1TestBase {
 
         vm.expectRevert(abi.encodeWithSignature("Unauthorized(address)", address(this)));
         river.setKeeper(address(0));
+    }
+
+    function testOnlyAdminCanSetDepositSize() public {
+        assert(river.getDepositSize() == 32 ether);
+        vm.prank(admin);
+        river.setDepositSize(64 ether);
+        assert(river.getDepositSize() == 64 ether);
     }
 
     function testInitWithZeroAddressValue() public {
@@ -861,6 +869,7 @@ contract RiverV1TestsReport_HEAVY_FUZZING is RiverV1TestBase {
         oracle.addMember(oracleMember, 1);
         river.setCoverageFund(address(coverageFund));
         river.setKeeper(admin);
+        river.setDepositSize(32 ether);
         vm.stopPrank();
     }
 
