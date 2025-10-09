@@ -37,7 +37,7 @@ contract TlcMigration {
             scheduleCount: 7,
             newStart: 0,
             newEnd: 0,
-            newLockDuration: 140140800. //108604800, // 75772800
+            newLockDuration: 140140800, //108604800, // 75772800
             setCliff: false,
             setDuration: false,
             setPeriodDuration: false,
@@ -477,7 +477,7 @@ contract TlcMigration {
             scheduleCount: 1,
             newStart: 0,
             newEnd: 0,
-            newLockDuration: 90892800, 59356800, // 33523200
+            newLockDuration: 90892800, //59356800, // 33523200
             setCliff: false,
             setDuration: false,
             setPeriodDuration: false,
@@ -735,8 +735,8 @@ contract TlcMigration {
                 if (!isRevoked && (sch.end != sch.start + sch.duration)) {
                     revert WrongEnd(index);
                 }
-                // check all the schedules are locked until unix : 1761868800
-                if (sch.start + sch.lockDuration != OCTOBER_31_2025) {
+                // check all the schedules are locked until unix : 1793454446
+                if (sch.start + sch.lockDuration != OCTOBER_31_2026) {
                     revert WrongUnlockDate(index);
                 }
 
