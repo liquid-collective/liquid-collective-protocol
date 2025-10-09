@@ -444,7 +444,7 @@ contract TlcMigration {
             scheduleCount: 1,
             newStart: 0,
             newEnd: 0,
-            newLockDuration: 101347200, //67478400, // 39312900
+            newLockDuration: 99014400, //67478400, // 39312900
             setCliff: false,
             setDuration: false,
             setPeriodDuration: false,
