@@ -216,9 +216,11 @@ contract SharesManagerV1Tests is Test {
         if (transferValue > 0) {
             vm.startPrank(_userTwo);
             sharesManager.transferFrom(_userOne, _userTwo, transferValue);
-            uint256 newBalanceUserOne = (sharesManager.balanceOf(_userOne) * sharesManager.totalUnderlyingSupply())
+            uint256 newBalanceUserOne =
+                (sharesManager.balanceOf(_userOne) * sharesManager.totalUnderlyingSupply())
                 / sharesManager.totalSupply();
-            uint256 newBalanceUserTwo = (sharesManager.balanceOf(_userTwo) * sharesManager.totalUnderlyingSupply())
+            uint256 newBalanceUserTwo =
+                (sharesManager.balanceOf(_userTwo) * sharesManager.totalUnderlyingSupply())
                 / sharesManager.totalSupply();
             assert(totalAllowance - transferValue == sharesManager.allowance(_userOne, _userTwo));
             assert(newBalanceUserOne == sharesManager.balanceOf(_userOne));
@@ -297,9 +299,7 @@ contract SharesManagerV1Tests is Test {
         }
     }
 
-    function testApproveAndTransferAboveBalance(uint256 _userOneSalt, uint256 _userTwoSalt, uint128 _allowance)
-        public
-    {
+    function testApproveAndTransferAboveBalance(uint256 _userOneSalt, uint256 _userTwoSalt, uint128 _allowance) public {
         address _userOne = uf._new(_userOneSalt);
         address _userTwo = uf._new(_userTwoSalt);
         SharesManagerPublicDeal(payable(address(sharesManager))).deal(_userOne, _allowance / 2);
@@ -315,9 +315,7 @@ contract SharesManagerV1Tests is Test {
         }
     }
 
-    function testApproveAndTransferUnauthorized(uint256 _userOneSalt, uint256 _userTwoSalt, uint128 _allowance)
-        public
-    {
+    function testApproveAndTransferUnauthorized(uint256 _userOneSalt, uint256 _userTwoSalt, uint128 _allowance) public {
         address _userOne = uf._new(_userOneSalt);
         address _userTwo = uf._new(_userTwoSalt);
         SharesManagerPublicDeal(payable(address(sharesManager))).deal(_userOne, _allowance);
@@ -345,9 +343,11 @@ contract SharesManagerV1Tests is Test {
         uint256 transferValue = totalAllowance / 2;
         if (transferValue > 0) {
             sharesManager.transfer(_userTwo, transferValue);
-            uint256 newBalanceUserOne = (sharesManager.balanceOf(_userOne) * sharesManager.totalUnderlyingSupply())
+            uint256 newBalanceUserOne =
+                (sharesManager.balanceOf(_userOne) * sharesManager.totalUnderlyingSupply())
                 / sharesManager.totalSupply();
-            uint256 newBalanceUserTwo = (sharesManager.balanceOf(_userTwo) * sharesManager.totalUnderlyingSupply())
+            uint256 newBalanceUserTwo =
+                (sharesManager.balanceOf(_userTwo) * sharesManager.totalUnderlyingSupply())
                 / sharesManager.totalSupply();
             assert(newBalanceUserOne == sharesManager.balanceOf(_userOne));
             assert(newBalanceUserTwo == sharesManager.balanceOf(_userTwo));

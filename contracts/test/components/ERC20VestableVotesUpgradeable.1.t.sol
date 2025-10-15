@@ -1355,8 +1355,8 @@ contract ERC20VestableVotesUpgradeableV1Tests is Test {
                 tt.releaseVestingSchedule(0);
                 vm.stopPrank();
             } else if (
-                (releaseAt < periodDuration) || (releaseAt < cliffDuration)
-                    || (revokeAt > 0) && ((revokeAt < cliffDuration) || (revokeAt < periodDuration))
+                (releaseAt < periodDuration) || (releaseAt < cliffDuration) || (revokeAt > 0)
+                    && ((revokeAt < cliffDuration) || (revokeAt < periodDuration))
             ) {
                 // we are in either of this situation
                 // - before end of lock duration

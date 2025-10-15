@@ -52,8 +52,7 @@ contract OracleV1 is IOracleV1, Initializable, Administrable, IProtocolVersion {
         emit SetSpec(_epochsPerFrame, _slotsPerEpoch, _secondsPerSlot, _genesisTime);
         ReportBounds.set(
             ReportBounds.ReportBoundsStruct({
-                annualAprUpperBound: _annualAprUpperBound,
-                relativeLowerBound: _relativeLowerBound
+                annualAprUpperBound: _annualAprUpperBound, relativeLowerBound: _relativeLowerBound
             })
         );
         emit SetBounds(_annualAprUpperBound, _relativeLowerBound);
@@ -88,11 +87,7 @@ contract OracleV1 is IOracleV1, Initializable, Administrable, IProtocolVersion {
     }
 
     /// @inheritdoc IOracleV1
-    function getReportVariantDetails(uint256 _idx)
-        external
-        view
-        returns (ReportsVariants.ReportVariantDetails memory)
-    {
+    function getReportVariantDetails(uint256 _idx) external view returns (ReportsVariants.ReportVariantDetails memory) {
         if (ReportsVariants.get().length <= _idx) {
             revert ReportIndexOutOfBounds(_idx, ReportsVariants.get().length);
         }
