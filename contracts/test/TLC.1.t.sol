@@ -78,6 +78,6 @@ contract TLCTests is TLCTestBase {
 
     function testGetVestingScheduleRevertsForInvalidIndex() public {
         vm.expectRevert(abi.encodeWithSignature("VestingScheduleNotFound(uint256)", 1111));
-        tlc.getVestingSchedule(1);
+        tlc.getVestingSchedule(1111);
     }
 }
