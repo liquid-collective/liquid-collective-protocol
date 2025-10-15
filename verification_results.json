@@ -1,0 +1,1042 @@
+{
+  "contractAddress": "0xb5Fe6946836D687848B5aBd42dAbF531d5819632",
+  "fetchedAt": "2025-10-15T09:04:42.615Z",
+  "targetDate": 1793454446,
+  "totalSchedules": 103,
+  "passed": 103,
+  "failed": 0,
+  "scheduleStarts": [
+    1653264000,
+    1653264000,
+    1653264000,
+    1653264000,
+    1653264000,
+    1653264000,
+    1653264000,
+    1658707200,
+    1663545600,
+    1656633600,
+    1656633600,
+    1656633600,
+    1656633600,
+    1661990400,
+    1672531200,
+    1670803200,
+    1671062400,
+    1675296000,
+    1653264000,
+    1679562000,
+    1653264000,
+    1679562000,
+    1653264000,
+    1679562000,
+    1653264000,
+    1653264000,
+    1653264000,
+    1658707200,
+    1678665600,
+    1678665600,
+    1678320000,
+    1678233600,
+    1678147200,
+    1678320000,
+    1678147200,
+    1678147200,
+    1686175200,
+    1686175200,
+    1686175200,
+    1686175200,
+    1686175200,
+    1686175200,
+    1686175200,
+    1686175200,
+    1686175200,
+    1686175200,
+    1686175200,
+    1686175200,
+    1686175200,
+    1686175200,
+    1686175200,
+    1686175200,
+    1686175200,
+    1686175200,
+    1686175200,
+    1686175200,
+    1686175200,
+    1686175200,
+    1686175200,
+    1686175200,
+    1686175200,
+    1688083200,
+    1680307200,
+    1687392000,
+    1682035200,
+    1684022400,
+    1690848000,
+    1686175200,
+    1686175200,
+    1686175200,
+    1698105600,
+    1696896000,
+    1697155200,
+    1692057600,
+    1691971200,
+    1693180800,
+    1694390400,
+    1696809600,
+    1697414400,
+    1697414400,
+    1702512000,
+    1702944000,
+    1702944000,
+    1704067200,
+    1704758400,
+    1707782400,
+    1704672000,
+    1706227200,
+    1708905600,
+    1706227200,
+    1678752000,
+    1678752000,
+    1707696000,
+    1706227200,
+    1687737600,
+    1711929600,
+    1712534400,
+    1713916800,
+    1713916800,
+    1718582400,
+    1719792000,
+    1714953600,
+    1724889600
+  ],
+  "detailedResults": [
+    {
+      "index": 0,
+      "start": 1653264000,
+      "currentLockDuration": 2629800,
+      "calculatedLockDuration": 140190446,
+      "expectedLockDuration": 140190446,
+      "matches": true,
+      "end": 1679011200
+    },
+    {
+      "index": 1,
+      "start": 1653264000,
+      "currentLockDuration": 2629800,
+      "calculatedLockDuration": 140190446,
+      "expectedLockDuration": 140190446,
+      "matches": true,
+      "end": 1679011200
+    },
+    {
+      "index": 2,
+      "start": 1653264000,
+      "currentLockDuration": 2629800,
+      "calculatedLockDuration": 140190446,
+      "expectedLockDuration": 140190446,
+      "matches": true,
+      "end": 1679011200
+    },
+    {
+      "index": 3,
+      "start": 1653264000,
+      "currentLockDuration": 2629800,
+      "calculatedLockDuration": 140190446,
+      "expectedLockDuration": 140190446,
+      "matches": true,
+      "end": 1679011200
+    },
+    {
+      "index": 4,
+      "start": 1653264000,
+      "currentLockDuration": 2629800,
+      "calculatedLockDuration": 140190446,
+      "expectedLockDuration": 140190446,
+      "matches": true,
+      "end": 1779494400
+    },
+    {
+      "index": 5,
+      "start": 1653264000,
+      "currentLockDuration": 2629800,
+      "calculatedLockDuration": 140190446,
+      "expectedLockDuration": 140190446,
+      "matches": true,
+      "end": 1779494400
+    },
+    {
+      "index": 6,
+      "start": 1653264000,
+      "currentLockDuration": 2629800,
+      "calculatedLockDuration": 140190446,
+      "expectedLockDuration": 140190446,
+      "matches": true,
+      "end": 1731628800
+    },
+    {
+      "index": 7,
+      "start": 1658707200,
+      "currentLockDuration": 2629800,
+      "calculatedLockDuration": 134747246,
+      "expectedLockDuration": 134747246,
+      "matches": true,
+      "end": 1784937600
+    },
+    {
+      "index": 8,
+      "start": 1663545600,
+      "currentLockDuration": 2629800,
+      "calculatedLockDuration": 129908846,
+      "expectedLockDuration": 129908846,
+      "matches": true,
+      "end": 1702080000
+    },
+    {
+      "index": 9,
+      "start": 1656633600,
+      "currentLockDuration": 86400,
+      "calculatedLockDuration": 136820846,
+      "expectedLockDuration": 136820846,
+      "matches": true,
+      "end": 1656720000
+    },
+    {
+      "index": 10,
+      "start": 1656633600,
+      "currentLockDuration": 86400,
+      "calculatedLockDuration": 136820846,
+      "expectedLockDuration": 136820846,
+      "matches": true,
+      "end": 1656720000
+    },
+    {
+      "index": 11,
+      "start": 1656633600,
+      "currentLockDuration": 86400,
+      "calculatedLockDuration": 136820846,
+      "expectedLockDuration": 136820846,
+      "matches": true,
+      "end": 1656720000
+    },
+    {
+      "index": 12,
+      "start": 1656633600,
+      "currentLockDuration": 86400,
+      "calculatedLockDuration": 136820846,
+      "expectedLockDuration": 136820846,
+      "matches": true,
+      "end": 1656720000
+    },
+    {
+      "index": 13,
+      "start": 1661990400,
+      "currentLockDuration": 2631600,
+      "calculatedLockDuration": 131464046,
+      "expectedLockDuration": 131464046,
+      "matches": true,
+      "end": 1725148800
+    },
+    {
+      "index": 14,
+      "start": 1672531200,
+      "currentLockDuration": 2629800,
+      "calculatedLockDuration": 120923246,
+      "expectedLockDuration": 120923246,
+      "matches": true,
+      "end": 1798761600
+    },
+    {
+      "index": 15,
+      "start": 1670803200,
+      "currentLockDuration": 2629800,
+      "calculatedLockDuration": 122651246,
+      "expectedLockDuration": 122651246,
+      "matches": true,
+      "end": 1741910400
+    },
+    {
+      "index": 16,
+      "start": 1671062400,
+      "currentLockDuration": 2631600,
+      "calculatedLockDuration": 122392046,
+      "expectedLockDuration": 122392046,
+      "matches": true,
+      "end": 1734220800
+    },
+    {
+      "index": 17,
+      "start": 1675296000,
+      "currentLockDuration": 2628000,
+      "calculatedLockDuration": 118158446,
+      "expectedLockDuration": 118158446,
+      "matches": true,
+      "end": 1706832000
+    },
+    {
+      "index": 18,
+      "start": 1653264000,
+      "currentLockDuration": 2629800,
+      "calculatedLockDuration": 140190446,
+      "expectedLockDuration": 140190446,
+      "matches": true,
+      "end": 1679562000
+    },
+    {
+      "index": 19,
+      "start": 1679562000,
+      "currentLockDuration": 2629800,
+      "calculatedLockDuration": 113892446,
+      "expectedLockDuration": 113892446,
+      "matches": true,
+      "end": 1779494400
+    },
+    {
+      "index": 20,
+      "start": 1653264000,
+      "currentLockDuration": 2629800,
+      "calculatedLockDuration": 140190446,
+      "expectedLockDuration": 140190446,
+      "matches": true,
+      "end": 1679562000
+    },
+    {
+      "index": 21,
+      "start": 1679562000,
+      "currentLockDuration": 2629800,
+      "calculatedLockDuration": 113892446,
+      "expectedLockDuration": 113892446,
+      "matches": true,
+      "end": 1691539200
+    },
+    {
+      "index": 22,
+      "start": 1653264000,
+      "currentLockDuration": 2629800,
+      "calculatedLockDuration": 140190446,
+      "expectedLockDuration": 140190446,
+      "matches": true,
+      "end": 1679562000
+    },
+    {
+      "index": 23,
+      "start": 1679562000,
+      "currentLockDuration": 2629800,
+      "calculatedLockDuration": 113892446,
+      "expectedLockDuration": 113892446,
+      "matches": true,
+      "end": 1691539200
+    },
+    {
+      "index": 24,
+      "start": 1653264000,
+      "currentLockDuration": 2629800,
+      "calculatedLockDuration": 140190446,
+      "expectedLockDuration": 140190446,
+      "matches": true,
+      "end": 1692711000
+    },
+    {
+      "index": 25,
+      "start": 1653264000,
+      "currentLockDuration": 2629800,
+      "calculatedLockDuration": 140190446,
+      "expectedLockDuration": 140190446,
+      "matches": true,
+      "end": 1779494400
+    },
+    {
+      "index": 26,
+      "start": 1653264000,
+      "currentLockDuration": 2629800,
+      "calculatedLockDuration": 140190446,
+      "expectedLockDuration": 140190446,
+      "matches": true,
+      "end": 1731628800
+    },
+    {
+      "index": 27,
+      "start": 1658707200,
+      "currentLockDuration": 2629800,
+      "calculatedLockDuration": 134747246,
+      "expectedLockDuration": 134747246,
+      "matches": true,
+      "end": 1784937600
+    },
+    {
+      "index": 28,
+      "start": 1678665600,
+      "currentLockDuration": 2629800,
+      "calculatedLockDuration": 114788846,
+      "expectedLockDuration": 114788846,
+      "matches": true,
+      "end": 1804896000
+    },
+    {
+      "index": 29,
+      "start": 1678665600,
+      "currentLockDuration": 2629800,
+      "calculatedLockDuration": 114788846,
+      "expectedLockDuration": 114788846,
+      "matches": true,
+      "end": 1712707200
+    },
+    {
+      "index": 30,
+      "start": 1678320000,
+      "currentLockDuration": 2628000,
+      "calculatedLockDuration": 115134446,
+      "expectedLockDuration": 115134446,
+      "matches": true,
+      "end": 1709856000
+    },
+    {
+      "index": 31,
+      "start": 1678233600,
+      "currentLockDuration": 2628000,
+      "calculatedLockDuration": 115220846,
+      "expectedLockDuration": 115220846,
+      "matches": true,
+      "end": 1709769600
+    },
+    {
+      "index": 32,
+      "start": 1678147200,
+      "currentLockDuration": 2628000,
+      "calculatedLockDuration": 115307246,
+      "expectedLockDuration": 115307246,
+      "matches": true,
+      "end": 1709683200
+    },
+    {
+      "index": 33,
+      "start": 1678320000,
+      "currentLockDuration": 2628000,
+      "calculatedLockDuration": 115134446,
+      "expectedLockDuration": 115134446,
+      "matches": true,
+      "end": 1709856000
+    },
+    {
+      "index": 34,
+      "start": 1678147200,
+      "currentLockDuration": 2628000,
+      "calculatedLockDuration": 115307246,
+      "expectedLockDuration": 115307246,
+      "matches": true,
+      "end": 1709683200
+    },
+    {
+      "index": 35,
+      "start": 1678147200,
+      "currentLockDuration": 2628000,
+      "calculatedLockDuration": 115307246,
+      "expectedLockDuration": 115307246,
+      "matches": true,
+      "end": 1709683200
+    },
+    {
+      "index": 36,
+      "start": 1686175200,
+      "currentLockDuration": 86400,
+      "calculatedLockDuration": 107279246,
+      "expectedLockDuration": 107279246,
+      "matches": true,
+      "end": 1686261600
+    },
+    {
+      "index": 37,
+      "start": 1686175200,
+      "currentLockDuration": 86400,
+      "calculatedLockDuration": 107279246,
+      "expectedLockDuration": 107279246,
+      "matches": true,
+      "end": 1686261600
+    },
+    {
+      "index": 38,
+      "start": 1686175200,
+      "currentLockDuration": 86400,
+      "calculatedLockDuration": 107279246,
+      "expectedLockDuration": 107279246,
+      "matches": true,
+      "end": 1686261600
+    },
+    {
+      "index": 39,
+      "start": 1686175200,
+      "currentLockDuration": 86400,
+      "calculatedLockDuration": 107279246,
+      "expectedLockDuration": 107279246,
+      "matches": true,
+      "end": 1686261600
+    },
+    {
+      "index": 40,
+      "start": 1686175200,
+      "currentLockDuration": 86400,
+      "calculatedLockDuration": 107279246,
+      "expectedLockDuration": 107279246,
+      "matches": true,
+      "end": 1686261600
+    },
+    {
+      "index": 41,
+      "start": 1686175200,
+      "currentLockDuration": 86400,
+      "calculatedLockDuration": 107279246,
+      "expectedLockDuration": 107279246,
+      "matches": true,
+      "end": 1686261600
+    },
+    {
+      "index": 42,
+      "start": 1686175200,
+      "currentLockDuration": 86400,
+      "calculatedLockDuration": 107279246,
+      "expectedLockDuration": 107279246,
+      "matches": true,
+      "end": 1686261600
+    },
+    {
+      "index": 43,
+      "start": 1686175200,
+      "currentLockDuration": 86400,
+      "calculatedLockDuration": 107279246,
+      "expectedLockDuration": 107279246,
+      "matches": true,
+      "end": 1686261600
+    },
+    {
+      "index": 44,
+      "start": 1686175200,
+      "currentLockDuration": 86400,
+      "calculatedLockDuration": 107279246,
+      "expectedLockDuration": 107279246,
+      "matches": true,
+      "end": 1686261600
+    },
+    {
+      "index": 45,
+      "start": 1686175200,
+      "currentLockDuration": 86400,
+      "calculatedLockDuration": 107279246,
+      "expectedLockDuration": 107279246,
+      "matches": true,
+      "end": 1686261600
+    },
+    {
+      "index": 46,
+      "start": 1686175200,
+      "currentLockDuration": 86400,
+      "calculatedLockDuration": 107279246,
+      "expectedLockDuration": 107279246,
+      "matches": true,
+      "end": 1686261600
+    },
+    {
+      "index": 47,
+      "start": 1686175200,
+      "currentLockDuration": 86400,
+      "calculatedLockDuration": 107279246,
+      "expectedLockDuration": 107279246,
+      "matches": true,
+      "end": 1686261600
+    },
+    {
+      "index": 48,
+      "start": 1686175200,
+      "currentLockDuration": 86400,
+      "calculatedLockDuration": 107279246,
+      "expectedLockDuration": 107279246,
+      "matches": true,
+      "end": 1686261600
+    },
+    {
+      "index": 49,
+      "start": 1686175200,
+      "currentLockDuration": 86400,
+      "calculatedLockDuration": 107279246,
+      "expectedLockDuration": 107279246,
+      "matches": true,
+      "end": 1686261600
+    },
+    {
+      "index": 50,
+      "start": 1686175200,
+      "currentLockDuration": 86400,
+      "calculatedLockDuration": 107279246,
+      "expectedLockDuration": 107279246,
+      "matches": true,
+      "end": 1686261600
+    },
+    {
+      "index": 51,
+      "start": 1686175200,
+      "currentLockDuration": 86400,
+      "calculatedLockDuration": 107279246,
+      "expectedLockDuration": 107279246,
+      "matches": true,
+      "end": 1686261600
+    },
+    {
+      "index": 52,
+      "start": 1686175200,
+      "currentLockDuration": 86400,
+      "calculatedLockDuration": 107279246,
+      "expectedLockDuration": 107279246,
+      "matches": true,
+      "end": 1686261600
+    },
+    {
+      "index": 53,
+      "start": 1686175200,
+      "currentLockDuration": 86400,
+      "calculatedLockDuration": 107279246,
+      "expectedLockDuration": 107279246,
+      "matches": true,
+      "end": 1686261600
+    },
+    {
+      "index": 54,
+      "start": 1686175200,
+      "currentLockDuration": 86400,
+      "calculatedLockDuration": 107279246,
+      "expectedLockDuration": 107279246,
+      "matches": true,
+      "end": 1686261600
+    },
+    {
+      "index": 55,
+      "start": 1686175200,
+      "currentLockDuration": 86400,
+      "calculatedLockDuration": 107279246,
+      "expectedLockDuration": 107279246,
+      "matches": true,
+      "end": 1686261600
+    },
+    {
+      "index": 56,
+      "start": 1686175200,
+      "currentLockDuration": 86400,
+      "calculatedLockDuration": 107279246,
+      "expectedLockDuration": 107279246,
+      "matches": true,
+      "end": 1686261600
+    },
+    {
+      "index": 57,
+      "start": 1686175200,
+      "currentLockDuration": 86400,
+      "calculatedLockDuration": 107279246,
+      "expectedLockDuration": 107279246,
+      "matches": true,
+      "end": 1686261600
+    },
+    {
+      "index": 58,
+      "start": 1686175200,
+      "currentLockDuration": 86400,
+      "calculatedLockDuration": 107279246,
+      "expectedLockDuration": 107279246,
+      "matches": true,
+      "end": 1686261600
+    },
+    {
+      "index": 59,
+      "start": 1686175200,
+      "currentLockDuration": 86400,
+      "calculatedLockDuration": 107279246,
+      "expectedLockDuration": 107279246,
+      "matches": true,
+      "end": 1686261600
+    },
+    {
+      "index": 60,
+      "start": 1686175200,
+      "currentLockDuration": 86400,
+      "calculatedLockDuration": 107279246,
+      "expectedLockDuration": 107279246,
+      "matches": true,
+      "end": 1686261600
+    },
+    {
+      "index": 61,
+      "start": 1688083200,
+      "currentLockDuration": 2629800,
+      "calculatedLockDuration": 105371246,
+      "expectedLockDuration": 105371246,
+      "matches": true,
+      "end": 1814313600
+    },
+    {
+      "index": 62,
+      "start": 1680307200,
+      "currentLockDuration": 2629800,
+      "calculatedLockDuration": 113147246,
+      "expectedLockDuration": 113147246,
+      "matches": true,
+      "end": 1806537600
+    },
+    {
+      "index": 63,
+      "start": 1687392000,
+      "currentLockDuration": 2635200,
+      "calculatedLockDuration": 106062446,
+      "expectedLockDuration": 106062446,
+      "matches": true,
+      "end": 1719014400
+    },
+    {
+      "index": 64,
+      "start": 1682035200,
+      "currentLockDuration": 7905600,
+      "calculatedLockDuration": 111419246,
+      "expectedLockDuration": 111419246,
+      "matches": true,
+      "end": 1713657600
+    },
+    {
+      "index": 65,
+      "start": 1684022400,
+      "currentLockDuration": 7862400,
+      "calculatedLockDuration": 109432046,
+      "expectedLockDuration": 109432046,
+      "matches": true,
+      "end": 1691884800
+    },
+    {
+      "index": 66,
+      "start": 1690848000,
+      "currentLockDuration": 31622400,
+      "calculatedLockDuration": 102606446,
+      "expectedLockDuration": 102606446,
+      "matches": true,
+      "end": 1709164800
+    },
+    {
+      "index": 67,
+      "start": 1686175200,
+      "currentLockDuration": 86400,
+      "calculatedLockDuration": 107279246,
+      "expectedLockDuration": 107279246,
+      "matches": true,
+      "end": 1686261600
+    },
+    {
+      "index": 68,
+      "start": 1686175200,
+      "currentLockDuration": 86400,
+      "calculatedLockDuration": 107279246,
+      "expectedLockDuration": 107279246,
+      "matches": true,
+      "end": 1686261600
+    },
+    {
+      "index": 69,
+      "start": 1686175200,
+      "currentLockDuration": 86400,
+      "calculatedLockDuration": 107279246,
+      "expectedLockDuration": 107279246,
+      "matches": true,
+      "end": 1686261600
+    },
+    {
+      "index": 70,
+      "start": 1698105600,
+      "currentLockDuration": 2631600,
+      "calculatedLockDuration": 95348846,
+      "expectedLockDuration": 95348846,
+      "matches": true,
+      "end": 1761264000
+    },
+    {
+      "index": 71,
+      "start": 1696896000,
+      "currentLockDuration": 2631600,
+      "calculatedLockDuration": 96558446,
+      "expectedLockDuration": 96558446,
+      "matches": true,
+      "end": 1760054400
+    },
+    {
+      "index": 72,
+      "start": 1697155200,
+      "currentLockDuration": 2635200,
+      "calculatedLockDuration": 96299246,
+      "expectedLockDuration": 96299246,
+      "matches": true,
+      "end": 1728777600
+    },
+    {
+      "index": 73,
+      "start": 1692057600,
+      "currentLockDuration": 3002400,
+      "calculatedLockDuration": 101396846,
+      "expectedLockDuration": 101396846,
+      "matches": true,
+      "end": 1704067200
+    },
+    {
+      "index": 74,
+      "start": 1691971200,
+      "currentLockDuration": 2629800,
+      "calculatedLockDuration": 101483246,
+      "expectedLockDuration": 101483246,
+      "matches": true,
+      "end": 1749168000
+    },
+    {
+      "index": 75,
+      "start": 1693180800,
+      "currentLockDuration": 2629800,
+      "calculatedLockDuration": 100273646,
+      "expectedLockDuration": 100273646,
+      "matches": true,
+      "end": 1819411200
+    },
+    {
+      "index": 76,
+      "start": 1694390400,
+      "currentLockDuration": 2629800,
+      "calculatedLockDuration": 99064046,
+      "expectedLockDuration": 99064046,
+      "matches": true,
+      "end": 1820620800
+    },
+    {
+      "index": 77,
+      "start": 1696809600,
+      "currentLockDuration": 2629800,
+      "calculatedLockDuration": 96644846,
+      "expectedLockDuration": 96644846,
+      "matches": true,
+      "end": 1749168000
+    },
+    {
+      "index": 78,
+      "start": 1697414400,
+      "currentLockDuration": 2629800,
+      "calculatedLockDuration": 96040046,
+      "expectedLockDuration": 96040046,
+      "matches": true,
+      "end": 1823644800
+    },
+    {
+      "index": 79,
+      "start": 1697414400,
+      "currentLockDuration": 2629800,
+      "calculatedLockDuration": 96040046,
+      "expectedLockDuration": 96040046,
+      "matches": true,
+      "end": 1823644800
+    },
+    {
+      "index": 80,
+      "start": 1702512000,
+      "currentLockDuration": 86400,
+      "calculatedLockDuration": 90942446,
+      "expectedLockDuration": 90942446,
+      "matches": true,
+      "end": 1702598400
+    },
+    {
+      "index": 81,
+      "start": 1702944000,
+      "currentLockDuration": 31622400,
+      "calculatedLockDuration": 90510446,
+      "expectedLockDuration": 90510446,
+      "matches": true,
+      "end": 1734566400
+    },
+    {
+      "index": 82,
+      "start": 1702944000,
+      "currentLockDuration": 31622400,
+      "calculatedLockDuration": 90510446,
+      "expectedLockDuration": 90510446,
+      "matches": true,
+      "end": 1734566400
+    },
+    {
+      "index": 83,
+      "start": 1704067200,
+      "currentLockDuration": 7776000,
+      "calculatedLockDuration": 89387246,
+      "expectedLockDuration": 89387246,
+      "matches": true,
+      "end": 1711843200
+    },
+    {
+      "index": 84,
+      "start": 1704758400,
+      "currentLockDuration": 2631600,
+      "calculatedLockDuration": 88696046,
+      "expectedLockDuration": 88696046,
+      "matches": true,
+      "end": 1767916800
+    },
+    {
+      "index": 85,
+      "start": 1707782400,
+      "currentLockDuration": 7776000,
+      "calculatedLockDuration": 85672046,
+      "expectedLockDuration": 85672046,
+      "matches": true,
+      "end": 1723334400
+    },
+    {
+      "index": 86,
+      "start": 1704672000,
+      "currentLockDuration": 2629800,
+      "calculatedLockDuration": 88782446,
+      "expectedLockDuration": 88782446,
+      "matches": true,
+      "end": 1725235200
+    },
+    {
+      "index": 87,
+      "start": 1706227200,
+      "currentLockDuration": 2629800,
+      "calculatedLockDuration": 87227246,
+      "expectedLockDuration": 87227246,
+      "matches": true,
+      "end": 1832457600
+    },
+    {
+      "index": 88,
+      "start": 1708905600,
+      "currentLockDuration": 2629800,
+      "calculatedLockDuration": 84548846,
+      "expectedLockDuration": 84548846,
+      "matches": true,
+      "end": 1747699200
+    },
+    {
+      "index": 89,
+      "start": 1706227200,
+      "currentLockDuration": 2629800,
+      "calculatedLockDuration": 87227246,
+      "expectedLockDuration": 87227246,
+      "matches": true,
+      "end": 1741910400
+    },
+    {
+      "index": 90,
+      "start": 1678752000,
+      "currentLockDuration": 2629800,
+      "calculatedLockDuration": 114702446,
+      "expectedLockDuration": 114702446,
+      "matches": true,
+      "end": 1804982400
+    },
+    {
+      "index": 91,
+      "start": 1678752000,
+      "currentLockDuration": 2629800,
+      "calculatedLockDuration": 114702446,
+      "expectedLockDuration": 114702446,
+      "matches": true,
+      "end": 1804982400
+    },
+    {
+      "index": 92,
+      "start": 1707696000,
+      "currentLockDuration": 2629800,
+      "calculatedLockDuration": 85758446,
+      "expectedLockDuration": 85758446,
+      "matches": true,
+      "end": 1833926400
+    },
+    {
+      "index": 93,
+      "start": 1706227200,
+      "currentLockDuration": 2629800,
+      "calculatedLockDuration": 87227246,
+      "expectedLockDuration": 87227246,
+      "matches": true,
+      "end": 1832457600
+    },
+    {
+      "index": 94,
+      "start": 1687737600,
+      "currentLockDuration": 2629800,
+      "calculatedLockDuration": 105716846,
+      "expectedLockDuration": 105716846,
+      "matches": true,
+      "end": 1813968000
+    },
+    {
+      "index": 95,
+      "start": 1711929600,
+      "currentLockDuration": 7776000,
+      "calculatedLockDuration": 81524846,
+      "expectedLockDuration": 81524846,
+      "matches": true,
+      "end": 1719705600
+    },
+    {
+      "index": 96,
+      "start": 1712534400,
+      "currentLockDuration": 2631600,
+      "calculatedLockDuration": 80920046,
+      "expectedLockDuration": 80920046,
+      "matches": true,
+      "end": 1775692800
+    },
+    {
+      "index": 97,
+      "start": 1713916800,
+      "currentLockDuration": 31622400,
+      "calculatedLockDuration": 79537646,
+      "expectedLockDuration": 79537646,
+      "matches": true,
+      "end": 1745539200
+    },
+    {
+      "index": 98,
+      "start": 1713916800,
+      "currentLockDuration": 31622400,
+      "calculatedLockDuration": 79537646,
+      "expectedLockDuration": 79537646,
+      "matches": true,
+      "end": 1745366400
+    },
+    {
+      "index": 99,
+      "start": 1718582400,
+      "currentLockDuration": 2642400,
+      "calculatedLockDuration": 74872046,
+      "expectedLockDuration": 74872046,
+      "matches": true,
+      "end": 1734436800
+    },
+    {
+      "index": 100,
+      "start": 1719792000,
+      "currentLockDuration": 2629800,
+      "calculatedLockDuration": 73662446,
+      "expectedLockDuration": 73662446,
+      "matches": true,
+      "end": 1741910400
+    },
+    {
+      "index": 101,
+      "start": 1714953600,
+      "currentLockDuration": 2629800,
+      "calculatedLockDuration": 78500846,
+      "expectedLockDuration": 78500846,
+      "matches": true,
+      "end": 1841184000
+    },
+    {
+      "index": 102,
+      "start": 1724889600,
+      "currentLockDuration": 31622400,
+      "calculatedLockDuration": 68564846,
+      "expectedLockDuration": 68564846,
+      "matches": true,
+      "end": 1756512000
+    }
+  ]
+}
