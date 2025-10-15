@@ -75,4 +75,9 @@ contract TLCTests is TLCTestBase {
         assert(tlc.totalSupply() == 1_000_000_000e18);
         assert(tlc.balanceOf(initAccount) == tlc.totalSupply());
     }
+
+    function testGetVestingScheduleRevertsForInvalidIndex() public {
+        vm.expectRevert(abi.encodeWithSignature("VestingScheduleNotFound(uint256)", 1111));
+        tlc.getVestingSchedule(1);
+    }
 }
