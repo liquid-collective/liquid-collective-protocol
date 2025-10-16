@@ -13,7 +13,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - uses: aquiladev/ipfs-action@master
         id: ipfs
@@ -23,7 +23,7 @@ jobs:
           pinataKey: ${{ secrets.PINATA_KEY }}
           pinataSecret: ${{ secrets.PINATA_SECRET }}
 
-      - uses: peter-evans/commit-comment@v2
+      - uses: peter-evans/commit-comment@v3
         with:
           body: |
             Metadata directory has been uploaded to IPFS
