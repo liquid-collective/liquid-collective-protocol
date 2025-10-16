@@ -6,6 +6,7 @@ on:
         - "contracts/**"
         - "lib/**"
         - ".github/**"
+        - "certora/**"
 
 jobs:
   verify:
