@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: BUSL-1.1
 
-pragma solidity 0.8.20;
+pragma solidity ^0.8.20;
 
 /// @title Lib Unstructured Storage
 /// @notice Utilities to work with unstructured storage
