@@ -2568,9 +2568,8 @@ contract OperatorsRegistryV1TestDistribution is Test {
         vm.prank(admin);
         operatorsRegistry.setOperatorLimits(operators, limits, block.number);
 
-        uint32 sum =
-            uint32(fuzzedStoppedValidatorCount[0]) + fuzzedStoppedValidatorCount[1] + fuzzedStoppedValidatorCount[2]
-            + fuzzedStoppedValidatorCount[3] + fuzzedStoppedValidatorCount[4];
+        uint32 sum = uint32(fuzzedStoppedValidatorCount[0]) + fuzzedStoppedValidatorCount[1]
+            + fuzzedStoppedValidatorCount[2] + fuzzedStoppedValidatorCount[3] + fuzzedStoppedValidatorCount[4];
 
         OperatorsRegistryInitializableV1(address(operatorsRegistry))
             .debugGetNextValidatorsToDepositFromActiveOperators(sum);
@@ -2643,9 +2642,8 @@ contract OperatorsRegistryV1TestDistribution is Test {
         vm.prank(admin);
         operatorsRegistry.setOperatorLimits(operators, limits, block.number);
 
-        uint32 sum =
-            uint32(fuzzedStoppedValidatorCount[0]) + fuzzedStoppedValidatorCount[1] + fuzzedStoppedValidatorCount[2]
-            + fuzzedStoppedValidatorCount[3] + fuzzedStoppedValidatorCount[4];
+        uint32 sum = uint32(fuzzedStoppedValidatorCount[0]) + fuzzedStoppedValidatorCount[1]
+            + fuzzedStoppedValidatorCount[2] + fuzzedStoppedValidatorCount[3] + fuzzedStoppedValidatorCount[4];
 
         OperatorsRegistryInitializableV1(address(operatorsRegistry))
             .debugGetNextValidatorsToDepositFromActiveOperators(sum);
@@ -2723,9 +2721,8 @@ contract OperatorsRegistryV1TestDistribution is Test {
         vm.prank(admin);
         operatorsRegistry.setOperatorLimits(operators, limits, block.number);
 
-        uint32 sum =
-            uint32(fuzzedStoppedValidatorCount[0]) + fuzzedStoppedValidatorCount[1] + fuzzedStoppedValidatorCount[2]
-            + fuzzedStoppedValidatorCount[3] + fuzzedStoppedValidatorCount[4];
+        uint32 sum = uint32(fuzzedStoppedValidatorCount[0]) + fuzzedStoppedValidatorCount[1]
+            + fuzzedStoppedValidatorCount[2] + fuzzedStoppedValidatorCount[3] + fuzzedStoppedValidatorCount[4];
 
         OperatorsRegistryInitializableV1(address(operatorsRegistry))
             .debugGetNextValidatorsToDepositFromActiveOperators(sum);
@@ -2804,9 +2801,8 @@ contract OperatorsRegistryV1TestDistribution is Test {
         vm.prank(admin);
         operatorsRegistry.setOperatorLimits(operators, limits, block.number);
 
-        uint32 sum =
-            uint32(fuzzedStoppedValidatorCount[0]) + fuzzedStoppedValidatorCount[1] + fuzzedStoppedValidatorCount[2]
-            + fuzzedStoppedValidatorCount[3] + fuzzedStoppedValidatorCount[4];
+        uint32 sum = uint32(fuzzedStoppedValidatorCount[0]) + fuzzedStoppedValidatorCount[1]
+            + fuzzedStoppedValidatorCount[2] + fuzzedStoppedValidatorCount[3] + fuzzedStoppedValidatorCount[4];
 
         OperatorsRegistryInitializableV1(address(operatorsRegistry))
             .debugGetNextValidatorsToDepositFromActiveOperators(sum);
@@ -2890,9 +2886,8 @@ contract OperatorsRegistryV1TestDistribution is Test {
         vm.prank(admin);
         operatorsRegistry.setOperatorLimits(operators, limits, block.number);
 
-        uint32 sum =
-            uint32(fuzzedStoppedValidatorCount[0]) + fuzzedStoppedValidatorCount[1] + fuzzedStoppedValidatorCount[2]
-            + fuzzedStoppedValidatorCount[3] + fuzzedStoppedValidatorCount[4];
+        uint32 sum = uint32(fuzzedStoppedValidatorCount[0]) + fuzzedStoppedValidatorCount[1]
+            + fuzzedStoppedValidatorCount[2] + fuzzedStoppedValidatorCount[3] + fuzzedStoppedValidatorCount[4];
 
         OperatorsRegistryInitializableV1(address(operatorsRegistry))
             .debugGetNextValidatorsToDepositFromActiveOperators(sum);

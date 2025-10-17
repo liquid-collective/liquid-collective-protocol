@@ -550,8 +550,8 @@ contract RiverV1 is
                 // we take them into account to not exit too many validators
                 uint256 preExitingBalance =
                     (totalRequestedExitsCount > totalStoppedValidatorCount
-                            ? (totalRequestedExitsCount - totalStoppedValidatorCount)
-                            : 0) * DEPOSIT_SIZE;
+                                ? (totalRequestedExitsCount - totalStoppedValidatorCount)
+                                : 0) * DEPOSIT_SIZE;
 
                 if (availableBalanceToRedeem + _exitingBalance + preExitingBalance < redeemManagerDemandInEth) {
                     uint256 validatorCountToExit = LibUint256.ceil(
