@@ -1504,4 +1504,11 @@ contract ERC20VestableVotesUpgradeableV1Tests is Test {
         vm.expectRevert(abi.encodeWithSignature("VestingScheduleNotRevocableInPast()"));
         tt.revokeVestingSchedule(index, uint64(block.timestamp - 1));
     }
+
+    function testRevokeIfCliffDurationGreaterThanDuration() public {
+        // create a vesting schedule for Alice
+        vm.prank(initAccount);
+        vm.expectRevert(abi.encodeWithSignature("InvalidVestingScheduleParameter(string)", "Vesting schedule duration must be greater than or equal to the cliff duration"));
+        createVestingSchedule(makeAddr("bomb"), block.timestamp, 1 days, 1, 1, 0, true, 10);
+    }
 }
