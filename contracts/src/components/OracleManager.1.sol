@@ -125,8 +125,7 @@ abstract contract OracleManagerV1 is IOracleManagerV1 {
         emit SetSpec(_epochsPerFrame, _slotsPerEpoch, _secondsPerSlot, _genesisTime, _epochsToAssumedFinality);
         ReportBounds.set(
             ReportBounds.ReportBoundsStruct({
-                annualAprUpperBound: _annualAprUpperBound,
-                relativeLowerBound: _relativeLowerBound
+                annualAprUpperBound: _annualAprUpperBound, relativeLowerBound: _relativeLowerBound
             })
         );
         emit SetBounds(_annualAprUpperBound, _relativeLowerBound);
@@ -451,10 +450,8 @@ abstract contract OracleManagerV1 is IOracleManagerV1 {
     /// @param _epoch The epoch to verify
     /// @return True if valid
     function _isValidEpoch(CLSpec.CLSpecStruct memory _cls, uint256 _epoch) internal view returns (bool) {
-        return (
-            _currentEpoch(_cls) >= _epoch + _cls.epochsToAssumedFinality
-                && _epoch > LastConsensusLayerReport.get().epoch && _epoch % _cls.epochsPerFrame == 0
-        );
+        return (_currentEpoch(_cls) >= _epoch + _cls.epochsToAssumedFinality
+                && _epoch > LastConsensusLayerReport.get().epoch && _epoch % _cls.epochsPerFrame == 0);
     }
 
     /// @notice Retrieves the maximum increase in balance based on current total underlying supply and period since last report

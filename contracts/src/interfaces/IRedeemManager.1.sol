@@ -124,10 +124,7 @@ interface IRedeemManagerV1 {
     /// @notice Retrieve the details of a specific redeem request
     /// @param _redeemRequestId The id of the request
     /// @return The redeem request details
-    function getRedeemRequestDetails(uint32 _redeemRequestId)
-        external
-        view
-        returns (RedeemQueueV2.RedeemRequest memory);
+    function getRedeemRequestDetails(uint32 _redeemRequestId) external view returns (RedeemQueueV2.RedeemRequest memory);
 
     /// @notice Retrieve the global count of withdrawal events
     function getWithdrawalEventCount() external view returns (uint256);

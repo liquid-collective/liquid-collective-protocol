@@ -182,9 +182,7 @@ contract AllowlistV1Tests is AllowlistV1TestBase {
         assert(allowlist.isAllowed(userThree, TEST_ONE_MASK) == false);
     }
 
-    function testSetAllowlistRevertForMismatch(uint256 userOneSalt, uint256 userTwoSalt, uint256 userThreeSalt)
-        public
-    {
+    function testSetAllowlistRevertForMismatch(uint256 userOneSalt, uint256 userTwoSalt, uint256 userThreeSalt) public {
         address userOne = uf._new(userOneSalt);
         address userTwo = uf._new(userTwoSalt);
         address userThree = uf._new(userThreeSalt);

@@ -9,14 +9,12 @@ import "../../../src/RedeemManager.1.sol";
 import "../../../src/state/redeemManager/RedeemQueue.1.sol";
 import "../../../src/state/redeemManager/RedeemQueue.2.sol";
 import "../../../src/state/redeemManager/WithdrawalStack.sol";
-import {ITransparentUpgradeableProxy} from
-    "openzeppelin-contracts/contracts/proxy/transparent/TransparentUpgradeableProxy.sol";
+import {
+    ITransparentUpgradeableProxy
+} from "openzeppelin-contracts/contracts/proxy/transparent/TransparentUpgradeableProxy.sol";
 
 interface MockIRedeemManagerV1 {
-    function getRedeemRequestDetails(uint32 _redeemRequestId)
-        external
-        view
-        returns (RedeemQueueV1.RedeemRequest memory);
+    function getRedeemRequestDetails(uint32 _redeemRequestId) external view returns (RedeemQueueV1.RedeemRequest memory);
 
     function getRedeemRequestCount() external view returns (uint256);
 }
@@ -62,9 +60,10 @@ contract RedeemQueueMigrationV1_2 is Test {
         // Upgrade the RedeemManager
         RedeemManagerV1 newImplementation = new RedeemManagerV1();
         vm.prank(REDEEM_MANAGER_STAGING_PROXY_ADMIN_ADDRESS);
-        ITransparentUpgradeableProxy(address(redeemManagerProxy)).upgradeToAndCall(
-            address(newImplementation), abi.encodeWithSelector(RedeemManagerV1.initializeRedeemManagerV1_2.selector)
-        );
+        ITransparentUpgradeableProxy(address(redeemManagerProxy))
+            .upgradeToAndCall(
+                address(newImplementation), abi.encodeWithSelector(RedeemManagerV1.initializeRedeemManagerV1_2.selector)
+            );
 
         // After upgrade: check that state before the upgrade, and state after upgrade are same.
         RedeemManagerV1 RManager = RedeemManagerV1(REDEEM_MANAGER_STAGING_ADDRESS);

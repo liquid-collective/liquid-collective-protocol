@@ -2015,10 +2015,7 @@ contract MockRedeemManagerV1 is MockRedeemManagerV1Base {
 
         redeemRequests.push(
             RedeemQueueV1.RedeemRequest({
-                height: height,
-                amount: _lsETHAmount,
-                recipient: _recipient,
-                maxRedeemableEth: maxRedeemableEth
+                height: height, amount: _lsETHAmount, recipient: _recipient, maxRedeemableEth: maxRedeemableEth
             })
         );
 

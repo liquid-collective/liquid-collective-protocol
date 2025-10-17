@@ -24,10 +24,7 @@ contract OperatorsRegistryInitializableV1 is OperatorsRegistryV1 {
         return _pickNextValidatorsToDepositFromActiveOperators(_requestedAmount);
     }
 
-    function debugGetNextValidatorsToExitFromActiveOperators(uint256 _requestedExitsAmount)
-        external
-        returns (uint256)
-    {
+    function debugGetNextValidatorsToExitFromActiveOperators(uint256 _requestedExitsAmount) external returns (uint256) {
         return _pickNextValidatorsToExitFromActiveOperators(_requestedExitsAmount);
     }
 
@@ -1232,9 +1229,8 @@ contract OperatorsRegistryV1Tests is OperatorsRegistryV1TestBase, BytesGenerator
         vm.prank(admin);
         operatorsRegistry.setOperatorLimits(operators, limits, block.number);
 
-        OperatorsRegistryInitializableV1(address(operatorsRegistry)).debugGetNextValidatorsToDepositFromActiveOperators(
-            totalCount
-        );
+        OperatorsRegistryInitializableV1(address(operatorsRegistry))
+            .debugGetNextValidatorsToDepositFromActiveOperators(totalCount);
 
         vm.prank(river);
         for (uint256 idx = 1; idx < len + 1; ++idx) {
@@ -1316,9 +1312,8 @@ contract OperatorsRegistryV1Tests is OperatorsRegistryV1TestBase, BytesGenerator
         vm.prank(admin);
         operatorsRegistry.setOperatorLimits(operators, limits, block.number);
 
-        OperatorsRegistryInitializableV1(address(operatorsRegistry)).debugGetNextValidatorsToDepositFromActiveOperators(
-            totalCount
-        );
+        OperatorsRegistryInitializableV1(address(operatorsRegistry))
+            .debugGetNextValidatorsToDepositFromActiveOperators(totalCount);
 
         stoppedValidators[0] -= 1;
 
@@ -1481,8 +1476,8 @@ contract OperatorsRegistryV1TestDistribution is Test {
                 false
             );
             (bytes[] memory publicKeys, bytes[] memory signatures) = OperatorsRegistryInitializableV1(
-                address(operatorsRegistry)
-            ).debugGetNextValidatorsToDepositFromActiveOperators(50);
+                    address(operatorsRegistry)
+                ).debugGetNextValidatorsToDepositFromActiveOperators(50);
 
             assert(publicKeys.length == 50);
             assert(signatures.length == 50);
@@ -1545,8 +1540,8 @@ contract OperatorsRegistryV1TestDistribution is Test {
                 false
             );
             (bytes[] memory publicKeys, bytes[] memory signatures) = OperatorsRegistryInitializableV1(
-                address(operatorsRegistry)
-            ).debugGetNextValidatorsToDepositFromActiveOperators(200);
+                    address(operatorsRegistry)
+                ).debugGetNextValidatorsToDepositFromActiveOperators(200);
 
             assert(publicKeys.length == 200);
             assert(signatures.length == 200);
@@ -1591,8 +1586,8 @@ contract OperatorsRegistryV1TestDistribution is Test {
 
         {
             (bytes[] memory publicKeys, bytes[] memory signatures) = OperatorsRegistryInitializableV1(
-                address(operatorsRegistry)
-            ).debugGetNextValidatorsToDepositFromActiveOperators(250);
+                    address(operatorsRegistry)
+                ).debugGetNextValidatorsToDepositFromActiveOperators(250);
 
             assert(publicKeys.length == 150);
             assert(signatures.length == 150);
@@ -1629,9 +1624,8 @@ contract OperatorsRegistryV1TestDistribution is Test {
         operatorsRegistry.setOperatorLimits(operators, limits, block.number);
         vm.stopPrank();
 
-        OperatorsRegistryInitializableV1(address(operatorsRegistry)).debugGetNextValidatorsToDepositFromActiveOperators(
-            75
-        );
+        OperatorsRegistryInitializableV1(address(operatorsRegistry))
+            .debugGetNextValidatorsToDepositFromActiveOperators(75);
         assert(operatorsRegistry.getOperator(0).funded == 25);
         assert(operatorsRegistry.getOperator(1).funded == 0);
         assert(operatorsRegistry.getOperator(2).funded == 25);
@@ -1647,9 +1641,8 @@ contract OperatorsRegistryV1TestDistribution is Test {
         stoppedValidatorCounts[5] = 25;
 
         RiverMock(address(river)).sudoSetDepositedValidatorsCount(75);
-        OperatorsRegistryInitializableV1(address(operatorsRegistry)).sudoStoppedValidatorCounts(
-            stoppedValidatorCounts, 75
-        );
+        OperatorsRegistryInitializableV1(address(operatorsRegistry))
+            .sudoStoppedValidatorCounts(stoppedValidatorCounts, 75);
 
         limits = new uint32[](2);
         limits[0] = 50;
@@ -1665,8 +1658,8 @@ contract OperatorsRegistryV1TestDistribution is Test {
 
         {
             (bytes[] memory publicKeys, bytes[] memory signatures) = OperatorsRegistryInitializableV1(
-                address(operatorsRegistry)
-            ).debugGetNextValidatorsToDepositFromActiveOperators(50);
+                    address(operatorsRegistry)
+                ).debugGetNextValidatorsToDepositFromActiveOperators(50);
 
             assert(publicKeys.length == 50);
             assert(signatures.length == 50);
@@ -1705,9 +1698,8 @@ contract OperatorsRegistryV1TestDistribution is Test {
         vm.prank(admin);
         operatorsRegistry.setOperatorLimits(operators, limits, block.number);
 
-        OperatorsRegistryInitializableV1(address(operatorsRegistry)).debugGetNextValidatorsToDepositFromActiveOperators(
-            50
-        );
+        OperatorsRegistryInitializableV1(address(operatorsRegistry))
+            .debugGetNextValidatorsToDepositFromActiveOperators(50);
         assert(operatorsRegistry.getOperator(0).funded == 10);
         assert(operatorsRegistry.getOperator(1).funded == 10);
         assert(operatorsRegistry.getOperator(2).funded == 10);
@@ -1741,13 +1733,11 @@ contract OperatorsRegistryV1TestDistribution is Test {
         stoppedValidatorCounts[5] = 9;
 
         RiverMock(river).sudoSetDepositedValidatorsCount(47);
-        OperatorsRegistryInitializableV1(address(operatorsRegistry)).sudoStoppedValidatorCounts(
-            stoppedValidatorCounts, 47
-        );
+        OperatorsRegistryInitializableV1(address(operatorsRegistry))
+            .sudoStoppedValidatorCounts(stoppedValidatorCounts, 47);
 
-        OperatorsRegistryInitializableV1(address(operatorsRegistry)).debugGetNextValidatorsToDepositFromActiveOperators(
-            50
-        );
+        OperatorsRegistryInitializableV1(address(operatorsRegistry))
+            .debugGetNextValidatorsToDepositFromActiveOperators(50);
         assert(operatorsRegistry.getOperator(0).funded == 10);
         assert(operatorsRegistry.getOperator(1).funded == 35);
         assert(operatorsRegistry.getOperator(2).funded == 10);
@@ -1782,9 +1772,8 @@ contract OperatorsRegistryV1TestDistribution is Test {
 
         vm.prank(admin);
         operatorsRegistry.setOperatorLimits(operators, limits, block.number);
-        OperatorsRegistryInitializableV1(address(operatorsRegistry)).debugGetNextValidatorsToDepositFromActiveOperators(
-            250
-        );
+        OperatorsRegistryInitializableV1(address(operatorsRegistry))
+            .debugGetNextValidatorsToDepositFromActiveOperators(250);
         assert(operatorsRegistry.getOperator(0).funded == 50);
         assert(operatorsRegistry.getOperator(1).funded == 50);
         assert(operatorsRegistry.getOperator(2).funded == 50);
@@ -1851,9 +1840,8 @@ contract OperatorsRegistryV1TestDistribution is Test {
 
         vm.prank(admin);
         operatorsRegistry.setOperatorLimits(operators, limits, block.number);
-        OperatorsRegistryInitializableV1(address(operatorsRegistry)).debugGetNextValidatorsToDepositFromActiveOperators(
-            250
-        );
+        OperatorsRegistryInitializableV1(address(operatorsRegistry))
+            .debugGetNextValidatorsToDepositFromActiveOperators(250);
         assert(operatorsRegistry.getOperator(0).funded == 50);
         assert(operatorsRegistry.getOperator(1).funded == 50);
         assert(operatorsRegistry.getOperator(2).funded == 50);
@@ -1878,9 +1866,8 @@ contract OperatorsRegistryV1TestDistribution is Test {
 
         assertEq(operatorsRegistry.getCurrentValidatorExitsDemand(), 250);
 
-        OperatorsRegistryInitializableV1(address(operatorsRegistry)).sudoStoppedValidatorCounts(
-            stoppedValidatorCounts, 250
-        );
+        OperatorsRegistryInitializableV1(address(operatorsRegistry))
+            .sudoStoppedValidatorCounts(stoppedValidatorCounts, 250);
 
         assertEq(operatorsRegistry.getCurrentValidatorExitsDemand(), 150);
         assertEq(operatorsRegistry.getTotalValidatorExitsRequested(), 100);
@@ -1942,9 +1929,8 @@ contract OperatorsRegistryV1TestDistribution is Test {
         vm.prank(admin);
         operatorsRegistry.setOperatorLimits(operators, limits, block.number);
 
-        OperatorsRegistryInitializableV1(address(operatorsRegistry)).debugGetNextValidatorsToDepositFromActiveOperators(
-            250
-        );
+        OperatorsRegistryInitializableV1(address(operatorsRegistry))
+            .debugGetNextValidatorsToDepositFromActiveOperators(250);
         assert(operatorsRegistry.getOperator(0).funded == 50);
         assert(operatorsRegistry.getOperator(1).funded == 50);
         assert(operatorsRegistry.getOperator(2).funded == 50);
@@ -1995,9 +1981,8 @@ contract OperatorsRegistryV1TestDistribution is Test {
         vm.prank(admin);
         operatorsRegistry.setOperatorLimits(operators, limits, block.number);
 
-        OperatorsRegistryInitializableV1(address(operatorsRegistry)).debugGetNextValidatorsToDepositFromActiveOperators(
-            250
-        );
+        OperatorsRegistryInitializableV1(address(operatorsRegistry))
+            .debugGetNextValidatorsToDepositFromActiveOperators(250);
         assert(operatorsRegistry.getOperator(0).funded == 50);
         assert(operatorsRegistry.getOperator(1).funded == 50);
         assert(operatorsRegistry.getOperator(2).funded == 50);
@@ -2030,9 +2015,8 @@ contract OperatorsRegistryV1TestDistribution is Test {
         stoppedValidatorCounts[4] = 10;
         stoppedValidatorCounts[5] = 10;
 
-        OperatorsRegistryInitializableV1(address(operatorsRegistry)).sudoStoppedValidatorCounts(
-            stoppedValidatorCounts, 50
-        );
+        OperatorsRegistryInitializableV1(address(operatorsRegistry))
+            .sudoStoppedValidatorCounts(stoppedValidatorCounts, 50);
 
         OperatorsV2.Operator memory o = operatorsRegistry.getOperator(0);
         assertEq(o.requestedExits, 10);
@@ -2065,9 +2049,8 @@ contract OperatorsRegistryV1TestDistribution is Test {
         emit UpdatedRequestedValidatorExitsUponStopped(4, 10, 15);
         vm.expectEmit(true, true, true, true);
         emit SetTotalValidatorExitsRequested(50, 65);
-        OperatorsRegistryInitializableV1(address(operatorsRegistry)).sudoStoppedValidatorCounts(
-            stoppedValidatorCounts, 65
-        );
+        OperatorsRegistryInitializableV1(address(operatorsRegistry))
+            .sudoStoppedValidatorCounts(stoppedValidatorCounts, 65);
 
         assertEq(operatorsRegistry.getCurrentValidatorExitsDemand(), 0);
         assertEq(operatorsRegistry.getTotalValidatorExitsRequested(), 65);
@@ -2133,9 +2116,8 @@ contract OperatorsRegistryV1TestDistribution is Test {
         vm.prank(admin);
         operatorsRegistry.setOperatorLimits(operators, limits, block.number);
 
-        OperatorsRegistryInitializableV1(address(operatorsRegistry)).debugGetNextValidatorsToDepositFromActiveOperators(
-            250
-        );
+        OperatorsRegistryInitializableV1(address(operatorsRegistry))
+            .debugGetNextValidatorsToDepositFromActiveOperators(250);
         assert(operatorsRegistry.getOperator(0).funded == 50);
         assert(operatorsRegistry.getOperator(1).funded == 50);
         assert(operatorsRegistry.getOperator(2).funded == 50);
@@ -2181,9 +2163,8 @@ contract OperatorsRegistryV1TestDistribution is Test {
         emit UpdatedRequestedValidatorExitsUponStopped(4, 10, 15);
         vm.expectEmit(true, true, true, true);
         emit SetTotalValidatorExitsRequested(50, 65);
-        OperatorsRegistryInitializableV1(address(operatorsRegistry)).sudoStoppedValidatorCounts(
-            stoppedValidatorCounts, 65
-        );
+        OperatorsRegistryInitializableV1(address(operatorsRegistry))
+            .sudoStoppedValidatorCounts(stoppedValidatorCounts, 65);
 
         assertEq(operatorsRegistry.getCurrentValidatorExitsDemand(), 0);
         assertEq(operatorsRegistry.getTotalValidatorExitsRequested(), 65);
@@ -2228,9 +2209,8 @@ contract OperatorsRegistryV1TestDistribution is Test {
             operatorsRegistry.setOperatorLimits(operators, limits, block.number);
         }
 
-        OperatorsRegistryInitializableV1(address(operatorsRegistry)).debugGetNextValidatorsToDepositFromActiveOperators(
-            50
-        );
+        OperatorsRegistryInitializableV1(address(operatorsRegistry))
+            .debugGetNextValidatorsToDepositFromActiveOperators(50);
         assert(operatorsRegistry.getOperator(0).funded == 50);
         assert(operatorsRegistry.getOperator(1).funded == 0);
         assert(operatorsRegistry.getOperator(2).funded == 0);
@@ -2256,9 +2236,8 @@ contract OperatorsRegistryV1TestDistribution is Test {
         stoppedValidatorCounts[5] = 0;
 
         RiverMock(address(river)).sudoSetDepositedValidatorsCount(65);
-        OperatorsRegistryInitializableV1(address(operatorsRegistry)).sudoStoppedValidatorCounts(
-            stoppedValidatorCounts, 50
-        );
+        OperatorsRegistryInitializableV1(address(operatorsRegistry))
+            .sudoStoppedValidatorCounts(stoppedValidatorCounts, 50);
 
         vm.startPrank(admin);
         operatorsRegistry.addValidators(1, 50, genBytes((48 + 96) * 50));
@@ -2278,18 +2257,16 @@ contract OperatorsRegistryV1TestDistribution is Test {
             operatorsRegistry.setOperatorLimits(operators, limits, block.number);
         }
 
-        OperatorsRegistryInitializableV1(address(operatorsRegistry)).debugGetNextValidatorsToDepositFromActiveOperators(
-            100
-        );
+        OperatorsRegistryInitializableV1(address(operatorsRegistry))
+            .debugGetNextValidatorsToDepositFromActiveOperators(100);
 
         vm.expectEmit(true, true, true, true);
         emit RequestedValidatorExits(1, 25);
         vm.expectEmit(true, true, true, true);
         emit RequestedValidatorExits(2, 25);
         assertEq(
-            OperatorsRegistryInitializableV1(address(operatorsRegistry)).debugGetNextValidatorsToExitFromActiveOperators(
-                50
-            ),
+            OperatorsRegistryInitializableV1(address(operatorsRegistry))
+                .debugGetNextValidatorsToExitFromActiveOperators(50),
             50
         );
         assert(operatorsRegistry.getOperator(0).requestedExits == 50);
@@ -2325,9 +2302,8 @@ contract OperatorsRegistryV1TestDistribution is Test {
         vm.prank(admin);
         operatorsRegistry.setOperatorLimits(operators, limits, block.number);
 
-        OperatorsRegistryInitializableV1(address(operatorsRegistry)).debugGetNextValidatorsToDepositFromActiveOperators(
-            250
-        );
+        OperatorsRegistryInitializableV1(address(operatorsRegistry))
+            .debugGetNextValidatorsToDepositFromActiveOperators(250);
         assert(operatorsRegistry.getOperator(0).funded == 50);
         assert(operatorsRegistry.getOperator(1).funded == 50);
         assert(operatorsRegistry.getOperator(2).funded == 50);
@@ -2344,9 +2320,8 @@ contract OperatorsRegistryV1TestDistribution is Test {
         emit RequestedValidatorExits(3, 50);
         vm.expectEmit(true, true, true, true);
         emit RequestedValidatorExits(4, 50);
-        OperatorsRegistryInitializableV1(address(operatorsRegistry)).debugGetNextValidatorsToExitFromActiveOperators(
-            500
-        );
+        OperatorsRegistryInitializableV1(address(operatorsRegistry))
+            .debugGetNextValidatorsToExitFromActiveOperators(500);
 
         assert(operatorsRegistry.getOperator(0).requestedExits == 50);
         assert(operatorsRegistry.getOperator(1).requestedExits == 50);
@@ -2383,9 +2358,8 @@ contract OperatorsRegistryV1TestDistribution is Test {
         vm.prank(admin);
         operatorsRegistry.setOperatorLimits(operators, limits, block.number);
 
-        OperatorsRegistryInitializableV1(address(operatorsRegistry)).debugGetNextValidatorsToDepositFromActiveOperators(
-            250
-        );
+        OperatorsRegistryInitializableV1(address(operatorsRegistry))
+            .debugGetNextValidatorsToDepositFromActiveOperators(250);
         assert(operatorsRegistry.getOperator(0).funded == 50);
         assert(operatorsRegistry.getOperator(1).funded == 40);
         assert(operatorsRegistry.getOperator(2).funded == 30);
@@ -2402,9 +2376,8 @@ contract OperatorsRegistryV1TestDistribution is Test {
         emit RequestedValidatorExits(3, 20);
         vm.expectEmit(true, true, true, true);
         emit RequestedValidatorExits(4, 10);
-        OperatorsRegistryInitializableV1(address(operatorsRegistry)).debugGetNextValidatorsToExitFromActiveOperators(
-            500
-        );
+        OperatorsRegistryInitializableV1(address(operatorsRegistry))
+            .debugGetNextValidatorsToExitFromActiveOperators(500);
 
         assert(operatorsRegistry.getOperator(0).requestedExits == 50);
         assert(operatorsRegistry.getOperator(1).requestedExits == 40);
@@ -2441,9 +2414,8 @@ contract OperatorsRegistryV1TestDistribution is Test {
         vm.prank(admin);
         operatorsRegistry.setOperatorLimits(operators, limits, block.number);
 
-        OperatorsRegistryInitializableV1(address(operatorsRegistry)).debugGetNextValidatorsToDepositFromActiveOperators(
-            250
-        );
+        OperatorsRegistryInitializableV1(address(operatorsRegistry))
+            .debugGetNextValidatorsToDepositFromActiveOperators(250);
         assert(operatorsRegistry.getOperator(0).funded == 50);
         assert(operatorsRegistry.getOperator(1).funded == 50);
         assert(operatorsRegistry.getOperator(2).funded == 50);
@@ -2497,9 +2469,8 @@ contract OperatorsRegistryV1TestDistribution is Test {
         vm.prank(admin);
         operatorsRegistry.setOperatorLimits(operators, limits, block.number);
 
-        OperatorsRegistryInitializableV1(address(operatorsRegistry)).debugGetNextValidatorsToDepositFromActiveOperators(
-            160
-        );
+        OperatorsRegistryInitializableV1(address(operatorsRegistry))
+            .debugGetNextValidatorsToDepositFromActiveOperators(160);
         assert(operatorsRegistry.getOperator(0).funded == 50);
         assert(operatorsRegistry.getOperator(1).funded == 40);
         assert(operatorsRegistry.getOperator(2).funded == 30);
@@ -2600,9 +2571,8 @@ contract OperatorsRegistryV1TestDistribution is Test {
         uint32 sum = uint32(fuzzedStoppedValidatorCount[0]) + fuzzedStoppedValidatorCount[1]
             + fuzzedStoppedValidatorCount[2] + fuzzedStoppedValidatorCount[3] + fuzzedStoppedValidatorCount[4];
 
-        OperatorsRegistryInitializableV1(address(operatorsRegistry)).debugGetNextValidatorsToDepositFromActiveOperators(
-            sum
-        );
+        OperatorsRegistryInitializableV1(address(operatorsRegistry))
+            .debugGetNextValidatorsToDepositFromActiveOperators(sum);
 
         uint32[] memory stoppedValidatorCount = new uint32[](6);
 
@@ -2615,18 +2585,16 @@ contract OperatorsRegistryV1TestDistribution is Test {
 
         RiverMock(address(river)).sudoSetDepositedValidatorsCount(sum);
 
-        OperatorsRegistryInitializableV1(address(operatorsRegistry)).sudoStoppedValidatorCounts(
-            stoppedValidatorCount, sum
-        );
+        OperatorsRegistryInitializableV1(address(operatorsRegistry))
+            .sudoStoppedValidatorCounts(stoppedValidatorCount, sum);
 
         decreasingIndex = uint8(bound(decreasingIndex, 1, 5));
 
         stoppedValidatorCount[decreasingIndex] -= 1;
 
         vm.expectRevert(abi.encodeWithSignature("StoppedValidatorCountsDecreased()"));
-        OperatorsRegistryInitializableV1(address(operatorsRegistry)).sudoStoppedValidatorCounts(
-            stoppedValidatorCount, sum
-        );
+        OperatorsRegistryInitializableV1(address(operatorsRegistry))
+            .sudoStoppedValidatorCounts(stoppedValidatorCount, sum);
     }
 
     function testStoppedValidatorCountAboveFundedCount(
@@ -2677,9 +2645,8 @@ contract OperatorsRegistryV1TestDistribution is Test {
         uint32 sum = uint32(fuzzedStoppedValidatorCount[0]) + fuzzedStoppedValidatorCount[1]
             + fuzzedStoppedValidatorCount[2] + fuzzedStoppedValidatorCount[3] + fuzzedStoppedValidatorCount[4];
 
-        OperatorsRegistryInitializableV1(address(operatorsRegistry)).debugGetNextValidatorsToDepositFromActiveOperators(
-            sum
-        );
+        OperatorsRegistryInitializableV1(address(operatorsRegistry))
+            .debugGetNextValidatorsToDepositFromActiveOperators(sum);
 
         uint32[] memory stoppedValidatorCount = new uint32[](6);
 
@@ -2692,9 +2659,8 @@ contract OperatorsRegistryV1TestDistribution is Test {
 
         RiverMock(address(river)).sudoSetDepositedValidatorsCount(sum);
 
-        OperatorsRegistryInitializableV1(address(operatorsRegistry)).sudoStoppedValidatorCounts(
-            stoppedValidatorCount, sum
-        );
+        OperatorsRegistryInitializableV1(address(operatorsRegistry))
+            .sudoStoppedValidatorCounts(stoppedValidatorCount, sum);
 
         decreasingIndex = uint8(bound(decreasingIndex, 1, 5));
 
@@ -2709,9 +2675,8 @@ contract OperatorsRegistryV1TestDistribution is Test {
                 stoppedValidatorCount[decreasingIndex] - 1
             )
         );
-        OperatorsRegistryInitializableV1(address(operatorsRegistry)).sudoStoppedValidatorCounts(
-            stoppedValidatorCount, sum
-        );
+        OperatorsRegistryInitializableV1(address(operatorsRegistry))
+            .sudoStoppedValidatorCounts(stoppedValidatorCount, sum);
     }
 
     function testStoppedValidatorCountArrayShrinking(uint8[5] memory fuzzedStoppedValidatorCount) external {
@@ -2759,9 +2724,8 @@ contract OperatorsRegistryV1TestDistribution is Test {
         uint32 sum = uint32(fuzzedStoppedValidatorCount[0]) + fuzzedStoppedValidatorCount[1]
             + fuzzedStoppedValidatorCount[2] + fuzzedStoppedValidatorCount[3] + fuzzedStoppedValidatorCount[4];
 
-        OperatorsRegistryInitializableV1(address(operatorsRegistry)).debugGetNextValidatorsToDepositFromActiveOperators(
-            sum
-        );
+        OperatorsRegistryInitializableV1(address(operatorsRegistry))
+            .debugGetNextValidatorsToDepositFromActiveOperators(sum);
 
         {
             uint32[] memory stoppedValidatorCount = new uint32[](6);
@@ -2775,9 +2739,8 @@ contract OperatorsRegistryV1TestDistribution is Test {
 
             RiverMock(address(river)).sudoSetDepositedValidatorsCount(sum);
 
-            OperatorsRegistryInitializableV1(address(operatorsRegistry)).sudoStoppedValidatorCounts(
-                stoppedValidatorCount, sum
-            );
+            OperatorsRegistryInitializableV1(address(operatorsRegistry))
+                .sudoStoppedValidatorCounts(stoppedValidatorCount, sum);
         }
         {
             uint32[] memory stoppedValidatorCount = new uint32[](5);
@@ -2789,9 +2752,8 @@ contract OperatorsRegistryV1TestDistribution is Test {
             stoppedValidatorCount[4] = fuzzedStoppedValidatorCount[3];
 
             vm.expectRevert(abi.encodeWithSignature("StoppedValidatorCountArrayShrinking()"));
-            OperatorsRegistryInitializableV1(address(operatorsRegistry)).sudoStoppedValidatorCounts(
-                stoppedValidatorCount, sum
-            );
+            OperatorsRegistryInitializableV1(address(operatorsRegistry))
+                .sudoStoppedValidatorCounts(stoppedValidatorCount, sum);
         }
     }
 
@@ -2842,9 +2804,8 @@ contract OperatorsRegistryV1TestDistribution is Test {
         uint32 sum = uint32(fuzzedStoppedValidatorCount[0]) + fuzzedStoppedValidatorCount[1]
             + fuzzedStoppedValidatorCount[2] + fuzzedStoppedValidatorCount[3] + fuzzedStoppedValidatorCount[4];
 
-        OperatorsRegistryInitializableV1(address(operatorsRegistry)).debugGetNextValidatorsToDepositFromActiveOperators(
-            sum
-        );
+        OperatorsRegistryInitializableV1(address(operatorsRegistry))
+            .debugGetNextValidatorsToDepositFromActiveOperators(sum);
 
         {
             uint32[] memory stoppedValidatorCount = new uint32[](5);
@@ -2857,9 +2818,8 @@ contract OperatorsRegistryV1TestDistribution is Test {
 
             RiverMock(address(river)).sudoSetDepositedValidatorsCount(sum);
 
-            OperatorsRegistryInitializableV1(address(operatorsRegistry)).sudoStoppedValidatorCounts(
-                stoppedValidatorCount, sum
-            );
+            OperatorsRegistryInitializableV1(address(operatorsRegistry))
+                .sudoStoppedValidatorCounts(stoppedValidatorCount, sum);
         }
         {
             uint32[] memory stoppedValidatorCount = new uint32[](6);
@@ -2879,9 +2839,8 @@ contract OperatorsRegistryV1TestDistribution is Test {
                     fuzzedStoppedValidatorCount[4]
                 )
             );
-            OperatorsRegistryInitializableV1(address(operatorsRegistry)).sudoStoppedValidatorCounts(
-                stoppedValidatorCount, sum
-            );
+            OperatorsRegistryInitializableV1(address(operatorsRegistry))
+                .sudoStoppedValidatorCounts(stoppedValidatorCount, sum);
         }
     }
 
@@ -2930,9 +2889,8 @@ contract OperatorsRegistryV1TestDistribution is Test {
         uint32 sum = uint32(fuzzedStoppedValidatorCount[0]) + fuzzedStoppedValidatorCount[1]
             + fuzzedStoppedValidatorCount[2] + fuzzedStoppedValidatorCount[3] + fuzzedStoppedValidatorCount[4];
 
-        OperatorsRegistryInitializableV1(address(operatorsRegistry)).debugGetNextValidatorsToDepositFromActiveOperators(
-            sum
-        );
+        OperatorsRegistryInitializableV1(address(operatorsRegistry))
+            .debugGetNextValidatorsToDepositFromActiveOperators(sum);
 
         uint32[] memory stoppedValidatorCount = new uint32[](6);
 
@@ -2945,16 +2903,14 @@ contract OperatorsRegistryV1TestDistribution is Test {
 
         RiverMock(address(river)).sudoSetDepositedValidatorsCount(sum);
 
-        OperatorsRegistryInitializableV1(address(operatorsRegistry)).sudoStoppedValidatorCounts(
-            stoppedValidatorCount, sum
-        );
+        OperatorsRegistryInitializableV1(address(operatorsRegistry))
+            .sudoStoppedValidatorCounts(stoppedValidatorCount, sum);
 
         stoppedValidatorCount[0] -= 1;
 
         vm.expectRevert(abi.encodeWithSignature("InvalidStoppedValidatorCountsSum()"));
-        OperatorsRegistryInitializableV1(address(operatorsRegistry)).sudoStoppedValidatorCounts(
-            stoppedValidatorCount, sum
-        );
+        OperatorsRegistryInitializableV1(address(operatorsRegistry))
+            .sudoStoppedValidatorCounts(stoppedValidatorCount, sum);
     }
 
     function testStoppedValidatorCountHigherThanDepositCount() external {
@@ -2983,9 +2939,8 @@ contract OperatorsRegistryV1TestDistribution is Test {
         vm.prank(admin);
         operatorsRegistry.setOperatorLimits(operators, limits, block.number);
 
-        OperatorsRegistryInitializableV1(address(operatorsRegistry)).debugGetNextValidatorsToDepositFromActiveOperators(
-            100
-        );
+        OperatorsRegistryInitializableV1(address(operatorsRegistry))
+            .debugGetNextValidatorsToDepositFromActiveOperators(100);
         uint32[] memory stoppedValidatorCount = new uint32[](6);
 
         stoppedValidatorCount[1] = 10;
@@ -2997,9 +2952,8 @@ contract OperatorsRegistryV1TestDistribution is Test {
 
         RiverMock(address(river)).sudoSetDepositedValidatorsCount(99);
         vm.expectRevert(abi.encodeWithSignature("StoppedValidatorCountsTooHigh()"));
-        OperatorsRegistryInitializableV1(address(operatorsRegistry)).sudoStoppedValidatorCounts(
-            stoppedValidatorCount, 99
-        );
+        OperatorsRegistryInitializableV1(address(operatorsRegistry))
+            .sudoStoppedValidatorCounts(stoppedValidatorCount, 99);
     }
 
     function testSetOperatorLimitsFail() public {

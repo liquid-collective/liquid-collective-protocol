@@ -318,9 +318,8 @@ contract ConsensusLayerDepositManagerV1WithdrawalCredentialError is Test {
         vm.expectRevert(abi.encodeWithSignature("InvalidWithdrawalCredentials()"));
         vm.prank(address(0x1));
         depositManager.depositToConsensusLayerWithDepositRoot(5, bytes32(0));
-        ConsensusLayerDepositManagerV1ExposeInitializer(address(depositManager)).sudoSetWithdrawalCredentials(
-            withdrawalCredentials
-        );
+        ConsensusLayerDepositManagerV1ExposeInitializer(address(depositManager))
+            .sudoSetWithdrawalCredentials(withdrawalCredentials);
     }
 
     function testInvalidArgumentForWithdrawalCredential() public {
@@ -393,9 +392,8 @@ contract ConsensusLayerDepositManagerV1ValidKeysTest is Test {
 
         depositManager = new ConsensusLayerDepositManagerV1ValidKeys();
         LibImplementationUnbricker.unbrick(vm, address(depositManager));
-        ConsensusLayerDepositManagerV1ValidKeys(address(depositManager)).publicConsensusLayerDepositManagerInitializeV1(
-            address(depositContract), withdrawalCredentials
-        );
+        ConsensusLayerDepositManagerV1ValidKeys(address(depositManager))
+            .publicConsensusLayerDepositManagerInitializeV1(address(depositContract), withdrawalCredentials);
     }
 
     function testDepositValidKey() external {
@@ -434,9 +432,8 @@ contract ConsensusLayerDepositManagerV1InvalidDepositContract is Test {
 
         depositManager = new ConsensusLayerDepositManagerV1ValidKeys();
         LibImplementationUnbricker.unbrick(vm, address(depositManager));
-        ConsensusLayerDepositManagerV1ValidKeys(address(depositManager)).publicConsensusLayerDepositManagerInitializeV1(
-            address(depositContract), withdrawalCredentials
-        );
+        ConsensusLayerDepositManagerV1ValidKeys(address(depositManager))
+            .publicConsensusLayerDepositManagerInitializeV1(address(depositContract), withdrawalCredentials);
     }
 
     function testDepositInvalidDepositContract() external {
@@ -465,9 +462,8 @@ contract ConsensusLayerDepositManagerV1KeeperTest is Test {
 
         depositManager = new ConsensusLayerDepositManagerV1ValidKeys();
         LibImplementationUnbricker.unbrick(vm, address(depositManager));
-        ConsensusLayerDepositManagerV1ValidKeys(address(depositManager)).publicConsensusLayerDepositManagerInitializeV1(
-            address(depositContract), withdrawalCredentials
-        );
+        ConsensusLayerDepositManagerV1ValidKeys(address(depositManager))
+            .publicConsensusLayerDepositManagerInitializeV1(address(depositContract), withdrawalCredentials);
     }
 
     function testDepositValidKeeper() external {

@@ -127,10 +127,7 @@ interface IOracleV1 {
     /// @notice Retrieve the details of a report variant
     /// @param _idx The index of the report variant
     /// @return The report variant details
-    function getReportVariantDetails(uint256 _idx)
-        external
-        view
-        returns (ReportsVariants.ReportVariantDetails memory);
+    function getReportVariantDetails(uint256 _idx) external view returns (ReportsVariants.ReportVariantDetails memory);
 
     /// @notice Retrieve the current quorum
     /// @return The current quorum

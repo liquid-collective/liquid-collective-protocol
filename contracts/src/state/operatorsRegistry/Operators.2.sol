@@ -195,11 +195,7 @@ library OperatorsV2 {
             ) {
                 Operator storage op = r.value[idx];
                 fundableOperators[fundableCount] = CachedOperator({
-                    limit: op.limit,
-                    funded: op.funded,
-                    requestedExits: op.requestedExits,
-                    index: uint32(idx),
-                    picked: 0
+                    limit: op.limit, funded: op.funded, requestedExits: op.requestedExits, index: uint32(idx), picked: 0
                 });
                 unchecked {
                     ++fundableCount;
@@ -241,10 +237,7 @@ library OperatorsV2 {
             if (_hasExitableKeys(r.value[idx])) {
                 Operator storage op = r.value[idx];
                 exitableOperators[exitableCount] = CachedExitableOperator({
-                    funded: op.funded,
-                    requestedExits: op.requestedExits,
-                    index: uint32(idx),
-                    picked: 0
+                    funded: op.funded, requestedExits: op.requestedExits, index: uint32(idx), picked: 0
                 });
                 unchecked {
                     ++exitableCount;
@@ -307,7 +300,8 @@ library OperatorsV2 {
     }
 
     /// @notice Storage slot of the Stopped Validators
-    bytes32 internal constant STOPPED_VALIDATORS_SLOT = bytes32(uint256(keccak256("river.state.stoppedValidators")) - 1);
+    bytes32 internal constant STOPPED_VALIDATORS_SLOT =
+        bytes32(uint256(keccak256("river.state.stoppedValidators")) - 1);
 
     struct SlotStoppedValidators {
         uint32[] value;

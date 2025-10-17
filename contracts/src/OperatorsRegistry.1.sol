@@ -637,11 +637,7 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
     /// @param _arr1 First array
     /// @param _arr2 Second array
     /// @return The result of the concatenation of _arr1 + _arr2
-    function _concatenateByteArrays(bytes[] memory _arr1, bytes[] memory _arr2)
-        internal
-        pure
-        returns (bytes[] memory)
-    {
+    function _concatenateByteArrays(bytes[] memory _arr1, bytes[] memory _arr2) internal pure returns (bytes[] memory) {
         bytes[] memory res = new bytes[](_arr1.length + _arr2.length);
         for (uint256 idx = 0; idx < _arr1.length;) {
             res[idx] = _arr1[idx];
@@ -759,7 +755,7 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
             for (uint256 idx = selectedOperatorIndex + 1; idx < fundableOperatorCount;) {
                 if (
                     _getActiveValidatorCountForDeposits(operators[idx])
-                        < _getActiveValidatorCountForDeposits(operators[selectedOperatorIndex])
+                            < _getActiveValidatorCountForDeposits(operators[selectedOperatorIndex])
                         && _hasFundableKeys(operators[idx])
                 ) {
                     selectedOperatorIndex = idx;
