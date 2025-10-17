@@ -1494,4 +1494,14 @@ contract ERC20VestableVotesUpgradeableV1Tests is Test {
         releasableAmount = tt.computeVestingReleasableAmount(0);
         assertEq(releasableAmount, 10);
     }
+
+    function testRevokeRevertsPastEndDate() public {
+        // create a vesting schedule for Alice
+        vm.prank(initAccount);
+        uint index = createVestingSchedule(alice, block.timestamp, 1 days, 10 days, 1 days, 0, true, 10);
+        vm.warp(block.timestamp + 1 days);
+        vm.prank(initAccount);
+        vm.expectRevert(abi.encodeWithSignature("VestingScheduleNotRevocableInPast()"));
+        tt.revokeVestingSchedule(index, uint64(block.timestamp - 1));
+    }
 }
