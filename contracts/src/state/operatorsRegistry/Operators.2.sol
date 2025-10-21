@@ -22,7 +22,7 @@ library OperatorsV2 {
         uint32 requestedExits;
         /// @custom:attribute The total count of keys of the operator
         uint32 keys;
-        /// @custom attribute The block at which the last edit happened in the operator details
+        /// @custom:attribute The block at which the last edit happened in the operator details
         uint64 latestKeysEditBlockNumber;
         /// @custom:attribute True if the operator is active and allowed to operate on River
         bool active;
