@@ -8,10 +8,12 @@ import {IGetCCIPAdmin} from "contracts/src/l2-token/IGetCCIPAdmin.sol";
 import {IAccessControl} from "openzeppelin-contracts/contracts/access/IAccessControl.sol";
 import {IERC165} from "openzeppelin-contracts/contracts/utils/introspection/IERC165.sol";
 import {IERC20} from "openzeppelin-contracts/contracts/token/ERC20/IERC20.sol";
-import {AccessControlUpgradeable} from
-    "openzeppelin-contracts-upgradeable/contracts/access/AccessControlUpgradeable.sol";
-import {ERC20BurnableUpgradeable} from
-    "openzeppelin-contracts-upgradeable/contracts/token/ERC20/extensions/ERC20BurnableUpgradeable.sol";
+import {
+    AccessControlUpgradeable
+} from "openzeppelin-contracts-upgradeable/contracts/access/AccessControlUpgradeable.sol";
+import {
+    ERC20BurnableUpgradeable
+} from "openzeppelin-contracts-upgradeable/contracts/token/ERC20/extensions/ERC20BurnableUpgradeable.sol";
 
 /// @notice A basic ERC20 compatible token contract with burn and minting roles.
 /// @dev This contract has not been audited and is not yet approved for production use.

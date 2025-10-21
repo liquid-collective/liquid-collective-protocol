@@ -294,8 +294,10 @@ contract RiverV1Tests is RiverV1TestBase {
     event SetMaxDailyCommittableAmounts(uint256 maxNetAmount, uint256 maxRelativeAmount);
 
     function testSetDailyCommittableLimits(uint128 net, uint128 relative) public {
-        DailyCommittableLimits.DailyCommittableLimitsStruct memory dcl = DailyCommittableLimits
-            .DailyCommittableLimitsStruct({maxDailyRelativeCommittableAmount: relative, minDailyNetCommittableAmount: net});
+        DailyCommittableLimits.DailyCommittableLimitsStruct memory dcl =
+            DailyCommittableLimits.DailyCommittableLimitsStruct({
+                maxDailyRelativeCommittableAmount: relative, minDailyNetCommittableAmount: net
+            });
         vm.prank(admin);
         vm.expectEmit(true, true, true, true);
         emit SetMaxDailyCommittableAmounts(net, relative);
@@ -308,8 +310,10 @@ contract RiverV1Tests is RiverV1TestBase {
     }
 
     function testSetDailyCommittableLimitsUnauthorized(uint128 net, uint128 relative) public {
-        DailyCommittableLimits.DailyCommittableLimitsStruct memory dcl = DailyCommittableLimits
-            .DailyCommittableLimitsStruct({maxDailyRelativeCommittableAmount: relative, minDailyNetCommittableAmount: net});
+        DailyCommittableLimits.DailyCommittableLimitsStruct memory dcl =
+            DailyCommittableLimits.DailyCommittableLimitsStruct({
+                maxDailyRelativeCommittableAmount: relative, minDailyNetCommittableAmount: net
+            });
         vm.expectRevert(abi.encodeWithSignature("Unauthorized(address)", address(this)));
         river.setDailyCommittableLimits(dcl);
     }

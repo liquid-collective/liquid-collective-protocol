@@ -207,9 +207,8 @@ contract RiverV1 is
         external
         returns (uint8[] memory claimStatuses)
     {
-        return IRedeemManagerV1(RedeemManagerAddress.get()).claimRedeemRequests(
-            _redeemRequestIds, _withdrawalEventIds, true, type(uint16).max
-        );
+        return IRedeemManagerV1(RedeemManagerAddress.get())
+            .claimRedeemRequests(_redeemRequestIds, _withdrawalEventIds, true, type(uint16).max);
     }
 
     /// @inheritdoc IRiverV1
@@ -396,8 +395,8 @@ contract RiverV1 is
         uint256 depositedValidatorCount = DepositedValidatorCount.get();
         if (clValidatorCount < depositedValidatorCount) {
             return storedReport.validatorsBalance + BalanceToDeposit.get() + CommittedBalance.get()
-                + BalanceToRedeem.get()
-                + (depositedValidatorCount - clValidatorCount) * ConsensusLayerDepositManagerV1.DEPOSIT_SIZE;
+                + BalanceToRedeem.get() + (depositedValidatorCount - clValidatorCount)
+                * ConsensusLayerDepositManagerV1.DEPOSIT_SIZE;
         } else {
             return
                 storedReport.validatorsBalance + BalanceToDeposit.get() + CommittedBalance.get() + BalanceToRedeem.get();
@@ -512,9 +511,8 @@ contract RiverV1 is
         bool _depositToRedeemRebalancingAllowed,
         bool _slashingContainmentModeEnabled
     ) internal override {
-        IOperatorsRegistryV1(OperatorsRegistryAddress.get()).reportStoppedValidatorCounts(
-            _stoppedValidatorCounts, DepositedValidatorCount.get()
-        );
+        IOperatorsRegistryV1(OperatorsRegistryAddress.get())
+            .reportStoppedValidatorCounts(_stoppedValidatorCounts, DepositedValidatorCount.get());
 
         if (_slashingContainmentModeEnabled) {
             return;
@@ -550,11 +548,10 @@ contract RiverV1 is
                 // what we are calling pre-exiting balance is the amount of eth that should soon enter the exiting balance
                 // because exit requests have been made and operators might have a lag to process them
                 // we take them into account to not exit too many validators
-                uint256 preExitingBalance = (
-                    totalRequestedExitsCount > totalStoppedValidatorCount
-                        ? (totalRequestedExitsCount - totalStoppedValidatorCount)
-                        : 0
-                ) * DEPOSIT_SIZE;
+                uint256 preExitingBalance =
+                    (totalRequestedExitsCount > totalStoppedValidatorCount
+                                ? (totalRequestedExitsCount - totalStoppedValidatorCount)
+                                : 0) * DEPOSIT_SIZE;
 
                 if (availableBalanceToRedeem + _exitingBalance + preExitingBalance < redeemManagerDemandInEth) {
                     uint256 validatorCountToExit = LibUint256.ceil(

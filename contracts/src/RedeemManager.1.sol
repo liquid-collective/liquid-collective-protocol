@@ -235,10 +235,8 @@ contract RedeemManagerV1 is Initializable, IRedeemManagerV1, IProtocolVersion {
         RedeemQueueV2.RedeemRequest memory _redeemRequest,
         WithdrawalStack.WithdrawalEvent memory _withdrawalEvent
     ) internal pure returns (bool) {
-        return (
-            _redeemRequest.height < _withdrawalEvent.height + _withdrawalEvent.amount
-                && _redeemRequest.height >= _withdrawalEvent.height
-        );
+        return (_redeemRequest.height < _withdrawalEvent.height + _withdrawalEvent.amount
+                && _redeemRequest.height >= _withdrawalEvent.height);
     }
 
     /// @notice Internal utility to perform a dichotomic search of the withdrawal event to use to claim the redeem request

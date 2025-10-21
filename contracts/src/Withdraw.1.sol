@@ -28,9 +28,10 @@ contract WithdrawV1 is IWithdrawV1, Initializable, IProtocolVersion {
 
     /// @inheritdoc IWithdrawV1
     function getCredentials() external view returns (bytes32) {
-        return bytes32(
-            uint256(uint160(address(this))) + 0x0100000000000000000000000000000000000000000000000000000000000000
-        );
+        return
+            bytes32(
+                uint256(uint160(address(this))) + 0x0100000000000000000000000000000000000000000000000000000000000000
+            );
     }
 
     /// @inheritdoc IWithdrawV1
