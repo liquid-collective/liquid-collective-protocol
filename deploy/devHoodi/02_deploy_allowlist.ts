@@ -12,7 +12,7 @@ const func: DeployFunction = async function ({
   ethers,
   network,
 }: HardhatRuntimeEnvironment) {
-  if (!["hardhat", "local", "tenderly", "hoodi", "devHoodi"].includes(network.name)) {
+  if (!["hardhat", "local", "tenderly", "hoodi", "devHoodi", "kurtosis"].includes(network.name)) {
     throw new Error("Invalid network for hoodi deployment");
   }
   const { deployer, proxyAdministrator, governor, executor } = await getNamedAccounts();

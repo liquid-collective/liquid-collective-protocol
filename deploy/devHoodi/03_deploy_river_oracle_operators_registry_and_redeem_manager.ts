@@ -25,7 +25,7 @@ const func: DeployFunction = async function ({
   ethers,
   network,
 }: HardhatRuntimeEnvironment) {
-  if (!["hardhat", "local", "tenderly", "hoodi", "devHoodi"].includes(network.name)) {
+  if (!["hardhat", "local", "tenderly", "hoodi", "devHoodi", "kurtosis"].includes(network.name)) {
     throw new Error("Invalid network for hoodi deployment");
   }
   const genesisTimestamp = 1742213400;
@@ -124,12 +124,7 @@ const func: DeployFunction = async function ({
     args: [governor, executor, futureOracleAddress, []],
   });
 
-  await verify("Firewall", oracleFirewallDeployment.address, [
-    governor,
-    executor,
-    futureOracleAddress,
-    [],
-  ]);
+  await verify("Firewall", oracleFirewallDeployment.address, [governor, executor, futureOracleAddress, []]);
   const oracleProxyFirewall = await deployments.deploy("OracleProxyFirewall", {
     contract: "Firewall",
     from: deployer,
@@ -167,9 +162,7 @@ const func: DeployFunction = async function ({
       governor,
       executor,
       futureOperatorsRegistryAddress,
-      [
-        operatorsRegistryInterface.getSighash("setOperatorLimits"),
-      ],
+      [operatorsRegistryInterface.getSighash("setOperatorLimits")],
     ],
   });
 
@@ -177,9 +170,7 @@ const func: DeployFunction = async function ({
     governor,
     executor,
     futureOperatorsRegistryAddress,
-    [
-      operatorsRegistryInterface.getSighash("setOperatorLimits"),
-    ],
+    [operatorsRegistryInterface.getSighash("setOperatorLimits")],
   ]);
 
   const operatorsRegistryProxyFirewallDeployment = await deployments.deploy("OperatorsRegistryProxyFirewall", {
