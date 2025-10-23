@@ -84,6 +84,10 @@ const config: HardhatUserConfig = {
       accounts: [process.env.PRIVATE_KEY || "0x0000000000000000000000000000000000000000000000000000000000000000"],
       gas: 5000000,
     },
+    linea: {
+      url: process.env.RPC_URL || "",
+      accounts: [process.env.PRIVATE_KEY || "0x0000000000000000000000000000000000000000000000000000000000000000"],
+    },
   },
   namedAccounts: {
     deployer: {
@@ -122,6 +126,7 @@ const config: HardhatUserConfig = {
     },
     proxyAdministrator: {
       default: 2,
+      linea: "0xbDB890B69A9b39439219e9e2f1CbA5f54fE409f2",
       base: "0x078Fb5A53Ac625eD6C8Eff5C8E316fb911Bf2b16",
       local: "0x07706A7D768054c10eB4FC9103Ea322f62831cb9",
       mainnet: "0x8EE3fC0Bcd7B57429203751C5bE5fdf1AB8409f3",
@@ -129,7 +134,7 @@ const config: HardhatUserConfig = {
       devHolesky: "0x0FdEe4562D7e6dbA05A9f892D2Be04B83f3E7579",
       sepolia: "0x341C40B94bF2afBFa42573cB78f16Ee15a056238",
       baseSepolia: "0x341C40B94bF2afBFa42573cB78f16Ee15a056238",
-      tenderly: "0x8EE3fC0Bcd7B57429203751C5bE5fdf1AB8409f3",
+      tenderly: "0xbDB890B69A9b39439219e9e2f1CbA5f54fE409f2",
       hoodi: "0xF733B0eCf2141db2956d8Ea9ab98e5Cc33CA2f80",
       devHoodi: "0x4B58E6B3D16c3203d4aa5C9Ad86692230FbCb5F6",
     },
@@ -153,6 +158,11 @@ const config: HardhatUserConfig = {
       baseSepolia: "0x726Da59a3cF0966BeF383d3A00Ac002a66Fece30",
       sepolia: "0x726Da59a3cF0966BeF383d3A00Ac002a66Fece30",
       tenderly: "0x726Da59a3cF0966BeF383d3A00Ac002a66Fece30",
+    },
+    lineaTokenAdmin: {
+      default: 1,
+      linea: "0x0D449057769202826fEA00dE561713261bE4e1F5",
+      tenderly: "0x0D449057769202826fEA00dE561713261bE4e1F5",
     },
   },
   paths: {
@@ -200,6 +210,14 @@ const config: HardhatUserConfig = {
         urls: {
           apiURL: "https://api.basescan.org/api",
           browserURL: "https://basescan.org",
+        },
+      },
+      {
+        network: "linea",
+        chainId: 59144,
+        urls: {
+          apiURL: "https://api.lineascan.build/api",
+          browserURL: "https://lineascan.build",
         },
       },
     ],
