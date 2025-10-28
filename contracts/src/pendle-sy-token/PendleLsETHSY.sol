@@ -1,34 +1,28 @@
-
-
-pragma solidity ^0.8.26;
+/// SPDX-License-Identifier: GPL-3.0-or-later
+pragma solidity 0.8.26;
 
 import "../../SYBaseUpg.sol";
+import "../../interfaces/IWLSETH.1.sol";
 
+contract PendleLsETHETHSY is SYBaseUpg {
+    address public constant LSETH = 0x8c1BEd5b9a0928467c9B1341Da1D7BD5e10b6549; // Liquid Collective LsETH on Ethereum mainnet
 
-contract PendleRUSDSY is SYBaseUpg {
-    address public constant LSETH = 0xassllslslsl;
-
-    onstructor() SYBaseUpg(RUSD) {}
+    constructor() SYBaseUpg(LSETH) {}
 
     function initialize() external initializer {
         __SYBaseUpg_init("SY Pendle LsETH", "SY-LsETH");
 
-        _safeApproveInf(LSETH, PSM);
-        _safeApproveInf(LSETH, CREDIT_ENFORSER);
+        //  _safeApproveInf(LSETH, WLSETHV1(LSETH).RiverAddress());
     }
 
     /*///////////////////////////////////////////////////////////////
-                    DEPOSIT/REDEEM USING BASE TOKENS
-    //////////////////////////////////////////////////////////////*/
+                   DEPOSIT/REDEEM USING BASE TOKENS
+   //////////////////////////////////////////////////////////////*/
 
     function _deposit(
-        address tokenIn,
+        address /*tokenIn*/,
         uint256 amountDeposited
     ) internal virtual override returns (uint256 /*amountSharesOut*/) {
-        if (tokenIn == LSETH) {
-            // syLsETH will be minted
-            WLSETHV1(LSETH).mint(amountDeposited);
-        }
         return amountDeposited;
     }
 
@@ -37,23 +31,24 @@ contract PendleRUSDSY is SYBaseUpg {
         address tokenOut,
         uint256 amountSharesToRedeem
     ) internal override returns (uint256) {
-        if (tokenOut == LSETH) {
-            WLSETHV1(LSETH).burn(receiver, amountSharesToRedeem);
-        }
+        _transferOut(LSETH, receiver, amountSharesToRedeem);
         return amountSharesToRedeem;
     }
 
     /*///////////////////////////////////////////////////////////////
-                               EXCHANGE-RATE
-    //////////////////////////////////////////////////////////////*/
+                              EXCHANGE-RATE
+   //////////////////////////////////////////////////////////////*/
 
+    /// @notice Returns the ETH-per-LsETH exchange rate
+    /// @dev This is monotonic (never decreases) as staking rewards accrue
+    /// @return The amount of ETH (1e18 scaled) that 1 LsETH is worth
     function exchangeRate() public view virtual override returns (uint256) {
-        return PMath.ONE;
+        return ILsETH(LSETH).underlyingBalanceFromShares(1e18);
     }
 
     /*///////////////////////////////////////////////////////////////
-                MISC FUNCTIONS FOR METADATA
-    //////////////////////////////////////////////////////////////*/
+               MISC FUNCTIONS FOR METADATA
+   //////////////////////////////////////////////////////////////*/
 
     function _previewDeposit(
         address /*tokenIn*/,
