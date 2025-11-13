@@ -173,8 +173,9 @@ abstract contract ConsensusLayerDepositManagerV1 is IConsensusLayerDepositManage
 
         uint256 targetBalance = address(this).balance - value;
 
-        IDepositContract(DepositContractAddress.get())
-        .deposit{value: value}(_publicKey, abi.encodePacked(_withdrawalCredentials), _signature, depositDataRoot);
+        IDepositContract(DepositContractAddress.get()).deposit{value: value}(
+            _publicKey, abi.encodePacked(_withdrawalCredentials), _signature, depositDataRoot
+        );
         if (address(this).balance != targetBalance) {
             revert ErrorOnDeposit();
         }
