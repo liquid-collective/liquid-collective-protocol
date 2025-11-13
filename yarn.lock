@@ -1394,25 +1394,32 @@
     "@types/node" "*"
     form-data "^3.0.0"
 
-"@types/node@*", "@types/node@^12.12.6", "@types/node@^12.20.42":
-  version "12.20.47"
-  resolved "https://registry.npmjs.org/@types/node/-/node-12.20.47.tgz"
-  integrity sha512-BzcaRsnFuznzOItW1WpQrDHM7plAa7GIDMZ6b5pnMbkqEtM/6WCOhvZar39oeMQP79gwvFUWjjptE7/KGcNqFg==
+"@types/node@*":
+  version "24.10.1"
+  resolved "https://registry.yarnpkg.com/@types/node/-/node-24.10.1.tgz#91e92182c93db8bd6224fca031e2370cef9a8f01"
+  integrity sha512-GNWcUTRBgIRJD5zj+Tq0fKOJ5XZajIiBroOF0yvj2bSU1WvNdYS/dn9UxwsujGW4JX06dnHyjV2y9rRaybH0iQ==
+  dependencies:
+    undici-types "~7.16.0"
 
 "@types/node@^10.0.3":
   version "10.17.60"
-  resolved "https://registry.npmjs.org/@types/node/-/node-10.17.60.tgz"
+  resolved "https://registry.yarnpkg.com/@types/node/-/node-10.17.60.tgz#35f3d6213daed95da7f0f73e75bcc6980e90597b"
   integrity sha512-F0KIgDJfy2nA3zMLmWGKxcH2ZVEtCZXHHdOQs2gSaQ27+lNeEfGxzkIw90aXswATX7AZ33tahPbzy6KAfUreVw==
+
+"@types/node@^12.12.6", "@types/node@^12.20.42":
+  version "12.20.55"
+  resolved "https://registry.yarnpkg.com/@types/node/-/node-12.20.55.tgz#c329cbd434c42164f846b909bd6f85b5537f6240"
+  integrity sha512-J8xLz7q2OFulZ2cyGTLE1TbbZcjpno7FaN6zdJNrgAdrJ+DZzh/uFR6YrTb4C+nXakvud8Q4+rbhoIWlYQbUFQ==
 
 "@types/node@^8.0.0":
   version "8.10.66"
-  resolved "https://registry.npmjs.org/@types/node/-/node-8.10.66.tgz"
+  resolved "https://registry.yarnpkg.com/@types/node/-/node-8.10.66.tgz#dd035d409df322acc83dff62a602f12a5783bbb3"
   integrity sha512-tktOkFUA4kXx2hhhrB8bIFb5TbwzS4uOhKEmwiD+NoiL0qtP2OQ9mFldbgD4dV1djrlBYP6eBuQZiWjuHUpqFw==
 
 "@types/pbkdf2@^3.0.0":
-  version "3.1.0"
-  resolved "https://registry.npmjs.org/@types/pbkdf2/-/pbkdf2-3.1.0.tgz"
-  integrity sha512-Cf63Rv7jCQ0LaL8tNXmEyqTHuIJxRdlS5vMh1mj5voN4+QFhVZnlZruezqpWYDiJ8UTzhP0VmeLXCmBk66YrMQ==
+  version "3.1.2"
+  resolved "https://registry.yarnpkg.com/@types/pbkdf2/-/pbkdf2-3.1.2.tgz#2dc43808e9985a2c69ff02e2d2027bd4fe33e8dc"
+  integrity sha512-uRwJqmiXmh9++aSu1VNEn3iIxWOhd8AHXNSdlaLfdAAdSTY9jYVeGWnzejM3dvrkbqE3/hyQkQQ29IFATEGlew==
   dependencies:
     "@types/node" "*"
 
@@ -10902,6 +10909,11 @@ underscore@1.9.1:
   version "1.9.1"
   resolved "https://registry.npmjs.org/underscore/-/underscore-1.9.1.tgz"
   integrity sha512-5/4etnCkd9c8gwgowi5/om/mYO5ajCaOgdzj/oW+0eQV9WxKBDZw5+ycmKmeaTXjInS/W0BzpGLo2xR2aBwZdg==
+
+undici-types@~7.16.0:
+  version "7.16.0"
+  resolved "https://registry.yarnpkg.com/undici-types/-/undici-types-7.16.0.tgz#ffccdff36aea4884cbfce9a750a0580224f58a46"
+  integrity sha512-Zz+aZWSj8LE6zoxD+xrjh4VfkIG8Ya6LvYkZqtUQGJPZjYl53ypCaUwWqo7eI0x66KBGeRo+mlBEkMSeSZ38Nw==
 
 undici@^5.14.0:
   version "5.29.0"
