@@ -84,6 +84,16 @@ const config: HardhatUserConfig = {
       accounts: [process.env.PRIVATE_KEY || "0x0000000000000000000000000000000000000000000000000000000000000000"],
       gas: 5000000,
     },
+    kurtosis: {
+      url: process.env.RPC_URL || "http://127.0.0.1:8545",
+      accounts: [
+        process.env.KURTOSIS_DEPLOYER_KEY || "0xbcdf20249abf0ed6d944c0288fad489e33f66b3960d9e6229c1cd214ed3bbe31", // 0: deployer
+        process.env.KURTOSIS_GOVERNOR_KEY || "0x39725efee3fb28614de3bacaffe4cc4bd8c436257e2c8bb887c4b5c4be45e76d", // 1: governor/executor/collector
+        process.env.KURTOSIS_PROXY_ADMIN_KEY || "0x53321db7c1e331d93a11a41d16f004d7ff63972ec8ec7c25db329728ceeb1710", // 2: proxyAdministrator
+      ],
+      gas: 5000000,
+      gasMultiplier: 2,
+    },
   },
   namedAccounts: {
     deployer: {
@@ -96,6 +106,7 @@ const config: HardhatUserConfig = {
       tenderly: "0x4242424242424242424242424242424242424242",
       hoodi: "0x00000000219ab540356cBB839Cbe05303d7705Fa",
       devHoodi: "0x00000000219ab540356cBB839Cbe05303d7705Fa",
+      kurtosis: "0x4242424242424242424242424242424242424242",
     },
     governor: {
       default: 1,
@@ -108,6 +119,7 @@ const config: HardhatUserConfig = {
       tenderly: "0x0e9eAd2FEB500DB46E6EB95b352FA4a86aC13dBE",
       hoodi: "0xF733B0eCf2141db2956d8Ea9ab98e5Cc33CA2f80",
       devHoodi: "0x4B58E6B3D16c3203d4aa5C9Ad86692230FbCb5F6",
+      kurtosis: 1,
     },
     executor: {
       default: 1,
@@ -119,6 +131,7 @@ const config: HardhatUserConfig = {
       tenderly: "0xe953E4df3dDd575D2C1E1950ec4Fa33CF89947DA",
       hoodi: "0xF733B0eCf2141db2956d8Ea9ab98e5Cc33CA2f80",
       devHoodi: "0x4B58E6B3D16c3203d4aa5C9Ad86692230FbCb5F6",
+      kurtosis: 1,
     },
     proxyAdministrator: {
       default: 2,
@@ -132,6 +145,7 @@ const config: HardhatUserConfig = {
       tenderly: "0x8EE3fC0Bcd7B57429203751C5bE5fdf1AB8409f3",
       hoodi: "0xF733B0eCf2141db2956d8Ea9ab98e5Cc33CA2f80",
       devHoodi: "0x4B58E6B3D16c3203d4aa5C9Ad86692230FbCb5F6",
+      kurtosis: 2,
     },
     collector: {
       default: 1,
@@ -140,6 +154,7 @@ const config: HardhatUserConfig = {
       tenderly: "0xc5DB3C539900B1A2889c37BEaE789D0EB57e8681",
       hoodi: "0xF733B0eCf2141db2956d8Ea9ab98e5Cc33CA2f80",
       devHoodi: "0x4B58E6B3D16c3203d4aa5C9Ad86692230FbCb5F6",
+      kurtosis: 1,
     },
     tlcMintAccount: {
       default: 1,
