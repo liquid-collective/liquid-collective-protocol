@@ -32,6 +32,10 @@ contract OperatorsRegistryInitializableV1 is OperatorsRegistryV1 {
         OperatorsV2.setKeys(_operatorIndex, _keyCount);
     }
 
+    function sudoSetLastFundedIndex(uint256 _index) external {
+        LastRoundRobinOperatorIndex.set(_index);
+    }
+
     function sudoExitRequests(uint256 _operatorIndex, uint32 _requestedExits) external {
         OperatorsV2.get(_operatorIndex).requestedExits = _requestedExits;
     }
@@ -759,6 +763,47 @@ contract OperatorsRegistryV1Tests is OperatorsRegistryV1TestBase, BytesGenerator
             assert(op.keys == 50);
             assert(op.requestedExits == 0);
         }
+    }
+
+    function testRoundRobinDistributionSpecificScenario() external {
+        // Setup 5 operators (0 to 4)
+        for (uint256 i = 0; i < 5; ++i) {
+            address opAddr = makeAddr(string(abi.encodePacked("op", i)));
+            vm.prank(admin);
+            operatorsRegistry.addOperator(string(abi.encodePacked("op", i)), opAddr);
+
+            // Give them keys and limits
+            bytes memory keys = genBytes(10 * (48 + 96));
+            vm.prank(opAddr);
+            operatorsRegistry.addValidators(i, 10, keys);
+
+            uint256[] memory opIdxs = new uint256[](1);
+            opIdxs[0] = i;
+            uint32[] memory limits = new uint32[](1);
+            limits[0] = 10;
+            vm.prank(admin);
+            operatorsRegistry.setOperatorLimits(opIdxs, limits, block.number);
+        }
+
+        // Set last funded index to 4
+        OperatorsRegistryInitializableV1(address(operatorsRegistry)).sudoSetLastFundedIndex(4);
+
+        // Fund 3 validators. Should pick from 0, 1, 2
+        vm.prank(river);
+        (bytes[] memory publicKeys,) = operatorsRegistry.pickNextValidatorsToDeposit(3);
+
+        assertEq(publicKeys.length, 3);
+        assertEq(operatorsRegistry.getOperator(0).funded, 1);
+        assertEq(operatorsRegistry.getOperator(1).funded, 1);
+        assertEq(operatorsRegistry.getOperator(2).funded, 1);
+        assertEq(operatorsRegistry.getOperator(3).funded, 0);
+        assertEq(operatorsRegistry.getOperator(4).funded, 0);
+
+        // Verify LastRoundRobinOperatorIndex is now 2
+        // Start another deposit and see where it starts.
+        vm.prank(river);
+        operatorsRegistry.pickNextValidatorsToDeposit(1);
+        assertEq(operatorsRegistry.getOperator(3).funded, 1);
     }
 
     function testGetAllActiveOperators(bytes32 _name, uint256 _firstAddressSalt, uint256 _count) public {
