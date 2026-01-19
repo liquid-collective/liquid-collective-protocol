@@ -13,6 +13,7 @@ import "./Administrable.sol";
 import "./state/operatorsRegistry/Operators.1.sol";
 import "./state/operatorsRegistry/Operators.2.sol";
 import "./state/operatorsRegistry/ValidatorKeys.sol";
+import "./state/operatorsRegistry/LastRoundRobinOperatorIndex.sol";
 import "./state/operatorsRegistry/TotalValidatorExitsRequested.sol";
 import "./state/operatorsRegistry/CurrentValidatorExitsDemand.sol";
 import "./state/shared/RiverAddress.sol";
@@ -454,7 +455,20 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
         onlyRiver
         returns (bytes[] memory publicKeys, bytes[] memory signatures)
     {
-        return _pickNextValidatorsToDepositFromActiveOperators(_count);
+        return _pickNextValidatorsToDepositRoundRobin(_count);
+    }
+
+    /// @inheritdoc IOperatorsRegistryV1
+    function pickNextValidatorsToDepositWithOperatorIndex(uint256 _count, uint256 _operatorIndex)
+        external
+        onlyRiver
+        returns (bytes[] memory publicKeys, bytes[] memory signatures)
+    {
+        if (_operatorIndex == type(uint256).max) {
+            return _pickNextValidatorsToDepositRoundRobin(_count);
+        } else {
+            return _pickNextValidatorsToDepositBYOV(_count, _operatorIndex);
+        }
     }
 
     /// @inheritdoc IOperatorsRegistryV1
@@ -727,6 +741,119 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
                 (OperatorsV2.get(operators[idx].index)).funded += operators[idx].picked;
             }
         }
+    }
+
+    /**
+     * @notice Internal utility to retrieve _count or lower fundable keys using a vanilla round-robin approach.
+     * @dev The selection process continues from the last node operator that received an unspecified deposit.
+     * @param _count Amount of keys required.
+     * @return publicKeys An array of fundable public keys
+     * @return signatures An array of signatures linked to the public keys
+     */
+    function _pickNextValidatorsToDepositRoundRobin(uint256 _count)
+        internal
+        returns (bytes[] memory publicKeys, bytes[] memory signatures)
+    {
+        (OperatorsV2.CachedOperator[] memory operators, uint256 fundableOperatorCount) = OperatorsV2.getAllFundable();
+
+        if (fundableOperatorCount == 0) {
+            return (new bytes[](0), new bytes[](0));
+        }
+
+        uint256 lastFundedIndex = LastRoundRobinOperatorIndex.get();
+
+        // Find the start position in the fundable operators list
+        uint256 startIdx = 0;
+        for (uint256 i = 0; i < fundableOperatorCount; ++i) {
+            if (operators[i].index > lastFundedIndex) {
+                startIdx = i;
+                break;
+            }
+        }
+
+        uint256 remainingCount = _count;
+        uint256 activeOperatorsWithCapacity = fundableOperatorCount;
+
+        // We use the limit field in CachedOperator as a marker for remaining capacity in this run
+        // to avoid repeated calculations. We initialize it with the actual capacity.
+        for (uint256 i = 0; i < fundableOperatorCount; ++i) {
+            operators[i].limit = operators[i].limit - operators[i].funded;
+        }
+
+        while (remainingCount > 0 && activeOperatorsWithCapacity > 0) {
+            uint256 quota = remainingCount / activeOperatorsWithCapacity;
+            if (quota == 0) quota = 1;
+
+            uint256 keysDistributedThisLoop = 0;
+            for (uint256 i = 0; i < fundableOperatorCount; ++i) {
+                uint256 currentIdx = (i + startIdx) % fundableOperatorCount;
+                OperatorsV2.CachedOperator memory op = operators[currentIdx];
+
+                if (op.limit == 0) continue;
+
+                uint256 toGive = LibUint256.min(LibUint256.min(quota, op.limit), remainingCount);
+                if (toGive > 0) {
+                    operators[currentIdx].picked += uint32(toGive);
+                    operators[currentIdx].limit -= uint32(toGive);
+                    remainingCount -= toGive;
+                    keysDistributedThisLoop += toGive;
+
+                    if (operators[currentIdx].limit == 0) {
+                        activeOperatorsWithCapacity--;
+                    }
+
+                    if (remainingCount == 0) break;
+                }
+            }
+            if (keysDistributedThisLoop == 0) break;
+        }
+
+        // Extract keys and update storage
+        uint256 lastOpIndex = lastFundedIndex;
+        for (uint256 i = 0; i < fundableOperatorCount; ++i) {
+            // We follow the sorted order to ensure lastOpIndex is correct
+            uint256 currentIdx = (i + startIdx) % fundableOperatorCount;
+            if (operators[currentIdx].picked > 0) {
+                (bytes[] memory _publicKeys, bytes[] memory _signatures) = ValidatorKeys.getKeys(
+                    operators[currentIdx].index, operators[currentIdx].funded, operators[currentIdx].picked
+                );
+                emit FundedValidatorKeys(operators[currentIdx].index, _publicKeys, false);
+                publicKeys = _concatenateByteArrays(publicKeys, _publicKeys);
+                signatures = _concatenateByteArrays(signatures, _signatures);
+                OperatorsV2.get(operators[currentIdx].index).funded += operators[currentIdx].picked;
+                lastOpIndex = operators[currentIdx].index;
+            }
+        }
+
+        if (lastOpIndex != lastFundedIndex) {
+            LastRoundRobinOperatorIndex.set(lastOpIndex);
+        }
+    }
+
+    /**
+     * @notice Internal utility to retrieve keys from a specific operator (BYOV).
+     * @param _count Amount of keys required.
+     * @param _operatorIndex The index of the operator.
+     * @return publicKeys An array of fundable public keys
+     * @return signatures An array of signatures linked to the public keys
+     */
+    function _pickNextValidatorsToDepositBYOV(uint256 _count, uint256 _operatorIndex)
+        internal
+        returns (bytes[] memory publicKeys, bytes[] memory signatures)
+    {
+        OperatorsV2.Operator storage operator = OperatorsV2.get(_operatorIndex);
+        if (!operator.active) {
+            revert InactiveOperator(_operatorIndex);
+        }
+
+        uint256 available = operator.limit > operator.funded ? operator.limit - operator.funded : 0;
+        if (available < _count) {
+            revert InsufficientKeysForBYOV(_operatorIndex, _count, available);
+        }
+
+        (publicKeys, signatures) = ValidatorKeys.getKeys(_operatorIndex, operator.funded, _count);
+        emit FundedValidatorKeys(_operatorIndex, publicKeys, false);
+        operator.funded += uint32(_count);
     }
 
     function _updateCountOfPickedValidatorsForEachOperator(

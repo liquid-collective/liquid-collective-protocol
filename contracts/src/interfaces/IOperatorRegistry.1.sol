@@ -180,6 +180,9 @@ interface IOperatorsRegistryV1 {
     /// @notice The provided stopped validator count of an operator is above its funded validator count
     error StoppedValidatorCountAboveFundedCount(uint256 operatorIndex, uint32 stoppedCount, uint32 fundedCount);
 
+    /// @notice The requested operator does not have enough keys for BYOV deposit
+    error InsufficientKeysForBYOV(uint256 operatorIndex, uint256 requested, uint256 available);
+
     /// @notice Initializes the operators registry
     /// @param _admin Admin in charge of managing operators
     /// @param _river Address of River system
@@ -325,6 +328,15 @@ interface IOperatorsRegistryV1 {
     /// @return publicKeys An array of public keys
     /// @return signatures An array of signatures linked to the public keys
     function pickNextValidatorsToDeposit(uint256 _count)
+        external
+        returns (bytes[] memory publicKeys, bytes[] memory signatures);
+
+    /// @notice Retrieve validator keys based on a specific operator index (BYOV)
+    /// @param _count Max amount of keys requested
+    /// @param _operatorIndex The operator index to pick from
+    /// @return publicKeys An array of public keys
+    /// @return signatures An array of signatures linked to the public keys
+    function pickNextValidatorsToDepositWithOperatorIndex(uint256 _count, uint256 _operatorIndex)
         external
         returns (bytes[] memory publicKeys, bytes[] memory signatures);
 

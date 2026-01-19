@@ -40,7 +40,8 @@ abstract contract ConsensusLayerDepositManagerV1 is IConsensusLayerDepositManage
     /// @notice Internal helper to retrieve validator keys ready to be funded
     /// @dev Must be overridden
     /// @param _keyCount The amount of keys (or less) to return.
-    function _getNextValidators(uint256 _keyCount)
+    /// @param _operatorIndex The operator index to pick from, or type(uint256).max for round-robin
+    function _getNextValidators(uint256 _keyCount, uint256 _operatorIndex)
         internal
         virtual
         returns (bytes[] memory publicKeys, bytes[] memory signatures);
@@ -89,6 +90,21 @@ abstract contract ConsensusLayerDepositManagerV1 is IConsensusLayerDepositManage
 
     /// @inheritdoc IConsensusLayerDepositManagerV1
     function depositToConsensusLayerWithDepositRoot(uint256 _maxCount, bytes32 _depositRoot) external {
+        _depositToConsensusLayer(_maxCount, _depositRoot, type(uint256).max);
+    }
+
+    /// @inheritdoc IConsensusLayerDepositManagerV1
+    function depositToConsensusLayerWithOperatorIndex(uint256 _maxCount, bytes32 _depositRoot, uint256 _operatorIndex)
+        external
+    {
+        _depositToConsensusLayer(_maxCount, _depositRoot, _operatorIndex);
+    }
+
+    /// @notice Internal utility to deposit current balance to the Consensus Layer
+    /// @param _maxCount The maximum amount of validator keys to fund
+    /// @param _depositRoot The root of the deposit tree
+    /// @param _operatorIndex The operator index to pick from, or type(uint256).max for round-robin
+    function _depositToConsensusLayer(uint256 _maxCount, bytes32 _depositRoot, uint256 _operatorIndex) internal {
         if (msg.sender != KeeperAddress.get()) {
             revert OnlyKeeper();
         }
@@ -106,7 +122,7 @@ abstract contract ConsensusLayerDepositManagerV1 is IConsensusLayerDepositManage
 
         // it's up to the internal overriden _getNextValidators method to provide two array of the same
         // size for the publicKeys and the signatures
-        (bytes[] memory publicKeys, bytes[] memory signatures) = _getNextValidators(keyToDepositCount);
+        (bytes[] memory publicKeys, bytes[] memory signatures) = _getNextValidators(keyToDepositCount, _operatorIndex);
 
         uint256 receivedPublicKeyCount = publicKeys.length;
 

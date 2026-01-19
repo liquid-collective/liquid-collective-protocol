@@ -21,7 +21,7 @@ contract OperatorsRegistryInitializableV1 is OperatorsRegistryV1 {
         external
         returns (bytes[] memory publicKeys, bytes[] memory signatures)
     {
-        return _pickNextValidatorsToDepositFromActiveOperators(_requestedAmount);
+        return _pickNextValidatorsToDepositRoundRobin(_requestedAmount);
     }
 
     function debugGetNextValidatorsToExitFromActiveOperators(uint256 _requestedExitsAmount) external returns (uint256) {

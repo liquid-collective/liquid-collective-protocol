@@ -100,9 +100,10 @@ contract FirewallTests is BytesGenerator, Test {
         operatorsRegistry.initOperatorsRegistryV1(address(operatorsRegistryFirewall), address(river));
 
         bytes32 withdrawalCredentials = withdraw.getCredentials();
-        bytes4[] memory executorCallableRiverSelectors = new bytes4[](2);
+        bytes4[] memory executorCallableRiverSelectors = new bytes4[](3);
         executorCallableRiverSelectors[0] = river.depositToConsensusLayerWithDepositRoot.selector;
-        executorCallableRiverSelectors[1] = river.setOracle.selector;
+        executorCallableRiverSelectors[1] = river.depositToConsensusLayerWithOperatorIndex.selector;
+        executorCallableRiverSelectors[2] = river.setOracle.selector;
         riverFirewall = new Firewall(riverGovernorDAO, executor, address(river), executorCallableRiverSelectors);
         firewalledRiver = RiverV1(payable(address(riverFirewall)));
         river.initRiverV1(
