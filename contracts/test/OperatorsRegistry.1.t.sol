@@ -21,7 +21,7 @@ contract OperatorsRegistryInitializableV1 is OperatorsRegistryV1 {
         external
         returns (bytes[] memory publicKeys, bytes[] memory signatures)
     {
-        return _pickNextValidatorsToDepositRoundRobin(_requestedAmount);
+        return _pickNextValidatorsToDepositFromActiveOperators(_requestedAmount);
     }
 
     function debugGetNextValidatorsToExitFromActiveOperators(uint256 _requestedExitsAmount) external returns (uint256) {
@@ -595,7 +595,17 @@ contract OperatorsRegistryV1Tests is OperatorsRegistryV1TestBase, BytesGenerator
         vm.stopPrank();
 
         vm.startPrank(river);
-        (bytes[] memory publicKeys, bytes[] memory signatures) = operatorsRegistry.pickNextValidatorsToDeposit(10);
+        // Only 5 keys available, requesting 10 should revert
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IOperatorsRegistryV1.InsufficientKeysForRoundRobin.selector,
+                10
+            )
+        );
+        operatorsRegistry.pickNextValidatorsToDeposit(10);
+        
+        // Requesting 5 should work
+        (bytes[] memory publicKeys, bytes[] memory signatures) = operatorsRegistry.pickNextValidatorsToDeposit(5);
         vm.stopPrank();
         assert(publicKeys.length == 5);
         assert(keccak256(publicKeys[0]) == keccak256(LibBytes.slice(tenKeys, 0, 48)));
@@ -654,36 +664,7 @@ contract OperatorsRegistryV1Tests is OperatorsRegistryV1TestBase, BytesGenerator
         {
             OperatorsV2.Operator memory op = operatorsRegistry.getOperator(0);
             assert(op.limit == 50);
-            assert(op.funded == 5);
-            assert(op.keys == 50);
-            assert(op.requestedExits == 0);
-        }
-
-        {
-            OperatorsV2.Operator memory op = operatorsRegistry.getOperator(1);
-            assert(op.limit == 50);
-            assert(op.funded == 1);
-            assert(op.keys == 50);
-            assert(op.requestedExits == 0);
-        }
-
-        {
-            OperatorsV2.Operator memory op = operatorsRegistry.getOperator(2);
-            assert(op.limit == 50);
-            assert(op.funded == 0);
-            assert(op.keys == 50);
-            assert(op.requestedExits == 0);
-        }
-        vm.prank(river);
-        (publicKeys, signatures) = operatorsRegistry.pickNextValidatorsToDeposit(6);
-
-        assert(publicKeys.length == 6);
-        assert(signatures.length == 6);
-
-        {
-            OperatorsV2.Operator memory op = operatorsRegistry.getOperator(0);
-            assert(op.limit == 50);
-            assert(op.funded == 5);
+            assert(op.funded == 2);
             assert(op.keys == 50);
             assert(op.requestedExits == 0);
         }
@@ -699,7 +680,36 @@ contract OperatorsRegistryV1Tests is OperatorsRegistryV1TestBase, BytesGenerator
         {
             OperatorsV2.Operator memory op = operatorsRegistry.getOperator(2);
             assert(op.limit == 50);
-            assert(op.funded == 5);
+            assert(op.funded == 2);
+            assert(op.keys == 50);
+            assert(op.requestedExits == 0);
+        }
+        vm.prank(river);
+        (publicKeys, signatures) = operatorsRegistry.pickNextValidatorsToDeposit(6);
+
+        assert(publicKeys.length == 6);
+        assert(signatures.length == 6);
+
+        {
+            OperatorsV2.Operator memory op = operatorsRegistry.getOperator(0);
+            assert(op.limit == 50);
+            assert(op.funded == 4);
+            assert(op.keys == 50);
+            assert(op.requestedExits == 0);
+        }
+
+        {
+            OperatorsV2.Operator memory op = operatorsRegistry.getOperator(1);
+            assert(op.limit == 50);
+            assert(op.funded == 4);
+            assert(op.keys == 50);
+            assert(op.requestedExits == 0);
+        }
+
+        {
+            OperatorsV2.Operator memory op = operatorsRegistry.getOperator(2);
+            assert(op.limit == 50);
+            assert(op.funded == 4);
             assert(op.keys == 50);
             assert(op.requestedExits == 0);
         }
@@ -710,10 +720,14 @@ contract OperatorsRegistryV1Tests is OperatorsRegistryV1TestBase, BytesGenerator
         assert(publicKeys.length == 64);
         assert(signatures.length == 64);
 
+        // After funding 4+4+4 = 12, we have 12 total funded. Requesting 64 more gives us 4+64=68 total
+        // Round-robin should distribute approximately evenly: starting from operator 3 (last funded was 2)
+        // With 3 operators and 64 keys: 22, 21, 21 (or similar distribution)
+        // Total funded should be: 4+22=26, 4+21=25, 4+21=25 (or variations)
         {
             OperatorsV2.Operator memory op = operatorsRegistry.getOperator(0);
             assert(op.limit == 50);
-            assert(op.funded == 25);
+            assert(op.funded == 26);
             assert(op.keys == 50);
             assert(op.requestedExits == 0);
         }
@@ -721,7 +735,7 @@ contract OperatorsRegistryV1Tests is OperatorsRegistryV1TestBase, BytesGenerator
         {
             OperatorsV2.Operator memory op = operatorsRegistry.getOperator(1);
             assert(op.limit == 50);
-            assert(op.funded == 26);
+            assert(op.funded == 25);
             assert(op.keys == 50);
             assert(op.requestedExits == 0);
         }
@@ -844,9 +858,14 @@ contract OperatorsRegistryV1Tests is OperatorsRegistryV1TestBase, BytesGenerator
 
     function testGetKeysAsRiverNoKeys() public {
         vm.startPrank(river);
-        (bytes[] memory publicKeys,) = operatorsRegistry.pickNextValidatorsToDeposit(10);
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IOperatorsRegistryV1.InsufficientKeysForRoundRobin.selector,
+                10
+            )
+        );
+        operatorsRegistry.pickNextValidatorsToDeposit(10);
         vm.stopPrank();
-        assert(publicKeys.length == 0);
     }
 
     function testGetKeysAsUnauthorized() public {
@@ -1630,9 +1649,22 @@ contract OperatorsRegistryV1TestDistribution is Test {
         vm.stopPrank();
 
         {
+            // With 2 operators inactive, only 150 keys available, so requesting 250 should revert
+            vm.expectRevert(
+                abi.encodeWithSelector(
+                    IOperatorsRegistryV1.InsufficientKeysForRoundRobin.selector,
+                    250
+                )
+            );
+            OperatorsRegistryInitializableV1(address(operatorsRegistry))
+                .debugGetNextValidatorsToDepositFromActiveOperators(250);
+        }
+
+        {
+            // Requesting 150 should work
             (bytes[] memory publicKeys, bytes[] memory signatures) = OperatorsRegistryInitializableV1(
                     address(operatorsRegistry)
-                ).debugGetNextValidatorsToDepositFromActiveOperators(250);
+                ).debugGetNextValidatorsToDepositFromActiveOperators(150);
 
             assert(publicKeys.length == 150);
             assert(signatures.length == 150);
@@ -2403,8 +2435,19 @@ contract OperatorsRegistryV1TestDistribution is Test {
         vm.prank(admin);
         operatorsRegistry.setOperatorLimits(operators, limits, block.number);
 
+        // Total available is 150, requesting 250 should revert
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IOperatorsRegistryV1.InsufficientKeysForRoundRobin.selector,
+                250
+            )
+        );
         OperatorsRegistryInitializableV1(address(operatorsRegistry))
             .debugGetNextValidatorsToDepositFromActiveOperators(250);
+
+        // Requesting 150 should work
+        OperatorsRegistryInitializableV1(address(operatorsRegistry))
+            .debugGetNextValidatorsToDepositFromActiveOperators(150);
         assert(operatorsRegistry.getOperator(0).funded == 50);
         assert(operatorsRegistry.getOperator(1).funded == 40);
         assert(operatorsRegistry.getOperator(2).funded == 30);
@@ -3052,8 +3095,15 @@ contract OperatorsRegistryV1TestDistribution is Test {
         vm.prank(admin);
         operatorsRegistry.setOperatorLimits(operators, limits, block.number);
 
+        // Requesting 51 when only 50 available should return empty arrays (view function doesn't revert)
         (bytes[] memory publicKeys, bytes[] memory signatures) =
             operatorsRegistry.getNextValidatorsToDepositFromActiveOperators(51);
+        assert(publicKeys.length == 0);
+        assert(signatures.length == 0);
+
+        // Requesting 50 should work
+        (publicKeys, signatures) =
+            operatorsRegistry.getNextValidatorsToDepositFromActiveOperators(50);
         assert(publicKeys.length == 50);
         assert(signatures.length == 50);
 

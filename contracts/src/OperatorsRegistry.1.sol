@@ -217,24 +217,22 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
         view
         returns (bytes[] memory publicKeys, bytes[] memory signatures)
     {
-        (OperatorsV2.CachedOperator[] memory operators, uint256 fundableOperatorCount) = OperatorsV2.getAllFundable();
-
-        if (fundableOperatorCount == 0) {
+        // Call internal calculation helper
+        (uint256[] memory operatorIndices, uint256[] memory keyCounts) = 
+            _calculateRoundRobinAllocationInternal(_count);
+        
+        // If no operators returned, return empty arrays (view function shouldn't revert)
+        if (operatorIndices.length == 0) {
             return (publicKeys, signatures);
         }
-
-        _updateCountOfPickedValidatorsForEachOperator(operators, fundableOperatorCount, _count);
-
-        // we loop on all operators
-        for (uint256 idx = 0; idx < fundableOperatorCount; ++idx) {
-            // if we picked keys on any operator, we extract the keys from storage and concatenate them in the result
-            // we then update the funded value
-            if (operators[idx].picked > 0) {
-                (bytes[] memory _publicKeys, bytes[] memory _signatures) =
-                    ValidatorKeys.getKeys(operators[idx].index, operators[idx].funded, operators[idx].picked);
-                publicKeys = _concatenateByteArrays(publicKeys, _publicKeys);
-                signatures = _concatenateByteArrays(signatures, _signatures);
-            }
+        
+        // Extract keys without updating storage
+        for (uint256 i = 0; i < operatorIndices.length; i++) {
+            OperatorsV2.Operator storage operator = OperatorsV2.get(operatorIndices[i]);
+            (bytes[] memory _keys, bytes[] memory _sigs) = 
+                ValidatorKeys.getKeys(operatorIndices[i], operator.funded, keyCounts[i]);
+            publicKeys = _concatenateByteArrays(publicKeys, _keys);
+            signatures = _concatenateByteArrays(signatures, _sigs);
         }
     }
 
@@ -450,12 +448,41 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
     }
 
     /// @inheritdoc IOperatorsRegistryV1
+    function calculateRoundRobinAllocation(uint256 _count)
+        external
+        view
+        returns (uint256[] memory operatorIndices, uint256[] memory keyCounts)
+    {
+        return _calculateRoundRobinAllocationInternal(_count);
+    }
+
+    /// @inheritdoc IOperatorsRegistryV1
     function pickNextValidatorsToDeposit(uint256 _count)
         external
         onlyRiver
         returns (bytes[] memory publicKeys, bytes[] memory signatures)
     {
-        return _pickNextValidatorsToDepositRoundRobin(_count);
+        // Call internal calculation helper
+        (uint256[] memory operatorIndices, uint256[] memory keyCounts) = 
+            _calculateRoundRobinAllocationInternal(_count);
+        
+        // If no operators returned, insufficient keys available
+        if (operatorIndices.length == 0) {
+            revert InsufficientKeysForRoundRobin(_count);
+        }
+        
+        // Orchestrate multiple BYOV calls
+        for (uint256 i = 0; i < operatorIndices.length; i++) {
+            (bytes[] memory _keys, bytes[] memory _sigs) = 
+                _pickNextValidatorsToDepositBYOV(keyCounts[i], operatorIndices[i]);
+            publicKeys = _concatenateByteArrays(publicKeys, _keys);
+            signatures = _concatenateByteArrays(signatures, _sigs);
+        }
+        
+        // Update cursor to the last funded operator
+        if (operatorIndices.length > 0) {
+            LastRoundRobinOperatorIndex.set(operatorIndices[operatorIndices.length - 1]);
+        }
     }
 
     /// @inheritdoc IOperatorsRegistryV1
@@ -464,11 +491,7 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
         onlyRiver
         returns (bytes[] memory publicKeys, bytes[] memory signatures)
     {
-        if (_operatorIndex == type(uint256).max) {
-            return _pickNextValidatorsToDepositRoundRobin(_count);
-        } else {
-            return _pickNextValidatorsToDepositBYOV(_count, _operatorIndex);
-        }
+        return _pickNextValidatorsToDepositBYOV(_count, _operatorIndex);
     }
 
     /// @inheritdoc IOperatorsRegistryV1
@@ -693,6 +716,111 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
         return (_operator.funded + _operator.picked) - _getStoppedValidatorsCount(_operator.index);
     }
 
+    /**
+     * @notice Internal utility to calculate round-robin allocation without modifying state
+     * @param _count Amount of keys required.
+     * @return operatorIndices Array of operator indices to fund
+     * @return keyCounts Array of key counts for each operator
+     */
+    function _calculateRoundRobinAllocationInternal(uint256 _count)
+        internal
+        view
+        returns (uint256[] memory operatorIndices, uint256[] memory keyCounts)
+    {
+        (OperatorsV2.CachedOperator[] memory operators, uint256 fundableOperatorCount) = OperatorsV2.getAllFundable();
+
+        if (fundableOperatorCount == 0) {
+            return (new uint256[](0), new uint256[](0));
+        }
+
+        uint256 lastFundedIndex = LastRoundRobinOperatorIndex.get();
+
+        // Find the start position in the fundable operators list
+        // We want to start after the last funded operator
+        uint256 startIdx = 0;
+        
+        // Special case: if lastFundedIndex is 0 and operator 0 hasn't been funded yet, start from 0
+        if (lastFundedIndex == 0 && operators[0].index == 0 && operators[0].funded == 0) {
+            startIdx = 0;
+        } else {
+            // Find the first operator with index > lastFundedIndex
+            for (uint256 i = 0; i < fundableOperatorCount; ++i) {
+                if (operators[i].index > lastFundedIndex) {
+                    startIdx = i;
+                    break;
+                }
+            }
+            // If no operator found (all have index <= lastFundedIndex), wrap to beginning
+        }
+
+        uint256 remainingCount = _count;
+        uint256 activeOperatorsWithCapacity = fundableOperatorCount;
+
+        // Calculate available capacity for each operator
+        uint256[] memory capacities = new uint256[](fundableOperatorCount);
+        uint256 totalAvailable = 0;
+        for (uint256 i = 0; i < fundableOperatorCount; ++i) {
+            capacities[i] = operators[i].limit - operators[i].funded;
+            totalAvailable += capacities[i];
+        }
+
+        // If total available is less than requested, return empty arrays
+        if (totalAvailable < _count) {
+            return (new uint256[](0), new uint256[](0));
+        }
+
+        // Temporary arrays to track distribution
+        uint256[] memory distribution = new uint256[](fundableOperatorCount);
+        
+        while (remainingCount > 0 && activeOperatorsWithCapacity > 0) {
+            uint256 quota = remainingCount / activeOperatorsWithCapacity;
+            if (quota == 0) quota = 1;
+
+            uint256 keysDistributedThisLoop = 0;
+            for (uint256 i = 0; i < fundableOperatorCount; ++i) {
+                uint256 currentIdx = (i + startIdx) % fundableOperatorCount;
+
+                if (capacities[currentIdx] == 0) continue;
+
+                uint256 toGive = LibUint256.min(LibUint256.min(quota, capacities[currentIdx]), remainingCount);
+                if (toGive > 0) {
+                    distribution[currentIdx] += toGive;
+                    capacities[currentIdx] -= toGive;
+                    remainingCount -= toGive;
+                    keysDistributedThisLoop += toGive;
+
+                    if (capacities[currentIdx] == 0) {
+                        activeOperatorsWithCapacity--;
+                    }
+
+                    if (remainingCount == 0) break;
+                }
+            }
+            if (keysDistributedThisLoop == 0) break;
+        }
+
+        // Count how many operators received keys
+        uint256 operatorCount = 0;
+        for (uint256 i = 0; i < fundableOperatorCount; ++i) {
+            if (distribution[i] > 0) {
+                operatorCount++;
+            }
+        }
+
+        // Build result arrays
+        operatorIndices = new uint256[](operatorCount);
+        keyCounts = new uint256[](operatorCount);
+        uint256 resultIdx = 0;
+        for (uint256 i = 0; i < fundableOperatorCount; ++i) {
+            uint256 currentIdx = (i + startIdx) % fundableOperatorCount;
+            if (distribution[currentIdx] > 0) {
+                operatorIndices[resultIdx] = operators[currentIdx].index;
+                keyCounts[resultIdx] = distribution[currentIdx];
+                resultIdx++;
+            }
+        }
+    }
+
     /// @notice Internal utility to retrieve _count or lower fundable keys
     /// @dev The selection process starts by retrieving the full list of active operators with at least one fundable key.
     /// @dev
@@ -720,113 +848,26 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
         internal
         returns (bytes[] memory publicKeys, bytes[] memory signatures)
     {
-        (OperatorsV2.CachedOperator[] memory operators, uint256 fundableOperatorCount) = OperatorsV2.getAllFundable();
-
-        if (fundableOperatorCount == 0) {
-            return (new bytes[](0), new bytes[](0));
+        // Call internal calculation helper
+        (uint256[] memory operatorIndices, uint256[] memory keyCounts) = 
+            _calculateRoundRobinAllocationInternal(_count);
+        
+        // If no operators returned, insufficient keys available
+        if (operatorIndices.length == 0) {
+            revert InsufficientKeysForRoundRobin(_count);
         }
-
-        _updateCountOfPickedValidatorsForEachOperator(operators, fundableOperatorCount, _count);
-
-        // we loop on all operators
-        for (uint256 idx = 0; idx < fundableOperatorCount; ++idx) {
-            // if we picked keys on any operator, we extract the keys from storage and concatenate them in the result
-            // we then update the funded value
-            if (operators[idx].picked > 0) {
-                (bytes[] memory _publicKeys, bytes[] memory _signatures) =
-                    ValidatorKeys.getKeys(operators[idx].index, operators[idx].funded, operators[idx].picked);
-                emit FundedValidatorKeys(operators[idx].index, _publicKeys, false);
-                publicKeys = _concatenateByteArrays(publicKeys, _publicKeys);
-                signatures = _concatenateByteArrays(signatures, _signatures);
-                (OperatorsV2.get(operators[idx].index)).funded += operators[idx].picked;
-            }
+        
+        // Orchestrate multiple BYOV calls
+        for (uint256 i = 0; i < operatorIndices.length; i++) {
+            (bytes[] memory _keys, bytes[] memory _sigs) = 
+                _pickNextValidatorsToDepositBYOV(keyCounts[i], operatorIndices[i]);
+            publicKeys = _concatenateByteArrays(publicKeys, _keys);
+            signatures = _concatenateByteArrays(signatures, _sigs);
         }
-    }
-
-    /**
-     * @notice Internal utility to retrieve _count or lower fundable keys using a vanilla round-robin approach.
-     * @dev The selection process continues from the last node operator that received an unspecified deposit.
-     * @param _count Amount of keys required.
-     * @return publicKeys An array of fundable public keys
-     * @return signatures An array of signatures linked to the public keys
-     */
-    function _pickNextValidatorsToDepositRoundRobin(uint256 _count)
-        internal
-        returns (bytes[] memory publicKeys, bytes[] memory signatures)
-    {
-        (OperatorsV2.CachedOperator[] memory operators, uint256 fundableOperatorCount) = OperatorsV2.getAllFundable();
-
-        if (fundableOperatorCount == 0) {
-            return (new bytes[](0), new bytes[](0));
-        }
-
-        uint256 lastFundedIndex = LastRoundRobinOperatorIndex.get();
-
-        // Find the start position in the fundable operators list
-        uint256 startIdx = 0;
-        for (uint256 i = 0; i < fundableOperatorCount; ++i) {
-            if (operators[i].index > lastFundedIndex) {
-                startIdx = i;
-                break;
-            }
-        }
-
-        uint256 remainingCount = _count;
-        uint256 activeOperatorsWithCapacity = fundableOperatorCount;
-
-        // We use the limit field in CachedOperator as a marker for remaining capacity in this run
-        // to avoid repeated calculations. We initialize it with the actual capacity.
-        for (uint256 i = 0; i < fundableOperatorCount; ++i) {
-            operators[i].limit = operators[i].limit - operators[i].funded;
-        }
-
-        while (remainingCount > 0 && activeOperatorsWithCapacity > 0) {
-            uint256 quota = remainingCount / activeOperatorsWithCapacity;
-            if (quota == 0) quota = 1;
-
-            uint256 keysDistributedThisLoop = 0;
-            for (uint256 i = 0; i < fundableOperatorCount; ++i) {
-                uint256 currentIdx = (i + startIdx) % fundableOperatorCount;
-                OperatorsV2.CachedOperator memory op = operators[currentIdx];
-
-                if (op.limit == 0) continue;
-
-                uint256 toGive = LibUint256.min(LibUint256.min(quota, op.limit), remainingCount);
-                if (toGive > 0) {
-                    operators[currentIdx].picked += uint32(toGive);
-                    operators[currentIdx].limit -= uint32(toGive);
-                    remainingCount -= toGive;
-                    keysDistributedThisLoop += toGive;
-
-                    if (operators[currentIdx].limit == 0) {
-                        activeOperatorsWithCapacity--;
-                    }
-
-                    if (remainingCount == 0) break;
-                }
-            }
-            if (keysDistributedThisLoop == 0) break;
-        }
-
-        // Extract keys and update storage
-        uint256 lastOpIndex = lastFundedIndex;
-        for (uint256 i = 0; i < fundableOperatorCount; ++i) {
-            // We follow the sorted order to ensure lastOpIndex is correct
-            uint256 currentIdx = (i + startIdx) % fundableOperatorCount;
-            if (operators[currentIdx].picked > 0) {
-                (bytes[] memory _publicKeys, bytes[] memory _signatures) = ValidatorKeys.getKeys(
-                    operators[currentIdx].index, operators[currentIdx].funded, operators[currentIdx].picked
-                );
-                emit FundedValidatorKeys(operators[currentIdx].index, _publicKeys, false);
-                publicKeys = _concatenateByteArrays(publicKeys, _publicKeys);
-                signatures = _concatenateByteArrays(signatures, _signatures);
-                OperatorsV2.get(operators[currentIdx].index).funded += operators[currentIdx].picked;
-                lastOpIndex = operators[currentIdx].index;
-            }
-        }
-
-        if (lastOpIndex != lastFundedIndex) {
-            LastRoundRobinOperatorIndex.set(lastOpIndex);
+        
+        // Update cursor to the last funded operator
+        if (operatorIndices.length > 0) {
+            LastRoundRobinOperatorIndex.set(operatorIndices[operatorIndices.length - 1]);
         }
     }
 
@@ -854,60 +895,6 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
         (publicKeys, signatures) = ValidatorKeys.getKeys(_operatorIndex, operator.funded, _count);
         emit FundedValidatorKeys(_operatorIndex, publicKeys, false);
         operator.funded += uint32(_count);
-    }
-
-    function _updateCountOfPickedValidatorsForEachOperator(
-        OperatorsV2.CachedOperator[] memory operators,
-        uint256 fundableOperatorCount,
-        uint256 _count
-    ) internal view {
-        while (_count > 0) {
-            // loop on operators to find the first that has fundable keys, taking into account previous loop round attributions
-            uint256 selectedOperatorIndex = 0;
-            for (; selectedOperatorIndex < fundableOperatorCount;) {
-                if (_hasFundableKeys(operators[selectedOperatorIndex])) {
-                    break;
-                }
-                unchecked {
-                    ++selectedOperatorIndex;
-                }
-            }
-
-            // if we reach the end, we have allocated all keys
-            if (selectedOperatorIndex == fundableOperatorCount) {
-                break;
-            }
-
-            // we start from the next operator and we try to find one that has fundable keys but a lower (funded + picked) - stopped value
-            for (uint256 idx = selectedOperatorIndex + 1; idx < fundableOperatorCount;) {
-                if (
-                    _getActiveValidatorCountForDeposits(operators[idx])
-                            < _getActiveValidatorCountForDeposits(operators[selectedOperatorIndex])
-                        && _hasFundableKeys(operators[idx])
-                ) {
-                    selectedOperatorIndex = idx;
-                }
-                unchecked {
-                    ++idx;
-                }
-            }
-
-            // we take the smallest value between limit - (funded + picked), _requestedAmount and MAX_VALIDATOR_ATTRIBUTION_PER_ROUND
-            uint256 pickedKeyCount = LibUint256.min(
-                LibUint256.min(
-                    operators[selectedOperatorIndex].limit
-                        - (operators[selectedOperatorIndex].funded + operators[selectedOperatorIndex].picked),
-                    MAX_VALIDATOR_ATTRIBUTION_PER_ROUND
-                ),
-                _count
-            );
-
-            // we update the cached picked amount
-            operators[selectedOperatorIndex].picked += uint32(pickedKeyCount);
-
-            // we update the requested amount count
-            _count -= pickedKeyCount;
-        }
     }
 
     /// @notice Internal utility to get the count of active validators during the exit selection process

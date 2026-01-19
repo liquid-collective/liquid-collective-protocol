@@ -183,6 +183,10 @@ interface IOperatorsRegistryV1 {
     /// @notice The requested operator does not have enough keys for BYOV deposit
     error InsufficientKeysForBYOV(uint256 operatorIndex, uint256 requested, uint256 available);
 
+    /// @notice Thrown when round-robin deposit cannot fulfill the requested count
+    /// @param requested The number of keys requested
+    error InsufficientKeysForRoundRobin(uint256 requested);
+
     /// @notice Initializes the operators registry
     /// @param _admin Admin in charge of managing operators
     /// @param _river Address of River system
@@ -323,7 +327,16 @@ interface IOperatorsRegistryV1 {
     /// @param _indexes The indexes of the keys to remove
     function removeValidators(uint256 _index, uint256[] calldata _indexes) external;
 
-    /// @notice Retrieve validator keys based on operator statuses
+    /// @notice Calculate the round-robin distribution for validator key allocation
+    /// @param _count The number of validator keys to distribute
+    /// @return operatorIndices The operator indices to fund
+    /// @return keyCounts The number of keys to fund for each operator
+    function calculateRoundRobinAllocation(uint256 _count)
+        external
+        view
+        returns (uint256[] memory operatorIndices, uint256[] memory keyCounts);
+
+    /// @notice Retrieve validator keys using vanilla round-robin (the previous equitable logic is deprecated)
     /// @param _count Max amount of keys requested
     /// @return publicKeys An array of public keys
     /// @return signatures An array of signatures linked to the public keys
@@ -331,8 +344,9 @@ interface IOperatorsRegistryV1 {
         external
         returns (bytes[] memory publicKeys, bytes[] memory signatures);
 
-    /// @notice Retrieve validator keys based on a specific operator index (BYOV)
-    /// @param _count Max amount of keys requested
+    /// @notice Retrieve validator keys from a specific operator (BYOV)
+    /// @dev Reverts if the operator doesn't have enough keys available
+    /// @param _count The exact amount of keys required
     /// @param _operatorIndex The operator index to pick from
     /// @return publicKeys An array of public keys
     /// @return signatures An array of signatures linked to the public keys
