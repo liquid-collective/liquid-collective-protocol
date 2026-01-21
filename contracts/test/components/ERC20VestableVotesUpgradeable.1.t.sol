@@ -1355,8 +1355,8 @@ contract ERC20VestableVotesUpgradeableV1Tests is Test {
                 tt.releaseVestingSchedule(0);
                 vm.stopPrank();
             } else if (
-                (releaseAt < periodDuration) || (releaseAt < cliffDuration)
-                    || (revokeAt > 0) && ((revokeAt < cliffDuration) || (revokeAt < periodDuration))
+                (releaseAt < periodDuration) || (releaseAt < cliffDuration) || (revokeAt > 0)
+                    && ((revokeAt < cliffDuration) || (revokeAt < periodDuration))
             ) {
                 // we are in either of this situation
                 // - before end of lock duration
@@ -1493,5 +1493,27 @@ contract ERC20VestableVotesUpgradeableV1Tests is Test {
         vm.warp(block.timestamp + 10 days);
         releasableAmount = tt.computeVestingReleasableAmount(0);
         assertEq(releasableAmount, 10);
+    }
+
+    function testRevokeRevertsPastEndDate() public {
+        // create a vesting schedule for Alice
+        vm.prank(initAccount);
+        uint256 index = createVestingSchedule(alice, block.timestamp, 1 days, 10 days, 1 days, 0, true, 10);
+        vm.warp(block.timestamp + 1 days);
+        vm.prank(initAccount);
+        vm.expectRevert(abi.encodeWithSignature("VestingScheduleNotRevocableInPast()"));
+        tt.revokeVestingSchedule(index, uint64(block.timestamp - 1));
+    }
+
+    function testRevokeIfCliffDurationGreaterThanDuration() public {
+        // create a vesting schedule for Alice
+        vm.prank(initAccount);
+        vm.expectRevert(
+            abi.encodeWithSignature(
+                "InvalidVestingScheduleParameter(string)",
+                "Vesting schedule duration must be greater than or equal to the cliff duration"
+            )
+        );
+        createVestingSchedule(makeAddr("bomb"), block.timestamp, 1 days, 1, 1, 0, true, 10);
     }
 }

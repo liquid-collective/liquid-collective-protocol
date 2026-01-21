@@ -297,9 +297,7 @@ contract SharesManagerV1Tests is Test {
         }
     }
 
-    function testApproveAndTransferAboveBalance(uint256 _userOneSalt, uint256 _userTwoSalt, uint128 _allowance)
-        public
-    {
+    function testApproveAndTransferAboveBalance(uint256 _userOneSalt, uint256 _userTwoSalt, uint128 _allowance) public {
         address _userOne = uf._new(_userOneSalt);
         address _userTwo = uf._new(_userTwoSalt);
         SharesManagerPublicDeal(payable(address(sharesManager))).deal(_userOne, _allowance / 2);
@@ -315,9 +313,7 @@ contract SharesManagerV1Tests is Test {
         }
     }
 
-    function testApproveAndTransferUnauthorized(uint256 _userOneSalt, uint256 _userTwoSalt, uint128 _allowance)
-        public
-    {
+    function testApproveAndTransferUnauthorized(uint256 _userOneSalt, uint256 _userTwoSalt, uint128 _allowance) public {
         address _userOne = uf._new(_userOneSalt);
         address _userTwo = uf._new(_userTwoSalt);
         SharesManagerPublicDeal(payable(address(sharesManager))).deal(_userOne, _allowance);

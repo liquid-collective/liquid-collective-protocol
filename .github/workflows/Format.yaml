@@ -11,14 +11,14 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           submodules: recursive
 
       - name: install foundry
         uses: onbjerg/foundry-toolchain@v1
         with:
-          version: nightly
+          version: v1.4.3
 
       - name: run formatting checks
         run: forge fmt --check 
