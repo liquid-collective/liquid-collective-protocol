@@ -20,7 +20,7 @@ Liquid Collective enables users to stake ETH and mint LsETH. The LsETH liquid st
 - [Report Security Vulnerability](https://github.com/liquid-collective/security)
 
 ## Deployment Addresses
-
+### Ethereum Deployments
 | Contract                                                                                                                             |                                                         Mainnet                                                         |                                                              Hoodi                                                              |
 |--------------------------------------------------------------------------------------------------------------------------------------|-------------------------------------------------------------------------------------------------------------------------|:-------------------------------------------------------------------------------------------------------------------------------:|
 | [TLC](https://github.com/liquid-collective/liquid-collective-protocol/blob/main/contracts/src/TLC.1.sol)                             | [`0xb5Fe6946836D687848B5aBd42dAbF531d5819632`](https://etherscan.io/address/0xb5Fe6946836D687848B5aBd42dAbF531d5819632) |                                                               n/a                                                               |
@@ -34,6 +34,18 @@ Liquid Collective enables users to stake ETH and mint LsETH. The LsETH liquid st
 | [RedeemManager](https://github.com/liquid-collective/liquid-collective-protocol/blob/main/contracts/src/RedeemManager.1.sol)         | [`0x080b3a41390b357Ad7e8097644d1DEDf57AD3375`](https://etherscan.io/address/0x080b3a41390b357Ad7e8097644d1DEDf57AD3375) | [`0x5d51E82b75A4F16ef677d5bE20d707b6441A00b7`](https://hoodi.etherscan.io/address/0x5d51E82b75A4F16ef677d5bE20d707b6441A00b7) |
 | [WLSETH](https://github.com/liquid-collective/liquid-collective-protocol/blob/main/contracts/src/WLSETH.1.sol)                       |                                                           n/a                                                           |                                                               n/a                                                               |
 | [Protocol Metrics](https://github.com/liquid-collective/liquid-collective-protocol/blob/main/contracts/src/ProtocolMetrics.1.sol)    | [`0xf19345EabC46ADF82e85CC2293A657A2dBa5c7d4`](https://etherscan.io/address/0xf19345EabC46ADF82e85CC2293A657A2dBa5c7d4) |                                                               n/a                                                               |
+
+### L2 Deployments
+| Contract                                                                                                                             |                                     Chain                                   |                                                     Address                                                                     |
+|--------------------------------------------------------------------------------------------------------------------------------------|-----------------------------------------------------------------------------|:-------------------------------------------------------------------------------------------------------------------------------:|
+| [LsETH](https://github.com/liquid-collective/liquid-collective-protocol/blob/main/contracts/src/l2-token/BurnMintERC20.sol)          |                                      Base                                   | [`0xB29749498954A3A821ec37BdE86e386dF3cE30B6`](https://basescan.org/address/0xB29749498954A3A821ec37BdE86e386dF3cE30B6)         |
+| [LsETH](https://github.com/zircuit-labs/L2UpgradeableERC20/blob/main/contracts/L2UpgradeableERC20.sol)                               |                                      Zircuit                                | [`0xF97c7A9bECe498FD6e31e344643589aACC96206A`](https://explorer.zircuit.com/address/0xF97c7A9bECe498FD6e31e344643589aACC96206A) |
+| [LsETH](https://github.com/liquid-collective/liquid-collective-protocol/blob/main/contracts/src/l2-token/BurnMintERC20.sol)          |                                      Linea                                  | [`0xB29749498954A3A821ec37BdE86e386dF3cE30B6`](https://lineascan.build/address/0xB29749498954A3A821ec37BdE86e386dF3cE30B6)      |
+
+### Ethereum Adapters
+| Contract                                                                                                                             |                                                         Mainnet                                                         |
+|--------------------------------------------------------------------------------------------------------------------------------------|-------------------------------------------------------------------------------------------------------------------------|
+| [PendleLsETHSY](https://github.com/liquid-collective/pendle-sy-tests/blob/main/src/PendleLsETHSY.sol)                                | [`0xEC3f66d7FaC189Ed83593C730ef46b67A9d2d455`](https://etherscan.io/address/0xEC3f66d7FaC189Ed83593C730ef46b67A9d2d455) |
 
 ## Security
 
