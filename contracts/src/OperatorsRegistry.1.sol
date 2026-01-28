@@ -1,5 +1,5 @@
 //SPDX-License-Identifier: BUSL-1.1
-pragma solidity 0.8.22;
+pragma solidity 0.8.20;
 
 import "./interfaces/IOperatorRegistry.1.sol";
 import "./interfaces/IRiver.1.sol";
@@ -208,34 +208,32 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
     }
 
     /// @inheritdoc IOperatorsRegistryV1
-    function getNextValidatorsToDeposit(Allocation memory _allocation)
+    function getNextValidatorsToDeposit(OperatorAllocation[] memory _allocations)
         external
         view
-        returns (Allocation memory)
+        returns (OperatorAllocation[] memory)
     {
-        uint256 len = _allocation.operatorIds.length;
-        if (len != _allocation.counts.length) {
-            revert InvalidArrayLengths();
-        }
-
-        uint32[] memory cappedCounts = new uint32[](len);
+        uint256 len = _allocations.length;
+        OperatorAllocation[] memory cappedAllocations = new OperatorAllocation[](len);
 
         for (uint256 i = 0; i < len; ++i) {
-            uint256 operatorIndex = _allocation.operatorIds[i];
+            uint256 operatorIndex = _allocations[i].operatorIndex;
             OperatorsV2.Operator memory operator = OperatorsV2.get(operatorIndex);
+
+            cappedAllocations[i].operatorIndex = operatorIndex;
 
             // Check operator is active
             if (!operator.active) {
-                cappedCounts[i] = 0;
+                cappedAllocations[i].validatorCount = 0;
                 continue;
             }
 
             // Calculate fundable keys and cap the count
             uint256 fundableKeys = operator.limit - operator.funded;
-            cappedCounts[i] = uint32(LibUint256.min(_allocation.counts[i], fundableKeys));
+            cappedAllocations[i].validatorCount = LibUint256.min(_allocations[i].validatorCount, fundableKeys);
         }
 
-        return Allocation({operatorIds: _allocation.operatorIds, counts: cappedCounts});
+        return cappedAllocations;
     }
 
     /// @inheritdoc IOperatorsRegistryV1
@@ -450,19 +448,16 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
     }
 
     /// @inheritdoc IOperatorsRegistryV1
-    function pickNextValidatorsToDeposit(Allocation calldata _allocation)
+    function pickNextValidatorsToDeposit(OperatorAllocation[] calldata _allocations)
         external
         onlyRiver
         returns (bytes[] memory publicKeys, bytes[] memory signatures)
     {
-        uint256 len = _allocation.operatorIds.length;
-        if (len != _allocation.counts.length) {
-            revert InvalidArrayLengths();
-        }
+        uint256 len = _allocations.length;
 
         for (uint256 i = 0; i < len; ++i) {
-            uint256 operatorIndex = _allocation.operatorIds[i];
-            uint256 count = _allocation.counts[i];
+            uint256 operatorIndex = _allocations[i].operatorIndex;
+            uint256 count = _allocations[i].validatorCount;
 
             if (count == 0) {
                 continue;
@@ -493,11 +488,8 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
     }
 
     /// @inheritdoc IOperatorsRegistryV1
-    function requestValidatorExits(Allocation calldata _allocation) external {
-        uint256 len = _allocation.operatorIds.length;
-        if (len != _allocation.counts.length) {
-            revert InvalidArrayLengths();
-        }
+    function requestValidatorExits(OperatorAllocation[] calldata _allocations) external {
+        uint256 len = _allocations.length;
 
         uint256 currentValidatorExitsDemand = CurrentValidatorExitsDemand.get();
         uint256 savedCurrentValidatorExitsDemand = currentValidatorExitsDemand;
@@ -506,8 +498,8 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
         uint256 totalRequestedExitsCopy = totalRequestedExitsValue;
 
         for (uint256 i = 0; i < len; ++i) {
-            uint256 operatorIndex = _allocation.operatorIds[i];
-            uint256 count = _allocation.counts[i];
+            uint256 operatorIndex = _allocations[i].operatorIndex;
+            uint256 count = _allocations[i].validatorCount;
 
             if (count == 0) {
                 continue;

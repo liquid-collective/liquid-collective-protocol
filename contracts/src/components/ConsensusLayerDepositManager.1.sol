@@ -1,5 +1,5 @@
 //SPDX-License-Identifier: BUSL-1.1
-pragma solidity 0.8.22;
+pragma solidity 0.8.20;
 
 import "../interfaces/components/IConsensusLayerDepositManager.1.sol";
 import "../interfaces/IOperatorRegistry.1.sol";
@@ -40,10 +40,10 @@ abstract contract ConsensusLayerDepositManagerV1 is IConsensusLayerDepositManage
 
     /// @notice Internal helper to retrieve validator keys based on node operator allocations
     /// @dev Must be overridden
-    /// @param _allocation Node operator allocations
+    /// @param _allocations Node operator allocations
     /// @return publicKeys An array of fundable public keys
     /// @return signatures An array of signatures linked to the public keys
-    function _getNextValidators(IOperatorsRegistryV1.Allocation memory _allocation)
+    function _getNextValidators(IOperatorsRegistryV1.OperatorAllocation[] memory _allocations)
         internal
         virtual
         returns (bytes[] memory publicKeys, bytes[] memory signatures);
@@ -92,7 +92,7 @@ abstract contract ConsensusLayerDepositManagerV1 is IConsensusLayerDepositManage
 
     /// @inheritdoc IConsensusLayerDepositManagerV1
     function depositToConsensusLayerWithDepositRoot(
-        IOperatorsRegistryV1.Allocation calldata _allocation,
+        IOperatorsRegistryV1.OperatorAllocation[] calldata _allocations,
         bytes32 _depositRoot
     ) external {
         if (msg.sender != KeeperAddress.get()) {
@@ -106,10 +106,10 @@ abstract contract ConsensusLayerDepositManagerV1 is IConsensusLayerDepositManage
         uint256 committedBalance = CommittedBalance.get();
         uint256 maxDepositable = committedBalance / DEPOSIT_SIZE;
 
-        // Calculate total requested from allocation
+        // Calculate total requested from allocations
         uint256 totalRequested = 0;
-        for (uint256 i = 0; i < _allocation.counts.length; ++i) {
-            totalRequested += _allocation.counts[i];
+        for (uint256 i = 0; i < _allocations.length; ++i) {
+            totalRequested += _allocations[i].validatorCount;
         }
 
         if (totalRequested > maxDepositable) {
@@ -121,7 +121,7 @@ abstract contract ConsensusLayerDepositManagerV1 is IConsensusLayerDepositManage
         }
 
         // Get validator keys using provided allocations
-        (bytes[] memory publicKeys, bytes[] memory signatures) = _getNextValidators(_allocation);
+        (bytes[] memory publicKeys, bytes[] memory signatures) = _getNextValidators(_allocations);
 
         uint256 receivedPublicKeyCount = publicKeys.length;
 

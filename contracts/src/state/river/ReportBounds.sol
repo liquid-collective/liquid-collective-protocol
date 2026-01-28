@@ -1,5 +1,5 @@
 //SPDX-License-Identifier: BUSL-1.1
-pragma solidity 0.8.22;
+pragma solidity 0.8.20;
 
 /// @title Report Bounds Storage
 /// @notice Utility to manage the Report Bounds in storage

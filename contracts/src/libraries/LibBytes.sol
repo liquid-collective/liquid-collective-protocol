@@ -1,5 +1,5 @@
 //SPDX-License-Identifier: Unlicense
-pragma solidity 0.8.22;
+pragma solidity 0.8.20;
 
 /// @title Lib Bytes
 /// @notice This library helps manipulating bytes

@@ -1,5 +1,5 @@
 //SPDX-License-Identifier: BUSL-1.1
-pragma solidity 0.8.22;
+pragma solidity 0.8.20;
 
 import "../IOperatorRegistry.1.sol";
 
@@ -71,10 +71,10 @@ interface IConsensusLayerDepositManagerV1 {
     function getKeeper() external view returns (address);
 
     /// @notice Deposits current balance to the Consensus Layer based on explicit operator allocations
-    /// @param _allocation The operator allocation specifying how many validators per operator
+    /// @param _allocations The operator allocations specifying how many validators per operator
     /// @param _depositRoot The root of the deposit tree
     function depositToConsensusLayerWithDepositRoot(
-        IOperatorsRegistryV1.Allocation calldata _allocation,
+        IOperatorsRegistryV1.OperatorAllocation[] calldata _allocations,
         bytes32 _depositRoot
     ) external;
 }

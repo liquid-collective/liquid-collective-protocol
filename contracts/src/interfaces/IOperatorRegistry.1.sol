@@ -1,5 +1,5 @@
 //SPDX-License-Identifier: BUSL-1.1
-pragma solidity 0.8.22;
+pragma solidity 0.8.20;
 
 import "../state/operatorsRegistry/Operators.2.sol";
 
@@ -7,12 +7,12 @@ import "../state/operatorsRegistry/Operators.2.sol";
 /// @author Alluvial Finance Inc.
 /// @notice This interface exposes methods to handle the list of operators and their keys
 interface IOperatorsRegistryV1 {
-    /// @notice Structure representing node operator allocations using parallel arrays
-    /// @param operatorIds Array of operator indexes
-    /// @param counts Array of counts per operator
-    struct Allocation {
-        uint32[] operatorIds;
-        uint32[] counts;
+    /// @notice Structure representing an operator allocation for deposits or exits
+    /// @param operatorIndex The index of the operator
+    /// @param validatorCount The number of validators to deposit/exit for this operator
+    struct OperatorAllocation {
+        uint256 operatorIndex;
+        uint256 validatorCount;
     }
     /// @notice A new operator has been added to the registry
     /// @param index The operator index
@@ -263,13 +263,13 @@ interface IOperatorsRegistryV1 {
         view
         returns (bytes memory publicKey, bytes memory signature, bool funded);
 
-    /// @notice Validate and cap an allocation against operator state
-    /// @param _allocation The proposed allocation to validate
-    /// @return The validated/capped allocation
-    function getNextValidatorsToDeposit(Allocation memory _allocation)
+    /// @notice Validate and cap allocations against operator state
+    /// @param _allocations The proposed allocations to validate
+    /// @return The validated/capped allocations
+    function getNextValidatorsToDeposit(OperatorAllocation[] memory _allocations)
         external
         view
-        returns (Allocation memory);
+        returns (OperatorAllocation[] memory);
 
     /// @notice Retrieve the active operator set
     /// @return The list of active operators and their details
@@ -343,16 +343,16 @@ interface IOperatorsRegistryV1 {
     function removeValidators(uint256 _index, uint256[] calldata _indexes) external;
 
     /// @notice Retrieve validator keys based on explicit operator allocations
-    /// @param _allocation Node operator allocations specifying how many validators per operator
+    /// @param _allocations Node operator allocations specifying how many validators per operator
     /// @return publicKeys An array of public keys
     /// @return signatures An array of signatures linked to the public keys
-    function pickNextValidatorsToDeposit(Allocation calldata _allocation)
+    function pickNextValidatorsToDeposit(OperatorAllocation[] calldata _allocations)
         external
         returns (bytes[] memory publicKeys, bytes[] memory signatures);
 
     /// @notice Request validator exits based on explicit operator allocations
-    /// @param _allocation Node operator allocations specifying how many exits per operator
-    function requestValidatorExits(Allocation calldata _allocation) external;
+    /// @param _allocations Node operator allocations specifying how many exits per operator
+    function requestValidatorExits(OperatorAllocation[] calldata _allocations) external;
 
     /// @notice Increases the exit request demand
     /// @dev This method is only callable by the river contract, and to actually forward the information to the node operators via event emission, the unprotected requestValidatorExits method must be called

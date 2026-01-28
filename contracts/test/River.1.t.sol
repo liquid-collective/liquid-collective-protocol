@@ -1,6 +1,6 @@
 //SPDX-License-Identifier: BUSL-1.1
 
-pragma solidity 0.8.22;
+pragma solidity 0.8.20;
 
 import "forge-std/Test.sol";
 
@@ -47,28 +47,28 @@ abstract contract RiverV1TestBase is Test, BytesGenerator {
     AllowlistV1 internal allowlist;
     OperatorsRegistryWithOverridesV1 internal operatorsRegistry;
 
-    function _createAllocation(uint256 opIndex, uint32 count)
+    function _createAllocation(uint256 opIndex, uint256 count)
         internal
         pure
-        returns (IOperatorsRegistryV1.Allocation memory)
+        returns (IOperatorsRegistryV1.OperatorAllocation[] memory)
     {
-        uint32[] memory operatorIds = new uint32[](1);
-        uint32[] memory counts = new uint32[](1);
-        operatorIds[0] = uint32(opIndex);
-        counts[0] = count;
-        return IOperatorsRegistryV1.Allocation({operatorIds: operatorIds, counts: counts});
+        IOperatorsRegistryV1.OperatorAllocation[] memory allocations = new IOperatorsRegistryV1.OperatorAllocation[](1);
+        allocations[0] = IOperatorsRegistryV1.OperatorAllocation({operatorIndex: opIndex, validatorCount: count});
+        return allocations;
     }
 
     function _createMultiAllocation(uint256[] memory opIndexes, uint32[] memory counts)
         internal
         pure
-        returns (IOperatorsRegistryV1.Allocation memory)
+        returns (IOperatorsRegistryV1.OperatorAllocation[] memory)
     {
-        uint32[] memory operatorIds = new uint32[](opIndexes.length);
+        IOperatorsRegistryV1.OperatorAllocation[] memory allocations =
+            new IOperatorsRegistryV1.OperatorAllocation[](opIndexes.length);
         for (uint256 i = 0; i < opIndexes.length; ++i) {
-            operatorIds[i] = uint32(opIndexes[i]);
+            allocations[i] =
+                IOperatorsRegistryV1.OperatorAllocation({operatorIndex: opIndexes[i], validatorCount: counts[i]});
         }
-        return IOperatorsRegistryV1.Allocation({operatorIds: operatorIds, counts: counts});
+        return allocations;
     }
 
     address internal admin;
@@ -590,7 +590,7 @@ contract RiverV1Tests is RiverV1TestBase {
         uint32[] memory counts = new uint32[](2);
         counts[0] = 17;
         counts[1] = 17;
-        IOperatorsRegistryV1.Allocation memory allocation = _createMultiAllocation(indexes, counts);
+        IOperatorsRegistryV1.OperatorAllocation[] memory allocation = _createMultiAllocation(indexes, counts);
 
         vm.prank(admin);
         river.depositToConsensusLayerWithDepositRoot(allocation, bytes32(0));
@@ -636,7 +636,7 @@ contract RiverV1Tests is RiverV1TestBase {
         uint32[] memory counts = new uint32[](2);
         counts[0] = 17;
         counts[1] = 17;
-        IOperatorsRegistryV1.Allocation memory allocation = _createMultiAllocation(indexes, counts);
+        IOperatorsRegistryV1.OperatorAllocation[] memory allocation = _createMultiAllocation(indexes, counts);
 
         vm.prank(admin);
         river.depositToConsensusLayerWithDepositRoot(allocation, bytes32(0));
@@ -739,7 +739,7 @@ contract RiverV1Tests is RiverV1TestBase {
         uint32[] memory counts = new uint32[](2);
         counts[0] = 17;
         counts[1] = 17;
-        IOperatorsRegistryV1.Allocation memory allocation = _createMultiAllocation(indexes, counts);
+        IOperatorsRegistryV1.OperatorAllocation[] memory allocation = _createMultiAllocation(indexes, counts);
 
         vm.prank(admin);
         river.depositToConsensusLayerWithDepositRoot(allocation, bytes32(0));
@@ -793,7 +793,7 @@ contract RiverV1Tests is RiverV1TestBase {
         uint32[] memory counts = new uint32[](2);
         counts[0] = 17;
         counts[1] = 17;
-        IOperatorsRegistryV1.Allocation memory allocation = _createMultiAllocation(indexes, counts);
+        IOperatorsRegistryV1.OperatorAllocation[] memory allocation = _createMultiAllocation(indexes, counts);
 
         vm.prank(admin);
         river.depositToConsensusLayerWithDepositRoot(allocation, bytes32(0));
@@ -1029,7 +1029,7 @@ contract RiverV1TestsReport_HEAVY_FUZZING is RiverV1TestBase {
         }
 
         // Create allocation from collected operator data
-        IOperatorsRegistryV1.Allocation memory allocation = _createMultiAllocation(operatorIndices, operatorKeyCounts);
+        IOperatorsRegistryV1.OperatorAllocation[] memory allocation = _createMultiAllocation(operatorIndices, operatorKeyCounts);
 
         vm.prank(admin);
         river.depositToConsensusLayerWithDepositRoot(allocation, bytes32(0));
