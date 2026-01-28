@@ -1,5 +1,5 @@
 //SPDX-License-Identifier: BUSL-1.1
-pragma solidity 0.8.20;
+pragma solidity 0.8.22;
 
 import "../../../src/state/tlc/VestingSchedules.1.sol";
 import "../../../src/state/tlc/VestingSchedules.2.sol";

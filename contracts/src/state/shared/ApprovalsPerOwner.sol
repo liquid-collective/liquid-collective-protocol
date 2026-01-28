@@ -1,5 +1,5 @@
 //SPDX-License-Identifier: BUSL-1.1
-pragma solidity 0.8.20;
+pragma solidity 0.8.22;
 
 /// @title Approvals Per Owner Storage
 /// @notice Utility to manage the Approvals Per Owner in storage

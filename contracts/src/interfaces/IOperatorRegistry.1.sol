@@ -1,5 +1,5 @@
 //SPDX-License-Identifier: BUSL-1.1
-pragma solidity 0.8.20;
+pragma solidity 0.8.22;
 
 import "../state/operatorsRegistry/Operators.2.sol";
 
@@ -7,6 +7,13 @@ import "../state/operatorsRegistry/Operators.2.sol";
 /// @author Alluvial Finance Inc.
 /// @notice This interface exposes methods to handle the list of operators and their keys
 interface IOperatorsRegistryV1 {
+    /// @notice Structure representing node operator allocations using parallel arrays
+    /// @param operatorIds Array of operator indexes
+    /// @param counts Array of counts per operator
+    struct Allocation {
+        uint32[] operatorIds;
+        uint32[] counts;
+    }
     /// @notice A new operator has been added to the registry
     /// @param index The operator index
     /// @param name The operator display name
@@ -174,6 +181,22 @@ interface IOperatorsRegistryV1 {
     /// @notice Thrown when no exit requests can be performed
     error NoExitRequestsToPerform();
 
+    /// @notice Thrown when an invalid operator allocation is provided
+    /// @param operatorIndex The operator index
+    /// @param requested The requested count
+    /// @param available The available count
+    error InvalidOperatorAllocation(uint256 operatorIndex, uint256 requested, uint256 available);
+
+    /// @notice Thrown when operator in allocation is not active
+    /// @param operatorIndex The operator index
+    error OperatorNotActive(uint256 operatorIndex);
+
+    /// @notice Thrown when operator in exit allocation has insufficient exitable validators
+    /// @param operatorIndex The operator index
+    /// @param requested The requested exit count
+    /// @param available The available exitable validators
+    error InvalidExitAllocation(uint256 operatorIndex, uint256 requested, uint256 available);
+
     /// @notice The provided stopped validator count array is shrinking
     error StoppedValidatorCountArrayShrinking();
 
@@ -240,14 +263,13 @@ interface IOperatorsRegistryV1 {
         view
         returns (bytes memory publicKey, bytes memory signature, bool funded);
 
-    /// @notice Get the next validators that would be funded
-    /// @param _count Count of validators that would be funded next
-    /// @return publicKeys An array of fundable public keys
-    /// @return signatures An array of signatures linked to the public keys
-    function getNextValidatorsToDepositFromActiveOperators(uint256 _count)
+    /// @notice Validate and cap an allocation against operator state
+    /// @param _allocation The proposed allocation to validate
+    /// @return The validated/capped allocation
+    function getNextValidatorsToDeposit(Allocation memory _allocation)
         external
         view
-        returns (bytes[] memory publicKeys, bytes[] memory signatures);
+        returns (Allocation memory);
 
     /// @notice Retrieve the active operator set
     /// @return The list of active operators and their details
@@ -320,19 +342,17 @@ interface IOperatorsRegistryV1 {
     /// @param _indexes The indexes of the keys to remove
     function removeValidators(uint256 _index, uint256[] calldata _indexes) external;
 
-    /// @notice Retrieve validator keys based on operator statuses
-    /// @param _count Max amount of keys requested
+    /// @notice Retrieve validator keys based on explicit operator allocations
+    /// @param _allocation Node operator allocations specifying how many validators per operator
     /// @return publicKeys An array of public keys
     /// @return signatures An array of signatures linked to the public keys
-    function pickNextValidatorsToDeposit(uint256 _count)
+    function pickNextValidatorsToDeposit(Allocation calldata _allocation)
         external
         returns (bytes[] memory publicKeys, bytes[] memory signatures);
 
-    /// @notice Public endpoint to consume the exit request demand and perform the actual exit requests
-    /// @notice The selection algorithm will pick validators based on their active validator counts
-    /// @notice This value is computed by using the count of funded keys and taking into account the stopped validator counts and exit requests
-    /// @param _count Max amount of exits to request
-    function requestValidatorExits(uint256 _count) external;
+    /// @notice Request validator exits based on explicit operator allocations
+    /// @param _allocation Node operator allocations specifying how many exits per operator
+    function requestValidatorExits(Allocation calldata _allocation) external;
 
     /// @notice Increases the exit request demand
     /// @dev This method is only callable by the river contract, and to actually forward the information to the node operators via event emission, the unprotected requestValidatorExits method must be called

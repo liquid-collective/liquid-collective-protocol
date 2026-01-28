@@ -1,5 +1,5 @@
 //SPDX-License-Identifier: BUSL-1.1
-pragma solidity 0.8.20;
+pragma solidity 0.8.22;
 
 /// @title Global unlock schedule activation storage
 /// @notice Utility to manage the global unlock schedule activation mapping in storage

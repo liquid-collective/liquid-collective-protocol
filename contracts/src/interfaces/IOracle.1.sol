@@ -1,5 +1,5 @@
 //SPDX-License-Identifier: BUSL-1.1
-pragma solidity 0.8.20;
+pragma solidity 0.8.22;
 
 import "./IRiver.1.sol";
 import "../state/oracle/ReportsVariants.sol";
