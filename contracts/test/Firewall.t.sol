@@ -1,6 +1,6 @@
 //SPDX-License-Identifier: BUSL-1.1
 
-pragma solidity 0.8.20;
+pragma solidity 0.8.22;
 
 import "forge-std/Test.sol";
 
@@ -282,11 +282,19 @@ contract FirewallTests is BytesGenerator, Test {
         vm.stopPrank();
     }
 
+    function _createAllocation(uint32 count) internal pure returns (IOperatorsRegistryV1.Allocation memory) {
+        uint32[] memory operatorIds = new uint32[](1);
+        uint32[] memory counts = new uint32[](1);
+        operatorIds[0] = 0;
+        counts[0] = count;
+        return IOperatorsRegistryV1.Allocation({operatorIds: operatorIds, counts: counts});
+    }
+
     function testGovernorCannotdepositToConsensusLayerWithDepositRoot() public {
         // Assert this by expecting NotEnoughFunds, NOT Unauthorized
         vm.startPrank(riverGovernorDAO);
         vm.expectRevert(abi.encodeWithSignature("NotEnoughFunds()"));
-        firewalledRiver.depositToConsensusLayerWithDepositRoot(10, bytes32(0));
+        firewalledRiver.depositToConsensusLayerWithDepositRoot(_createAllocation(10), bytes32(0));
         vm.stopPrank();
     }
 
@@ -294,14 +302,14 @@ contract FirewallTests is BytesGenerator, Test {
         // Assert this by expecting NotEnoughFunds, NOT Unauthorized
         vm.startPrank(executor);
         vm.expectRevert(abi.encodeWithSignature("NotEnoughFunds()"));
-        firewalledRiver.depositToConsensusLayerWithDepositRoot(10, bytes32(0));
+        firewalledRiver.depositToConsensusLayerWithDepositRoot(_createAllocation(10), bytes32(0));
         vm.stopPrank();
     }
 
     function testRandomCallerCannotdepositToConsensusLayerWithDepositRoot() public {
         vm.startPrank(joe);
         vm.expectRevert(unauthJoe);
-        firewalledRiver.depositToConsensusLayerWithDepositRoot(10, bytes32(0));
+        firewalledRiver.depositToConsensusLayerWithDepositRoot(_createAllocation(10), bytes32(0));
         vm.stopPrank();
     }
 

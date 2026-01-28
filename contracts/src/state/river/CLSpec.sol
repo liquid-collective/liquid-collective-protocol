@@ -1,5 +1,5 @@
 //SPDX-License-Identifier: BUSL-1.1
-pragma solidity 0.8.20;
+pragma solidity 0.8.22;
 
 /// @title Consensus Layer Spec Storage
 /// @notice Utility to manage the Consensus Layer Spec in storage

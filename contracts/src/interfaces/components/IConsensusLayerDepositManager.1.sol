@@ -1,5 +1,7 @@
 //SPDX-License-Identifier: BUSL-1.1
-pragma solidity 0.8.20;
+pragma solidity 0.8.22;
+
+import "../IOperatorRegistry.1.sol";
 
 /// @title Consensys Layer Deposit Manager Interface (v1)
 /// @author Alluvial Finance Inc.
@@ -68,8 +70,11 @@ interface IConsensusLayerDepositManagerV1 {
     /// @return The keeper address
     function getKeeper() external view returns (address);
 
-    /// @notice Deposits current balance to the Consensus Layer by batches of 32 ETH
-    /// @param _maxCount The maximum amount of validator keys to fund
+    /// @notice Deposits current balance to the Consensus Layer based on explicit operator allocations
+    /// @param _allocation The operator allocation specifying how many validators per operator
     /// @param _depositRoot The root of the deposit tree
-    function depositToConsensusLayerWithDepositRoot(uint256 _maxCount, bytes32 _depositRoot) external;
+    function depositToConsensusLayerWithDepositRoot(
+        IOperatorsRegistryV1.Allocation calldata _allocation,
+        bytes32 _depositRoot
+    ) external;
 }

@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: UNLICENSED
 
-pragma solidity 0.8.20;
+pragma solidity 0.8.22;
 
 interface IDepositContractEnhancedMock {
     event DepositEvent(bytes pubkey, bytes withdrawalCredentials, bytes amount, bytes signature, bytes index);

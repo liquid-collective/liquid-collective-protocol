@@ -1,5 +1,5 @@
 //SPDX-License-Identifier: BUSL-1.1
-pragma solidity 0.8.20;
+pragma solidity 0.8.22;
 
 import {ISharesManagerV1} from "./interfaces/components/ISharesManager.1.sol";
 import {Initializable} from "./Initializable.sol";
