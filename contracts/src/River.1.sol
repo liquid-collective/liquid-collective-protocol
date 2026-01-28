@@ -1,5 +1,5 @@
 //SPDX-License-Identifier: BUSL-1.1
-pragma solidity 0.8.22;
+pragma solidity 0.8.20;
 
 import "./interfaces/IAllowlist.1.sol";
 import "./interfaces/IOperatorRegistry.1.sol";
@@ -321,15 +321,15 @@ contract RiverV1 is
     }
 
     /// @notice Overridden handler called whenever a deposit to the consensus layer is made based on node operator allocations.
-    /// @param _allocation Node operator allocations
+    /// @param _allocations Node operator allocations
     /// @return publicKeys Array of fundable public keys
     /// @return signatures Array of signatures linked to the public keys
-    function _getNextValidators(IOperatorsRegistryV1.Allocation memory _allocation)
+    function _getNextValidators(IOperatorsRegistryV1.OperatorAllocation[] memory _allocations)
         internal
         override
         returns (bytes[] memory publicKeys, bytes[] memory signatures)
     {
-        return IOperatorsRegistryV1(OperatorsRegistryAddress.get()).pickNextValidatorsToDeposit(_allocation);
+        return IOperatorsRegistryV1(OperatorsRegistryAddress.get()).pickNextValidatorsToDeposit(_allocations);
     }
 
     /// @notice Overridden handler to pull funds from the execution layer fee recipient to River and return the delta in the balance

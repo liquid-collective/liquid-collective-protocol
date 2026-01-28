@@ -1,6 +1,6 @@
 //SPDX-License-Identifier: BUSL-1.1
 
-pragma solidity 0.8.22;
+pragma solidity 0.8.20;
 
 import "forge-std/Test.sol";
 
@@ -152,28 +152,28 @@ contract OperatorsRegistryV1Tests is OperatorsRegistryV1TestBase, BytesGenerator
         operatorsRegistry.initOperatorsRegistryV1(admin, river);
     }
 
-    function _createAllocation(uint256 opIndex, uint32 count)
+    function _createAllocation(uint256 opIndex, uint256 count)
         internal
         pure
-        returns (IOperatorsRegistryV1.Allocation memory)
+        returns (IOperatorsRegistryV1.OperatorAllocation[] memory)
     {
-        uint32[] memory operatorIds = new uint32[](1);
-        uint32[] memory counts = new uint32[](1);
-        operatorIds[0] = uint32(opIndex);
-        counts[0] = count;
-        return IOperatorsRegistryV1.Allocation({operatorIds: operatorIds, counts: counts});
+        IOperatorsRegistryV1.OperatorAllocation[] memory allocations = new IOperatorsRegistryV1.OperatorAllocation[](1);
+        allocations[0] = IOperatorsRegistryV1.OperatorAllocation({operatorIndex: opIndex, validatorCount: count});
+        return allocations;
     }
 
     function _createMultiAllocation(uint256[] memory opIndexes, uint32[] memory counts)
         internal
         pure
-        returns (IOperatorsRegistryV1.Allocation memory)
+        returns (IOperatorsRegistryV1.OperatorAllocation[] memory)
     {
-        uint32[] memory operatorIds = new uint32[](opIndexes.length);
+        IOperatorsRegistryV1.OperatorAllocation[] memory allocations =
+            new IOperatorsRegistryV1.OperatorAllocation[](opIndexes.length);
         for (uint256 i = 0; i < opIndexes.length; ++i) {
-            operatorIds[i] = uint32(opIndexes[i]);
+            allocations[i] =
+                IOperatorsRegistryV1.OperatorAllocation({operatorIndex: opIndexes[i], validatorCount: counts[i]});
         }
-        return IOperatorsRegistryV1.Allocation({operatorIds: operatorIds, counts: counts});
+        return allocations;
     }
 
     function testInitializeTwice() public {
@@ -721,7 +721,7 @@ contract OperatorsRegistryV1Tests is OperatorsRegistryV1TestBase, BytesGenerator
         allocationCounts[0] = 2;
         allocationCounts[1] = 2;
         allocationCounts[2] = 2;
-        IOperatorsRegistryV1.Allocation memory allocation = _createMultiAllocation(indexes, allocationCounts);
+        IOperatorsRegistryV1.OperatorAllocation[] memory allocation = _createMultiAllocation(indexes, allocationCounts);
 
         vm.prank(river);
         (bytes[] memory publicKeys, bytes[] memory signatures) = operatorsRegistry.pickNextValidatorsToDeposit(allocation);
@@ -788,7 +788,7 @@ contract OperatorsRegistryV1Tests is OperatorsRegistryV1TestBase, BytesGenerator
         allocationCounts[0] = 20;
         allocationCounts[1] = 20;
         allocationCounts[2] = 20;
-        IOperatorsRegistryV1.Allocation memory largeAllocation = _createMultiAllocation(indexes, allocationCounts);
+        IOperatorsRegistryV1.OperatorAllocation[] memory largeAllocation = _createMultiAllocation(indexes, allocationCounts);
 
         vm.prank(river);
         (publicKeys, signatures) = operatorsRegistry.pickNextValidatorsToDeposit(largeAllocation);
@@ -823,7 +823,7 @@ contract OperatorsRegistryV1Tests is OperatorsRegistryV1TestBase, BytesGenerator
         allocationCounts[0] = 26;
         allocationCounts[1] = 26;
         allocationCounts[2] = 26;
-        IOperatorsRegistryV1.Allocation memory finalAllocation = _createMultiAllocation(indexes, allocationCounts);
+        IOperatorsRegistryV1.OperatorAllocation[] memory finalAllocation = _createMultiAllocation(indexes, allocationCounts);
 
         vm.prank(river);
         (publicKeys, signatures) = operatorsRegistry.pickNextValidatorsToDeposit(finalAllocation);
@@ -895,10 +895,8 @@ contract OperatorsRegistryV1Tests is OperatorsRegistryV1TestBase, BytesGenerator
     function testGetKeysAsRiverNoKeys() public {
         // Create an allocation for an operator that doesn't exist or has no keys
         // This should succeed but return empty arrays since count is 0 for non-existent operators
-        uint32[] memory operatorIds = new uint32[](0);
-        uint32[] memory counts = new uint32[](0);
-        IOperatorsRegistryV1.Allocation memory emptyAllocation =
-            IOperatorsRegistryV1.Allocation({operatorIds: operatorIds, counts: counts});
+        IOperatorsRegistryV1.OperatorAllocation[] memory emptyAllocation =
+            new IOperatorsRegistryV1.OperatorAllocation[](0);
         vm.startPrank(river);
         (bytes[] memory publicKeys,) = operatorsRegistry.pickNextValidatorsToDeposit(emptyAllocation);
         vm.stopPrank();
@@ -1449,13 +1447,15 @@ contract OperatorsRegistryV1TestDistribution is Test {
     function _createExitAllocation(uint256[] memory opIndexes, uint32[] memory counts)
         internal
         pure
-        returns (IOperatorsRegistryV1.Allocation memory)
+        returns (IOperatorsRegistryV1.OperatorAllocation[] memory)
     {
-        uint32[] memory operatorIds = new uint32[](opIndexes.length);
+        IOperatorsRegistryV1.OperatorAllocation[] memory allocations =
+            new IOperatorsRegistryV1.OperatorAllocation[](opIndexes.length);
         for (uint256 i = 0; i < opIndexes.length; ++i) {
-            operatorIds[i] = uint32(opIndexes[i]);
+            allocations[i] =
+                IOperatorsRegistryV1.OperatorAllocation({operatorIndex: opIndexes[i], validatorCount: counts[i]});
         }
-        return IOperatorsRegistryV1.Allocation({operatorIds: operatorIds, counts: counts});
+        return allocations;
     }
 
     function genBytes(uint256 len) internal returns (bytes memory) {
@@ -1917,7 +1917,7 @@ contract OperatorsRegistryV1TestDistribution is Test {
         exitCounts[2] = 50;
         exitCounts[3] = 50;
         exitCounts[4] = 50;
-        IOperatorsRegistryV1.Allocation memory exitAllocation = _createExitAllocation(exitOperators, exitCounts);
+        IOperatorsRegistryV1.OperatorAllocation[] memory exitAllocation = _createExitAllocation(exitOperators, exitCounts);
 
         vm.expectEmit(true, true, true, true);
         emit RequestedValidatorExits(0, 50);
@@ -2014,7 +2014,7 @@ contract OperatorsRegistryV1TestDistribution is Test {
         exitCounts[2] = 30;
         exitCounts[3] = 30;
         exitCounts[4] = 30;
-        IOperatorsRegistryV1.Allocation memory exitAllocation = _createExitAllocation(exitOperators, exitCounts);
+        IOperatorsRegistryV1.OperatorAllocation[] memory exitAllocation = _createExitAllocation(exitOperators, exitCounts);
 
         vm.expectEmit(true, true, true, true);
         emit RequestedValidatorExits(0, 50);
@@ -2044,10 +2044,8 @@ contract OperatorsRegistryV1TestDistribution is Test {
 
     function testRequestValidatorNoExits() external {
         // Create empty allocation
-        uint32[] memory emptyOperatorIds = new uint32[](0);
-        uint32[] memory emptyExitCounts = new uint32[](0);
-        IOperatorsRegistryV1.Allocation memory emptyAllocation =
-            IOperatorsRegistryV1.Allocation({operatorIds: emptyOperatorIds, counts: emptyExitCounts});
+        IOperatorsRegistryV1.OperatorAllocation[] memory emptyAllocation =
+            new IOperatorsRegistryV1.OperatorAllocation[](0);
         vm.expectRevert(abi.encodeWithSignature("NoExitRequestsToPerform()"));
         operatorsRegistry.requestValidatorExits(emptyAllocation);
     }
@@ -3157,36 +3155,31 @@ contract OperatorsRegistryV1TestDistribution is Test {
         operatorsRegistry.setOperatorLimits(operators, limits, block.number);
 
         // Create allocation requesting 51 validators (10 from each of 5 operators, but limit is 10 each = 50 total max)
-        uint32[] memory operatorIds = new uint32[](5);
-        uint32[] memory counts = new uint32[](5);
+        IOperatorsRegistryV1.OperatorAllocation[] memory allocation = new IOperatorsRegistryV1.OperatorAllocation[](5);
         for (uint256 i = 0; i < 5; ++i) {
-            operatorIds[i] = uint32(i);
-            counts[i] = 11; // Request 11 from each, but limit is 10
+            allocation[i] = IOperatorsRegistryV1.OperatorAllocation({
+                operatorIndex: i,
+                validatorCount: 11 // Request 11 from each, but limit is 10
+            });
         }
-        IOperatorsRegistryV1.Allocation memory allocation =
-            IOperatorsRegistryV1.Allocation({operatorIds: operatorIds, counts: counts});
 
-        IOperatorsRegistryV1.Allocation memory capped = operatorsRegistry.getNextValidatorsToDeposit(allocation);
+        IOperatorsRegistryV1.OperatorAllocation[] memory capped = operatorsRegistry.getNextValidatorsToDeposit(allocation);
 
         // Verify capped allocation
         uint256 totalCapped = 0;
-        for (uint256 i = 0; i < capped.counts.length; ++i) {
-            totalCapped += capped.counts[i];
-            assert(capped.counts[i] == 10); // Each operator capped at 10
+        for (uint256 i = 0; i < capped.length; ++i) {
+            totalCapped += capped[i].validatorCount;
+            assert(capped[i].validatorCount == 10); // Each operator capped at 10
         }
         assert(totalCapped == 50);
     }
 
     function testGetNextValidatorsToDepositForNoOperators() public {
         // Create an allocation with no operators
-        uint32[] memory operatorIds = new uint32[](0);
-        uint32[] memory counts = new uint32[](0);
-        IOperatorsRegistryV1.Allocation memory allocation =
-            IOperatorsRegistryV1.Allocation({operatorIds: operatorIds, counts: counts});
+        IOperatorsRegistryV1.OperatorAllocation[] memory allocation = new IOperatorsRegistryV1.OperatorAllocation[](0);
 
-        IOperatorsRegistryV1.Allocation memory capped = operatorsRegistry.getNextValidatorsToDeposit(allocation);
-        assert(capped.operatorIds.length == 0);
-        assert(capped.counts.length == 0);
+        IOperatorsRegistryV1.OperatorAllocation[] memory capped = operatorsRegistry.getNextValidatorsToDeposit(allocation);
+        assert(capped.length == 0);
     }
 
     function testVersion() external {

@@ -1,6 +1,6 @@
 //SPDX-License-Identifier: BUSL-1.1
 
-pragma solidity 0.8.22;
+pragma solidity 0.8.20;
 
 import "forge-std/Test.sol";
 
@@ -282,12 +282,10 @@ contract FirewallTests is BytesGenerator, Test {
         vm.stopPrank();
     }
 
-    function _createAllocation(uint32 count) internal pure returns (IOperatorsRegistryV1.Allocation memory) {
-        uint32[] memory operatorIds = new uint32[](1);
-        uint32[] memory counts = new uint32[](1);
-        operatorIds[0] = 0;
-        counts[0] = count;
-        return IOperatorsRegistryV1.Allocation({operatorIds: operatorIds, counts: counts});
+    function _createAllocation(uint256 count) internal pure returns (IOperatorsRegistryV1.OperatorAllocation[] memory) {
+        IOperatorsRegistryV1.OperatorAllocation[] memory allocations = new IOperatorsRegistryV1.OperatorAllocation[](1);
+        allocations[0] = IOperatorsRegistryV1.OperatorAllocation({operatorIndex: 0, validatorCount: count});
+        return allocations;
     }
 
     function testGovernorCannotdepositToConsensusLayerWithDepositRoot() public {

@@ -1,5 +1,5 @@
 //SPDX-License-Identifier: BUSL-1.1
-pragma solidity 0.8.22;
+pragma solidity 0.8.20;
 
 import "./components/ERC20VestableVotesUpgradeable.1.sol";
 import "./interfaces/ITLC.1.sol";
