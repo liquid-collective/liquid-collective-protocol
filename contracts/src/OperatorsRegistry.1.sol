@@ -88,7 +88,7 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
                 if (operatorIndex == OperatorsV2.getCount() - 1) {
                     operatorIndex = type(uint256).max;
                 } else {
-            ++operatorIndex;
+                    ++operatorIndex;
                 }
             } else {
                 keyIndex += publicKeys.length;
@@ -709,7 +709,7 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
                 if (_hasFundableKeys(operators[selectedOperatorIndex])) {
                     break;
                 }
-            ++selectedOperatorIndex;
+                ++selectedOperatorIndex;
             }
 
             // if we reach the end, we have allocated all keys
@@ -726,7 +726,7 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
                 ) {
                     selectedOperatorIndex = idx;
                 }
-            ++idx;
+                ++idx;
             }
 
             // we take the smallest value between limit - (funded + picked), _requestedAmount and MAX_VALIDATOR_ATTRIBUTION_PER_ROUND

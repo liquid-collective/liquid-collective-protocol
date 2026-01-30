@@ -20,7 +20,7 @@ jobs:
       - name: Install foundry
         uses: onbjerg/foundry-toolchain@v1
         with:
-          version: nightly-de33b6af53005037b463318d2628b5cfcaf39916
+          version: nightly
 
       - name: Run coverage
         run: forge coverage --report lcov && mv lcov.info lcov.txt

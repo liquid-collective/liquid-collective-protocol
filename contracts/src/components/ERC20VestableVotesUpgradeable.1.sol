@@ -89,7 +89,7 @@ abstract contract ERC20VestableVotesUpgradeableV1 is
                 uint256 releasedAmount =
                     scheduleAmount - LibUint256.min(balanceOf(_deterministicVestingEscrow(idx)), scheduleAmount);
                 VestingSchedulesV2.migrateVestingScheduleFromV1(idx, releasedAmount);
-            ++idx;
+                ++idx;
             }
         }
     }

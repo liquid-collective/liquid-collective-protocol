@@ -19,7 +19,7 @@ jobs:
       - name: install foundry
         uses: onbjerg/foundry-toolchain@v1
         with:
-          version: nightly-de33b6af53005037b463318d2628b5cfcaf39916
+          version: nightly
 
       - name: run tests
         run: forge test --force -vvv --gas-report --match-contract HEAVY_FUZZING
