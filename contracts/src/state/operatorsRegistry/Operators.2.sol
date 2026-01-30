@@ -1,5 +1,5 @@
 //SPDX-License-Identifier: BUSL-1.1
-pragma solidity 0.8.20;
+pragma solidity 0.8.33;
 
 import "../../libraries/LibSanitize.sol";
 
@@ -134,15 +134,10 @@ library OperatorsV2 {
         uint256 operatorCount = r.value.length;
         Operator[] memory activeOperators = new Operator[](operatorCount);
 
-        for (uint256 idx = 0; idx < operatorCount;) {
+        for (uint256 idx = 0; idx < operatorCount; ++idx) {
             if (r.value[idx].active) {
                 activeOperators[activeCount] = r.value[idx];
-                unchecked {
-                    ++activeCount;
-                }
-            }
-            unchecked {
-                ++idx;
+                ++activeCount;
             }
         }
         assembly ("memory-safe") {
@@ -188,7 +183,7 @@ library OperatorsV2 {
 
         uint32[] storage stoppedValidatorCounts = getStoppedValidators();
 
-        for (uint256 idx = 0; idx < operatorCount;) {
+        for (uint256 idx = 0; idx < operatorCount; ++idx) {
             if (
                 _hasFundableKeys(r.value[idx])
                     && _getStoppedValidatorCountAtIndex(stoppedValidatorCounts, idx) >= r.value[idx].requestedExits
@@ -197,12 +192,7 @@ library OperatorsV2 {
                 fundableOperators[fundableCount] = CachedOperator({
                     limit: op.limit, funded: op.funded, requestedExits: op.requestedExits, index: uint32(idx), picked: 0
                 });
-                unchecked {
-                    ++fundableCount;
-                }
-            }
-            unchecked {
-                ++idx;
+                ++fundableCount;
             }
         }
 
@@ -233,18 +223,13 @@ library OperatorsV2 {
 
         CachedExitableOperator[] memory exitableOperators = new CachedExitableOperator[](operatorCount);
 
-        for (uint256 idx = 0; idx < operatorCount;) {
+        for (uint256 idx = 0; idx < operatorCount; ++idx) {
             if (_hasExitableKeys(r.value[idx])) {
                 Operator storage op = r.value[idx];
                 exitableOperators[exitableCount] = CachedExitableOperator({
                     funded: op.funded, requestedExits: op.requestedExits, index: uint32(idx), picked: 0
                 });
-                unchecked {
-                    ++exitableCount;
-                }
-            }
-            unchecked {
-                ++idx;
+                ++exitableCount;
             }
         }
 

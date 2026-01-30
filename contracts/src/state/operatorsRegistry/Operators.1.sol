@@ -1,5 +1,5 @@
 //SPDX-License-Identifier: BUSL-1.1
-pragma solidity 0.8.20;
+pragma solidity 0.8.33;
 
 import "../../libraries/LibSanitize.sol";
 
@@ -116,29 +116,19 @@ library OperatorsV1 {
         uint256 activeCount = 0;
         uint256 operatorCount = r.value.length;
 
-        for (uint256 idx = 0; idx < operatorCount;) {
+        for (uint256 idx = 0; idx < operatorCount; ++idx) {
             if (r.value[idx].active) {
-                unchecked {
-                    ++activeCount;
-                }
-            }
-            unchecked {
-                ++idx;
+                ++activeCount;
             }
         }
 
         Operator[] memory activeOperators = new Operator[](activeCount);
 
         uint256 activeIdx = 0;
-        for (uint256 idx = 0; idx < operatorCount;) {
+        for (uint256 idx = 0; idx < operatorCount; ++idx) {
             if (r.value[idx].active) {
                 activeOperators[activeIdx] = r.value[idx];
-                unchecked {
-                    ++activeIdx;
-                }
-            }
-            unchecked {
-                ++idx;
+                ++activeIdx;
             }
         }
 
@@ -160,21 +150,16 @@ library OperatorsV1 {
         uint256 activeCount = 0;
         uint256 operatorCount = r.value.length;
 
-        for (uint256 idx = 0; idx < operatorCount;) {
+        for (uint256 idx = 0; idx < operatorCount; ++idx) {
             if (_hasFundableKeys(r.value[idx])) {
-                unchecked {
-                    ++activeCount;
-                }
-            }
-            unchecked {
-                ++idx;
+                ++activeCount;
             }
         }
 
         CachedOperator[] memory activeOperators = new CachedOperator[](activeCount);
 
         uint256 activeIdx = 0;
-        for (uint256 idx = 0; idx < operatorCount;) {
+        for (uint256 idx = 0; idx < operatorCount; ++idx) {
             Operator memory op = r.value[idx];
             if (_hasFundableKeys(op)) {
                 activeOperators[activeIdx] = CachedOperator({
@@ -188,12 +173,7 @@ library OperatorsV1 {
                     index: idx,
                     picked: 0
                 });
-                unchecked {
-                    ++activeIdx;
-                }
-            }
-            unchecked {
-                ++idx;
+                ++activeIdx;
             }
         }
 

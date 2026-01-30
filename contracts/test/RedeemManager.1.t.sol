@@ -1,6 +1,6 @@
 //SPDX-License-Identifier: BUSL-1.1
 
-pragma solidity 0.8.20;
+pragma solidity 0.8.33;
 
 import "forge-std/Test.sol";
 
@@ -1337,21 +1337,15 @@ contract RedeemManagerV1Tests is RedeeManagerV1TestBase {
         assertEq(redeemManager.getRedeemDemand(), 0);
 
         uint32[] memory redeemRequestIds = new uint32[](count);
-        for (uint256 idx = 0; idx < count;) {
+        for (uint256 idx = 0; idx < count; ++idx) {
             redeemRequestIds[idx] = uint32(idx);
-            unchecked {
-                ++idx;
-            }
         }
         int64[] memory withdrawalEventIds = redeemManager.resolveRedeemRequests(redeemRequestIds);
         uint32[] memory withdrawalEventIdsUint = new uint32[](withdrawalEventIds.length);
 
-        for (uint256 idx = 0; idx < withdrawalEventIds.length;) {
+        for (uint256 idx = 0; idx < withdrawalEventIds.length; ++idx) {
             assertTrue(withdrawalEventIds[idx] >= 0, "unresolved requests");
             withdrawalEventIdsUint[idx] = uint32(uint64(withdrawalEventIds[idx]));
-            unchecked {
-                ++idx;
-            }
         }
 
         assertEq(address(redeemManager).balance, totalAmount * 2);
@@ -1366,12 +1360,9 @@ contract RedeemManagerV1Tests is RedeeManagerV1TestBase {
 
         withdrawalEventIds = redeemManager.resolveRedeemRequests(redeemRequestIds);
 
-        for (uint256 idx = 0; idx < withdrawalEventIds.length;) {
+        for (uint256 idx = 0; idx < withdrawalEventIds.length; ++idx) {
             assertTrue(withdrawalEventIds[idx] == -3);
             assertTrue(claimStatus[idx] == 0);
-            unchecked {
-                ++idx;
-            }
         }
 
         assertEq(redeemManager.getBufferedExceedingEth(), totalAmount);

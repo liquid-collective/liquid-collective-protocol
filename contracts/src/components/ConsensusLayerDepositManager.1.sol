@@ -1,5 +1,5 @@
 //SPDX-License-Identifier: BUSL-1.1
-pragma solidity 0.8.20;
+pragma solidity 0.8.33;
 
 import "../interfaces/components/IConsensusLayerDepositManager.1.sol";
 import "../interfaces/IDepositContract.sol";
@@ -124,11 +124,8 @@ abstract contract ConsensusLayerDepositManagerV1 is IConsensusLayerDepositManage
             revert InvalidWithdrawalCredentials();
         }
 
-        for (uint256 idx = 0; idx < receivedPublicKeyCount;) {
+        for (uint256 idx = 0; idx < receivedPublicKeyCount; ++idx) {
             _depositValidator(publicKeys[idx], signatures[idx], withdrawalCredentials);
-            unchecked {
-                ++idx;
-            }
         }
         _setCommittedBalance(committedBalance - DEPOSIT_SIZE * receivedPublicKeyCount);
         uint256 currentDepositedValidatorCount = DepositedValidatorCount.get();

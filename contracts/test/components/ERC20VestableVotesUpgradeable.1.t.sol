@@ -1,5 +1,5 @@
 //SPDX-License-Identifier: BUSL-1.1
-pragma solidity 0.8.20;
+pragma solidity 0.8.33;
 
 import "../../src/components/ERC20VestableVotesUpgradeable.1.sol";
 import "forge-std/Test.sol";
@@ -31,9 +31,7 @@ contract TestToken is ERC20VestableVotesUpgradeableV1 {
                 uint256 releasedAmount =
                     scheduleAmount - LibUint256.min(balanceOf(_deterministicVestingEscrow(idx)), scheduleAmount);
                 VestingSchedulesV2.migrateVestingScheduleFromV1(idx, releasedAmount);
-                unchecked {
-                    ++idx;
-                }
+                ++idx;
             }
         }
     }

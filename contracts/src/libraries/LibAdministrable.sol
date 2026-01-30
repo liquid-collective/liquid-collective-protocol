@@ -1,5 +1,5 @@
 //SPDX-License-Identifier: BUSL-1.1
-pragma solidity 0.8.20;
+pragma solidity 0.8.33;
 
 import "../state/shared/AdministratorAddress.sol";
 import "../state/shared/PendingAdministratorAddress.sol";
