@@ -643,10 +643,17 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
         returns (bytes[] memory publicKeys, bytes[] memory signatures)
     {
         uint256 len = _allocations.length;
+        uint256 prevOperatorIndex;
 
         for (uint256 i = 0; i < len; ++i) {
             uint256 operatorIndex = _allocations[i].operatorIndex;
             uint256 count = _allocations[i].validatorCount;
+
+            // Validate ordering: operator indices must be strictly ascending (prevents duplicates)
+            if (i > 0 && !(operatorIndex > prevOperatorIndex)) {
+                revert UnorderedOperatorList();
+            }
+            prevOperatorIndex = operatorIndex;
 
             if (count == 0) {
                 continue;
@@ -664,7 +671,7 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
     }
 
     /// @notice Internal utility to pick validators to deposit based on allocations (updates state)
-    /// @param _allocations The operator allocations specifying how many validators per operator
+    /// @param _allocations The operator allocations specifying how many validators per operator sorted by operator index
     /// @return publicKeys An array of public keys
     /// @return signatures An array of signatures linked to the public keys
     function _pickValidatorsToDeposit(OperatorAllocation[] memory _allocations)
@@ -672,10 +679,17 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
         returns (bytes[] memory publicKeys, bytes[] memory signatures)
     {
         uint256 len = _allocations.length;
+        uint256 prevOperatorIndex;
 
         for (uint256 i = 0; i < len; ++i) {
             uint256 operatorIndex = _allocations[i].operatorIndex;
             uint256 count = _allocations[i].validatorCount;
+
+            // Validate ordering: operator indices must be strictly ascending (prevents duplicates)
+            if (i > 0 && !(operatorIndex > prevOperatorIndex)) {
+                revert UnorderedOperatorList();
+            }
+            prevOperatorIndex = operatorIndex;
 
             if (count == 0) {
                 continue;
