@@ -20,8 +20,8 @@ interface IConsensusLayerDepositManagerV1 {
     /// @param newDepositedValidatorCount The new deposited validator count value
     event SetDepositedValidatorCount(uint256 oldDepositedValidatorCount, uint256 newDepositedValidatorCount);
 
-    /// @notice Not enough funds to deposit one validator
-    error NotEnoughFunds();
+    /// @notice The operator allocations array is empty
+    error EmptyOperatorAllocations();
 
     /// @notice The length of the BLS Public key is invalid during deposit
     error InconsistentPublicKeys();
@@ -49,6 +49,9 @@ interface IConsensusLayerDepositManagerV1 {
 
     // @notice Not keeper
     error OnlyKeeper();
+
+    /// @notice The operator allocations exceed the committed balance
+    error OperatorAllocationsExceedCommittedBalance();
 
     /// @notice Returns the amount of ETH not yet committed for deposit
     /// @return The amount of ETH not yet committed for deposit

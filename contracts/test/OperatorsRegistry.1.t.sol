@@ -33,7 +33,8 @@ contract OperatorsRegistryInitializableV1 is OperatorsRegistryV1 {
 
     /// @notice Debug function to simulate deposits by directly updating funded count
     /// @param _allocations The operator allocations specifying how many validators per operator
-    function debugGetNextValidatorsToDepositFromActiveOperators(IOperatorsRegistryV1.OperatorAllocation[] memory _allocations)
+    function debugGetNextValidatorsToDepositFromActiveOperators(IOperatorsRegistryV1
+                .OperatorAllocation[] memory _allocations)
         external
         returns (bytes[] memory publicKeys, bytes[] memory signatures)
     {
@@ -62,8 +63,7 @@ contract OperatorsRegistryInitializableV1 is OperatorsRegistryV1 {
 
             if (toFund == 0) continue;
 
-            (bytes[] memory _publicKeys, bytes[] memory _signatures) =
-                ValidatorKeys.getKeys(i, operator.funded, toFund);
+            (bytes[] memory _publicKeys, bytes[] memory _signatures) = ValidatorKeys.getKeys(i, operator.funded, toFund);
             emit FundedValidatorKeys(i, _publicKeys, false);
             publicKeys = _concatenateByteArrays(publicKeys, _publicKeys);
             signatures = _concatenateByteArrays(signatures, _signatures);

@@ -104,20 +104,19 @@ abstract contract ConsensusLayerDepositManagerV1 is IConsensusLayerDepositManage
         }
 
         uint256 committedBalance = CommittedBalance.get();
-        uint256 maxDepositable = committedBalance / DEPOSIT_SIZE;
-
+        uint256 keyToDepositCount = committedBalance / DEPOSIT_SIZE;
         // Calculate total requested from allocations
         uint256 totalRequested = 0;
         for (uint256 i = 0; i < _allocations.length; ++i) {
             totalRequested += _allocations[i].validatorCount;
         }
 
-        if (totalRequested > maxDepositable) {
-            revert NotEnoughFunds();
+        if (totalRequested > keyToDepositCount) {
+            revert OperatorAllocationsExceedCommittedBalance();
         }
 
         if (totalRequested == 0) {
-            revert NotEnoughFunds();
+            revert EmptyOperatorAllocations();
         }
 
         // Get validator keys using provided allocations
@@ -129,7 +128,7 @@ abstract contract ConsensusLayerDepositManagerV1 is IConsensusLayerDepositManage
             revert NoAvailableValidatorKeys();
         }
 
-        if (receivedPublicKeyCount > totalRequested) {
+        if (receivedPublicKeyCount > keyToDepositCount) {
             revert InvalidPublicKeyCount();
         }
 

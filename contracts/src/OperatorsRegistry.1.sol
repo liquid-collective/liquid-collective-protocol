@@ -616,11 +616,7 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
     /// @param _operatorIndex The index of the operator
     /// @param _count The number of validators requested
     /// @return currentFunded The operator's current funded validator count
-    function _validateAllocation(uint256 _operatorIndex, uint256 _count)
-        internal
-        view
-        returns (uint32 currentFunded)
-    {
+    function _validateAllocation(uint256 _operatorIndex, uint256 _count) internal view returns (uint32 currentFunded) {
         OperatorsV2.Operator storage operator = OperatorsV2.get(_operatorIndex);
 
         // Validate operator is active

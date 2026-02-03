@@ -289,17 +289,17 @@ contract FirewallTests is BytesGenerator, Test {
     }
 
     function testGovernorCannotdepositToConsensusLayerWithDepositRoot() public {
-        // Assert this by expecting NotEnoughFunds, NOT Unauthorized
+        // Assert this by expecting OperatorAllocationsExceedCommittedBalance, NOT Unauthorized
         vm.startPrank(riverGovernorDAO);
-        vm.expectRevert(abi.encodeWithSignature("NotEnoughFunds()"));
+        vm.expectRevert(abi.encodeWithSignature("OperatorAllocationsExceedCommittedBalance()"));
         firewalledRiver.depositToConsensusLayerWithDepositRoot(_createAllocation(10), bytes32(0));
         vm.stopPrank();
     }
 
     function testExecutorCannotdepositToConsensusLayerWithDepositRoot() public {
-        // Assert this by expecting NotEnoughFunds, NOT Unauthorized
+        // Assert this by expecting OperatorAllocationsExceedCommittedBalance, NOT Unauthorized
         vm.startPrank(executor);
-        vm.expectRevert(abi.encodeWithSignature("NotEnoughFunds()"));
+        vm.expectRevert(abi.encodeWithSignature("OperatorAllocationsExceedCommittedBalance()"));
         firewalledRiver.depositToConsensusLayerWithDepositRoot(_createAllocation(10), bytes32(0));
         vm.stopPrank();
     }
