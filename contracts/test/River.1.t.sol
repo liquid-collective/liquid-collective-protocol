@@ -1029,7 +1029,8 @@ contract RiverV1TestsReport_HEAVY_FUZZING is RiverV1TestBase {
         }
 
         // Create allocation from collected operator data
-        IOperatorsRegistryV1.OperatorAllocation[] memory allocation = _createMultiAllocation(operatorIndices, operatorKeyCounts);
+        IOperatorsRegistryV1.OperatorAllocation[] memory allocation =
+            _createMultiAllocation(operatorIndices, operatorKeyCounts);
 
         vm.prank(admin);
         river.depositToConsensusLayerWithDepositRoot(allocation, bytes32(0));

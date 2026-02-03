@@ -187,10 +187,6 @@ interface IOperatorsRegistryV1 {
     /// @param available The available count
     error InvalidOperatorAllocation(uint256 operatorIndex, uint256 requested, uint256 available);
 
-    /// @notice Thrown when operator in allocation is not active
-    /// @param operatorIndex The operator index
-    error OperatorNotActive(uint256 operatorIndex);
-
     /// @notice Thrown when operator in exit allocation has insufficient exitable validators
     /// @param operatorIndex The operator index
     /// @param requested The requested exit count

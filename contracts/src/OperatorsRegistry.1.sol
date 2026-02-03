@@ -224,7 +224,7 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
 
             // Check operator is active
             if (!operator.active) {
-                revert OperatorNotActive(operatorIndex);
+                revert InactiveOperator(operatorIndex);
             }
 
             // Validate operator has enough fundable keys
@@ -470,7 +470,7 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
 
             // Validate operator is active
             if (!operator.active) {
-                revert OperatorNotActive(operatorIndex);
+                revert InactiveOperator(operatorIndex);
             }
 
             // Validate operator has enough fundable keys
@@ -518,7 +518,7 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
 
             // Validate operator is active
             if (!operator.active) {
-                revert OperatorNotActive(operatorIndex);
+                revert InactiveOperator(operatorIndex);
             }
 
             // Validate operator has enough exitable validators

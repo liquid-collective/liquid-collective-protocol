@@ -3164,10 +3164,7 @@ contract OperatorsRegistryV1TestDistribution is Test {
         // Create valid allocation requesting exactly 10 validators from each operator
         IOperatorsRegistryV1.OperatorAllocation[] memory allocation = new IOperatorsRegistryV1.OperatorAllocation[](5);
         for (uint256 i = 0; i < 5; ++i) {
-            allocation[i] = IOperatorsRegistryV1.OperatorAllocation({
-                operatorIndex: i,
-                validatorCount: 10
-            });
+            allocation[i] = IOperatorsRegistryV1.OperatorAllocation({operatorIndex: i, validatorCount: 10});
         }
 
         IOperatorsRegistryV1.OperatorAllocation[] memory result =
@@ -3218,10 +3215,7 @@ contract OperatorsRegistryV1TestDistribution is Test {
 
         // Create allocation requesting 11 validators from first operator (exceeds limit of 10)
         IOperatorsRegistryV1.OperatorAllocation[] memory allocation = new IOperatorsRegistryV1.OperatorAllocation[](1);
-        allocation[0] = IOperatorsRegistryV1.OperatorAllocation({
-            operatorIndex: 0,
-            validatorCount: 11
-        });
+        allocation[0] = IOperatorsRegistryV1.OperatorAllocation({operatorIndex: 0, validatorCount: 11});
 
         vm.expectRevert(abi.encodeWithSignature("InvalidOperatorAllocation(uint256,uint256,uint256)", 0, 11, 10));
         operatorsRegistry.getNextValidatorsToDeposit(allocation);
@@ -3245,10 +3239,7 @@ contract OperatorsRegistryV1TestDistribution is Test {
 
         // Create allocation for inactive operator
         IOperatorsRegistryV1.OperatorAllocation[] memory allocation = new IOperatorsRegistryV1.OperatorAllocation[](1);
-        allocation[0] = IOperatorsRegistryV1.OperatorAllocation({
-            operatorIndex: 0,
-            validatorCount: 5
-        });
+        allocation[0] = IOperatorsRegistryV1.OperatorAllocation({operatorIndex: 0, validatorCount: 5});
 
         vm.expectRevert(abi.encodeWithSignature("OperatorNotActive(uint256)", 0));
         operatorsRegistry.getNextValidatorsToDeposit(allocation);

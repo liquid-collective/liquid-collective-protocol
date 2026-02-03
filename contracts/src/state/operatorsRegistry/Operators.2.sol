@@ -232,9 +232,8 @@ library OperatorsV2 {
         for (uint256 idx = 0; idx < operatorCount;) {
             if (_hasExitableKeys(r.value[idx])) {
                 Operator storage op = r.value[idx];
-                exitableOperators[exitableCount] = CachedExitableOperator({
-                    funded: op.funded, requestedExits: op.requestedExits, index: uint32(idx)
-                });
+                exitableOperators[exitableCount] =
+                    CachedExitableOperator({funded: op.funded, requestedExits: op.requestedExits, index: uint32(idx)});
                 unchecked {
                     ++exitableCount;
                 }
