@@ -687,6 +687,13 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
         return res;
     }
 
+    /// @notice Internal utility to retrieve the actual stopped validator count of an operator from the reported array
+    /// @param _operatorIndex The operator index
+    /// @return The count of stopped validators
+    function _getStoppedValidatorsCount(uint256 _operatorIndex) internal view returns (uint32) {
+        return OperatorsV2._getStoppedValidatorCountAtIndex(OperatorsV2.getStoppedValidators(), _operatorIndex);
+    }
+
     /// @notice Internal utility to get the count of active validators during the exit selection process
     /// @param _operator The Operator structure in memory
     /// @return The count of active validators for the operator
@@ -696,13 +703,6 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
         returns (uint32)
     {
         return _operator.funded - (_operator.requestedExits + _operator.picked);
-    }
-
-    /// @notice Internal utility to retrieve the actual stopped validator count of an operator from the reported array
-    /// @param _operatorIndex The operator index
-    /// @return The count of stopped validators
-    function _getStoppedValidatorsCount(uint256 _operatorIndex) internal view returns (uint32) {
-        return OperatorsV2._getStoppedValidatorCountAtIndex(OperatorsV2.getStoppedValidators(), _operatorIndex);
     }
 
     /// @notice Internal utility to pick the next validator counts to exit for every operator
