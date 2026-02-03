@@ -630,7 +630,8 @@ contract OperatorsRegistryV1Tests is OperatorsRegistryV1TestBase, BytesGenerator
         vm.stopPrank();
 
         vm.startPrank(river);
-        (bytes[] memory publicKeys, bytes[] memory signatures) = operatorsRegistry.pickNextValidatorsToDeposit(_createAllocation(index, 10));
+        (bytes[] memory publicKeys, bytes[] memory signatures) =
+            operatorsRegistry.pickNextValidatorsToDeposit(_createAllocation(index, 10));
         vm.stopPrank();
         assert(publicKeys.length == 10);
         assert(keccak256(publicKeys[0]) == keccak256(LibBytes.slice(tenKeys, 0, 48)));
@@ -665,7 +666,8 @@ contract OperatorsRegistryV1Tests is OperatorsRegistryV1TestBase, BytesGenerator
 
         // Request within limit
         vm.startPrank(river);
-        (bytes[] memory publicKeys, bytes[] memory signatures) = operatorsRegistry.pickNextValidatorsToDeposit(_createAllocation(index, 5));
+        (bytes[] memory publicKeys, bytes[] memory signatures) =
+            operatorsRegistry.pickNextValidatorsToDeposit(_createAllocation(index, 5));
         vm.stopPrank();
         assert(publicKeys.length == 5);
         assert(keccak256(publicKeys[0]) == keccak256(LibBytes.slice(tenKeys, 0, 48)));
@@ -724,7 +726,8 @@ contract OperatorsRegistryV1Tests is OperatorsRegistryV1TestBase, BytesGenerator
         IOperatorsRegistryV1.OperatorAllocation[] memory allocation = _createMultiAllocation(indexes, allocationCounts);
 
         vm.prank(river);
-        (bytes[] memory publicKeys, bytes[] memory signatures) = operatorsRegistry.pickNextValidatorsToDeposit(allocation);
+        (bytes[] memory publicKeys, bytes[] memory signatures) =
+            operatorsRegistry.pickNextValidatorsToDeposit(allocation);
 
         assert(publicKeys.length == 6);
         assert(signatures.length == 6);
@@ -788,7 +791,8 @@ contract OperatorsRegistryV1Tests is OperatorsRegistryV1TestBase, BytesGenerator
         allocationCounts[0] = 20;
         allocationCounts[1] = 20;
         allocationCounts[2] = 20;
-        IOperatorsRegistryV1.OperatorAllocation[] memory largeAllocation = _createMultiAllocation(indexes, allocationCounts);
+        IOperatorsRegistryV1.OperatorAllocation[] memory largeAllocation =
+            _createMultiAllocation(indexes, allocationCounts);
 
         vm.prank(river);
         (publicKeys, signatures) = operatorsRegistry.pickNextValidatorsToDeposit(largeAllocation);
@@ -823,7 +827,8 @@ contract OperatorsRegistryV1Tests is OperatorsRegistryV1TestBase, BytesGenerator
         allocationCounts[0] = 26;
         allocationCounts[1] = 26;
         allocationCounts[2] = 26;
-        IOperatorsRegistryV1.OperatorAllocation[] memory finalAllocation = _createMultiAllocation(indexes, allocationCounts);
+        IOperatorsRegistryV1.OperatorAllocation[] memory finalAllocation =
+            _createMultiAllocation(indexes, allocationCounts);
 
         vm.prank(river);
         (publicKeys, signatures) = operatorsRegistry.pickNextValidatorsToDeposit(finalAllocation);
@@ -1917,7 +1922,8 @@ contract OperatorsRegistryV1TestDistribution is Test {
         exitCounts[2] = 50;
         exitCounts[3] = 50;
         exitCounts[4] = 50;
-        IOperatorsRegistryV1.OperatorAllocation[] memory exitAllocation = _createExitAllocation(exitOperators, exitCounts);
+        IOperatorsRegistryV1.OperatorAllocation[] memory exitAllocation =
+            _createExitAllocation(exitOperators, exitCounts);
 
         vm.expectEmit(true, true, true, true);
         emit RequestedValidatorExits(0, 50);
@@ -2014,7 +2020,8 @@ contract OperatorsRegistryV1TestDistribution is Test {
         exitCounts[2] = 30;
         exitCounts[3] = 30;
         exitCounts[4] = 30;
-        IOperatorsRegistryV1.OperatorAllocation[] memory exitAllocation = _createExitAllocation(exitOperators, exitCounts);
+        IOperatorsRegistryV1.OperatorAllocation[] memory exitAllocation =
+            _createExitAllocation(exitOperators, exitCounts);
 
         vm.expectEmit(true, true, true, true);
         emit RequestedValidatorExits(0, 50);
@@ -3154,31 +3161,105 @@ contract OperatorsRegistryV1TestDistribution is Test {
         vm.prank(admin);
         operatorsRegistry.setOperatorLimits(operators, limits, block.number);
 
-        // Create allocation requesting 51 validators (10 from each of 5 operators, but limit is 10 each = 50 total max)
+        // Create valid allocation requesting exactly 10 validators from each operator
         IOperatorsRegistryV1.OperatorAllocation[] memory allocation = new IOperatorsRegistryV1.OperatorAllocation[](5);
         for (uint256 i = 0; i < 5; ++i) {
             allocation[i] = IOperatorsRegistryV1.OperatorAllocation({
                 operatorIndex: i,
-                validatorCount: 11 // Request 11 from each, but limit is 10
+                validatorCount: 10
             });
         }
 
-        IOperatorsRegistryV1.OperatorAllocation[] memory capped = operatorsRegistry.getNextValidatorsToDeposit(allocation);
+        IOperatorsRegistryV1.OperatorAllocation[] memory result =
+            operatorsRegistry.getNextValidatorsToDeposit(allocation);
 
-        // Verify capped allocation
-        uint256 totalCapped = 0;
-        for (uint256 i = 0; i < capped.length; ++i) {
-            totalCapped += capped[i].validatorCount;
-            assert(capped[i].validatorCount == 10); // Each operator capped at 10
+        // Verify allocation is returned as-is
+        uint256 total = 0;
+        for (uint256 i = 0; i < result.length; ++i) {
+            total += result[i].validatorCount;
+            assert(result[i].validatorCount == 10);
         }
-        assert(totalCapped == 50);
+        assert(total == 50);
+    }
+
+    function testGetNextValidatorsToDepositRevertsWhenExceedingLimit() public {
+        bytes[] memory rawKeys = new bytes[](5);
+
+        rawKeys[0] = genBytes((48 + 96) * 10);
+        rawKeys[1] = genBytes((48 + 96) * 10);
+        rawKeys[2] = genBytes((48 + 96) * 10);
+        rawKeys[3] = genBytes((48 + 96) * 10);
+        rawKeys[4] = genBytes((48 + 96) * 10);
+
+        vm.startPrank(admin);
+        operatorsRegistry.addValidators(0, 10, rawKeys[0]);
+        operatorsRegistry.addValidators(1, 10, rawKeys[1]);
+        operatorsRegistry.addValidators(2, 10, rawKeys[2]);
+        operatorsRegistry.addValidators(3, 10, rawKeys[3]);
+        operatorsRegistry.addValidators(4, 10, rawKeys[4]);
+        vm.stopPrank();
+
+        uint32[] memory limits = new uint32[](5);
+        limits[0] = 10;
+        limits[1] = 10;
+        limits[2] = 10;
+        limits[3] = 10;
+        limits[4] = 10;
+
+        uint256[] memory operators = new uint256[](5);
+        operators[0] = 0;
+        operators[1] = 1;
+        operators[2] = 2;
+        operators[3] = 3;
+        operators[4] = 4;
+
+        vm.prank(admin);
+        operatorsRegistry.setOperatorLimits(operators, limits, block.number);
+
+        // Create allocation requesting 11 validators from first operator (exceeds limit of 10)
+        IOperatorsRegistryV1.OperatorAllocation[] memory allocation = new IOperatorsRegistryV1.OperatorAllocation[](1);
+        allocation[0] = IOperatorsRegistryV1.OperatorAllocation({
+            operatorIndex: 0,
+            validatorCount: 11
+        });
+
+        vm.expectRevert(abi.encodeWithSignature("InvalidOperatorAllocation(uint256,uint256,uint256)", 0, 11, 10));
+        operatorsRegistry.getNextValidatorsToDeposit(allocation);
+    }
+
+    function testGetNextValidatorsToDepositRevertsWhenOperatorInactive() public {
+        bytes memory rawKeys = genBytes((48 + 96) * 10);
+
+        vm.startPrank(admin);
+        operatorsRegistry.addValidators(0, 10, rawKeys);
+
+        uint32[] memory limits = new uint32[](1);
+        limits[0] = 10;
+        uint256[] memory operators = new uint256[](1);
+        operators[0] = 0;
+        operatorsRegistry.setOperatorLimits(operators, limits, block.number);
+
+        // Deactivate the operator
+        operatorsRegistry.setOperatorStatus(0, false);
+        vm.stopPrank();
+
+        // Create allocation for inactive operator
+        IOperatorsRegistryV1.OperatorAllocation[] memory allocation = new IOperatorsRegistryV1.OperatorAllocation[](1);
+        allocation[0] = IOperatorsRegistryV1.OperatorAllocation({
+            operatorIndex: 0,
+            validatorCount: 5
+        });
+
+        vm.expectRevert(abi.encodeWithSignature("OperatorNotActive(uint256)", 0));
+        operatorsRegistry.getNextValidatorsToDeposit(allocation);
     }
 
     function testGetNextValidatorsToDepositForNoOperators() public {
         // Create an allocation with no operators
         IOperatorsRegistryV1.OperatorAllocation[] memory allocation = new IOperatorsRegistryV1.OperatorAllocation[](0);
 
-        IOperatorsRegistryV1.OperatorAllocation[] memory capped = operatorsRegistry.getNextValidatorsToDeposit(allocation);
+        IOperatorsRegistryV1.OperatorAllocation[] memory capped =
+            operatorsRegistry.getNextValidatorsToDeposit(allocation);
         assert(capped.length == 0);
     }
 

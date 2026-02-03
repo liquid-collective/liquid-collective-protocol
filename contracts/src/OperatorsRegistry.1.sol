@@ -224,13 +224,16 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
 
             // Check operator is active
             if (!operator.active) {
-                cappedAllocations[i].validatorCount = 0;
-                continue;
+                revert OperatorNotActive(operatorIndex);
             }
 
-            // Calculate fundable keys and cap the count
+            // Validate operator has enough fundable keys
             uint256 fundableKeys = operator.limit - operator.funded;
-            cappedAllocations[i].validatorCount = LibUint256.min(_allocations[i].validatorCount, fundableKeys);
+            uint256 requestedCount = _allocations[i].validatorCount;
+            if (requestedCount > fundableKeys) {
+                revert InvalidOperatorAllocation(operatorIndex, requestedCount, fundableKeys);
+            }
+            cappedAllocations[i].validatorCount = requestedCount;
         }
 
         return cappedAllocations;
@@ -541,7 +544,9 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
             _setTotalValidatorExitsRequested(totalRequestedExitsCopy, totalRequestedExitsValue);
         }
 
-        _setCurrentValidatorExitsDemand(savedCurrentValidatorExitsDemand, savedCurrentValidatorExitsDemand - totalExitsPerformed);
+        _setCurrentValidatorExitsDemand(
+            savedCurrentValidatorExitsDemand, savedCurrentValidatorExitsDemand - totalExitsPerformed
+        );
     }
 
     /// @inheritdoc IOperatorsRegistryV1
