@@ -1909,22 +1909,6 @@ contract OperatorsRegistryV1TestDistribution is Test {
         assertEq(operatorsRegistry.getCurrentValidatorExitsDemand(), 250);
         assertEq(operatorsRegistry.getTotalValidatorExitsRequested(), 0);
 
-        // Create allocation: 50 exits from each of 5 operators = 250 total
-        uint256[] memory exitOperators = new uint256[](5);
-        exitOperators[0] = 0;
-        exitOperators[1] = 1;
-        exitOperators[2] = 2;
-        exitOperators[3] = 3;
-        exitOperators[4] = 4;
-        uint32[] memory exitCounts = new uint32[](5);
-        exitCounts[0] = 50;
-        exitCounts[1] = 50;
-        exitCounts[2] = 50;
-        exitCounts[3] = 50;
-        exitCounts[4] = 50;
-        IOperatorsRegistryV1.OperatorAllocation[] memory exitAllocation =
-            _createExitAllocation(exitOperators, exitCounts);
-
         vm.expectEmit(true, true, true, true);
         emit RequestedValidatorExits(0, 50);
         vm.expectEmit(true, true, true, true);
@@ -1937,7 +1921,7 @@ contract OperatorsRegistryV1TestDistribution is Test {
         emit RequestedValidatorExits(4, 50);
         vm.expectEmit(true, true, true, true);
         emit SetTotalValidatorExitsRequested(0, 250);
-        operatorsRegistry.requestValidatorExits(exitAllocation);
+        operatorsRegistry.requestValidatorExits(250);
 
         assert(operatorsRegistry.getOperator(0).requestedExits == 50);
         assert(operatorsRegistry.getOperator(1).requestedExits == 50);
@@ -2006,23 +1990,6 @@ contract OperatorsRegistryV1TestDistribution is Test {
         assertEq(operatorsRegistry.getCurrentValidatorExitsDemand(), 150);
         assertEq(operatorsRegistry.getTotalValidatorExitsRequested(), 100);
 
-        // Create allocation: 30 exits from each of 5 operators = 150 total
-        uint256[] memory exitOperators = new uint256[](5);
-        exitOperators[0] = 0;
-        exitOperators[1] = 1;
-        exitOperators[2] = 2;
-        exitOperators[3] = 3;
-        exitOperators[4] = 4;
-        uint32[] memory exitCounts = new uint32[](5);
-        // Only 30 available per operator (funded - stopped - already requested = 50 - 20 - 0 = 30)
-        exitCounts[0] = 30;
-        exitCounts[1] = 30;
-        exitCounts[2] = 30;
-        exitCounts[3] = 30;
-        exitCounts[4] = 30;
-        IOperatorsRegistryV1.OperatorAllocation[] memory exitAllocation =
-            _createExitAllocation(exitOperators, exitCounts);
-
         vm.expectEmit(true, true, true, true);
         emit RequestedValidatorExits(0, 50);
         vm.expectEmit(true, true, true, true);
@@ -2037,7 +2004,7 @@ contract OperatorsRegistryV1TestDistribution is Test {
         emit SetTotalValidatorExitsRequested(100, 250);
         vm.expectEmit(true, true, true, true);
         emit SetCurrentValidatorExitsDemand(150, 0);
-        operatorsRegistry.requestValidatorExits(exitAllocation);
+        operatorsRegistry.requestValidatorExits(150);
 
         assert(operatorsRegistry.getOperator(0).requestedExits == 50);
         assert(operatorsRegistry.getOperator(1).requestedExits == 50);
@@ -2050,11 +2017,8 @@ contract OperatorsRegistryV1TestDistribution is Test {
     }
 
     function testRequestValidatorNoExits() external {
-        // Create empty allocation
-        IOperatorsRegistryV1.OperatorAllocation[] memory emptyAllocation =
-            new IOperatorsRegistryV1.OperatorAllocation[](0);
         vm.expectRevert(abi.encodeWithSignature("NoExitRequestsToPerform()"));
-        operatorsRegistry.requestValidatorExits(emptyAllocation);
+        operatorsRegistry.requestValidatorExits(0);
     }
 
     function testOneExitDistribution() external {
