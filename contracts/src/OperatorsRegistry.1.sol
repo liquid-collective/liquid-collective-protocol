@@ -4,6 +4,7 @@ pragma solidity 0.8.20;
 import "./interfaces/IOperatorRegistry.1.sol";
 import "./interfaces/IRiver.1.sol";
 import "./interfaces/IProtocolVersion.sol";
+import "./interfaces/components/IConsensusLayerDepositManager.1.sol";
 
 import "./libraries/LibUint256.sol";
 
@@ -437,15 +438,54 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
     }
 
     /// @inheritdoc IOperatorsRegistryV1
-    function requestValidatorExits(uint256 _count) external {
-        uint256 currentValidatorExitsDemand = CurrentValidatorExitsDemand.get();
-        uint256 exitRequestsToPerform = LibUint256.min(currentValidatorExitsDemand, _count);
-        if (exitRequestsToPerform == 0) {
-            revert NoExitRequestsToPerform();
+    function requestValidatorExits(OperatorAllocation[] calldata _allocations) external {
+        if (msg.sender != IConsensusLayerDepositManagerV1(RiverAddress.get()).getKeeper()) {
+            revert IConsensusLayerDepositManagerV1.OnlyKeeper();
         }
-        uint256 savedCurrentValidatorExitsDemand = currentValidatorExitsDemand;
-        currentValidatorExitsDemand -= _pickNextValidatorsToExitFromActiveOperators(exitRequestsToPerform);
 
+        uint256 currentValidatorExitsDemand = CurrentValidatorExitsDemand.get();
+        uint256 indexesTillNow = 0;
+        uint256 suppliedExitCount = 0;
+        
+        // Check that the exits requested do not exceed the current validator exits demand
+        for (uint256 i = 0; i < _allocations.length; ++i) {
+            uint256 operatorIndex = _allocations[i].operatorIndex;
+            suppliedExitCount += _allocations[i].validatorCount;
+            
+            if ((1<<operatorIndex & indexesTillNow) != 0) {
+                revert OperatorIndexNotUnique(operatorIndex);
+            }
+            indexesTillNow |= 1<<operatorIndex;
+        }
+
+        if (suppliedExitCount > currentValidatorExitsDemand) {
+            revert ExitsRequestedExceedsDemand(suppliedExitCount, currentValidatorExitsDemand);
+        }
+
+        // Check that the exits requested do not exceed the funded validator count of the operator
+        for (uint256 i = 0; i < _allocations.length; ++i) {
+            uint256 operatorIndex = _allocations[i].operatorIndex;
+            uint256 count = _allocations[i].validatorCount;
+            OperatorsV2.Operator storage operator = OperatorsV2.get(operatorIndex);
+            if (!operator.active) {
+                revert InactiveOperator(operatorIndex);
+            }
+            if (count > (operator.funded - operator.requestedExits)) {
+                // Operator has insufficient funded validators
+                revert ExitsRequestedExceedsFundedCount(operatorIndex, count, operator.funded);
+            } else {
+                // Operator has sufficient funded validators
+                operator.requestedExits += uint32(count);
+                emit RequestedValidatorExits(operatorIndex, operator.requestedExits);
+            }
+        }
+
+        uint256 savedCurrentValidatorExitsDemand = currentValidatorExitsDemand;
+        currentValidatorExitsDemand -= suppliedExitCount;
+        
+        uint256 totalRequestedExitsValue = TotalValidatorExitsRequested.get();
+
+        _setTotalValidatorExitsRequested(totalRequestedExitsValue, totalRequestedExitsValue + suppliedExitCount);
         _setCurrentValidatorExitsDemand(savedCurrentValidatorExitsDemand, currentValidatorExitsDemand);
     }
 
@@ -735,99 +775,6 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
         returns (uint32)
     {
         return _operator.funded - (_operator.requestedExits + _operator.picked);
-    }
-
-    /// @notice Internal utility to pick the next validator counts to exit for every operator
-    /// @param _count The count of validators to request exits for
-    function _pickNextValidatorsToExitFromActiveOperators(uint256 _count) internal returns (uint256) {
-        (OperatorsV2.CachedExitableOperator[] memory operators, uint256 exitableOperatorCount) =
-            OperatorsV2.getAllExitable();
-
-        if (exitableOperatorCount == 0) {
-            return 0;
-        }
-
-        uint256 initialExitRequestDemand = _count;
-        uint256 totalRequestedExitsValue = TotalValidatorExitsRequested.get();
-        uint256 totalRequestedExitsCopy = totalRequestedExitsValue;
-
-        // we loop to find the highest count of active validators, the number of operators that have this amount and the second highest amount
-        while (_count > 0) {
-            uint32 highestActiveCount = 0;
-            uint32 secondHighestActiveCount = 0;
-            uint32 siblings = 0;
-
-            for (uint256 idx = 0; idx < exitableOperatorCount;) {
-                uint32 activeCount = _getActiveValidatorCountForExitRequests(operators[idx]);
-
-                if (activeCount == highestActiveCount) {
-                    unchecked {
-                        ++siblings;
-                    }
-                } else if (activeCount > highestActiveCount) {
-                    secondHighestActiveCount = highestActiveCount;
-                    highestActiveCount = activeCount;
-                    siblings = 1;
-                } else if (activeCount > secondHighestActiveCount) {
-                    secondHighestActiveCount = activeCount;
-                }
-
-                unchecked {
-                    ++idx;
-                }
-            }
-
-            // we exited all exitable validators
-            if (highestActiveCount == 0) {
-                break;
-            }
-            // The optimal amount is how much we should dispatch to all the operators with the highest count for them to get the same amount
-            // of active validators as the second highest count. We then take the minimum between this value and the total we need to exit
-            uint32 optimalTotalDispatchCount =
-                uint32(LibUint256.min((highestActiveCount - secondHighestActiveCount) * siblings, _count));
-
-            // We lookup the operators again to assign the exit requests
-            uint256 rest = optimalTotalDispatchCount % siblings;
-            uint32 baseExitRequestAmount = optimalTotalDispatchCount / siblings;
-            for (uint256 idx = 0; idx < exitableOperatorCount;) {
-                if (_getActiveValidatorCountForExitRequests(operators[idx]) == highestActiveCount) {
-                    uint32 additionalRequestedExits = baseExitRequestAmount + (rest > 0 ? 1 : 0);
-                    operators[idx].picked += additionalRequestedExits;
-                    if (rest > 0) {
-                        unchecked {
-                            --rest;
-                        }
-                    }
-                }
-                unchecked {
-                    ++idx;
-                }
-            }
-
-            totalRequestedExitsValue += optimalTotalDispatchCount;
-            _count -= optimalTotalDispatchCount;
-        }
-
-        // We loop over the operators and apply the change, also emit the exit request event
-        for (uint256 idx = 0; idx < exitableOperatorCount;) {
-            if (operators[idx].picked > 0) {
-                uint256 opIndex = operators[idx].index;
-                uint32 newRequestedExits = operators[idx].requestedExits + operators[idx].picked;
-
-                OperatorsV2.get(opIndex).requestedExits = newRequestedExits;
-                emit RequestedValidatorExits(opIndex, newRequestedExits);
-            }
-
-            unchecked {
-                ++idx;
-            }
-        }
-
-        if (totalRequestedExitsValue != totalRequestedExitsCopy) {
-            _setTotalValidatorExitsRequested(totalRequestedExitsCopy, totalRequestedExitsValue);
-        }
-
-        return initialExitRequestDemand - _count;
     }
 
     /// @notice Internal utility to set the total validator exits requested by the system

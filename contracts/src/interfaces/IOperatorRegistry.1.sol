@@ -191,7 +191,25 @@ interface IOperatorsRegistryV1 {
     error StoppedValidatorCountArrayShrinking();
 
     /// @notice The provided stopped validator count of an operator is above its funded validator count
+    /// @param operatorIndex The operator index
+    /// @param stoppedCount The stopped count
+    /// @param fundedCount The funded count
     error StoppedValidatorCountAboveFundedCount(uint256 operatorIndex, uint32 stoppedCount, uint32 fundedCount);
+
+    /// @notice The exits requested do not exceed the current validator exits demand
+    /// @param requested The requested count
+    /// @param demand The demand count
+    error ExitsRequestedExceedsDemand(uint256 requested, uint256 demand);
+
+    /// @notice The exits requested do not exceed the funded validator count of the operator
+    /// @param operatorIndex The operator index
+    /// @param requested The requested count
+    /// @param funded The funded count
+    error ExitsRequestedExceedsFundedCount(uint256 operatorIndex, uint256 requested, uint256 funded);
+
+    /// @notice Duplicate operator index found in allocations
+    /// @param operatorIndex The duplicate operator index
+    error OperatorIndexNotUnique(uint256 operatorIndex);
 
     /// @notice Initializes the operators registry
     /// @param _admin Admin in charge of managing operators
@@ -342,10 +360,8 @@ interface IOperatorsRegistryV1 {
         returns (bytes[] memory publicKeys, bytes[] memory signatures);
 
     /// @notice Public endpoint to consume the exit request demand and perform the actual exit requests
-    /// @notice The selection algorithm will pick validators based on their active validator counts
-    /// @notice This value is computed by using the count of funded keys and taking into account the stopped validator counts and exit requests
-    /// @param _count Max amount of exits to request
-    function requestValidatorExits(uint256 _count) external;
+    /// @param _allocations Node operator allocations specifying how many exits per operator
+    function requestValidatorExits(OperatorAllocation[] calldata _allocations) external;
 
     /// @notice Increases the exit request demand
     /// @dev This method is only callable by the river contract, and to actually forward the information to the node operators via event emission, the unprotected requestValidatorExits method must be called
