@@ -121,7 +121,8 @@ contract TlcMigrationTest is Test {
     bool[] isGlobalUnlockedScheduleIgnoredOld;
 
     function setUp() public {
-        rpc = vm.rpcUrl("mainnet");
+        // Use env var if available, otherwise fall back to hardcoded RPC URL
+        rpc = vm.envOr("MAINNET_FORK_RPC_URL", rpc);
         vm.createFork(rpc);
     }
 

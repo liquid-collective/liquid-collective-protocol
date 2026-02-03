@@ -5,13 +5,26 @@ import "../../../src/state/tlc/VestingSchedules.1.sol";
 import "../../../src/state/tlc/VestingSchedules.2.sol";
 import "forge-std/Test.sol";
 
+/// @notice Helper contract to wrap internal library calls for vm.expectRevert testing
+contract VestingSchedulesHelper {
+    function getV1(uint256 _index) external view returns (VestingSchedulesV1.VestingSchedule memory) {
+        return VestingSchedulesV1.get(_index);
+    }
+
+    function getV2(uint256 _index) external view returns (VestingSchedulesV2.VestingSchedule memory) {
+        return VestingSchedulesV2.get(_index);
+    }
+}
+
 contract VestingSchedulesMigrationTest is Test {
     address internal alice;
     address internal bob;
+    VestingSchedulesHelper internal helper;
 
     function setUp() public {
         alice = makeAddr("alice");
         bob = makeAddr("bob");
+        helper = new VestingSchedulesHelper();
     }
 
     function _createV1VestingSchedule(VestingSchedulesV1.VestingSchedule memory vestingSchedule)
@@ -59,9 +72,9 @@ contract VestingSchedulesMigrationTest is Test {
     function testGetRevert() public {
         uint256 _index = 1;
         vm.expectRevert(abi.encodeWithSignature("VestingScheduleNotFound(uint256)", _index));
-        VestingSchedulesV1.get(_index);
+        helper.getV1(_index);
         vm.expectRevert(abi.encodeWithSignature("VestingScheduleNotFound(uint256)", _index));
-        VestingSchedulesV2.get(_index);
+        helper.getV2(_index);
     }
 
     function testVestingScheduleV1ToV2Compatibility(

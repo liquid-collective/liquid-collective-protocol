@@ -1203,9 +1203,10 @@ contract OperatorsRegistryV1Tests is OperatorsRegistryV1TestBase, BytesGenerator
     }
 
     function testReportStoppedValidatorCounts(uint8 totalCount, uint8 len) public {
-        len = uint8(bound(len, 1, type(uint8).max / 2));
-        vm.assume(len > 0 && len < type(uint8).max);
-        totalCount = uint8(bound(totalCount, len, type(uint8).max));
+        // Limit len and totalCount to 50 to avoid gas exhaustion from picking too many validators
+        // (each validator requires storage ops and picking uses MAX_VALIDATOR_ATTRIBUTION_PER_ROUND=5)
+        len = uint8(bound(len, 1, 50));
+        totalCount = uint8(bound(totalCount, len, 50));
 
         uint32[] memory stoppedValidatorCounts = new uint32[](len + 1);
         uint32[] memory limits = new uint32[](len);
@@ -1286,9 +1287,9 @@ contract OperatorsRegistryV1Tests is OperatorsRegistryV1TestBase, BytesGenerator
     }
 
     function testReportStoppedValidatorCountsInvalidSum(uint8 totalCount, uint8 len) public {
-        len = uint8(bound(len, 1, type(uint8).max / 2));
-        vm.assume(len > 0 && len < type(uint8).max);
-        totalCount = uint8(bound(totalCount, len, type(uint8).max));
+        // Limit len and totalCount to 50 to avoid gas exhaustion from picking too many validators
+        len = uint8(bound(len, 1, 50));
+        totalCount = uint8(bound(totalCount, len, 50));
 
         uint32[] memory stoppedValidators = new uint32[](len + 1);
         uint32[] memory limits = new uint32[](len);
