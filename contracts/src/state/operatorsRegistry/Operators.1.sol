@@ -52,8 +52,6 @@ library OperatorsV1 {
         /// @custom:attribute The count of stopped validators. Stopped validators are validators
         ///                   that exited the consensus layer (voluntary or slashed)
         uint256 index;
-        /// @custom:attribute The amount of picked keys, buffer used before changing funded in storage
-        uint256 picked;
     }
 
     /// @notice The structure at the storage slot
@@ -185,8 +183,7 @@ library OperatorsV1 {
                     funded: op.funded,
                     keys: op.keys,
                     stopped: op.stopped,
-                    index: idx,
-                    picked: 0
+                    index: idx
                 });
                 unchecked {
                     ++activeIdx;

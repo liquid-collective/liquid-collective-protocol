@@ -42,8 +42,6 @@ library OperatorsV2 {
         uint32 requestedExits;
         /// @custom:attribute The original index of the operator
         uint32 index;
-        /// @custom:attribute The amount of picked keys, buffer used before changing funded in storage
-        uint32 picked;
     }
 
     /// @notice The Operator structure when loaded in memory for the exit selection
@@ -54,8 +52,6 @@ library OperatorsV2 {
         uint32 requestedExits;
         /// @custom:attribute The original index of the operator
         uint32 index;
-        /// @custom:attribute The amount of picked keys, buffer used before changing funded in storage
-        uint32 picked;
     }
 
     /// @notice The structure at the storage slot
@@ -195,7 +191,7 @@ library OperatorsV2 {
             ) {
                 Operator storage op = r.value[idx];
                 fundableOperators[fundableCount] = CachedOperator({
-                    limit: op.limit, funded: op.funded, requestedExits: op.requestedExits, index: uint32(idx), picked: 0
+                    limit: op.limit, funded: op.funded, requestedExits: op.requestedExits, index: uint32(idx)
                 });
                 unchecked {
                     ++fundableCount;
@@ -237,7 +233,7 @@ library OperatorsV2 {
             if (_hasExitableKeys(r.value[idx])) {
                 Operator storage op = r.value[idx];
                 exitableOperators[exitableCount] = CachedExitableOperator({
-                    funded: op.funded, requestedExits: op.requestedExits, index: uint32(idx), picked: 0
+                    funded: op.funded, requestedExits: op.requestedExits, index: uint32(idx)
                 });
                 unchecked {
                     ++exitableCount;
