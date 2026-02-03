@@ -3131,16 +3131,12 @@ contract OperatorsRegistryV1TestDistribution is Test {
             allocation[i] = IOperatorsRegistryV1.OperatorAllocation({operatorIndex: i, validatorCount: 10});
         }
 
-        IOperatorsRegistryV1.OperatorAllocation[] memory result =
-            operatorsRegistry.getNextValidatorsToDeposit(allocation);
+        (bytes[] memory publicKeys, bytes[] memory signatures) =
+            operatorsRegistry.getNextValidatorsToDepositFromActiveOperators(allocation);
 
-        // Verify allocation is returned as-is
-        uint256 total = 0;
-        for (uint256 i = 0; i < result.length; ++i) {
-            total += result[i].validatorCount;
-            assert(result[i].validatorCount == 10);
-        }
-        assert(total == 50);
+        // Verify keys are returned (50 total = 10 per operator * 5 operators)
+        assert(publicKeys.length == 50);
+        assert(signatures.length == 50);
     }
 
     function testGetNextValidatorsToDepositRevertsWhenExceedingLimit() public {
@@ -3182,7 +3178,7 @@ contract OperatorsRegistryV1TestDistribution is Test {
         allocation[0] = IOperatorsRegistryV1.OperatorAllocation({operatorIndex: 0, validatorCount: 11});
 
         vm.expectRevert(abi.encodeWithSignature("InvalidOperatorAllocation(uint256,uint256,uint256)", 0, 11, 10));
-        operatorsRegistry.getNextValidatorsToDeposit(allocation);
+        operatorsRegistry.getNextValidatorsToDepositFromActiveOperators(allocation);
     }
 
     function testGetNextValidatorsToDepositRevertsWhenOperatorInactive() public {
@@ -3206,16 +3202,17 @@ contract OperatorsRegistryV1TestDistribution is Test {
         allocation[0] = IOperatorsRegistryV1.OperatorAllocation({operatorIndex: 0, validatorCount: 5});
 
         vm.expectRevert(abi.encodeWithSignature("OperatorNotActive(uint256)", 0));
-        operatorsRegistry.getNextValidatorsToDeposit(allocation);
+        operatorsRegistry.getNextValidatorsToDepositFromActiveOperators(allocation);
     }
 
     function testGetNextValidatorsToDepositForNoOperators() public {
         // Create an allocation with no operators
         IOperatorsRegistryV1.OperatorAllocation[] memory allocation = new IOperatorsRegistryV1.OperatorAllocation[](0);
 
-        IOperatorsRegistryV1.OperatorAllocation[] memory capped =
-            operatorsRegistry.getNextValidatorsToDeposit(allocation);
-        assert(capped.length == 0);
+        (bytes[] memory publicKeys, bytes[] memory signatures) =
+            operatorsRegistry.getNextValidatorsToDepositFromActiveOperators(allocation);
+        assert(publicKeys.length == 0);
+        assert(signatures.length == 0);
     }
 
     function testVersion() external {

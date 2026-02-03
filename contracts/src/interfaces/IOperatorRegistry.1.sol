@@ -253,13 +253,14 @@ interface IOperatorsRegistryV1 {
         view
         returns (bytes memory publicKey, bytes memory signature, bool funded);
 
-    /// @notice Validate and cap allocations against operator state
+    /// @notice Validate allocations and retrieve validator keys for deposit
     /// @param _allocations The proposed allocations to validate
-    /// @return The validated/capped allocations
-    function getNextValidatorsToDeposit(OperatorAllocation[] memory _allocations)
+    /// @return publicKeys The public keys of validators to deposit
+    /// @return signatures The signatures for the validators
+    function getNextValidatorsToDepositFromActiveOperators(OperatorAllocation[] memory _allocations)
         external
         view
-        returns (OperatorAllocation[] memory);
+        returns (bytes[] memory publicKeys, bytes[] memory signatures);
 
     /// @notice Retrieve the active operator set
     /// @return The list of active operators and their details

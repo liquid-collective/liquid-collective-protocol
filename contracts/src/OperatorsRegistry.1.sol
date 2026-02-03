@@ -208,21 +208,17 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
     }
 
     /// @inheritdoc IOperatorsRegistryV1
-    function getNextValidatorsToDeposit(OperatorAllocation[] memory _allocations)
+    function getNextValidatorsToDepositFromActiveOperators(OperatorAllocation[] memory _allocations)
         external
         view
-        returns (OperatorAllocation[] memory)
+        returns (bytes[] memory publicKeys, bytes[] memory signatures)
     {
         uint256 len = _allocations.length;
-        OperatorAllocation[] memory cappedAllocations = new OperatorAllocation[](len);
 
         for (uint256 i = 0; i < len; ++i) {
             uint256 operatorIndex = _allocations[i].operatorIndex;
             OperatorsV2.Operator memory operator = OperatorsV2.get(operatorIndex);
-
-            cappedAllocations[i].operatorIndex = operatorIndex;
-
-            // Check operator is active
+             // Check operator is active
             if (!operator.active) {
                 revert InactiveOperator(operatorIndex);
             }
@@ -233,10 +229,15 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
             if (requestedCount > fundableKeys) {
                 revert InvalidOperatorAllocation(operatorIndex, requestedCount, fundableKeys);
             }
-            cappedAllocations[i].validatorCount = requestedCount;
+
+            (bytes[] memory _publicKeys, bytes[] memory _signatures) = ValidatorKeys.getKeys(
+                operatorIndex, operator.funded, requestedCount
+            );
+            publicKeys = _concatenateByteArrays(publicKeys, _publicKeys);
+            signatures = _concatenateByteArrays(signatures, _signatures);
         }
 
-        return cappedAllocations;
+        return (publicKeys, signatures);
     }
 
     /// @inheritdoc IOperatorsRegistryV1
