@@ -187,12 +187,6 @@ interface IOperatorsRegistryV1 {
     /// @param available The available count
     error InvalidOperatorAllocation(uint256 operatorIndex, uint256 requested, uint256 available);
 
-    /// @notice Thrown when operator in exit allocation has insufficient exitable validators
-    /// @param operatorIndex The operator index
-    /// @param requested The requested exit count
-    /// @param available The available exitable validators
-    error InvalidExitAllocation(uint256 operatorIndex, uint256 requested, uint256 available);
-
     /// @notice The provided stopped validator count array is shrinking
     error StoppedValidatorCountArrayShrinking();
 
@@ -346,9 +340,11 @@ interface IOperatorsRegistryV1 {
         external
         returns (bytes[] memory publicKeys, bytes[] memory signatures);
 
-    /// @notice Request validator exits based on explicit operator allocations
-    /// @param _allocations Node operator allocations specifying how many exits per operator
-    function requestValidatorExits(OperatorAllocation[] calldata _allocations) external;
+    /// @notice Public endpoint to consume the exit request demand and perform the actual exit requests
+    /// @notice The selection algorithm will pick validators based on their active validator counts
+    /// @notice This value is computed by using the count of funded keys and taking into account the stopped validator counts and exit requests
+    /// @param _count Max amount of exits to request
+    function requestValidatorExits(uint256 _count) external;
 
     /// @notice Increases the exit request demand
     /// @dev This method is only callable by the river contract, and to actually forward the information to the node operators via event emission, the unprotected requestValidatorExits method must be called
