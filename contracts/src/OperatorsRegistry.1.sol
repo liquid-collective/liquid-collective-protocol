@@ -439,6 +439,12 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
 
     /// @inheritdoc IOperatorsRegistryV1
     function requestValidatorExits(OperatorAllocation[] calldata _allocations) external {
+        uint256 allocationsLength = _allocations.length;
+
+        if (allocationsLength == 0) {
+            revert InvalidEmptyArray();
+        }
+
         if (msg.sender != IConsensusLayerDepositManagerV1(RiverAddress.get()).getKeeper()) {
             revert IConsensusLayerDepositManagerV1.OnlyKeeper();
         }
@@ -448,7 +454,7 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
         uint256 suppliedExitCount = 0;
         
         // Check that the exits requested do not exceed the current validator exits demand
-        for (uint256 i = 0; i < _allocations.length; ++i) {
+        for (uint256 i = 0; i < allocationsLength; ++i) {
             uint256 operatorIndex = _allocations[i].operatorIndex;
             suppliedExitCount += _allocations[i].validatorCount;
             
@@ -463,7 +469,7 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
         }
 
         // Check that the exits requested do not exceed the funded validator count of the operator
-        for (uint256 i = 0; i < _allocations.length; ++i) {
+        for (uint256 i = 0; i < allocationsLength; ++i) {
             uint256 operatorIndex = _allocations[i].operatorIndex;
             uint256 count = _allocations[i].validatorCount;
             OperatorsV2.Operator storage operator = OperatorsV2.get(operatorIndex);
@@ -764,17 +770,6 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
     /// @return The count of stopped validators
     function _getStoppedValidatorsCount(uint256 _operatorIndex) internal view returns (uint32) {
         return OperatorsV2._getStoppedValidatorCountAtIndex(OperatorsV2.getStoppedValidators(), _operatorIndex);
-    }
-
-    /// @notice Internal utility to get the count of active validators during the exit selection process
-    /// @param _operator The Operator structure in memory
-    /// @return The count of active validators for the operator
-    function _getActiveValidatorCountForExitRequests(OperatorsV2.CachedExitableOperator memory _operator)
-        internal
-        pure
-        returns (uint32)
-    {
-        return _operator.funded - (_operator.requestedExits + _operator.picked);
     }
 
     /// @notice Internal utility to set the total validator exits requested by the system

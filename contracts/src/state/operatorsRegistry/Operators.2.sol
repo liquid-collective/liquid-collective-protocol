@@ -52,8 +52,6 @@ library OperatorsV2 {
         uint32 requestedExits;
         /// @custom:attribute The original index of the operator
         uint32 index;
-        /// @custom:attribute The count of requested exits
-        uint32 picked;
     }
 
     /// @notice The structure at the storage slot
@@ -235,7 +233,7 @@ library OperatorsV2 {
             if (_hasExitableKeys(r.value[idx])) {
                 Operator storage op = r.value[idx];
                 exitableOperators[exitableCount] =
-                    CachedExitableOperator({funded: op.funded, requestedExits: op.requestedExits, index: uint32(idx), picked: 0});
+                    CachedExitableOperator({funded: op.funded, requestedExits: op.requestedExits, index: uint32(idx)});
                 unchecked {
                     ++exitableCount;
                 }
