@@ -802,6 +802,88 @@ contract RedeemManagerV1Tests is RedeeManagerV1TestBase {
         redeemManager.claimRedeemRequests(redeemRequestIds, withdrawEventIds, false, type(uint16).max);
     }
 
+    // Tests that when the first item in claimRedeemRequests is already claimed and triggers
+    // the continue statement, subsequent items are still processed correctly.
+    // This verifies the loop advances properly after continue in a for(;;++idx) loop.
+    function testClaimRedeemRequestsSkipDoesNotBreakSubsequentClaims(uint256 _salt) external {
+        // Bound salt to avoid overflow when adding 1
+        _salt = bound(_salt, 0, type(uint256).max - 1);
+        uint128 amount = uint128(bound(_salt, 1, type(uint128).max / 2));
+
+        // Create two users with redeem requests
+        address user0 = _generateAllowlistedUser(_salt);
+        address user1 = _generateAllowlistedUser(_salt + 1);
+
+        // Give both users tokens and create redeem requests
+        river.sudoDeal(user0, uint256(amount));
+        river.sudoDeal(user1, uint256(amount));
+
+        vm.prank(user0);
+        river.approve(address(redeemManager), uint256(amount));
+        vm.prank(user1);
+        river.approve(address(redeemManager), uint256(amount));
+
+        vm.prank(user0);
+        redeemManager.requestRedeem(amount, user0); // request 0
+        vm.prank(user1);
+        redeemManager.requestRedeem(amount, user1); // request 1
+
+        // Report enough withdrawal to cover both requests
+        vm.deal(address(this), uint256(amount) * 2);
+        river.sudoReportWithdraw{value: uint256(amount) * 2}(address(redeemManager), uint256(amount) * 2);
+
+        assertEq(redeemManager.getWithdrawalEventCount(), 1);
+        assertEq(redeemManager.getRedeemRequestCount(), 2);
+
+        // First: claim only request 0
+        {
+            uint32[] memory ids = new uint32[](1);
+            uint32[] memory events = new uint32[](1);
+            ids[0] = 0;
+            events[0] = 0;
+
+            uint8[] memory statuses = redeemManager.claimRedeemRequests(ids, events, true, type(uint16).max);
+            assertEq(statuses.length, 1);
+            assertEq(statuses[0], 0); // CLAIM_FULLY_CLAIMED
+        }
+
+        // Verify request 0 is now claimed (amount == 0)
+        {
+            RedeemQueueV2.RedeemRequest memory rr = redeemManager.getRedeemRequestDetails(0);
+            assertEq(rr.amount, 0, "Request 0 should be fully claimed");
+        }
+
+        // Now claim [0, 1] with skipAlreadyClaimed=true
+        // Request 0 triggers continue (already claimed), request 1 should still be processed
+        uint32[] memory redeemRequestIds = new uint32[](2);
+        uint32[] memory withdrawEventIds = new uint32[](2);
+        redeemRequestIds[0] = 0; // already claimed - will trigger continue
+        redeemRequestIds[1] = 1; // fresh - should still be processed
+        withdrawEventIds[0] = 0;
+        withdrawEventIds[1] = 0;
+
+        uint256 user0BalanceBefore = user0.balance;
+        uint256 user1BalanceBefore = user1.balance;
+
+        uint8[] memory claimStatuses =
+            redeemManager.claimRedeemRequests(redeemRequestIds, withdrawEventIds, true, type(uint16).max);
+
+        // Verify the return values
+        assertEq(claimStatuses.length, 2, "Should return 2 statuses");
+        assertEq(claimStatuses[0], 2, "Request 0 should be CLAIM_SKIPPED (2)");
+        assertEq(claimStatuses[1], 0, "Request 1 should be CLAIM_FULLY_CLAIMED (0)");
+
+        // Verify user1 received their funds (proves loop continued after the skip)
+        assertEq(user0.balance, user0BalanceBefore, "User0 balance should not change (already claimed before)");
+        assertEq(user1.balance, user1BalanceBefore + amount, "User1 should receive their redemption");
+
+        // Verify request 1 is now claimed
+        {
+            RedeemQueueV2.RedeemRequest memory rr = redeemManager.getRedeemRequestDetails(1);
+            assertEq(rr.amount, 0, "Request 1 should be fully claimed");
+        }
+    }
+
     function testClaimRedeemRequestTwiceBigger(uint256 _salt) external {
         uint128 amount = uint128(bound(_salt, 2, type(uint128).max));
 
