@@ -128,7 +128,7 @@ contract ConsensusLayerDepositManagerV1Tests is Test {
         return allocations;
     }
 
-    function testDepositOperatorAllocationsExceedCommittedBalance() public {
+    function testDepositEmptyOperatorAllocations() public {
         vm.deal(address(depositManager), 31.9 ether);
         ConsensusLayerDepositManagerV1ExposeInitializer(address(depositManager)).sudoSyncBalance();
         vm.expectRevert(abi.encodeWithSignature("EmptyOperatorAllocations()"));

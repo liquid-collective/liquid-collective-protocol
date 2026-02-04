@@ -62,6 +62,7 @@ abstract contract RiverV1TestBase is Test, BytesGenerator {
         pure
         returns (IOperatorsRegistryV1.OperatorAllocation[] memory)
     {
+        require(opIndexes.length == counts.length, "InvalidAllocationLengths");
         IOperatorsRegistryV1.OperatorAllocation[] memory allocations =
             new IOperatorsRegistryV1.OperatorAllocation[](opIndexes.length);
         for (uint256 i = 0; i < opIndexes.length; ++i) {

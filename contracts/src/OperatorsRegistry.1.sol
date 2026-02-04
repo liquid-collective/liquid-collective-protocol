@@ -645,15 +645,26 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
         uint256 len = _allocations.length;
         uint256 prevOperatorIndex;
 
+        // First pass: validate ordering and calculate total count
+        uint256 totalCount = 0;
         for (uint256 i = 0; i < len; ++i) {
             uint256 operatorIndex = _allocations[i].operatorIndex;
-            uint256 count = _allocations[i].validatorCount;
-
-            // Validate ordering: operator indices must be strictly ascending (prevents duplicates)
             if (i > 0 && !(operatorIndex > prevOperatorIndex)) {
                 revert UnorderedOperatorList();
             }
             prevOperatorIndex = operatorIndex;
+            totalCount += _allocations[i].validatorCount;
+        }
+
+        // Pre-allocate arrays with exact size
+        publicKeys = new bytes[](totalCount);
+        signatures = new bytes[](totalCount);
+
+        // Second pass: fill arrays directly
+        uint256 keyIndex = 0;
+        for (uint256 i = 0; i < len; ++i) {
+            uint256 operatorIndex = _allocations[i].operatorIndex;
+            uint256 count = _allocations[i].validatorCount;
 
             if (count == 0) {
                 continue;
@@ -663,8 +674,15 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
 
             (bytes[] memory _publicKeys, bytes[] memory _signatures) =
                 ValidatorKeys.getKeys(operatorIndex, currentFunded, count);
-            publicKeys = _concatenateByteArrays(publicKeys, _publicKeys);
-            signatures = _concatenateByteArrays(signatures, _signatures);
+
+            for (uint256 j = 0; j < count;) {
+                publicKeys[keyIndex + j] = _publicKeys[j];
+                signatures[keyIndex + j] = _signatures[j];
+                unchecked {
+                    ++j;
+                }
+            }
+            keyIndex += count;
         }
 
         return (publicKeys, signatures);
@@ -681,15 +699,26 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
         uint256 len = _allocations.length;
         uint256 prevOperatorIndex;
 
+        // First pass: validate ordering and calculate total count
+        uint256 totalCount = 0;
         for (uint256 i = 0; i < len; ++i) {
             uint256 operatorIndex = _allocations[i].operatorIndex;
-            uint256 count = _allocations[i].validatorCount;
-
-            // Validate ordering: operator indices must be strictly ascending (prevents duplicates)
             if (i > 0 && !(operatorIndex > prevOperatorIndex)) {
                 revert UnorderedOperatorList();
             }
             prevOperatorIndex = operatorIndex;
+            totalCount += _allocations[i].validatorCount;
+        }
+
+        // Pre-allocate arrays with exact size
+        publicKeys = new bytes[](totalCount);
+        signatures = new bytes[](totalCount);
+
+        // Second pass: fill arrays directly
+        uint256 keyIndex = 0;
+        for (uint256 i = 0; i < len; ++i) {
+            uint256 operatorIndex = _allocations[i].operatorIndex;
+            uint256 count = _allocations[i].validatorCount;
 
             if (count == 0) {
                 continue;
@@ -700,33 +729,19 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
             (bytes[] memory _publicKeys, bytes[] memory _signatures) =
                 ValidatorKeys.getKeys(operatorIndex, currentFunded, count);
             emit FundedValidatorKeys(operatorIndex, _publicKeys, false);
-            publicKeys = _concatenateByteArrays(publicKeys, _publicKeys);
-            signatures = _concatenateByteArrays(signatures, _signatures);
+
+            for (uint256 j = 0; j < count;) {
+                publicKeys[keyIndex + j] = _publicKeys[j];
+                signatures[keyIndex + j] = _signatures[j];
+                unchecked {
+                    ++j;
+                }
+            }
+            keyIndex += count;
             OperatorsV2.get(operatorIndex).funded = currentFunded + uint32(count);
         }
 
         return (publicKeys, signatures);
-    }
-
-    /// @notice Internal utility to concatenate bytes arrays together
-    /// @param _arr1 First array
-    /// @param _arr2 Second array
-    /// @return The result of the concatenation of _arr1 + _arr2
-    function _concatenateByteArrays(bytes[] memory _arr1, bytes[] memory _arr2) internal pure returns (bytes[] memory) {
-        bytes[] memory res = new bytes[](_arr1.length + _arr2.length);
-        for (uint256 idx = 0; idx < _arr1.length;) {
-            res[idx] = _arr1[idx];
-            unchecked {
-                ++idx;
-            }
-        }
-        for (uint256 idx = 0; idx < _arr2.length;) {
-            res[idx + _arr1.length] = _arr2[idx];
-            unchecked {
-                ++idx;
-            }
-        }
-        return res;
     }
 
     /// @notice Internal utility to retrieve the actual stopped validator count of an operator from the reported array
