@@ -52,7 +52,7 @@ library OperatorsV2 {
         uint32 requestedExits;
         /// @custom:attribute The original index of the operator
         uint32 index;
-        /// @custom:attribute The count of requested exits
+        /// @custom:attribute The count of picked keys during the exit selection algorithm
         uint32 picked;
     }
 
