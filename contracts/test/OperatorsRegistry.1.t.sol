@@ -1695,6 +1695,72 @@ contract OperatorsRegistryV1TestDistribution is Test {
         }
     }
 
+    function testDepositDistributionSkipsZeroCountAllocation() external {
+        // Setup: add validators to operators
+        bytes[] memory rawKeys = new bytes[](3);
+        rawKeys[0] = genBytes((48 + 96) * 10);
+        rawKeys[1] = genBytes((48 + 96) * 10);
+        rawKeys[2] = genBytes((48 + 96) * 10);
+
+        vm.startPrank(admin);
+        operatorsRegistry.addValidators(0, 10, rawKeys[0]);
+        operatorsRegistry.addValidators(1, 10, rawKeys[1]);
+        operatorsRegistry.addValidators(2, 10, rawKeys[2]);
+        vm.stopPrank();
+
+        // Set limits for all operators
+        uint32[] memory limits = new uint32[](3);
+        limits[0] = 10;
+        limits[1] = 10;
+        limits[2] = 10;
+
+        uint256[] memory operators = new uint256[](3);
+        operators[0] = 0;
+        operators[1] = 1;
+        operators[2] = 2;
+
+        vm.prank(admin);
+        operatorsRegistry.setOperatorLimits(operators, limits, block.number);
+
+        // Create allocation with operator 1 having validatorCount = 0
+        // This should trigger the `if (count == 0) { continue; }` path
+        uint32[] memory allocCounts = new uint32[](3);
+        allocCounts[0] = 5; // operator 0 gets 5 validators
+        allocCounts[1] = 0; // operator 1 gets 0 validators (should be skipped)
+        allocCounts[2] = 3; // operator 2 gets 3 validators
+
+        // Expect events only for operators 0 and 2 (operator 1 is skipped)
+        vm.expectEmit(true, true, true, true);
+        emit FundedValidatorKeys(
+            0,
+            _bytesToPublicKeysArray(
+                rawKeys[0], 0, 5 * (ValidatorKeys.PUBLIC_KEY_LENGTH + ValidatorKeys.SIGNATURE_LENGTH)
+            ),
+            false
+        );
+        vm.expectEmit(true, true, true, true);
+        emit FundedValidatorKeys(
+            2,
+            _bytesToPublicKeysArray(
+                rawKeys[2], 0, 3 * (ValidatorKeys.PUBLIC_KEY_LENGTH + ValidatorKeys.SIGNATURE_LENGTH)
+            ),
+            false
+        );
+
+        (bytes[] memory publicKeys, bytes[] memory signatures) = OperatorsRegistryInitializableV1(
+                address(operatorsRegistry)
+            ).debugGetNextValidatorsToDepositFromActiveOperators(_createExitAllocation(operators, allocCounts));
+
+        // Verify total keys returned is 5 + 0 + 3 = 8
+        assert(publicKeys.length == 8);
+        assert(signatures.length == 8);
+
+        // Verify funded counts: operator 0 = 5, operator 1 = 0 (skipped), operator 2 = 3
+        assert(operatorsRegistry.getOperator(0).funded == 5);
+        assert(operatorsRegistry.getOperator(1).funded == 0); // Should remain 0 because count was 0
+        assert(operatorsRegistry.getOperator(2).funded == 3);
+    }
+
     function testInactiveDepositDistribution() external {
         vm.startPrank(admin);
         operatorsRegistry.addValidators(0, 50, genBytes((48 + 96) * 50));
