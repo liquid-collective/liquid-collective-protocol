@@ -38,8 +38,8 @@ contract OperatorsRegistryInitializableV1 is OperatorsRegistryV1 {
         external
         returns (bytes[] memory publicKeys, bytes[] memory signatures)
     {
-        return _pickValidatorsToDeposit(_allocations);
-    }
+        return _pickValidatorsToDepositFromActiveOperators(_allocations);
+    }   
 
     /// @notice Debug function to simulate deposits with equal distribution across all active operators
     /// @param _requestedAmount The total number of validators to fund

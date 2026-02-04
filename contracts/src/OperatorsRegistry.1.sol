@@ -433,7 +433,7 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
         onlyRiver
         returns (bytes[] memory publicKeys, bytes[] memory signatures)
     {
-        return _pickValidatorsToDeposit(_allocations);
+        return _pickValidatorsToDepositFromActiveOperators(_allocations);
     }
 
     /// @inheritdoc IOperatorsRegistryV1
@@ -692,7 +692,7 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
     /// @param _allocations The operator allocations specifying how many validators per operator sorted by operator index
     /// @return publicKeys An array of public keys
     /// @return signatures An array of signatures linked to the public keys
-    function _pickValidatorsToDeposit(OperatorAllocation[] memory _allocations)
+    function _pickValidatorsToDepositFromActiveOperators(OperatorAllocation[] memory _allocations)
         internal
         returns (bytes[] memory publicKeys, bytes[] memory signatures)
     {
