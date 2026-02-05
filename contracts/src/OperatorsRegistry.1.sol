@@ -663,29 +663,11 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
         return res;
     }
 
-    /// @notice Internal utility to verify if an operator has fundable keys during the selection process
-    /// @param _operator The Operator structure in memory
-    /// @return True if at least one fundable key is available
-    function _hasFundableKeys(OperatorsV2.CachedOperator memory _operator) internal pure returns (bool) {
-        return (_operator.funded + _operator.picked) < _operator.limit;
-    }
-
     /// @notice Internal utility to retrieve the actual stopped validator count of an operator from the reported array
     /// @param _operatorIndex The operator index
     /// @return The count of stopped validators
     function _getStoppedValidatorsCount(uint256 _operatorIndex) internal view returns (uint32) {
         return OperatorsV2._getStoppedValidatorCountAtIndex(OperatorsV2.getStoppedValidators(), _operatorIndex);
-    }
-
-    /// @notice Internal utility to get the count of active validators during the deposit selection process
-    /// @param _operator The Operator structure in memory
-    /// @return The count of active validators for the operator
-    function _getActiveValidatorCountForDeposits(OperatorsV2.CachedOperator memory _operator)
-        internal
-        view
-        returns (uint256)
-    {
-        return (_operator.funded + _operator.picked) - _getStoppedValidatorsCount(_operator.index);
     }
 
     /// @notice Internal view utility to validate an allocation and return the operator's current funded count
