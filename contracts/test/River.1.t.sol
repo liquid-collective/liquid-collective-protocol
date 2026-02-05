@@ -63,11 +63,27 @@ abstract contract RiverV1TestBase is Test, BytesGenerator {
         returns (IOperatorsRegistryV1.OperatorAllocation[] memory)
     {
         require(opIndexes.length == counts.length, "InvalidAllocationLengths");
+
+        // First pass: count non-zero allocations
+        uint256 nonZeroCount = 0;
+        for (uint256 i = 0; i < counts.length; ++i) {
+            if (counts[i] > 0) {
+                ++nonZeroCount;
+            }
+        }
+
+        // Allocate array with exact size needed
         IOperatorsRegistryV1.OperatorAllocation[] memory allocations =
-            new IOperatorsRegistryV1.OperatorAllocation[](opIndexes.length);
+            new IOperatorsRegistryV1.OperatorAllocation[](nonZeroCount);
+
+        // Second pass: fill only non-zero allocations
+        uint256 idx = 0;
         for (uint256 i = 0; i < opIndexes.length; ++i) {
-            allocations[i] =
-                IOperatorsRegistryV1.OperatorAllocation({operatorIndex: opIndexes[i], validatorCount: counts[i]});
+            if (counts[i] > 0) {
+                allocations[idx] =
+                    IOperatorsRegistryV1.OperatorAllocation({operatorIndex: opIndexes[i], validatorCount: counts[i]});
+                ++idx;
+            }
         }
         return allocations;
     }
