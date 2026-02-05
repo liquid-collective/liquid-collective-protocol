@@ -38,11 +38,11 @@ abstract contract ConsensusLayerDepositManagerV1 is IConsensusLayerDepositManage
     /// @param newCommittedBalance The new committed balance value
     function _setCommittedBalance(uint256 newCommittedBalance) internal virtual;
 
-    /// @notice Internal helper to retrieve validator keys based on node operator allocations
+    /// @notice Internal helper to retrieve validator keys ready to be funded
     /// @dev Must be overridden
-    /// @param _allocations Node operator allocations
-    /// @return publicKeys An array of fundable public keys
-    /// @return signatures An array of signatures linked to the public keys
+    /// @param _allocations Validator allocations
+    /// @return publicKeys An array of public keys ready to be funded
+    /// @return signatures An array of signatures ready to be funded
     function _getNextValidators(IOperatorsRegistryV1.OperatorAllocation[] memory _allocations)
         internal
         virtual
@@ -126,7 +126,8 @@ abstract contract ConsensusLayerDepositManagerV1 is IConsensusLayerDepositManage
             revert OperatorAllocationsExceedCommittedBalance();
         }
 
-        // Get validator keys using provided allocations
+        // it's up to the internal overriden _getNextValidators method to provide two array of the same
+        // size for the publicKeys and the signatures
         (bytes[] memory publicKeys, bytes[] memory signatures) = _getNextValidators(_allocations);
 
         uint256 receivedPublicKeyCount = publicKeys.length;
@@ -135,7 +136,7 @@ abstract contract ConsensusLayerDepositManagerV1 is IConsensusLayerDepositManage
             revert NoAvailableValidatorKeys();
         }
 
-        // Check if the number of received public keys is valid
+        // Check that the received public keys count equals the total requested and does not exceed the maximum number of validators that can be funded in this run
         if (receivedPublicKeyCount > maxDepositableCount || receivedPublicKeyCount != totalRequested) {
             revert InvalidPublicKeyCount();
         }
