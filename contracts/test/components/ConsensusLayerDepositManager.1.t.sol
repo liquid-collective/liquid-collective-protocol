@@ -340,6 +340,16 @@ contract ConsensusLayerDepositManagerV1ErrorTests is Test {
         vm.prank(address(0x1));
         depositManager.depositToConsensusLayerWithDepositRoot(_createAllocation(4), bytes32(0));
     }
+
+    function testAllocationExceedsCommittedBalance() public {
+        // Fund with only 2 deposits worth of ETH
+        vm.deal(address(depositManager), 2 * 32 ether);
+        ConsensusLayerDepositManagerV1ControllableValidatorKeyRequest(address(depositManager)).sudoSyncBalance();
+        // Try to allocate 5 validators when only 2 can be funded
+        vm.expectRevert(abi.encodeWithSignature("OperatorAllocationsExceedCommittedBalance()"));
+        vm.prank(address(0x1));
+        depositManager.depositToConsensusLayerWithDepositRoot(_createAllocation(5), bytes32(0));
+    }
 }
 
 contract ConsensusLayerDepositManagerV1WithdrawalCredentialError is Test {
