@@ -14,4 +14,4 @@ definition ignoredMethod(method f) returns bool =
     f.selector == sig:helper11_commitBalanceToDeposit(OracleManagerV1.ConsensusLayerDataReportingVariables).selector;
 
 definition excludedInCI(method f) returns bool =
-    f.selector == sig:depositToConsensusLayerWithDepositRoot(OperatorAllocation[], bytes32).selector;
+    f.selector == sig:depositToConsensusLayerWithDepositRoot(IOperatorsRegistryV1.OperatorAllocation[], bytes32).selector;
