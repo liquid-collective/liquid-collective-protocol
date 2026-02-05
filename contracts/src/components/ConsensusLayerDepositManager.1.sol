@@ -108,15 +108,15 @@ abstract contract ConsensusLayerDepositManagerV1 is IConsensusLayerDepositManage
         // Calculate total requested from allocations
         uint256 totalRequested = 0;
         for (uint256 i = 0; i < _allocations.length; ++i) {
+            if (_allocations[i].validatorCount == 0) {
+                revert IOperatorsRegistryV1.AllocationWithZeroValidatorCount();
+            }
             totalRequested += _allocations[i].validatorCount;
         }
 
+        //TODO maybe rename
         if (totalRequested > keyToDepositCount) {
             revert OperatorAllocationsExceedCommittedBalance();
-        }
-
-        if (totalRequested == 0) {
-            revert EmptyOperatorAllocations();
         }
 
         // Get validator keys using provided allocations
@@ -128,6 +128,8 @@ abstract contract ConsensusLayerDepositManagerV1 is IConsensusLayerDepositManage
             revert NoAvailableValidatorKeys();
         }
 
+        //!!! TODO what if allocation is less than keyToDepositCount?
+        /// Should we still revert?
         if (receivedPublicKeyCount > keyToDepositCount) {
             revert InvalidPublicKeyCount();
         }
