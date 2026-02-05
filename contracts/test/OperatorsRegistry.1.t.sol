@@ -45,6 +45,7 @@ contract OperatorsRegistryInitializableV1 is OperatorsRegistryV1 {
 
 contract RiverMock {
     uint256 public getDepositedValidatorCount;
+    address public keeper;
 
     constructor(uint256 _getDepositedValidatorsCount) {
         getDepositedValidatorCount = _getDepositedValidatorsCount;
@@ -52,6 +53,14 @@ contract RiverMock {
 
     function sudoSetDepositedValidatorsCount(uint256 _getDepositedValidatorsCount) external {
         getDepositedValidatorCount = _getDepositedValidatorsCount;
+    }
+
+    function setKeeper(address _keeper) external {
+        keeper = _keeper;
+    }
+
+    function getKeeper() external view returns (address) {
+        return keeper;
     }
 }
 
@@ -61,6 +70,7 @@ abstract contract OperatorsRegistryV1TestBase is Test {
     OperatorsRegistryV1 internal operatorsRegistry;
     address internal admin;
     address internal river;
+    address internal keeper;
     string internal firstName = "Operator One";
     string internal secondName = "Operator Two";
 
@@ -85,7 +95,9 @@ abstract contract OperatorsRegistryV1TestBase is Test {
 contract OperatorsRegistryV1InitializationTests is OperatorsRegistryV1TestBase {
     function setUp() public {
         admin = makeAddr("admin");
+        keeper = makeAddr("keeper");
         river = address(new RiverMock(0));
+        RiverMock(river).setKeeper(keeper);
         operatorsRegistry = new OperatorsRegistryInitializableV1();
         LibImplementationUnbricker.unbrick(vm, address(operatorsRegistry));
     }
@@ -103,7 +115,9 @@ contract OperatorsRegistryV1InitializationTests is OperatorsRegistryV1TestBase {
 contract OperatorsRegistryV1Tests is OperatorsRegistryV1TestBase, BytesGenerator {
     function setUp() public {
         admin = makeAddr("admin");
+        keeper = makeAddr("keeper");
         river = address(new RiverMock(0));
+        RiverMock(river).setKeeper(keeper);
         operatorsRegistry = new OperatorsRegistryInitializableV1();
         LibImplementationUnbricker.unbrick(vm, address(operatorsRegistry));
         operatorsRegistry.initOperatorsRegistryV1(admin, river);
@@ -1400,6 +1414,7 @@ contract OperatorsRegistryV1TestDistribution is Test {
     address internal operatorThree;
     address internal operatorFour;
     address internal operatorFive;
+    address internal keeper;
 
     event AddedValidatorKeys(uint256 indexed index, bytes publicKeys);
     event RemovedValidatorKey(uint256 indexed index, bytes publicKey);
@@ -1446,6 +1461,8 @@ contract OperatorsRegistryV1TestDistribution is Test {
     function setUp() public {
         admin = makeAddr("admin");
         river = address(new RiverMock(0));
+        keeper = makeAddr("keeper");
+        RiverMock(river).setKeeper(keeper);
 
         operatorOne = makeAddr("operatorOne");
         operatorTwo = makeAddr("operatorTwo");
@@ -1983,7 +2000,14 @@ contract OperatorsRegistryV1TestDistribution is Test {
         emit RequestedValidatorExits(4, 50);
         vm.expectEmit(true, true, true, true);
         emit SetTotalValidatorExitsRequested(0, 250);
-        operatorsRegistry.requestValidatorExits(250);
+        uint32[] memory exitCounts = new uint32[](5);
+        exitCounts[0] = 50;
+        exitCounts[1] = 50;
+        exitCounts[2] = 50;
+        exitCounts[3] = 50;
+        exitCounts[4] = 50;
+        vm.prank(keeper);
+        operatorsRegistry.requestValidatorExits(_createMultiAllocation(operators, exitCounts));
 
         assert(operatorsRegistry.getOperator(0).requestedExits == 50);
         assert(operatorsRegistry.getOperator(1).requestedExits == 50);
@@ -2066,7 +2090,14 @@ contract OperatorsRegistryV1TestDistribution is Test {
         emit SetTotalValidatorExitsRequested(100, 250);
         vm.expectEmit(true, true, true, true);
         emit SetCurrentValidatorExitsDemand(150, 0);
-        operatorsRegistry.requestValidatorExits(150);
+        uint32[] memory exitCounts = new uint32[](5);
+        exitCounts[0] = 30;
+        exitCounts[1] = 30;
+        exitCounts[2] = 30;
+        exitCounts[3] = 30;
+        exitCounts[4] = 30;
+        vm.prank(keeper);
+        operatorsRegistry.requestValidatorExits(_createMultiAllocation(operators, exitCounts));
 
         assert(operatorsRegistry.getOperator(0).requestedExits == 50);
         assert(operatorsRegistry.getOperator(1).requestedExits == 50);
@@ -2079,8 +2110,10 @@ contract OperatorsRegistryV1TestDistribution is Test {
     }
 
     function testRequestValidatorNoExits() external {
-        vm.expectRevert(abi.encodeWithSignature("NoExitRequestsToPerform()"));
-        operatorsRegistry.requestValidatorExits(0);
+        IOperatorsRegistryV1.OperatorAllocation[] memory allocations =
+            new IOperatorsRegistryV1.OperatorAllocation[](0);
+        vm.expectRevert(abi.encodeWithSignature("InvalidEmptyArray()"));
+        operatorsRegistry.requestValidatorExits(allocations);
     }
 
     function testOneExitDistribution() external {
