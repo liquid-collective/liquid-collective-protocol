@@ -166,6 +166,15 @@ interface IOperatorsRegistryV1 {
     /// @notice The provided list of operators is not in increasing order
     error UnorderedOperatorList();
 
+    /// @notice Thrown when an invalid operator allocation is provided
+    /// @param operatorIndex The operator index
+    /// @param requested The requested count
+    /// @param available The available count
+    error OperatorDoesNotHaveEnoughFundableKeys(uint256 operatorIndex, uint256 requested, uint256 available);
+
+    /// @notice Thrown when an allocation with zero validator count is provided
+    error AllocationWithZeroValidatorCount();
+
     /// @notice Thrown when an invalid empty stopped validator array is provided
     error InvalidEmptyStoppedValidatorCountsArray();
 
@@ -180,12 +189,6 @@ interface IOperatorsRegistryV1 {
 
     /// @notice Thrown when no exit requests can be performed
     error NoExitRequestsToPerform();
-
-    /// @notice Thrown when an invalid operator allocation is provided
-    /// @param operatorIndex The operator index
-    /// @param requested The requested count
-    /// @param available The available count
-    error InvalidOperatorAllocation(uint256 operatorIndex, uint256 requested, uint256 available);
 
     /// @notice The provided stopped validator count array is shrinking
     error StoppedValidatorCountArrayShrinking();

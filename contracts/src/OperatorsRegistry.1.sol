@@ -613,10 +613,16 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
     }
 
     /// @notice Internal view utility to validate an allocation and return the operator's current funded count
+    /// @dev This function checks if the operator is active and has enough fundable keys.
+    /// @dev This function can only return the operator's current funded validator count if allocation does not contain duplicate operator indices.
     /// @param _operatorIndex The index of the operator
     /// @param _count The number of validators requested
     /// @return currentFunded The operator's current funded validator count
-    function _validateAllocation(uint256 _operatorIndex, uint256 _count) internal view returns (uint32 currentFunded) {
+    function _checkActiveOperatorAndHasEnoughFundableKeys(uint256 _operatorIndex, uint256 _count)
+        internal
+        view
+        returns (uint32 currentFunded)
+    {
         OperatorsV2.Operator storage operator = OperatorsV2.get(_operatorIndex);
 
         // Validate operator is active
@@ -627,7 +633,7 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
         // Validate operator has enough fundable keys
         uint256 fundableKeys = operator.limit - operator.funded;
         if (_count > fundableKeys) {
-            revert InvalidOperatorAllocation(_operatorIndex, _count, fundableKeys);
+            revert OperatorDoesNotHaveEnoughFundableKeys(_operatorIndex, _count, fundableKeys);
         }
 
         return operator.funded;
@@ -666,11 +672,7 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
             uint256 operatorIndex = _allocations[i].operatorIndex;
             uint256 count = _allocations[i].validatorCount;
 
-            if (count == 0) {
-                continue;
-            }
-
-            uint32 currentFunded = _validateAllocation(operatorIndex, count);
+            uint32 currentFunded = _checkActiveOperatorAndHasEnoughFundableKeys(operatorIndex, count);
 
             (bytes[] memory _publicKeys, bytes[] memory _signatures) =
                 ValidatorKeys.getKeys(operatorIndex, currentFunded, count);
@@ -706,6 +708,10 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
             if (i > 0 && !(operatorIndex > prevOperatorIndex)) {
                 revert UnorderedOperatorList();
             }
+
+            if (_allocations[i].validatorCount == 0) {
+                revert AllocationWithZeroValidatorCount();
+            }
             prevOperatorIndex = operatorIndex;
             totalCount += _allocations[i].validatorCount;
         }
@@ -718,27 +724,23 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
         uint256 keyIndex = 0;
         for (uint256 i = 0; i < len; ++i) {
             uint256 operatorIndex = _allocations[i].operatorIndex;
-            uint256 count = _allocations[i].validatorCount;
+            uint256 keysToFundPerOperator = _allocations[i].validatorCount;
 
-            if (count == 0) {
-                continue;
-            }
-
-            uint32 currentFunded = _validateAllocation(operatorIndex, count);
+            uint32 currentFunded = _checkActiveOperatorAndHasEnoughFundableKeys(operatorIndex, keysToFundPerOperator);
 
             (bytes[] memory _publicKeys, bytes[] memory _signatures) =
-                ValidatorKeys.getKeys(operatorIndex, currentFunded, count);
+                ValidatorKeys.getKeys(operatorIndex, currentFunded, keysToFundPerOperator);
             emit FundedValidatorKeys(operatorIndex, _publicKeys, false);
 
-            for (uint256 j = 0; j < count;) {
+            for (uint256 j = 0; j < keysToFundPerOperator;) {
                 publicKeys[keyIndex + j] = _publicKeys[j];
                 signatures[keyIndex + j] = _signatures[j];
                 unchecked {
                     ++j;
                 }
             }
-            keyIndex += count;
-            OperatorsV2.get(operatorIndex).funded = currentFunded + uint32(count);
+            keyIndex += keysToFundPerOperator;
+            OperatorsV2.get(operatorIndex).funded = currentFunded + uint32(keysToFundPerOperator);
         }
 
         return (publicKeys, signatures);
