@@ -374,6 +374,70 @@ contract ConsensusLayerDepositManagerV1ErrorTests is ConsensusLayerDepositManage
         vm.prank(address(0x1));
         depositManager.depositToConsensusLayerWithDepositRoot(_createAllocation(5), bytes32(0));
     }
+
+    // Tests that duplicate operator indices in allocations revert with UnorderedOperatorList
+    function testUnorderedOperatorListDuplicate() public {
+        vm.deal(address(depositManager), 4 * 32 ether);
+        ConsensusLayerDepositManagerV1ControllableValidatorKeyRequest(address(depositManager)).sudoSyncBalance();
+
+        // Create allocations with duplicate operator index: [{0, 2}, {0, 2}]
+        IOperatorsRegistryV1.OperatorAllocation[] memory allocations =
+            new IOperatorsRegistryV1.OperatorAllocation[](2);
+        allocations[0] = IOperatorsRegistryV1.OperatorAllocation({operatorIndex: 0, validatorCount: 2});
+        allocations[1] = IOperatorsRegistryV1.OperatorAllocation({operatorIndex: 0, validatorCount: 2});
+
+        vm.expectRevert(abi.encodeWithSignature("UnorderedOperatorList()"));
+        vm.prank(address(0x1));
+        depositManager.depositToConsensusLayerWithDepositRoot(allocations, bytes32(0));
+    }
+
+    // Tests that non-ascending operator indices revert with UnorderedOperatorList
+    function testUnorderedOperatorListDescendingOperatorIndices() public {
+        vm.deal(address(depositManager), 4 * 32 ether);
+        ConsensusLayerDepositManagerV1ControllableValidatorKeyRequest(address(depositManager)).sudoSyncBalance();
+
+        // Create allocations with descending order: [{1, 2}, {0, 2}]
+        IOperatorsRegistryV1.OperatorAllocation[] memory allocations =
+            new IOperatorsRegistryV1.OperatorAllocation[](2);
+        allocations[0] = IOperatorsRegistryV1.OperatorAllocation({operatorIndex: 1, validatorCount: 2});
+        allocations[1] = IOperatorsRegistryV1.OperatorAllocation({operatorIndex: 0, validatorCount: 2});
+
+        vm.expectRevert(abi.encodeWithSignature("UnorderedOperatorList()"));
+        vm.prank(address(0x1));
+        depositManager.depositToConsensusLayerWithDepositRoot(allocations, bytes32(0));
+    }
+
+    // Tests that an allocation with zero validator count reverts with AllocationWithZeroValidatorCount
+    function testAllocationWithZeroValidatorCount() public {
+        vm.deal(address(depositManager), 2 * 32 ether);
+        ConsensusLayerDepositManagerV1ControllableValidatorKeyRequest(address(depositManager)).sudoSyncBalance();
+
+        // Create allocation with zero validator count: [{0, 0}]
+        IOperatorsRegistryV1.OperatorAllocation[] memory allocations =
+            new IOperatorsRegistryV1.OperatorAllocation[](1);
+        allocations[0] = IOperatorsRegistryV1.OperatorAllocation({operatorIndex: 0, validatorCount: 0});
+
+        vm.expectRevert(abi.encodeWithSignature("AllocationWithZeroValidatorCount()"));
+        vm.prank(address(0x1));
+        depositManager.depositToConsensusLayerWithDepositRoot(allocations, bytes32(0));
+    }
+
+    // Tests that a multi-allocation array with a zero count in the middle reverts
+    function testAllocationWithZeroValidatorCountInMiddle() public {
+        vm.deal(address(depositManager), 4 * 32 ether);
+        ConsensusLayerDepositManagerV1ControllableValidatorKeyRequest(address(depositManager)).sudoSyncBalance();
+
+        // Create allocations: [{0, 2}, {1, 0}, {2, 2}] - middle has zero count
+        IOperatorsRegistryV1.OperatorAllocation[] memory allocations =
+            new IOperatorsRegistryV1.OperatorAllocation[](3);
+        allocations[0] = IOperatorsRegistryV1.OperatorAllocation({operatorIndex: 0, validatorCount: 2});
+        allocations[1] = IOperatorsRegistryV1.OperatorAllocation({operatorIndex: 1, validatorCount: 0});
+        allocations[2] = IOperatorsRegistryV1.OperatorAllocation({operatorIndex: 2, validatorCount: 2});
+
+        vm.expectRevert(abi.encodeWithSignature("AllocationWithZeroValidatorCount()"));
+        vm.prank(address(0x1));
+        depositManager.depositToConsensusLayerWithDepositRoot(allocations, bytes32(0));
+    }
 }
 
 contract ConsensusLayerDepositManagerV1WithdrawalCredentialError is ConsensusLayerDepositManagerTestBase {
