@@ -465,15 +465,56 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
     }
 
     /// @inheritdoc IOperatorsRegistryV1
-    function requestValidatorExits(uint256 _count) external {
-        uint256 currentValidatorExitsDemand = CurrentValidatorExitsDemand.get();
-        uint256 exitRequestsToPerform = LibUint256.min(currentValidatorExitsDemand, _count);
-        if (exitRequestsToPerform == 0) {
-            revert NoExitRequestsToPerform();
-        }
-        uint256 savedCurrentValidatorExitsDemand = currentValidatorExitsDemand;
-        currentValidatorExitsDemand -= _pickNextValidatorsToExitFromActiveOperators(exitRequestsToPerform);
+    function requestValidatorExits(OperatorAllocation[] calldata _allocations) external {
+        uint256 allocationsLength = _allocations.length;
 
+        if (allocationsLength == 0) {
+            revert InvalidEmptyArray();
+        }
+
+        if (msg.sender != IConsensusLayerDepositManagerV1(RiverAddress.get()).getKeeper()) {
+            revert IConsensusLayerDepositManagerV1.OnlyKeeper();
+        }
+
+        uint256 currentValidatorExitsDemand = CurrentValidatorExitsDemand.get();
+        uint256 prevOperatorIndex = 0;
+        uint256 suppliedExitCount = 0;
+        
+        // Check that the exits requested do not exceed the funded validator count of the operator
+        for (uint256 i = 0; i < allocationsLength; ++i) {
+            uint256 operatorIndex = _allocations[i].operatorIndex;
+            uint256 count = _allocations[i].validatorCount;
+            suppliedExitCount += count;
+
+            if (i > 0 && !(operatorIndex > prevOperatorIndex)) {
+                revert UnorderedOperatorList();
+            }
+            prevOperatorIndex = operatorIndex;
+
+            OperatorsV2.Operator storage operator = OperatorsV2.get(operatorIndex);
+            if (!operator.active) {
+                revert InactiveOperator(operatorIndex);
+            }
+            if (count > (operator.funded - operator.requestedExits)) {
+                // Operator has insufficient funded validators
+                revert ExitsRequestedExceedsFundedCount(operatorIndex, count, operator.funded);
+            } else {
+                // Operator has sufficient funded validators
+                operator.requestedExits += uint32(count);
+                emit RequestedValidatorExits(operatorIndex, operator.requestedExits);
+            }
+        }
+
+        // Check that the exits requested do not exceed the current validator exits demand
+        if (suppliedExitCount > currentValidatorExitsDemand) {
+            revert ExitsRequestedExceedsDemand(suppliedExitCount, currentValidatorExitsDemand);
+        }
+
+        uint256 savedCurrentValidatorExitsDemand = currentValidatorExitsDemand;
+        currentValidatorExitsDemand -= suppliedExitCount;
+        
+        uint256 totalRequestedExitsValue = TotalValidatorExitsRequested.get();
+        _setTotalValidatorExitsRequested(totalRequestedExitsValue, totalRequestedExitsValue + suppliedExitCount);
         _setCurrentValidatorExitsDemand(savedCurrentValidatorExitsDemand, currentValidatorExitsDemand);
     }
 
