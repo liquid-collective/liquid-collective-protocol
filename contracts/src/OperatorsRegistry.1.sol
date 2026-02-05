@@ -670,33 +670,6 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
         return OperatorsV2._getStoppedValidatorCountAtIndex(OperatorsV2.getStoppedValidators(), _operatorIndex);
     }
 
-    /// @notice Internal view utility to validate an allocation and return the operator's current funded count
-    /// @dev This function checks if the operator is active and has enough fundable keys.
-    /// @dev This function can only return the operator's current funded validator count if allocation does not contain duplicate operator indices.
-    /// @param _operatorIndex The index of the operator
-    /// @param _count The number of validators requested
-    /// @return currentFunded The operator's current funded validator count
-    function _checkActiveOperatorAndHasEnoughFundableKeys(uint256 _operatorIndex, uint256 _count)
-        internal
-        view
-        returns (uint32 currentFunded)
-    {
-        OperatorsV2.Operator storage operator = OperatorsV2.get(_operatorIndex);
-
-        // Validate operator is active
-        if (!operator.active) {
-            revert InactiveOperator(_operatorIndex);
-        }
-
-        // Validate operator has enough fundable keys
-        uint256 fundableKeys = operator.limit - operator.funded;
-        if (_count > fundableKeys) {
-            revert OperatorDoesNotHaveEnoughFundableKeys(_operatorIndex, _count, fundableKeys);
-        }
-
-        return operator.funded;
-    }
-
     /// @notice Internal utility to retrieve _count or lower fundable keys
     /// @dev The selection process starts by retrieving the full list of active operators with at least one fundable key.
     /// @dev
