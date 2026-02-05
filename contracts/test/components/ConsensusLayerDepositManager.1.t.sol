@@ -265,6 +265,16 @@ contract ConsensusLayerDepositManagerV1ControllableValidatorKeyRequest is Consen
                 signatures[idx] = LibBytes.slice(_signatures, idx * 96, 96);
             }
             return (publicKeys, signatures);
+        } else if (scenario == 7) {
+            // Return more keys than requested (but within max depositable)
+            uint256 amount = 4;
+            bytes[] memory publicKeys = new bytes[](amount);
+            bytes[] memory signatures = new bytes[](amount);
+            for (uint256 idx = 0; idx < amount; ++idx) {
+                publicKeys[idx] = LibBytes.slice(_publicKeys, idx * 48, 48);
+                signatures[idx] = LibBytes.slice(_signatures, idx * 96, 96);
+            }
+            return (publicKeys, signatures);
         }
         return (new bytes[](0), new bytes[](0));
     }
@@ -348,6 +358,15 @@ contract ConsensusLayerDepositManagerV1ErrorTests is Test {
         vm.expectRevert(abi.encodeWithSignature("InvalidPublicKeyCount()"));
         vm.prank(address(0x1));
         depositManager.depositToConsensusLayerWithDepositRoot(_createAllocation(4), bytes32(0));
+    }
+
+    function testFaultyRegistryReturnsMoreKeysThanRequested() public {
+        vm.deal(address(depositManager), 4 * 32 ether); // maxDepositableCount = 4
+        ConsensusLayerDepositManagerV1ControllableValidatorKeyRequest(address(depositManager)).sudoSyncBalance();
+        ConsensusLayerDepositManagerV1ControllableValidatorKeyRequest(address(depositManager)).setScenario(7); // returns 4 keys
+        vm.expectRevert(abi.encodeWithSignature("InvalidPublicKeyCount()"));
+        vm.prank(address(0x1));
+        depositManager.depositToConsensusLayerWithDepositRoot(_createAllocation(2), bytes32(0)); // only request 2
     }
 
     function testAllocationExceedsCommittedBalance() public {
