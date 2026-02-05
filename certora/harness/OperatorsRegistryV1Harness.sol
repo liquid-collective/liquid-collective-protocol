@@ -14,10 +14,6 @@ contract OperatorsRegistryV1Harness is OperatorsRegistryV1 {
         return OperatorsV2.getCount();
     }
 
-    function getMaxValidatorAttributionPerRound() external view returns (uint256) {
-        return MAX_VALIDATOR_ATTRIBUTION_PER_ROUND;
-    }
-
     function getStoppedValidatorsLength() external view returns (uint256) {
         return OperatorsV2.getStoppedValidators().length;
     }

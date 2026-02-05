@@ -38,7 +38,7 @@ invariant validatorKeysRemainUnique_LI2(
     filtered { f -> !ignoredMethod(f) && !needsLoopIter4(f) }
     { 
         preserved requestValidatorExits(uint256 x) with(env e) { require x <= 2; }
-        preserved pickNextValidatorsToDeposit(uint256 x) with(env e) { require x <= 2; }  
+        preserved pickNextValidatorsToDeposit(OperatorAllocation[] x) with(env e) { require x.length <= 2; }  
         preserved removeValidators(uint256 _index, uint256[] _indexes) with(env e) { require _indexes.length <= 2; }  
     }
 
@@ -84,7 +84,7 @@ rule startingValidatorsDecreasesDiscrepancy(env e)
     //keysAfter2, limitAfter2, fundedAfter2, requestedExitsAfter2, stoppedCountAfter2, activeAfter2, operatorAfter2 = getOperatorState(e, index2);
 
     assert discrepancyBefore > 0 => to_mathint(discrepancyBefore) >= 
-        discrepancyAfter - count + 1; //getMaxValidatorAttributionPerRound(e);
+        discrepancyAfter - count + 1;
 }
 
 rule startingValidatorsNeverUsesSameValidatorTwice(env e) 

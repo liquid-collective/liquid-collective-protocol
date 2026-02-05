@@ -129,7 +129,7 @@ invariant inactiveOperatorsRemainNotFunded_LI2(uint opIndex)
         } 
     { 
         preserved requestValidatorExits(uint256 x) with(env e) { require x <= 2; }
-        preserved pickNextValidatorsToDeposit(uint256 x) with(env e) { require x <= 1; }  
+        preserved pickNextValidatorsToDeposit(OperatorAllocation[] x) with(env e) { require x.length <= 1; }  
         preserved removeValidators(uint256 _index, uint256[] _indexes) with(env e) { require _indexes.length <= 1; }  
     }
 
@@ -216,7 +216,7 @@ invariant operatorsStatesRemainValid_LI2_easyMethods(uint opIndex)
     filtered { f -> !ignoredMethod(f) && 
     !needsLoopIter4(f) &&
     f.selector != sig:requestValidatorExits(uint256).selector &&
-    f.selector != sig:pickNextValidatorsToDeposit(uint256).selector &&
+    f.selector != sig:pickNextValidatorsToDeposit(OperatorAllocation[]).selector &&
     f.selector != sig:removeValidators(uint256,uint256[]).selector
     }
 
@@ -225,7 +225,7 @@ invariant operatorsStatesRemainValid_LI2_easyMethods(uint opIndex)
 invariant operatorsStatesRemainValid_LI2_pickNextValidatorsToDeposit(uint opIndex) 
     isValidState() => (operatorStateIsValid(opIndex))
     filtered { f -> !ignoredMethod(f) && 
-    !needsLoopIter4(f) && f.selector != sig:pickNextValidatorsToDeposit(uint256).selector
+    !needsLoopIter4(f) && f.selector != sig:pickNextValidatorsToDeposit(OperatorAllocation[]).selector
     }
 
 // proves the invariant for reportStoppedValidatorCounts
