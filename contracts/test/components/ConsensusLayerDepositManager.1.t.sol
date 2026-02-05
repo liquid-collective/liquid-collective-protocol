@@ -128,10 +128,10 @@ contract ConsensusLayerDepositManagerV1Tests is Test {
         return allocations;
     }
 
-    function testDepositAllocationWithZeroValidatorCount() public {
+    function testDepositAllocationFailsWithNotEnoughFunds() public {
         vm.deal(address(depositManager), 31.9 ether);
         ConsensusLayerDepositManagerV1ExposeInitializer(address(depositManager)).sudoSyncBalance();
-        vm.expectRevert(abi.encodeWithSignature("AllocationWithZeroValidatorCount()"));
+        vm.expectRevert(abi.encodeWithSignature("NotEnoughFunds()"));
         vm.prank(address(0x1));
         depositManager.depositToConsensusLayerWithDepositRoot(_createAllocation(0), bytes32(0));
     }
