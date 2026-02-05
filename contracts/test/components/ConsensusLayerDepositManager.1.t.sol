@@ -305,7 +305,7 @@ contract ConsensusLayerDepositManagerV1ErrorTests is Test {
 
     // For InconsistentPublicKeys - scenario 1 returns 1 key with 49-byte pubkey
     function testInconsistentPublicKey() public {
-        vm.deal(address(depositManager), 32 ether);  // 1 deposit
+        vm.deal(address(depositManager), 32 ether); // 1 deposit
         ConsensusLayerDepositManagerV1ControllableValidatorKeyRequest(address(depositManager)).sudoSyncBalance();
         ConsensusLayerDepositManagerV1ControllableValidatorKeyRequest(address(depositManager)).setScenario(1);
         vm.expectRevert(abi.encodeWithSignature("InconsistentPublicKeys()"));
@@ -315,7 +315,7 @@ contract ConsensusLayerDepositManagerV1ErrorTests is Test {
 
     // For InconsistentSignatures - scenario 2 returns 1 key with 97-byte signature
     function testInconsistentSignature() public {
-        vm.deal(address(depositManager), 32 ether);  // 1 deposit
+        vm.deal(address(depositManager), 32 ether); // 1 deposit
         ConsensusLayerDepositManagerV1ControllableValidatorKeyRequest(address(depositManager)).sudoSyncBalance();
         ConsensusLayerDepositManagerV1ControllableValidatorKeyRequest(address(depositManager)).setScenario(2);
         vm.expectRevert(abi.encodeWithSignature("InconsistentSignatures()"));
