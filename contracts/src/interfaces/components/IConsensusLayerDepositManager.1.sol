@@ -20,7 +20,7 @@ interface IConsensusLayerDepositManagerV1 {
     /// @param newDepositedValidatorCount The new deposited validator count value
     event SetDepositedValidatorCount(uint256 oldDepositedValidatorCount, uint256 newDepositedValidatorCount);
 
-    /// @notice Not enough funds to deposit the requested number of validators
+    /// @notice Not enough funds to deposit one validator
     error NotEnoughFunds();
 
     /// @notice The length of the BLS Public key is invalid during deposit
