@@ -248,6 +248,16 @@ contract ConsensusLayerDepositManagerV1ControllableValidatorKeyRequest is Consen
             signatures[0] = LibBytes.slice(_signatures, 0, 96);
             signatures[1] = LibBytes.slice(_signatures, 96, 96);
             return (publicKeys, signatures);
+        } else if (scenario == 6) {
+            // Return fewer keys than requested (simulates faulty registry)
+            uint256 amount = totalRequested / 2;
+            bytes[] memory publicKeys = new bytes[](amount);
+            bytes[] memory signatures = new bytes[](amount);
+            for (uint256 idx = 0; idx < amount; ++idx) {
+                publicKeys[idx] = LibBytes.slice(_publicKeys, idx * 48, 48);
+                signatures[idx] = LibBytes.slice(_signatures, idx * 96, 96);
+            }
+            return (publicKeys, signatures);
         }
         return (new bytes[](0), new bytes[](0));
     }
@@ -320,6 +330,15 @@ contract ConsensusLayerDepositManagerV1ErrorTests is Test {
         vm.expectRevert(abi.encodeWithSignature("InvalidPublicKeyCount()"));
         vm.prank(address(0x1));
         depositManager.depositToConsensusLayerWithDepositRoot(_createAllocation(1), bytes32(0));
+    }
+
+    function testFaultyRegistryReturnsFewerKeys() public {
+        vm.deal(address(depositManager), 4 * 32 ether);
+        ConsensusLayerDepositManagerV1ControllableValidatorKeyRequest(address(depositManager)).sudoSyncBalance();
+        ConsensusLayerDepositManagerV1ControllableValidatorKeyRequest(address(depositManager)).setScenario(6); // returns half of requested keys
+        vm.expectRevert(abi.encodeWithSignature("InvalidPublicKeyCount()"));
+        vm.prank(address(0x1));
+        depositManager.depositToConsensusLayerWithDepositRoot(_createAllocation(4), bytes32(0));
     }
 }
 
