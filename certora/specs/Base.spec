@@ -66,7 +66,7 @@ methods {
     function RiverV1Harness.getCLValidatorCount() external returns(uint256) envfree;
     
     // RiverV1 : ConsensusLayerDepositManagerV1
-    function _.depositToConsensusLayerWithDepositRoot(uint256, bytes32) external => DISPATCHER(true);
+    function _.depositToConsensusLayerWithDepositRoot(OperatorAllocation[], bytes32) external => DISPATCHER(true);
     function RiverV1Harness.getDepositedValidatorCount() external returns(uint256) envfree;
 
     // WithdrawV1
