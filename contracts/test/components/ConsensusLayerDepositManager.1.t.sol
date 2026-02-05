@@ -11,6 +11,14 @@ import "../mocks/DepositContractMock.sol";
 import "../mocks/DepositContractEnhancedMock.sol";
 import "../mocks/DepositContractInvalidMock.sol";
 
+abstract contract ConsensusLayerDepositManagerTestBase is Test {
+    function _createAllocation(uint256 count) internal pure returns (IOperatorsRegistryV1.OperatorAllocation[] memory) {
+        IOperatorsRegistryV1.OperatorAllocation[] memory allocations = new IOperatorsRegistryV1.OperatorAllocation[](1);
+        allocations[0] = IOperatorsRegistryV1.OperatorAllocation({operatorIndex: 0, validatorCount: count});
+        return allocations;
+    }
+}
+
 contract ConsensusLayerDepositManagerV1ExposeInitializer is ConsensusLayerDepositManagerV1 {
     function _getRiverAdmin() internal pure override returns (address) {
         return address(0);
@@ -103,7 +111,7 @@ contract ConsensusLayerDepositManagerV1InitTests is Test {
     }
 }
 
-contract ConsensusLayerDepositManagerV1Tests is Test {
+contract ConsensusLayerDepositManagerV1Tests is ConsensusLayerDepositManagerTestBase {
     bytes32 internal withdrawalCredentials = bytes32(uint256(1));
 
     ConsensusLayerDepositManagerV1 internal depositManager;
@@ -116,12 +124,6 @@ contract ConsensusLayerDepositManagerV1Tests is Test {
         LibImplementationUnbricker.unbrick(vm, address(depositManager));
         ConsensusLayerDepositManagerV1ExposeInitializer(address(depositManager))
             .publicConsensusLayerDepositManagerInitializeV1(address(depositContract), withdrawalCredentials);
-    }
-
-    function _createAllocation(uint256 count) internal pure returns (IOperatorsRegistryV1.OperatorAllocation[] memory) {
-        IOperatorsRegistryV1.OperatorAllocation[] memory allocations = new IOperatorsRegistryV1.OperatorAllocation[](1);
-        allocations[0] = IOperatorsRegistryV1.OperatorAllocation({operatorIndex: 0, validatorCount: count});
-        return allocations;
     }
 
     function testRetrieveWithdrawalCredentials() public view {
@@ -292,7 +294,7 @@ contract ConsensusLayerDepositManagerV1ControllableValidatorKeyRequest is Consen
     }
 }
 
-contract ConsensusLayerDepositManagerV1ErrorTests is Test {
+contract ConsensusLayerDepositManagerV1ErrorTests is ConsensusLayerDepositManagerTestBase {
     bytes32 internal withdrawalCredentials = bytes32(uint256(1));
 
     ConsensusLayerDepositManagerV1 internal depositManager;
@@ -305,12 +307,6 @@ contract ConsensusLayerDepositManagerV1ErrorTests is Test {
         LibImplementationUnbricker.unbrick(vm, address(depositManager));
         ConsensusLayerDepositManagerV1ControllableValidatorKeyRequest(address(depositManager))
             .publicConsensusLayerDepositManagerInitializeV1(address(depositContract), withdrawalCredentials);
-    }
-
-    function _createAllocation(uint256 count) internal pure returns (IOperatorsRegistryV1.OperatorAllocation[] memory) {
-        IOperatorsRegistryV1.OperatorAllocation[] memory allocations = new IOperatorsRegistryV1.OperatorAllocation[](1);
-        allocations[0] = IOperatorsRegistryV1.OperatorAllocation({operatorIndex: 0, validatorCount: count});
-        return allocations;
     }
 
     // For InconsistentPublicKeys - scenario 1 returns 1 key with 49-byte pubkey
@@ -380,7 +376,7 @@ contract ConsensusLayerDepositManagerV1ErrorTests is Test {
     }
 }
 
-contract ConsensusLayerDepositManagerV1WithdrawalCredentialError is Test {
+contract ConsensusLayerDepositManagerV1WithdrawalCredentialError is ConsensusLayerDepositManagerTestBase {
     bytes32 internal withdrawalCredentials = bytes32(uint256(1));
 
     ConsensusLayerDepositManagerV1 internal depositManager;
@@ -396,12 +392,6 @@ contract ConsensusLayerDepositManagerV1WithdrawalCredentialError is Test {
             bytes32(uint256(uint160(address(depositContract))))
         );
         LibImplementationUnbricker.unbrick(vm, address(depositManager));
-    }
-
-    function _createAllocation(uint256 count) internal pure returns (IOperatorsRegistryV1.OperatorAllocation[] memory) {
-        IOperatorsRegistryV1.OperatorAllocation[] memory allocations = new IOperatorsRegistryV1.OperatorAllocation[](1);
-        allocations[0] = IOperatorsRegistryV1.OperatorAllocation({operatorIndex: 0, validatorCount: count});
-        return allocations;
     }
 
     function testInvalidWithdrawalCredential() public {
@@ -478,7 +468,7 @@ contract ConsensusLayerDepositManagerV1ValidKeys is ConsensusLayerDepositManager
     }
 }
 
-contract ConsensusLayerDepositManagerV1ValidKeysTest is Test {
+contract ConsensusLayerDepositManagerV1ValidKeysTest is ConsensusLayerDepositManagerTestBase {
     ConsensusLayerDepositManagerV1 internal depositManager;
     IDepositContract internal depositContract;
 
@@ -497,12 +487,6 @@ contract ConsensusLayerDepositManagerV1ValidKeysTest is Test {
         LibImplementationUnbricker.unbrick(vm, address(depositManager));
         ConsensusLayerDepositManagerV1ValidKeys(address(depositManager))
             .publicConsensusLayerDepositManagerInitializeV1(address(depositContract), withdrawalCredentials);
-    }
-
-    function _createAllocation(uint256 count) internal pure returns (IOperatorsRegistryV1.OperatorAllocation[] memory) {
-        IOperatorsRegistryV1.OperatorAllocation[] memory allocations = new IOperatorsRegistryV1.OperatorAllocation[](1);
-        allocations[0] = IOperatorsRegistryV1.OperatorAllocation({operatorIndex: 0, validatorCount: count});
-        return allocations;
     }
 
     function testDepositValidKey() external {
@@ -530,7 +514,7 @@ contract ConsensusLayerDepositManagerV1ValidKeysTest is Test {
     }
 }
 
-contract ConsensusLayerDepositManagerV1InvalidDepositContract is Test {
+contract ConsensusLayerDepositManagerV1InvalidDepositContract is ConsensusLayerDepositManagerTestBase {
     ConsensusLayerDepositManagerV1 internal depositManager;
     IDepositContract internal depositContract;
 
@@ -545,12 +529,6 @@ contract ConsensusLayerDepositManagerV1InvalidDepositContract is Test {
             .publicConsensusLayerDepositManagerInitializeV1(address(depositContract), withdrawalCredentials);
     }
 
-    function _createAllocation(uint256 count) internal pure returns (IOperatorsRegistryV1.OperatorAllocation[] memory) {
-        IOperatorsRegistryV1.OperatorAllocation[] memory allocations = new IOperatorsRegistryV1.OperatorAllocation[](1);
-        allocations[0] = IOperatorsRegistryV1.OperatorAllocation({operatorIndex: 0, validatorCount: count});
-        return allocations;
-    }
-
     function testDepositInvalidDepositContract() external {
         vm.deal(address(depositManager), 32 ether);
         ConsensusLayerDepositManagerV1ValidKeys(address(depositManager)).sudoSyncBalance();
@@ -560,7 +538,7 @@ contract ConsensusLayerDepositManagerV1InvalidDepositContract is Test {
     }
 }
 
-contract ConsensusLayerDepositManagerV1KeeperTest is Test {
+contract ConsensusLayerDepositManagerV1KeeperTest is ConsensusLayerDepositManagerTestBase {
     ConsensusLayerDepositManagerV1 internal depositManager;
     IDepositContract internal depositContract;
 
@@ -579,12 +557,6 @@ contract ConsensusLayerDepositManagerV1KeeperTest is Test {
         LibImplementationUnbricker.unbrick(vm, address(depositManager));
         ConsensusLayerDepositManagerV1ValidKeys(address(depositManager))
             .publicConsensusLayerDepositManagerInitializeV1(address(depositContract), withdrawalCredentials);
-    }
-
-    function _createAllocation(uint256 count) internal pure returns (IOperatorsRegistryV1.OperatorAllocation[] memory) {
-        IOperatorsRegistryV1.OperatorAllocation[] memory allocations = new IOperatorsRegistryV1.OperatorAllocation[](1);
-        allocations[0] = IOperatorsRegistryV1.OperatorAllocation({operatorIndex: 0, validatorCount: count});
-        return allocations;
     }
 
     function testDepositValidKeeper() external {
