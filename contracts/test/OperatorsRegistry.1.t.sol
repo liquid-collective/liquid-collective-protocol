@@ -1938,13 +1938,13 @@ contract OperatorsRegistryV1TestDistribution is Test {
 
         {
             uint32[] memory allocCounts = new uint32[](2);
-            uint256[] memory operators = new uint256[](2);
-            operators[0] = 1;
-            operators[1] = 3;
+            uint256[] memory alloOperators = new uint256[](2);
+            alloOperators[0] = 1;
+            alloOperators[1] = 3;
             allocCounts[0] = 25;
             allocCounts[1] = 25;
             OperatorsRegistryInitializableV1(address(operatorsRegistry))
-                .debugGetNextValidatorsToDepositFromActiveOperators(_createExitAllocation(operators, allocCounts));
+                .debugGetNextValidatorsToDepositFromActiveOperators(_createExitAllocation(alloOperators, allocCounts));
         }
         assert(operatorsRegistry.getOperator(0).funded == 10);
         assert(operatorsRegistry.getOperator(1).funded == 35);
@@ -3293,8 +3293,10 @@ contract OperatorsRegistryV1TestDistribution is Test {
         IOperatorsRegistryV1.OperatorAllocation[] memory allocation = new IOperatorsRegistryV1.OperatorAllocation[](1);
         allocation[0] = IOperatorsRegistryV1.OperatorAllocation({operatorIndex: 0, validatorCount: 5});
 
-        vm.expectRevert(abi.encodeWithSignature("InactiveOperator(uint256)", 0));
-        operatorsRegistry.getNextValidatorsToDepositFromActiveOperators(allocation);
+        (bytes[] memory publicKeys, bytes[] memory signatures) =
+            operatorsRegistry.getNextValidatorsToDepositFromActiveOperators(allocation);
+        assert(publicKeys.length == 0);
+        assert(signatures.length == 0);
     }
 
     function testGetNextValidatorsToDepositForNoOperators() public {

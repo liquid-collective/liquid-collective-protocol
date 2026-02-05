@@ -213,46 +213,37 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
         view
         returns (bytes[] memory publicKeys, bytes[] memory signatures)
     {
+        (OperatorsV2.CachedOperator[] memory operators, uint256 fundableOperatorCount) = OperatorsV2.getAllFundable();
+
+        if (fundableOperatorCount == 0) {
+            return (new bytes[](0), new bytes[](0));
+        }
         uint256 len = _allocations.length;
         uint256 prevOperatorIndex;
 
-        // First pass: validate ordering and calculate total count
-        uint256 totalCount = 0;
+        // First pass: validate ordering and update picked count for each operator
         for (uint256 i = 0; i < len; ++i) {
             uint256 operatorIndex = _allocations[i].operatorIndex;
             if (i > 0 && !(operatorIndex > prevOperatorIndex)) {
                 revert UnorderedOperatorList();
             }
-            prevOperatorIndex = operatorIndex;
-            totalCount += _allocations[i].validatorCount;
-        }
-
-        // Pre-allocate arrays with exact size
-        publicKeys = new bytes[](totalCount);
-        signatures = new bytes[](totalCount);
-
-        // Second pass: fill arrays directly
-        uint256 keyIndex = 0;
-        for (uint256 i = 0; i < len; ++i) {
-            uint256 operatorIndex = _allocations[i].operatorIndex;
-            uint256 count = _allocations[i].validatorCount;
-
-            uint32 currentFunded = _checkActiveOperatorAndHasEnoughFundableKeys(operatorIndex, count);
-
-            (bytes[] memory _publicKeys, bytes[] memory _signatures) =
-                ValidatorKeys.getKeys(operatorIndex, currentFunded, count);
-
-            for (uint256 j = 0; j < count;) {
-                publicKeys[keyIndex + j] = _publicKeys[j];
-                signatures[keyIndex + j] = _signatures[j];
-                unchecked {
-                    ++j;
-                }
+            if (_allocations[i].validatorCount == 0) {
+                revert AllocationWithZeroValidatorCount();
             }
-            keyIndex += count;
+            prevOperatorIndex = operatorIndex;
+            _updateCountOfPickedValidatorsForEachOperator(operators, operatorIndex, _allocations[i].validatorCount);
         }
-
-        return (publicKeys, signatures);
+        // we loop on all operators
+        for (uint256 idx = 0; idx < fundableOperatorCount; ++idx) {
+            // if we picked keys on any operator, we extract the keys from storage and concatenate them in the result
+            // we then update the funded value
+            if (operators[idx].picked > 0) {
+                (bytes[] memory _publicKeys, bytes[] memory _signatures) =
+                    ValidatorKeys.getKeys(operators[idx].index, operators[idx].funded, operators[idx].picked);
+                publicKeys = _concatenateByteArrays(publicKeys, _publicKeys);
+                signatures = _concatenateByteArrays(signatures, _signatures);
+            }
+        }
     }
 
     /// @inheritdoc IOperatorsRegistryV1
@@ -716,8 +707,7 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
         uint256 len = _allocations.length;
         uint256 prevOperatorIndex;
 
-        // First pass: validate ordering and calculate total count
-        uint256 totalCount = 0;
+        // First pass: validate ordering and update picked count for each operator
         for (uint256 i = 0; i < len; ++i) {
             uint256 operatorIndex = _allocations[i].operatorIndex;
             if (i > 0 && !(operatorIndex > prevOperatorIndex)) {
@@ -728,7 +718,6 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
                 revert AllocationWithZeroValidatorCount();
             }
             prevOperatorIndex = operatorIndex;
-            totalCount += _allocations[i].validatorCount;
             _updateCountOfPickedValidatorsForEachOperator(
                 operators, _allocations[i].operatorIndex, _allocations[i].validatorCount
             );
