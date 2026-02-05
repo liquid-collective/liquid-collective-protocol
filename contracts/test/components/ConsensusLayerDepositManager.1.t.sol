@@ -118,14 +118,22 @@ contract ConsensusLayerDepositManagerV1Tests is Test {
             .publicConsensusLayerDepositManagerInitializeV1(address(depositContract), withdrawalCredentials);
     }
 
-    function testRetrieveWithdrawalCredentials() public view {
-        assert(depositManager.getWithdrawalCredentials() == withdrawalCredentials);
-    }
-
     function _createAllocation(uint256 count) internal pure returns (IOperatorsRegistryV1.OperatorAllocation[] memory) {
         IOperatorsRegistryV1.OperatorAllocation[] memory allocations = new IOperatorsRegistryV1.OperatorAllocation[](1);
         allocations[0] = IOperatorsRegistryV1.OperatorAllocation({operatorIndex: 0, validatorCount: count});
         return allocations;
+    }
+
+    function testRetrieveWithdrawalCredentials() public view {
+        assert(depositManager.getWithdrawalCredentials() == withdrawalCredentials);
+    }
+
+    function testDepositNotEnoughFunds() public {
+        vm.deal(address(depositManager), 31.9 ether);
+        ConsensusLayerDepositManagerV1ExposeInitializer(address(depositManager)).sudoSyncBalance();
+        vm.expectRevert(abi.encodeWithSignature("NotEnoughFunds()"));
+        vm.prank(address(0x1));
+        depositManager.depositToConsensusLayerWithDepositRoot(_createAllocation(1), bytes32(0));
     }
 
     function testDepositAllocationFailsWithNotEnoughFunds() public {
@@ -145,14 +153,13 @@ contract ConsensusLayerDepositManagerV1Tests is Test {
         assert(address(depositManager).balance == 0);
     }
 
-    function testRequestToDepositMoreThanMaxDepositableCountFailsWithInvalidPublicKeyCount() public {
+    function testDepositLessThanMaxDepositableCount() public {
         vm.deal(address(depositManager), 640 ether);
         ConsensusLayerDepositManagerV1ExposeInitializer(address(depositManager)).sudoSyncBalance();
         assert(address(depositManager).balance == 640 ether);
         vm.prank(address(0x1));
-        vm.expectRevert(abi.encodeWithSignature("InvalidPublicKeyCount()"));
-        depositManager.depositToConsensusLayerWithDepositRoot(_createAllocation(20), bytes32(0));
-        assert(address(depositManager).balance == 640 ether);
+        depositManager.depositToConsensusLayerWithDepositRoot(_createAllocation(10), bytes32(0));
+        assert(address(depositManager).balance == 320 ether);
     }
 }
 
@@ -296,31 +303,33 @@ contract ConsensusLayerDepositManagerV1ErrorTests is Test {
         return allocations;
     }
 
+    // For InconsistentPublicKeys - scenario 1 returns 1 key with 49-byte pubkey
     function testInconsistentPublicKey() public {
-        vm.deal(address(depositManager), 5 * 32 ether);
+        vm.deal(address(depositManager), 32 ether);  // 1 deposit
         ConsensusLayerDepositManagerV1ControllableValidatorKeyRequest(address(depositManager)).sudoSyncBalance();
-        ConsensusLayerDepositManagerV1ControllableValidatorKeyRequest(address(depositManager)).setScenario(1); // only returns 1 public key
-        vm.expectRevert(abi.encodeWithSignature("InvalidPublicKeyCount()"));
+        ConsensusLayerDepositManagerV1ControllableValidatorKeyRequest(address(depositManager)).setScenario(1);
+        vm.expectRevert(abi.encodeWithSignature("InconsistentPublicKeys()"));
         vm.prank(address(0x1));
-        depositManager.depositToConsensusLayerWithDepositRoot(_createAllocation(5), bytes32(0));
+        depositManager.depositToConsensusLayerWithDepositRoot(_createAllocation(1), bytes32(0));
     }
 
-    function testPublicKeyAndSignatureCountMismatch() public {
-        vm.deal(address(depositManager), 5 * 32 ether);
+    // For InconsistentSignatures - scenario 2 returns 1 key with 97-byte signature
+    function testInconsistentSignature() public {
+        vm.deal(address(depositManager), 32 ether);  // 1 deposit
         ConsensusLayerDepositManagerV1ControllableValidatorKeyRequest(address(depositManager)).sudoSyncBalance();
-        ConsensusLayerDepositManagerV1ControllableValidatorKeyRequest(address(depositManager)).setScenario(2); // returns less key signature pairs than expected
-        vm.expectRevert(abi.encodeWithSignature("InvalidPublicKeyCount()"));
+        ConsensusLayerDepositManagerV1ControllableValidatorKeyRequest(address(depositManager)).setScenario(2);
+        vm.expectRevert(abi.encodeWithSignature("InconsistentSignatures()"));
         vm.prank(address(0x1));
-        depositManager.depositToConsensusLayerWithDepositRoot(_createAllocation(5), bytes32(0));
+        depositManager.depositToConsensusLayerWithDepositRoot(_createAllocation(1), bytes32(0));
     }
 
     function testUnavailableKeys() public {
-        vm.deal(address(depositManager), 5 * 32 ether);
+        vm.deal(address(depositManager), 32 ether);
         ConsensusLayerDepositManagerV1ControllableValidatorKeyRequest(address(depositManager)).sudoSyncBalance();
         ConsensusLayerDepositManagerV1ControllableValidatorKeyRequest(address(depositManager)).setScenario(3);
         vm.expectRevert(abi.encodeWithSignature("NoAvailableValidatorKeys()"));
         vm.prank(address(0x1));
-        depositManager.depositToConsensusLayerWithDepositRoot(_createAllocation(5), bytes32(0));
+        depositManager.depositToConsensusLayerWithDepositRoot(_createAllocation(1), bytes32(0));
     }
 
     function testInvalidPublicKeyCount() public {
@@ -377,13 +386,13 @@ contract ConsensusLayerDepositManagerV1WithdrawalCredentialError is Test {
     }
 
     function testInvalidWithdrawalCredential() public {
-        vm.deal(address(depositManager), 5 * 32 ether);
+        vm.deal(address(depositManager), 32 ether);
         ConsensusLayerDepositManagerV1ControllableValidatorKeyRequest(address(depositManager)).sudoSyncBalance();
         ConsensusLayerDepositManagerV1ControllableValidatorKeyRequest(address(depositManager)).setScenario(0);
         ConsensusLayerDepositManagerV1ControllableValidatorKeyRequest(address(depositManager)).setKeeper(address(0x1));
         vm.expectRevert(abi.encodeWithSignature("InvalidWithdrawalCredentials()"));
         vm.prank(address(0x1));
-        depositManager.depositToConsensusLayerWithDepositRoot(_createAllocation(5), bytes32(0));
+        depositManager.depositToConsensusLayerWithDepositRoot(_createAllocation(1), bytes32(0));
         ConsensusLayerDepositManagerV1ExposeInitializer(address(depositManager))
             .sudoSetWithdrawalCredentials(withdrawalCredentials);
     }
