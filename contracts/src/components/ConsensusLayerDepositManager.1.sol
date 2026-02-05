@@ -108,6 +108,9 @@ abstract contract ConsensusLayerDepositManagerV1 is IConsensusLayerDepositManage
         // Calculate total requested from allocations
         uint256 totalRequested = 0;
         for (uint256 i = 0; i < _allocations.length; ++i) {
+            if (i > 0 && !(_allocations[i].operatorIndex > _allocations[i - 1].operatorIndex)) {
+                revert IOperatorsRegistryV1.UnorderedOperatorList();
+            }
             if (_allocations[i].validatorCount == 0) {
                 revert IOperatorsRegistryV1.AllocationWithZeroValidatorCount();
             }
@@ -139,8 +142,11 @@ abstract contract ConsensusLayerDepositManagerV1 is IConsensusLayerDepositManage
             revert InvalidWithdrawalCredentials();
         }
 
-        for (uint256 idx = 0; idx < receivedPublicKeyCount; ++idx) {
+        for (uint256 idx = 0; idx < receivedPublicKeyCount;) {
             _depositValidator(publicKeys[idx], signatures[idx], withdrawalCredentials);
+            unchecked {
+                ++idx;
+            }
         }
         _setCommittedBalance(committedBalance - DEPOSIT_SIZE * receivedPublicKeyCount);
         uint256 currentDepositedValidatorCount = DepositedValidatorCount.get();

@@ -256,7 +256,7 @@ interface IOperatorsRegistryV1 {
         view
         returns (bytes memory publicKey, bytes memory signature, bool funded);
 
-    /// @notice Validate allocations and retrieve validator keys that will be funded
+    /// @notice Get the next validators that would be funded based on the proposed allocations
     /// @param _allocations The proposed allocations to validate
     /// @return publicKeys An array of fundable public keys
     /// @return signatures An array of signatures linked to the public keys
