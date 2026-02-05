@@ -32,9 +32,6 @@ interface IConsensusLayerDepositManagerV1 {
     /// @notice The received count of public keys to deposit is invalid
     error InvalidPublicKeyCount();
 
-    /// @notice The received count of signatures to deposit is invalid
-    error InvalidSignatureCount();
-
     /// @notice The withdrawal credentials value is null
     error InvalidWithdrawalCredentials();
 
