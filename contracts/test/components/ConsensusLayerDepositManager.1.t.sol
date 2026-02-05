@@ -145,13 +145,14 @@ contract ConsensusLayerDepositManagerV1Tests is Test {
         assert(address(depositManager).balance == 0);
     }
 
-    function testDepositTwentyValidators() public {
+    function testRequestToDepositMoreThanMaxDepositableCountFailsWithInvalidPublicKeyCount() public {
         vm.deal(address(depositManager), 640 ether);
         ConsensusLayerDepositManagerV1ExposeInitializer(address(depositManager)).sudoSyncBalance();
         assert(address(depositManager).balance == 640 ether);
         vm.prank(address(0x1));
+        vm.expectRevert(abi.encodeWithSignature("InvalidPublicKeyCount()"));
         depositManager.depositToConsensusLayerWithDepositRoot(_createAllocation(20), bytes32(0));
-        assert(address(depositManager).balance == 320 ether);
+        assert(address(depositManager).balance == 640 ether);
     }
 }
 
@@ -288,17 +289,17 @@ contract ConsensusLayerDepositManagerV1ErrorTests is Test {
     function testInconsistentPublicKey() public {
         vm.deal(address(depositManager), 5 * 32 ether);
         ConsensusLayerDepositManagerV1ControllableValidatorKeyRequest(address(depositManager)).sudoSyncBalance();
-        ConsensusLayerDepositManagerV1ControllableValidatorKeyRequest(address(depositManager)).setScenario(1);
-        vm.expectRevert(abi.encodeWithSignature("InconsistentPublicKeys()"));
+        ConsensusLayerDepositManagerV1ControllableValidatorKeyRequest(address(depositManager)).setScenario(1); // only returns 1 public key
+        vm.expectRevert(abi.encodeWithSignature("InvalidPublicKeyCount()"));
         vm.prank(address(0x1));
         depositManager.depositToConsensusLayerWithDepositRoot(_createAllocation(5), bytes32(0));
     }
 
-    function testInconsistentSignature() public {
+    function testPublicKeyAndSignatureCountMismatch() public {
         vm.deal(address(depositManager), 5 * 32 ether);
         ConsensusLayerDepositManagerV1ControllableValidatorKeyRequest(address(depositManager)).sudoSyncBalance();
-        ConsensusLayerDepositManagerV1ControllableValidatorKeyRequest(address(depositManager)).setScenario(2);
-        vm.expectRevert(abi.encodeWithSignature("InconsistentSignatures()"));
+        ConsensusLayerDepositManagerV1ControllableValidatorKeyRequest(address(depositManager)).setScenario(2); // returns less key signature pairs than expected
+        vm.expectRevert(abi.encodeWithSignature("InvalidPublicKeyCount()"));
         vm.prank(address(0x1));
         depositManager.depositToConsensusLayerWithDepositRoot(_createAllocation(5), bytes32(0));
     }

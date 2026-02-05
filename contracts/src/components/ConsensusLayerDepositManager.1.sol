@@ -128,8 +128,8 @@ abstract contract ConsensusLayerDepositManagerV1 is IConsensusLayerDepositManage
             revert NoAvailableValidatorKeys();
         }
 
-        //!!! TODO what if allocation is less than maxDepositableCount?
-        if (receivedPublicKeyCount > maxDepositableCount) {
+        // Check if the number of received public keys is valid
+        if (receivedPublicKeyCount > maxDepositableCount || receivedPublicKeyCount != totalRequested) {
             revert InvalidPublicKeyCount();
         }
 
