@@ -450,28 +450,20 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
         }
 
         uint256 currentValidatorExitsDemand = CurrentValidatorExitsDemand.get();
-        uint256 indexesTillNow = 0;
+        uint256 prevOperatorIndex = 0;
         uint256 suppliedExitCount = 0;
         
-        // Check that the exits requested do not exceed the current validator exits demand
-        for (uint256 i = 0; i < allocationsLength; ++i) {
-            uint256 operatorIndex = _allocations[i].operatorIndex;
-            suppliedExitCount += _allocations[i].validatorCount;
-            
-            if ((1<<operatorIndex & indexesTillNow) != 0) {
-                revert OperatorIndexNotUnique(operatorIndex);
-            }
-            indexesTillNow |= 1<<operatorIndex;
-        }
-
-        if (suppliedExitCount > currentValidatorExitsDemand) {
-            revert ExitsRequestedExceedsDemand(suppliedExitCount, currentValidatorExitsDemand);
-        }
-
         // Check that the exits requested do not exceed the funded validator count of the operator
         for (uint256 i = 0; i < allocationsLength; ++i) {
             uint256 operatorIndex = _allocations[i].operatorIndex;
             uint256 count = _allocations[i].validatorCount;
+            suppliedExitCount += count;
+
+            if (i > 0 && !(operatorIndex > prevOperatorIndex)) {
+                revert UnorderedOperatorList();
+            }
+            prevOperatorIndex = operatorIndex;
+
             OperatorsV2.Operator storage operator = OperatorsV2.get(operatorIndex);
             if (!operator.active) {
                 revert InactiveOperator(operatorIndex);
@@ -484,6 +476,11 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
                 operator.requestedExits += uint32(count);
                 emit RequestedValidatorExits(operatorIndex, operator.requestedExits);
             }
+        }
+
+        // Check that the exits requested do not exceed the current validator exits demand
+        if (suppliedExitCount > currentValidatorExitsDemand) {
+            revert ExitsRequestedExceedsDemand(suppliedExitCount, currentValidatorExitsDemand);
         }
 
         uint256 savedCurrentValidatorExitsDemand = currentValidatorExitsDemand;
