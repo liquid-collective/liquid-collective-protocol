@@ -381,8 +381,7 @@ contract ConsensusLayerDepositManagerV1ErrorTests is ConsensusLayerDepositManage
         ConsensusLayerDepositManagerV1ControllableValidatorKeyRequest(address(depositManager)).sudoSyncBalance();
 
         // Create allocations with duplicate operator index: [{0, 2}, {0, 2}]
-        IOperatorsRegistryV1.OperatorAllocation[] memory allocations =
-            new IOperatorsRegistryV1.OperatorAllocation[](2);
+        IOperatorsRegistryV1.OperatorAllocation[] memory allocations = new IOperatorsRegistryV1.OperatorAllocation[](2);
         allocations[0] = IOperatorsRegistryV1.OperatorAllocation({operatorIndex: 0, validatorCount: 2});
         allocations[1] = IOperatorsRegistryV1.OperatorAllocation({operatorIndex: 0, validatorCount: 2});
 
@@ -397,8 +396,7 @@ contract ConsensusLayerDepositManagerV1ErrorTests is ConsensusLayerDepositManage
         ConsensusLayerDepositManagerV1ControllableValidatorKeyRequest(address(depositManager)).sudoSyncBalance();
 
         // Create allocations with descending order: [{1, 2}, {0, 2}]
-        IOperatorsRegistryV1.OperatorAllocation[] memory allocations =
-            new IOperatorsRegistryV1.OperatorAllocation[](2);
+        IOperatorsRegistryV1.OperatorAllocation[] memory allocations = new IOperatorsRegistryV1.OperatorAllocation[](2);
         allocations[0] = IOperatorsRegistryV1.OperatorAllocation({operatorIndex: 1, validatorCount: 2});
         allocations[1] = IOperatorsRegistryV1.OperatorAllocation({operatorIndex: 0, validatorCount: 2});
 
@@ -413,8 +411,7 @@ contract ConsensusLayerDepositManagerV1ErrorTests is ConsensusLayerDepositManage
         ConsensusLayerDepositManagerV1ControllableValidatorKeyRequest(address(depositManager)).sudoSyncBalance();
 
         // Create allocation with zero validator count: [{0, 0}]
-        IOperatorsRegistryV1.OperatorAllocation[] memory allocations =
-            new IOperatorsRegistryV1.OperatorAllocation[](1);
+        IOperatorsRegistryV1.OperatorAllocation[] memory allocations = new IOperatorsRegistryV1.OperatorAllocation[](1);
         allocations[0] = IOperatorsRegistryV1.OperatorAllocation({operatorIndex: 0, validatorCount: 0});
 
         vm.expectRevert(abi.encodeWithSignature("AllocationWithZeroValidatorCount()"));
@@ -428,8 +425,7 @@ contract ConsensusLayerDepositManagerV1ErrorTests is ConsensusLayerDepositManage
         ConsensusLayerDepositManagerV1ControllableValidatorKeyRequest(address(depositManager)).sudoSyncBalance();
 
         // Create allocations: [{0, 2}, {1, 0}, {2, 2}] - middle has zero count
-        IOperatorsRegistryV1.OperatorAllocation[] memory allocations =
-            new IOperatorsRegistryV1.OperatorAllocation[](3);
+        IOperatorsRegistryV1.OperatorAllocation[] memory allocations = new IOperatorsRegistryV1.OperatorAllocation[](3);
         allocations[0] = IOperatorsRegistryV1.OperatorAllocation({operatorIndex: 0, validatorCount: 2});
         allocations[1] = IOperatorsRegistryV1.OperatorAllocation({operatorIndex: 1, validatorCount: 0});
         allocations[2] = IOperatorsRegistryV1.OperatorAllocation({operatorIndex: 2, validatorCount: 2});
