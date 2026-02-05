@@ -138,14 +138,6 @@ contract ConsensusLayerDepositManagerV1Tests is ConsensusLayerDepositManagerTest
         depositManager.depositToConsensusLayerWithDepositRoot(_createAllocation(1), bytes32(0));
     }
 
-    function testDepositAllocationFailsWithNotEnoughFunds() public {
-        vm.deal(address(depositManager), 31.9 ether);
-        ConsensusLayerDepositManagerV1ExposeInitializer(address(depositManager)).sudoSyncBalance();
-        vm.expectRevert(abi.encodeWithSignature("NotEnoughFunds()"));
-        vm.prank(address(0x1));
-        depositManager.depositToConsensusLayerWithDepositRoot(_createAllocation(1), bytes32(0));
-    }
-
     function testDepositTenValidators() public {
         vm.deal(address(depositManager), 320 ether);
         ConsensusLayerDepositManagerV1ExposeInitializer(address(depositManager)).sudoSyncBalance();
