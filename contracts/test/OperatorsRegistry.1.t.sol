@@ -3855,6 +3855,40 @@ contract OperatorsRegistryV1TestDistribution is Test {
         operatorsRegistry.pickNextValidatorsToDeposit(allocation);
     }
 
+    function testPickNextValidatorsToDepositRevertsInactiveOperatorWithMultipleFundableOperators() public {
+        // Setup: 3 operators all with keys and limits (all fundable)
+        // This test ensures the loop in _updateCountOfPickedValidatorsForEachOperator
+        // iterates through ALL operators (condition false each time) before reverting
+        bytes memory tenKeys = genBytes((48 + 96) * 10);
+
+        vm.startPrank(admin);
+        operatorsRegistry.addValidators(0, 10, tenKeys);
+        operatorsRegistry.addValidators(1, 10, tenKeys);
+        operatorsRegistry.addValidators(2, 10, tenKeys);
+        vm.stopPrank();
+
+        uint256[] memory operators = new uint256[](3);
+        operators[0] = 0;
+        operators[1] = 1;
+        operators[2] = 2;
+        uint32[] memory limits = new uint32[](3);
+        limits[0] = 10;
+        limits[1] = 10;
+        limits[2] = 10;
+        vm.prank(admin);
+        operatorsRegistry.setOperatorLimits(operators, limits, block.number);
+
+        // Request operator 99 which doesn't exist
+        // This forces the loop to iterate through all 3 fundable operators (all false)
+        // before reverting with InactiveOperator
+        IOperatorsRegistryV1.OperatorAllocation[] memory allocation = new IOperatorsRegistryV1.OperatorAllocation[](1);
+        allocation[0] = IOperatorsRegistryV1.OperatorAllocation({operatorIndex: 99, validatorCount: 5});
+
+        vm.prank(river);
+        vm.expectRevert(abi.encodeWithSignature("InactiveOperator(uint256)", 99));
+        operatorsRegistry.pickNextValidatorsToDeposit(allocation);
+    }
+
     function testVersion() external {
         assertEq(operatorsRegistry.version(), "1.2.1");
     }
