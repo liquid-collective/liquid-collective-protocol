@@ -77,24 +77,6 @@ contract OperatorsRegistryInitializableV1 is OperatorsRegistryV1 {
     function debugGetNextValidatorsToExitFromActiveOperators(uint256 _requestedExitsAmount) external returns (uint256) {
         return _pickNextValidatorsToExitFromActiveOperators(_requestedExitsAmount);
     }
-
-    /// @notice Local helper for test contract (removed from main contract)
-    function _concatenateByteArrays(bytes[] memory _arr1, bytes[] memory _arr2) internal pure returns (bytes[] memory) {
-        bytes[] memory res = new bytes[](_arr1.length + _arr2.length);
-        for (uint256 idx = 0; idx < _arr1.length;) {
-            res[idx] = _arr1[idx];
-            unchecked {
-                ++idx;
-            }
-        }
-        for (uint256 idx = 0; idx < _arr2.length;) {
-            res[idx + _arr1.length] = _arr2[idx];
-            unchecked {
-                ++idx;
-            }
-        }
-        return res;
-    }
 }
 
 contract RiverMock {
