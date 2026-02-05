@@ -706,7 +706,7 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
         uint256 len = _allocations.length;
         uint256 prevOperatorIndex;
 
-        // First pass: validate ordering and update picked count for each operator
+        // Iterate over the allocations, validate ordering and update the picked count for each operator
         for (uint256 i = 0; i < len; ++i) {
             uint256 operatorIndex = _allocations[i].operatorIndex;
             if (i > 0 && !(operatorIndex > prevOperatorIndex)) {
