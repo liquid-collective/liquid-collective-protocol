@@ -736,7 +736,6 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
         // Find the operator in the compacted array by matching .index
         for (uint256 i = 0; i < operators.length; ++i) {
             if (operators[i].index == _operatorIndex) {
-                // we take the smallest value between limit - (funded + picked)
                 uint256 availableKeys = operators[i].limit - (operators[i].funded + operators[i].picked);
 
                 if (_validatorCount > availableKeys) {
