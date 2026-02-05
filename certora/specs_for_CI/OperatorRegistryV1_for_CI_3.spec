@@ -21,13 +21,13 @@ rule startingValidatorsDecreasesDiscrepancy(env e)
     require getKeysCount(index1) < 5; 
     require getKeysCount(index2) < 5;
        
-    uint count;
-    require count > 0 && count <= 3;
-    pickNextValidatorsToDeposit(e, count);
+    IOperatorsRegistryV1.OperatorAllocation[] allocations;
+    require allocations.length > 0 && allocations.length <= 3;
+    pickNextValidatorsToDeposit(e, allocations);
     uint discrepancyAfter = getOperatorsSaturationDiscrepancy(index1, index2);
 
     assert discrepancyBefore > 0 => to_mathint(discrepancyBefore) >= 
-        discrepancyAfter - count + 1; // this conditions is fine as long as count <= MAX_VALIDATOR_ATTRIBUTION_PER_ROUND
+        discrepancyAfter - allocations.length + 1; // this conditions is fine as long as allocations.length <= MAX_VALIDATOR_ATTRIBUTION_PER_ROUND
 }
 
 rule witness4_3StartingValidatorsDecreasesDiscrepancy(env e) 
@@ -38,9 +38,9 @@ rule witness4_3StartingValidatorsDecreasesDiscrepancy(env e)
     require operatorStateIsValid(index2);
     
     uint discrepancyBefore = getOperatorsSaturationDiscrepancy(index1, index2);
-    uint count;
-    require count <= 1;
-    pickNextValidatorsToDeposit(e, count);
+    IOperatorsRegistryV1.OperatorAllocation[] allocations;
+    require allocations.length <= 1;
+    pickNextValidatorsToDeposit(e, allocations);
     uint discrepancyAfter = getOperatorsSaturationDiscrepancy(index1, index2);
     satisfy discrepancyBefore == 4 && discrepancyAfter == 3;
 }
