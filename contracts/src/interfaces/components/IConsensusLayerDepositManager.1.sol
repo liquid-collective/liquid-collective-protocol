@@ -20,9 +20,6 @@ interface IConsensusLayerDepositManagerV1 {
     /// @param newDepositedValidatorCount The new deposited validator count value
     event SetDepositedValidatorCount(uint256 oldDepositedValidatorCount, uint256 newDepositedValidatorCount);
 
-    /// @notice The operator allocations array is empty
-    error EmptyOperatorAllocations();
-
     /// @notice The length of the BLS Public key is invalid during deposit
     error InconsistentPublicKeys();
 

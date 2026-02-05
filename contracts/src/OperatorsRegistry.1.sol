@@ -213,7 +213,46 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
         view
         returns (bytes[] memory publicKeys, bytes[] memory signatures)
     {
-        return _getValidatorsToDeposit(_allocations);
+        uint256 len = _allocations.length;
+        uint256 prevOperatorIndex;
+
+        // First pass: validate ordering and calculate total count
+        uint256 totalCount = 0;
+        for (uint256 i = 0; i < len; ++i) {
+            uint256 operatorIndex = _allocations[i].operatorIndex;
+            if (i > 0 && !(operatorIndex > prevOperatorIndex)) {
+                revert UnorderedOperatorList();
+            }
+            prevOperatorIndex = operatorIndex;
+            totalCount += _allocations[i].validatorCount;
+        }
+
+        // Pre-allocate arrays with exact size
+        publicKeys = new bytes[](totalCount);
+        signatures = new bytes[](totalCount);
+
+        // Second pass: fill arrays directly
+        uint256 keyIndex = 0;
+        for (uint256 i = 0; i < len; ++i) {
+            uint256 operatorIndex = _allocations[i].operatorIndex;
+            uint256 count = _allocations[i].validatorCount;
+
+            uint32 currentFunded = _checkActiveOperatorAndHasEnoughFundableKeys(operatorIndex, count);
+
+            (bytes[] memory _publicKeys, bytes[] memory _signatures) =
+                ValidatorKeys.getKeys(operatorIndex, currentFunded, count);
+
+            for (uint256 j = 0; j < count;) {
+                publicKeys[keyIndex + j] = _publicKeys[j];
+                signatures[keyIndex + j] = _signatures[j];
+                unchecked {
+                    ++j;
+                }
+            }
+            keyIndex += count;
+        }
+
+        return (publicKeys, signatures);
     }
 
     /// @inheritdoc IOperatorsRegistryV1
@@ -637,57 +676,6 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
         }
 
         return operator.funded;
-    }
-
-    /// @notice Internal view utility to get validators to deposit based on allocations (no state changes)
-    /// @param _allocations The operator allocations specifying how many validators per operator
-    /// @return publicKeys An array of public keys
-    /// @return signatures An array of signatures linked to the public keys
-    function _getValidatorsToDeposit(OperatorAllocation[] memory _allocations)
-        internal
-        view
-        returns (bytes[] memory publicKeys, bytes[] memory signatures)
-    {
-        uint256 len = _allocations.length;
-        uint256 prevOperatorIndex;
-
-        // First pass: validate ordering and calculate total count
-        uint256 totalCount = 0;
-        for (uint256 i = 0; i < len; ++i) {
-            uint256 operatorIndex = _allocations[i].operatorIndex;
-            if (i > 0 && !(operatorIndex > prevOperatorIndex)) {
-                revert UnorderedOperatorList();
-            }
-            prevOperatorIndex = operatorIndex;
-            totalCount += _allocations[i].validatorCount;
-        }
-
-        // Pre-allocate arrays with exact size
-        publicKeys = new bytes[](totalCount);
-        signatures = new bytes[](totalCount);
-
-        // Second pass: fill arrays directly
-        uint256 keyIndex = 0;
-        for (uint256 i = 0; i < len; ++i) {
-            uint256 operatorIndex = _allocations[i].operatorIndex;
-            uint256 count = _allocations[i].validatorCount;
-
-            uint32 currentFunded = _checkActiveOperatorAndHasEnoughFundableKeys(operatorIndex, count);
-
-            (bytes[] memory _publicKeys, bytes[] memory _signatures) =
-                ValidatorKeys.getKeys(operatorIndex, currentFunded, count);
-
-            for (uint256 j = 0; j < count;) {
-                publicKeys[keyIndex + j] = _publicKeys[j];
-                signatures[keyIndex + j] = _signatures[j];
-                unchecked {
-                    ++j;
-                }
-            }
-            keyIndex += count;
-        }
-
-        return (publicKeys, signatures);
     }
 
     /// @notice Internal utility to pick validators to deposit based on allocations (updates state)
