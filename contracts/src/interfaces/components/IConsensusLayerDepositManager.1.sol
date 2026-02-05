@@ -1,6 +1,8 @@
 //SPDX-License-Identifier: BUSL-1.1
 pragma solidity 0.8.20;
 
+import "../IOperatorRegistry.1.sol";
+
 /// @title Consensys Layer Deposit Manager Interface (v1)
 /// @author Alluvial Finance Inc.
 /// @notice This interface exposes methods to handle the interactions with the official deposit contract
@@ -18,9 +20,6 @@ interface IConsensusLayerDepositManagerV1 {
     /// @param newDepositedValidatorCount The new deposited validator count value
     event SetDepositedValidatorCount(uint256 oldDepositedValidatorCount, uint256 newDepositedValidatorCount);
 
-    /// @notice Not enough funds to deposit one validator
-    error NotEnoughFunds();
-
     /// @notice The length of the BLS Public key is invalid during deposit
     error InconsistentPublicKeys();
 
@@ -33,9 +32,6 @@ interface IConsensusLayerDepositManagerV1 {
     /// @notice The received count of public keys to deposit is invalid
     error InvalidPublicKeyCount();
 
-    /// @notice The received count of signatures to deposit is invalid
-    error InvalidSignatureCount();
-
     /// @notice The withdrawal credentials value is null
     error InvalidWithdrawalCredentials();
 
@@ -47,6 +43,9 @@ interface IConsensusLayerDepositManagerV1 {
 
     // @notice Not keeper
     error OnlyKeeper();
+
+    /// @notice The operator allocations exceed the committed balance
+    error OperatorAllocationsExceedCommittedBalance();
 
     /// @notice Returns the amount of ETH not yet committed for deposit
     /// @return The amount of ETH not yet committed for deposit
@@ -68,8 +67,11 @@ interface IConsensusLayerDepositManagerV1 {
     /// @return The keeper address
     function getKeeper() external view returns (address);
 
-    /// @notice Deposits current balance to the Consensus Layer by batches of 32 ETH
-    /// @param _maxCount The maximum amount of validator keys to fund
+    /// @notice Deposits current balance to the Consensus Layer based on explicit operator allocations
+    /// @param _allocations The operator allocations specifying how many validators per operator
     /// @param _depositRoot The root of the deposit tree
-    function depositToConsensusLayerWithDepositRoot(uint256 _maxCount, bytes32 _depositRoot) external;
+    function depositToConsensusLayerWithDepositRoot(
+        IOperatorsRegistryV1.OperatorAllocation[] calldata _allocations,
+        bytes32 _depositRoot
+    ) external;
 }

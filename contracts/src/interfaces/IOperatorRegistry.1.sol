@@ -7,6 +7,13 @@ import "../state/operatorsRegistry/Operators.2.sol";
 /// @author Alluvial Finance Inc.
 /// @notice This interface exposes methods to handle the list of operators and their keys
 interface IOperatorsRegistryV1 {
+    /// @notice Structure representing an operator allocation for deposits or exits
+    /// @param operatorIndex The index of the operator
+    /// @param validatorCount The number of validators to deposit/exit for this operator
+    struct OperatorAllocation {
+        uint256 operatorIndex;
+        uint256 validatorCount;
+    }
     /// @notice A new operator has been added to the registry
     /// @param index The operator index
     /// @param name The operator display name
@@ -159,6 +166,15 @@ interface IOperatorsRegistryV1 {
     /// @notice The provided list of operators is not in increasing order
     error UnorderedOperatorList();
 
+    /// @notice Thrown when an invalid operator allocation is provided
+    /// @param operatorIndex The operator index
+    /// @param requested The requested count
+    /// @param available The available count
+    error OperatorDoesNotHaveEnoughFundableKeys(uint256 operatorIndex, uint256 requested, uint256 available);
+
+    /// @notice Thrown when an allocation with zero validator count is provided
+    error AllocationWithZeroValidatorCount();
+
     /// @notice Thrown when an invalid empty stopped validator array is provided
     error InvalidEmptyStoppedValidatorCountsArray();
 
@@ -240,11 +256,11 @@ interface IOperatorsRegistryV1 {
         view
         returns (bytes memory publicKey, bytes memory signature, bool funded);
 
-    /// @notice Get the next validators that would be funded
-    /// @param _count Count of validators that would be funded next
+    /// @notice Validate allocations and retrieve validator keys that will be funded
+    /// @param _allocations The proposed allocations to validate
     /// @return publicKeys An array of fundable public keys
     /// @return signatures An array of signatures linked to the public keys
-    function getNextValidatorsToDepositFromActiveOperators(uint256 _count)
+    function getNextValidatorsToDepositFromActiveOperators(OperatorAllocation[] memory _allocations)
         external
         view
         returns (bytes[] memory publicKeys, bytes[] memory signatures);
@@ -320,11 +336,11 @@ interface IOperatorsRegistryV1 {
     /// @param _indexes The indexes of the keys to remove
     function removeValidators(uint256 _index, uint256[] calldata _indexes) external;
 
-    /// @notice Retrieve validator keys based on operator statuses
-    /// @param _count Max amount of keys requested
+    /// @notice Retrieve validator keys based on explicit operator allocations
+    /// @param _allocations Node operator allocations specifying how many validators per operator
     /// @return publicKeys An array of public keys
     /// @return signatures An array of signatures linked to the public keys
-    function pickNextValidatorsToDeposit(uint256 _count)
+    function pickNextValidatorsToDeposit(OperatorAllocation[] calldata _allocations)
         external
         returns (bytes[] memory publicKeys, bytes[] memory signatures);
 

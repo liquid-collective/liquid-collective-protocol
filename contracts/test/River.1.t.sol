@@ -47,6 +47,47 @@ abstract contract RiverV1TestBase is Test, BytesGenerator {
     AllowlistV1 internal allowlist;
     OperatorsRegistryWithOverridesV1 internal operatorsRegistry;
 
+    function _createAllocation(uint256 opIndex, uint256 count)
+        internal
+        pure
+        returns (IOperatorsRegistryV1.OperatorAllocation[] memory)
+    {
+        IOperatorsRegistryV1.OperatorAllocation[] memory allocations = new IOperatorsRegistryV1.OperatorAllocation[](1);
+        allocations[0] = IOperatorsRegistryV1.OperatorAllocation({operatorIndex: opIndex, validatorCount: count});
+        return allocations;
+    }
+
+    function _createMultiAllocation(uint256[] memory opIndexes, uint32[] memory counts)
+        internal
+        pure
+        returns (IOperatorsRegistryV1.OperatorAllocation[] memory)
+    {
+        require(opIndexes.length == counts.length, "InvalidAllocationLengths");
+
+        // First pass: count non-zero allocations
+        uint256 nonZeroCount = 0;
+        for (uint256 i = 0; i < counts.length; ++i) {
+            if (counts[i] > 0) {
+                ++nonZeroCount;
+            }
+        }
+
+        // Allocate array with exact size needed
+        IOperatorsRegistryV1.OperatorAllocation[] memory allocations =
+            new IOperatorsRegistryV1.OperatorAllocation[](nonZeroCount);
+
+        // Second pass: fill only non-zero allocations
+        uint256 idx = 0;
+        for (uint256 i = 0; i < opIndexes.length; ++i) {
+            if (counts[i] > 0) {
+                allocations[idx] =
+                    IOperatorsRegistryV1.OperatorAllocation({operatorIndex: opIndexes[i], validatorCount: counts[i]});
+                ++idx;
+            }
+        }
+        return allocations;
+    }
+
     address internal admin;
     address internal newAdmin;
     address internal denier;
@@ -559,10 +600,17 @@ contract RiverV1Tests is RiverV1TestBase {
 
         river.debug_moveDepositToCommitted();
 
+        // Create allocation for 17 validators from each operator = 34 total
+        uint256[] memory indexes = new uint256[](2);
+        indexes[0] = operatorOneIndex;
+        indexes[1] = operatorTwoIndex;
+        uint32[] memory counts = new uint32[](2);
+        counts[0] = 17;
+        counts[1] = 17;
+        IOperatorsRegistryV1.OperatorAllocation[] memory allocation = _createMultiAllocation(indexes, counts);
+
         vm.prank(admin);
-        river.depositToConsensusLayerWithDepositRoot(17, bytes32(0));
-        vm.prank(admin);
-        river.depositToConsensusLayerWithDepositRoot(17, bytes32(0));
+        river.depositToConsensusLayerWithDepositRoot(allocation, bytes32(0));
 
         OperatorsV2.Operator memory op1 = operatorsRegistry.getOperator(operatorOneIndex);
         OperatorsV2.Operator memory op2 = operatorsRegistry.getOperator(operatorTwoIndex);
@@ -598,10 +646,17 @@ contract RiverV1Tests is RiverV1TestBase {
 
         river.debug_moveDepositToCommitted();
 
+        // Create allocation for 17 validators from each operator = 34 total
+        uint256[] memory indexes = new uint256[](2);
+        indexes[0] = operatorOneIndex;
+        indexes[1] = operatorTwoIndex;
+        uint32[] memory counts = new uint32[](2);
+        counts[0] = 17;
+        counts[1] = 17;
+        IOperatorsRegistryV1.OperatorAllocation[] memory allocation = _createMultiAllocation(indexes, counts);
+
         vm.prank(admin);
-        river.depositToConsensusLayerWithDepositRoot(17, bytes32(0));
-        vm.prank(admin);
-        river.depositToConsensusLayerWithDepositRoot(17, bytes32(0));
+        river.depositToConsensusLayerWithDepositRoot(allocation, bytes32(0));
 
         OperatorsV2.Operator memory op1 = operatorsRegistry.getOperator(operatorOneIndex);
         OperatorsV2.Operator memory op2 = operatorsRegistry.getOperator(operatorTwoIndex);
@@ -694,10 +749,17 @@ contract RiverV1Tests is RiverV1TestBase {
 
         river.debug_moveDepositToCommitted();
 
+        // Create allocation for 17 validators from each operator = 34 total
+        uint256[] memory indexes = new uint256[](2);
+        indexes[0] = operatorOneIndex;
+        indexes[1] = operatorTwoIndex;
+        uint32[] memory counts = new uint32[](2);
+        counts[0] = 17;
+        counts[1] = 17;
+        IOperatorsRegistryV1.OperatorAllocation[] memory allocation = _createMultiAllocation(indexes, counts);
+
         vm.prank(admin);
-        river.depositToConsensusLayerWithDepositRoot(17, bytes32(0));
-        vm.prank(admin);
-        river.depositToConsensusLayerWithDepositRoot(17, bytes32(0));
+        river.depositToConsensusLayerWithDepositRoot(allocation, bytes32(0));
 
         OperatorsV2.Operator memory op1 = operatorsRegistry.getOperator(operatorOneIndex);
         OperatorsV2.Operator memory op2 = operatorsRegistry.getOperator(operatorTwoIndex);
@@ -741,12 +803,17 @@ contract RiverV1Tests is RiverV1TestBase {
 
         river.debug_moveDepositToCommitted();
 
+        // Create allocation for 17 validators from each operator = 34 total
+        uint256[] memory indexes = new uint256[](2);
+        indexes[0] = operatorOneIndex;
+        indexes[1] = operatorTwoIndex;
+        uint32[] memory counts = new uint32[](2);
+        counts[0] = 17;
+        counts[1] = 17;
+        IOperatorsRegistryV1.OperatorAllocation[] memory allocation = _createMultiAllocation(indexes, counts);
+
         vm.prank(admin);
-        river.depositToConsensusLayerWithDepositRoot(1, bytes32(0));
-        vm.prank(admin);
-        river.depositToConsensusLayerWithDepositRoot(2, bytes32(0));
-        vm.prank(admin);
-        river.depositToConsensusLayerWithDepositRoot(31, bytes32(0));
+        river.depositToConsensusLayerWithDepositRoot(allocation, bytes32(0));
 
         OperatorsV2.Operator memory op1 = operatorsRegistry.getOperator(operatorOneIndex);
         OperatorsV2.Operator memory op2 = operatorsRegistry.getOperator(operatorTwoIndex);
@@ -782,15 +849,19 @@ contract RiverV1Tests is RiverV1TestBase {
 
         river.debug_moveDepositToCommitted();
 
+        // First deposit: 20 validators from operator 1
         vm.prank(admin);
-        river.depositToConsensusLayerWithDepositRoot(20, bytes32(0));
+        river.depositToConsensusLayerWithDepositRoot(_createAllocation(operatorOneIndex, 20), bytes32(0));
+
         uint32[] memory stoppedCounts = new uint32[](3);
         stoppedCounts[0] = 10;
         stoppedCounts[1] = 10;
         stoppedCounts[2] = 0;
         operatorsRegistry.sudoStoppedValidatorCounts(stoppedCounts, 20);
+
+        // Second deposit: 10 validators from operator 2
         vm.prank(admin);
-        river.depositToConsensusLayerWithDepositRoot(10, bytes32(0));
+        river.depositToConsensusLayerWithDepositRoot(_createAllocation(operatorTwoIndex, 10), bytes32(0));
 
         OperatorsV2.Operator memory op1 = operatorsRegistry.getOperator(operatorOneIndex);
         OperatorsV2.Operator memory op2 = operatorsRegistry.getOperator(operatorTwoIndex);
@@ -938,6 +1009,10 @@ contract RiverV1TestsReport_HEAVY_FUZZING is RiverV1TestBase {
         operatorCount = bound(_salt, 1, 100);
         _salt = _next(_salt);
 
+        // Arrays to store operator info for allocation
+        uint256[] memory operatorIndices = new uint256[](operatorCount);
+        uint32[] memory operatorKeyCounts = new uint32[](operatorCount);
+
         uint256 rest = depositCount % operatorCount;
         for (uint256 idx = 0; idx < operatorCount; ++idx) {
             address operatorAddress = address(uint160(_salt));
@@ -947,11 +1022,13 @@ contract RiverV1TestsReport_HEAVY_FUZZING is RiverV1TestBase {
 
             vm.prank(admin);
             uint256 operatorIndex = operatorsRegistry.addOperator(operatorName, operatorAddress);
+            operatorIndices[idx] = operatorIndex;
 
             uint256 operatorKeyCount = (depositCount / operatorCount) + (rest > 0 ? 1 : 0);
             if (rest > 0) {
                 --rest;
             }
+            operatorKeyCounts[idx] = uint32(operatorKeyCount);
 
             if (operatorKeyCount > 0) {
                 bytes memory operatorKeys = genBytes((48 + 96) * operatorKeyCount);
@@ -968,8 +1045,12 @@ contract RiverV1TestsReport_HEAVY_FUZZING is RiverV1TestBase {
             }
         }
 
+        // Create allocation from collected operator data
+        IOperatorsRegistryV1.OperatorAllocation[] memory allocation =
+            _createMultiAllocation(operatorIndices, operatorKeyCounts);
+
         vm.prank(admin);
-        river.depositToConsensusLayerWithDepositRoot(depositCount, bytes32(0));
+        river.depositToConsensusLayerWithDepositRoot(allocation, bytes32(0));
 
         _newSalt = _salt;
     }
@@ -1763,8 +1844,9 @@ contract RiverV1TestsReport_HEAVY_FUZZING is RiverV1TestBase {
 
         river.debug_moveDepositToCommitted();
 
+        // Create allocation for this single operator
         vm.prank(admin);
-        river.depositToConsensusLayerWithDepositRoot(count, bytes32(0));
+        river.depositToConsensusLayerWithDepositRoot(_createAllocation(operatorIndex, uint32(count)), bytes32(0));
 
         return _salt;
     }

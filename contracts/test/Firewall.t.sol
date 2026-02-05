@@ -282,26 +282,32 @@ contract FirewallTests is BytesGenerator, Test {
         vm.stopPrank();
     }
 
+    function _createAllocation(uint256 count) internal pure returns (IOperatorsRegistryV1.OperatorAllocation[] memory) {
+        IOperatorsRegistryV1.OperatorAllocation[] memory allocations = new IOperatorsRegistryV1.OperatorAllocation[](1);
+        allocations[0] = IOperatorsRegistryV1.OperatorAllocation({operatorIndex: 0, validatorCount: count});
+        return allocations;
+    }
+
     function testGovernorCannotdepositToConsensusLayerWithDepositRoot() public {
-        // Assert this by expecting NotEnoughFunds, NOT Unauthorized
+        // Assert this by expecting OperatorAllocationsExceedCommittedBalance, NOT Unauthorized
         vm.startPrank(riverGovernorDAO);
-        vm.expectRevert(abi.encodeWithSignature("NotEnoughFunds()"));
-        firewalledRiver.depositToConsensusLayerWithDepositRoot(10, bytes32(0));
+        vm.expectRevert(abi.encodeWithSignature("OperatorAllocationsExceedCommittedBalance()"));
+        firewalledRiver.depositToConsensusLayerWithDepositRoot(_createAllocation(10), bytes32(0));
         vm.stopPrank();
     }
 
     function testExecutorCannotdepositToConsensusLayerWithDepositRoot() public {
-        // Assert this by expecting NotEnoughFunds, NOT Unauthorized
+        // Assert this by expecting OperatorAllocationsExceedCommittedBalance, NOT Unauthorized
         vm.startPrank(executor);
-        vm.expectRevert(abi.encodeWithSignature("NotEnoughFunds()"));
-        firewalledRiver.depositToConsensusLayerWithDepositRoot(10, bytes32(0));
+        vm.expectRevert(abi.encodeWithSignature("OperatorAllocationsExceedCommittedBalance()"));
+        firewalledRiver.depositToConsensusLayerWithDepositRoot(_createAllocation(10), bytes32(0));
         vm.stopPrank();
     }
 
     function testRandomCallerCannotdepositToConsensusLayerWithDepositRoot() public {
         vm.startPrank(joe);
         vm.expectRevert(unauthJoe);
-        firewalledRiver.depositToConsensusLayerWithDepositRoot(10, bytes32(0));
+        firewalledRiver.depositToConsensusLayerWithDepositRoot(_createAllocation(10), bytes32(0));
         vm.stopPrank();
     }
 
