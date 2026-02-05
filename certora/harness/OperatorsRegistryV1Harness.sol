@@ -38,7 +38,7 @@ contract OperatorsRegistryV1Harness is OperatorsRegistryV1 {
         OperatorsV2.Operator memory op = OperatorsV2.get(opIndex);
         uint256 valIndex = 0;
         bytes32 validatorDataHash = keccak256(abi.encodePacked(publicKeyAndSignature));
-        for (; valIndex < op.keys;) 
+        for (; valIndex < op.keys; ++valIndex) 
         {
             (bytes memory valData) = ValidatorKeys.getRaw(opIndex, valIndex);
             if (validatorDataHash == keccak256(abi.encodePacked(valData)))  //element found
