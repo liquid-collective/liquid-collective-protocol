@@ -26,12 +26,11 @@ contract TestToken is ERC20VestableVotesUpgradeableV1 {
     function migrateVestingSchedules() external reinitializer(2) {
         if (VestingSchedulesV2.getCount() == 0) {
             uint256 existingV1VestingSchedules = VestingSchedulesV1.getCount();
-            for (uint256 idx; idx < existingV1VestingSchedules;) {
+            for (uint256 idx; idx < existingV1VestingSchedules; ++idx) {
                 uint256 scheduleAmount = VestingSchedulesV1.get(idx).amount;
                 uint256 releasedAmount =
                     scheduleAmount - LibUint256.min(balanceOf(_deterministicVestingEscrow(idx)), scheduleAmount);
                 VestingSchedulesV2.migrateVestingScheduleFromV1(idx, releasedAmount);
-                ++idx;
             }
         }
     }
