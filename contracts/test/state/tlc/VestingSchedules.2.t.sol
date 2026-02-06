@@ -53,12 +53,22 @@ contract VestingSchedulesMigrationTest is Test {
         return VestingSchedulesV2.getCount();
     }
 
+    /// @dev External wrapper to call VestingSchedulesV1.get so vm.expectRevert can catch it
+    function getV1Schedule(uint256 _index) external view returns (VestingSchedulesV1.VestingSchedule memory) {
+        return VestingSchedulesV1.get(_index);
+    }
+
+    /// @dev External wrapper to call VestingSchedulesV2.get so vm.expectRevert can catch it
+    function getV2Schedule(uint256 _index) external view returns (VestingSchedulesV2.VestingSchedule memory) {
+        return VestingSchedulesV2.get(_index);
+    }
+
     function testGetRevert() public {
         uint256 _index = 1;
         vm.expectRevert(abi.encodeWithSignature("VestingScheduleNotFound(uint256)", _index));
-        VestingSchedulesV1.get(_index);
+        this.getV1Schedule(_index);
         vm.expectRevert(abi.encodeWithSignature("VestingScheduleNotFound(uint256)", _index));
-        VestingSchedulesV2.get(_index);
+        this.getV2Schedule(_index);
     }
 
     function testVestingScheduleV1ToV2Compatibility(
