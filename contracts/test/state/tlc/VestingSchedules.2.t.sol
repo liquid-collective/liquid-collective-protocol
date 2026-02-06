@@ -46,9 +46,8 @@ contract VestingSchedulesMigrationTest is Test {
     function _migrate() internal returns (uint256) {
         if (VestingSchedulesV2.getCount() == 0) {
             uint256 existingV1VestingSchedules = VestingSchedulesV1.getCount();
-            for (uint256 idx; idx < existingV1VestingSchedules;) {
+            for (uint256 idx; idx < existingV1VestingSchedules; ++idx) {
                 VestingSchedulesV2.migrateVestingScheduleFromV1(idx, 0);
-                ++idx;
             }
         }
         return VestingSchedulesV2.getCount();
