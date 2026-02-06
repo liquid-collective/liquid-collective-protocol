@@ -1203,9 +1203,12 @@ contract OperatorsRegistryV1Tests is OperatorsRegistryV1TestBase, BytesGenerator
     }
 
     function testReportStoppedValidatorCounts(uint8 totalCount, uint8 len) public {
-        len = uint8(bound(len, 1, type(uint8).max / 2));
+        // Cap len and totalCount to avoid MemoryOOG when adding many validators per operator
+        // Original: len up to 127, totalCount up to 255
+        // Each validator = 144 bytes, limit to ~30 validators per operator max
+        len = uint8(bound(len, 1, 30));
         vm.assume(len > 0 && len < type(uint8).max);
-        totalCount = uint8(bound(totalCount, len, type(uint8).max));
+        totalCount = uint8(bound(totalCount, len, 100));
 
         uint32[] memory stoppedValidatorCounts = new uint32[](len + 1);
         uint32[] memory limits = new uint32[](len);
@@ -1286,9 +1289,12 @@ contract OperatorsRegistryV1Tests is OperatorsRegistryV1TestBase, BytesGenerator
     }
 
     function testReportStoppedValidatorCountsInvalidSum(uint8 totalCount, uint8 len) public {
-        len = uint8(bound(len, 1, type(uint8).max / 2));
+        // Cap len and totalCount to avoid MemoryOOG when adding many validators per operator
+        // Original: len up to 127, totalCount up to 255
+        // Each validator = 144 bytes, limit to ~30 validators per operator max
+        len = uint8(bound(len, 1, 30));
         vm.assume(len > 0 && len < type(uint8).max);
-        totalCount = uint8(bound(totalCount, len, type(uint8).max));
+        totalCount = uint8(bound(totalCount, len, 100));
 
         uint32[] memory stoppedValidators = new uint32[](len + 1);
         uint32[] memory limits = new uint32[](len);
