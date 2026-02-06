@@ -118,7 +118,9 @@ library OperatorsV1 {
 
         for (uint256 idx = 0; idx < operatorCount; ++idx) {
             if (r.value[idx].active) {
-                ++activeCount;
+                unchecked {
+                    ++activeCount;
+                }
             }
         }
 
@@ -128,7 +130,9 @@ library OperatorsV1 {
         for (uint256 idx = 0; idx < operatorCount; ++idx) {
             if (r.value[idx].active) {
                 activeOperators[activeIdx] = r.value[idx];
-                ++activeIdx;
+                unchecked {
+                    ++activeIdx;
+                }
             }
         }
 
@@ -152,7 +156,9 @@ library OperatorsV1 {
 
         for (uint256 idx = 0; idx < operatorCount; ++idx) {
             if (_hasFundableKeys(r.value[idx])) {
-                ++activeCount;
+                unchecked {
+                    ++activeCount;
+                }
             }
         }
 
@@ -173,7 +179,9 @@ library OperatorsV1 {
                     index: idx,
                     picked: 0
                 });
-                ++activeIdx;
+                unchecked {
+                    ++activeIdx;
+                }
             }
         }
 

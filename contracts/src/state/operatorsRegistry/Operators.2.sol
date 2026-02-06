@@ -137,7 +137,9 @@ library OperatorsV2 {
         for (uint256 idx = 0; idx < operatorCount; ++idx) {
             if (r.value[idx].active) {
                 activeOperators[activeCount] = r.value[idx];
-                ++activeCount;
+                unchecked {
+                    ++activeCount;
+                }
             }
         }
         assembly ("memory-safe") {
@@ -192,7 +194,9 @@ library OperatorsV2 {
                 fundableOperators[fundableCount] = CachedOperator({
                     limit: op.limit, funded: op.funded, requestedExits: op.requestedExits, index: uint32(idx), picked: 0
                 });
-                ++fundableCount;
+                unchecked {
+                    ++fundableCount;
+                }
             }
         }
 
@@ -229,7 +233,9 @@ library OperatorsV2 {
                 exitableOperators[exitableCount] = CachedExitableOperator({
                     funded: op.funded, requestedExits: op.requestedExits, index: uint32(idx), picked: 0
                 });
-                ++exitableCount;
+                unchecked {
+                    ++exitableCount;
+                }
             }
         }
 
