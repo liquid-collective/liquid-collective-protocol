@@ -27,7 +27,7 @@ rule startingValidatorsDecreasesDiscrepancy(env e)
     uint discrepancyAfter = getOperatorsSaturationDiscrepancy(index1, index2);
 
     assert discrepancyBefore > 0 => to_mathint(discrepancyBefore) >= 
-        discrepancyAfter - allocations.length + 1; // this conditions is fine as long as allocations.length <= MAX_VALIDATOR_ATTRIBUTION_PER_ROUND
+        discrepancyAfter - allocations.length + 1;
 }
 
 rule witness4_3StartingValidatorsDecreasesDiscrepancy(env e) 
