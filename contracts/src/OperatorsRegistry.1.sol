@@ -88,7 +88,9 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
                 if (operatorIndex == OperatorsV2.getCount() - 1) {
                     operatorIndex = type(uint256).max;
                 } else {
-                    ++operatorIndex;
+                    unchecked {
+                        ++operatorIndex;
+                    }
                 }
             } else {
                 keyIndex += publicKeys.length;
@@ -407,7 +409,9 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
             if (idx > 0 && !(keyIndex < _indexes[idx - 1])) {
                 revert InvalidUnsortedIndexes();
             }
-            ++idx;
+            unchecked {
+                ++idx;
+            }
 
             uint256 lastKeyIndex = totalKeys - idx;
 
@@ -530,7 +534,7 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
 
         uint256 idx = 1;
         uint256 unsollicitedExitsSum;
-        for (; idx < vars.currentStoppedValidatorCountsLength;) {
+        for (; idx < vars.currentStoppedValidatorCountsLength; ++idx) {
             // if the previous array was long enough, we check that the values are not decreasing
             if (_stoppedValidatorCounts[idx] < vars.currentStoppedValidatorCounts[idx]) {
                 revert StoppedValidatorCountsDecreased();
@@ -555,11 +559,10 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
 
             // we recompute the total to ensure it's not an invalid sum
             vars.count += _stoppedValidatorCounts[idx];
-            ++idx;
         }
 
         // In case of a new operator we do not check against the current stopped validator count (would revert OOB)
-        for (; idx < vars.stoppedValidatorCountsLength;) {
+        for (; idx < vars.stoppedValidatorCountsLength; ++idx) {
             // we check that the count of stopped validators is not above the funded validator count of an operator
             if (_stoppedValidatorCounts[idx] > operators[idx - 1].funded) {
                 revert StoppedValidatorCountAboveFundedCount(
@@ -579,7 +582,6 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
 
             // we recompute the total to ensure it's not an invalid sum
             vars.count += _stoppedValidatorCounts[idx];
-            ++idx;
         }
 
         vars.totalRequestedExits += unsollicitedExitsSum;
@@ -705,11 +707,10 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
         while (_count > 0) {
             // loop on operators to find the first that has fundable keys, taking into account previous loop round attributions
             uint256 selectedOperatorIndex = 0;
-            for (; selectedOperatorIndex < fundableOperatorCount;) {
+            for (; selectedOperatorIndex < fundableOperatorCount; ++selectedOperatorIndex) {
                 if (_hasFundableKeys(operators[selectedOperatorIndex])) {
                     break;
                 }
-                ++selectedOperatorIndex;
             }
 
             // if we reach the end, we have allocated all keys
@@ -718,7 +719,7 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
             }
 
             // we start from the next operator and we try to find one that has fundable keys but a lower (funded + picked) - stopped value
-            for (uint256 idx = selectedOperatorIndex + 1; idx < fundableOperatorCount;) {
+            for (uint256 idx = selectedOperatorIndex + 1; idx < fundableOperatorCount; ++idx) {
                 if (
                     _getActiveValidatorCountForDeposits(operators[idx])
                             < _getActiveValidatorCountForDeposits(operators[selectedOperatorIndex])
@@ -726,7 +727,6 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
                 ) {
                     selectedOperatorIndex = idx;
                 }
-                ++idx;
             }
 
             // we take the smallest value between limit - (funded + picked), _requestedAmount and MAX_VALIDATOR_ATTRIBUTION_PER_ROUND
@@ -782,7 +782,9 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
                 uint32 activeCount = _getActiveValidatorCountForExitRequests(operators[idx]);
 
                 if (activeCount == highestActiveCount) {
-                    ++siblings;
+                    unchecked {
+                        ++siblings;
+                    }
                 } else if (activeCount > highestActiveCount) {
                     secondHighestActiveCount = highestActiveCount;
                     highestActiveCount = activeCount;
