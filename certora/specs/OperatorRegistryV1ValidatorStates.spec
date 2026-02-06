@@ -457,7 +457,7 @@ rule validatorStateTransition_4_3_M13(method f, env e, calldataarg args) filtere
     require getKeysCount(opIndex) <= 4; //should not be higher than loop_iter 
     uint stateBefore = getValidatorState(opIndex, validatorData);
     f(e, args);
-    uint stateAfter = getValidatorStateByIndex(opIndex, validatorData);
+    uint stateAfter = getValidatorState(opIndex, validatorData);
     assert (stateAfter == 4) =>
         (stateBefore == 3 || stateBefore == 4);
 }
