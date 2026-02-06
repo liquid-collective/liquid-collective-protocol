@@ -4002,7 +4002,8 @@ contract OperatorsRegistryV1TestDistribution is Test {
         emit FundedValidatorKeys(0, new bytes[](3), false);
 
         vm.prank(river);
-        (bytes[] memory publicKeys, bytes[] memory signatures) = operatorsRegistry.pickNextValidatorsToDeposit(allocation);
+        (bytes[] memory publicKeys, bytes[] memory signatures) =
+            operatorsRegistry.pickNextValidatorsToDeposit(allocation);
 
         assertEq(publicKeys.length, 3, "Expected 3 public keys");
         assertEq(signatures.length, 3, "Expected 3 signatures");
@@ -4186,7 +4187,8 @@ contract OperatorsRegistryV1TestDistribution is Test {
         allocation2[1] = IOperatorsRegistryV1.OperatorAllocation({operatorIndex: 1, validatorCount: 5});
 
         vm.prank(river);
-        (bytes[] memory publicKeys, bytes[] memory signatures) = operatorsRegistry.pickNextValidatorsToDeposit(allocation2);
+        (bytes[] memory publicKeys, bytes[] memory signatures) =
+            operatorsRegistry.pickNextValidatorsToDeposit(allocation2);
 
         assertEq(publicKeys.length, 9, "Expected 9 public keys (4 + 5)");
         assertEq(signatures.length, 9, "Expected 9 signatures");
@@ -4231,7 +4233,8 @@ contract OperatorsRegistryV1TestDistribution is Test {
         IOperatorsRegistryV1.OperatorAllocation[] memory allocation = new IOperatorsRegistryV1.OperatorAllocation[](0);
 
         vm.prank(river);
-        (bytes[] memory publicKeys, bytes[] memory signatures) = operatorsRegistry.pickNextValidatorsToDeposit(allocation);
+        (bytes[] memory publicKeys, bytes[] memory signatures) =
+            operatorsRegistry.pickNextValidatorsToDeposit(allocation);
 
         assertEq(publicKeys.length, 0, "Expected empty publicKeys");
         assertEq(signatures.length, 0, "Expected empty signatures");
