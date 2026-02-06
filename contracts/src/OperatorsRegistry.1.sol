@@ -479,7 +479,7 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
         uint256 currentValidatorExitsDemand = CurrentValidatorExitsDemand.get();
         uint256 prevOperatorIndex = 0;
         uint256 suppliedExitCount = 0;
-        
+
         // Check that the exits requested do not exceed the funded validator count of the operator
         for (uint256 i = 0; i < allocationsLength; ++i) {
             uint256 operatorIndex = _allocations[i].operatorIndex;
@@ -512,7 +512,7 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
 
         uint256 savedCurrentValidatorExitsDemand = currentValidatorExitsDemand;
         currentValidatorExitsDemand -= suppliedExitCount;
-        
+
         uint256 totalRequestedExitsValue = TotalValidatorExitsRequested.get();
         _setTotalValidatorExitsRequested(totalRequestedExitsValue, totalRequestedExitsValue + suppliedExitCount);
         _setCurrentValidatorExitsDemand(savedCurrentValidatorExitsDemand, currentValidatorExitsDemand);
