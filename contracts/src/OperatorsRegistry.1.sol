@@ -793,17 +793,6 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
         revert InactiveOperator(_operatorIndex);
     }
 
-    /// @notice Internal utility to get the count of active validators during the exit selection process
-    /// @param _operator The Operator structure in memory
-    /// @return The count of active validators for the operator
-    function _getActiveValidatorCountForExitRequests(OperatorsV2.CachedExitableOperator memory _operator)
-        internal
-        pure
-        returns (uint32)
-    {
-        return _operator.funded - (_operator.requestedExits + _operator.picked);
-    }
-
     /// @notice Internal utility to set the total validator exits requested by the system
     /// @param _currentValue The current value of the total validator exits requested
     /// @param _newValue The new value of the total validator exits requested
