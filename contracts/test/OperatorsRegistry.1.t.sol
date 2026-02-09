@@ -24,11 +24,6 @@ contract OperatorsRegistryInitializableV1 is OperatorsRegistryV1 {
         return _pickNextValidatorsToDepositFromActiveOperators(_allocations);
     }
 
-    function debugGetNextValidatorsToExitFromActiveOperators(uint256 _requestedExitsAmount) external returns (uint256) {
-        return 0;
-        // return _pickNextValidatorsToExitFromActiveOperators(_requestedExitsAmount);
-    }
-
     function sudoSetKeys(uint256 _operatorIndex, uint32 _keyCount) external {
         OperatorsV2.setKeys(_operatorIndex, _keyCount);
     }
@@ -1985,6 +1980,25 @@ contract OperatorsRegistryV1TestDistribution is Test {
         operatorsRegistry.requestValidatorExits(_createAllocation(operators, limits));
     }
 
+    function testRequestValidatorNoExits() external {
+        uint32[] memory limits = new uint32[](5);
+        limits[0] = 50;
+        limits[1] = 50;
+        limits[2] = 50;
+        limits[3] = 50;
+        limits[4] = 50;
+
+        uint256[] memory operators = new uint256[](5);
+        operators[0] = 0;
+        operators[1] = 1;
+        operators[2] = 2;
+        operators[3] = 3;
+        operators[4] = 4;
+        vm.expectRevert(abi.encodeWithSignature("NoExitRequestsToPerform()"));
+        vm.prank(keeper);
+        operatorsRegistry.requestValidatorExits(_createAllocation(operators, limits));
+    }
+
     function testRequestExitsWithInactiveOperator() external {
         vm.startPrank(admin);
         operatorsRegistry.addValidators(0, 50, genBytes((48 + 96) * 50));
@@ -2329,12 +2343,6 @@ contract OperatorsRegistryV1TestDistribution is Test {
 
         assertEq(operatorsRegistry.getCurrentValidatorExitsDemand(), 0);
         assertEq(operatorsRegistry.getTotalValidatorExitsRequested(), 250);
-    }
-
-    function testRequestValidatorNoExits() external {
-        IOperatorsRegistryV1.OperatorAllocation[] memory allocations = new IOperatorsRegistryV1.OperatorAllocation[](0);
-        vm.expectRevert(abi.encodeWithSignature("InvalidEmptyArray()"));
-        operatorsRegistry.requestValidatorExits(allocations);
     }
 
     function testOneExitDistribution() external {
