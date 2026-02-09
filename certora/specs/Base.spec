@@ -66,7 +66,7 @@ methods {
     function RiverV1Harness.getCLValidatorCount() external returns(uint256) envfree;
     
     // RiverV1 : ConsensusLayerDepositManagerV1
-    function _.depositToConsensusLayerWithDepositRoot(uint256, bytes32) external => DISPATCHER(true);
+    function _.depositToConsensusLayerWithDepositRoot(IOperatorsRegistryV1.OperatorAllocation[], bytes32) external => DISPATCHER(true);
     function RiverV1Harness.getDepositedValidatorCount() external returns(uint256) envfree;
 
     // WithdrawV1
@@ -83,7 +83,7 @@ methods {
     function OR.getStoppedAndRequestedExitCounts() external returns (uint32, uint256) envfree;
     function _.getStoppedAndRequestedExitCounts() external => DISPATCHER(true);
     function _.demandValidatorExits(uint256, uint256) external => DISPATCHER(true);
-    function _.pickNextValidatorsToDeposit(uint256) external => DISPATCHER(true); // has no effect - CERT-4615
+    function _.pickNextValidatorsToDeposit(IOperatorsRegistryV1.OperatorAllocation[]) external => DISPATCHER(true); // has no effect - CERT-4615
 
     //function _.deposit(bytes,bytes,bytes,bytes32) external => DISPATCHER(true); // has no effect - CERT-4615
 
