@@ -469,16 +469,16 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
         uint256 allocationsLength = _allocations.length;
         uint256 currentValidatorExitsDemand = CurrentValidatorExitsDemand.get();
 
+        if (msg.sender != IConsensusLayerDepositManagerV1(RiverAddress.get()).getKeeper()) {
+            revert IConsensusLayerDepositManagerV1.OnlyKeeper();
+        }
+
         if (currentValidatorExitsDemand == 0) {
             revert NoExitRequestsToPerform();
         }
 
         if (allocationsLength == 0) {
             revert InvalidEmptyArray();
-        }
-
-        if (msg.sender != IConsensusLayerDepositManagerV1(RiverAddress.get()).getKeeper()) {
-            revert IConsensusLayerDepositManagerV1.OnlyKeeper();
         }
 
         uint256 prevOperatorIndex = 0;
