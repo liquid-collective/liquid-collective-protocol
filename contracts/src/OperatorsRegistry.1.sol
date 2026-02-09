@@ -488,6 +488,9 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
         for (uint256 i = 0; i < allocationsLength; ++i) {
             uint256 operatorIndex = _allocations[i].operatorIndex;
             uint256 count = _allocations[i].validatorCount;
+            if (count == 0) {
+                revert AllocationWithZeroValidatorCount();
+            }
             suppliedExitCount += count;
 
             if (i > 0 && !(operatorIndex > prevOperatorIndex)) {

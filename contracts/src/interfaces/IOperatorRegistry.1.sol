@@ -355,9 +355,7 @@ interface IOperatorsRegistryV1 {
         external
         returns (bytes[] memory publicKeys, bytes[] memory signatures);
 
-    /// @notice Public endpoint to consume the exit request demand and perform the actual exit requests
-    /// @notice The selection algorithm will pick validators based on their active validator counts
-    /// @notice This value is computed by using the count of funded keys and taking into account the stopped validator counts and exit requests
+    /// @notice The keeper supplies explicit per-operator exit allocations to be performed
     /// @param _allocations The proposed allocations to exit
     function requestValidatorExits(OperatorAllocation[] calldata _allocations) external;
 

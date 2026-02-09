@@ -2473,6 +2473,20 @@ contract OperatorsRegistryV1TestDistribution is Test {
         operatorsRegistry.requestValidatorExits(_createAllocation(new uint256[](0), new uint32[](0)));
     }
 
+    function testRequestExitsWithAllocationWithZeroValidatorCount() external {
+        vm.prank(river);
+        operatorsRegistry.demandValidatorExits(250, 250);
+
+        uint256[] memory operators = new uint256[](1);
+        operators[0] = 0;
+        uint32[] memory exitCounts = new uint32[](1);
+        exitCounts[0] = 0;
+
+        vm.prank(keeper);
+        vm.expectRevert(abi.encodeWithSignature("AllocationWithZeroValidatorCount()"));
+        operatorsRegistry.requestValidatorExits(_createAllocation(operators, exitCounts));
+    }
+
     function testRegularExitDistribution() external {
         vm.startPrank(admin);
         operatorsRegistry.addValidators(0, 50, genBytes((48 + 96) * 50));
