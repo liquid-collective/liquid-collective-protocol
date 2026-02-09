@@ -2464,6 +2464,15 @@ contract OperatorsRegistryV1TestDistribution is Test {
         operatorsRegistry.requestValidatorExits(_createAllocation(operators, limits));
     }
 
+    function testRequestExitsWithInvalidEmptyArray() external {
+        vm.prank(river);
+        operatorsRegistry.demandValidatorExits(250, 250);
+
+        vm.prank(keeper);
+        vm.expectRevert(abi.encodeWithSignature("InvalidEmptyArray()"));
+        operatorsRegistry.requestValidatorExits(_createAllocation(new uint256[](0), new uint32[](0)));
+    }
+
     function testRegularExitDistribution() external {
         vm.startPrank(admin);
         operatorsRegistry.addValidators(0, 50, genBytes((48 + 96) * 50));
