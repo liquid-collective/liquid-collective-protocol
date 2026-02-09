@@ -2687,13 +2687,13 @@ contract OperatorsRegistryV1TestDistribution is Test {
         assert(operatorsRegistry.getOperator(4).funded == 50);
 
         vm.prank(river);
-        operatorsRegistry.demandValidatorExits(1, 250);
+        operatorsRegistry.demandValidatorExits(5, 250);
 
         limits[0] = 1;
-        limits[1] = 0;
-        limits[2] = 0;
-        limits[3] = 0;
-        limits[4] = 0;
+        limits[1] = 1;
+        limits[2] = 1;
+        limits[3] = 1;
+        limits[4] = 1;
 
         vm.expectEmit(true, true, true, true);
         emit RequestedValidatorExits(0, 1);
@@ -2701,11 +2701,11 @@ contract OperatorsRegistryV1TestDistribution is Test {
         operatorsRegistry.requestValidatorExits(_createAllocation(operators, limits));
 
         assert(operatorsRegistry.getOperator(0).requestedExits == 1);
-        assert(operatorsRegistry.getOperator(1).requestedExits == 0);
-        assert(operatorsRegistry.getOperator(2).requestedExits == 0);
-        assert(operatorsRegistry.getOperator(3).requestedExits == 0);
-        assert(operatorsRegistry.getOperator(4).requestedExits == 0);
-        assert(operatorsRegistry.getTotalValidatorExitsRequested() == 1);
+        assert(operatorsRegistry.getOperator(1).requestedExits == 1);
+        assert(operatorsRegistry.getOperator(2).requestedExits == 1);
+        assert(operatorsRegistry.getOperator(3).requestedExits == 1);
+        assert(operatorsRegistry.getOperator(4).requestedExits == 1);
+        assert(operatorsRegistry.getTotalValidatorExitsRequested() == 5);
     }
 
     event UpdatedRequestedValidatorExitsUponStopped(
