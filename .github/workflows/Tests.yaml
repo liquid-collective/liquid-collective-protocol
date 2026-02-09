@@ -2,6 +2,15 @@ name: Tests
 
 on:
   push:
+    branches:
+      - main
+    paths:
+      - "contracts/**"
+      - "lib/**"
+      - ".github/**"
+  pull_request:
+    branches:
+      - main
     paths:
       - "contracts/**"
       - "lib/**"
@@ -9,10 +18,10 @@ on:
 
 jobs:
   run-tests:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           submodules: recursive
 

@@ -2,6 +2,21 @@ name: Deploy Scripts Checks
 
 on:
   push:
+    branches:
+      - main
+    paths:
+      - ".github/**"
+      - "contracts/**"
+      - "deploy/**"
+      - "lib/**"
+      - "scripts/**"
+      - "ts-utils/**"
+      - "package.json"
+      - "yarn.lock"
+      - "hardhat.config.ts"
+  pull_request:
+    branches:
+      - main
     paths:
       - ".github/**"
       - "contracts/**"
@@ -15,10 +30,10 @@ on:
 
 jobs:
   run-deploy:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           submodules: recursive
           persist-credentials: false

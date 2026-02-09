@@ -2,6 +2,16 @@ name: Coverage
 
 on:
   push:
+    branches:
+      - main
+    paths:
+      - "contracts/**"
+      - "lib/**"
+      - ".github/**"
+      - "codecov.yml"
+  pull_request:
+    branches:
+      - main
     paths:
       - "contracts/**"
       - "lib/**"
@@ -10,10 +20,10 @@ on:
 
 jobs:
   run-coverage:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           submodules: recursive
 

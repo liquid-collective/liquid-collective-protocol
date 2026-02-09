@@ -1,20 +1,30 @@
 name: Certora verification
 
 on:
-    push:
-      paths:
-        - "contracts/**"
-        - "lib/**"
-        - ".github/**"
-        - "certora/**"
+  push:
+    branches:
+      - main
+    paths:
+      - "contracts/**"
+      - "lib/**"
+      - ".github/**"
+      - "certora/**"
+  pull_request:
+    branches:
+      - main
+    paths:
+      - "contracts/**"
+      - "lib/**"
+      - ".github/**"
+      - "certora/**"
 
 jobs:
   verify:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     outputs:
       matrix: ${{ steps.set-matrix.outputs.matrix }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Install Foundry
         uses: foundry-rs/foundry-toolchain@v1
