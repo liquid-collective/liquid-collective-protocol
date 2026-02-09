@@ -218,18 +218,18 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
         if (fundableOperatorCount == 0) {
             return (new bytes[](0), new bytes[](0));
         }
-        uint256 len = _allocations.length;
 
-        // First pass: validate ordering and update picked count for each operator
+        uint256 len = _allocations.length;
         for (uint256 i = 0; i < len; ++i) {
-            uint256 operatorIndex = _allocations[i].operatorIndex;
-            if (i > 0 && !(operatorIndex > _allocations[i - 1].operatorIndex)) {
+            if (i > 0 && !(_allocations[i].operatorIndex > _allocations[i - 1].operatorIndex)) {
                 revert UnorderedOperatorList();
             }
             if (_allocations[i].validatorCount == 0) {
                 revert AllocationWithZeroValidatorCount();
             }
-            _updateCountOfPickedValidatorsForEachOperator(operators, operatorIndex, _allocations[i].validatorCount);
+            _updateCountOfPickedValidatorsForEachOperator(
+                operators, _allocations[i].operatorIndex, _allocations[i].validatorCount
+            );
         }
         // we loop on all operators
         for (uint256 idx = 0; idx < fundableOperatorCount; ++idx) {
@@ -747,17 +747,16 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
         }
 
         uint256 len = _allocations.length;
-        // Iterate over the allocations, validate ordering and update the picked count for each operator
         for (uint256 i = 0; i < len; ++i) {
-            uint256 operatorIndex = _allocations[i].operatorIndex;
-            if (i > 0 && !(operatorIndex > _allocations[i - 1].operatorIndex)) {
+            if (i > 0 && !(_allocations[i].operatorIndex > _allocations[i - 1].operatorIndex)) {
                 revert UnorderedOperatorList();
             }
-
             if (_allocations[i].validatorCount == 0) {
                 revert AllocationWithZeroValidatorCount();
             }
-            _updateCountOfPickedValidatorsForEachOperator(operators, operatorIndex, _allocations[i].validatorCount);
+            _updateCountOfPickedValidatorsForEachOperator(
+                operators, _allocations[i].operatorIndex, _allocations[i].validatorCount
+            );
         }
         // we loop on all operators
         for (uint256 idx = 0; idx < fundableOperatorCount; ++idx) {
@@ -782,7 +781,6 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
         // Find the operator in the compacted array by matching .index
         for (uint256 i = 0; i < operators.length; ++i) {
             if (operators[i].index == _operatorIndex) {
-                // we take the smallest value between limit - (funded + picked), _validatorCount
                 uint256 availableKeys = operators[i].limit - (operators[i].funded + operators[i].picked);
 
                 if (_validatorCount > availableKeys) {
