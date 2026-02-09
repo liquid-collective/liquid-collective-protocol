@@ -14,10 +14,6 @@ contract OperatorsRegistryV1Harness is OperatorsRegistryV1 {
         return OperatorsV2.getCount();
     }
 
-    function getMaxValidatorAttributionPerRound() external view returns (uint256) {
-        return MAX_VALIDATOR_ATTRIBUTION_PER_ROUND;
-    }
-
     function getStoppedValidatorsLength() external view returns (uint256) {
         return OperatorsV2.getStoppedValidators().length;
     }
@@ -42,7 +38,7 @@ contract OperatorsRegistryV1Harness is OperatorsRegistryV1 {
         OperatorsV2.Operator memory op = OperatorsV2.get(opIndex);
         uint256 valIndex = 0;
         bytes32 validatorDataHash = keccak256(abi.encodePacked(publicKeyAndSignature));
-        for (; valIndex < op.keys;) 
+        for (; valIndex < op.keys; ++valIndex) 
         {
             (bytes memory valData) = ValidatorKeys.getRaw(opIndex, valIndex);
             if (validatorDataHash == keccak256(abi.encodePacked(valData)))  //element found
