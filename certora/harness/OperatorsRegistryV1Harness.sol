@@ -23,8 +23,17 @@ contract OperatorsRegistryV1Harness is OperatorsRegistryV1 {
     }
 
     function getFundableOperatorsCount() external view returns (uint256) {
-        (OperatorsV2.CachedOperator[] memory operators, uint256 fundableOperatorCount) = OperatorsV2.getAllFundable();
-        return fundableOperatorCount;
+        uint256 count = OperatorsV2.getCount();
+        uint256 fundableCount = 0;
+        for (uint256 idx = 0; idx < count; ++idx) {
+            OperatorsV2.Operator memory op = OperatorsV2.get(idx);
+            if (op.active && op.limit > op.funded && _getStoppedValidatorsCount(idx) >= op.requestedExits) {
+                unchecked {
+                    ++fundableCount;
+                }
+            }
+        }
+        return fundableCount;
     }
 
     //Returns current state of given validator with respect to given operator

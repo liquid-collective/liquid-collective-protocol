@@ -3383,14 +3383,12 @@ contract OperatorsRegistryV1TestDistribution is Test {
         operatorsRegistry.setOperatorStatus(0, false);
         vm.stopPrank();
 
-        // Create allocation for inactive operator
+        // Create allocation for inactive operator - reverts InactiveOperator
         IOperatorsRegistryV1.OperatorAllocation[] memory allocation = new IOperatorsRegistryV1.OperatorAllocation[](1);
         allocation[0] = IOperatorsRegistryV1.OperatorAllocation({operatorIndex: 0, validatorCount: 5});
 
-        (bytes[] memory publicKeys, bytes[] memory signatures) =
-            operatorsRegistry.getNextValidatorsToDepositFromActiveOperators(allocation);
-        assert(publicKeys.length == 0);
-        assert(signatures.length == 0);
+        vm.expectRevert(abi.encodeWithSignature("InactiveOperator(uint256)", 0));
+        operatorsRegistry.getNextValidatorsToDepositFromActiveOperators(allocation);
     }
 
     function testPickNextValidatorsToDepositReturnsEmptyArraysWhenOperatorInactive() public {
@@ -3409,15 +3407,14 @@ contract OperatorsRegistryV1TestDistribution is Test {
         operatorsRegistry.setOperatorStatus(0, false);
         vm.stopPrank();
 
-        // Create allocation for inactive operator
+        // Create allocation for inactive operator - reverts InactiveOperator
         IOperatorsRegistryV1.OperatorAllocation[] memory allocation = new IOperatorsRegistryV1.OperatorAllocation[](1);
         allocation[0] = IOperatorsRegistryV1.OperatorAllocation({operatorIndex: 0, validatorCount: 5});
 
-        (bytes[] memory publicKeys, bytes[] memory signatures) = OperatorsRegistryInitializableV1(
-                address(operatorsRegistry)
-            ).debugPickNextValidatorsToDepositFromActiveOperators(allocation);
-        assert(publicKeys.length == 0);
-        assert(signatures.length == 0);
+        vm.prank(river);
+        vm.expectRevert(abi.encodeWithSignature("InactiveOperator(uint256)", 0));
+        OperatorsRegistryInitializableV1(address(operatorsRegistry))
+            .debugPickNextValidatorsToDepositFromActiveOperators(allocation);
     }
 
     function testGetNextValidatorsToDepositForNoOperators() public {
@@ -3621,7 +3618,7 @@ contract OperatorsRegistryV1TestDistribution is Test {
         IOperatorsRegistryV1.OperatorAllocation[] memory allocation = new IOperatorsRegistryV1.OperatorAllocation[](1);
         allocation[0] = IOperatorsRegistryV1.OperatorAllocation({operatorIndex: 99, validatorCount: 5});
 
-        vm.expectRevert(abi.encodeWithSignature("InactiveOperator(uint256)", 99));
+        vm.expectRevert(abi.encodeWithSignature("OperatorNotFound(uint256)", 99));
         operatorsRegistry.getNextValidatorsToDepositFromActiveOperators(allocation);
     }
 
@@ -3645,7 +3642,7 @@ contract OperatorsRegistryV1TestDistribution is Test {
         allocation[0] = IOperatorsRegistryV1.OperatorAllocation({operatorIndex: 99, validatorCount: 5});
 
         vm.prank(river);
-        vm.expectRevert(abi.encodeWithSignature("InactiveOperator(uint256)", 99));
+        vm.expectRevert(abi.encodeWithSignature("OperatorNotFound(uint256)", 99));
         operatorsRegistry.pickNextValidatorsToDeposit(allocation);
     }
 
@@ -3672,14 +3669,12 @@ contract OperatorsRegistryV1TestDistribution is Test {
         vm.prank(admin);
         operatorsRegistry.setOperatorLimits(operators, limits, block.number);
 
-        // Request operator 99 which doesn't exist
-        // This forces the loop to iterate through all 3 fundable operators (all false)
-        // before reverting with InactiveOperator
+        // Request operator 99 which doesn't exist - reverts OperatorNotFound
         IOperatorsRegistryV1.OperatorAllocation[] memory allocation = new IOperatorsRegistryV1.OperatorAllocation[](1);
         allocation[0] = IOperatorsRegistryV1.OperatorAllocation({operatorIndex: 99, validatorCount: 5});
 
         vm.prank(river);
-        vm.expectRevert(abi.encodeWithSignature("InactiveOperator(uint256)", 99));
+        vm.expectRevert(abi.encodeWithSignature("OperatorNotFound(uint256)", 99));
         operatorsRegistry.pickNextValidatorsToDeposit(allocation);
     }
 
@@ -3688,11 +3683,7 @@ contract OperatorsRegistryV1TestDistribution is Test {
     }
 
     function testGetNextValidatorsToDepositFromActiveOperatorsReturnsEmptyWhenNoFundableOperators() public {
-        // No operators have been added, so fundableOperatorCount will be 0
-        // This triggers the early return at line 218: if (fundableOperatorCount == 0)
-
-        // Create an empty allocation array (the allocation content doesn't matter since
-        // the function returns early when there are no fundable operators)
+        // Create an empty allocation array - returns empty arrays
         IOperatorsRegistryV1.OperatorAllocation[] memory allocation = new IOperatorsRegistryV1.OperatorAllocation[](0);
 
         (bytes[] memory publicKeys, bytes[] memory signatures) =
@@ -3706,7 +3697,7 @@ contract OperatorsRegistryV1TestDistribution is Test {
     // ============ NEW TESTS FOR BYOV COVERAGE ============
 
     /// @notice Tests OperatorDoesNotHaveEnoughFundableKeys when some keys are already funded
-    /// This covers the case where availableKeys = limit - (funded + picked) is less than requested
+    /// This covers the case where availableKeys = limit - funded is less than requested
     function testOperatorDoesNotHaveEnoughFundableKeysWithPartialFunding() public {
         bytes memory rawKeys = genBytes((48 + 96) * 10);
 
@@ -3761,17 +3752,12 @@ contract OperatorsRegistryV1TestDistribution is Test {
         operatorsRegistry.setOperatorStatus(0, false);
         vm.stopPrank();
 
-        // Try to allocate to the deactivated operator
+        // Try to allocate to the deactivated operator - should revert InactiveOperator
         IOperatorsRegistryV1.OperatorAllocation[] memory allocation = new IOperatorsRegistryV1.OperatorAllocation[](1);
         allocation[0] = IOperatorsRegistryV1.OperatorAllocation({operatorIndex: 0, validatorCount: 5});
 
-        // Since operator is inactive, getAllFundable returns 0 operators,
-        // so we get empty arrays (not InactiveOperator error in this case)
-        (bytes[] memory publicKeys, bytes[] memory signatures) =
-            operatorsRegistry.getNextValidatorsToDepositFromActiveOperators(allocation);
-
-        assertEq(publicKeys.length, 0, "Expected empty publicKeys for deactivated operator");
-        assertEq(signatures.length, 0, "Expected empty signatures for deactivated operator");
+        vm.expectRevert(abi.encodeWithSignature("InactiveOperator(uint256)", 0));
+        operatorsRegistry.getNextValidatorsToDepositFromActiveOperators(allocation);
     }
 
     /// @notice Tests that pickNextValidatorsToDeposit correctly updates funded count and emits FundedValidatorKeys
@@ -3904,16 +3890,14 @@ contract OperatorsRegistryV1TestDistribution is Test {
         vm.prank(river);
         operatorsRegistry.pickNextValidatorsToDeposit(allocation1);
 
-        // Now try to allocate more - should get empty arrays since operator has limit==funded
+        // Now try to allocate more - should revert since operator has no available keys (limit == funded)
         IOperatorsRegistryV1.OperatorAllocation[] memory allocation2 = new IOperatorsRegistryV1.OperatorAllocation[](1);
         allocation2[0] = IOperatorsRegistryV1.OperatorAllocation({operatorIndex: 0, validatorCount: 1});
 
-        // Operator is no longer fundable (limit == funded), so getAllFundable returns 0
-        (bytes[] memory publicKeys, bytes[] memory signatures) =
-            operatorsRegistry.getNextValidatorsToDepositFromActiveOperators(allocation2);
-
-        assertEq(publicKeys.length, 0, "Expected empty publicKeys when operator fully funded");
-        assertEq(signatures.length, 0, "Expected empty signatures when operator fully funded");
+        vm.expectRevert(
+            abi.encodeWithSignature("OperatorDoesNotHaveEnoughFundableKeys(uint256,uint256,uint256)", 0, 1, 0)
+        );
+        operatorsRegistry.getNextValidatorsToDepositFromActiveOperators(allocation2);
     }
 
     /// @notice Tests that getNextValidators (view) doesn't modify state while pickNextValidators does
