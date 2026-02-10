@@ -402,8 +402,7 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
         bool limitEqualsKeyCount = totalKeys == operator.limit;
         OperatorsV2.setKeys(_index, totalKeys - uint32(indexesLength));
 
-        uint256 idx;
-        for (; idx < indexesLength;) {
+        for (uint256 idx; idx < indexesLength;) {
             uint256 keyIndex = _indexes[idx];
 
             if (idx > 0 && !(keyIndex < _indexes[idx - 1])) {
