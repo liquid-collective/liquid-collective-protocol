@@ -366,7 +366,6 @@ contract ConsensusLayerDepositManagerV1ErrorTests is ConsensusLayerDepositManage
         vm.prank(address(0x1));
         depositManager.depositToConsensusLayerWithDepositRoot(_createAllocation(5), bytes32(0));
     }
-
 }
 
 contract ConsensusLayerDepositManagerV1WithdrawalCredentialError is ConsensusLayerDepositManagerTestBase {

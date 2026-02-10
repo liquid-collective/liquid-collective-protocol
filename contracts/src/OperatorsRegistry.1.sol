@@ -736,12 +736,9 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
             if (_allocations[i].validatorCount == 0) {
                 revert AllocationWithZeroValidatorCount();
             }
-            uint32 funded = _checkOperatorAllocation(
-                _allocations[i].operatorIndex, _allocations[i].validatorCount
-            );
-            (perOperatorKeys[i], perOperatorSigs[i]) = ValidatorKeys.getKeys(
-                _allocations[i].operatorIndex, funded, _allocations[i].validatorCount
-            );
+            uint32 funded = _checkOperatorAllocation(_allocations[i].operatorIndex, _allocations[i].validatorCount);
+            (perOperatorKeys[i], perOperatorSigs[i]) =
+                ValidatorKeys.getKeys(_allocations[i].operatorIndex, funded, _allocations[i].validatorCount);
         }
     }
 
