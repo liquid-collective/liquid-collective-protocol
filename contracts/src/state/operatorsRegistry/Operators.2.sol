@@ -242,7 +242,6 @@ library OperatorsV2 {
         assembly ("memory-safe") {
             mstore(exitableOperators, exitableCount)
         }
-git 
         return (exitableOperators, exitableCount);
     }
 
