@@ -237,9 +237,8 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
                     _allocations[i].operatorIndex, _allocations[i].validatorCount, availableKeys
                 );
             }
-            (bytes[] memory _publicKeys, bytes[] memory _signatures) = ValidatorKeys.getKeys(
-                _allocations[i].operatorIndex, operator.funded, _allocations[i].validatorCount
-            );
+            (bytes[] memory _publicKeys, bytes[] memory _signatures) =
+                ValidatorKeys.getKeys(_allocations[i].operatorIndex, operator.funded, _allocations[i].validatorCount);
             publicKeys = _concatenateByteArrays(publicKeys, _publicKeys);
             signatures = _concatenateByteArrays(signatures, _signatures);
         }
@@ -751,9 +750,8 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
                     _allocations[i].operatorIndex, _allocations[i].validatorCount, availableKeys
                 );
             }
-            (bytes[] memory _publicKeys, bytes[] memory _signatures) = ValidatorKeys.getKeys(
-                _allocations[i].operatorIndex, operator.funded, _allocations[i].validatorCount
-            );
+            (bytes[] memory _publicKeys, bytes[] memory _signatures) =
+                ValidatorKeys.getKeys(_allocations[i].operatorIndex, operator.funded, _allocations[i].validatorCount);
             emit FundedValidatorKeys(_allocations[i].operatorIndex, _publicKeys, false);
             publicKeys = _concatenateByteArrays(publicKeys, _publicKeys);
             signatures = _concatenateByteArrays(signatures, _signatures);
