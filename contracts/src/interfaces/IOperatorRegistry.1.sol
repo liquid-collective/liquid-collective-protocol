@@ -166,11 +166,15 @@ interface IOperatorsRegistryV1 {
     /// @notice The provided list of operators is not in increasing order
     error UnorderedOperatorList();
 
-    /// @notice Thrown when an invalid operator allocation is provided
+    /// @notice Thrown when an operator ignored the required number of requested exits
+    /// @param operatorIndex The operator index
+    error OperatorIgnoredExitRequests(uint256 operatorIndex);
+
+    /// @notice Thrown when an operator lacks the required number of fundable keys
     /// @param operatorIndex The operator index
     /// @param requested The requested count
     /// @param available The available count
-    error OperatorDoesNotHaveEnoughFundableKeys(uint256 operatorIndex, uint256 requested, uint256 available);
+    error OperatorInsufficientFundableKeys(uint256 operatorIndex, uint256 requested, uint256 available);
 
     /// @notice Thrown when an allocation with zero validator count is provided
     error AllocationWithZeroValidatorCount();
