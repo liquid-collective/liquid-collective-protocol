@@ -21,7 +21,8 @@ contract OperatorsRegistryInitializableV1 is OperatorsRegistryV1 {
         external
         returns (bytes[] memory publicKeys, bytes[] memory signatures)
     {
-        (bytes[][] memory perOpKeys, bytes[][] memory perOpSigs) = _getPerOperatorValidatorKeysForAllocations(_allocations);
+        (bytes[][] memory perOpKeys, bytes[][] memory perOpSigs) =
+            _getPerOperatorValidatorKeysForAllocations(_allocations);
         for (uint256 i = 0; i < perOpKeys.length; ++i) {
             emit FundedValidatorKeys(_allocations[i].operatorIndex, perOpKeys[i], false);
             publicKeys = _concatenateByteArrays(publicKeys, perOpKeys[i]);
