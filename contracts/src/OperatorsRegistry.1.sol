@@ -481,22 +481,21 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
             revert InvalidEmptyArray();
         }
 
-        uint256 prevOperatorIndex = 0;
-        uint256 suppliedExitCount = 0;
+        uint256 requestedExitCount = 0;
 
         // Check that the exits requested do not exceed the funded validator count of the operator
         for (uint256 i = 0; i < allocationsLength; ++i) {
             uint256 operatorIndex = _allocations[i].operatorIndex;
             uint256 count = _allocations[i].validatorCount;
+
             if (count == 0) {
                 revert AllocationWithZeroValidatorCount();
             }
-            suppliedExitCount += count;
-
-            if (i > 0 && !(operatorIndex > prevOperatorIndex)) {
+            if (i > 0 && !(operatorIndex > _allocations[i - 1].operatorIndex)) {
                 revert UnorderedOperatorList();
             }
-            prevOperatorIndex = operatorIndex;
+
+            requestedExitCount += count;
 
             OperatorsV2.Operator storage operator = OperatorsV2.get(operatorIndex);
             if (!operator.active) {
@@ -513,15 +512,15 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
         }
 
         // Check that the exits requested do not exceed the current validator exits demand
-        if (suppliedExitCount > currentValidatorExitsDemand) {
-            revert ExitsRequestedExceedsDemand(suppliedExitCount, currentValidatorExitsDemand);
+        if (requestedExitCount > currentValidatorExitsDemand) {
+            revert ExitsRequestedExceedsDemand(requestedExitCount, currentValidatorExitsDemand);
         }
 
         uint256 savedCurrentValidatorExitsDemand = currentValidatorExitsDemand;
-        currentValidatorExitsDemand -= suppliedExitCount;
+        currentValidatorExitsDemand -= requestedExitCount;
 
         uint256 totalRequestedExitsValue = TotalValidatorExitsRequested.get();
-        _setTotalValidatorExitsRequested(totalRequestedExitsValue, totalRequestedExitsValue + suppliedExitCount);
+        _setTotalValidatorExitsRequested(totalRequestedExitsValue, totalRequestedExitsValue + requestedExitCount);
         _setCurrentValidatorExitsDemand(savedCurrentValidatorExitsDemand, currentValidatorExitsDemand);
     }
 

@@ -46,18 +46,6 @@ library OperatorsV2 {
         uint32 picked;
     }
 
-    /// @notice The Operator structure when loaded in memory for the exit selection
-    struct CachedExitableOperator {
-        /// @custom:attribute The count of funded validators
-        uint32 funded;
-        /// @custom:attribute The count of exit requests made to this operator
-        uint32 requestedExits;
-        /// @custom:attribute The original index of the operator
-        uint32 index;
-        /// @custom:attribute The amount of picked keys, buffer used before changing funded in storage
-        uint32 picked;
-    }
-
     /// @notice The structure at the storage slot
     struct SlotOperator {
         /// @custom:attribute Array containing all the operators
