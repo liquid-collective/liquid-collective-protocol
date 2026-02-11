@@ -37,6 +37,28 @@ contract OperatorsRegistryInitializableV1 is OperatorsRegistryV1 {
     }
 }
 
+/// @dev Same as OperatorsRegistryInitializableV1 but does NOT override onlyRiver; use for tests that assert Unauthorized
+contract OperatorsRegistryStrictRiverV1 is OperatorsRegistryV1 {
+    function sudoSetFunded(uint256 _index, uint32 _funded) external {
+        OperatorsV2.Operator storage operator = OperatorsV2.get(_index);
+        operator.funded = _funded;
+    }
+
+    function sudoSetKeys(uint256 _operatorIndex, uint32 _keyCount) external {
+        OperatorsV2.setKeys(_operatorIndex, _keyCount);
+    }
+
+    function sudoExitRequests(uint256 _operatorIndex, uint32 _requestedExits) external {
+        OperatorsV2.get(_operatorIndex).requestedExits = _requestedExits;
+    }
+
+    function sudoStoppedValidatorCounts(uint32[] calldata stoppedValidatorCount, uint256 depositedValidatorCount)
+        external
+    {
+        _setStoppedValidatorCounts(stoppedValidatorCount, depositedValidatorCount);
+    }
+}
+
 contract RiverMock {
     uint256 public getDepositedValidatorCount;
     address public keeper;
@@ -103,6 +125,53 @@ contract OperatorsRegistryV1InitializationTests is OperatorsRegistryV1TestBase {
 
         assertEq(river, operatorsRegistry.getRiver());
         assertEq(admin, operatorsRegistry.getAdmin());
+    }
+}
+
+/// @notice Tests that require real onlyRiver enforcement (expect Unauthorized when not pranking as river)
+contract OperatorsRegistryV1StrictRiverTests is OperatorsRegistryV1TestBase, BytesGenerator {
+    function setUp() public {
+        admin = makeAddr("admin");
+        keeper = makeAddr("keeper");
+        river = address(new RiverMock(0));
+        RiverMock(river).setKeeper(keeper);
+        operatorsRegistry = new OperatorsRegistryStrictRiverV1();
+        LibImplementationUnbricker.unbrick(vm, address(operatorsRegistry));
+        operatorsRegistry.initOperatorsRegistryV1(admin, river);
+    }
+
+    function _createAllocation(uint256 opIndex, uint256 count)
+        internal
+        pure
+        returns (IOperatorsRegistryV1.OperatorAllocation[] memory)
+    {
+        IOperatorsRegistryV1.OperatorAllocation[] memory allocations = new IOperatorsRegistryV1.OperatorAllocation[](1);
+        allocations[0] = IOperatorsRegistryV1.OperatorAllocation({operatorIndex: opIndex, validatorCount: count});
+        return allocations;
+    }
+
+    function testGetKeysAsUnauthorized() public {
+        vm.expectRevert(abi.encodeWithSignature("Unauthorized(address)", address(this)));
+        operatorsRegistry.pickNextValidatorsToDeposit(_createAllocation(0, 10));
+    }
+
+    function testReportStoppedValidatorCountsUnauthorized(uint256 _salt, uint32 totalCount, uint8 len) public {
+        address random = uf._new(_salt);
+        vm.assume(len > 0 && len < type(uint8).max);
+        totalCount = uint32(bound(totalCount, len, type(uint32).max));
+
+        uint32[] memory stoppedValidatorCounts = new uint32[](len + 1);
+        stoppedValidatorCounts[0] = totalCount;
+
+        for (uint256 idx = 1; idx < len + 1; ++idx) {
+            vm.prank(admin);
+            operatorsRegistry.addOperator(string(abi.encodePacked(idx)), address(123));
+            stoppedValidatorCounts[idx] = (totalCount / len) + (idx - 1 < totalCount % len ? 1 : 0);
+        }
+
+        vm.prank(random);
+        vm.expectRevert(abi.encodeWithSignature("Unauthorized(address)", random));
+        operatorsRegistry.reportStoppedValidatorCounts(stoppedValidatorCounts, totalCount);
     }
 }
 
@@ -875,11 +944,6 @@ contract OperatorsRegistryV1Tests is OperatorsRegistryV1TestBase, BytesGenerator
         assert(publicKeys.length == 0);
     }
 
-    function testGetKeysAsUnauthorized() public {
-        vm.expectRevert(abi.encodeWithSignature("Unauthorized(address)", address(this)));
-        operatorsRegistry.pickNextValidatorsToDeposit(_createAllocation(0, 10));
-    }
-
     function testAddValidatorsAsAdmin(bytes32 _name, uint256 _firstAddressSalt) public {
         address _firstAddress = uf._new(_firstAddressSalt);
         vm.startPrank(admin);
@@ -1324,25 +1388,6 @@ contract OperatorsRegistryV1Tests is OperatorsRegistryV1TestBase, BytesGenerator
             assertEq(stoppedValidatorCounts[idx], operatorsRegistry.getOperatorStoppedValidatorCount(idx - 1));
             assertEq(stoppedValidatorCounts[idx], rawStoppedValidators[idx - 1]);
         }
-    }
-
-    function testReportStoppedValidatorCountsUnauthorized(uint256 _salt, uint32 totalCount, uint8 len) public {
-        address random = uf._new(_salt);
-        vm.assume(len > 0 && len < type(uint8).max);
-        totalCount = uint32(bound(totalCount, len, type(uint32).max));
-
-        uint32[] memory stoppedValidatorCounts = new uint32[](len + 1);
-        stoppedValidatorCounts[0] = totalCount;
-
-        for (uint256 idx = 1; idx < len + 1; ++idx) {
-            vm.prank(admin);
-            operatorsRegistry.addOperator(string(abi.encodePacked(idx)), address(123));
-            stoppedValidatorCounts[idx] = (totalCount / len) + (idx - 1 < totalCount % len ? 1 : 0);
-        }
-
-        vm.prank(random);
-        vm.expectRevert(abi.encodeWithSignature("Unauthorized(address)", random));
-        operatorsRegistry.reportStoppedValidatorCounts(stoppedValidatorCounts, totalCount);
     }
 
     function testReportStoppedValidatorCountsEmptyArray() public {
