@@ -21,12 +21,12 @@ contract OperatorsRegistryInitializableV1 is OperatorsRegistryV1 {
         external
         returns (bytes[] memory publicKeys, bytes[] memory signatures)
     {
-        (bytes[][] memory perOpKeys, bytes[][] memory perOpSigs) = _validateAndExtractKeys(_allocations);
+        (bytes[][] memory perOpKeys, bytes[][] memory perOpSigs) = _getPerOperatorValidatorKeysForAllocations(_allocations);
         for (uint256 i = 0; i < perOpKeys.length; ++i) {
             emit FundedValidatorKeys(_allocations[i].operatorIndex, perOpKeys[i], false);
-            OperatorsV2.get(_allocations[i].operatorIndex).funded += uint32(_allocations[i].validatorCount);
             publicKeys = _concatenateByteArrays(publicKeys, perOpKeys[i]);
             signatures = _concatenateByteArrays(signatures, perOpSigs[i]);
+            OperatorsV2.get(_allocations[i].operatorIndex).funded += uint32(_allocations[i].validatorCount);
         }
     }
 
