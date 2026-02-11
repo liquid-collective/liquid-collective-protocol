@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.20;
+pragma solidity 0.8.33;
 
 import {CCIPAdminAddress} from "contracts/src/l2-token/state/CCIPAdminAddress.sol";
 
