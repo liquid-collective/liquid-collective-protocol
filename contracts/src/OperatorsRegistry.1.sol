@@ -493,7 +493,7 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
 
         // Check that the exits requested do not exceed the current validator exits demand
         if (requestedExitCount > currentValidatorExitsDemand) {
-            revert ExitsRequestedExceedsDemand(requestedExitCount, currentValidatorExitsDemand);
+            revert ExitsRequestedExceedDemand(requestedExitCount, currentValidatorExitsDemand);
         }
 
         uint256 savedCurrentValidatorExitsDemand = currentValidatorExitsDemand;

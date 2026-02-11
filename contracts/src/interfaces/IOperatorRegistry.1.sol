@@ -205,7 +205,7 @@ interface IOperatorsRegistryV1 {
     /// @notice The provided exit requests exceed the current exit request demand
     /// @param requested The requested count
     /// @param demand The demand count
-    error ExitsRequestedExceedsDemand(uint256 requested, uint256 demand);
+    error ExitsRequestedExceedDemand(uint256 requested, uint256 demand);
 
     /// @notice Initializes the operators registry
     /// @param _admin Admin in charge of managing operators
