@@ -447,17 +447,16 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
 
     /// @inheritdoc IOperatorsRegistryV1
     function requestValidatorExits(OperatorAllocation[] calldata _allocations) external {
-        uint256 allocationsLength = _allocations.length;
-        uint256 currentValidatorExitsDemand = CurrentValidatorExitsDemand.get();
-
         if (msg.sender != IConsensusLayerDepositManagerV1(RiverAddress.get()).getKeeper()) {
             revert IConsensusLayerDepositManagerV1.OnlyKeeper();
         }
 
+        uint256 currentValidatorExitsDemand = CurrentValidatorExitsDemand.get();
         if (currentValidatorExitsDemand == 0) {
             revert NoExitRequestsToPerform();
         }
 
+        uint256 allocationsLength = _allocations.length;
         if (allocationsLength == 0) {
             revert InvalidEmptyArray();
         }
