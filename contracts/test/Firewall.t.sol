@@ -4,6 +4,7 @@ pragma solidity 0.8.33;
 
 import "forge-std/Test.sol";
 
+import "./OperatorAllocationTestBase.sol";
 import "./utils/BytesGenerator.sol";
 import "./utils/LibImplementationUnbricker.sol";
 import "./mocks/DepositContractMock.sol";
@@ -18,7 +19,7 @@ import "../src/Oracle.1.sol";
 import "../src/OperatorsRegistry.1.sol";
 import "../src/ELFeeRecipient.1.sol";
 
-contract FirewallTests is BytesGenerator, Test {
+contract FirewallTests is BytesGenerator, OperatorAllocationTestBase {
     AllowlistV1 internal allowlist;
 
     ELFeeRecipientV1 internal elFeeRecipient;
@@ -280,12 +281,6 @@ contract FirewallTests is BytesGenerator, Test {
         operatorLimits[0] = 10;
         firewalledOperatorsRegistry.setOperatorLimits(operatorIndexes, operatorLimits, block.number);
         vm.stopPrank();
-    }
-
-    function _createAllocation(uint256 count) internal pure returns (IOperatorsRegistryV1.OperatorAllocation[] memory) {
-        IOperatorsRegistryV1.OperatorAllocation[] memory allocations = new IOperatorsRegistryV1.OperatorAllocation[](1);
-        allocations[0] = IOperatorsRegistryV1.OperatorAllocation({operatorIndex: 0, validatorCount: count});
-        return allocations;
     }
 
     function testGovernorCannotdepositToConsensusLayerWithDepositRoot() public {

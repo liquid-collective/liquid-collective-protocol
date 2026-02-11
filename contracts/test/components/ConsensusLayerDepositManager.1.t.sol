@@ -4,20 +4,13 @@ pragma solidity 0.8.33;
 
 import "forge-std/Test.sol";
 
+import "../OperatorAllocationTestBase.sol";
 import "../../src/components/ConsensusLayerDepositManager.1.sol";
 import "../utils/LibImplementationUnbricker.sol";
 
 import "../mocks/DepositContractMock.sol";
 import "../mocks/DepositContractEnhancedMock.sol";
 import "../mocks/DepositContractInvalidMock.sol";
-
-abstract contract ConsensusLayerDepositManagerTestBase is Test {
-    function _createAllocation(uint256 count) internal pure returns (IOperatorsRegistryV1.OperatorAllocation[] memory) {
-        IOperatorsRegistryV1.OperatorAllocation[] memory allocations = new IOperatorsRegistryV1.OperatorAllocation[](1);
-        allocations[0] = IOperatorsRegistryV1.OperatorAllocation({operatorIndex: 0, validatorCount: count});
-        return allocations;
-    }
-}
 
 contract ConsensusLayerDepositManagerV1ExposeInitializer is ConsensusLayerDepositManagerV1 {
     function _getRiverAdmin() internal pure override returns (address) {
@@ -111,7 +104,7 @@ contract ConsensusLayerDepositManagerV1InitTests is Test {
     }
 }
 
-contract ConsensusLayerDepositManagerV1Tests is ConsensusLayerDepositManagerTestBase {
+contract ConsensusLayerDepositManagerV1Tests is OperatorAllocationTestBase {
     bytes32 internal withdrawalCredentials = bytes32(uint256(1));
 
     ConsensusLayerDepositManagerV1 internal depositManager;
@@ -286,7 +279,7 @@ contract ConsensusLayerDepositManagerV1ControllableValidatorKeyRequest is Consen
     }
 }
 
-contract ConsensusLayerDepositManagerV1ErrorTests is ConsensusLayerDepositManagerTestBase {
+contract ConsensusLayerDepositManagerV1ErrorTests is OperatorAllocationTestBase {
     bytes32 internal withdrawalCredentials = bytes32(uint256(1));
 
     ConsensusLayerDepositManagerV1 internal depositManager;
@@ -428,7 +421,7 @@ contract ConsensusLayerDepositManagerV1ErrorTests is ConsensusLayerDepositManage
     }
 }
 
-contract ConsensusLayerDepositManagerV1WithdrawalCredentialError is ConsensusLayerDepositManagerTestBase {
+contract ConsensusLayerDepositManagerV1WithdrawalCredentialError is OperatorAllocationTestBase {
     bytes32 internal withdrawalCredentials = bytes32(uint256(1));
 
     ConsensusLayerDepositManagerV1 internal depositManager;
@@ -520,7 +513,7 @@ contract ConsensusLayerDepositManagerV1ValidKeys is ConsensusLayerDepositManager
     }
 }
 
-contract ConsensusLayerDepositManagerV1ValidKeysTest is ConsensusLayerDepositManagerTestBase {
+contract ConsensusLayerDepositManagerV1ValidKeysTest is OperatorAllocationTestBase {
     ConsensusLayerDepositManagerV1 internal depositManager;
     IDepositContract internal depositContract;
 
@@ -566,7 +559,7 @@ contract ConsensusLayerDepositManagerV1ValidKeysTest is ConsensusLayerDepositMan
     }
 }
 
-contract ConsensusLayerDepositManagerV1InvalidDepositContract is ConsensusLayerDepositManagerTestBase {
+contract ConsensusLayerDepositManagerV1InvalidDepositContract is OperatorAllocationTestBase {
     ConsensusLayerDepositManagerV1 internal depositManager;
     IDepositContract internal depositContract;
 
@@ -590,7 +583,7 @@ contract ConsensusLayerDepositManagerV1InvalidDepositContract is ConsensusLayerD
     }
 }
 
-contract ConsensusLayerDepositManagerV1KeeperTest is ConsensusLayerDepositManagerTestBase {
+contract ConsensusLayerDepositManagerV1KeeperTest is OperatorAllocationTestBase {
     ConsensusLayerDepositManagerV1 internal depositManager;
     IDepositContract internal depositContract;
 
