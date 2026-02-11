@@ -18,10 +18,12 @@ const func: DeployFunction = async function ({ deployments, getNamedAccounts, et
     proxy: {
       owner: proxyAdministrator,
       proxyContract: "TUPProxy",
-      implementationName: "ProtocolMetricsV1",
+      implementationName: "ProtocolMetricsV1_Implementation",
       execute: {
-        methodName: "initProtocolMetricsV1",
-        args: [riverDeployment.address],
+        init: {
+          methodName: "initProtocolMetricsV1",
+          args: [riverDeployment.address],
+        },
       },
     },
   });
@@ -32,7 +34,7 @@ const func: DeployFunction = async function ({ deployments, getNamedAccounts, et
 
 func.skip = async function ({ deployments }: HardhatRuntimeEnvironment): Promise<boolean> {
   logStep(__filename);
-  const shouldSkip = await isDeployed("RateProvider", deployments, __filename);
+  const shouldSkip = await isDeployed("ProtocolMetrics", deployments, __filename);
   if (shouldSkip) {
     console.log("Skipped");
     logStepEnd(__filename);

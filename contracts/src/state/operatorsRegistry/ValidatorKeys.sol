@@ -1,5 +1,5 @@
 //SPDX-License-Identifier: BUSL-1.1
-pragma solidity 0.8.20;
+pragma solidity 0.8.33;
 
 import "../../libraries/LibBytes.sol";
 
@@ -91,14 +91,10 @@ library ValidatorKeys {
         assembly {
             r.slot := slot
         }
-        uint256 idx;
-        for (; idx < _amount;) {
+        for (uint256 idx = 0; idx < _amount; ++idx) {
             bytes memory rawCredentials = r.value[_operatorIndex][idx + _startIdx];
             publicKeys[idx] = LibBytes.slice(rawCredentials, 0, PUBLIC_KEY_LENGTH);
             signatures[idx] = LibBytes.slice(rawCredentials, PUBLIC_KEY_LENGTH, SIGNATURE_LENGTH);
-            unchecked {
-                ++idx;
-            }
         }
     }
 

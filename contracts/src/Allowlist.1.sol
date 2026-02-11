@@ -1,5 +1,5 @@
 //SPDX-License-Identifier: BUSL-1.1
-pragma solidity 0.8.20;
+pragma solidity 0.8.33;
 
 import "./interfaces/IAllowlist.1.sol";
 import "./interfaces/IProtocolVersion.sol";
@@ -105,7 +105,7 @@ contract AllowlistV1 is IAllowlistV1, Initializable, Administrable, IProtocolVer
             revert MismatchedArrayLengths();
         }
 
-        for (uint256 i = 0; i < accountsLength;) {
+        for (uint256 i = 0; i < accountsLength; ++i) {
             LibSanitize._notZeroAddress(_accounts[i]);
 
             // Check if account is already denied
@@ -119,9 +119,6 @@ contract AllowlistV1 is IAllowlistV1, Initializable, Administrable, IProtocolVer
             }
 
             Allowlist.set(_accounts[i], _permissions[i]);
-            unchecked {
-                ++i;
-            }
         }
 
         emit SetAllowlistPermissions(_accounts, _permissions);
@@ -143,7 +140,7 @@ contract AllowlistV1 is IAllowlistV1, Initializable, Administrable, IProtocolVer
             revert MismatchedArrayLengths();
         }
 
-        for (uint256 i = 0; i < accountsLength;) {
+        for (uint256 i = 0; i < accountsLength; ++i) {
             LibSanitize._notZeroAddress(_accounts[i]);
             if (_permissions[i] & LibAllowlistMasks.DENY_MASK == LibAllowlistMasks.DENY_MASK) {
                 // Apply deny mask
@@ -151,9 +148,6 @@ contract AllowlistV1 is IAllowlistV1, Initializable, Administrable, IProtocolVer
             } else {
                 // Remove deny mask
                 Allowlist.set(_accounts[i], 0);
-            }
-            unchecked {
-                ++i;
             }
         }
 

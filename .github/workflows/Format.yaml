@@ -2,16 +2,24 @@ name: Format Checks
 
 on:
   push:
+    branches:
+      - main
+    paths:
+      - "contracts/**"
+      - ".github/**"
+  pull_request:
+    branches:
+      - main
     paths:
       - "contracts/**"
       - ".github/**"
 
 jobs:
   run-format:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           submodules: recursive
 

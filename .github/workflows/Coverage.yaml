@@ -2,6 +2,16 @@ name: Coverage
 
 on:
   push:
+    branches:
+      - main
+    paths:
+      - "contracts/**"
+      - "lib/**"
+      - ".github/**"
+      - "codecov.yml"
+  pull_request:
+    branches:
+      - main
     paths:
       - "contracts/**"
       - "lib/**"
@@ -10,17 +20,17 @@ on:
 
 jobs:
   run-coverage:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           submodules: recursive
 
       - name: Install foundry
         uses: onbjerg/foundry-toolchain@v1
         with:
-          version: nightly-de33b6af53005037b463318d2628b5cfcaf39916
+          version: nightly
 
       - name: Run coverage
         run: forge coverage --report lcov && mv lcov.info lcov.txt

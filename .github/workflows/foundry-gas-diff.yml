@@ -2,6 +2,15 @@ name: Report gas diff
 
 on:
   push:
+    branches:
+      - main
+    paths:
+      - "contracts/**"
+      - "lib/**"
+      - ".github/**"
+  pull_request:
+    branches:
+      - main
     paths:
       - "contracts/**"
       - "lib/**"
@@ -9,16 +18,16 @@ on:
 
 jobs:
   compare_gas_reports:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           submodules: recursive
 
       - name: Install Foundry
         uses: onbjerg/foundry-toolchain@v1
         with:
-          version: nightly-de33b6af53005037b463318d2628b5cfcaf39916
+          version: nightly
 
       # Add any step generating a gas report to a temporary file named gasreport.ansi. For example:
       - name: Run tests
