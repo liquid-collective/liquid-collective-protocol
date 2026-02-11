@@ -3927,6 +3927,111 @@ contract OperatorsRegistryV1TestDistribution is Test {
         // Should return 5 total keys (2 + 3)
         assertEq(publicKeys.length, 5, "Expected 5 public keys total");
         assertEq(signatures.length, 5, "Expected 5 signatures total");
+
+        // Combined output must follow allocation order: first 2 from operator 0, then 3 from operator 1
+        uint256 keyLen = 48;
+        uint256 sigLen = 96;
+        uint256 validatorSize = keyLen + sigLen;
+
+        for (uint256 i = 0; i < 2; ++i) {
+            uint256 offset = i * validatorSize;
+            assertEq(
+                keccak256(publicKeys[i]),
+                keccak256(LibBytes.slice(rawKeys0, offset, keyLen)),
+                "Public key at index must match operator 0 key order"
+            );
+            assertEq(
+                keccak256(signatures[i]),
+                keccak256(LibBytes.slice(rawKeys0, offset + keyLen, sigLen)),
+                "Signature at index must match operator 0 key order"
+            );
+        }
+        for (uint256 i = 0; i < 3; ++i) {
+            uint256 offset = i * validatorSize;
+            assertEq(
+                keccak256(publicKeys[2 + i]),
+                keccak256(LibBytes.slice(rawKeys1, offset, keyLen)),
+                "Public key at index must match operator 1 key order"
+            );
+            assertEq(
+                keccak256(signatures[2 + i]),
+                keccak256(LibBytes.slice(rawKeys1, offset + keyLen, sigLen)),
+                "Signature at index must match operator 1 key order"
+            );
+        }
+    }
+
+    /// @notice Tests that combined validator keys from multi-operator allocation match allocations[] order
+    /// (first all keys for allocations[0].operatorIndex, then all for allocations[1], etc.)
+    function testMultiOperatorCombinedKeysOrderMatchesAllocationsArray() public {
+        bytes memory rawKeys0 = genBytes((48 + 96) * 5);
+        bytes memory rawKeys1 = genBytes((48 + 96) * 5);
+        bytes memory rawKeys2 = genBytes((48 + 96) * 5);
+
+        vm.startPrank(admin);
+        operatorsRegistry.addValidators(0, 5, rawKeys0);
+        operatorsRegistry.addValidators(1, 5, rawKeys1);
+        operatorsRegistry.addValidators(2, 5, rawKeys2);
+
+        uint256[] memory operators = new uint256[](3);
+        operators[0] = 0;
+        operators[1] = 1;
+        operators[2] = 2;
+        uint32[] memory limits = new uint32[](3);
+        limits[0] = 5;
+        limits[1] = 5;
+        limits[2] = 5;
+        operatorsRegistry.setOperatorLimits(operators, limits, block.number);
+        vm.stopPrank();
+
+        // Allocations: 1 from op0, 2 from op1, 2 from op2 (order must be preserved in combined output)
+        IOperatorsRegistryV1.OperatorAllocation[] memory allocation = new IOperatorsRegistryV1.OperatorAllocation[](3);
+        allocation[0] = IOperatorsRegistryV1.OperatorAllocation({operatorIndex: 0, validatorCount: 1});
+        allocation[1] = IOperatorsRegistryV1.OperatorAllocation({operatorIndex: 1, validatorCount: 2});
+        allocation[2] = IOperatorsRegistryV1.OperatorAllocation({operatorIndex: 2, validatorCount: 2});
+
+        (bytes[] memory publicKeys, bytes[] memory signatures) =
+            operatorsRegistry.getNextValidatorsToDepositFromActiveOperators(allocation);
+
+        assertEq(publicKeys.length, 5, "Expected 5 keys total (1+2+2)");
+        assertEq(signatures.length, 5, "Expected 5 signatures total");
+
+        assertEq(
+            keccak256(publicKeys[0]),
+            keccak256(LibBytes.slice(rawKeys0, 0, 48)),
+            "Key 0 must be first key of operator 0"
+        );
+        assertEq(
+            keccak256(signatures[0]),
+            keccak256(LibBytes.slice(rawKeys0, 48, 96)),
+            "Sig 0 must be first sig of operator 0"
+        );
+
+        assertEq(
+            keccak256(publicKeys[1]),
+            keccak256(LibBytes.slice(rawKeys1, 0, 48)),
+            "Key 1 must be first key of operator 1"
+        );
+        assertEq(keccak256(signatures[1]), keccak256(LibBytes.slice(rawKeys1, 48, 96)), "Sig 1 must match operator 1");
+        assertEq(
+            keccak256(publicKeys[2]),
+            keccak256(LibBytes.slice(rawKeys1, 144, 48)),
+            "Key 2 must be second key of operator 1"
+        );
+        assertEq(keccak256(signatures[2]), keccak256(LibBytes.slice(rawKeys1, 192, 96)), "Sig 2 must match operator 1");
+
+        assertEq(
+            keccak256(publicKeys[3]),
+            keccak256(LibBytes.slice(rawKeys2, 0, 48)),
+            "Key 3 must be first key of operator 2"
+        );
+        assertEq(keccak256(signatures[3]), keccak256(LibBytes.slice(rawKeys2, 48, 96)), "Sig 3 must match operator 2");
+        assertEq(
+            keccak256(publicKeys[4]),
+            keccak256(LibBytes.slice(rawKeys2, 144, 48)),
+            "Key 4 must be second key of operator 2"
+        );
+        assertEq(keccak256(signatures[4]), keccak256(LibBytes.slice(rawKeys2, 192, 96)), "Sig 4 must match operator 2");
     }
 
     /// @notice Tests that sequential allocations to the same operator work correctly
