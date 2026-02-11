@@ -3321,7 +3321,9 @@ contract OperatorsRegistryV1TestDistribution is Test {
         IOperatorsRegistryV1.OperatorAllocation[] memory allocation = new IOperatorsRegistryV1.OperatorAllocation[](1);
         allocation[0] = IOperatorsRegistryV1.OperatorAllocation({operatorIndex: 0, validatorCount: 11});
 
-        vm.expectRevert(abi.encodeWithSignature("OperatorHasInsufficientFundableKeys(uint256,uint256,uint256)", 0, 11, 10));
+        vm.expectRevert(
+            abi.encodeWithSignature("OperatorHasInsufficientFundableKeys(uint256,uint256,uint256)", 0, 11, 10)
+        );
         operatorsRegistry.getNextValidatorsToDepositFromActiveOperators(allocation);
     }
 
@@ -3365,7 +3367,9 @@ contract OperatorsRegistryV1TestDistribution is Test {
         uint256[] memory allocOperators = new uint256[](1);
         allocOperators[0] = 0;
 
-        vm.expectRevert(abi.encodeWithSignature("OperatorHasInsufficientFundableKeys(uint256,uint256,uint256)", 0, 11, 10));
+        vm.expectRevert(
+            abi.encodeWithSignature("OperatorHasInsufficientFundableKeys(uint256,uint256,uint256)", 0, 11, 10)
+        );
         OperatorsRegistryInitializableV1(address(operatorsRegistry))
             .debugPickNextValidatorsToDepositFromActiveOperators(_createAllocation(allocOperators, allocCounts));
     }
@@ -3823,7 +3827,9 @@ contract OperatorsRegistryV1TestDistribution is Test {
             new IOperatorsRegistryV1.OperatorAllocation[](1);
         secondAllocation[0] = IOperatorsRegistryV1.OperatorAllocation({operatorIndex: 0, validatorCount: 5});
 
-        vm.expectRevert(abi.encodeWithSignature("OperatorHasInsufficientFundableKeys(uint256,uint256,uint256)", 0, 5, 3));
+        vm.expectRevert(
+            abi.encodeWithSignature("OperatorHasInsufficientFundableKeys(uint256,uint256,uint256)", 0, 5, 3)
+        );
         operatorsRegistry.getNextValidatorsToDepositFromActiveOperators(secondAllocation);
     }
 
@@ -3987,7 +3993,9 @@ contract OperatorsRegistryV1TestDistribution is Test {
         IOperatorsRegistryV1.OperatorAllocation[] memory allocation2 = new IOperatorsRegistryV1.OperatorAllocation[](1);
         allocation2[0] = IOperatorsRegistryV1.OperatorAllocation({operatorIndex: 0, validatorCount: 1});
 
-        vm.expectRevert(abi.encodeWithSignature("OperatorHasInsufficientFundableKeys(uint256,uint256,uint256)", 0, 1, 0));
+        vm.expectRevert(
+            abi.encodeWithSignature("OperatorHasInsufficientFundableKeys(uint256,uint256,uint256)", 0, 1, 0)
+        );
         operatorsRegistry.getNextValidatorsToDepositFromActiveOperators(allocation2);
     }
 
@@ -4090,7 +4098,9 @@ contract OperatorsRegistryV1TestDistribution is Test {
         allocation[0] = IOperatorsRegistryV1.OperatorAllocation({operatorIndex: 0, validatorCount: 2});
         allocation[1] = IOperatorsRegistryV1.OperatorAllocation({operatorIndex: 1, validatorCount: 5});
 
-        vm.expectRevert(abi.encodeWithSignature("OperatorHasInsufficientFundableKeys(uint256,uint256,uint256)", 1, 5, 3));
+        vm.expectRevert(
+            abi.encodeWithSignature("OperatorHasInsufficientFundableKeys(uint256,uint256,uint256)", 1, 5, 3)
+        );
         operatorsRegistry.getNextValidatorsToDepositFromActiveOperators(allocation);
     }
 
