@@ -485,11 +485,10 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
             if (count > (operator.funded - operator.requestedExits)) {
                 // Operator has insufficient funded validators
                 revert ExitsRequestedExceedsFundedCount(operatorIndex, count, operator.funded);
-            } else {
-                // Operator has sufficient funded validators
-                operator.requestedExits += uint32(count);
-                emit RequestedValidatorExits(operatorIndex, operator.requestedExits);
             }
+            // Operator has sufficient funded validators
+            operator.requestedExits += uint32(count);
+            emit RequestedValidatorExits(operatorIndex, operator.requestedExits);
         }
 
         // Check that the exits requested do not exceed the current validator exits demand
