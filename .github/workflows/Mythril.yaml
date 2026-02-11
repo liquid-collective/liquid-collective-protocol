@@ -1,13 +1,21 @@
 name: Mythril
 on:
   push:
+    branches:
+      - main
+    paths:
+      - "contracts/**"
+      - ".github/**"
+  pull_request:
+    branches:
+      - main
     paths:
       - "contracts/**"
       - ".github/**"
 
 jobs:
   run-mythril:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     strategy:
       matrix:
         contract:
@@ -22,7 +30,7 @@ jobs:
           - { file: CoverageFund.1.sol, name: CoverageFundV1 }
           - { file: TLC.1.sol, name: TLCV1 }
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           submodules: recursive
 

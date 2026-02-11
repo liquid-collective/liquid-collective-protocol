@@ -1,5 +1,5 @@
 //SPDX-License-Identifier: BUSL-1.1
-pragma solidity 0.8.20;
+pragma solidity 0.8.33;
 
 import "./interfaces/IOperatorRegistry.1.sol";
 import "./interfaces/IRiver.1.sol";
@@ -35,7 +35,7 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
     function _migrateOperators_V1_1() internal {
         uint256 opCount = OperatorsV1.getCount();
 
-        for (uint256 idx = 0; idx < opCount;) {
+        for (uint256 idx = 0; idx < opCount; ++idx) {
             OperatorsV1.Operator memory oldOperatorValue = OperatorsV1.get(idx);
 
             OperatorsV2.push(
@@ -50,10 +50,6 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
                     operator: oldOperatorValue.operator
                 })
             );
-
-            unchecked {
-                ++idx;
-            }
         }
     }
 
@@ -316,7 +312,7 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
         if (_operatorIndexesLength == 0) {
             revert InvalidEmptyArray();
         }
-        for (uint256 idx = 0; idx < _operatorIndexesLength;) {
+        for (uint256 idx = 0; idx < _operatorIndexesLength; ++idx) {
             uint256 operatorIndex = _operatorIndexes[idx];
             uint32 newLimit = _newLimits[idx];
 
@@ -330,9 +326,6 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
             uint32 currentLimit = operator.limit;
             if (newLimit == currentLimit) {
                 emit OperatorLimitUnchanged(operatorIndex, newLimit);
-                unchecked {
-                    ++idx;
-                }
                 continue;
             }
 
@@ -342,9 +335,6 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
                 emit OperatorEditsAfterSnapshot(
                     operatorIndex, currentLimit, newLimit, operator.latestKeysEditBlockNumber, _snapshotBlock
                 );
-                unchecked {
-                    ++idx;
-                }
                 continue;
             }
 
@@ -361,10 +351,6 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
 
             operator.limit = newLimit;
             emit SetOperatorLimit(operatorIndex, newLimit);
-
-            unchecked {
-                ++idx;
-            }
         }
     }
 
@@ -386,16 +372,13 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
 
         OperatorsV2.Operator storage operator = OperatorsV2.get(_index);
         uint256 totalKeys = uint256(operator.keys);
-        for (uint256 idx = 0; idx < _keyCount;) {
+        for (uint256 idx = 0; idx < _keyCount; ++idx) {
             bytes memory publicKeyAndSignature = LibBytes.slice(
                 _publicKeysAndSignatures,
                 idx * (ValidatorKeys.PUBLIC_KEY_LENGTH + ValidatorKeys.SIGNATURE_LENGTH),
                 ValidatorKeys.PUBLIC_KEY_LENGTH + ValidatorKeys.SIGNATURE_LENGTH
             );
             ValidatorKeys.set(_index, totalKeys + idx, publicKeyAndSignature);
-            unchecked {
-                ++idx;
-            }
         }
         OperatorsV2.setKeys(_index, uint32(totalKeys) + _keyCount);
 
@@ -426,14 +409,12 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
         bool limitEqualsKeyCount = totalKeys == operator.limit;
         OperatorsV2.setKeys(_index, totalKeys - uint32(indexesLength));
 
-        uint256 idx;
-        for (; idx < indexesLength;) {
+        for (uint256 idx; idx < indexesLength;) {
             uint256 keyIndex = _indexes[idx];
 
             if (idx > 0 && !(keyIndex < _indexes[idx - 1])) {
                 revert InvalidUnsortedIndexes();
             }
-
             unchecked {
                 ++idx;
             }
@@ -606,7 +587,7 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
 
         uint256 idx = 1;
         uint256 unsollicitedExitsSum;
-        for (; idx < vars.currentStoppedValidatorCountsLength;) {
+        for (; idx < vars.currentStoppedValidatorCountsLength; ++idx) {
             // if the previous array was long enough, we check that the values are not decreasing
             if (_stoppedValidatorCounts[idx] < vars.currentStoppedValidatorCounts[idx]) {
                 revert StoppedValidatorCountsDecreased();
@@ -631,13 +612,10 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
 
             // we recompute the total to ensure it's not an invalid sum
             vars.count += _stoppedValidatorCounts[idx];
-            unchecked {
-                ++idx;
-            }
         }
 
         // In case of a new operator we do not check against the current stopped validator count (would revert OOB)
-        for (; idx < vars.stoppedValidatorCountsLength;) {
+        for (; idx < vars.stoppedValidatorCountsLength; ++idx) {
             // we check that the count of stopped validators is not above the funded validator count of an operator
             if (_stoppedValidatorCounts[idx] > operators[idx - 1].funded) {
                 revert StoppedValidatorCountAboveFundedCount(
@@ -657,9 +635,6 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
 
             // we recompute the total to ensure it's not an invalid sum
             vars.count += _stoppedValidatorCounts[idx];
-            unchecked {
-                ++idx;
-            }
         }
 
         vars.totalRequestedExits += unsollicitedExitsSum;
@@ -693,17 +668,11 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
     /// @return The result of the concatenation of _arr1 + _arr2
     function _concatenateByteArrays(bytes[] memory _arr1, bytes[] memory _arr2) internal pure returns (bytes[] memory) {
         bytes[] memory res = new bytes[](_arr1.length + _arr2.length);
-        for (uint256 idx = 0; idx < _arr1.length;) {
+        for (uint256 idx = 0; idx < _arr1.length; ++idx) {
             res[idx] = _arr1[idx];
-            unchecked {
-                ++idx;
-            }
         }
-        for (uint256 idx = 0; idx < _arr2.length;) {
+        for (uint256 idx = 0; idx < _arr2.length; ++idx) {
             res[idx + _arr1.length] = _arr2[idx];
-            unchecked {
-                ++idx;
-            }
         }
         return res;
     }

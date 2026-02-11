@@ -2,6 +2,21 @@ name: Deploy Scripts Checks
 
 on:
   push:
+    branches:
+      - main
+    paths:
+      - ".github/**"
+      - "contracts/**"
+      - "deploy/**"
+      - "lib/**"
+      - "scripts/**"
+      - "ts-utils/**"
+      - "package.json"
+      - "yarn.lock"
+      - "hardhat.config.ts"
+  pull_request:
+    branches:
+      - main
     paths:
       - ".github/**"
       - "contracts/**"
@@ -15,10 +30,10 @@ on:
 
 jobs:
   run-deploy:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           submodules: recursive
           persist-credentials: false
@@ -31,7 +46,7 @@ jobs:
       - name: install foundry
         uses: foundry-rs/foundry-toolchain@v1
         with:
-          version: nightly-de33b6af53005037b463318d2628b5cfcaf39916
+          version: nightly
         
       - name: install nodejs
         uses: actions/setup-node@v3
