@@ -2366,7 +2366,9 @@ contract OperatorsRegistryV1TestDistribution is Test {
         limits[0] = 60;
 
         vm.prank(keeper);
-        vm.expectRevert(abi.encodeWithSignature("ExitsRequestedExceedsFundedCount(uint256,uint256,uint256)", 0, 60, 50));
+        vm.expectRevert(
+            abi.encodeWithSignature("ExitsRequestedExceedAvailableFundedCount(uint256,uint256,uint256)", 0, 60, 50)
+        );
         operatorsRegistry.requestValidatorExits(_createAllocation(operators, limits));
     }
 
