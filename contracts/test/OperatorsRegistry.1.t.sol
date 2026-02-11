@@ -3697,6 +3697,98 @@ contract OperatorsRegistryV1TestDistribution is Test {
         assertEq(signatures.length, 0, "Expected empty signatures array");
     }
 
+    /// @notice Tests OperatorIgnoredExitRequests when getNextValidatorsToDepositFromActiveOperators is called
+    /// for an operator that has requested exits but has not yet had enough validators reported as stopped
+    function testGetNextValidatorsToDepositRevertsOperatorIgnoredExitRequests() public {
+        bytes memory rawKeys = genBytes((48 + 96) * 10);
+
+        vm.startPrank(admin);
+        operatorsRegistry.addValidators(0, 10, rawKeys);
+        vm.stopPrank();
+
+        uint256[] memory operators = new uint256[](1);
+        operators[0] = 0;
+        uint32[] memory limits = new uint32[](1);
+        limits[0] = 10;
+        vm.prank(admin);
+        operatorsRegistry.setOperatorLimits(operators, limits, block.number);
+
+        // Set requestedExits without reporting stopped counts (stopped count stays 0)
+        OperatorsRegistryInitializableV1(address(operatorsRegistry)).sudoExitRequests(0, 3);
+
+        IOperatorsRegistryV1.OperatorAllocation[] memory allocation = new IOperatorsRegistryV1.OperatorAllocation[](1);
+        allocation[0] = IOperatorsRegistryV1.OperatorAllocation({operatorIndex: 0, validatorCount: 1});
+
+        vm.expectRevert(abi.encodeWithSignature("OperatorIgnoredExitRequests(uint256)", 0));
+        operatorsRegistry.getNextValidatorsToDepositFromActiveOperators(allocation);
+    }
+
+    /// @notice Tests OperatorIgnoredExitRequests when pickNextValidatorsToDeposit is called
+    /// for an operator that has requested exits but has not yet had enough validators reported as stopped
+    function testPickNextValidatorsToDepositRevertsOperatorIgnoredExitRequests() public {
+        bytes memory rawKeys = genBytes((48 + 96) * 10);
+
+        vm.startPrank(admin);
+        operatorsRegistry.addValidators(0, 10, rawKeys);
+        vm.stopPrank();
+
+        uint256[] memory operators = new uint256[](1);
+        operators[0] = 0;
+        uint32[] memory limits = new uint32[](1);
+        limits[0] = 10;
+        vm.prank(admin);
+        operatorsRegistry.setOperatorLimits(operators, limits, block.number);
+
+        // Set requestedExits without reporting stopped counts (stopped count stays 0)
+        OperatorsRegistryInitializableV1(address(operatorsRegistry)).sudoExitRequests(0, 3);
+
+        IOperatorsRegistryV1.OperatorAllocation[] memory allocation = new IOperatorsRegistryV1.OperatorAllocation[](1);
+        allocation[0] = IOperatorsRegistryV1.OperatorAllocation({operatorIndex: 0, validatorCount: 1});
+
+        vm.prank(river);
+        vm.expectRevert(abi.encodeWithSignature("OperatorIgnoredExitRequests(uint256)", 0));
+        operatorsRegistry.pickNextValidatorsToDeposit(allocation);
+    }
+
+    /// @notice Tests OperatorIgnoredExitRequests when stopped validator count is reported but below requested exits
+    function testOperatorIgnoredExitRequestsWhenStoppedCountBelowRequested() public {
+        bytes memory rawKeys = genBytes((48 + 96) * 10);
+
+        vm.startPrank(admin);
+        operatorsRegistry.addValidators(0, 10, rawKeys);
+        vm.stopPrank();
+
+        uint256[] memory operators = new uint256[](1);
+        operators[0] = 0;
+        uint32[] memory limits = new uint32[](1);
+        limits[0] = 10;
+        vm.prank(admin);
+        operatorsRegistry.setOperatorLimits(operators, limits, block.number);
+
+        // Fund 5 validators so we can later report up to 5 stopped
+        uint256[] memory fundOps = new uint256[](1);
+        fundOps[0] = 0;
+        uint32[] memory fundCounts = new uint32[](1);
+        fundCounts[0] = 5;
+        vm.prank(river);
+        operatorsRegistry.pickNextValidatorsToDeposit(_createAllocation(fundOps, fundCounts));
+
+        OperatorsRegistryInitializableV1(address(operatorsRegistry)).sudoExitRequests(0, 5);
+
+        // Report only 2 stopped for operator 0 (requested was 5)
+        uint32[] memory stoppedValidatorCounts = new uint32[](2);
+        stoppedValidatorCounts[0] = 2;
+        stoppedValidatorCounts[1] = 2;
+        vm.prank(river);
+        operatorsRegistry.reportStoppedValidatorCounts(stoppedValidatorCounts, 5);
+
+        IOperatorsRegistryV1.OperatorAllocation[] memory allocation = new IOperatorsRegistryV1.OperatorAllocation[](1);
+        allocation[0] = IOperatorsRegistryV1.OperatorAllocation({operatorIndex: 0, validatorCount: 1});
+
+        vm.expectRevert(abi.encodeWithSignature("OperatorIgnoredExitRequests(uint256)", 0));
+        operatorsRegistry.getNextValidatorsToDepositFromActiveOperators(allocation);
+    }
+
     // ============ NEW TESTS FOR BYOV COVERAGE ============
 
     /// @notice Tests OperatorHasInsufficientFundableKeys when some keys are already funded
