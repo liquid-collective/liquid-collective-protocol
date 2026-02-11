@@ -4040,6 +4040,53 @@ contract OperatorsRegistryV1TestDistribution is Test {
         assertEq(op.funded, 5, "pickNextValidatorsToDeposit should modify funded count");
     }
 
+    /// @notice Tests that the funded count updated in pickNextValidatorsToDeposit is a storage update:
+    ///         it persists beyond the transaction and the next read (or next pick) sees the higher value.
+    function testFundedCountPersistsInStorageAndIsUsedOnNextCall() public {
+        bytes memory rawKeys = genBytes((48 + 96) * 10);
+
+        vm.startPrank(admin);
+        operatorsRegistry.addValidators(0, 10, rawKeys);
+
+        uint256[] memory operators = new uint256[](1);
+        operators[0] = 0;
+        uint32[] memory limits = new uint32[](1);
+        limits[0] = 10;
+        operatorsRegistry.setOperatorLimits(operators, limits, block.number);
+        vm.stopPrank();
+
+        // Before any pick: funded is 0
+        uint32 fundedBefore = operatorsRegistry.getOperator(0).funded;
+        assertEq(fundedBefore, 0, "funded should be 0 before any pick");
+
+        // First pick: fund 3 validators (updates storage)
+        IOperatorsRegistryV1.OperatorAllocation[] memory allocation1 = new IOperatorsRegistryV1.OperatorAllocation[](1);
+        allocation1[0] = IOperatorsRegistryV1.OperatorAllocation({operatorIndex: 0, validatorCount: 3});
+
+        vm.prank(river);
+        operatorsRegistry.pickNextValidatorsToDeposit(allocation1);
+
+        // Assert funded was updated in storage (first read after the transaction that wrote it)
+        uint32 fundedAfterFirst = operatorsRegistry.getOperator(0).funded;
+        assertEq(fundedAfterFirst, 3, "funded should be 3 in storage after first pick");
+
+        // Second read: value must still be 3 (proves it is storage, not transient)
+        uint32 fundedOnSecondRead = operatorsRegistry.getOperator(0).funded;
+        assertEq(fundedOnSecondRead, 3, "funded must persist when read again");
+
+        // Second pick: fund 2 more. If funded were only in memory, this would start from 0 and we'd get 2.
+        // Because it is storage, we get 3 + 2 = 5.
+        IOperatorsRegistryV1.OperatorAllocation[] memory allocation2 = new IOperatorsRegistryV1.OperatorAllocation[](1);
+        allocation2[0] = IOperatorsRegistryV1.OperatorAllocation({operatorIndex: 0, validatorCount: 2});
+
+        vm.prank(river);
+        operatorsRegistry.pickNextValidatorsToDeposit(allocation2);
+
+        // Next use of funded must see the cumulative value (3 + 2 = 5)
+        uint32 fundedAfterSecond = operatorsRegistry.getOperator(0).funded;
+        assertEq(fundedAfterSecond, 5, "funded must be cumulative (5) when used on next call");
+    }
+
     /// @notice Tests allocation with multiple operators where one has partially funded keys
     function testMultiOperatorWithPartialFunding() public {
         bytes memory rawKeys = genBytes((48 + 96) * 10);
