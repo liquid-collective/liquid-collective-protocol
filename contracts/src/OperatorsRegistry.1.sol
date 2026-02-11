@@ -541,7 +541,7 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
         }
         uint256 availableKeys = operator.limit - operator.funded;
         if (_validatorCount > availableKeys) {
-            revert OperatorInsufficientFundableKeys(_operatorIndex, _validatorCount, availableKeys);
+            revert OperatorHasInsufficientFundableKeys(_operatorIndex, _validatorCount, availableKeys);
         }
         return operator.funded;
     }

@@ -174,7 +174,7 @@ interface IOperatorsRegistryV1 {
     /// @param operatorIndex The operator index
     /// @param requested The requested count
     /// @param available The available count
-    error OperatorInsufficientFundableKeys(uint256 operatorIndex, uint256 requested, uint256 available);
+    error OperatorHasInsufficientFundableKeys(uint256 operatorIndex, uint256 requested, uint256 available);
 
     /// @notice Thrown when an allocation with zero validator count is provided
     error AllocationWithZeroValidatorCount();

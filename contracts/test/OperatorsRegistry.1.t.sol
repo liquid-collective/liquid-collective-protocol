@@ -635,7 +635,7 @@ contract OperatorsRegistryV1Tests is OperatorsRegistryV1TestBase, BytesGenerator
         vm.startPrank(river);
         // Request 10 but limit is 5, so should revert with InvalidOperatorAllocation
         vm.expectRevert(
-            abi.encodeWithSignature("OperatorInsufficientFundableKeys(uint256,uint256,uint256)", index, 10, 5)
+            abi.encodeWithSignature("OperatorHasInsufficientFundableKeys(uint256,uint256,uint256)", index, 10, 5)
         );
         operatorsRegistry.pickNextValidatorsToDeposit(_createAllocation(index, 10));
         vm.stopPrank();
@@ -3321,7 +3321,7 @@ contract OperatorsRegistryV1TestDistribution is Test {
         IOperatorsRegistryV1.OperatorAllocation[] memory allocation = new IOperatorsRegistryV1.OperatorAllocation[](1);
         allocation[0] = IOperatorsRegistryV1.OperatorAllocation({operatorIndex: 0, validatorCount: 11});
 
-        vm.expectRevert(abi.encodeWithSignature("OperatorInsufficientFundableKeys(uint256,uint256,uint256)", 0, 11, 10));
+        vm.expectRevert(abi.encodeWithSignature("OperatorHasInsufficientFundableKeys(uint256,uint256,uint256)", 0, 11, 10));
         operatorsRegistry.getNextValidatorsToDepositFromActiveOperators(allocation);
     }
 
@@ -3365,7 +3365,7 @@ contract OperatorsRegistryV1TestDistribution is Test {
         uint256[] memory allocOperators = new uint256[](1);
         allocOperators[0] = 0;
 
-        vm.expectRevert(abi.encodeWithSignature("OperatorInsufficientFundableKeys(uint256,uint256,uint256)", 0, 11, 10));
+        vm.expectRevert(abi.encodeWithSignature("OperatorHasInsufficientFundableKeys(uint256,uint256,uint256)", 0, 11, 10));
         OperatorsRegistryInitializableV1(address(operatorsRegistry))
             .debugPickNextValidatorsToDepositFromActiveOperators(_createAllocation(allocOperators, allocCounts));
     }
@@ -3699,9 +3699,9 @@ contract OperatorsRegistryV1TestDistribution is Test {
 
     // ============ NEW TESTS FOR BYOV COVERAGE ============
 
-    /// @notice Tests OperatorInsufficientFundableKeys when some keys are already funded
+    /// @notice Tests OperatorHasInsufficientFundableKeys when some keys are already funded
     /// This covers the case where availableKeys = limit - funded is less than requested
-    function testOperatorInsufficientFundableKeysWithPartialFunding() public {
+    function testOperatorHasInsufficientFundableKeysWithPartialFunding() public {
         bytes memory rawKeys = genBytes((48 + 96) * 10);
 
         vm.startPrank(admin);
@@ -3731,7 +3731,7 @@ contract OperatorsRegistryV1TestDistribution is Test {
             new IOperatorsRegistryV1.OperatorAllocation[](1);
         secondAllocation[0] = IOperatorsRegistryV1.OperatorAllocation({operatorIndex: 0, validatorCount: 5});
 
-        vm.expectRevert(abi.encodeWithSignature("OperatorInsufficientFundableKeys(uint256,uint256,uint256)", 0, 5, 3));
+        vm.expectRevert(abi.encodeWithSignature("OperatorHasInsufficientFundableKeys(uint256,uint256,uint256)", 0, 5, 3));
         operatorsRegistry.getNextValidatorsToDepositFromActiveOperators(secondAllocation);
     }
 
@@ -3895,7 +3895,7 @@ contract OperatorsRegistryV1TestDistribution is Test {
         IOperatorsRegistryV1.OperatorAllocation[] memory allocation2 = new IOperatorsRegistryV1.OperatorAllocation[](1);
         allocation2[0] = IOperatorsRegistryV1.OperatorAllocation({operatorIndex: 0, validatorCount: 1});
 
-        vm.expectRevert(abi.encodeWithSignature("OperatorInsufficientFundableKeys(uint256,uint256,uint256)", 0, 1, 0));
+        vm.expectRevert(abi.encodeWithSignature("OperatorHasInsufficientFundableKeys(uint256,uint256,uint256)", 0, 1, 0));
         operatorsRegistry.getNextValidatorsToDepositFromActiveOperators(allocation2);
     }
 
@@ -3976,7 +3976,7 @@ contract OperatorsRegistryV1TestDistribution is Test {
         assertEq(op1.funded, 5, "Operator 1 should have 5 funded");
     }
 
-    /// @notice Tests that pick reverts with OperatorInsufficientFundableKeys for second operator in multi-allocation
+    /// @notice Tests that pick reverts with OperatorHasInsufficientFundableKeys for second operator in multi-allocation
     function testMultiOperatorSecondOperatorExceedsLimit() public {
         bytes memory rawKeys = genBytes((48 + 96) * 5);
 
@@ -3998,7 +3998,7 @@ contract OperatorsRegistryV1TestDistribution is Test {
         allocation[0] = IOperatorsRegistryV1.OperatorAllocation({operatorIndex: 0, validatorCount: 2});
         allocation[1] = IOperatorsRegistryV1.OperatorAllocation({operatorIndex: 1, validatorCount: 5});
 
-        vm.expectRevert(abi.encodeWithSignature("OperatorInsufficientFundableKeys(uint256,uint256,uint256)", 1, 5, 3));
+        vm.expectRevert(abi.encodeWithSignature("OperatorHasInsufficientFundableKeys(uint256,uint256,uint256)", 1, 5, 3));
         operatorsRegistry.getNextValidatorsToDepositFromActiveOperators(allocation);
     }
 
