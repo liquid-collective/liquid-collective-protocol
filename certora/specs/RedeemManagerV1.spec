@@ -5,7 +5,7 @@
 //use rule method_reachability;
 
 definition ignoredMethod(method f) returns bool =
-    f.selector == sig:initializeRedeemManagerV1_2(address[]).selector;
+    f.selector == sig:initializeRedeemManagerV1_2().selector;
 
 methods {
     function getRedeemRequestDetails(uint32) external returns (RedeemQueueV2.RedeemRequest) envfree;

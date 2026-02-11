@@ -1,5 +1,5 @@
 //SPDX-License-Identifier: BUSL-1.1
-pragma solidity 0.8.20;
+pragma solidity 0.8.33;
 
 import "./interfaces/IAllowlist.1.sol";
 import "./interfaces/IRiver.1.sol";
@@ -75,7 +75,7 @@ contract RedeemManagerV1 is Initializable, IRedeemManagerV1, IProtocolVersion {
         RedeemQueueV2.RedeemRequest[] storage newQueue = RedeemQueueV2.get();
 
         // Migrate from v1 to v2
-        for (uint256 i = 0; i < oldQueueLen;) {
+        for (uint256 i = 0; i < oldQueueLen; ++i) {
             newQueue[i] = RedeemQueueV2.RedeemRequest({
                 amount: oldQueue[i].amount,
                 maxRedeemableEth: oldQueue[i].maxRedeemableEth,
@@ -83,10 +83,6 @@ contract RedeemManagerV1 is Initializable, IRedeemManagerV1, IProtocolVersion {
                 height: oldQueue[i].height,
                 initiator: oldQueue[i].recipient
             });
-
-            unchecked {
-                ++i;
-            }
         }
     }
 
@@ -454,13 +450,9 @@ contract RedeemManagerV1 is Initializable, IRedeemManagerV1, IProtocolVersion {
         ) {
             WithdrawalStack.WithdrawalEvent[] storage withdrawalEvents = WithdrawalStack.get();
 
-            unchecked {
-                ++_params.withdrawalEventId;
-            }
+            ++_params.withdrawalEventId;
             _params.withdrawalEvent = withdrawalEvents[_params.withdrawalEventId];
-            unchecked {
-                --_params.depth;
-            }
+            --_params.depth;
 
             _claimRedeemRequest(_params);
         } else {
@@ -498,7 +490,7 @@ contract RedeemManagerV1 is Initializable, IRedeemManagerV1, IProtocolVersion {
 
         IAllowlistV1 allowList = IAllowlistV1(_castedRiver().getAllowlist());
 
-        for (uint256 idx = 0; idx < redeemRequestIdsLength;) {
+        for (uint256 idx = 0; idx < redeemRequestIdsLength; ++idx) {
             // both ids are loaded into params
             params.redeemRequestId = _redeemRequestIds[idx];
             params.withdrawalEventId = _withdrawalEventIds[idx];
@@ -527,9 +519,6 @@ contract RedeemManagerV1 is Initializable, IRedeemManagerV1, IProtocolVersion {
             if (params.redeemRequest.amount == 0) {
                 if (_skipAlreadyClaimed) {
                     claimStatuses[idx] = CLAIM_SKIPPED;
-                    unchecked {
-                        ++idx;
-                    }
                     continue;
                 }
                 revert RedeemRequestAlreadyClaimed(params.redeemRequestId);
@@ -564,10 +553,6 @@ contract RedeemManagerV1 is Initializable, IRedeemManagerV1, IProtocolVersion {
                 params.lsETHAmount,
                 params.redeemRequest.amount
             );
-
-            unchecked {
-                ++idx;
-            }
         }
     }
 
