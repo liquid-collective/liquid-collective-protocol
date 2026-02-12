@@ -10,9 +10,9 @@ rule exitingValidatorsDecreasesDiscrepancy(env e)
     require isValidState();
     uint index1; uint index2;
     uint discrepancyBefore = getOperatorsSaturationDiscrepancy(index1, index2);
-    uint count;
-    require count <= 1;
-    requestValidatorExits(e, count);
+    IOperatorsRegistryV1.OperatorAllocation[] allocations;
+    require allocations.length <= 1;
+    requestValidatorExits(e, allocations);
     uint discrepancyAfter = getOperatorsSaturationDiscrepancy(index1, index2);
     assert discrepancyBefore > 0 => discrepancyBefore >= discrepancyAfter;
 }
@@ -22,9 +22,9 @@ rule witness4_3ExitingValidatorsDecreasesDiscrepancy(env e)
     require isValidState();
     uint index1; uint index2;
     uint discrepancyBefore = getOperatorsSaturationDiscrepancy(index1, index2);
-    uint count;
-    require count <= 1;
-    requestValidatorExits(e, count);
+    IOperatorsRegistryV1.OperatorAllocation[] allocations;
+    require allocations.length <= 1;
+    requestValidatorExits(e, allocations);
     uint discrepancyAfter = getOperatorsSaturationDiscrepancy(index1, index2);
     satisfy discrepancyBefore == 4 && discrepancyAfter == 3;
 }
@@ -48,7 +48,7 @@ invariant inactiveOperatorsRemainNotFunded(uint opIndex)
     (isValidState() && isOpIndexInBounds(opIndex)) => 
         (!getOperator(opIndex).active => getOperator(opIndex).funded == 0)
     { 
-        preserved requestValidatorExits(IOperatorsRegistryV1.OperatorAllocation[] x) with(env e) { require x <= 2; }
+        preserved requestValidatorExits(IOperatorsRegistryV1.OperatorAllocation[] x) with(env e) { require x.length <= 2; }
         preserved pickNextValidatorsToDeposit(IOperatorsRegistryV1.OperatorAllocation[] x) with(env e) { require x.length <= 1; }  
         preserved removeValidators(uint256 _index, uint256[] _indexes) with(env e) { require _indexes.length <= 1; }  
     }
@@ -67,7 +67,7 @@ invariant inactiveOperatorsRemainNotFunded_LI2(uint opIndex)
         //&& f.selector == sig:requestValidatorExits(IOperatorsRegistryV1.OperatorAllocation[]).selector
         } 
     { 
-        preserved requestValidatorExits(IOperatorsRegistryV1.OperatorAllocation[] x) with(env e) { require x <= 2; }
+        preserved requestValidatorExits(IOperatorsRegistryV1.OperatorAllocation[] x) with(env e) { require x.length <= 2; }
         preserved pickNextValidatorsToDeposit(IOperatorsRegistryV1.OperatorAllocation[] x) with(env e) { require x.length <= 1; }  
         preserved removeValidators(uint256 _index, uint256[] _indexes) with(env e) { require _indexes.length <= 1; }  
     }
@@ -160,14 +160,14 @@ invariant operatorsStatesRemainValid_LI2_cond3_requestValidatorExits(uint opInde
     isValidState() => (operatorStateIsValid_cond3(opIndex))
     filtered { f -> f.selector == sig:requestValidatorExits(IOperatorsRegistryV1.OperatorAllocation[]).selector }
     { 
-        preserved requestValidatorExits(IOperatorsRegistryV1.OperatorAllocation[] x) with(env e) { require x <= 2; }  
+        preserved requestValidatorExits(IOperatorsRegistryV1.OperatorAllocation[] x) with(env e) { require x.length <= 2; }  
     }
 // https://prover.certora.com/output/6893/9b9eaf30d9274d02934641a25351218f/?anonymousKey=27d543677f1c1d051d7a5715ce4e41fd5ffaf412
 invariant operatorsStatesRemainValid_LI2_cond2_requestValidatorExits(uint opIndex) 
     isValidState() => (operatorStateIsValid_cond2(opIndex))
     filtered { f -> f.selector == sig:requestValidatorExits(IOperatorsRegistryV1.OperatorAllocation[]).selector }
     { 
-        preserved requestValidatorExits(IOperatorsRegistryV1.OperatorAllocation[] x) with(env e) { require x <= 2; }  
+        preserved requestValidatorExits(IOperatorsRegistryV1.OperatorAllocation[] x) with(env e) { require x.length <= 2; }  
     }
 
 // https://prover.certora.com/output/6893/87eaf2d5d9ad427781570b215598a7a7/?anonymousKey=7e0aa6df6957986370875945b0c894a2b993b99c

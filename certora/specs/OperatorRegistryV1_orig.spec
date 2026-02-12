@@ -37,7 +37,7 @@ invariant validatorKeysRemainUnique_LI2(
             => (opIndex1 == opIndex2 && valIndex1 == valIndex2))
     filtered { f -> !ignoredMethod(f) && !needsLoopIter4(f) }
     { 
-        preserved requestValidatorExits(IOperatorsRegistryV1.OperatorAllocation[] x) with(env e) { require x <= 2; }
+        preserved requestValidatorExits(IOperatorsRegistryV1.OperatorAllocation[] x) with(env e) { require x.length <= 2; }
         preserved pickNextValidatorsToDeposit(IOperatorsRegistryV1.OperatorAllocation[] x) with(env e) { require x.length <= 2; }  
         preserved removeValidators(uint256 _index, uint256[] _indexes) with(env e) { require _indexes.length <= 2; }  
     }
