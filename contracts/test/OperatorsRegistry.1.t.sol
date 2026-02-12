@@ -1367,16 +1367,16 @@ contract OperatorsRegistryV1Tests is OperatorsRegistryV1TestBase, BytesGenerator
         vm.stopPrank();
 
         assertEq(operatorsRegistry.getOperatorCount(), 3, "count unchanged after deactivation");
-        assertEq(operatorsRegistry.getOperator(0).index, index0, "index 0 still op0");
-        assertEq(operatorsRegistry.getOperator(1).index, index1, "index 1 still op1");
+        assertEq(operatorsRegistry.getOperator(0).operator, addr0, "index 0 still op0");
+        assertEq(operatorsRegistry.getOperator(1).operator, addr1, "index 1 still op1");
         assertFalse(operatorsRegistry.getOperator(1).active, "index 1 is inactive");
-        assertEq(operatorsRegistry.getOperator(2).index, index2, "index 2 still op2");
+        assertEq(operatorsRegistry.getOperator(2).operator, addr2, "index 2 still op2");
 
         vm.prank(admin);
         operatorsRegistry.setOperatorStatus(1, true);
-        assertEq(operatorsRegistry.getOperator(0).index, index0, "index 0 still op0 after reactivation");
-        assertEq(operatorsRegistry.getOperator(1).index, index1, "index 1 is still 1 after reactivation");
-        assertEq(operatorsRegistry.getOperator(2).index, index2, "index 2 still op2 after reactivation");
+        assertEq(operatorsRegistry.getOperator(0).operator, addr0, "index 0 still op0 after reactivation");
+        assertEq(operatorsRegistry.getOperator(1).operator, addr1, "index 1 is still 1 after reactivation");
+        assertEq(operatorsRegistry.getOperator(2).operator, addr2, "index 2 still op2 after reactivation");
     }
 
     /// @dev getOperator(outOfBounds) reverts with OperatorNotFound
@@ -1430,7 +1430,6 @@ contract OperatorsRegistryV1Tests is OperatorsRegistryV1TestBase, BytesGenerator
         assertEq(operatorsRegistry.getOperatorCount(), n, "count equals n");
         for (uint256 i = 0; i < n; ++i) {
             assertEq(operatorsRegistry.getOperator(i).operator, addrs[i], "getOperator(i) is operator added at step i");
-            assertEq(operatorsRegistry.getOperator(i).index, i, "getOperator(i).index is i");
         }
     }
 
