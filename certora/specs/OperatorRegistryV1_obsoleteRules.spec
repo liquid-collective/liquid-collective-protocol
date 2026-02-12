@@ -5,10 +5,11 @@ import "OperatorRegistryV1_base.spec";
 //uses a more complex check for discrepancy that the prover can't handle
 rule startingValidatorsDecreasesDiscrepancyFULL(env e) {
     require isValidState();
+    require getOperatorsCount() > 0;
     uint discrepancyBefore = getOperatorsSaturationDiscrepancy();
-    IOperatorsRegistryV1.OperatorAllocation[] allocations;
-    require allocations.length <= 10;
-    pickNextValidatorsToDeposit(e, allocations);
+    uint count;
+    require count <= 10;
+    pickNextValidatorsToDepositWithCount(e, count);
     uint discrepancyAfter = getOperatorsSaturationDiscrepancy();
     assert discrepancyBefore >= discrepancyAfter;
 }

@@ -4,6 +4,7 @@ pragma solidity 0.8.33;
 
 import "forge-std/Test.sol";
 
+import "./OperatorAllocationTestBase.sol";
 import "../src/libraries/LibBytes.sol";
 import "./utils/UserFactory.sol";
 import "./utils/BytesGenerator.sol";
@@ -108,7 +109,7 @@ contract OperatorsRegistryV1InitializationTests is OperatorsRegistryV1TestBase {
     }
 }
 
-contract OperatorsRegistryV1Tests is OperatorsRegistryV1TestBase, BytesGenerator {
+contract OperatorsRegistryV1Tests is OperatorsRegistryV1TestBase, BytesGenerator, OperatorAllocationTestBase {
     function setUp() public {
         admin = makeAddr("admin");
         keeper = makeAddr("keeper");
@@ -117,30 +118,6 @@ contract OperatorsRegistryV1Tests is OperatorsRegistryV1TestBase, BytesGenerator
         operatorsRegistry = new OperatorsRegistryInitializableV1();
         LibImplementationUnbricker.unbrick(vm, address(operatorsRegistry));
         operatorsRegistry.initOperatorsRegistryV1(admin, river);
-    }
-
-    function _createAllocation(uint256 opIndex, uint256 count)
-        internal
-        pure
-        returns (IOperatorsRegistryV1.OperatorAllocation[] memory)
-    {
-        IOperatorsRegistryV1.OperatorAllocation[] memory allocations = new IOperatorsRegistryV1.OperatorAllocation[](1);
-        allocations[0] = IOperatorsRegistryV1.OperatorAllocation({operatorIndex: opIndex, validatorCount: count});
-        return allocations;
-    }
-
-    function _createMultiAllocation(uint256[] memory opIndexes, uint32[] memory counts)
-        internal
-        pure
-        returns (IOperatorsRegistryV1.OperatorAllocation[] memory)
-    {
-        IOperatorsRegistryV1.OperatorAllocation[] memory allocations =
-            new IOperatorsRegistryV1.OperatorAllocation[](opIndexes.length);
-        for (uint256 i = 0; i < opIndexes.length; ++i) {
-            allocations[i] =
-                IOperatorsRegistryV1.OperatorAllocation({operatorIndex: opIndexes[i], validatorCount: counts[i]});
-        }
-        return allocations;
     }
 
     function testInitializeTwice() public {
@@ -1683,7 +1660,7 @@ contract OperatorsRegistryV1Tests is OperatorsRegistryV1TestBase, BytesGenerator
     }
 }
 
-contract OperatorsRegistryV1TestDistribution is Test {
+contract OperatorsRegistryV1TestDistribution is OperatorAllocationTestBase {
     UserFactory internal uf = new UserFactory();
 
     OperatorsRegistryV1 internal operatorsRegistry;
@@ -1717,28 +1694,6 @@ contract OperatorsRegistryV1TestDistribution is Test {
             }
         }
         return res;
-    }
-
-    function _createAllocation(uint256[] memory opIndexes, uint32[] memory counts)
-        internal
-        pure
-        returns (IOperatorsRegistryV1.OperatorAllocation[] memory)
-    {
-        IOperatorsRegistryV1.OperatorAllocation[] memory allocations =
-            new IOperatorsRegistryV1.OperatorAllocation[](opIndexes.length);
-        for (uint256 i = 0; i < opIndexes.length; ++i) {
-            allocations[i] =
-                IOperatorsRegistryV1.OperatorAllocation({operatorIndex: opIndexes[i], validatorCount: counts[i]});
-        }
-        return allocations;
-    }
-
-    function _createMultiAllocation(uint256[] memory opIndexes, uint32[] memory counts)
-        internal
-        pure
-        returns (IOperatorsRegistryV1.OperatorAllocation[] memory)
-    {
-        return _createAllocation(opIndexes, counts);
     }
 
     function setUp() public {
