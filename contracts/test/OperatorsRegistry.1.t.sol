@@ -1332,6 +1332,108 @@ contract OperatorsRegistryV1Tests is OperatorsRegistryV1TestBase, BytesGenerator
         assert(operatorsRegistry.getOperatorCount() == 1);
     }
 
+    /// @dev Invariant: operator index equals array position; addOperator returns 0, 1, 2, ...
+    function testOperatorIndexEqualsArrayPosition() public {
+        address addr0 = uf._new(0);
+        address addr1 = uf._new(1);
+        address addr2 = uf._new(2);
+        vm.startPrank(admin);
+        uint256 index0 = operatorsRegistry.addOperator("op0", addr0);
+        uint256 index1 = operatorsRegistry.addOperator("op1", addr1);
+        uint256 index2 = operatorsRegistry.addOperator("op2", addr2);
+        vm.stopPrank();
+
+        assertEq(index0, 0, "first add returns 0");
+        assertEq(index1, 1, "second add returns 1");
+        assertEq(index2, 2, "third add returns 2");
+        assertEq(operatorsRegistry.getOperatorCount(), 3, "count is 3");
+
+        assertEq(operatorsRegistry.getOperator(0).operator, addr0, "index 0 is op0");
+        assertEq(operatorsRegistry.getOperator(1).operator, addr1, "index 1 is op1");
+        assertEq(operatorsRegistry.getOperator(2).operator, addr2, "index 2 is op2");
+    }
+
+    /// @dev Invariant: indices and count are stable after deactivation (operators are never removed)
+    function testOperatorIndicesStableAfterDeactivation() public {
+        address addr0 = uf._new(0);
+        address addr1 = uf._new(1);
+        address addr2 = uf._new(2);
+        vm.startPrank(admin);
+        operatorsRegistry.addOperator("op0", addr0);
+        operatorsRegistry.addOperator("op1", addr1);
+        operatorsRegistry.addOperator("op2", addr2);
+        assertEq(operatorsRegistry.getOperatorCount(), 3);
+        operatorsRegistry.setOperatorStatus(1, false);
+        vm.stopPrank();
+
+        assertEq(operatorsRegistry.getOperatorCount(), 3, "count unchanged after deactivation");
+        assertEq(operatorsRegistry.getOperator(0).index, index0, "index 0 still op0");
+        assertEq(operatorsRegistry.getOperator(1).index, index1, "index 1 still op1");
+        assertFalse(operatorsRegistry.getOperator(1).active, "index 1 is inactive");
+        assertEq(operatorsRegistry.getOperator(2).index, index2, "index 2 still op2");
+
+        vm.prank(admin);
+        operatorsRegistry.setOperatorStatus(1, true);
+        assertEq(operatorsRegistry.getOperator(0).index, index0, "index 0 still op0 after reactivation");
+        assertEq(operatorsRegistry.getOperator(1).index, index1, "index 1 is still 1 after reactivation");
+        assertEq(operatorsRegistry.getOperator(2).index, index2, "index 2 still op2 after reactivation");
+    }
+
+    /// @dev getOperator(outOfBounds) reverts with OperatorNotFound
+    function testGetOperatorOutOfBoundsRevertsWithOperatorNotFound() public {
+        vm.startPrank(admin);
+        vm.expectRevert(abi.encodeWithSignature("OperatorNotFound(uint256)", 0));
+        operatorsRegistry.getOperator(0);
+
+        operatorsRegistry.addOperator("only", uf._new(0));
+        vm.expectRevert(abi.encodeWithSignature("OperatorNotFound(uint256)", 1));
+        operatorsRegistry.getOperator(1);
+        vm.stopPrank();
+    }
+
+    /// @dev Allocation to an inactive operator reverts with InactiveOperator
+    function testAllocationToInactiveOperatorReverts() public {
+        address opAddr = uf._new(0);
+        vm.startPrank(admin);
+        uint256 index = operatorsRegistry.addOperator("op", opAddr);
+        vm.stopPrank();
+
+        bytes memory tenKeys = genBytes(10 * (48 + 96));
+        vm.prank(opAddr);
+        operatorsRegistry.addValidators(index, 10, tenKeys);
+        vm.prank(admin);
+        uint256[] memory indexes = new uint256[](1);
+        indexes[0] = index;
+        uint32[] memory limits = new uint32[](1);
+        limits[0] = 10;
+        operatorsRegistry.setOperatorLimits(indexes, limits, block.number);
+
+        vm.prank(admin);
+        operatorsRegistry.setOperatorStatus(index, false);
+
+        vm.expectRevert(abi.encodeWithSignature("InactiveOperator(uint256)", index));
+        operatorsRegistry.getNextValidatorsToDepositFromActiveOperators(_createAllocation(index, 5));
+    }
+
+    /// @dev Fuzz: operator indices stay 0, 1, ..., n-1 after n adds
+    function testFuzzOperatorIndicesSequentialAfterMultipleAdds(uint8 _n) public {
+        uint256 n = bound(_n, 1, 30);
+        address[] memory addrs = new address[](n);
+        vm.startPrank(admin);
+        for (uint256 i = 0; i < n; ++i) {
+            addrs[i] = uf._new(i);
+            uint256 idx = operatorsRegistry.addOperator(string(abi.encodePacked("op", i)), addrs[i]);
+            assertEq(idx, i, "addOperator returns sequential index");
+        }
+        vm.stopPrank();
+
+        assertEq(operatorsRegistry.getOperatorCount(), n, "count equals n");
+        for (uint256 i = 0; i < n; ++i) {
+            assertEq(operatorsRegistry.getOperator(i).operator, addrs[i], "getOperator(i) is operator added at step i");
+            assertEq(operatorsRegistry.getOperator(i).index, i, "getOperator(i).index is i");
+        }
+    }
+
     function testGetStoppedValidatorCounts() public {
         assertEq(operatorsRegistry.getOperatorStoppedValidatorCount(0), 0);
         assertEq(operatorsRegistry.getTotalStoppedValidatorCount(), 0);

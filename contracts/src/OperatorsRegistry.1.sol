@@ -23,6 +23,9 @@ import "./state/migration/OperatorsRegistry_FundedKeyEventRebroadcasting_Operato
 /// @title Operators Registry (v1)
 /// @author Alluvial Finance Inc.
 /// @notice This contract handles the list of operators and their keys
+/// @dev Operator index is the position in the operators array. Operators are only
+/// @dev added, never removed, so the operator at index i is always the one at
+/// @dev array position i and indices are stable over time.
 contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrable, IProtocolVersion {
     /// @inheritdoc IOperatorsRegistryV1
     function initOperatorsRegistryV1(address _admin, address _river) external init(0) {
