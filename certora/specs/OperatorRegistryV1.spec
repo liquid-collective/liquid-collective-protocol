@@ -25,7 +25,8 @@ rule startingValidatorsDecreasesDiscrepancy(env e)
        
     uint count;
     require count > 0 && count <= 3;
-    pickNextValidatorsToDeposit(e, count);
+    require allOpCount > 0;
+    pickNextValidatorsToDepositWithCount(e, count);
     uint discrepancyAfter = getOperatorsSaturationDiscrepancy(index1, index2);
 
     assert discrepancyBefore > 0 => to_mathint(discrepancyBefore) >= 
@@ -42,7 +43,8 @@ rule witness4_3StartingValidatorsDecreasesDiscrepancy(env e)
     uint discrepancyBefore = getOperatorsSaturationDiscrepancy(index1, index2);
     uint count;
     require count <= 1;
-    pickNextValidatorsToDeposit(e, count);
+    require getOperatorsCount() > 0;
+    pickNextValidatorsToDepositWithCount(e, count);
     uint discrepancyAfter = getOperatorsSaturationDiscrepancy(index1, index2);
     satisfy discrepancyBefore == 4 && discrepancyAfter == 3;
 }
@@ -129,7 +131,7 @@ invariant inactiveOperatorsRemainNotFunded_LI2(uint opIndex)
         } 
     { 
         preserved requestValidatorExits(uint256 x) with(env e) { require x <= 2; }
-        preserved pickNextValidatorsToDeposit(IOperatorsRegistryV1.OperatorAllocation[] x) with(env e) { require x.length <= 1; }  
+        preserved pickNextValidatorsToDepositWithCount(uint256 x) with(env e) { require x <= 1; }  
         preserved removeValidators(uint256 _index, uint256[] _indexes) with(env e) { require _indexes.length <= 1; }  
     }
 
@@ -216,7 +218,7 @@ invariant operatorsStatesRemainValid_LI2_easyMethods(uint opIndex)
     filtered { f -> !ignoredMethod(f) && 
     !needsLoopIter4(f) &&
     f.selector != sig:requestValidatorExits(uint256).selector &&
-    f.selector != sig:pickNextValidatorsToDeposit(IOperatorsRegistryV1.OperatorAllocation[]).selector &&
+    f.selector != sig:pickNextValidatorsToDepositWithCount(uint256).selector &&
     f.selector != sig:removeValidators(uint256,uint256[]).selector
     }
 
@@ -225,7 +227,7 @@ invariant operatorsStatesRemainValid_LI2_easyMethods(uint opIndex)
 invariant operatorsStatesRemainValid_LI2_pickNextValidatorsToDeposit(uint opIndex) 
     isValidState() => (operatorStateIsValid(opIndex))
     filtered { f -> !ignoredMethod(f) && 
-    !needsLoopIter4(f) && f.selector != sig:pickNextValidatorsToDeposit(IOperatorsRegistryV1.OperatorAllocation[]).selector
+    !needsLoopIter4(f) && f.selector != sig:pickNextValidatorsToDepositWithCount(uint256).selector
     }
 
 // proves the invariant for reportStoppedValidatorCounts

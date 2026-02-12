@@ -4,12 +4,12 @@ using OperatorsRegistryV1Harness as OR;
 
 methods {
 
-    // OperatorsRegistryV1
+    // IOperatorsRegistryV1
     function _.reportStoppedValidatorCounts(uint32[], uint256) external => DISPATCHER(true);
     function OR.getStoppedAndRequestedExitCounts() external returns (uint32, uint256) envfree;
     function _.getStoppedAndRequestedExitCounts() external => DISPATCHER(true);
     function _.demandValidatorExits(uint256, uint256) external => DISPATCHER(true);
-    //function _.pickNextValidatorsToDeposit(IOperatorsRegistryV1.OperatorAllocation[]) external => DISPATCHER(true); // has no effect - CERT-4615
+    // DISPATCHER for pickNextValidatorsToDeposit not used; specs use pickNextValidatorsToDepositWithCount to avoid IOperatorsRegistryV1 in scene (no bytecode)
 
     //function _.deposit(bytes,bytes,bytes,bytes32) external => DISPATCHER(true); // has no effect - CERT-4615 
     
@@ -30,7 +30,7 @@ methods {
     function OR.getActiveOperatorsCount() external returns (uint256) envfree;
     function OR.getOperatorsSaturationDiscrepancy() external returns (uint256) envfree;
     function OR.getKeysCount(uint256) external returns (uint256) envfree;
-    function OR.pickNextValidatorsToDeposit(IOperatorsRegistryV1.OperatorAllocation[]) external returns (bytes[] memory, bytes[] memory);
+    function OR.pickNextValidatorsToDepositWithCount(uint256) external returns (bytes[] memory, bytes[] memory);
     function OR.requestValidatorExits(uint256) external;
     function OR.setOperatorAddress(uint256, address) external;   
     function OR.getOperatorsSaturationDiscrepancy(uint256, uint256) external returns (uint256) envfree;
@@ -88,7 +88,7 @@ definition isMethodID(method f, uint ID) returns bool =
     (f.selector == sig:addOperator(string,address).selector && ID == 4) ||
     (f.selector == sig:demandValidatorExits(uint256,uint256).selector && ID == 5) ||
     (f.selector == sig:initOperatorsRegistryV1(address,address).selector && ID == 6) ||
-    (f.selector == sig:pickNextValidatorsToDeposit(IOperatorsRegistryV1.OperatorAllocation[]).selector && ID == 7) ||
+    (f.selector == sig:pickNextValidatorsToDepositWithCount(uint256).selector && ID == 7) ||
     (f.selector == sig:proposeAdmin(address).selector && ID == 8) ||
     (f.selector == sig:removeValidators(uint256,uint256[]).selector && ID == 9) ||
     (f.selector == sig:requestValidatorExits(uint256).selector && ID == 10) ||
