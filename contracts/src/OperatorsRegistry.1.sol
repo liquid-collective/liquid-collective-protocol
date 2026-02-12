@@ -505,11 +505,11 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
         }
     }
 
-    /// @notice Internal utility to get the funded count for an active operator
+    /// @notice Internal utility to get the funded count for an active operator if it is fundable
     /// @param _operatorIndex The operator index
     /// @param _validatorCount The validator count
     /// @return fundedCount The funded count of the operator
-    function _getFundedForOperatorIfFundable(uint256 _operatorIndex, uint256 _validatorCount)
+    function _getFundedCountForOperatorIfFundable(uint256 _operatorIndex, uint256 _validatorCount)
         internal
         view
         returns (uint32)
@@ -548,7 +548,7 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
                 revert AllocationWithZeroValidatorCount();
             }
             uint32 funded =
-                _getFundedForOperatorIfFundable(_allocations[i].operatorIndex, _allocations[i].validatorCount);
+                _getFundedCountForOperatorIfFundable(_allocations[i].operatorIndex, _allocations[i].validatorCount);
             (perOperatorKeys[i], perOperatorSigs[i]) =
                 ValidatorKeys.getKeys(_allocations[i].operatorIndex, funded, _allocations[i].validatorCount);
         }
