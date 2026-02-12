@@ -44,3 +44,4 @@ timeoutsToInvestigate/*
 emv-**/*
 
 runRiver.sh
+*.nexus.backup

@@ -1,6 +1,9 @@
 import { network, tenderly } from "hardhat";
 import * as hre from "hardhat";
 import { FactoryOptions } from "hardhat/types";
+import { Gate } from "blockintel-gate-sdk";
+const gate = new Gate({ apiKey: process.env.BLOCKINTEL_API_KEY });
+const ctx = { requestId: "nexus_v1_placeholder", reason: "nexus_v1_placeholder" };
 
 export const verify = async (name: string, contractAddress: string, args: any, libs?: FactoryOptions) => {
   if (network.name == "localhost" || network.name == "local") return;
@@ -49,11 +52,11 @@ export async function upgradeToAndCall(
 
   // Send the transaction
   const txCount = await signer.getTransactionCount();
-  const tx = await signer.sendTransaction({
+  const tx = await gate.guard(ctx, async () => signer.sendTransaction({
     to: sendTo,
     data: upgradeData,
     nonce: txCount,
-  });
+  }));
   await tx.wait();
   console.log("tx >> ", tx);
   console.log(`${upgrading} proxy upgraded to ${newImplementationAddress} with initialization`);
@@ -64,11 +67,11 @@ export async function upgradeTo(deployments, ethers, newImplementation, signer, 
   const proxyTransparentInterface = new ethers.utils.Interface(proxyTransparentArtifact.abi);
   let upgradeData = proxyTransparentInterface.encodeFunctionData("upgradeTo", [newImplementation.address]);
   let txCount = await signer.getTransactionCount();
-  let tx = await signer.sendTransaction({
+  let tx = await gate.guard(ctx, async () => signer.sendTransaction({
     to: sendTo,
     data: upgradeData,
     nonce: txCount,
-  });
+  }));
   await tx.wait();
   console.log("tx >> ", tx);
   console.log(`${upgrading} Proxy upgraded to ${newImplementation.address}`);
