@@ -150,7 +150,7 @@ contract OperatorsRegistryV1StrictRiverTests is OperatorsRegistryV1TestBase, Byt
         return allocations;
     }
 
-    function testGetKeysAsUnauthorized() public {
+    function testPickNextValidatorsToDepositRevertsWithUnauthorizedWhenNotRiver() public {
         vm.expectRevert(abi.encodeWithSignature("Unauthorized(address)", address(this)));
         operatorsRegistry.pickNextValidatorsToDeposit(_createAllocation(0, 10));
     }
