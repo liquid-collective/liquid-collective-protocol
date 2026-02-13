@@ -31,7 +31,7 @@ methods {
     function OR.getOperatorsSaturationDiscrepancy() external returns (uint256) envfree;
     function OR.getKeysCount(uint256) external returns (uint256) envfree;
     function OR.pickNextValidatorsToDeposit(IOperatorsRegistryV1.OperatorAllocation[]) external returns (bytes[] memory, bytes[] memory);
-    function OR.requestValidatorExits(uint256) external;
+    function OR.requestValidatorExits(IOperatorsRegistryV1.OperatorAllocation[]) external;
     function OR.setOperatorAddress(uint256, address) external;   
     function OR.getOperatorsSaturationDiscrepancy(uint256, uint256) external returns (uint256) envfree;
     //function OR.removeValidators(uint256,uint256[]) external envfree;
@@ -91,7 +91,7 @@ definition isMethodID(method f, uint ID) returns bool =
     (f.selector == sig:pickNextValidatorsToDeposit(IOperatorsRegistryV1.OperatorAllocation[]).selector && ID == 7) ||
     (f.selector == sig:proposeAdmin(address).selector && ID == 8) ||
     (f.selector == sig:removeValidators(uint256,uint256[]).selector && ID == 9) ||
-    (f.selector == sig:requestValidatorExits(uint256).selector && ID == 10) ||
+    (f.selector == sig:requestValidatorExits(IOperatorsRegistryV1.OperatorAllocation[]).selector && ID == 10) ||
     (f.selector == sig:setOperatorAddress(uint256,address).selector && ID == 11) ||
     (f.selector == sig:setOperatorLimits(uint256[],uint32[],uint256).selector && ID == 12) ||
     (f.selector == sig:setOperatorName(uint256,string).selector && ID == 13) ||

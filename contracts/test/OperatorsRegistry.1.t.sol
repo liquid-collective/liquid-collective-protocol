@@ -2510,11 +2510,13 @@ contract OperatorsRegistryV1TestDistribution is Test {
         limits[0] = 60;
 
         vm.prank(keeper);
-        vm.expectRevert(abi.encodeWithSignature("ExitsRequestedExceedsFundedCount(uint256,uint256,uint256)", 0, 60, 50));
+        vm.expectRevert(
+            abi.encodeWithSignature("ExitsRequestedExceedAvailableFundedCount(uint256,uint256,uint256)", 0, 60, 50)
+        );
         operatorsRegistry.requestValidatorExits(_createAllocation(operators, limits));
     }
 
-    function testRequestExitsRequestedExceedsDemand() external {
+    function testRequestExitsRequestedExceedDemand() external {
         vm.startPrank(admin);
         operatorsRegistry.addValidators(0, 50, genBytes((48 + 96) * 50));
         operatorsRegistry.addValidators(1, 50, genBytes((48 + 96) * 50));
@@ -2558,7 +2560,7 @@ contract OperatorsRegistryV1TestDistribution is Test {
         limits[0] = 50;
 
         vm.prank(keeper);
-        vm.expectRevert(abi.encodeWithSignature("ExitsRequestedExceedsDemand(uint256,uint256)", 250, 10));
+        vm.expectRevert(abi.encodeWithSignature("ExitsRequestedExceedDemand(uint256,uint256)", 250, 10));
         operatorsRegistry.requestValidatorExits(_createAllocation(operators, limits));
     }
 

@@ -436,17 +436,16 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
 
     /// @inheritdoc IOperatorsRegistryV1
     function requestValidatorExits(OperatorAllocation[] calldata _allocations) external {
-        uint256 allocationsLength = _allocations.length;
-        uint256 currentValidatorExitsDemand = CurrentValidatorExitsDemand.get();
-
         if (msg.sender != IConsensusLayerDepositManagerV1(RiverAddress.get()).getKeeper()) {
             revert IConsensusLayerDepositManagerV1.OnlyKeeper();
         }
 
+        uint256 currentValidatorExitsDemand = CurrentValidatorExitsDemand.get();
         if (currentValidatorExitsDemand == 0) {
             revert NoExitRequestsToPerform();
         }
 
+        uint256 allocationsLength = _allocations.length;
         if (allocationsLength == 0) {
             revert InvalidEmptyArray();
         }
@@ -472,8 +471,10 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
                 revert InactiveOperator(operatorIndex);
             }
             if (count > (operator.funded - operator.requestedExits)) {
-                // Operator has insufficient funded validators
-                revert ExitsRequestedExceedsFundedCount(operatorIndex, count, operator.funded);
+                // Operator has insufficient available funded validators
+                revert ExitsRequestedExceedAvailableFundedCount(
+                    operatorIndex, count, operator.funded - operator.requestedExits
+                );
             }
             // Operator has sufficient funded validators
             operator.requestedExits += uint32(count);
@@ -482,7 +483,7 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
 
         // Check that the exits requested do not exceed the current validator exits demand
         if (requestedExitCount > currentValidatorExitsDemand) {
-            revert ExitsRequestedExceedsDemand(requestedExitCount, currentValidatorExitsDemand);
+            revert ExitsRequestedExceedDemand(requestedExitCount, currentValidatorExitsDemand);
         }
 
         uint256 savedCurrentValidatorExitsDemand = currentValidatorExitsDemand;

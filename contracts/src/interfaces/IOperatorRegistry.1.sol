@@ -200,16 +200,16 @@ interface IOperatorsRegistryV1 {
     /// @notice The provided stopped validator count of an operator is above its funded validator count
     error StoppedValidatorCountAboveFundedCount(uint256 operatorIndex, uint32 stoppedCount, uint32 fundedCount);
 
-    /// @notice The provided exit requests exceed the funded validator count of the operator
+    /// @notice The provided exit requests exceed the available funded validator count of the operator
     /// @param operatorIndex The operator index
     /// @param requested The requested count
-    /// @param funded The funded count
-    error ExitsRequestedExceedsFundedCount(uint256 operatorIndex, uint256 requested, uint256 funded);
+    /// @param available The available count
+    error ExitsRequestedExceedAvailableFundedCount(uint256 operatorIndex, uint256 requested, uint256 available);
 
     /// @notice The provided exit requests exceed the current exit request demand
     /// @param requested The requested count
     /// @param demand The demand count
-    error ExitsRequestedExceedsDemand(uint256 requested, uint256 demand);
+    error ExitsRequestedExceedDemand(uint256 requested, uint256 demand);
 
     /// @notice Initializes the operators registry
     /// @param _admin Admin in charge of managing operators
