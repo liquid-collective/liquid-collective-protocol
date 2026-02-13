@@ -4,6 +4,7 @@ pragma solidity 0.8.33;
 
 import "forge-std/Test.sol";
 
+import "./OperatorAllocationTestBase.sol";
 import "./utils/UserFactory.sol";
 import "./utils/BytesGenerator.sol";
 import "./utils/LibImplementationUnbricker.sol";
@@ -35,7 +36,7 @@ contract RiverV1ForceCommittable is RiverV1 {
     }
 }
 
-abstract contract RiverV1TestBase is Test, BytesGenerator {
+abstract contract RiverV1TestBase is OperatorAllocationTestBase, BytesGenerator {
     UserFactory internal uf = new UserFactory();
 
     RiverV1ForceCommittable internal river;
@@ -47,19 +48,10 @@ abstract contract RiverV1TestBase is Test, BytesGenerator {
     AllowlistV1 internal allowlist;
     OperatorsRegistryWithOverridesV1 internal operatorsRegistry;
 
-    function _createAllocation(uint256 opIndex, uint256 count)
-        internal
-        pure
-        returns (IOperatorsRegistryV1.OperatorAllocation[] memory)
-    {
-        IOperatorsRegistryV1.OperatorAllocation[] memory allocations = new IOperatorsRegistryV1.OperatorAllocation[](1);
-        allocations[0] = IOperatorsRegistryV1.OperatorAllocation({operatorIndex: opIndex, validatorCount: count});
-        return allocations;
-    }
-
     function _createMultiAllocation(uint256[] memory opIndexes, uint32[] memory counts)
         internal
         pure
+        override
         returns (IOperatorsRegistryV1.OperatorAllocation[] memory)
     {
         require(opIndexes.length == counts.length, "InvalidAllocationLengths");
