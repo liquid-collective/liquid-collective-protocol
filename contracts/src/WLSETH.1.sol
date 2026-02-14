@@ -3,6 +3,7 @@ pragma solidity 0.8.33;
 
 import "openzeppelin-contracts-upgradeable/contracts/security/ReentrancyGuardUpgradeable.sol";
 
+import "./interfaces/IAllowlist.1.sol";
 import "./interfaces/IRiver.1.sol";
 import "./interfaces/IWLSETH.1.sol";
 
@@ -178,13 +179,21 @@ contract WLSETHV1 is IWLSETHV1, Initializable, ReentrancyGuardUpgradeable {
         return IRiverV1(payable(RiverAddress.get())).underlyingBalanceFromShares(BalanceOf.get(_owner));
     }
 
-    /// @notice Internal utility to perform an unchecked transfer
+    /// @notice Internal utility to perform a transfer with allowlist deny checks
     /// @param _from Address sending the tokens
     /// @param _to Address receiving the tokens
     /// @param _value Amount to be sent
     /// @return True if success
     function _transfer(address _from, address _to, uint256 _value) internal returns (bool) {
-        uint256 valueToShares = IRiverV1(payable(RiverAddress.get())).sharesFromUnderlyingBalance(_value);
+        IRiverV1 river = IRiverV1(payable(RiverAddress.get()));
+        IAllowlistV1 allowlist = IAllowlistV1(river.getAllowlist());
+        if (allowlist.isDenied(_from)) {
+            revert Denied(_from);
+        }
+        if (allowlist.isDenied(_to)) {
+            revert Denied(_to);
+        }
+        uint256 valueToShares = river.sharesFromUnderlyingBalance(_value);
         BalanceOf.set(_from, BalanceOf.get(_from) - valueToShares);
         BalanceOf.set(_to, BalanceOf.get(_to) + valueToShares);
 

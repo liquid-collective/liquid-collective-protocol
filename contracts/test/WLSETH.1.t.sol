@@ -9,12 +9,25 @@ import "./utils/LibImplementationUnbricker.sol";
 
 import "../src/WLSETH.1.sol";
 
+contract AllowlistMock {
+    mapping(address => bool) internal denied;
+
+    function isDenied(address _account) external view returns (bool) {
+        return denied[_account];
+    }
+
+    function sudoSetDenied(address _account, bool _isDenied) external {
+        denied[_account] = _isDenied;
+    }
+}
+
 contract RiverTokenMock {
     mapping(address => uint256) internal balances;
     mapping(address => mapping(address => uint256)) internal approvals;
     uint256 internal underlyingAssetTotal;
     uint256 internal _totalSupply;
     bool internal retVal = true;
+    address internal allowlistAddr;
 
     function totalSupply() external view returns (uint256) {
         return _totalSupply;
@@ -85,11 +98,20 @@ contract RiverTokenMock {
     function sudoSetRetVal(bool _newVal) external {
         retVal = _newVal;
     }
+
+    function getAllowlist() external view returns (address) {
+        return allowlistAddr;
+    }
+
+    function sudoSetAllowlist(address _allowlist) external {
+        allowlistAddr = _allowlist;
+    }
 }
 
 abstract contract WLSETHV1TestBase is Test {
     IRiverV1 internal river;
     WLSETHV1 internal wlseth;
+    AllowlistMock internal allowlistMock;
     UserFactory internal uf = new UserFactory();
 
     event Mint(address indexed _recipient, uint256 _value);
@@ -100,7 +122,9 @@ abstract contract WLSETHV1TestBase is Test {
 
 contract WLSETHV1InitializationTests is WLSETHV1TestBase {
     function setUp() external {
+        allowlistMock = new AllowlistMock();
         river = IRiverV1(payable(address(new RiverTokenMock())));
+        RiverTokenMock(address(river)).sudoSetAllowlist(address(allowlistMock));
         wlseth = new WLSETHV1();
         LibImplementationUnbricker.unbrick(vm, address(wlseth));
     }
@@ -114,7 +138,9 @@ contract WLSETHV1InitializationTests is WLSETHV1TestBase {
 
 contract WLSETHV1Tests is WLSETHV1TestBase {
     function setUp() external {
+        allowlistMock = new AllowlistMock();
         river = IRiverV1(payable(address(new RiverTokenMock())));
+        RiverTokenMock(address(river)).sudoSetAllowlist(address(allowlistMock));
         wlseth = new WLSETHV1();
         LibImplementationUnbricker.unbrick(vm, address(wlseth));
         vm.expectEmit(true, true, true, true);
@@ -812,6 +838,132 @@ contract WLSETHV1Tests is WLSETHV1TestBase {
             vm.stopPrank();
         } else {
             assert(balance == 0 ether);
+        }
+    }
+}
+
+contract WLSETHV1DenyTests is WLSETHV1TestBase {
+    function setUp() external {
+        allowlistMock = new AllowlistMock();
+        river = IRiverV1(payable(address(new RiverTokenMock())));
+        RiverTokenMock(address(river)).sudoSetAllowlist(address(allowlistMock));
+        wlseth = new WLSETHV1();
+        LibImplementationUnbricker.unbrick(vm, address(wlseth));
+        wlseth.initWLSETHV1(address(river));
+        RiverTokenMock(address(river)).sudoSetUnderlyingTotal(100 ether);
+    }
+
+    function _mint(address _who, uint256 _sum) internal {
+        RiverTokenMock(address(river)).sudoSetBalance(_who, RiverTokenMock(address(river)).balanceOf(_who) + _sum);
+        vm.startPrank(_who);
+        RiverTokenMock(address(river)).approve(address(wlseth), _sum);
+        wlseth.mint(_who, _sum);
+        vm.stopPrank();
+    }
+
+    function testTransferDeniedSender(uint256 _guySalt, uint256 _recipientSalt, uint32 _sum) external {
+        address _guy = uf._new(_guySalt);
+        address _recipient = uf._new(_recipientSalt);
+        if (_sum > 0) {
+            _mint(_guy, _sum);
+            uint256 guyBalance = wlseth.balanceOf(_guy);
+            allowlistMock.sudoSetDenied(_guy, true);
+            vm.startPrank(_guy);
+            vm.expectRevert(abi.encodeWithSignature("Denied(address)", _guy));
+            wlseth.transfer(_recipient, guyBalance);
+            vm.stopPrank();
+        }
+    }
+
+    function testTransferDeniedRecipient(uint256 _guySalt, uint256 _recipientSalt, uint32 _sum) external {
+        address _guy = uf._new(_guySalt);
+        address _recipient = uf._new(_recipientSalt);
+        if (_sum > 0) {
+            _mint(_guy, _sum);
+            uint256 guyBalance = wlseth.balanceOf(_guy);
+            allowlistMock.sudoSetDenied(_recipient, true);
+            vm.startPrank(_guy);
+            vm.expectRevert(abi.encodeWithSignature("Denied(address)", _recipient));
+            wlseth.transfer(_recipient, guyBalance);
+            vm.stopPrank();
+        }
+    }
+
+    function testTransferFromDeniedSender(
+        uint256 _fromSalt,
+        uint256 _approvedSalt,
+        uint256 _recipientSalt,
+        uint32 _sum
+    ) external {
+        address _from = uf._new(_fromSalt);
+        address _approved = uf._new(_approvedSalt);
+        address _recipient = uf._new(_recipientSalt);
+        if (_sum > 0) {
+            _mint(_from, _sum);
+            uint256 balance = wlseth.balanceOf(_from);
+            vm.prank(_from);
+            wlseth.approve(_approved, balance);
+            allowlistMock.sudoSetDenied(_from, true);
+            vm.startPrank(_approved);
+            vm.expectRevert(abi.encodeWithSignature("Denied(address)", _from));
+            wlseth.transferFrom(_from, _recipient, balance);
+            vm.stopPrank();
+        }
+    }
+
+    function testTransferFromDeniedRecipient(
+        uint256 _fromSalt,
+        uint256 _approvedSalt,
+        uint256 _recipientSalt,
+        uint32 _sum
+    ) external {
+        address _from = uf._new(_fromSalt);
+        address _approved = uf._new(_approvedSalt);
+        address _recipient = uf._new(_recipientSalt);
+        if (_sum > 0) {
+            _mint(_from, _sum);
+            uint256 balance = wlseth.balanceOf(_from);
+            vm.prank(_from);
+            wlseth.approve(_approved, balance);
+            allowlistMock.sudoSetDenied(_recipient, true);
+            vm.startPrank(_approved);
+            vm.expectRevert(abi.encodeWithSignature("Denied(address)", _recipient));
+            wlseth.transferFrom(_from, _recipient, balance);
+            vm.stopPrank();
+        }
+    }
+
+    function testTransferSucceedsWhenNotDenied(uint256 _guySalt, uint256 _recipientSalt, uint32 _sum) external {
+        address _guy = uf._new(_guySalt);
+        address _recipient = uf._new(_recipientSalt);
+        if (_sum > 0) {
+            _mint(_guy, _sum);
+            uint256 guyBalance = wlseth.balanceOf(_guy);
+            vm.startPrank(_guy);
+            wlseth.transfer(_recipient, guyBalance);
+            vm.stopPrank();
+            assert(wlseth.balanceOf(_guy) == 0);
+            assert(wlseth.balanceOf(_recipient) == guyBalance);
+        }
+    }
+
+    function testTransferSucceedsAfterUndeny(uint256 _guySalt, uint256 _recipientSalt, uint32 _sum) external {
+        address _guy = uf._new(_guySalt);
+        address _recipient = uf._new(_recipientSalt);
+        if (_sum > 0) {
+            _mint(_guy, _sum);
+            uint256 guyBalance = wlseth.balanceOf(_guy);
+            allowlistMock.sudoSetDenied(_guy, true);
+            vm.startPrank(_guy);
+            vm.expectRevert(abi.encodeWithSignature("Denied(address)", _guy));
+            wlseth.transfer(_recipient, guyBalance);
+            vm.stopPrank();
+            allowlistMock.sudoSetDenied(_guy, false);
+            vm.startPrank(_guy);
+            wlseth.transfer(_recipient, guyBalance);
+            vm.stopPrank();
+            assert(wlseth.balanceOf(_guy) == 0);
+            assert(wlseth.balanceOf(_recipient) == guyBalance);
         }
     }
 }
