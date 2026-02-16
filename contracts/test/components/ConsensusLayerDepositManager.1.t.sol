@@ -408,10 +408,7 @@ contract ConsensusLayerDepositManagerV1ErrorTests is OperatorAllocationTestBase 
 }
 
 /// @notice Tests allocation validation (UnorderedOperatorList, AllocationWithZeroValidatorCount) via real OperatorsRegistry flow
-contract ConsensusLayerDepositManagerV1AllocationValidationTests is
-    ConsensusLayerDepositManagerTestBase,
-    BytesGenerator
-{
+contract ConsensusLayerDepositManagerV1AllocationValidationTests is OperatorAllocationTestBase, BytesGenerator {
     bytes32 internal withdrawalCredentials = bytes32(uint256(1));
 
     ConsensusLayerDepositManagerV1 internal depositManager;

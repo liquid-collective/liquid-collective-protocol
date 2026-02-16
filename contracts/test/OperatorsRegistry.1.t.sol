@@ -130,7 +130,11 @@ contract OperatorsRegistryV1InitializationTests is OperatorsRegistryV1TestBase {
 }
 
 /// @notice Tests that require real onlyRiver enforcement (expect Unauthorized when not pranking as river)
-contract OperatorsRegistryV1StrictRiverTests is OperatorsRegistryV1TestBase, BytesGenerator {
+contract OperatorsRegistryV1StrictRiverTests is
+    OperatorsRegistryV1TestBase,
+    OperatorAllocationTestBase,
+    BytesGenerator
+{
     function setUp() public {
         admin = makeAddr("admin");
         keeper = makeAddr("keeper");
@@ -139,16 +143,6 @@ contract OperatorsRegistryV1StrictRiverTests is OperatorsRegistryV1TestBase, Byt
         operatorsRegistry = new OperatorsRegistryStrictRiverV1();
         LibImplementationUnbricker.unbrick(vm, address(operatorsRegistry));
         operatorsRegistry.initOperatorsRegistryV1(admin, river);
-    }
-
-    function _createAllocation(uint256 opIndex, uint256 count)
-        internal
-        pure
-        returns (IOperatorsRegistryV1.OperatorAllocation[] memory)
-    {
-        IOperatorsRegistryV1.OperatorAllocation[] memory allocations = new IOperatorsRegistryV1.OperatorAllocation[](1);
-        allocations[0] = IOperatorsRegistryV1.OperatorAllocation({operatorIndex: opIndex, validatorCount: count});
-        return allocations;
     }
 
     function testPickNextValidatorsToDepositRevertsWithUnauthorizedWhenNotRiver() public {
@@ -176,7 +170,7 @@ contract OperatorsRegistryV1StrictRiverTests is OperatorsRegistryV1TestBase, Byt
     }
 }
 
-contract OperatorsRegistryV1Tests is OperatorsRegistryV1TestBase, BytesGenerator {
+contract OperatorsRegistryV1Tests is OperatorsRegistryV1TestBase, OperatorAllocationTestBase, BytesGenerator {
     function setUp() public {
         admin = makeAddr("admin");
         keeper = makeAddr("keeper");
