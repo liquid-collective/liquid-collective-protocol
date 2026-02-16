@@ -4253,7 +4253,8 @@ contract OperatorsRegistryV1AllocationCorrectnessTests is OperatorAllocationTest
             address opAddr = makeAddr(string(abi.encodePacked("op", vm.toString(i))));
             operatorsRegistry.addOperator(string(abi.encodePacked("Operator ", vm.toString(i))), opAddr);
 
-            bytes memory keys = genBytes(uint256(keysPerOp) * (ValidatorKeys.PUBLIC_KEY_LENGTH + ValidatorKeys.SIGNATURE_LENGTH));
+            bytes memory keys =
+                genBytes(uint256(keysPerOp) * (ValidatorKeys.PUBLIC_KEY_LENGTH + ValidatorKeys.SIGNATURE_LENGTH));
             rawKeysByOperator.push(keys);
             operatorsRegistry.addValidators(i, keysPerOp, keys);
 
@@ -4321,7 +4322,11 @@ contract OperatorsRegistryV1AllocationCorrectnessTests is OperatorAllocationTest
 
         // Keys 1-8: op1 validators 0-7
         for (uint256 i = 0; i < 8; ++i) {
-            assertEq(publicKeys[1 + i], _extractPublicKey(1, i), string(abi.encodePacked("Key should be op1 validator ", vm.toString(i))));
+            assertEq(
+                publicKeys[1 + i],
+                _extractPublicKey(1, i),
+                string(abi.encodePacked("Key should be op1 validator ", vm.toString(i)))
+            );
         }
 
         // Key 9: op2 validator 0
