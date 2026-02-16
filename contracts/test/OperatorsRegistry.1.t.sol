@@ -836,10 +836,10 @@ contract OperatorsRegistryV1Tests is OperatorsRegistryV1TestBase, BytesGenerator
     function testGetKeysAsRiverNoKeys() public {
         // Create an allocation for an operator that doesn't exist or has no keys
         // This should succeed but return empty arrays since count is 0 for non-existent operators
-        IOperatorsRegistryV1.OperatorAllocation[] memory emptyAllocation =
-            new IOperatorsRegistryV1.OperatorAllocation[](0);
+        IOperatorsRegistryV1.OperatorAllocation[] memory allocation = new IOperatorsRegistryV1.OperatorAllocation[](1);
+        allocation[0] = IOperatorsRegistryV1.OperatorAllocation({operatorIndex: 0, validatorCount: 10});
         vm.startPrank(river);
-        (bytes[] memory publicKeys,) = operatorsRegistry.pickNextValidatorsToDeposit(emptyAllocation);
+        (bytes[] memory publicKeys,) = operatorsRegistry.pickNextValidatorsToDeposit(allocation);
         vm.stopPrank();
         assert(publicKeys.length == 0);
     }
@@ -1893,7 +1893,20 @@ contract OperatorsRegistryV1TestDistribution is OperatorAllocationTestBase {
         }
     }
 
-    function testDepositDistributionWithZeroCountAllocationFails() external {
+    function testPickNextValidatorsToDepositRevertsWithEmptyAllocation() external {
+        IOperatorsRegistryV1.OperatorAllocation[] memory allocation = new IOperatorsRegistryV1.OperatorAllocation[](0);
+        vm.expectRevert(abi.encodeWithSelector(IOperatorsRegistryV1.InvalidEmptyArray.selector));
+        vm.prank(river);
+        operatorsRegistry.pickNextValidatorsToDeposit(allocation);
+    }
+
+    function testGetNextValidatorsToDepositFromActiveOperatorsRevertsWithEmptyAllocation() external {
+        IOperatorsRegistryV1.OperatorAllocation[] memory allocation = new IOperatorsRegistryV1.OperatorAllocation[](0);
+        vm.expectRevert(abi.encodeWithSelector(IOperatorsRegistryV1.InvalidEmptyArray.selector));
+        operatorsRegistry.getNextValidatorsToDepositFromActiveOperators(allocation);
+    }
+
+    function testPickNextValidatorsToDepositRevertsWithZeroCountAllocation() external {
         // Setup: add validators to operators
         bytes[] memory rawKeys = new bytes[](3);
         rawKeys[0] = genBytes((48 + 96) * 10);
@@ -3589,7 +3602,8 @@ contract OperatorsRegistryV1TestDistribution is OperatorAllocationTestBase {
 
     function testGetNextValidatorsToDepositForNoOperators() public {
         // Create an allocation with no operators
-        IOperatorsRegistryV1.OperatorAllocation[] memory allocation = new IOperatorsRegistryV1.OperatorAllocation[](0);
+        IOperatorsRegistryV1.OperatorAllocation[] memory allocation = new IOperatorsRegistryV1.OperatorAllocation[](1);
+        allocation[0] = IOperatorsRegistryV1.OperatorAllocation({operatorIndex: 0, validatorCount: 10});
 
         (bytes[] memory publicKeys, bytes[] memory signatures) =
             operatorsRegistry.getNextValidatorsToDepositFromActiveOperators(allocation);
@@ -3599,7 +3613,8 @@ contract OperatorsRegistryV1TestDistribution is OperatorAllocationTestBase {
 
     function testPickNextValidatorsToDepositForNoOperators() public {
         // Create an allocation with no operators
-        IOperatorsRegistryV1.OperatorAllocation[] memory allocation = new IOperatorsRegistryV1.OperatorAllocation[](0);
+        IOperatorsRegistryV1.OperatorAllocation[] memory allocation = new IOperatorsRegistryV1.OperatorAllocation[](1);
+        allocation[0] = IOperatorsRegistryV1.OperatorAllocation({operatorIndex: 0, validatorCount: 10});
 
         (bytes[] memory publicKeys, bytes[] memory signatures) = OperatorsRegistryInitializableV1(
                 address(operatorsRegistry)
@@ -3860,7 +3875,8 @@ contract OperatorsRegistryV1TestDistribution is OperatorAllocationTestBase {
 
         // Create an empty allocation array (the allocation content doesn't matter since
         // the function returns early when there are no fundable operators)
-        IOperatorsRegistryV1.OperatorAllocation[] memory allocation = new IOperatorsRegistryV1.OperatorAllocation[](0);
+        IOperatorsRegistryV1.OperatorAllocation[] memory allocation = new IOperatorsRegistryV1.OperatorAllocation[](1);
+        allocation[0] = IOperatorsRegistryV1.OperatorAllocation({operatorIndex: 0, validatorCount: 10});
 
         (bytes[] memory publicKeys, bytes[] memory signatures) =
             operatorsRegistry.getNextValidatorsToDepositFromActiveOperators(allocation);
@@ -4191,7 +4207,8 @@ contract OperatorsRegistryV1TestDistribution is OperatorAllocationTestBase {
     /// @notice Tests the _pickNextValidatorsToDepositFromActiveOperators returns empty when no fundable operators
     function testPickReturnsEmptyWhenNoFundableOperators() public {
         // No operators have keys or limits set, so none are fundable
-        IOperatorsRegistryV1.OperatorAllocation[] memory allocation = new IOperatorsRegistryV1.OperatorAllocation[](0);
+        IOperatorsRegistryV1.OperatorAllocation[] memory allocation = new IOperatorsRegistryV1.OperatorAllocation[](1);
+        allocation[0] = IOperatorsRegistryV1.OperatorAllocation({operatorIndex: 5, validatorCount: 10});
 
         vm.prank(river);
         (bytes[] memory publicKeys, bytes[] memory signatures) =
