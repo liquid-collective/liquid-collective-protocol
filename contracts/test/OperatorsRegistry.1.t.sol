@@ -3997,3 +3997,408 @@ contract OperatorsRegistryV1TestDistribution is OperatorAllocationTestBase {
         assertEq(signatures.length, 0, "Expected empty signatures");
     }
 }
+
+/// @title Exit Allocation Correctness Tests
+/// @notice Tests that verify the exit allocation logic correctly tracks per-operator
+///         requestedExits across sequential calls, partial fulfillment, stopped validator
+///         interactions, and combined deposit+exit flows.
+contract OperatorsRegistryV1ExitCorrectnessTests is OperatorAllocationTestBase {
+    OperatorsRegistryV1 internal operatorsRegistry;
+    address internal admin;
+    address internal river;
+    address internal keeper;
+
+    event RequestedValidatorExits(uint256 indexed index, uint256 count);
+    event SetTotalValidatorExitsRequested(uint256 previousTotalRequestedExits, uint256 newTotalRequestedExits);
+    event SetCurrentValidatorExitsDemand(uint256 previousValidatorExitsDemand, uint256 nextValidatorExitsDemand);
+
+    bytes32 salt = bytes32(0);
+
+    function genBytes(uint256 len) internal returns (bytes memory) {
+        bytes memory res = "";
+        while (res.length < len) {
+            salt = keccak256(abi.encodePacked(salt));
+            if (len - res.length >= 32) {
+                res = bytes.concat(res, abi.encode(salt));
+            } else {
+                res = bytes.concat(res, LibBytes.slice(abi.encode(salt), 0, len - res.length));
+            }
+        }
+        return res;
+    }
+
+    function setUp() public {
+        admin = makeAddr("admin");
+        river = address(new RiverMock(0));
+        keeper = makeAddr("keeper");
+        RiverMock(river).setKeeper(keeper);
+
+        operatorsRegistry = new OperatorsRegistryInitializableV1();
+        LibImplementationUnbricker.unbrick(vm, address(operatorsRegistry));
+        operatorsRegistry.initOperatorsRegistryV1(admin, river);
+
+        vm.startPrank(admin);
+        operatorsRegistry.addOperator("operatorOne", makeAddr("op1"));
+        operatorsRegistry.addOperator("operatorTwo", makeAddr("op2"));
+        operatorsRegistry.addOperator("operatorThree", makeAddr("op3"));
+        operatorsRegistry.addOperator("operatorFour", makeAddr("op4"));
+        operatorsRegistry.addOperator("operatorFive", makeAddr("op5"));
+        vm.stopPrank();
+    }
+
+    /// @dev Fund all 5 operators with 50 validators each and set limits
+    function _fundAllOperators() internal {
+        vm.startPrank(admin);
+        for (uint256 i = 0; i < 5; ++i) {
+            operatorsRegistry.addValidators(i, 50, genBytes((48 + 96) * 50));
+        }
+        vm.stopPrank();
+
+        uint256[] memory operators = new uint256[](5);
+        uint32[] memory limits = new uint32[](5);
+        for (uint256 i = 0; i < 5; ++i) {
+            operators[i] = i;
+            limits[i] = 50;
+        }
+
+        vm.prank(admin);
+        operatorsRegistry.setOperatorLimits(operators, limits, block.number);
+
+        OperatorsRegistryInitializableV1(address(operatorsRegistry))
+            .debugPickNextValidatorsToDepositFromActiveOperators(_createAllocation(operators, limits));
+
+        RiverMock(river).sudoSetDepositedValidatorsCount(250);
+    }
+
+    // ──────────────────────────────────────────────────────────────────────
+    // TEST 1: Sequential exit allocations accumulate correctly
+    // ──────────────────────────────────────────────────────────────────────
+
+    /// @notice Two rounds of exits to overlapping operators. Verifies requestedExits
+    ///         accumulates correctly and demand decrements across both calls.
+    function testSequentialExitAllocationsAccumulate() external {
+        _fundAllOperators();
+
+        // Set demand to 100
+        vm.prank(river);
+        operatorsRegistry.demandValidatorExits(100, 250);
+        assertEq(operatorsRegistry.getCurrentValidatorExitsDemand(), 100);
+
+        // Round 1: exit 10 from each of ops 0,1,2
+        uint256[] memory ops1 = new uint256[](3);
+        ops1[0] = 0;
+        ops1[1] = 1;
+        ops1[2] = 2;
+        uint32[] memory counts1 = new uint32[](3);
+        counts1[0] = 10;
+        counts1[1] = 10;
+        counts1[2] = 10;
+
+        vm.prank(keeper);
+        operatorsRegistry.requestValidatorExits(_createAllocation(ops1, counts1));
+
+        assertEq(operatorsRegistry.getOperator(0).requestedExits, 10, "Op0 should have 10 exits after round 1");
+        assertEq(operatorsRegistry.getOperator(1).requestedExits, 10, "Op1 should have 10 exits after round 1");
+        assertEq(operatorsRegistry.getOperator(2).requestedExits, 10, "Op2 should have 10 exits after round 1");
+        assertEq(operatorsRegistry.getOperator(3).requestedExits, 0, "Op3 untouched after round 1");
+        assertEq(operatorsRegistry.getOperator(4).requestedExits, 0, "Op4 untouched after round 1");
+        assertEq(operatorsRegistry.getCurrentValidatorExitsDemand(), 70, "Demand should be 70 after round 1");
+        assertEq(operatorsRegistry.getTotalValidatorExitsRequested(), 30, "Total exits should be 30 after round 1");
+
+        // Round 2: exit 15 more from ops 0,1 and 5 from op3 (new operator)
+        uint256[] memory ops2 = new uint256[](3);
+        ops2[0] = 0;
+        ops2[1] = 1;
+        ops2[2] = 3;
+        uint32[] memory counts2 = new uint32[](3);
+        counts2[0] = 15;
+        counts2[1] = 15;
+        counts2[2] = 5;
+
+        vm.prank(keeper);
+        operatorsRegistry.requestValidatorExits(_createAllocation(ops2, counts2));
+
+        assertEq(operatorsRegistry.getOperator(0).requestedExits, 25, "Op0 should have 10+15=25 exits");
+        assertEq(operatorsRegistry.getOperator(1).requestedExits, 25, "Op1 should have 10+15=25 exits");
+        assertEq(operatorsRegistry.getOperator(2).requestedExits, 10, "Op2 unchanged from round 1");
+        assertEq(operatorsRegistry.getOperator(3).requestedExits, 5, "Op3 should have 5 exits from round 2");
+        assertEq(operatorsRegistry.getOperator(4).requestedExits, 0, "Op4 still untouched");
+        assertEq(operatorsRegistry.getCurrentValidatorExitsDemand(), 35, "Demand should be 100-30-35=35");
+        assertEq(operatorsRegistry.getTotalValidatorExitsRequested(), 65, "Total exits should be 30+35=65");
+    }
+
+    // ──────────────────────────────────────────────────────────────────────
+    // TEST 2: Non-contiguous operator exits
+    // ──────────────────────────────────────────────────────────────────────
+
+    /// @notice Exit from operators 0 and 4 only, skipping active operators 1,2,3.
+    ///         Verifies skipped operators remain at requestedExits=0.
+    function testNonContiguousExitAllocations() external {
+        _fundAllOperators();
+
+        vm.prank(river);
+        operatorsRegistry.demandValidatorExits(30, 250);
+
+        uint256[] memory ops = new uint256[](2);
+        ops[0] = 0;
+        ops[1] = 4;
+        uint32[] memory counts = new uint32[](2);
+        counts[0] = 20;
+        counts[1] = 10;
+
+        vm.expectEmit(true, true, true, true);
+        emit RequestedValidatorExits(0, 20);
+        vm.expectEmit(true, true, true, true);
+        emit RequestedValidatorExits(4, 10);
+
+        vm.prank(keeper);
+        operatorsRegistry.requestValidatorExits(_createAllocation(ops, counts));
+
+        assertEq(operatorsRegistry.getOperator(0).requestedExits, 20, "Op0 should have 20 exits");
+        assertEq(operatorsRegistry.getOperator(1).requestedExits, 0, "Op1 should remain at 0");
+        assertEq(operatorsRegistry.getOperator(2).requestedExits, 0, "Op2 should remain at 0");
+        assertEq(operatorsRegistry.getOperator(3).requestedExits, 0, "Op3 should remain at 0");
+        assertEq(operatorsRegistry.getOperator(4).requestedExits, 10, "Op4 should have 10 exits");
+        assertEq(operatorsRegistry.getCurrentValidatorExitsDemand(), 0, "Demand fully satisfied");
+        assertEq(operatorsRegistry.getTotalValidatorExitsRequested(), 30);
+    }
+
+    // ──────────────────────────────────────────────────────────────────────
+    // TEST 3: Partial demand fulfillment across multiple calls
+    // ──────────────────────────────────────────────────────────────────────
+
+    /// @notice Demand is 100. Keeper fulfills 40 in first call, then 60 in second call.
+    ///         Verifies demand decrements correctly and total accumulates.
+    function testPartialDemandFulfillmentAcrossMultipleCalls() external {
+        _fundAllOperators();
+
+        vm.prank(river);
+        operatorsRegistry.demandValidatorExits(100, 250);
+        assertEq(operatorsRegistry.getCurrentValidatorExitsDemand(), 100);
+        assertEq(operatorsRegistry.getTotalValidatorExitsRequested(), 0);
+
+        // Call 1: fulfill 40 (8 from each operator)
+        uint256[] memory ops = new uint256[](5);
+        uint32[] memory counts = new uint32[](5);
+        for (uint256 i = 0; i < 5; ++i) {
+            ops[i] = i;
+            counts[i] = 8;
+        }
+
+        vm.prank(keeper);
+        operatorsRegistry.requestValidatorExits(_createAllocation(ops, counts));
+
+        assertEq(operatorsRegistry.getCurrentValidatorExitsDemand(), 60, "Demand should be 60 after first call");
+        assertEq(operatorsRegistry.getTotalValidatorExitsRequested(), 40, "Total exits should be 40");
+
+        for (uint256 i = 0; i < 5; ++i) {
+            assertEq(operatorsRegistry.getOperator(i).requestedExits, 8, string(abi.encodePacked("Op ", vm.toString(i), " should have 8 exits")));
+        }
+
+        // Call 2: fulfill remaining 60 (12 from each)
+        for (uint256 i = 0; i < 5; ++i) {
+            counts[i] = 12;
+        }
+
+        vm.prank(keeper);
+        operatorsRegistry.requestValidatorExits(_createAllocation(ops, counts));
+
+        assertEq(operatorsRegistry.getCurrentValidatorExitsDemand(), 0, "Demand should be fully satisfied");
+        assertEq(operatorsRegistry.getTotalValidatorExitsRequested(), 100, "Total exits should be 100");
+
+        for (uint256 i = 0; i < 5; ++i) {
+            assertEq(operatorsRegistry.getOperator(i).requestedExits, 20, string(abi.encodePacked("Op ", vm.toString(i), " should have 8+12=20 exits")));
+        }
+    }
+
+    // ──────────────────────────────────────────────────────────────────────
+    // TEST 4: Stopped validators + exits multi-step interaction
+    // ──────────────────────────────────────────────────────────────────────
+
+    /// @notice Multi-step: demand exits -> stop some validators (reducing demand) -> exit some
+    ///         -> stop more -> exit more. Verifies demand and requestedExits track correctly
+    ///         through the interleaved sequence.
+    function testStoppedValidatorsAndExitsMultiStep() external {
+        _fundAllOperators();
+
+        // Step 1: Create demand for 200 exits
+        vm.prank(river);
+        operatorsRegistry.demandValidatorExits(200, 250);
+        assertEq(operatorsRegistry.getCurrentValidatorExitsDemand(), 200);
+        assertEq(operatorsRegistry.getTotalValidatorExitsRequested(), 0);
+
+        // Step 2: Stop 50 validators across operators (reduces demand by 50)
+        // stoppedValidatorCounts[0] = totalStopped, then per-operator
+        uint32[] memory stoppedCounts1 = new uint32[](6);
+        stoppedCounts1[0] = 50; // total
+        stoppedCounts1[1] = 10; // op0
+        stoppedCounts1[2] = 10; // op1
+        stoppedCounts1[3] = 10; // op2
+        stoppedCounts1[4] = 10; // op3
+        stoppedCounts1[5] = 10; // op4
+        OperatorsRegistryInitializableV1(address(operatorsRegistry))
+            .sudoStoppedValidatorCounts(stoppedCounts1, 250);
+
+        assertEq(operatorsRegistry.getCurrentValidatorExitsDemand(), 150, "Demand reduced by 50 stopped");
+        assertEq(operatorsRegistry.getTotalValidatorExitsRequested(), 50, "Stopped validators count as exits");
+
+        // Step 3: Keeper exits 60 (12 from each operator)
+        uint256[] memory ops = new uint256[](5);
+        uint32[] memory exitCounts1 = new uint32[](5);
+        for (uint256 i = 0; i < 5; ++i) {
+            ops[i] = i;
+            exitCounts1[i] = 12;
+        }
+
+        vm.prank(keeper);
+        operatorsRegistry.requestValidatorExits(_createAllocation(ops, exitCounts1));
+
+        assertEq(operatorsRegistry.getCurrentValidatorExitsDemand(), 90, "Demand should be 150-60=90");
+        assertEq(operatorsRegistry.getTotalValidatorExitsRequested(), 110, "Total exits should be 50+60=110");
+
+        for (uint256 i = 0; i < 5; ++i) {
+            // requestedExits = 10 (from stopped) + 12 (from explicit exit) = 22
+            assertEq(operatorsRegistry.getOperator(i).requestedExits, 22,
+                string(abi.encodePacked("Op ", vm.toString(i), " should have 22 requestedExits")));
+        }
+
+        // Step 4: Stop 30 more validators (total stopped now 80)
+        // Each operator goes from 10 stopped to 16 stopped.
+        // But requestedExits is already 22 per operator (10 from stopped + 12 from keeper).
+        // Since 16 < 22, _setStoppedValidatorCounts does NOT increase requestedExits.
+        // The unsolicited exit count is 0 (no operator has stoppedCount > requestedExits).
+        // However, the delta from 50 total stopped to 80 total stopped still reduces demand
+        // only to the extent that new stopped > old requestedExits per operator.
+        // Since 16 < 22 for all operators, unsollicitedExitsSum = 0, so demand stays at 90.
+        uint32[] memory stoppedCounts2 = new uint32[](6);
+        stoppedCounts2[0] = 80; // total now 80 (was 50)
+        stoppedCounts2[1] = 16; // op0
+        stoppedCounts2[2] = 16; // op1
+        stoppedCounts2[3] = 16; // op2
+        stoppedCounts2[4] = 16; // op3
+        stoppedCounts2[5] = 16; // op4
+        OperatorsRegistryInitializableV1(address(operatorsRegistry))
+            .sudoStoppedValidatorCounts(stoppedCounts2, 250);
+
+        // Demand unchanged because stoppedCount(16) < requestedExits(22) for all operators
+        assertEq(operatorsRegistry.getCurrentValidatorExitsDemand(), 90, "Demand unchanged: stopped < requestedExits");
+        assertEq(operatorsRegistry.getTotalValidatorExitsRequested(), 110, "Total exits unchanged");
+
+        // requestedExits still 22 per operator (stopped didn't exceed it)
+        for (uint256 i = 0; i < 5; ++i) {
+            assertEq(operatorsRegistry.getOperator(i).requestedExits, 22,
+                string(abi.encodePacked("Op ", vm.toString(i), " requestedExits unchanged at 22")));
+        }
+
+        // Step 5: Keeper exits 12 more from each (total 60)
+        uint32[] memory exitCounts2 = new uint32[](5);
+        for (uint256 i = 0; i < 5; ++i) {
+            exitCounts2[i] = 12;
+        }
+
+        vm.prank(keeper);
+        operatorsRegistry.requestValidatorExits(_createAllocation(ops, exitCounts2));
+
+        assertEq(operatorsRegistry.getCurrentValidatorExitsDemand(), 30, "Demand should be 90-60=30");
+        assertEq(operatorsRegistry.getTotalValidatorExitsRequested(), 170, "Total exits should be 110+60=170");
+
+        for (uint256 i = 0; i < 5; ++i) {
+            // requestedExits = 22 + 12 = 34
+            assertEq(operatorsRegistry.getOperator(i).requestedExits, 34,
+                string(abi.encodePacked("Op ", vm.toString(i), " should have 22+12=34 requestedExits")));
+        }
+    }
+
+    // ──────────────────────────────────────────────────────────────────────
+    // TEST 5: Deposit then exit end-to-end
+    // ──────────────────────────────────────────────────────────────────────
+
+    /// @notice Combined flow: deposit validators via BYOV allocation, then exit some,
+    ///         then simulate validators stopping, then deposit more.
+    ///         Verifies funded and requestedExits are both correct throughout.
+    ///
+    ///         Key invariant: getAllFundable() requires stoppedCount >= requestedExits
+    ///         for an operator to be eligible for new deposits. This means you can't
+    ///         deposit to an operator with pending (unfulfilled) exit requests until
+    ///         those validators have actually stopped.
+    function testDepositThenExitEndToEnd() external {
+        // Setup: add keys and limits for 3 operators
+        vm.startPrank(admin);
+        for (uint256 i = 0; i < 3; ++i) {
+            operatorsRegistry.addValidators(i, 20, genBytes((48 + 96) * 20));
+        }
+        vm.stopPrank();
+
+        uint256[] memory ops = new uint256[](3);
+        uint32[] memory limits = new uint32[](3);
+        for (uint256 i = 0; i < 3; ++i) {
+            ops[i] = i;
+            limits[i] = 20;
+        }
+        vm.prank(admin);
+        operatorsRegistry.setOperatorLimits(ops, limits, block.number);
+
+        // Phase 1: Deposit 10 to op0, 15 to op1, 5 to op2 = 30 total
+        uint32[] memory depositCounts = new uint32[](3);
+        depositCounts[0] = 10;
+        depositCounts[1] = 15;
+        depositCounts[2] = 5;
+
+        vm.prank(river);
+        operatorsRegistry.pickNextValidatorsToDeposit(_createAllocation(ops, depositCounts));
+
+        assertEq(operatorsRegistry.getOperator(0).funded, 10, "Op0 should have 10 funded");
+        assertEq(operatorsRegistry.getOperator(1).funded, 15, "Op1 should have 15 funded");
+        assertEq(operatorsRegistry.getOperator(2).funded, 5, "Op2 should have 5 funded");
+
+        // Phase 2: Request exits -- 5 from op0, 7 from op1, 3 from op2 = 15 total
+        RiverMock(river).sudoSetDepositedValidatorsCount(30);
+        vm.prank(river);
+        operatorsRegistry.demandValidatorExits(15, 30);
+        assertEq(operatorsRegistry.getCurrentValidatorExitsDemand(), 15);
+
+        uint32[] memory exitCounts = new uint32[](3);
+        exitCounts[0] = 5;
+        exitCounts[1] = 7;
+        exitCounts[2] = 3;
+
+        vm.prank(keeper);
+        operatorsRegistry.requestValidatorExits(_createAllocation(ops, exitCounts));
+
+        assertEq(operatorsRegistry.getOperator(0).funded, 10, "Op0 funded unchanged");
+        assertEq(operatorsRegistry.getOperator(1).funded, 15, "Op1 funded unchanged");
+        assertEq(operatorsRegistry.getOperator(2).funded, 5, "Op2 funded unchanged");
+        assertEq(operatorsRegistry.getOperator(0).requestedExits, 5, "Op0 should have 5 exits");
+        assertEq(operatorsRegistry.getOperator(1).requestedExits, 7, "Op1 should have 7 exits");
+        assertEq(operatorsRegistry.getOperator(2).requestedExits, 3, "Op2 should have 3 exits");
+        assertEq(operatorsRegistry.getCurrentValidatorExitsDemand(), 0, "Demand fully satisfied");
+        assertEq(operatorsRegistry.getTotalValidatorExitsRequested(), 15);
+
+        // Phase 3: Before depositing more, the exited validators must actually stop.
+        // getAllFundable() requires stoppedCount >= requestedExits for eligibility.
+        // Simulate the stopped validators matching the exit requests.
+        uint32[] memory stoppedCounts = new uint32[](4);
+        stoppedCounts[0] = 15; // total stopped
+        stoppedCounts[1] = 5;  // op0 stopped
+        stoppedCounts[2] = 7;  // op1 stopped
+        stoppedCounts[3] = 3;  // op2 stopped
+        OperatorsRegistryInitializableV1(address(operatorsRegistry))
+            .sudoStoppedValidatorCounts(stoppedCounts, 30);
+
+        // Phase 4: Now deposit more to op0 (limit=20, funded=10, stopped >= requestedExits)
+        uint32[] memory depositCounts2 = new uint32[](1);
+        depositCounts2[0] = 5;
+        uint256[] memory singleOp = new uint256[](1);
+        singleOp[0] = 0;
+
+        vm.prank(river);
+        operatorsRegistry.pickNextValidatorsToDeposit(_createAllocation(singleOp, depositCounts2));
+
+        assertEq(operatorsRegistry.getOperator(0).funded, 15, "Op0 should now have 15 funded");
+        assertEq(operatorsRegistry.getOperator(0).requestedExits, 5, "Op0 exits unchanged by new deposit");
+
+        // Verify the other operators are unchanged
+        assertEq(operatorsRegistry.getOperator(1).funded, 15, "Op1 funded unchanged");
+        assertEq(operatorsRegistry.getOperator(2).funded, 5, "Op2 funded unchanged");
+    }
+}
