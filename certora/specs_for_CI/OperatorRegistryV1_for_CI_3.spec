@@ -45,6 +45,45 @@ rule witness4_3StartingValidatorsDecreasesDiscrepancy(env e)
     satisfy discrepancyBefore == 4 && discrepancyAfter == 3;
 }
 
+// Generalized ordering rule for pickNextValidatorsToDeposit.
+// Uses a symbolic index j so the prover verifies ALL adjacent pairs, not just (0,1).
+// The Solidity check is at OperatorsRegistry.1.sol:545 inside
+// _getPerOperatorValidatorKeysForAllocations, called by pickNextValidatorsToDeposit.
+rule pickNextValidatorToDepositRevertsIfNotSorted(env e)
+{
+    require isValidState();
+
+    IOperatorsRegistryV1.OperatorAllocation[] allocations;
+    require allocations.length >= 2;
+
+    // There exists some adjacent pair (j-1, j) that is not strictly ascending
+    uint256 j;
+    require j >= 1 && j < allocations.length;
+    require allocations[j].operatorIndex <= allocations[assert_uint256(j - 1)].operatorIndex;
+
+    pickNextValidatorsToDeposit@withrevert(e, allocations);
+    assert lastReverted, "unordered allocations must revert";
+}
+
+// Generalized ordering rule for requestValidatorExits.
+// Same pattern: symbolic index j covers all adjacent pairs.
+// The Solidity check is at OperatorsRegistry.1.sol:463.
+rule requestValidatorExitsRevertsIfNotSorted(env e)
+{
+    require isValidState();
+
+    IOperatorsRegistryV1.OperatorAllocation[] allocations;
+    require allocations.length >= 2;
+
+    // There exists some adjacent pair (j-1, j) that is not strictly ascending
+    uint256 j;
+    require j >= 1 && j < allocations.length;
+    require allocations[j].operatorIndex <= allocations[assert_uint256(j - 1)].operatorIndex;
+
+    requestValidatorExits@withrevert(e, allocations);
+    assert lastReverted, "unordered allocations must revert";
+}
+
 rule removeValidatorsDecreaseKeys(env e)
 {
     uint256[] indices;
