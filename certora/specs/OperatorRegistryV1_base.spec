@@ -7,6 +7,7 @@ methods {
     // IOperatorsRegistryV1
     function _.reportStoppedValidatorCounts(uint32[], uint256) external => DISPATCHER(true);
     function OR.getStoppedAndRequestedExitCounts() external returns (uint32, uint256) envfree;
+    function OR.getTotalValidatorExitsRequested() external returns (uint256) envfree;
     function _.getStoppedAndRequestedExitCounts() external => DISPATCHER(true);
     function _.demandValidatorExits(uint256, uint256) external => DISPATCHER(true);
     // DISPATCHER for pickNextValidatorsToDeposit not used; specs use pickNextValidatorsToDepositWithCount to avoid IOperatorsRegistryV1 in scene (no bytecode)

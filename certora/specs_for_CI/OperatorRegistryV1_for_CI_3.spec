@@ -42,6 +42,29 @@ rule pickNextValidatorsToDepositReturnsTotalAllocationCount(env e)
         "when call succeeds, returned key count must equal total allocation validator count";
 }
 
+// When requestValidatorExits succeeds, total validator exits requested increases by total allocation validator count (generic; no fixed operator count).
+rule requestValidatorExitsIncreasesTotalExitsRequestedByAllocationCount(env e)
+{
+    require isValidState();
+
+    IOperatorsRegistryV1.OperatorAllocation[] allocations;
+    require allocations.length >= 1;
+    require allocations.length <= 2;
+    if (allocations.length >= 2) {
+        require allocations[1].operatorIndex > allocations[0].operatorIndex;
+    }
+
+    uint256 totalRequested = totalAllocationValidatorCount(allocations);
+    require totalRequested >= 1;
+
+    uint256 totalExitsBefore = getTotalValidatorExitsRequested();
+    requestValidatorExits@withrevert(e, allocations);
+    bool reverted = lastReverted;
+    uint256 totalExitsAfter = getTotalValidatorExitsRequested();
+    assert reverted || (totalExitsAfter == totalExitsBefore + totalRequested),
+        "when call succeeds, total validator exits requested must increase by total allocation validator count";
+}
+
 // Generalized ordering rule for requestValidatorExits.
 // Same pattern: symbolic index j covers all adjacent pairs.
 // The Solidity check is at OperatorsRegistry.1.sol:463.
