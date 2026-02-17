@@ -209,6 +209,10 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
         view
         returns (bytes[] memory publicKeys, bytes[] memory signatures)
     {
+        if (_allocations.length == 0) {
+            revert InvalidEmptyArray();
+        }
+
         (OperatorsV2.CachedOperator[] memory operators, uint256 fundableOperatorCount) = OperatorsV2.getAllFundable();
 
         if (fundableOperatorCount == 0) {
@@ -711,6 +715,10 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
         internal
         returns (bytes[] memory publicKeys, bytes[] memory signatures)
     {
+        if (_allocations.length == 0) {
+            revert InvalidEmptyArray();
+        }
+
         (OperatorsV2.CachedOperator[] memory operators, uint256 fundableOperatorCount) = OperatorsV2.getAllFundable();
 
         if (fundableOperatorCount == 0) {

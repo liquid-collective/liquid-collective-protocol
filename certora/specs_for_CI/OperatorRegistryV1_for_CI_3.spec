@@ -24,6 +24,9 @@ rule startingValidatorsDecreasesDiscrepancy(env e)
     IOperatorsRegistryV1.OperatorAllocation[] allocations;
     require allocations.length > 0 && allocations.length <= 3;
     pickNextValidatorsToDeposit(e, allocations);
+    IOperatorsRegistryV1.OperatorAllocation[] allocations;
+    require allocations.length > 0 && allocations.length <= 3;
+    pickNextValidatorsToDeposit(e, allocations);
     uint discrepancyAfter = getOperatorsSaturationDiscrepancy(index1, index2);
 
     assert discrepancyBefore > 0 => to_mathint(discrepancyBefore) >= 
