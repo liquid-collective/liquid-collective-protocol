@@ -2,6 +2,7 @@
 pragma solidity 0.8.33;
 
 import "../interfaces/components/IConsensusLayerDepositManager.1.sol";
+import "../interfaces/IOperatorRegistry.1.sol";
 import "../interfaces/IDepositContract.sol";
 
 import "../libraries/LibBytes.sol";
@@ -20,7 +21,7 @@ import "../state/river/KeeperAddress.sol";
 /// @notice Whenever a deposit to the consensus layer is requested, this contract computed the amount of keys
 /// @notice that could be deposited depending on the amount available in the contract. It then tries to retrieve
 /// @notice validator keys by calling its internal virtual method _getNextValidators. This method should be
-/// @notice overridden by the implementing contract to provide [0; _keyCount] keys when invoked.
+/// @notice overridden by the implementing contract to provide keys based on the allocation when invoked.
 abstract contract ConsensusLayerDepositManagerV1 is IConsensusLayerDepositManagerV1 {
     /// @notice Size of a BLS Public key in bytes
     uint256 public constant PUBLIC_KEY_LENGTH = 48;
@@ -39,8 +40,10 @@ abstract contract ConsensusLayerDepositManagerV1 is IConsensusLayerDepositManage
 
     /// @notice Internal helper to retrieve validator keys ready to be funded
     /// @dev Must be overridden
-    /// @param _keyCount The amount of keys (or less) to return.
-    function _getNextValidators(uint256 _keyCount)
+    /// @param _allocations Validator allocations
+    /// @return publicKeys An array of public keys ready to be funded
+    /// @return signatures An array of signatures ready to be funded
+    function _getNextValidators(IOperatorsRegistryV1.OperatorAllocation[] memory _allocations)
         internal
         virtual
         returns (bytes[] memory publicKeys, bytes[] memory signatures);
@@ -88,7 +91,10 @@ abstract contract ConsensusLayerDepositManagerV1 is IConsensusLayerDepositManage
     }
 
     /// @inheritdoc IConsensusLayerDepositManagerV1
-    function depositToConsensusLayerWithDepositRoot(uint256 _maxCount, bytes32 _depositRoot) external {
+    function depositToConsensusLayerWithDepositRoot(
+        IOperatorsRegistryV1.OperatorAllocation[] calldata _allocations,
+        bytes32 _depositRoot
+    ) external {
         if (msg.sender != KeeperAddress.get()) {
             revert OnlyKeeper();
         }
@@ -98,15 +104,31 @@ abstract contract ConsensusLayerDepositManagerV1 is IConsensusLayerDepositManage
         }
 
         uint256 committedBalance = CommittedBalance.get();
-        uint256 keyToDepositCount = LibUint256.min(committedBalance / DEPOSIT_SIZE, _maxCount);
+        uint256 maxDepositableCount = committedBalance / DEPOSIT_SIZE;
 
-        if (keyToDepositCount == 0) {
+        if (maxDepositableCount == 0) {
             revert NotEnoughFunds();
+        }
+        // Calculate total requested from allocations
+        uint256 totalRequested = 0;
+        for (uint256 i = 0; i < _allocations.length; ++i) {
+            if (i > 0 && !(_allocations[i].operatorIndex > _allocations[i - 1].operatorIndex)) {
+                revert IOperatorsRegistryV1.UnorderedOperatorList();
+            }
+            if (_allocations[i].validatorCount == 0) {
+                revert IOperatorsRegistryV1.AllocationWithZeroValidatorCount();
+            }
+            totalRequested += _allocations[i].validatorCount;
+        }
+
+        // Check if the total requested number of validators exceeds the maximum number of validators that can be funded
+        if (totalRequested > maxDepositableCount) {
+            revert OperatorAllocationsExceedCommittedBalance();
         }
 
         // it's up to the internal overriden _getNextValidators method to provide two array of the same
         // size for the publicKeys and the signatures
-        (bytes[] memory publicKeys, bytes[] memory signatures) = _getNextValidators(keyToDepositCount);
+        (bytes[] memory publicKeys, bytes[] memory signatures) = _getNextValidators(_allocations);
 
         uint256 receivedPublicKeyCount = publicKeys.length;
 
@@ -114,7 +136,8 @@ abstract contract ConsensusLayerDepositManagerV1 is IConsensusLayerDepositManage
             revert NoAvailableValidatorKeys();
         }
 
-        if (receivedPublicKeyCount > keyToDepositCount) {
+        // Check that the received public keys count equals the total requested and does not exceed the maximum number of validators that can be funded in this run
+        if (receivedPublicKeyCount > maxDepositableCount || receivedPublicKeyCount != totalRequested) {
             revert InvalidPublicKeyCount();
         }
 

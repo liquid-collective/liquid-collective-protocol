@@ -4,6 +4,7 @@ pragma solidity 0.8.33;
 
 import "forge-std/Test.sol";
 
+import "../OperatorAllocationTestBase.sol";
 import "../../src/components/ConsensusLayerDepositManager.1.sol";
 import "../utils/LibImplementationUnbricker.sol";
 
@@ -35,8 +36,17 @@ contract ConsensusLayerDepositManagerV1ExposeInitializer is ConsensusLayerDeposi
     bytes public _signatures =
         hex"6e93b287f9972d6e4bb7b9b7bdf75e2f3190b61dff0699d9708ee2a6e08f0ce1436b3f0213c1d7e0168cd1b221326b917e0dba509208bf586923ccc53e30b9bc697834508a4c54cd4f097f2c8c5d1b7b3c829fdc326f8df92aae75f008099e1e0324e6ea8734ab375bc33000ab02c63423c3dec20823ac27cadc1e393fa1f15774e52c6a5194dd9136f253b1dc8e0cf9f1a9eec02517d923af4f242e2215d4f82d2bfb657e666f24e5c5f8e6c9636250c0e8f2c20ddd91eda71d1ef5896dbc0fd84508f71958ab19b047030cee1911d55194e38051111021e0710e0be25c3f878ba11c7db118b06a6fc04570cba519c1aa4184693f024bc0e02019dfb62dacab8a2b1127d1b03645ed6377717cbd099aab8d6a5bef2be1aa8e0bb7e2565c8eddfa91b72ae014adb0a47a272d1aedd5920a2ec2f788fe76852b45961d959fdb627329326352f8f3e73bb758022265174af7bc6e3b8ef19f173244735f68789d0f6a34de6da1e22142478205388e8b9db291e01227aa5e4e7173aa11624341b31a202ffade6b5418099dd583708c1fb95525bbfa87b1d08455b640ce25cf322b00471f8dc813dbcd8b82c20e9d07c6215e86237d94ed6f81c7a7ffce0180c128be4f036203e9acfa713d41609a654de0a56a1689da6dcd3950dfd1e3f36987cca569ba947c97b205e34f8ed2dd87b4e29a822676457121ff48ee8bb4dd0b7200093883f6cde4edf1026abc5bc5692dbbfb2197fb4cfbac4eecc99b7956a4dab19cc74db50cf83ff35e880ef58457d3a5b444a17c072ea617ff28cf7bba2657f8ef118a8e6f65453548aafea8c8b88a0df7dbeeaecff69d05ff0dfc55fb97eb94b05b7d7aa748f5aaf6fe38aa6183f400d65e0152004780a089449a5bd77e04b7bd0682c67f5c4fd12bf56b6b31ec3eccfe104f8f64c8b9d23375e0078ba8fe6253037a8a2171682301d5463ce24b4e920af83fd009b6214450382309a143332e8dfa05a95dfa686a630b95b80cfd9b42d33cc3de7f5708dd67714192a14ca814a1f3cc4b4932c36831674ee8ba3a58f12643c1b4bf1e00370290ac4d5e994410d69bad8c691efaf5b6e8fe8331882f7dc304d8ccb6bd9d6079c1698dbdef47996c937046157498db082443ddd33f61e1abb204f12d553b25ea1d773812f701a3c9b36c5909c3b9ebd18d2ba1b8a2daeae36a2811a59bbae1d334fde54e07eac5770172c36d50d821fb181c97bb00a9684a904a2fc8c9c520e730fca4751b4f0d266dc33ddbb7e8ea065ccc47a7dbea61a185ab2413917a039e505e85e2f781eeef96658b94a07f9662ff3e6c8728de755c7a305f975ae8772c8b75468ad30a5467";
 
-    function _getNextValidators(uint256 _amount) internal view override returns (bytes[] memory, bytes[] memory) {
-        uint256 amount = _amount > 10 ? 10 : _amount;
+    function _getNextValidators(IOperatorsRegistryV1.OperatorAllocation[] memory _allocations)
+        internal
+        view
+        override
+        returns (bytes[] memory, bytes[] memory)
+    {
+        uint256 totalRequested = 0;
+        for (uint256 i = 0; i < _allocations.length; ++i) {
+            totalRequested += _allocations[i].validatorCount;
+        }
+        uint256 amount = totalRequested > 10 ? 10 : totalRequested;
         bytes[] memory publicKeys = new bytes[](amount);
         bytes[] memory signatures = new bytes[](amount);
 
@@ -94,7 +104,7 @@ contract ConsensusLayerDepositManagerV1InitTests is Test {
     }
 }
 
-contract ConsensusLayerDepositManagerV1Tests is Test {
+contract ConsensusLayerDepositManagerV1Tests is OperatorAllocationTestBase {
     bytes32 internal withdrawalCredentials = bytes32(uint256(1));
 
     ConsensusLayerDepositManagerV1 internal depositManager;
@@ -118,7 +128,7 @@ contract ConsensusLayerDepositManagerV1Tests is Test {
         ConsensusLayerDepositManagerV1ExposeInitializer(address(depositManager)).sudoSyncBalance();
         vm.expectRevert(abi.encodeWithSignature("NotEnoughFunds()"));
         vm.prank(address(0x1));
-        depositManager.depositToConsensusLayerWithDepositRoot(5, bytes32(0));
+        depositManager.depositToConsensusLayerWithDepositRoot(_createAllocation(1), bytes32(0));
     }
 
     function testDepositTenValidators() public {
@@ -126,16 +136,16 @@ contract ConsensusLayerDepositManagerV1Tests is Test {
         ConsensusLayerDepositManagerV1ExposeInitializer(address(depositManager)).sudoSyncBalance();
         assert(address(depositManager).balance == 320 ether);
         vm.prank(address(0x1));
-        depositManager.depositToConsensusLayerWithDepositRoot(10, bytes32(0));
+        depositManager.depositToConsensusLayerWithDepositRoot(_createAllocation(10), bytes32(0));
         assert(address(depositManager).balance == 0);
     }
 
-    function testDepositTwentyValidators() public {
+    function testDepositLessThanMaxDepositableCount() public {
         vm.deal(address(depositManager), 640 ether);
         ConsensusLayerDepositManagerV1ExposeInitializer(address(depositManager)).sudoSyncBalance();
         assert(address(depositManager).balance == 640 ether);
         vm.prank(address(0x1));
-        depositManager.depositToConsensusLayerWithDepositRoot(20, bytes32(0));
+        depositManager.depositToConsensusLayerWithDepositRoot(_createAllocation(10), bytes32(0));
         assert(address(depositManager).balance == 320 ether);
     }
 }
@@ -170,9 +180,18 @@ contract ConsensusLayerDepositManagerV1ControllableValidatorKeyRequest is Consen
         scenario = _newScenario;
     }
 
-    function _getNextValidators(uint256 _amount) internal view override returns (bytes[] memory, bytes[] memory) {
+    function _getNextValidators(IOperatorsRegistryV1.OperatorAllocation[] memory _allocations)
+        internal
+        view
+        override
+        returns (bytes[] memory, bytes[] memory)
+    {
+        uint256 totalRequested = 0;
+        for (uint256 i = 0; i < _allocations.length; ++i) {
+            totalRequested += _allocations[i].validatorCount;
+        }
         if (scenario == 0) {
-            uint256 amount = _amount > 10 ? 10 : _amount;
+            uint256 amount = totalRequested > 10 ? 10 : totalRequested;
             bytes[] memory publicKeys = new bytes[](amount);
             bytes[] memory signatures = new bytes[](amount);
 
@@ -223,6 +242,26 @@ contract ConsensusLayerDepositManagerV1ControllableValidatorKeyRequest is Consen
             signatures[0] = LibBytes.slice(_signatures, 0, 96);
             signatures[1] = LibBytes.slice(_signatures, 96, 96);
             return (publicKeys, signatures);
+        } else if (scenario == 6) {
+            // Return fewer keys than requested (simulates faulty registry)
+            uint256 amount = totalRequested / 2;
+            bytes[] memory publicKeys = new bytes[](amount);
+            bytes[] memory signatures = new bytes[](amount);
+            for (uint256 idx = 0; idx < amount; ++idx) {
+                publicKeys[idx] = LibBytes.slice(_publicKeys, idx * 48, 48);
+                signatures[idx] = LibBytes.slice(_signatures, idx * 96, 96);
+            }
+            return (publicKeys, signatures);
+        } else if (scenario == 7) {
+            // Return more keys than requested (but within max depositable)
+            uint256 amount = 4;
+            bytes[] memory publicKeys = new bytes[](amount);
+            bytes[] memory signatures = new bytes[](amount);
+            for (uint256 idx = 0; idx < amount; ++idx) {
+                publicKeys[idx] = LibBytes.slice(_publicKeys, idx * 48, 48);
+                signatures[idx] = LibBytes.slice(_signatures, idx * 96, 96);
+            }
+            return (publicKeys, signatures);
         }
         return (new bytes[](0), new bytes[](0));
     }
@@ -240,7 +279,7 @@ contract ConsensusLayerDepositManagerV1ControllableValidatorKeyRequest is Consen
     }
 }
 
-contract ConsensusLayerDepositManagerV1ErrorTests is Test {
+contract ConsensusLayerDepositManagerV1ErrorTests is OperatorAllocationTestBase {
     bytes32 internal withdrawalCredentials = bytes32(uint256(1));
 
     ConsensusLayerDepositManagerV1 internal depositManager;
@@ -255,22 +294,24 @@ contract ConsensusLayerDepositManagerV1ErrorTests is Test {
             .publicConsensusLayerDepositManagerInitializeV1(address(depositContract), withdrawalCredentials);
     }
 
+    // For InconsistentPublicKeys - scenario 1 returns 1 key with 49-byte pubkey
     function testInconsistentPublicKey() public {
-        vm.deal(address(depositManager), 32 ether);
+        vm.deal(address(depositManager), 32 ether); // 1 deposit
         ConsensusLayerDepositManagerV1ControllableValidatorKeyRequest(address(depositManager)).sudoSyncBalance();
         ConsensusLayerDepositManagerV1ControllableValidatorKeyRequest(address(depositManager)).setScenario(1);
         vm.expectRevert(abi.encodeWithSignature("InconsistentPublicKeys()"));
         vm.prank(address(0x1));
-        depositManager.depositToConsensusLayerWithDepositRoot(5, bytes32(0));
+        depositManager.depositToConsensusLayerWithDepositRoot(_createAllocation(1), bytes32(0));
     }
 
+    // For InconsistentSignatures - scenario 2 returns 1 key with 97-byte signature
     function testInconsistentSignature() public {
-        vm.deal(address(depositManager), 32 ether);
+        vm.deal(address(depositManager), 32 ether); // 1 deposit
         ConsensusLayerDepositManagerV1ControllableValidatorKeyRequest(address(depositManager)).sudoSyncBalance();
         ConsensusLayerDepositManagerV1ControllableValidatorKeyRequest(address(depositManager)).setScenario(2);
         vm.expectRevert(abi.encodeWithSignature("InconsistentSignatures()"));
         vm.prank(address(0x1));
-        depositManager.depositToConsensusLayerWithDepositRoot(5, bytes32(0));
+        depositManager.depositToConsensusLayerWithDepositRoot(_createAllocation(1), bytes32(0));
     }
 
     function testUnavailableKeys() public {
@@ -279,7 +320,7 @@ contract ConsensusLayerDepositManagerV1ErrorTests is Test {
         ConsensusLayerDepositManagerV1ControllableValidatorKeyRequest(address(depositManager)).setScenario(3);
         vm.expectRevert(abi.encodeWithSignature("NoAvailableValidatorKeys()"));
         vm.prank(address(0x1));
-        depositManager.depositToConsensusLayerWithDepositRoot(5, bytes32(0));
+        depositManager.depositToConsensusLayerWithDepositRoot(_createAllocation(1), bytes32(0));
     }
 
     function testInvalidPublicKeyCount() public {
@@ -288,11 +329,99 @@ contract ConsensusLayerDepositManagerV1ErrorTests is Test {
         ConsensusLayerDepositManagerV1ControllableValidatorKeyRequest(address(depositManager)).setScenario(4);
         vm.expectRevert(abi.encodeWithSignature("InvalidPublicKeyCount()"));
         vm.prank(address(0x1));
-        depositManager.depositToConsensusLayerWithDepositRoot(5, bytes32(0));
+        depositManager.depositToConsensusLayerWithDepositRoot(_createAllocation(1), bytes32(0));
+    }
+
+    function testFaultyRegistryReturnsFewerKeys() public {
+        vm.deal(address(depositManager), 4 * 32 ether);
+        ConsensusLayerDepositManagerV1ControllableValidatorKeyRequest(address(depositManager)).sudoSyncBalance();
+        ConsensusLayerDepositManagerV1ControllableValidatorKeyRequest(address(depositManager)).setScenario(6); // returns half of requested keys
+        vm.expectRevert(abi.encodeWithSignature("InvalidPublicKeyCount()"));
+        vm.prank(address(0x1));
+        depositManager.depositToConsensusLayerWithDepositRoot(_createAllocation(4), bytes32(0));
+    }
+
+    function testFaultyRegistryReturnsMoreKeysThanRequested() public {
+        vm.deal(address(depositManager), 4 * 32 ether); // maxDepositableCount = 4
+        ConsensusLayerDepositManagerV1ControllableValidatorKeyRequest(address(depositManager)).sudoSyncBalance();
+        ConsensusLayerDepositManagerV1ControllableValidatorKeyRequest(address(depositManager)).setScenario(7); // returns 4 keys
+        vm.expectRevert(abi.encodeWithSignature("InvalidPublicKeyCount()"));
+        vm.prank(address(0x1));
+        depositManager.depositToConsensusLayerWithDepositRoot(_createAllocation(2), bytes32(0)); // only request 2
+    }
+
+    function testAllocationExceedsCommittedBalance() public {
+        // Fund with only 2 deposits worth of ETH
+        vm.deal(address(depositManager), 2 * 32 ether);
+        ConsensusLayerDepositManagerV1ControllableValidatorKeyRequest(address(depositManager)).sudoSyncBalance();
+        // Try to allocate 5 validators when only 2 can be funded
+        vm.expectRevert(abi.encodeWithSignature("OperatorAllocationsExceedCommittedBalance()"));
+        vm.prank(address(0x1));
+        depositManager.depositToConsensusLayerWithDepositRoot(_createAllocation(5), bytes32(0));
+    }
+
+    // Tests that duplicate operator indices in allocations revert with UnorderedOperatorList
+    function testUnorderedOperatorListDuplicate() public {
+        vm.deal(address(depositManager), 4 * 32 ether);
+        ConsensusLayerDepositManagerV1ControllableValidatorKeyRequest(address(depositManager)).sudoSyncBalance();
+
+        // Create allocations with duplicate operator index: [{0, 2}, {0, 2}]
+        IOperatorsRegistryV1.OperatorAllocation[] memory allocations = new IOperatorsRegistryV1.OperatorAllocation[](2);
+        allocations[0] = IOperatorsRegistryV1.OperatorAllocation({operatorIndex: 0, validatorCount: 2});
+        allocations[1] = IOperatorsRegistryV1.OperatorAllocation({operatorIndex: 0, validatorCount: 2});
+
+        vm.expectRevert(abi.encodeWithSignature("UnorderedOperatorList()"));
+        vm.prank(address(0x1));
+        depositManager.depositToConsensusLayerWithDepositRoot(allocations, bytes32(0));
+    }
+
+    // Tests that non-ascending operator indices revert with UnorderedOperatorList
+    function testUnorderedOperatorListDescendingOperatorIndices() public {
+        vm.deal(address(depositManager), 4 * 32 ether);
+        ConsensusLayerDepositManagerV1ControllableValidatorKeyRequest(address(depositManager)).sudoSyncBalance();
+
+        // Create allocations with descending order: [{1, 2}, {0, 2}]
+        IOperatorsRegistryV1.OperatorAllocation[] memory allocations = new IOperatorsRegistryV1.OperatorAllocation[](2);
+        allocations[0] = IOperatorsRegistryV1.OperatorAllocation({operatorIndex: 1, validatorCount: 2});
+        allocations[1] = IOperatorsRegistryV1.OperatorAllocation({operatorIndex: 0, validatorCount: 2});
+
+        vm.expectRevert(abi.encodeWithSignature("UnorderedOperatorList()"));
+        vm.prank(address(0x1));
+        depositManager.depositToConsensusLayerWithDepositRoot(allocations, bytes32(0));
+    }
+
+    // Tests that an allocation with zero validator count reverts with AllocationWithZeroValidatorCount
+    function testAllocationWithZeroValidatorCount() public {
+        vm.deal(address(depositManager), 2 * 32 ether);
+        ConsensusLayerDepositManagerV1ControllableValidatorKeyRequest(address(depositManager)).sudoSyncBalance();
+
+        // Create allocation with zero validator count: [{0, 0}]
+        IOperatorsRegistryV1.OperatorAllocation[] memory allocations = new IOperatorsRegistryV1.OperatorAllocation[](1);
+        allocations[0] = IOperatorsRegistryV1.OperatorAllocation({operatorIndex: 0, validatorCount: 0});
+
+        vm.expectRevert(abi.encodeWithSignature("AllocationWithZeroValidatorCount()"));
+        vm.prank(address(0x1));
+        depositManager.depositToConsensusLayerWithDepositRoot(allocations, bytes32(0));
+    }
+
+    // Tests that a multi-allocation array with a zero count in the middle reverts
+    function testAllocationWithZeroValidatorCountInMiddle() public {
+        vm.deal(address(depositManager), 4 * 32 ether);
+        ConsensusLayerDepositManagerV1ControllableValidatorKeyRequest(address(depositManager)).sudoSyncBalance();
+
+        // Create allocations: [{0, 2}, {1, 0}, {2, 2}] - middle has zero count
+        IOperatorsRegistryV1.OperatorAllocation[] memory allocations = new IOperatorsRegistryV1.OperatorAllocation[](3);
+        allocations[0] = IOperatorsRegistryV1.OperatorAllocation({operatorIndex: 0, validatorCount: 2});
+        allocations[1] = IOperatorsRegistryV1.OperatorAllocation({operatorIndex: 1, validatorCount: 0});
+        allocations[2] = IOperatorsRegistryV1.OperatorAllocation({operatorIndex: 2, validatorCount: 2});
+
+        vm.expectRevert(abi.encodeWithSignature("AllocationWithZeroValidatorCount()"));
+        vm.prank(address(0x1));
+        depositManager.depositToConsensusLayerWithDepositRoot(allocations, bytes32(0));
     }
 }
 
-contract ConsensusLayerDepositManagerV1WithdrawalCredentialError is Test {
+contract ConsensusLayerDepositManagerV1WithdrawalCredentialError is OperatorAllocationTestBase {
     bytes32 internal withdrawalCredentials = bytes32(uint256(1));
 
     ConsensusLayerDepositManagerV1 internal depositManager;
@@ -317,7 +446,7 @@ contract ConsensusLayerDepositManagerV1WithdrawalCredentialError is Test {
         ConsensusLayerDepositManagerV1ControllableValidatorKeyRequest(address(depositManager)).setKeeper(address(0x1));
         vm.expectRevert(abi.encodeWithSignature("InvalidWithdrawalCredentials()"));
         vm.prank(address(0x1));
-        depositManager.depositToConsensusLayerWithDepositRoot(5, bytes32(0));
+        depositManager.depositToConsensusLayerWithDepositRoot(_createAllocation(1), bytes32(0));
         ConsensusLayerDepositManagerV1ExposeInitializer(address(depositManager))
             .sudoSetWithdrawalCredentials(withdrawalCredentials);
     }
@@ -349,8 +478,17 @@ contract ConsensusLayerDepositManagerV1ValidKeys is ConsensusLayerDepositManager
     bytes public _signatures =
         hex"8A1979CC3E8D2897044AA18F99F78569AFC0EF9CF5CA5F9545070CF2D2A2CCD5C328B2B2280A8BA80CC810A46470BFC80D2EAAC53E533E43BA054A00587027BA0BCBA5FAD22355257CEB96B23E45D5746022312FBB7E7EFA8C3AE17C0713B426";
 
-    function _getNextValidators(uint256 _amount) internal view override returns (bytes[] memory, bytes[] memory) {
-        uint256 amount = _amount > 1 ? 1 : _amount;
+    function _getNextValidators(IOperatorsRegistryV1.OperatorAllocation[] memory _allocations)
+        internal
+        view
+        override
+        returns (bytes[] memory, bytes[] memory)
+    {
+        uint256 totalRequested = 0;
+        for (uint256 i = 0; i < _allocations.length; ++i) {
+            totalRequested += _allocations[i].validatorCount;
+        }
+        uint256 amount = totalRequested > 1 ? 1 : totalRequested;
         bytes[] memory publicKeys = new bytes[](amount);
         bytes[] memory signatures = new bytes[](amount);
 
@@ -375,7 +513,7 @@ contract ConsensusLayerDepositManagerV1ValidKeys is ConsensusLayerDepositManager
     }
 }
 
-contract ConsensusLayerDepositManagerV1ValidKeysTest is Test {
+contract ConsensusLayerDepositManagerV1ValidKeysTest is OperatorAllocationTestBase {
     ConsensusLayerDepositManagerV1 internal depositManager;
     IDepositContract internal depositContract;
 
@@ -405,7 +543,7 @@ contract ConsensusLayerDepositManagerV1ValidKeysTest is Test {
             bytes32(uint256(uint160(address(0x1))))
         );
         vm.startPrank(address(0x1));
-        depositManager.depositToConsensusLayerWithDepositRoot(1, depositContract.get_deposit_root());
+        depositManager.depositToConsensusLayerWithDepositRoot(_createAllocation(1), depositContract.get_deposit_root());
         assert(DepositContractEnhancedMock(address(depositContract)).debug_getLastDepositDataRoot() == depositDataRoot);
     }
 
@@ -417,11 +555,11 @@ contract ConsensusLayerDepositManagerV1ValidKeysTest is Test {
         );
         vm.startPrank(address(0x1));
         vm.expectRevert(abi.encodeWithSignature("InvalidDepositRoot()"));
-        depositManager.depositToConsensusLayerWithDepositRoot(1, bytes32(0));
+        depositManager.depositToConsensusLayerWithDepositRoot(_createAllocation(1), bytes32(0));
     }
 }
 
-contract ConsensusLayerDepositManagerV1InvalidDepositContract is Test {
+contract ConsensusLayerDepositManagerV1InvalidDepositContract is OperatorAllocationTestBase {
     ConsensusLayerDepositManagerV1 internal depositManager;
     IDepositContract internal depositContract;
 
@@ -441,11 +579,11 @@ contract ConsensusLayerDepositManagerV1InvalidDepositContract is Test {
         ConsensusLayerDepositManagerV1ValidKeys(address(depositManager)).sudoSyncBalance();
         vm.expectRevert(abi.encodeWithSignature("ErrorOnDeposit()"));
         vm.prank(address(0x1));
-        depositManager.depositToConsensusLayerWithDepositRoot(1, bytes32(0));
+        depositManager.depositToConsensusLayerWithDepositRoot(_createAllocation(1), bytes32(0));
     }
 }
 
-contract ConsensusLayerDepositManagerV1KeeperTest is Test {
+contract ConsensusLayerDepositManagerV1KeeperTest is OperatorAllocationTestBase {
     ConsensusLayerDepositManagerV1 internal depositManager;
     IDepositContract internal depositContract;
 
@@ -475,7 +613,7 @@ contract ConsensusLayerDepositManagerV1KeeperTest is Test {
             bytes32(uint256(uint160(address(0x1))))
         );
         vm.startPrank(address(0x1));
-        depositManager.depositToConsensusLayerWithDepositRoot(1, depositContract.get_deposit_root());
+        depositManager.depositToConsensusLayerWithDepositRoot(_createAllocation(1), depositContract.get_deposit_root());
         assert(DepositContractEnhancedMock(address(depositContract)).debug_getLastDepositDataRoot() == depositDataRoot);
     }
 
@@ -490,6 +628,6 @@ contract ConsensusLayerDepositManagerV1KeeperTest is Test {
         bytes32 depositRoot = depositContract.get_deposit_root();
         vm.expectRevert(abi.encodeWithSignature("OnlyKeeper()"));
         vm.prank(address(0x1));
-        depositManager.depositToConsensusLayerWithDepositRoot(1, depositRoot);
+        depositManager.depositToConsensusLayerWithDepositRoot(_createAllocation(1), depositRoot);
     }
 }

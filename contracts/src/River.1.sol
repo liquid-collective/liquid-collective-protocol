@@ -320,16 +320,16 @@ contract RiverV1 is
         }
     }
 
-    /// @notice Overridden handler called whenever a deposit to the consensus layer is made. Should retrieve _requestedAmount or lower keys
-    /// @param _requestedAmount Amount of keys required. Contract is expected to send _requestedAmount or lower.
+    /// @notice Overridden handler called whenever a deposit to the consensus layer is made based on node operator allocations.
+    /// @param _allocations Node operator allocations
     /// @return publicKeys Array of fundable public keys
     /// @return signatures Array of signatures linked to the public keys
-    function _getNextValidators(uint256 _requestedAmount)
+    function _getNextValidators(IOperatorsRegistryV1.OperatorAllocation[] memory _allocations)
         internal
         override
         returns (bytes[] memory publicKeys, bytes[] memory signatures)
     {
-        return IOperatorsRegistryV1(OperatorsRegistryAddress.get()).pickNextValidatorsToDeposit(_requestedAmount);
+        return IOperatorsRegistryV1(OperatorsRegistryAddress.get()).pickNextValidatorsToDeposit(_allocations);
     }
 
     /// @notice Overridden handler to pull funds from the execution layer fee recipient to River and return the delta in the balance

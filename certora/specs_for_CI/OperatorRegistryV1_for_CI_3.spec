@@ -21,13 +21,13 @@ rule startingValidatorsDecreasesDiscrepancy(env e)
     require getKeysCount(index1) < 5; 
     require getKeysCount(index2) < 5;
        
-    uint count;
-    require count > 0 && count <= 3;
-    pickNextValidatorsToDeposit(e, count);
+    IOperatorsRegistryV1.OperatorAllocation[] allocations;
+    require allocations.length > 0 && allocations.length <= 3;
+    pickNextValidatorsToDeposit(e, allocations);
     uint discrepancyAfter = getOperatorsSaturationDiscrepancy(index1, index2);
 
     assert discrepancyBefore > 0 => to_mathint(discrepancyBefore) >= 
-        discrepancyAfter - count + 1; // this conditions is fine as long as count <= MAX_VALIDATOR_ATTRIBUTION_PER_ROUND
+        discrepancyAfter - allocations.length + 1;
 }
 
 rule witness4_3StartingValidatorsDecreasesDiscrepancy(env e) 
@@ -38,9 +38,9 @@ rule witness4_3StartingValidatorsDecreasesDiscrepancy(env e)
     require operatorStateIsValid(index2);
     
     uint discrepancyBefore = getOperatorsSaturationDiscrepancy(index1, index2);
-    uint count;
-    require count <= 1;
-    pickNextValidatorsToDeposit(e, count);
+    IOperatorsRegistryV1.OperatorAllocation[] allocations;
+    require allocations.length <= 1;
+    pickNextValidatorsToDeposit(e, allocations);
     uint discrepancyAfter = getOperatorsSaturationDiscrepancy(index1, index2);
     satisfy discrepancyBefore == 4 && discrepancyAfter == 3;
 }
@@ -119,7 +119,7 @@ invariant inactiveOperatorsRemainNotFunded_LI2(uint opIndex)
         } 
     { 
         preserved requestValidatorExits(uint256 x) with(env e) { require x <= 2; }
-        preserved pickNextValidatorsToDeposit(uint256 x) with(env e) { require x <= 1; }  
+        preserved pickNextValidatorsToDeposit(IOperatorsRegistryV1.OperatorAllocation[] x) with(env e) { require x.length <= 1; }  
         preserved removeValidators(uint256 _index, uint256[] _indexes) with(env e) { require _indexes.length <= 1; }  
     }
 
@@ -178,7 +178,7 @@ invariant operatorsStatesRemainValid_LI2_easyMethods(uint opIndex)
     filtered { f -> !ignoredMethod(f) && 
     !needsLoopIter4(f) &&
     f.selector != sig:requestValidatorExits(uint256).selector &&
-    f.selector != sig:pickNextValidatorsToDeposit(uint256).selector &&
+    f.selector != sig:pickNextValidatorsToDeposit(IOperatorsRegistryV1.OperatorAllocation[]).selector &&
     f.selector != sig:removeValidators(uint256,uint256[]).selector
     }
 
@@ -187,7 +187,7 @@ invariant operatorsStatesRemainValid_LI2_easyMethods(uint opIndex)
 invariant operatorsStatesRemainValid_LI2_pickNextValidatorsToDeposit(uint opIndex) 
     isValidState() => (operatorStateIsValid(opIndex))
     filtered { f -> !ignoredMethod(f) && 
-    !needsLoopIter4(f) && f.selector != sig:pickNextValidatorsToDeposit(uint256).selector
+    !needsLoopIter4(f) && f.selector != sig:pickNextValidatorsToDeposit(IOperatorsRegistryV1.OperatorAllocation[]).selector
     }
 
 // proves the invariant for reportStoppedValidatorCounts
@@ -392,7 +392,7 @@ invariant validatorKeysRemainUnique_LI2(
     filtered { f -> !ignoredMethod(f) && !needsLoopIter4(f) }
     { 
         preserved requestValidatorExits(uint256 x) with(env e) { require x <= 2; }
-        preserved pickNextValidatorsToDeposit(uint256 x) with(env e) { require x <= 2; }  
+        preserved pickNextValidatorsToDeposit(IOperatorsRegistryV1.OperatorAllocation[] x) with(env e) { require x.length <= 2; }  
         preserved removeValidators(uint256 _index, uint256[] _indexes) with(env e) { require _indexes.length <= 2; }  
     }
 
@@ -784,7 +784,7 @@ invariant inactiveOperatorsRemainNotFunded(uint opIndex)
         (!getOperator(opIndex).active => getOperator(opIndex).funded == 0)
     { 
         preserved requestValidatorExits(uint256 x) with(env e) { require x <= 2; }
-        preserved pickNextValidatorsToDeposit(uint256 x) with(env e) { require x <= 1; }  
+        preserved pickNextValidatorsToDeposit(IOperatorsRegistryV1.OperatorAllocation[] x) with(env e) { require x.length <= 1; }  
         preserved removeValidators(uint256 _index, uint256[] _indexes) with(env e) { require _indexes.length <= 1; }  
     }
 

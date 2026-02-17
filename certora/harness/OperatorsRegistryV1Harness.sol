@@ -14,10 +14,6 @@ contract OperatorsRegistryV1Harness is OperatorsRegistryV1 {
         return OperatorsV2.getCount();
     }
 
-    function getMaxValidatorAttributionPerRound() external view returns (uint256) {
-        return MAX_VALIDATOR_ATTRIBUTION_PER_ROUND;
-    }
-
     function getStoppedValidatorsLength() external view returns (uint256) {
         return OperatorsV2.getStoppedValidators().length;
     }
@@ -42,7 +38,7 @@ contract OperatorsRegistryV1Harness is OperatorsRegistryV1 {
         OperatorsV2.Operator memory op = OperatorsV2.get(opIndex);
         uint256 valIndex = 0;
         bytes32 validatorDataHash = keccak256(abi.encodePacked(publicKeyAndSignature));
-        for (; valIndex < op.keys;) 
+        for (; valIndex < op.keys; ++valIndex) 
         {
             (bytes memory valData) = ValidatorKeys.getRaw(opIndex, valIndex);
             if (validatorDataHash == keccak256(abi.encodePacked(valData)))  //element found
@@ -158,6 +154,13 @@ contract OperatorsRegistryV1Harness is OperatorsRegistryV1 {
             }
         }
         return maxSaturation - minSaturation;
+    }
+
+    /// @dev Certora-only: single-arg wrapper so specs need not reference IOperatorsRegistryV1 (listing the interface in conf causes "no bytecode" fatal error).
+    function pickNextValidatorsToDepositWithCount(uint256 count) external returns (bytes[] memory, bytes[] memory) {
+        IOperatorsRegistryV1.OperatorAllocation[] memory allocations = new IOperatorsRegistryV1.OperatorAllocation[](1);
+        allocations[0] = IOperatorsRegistryV1.OperatorAllocation({operatorIndex: 0, validatorCount: count});
+        return this.pickNextValidatorsToDeposit(allocations);
     }
 
     function getOperatorsSaturationDiscrepancy(uint256 index1, uint256 index2) external view returns (uint256)
