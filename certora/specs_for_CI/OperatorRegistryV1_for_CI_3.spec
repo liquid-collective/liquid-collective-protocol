@@ -104,6 +104,93 @@ rule requestValidatorExitsRevertsIfNotSorted(env e)
     assert lastReverted, "unordered allocations must revert";
 }
 
+// Empty allocation must revert (InvalidEmptyArray) for both deposit and exit flows.
+rule pickNextValidatorsToDepositRevertsOnEmptyAllocation(env e)
+{
+    require isValidState();
+    IOperatorsRegistryV1.OperatorAllocation[] allocations;
+    require allocations.length == 0;
+    pickNextValidatorsToDepositReturnCount@withrevert(e, allocations);
+    assert lastReverted, "empty allocations must revert";
+}
+
+rule requestValidatorExitsRevertsOnEmptyAllocation(env e)
+{
+    require isValidState();
+    IOperatorsRegistryV1.OperatorAllocation[] allocations;
+    require allocations.length == 0;
+    requestValidatorExits@withrevert(e, allocations);
+    assert lastReverted, "empty allocations must revert";
+}
+
+// If any allocation entry has validatorCount 0, the call must revert (AllocationWithZeroValidatorCount).
+rule pickNextValidatorsToDepositRevertsOnZeroValidatorCount(env e)
+{
+    require isValidState(), "bounded operator count for preserved method and loop bounds";
+    IOperatorsRegistryV1.OperatorAllocation[] allocations;
+    require allocations.length >= 1, "at least one allocation entry";
+    require allocations.length <= 2, "preserved bound for pickNextValidatorsToDeposit in this spec";
+    if (allocations.length >= 2) {
+        require allocations[1].operatorIndex > allocations[0].operatorIndex,
+            "allocations ordered by operator index";
+    }
+    uint256 j;
+    require j < allocations.length;
+    require allocations[j].validatorCount == 0, "some allocation has zero validator count";
+    pickNextValidatorsToDepositReturnCount@withrevert(e, allocations);
+    assert lastReverted, "zero validator count in any allocation must revert";
+}
+
+rule requestValidatorExitsRevertsOnZeroValidatorCount(env e)
+{
+    require isValidState(), "bounded operator count for preserved method and loop bounds";
+    IOperatorsRegistryV1.OperatorAllocation[] allocations;
+    require allocations.length >= 1, "at least one allocation entry";
+    require allocations.length <= 2, "preserved bound for requestValidatorExits in this spec";
+    if (allocations.length >= 2) {
+        require allocations[1].operatorIndex > allocations[0].operatorIndex,
+            "allocations ordered by operator index";
+    }
+    uint256 j;
+    require j < allocations.length;
+    require allocations[j].validatorCount == 0, "some allocation has zero validator count";
+    requestValidatorExits@withrevert(e, allocations);
+    assert lastReverted, "zero validator count in any allocation must revert";
+}
+
+// Only River may call pickNextValidatorsToDeposit (onlyRiver).
+rule onlyRiverCanCallPickNextValidatorsToDeposit(env e)
+{
+    require isValidState();
+    require e.msg.sender != getRiver();
+    IOperatorsRegistryV1.OperatorAllocation[] allocations;
+    require allocations.length >= 1;
+    require allocations.length <= 2;
+    if (allocations.length >= 2) {
+        require allocations[1].operatorIndex > allocations[0].operatorIndex;
+    }
+    require totalAllocationValidatorCount(allocations) >= 1;
+    pickNextValidatorsToDepositReturnCount@withrevert(e, allocations);
+    assert lastReverted, "non-River caller must revert";
+}
+
+// requestValidatorExits may only be called by the Keeper; any other caller must cause a revert.
+rule onlyKeeperCanCallRequestValidatorExits(env e)
+{
+    require isValidState(), "bounded operator count for preserved method and loop bounds";
+    IOperatorsRegistryV1.OperatorAllocation[] allocations;
+    require allocations.length >= 1, "at least one allocation entry for the call";
+    require allocations.length <= 2, "preserved bound for requestValidatorExits in this spec";
+    if (allocations.length >= 2) {
+        require allocations[1].operatorIndex > allocations[0].operatorIndex,
+            "allocations ordered by operator index (contract enforces same)";
+    }
+    require totalAllocationValidatorCount(allocations) >= 1, "at least one validator requested";
+    requestValidatorExits@withrevert(e, allocations);
+    assert lastReverted || (e.msg.sender == getKeeperAddress(e)),
+        "requestValidatorExits must revert unless caller is the Keeper";
+}
+
 rule removeValidatorsDecreaseKeys(env e)
 {
     uint256[] indices;

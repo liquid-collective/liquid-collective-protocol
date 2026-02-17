@@ -187,6 +187,11 @@ contract OperatorsRegistryV1Harness is OperatorsRegistryV1 {
         return publicKeys.length;
     }
 
+    /// @dev Certora-only: returns keeper address from River for access-control rules (only Keeper can call requestValidatorExits).
+    function getKeeperAddress() external view returns (address) {
+        return IConsensusLayerDepositManagerV1(RiverAddress.get()).getKeeper();
+    }
+
     /// @dev Certora-only: single-arg wrapper so specs need not reference IOperatorsRegistryV1 (listing the interface in conf causes "no bytecode" fatal error).
     function pickNextValidatorsToDepositWithCount(uint256 count) external returns (bytes[] memory, bytes[] memory) {
         IOperatorsRegistryV1.OperatorAllocation[] memory allocations = new IOperatorsRegistryV1.OperatorAllocation[](1);
