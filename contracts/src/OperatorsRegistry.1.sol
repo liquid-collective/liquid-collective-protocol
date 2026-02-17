@@ -430,7 +430,7 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
             emit FundedValidatorKeys(_allocations[i].operatorIndex, perOpKeys[i], false);
             publicKeys = _concatenateByteArrays(publicKeys, perOpKeys[i]);
             signatures = _concatenateByteArrays(signatures, perOpSigs[i]);
-            OperatorsV2.get(_allocations[i].operatorIndex).funded += uint32(_allocations[i].validatorCount);
+            OperatorsV2.get(_allocations[i].operatorIndex).funded += uint32(perOpKeys[i].length);
         }
     }
 
@@ -538,20 +538,20 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
         view
         returns (bytes[][] memory perOperatorKeys, bytes[][] memory perOperatorSigs)
     {
-        uint256 len = _allocations.length;
-        perOperatorKeys = new bytes[][](len);
-        perOperatorSigs = new bytes[][](len);
-        for (uint256 i = 0; i < len; ++i) {
+        uint256 allocationsLength = _allocations.length;
+        perOperatorKeys = new bytes[][](allocationsLength);
+        perOperatorSigs = new bytes[][](allocationsLength);
+        for (uint256 i = 0; i < allocationsLength; ++i) {
             if (i > 0 && !(_allocations[i].operatorIndex > _allocations[i - 1].operatorIndex)) {
                 revert UnorderedOperatorList();
             }
             if (_allocations[i].validatorCount == 0) {
                 revert AllocationWithZeroValidatorCount();
             }
-            uint32 funded =
+            uint32 fundedCount =
                 _getFundedCountForOperatorIfFundable(_allocations[i].operatorIndex, _allocations[i].validatorCount);
             (perOperatorKeys[i], perOperatorSigs[i]) =
-                ValidatorKeys.getKeys(_allocations[i].operatorIndex, funded, _allocations[i].validatorCount);
+                ValidatorKeys.getKeys(_allocations[i].operatorIndex, fundedCount, _allocations[i].validatorCount);
         }
     }
 
