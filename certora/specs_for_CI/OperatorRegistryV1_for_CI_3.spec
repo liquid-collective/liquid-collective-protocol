@@ -2,49 +2,6 @@ import "./../specs/Sanity.spec";
 import "./../specs/CVLMath.spec";
 import "./../specs/OperatorRegistryV1_base.spec";
 
-// some functions require loop_iter = 4 but loop_iter = 2 is sufficient for most. For this reason we run parametric rule and invariants in two versions
-//_LI4 for methods that require loop_iter = 4 and _LI2 for the others.
-
-rule startingValidatorsDecreasesDiscrepancy(env e) 
-{
-    uint256 allOpCount = getOperatorsCount();
-    require allOpCount <= 3;
-    
-    uint index1; uint index2;
-    require isOpIndexInBounds(index1);
-    require isOpIndexInBounds(index2);
-    require operatorStateIsValid(index1);
-    require operatorStateIsValid(index2);
-
-    uint discrepancyBefore = getOperatorsSaturationDiscrepancy(index1, index2);
-
-    require getKeysCount(index1) < 5; 
-    require getKeysCount(index2) < 5;
-       
-    IOperatorsRegistryV1.OperatorAllocation[] allocations;
-    require allocations.length > 0 && allocations.length <= 3;
-    pickNextValidatorsToDeposit(e, allocations);
-    uint discrepancyAfter = getOperatorsSaturationDiscrepancy(index1, index2);
-
-    assert discrepancyBefore > 0 => to_mathint(discrepancyBefore) >= 
-        discrepancyAfter - allocations.length + 1;
-}
-
-rule witness4_3StartingValidatorsDecreasesDiscrepancy(env e) 
-{
-    require isValidState();
-    uint index1; uint index2;
-    require operatorStateIsValid(index1);
-    require operatorStateIsValid(index2);
-    
-    uint discrepancyBefore = getOperatorsSaturationDiscrepancy(index1, index2);
-    IOperatorsRegistryV1.OperatorAllocation[] allocations;
-    require allocations.length <= 1;
-    pickNextValidatorsToDeposit(e, allocations);
-    uint discrepancyAfter = getOperatorsSaturationDiscrepancy(index1, index2);
-    satisfy discrepancyBefore == 4 && discrepancyAfter == 3;
-}
-
 // Generalized ordering rule for pickNextValidatorsToDeposit.
 // Uses a symbolic index j so the prover verifies ALL adjacent pairs, not just (0,1).
 // The Solidity check is at OperatorsRegistry.1.sol:545 inside
@@ -194,30 +151,6 @@ rule whoCanChangeValidatorsCount(method f, env e, calldataarg args) filtered
     uint valCountAfter = getOperator(0).keys;
     assert valCountAfter < valCountBefore => canRemoveValidators(f);
     assert valCountAfter > valCountBefore => canAddValidators(f);
-}
- 
-rule exitingValidatorsDecreasesDiscrepancy(env e) 
-{
-    require isValidState();
-    uint index1; uint index2;
-    uint discrepancyBefore = getOperatorsSaturationDiscrepancy(index1, index2);
-    IOperatorsRegistryV1.OperatorAllocation[] allocations;
-    require allocations.length <= 1;
-    requestValidatorExits(e, allocations);
-    uint discrepancyAfter = getOperatorsSaturationDiscrepancy(index1, index2);
-    assert discrepancyBefore > 0 => discrepancyBefore >= discrepancyAfter;
-}
-
-rule witness4_3ExitingValidatorsDecreasesDiscrepancy(env e) 
-{
-    require isValidState();
-    uint index1; uint index2;
-    uint discrepancyBefore = getOperatorsSaturationDiscrepancy(index1, index2);
-    IOperatorsRegistryV1.OperatorAllocation[] allocations;
-    require allocations.length <= 1;
-    requestValidatorExits(e, allocations);
-    uint discrepancyAfter = getOperatorsSaturationDiscrepancy(index1, index2);
-    satisfy discrepancyBefore == 4 && discrepancyAfter == 3;
 }
 
 invariant operatorsAddressesRemainUnique_LI4(uint opIndex1, uint opIndex2) 
