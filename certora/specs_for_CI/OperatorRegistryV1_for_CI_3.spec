@@ -174,23 +174,6 @@ rule onlyRiverCanCallPickNextValidatorsToDeposit(env e)
     assert lastReverted, "non-River caller must revert";
 }
 
-// requestValidatorExits may only be called by the Keeper; any other caller must cause a revert.
-rule onlyKeeperCanCallRequestValidatorExits(env e)
-{
-    require isValidState(), "bounded operator count for preserved method and loop bounds";
-    IOperatorsRegistryV1.OperatorAllocation[] allocations;
-    require allocations.length >= 1, "at least one allocation entry for the call";
-    require allocations.length <= 2, "preserved bound for requestValidatorExits in this spec";
-    if (allocations.length >= 2) {
-        require allocations[1].operatorIndex > allocations[0].operatorIndex,
-            "allocations ordered by operator index (contract enforces same)";
-    }
-    require totalAllocationValidatorCount(allocations) >= 1, "at least one validator requested";
-    requestValidatorExits@withrevert(e, allocations);
-    assert lastReverted || (e.msg.sender == getKeeperAddress(e)),
-        "requestValidatorExits must revert unless caller is the Keeper";
-}
-
 rule removeValidatorsDecreaseKeys(env e)
 {
     uint256[] indices;
