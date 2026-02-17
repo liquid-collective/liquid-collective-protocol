@@ -65,6 +65,26 @@ rule pickNextValidatorToDepositRevertsIfNotSorted(env e)
     assert lastReverted, "unordered allocations must revert";
 }
 
+// When pickNextValidatorsToDeposit succeeds, returned key count equals total allocation validator count (generic; no fixed operator count).
+rule pickNextValidatorsToDepositReturnsTotalAllocationCount(env e)
+{
+    require isValidState();
+
+    IOperatorsRegistryV1.OperatorAllocation[] allocations;
+    require allocations.length >= 1;
+    require allocations.length <= 2;
+    if (allocations.length >= 2) {
+        require allocations[1].operatorIndex > allocations[0].operatorIndex;
+    }
+
+    uint256 totalRequested = totalAllocationValidatorCount(allocations);
+    require totalRequested >= 1;
+
+    uint256 returnedCount = pickNextValidatorsToDepositReturnCount@withrevert(e, allocations);
+    assert lastReverted || (returnedCount == totalRequested),
+        "when call succeeds, returned key count must equal total allocation validator count";
+}
+
 // Generalized ordering rule for requestValidatorExits.
 // Same pattern: symbolic index j covers all adjacent pairs.
 // The Solidity check is at OperatorsRegistry.1.sol:463.

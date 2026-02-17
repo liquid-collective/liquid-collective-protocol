@@ -165,6 +165,28 @@ contract OperatorsRegistryV1Harness is OperatorsRegistryV1 {
         return maxSaturation - minSaturation;
     }
 
+    /// @notice Returns the sum of validatorCount over all allocations (for Certora specs; no fixed operator count).
+    function totalAllocationValidatorCount(IOperatorsRegistryV1.OperatorAllocation[] memory allocations)
+        external
+        pure
+        returns (uint256)
+    {
+        uint256 sum = 0;
+        for (uint256 i = 0; i < allocations.length; i++) {
+            sum += allocations[i].validatorCount;
+        }
+        return sum;
+    }
+
+    /// @dev Certora-only: returns number of keys from pickNextValidatorsToDeposit so specs can assert without capturing bytes[] (CVL tuple assignment limitation).
+    function pickNextValidatorsToDepositReturnCount(IOperatorsRegistryV1.OperatorAllocation[] memory allocations)
+        external
+        returns (uint256)
+    {
+        (bytes[] memory publicKeys, ) = this.pickNextValidatorsToDeposit(allocations);
+        return publicKeys.length;
+    }
+
     /// @dev Certora-only: single-arg wrapper so specs need not reference IOperatorsRegistryV1 (listing the interface in conf causes "no bytecode" fatal error).
     function pickNextValidatorsToDepositWithCount(uint256 count) external returns (bytes[] memory, bytes[] memory) {
         IOperatorsRegistryV1.OperatorAllocation[] memory allocations = new IOperatorsRegistryV1.OperatorAllocation[](1);

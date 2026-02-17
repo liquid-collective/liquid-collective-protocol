@@ -13,6 +13,19 @@ contract RiverV1Harness is RiverV1 {
         return ConsensusLayerDepositManagerV1.DEPOSIT_SIZE;
     }
 
+    /// @notice Returns the sum of validatorCount over all allocations (for Certora specs).
+    function totalAllocationValidatorCount(IOperatorsRegistryV1.OperatorAllocation[] memory allocations)
+        external
+        pure
+        returns (uint256)
+    {
+        uint256 sum = 0;
+        for (uint256 i = 0; i < allocations.length; i++) {
+            sum += allocations[i].validatorCount;
+        }
+        return sum;
+    }
+
     function consensusLayerEthBalance() external view returns (uint256) {
         IOracleManagerV1.StoredConsensusLayerReport storage storedReport = LastConsensusLayerReport.get();
         uint256 clValidatorCount = storedReport.validatorsCount;

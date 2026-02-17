@@ -31,9 +31,11 @@ methods {
     function OR.getOperatorsSaturationDiscrepancy() external returns (uint256) envfree;
     function OR.getKeysCount(uint256) external returns (uint256) envfree;
     function OR.pickNextValidatorsToDeposit(IOperatorsRegistryV1.OperatorAllocation[]) external returns (bytes[] memory, bytes[] memory);
+    function OR.pickNextValidatorsToDepositReturnCount(IOperatorsRegistryV1.OperatorAllocation[]) external returns (uint256);
     function OR.requestValidatorExits(IOperatorsRegistryV1.OperatorAllocation[]) external;
     function OR.setOperatorAddress(uint256, address) external;   
     function OR.getOperatorsSaturationDiscrepancy(uint256, uint256) external returns (uint256) envfree;
+    function OR.totalAllocationValidatorCount(IOperatorsRegistryV1.OperatorAllocation[]) external returns (uint256) envfree;
     //function OR.removeValidators(uint256,uint256[]) external envfree;
     function OR.getHash(bytes) external returns (bytes32) envfree;
 

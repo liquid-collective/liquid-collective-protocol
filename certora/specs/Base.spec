@@ -43,6 +43,7 @@ methods {
     function RiverV1Harness.getCommittedBalance() external returns(uint256) envfree;
     function RiverV1Harness.getBalanceToRedeem() external returns(uint256) envfree;
     function RiverV1Harness.consensusLayerDepositSize() external returns(uint256) envfree;
+    function RiverV1Harness.totalAllocationValidatorCount(IOperatorsRegistryV1.OperatorAllocation[]) external returns(uint256) envfree;
     function RiverV1Harness.riverEthBalance() external returns(uint256) envfree;
     function _.sendRedeemManagerExceedingFunds() external => DISPATCHER(true);
     function _.getAllowlist() external => DISPATCHER(true);
