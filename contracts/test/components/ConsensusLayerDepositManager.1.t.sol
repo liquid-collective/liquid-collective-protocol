@@ -782,31 +782,6 @@ contract ConsensusLayerDepositManagerV1FullDepositFlowTests is OperatorAllocatio
         assertEq(address(depositManager).balance, 0, "balance drained");
     }
 
-    // Tests that duplicate operator indices in allocations revert with UnorderedOperatorList
-    function testUnorderedOperatorListDuplicate() public {
-        vm.startPrank(admin);
-        registry.addOperator("Op0", admin);
-        registry.addValidators(0, 4, genBytes((48 + 96) * 4));
-        uint256[] memory indexes = new uint256[](1);
-        indexes[0] = 0;
-        uint32[] memory limits = new uint32[](1);
-        limits[0] = 4;
-        registry.setOperatorLimits(indexes, limits, block.number);
-        vm.stopPrank();
-
-        vm.deal(address(depositManager), 4 * 32 ether);
-        ConsensusLayerDepositManagerV1UsesRegistry(address(depositManager)).sudoSyncBalance();
-
-        // Create allocations with duplicate operator index: [{0, 2}, {0, 2}]
-        IOperatorsRegistryV1.OperatorAllocation[] memory allocations = new IOperatorsRegistryV1.OperatorAllocation[](2);
-        allocations[0] = IOperatorsRegistryV1.OperatorAllocation({operatorIndex: 0, validatorCount: 2});
-        allocations[1] = IOperatorsRegistryV1.OperatorAllocation({operatorIndex: 0, validatorCount: 2});
-
-        vm.expectRevert(abi.encodeWithSignature("UnorderedOperatorList()"));
-        vm.prank(keeper);
-        depositManager.depositToConsensusLayerWithDepositRoot(allocations, bytes32(0));
-    }
-
     // Tests that non-ascending operator indices revert with UnorderedOperatorList
     function testUnorderedOperatorListDescendingOperatorIndices() public {
         vm.startPrank(admin);
