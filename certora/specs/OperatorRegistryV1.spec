@@ -27,7 +27,6 @@ rule startingValidatorsDecreasesDiscrepancy(env e)
     require count > 0 && count <= 3;
     require allOpCount > 0;
     pickNextValidatorsToDepositWithCount(e, count);
-    require allOpCount > 0;
     pickNextValidatorsToDepositWithCount(e, count);
     uint discrepancyAfter = getOperatorsSaturationDiscrepancy(index1, index2);
 
