@@ -18,9 +18,10 @@ rule startingValidatorsDecreasesDiscrepancyFULL(env e) {
 rule exitingValidatorsDecreasesDiscrepancyFULL(env e) {
     require isValidState();
     uint discrepancyBefore = getOperatorsSaturationDiscrepancy();
-    uint count;
-    require count <= 10;
-    requestValidatorExits(e, count);
+
+    IOperatorsRegistryV1.OperatorAllocation[] allocations;
+    require allocations.length <= 10;
+    requestValidatorExits(e, allocations);
     uint discrepancyAfter = getOperatorsSaturationDiscrepancy();
     assert discrepancyBefore >= discrepancyAfter;
 }

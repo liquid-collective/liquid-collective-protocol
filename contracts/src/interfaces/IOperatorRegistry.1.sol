@@ -196,6 +196,17 @@ interface IOperatorsRegistryV1 {
     /// @notice The provided stopped validator count of an operator is above its funded validator count
     error StoppedValidatorCountAboveFundedCount(uint256 operatorIndex, uint32 stoppedCount, uint32 fundedCount);
 
+    /// @notice The provided exit requests exceed the available funded validator count of the operator
+    /// @param operatorIndex The operator index
+    /// @param requested The requested count
+    /// @param available The available count
+    error ExitsRequestedExceedAvailableFundedCount(uint256 operatorIndex, uint256 requested, uint256 available);
+
+    /// @notice The provided exit requests exceed the current exit request demand
+    /// @param requested The requested count
+    /// @param demand The demand count
+    error ExitsRequestedExceedDemand(uint256 requested, uint256 demand);
+
     /// @notice Initializes the operators registry
     /// @param _admin Admin in charge of managing operators
     /// @param _river Address of River system
@@ -344,11 +355,9 @@ interface IOperatorsRegistryV1 {
         external
         returns (bytes[] memory publicKeys, bytes[] memory signatures);
 
-    /// @notice Public endpoint to consume the exit request demand and perform the actual exit requests
-    /// @notice The selection algorithm will pick validators based on their active validator counts
-    /// @notice This value is computed by using the count of funded keys and taking into account the stopped validator counts and exit requests
-    /// @param _count Max amount of exits to request
-    function requestValidatorExits(uint256 _count) external;
+    /// @notice The keeper supplies explicit per-operator exit allocations to be performed
+    /// @param _allocations The proposed allocations to exit
+    function requestValidatorExits(OperatorAllocation[] calldata _allocations) external;
 
     /// @notice Increases the exit request demand
     /// @dev This method is only callable by the river contract, and to actually forward the information to the node operators via event emission, the unprotected requestValidatorExits method must be called

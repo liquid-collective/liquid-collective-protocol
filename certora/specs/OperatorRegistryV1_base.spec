@@ -91,7 +91,7 @@ definition isMethodID(method f, uint ID) returns bool =
     (f.selector == sig:pickNextValidatorsToDepositWithCount(uint256).selector && ID == 7) ||
     (f.selector == sig:proposeAdmin(address).selector && ID == 8) ||
     (f.selector == sig:removeValidators(uint256,uint256[]).selector && ID == 9) ||
-    (f.selector == sig:requestValidatorExits(uint256).selector && ID == 10) ||
+    (f.selector == sig:requestValidatorExits(IOperatorsRegistryV1.OperatorAllocation[]).selector && ID == 10) ||
     (f.selector == sig:setOperatorAddress(uint256,address).selector && ID == 11) ||
     (f.selector == sig:setOperatorLimits(uint256[],uint32[],uint256).selector && ID == 12) ||
     (f.selector == sig:setOperatorName(uint256,string).selector && ID == 13) ||
