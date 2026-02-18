@@ -3126,34 +3126,21 @@ contract OperatorsRegistryV1TestDistribution is OperatorAllocationTestBase {
         limits[3] = fuzzedStoppedValidatorCount[3];
         limits[4] = fuzzedStoppedValidatorCount[4];
 
-        uint256[] memory activeOperators = new uint256[](3);
-        activeOperators[0] = 0;
-        activeOperators[1] = 2;
-        activeOperators[2] = 4;
-
-        uint256[] memory allOperators = new uint256[](5);
-        allOperators[0] = 0;
-        allOperators[1] = 1;
-        allOperators[2] = 2;
-        allOperators[3] = 3;
-        allOperators[4] = 4;
-
-        uint32[] memory allLimits = new uint32[](5);
-        allLimits[0] = 50;
-        allLimits[1] = 50;
-        allLimits[2] = 50;
-        allLimits[3] = 50;
-        allLimits[4] = 50;
+        uint256[] memory operators = new uint256[](5);
+        operators[0] = 0;
+        operators[1] = 1;
+        operators[2] = 2;
+        operators[3] = 3;
+        operators[4] = 4;
 
         vm.prank(admin);
-        OperatorsRegistryInitializableV1(address(operatorsRegistry))
-            .setOperatorLimits(allOperators, allLimits, block.number);
+        operatorsRegistry.setOperatorLimits(operators, limits, block.number);
 
         uint32 sum = uint32(fuzzedStoppedValidatorCount[0]) + fuzzedStoppedValidatorCount[1]
             + fuzzedStoppedValidatorCount[2] + fuzzedStoppedValidatorCount[3] + fuzzedStoppedValidatorCount[4];
 
         OperatorsRegistryInitializableV1(address(operatorsRegistry))
-            .pickNextValidatorsToDeposit(_createAllocation(activeOperators, limits));
+            .pickNextValidatorsToDeposit(_createAllocation(operators, limits));
 
         uint32[] memory stoppedValidatorCount = new uint32[](6);
 
