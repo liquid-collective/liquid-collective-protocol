@@ -214,10 +214,8 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
     {
         (bytes[][] memory perOpKeys, bytes[][] memory perOpSigs) =
             _getPerOperatorValidatorKeysForAllocations(_allocations);
-        for (uint256 i = 0; i < perOpKeys.length; ++i) {
-            publicKeys = _concatenateByteArrays(publicKeys, perOpKeys[i]);
-            signatures = _concatenateByteArrays(signatures, perOpSigs[i]);
-        }
+        publicKeys = _flattenByteArrays(perOpKeys);
+        signatures = _flattenByteArrays(perOpSigs);
     }
 
     /// @inheritdoc IOperatorsRegistryV1
@@ -422,16 +420,18 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
         onlyRiver
         returns (bytes[] memory publicKeys, bytes[] memory signatures)
     {
+        if (_allocations.length == 0) {
+            revert InvalidEmptyArray();
+        }
+
         (bytes[][] memory perOpKeys, bytes[][] memory perOpSigs) =
             _getPerOperatorValidatorKeysForAllocations(_allocations);
         for (uint256 i = 0; i < perOpKeys.length; ++i) {
-            // for each operator, we extract the keys and signatures and concatenate them in the result
-            // we then update the funded value of the operator
             emit FundedValidatorKeys(_allocations[i].operatorIndex, perOpKeys[i], false);
-            publicKeys = _concatenateByteArrays(publicKeys, perOpKeys[i]);
-            signatures = _concatenateByteArrays(signatures, perOpSigs[i]);
             OperatorsV2.get(_allocations[i].operatorIndex).funded += uint32(perOpKeys[i].length);
         }
+        publicKeys = _flattenByteArrays(perOpKeys);
+        signatures = _flattenByteArrays(perOpSigs);
     }
 
     /// @inheritdoc IOperatorsRegistryV1
@@ -539,6 +539,9 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
         returns (bytes[][] memory perOperatorKeys, bytes[][] memory perOperatorSigs)
     {
         uint256 allocationsLength = _allocations.length;
+        if (allocationsLength == 0) {
+            revert InvalidEmptyArray();
+        }
         perOperatorKeys = new bytes[][](allocationsLength);
         perOperatorSigs = new bytes[][](allocationsLength);
         for (uint256 i = 0; i < allocationsLength; ++i) {
@@ -700,19 +703,22 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
         emit UpdatedStoppedValidators(_stoppedValidatorCounts);
     }
 
-    /// @notice Internal utility to concatenate bytes arrays together
-    /// @param _arr1 First array
-    /// @param _arr2 Second array
-    /// @return The result of the concatenation of _arr1 + _arr2
-    function _concatenateByteArrays(bytes[] memory _arr1, bytes[] memory _arr2) internal pure returns (bytes[] memory) {
-        bytes[] memory res = new bytes[](_arr1.length + _arr2.length);
-        for (uint256 idx = 0; idx < _arr1.length; ++idx) {
-            res[idx] = _arr1[idx];
+    /// @notice Internal utility to flatten a 2D bytes array into a 1D bytes array with a single allocation
+    /// @param _arrays The 2D array to flatten
+    /// @return result The flattened 1D array
+    function _flattenByteArrays(bytes[][] memory _arrays) internal pure returns (bytes[] memory result) {
+        uint256 totalLength = 0;
+        for (uint256 i = 0; i < _arrays.length; ++i) {
+            totalLength += _arrays[i].length;
         }
-        for (uint256 idx = 0; idx < _arr2.length; ++idx) {
-            res[idx + _arr1.length] = _arr2[idx];
+        result = new bytes[](totalLength);
+        uint256 offset = 0;
+        for (uint256 i = 0; i < _arrays.length; ++i) {
+            bytes[] memory inner = _arrays[i];
+            for (uint256 j = 0; j < inner.length; ++j) {
+                result[offset++] = inner[j];
+            }
         }
-        return res;
     }
 
     /// @notice Internal utility to retrieve the actual stopped validator count of an operator from the reported array
