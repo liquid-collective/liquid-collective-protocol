@@ -212,6 +212,9 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
         view
         returns (bytes[] memory publicKeys, bytes[] memory signatures)
     {
+        if (_allocations.length == 0) {
+            revert InvalidEmptyArray();
+        }
         (bytes[][] memory perOpKeys, bytes[][] memory perOpSigs) =
             _getPerOperatorValidatorKeysForAllocations(_allocations);
         publicKeys = _flattenByteArrays(perOpKeys);
