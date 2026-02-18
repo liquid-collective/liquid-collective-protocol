@@ -37,7 +37,6 @@ methods {
     function OR.setOperatorAddress(uint256, address) external;   
     function OR.getOperatorsSaturationDiscrepancy(uint256, uint256) external returns (uint256) envfree;
     function OR.getRiver() external returns (address) envfree;
-    function OR.getKeeperAddress() external returns (address);
     function OR.totalAllocationValidatorCount(IOperatorsRegistryV1.OperatorAllocation[]) external returns (uint256) envfree;
     //function OR.removeValidators(uint256,uint256[]) external envfree;
     function OR.getHash(bytes) external returns (bytes32) envfree;
