@@ -112,12 +112,6 @@ abstract contract ConsensusLayerDepositManagerV1 is IConsensusLayerDepositManage
         // Calculate total requested from allocations
         uint256 totalRequested = 0;
         for (uint256 i = 0; i < _allocations.length; ++i) {
-            if (i > 0 && !(_allocations[i].operatorIndex > _allocations[i - 1].operatorIndex)) {
-                revert IOperatorsRegistryV1.UnorderedOperatorList();
-            }
-            if (_allocations[i].validatorCount == 0) {
-                revert IOperatorsRegistryV1.AllocationWithZeroValidatorCount();
-            }
             totalRequested += _allocations[i].validatorCount;
         }
 

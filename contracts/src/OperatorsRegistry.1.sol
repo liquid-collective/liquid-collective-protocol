@@ -23,6 +23,9 @@ import "./state/migration/OperatorsRegistry_FundedKeyEventRebroadcasting_Operato
 /// @title Operators Registry (v1)
 /// @author Alluvial Finance Inc.
 /// @notice This contract handles the list of operators and their keys
+/// @dev Operator index is the position in the operators array. Operators are only
+/// @dev added, never removed, so the operator at index i is always the one at
+/// @dev array position i and indices are stable over time.
 contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrable, IProtocolVersion {
     /// @inheritdoc IOperatorsRegistryV1
     function initOperatorsRegistryV1(address _admin, address _river) external init(0) {
@@ -209,39 +212,10 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
         view
         returns (bytes[] memory publicKeys, bytes[] memory signatures)
     {
-        if (_allocations.length == 0) {
-            revert InvalidEmptyArray();
-        }
-
-        (OperatorsV2.CachedOperator[] memory operators, uint256 fundableOperatorCount) = OperatorsV2.getAllFundable();
-
-        if (fundableOperatorCount == 0) {
-            return (new bytes[](0), new bytes[](0));
-        }
-
-        uint256 len = _allocations.length;
-        for (uint256 i = 0; i < len; ++i) {
-            if (i > 0 && !(_allocations[i].operatorIndex > _allocations[i - 1].operatorIndex)) {
-                revert UnorderedOperatorList();
-            }
-            if (_allocations[i].validatorCount == 0) {
-                revert AllocationWithZeroValidatorCount();
-            }
-            _updateCountOfPickedValidatorsForEachOperator(
-                operators, _allocations[i].operatorIndex, _allocations[i].validatorCount
-            );
-        }
-        // we loop on all operators
-        for (uint256 idx = 0; idx < fundableOperatorCount; ++idx) {
-            // if we picked keys on any operator, we extract the keys from storage and concatenate them in the result
-            // we then update the funded value
-            if (operators[idx].picked > 0) {
-                (bytes[] memory _publicKeys, bytes[] memory _signatures) =
-                    ValidatorKeys.getKeys(operators[idx].index, operators[idx].funded, operators[idx].picked);
-                publicKeys = _concatenateByteArrays(publicKeys, _publicKeys);
-                signatures = _concatenateByteArrays(signatures, _signatures);
-            }
-        }
+        (bytes[][] memory perOpKeys, bytes[][] memory perOpSigs) =
+            _getPerOperatorValidatorKeysForAllocations(_allocations);
+        publicKeys = _flattenByteArrays(perOpKeys);
+        signatures = _flattenByteArrays(perOpSigs);
     }
 
     /// @inheritdoc IOperatorsRegistryV1
@@ -446,7 +420,14 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
         onlyRiver
         returns (bytes[] memory publicKeys, bytes[] memory signatures)
     {
-        return _pickNextValidatorsToDepositFromActiveOperators(_allocations);
+        (bytes[][] memory perOpKeys, bytes[][] memory perOpSigs) =
+            _getPerOperatorValidatorKeysForAllocations(_allocations);
+        for (uint256 i = 0; i < perOpKeys.length; ++i) {
+            emit FundedValidatorKeys(_allocations[i].operatorIndex, perOpKeys[i], false);
+            OperatorsV2.get(_allocations[i].operatorIndex).funded += uint32(perOpKeys[i].length);
+        }
+        publicKeys = _flattenByteArrays(perOpKeys);
+        signatures = _flattenByteArrays(perOpSigs);
     }
 
     /// @inheritdoc IOperatorsRegistryV1
@@ -518,6 +499,58 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
         );
         if (_count > 0) {
             _setCurrentValidatorExitsDemand(currentValidatorExitsDemand, currentValidatorExitsDemand + _count);
+        }
+    }
+
+    /// @notice Internal utility to get the funded count for an active operator if it is fundable
+    /// @param _operatorIndex The operator index
+    /// @param _validatorCount The validator count
+    /// @return fundedCount The funded count of the operator
+    function _getFundedCountForOperatorIfFundable(uint256 _operatorIndex, uint256 _validatorCount)
+        internal
+        view
+        returns (uint32)
+    {
+        OperatorsV2.Operator memory operator = OperatorsV2.get(_operatorIndex);
+        if (!operator.active) {
+            revert InactiveOperator(_operatorIndex);
+        }
+        if (_getStoppedValidatorsCount(_operatorIndex) < operator.requestedExits) {
+            revert OperatorIgnoredExitRequests(_operatorIndex);
+        }
+        uint256 availableKeys = operator.limit - operator.funded;
+        if (_validatorCount > availableKeys) {
+            revert OperatorHasInsufficientFundableKeys(_operatorIndex, _validatorCount, availableKeys);
+        }
+        return operator.funded;
+    }
+
+    /// @notice Internal view utility that retrieves the validator keys for the given allocations
+    /// @param _allocations The operator allocations sorted by operator index
+    /// @return perOperatorKeys Per-operator arrays of public keys
+    /// @return perOperatorSigs Per-operator arrays of signatures
+    function _getPerOperatorValidatorKeysForAllocations(OperatorAllocation[] memory _allocations)
+        internal
+        view
+        returns (bytes[][] memory perOperatorKeys, bytes[][] memory perOperatorSigs)
+    {
+        uint256 allocationsLength = _allocations.length;
+        if (allocationsLength == 0) {
+            revert InvalidEmptyArray();
+        }
+        perOperatorKeys = new bytes[][](allocationsLength);
+        perOperatorSigs = new bytes[][](allocationsLength);
+        for (uint256 i = 0; i < allocationsLength; ++i) {
+            if (i > 0 && !(_allocations[i].operatorIndex > _allocations[i - 1].operatorIndex)) {
+                revert UnorderedOperatorList();
+            }
+            if (_allocations[i].validatorCount == 0) {
+                revert AllocationWithZeroValidatorCount();
+            }
+            uint32 fundedCount =
+                _getFundedCountForOperatorIfFundable(_allocations[i].operatorIndex, _allocations[i].validatorCount);
+            (perOperatorKeys[i], perOperatorSigs[i]) =
+                ValidatorKeys.getKeys(_allocations[i].operatorIndex, fundedCount, _allocations[i].validatorCount);
         }
     }
 
@@ -666,19 +699,22 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
         emit UpdatedStoppedValidators(_stoppedValidatorCounts);
     }
 
-    /// @notice Internal utility to concatenate bytes arrays together
-    /// @param _arr1 First array
-    /// @param _arr2 Second array
-    /// @return The result of the concatenation of _arr1 + _arr2
-    function _concatenateByteArrays(bytes[] memory _arr1, bytes[] memory _arr2) internal pure returns (bytes[] memory) {
-        bytes[] memory res = new bytes[](_arr1.length + _arr2.length);
-        for (uint256 idx = 0; idx < _arr1.length; ++idx) {
-            res[idx] = _arr1[idx];
+    /// @notice Internal utility to flatten a 2D bytes array into a 1D bytes array with a single allocation
+    /// @param _arrays The 2D array to flatten
+    /// @return result The flattened 1D array
+    function _flattenByteArrays(bytes[][] memory _arrays) internal pure returns (bytes[] memory result) {
+        uint256 totalLength = 0;
+        for (uint256 i = 0; i < _arrays.length; ++i) {
+            totalLength += _arrays[i].length;
         }
-        for (uint256 idx = 0; idx < _arr2.length; ++idx) {
-            res[idx + _arr1.length] = _arr2[idx];
+        result = new bytes[](totalLength);
+        uint256 offset = 0;
+        for (uint256 i = 0; i < _arrays.length; ++i) {
+            bytes[] memory inner = _arrays[i];
+            for (uint256 j = 0; j < inner.length; ++j) {
+                result[offset++] = inner[j];
+            }
         }
-        return res;
     }
 
     /// @notice Internal utility to retrieve the actual stopped validator count of an operator from the reported array
@@ -686,92 +722,6 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
     /// @return The count of stopped validators
     function _getStoppedValidatorsCount(uint256 _operatorIndex) internal view returns (uint32) {
         return OperatorsV2._getStoppedValidatorCountAtIndex(OperatorsV2.getStoppedValidators(), _operatorIndex);
-    }
-
-    /// @notice Internal utility to retrieve _count or lower fundable keys
-    /// @dev The selection process starts by retrieving the full list of active operators with at least one fundable key.
-    /// @dev
-    /// @dev An operator is considered to have at least one fundable key when their staking limit is higher than their funded key count.
-    /// @dev
-    /// @dev    isFundable = operator.active && operator.limit > operator.funded
-    /// @dev
-    /// @dev The internal utility will loop on all operators and select the operator with the lowest active validator count.
-    /// @dev The active validator count is computed by subtracting the stopped validator count to the funded validator count.
-    /// @dev
-    /// @dev    activeValidatorCount = operator.funded - operator.stopped
-    /// @dev
-    /// @dev During the selection process, we keep in memory all previously selected operators and the number of given validators inside a field
-    /// @dev called picked that only exists on the CachedOperator structure in memory.
-    /// @dev
-    /// @dev    isFundable = operator.active && operator.limit > (operator.funded + operator.picked)
-    /// @dev    activeValidatorCount = (operator.funded + operator.picked) - operator.stopped
-    /// @dev
-    /// @dev When we reach the requested key count or when all available keys are used, we perform a final loop on all the operators and extract keys
-    /// @dev if any operator has a positive picked count. We then update the storage counters and return the arrays with the public keys and signatures.
-    /// @param _allocations The operator allocations specifying how many validators per operator sorted by operator index
-    /// @return publicKeys An array of fundable public keys
-    /// @return signatures An array of signatures linked to the public keys
-    function _pickNextValidatorsToDepositFromActiveOperators(OperatorAllocation[] memory _allocations)
-        internal
-        returns (bytes[] memory publicKeys, bytes[] memory signatures)
-    {
-        if (_allocations.length == 0) {
-            revert InvalidEmptyArray();
-        }
-
-        (OperatorsV2.CachedOperator[] memory operators, uint256 fundableOperatorCount) = OperatorsV2.getAllFundable();
-
-        if (fundableOperatorCount == 0) {
-            return (new bytes[](0), new bytes[](0));
-        }
-
-        uint256 len = _allocations.length;
-        for (uint256 i = 0; i < len; ++i) {
-            if (i > 0 && !(_allocations[i].operatorIndex > _allocations[i - 1].operatorIndex)) {
-                revert UnorderedOperatorList();
-            }
-            if (_allocations[i].validatorCount == 0) {
-                revert AllocationWithZeroValidatorCount();
-            }
-            _updateCountOfPickedValidatorsForEachOperator(
-                operators, _allocations[i].operatorIndex, _allocations[i].validatorCount
-            );
-        }
-        // we loop on all operators
-        for (uint256 idx = 0; idx < fundableOperatorCount; ++idx) {
-            // if we picked keys on any operator, we extract the keys from storage and concatenate them in the result
-            // we then update the funded value
-            if (operators[idx].picked > 0) {
-                (bytes[] memory _publicKeys, bytes[] memory _signatures) =
-                    ValidatorKeys.getKeys(operators[idx].index, operators[idx].funded, operators[idx].picked);
-                emit FundedValidatorKeys(operators[idx].index, _publicKeys, false);
-                publicKeys = _concatenateByteArrays(publicKeys, _publicKeys);
-                signatures = _concatenateByteArrays(signatures, _signatures);
-                (OperatorsV2.get(operators[idx].index)).funded += operators[idx].picked;
-            }
-        }
-    }
-
-    function _updateCountOfPickedValidatorsForEachOperator(
-        OperatorsV2.CachedOperator[] memory operators,
-        uint256 _operatorIndex,
-        uint256 _validatorCount
-    ) internal pure {
-        // Find the operator in the compacted array by matching .index
-        for (uint256 i = 0; i < operators.length; ++i) {
-            if (operators[i].index == _operatorIndex) {
-                uint256 availableKeys = operators[i].limit - (operators[i].funded + operators[i].picked);
-
-                if (_validatorCount > availableKeys) {
-                    revert OperatorDoesNotHaveEnoughFundableKeys(_operatorIndex, _validatorCount, availableKeys);
-                }
-                // we update the cached picked amount
-                operators[i].picked += uint32(_validatorCount);
-                return;
-            }
-        }
-        // Operator not found in fundable list
-        revert InactiveOperator(_operatorIndex);
     }
 
     /// @notice Internal utility to set the total validator exits requested by the system
