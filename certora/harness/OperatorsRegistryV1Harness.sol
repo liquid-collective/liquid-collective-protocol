@@ -169,7 +169,7 @@ contract OperatorsRegistryV1Harness is OperatorsRegistryV1 {
     function pickNextValidatorsToDepositWithCount(uint256 count) external returns (bytes[] memory, bytes[] memory) {
         IOperatorsRegistryV1.OperatorAllocation[] memory allocations = new IOperatorsRegistryV1.OperatorAllocation[](1);
         allocations[0] = IOperatorsRegistryV1.OperatorAllocation({operatorIndex: 0, validatorCount: count});
-        return this.pickNextValidatorsToDepositFromActiveOperators(allocations);
+        return this.pickNextValidatorsToDeposit(allocations);
     }
 
     function getOperatorsSaturationDiscrepancy(uint256 index1, uint256 index2) external view returns (uint256)

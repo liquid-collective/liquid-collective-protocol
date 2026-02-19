@@ -415,7 +415,7 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
     }
 
     /// @inheritdoc IOperatorsRegistryV1
-    function pickNextValidatorsToDepositFromActiveOperators(OperatorAllocation[] calldata _allocations)
+    function pickNextValidatorsToDeposit(OperatorAllocation[] calldata _allocations)
         external
         onlyRiver
         returns (bytes[] memory publicKeys, bytes[] memory signatures)
