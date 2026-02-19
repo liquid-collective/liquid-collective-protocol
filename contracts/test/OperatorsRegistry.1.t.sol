@@ -3160,6 +3160,136 @@ contract OperatorsRegistryV1TestDistribution is OperatorAllocationTestBase {
 
     event SetCurrentValidatorExitsDemand(uint256 previousValidatorExitsDemand, uint256 nextValidatorExitsDemand);
 
+    /// @notice Two successive exit rounds with non-overlapping operator sets verify independence
+    function testNonOverlappingSuccessiveExitRequests() external {
+        vm.startPrank(admin);
+        operatorsRegistry.addValidators(0, 20, genBytes((48 + 96) * 20));
+        operatorsRegistry.addValidators(1, 20, genBytes((48 + 96) * 20));
+        operatorsRegistry.addValidators(2, 20, genBytes((48 + 96) * 20));
+        operatorsRegistry.addValidators(3, 20, genBytes((48 + 96) * 20));
+        vm.stopPrank();
+
+        uint256[] memory allOps = new uint256[](4);
+        allOps[0] = 0;
+        allOps[1] = 1;
+        allOps[2] = 2;
+        allOps[3] = 3;
+        uint32[] memory allLimits = new uint32[](4);
+        allLimits[0] = 20;
+        allLimits[1] = 20;
+        allLimits[2] = 20;
+        allLimits[3] = 20;
+        vm.prank(admin);
+        operatorsRegistry.setOperatorLimits(allOps, allLimits, block.number);
+
+        OperatorsRegistryInitializableV1(address(operatorsRegistry))
+            .pickNextValidatorsToDepositFromActiveOperators(_createAllocation(allOps, allLimits));
+
+        // Round 1: demand 10, exit operators [0,1] with 5 each
+        vm.prank(river);
+        operatorsRegistry.demandValidatorExits(10, 80);
+
+        uint256[] memory round1Ops = new uint256[](2);
+        round1Ops[0] = 0;
+        round1Ops[1] = 1;
+        uint32[] memory round1Counts = new uint32[](2);
+        round1Counts[0] = 5;
+        round1Counts[1] = 5;
+
+        vm.expectEmit(true, true, true, true);
+        emit RequestedValidatorExits(0, 5);
+        vm.expectEmit(true, true, true, true);
+        emit RequestedValidatorExits(1, 5);
+        vm.expectEmit(true, true, true, true);
+        emit SetTotalValidatorExitsRequested(0, 10);
+        vm.expectEmit(true, true, true, true);
+        emit SetCurrentValidatorExitsDemand(10, 0);
+        vm.prank(keeper);
+        operatorsRegistry.requestValidatorExits(_createMultiAllocation(round1Ops, round1Counts));
+
+        assertEq(operatorsRegistry.getOperator(0).requestedExits, 5);
+        assertEq(operatorsRegistry.getOperator(1).requestedExits, 5);
+        assertEq(operatorsRegistry.getOperator(2).requestedExits, 0);
+        assertEq(operatorsRegistry.getOperator(3).requestedExits, 0);
+        assertEq(operatorsRegistry.getTotalValidatorExitsRequested(), 10);
+        assertEq(operatorsRegistry.getCurrentValidatorExitsDemand(), 0);
+
+        // Round 2: demand 8, exit operators [2,3] — non-overlapping with round 1
+        vm.prank(river);
+        operatorsRegistry.demandValidatorExits(8, 80);
+
+        uint256[] memory round2Ops = new uint256[](2);
+        round2Ops[0] = 2;
+        round2Ops[1] = 3;
+        uint32[] memory round2Counts = new uint32[](2);
+        round2Counts[0] = 4;
+        round2Counts[1] = 4;
+
+        vm.expectEmit(true, true, true, true);
+        emit RequestedValidatorExits(2, 4);
+        vm.expectEmit(true, true, true, true);
+        emit RequestedValidatorExits(3, 4);
+        vm.expectEmit(true, true, true, true);
+        emit SetTotalValidatorExitsRequested(10, 18);
+        vm.expectEmit(true, true, true, true);
+        emit SetCurrentValidatorExitsDemand(8, 0);
+        vm.prank(keeper);
+        operatorsRegistry.requestValidatorExits(_createMultiAllocation(round2Ops, round2Counts));
+
+        // Operators 0,1 unchanged from round 1; operators 2,3 updated in round 2
+        assertEq(operatorsRegistry.getOperator(0).requestedExits, 5, "Op0 unchanged after round 2");
+        assertEq(operatorsRegistry.getOperator(1).requestedExits, 5, "Op1 unchanged after round 2");
+        assertEq(operatorsRegistry.getOperator(2).requestedExits, 4, "Op2 set in round 2");
+        assertEq(operatorsRegistry.getOperator(3).requestedExits, 4, "Op3 set in round 2");
+        assertEq(operatorsRegistry.getTotalValidatorExitsRequested(), 18);
+        assertEq(operatorsRegistry.getCurrentValidatorExitsDemand(), 0);
+    }
+
+    /// @notice Exit request that exactly matches the current demand (boundary: requestedExitCount == currentValidatorExitsDemand)
+    function testExitRequestExactlyMatchesDemand() external {
+        vm.startPrank(admin);
+        operatorsRegistry.addValidators(0, 30, genBytes((48 + 96) * 30));
+        operatorsRegistry.addValidators(1, 30, genBytes((48 + 96) * 30));
+        vm.stopPrank();
+
+        uint256[] memory ops = new uint256[](2);
+        ops[0] = 0;
+        ops[1] = 1;
+        uint32[] memory limits = new uint32[](2);
+        limits[0] = 30;
+        limits[1] = 30;
+        vm.prank(admin);
+        operatorsRegistry.setOperatorLimits(ops, limits, block.number);
+
+        OperatorsRegistryInitializableV1(address(operatorsRegistry))
+            .pickNextValidatorsToDepositFromActiveOperators(_createAllocation(ops, limits));
+
+        // Demand exactly 60 — equals total funded across both operators
+        vm.prank(river);
+        operatorsRegistry.demandValidatorExits(60, 60);
+        assertEq(operatorsRegistry.getCurrentValidatorExitsDemand(), 60);
+
+        uint32[] memory exitCounts = new uint32[](2);
+        exitCounts[0] = 30;
+        exitCounts[1] = 30;
+
+        vm.expectEmit(true, true, true, true);
+        emit RequestedValidatorExits(0, 30);
+        vm.expectEmit(true, true, true, true);
+        emit RequestedValidatorExits(1, 30);
+        vm.expectEmit(true, true, true, true);
+        emit SetTotalValidatorExitsRequested(0, 60);
+        vm.expectEmit(true, true, true, true);
+        emit SetCurrentValidatorExitsDemand(60, 0);
+        vm.prank(keeper);
+        operatorsRegistry.requestValidatorExits(_createMultiAllocation(ops, exitCounts));
+
+        assertEq(operatorsRegistry.getOperator(0).requestedExits, 30);
+        assertEq(operatorsRegistry.getOperator(1).requestedExits, 30);
+        assertEq(operatorsRegistry.getTotalValidatorExitsRequested(), 60);
+        assertEq(operatorsRegistry.getCurrentValidatorExitsDemand(), 0, "Demand fully consumed at exact boundary");
+    }
+
     function testUnevenExitDistribution() external {
         vm.startPrank(admin);
         operatorsRegistry.addValidators(0, 50, genBytes((48 + 96) * 50));
