@@ -7,6 +7,7 @@ methods {
     // IOperatorsRegistryV1
     function _.reportStoppedValidatorCounts(uint32[], uint256) external => DISPATCHER(true);
     function OR.getStoppedAndRequestedExitCounts() external returns (uint32, uint256) envfree;
+    function OR.getTotalValidatorExitsRequested() external returns (uint256) envfree;
     function _.getStoppedAndRequestedExitCounts() external => DISPATCHER(true);
     function _.demandValidatorExits(uint256, uint256) external => DISPATCHER(true);
     // DISPATCHER for pickNextValidatorsToDeposit not used; specs use pickNextValidatorsToDepositWithCount to avoid IOperatorsRegistryV1 in scene (no bytecode)
@@ -31,9 +32,12 @@ methods {
     function OR.getOperatorsSaturationDiscrepancy() external returns (uint256) envfree;
     function OR.getKeysCount(uint256) external returns (uint256) envfree;
     function OR.pickNextValidatorsToDeposit(IOperatorsRegistryV1.OperatorAllocation[]) external returns (bytes[] memory, bytes[] memory);
+    function OR.pickNextValidatorsToDepositReturnCount(IOperatorsRegistryV1.OperatorAllocation[]) external returns (uint256);
     function OR.requestValidatorExits(IOperatorsRegistryV1.OperatorAllocation[]) external;
     function OR.setOperatorAddress(uint256, address) external;   
     function OR.getOperatorsSaturationDiscrepancy(uint256, uint256) external returns (uint256) envfree;
+    function OR.getRiver() external returns (address) envfree;
+    function OR.totalAllocationValidatorCount(IOperatorsRegistryV1.OperatorAllocation[]) external returns (uint256) envfree;
     //function OR.removeValidators(uint256,uint256[]) external envfree;
     function OR.getHash(bytes) external returns (bytes32) envfree;
 
