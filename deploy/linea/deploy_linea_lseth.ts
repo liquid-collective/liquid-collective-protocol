@@ -2,7 +2,6 @@ import { HardhatRuntimeEnvironment } from "hardhat/types";
 import { DeployFunction } from "hardhat-deploy/dist/types";
 import { isDeployed, logStep, logStepEnd } from "../../ts-utils/helpers/index";
 import { verify } from "../../scripts/helpers";
-import { ethers } from "hardhat";
 
 const func: DeployFunction = async function ({ deployments, getNamedAccounts, network }: HardhatRuntimeEnvironment) {
   if (!["linea", "tenderly"].includes(network.name)) {
