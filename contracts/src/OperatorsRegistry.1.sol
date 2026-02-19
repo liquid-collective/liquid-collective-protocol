@@ -423,6 +423,10 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
         (bytes[][] memory perOpKeys, bytes[][] memory perOpSigs) =
             _getPerOperatorValidatorKeysForAllocations(_allocations);
         for (uint256 i = 0; i < perOpKeys.length; ++i) {
+            // unreachable code as perOpKeys is populated by _getPerOperatorValidatorKeysForAllocations
+            if (perOpKeys[i].length > type(uint32).max) {
+                revert InvalidKeyCount();
+            }
             emit FundedValidatorKeys(_allocations[i].operatorIndex, perOpKeys[i], false);
             OperatorsV2.get(_allocations[i].operatorIndex).funded += uint32(perOpKeys[i].length);
         }
