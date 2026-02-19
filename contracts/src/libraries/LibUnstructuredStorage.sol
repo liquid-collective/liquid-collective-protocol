@@ -1,6 +1,8 @@
-// SPDX-License-Identifier: BUSL-1.1
+// SPDX-License-Identifier: MIT
+// Originally derived from aragonOS (MIT)
+// https://github.com/aragon/aragonOS/blob/next/contracts/common/UnstructuredStorage.sol
 
-pragma solidity 0.8.33;
+pragma solidity ^0.8.33;
 
 /// @title Lib Unstructured Storage
 /// @notice Utilities to work with unstructured storage

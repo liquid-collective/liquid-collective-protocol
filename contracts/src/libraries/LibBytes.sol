@@ -1,5 +1,7 @@
-//SPDX-License-Identifier: Unlicense
-pragma solidity 0.8.33;
+// SPDX-License-Identifier: Unlicense
+// Originally derived from solidity-bytes-utils (Unlicense)
+// https://github.com/GNSPS/solidity-bytes-utils
+pragma solidity ^0.8.33;
 
 /// @title Lib Bytes
 /// @notice This library helps manipulating bytes
@@ -28,7 +30,7 @@ library LibBytes {
         bytes memory tempBytes;
 
         // solhint-disable-next-line no-inline-assembly
-        assembly {
+        assembly ("memory-safe") {
             switch iszero(_length)
             case 0 {
                 // Get a location of some free memory and store it in tempBytes as
