@@ -3130,6 +3130,18 @@ contract OperatorsRegistryV1TestDistribution is OperatorAllocationTestBase {
 
         vm.expectEmit(true, true, true, true);
         emit RequestedValidatorExits(0, 1);
+        vm.expectEmit(true, true, true, true);
+        emit RequestedValidatorExits(1, 1);
+        vm.expectEmit(true, true, true, true);
+        emit RequestedValidatorExits(2, 1);
+        vm.expectEmit(true, true, true, true);
+        emit RequestedValidatorExits(3, 1);
+        vm.expectEmit(true, true, true, true);
+        emit RequestedValidatorExits(4, 1);
+        vm.expectEmit(true, true, true, true);
+        emit SetTotalValidatorExitsRequested(0, 5);
+        vm.expectEmit(true, true, true, true);
+        emit SetCurrentValidatorExitsDemand(5, 0);
         vm.prank(keeper);
         operatorsRegistry.requestValidatorExits(_createAllocation(operators, limits));
 
@@ -3139,6 +3151,7 @@ contract OperatorsRegistryV1TestDistribution is OperatorAllocationTestBase {
         assert(operatorsRegistry.getOperator(3).requestedExits == 1);
         assert(operatorsRegistry.getOperator(4).requestedExits == 1);
         assert(operatorsRegistry.getTotalValidatorExitsRequested() == 5);
+        assertEq(operatorsRegistry.getCurrentValidatorExitsDemand(), 0);
     }
 
     event UpdatedRequestedValidatorExitsUponStopped(
