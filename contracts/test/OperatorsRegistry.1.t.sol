@@ -3650,10 +3650,15 @@ contract OperatorsRegistryV1TestDistribution is OperatorAllocationTestBase {
         limits[3] = 10;
         limits[4] = 10;
 
-        bytes memory tenKeys = genBytes(10 * (48 + 96));
+        uint256[] memory operators = new uint256[](5);
+        operators[0] = 0;
+        operators[1] = 1;
+        operators[2] = 2;
+        operators[3] = 3;
+        operators[4] = 4;
 
-        vm.prank(_operatorOne);
-        operatorsRegistry.addValidators(0, 10, tenKeys);
+        vm.prank(admin);
+        operatorsRegistry.setOperatorLimits(operators, limits, block.number);
 
         // Create valid allocation requesting exactly 10 validators from each operator
         IOperatorsRegistryV1.OperatorAllocation[] memory allocation = new IOperatorsRegistryV1.OperatorAllocation[](5);
@@ -5291,9 +5296,8 @@ contract OperatorsRegistryV1ExitCorrectnessTests is OperatorAllocationTestBase {
             limits[i] = 50;
         }
 
-        // Now try to allocate more - should revert since operator has no available keys (limit == funded)
-        IOperatorsRegistryV1.OperatorAllocation[] memory allocation2 = new IOperatorsRegistryV1.OperatorAllocation[](1);
-        allocation2[0] = IOperatorsRegistryV1.OperatorAllocation({operatorIndex: 0, validatorCount: 1});
+        vm.prank(admin);
+        operatorsRegistry.setOperatorLimits(operators, limits, block.number);
 
         OperatorsRegistryInitializableV1(address(operatorsRegistry))
             .pickNextValidatorsToDeposit(_createAllocation(operators, limits));
