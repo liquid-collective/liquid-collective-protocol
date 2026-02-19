@@ -535,7 +535,6 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
     function _getPerOperatorValidatorKeysForAllocations(OperatorAllocation[] memory _allocations)
         internal
         view
-        virtual
         returns (bytes[][] memory perOperatorKeys, bytes[][] memory perOperatorSigs)
     {
         uint256 allocationsLength = _allocations.length;

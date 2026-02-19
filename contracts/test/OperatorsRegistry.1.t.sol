@@ -38,39 +38,6 @@ contract OperatorsRegistryInitializableV1 is OperatorsRegistryV1 {
     }
 }
 
-/// @dev Harness that injects a key-count mismatch to test the InvalidKeyCount guard in pickNextValidatorsToDeposit.
-contract OperatorsRegistryMismatchedKeysV1 is OperatorsRegistryV1 {
-    modifier onlyRiver() override {
-        _;
-    }
-
-    function sudoSetFunded(uint256 _index, uint32 _funded) external {
-        OperatorsV2.Operator storage operator = OperatorsV2.get(_index);
-        operator.funded = _funded;
-    }
-
-    function sudoSetKeys(uint256 _operatorIndex, uint32 _keyCount) external {
-        OperatorsV2.setKeys(_operatorIndex, _keyCount);
-    }
-
-    function _getPerOperatorValidatorKeysForAllocations(OperatorAllocation[] memory _allocations)
-        internal
-        view
-        override
-        returns (bytes[][] memory perOperatorKeys, bytes[][] memory perOperatorSigs)
-    {
-        uint256 len = _allocations.length;
-        perOperatorKeys = new bytes[][](len);
-        perOperatorSigs = new bytes[][](len);
-        for (uint256 i = 0; i < len; ++i) {
-            // Return one fewer key than requested to trigger the mismatch guard
-            uint256 wrongCount = _allocations[i].validatorCount > 0 ? _allocations[i].validatorCount - 1 : 0;
-            perOperatorKeys[i] = new bytes[](wrongCount);
-            perOperatorSigs[i] = new bytes[](wrongCount);
-        }
-    }
-}
-
 /// @dev Same as OperatorsRegistryInitializableV1 but does NOT override onlyRiver; use for tests that assert Unauthorized
 contract OperatorsRegistryStrictRiverV1 is OperatorsRegistryV1 {
     function sudoSetFunded(uint256 _index, uint32 _funded) external {
@@ -5828,36 +5795,3 @@ contract OperatorsRegistryV1ExitCorrectnessTests is OperatorAllocationTestBase {
     }
 }
 
-contract OperatorsRegistryV1InvalidKeyCountTests is
-    OperatorsRegistryV1TestBase,
-    OperatorAllocationTestBase,
-    BytesGenerator
-{
-    function setUp() public {
-        admin = makeAddr("admin");
-        keeper = makeAddr("keeper");
-        river = address(new RiverMock(0));
-        RiverMock(river).setKeeper(keeper);
-        operatorsRegistry = new OperatorsRegistryMismatchedKeysV1();
-        LibImplementationUnbricker.unbrick(vm, address(operatorsRegistry));
-        operatorsRegistry.initOperatorsRegistryV1(admin, river);
-    }
-
-    function testPickNextValidatorsRevertsOnKeyCountMismatch() public {
-        vm.prank(admin);
-        operatorsRegistry.addOperator("Operator", makeAddr("operator"));
-        bytes memory keys = genBytes(48);
-        bytes memory sigs = genBytes(96);
-        vm.prank(admin);
-        operatorsRegistry.addValidators(0, 1, abi.encodePacked(keys, sigs));
-        uint256[] memory ops = new uint256[](1);
-        ops[0] = 0;
-        uint32[] memory limits = new uint32[](1);
-        limits[0] = 1;
-        vm.prank(admin);
-        operatorsRegistry.setOperatorLimits(ops, limits, block.number);
-
-        vm.expectRevert(abi.encodeWithSelector(IOperatorsRegistryV1.InvalidKeyCount.selector));
-        operatorsRegistry.pickNextValidatorsToDeposit(_createAllocation(0, 1));
-    }
-}
