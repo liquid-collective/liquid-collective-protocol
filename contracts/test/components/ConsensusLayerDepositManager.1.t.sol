@@ -405,6 +405,40 @@ contract ConsensusLayerDepositManagerV1ErrorTests is OperatorAllocationTestBase 
         vm.prank(address(0x1));
         depositManager.depositToConsensusLayerWithDepositRoot(_createAllocation(5), bytes32(0));
     }
+
+    /// @notice Fund with exactly 2 deposits (64 ETH). Request allocation of 3 validators.
+    ///         Verify OperatorAllocationsExceedCommittedBalance().
+    function testAllocationExceedsCommittedBalanceByOne() public {
+        vm.deal(address(depositManager), 2 * 32 ether);
+        ConsensusLayerDepositManagerV1ControllableValidatorKeyRequest(address(depositManager)).sudoSyncBalance();
+        vm.expectRevert(abi.encodeWithSignature("OperatorAllocationsExceedCommittedBalance()"));
+        vm.prank(address(0x1));
+        depositManager.depositToConsensusLayerWithDepositRoot(_createAllocation(3), bytes32(0));
+    }
+
+    /// @notice Fund with 3 deposits (96 ETH). Request [op0: 2, op1: 2] = 4 total.
+    ///         Verify OperatorAllocationsExceedCommittedBalance().
+    function testAllocationExceedsCommittedBalanceMultiOperator() public {
+        vm.deal(address(depositManager), 3 * 32 ether);
+        ConsensusLayerDepositManagerV1ControllableValidatorKeyRequest(address(depositManager)).sudoSyncBalance();
+
+        IOperatorsRegistryV1.OperatorAllocation[] memory allocations = new IOperatorsRegistryV1.OperatorAllocation[](2);
+        allocations[0] = IOperatorsRegistryV1.OperatorAllocation({operatorIndex: 0, validatorCount: 2});
+        allocations[1] = IOperatorsRegistryV1.OperatorAllocation({operatorIndex: 1, validatorCount: 2});
+
+        vm.expectRevert(abi.encodeWithSignature("OperatorAllocationsExceedCommittedBalance()"));
+        vm.prank(address(0x1));
+        depositManager.depositToConsensusLayerWithDepositRoot(allocations, bytes32(0));
+    }
+
+    /// @notice Fund with 3 deposits. Request exactly 3 validators. Verify it succeeds (no revert).
+    function testAllocationExactlyMatchesCommittedBalance() public {
+        vm.deal(address(depositManager), 3 * 32 ether);
+        ConsensusLayerDepositManagerV1ControllableValidatorKeyRequest(address(depositManager)).sudoSyncBalance();
+        vm.prank(address(0x1));
+        depositManager.depositToConsensusLayerWithDepositRoot(_createAllocation(3), bytes32(0));
+        assertEq(address(depositManager).balance, 3 * 32 ether - 3 * 32 ether, "balance should be 0");
+    }
 }
 
 /// @notice Tests allocation validation (UnorderedOperatorList, AllocationWithZeroValidatorCount) via real OperatorsRegistry flow
