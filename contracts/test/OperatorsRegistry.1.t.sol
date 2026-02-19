@@ -5650,4 +5650,361 @@ contract OperatorsRegistryV1ExitCorrectnessTests is OperatorAllocationTestBase {
         assertEq(operatorsRegistry.getOperator(1).funded, 15, "Op1 funded unchanged");
         assertEq(operatorsRegistry.getOperator(2).funded, 5, "Op2 funded unchanged");
     }
+
+    // ──────────────────────────────────────────────────────────────────────
+    // TEST 6: ExitsRequestedExceedDemand by one
+    // ──────────────────────────────────────────────────────────────────────
+
+    /// @notice Demand is 10. Request exactly 11 exits (1 over). Verify the exact error parameters.
+    function testExitsRequestedExceedDemandByOne() external {
+        _fundAllOperators();
+
+        vm.prank(river);
+        operatorsRegistry.demandValidatorExits(10, 250);
+        assertEq(operatorsRegistry.getCurrentValidatorExitsDemand(), 10);
+
+        // Request 11 total (all from op0) -- 1 over demand
+        uint256[] memory ops = new uint256[](1);
+        ops[0] = 0;
+        uint32[] memory counts = new uint32[](1);
+        counts[0] = 11;
+
+        vm.expectRevert(abi.encodeWithSignature("ExitsRequestedExceedDemand(uint256,uint256)", 11, 10));
+        vm.prank(keeper);
+        operatorsRegistry.requestValidatorExits(_createAllocation(ops, counts));
+    }
+
+    // ──────────────────────────────────────────────────────────────────────
+    // TEST 7: ExitsRequestedExceedDemand after partial fulfillment
+    // ──────────────────────────────────────────────────────────────────────
+
+    /// @notice Demand is 20. First call fulfills 15. Second call tries to exit 10 (5 over remaining 5).
+    function testExitsRequestedExceedDemandAfterPartialFulfillment() external {
+        _fundAllOperators();
+
+        vm.prank(river);
+        operatorsRegistry.demandValidatorExits(20, 250);
+        assertEq(operatorsRegistry.getCurrentValidatorExitsDemand(), 20);
+
+        // First call: fulfill 15 (5 from each of ops 0,1,2)
+        uint256[] memory ops1 = new uint256[](3);
+        ops1[0] = 0;
+        ops1[1] = 1;
+        ops1[2] = 2;
+        uint32[] memory counts1 = new uint32[](3);
+        counts1[0] = 5;
+        counts1[1] = 5;
+        counts1[2] = 5;
+
+        vm.prank(keeper);
+        operatorsRegistry.requestValidatorExits(_createAllocation(ops1, counts1));
+        assertEq(operatorsRegistry.getCurrentValidatorExitsDemand(), 5, "Demand should be 5 after first call");
+
+        // Second call: try to exit 10 from op3 (5 over remaining demand of 5)
+        uint256[] memory ops2 = new uint256[](1);
+        ops2[0] = 3;
+        uint32[] memory counts2 = new uint32[](1);
+        counts2[0] = 10;
+
+        vm.expectRevert(abi.encodeWithSignature("ExitsRequestedExceedDemand(uint256,uint256)", 10, 5));
+        vm.prank(keeper);
+        operatorsRegistry.requestValidatorExits(_createAllocation(ops2, counts2));
+    }
+
+    // ──────────────────────────────────────────────────────────────────────
+    // TEST 8: Exits exactly match demand succeeds
+    // ──────────────────────────────────────────────────────────────────────
+
+    /// @notice Demand is 10, request exactly 10 across multiple operators. Verify it succeeds and demand goes to 0.
+    function testExitsRequestedExactlyMatchesDemand() external {
+        _fundAllOperators();
+
+        vm.prank(river);
+        operatorsRegistry.demandValidatorExits(10, 250);
+        assertEq(operatorsRegistry.getCurrentValidatorExitsDemand(), 10);
+
+        // Request exactly 10 total: 3 from op0, 3 from op1, 4 from op2
+        uint256[] memory ops = new uint256[](3);
+        ops[0] = 0;
+        ops[1] = 1;
+        ops[2] = 2;
+        uint32[] memory counts = new uint32[](3);
+        counts[0] = 3;
+        counts[1] = 3;
+        counts[2] = 4;
+
+        vm.prank(keeper);
+        operatorsRegistry.requestValidatorExits(_createAllocation(ops, counts));
+
+        assertEq(operatorsRegistry.getCurrentValidatorExitsDemand(), 0, "Demand should be 0");
+        assertEq(operatorsRegistry.getTotalValidatorExitsRequested(), 10, "Total exits should be 10");
+        assertEq(operatorsRegistry.getOperator(0).requestedExits, 3, "Op0 should have 3 exits");
+        assertEq(operatorsRegistry.getOperator(1).requestedExits, 3, "Op1 should have 3 exits");
+        assertEq(operatorsRegistry.getOperator(2).requestedExits, 4, "Op2 should have 4 exits");
+    }
+}
+
+// ══════════════════════════════════════════════════════════════════════════
+// _flattenByteArrays and _getPerOperatorValidatorKeysForAllocations tests
+// ══════════════════════════════════════════════════════════════════════════
+
+/// @notice Tests that exercise _flattenByteArrays and allocation validation logic
+///         via the public view function getNextValidatorsToDepositFromActiveOperators.
+contract OperatorsRegistryV1FlattenAndAllocationTests is OperatorAllocationTestBase {
+    OperatorsRegistryV1 internal operatorsRegistry;
+    address internal admin;
+    address internal river;
+
+    /// @dev Per-operator raw key material, stored so we can verify returned keys match
+    bytes[] internal rawKeysByOperator;
+
+    bytes32 salt = bytes32(0);
+
+    function genBytes(uint256 len) internal returns (bytes memory) {
+        bytes memory res = "";
+        while (res.length < len) {
+            salt = keccak256(abi.encodePacked(salt));
+            if (len - res.length >= 32) {
+                res = bytes.concat(res, abi.encode(salt));
+            } else {
+                res = bytes.concat(res, LibBytes.slice(abi.encode(salt), 0, len - res.length));
+            }
+        }
+        return res;
+    }
+
+    /// @dev Extract the public key at a given validator index from the raw key material for an operator
+    function _extractPublicKey(uint256 operatorIdx, uint256 validatorIdx) internal view returns (bytes memory) {
+        uint256 entrySize = ValidatorKeys.PUBLIC_KEY_LENGTH + ValidatorKeys.SIGNATURE_LENGTH; // 144
+        return LibBytes.slice(rawKeysByOperator[operatorIdx], validatorIdx * entrySize, ValidatorKeys.PUBLIC_KEY_LENGTH);
+    }
+
+    /// @dev Extract the signature at a given validator index from the raw key material for an operator
+    function _extractSignature(uint256 operatorIdx, uint256 validatorIdx) internal view returns (bytes memory) {
+        uint256 entrySize = ValidatorKeys.PUBLIC_KEY_LENGTH + ValidatorKeys.SIGNATURE_LENGTH; // 144
+        return LibBytes.slice(
+            rawKeysByOperator[operatorIdx],
+            validatorIdx * entrySize + ValidatorKeys.PUBLIC_KEY_LENGTH,
+            ValidatorKeys.SIGNATURE_LENGTH
+        );
+    }
+
+    /// @dev Setup with a configurable number of operators, each with `keysPerOp` keys and limits
+    function _setupOperators(uint256 count, uint32 keysPerOp) internal {
+        admin = makeAddr("admin");
+        river = makeAddr("river");
+
+        operatorsRegistry = new OperatorsRegistryInitializableV1();
+        LibImplementationUnbricker.unbrick(vm, address(operatorsRegistry));
+        operatorsRegistry.initOperatorsRegistryV1(admin, river);
+
+        uint256[] memory indexes = new uint256[](count);
+        uint32[] memory limits = new uint32[](count);
+
+        vm.startPrank(admin);
+        for (uint256 i = 0; i < count; ++i) {
+            address opAddr = makeAddr(string(abi.encodePacked("op", vm.toString(i))));
+            operatorsRegistry.addOperator(string(abi.encodePacked("Operator ", vm.toString(i))), opAddr);
+
+            bytes memory keys =
+                genBytes(uint256(keysPerOp) * (ValidatorKeys.PUBLIC_KEY_LENGTH + ValidatorKeys.SIGNATURE_LENGTH));
+            rawKeysByOperator.push(keys);
+            operatorsRegistry.addValidators(i, keysPerOp, keys);
+
+            indexes[i] = i;
+            limits[i] = keysPerOp;
+        }
+        operatorsRegistry.setOperatorLimits(indexes, limits, block.number);
+        vm.stopPrank();
+    }
+
+    // ──────────────────────────────────────────────────────────────────────
+    // TEST 1: Single operator, single key
+    // ──────────────────────────────────────────────────────────────────────
+
+    /// @notice 1 operator, allocate 1 key. Verify returned arrays have length 1 and key matches.
+    function testFlattenSingleOperatorSingleKey() external {
+        _setupOperators(1, 10);
+
+        IOperatorsRegistryV1.OperatorAllocation[] memory alloc = new IOperatorsRegistryV1.OperatorAllocation[](1);
+        alloc[0] = IOperatorsRegistryV1.OperatorAllocation({operatorIndex: 0, validatorCount: 1});
+
+        (bytes[] memory publicKeys, bytes[] memory signatures) =
+            operatorsRegistry.getNextValidatorsToDepositFromActiveOperators(alloc);
+
+        assertEq(publicKeys.length, 1, "Expected 1 public key");
+        assertEq(signatures.length, 1, "Expected 1 signature");
+        assertEq(publicKeys[0], _extractPublicKey(0, 0), "Key should be op0 validator 0");
+    }
+
+    // ──────────────────────────────────────────────────────────────────────
+    // TEST 2: Single operator, all keys
+    // ──────────────────────────────────────────────────────────────────────
+
+    /// @notice 1 operator with 10 keys, allocate all 10. Verify returned array length == 10 and all keys match.
+    function testFlattenSingleOperatorAllKeys() external {
+        _setupOperators(1, 10);
+
+        IOperatorsRegistryV1.OperatorAllocation[] memory alloc = new IOperatorsRegistryV1.OperatorAllocation[](1);
+        alloc[0] = IOperatorsRegistryV1.OperatorAllocation({operatorIndex: 0, validatorCount: 10});
+
+        (bytes[] memory publicKeys, bytes[] memory signatures) =
+            operatorsRegistry.getNextValidatorsToDepositFromActiveOperators(alloc);
+
+        assertEq(publicKeys.length, 10, "Expected 10 public keys");
+        assertEq(signatures.length, 10, "Expected 10 signatures");
+        for (uint256 i = 0; i < 10; ++i) {
+            assertEq(
+                publicKeys[i],
+                _extractPublicKey(0, i),
+                string(abi.encodePacked("Key ", vm.toString(i), " should match op0 validator ", vm.toString(i)))
+            );
+        }
+    }
+
+    // ──────────────────────────────────────────────────────────────────────
+    // TEST 3: Multi-operator verify order
+    // ──────────────────────────────────────────────────────────────────────
+
+    /// @notice 3 operators, allocate [2, 3, 1]. Verify 6 returned keys are in correct
+    ///         operator order (op0 keys first, then op1, then op2) with correct content.
+    function testFlattenMultiOperatorVerifyOrder() external {
+        _setupOperators(3, 10);
+
+        IOperatorsRegistryV1.OperatorAllocation[] memory alloc = new IOperatorsRegistryV1.OperatorAllocation[](3);
+        alloc[0] = IOperatorsRegistryV1.OperatorAllocation({operatorIndex: 0, validatorCount: 2});
+        alloc[1] = IOperatorsRegistryV1.OperatorAllocation({operatorIndex: 1, validatorCount: 3});
+        alloc[2] = IOperatorsRegistryV1.OperatorAllocation({operatorIndex: 2, validatorCount: 1});
+
+        (bytes[] memory publicKeys,) = operatorsRegistry.getNextValidatorsToDepositFromActiveOperators(alloc);
+
+        assertEq(publicKeys.length, 6, "Expected 6 total keys");
+
+        // op0 keys first
+        assertEq(publicKeys[0], _extractPublicKey(0, 0), "Key 0 should be op0 validator 0");
+        assertEq(publicKeys[1], _extractPublicKey(0, 1), "Key 1 should be op0 validator 1");
+
+        // op1 keys next
+        assertEq(publicKeys[2], _extractPublicKey(1, 0), "Key 2 should be op1 validator 0");
+        assertEq(publicKeys[3], _extractPublicKey(1, 1), "Key 3 should be op1 validator 1");
+        assertEq(publicKeys[4], _extractPublicKey(1, 2), "Key 4 should be op1 validator 2");
+
+        // op2 key last
+        assertEq(publicKeys[5], _extractPublicKey(2, 0), "Key 5 should be op2 validator 0");
+    }
+
+    // ──────────────────────────────────────────────────────────────────────
+    // TEST 4: Signatures match keys
+    // ──────────────────────────────────────────────────────────────────────
+
+    /// @notice 2 operators, allocate [2, 2]. Verify both publicKeys and signatures arrays
+    ///         have length 4 and each signature corresponds to the correct key's registered signature.
+    function testFlattenSignaturesMatchKeys() external {
+        _setupOperators(2, 10);
+
+        IOperatorsRegistryV1.OperatorAllocation[] memory alloc = new IOperatorsRegistryV1.OperatorAllocation[](2);
+        alloc[0] = IOperatorsRegistryV1.OperatorAllocation({operatorIndex: 0, validatorCount: 2});
+        alloc[1] = IOperatorsRegistryV1.OperatorAllocation({operatorIndex: 1, validatorCount: 2});
+
+        (bytes[] memory publicKeys, bytes[] memory signatures) =
+            operatorsRegistry.getNextValidatorsToDepositFromActiveOperators(alloc);
+
+        assertEq(publicKeys.length, 4, "Expected 4 public keys");
+        assertEq(signatures.length, 4, "Expected 4 signatures");
+
+        // op0 validator 0
+        assertEq(publicKeys[0], _extractPublicKey(0, 0), "Key 0 content");
+        assertEq(signatures[0], _extractSignature(0, 0), "Sig 0 content");
+        // op0 validator 1
+        assertEq(publicKeys[1], _extractPublicKey(0, 1), "Key 1 content");
+        assertEq(signatures[1], _extractSignature(0, 1), "Sig 1 content");
+        // op1 validator 0
+        assertEq(publicKeys[2], _extractPublicKey(1, 0), "Key 2 content");
+        assertEq(signatures[2], _extractSignature(1, 0), "Sig 2 content");
+        // op1 validator 1
+        assertEq(publicKeys[3], _extractPublicKey(1, 1), "Key 3 content");
+        assertEq(signatures[3], _extractSignature(1, 1), "Sig 3 content");
+    }
+
+    // ──────────────────────────────────────────────────────────────────────
+    // TEST 5: Reverts on empty allocation
+    // ──────────────────────────────────────────────────────────────────────
+
+    /// @notice Pass empty OperatorAllocation[] to getNextValidatorsToDepositFromActiveOperators. Expect InvalidEmptyArray().
+    function testGetNextValidatorsRevertsEmptyAllocation() external {
+        _setupOperators(1, 10);
+
+        IOperatorsRegistryV1.OperatorAllocation[] memory alloc = new IOperatorsRegistryV1.OperatorAllocation[](0);
+
+        vm.expectRevert(abi.encodeWithSignature("InvalidEmptyArray()"));
+        operatorsRegistry.getNextValidatorsToDepositFromActiveOperators(alloc);
+    }
+
+    // ──────────────────────────────────────────────────────────────────────
+    // TEST 6: Reverts on unordered list
+    // ──────────────────────────────────────────────────────────────────────
+
+    /// @notice Pass allocations with descending operator indices. Expect UnorderedOperatorList().
+    function testGetNextValidatorsRevertsUnorderedList() external {
+        _setupOperators(3, 10);
+
+        IOperatorsRegistryV1.OperatorAllocation[] memory alloc = new IOperatorsRegistryV1.OperatorAllocation[](2);
+        alloc[0] = IOperatorsRegistryV1.OperatorAllocation({operatorIndex: 2, validatorCount: 1});
+        alloc[1] = IOperatorsRegistryV1.OperatorAllocation({operatorIndex: 0, validatorCount: 1});
+
+        vm.expectRevert(abi.encodeWithSignature("UnorderedOperatorList()"));
+        operatorsRegistry.getNextValidatorsToDepositFromActiveOperators(alloc);
+    }
+
+    // ──────────────────────────────────────────────────────────────────────
+    // TEST 7: Reverts on zero validator count
+    // ──────────────────────────────────────────────────────────────────────
+
+    /// @notice Pass allocation with validatorCount: 0. Expect AllocationWithZeroValidatorCount().
+    function testGetNextValidatorsRevertsZeroValidatorCount() external {
+        _setupOperators(1, 10);
+
+        IOperatorsRegistryV1.OperatorAllocation[] memory alloc = new IOperatorsRegistryV1.OperatorAllocation[](1);
+        alloc[0] = IOperatorsRegistryV1.OperatorAllocation({operatorIndex: 0, validatorCount: 0});
+
+        vm.expectRevert(abi.encodeWithSignature("AllocationWithZeroValidatorCount()"));
+        operatorsRegistry.getNextValidatorsToDepositFromActiveOperators(alloc);
+    }
+
+    // ──────────────────────────────────────────────────────────────────────
+    // TEST 8: Reverts when operator ignored exit requests
+    // ──────────────────────────────────────────────────────────────────────
+
+    /// @notice Set up an operator with requestedExits > stoppedCount, then try to get validators.
+    ///         Expect OperatorIgnoredExitRequests().
+    function testGetNextValidatorsRevertsOperatorIgnoredExitRequests() external {
+        _setupOperators(1, 10);
+
+        // Set requestedExits to 5 but leave stoppedCount at 0
+        OperatorsRegistryInitializableV1(address(operatorsRegistry)).sudoExitRequests(0, 5);
+
+        IOperatorsRegistryV1.OperatorAllocation[] memory alloc = new IOperatorsRegistryV1.OperatorAllocation[](1);
+        alloc[0] = IOperatorsRegistryV1.OperatorAllocation({operatorIndex: 0, validatorCount: 1});
+
+        vm.expectRevert(abi.encodeWithSignature("OperatorIgnoredExitRequests(uint256)", 0));
+        operatorsRegistry.getNextValidatorsToDepositFromActiveOperators(alloc);
+    }
+
+    // ──────────────────────────────────────────────────────────────────────
+    // TEST 9: Reverts on insufficient fundable keys
+    // ──────────────────────────────────────────────────────────────────────
+
+    /// @notice Allocate more keys than available (limit - funded). Expect OperatorHasInsufficientFundableKeys().
+    function testGetNextValidatorsRevertsInsufficientFundableKeys() external {
+        _setupOperators(1, 10);
+
+        // Fund 8 out of 10 limit, leaving only 2 available
+        OperatorsRegistryInitializableV1(address(operatorsRegistry)).sudoSetFunded(0, 8);
+
+        IOperatorsRegistryV1.OperatorAllocation[] memory alloc = new IOperatorsRegistryV1.OperatorAllocation[](1);
+        alloc[0] = IOperatorsRegistryV1.OperatorAllocation({operatorIndex: 0, validatorCount: 5});
+
+        vm.expectRevert(abi.encodeWithSignature("OperatorHasInsufficientFundableKeys(uint256,uint256,uint256)", 0, 5, 2));
+        operatorsRegistry.getNextValidatorsToDepositFromActiveOperators(alloc);
+    }
 }
