@@ -38,7 +38,7 @@ contract OperatorsRegistryInitializableV1 is OperatorsRegistryV1 {
     }
 }
 
-/// @dev Harness that injects a key-count mismatch to test the InvalidKeyCount guard in pickNextValidatorsToDepositFromActiveOperators.
+/// @dev Harness that injects a key-count mismatch to test the InvalidKeyCount guard in pickNextValidatorsToDeposit.
 contract OperatorsRegistryMismatchedKeysV1 is OperatorsRegistryV1 {
     modifier onlyRiver() override {
         _;
@@ -3955,7 +3955,7 @@ contract OperatorsRegistryV1TestDistribution is OperatorAllocationTestBase {
         operatorsRegistry.pickNextValidatorsToDeposit(allocation);
     }
 
-    function testPickNextValidatorsToDepositFromActiveOperatorsRevertsWhenExceedingLimit() public {
+    function testpickNextValidatorsToDepositRevertsWhenExceedingLimit() public {
         bytes[] memory rawKeys = new bytes[](5);
 
         rawKeys[0] = genBytes((48 + 96) * 10);
@@ -4880,7 +4880,7 @@ contract OperatorsRegistryV1TestDistribution is OperatorAllocationTestBase {
         operatorsRegistry.getNextValidatorsToDepositFromActiveOperators(allocation);
     }
 
-    /// @notice Tests the _pickNextValidatorsToDepositFromActiveOperators returns empty when no fundable operators
+    /// @notice Tests the _pickNextValidatorsToDeposit returns empty when no fundable operators
     function testPickNextValidatorsToDepositReturnsEmptyAllocation() public {
         // No operators have keys or limits set, so none are fundable
         IOperatorsRegistryV1.OperatorAllocation[] memory allocation = new IOperatorsRegistryV1.OperatorAllocation[](0);
