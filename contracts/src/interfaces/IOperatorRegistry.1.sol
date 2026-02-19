@@ -355,7 +355,7 @@ interface IOperatorsRegistryV1 {
     /// @param _allocations Node operator allocations specifying how many validators per operator
     /// @return publicKeys An array of public keys
     /// @return signatures An array of signatures linked to the public keys
-    function pickNextValidatorsToDeposit(OperatorAllocation[] calldata _allocations)
+    function pickNextValidatorsToDepositFromActiveOperators(OperatorAllocation[] calldata _allocations)
         external
         returns (bytes[] memory publicKeys, bytes[] memory signatures);
 

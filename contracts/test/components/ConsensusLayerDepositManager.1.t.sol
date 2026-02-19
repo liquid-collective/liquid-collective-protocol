@@ -105,7 +105,7 @@ contract ConsensusLayerDepositManagerV1UsesRegistry is ConsensusLayerDepositMana
         override
         returns (bytes[] memory publicKeys, bytes[] memory signatures)
     {
-        return registry.pickNextValidatorsToDeposit(_allocations);
+        return registry.pickNextValidatorsToDepositFromActiveOperators(_allocations);
     }
 
     function sudoSyncBalance() external {
