@@ -1,5 +1,5 @@
 //SPDX-License-Identifier: BUSL-1.1
-pragma solidity 0.8.20;
+pragma solidity 0.8.33;
 
 import "./interfaces/IFirewall.sol";
 import "./interfaces/IProtocolVersion.sol";
@@ -38,12 +38,9 @@ contract Firewall is IFirewall, IProtocolVersion, Administrable {
         emit SetExecutor(_executor);
         emit SetDestination(_destination);
 
-        for (uint256 i; i < _executorCallableSelectors.length;) {
+        for (uint256 i; i < _executorCallableSelectors.length; ++i) {
             executorCanCall[_executorCallableSelectors[i]] = true;
             emit SetExecutorPermissions(_executorCallableSelectors[i], true);
-            unchecked {
-                ++i;
-            }
         }
     }
 

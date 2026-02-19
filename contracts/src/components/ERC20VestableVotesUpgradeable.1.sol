@@ -1,5 +1,5 @@
 //SPDX-License-Identifier: BUSL-1.1
-pragma solidity 0.8.20;
+pragma solidity 0.8.33;
 
 import "openzeppelin-contracts-upgradeable/contracts/token/ERC20/extensions/ERC20VotesUpgradeable.sol";
 import "openzeppelin-contracts-upgradeable/contracts/proxy/utils/Initializable.sol";
@@ -84,14 +84,11 @@ abstract contract ERC20VestableVotesUpgradeableV1 is
     function migrateVestingSchedulesFromV1ToV2() internal {
         if (VestingSchedulesV2.getCount() == 0) {
             uint256 existingV1VestingSchedules = VestingSchedulesV1.getCount();
-            for (uint256 idx; idx < existingV1VestingSchedules;) {
+            for (uint256 idx; idx < existingV1VestingSchedules; ++idx) {
                 uint256 scheduleAmount = VestingSchedulesV1.get(idx).amount;
                 uint256 releasedAmount =
                     scheduleAmount - LibUint256.min(balanceOf(_deterministicVestingEscrow(idx)), scheduleAmount);
                 VestingSchedulesV2.migrateVestingScheduleFromV1(idx, releasedAmount);
-                unchecked {
-                    ++idx;
-                }
             }
         }
     }

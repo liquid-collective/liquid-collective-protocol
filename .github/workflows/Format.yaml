@@ -2,23 +2,31 @@ name: Format Checks
 
 on:
   push:
+    branches:
+      - main
+    paths:
+      - "contracts/**"
+      - ".github/**"
+  pull_request:
+    branches:
+      - main
     paths:
       - "contracts/**"
       - ".github/**"
 
 jobs:
   run-format:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           submodules: recursive
 
       - name: install foundry
         uses: onbjerg/foundry-toolchain@v1
         with:
-          version: nightly
+          version: v1.4.3
 
       - name: run formatting checks
         run: forge fmt --check 

@@ -1,5 +1,5 @@
 //SPDX-License-Identifier: BUSL-1.1
-pragma solidity 0.8.20;
+pragma solidity 0.8.33;
 
 /// @title Redeem Manager Withdrawal Stack storage
 /// @notice Utility to manage the Withdrawal Stack in the Redeem Manager

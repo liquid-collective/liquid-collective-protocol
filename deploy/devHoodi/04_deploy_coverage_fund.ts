@@ -6,7 +6,7 @@ import { verify } from "../../scripts/helpers";
 const implementationVersion = "1_2_1";
 
 const func: DeployFunction = async function ({ deployments, getNamedAccounts, network }: HardhatRuntimeEnvironment) {
-  if (!["hardhat", "local", "tenderly", "hoodi", "devHoodi"].includes(network.name)) {
+  if (!["hardhat", "local", "tenderly", "hoodi", "devHoodi", "kurtosis"].includes(network.name)) {
     throw new Error("Invalid network for hoodi deployment");
   }
   const { deployer, proxyAdministrator } = await getNamedAccounts();

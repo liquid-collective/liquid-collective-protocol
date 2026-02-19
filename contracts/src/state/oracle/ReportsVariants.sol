@@ -1,5 +1,5 @@
 //SPDX-License-Identifier: BUSL-1.1
-pragma solidity 0.8.20;
+pragma solidity 0.8.33;
 
 /// @title Reports Variants Storage
 /// @notice Utility to manage the Reports Variants in storage
@@ -79,12 +79,9 @@ library ReportsVariants {
 
         uint256 length = r.value.length;
 
-        for (uint256 idx = 0; idx < length;) {
+        for (uint256 idx = 0; idx < length; ++idx) {
             if (r.value[idx].variant == _variant) {
                 return int256(idx);
-            }
-            unchecked {
-                ++idx;
             }
         }
 

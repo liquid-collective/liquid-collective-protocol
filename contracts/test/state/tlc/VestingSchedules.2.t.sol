@@ -1,5 +1,5 @@
 //SPDX-License-Identifier: BUSL-1.1
-pragma solidity 0.8.20;
+pragma solidity 0.8.33;
 
 import "../../../src/state/tlc/VestingSchedules.1.sol";
 import "../../../src/state/tlc/VestingSchedules.2.sol";
@@ -46,22 +46,29 @@ contract VestingSchedulesMigrationTest is Test {
     function _migrate() internal returns (uint256) {
         if (VestingSchedulesV2.getCount() == 0) {
             uint256 existingV1VestingSchedules = VestingSchedulesV1.getCount();
-            for (uint256 idx; idx < existingV1VestingSchedules;) {
+            for (uint256 idx; idx < existingV1VestingSchedules; ++idx) {
                 VestingSchedulesV2.migrateVestingScheduleFromV1(idx, 0);
-                unchecked {
-                    ++idx;
-                }
             }
         }
         return VestingSchedulesV2.getCount();
     }
 
+    /// @dev External wrapper to call VestingSchedulesV1.get so vm.expectRevert can catch it
+    function getV1Schedule(uint256 _index) external view returns (VestingSchedulesV1.VestingSchedule memory) {
+        return VestingSchedulesV1.get(_index);
+    }
+
+    /// @dev External wrapper to call VestingSchedulesV2.get so vm.expectRevert can catch it
+    function getV2Schedule(uint256 _index) external view returns (VestingSchedulesV2.VestingSchedule memory) {
+        return VestingSchedulesV2.get(_index);
+    }
+
     function testGetRevert() public {
         uint256 _index = 1;
         vm.expectRevert(abi.encodeWithSignature("VestingScheduleNotFound(uint256)", _index));
-        VestingSchedulesV1.get(_index);
+        this.getV1Schedule(_index);
         vm.expectRevert(abi.encodeWithSignature("VestingScheduleNotFound(uint256)", _index));
-        VestingSchedulesV2.get(_index);
+        this.getV2Schedule(_index);
     }
 
     function testVestingScheduleV1ToV2Compatibility(
@@ -102,7 +109,7 @@ contract VestingSchedulesMigrationTest is Test {
         assert(count == 2);
 
         // #3. Get v2 schedules and check validity of inputs
-        for (uint256 idx = 0; idx < count;) {
+        for (uint256 idx = 0; idx < count; ++idx) {
             VestingSchedulesV2.VestingSchedule memory vestingScheduleV2 = VestingSchedulesV2.get(idx);
             assert(vestingScheduleV2.start == vestingScheduleV1.start);
             assert(vestingScheduleV2.end == vestingScheduleV1.end);
@@ -114,9 +121,6 @@ contract VestingSchedulesMigrationTest is Test {
             assert(vestingScheduleV2.beneficiary == vestingScheduleV1.beneficiary);
             assert(vestingScheduleV2.revocable == vestingScheduleV1.revocable);
             assert(vestingScheduleV2.releasedAmount == 0);
-            unchecked {
-                ++idx;
-            }
         }
 
         // Arguments are mixed on purpose to increase fuzzing variability
@@ -135,15 +139,12 @@ contract VestingSchedulesMigrationTest is Test {
         });
 
         // #3. Update V2 schedule
-        for (uint256 idx = 0; idx < count;) {
+        for (uint256 idx = 0; idx < count; ++idx) {
             assert(_updateV2VestingSchedule(idx, newVestingScheduleV2));
-            unchecked {
-                ++idx;
-            }
         }
 
         // #4. Verify V2 schedule have been updated properly
-        for (uint256 idx = 0; idx < count;) {
+        for (uint256 idx = 0; idx < count; ++idx) {
             VestingSchedulesV2.VestingSchedule memory vestingScheduleV2 = VestingSchedulesV2.get(idx);
             assert(vestingScheduleV2.start == newVestingScheduleV2.start);
             assert(vestingScheduleV2.end == newVestingScheduleV2.end);
@@ -155,9 +156,6 @@ contract VestingSchedulesMigrationTest is Test {
             assert(vestingScheduleV2.beneficiary == newVestingScheduleV2.beneficiary);
             assert(vestingScheduleV2.revocable == newVestingScheduleV2.revocable);
             assert(vestingScheduleV2.releasedAmount == newVestingScheduleV2.releasedAmount);
-            unchecked {
-                ++idx;
-            }
         }
     }
 }

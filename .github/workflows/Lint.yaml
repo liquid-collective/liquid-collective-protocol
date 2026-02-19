@@ -2,16 +2,24 @@ name: Lint
 
 on:
   push:
+    branches:
+      - main
+    paths:
+      - "contracts/**"
+      - ".github/**"
+  pull_request:
+    branches:
+      - main
     paths:
       - "contracts/**"
       - ".github/**"
 
 jobs:
   run-lint:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           submodules: recursive
           persist-credentials: false
@@ -29,7 +37,7 @@ jobs:
       - name: install nodejs
         uses: actions/setup-node@v4
         with:
-          node-version: 16
+          node-version: 20
 
       - name: cache node_modules
         uses: actions/cache@v4

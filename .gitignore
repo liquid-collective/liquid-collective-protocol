@@ -22,6 +22,7 @@ deployment.local.json
 deployments/local
 deployments/localhost
 deployments/tenderly
+deployments/kurtosis/
 
 .DS_Store
 .idea

@@ -1,5 +1,5 @@
 //SPDX-License-Identifier: BUSL-1.1
-pragma solidity 0.8.20;
+pragma solidity 0.8.33;
 
 import "./interfaces/IRiver.1.sol";
 import "./interfaces/IOracle.1.sol";
@@ -260,12 +260,9 @@ contract OracleV1 is IOracleV1, Initializable, Administrable, IProtocolVersion {
     /// @return The vote count of the variant
     function _getReportVariantIndexAndVotes(bytes32 _variant) internal view returns (int256, uint256) {
         uint256 reportVariantsLength = ReportsVariants.get().length;
-        for (uint256 idx = 0; idx < reportVariantsLength;) {
+        for (uint256 idx = 0; idx < reportVariantsLength; ++idx) {
             if (ReportsVariants.get()[idx].variant == _variant) {
                 return (int256(idx), ReportsVariants.get()[idx].votes);
-            }
-            unchecked {
-                ++idx;
             }
         }
         return (-1, 0);
