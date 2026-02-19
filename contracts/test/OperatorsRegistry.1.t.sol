@@ -6004,7 +6004,9 @@ contract OperatorsRegistryV1FlattenAndAllocationTests is OperatorAllocationTestB
         IOperatorsRegistryV1.OperatorAllocation[] memory alloc = new IOperatorsRegistryV1.OperatorAllocation[](1);
         alloc[0] = IOperatorsRegistryV1.OperatorAllocation({operatorIndex: 0, validatorCount: 5});
 
-        vm.expectRevert(abi.encodeWithSignature("OperatorHasInsufficientFundableKeys(uint256,uint256,uint256)", 0, 5, 2));
+        vm.expectRevert(
+            abi.encodeWithSignature("OperatorHasInsufficientFundableKeys(uint256,uint256,uint256)", 0, 5, 2)
+        );
         operatorsRegistry.getNextValidatorsToDepositFromActiveOperators(alloc);
     }
 }
