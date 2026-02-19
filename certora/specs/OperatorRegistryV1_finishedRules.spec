@@ -49,7 +49,7 @@ invariant inactiveOperatorsRemainNotFunded(uint opIndex)
         (!getOperator(opIndex).active => getOperator(opIndex).funded == 0)
     { 
         preserved requestValidatorExits(IOperatorsRegistryV1.OperatorAllocation[] x) with(env e) { require x.length <= 2; }
-        preserved pickNextValidatorsToDepositFromActiveOperators(IOperatorsRegistryV1.OperatorAllocation[] x) with(env e) { require x.length <= 1; }  
+        preserved pickNextValidatorsToDeposit(IOperatorsRegistryV1.OperatorAllocation[] x) with(env e) { require x.length <= 1; }  
         preserved removeValidators(uint256 _index, uint256[] _indexes) with(env e) { require _indexes.length <= 1; }  
     }
 
@@ -68,7 +68,7 @@ invariant inactiveOperatorsRemainNotFunded_LI2(uint opIndex)
         } 
     { 
         preserved requestValidatorExits(IOperatorsRegistryV1.OperatorAllocation[] x) with(env e) { require x.length <= 2; }
-        preserved pickNextValidatorsToDepositFromActiveOperators(IOperatorsRegistryV1.OperatorAllocation[] x) with(env e) { require x.length <= 1; }  
+        preserved pickNextValidatorsToDeposit(IOperatorsRegistryV1.OperatorAllocation[] x) with(env e) { require x.length <= 1; }  
         preserved removeValidators(uint256 _index, uint256[] _indexes) with(env e) { require _indexes.length <= 1; }  
     }
 
@@ -181,16 +181,16 @@ invariant operatorsStatesRemainValid_LI2_easyMethods(uint opIndex)
     filtered { f -> !ignoredMethod(f) && 
     !needsLoopIter4(f) &&
     f.selector != sig:requestValidatorExits(IOperatorsRegistryV1.OperatorAllocation[]).selector &&
-    f.selector != sig:pickNextValidatorsToDepositFromActiveOperators(IOperatorsRegistryV1.OperatorAllocation[]).selector &&
+    f.selector != sig:pickNextValidatorsToDeposit(IOperatorsRegistryV1.OperatorAllocation[]).selector &&
     f.selector != sig:removeValidators(uint256,uint256[]).selector
     }
 
     // requires special configuration!
     // https://prover.certora.com/output/6893/b8f0e5fb8b3b4b5685a522ee20e967c9/?anonymousKey=504a8d77280a1fb1d9415114904b0872e7607815
-invariant operatorsStatesRemainValid_LI2_pickNextValidatorsToDepositFromActiveOperators(uint opIndex) 
+invariant operatorsStatesRemainValid_LI2_pickNextValidatorsToDeposit(uint opIndex) 
     isValidState() => (operatorStateIsValid(opIndex))
     filtered { f -> !ignoredMethod(f) && 
-    !needsLoopIter4(f) && f.selector != sig:pickNextValidatorsToDepositFromActiveOperators(IOperatorsRegistryV1.OperatorAllocation[]).selector
+    !needsLoopIter4(f) && f.selector != sig:pickNextValidatorsToDeposit(IOperatorsRegistryV1.OperatorAllocation[]).selector
     }
 
 // proves the invariant for reportStoppedValidatorCounts

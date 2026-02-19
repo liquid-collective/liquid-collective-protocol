@@ -38,7 +38,7 @@ invariant validatorKeysRemainUnique_LI2(
     filtered { f -> !ignoredMethod(f) && !needsLoopIter4(f) }
     { 
         preserved requestValidatorExits(IOperatorsRegistryV1.OperatorAllocation[] x) with(env e) { require x.length <= 2; }
-        preserved pickNextValidatorsToDepositFromActiveOperators(IOperatorsRegistryV1.OperatorAllocation[] x) with(env e) { require x.length <= 2; }  
+        preserved pickNextValidatorsToDeposit(IOperatorsRegistryV1.OperatorAllocation[] x) with(env e) { require x.length <= 2; }  
         preserved removeValidators(uint256 _index, uint256[] _indexes) with(env e) { require _indexes.length <= 2; }  
     }
 
@@ -75,7 +75,7 @@ rule startingValidatorsDecreasesDiscrepancy(env e)
        
     IOperatorsRegistryV1.OperatorAllocation[] allocations;
     require allocations.length > 0 && allocations.length <= 3;
-    pickNextValidatorsToDepositFromActiveOperators(e, allocations);
+    pickNextValidatorsToDeposit(e, allocations);
     uint discrepancyAfter = getOperatorsSaturationDiscrepancy(index1, index2);
 
     //uint256 keysAfter1; uint256 limitAfter1; uint256 fundedAfter1; uint256 requestedExitsAfter1; uint256 stoppedCountAfter1; bool activeAfter1; address operatorAfter1;
@@ -96,7 +96,7 @@ rule startingValidatorsNeverUsesSameValidatorTwice(env e)
     uint count;
     require count <= 2;
     bytes[] keys; bytes[] signatures;
-    //keys, signatures = pickNextValidatorsToDepositFromActiveOperators(e, count);   // Cannot convert `bytes[]` to a CVL dynamic array: conversion is only supported for dynamic arrays of non-dynamic types (e.g. primitive types, or structs containing only primitive types).
+    //keys, signatures = pickNextValidatorsToDeposit(e, count);   // Cannot convert `bytes[]` to a CVL dynamic array: conversion is only supported for dynamic arrays of non-dynamic types (e.g. primitive types, or structs containing only primitive types).
     uint resIndex1; uint resIndex2;
     require resIndex1 < keys.length;
     require resIndex2 < keys.length;
@@ -131,7 +131,7 @@ rule witness4_3StartingValidatorsDecreasesDiscrepancy(env e)
     uint discrepancyBefore = getOperatorsSaturationDiscrepancy(index1, index2);
     IOperatorsRegistryV1.OperatorAllocation[] allocations;
     require allocations.length <= 1;
-    pickNextValidatorsToDepositFromActiveOperators(e, allocations);
+    pickNextValidatorsToDeposit(e, allocations);
     uint discrepancyAfter = getOperatorsSaturationDiscrepancy(index1, index2);
     satisfy discrepancyBefore == 4 && discrepancyAfter == 3;
 }

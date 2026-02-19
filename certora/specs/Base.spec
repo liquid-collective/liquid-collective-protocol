@@ -83,7 +83,7 @@ methods {
     function OR.getStoppedAndRequestedExitCounts() external returns (uint32, uint256) envfree;
     function _.getStoppedAndRequestedExitCounts() external => DISPATCHER(true);
     function _.demandValidatorExits(uint256, uint256) external => DISPATCHER(true);
-    function _.pickNextValidatorsToDepositFromActiveOperators(IOperatorsRegistryV1.OperatorAllocation[]) external => DISPATCHER(true); // has no effect - CERT-4615
+    function _.pickNextValidatorsToDeposit(IOperatorsRegistryV1.OperatorAllocation[]) external => DISPATCHER(true); // has no effect - CERT-4615
 
     //function _.deposit(bytes,bytes,bytes,bytes32) external => DISPATCHER(true); // has no effect - CERT-4615
 

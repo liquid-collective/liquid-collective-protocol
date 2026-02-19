@@ -328,7 +328,7 @@ Retrieve the active operator set
 ### pickNextValidatorsToDeposit
 
 ```solidity
-function pickNextValidatorsToDepositFromActiveOperators(uint256 _count) external nonpayable returns (bytes[] publicKeys, bytes[] signatures)
+function pickNextValidatorsToDeposit(uint256 _count) external nonpayable returns (bytes[] publicKeys, bytes[] signatures)
 ```
 
 Retrieve validator keys based on operator statuses
