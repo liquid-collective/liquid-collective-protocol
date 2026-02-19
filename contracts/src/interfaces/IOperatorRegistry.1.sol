@@ -351,7 +351,16 @@ interface IOperatorsRegistryV1 {
     /// @param _indexes The indexes of the keys to remove
     function removeValidators(uint256 _index, uint256[] calldata _indexes) external;
 
-    /// @notice Retrieve validator keys based on explicit operator allocations
+    /// @notice Retrieve validator keys based on explicit operator allocations and mark them as funded
+    /// @dev Only callable by the river contract
+    /// @dev The allocations must be sorted by operator index in strictly ascending order with no duplicates
+    /// @dev Each allocation's validatorCount must be non-zero and not exceed the operator's available fundable keys
+    /// @dev Reverts with InvalidEmptyArray if _allocations is empty
+    /// @dev Reverts with UnorderedOperatorList if operator indexes are not strictly ascending
+    /// @dev Reverts with AllocationWithZeroValidatorCount if any allocation has a zero validator count
+    /// @dev Reverts with InactiveOperator if a referenced operator is inactive
+    /// @dev Reverts with OperatorIgnoredExitRequests if an operator has not complied with exit requests
+    /// @dev Reverts with OperatorHasInsufficientFundableKeys if an operator lacks enough fundable keys
     /// @param _allocations Node operator allocations specifying how many validators per operator
     /// @return publicKeys An array of public keys
     /// @return signatures An array of signatures linked to the public keys
@@ -360,7 +369,17 @@ interface IOperatorsRegistryV1 {
         returns (bytes[] memory publicKeys, bytes[] memory signatures);
 
     /// @notice The keeper supplies explicit per-operator exit allocations to be performed
-    /// @param _allocations The proposed allocations to exit
+    /// @dev Only callable by the keeper address returned by the River contract's getKeeper()
+    /// @dev The allocations must be sorted by operator index in strictly ascending order with no duplicates
+    /// @dev Each allocation's validatorCount must be non-zero and not exceed the operator's available funded-but-not-yet-exited validators
+    /// @dev The total requested exits across all allocations must not exceed the current validator exit demand
+    /// @dev Reverts with AllocationWithZeroValidatorCount if any allocation has a zero validator count
+    /// @dev Reverts with UnorderedOperatorList if operator indexes are not strictly ascending
+    /// @dev Reverts with InactiveOperator if a referenced operator is inactive
+    /// @dev Reverts with ExitsRequestedExceedAvailableFundedCount if count exceeds funded minus requestedExits for an operator
+    /// @dev Reverts with ExitsRequestedExceedDemand if total exits requested exceed the current demand
+    /// @dev Reverts with NoExitRequestsToPerform if there is no pending exit demand
+    /// @param _allocations The proposed per-operator exit allocations, sorted by operator index
     function requestValidatorExits(OperatorAllocation[] calldata _allocations) external;
 
     /// @notice Increases the exit request demand
