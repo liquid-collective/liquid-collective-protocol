@@ -329,7 +329,8 @@ contract RiverV1 is
         override
         returns (bytes[] memory publicKeys, bytes[] memory signatures)
     {
-        return IOperatorsRegistryV1(OperatorsRegistryAddress.get()).pickNextValidatorsToDepositFromActiveOperators(_allocations);
+        return IOperatorsRegistryV1(OperatorsRegistryAddress.get())
+            .pickNextValidatorsToDepositFromActiveOperators(_allocations);
     }
 
     /// @notice Overridden handler to pull funds from the execution layer fee recipient to River and return the delta in the balance
