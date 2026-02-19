@@ -7,6 +7,13 @@ import "../state/operatorsRegistry/Operators.2.sol";
 /// @author Alluvial Finance Inc.
 /// @notice This interface exposes methods to handle the list of operators and their keys
 interface IOperatorsRegistryV1 {
+    /// @notice Structure representing an operator allocation for deposits or exits
+    /// @param operatorIndex The index of the operator
+    /// @param validatorCount The number of validators to deposit/exit for this operator
+    struct OperatorAllocation {
+        uint256 operatorIndex;
+        uint256 validatorCount;
+    }
     /// @notice A new operator has been added to the registry
     /// @param index The operator index
     /// @param name The operator display name
@@ -159,6 +166,19 @@ interface IOperatorsRegistryV1 {
     /// @notice The provided list of operators is not in increasing order
     error UnorderedOperatorList();
 
+    /// @notice Thrown when an operator ignored the required number of requested exits
+    /// @param operatorIndex The operator index
+    error OperatorIgnoredExitRequests(uint256 operatorIndex);
+
+    /// @notice Thrown when an operator lacks the required number of fundable keys
+    /// @param operatorIndex The operator index
+    /// @param requested The requested count
+    /// @param available The available count
+    error OperatorHasInsufficientFundableKeys(uint256 operatorIndex, uint256 requested, uint256 available);
+
+    /// @notice Thrown when an allocation with zero validator count is provided
+    error AllocationWithZeroValidatorCount();
+
     /// @notice Thrown when an invalid empty stopped validator array is provided
     error InvalidEmptyStoppedValidatorCountsArray();
 
@@ -179,6 +199,17 @@ interface IOperatorsRegistryV1 {
 
     /// @notice The provided stopped validator count of an operator is above its funded validator count
     error StoppedValidatorCountAboveFundedCount(uint256 operatorIndex, uint32 stoppedCount, uint32 fundedCount);
+
+    /// @notice The provided exit requests exceed the available funded validator count of the operator
+    /// @param operatorIndex The operator index
+    /// @param requested The requested count
+    /// @param available The available count
+    error ExitsRequestedExceedAvailableFundedCount(uint256 operatorIndex, uint256 requested, uint256 available);
+
+    /// @notice The provided exit requests exceed the current exit request demand
+    /// @param requested The requested count
+    /// @param demand The demand count
+    error ExitsRequestedExceedDemand(uint256 requested, uint256 demand);
 
     /// @notice Initializes the operators registry
     /// @param _admin Admin in charge of managing operators
@@ -240,11 +271,11 @@ interface IOperatorsRegistryV1 {
         view
         returns (bytes memory publicKey, bytes memory signature, bool funded);
 
-    /// @notice Get the next validators that would be funded
-    /// @param _count Count of validators that would be funded next
+    /// @notice Get the next validators that would be funded based on the proposed allocations
+    /// @param _allocations The proposed allocations to validate
     /// @return publicKeys An array of fundable public keys
     /// @return signatures An array of signatures linked to the public keys
-    function getNextValidatorsToDepositFromActiveOperators(uint256 _count)
+    function getNextValidatorsToDepositFromActiveOperators(OperatorAllocation[] memory _allocations)
         external
         view
         returns (bytes[] memory publicKeys, bytes[] memory signatures);
@@ -320,19 +351,17 @@ interface IOperatorsRegistryV1 {
     /// @param _indexes The indexes of the keys to remove
     function removeValidators(uint256 _index, uint256[] calldata _indexes) external;
 
-    /// @notice Retrieve validator keys based on operator statuses
-    /// @param _count Max amount of keys requested
+    /// @notice Retrieve validator keys based on explicit operator allocations
+    /// @param _allocations Node operator allocations specifying how many validators per operator
     /// @return publicKeys An array of public keys
     /// @return signatures An array of signatures linked to the public keys
-    function pickNextValidatorsToDeposit(uint256 _count)
+    function pickNextValidatorsToDeposit(OperatorAllocation[] calldata _allocations)
         external
         returns (bytes[] memory publicKeys, bytes[] memory signatures);
 
-    /// @notice Public endpoint to consume the exit request demand and perform the actual exit requests
-    /// @notice The selection algorithm will pick validators based on their active validator counts
-    /// @notice This value is computed by using the count of funded keys and taking into account the stopped validator counts and exit requests
-    /// @param _count Max amount of exits to request
-    function requestValidatorExits(uint256 _count) external;
+    /// @notice The keeper supplies explicit per-operator exit allocations to be performed
+    /// @param _allocations The proposed allocations to exit
+    function requestValidatorExits(OperatorAllocation[] calldata _allocations) external;
 
     /// @notice Increases the exit request demand
     /// @dev This method is only callable by the river contract, and to actually forward the information to the node operators via event emission, the unprotected requestValidatorExits method must be called

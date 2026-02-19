@@ -4,6 +4,7 @@ pragma solidity 0.8.33;
 
 import "forge-std/Test.sol";
 
+import "./OperatorAllocationTestBase.sol";
 import "./utils/BytesGenerator.sol";
 import "./utils/LibImplementationUnbricker.sol";
 import "./mocks/DepositContractMock.sol";
@@ -18,7 +19,7 @@ import "../src/Oracle.1.sol";
 import "../src/OperatorsRegistry.1.sol";
 import "../src/ELFeeRecipient.1.sol";
 
-contract FirewallTests is BytesGenerator, Test {
+contract FirewallTests is BytesGenerator, OperatorAllocationTestBase {
     AllowlistV1 internal allowlist;
 
     ELFeeRecipientV1 internal elFeeRecipient;
@@ -286,7 +287,7 @@ contract FirewallTests is BytesGenerator, Test {
         // Assert this by expecting NotEnoughFunds, NOT Unauthorized
         vm.startPrank(riverGovernorDAO);
         vm.expectRevert(abi.encodeWithSignature("NotEnoughFunds()"));
-        firewalledRiver.depositToConsensusLayerWithDepositRoot(10, bytes32(0));
+        firewalledRiver.depositToConsensusLayerWithDepositRoot(_createAllocation(10), bytes32(0));
         vm.stopPrank();
     }
 
@@ -294,14 +295,14 @@ contract FirewallTests is BytesGenerator, Test {
         // Assert this by expecting NotEnoughFunds, NOT Unauthorized
         vm.startPrank(executor);
         vm.expectRevert(abi.encodeWithSignature("NotEnoughFunds()"));
-        firewalledRiver.depositToConsensusLayerWithDepositRoot(10, bytes32(0));
+        firewalledRiver.depositToConsensusLayerWithDepositRoot(_createAllocation(10), bytes32(0));
         vm.stopPrank();
     }
 
     function testRandomCallerCannotdepositToConsensusLayerWithDepositRoot() public {
         vm.startPrank(joe);
         vm.expectRevert(unauthJoe);
-        firewalledRiver.depositToConsensusLayerWithDepositRoot(10, bytes32(0));
+        firewalledRiver.depositToConsensusLayerWithDepositRoot(_createAllocation(10), bytes32(0));
         vm.stopPrank();
     }
 

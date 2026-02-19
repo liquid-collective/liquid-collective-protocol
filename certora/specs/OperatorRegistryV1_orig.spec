@@ -37,8 +37,8 @@ invariant validatorKeysRemainUnique_LI2(
             => (opIndex1 == opIndex2 && valIndex1 == valIndex2))
     filtered { f -> !ignoredMethod(f) && !needsLoopIter4(f) }
     { 
-        preserved requestValidatorExits(uint256 x) with(env e) { require x <= 2; }
-        preserved pickNextValidatorsToDeposit(uint256 x) with(env e) { require x <= 2; }  
+        preserved requestValidatorExits(IOperatorsRegistryV1.OperatorAllocation[] x) with(env e) { require x.length <= 2; }
+        preserved pickNextValidatorsToDeposit(IOperatorsRegistryV1.OperatorAllocation[] x) with(env e) { require x.length <= 2; }  
         preserved removeValidators(uint256 _index, uint256[] _indexes) with(env e) { require _indexes.length <= 2; }  
     }
 
@@ -73,9 +73,9 @@ rule startingValidatorsDecreasesDiscrepancy(env e)
     require getKeysCount(index1) < 5; 
     require getKeysCount(index2) < 5;  //counterexamples when the keys count overflows
        
-    uint count;
-    require count > 0 && count <= 3;
-    pickNextValidatorsToDeposit(e, count);
+    IOperatorsRegistryV1.OperatorAllocation[] allocations;
+    require allocations.length > 0 && allocations.length <= 3;
+    pickNextValidatorsToDeposit(e, allocations);
     uint discrepancyAfter = getOperatorsSaturationDiscrepancy(index1, index2);
 
     //uint256 keysAfter1; uint256 limitAfter1; uint256 fundedAfter1; uint256 requestedExitsAfter1; uint256 stoppedCountAfter1; bool activeAfter1; address operatorAfter1;
@@ -84,7 +84,7 @@ rule startingValidatorsDecreasesDiscrepancy(env e)
     //keysAfter2, limitAfter2, fundedAfter2, requestedExitsAfter2, stoppedCountAfter2, activeAfter2, operatorAfter2 = getOperatorState(e, index2);
 
     assert discrepancyBefore > 0 => to_mathint(discrepancyBefore) >= 
-        discrepancyAfter - count + 1; //getMaxValidatorAttributionPerRound(e);
+        discrepancyAfter - allocations.length + 1;
 }
 
 rule startingValidatorsNeverUsesSameValidatorTwice(env e) 
@@ -129,9 +129,9 @@ rule witness4_3StartingValidatorsDecreasesDiscrepancy(env e)
     require operatorStateIsValid(index2);
     
     uint discrepancyBefore = getOperatorsSaturationDiscrepancy(index1, index2);
-    uint count;
-    require count <= 1;
-    pickNextValidatorsToDeposit(e, count);
+    IOperatorsRegistryV1.OperatorAllocation[] allocations;
+    require allocations.length <= 1;
+    pickNextValidatorsToDeposit(e, allocations);
     uint discrepancyAfter = getOperatorsSaturationDiscrepancy(index1, index2);
     satisfy discrepancyBefore == 4 && discrepancyAfter == 3;
 }

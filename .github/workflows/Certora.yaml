@@ -2,16 +2,12 @@ name: Certora verification
 
 on:
   push:
-    branches:
-      - main
     paths:
       - "contracts/**"
       - "lib/**"
       - ".github/**"
       - "certora/**"
   pull_request:
-    branches:
-      - main
     paths:
       - "contracts/**"
       - "lib/**"
@@ -41,6 +37,12 @@ jobs:
 
       - name: Install certora
         run: pip3 install certora-cli
+
+      - name: Set up JDK
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '21'
 
       - name: Install solc
         run: |
