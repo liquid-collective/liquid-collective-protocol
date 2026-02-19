@@ -4880,7 +4880,7 @@ contract OperatorsRegistryV1TestDistribution is OperatorAllocationTestBase {
         operatorsRegistry.getNextValidatorsToDepositFromActiveOperators(allocation);
     }
 
-    /// @notice Tests the _pickNextValidatorsToDeposit returns empty when no fundable operators
+    /// @notice Tests reverts with InvalidEmptyArray when allocation is empty
     function testPickNextValidatorsToDepositReturnsEmptyAllocation() public {
         // No operators have keys or limits set, so none are fundable
         IOperatorsRegistryV1.OperatorAllocation[] memory allocation = new IOperatorsRegistryV1.OperatorAllocation[](0);
