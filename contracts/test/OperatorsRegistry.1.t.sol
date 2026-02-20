@@ -6075,6 +6075,8 @@ contract OperatorsRegistryV1ExitCorrectnessTests is OperatorAllocationTestBase {
     ///         requestedExits is bumped to match the stopped count, the unsolicited
     ///         delta is added to TotalValidatorExitsRequested, and
     ///         CurrentValidatorExitsDemand is reduced by the unsolicited amount.
+    ///         This test exercises the FIRST loop in _setStoppedValidatorCounts
+    ///         (existing operators path) by making two successive stopped-count reports.
     function testStoppedCountExceedingRequestedExitsBumpsRequestedExits() external {
         _fundAllOperators();
 
@@ -6103,43 +6105,65 @@ contract OperatorsRegistryV1ExitCorrectnessTests is OperatorAllocationTestBase {
         assertEq(operatorsRegistry.getCurrentValidatorExitsDemand(), 40, "Demand should be 50-10=40");
         assertEq(operatorsRegistry.getTotalValidatorExitsRequested(), 10, "Total exits should be 10");
 
-        // Report stopped validators:
+        // First stopped-count report: small counts that do NOT exceed requestedExits
+        // for op0 and op1. op2 and op3 get bumped (unsolicited = 2+1 = 3).
+        // This establishes currentStoppedValidatorCounts so the next report iterates
+        // through the first loop (existing operators path).
+        uint32[] memory stoppedCounts1 = new uint32[](6);
+        stoppedCounts1[0] = 6; // total: 2 + 1 + 2 + 1 + 0
+        stoppedCounts1[1] = 2; // op0 (2 <= requestedExits 5, no bump)
+        stoppedCounts1[2] = 1; // op1 (1 <= requestedExits 5, no bump)
+        stoppedCounts1[3] = 2; // op2 (2 > requestedExits 0, bumps to 2)
+        stoppedCounts1[4] = 1; // op3 (1 > requestedExits 0, bumps to 1)
+        stoppedCounts1[5] = 0; // op4
+        OperatorsRegistryInitializableV1(address(operatorsRegistry)).sudoStoppedValidatorCounts(stoppedCounts1, 250);
+
+        // After first report: op2 bumped 0->2, op3 bumped 0->1 (unsolicited = 3)
+        assertEq(operatorsRegistry.getOperator(0).requestedExits, 5, "Op0 unchanged after first report");
+        assertEq(operatorsRegistry.getOperator(1).requestedExits, 5, "Op1 unchanged after first report");
+        assertEq(operatorsRegistry.getOperator(2).requestedExits, 2, "Op2 bumped to 2 after first report");
+        assertEq(operatorsRegistry.getOperator(3).requestedExits, 1, "Op3 bumped to 1 after first report");
+        assertEq(operatorsRegistry.getTotalValidatorExitsRequested(), 13, "Total exits = 10 + 3 unsolicited");
+        assertEq(operatorsRegistry.getCurrentValidatorExitsDemand(), 37, "Demand = 40 - 3 unsolicited");
+
+        // Second stopped-count report: higher counts that exceed requestedExits.
+        // All 5 operators are in the first loop (existing operators path) since
+        // stoppedCounts1 had 6 entries == stoppedCounts2's 6 entries.
         //   op0: 8 stopped (exceeds requestedExits=5, unsolicited delta = 3)
         //   op1: 3 stopped (does NOT exceed requestedExits=5, no bump)
-        //   op2: 7 stopped (exceeds requestedExits=0, unsolicited delta = 7)
-        //   op3: 0 stopped (no change)
+        //   op2: 7 stopped (exceeds requestedExits=2, unsolicited delta = 5)
+        //   op3: 1 stopped (unchanged, does NOT exceed requestedExits=1)
         //   op4: 0 stopped (no change)
-        // Total unsolicited = 3 + 7 = 10
-        uint32[] memory stoppedCounts = new uint32[](6);
-        stoppedCounts[0] = 18; // total: 8 + 3 + 7 + 0 + 0
-        stoppedCounts[1] = 8; // op0
-        stoppedCounts[2] = 3; // op1
-        stoppedCounts[3] = 7; // op2
-        stoppedCounts[4] = 0; // op3
-        stoppedCounts[5] = 0; // op4
+        // Total unsolicited = 3 + 5 = 8
+        uint32[] memory stoppedCounts2 = new uint32[](6);
+        stoppedCounts2[0] = 19; // total: 8 + 3 + 7 + 1 + 0
+        stoppedCounts2[1] = 8; // op0
+        stoppedCounts2[2] = 3; // op1
+        stoppedCounts2[3] = 7; // op2
+        stoppedCounts2[4] = 1; // op3
+        stoppedCounts2[5] = 0; // op4
 
-        // Expect events for the two operators whose stopped count exceeds requestedExits
         vm.expectEmit(true, true, true, true);
         emit UpdatedRequestedValidatorExitsUponStopped(0, 5, 8);
         vm.expectEmit(true, true, true, true);
-        emit UpdatedRequestedValidatorExitsUponStopped(2, 0, 7);
+        emit UpdatedRequestedValidatorExitsUponStopped(2, 2, 7);
 
-        OperatorsRegistryInitializableV1(address(operatorsRegistry)).sudoStoppedValidatorCounts(stoppedCounts, 250);
+        OperatorsRegistryInitializableV1(address(operatorsRegistry)).sudoStoppedValidatorCounts(stoppedCounts2, 250);
 
-        // requestedExits bumped for op0 (5->8) and op2 (0->7); op1 unchanged (3 < 5)
+        // requestedExits bumped for op0 (5->8) and op2 (2->7); others unchanged
         assertEq(operatorsRegistry.getOperator(0).requestedExits, 8, "Op0 requestedExits bumped to stoppedCount");
         assertEq(
             operatorsRegistry.getOperator(1).requestedExits, 5, "Op1 requestedExits unchanged (stopped < requested)"
         );
         assertEq(operatorsRegistry.getOperator(2).requestedExits, 7, "Op2 requestedExits bumped to stoppedCount");
-        assertEq(operatorsRegistry.getOperator(3).requestedExits, 0, "Op3 requestedExits unchanged");
+        assertEq(operatorsRegistry.getOperator(3).requestedExits, 1, "Op3 requestedExits unchanged");
         assertEq(operatorsRegistry.getOperator(4).requestedExits, 0, "Op4 requestedExits unchanged");
 
-        // TotalValidatorExitsRequested = 10 (from keeper) + 10 (unsolicited) = 20
-        assertEq(operatorsRegistry.getTotalValidatorExitsRequested(), 20, "Total exits should include unsolicited");
+        // TotalValidatorExitsRequested = 13 + 8 (unsolicited) = 21
+        assertEq(operatorsRegistry.getTotalValidatorExitsRequested(), 21, "Total exits should include unsolicited");
 
-        // CurrentValidatorExitsDemand = 40 - min(10, 40) = 30
-        assertEq(operatorsRegistry.getCurrentValidatorExitsDemand(), 30, "Demand reduced by unsolicited exits");
+        // CurrentValidatorExitsDemand = 37 - min(8, 37) = 29
+        assertEq(operatorsRegistry.getCurrentValidatorExitsDemand(), 29, "Demand reduced by unsolicited exits");
     }
 
     /// @notice When stopped count exceeds requestedExits and the unsolicited amount
