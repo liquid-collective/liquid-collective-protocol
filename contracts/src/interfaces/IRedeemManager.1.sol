@@ -1,5 +1,5 @@
 //SPDX-License-Identifier: BUSL-1.1
-pragma solidity 0.8.33;
+pragma solidity 0.8.34;
 
 import "../state/redeemManager/RedeemQueue.2.sol";
 import "../state/redeemManager/WithdrawalStack.sol";

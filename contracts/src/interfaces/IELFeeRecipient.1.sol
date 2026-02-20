@@ -1,5 +1,5 @@
 //SPDX-License-Identifier: BUSL-1.1
-pragma solidity 0.8.33;
+pragma solidity 0.8.34;
 
 /// @title Execution Layer Fee Recipient Interface (v1)
 /// @author Alluvial Finance Inc.

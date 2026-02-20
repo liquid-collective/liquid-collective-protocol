@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Unlicense
 // Originally derived from solidity-bytes-utils (Unlicense)
 // https://github.com/GNSPS/solidity-bytes-utils
-pragma solidity ^0.8.33;
+pragma solidity ^0.8.34;
 
 /// @title Lib Bytes
 /// @notice This library helps manipulating bytes

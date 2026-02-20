@@ -44,3 +44,5 @@ timeoutsToInvestigate/*
 emv-**/*
 
 runRiver.sh
+
+.claude
