@@ -44,6 +44,10 @@ interface IWLSETHV1 {
     /// @param _value Requested transfer value
     error AllowanceTooLow(address _from, address _operator, uint256 _allowance, uint256 _value);
 
+    /// @notice The account is denied access
+    /// @param _account The denied account
+    error Denied(address _account);
+
     /// @notice Invalid empty transfer
     error NullTransfer();
 
