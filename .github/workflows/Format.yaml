@@ -26,7 +26,7 @@ jobs:
       - name: install foundry
         uses: onbjerg/foundry-toolchain@v1
         with:
-          version: v1.4.3
+          version: v1.5.1
 
       - name: run formatting checks
         run: forge fmt --check 
