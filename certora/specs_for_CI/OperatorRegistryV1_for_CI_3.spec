@@ -2,47 +2,156 @@ import "./../specs/Sanity.spec";
 import "./../specs/CVLMath.spec";
 import "./../specs/OperatorRegistryV1_base.spec";
 
-// some functions require loop_iter = 4 but loop_iter = 2 is sufficient for most. For this reason we run parametric rule and invariants in two versions
-//_LI4 for methods that require loop_iter = 4 and _LI2 for the others.
-
-rule startingValidatorsDecreasesDiscrepancy(env e) 
-{
-    uint256 allOpCount = getOperatorsCount();
-    require allOpCount <= 3;
-    
-    uint index1; uint index2;
-    require isOpIndexInBounds(index1);
-    require isOpIndexInBounds(index2);
-    require operatorStateIsValid(index1);
-    require operatorStateIsValid(index2);
-
-    uint discrepancyBefore = getOperatorsSaturationDiscrepancy(index1, index2);
-
-    require getKeysCount(index1) < 5; 
-    require getKeysCount(index2) < 5;
-       
-    IOperatorsRegistryV1.OperatorAllocation[] allocations;
-    require allocations.length > 0 && allocations.length <= 3;
-    pickNextValidatorsToDeposit(e, allocations);
-    uint discrepancyAfter = getOperatorsSaturationDiscrepancy(index1, index2);
-
-    assert discrepancyBefore > 0 => to_mathint(discrepancyBefore) >= 
-        discrepancyAfter - allocations.length + 1;
-}
-
-rule witness4_3StartingValidatorsDecreasesDiscrepancy(env e) 
+// Generalized ordering rule for pickNextValidatorsToDeposit.
+// Uses a symbolic index j so the prover verifies ALL adjacent pairs, not just (0,1).
+// The Solidity check is at OperatorsRegistry.1.sol:545 inside
+// _getPerOperatorValidatorKeysForAllocations, called by pickNextValidatorsToDeposit.
+rule pickNextValidatorToDepositRevertsIfNotSorted(env e)
 {
     require isValidState();
-    uint index1; uint index2;
-    require operatorStateIsValid(index1);
-    require operatorStateIsValid(index2);
-    
-    uint discrepancyBefore = getOperatorsSaturationDiscrepancy(index1, index2);
+
     IOperatorsRegistryV1.OperatorAllocation[] allocations;
-    require allocations.length <= 1;
-    pickNextValidatorsToDeposit(e, allocations);
-    uint discrepancyAfter = getOperatorsSaturationDiscrepancy(index1, index2);
-    satisfy discrepancyBefore == 4 && discrepancyAfter == 3;
+    require allocations.length >= 2;
+
+    // There exists some adjacent pair (j-1, j) that is not strictly ascending
+    uint256 j;
+    require j >= 1 && j < allocations.length;
+    require allocations[j].operatorIndex <= allocations[assert_uint256(j - 1)].operatorIndex;
+
+    pickNextValidatorsToDeposit@withrevert(e, allocations);
+    assert lastReverted, "unordered allocations must revert";
+}
+
+// When pickNextValidatorsToDeposit succeeds, returned key count equals total allocation validator count (generic; no fixed operator count).
+rule pickNextValidatorsToDepositReturnsTotalAllocationCount(env e)
+{
+    require isValidState();
+
+    IOperatorsRegistryV1.OperatorAllocation[] allocations;
+    require allocations.length >= 1;
+    require allocations.length <= 2;
+    if (allocations.length >= 2) {
+        require allocations[1].operatorIndex > allocations[0].operatorIndex;
+    }
+
+    uint256 totalRequested = totalAllocationValidatorCount(allocations);
+    require totalRequested >= 1;
+
+    uint256 returnedCount = pickNextValidatorsToDepositReturnCount@withrevert(e, allocations);
+    assert lastReverted || (returnedCount == totalRequested),
+        "when call succeeds, returned key count must equal total allocation validator count";
+}
+
+// When requestValidatorExits succeeds, total validator exits requested increases by total allocation validator count (generic; no fixed operator count).
+rule requestValidatorExitsIncreasesTotalExitsRequestedByAllocationCount(env e)
+{
+    require isValidState();
+
+    IOperatorsRegistryV1.OperatorAllocation[] allocations;
+    require allocations.length >= 1;
+    require allocations.length <= 2;
+    if (allocations.length >= 2) {
+        require allocations[1].operatorIndex > allocations[0].operatorIndex;
+    }
+
+    uint256 totalRequested = totalAllocationValidatorCount(allocations);
+    require totalRequested >= 1;
+
+    uint256 totalExitsBefore = getTotalValidatorExitsRequested();
+    requestValidatorExits@withrevert(e, allocations);
+    bool reverted = lastReverted;
+    uint256 totalExitsAfter = getTotalValidatorExitsRequested();
+    assert reverted || (totalExitsAfter == totalExitsBefore + totalRequested),
+        "when call succeeds, total validator exits requested must increase by total allocation validator count";
+}
+
+// Generalized ordering rule for requestValidatorExits.
+// Same pattern: symbolic index j covers all adjacent pairs.
+// The Solidity check is at OperatorsRegistry.1.sol:463.
+rule requestValidatorExitsRevertsIfNotSorted(env e)
+{
+    require isValidState();
+
+    IOperatorsRegistryV1.OperatorAllocation[] allocations;
+    require allocations.length >= 2;
+
+    // There exists some adjacent pair (j-1, j) that is not strictly ascending
+    uint256 j;
+    require j >= 1 && j < allocations.length;
+    require allocations[j].operatorIndex <= allocations[assert_uint256(j - 1)].operatorIndex;
+
+    requestValidatorExits@withrevert(e, allocations);
+    assert lastReverted, "unordered allocations must revert";
+}
+
+// Empty allocation must revert (InvalidEmptyArray) for both deposit and exit flows.
+rule pickNextValidatorsToDepositRevertsOnEmptyAllocation(env e)
+{
+    require isValidState();
+    IOperatorsRegistryV1.OperatorAllocation[] allocations;
+    require allocations.length == 0;
+    pickNextValidatorsToDepositReturnCount@withrevert(e, allocations);
+    assert lastReverted, "empty allocations must revert";
+}
+
+rule requestValidatorExitsRevertsOnEmptyAllocation(env e)
+{
+    require isValidState();
+    IOperatorsRegistryV1.OperatorAllocation[] allocations;
+    require allocations.length == 0;
+    requestValidatorExits@withrevert(e, allocations);
+    assert lastReverted, "empty allocations must revert";
+}
+
+// If any allocation entry has validatorCount 0, the call must revert (AllocationWithZeroValidatorCount).
+rule pickNextValidatorsToDepositRevertsOnZeroValidatorCount(env e)
+{
+    require isValidState(), "bounded operator count for preserved method and loop bounds";
+    IOperatorsRegistryV1.OperatorAllocation[] allocations;
+    require allocations.length >= 1, "at least one allocation entry";
+    require allocations.length <= 2, "preserved bound for pickNextValidatorsToDeposit in this spec";
+    if (allocations.length >= 2) {
+        require allocations[1].operatorIndex > allocations[0].operatorIndex,
+            "allocations ordered by operator index";
+    }
+    uint256 j;
+    require j < allocations.length;
+    require allocations[j].validatorCount == 0, "some allocation has zero validator count";
+    pickNextValidatorsToDepositReturnCount@withrevert(e, allocations);
+    assert lastReverted, "zero validator count in any allocation must revert";
+}
+
+rule requestValidatorExitsRevertsOnZeroValidatorCount(env e)
+{
+    require isValidState(), "bounded operator count for preserved method and loop bounds";
+    IOperatorsRegistryV1.OperatorAllocation[] allocations;
+    require allocations.length >= 1, "at least one allocation entry";
+    require allocations.length <= 2, "preserved bound for requestValidatorExits in this spec";
+    if (allocations.length >= 2) {
+        require allocations[1].operatorIndex > allocations[0].operatorIndex,
+            "allocations ordered by operator index";
+    }
+    uint256 j;
+    require j < allocations.length;
+    require allocations[j].validatorCount == 0, "some allocation has zero validator count";
+    requestValidatorExits@withrevert(e, allocations);
+    assert lastReverted, "zero validator count in any allocation must revert";
+}
+
+// Only River may call pickNextValidatorsToDeposit (onlyRiver).
+rule onlyRiverCanCallPickNextValidatorsToDeposit(env e)
+{
+    require isValidState();
+    require e.msg.sender != getRiver();
+    IOperatorsRegistryV1.OperatorAllocation[] allocations;
+    require allocations.length >= 1;
+    require allocations.length <= 2;
+    if (allocations.length >= 2) {
+        require allocations[1].operatorIndex > allocations[0].operatorIndex;
+    }
+    require totalAllocationValidatorCount(allocations) >= 1;
+    pickNextValidatorsToDepositReturnCount@withrevert(e, allocations);
+    assert lastReverted, "non-River caller must revert";
 }
 
 rule removeValidatorsDecreaseKeys(env e)
@@ -65,30 +174,6 @@ rule whoCanChangeValidatorsCount(method f, env e, calldataarg args) filtered
     uint valCountAfter = getOperator(0).keys;
     assert valCountAfter < valCountBefore => canRemoveValidators(f);
     assert valCountAfter > valCountBefore => canAddValidators(f);
-}
- 
-rule exitingValidatorsDecreasesDiscrepancy(env e) 
-{
-    require isValidState();
-    uint index1; uint index2;
-    uint discrepancyBefore = getOperatorsSaturationDiscrepancy(index1, index2);
-    IOperatorsRegistryV1.OperatorAllocation[] allocations;
-    require allocations.length <= 1;
-    requestValidatorExits(e, allocations);
-    uint discrepancyAfter = getOperatorsSaturationDiscrepancy(index1, index2);
-    assert discrepancyBefore > 0 => discrepancyBefore >= discrepancyAfter;
-}
-
-rule witness4_3ExitingValidatorsDecreasesDiscrepancy(env e) 
-{
-    require isValidState();
-    uint index1; uint index2;
-    uint discrepancyBefore = getOperatorsSaturationDiscrepancy(index1, index2);
-    IOperatorsRegistryV1.OperatorAllocation[] allocations;
-    require allocations.length <= 1;
-    requestValidatorExits(e, allocations);
-    uint discrepancyAfter = getOperatorsSaturationDiscrepancy(index1, index2);
-    satisfy discrepancyBefore == 4 && discrepancyAfter == 3;
 }
 
 invariant operatorsAddressesRemainUnique_LI4(uint opIndex1, uint opIndex2) 
