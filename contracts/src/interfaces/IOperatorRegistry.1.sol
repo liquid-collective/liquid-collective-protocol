@@ -110,7 +110,7 @@ interface IOperatorsRegistryV1 {
     /// @notice A validator key got funded on the deposit contract
     /// @notice This event was introduced during a contract upgrade, in order to cover all possible public keys, this event
     /// @notice will be replayed for past funded keys in order to have a complete coverage of all the funded public keys.
-    /// @notice In this particuliar scenario, the deferred value will be set to true, to indicate that we are not going to have
+    /// @notice In this particular scenario, the deferred value will be set to true, to indicate that we are not going to have
     /// @notice the expected additional events and side effects in the same transaction (deposit to official DepositContract etc ...) because
     /// @notice the event was synthetically crafted.
     /// @param index The operator index
@@ -185,7 +185,7 @@ interface IOperatorsRegistryV1 {
     /// @notice Thrown when the sum of stopped validators is invalid
     error InvalidStoppedValidatorCountsSum();
 
-    /// @notice Throw when an element in the stopped validator array is decreasing
+    /// @notice Thrown when an element in the stopped validator array is decreasing
     error StoppedValidatorCountsDecreased();
 
     /// @notice Thrown when the number of elements in the array is too high compared to operator count
@@ -368,11 +368,12 @@ interface IOperatorsRegistryV1 {
         external
         returns (bytes[] memory publicKeys, bytes[] memory signatures);
 
-    /// @notice The keeper supplies explicit per-operator exit allocations to be performed
+    /// @notice Process explicit per-operator exit allocations and update operator requestedExits
     /// @dev Only callable by the keeper address returned by the River contract's getKeeper()
     /// @dev The allocations must be sorted by operator index in strictly ascending order with no duplicates
     /// @dev Each allocation's validatorCount must be non-zero and not exceed the operator's available funded-but-not-yet-exited validators
     /// @dev The total requested exits across all allocations must not exceed the current validator exit demand
+    /// @dev Reverts with InvalidEmptyArray if _allocations is empty
     /// @dev Reverts with AllocationWithZeroValidatorCount if any allocation has a zero validator count
     /// @dev Reverts with UnorderedOperatorList if operator indexes are not strictly ascending
     /// @dev Reverts with InactiveOperator if a referenced operator is inactive

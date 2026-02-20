@@ -425,7 +425,7 @@ contract OperatorsRegistryV1Tests is OperatorsRegistryV1TestBase, OperatorAlloca
     }
 
     // ──────────────────────────────────────────────────────────────────────
-    // onlyOperatorOrAdmin modifier – dedicated coverage
+    // onlyOperatorOrAdmin modifier
     // ──────────────────────────────────────────────────────────────────────
 
     function testOnlyOperatorOrAdmin_AdminCanActOnInactiveOperator() public {
@@ -4068,7 +4068,7 @@ contract OperatorsRegistryV1TestDistribution is OperatorAllocationTestBase {
         operatorsRegistry.pickNextValidatorsToDeposit(allocation);
     }
 
-    function testpickNextValidatorsToDepositRevertsWhenExceedingLimit() public {
+    function testPickNextValidatorsToDepositRevertsWhenExceedingLimit() public {
         bytes[] memory rawKeys = new bytes[](5);
 
         rawKeys[0] = genBytes((48 + 96) * 10);
