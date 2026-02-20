@@ -454,6 +454,152 @@ contract OperatorsRegistryV1Tests is OperatorsRegistryV1TestBase, OperatorAlloca
         vm.stopPrank();
     }
 
+    // ──────────────────────────────────────────────────────────────────────
+    // onlyOperatorOrAdmin modifier – dedicated coverage
+    // ──────────────────────────────────────────────────────────────────────
+
+    function testOnlyOperatorOrAdmin_AdminCanActOnInactiveOperator() public {
+        address opAddr = makeAddr("operator");
+        vm.startPrank(admin);
+        uint256 index = operatorsRegistry.addOperator("InactiveOp", opAddr);
+        operatorsRegistry.setOperatorStatus(index, false);
+
+        // Admin should still be able to change the name of an inactive operator
+        operatorsRegistry.setOperatorName(index, "RenamedWhileInactive");
+        assertEq(operatorsRegistry.getOperator(index).name, "RenamedWhileInactive");
+
+        // Admin should still be able to change the address of an inactive operator
+        address newAddr = makeAddr("newOperator");
+        operatorsRegistry.setOperatorAddress(index, newAddr);
+        assertEq(operatorsRegistry.getOperator(index).operator, newAddr);
+        vm.stopPrank();
+    }
+
+    function testOnlyOperatorOrAdmin_InactiveOperatorCannotCallItself() public {
+        address opAddr = makeAddr("operator");
+        vm.startPrank(admin);
+        uint256 index = operatorsRegistry.addOperator("InactiveOp", opAddr);
+        operatorsRegistry.setOperatorStatus(index, false);
+        vm.stopPrank();
+
+        vm.startPrank(opAddr);
+        vm.expectRevert(abi.encodeWithSignature("InactiveOperator(uint256)", index));
+        operatorsRegistry.setOperatorName(index, "ShouldFail");
+        vm.stopPrank();
+    }
+
+    function testOnlyOperatorOrAdmin_InactiveOperatorCannotChangeAddress() public {
+        address opAddr = makeAddr("operator");
+        vm.startPrank(admin);
+        uint256 index = operatorsRegistry.addOperator("InactiveOp", opAddr);
+        operatorsRegistry.setOperatorStatus(index, false);
+        vm.stopPrank();
+
+        vm.startPrank(opAddr);
+        vm.expectRevert(abi.encodeWithSignature("InactiveOperator(uint256)", index));
+        operatorsRegistry.setOperatorAddress(index, makeAddr("irrelevant"));
+        vm.stopPrank();
+    }
+
+    function testOnlyOperatorOrAdmin_UnauthorizedOnInactiveOperator() public {
+        address opAddr = makeAddr("operator");
+        address stranger = makeAddr("stranger");
+        vm.startPrank(admin);
+        uint256 index = operatorsRegistry.addOperator("InactiveOp", opAddr);
+        operatorsRegistry.setOperatorStatus(index, false);
+        vm.stopPrank();
+
+        // Stranger hits the inactive check before the operator-address check
+        vm.startPrank(stranger);
+        vm.expectRevert(abi.encodeWithSignature("InactiveOperator(uint256)", index));
+        operatorsRegistry.setOperatorName(index, "ShouldFail");
+        vm.stopPrank();
+    }
+
+    function testOnlyOperatorOrAdmin_UnauthorizedOnActiveOperator() public {
+        address opAddr = makeAddr("operator");
+        address stranger = makeAddr("stranger");
+        vm.startPrank(admin);
+        uint256 index = operatorsRegistry.addOperator("ActiveOp", opAddr);
+        vm.stopPrank();
+
+        // Operator is active, so the modifier proceeds past the active check
+        // but stranger's address doesn't match → Unauthorized
+        vm.startPrank(stranger);
+        vm.expectRevert(abi.encodeWithSignature("Unauthorized(address)", stranger));
+        operatorsRegistry.setOperatorName(index, "ShouldFail");
+        vm.stopPrank();
+    }
+
+    function testOnlyOperatorOrAdmin_ActiveOperatorCanCall() public {
+        address opAddr = makeAddr("operator");
+        vm.startPrank(admin);
+        uint256 index = operatorsRegistry.addOperator("ActiveOp", opAddr);
+        vm.stopPrank();
+
+        vm.startPrank(opAddr);
+        operatorsRegistry.setOperatorName(index, "RenamedByOperator");
+        assertEq(operatorsRegistry.getOperator(index).name, "RenamedByOperator");
+        vm.stopPrank();
+    }
+
+    function testOnlyOperatorOrAdmin_AdminCanAddValidatorsForInactiveOperator() public {
+        address opAddr = makeAddr("operator");
+        vm.startPrank(admin);
+        uint256 index = operatorsRegistry.addOperator("InactiveOp", opAddr);
+        operatorsRegistry.setOperatorStatus(index, false);
+
+        bytes memory keysAndSigs = genBytes(48 + 96);
+        operatorsRegistry.addValidators(index, 1, keysAndSigs);
+        assertEq(operatorsRegistry.getOperator(index).keys, 1);
+        vm.stopPrank();
+    }
+
+    function testOnlyOperatorOrAdmin_InactiveOperatorCannotAddValidators() public {
+        address opAddr = makeAddr("operator");
+        vm.startPrank(admin);
+        uint256 index = operatorsRegistry.addOperator("InactiveOp", opAddr);
+        operatorsRegistry.addValidators(index, 1, genBytes(48 + 96));
+        operatorsRegistry.setOperatorStatus(index, false);
+        vm.stopPrank();
+
+        vm.startPrank(opAddr);
+        vm.expectRevert(abi.encodeWithSignature("InactiveOperator(uint256)", index));
+        operatorsRegistry.addValidators(index, 1, genBytes(48 + 96));
+        vm.stopPrank();
+    }
+
+    function testOnlyOperatorOrAdmin_InactiveOperatorCannotRemoveValidators() public {
+        address opAddr = makeAddr("operator");
+        vm.startPrank(admin);
+        uint256 index = operatorsRegistry.addOperator("InactiveOp", opAddr);
+        operatorsRegistry.addValidators(index, 1, genBytes(48 + 96));
+        operatorsRegistry.setOperatorStatus(index, false);
+        vm.stopPrank();
+
+        uint256[] memory indexes = new uint256[](1);
+        indexes[0] = 0;
+
+        vm.startPrank(opAddr);
+        vm.expectRevert(abi.encodeWithSignature("InactiveOperator(uint256)", index));
+        operatorsRegistry.removeValidators(index, indexes);
+        vm.stopPrank();
+    }
+
+    function testOnlyOperatorOrAdmin_AdminCanRemoveValidatorsForInactiveOperator() public {
+        address opAddr = makeAddr("operator");
+        vm.startPrank(admin);
+        uint256 index = operatorsRegistry.addOperator("InactiveOp", opAddr);
+        operatorsRegistry.addValidators(index, 1, genBytes(48 + 96));
+        operatorsRegistry.setOperatorStatus(index, false);
+
+        uint256[] memory indexes = new uint256[](1);
+        indexes[0] = 0;
+        operatorsRegistry.removeValidators(index, indexes);
+        assertEq(operatorsRegistry.getOperator(index).keys, 0);
+        vm.stopPrank();
+    }
+
     function testSetOperatorStatusAsAdmin(bytes32 _name, uint256 _firstAddressSalt) public {
         address _firstAddress = uf._new(_firstAddressSalt);
         vm.startPrank(admin);
@@ -5914,6 +6060,175 @@ contract OperatorsRegistryV1ExitCorrectnessTests is OperatorAllocationTestBase {
         assertEq(operatorsRegistry.getOperator(0).requestedExits, 3, "Op0 should have 3 exits");
         assertEq(operatorsRegistry.getOperator(1).requestedExits, 3, "Op1 should have 3 exits");
         assertEq(operatorsRegistry.getOperator(2).requestedExits, 4, "Op2 should have 4 exits");
+    }
+
+    // ──────────────────────────────────────────────────────────────────────
+    // TEST 9: Stopped validators exceeding requestedExits bumps requestedExits
+    // ──────────────────────────────────────────────────────────────────────
+
+    event UpdatedRequestedValidatorExitsUponStopped(
+        uint256 indexed index, uint32 oldRequestedExits, uint32 newRequestedExits
+    );
+    event UpdatedStoppedValidators(uint32[] stoppedValidatorCounts);
+
+    /// @notice When stopped validator count exceeds an operator's requestedExits,
+    ///         requestedExits is bumped to match the stopped count, the unsolicited
+    ///         delta is added to TotalValidatorExitsRequested, and
+    ///         CurrentValidatorExitsDemand is reduced by the unsolicited amount.
+    function testStoppedCountExceedingRequestedExitsBumpsRequestedExits() external {
+        _fundAllOperators();
+
+        // Create demand of 50
+        vm.prank(river);
+        operatorsRegistry.demandValidatorExits(50, 250);
+        assertEq(operatorsRegistry.getCurrentValidatorExitsDemand(), 50);
+        assertEq(operatorsRegistry.getTotalValidatorExitsRequested(), 0);
+
+        // Keeper requests 5 exits from op0 and op1 only (total 10)
+        uint256[] memory ops = new uint256[](2);
+        ops[0] = 0;
+        ops[1] = 1;
+        uint32[] memory exitCounts = new uint32[](2);
+        exitCounts[0] = 5;
+        exitCounts[1] = 5;
+
+        vm.prank(keeper);
+        operatorsRegistry.requestValidatorExits(_createAllocation(ops, exitCounts));
+
+        assertEq(operatorsRegistry.getOperator(0).requestedExits, 5, "Op0 should have 5 requestedExits");
+        assertEq(operatorsRegistry.getOperator(1).requestedExits, 5, "Op1 should have 5 requestedExits");
+        assertEq(operatorsRegistry.getOperator(2).requestedExits, 0, "Op2 should have 0 requestedExits");
+        assertEq(operatorsRegistry.getOperator(3).requestedExits, 0, "Op3 should have 0 requestedExits");
+        assertEq(operatorsRegistry.getOperator(4).requestedExits, 0, "Op4 should have 0 requestedExits");
+        assertEq(operatorsRegistry.getCurrentValidatorExitsDemand(), 40, "Demand should be 50-10=40");
+        assertEq(operatorsRegistry.getTotalValidatorExitsRequested(), 10, "Total exits should be 10");
+
+        // Report stopped validators:
+        //   op0: 8 stopped (exceeds requestedExits=5, unsolicited delta = 3)
+        //   op1: 3 stopped (does NOT exceed requestedExits=5, no bump)
+        //   op2: 7 stopped (exceeds requestedExits=0, unsolicited delta = 7)
+        //   op3: 0 stopped (no change)
+        //   op4: 0 stopped (no change)
+        // Total unsolicited = 3 + 7 = 10
+        uint32[] memory stoppedCounts = new uint32[](6);
+        stoppedCounts[0] = 18; // total: 8 + 3 + 7 + 0 + 0
+        stoppedCounts[1] = 8;  // op0
+        stoppedCounts[2] = 3;  // op1
+        stoppedCounts[3] = 7;  // op2
+        stoppedCounts[4] = 0;  // op3
+        stoppedCounts[5] = 0;  // op4
+
+        // Expect events for the two operators whose stopped count exceeds requestedExits
+        vm.expectEmit(true, true, true, true);
+        emit UpdatedRequestedValidatorExitsUponStopped(0, 5, 8);
+        vm.expectEmit(true, true, true, true);
+        emit UpdatedRequestedValidatorExitsUponStopped(2, 0, 7);
+
+        OperatorsRegistryInitializableV1(address(operatorsRegistry)).sudoStoppedValidatorCounts(stoppedCounts, 250);
+
+        // requestedExits bumped for op0 (5->8) and op2 (0->7); op1 unchanged (3 < 5)
+        assertEq(operatorsRegistry.getOperator(0).requestedExits, 8, "Op0 requestedExits bumped to stoppedCount");
+        assertEq(operatorsRegistry.getOperator(1).requestedExits, 5, "Op1 requestedExits unchanged (stopped < requested)");
+        assertEq(operatorsRegistry.getOperator(2).requestedExits, 7, "Op2 requestedExits bumped to stoppedCount");
+        assertEq(operatorsRegistry.getOperator(3).requestedExits, 0, "Op3 requestedExits unchanged");
+        assertEq(operatorsRegistry.getOperator(4).requestedExits, 0, "Op4 requestedExits unchanged");
+
+        // TotalValidatorExitsRequested = 10 (from keeper) + 10 (unsolicited) = 20
+        assertEq(operatorsRegistry.getTotalValidatorExitsRequested(), 20, "Total exits should include unsolicited");
+
+        // CurrentValidatorExitsDemand = 40 - min(10, 40) = 30
+        assertEq(operatorsRegistry.getCurrentValidatorExitsDemand(), 30, "Demand reduced by unsolicited exits");
+    }
+
+    /// @notice When stopped count exceeds requestedExits and the unsolicited amount
+    ///         is larger than the remaining demand, demand is clamped to zero.
+    function testStoppedCountExceedingRequestedExitsClampsDemandToZero() external {
+        _fundAllOperators();
+
+        // Create small demand of 5
+        vm.prank(river);
+        operatorsRegistry.demandValidatorExits(5, 250);
+        assertEq(operatorsRegistry.getCurrentValidatorExitsDemand(), 5);
+
+        // No keeper exit requests: all operators have requestedExits = 0
+
+        // Report 20 stopped validators on op0 alone — unsolicited delta = 20, exceeds demand of 5
+        uint32[] memory stoppedCounts = new uint32[](6);
+        stoppedCounts[0] = 20;
+        stoppedCounts[1] = 20; // op0
+        stoppedCounts[2] = 0;
+        stoppedCounts[3] = 0;
+        stoppedCounts[4] = 0;
+        stoppedCounts[5] = 0;
+
+        vm.expectEmit(true, true, true, true);
+        emit UpdatedRequestedValidatorExitsUponStopped(0, 0, 20);
+
+        OperatorsRegistryInitializableV1(address(operatorsRegistry)).sudoStoppedValidatorCounts(stoppedCounts, 250);
+
+        assertEq(operatorsRegistry.getOperator(0).requestedExits, 20, "Op0 requestedExits bumped to 20");
+        assertEq(operatorsRegistry.getTotalValidatorExitsRequested(), 20, "Total exits = unsolicited 20");
+        // Demand clamped: 5 - min(20, 5) = 0
+        assertEq(operatorsRegistry.getCurrentValidatorExitsDemand(), 0, "Demand clamped to zero");
+    }
+
+    /// @notice When a new operator is added between two stopped-count reports,
+    ///         the second report includes the new operator's stopped count which
+    ///         triggers the requestedExits bump in the "new operator" loop.
+    function testStoppedCountExceedingRequestedExitsForNewOperator() external {
+        _fundAllOperators();
+
+        // Initial stopped report for 5 operators (all zeros)
+        uint32[] memory stoppedCounts1 = new uint32[](6);
+        stoppedCounts1[0] = 0;
+        stoppedCounts1[1] = 0;
+        stoppedCounts1[2] = 0;
+        stoppedCounts1[3] = 0;
+        stoppedCounts1[4] = 0;
+        stoppedCounts1[5] = 0;
+        OperatorsRegistryInitializableV1(address(operatorsRegistry)).sudoStoppedValidatorCounts(stoppedCounts1, 250);
+
+        // Add a 6th operator, fund it
+        vm.startPrank(admin);
+        operatorsRegistry.addOperator("operatorSix", makeAddr("op6"));
+        operatorsRegistry.addValidators(5, 50, genBytes((48 + 96) * 50));
+        vm.stopPrank();
+
+        uint256[] memory newOps = new uint256[](1);
+        newOps[0] = 5;
+        uint32[] memory newLimits = new uint32[](1);
+        newLimits[0] = 50;
+        vm.prank(admin);
+        operatorsRegistry.setOperatorLimits(newOps, newLimits, block.number);
+
+        OperatorsRegistryInitializableV1(address(operatorsRegistry))
+            .pickNextValidatorsToDeposit(_createAllocation(newOps, newLimits));
+        RiverMock(river).sudoSetDepositedValidatorsCount(300);
+
+        // Create demand
+        vm.prank(river);
+        operatorsRegistry.demandValidatorExits(10, 300);
+        assertEq(operatorsRegistry.getCurrentValidatorExitsDemand(), 10);
+
+        // Report stopped with 7 entries (includes new op5 at index 6 in the array)
+        // The new operator (op5) has 0 requestedExits but 5 stopped -> unsolicited = 5
+        uint32[] memory stoppedCounts2 = new uint32[](7);
+        stoppedCounts2[0] = 5; // total
+        stoppedCounts2[1] = 0; // op0
+        stoppedCounts2[2] = 0; // op1
+        stoppedCounts2[3] = 0; // op2
+        stoppedCounts2[4] = 0; // op3
+        stoppedCounts2[5] = 0; // op4
+        stoppedCounts2[6] = 5; // op5 (new operator — enters the second loop)
+
+        vm.expectEmit(true, true, true, true);
+        emit UpdatedRequestedValidatorExitsUponStopped(5, 0, 5);
+
+        OperatorsRegistryInitializableV1(address(operatorsRegistry)).sudoStoppedValidatorCounts(stoppedCounts2, 300);
+
+        assertEq(operatorsRegistry.getOperator(5).requestedExits, 5, "New op requestedExits bumped to stoppedCount");
+        assertEq(operatorsRegistry.getTotalValidatorExitsRequested(), 5, "Total exits = unsolicited 5");
+        assertEq(operatorsRegistry.getCurrentValidatorExitsDemand(), 5, "Demand reduced by unsolicited 5");
     }
 }
 
