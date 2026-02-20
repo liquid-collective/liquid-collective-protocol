@@ -6112,11 +6112,11 @@ contract OperatorsRegistryV1ExitCorrectnessTests is OperatorAllocationTestBase {
         // Total unsolicited = 3 + 7 = 10
         uint32[] memory stoppedCounts = new uint32[](6);
         stoppedCounts[0] = 18; // total: 8 + 3 + 7 + 0 + 0
-        stoppedCounts[1] = 8;  // op0
-        stoppedCounts[2] = 3;  // op1
-        stoppedCounts[3] = 7;  // op2
-        stoppedCounts[4] = 0;  // op3
-        stoppedCounts[5] = 0;  // op4
+        stoppedCounts[1] = 8; // op0
+        stoppedCounts[2] = 3; // op1
+        stoppedCounts[3] = 7; // op2
+        stoppedCounts[4] = 0; // op3
+        stoppedCounts[5] = 0; // op4
 
         // Expect events for the two operators whose stopped count exceeds requestedExits
         vm.expectEmit(true, true, true, true);
@@ -6128,7 +6128,9 @@ contract OperatorsRegistryV1ExitCorrectnessTests is OperatorAllocationTestBase {
 
         // requestedExits bumped for op0 (5->8) and op2 (0->7); op1 unchanged (3 < 5)
         assertEq(operatorsRegistry.getOperator(0).requestedExits, 8, "Op0 requestedExits bumped to stoppedCount");
-        assertEq(operatorsRegistry.getOperator(1).requestedExits, 5, "Op1 requestedExits unchanged (stopped < requested)");
+        assertEq(
+            operatorsRegistry.getOperator(1).requestedExits, 5, "Op1 requestedExits unchanged (stopped < requested)"
+        );
         assertEq(operatorsRegistry.getOperator(2).requestedExits, 7, "Op2 requestedExits bumped to stoppedCount");
         assertEq(operatorsRegistry.getOperator(3).requestedExits, 0, "Op3 requestedExits unchanged");
         assertEq(operatorsRegistry.getOperator(4).requestedExits, 0, "Op4 requestedExits unchanged");
