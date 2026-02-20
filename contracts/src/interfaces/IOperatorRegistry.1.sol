@@ -118,7 +118,7 @@ interface IOperatorsRegistryV1 {
     /// @param deferred True if event has been replayed in the context of a migration
     event FundedValidatorKeys(uint256 indexed index, bytes[] publicKeys, bool deferred);
 
-    /// @notice The requested exit count has been update to fill the gap with the reported stopped count
+    /// @notice The requested exit count has been updated to fill the gap with the reported stopped count
     /// @param index The operator index
     /// @param oldRequestedExits The old requested exit count
     /// @param newRequestedExits The new requested exit count
