@@ -38,36 +38,6 @@ contract OperatorsRegistryInitializableV1 is OperatorsRegistryV1 {
     }
 }
 
-/// @dev Mock whose pickNextValidatorsToDeposit has the same selector as the production
-/// function but feeds deliberately wrong-sized key arrays into the InvalidKeyCount guard.
-/// Used with vm.etch to test the defense-in-depth assertion without virtual functions.
-contract OperatorsRegistryKeyCountGuardMock {
-    error InvalidKeyCount();
-
-    struct OperatorAllocation {
-        uint256 operatorIndex;
-        uint256 validatorCount;
-    }
-
-    function pickNextValidatorsToDeposit(OperatorAllocation[] calldata _allocations)
-        external
-        pure
-        returns (bytes[] memory, bytes[] memory)
-    {
-        bytes[][] memory perOpKeys = new bytes[][](_allocations.length);
-        for (uint256 i = 0; i < _allocations.length; ++i) {
-            uint256 wrongCount = _allocations[i].validatorCount > 0 ? _allocations[i].validatorCount - 1 : 0;
-            perOpKeys[i] = new bytes[](wrongCount);
-        }
-        for (uint256 i = 0; i < perOpKeys.length; ++i) {
-            if (perOpKeys[i].length != _allocations[i].validatorCount) {
-                revert InvalidKeyCount();
-            }
-        }
-        return (new bytes[](0), new bytes[](0));
-    }
-}
-
 /// @dev Same as OperatorsRegistryInitializableV1 but does NOT override onlyRiver; use for tests that assert Unauthorized
 contract OperatorsRegistryStrictRiverV1 is OperatorsRegistryV1 {
     function sudoSetFunded(uint256 _index, uint32 _funded) external {
@@ -6525,33 +6495,3 @@ contract OperatorsRegistryV1FlattenAndAllocationTests is OperatorAllocationTestB
     }
 }
 
-contract OperatorsRegistryV1InvalidKeyCountTests is OperatorsRegistryV1TestBase, OperatorAllocationTestBase {
-    function setUp() public {
-        admin = makeAddr("admin");
-        keeper = makeAddr("keeper");
-        river = address(new RiverMock(0));
-        RiverMock(river).setKeeper(keeper);
-        operatorsRegistry = new OperatorsRegistryInitializableV1();
-        LibImplementationUnbricker.unbrick(vm, address(operatorsRegistry));
-        operatorsRegistry.initOperatorsRegistryV1(admin, river);
-    }
-
-    /// @dev Replaces the registry bytecode with a mock that feeds wrong-sized key
-    /// arrays into the same guard logic, proving InvalidKeyCount fires on mismatch.
-    function testPickNextValidatorsRevertsOnKeyCountMismatch() public {
-        OperatorsRegistryKeyCountGuardMock mock = new OperatorsRegistryKeyCountGuardMock();
-        vm.etch(address(operatorsRegistry), address(mock).code);
-
-        vm.expectRevert(abi.encodeWithSelector(IOperatorsRegistryV1.InvalidKeyCount.selector));
-        operatorsRegistry.pickNextValidatorsToDeposit(_createAllocation(0, 1));
-    }
-
-    /// @dev Validates the mock does not revert when called with validatorCount == 0
-    /// (wrongCount == 0, so lengths match and the guard passes).
-    function testPickNextValidatorsDoesNotRevertOnZeroAllocation() public {
-        OperatorsRegistryKeyCountGuardMock mock = new OperatorsRegistryKeyCountGuardMock();
-        vm.etch(address(operatorsRegistry), address(mock).code);
-
-        operatorsRegistry.pickNextValidatorsToDeposit(_createAllocation(0, 0));
-    }
-}
