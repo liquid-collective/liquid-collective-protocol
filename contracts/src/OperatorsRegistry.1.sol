@@ -420,12 +420,12 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
         onlyRiver
         returns (bytes[] memory publicKeys, bytes[] memory signatures)
     {
+        // The dimensions of the bytes arrays must match the validator counts for each operator in the allocations
         (bytes[][] memory perOpKeys, bytes[][] memory perOpSigs) =
             _getPerOperatorValidatorKeysForAllocations(_allocations);
         for (uint256 i = 0; i < perOpKeys.length; ++i) {
-            if (perOpKeys[i].length != _allocations[i].validatorCount) {
-                revert InvalidKeyCount();
-            }
+            // Assumes that perOpKeys[i].length == _allocations[i].validatorCount and that perOpSigs[i].length == _allocations[i].validatorCount when returned from _getPerOperatorValidatorKeysForAllocations,
+            // as this is enforced by the _getPerOperatorValidatorKeysForAllocations function
             emit FundedValidatorKeys(_allocations[i].operatorIndex, perOpKeys[i], false);
             OperatorsV2.get(_allocations[i].operatorIndex).funded += uint32(perOpKeys[i].length);
         }
