@@ -1,5 +1,7 @@
-//SPDX-License-Identifier: BUSL-1.1
-pragma solidity 0.8.33;
+// SPDX-License-Identifier: CC0-1.0
+// Originally derived from the Ethereum 2.0 Deposit Contract (CC0-1.0)
+// https://github.com/ethereum/consensus-specs/blob/dev/solidity_deposit_contract/deposit_contract.sol
+pragma solidity ^0.8.33;
 
 /// @title Lib Uint256
 /// @notice Utilities to perform uint operations
