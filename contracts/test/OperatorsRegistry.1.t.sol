@@ -208,19 +208,7 @@ contract OperatorsRegistryV1Tests is OperatorsRegistryV1TestBase, OperatorAlloca
         operatorsRegistry.initOperatorsRegistryV1(admin, river);
     }
 
-    function testForceFundedValidatorKeysEventEmission() public {
-        operatorsRegistry.getOperatorCount();
-        operatorsRegistry.forceFundedValidatorKeysEventEmission(100);
-
-        bytes32 operatorIndex = vm.load(
-            address(operatorsRegistry),
-            bytes32(
-                uint256(keccak256("river.state.migration.operatorsRegistry.fundedKeyEventRebroadcasting.operatorIndex"))
-                    - 1
-            )
-        );
-        assertEq(uint256(operatorIndex), type(uint256).max);
-    }
+    // NOTE: testForceFundedValidatorKeysEventEmission removed - function was deprecated in accounting changes
 
     function testInternalSetKeys(uint256 _nodeOperatorAddressSalt, bytes32 _name, uint32 _keyCount, uint32 _blockRoll)
         public

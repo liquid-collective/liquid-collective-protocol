@@ -11,9 +11,11 @@ import "./utils/LibImplementationUnbricker.sol";
 import "./mocks/DepositContractMock.sol";
 
 import "../src/libraries/LibAllowlistMasks.sol";
+import "../src/libraries/LibBytes.sol";
 import "../src/Allowlist.1.sol";
 import "../src/River.1.sol";
 import "../src/interfaces/IDepositContract.sol";
+import "../src/interfaces/components/IConsensusLayerDepositManager.1.sol";
 import "../src/Withdraw.1.sol";
 import "../src/Oracle.1.sol";
 import "../src/ELFeeRecipient.1.sol";
@@ -41,6 +43,49 @@ contract RiverV1ForceCommittable is RiverV1 {
 
 abstract contract RiverV1TestBase is OperatorAllocationTestBase, BytesGenerator {
     UserFactory internal uf = new UserFactory();
+
+    /// @dev Helper to create ValidatorDeposit[] from raw key bytes (pubkey+signature concatenated per validator)
+    function _createValidatorDeposits(bytes memory rawKeys, uint256 operatorIndex, uint256 count)
+        internal
+        pure
+        returns (IConsensusLayerDepositManagerV1.ValidatorDeposit[] memory)
+    {
+        return _createValidatorDeposits(rawKeys, operatorIndex, count, 0);
+    }
+
+    function _createValidatorDeposits(bytes memory rawKeys, uint256 operatorIndex, uint256 count, uint256 startIndex)
+        internal
+        pure
+        returns (IConsensusLayerDepositManagerV1.ValidatorDeposit[] memory)
+    {
+        uint256 validatorSize = 48 + 96;
+        IConsensusLayerDepositManagerV1.ValidatorDeposit[] memory deposits =
+            new IConsensusLayerDepositManagerV1.ValidatorDeposit[](count);
+        for (uint256 i = 0; i < count; ++i) {
+            deposits[i] = IConsensusLayerDepositManagerV1.ValidatorDeposit({
+                pubkey: LibBytes.slice(rawKeys, (startIndex + i) * validatorSize, 48),
+                signature: LibBytes.slice(rawKeys, (startIndex + i) * validatorSize + 48, 96),
+                depositAmount: 32 ether,
+                operatorIndex: operatorIndex
+            });
+        }
+        return deposits;
+    }
+
+    function _concatValidatorDeposits(
+        IConsensusLayerDepositManagerV1.ValidatorDeposit[] memory a,
+        IConsensusLayerDepositManagerV1.ValidatorDeposit[] memory b
+    ) internal pure returns (IConsensusLayerDepositManagerV1.ValidatorDeposit[] memory) {
+        IConsensusLayerDepositManagerV1.ValidatorDeposit[] memory result =
+            new IConsensusLayerDepositManagerV1.ValidatorDeposit[](a.length + b.length);
+        for (uint256 i = 0; i < a.length; ++i) {
+            result[i] = a[i];
+        }
+        for (uint256 i = 0; i < b.length; ++i) {
+            result[a.length + i] = b[i];
+        }
+        return result;
+    }
 
     RiverV1ForceCommittable internal river;
     IDepositContract internal deposit;
@@ -189,6 +234,9 @@ contract RiverV1InitializationTests is RiverV1TestBase {
 }
 
 contract RiverV1Tests is RiverV1TestBase {
+    bytes internal rawKeysOp1;
+    bytes internal rawKeysOp2;
+
     function setUp() public override {
         super.setUp();
         bytes32 withdrawalCredentials = withdraw.getCredentials();
@@ -217,10 +265,12 @@ contract RiverV1Tests is RiverV1TestBase {
         operatorTwoIndex = operatorsRegistry.addOperator(operatorTwoName, operatorTwo);
 
         bytes memory hundredKeysOp1 = genBytes((48 + 96) * 100);
+        rawKeysOp1 = hundredKeysOp1;
 
         operatorsRegistry.addValidators(operatorOneIndex, 100, hundredKeysOp1);
 
         bytes memory hundredKeysOp2 = genBytes((48 + 96) * 100);
+        rawKeysOp2 = hundredKeysOp2;
 
         operatorsRegistry.addValidators(operatorTwoIndex, 100, hundredKeysOp2);
 
@@ -318,7 +368,7 @@ contract RiverV1Tests is RiverV1TestBase {
         uint256 committedBefore = castedRiver.getCommittedBalance();
         uint256 dust = committedBefore % 32 ether;
 
-        river.initRiverV1_2();
+        river.initRiverV2();
 
         uint256 balanceAfter = castedRiver.getBalanceToDeposit();
         uint256 committedAfter = castedRiver.getCommittedBalance();
@@ -590,22 +640,21 @@ contract RiverV1Tests is RiverV1TestBase {
         vm.stopPrank();
         assert(river.balanceOfUnderlying(joe) == 100 ether);
         assert(river.balanceOfUnderlying(bob) == 1000 ether);
-        assert(river.getDepositedValidatorCount() == 0);
+        assert(river.getDepositedBalance() == 0);
         assert(river.totalUnderlyingSupply() == 1100 ether);
 
         river.debug_moveDepositToCommitted();
 
-        // Create allocation for 17 validators from each operator = 34 total
-        uint256[] memory indexes = new uint256[](2);
-        indexes[0] = operatorOneIndex;
-        indexes[1] = operatorTwoIndex;
-        uint32[] memory counts = new uint32[](2);
-        counts[0] = 17;
-        counts[1] = 17;
-        IOperatorsRegistryV1.OperatorAllocation[] memory allocation = _createMultiAllocation(indexes, counts);
+        // Create deposits for 17 validators from each operator = 34 total
+        IConsensusLayerDepositManagerV1.ValidatorDeposit[] memory depositsOp1 =
+            _createValidatorDeposits(rawKeysOp1, operatorOneIndex, 17);
+        IConsensusLayerDepositManagerV1.ValidatorDeposit[] memory depositsOp2 =
+            _createValidatorDeposits(rawKeysOp2, operatorTwoIndex, 17);
+        IConsensusLayerDepositManagerV1.ValidatorDeposit[] memory deposits =
+            _concatValidatorDeposits(depositsOp1, depositsOp2);
 
         vm.prank(admin);
-        river.depositToConsensusLayerWithDepositRoot(allocation, bytes32(0));
+        river.depositToConsensusLayer(deposits, bytes32(0));
 
         OperatorsV2.Operator memory op1 = operatorsRegistry.getOperator(operatorOneIndex);
         OperatorsV2.Operator memory op2 = operatorsRegistry.getOperator(operatorTwoIndex);
@@ -613,7 +662,7 @@ contract RiverV1Tests is RiverV1TestBase {
         assert(op1.funded == 17);
         assert(op2.funded == 17);
 
-        assert(river.getDepositedValidatorCount() == 34);
+        assert(river.getDepositedBalance() == 34 * 32 ether);
         assert(river.totalUnderlyingSupply() == 1100 ether);
         assert(address(river).balance == (1000 ether + 100 ether) - (32 ether * 34));
         assert(river.balanceOfUnderlying(joe) == 100 ether);
@@ -636,22 +685,21 @@ contract RiverV1Tests is RiverV1TestBase {
         vm.stopPrank();
         assert(river.balanceOfUnderlying(joe) == 100 ether);
         assert(river.balanceOfUnderlying(bob) == 1000 ether);
-        assert(river.getDepositedValidatorCount() == 0);
+        assert(river.getDepositedBalance() == 0);
         assert(river.totalUnderlyingSupply() == 1100 ether);
 
         river.debug_moveDepositToCommitted();
 
-        // Create allocation for 17 validators from each operator = 34 total
-        uint256[] memory indexes = new uint256[](2);
-        indexes[0] = operatorOneIndex;
-        indexes[1] = operatorTwoIndex;
-        uint32[] memory counts = new uint32[](2);
-        counts[0] = 17;
-        counts[1] = 17;
-        IOperatorsRegistryV1.OperatorAllocation[] memory allocation = _createMultiAllocation(indexes, counts);
+        // Create deposits for 17 validators from each operator = 34 total
+        IConsensusLayerDepositManagerV1.ValidatorDeposit[] memory depositsOp1b =
+            _createValidatorDeposits(rawKeysOp1, operatorOneIndex, 17);
+        IConsensusLayerDepositManagerV1.ValidatorDeposit[] memory depositsOp2b =
+            _createValidatorDeposits(rawKeysOp2, operatorTwoIndex, 17);
+        IConsensusLayerDepositManagerV1.ValidatorDeposit[] memory depositsB =
+            _concatValidatorDeposits(depositsOp1b, depositsOp2b);
 
         vm.prank(admin);
-        river.depositToConsensusLayerWithDepositRoot(allocation, bytes32(0));
+        river.depositToConsensusLayer(depositsB, bytes32(0));
 
         OperatorsV2.Operator memory op1 = operatorsRegistry.getOperator(operatorOneIndex);
         OperatorsV2.Operator memory op2 = operatorsRegistry.getOperator(operatorTwoIndex);
@@ -659,7 +707,7 @@ contract RiverV1Tests is RiverV1TestBase {
         assert(op1.funded == 17);
         assert(op2.funded == 17);
 
-        assert(river.getDepositedValidatorCount() == 34);
+        assert(river.getDepositedBalance() == 34 * 32 ether);
         assert(river.totalUnderlyingSupply() == 1100 ether);
         assert(address(river).balance == (1000 ether + 100 ether) - (32 ether * 34));
         assert(river.balanceOfUnderlying(joe) == 100 ether);
@@ -739,22 +787,22 @@ contract RiverV1Tests is RiverV1TestBase {
         vm.stopPrank();
         assert(river.balanceOfUnderlying(joe) == 100 ether);
         assert(river.balanceOfUnderlying(bob) == 1000 ether);
-        assert(river.getDepositedValidatorCount() == 0);
+        assert(river.getDepositedBalance() == 0);
         assert(river.totalUnderlyingSupply() == 1100 ether);
 
         river.debug_moveDepositToCommitted();
 
-        // Create allocation for 17 validators from each operator = 34 total
-        uint256[] memory indexes = new uint256[](2);
-        indexes[0] = operatorOneIndex;
-        indexes[1] = operatorTwoIndex;
-        uint32[] memory counts = new uint32[](2);
-        counts[0] = 17;
-        counts[1] = 17;
-        IOperatorsRegistryV1.OperatorAllocation[] memory allocation = _createMultiAllocation(indexes, counts);
-
-        vm.prank(admin);
-        river.depositToConsensusLayerWithDepositRoot(allocation, bytes32(0));
+        // Create deposits for 17 validators from each operator = 34 total
+        {
+            IConsensusLayerDepositManagerV1.ValidatorDeposit[] memory dOp1 =
+                _createValidatorDeposits(rawKeysOp1, operatorOneIndex, 17);
+            IConsensusLayerDepositManagerV1.ValidatorDeposit[] memory dOp2 =
+                _createValidatorDeposits(rawKeysOp2, operatorTwoIndex, 17);
+            IConsensusLayerDepositManagerV1.ValidatorDeposit[] memory allDeposits =
+                _concatValidatorDeposits(dOp1, dOp2);
+            vm.prank(admin);
+            river.depositToConsensusLayer(allDeposits, bytes32(0));
+        }
 
         OperatorsV2.Operator memory op1 = operatorsRegistry.getOperator(operatorOneIndex);
         OperatorsV2.Operator memory op2 = operatorsRegistry.getOperator(operatorTwoIndex);
@@ -762,7 +810,7 @@ contract RiverV1Tests is RiverV1TestBase {
         assert(op1.funded == 17);
         assert(op2.funded == 17);
 
-        assert(river.getDepositedValidatorCount() == 34);
+        assert(river.getDepositedBalance() == 34 * 32 ether);
         assert(river.totalUnderlyingSupply() == 1100 ether);
         assert(address(river).balance == (1000 ether + 100 ether) - (32 ether * 34));
         assert(river.balanceOfUnderlying(joe) == 100 ether);
@@ -793,22 +841,22 @@ contract RiverV1Tests is RiverV1TestBase {
         vm.stopPrank();
         assert(river.balanceOfUnderlying(joe) == 100 ether);
         assert(river.balanceOfUnderlying(bob) == 1000 ether);
-        assert(river.getDepositedValidatorCount() == 0);
+        assert(river.getDepositedBalance() == 0);
         assert(river.totalUnderlyingSupply() == 1100 ether);
 
         river.debug_moveDepositToCommitted();
 
-        // Create allocation for 17 validators from each operator = 34 total
-        uint256[] memory indexes = new uint256[](2);
-        indexes[0] = operatorOneIndex;
-        indexes[1] = operatorTwoIndex;
-        uint32[] memory counts = new uint32[](2);
-        counts[0] = 17;
-        counts[1] = 17;
-        IOperatorsRegistryV1.OperatorAllocation[] memory allocation = _createMultiAllocation(indexes, counts);
-
-        vm.prank(admin);
-        river.depositToConsensusLayerWithDepositRoot(allocation, bytes32(0));
+        // Create deposits for 17 validators from each operator = 34 total
+        {
+            IConsensusLayerDepositManagerV1.ValidatorDeposit[] memory dOp1 =
+                _createValidatorDeposits(rawKeysOp1, operatorOneIndex, 17);
+            IConsensusLayerDepositManagerV1.ValidatorDeposit[] memory dOp2 =
+                _createValidatorDeposits(rawKeysOp2, operatorTwoIndex, 17);
+            IConsensusLayerDepositManagerV1.ValidatorDeposit[] memory allDeposits =
+                _concatValidatorDeposits(dOp1, dOp2);
+            vm.prank(admin);
+            river.depositToConsensusLayer(allDeposits, bytes32(0));
+        }
 
         OperatorsV2.Operator memory op1 = operatorsRegistry.getOperator(operatorOneIndex);
         OperatorsV2.Operator memory op2 = operatorsRegistry.getOperator(operatorTwoIndex);
@@ -816,7 +864,7 @@ contract RiverV1Tests is RiverV1TestBase {
         assert(op1.funded == 17);
         assert(op2.funded == 17);
 
-        assert(river.getDepositedValidatorCount() == 34);
+        assert(river.getDepositedBalance() == 34 * 32 ether);
         assert(river.totalUnderlyingSupply() == 1100 ether);
         assert(address(river).balance == (1000 ether + 100 ether) - (32 ether * 34));
         assert(river.balanceOfUnderlying(joe) == 100 ether);
@@ -839,14 +887,16 @@ contract RiverV1Tests is RiverV1TestBase {
         vm.stopPrank();
         assert(river.balanceOfUnderlying(joe) == 100 ether);
         assert(river.balanceOfUnderlying(bob) == 1000 ether);
-        assert(river.getDepositedValidatorCount() == 0);
+        assert(river.getDepositedBalance() == 0);
         assert(river.totalUnderlyingSupply() == 1100 ether);
 
         river.debug_moveDepositToCommitted();
 
         // First deposit: 20 validators from operator 1
         vm.prank(admin);
-        river.depositToConsensusLayerWithDepositRoot(_createAllocation(operatorOneIndex, 20), bytes32(0));
+        river.depositToConsensusLayer(
+            _createValidatorDeposits(rawKeysOp1, operatorOneIndex, 20), bytes32(0)
+        );
 
         uint32[] memory stoppedCounts = new uint32[](3);
         stoppedCounts[0] = 10;
@@ -856,7 +906,9 @@ contract RiverV1Tests is RiverV1TestBase {
 
         // Second deposit: 10 validators from operator 2
         vm.prank(admin);
-        river.depositToConsensusLayerWithDepositRoot(_createAllocation(operatorTwoIndex, 10), bytes32(0));
+        river.depositToConsensusLayer(
+            _createValidatorDeposits(rawKeysOp2, operatorTwoIndex, 10), bytes32(0)
+        );
 
         OperatorsV2.Operator memory op1 = operatorsRegistry.getOperator(operatorOneIndex);
         OperatorsV2.Operator memory op2 = operatorsRegistry.getOperator(operatorTwoIndex);
@@ -867,7 +919,7 @@ contract RiverV1Tests is RiverV1TestBase {
 
         assert(operatorsRegistry.getOperatorStoppedValidatorCount(operatorOneIndex) == 10);
 
-        assert(river.getDepositedValidatorCount() == 30);
+        assert(river.getDepositedBalance() == 30 * 32 ether);
         assert(river.totalUnderlyingSupply() == 1100 ether);
         assert(address(river).balance == (1000 ether + 100 ether) - (32 ether * 30));
         assert(river.balanceOfUnderlying(joe) == 100 ether);
@@ -922,7 +974,7 @@ contract RiverV1TestsReport_HEAVY_FUZZING is RiverV1TestBase {
             maxDailyNetCommittableAmount,
             maxDailyRelativeCommittableAmount
         );
-        river.initRiverV1_2();
+        river.initRiverV2();
         withdraw.initializeWithdrawV1(address(river));
         oracle.initOracleV1(address(river), admin, 225, 32, 12, 0, 1000, 500);
 
@@ -1004,9 +1056,12 @@ contract RiverV1TestsReport_HEAVY_FUZZING is RiverV1TestBase {
         operatorCount = bound(_salt, 1, 100);
         _salt = _next(_salt);
 
-        // Arrays to store operator info for allocation
-        uint256[] memory operatorIndices = new uint256[](operatorCount);
-        uint32[] memory operatorKeyCounts = new uint32[](operatorCount);
+        // Collect all deposits across operators
+        uint256 totalDeposits = 0;
+        // First pass: create operators and store keys, count total deposits
+        bytes[] memory allOperatorKeys = new bytes[](operatorCount);
+        uint256[] memory allOperatorIndices = new uint256[](operatorCount);
+        uint256[] memory allOperatorKeyCounts = new uint256[](operatorCount);
 
         uint256 rest = depositCount % operatorCount;
         for (uint256 idx = 0; idx < operatorCount; ++idx) {
@@ -1017,16 +1072,17 @@ contract RiverV1TestsReport_HEAVY_FUZZING is RiverV1TestBase {
 
             vm.prank(admin);
             uint256 operatorIndex = operatorsRegistry.addOperator(operatorName, operatorAddress);
-            operatorIndices[idx] = operatorIndex;
+            allOperatorIndices[idx] = operatorIndex;
 
             uint256 operatorKeyCount = (depositCount / operatorCount) + (rest > 0 ? 1 : 0);
             if (rest > 0) {
                 --rest;
             }
-            operatorKeyCounts[idx] = uint32(operatorKeyCount);
+            allOperatorKeyCounts[idx] = operatorKeyCount;
 
             if (operatorKeyCount > 0) {
                 bytes memory operatorKeys = genBytes((48 + 96) * operatorKeyCount);
+                allOperatorKeys[idx] = operatorKeys;
                 vm.prank(operatorAddress);
                 operatorsRegistry.addValidators(operatorIndex, uint32(operatorKeyCount), operatorKeys);
 
@@ -1037,15 +1093,27 @@ contract RiverV1TestsReport_HEAVY_FUZZING is RiverV1TestBase {
 
                 vm.prank(admin);
                 operatorsRegistry.setOperatorLimits(operatorIndexes, operatorLimits, block.number);
+                totalDeposits += operatorKeyCount;
             }
         }
 
-        // Create allocation from collected operator data
-        IOperatorsRegistryV1.OperatorAllocation[] memory allocation =
-            _createMultiAllocation(operatorIndices, operatorKeyCounts);
+        // Build ValidatorDeposit[] from all operators' keys
+        IConsensusLayerDepositManagerV1.ValidatorDeposit[] memory deposits =
+            new IConsensusLayerDepositManagerV1.ValidatorDeposit[](totalDeposits);
+        uint256 depositIdx = 0;
+        for (uint256 idx = 0; idx < operatorCount; ++idx) {
+            uint256 keyCount = allOperatorKeyCounts[idx];
+            if (keyCount > 0) {
+                IConsensusLayerDepositManagerV1.ValidatorDeposit[] memory opDeposits =
+                    _createValidatorDeposits(allOperatorKeys[idx], allOperatorIndices[idx], keyCount);
+                for (uint256 j = 0; j < opDeposits.length; ++j) {
+                    deposits[depositIdx++] = opDeposits[j];
+                }
+            }
+        }
 
         vm.prank(admin);
-        river.depositToConsensusLayerWithDepositRoot(allocation, bytes32(0));
+        river.depositToConsensusLayer(deposits, bytes32(0));
 
         _newSalt = _salt;
     }
@@ -1187,8 +1255,8 @@ contract RiverV1TestsReport_HEAVY_FUZZING is RiverV1TestBase {
         clr.validatorsSkimmedBalance = 0;
         clr.validatorsExitedBalance = 0;
         clr.validatorsExitingBalance = type(uint256).max; // ensures no exits will be requested before asserted report
-        clr.stoppedValidatorCountPerOperator = new uint32[](1);
-        clr.stoppedValidatorCountPerOperator[0] = 0;
+        clr.stoppedBalancePerOperator = new uint256[](1);
+        clr.stoppedBalancePerOperator[0] = 0;
         _newSalt = _salt;
     }
 
@@ -1327,12 +1395,12 @@ contract RiverV1TestsReport_HEAVY_FUZZING is RiverV1TestBase {
 
         vm.deal(address(withdraw), clr.validatorsSkimmedBalance + clr.validatorsExitedBalance);
 
-        clr.stoppedValidatorCountPerOperator = new uint32[](rfv.operatorCount + 1);
+        clr.stoppedBalancePerOperator = new uint256[](rfv.operatorCount + 1);
 
-        clr.stoppedValidatorCountPerOperator[0] = uint32(stoppedTotalCount);
+        clr.stoppedBalancePerOperator[0] = stoppedTotalCount;
         uint256 rest = stoppedTotalCount % rfv.operatorCount;
         for (uint256 idx = 0; idx < rfv.operatorCount; ++idx) {
-            clr.stoppedValidatorCountPerOperator[idx + 1] =
+            clr.stoppedBalancePerOperator[idx + 1] =
                 uint32((stoppedTotalCount / rfv.operatorCount) + (rest > 0 ? 1 : 0));
             if (rest > 0) {
                 --rest;
@@ -1389,12 +1457,12 @@ contract RiverV1TestsReport_HEAVY_FUZZING is RiverV1TestBase {
 
         vm.deal(address(withdraw), clr.validatorsSkimmedBalance + clr.validatorsExitedBalance);
 
-        clr.stoppedValidatorCountPerOperator = new uint32[](rfv.operatorCount + 1);
+        clr.stoppedBalancePerOperator = new uint256[](rfv.operatorCount + 1);
 
-        clr.stoppedValidatorCountPerOperator[0] = uint32(stoppedTotalCount);
+        clr.stoppedBalancePerOperator[0] = stoppedTotalCount;
         uint256 rest = stoppedTotalCount % rfv.operatorCount;
         for (uint256 idx = 0; idx < rfv.operatorCount; ++idx) {
-            clr.stoppedValidatorCountPerOperator[idx + 1] =
+            clr.stoppedBalancePerOperator[idx + 1] =
                 uint32((stoppedTotalCount / rfv.operatorCount) + (rest > 0 ? 1 : 0));
             if (rest > 0) {
                 --rest;
@@ -1454,12 +1522,12 @@ contract RiverV1TestsReport_HEAVY_FUZZING is RiverV1TestBase {
 
         vm.deal(address(withdraw), clr.validatorsSkimmedBalance + clr.validatorsExitedBalance);
 
-        clr.stoppedValidatorCountPerOperator = new uint32[](rfv.operatorCount + 1);
+        clr.stoppedBalancePerOperator = new uint256[](rfv.operatorCount + 1);
 
-        clr.stoppedValidatorCountPerOperator[0] = uint32(stoppedTotalCount);
+        clr.stoppedBalancePerOperator[0] = stoppedTotalCount;
         uint256 rest = stoppedTotalCount % rfv.operatorCount;
         for (uint256 idx = 0; idx < rfv.operatorCount; ++idx) {
-            clr.stoppedValidatorCountPerOperator[idx + 1] =
+            clr.stoppedBalancePerOperator[idx + 1] =
                 uint32((stoppedTotalCount / rfv.operatorCount) + (rest > 0 ? 1 : 0));
             if (rest > 0) {
                 --rest;
@@ -1524,12 +1592,12 @@ contract RiverV1TestsReport_HEAVY_FUZZING is RiverV1TestBase {
 
         vm.deal(address(withdraw), clr.validatorsSkimmedBalance + clr.validatorsExitedBalance);
 
-        clr.stoppedValidatorCountPerOperator = new uint32[](rfv.operatorCount + 1);
+        clr.stoppedBalancePerOperator = new uint256[](rfv.operatorCount + 1);
 
-        clr.stoppedValidatorCountPerOperator[0] = uint32(stoppedTotalCount);
+        clr.stoppedBalancePerOperator[0] = stoppedTotalCount;
         uint256 rest = stoppedTotalCount % rfv.operatorCount;
         for (uint256 idx = 0; idx < rfv.operatorCount; ++idx) {
-            clr.stoppedValidatorCountPerOperator[idx + 1] =
+            clr.stoppedBalancePerOperator[idx + 1] =
                 uint32((stoppedTotalCount / rfv.operatorCount) + (rest > 0 ? 1 : 0));
             if (rest > 0) {
                 --rest;
@@ -1587,12 +1655,12 @@ contract RiverV1TestsReport_HEAVY_FUZZING is RiverV1TestBase {
 
             vm.deal(address(withdraw), clr.validatorsSkimmedBalance + clr.validatorsExitedBalance);
 
-            clr.stoppedValidatorCountPerOperator = new uint32[](rfv.operatorCount + 1);
+            clr.stoppedBalancePerOperator = new uint256[](rfv.operatorCount + 1);
 
-            clr.stoppedValidatorCountPerOperator[0] = uint32(stoppedTotalCount);
+            clr.stoppedBalancePerOperator[0] = stoppedTotalCount;
             uint256 rest = stoppedTotalCount % rfv.operatorCount;
             for (uint256 idx = 0; idx < rfv.operatorCount; ++idx) {
-                clr.stoppedValidatorCountPerOperator[idx + 1] =
+                clr.stoppedBalancePerOperator[idx + 1] =
                     uint32((stoppedTotalCount / rfv.operatorCount) + (rest > 0 ? 1 : 0));
                 if (rest > 0) {
                     --rest;
@@ -1659,12 +1727,12 @@ contract RiverV1TestsReport_HEAVY_FUZZING is RiverV1TestBase {
 
         vm.deal(address(withdraw), clr.validatorsSkimmedBalance + clr.validatorsExitedBalance);
 
-        clr.stoppedValidatorCountPerOperator = new uint32[](rfv.operatorCount + 1);
+        clr.stoppedBalancePerOperator = new uint256[](rfv.operatorCount + 1);
 
-        clr.stoppedValidatorCountPerOperator[0] = uint32(stoppedTotalCount);
+        clr.stoppedBalancePerOperator[0] = stoppedTotalCount;
         uint256 rest = stoppedTotalCount % rfv.operatorCount;
         for (uint256 idx = 0; idx < rfv.operatorCount; ++idx) {
-            clr.stoppedValidatorCountPerOperator[idx + 1] =
+            clr.stoppedBalancePerOperator[idx + 1] =
                 uint32((stoppedTotalCount / rfv.operatorCount) + (rest > 0 ? 1 : 0));
             if (rest > 0) {
                 --rest;
@@ -1720,12 +1788,12 @@ contract RiverV1TestsReport_HEAVY_FUZZING is RiverV1TestBase {
 
         vm.deal(address(withdraw), clr.validatorsSkimmedBalance + clr.validatorsExitedBalance);
 
-        clr.stoppedValidatorCountPerOperator = new uint32[](rfv.operatorCount + 1);
+        clr.stoppedBalancePerOperator = new uint256[](rfv.operatorCount + 1);
 
-        clr.stoppedValidatorCountPerOperator[0] = uint32(stoppedTotalCount);
+        clr.stoppedBalancePerOperator[0] = stoppedTotalCount;
         uint256 rest = stoppedTotalCount % rfv.operatorCount;
         for (uint256 idx = 0; idx < rfv.operatorCount; ++idx) {
-            clr.stoppedValidatorCountPerOperator[idx + 1] =
+            clr.stoppedBalancePerOperator[idx + 1] =
                 uint32((stoppedTotalCount / rfv.operatorCount) + (rest > 0 ? 1 : 0));
             if (rest > 0) {
                 --rest;
@@ -1751,7 +1819,7 @@ contract RiverV1TestsReport_HEAVY_FUZZING is RiverV1TestBase {
         IOracleManagerV1.ConsensusLayerReport memory clr,
         uint256
     ) internal {
-        uint32[] memory stoppedValidatorCounts = clr.stoppedValidatorCountPerOperator;
+        uint256[] memory stoppedValidatorCounts = clr.stoppedBalancePerOperator;
         for (uint256 idx = 0; idx < operatorsRegistry.getOperatorCount(); ++idx) {
             OperatorsV2.Operator memory op = operatorsRegistry.getOperator(idx);
             if (stoppedValidatorCounts.length - 1 > idx) {
@@ -1787,8 +1855,8 @@ contract RiverV1TestsReport_HEAVY_FUZZING is RiverV1TestBase {
     }
 
     function _generateEmptyReport() internal pure returns (IOracleManagerV1.ConsensusLayerReport memory clr) {
-        clr.stoppedValidatorCountPerOperator = new uint32[](1);
-        clr.stoppedValidatorCountPerOperator[0] = 0;
+        clr.stoppedBalancePerOperator = new uint256[](1);
+        clr.stoppedBalancePerOperator[0] = 0;
     }
 
     function testReportingError_Unauthorized(uint256 _salt) external {
@@ -1826,8 +1894,9 @@ contract RiverV1TestsReport_HEAVY_FUZZING is RiverV1TestBase {
 
         vm.prank(admin);
         uint256 operatorIndex = operatorsRegistry.addOperator(operatorName, operator);
+        bytes memory validatorKeys = genBytes((48 + 96) * count);
         vm.prank(operator);
-        operatorsRegistry.addValidators(operatorIndex, uint32(count), genBytes((48 + 96) * count));
+        operatorsRegistry.addValidators(operatorIndex, uint32(count), validatorKeys);
 
         uint256[] memory operatorIndexes = new uint256[](1);
         operatorIndexes[0] = operatorIndex;
@@ -1839,9 +1908,11 @@ contract RiverV1TestsReport_HEAVY_FUZZING is RiverV1TestBase {
 
         river.debug_moveDepositToCommitted();
 
-        // Create allocation for this single operator
+        // Create deposits for this single operator
         vm.prank(admin);
-        river.depositToConsensusLayerWithDepositRoot(_createAllocation(operatorIndex, uint32(count)), bytes32(0));
+        river.depositToConsensusLayer(
+            _createValidatorDeposits(validatorKeys, operatorIndex, count), bytes32(0)
+        );
 
         return _salt;
     }
@@ -2112,9 +2183,9 @@ contract RiverV1TestsReport_HEAVY_FUZZING is RiverV1TestBase {
         clr.validatorsSkimmedBalance = maxIncrease;
         clr.validatorsExitedBalance = 0;
         clr.epoch = framesBetween * epochsPerFrame;
-        clr.stoppedValidatorCountPerOperator = new uint32[](2);
-        clr.stoppedValidatorCountPerOperator[0] = 2;
-        clr.stoppedValidatorCountPerOperator[1] = 2;
+        clr.stoppedBalancePerOperator = new uint256[](2);
+        clr.stoppedBalancePerOperator[0] = 2;
+        clr.stoppedBalancePerOperator[1] = 2;
         vm.warp((clr.epoch + epochsUntilFinal) * (secondsPerSlot * slotsPerEpoch));
 
         vm.deal(address(withdraw), maxIncrease);
@@ -2123,8 +2194,8 @@ contract RiverV1TestsReport_HEAVY_FUZZING is RiverV1TestBase {
         river.setConsensusLayerData(clr);
 
         clr.epoch += epochsPerFrame;
-        clr.stoppedValidatorCountPerOperator[0] = 1;
-        clr.stoppedValidatorCountPerOperator[1] = 1;
+        clr.stoppedBalancePerOperator[0] = 1;
+        clr.stoppedBalancePerOperator[1] = 1;
         vm.warp((clr.epoch + epochsUntilFinal) * (secondsPerSlot * slotsPerEpoch));
 
         vm.prank(address(oracle));

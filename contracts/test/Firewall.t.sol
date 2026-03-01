@@ -14,6 +14,7 @@ import "../src/Firewall.sol";
 import "../src/Allowlist.1.sol";
 import "../src/River.1.sol";
 import "../src/interfaces/IDepositContract.sol";
+import "../src/interfaces/components/IConsensusLayerDepositManager.1.sol";
 import "../src/Withdraw.1.sol";
 import "../src/Oracle.1.sol";
 import "../src/OperatorsRegistry.1.sol";
@@ -102,7 +103,7 @@ contract FirewallTests is BytesGenerator, OperatorAllocationTestBase {
 
         bytes32 withdrawalCredentials = withdraw.getCredentials();
         bytes4[] memory executorCallableRiverSelectors = new bytes4[](2);
-        executorCallableRiverSelectors[0] = river.depositToConsensusLayerWithDepositRoot.selector;
+        executorCallableRiverSelectors[0] = river.depositToConsensusLayer.selector;
         executorCallableRiverSelectors[1] = river.setOracle.selector;
         riverFirewall = new Firewall(riverGovernorDAO, executor, address(river), executorCallableRiverSelectors);
         firewalledRiver = RiverV1(payable(address(riverFirewall)));
@@ -283,26 +284,32 @@ contract FirewallTests is BytesGenerator, OperatorAllocationTestBase {
         vm.stopPrank();
     }
 
-    function testGovernorCannotdepositToConsensusLayerWithDepositRoot() public {
-        // Assert this by expecting NotEnoughFunds, NOT Unauthorized
+    function testGovernorCannotdepositToConsensusLayer() public {
+        // Assert this by expecting EmptyDepositsArray, NOT Unauthorized
+        IConsensusLayerDepositManagerV1.ValidatorDeposit[] memory emptyDeposits =
+            new IConsensusLayerDepositManagerV1.ValidatorDeposit[](0);
         vm.startPrank(riverGovernorDAO);
-        vm.expectRevert(abi.encodeWithSignature("NotEnoughFunds()"));
-        firewalledRiver.depositToConsensusLayerWithDepositRoot(_createAllocation(10), bytes32(0));
+        vm.expectRevert(abi.encodeWithSignature("EmptyDepositsArray()"));
+        firewalledRiver.depositToConsensusLayer(emptyDeposits, bytes32(0));
         vm.stopPrank();
     }
 
-    function testExecutorCannotdepositToConsensusLayerWithDepositRoot() public {
-        // Assert this by expecting NotEnoughFunds, NOT Unauthorized
+    function testExecutorCannotdepositToConsensusLayer() public {
+        // Assert this by expecting EmptyDepositsArray, NOT Unauthorized
+        IConsensusLayerDepositManagerV1.ValidatorDeposit[] memory emptyDeposits =
+            new IConsensusLayerDepositManagerV1.ValidatorDeposit[](0);
         vm.startPrank(executor);
-        vm.expectRevert(abi.encodeWithSignature("NotEnoughFunds()"));
-        firewalledRiver.depositToConsensusLayerWithDepositRoot(_createAllocation(10), bytes32(0));
+        vm.expectRevert(abi.encodeWithSignature("EmptyDepositsArray()"));
+        firewalledRiver.depositToConsensusLayer(emptyDeposits, bytes32(0));
         vm.stopPrank();
     }
 
-    function testRandomCallerCannotdepositToConsensusLayerWithDepositRoot() public {
+    function testRandomCallerCannotdepositToConsensusLayer() public {
+        IConsensusLayerDepositManagerV1.ValidatorDeposit[] memory emptyDeposits =
+            new IConsensusLayerDepositManagerV1.ValidatorDeposit[](0);
         vm.startPrank(joe);
         vm.expectRevert(unauthJoe);
-        firewalledRiver.depositToConsensusLayerWithDepositRoot(_createAllocation(10), bytes32(0));
+        firewalledRiver.depositToConsensusLayer(emptyDeposits, bytes32(0));
         vm.stopPrank();
     }
 

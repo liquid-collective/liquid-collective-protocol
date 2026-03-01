@@ -161,8 +161,8 @@ interface IRiverV1 is IConsensusLayerDepositManagerV1, IUserDepositManagerV1, IS
         uint128 _maxDailyRelativeCommittableAmount_
     ) external;
 
-    /// @notice Initializes version 1.2 of the River System
-    function initRiverV1_2() external;
+    /// @notice Initializes version 2 of the River System
+    function initRiverV2() external;
 
     /// @notice Get the current global fee
     /// @return The global fee
