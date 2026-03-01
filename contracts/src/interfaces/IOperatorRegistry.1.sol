@@ -14,6 +14,15 @@ interface IOperatorsRegistryV1 {
         uint256 operatorIndex;
         uint256 validatorCount;
     }
+
+    /// @notice Structure representing an ETH-denominated exit allocation
+    /// @param operatorIndex The index of the operator
+    /// @param exitBalance The amount of ETH to exit for this operator
+    struct ExitAllocation {
+        uint256 operatorIndex;
+        uint256 exitBalance;
+    }
+
     /// @notice A new operator has been added to the registry
     /// @param index The operator index
     /// @param name The operator display name
