@@ -62,6 +62,37 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
         _migrateOperators_V1_1();
     }
 
+    /// @notice Migration from count-based to ETH-based operator tracking
+    function initOperatorsRegistryV2() external init(2) {
+        // Migrate exit demand from count to ETH
+        CurrentExitDemand.set(CurrentValidatorExitsDemand.get() * 32 ether);
+        TotalExitsRequested.set(TotalValidatorExitsRequested.get() * 32 ether);
+
+        // Migrate per-operator balances from V2 to V3
+        uint256 operatorCount = OperatorsV2.getCount();
+        for (uint256 i = 0; i < operatorCount; ++i) {
+            OperatorsV2.Operator storage v2Op = OperatorsV2.get(i);
+            OperatorsV3.Operator memory v3Op = OperatorsV3.Operator({
+                fundedBalance: uint256(v2Op.funded) * 32 ether,
+                requestedExitBalance: uint256(v2Op.requestedExits) * 32 ether,
+                active: v2Op.active,
+                name: v2Op.name,
+                operator: v2Op.operator
+            });
+            OperatorsV3.push(v3Op);
+        }
+
+        // Migrate stopped validator counts to stopped balances
+        uint32[] storage stoppedCounts = OperatorsV2.getStoppedValidators();
+        if (stoppedCounts.length > 0) {
+            uint256[] memory stoppedBalances = new uint256[](stoppedCounts.length);
+            for (uint256 i = 0; i < stoppedCounts.length; ++i) {
+                stoppedBalances[i] = uint256(stoppedCounts[i]) * 32 ether;
+            }
+            OperatorsV3.setRawStoppedBalances(stoppedBalances);
+        }
+    }
+
     /// @notice Prevent unauthorized calls
     modifier onlyRiver() virtual {
         if (msg.sender != RiverAddress.get()) {

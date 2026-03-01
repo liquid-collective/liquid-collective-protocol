@@ -30,6 +30,7 @@ import "./state/river/MetadataURI.sol";
 import "./state/river/LastConsensusLayerReport.sol";
 import "./state/river/DepositedBalance.sol";
 import "./state/river/ActivatedDepositedBalance.sol";
+import "./state/river/DepositedValidatorCount.sol";
 
 /// @title River (v1)
 /// @author Alluvial Finance Inc.
@@ -114,6 +115,18 @@ contract RiverV1 is
         );
 
         _approve(address(this), _redeemManager, type(uint256).max);
+    }
+
+    /// @notice Migration from count-based to ETH-based validator tracking
+    function initRiverV2() external init(2) {
+        IOracleManagerV1.StoredConsensusLayerReport storage lastReport = LastConsensusLayerReport.get();
+
+        // Migrate deposited balance: count * 32 ETH
+        uint256 depositedCount = DepositedValidatorCount.get();
+        DepositedBalance.set(depositedCount * 32 ether);
+
+        // Migrate activated balance: oracle's validator count * 32 ETH
+        ActivatedDepositedBalance.set(uint256(lastReport.validatorsCount) * 32 ether);
     }
 
     /// @inheritdoc IRiverV1
