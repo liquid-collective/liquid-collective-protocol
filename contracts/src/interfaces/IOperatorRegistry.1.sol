@@ -397,4 +397,28 @@ interface IOperatorsRegistryV1 {
     /// @param _count The amount of exit requests to add to the demand
     /// @param _depositedValidatorCount The total deposited validator count
     function demandValidatorExits(uint256 _count, uint256 _depositedValidatorCount) external;
+
+    /// @notice Report stopped balances from the oracle (ETH-denominated)
+    /// @param _stoppedBalances The stopped balances per operator (index 0 = total)
+    /// @param _depositedBalance The current deposited balance
+    function reportStoppedBalances(uint256[] calldata _stoppedBalances, uint256 _depositedBalance) external;
+
+    /// @notice Report a funded balance increase for an operator after a deposit
+    /// @param _operatorIndex The operator index
+    /// @param _amount The deposit amount in ETH
+    function reportFundedBalance(uint256 _operatorIndex, uint256 _amount) external;
+
+    /// @notice Retrieve the total stopped and requested exit balances (ETH-denominated)
+    /// @return The total stopped balance
+    /// @return The total requested exit balance (requested + demand)
+    function getStoppedAndRequestedExitBalances() external view returns (uint256, uint256);
+
+    /// @notice Increase the exit demand (ETH-denominated)
+    /// @param _amount The amount of ETH to demand exits for
+    /// @param _depositedBalance The current deposited balance
+    function demandExits(uint256 _amount, uint256 _depositedBalance) external;
+
+    /// @notice Process explicit per-operator exit allocations using ETH-denominated balances
+    /// @param _allocations The proposed per-operator exit allocations, sorted by operator index
+    function requestExits(ExitAllocation[] calldata _allocations) external;
 }

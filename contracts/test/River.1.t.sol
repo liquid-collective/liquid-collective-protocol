@@ -22,10 +22,13 @@ import "../src/CoverageFund.1.sol";
 import "../src/RedeemManager.1.sol";
 
 contract OperatorsRegistryWithOverridesV1 is OperatorsRegistryV1 {
-    function sudoStoppedValidatorCounts(uint32[] calldata stoppedValidatorCounts, uint256 depositedValidatorCount)
-        external
-    {
-        _setStoppedValidatorCounts(stoppedValidatorCounts, depositedValidatorCount);
+    function sudoStoppedValidatorCounts(uint32[] calldata, uint256) external pure {
+        // No-op: stopped validator counts replaced by stopped balances in V3
+        revert("Use sudoStoppedBalances instead");
+    }
+
+    function sudoStoppedBalances(uint256[] calldata stoppedBalances, uint256 depositedBalance) external {
+        _setStoppedBalances(stoppedBalances, depositedBalance);
     }
 }
 

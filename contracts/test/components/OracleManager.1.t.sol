@@ -10,6 +10,7 @@ import "../utils/LibImplementationUnbricker.sol";
 import "../../src/components/OracleManager.1.sol";
 import "../../src/libraries/LibUint256.sol";
 import "../../src/state/shared/AdministratorAddress.sol";
+import "../../src/state/river/DepositedValidatorCount.sol";
 
 contract OracleManagerV1ExposeInitializer is OracleManagerV1 {
     function supersedeReportedBalanceSum(uint256 amount) external {
