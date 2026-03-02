@@ -13,50 +13,56 @@ import "./utils/LibImplementationUnbricker.sol";
 import "../src/OperatorsRegistry.1.sol";
 
 contract OperatorsRegistryInitializableV1 is OperatorsRegistryV1 {
-    /// @dev Override to allow tests to call pickNextValidatorsToDeposit without pranking as river
+    /// @dev Override to allow tests to call functions without pranking as river
     modifier onlyRiver() override {
         _;
     }
 
     function sudoSetFunded(uint256 _index, uint32 _funded) external {
-        OperatorsV2.Operator storage operator = OperatorsV2.get(_index);
-        operator.funded = _funded;
+        OperatorsV3.Operator storage operator = OperatorsV3.get(_index);
+        operator.fundedBalance = uint256(_funded) * 32 ether;
     }
 
     function sudoSetKeys(uint256 _operatorIndex, uint32 _keyCount) external {
-        OperatorsV2.setKeys(_operatorIndex, _keyCount);
+        // No-op: key tracking removed in V3
     }
 
     function sudoExitRequests(uint256 _operatorIndex, uint32 _requestedExits) external {
-        OperatorsV2.get(_operatorIndex).requestedExits = _requestedExits;
+        OperatorsV3.get(_operatorIndex).requestedExitBalance = uint256(_requestedExits) * 32 ether;
     }
 
-    function sudoStoppedValidatorCounts(uint32[] calldata stoppedValidatorCount, uint256 depositedValidatorCount)
-        external
-    {
-        _setStoppedValidatorCounts(stoppedValidatorCount, depositedValidatorCount);
+    function sudoStoppedBalances(uint256[] calldata stoppedBalances, uint256 depositedBalance) external {
+        _setStoppedBalances(stoppedBalances, depositedBalance);
+    }
+
+    function sudoStoppedValidatorCounts(uint32[] calldata, uint256) external pure {
+        // No-op: stopped validator counts replaced by stopped balances in V3
+        revert("Use sudoStoppedBalances instead");
     }
 }
 
 /// @dev Same as OperatorsRegistryInitializableV1 but does NOT override onlyRiver; use for tests that assert Unauthorized
 contract OperatorsRegistryStrictRiverV1 is OperatorsRegistryV1 {
     function sudoSetFunded(uint256 _index, uint32 _funded) external {
-        OperatorsV2.Operator storage operator = OperatorsV2.get(_index);
-        operator.funded = _funded;
+        OperatorsV3.Operator storage operator = OperatorsV3.get(_index);
+        operator.fundedBalance = uint256(_funded) * 32 ether;
     }
 
     function sudoSetKeys(uint256 _operatorIndex, uint32 _keyCount) external {
-        OperatorsV2.setKeys(_operatorIndex, _keyCount);
+        // No-op: key tracking removed in V3
     }
 
     function sudoExitRequests(uint256 _operatorIndex, uint32 _requestedExits) external {
-        OperatorsV2.get(_operatorIndex).requestedExits = _requestedExits;
+        OperatorsV3.get(_operatorIndex).requestedExitBalance = uint256(_requestedExits) * 32 ether;
     }
 
-    function sudoStoppedValidatorCounts(uint32[] calldata stoppedValidatorCount, uint256 depositedValidatorCount)
-        external
-    {
-        _setStoppedValidatorCounts(stoppedValidatorCount, depositedValidatorCount);
+    function sudoStoppedBalances(uint256[] calldata stoppedBalances, uint256 depositedBalance) external {
+        _setStoppedBalances(stoppedBalances, depositedBalance);
+    }
+
+    function sudoStoppedValidatorCounts(uint32[] calldata, uint256) external pure {
+        // No-op: stopped validator counts replaced by stopped balances in V3
+        revert("Use sudoStoppedBalances instead");
     }
 }
 
@@ -202,19 +208,7 @@ contract OperatorsRegistryV1Tests is OperatorsRegistryV1TestBase, OperatorAlloca
         operatorsRegistry.initOperatorsRegistryV1(admin, river);
     }
 
-    function testForceFundedValidatorKeysEventEmission() public {
-        operatorsRegistry.getOperatorCount();
-        operatorsRegistry.forceFundedValidatorKeysEventEmission(100);
-
-        bytes32 operatorIndex = vm.load(
-            address(operatorsRegistry),
-            bytes32(
-                uint256(keccak256("river.state.migration.operatorsRegistry.fundedKeyEventRebroadcasting.operatorIndex"))
-                    - 1
-            )
-        );
-        assertEq(uint256(operatorIndex), type(uint256).max);
-    }
+    // NOTE: testForceFundedValidatorKeysEventEmission removed - function was deprecated in accounting changes
 
     function testInternalSetKeys(uint256 _nodeOperatorAddressSalt, bytes32 _name, uint32 _keyCount, uint32 _blockRoll)
         public

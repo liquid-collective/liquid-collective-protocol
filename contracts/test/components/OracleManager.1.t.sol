@@ -10,6 +10,7 @@ import "../utils/LibImplementationUnbricker.sol";
 import "../../src/components/OracleManager.1.sol";
 import "../../src/libraries/LibUint256.sol";
 import "../../src/state/shared/AdministratorAddress.sol";
+import "../../src/state/river/DepositedValidatorCount.sol";
 
 contract OracleManagerV1ExposeInitializer is OracleManagerV1 {
     function supersedeReportedBalanceSum(uint256 amount) external {
@@ -137,7 +138,7 @@ contract OracleManagerV1ExposeInitializer is OracleManagerV1 {
         amountToDeposit += result;
     }
 
-    event Internal_SetReportedStoppedValidatorCounts(uint32[] stoppedValidatorCounts);
+    event Internal_SetReportedStoppedBalances(uint256[] stoppedBalances);
 
     event Internal_RequestExitsBasedOnRedeemDemandAfterRebalancings(
         uint256 exitingBalance, bool depositToRedeemRebalancingAllowed, uint256 exitCountRequest
@@ -145,13 +146,13 @@ contract OracleManagerV1ExposeInitializer is OracleManagerV1 {
 
     function _requestExitsBasedOnRedeemDemandAfterRebalancings(
         uint256 exitingBalance,
-        uint32[] memory stoppedValidatorCounts,
+        uint256[] memory stoppedBalances,
         bool depositToRedeemRebalancingAllowed,
         bool slashingContainmentModeEnabled
     ) internal override {
         uint256 exitCount = 0;
 
-        emit Internal_SetReportedStoppedValidatorCounts(stoppedValidatorCounts);
+        emit Internal_SetReportedStoppedBalances(stoppedBalances);
 
         if (slashingContainmentModeEnabled) {
             return;
@@ -209,7 +210,7 @@ contract OracleManagerV1Tests is Test {
     );
     event Internal_CommitBalanceToDeposit(uint256 period, uint256 depositBalance);
     event Internal_SkimExcessBalanceToRedeem(uint256 balanceToDeposit, uint256 balanceToRedeem);
-    event Internal_SetReportedStoppedValidatorCounts(uint32[] stoppedValidatorCounts);
+    event Internal_SetReportedStoppedBalances(uint256[] stoppedBalances);
 
     function setUp() public {
         admin = makeAddr("admin");
@@ -316,7 +317,7 @@ contract OracleManagerV1Tests is Test {
 
         v.clr.validatorsExitedBalance = exitedCount * 32 ether;
         v.clr.validatorsExitingBalance = (stoppedValidatorCount - exitedCount) * 32 ether;
-        v.clr.stoppedValidatorCountPerOperator = new uint32[](1);
+        v.clr.stoppedBalancePerOperator = new uint256[](1);
         v.clr.rebalanceDepositToRedeemMode = false;
         v.clr.slashingContainmentMode = false;
 
@@ -348,7 +349,7 @@ contract OracleManagerV1Tests is Test {
         vm.expectEmit(true, true, true, true);
         emit Internal_OnEarnings(v.elFeesAvailable + v.clr.validatorsSkimmedBalance);
         vm.expectEmit(true, true, true, true);
-        emit Internal_SetReportedStoppedValidatorCounts(v.clr.stoppedValidatorCountPerOperator);
+        emit Internal_SetReportedStoppedBalances(v.clr.stoppedBalancePerOperator);
         vm.expectEmit(true, true, true, true);
         emit Internal_RequestExitsBasedOnRedeemDemandAfterRebalancings(v.clr.validatorsExitingBalance, false, 0);
         vm.expectEmit(true, true, true, true);

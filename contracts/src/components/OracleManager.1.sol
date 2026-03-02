@@ -10,7 +10,8 @@ import "../state/river/LastConsensusLayerReport.sol";
 import "../state/river/OracleAddress.sol";
 import "../state/river/CLValidatorTotalBalance.sol";
 import "../state/river/CLValidatorCount.sol";
-import "../state/river/DepositedValidatorCount.sol";
+import "../state/river/DepositedBalance.sol";
+import "../state/river/ActivatedDepositedBalance.sol";
 import "../state/river/LastOracleRoundId.sol";
 
 /// @title Oracle Manager (v1)
@@ -22,8 +23,6 @@ import "../state/river/LastOracleRoundId.sol";
 /// @notice validators that have been activated on the consensus layer.
 abstract contract OracleManagerV1 is IOracleManagerV1 {
     uint256 internal constant ONE_YEAR = 365 days;
-    /// @notice Size of a deposit in ETH
-    uint256 public constant _DEPOSIT_SIZE = 32 ether;
 
     /// @notice Handler called if the delta between the last and new validator balance sum is positive
     /// @dev Must be overridden
@@ -69,7 +68,7 @@ abstract contract OracleManagerV1 is IOracleManagerV1 {
     /// @param _depositToRedeemRebalancingAllowed True if rebalancing from deposit to redeem is allowed
     function _requestExitsBasedOnRedeemDemandAfterRebalancings(
         uint256 _exitingBalance,
-        uint32[] memory _stoppedValidatorCounts,
+        uint256[] memory _stoppedBalances,
         bool _depositToRedeemRebalancingAllowed,
         bool _slashingContainmentModeEnabled
     ) internal virtual;
@@ -294,13 +293,18 @@ abstract contract OracleManagerV1 is IOracleManagerV1 {
                 );
             }
 
-            // we ensure that the reported validator count is not decreasing
-            if (
-                _report.validatorsCount > DepositedValidatorCount.get()
-                    || _report.validatorsCount < lastStoredReport.validatorsCount
-            ) {
+            // we ensure that the reported validator count is not decreasing (informational check)
+            if (_report.validatorsCount < lastStoredReport.validatorsCount) {
                 revert InvalidValidatorCountReport(
-                    _report.validatorsCount, DepositedValidatorCount.get(), lastStoredReport.validatorsCount
+                    _report.validatorsCount, 0, lastStoredReport.validatorsCount
+                );
+            }
+
+            // validate activated deposit balance does not exceed deposited balance
+            uint256 newActivatedBalance = ActivatedDepositedBalance.get() + _report.newlyActivatedDepositedBalance;
+            if (newActivatedBalance > DepositedBalance.get()) {
+                revert InvalidValidatorCountReport(
+                    _report.validatorsCount, DepositedBalance.get(), lastStoredReport.validatorsCount
                 );
             }
 
@@ -332,6 +336,13 @@ abstract contract OracleManagerV1 is IOracleManagerV1 {
             storedReport.rebalanceDepositToRedeemMode = _report.rebalanceDepositToRedeemMode;
             storedReport.slashingContainmentMode = _report.slashingContainmentMode;
             LastConsensusLayerReport.set(storedReport);
+
+            // update the activated deposited balance with the newly activated amount
+            if (_report.newlyActivatedDepositedBalance > 0) {
+                ActivatedDepositedBalance.set(
+                    ActivatedDepositedBalance.get() + _report.newlyActivatedDepositedBalance
+                );
+            }
         }
 
         ReportBounds.ReportBoundsStruct memory rb = ReportBounds.get();
@@ -420,7 +431,7 @@ abstract contract OracleManagerV1 is IOracleManagerV1 {
 
         _requestExitsBasedOnRedeemDemandAfterRebalancings(
             _report.validatorsExitingBalance,
-            _report.stoppedValidatorCountPerOperator,
+            _report.stoppedBalancePerOperator,
             _report.rebalanceDepositToRedeemMode,
             _report.slashingContainmentMode
         );

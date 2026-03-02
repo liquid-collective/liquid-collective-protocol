@@ -1,80 +1,44 @@
 //SPDX-License-Identifier: BUSL-1.1
 pragma solidity 0.8.34;
 
-import "../IOperatorRegistry.1.sol";
-
-/// @title Consensys Layer Deposit Manager Interface (v1)
-/// @author Alluvial Finance Inc.
-/// @notice This interface exposes methods to handle the interactions with the official deposit contract
 interface IConsensusLayerDepositManagerV1 {
-    /// @notice The stored deposit contract address changed
-    /// @param depositContract Address of the deposit contract
+    /// @notice A single validator deposit with keeper-provided key, signature, and amount
+    struct ValidatorDeposit {
+        bytes pubkey;
+        bytes signature;
+        uint256 depositAmount;
+        uint256 operatorIndex;
+    }
+
     event SetDepositContractAddress(address indexed depositContract);
-
-    /// @notice The stored withdrawal credentials changed
-    /// @param withdrawalCredentials The withdrawal credentials to use for deposits
     event SetWithdrawalCredentials(bytes32 withdrawalCredentials);
+    event SetDepositedBalance(uint256 oldDepositedBalance, uint256 newDepositedBalance);
 
-    /// @notice Emitted when the deposited validator count is updated
-    /// @param oldDepositedValidatorCount The old deposited validator count value
-    /// @param newDepositedValidatorCount The new deposited validator count value
-    event SetDepositedValidatorCount(uint256 oldDepositedValidatorCount, uint256 newDepositedValidatorCount);
-
-    /// @notice Not enough funds to deposit one validator
     error NotEnoughFunds();
-
-    /// @notice The length of the BLS Public key is invalid during deposit
     error InconsistentPublicKeys();
-
-    /// @notice The length of the BLS Signature is invalid during deposit
     error InconsistentSignatures();
-
-    /// @notice The internal key retrieval returned no keys
-    error NoAvailableValidatorKeys();
-
-    /// @notice The received count of public keys to deposit is invalid
-    error InvalidPublicKeyCount();
-
-    /// @notice The withdrawal credentials value is null
     error InvalidWithdrawalCredentials();
-
-    /// @notice An error occured during the deposit
     error ErrorOnDeposit();
-
-    /// @notice Invalid deposit root
     error InvalidDepositRoot();
-
-    // @notice Not keeper
     error OnlyKeeper();
+    error DepositAmountTooLow(uint256 amount, uint256 minimum);
+    error DepositAmountTooHigh(uint256 amount, uint256 maximum);
+    error DepositAmountNotGweiAligned(uint256 amount);
+    error DepositsExceedCommittedBalance(uint256 totalAmount, uint256 committedBalance);
+    error EmptyDepositsArray();
 
-    /// @notice The operator allocations exceed the committed balance
-    error OperatorAllocationsExceedCommittedBalance();
-
-    /// @notice Returns the amount of ETH not yet committed for deposit
-    /// @return The amount of ETH not yet committed for deposit
     function getBalanceToDeposit() external view returns (uint256);
-
-    /// @notice Returns the amount of ETH committed for deposit
-    /// @return The amount of ETH committed for deposit
     function getCommittedBalance() external view returns (uint256);
-
-    /// @notice Retrieve the withdrawal credentials
-    /// @return The withdrawal credentials
     function getWithdrawalCredentials() external view returns (bytes32);
-
-    /// @notice Get the deposited validator count (the count of deposits made by the contract)
-    /// @return The deposited validator count
-    function getDepositedValidatorCount() external view returns (uint256);
-
-    /// @notice Get the keeper address
-    /// @return The keeper address
+    function getDepositedBalance() external view returns (uint256);
+    function getActivatedDepositedBalance() external view returns (uint256);
     function getKeeper() external view returns (address);
 
-    /// @notice Deposits current balance to the Consensus Layer based on explicit operator allocations
-    /// @param _allocations The operator allocations specifying how many validators per operator
-    /// @param _depositRoot The root of the deposit tree
-    function depositToConsensusLayerWithDepositRoot(
-        IOperatorsRegistryV1.OperatorAllocation[] calldata _allocations,
+    /// @notice Deposits ETH to the Consensus Layer with keeper-provided keys and signatures
+    /// @param _deposits Array of validator deposits with pubkey, signature, amount, and operator index
+    /// @param _depositRoot Expected deposit contract root for front-running protection
+    function depositToConsensusLayer(
+        ValidatorDeposit[] calldata _deposits,
         bytes32 _depositRoot
     ) external;
 }
