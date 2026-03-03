@@ -4427,7 +4427,7 @@ contract OperatorsRegistryV1TestDistribution is OperatorAllocationTestBase {
     }
 
     function testVersion() external {
-        assertEq(operatorsRegistry.version(), "1.2.1");
+        assertEq(operatorsRegistry.version(), "1.3.0");
     }
 
     function testGetNextValidatorsToDepositFromActiveOperatorsRevertsWithEmptyAllocation() public {

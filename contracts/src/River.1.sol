@@ -28,6 +28,9 @@ import "./state/river/BalanceToRedeem.sol";
 import "./state/river/GlobalFee.sol";
 import "./state/river/MetadataURI.sol";
 import "./state/river/LastConsensusLayerReport.sol";
+import "./state/river/InFlightDepositBalance.sol";
+import "./state/river/PendingFullExitBalance.sol";
+import "./state/river/KeeperAddress.sol";
 
 /// @title River (v1)
 /// @author Alluvial Finance Inc.
@@ -122,6 +125,18 @@ contract RiverV1 is
         unchecked {
             _setCommittedBalance(CommittedBalance.get() - dustToUncommit);
             _setBalanceToDeposit(BalanceToDeposit.get() + dustToUncommit);
+        }
+    }
+
+    /// @inheritdoc IRiverV1
+    function initRiverV1_3() external init(3) {
+        IOracleManagerV1.StoredConsensusLayerReport storage storedReport = LastConsensusLayerReport.get();
+        uint256 clValidatorCount = storedReport.validatorsCount;
+        uint256 depositedValidatorCount = DepositedValidatorCount.get();
+        if (depositedValidatorCount > clValidatorCount) {
+            uint256 inFlightBalance = (depositedValidatorCount - clValidatorCount) * DEPOSIT_SIZE;
+            InFlightDepositBalance.set(inFlightBalance);
+            emit SetInFlightDepositBalance(0, inFlightBalance);
         }
     }
 
@@ -281,6 +296,40 @@ contract RiverV1 is
         }
     }
 
+    /// @inheritdoc IRiverV1
+    function requestFullExits(IRiverV1.FullExitRequest[] calldata _exitRequests) external {
+        if (msg.sender != KeeperAddress.get()) {
+            revert OnlyKeeper();
+        }
+
+        IOperatorsRegistryV1 or_ = IOperatorsRegistryV1(OperatorsRegistryAddress.get());
+
+        uint256 totalEthAmount;
+        uint256 totalValidatorCount;
+        IOperatorsRegistryV1.OperatorAllocation[] memory allocations =
+            new IOperatorsRegistryV1.OperatorAllocation[](_exitRequests.length);
+
+        for (uint256 i = 0; i < _exitRequests.length; ++i) {
+            totalEthAmount += _exitRequests[i].ethAmount;
+            totalValidatorCount += _exitRequests[i].validatorCount;
+            allocations[i] = IOperatorsRegistryV1.OperatorAllocation({
+                operatorIndex: _exitRequests[i].operatorIndex,
+                validatorCount: _exitRequests[i].validatorCount
+            });
+        }
+
+        PendingFullExitBalance.set(PendingFullExitBalance.get() + totalEthAmount);
+        or_.fillExitDemandBalance(totalEthAmount);
+        or_.requestValidatorExits(allocations);
+
+        emit FullExitsRequested(totalEthAmount, totalValidatorCount);
+    }
+
+    /// @inheritdoc IRiverV1
+    function getPendingFullExitBalance() external view returns (uint256) {
+        return PendingFullExitBalance.get();
+    }
+
     /// @notice Overridden handler to pass the system admin inside components
     /// @return The address of the admin
     function _getRiverAdmin()
@@ -391,15 +440,37 @@ contract RiverV1 is
     /// @return The current total asset balance managed by River
     function _assetBalance() internal view override(SharesManagerV1, OracleManagerV1) returns (uint256) {
         IOracleManagerV1.StoredConsensusLayerReport storage storedReport = LastConsensusLayerReport.get();
-        uint256 clValidatorCount = storedReport.validatorsCount;
-        uint256 depositedValidatorCount = DepositedValidatorCount.get();
-        if (clValidatorCount < depositedValidatorCount) {
-            return storedReport.validatorsBalance + BalanceToDeposit.get() + CommittedBalance.get()
-                + BalanceToRedeem.get() + (depositedValidatorCount - clValidatorCount)
-                * ConsensusLayerDepositManagerV1.DEPOSIT_SIZE;
-        } else {
-            return
-                storedReport.validatorsBalance + BalanceToDeposit.get() + CommittedBalance.get() + BalanceToRedeem.get();
+        return storedReport.validatorsBalance + BalanceToDeposit.get() + CommittedBalance.get()
+            + BalanceToRedeem.get() + InFlightDepositBalance.get();
+    }
+
+    /// @notice Overridden handler to increase the in-flight deposit balance after deposits
+    /// @param _amount The ETH amount to add to the in-flight deposit balance
+    function _increaseInFlightDepositBalance(uint256 _amount) internal override {
+        uint256 oldBalance = InFlightDepositBalance.get();
+        uint256 newBalance = oldBalance + _amount;
+        InFlightDepositBalance.set(newBalance);
+        emit SetInFlightDepositBalance(oldBalance, newBalance);
+    }
+
+    /// @notice Overridden handler to decrease the in-flight deposit balance when validators activate
+    /// @param _newValidatorCount The number of newly activated validators
+    function _decreaseInFlightDepositBalance(uint32 _newValidatorCount) internal override {
+        uint256 oldBalance = InFlightDepositBalance.get();
+        uint256 decrease = uint256(_newValidatorCount) * DEPOSIT_SIZE;
+        uint256 newBalance = oldBalance > decrease ? oldBalance - decrease : 0;
+        InFlightDepositBalance.set(newBalance);
+        emit SetInFlightDepositBalance(oldBalance, newBalance);
+    }
+
+    /// @notice Overridden handler to reconcile pending full exits when exited balance increases
+    /// @param _exitedIncrease The increase in total exited ETH balance
+    function _reconcileFullExits(uint256 _exitedIncrease) internal override {
+        uint256 pendingBalance = PendingFullExitBalance.get();
+        if (pendingBalance > 0) {
+            uint256 reconciled = LibUint256.min(_exitedIncrease, pendingBalance);
+            PendingFullExitBalance.set(pendingBalance - reconciled);
+            emit FullExitsReconciled(reconciled);
         }
     }
 
@@ -526,9 +597,9 @@ contract RiverV1 is
                 _balanceFromShares(IRedeemManagerV1(RedeemManagerAddress.get()).getRedeemDemand());
 
             // if after all rebalancings, the redeem manager demand is still higher than the balance to redeem and exiting eth, we compute
-            // the amount of validators to exit in order to cover the remaining demand
+            // the amount of ETH to demand for exits in order to cover the remaining demand
             if (availableBalanceToRedeem + _exitingBalance < redeemManagerDemandInEth) {
-                // if reblancing is enabled and the redeem manager demand is higher than exiting eth, we add eth for deposit buffer to redeem buffer
+                // if rebalancing is enabled and the redeem manager demand is higher than exiting eth, we add eth for deposit buffer to redeem buffer
                 if (_depositToRedeemRebalancingAllowed && availableBalanceToDeposit > 0) {
                     uint256 rebalancingAmount = LibUint256.min(
                         availableBalanceToDeposit, redeemManagerDemandInEth - _exitingBalance - availableBalanceToRedeem
@@ -540,26 +611,16 @@ contract RiverV1 is
                     }
                 }
 
-                IOperatorsRegistryV1 or = IOperatorsRegistryV1(OperatorsRegistryAddress.get());
+                IOperatorsRegistryV1 or_ = IOperatorsRegistryV1(OperatorsRegistryAddress.get());
 
-                (uint256 totalStoppedValidatorCount, uint256 totalRequestedExitsCount) =
-                    or.getStoppedAndRequestedExitCounts();
+                // Use ETH-based pending full exit balance instead of count-based preExitingBalance
+                uint256 pendingFullExitBalance = PendingFullExitBalance.get();
 
-                // what we are calling pre-exiting balance is the amount of eth that should soon enter the exiting balance
-                // because exit requests have been made and operators might have a lag to process them
-                // we take them into account to not exit too many validators
-                uint256 preExitingBalance =
-                    (totalRequestedExitsCount > totalStoppedValidatorCount
-                                ? (totalRequestedExitsCount - totalStoppedValidatorCount)
-                                : 0) * DEPOSIT_SIZE;
+                if (availableBalanceToRedeem + _exitingBalance + pendingFullExitBalance < redeemManagerDemandInEth) {
+                    uint256 shortfall =
+                        redeemManagerDemandInEth - (availableBalanceToRedeem + _exitingBalance + pendingFullExitBalance);
 
-                if (availableBalanceToRedeem + _exitingBalance + preExitingBalance < redeemManagerDemandInEth) {
-                    uint256 validatorCountToExit = LibUint256.ceil(
-                        redeemManagerDemandInEth - (availableBalanceToRedeem + _exitingBalance + preExitingBalance),
-                        DEPOSIT_SIZE
-                    );
-
-                    or.demandValidatorExits(validatorCountToExit, DepositedValidatorCount.get());
+                    or_.demandExitBalance(shortfall);
                 }
             }
         }
@@ -610,6 +671,6 @@ contract RiverV1 is
     }
 
     function version() external pure returns (string memory) {
-        return "1.2.1";
+        return "1.3.0";
     }
 }

@@ -28,6 +28,10 @@ contract OracleManagerV1ExposeInitializer is OracleManagerV1 {
         return AdministratorAddress.get();
     }
 
+    function _decreaseInFlightDepositBalance(uint32) internal override {}
+    function _reconcileFullExits(uint256) internal override {}
+
+
     constructor(
         address oracle,
         address admin,

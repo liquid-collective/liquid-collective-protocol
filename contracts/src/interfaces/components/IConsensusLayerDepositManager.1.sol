@@ -77,4 +77,8 @@ interface IConsensusLayerDepositManagerV1 {
         IOperatorsRegistryV1.OperatorAllocation[] calldata _allocations,
         bytes32 _depositRoot
     ) external;
+
+    /// @notice Retrieve the current in-flight deposit balance
+    /// @return The current in-flight deposit balance in ETH
+    function getInFlightDepositBalance() external view returns (uint256);
 }

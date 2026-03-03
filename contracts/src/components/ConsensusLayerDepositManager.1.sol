@@ -14,6 +14,7 @@ import "../state/river/DepositedValidatorCount.sol";
 import "../state/river/BalanceToDeposit.sol";
 import "../state/river/CommittedBalance.sol";
 import "../state/river/KeeperAddress.sol";
+import "../state/river/InFlightDepositBalance.sol";
 
 /// @title Consensus Layer Deposit Manager (v1)
 /// @author Alluvial Finance Inc.
@@ -37,6 +38,11 @@ abstract contract ConsensusLayerDepositManagerV1 is IConsensusLayerDepositManage
     /// @notice Handler called to change the committed balance to deposit
     /// @param newCommittedBalance The new committed balance value
     function _setCommittedBalance(uint256 newCommittedBalance) internal virtual;
+
+    /// @notice Handler called to increase the in-flight deposit balance after deposits
+    /// @dev Must be Overridden
+    /// @param _amount The ETH amount to add to the in-flight deposit balance
+    function _increaseInFlightDepositBalance(uint256 _amount) internal virtual;
 
     /// @notice Internal helper to retrieve validator keys ready to be funded
     /// @dev Must be overridden
@@ -88,6 +94,11 @@ abstract contract ConsensusLayerDepositManagerV1 is IConsensusLayerDepositManage
     /// @inheritdoc IConsensusLayerDepositManagerV1
     function getKeeper() external view returns (address) {
         return KeeperAddress.get();
+    }
+
+    /// @inheritdoc IConsensusLayerDepositManagerV1
+    function getInFlightDepositBalance() external view returns (uint256) {
+        return InFlightDepositBalance.get();
     }
 
     /// @inheritdoc IConsensusLayerDepositManagerV1
@@ -150,6 +161,7 @@ abstract contract ConsensusLayerDepositManagerV1 is IConsensusLayerDepositManage
         emit SetDepositedValidatorCount(
             currentDepositedValidatorCount, currentDepositedValidatorCount + receivedPublicKeyCount
         );
+        _increaseInFlightDepositBalance(DEPOSIT_SIZE * receivedPublicKeyCount);
     }
 
     /// @notice Deposits 32 ETH to the official Deposit contract
