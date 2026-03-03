@@ -15,6 +15,7 @@ import "./state/operatorsRegistry/Operators.2.sol";
 import "./state/operatorsRegistry/ValidatorKeys.sol";
 import "./state/operatorsRegistry/TotalValidatorExitsRequested.sol";
 import "./state/operatorsRegistry/CurrentValidatorExitsDemand.sol";
+import "./state/operatorsRegistry/CurrentExitDemandBalance.sol";
 import "./state/shared/RiverAddress.sol";
 
 import "./state/migration/OperatorsRegistry_FundedKeyEventRebroadcasting_KeyIndex.sol";
@@ -689,6 +690,16 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
             _setCurrentValidatorExitsDemand(vars.cachedCurrentValidatorExitsDemand, vars.currentValidatorExitsDemand);
         }
 
+        // Decrement ETH-based exit demand balance for unsolicited exits (conservative: 32 ETH per validator)
+        if (unsolicitedExitsSum > 0) {
+            uint256 currentExitDemandBalance = CurrentExitDemandBalance.get();
+            if (currentExitDemandBalance > 0) {
+                uint256 decrease = LibUint256.min(unsolicitedExitsSum * 32 ether, currentExitDemandBalance);
+                CurrentExitDemandBalance.set(currentExitDemandBalance - decrease);
+                emit SetCurrentExitDemandBalance(currentExitDemandBalance, currentExitDemandBalance - decrease);
+            }
+        }
+
         // we check that the total is matching the sum of the individual values
         if (vars.totalStoppedValidatorCount != vars.count) {
             revert InvalidStoppedValidatorCountsSum();
@@ -735,8 +746,39 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
         emit SetTotalValidatorExitsRequested(_currentValue, _newValue);
     }
 
+    /// @inheritdoc IOperatorsRegistryV1
+    function demandExitBalance(uint256 _ethAmount) external onlyRiver {
+        uint256 currentBalance = CurrentExitDemandBalance.get();
+        uint256 newBalance = currentBalance + _ethAmount;
+        CurrentExitDemandBalance.set(newBalance);
+        emit SetCurrentExitDemandBalance(currentBalance, newBalance);
+    }
+
+    /// @inheritdoc IOperatorsRegistryV1
+    function fillExitDemandBalance(uint256 _ethAmount) external onlyRiver {
+        uint256 currentBalance = CurrentExitDemandBalance.get();
+        uint256 newBalance = currentBalance > _ethAmount ? currentBalance - _ethAmount : 0;
+        CurrentExitDemandBalance.set(newBalance);
+        emit SetCurrentExitDemandBalance(currentBalance, newBalance);
+    }
+
+    /// @inheritdoc IOperatorsRegistryV1
+    function getCurrentExitDemandBalance() external view returns (uint256) {
+        return CurrentExitDemandBalance.get();
+    }
+
+    /// @notice Initializes version 1.3 of the Operators Registry (ETH-based accounting)
+    function initOperatorsRegistryV1_3() external init(2) {
+        uint256 currentDemand = CurrentValidatorExitsDemand.get();
+        if (currentDemand > 0) {
+            uint256 ethDemand = currentDemand * 32 ether;
+            CurrentExitDemandBalance.set(ethDemand);
+            emit SetCurrentExitDemandBalance(0, ethDemand);
+        }
+    }
+
     /// @inheritdoc IProtocolVersion
     function version() external pure returns (string memory) {
-        return "1.2.1";
+        return "1.3.0";
     }
 }

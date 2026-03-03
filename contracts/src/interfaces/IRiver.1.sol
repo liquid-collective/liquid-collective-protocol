@@ -103,6 +103,20 @@ interface IRiverV1 is IConsensusLayerDepositManagerV1, IUserDepositManagerV1, IS
         uint256 redeemManagerDemand, uint256 suppliedRedeemManagerDemand, uint256 suppliedRedeemManagerDemandInEth
     );
 
+    /// @notice The in-flight deposit balance has been updated
+    /// @param oldAmount The old in-flight deposit balance
+    /// @param newAmount The new in-flight deposit balance
+    event SetInFlightDepositBalance(uint256 oldAmount, uint256 newAmount);
+
+    /// @notice Full exits have been requested for validators
+    /// @param ethAmount The total ETH amount of the exit requests
+    /// @param validatorCount The number of validators requested to exit
+    event FullExitsRequested(uint256 ethAmount, uint256 validatorCount);
+
+    /// @notice Full exits have been reconciled based on oracle data
+    /// @param ethAmount The ETH amount reconciled from the pending full exit balance
+    event FullExitsReconciled(uint256 ethAmount);
+
     /// @notice Thrown when the amount received from the Withdraw contract doe not match the requested amount
     /// @param requested The amount that was requested
     /// @param received The amount that was received
@@ -163,6 +177,9 @@ interface IRiverV1 is IConsensusLayerDepositManagerV1, IUserDepositManagerV1, IS
 
     /// @notice Initializes version 1.2 of the River System
     function initRiverV1_2() external;
+
+    /// @notice Initializes version 1.3 of the River System (ETH-based accounting)
+    function initRiverV1_3() external;
 
     /// @notice Get the current global fee
     /// @return The global fee
@@ -268,4 +285,22 @@ interface IRiverV1 is IConsensusLayerDepositManagerV1, IUserDepositManagerV1, IS
 
     /// @notice Input for the redeem manager funds
     function sendRedeemManagerExceedingFunds() external payable;
+
+    /// @notice Structure representing a full exit request for a set of validators
+    /// @param operatorIndex The index of the operator
+    /// @param validatorCount The number of validators to exit for this operator
+    /// @param ethAmount The total ETH amount associated with this exit request
+    struct FullExitRequest {
+        uint256 operatorIndex;
+        uint256 validatorCount;
+        uint256 ethAmount;
+    }
+
+    /// @notice Requests full exits for validators with ETH-based accounting
+    /// @param _exitRequests The array of full exit requests
+    function requestFullExits(FullExitRequest[] calldata _exitRequests) external;
+
+    /// @notice Retrieve the current pending full exit balance
+    /// @return The current pending full exit balance in ETH
+    function getPendingFullExitBalance() external view returns (uint256);
 }

@@ -74,6 +74,16 @@ abstract contract OracleManagerV1 is IOracleManagerV1 {
         bool _slashingContainmentModeEnabled
     ) internal virtual;
 
+    /// @notice Handler called when new validators activate to decrease in-flight deposit balance
+    /// @dev Must be overridden
+    /// @param _newValidatorCount The number of newly activated validators
+    function _decreaseInFlightDepositBalance(uint32 _newValidatorCount) internal virtual;
+
+    /// @notice Handler called to reconcile pending full exits when exited balance increases
+    /// @dev Must be overridden
+    /// @param _exitedIncrease The increase in total exited ETH balance
+    function _reconcileFullExits(uint256 _exitedIncrease) internal virtual;
+
     /// @notice Skims the redeem balance and sends remaining funds to the deposit balance
     function _skimExcessBalanceToRedeem() internal virtual;
 
@@ -251,6 +261,7 @@ abstract contract OracleManagerV1 is IOracleManagerV1 {
         uint256 timeElapsedSinceLastReport;
         uint256 availableAmountToUpperBound;
         uint256 redeemManagerDemand;
+        uint32 lastReportValidatorsCount;
         ConsensusLayerDataReportingTrace trace;
     }
 
@@ -307,6 +318,7 @@ abstract contract OracleManagerV1 is IOracleManagerV1 {
             // we compute the new skimmed amount by taking the delta between reports
             vars.skimmedAmountIncrease = _report.validatorsSkimmedBalance - vars.lastReportSkimmedBalance;
 
+            vars.lastReportValidatorsCount = lastStoredReport.validatorsCount;
             vars.timeElapsedSinceLastReport = _timeBetweenEpochs(cls, lastStoredReport.epoch, _report.epoch);
         }
 
@@ -331,7 +343,18 @@ abstract contract OracleManagerV1 is IOracleManagerV1 {
             storedReport.validatorsCount = _report.validatorsCount;
             storedReport.rebalanceDepositToRedeemMode = _report.rebalanceDepositToRedeemMode;
             storedReport.slashingContainmentMode = _report.slashingContainmentMode;
+
+            // Decrease in-flight deposit balance when new validators activate on the consensus layer
+            if (_report.validatorsCount > vars.lastReportValidatorsCount) {
+                _decreaseInFlightDepositBalance(_report.validatorsCount - vars.lastReportValidatorsCount);
+            }
+
             LastConsensusLayerReport.set(storedReport);
+        }
+
+        // Reconcile pending full exits when exited balance increases
+        if (vars.exitedAmountIncrease > 0) {
+            _reconcileFullExits(vars.exitedAmountIncrease);
         }
 
         ReportBounds.ReportBoundsStruct memory rb = ReportBounds.get();

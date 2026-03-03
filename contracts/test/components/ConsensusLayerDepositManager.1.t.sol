@@ -20,6 +20,9 @@ contract ConsensusLayerDepositManagerV1ExposeInitializer is ConsensusLayerDeposi
         return address(0);
     }
 
+    function _increaseInFlightDepositBalance(uint256) internal override {}
+
+
     function publicConsensusLayerDepositManagerInitializeV1(
         address _depositContractAddress,
         bytes32 _withdrawalCredentials
@@ -81,6 +84,9 @@ contract ConsensusLayerDepositManagerV1UsesRegistry is ConsensusLayerDepositMana
     function _getRiverAdmin() internal pure override returns (address) {
         return address(0);
     }
+
+    function _increaseInFlightDepositBalance(uint256) internal override {}
+
 
     function setRegistry(IOperatorsRegistryV1 _registry) external {
         registry = _registry;
@@ -200,6 +206,9 @@ contract ConsensusLayerDepositManagerV1ControllableValidatorKeyRequest is Consen
     function _getRiverAdmin() internal pure override returns (address) {
         return address(0);
     }
+
+    function _increaseInFlightDepositBalance(uint256) internal override {}
+
 
     function publicConsensusLayerDepositManagerInitializeV1(
         address _depositContractAddress,
@@ -927,6 +936,9 @@ contract ConsensusLayerDepositManagerV1ValidKeys is ConsensusLayerDepositManager
     function _getRiverAdmin() internal pure override returns (address) {
         return address(0);
     }
+
+    function _increaseInFlightDepositBalance(uint256) internal override {}
+
 
     function publicConsensusLayerDepositManagerInitializeV1(
         address _depositContractAddress,

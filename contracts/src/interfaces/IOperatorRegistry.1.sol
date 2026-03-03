@@ -388,4 +388,23 @@ interface IOperatorsRegistryV1 {
     /// @param _count The amount of exit requests to add to the demand
     /// @param _depositedValidatorCount The total deposited validator count
     function demandValidatorExits(uint256 _count, uint256 _depositedValidatorCount) external;
+
+    /// @notice The current exit demand balance has been updated
+    /// @param previousExitDemandBalance The previous exit demand balance in ETH
+    /// @param nextExitDemandBalance The new exit demand balance in ETH
+    event SetCurrentExitDemandBalance(uint256 previousExitDemandBalance, uint256 nextExitDemandBalance);
+
+    /// @notice Increases the ETH-based exit demand balance
+    /// @dev Only callable by the river contract
+    /// @param _ethAmount The amount of ETH to add to the exit demand
+    function demandExitBalance(uint256 _ethAmount) external;
+
+    /// @notice Decreases the ETH-based exit demand balance when exit requests are filled
+    /// @dev Only callable by the river contract
+    /// @param _ethAmount The amount of ETH to subtract from the exit demand
+    function fillExitDemandBalance(uint256 _ethAmount) external;
+
+    /// @notice Retrieve the current ETH-based exit demand balance
+    /// @return The current exit demand balance in ETH
+    function getCurrentExitDemandBalance() external view returns (uint256);
 }
