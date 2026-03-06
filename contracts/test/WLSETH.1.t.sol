@@ -963,4 +963,34 @@ contract WLSETHV1DenyTests is WLSETHV1TestBase {
             assert(wlseth.balanceOf(_recipient) == guyBalance);
         }
     }
+
+    function testMintDeniedRecipient(uint256 _senderSalt, uint256 _recipientSalt, uint32 _sum) external {
+        address _sender = uf._new(_senderSalt);
+        address _recipient = uf._new(_recipientSalt);
+        if (_sum > 0) {
+            RiverTokenMock(address(river)).sudoSetBalance(_sender, _sum);
+            allowlistMock.sudoSetDenied(_recipient, true);
+
+            vm.startPrank(_sender);
+            RiverTokenMock(address(river)).approve(address(wlseth), _sum);
+            vm.expectRevert(abi.encodeWithSignature("Denied(address)", _recipient));
+            wlseth.mint(_recipient, _sum);
+            vm.stopPrank();
+        }
+    }
+
+    function testBurnDeniedSender(uint256 _senderSalt, uint256 _recipientSalt, uint32 _sum) external {
+        address _sender = uf._new(_senderSalt);
+        address _recipient = uf._new(_recipientSalt);
+        if (_sum > 0) {
+            _mint(_sender, _sum);
+            uint256 senderShares = wlseth.sharesOf(_sender);
+            allowlistMock.sudoSetDenied(_sender, true);
+
+            vm.startPrank(_sender);
+            vm.expectRevert(abi.encodeWithSignature("Denied(address)", _sender));
+            wlseth.burn(_recipient, senderShares);
+            vm.stopPrank();
+        }
+    }
 }
