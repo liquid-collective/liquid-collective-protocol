@@ -124,8 +124,11 @@ contract WLSETHV1 is IWLSETHV1, Initializable, ReentrancyGuardUpgradeable {
 
     /// @inheritdoc IWLSETHV1
     function mint(address _recipient, uint256 _shares) external nonReentrant {
-        BalanceOf.set(_recipient, BalanceOf.get(_recipient) + _shares);
         IRiverV1 river = IRiverV1(payable(RiverAddress.get()));
+        if (IAllowlistV1(river.getAllowlist()).isDenied(_recipient)) {
+            revert Denied(_recipient);
+        }
+        BalanceOf.set(_recipient, BalanceOf.get(_recipient) + _shares);
         if (!river.transferFrom(msg.sender, address(this), _shares)) {
             revert TokenTransferError();
         }
@@ -139,8 +142,11 @@ contract WLSETHV1 is IWLSETHV1, Initializable, ReentrancyGuardUpgradeable {
         if (_shares > shares) {
             revert BalanceTooLow();
         }
-        BalanceOf.set(msg.sender, shares - _shares);
         IRiverV1 river = IRiverV1(payable(RiverAddress.get()));
+        if (IAllowlistV1(river.getAllowlist()).isDenied(msg.sender)) {
+            revert Denied(msg.sender);
+        }
+        BalanceOf.set(msg.sender, shares - _shares);
         if (!river.transfer(_recipient, _shares)) {
             revert TokenTransferError();
         }
