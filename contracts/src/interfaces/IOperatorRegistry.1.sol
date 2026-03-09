@@ -260,26 +260,6 @@ interface IOperatorsRegistryV1 {
     /// @return The stopped validator array
     function getStoppedValidatorCountPerOperator() external view returns (uint32[] memory);
 
-    /// @notice Get the details of a validator
-    /// @param _operatorIndex The index of the operator
-    /// @param _validatorIndex The index of the validator
-    /// @return publicKey The public key of the validator
-    /// @return signature The signature used during deposit
-    /// @return funded True if validator has been funded
-    function getValidator(uint256 _operatorIndex, uint256 _validatorIndex)
-        external
-        view
-        returns (bytes memory publicKey, bytes memory signature, bool funded);
-
-    /// @notice Get the next validators that would be funded based on the proposed allocations
-    /// @param _allocations The proposed allocations to validate
-    /// @return publicKeys An array of fundable public keys
-    /// @return signatures An array of signatures linked to the public keys
-    function getNextValidatorsToDepositFromActiveOperators(OperatorAllocation[] memory _allocations)
-        external
-        view
-        returns (bytes[] memory publicKeys, bytes[] memory signatures);
-
     /// @notice Retrieve the active operator set
     /// @return The list of active operators and their details
     function listActiveOperators() external view returns (OperatorsV2.Operator[] memory);
@@ -315,58 +295,6 @@ interface IOperatorsRegistryV1 {
     /// @param _index The operator index
     /// @param _newStatus The new status of the operator
     function setOperatorStatus(uint256 _index, bool _newStatus) external;
-
-    /// @notice Changes the operator staking limit
-    /// @dev Only callable by the administrator
-    /// @dev The operator indexes must be in increasing order and contain no duplicate
-    /// @dev The limit cannot exceed the total key count of the operator
-    /// @dev The _indexes and _newLimits must have the same length.
-    /// @dev Each limit value is applied to the operator index at the same index in the _indexes array.
-    /// @param _operatorIndexes The operator indexes, in increasing order and duplicate free
-    /// @param _newLimits The new staking limit of the operators
-    /// @param _snapshotBlock The block number at which the snapshot was computed
-    function setOperatorLimits(
-        uint256[] calldata _operatorIndexes,
-        uint32[] calldata _newLimits,
-        uint256 _snapshotBlock
-    ) external;
-
-    /// @notice Adds new keys for an operator
-    /// @dev Only callable by the administrator or the operator address
-    /// @param _index The operator index
-    /// @param _keyCount The amount of keys provided
-    /// @param _publicKeysAndSignatures Public keys of the validator, concatenated
-    function addValidators(uint256 _index, uint32 _keyCount, bytes calldata _publicKeysAndSignatures) external;
-
-    /// @notice Remove validator keys
-    /// @dev Only callable by the administrator or the operator address
-    /// @dev The indexes must be provided sorted in decreasing order and duplicate-free, otherwise the method will revert
-    /// @dev The operator limit will be set to the lowest deleted key index if the operator's limit wasn't equal to its total key count
-    /// @dev The operator or the admin cannot remove funded keys
-    /// @dev When removing validators, the indexes of specific unfunded keys can be changed in order to properly
-    /// @dev remove the keys from the storage array. Beware of this specific behavior when chaining calls as the
-    /// @dev targeted public key indexes can point to a different key after a first call was made and performed
-    /// @dev some swaps
-    /// @param _index The operator index
-    /// @param _indexes The indexes of the keys to remove
-    function removeValidators(uint256 _index, uint256[] calldata _indexes) external;
-
-    /// @notice Retrieve validator keys based on explicit operator allocations and mark them as funded
-    /// @dev Only callable by the river contract
-    /// @dev The allocations must be sorted by operator index in strictly ascending order with no duplicates
-    /// @dev Each allocation's validatorCount must be non-zero and not exceed the operator's available fundable keys
-    /// @dev Reverts with InvalidEmptyArray if _allocations is empty
-    /// @dev Reverts with UnorderedOperatorList if operator indexes are not strictly ascending
-    /// @dev Reverts with AllocationWithZeroValidatorCount if any allocation has a zero validator count
-    /// @dev Reverts with InactiveOperator if a referenced operator is inactive
-    /// @dev Reverts with OperatorIgnoredExitRequests if an operator has not complied with exit requests
-    /// @dev Reverts with OperatorHasInsufficientFundableKeys if an operator lacks enough fundable keys
-    /// @param _allocations Node operator allocations specifying how many validators per operator
-    /// @return publicKeys An array of public keys
-    /// @return signatures An array of signatures linked to the public keys
-    function pickNextValidatorsToDeposit(OperatorAllocation[] calldata _allocations)
-        external
-        returns (bytes[] memory publicKeys, bytes[] memory signatures);
 
     /// @notice Process explicit per-operator exit allocations and update operator requestedExits
     /// @dev Only callable by the keeper address returned by the River contract's getKeeper()
