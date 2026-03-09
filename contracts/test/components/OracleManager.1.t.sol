@@ -91,9 +91,16 @@ contract OracleManagerV1ExposeInitializer is OracleManagerV1 {
         emit Internal_PullCoverageFunds(_max, result);
     }
 
+    function supersedeDepositedEthAmount(uint256 amount) external {
+        DepositedEthAmount.set(amount);
+    }
+
     function _assetBalance() internal view override returns (uint256 result) {
-        result = (DepositedValidatorCount.get() - LastConsensusLayerReport.get().validatorsCount) * 32 ether
-            + LastConsensusLayerReport.get().validatorsBalance + amountToDeposit + amountToRedeem;
+        uint256 depositedEth = DepositedValidatorCount.get() * 32 ether;
+        IOracleManagerV1.StoredConsensusLayerReport storage report = LastConsensusLayerReport.get();
+        uint256 clAccountedEth = report.validatorsBalance + report.validatorsExitedBalance + report.validatorsSkimmedBalance;
+        uint256 unaccountedEth = depositedEth > clAccountedEth ? depositedEth - clAccountedEth : 0;
+        result = report.validatorsBalance + amountToDeposit + amountToRedeem + unaccountedEth;
     }
 
     function debug_getTotalUnderlyingBalance() external view returns (uint256) {
@@ -146,6 +153,7 @@ contract OracleManagerV1ExposeInitializer is OracleManagerV1 {
     function _requestExitsBasedOnRedeemDemandAfterRebalancings(
         uint256 exitingBalance,
         uint32[] memory stoppedValidatorCounts,
+        uint256[] memory,
         bool depositToRedeemRebalancingAllowed,
         bool slashingContainmentModeEnabled
     ) internal override {
@@ -158,7 +166,7 @@ contract OracleManagerV1ExposeInitializer is OracleManagerV1 {
         }
 
         if (redeemDemand > amountToRedeem + exitingBalance) {
-            exitCount = LibUint256.ceil((redeemDemand - (amountToRedeem + exitingBalance)), 32 ether);
+            exitCount = redeemDemand - (amountToRedeem + exitingBalance);
         }
         emit Internal_RequestExitsBasedOnRedeemDemandAfterRebalancings(
             exitingBalance, depositToRedeemRebalancingAllowed, exitCount
@@ -323,6 +331,10 @@ contract OracleManagerV1Tests is Test {
         v.elFeesAvailable = om.elFeesAvailable();
         v.exceedingEth = om.exceedingEth();
         v.coverageFundAvailable = om.coverageFundAvailable();
+
+        om.supersedeDepositedEthAmount(
+            v.clr.validatorsBalance + v.clr.validatorsExitedBalance + v.clr.validatorsSkimmedBalance
+        );
 
         {
             (uint256 epochStart, uint256 timeStart, uint256 timeEnd) = om.getCurrentFrame();

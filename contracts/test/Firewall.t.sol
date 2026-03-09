@@ -91,9 +91,8 @@ contract FirewallTests is BytesGenerator, OperatorAllocationTestBase {
         allowlist.initAllowlistV1(payable(address(allowlistFirewall)), payable(address(allowlistFirewall)));
         allowlist.initAllowlistV1_1(payable(address(allowlistFirewall)));
 
-        bytes4[] memory executorCallableOperatorsRegistrySelectors = new bytes4[](2);
+        bytes4[] memory executorCallableOperatorsRegistrySelectors = new bytes4[](1);
         executorCallableOperatorsRegistrySelectors[0] = operatorsRegistry.setOperatorStatus.selector;
-        executorCallableOperatorsRegistrySelectors[1] = operatorsRegistry.setOperatorLimits.selector;
         operatorsRegistryFirewall = new Firewall(
             riverGovernorDAO, executor, address(operatorsRegistry), executorCallableOperatorsRegistrySelectors
         );
@@ -232,54 +231,6 @@ contract FirewallTests is BytesGenerator, OperatorAllocationTestBase {
         vm.startPrank(joe);
         vm.expectRevert(unauthJoe);
         firewalledOperatorsRegistry.setOperatorStatus(operatorBobIndex, true);
-        vm.stopPrank();
-    }
-
-    function testGovernorCanSetOperatorLimit() public {
-        uint256 operatorBobIndex = haveGovernorAddOperatorBob();
-        vm.startPrank(bob);
-
-        bytes memory tenKeys = genBytes((48 + 96) * 10);
-
-        operatorsRegistry.addValidators(operatorBobIndex, 10, tenKeys);
-        vm.stopPrank();
-        vm.startPrank(riverGovernorDAO);
-        uint256[] memory operatorIndexes = new uint256[](1);
-        operatorIndexes[0] = operatorBobIndex;
-        uint32[] memory operatorLimits = new uint32[](1);
-        operatorLimits[0] = 10;
-        firewalledOperatorsRegistry.setOperatorLimits(operatorIndexes, operatorLimits, block.number);
-        assert(operatorsRegistry.getOperator(operatorBobIndex).limit == 10);
-        vm.stopPrank();
-    }
-
-    function testExecutorCanSetOperatorLimit() public {
-        uint256 operatorBobIndex = haveGovernorAddOperatorBob();
-        vm.startPrank(bob);
-
-        bytes memory tenKeys = genBytes((48 + 96) * 10);
-
-        operatorsRegistry.addValidators(operatorBobIndex, 10, tenKeys);
-        vm.stopPrank();
-        vm.startPrank(executor);
-        uint256[] memory operatorIndexes = new uint256[](1);
-        operatorIndexes[0] = operatorBobIndex;
-        uint32[] memory operatorLimits = new uint32[](1);
-        operatorLimits[0] = 10;
-        firewalledOperatorsRegistry.setOperatorLimits(operatorIndexes, operatorLimits, block.number);
-        assert(operatorsRegistry.getOperator(operatorBobIndex).limit == 10);
-        vm.stopPrank();
-    }
-
-    function testRandomCallerCannotSetOperatorLimit() public {
-        uint256 operatorBobIndex = haveGovernorAddOperatorBob();
-        vm.startPrank(joe);
-        vm.expectRevert(unauthJoe);
-        uint256[] memory operatorIndexes = new uint256[](1);
-        operatorIndexes[0] = operatorBobIndex;
-        uint32[] memory operatorLimits = new uint32[](1);
-        operatorLimits[0] = 10;
-        firewalledOperatorsRegistry.setOperatorLimits(operatorIndexes, operatorLimits, block.number);
         vm.stopPrank();
     }
 

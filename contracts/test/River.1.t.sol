@@ -22,10 +22,13 @@ import "../src/CoverageFund.1.sol";
 import "../src/RedeemManager.1.sol";
 
 contract OperatorsRegistryWithOverridesV1 is OperatorsRegistryV1 {
-    function sudoStoppedValidatorCounts(uint32[] calldata stoppedValidatorCounts, uint256 depositedValidatorCount)
-        external
-    {
-        _setStoppedValidatorCounts(stoppedValidatorCounts, depositedValidatorCount);
+    function sudoStoppedValidatorCounts(
+        uint32[] memory stoppedValidatorCounts,
+        uint256[] memory stoppedEthAmounts,
+        uint256 depositedValidatorCount,
+        uint256 depositedEthAmount
+    ) external {
+        _setStoppedValidatorCounts(stoppedValidatorCounts, stoppedEthAmounts, depositedValidatorCount, depositedEthAmount);
     }
 }
 
@@ -73,7 +76,7 @@ abstract contract RiverV1TestBase is OperatorAllocationTestBase, BytesGenerator 
         for (uint256 i = 0; i < opIndexes.length; ++i) {
             if (counts[i] > 0) {
                 allocations[idx] =
-                    IOperatorsRegistryV1.OperatorAllocation({operatorIndex: opIndexes[i], validatorCount: counts[i]});
+                    IOperatorsRegistryV1.OperatorAllocation({operatorIndex: opIndexes[i], depositAmounts: _depositAmountsArray(counts[i])});
                 ++idx;
             }
         }
@@ -221,14 +224,6 @@ contract RiverV1Tests is RiverV1TestBase {
 
         operatorsRegistry.addValidators(operatorTwoIndex, 100, hundredKeysOp2);
 
-        uint256[] memory operatorIndexes = new uint256[](2);
-        operatorIndexes[0] = operatorOneIndex;
-        operatorIndexes[1] = operatorTwoIndex;
-        uint32[] memory operatorLimits = new uint32[](2);
-        operatorLimits[0] = 100;
-        operatorLimits[1] = 100;
-
-        operatorsRegistry.setOperatorLimits(operatorIndexes, operatorLimits, block.number);
         vm.stopPrank();
     }
 
@@ -849,7 +844,11 @@ contract RiverV1Tests is RiverV1TestBase {
         stoppedCounts[0] = 10;
         stoppedCounts[1] = 10;
         stoppedCounts[2] = 0;
-        operatorsRegistry.sudoStoppedValidatorCounts(stoppedCounts, 20);
+        uint256[] memory stoppedEthAmounts = new uint256[](3);
+        stoppedEthAmounts[0] = 10 * 32 ether;
+        stoppedEthAmounts[1] = 10 * 32 ether;
+        stoppedEthAmounts[2] = 0;
+        operatorsRegistry.sudoStoppedValidatorCounts(stoppedCounts, stoppedEthAmounts, 20, 20 * 32 ether);
 
         // Second deposit: 10 validators from operator 2
         vm.prank(admin);
@@ -1027,13 +1026,6 @@ contract RiverV1TestsReport_HEAVY_FUZZING is RiverV1TestBase {
                 vm.prank(operatorAddress);
                 operatorsRegistry.addValidators(operatorIndex, uint32(operatorKeyCount), operatorKeys);
 
-                uint256[] memory operatorIndexes = new uint256[](1);
-                operatorIndexes[0] = operatorIndex;
-                uint32[] memory operatorLimits = new uint32[](1);
-                operatorLimits[0] = uint32(operatorKeyCount);
-
-                vm.prank(admin);
-                operatorsRegistry.setOperatorLimits(operatorIndexes, operatorLimits, block.number);
             }
         }
 
@@ -1825,14 +1817,6 @@ contract RiverV1TestsReport_HEAVY_FUZZING is RiverV1TestBase {
         uint256 operatorIndex = operatorsRegistry.addOperator(operatorName, operator);
         vm.prank(operator);
         operatorsRegistry.addValidators(operatorIndex, uint32(count), genBytes((48 + 96) * count));
-
-        uint256[] memory operatorIndexes = new uint256[](1);
-        operatorIndexes[0] = operatorIndex;
-        uint32[] memory operatorLimits = new uint32[](1);
-        operatorLimits[0] = uint32(count);
-
-        vm.prank(admin);
-        operatorsRegistry.setOperatorLimits(operatorIndexes, operatorLimits, block.number);
 
         river.debug_moveDepositToCommitted();
 
