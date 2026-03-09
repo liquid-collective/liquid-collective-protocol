@@ -20,7 +20,12 @@ interface IConsensusLayerDepositManagerV1 {
     /// @param newDepositedValidatorCount The new deposited validator count value
     event SetDepositedValidatorCount(uint256 oldDepositedValidatorCount, uint256 newDepositedValidatorCount);
 
-    /// @notice Not enough funds to deposit one validator
+    /// @notice Emitted when the deposited ETH amount is updated
+    /// @param oldDepositedEthAmount The old deposited ETH amount value
+    /// @param newDepositedEthAmount The new deposited ETH amount value
+    event SetDepositedEthAmount(uint256 oldDepositedEthAmount, uint256 newDepositedEthAmount);
+
+    /// @notice Not enough funds to deposit
     error NotEnoughFunds();
 
     /// @notice The length of the BLS Public key is invalid during deposit
@@ -47,9 +52,6 @@ interface IConsensusLayerDepositManagerV1 {
     // @notice Not keeper
     error OnlyKeeper();
 
-    /// @notice The operator allocations exceed the committed balance
-    error OperatorAllocationsExceedCommittedBalance();
-
     /// @notice Returns the amount of ETH not yet committed for deposit
     /// @return The amount of ETH not yet committed for deposit
     function getBalanceToDeposit() external view returns (uint256);
@@ -65,6 +67,10 @@ interface IConsensusLayerDepositManagerV1 {
     /// @notice Get the deposited validator count (the count of deposits made by the contract)
     /// @return The deposited validator count
     function getDepositedValidatorCount() external view returns (uint256);
+
+    /// @notice Get the total ETH amount deposited to the consensus layer
+    /// @return The deposited ETH amount
+    function getDepositedEthAmount() external view returns (uint256);
 
     /// @notice Get the keeper address
     /// @return The keeper address

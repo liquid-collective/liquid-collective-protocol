@@ -11,6 +11,7 @@ import "../state/river/OracleAddress.sol";
 import "../state/river/CLValidatorTotalBalance.sol";
 import "../state/river/CLValidatorCount.sol";
 import "../state/river/DepositedValidatorCount.sol";
+import "../state/river/DepositedEthAmount.sol";
 import "../state/river/LastOracleRoundId.sol";
 
 /// @title Oracle Manager (v1)
@@ -66,10 +67,14 @@ abstract contract OracleManagerV1 is IOracleManagerV1 {
 
     /// @notice Requests exits of validators after possibly rebalancing deposit and redeem balances
     /// @param _exitingBalance The currently exiting funds, soon to be received on the execution layer
+    /// @param _stoppedValidatorCounts The stopped validator counts per operator
+    /// @param _stoppedEthAmounts The stopped validator ETH amounts per operator
     /// @param _depositToRedeemRebalancingAllowed True if rebalancing from deposit to redeem is allowed
+    /// @param _slashingContainmentModeEnabled True if slashing containment mode is enabled
     function _requestExitsBasedOnRedeemDemandAfterRebalancings(
         uint256 _exitingBalance,
         uint32[] memory _stoppedValidatorCounts,
+        uint256[] memory _stoppedEthAmounts,
         bool _depositToRedeemRebalancingAllowed,
         bool _slashingContainmentModeEnabled
     ) internal virtual;
@@ -294,14 +299,21 @@ abstract contract OracleManagerV1 is IOracleManagerV1 {
                 );
             }
 
-            // we ensure that the reported validator count is not decreasing
-            if (
-                _report.validatorsCount > DepositedValidatorCount.get()
-                    || _report.validatorsCount < lastStoredReport.validatorsCount
-            ) {
+            // we ensure that the reported validator count is monotonically non-decreasing as a secondary safety check
+            if (_report.validatorsCount < lastStoredReport.validatorsCount) {
                 revert InvalidValidatorCountReport(
                     _report.validatorsCount, DepositedValidatorCount.get(), lastStoredReport.validatorsCount
                 );
+            }
+
+            // ETH-based validation: the sum of reported balance + exited + skimmed should not exceed deposited ETH
+            {
+                uint256 reportedTotalEth =
+                    _report.validatorsBalance + _report.validatorsExitedBalance + _report.validatorsSkimmedBalance;
+                uint256 depositedEth = DepositedEthAmount.get();
+                if (reportedTotalEth > depositedEth) {
+                    revert InvalidDepositedEthReport(reportedTotalEth, depositedEth);
+                }
             }
 
             // we compute the new skimmed amount by taking the delta between reports
@@ -421,6 +433,7 @@ abstract contract OracleManagerV1 is IOracleManagerV1 {
         _requestExitsBasedOnRedeemDemandAfterRebalancings(
             _report.validatorsExitingBalance,
             _report.stoppedValidatorCountPerOperator,
+            _report.stoppedValidatorEthPerOperator,
             _report.rebalanceDepositToRedeemMode,
             _report.slashingContainmentMode
         );

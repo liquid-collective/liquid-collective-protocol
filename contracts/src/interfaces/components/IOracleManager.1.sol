@@ -52,6 +52,11 @@ interface IOracleManagerV1 {
         uint256 providedValidatorCount, uint256 depositedValidatorCount, uint256 lastReportedValidatorCount
     );
 
+    /// @notice The reported deposited ETH does not match expectations
+    /// @param reportedEth The ETH implied by the report
+    /// @param depositedEthAmount The deposited ETH tracked by the system
+    error InvalidDepositedEthReport(uint256 reportedEth, uint256 depositedEthAmount);
+
     /// @notice Thrown when an invalid epoch was reported
     /// @param epoch Invalid epoch
     error InvalidEpoch(uint256 epoch);
@@ -138,6 +143,10 @@ interface IOracleManagerV1 {
         // then index 1 would be operator 0
         // these values cannot decrease over reports
         uint32[] stoppedValidatorCountPerOperator;
+        // an array containing the ETH amounts of stopped validators per operator
+        // same layout as stoppedValidatorCountPerOperator: index 0 is total, index i+1 is operator i-1
+        // these values cannot decrease over reports
+        uint256[] stoppedValidatorEthPerOperator;
         // flag enabled by the oracles when the buffer rebalancing is activated
         // the activation logic is written in the oracle specification and all oracle members must agree on the activation
         // when active, the eth in the deposit buffer can be used to pay for exits in the redeem manager

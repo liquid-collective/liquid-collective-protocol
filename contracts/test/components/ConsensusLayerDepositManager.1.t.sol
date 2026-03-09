@@ -47,7 +47,7 @@ contract ConsensusLayerDepositManagerV1ExposeInitializer is ConsensusLayerDeposi
     {
         uint256 totalRequested = 0;
         for (uint256 i = 0; i < _allocations.length; ++i) {
-            totalRequested += _allocations[i].validatorCount;
+            totalRequested += _allocations[i].depositAmounts.length;
         }
         uint256 amount = totalRequested > 10 ? 10 : totalRequested;
         bytes[] memory publicKeys = new bytes[](amount);
@@ -234,7 +234,7 @@ contract ConsensusLayerDepositManagerV1ControllableValidatorKeyRequest is Consen
     {
         uint256 totalRequested = 0;
         for (uint256 i = 0; i < _allocations.length; ++i) {
-            totalRequested += _allocations[i].validatorCount;
+            totalRequested += _allocations[i].depositAmounts.length;
         }
         if (scenario == 0) {
             uint256 amount = totalRequested > 10 ? 10 : totalRequested;
@@ -401,32 +401,32 @@ contract ConsensusLayerDepositManagerV1ErrorTests is OperatorAllocationTestBase 
         vm.deal(address(depositManager), 2 * 32 ether);
         ConsensusLayerDepositManagerV1ControllableValidatorKeyRequest(address(depositManager)).sudoSyncBalance();
         // Try to allocate 5 validators when only 2 can be funded
-        vm.expectRevert(abi.encodeWithSignature("OperatorAllocationsExceedCommittedBalance()"));
+        vm.expectRevert(abi.encodeWithSignature("NotEnoughFunds()"));
         vm.prank(address(0x1));
         depositManager.depositToConsensusLayerWithDepositRoot(_createAllocation(5), bytes32(0));
     }
 
     /// @notice Fund with exactly 2 deposits (64 ETH). Request allocation of 3 validators.
-    ///         Verify OperatorAllocationsExceedCommittedBalance().
+    ///         Verify NotEnoughFunds().
     function testAllocationExceedsCommittedBalanceByOne() public {
         vm.deal(address(depositManager), 2 * 32 ether);
         ConsensusLayerDepositManagerV1ControllableValidatorKeyRequest(address(depositManager)).sudoSyncBalance();
-        vm.expectRevert(abi.encodeWithSignature("OperatorAllocationsExceedCommittedBalance()"));
+        vm.expectRevert(abi.encodeWithSignature("NotEnoughFunds()"));
         vm.prank(address(0x1));
         depositManager.depositToConsensusLayerWithDepositRoot(_createAllocation(3), bytes32(0));
     }
 
     /// @notice Fund with 3 deposits (96 ETH). Request [op0: 2, op1: 2] = 4 total.
-    ///         Verify OperatorAllocationsExceedCommittedBalance().
+    ///         Verify NotEnoughFunds().
     function testAllocationExceedsCommittedBalanceMultiOperator() public {
         vm.deal(address(depositManager), 3 * 32 ether);
         ConsensusLayerDepositManagerV1ControllableValidatorKeyRequest(address(depositManager)).sudoSyncBalance();
 
         IOperatorsRegistryV1.OperatorAllocation[] memory allocations = new IOperatorsRegistryV1.OperatorAllocation[](2);
-        allocations[0] = IOperatorsRegistryV1.OperatorAllocation({operatorIndex: 0, validatorCount: 2});
-        allocations[1] = IOperatorsRegistryV1.OperatorAllocation({operatorIndex: 1, validatorCount: 2});
+        allocations[0] = IOperatorsRegistryV1.OperatorAllocation({operatorIndex: 0, depositAmounts: _depositAmountsArray(2)});
+        allocations[1] = IOperatorsRegistryV1.OperatorAllocation({operatorIndex: 1, depositAmounts: _depositAmountsArray(2)});
 
-        vm.expectRevert(abi.encodeWithSignature("OperatorAllocationsExceedCommittedBalance()"));
+        vm.expectRevert(abi.encodeWithSignature("NotEnoughFunds()"));
         vm.prank(address(0x1));
         depositManager.depositToConsensusLayerWithDepositRoot(allocations, bytes32(0));
     }
@@ -441,7 +441,7 @@ contract ConsensusLayerDepositManagerV1ErrorTests is OperatorAllocationTestBase 
     }
 }
 
-/// @notice Tests allocation validation (UnorderedOperatorList, AllocationWithZeroValidatorCount) via real OperatorsRegistry flow
+/// @notice Tests allocation validation (UnorderedOperatorList, AllocationWithZeroEthAmount) via real OperatorsRegistry flow
 contract ConsensusLayerDepositManagerV1AllocationValidationTests is OperatorAllocationTestBase, BytesGenerator {
     bytes32 internal withdrawalCredentials = bytes32(uint256(1));
 
@@ -475,15 +475,6 @@ contract ConsensusLayerDepositManagerV1AllocationValidationTests is OperatorAllo
         registry.addValidators(1, 2, rawKeys);
         registry.addOperator("Op2", admin);
         registry.addValidators(2, 2, rawKeys);
-        uint256[] memory operators = new uint256[](3);
-        operators[0] = 0;
-        operators[1] = 1;
-        operators[2] = 2;
-        uint32[] memory limits = new uint32[](3);
-        limits[0] = 2;
-        limits[1] = 2;
-        limits[2] = 2;
-        registry.setOperatorLimits(operators, limits, block.number);
         vm.stopPrank();
     }
 
@@ -492,8 +483,8 @@ contract ConsensusLayerDepositManagerV1AllocationValidationTests is OperatorAllo
         ConsensusLayerDepositManagerV1UsesRegistry(address(depositManager)).sudoSyncBalance();
 
         IOperatorsRegistryV1.OperatorAllocation[] memory allocations = new IOperatorsRegistryV1.OperatorAllocation[](2);
-        allocations[0] = IOperatorsRegistryV1.OperatorAllocation({operatorIndex: 0, validatorCount: 2});
-        allocations[1] = IOperatorsRegistryV1.OperatorAllocation({operatorIndex: 0, validatorCount: 2});
+        allocations[0] = IOperatorsRegistryV1.OperatorAllocation({operatorIndex: 0, depositAmounts: _depositAmountsArray(2)});
+        allocations[1] = IOperatorsRegistryV1.OperatorAllocation({operatorIndex: 0, depositAmounts: _depositAmountsArray(2)});
 
         vm.expectRevert(abi.encodeWithSignature("UnorderedOperatorList()"));
         vm.prank(address(0x1));
@@ -505,34 +496,34 @@ contract ConsensusLayerDepositManagerV1AllocationValidationTests is OperatorAllo
         ConsensusLayerDepositManagerV1UsesRegistry(address(depositManager)).sudoSyncBalance();
 
         IOperatorsRegistryV1.OperatorAllocation[] memory allocations = new IOperatorsRegistryV1.OperatorAllocation[](2);
-        allocations[0] = IOperatorsRegistryV1.OperatorAllocation({operatorIndex: 1, validatorCount: 2});
-        allocations[1] = IOperatorsRegistryV1.OperatorAllocation({operatorIndex: 0, validatorCount: 2});
+        allocations[0] = IOperatorsRegistryV1.OperatorAllocation({operatorIndex: 1, depositAmounts: _depositAmountsArray(2)});
+        allocations[1] = IOperatorsRegistryV1.OperatorAllocation({operatorIndex: 0, depositAmounts: _depositAmountsArray(2)});
 
         vm.expectRevert(abi.encodeWithSignature("UnorderedOperatorList()"));
         vm.prank(address(0x1));
         depositManager.depositToConsensusLayerWithDepositRoot(allocations, bytes32(0));
     }
 
-    function testAllocationWithZeroValidatorCount() public {
+    function testAllocationWithZeroEthAmount() public {
         vm.deal(address(depositManager), 2 * 32 ether);
         ConsensusLayerDepositManagerV1UsesRegistry(address(depositManager)).sudoSyncBalance();
 
         IOperatorsRegistryV1.OperatorAllocation[] memory allocations = new IOperatorsRegistryV1.OperatorAllocation[](1);
-        allocations[0] = IOperatorsRegistryV1.OperatorAllocation({operatorIndex: 0, validatorCount: 0});
+        allocations[0] = IOperatorsRegistryV1.OperatorAllocation({operatorIndex: 0, depositAmounts: new uint256[](0)});
 
-        vm.expectRevert(abi.encodeWithSignature("AllocationWithZeroValidatorCount()"));
+        vm.expectRevert(abi.encodeWithSignature("NotEnoughFunds()"));
         vm.prank(address(0x1));
         depositManager.depositToConsensusLayerWithDepositRoot(allocations, bytes32(0));
     }
 
-    function testAllocationWithZeroValidatorCountInMiddle() public {
+    function testAllocationWithZeroEthAmountInMiddle() public {
         vm.deal(address(depositManager), 4 * 32 ether);
         ConsensusLayerDepositManagerV1UsesRegistry(address(depositManager)).sudoSyncBalance();
 
         IOperatorsRegistryV1.OperatorAllocation[] memory allocations = new IOperatorsRegistryV1.OperatorAllocation[](3);
-        allocations[0] = IOperatorsRegistryV1.OperatorAllocation({operatorIndex: 0, validatorCount: 2});
-        allocations[1] = IOperatorsRegistryV1.OperatorAllocation({operatorIndex: 1, validatorCount: 0});
-        allocations[2] = IOperatorsRegistryV1.OperatorAllocation({operatorIndex: 2, validatorCount: 2});
+        allocations[0] = IOperatorsRegistryV1.OperatorAllocation({operatorIndex: 0, depositAmounts: _depositAmountsArray(2)});
+        allocations[1] = IOperatorsRegistryV1.OperatorAllocation({operatorIndex: 1, depositAmounts: new uint256[](0)});
+        allocations[2] = IOperatorsRegistryV1.OperatorAllocation({operatorIndex: 2, depositAmounts: _depositAmountsArray(2)});
 
         vm.expectRevert(abi.encodeWithSignature("AllocationWithZeroValidatorCount()"));
         vm.prank(address(0x1));
@@ -574,11 +565,6 @@ contract ConsensusLayerDepositManagerV1FullDepositFlowTests is OperatorAllocatio
         vm.startPrank(admin);
         registry.addOperator("Op0", admin);
         registry.addValidators(0, 5, rawKeys);
-        uint256[] memory indexes = new uint256[](1);
-        indexes[0] = 0;
-        uint32[] memory limits = new uint32[](1);
-        limits[0] = 5;
-        registry.setOperatorLimits(indexes, limits, block.number);
         vm.stopPrank();
 
         uint256 toDeposit = 2;
@@ -586,7 +572,7 @@ contract ConsensusLayerDepositManagerV1FullDepositFlowTests is OperatorAllocatio
         ConsensusLayerDepositManagerV1UsesRegistry(address(depositManager)).sudoSyncBalance();
 
         IOperatorsRegistryV1.OperatorAllocation[] memory allocation = new IOperatorsRegistryV1.OperatorAllocation[](1);
-        allocation[0] = IOperatorsRegistryV1.OperatorAllocation({operatorIndex: 0, validatorCount: uint32(toDeposit)});
+        allocation[0] = IOperatorsRegistryV1.OperatorAllocation({operatorIndex: 0, depositAmounts: _depositAmountsArray(uint32(toDeposit))});
 
         bytes32 depositRoot = depositContract.get_deposit_root();
         vm.prank(keeper);
@@ -606,18 +592,13 @@ contract ConsensusLayerDepositManagerV1FullDepositFlowTests is OperatorAllocatio
         vm.startPrank(admin);
         registry.addOperator("Op0", admin);
         registry.addValidators(0, uint32(keyCount), rawKeys);
-        uint256[] memory indexes = new uint256[](1);
-        indexes[0] = 0;
-        uint32[] memory limits = new uint32[](1);
-        limits[0] = uint32(keyCount);
-        registry.setOperatorLimits(indexes, limits, block.number);
         vm.stopPrank();
 
         vm.deal(address(depositManager), toDeposit * 32 ether);
         ConsensusLayerDepositManagerV1UsesRegistry(address(depositManager)).sudoSyncBalance();
 
         IOperatorsRegistryV1.OperatorAllocation[] memory allocation = new IOperatorsRegistryV1.OperatorAllocation[](1);
-        allocation[0] = IOperatorsRegistryV1.OperatorAllocation({operatorIndex: 0, validatorCount: uint32(toDeposit)});
+        allocation[0] = IOperatorsRegistryV1.OperatorAllocation({operatorIndex: 0, depositAmounts: _depositAmountsArray(uint32(toDeposit))});
 
         bytes32 depositRoot = depositContract.get_deposit_root();
         vm.prank(keeper);
@@ -647,21 +628,14 @@ contract ConsensusLayerDepositManagerV1FullDepositFlowTests is OperatorAllocatio
         registry.addValidators(0, uint32(keyCount), rawKeys);
         registry.addOperator("Op1", admin);
         registry.addValidators(1, uint32(keyCount), rawKeys);
-        uint256[] memory indexes = new uint256[](2);
-        indexes[0] = 0;
-        indexes[1] = 1;
-        uint32[] memory limits = new uint32[](2);
-        limits[0] = uint32(keyCount);
-        limits[1] = uint32(keyCount);
-        registry.setOperatorLimits(indexes, limits, block.number);
         vm.stopPrank();
 
         vm.deal(address(depositManager), total * 32 ether);
         ConsensusLayerDepositManagerV1UsesRegistry(address(depositManager)).sudoSyncBalance();
 
         IOperatorsRegistryV1.OperatorAllocation[] memory allocation = new IOperatorsRegistryV1.OperatorAllocation[](2);
-        allocation[0] = IOperatorsRegistryV1.OperatorAllocation({operatorIndex: 0, validatorCount: uint32(fromOp0)});
-        allocation[1] = IOperatorsRegistryV1.OperatorAllocation({operatorIndex: 1, validatorCount: uint32(fromOp1)});
+        allocation[0] = IOperatorsRegistryV1.OperatorAllocation({operatorIndex: 0, depositAmounts: _depositAmountsArray(uint32(fromOp0))});
+        allocation[1] = IOperatorsRegistryV1.OperatorAllocation({operatorIndex: 1, depositAmounts: _depositAmountsArray(uint32(fromOp1))});
 
         bytes32 depositRoot = depositContract.get_deposit_root();
         vm.prank(keeper);
@@ -694,15 +668,6 @@ contract ConsensusLayerDepositManagerV1FullDepositFlowTests is OperatorAllocatio
         registry.addValidators(1, 5, genBytes((48 + 96) * 5));
         registry.addOperator("Op2", admin);
         registry.addValidators(2, 5, keys2);
-        uint256[] memory indexes = new uint256[](3);
-        indexes[0] = 0;
-        indexes[1] = 1;
-        indexes[2] = 2;
-        uint32[] memory limits = new uint32[](3);
-        limits[0] = 5;
-        limits[1] = 5;
-        limits[2] = 5;
-        registry.setOperatorLimits(indexes, limits, block.number);
         registry.setOperatorStatus(1, false);
         vm.stopPrank();
 
@@ -713,8 +678,8 @@ contract ConsensusLayerDepositManagerV1FullDepositFlowTests is OperatorAllocatio
         ConsensusLayerDepositManagerV1UsesRegistry(address(depositManager)).sudoSyncBalance();
 
         IOperatorsRegistryV1.OperatorAllocation[] memory allocation = new IOperatorsRegistryV1.OperatorAllocation[](2);
-        allocation[0] = IOperatorsRegistryV1.OperatorAllocation({operatorIndex: 0, validatorCount: uint32(fromOp0)});
-        allocation[1] = IOperatorsRegistryV1.OperatorAllocation({operatorIndex: 2, validatorCount: uint32(fromOp2)});
+        allocation[0] = IOperatorsRegistryV1.OperatorAllocation({operatorIndex: 0, depositAmounts: _depositAmountsArray(uint32(fromOp0))});
+        allocation[1] = IOperatorsRegistryV1.OperatorAllocation({operatorIndex: 2, depositAmounts: _depositAmountsArray(uint32(fromOp2))});
 
         bytes32 depositRoot = depositContract.get_deposit_root();
         vm.prank(keeper);
@@ -731,11 +696,6 @@ contract ConsensusLayerDepositManagerV1FullDepositFlowTests is OperatorAllocatio
         vm.startPrank(admin);
         registry.addOperator("Op0", admin);
         registry.addValidators(0, 5, genBytes((48 + 96) * 5));
-        uint256[] memory indexes = new uint256[](1);
-        indexes[0] = 0;
-        uint32[] memory limits = new uint32[](1);
-        limits[0] = 5;
-        registry.setOperatorLimits(indexes, limits, block.number);
         registry.setOperatorStatus(0, false);
         vm.stopPrank();
 
@@ -743,7 +703,7 @@ contract ConsensusLayerDepositManagerV1FullDepositFlowTests is OperatorAllocatio
         ConsensusLayerDepositManagerV1UsesRegistry(address(depositManager)).sudoSyncBalance();
 
         IOperatorsRegistryV1.OperatorAllocation[] memory allocation = new IOperatorsRegistryV1.OperatorAllocation[](1);
-        allocation[0] = IOperatorsRegistryV1.OperatorAllocation({operatorIndex: 0, validatorCount: 1});
+        allocation[0] = IOperatorsRegistryV1.OperatorAllocation({operatorIndex: 0, depositAmounts: _depositAmountsArray(1)});
 
         bytes32 depositRoot = depositContract.get_deposit_root();
         vm.prank(keeper);
@@ -761,18 +721,13 @@ contract ConsensusLayerDepositManagerV1FullDepositFlowTests is OperatorAllocatio
         vm.startPrank(admin);
         registry.addOperator("Op0", admin);
         registry.addValidators(0, 2, rawKeys);
-        uint256[] memory indexes = new uint256[](1);
-        indexes[0] = 0;
-        uint32[] memory limits = new uint32[](1);
-        limits[0] = 2;
-        registry.setOperatorLimits(indexes, limits, block.number);
         vm.stopPrank();
 
         vm.deal(address(depositManager), 2 * 32 ether);
         ConsensusLayerDepositManagerV1UsesRegistry(address(depositManager)).sudoSyncBalance();
 
         IOperatorsRegistryV1.OperatorAllocation[] memory allocation = new IOperatorsRegistryV1.OperatorAllocation[](1);
-        allocation[0] = IOperatorsRegistryV1.OperatorAllocation({operatorIndex: 0, validatorCount: 1});
+        allocation[0] = IOperatorsRegistryV1.OperatorAllocation({operatorIndex: 0, depositAmounts: _depositAmountsArray(1)});
 
         bytes32 depositRoot = depositContract.get_deposit_root();
         vm.prank(admin);
@@ -786,18 +741,13 @@ contract ConsensusLayerDepositManagerV1FullDepositFlowTests is OperatorAllocatio
         vm.startPrank(admin);
         registry.addOperator("Op0", admin);
         registry.addValidators(0, 10, rawKeys);
-        uint256[] memory indexes = new uint256[](1);
-        indexes[0] = 0;
-        uint32[] memory limits = new uint32[](1);
-        limits[0] = 10;
-        registry.setOperatorLimits(indexes, limits, block.number);
         vm.stopPrank();
 
         vm.deal(address(depositManager), 5 * 32 ether);
         ConsensusLayerDepositManagerV1UsesRegistry(address(depositManager)).sudoSyncBalance();
 
         IOperatorsRegistryV1.OperatorAllocation[] memory allocation = new IOperatorsRegistryV1.OperatorAllocation[](1);
-        allocation[0] = IOperatorsRegistryV1.OperatorAllocation({operatorIndex: 0, validatorCount: 2});
+        allocation[0] = IOperatorsRegistryV1.OperatorAllocation({operatorIndex: 0, depositAmounts: _depositAmountsArray(2)});
 
         bytes32 depositRoot = depositContract.get_deposit_root();
         vm.prank(keeper);
@@ -807,7 +757,7 @@ contract ConsensusLayerDepositManagerV1FullDepositFlowTests is OperatorAllocatio
         assertEq(depositManager.getDepositedValidatorCount(), 2, "deposited after first");
         assertEq(address(depositManager).balance, 3 * 32 ether, "remaining balance");
 
-        allocation[0] = IOperatorsRegistryV1.OperatorAllocation({operatorIndex: 0, validatorCount: 3});
+        allocation[0] = IOperatorsRegistryV1.OperatorAllocation({operatorIndex: 0, depositAmounts: _depositAmountsArray(3)});
         vm.prank(keeper);
         depositManager.depositToConsensusLayerWithDepositRoot(allocation, depositRoot);
 
@@ -823,13 +773,6 @@ contract ConsensusLayerDepositManagerV1FullDepositFlowTests is OperatorAllocatio
         registry.addValidators(0, 2, genBytes((48 + 96) * 2));
         registry.addOperator("Op1", admin);
         registry.addValidators(1, 2, genBytes((48 + 96) * 2));
-        uint256[] memory indexes = new uint256[](2);
-        indexes[0] = 0;
-        indexes[1] = 1;
-        uint32[] memory limits = new uint32[](2);
-        limits[0] = 2;
-        limits[1] = 2;
-        registry.setOperatorLimits(indexes, limits, block.number);
         vm.stopPrank();
 
         vm.deal(address(depositManager), 4 * 32 ether);
@@ -837,38 +780,33 @@ contract ConsensusLayerDepositManagerV1FullDepositFlowTests is OperatorAllocatio
 
         // Create allocations with descending order: [{1, 2}, {0, 2}]
         IOperatorsRegistryV1.OperatorAllocation[] memory allocations = new IOperatorsRegistryV1.OperatorAllocation[](2);
-        allocations[0] = IOperatorsRegistryV1.OperatorAllocation({operatorIndex: 1, validatorCount: 2});
-        allocations[1] = IOperatorsRegistryV1.OperatorAllocation({operatorIndex: 0, validatorCount: 2});
+        allocations[0] = IOperatorsRegistryV1.OperatorAllocation({operatorIndex: 1, depositAmounts: _depositAmountsArray(2)});
+        allocations[1] = IOperatorsRegistryV1.OperatorAllocation({operatorIndex: 0, depositAmounts: _depositAmountsArray(2)});
 
         vm.expectRevert(abi.encodeWithSignature("UnorderedOperatorList()"));
         vm.prank(keeper);
         depositManager.depositToConsensusLayerWithDepositRoot(allocations, bytes32(0));
     }
 
-    // Tests that an allocation with zero validator count reverts with AllocationWithZeroValidatorCount
-    function testAllocationWithZeroValidatorCount() public {
+    // Tests that an allocation with zero deposit amounts reverts with NotEnoughFunds
+    function testAllocationWithZeroEthAmount() public {
         vm.deal(address(depositManager), 2 * 32 ether);
         ConsensusLayerDepositManagerV1ControllableValidatorKeyRequest(address(depositManager)).sudoSyncBalance();
 
-        // Create allocation with zero validator count: [{0, 0}]
+        // Create allocation with zero deposit amounts: [{0, []}]
         IOperatorsRegistryV1.OperatorAllocation[] memory allocations = new IOperatorsRegistryV1.OperatorAllocation[](1);
-        allocations[0] = IOperatorsRegistryV1.OperatorAllocation({operatorIndex: 0, validatorCount: 0});
+        allocations[0] = IOperatorsRegistryV1.OperatorAllocation({operatorIndex: 0, depositAmounts: new uint256[](0)});
 
-        vm.expectRevert(abi.encodeWithSignature("AllocationWithZeroValidatorCount()"));
+        vm.expectRevert(abi.encodeWithSignature("NotEnoughFunds()"));
         vm.prank(address(0x1));
         depositManager.depositToConsensusLayerWithDepositRoot(allocations, bytes32(0));
     }
 
     // Tests that a multi-allocation array with a zero count in the middle reverts
-    function testAllocationWithZeroValidatorCountInMiddle() public {
+    function testAllocationWithZeroEthAmountInMiddle() public {
         vm.startPrank(admin);
         registry.addOperator("Op0", admin);
         registry.addValidators(0, 2, genBytes((48 + 96) * 2));
-        uint256[] memory indexes = new uint256[](1);
-        indexes[0] = 0;
-        uint32[] memory limits = new uint32[](1);
-        limits[0] = 2;
-        registry.setOperatorLimits(indexes, limits, block.number);
         vm.stopPrank();
 
         vm.deal(address(depositManager), 4 * 32 ether);
@@ -876,9 +814,9 @@ contract ConsensusLayerDepositManagerV1FullDepositFlowTests is OperatorAllocatio
 
         // Create allocations: [{0, 2}, {1, 0}, {2, 2}] - middle has zero count
         IOperatorsRegistryV1.OperatorAllocation[] memory allocations = new IOperatorsRegistryV1.OperatorAllocation[](3);
-        allocations[0] = IOperatorsRegistryV1.OperatorAllocation({operatorIndex: 0, validatorCount: 2});
-        allocations[1] = IOperatorsRegistryV1.OperatorAllocation({operatorIndex: 1, validatorCount: 0});
-        allocations[2] = IOperatorsRegistryV1.OperatorAllocation({operatorIndex: 2, validatorCount: 2});
+        allocations[0] = IOperatorsRegistryV1.OperatorAllocation({operatorIndex: 0, depositAmounts: _depositAmountsArray(2)});
+        allocations[1] = IOperatorsRegistryV1.OperatorAllocation({operatorIndex: 1, depositAmounts: new uint256[](0)});
+        allocations[2] = IOperatorsRegistryV1.OperatorAllocation({operatorIndex: 2, depositAmounts: _depositAmountsArray(2)});
 
         vm.expectRevert(abi.encodeWithSignature("AllocationWithZeroValidatorCount()"));
         vm.prank(keeper);
@@ -951,7 +889,7 @@ contract ConsensusLayerDepositManagerV1ValidKeys is ConsensusLayerDepositManager
     {
         uint256 totalRequested = 0;
         for (uint256 i = 0; i < _allocations.length; ++i) {
-            totalRequested += _allocations[i].validatorCount;
+            totalRequested += _allocations[i].depositAmounts.length;
         }
         uint256 amount = totalRequested > 1 ? 1 : totalRequested;
         bytes[] memory publicKeys = new bytes[](amount);
