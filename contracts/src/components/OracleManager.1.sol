@@ -327,15 +327,18 @@ abstract contract OracleManagerV1 is IOracleManagerV1 {
                 // if the validators balance has decreased, we need to check if the
                 // exited balance has increased, if it has then we need to calculate if we received any new
                 // in flight eth
-                if (_report.validatorsExitedBalance > vars.lastReportExitedBalance) {
-                    // this means that the validatorsBalance has decreased because of exits
-                    uint256 diff = lastStoredReport.validatorsBalance - _report.validatorsExitedBalance;
-                    if (_report.validatorsBalance > diff) {
+                if (_report.validatorsExitingBalance < lastStoredReport.validatorsExitingBalance) {
+                    // this means that the validatorsBalance has decreased because of ETH moving from exiting to exited
+
+                    // we compute the actual validators balance at the last report, since the validatorsExitedBalance was included
+                    uint256 actualLastReportValidatorsBalance = lastStoredReport.validatorsBalance - lastStoredReport.validatorsExitingBalance;
+
+                    if (_report.validatorsBalance > actualLastReportValidatorsBalance) {
                         // this means that the validatorsBalance has decreased because of exits
-                        if(_report.validatorsBalance - diff >= vars.inFlightETH) {
+                        if(_report.validatorsBalance - actualLastReportValidatorsBalance >= vars.inFlightETH) {
                             vars.inFlightETH = 0;
                         } else {
-                            vars.inFlightETH = vars.inFlightETH - (_report.validatorsBalance - diff);
+                            vars.inFlightETH = vars.inFlightETH - (_report.validatorsBalance - actualLastReportValidatorsBalance);
                         }
                     }
                 }

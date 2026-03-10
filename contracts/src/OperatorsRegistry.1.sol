@@ -174,19 +174,13 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
     }
 
     /// @inheritdoc IOperatorsRegistryV1
-    function getTotalValidatorExitsRequested() external view returns (uint256) {
+    function getTotalETHExitsRequested() external view returns (uint256) {
         return TotalETHExitsRequested.get();
     }
 
     /// @inheritdoc IOperatorsRegistryV1
     function getCurrentValidatorExitsDemand() external view returns (uint256) {
         return CurrentETHExitsDemand.get();
-    }
-
-    /// @inheritdoc IOperatorsRegistryV1
-    function getStoppedAndRequestedExitCounts() external view returns (uint32, uint256) {
-        return
-            (_getTotalStoppedValidatorCount(), TotalETHExitsRequested.get() + CurrentETHExitsDemand.get());
     }
 
     /// @inheritdoc IOperatorsRegistryV1
@@ -216,7 +210,7 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
         returns (bytes memory publicKey, bytes memory signature, bool funded)
     {
         (publicKey, signature) = ValidatorKeys.get(_operatorIndex, _validatorIndex);
-        funded = _validatorIndex < OperatorsV3.get(_operatorIndex).funded;
+        funded = _validatorIndex < OperatorsV3.get(_operatorIndex).funded / 32 ether;
     }
 
     /// @inheritdoc IOperatorsRegistryV1
@@ -482,7 +476,7 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
             emit RequestedValidatorExits(operatorIndex, operator.exited);
         }
 
-        // Check that the exits requested do not exceed the current validator exits demand
+        // Check that the exits requested do not exceed the current ETH exits demand
         if (requestedETHAmount > currentETHExitsDemand) {
             revert ExitsRequestedExceedDemand(requestedETHAmount, currentETHExitsDemand);
         }
@@ -496,14 +490,14 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
     }
 
     /// @inheritdoc IOperatorsRegistryV1
-    function demandValidatorExits(uint256 _exitAmountToRequest, uint256 _totalDepositedETH) external onlyRiver {
-        uint256 currentValidatorExitsDemand = CurrentETHExitsDemand.get();
+    function demandETHExits(uint256 _exitAmountToRequest, uint256 _totalDepositedETH) external onlyRiver {
+        uint256 currentETHExitsDemand = CurrentETHExitsDemand.get();
         uint256 totalETHExitsRequested = TotalETHExitsRequested.get();
         _exitAmountToRequest = LibUint256.min(
-            _exitAmountToRequest, _totalDepositedETH - (totalETHExitsRequested + currentValidatorExitsDemand)
+            _exitAmountToRequest, _totalDepositedETH - (totalETHExitsRequested + currentETHExitsDemand)
         );
         if (_exitAmountToRequest > 0) {
-            _setCurrentETHExitsDemand(currentValidatorExitsDemand, currentValidatorExitsDemand + _exitAmountToRequest);
+            _setCurrentETHExitsDemand(currentETHExitsDemand, currentETHExitsDemand + _exitAmountToRequest);
         }
     }
 
@@ -598,9 +592,9 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
         uint256 currentExitedETHsLength;
         uint256 totalExitedETH;
         uint256 amountOfExitedETH;
-        uint256 currentValidatorExitsDemand;
-        uint256 cachedCurrentValidatorExitsDemand;
-        uint256 totalRequestedExits;
+        uint256 currentETHExitsDemand;
+        uint256 cachedCurrentETHExitsDemand;
+        uint256 totalRequestedETHExits;
         uint256 cachedTotalExitedETH;
     }
 
@@ -631,10 +625,10 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
         vars.amountOfExitedETH = 0;
 
         // create value to track unsolicited validator exits (e.g. to cover cases when Node Operator exit a validator without being requested to)
-        vars.currentValidatorExitsDemand = CurrentETHExitsDemand.get();
-        vars.cachedCurrentValidatorExitsDemand = vars.currentValidatorExitsDemand;
-        vars.totalRequestedExits = TotalETHExitsRequested.get();
-        vars.cachedTotalExitedETH = vars.totalRequestedExits;
+        vars.currentETHExitsDemand = CurrentETHExitsDemand.get();
+        vars.cachedCurrentETHExitsDemand = vars.currentETHExitsDemand;
+        vars.totalRequestedETHExits = TotalETHExitsRequested.get();
+        vars.cachedTotalExitedETH = vars.totalRequestedETHExits;
 
         uint256 idx = 1;
         uint256 unsolicitedExitsSum;
@@ -688,16 +682,16 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
             vars.amountOfExitedETH += _exitedETHs[idx];
         }
 
-        vars.totalRequestedExits += unsolicitedExitsSum;
+        vars.totalRequestedETHExits += unsolicitedExitsSum;
         // we decrease the demand, considering unsolicited exits as if they were answering the demand
-        vars.currentValidatorExitsDemand -= LibUint256.min(unsolicitedExitsSum, vars.currentValidatorExitsDemand);
+        vars.currentETHExitsDemand -= LibUint256.min(unsolicitedExitsSum, vars.currentETHExitsDemand);
 
-        if (vars.totalRequestedExits != vars.cachedTotalExitedETH) {
-            _setTotalETHExitsRequested(vars.cachedTotalExitedETH, vars.totalRequestedExits);
+        if (vars.totalRequestedETHExits != vars.cachedTotalExitedETH) {
+            _setTotalETHExitsRequested(vars.cachedTotalExitedETH, vars.totalRequestedETHExits);
         }
 
-        if (vars.currentValidatorExitsDemand != vars.cachedCurrentValidatorExitsDemand) {
-            _setCurrentETHExitsDemand(vars.cachedCurrentValidatorExitsDemand, vars.currentValidatorExitsDemand);
+        if (vars.currentETHExitsDemand != vars.cachedCurrentETHExitsDemand) {
+            _setCurrentETHExitsDemand(vars.cachedCurrentETHExitsDemand, vars.currentETHExitsDemand);
         }
 
         // we check that the total is matching the sum of the individual values

@@ -542,17 +542,15 @@ contract RiverV1 is
                 // because exit requests have been made and operators might have a lag to process them
                 // we take them into account to not exit too many validators
                 uint256 preExitingBalance =
-                    (totalRequestedExitAmounts > totalExitedETH
+                    totalRequestedExitAmounts > totalExitedETH
                                 ? (totalRequestedExitAmounts - totalExitedETH)
-                                : 0) * DEPOSIT_SIZE;
+                                : 0;
 
                 if (availableBalanceToRedeem + _exitingBalance + preExitingBalance < redeemManagerDemandInEth) {
-                    uint256 exitAmountToRequest = LibUint256.ceil(
-                        redeemManagerDemandInEth - (availableBalanceToRedeem + _exitingBalance + preExitingBalance),
-                        DEPOSIT_SIZE
-                    );
+                    uint256 exitAmountToRequest = 
+                        redeemManagerDemandInEth - (availableBalanceToRedeem + _exitingBalance + preExitingBalance);
 
-                    or.demandValidatorExits(exitAmountToRequest, TotalDepositedETH.get());
+                    or.demandETHExits(exitAmountToRequest, TotalDepositedETH.get());
                 }
             }
         }
