@@ -174,27 +174,14 @@ contract OperatorsRegistryV1Harness is OperatorsRegistryV1 {
         return allocations.length;
     }
 
-    /// @dev Certora-only: disables onlyRiver so that this.pickNextValidatorsToDeposit() self-calls
-    ///      don't revert (self-call changes msg.sender to the contract address).
+    /// @dev Certora-only: disables onlyRiver so that self-calls don't revert.
     modifier onlyRiver() override {
         _;
     }
 
-    /// @dev Certora-only: returns number of keys from pickNextValidatorsToDeposit so specs can assert without capturing bytes[] (CVL tuple assignment limitation).
-    function pickNextValidatorsToDepositReturnCount(IOperatorsRegistryV1.ValidatorDeposit[] memory allocations)
-        external
-        returns (uint256)
-    {
-        (bytes[] memory publicKeys, ) = this.pickNextValidatorsToDeposit(allocations);
-        return publicKeys.length;
-    }
-
-    /// @dev Certora-only: single-arg wrapper so specs need not reference IOperatorsRegistryV1 (listing the interface in conf causes "no bytecode" fatal error).
-    function pickNextValidatorsToDepositWithCount(uint256 count) external returns (bytes[] memory, bytes[] memory) {
-        IOperatorsRegistryV1.ValidatorDeposit[] memory allocations = new IOperatorsRegistryV1.ValidatorDeposit[](1);
-        allocations[0] = IOperatorsRegistryV1.ValidatorDeposit({operatorIndex: 0, pubkey: bytes(new bytes(48)), signature: bytes(new bytes(96)), depositAmount: count});
-        return this.pickNextValidatorsToDeposit(allocations);
-    }
+    // pickNextValidatorsToDeposit was removed — keys are now passed directly via ValidatorDeposit[]
+    // function pickNextValidatorsToDepositReturnCount(...) ...
+    // function pickNextValidatorsToDepositWithCount(...) ...
 
     function getOperatorsSaturationDiscrepancy(uint256 index1, uint256 index2) external view returns (uint256)
     {
