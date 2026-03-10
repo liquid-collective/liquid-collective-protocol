@@ -38,11 +38,6 @@ interface IOperatorsRegistryV1 {
     /// @param active True if the operator is active
     event SetOperatorStatus(uint256 indexed index, bool active);
 
-    /// @notice The operator limit has been changed
-    /// @param index The operator index
-    /// @param newLimit The new operator staking limit
-    event SetOperatorLimit(uint256 indexed index, uint256 newLimit);
-
     /// @notice The operator stopped validator count has been changed
     /// @param index The operator index
     /// @param newStoppedValidatorCount The new stopped validator count
@@ -57,20 +52,6 @@ interface IOperatorsRegistryV1 {
     /// @param index The operator index
     /// @param newName The new display name
     event SetOperatorName(uint256 indexed index, string newName);
-
-    /// @notice The operator or the admin added new validator keys and signatures
-    /// @dev The public keys and signatures are concatenated
-    /// @dev A public key is 48 bytes long
-    /// @dev A signature is 96 bytes long
-    /// @dev [P1, S1, P2, S2, ..., PN, SN] where N is the bytes length divided by (96 + 48)
-    /// @param index The operator index
-    /// @param publicKeysAndSignatures The concatenated public keys and signatures
-    event AddedValidatorKeys(uint256 indexed index, bytes publicKeysAndSignatures);
-
-    /// @notice The operator or the admin removed a public key and its signature from the registry
-    /// @param index The operator index
-    /// @param publicKey The BLS public key that has been removed
-    event RemovedValidatorKey(uint256 indexed index, bytes publicKey);
 
     /// @notice The stored river address has been changed
     /// @param river The new river address
@@ -91,11 +72,6 @@ interface IOperatorsRegistryV1 {
         uint256 indexed latestKeysEditBlockNumber,
         uint256 indexed snapshotBlock
     );
-
-    /// @notice The call didn't alter the limit of the operator
-    /// @param index The operator index
-    /// @param limit The limit of the operator
-    event OperatorLimitUnchanged(uint256 indexed index, uint256 limit);
 
     /// @notice The stopped validator array has been changed
     /// @notice A validator is considered stopped if exiting, exited or slashed
@@ -163,18 +139,6 @@ interface IOperatorsRegistryV1 {
 
     /// @notice The index that is removed is out of bounds
     error InvalidIndexOutOfBounds();
-
-    /// @notice The value for the operator limit is too high
-    /// @param index The operator index
-    /// @param limit The new limit provided
-    /// @param keyCount The operator key count
-    error OperatorLimitTooHigh(uint256 index, uint256 limit, uint256 keyCount);
-
-    /// @notice The value for the limit is too low
-    /// @param index The operator index
-    /// @param limit The new limit provided
-    /// @param fundedKeyCount The operator funded key count
-    error OperatorLimitTooLow(uint256 index, uint256 limit, uint256 fundedKeyCount);
 
     /// @notice The provided list of operators is not in increasing order
     error UnorderedOperatorList();
