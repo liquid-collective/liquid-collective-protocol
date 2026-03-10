@@ -7,13 +7,19 @@ import "../state/operatorsRegistry/Operators.2.sol";
 /// @author Alluvial Finance Inc.
 /// @notice This interface exposes methods to handle the list of operators and their keys
 interface IOperatorsRegistryV1 {
-    /// @notice Structure representing an operator allocation for deposits or exits
+
+    /// @notice Structure representing a validator deposit
     /// @param operatorIndex The index of the operator
-    /// @param validatorCount The number of validators to deposit/exit for this operator
-    struct OperatorAllocation {
+    /// @param pubkey The BLS public key of the validator
+    /// @param signature The BLS signature of the validator
+    /// @param depositAmount The deposit amount in ETH
+    struct ValidatorDeposit {
         uint256 operatorIndex;
-        uint256 validatorCount;
+        bytes pubkey;          // 48 bytes
+        bytes signature;       // 96 bytes
+        uint256 depositAmount; // 32-2048 ETH
     }
+
     /// @notice A new operator has been added to the registry
     /// @param index The operator index
     /// @param name The operator display name
@@ -309,7 +315,7 @@ interface IOperatorsRegistryV1 {
     /// @dev Reverts with ExitsRequestedExceedDemand if total exits requested exceed the current demand
     /// @dev Reverts with NoExitRequestsToPerform if there is no pending exit demand
     /// @param _allocations The proposed per-operator exit allocations, sorted by operator index
-    function requestValidatorExits(OperatorAllocation[] calldata _allocations) external;
+    function requestValidatorExits(ValidatorDeposit[] calldata _allocations) external;
 
     /// @notice Increases the exit request demand
     /// @dev This method is only callable by the river contract, and to actually forward the information to the node operators via event emission, the unprotected requestValidatorExits method must be called

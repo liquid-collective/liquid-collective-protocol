@@ -48,7 +48,7 @@ interface IConsensusLayerDepositManagerV1 {
     error OnlyKeeper();
 
     /// @notice The operator allocations exceed the committed balance
-    error OperatorAllocationsExceedCommittedBalance();
+    error ValidatorDepositsExceedCommittedBalance();
 
     /// @notice Returns the amount of ETH not yet committed for deposit
     /// @return The amount of ETH not yet committed for deposit
@@ -74,7 +74,7 @@ interface IConsensusLayerDepositManagerV1 {
     /// @param _allocations The operator allocations specifying how many validators per operator
     /// @param _depositRoot The root of the deposit tree
     function depositToConsensusLayerWithDepositRoot(
-        IOperatorsRegistryV1.OperatorAllocation[] calldata _allocations,
+        IOperatorsRegistryV1.ValidatorDeposit[] calldata _allocations,
         bytes32 _depositRoot
     ) external;
 }

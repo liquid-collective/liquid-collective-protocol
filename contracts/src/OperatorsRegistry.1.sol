@@ -257,7 +257,7 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
     }
 
     /// @inheritdoc IOperatorsRegistryV1
-    function requestValidatorExits(OperatorAllocation[] calldata _allocations) external {
+    function requestValidatorExits(ValidatorDeposit[] calldata _allocations) external {
         if (msg.sender != IConsensusLayerDepositManagerV1(RiverAddress.get()).getKeeper()) {
             revert IConsensusLayerDepositManagerV1.OnlyKeeper();
         }
@@ -277,29 +277,29 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
         // Check that the exits requested do not exceed the funded validator count of the operator
         for (uint256 i = 0; i < allocationsLength; ++i) {
             uint256 operatorIndex = _allocations[i].operatorIndex;
-            uint256 count = _allocations[i].validatorCount;
+            uint256 depositAmount = _allocations[i].depositAmount;
 
-            if (count == 0) {
+            if (depositAmount == 0) {
                 revert AllocationWithZeroValidatorCount();
             }
             if (i > 0 && !(operatorIndex > _allocations[i - 1].operatorIndex)) {
                 revert UnorderedOperatorList();
             }
 
-            requestedExitCount += count;
+            requestedExitCount += depositAmount;
 
             OperatorsV2.Operator storage operator = OperatorsV2.get(operatorIndex);
             if (!operator.active) {
                 revert InactiveOperator(operatorIndex);
             }
-            if (count > (operator.funded - operator.requestedExits)) {
+            if (depositAmount > (operator.funded - operator.requestedExits)) {
                 // Operator has insufficient available funded validators
                 revert ExitsRequestedExceedAvailableFundedCount(
-                    operatorIndex, count, operator.funded - operator.requestedExits
+                    operatorIndex, depositAmount, operator.funded - operator.requestedExits
                 );
             }
             // Operator has sufficient funded validators
-            operator.requestedExits += uint32(count);
+            operator.requestedExits += uint32(depositAmount);
             emit RequestedValidatorExits(operatorIndex, operator.requestedExits);
         }
 
