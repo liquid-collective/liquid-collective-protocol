@@ -40,11 +40,6 @@ interface IOperatorsRegistryV1 {
     /// @param newLimit The new operator staking limit
     event SetOperatorLimit(uint256 indexed index, uint256 newLimit);
 
-    /// @notice The operator stopped validator count has been changed
-    /// @param index The operator index
-    /// @param newStoppedValidatorCount The new stopped validator count
-    event SetOperatorStoppedValidatorCount(uint256 indexed index, uint256 newStoppedValidatorCount);
-
     /// @notice The operator address has been changed
     /// @param index The operator index
     /// @param newOperatorAddress The new operator address
@@ -100,10 +95,10 @@ interface IOperatorsRegistryV1 {
     /// @param stoppedValidatorCounts The new stopped validator counts
     event UpdatedStoppedValidators(uint32[] stoppedValidatorCounts);
 
-    /// @notice The requested exit count has been updated
+    /// @notice The requested ETH amount has been updated
     /// @param index The operator index
-    /// @param count The count of requested exits
-    event RequestedValidatorExits(uint256 indexed index, uint256 count);
+    /// @param amount The amount of requested exits in ETH
+    event RequestedETHExits(uint256 indexed index, uint256 amount);
 
     /// @notice The exit request demand has been updated
     /// @param previousValidatorExitsDemand The previous exit request demand
@@ -128,20 +123,12 @@ interface IOperatorsRegistryV1 {
     /// @param deferred True if event has been replayed in the context of a migration
     event FundedValidatorKeys(uint256 indexed index, bytes[] publicKeys, bool deferred);
 
-    /// @notice The requested exit count has been updated to fill the gap with the reported stopped count
+    /// @notice The requested ETH amount has been updated to fill the gap with the reported exited ETH amount
     /// @param index The operator index
-    /// @param oldRequestedExits The old requested exit count
-    /// @param newRequestedExits The new requested exit count
-    event UpdatedRequestedValidatorExitsUponStopped(
-        uint256 indexed index, uint256 oldRequestedExits, uint256 newRequestedExits
-    );
-
-    /// @notice The requested exit count has been updated to fill the gap with the reported stopped count
-    /// @param index The operator index
-    /// @param oldRequestedExits The old requested exit count
-    /// @param newRequestedExits The new requested exit count
+    /// @param oldRequestedETHAmount The old requested ETH amount
+    /// @param newRequestedETHAmount The new requested ETH amount
     event UpdatedRequestedETHExitsUponStopped(
-        uint256 indexed index, uint256 oldRequestedExits, uint256 newRequestedExits
+        uint256 indexed index, uint256 oldRequestedETHAmount, uint256 newRequestedETHAmount
     );
 
     /// @notice The operator exited ETH has been set
@@ -212,8 +199,11 @@ interface IOperatorsRegistryV1 {
     /// @notice Thrown when an element in the exited ETH array is decreasing
     error ExitedETHArrayDecreased();
 
-    /// @notice Thrown when the number of elements in the array is too high compared to operator count
+    /// @notice Thrown when the amount of exited ETH is too high compared to the total deposited ETH
     error ExitedETHsTooHigh();
+
+    /// @notice Thrown when the number of exited ETHs is too high compared to operator count
+    error ExitedETHCountTooHigh();
 
     /// @notice Thrown when no exit requests can be performed
     error NoExitRequestsToPerform();
@@ -228,9 +218,9 @@ interface IOperatorsRegistryV1 {
     error ExitsRequestedExceedAvailableFundedCount(uint256 operatorIndex, uint256 requested, uint256 available);
 
     /// @notice The provided exit requests exceed the current exit request demand
-    /// @param requested The requested count
-    /// @param demand The demand count
-    error ExitsRequestedExceedDemand(uint256 requested, uint256 demand);
+    /// @param requestedETHAmount The requested ETH amount
+    /// @param currentETHExitsDemand The current ETH exits demand
+    error ExitsRequestedExceedDemand(uint256 requestedETHAmount, uint256 currentETHExitsDemand);
 
     /// @notice The provided exited ETH is above the funded ETH of the operator
     /// @param operatorIndex The operator index
@@ -260,15 +250,6 @@ interface IOperatorsRegistryV1 {
     /// @notice Get operator count
     /// @return The operator count
     function getOperatorCount() external view returns (uint256);
-
-    /// @notice Retrieve the stopped validator count for an operator index
-    /// @param _idx The index of the operator
-    /// @return The stopped validator count of the operator
-    function getOperatorStoppedValidatorCount(uint256 _idx) external view returns (uint32);
-
-    /// @notice Retrieve the total stopped validator count
-    /// @return The total stopped validator count
-    function getTotalStoppedValidatorCount() external view returns (uint32);
 
     /// @notice Retrieve the total requested exit amount in ETH
     /// @notice This value is the amount of exit requests that have been performed, emitting an event for operators to catch

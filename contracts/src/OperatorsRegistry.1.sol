@@ -164,16 +164,6 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
     }
 
     /// @inheritdoc IOperatorsRegistryV1
-    function getOperatorStoppedValidatorCount(uint256 _idx) external view returns (uint32) {
-        return _getStoppedValidatorsCount(_idx);
-    }
-
-    /// @inheritdoc IOperatorsRegistryV1
-    function getTotalStoppedValidatorCount() external view returns (uint32) {
-        return _getTotalStoppedValidatorCount();
-    }
-
-    /// @inheritdoc IOperatorsRegistryV1
     function getTotalETHExitsRequested() external view returns (uint256) {
         return TotalETHExitsRequested.get();
     }
@@ -473,7 +463,7 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
             }
             // Operator has sufficient funded validators
             operator.exited += ethAmount;
-            emit RequestedValidatorExits(operatorIndex, operator.exited);
+            emit RequestedETHExits(operatorIndex, operator.exited);
         }
 
         // Check that the exits requested do not exceed the current ETH exits demand
@@ -610,7 +600,7 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
 
         // we check that the cells containing operator stopped values are no more than the current operator count
         if (vars.stoppedExitedETHsLength - 1 > operators.length) {
-            revert ExitedETHsTooHigh();
+            revert ExitedETHCountTooHigh();
         }
 
         vars.currentExitedETHs = OperatorsV3.getExitedETH();
