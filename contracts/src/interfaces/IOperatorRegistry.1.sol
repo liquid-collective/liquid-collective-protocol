@@ -20,6 +20,14 @@ interface IOperatorsRegistryV1 {
         uint256 depositAmount; // 32-2048 ETH
     }
 
+    /// @notice Structure representing an operator allocation for exit requests
+    /// @param operatorIndex The index of the operator
+    /// @param validatorCount The number of validators
+    struct OperatorAllocation {
+        uint256 operatorIndex;
+        uint256 validatorCount;
+    }
+
     /// @notice A new operator has been added to the registry
     /// @param index The operator index
     /// @param name The operator display name
@@ -315,7 +323,12 @@ interface IOperatorsRegistryV1 {
     /// @dev Reverts with ExitsRequestedExceedDemand if total exits requested exceed the current demand
     /// @dev Reverts with NoExitRequestsToPerform if there is no pending exit demand
     /// @param _allocations The proposed per-operator exit allocations, sorted by operator index
-    function requestValidatorExits(ValidatorDeposit[] calldata _allocations) external;
+    function requestValidatorExits(OperatorAllocation[] calldata _allocations) external;
+
+    /// @notice Increment the funded validator count for an operator by 1
+    /// @dev Only callable by the River contract. Called once per ValidatorDeposit entry during deposit.
+    /// @param _operatorIndex The operator index
+    function incrementFundedValidator(uint256 _operatorIndex) external;
 
     /// @notice Increases the exit request demand
     /// @dev This method is only callable by the river contract, and to actually forward the information to the node operators via event emission, the unprotected requestValidatorExits method must be called

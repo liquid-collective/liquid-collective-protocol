@@ -114,11 +114,10 @@ contract RiverV1 is
         _approve(address(this), _redeemManager, type(uint256).max);
     }
 
-    /// @inheritdoc IRiverV1
     function initRiverV1_2() external init(2) {
         // force committed balance to a multiple of 32 ETH and
         // move extra funds back to the deposit buffer
-        uint256 dustToUncommit = CommittedBalance.get() % DEPOSIT_SIZE;
+        uint256 dustToUncommit = CommittedBalance.get() % MIN_DEPOSIT_SIZE;
         unchecked {
             _setCommittedBalance(CommittedBalance.get() - dustToUncommit);
             _setBalanceToDeposit(BalanceToDeposit.get() + dustToUncommit);
@@ -292,6 +291,14 @@ contract RiverV1 is
         return Administrable._getAdmin();
     }
 
+    /// @notice Overridden handler to update funded validator counts on the operators registry after deposits
+    function _updateFundedValidators(IOperatorsRegistryV1.ValidatorDeposit[] calldata _allocations) internal override {
+        IOperatorsRegistryV1 registry = IOperatorsRegistryV1(OperatorsRegistryAddress.get());
+        for (uint256 idx = 0; idx < _allocations.length; ++idx) {
+            registry.incrementFundedValidator(_allocations[idx].operatorIndex);
+        }
+    }
+
     /// @notice Overridden handler called whenever a token transfer is triggered
     /// @param _from Token sender
     /// @param _to Token receiver
@@ -376,6 +383,8 @@ contract RiverV1 is
     }
 
     /// @notice Overridden handler called whenever the total balance of ETH is requested
+    /// @dev WARNING: assumes all validators are deposited with exactly MIN_DEPOSIT_SIZE (32 ETH).
+    /// @dev This will break if variable deposit amounts are used (Pectra).
     /// @return The current total asset balance managed by River
     function _assetBalance() internal view override(SharesManagerV1, OracleManagerV1) returns (uint256) {
         IOracleManagerV1.StoredConsensusLayerReport storage storedReport = LastConsensusLayerReport.get();
@@ -384,7 +393,7 @@ contract RiverV1 is
         if (clValidatorCount < depositedValidatorCount) {
             return storedReport.validatorsBalance + BalanceToDeposit.get() + CommittedBalance.get()
                 + BalanceToRedeem.get() + (depositedValidatorCount - clValidatorCount)
-                * ConsensusLayerDepositManagerV1.DEPOSIT_SIZE;
+                * MIN_DEPOSIT_SIZE;
         } else {
             return
                 storedReport.validatorsBalance + BalanceToDeposit.get() + CommittedBalance.get() + BalanceToRedeem.get();
@@ -491,6 +500,8 @@ contract RiverV1 is
     }
 
     /// @notice Requests exits of validators after possibly rebalancing deposit and redeem balances
+    /// @dev WARNING: assumes all validators are deposited with exactly MIN_DEPOSIT_SIZE (32 ETH).
+    /// @dev This will break if variable deposit amounts are used (Pectra).
     /// @param _exitingBalance The currently exiting funds, soon to be received on the execution layer
     /// @param _depositToRedeemRebalancingAllowed True if rebalancing from deposit to redeem is allowed
     function _requestExitsBasedOnRedeemDemandAfterRebalancings(
@@ -539,12 +550,12 @@ contract RiverV1 is
                 uint256 preExitingBalance =
                     (totalRequestedExitsCount > totalStoppedValidatorCount
                                 ? (totalRequestedExitsCount - totalStoppedValidatorCount)
-                                : 0) * DEPOSIT_SIZE;
+                                : 0) * MIN_DEPOSIT_SIZE;
 
                 if (availableBalanceToRedeem + _exitingBalance + preExitingBalance < redeemManagerDemandInEth) {
                     uint256 validatorCountToExit = LibUint256.ceil(
                         redeemManagerDemandInEth - (availableBalanceToRedeem + _exitingBalance + preExitingBalance),
-                        DEPOSIT_SIZE
+                        MIN_DEPOSIT_SIZE
                     );
 
                     or.demandValidatorExits(validatorCountToExit, DepositedValidatorCount.get());
@@ -566,6 +577,8 @@ contract RiverV1 is
 
     /// @notice Commits the deposit balance up to the allowed daily limit in batches of 32 ETH.
     /// @notice Committed funds are funds waiting to be deposited but that cannot be used to fund the redeem manager anymore
+    /// @dev WARNING: assumes all validators are deposited with exactly MIN_DEPOSIT_SIZE (32 ETH).
+    /// @dev This will break if variable deposit amounts are used (Pectra).
     /// @notice This two step process is required to prevent possible out of gas issues we would have from actually funding the validators at this point
     /// @param _period The period between current and last report
     function _commitBalanceToDeposit(uint256 _period) internal override {
@@ -589,7 +602,7 @@ contract RiverV1 is
         uint256 currentMaxCommittableAmount =
             LibUint256.min((currentMaxDailyCommittableAmount * _period) / 1 days, currentBalanceToDeposit);
         // we only commit multiples of 32 ETH
-        currentMaxCommittableAmount = (currentMaxCommittableAmount / DEPOSIT_SIZE) * DEPOSIT_SIZE;
+        currentMaxCommittableAmount = (currentMaxCommittableAmount / MIN_DEPOSIT_SIZE) * MIN_DEPOSIT_SIZE;
 
         if (currentMaxCommittableAmount > 0) {
             _setCommittedBalance(CommittedBalance.get() + currentMaxCommittableAmount);

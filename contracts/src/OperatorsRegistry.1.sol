@@ -196,7 +196,6 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
         return completeList;
     }
 
-
     /// @inheritdoc IOperatorsRegistryV1
     function listActiveOperators() external view returns (OperatorsV2.Operator[] memory) {
         return OperatorsV2.getAllActive();
@@ -257,7 +256,7 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
     }
 
     /// @inheritdoc IOperatorsRegistryV1
-    function requestValidatorExits(ValidatorDeposit[] calldata _allocations) external {
+    function requestValidatorExits(OperatorAllocation[] calldata _allocations) external {
         if (msg.sender != IConsensusLayerDepositManagerV1(RiverAddress.get()).getKeeper()) {
             revert IConsensusLayerDepositManagerV1.OnlyKeeper();
         }
@@ -277,29 +276,29 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
         // Check that the exits requested do not exceed the funded validator count of the operator
         for (uint256 i = 0; i < allocationsLength; ++i) {
             uint256 operatorIndex = _allocations[i].operatorIndex;
-            uint256 depositAmount = _allocations[i].depositAmount;
+            uint256 validatorCount = _allocations[i].validatorCount;
 
-            if (depositAmount == 0) {
+            if (validatorCount == 0) {
                 revert AllocationWithZeroValidatorCount();
             }
             if (i > 0 && !(operatorIndex > _allocations[i - 1].operatorIndex)) {
                 revert UnorderedOperatorList();
             }
 
-            requestedExitCount += depositAmount;
+            requestedExitCount += validatorCount;
 
             OperatorsV2.Operator storage operator = OperatorsV2.get(operatorIndex);
             if (!operator.active) {
                 revert InactiveOperator(operatorIndex);
             }
-            if (depositAmount > (operator.funded - operator.requestedExits)) {
+            if (validatorCount > (operator.funded - operator.requestedExits)) {
                 // Operator has insufficient available funded validators
                 revert ExitsRequestedExceedAvailableFundedCount(
-                    operatorIndex, depositAmount, operator.funded - operator.requestedExits
+                    operatorIndex, validatorCount, operator.funded - operator.requestedExits
                 );
             }
             // Operator has sufficient funded validators
-            operator.requestedExits += uint32(depositAmount);
+            operator.requestedExits += uint32(validatorCount);
             emit RequestedValidatorExits(operatorIndex, operator.requestedExits);
         }
 
@@ -317,6 +316,18 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
     }
 
     /// @inheritdoc IOperatorsRegistryV1
+    function incrementFundedValidator(uint256 _operatorIndex) external onlyRiver {
+        OperatorsV2.Operator storage operator = OperatorsV2.get(_operatorIndex);
+        if (!operator.active) {
+            revert InactiveOperator(_operatorIndex);
+        }
+        if (_getStoppedValidatorsCount(_operatorIndex) < operator.requestedExits) {
+            revert OperatorIgnoredExitRequests(_operatorIndex);
+        }
+        operator.funded += 1;
+    }
+
+    /// @inheritdoc IOperatorsRegistryV1
     function demandValidatorExits(uint256 _count, uint256 _depositedValidatorCount) external onlyRiver {
         uint256 currentValidatorExitsDemand = CurrentValidatorExitsDemand.get();
         uint256 totalValidatorExitsRequested = TotalValidatorExitsRequested.get();
@@ -326,29 +337,6 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
         if (_count > 0) {
             _setCurrentValidatorExitsDemand(currentValidatorExitsDemand, currentValidatorExitsDemand + _count);
         }
-    }
-
-    /// @notice Internal utility to get the funded count for an active operator if it is fundable
-    /// @param _operatorIndex The operator index
-    /// @param _validatorCount The validator count
-    /// @return fundedCount The funded count of the operator
-    function _getFundedCountForOperatorIfFundable(uint256 _operatorIndex, uint256 _validatorCount)
-        internal
-        view
-        returns (uint32)
-    {
-        OperatorsV2.Operator memory operator = OperatorsV2.get(_operatorIndex);
-        if (!operator.active) {
-            revert InactiveOperator(_operatorIndex);
-        }
-        if (_getStoppedValidatorsCount(_operatorIndex) < operator.requestedExits) {
-            revert OperatorIgnoredExitRequests(_operatorIndex);
-        }
-        uint256 availableKeys = operator.limit - operator.funded;
-        if (_validatorCount > availableKeys) {
-            revert OperatorHasInsufficientFundableKeys(_operatorIndex, _validatorCount, availableKeys);
-        }
-        return operator.funded;
     }
 
     /// @notice Internal utility to retrieve the total stopped validator count

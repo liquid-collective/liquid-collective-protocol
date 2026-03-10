@@ -26,7 +26,9 @@ abstract contract ConsensusLayerDepositManagerV1 is IConsensusLayerDepositManage
     /// @notice Size of a BLS Signature in bytes
     uint256 public constant SIGNATURE_LENGTH = 96;
     /// @notice Size of a deposit in ETH
-    uint256 public constant DEPOSIT_SIZE = 32 ether;
+    uint256 public constant MIN_DEPOSIT_SIZE = 32 ether;
+    /// @notice Size of a deposit in ETH
+    uint256 public constant MAX_DEPOSIT_SIZE = 2048 ether;
 
     /// @notice Handler called to retrieve the internal River admin address
     /// @dev Must be Overridden
@@ -35,6 +37,11 @@ abstract contract ConsensusLayerDepositManagerV1 is IConsensusLayerDepositManage
     /// @notice Handler called to change the committed balance to deposit
     /// @param newCommittedBalance The new committed balance value
     function _setCommittedBalance(uint256 newCommittedBalance) internal virtual;
+
+    /// @notice Handler called to update the funded validator count on the operators registry after each deposit
+    /// @dev Must be overridden. River implements this to call incrementFundedValidator on the registry.
+    /// @param _allocations The validator deposits that were just deposited
+    function _updateFundedValidators(IOperatorsRegistryV1.ValidatorDeposit[] calldata _allocations) internal virtual;
 
     /// @notice Initializer to set the deposit contract address and the withdrawal credentials to use
     /// @param _depositContractAddress The address of the deposit contract
@@ -79,6 +86,8 @@ abstract contract ConsensusLayerDepositManagerV1 is IConsensusLayerDepositManage
     }
 
     /// @inheritdoc IConsensusLayerDepositManagerV1
+    /// @dev WARNING: maxDepositableCount assumes all deposits are exactly MIN_DEPOSIT_SIZE (32 ETH).
+    /// @dev This will break if variable deposit amounts are used (Pectra).
     function depositToConsensusLayerWithDepositRoot(
         IOperatorsRegistryV1.ValidatorDeposit[] calldata _allocations,
         bytes32 _depositRoot
@@ -92,7 +101,7 @@ abstract contract ConsensusLayerDepositManagerV1 is IConsensusLayerDepositManage
         }
 
         uint256 committedBalance = CommittedBalance.get();
-        uint256 maxDepositableCount = committedBalance / DEPOSIT_SIZE;
+        uint256 maxDepositableCount = committedBalance / MIN_DEPOSIT_SIZE;
 
         if (maxDepositableCount == 0) {
             revert NotEnoughFunds();
@@ -103,8 +112,8 @@ abstract contract ConsensusLayerDepositManagerV1 is IConsensusLayerDepositManage
             totalRequested += _allocations[i].depositAmount;
         }
 
-        // Check if the total requested number of validators exceeds the maximum number of validators that can be funded
-        if (totalRequested > maxDepositableCount) {
+        // Check if the total requested exceeds the committed balance
+        if (totalRequested > committedBalance) {
             revert ValidatorDepositsExceedCommittedBalance();
         }
 
@@ -114,10 +123,26 @@ abstract contract ConsensusLayerDepositManagerV1 is IConsensusLayerDepositManage
             revert InvalidWithdrawalCredentials();
         }
 
+        // Validate pubkey and signature lengths before any state changes
         for (uint256 idx = 0; idx < _allocations.length; ++idx) {
-            _depositValidator(_allocations[idx].pubkey, _allocations[idx].signature, withdrawalCredentials);
+            if (_allocations[idx].pubkey.length != PUBLIC_KEY_LENGTH) {
+                revert InconsistentPublicKeys();
+            }
+            if (_allocations[idx].signature.length != SIGNATURE_LENGTH) {
+                revert InconsistentSignatures();
+            }
         }
-        _setCommittedBalance(committedBalance - DEPOSIT_SIZE * _allocations.length);
+
+        for (uint256 idx = 0; idx < _allocations.length; ++idx) {
+            _depositValidator(
+                _allocations[idx].pubkey,
+                _allocations[idx].signature,
+                _allocations[idx].depositAmount,
+                withdrawalCredentials
+            );
+        }
+        _updateFundedValidators(_allocations);
+        _setCommittedBalance(committedBalance - totalRequested);
         uint256 currentDepositedValidatorCount = DepositedValidatorCount.get();
         DepositedValidatorCount.set(currentDepositedValidatorCount + _allocations.length);
         emit SetDepositedValidatorCount(
@@ -129,9 +154,12 @@ abstract contract ConsensusLayerDepositManagerV1 is IConsensusLayerDepositManage
     /// @param _publicKey The public key of the validator
     /// @param _signature The signature provided by the operator
     /// @param _withdrawalCredentials The withdrawal credentials provided by River
-    function _depositValidator(bytes memory _publicKey, bytes memory _signature, bytes32 _withdrawalCredentials)
-        internal
-    {
+    function _depositValidator(
+        bytes memory _publicKey,
+        bytes memory _signature,
+        uint256 _depositAmount,
+        bytes32 _withdrawalCredentials
+    ) internal {
         if (_publicKey.length != PUBLIC_KEY_LENGTH) {
             revert InconsistentPublicKeys();
         }
@@ -139,7 +167,10 @@ abstract contract ConsensusLayerDepositManagerV1 is IConsensusLayerDepositManage
         if (_signature.length != SIGNATURE_LENGTH) {
             revert InconsistentSignatures();
         }
-        uint256 value = DEPOSIT_SIZE;
+        if (_depositAmount < MIN_DEPOSIT_SIZE || _depositAmount > MAX_DEPOSIT_SIZE) {
+            revert InvalidDepositSize(_depositAmount);
+        }
+        uint256 value = _depositAmount;
 
         uint256 depositAmount = value / 1 gwei;
 

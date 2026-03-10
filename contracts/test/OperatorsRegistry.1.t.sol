@@ -622,6 +622,8 @@ contract OperatorsRegistryV1Tests is OperatorsRegistryV1TestBase, OperatorAlloca
             operatorsRegistry.addOperator(string(abi.encodePacked(idx)), address(123));
             stoppedValidatorCounts[idx] = (totalCount / len) + (idx - 1 < totalCount % len ? 1 : 0);
             operators[idx - 1] = idx - 1;
+            // Set funded high enough so stopped counts don't exceed funded
+            OperatorsRegistryInitializableV1(address(operatorsRegistry)).sudoSetFunded(idx - 1, totalCount);
         }
         vm.prank(river);
         for (uint256 idx = 1; idx < len + 1; ++idx) {
@@ -675,13 +677,15 @@ contract OperatorsRegistryV1Tests is OperatorsRegistryV1TestBase, OperatorAlloca
             operatorsRegistry.addOperator(string(abi.encodePacked(idx)), address(123));
             stoppedValidators[idx] = (totalCount / len) + (idx - 1 < totalCount % len ? 1 : 0);
             operators[idx - 1] = idx - 1;
+            // Set funded high enough so stopped counts don't exceed funded
+            OperatorsRegistryInitializableV1(address(operatorsRegistry)).sudoSetFunded(idx - 1, totalCount);
         }
 
         stoppedValidators[0] -= 1;
 
         vm.prank(river);
         vm.expectRevert(abi.encodeWithSignature("InvalidStoppedValidatorCountsSum()"));
-        operatorsRegistry.reportStoppedValidatorCounts(stoppedValidators, 0);
+        operatorsRegistry.reportStoppedValidatorCounts(stoppedValidators, totalCount);
     }
 }
 
@@ -787,9 +791,11 @@ contract OperatorsRegistryV1ExitCorrectnessTests is OperatorAllocationTestBase {
         vm.stopPrank();
     }
 
-    /// @dev Fund all 5 operators with 50 validators each and set limits
+    /// @dev Fund all 5 operators with 50 validators each
     function _fundAllOperators() internal {
-
+        for (uint256 i = 0; i < 5; ++i) {
+            OperatorsRegistryInitializableV1(address(operatorsRegistry)).sudoSetFunded(i, 50);
+        }
         RiverMock(river).sudoSetDepositedValidatorsCount(250);
     }
 
@@ -818,7 +824,7 @@ contract OperatorsRegistryV1ExitCorrectnessTests is OperatorAllocationTestBase {
         counts1[2] = 10;
 
         vm.prank(keeper);
-        operatorsRegistry.requestValidatorExits(_createAllocation(ops1, counts1));
+        operatorsRegistry.requestValidatorExits(_createExitAllocation(ops1, counts1));
 
         assertEq(operatorsRegistry.getOperator(0).requestedExits, 10, "Op0 should have 10 exits after round 1");
         assertEq(operatorsRegistry.getOperator(1).requestedExits, 10, "Op1 should have 10 exits after round 1");
@@ -839,7 +845,7 @@ contract OperatorsRegistryV1ExitCorrectnessTests is OperatorAllocationTestBase {
         counts2[2] = 5;
 
         vm.prank(keeper);
-        operatorsRegistry.requestValidatorExits(_createAllocation(ops2, counts2));
+        operatorsRegistry.requestValidatorExits(_createExitAllocation(ops2, counts2));
 
         assertEq(operatorsRegistry.getOperator(0).requestedExits, 25, "Op0 should have 10+15=25 exits");
         assertEq(operatorsRegistry.getOperator(1).requestedExits, 25, "Op1 should have 10+15=25 exits");
@@ -875,7 +881,7 @@ contract OperatorsRegistryV1ExitCorrectnessTests is OperatorAllocationTestBase {
         emit RequestedValidatorExits(4, 10);
 
         vm.prank(keeper);
-        operatorsRegistry.requestValidatorExits(_createAllocation(ops, counts));
+        operatorsRegistry.requestValidatorExits(_createExitAllocation(ops, counts));
 
         assertEq(operatorsRegistry.getOperator(0).requestedExits, 20, "Op0 should have 20 exits");
         assertEq(operatorsRegistry.getOperator(1).requestedExits, 0, "Op1 should remain at 0");
@@ -909,7 +915,7 @@ contract OperatorsRegistryV1ExitCorrectnessTests is OperatorAllocationTestBase {
         }
 
         vm.prank(keeper);
-        operatorsRegistry.requestValidatorExits(_createAllocation(ops, counts));
+        operatorsRegistry.requestValidatorExits(_createExitAllocation(ops, counts));
 
         assertEq(operatorsRegistry.getCurrentValidatorExitsDemand(), 60, "Demand should be 60 after first call");
         assertEq(operatorsRegistry.getTotalValidatorExitsRequested(), 40, "Total exits should be 40");
@@ -928,7 +934,7 @@ contract OperatorsRegistryV1ExitCorrectnessTests is OperatorAllocationTestBase {
         }
 
         vm.prank(keeper);
-        operatorsRegistry.requestValidatorExits(_createAllocation(ops, counts));
+        operatorsRegistry.requestValidatorExits(_createExitAllocation(ops, counts));
 
         assertEq(operatorsRegistry.getCurrentValidatorExitsDemand(), 0, "Demand should be fully satisfied");
         assertEq(operatorsRegistry.getTotalValidatorExitsRequested(), 100, "Total exits should be 100");
@@ -981,7 +987,7 @@ contract OperatorsRegistryV1ExitCorrectnessTests is OperatorAllocationTestBase {
         }
 
         vm.prank(keeper);
-        operatorsRegistry.requestValidatorExits(_createAllocation(ops, exitCounts1));
+        operatorsRegistry.requestValidatorExits(_createExitAllocation(ops, exitCounts1));
 
         assertEq(operatorsRegistry.getCurrentValidatorExitsDemand(), 90, "Demand should be 150-60=90");
         assertEq(operatorsRegistry.getTotalValidatorExitsRequested(), 110, "Total exits should be 50+60=110");
@@ -1032,7 +1038,7 @@ contract OperatorsRegistryV1ExitCorrectnessTests is OperatorAllocationTestBase {
         }
 
         vm.prank(keeper);
-        operatorsRegistry.requestValidatorExits(_createAllocation(ops, exitCounts2));
+        operatorsRegistry.requestValidatorExits(_createExitAllocation(ops, exitCounts2));
 
         assertEq(operatorsRegistry.getCurrentValidatorExitsDemand(), 30, "Demand should be 90-60=30");
         assertEq(operatorsRegistry.getTotalValidatorExitsRequested(), 170, "Total exits should be 110+60=170");
@@ -1086,7 +1092,7 @@ contract OperatorsRegistryV1ExitCorrectnessTests is OperatorAllocationTestBase {
     //     exitCounts[2] = 3;
 
     //     vm.prank(keeper);
-    //     operatorsRegistry.requestValidatorExits(_createAllocation(ops, exitCounts));
+    //     operatorsRegistry.requestValidatorExits(_createExitAllocation(ops, exitCounts));
 
     //     assertEq(operatorsRegistry.getOperator(0).funded, 10, "Op0 funded unchanged");
     //     assertEq(operatorsRegistry.getOperator(1).funded, 15, "Op1 funded unchanged");
@@ -1144,7 +1150,7 @@ contract OperatorsRegistryV1ExitCorrectnessTests is OperatorAllocationTestBase {
 
         vm.expectRevert(abi.encodeWithSignature("ExitsRequestedExceedDemand(uint256,uint256)", 11, 10));
         vm.prank(keeper);
-        operatorsRegistry.requestValidatorExits(_createAllocation(ops, counts));
+        operatorsRegistry.requestValidatorExits(_createExitAllocation(ops, counts));
     }
 
     // ──────────────────────────────────────────────────────────────────────
@@ -1170,7 +1176,7 @@ contract OperatorsRegistryV1ExitCorrectnessTests is OperatorAllocationTestBase {
         counts1[2] = 5;
 
         vm.prank(keeper);
-        operatorsRegistry.requestValidatorExits(_createAllocation(ops1, counts1));
+        operatorsRegistry.requestValidatorExits(_createExitAllocation(ops1, counts1));
         assertEq(operatorsRegistry.getCurrentValidatorExitsDemand(), 5, "Demand should be 5 after first call");
 
         // Second call: try to exit 10 from op3 (5 over remaining demand of 5)
@@ -1181,7 +1187,7 @@ contract OperatorsRegistryV1ExitCorrectnessTests is OperatorAllocationTestBase {
 
         vm.expectRevert(abi.encodeWithSignature("ExitsRequestedExceedDemand(uint256,uint256)", 10, 5));
         vm.prank(keeper);
-        operatorsRegistry.requestValidatorExits(_createAllocation(ops2, counts2));
+        operatorsRegistry.requestValidatorExits(_createExitAllocation(ops2, counts2));
     }
 
     // ──────────────────────────────────────────────────────────────────────
@@ -1207,7 +1213,7 @@ contract OperatorsRegistryV1ExitCorrectnessTests is OperatorAllocationTestBase {
         counts[2] = 4;
 
         vm.prank(keeper);
-        operatorsRegistry.requestValidatorExits(_createAllocation(ops, counts));
+        operatorsRegistry.requestValidatorExits(_createExitAllocation(ops, counts));
 
         assertEq(operatorsRegistry.getCurrentValidatorExitsDemand(), 0, "Demand should be 0");
         assertEq(operatorsRegistry.getTotalValidatorExitsRequested(), 10, "Total exits should be 10");
@@ -1249,7 +1255,7 @@ contract OperatorsRegistryV1ExitCorrectnessTests is OperatorAllocationTestBase {
         exitCounts[1] = 5;
 
         vm.prank(keeper);
-        operatorsRegistry.requestValidatorExits(_createAllocation(ops, exitCounts));
+        operatorsRegistry.requestValidatorExits(_createExitAllocation(ops, exitCounts));
 
         assertEq(operatorsRegistry.getOperator(0).requestedExits, 5, "Op0 should have 5 requestedExits");
         assertEq(operatorsRegistry.getOperator(1).requestedExits, 5, "Op1 should have 5 requestedExits");
