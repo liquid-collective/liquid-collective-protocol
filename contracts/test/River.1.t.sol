@@ -1774,7 +1774,6 @@ contract RiverV1TestsReport_HEAVY_FUZZING is RiverV1TestBase {
         vm.prank(admin);
         river.depositToConsensusLayerWithDepositRoot(_createAllocation(operatorIndex, uint32(count)), bytes32(0));
 
-
         return _salt;
     }
 

@@ -7,7 +7,6 @@ import "../state/operatorsRegistry/Operators.2.sol";
 /// @author Alluvial Finance Inc.
 /// @notice This interface exposes methods to handle the list of operators and their keys
 interface IOperatorsRegistryV1 {
-
     /// @notice Structure representing a validator deposit
     /// @param operatorIndex The index of the operator
     /// @param pubkey The BLS public key of the validator
@@ -15,8 +14,8 @@ interface IOperatorsRegistryV1 {
     /// @param depositAmount The deposit amount in ETH
     struct ValidatorDeposit {
         uint256 operatorIndex;
-        bytes pubkey;          // 48 bytes
-        bytes signature;       // 96 bytes
+        bytes pubkey; // 48 bytes
+        bytes signature; // 96 bytes
         uint256 depositAmount; // 32-2048 ETH
     }
 

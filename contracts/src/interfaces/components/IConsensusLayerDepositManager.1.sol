@@ -31,7 +31,7 @@ interface IConsensusLayerDepositManagerV1 {
 
     /// @notice The deposit size is invalid
     error InvalidDepositSize(uint256 depositSize);
-    
+
     /// @notice The internal key retrieval returned no keys
     error NoAvailableValidatorKeys();
 

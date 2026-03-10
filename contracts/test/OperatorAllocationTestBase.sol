@@ -17,8 +17,7 @@ abstract contract OperatorAllocationTestBase is Test {
         pure
         returns (IOperatorsRegistryV1.ValidatorDeposit[] memory)
     {
-        IOperatorsRegistryV1.ValidatorDeposit[] memory allocations =
-            new IOperatorsRegistryV1.ValidatorDeposit[](count);
+        IOperatorsRegistryV1.ValidatorDeposit[] memory allocations = new IOperatorsRegistryV1.ValidatorDeposit[](count);
         for (uint256 i = 0; i < count; ++i) {
             allocations[i] = IOperatorsRegistryV1.ValidatorDeposit({
                 operatorIndex: operatorIndex,
@@ -75,10 +74,8 @@ abstract contract OperatorAllocationTestBase is Test {
         IOperatorsRegistryV1.OperatorAllocation[] memory allocations =
             new IOperatorsRegistryV1.OperatorAllocation[](opIndexes.length);
         for (uint256 i = 0; i < opIndexes.length; ++i) {
-            allocations[i] = IOperatorsRegistryV1.OperatorAllocation({
-                operatorIndex: opIndexes[i],
-                validatorCount: counts[i]
-            });
+            allocations[i] =
+                IOperatorsRegistryV1.OperatorAllocation({operatorIndex: opIndexes[i], validatorCount: counts[i]});
         }
         return allocations;
     }

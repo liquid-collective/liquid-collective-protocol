@@ -392,8 +392,7 @@ contract RiverV1 is
         uint256 depositedValidatorCount = DepositedValidatorCount.get();
         if (clValidatorCount < depositedValidatorCount) {
             return storedReport.validatorsBalance + BalanceToDeposit.get() + CommittedBalance.get()
-                + BalanceToRedeem.get() + (depositedValidatorCount - clValidatorCount)
-                * MIN_DEPOSIT_SIZE;
+                + BalanceToRedeem.get() + (depositedValidatorCount - clValidatorCount) * MIN_DEPOSIT_SIZE;
         } else {
             return
                 storedReport.validatorsBalance + BalanceToDeposit.get() + CommittedBalance.get() + BalanceToRedeem.get();
