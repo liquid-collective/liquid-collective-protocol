@@ -383,7 +383,7 @@ contract RiverV1 is
     }
 
     /// @notice Overridden handler called whenever the total balance of ETH is requested
-    /// @dev WARNING: assumes all validators are deposited with exactly MIN_DEPOSIT_SIZE (32 ETH).
+    /// @dev WARNING: assumes all validators are exactly 32 ETH.
     /// @dev This will break if variable deposit amounts are used (Pectra).
     /// @return The current total asset balance managed by River
     function _assetBalance() internal view override(SharesManagerV1, OracleManagerV1) returns (uint256) {
@@ -499,7 +499,7 @@ contract RiverV1 is
     }
 
     /// @notice Requests exits of validators after possibly rebalancing deposit and redeem balances
-    /// @dev WARNING: assumes all validators are deposited with exactly MIN_DEPOSIT_SIZE (32 ETH).
+    /// @dev WARNING: assumes all validators are exactly 32 ETH.
     /// @dev This will break if variable deposit amounts are used (Pectra).
     /// @param _exitingBalance The currently exiting funds, soon to be received on the execution layer
     /// @param _depositToRedeemRebalancingAllowed True if rebalancing from deposit to redeem is allowed
@@ -576,7 +576,7 @@ contract RiverV1 is
 
     /// @notice Commits the deposit balance up to the allowed daily limit in batches of 32 ETH.
     /// @notice Committed funds are funds waiting to be deposited but that cannot be used to fund the redeem manager anymore
-    /// @dev WARNING: assumes all validators are deposited with exactly MIN_DEPOSIT_SIZE (32 ETH).
+    /// @dev WARNING: assumes all validators are exactly 32 ETH.
     /// @dev This will break if variable deposit amounts are used (Pectra).
     /// @notice This two step process is required to prevent possible out of gas issues we would have from actually funding the validators at this point
     /// @param _period The period between current and last report

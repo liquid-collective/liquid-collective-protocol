@@ -276,29 +276,29 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
         // Check that the exits requested do not exceed the funded validator count of the operator
         for (uint256 i = 0; i < allocationsLength; ++i) {
             uint256 operatorIndex = _allocations[i].operatorIndex;
-            uint256 validatorCount = _allocations[i].validatorCount;
+            uint256 count = _allocations[i].validatorCount;
 
-            if (validatorCount == 0) {
+            if (count == 0) {
                 revert AllocationWithZeroValidatorCount();
             }
             if (i > 0 && !(operatorIndex > _allocations[i - 1].operatorIndex)) {
                 revert UnorderedOperatorList();
             }
 
-            requestedExitCount += validatorCount;
+            requestedExitCount += count;
 
             OperatorsV2.Operator storage operator = OperatorsV2.get(operatorIndex);
             if (!operator.active) {
                 revert InactiveOperator(operatorIndex);
             }
-            if (validatorCount > (operator.funded - operator.requestedExits)) {
+            if (count > (operator.funded - operator.requestedExits)) {
                 // Operator has insufficient available funded validators
                 revert ExitsRequestedExceedAvailableFundedCount(
-                    operatorIndex, validatorCount, operator.funded - operator.requestedExits
+                    operatorIndex, count, operator.funded - operator.requestedExits
                 );
             }
             // Operator has sufficient funded validators
-            operator.requestedExits += uint32(validatorCount);
+            operator.requestedExits += uint32(count);
             emit RequestedValidatorExits(operatorIndex, operator.requestedExits);
         }
 

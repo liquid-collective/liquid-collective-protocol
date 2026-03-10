@@ -86,7 +86,7 @@ abstract contract ConsensusLayerDepositManagerV1 is IConsensusLayerDepositManage
     }
 
     /// @inheritdoc IConsensusLayerDepositManagerV1
-    /// @dev WARNING: maxDepositableCount assumes all deposits are exactly MIN_DEPOSIT_SIZE (32 ETH).
+    /// @dev WARNING: maxDepositableCount assumes all validators are exactly 32 ETH.
     /// @dev This will break if variable deposit amounts are used (Pectra).
     function depositToConsensusLayerWithDepositRoot(
         IOperatorsRegistryV1.ValidatorDeposit[] calldata _allocations,
@@ -106,9 +106,15 @@ abstract contract ConsensusLayerDepositManagerV1 is IConsensusLayerDepositManage
         if (maxDepositableCount == 0) {
             revert NotEnoughFunds();
         }
-        // Calculate total requested from allocations
+        // Calculate total requested and validate key lengths in a single pass
         uint256 totalRequested = 0;
         for (uint256 i = 0; i < _allocations.length; ++i) {
+            if (_allocations[i].pubkey.length != PUBLIC_KEY_LENGTH) {
+                revert InconsistentPublicKeys();
+            }
+            if (_allocations[i].signature.length != SIGNATURE_LENGTH) {
+                revert InconsistentSignatures();
+            }
             totalRequested += _allocations[i].depositAmount;
         }
 
@@ -121,16 +127,6 @@ abstract contract ConsensusLayerDepositManagerV1 is IConsensusLayerDepositManage
 
         if (withdrawalCredentials == 0) {
             revert InvalidWithdrawalCredentials();
-        }
-
-        // Validate pubkey and signature lengths before any state changes
-        for (uint256 idx = 0; idx < _allocations.length; ++idx) {
-            if (_allocations[idx].pubkey.length != PUBLIC_KEY_LENGTH) {
-                revert InconsistentPublicKeys();
-            }
-            if (_allocations[idx].signature.length != SIGNATURE_LENGTH) {
-                revert InconsistentSignatures();
-            }
         }
 
         for (uint256 idx = 0; idx < _allocations.length; ++idx) {
