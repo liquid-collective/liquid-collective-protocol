@@ -28,6 +28,7 @@ import "./state/river/BalanceToRedeem.sol";
 import "./state/river/GlobalFee.sol";
 import "./state/river/MetadataURI.sol";
 import "./state/river/LastConsensusLayerReport.sol";
+import "./state/river/TotalDepositedETH.sol";
 
 /// @title River (v1)
 /// @author Alluvial Finance Inc.
@@ -391,16 +392,8 @@ contract RiverV1 is
     /// @return The current total asset balance managed by River
     function _assetBalance() internal view override(SharesManagerV1, OracleManagerV1) returns (uint256) {
         IOracleManagerV1.StoredConsensusLayerReport storage storedReport = LastConsensusLayerReport.get();
-        uint256 clValidatorCount = storedReport.validatorsCount;
-        uint256 depositedValidatorCount = DepositedValidatorCount.get();
-        if (clValidatorCount < depositedValidatorCount) {
-            return storedReport.validatorsBalance + BalanceToDeposit.get() + CommittedBalance.get()
-                + BalanceToRedeem.get() + (depositedValidatorCount - clValidatorCount)
-                * ConsensusLayerDepositManagerV1.DEPOSIT_SIZE;
-        } else {
-            return
-                storedReport.validatorsBalance + BalanceToDeposit.get() + CommittedBalance.get() + BalanceToRedeem.get();
-        }
+        return storedReport.validatorsBalance + BalanceToDeposit.get() + CommittedBalance.get()
+            + BalanceToRedeem.get() + InFlightETH.get();
     }
 
     /// @notice Internal utility to set the daily committable limits
@@ -507,12 +500,12 @@ contract RiverV1 is
     /// @param _depositToRedeemRebalancingAllowed True if rebalancing from deposit to redeem is allowed
     function _requestExitsBasedOnRedeemDemandAfterRebalancings(
         uint256 _exitingBalance,
-        uint32[] memory _stoppedValidatorCounts,
+        uint256[] memory _exitedETHs,
         bool _depositToRedeemRebalancingAllowed,
         bool _slashingContainmentModeEnabled
     ) internal override {
         IOperatorsRegistryV1(OperatorsRegistryAddress.get())
-            .reportStoppedValidatorCounts(_stoppedValidatorCounts, DepositedValidatorCount.get());
+            .reportExitedETH(_exitedETHs, TotalDepositedETH.get());
 
         if (_slashingContainmentModeEnabled) {
             return;
@@ -542,24 +535,24 @@ contract RiverV1 is
 
                 IOperatorsRegistryV1 or = IOperatorsRegistryV1(OperatorsRegistryAddress.get());
 
-                (uint256 totalStoppedValidatorCount, uint256 totalRequestedExitsCount) =
-                    or.getStoppedAndRequestedExitCounts();
+                (uint256 totalExitedETH, uint256 totalRequestedExitAmounts) =
+                    or.getExitedETHAndRequestedExitAmounts();
 
                 // what we are calling pre-exiting balance is the amount of eth that should soon enter the exiting balance
                 // because exit requests have been made and operators might have a lag to process them
                 // we take them into account to not exit too many validators
                 uint256 preExitingBalance =
-                    (totalRequestedExitsCount > totalStoppedValidatorCount
-                                ? (totalRequestedExitsCount - totalStoppedValidatorCount)
+                    (totalRequestedExitAmounts > totalExitedETH
+                                ? (totalRequestedExitAmounts - totalExitedETH)
                                 : 0) * DEPOSIT_SIZE;
 
                 if (availableBalanceToRedeem + _exitingBalance + preExitingBalance < redeemManagerDemandInEth) {
-                    uint256 validatorCountToExit = LibUint256.ceil(
+                    uint256 exitAmountToRequest = LibUint256.ceil(
                         redeemManagerDemandInEth - (availableBalanceToRedeem + _exitingBalance + preExitingBalance),
                         DEPOSIT_SIZE
                     );
 
-                    or.demandValidatorExits(validatorCountToExit, DepositedValidatorCount.get());
+                    or.demandValidatorExits(exitAmountToRequest, TotalDepositedETH.get());
                 }
             }
         }

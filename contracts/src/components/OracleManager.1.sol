@@ -2,6 +2,7 @@
 pragma solidity 0.8.34;
 
 import "../interfaces/components/IOracleManager.1.sol";
+import "../interfaces/components/IConsensusLayerDepositManager.1.sol";
 import "../interfaces/IRedeemManager.1.sol";
 
 import "../libraries/LibUint256.sol";
@@ -12,6 +13,7 @@ import "../state/river/CLValidatorTotalBalance.sol";
 import "../state/river/CLValidatorCount.sol";
 import "../state/river/DepositedValidatorCount.sol";
 import "../state/river/LastOracleRoundId.sol";
+import "../state/river/InFlightETH.sol";
 
 /// @title Oracle Manager (v1)
 /// @author Alluvial Finance Inc.
@@ -66,10 +68,12 @@ abstract contract OracleManagerV1 is IOracleManagerV1 {
 
     /// @notice Requests exits of validators after possibly rebalancing deposit and redeem balances
     /// @param _exitingBalance The currently exiting funds, soon to be received on the execution layer
+    /// @param _exitedETHs The exited ETHs
     /// @param _depositToRedeemRebalancingAllowed True if rebalancing from deposit to redeem is allowed
+    /// @param _slashingContainmentModeEnabled True if slashing containment mode is enabled
     function _requestExitsBasedOnRedeemDemandAfterRebalancings(
         uint256 _exitingBalance,
-        uint32[] memory _stoppedValidatorCounts,
+        uint256[] memory _exitedETHs,
         bool _depositToRedeemRebalancingAllowed,
         bool _slashingContainmentModeEnabled
     ) internal virtual;
@@ -251,6 +255,7 @@ abstract contract OracleManagerV1 is IOracleManagerV1 {
         uint256 timeElapsedSinceLastReport;
         uint256 availableAmountToUpperBound;
         uint256 redeemManagerDemand;
+        uint256 inFlightETH;
         ConsensusLayerDataReportingTrace trace;
     }
 
@@ -308,6 +313,33 @@ abstract contract OracleManagerV1 is IOracleManagerV1 {
             vars.skimmedAmountIncrease = _report.validatorsSkimmedBalance - vars.lastReportSkimmedBalance;
 
             vars.timeElapsedSinceLastReport = _timeBetweenEpochs(cls, lastStoredReport.epoch, _report.epoch);
+
+            vars.inFlightETH = InFlightETH.get();
+            // if the validators balance has increased, we update the in flight eth value
+            if (_report.validatorsBalance > lastStoredReport.validatorsBalance) {
+                uint256 diffInFlightETH = _report.validatorsBalance - lastStoredReport.validatorsBalance;
+                if (diffInFlightETH >= vars.inFlightETH) {
+                    vars.inFlightETH = 0;
+                } else {
+                    vars.inFlightETH = vars.inFlightETH - diffInFlightETH;
+                }
+            } else {
+                // if the validators balance has decreased, we need to check if the
+                // exited balance has increased, if it has then we need to calculate if we received any new
+                // in flight eth
+                if (_report.validatorsExitedBalance > vars.lastReportExitedBalance) {
+                    // this means that the validatorsBalance has decreased because of exits
+                    uint256 diff = lastStoredReport.validatorsBalance - _report.validatorsExitedBalance;
+                    if (_report.validatorsBalance > diff) {
+                        // this means that the validatorsBalance has decreased because of exits
+                        if(_report.validatorsBalance - diff >= vars.inFlightETH) {
+                            vars.inFlightETH = 0;
+                        } else {
+                            vars.inFlightETH = vars.inFlightETH - (_report.validatorsBalance - diff);
+                        }
+                    }
+                }
+            }
         }
 
         // we retrieve the current total underlying balance before any reporting data is applied to the system
@@ -318,6 +350,10 @@ abstract contract OracleManagerV1 is IOracleManagerV1 {
             // this method pulls and updates ethToDeposit / ethToRedeem accordingly
             _pullCLFunds(vars.skimmedAmountIncrease, vars.exitedAmountIncrease);
         }
+
+        // we update the in flight eth value
+        emit IConsensusLayerDepositManagerV1.SetInFlightETH(InFlightETH.get(), vars.inFlightETH);
+        InFlightETH.set(vars.inFlightETH);
 
         {
             // we update the system parameters, this will have an impact on how the total underlying balance is computed
@@ -420,7 +456,7 @@ abstract contract OracleManagerV1 is IOracleManagerV1 {
 
         _requestExitsBasedOnRedeemDemandAfterRebalancings(
             _report.validatorsExitingBalance,
-            _report.stoppedValidatorCountPerOperator,
+            _report.exitedETHPerOperator,
             _report.rebalanceDepositToRedeemMode,
             _report.slashingContainmentMode
         );

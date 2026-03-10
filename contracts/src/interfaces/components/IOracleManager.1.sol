@@ -133,11 +133,11 @@ interface IOracleManagerV1 {
         // even validators that are exited are still accounted
         // this value cannot decrease over reports
         uint32 validatorsCount;
-        // an array containing the count of stopped validators per operator
-        // the first element of the array is the sum of all stopped validators
+        // an array containing the amount of exited ETH per operator
+        // the first element of the array is the sum of all exited ETH
         // then index 1 would be operator 0
         // these values cannot decrease over reports
-        uint32[] stoppedValidatorCountPerOperator;
+        uint256[] exitedETHPerOperator;
         // flag enabled by the oracles when the buffer rebalancing is activated
         // the activation logic is written in the oracle specification and all oracle members must agree on the activation
         // when active, the eth in the deposit buffer can be used to pay for exits in the redeem manager
@@ -158,7 +158,7 @@ interface IOracleManagerV1 {
         uint256 validatorsSkimmedBalance;
         uint256 validatorsExitedBalance;
         uint256 validatorsExitingBalance;
-        uint32 validatorsCount;
+        uint256 validatorsCount;
         bool rebalanceDepositToRedeemMode;
         bool slashingContainmentMode;
     }

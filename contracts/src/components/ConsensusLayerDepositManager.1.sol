@@ -14,6 +14,8 @@ import "../state/river/DepositedValidatorCount.sol";
 import "../state/river/BalanceToDeposit.sol";
 import "../state/river/CommittedBalance.sol";
 import "../state/river/KeeperAddress.sol";
+import "../state/river/TotalDepositedETH.sol";
+import "../state/river/InFlightETH.sol";
 
 /// @title Consensus Layer Deposit Manager (v1)
 /// @author Alluvial Finance Inc.
@@ -81,8 +83,8 @@ abstract contract ConsensusLayerDepositManagerV1 is IConsensusLayerDepositManage
     }
 
     /// @inheritdoc IConsensusLayerDepositManagerV1
-    function getDepositedValidatorCount() external view returns (uint256) {
-        return DepositedValidatorCount.get();
+    function getTotalDepositedETH() external view returns (uint256) {
+        return TotalDepositedETH.get();
     }
 
     /// @inheritdoc IConsensusLayerDepositManagerV1
@@ -150,6 +152,13 @@ abstract contract ConsensusLayerDepositManagerV1 is IConsensusLayerDepositManage
         emit SetDepositedValidatorCount(
             currentDepositedValidatorCount, currentDepositedValidatorCount + receivedPublicKeyCount
         );
+        uint256 currentInFlightETH = InFlightETH.get();
+        InFlightETH.set(currentInFlightETH + DEPOSIT_SIZE * receivedPublicKeyCount);
+        emit SetInFlightETH(currentInFlightETH, currentInFlightETH + DEPOSIT_SIZE * receivedPublicKeyCount);
+
+        uint256 currentTotalDepositedETH = TotalDepositedETH.get();
+        TotalDepositedETH.set(currentTotalDepositedETH + DEPOSIT_SIZE * receivedPublicKeyCount);
+        emit SetTotalDepositedETH(currentTotalDepositedETH, currentTotalDepositedETH + DEPOSIT_SIZE * receivedPublicKeyCount);
     }
 
     /// @notice Deposits 32 ETH to the official Deposit contract
