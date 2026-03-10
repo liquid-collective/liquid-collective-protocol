@@ -171,11 +171,7 @@ contract OperatorsRegistryV1Harness is OperatorsRegistryV1 {
         pure
         returns (uint256)
     {
-        uint256 sum = 0;
-        for (uint256 i = 0; i < allocations.length; i++) {
-            sum += allocations[i].validatorCount;
-        }
-        return sum;
+        return allocations.length;
     }
 
     /// @dev Certora-only: disables onlyRiver so that this.pickNextValidatorsToDeposit() self-calls
