@@ -166,7 +166,7 @@ contract OperatorsRegistryV1Harness is OperatorsRegistryV1 {
     }
 
     /// @notice Returns the sum of validatorCount over all allocations (for Certora specs; no fixed operator count).
-    function totalAllocationValidatorCount(IOperatorsRegistryV1.OperatorAllocation[] memory allocations)
+    function totalAllocationValidatorCount(IOperatorsRegistryV1.ValidatorDeposit[] memory allocations)
         external
         pure
         returns (uint256)
@@ -185,7 +185,7 @@ contract OperatorsRegistryV1Harness is OperatorsRegistryV1 {
     }
 
     /// @dev Certora-only: returns number of keys from pickNextValidatorsToDeposit so specs can assert without capturing bytes[] (CVL tuple assignment limitation).
-    function pickNextValidatorsToDepositReturnCount(IOperatorsRegistryV1.OperatorAllocation[] memory allocations)
+    function pickNextValidatorsToDepositReturnCount(IOperatorsRegistryV1.ValidatorDeposit[] memory allocations)
         external
         returns (uint256)
     {
@@ -195,8 +195,8 @@ contract OperatorsRegistryV1Harness is OperatorsRegistryV1 {
 
     /// @dev Certora-only: single-arg wrapper so specs need not reference IOperatorsRegistryV1 (listing the interface in conf causes "no bytecode" fatal error).
     function pickNextValidatorsToDepositWithCount(uint256 count) external returns (bytes[] memory, bytes[] memory) {
-        IOperatorsRegistryV1.OperatorAllocation[] memory allocations = new IOperatorsRegistryV1.OperatorAllocation[](1);
-        allocations[0] = IOperatorsRegistryV1.OperatorAllocation({operatorIndex: 0, validatorCount: count});
+        IOperatorsRegistryV1.ValidatorDeposit[] memory allocations = new IOperatorsRegistryV1.ValidatorDeposit[](1);
+        allocations[0] = IOperatorsRegistryV1.ValidatorDeposit({operatorIndex: 0, pubkey: bytes(new bytes(48)), signature: bytes(new bytes(96)), depositAmount: count});
         return this.pickNextValidatorsToDeposit(allocations);
     }
 
