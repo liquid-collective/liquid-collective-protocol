@@ -166,22 +166,39 @@ contract OperatorsRegistryV1Harness is OperatorsRegistryV1 {
     }
 
     /// @notice Returns the sum of validatorCount over all allocations (for Certora specs; no fixed operator count).
-    function totalAllocationValidatorCount(IOperatorsRegistryV1.ValidatorDeposit[] memory allocations)
+    function totalAllocationValidatorCount(IOperatorsRegistryV1.OperatorAllocation[] memory allocations)
         external
         pure
         returns (uint256)
     {
-        return allocations.length;
+        uint256 sum = 0;
+        for (uint256 i = 0; i < allocations.length; i++) {
+            sum += allocations[i].validatorCount;
+        }
+        return sum;
     }
 
-    /// @dev Certora-only: disables onlyRiver so that self-calls don't revert.
+    /// @dev Certora-only: disables onlyRiver so that this.pickNextValidatorsToDeposit() self-calls
+    ///      don't revert (self-call changes msg.sender to the contract address).
     modifier onlyRiver() override {
         _;
     }
 
-    // pickNextValidatorsToDeposit was removed — keys are now passed directly via ValidatorDeposit[]
-    // function pickNextValidatorsToDepositReturnCount(...) ...
-    // function pickNextValidatorsToDepositWithCount(...) ...
+    /// @dev Certora-only: returns number of keys from pickNextValidatorsToDeposit so specs can assert without capturing bytes[] (CVL tuple assignment limitation).
+    function pickNextValidatorsToDepositReturnCount(IOperatorsRegistryV1.OperatorAllocation[] memory allocations)
+        external
+        returns (uint256)
+    {
+        (bytes[] memory publicKeys, ) = this.pickNextValidatorsToDeposit(allocations);
+        return publicKeys.length;
+    }
+
+    /// @dev Certora-only: single-arg wrapper so specs need not reference IOperatorsRegistryV1 (listing the interface in conf causes "no bytecode" fatal error).
+    function pickNextValidatorsToDepositWithCount(uint256 count) external returns (bytes[] memory, bytes[] memory) {
+        IOperatorsRegistryV1.OperatorAllocation[] memory allocations = new IOperatorsRegistryV1.OperatorAllocation[](1);
+        allocations[0] = IOperatorsRegistryV1.OperatorAllocation({operatorIndex: 0, validatorCount: count});
+        return this.pickNextValidatorsToDeposit(allocations);
+    }
 
     function getOperatorsSaturationDiscrepancy(uint256 index1, uint256 index2) external view returns (uint256)
     {

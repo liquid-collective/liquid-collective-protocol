@@ -138,8 +138,8 @@ rule requestValidatorExitsRevertsOnZeroValidatorCount(env e)
     assert lastReverted, "zero validator count in any allocation must revert";
 }
 
-// Only River may call incrementFundedValidator (onlyRiver).
-rule onlyRiverCanIncrementFundedValidator(env e)
+// Only River may call pickNextValidatorsToDeposit (onlyRiver).
+rule onlyRiverCanCallPickNextValidatorsToDeposit(env e)
 {
     require isValidState();
     require e.msg.sender != getRiver();
@@ -150,7 +150,7 @@ rule onlyRiverCanIncrementFundedValidator(env e)
         require allocations[1].operatorIndex > allocations[0].operatorIndex;
     }
     require totalAllocationValidatorCount(allocations) >= 1;
-    incrementFundedValidator@withrevert(e, allocations);
+    pickNextValidatorsToDepositReturnCount@withrevert(e, allocations);
     assert lastReverted, "non-River caller must revert";
 }
 

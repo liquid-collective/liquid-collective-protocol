@@ -10,7 +10,7 @@ contract RiverV1Harness is RiverV1 {
     }
     
     function consensusLayerDepositSize() external view returns (uint256) {
-        return ConsensusLayerDepositManagerV1.MIN_DEPOSIT_SIZE;
+        return ConsensusLayerDepositManagerV1.DEPOSIT_SIZE;
     }
 
     function consensusLayerEthBalance() external view returns (uint256) {
@@ -18,7 +18,7 @@ contract RiverV1Harness is RiverV1 {
         uint256 clValidatorCount = storedReport.validatorsCount;
         uint256 depositedValidatorCount = DepositedValidatorCount.get();
 
-        uint256 depositSize = ConsensusLayerDepositManagerV1.MIN_DEPOSIT_SIZE;
+        uint256 depositSize = ConsensusLayerDepositManagerV1.DEPOSIT_SIZE;
         if (depositedValidatorCount == clValidatorCount)
             return 0;
         return (clValidatorCount - depositedValidatorCount) * depositSize;
