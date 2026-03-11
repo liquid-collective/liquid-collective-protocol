@@ -115,7 +115,6 @@ contract RiverV1 is
         _approve(address(this), _redeemManager, type(uint256).max);
     }
 
-    /// @inheritdoc IRiverV1
     function initRiverV1_2() external init(2) {
         // force committed balance to a multiple of 32 ETH and
         // move extra funds back to the deposit buffer
@@ -303,6 +302,14 @@ contract RiverV1 is
         return Administrable._getAdmin();
     }
 
+    /// @notice Overridden handler to update funded validator counts on the operators registry after deposits
+    function _updateFundedValidators(IOperatorsRegistryV1.ValidatorDeposit[] calldata _allocations) internal override {
+        IOperatorsRegistryV1 registry = IOperatorsRegistryV1(OperatorsRegistryAddress.get());
+        for (uint256 idx = 0; idx < _allocations.length; ++idx) {
+            registry.incrementFundedValidator(_allocations[idx].operatorIndex);
+        }
+    }
+
     /// @notice Overridden handler called whenever a token transfer is triggered
     /// @param _from Token sender
     /// @param _to Token receiver
@@ -329,18 +336,6 @@ contract RiverV1 is
             }
             _transfer(_depositor, _recipient, mintedShares);
         }
-    }
-
-    /// @notice Overridden handler called whenever a deposit to the consensus layer is made based on node operator allocations.
-    /// @param _allocations Node operator allocations
-    /// @return publicKeys Array of fundable public keys
-    /// @return signatures Array of signatures linked to the public keys
-    function _getNextValidators(IOperatorsRegistryV1.OperatorAllocation[] memory _allocations)
-        internal
-        override
-        returns (bytes[] memory publicKeys, bytes[] memory signatures)
-    {
-        return IOperatorsRegistryV1(OperatorsRegistryAddress.get()).pickNextValidatorsToDeposit(_allocations);
     }
 
     /// @notice Overridden handler to pull funds from the execution layer fee recipient to River and return the delta in the balance

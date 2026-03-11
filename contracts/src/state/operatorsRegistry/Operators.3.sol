@@ -3,8 +3,10 @@ pragma solidity 0.8.34;
 
 import "../../libraries/LibSanitize.sol";
 
-/// @title Operators Storage
+/// @title Operators Storage (v3)
 /// @notice Utility to manage the Operators in storage
+/// @dev V3 removes the key-management fields (limit, keys, latestKeysEditBlockNumber) that are no longer
+/// @dev needed after migrating to off-chain key submission at deposit time. V3 uses ETH-based accounting.
 library OperatorsV3 {
     /// @notice Storage slot of the Operators
     bytes32 internal constant OPERATORS_SLOT = bytes32(uint256(keccak256("river.state.v3.operators")) - 1);
@@ -12,16 +14,12 @@ library OperatorsV3 {
     /// @notice The Operator structure in storage
     struct Operator {
         /// @dev The following values respect this invariant:
-        /// @dev funded >= requestedExits
+        /// @dev     funded >= requestedExits
 
         /// @custom:attribute The amount of funded ETH
         uint256 funded;
         /// @custom:attribute The amount of requested ETH exits
         uint256 requestedExits;
-        /// @custom:attribute The total count of keys of the operator
-        uint32 keys;
-        /// @custom:attribute The block at which the last edit happened in the operator details
-        uint64 latestKeysEditBlockNumber;
         /// @custom:attribute True if the operator is active and allowed to operate on River
         bool active;
         /// @custom:attribute Display name of the operator
@@ -141,16 +139,6 @@ library OperatorsV3 {
         return r.value.length;
     }
 
-    /// @notice Atomic operation to set the key count and update the latestKeysEditBlockNumber field at the same time
-    /// @param _index The operator index
-    /// @param _newKeys The new value for the key count
-    function setKeys(uint256 _index, uint32 _newKeys) internal {
-        Operator storage op = get(_index);
-
-        op.keys = _newKeys;
-        op.latestKeysEditBlockNumber = uint64(block.number);
-    }
-
     /// @notice Storage slot of the Exited ETH
     bytes32 internal constant EXITED_ETH_SLOT =
         bytes32(uint256(keccak256("river.state.exitedETH")) - 1);
@@ -216,6 +204,6 @@ library OperatorsV3 {
             r.slot := slot
         }
 
-        r.value = value;    
+        r.value = value;
     }
 }

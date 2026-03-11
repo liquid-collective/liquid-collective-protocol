@@ -1,16 +1,27 @@
 //SPDX-License-Identifier: BUSL-1.1
 pragma solidity 0.8.34;
 
-import "../state/operatorsRegistry/Operators.2.sol";
 import "../state/operatorsRegistry/Operators.3.sol";
 
 /// @title Operators Registry Interface (v1)
 /// @author Alluvial Finance Inc.
 /// @notice This interface exposes methods to handle the list of operators and their keys
 interface IOperatorsRegistryV1 {
-    /// @notice Structure representing an operator allocation for deposits or exits
+    /// @notice Structure representing a validator deposit
     /// @param operatorIndex The index of the operator
-    /// @param validatorCount The number of validators to deposit/exit for this operator
+    /// @param pubkey The BLS public key of the validator
+    /// @param signature The BLS signature of the validator
+    /// @param depositAmount The deposit amount in ETH
+    struct ValidatorDeposit {
+        uint256 operatorIndex;
+        bytes pubkey; // 48 bytes
+        bytes signature; // 96 bytes
+        uint256 depositAmount; // 32-2048 ETH
+    }
+
+    /// @notice Structure representing an operator allocation for exit requests
+    /// @param operatorIndex The index of the operator
+    /// @param validatorCount The number of validators
     struct OperatorAllocation {
         uint256 operatorIndex;
         uint256 validatorCount;
@@ -35,10 +46,6 @@ interface IOperatorsRegistryV1 {
     /// @param active True if the operator is active
     event SetOperatorStatus(uint256 indexed index, bool active);
 
-    /// @notice The operator limit has been changed
-    /// @param index The operator index
-    /// @param newLimit The new operator staking limit
-    event SetOperatorLimit(uint256 indexed index, uint256 newLimit);
 
     /// @notice The operator address has been changed
     /// @param index The operator index
@@ -50,44 +57,9 @@ interface IOperatorsRegistryV1 {
     /// @param newName The new display name
     event SetOperatorName(uint256 indexed index, string newName);
 
-    /// @notice The operator or the admin added new validator keys and signatures
-    /// @dev The public keys and signatures are concatenated
-    /// @dev A public key is 48 bytes long
-    /// @dev A signature is 96 bytes long
-    /// @dev [P1, S1, P2, S2, ..., PN, SN] where N is the bytes length divided by (96 + 48)
-    /// @param index The operator index
-    /// @param publicKeysAndSignatures The concatenated public keys and signatures
-    event AddedValidatorKeys(uint256 indexed index, bytes publicKeysAndSignatures);
-
-    /// @notice The operator or the admin removed a public key and its signature from the registry
-    /// @param index The operator index
-    /// @param publicKey The BLS public key that has been removed
-    event RemovedValidatorKey(uint256 indexed index, bytes publicKey);
-
     /// @notice The stored river address has been changed
     /// @param river The new river address
     event SetRiver(address indexed river);
-
-    /// @notice The operator edited its keys after the snapshot block
-    /// @dev This means that we cannot assume that its key set is checked by the snapshot
-    /// @dev This happens only if the limit was meant to be increased
-    /// @param index The operator index
-    /// @param currentLimit The current operator limit
-    /// @param newLimit The new operator limit that was attempted to be set
-    /// @param latestKeysEditBlockNumber The last block number at which the operator changed its keys
-    /// @param snapshotBlock The block number of the snapshot
-    event OperatorEditsAfterSnapshot(
-        uint256 indexed index,
-        uint256 currentLimit,
-        uint256 newLimit,
-        uint256 indexed latestKeysEditBlockNumber,
-        uint256 indexed snapshotBlock
-    );
-
-    /// @notice The call didn't alter the limit of the operator
-    /// @param index The operator index
-    /// @param limit The limit of the operator
-    event OperatorLimitUnchanged(uint256 indexed index, uint256 limit);
 
     /// @notice The requested ETH amount has been updated
     /// @param index The operator index
@@ -105,17 +77,6 @@ interface IOperatorsRegistryV1 {
     event SetTotalETHExitsRequested(
         uint256 previousTotalETHExitsRequested, uint256 newTotalETHExitsRequested
     );
-
-    /// @notice A validator key got funded on the deposit contract
-    /// @notice This event was introduced during a contract upgrade, in order to cover all possible public keys, this event
-    /// @notice will be replayed for past funded keys in order to have a complete coverage of all the funded public keys.
-    /// @notice In this particular scenario, the deferred value will be set to true, to indicate that we are not going to have
-    /// @notice the expected additional events and side effects in the same transaction (deposit to official DepositContract etc ...) because
-    /// @notice the event was synthetically crafted.
-    /// @param index The operator index
-    /// @param publicKeys BLS Public key that got funded
-    /// @param deferred True if event has been replayed in the context of a migration
-    event FundedValidatorKeys(uint256 indexed index, bytes[] publicKeys, bool deferred);
 
     /// @notice The requested ETH amount has been updated to fill the gap with the reported exited ETH amount
     /// @param index The operator index
@@ -138,38 +99,8 @@ interface IOperatorsRegistryV1 {
     /// @param index The operator index
     error InactiveOperator(uint256 index);
 
-    /// @notice A funded key deletion has been attempted
-    error InvalidFundedKeyDeletionAttempt();
-
-    /// @notice The index provided are not sorted properly (descending order)
-    error InvalidUnsortedIndexes();
-
-    /// @notice The provided operator and limits array have different lengths
-    error InvalidArrayLengths();
-
     /// @notice The provided operator and limits array are empty
     error InvalidEmptyArray();
-
-    /// @notice The provided key count is 0
-    error InvalidKeyCount();
-
-    /// @notice The provided concatenated keys do not have the expected length
-    error InvalidKeysLength();
-
-    /// @notice The index that is removed is out of bounds
-    error InvalidIndexOutOfBounds();
-
-    /// @notice The value for the operator limit is too high
-    /// @param index The operator index
-    /// @param limit The new limit provided
-    /// @param keyCount The operator key count
-    error OperatorLimitTooHigh(uint256 index, uint256 limit, uint256 keyCount);
-
-    /// @notice The value for the limit is too low
-    /// @param index The operator index
-    /// @param limit The new limit provided
-    /// @param fundedKeyCount The operator funded key count
-    error OperatorLimitTooLow(uint256 index, uint256 limit, uint256 fundedKeyCount);
 
     /// @notice The provided list of operators is not in increasing order
     error UnorderedOperatorList();
@@ -177,12 +108,6 @@ interface IOperatorsRegistryV1 {
     /// @notice Thrown when an operator ignored the required number of requested exits
     /// @param operatorIndex The operator index
     error OperatorIgnoredExitRequests(uint256 operatorIndex);
-
-    /// @notice Thrown when an operator lacks the required number of fundable keys
-    /// @param operatorIndex The operator index
-    /// @param requested The requested count
-    /// @param available The available count
-    error OperatorHasInsufficientFundableKeys(uint256 operatorIndex, uint256 requested, uint256 available);
 
     /// @notice Thrown when an allocation with zero validator count is provided
     error AllocationWithZeroValidatorCount();
@@ -232,6 +157,9 @@ interface IOperatorsRegistryV1 {
     /// @notice Initializes the operators registry for V1_1
     function initOperatorsRegistryV1_1() external;
 
+    /// @notice Migrates operators from V2 to V3 storage, dropping key-management fields
+    function initOperatorsRegistryV1_2() external;
+
     /// @notice Retrieve the River address
     /// @return The address of River
     function getRiver() external view returns (address);
@@ -263,26 +191,6 @@ interface IOperatorsRegistryV1 {
     /// @notice Retrieve the raw exited ETH array from storage
     /// @return The exited ETH array
     function getExitedETHPerOperator() external view returns (uint256[] memory);
-
-    /// @notice Get the details of a validator
-    /// @param _operatorIndex The index of the operator
-    /// @param _validatorIndex The index of the validator
-    /// @return publicKey The public key of the validator
-    /// @return signature The signature used during deposit
-    /// @return funded True if validator has been funded
-    function getValidator(uint256 _operatorIndex, uint256 _validatorIndex)
-        external
-        view
-        returns (bytes memory publicKey, bytes memory signature, bool funded);
-
-    /// @notice Get the next validators that would be funded based on the proposed allocations
-    /// @param _allocations The proposed allocations to validate
-    /// @return publicKeys An array of fundable public keys
-    /// @return signatures An array of signatures linked to the public keys
-    function getNextValidatorsToDepositFromActiveOperators(OperatorAllocation[] memory _allocations)
-        external
-        view
-        returns (bytes[] memory publicKeys, bytes[] memory signatures);
 
     /// @notice Retrieve the active operator set
     /// @return The list of active operators and their details
@@ -318,43 +226,6 @@ interface IOperatorsRegistryV1 {
     /// @param _index The operator index
     /// @param _newStatus The new status of the operator
     function setOperatorStatus(uint256 _index, bool _newStatus) external;
-
-    /// @notice Adds new keys for an operator
-    /// @dev Only callable by the administrator or the operator address
-    /// @param _index The operator index
-    /// @param _keyCount The amount of keys provided
-    /// @param _publicKeysAndSignatures Public keys of the validator, concatenated
-    function addValidators(uint256 _index, uint32 _keyCount, bytes calldata _publicKeysAndSignatures) external;
-
-    /// @notice Remove validator keys
-    /// @dev Only callable by the administrator or the operator address
-    /// @dev The indexes must be provided sorted in decreasing order and duplicate-free, otherwise the method will revert
-    /// @dev The operator limit will be set to the lowest deleted key index if the operator's limit wasn't equal to its total key count
-    /// @dev The operator or the admin cannot remove funded keys
-    /// @dev When removing validators, the indexes of specific unfunded keys can be changed in order to properly
-    /// @dev remove the keys from the storage array. Beware of this specific behavior when chaining calls as the
-    /// @dev targeted public key indexes can point to a different key after a first call was made and performed
-    /// @dev some swaps
-    /// @param _index The operator index
-    /// @param _indexes The indexes of the keys to remove
-    function removeValidators(uint256 _index, uint256[] calldata _indexes) external;
-
-    /// @notice Retrieve validator keys based on explicit operator allocations and mark them as funded
-    /// @dev Only callable by the river contract
-    /// @dev The allocations must be sorted by operator index in strictly ascending order with no duplicates
-    /// @dev Each allocation's validatorCount must be non-zero and not exceed the operator's available fundable keys
-    /// @dev Reverts with InvalidEmptyArray if _allocations is empty
-    /// @dev Reverts with UnorderedOperatorList if operator indexes are not strictly ascending
-    /// @dev Reverts with AllocationWithZeroValidatorCount if any allocation has a zero validator count
-    /// @dev Reverts with InactiveOperator if a referenced operator is inactive
-    /// @dev Reverts with OperatorIgnoredExitRequests if an operator has not complied with exit requests
-    /// @dev Reverts with OperatorHasInsufficientFundableKeys if an operator lacks enough fundable keys
-    /// @param _allocations Node operator allocations specifying how many validators per operator
-    /// @return publicKeys An array of public keys
-    /// @return signatures An array of signatures linked to the public keys
-    function pickNextValidatorsToDeposit(OperatorAllocation[] calldata _allocations)
-        external
-        returns (bytes[] memory publicKeys, bytes[] memory signatures);
 
     /// @notice Process explicit per-operator exit allocations and update operator requestedExits
     /// @dev Only callable by the keeper address returned by the River contract's getKeeper()

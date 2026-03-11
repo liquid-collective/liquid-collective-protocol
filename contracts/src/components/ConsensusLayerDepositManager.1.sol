@@ -21,9 +21,9 @@ import "../state/river/InFlightDeposit.sol";
 /// @author Alluvial Finance Inc.
 /// @notice This contract handles the interactions with the official deposit contract, funding all validators
 /// @notice Whenever a deposit to the consensus layer is requested, this contract computed the amount of keys
-/// @notice that could be deposited depending on the amount available in the contract. It then tries to retrieve
-/// @notice validator keys by calling its internal virtual method _getNextValidators. This method should be
-/// @notice overridden by the implementing contract to provide keys based on the allocation when invoked.
+/// @notice that could be deposited depending on the amount available in the contract. After successfully
+/// @notice depositing the validators, the funded validator count is incremented on the operators registry
+/// @notice by overriding the _updateFundedValidators method in River.
 abstract contract ConsensusLayerDepositManagerV1 is IConsensusLayerDepositManagerV1 {
     /// @notice Size of a BLS Public key in bytes
     uint256 public constant PUBLIC_KEY_LENGTH = 48;
@@ -40,15 +40,10 @@ abstract contract ConsensusLayerDepositManagerV1 is IConsensusLayerDepositManage
     /// @param newCommittedBalance The new committed balance value
     function _setCommittedBalance(uint256 newCommittedBalance) internal virtual;
 
-    /// @notice Internal helper to retrieve validator keys ready to be funded
-    /// @dev Must be overridden
-    /// @param _allocations Validator allocations
-    /// @return publicKeys An array of public keys ready to be funded
-    /// @return signatures An array of signatures ready to be funded
-    function _getNextValidators(IOperatorsRegistryV1.OperatorAllocation[] memory _allocations)
-        internal
-        virtual
-        returns (bytes[] memory publicKeys, bytes[] memory signatures);
+    /// @notice Handler called to update the funded validator count on the operators registry after each deposit
+    /// @dev Must be overridden. River implements this to call incrementFundedValidator on the registry.
+    /// @param _allocations The validator deposits that were just deposited
+    function _updateFundedValidators(IOperatorsRegistryV1.ValidatorDeposit[] calldata _allocations) internal virtual;
 
     /// @notice Initializer to set the deposit contract address and the withdrawal credentials to use
     /// @param _depositContractAddress The address of the deposit contract
@@ -94,7 +89,7 @@ abstract contract ConsensusLayerDepositManagerV1 is IConsensusLayerDepositManage
 
     /// @inheritdoc IConsensusLayerDepositManagerV1
     function depositToConsensusLayerWithDepositRoot(
-        IOperatorsRegistryV1.OperatorAllocation[] calldata _allocations,
+        IOperatorsRegistryV1.ValidatorDeposit[] calldata _allocations,
         bytes32 _depositRoot
     ) external {
         if (msg.sender != KeeperAddress.get()) {
@@ -111,30 +106,21 @@ abstract contract ConsensusLayerDepositManagerV1 is IConsensusLayerDepositManage
         if (maxDepositableCount == 0) {
             revert NotEnoughFunds();
         }
-        // Calculate total requested from allocations
+        // Calculate total requested and validate key lengths in a single pass
         uint256 totalRequested = 0;
         for (uint256 i = 0; i < _allocations.length; ++i) {
-            totalRequested += _allocations[i].validatorCount;
+            if (_allocations[i].pubkey.length != PUBLIC_KEY_LENGTH) {
+                revert InconsistentPublicKeys();
+            }
+            if (_allocations[i].signature.length != SIGNATURE_LENGTH) {
+                revert InconsistentSignatures();
+            }
+            totalRequested += _allocations[i].depositAmount;
         }
 
-        // Check if the total requested number of validators exceeds the maximum number of validators that can be funded
-        if (totalRequested > maxDepositableCount) {
-            revert OperatorAllocationsExceedCommittedBalance();
-        }
-
-        // it's up to the internal overriden _getNextValidators method to provide two array of the same
-        // size for the publicKeys and the signatures
-        (bytes[] memory publicKeys, bytes[] memory signatures) = _getNextValidators(_allocations);
-
-        uint256 receivedPublicKeyCount = publicKeys.length;
-
-        if (receivedPublicKeyCount == 0) {
-            revert NoAvailableValidatorKeys();
-        }
-
-        // Check that the received public keys count equals the total requested and does not exceed the maximum number of validators that can be funded in this run
-        if (receivedPublicKeyCount > maxDepositableCount || receivedPublicKeyCount != totalRequested) {
-            revert InvalidPublicKeyCount();
+        // Check if the total requested exceeds the committed balance
+        if (totalRequested > committedBalance) {
+            revert ValidatorDepositsExceedCommittedBalance();
         }
 
         bytes32 withdrawalCredentials = WithdrawalCredentials.get();
@@ -143,14 +129,20 @@ abstract contract ConsensusLayerDepositManagerV1 is IConsensusLayerDepositManage
             revert InvalidWithdrawalCredentials();
         }
 
-        for (uint256 idx = 0; idx < receivedPublicKeyCount; ++idx) {
-            _depositValidator(publicKeys[idx], signatures[idx], withdrawalCredentials);
+        for (uint256 idx = 0; idx < _allocations.length; ++idx) {
+            _depositValidator(
+                _allocations[idx].pubkey,
+                _allocations[idx].signature,
+                _allocations[idx].depositAmount,
+                withdrawalCredentials
+            );
         }
-        _setCommittedBalance(committedBalance - DEPOSIT_SIZE * receivedPublicKeyCount);
+        _updateFundedValidators(_allocations);
+        _setCommittedBalance(committedBalance - totalRequested);
         uint256 currentDepositedValidatorCount = DepositedValidatorCount.get();
-        DepositedValidatorCount.set(currentDepositedValidatorCount + receivedPublicKeyCount);
+        DepositedValidatorCount.set(currentDepositedValidatorCount + _allocations.length);
         emit SetDepositedValidatorCount(
-            currentDepositedValidatorCount, currentDepositedValidatorCount + receivedPublicKeyCount
+            currentDepositedValidatorCount, currentDepositedValidatorCount + _allocations.length
         );
         uint256 currentInFlightETH = InFlightDeposit.get();
         InFlightDeposit.set(currentInFlightETH + DEPOSIT_SIZE * receivedPublicKeyCount);
@@ -165,9 +157,12 @@ abstract contract ConsensusLayerDepositManagerV1 is IConsensusLayerDepositManage
     /// @param _publicKey The public key of the validator
     /// @param _signature The signature provided by the operator
     /// @param _withdrawalCredentials The withdrawal credentials provided by River
-    function _depositValidator(bytes memory _publicKey, bytes memory _signature, bytes32 _withdrawalCredentials)
-        internal
-    {
+    function _depositValidator(
+        bytes memory _publicKey,
+        bytes memory _signature,
+        uint256 _depositAmount,
+        bytes32 _withdrawalCredentials
+    ) internal {
         if (_publicKey.length != PUBLIC_KEY_LENGTH) {
             revert InconsistentPublicKeys();
         }
@@ -175,7 +170,10 @@ abstract contract ConsensusLayerDepositManagerV1 is IConsensusLayerDepositManage
         if (_signature.length != SIGNATURE_LENGTH) {
             revert InconsistentSignatures();
         }
-        uint256 value = DEPOSIT_SIZE;
+        if (_depositAmount != DEPOSIT_SIZE) {
+            revert InvalidDepositSize(_depositAmount);
+        }
+        uint256 value = _depositAmount;
 
         uint256 depositAmount = value / 1 gwei;
 

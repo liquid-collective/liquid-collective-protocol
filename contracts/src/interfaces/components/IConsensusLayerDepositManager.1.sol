@@ -39,11 +39,8 @@ interface IConsensusLayerDepositManagerV1 {
     /// @notice The length of the BLS Signature is invalid during deposit
     error InconsistentSignatures();
 
-    /// @notice The internal key retrieval returned no keys
-    error NoAvailableValidatorKeys();
-
-    /// @notice The received count of public keys to deposit is invalid
-    error InvalidPublicKeyCount();
+    /// @notice The deposit size is invalid
+    error InvalidDepositSize(uint256 depositSize);
 
     /// @notice The withdrawal credentials value is null
     error InvalidWithdrawalCredentials();
@@ -58,7 +55,7 @@ interface IConsensusLayerDepositManagerV1 {
     error OnlyKeeper();
 
     /// @notice The operator allocations exceed the committed balance
-    error OperatorAllocationsExceedCommittedBalance();
+    error ValidatorDepositsExceedCommittedBalance();
 
     /// @notice Returns the amount of ETH not yet committed for deposit
     /// @return The amount of ETH not yet committed for deposit
@@ -84,7 +81,7 @@ interface IConsensusLayerDepositManagerV1 {
     /// @param _allocations The operator allocations specifying how many validators per operator
     /// @param _depositRoot The root of the deposit tree
     function depositToConsensusLayerWithDepositRoot(
-        IOperatorsRegistryV1.OperatorAllocation[] calldata _allocations,
+        IOperatorsRegistryV1.ValidatorDeposit[] calldata _allocations,
         bytes32 _depositRoot
     ) external;
 }
