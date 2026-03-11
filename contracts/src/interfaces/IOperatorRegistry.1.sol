@@ -91,9 +91,9 @@ interface IOperatorsRegistryV1 {
     /// @param exitedETH The exited ETH
     event SetOperatorExitedETH(uint256 operatorIndex, uint256 exitedETH);
 
-    /// @notice The exited ETHs have been updated
-    /// @param exitedETHs The exited ETHs
-    event UpdatedExitedETHs(uint256[] exitedETHs);
+    /// @notice The exited ETH have been updated
+    /// @param exitedETH The exited ETH
+    event UpdatedExitedETH(uint256[] exitedETH);
 
     /// @notice The calling operator is inactive
     /// @param index The operator index
@@ -112,16 +112,16 @@ interface IOperatorsRegistryV1 {
     /// @notice Thrown when an allocation with zero validator count is provided
     error AllocationWithZeroValidatorCount();
 
-    /// @notice Thrown when the sum of exited ETHs is invalid
-    error InvalidExitedETHsSum();
+    /// @notice Thrown when the sum of exited ETH is invalid
+    error InvalidExitedETHSum();
 
     /// @notice Thrown when an element in the exited ETH array is decreasing
     error ExitedETHArrayDecreased();
 
     /// @notice Thrown when the amount of exited ETH is too high compared to the total deposited ETH
-    error ExitedETHsTooHigh();
+    error ExitedETHTooHigh();
 
-    /// @notice Thrown when the number of exited ETHs is too high compared to operator count
+    /// @notice Thrown when the number of exited ETH is too high compared to operator count
     error ExitedETHCountTooHigh();
 
     /// @notice Thrown when no exit requests can be performed
@@ -147,7 +147,11 @@ interface IOperatorsRegistryV1 {
     /// @param fundedETH The funded ETH
     error ExitedETHAboveFundedETH(uint256 operatorIndex, uint256 exitedETH, uint256 fundedETH);
 
+    /// @notice Thrown when an allocation with zero ETH amount is provided
     error AllocationWithZeroETHAmount();
+
+    /// @notice Thrown when the provided funded ETH array length is invalid
+    error InvalidFundedETHLength();
 
     /// @notice Initializes the operators registry
     /// @param _admin Admin in charge of managing operators
@@ -197,14 +201,14 @@ interface IOperatorsRegistryV1 {
     function listActiveOperators() external view returns (OperatorsV3.Operator[] memory);
 
     /// @notice Increments the funded ETH for the operators
-    /// @param _fundedETHs The array of funded ETH amounts
-    function incrementFundedETH(uint256[] calldata _fundedETHs) external;
+    /// @param _fundedETH The array of funded ETH amounts
+    function incrementFundedETH(uint256[] calldata _fundedETH) external;
 
     /// @notice Allows river to override the exited ETH array
     /// @notice This actions happens during the Oracle report processing
-    /// @param _exitedETHs The new exited ETH array
+    /// @param _exitedETH The new exited ETH array
     /// @param _totalDepositedETH The total deposited ETH
-    function reportExitedETH(uint256[] calldata _exitedETHs, uint256 _totalDepositedETH) external;
+    function reportExitedETH(uint256[] calldata _exitedETH, uint256 _totalDepositedETH) external;
 
     /// @notice Adds an operator to the registry
     /// @dev Only callable by the administrator

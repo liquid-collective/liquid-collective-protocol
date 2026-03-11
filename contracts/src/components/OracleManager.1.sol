@@ -68,12 +68,12 @@ abstract contract OracleManagerV1 is IOracleManagerV1 {
 
     /// @notice Requests exits of validators after possibly rebalancing deposit and redeem balances
     /// @param _exitingBalance The currently exiting funds, soon to be received on the execution layer
-    /// @param _exitedETHs The exited ETHs
+    /// @param _exitedETH The exited ETH
     /// @param _depositToRedeemRebalancingAllowed True if rebalancing from deposit to redeem is allowed
     /// @param _slashingContainmentModeEnabled True if slashing containment mode is enabled
     function _requestExitsBasedOnRedeemDemandAfterRebalancings(
         uint256 _exitingBalance,
-        uint256[] memory _exitedETHs,
+        uint256[] memory _exitedETH,
         bool _depositToRedeemRebalancingAllowed,
         bool _slashingContainmentModeEnabled
     ) internal virtual;

@@ -178,18 +178,18 @@ library OperatorsV3 {
     }
 
     /// @notice Retrieve the exited ETH for an operator by its index
-    /// @param exitedETHs The storage pointer to the raw array containing the exited ETH
+    /// @param exitedETH The storage pointer to the raw array containing the exited ETH
     /// @param index The index of the operator to lookup
     /// @return The exited ETH for the given operator index
-    function _getExitedETHAtIndex(uint256[] storage exitedETHs, uint256 index)
+    function _getExitedETHAtIndex(uint256[] storage exitedETH, uint256 index)
         internal
         view
         returns (uint256)
     {
-        if (index + 1 >= exitedETHs.length) {
+        if (index + 1 >= exitedETH.length) {
             return 0;
         }
-        return exitedETHs[index + 1];
+        return exitedETH[index + 1];
     }
 
     /// @notice Sets the entire exited ETH array

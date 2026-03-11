@@ -303,9 +303,9 @@ contract RiverV1 is
     }
 
     /// @notice Overridden handler to increment the funded ETH for the operators
-    /// @param _fundedETHs The array of funded ETH amounts
-    function _incrementFundedETH(uint256[] memory _fundedETHs) internal override {
-        IOperatorsRegistryV1(OperatorsRegistryAddress.get()).incrementFundedETH(_fundedETHs);
+    /// @param _fundedETH The array of funded ETH amounts
+    function _incrementFundedETH(uint256[] memory _fundedETH) internal override {
+        IOperatorsRegistryV1(OperatorsRegistryAddress.get()).incrementFundedETH(_fundedETH);
     }
 
     /// @notice Overridden handler called whenever a token transfer is triggered
@@ -503,12 +503,12 @@ contract RiverV1 is
     /// @param _depositToRedeemRebalancingAllowed True if rebalancing from deposit to redeem is allowed
     function _requestExitsBasedOnRedeemDemandAfterRebalancings(
         uint256 _exitingBalance,
-        uint256[] memory _exitedETHs,
+        uint256[] memory _exitedETH,
         bool _depositToRedeemRebalancingAllowed,
         bool _slashingContainmentModeEnabled
     ) internal override {
         IOperatorsRegistryV1(OperatorsRegistryAddress.get())
-            .reportExitedETH(_exitedETHs, TotalDepositedETH.get());
+            .reportExitedETH(_exitedETH, TotalDepositedETH.get());
 
         if (_slashingContainmentModeEnabled) {
             return;
