@@ -44,14 +44,6 @@ interface IOracleManagerV1 {
         IOracleManagerV1.ConsensusLayerReport report, ConsensusLayerDataReportingTrace trace
     );
 
-    /// @notice The reported validator count is invalid
-    /// @param providedValidatorCount The received validator count value
-    /// @param depositedValidatorCount The number of deposits performed by the system
-    /// @param lastReportedValidatorCount The last reported validator count
-    error InvalidValidatorCountReport(
-        uint256 providedValidatorCount, uint256 depositedValidatorCount, uint256 lastReportedValidatorCount
-    );
-
     /// @notice Thrown when an invalid epoch was reported
     /// @param epoch Invalid epoch
     error InvalidEpoch(uint256 epoch);

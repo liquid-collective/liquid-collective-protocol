@@ -140,11 +140,7 @@ abstract contract ConsensusLayerDepositManagerV1 is IConsensusLayerDepositManage
 
         _incrementFundedETH(fundedETH);
         _setCommittedBalance(committedBalance - totalRequested);
-        uint256 currentDepositedValidatorCount = DepositedValidatorCount.get();
-        DepositedValidatorCount.set(currentDepositedValidatorCount + _allocations.length);
-        emit SetDepositedValidatorCount(
-            currentDepositedValidatorCount, currentDepositedValidatorCount + _allocations.length
-        );
+
         uint256 currentInFlightETH = InFlightDeposit.get();
         InFlightDeposit.set(currentInFlightETH + DEPOSIT_SIZE * _allocations.length);
         emit SetInFlightETH(currentInFlightETH, currentInFlightETH + DEPOSIT_SIZE * _allocations.length);

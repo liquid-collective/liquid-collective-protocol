@@ -19,14 +19,6 @@ interface IOperatorsRegistryV1 {
         uint256 depositAmount; // 32-2048 ETH
     }
 
-    /// @notice Structure representing an operator allocation for exit requests
-    /// @param operatorIndex The index of the operator
-    /// @param validatorCount The number of validators
-    struct OperatorAllocation {
-        uint256 operatorIndex;
-        uint256 validatorCount;
-    }
-
     /// @notice Structure representing an operator allocation for exits
     /// @param operatorIndex The index of the operator
     /// @param ethAmount The amount of ETH to exit for this operator

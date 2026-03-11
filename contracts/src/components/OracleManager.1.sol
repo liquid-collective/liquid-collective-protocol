@@ -11,7 +11,6 @@ import "../state/river/LastConsensusLayerReport.sol";
 import "../state/river/OracleAddress.sol";
 import "../state/river/CLValidatorTotalBalance.sol";
 import "../state/river/CLValidatorCount.sol";
-import "../state/river/DepositedValidatorCount.sol";
 import "../state/river/LastOracleRoundId.sol";
 import "../state/river/InFlightDeposit.sol";
 
@@ -295,16 +294,6 @@ abstract contract OracleManagerV1 is IOracleManagerV1 {
             if (_report.validatorsSkimmedBalance < vars.lastReportSkimmedBalance) {
                 revert InvalidDecreasingValidatorsSkimmedBalance(
                     vars.lastReportSkimmedBalance, _report.validatorsSkimmedBalance
-                );
-            }
-
-            // we ensure that the reported validator count is not decreasing
-            if (
-                _report.validatorsCount > DepositedValidatorCount.get()
-                    || _report.validatorsCount < lastStoredReport.validatorsCount
-            ) {
-                revert InvalidValidatorCountReport(
-                    _report.validatorsCount, DepositedValidatorCount.get(), lastStoredReport.validatorsCount
                 );
             }
 
