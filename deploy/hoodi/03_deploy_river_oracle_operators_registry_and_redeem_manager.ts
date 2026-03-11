@@ -50,7 +50,7 @@ async function isProxyInitialized(
     });
     const decoded = iface.decodeFunctionResult(viewFunction, result);
     return decoded[0] !== EthersType.constants.AddressZero;
-  } catch {
+  } catch (_error) {
     return false;
   }
 }
@@ -360,16 +360,27 @@ const func: DeployFunction = async function ({
     ethers.provider
   );
 
-  await initializeProxyIfNeeded(
-    elFeeRecipientDeployment.address,
-    elFeeRecipientDeployment.implementation,
-    elFeeRecipientInterface.encodeFunctionData("initELFeeRecipientV1", [riverDeployment.address]),
-    "ELFeeRecipient",
-    elFeeRecipientArtifact.abi,
-    "getRiver",
-    signer,
-    ethers.provider
-  );
+  // ELFeeRecipientV1 has no getRiver() getter, so we check initialization by reading
+  // the RiverAddress storage slot directly: bytes32(uint256(keccak256("river.state.riverAddress")) - 1)
+  const ELFEE_RIVER_SLOT = EthersType.BigNumber.from(
+    EthersType.utils.keccak256(EthersType.utils.toUtf8Bytes("river.state.riverAddress"))
+  )
+    .sub(1)
+    .toHexString();
+  const elFeeRiverRaw = await ethers.provider.getStorageAt(elFeeRecipientDeployment.address, ELFEE_RIVER_SLOT);
+  const elFeeRiverAddress = EthersType.utils.getAddress("0x" + elFeeRiverRaw.slice(-40));
+  if (elFeeRiverAddress === EthersType.constants.AddressZero) {
+    console.log("  Initializing ELFeeRecipient...");
+    const elFeeProxy = new EthersType.Contract(elFeeRecipientDeployment.address, PROXY_ADMIN_ABI, signer);
+    const tx = await elFeeProxy.upgradeToAndCall(
+      elFeeRecipientDeployment.implementation,
+      elFeeRecipientInterface.encodeFunctionData("initELFeeRecipientV1", [riverDeployment.address])
+    );
+    await tx.wait();
+    console.log(`  ELFeeRecipient initialized. tx: ${tx.hash}`);
+  } else {
+    console.log("  ELFeeRecipient already initialized, skipping.");
+  }
 
   await initializeProxyIfNeeded(
     redeemManagerDeployment.address,
@@ -431,6 +442,7 @@ const func: DeployFunction = async function ({
   const withdrawRiver = await WithdrawContract.getRiver().catch(() => EthersType.constants.AddressZero);
   if (withdrawRiver === EthersType.constants.AddressZero) {
     const tx = await WithdrawContract.initializeWithdrawV1(riverDeployment.address);
+    await tx.wait();
     console.log(`Performed Withdraw.initializeWithdrawV1(${riverDeployment.address}):`, tx.hash);
   } else {
     console.log(`Withdraw already initialized with river ${withdrawRiver}, skipping.`);
@@ -462,6 +474,7 @@ const func: DeployFunction = async function ({
       minDailyNetCommittable,
       maxDailyRelativeCommittable
     );
+    await tx.wait();
     console.log(
       `Performed River.initRiverV1_1(${[
         redeemManagerDeployment.address,
@@ -487,28 +500,58 @@ const func: DeployFunction = async function ({
     "OperatorsRegistryV1",
     operatorsRegistryDeployment.address
   );
-  const tx = await OperatorsRegistryContract.forceFundedValidatorKeysEventEmission(1);
-  console.log(
-    `Performed OperatorsRegistry.forceFundedValidatorKeysEventEmission(${1}) contract 0.6.0 migration:`,
-    tx.hash
-  );
+  try {
+    const tx = await OperatorsRegistryContract.forceFundedValidatorKeysEventEmission(1);
+    await tx.wait();
+    console.log(
+      `Performed OperatorsRegistry.forceFundedValidatorKeysEventEmission(${1}) contract 0.6.0 migration:`,
+      tx.hash
+    );
+  } catch (e: any) {
+    if (e.message?.includes("FundedKeyEventMigrationComplete") || e.error?.message?.includes("FundedKeyEventMigrationComplete")) {
+      console.log("OperatorsRegistry funded key event migration already complete, skipping.");
+    } else {
+      throw e;
+    }
+  }
 
   logStepEnd(__filename);
 };
 
-func.skip = async function ({ deployments }: HardhatRuntimeEnvironment): Promise<boolean> {
+func.skip = async function ({ deployments, ethers }: HardhatRuntimeEnvironment): Promise<boolean> {
   logStep(__filename);
-  const shouldSkip =
+  // Check proxy artifacts exist AND that post-initialization completed (River has a RedeemManager
+  // set, which is only true after initRiverV1_1 in Phase 5). This ensures re-runs still execute
+  // recovery steps when proxies exist but later-phase initialization failed.
+  const proxiesDeployed =
     (await isDeployed("River", deployments, __filename)) &&
     (await isDeployed("Oracle", deployments, __filename)) &&
     (await isDeployed("OperatorsRegistry", deployments, __filename)) &&
     (await isDeployed("ELFeeRecipient", deployments, __filename)) &&
     (await isDeployed("RedeemManager", deployments, __filename));
-  if (shouldSkip) {
-    console.log("Skipped");
-    logStepEnd(__filename);
+
+  if (!proxiesDeployed) return false;
+
+  try {
+    const riverDeployment = await deployments.get("River");
+    const riverInterface = new ethers.utils.Interface([
+      "function getRedeemManager() external view returns (address)",
+    ]);
+    const result = await ethers.provider.call({
+      from: ethers.constants.AddressZero,
+      to: riverDeployment.address,
+      data: riverInterface.encodeFunctionData("getRedeemManager"),
+    });
+    const [redeemManager] = riverInterface.decodeFunctionResult("getRedeemManager", result);
+    const shouldSkip = redeemManager !== ethers.constants.AddressZero;
+    if (shouldSkip) {
+      console.log("Skipped");
+      logStepEnd(__filename);
+    }
+    return shouldSkip;
+  } catch (_error) {
+    return false;
   }
-  return shouldSkip;
 };
 
 func.tags = ["all", "core"];
