@@ -379,7 +379,7 @@ interface IOperatorsRegistryV1 {
 
     /// @notice Increases the exit request demand
     /// @dev This method is only callable by the river contract, and to actually forward the information to the node operators via event emission, the unprotected requestValidatorExits method must be called
-    /// @param _count The amount of exit requests to add to the demand
-    /// @param _depositedValidatorCount The total deposited validator count
-    function demandETHExits(uint256 _count, uint256 _depositedValidatorCount) external;
+    /// @param _exitAmountToRequest The amount of exit requests to add to the demand
+    /// @param _totalDepositedETH The total deposited ETH
+    function demandETHExits(uint256 _exitAmountToRequest, uint256 _totalDepositedETH) external;
 }

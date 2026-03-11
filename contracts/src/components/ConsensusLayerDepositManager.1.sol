@@ -15,7 +15,7 @@ import "../state/river/BalanceToDeposit.sol";
 import "../state/river/CommittedBalance.sol";
 import "../state/river/KeeperAddress.sol";
 import "../state/river/TotalDepositedETH.sol";
-import "../state/river/InFlightETH.sol";
+import "../state/river/InFlightDeposit.sol";
 
 /// @title Consensus Layer Deposit Manager (v1)
 /// @author Alluvial Finance Inc.
@@ -152,8 +152,8 @@ abstract contract ConsensusLayerDepositManagerV1 is IConsensusLayerDepositManage
         emit SetDepositedValidatorCount(
             currentDepositedValidatorCount, currentDepositedValidatorCount + receivedPublicKeyCount
         );
-        uint256 currentInFlightETH = InFlightETH.get();
-        InFlightETH.set(currentInFlightETH + DEPOSIT_SIZE * receivedPublicKeyCount);
+        uint256 currentInFlightETH = InFlightDeposit.get();
+        InFlightDeposit.set(currentInFlightETH + DEPOSIT_SIZE * receivedPublicKeyCount);
         emit SetInFlightETH(currentInFlightETH, currentInFlightETH + DEPOSIT_SIZE * receivedPublicKeyCount);
 
         uint256 currentTotalDepositedETH = TotalDepositedETH.get();

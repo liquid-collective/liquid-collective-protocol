@@ -16,6 +16,8 @@ import "./state/operatorsRegistry/Operators.3.sol";
 import "./state/operatorsRegistry/ValidatorKeys.sol";
 import "./state/operatorsRegistry/TotalETHExitsRequested.sol";
 import "./state/operatorsRegistry/CurrentETHExitsDemand.sol";
+import "./state/operatorsRegistry/TotalValidatorExitsRequested.sol";
+import "./state/operatorsRegistry/CurrentValidatorExitsDemand.sol";
 import "./state/shared/RiverAddress.sol";
 
 import "./state/migration/OperatorsRegistry_FundedKeyEventRebroadcasting_KeyIndex.sol";
@@ -59,6 +61,16 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
 
     function initOperatorsRegistryV1_2() external init(2) {
         _migrateOperators_V2_3();
+
+        CurrentETHExitsDemand.set(CurrentValidatorExitsDemand.get() * 32 ether);
+        TotalETHExitsRequested.set(TotalValidatorExitsRequested.get() * 32 ether);
+
+        uint32[] memory stoppedValidators = OperatorsV2.getStoppedValidators();
+        uint256[] memory exitedETHs = new uint256[](stoppedValidators.length);
+        for (uint256 idx = 0; idx < stoppedValidators.length; ++idx) {
+            exitedETHs[idx] = stoppedValidators[idx] * 32 ether;
+        }
+        OperatorsV3.setRawExitedETH(exitedETHs);
     }
 
     function _migrateOperators_V2_3() internal {
@@ -504,7 +516,7 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
         emit SetCurrentValidatorExitsDemand(_currentValue, _newValue);
     }
 
-    /// @notice Internal structure to hold variables for the _setStoppedValidatorCounts method
+    /// @notice Internal structure to hold variables for the _setExitedETH method
     struct SetExitedETHInternalVars {
         uint256 stoppedExitedETHsLength;
         uint256[] currentExitedETHs;
@@ -643,13 +655,6 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
                 result[offset++] = inner[j];
             }
         }
-    }
-
-    /// @notice Internal utility to retrieve the actual stopped validator count of an operator from the reported array
-    /// @param _operatorIndex The operator index
-    /// @return The count of stopped validators
-    function _getStoppedValidatorsCount(uint256 _operatorIndex) internal view returns (uint32) {
-        return OperatorsV2._getStoppedValidatorCountAtIndex(OperatorsV2.getStoppedValidators(), _operatorIndex);
     }
 
     /// @notice Internal utility to set the total validator exits requested by the system

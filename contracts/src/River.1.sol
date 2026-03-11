@@ -127,7 +127,13 @@ contract RiverV1 is
     }
 
     function initRiverV1_3() external init(3) {
-        InFlightETH.set(0);
+        IOracleManagerV1.StoredConsensusLayerReport storage storedReport = LastConsensusLayerReport.get();
+        uint256 clValidatorCount = storedReport.validatorsCount;
+        uint256 depositedValidatorCount = DepositedValidatorCount.get();
+        TotalDepositedETH.set(depositedValidatorCount * DEPOSIT_SIZE);
+        if (clValidatorCount < depositedValidatorCount) {
+            InFlightDeposit.set((depositedValidatorCount - clValidatorCount) * DEPOSIT_SIZE);
+        }
     }
 
     /// @inheritdoc IRiverV1
@@ -397,7 +403,7 @@ contract RiverV1 is
     function _assetBalance() internal view override(SharesManagerV1, OracleManagerV1) returns (uint256) {
         IOracleManagerV1.StoredConsensusLayerReport storage storedReport = LastConsensusLayerReport.get();
         return storedReport.validatorsBalance + BalanceToDeposit.get() + CommittedBalance.get()
-            + BalanceToRedeem.get() + InFlightETH.get();
+            + BalanceToRedeem.get() + InFlightDeposit.get();
     }
 
     /// @notice Internal utility to set the daily committable limits

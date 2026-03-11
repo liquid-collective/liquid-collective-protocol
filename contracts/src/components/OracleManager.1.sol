@@ -13,7 +13,7 @@ import "../state/river/CLValidatorTotalBalance.sol";
 import "../state/river/CLValidatorCount.sol";
 import "../state/river/DepositedValidatorCount.sol";
 import "../state/river/LastOracleRoundId.sol";
-import "../state/river/InFlightETH.sol";
+import "../state/river/InFlightDeposit.sol";
 
 /// @title Oracle Manager (v1)
 /// @author Alluvial Finance Inc.
@@ -255,7 +255,7 @@ abstract contract OracleManagerV1 is IOracleManagerV1 {
         uint256 timeElapsedSinceLastReport;
         uint256 availableAmountToUpperBound;
         uint256 redeemManagerDemand;
-        uint256 inFlightETH;
+        uint256 inFlightDeposit;
         ConsensusLayerDataReportingTrace trace;
     }
 
@@ -314,14 +314,14 @@ abstract contract OracleManagerV1 is IOracleManagerV1 {
 
             vars.timeElapsedSinceLastReport = _timeBetweenEpochs(cls, lastStoredReport.epoch, _report.epoch);
 
-            vars.inFlightETH = InFlightETH.get();
+            vars.inFlightDeposit = InFlightDeposit.get();
             // if the validators balance has increased, we update the in flight eth value
             if (_report.validatorsBalance > lastStoredReport.validatorsBalance) {
                 uint256 diffInFlightETH = _report.validatorsBalance - lastStoredReport.validatorsBalance;
-                if (diffInFlightETH >= vars.inFlightETH) {
-                    vars.inFlightETH = 0;
+                if (diffInFlightETH >= vars.inFlightDeposit) {
+                    vars.inFlightDeposit = 0;
                 } else {
-                    vars.inFlightETH = vars.inFlightETH - diffInFlightETH;
+                    vars.inFlightDeposit = vars.inFlightDeposit - diffInFlightETH;
                 }
             } else {
                 // if the validators balance has decreased, we need to check if the
@@ -335,10 +335,10 @@ abstract contract OracleManagerV1 is IOracleManagerV1 {
 
                     if (_report.validatorsBalance > actualLastReportValidatorsBalance) {
                         // this means that the validatorsBalance has decreased because of exits
-                        if(_report.validatorsBalance - actualLastReportValidatorsBalance >= vars.inFlightETH) {
-                            vars.inFlightETH = 0;
+                        if(_report.validatorsBalance - actualLastReportValidatorsBalance >= vars.inFlightDeposit) {
+                            vars.inFlightDeposit = 0;
                         } else {
-                            vars.inFlightETH = vars.inFlightETH - (_report.validatorsBalance - actualLastReportValidatorsBalance);
+                            vars.inFlightDeposit = vars.inFlightDeposit - (_report.validatorsBalance - actualLastReportValidatorsBalance);
                         }
                     }
                 }
@@ -355,8 +355,8 @@ abstract contract OracleManagerV1 is IOracleManagerV1 {
         }
 
         // we update the in flight eth value
-        emit IConsensusLayerDepositManagerV1.SetInFlightETH(InFlightETH.get(), vars.inFlightETH);
-        InFlightETH.set(vars.inFlightETH);
+        emit IConsensusLayerDepositManagerV1.SetInFlightETH(InFlightDeposit.get(), vars.inFlightDeposit);
+        InFlightDeposit.set(vars.inFlightDeposit);
 
         {
             // we update the system parameters, this will have an impact on how the total underlying balance is computed
