@@ -21,9 +21,7 @@ import "../state/river/InFlightDeposit.sol";
 /// @author Alluvial Finance Inc.
 /// @notice This contract handles the interactions with the official deposit contract, funding all validators
 /// @notice Whenever a deposit to the consensus layer is requested, this contract computed the amount of keys
-/// @notice that could be deposited depending on the amount available in the contract. After successfully
-/// @notice depositing the validators, the funded validator count is incremented on the operators registry
-/// @notice by overriding the _updateFundedValidators method in River.
+/// @notice that could be deposited depending on the amount available in the contract.
 abstract contract ConsensusLayerDepositManagerV1 is IConsensusLayerDepositManagerV1 {
     /// @notice Size of a BLS Public key in bytes
     uint256 public constant PUBLIC_KEY_LENGTH = 48;
@@ -39,11 +37,6 @@ abstract contract ConsensusLayerDepositManagerV1 is IConsensusLayerDepositManage
     /// @notice Handler called to change the committed balance to deposit
     /// @param newCommittedBalance The new committed balance value
     function _setCommittedBalance(uint256 newCommittedBalance) internal virtual;
-
-    /// @notice Handler called to update the funded validator count on the operators registry after each deposit
-    /// @dev Must be overridden. River implements this to call incrementFundedValidator on the registry.
-    /// @param _allocations The validator deposits that were just deposited
-    function _updateFundedValidators(IOperatorsRegistryV1.ValidatorDeposit[] calldata _allocations) internal virtual;
 
     /// @notice Initializer to set the deposit contract address and the withdrawal credentials to use
     /// @param _depositContractAddress The address of the deposit contract
@@ -137,7 +130,7 @@ abstract contract ConsensusLayerDepositManagerV1 is IConsensusLayerDepositManage
                 withdrawalCredentials
             );
         }
-        _updateFundedValidators(_allocations);
+
         _setCommittedBalance(committedBalance - totalRequested);
         uint256 currentDepositedValidatorCount = DepositedValidatorCount.get();
         DepositedValidatorCount.set(currentDepositedValidatorCount + _allocations.length);
@@ -145,12 +138,12 @@ abstract contract ConsensusLayerDepositManagerV1 is IConsensusLayerDepositManage
             currentDepositedValidatorCount, currentDepositedValidatorCount + _allocations.length
         );
         uint256 currentInFlightETH = InFlightDeposit.get();
-        InFlightDeposit.set(currentInFlightETH + DEPOSIT_SIZE * receivedPublicKeyCount);
-        emit SetInFlightETH(currentInFlightETH, currentInFlightETH + DEPOSIT_SIZE * receivedPublicKeyCount);
+        InFlightDeposit.set(currentInFlightETH + DEPOSIT_SIZE * _allocations.length);
+        emit SetInFlightETH(currentInFlightETH, currentInFlightETH + DEPOSIT_SIZE * _allocations.length);
 
         uint256 currentTotalDepositedETH = TotalDepositedETH.get();
-        TotalDepositedETH.set(currentTotalDepositedETH + DEPOSIT_SIZE * receivedPublicKeyCount);
-        emit SetTotalDepositedETH(currentTotalDepositedETH, currentTotalDepositedETH + DEPOSIT_SIZE * receivedPublicKeyCount);
+        TotalDepositedETH.set(currentTotalDepositedETH + DEPOSIT_SIZE * _allocations.length);
+        emit SetTotalDepositedETH(currentTotalDepositedETH, currentTotalDepositedETH + DEPOSIT_SIZE * _allocations.length);
     }
 
     /// @notice Deposits 32 ETH to the official Deposit contract

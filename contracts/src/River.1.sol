@@ -302,14 +302,6 @@ contract RiverV1 is
         return Administrable._getAdmin();
     }
 
-    /// @notice Overridden handler to update funded validator counts on the operators registry after deposits
-    function _updateFundedValidators(IOperatorsRegistryV1.ValidatorDeposit[] calldata _allocations) internal override {
-        IOperatorsRegistryV1 registry = IOperatorsRegistryV1(OperatorsRegistryAddress.get());
-        for (uint256 idx = 0; idx < _allocations.length; ++idx) {
-            registry.incrementFundedValidator(_allocations[idx].operatorIndex);
-        }
-    }
-
     /// @notice Overridden handler called whenever a token transfer is triggered
     /// @param _from Token sender
     /// @param _to Token receiver
