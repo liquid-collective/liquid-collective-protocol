@@ -26,9 +26,7 @@ abstract contract ConsensusLayerDepositManagerV1 is IConsensusLayerDepositManage
     /// @notice Size of a BLS Signature in bytes
     uint256 public constant SIGNATURE_LENGTH = 96;
     /// @notice Size of a deposit in ETH
-    uint256 public constant MIN_DEPOSIT_SIZE = 32 ether;
-    /// @notice Size of a deposit in ETH
-    uint256 public constant MAX_DEPOSIT_SIZE = 2048 ether;
+    uint256 public constant DEPOSIT_SIZE = 32 ether;
 
     /// @notice Handler called to retrieve the internal River admin address
     /// @dev Must be Overridden
@@ -86,8 +84,6 @@ abstract contract ConsensusLayerDepositManagerV1 is IConsensusLayerDepositManage
     }
 
     /// @inheritdoc IConsensusLayerDepositManagerV1
-    /// @dev WARNING: maxDepositableCount assumes all validators are exactly 32 ETH.
-    /// @dev This will break if variable deposit amounts are used (Pectra).
     function depositToConsensusLayerWithDepositRoot(
         IOperatorsRegistryV1.ValidatorDeposit[] calldata _allocations,
         bytes32 _depositRoot
@@ -101,7 +97,7 @@ abstract contract ConsensusLayerDepositManagerV1 is IConsensusLayerDepositManage
         }
 
         uint256 committedBalance = CommittedBalance.get();
-        uint256 maxDepositableCount = committedBalance / MIN_DEPOSIT_SIZE;
+        uint256 maxDepositableCount = committedBalance / DEPOSIT_SIZE;
 
         if (maxDepositableCount == 0) {
             revert NotEnoughFunds();
@@ -163,7 +159,7 @@ abstract contract ConsensusLayerDepositManagerV1 is IConsensusLayerDepositManage
         if (_signature.length != SIGNATURE_LENGTH) {
             revert InconsistentSignatures();
         }
-        if (_depositAmount < MIN_DEPOSIT_SIZE || _depositAmount > MAX_DEPOSIT_SIZE) {
+        if (_depositAmount != DEPOSIT_SIZE) {
             revert InvalidDepositSize(_depositAmount);
         }
         uint256 value = _depositAmount;
