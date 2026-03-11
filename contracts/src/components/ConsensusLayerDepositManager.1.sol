@@ -93,7 +93,7 @@ abstract contract ConsensusLayerDepositManagerV1 is IConsensusLayerDepositManage
         }
 
         if (_allocations.length == 0) {
-            revert InvalidPublicKeyCount();
+            revert EmptyAllocations();
         }
 
         if (IDepositContract(DepositContractAddress.get()).get_deposit_root() != _depositRoot) {
