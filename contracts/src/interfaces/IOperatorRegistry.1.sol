@@ -101,15 +101,15 @@ interface IOperatorsRegistryV1 {
     event RequestedETHExits(uint256 indexed index, uint256 amount);
 
     /// @notice The exit request demand has been updated
-    /// @param previousValidatorExitsDemand The previous exit request demand
-    /// @param nextValidatorExitsDemand The new exit request demand
-    event SetCurrentValidatorExitsDemand(uint256 previousValidatorExitsDemand, uint256 nextValidatorExitsDemand);
+    /// @param previousETHExitsDemand The previous exit request demand
+    /// @param nextETHExitsDemand The new exit request demand
+    event SetCurrentETHExitsDemand(uint256 previousETHExitsDemand, uint256 nextETHExitsDemand);
 
     /// @notice The total requested exit has been updated
-    /// @param previousTotalValidatorExitsRequested The previous total requested exit
-    /// @param newTotalValidatorExitsRequested The new total requested exit
-    event SetTotalValidatorExitsRequested(
-        uint256 previousTotalValidatorExitsRequested, uint256 newTotalValidatorExitsRequested
+    /// @param previousTotalETHExitsRequested The previous total requested exit
+    /// @param newTotalETHExitsRequested The new total requested exit
+    event SetTotalETHExitsRequested(
+        uint256 previousTotalETHExitsRequested, uint256 newTotalETHExitsRequested
     );
 
     /// @notice A validator key got funded on the deposit contract
@@ -138,7 +138,7 @@ interface IOperatorsRegistryV1 {
 
     /// @notice The exited ETHs have been updated
     /// @param exitedETHs The exited ETHs
-    event UpdatedExitedETHs(uint256[] indexed exitedETHs);
+    event UpdatedExitedETHs(uint256[] exitedETHs);
 
     /// @notice The calling operator is inactive
     /// @param index The operator index
@@ -259,7 +259,7 @@ interface IOperatorsRegistryV1 {
     /// @notice Get the current exit request demand waiting to be triggered
     /// @notice This value is the amount of exit requests that are demanded and not yet performed by the contract
     /// @return The current exit request demand
-    function getCurrentValidatorExitsDemand() external view returns (uint256);
+    function getCurrentETHExitsDemand() external view returns (uint256);
 
     /// @notice Retrieve the total exited ETH and requested exit amount
     /// @return The total exited ETH

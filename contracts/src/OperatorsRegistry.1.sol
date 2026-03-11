@@ -181,7 +181,7 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
     }
 
     /// @inheritdoc IOperatorsRegistryV1
-    function getCurrentValidatorExitsDemand() external view returns (uint256) {
+    function getCurrentETHExitsDemand() external view returns (uint256) {
         return CurrentETHExitsDemand.get();
     }
 
@@ -196,13 +196,13 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
     }
 
     /// @inheritdoc IOperatorsRegistryV1
-    function getExitedETHPerOperator() external view returns (uint256[] memory) {
+    function getExitedETHPerOperator() external view returns (uint256[] memory exitedETHs) {
         uint256 opCount = OperatorsV3.getCount();
-        uint256[] memory exitedETHs = new uint256[](opCount);
+        exitedETHs = new uint256[](opCount);
+        uint256[] memory rawExitedETHs = OperatorsV3.getExitedETH();
         for (uint256 idx = 0; idx < opCount; ++idx) {
-            exitedETHs[idx] = OperatorsV3.get(idx).requestedExits;
+            exitedETHs[idx] = rawExitedETHs[idx + 1];
         }
-        return exitedETHs;
     }
 
     /// @inheritdoc IOperatorsRegistryV1
@@ -370,7 +370,7 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
             // perOpKeys[i] and perOpSigs[i] each have length == _allocations[i].validatorCount,
             // guaranteed by _getPerOperatorValidatorKeysForAllocations.
             emit FundedValidatorKeys(_allocations[i].operatorIndex, perOpKeys[i], false);
-            OperatorsV3.get(_allocations[i].operatorIndex).funded += uint32(perOpKeys[i].length) * 32 ether;
+            OperatorsV3.get(_allocations[i].operatorIndex).funded += perOpKeys[i].length * 32 ether;
         }
         publicKeys = _flattenByteArrays(perOpKeys);
         signatures = _flattenByteArrays(perOpSigs);
@@ -513,12 +513,12 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
     /// @param _newValue The new value
     function _setCurrentETHExitsDemand(uint256 _currentValue, uint256 _newValue) internal {
         CurrentETHExitsDemand.set(_newValue);
-        emit SetCurrentValidatorExitsDemand(_currentValue, _newValue);
+        emit SetCurrentETHExitsDemand(_currentValue, _newValue);
     }
 
     /// @notice Internal structure to hold variables for the _setExitedETH method
     struct SetExitedETHInternalVars {
-        uint256 stoppedExitedETHsLength;
+        uint256 exitedETHsLength;
         uint256[] currentExitedETHs;
         uint256 currentExitedETHsLength;
         uint256 totalExitedETH;
@@ -526,21 +526,21 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
         uint256 currentETHExitsDemand;
         uint256 cachedCurrentETHExitsDemand;
         uint256 totalRequestedETHExits;
-        uint256 cachedTotalExitedETH;
+        uint256 cachedTotalRequestedETHExits;
     }
 
     function _setExitedETH(uint256[] calldata _exitedETHs, uint256 _totalDepositedETH) internal {
         SetExitedETHInternalVars memory vars;
         // we check that the array is not empty
-        vars.stoppedExitedETHsLength = _exitedETHs.length;
-        if (vars.stoppedExitedETHsLength == 0) {
+        vars.exitedETHsLength = _exitedETHs.length;
+        if (vars.exitedETHsLength == 0) {
             revert InvalidEmptyArray();
         }
 
         OperatorsV3.Operator[] storage operators = OperatorsV3.getAll();
 
         // we check that the cells containing operator stopped values are no more than the current operator count
-        if (vars.stoppedExitedETHsLength - 1 > operators.length) {
+        if (vars.exitedETHsLength - 1 > operators.length) {
             revert ExitedETHCountTooHigh();
         }
 
@@ -548,7 +548,7 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
         vars.currentExitedETHsLength = vars.currentExitedETHs.length;
 
         // we check that the number of stopped values is not decreasing
-        if (vars.stoppedExitedETHsLength < vars.currentExitedETHsLength) {
+        if (vars.exitedETHsLength < vars.currentExitedETHsLength) {
             revert ExitedETHArrayShrinking();
         }
 
@@ -559,7 +559,7 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
         vars.currentETHExitsDemand = CurrentETHExitsDemand.get();
         vars.cachedCurrentETHExitsDemand = vars.currentETHExitsDemand;
         vars.totalRequestedETHExits = TotalETHExitsRequested.get();
-        vars.cachedTotalExitedETH = vars.totalRequestedETHExits;
+        vars.cachedTotalRequestedETHExits = vars.totalRequestedETHExits;
 
         uint256 idx = 1;
         uint256 unsolicitedExitsSum;
@@ -591,7 +591,7 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
         }
 
         // In case of a new operator we do not check against the current exited ETH (would revert OOB)
-        for (; idx < vars.stoppedExitedETHsLength; ++idx) {
+        for (; idx < vars.exitedETHsLength; ++idx) {
             // we check that the amount of exited ETH is not above the funded ETH of an operator
             if (_exitedETHs[idx] > operators[idx - 1].funded) {
                 revert ExitedETHAboveFundedETH(
@@ -617,8 +617,8 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
         // we decrease the demand, considering unsolicited exits as if they were answering the demand
         vars.currentETHExitsDemand -= LibUint256.min(unsolicitedExitsSum, vars.currentETHExitsDemand);
 
-        if (vars.totalRequestedETHExits != vars.cachedTotalExitedETH) {
-            _setTotalETHExitsRequested(vars.cachedTotalExitedETH, vars.totalRequestedETHExits);
+        if (vars.totalRequestedETHExits != vars.cachedTotalRequestedETHExits) {
+            _setTotalETHExitsRequested(vars.cachedTotalRequestedETHExits, vars.totalRequestedETHExits);
         }
 
         if (vars.currentETHExitsDemand != vars.cachedCurrentETHExitsDemand) {
@@ -662,7 +662,7 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
     /// @param _newValue The new value of the total validator exits requested
     function _setTotalETHExitsRequested(uint256 _currentValue, uint256 _newValue) internal {
         TotalETHExitsRequested.set(_newValue);
-        emit SetTotalValidatorExitsRequested(_currentValue, _newValue);
+        emit SetTotalETHExitsRequested(_currentValue, _newValue);
     }
 
     /// @inheritdoc IProtocolVersion
