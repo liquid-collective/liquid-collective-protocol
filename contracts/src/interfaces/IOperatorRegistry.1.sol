@@ -5,7 +5,7 @@ import "../state/operatorsRegistry/Operators.3.sol";
 
 /// @title Operators Registry Interface (v1)
 /// @author Alluvial Finance Inc.
-/// @notice This interface exposes methods to handle the list of operators and their keys
+/// @notice This interface exposes methods to handle the list of operators
 interface IOperatorsRegistryV1 {
     /// @notice Structure representing a validator deposit
     /// @param operatorIndex The index of the operator
@@ -16,7 +16,7 @@ interface IOperatorsRegistryV1 {
         uint256 operatorIndex;
         bytes pubkey; // 48 bytes
         bytes signature; // 96 bytes
-        uint256 depositAmount; // 32-2048 ETH
+        uint256 depositAmount; // deposit amount in wei (currently exactly 32 ETH)
     }
 
     /// @notice Structure representing an operator allocation for exit requests
