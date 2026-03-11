@@ -34,6 +34,10 @@ abstract contract ConsensusLayerDepositManagerV1 is IConsensusLayerDepositManage
     /// @dev Must be Overridden
     function _getRiverAdmin() internal view virtual returns (address);
 
+    /// @notice Handler called to increment the funded ETH for the operators
+    /// @param _fundedETHs The array of funded ETH amounts
+    function _incrementFundedETH(uint256[] memory _fundedETHs) internal virtual;
+
     /// @notice Handler called to change the committed balance to deposit
     /// @param newCommittedBalance The new committed balance value
     function _setCommittedBalance(uint256 newCommittedBalance) internal virtual;
@@ -95,7 +99,7 @@ abstract contract ConsensusLayerDepositManagerV1 is IConsensusLayerDepositManage
 
         uint256 committedBalance = CommittedBalance.get();
         uint256 maxDepositableCount = committedBalance / DEPOSIT_SIZE;
-
+        uint256 highestOperatorIndex = 0;
         if (maxDepositableCount == 0) {
             revert NotEnoughFunds();
         }
@@ -109,7 +113,9 @@ abstract contract ConsensusLayerDepositManagerV1 is IConsensusLayerDepositManage
                 revert InconsistentSignatures();
             }
             totalRequested += _allocations[i].depositAmount;
+            highestOperatorIndex = LibUint256.max(highestOperatorIndex, _allocations[i].operatorIndex);
         }
+        uint256[] memory fundedETHs = new uint256[](highestOperatorIndex + 1);
 
         // Check if the total requested exceeds the committed balance
         if (totalRequested > committedBalance) {
@@ -129,8 +135,10 @@ abstract contract ConsensusLayerDepositManagerV1 is IConsensusLayerDepositManage
                 _allocations[idx].depositAmount,
                 withdrawalCredentials
             );
+            fundedETHs[_allocations[idx].operatorIndex] += _allocations[idx].depositAmount;
         }
 
+        _incrementFundedETH(fundedETHs);
         _setCommittedBalance(committedBalance - totalRequested);
         uint256 currentDepositedValidatorCount = DepositedValidatorCount.get();
         DepositedValidatorCount.set(currentDepositedValidatorCount + _allocations.length);

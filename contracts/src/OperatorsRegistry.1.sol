@@ -75,6 +75,7 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
         OperatorsV3.setRawExitedETH(exitedETHs);
     }
 
+    /// @notice Internal utility to migrate the operators from V2 to V3 format
     function _migrateOperators_V2_3() internal {
         uint256 opCount = OperatorsV2.getCount();
         for (uint256 idx = 0; idx < opCount; ++idx) {
@@ -146,21 +147,37 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
     }
 
     /// @inheritdoc IOperatorsRegistryV1
-    function getExitedETHPerOperator() external view returns (uint256[] memory exitedETHs) {
-        uint256 opCount = OperatorsV3.getCount();
-        exitedETHs = new uint256[](opCount);
+    function getExitedETHPerOperator() external view returns (uint256[] memory) {
         uint256[] memory rawExitedETHs = OperatorsV3.getExitedETH();
-        if (rawExitedETHs.length == 0) {
-            return exitedETHs;
+        uint256 listLength = rawExitedETHs.length;
+        if (listLength > 0) {
+            assembly {
+                // no need to use free memory pointer as we reuse the same memory range
+
+                // erase previous word storing length
+                mstore(rawExitedETHs, 0)
+
+                // move memory pointer up by a word
+                rawExitedETHs := add(rawExitedETHs, 0x20)
+
+                // store updated length at new memory pointer location
+                mstore(rawExitedETHs, sub(listLength, 1))
+            }
         }
-        for (uint256 idx = 0; idx < opCount; ++idx) {
-            exitedETHs[idx] = rawExitedETHs[idx + 1];
-        }
+        return rawExitedETHs;
     }
 
     /// @inheritdoc IOperatorsRegistryV1
     function listActiveOperators() external view returns (OperatorsV3.Operator[] memory) {
         return OperatorsV3.getAllActive();
+    }
+
+    /// @inheritdoc IOperatorsRegistryV1
+    function incrementFundedETH(uint256[] calldata _fundedETHs) external onlyRiver {
+        for (uint256 idx = 0; idx < _fundedETHs.length; ++idx) {
+            OperatorsV3.Operator storage operator = OperatorsV3.get(idx);
+            operator.funded += _fundedETHs[idx];
+        }
     }
 
     /// @inheritdoc IOperatorsRegistryV1
@@ -243,12 +260,12 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
                 revert InactiveOperator(operatorIndex);
             }
             if (ethAmount > (operator.funded - operator.requestedExits)) {
-                // Operator has insufficient available funded validators
+                // Operator has insufficient available ETH
                 revert ExitsRequestedExceedAvailableFundedCount(
                     operatorIndex, ethAmount, operator.funded - operator.requestedExits
                 );
             }
-            // Operator has sufficient funded validators
+            // Operator has sufficient ETH
             operator.requestedExits += ethAmount;
             emit RequestedETHExits(operatorIndex, operator.requestedExits);
         }
@@ -288,7 +305,7 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
         return exitedETHs[0];
     }
 
-    /// @notice Internal utility to set the current validator exits demand
+    /// @notice Internal utility to set the current ETH exits demand
     /// @param _currentValue The current value
     /// @param _newValue The new value
     function _setCurrentETHExitsDemand(uint256 _currentValue, uint256 _newValue) internal {
@@ -335,7 +352,7 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
         vars.totalExitedETH = _exitedETHs[0];
         vars.amountOfExitedETH = 0;
 
-        // create value to track unsolicited validator exits (e.g. to cover cases when Node Operator exit a validator without being requested to)
+        // create value to track unsolicited exits (e.g. to cover cases when Node Operator exit ETH without being requested to)
         vars.currentETHExitsDemand = CurrentETHExitsDemand.get();
         vars.cachedCurrentETHExitsDemand = vars.currentETHExitsDemand;
         vars.totalRequestedETHExits = TotalETHExitsRequested.get();
@@ -356,7 +373,8 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
                 );
             }
 
-            // if the amount of exited ETH is greater than the current exited ETH, we update the exited ETH
+            // if the reported exited ETH for this operator is greater than its recorded requestedExits,
+            // treat the difference as unsolicited exits and set requestedExits to the reported exited ETH.
             if (_exitedETHs[idx] > operators[idx - 1].requestedExits) {
                 emit UpdatedRequestedETHExitsUponStopped(
                     idx - 1, operators[idx - 1].requestedExits, _exitedETHs[idx]
@@ -379,7 +397,8 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
                 );
             }
 
-            // if the stopped validator count is greater than its requested exit count, we update the requested exit count
+            // if the reported exited ETH for this operator is greater than its recorded requestedExits,
+            // treat the difference as unsolicited exits and set requestedExits to the reported exited ETH.
             if (_exitedETHs[idx] > operators[idx - 1].requestedExits) {
                 emit UpdatedRequestedETHExitsUponStopped(
                     idx - 1, operators[idx - 1].requestedExits, _exitedETHs[idx]
@@ -409,7 +428,7 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
         if (vars.totalExitedETH != vars.amountOfExitedETH) {
             revert InvalidExitedETHsSum();
         }
-        // we check that the total is not higher than the current deposited validator count
+        // we check that the total is not higher than the current deposited ETH
         if (vars.totalExitedETH > _totalDepositedETH) {
             revert ExitedETHsTooHigh();
         }
@@ -419,9 +438,9 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
         emit UpdatedExitedETHs(_exitedETHs);
     }
 
-    /// @notice Internal utility to set the total validator exits requested by the system
-    /// @param _currentValue The current value of the total validator exits requested
-    /// @param _newValue The new value of the total validator exits requested
+    /// @notice Internal utility to set the total ETH exits requested by the system
+    /// @param _currentValue The current value of the total ETH exits requested
+    /// @param _newValue The new value of the total ETH exits requested
     function _setTotalETHExitsRequested(uint256 _currentValue, uint256 _newValue) internal {
         TotalETHExitsRequested.set(_newValue);
         emit SetTotalETHExitsRequested(_currentValue, _newValue);

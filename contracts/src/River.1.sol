@@ -302,6 +302,12 @@ contract RiverV1 is
         return Administrable._getAdmin();
     }
 
+    /// @notice Overridden handler to increment the funded ETH for the operators
+    /// @param _fundedETHs The array of funded ETH amounts
+    function _incrementFundedETH(uint256[] memory _fundedETHs) internal override {
+        IOperatorsRegistryV1(OperatorsRegistryAddress.get()).incrementFundedETH(_fundedETHs);
+    }
+
     /// @notice Overridden handler called whenever a token transfer is triggered
     /// @param _from Token sender
     /// @param _to Token receiver

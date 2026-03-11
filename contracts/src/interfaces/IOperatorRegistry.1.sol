@@ -196,6 +196,10 @@ interface IOperatorsRegistryV1 {
     /// @return The list of active operators and their details
     function listActiveOperators() external view returns (OperatorsV3.Operator[] memory);
 
+    /// @notice Increments the funded ETH for the operators
+    /// @param _fundedETHs The array of funded ETH amounts
+    function incrementFundedETH(uint256[] calldata _fundedETHs) external;
+
     /// @notice Allows river to override the exited ETH array
     /// @notice This actions happens during the Oracle report processing
     /// @param _exitedETHs The new exited ETH array

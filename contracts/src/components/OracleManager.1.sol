@@ -255,7 +255,6 @@ abstract contract OracleManagerV1 is IOracleManagerV1 {
         uint256 timeElapsedSinceLastReport;
         uint256 availableAmountToUpperBound;
         uint256 redeemManagerDemand;
-        uint256 inFlightDeposit;
         ConsensusLayerDataReportingTrace trace;
     }
 
@@ -313,8 +312,6 @@ abstract contract OracleManagerV1 is IOracleManagerV1 {
             vars.skimmedAmountIncrease = _report.validatorsSkimmedBalance - vars.lastReportSkimmedBalance;
 
             vars.timeElapsedSinceLastReport = _timeBetweenEpochs(cls, lastStoredReport.epoch, _report.epoch);
-
-            vars.inFlightDeposit = InFlightDeposit.get();
         }
 
         // we retrieve the current total underlying balance before any reporting data is applied to the system
