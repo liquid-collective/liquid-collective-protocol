@@ -315,34 +315,6 @@ abstract contract OracleManagerV1 is IOracleManagerV1 {
             vars.timeElapsedSinceLastReport = _timeBetweenEpochs(cls, lastStoredReport.epoch, _report.epoch);
 
             vars.inFlightDeposit = InFlightDeposit.get();
-            // if the validators balance has increased, we update the in flight eth value
-            if (_report.validatorsBalance > lastStoredReport.validatorsBalance) {
-                uint256 diffInFlightETH = _report.validatorsBalance - lastStoredReport.validatorsBalance;
-                if (diffInFlightETH >= vars.inFlightDeposit) {
-                    vars.inFlightDeposit = 0;
-                } else {
-                    vars.inFlightDeposit = vars.inFlightDeposit - diffInFlightETH;
-                }
-            } else {
-                // if the validators balance has decreased, we need to check if the
-                // exited balance has increased, if it has then we need to calculate if we received any new
-                // in flight eth
-                if (_report.validatorsExitingBalance < lastStoredReport.validatorsExitingBalance) {
-                    // this means that the validatorsBalance has decreased because of ETH moving from exiting to exited
-
-                    // we compute the actual validators balance at the last report, since the validatorsExitedBalance was included
-                    uint256 actualLastReportValidatorsBalance = lastStoredReport.validatorsBalance - lastStoredReport.validatorsExitingBalance;
-
-                    if (_report.validatorsBalance > actualLastReportValidatorsBalance) {
-                        // this means that the validatorsBalance has decreased because of exits
-                        if(_report.validatorsBalance - actualLastReportValidatorsBalance >= vars.inFlightDeposit) {
-                            vars.inFlightDeposit = 0;
-                        } else {
-                            vars.inFlightDeposit = vars.inFlightDeposit - (_report.validatorsBalance - actualLastReportValidatorsBalance);
-                        }
-                    }
-                }
-            }
         }
 
         // we retrieve the current total underlying balance before any reporting data is applied to the system
@@ -355,8 +327,8 @@ abstract contract OracleManagerV1 is IOracleManagerV1 {
         }
 
         // we update the in flight eth value
-        emit IConsensusLayerDepositManagerV1.SetInFlightETH(InFlightDeposit.get(), vars.inFlightDeposit);
-        InFlightDeposit.set(vars.inFlightDeposit);
+        emit IConsensusLayerDepositManagerV1.SetInFlightETH(InFlightDeposit.get(), _report.inFlightETH);
+        InFlightDeposit.set(_report.inFlightETH);
 
         {
             // we update the system parameters, this will have an impact on how the total underlying balance is computed

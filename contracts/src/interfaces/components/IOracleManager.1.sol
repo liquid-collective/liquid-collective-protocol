@@ -129,6 +129,9 @@ interface IOracleManagerV1 {
         // this includes voluntary exits and slashings
         // this value can decrease between reports
         uint256 validatorsExitingBalance;
+        // this is the amount of ETH that was deposited but not yet activated
+        // this value can decrease between reports
+        uint256 inFlightETH;
         // the count of activated validators
         // even validators that are exited are still accounted
         // this value cannot decrease over reports

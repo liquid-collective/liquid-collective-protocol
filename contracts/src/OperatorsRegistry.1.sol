@@ -200,6 +200,9 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
         uint256 opCount = OperatorsV3.getCount();
         exitedETHs = new uint256[](opCount);
         uint256[] memory rawExitedETHs = OperatorsV3.getExitedETH();
+        if (rawExitedETHs.length == 0) {
+            return exitedETHs;
+        }
         for (uint256 idx = 0; idx < opCount; ++idx) {
             exitedETHs[idx] = rawExitedETHs[idx + 1];
         }
@@ -502,9 +505,12 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
     }
 
     /// @notice Internal utility to retrieve the total exited ETH
-    /// @return exitedETH The total exited ETH
-    function _getTotalExitedETH() internal view returns (uint256 exitedETH) {
+    /// @return The total exited ETH
+    function _getTotalExitedETH() internal view returns (uint256) {
         uint256[] storage exitedETHs = OperatorsV3.getExitedETH();
+        if (exitedETHs.length == 0) {
+            return 0;
+        }
         return exitedETHs[0];
     }
 
