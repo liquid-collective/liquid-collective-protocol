@@ -13,22 +13,18 @@ import "./utils/LibImplementationUnbricker.sol";
 import "../src/OperatorsRegistry.1.sol";
 
 contract OperatorsRegistryInitializableV1 is OperatorsRegistryV1 {
-    /// @dev Override to allow tests to call pickNextValidatorsToDeposit without pranking as river
+    /// @dev Override to allow tests to call functions without pranking as river
     modifier onlyRiver() override {
         _;
     }
 
     function sudoSetFunded(uint256 _index, uint32 _funded) external {
-        OperatorsV2.Operator storage operator = OperatorsV2.get(_index);
+        OperatorsV3.Operator storage operator = OperatorsV3.get(_index);
         operator.funded = _funded;
     }
 
-    function sudoSetKeys(uint256 _operatorIndex, uint32 _keyCount) external {
-        OperatorsV2.setKeys(_operatorIndex, _keyCount);
-    }
-
     function sudoExitRequests(uint256 _operatorIndex, uint32 _requestedExits) external {
-        OperatorsV2.get(_operatorIndex).requestedExits = _requestedExits;
+        OperatorsV3.get(_operatorIndex).requestedExits = _requestedExits;
     }
 
     function sudoStoppedValidatorCounts(uint32[] calldata stoppedValidatorCount, uint256 depositedValidatorCount)
@@ -41,16 +37,12 @@ contract OperatorsRegistryInitializableV1 is OperatorsRegistryV1 {
 /// @dev Same as OperatorsRegistryInitializableV1 but does NOT override onlyRiver; use for tests that assert Unauthorized
 contract OperatorsRegistryStrictRiverV1 is OperatorsRegistryV1 {
     function sudoSetFunded(uint256 _index, uint32 _funded) external {
-        OperatorsV2.Operator storage operator = OperatorsV2.get(_index);
+        OperatorsV3.Operator storage operator = OperatorsV3.get(_index);
         operator.funded = _funded;
     }
 
-    function sudoSetKeys(uint256 _operatorIndex, uint32 _keyCount) external {
-        OperatorsV2.setKeys(_operatorIndex, _keyCount);
-    }
-
     function sudoExitRequests(uint256 _operatorIndex, uint32 _requestedExits) external {
-        OperatorsV2.get(_operatorIndex).requestedExits = _requestedExits;
+        OperatorsV3.get(_operatorIndex).requestedExits = _requestedExits;
     }
 
     function sudoStoppedValidatorCounts(uint32[] calldata stoppedValidatorCount, uint256 depositedValidatorCount)
@@ -91,20 +83,7 @@ abstract contract OperatorsRegistryV1TestBase is Test {
     string internal firstName = "Operator One";
     string internal secondName = "Operator Two";
 
-    event AddedValidatorKeys(uint256 indexed index, bytes publicKeys);
-    event RemovedValidatorKey(uint256 indexed index, bytes publicKey);
     event SetRiver(address indexed river);
-    event OperatorLimitUnchanged(uint256 indexed operatorIndex, uint256 limit);
-    event OperatorEditsAfterSnapshot(
-        uint256 indexed index,
-        uint256 currentLimit,
-        uint256 newLimit,
-        uint256 indexed lastEdit,
-        uint256 indexed snapshotBlock
-    );
-
-    event SetOperatorLimit(uint256 indexed index, uint256 newLimit);
-    event AddedValidatorKeys(uint256 indexed index, uint256 amount);
     event UpdatedStoppedValidators(uint32[] stoppedValidatorCounts);
     event SetOperatorStoppedValidatorCount(uint256 indexed index, uint256 newStoppedValidatorCount);
 }
@@ -181,41 +160,11 @@ contract OperatorsRegistryV1Tests is OperatorsRegistryV1TestBase, OperatorAlloca
         operatorsRegistry.initOperatorsRegistryV1(admin, river);
     }
 
-    function testForceFundedValidatorKeysEventEmission() public {
-        operatorsRegistry.getOperatorCount();
-        operatorsRegistry.forceFundedValidatorKeysEventEmission(100);
-
-        bytes32 operatorIndex = vm.load(
-            address(operatorsRegistry),
-            bytes32(
-                uint256(keccak256("river.state.migration.operatorsRegistry.fundedKeyEventRebroadcasting.operatorIndex"))
-                    - 1
-            )
-        );
-        assertEq(uint256(operatorIndex), type(uint256).max);
-    }
-
-    function testInternalSetKeys(uint256 _nodeOperatorAddressSalt, bytes32 _name, uint32 _keyCount, uint32 _blockRoll)
-        public
-    {
-        address _nodeOperatorAddress = uf._new(_nodeOperatorAddressSalt);
-        vm.startPrank(admin);
-        uint256 operatorIndex = operatorsRegistry.addOperator(string(abi.encodePacked(_name)), _nodeOperatorAddress);
-        OperatorsV2.Operator memory newOperator = operatorsRegistry.getOperator(operatorIndex);
-        assert(newOperator.keys == 0);
-        assert(newOperator.latestKeysEditBlockNumber == block.number);
-        vm.roll(block.number + _blockRoll);
-        OperatorsRegistryInitializableV1(address(operatorsRegistry)).sudoSetKeys(0, _keyCount);
-        newOperator = operatorsRegistry.getOperator(operatorIndex);
-        assert(newOperator.keys == _keyCount);
-        assert(newOperator.latestKeysEditBlockNumber == block.number);
-    }
-
     function testAddNodeOperator(uint256 _nodeOperatorAddressSalt, bytes32 _name) public {
         address _nodeOperatorAddress = uf._new(_nodeOperatorAddressSalt);
         vm.startPrank(admin);
         uint256 operatorIndex = operatorsRegistry.addOperator(string(abi.encodePacked(_name)), _nodeOperatorAddress);
-        OperatorsV2.Operator memory newOperator = operatorsRegistry.getOperator(operatorIndex);
+        OperatorsV3.Operator memory newOperator = operatorsRegistry.getOperator(operatorIndex);
         assert(newOperator.operator == _nodeOperatorAddress);
     }
 
@@ -245,7 +194,7 @@ contract OperatorsRegistryV1Tests is OperatorsRegistryV1TestBase, OperatorAlloca
         address _secondAddress = uf._new(_secondAddressSalt);
         vm.startPrank(admin);
         uint256 index = operatorsRegistry.addOperator(string(abi.encodePacked(_name)), _firstAddress);
-        OperatorsV2.Operator memory newOperator = operatorsRegistry.getOperator(index);
+        OperatorsV3.Operator memory newOperator = operatorsRegistry.getOperator(index);
         assert(newOperator.operator == _firstAddress);
         operatorsRegistry.setOperatorAddress(index, _secondAddress);
         newOperator = operatorsRegistry.getOperator(index);
@@ -260,7 +209,7 @@ contract OperatorsRegistryV1Tests is OperatorsRegistryV1TestBase, OperatorAlloca
         address _secondAddress = uf._new(_secondAddressSalt);
         vm.startPrank(admin);
         uint256 index = operatorsRegistry.addOperator(string(abi.encodePacked(_name)), _firstAddress);
-        OperatorsV2.Operator memory newOperator = operatorsRegistry.getOperator(index);
+        OperatorsV3.Operator memory newOperator = operatorsRegistry.getOperator(index);
         assert(newOperator.operator == _firstAddress);
         vm.stopPrank();
         vm.startPrank(_firstAddress);
@@ -274,7 +223,7 @@ contract OperatorsRegistryV1Tests is OperatorsRegistryV1TestBase, OperatorAlloca
         address _firstAddress = uf._new(_firstAddressSalt);
         vm.startPrank(admin);
         uint256 index = operatorsRegistry.addOperator(string(abi.encodePacked(_name)), _firstAddress);
-        OperatorsV2.Operator memory newOperator = operatorsRegistry.getOperator(index);
+        OperatorsV3.Operator memory newOperator = operatorsRegistry.getOperator(index);
         assert(newOperator.operator == _firstAddress);
         vm.stopPrank();
         vm.startPrank(_firstAddress);
@@ -290,7 +239,7 @@ contract OperatorsRegistryV1Tests is OperatorsRegistryV1TestBase, OperatorAlloca
         address _secondAddress = uf._new(_secondAddressSalt);
         vm.startPrank(admin);
         uint256 index = operatorsRegistry.addOperator(string(abi.encodePacked(_name)), _firstAddress);
-        OperatorsV2.Operator memory newOperator = operatorsRegistry.getOperator(index);
+        OperatorsV3.Operator memory newOperator = operatorsRegistry.getOperator(index);
         assert(newOperator.operator == _firstAddress);
         vm.stopPrank();
         vm.startPrank(address(this));
@@ -304,7 +253,7 @@ contract OperatorsRegistryV1Tests is OperatorsRegistryV1TestBase, OperatorAlloca
         bytes32 _nextName = keccak256(abi.encodePacked(_name));
         vm.startPrank(admin);
         uint256 index = operatorsRegistry.addOperator(string(abi.encodePacked(_name)), _address);
-        OperatorsV2.Operator memory newOperator = operatorsRegistry.getOperator(index);
+        OperatorsV3.Operator memory newOperator = operatorsRegistry.getOperator(index);
         assert(keccak256(bytes(newOperator.name)) == keccak256(bytes(string(abi.encodePacked(_name)))));
         operatorsRegistry.setOperatorName(index, string(abi.encodePacked(_nextName)));
         newOperator = operatorsRegistry.getOperator(index);
@@ -318,7 +267,7 @@ contract OperatorsRegistryV1Tests is OperatorsRegistryV1TestBase, OperatorAlloca
         vm.startPrank(admin);
         uint256 index = operatorsRegistry.addOperator(string(abi.encodePacked(_name)), _address);
         vm.stopPrank();
-        OperatorsV2.Operator memory newOperator = operatorsRegistry.getOperator(index);
+        OperatorsV3.Operator memory newOperator = operatorsRegistry.getOperator(index);
         assert(keccak256(bytes(newOperator.name)) == keccak256(bytes(string(abi.encodePacked(_name)))));
         vm.startPrank(_address);
         operatorsRegistry.setOperatorName(index, string(abi.encodePacked(_nextName)));
@@ -332,7 +281,7 @@ contract OperatorsRegistryV1Tests is OperatorsRegistryV1TestBase, OperatorAlloca
         vm.startPrank(admin);
         uint256 index = operatorsRegistry.addOperator(string(abi.encodePacked(_name)), _address);
         vm.stopPrank();
-        OperatorsV2.Operator memory newOperator = operatorsRegistry.getOperator(index);
+        OperatorsV3.Operator memory newOperator = operatorsRegistry.getOperator(index);
         assert(keccak256(bytes(newOperator.name)) == keccak256(bytes(string(abi.encodePacked(_name)))));
         vm.startPrank(_address);
         vm.expectRevert(abi.encodeWithSignature("InvalidEmptyString()"));
@@ -346,7 +295,7 @@ contract OperatorsRegistryV1Tests is OperatorsRegistryV1TestBase, OperatorAlloca
         vm.startPrank(admin);
         uint256 index = operatorsRegistry.addOperator(string(abi.encodePacked(_name)), _address);
         vm.stopPrank();
-        OperatorsV2.Operator memory newOperator = operatorsRegistry.getOperator(index);
+        OperatorsV3.Operator memory newOperator = operatorsRegistry.getOperator(index);
         assert(keccak256(bytes(newOperator.name)) == keccak256(bytes(string(abi.encodePacked(_name)))));
         vm.startPrank(address(this));
         vm.expectRevert(abi.encodeWithSignature("Unauthorized(address)", address(this)));
@@ -447,7 +396,7 @@ contract OperatorsRegistryV1Tests is OperatorsRegistryV1TestBase, OperatorAlloca
         address _firstAddress = uf._new(_firstAddressSalt);
         vm.startPrank(admin);
         uint256 index = operatorsRegistry.addOperator(string(abi.encodePacked(_name)), _firstAddress);
-        OperatorsV2.Operator memory newOperator = operatorsRegistry.getOperator(index);
+        OperatorsV3.Operator memory newOperator = operatorsRegistry.getOperator(index);
         assert(newOperator.active == true);
         operatorsRegistry.setOperatorStatus(index, false);
         newOperator = operatorsRegistry.getOperator(index);
@@ -461,7 +410,7 @@ contract OperatorsRegistryV1Tests is OperatorsRegistryV1TestBase, OperatorAlloca
         address _firstAddress = uf._new(_firstAddressSalt);
         vm.startPrank(admin);
         uint256 index = operatorsRegistry.addOperator(string(abi.encodePacked(_name)), _firstAddress);
-        OperatorsV2.Operator memory newOperator = operatorsRegistry.getOperator(index);
+        OperatorsV3.Operator memory newOperator = operatorsRegistry.getOperator(index);
         assert(newOperator.active == true);
         vm.stopPrank();
         vm.startPrank(address(this));
@@ -478,7 +427,7 @@ contract OperatorsRegistryV1Tests is OperatorsRegistryV1TestBase, OperatorAlloca
             operatorsRegistry.addOperator(string(abi.encodePacked(_name)), _firstAddress[i]);
         }
 
-        OperatorsV2.Operator[] memory operators = operatorsRegistry.listActiveOperators();
+        OperatorsV3.Operator[] memory operators = operatorsRegistry.listActiveOperators();
 
         assert(operators.length == _count);
         for (uint256 i; i < _count; i++) {
@@ -500,7 +449,7 @@ contract OperatorsRegistryV1Tests is OperatorsRegistryV1TestBase, OperatorAlloca
             operatorsRegistry.setOperatorStatus(index, false);
         }
 
-        OperatorsV2.Operator[] memory operators = operatorsRegistry.listActiveOperators();
+        OperatorsV3.Operator[] memory operators = operatorsRegistry.listActiveOperators();
 
         assert(operators.length == 0);
     }
@@ -510,7 +459,7 @@ contract OperatorsRegistryV1Tests is OperatorsRegistryV1TestBase, OperatorAlloca
         vm.startPrank(admin);
         uint256 index = operatorsRegistry.addOperator(string(abi.encodePacked(_name)), _firstAddress);
 
-        OperatorsV2.Operator memory operator = operatorsRegistry.getOperator(index);
+        OperatorsV3.Operator memory operator = operatorsRegistry.getOperator(index);
         assert(operator.active == true);
     }
 
@@ -719,8 +668,8 @@ contract OperatorsRegistryV1AllocationCorrectnessTests is OperatorAllocationTest
 
     /// @dev Extract the public key at a given validator index from the raw key material for an operator
     function _extractPublicKey(uint256 operatorIdx, uint256 validatorIdx) internal view returns (bytes memory) {
-        uint256 entrySize = ValidatorKeys.PUBLIC_KEY_LENGTH + ValidatorKeys.SIGNATURE_LENGTH; // 144
-        return LibBytes.slice(rawKeysByOperator[operatorIdx], validatorIdx * entrySize, ValidatorKeys.PUBLIC_KEY_LENGTH);
+        uint256 entrySize = 48 + 96; // PUBLIC_KEY_LENGTH + SIGNATURE_LENGTH
+        return LibBytes.slice(rawKeysByOperator[operatorIdx], validatorIdx * entrySize, 48);
     }
 
     /// @dev Setup with a configurable number of operators, each with `keysPerOp` keys and limits
@@ -1440,22 +1389,6 @@ contract OperatorsRegistryV1FlattenAndAllocationTests is OperatorAllocationTestB
             }
         }
         return res;
-    }
-
-    /// @dev Extract the public key at a given validator index from the raw key material for an operator
-    function _extractPublicKey(uint256 operatorIdx, uint256 validatorIdx) internal view returns (bytes memory) {
-        uint256 entrySize = ValidatorKeys.PUBLIC_KEY_LENGTH + ValidatorKeys.SIGNATURE_LENGTH; // 144
-        return LibBytes.slice(rawKeysByOperator[operatorIdx], validatorIdx * entrySize, ValidatorKeys.PUBLIC_KEY_LENGTH);
-    }
-
-    /// @dev Extract the signature at a given validator index from the raw key material for an operator
-    function _extractSignature(uint256 operatorIdx, uint256 validatorIdx) internal view returns (bytes memory) {
-        uint256 entrySize = ValidatorKeys.PUBLIC_KEY_LENGTH + ValidatorKeys.SIGNATURE_LENGTH; // 144
-        return LibBytes.slice(
-            rawKeysByOperator[operatorIdx],
-            validatorIdx * entrySize + ValidatorKeys.PUBLIC_KEY_LENGTH,
-            ValidatorKeys.SIGNATURE_LENGTH
-        );
     }
 
     /// @dev Setup with a configurable number of operators, each with `keysPerOp` keys and limits

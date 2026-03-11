@@ -1,7 +1,7 @@
 //SPDX-License-Identifier: BUSL-1.1
 pragma solidity 0.8.34;
 
-import "../state/operatorsRegistry/Operators.2.sol";
+import "../state/operatorsRegistry/Operators.3.sol";
 
 /// @title Operators Registry Interface (v1)
 /// @author Alluvial Finance Inc.
@@ -57,22 +57,6 @@ interface IOperatorsRegistryV1 {
     /// @param river The new river address
     event SetRiver(address indexed river);
 
-    /// @notice The operator edited its keys after the snapshot block
-    /// @dev This means that we cannot assume that its key set is checked by the snapshot
-    /// @dev This happens only if the limit was meant to be increased
-    /// @param index The operator index
-    /// @param currentLimit The current operator limit
-    /// @param newLimit The new operator limit that was attempted to be set
-    /// @param latestKeysEditBlockNumber The last block number at which the operator changed its keys
-    /// @param snapshotBlock The block number of the snapshot
-    event OperatorEditsAfterSnapshot(
-        uint256 indexed index,
-        uint256 currentLimit,
-        uint256 newLimit,
-        uint256 indexed latestKeysEditBlockNumber,
-        uint256 indexed snapshotBlock
-    );
-
     /// @notice The stopped validator array has been changed
     /// @notice A validator is considered stopped if exiting, exited or slashed
     /// @notice This event is emitted when the oracle reports new stopped validators counts
@@ -96,17 +80,6 @@ interface IOperatorsRegistryV1 {
         uint256 previousTotalValidatorExitsRequested, uint256 newTotalValidatorExitsRequested
     );
 
-    /// @notice A validator key got funded on the deposit contract
-    /// @notice This event was introduced during a contract upgrade, in order to cover all possible public keys, this event
-    /// @notice will be replayed for past funded keys in order to have a complete coverage of all the funded public keys.
-    /// @notice In this particular scenario, the deferred value will be set to true, to indicate that we are not going to have
-    /// @notice the expected additional events and side effects in the same transaction (deposit to official DepositContract etc ...) because
-    /// @notice the event was synthetically crafted.
-    /// @param index The operator index
-    /// @param publicKeys BLS Public key that got funded
-    /// @param deferred True if event has been replayed in the context of a migration
-    event FundedValidatorKeys(uint256 indexed index, bytes[] publicKeys, bool deferred);
-
     /// @notice The requested exit count has been updated to fill the gap with the reported stopped count
     /// @param index The operator index
     /// @param oldRequestedExits The old requested exit count
@@ -119,26 +92,8 @@ interface IOperatorsRegistryV1 {
     /// @param index The operator index
     error InactiveOperator(uint256 index);
 
-    /// @notice A funded key deletion has been attempted
-    error InvalidFundedKeyDeletionAttempt();
-
-    /// @notice The index provided are not sorted properly (descending order)
-    error InvalidUnsortedIndexes();
-
-    /// @notice The provided operator and limits array have different lengths
-    error InvalidArrayLengths();
-
     /// @notice The provided operator and limits array are empty
     error InvalidEmptyArray();
-
-    /// @notice The provided key count is 0
-    error InvalidKeyCount();
-
-    /// @notice The provided concatenated keys do not have the expected length
-    error InvalidKeysLength();
-
-    /// @notice The index that is removed is out of bounds
-    error InvalidIndexOutOfBounds();
 
     /// @notice The provided list of operators is not in increasing order
     error UnorderedOperatorList();
@@ -146,12 +101,6 @@ interface IOperatorsRegistryV1 {
     /// @notice Thrown when an operator ignored the required number of requested exits
     /// @param operatorIndex The operator index
     error OperatorIgnoredExitRequests(uint256 operatorIndex);
-
-    /// @notice Thrown when an operator lacks the required number of fundable keys
-    /// @param operatorIndex The operator index
-    /// @param requested The requested count
-    /// @param available The available count
-    error OperatorHasInsufficientFundableKeys(uint256 operatorIndex, uint256 requested, uint256 available);
 
     /// @notice Thrown when an allocation with zero validator count is provided
     error AllocationWithZeroValidatorCount();
@@ -196,6 +145,9 @@ interface IOperatorsRegistryV1 {
     /// @notice Initializes the operators registry for V1_1
     function initOperatorsRegistryV1_1() external;
 
+    /// @notice Migrates operators from V2 to V3 storage, dropping key-management fields
+    function initOperatorsRegistryV1_2() external;
+
     /// @notice Retrieve the River address
     /// @return The address of River
     function getRiver() external view returns (address);
@@ -203,7 +155,7 @@ interface IOperatorsRegistryV1 {
     /// @notice Get operator details
     /// @param _index The index of the operator
     /// @return The details of the operator
-    function getOperator(uint256 _index) external view returns (OperatorsV2.Operator memory);
+    function getOperator(uint256 _index) external view returns (OperatorsV3.Operator memory);
 
     /// @notice Get operator count
     /// @return The operator count
@@ -239,7 +191,7 @@ interface IOperatorsRegistryV1 {
 
     /// @notice Retrieve the active operator set
     /// @return The list of active operators and their details
-    function listActiveOperators() external view returns (OperatorsV2.Operator[] memory);
+    function listActiveOperators() external view returns (OperatorsV3.Operator[] memory);
 
     /// @notice Allows river to override the stopped validators array
     /// @notice This actions happens during the Oracle report processing

@@ -29,7 +29,7 @@ contract OperatorsRegistryWithOverridesV1 is OperatorsRegistryV1 {
     }
 
     function sudoSetFunded(uint256 _index, uint32 _funded) external {
-        OperatorsV2.Operator storage operator = OperatorsV2.get(_index);
+        OperatorsV3.Operator storage operator = OperatorsV3.get(_index);
         operator.funded = _funded;
     }
 }
@@ -562,8 +562,8 @@ contract RiverV1Tests is RiverV1TestBase {
         vm.prank(admin);
         river.depositToConsensusLayerWithDepositRoot(allocation, bytes32(0));
 
-        OperatorsV2.Operator memory op1 = operatorsRegistry.getOperator(operatorOneIndex);
-        OperatorsV2.Operator memory op2 = operatorsRegistry.getOperator(operatorTwoIndex);
+        OperatorsV3.Operator memory op1 = operatorsRegistry.getOperator(operatorOneIndex);
+        OperatorsV3.Operator memory op2 = operatorsRegistry.getOperator(operatorTwoIndex);
 
         assert(op1.funded == 17);
         assert(op2.funded == 17);
@@ -608,8 +608,8 @@ contract RiverV1Tests is RiverV1TestBase {
         vm.prank(admin);
         river.depositToConsensusLayerWithDepositRoot(allocation, bytes32(0));
 
-        OperatorsV2.Operator memory op1 = operatorsRegistry.getOperator(operatorOneIndex);
-        OperatorsV2.Operator memory op2 = operatorsRegistry.getOperator(operatorTwoIndex);
+        OperatorsV3.Operator memory op1 = operatorsRegistry.getOperator(operatorOneIndex);
+        OperatorsV3.Operator memory op2 = operatorsRegistry.getOperator(operatorTwoIndex);
 
         assert(op1.funded == 17);
         assert(op2.funded == 17);
@@ -711,8 +711,8 @@ contract RiverV1Tests is RiverV1TestBase {
         vm.prank(admin);
         river.depositToConsensusLayerWithDepositRoot(allocation, bytes32(0));
 
-        OperatorsV2.Operator memory op1 = operatorsRegistry.getOperator(operatorOneIndex);
-        OperatorsV2.Operator memory op2 = operatorsRegistry.getOperator(operatorTwoIndex);
+        OperatorsV3.Operator memory op1 = operatorsRegistry.getOperator(operatorOneIndex);
+        OperatorsV3.Operator memory op2 = operatorsRegistry.getOperator(operatorTwoIndex);
 
         assert(op1.funded == 17);
         assert(op2.funded == 17);
@@ -765,8 +765,8 @@ contract RiverV1Tests is RiverV1TestBase {
         vm.prank(admin);
         river.depositToConsensusLayerWithDepositRoot(allocation, bytes32(0));
 
-        OperatorsV2.Operator memory op1 = operatorsRegistry.getOperator(operatorOneIndex);
-        OperatorsV2.Operator memory op2 = operatorsRegistry.getOperator(operatorTwoIndex);
+        OperatorsV3.Operator memory op1 = operatorsRegistry.getOperator(operatorOneIndex);
+        OperatorsV3.Operator memory op2 = operatorsRegistry.getOperator(operatorTwoIndex);
 
         assert(op1.funded == 17);
         assert(op2.funded == 17);
@@ -813,8 +813,8 @@ contract RiverV1Tests is RiverV1TestBase {
         vm.prank(admin);
         river.depositToConsensusLayerWithDepositRoot(_createAllocation(operatorTwoIndex, 10), bytes32(0));
 
-        OperatorsV2.Operator memory op1 = operatorsRegistry.getOperator(operatorOneIndex);
-        OperatorsV2.Operator memory op2 = operatorsRegistry.getOperator(operatorTwoIndex);
+        OperatorsV3.Operator memory op1 = operatorsRegistry.getOperator(operatorOneIndex);
+        OperatorsV3.Operator memory op2 = operatorsRegistry.getOperator(operatorTwoIndex);
 
         assert(op1.funded == 20);
         assert(op1.requestedExits == 10);
@@ -1694,7 +1694,7 @@ contract RiverV1TestsReport_HEAVY_FUZZING is RiverV1TestBase {
     ) internal {
         uint32[] memory stoppedValidatorCounts = clr.stoppedValidatorCountPerOperator;
         for (uint256 idx = 0; idx < operatorsRegistry.getOperatorCount(); ++idx) {
-            OperatorsV2.Operator memory op = operatorsRegistry.getOperator(idx);
+            OperatorsV3.Operator memory op = operatorsRegistry.getOperator(idx);
             if (stoppedValidatorCounts.length - 1 > idx) {
                 assertEq(op.requestedExits, stoppedValidatorCounts[idx + 1]);
             } else {
