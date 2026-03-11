@@ -325,21 +325,6 @@ interface IOperatorsRegistryV1 {
     /// @param _newStatus The new status of the operator
     function setOperatorStatus(uint256 _index, bool _newStatus) external;
 
-    /// @notice Changes the operator staking limit
-    /// @dev Only callable by the administrator
-    /// @dev The operator indexes must be in increasing order and contain no duplicate
-    /// @dev The limit cannot exceed the total key count of the operator
-    /// @dev The _indexes and _newLimits must have the same length.
-    /// @dev Each limit value is applied to the operator index at the same index in the _indexes array.
-    /// @param _operatorIndexes The operator indexes, in increasing order and duplicate free
-    /// @param _newLimits The new staking limit of the operators
-    /// @param _snapshotBlock The block number at which the snapshot was computed
-    function setOperatorLimits(
-        uint256[] calldata _operatorIndexes,
-        uint32[] calldata _newLimits,
-        uint256 _snapshotBlock
-    ) external;
-
     /// @notice Adds new keys for an operator
     /// @dev Only callable by the administrator or the operator address
     /// @param _index The operator index

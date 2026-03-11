@@ -67,7 +67,7 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
             OperatorsV2.Operator memory operator = OperatorsV2.get(idx);
             OperatorsV3.push(OperatorsV3.Operator({
                 funded: operator.funded * 32 ether,
-                exited: operator.requestedExits * 32 ether,
+                requestedExits: operator.requestedExits * 32 ether,
                 keys: uint32(operator.keys),
                 latestKeysEditBlockNumber: uint64(operator.latestKeysEditBlockNumber),
                 active: operator.active,
@@ -188,7 +188,7 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
         uint256 opCount = OperatorsV3.getCount();
         uint256[] memory exitedETHs = new uint256[](opCount);
         for (uint256 idx = 0; idx < opCount; ++idx) {
-            exitedETHs[idx] = OperatorsV3.get(idx).exited;
+            exitedETHs[idx] = OperatorsV3.get(idx).requestedExits;
         }
         return exitedETHs;
     }
@@ -232,7 +232,7 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
             operator: _operator,
             name: _name,
             funded: 0,
-            exited: 0,
+            requestedExits: 0,
             keys: 0,
             latestKeysEditBlockNumber: uint64(block.number)
         });
@@ -268,61 +268,6 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
         operator.active = _newStatus;
 
         emit SetOperatorStatus(_index, _newStatus);
-    }
-
-    /// @inheritdoc IOperatorsRegistryV1
-    function setOperatorLimits(
-        uint256[] calldata _operatorIndexes,
-        uint32[] calldata _newLimits,
-        uint256 _snapshotBlock
-    ) external onlyAdmin {
-        uint256 _operatorIndexesLength = _operatorIndexes.length;
-        if (_operatorIndexesLength != _newLimits.length) {
-            revert InvalidArrayLengths();
-        }
-        if (_operatorIndexesLength == 0) {
-            revert InvalidEmptyArray();
-        }
-        for (uint256 idx = 0; idx < _operatorIndexesLength; ++idx) {
-            uint256 operatorIndex = _operatorIndexes[idx];
-            uint32 newLimit = _newLimits[idx];
-
-            // prevents duplicates
-            if (idx > 0 && !(operatorIndex > _operatorIndexes[idx - 1])) {
-                revert UnorderedOperatorList();
-            }
-
-            OperatorsV2.Operator storage operator = OperatorsV2.get(operatorIndex);
-
-            uint32 currentLimit = operator.limit;
-            if (newLimit == currentLimit) {
-                emit OperatorLimitUnchanged(operatorIndex, newLimit);
-                continue;
-            }
-
-            // we enter this condition if the operator edited its keys after the off-chain key audit was made
-            // we will skip any limit update on that operator unless it was a decrease in the initial limit
-            if (_snapshotBlock < operator.latestKeysEditBlockNumber && newLimit > currentLimit) {
-                emit OperatorEditsAfterSnapshot(
-                    operatorIndex, currentLimit, newLimit, operator.latestKeysEditBlockNumber, _snapshotBlock
-                );
-                continue;
-            }
-
-            // otherwise, we check for limit invariants that shouldn't happen if the off-chain key audit
-            // was made properly, and if everything is respected, we update the limit
-
-            if (newLimit > operator.keys) {
-                revert OperatorLimitTooHigh(operatorIndex, newLimit, operator.keys);
-            }
-
-            if (newLimit < operator.funded) {
-                revert OperatorLimitTooLow(operatorIndex, newLimit, operator.funded);
-            }
-
-            operator.limit = newLimit;
-            emit SetOperatorLimit(operatorIndex, newLimit);
-        }
     }
 
     /// @inheritdoc IOperatorsRegistryV1
@@ -373,7 +318,7 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
 
         uint256 lastIndex = _indexes[indexesLength - 1];
 
-        if (lastIndex < operator.funded) {
+        if (lastIndex < operator.funded / 32 ether) {
             revert InvalidFundedKeyDeletionAttempt();
         }
 
@@ -455,15 +400,15 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
             if (!operator.active) {
                 revert InactiveOperator(operatorIndex);
             }
-            if (ethAmount > (operator.funded - operator.exited)) {
+            if (ethAmount > (operator.funded - operator.requestedExits)) {
                 // Operator has insufficient available funded validators
                 revert ExitsRequestedExceedAvailableFundedCount(
-                    operatorIndex, ethAmount, operator.funded - operator.exited
+                    operatorIndex, ethAmount, operator.funded - operator.requestedExits
                 );
             }
             // Operator has sufficient funded validators
-            operator.exited += ethAmount;
-            emit RequestedETHExits(operatorIndex, operator.exited);
+            operator.requestedExits += ethAmount;
+            emit RequestedETHExits(operatorIndex, operator.requestedExits);
         }
 
         // Check that the exits requested do not exceed the current ETH exits demand
@@ -500,18 +445,19 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
         view
         returns (uint32)
     {
-        OperatorsV2.Operator memory operator = OperatorsV2.get(_operatorIndex);
+        OperatorsV3.Operator memory operator = OperatorsV3.get(_operatorIndex);
         if (!operator.active) {
             revert InactiveOperator(_operatorIndex);
         }
-        if (_getStoppedValidatorsCount(_operatorIndex) < operator.requestedExits) {
+        if (OperatorsV3.getExitedETHAtIndex(_operatorIndex) < operator.requestedExits) {
             revert OperatorIgnoredExitRequests(_operatorIndex);
         }
-        uint256 availableKeys = operator.limit - operator.funded;
+        uint256 fundedCount = operator.funded / 32 ether;
+        uint256 availableKeys = operator.keys - fundedCount;
         if (_validatorCount > availableKeys) {
             revert OperatorHasInsufficientFundableKeys(_operatorIndex, _validatorCount, availableKeys);
         }
-        return operator.funded;
+        return uint32(fundedCount);
     }
 
     /// @notice Internal view utility that retrieves the validator keys for the given allocations
@@ -543,28 +489,11 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
         }
     }
 
-    /// @notice Internal utility to retrieve the total stopped validator count
-    /// @return The total stopped validator count
-    function _getTotalStoppedValidatorCount() internal view returns (uint32) {
-        uint32[] storage stoppedValidatorCounts = OperatorsV2.getStoppedValidators();
-        if (stoppedValidatorCounts.length == 0) {
-            return 0;
-        }
-        return stoppedValidatorCounts[0];
-    }
-
     /// @notice Internal utility to retrieve the total exited ETH
     /// @return exitedETH The total exited ETH
     function _getTotalExitedETH() internal view returns (uint256 exitedETH) {
         uint256[] storage exitedETHs = OperatorsV3.getExitedETH();
-        if (exitedETHs.length == 0) {
-            return 0;
-        }
-        
-        for (uint256 i = 0; i < exitedETHs.length; ++i) {
-            exitedETH += exitedETHs[i];
-        }
-        return exitedETH;
+        return exitedETHs[0];
     }
 
     /// @notice Internal utility to set the current validator exits demand
@@ -636,12 +565,12 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
             }
 
             // if the amount of exited ETH is greater than the current exited ETH, we update the exited ETH
-            if (_exitedETHs[idx] > operators[idx - 1].exited) {
+            if (_exitedETHs[idx] > operators[idx - 1].requestedExits) {
                 emit UpdatedRequestedETHExitsUponStopped(
-                    idx - 1, operators[idx - 1].exited, _exitedETHs[idx]
+                    idx - 1, operators[idx - 1].requestedExits, _exitedETHs[idx]
                 );
-                unsolicitedExitsSum += _exitedETHs[idx] - operators[idx - 1].exited;
-                operators[idx - 1].exited = _exitedETHs[idx];
+                unsolicitedExitsSum += _exitedETHs[idx] - operators[idx - 1].requestedExits;
+                operators[idx - 1].requestedExits = _exitedETHs[idx];
             }
             emit SetOperatorExitedETH(idx - 1, _exitedETHs[idx]);
 
@@ -659,12 +588,12 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
             }
 
             // if the stopped validator count is greater than its requested exit count, we update the requested exit count
-            if (_exitedETHs[idx] > operators[idx - 1].exited) {
+            if (_exitedETHs[idx] > operators[idx - 1].requestedExits) {
                 emit UpdatedRequestedETHExitsUponStopped(
-                    idx - 1, operators[idx - 1].exited, _exitedETHs[idx]
+                    idx - 1, operators[idx - 1].requestedExits, _exitedETHs[idx]
                 );
-                unsolicitedExitsSum += _exitedETHs[idx] - operators[idx - 1].exited;
-                operators[idx - 1].exited = _exitedETHs[idx];
+                unsolicitedExitsSum += _exitedETHs[idx] - operators[idx - 1].requestedExits;
+                operators[idx - 1].requestedExits = _exitedETHs[idx];
             }
             emit SetOperatorExitedETH(idx - 1, _exitedETHs[idx]);
 

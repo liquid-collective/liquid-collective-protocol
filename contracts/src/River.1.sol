@@ -126,6 +126,10 @@ contract RiverV1 is
         }
     }
 
+    function initRiverV1_3() external init(3) {
+        InFlightETH.set(0);
+    }
+
     /// @inheritdoc IRiverV1
     function getGlobalFee() external view returns (uint256) {
         return GlobalFee.get();

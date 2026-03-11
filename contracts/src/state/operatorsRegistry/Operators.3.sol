@@ -12,12 +12,12 @@ library OperatorsV3 {
     /// @notice The Operator structure in storage
     struct Operator {
         /// @dev The following values respect this invariant:
-        /// @dev funded >= exited
+        /// @dev funded >= requestedExits
 
         /// @custom:attribute The amount of funded ETH
         uint256 funded;
-        /// @custom:attribute The amount of exited ETH
-        uint256 exited;
+        /// @custom:attribute The amount of requested ETH exits
+        uint256 requestedExits;
         /// @custom:attribute The total count of keys of the operator
         uint32 keys;
         /// @custom:attribute The block at which the last edit happened in the operator details
@@ -121,21 +121,6 @@ library OperatorsV3 {
         return activeOperators;
     }
 
-    /// @notice Retrieve the stopped validator count for an operator by its index
-    /// @param stoppedValidatorCounts The storage pointer to the raw array containing the stopped validator counts
-    /// @param index The index of the operator to lookup
-    /// @return The amount of stopped validators for the given operator index
-    function _getStoppedValidatorCountAtIndex(uint32[] storage stoppedValidatorCounts, uint256 index)
-        internal
-        view
-        returns (uint32)
-    {
-        if (index + 1 >= stoppedValidatorCounts.length) {
-            return 0;
-        }
-        return stoppedValidatorCounts[index + 1];
-    }
-
     /// @notice Add a new operator in storage
     /// @param _newOperator Value of the new operator
     /// @return The size of the operator array after the operation
@@ -187,6 +172,36 @@ library OperatorsV3 {
         }
 
         return r.value;
+    }
+
+    /// @notice Retrieve the exited ETH for an operator by its index
+    /// @param index The index of the operator to lookup
+    /// @return The exited ETH for the given operator index
+    function getExitedETHAtIndex(uint256 index) internal view returns (uint256) {
+        bytes32 slot = EXITED_ETH_SLOT;
+
+        SlotExitedETH storage r;
+
+        // solhint-disable-next-line no-inline-assembly
+        assembly {
+            r.slot := slot
+        }
+        return _getExitedETHAtIndex(r.value, index);
+    }
+
+    /// @notice Retrieve the exited ETH for an operator by its index
+    /// @param exitedETHs The storage pointer to the raw array containing the exited ETH
+    /// @param index The index of the operator to lookup
+    /// @return The exited ETH for the given operator index
+    function _getExitedETHAtIndex(uint256[] storage exitedETHs, uint256 index)
+        internal
+        view
+        returns (uint256)
+    {
+        if (index + 1 >= exitedETHs.length) {
+            return 0;
+        }
+        return exitedETHs[index + 1];
     }
 
     /// @notice Sets the entire exited ETH array
