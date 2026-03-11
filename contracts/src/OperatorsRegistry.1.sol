@@ -56,13 +56,15 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
         uint256 opCount = OperatorsV2.getCount();
         for (uint256 idx = 0; idx < opCount; ++idx) {
             OperatorsV2.Operator memory operator = OperatorsV2.get(idx);
-            OperatorsV3.push(OperatorsV3.Operator({
-                funded: operator.funded * 32 ether,
-                requestedExits: operator.requestedExits * 32 ether,
-                active: operator.active,
-                name: operator.name,
-                operator: operator.operator
-            }));
+            OperatorsV3.push(
+                OperatorsV3.Operator({
+                    funded: operator.funded * 32 ether,
+                    requestedExits: operator.requestedExits * 32 ether,
+                    active: operator.active,
+                    name: operator.name,
+                    operator: operator.operator
+                })
+            );
         }
     }
 
@@ -273,9 +275,8 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
         if (_totalDepositedETH < (totalETHExitsRequested + currentETHExitsDemand)) {
             revert ExitedETHTooHigh();
         }
-        _exitAmountToRequest = LibUint256.min(
-            _exitAmountToRequest, _totalDepositedETH - (totalETHExitsRequested + currentETHExitsDemand)
-        );
+        _exitAmountToRequest =
+            LibUint256.min(_exitAmountToRequest, _totalDepositedETH - (totalETHExitsRequested + currentETHExitsDemand));
         if (_exitAmountToRequest > 0) {
             _setCurrentETHExitsDemand(currentETHExitsDemand, currentETHExitsDemand + _exitAmountToRequest);
         }
@@ -354,17 +355,13 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
 
             // we check that the amount of exited ETH is not above the funded ETH of an operator
             if (_exitedETH[idx] > operators[idx - 1].funded) {
-                revert ExitedETHAboveFundedETH(
-                    idx - 1, _exitedETH[idx], operators[idx - 1].funded
-                );
+                revert ExitedETHAboveFundedETH(idx - 1, _exitedETH[idx], operators[idx - 1].funded);
             }
 
             // if the reported exited ETH for this operator is greater than its recorded requestedExits,
             // treat the difference as unsolicited exits and set requestedExits to the reported exited ETH.
             if (_exitedETH[idx] > operators[idx - 1].requestedExits) {
-                emit UpdatedRequestedETHExitsUponStopped(
-                    idx - 1, operators[idx - 1].requestedExits, _exitedETH[idx]
-                );
+                emit UpdatedRequestedETHExitsUponStopped(idx - 1, operators[idx - 1].requestedExits, _exitedETH[idx]);
                 unsolicitedExitsSum += _exitedETH[idx] - operators[idx - 1].requestedExits;
                 operators[idx - 1].requestedExits = _exitedETH[idx];
             }
@@ -378,17 +375,13 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
         for (; idx < vars.exitedETHLength; ++idx) {
             // we check that the amount of exited ETH is not above the funded ETH of an operator
             if (_exitedETH[idx] > operators[idx - 1].funded) {
-                revert ExitedETHAboveFundedETH(
-                    idx - 1, _exitedETH[idx], operators[idx - 1].funded
-                );
+                revert ExitedETHAboveFundedETH(idx - 1, _exitedETH[idx], operators[idx - 1].funded);
             }
 
             // if the reported exited ETH for this operator is greater than its recorded requestedExits,
             // treat the difference as unsolicited exits and set requestedExits to the reported exited ETH.
             if (_exitedETH[idx] > operators[idx - 1].requestedExits) {
-                emit UpdatedRequestedETHExitsUponStopped(
-                    idx - 1, operators[idx - 1].requestedExits, _exitedETH[idx]
-                );
+                emit UpdatedRequestedETHExitsUponStopped(idx - 1, operators[idx - 1].requestedExits, _exitedETH[idx]);
                 unsolicitedExitsSum += _exitedETH[idx] - operators[idx - 1].requestedExits;
                 operators[idx - 1].requestedExits = _exitedETH[idx];
             }

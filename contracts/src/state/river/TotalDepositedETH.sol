@@ -7,7 +7,8 @@ import "../../libraries/LibUnstructuredStorage.sol";
 /// @notice This value is the total deposited ETH
 /// @notice Utility to manage the TotalDepositedETH in storage
 library TotalDepositedETH {
-    bytes32 internal constant TOTAL_DEPOSITED_ETH_SLOT = bytes32(uint256(keccak256("river.state.totalDepositedETH")) - 1);
+    bytes32 internal constant TOTAL_DEPOSITED_ETH_SLOT =
+        bytes32(uint256(keccak256("river.state.totalDepositedETH")) - 1);
 
     /// @notice Retrieve the TotalDepositedETH
     /// @return The TotalDepositedETH

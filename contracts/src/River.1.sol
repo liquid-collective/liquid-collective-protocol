@@ -395,8 +395,8 @@ contract RiverV1 is
     /// @return The current total asset balance managed by River
     function _assetBalance() internal view override(SharesManagerV1, OracleManagerV1) returns (uint256) {
         IOracleManagerV1.StoredConsensusLayerReport storage storedReport = LastConsensusLayerReport.get();
-        return storedReport.validatorsBalance + BalanceToDeposit.get() + CommittedBalance.get()
-            + BalanceToRedeem.get() + InFlightDeposit.get();
+        return storedReport.validatorsBalance + BalanceToDeposit.get() + CommittedBalance.get() + BalanceToRedeem.get()
+            + InFlightDeposit.get();
     }
 
     /// @notice Internal utility to set the daily committable limits
@@ -507,8 +507,7 @@ contract RiverV1 is
         bool _depositToRedeemRebalancingAllowed,
         bool _slashingContainmentModeEnabled
     ) internal override {
-        IOperatorsRegistryV1(OperatorsRegistryAddress.get())
-            .reportExitedETH(_exitedETH, TotalDepositedETH.get());
+        IOperatorsRegistryV1(OperatorsRegistryAddress.get()).reportExitedETH(_exitedETH, TotalDepositedETH.get());
 
         if (_slashingContainmentModeEnabled) {
             return;
@@ -538,19 +537,16 @@ contract RiverV1 is
 
                 IOperatorsRegistryV1 or = IOperatorsRegistryV1(OperatorsRegistryAddress.get());
 
-                (uint256 totalExitedETH, uint256 totalRequestedExitAmounts) =
-                    or.getExitedETHAndRequestedExitAmounts();
+                (uint256 totalExitedETH, uint256 totalRequestedExitAmounts) = or.getExitedETHAndRequestedExitAmounts();
 
                 // what we are calling pre-exiting balance is the amount of eth that should soon enter the exiting balance
                 // because exit requests have been made and operators might have a lag to process them
                 // we take them into account to not exit too many validators
                 uint256 preExitingBalance =
-                    totalRequestedExitAmounts > totalExitedETH
-                                ? (totalRequestedExitAmounts - totalExitedETH)
-                                : 0;
+                    totalRequestedExitAmounts > totalExitedETH ? (totalRequestedExitAmounts - totalExitedETH) : 0;
 
                 if (availableBalanceToRedeem + _exitingBalance + preExitingBalance < redeemManagerDemandInEth) {
-                    uint256 exitAmountToRequest = 
+                    uint256 exitAmountToRequest =
                         redeemManagerDemandInEth - (availableBalanceToRedeem + _exitingBalance + preExitingBalance);
 
                     or.demandETHExits(exitAmountToRequest, TotalDepositedETH.get());

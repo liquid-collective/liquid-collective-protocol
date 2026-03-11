@@ -38,7 +38,6 @@ interface IOperatorsRegistryV1 {
     /// @param active True if the operator is active
     event SetOperatorStatus(uint256 indexed index, bool active);
 
-
     /// @notice The operator address has been changed
     /// @param index The operator index
     /// @param newOperatorAddress The new operator address
@@ -66,9 +65,7 @@ interface IOperatorsRegistryV1 {
     /// @notice The total requested exit has been updated
     /// @param previousTotalETHExitsRequested The previous total requested exit
     /// @param newTotalETHExitsRequested The new total requested exit
-    event SetTotalETHExitsRequested(
-        uint256 previousTotalETHExitsRequested, uint256 newTotalETHExitsRequested
-    );
+    event SetTotalETHExitsRequested(uint256 previousTotalETHExitsRequested, uint256 newTotalETHExitsRequested);
 
     /// @notice The requested ETH amount has been updated to fill the gap with the reported exited ETH amount
     /// @param index The operator index

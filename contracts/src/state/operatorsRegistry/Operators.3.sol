@@ -140,8 +140,7 @@ library OperatorsV3 {
     }
 
     /// @notice Storage slot of the Exited ETH
-    bytes32 internal constant EXITED_ETH_SLOT =
-        bytes32(uint256(keccak256("river.state.exitedETH")) - 1);
+    bytes32 internal constant EXITED_ETH_SLOT = bytes32(uint256(keccak256("river.state.exitedETH")) - 1);
 
     struct SlotExitedETH {
         uint256[] value;
@@ -181,11 +180,7 @@ library OperatorsV3 {
     /// @param exitedETH The storage pointer to the raw array containing the exited ETH
     /// @param index The index of the operator to lookup
     /// @return The exited ETH for the given operator index
-    function _getExitedETHAtIndex(uint256[] storage exitedETH, uint256 index)
-        internal
-        view
-        returns (uint256)
-    {
+    function _getExitedETHAtIndex(uint256[] storage exitedETH, uint256 index) internal view returns (uint256) {
         if (index + 1 >= exitedETH.length) {
             return 0;
         }
