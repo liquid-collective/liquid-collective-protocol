@@ -180,13 +180,8 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
 
     /// @inheritdoc IOperatorsRegistryV1
     function addOperator(string calldata _name, address _operator) external onlyAdmin returns (uint256) {
-        OperatorsV3.Operator memory newOperator = OperatorsV3.Operator({
-            active: true,
-            operator: _operator,
-            name: _name,
-            funded: 0,
-            requestedExits: 0
-        });
+        OperatorsV3.Operator memory newOperator =
+            OperatorsV3.Operator({active: true, operator: _operator, name: _name, funded: 0, requestedExits: 0});
 
         uint256 operatorIndex = OperatorsV3.push(newOperator) - 1;
 
