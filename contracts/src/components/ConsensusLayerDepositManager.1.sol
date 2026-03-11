@@ -19,9 +19,9 @@ import "../state/river/InFlightDeposit.sol";
 
 /// @title Consensus Layer Deposit Manager (v1)
 /// @author Alluvial Finance Inc.
-/// @notice This contract handles the interactions with the official deposit contract, funding all validators
-/// @notice Whenever a deposit to the consensus layer is requested, this contract computed the amount of keys
-/// @notice that could be deposited depending on the amount available in the contract.
+/// @notice This contract handles the interactions with the official deposit contract, funding all validators.
+/// @notice After successfully depositing the validators, the funded validator count is incremented on the operators registry
+/// @notice by overriding the _updateFundedValidators method in River.
 abstract contract ConsensusLayerDepositManagerV1 is IConsensusLayerDepositManagerV1 {
     /// @notice Size of a BLS Public key in bytes
     uint256 public constant PUBLIC_KEY_LENGTH = 48;
@@ -91,6 +91,10 @@ abstract contract ConsensusLayerDepositManagerV1 is IConsensusLayerDepositManage
     ) external {
         if (msg.sender != KeeperAddress.get()) {
             revert OnlyKeeper();
+        }
+
+        if (_allocations.length == 0) {
+            revert EmptyAllocations();
         }
 
         if (IDepositContract(DepositContractAddress.get()).get_deposit_root() != _depositRoot) {

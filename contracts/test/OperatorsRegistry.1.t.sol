@@ -442,8 +442,8 @@ contract OperatorsRegistryV1Tests is OperatorsRegistryV1TestBase, OperatorAlloca
         vm.assume(_count < 1000);
         address[] memory _firstAddress = new address[](_count);
         _firstAddress = uf._newMulti(_firstAddressSalt, _count);
+        vm.startPrank(admin);
         for (uint256 i; i < _count; i++) {
-            vm.startPrank(admin);
             uint256 index = operatorsRegistry.addOperator(string(abi.encodePacked(_name)), _firstAddress[i]);
 
             operatorsRegistry.setOperatorStatus(index, false);

@@ -10,7 +10,6 @@ import "./libraries/LibUint256.sol";
 import "./Initializable.sol";
 import "./Administrable.sol";
 
-import "./state/operatorsRegistry/Operators.1.sol";
 import "./state/operatorsRegistry/Operators.2.sol";
 import "./state/operatorsRegistry/Operators.3.sol";
 import "./state/operatorsRegistry/TotalETHExitsRequested.sol";
@@ -33,32 +32,9 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
         emit SetRiver(_river);
     }
 
-    /// @notice Internal migration utility to migrate all operators to OperatorsV2 format
-    function _migrateOperators_V1_1() internal {
-        uint256 opCount = OperatorsV1.getCount();
-
-        for (uint256 idx = 0; idx < opCount; ++idx) {
-            OperatorsV1.Operator memory oldOperatorValue = OperatorsV1.get(idx);
-
-            OperatorsV2.push(
-                OperatorsV2.Operator({
-                    limit: uint32(oldOperatorValue.limit),
-                    funded: uint32(oldOperatorValue.funded),
-                    requestedExits: 0,
-                    keys: uint32(oldOperatorValue.keys),
-                    latestKeysEditBlockNumber: uint64(oldOperatorValue.latestKeysEditBlockNumber),
-                    active: oldOperatorValue.active,
-                    name: oldOperatorValue.name,
-                    operator: oldOperatorValue.operator
-                })
-            );
-        }
-    }
-
     /// @inheritdoc IOperatorsRegistryV1
-    function initOperatorsRegistryV1_1() external init(1) {
-        _migrateOperators_V1_1();
-    }
+    /// @dev V1→V2 operator migration has already run on mainnet; body is intentionally empty.
+    function initOperatorsRegistryV1_1() external init(1) {}
 
     /// @inheritdoc IOperatorsRegistryV1
     function initOperatorsRegistryV1_2() external init(2) {

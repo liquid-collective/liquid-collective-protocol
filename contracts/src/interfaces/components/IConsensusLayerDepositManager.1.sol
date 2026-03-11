@@ -25,6 +25,9 @@ interface IConsensusLayerDepositManagerV1 {
     /// @param newInFlightETH The new in flight ETH value
     event SetInFlightETH(uint256 oldInFlightETH, uint256 newInFlightETH);
 
+    /// @notice The allocations array must not be empty
+    error EmptyAllocations();
+
     /// @notice Not enough funds to deposit one validator
     error NotEnoughFunds();
 
