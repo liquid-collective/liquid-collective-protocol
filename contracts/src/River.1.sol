@@ -292,10 +292,19 @@ contract RiverV1 is
     }
 
     /// @notice Overridden handler to update funded validator counts on the operators registry after deposits
+    /// @dev Aggregates consecutive entries by operatorIndex (assumes sorted input) and calls
+    ///      incrementFundedValidators once per distinct operator.
     function _updateFundedValidators(IOperatorsRegistryV1.ValidatorDeposit[] calldata _allocations) internal override {
         IOperatorsRegistryV1 registry = IOperatorsRegistryV1(OperatorsRegistryAddress.get());
-        for (uint256 idx = 0; idx < _allocations.length; ++idx) {
-            registry.incrementFundedValidator(_allocations[idx].operatorIndex);
+        uint256 i = 0;
+        while (i < _allocations.length) {
+            uint256 operatorIndex = _allocations[i].operatorIndex;
+            uint32 count = 0;
+            while (i < _allocations.length && _allocations[i].operatorIndex == operatorIndex) {
+                ++count;
+                ++i;
+            }
+            registry.incrementFundedValidators(operatorIndex, count);
         }
     }
 

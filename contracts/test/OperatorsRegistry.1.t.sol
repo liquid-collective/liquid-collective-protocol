@@ -1420,7 +1420,7 @@ contract OperatorsRegistryV1FlattenAndAllocationTests is OperatorAllocationTestB
         // stoppedCount remains 0, so operator has not fulfilled any exits
 
         vm.expectRevert(abi.encodeWithSignature("OperatorIgnoredExitRequests(uint256)", 0));
-        operatorsRegistry.incrementFundedValidator(0);
+        operatorsRegistry.incrementFundedValidators(0, 1);
     }
 }
 

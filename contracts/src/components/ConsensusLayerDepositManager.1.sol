@@ -37,7 +37,7 @@ abstract contract ConsensusLayerDepositManagerV1 is IConsensusLayerDepositManage
     function _setCommittedBalance(uint256 newCommittedBalance) internal virtual;
 
     /// @notice Handler called to update the funded validator count on the operators registry after each deposit
-    /// @dev Must be overridden. River implements this to call incrementFundedValidator on the registry.
+    /// @dev Must be overridden. River implements this to call incrementFundedValidators on the registry.
     /// @param _allocations The validator deposits that were just deposited
     function _updateFundedValidators(IOperatorsRegistryV1.ValidatorDeposit[] calldata _allocations) internal virtual;
 
@@ -106,9 +106,12 @@ abstract contract ConsensusLayerDepositManagerV1 is IConsensusLayerDepositManage
         if (maxDepositableCount == 0) {
             revert NotEnoughFunds();
         }
-        // Calculate total requested and validate key lengths in a single pass
+        // Calculate total requested and validate key lengths + operator ordering in a single pass
         uint256 totalRequested = 0;
         for (uint256 i = 0; i < _allocations.length; ++i) {
+            if (i > 0 && _allocations[i].operatorIndex < _allocations[i - 1].operatorIndex) {
+                revert IOperatorsRegistryV1.UnorderedOperatorList();
+            }
             if (_allocations[i].pubkey.length != PUBLIC_KEY_LENGTH) {
                 revert InconsistentPublicKey();
             }

@@ -58,8 +58,15 @@ contract ConsensusLayerDepositManagerV1UsesRegistry is ConsensusLayerDepositMana
     }
 
     function _updateFundedValidators(IOperatorsRegistryV1.ValidatorDeposit[] calldata _allocations) internal override {
-        for (uint256 idx = 0; idx < _allocations.length; ++idx) {
-            registry.incrementFundedValidator(_allocations[idx].operatorIndex);
+        uint256 i = 0;
+        while (i < _allocations.length) {
+            uint256 operatorIndex = _allocations[i].operatorIndex;
+            uint32 count = 0;
+            while (i < _allocations.length && _allocations[i].operatorIndex == operatorIndex) {
+                ++count;
+                ++i;
+            }
+            registry.incrementFundedValidators(operatorIndex, count);
         }
     }
 

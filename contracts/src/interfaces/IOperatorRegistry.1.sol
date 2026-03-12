@@ -240,10 +240,11 @@ interface IOperatorsRegistryV1 {
     /// @param _allocations The proposed per-operator exit allocations, sorted by operator index
     function requestValidatorExits(OperatorAllocation[] calldata _allocations) external;
 
-    /// @notice Increment the funded validator count for an operator by 1
-    /// @dev Only callable by the River contract. Called once per ValidatorDeposit entry during deposit.
+    /// @notice Increment the funded validator count for an operator
+    /// @dev Only callable by the River contract. Called once per distinct operator during deposit.
     /// @param _operatorIndex The operator index
-    function incrementFundedValidator(uint256 _operatorIndex) external;
+    /// @param _count The number of validators funded for this operator
+    function incrementFundedValidators(uint256 _operatorIndex, uint32 _count) external;
 
     /// @notice Increases the exit request demand
     /// @dev This method is only callable by the river contract, and to actually forward the information to the node operators via event emission, the unprotected requestValidatorExits method must be called

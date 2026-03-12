@@ -277,7 +277,7 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
     }
 
     /// @inheritdoc IOperatorsRegistryV1
-    function incrementFundedValidator(uint256 _operatorIndex) external onlyRiver {
+    function incrementFundedValidators(uint256 _operatorIndex, uint32 _count) external onlyRiver {
         OperatorsV3.Operator storage operator = OperatorsV3.get(_operatorIndex);
         if (!operator.active) {
             revert InactiveOperator(_operatorIndex);
@@ -285,7 +285,7 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
         if (_getStoppedValidatorsCount(_operatorIndex) < operator.requestedExits) {
             revert OperatorIgnoredExitRequests(_operatorIndex);
         }
-        operator.funded += 1;
+        operator.funded += _count;
     }
 
     /// @inheritdoc IOperatorsRegistryV1
