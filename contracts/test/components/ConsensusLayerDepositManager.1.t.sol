@@ -227,7 +227,7 @@ contract ConsensusLayerDepositManagerV1ErrorTests is OperatorAllocationTestBase 
         alloc[0] = IOperatorsRegistryV1.ValidatorDeposit({
             operatorIndex: 0, pubkey: bytes(new bytes(49)), signature: bytes(new bytes(96)), depositAmount: 32 ether
         });
-        vm.expectRevert(abi.encodeWithSignature("InconsistentPublicKeys()"));
+        vm.expectRevert(abi.encodeWithSignature("InconsistentPublicKey()"));
         vm.prank(address(0x1));
         depositManager.depositToConsensusLayerWithDepositRoot(alloc, bytes32(0));
     }
@@ -240,7 +240,7 @@ contract ConsensusLayerDepositManagerV1ErrorTests is OperatorAllocationTestBase 
         alloc[0] = IOperatorsRegistryV1.ValidatorDeposit({
             operatorIndex: 0, pubkey: bytes(new bytes(48)), signature: bytes(new bytes(97)), depositAmount: 32 ether
         });
-        vm.expectRevert(abi.encodeWithSignature("InconsistentSignatures()"));
+        vm.expectRevert(abi.encodeWithSignature("InconsistentSignature()"));
         vm.prank(address(0x1));
         depositManager.depositToConsensusLayerWithDepositRoot(alloc, bytes32(0));
     }
@@ -253,12 +253,6 @@ contract ConsensusLayerDepositManagerV1ErrorTests is OperatorAllocationTestBase 
         vm.prank(address(0x1));
         depositManager.depositToConsensusLayerWithDepositRoot(alloc, bytes32(0));
     }
-
-    // Tests below are no longer applicable: errors NoAvailableValidatorKeys were removed when
-    // _getNextValidators was removed. Keys are now passed directly in ValidatorDeposit.
-    // function testUnavailableKeys() ...
-    // function testFaultyRegistryReturnsFewerKeys() ...
-    // function testFaultyRegistryReturnsMoreKeysThanRequested() ...
 
     function testAllocationExceedsCommittedBalance() public {
         vm.deal(address(depositManager), 2 * 32 ether);
@@ -305,42 +299,6 @@ contract ConsensusLayerDepositManagerV1ErrorTests is OperatorAllocationTestBase 
         depositManager.depositToConsensusLayerWithDepositRoot(_createAllocation(3), bytes32(0));
         assertEq(address(depositManager).balance, 0, "balance should be 0");
     }
-}
-
-/// @notice Tests allocation validation (UnorderedOperatorList, AllocationWithZeroValidatorCount) via real OperatorsRegistry flow
-contract ConsensusLayerDepositManagerV1AllocationValidationTests is OperatorAllocationTestBase, BytesGenerator {
-    bytes32 internal withdrawalCredentials = bytes32(uint256(1));
-
-    ConsensusLayerDepositManagerV1 internal depositManager;
-    OperatorsRegistryV1 internal registry;
-    IDepositContract internal depositContract;
-    address internal admin;
-
-    function setUp() public {
-        admin = makeAddr("admin");
-        depositContract = new DepositContractMock();
-
-        depositManager = new ConsensusLayerDepositManagerV1UsesRegistry();
-        registry = new OperatorsRegistryInitializableV1();
-
-        LibImplementationUnbricker.unbrick(vm, address(depositManager));
-        LibImplementationUnbricker.unbrick(vm, address(registry));
-
-        registry.initOperatorsRegistryV1(admin, address(depositManager));
-        ConsensusLayerDepositManagerV1UsesRegistry(address(depositManager))
-            .publicConsensusLayerDepositManagerInitializeV1(address(depositContract), withdrawalCredentials);
-        ConsensusLayerDepositManagerV1UsesRegistry(address(depositManager)).setRegistry(registry);
-    }
-
-    // Ordering tests no longer applicable: with one-validator-per-entry design,
-    // multiple entries for the same operator are valid (multiple validators from same operator).
-    // function testUnorderedOperatorListDuplicate() ...
-    // function testUnorderedOperatorListDescendingOperatorIndices() ...
-
-    // TODO: Zero-count validation relied on fundValidators which was removed.
-    // Will be re-added with accounting changes.
-    // function testAllocationWithZeroValidatorCount() public { ... }
-    // function testAllocationWithZeroValidatorCountInMiddle() public { ... }
 }
 
 /// @notice Integration tests for the full deposit flow: Keeper -> DepositManager -> Registry.pickNextValidatorsToDeposit -> DepositContract
@@ -534,14 +492,6 @@ contract ConsensusLayerDepositManagerV1FullDepositFlowTests is OperatorAllocatio
         assertEq(depositManager.getDepositedValidatorCount(), 5, "deposited after second");
         assertEq(address(depositManager).balance, 0, "balance drained");
     }
-
-    // Ordering tests no longer applicable with one-validator-per-entry design
-    // function testUnorderedOperatorListDescendingOperatorIndices() ...
-
-    // TODO: Zero-count validation relied on fundValidators which was removed.
-    // Will be re-added with accounting changes.
-    // function testAllocationWithZeroValidatorCount() public { ... }
-    // function testAllocationWithZeroValidatorCountInMiddle() public { ... }
 }
 
 contract ConsensusLayerDepositManagerV1WithdrawalCredentialError is OperatorAllocationTestBase {

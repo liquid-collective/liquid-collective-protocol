@@ -110,10 +110,10 @@ abstract contract ConsensusLayerDepositManagerV1 is IConsensusLayerDepositManage
         uint256 totalRequested = 0;
         for (uint256 i = 0; i < _allocations.length; ++i) {
             if (_allocations[i].pubkey.length != PUBLIC_KEY_LENGTH) {
-                revert InconsistentPublicKeys();
+                revert InconsistentPublicKey();
             }
             if (_allocations[i].signature.length != SIGNATURE_LENGTH) {
-                revert InconsistentSignatures();
+                revert InconsistentSignature();
             }
             totalRequested += _allocations[i].depositAmount;
         }
@@ -157,11 +157,11 @@ abstract contract ConsensusLayerDepositManagerV1 is IConsensusLayerDepositManage
         bytes32 _withdrawalCredentials
     ) internal {
         if (_publicKey.length != PUBLIC_KEY_LENGTH) {
-            revert InconsistentPublicKeys();
+            revert InconsistentPublicKey();
         }
 
         if (_signature.length != SIGNATURE_LENGTH) {
-            revert InconsistentSignatures();
+            revert InconsistentSignature();
         }
         if (_depositAmount != DEPOSIT_SIZE) {
             revert InvalidDepositSize(_depositAmount);
