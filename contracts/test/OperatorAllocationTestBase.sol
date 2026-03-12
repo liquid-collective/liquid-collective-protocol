@@ -66,17 +66,21 @@ abstract contract OperatorAllocationTestBase is Test {
         return _createAllocation(opIndexes, counts);
     }
 
-    /// @dev Creates OperatorAllocation[] for exit requests (one entry per operator with validatorCount)
+    /// @dev Creates ExitETHAllocation[] for exit requests (one entry per operator with ethAmount = count * 32 ether)
     function _createExitAllocation(uint256[] memory opIndexes, uint32[] memory counts)
         internal
         pure
+        returns (IOperatorsRegistryV1.ExitETHAllocation[] memory)
         returns (IOperatorsRegistryV1.ExitETHAllocation[] memory)
     {
         require(opIndexes.length == counts.length, "_createExitAllocation: length mismatch");
         IOperatorsRegistryV1.ExitETHAllocation[] memory allocations =
             new IOperatorsRegistryV1.ExitETHAllocation[](opIndexes.length);
+        IOperatorsRegistryV1.ExitETHAllocation[] memory allocations =
+            new IOperatorsRegistryV1.ExitETHAllocation[](opIndexes.length);
         for (uint256 i = 0; i < opIndexes.length; ++i) {
-            allocations[i] = IOperatorsRegistryV1.ExitETHAllocation({operatorIndex: opIndexes[i], ethAmount: counts[i]});
+            allocations[i] =
+                IOperatorsRegistryV1.ExitETHAllocation({operatorIndex: opIndexes[i], ethAmount: uint256(counts[i]) * 32 ether});
         }
         return allocations;
     }
