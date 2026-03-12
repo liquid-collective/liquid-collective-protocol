@@ -475,6 +475,29 @@ contract ConsensusLayerDepositManagerV1FullDepositFlowTests is OperatorAllocatio
         depositManager.depositToConsensusLayerWithDepositRoot(_createAllocation(0, 1), depositRoot);
     }
 
+    /// @dev Reverts before depositing when operator has ignored exit requests
+    function testFullDepositFlowRevertsWhenOperatorIgnoredExitRequests() public {
+        vm.startPrank(admin);
+        registry.addOperator("Op0", admin);
+        vm.stopPrank();
+
+        // Give the operator some funded validators then request exits without stopping any
+        OperatorsRegistryInitializableV1(address(registry)).sudoSetFunded(0, 5);
+        OperatorsRegistryInitializableV1(address(registry)).sudoExitRequests(0, 5);
+
+        vm.deal(address(depositManager), 32 ether);
+        ConsensusLayerDepositManagerV1UsesRegistry(address(depositManager)).sudoSyncBalance();
+
+        bytes32 depositRoot = depositContract.get_deposit_root();
+        vm.prank(keeper);
+        vm.expectRevert(abi.encodeWithSignature("OperatorIgnoredExitRequests(uint256)", 0));
+        depositManager.depositToConsensusLayerWithDepositRoot(_createAllocation(0, 1), depositRoot);
+
+        assertEq(registry.getOperator(0).funded, 5, "funded unchanged on revert");
+        assertEq(depositManager.getDepositedValidatorCount(), 0, "no deposited count");
+        assertEq(address(depositManager).balance, 32 ether, "balance unchanged");
+    }
+
     /// @dev Sequential deposits: first 2 validators, then 3 more from same operator
     function testFullDepositFlowSequentialDeposits() public {
         vm.startPrank(admin);

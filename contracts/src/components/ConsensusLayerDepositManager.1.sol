@@ -118,6 +118,9 @@ abstract contract ConsensusLayerDepositManagerV1 is IConsensusLayerDepositManage
             if (_allocations[i].signature.length != SIGNATURE_LENGTH) {
                 revert InconsistentSignature();
             }
+            if (_allocations[i].depositAmount != DEPOSIT_SIZE) {
+                revert InvalidDepositSize(_allocations[i].depositAmount);
+            }
             totalRequested += _allocations[i].depositAmount;
         }
 
@@ -132,6 +135,8 @@ abstract contract ConsensusLayerDepositManagerV1 is IConsensusLayerDepositManage
             revert InvalidWithdrawalCredentials();
         }
 
+        _updateFundedValidators(_allocations);
+
         for (uint256 idx = 0; idx < _allocations.length; ++idx) {
             _depositValidator(
                 _allocations[idx].pubkey,
@@ -140,7 +145,6 @@ abstract contract ConsensusLayerDepositManagerV1 is IConsensusLayerDepositManage
                 withdrawalCredentials
             );
         }
-        _updateFundedValidators(_allocations);
         _setCommittedBalance(committedBalance - totalRequested);
         uint256 currentDepositedValidatorCount = DepositedValidatorCount.get();
         DepositedValidatorCount.set(currentDepositedValidatorCount + _allocations.length);
@@ -165,9 +169,6 @@ abstract contract ConsensusLayerDepositManagerV1 is IConsensusLayerDepositManage
 
         if (_signature.length != SIGNATURE_LENGTH) {
             revert InconsistentSignature();
-        }
-        if (_depositAmount != DEPOSIT_SIZE) {
-            revert InvalidDepositSize(_depositAmount);
         }
         uint256 value = _depositAmount;
 
