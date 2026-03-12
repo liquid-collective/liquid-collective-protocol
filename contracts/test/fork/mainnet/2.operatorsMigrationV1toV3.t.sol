@@ -10,7 +10,7 @@ import {
     ITransparentUpgradeableProxy
 } from "openzeppelin-contracts/contracts/proxy/transparent/TransparentUpgradeableProxy.sol";
 
-contract OperatorsMigrationV1ToV2 is Test {
+contract OperatorsMigrationV1ToV3 is Test {
     bool internal _skip = false;
 
     function setUp() external {

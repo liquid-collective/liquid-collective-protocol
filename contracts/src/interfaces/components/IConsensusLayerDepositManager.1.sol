@@ -32,10 +32,10 @@ interface IConsensusLayerDepositManagerV1 {
     error NotEnoughFunds();
 
     /// @notice The length of the BLS Public key is invalid during deposit
-    error InconsistentPublicKeys();
+    error InconsistentPublicKey();
 
     /// @notice The length of the BLS Signature is invalid during deposit
-    error InconsistentSignatures();
+    error InconsistentSignature();
 
     /// @notice The deposit size is invalid
     error InvalidDepositSize(uint256 depositSize);

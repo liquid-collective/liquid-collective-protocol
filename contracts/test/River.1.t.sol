@@ -240,9 +240,7 @@ contract RiverV1Tests is RiverV1TestBase {
         vm.stopPrank();
     }
 
-    // TODO: test expects dust = committedBefore % 32 ether but initRiverV1_2 uses 1 ether
-    // Commenting out to avoid changing test logic — needs review
-    function DISABLED_testInit2(uint128 depositTotal, uint96 committedBalance) public {
+    function testInit2(uint128 depositTotal, uint96 committedBalance) public {
         vm.assume(depositTotal > committedBalance && committedBalance > 0);
         RedeemManagerV1 redeemManager;
         redeemManager = new RedeemManagerV1();

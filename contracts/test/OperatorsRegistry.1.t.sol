@@ -1411,54 +1411,16 @@ contract OperatorsRegistryV1FlattenAndAllocationTests is OperatorAllocationTestB
         vm.stopPrank();
     }
 
-    // ──────────────────────────────────────────────────────────────────────
-    // TEST 6: Reverts on unordered list
-    // ──────────────────────────────────────────────────────────────────────
+    function testIncrementFundedRevertsOperatorIgnoredExitRequests() external {
+        _setupOperators(1, 10);
 
-    // /// @notice Pass allocations with descending operator indices. Expect UnorderedOperatorList().
-    // function testGetNextValidatorsRevertsUnorderedList() external {
-    //     _setupOperators(3, 10);
+        // Give the operator some funded validators then request exits for all of them
+        OperatorsRegistryInitializableV1(address(operatorsRegistry)).sudoSetFunded(0, 5);
+        OperatorsRegistryInitializableV1(address(operatorsRegistry)).sudoExitRequests(0, 5);
+        // stoppedCount remains 0, so operator has not fulfilled any exits
 
-    //     IOperatorsRegistryV1.OperatorAllocation[] memory alloc = new IOperatorsRegistryV1.OperatorAllocation[](2);
-    //     alloc[0] = IOperatorsRegistryV1.OperatorAllocation({operatorIndex: 2, validatorCount: 1});
-    //     alloc[1] = IOperatorsRegistryV1.OperatorAllocation({operatorIndex: 0, validatorCount: 1});
-
-    //     vm.expectRevert(abi.encodeWithSignature("UnorderedOperatorList()"));
-    //     operatorsRegistry.getNextValidatorsToDepositFromActiveOperators(alloc);
-    // }
-
-    // // ──────────────────────────────────────────────────────────────────────
-    // // TEST 7: Reverts on zero validator count
-    // // ──────────────────────────────────────────────────────────────────────
-
-    // /// @notice Pass allocation with validatorCount: 0. Expect AllocationWithZeroValidatorCount().
-    // function testGetNextValidatorsRevertsZeroValidatorCount() external {
-    //     _setupOperators(1, 10);
-
-    //     IOperatorsRegistryV1.OperatorAllocation[] memory alloc = new IOperatorsRegistryV1.OperatorAllocation[](1);
-    //     alloc[0] = IOperatorsRegistryV1.OperatorAllocation({operatorIndex: 0, validatorCount: 0});
-
-    //     vm.expectRevert(abi.encodeWithSignature("AllocationWithZeroValidatorCount()"));
-    //     operatorsRegistry.getNextValidatorsToDepositFromActiveOperators(alloc);
-    // }
-
-    // ──────────────────────────────────────────────────────────────────────
-    // TEST 8: Reverts when operator ignored exit requests
-    // ──────────────────────────────────────────────────────────────────────
-
-    /// @notice Set up an operator with requestedExits > stoppedCount, then try to get validators.
-    ///         Expect OperatorIgnoredExitRequests().
-    // function testGetNextValidatorsRevertsOperatorIgnoredExitRequests() external {
-    //     _setupOperators(1, 10);
-
-    //     // Set requestedExits to 5 but leave stoppedCount at 0
-    //     OperatorsRegistryInitializableV1(address(operatorsRegistry)).sudoExitRequests(0, 5);
-
-    //     IOperatorsRegistryV1.OperatorAllocation[] memory alloc = new IOperatorsRegistryV1.OperatorAllocation[](1);
-    //     alloc[0] = IOperatorsRegistryV1.OperatorAllocation({operatorIndex: 0, validatorCount: 1});
-
-    //     vm.expectRevert(abi.encodeWithSignature("OperatorIgnoredExitRequests(uint256)", 0));
-    //     operatorsRegistry.getNextValidatorsToDepositFromActiveOperators(alloc);
-    // }
+        vm.expectRevert(abi.encodeWithSignature("OperatorIgnoredExitRequests(uint256)", 0));
+        operatorsRegistry.incrementFundedValidators(0, 1);
+    }
 }
 

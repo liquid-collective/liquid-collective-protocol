@@ -107,14 +107,20 @@ abstract contract ConsensusLayerDepositManagerV1 is IConsensusLayerDepositManage
         if (maxDepositableCount == 0) {
             revert NotEnoughFunds();
         }
-        // Calculate total requested and validate key lengths in a single pass
+        // Calculate total requested and validate key lengths + operator ordering in a single pass
         uint256 totalRequested = 0;
         for (uint256 i = 0; i < _allocations.length; ++i) {
+            if (i > 0 && _allocations[i].operatorIndex < _allocations[i - 1].operatorIndex) {
+                revert IOperatorsRegistryV1.UnorderedOperatorList();
+            }
             if (_allocations[i].pubkey.length != PUBLIC_KEY_LENGTH) {
-                revert InconsistentPublicKeys();
+                revert InconsistentPublicKey();
             }
             if (_allocations[i].signature.length != SIGNATURE_LENGTH) {
-                revert InconsistentSignatures();
+                revert InconsistentSignature();
+            }
+            if (_allocations[i].depositAmount != DEPOSIT_SIZE) {
+                revert InvalidDepositSize(_allocations[i].depositAmount);
             }
             totalRequested += _allocations[i].depositAmount;
             highestOperatorIndex = LibUint256.max(highestOperatorIndex, _allocations[i].operatorIndex);
@@ -131,6 +137,8 @@ abstract contract ConsensusLayerDepositManagerV1 is IConsensusLayerDepositManage
         if (withdrawalCredentials == 0) {
             revert InvalidWithdrawalCredentials();
         }
+
+        _updateFundedValidators(_allocations);
 
         for (uint256 idx = 0; idx < _allocations.length; ++idx) {
             _depositValidator(
@@ -167,14 +175,11 @@ abstract contract ConsensusLayerDepositManagerV1 is IConsensusLayerDepositManage
         bytes32 _withdrawalCredentials
     ) internal {
         if (_publicKey.length != PUBLIC_KEY_LENGTH) {
-            revert InconsistentPublicKeys();
+            revert InconsistentPublicKey();
         }
 
         if (_signature.length != SIGNATURE_LENGTH) {
-            revert InconsistentSignatures();
-        }
-        if (_depositAmount != DEPOSIT_SIZE) {
-            revert InvalidDepositSize(_depositAmount);
+            revert InconsistentSignature();
         }
         uint256 value = _depositAmount;
 
