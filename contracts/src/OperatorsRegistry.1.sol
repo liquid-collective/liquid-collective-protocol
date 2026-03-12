@@ -181,7 +181,7 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
             revert InvalidEmptyArray();
         }
         if (fundedETHLength != OperatorsV3.getCount()) {
-            revert InvalidFundedETHLength();
+            revert FundedETHArrayLengthMismatch();
         }
         for (uint256 idx = 0; idx < fundedETHLength; ++idx) {
             OperatorsV3.Operator storage operator = OperatorsV3.get(idx);
@@ -297,7 +297,7 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
         uint256 currentETHExitsDemand = CurrentETHExitsDemand.get();
         uint256 totalETHExitsRequested = TotalETHExitsRequested.get();
         if (_totalDepositedETH < (totalETHExitsRequested + currentETHExitsDemand)) {
-            revert ExitedETHTooHigh();
+            revert ExitedETHExceedsDeposited();
         }
         _exitAmountToRequest =
             LibUint256.min(_exitAmountToRequest, _totalDepositedETH - (totalETHExitsRequested + currentETHExitsDemand));
@@ -349,7 +349,7 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
 
         // we check that the cells containing operator stopped values are no more than the current operator count
         if (vars.exitedETHLength - 1 > operators.length) {
-            revert ExitedETHCountTooHigh();
+            revert ExitedETHArrayLengthExceedsOperatorCount();
         }
 
         vars.currentExitedETH = OperatorsV3.getExitedETH();
@@ -374,12 +374,12 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
         for (; idx < vars.currentExitedETHLength; ++idx) {
             // if the previous array was long enough, we check that the values are not decreasing
             if (_exitedETH[idx] < vars.currentExitedETH[idx]) {
-                revert ExitedETHArrayDecreased();
+                revert ExitedETHPerOperatorDecreased();
             }
 
             // we check that the amount of exited ETH is not above the funded ETH of an operator
             if (_exitedETH[idx] > operators[idx - 1].funded) {
-                revert ExitedETHAboveFundedETH(idx - 1, _exitedETH[idx], operators[idx - 1].funded);
+                revert ExitedETHExceedsFundedETH(idx - 1, _exitedETH[idx], operators[idx - 1].funded);
             }
 
             // if the reported exited ETH for this operator is greater than its recorded requestedExits,
@@ -399,7 +399,7 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
         for (; idx < vars.exitedETHLength; ++idx) {
             // we check that the amount of exited ETH is not above the funded ETH of an operator
             if (_exitedETH[idx] > operators[idx - 1].funded) {
-                revert ExitedETHAboveFundedETH(idx - 1, _exitedETH[idx], operators[idx - 1].funded);
+                revert ExitedETHExceedsFundedETH(idx - 1, _exitedETH[idx], operators[idx - 1].funded);
             }
 
             // if the reported exited ETH for this operator is greater than its recorded requestedExits,
@@ -429,11 +429,11 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
 
         // we check that the total is matching the sum of the individual values
         if (vars.totalExitedETH != vars.amountOfExitedETH) {
-            revert InvalidExitedETHSum();
+            revert ExitedETHSumMismatch();
         }
         // we check that the total is not higher than the current deposited ETH
         if (vars.totalExitedETH > _totalDepositedETH) {
-            revert ExitedETHTooHigh();
+            revert ExitedETHExceedsDeposited();
         }
 
         // we set the exited ETH

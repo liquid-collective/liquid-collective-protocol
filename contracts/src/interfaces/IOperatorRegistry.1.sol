@@ -102,16 +102,16 @@ interface IOperatorsRegistryV1 {
     error AllocationWithZeroValidatorCount();
 
     /// @notice Thrown when the sum of exited ETH is invalid
-    error InvalidExitedETHSum();
+    error ExitedETHSumMismatch();
 
     /// @notice Thrown when an element in the exited ETH array is decreasing
-    error ExitedETHArrayDecreased();
+    error ExitedETHPerOperatorDecreased();
 
     /// @notice Thrown when the amount of exited ETH is too high compared to the total deposited ETH
-    error ExitedETHTooHigh();
+    error ExitedETHExceedsDeposited();
 
     /// @notice Thrown when the number of exited ETH is too high compared to operator count
-    error ExitedETHCountTooHigh();
+    error ExitedETHArrayLengthExceedsOperatorCount();
 
     /// @notice Thrown when no exit requests can be performed
     error NoExitRequestsToPerform();
@@ -134,13 +134,13 @@ interface IOperatorsRegistryV1 {
     /// @param operatorIndex The operator index
     /// @param exitedETH The exited ETH
     /// @param fundedETH The funded ETH
-    error ExitedETHAboveFundedETH(uint256 operatorIndex, uint256 exitedETH, uint256 fundedETH);
+    error ExitedETHExceedsFundedETH(uint256 operatorIndex, uint256 exitedETH, uint256 fundedETH);
 
     /// @notice Thrown when an allocation with zero ETH amount is provided
     error AllocationWithZeroETHAmount();
 
     /// @notice Thrown when the provided funded ETH array length is invalid
-    error InvalidFundedETHLength();
+    error FundedETHArrayLengthMismatch();
 
     /// @notice Initializes the operators registry
     /// @param _admin Admin in charge of managing operators
