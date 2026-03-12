@@ -14,12 +14,12 @@ import "../state/river/DepositedValidatorCount.sol";
 import "../state/river/BalanceToDeposit.sol";
 import "../state/river/CommittedBalance.sol";
 import "../state/river/KeeperAddress.sol";
+import "../state/river/TotalDepositedETH.sol";
+import "../state/river/InFlightDeposit.sol";
 
 /// @title Consensus Layer Deposit Manager (v1)
 /// @author Alluvial Finance Inc.
 /// @notice This contract handles the interactions with the official deposit contract, funding all validators.
-/// @notice After successfully depositing the validators, the funded validator count is incremented on the operators registry
-/// @notice by overriding the _updateFundedValidators method in River.
 abstract contract ConsensusLayerDepositManagerV1 is IConsensusLayerDepositManagerV1 {
     /// @notice Size of a BLS Public key in bytes
     uint256 public constant PUBLIC_KEY_LENGTH = 48;
@@ -32,14 +32,13 @@ abstract contract ConsensusLayerDepositManagerV1 is IConsensusLayerDepositManage
     /// @dev Must be Overridden
     function _getRiverAdmin() internal view virtual returns (address);
 
+    /// @notice Handler called to increment the funded ETH for the operators
+    /// @param _fundedETH The array of funded ETH amounts
+    function _incrementFundedETH(uint256[] memory _fundedETH) internal virtual;
+
     /// @notice Handler called to change the committed balance to deposit
     /// @param newCommittedBalance The new committed balance value
     function _setCommittedBalance(uint256 newCommittedBalance) internal virtual;
-
-    /// @notice Handler called to update the funded validator count on the operators registry after each deposit
-    /// @dev Must be overridden. River implements this to call incrementFundedValidators on the registry.
-    /// @param _allocations The validator deposits that were just deposited
-    function _updateFundedValidators(IOperatorsRegistryV1.ValidatorDeposit[] calldata _allocations) internal virtual;
 
     /// @notice Initializer to set the deposit contract address and the withdrawal credentials to use
     /// @param _depositContractAddress The address of the deposit contract
@@ -74,8 +73,8 @@ abstract contract ConsensusLayerDepositManagerV1 is IConsensusLayerDepositManage
     }
 
     /// @inheritdoc IConsensusLayerDepositManagerV1
-    function getDepositedValidatorCount() external view returns (uint256) {
-        return DepositedValidatorCount.get();
+    function getTotalDepositedETH() external view returns (uint256) {
+        return TotalDepositedETH.get();
     }
 
     /// @inheritdoc IConsensusLayerDepositManagerV1
@@ -102,7 +101,7 @@ abstract contract ConsensusLayerDepositManagerV1 is IConsensusLayerDepositManage
 
         uint256 committedBalance = CommittedBalance.get();
         uint256 maxDepositableCount = committedBalance / DEPOSIT_SIZE;
-
+        uint256 highestOperatorIndex = 0;
         if (maxDepositableCount == 0) {
             revert NotEnoughFunds();
         }
@@ -122,7 +121,9 @@ abstract contract ConsensusLayerDepositManagerV1 is IConsensusLayerDepositManage
                 revert InvalidDepositSize(_allocations[i].depositAmount);
             }
             totalRequested += _allocations[i].depositAmount;
+            highestOperatorIndex = LibUint256.max(highestOperatorIndex, _allocations[i].operatorIndex);
         }
+        uint256[] memory fundedETH = new uint256[](highestOperatorIndex + 1);
 
         // Check if the total requested exceeds the committed balance
         if (totalRequested > committedBalance) {
@@ -135,8 +136,6 @@ abstract contract ConsensusLayerDepositManagerV1 is IConsensusLayerDepositManage
             revert InvalidWithdrawalCredentials();
         }
 
-        _updateFundedValidators(_allocations);
-
         for (uint256 idx = 0; idx < _allocations.length; ++idx) {
             _depositValidator(
                 _allocations[idx].pubkey,
@@ -144,12 +143,20 @@ abstract contract ConsensusLayerDepositManagerV1 is IConsensusLayerDepositManage
                 _allocations[idx].depositAmount,
                 withdrawalCredentials
             );
+            fundedETH[_allocations[idx].operatorIndex] += _allocations[idx].depositAmount;
         }
+
+        _incrementFundedETH(fundedETH);
         _setCommittedBalance(committedBalance - totalRequested);
-        uint256 currentDepositedValidatorCount = DepositedValidatorCount.get();
-        DepositedValidatorCount.set(currentDepositedValidatorCount + _allocations.length);
-        emit SetDepositedValidatorCount(
-            currentDepositedValidatorCount, currentDepositedValidatorCount + _allocations.length
+
+        uint256 currentInFlightETH = InFlightDeposit.get();
+        InFlightDeposit.set(currentInFlightETH + DEPOSIT_SIZE * _allocations.length);
+        emit SetInFlightETH(currentInFlightETH, currentInFlightETH + DEPOSIT_SIZE * _allocations.length);
+
+        uint256 currentTotalDepositedETH = TotalDepositedETH.get();
+        TotalDepositedETH.set(currentTotalDepositedETH + DEPOSIT_SIZE * _allocations.length);
+        emit SetTotalDepositedETH(
+            currentTotalDepositedETH, currentTotalDepositedETH + DEPOSIT_SIZE * _allocations.length
         );
     }
 

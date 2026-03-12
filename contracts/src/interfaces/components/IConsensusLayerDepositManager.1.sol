@@ -15,10 +15,15 @@ interface IConsensusLayerDepositManagerV1 {
     /// @param withdrawalCredentials The withdrawal credentials to use for deposits
     event SetWithdrawalCredentials(bytes32 withdrawalCredentials);
 
-    /// @notice Emitted when the deposited validator count is updated
-    /// @param oldDepositedValidatorCount The old deposited validator count value
-    /// @param newDepositedValidatorCount The new deposited validator count value
-    event SetDepositedValidatorCount(uint256 oldDepositedValidatorCount, uint256 newDepositedValidatorCount);
+    /// @notice Emitted when the total deposited ETH is updated
+    /// @param oldTotalDepositedETH The old total deposited ETH value
+    /// @param newTotalDepositedETH The new total deposited ETH value
+    event SetTotalDepositedETH(uint256 oldTotalDepositedETH, uint256 newTotalDepositedETH);
+
+    /// @notice Emitted when the in flight ETH is updated
+    /// @param oldInFlightETH The old in flight ETH value
+    /// @param newInFlightETH The new in flight ETH value
+    event SetInFlightETH(uint256 oldInFlightETH, uint256 newInFlightETH);
 
     /// @notice The allocations array must not be empty
     error EmptyAllocations();
@@ -62,9 +67,9 @@ interface IConsensusLayerDepositManagerV1 {
     /// @return The withdrawal credentials
     function getWithdrawalCredentials() external view returns (bytes32);
 
-    /// @notice Get the deposited validator count (the count of deposits made by the contract)
-    /// @return The deposited validator count
-    function getDepositedValidatorCount() external view returns (uint256);
+    /// @notice Returns the total deposited ETH
+    /// @return The total deposited ETH
+    function getTotalDepositedETH() external view returns (uint256);
 
     /// @notice Get the keeper address
     /// @return The keeper address
