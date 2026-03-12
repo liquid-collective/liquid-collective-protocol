@@ -42,6 +42,12 @@ abstract contract OracleManagerV1 is IOracleManagerV1 {
     /// @return The amount pulled inside the system
     function _pullCoverageFunds(uint256 _max) internal virtual returns (uint256);
 
+    /// @notice Handler called to pull the consolidation coverage funds
+    /// @dev Must be overridden
+    /// @param _max The maximum amount to pull inside the system
+    /// @return The amount pulled inside the system
+    function _pullConsolidationCoverageFunds(uint256 _max) internal virtual returns (uint256);
+
     /// @notice Handler called to retrieve the system administrator address
     /// @dev Must be overridden
     /// @return The system administrator address
@@ -410,7 +416,12 @@ abstract contract OracleManagerV1 is IOracleManagerV1 {
             // we pull the funds from the coverage recipient
             vars.trace.pulledCoverageFunds = _pullCoverageFunds(vars.availableAmountToUpperBound);
             // we do not update the rewards as coverage is not considered rewards
-            // we do not update the available amount as there are no more pulling actions to perform afterwards
+            vars.availableAmountToUpperBound -= vars.trace.pulledCoverageFunds;
+        }
+
+        // if we have available amount to upper bound after pulling coverage funds, we attempt to pull consolidation coverage funds
+        if (vars.availableAmountToUpperBound > 0) {
+            vars.trace.pulledConsolidationCoverageFunds = _pullConsolidationCoverageFunds(vars.availableAmountToUpperBound);
         }
 
         // if our rewards are not null, we dispatch the fee to the collector

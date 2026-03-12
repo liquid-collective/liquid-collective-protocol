@@ -227,7 +227,11 @@ contract RiverV1Harness is RiverV1 {
             // we pull the funds from the coverage recipient
             vars.trace.pulledCoverageFunds = _pullCoverageFunds(vars.availableAmountToUpperBound);
             // we do not update the rewards as coverage is not considered rewards
-            // we do not update the available amount as there are no more pulling actions to perform afterwards
+            vars.availableAmountToUpperBound -= vars.trace.pulledCoverageFunds;
+        }
+        // if we have available amount to upper bound after pulling coverage funds, we attempt to pull consolidation coverage funds
+        if (vars.availableAmountToUpperBound > 0) {
+            vars.trace.pulledConsolidationCoverageFunds = _pullConsolidationCoverageFunds(vars.availableAmountToUpperBound);
         }
     }
 

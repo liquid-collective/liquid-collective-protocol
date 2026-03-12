@@ -45,7 +45,7 @@ contract ConsolidationCoverageFundV1 is Initializable, IConsolidationCoverageFun
 
         if (amount > 0) {
             BalanceForConsolidationCoverage.set(BalanceForConsolidationCoverage.get() - amount);
-            IRiverV1(payable(river)).sendCoverageFunds{value: amount}();
+            IRiverV1(payable(river)).sendConsolidationCoverageFunds{value: amount}();
         }
     }
 
@@ -57,7 +57,7 @@ contract ConsolidationCoverageFundV1 is Initializable, IConsolidationCoverageFun
         BalanceForConsolidationCoverage.set(BalanceForConsolidationCoverage.get() + msg.value);
 
         IAllowlistV1 allowlist = IAllowlistV1(IRiverV1(payable(RiverAddress.get())).getAllowlist());
-        allowlist.onlyAllowed(msg.sender, LibAllowlistMasks.DONATE_MASK);
+        allowlist.onlyAllowed(msg.sender, LibAllowlistMasks.DONATE_CONSOLIDATION_MASK);
 
         emit Donate(msg.sender, msg.value);
     }

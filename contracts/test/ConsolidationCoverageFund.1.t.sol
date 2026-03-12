@@ -24,6 +24,10 @@ contract RiverMock {
         emit BalanceUpdated(address(this).balance);
     }
 
+    function sendConsolidationCoverageFunds() external payable {
+        emit BalanceUpdated(address(this).balance);
+    }
+
     function pullCoverageFunds(address consolidationCoverageFund, uint256 maxAmount) external {
         IConsolidationCoverageFundV1(payable(consolidationCoverageFund)).pullCoverageFunds(maxAmount);
     }
@@ -122,7 +126,7 @@ contract ConsolidationCoverageFundTestV1 is ConsolidationCoverageFundV1TestBase 
         address[] memory accounts = new address[](1);
         accounts[0] = sender;
         uint256[] memory permissions = new uint256[](1);
-        permissions[0] = LibAllowlistMasks.DONATE_MASK;
+        permissions[0] = LibAllowlistMasks.DONATE_CONSOLIDATION_MASK;
         allowlist.setAllowPermissions(accounts, permissions);
 
         vm.startPrank(sender);
@@ -147,7 +151,7 @@ contract ConsolidationCoverageFundTestV1 is ConsolidationCoverageFundV1TestBase 
         address[] memory accounts = new address[](1);
         accounts[0] = sender;
         uint256[] memory permissions = new uint256[](1);
-        permissions[0] = LibAllowlistMasks.DONATE_MASK;
+        permissions[0] = LibAllowlistMasks.DONATE_CONSOLIDATION_MASK;
         allowlist.setAllowPermissions(accounts, permissions);
 
         vm.startPrank(sender);
@@ -179,7 +183,7 @@ contract ConsolidationCoverageFundTestV1 is ConsolidationCoverageFundV1TestBase 
         address[] memory accounts = new address[](1);
         accounts[0] = sender;
         uint256[] memory permissions = new uint256[](1);
-        permissions[0] = LibAllowlistMasks.DONATE_MASK;
+        permissions[0] = LibAllowlistMasks.DONATE_CONSOLIDATION_MASK;
         allowlist.setAllowPermissions(accounts, permissions);
 
         vm.startPrank(sender);
@@ -197,7 +201,7 @@ contract ConsolidationCoverageFundTestV1 is ConsolidationCoverageFundV1TestBase 
         address[] memory accounts = new address[](1);
         accounts[0] = sender;
         uint256[] memory permissions = new uint256[](1);
-        permissions[0] = LibAllowlistMasks.DONATE_MASK;
+        permissions[0] = LibAllowlistMasks.DONATE_CONSOLIDATION_MASK;
         allowlist.setAllowPermissions(accounts, permissions);
 
         vm.startPrank(sender);
