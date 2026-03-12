@@ -70,6 +70,13 @@ contract MockELConsolidation {
     }
 }
 
+/// @notice Mock that reverts on receive (for UnsentExcessFee tests)
+contract MockBeneficiaryContract {
+    receive() external payable {
+        revert();
+    }
+}
+
 /// @notice Mock that fails on call (for RequestFailed tests)
 contract MockELWithdrawalFails {
     uint256 public fee = 1 gwei;
@@ -77,6 +84,34 @@ contract MockELWithdrawalFails {
     fallback(bytes calldata) external payable returns (bytes memory) {
         if (msg.value > 0) revert("mock fail");
         return abi.encode(fee);
+    }
+}
+
+/// @notice Mock consolidation that reverts on call with value (for RequestFailed tests)
+contract MockELConsolidationFails {
+    uint256 public fee = 1 gwei;
+
+    function setFee(uint256 _fee) external {
+        fee = _fee;
+    }
+
+    fallback(bytes calldata) external payable returns (bytes memory) {
+        if (msg.value > 0) revert("mock fail");
+        return abi.encode(fee);
+    }
+}
+
+/// @notice Mock consolidation that reverts on fee read (staticcall)
+contract MockELConsolidationFeeReadFails {
+    fallback(bytes calldata) external payable returns (bytes memory) {
+        revert();
+    }
+}
+
+/// @notice Mock withdrawal that reverts on fee read (staticcall)
+contract MockELWithdrawalFeeReadFails {
+    fallback(bytes calldata) external payable returns (bytes memory) {
+        revert();
     }
 }
 
@@ -237,6 +272,11 @@ contract WithdrawV1PectraTests is WithdrawV1TestBase {
     /// 48 bytes = 96 hex chars
     bytes internal constant VALID_PUBKEY_48 = hex"0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef";
 
+    // Events for expectEmit (must match IWithdrawV1)
+    event ConsolidationRequested(bytes srcPubkey, bytes targetPubkey, uint256 fee);
+    event WithdrawalRequested(bytes pubkey, uint64 amount, uint256 fee);
+    event UnsentExcessFee(address recipient, uint256 amount);
+
     function setUp() public override {
         super.setUp();
         withdraw.initializeWithdrawV1(address(river));
@@ -380,5 +420,471 @@ contract WithdrawV1PectraTests is WithdrawV1TestBase {
         vm.prank(address(river));
         vm.expectRevert(abi.encodeWithSignature("RequestFailed()"));
         w.withdraw{value: 1 gwei}(pubkeys, amounts, 1 gwei, excessFeeRecipient);
+    }
+
+    // --- Consolidation tests (from plan) ---
+
+    /// @notice Tests that consolidate reverts when fee read (staticcall) fails.
+    function testConsolidateFailsIfNoValueSent() public {
+        MockELConsolidationFeeReadFails mockConsolidationFeeReadFails = new MockELConsolidationFeeReadFails();
+        WithdrawV1 w = new WithdrawV1();
+        LibImplementationUnbricker.unbrick(vm, address(w));
+        w.initializeWithdrawV1(address(river));
+        w.initWithdrawV1_1(address(mockWithdrawal), address(mockConsolidationFeeReadFails));
+
+        bytes[] memory srcPubkeys = new bytes[](1);
+        srcPubkeys[0] = VALID_PUBKEY_48;
+        bytes memory targetPubkey = VALID_PUBKEY_48;
+        IWithdrawV1.ConsolidationRequest[] memory requests = new IWithdrawV1.ConsolidationRequest[](1);
+        requests[0] = IWithdrawV1.ConsolidationRequest(srcPubkeys, targetPubkey);
+
+        vm.prank(address(river));
+        vm.expectRevert(abi.encodeWithSelector(IWithdrawV1.FeeReadFailed.selector));
+        w.consolidate(requests, 0.1 ether, excessFeeRecipient);
+    }
+
+    /// @notice Tests that consolidate refunds the sender (river) any excess funds after actual fee deduction.
+    function testConsolidateRefundsSenderAnyExcessFund() public {
+        bytes[] memory srcPubkeys = new bytes[](1);
+        srcPubkeys[0] = VALID_PUBKEY_48;
+        bytes memory targetPubkey = VALID_PUBKEY_48;
+        IWithdrawV1.ConsolidationRequest[] memory requests = new IWithdrawV1.ConsolidationRequest[](1);
+        requests[0] = IWithdrawV1.ConsolidationRequest(srcPubkeys, targetPubkey);
+
+        uint256 maxFeePerConsolidation = 1.5 ether;
+        uint256 fee = maxFeePerConsolidation - 1;
+        mockConsolidation.setFee(fee);
+        vm.deal(address(river), maxFeePerConsolidation);
+
+        uint256 recipientBalBefore = excessFeeRecipient.balance;
+        vm.prank(address(river));
+        withdraw.consolidate{value: maxFeePerConsolidation}(requests, maxFeePerConsolidation, excessFeeRecipient);
+        uint256 recipientBalAfter = excessFeeRecipient.balance;
+        assertEq(recipientBalAfter, recipientBalBefore + (maxFeePerConsolidation - fee), "Recipient should be refunded any excess funds after actual fee deduction.");
+    }
+
+    /// @notice Tests that consolidate emits UnsentExcessFee when excess refund fails.
+    function testConsolidateEmitsEventWhenExcessRefundsFail() public {
+        bytes[] memory srcPubkeys = new bytes[](1);
+        srcPubkeys[0] = VALID_PUBKEY_48;
+        bytes memory targetPubkey = VALID_PUBKEY_48;
+        IWithdrawV1.ConsolidationRequest[] memory requests = new IWithdrawV1.ConsolidationRequest[](1);
+        requests[0] = IWithdrawV1.ConsolidationRequest(srcPubkeys, targetPubkey);
+
+        uint256 maxFeePerConsolidation = 1.5 ether;
+        uint256 fee = maxFeePerConsolidation - 1;
+        mockConsolidation.setFee(fee);
+        vm.deal(address(river), maxFeePerConsolidation);
+
+        address excessFeeRecipientAddr = address(new MockBeneficiaryContract());
+        uint256 totalValueReceived = maxFeePerConsolidation;
+        uint256 excessFee = totalValueReceived - fee;
+
+        vm.expectEmit(true, true, true, true);
+        emit UnsentExcessFee(excessFeeRecipientAddr, excessFee);
+
+        vm.prank(address(river));
+        withdraw.consolidate{value: maxFeePerConsolidation}(requests, maxFeePerConsolidation, excessFeeRecipientAddr);
+    }
+
+    /// @notice Tests that consolidate reverts when the fee exceeds the max fee.
+    function testConsolidateFailsIfFeeExceedsMax() public {
+        bytes[] memory srcPubkeys = new bytes[](1);
+        srcPubkeys[0] = VALID_PUBKEY_48;
+        bytes memory targetPubkey = VALID_PUBKEY_48;
+        IWithdrawV1.ConsolidationRequest[] memory requests = new IWithdrawV1.ConsolidationRequest[](1);
+        requests[0] = IWithdrawV1.ConsolidationRequest(srcPubkeys, targetPubkey);
+
+        uint256 maxFeePerConsolidation = 0.1 ether;
+        uint256 fee = maxFeePerConsolidation + 1;
+        mockConsolidation.setFee(fee);
+        vm.deal(address(river), fee);
+
+        vm.prank(address(river));
+        vm.expectRevert(abi.encodeWithSelector(IWithdrawV1.FeeTooHigh.selector, fee, maxFeePerConsolidation));
+        withdraw.consolidate{value: fee}(requests, maxFeePerConsolidation, excessFeeRecipient);
+    }
+
+    /// @notice Tests that consolidate reverts when the fee exceeds the value sent (msg.value).
+    function testConsolidateFailsIfFeeExceedsValue() public {
+        bytes[] memory srcPubkeys = new bytes[](1);
+        srcPubkeys[0] = VALID_PUBKEY_48;
+        bytes memory targetPubkey = VALID_PUBKEY_48;
+        IWithdrawV1.ConsolidationRequest[] memory requests = new IWithdrawV1.ConsolidationRequest[](1);
+        requests[0] = IWithdrawV1.ConsolidationRequest(srcPubkeys, targetPubkey);
+
+        uint256 maxFeePerConsolidation = 0.1 ether;
+        mockConsolidation.setFee(maxFeePerConsolidation);
+        vm.deal(address(river), maxFeePerConsolidation);
+        vm.deal(address(withdraw), 10 ether);
+
+        uint256 value = maxFeePerConsolidation - 1;
+        vm.prank(address(river));
+        vm.expectRevert(abi.encodeWithSelector(IWithdrawV1.InsufficientValueForFee.selector, value, maxFeePerConsolidation));
+        withdraw.consolidate{value: value}(requests, maxFeePerConsolidation, excessFeeRecipient);
+    }
+
+    /// @notice Tests that consolidate reverts when value is insufficient for multiple consolidations.
+    function testConsolidateFailsIfFeeExceedsValueForMultipleConsolidations() public {
+        bytes[] memory srcPubkeys = new bytes[](4);
+        for (uint256 i = 0; i < 4; i++) srcPubkeys[i] = VALID_PUBKEY_48;
+        bytes memory targetPubkey = VALID_PUBKEY_48;
+        bytes[] memory srcPubkeys2 = new bytes[](4);
+        for (uint256 i = 0; i < 4; i++) srcPubkeys2[i] = VALID_PUBKEY_48;
+        bytes memory targetPubkey2 = VALID_PUBKEY_48;
+
+        IWithdrawV1.ConsolidationRequest[] memory requests = new IWithdrawV1.ConsolidationRequest[](2);
+        requests[0] = IWithdrawV1.ConsolidationRequest(srcPubkeys, targetPubkey);
+        requests[1] = IWithdrawV1.ConsolidationRequest(srcPubkeys2, targetPubkey2);
+
+        uint256 maxFeePerConsolidation = 0.1 ether;
+        mockConsolidation.setFee(maxFeePerConsolidation);
+        vm.deal(address(river), 1 ether);
+        vm.deal(address(withdraw), 10 ether);
+
+        uint256 totalNumOfConsolidationOperations = 8;
+        uint256 totalFeeRequired = maxFeePerConsolidation * totalNumOfConsolidationOperations;
+        uint256 value = totalFeeRequired - 1;
+
+        vm.prank(address(river));
+        vm.expectRevert(abi.encodeWithSelector(IWithdrawV1.InsufficientValueForFee.selector, value, totalFeeRequired));
+        withdraw.consolidate{value: value}(requests, maxFeePerConsolidation, excessFeeRecipient);
+    }
+
+    /// @notice Tests that consolidate reverts when the request (call to EL contract) fails.
+    function testConsolidateFailsIfRequestFails() public {
+        MockELConsolidationFails mockConsolidationFails = new MockELConsolidationFails();
+        uint256 maxFeePerConsolidation = 0.1 ether;
+        mockConsolidationFails.setFee(maxFeePerConsolidation);
+
+        WithdrawV1 w = new WithdrawV1();
+        LibImplementationUnbricker.unbrick(vm, address(w));
+        w.initializeWithdrawV1(address(river));
+        w.initWithdrawV1_1(address(mockWithdrawal), address(mockConsolidationFails));
+
+        bytes[] memory srcPubkeys = new bytes[](1);
+        srcPubkeys[0] = VALID_PUBKEY_48;
+        bytes memory targetPubkey = VALID_PUBKEY_48;
+        IWithdrawV1.ConsolidationRequest[] memory requests = new IWithdrawV1.ConsolidationRequest[](1);
+        requests[0] = IWithdrawV1.ConsolidationRequest(srcPubkeys, targetPubkey);
+
+        vm.deal(address(river), maxFeePerConsolidation);
+        vm.prank(address(river));
+        vm.expectRevert(abi.encodeWithSignature("RequestFailed()"));
+        w.consolidate{value: maxFeePerConsolidation}(requests, maxFeePerConsolidation, excessFeeRecipient);
+    }
+
+    /// @notice Tests that consolidate works when all checks pass.
+    function testConsolidateWorksIfAllIsFine() public {
+        bytes[] memory srcPubkeys = new bytes[](1);
+        srcPubkeys[0] = VALID_PUBKEY_48;
+        bytes memory targetPubkey = VALID_PUBKEY_48;
+        IWithdrawV1.ConsolidationRequest[] memory requests = new IWithdrawV1.ConsolidationRequest[](1);
+        requests[0] = IWithdrawV1.ConsolidationRequest(srcPubkeys, targetPubkey);
+
+        uint256 maxFeePerConsolidation = 0.1 ether;
+        mockConsolidation.setFee(maxFeePerConsolidation);
+        vm.deal(address(river), maxFeePerConsolidation);
+
+        bytes memory callData = bytes.concat(srcPubkeys[0], targetPubkey);
+
+        vm.expectCall(address(mockConsolidation), maxFeePerConsolidation, callData);
+        vm.expectEmit(true, true, true, true);
+        emit ConsolidationRequested(srcPubkeys[0], targetPubkey, maxFeePerConsolidation);
+
+        vm.prank(address(river));
+        withdraw.consolidate{value: maxFeePerConsolidation}(requests, maxFeePerConsolidation, excessFeeRecipient);
+    }
+
+    /// @notice Tests that consolidate emits events for multiple consolidations.
+    function testConsolidateEmitsEventsForMultipleConsolidations() public {
+        bytes[] memory srcPubkeys1 = new bytes[](1);
+        srcPubkeys1[0] = VALID_PUBKEY_48;
+        bytes[] memory srcPubkeys2 = new bytes[](1);
+        srcPubkeys2[0] = VALID_PUBKEY_48;
+        bytes memory targetPubkey = VALID_PUBKEY_48;
+
+        IWithdrawV1.ConsolidationRequest[] memory requests = new IWithdrawV1.ConsolidationRequest[](2);
+        requests[0] = IWithdrawV1.ConsolidationRequest(srcPubkeys1, targetPubkey);
+        requests[1] = IWithdrawV1.ConsolidationRequest(srcPubkeys2, targetPubkey);
+
+        uint256 maxFeePerConsolidation = 0.1 ether;
+        mockConsolidation.setFee(maxFeePerConsolidation);
+        vm.deal(address(river), maxFeePerConsolidation * 2);
+
+        bytes memory callData1 = bytes.concat(srcPubkeys1[0], targetPubkey);
+        bytes memory callData2 = bytes.concat(srcPubkeys2[0], targetPubkey);
+
+        vm.expectCall(address(mockConsolidation), maxFeePerConsolidation, callData1);
+        vm.expectCall(address(mockConsolidation), maxFeePerConsolidation, callData2);
+        vm.expectEmit(true, true, true, true);
+        emit ConsolidationRequested(srcPubkeys1[0], targetPubkey, maxFeePerConsolidation);
+        vm.expectEmit(true, true, true, true);
+        emit ConsolidationRequested(srcPubkeys2[0], targetPubkey, maxFeePerConsolidation);
+
+        vm.prank(address(river));
+        withdraw.consolidate{value: maxFeePerConsolidation * 2}(requests, maxFeePerConsolidation, excessFeeRecipient);
+    }
+
+    /// @notice Tests that consolidate reverts when the caller is not River.
+    function testConsolidateFailsIfNotOwner() public {
+        bytes[] memory srcPubkeys = new bytes[](1);
+        srcPubkeys[0] = VALID_PUBKEY_48;
+        bytes memory targetPubkey = VALID_PUBKEY_48;
+        IWithdrawV1.ConsolidationRequest[] memory requests = new IWithdrawV1.ConsolidationRequest[](1);
+        requests[0] = IWithdrawV1.ConsolidationRequest(srcPubkeys, targetPubkey);
+
+        uint256 maxFeePerConsolidation = 0.1 ether;
+        address nonOwner = makeAddr("nonOwner");
+        vm.deal(nonOwner, maxFeePerConsolidation);
+
+        vm.expectRevert(abi.encodeWithSignature("Unauthorized(address)", nonOwner));
+        vm.prank(nonOwner);
+        withdraw.consolidate{value: maxFeePerConsolidation}(requests, maxFeePerConsolidation, excessFeeRecipient);
+    }
+
+    /// @notice Tests that consolidate reverts when a source pubkey is not 48 bytes.
+    function testConsolidateFailsIfSrcPubkeyLengthInvalid() public {
+        bytes[] memory srcPubkeys = new bytes[](1);
+        srcPubkeys[0] = hex"1234567890abcdef1234567890abcde67895645f1234567890abcdef1234567890abcdef1234567890abcdef123456"; // 47 bytes
+        bytes memory targetPubkey = VALID_PUBKEY_48;
+        IWithdrawV1.ConsolidationRequest[] memory requests = new IWithdrawV1.ConsolidationRequest[](1);
+        requests[0] = IWithdrawV1.ConsolidationRequest(srcPubkeys, targetPubkey);
+
+        uint256 maxFeePerConsolidation = 0.1 ether;
+        vm.deal(address(river), maxFeePerConsolidation);
+
+        vm.expectRevert(abi.encodeWithSelector(IWithdrawV1.InvalidPubkeyLength.selector, 47));
+        vm.prank(address(river));
+        withdraw.consolidate{value: maxFeePerConsolidation}(requests, maxFeePerConsolidation, excessFeeRecipient);
+    }
+
+    /// @notice Tests that consolidate reverts when the target pubkey is not 48 bytes.
+    function testConsolidateFailsIfTargetPubkeyLengthInvalid() public {
+        bytes[] memory srcPubkeys = new bytes[](1);
+        srcPubkeys[0] = VALID_PUBKEY_48;
+        bytes memory targetPubkey = hex"1234567890abcdef1234567890abcde67895645f1234567890abcdef1234567890abcdef1234567890abcdef123456"; // 47 bytes
+        IWithdrawV1.ConsolidationRequest[] memory requests = new IWithdrawV1.ConsolidationRequest[](1);
+        requests[0] = IWithdrawV1.ConsolidationRequest(srcPubkeys, targetPubkey);
+
+        uint256 maxFeePerConsolidation = 0.1 ether;
+        vm.deal(address(river), maxFeePerConsolidation);
+
+        vm.expectRevert(abi.encodeWithSelector(IWithdrawV1.InvalidPubkeyLength.selector, 47));
+        vm.prank(address(river));
+        withdraw.consolidate{value: maxFeePerConsolidation}(requests, maxFeePerConsolidation, excessFeeRecipient);
+    }
+
+    // --- Withdraw tests (from plan) ---
+
+    /// @notice Tests that withdraw reverts when the fee read fails.
+    function testWithdrawFailsIfFeeReadFails() public {
+        MockELWithdrawalFeeReadFails mockWithdrawalFeeReadFails = new MockELWithdrawalFeeReadFails();
+        WithdrawV1 w = new WithdrawV1();
+        LibImplementationUnbricker.unbrick(vm, address(w));
+        w.initializeWithdrawV1(address(river));
+        w.initWithdrawV1_1(address(mockWithdrawalFeeReadFails), address(mockConsolidation));
+
+        bytes[] memory pubkeys = new bytes[](1);
+        pubkeys[0] = VALID_PUBKEY_48;
+        uint64[] memory amounts = new uint64[](1);
+        amounts[0] = 1 ether;
+
+        uint256 maxFeePerWithdrawal = 0.1 ether;
+        vm.deal(address(river), maxFeePerWithdrawal);
+
+        vm.prank(address(river));
+        vm.expectRevert(abi.encodeWithSelector(IWithdrawV1.FeeReadFailed.selector));
+        w.withdraw{value: maxFeePerWithdrawal}(pubkeys, amounts, maxFeePerWithdrawal, excessFeeRecipient);
+    }
+
+    /// @notice Tests that withdraw reverts when the fee exceeds the max fee.
+    function testWithdrawFailsIfFeeExceedsMax() public {
+        bytes[] memory pubkeys = new bytes[](1);
+        pubkeys[0] = VALID_PUBKEY_48;
+        uint64[] memory amounts = new uint64[](1);
+        amounts[0] = 1 ether;
+
+        uint256 maxFeePerWithdrawal = 0.1 ether;
+        uint256 fee = maxFeePerWithdrawal + 1;
+        mockWithdrawal.setFee(fee);
+        vm.deal(address(river), maxFeePerWithdrawal);
+
+        vm.prank(address(river));
+        vm.expectRevert(abi.encodeWithSelector(IWithdrawV1.FeeTooHigh.selector, fee, maxFeePerWithdrawal));
+        withdraw.withdraw{value: maxFeePerWithdrawal}(pubkeys, amounts, maxFeePerWithdrawal, excessFeeRecipient);
+    }
+
+    /// @notice Tests that withdraw reverts when the request fails.
+    function testWithdrawFailsIfRequestFails() public {
+        MockELWithdrawalFails mockWithdrawalFails = new MockELWithdrawalFails();
+        WithdrawV1 w = new WithdrawV1();
+        LibImplementationUnbricker.unbrick(vm, address(w));
+        w.initializeWithdrawV1(address(river));
+        w.initWithdrawV1_1(address(mockWithdrawalFails), address(mockConsolidation));
+
+        bytes[] memory pubkeys = new bytes[](1);
+        pubkeys[0] = VALID_PUBKEY_48;
+        uint64[] memory amounts = new uint64[](1);
+        amounts[0] = 1 ether;
+
+        uint256 maxFeePerWithdrawal = 0.1 ether;
+        vm.deal(address(river), maxFeePerWithdrawal);
+
+        vm.prank(address(river));
+        vm.expectRevert(abi.encodeWithSignature("RequestFailed()"));
+        w.withdraw{value: maxFeePerWithdrawal}(pubkeys, amounts, maxFeePerWithdrawal, excessFeeRecipient);
+    }
+
+    /// @notice Tests that withdraw refunds the sender (river) any excess funds after actual fee deduction.
+    function testWithdrawRefundsSenderAnyExcessFund() public {
+        bytes[] memory pubkeys = new bytes[](1);
+        pubkeys[0] = VALID_PUBKEY_48;
+        uint64[] memory amounts = new uint64[](1);
+        amounts[0] = 1 ether;
+
+        uint256 maxFeePerWithdrawal = 2 ether;
+        uint256 fee = maxFeePerWithdrawal - 1 ether;
+        mockWithdrawal.setFee(fee);
+        vm.deal(address(river), maxFeePerWithdrawal);
+
+        uint256 recipientBalBefore = excessFeeRecipient.balance;
+        vm.prank(address(river));
+        withdraw.withdraw{value: maxFeePerWithdrawal}(pubkeys, amounts, maxFeePerWithdrawal, excessFeeRecipient);
+        uint256 recipientBalAfter = excessFeeRecipient.balance;
+        assertEq(recipientBalAfter, recipientBalBefore + (maxFeePerWithdrawal - fee), "Recipient should be refunded any excess funds after actual fee deduction.");
+    }
+
+    /// @notice Tests that withdraw emits UnsentExcessFee when excess refund fails.
+    function testWithdrawEmitsEventWhenExcessRefundsFail() public {
+        bytes[] memory pubkeys = new bytes[](1);
+        pubkeys[0] = VALID_PUBKEY_48;
+        uint64[] memory amounts = new uint64[](1);
+        amounts[0] = 1 ether;
+
+        uint256 maxFeePerWithdrawal = 2 ether;
+        uint256 fee = maxFeePerWithdrawal - 1 ether;
+        mockWithdrawal.setFee(fee);
+        vm.deal(address(river), maxFeePerWithdrawal);
+
+        address excessFeeRecipientAddr = address(new MockBeneficiaryContract());
+        uint256 totalValueReceived = maxFeePerWithdrawal;
+        uint256 excessFee = totalValueReceived - fee;
+
+        vm.expectEmit(true, true, true, true);
+        emit UnsentExcessFee(excessFeeRecipientAddr, excessFee);
+
+        vm.prank(address(river));
+        withdraw.withdraw{value: maxFeePerWithdrawal}(pubkeys, amounts, maxFeePerWithdrawal, excessFeeRecipientAddr);
+    }
+
+    /// @notice Tests that withdraw works when all is fine.
+    function testWithdrawWorksIfAllIsFine() public {
+        bytes[] memory pubkeys = new bytes[](1);
+        pubkeys[0] = VALID_PUBKEY_48;
+        uint64[] memory amounts = new uint64[](1);
+        amounts[0] = 1 ether;
+
+        uint256 maxFeePerWithdrawal = 0.1 ether;
+        mockWithdrawal.setFee(maxFeePerWithdrawal);
+        vm.deal(address(river), maxFeePerWithdrawal);
+
+        bytes memory callData = abi.encodePacked(pubkeys[0], amounts[0]);
+
+        vm.expectCall(address(mockWithdrawal), maxFeePerWithdrawal, callData);
+        vm.expectEmit(true, true, true, true);
+        emit WithdrawalRequested(pubkeys[0], amounts[0], maxFeePerWithdrawal);
+
+        vm.prank(address(river));
+        withdraw.withdraw{value: maxFeePerWithdrawal}(pubkeys, amounts, maxFeePerWithdrawal, excessFeeRecipient);
+    }
+
+    /// @notice Tests that withdraw emits events for multiple withdrawals.
+    function testWithdrawEmitsEventsForMultipleWithdrawals() public {
+        bytes[] memory pubkeys = new bytes[](2);
+        pubkeys[0] = VALID_PUBKEY_48;
+        pubkeys[1] = VALID_PUBKEY_48;
+        uint64[] memory amounts = new uint64[](2);
+        amounts[0] = 1 ether;
+        amounts[1] = 2 ether;
+
+        uint256 maxFeePerWithdrawal = 0.1 ether;
+        mockWithdrawal.setFee(maxFeePerWithdrawal);
+        vm.deal(address(river), maxFeePerWithdrawal * 2);
+
+        bytes memory callData1 = abi.encodePacked(pubkeys[0], amounts[0]);
+        bytes memory callData2 = abi.encodePacked(pubkeys[1], amounts[1]);
+
+        vm.expectCall(address(mockWithdrawal), maxFeePerWithdrawal, callData1);
+        vm.expectCall(address(mockWithdrawal), maxFeePerWithdrawal, callData2);
+        vm.expectEmit(true, true, true, true);
+        emit WithdrawalRequested(pubkeys[0], amounts[0], maxFeePerWithdrawal);
+        vm.expectEmit(true, true, true, true);
+        emit WithdrawalRequested(pubkeys[1], amounts[1], maxFeePerWithdrawal);
+
+        vm.prank(address(river));
+        withdraw.withdraw{value: maxFeePerWithdrawal * 2}(pubkeys, amounts, maxFeePerWithdrawal, excessFeeRecipient);
+    }
+
+    /// @notice Tests that withdraw reverts when the caller is not River.
+    function testWithdrawFailsIfNotOwner() public {
+        bytes[] memory pubkeys = new bytes[](1);
+        pubkeys[0] = VALID_PUBKEY_48;
+        uint64[] memory amounts = new uint64[](1);
+        amounts[0] = 1 ether;
+
+        uint256 maxFeePerWithdrawal = 0.1 ether;
+        address nonOwner = makeAddr("nonOwner");
+        vm.deal(nonOwner, maxFeePerWithdrawal);
+
+        vm.expectRevert(abi.encodeWithSignature("Unauthorized(address)", nonOwner));
+        vm.prank(nonOwner);
+        withdraw.withdraw{value: maxFeePerWithdrawal}(pubkeys, amounts, maxFeePerWithdrawal, excessFeeRecipient);
+    }
+
+    /// @notice Tests that withdraw reverts when a pubkey is not 48 bytes.
+    function testWithdrawFailsIfPubkeyLengthInvalid() public {
+        bytes[] memory pubkeys = new bytes[](1);
+        pubkeys[0] = hex"1234567890abcdef1234567890abcde67895645f1234567890abcdef1234567890abcdef1234567890abcdef123456"; // 47 bytes
+        uint64[] memory amounts = new uint64[](1);
+        amounts[0] = 1 ether;
+
+        uint256 maxFeePerWithdrawal = 0.1 ether;
+        vm.deal(address(river), maxFeePerWithdrawal);
+
+        vm.expectRevert(abi.encodeWithSelector(IWithdrawV1.InvalidPubkeyLength.selector, 47));
+        vm.prank(address(river));
+        withdraw.withdraw{value: maxFeePerWithdrawal}(pubkeys, amounts, maxFeePerWithdrawal, excessFeeRecipient);
+    }
+
+    /// @notice Tests that withdraw reverts when the fee exceeds the value sent.
+    function testWithdrawFailsIfFeeExceedsValue() public {
+        bytes[] memory pubkeys = new bytes[](1);
+        pubkeys[0] = VALID_PUBKEY_48;
+        uint64[] memory amounts = new uint64[](1);
+        amounts[0] = 1 ether;
+
+        uint256 maxFeePerWithdrawal = 0.1 ether;
+        mockWithdrawal.setFee(maxFeePerWithdrawal);
+        uint256 value = maxFeePerWithdrawal - 1;
+        vm.deal(address(river), maxFeePerWithdrawal);
+
+        vm.expectRevert(abi.encodeWithSelector(IWithdrawV1.InsufficientValueForFee.selector, value, maxFeePerWithdrawal));
+        vm.prank(address(river));
+        withdraw.withdraw{value: value}(pubkeys, amounts, maxFeePerWithdrawal, excessFeeRecipient);
+    }
+
+    /// @notice Tests that withdraw reverts when pubkeys and amounts length mismatch.
+    function testWithdrawFailsIfInputLengthMismatch() public {
+        bytes[] memory pubkeys = new bytes[](1);
+        pubkeys[0] = VALID_PUBKEY_48;
+        uint64[] memory amounts = new uint64[](0);
+
+        uint256 maxFeePerWithdrawal = 0.1 ether;
+        vm.deal(address(river), maxFeePerWithdrawal);
+
+        vm.expectRevert(abi.encodeWithSelector(IWithdrawV1.LengthMismatch.selector, pubkeys.length, amounts.length));
+        vm.prank(address(river));
+        withdraw.withdraw{value: maxFeePerWithdrawal}(pubkeys, amounts, maxFeePerWithdrawal, excessFeeRecipient);
     }
 }
