@@ -420,6 +420,7 @@ abstract contract OracleManagerV1 is IOracleManagerV1 {
         }
 
         // if we have available amount to upper bound after pulling coverage funds, we attempt to pull consolidation coverage funds
+        // TODO: This will change when we introduce the consolidation buffer. this would be called when the buffer value is not zero
         if (vars.availableAmountToUpperBound > 0) {
             vars.trace.pulledConsolidationCoverageFunds = _pullConsolidationCoverageFunds(vars.availableAmountToUpperBound);
         }
