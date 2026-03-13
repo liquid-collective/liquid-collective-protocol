@@ -27,6 +27,7 @@ import "./state/river/ELFeeRecipientAddress.sol";
 import "./state/river/CoverageFundAddress.sol";
 import "./state/river/ConsolidationCoverageFundAddress.sol";
 import "./state/river/BalanceToRedeem.sol";
+import "./state/river/BalanceToConsolidate.sol";
 import "./state/river/GlobalFee.sol";
 import "./state/river/MetadataURI.sol";
 import "./state/river/LastConsensusLayerReport.sol";
@@ -191,6 +192,25 @@ contract RiverV1 is
     /// @inheritdoc IRiverV1
     function getBalanceToRedeem() external view returns (uint256) {
         return BalanceToRedeem.get();
+    }
+
+    /// @inheritdoc IRiverV1
+    function getBalanceToConsolidate() external view returns (uint256) {
+        return BalanceToConsolidate.get();
+    }
+
+    /// @inheritdoc IRiverV1
+    function mintLsETHForConsolidation(uint256 _amount, address _recipient) external {
+        if (msg.sender != KeeperAddress.get()) {
+            revert IConsensusLayerDepositManagerV1.OnlyKeeper();
+        }
+        if (_amount == 0) {
+            revert LibErrors.InvalidArgument();
+        }
+        LibSanitize._notZeroAddress(_recipient);
+        _setBalanceToConsolidate(BalanceToConsolidate.get() + _amount);
+        uint256 sharesMinted = _mintShares(_recipient, _amount);
+        emit LsETHMintedForConsolidation(_recipient, _amount, sharesMinted);
     }
 
     /// @inheritdoc IRiverV1
@@ -432,12 +452,12 @@ contract RiverV1 is
         uint256 clValidatorCount = storedReport.validatorsCount;
         uint256 depositedValidatorCount = DepositedValidatorCount.get();
         if (clValidatorCount < depositedValidatorCount) {
-            return storedReport.validatorsBalance + BalanceToDeposit.get() + CommittedBalance.get()
-                + BalanceToRedeem.get() + (depositedValidatorCount - clValidatorCount)
+            return storedReport.validatorsBalance + BalanceToDeposit.get() + BalanceToConsolidate.get()
+                + CommittedBalance.get() + BalanceToRedeem.get() + (depositedValidatorCount - clValidatorCount)
                 * ConsensusLayerDepositManagerV1.DEPOSIT_SIZE;
         } else {
-            return
-                storedReport.validatorsBalance + BalanceToDeposit.get() + CommittedBalance.get() + BalanceToRedeem.get();
+            return storedReport.validatorsBalance + BalanceToDeposit.get() + BalanceToConsolidate.get()
+                + CommittedBalance.get() + BalanceToRedeem.get();
         }
     }
 
@@ -460,6 +480,13 @@ contract RiverV1 is
     function _setBalanceToRedeem(uint256 _newBalanceToRedeem) internal {
         emit SetBalanceToRedeem(BalanceToRedeem.get(), _newBalanceToRedeem);
         BalanceToRedeem.set(_newBalanceToRedeem);
+    }
+
+    /// @notice Sets the balance to consolidate (ETH attributed to consolidation mints)
+    /// @param _newBalanceToConsolidate The new balance to consolidate value
+    function _setBalanceToConsolidate(uint256 _newBalanceToConsolidate) internal {
+        emit SetBalanceToConsolidate(BalanceToConsolidate.get(), _newBalanceToConsolidate);
+        BalanceToConsolidate.set(_newBalanceToConsolidate);
     }
 
     /// @notice Sets the committed balance, ready to be deposited to the consensus layer

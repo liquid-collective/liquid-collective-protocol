@@ -324,7 +324,7 @@ abstract contract OracleManagerV1 is IOracleManagerV1 {
             // this method pulls and updates ethToDeposit / ethToRedeem accordingly
             _pullCLFunds(vars.skimmedAmountIncrease, vars.exitedAmountIncrease);
         }
-
+        // TODO: Adjust the BalanceToConsolidate based on the oracle reporting
         {
             // we update the system parameters, this will have an impact on how the total underlying balance is computed
             IOracleManagerV1.StoredConsensusLayerReport memory storedReport;
