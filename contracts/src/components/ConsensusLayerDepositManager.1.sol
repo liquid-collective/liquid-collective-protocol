@@ -101,8 +101,9 @@ abstract contract ConsensusLayerDepositManagerV1 is IConsensusLayerDepositManage
         }
 
         uint256 committedBalance = CommittedBalance.get();
-        uint256 maxDepositableCount = committedBalance / DEPOSIT_SIZE;
 
+        // early termination check
+        uint256 maxDepositableCount = committedBalance / DEPOSIT_SIZE;
         if (maxDepositableCount == 0) {
             revert NotEnoughFunds();
         }
