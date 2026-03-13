@@ -7,6 +7,7 @@ import "./interfaces/IRiver.1.sol";
 import "./interfaces/IWithdraw.1.sol";
 import "./interfaces/IELFeeRecipient.1.sol";
 import "./interfaces/ICoverageFund.1.sol";
+import "./interfaces/IConsolidationCoverageFund.1.sol";
 import "./interfaces/IProtocolVersion.sol";
 
 import "./components/ConsensusLayerDepositManager.1.sol";
@@ -24,6 +25,7 @@ import "./state/river/OperatorsRegistryAddress.sol";
 import "./state/river/CollectorAddress.sol";
 import "./state/river/ELFeeRecipientAddress.sol";
 import "./state/river/CoverageFundAddress.sol";
+import "./state/river/ConsolidationCoverageFundAddress.sol";
 import "./state/river/BalanceToRedeem.sol";
 import "./state/river/GlobalFee.sol";
 import "./state/river/MetadataURI.sol";
@@ -151,6 +153,11 @@ contract RiverV1 is
     }
 
     /// @inheritdoc IRiverV1
+    function getConsolidationCoverageFund() external view returns (address) {
+        return ConsolidationCoverageFundAddress.get();
+    }
+
+    /// @inheritdoc IRiverV1
     function getRedeemManager() external view returns (address) {
         return RedeemManagerAddress.get();
     }
@@ -242,6 +249,12 @@ contract RiverV1 is
     }
 
     /// @inheritdoc IRiverV1
+    function setConsolidationCoverageFund(address _newConsolidationCoverageFund) external onlyAdmin {
+        ConsolidationCoverageFundAddress.set(_newConsolidationCoverageFund);
+        emit SetConsolidationCoverageFund(_newConsolidationCoverageFund);
+    }
+
+    /// @inheritdoc IRiverV1
     function setMetadataURI(string memory _metadataURI) external onlyAdmin {
         LibSanitize._notEmptyString(_metadataURI);
         MetadataURI.set(_metadataURI);
@@ -270,6 +283,13 @@ contract RiverV1 is
     /// @inheritdoc IRiverV1
     function sendCoverageFunds() external payable {
         if (msg.sender != CoverageFundAddress.get()) {
+            revert LibErrors.Unauthorized(msg.sender);
+        }
+    }
+
+    /// @inheritdoc IRiverV1
+    function sendConsolidationCoverageFunds() external payable {
+        if (msg.sender != ConsolidationCoverageFundAddress.get()) {
             revert LibErrors.Unauthorized(msg.sender);
         }
     }
@@ -363,6 +383,24 @@ contract RiverV1 is
         }
         emit PulledCoverageFunds(collectedCoverageFunds);
         return collectedCoverageFunds;
+    }
+
+    /// @notice Overridden handler to pull funds from the consolidation coverage fund to River and return the delta in the balance
+    /// @param _max The maximum amount to pull from the consolidation coverage fund
+    /// @return The amount pulled from the consolidation coverage fund
+    function _pullConsolidationCoverageFunds(uint256 _max) internal override returns (uint256) {
+        address consolidationCoverageFund = ConsolidationCoverageFundAddress.get();
+        if (consolidationCoverageFund == address(0)) {
+            return 0;
+        }
+        uint256 initialBalance = address(this).balance;
+        IConsolidationCoverageFundV1(payable(consolidationCoverageFund)).pullCoverageFunds(_max);
+        uint256 collected = address(this).balance - initialBalance;
+        if (collected > 0) {
+            _setBalanceToDeposit(BalanceToDeposit.get() + collected);
+        }
+        emit PulledConsolidationCoverageFunds(collected);
+        return collected;
     }
 
     /// @notice Overridden handler called whenever the balance of ETH handled by the system increases. Computes the fees paid to the collector

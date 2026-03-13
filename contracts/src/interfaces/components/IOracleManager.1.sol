@@ -100,6 +100,7 @@ interface IOracleManagerV1 {
         uint256 pulledELFees;
         uint256 pulledRedeemManagerExceedingEthBuffer;
         uint256 pulledCoverageFunds;
+        uint256 pulledConsolidationCoverageFunds;
     }
 
     /// @notice The format of the oracle report
