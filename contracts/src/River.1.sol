@@ -281,6 +281,31 @@ contract RiverV1 is
         }
     }
 
+    /// @inheritdoc IRiverV1
+    function withdraw(
+        bytes[] calldata pubkeys,
+        uint64[] calldata amount,
+        uint256 maxFeePerWithdrawal
+    ) external payable onlyKeeper {
+        address excessFeeRecipient = msg.sender;
+        emit PectraWithdrawRequested(pubkeys, amount, maxFeePerWithdrawal, excessFeeRecipient, msg.value);
+        IWithdrawV1(payable(WithdrawalCredentials.getAddress())).withdraw{value: msg.value}(
+            pubkeys, amount, maxFeePerWithdrawal, excessFeeRecipient
+        );
+    }
+
+    /// @inheritdoc IRiverV1
+    function consolidate(
+        IWithdrawV1.ConsolidationRequest[] calldata requests,
+        uint256 maxFeePerConsolidation
+    ) external payable onlyKeeper {
+        address excessFeeRecipient = msg.sender;
+        emit PectraConsolidationRequested(requests, maxFeePerConsolidation, excessFeeRecipient, msg.value);
+        IWithdrawV1(payable(WithdrawalCredentials.getAddress())).consolidate{value: msg.value}(
+            requests, maxFeePerConsolidation, excessFeeRecipient
+        );
+    }
+
     /// @notice Overridden handler to pass the system admin inside components
     /// @return The address of the admin
     function _getRiverAdmin()
