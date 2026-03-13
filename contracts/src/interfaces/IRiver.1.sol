@@ -7,6 +7,7 @@ import "./components/IConsensusLayerDepositManager.1.sol";
 import "./components/IOracleManager.1.sol";
 import "./components/ISharesManager.1.sol";
 import "./components/IUserDepositManager.1.sol";
+import "./IWithdraw.1.sol";
 
 /// @title River Interface (v1)
 /// @author Alluvial Finance Inc.
@@ -101,6 +102,32 @@ interface IRiverV1 is IConsensusLayerDepositManagerV1, IUserDepositManagerV1, IS
     /// @param suppliedRedeemManagerDemandInEth The amount in ETH of the supplied demand
     event ReportedRedeemManager(
         uint256 redeemManagerDemand, uint256 suppliedRedeemManagerDemand, uint256 suppliedRedeemManagerDemandInEth
+    );
+
+    /// @notice Emitted when River forwards a Pectra withdraw request to the Withdraw contract
+    /// @param pubkeys Validator pubkeys (48 bytes each)
+    /// @param amount Withdrawal amount per validator (gwei)
+    /// @param maxFeePerWithdrawal Maximum fee per withdrawal
+    /// @param excessFeeRecipient Address to receive any excess msg.value
+    /// @param valueSent ETH sent with the call for fees
+    event PectraWithdrawRequested(
+        bytes[] pubkeys,
+        uint64[] amount,
+        uint256 maxFeePerWithdrawal,
+        address excessFeeRecipient,
+        uint256 valueSent
+    );
+
+    /// @notice Emitted when River forwards a Pectra consolidation request to the Withdraw contract
+    /// @param requests Consolidation requests
+    /// @param maxFeePerConsolidation Maximum fee per consolidation
+    /// @param excessFeeRecipient Address to receive any excess msg.value
+    /// @param valueSent ETH sent with the call for fees
+    event PectraConsolidationRequested(
+        IWithdrawV1.ConsolidationRequest[] requests,
+        uint256 maxFeePerConsolidation,
+        address excessFeeRecipient,
+        uint256 valueSent
     );
 
     /// @notice Thrown when the amount received from the Withdraw contract doe not match the requested amount
@@ -268,4 +295,22 @@ interface IRiverV1 is IConsensusLayerDepositManagerV1, IUserDepositManagerV1, IS
 
     /// @notice Input for the redeem manager funds
     function sendRedeemManagerExceedingFunds() external payable;
+
+    /// @notice Request Pectra withdrawals via the Withdraw contract. Callable by admin; fee ETH sent as msg.value.
+    /// @param pubkeys Validator pubkeys (48 bytes each)
+    /// @param amount Withdrawal amount per validator (gwei)
+    /// @param maxFeePerWithdrawal Maximum fee per withdrawal to accept
+    function withdraw(
+        bytes[] calldata pubkeys,
+        uint64[] calldata amount,
+        uint256 maxFeePerWithdrawal
+    ) external payable;
+
+    /// @notice Request Pectra consolidations via the Withdraw contract. Callable by admin; fee ETH sent as msg.value.
+    /// @param requests Consolidation requests (each: src pubkeys -> target pubkey)
+    /// @param maxFeePerConsolidation Maximum fee per consolidation to accept
+    function consolidate(
+        IWithdrawV1.ConsolidationRequest[] calldata requests,
+        uint256 maxFeePerConsolidation
+    ) external payable;
 }
