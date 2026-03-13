@@ -299,12 +299,15 @@ contract RiverV1 is
         uint256 i = 0;
         while (i < _allocations.length) {
             uint256 operatorIndex = _allocations[i].operatorIndex;
-            uint32 count = 0;
+            uint256 start = i;
             while (i < _allocations.length && _allocations[i].operatorIndex == operatorIndex) {
-                ++count;
                 ++i;
             }
-            registry.incrementFundedValidators(operatorIndex, count);
+            bytes[] memory publicKeys = new bytes[](i - start);
+            for (uint256 j = start; j < i; ++j) {
+                publicKeys[j - start] = _allocations[j].pubkey;
+            }
+            registry.incrementFundedValidators(operatorIndex, publicKeys);
         }
     }
 

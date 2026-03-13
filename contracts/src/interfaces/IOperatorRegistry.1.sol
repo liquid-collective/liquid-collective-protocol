@@ -63,6 +63,12 @@ interface IOperatorsRegistryV1 {
     /// @param stoppedValidatorCounts The new stopped validator counts
     event UpdatedStoppedValidators(uint32[] stoppedValidatorCounts);
 
+    /// @notice The funded validator keys of an operator have been updated
+    /// @param index The operator index
+    /// @param publicKeys The list of funded public keys
+    /// @param deferred Whether the event was emitted as part of a deferred (migration) process
+    event FundedValidatorKeys(uint256 indexed index, bytes[] publicKeys, bool deferred);
+
     /// @notice The requested exit count has been updated
     /// @param index The operator index
     /// @param count The count of requested exits
@@ -243,8 +249,8 @@ interface IOperatorsRegistryV1 {
     /// @notice Increment the funded validator count for an operator
     /// @dev Only callable by the River contract. Called once per distinct operator during deposit.
     /// @param _operatorIndex The operator index
-    /// @param _count The number of validators funded for this operator
-    function incrementFundedValidators(uint256 _operatorIndex, uint32 _count) external;
+    /// @param _publicKeys The public keys of the newly funded validators
+    function incrementFundedValidators(uint256 _operatorIndex, bytes[] calldata _publicKeys) external;
 
     /// @notice Increases the exit request demand
     /// @dev This method is only callable by the river contract, and to actually forward the information to the node operators via event emission, the unprotected requestValidatorExits method must be called
