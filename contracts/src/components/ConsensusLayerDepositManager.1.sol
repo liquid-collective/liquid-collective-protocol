@@ -113,12 +113,6 @@ abstract contract ConsensusLayerDepositManagerV1 is IConsensusLayerDepositManage
             if (i > 0 && _allocations[i].operatorIndex < _allocations[i - 1].operatorIndex) {
                 revert IOperatorsRegistryV1.UnorderedOperatorList();
             }
-            if (_allocations[i].pubkey.length != PUBLIC_KEY_LENGTH) {
-                revert InconsistentPublicKey();
-            }
-            if (_allocations[i].signature.length != SIGNATURE_LENGTH) {
-                revert InconsistentSignature();
-            }
             if (_allocations[i].depositAmount != DEPOSIT_SIZE) {
                 revert InvalidDepositSize(_allocations[i].depositAmount);
             }
@@ -138,12 +132,14 @@ abstract contract ConsensusLayerDepositManagerV1 is IConsensusLayerDepositManage
 
         _updateFundedValidators(_allocations);
 
+        address depositContract = DepositContractAddress.get();
         for (uint256 idx = 0; idx < _allocations.length; ++idx) {
             _depositValidator(
                 _allocations[idx].pubkey,
                 _allocations[idx].signature,
                 _allocations[idx].depositAmount,
-                withdrawalCredentials
+                withdrawalCredentials,
+                depositContract
             );
         }
         _setCommittedBalance(committedBalance - totalRequested);
@@ -162,7 +158,8 @@ abstract contract ConsensusLayerDepositManagerV1 is IConsensusLayerDepositManage
         bytes memory _publicKey,
         bytes memory _signature,
         uint256 _depositAmount,
-        bytes32 _withdrawalCredentials
+        bytes32 _withdrawalCredentials,
+        address _depositContract
     ) internal {
         if (_publicKey.length != PUBLIC_KEY_LENGTH) {
             revert InconsistentPublicKey();
@@ -192,7 +189,7 @@ abstract contract ConsensusLayerDepositManagerV1 is IConsensusLayerDepositManage
 
         uint256 targetBalance = address(this).balance - value;
 
-        IDepositContract(DepositContractAddress.get()).deposit{value: value}(
+        IDepositContract(_depositContract).deposit{value: value}(
             _publicKey, abi.encodePacked(_withdrawalCredentials), _signature, depositDataRoot
         );
         if (address(this).balance != targetBalance) {

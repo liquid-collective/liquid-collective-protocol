@@ -252,11 +252,10 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
             if (!operator.active) {
                 revert InactiveOperator(operatorIndex);
             }
-            if (count > (operator.funded - operator.requestedExits)) {
+            uint256 available = operator.funded - operator.requestedExits;
+            if (count > available) {
                 // Operator has insufficient available funded validators
-                revert ExitsRequestedExceedAvailableFundedCount(
-                    operatorIndex, count, operator.funded - operator.requestedExits
-                );
+                revert ExitsRequestedExceedAvailableFundedCount(operatorIndex, count, available);
             }
             // Operator has sufficient funded validators
             operator.requestedExits += uint32(count);
