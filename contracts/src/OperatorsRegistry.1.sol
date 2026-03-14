@@ -12,13 +12,10 @@ import "./Administrable.sol";
 
 import "./state/operatorsRegistry/Operators.1.sol";
 import "./state/operatorsRegistry/Operators.2.sol";
-import "./state/operatorsRegistry/ValidatorKeys.sol";
+import "./state/operatorsRegistry/Operators.3.sol";
 import "./state/operatorsRegistry/TotalValidatorExitsRequested.sol";
 import "./state/operatorsRegistry/CurrentValidatorExitsDemand.sol";
 import "./state/shared/RiverAddress.sol";
-
-import "./state/migration/OperatorsRegistry_FundedKeyEventRebroadcasting_KeyIndex.sol";
-import "./state/migration/OperatorsRegistry_FundedKeyEventRebroadcasting_OperatorIndex.sol";
 
 /// @title Operators Registry (v1)
 /// @author Alluvial Finance Inc.
@@ -56,54 +53,26 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
         }
     }
 
-    /// MIGRATION: FUNDED VALIDATOR KEY EVENT REBROADCASTING
-    /// As the event for funded keys was moved from River to this contract because we needed to be able to bind
-    /// operator indexes to public keys, we need to rebroadcast the past funded validator keys with the new event
-    /// to keep retro-compatibility
-
-    /// Emitted when the event rebroadcasting is done and we attempt to broadcast new events
-    error FundedKeyEventMigrationComplete();
-
-    /// Utility to force the broadcasting of events. Will keep its progress in storage to prevent being DoSed by the number of keys
-    /// @param _amountToEmit The amount of events to emit at maximum in this call
-    function forceFundedValidatorKeysEventEmission(uint256 _amountToEmit) external {
-        uint256 operatorIndex = OperatorsRegistry_FundedKeyEventRebroadcasting_OperatorIndex.get();
-        if (operatorIndex == type(uint256).max) {
-            revert FundedKeyEventMigrationComplete();
-        }
-        if (OperatorsV2.getCount() == 0) {
-            OperatorsRegistry_FundedKeyEventRebroadcasting_OperatorIndex.set(type(uint256).max);
-            return;
-        }
-        uint256 keyIndex = OperatorsRegistry_FundedKeyEventRebroadcasting_KeyIndex.get();
-        while (_amountToEmit > 0 && operatorIndex != type(uint256).max) {
-            OperatorsV2.Operator memory operator = OperatorsV2.get(operatorIndex);
-
-            (bytes[] memory publicKeys,) = ValidatorKeys.getKeys(
-                operatorIndex, keyIndex, LibUint256.min(_amountToEmit, operator.funded - keyIndex)
-            );
-            emit FundedValidatorKeys(operatorIndex, publicKeys, true);
-            if (keyIndex + publicKeys.length == operator.funded) {
-                keyIndex = 0;
-                if (operatorIndex == OperatorsV2.getCount() - 1) {
-                    operatorIndex = type(uint256).max;
-                } else {
-                    unchecked {
-                        ++operatorIndex;
-                    }
-                }
-            } else {
-                keyIndex += publicKeys.length;
-            }
-            _amountToEmit -= publicKeys.length;
-        }
-        OperatorsRegistry_FundedKeyEventRebroadcasting_OperatorIndex.set(operatorIndex);
-        OperatorsRegistry_FundedKeyEventRebroadcasting_KeyIndex.set(keyIndex);
-    }
-
     /// @inheritdoc IOperatorsRegistryV1
     function initOperatorsRegistryV1_1() external init(1) {
         _migrateOperators_V1_1();
+    }
+
+    /// @inheritdoc IOperatorsRegistryV1
+    function initOperatorsRegistryV1_2() external init(2) {
+        uint256 opCount = OperatorsV2.getCount();
+        for (uint256 idx = 0; idx < opCount; ++idx) {
+            OperatorsV2.Operator memory old = OperatorsV2.get(idx);
+            OperatorsV3.push(
+                OperatorsV3.Operator({
+                    funded: old.funded,
+                    requestedExits: old.requestedExits,
+                    active: old.active,
+                    name: old.name,
+                    operator: old.operator
+                })
+            );
+        }
     }
 
     /// @notice Prevent unauthorized calls
@@ -122,7 +91,7 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
             _;
             return;
         }
-        OperatorsV2.Operator storage operator = OperatorsV2.get(_index);
+        OperatorsV3.Operator storage operator = OperatorsV3.get(_index);
         if (!operator.active) {
             revert InactiveOperator(_index);
         }
@@ -138,8 +107,8 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
     }
 
     /// @inheritdoc IOperatorsRegistryV1
-    function getOperator(uint256 _index) external view returns (OperatorsV2.Operator memory) {
-        return OperatorsV2.get(_index);
+    function getOperator(uint256 _index) external view returns (OperatorsV3.Operator memory) {
+        return OperatorsV3.get(_index);
     }
 
     /// @inheritdoc IOperatorsRegistryV1
@@ -170,12 +139,12 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
 
     /// @inheritdoc IOperatorsRegistryV1
     function getOperatorCount() external view returns (uint256) {
-        return OperatorsV2.getCount();
+        return OperatorsV3.getCount();
     }
 
     /// @inheritdoc IOperatorsRegistryV1
     function getStoppedValidatorCountPerOperator() external view returns (uint32[] memory) {
-        uint32[] memory completeList = OperatorsV2.getStoppedValidators();
+        uint32[] memory completeList = OperatorsV3.getStoppedValidators();
         uint256 listLength = completeList.length;
 
         if (listLength > 0) {
@@ -197,30 +166,8 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
     }
 
     /// @inheritdoc IOperatorsRegistryV1
-    function getValidator(uint256 _operatorIndex, uint256 _validatorIndex)
-        external
-        view
-        returns (bytes memory publicKey, bytes memory signature, bool funded)
-    {
-        (publicKey, signature) = ValidatorKeys.get(_operatorIndex, _validatorIndex);
-        funded = _validatorIndex < OperatorsV2.get(_operatorIndex).funded;
-    }
-
-    /// @inheritdoc IOperatorsRegistryV1
-    function getNextValidatorsToDepositFromActiveOperators(OperatorAllocation[] memory _allocations)
-        external
-        view
-        returns (bytes[] memory publicKeys, bytes[] memory signatures)
-    {
-        (bytes[][] memory perOpKeys, bytes[][] memory perOpSigs) =
-            _getPerOperatorValidatorKeysForAllocations(_allocations);
-        publicKeys = _flattenByteArrays(perOpKeys);
-        signatures = _flattenByteArrays(perOpSigs);
-    }
-
-    /// @inheritdoc IOperatorsRegistryV1
-    function listActiveOperators() external view returns (OperatorsV2.Operator[] memory) {
-        return OperatorsV2.getAllActive();
+    function listActiveOperators() external view returns (OperatorsV3.Operator[] memory) {
+        return OperatorsV3.getAllActive();
     }
 
     /// @inheritdoc IOperatorsRegistryV1
@@ -233,18 +180,10 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
 
     /// @inheritdoc IOperatorsRegistryV1
     function addOperator(string calldata _name, address _operator) external onlyAdmin returns (uint256) {
-        OperatorsV2.Operator memory newOperator = OperatorsV2.Operator({
-            active: true,
-            operator: _operator,
-            name: _name,
-            limit: 0,
-            funded: 0,
-            keys: 0,
-            requestedExits: 0,
-            latestKeysEditBlockNumber: uint64(block.number)
-        });
+        OperatorsV3.Operator memory newOperator =
+            OperatorsV3.Operator({active: true, operator: _operator, name: _name, funded: 0, requestedExits: 0});
 
-        uint256 operatorIndex = OperatorsV2.push(newOperator) - 1;
+        uint256 operatorIndex = OperatorsV3.push(newOperator) - 1;
 
         emit AddedOperator(operatorIndex, _name, _operator);
         return operatorIndex;
@@ -253,7 +192,7 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
     /// @inheritdoc IOperatorsRegistryV1
     function setOperatorAddress(uint256 _index, address _newOperatorAddress) external onlyOperatorOrAdmin(_index) {
         LibSanitize._notZeroAddress(_newOperatorAddress);
-        OperatorsV2.Operator storage operator = OperatorsV2.get(_index);
+        OperatorsV3.Operator storage operator = OperatorsV3.get(_index);
 
         operator.operator = _newOperatorAddress;
 
@@ -263,7 +202,7 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
     /// @inheritdoc IOperatorsRegistryV1
     function setOperatorName(uint256 _index, string calldata _newName) external onlyOperatorOrAdmin(_index) {
         LibSanitize._notEmptyString(_newName);
-        OperatorsV2.Operator storage operator = OperatorsV2.get(_index);
+        OperatorsV3.Operator storage operator = OperatorsV3.get(_index);
         operator.name = _newName;
 
         emit SetOperatorName(_index, _newName);
@@ -271,166 +210,10 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
 
     /// @inheritdoc IOperatorsRegistryV1
     function setOperatorStatus(uint256 _index, bool _newStatus) external onlyAdmin {
-        OperatorsV2.Operator storage operator = OperatorsV2.get(_index);
+        OperatorsV3.Operator storage operator = OperatorsV3.get(_index);
         operator.active = _newStatus;
 
         emit SetOperatorStatus(_index, _newStatus);
-    }
-
-    /// @inheritdoc IOperatorsRegistryV1
-    function setOperatorLimits(
-        uint256[] calldata _operatorIndexes,
-        uint32[] calldata _newLimits,
-        uint256 _snapshotBlock
-    ) external onlyAdmin {
-        uint256 _operatorIndexesLength = _operatorIndexes.length;
-        if (_operatorIndexesLength != _newLimits.length) {
-            revert InvalidArrayLengths();
-        }
-        if (_operatorIndexesLength == 0) {
-            revert InvalidEmptyArray();
-        }
-        for (uint256 idx = 0; idx < _operatorIndexesLength; ++idx) {
-            uint256 operatorIndex = _operatorIndexes[idx];
-            uint32 newLimit = _newLimits[idx];
-
-            // prevents duplicates
-            if (idx > 0 && !(operatorIndex > _operatorIndexes[idx - 1])) {
-                revert UnorderedOperatorList();
-            }
-
-            OperatorsV2.Operator storage operator = OperatorsV2.get(operatorIndex);
-
-            uint32 currentLimit = operator.limit;
-            if (newLimit == currentLimit) {
-                emit OperatorLimitUnchanged(operatorIndex, newLimit);
-                continue;
-            }
-
-            // we enter this condition if the operator edited its keys after the off-chain key audit was made
-            // we will skip any limit update on that operator unless it was a decrease in the initial limit
-            if (_snapshotBlock < operator.latestKeysEditBlockNumber && newLimit > currentLimit) {
-                emit OperatorEditsAfterSnapshot(
-                    operatorIndex, currentLimit, newLimit, operator.latestKeysEditBlockNumber, _snapshotBlock
-                );
-                continue;
-            }
-
-            // otherwise, we check for limit invariants that shouldn't happen if the off-chain key audit
-            // was made properly, and if everything is respected, we update the limit
-
-            if (newLimit > operator.keys) {
-                revert OperatorLimitTooHigh(operatorIndex, newLimit, operator.keys);
-            }
-
-            if (newLimit < operator.funded) {
-                revert OperatorLimitTooLow(operatorIndex, newLimit, operator.funded);
-            }
-
-            operator.limit = newLimit;
-            emit SetOperatorLimit(operatorIndex, newLimit);
-        }
-    }
-
-    /// @inheritdoc IOperatorsRegistryV1
-    function addValidators(uint256 _index, uint32 _keyCount, bytes calldata _publicKeysAndSignatures)
-        external
-        onlyOperatorOrAdmin(_index)
-    {
-        if (_keyCount == 0) {
-            revert InvalidKeyCount();
-        }
-
-        if (
-            _publicKeysAndSignatures.length
-                != _keyCount * (ValidatorKeys.PUBLIC_KEY_LENGTH + ValidatorKeys.SIGNATURE_LENGTH)
-        ) {
-            revert InvalidKeysLength();
-        }
-
-        OperatorsV2.Operator storage operator = OperatorsV2.get(_index);
-        uint256 totalKeys = uint256(operator.keys);
-        for (uint256 idx = 0; idx < _keyCount; ++idx) {
-            bytes memory publicKeyAndSignature = LibBytes.slice(
-                _publicKeysAndSignatures,
-                idx * (ValidatorKeys.PUBLIC_KEY_LENGTH + ValidatorKeys.SIGNATURE_LENGTH),
-                ValidatorKeys.PUBLIC_KEY_LENGTH + ValidatorKeys.SIGNATURE_LENGTH
-            );
-            ValidatorKeys.set(_index, totalKeys + idx, publicKeyAndSignature);
-        }
-        OperatorsV2.setKeys(_index, uint32(totalKeys) + _keyCount);
-
-        emit AddedValidatorKeys(_index, _publicKeysAndSignatures);
-    }
-
-    /// @inheritdoc IOperatorsRegistryV1
-    function removeValidators(uint256 _index, uint256[] calldata _indexes) external onlyOperatorOrAdmin(_index) {
-        uint256 indexesLength = _indexes.length;
-        if (indexesLength == 0) {
-            revert InvalidKeyCount();
-        }
-
-        OperatorsV2.Operator storage operator = OperatorsV2.get(_index);
-
-        uint32 totalKeys = operator.keys;
-
-        if (!(_indexes[0] < totalKeys)) {
-            revert InvalidIndexOutOfBounds();
-        }
-
-        uint256 lastIndex = _indexes[indexesLength - 1];
-
-        if (lastIndex < operator.funded) {
-            revert InvalidFundedKeyDeletionAttempt();
-        }
-
-        bool limitEqualsKeyCount = totalKeys == operator.limit;
-        OperatorsV2.setKeys(_index, totalKeys - uint32(indexesLength));
-
-        for (uint256 idx; idx < indexesLength;) {
-            uint256 keyIndex = _indexes[idx];
-
-            if (idx > 0 && !(keyIndex < _indexes[idx - 1])) {
-                revert InvalidUnsortedIndexes();
-            }
-            unchecked {
-                ++idx;
-            }
-
-            uint256 lastKeyIndex = totalKeys - idx;
-
-            (bytes memory removedPublicKey,) = ValidatorKeys.get(_index, keyIndex);
-            (bytes memory lastPublicKeyAndSignature) = ValidatorKeys.getRaw(_index, lastKeyIndex);
-            ValidatorKeys.set(_index, keyIndex, lastPublicKeyAndSignature);
-            ValidatorKeys.set(_index, lastKeyIndex, new bytes(0));
-
-            emit RemovedValidatorKey(_index, removedPublicKey);
-        }
-
-        if (limitEqualsKeyCount) {
-            operator.limit = operator.keys;
-        } else if (lastIndex < operator.limit) {
-            operator.limit = uint32(lastIndex);
-        }
-    }
-
-    /// @inheritdoc IOperatorsRegistryV1
-    function pickNextValidatorsToDeposit(OperatorAllocation[] calldata _allocations)
-        external
-        onlyRiver
-        returns (bytes[] memory publicKeys, bytes[] memory signatures)
-    {
-        // The dimensions of the bytes arrays must match the validator counts for each operator in the allocations
-        (bytes[][] memory perOpKeys, bytes[][] memory perOpSigs) =
-            _getPerOperatorValidatorKeysForAllocations(_allocations);
-        for (uint256 i = 0; i < perOpKeys.length; ++i) {
-            // perOpKeys[i] and perOpSigs[i] each have length == _allocations[i].validatorCount,
-            // guaranteed by _getPerOperatorValidatorKeysForAllocations.
-            emit FundedValidatorKeys(_allocations[i].operatorIndex, perOpKeys[i], false);
-            OperatorsV2.get(_allocations[i].operatorIndex).funded += uint32(perOpKeys[i].length);
-        }
-        publicKeys = _flattenByteArrays(perOpKeys);
-        signatures = _flattenByteArrays(perOpSigs);
     }
 
     /// @inheritdoc IOperatorsRegistryV1
@@ -465,15 +248,14 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
 
             requestedExitCount += count;
 
-            OperatorsV2.Operator storage operator = OperatorsV2.get(operatorIndex);
+            OperatorsV3.Operator storage operator = OperatorsV3.get(operatorIndex);
             if (!operator.active) {
                 revert InactiveOperator(operatorIndex);
             }
-            if (count > (operator.funded - operator.requestedExits)) {
+            uint256 available = operator.funded - operator.requestedExits;
+            if (count > available) {
                 // Operator has insufficient available funded validators
-                revert ExitsRequestedExceedAvailableFundedCount(
-                    operatorIndex, count, operator.funded - operator.requestedExits
-                );
+                revert ExitsRequestedExceedAvailableFundedCount(operatorIndex, count, available);
             }
             // Operator has sufficient funded validators
             operator.requestedExits += uint32(count);
@@ -494,6 +276,19 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
     }
 
     /// @inheritdoc IOperatorsRegistryV1
+    function incrementFundedValidators(uint256 _operatorIndex, bytes[] calldata _publicKeys) external onlyRiver {
+        OperatorsV3.Operator storage operator = OperatorsV3.get(_operatorIndex);
+        if (!operator.active) {
+            revert InactiveOperator(_operatorIndex);
+        }
+        if (_getStoppedValidatorsCount(_operatorIndex) < operator.requestedExits) {
+            revert OperatorIgnoredExitRequests(_operatorIndex);
+        }
+        operator.funded += uint32(_publicKeys.length);
+        emit FundedValidatorKeys(_operatorIndex, _publicKeys, false);
+    }
+
+    /// @inheritdoc IOperatorsRegistryV1
     function demandValidatorExits(uint256 _count, uint256 _depositedValidatorCount) external onlyRiver {
         uint256 currentValidatorExitsDemand = CurrentValidatorExitsDemand.get();
         uint256 totalValidatorExitsRequested = TotalValidatorExitsRequested.get();
@@ -505,62 +300,10 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
         }
     }
 
-    /// @notice Internal utility to get the funded count for an active operator if it is fundable
-    /// @param _operatorIndex The operator index
-    /// @param _validatorCount The validator count
-    /// @return fundedCount The funded count of the operator
-    function _getFundedCountForOperatorIfFundable(uint256 _operatorIndex, uint256 _validatorCount)
-        internal
-        view
-        returns (uint32)
-    {
-        OperatorsV2.Operator memory operator = OperatorsV2.get(_operatorIndex);
-        if (!operator.active) {
-            revert InactiveOperator(_operatorIndex);
-        }
-        if (_getStoppedValidatorsCount(_operatorIndex) < operator.requestedExits) {
-            revert OperatorIgnoredExitRequests(_operatorIndex);
-        }
-        uint256 availableKeys = operator.limit - operator.funded;
-        if (_validatorCount > availableKeys) {
-            revert OperatorHasInsufficientFundableKeys(_operatorIndex, _validatorCount, availableKeys);
-        }
-        return operator.funded;
-    }
-
-    /// @notice Internal view utility that retrieves the validator keys for the given allocations
-    /// @param _allocations The operator allocations sorted by operator index
-    /// @return perOperatorKeys Per-operator arrays of public keys
-    /// @return perOperatorSigs Per-operator arrays of signatures
-    function _getPerOperatorValidatorKeysForAllocations(OperatorAllocation[] memory _allocations)
-        internal
-        view
-        returns (bytes[][] memory perOperatorKeys, bytes[][] memory perOperatorSigs)
-    {
-        uint256 allocationsLength = _allocations.length;
-        if (allocationsLength == 0) {
-            revert InvalidEmptyArray();
-        }
-        perOperatorKeys = new bytes[][](allocationsLength);
-        perOperatorSigs = new bytes[][](allocationsLength);
-        for (uint256 i = 0; i < allocationsLength; ++i) {
-            if (i > 0 && !(_allocations[i].operatorIndex > _allocations[i - 1].operatorIndex)) {
-                revert UnorderedOperatorList();
-            }
-            if (_allocations[i].validatorCount == 0) {
-                revert AllocationWithZeroValidatorCount();
-            }
-            uint32 fundedCount =
-                _getFundedCountForOperatorIfFundable(_allocations[i].operatorIndex, _allocations[i].validatorCount);
-            (perOperatorKeys[i], perOperatorSigs[i]) =
-                ValidatorKeys.getKeys(_allocations[i].operatorIndex, fundedCount, _allocations[i].validatorCount);
-        }
-    }
-
     /// @notice Internal utility to retrieve the total stopped validator count
     /// @return The total stopped validator count
     function _getTotalStoppedValidatorCount() internal view returns (uint32) {
-        uint32[] storage stoppedValidatorCounts = OperatorsV2.getStoppedValidators();
+        uint32[] storage stoppedValidatorCounts = OperatorsV3.getStoppedValidators();
         if (stoppedValidatorCounts.length == 0) {
             return 0;
         }
@@ -601,14 +344,14 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
             revert InvalidEmptyStoppedValidatorCountsArray();
         }
 
-        OperatorsV2.Operator[] storage operators = OperatorsV2.getAll();
+        OperatorsV3.Operator[] storage operators = OperatorsV3.getAll();
 
         // we check that the cells containing operator stopped values are no more than the current operator count
         if (vars.stoppedValidatorCountsLength - 1 > operators.length) {
             revert StoppedValidatorCountsTooHigh();
         }
 
-        vars.currentStoppedValidatorCounts = OperatorsV2.getStoppedValidators();
+        vars.currentStoppedValidatorCounts = OperatorsV3.getStoppedValidators();
         vars.currentStoppedValidatorCountsLength = vars.currentStoppedValidatorCounts.length;
 
         // we check that the number of stopped values is not decreasing
@@ -698,33 +441,15 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
             revert StoppedValidatorCountsTooHigh();
         }
         // we set the new stopped validators counts
-        OperatorsV2.setRawStoppedValidators(_stoppedValidatorCounts);
+        OperatorsV3.setRawStoppedValidators(_stoppedValidatorCounts);
         emit UpdatedStoppedValidators(_stoppedValidatorCounts);
-    }
-
-    /// @notice Internal utility to flatten a 2D bytes array into a 1D bytes array with a single allocation
-    /// @param _arrays The 2D array to flatten
-    /// @return result The flattened 1D array
-    function _flattenByteArrays(bytes[][] memory _arrays) internal pure returns (bytes[] memory result) {
-        uint256 totalLength = 0;
-        for (uint256 i = 0; i < _arrays.length; ++i) {
-            totalLength += _arrays[i].length;
-        }
-        result = new bytes[](totalLength);
-        uint256 offset = 0;
-        for (uint256 i = 0; i < _arrays.length; ++i) {
-            bytes[] memory inner = _arrays[i];
-            for (uint256 j = 0; j < inner.length; ++j) {
-                result[offset++] = inner[j];
-            }
-        }
     }
 
     /// @notice Internal utility to retrieve the actual stopped validator count of an operator from the reported array
     /// @param _operatorIndex The operator index
     /// @return The count of stopped validators
     function _getStoppedValidatorsCount(uint256 _operatorIndex) internal view returns (uint32) {
-        return OperatorsV2._getStoppedValidatorCountAtIndex(OperatorsV2.getStoppedValidators(), _operatorIndex);
+        return OperatorsV3._getStoppedValidatorCountAtIndex(OperatorsV3.getStoppedValidators(), _operatorIndex);
     }
 
     /// @notice Internal utility to set the total validator exits requested by the system
