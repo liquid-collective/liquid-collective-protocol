@@ -142,6 +142,12 @@ library OperatorsV3 {
     /// @notice Storage slot of the Exited ETH
     bytes32 internal constant EXITED_ETH_SLOT = bytes32(uint256(keccak256("river.state.exitedETH")) - 1);
 
+    // This slot is used to store the exited ETH for each operator
+    // the array is encoded as [sum, op0, op1, ...]
+    // the sum is the total exited ETH for all operators
+    // the op0 is the exited ETH for operator 0
+    // the op1 is the exited ETH for operator 1
+    // and so on
     struct SlotExitedETH {
         uint256[] value;
     }
