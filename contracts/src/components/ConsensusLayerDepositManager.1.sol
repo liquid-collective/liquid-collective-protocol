@@ -105,8 +105,8 @@ abstract contract ConsensusLayerDepositManagerV1 is IConsensusLayerDepositManage
         if (maxDepositableCount == 0) {
             revert NotEnoughFunds();
         }
-        // Calculate total requested and validate key lengths + operator ordering in a single pass
-        uint256 totalRequested = 0;
+        // Calculate total deposits and validate key lengths + operator ordering in a single pass
+        uint256 totalDeposits = 0;
         for (uint256 i = 0; i < _allocations.length; ++i) {
             if (i > 0 && _allocations[i].operatorIndex < _allocations[i - 1].operatorIndex) {
                 revert IOperatorsRegistryV1.UnorderedOperatorList();
@@ -120,13 +120,13 @@ abstract contract ConsensusLayerDepositManagerV1 is IConsensusLayerDepositManage
             if (_allocations[i].depositAmount != DEPOSIT_SIZE) {
                 revert InvalidDepositSize(_allocations[i].depositAmount);
             }
-            totalRequested += _allocations[i].depositAmount;
+            totalDeposits += _allocations[i].depositAmount;
             highestOperatorIndex = LibUint256.max(highestOperatorIndex, _allocations[i].operatorIndex);
         }
         uint256[] memory fundedETH = new uint256[](highestOperatorIndex + 1);
 
         // Check if the total requested exceeds the committed balance
-        if (totalRequested > committedBalance) {
+        if (totalDeposits > committedBalance) {
             revert ValidatorDepositsExceedCommittedBalance();
         }
 
@@ -147,16 +147,16 @@ abstract contract ConsensusLayerDepositManagerV1 is IConsensusLayerDepositManage
         }
 
         _incrementFundedETH(fundedETH);
-        _setCommittedBalance(committedBalance - totalRequested);
+        _setCommittedBalance(committedBalance - totalDeposits);
 
         uint256 currentInFlightETH = InFlightDeposit.get();
-        InFlightDeposit.set(currentInFlightETH + DEPOSIT_SIZE * _allocations.length);
-        emit SetInFlightETH(currentInFlightETH, currentInFlightETH + DEPOSIT_SIZE * _allocations.length);
+        InFlightDeposit.set(currentInFlightETH + totalDeposits);
+        emit SetInFlightETH(currentInFlightETH, currentInFlightETH + totalDeposits);
 
         uint256 currentTotalDepositedETH = TotalDepositedETH.get();
-        TotalDepositedETH.set(currentTotalDepositedETH + DEPOSIT_SIZE * _allocations.length);
+        TotalDepositedETH.set(currentTotalDepositedETH + totalDeposits);
         emit SetTotalDepositedETH(
-            currentTotalDepositedETH, currentTotalDepositedETH + DEPOSIT_SIZE * _allocations.length
+            currentTotalDepositedETH, currentTotalDepositedETH + totalDeposits
         );
     }
 

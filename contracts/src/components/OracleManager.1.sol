@@ -316,9 +316,11 @@ abstract contract OracleManagerV1 is IOracleManagerV1 {
         if (_report.inFlightETH > currentInFlightETH) {
             revert InvalidInFlightETHIncrease(currentInFlightETH, _report.inFlightETH);
         }
-        // we update the in flight eth value
-        InFlightDeposit.set(_report.inFlightETH);
-        emit IConsensusLayerDepositManagerV1.SetInFlightETH(currentInFlightETH, _report.inFlightETH);
+        if (_report.inFlightETH != currentInFlightETH) {
+            // we update the in flight eth value
+            InFlightDeposit.set(_report.inFlightETH);
+            emit IConsensusLayerDepositManagerV1.SetInFlightETH(currentInFlightETH, _report.inFlightETH);
+        }
 
         {
             // we update the system parameters, this will have an impact on how the total underlying balance is computed

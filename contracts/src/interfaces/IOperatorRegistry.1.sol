@@ -98,9 +98,6 @@ interface IOperatorsRegistryV1 {
     /// @param operatorIndex The operator index
     error OperatorIgnoredExitRequests(uint256 operatorIndex);
 
-    /// @notice Thrown when an allocation with zero validator count is provided
-    error AllocationWithZeroValidatorCount();
-
     /// @notice Thrown when the sum of exited ETH is invalid
     error ExitedETHSumMismatch();
 
@@ -119,11 +116,11 @@ interface IOperatorsRegistryV1 {
     /// @notice The provided exited ETH array is shrinking
     error ExitedETHArrayShrinking();
 
-    /// @notice The provided exit requests exceed the available funded validator count of the operator
+    /// @notice The provided exit requests exceed the available funded ETH amount of the operator
     /// @param operatorIndex The operator index
     /// @param requested The requested count
     /// @param available The available count
-    error ExitsRequestedExceedAvailableFundedCount(uint256 operatorIndex, uint256 requested, uint256 available);
+    error ExitsRequestedExceedAvailableFundedAmount(uint256 operatorIndex, uint256 requested, uint256 available);
 
     /// @notice The provided exit requests exceed the current exit request demand
     /// @param requestedETHAmount The requested ETH amount
@@ -230,10 +227,10 @@ interface IOperatorsRegistryV1 {
     /// @dev Each allocation's validatorCount must be non-zero and not exceed the operator's available funded-but-not-yet-exited validators
     /// @dev The total requested exits across all allocations must not exceed the current validator exit demand
     /// @dev Reverts with InvalidEmptyArray if _allocations is empty
-    /// @dev Reverts with AllocationWithZeroValidatorCount if any allocation has a zero validator count
+    /// @dev Reverts with AllocationWithZeroETHAmount if any allocation has a zero ETH amount
     /// @dev Reverts with UnorderedOperatorList if operator indexes are not strictly ascending
     /// @dev Reverts with InactiveOperator if a referenced operator is inactive
-    /// @dev Reverts with ExitsRequestedExceedAvailableFundedCount if count exceeds funded minus requestedExits for an operator
+    /// @dev Reverts with ExitsRequestedExceedAvailableFundedAmount if count exceeds funded minus requestedExits for an operator
     /// @dev Reverts with ExitsRequestedExceedDemand if total exits requested exceed the current demand
     /// @dev Reverts with NoExitRequestsToPerform if there is no pending exit demand
     /// @param _allocations The proposed per-operator exit ETH allocations, sorted by operator index

@@ -68,10 +68,13 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
         TotalETHExitsRequested.set(TotalValidatorExitsRequested.get() * 32 ether);
 
         uint32[] memory stoppedValidators = OperatorsV2.getStoppedValidators();
-        uint256[] memory exitedETH = new uint256[](stoppedValidators.length);
-        for (uint256 idx = 0; idx < stoppedValidators.length; ++idx) {
+        uint256[] memory exitedETH = new uint256[](stoppedValidators.length + 1);
+        uint256 totalExitedETH = 0;
+        for (uint256 idx = 1; idx < stoppedValidators.length; ++idx) {
             exitedETH[idx] = stoppedValidators[idx] * 32 ether;
+            totalExitedETH += exitedETH[idx];
         }
+        exitedETH[0] = totalExitedETH;
         OperatorsV3.setRawExitedETH(exitedETH);
     }
 
@@ -182,14 +185,14 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
         }
         for (uint256 idx = 0; idx < fundedETHLength; ++idx) {
             // We have this check to avoid unnecessary storage reads for operators with no funded ETH
-            if(fundedETH[idx] == 0) {
+            if (_fundedETH[idx] == 0) {
                 continue;
             }
             OperatorsV3.Operator storage operator = OperatorsV3.get(idx);
             if(!operator.active) {
                 revert InactiveOperator(idx);
             }
-            if(operator.requestedExits > operator.getExitedETHAtIndex(idx)) {
+            if (operator.requestedExits > OperatorsV3.getExitedETHAtIndex(idx)) {
                 revert OperatorIgnoredExitRequests(idx);
             }
             operator.funded += _fundedETH[idx];
@@ -277,7 +280,7 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
             }
             if (ethAmount > (operator.funded - operator.requestedExits)) {
                 // Operator has insufficient available ETH
-                revert ExitsRequestedExceedAvailableFundedCount(
+                revert ExitsRequestedExceedAvailableFundedAmount(
                     operatorIndex, ethAmount, operator.funded - operator.requestedExits
                 );
             }
