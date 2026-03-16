@@ -180,11 +180,18 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
         if (fundedETHLength == 0) {
             revert InvalidEmptyArray();
         }
-        if (fundedETHLength != OperatorsV3.getCount()) {
-            revert FundedETHArrayLengthMismatch();
-        }
         for (uint256 idx = 0; idx < fundedETHLength; ++idx) {
+            // We have this check to avoid unnecessary storage reads for operators with no funded ETH
+            if(fundedETH[idx] == 0) {
+                continue;
+            }
             OperatorsV3.Operator storage operator = OperatorsV3.get(idx);
+            if(!operator.active) {
+                revert InactiveOperator(idx);
+            }
+            if(operator.requestedExits > operator.getExitedETHAtIndex(idx)) {
+                revert OperatorIgnoredExitRequests(idx);
+            }
             operator.funded += _fundedETH[idx];
         }
     }

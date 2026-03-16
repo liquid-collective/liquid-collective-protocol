@@ -44,6 +44,11 @@ interface IOracleManagerV1 {
         IOracleManagerV1.ConsensusLayerReport report, ConsensusLayerDataReportingTrace trace
     );
 
+    /// @notice The in flight ETH increase is invalid
+    /// @param currentInFlightETH The current in flight ETH value
+    /// @param newInFlightETH The new in flight ETH value
+    error InvalidInFlightETHIncrease(uint256 currentInFlightETH, uint256 newInFlightETH);
+
     /// @notice Thrown when an invalid epoch was reported
     /// @param epoch Invalid epoch
     error InvalidEpoch(uint256 epoch);
@@ -121,8 +126,10 @@ interface IOracleManagerV1 {
         // this includes voluntary exits and slashings
         // this value can decrease between reports
         uint256 validatorsExitingBalance;
-        // this is the amount of ETH that was deposited but not yet activated
+        // this is the amount of ETH that was deposited but not yet activated, the ETH is in either deposited or pending state
         // this value can decrease between reports
+        // the assumption is that the oracle will report will be able to capture the in flight ETH value as soon as a deposit is made
+        // on the beacon deposit contract
         uint256 inFlightETH;
         // the count of activated validators
         // even validators that are exited are still accounted

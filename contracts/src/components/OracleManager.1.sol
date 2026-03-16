@@ -311,10 +311,14 @@ abstract contract OracleManagerV1 is IOracleManagerV1 {
             // this method pulls and updates ethToDeposit / ethToRedeem accordingly
             _pullCLFunds(vars.skimmedAmountIncrease, vars.exitedAmountIncrease);
         }
-
+        
+        uint256 currentInFlightETH = InFlightDeposit.get();
+        if (_report.inFlightETH > currentInFlightETH) {
+            revert InvalidInFlightETHIncrease(currentInFlightETH, _report.inFlightETH);
+        }
         // we update the in flight eth value
-        emit IConsensusLayerDepositManagerV1.SetInFlightETH(InFlightDeposit.get(), _report.inFlightETH);
         InFlightDeposit.set(_report.inFlightETH);
+        emit IConsensusLayerDepositManagerV1.SetInFlightETH(currentInFlightETH, _report.inFlightETH);
 
         {
             // we update the system parameters, this will have an impact on how the total underlying balance is computed
