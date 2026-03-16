@@ -66,16 +66,6 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
 
         CurrentETHExitsDemand.set(CurrentValidatorExitsDemand.get() * 32 ether);
         TotalETHExitsRequested.set(TotalValidatorExitsRequested.get() * 32 ether);
-
-        uint32[] memory stoppedValidators = OperatorsV2.getStoppedValidators();
-        uint256[] memory exitedETH = new uint256[](stoppedValidators.length + 1);
-        uint256 totalExitedETH = 0;
-        for (uint256 idx = 1; idx < stoppedValidators.length; ++idx) {
-            exitedETH[idx] = stoppedValidators[idx] * 32 ether;
-            totalExitedETH += exitedETH[idx];
-        }
-        exitedETH[0] = totalExitedETH;
-        OperatorsV3.setRawExitedETH(exitedETH);
     }
 
     /// @notice Internal utility to migrate the operators from V2 to V3 format
@@ -93,6 +83,15 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
                 })
             );
         }
+
+        // we migrate the exited ETH array from V2 to V3 format
+        uint32[] memory stoppedValidators = OperatorsV2.getStoppedValidators();
+        uint256[] memory exitedETH = new uint256[](stoppedValidators.length);
+
+        for (uint256 idx = 0; idx < stoppedValidators.length; ++idx) {
+            exitedETH[idx] = stoppedValidators[idx] * 32 ether;
+        }
+        OperatorsV3.setRawExitedETH(exitedETH);
     }
 
     /// @notice Prevent unauthorized calls

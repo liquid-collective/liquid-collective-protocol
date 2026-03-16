@@ -118,8 +118,8 @@ interface IOperatorsRegistryV1 {
 
     /// @notice The provided exit requests exceed the available funded ETH amount of the operator
     /// @param operatorIndex The operator index
-    /// @param requested The requested count
-    /// @param available The available count
+    /// @param requested The requested ETH amount
+    /// @param available The available ETH amount
     error ExitsRequestedExceedAvailableFundedAmount(uint256 operatorIndex, uint256 requested, uint256 available);
 
     /// @notice The provided exit requests exceed the current exit request demand
