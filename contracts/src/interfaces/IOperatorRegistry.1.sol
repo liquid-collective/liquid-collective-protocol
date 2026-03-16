@@ -224,8 +224,8 @@ interface IOperatorsRegistryV1 {
     /// @notice Process explicit per-operator exit allocations and update operator requestedExits
     /// @dev Only callable by the keeper address returned by the River contract's getKeeper()
     /// @dev The allocations must be sorted by operator index in strictly ascending order with no duplicates
-    /// @dev Each allocation's validatorCount must be non-zero and not exceed the operator's available funded-but-not-yet-exited validators
-    /// @dev The total requested exits across all allocations must not exceed the current validator exit demand
+    /// @dev Each allocation's ethAmount must be non-zero and not exceed the operator's available funded-but-not-yet-exited ETH amount
+    /// @dev The total requested exits across all allocations must not exceed the current ETH exit demand
     /// @dev Reverts with InvalidEmptyArray if _allocations is empty
     /// @dev Reverts with AllocationWithZeroETHAmount if any allocation has a zero ETH amount
     /// @dev Reverts with UnorderedOperatorList if operator indexes are not strictly ascending
@@ -237,7 +237,7 @@ interface IOperatorsRegistryV1 {
     function requestValidatorExits(ExitETHAllocation[] calldata _allocations) external;
 
     /// @notice Increases the exit request demand
-    /// @dev This method is only callable by the river contract, and to actually forward the information to the node operators via event emission, the unprotected requestValidatorExits method must be called
+    /// @dev This method is only callable by the river contract, and to actually forward the information to the node operators via event emission, the requestValidatorExits method must be called
     /// @param _exitAmountToRequest The amount of exit requests to add to the demand
     /// @param _totalDepositedETH The total deposited ETH
     function demandETHExits(uint256 _exitAmountToRequest, uint256 _totalDepositedETH) external;

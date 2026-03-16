@@ -21,6 +21,6 @@ library CurrentETHExitsDemand {
     /// @notice Sets the CurrentETHExitsDemand
     /// @param _newValue New CurrentETHExitsDemand
     function set(uint256 _newValue) internal {
-        return LibUnstructuredStorage.setStorageUint256(CURRENT_ETH_EXITS_DEMAND_SLOT, _newValue);
+        LibUnstructuredStorage.setStorageUint256(CURRENT_ETH_EXITS_DEMAND_SLOT, _newValue);
     }
 }

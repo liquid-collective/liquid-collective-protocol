@@ -20,6 +20,6 @@ library TotalETHExitsRequested {
     /// @notice Sets the TotalETHExitsRequested
     /// @param _newValue New TotalETHExitsRequested
     function set(uint256 _newValue) internal {
-        return LibUnstructuredStorage.setStorageUint256(TOTAL_ETH_EXITS_REQUESTED_SLOT, _newValue);
+        LibUnstructuredStorage.setStorageUint256(TOTAL_ETH_EXITS_REQUESTED_SLOT, _newValue);
     }
 }

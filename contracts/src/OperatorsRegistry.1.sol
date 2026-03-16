@@ -188,7 +188,7 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
                 continue;
             }
             OperatorsV3.Operator storage operator = OperatorsV3.get(idx);
-            if(!operator.active) {
+            if (!operator.active) {
                 revert InactiveOperator(idx);
             }
             if (operator.requestedExits > OperatorsV3.getExitedETHAtIndex(idx)) {

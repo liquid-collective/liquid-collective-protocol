@@ -155,9 +155,7 @@ abstract contract ConsensusLayerDepositManagerV1 is IConsensusLayerDepositManage
 
         uint256 currentTotalDepositedETH = TotalDepositedETH.get();
         TotalDepositedETH.set(currentTotalDepositedETH + totalDeposits);
-        emit SetTotalDepositedETH(
-            currentTotalDepositedETH, currentTotalDepositedETH + totalDeposits
-        );
+        emit SetTotalDepositedETH(currentTotalDepositedETH, currentTotalDepositedETH + totalDeposits);
     }
 
     /// @notice Deposits 32 ETH to the official Deposit contract
