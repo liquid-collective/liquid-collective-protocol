@@ -963,4 +963,13 @@ contract WLSETHV1DenyTests is WLSETHV1TestBase {
             assert(wlseth.balanceOf(_recipient) == guyBalance);
         }
     }
+
+    function testTransferNullTransfer(uint256 _guySalt) external {
+        address _guy = uf._new(_guySalt);
+        uint256 guyBalance = wlseth.balanceOf(_guy);
+        vm.expectRevert(abi.encodeWithSignature("NullTransfer()"));
+        vm.prank(_guy);
+        wlseth.transfer(address(0), guyBalance);
+        assert(wlseth.balanceOf(_guy) == guyBalance);
+    }
 }
