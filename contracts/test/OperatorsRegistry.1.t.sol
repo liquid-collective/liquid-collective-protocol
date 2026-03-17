@@ -1529,6 +1529,81 @@ contract OperatorsRegistryV1Tests is OperatorsRegistryV1TestBase, OperatorAlloca
         assertEq(operatorsRegistry.getOperator(2).operator, addr2, "index 2 still op2 after reactivation");
     }
 
+    // ── I-01 fix: SetOperatorLimit must be emitted by removeValidators ──────
+
+    /// @dev Branch 1: when limit == keys before removal, limit is reduced to
+    ///      the new key count and SetOperatorLimit must be emitted.
+    function testRemoveValidatorsEmitsSetOperatorLimitWhenLimitEqualsKeys(
+        bytes32 _name,
+        uint256 _firstAddressSalt
+    ) public {
+        address _firstAddress = uf._new(_firstAddressSalt);
+        vm.startPrank(admin);
+        uint256 index = operatorsRegistry.addOperator(string(abi.encodePacked(_name)), _firstAddress);
+
+        bytes memory tenKeys = genBytes((48 + 96) * 10);
+        operatorsRegistry.addValidators(index, 10, tenKeys);
+
+        uint256[] memory operators = new uint256[](1);
+        uint32[] memory limits = new uint32[](1);
+        operators[0] = index;
+        limits[0] = 10; // limit == keys → limitEqualsKeyCount branch
+        operatorsRegistry.setOperatorLimits(operators, limits, block.number);
+        vm.stopPrank();
+
+        uint256[] memory indexes = new uint256[](5);
+        indexes[0] = 8;
+        indexes[1] = 6;
+        indexes[2] = 4;
+        indexes[3] = 2;
+        indexes[4] = 0; // lastIndex = 0; new keys = 5
+
+        vm.startPrank(_firstAddress);
+        vm.expectEmit(true, true, true, true);
+        emit SetOperatorLimit(index, 5); // new limit must equal new key count
+        operatorsRegistry.removeValidators(index, indexes);
+        vm.stopPrank();
+
+        OperatorsV2.Operator memory operator = operatorsRegistry.getOperator(index);
+        assertEq(operator.limit, 5);
+    }
+
+    /// @dev Branch 2: when lastIndex < limit (but limit != keys), limit is
+    ///      reduced to lastIndex and SetOperatorLimit must be emitted.
+    function testRemoveValidatorsEmitsSetOperatorLimitWhenLastIndexBelowLimit(
+        bytes32 _name,
+        uint256 _firstAddressSalt
+    ) public {
+        address _firstAddress = uf._new(_firstAddressSalt);
+        vm.startPrank(admin);
+        uint256 index = operatorsRegistry.addOperator(string(abi.encodePacked(_name)), _firstAddress);
+
+        bytes memory tenKeys = genBytes((48 + 96) * 10);
+        operatorsRegistry.addValidators(index, 10, tenKeys);
+
+        uint256[] memory operators = new uint256[](1);
+        uint32[] memory limits = new uint32[](1);
+        operators[0] = index;
+        limits[0] = 8; // limit < keys → limitEqualsKeyCount is false
+        operatorsRegistry.setOperatorLimits(operators, limits, block.number);
+        vm.stopPrank();
+
+        uint256[] memory indexes = new uint256[](2);
+        indexes[0] = 9;
+        indexes[1] = 5; // lastIndex = 5; 5 < limit(8) → branch 2 fires
+
+        vm.startPrank(_firstAddress);
+        vm.expectEmit(true, true, true, true);
+        emit SetOperatorLimit(index, 5); // new limit must equal lastIndex
+        operatorsRegistry.removeValidators(index, indexes);
+        vm.stopPrank();
+
+        OperatorsV2.Operator memory operator = operatorsRegistry.getOperator(index);
+        assertEq(operator.limit, 5);
+    }
+
+    // ── end I-01 tests ───────────────────────────────────────────────────────
+
     /// @dev getOperator(outOfBounds) reverts with OperatorNotFound
     function testGetOperatorOutOfBoundsRevertsWithOperatorNotFound() public {
         vm.startPrank(admin);
