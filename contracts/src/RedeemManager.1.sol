@@ -41,16 +41,6 @@ contract RedeemManagerV1 is Initializable, IRedeemManagerV1, IProtocolVersion {
         _;
     }
 
-    modifier onlyRedeemerOrRiver() {
-        {
-            IRiverV1 river = _castedRiver();
-            if (msg.sender != address(river)) {
-                IAllowlistV1(river.getAllowlist()).onlyAllowed(msg.sender, LibAllowlistMasks.REDEEM_MASK);
-            }
-        }
-        _;
-    }
-
     modifier onlyRedeemer() {
         {
             IRiverV1 river = _castedRiver();

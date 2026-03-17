@@ -883,6 +883,19 @@ contract RiverV1Tests is RiverV1TestBase {
         vm.expectRevert(abi.encodeWithSignature("Unauthorized(address)", address(this)));
         river.sendRedeemManagerExceedingFunds();
     }
+
+    function testRequestRedeemDeniedRecipient(uint256 _salt, uint256 _salt2) external {
+        vm.assume(_salt != _salt2);
+        address user = uf._new(_salt);
+        _allow(user);
+        uint128 amount = uint128(bound(_salt, 1, type(uint128).max));
+        address recipient = uf._new(_salt2);
+        _deny(recipient, true);
+
+        vm.prank(user);
+        vm.expectRevert(abi.encodeWithSignature("RecipientIsDenied()"));
+        river.requestRedeem(amount, recipient);
+    }
 }
 
 contract RiverV1TestsReport_HEAVY_FUZZING is RiverV1TestBase {
