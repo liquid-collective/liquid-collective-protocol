@@ -1600,6 +1600,38 @@ contract OperatorsRegistryV1Tests is OperatorsRegistryV1TestBase, OperatorAlloca
         assertEq(operator.limit, 5);
     }
 
+    /// @dev Branch 3 (no emit): when limit != keys and lastIndex >= limit,
+    ///      removeValidators does not emit SetOperatorLimit and limit is unchanged.
+    function testRemoveValidatorsDoesNotEmitSetOperatorLimitWhenLastIndexAtOrAboveLimit(
+        bytes32 _name,
+        uint256 _firstAddressSalt
+    ) public {
+        address _firstAddress = uf._new(_firstAddressSalt);
+        vm.startPrank(admin);
+        uint256 index = operatorsRegistry.addOperator(string(abi.encodePacked(_name)), _firstAddress);
+
+        bytes memory tenKeys = genBytes((48 + 96) * 10);
+        operatorsRegistry.addValidators(index, 10, tenKeys);
+
+        uint256[] memory operators = new uint256[](1);
+        uint32[] memory limits = new uint32[](1);
+        operators[0] = index;
+        limits[0] = 3; // limit < keys → limitEqualsKeyCount is false
+        operatorsRegistry.setOperatorLimits(operators, limits, block.number);
+        vm.stopPrank();
+
+        // Remove only index 9 → lastIndex = 9; 9 >= limit(3) so else if (lastIndex < limit) is false.
+        uint256[] memory indexes = new uint256[](1);
+        indexes[0] = 9;
+
+        vm.prank(_firstAddress);
+        operatorsRegistry.removeValidators(index, indexes);
+
+        OperatorsV2.Operator memory operator = operatorsRegistry.getOperator(index);
+        assertEq(operator.keys, 9);
+        assertEq(operator.limit, 3, "limit unchanged when lastIndex >= limit");
+    }
+
     // ── end I-01 tests ───────────────────────────────────────────────────────
 
     /// @dev getOperator(outOfBounds) reverts with OperatorNotFound
