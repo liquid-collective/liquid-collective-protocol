@@ -966,10 +966,10 @@ contract WLSETHV1DenyTests is WLSETHV1TestBase {
 
     function testTransferNullTransfer(uint256 _guySalt) external {
         address _guy = uf._new(_guySalt);
+        _mint(_guy, 1);
         uint256 guyBalance = wlseth.balanceOf(_guy);
         vm.expectRevert(abi.encodeWithSignature("NullTransfer()"));
         vm.prank(_guy);
-        wlseth.transfer(address(0), guyBalance);
-        assert(wlseth.balanceOf(_guy) == guyBalance);
+        wlseth.transfer(address(this), 0);
     }
 }
