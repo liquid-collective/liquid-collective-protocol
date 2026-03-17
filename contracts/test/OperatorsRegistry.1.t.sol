@@ -1533,10 +1533,9 @@ contract OperatorsRegistryV1Tests is OperatorsRegistryV1TestBase, OperatorAlloca
 
     /// @dev Branch 1: when limit == keys before removal, limit is reduced to
     ///      the new key count and SetOperatorLimit must be emitted.
-    function testRemoveValidatorsEmitsSetOperatorLimitWhenLimitEqualsKeys(
-        bytes32 _name,
-        uint256 _firstAddressSalt
-    ) public {
+    function testRemoveValidatorsEmitsSetOperatorLimitWhenLimitEqualsKeys(bytes32 _name, uint256 _firstAddressSalt)
+        public
+    {
         address _firstAddress = uf._new(_firstAddressSalt);
         vm.startPrank(admin);
         uint256 index = operatorsRegistry.addOperator(string(abi.encodePacked(_name)), _firstAddress);
@@ -1570,10 +1569,9 @@ contract OperatorsRegistryV1Tests is OperatorsRegistryV1TestBase, OperatorAlloca
 
     /// @dev Branch 2: when lastIndex < limit (but limit != keys), limit is
     ///      reduced to lastIndex and SetOperatorLimit must be emitted.
-    function testRemoveValidatorsEmitsSetOperatorLimitWhenLastIndexBelowLimit(
-        bytes32 _name,
-        uint256 _firstAddressSalt
-    ) public {
+    function testRemoveValidatorsEmitsSetOperatorLimitWhenLastIndexBelowLimit(bytes32 _name, uint256 _firstAddressSalt)
+        public
+    {
         address _firstAddress = uf._new(_firstAddressSalt);
         vm.startPrank(admin);
         uint256 index = operatorsRegistry.addOperator(string(abi.encodePacked(_name)), _firstAddress);
