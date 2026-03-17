@@ -150,21 +150,30 @@ contract RedeemManagerV1 is Initializable, IRedeemManagerV1, IProtocolVersion {
     }
 
     /// @inheritdoc IRedeemManagerV1
+    function requestRedeem(uint256 _lsETHAmount, address _recipient, address _initiator)
+        external
+        onlyRiver
+        returns (uint32 redeemRequestId)
+    {
+        return _requestRedeem(_lsETHAmount, _recipient, _initiator);
+    }
+
+    /// @inheritdoc IRedeemManagerV1
     function requestRedeem(uint256 _lsETHAmount, address _recipient)
         external
-        onlyRedeemerOrRiver
+        onlyRedeemer
         returns (uint32 redeemRequestId)
     {
         IRiverV1 river = _castedRiver();
         if (IAllowlistV1(river.getAllowlist()).isDenied(_recipient)) {
             revert RecipientIsDenied();
         }
-        return _requestRedeem(_lsETHAmount, _recipient);
+        return _requestRedeem(_lsETHAmount, _recipient, msg.sender);
     }
 
     /// @inheritdoc IRedeemManagerV1
     function requestRedeem(uint256 _lsETHAmount) external onlyRedeemer returns (uint32 redeemRequestId) {
-        return _requestRedeem(_lsETHAmount, msg.sender);
+        return _requestRedeem(_lsETHAmount, msg.sender, msg.sender);
     }
 
     /// @inheritdoc IRedeemManagerV1
@@ -312,8 +321,12 @@ contract RedeemManagerV1 is Initializable, IRedeemManagerV1, IProtocolVersion {
     /// @notice Perform a new redeem request for the specified recipient
     /// @param _lsETHAmount The amount of LsETH to redeem
     /// @param _recipient The recipient owning the request
+    /// @param _initiator The initiator of the request
     /// @return redeemRequestId The id of the newly created redeem request
-    function _requestRedeem(uint256 _lsETHAmount, address _recipient) internal returns (uint32 redeemRequestId) {
+    function _requestRedeem(uint256 _lsETHAmount, address _recipient, address _initiator)
+        internal
+        returns (uint32 redeemRequestId)
+    {
         LibSanitize._notZeroAddress(_recipient);
         if (_lsETHAmount == 0) {
             revert InvalidZeroAmount();
@@ -336,7 +349,7 @@ contract RedeemManagerV1 is Initializable, IRedeemManagerV1, IProtocolVersion {
                 height: height,
                 amount: _lsETHAmount,
                 recipient: _recipient,
-                initiator: msg.sender,
+                initiator: _initiator,
                 maxRedeemableEth: maxRedeemableEth
             })
         );
