@@ -249,6 +249,10 @@ interface IRiverV1 is IConsensusLayerDepositManagerV1, IUserDepositManagerV1, IS
     /// @param _newELFeeRecipient New address for the recipient
     function setELFeeRecipient(address _newELFeeRecipient) external;
 
+    /// @notice Changes the keeper address
+    /// @param _keeper New address for the keeper
+    function setKeeper(address _keeper) external;
+
     /// @notice Changes the coverage fund
     /// @param _newCoverageFund New address for the fund
     function setCoverageFund(address _newCoverageFund) external;
