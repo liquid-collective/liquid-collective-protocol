@@ -1567,6 +1567,34 @@ contract OperatorsRegistryV1Tests is OperatorsRegistryV1TestBase, OperatorAlloca
         assertEq(operator.limit, 5);
     }
 
+    function testRemoveValidatorsLimitEqualsKeyCountBranch() public {
+        address opAddr = makeAddr("operator");
+        vm.startPrank(admin);
+        uint256 index = operatorsRegistry.addOperator("Op", opAddr);
+        bytes memory tenKeys = genBytes((48 + 96) * 10);
+        operatorsRegistry.addValidators(index, 10, tenKeys);
+        uint256[] memory operators = new uint256[](1);
+        uint32[] memory limits = new uint32[](1);
+        operators[0] = index;
+        limits[0] = 10; // limit == keys → limitEqualsKeyCount true
+        operatorsRegistry.setOperatorLimits(operators, limits, block.number);
+        vm.stopPrank();
+
+        uint256[] memory toRemove = new uint256[](3);
+        toRemove[0] = 9;
+        toRemove[1] = 7;
+        toRemove[2] = 5; // lastIndex 5; new keys = 7
+
+        vm.prank(opAddr);
+        vm.expectEmit(true, true, true, true);
+        emit SetOperatorLimit(index, 7);
+        operatorsRegistry.removeValidators(index, toRemove);
+
+        OperatorsV2.Operator memory op = operatorsRegistry.getOperator(index);
+        assertEq(op.keys, 7);
+        assertEq(op.limit, 7);
+    }
+
     /// @dev Branch 2: when lastIndex < limit (but limit != keys), limit is
     ///      reduced to lastIndex and SetOperatorLimit must be emitted.
     function testRemoveValidatorsEmitsSetOperatorLimitWhenLastIndexBelowLimit(bytes32 _name, uint256 _firstAddressSalt)
