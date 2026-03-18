@@ -964,6 +964,20 @@ contract WLSETHV1DenyTests is WLSETHV1TestBase {
         }
     }
 
+    function testTransferZeroShares() external {
+        address sender = uf._new(1);
+        address recipient = uf._new(2);
+        RiverTokenMock(address(river)).sudoSetBalance(sender, 10);
+        vm.startPrank(sender);
+        RiverTokenMock(address(river)).approve(address(wlseth), 10);
+        wlseth.mint(sender, 10);
+        vm.stopPrank();
+        assert(wlseth.balanceOf(sender) == 100 ether);
+        vm.expectRevert(abi.encodeWithSignature("ZeroShares()"));
+        vm.prank(sender);
+        wlseth.transfer(recipient, 1);
+    }
+
     function testTransferNullTransfer(uint256 _guySalt) external {
         address _guy = uf._new(_guySalt);
         _mint(_guy, 1);
