@@ -435,6 +435,22 @@ Balance too low to perform operation
 
 
 
+### Denied
+
+```solidity
+error Denied(address _account)
+```
+
+The account is denied access
+
+
+
+#### Parameters
+
+| Name | Type | Description |
+|---|---|---|
+| _account | address | The denied account |
+
 ### NullTransfer
 
 ```solidity
