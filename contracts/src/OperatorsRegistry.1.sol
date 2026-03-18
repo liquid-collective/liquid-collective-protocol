@@ -282,9 +282,7 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
             uint256 available = opFunded - opRequestedExits;
             if (ethAmount > available) {
                 // Operator has insufficient available ETH
-                revert ExitsRequestedExceedAvailableFundedAmount(
-                    operatorIndex, ethAmount, available
-                );
+                revert ExitsRequestedExceedAvailableFundedAmount(operatorIndex, ethAmount, available);
             }
             // Operator has sufficient ETH
             opRequestedExits += ethAmount;
@@ -310,7 +308,7 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
         uint256 currentETHExitsDemand = CurrentETHExitsDemand.get();
         uint256 totalETHExitsRequested = TotalETHExitsRequested.get();
         if (_totalDepositedETH < (totalETHExitsRequested + currentETHExitsDemand)) {
-            revert ExitedETHExceedsDeposited();
+            revert DemandedETHExitsExceedsDepositedETH();
         }
         _exitAmountToRequest =
             LibUint256.min(_exitAmountToRequest, _totalDepositedETH - (totalETHExitsRequested + currentETHExitsDemand));

@@ -104,6 +104,9 @@ interface IOperatorsRegistryV1 {
     /// @notice Thrown when an element in the exited ETH array is decreasing
     error ExitedETHPerOperatorDecreased();
 
+    /// @notice Thrown when the amount of exited ETH is too high compared to the operator's funded ETH amount
+    error DemandedETHExitsExceedsDepositedETH();
+
     /// @notice Thrown when the amount of exited ETH is too high compared to the total deposited ETH
     error ExitedETHExceedsDeposited();
 
@@ -135,9 +138,6 @@ interface IOperatorsRegistryV1 {
 
     /// @notice Thrown when an allocation with zero ETH amount is provided
     error AllocationWithZeroETHAmount();
-
-    /// @notice Thrown when the provided funded ETH array length is invalid
-    error FundedETHArrayLengthMismatch();
 
     /// @notice Initializes the operators registry
     /// @param _admin Admin in charge of managing operators
