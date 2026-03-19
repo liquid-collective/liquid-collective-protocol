@@ -15,7 +15,10 @@ contract OperatorsRegistryV1Minimal is OperatorsRegistryV1 {}
 
 contract RiverMockForLimitTest {
     function setKeeper(address) external {}
-    function getKeeper() external view returns (address) { return address(0); }
+
+    function getKeeper() external view returns (address) {
+        return address(0);
+    }
 }
 
 /// @notice Single test that triggers the limitEqualsKeyCount branch (first if block) in removeValidators.
