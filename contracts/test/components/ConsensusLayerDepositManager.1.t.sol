@@ -976,6 +976,21 @@ contract ConsensusLayerDepositManagerV1ValidKeys is ConsensusLayerDepositManager
     function _setCommittedBalance(uint256 newCommittedBalance) internal override {
         CommittedBalance.set(newCommittedBalance);
     }
+
+    function sudoSetSlashingContainmentMode(bool _slashingContainmentMode) external {
+        LastConsensusLayerReport.set(
+            IOracleManagerV1.StoredConsensusLayerReport({
+                epoch: 0,
+                validatorsBalance: 0,
+                validatorsSkimmedBalance: 0,
+                validatorsExitedBalance: 0,
+                validatorsExitingBalance: 0,
+                validatorsCount: 0,
+                rebalanceDepositToRedeemMode: false,
+                slashingContainmentMode: _slashingContainmentMode
+            })
+        );
+    }
 }
 
 contract ConsensusLayerDepositManagerV1ValidKeysTest is OperatorAllocationTestBase {
@@ -1094,5 +1109,14 @@ contract ConsensusLayerDepositManagerV1KeeperTest is OperatorAllocationTestBase 
         vm.expectRevert(abi.encodeWithSignature("OnlyKeeper()"));
         vm.prank(address(0x1));
         depositManager.depositToConsensusLayerWithDepositRoot(_createAllocation(1), depositRoot);
+    }
+
+    function testDepositFailsWithSlashingContainmentModeActive() external {
+        ConsensusLayerDepositManagerV1ValidKeys(address(depositManager)).sudoSetSlashingContainmentMode(true);
+        IOperatorsRegistryV1.OperatorAllocation[] memory allocation = _createAllocation(1);
+        bytes32 depositRoot = depositContract.get_deposit_root();
+        vm.expectRevert(abi.encodeWithSignature("SlashingContainmentModeActive()"));
+        vm.prank(address(0x1));
+        depositManager.depositToConsensusLayerWithDepositRoot(allocation, depositRoot);
     }
 }

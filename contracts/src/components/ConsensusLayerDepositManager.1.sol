@@ -2,6 +2,7 @@
 pragma solidity 0.8.34;
 
 import "../interfaces/components/IConsensusLayerDepositManager.1.sol";
+import "../interfaces/components/IOracleManager.1.sol";
 import "../interfaces/IOperatorRegistry.1.sol";
 import "../interfaces/IDepositContract.sol";
 
@@ -14,6 +15,7 @@ import "../state/river/DepositedValidatorCount.sol";
 import "../state/river/BalanceToDeposit.sol";
 import "../state/river/CommittedBalance.sol";
 import "../state/river/KeeperAddress.sol";
+import "../state/river/LastConsensusLayerReport.sol";
 
 /// @title Consensus Layer Deposit Manager (v1)
 /// @author Alluvial Finance Inc.
@@ -97,6 +99,11 @@ abstract contract ConsensusLayerDepositManagerV1 is IConsensusLayerDepositManage
     ) external {
         if (msg.sender != KeeperAddress.get()) {
             revert OnlyKeeper();
+        }
+
+        IOracleManagerV1.StoredConsensusLayerReport storage storedReport = LastConsensusLayerReport.get();
+        if (storedReport.slashingContainmentMode) {
+            revert SlashingContainmentModeActive();
         }
 
         if (IDepositContract(DepositContractAddress.get()).get_deposit_root() != _depositRoot) {
