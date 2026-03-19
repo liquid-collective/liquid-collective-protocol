@@ -1535,7 +1535,41 @@ contract OperatorsRegistryV1Tests is OperatorsRegistryV1TestBase, OperatorAlloca
 
     // ── I-01: deterministic coverage for removeValidators SetOperatorLimit branches (lines 409–415) ──
 
+    /// @dev Unit test: triggers the first if block (limitEqualsKeyCount) in removeValidators and asserts SetOperatorLimit is emitted.
+    ///      When limit == keys before removal, removeValidators sets operator.limit = operator.keys and emits SetOperatorLimit(_index, newKeyCount).
+    function testRemoveValidatorsLimitEqualsKeyCountEmitsSetOperatorLimit() public {
+        address opAddr = makeAddr("operator");
+        vm.startPrank(admin);
+        uint256 index = operatorsRegistry.addOperator("Op", opAddr);
+        bytes memory tenKeys = genBytes((48 + 96) * 10);
+        vm.stopPrank();
+        vm.prank(opAddr);
+        operatorsRegistry.addValidators(index, 10, tenKeys);
+        vm.roll(block.number + 1);
+        vm.prank(admin);
+        uint256[] memory operatorIndexes = new uint256[](1);
+        uint32[] memory limits = new uint32[](1);
+        operatorIndexes[0] = index;
+        limits[0] = 10; // limit == keys so limitEqualsKeyCount is true
+        operatorsRegistry.setOperatorLimits(operatorIndexes, limits, block.number);
+        assertEq(operatorsRegistry.getOperator(index).limit, 10);
+        assertEq(operatorsRegistry.getOperator(index).keys, 10);
+
+        uint256[] memory toRemove = new uint256[](2);
+        toRemove[0] = 9;
+        toRemove[1] = 8; // lastIndex 8; after removal keys = 8
+        vm.prank(opAddr);
+        vm.expectEmit(true, true, true, true);
+        emit SetOperatorLimit(index, 8);
+        operatorsRegistry.removeValidators(index, toRemove);
+
+        OperatorsV2.Operator memory op = operatorsRegistry.getOperator(index);
+        assertEq(op.keys, 8);
+        assertEq(op.limit, 8);
+    }
+
     /// @dev Covers if (limitEqualsKeyCount): limit == keys before removal → emit SetOperatorLimit(_index, operator.keys)
+    ///      Roll block so setOperatorLimits snapshot is after latestKeysEditBlockNumber and limit is applied.
     function testRemoveValidatorsSetOperatorLimitWhenLimitEqualsKeys() public {
         address opAddr = makeAddr("op");
         vm.startPrank(admin);
@@ -1544,12 +1578,14 @@ contract OperatorsRegistryV1Tests is OperatorsRegistryV1TestBase, OperatorAlloca
         vm.stopPrank();
         vm.prank(opAddr);
         operatorsRegistry.addValidators(index, 10, tenKeys);
+        vm.roll(block.number + 1);
         vm.prank(admin);
         uint256[] memory operators = new uint256[](1);
         uint32[] memory limits = new uint32[](1);
         operators[0] = index;
         limits[0] = 10; // limit == keys → limitEqualsKeyCount true
         operatorsRegistry.setOperatorLimits(operators, limits, block.number);
+        assertEq(operatorsRegistry.getOperator(index).limit, 10, "limit must be 10 for limitEqualsKeyCount branch");
 
         uint256[] memory toRemove = new uint256[](3);
         toRemove[0] = 9;
@@ -1574,6 +1610,7 @@ contract OperatorsRegistryV1Tests is OperatorsRegistryV1TestBase, OperatorAlloca
         vm.stopPrank();
         vm.prank(opAddr);
         operatorsRegistry.addValidators(index, 10, tenKeys);
+        vm.roll(block.number + 1);
         vm.prank(admin);
         uint256[] memory operators = new uint256[](1);
         uint32[] memory limits = new uint32[](1);
