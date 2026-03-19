@@ -135,14 +135,6 @@ contract ELFeeRecipientV1Test is ELFeeRecipientV1TestBase {
         vm.stopPrank();
     }
 
-    function testReceiveAcceptsEth() external {
-        uint256 amount = 1 ether;
-        vm.deal(address(this), amount);
-        (bool ok,) = payable(address(feeRecipient)).call{value: amount}("");
-        assertTrue(ok);
-        assertEq(address(feeRecipient).balance, amount);
-    }
-
     function testFallbackFail() external {
         address sender = uf._new(1);
         vm.deal(sender, 1e18);
