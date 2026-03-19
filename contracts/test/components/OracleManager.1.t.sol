@@ -483,3 +483,43 @@ contract OracleManagerV1Tests is Test {
         assertEq(0, oracleManager.getCLValidatorCount());
     }
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// OracleManager view and revert tests
+// ─────────────────────────────────────────────────────────────────────────────
+
+contract OracleManagerV1CoverageTests is OracleManagerV1Tests {
+    bytes32 constant IN_FLIGHT_DEPOSIT_SLOT = bytes32(uint256(keccak256("river.state.inFlightDeposit")) - 1);
+
+    /// Asserts that getCLValidatorTotalBalance returns the value stored in the last consensus layer report.
+    function testGetCLValidatorTotalBalance() public {
+        OracleManagerV1ExposeInitializer om = OracleManagerV1ExposeInitializer(address(oracleManager));
+        om.supersedeReportedBalanceSum(99 ether);
+        assertEq(oracleManager.getCLValidatorTotalBalance(), 99 ether);
+    }
+
+    /// Asserts that getLastConsensusLayerReport returns the stored report with the expected validatorsBalance.
+    function testGetLastConsensusLayerReport() public {
+        OracleManagerV1ExposeInitializer om = OracleManagerV1ExposeInitializer(address(oracleManager));
+        om.supersedeReportedBalanceSum(64 ether);
+        IOracleManagerV1.StoredConsensusLayerReport memory r = oracleManager.getLastConsensusLayerReport();
+        assertEq(r.validatorsBalance, 64 ether);
+    }
+
+    /// Asserts that setConsensusLayerData reverts with InvalidInFlightETHIncrease when report inFlightETH is greater than current stored in-flight.
+    function testSetConsensusLayerDataRevertsOnInFlightETHIncrease() public {
+        vm.store(address(oracleManager), IN_FLIGHT_DEPOSIT_SLOT, bytes32(uint256(10 ether)));
+        uint256 epoch = epochsPerFrame;
+        vm.warp(genesisTime + (epoch + epochsToAssumedFinality) * slotsPerEpoch * secondsPerSlot);
+        IOracleManagerV1.ConsensusLayerReport memory clr;
+        clr.epoch = epoch;
+        clr.validatorsBalance = 0;
+        clr.validatorsExitedBalance = 0;
+        clr.validatorsSkimmedBalance = 0;
+        clr.inFlightETH = 11 ether;
+        clr.exitedETHPerOperator = new uint256[](1);
+        vm.prank(oracle);
+        vm.expectRevert(abi.encodeWithSignature("InvalidInFlightETHIncrease(uint256,uint256)", 10 ether, 11 ether));
+        oracleManager.setConsensusLayerData(clr);
+    }
+}

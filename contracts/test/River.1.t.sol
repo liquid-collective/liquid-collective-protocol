@@ -2047,7 +2047,7 @@ contract RiverV1TestsReport_HEAVY_FUZZING is RiverV1TestBase {
         vm.warp((clr.epoch + epochsUntilFinal) * (secondsPerSlot * slotsPerEpoch));
 
         vm.prank(address(oracle));
-        vm.expectRevert(abi.encodeWithSignature("ExitedETHArrayDecreased()"));
+        vm.expectRevert(abi.encodeWithSignature("ExitedETHPerOperatorDecreased()"));
         river.setConsensusLayerData(clr);
     }
 
@@ -2225,5 +2225,185 @@ contract RiverV1TestsReport_HEAVY_FUZZING is RiverV1TestBase {
     function testExternalViewFunctions() public {
         assertEq(block.timestamp, river.getTime());
         assertEq(address(redeemManager), river.getRedeemManager());
+    }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// River coverage tests (100% for changed contracts, no CoverageGaps)
+// ─────────────────────────────────────────────────────────────────────────────
+
+contract RiverV1CoverageTests is RiverV1TestBase {
+    RedeemManagerV1 internal redeemManager;
+
+    bytes32 constant DEPOSITED_VALIDATOR_COUNT_SLOT =
+        bytes32(uint256(keccak256("river.state.depositedValidatorCount")) - 1);
+    bytes32 constant LAST_CLR_BASE_SLOT = bytes32(uint256(keccak256("river.state.lastConsensusLayerReport")) - 1);
+    bytes32 constant IN_FLIGHT_DEPOSIT_SLOT = bytes32(uint256(keccak256("river.state.inFlightDeposit")) - 1);
+    bytes32 constant BUFFERED_EXCEEDING_ETH_SLOT = bytes32(uint256(keccak256("river.state.bufferedExceedingEth")) - 1);
+
+    /// Asserts that initRiverV1_3 sets in-flight deposit when reported validator count is less than deposited count.
+    function testInitRiverV1_3WithInFlightValidators() public {
+        _initRiverAndV1_2();
+        // 10 deposited validators, 7 reported -> 3 in flight.
+        vm.store(address(river), DEPOSITED_VALIDATOR_COUNT_SLOT, bytes32(uint256(10)));
+        vm.store(address(river), bytes32(uint256(LAST_CLR_BASE_SLOT) + 5), bytes32(uint256(7)));
+        river.initRiverV1_3();
+        assertEq(river.getTotalDepositedETH(), 10 * 32 ether);
+        assertEq(uint256(vm.load(address(river), IN_FLIGHT_DEPOSIT_SLOT)), 3 * 32 ether);
+    }
+
+    /// Asserts that initRiverV1_3 leaves in-flight deposit zero when reported count equals deposited count.
+    function testInitRiverV1_3NoInFlight() public {
+        _initRiverAndV1_2();
+        vm.store(address(river), DEPOSITED_VALIDATOR_COUNT_SLOT, bytes32(uint256(5)));
+        vm.store(address(river), bytes32(uint256(LAST_CLR_BASE_SLOT) + 5), bytes32(uint256(5)));
+        river.initRiverV1_3();
+        assertEq(river.getTotalDepositedETH(), 5 * 32 ether);
+        assertEq(uint256(vm.load(address(river), IN_FLIGHT_DEPOSIT_SLOT)), 0);
+    }
+
+    /// Asserts that a consensus layer report succeeds when no coverage fund is configured (pull is skipped).
+    function testPullCoverageFundsNoCoverageFund() public {
+        _initRiverMinimalForReporting();
+        address alice = makeAddr("alice");
+        _allowDeposit(alice);
+        vm.deal(alice, 32 ether);
+        vm.prank(alice);
+        river.deposit{value: 32 ether}();
+        // Set last reported balance so the small increase is within bounds.
+        vm.store(address(river), bytes32(uint256(LAST_CLR_BASE_SLOT) + 1), bytes32(uint256(32 ether)));
+        uint256 epoch = epochsPerFrame;
+        vm.warp((epoch + epochsUntilFinal) * slotsPerEpoch * secondsPerSlot);
+        IOracleManagerV1.ConsensusLayerReport memory clr;
+        clr.epoch = epoch;
+        clr.validatorsBalance = 32 ether + 1 wei;
+        clr.inFlightETH = 0;
+        clr.exitedETHPerOperator = new uint256[](1);
+        vm.prank(address(oracle));
+        river.setConsensusLayerData(clr);
+    }
+
+    /// Asserts that setConsensusLayerData reverts with ZeroMintedShares when balance increases but total supply is zero.
+    function testOnEarningsZeroMintedSharesReverts() public {
+        _initRiverMinimalForReporting();
+        vm.store(address(river), IN_FLIGHT_DEPOSIT_SLOT, bytes32(uint256(32 ether)));
+        uint256 epoch = epochsPerFrame;
+        vm.warp((epoch + epochsUntilFinal) * slotsPerEpoch * secondsPerSlot);
+        IOracleManagerV1.ConsensusLayerReport memory clr;
+        clr.epoch = epoch;
+        clr.validatorsBalance = 32 ether + 1 wei;
+        clr.inFlightETH = 0;
+        clr.exitedETHPerOperator = new uint256[](1);
+        vm.prank(address(oracle));
+        vm.expectRevert(abi.encodeWithSignature("ZeroMintedShares()"));
+        river.setConsensusLayerData(clr);
+    }
+
+    /// Asserts that when the redeem manager has buffered exceeding ETH, reporting pulls some of it and redeem manager balance decreases.
+    function testPullRedeemManagerExceedingEthNonZero() public {
+        _initRiverMinimalForReporting();
+        address alice = makeAddr("alice");
+        _allowDeposit(alice);
+        vm.deal(alice, 32 ether);
+        vm.prank(alice);
+        river.deposit{value: 32 ether}();
+        vm.store(address(redeemManager), BUFFERED_EXCEEDING_ETH_SLOT, bytes32(uint256(1 ether)));
+        vm.deal(address(redeemManager), 1 ether);
+        uint256 epoch = epochsPerFrame;
+        vm.warp((epoch + epochsUntilFinal) * slotsPerEpoch * secondsPerSlot);
+        IOracleManagerV1.ConsensusLayerReport memory clr;
+        clr.epoch = epoch;
+        clr.validatorsBalance = 0;
+        clr.inFlightETH = 0;
+        clr.exitedETHPerOperator = new uint256[](1);
+        uint256 rdmBefore = address(redeemManager).balance;
+        vm.prank(address(oracle));
+        river.setConsensusLayerData(clr);
+        assertLt(address(redeemManager).balance, rdmBefore);
+    }
+
+    function _initRiverAndV1_2() internal {
+        super.setUp();
+        redeemManager = new RedeemManagerV1();
+        LibImplementationUnbricker.unbrick(vm, address(redeemManager));
+        bytes32 wc = withdraw.getCredentials();
+        river.initRiverV1(
+            address(deposit),
+            address(elFeeRecipient),
+            wc,
+            address(oracle),
+            admin,
+            address(allowlist),
+            address(operatorsRegistry),
+            collector,
+            500
+        );
+        river.initRiverV1_1(
+            address(redeemManager),
+            epochsPerFrame,
+            slotsPerEpoch,
+            secondsPerSlot,
+            0,
+            epochsUntilFinal,
+            1000,
+            500,
+            maxDailyNetCommittableAmount,
+            maxDailyRelativeCommittableAmount
+        );
+        river.initRiverV1_2();
+        withdraw.initializeWithdrawV1(address(river));
+        oracle.initOracleV1(address(river), admin, epochsPerFrame, slotsPerEpoch, secondsPerSlot, 0, 1000, 500);
+        vm.prank(admin);
+        oracle.addMember(oracleMember, 1);
+        vm.prank(admin);
+        river.setKeeper(admin);
+        redeemManager.initializeRedeemManagerV1(address(river));
+    }
+
+    function _initRiverMinimalForReporting() internal {
+        super.setUp();
+        redeemManager = new RedeemManagerV1();
+        LibImplementationUnbricker.unbrick(vm, address(redeemManager));
+        bytes32 wc = withdraw.getCredentials();
+        river.initRiverV1(
+            address(deposit),
+            address(elFeeRecipient),
+            wc,
+            address(oracle),
+            admin,
+            address(allowlist),
+            address(operatorsRegistry),
+            collector,
+            500
+        );
+        river.initRiverV1_1(
+            address(redeemManager),
+            epochsPerFrame,
+            slotsPerEpoch,
+            secondsPerSlot,
+            0,
+            epochsUntilFinal,
+            1000,
+            500,
+            maxDailyNetCommittableAmount,
+            maxDailyRelativeCommittableAmount
+        );
+        river.initRiverV1_2();
+        withdraw.initializeWithdrawV1(address(river));
+        oracle.initOracleV1(address(river), admin, epochsPerFrame, slotsPerEpoch, secondsPerSlot, 0, 1000, 500);
+        vm.prank(admin);
+        oracle.addMember(oracleMember, 1);
+        vm.prank(admin);
+        river.setKeeper(admin);
+        redeemManager.initializeRedeemManagerV1(address(river));
+    }
+
+    function _allowDeposit(address _who) internal {
+        address[] memory allowees = new address[](1);
+        allowees[0] = _who;
+        uint256[] memory permissions = new uint256[](1);
+        permissions[0] = LibAllowlistMasks.REDEEM_MASK | LibAllowlistMasks.DEPOSIT_MASK;
+        vm.prank(allower);
+        allowlist.setAllowPermissions(allowees, permissions);
     }
 }

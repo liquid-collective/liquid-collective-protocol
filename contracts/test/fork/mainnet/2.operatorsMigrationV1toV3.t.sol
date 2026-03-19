@@ -70,8 +70,7 @@ contract OperatorsMigrationV1ToV2 is Test {
         vm.prank(OPERATORS_REGISTRY_MAINNET_PROXY_ADMIN_ADDRESS);
         ITransparentUpgradeableProxy(address(orProxy))
             .upgradeToAndCall(
-                address(migrationImplementation),
-                abi.encodeCall(OperatorsRegistryV1WithFullMigration.migrateV1ToV2, ())
+                address(migrationImplementation), abi.encodeCall(OperatorsRegistryV1WithFullMigration.migrateV1ToV2, ())
             );
 
         OperatorsRegistryV1 or = OperatorsRegistryV1(OPERATORS_REGISTRY_MAINNET_ADDRESS);
