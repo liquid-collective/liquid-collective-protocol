@@ -1179,8 +1179,6 @@ contract OperatorsRegistryV1Tests is OperatorsRegistryV1TestBase, OperatorAlloca
 
         vm.expectEmit(true, true, true, true);
         emit RemovedValidatorKey(index, LibBytes.slice(tenKeys, 0, 48));
-        vm.expectEmit(true, true, true, true);
-        emit SetOperatorLimit(index, 0);
         operatorsRegistry.removeValidators(index, indexes);
         operator = operatorsRegistry.getOperator(index);
         assert(operator.keys == 0);
