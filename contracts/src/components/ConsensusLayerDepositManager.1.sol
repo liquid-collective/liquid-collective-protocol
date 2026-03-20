@@ -38,6 +38,10 @@ abstract contract ConsensusLayerDepositManagerV1 is IConsensusLayerDepositManage
     /// @param newCommittedBalance The new committed balance value
     function _setCommittedBalance(uint256 newCommittedBalance) internal virtual;
 
+    /// @notice Handler to check if slashing containment mode is active
+    /// @dev Must be overridden
+    function _getSlashingContainmentMode() internal view virtual returns (bool);
+
     /// @notice Internal helper to retrieve validator keys ready to be funded
     /// @dev Must be overridden
     /// @param _allocations Validator allocations
@@ -97,6 +101,10 @@ abstract contract ConsensusLayerDepositManagerV1 is IConsensusLayerDepositManage
     ) external {
         if (msg.sender != KeeperAddress.get()) {
             revert OnlyKeeper();
+        }
+
+        if (_getSlashingContainmentMode()) {
+            revert SlashingContainmentModeEnabled();
         }
 
         if (IDepositContract(DepositContractAddress.get()).get_deposit_root() != _depositRoot) {

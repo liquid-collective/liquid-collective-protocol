@@ -424,6 +424,11 @@ contract RiverV1 is
         BalanceToRedeem.set(_newBalanceToRedeem);
     }
 
+    /// @notice Returns whether slashing containment mode is currently active
+    function _getSlashingContainmentMode() internal view override(ConsensusLayerDepositManagerV1) returns (bool) {
+        return LastConsensusLayerReport.get().slashingContainmentMode;
+    }
+
     /// @notice Sets the committed balance, ready to be deposited to the consensus layer
     /// @param _newCommittedBalance The new committed balance value
     function _setCommittedBalance(uint256 _newCommittedBalance) internal override(ConsensusLayerDepositManagerV1) {
@@ -580,7 +585,11 @@ contract RiverV1 is
     /// @notice Committed funds are funds waiting to be deposited but that cannot be used to fund the redeem manager anymore
     /// @notice This two step process is required to prevent possible out of gas issues we would have from actually funding the validators at this point
     /// @param _period The period between current and last report
-    function _commitBalanceToDeposit(uint256 _period) internal override {
+    function _commitBalanceToDeposit(uint256 _period, bool _slashingContainmentModeEnabled) internal override {
+        if (_slashingContainmentModeEnabled) {
+            return;
+        }
+
         uint256 underlyingAssetBalance = _assetBalance();
         uint256 currentBalanceToDeposit = BalanceToDeposit.get();
         DailyCommittableLimits.DailyCommittableLimitsStruct memory dcl = DailyCommittableLimits.get();
@@ -588,7 +597,7 @@ contract RiverV1 is
         // we compute the max daily committable amount by taking the asset balance without the balance to deposit into account
         // this value is the daily maximum amount we can commit for deposits
         // we take the maximum value between a net amount and an amount relative to the asset balance
-        // this ensures that the amount we can commit is not too low in the beginning and that it is not too high when volumes grow
+        // this ensures that` the amount we can commit is not too low in the beginning and that it is not too high when volumes grow
         // the relative amount is computed from the committed and activated funds (on the CL or committed to be on the CL soon) and not
         // the deposit balance
         // this value is computed by subtracting the current balance to deposit from the underlying asset balance

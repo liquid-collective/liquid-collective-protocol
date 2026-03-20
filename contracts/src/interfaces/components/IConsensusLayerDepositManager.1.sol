@@ -50,6 +50,9 @@ interface IConsensusLayerDepositManagerV1 {
     /// @notice The operator allocations exceed the committed balance
     error OperatorAllocationsExceedCommittedBalance();
 
+    /// @notice Deposits are blocked while slashing containment mode is active
+    error SlashingContainmentModeEnabled();
+
     /// @notice Returns the amount of ETH not yet committed for deposit
     /// @return The amount of ETH not yet committed for deposit
     function getBalanceToDeposit() external view returns (uint256);
