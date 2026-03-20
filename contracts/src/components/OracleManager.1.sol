@@ -79,7 +79,7 @@ abstract contract OracleManagerV1 is IOracleManagerV1 {
 
     /// @notice Commits the deposit balance up to the allowed daily limit
     /// @param _period The period between current and last report
-    /// @param _slashingContainmentModeEnabled True if slashing containment mode is active
+    /// @param _slashingContainmentModeEnabled True if slashing containment mode is enabled
     function _commitBalanceToDeposit(uint256 _period, bool _slashingContainmentModeEnabled) internal virtual;
 
     /// @notice Prevents unauthorized calls
