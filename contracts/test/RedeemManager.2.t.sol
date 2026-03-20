@@ -15,7 +15,7 @@ interface IRedeemManagerV1Mock {
 
 contract RedeemManagerV1Mock is RedeemManagerV1 {
     // The error we are testing for
-    function redeem(uint256 _lsETHAmount) external onlyRedeemerOrRiver {
+    function redeem(uint256 _lsETHAmount) external onlyRiver {
         if (!_castedRiver().transferFrom(msg.sender, address(this), _lsETHAmount)) {
             revert TransferError();
         }
