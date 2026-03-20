@@ -109,6 +109,7 @@ abstract contract RiverV1TestBase is OperatorAllocationTestBase, BytesGenerator 
     event SetAllowlist(address indexed allowlist);
     event SetGlobalFee(uint256 fee);
     event SetOperatorsRegistry(address indexed operatorsRegistry);
+    event SetKeeper(address indexed keeper);
 
     uint64 constant epochsPerFrame = 225;
     uint64 constant slotsPerEpoch = 32;
@@ -241,6 +242,8 @@ contract RiverV1Tests is RiverV1TestBase {
         address keeper = makeAddr("keeper");
         assert(river.getKeeper() == admin);
         vm.prank(admin);
+        vm.expectEmit(true, true, true, true);
+        emit SetKeeper(keeper);
         river.setKeeper(keeper);
         assert(river.getKeeper() == keeper);
 

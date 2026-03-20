@@ -124,8 +124,15 @@ contract WLSETHV1 is IWLSETHV1, Initializable, ReentrancyGuardUpgradeable {
 
     /// @inheritdoc IWLSETHV1
     function mint(address _recipient, uint256 _shares) external nonReentrant {
-        BalanceOf.set(_recipient, BalanceOf.get(_recipient) + _shares);
         IRiverV1 river = IRiverV1(payable(RiverAddress.get()));
+        IAllowlistV1 allowlist = IAllowlistV1(river.getAllowlist());
+        if (allowlist.isDenied(msg.sender)) {
+            revert Denied(msg.sender);
+        }
+        if (allowlist.isDenied(_recipient)) {
+            revert Denied(_recipient);
+        }
+        BalanceOf.set(_recipient, BalanceOf.get(_recipient) + _shares);
         if (!river.transferFrom(msg.sender, address(this), _shares)) {
             revert TokenTransferError();
         }
@@ -135,12 +142,19 @@ contract WLSETHV1 is IWLSETHV1, Initializable, ReentrancyGuardUpgradeable {
 
     /// @inheritdoc IWLSETHV1
     function burn(address _recipient, uint256 _shares) external nonReentrant {
+        IRiverV1 river = IRiverV1(payable(RiverAddress.get()));
+        IAllowlistV1 allowlist = IAllowlistV1(river.getAllowlist());
+        if (allowlist.isDenied(msg.sender)) {
+            revert Denied(msg.sender);
+        }
+        if (allowlist.isDenied(_recipient)) {
+            revert Denied(_recipient);
+        }
         uint256 shares = BalanceOf.get(msg.sender);
         if (_shares > shares) {
             revert BalanceTooLow();
         }
         BalanceOf.set(msg.sender, shares - _shares);
-        IRiverV1 river = IRiverV1(payable(RiverAddress.get()));
         if (!river.transfer(_recipient, _shares)) {
             revert TokenTransferError();
         }
