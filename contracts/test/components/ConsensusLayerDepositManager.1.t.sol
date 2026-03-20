@@ -72,6 +72,10 @@ contract ConsensusLayerDepositManagerV1ExposeInitializer is ConsensusLayerDeposi
     function _setCommittedBalance(uint256 newCommittedBalance) internal override {
         CommittedBalance.set(newCommittedBalance);
     }
+
+    function _getSlashingContainmentMode() internal view override returns (bool) {
+        return false;
+    }
 }
 
 /// @notice Deposit manager test double that delegates _getNextValidators to the real OperatorsRegistry (same as River in production)
@@ -114,6 +118,10 @@ contract ConsensusLayerDepositManagerV1UsesRegistry is ConsensusLayerDepositMana
 
     function _setCommittedBalance(uint256 newCommittedBalance) internal override {
         CommittedBalance.set(newCommittedBalance);
+    }
+
+    function _getSlashingContainmentMode() internal view override returns (bool) {
+        return false;
     }
 }
 
@@ -322,6 +330,10 @@ contract ConsensusLayerDepositManagerV1ControllableValidatorKeyRequest is Consen
 
     function _setCommittedBalance(uint256 newCommittedBalance) internal override {
         CommittedBalance.set(newCommittedBalance);
+    }
+
+    function _getSlashingContainmentMode() internal view override returns (bool) {
+        return false;
     }
 }
 
@@ -975,6 +987,10 @@ contract ConsensusLayerDepositManagerV1ValidKeys is ConsensusLayerDepositManager
 
     function _setCommittedBalance(uint256 newCommittedBalance) internal override {
         CommittedBalance.set(newCommittedBalance);
+    }
+
+    function _getSlashingContainmentMode() internal view override returns (bool) {
+        return false;
     }
 }
 
