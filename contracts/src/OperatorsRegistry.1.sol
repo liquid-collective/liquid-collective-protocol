@@ -409,8 +409,10 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
 
         if (limitEqualsKeyCount) {
             operator.limit = operator.keys;
+            emit SetOperatorLimit(_index, operator.keys);
         } else if (lastIndex < operator.limit) {
             operator.limit = uint32(lastIndex);
+            emit SetOperatorLimit(_index, lastIndex);
         }
     }
 
