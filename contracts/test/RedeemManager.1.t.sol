@@ -470,6 +470,18 @@ contract RedeemManagerV1Tests is RedeeManagerV1TestBase {
         river.sudoReportWithdraw{value: amount}(address(redeemManager), uint256(amount) + 1e18);
     }
 
+    function testRequestRedeemFailNotRiver(uint256 _salt) external {
+        uint128 amount = uint128(bound(_salt, 1, type(uint128).max));
+        address user = _generateAllowlistedUser(_salt);
+
+        vm.prank(user);
+        river.approve(address(redeemManager), amount);
+
+        vm.prank(user);
+        vm.expectRevert(abi.encodeWithSignature("Unauthorized(address)", user));
+        redeemManager.requestRedeem(amount, user, user);
+    }
+
     function testReportWithdrawMultiple(uint256 _salt) external {
         uint128 amount = uint128(bound(_salt, 1, type(uint128).max));
         address user = _generateAllowlistedUser(_salt);

@@ -63,6 +63,7 @@ abstract contract ConsensusLayerDepositManagerV1 is IConsensusLayerDepositManage
 
     function _setKeeper(address _keeper) internal {
         KeeperAddress.set(_keeper);
+        emit SetKeeper(_keeper);
     }
 
     /// @inheritdoc IConsensusLayerDepositManagerV1
