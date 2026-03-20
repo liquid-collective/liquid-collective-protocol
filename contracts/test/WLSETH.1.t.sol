@@ -395,6 +395,15 @@ contract WLSETHV1Tests is WLSETHV1TestBase {
         vm.stopPrank();
     }
 
+    function testSendingToContractDoesntIncreaseSupply(uint256 _guySalt, uint256 _sum) external {
+        address _guy = uf._new(_guySalt);
+        RiverTokenMock(address(river)).sudoSetBalance(_guy, _sum);
+        vm.startPrank(_guy);
+        RiverTokenMock(address(river)).transfer(address(wlseth), _sum);
+        vm.stopPrank();
+        assert(wlseth.totalSupply() == 0);
+    }
+
     function testTransfer(uint256 _guySalt, uint256 _recipientSalt, uint32 _sum) external {
         address _guy = uf._new(_guySalt);
         address _recipient = uf._new(_recipientSalt);
