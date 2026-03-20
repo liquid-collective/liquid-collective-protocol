@@ -407,9 +407,6 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
             emit RemovedValidatorKey(_index, removedPublicKey);
         }
 
-        // Tested by testRemoveValidatorsLimitEqualsKeyCountBranch (OperatorsRegistryRemoveValidatorsLimitEqualsKeyCount.t.sol)
-        // and testRemoveValidatorsLimitEqualsKeyCountEmitsSetOperatorLimit / testRemoveValidatorsSetOperatorLimitWhenLimitEqualsKeys.
-        // Forge coverage does not attribute hits to these lines (known instrumentation quirk).
         if (limitEqualsKeyCount) {
             operator.limit = operator.keys;
             emit SetOperatorLimit(_index, operator.keys);
