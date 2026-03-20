@@ -161,6 +161,15 @@ interface IRedeemManagerV1 {
     /// @notice Creates a redeem request
     /// @param _lsETHAmount The amount of LsETH to redeem
     /// @param _recipient The recipient owning the redeem request
+    /// @param _initiator The initiator of the request
+    /// @return redeemRequestId The id of the redeem request
+    function requestRedeem(uint256 _lsETHAmount, address _recipient, address _initiator)
+        external
+        returns (uint32 redeemRequestId);
+
+    /// @notice Creates a redeem request
+    /// @param _lsETHAmount The amount of LsETH to redeem
+    /// @param _recipient The recipient owning the redeem request
     /// @return redeemRequestId The id of the redeem request
     function requestRedeem(uint256 _lsETHAmount, address _recipient) external returns (uint32 redeemRequestId);
 

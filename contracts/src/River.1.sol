@@ -198,8 +198,11 @@ contract RiverV1 is
     /// @inheritdoc IRiverV1
     function requestRedeem(uint256 _lsETHAmount, address _recipient) external returns (uint32 _redeemRequestId) {
         IAllowlistV1(AllowlistAddress.get()).onlyAllowed(msg.sender, LibAllowlistMasks.REDEEM_MASK);
+        if (IAllowlistV1(AllowlistAddress.get()).isDenied(_recipient)) {
+            revert IRedeemManagerV1.RecipientIsDenied();
+        }
         _transfer(msg.sender, address(this), _lsETHAmount);
-        return IRedeemManagerV1(RedeemManagerAddress.get()).requestRedeem(_lsETHAmount, _recipient);
+        return IRedeemManagerV1(RedeemManagerAddress.get()).requestRedeem(_lsETHAmount, _recipient, msg.sender);
     }
 
     /// @inheritdoc IRiverV1
