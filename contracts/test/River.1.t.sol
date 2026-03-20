@@ -13,6 +13,7 @@ import "./mocks/DepositContractMock.sol";
 import "../src/libraries/LibAllowlistMasks.sol";
 import "../src/Allowlist.1.sol";
 import "../src/River.1.sol";
+import "../src/interfaces/IRiver.1.sol";
 import "../src/interfaces/IDepositContract.sol";
 import "../src/Withdraw.1.sol";
 import "../src/Oracle.1.sol";
@@ -248,6 +249,13 @@ contract RiverV1Tests is RiverV1TestBase {
 
         vm.expectRevert(abi.encodeWithSignature("Unauthorized(address)", address(this)));
         river.setKeeper(address(0));
+    }
+
+    function testSetKeeperViaInterface() public {
+        address keeper = makeAddr("keeper");
+        vm.prank(admin);
+        IRiverV1(payable(address(river))).setKeeper(keeper);
+        assert(river.getKeeper() == keeper);
     }
 
     function testInitWithZeroAddressValue() public {
