@@ -109,6 +109,9 @@ interface IRedeemManagerV1 {
     /// @notice Thrown when the recipient of redeemRequest is denied
     error RecipientIsDenied();
 
+    /// @notice Thrown when an action is blocked because slashing containment mode is active
+    error SlashingContainmentModeEnabled();
+
     /// @param _river The address of the River contract
     function initializeRedeemManagerV1(address _river) external;
 

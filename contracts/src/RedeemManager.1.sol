@@ -49,6 +49,13 @@ contract RedeemManagerV1 is Initializable, IRedeemManagerV1, IProtocolVersion {
         _;
     }
 
+    modifier whenNotSlashingContainmentMode() {
+        if (_castedRiver().getSlashingContainmentMode()) {
+            revert SlashingContainmentModeEnabled();
+        }
+        _;
+    }
+
     /// @inheritdoc IRedeemManagerV1
     function initializeRedeemManagerV1(address _river) external init(0) {
         RiverAddress.set(_river);
@@ -152,6 +159,7 @@ contract RedeemManagerV1 is Initializable, IRedeemManagerV1, IProtocolVersion {
     function requestRedeem(uint256 _lsETHAmount, address _recipient)
         external
         onlyRedeemer
+        whenNotSlashingContainmentMode
         returns (uint32 redeemRequestId)
     {
         IRiverV1 river = _castedRiver();
@@ -162,7 +170,12 @@ contract RedeemManagerV1 is Initializable, IRedeemManagerV1, IProtocolVersion {
     }
 
     /// @inheritdoc IRedeemManagerV1
-    function requestRedeem(uint256 _lsETHAmount) external onlyRedeemer returns (uint32 redeemRequestId) {
+    function requestRedeem(uint256 _lsETHAmount)
+        external
+        onlyRedeemer
+        whenNotSlashingContainmentMode
+        returns (uint32 redeemRequestId)
+    {
         return _requestRedeem(_lsETHAmount, msg.sender, msg.sender);
     }
 
@@ -172,13 +185,14 @@ contract RedeemManagerV1 is Initializable, IRedeemManagerV1, IProtocolVersion {
         uint32[] calldata withdrawalEventIds,
         bool skipAlreadyClaimed,
         uint16 _depth
-    ) external returns (uint8[] memory claimStatuses) {
+    ) external whenNotSlashingContainmentMode returns (uint8[] memory claimStatuses) {
         return _claimRedeemRequests(redeemRequestIds, withdrawalEventIds, skipAlreadyClaimed, _depth);
     }
 
     /// @inheritdoc IRedeemManagerV1
     function claimRedeemRequests(uint32[] calldata _redeemRequestIds, uint32[] calldata _withdrawalEventIds)
         external
+        whenNotSlashingContainmentMode
         returns (uint8[] memory claimStatuses)
     {
         return _claimRedeemRequests(_redeemRequestIds, _withdrawalEventIds, true, type(uint16).max);

@@ -219,6 +219,10 @@ interface IRiverV1 is IConsensusLayerDepositManagerV1, IUserDepositManagerV1, IS
     /// @return The current balance to redeem
     function getBalanceToRedeem() external view returns (uint256);
 
+    /// @notice Returns whether slashing containment mode is currently active
+    /// @return True if slashing containment mode is active
+    function getSlashingContainmentMode() external view returns (bool);
+
     /// @notice Performs a redeem request on the redeem manager
     /// @param _lsETHAmount The amount of LsETH to redeem
     /// @param _recipient The address that will own the redeem request

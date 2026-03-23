@@ -437,6 +437,11 @@ contract RiverV1 is
         return LastConsensusLayerReport.get().slashingContainmentMode;
     }
 
+    /// @inheritdoc IRiverV1
+    function getSlashingContainmentMode() external view returns (bool) {
+        return _getSlashingContainmentMode();
+    }
+
     /// @notice Reverts if slashing containment mode is currently active
     modifier whenNotSlashingContainmentMode() {
         if (_getSlashingContainmentMode()) {
