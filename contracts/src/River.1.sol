@@ -429,6 +429,19 @@ contract RiverV1 is
         return LastConsensusLayerReport.get().slashingContainmentMode;
     }
 
+    /// @notice Reverts if slashing containment mode is currently active
+    modifier whenNotInSlashingContainmentMode() {
+        if (_getSlashingContainmentMode()) {
+            revert SlashingContainmentModeEnabled();
+        }
+        _;
+    }
+
+    /// @notice Override to block user deposits when slashing containment mode is active
+    function _deposit(address _recipient) internal override whenNotInSlashingContainmentMode {
+        super._deposit(_recipient);
+    }
+
     /// @notice Sets the committed balance, ready to be deposited to the consensus layer
     /// @param _newCommittedBalance The new committed balance value
     function _setCommittedBalance(uint256 _newCommittedBalance) internal override(ConsensusLayerDepositManagerV1) {

@@ -13,6 +13,8 @@ import "./mocks/DepositContractMock.sol";
 import "../src/libraries/LibAllowlistMasks.sol";
 import "../src/Allowlist.1.sol";
 import "../src/River.1.sol";
+import "../src/state/river/LastConsensusLayerReport.sol";
+import "../src/interfaces/components/IOracleManager.1.sol";
 import "../src/interfaces/IDepositContract.sol";
 import "../src/Withdraw.1.sol";
 import "../src/Oracle.1.sol";
@@ -33,6 +35,11 @@ contract RiverV1ForceCommittable is RiverV1 {
     function debug_moveDepositToCommitted() external {
         _setCommittedBalance(CommittedBalance.get() + BalanceToDeposit.get());
         _setBalanceToDeposit(0);
+    }
+
+    function sudoSetSlashingContainmentMode(bool _enabled) external {
+        IOracleManagerV1.StoredConsensusLayerReport storage report = LastConsensusLayerReport.get();
+        report.slashingContainmentMode = _enabled;
     }
 }
 
@@ -877,6 +884,15 @@ contract RiverV1Tests is RiverV1TestBase {
         returns (uint256)
     {
         return (_prevTotalEth * annualAprUpperBound * _timeElapsed) / uint256(10000 * 365 days);
+    }
+
+    function testDepositBlockedInSlashingContainmentMode() public {
+        vm.deal(bob, 1 ether);
+        _allow(bob);
+        river.sudoSetSlashingContainmentMode(true);
+        vm.prank(bob);
+        vm.expectRevert(abi.encodeWithSignature("SlashingContainmentModeEnabled()"));
+        river.deposit{value: 1 ether}();
     }
 
     function testSendRedeemManagerUnauthorizedCall() public {
