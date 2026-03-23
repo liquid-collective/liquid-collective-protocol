@@ -964,6 +964,22 @@ contract RiverV1Tests is RiverV1TestBase {
     }
 
     function testRequestRedeemAllowedWhenSlashingModeOff() public {
+        RedeemManagerV1 redeemManager = new RedeemManagerV1();
+        LibImplementationUnbricker.unbrick(vm, address(redeemManager));
+        redeemManager.initializeRedeemManagerV1(address(river));
+        river.initRiverV1_1(
+            address(redeemManager),
+            epochsPerFrame,
+            slotsPerEpoch,
+            secondsPerSlot,
+            0,
+            epochsUntilFinal,
+            1000,
+            500,
+            maxDailyNetCommittableAmount,
+            maxDailyRelativeCommittableAmount
+        );
+
         vm.deal(bob, 1 ether);
         _allow(bob);
         vm.prank(bob);
@@ -971,24 +987,32 @@ contract RiverV1Tests is RiverV1TestBase {
         river.sudoSetSlashingContainmentMode(false);
         uint256 balance = river.balanceOf(bob);
         vm.prank(bob);
-        // Confirm the slashing mode check does not block the call.
-        // The call may fail for other reasons (no RedeemManager in this suite).
-        try river.requestRedeem(balance, bob) {}
-        catch (bytes memory err) {
-            assertFalse(bytes4(err) == bytes4(keccak256("SlashingContainmentModeEnabled()")));
-        }
+        uint32 redeemRequestId = river.requestRedeem(balance, bob);
+        assertEq(redeemRequestId, 0);
     }
 
     function testClaimRedeemRequestsAllowedWhenSlashingModeOff() public {
+        RedeemManagerV1 redeemManager = new RedeemManagerV1();
+        LibImplementationUnbricker.unbrick(vm, address(redeemManager));
+        redeemManager.initializeRedeemManagerV1(address(river));
+        river.initRiverV1_1(
+            address(redeemManager),
+            epochsPerFrame,
+            slotsPerEpoch,
+            secondsPerSlot,
+            0,
+            epochsUntilFinal,
+            1000,
+            500,
+            maxDailyNetCommittableAmount,
+            maxDailyRelativeCommittableAmount
+        );
+
         river.sudoSetSlashingContainmentMode(false);
         uint32[] memory ids = new uint32[](0);
         uint32[] memory events = new uint32[](0);
-        // Confirm the slashing mode check does not block the call.
-        // The call may fail for other reasons (no RedeemManager in this suite).
-        try river.claimRedeemRequests(ids, events) {}
-        catch (bytes memory err) {
-            assertFalse(bytes4(err) == bytes4(keccak256("SlashingContainmentModeEnabled()")));
-        }
+        uint8[] memory claimStatuses = river.claimRedeemRequests(ids, events);
+        assertEq(claimStatuses.length, 0);
     }
 
     function testDepositUnblockedAfterSlashingModeToggleOff() public {
