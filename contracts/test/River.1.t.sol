@@ -15,6 +15,7 @@ import "../src/Allowlist.1.sol";
 import "../src/River.1.sol";
 import "../src/state/river/LastConsensusLayerReport.sol";
 import "../src/interfaces/components/IOracleManager.1.sol";
+import "../src/interfaces/IRiver.1.sol";
 import "../src/interfaces/IDepositContract.sol";
 import "../src/Withdraw.1.sol";
 import "../src/Oracle.1.sol";
@@ -115,6 +116,7 @@ abstract contract RiverV1TestBase is OperatorAllocationTestBase, BytesGenerator 
     event SetAllowlist(address indexed allowlist);
     event SetGlobalFee(uint256 fee);
     event SetOperatorsRegistry(address indexed operatorsRegistry);
+    event SetKeeper(address indexed keeper);
 
     uint64 constant epochsPerFrame = 225;
     uint64 constant slotsPerEpoch = 32;
@@ -247,11 +249,20 @@ contract RiverV1Tests is RiverV1TestBase {
         address keeper = makeAddr("keeper");
         assert(river.getKeeper() == admin);
         vm.prank(admin);
+        vm.expectEmit(true, true, true, true);
+        emit SetKeeper(keeper);
         river.setKeeper(keeper);
         assert(river.getKeeper() == keeper);
 
         vm.expectRevert(abi.encodeWithSignature("Unauthorized(address)", address(this)));
         river.setKeeper(address(0));
+    }
+
+    function testSetKeeperViaInterface() public {
+        address keeper = makeAddr("keeper");
+        vm.prank(admin);
+        IRiverV1(payable(address(river))).setKeeper(keeper);
+        assert(river.getKeeper() == keeper);
     }
 
     function testInitWithZeroAddressValue() public {
@@ -990,6 +1001,17 @@ contract RiverV1Tests is RiverV1TestBase {
         vm.prank(bob);
         river.deposit{value: 1 ether}();
         assertGt(river.balanceOf(bob), 0);
+    function testRequestRedeemDeniedRecipient(uint256 _salt, uint256 _salt2) external {
+        vm.assume(_salt != _salt2);
+        address user = uf._new(_salt);
+        _allow(user);
+        uint128 amount = uint128(bound(_salt, 1, type(uint128).max));
+        address recipient = uf._new(_salt2);
+        _deny(recipient, true);
+
+        vm.prank(user);
+        vm.expectRevert(abi.encodeWithSignature("RecipientIsDenied()"));
+        river.requestRedeem(amount, recipient);
     }
 }
 

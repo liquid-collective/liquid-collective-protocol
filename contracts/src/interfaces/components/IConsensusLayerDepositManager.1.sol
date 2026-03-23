@@ -20,6 +20,10 @@ interface IConsensusLayerDepositManagerV1 {
     /// @param newDepositedValidatorCount The new deposited validator count value
     event SetDepositedValidatorCount(uint256 oldDepositedValidatorCount, uint256 newDepositedValidatorCount);
 
+    /// @notice Emitted when the keeper address is updated
+    /// @param keeper The new keeper address
+    event SetKeeper(address indexed keeper);
+
     /// @notice Not enough funds to deposit one validator
     error NotEnoughFunds();
 

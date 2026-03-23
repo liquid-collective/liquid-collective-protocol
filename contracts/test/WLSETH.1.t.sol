@@ -395,6 +395,15 @@ contract WLSETHV1Tests is WLSETHV1TestBase {
         vm.stopPrank();
     }
 
+    function testSendingToContractDoesntIncreaseSupply(uint256 _guySalt, uint256 _sum) external {
+        address _guy = uf._new(_guySalt);
+        RiverTokenMock(address(river)).sudoSetBalance(_guy, _sum);
+        vm.startPrank(_guy);
+        RiverTokenMock(address(river)).transfer(address(wlseth), _sum);
+        vm.stopPrank();
+        assert(wlseth.totalSupply() == 0);
+    }
+
     function testTransfer(uint256 _guySalt, uint256 _recipientSalt, uint32 _sum) external {
         address _guy = uf._new(_guySalt);
         address _recipient = uf._new(_recipientSalt);
@@ -944,6 +953,60 @@ contract WLSETHV1DenyTests is WLSETHV1TestBase {
         }
     }
 
+    function testBurnDeniedSender(uint256 _guySalt, uint32 _sum) external {
+        address _guy = uf._new(_guySalt);
+        if (_sum > 0) {
+            _mint(_guy, _sum);
+            uint256 shares = wlseth.sharesOf(_guy);
+            allowlistMock.sudoSetDenied(_guy, true);
+            vm.startPrank(_guy);
+            vm.expectRevert(abi.encodeWithSignature("Denied(address)", _guy));
+            wlseth.burn(_guy, shares);
+            vm.stopPrank();
+        }
+    }
+
+    function testBurnDeniedRecipient(uint256 _guySalt, uint256 _recipientSalt, uint32 _sum) external {
+        address _guy = uf._new(_guySalt);
+        address _recipient = uf._new(_recipientSalt);
+        if (_sum > 0) {
+            _mint(_guy, _sum);
+            uint256 shares = wlseth.sharesOf(_guy);
+            allowlistMock.sudoSetDenied(_recipient, true);
+            vm.startPrank(_guy);
+            vm.expectRevert(abi.encodeWithSignature("Denied(address)", _recipient));
+            wlseth.burn(_recipient, shares);
+            vm.stopPrank();
+        }
+    }
+
+    function testMintDeniedSender(uint256 _guySalt, uint32 _sum) external {
+        address _guy = uf._new(_guySalt);
+        if (_sum > 0) {
+            RiverTokenMock(address(river)).sudoSetBalance(_guy, _sum);
+            allowlistMock.sudoSetDenied(_guy, true);
+            vm.startPrank(_guy);
+            RiverTokenMock(address(river)).approve(address(wlseth), _sum);
+            vm.expectRevert(abi.encodeWithSignature("Denied(address)", _guy));
+            wlseth.mint(_guy, _sum);
+            vm.stopPrank();
+        }
+    }
+
+    function testMintDeniedRecipient(uint256 _guySalt, uint256 _recipientSalt, uint32 _sum) external {
+        address _guy = uf._new(_guySalt);
+        address _recipient = uf._new(_recipientSalt);
+        if (_sum > 0) {
+            RiverTokenMock(address(river)).sudoSetBalance(_guy, _sum);
+            allowlistMock.sudoSetDenied(_recipient, true);
+            vm.startPrank(_guy);
+            RiverTokenMock(address(river)).approve(address(wlseth), _sum);
+            vm.expectRevert(abi.encodeWithSignature("Denied(address)", _recipient));
+            wlseth.mint(_recipient, _sum);
+            vm.stopPrank();
+        }
+    }
+
     function testTransferSucceedsAfterUndeny(uint256 _guySalt, uint256 _recipientSalt, uint32 _sum) external {
         address _guy = uf._new(_guySalt);
         address _recipient = uf._new(_recipientSalt);
@@ -962,5 +1025,28 @@ contract WLSETHV1DenyTests is WLSETHV1TestBase {
             assert(wlseth.balanceOf(_guy) == 0);
             assert(wlseth.balanceOf(_recipient) == guyBalance);
         }
+    }
+
+    function testTransferZeroShares() external {
+        address sender = uf._new(1);
+        address recipient = uf._new(2);
+        RiverTokenMock(address(river)).sudoSetBalance(sender, 10);
+        vm.startPrank(sender);
+        RiverTokenMock(address(river)).approve(address(wlseth), 10);
+        wlseth.mint(sender, 10);
+        vm.stopPrank();
+        assert(wlseth.balanceOf(sender) == 100 ether);
+        vm.expectRevert(abi.encodeWithSignature("ZeroShares()"));
+        vm.prank(sender);
+        wlseth.transfer(recipient, 1);
+    }
+
+    function testTransferNullTransfer(uint256 _guySalt) external {
+        address _guy = uf._new(_guySalt);
+        _mint(_guy, 1);
+        uint256 guyBalance = wlseth.balanceOf(_guy);
+        vm.expectRevert(abi.encodeWithSignature("NullTransfer()"));
+        vm.prank(_guy);
+        wlseth.transfer(address(this), 0);
     }
 }
