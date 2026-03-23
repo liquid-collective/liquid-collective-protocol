@@ -2075,7 +2075,7 @@ contract RedeemManagerV1Tests is RedeeManagerV1TestBase {
         assertEq(redeemManager.getRedeemRequestCount(), 1);
         assertEq(redeemManager.getRedeemRequestDetails(id).recipient, user);
     }
- 
+
     function testClaimRedeemRequestsBlocksReentrancy() external {
         uint256 amount = 32 ether;
 
