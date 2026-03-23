@@ -618,7 +618,7 @@ contract RiverV1 is
         // we compute the max daily committable amount by taking the asset balance without the balance to deposit into account
         // this value is the daily maximum amount we can commit for deposits
         // we take the maximum value between a net amount and an amount relative to the asset balance
-        // this ensures that` the amount we can commit is not too low in the beginning and that it is not too high when volumes grow
+        // this ensures that the amount we can commit is not too low in the beginning and that it is not too high when volumes grow
         // the relative amount is computed from the committed and activated funds (on the CL or committed to be on the CL soon) and not
         // the deposit balance
         // this value is computed by subtracting the current balance to deposit from the underlying asset balance
