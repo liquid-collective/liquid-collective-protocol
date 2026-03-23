@@ -196,7 +196,11 @@ contract RiverV1 is
     }
 
     /// @inheritdoc IRiverV1
-    function requestRedeem(uint256 _lsETHAmount, address _recipient) external returns (uint32 _redeemRequestId) {
+    function requestRedeem(uint256 _lsETHAmount, address _recipient)
+        external
+        whenNotSlashingContainmentMode
+        returns (uint32 _redeemRequestId)
+    {
         IAllowlistV1(AllowlistAddress.get()).onlyAllowed(msg.sender, LibAllowlistMasks.REDEEM_MASK);
         _transfer(msg.sender, address(this), _lsETHAmount);
         return IRedeemManagerV1(RedeemManagerAddress.get()).requestRedeem(_lsETHAmount, _recipient);
@@ -205,6 +209,7 @@ contract RiverV1 is
     /// @inheritdoc IRiverV1
     function claimRedeemRequests(uint32[] calldata _redeemRequestIds, uint32[] calldata _withdrawalEventIds)
         external
+        whenNotSlashingContainmentMode
         returns (uint8[] memory claimStatuses)
     {
         return IRedeemManagerV1(RedeemManagerAddress.get())
@@ -430,7 +435,7 @@ contract RiverV1 is
     }
 
     /// @notice Reverts if slashing containment mode is currently active
-    modifier whenNotInSlashingContainmentMode() {
+    modifier whenNotSlashingContainmentMode() {
         if (_getSlashingContainmentMode()) {
             revert SlashingContainmentModeEnabled();
         }
@@ -438,7 +443,7 @@ contract RiverV1 is
     }
 
     /// @notice Override to block user deposits when slashing containment mode is active
-    function _deposit(address _recipient) internal override whenNotInSlashingContainmentMode {
+    function _deposit(address _recipient) internal override whenNotSlashingContainmentMode {
         super._deposit(_recipient);
     }
 
