@@ -1001,6 +1001,8 @@ contract RiverV1Tests is RiverV1TestBase {
         vm.prank(bob);
         river.deposit{value: 1 ether}();
         assertGt(river.balanceOf(bob), 0);
+    }
+
     function testRequestRedeemDeniedRecipient(uint256 _salt, uint256 _salt2) external {
         vm.assume(_salt != _salt2);
         address user = uf._new(_salt);
