@@ -2012,6 +2012,69 @@ contract RedeemManagerV1Tests is RedeeManagerV1TestBase {
         redeemManager.claimRedeemRequests(redeemRequestIds, withdrawEventIds, true, type(uint16).max);
     }
 
+    function testRequestRedeemTwoArgBlockedInSlashingMode(uint256 _salt) external {
+        address user = _generateAllowlistedUser(_salt);
+        uint64 amount = uint64(bound(_salt, 1, type(uint64).max));
+        river.sudoDeal(user, amount);
+        vm.prank(user);
+        river.approve(address(redeemManager), amount);
+
+        river.sudoSetSlashingContainmentMode(true);
+
+        vm.prank(user);
+        vm.expectRevert(abi.encodeWithSignature("SlashingContainmentModeEnabled()"));
+        redeemManager.requestRedeem(amount, user);
+    }
+
+    function testRequestRedeemOneArgBlockedInSlashingMode(uint256 _salt) external {
+        address user = _generateAllowlistedUser(_salt);
+        uint64 amount = uint64(bound(_salt, 1, type(uint64).max));
+        river.sudoDeal(user, amount);
+        vm.prank(user);
+        river.approve(address(redeemManager), amount);
+
+        river.sudoSetSlashingContainmentMode(true);
+
+        vm.prank(user);
+        vm.expectRevert(abi.encodeWithSignature("SlashingContainmentModeEnabled()"));
+        redeemManager.requestRedeem(amount);
+    }
+
+    function testClaimRedeemRequestsFourArgBlockedInSlashingMode() external {
+        river.sudoSetSlashingContainmentMode(true);
+
+        uint32[] memory redeemRequestIds = new uint32[](0);
+        uint32[] memory withdrawalEventIds = new uint32[](0);
+
+        vm.expectRevert(abi.encodeWithSignature("SlashingContainmentModeEnabled()"));
+        redeemManager.claimRedeemRequests(redeemRequestIds, withdrawalEventIds, true, type(uint16).max);
+    }
+
+    function testClaimRedeemRequestsTwoArgBlockedInSlashingMode() external {
+        river.sudoSetSlashingContainmentMode(true);
+
+        uint32[] memory redeemRequestIds = new uint32[](0);
+        uint32[] memory withdrawalEventIds = new uint32[](0);
+
+        vm.expectRevert(abi.encodeWithSignature("SlashingContainmentModeEnabled()"));
+        redeemManager.claimRedeemRequests(redeemRequestIds, withdrawalEventIds);
+    }
+
+    function testRequestRedeemTwoArgAllowedWhenSlashingModeOff(uint256 _salt) external {
+        address user = _generateAllowlistedUser(_salt);
+        uint64 amount = uint64(bound(_salt, 1, type(uint64).max));
+        river.sudoDeal(user, amount);
+        vm.prank(user);
+        river.approve(address(redeemManager), amount);
+
+        river.sudoSetSlashingContainmentMode(false);
+
+        vm.prank(user);
+        uint32 id = redeemManager.requestRedeem(amount, user);
+        assertEq(redeemManager.getRedeemRequestCount(), 1);
+        assertEq(redeemManager.getRedeemRequestDetails(id).recipient, user);
+    }
+
     function testVersion() external {
         assertEq(redeemManager.version(), "1.2.1");
     }

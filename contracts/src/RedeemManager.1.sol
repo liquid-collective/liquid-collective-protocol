@@ -49,6 +49,9 @@ contract RedeemManagerV1 is Initializable, IRedeemManagerV1, IProtocolVersion {
         _;
     }
 
+    /// @notice Reverts if slashing containment mode is currently active
+    /// @dev Makes an external view call to River. River must be initialized before any function
+    ///      guarded by this modifier is callable; calls will revert with a non-contract error otherwise.
     modifier whenNotSlashingContainmentMode() {
         if (_castedRiver().getSlashingContainmentMode()) {
             revert SlashingContainmentModeEnabled();
@@ -158,8 +161,8 @@ contract RedeemManagerV1 is Initializable, IRedeemManagerV1, IProtocolVersion {
     /// @inheritdoc IRedeemManagerV1
     function requestRedeem(uint256 _lsETHAmount, address _recipient)
         external
-        onlyRedeemer
         whenNotSlashingContainmentMode
+        onlyRedeemer
         returns (uint32 redeemRequestId)
     {
         IRiverV1 river = _castedRiver();
@@ -172,8 +175,8 @@ contract RedeemManagerV1 is Initializable, IRedeemManagerV1, IProtocolVersion {
     /// @inheritdoc IRedeemManagerV1
     function requestRedeem(uint256 _lsETHAmount)
         external
-        onlyRedeemer
         whenNotSlashingContainmentMode
+        onlyRedeemer
         returns (uint32 redeemRequestId)
     {
         return _requestRedeem(_lsETHAmount, msg.sender, msg.sender);
