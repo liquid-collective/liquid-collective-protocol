@@ -18,6 +18,7 @@ import "../src/TUPProxy.sol";
 import "../src/Initializable.sol";
 import "../src/Allowlist.1.sol";
 import "./mocks/RejectEtherMock.sol";
+import "./mocks/ReentrancyClaimAttackMock.sol";
 
 contract RiverMock {
     mapping(address => uint256) internal balances;
@@ -2000,6 +2001,39 @@ contract RedeemManagerV1Tests is RedeeManagerV1TestBase {
         // Attempt to claim the redeem request and expect it to fail
         vm.expectRevert(abi.encodeWithSignature("ClaimRedeemFailed(address,bytes)", recipient, new bytes(0)));
         redeemManager.claimRedeemRequests(redeemRequestIds, withdrawEventIds, true, type(uint16).max);
+    }
+
+    function testClaimRedeemRequestsBlocksReentrancy() external {
+        uint256 amount = 32 ether;
+
+        // Deploy attacker whose receive() re-enters claimRedeemRequests
+        ReentrancyClaimAttackMock attacker = new ReentrancyClaimAttackMock(address(redeemManager));
+
+        // Allowlisted EOA requests a redeem with the attacker contract as recipient
+        address requester = _generateAllowlistedUser(999);
+        river.sudoDeal(requester, amount);
+        vm.prank(requester);
+        river.approve(address(redeemManager), amount);
+        vm.prank(requester);
+        redeemManager.requestRedeem(amount, address(attacker));
+
+        // Fund the withdrawal
+        vm.deal(address(this), amount);
+        river.sudoReportWithdraw{value: amount}(address(redeemManager), amount);
+
+        // Prime the attacker with the request/event IDs it will use during re-entry
+        uint32[] memory reqIds = new uint32[](1);
+        uint32[] memory eventIds = new uint32[](1);
+        reqIds[0] = 0;
+        eventIds[0] = 0;
+        attacker.setAttackIds(reqIds, eventIds);
+
+        // Trigger claim: attacker's receive() attempts a re-entrant call.
+        // Without nonReentrant: the re-entrant call succeeds (reentrancySucceeded = true).
+        // With nonReentrant:    the re-entrant call is blocked  (reentrancySucceeded = false).
+        redeemManager.claimRedeemRequests(reqIds, eventIds, true, type(uint16).max);
+
+        assertFalse(attacker.reentrancySucceeded(), "re-entrant call to claimRedeemRequests must be blocked");
     }
 
     function testVersion() external {
