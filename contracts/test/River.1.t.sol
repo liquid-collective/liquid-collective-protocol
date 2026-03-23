@@ -973,7 +973,8 @@ contract RiverV1Tests is RiverV1TestBase {
         vm.prank(bob);
         // Confirm the slashing mode check does not block the call.
         // The call may fail for other reasons (no RedeemManager in this suite).
-        try river.requestRedeem(balance, bob) {} catch (bytes memory err) {
+        try river.requestRedeem(balance, bob) {}
+        catch (bytes memory err) {
             assertFalse(bytes4(err) == bytes4(keccak256("SlashingContainmentModeEnabled()")));
         }
     }
@@ -984,7 +985,8 @@ contract RiverV1Tests is RiverV1TestBase {
         uint32[] memory events = new uint32[](0);
         // Confirm the slashing mode check does not block the call.
         // The call may fail for other reasons (no RedeemManager in this suite).
-        try river.claimRedeemRequests(ids, events) {} catch (bytes memory err) {
+        try river.claimRedeemRequests(ids, events) {}
+        catch (bytes memory err) {
             assertFalse(bytes4(err) == bytes4(keccak256("SlashingContainmentModeEnabled()")));
         }
     }
