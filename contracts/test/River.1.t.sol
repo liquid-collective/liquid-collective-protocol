@@ -13,6 +13,8 @@ import "./mocks/DepositContractMock.sol";
 import "../src/libraries/LibAllowlistMasks.sol";
 import "../src/Allowlist.1.sol";
 import "../src/River.1.sol";
+import "../src/state/river/LastConsensusLayerReport.sol";
+import "../src/interfaces/components/IOracleManager.1.sol";
 import "../src/interfaces/IRiver.1.sol";
 import "../src/interfaces/IDepositContract.sol";
 import "../src/Withdraw.1.sol";
@@ -34,6 +36,11 @@ contract RiverV1ForceCommittable is RiverV1 {
     function debug_moveDepositToCommitted() external {
         _setCommittedBalance(CommittedBalance.get() + BalanceToDeposit.get());
         _setBalanceToDeposit(0);
+    }
+
+    function sudoSetSlashingContainmentMode(bool _enabled) external {
+        IOracleManagerV1.StoredConsensusLayerReport storage report = LastConsensusLayerReport.get();
+        report.slashingContainmentMode = _enabled;
     }
 }
 
@@ -890,9 +897,136 @@ contract RiverV1Tests is RiverV1TestBase {
         return (_prevTotalEth * annualAprUpperBound * _timeElapsed) / uint256(10000 * 365 days);
     }
 
+    function testDepositBlockedInSlashingContainmentMode() public {
+        vm.deal(bob, 1 ether);
+        _allow(bob);
+        river.sudoSetSlashingContainmentMode(true);
+        vm.prank(bob);
+        vm.expectRevert(abi.encodeWithSignature("SlashingContainmentModeEnabled()"));
+        river.deposit{value: 1 ether}();
+    }
+
     function testSendRedeemManagerUnauthorizedCall() public {
         vm.expectRevert(abi.encodeWithSignature("Unauthorized(address)", address(this)));
         river.sendRedeemManagerExceedingFunds();
+    }
+
+    function testRequestRedeemBlockedInSlashingContainmentMode() public {
+        vm.deal(bob, 1 ether);
+        _allow(bob);
+        vm.prank(bob);
+        river.deposit{value: 1 ether}();
+
+        river.sudoSetSlashingContainmentMode(true);
+
+        vm.prank(bob);
+        vm.expectRevert(abi.encodeWithSignature("SlashingContainmentModeEnabled()"));
+        river.requestRedeem(1 ether, bob);
+    }
+
+    function testClaimRedeemRequestsBlockedInSlashingContainmentMode() public {
+        river.sudoSetSlashingContainmentMode(true);
+
+        uint32[] memory redeemRequestIds = new uint32[](1);
+        redeemRequestIds[0] = 0;
+        uint32[] memory withdrawalEventIds = new uint32[](1);
+        withdrawalEventIds[0] = 0;
+
+        vm.expectRevert(abi.encodeWithSignature("SlashingContainmentModeEnabled()"));
+        river.claimRedeemRequests(redeemRequestIds, withdrawalEventIds);
+    }
+
+    function testDepositAllowedWhenSlashingModeOff() public {
+        vm.deal(bob, 1 ether);
+        _allow(bob);
+        river.sudoSetSlashingContainmentMode(false);
+        vm.prank(bob);
+        river.deposit{value: 1 ether}();
+        assertGt(river.balanceOf(bob), 0);
+    }
+
+    function testDepositAndTransferBlockedInSlashingContainmentMode() public {
+        vm.deal(bob, 1 ether);
+        _allow(bob);
+        river.sudoSetSlashingContainmentMode(true);
+        vm.prank(bob);
+        vm.expectRevert(abi.encodeWithSignature("SlashingContainmentModeEnabled()"));
+        river.depositAndTransfer{value: 1 ether}(joe);
+    }
+
+    function testReceiveBlockedInSlashingContainmentMode() public {
+        vm.deal(bob, 1 ether);
+        _allow(bob);
+        river.sudoSetSlashingContainmentMode(true);
+        vm.prank(bob);
+        vm.expectRevert(abi.encodeWithSignature("SlashingContainmentModeEnabled()"));
+        address(river).call{value: 1 ether}("");
+    }
+
+    function testRequestRedeemAllowedWhenSlashingModeOff() public {
+        RedeemManagerV1 redeemManager = new RedeemManagerV1();
+        LibImplementationUnbricker.unbrick(vm, address(redeemManager));
+        redeemManager.initializeRedeemManagerV1(address(river));
+        river.initRiverV1_1(
+            address(redeemManager),
+            epochsPerFrame,
+            slotsPerEpoch,
+            secondsPerSlot,
+            0,
+            epochsUntilFinal,
+            1000,
+            500,
+            maxDailyNetCommittableAmount,
+            maxDailyRelativeCommittableAmount
+        );
+
+        vm.deal(bob, 1 ether);
+        _allow(bob);
+        vm.prank(bob);
+        river.deposit{value: 1 ether}();
+        river.sudoSetSlashingContainmentMode(false);
+        uint256 balance = river.balanceOf(bob);
+        vm.prank(bob);
+        uint32 redeemRequestId = river.requestRedeem(balance, bob);
+        assertEq(redeemRequestId, 0);
+    }
+
+    function testClaimRedeemRequestsAllowedWhenSlashingModeOff() public {
+        RedeemManagerV1 redeemManager = new RedeemManagerV1();
+        LibImplementationUnbricker.unbrick(vm, address(redeemManager));
+        redeemManager.initializeRedeemManagerV1(address(river));
+        river.initRiverV1_1(
+            address(redeemManager),
+            epochsPerFrame,
+            slotsPerEpoch,
+            secondsPerSlot,
+            0,
+            epochsUntilFinal,
+            1000,
+            500,
+            maxDailyNetCommittableAmount,
+            maxDailyRelativeCommittableAmount
+        );
+
+        river.sudoSetSlashingContainmentMode(false);
+        uint32[] memory ids = new uint32[](0);
+        uint32[] memory events = new uint32[](0);
+        uint8[] memory claimStatuses = river.claimRedeemRequests(ids, events);
+        assertEq(claimStatuses.length, 0);
+    }
+
+    function testDepositUnblockedAfterSlashingModeToggleOff() public {
+        vm.deal(bob, 1 ether);
+        _allow(bob);
+        river.sudoSetSlashingContainmentMode(true);
+        vm.prank(bob);
+        vm.expectRevert(abi.encodeWithSignature("SlashingContainmentModeEnabled()"));
+        river.deposit{value: 1 ether}();
+
+        river.sudoSetSlashingContainmentMode(false);
+        vm.prank(bob);
+        river.deposit{value: 1 ether}();
+        assertGt(river.balanceOf(bob), 0);
     }
 
     function testRequestRedeemDeniedRecipient(uint256 _salt, uint256 _salt2) external {
@@ -1245,6 +1379,12 @@ contract RiverV1TestsReport_HEAVY_FUZZING is RiverV1TestBase {
         _updateAssertions(clr, rfv, _salt);
 
         _performPostAssertions(rfv);
+
+        // Scenario 6 leaves slashing containment mode active; disable it so
+        // _redeemAllSatisfiedRedeemRequests can call river.claimRedeemRequests.
+        if (rfv.scenario == SCENARIO_REGULAR_REPORTING_SLASHING_CONTAINMENT_ACTIVE) {
+            river.sudoSetSlashingContainmentMode(false);
+        }
 
         _salt = _redeemAllSatisfiedRedeemRequests(_salt);
     }

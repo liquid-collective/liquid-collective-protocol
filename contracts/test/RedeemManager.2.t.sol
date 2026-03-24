@@ -99,6 +99,16 @@ contract RiverMock is MockERC20 {
         RedeemManagerV1(redeemManager).pullExceedingEth(amount);
     }
 
+    bool internal _slashingContainmentMode;
+
+    function getSlashingContainmentMode() external view returns (bool) {
+        return _slashingContainmentMode;
+    }
+
+    function sudoSetSlashingContainmentMode(bool _enabled) external {
+        _slashingContainmentMode = _enabled;
+    }
+
     fallback() external payable {}
     receive() external payable {}
 }
