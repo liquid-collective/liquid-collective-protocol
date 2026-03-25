@@ -164,6 +164,21 @@ interface IRiverV1 is IConsensusLayerDepositManagerV1, IUserDepositManagerV1, IS
     /// @notice Initializes version 1.2 of the River System
     function initRiverV1_2() external;
 
+    /// @notice Initializes version 1.3 of the River System — TotalDepositedETH and InFlightDeposit migration
+    function initRiverV1_3() external;
+
+    /// @notice Initializes version 1.4 of the River System — attestation committee setup
+    /// @param _depositDataBuffer   Address of the DepositDataBuffer contract
+    /// @param _attesters           Initial list of attester addresses
+    /// @param _threshold           Initial attestation quorum threshold
+    /// @param _genesisForkVersion  Genesis fork version used to compute the BLS deposit domain
+    function initRiverV1_4(
+        address _depositDataBuffer,
+        address[] calldata _attesters,
+        uint256 _threshold,
+        bytes4 _genesisForkVersion
+    ) external;
+
     /// @notice Get the current global fee
     /// @return The global fee
     function getGlobalFee() external view returns (uint256);

@@ -72,6 +72,8 @@ contract ConsensusLayerDepositManagerV1ExposeInitializer is ConsensusLayerDeposi
     function _setCommittedBalance(uint256 newCommittedBalance) internal override {
         CommittedBalance.set(newCommittedBalance);
     }
+
+    function _updateFundedValidatorsFromBuffer(IDepositDataBuffer.DepositObject[] memory) internal override {}
 }
 
 /// @notice Deposit manager test double that delegates _getNextValidators to the real OperatorsRegistry (same as River in production)
@@ -115,6 +117,8 @@ contract ConsensusLayerDepositManagerV1UsesRegistry is ConsensusLayerDepositMana
     function _setCommittedBalance(uint256 newCommittedBalance) internal override {
         CommittedBalance.set(newCommittedBalance);
     }
+
+    function _updateFundedValidatorsFromBuffer(IDepositDataBuffer.DepositObject[] memory) internal override {}
 }
 
 contract ConsensusLayerDepositManagerV1InitTests is Test {
@@ -323,6 +327,8 @@ contract ConsensusLayerDepositManagerV1ControllableValidatorKeyRequest is Consen
     function _setCommittedBalance(uint256 newCommittedBalance) internal override {
         CommittedBalance.set(newCommittedBalance);
     }
+
+    function _updateFundedValidatorsFromBuffer(IDepositDataBuffer.DepositObject[] memory) internal override {}
 }
 
 contract ConsensusLayerDepositManagerV1ErrorTests is OperatorAllocationTestBase {
@@ -976,6 +982,8 @@ contract ConsensusLayerDepositManagerV1ValidKeys is ConsensusLayerDepositManager
     function _setCommittedBalance(uint256 newCommittedBalance) internal override {
         CommittedBalance.set(newCommittedBalance);
     }
+
+    function _updateFundedValidatorsFromBuffer(IDepositDataBuffer.DepositObject[] memory) internal override {}
 }
 
 contract ConsensusLayerDepositManagerV1ValidKeysTest is OperatorAllocationTestBase {

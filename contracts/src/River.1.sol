@@ -17,8 +17,15 @@ import "./Initializable.sol";
 import "./Administrable.sol";
 
 import "./libraries/LibAllowlistMasks.sol";
+import "./libraries/LibErrors.sol";
+import "./libraries/BLS12_381.sol";
+import "./interfaces/IDepositDataBuffer.sol";
 
 import "./state/river/AllowlistAddress.sol";
+import "./state/river/DepositDataBufferAddress.sol";
+import "./state/river/AttestationThreshold.sol";
+import "./state/river/Attesters.sol";
+import "./state/river/DepositDomainValue.sol";
 import "./state/river/RedeemManagerAddress.sol";
 import "./state/river/OperatorsRegistryAddress.sol";
 import "./state/river/CollectorAddress.sol";
@@ -134,6 +141,40 @@ contract RiverV1 is
         if (clValidatorCount < depositedValidatorCount) {
             InFlightDeposit.set((depositedValidatorCount - clValidatorCount) * DEPOSIT_SIZE);
         }
+    }
+
+    /// @inheritdoc IRiverV1
+    function initRiverV1_4(
+        address _depositDataBuffer,
+        address[] calldata _attesters,
+        uint256 _threshold,
+        bytes4 _genesisForkVersion
+    ) external init(4) {
+        if (_depositDataBuffer == address(0)) revert LibErrors.InvalidZeroAddress();
+        DepositDataBufferAddress.set(_depositDataBuffer);
+        emit SetDepositDataBuffer(_depositDataBuffer);
+
+        DepositDomainValue.set(BLS12_381.computeDepositDomain(_genesisForkVersion));
+
+        for (uint256 i = 0; i < _attesters.length; i++) {
+            if (_attesters[i] == address(0)) revert LibErrors.InvalidZeroAddress();
+            if (!Attesters.isAttester(_attesters[i])) {
+                Attesters.setAttester(_attesters[i], true);
+                Attesters.setCount(Attesters.getCount() + 1);
+                emit SetAttester(_attesters[i], true);
+            }
+        }
+
+        if (_threshold == 0) revert ZeroThreshold();
+        uint256 attesterCount = Attesters.getCount();
+        if (_threshold > attesterCount) {
+            revert ThresholdExceedsAttesterCount(_threshold, attesterCount);
+        }
+        if (_threshold > MAX_SIGNATURES) {
+            revert ThresholdExceedsMaxSignatures(_threshold, MAX_SIGNATURES);
+        }
+        AttestationThreshold.set(_threshold);
+        emit SetAttestationThreshold(_threshold);
     }
 
     /// @inheritdoc IRiverV1
@@ -335,6 +376,32 @@ contract RiverV1 is
             }
             _transfer(_depositor, _recipient, mintedShares);
         }
+    }
+
+
+    /// @notice Overridden handler to update operator funded ETH accounting for attestation-based deposits.
+    ///         Aggregates deposit objects by operator index and calls _incrementFundedETH.
+    /// @param deposits Array of deposit objects from the DepositDataBuffer
+    function _updateFundedValidatorsFromBuffer(IDepositDataBuffer.DepositObject[] memory deposits)
+        internal
+        override
+    {
+        if (deposits.length == 0) return;
+
+        uint256 len = deposits.length;
+        uint256 highestOpIdx = 0;
+        for (uint256 i = 0; i < len; i++) {
+            uint256 opIdx = _parseOperatorIndex(deposits[i].metadata);
+            if (opIdx > highestOpIdx) highestOpIdx = opIdx;
+        }
+
+        uint256[] memory fundedETH = new uint256[](highestOpIdx + 1);
+        for (uint256 i = 0; i < len; i++) {
+            uint256 opIdx = _parseOperatorIndex(deposits[i].metadata);
+            fundedETH[opIdx] += deposits[i].amount;
+        }
+
+        _incrementFundedETH(fundedETH);
     }
 
     /// @notice Overridden handler to pull funds from the execution layer fee recipient to River and return the delta in the balance

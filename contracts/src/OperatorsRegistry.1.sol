@@ -243,6 +243,140 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
 
     /// @inheritdoc IOperatorsRegistryV1
     function requestValidatorExits(ExitETHAllocation[] calldata _allocations) external {
+        uint256 _operatorIndexesLength = _operatorIndexes.length;
+        if (_operatorIndexesLength != _newLimits.length) {
+            revert InvalidArrayLengths();
+        }
+        if (_operatorIndexesLength == 0) {
+            revert InvalidEmptyArray();
+        }
+        for (uint256 idx = 0; idx < _operatorIndexesLength; ++idx) {
+            uint256 operatorIndex = _operatorIndexes[idx];
+            uint32 newLimit = _newLimits[idx];
+
+            // prevents duplicates
+            if (idx > 0 && !(operatorIndex > _operatorIndexes[idx - 1])) {
+                revert UnorderedOperatorList();
+            }
+
+            OperatorsV2.Operator storage operator = OperatorsV2.get(operatorIndex);
+
+            uint32 currentLimit = operator.limit;
+            if (newLimit == currentLimit) {
+                emit OperatorLimitUnchanged(operatorIndex, newLimit);
+                continue;
+            }
+
+            // we enter this condition if the operator edited its keys after the off-chain key audit was made
+            // we will skip any limit update on that operator unless it was a decrease in the initial limit
+            if (_snapshotBlock < operator.latestKeysEditBlockNumber && newLimit > currentLimit) {
+                emit OperatorEditsAfterSnapshot(
+                    operatorIndex, currentLimit, newLimit, operator.latestKeysEditBlockNumber, _snapshotBlock
+                );
+                continue;
+            }
+
+            // otherwise, we check for limit invariants that shouldn't happen if the off-chain key audit
+            // was made properly, and if everything is respected, we update the limit
+
+            if (newLimit > operator.keys) {
+                revert OperatorLimitTooHigh(operatorIndex, newLimit, operator.keys);
+            }
+
+            if (newLimit < operator.funded) {
+                revert OperatorLimitTooLow(operatorIndex, newLimit, operator.funded);
+            }
+
+            operator.limit = newLimit;
+            emit SetOperatorLimit(operatorIndex, newLimit);
+        }
+    }
+
+    /// @inheritdoc IOperatorsRegistryV1
+    function addValidators(uint256 _index, uint32 _keyCount, bytes calldata _publicKeysAndSignatures)
+        external
+        onlyOperatorOrAdmin(_index)
+    {
+        if (_keyCount == 0) {
+            revert InvalidKeyCount();
+        }
+
+        if (
+            _publicKeysAndSignatures.length
+                != _keyCount * (ValidatorKeys.PUBLIC_KEY_LENGTH + ValidatorKeys.SIGNATURE_LENGTH)
+        ) {
+            revert InvalidKeysLength();
+        }
+
+        OperatorsV2.Operator storage operator = OperatorsV2.get(_index);
+        uint256 totalKeys = uint256(operator.keys);
+        for (uint256 idx = 0; idx < _keyCount; ++idx) {
+            bytes memory publicKeyAndSignature = LibBytes.slice(
+                _publicKeysAndSignatures,
+                idx * (ValidatorKeys.PUBLIC_KEY_LENGTH + ValidatorKeys.SIGNATURE_LENGTH),
+                ValidatorKeys.PUBLIC_KEY_LENGTH + ValidatorKeys.SIGNATURE_LENGTH
+            );
+            ValidatorKeys.set(_index, totalKeys + idx, publicKeyAndSignature);
+        }
+        OperatorsV2.setKeys(_index, uint32(totalKeys) + _keyCount);
+
+        emit AddedValidatorKeys(_index, _publicKeysAndSignatures);
+    }
+
+    /// @inheritdoc IOperatorsRegistryV1
+    function removeValidators(uint256 _index, uint256[] calldata _indexes) external onlyOperatorOrAdmin(_index) {
+        uint256 indexesLength = _indexes.length;
+        if (indexesLength == 0) {
+            revert InvalidKeyCount();
+        }
+
+        OperatorsV2.Operator storage operator = OperatorsV2.get(_index);
+
+        uint32 totalKeys = operator.keys;
+
+        if (!(_indexes[0] < totalKeys)) {
+            revert InvalidIndexOutOfBounds();
+        }
+
+        uint256 lastIndex = _indexes[indexesLength - 1];
+
+        if (lastIndex < operator.funded) {
+            revert InvalidFundedKeyDeletionAttempt();
+        }
+
+        bool limitEqualsKeyCount = totalKeys == operator.limit;
+        OperatorsV2.setKeys(_index, totalKeys - uint32(indexesLength));
+
+        for (uint256 idx; idx < indexesLength;) {
+            uint256 keyIndex = _indexes[idx];
+
+            if (idx > 0 && !(keyIndex < _indexes[idx - 1])) {
+                revert InvalidUnsortedIndexes();
+            }
+            unchecked {
+                ++idx;
+            }
+
+            uint256 lastKeyIndex = totalKeys - idx;
+
+            (bytes memory removedPublicKey,) = ValidatorKeys.get(_index, keyIndex);
+            (bytes memory lastPublicKeyAndSignature) = ValidatorKeys.getRaw(_index, lastKeyIndex);
+            ValidatorKeys.set(_index, keyIndex, lastPublicKeyAndSignature);
+            ValidatorKeys.set(_index, lastKeyIndex, new bytes(0));
+
+            emit RemovedValidatorKey(_index, removedPublicKey);
+        }
+
+        if (limitEqualsKeyCount) {
+            operator.limit = operator.keys;
+            emit SetOperatorLimit(_index, operator.keys);
+        } else if (lastIndex < operator.limit) {
+            operator.limit = uint32(lastIndex);
+            emit SetOperatorLimit(_index, lastIndex);
+        }
+    }
+
+    /// @inheritdoc IOperatorsRegistryV1
         if (msg.sender != IConsensusLayerDepositManagerV1(RiverAddress.get()).getKeeper()) {
             revert IConsensusLayerDepositManagerV1.OnlyKeeper();
         }
