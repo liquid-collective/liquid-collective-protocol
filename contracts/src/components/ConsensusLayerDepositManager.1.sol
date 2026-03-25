@@ -117,9 +117,7 @@ abstract contract ConsensusLayerDepositManagerV1 is IConsensusLayerDepositManage
             if (_allocations[i].signature.length != SIGNATURE_LENGTH) {
                 revert InconsistentSignature();
             }
-            if (_allocations[i].depositAmount != DEPOSIT_SIZE) {
-                revert InvalidDepositSize(_allocations[i].depositAmount);
-            }
+
             totalDeposits += _allocations[i].depositAmount;
             highestOperatorIndex = LibUint256.max(highestOperatorIndex, _allocations[i].operatorIndex);
         }

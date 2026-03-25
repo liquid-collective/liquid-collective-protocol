@@ -277,9 +277,9 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
             if (!operator.active) {
                 revert InactiveOperator(operatorIndex);
             }
-            uint256 opFunded = operator.funded;
+
             uint256 opRequestedExits = operator.requestedExits;
-            uint256 available = opFunded - opRequestedExits;
+            uint256 available = operator.funded - opRequestedExits;
             if (ethAmount > available) {
                 // Operator has insufficient available ETH
                 revert ExitsRequestedExceedAvailableFundedAmount(operatorIndex, ethAmount, available);
