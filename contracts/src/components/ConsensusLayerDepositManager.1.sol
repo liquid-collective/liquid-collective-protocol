@@ -99,9 +99,8 @@ abstract contract ConsensusLayerDepositManagerV1 is IConsensusLayerDepositManage
         }
 
         uint256 committedBalance = CommittedBalance.get();
-        uint256 maxDepositableCount = committedBalance / DEPOSIT_SIZE;
         uint256 highestOperatorIndex = 0;
-        if (maxDepositableCount == 0) {
+        if (committedBalance == 0) {
             revert NotEnoughFunds();
         }
         // Calculate total deposits and validate key lengths + operator ordering in a single pass
@@ -165,6 +164,9 @@ abstract contract ConsensusLayerDepositManagerV1 is IConsensusLayerDepositManage
         uint256 _depositAmount,
         bytes32 _withdrawalCredentials
     ) internal {
+        if (_depositAmount < 1 ether) {
+            revert InvalidDepositSize(_depositAmount);
+        }
         uint256 depositAmount = _depositAmount / 1 gwei;
 
         bytes32 pubkeyRoot = sha256(bytes.concat(_publicKey, bytes16(0)));

@@ -29,6 +29,7 @@ import "./state/river/GlobalFee.sol";
 import "./state/river/MetadataURI.sol";
 import "./state/river/LastConsensusLayerReport.sol";
 import "./state/river/TotalDepositedETH.sol";
+import "./state/river/DepositedValidatorCount.sol";
 
 /// @title River (v1)
 /// @author Alluvial Finance Inc.
