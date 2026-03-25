@@ -6,7 +6,7 @@ import "../../libraries/LibSanitize.sol";
 /// @title Operators Storage (v3)
 /// @notice Utility to manage the Operators in storage
 /// @dev V3 removes the key-management fields (limit, keys, latestKeysEditBlockNumber) that are no longer
-/// @dev needed after migrating to off-chain key submission at deposit time.
+/// @dev needed after migrating to off-chain key submission at deposit time. V3 uses ETH-based accounting.
 library OperatorsV3 {
     /// @notice Storage slot of the Operators
     bytes32 internal constant OPERATORS_SLOT = bytes32(uint256(keccak256("river.state.v3.operators")) - 1);
@@ -16,10 +16,10 @@ library OperatorsV3 {
         /// @dev The following values respect this invariant:
         /// @dev     funded >= requestedExits
 
-        /// @custom:attribute The count of funded validators
-        uint32 funded;
-        /// @custom:attribute The count of exit requests made to this operator
-        uint32 requestedExits;
+        /// @custom:attribute The amount of funded ETH
+        uint256 funded;
+        /// @custom:attribute The amount of requested ETH exits
+        uint256 requestedExits;
         /// @custom:attribute True if the operator is active and allowed to operate on River
         bool active;
         /// @custom:attribute Display name of the operator
@@ -119,21 +119,6 @@ library OperatorsV3 {
         return activeOperators;
     }
 
-    /// @notice Retrieve the stopped validator count for an operator by its index
-    /// @param stoppedValidatorCounts The storage pointer to the raw array containing the stopped validator counts
-    /// @param index The index of the operator to lookup
-    /// @return The amount of stopped validators for the given operator index
-    function _getStoppedValidatorCountAtIndex(uint32[] storage stoppedValidatorCounts, uint256 index)
-        internal
-        view
-        returns (uint32)
-    {
-        if (index + 1 >= stoppedValidatorCounts.length) {
-            return 0;
-        }
-        return stoppedValidatorCounts[index + 1];
-    }
-
     /// @notice Add a new operator in storage
     /// @param _newOperator Value of the new operator
     /// @return The size of the operator array after the operation
@@ -154,20 +139,25 @@ library OperatorsV3 {
         return r.value.length;
     }
 
-    /// @notice Storage slot of the Stopped Validators
-    bytes32 internal constant STOPPED_VALIDATORS_SLOT =
-        bytes32(uint256(keccak256("river.state.stoppedValidators")) - 1);
+    /// @notice Storage slot of the Exited ETH
+    bytes32 internal constant EXITED_ETH_SLOT = bytes32(uint256(keccak256("river.state.exitedETH")) - 1);
 
-    struct SlotStoppedValidators {
-        uint32[] value;
+    // This slot is used to store the exited ETH for each operator
+    // the array is encoded as [sum, op0, op1, ...]
+    // the sum is the total exited ETH for all operators
+    // the op0 is the exited ETH for operator 0
+    // the op1 is the exited ETH for operator 1
+    // and so on
+    struct SlotExitedETH {
+        uint256[] value;
     }
 
-    /// @notice Retrieve the storage pointer of the Stopped Validators array
-    /// @return The Stopped Validators storage pointer
-    function getStoppedValidators() internal view returns (uint32[] storage) {
-        bytes32 slot = STOPPED_VALIDATORS_SLOT;
+    /// @notice Retrieve the storage pointer of the Exited ETH array
+    /// @return The Exited ETH storage pointer
+    function getExitedETH() internal view returns (uint256[] storage) {
+        bytes32 slot = EXITED_ETH_SLOT;
 
-        SlotStoppedValidators storage r;
+        SlotExitedETH storage r;
 
         // solhint-disable-next-line no-inline-assembly
         assembly {
@@ -177,12 +167,38 @@ library OperatorsV3 {
         return r.value;
     }
 
-    /// @notice Sets the entire stopped validators array
-    /// @param value The new stopped validators array
-    function setRawStoppedValidators(uint32[] memory value) internal {
-        bytes32 slot = STOPPED_VALIDATORS_SLOT;
+    /// @notice Retrieve the exited ETH for an operator by its index
+    /// @param index The index of the operator to lookup
+    /// @return The exited ETH for the given operator index
+    function getExitedETHAtIndex(uint256 index) internal view returns (uint256) {
+        bytes32 slot = EXITED_ETH_SLOT;
 
-        SlotStoppedValidators storage r;
+        SlotExitedETH storage r;
+
+        // solhint-disable-next-line no-inline-assembly
+        assembly {
+            r.slot := slot
+        }
+        return _getExitedETHAtIndex(r.value, index);
+    }
+
+    /// @notice Retrieve the exited ETH for an operator by its index
+    /// @param exitedETH The storage pointer to the raw array containing the exited ETH
+    /// @param index The index of the operator to lookup
+    /// @return The exited ETH for the given operator index
+    function _getExitedETHAtIndex(uint256[] storage exitedETH, uint256 index) internal view returns (uint256) {
+        if (index + 1 >= exitedETH.length) {
+            return 0;
+        }
+        return exitedETH[index + 1];
+    }
+
+    /// @notice Sets the entire exited ETH array
+    /// @param value The new exited ETH array
+    function setRawExitedETH(uint256[] memory value) internal {
+        bytes32 slot = EXITED_ETH_SLOT;
+
+        SlotExitedETH storage r;
 
         // solhint-disable-next-line no-inline-assembly
         assembly {

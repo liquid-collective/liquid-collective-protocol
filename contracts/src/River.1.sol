@@ -28,6 +28,7 @@ import "./state/river/BalanceToRedeem.sol";
 import "./state/river/GlobalFee.sol";
 import "./state/river/MetadataURI.sol";
 import "./state/river/LastConsensusLayerReport.sol";
+import "./state/river/TotalDepositedETH.sol";
 
 /// @title River (v1)
 /// @author Alluvial Finance Inc.
@@ -121,6 +122,16 @@ contract RiverV1 is
         unchecked {
             _setCommittedBalance(CommittedBalance.get() - dustToUncommit);
             _setBalanceToDeposit(BalanceToDeposit.get() + dustToUncommit);
+        }
+    }
+
+    function initRiverV1_3() external init(3) {
+        IOracleManagerV1.StoredConsensusLayerReport storage storedReport = LastConsensusLayerReport.get();
+        uint256 clValidatorCount = storedReport.validatorsCount;
+        uint256 depositedValidatorCount = DepositedValidatorCount.get();
+        TotalDepositedETH.set(depositedValidatorCount * DEPOSIT_SIZE);
+        if (clValidatorCount < depositedValidatorCount) {
+            InFlightDeposit.set((depositedValidatorCount - clValidatorCount) * DEPOSIT_SIZE);
         }
     }
 
@@ -291,24 +302,10 @@ contract RiverV1 is
         return Administrable._getAdmin();
     }
 
-    /// @notice Overridden handler to update funded validator counts on the operators registry after deposits
-    /// @dev Aggregates consecutive entries by operatorIndex (assumes sorted input) and calls
-    ///      incrementFundedValidators once per distinct operator.
-    function _updateFundedValidators(IOperatorsRegistryV1.ValidatorDeposit[] calldata _allocations) internal override {
-        IOperatorsRegistryV1 registry = IOperatorsRegistryV1(OperatorsRegistryAddress.get());
-        uint256 i = 0;
-        while (i < _allocations.length) {
-            uint256 operatorIndex = _allocations[i].operatorIndex;
-            uint256 start = i;
-            while (i < _allocations.length && _allocations[i].operatorIndex == operatorIndex) {
-                ++i;
-            }
-            bytes[] memory publicKeys = new bytes[](i - start);
-            for (uint256 j = start; j < i; ++j) {
-                publicKeys[j - start] = _allocations[j].pubkey;
-            }
-            registry.incrementFundedValidators(operatorIndex, publicKeys);
-        }
+    /// @notice Overridden handler to increment the funded ETH for the operators
+    /// @param _fundedETH The array of funded ETH amounts
+    function _incrementFundedETH(uint256[] memory _fundedETH) internal override {
+        IOperatorsRegistryV1(OperatorsRegistryAddress.get()).incrementFundedETH(_fundedETH);
     }
 
     /// @notice Overridden handler called whenever a token transfer is triggered
@@ -398,16 +395,8 @@ contract RiverV1 is
     /// @return The current total asset balance managed by River
     function _assetBalance() internal view override(SharesManagerV1, OracleManagerV1) returns (uint256) {
         IOracleManagerV1.StoredConsensusLayerReport storage storedReport = LastConsensusLayerReport.get();
-        uint256 clValidatorCount = storedReport.validatorsCount;
-        uint256 depositedValidatorCount = DepositedValidatorCount.get();
-        if (clValidatorCount < depositedValidatorCount) {
-            return storedReport.validatorsBalance + BalanceToDeposit.get() + CommittedBalance.get()
-                + BalanceToRedeem.get() + (depositedValidatorCount - clValidatorCount)
-                * ConsensusLayerDepositManagerV1.DEPOSIT_SIZE;
-        } else {
-            return
-                storedReport.validatorsBalance + BalanceToDeposit.get() + CommittedBalance.get() + BalanceToRedeem.get();
-        }
+        return storedReport.validatorsBalance + BalanceToDeposit.get() + CommittedBalance.get() + BalanceToRedeem.get()
+            + InFlightDeposit.get();
     }
 
     /// @notice Internal utility to set the daily committable limits
@@ -514,12 +503,11 @@ contract RiverV1 is
     /// @param _depositToRedeemRebalancingAllowed True if rebalancing from deposit to redeem is allowed
     function _requestExitsBasedOnRedeemDemandAfterRebalancings(
         uint256 _exitingBalance,
-        uint32[] memory _stoppedValidatorCounts,
+        uint256[] memory _exitedETH,
         bool _depositToRedeemRebalancingAllowed,
         bool _slashingContainmentModeEnabled
     ) internal override {
-        IOperatorsRegistryV1(OperatorsRegistryAddress.get())
-            .reportStoppedValidatorCounts(_stoppedValidatorCounts, DepositedValidatorCount.get());
+        IOperatorsRegistryV1(OperatorsRegistryAddress.get()).reportExitedETH(_exitedETH, TotalDepositedETH.get());
 
         if (_slashingContainmentModeEnabled) {
             return;
@@ -549,24 +537,19 @@ contract RiverV1 is
 
                 IOperatorsRegistryV1 or = IOperatorsRegistryV1(OperatorsRegistryAddress.get());
 
-                (uint256 totalStoppedValidatorCount, uint256 totalRequestedExitsCount) =
-                    or.getStoppedAndRequestedExitCounts();
+                (uint256 totalExitedETH, uint256 totalRequestedExitAmounts) = or.getExitedETHAndRequestedExitAmounts();
 
                 // what we are calling pre-exiting balance is the amount of eth that should soon enter the exiting balance
                 // because exit requests have been made and operators might have a lag to process them
                 // we take them into account to not exit too many validators
                 uint256 preExitingBalance =
-                    (totalRequestedExitsCount > totalStoppedValidatorCount
-                                ? (totalRequestedExitsCount - totalStoppedValidatorCount)
-                                : 0) * DEPOSIT_SIZE;
+                    totalRequestedExitAmounts > totalExitedETH ? (totalRequestedExitAmounts - totalExitedETH) : 0;
 
                 if (availableBalanceToRedeem + _exitingBalance + preExitingBalance < redeemManagerDemandInEth) {
-                    uint256 validatorCountToExit = LibUint256.ceil(
-                        redeemManagerDemandInEth - (availableBalanceToRedeem + _exitingBalance + preExitingBalance),
-                        DEPOSIT_SIZE
-                    );
+                    uint256 exitAmountToRequest =
+                        redeemManagerDemandInEth - (availableBalanceToRedeem + _exitingBalance + preExitingBalance);
 
-                    or.demandValidatorExits(validatorCountToExit, DepositedValidatorCount.get());
+                    or.demandETHExits(exitAmountToRequest, TotalDepositedETH.get());
                 }
             }
         }
