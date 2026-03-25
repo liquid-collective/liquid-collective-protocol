@@ -13,11 +13,8 @@ import "./Administrable.sol";
 import "./state/operatorsRegistry/Operators.1.sol";
 import "./state/operatorsRegistry/Operators.2.sol";
 import "./state/operatorsRegistry/Operators.3.sol";
-<<<<<<< feat/pectra/accounting-changes
 import "./state/operatorsRegistry/TotalETHExitsRequested.sol";
 import "./state/operatorsRegistry/CurrentETHExitsDemand.sol";
-=======
->>>>>>> feat/pectra/remove-keys
 import "./state/operatorsRegistry/TotalValidatorExitsRequested.sol";
 import "./state/operatorsRegistry/CurrentValidatorExitsDemand.sol";
 import "./state/shared/RiverAddress.sol";
@@ -61,7 +58,6 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
     /// @inheritdoc IOperatorsRegistryV1
     function initOperatorsRegistryV1_1() external init(1) {
         _migrateOperators_V1_1();
-<<<<<<< feat/pectra/accounting-changes
     }
 
     /// @inheritdoc IOperatorsRegistryV1
@@ -96,25 +92,6 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
             exitedETH[idx] = stoppedValidators[idx] * 32 ether;
         }
         OperatorsV3.setRawExitedETH(exitedETH);
-=======
->>>>>>> feat/pectra/remove-keys
-    }
-
-    /// @inheritdoc IOperatorsRegistryV1
-    function initOperatorsRegistryV1_2() external init(2) {
-        uint256 opCount = OperatorsV2.getCount();
-        for (uint256 idx = 0; idx < opCount; ++idx) {
-            OperatorsV2.Operator memory old = OperatorsV2.get(idx);
-            OperatorsV3.push(
-                OperatorsV3.Operator({
-                    funded: old.funded,
-                    requestedExits: old.requestedExits,
-                    active: old.active,
-                    name: old.name,
-                    operator: old.operator
-                })
-            );
-        }
     }
 
     /// @notice Prevent unauthorized calls
@@ -151,19 +128,6 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
     /// @inheritdoc IOperatorsRegistryV1
     function getOperator(uint256 _index) external view returns (OperatorsV3.Operator memory) {
         return OperatorsV3.get(_index);
-<<<<<<< feat/pectra/accounting-changes
-=======
-    }
-
-    /// @inheritdoc IOperatorsRegistryV1
-    function getOperatorStoppedValidatorCount(uint256 _idx) external view returns (uint32) {
-        return _getStoppedValidatorsCount(_idx);
-    }
-
-    /// @inheritdoc IOperatorsRegistryV1
-    function getTotalStoppedValidatorCount() external view returns (uint32) {
-        return _getTotalStoppedValidatorCount();
->>>>>>> feat/pectra/remove-keys
     }
 
     /// @inheritdoc IOperatorsRegistryV1
@@ -187,16 +151,9 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
     }
 
     /// @inheritdoc IOperatorsRegistryV1
-<<<<<<< feat/pectra/accounting-changes
     function getExitedETHPerOperator() external view returns (uint256[] memory) {
         uint256[] memory rawExitedETH = OperatorsV3.getExitedETH();
         uint256 listLength = rawExitedETH.length;
-=======
-    function getStoppedValidatorCountPerOperator() external view returns (uint32[] memory) {
-        uint32[] memory completeList = OperatorsV3.getStoppedValidators();
-        uint256 listLength = completeList.length;
-
->>>>>>> feat/pectra/remove-keys
         if (listLength > 0) {
             assembly {
                 // no need to use free memory pointer as we reuse the same memory range
@@ -211,18 +168,12 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
                 mstore(rawExitedETH, sub(listLength, 1))
             }
         }
-<<<<<<< feat/pectra/accounting-changes
         return rawExitedETH;
-=======
-
-        return completeList;
->>>>>>> feat/pectra/remove-keys
     }
 
     /// @inheritdoc IOperatorsRegistryV1
     function listActiveOperators() external view returns (OperatorsV3.Operator[] memory) {
         return OperatorsV3.getAllActive();
-<<<<<<< feat/pectra/accounting-changes
     }
 
     /// @inheritdoc IOperatorsRegistryV1
@@ -245,8 +196,6 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
             }
             operator.funded += _fundedETH[idx];
         }
-=======
->>>>>>> feat/pectra/remove-keys
     }
 
     /// @inheritdoc IOperatorsRegistryV1
@@ -293,11 +242,7 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
     }
 
     /// @inheritdoc IOperatorsRegistryV1
-<<<<<<< feat/pectra/accounting-changes
     function requestValidatorExits(ExitETHAllocation[] calldata _allocations) external {
-=======
-    function requestValidatorExits(OperatorAllocation[] calldata _allocations) external {
->>>>>>> feat/pectra/remove-keys
         if (msg.sender != IConsensusLayerDepositManagerV1(RiverAddress.get()).getKeeper()) {
             revert IConsensusLayerDepositManagerV1.OnlyKeeper();
         }
@@ -332,19 +277,12 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
             if (!operator.active) {
                 revert InactiveOperator(operatorIndex);
             }
-<<<<<<< feat/pectra/accounting-changes
             uint256 opFunded = operator.funded;
             uint256 opRequestedExits = operator.requestedExits;
             uint256 available = opFunded - opRequestedExits;
             if (ethAmount > available) {
                 // Operator has insufficient available ETH
                 revert ExitsRequestedExceedAvailableFundedAmount(operatorIndex, ethAmount, available);
-=======
-            uint256 available = operator.funded - operator.requestedExits;
-            if (count > available) {
-                // Operator has insufficient available funded validators
-                revert ExitsRequestedExceedAvailableFundedCount(operatorIndex, count, available);
->>>>>>> feat/pectra/remove-keys
             }
             // Operator has sufficient ETH
             opRequestedExits += ethAmount;
@@ -366,25 +304,17 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
     }
 
     /// @inheritdoc IOperatorsRegistryV1
-<<<<<<< feat/pectra/accounting-changes
     function demandETHExits(uint256 _exitAmountToRequest, uint256 _totalDepositedETH) external onlyRiver {
         uint256 currentETHExitsDemand = CurrentETHExitsDemand.get();
         uint256 totalETHExitsRequested = TotalETHExitsRequested.get();
         if (_totalDepositedETH < (totalETHExitsRequested + currentETHExitsDemand)) {
             revert DemandedETHExitsExceedsDepositedETH();
-=======
-    function incrementFundedValidators(uint256 _operatorIndex, bytes[] calldata _publicKeys) external onlyRiver {
-        OperatorsV3.Operator storage operator = OperatorsV3.get(_operatorIndex);
-        if (!operator.active) {
-            revert InactiveOperator(_operatorIndex);
->>>>>>> feat/pectra/remove-keys
         }
         _exitAmountToRequest =
             LibUint256.min(_exitAmountToRequest, _totalDepositedETH - (totalETHExitsRequested + currentETHExitsDemand));
         if (_exitAmountToRequest > 0) {
             _setCurrentETHExitsDemand(currentETHExitsDemand, currentETHExitsDemand + _exitAmountToRequest);
         }
-<<<<<<< feat/pectra/accounting-changes
     }
 
     /// @notice Internal utility to retrieve the total exited ETH
@@ -392,29 +322,6 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
     function _getTotalExitedETH() internal view returns (uint256) {
         uint256[] storage exitedETH = OperatorsV3.getExitedETH();
         if (exitedETH.length == 0) {
-=======
-        operator.funded += uint32(_publicKeys.length);
-        emit FundedValidatorKeys(_operatorIndex, _publicKeys, false);
-    }
-
-    /// @inheritdoc IOperatorsRegistryV1
-    function demandValidatorExits(uint256 _count, uint256 _depositedValidatorCount) external onlyRiver {
-        uint256 currentValidatorExitsDemand = CurrentValidatorExitsDemand.get();
-        uint256 totalValidatorExitsRequested = TotalValidatorExitsRequested.get();
-        _count = LibUint256.min(
-            _count, _depositedValidatorCount - (totalValidatorExitsRequested + currentValidatorExitsDemand)
-        );
-        if (_count > 0) {
-            _setCurrentValidatorExitsDemand(currentValidatorExitsDemand, currentValidatorExitsDemand + _count);
-        }
-    }
-
-    /// @notice Internal utility to retrieve the total stopped validator count
-    /// @return The total stopped validator count
-    function _getTotalStoppedValidatorCount() internal view returns (uint32) {
-        uint32[] storage stoppedValidatorCounts = OperatorsV3.getStoppedValidators();
-        if (stoppedValidatorCounts.length == 0) {
->>>>>>> feat/pectra/remove-keys
             return 0;
         }
         return exitedETH[0];
@@ -456,13 +363,8 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
             revert ExitedETHArrayLengthExceedsOperatorCount();
         }
 
-<<<<<<< feat/pectra/accounting-changes
         vars.currentExitedETH = OperatorsV3.getExitedETH();
         vars.currentExitedETHLength = vars.currentExitedETH.length;
-=======
-        vars.currentStoppedValidatorCounts = OperatorsV3.getStoppedValidators();
-        vars.currentStoppedValidatorCountsLength = vars.currentStoppedValidatorCounts.length;
->>>>>>> feat/pectra/remove-keys
 
         // we check that the number of stopped values is not decreasing
         if (vars.exitedETHLength < vars.currentExitedETHLength) {
@@ -543,7 +445,6 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
         if (vars.totalExitedETH != vars.amountOfExitedETH) {
             revert ExitedETHSumMismatch();
         }
-<<<<<<< feat/pectra/accounting-changes
         // we check that the total is not higher than the current deposited ETH
         if (vars.totalExitedETH > _totalDepositedETH) {
             revert ExitedETHExceedsDeposited();
@@ -552,18 +453,6 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
         // we set the exited ETH
         OperatorsV3.setRawExitedETH(_exitedETH);
         emit UpdatedExitedETH(_exitedETH);
-=======
-        // we set the new stopped validators counts
-        OperatorsV3.setRawStoppedValidators(_stoppedValidatorCounts);
-        emit UpdatedStoppedValidators(_stoppedValidatorCounts);
-    }
-
-    /// @notice Internal utility to retrieve the actual stopped validator count of an operator from the reported array
-    /// @param _operatorIndex The operator index
-    /// @return The count of stopped validators
-    function _getStoppedValidatorsCount(uint256 _operatorIndex) internal view returns (uint32) {
-        return OperatorsV3._getStoppedValidatorCountAtIndex(OperatorsV3.getStoppedValidators(), _operatorIndex);
->>>>>>> feat/pectra/remove-keys
     }
 
     /// @notice Internal utility to set the total ETH exits requested by the system

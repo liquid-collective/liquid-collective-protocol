@@ -28,9 +28,6 @@ interface IConsensusLayerDepositManagerV1 {
     /// @notice The allocations array must not be empty
     error EmptyAllocations();
 
-    /// @notice The allocations array must not be empty
-    error EmptyAllocations();
-
     /// @notice Not enough funds to deposit one validator
     error NotEnoughFunds();
 
@@ -55,11 +52,7 @@ interface IConsensusLayerDepositManagerV1 {
     // @notice Not keeper
     error OnlyKeeper();
 
-<<<<<<< feat/pectra/accounting-changes
     /// @notice The operator allocations exceed the committed balance
-=======
-    /// @notice The validator deposits exceed the committed balance
->>>>>>> feat/pectra/remove-keys
     error ValidatorDepositsExceedCommittedBalance();
 
     /// @notice Returns the amount of ETH not yet committed for deposit
@@ -82,8 +75,8 @@ interface IConsensusLayerDepositManagerV1 {
     /// @return The keeper address
     function getKeeper() external view returns (address);
 
-    /// @notice Deposits current balance to the Consensus Layer based on explicit validator deposits allocations
-    /// @param _allocations The allocations specifying the validator deposits to make
+    /// @notice Deposits current balance to the Consensus Layer based on explicit operator allocations
+    /// @param _allocations The operator allocations specifying how many validators per operator
     /// @param _depositRoot The root of the deposit tree
     function depositToConsensusLayerWithDepositRoot(
         IOperatorsRegistryV1.ValidatorDeposit[] calldata _allocations,
