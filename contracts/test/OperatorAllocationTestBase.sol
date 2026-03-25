@@ -20,7 +20,7 @@ abstract contract OperatorAllocationTestBase is Test {
         return allocations;
     }
 
-    function _createAllocation(uint256[] memory opIndexes, uint32[] memory counts)
+    function _createAllocation(uint256[] memory opIndexes, uint256[] memory counts)
         internal
         pure
         returns (IOperatorsRegistryV1.ExitETHAllocation[] memory)
@@ -33,7 +33,7 @@ abstract contract OperatorAllocationTestBase is Test {
         return allocations;
     }
 
-    function _createMultiAllocation(uint256[] memory opIndexes, uint32[] memory counts)
+    function _createMultiAllocation(uint256[] memory opIndexes, uint256[] memory counts)
         internal
         pure
         virtual

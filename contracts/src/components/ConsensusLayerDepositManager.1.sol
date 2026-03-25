@@ -10,7 +10,6 @@ import "../libraries/LibUint256.sol";
 
 import "../state/river/DepositContractAddress.sol";
 import "../state/river/WithdrawalCredentials.sol";
-import "../state/river/DepositedValidatorCount.sol";
 import "../state/river/BalanceToDeposit.sol";
 import "../state/river/CommittedBalance.sol";
 import "../state/river/KeeperAddress.sol";
