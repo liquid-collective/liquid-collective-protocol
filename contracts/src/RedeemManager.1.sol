@@ -586,6 +586,6 @@ contract RedeemManagerV1 is Initializable, ReentrancyGuard, IRedeemManagerV1, IP
     }
 
     function version() external pure returns (string memory) {
-        return "1.2.1";
+        return "1.3.0";
     }
 }
