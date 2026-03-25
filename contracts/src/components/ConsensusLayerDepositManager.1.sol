@@ -166,16 +166,7 @@ abstract contract ConsensusLayerDepositManagerV1 is IConsensusLayerDepositManage
         uint256 _depositAmount,
         bytes32 _withdrawalCredentials
     ) internal {
-        if (_publicKey.length != PUBLIC_KEY_LENGTH) {
-            revert InconsistentPublicKey();
-        }
-
-        if (_signature.length != SIGNATURE_LENGTH) {
-            revert InconsistentSignature();
-        }
-        uint256 value = _depositAmount;
-
-        uint256 depositAmount = value / 1 gwei;
+        uint256 depositAmount = _depositAmount / 1 gwei;
 
         bytes32 pubkeyRoot = sha256(bytes.concat(_publicKey, bytes16(0)));
         bytes32 signatureRoot = sha256(
@@ -192,9 +183,9 @@ abstract contract ConsensusLayerDepositManagerV1 is IConsensusLayerDepositManage
             )
         );
 
-        uint256 targetBalance = address(this).balance - value;
+        uint256 targetBalance = address(this).balance - _depositAmount;
 
-        IDepositContract(DepositContractAddress.get()).deposit{value: value}(
+        IDepositContract(DepositContractAddress.get()).deposit{value: _depositAmount}(
             _publicKey, abi.encodePacked(_withdrawalCredentials), _signature, depositDataRoot
         );
         if (address(this).balance != targetBalance) {
