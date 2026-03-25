@@ -302,10 +302,31 @@ contract RiverV1 is
         return Administrable._getAdmin();
     }
 
+<<<<<<< feat/pectra/accounting-changes
     /// @notice Overridden handler to increment the funded ETH for the operators
     /// @param _fundedETH The array of funded ETH amounts
     function _incrementFundedETH(uint256[] memory _fundedETH) internal override {
         IOperatorsRegistryV1(OperatorsRegistryAddress.get()).incrementFundedETH(_fundedETH);
+=======
+    /// @notice Overridden handler to update funded validator counts on the operators registry after deposits
+    /// @dev Aggregates consecutive entries by operatorIndex (assumes sorted input) and calls
+    ///      incrementFundedValidators once per distinct operator.
+    function _updateFundedValidators(IOperatorsRegistryV1.ValidatorDeposit[] calldata _allocations) internal override {
+        IOperatorsRegistryV1 registry = IOperatorsRegistryV1(OperatorsRegistryAddress.get());
+        uint256 i = 0;
+        while (i < _allocations.length) {
+            uint256 operatorIndex = _allocations[i].operatorIndex;
+            uint256 start = i;
+            while (i < _allocations.length && _allocations[i].operatorIndex == operatorIndex) {
+                ++i;
+            }
+            bytes[] memory publicKeys = new bytes[](i - start);
+            for (uint256 j = start; j < i; ++j) {
+                publicKeys[j - start] = _allocations[j].pubkey;
+            }
+            registry.incrementFundedValidators(operatorIndex, publicKeys);
+        }
+>>>>>>> feat/pectra/remove-keys
     }
 
     /// @notice Overridden handler called whenever a token transfer is triggered

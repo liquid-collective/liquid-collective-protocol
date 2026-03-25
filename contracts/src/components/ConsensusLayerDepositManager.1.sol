@@ -20,6 +20,11 @@ import "../state/river/InFlightDeposit.sol";
 /// @title Consensus Layer Deposit Manager (v1)
 /// @author Alluvial Finance Inc.
 /// @notice This contract handles the interactions with the official deposit contract, funding all validators.
+<<<<<<< feat/pectra/accounting-changes
+=======
+/// @notice After successfully depositing the validators, the funded validator count is incremented on the operators registry
+/// @notice by overriding the _updateFundedValidators method in River.
+>>>>>>> feat/pectra/remove-keys
 abstract contract ConsensusLayerDepositManagerV1 is IConsensusLayerDepositManagerV1 {
     /// @notice Size of a BLS Public key in bytes
     uint256 public constant PUBLIC_KEY_LENGTH = 48;
@@ -40,6 +45,14 @@ abstract contract ConsensusLayerDepositManagerV1 is IConsensusLayerDepositManage
     /// @param newCommittedBalance The new committed balance value
     function _setCommittedBalance(uint256 newCommittedBalance) internal virtual;
 
+<<<<<<< feat/pectra/accounting-changes
+=======
+    /// @notice Handler called to update the funded validator count on the operators registry after each deposit
+    /// @dev Must be overridden. River implements this to call incrementFundedValidators on the registry.
+    /// @param _allocations The validator deposits that were just deposited
+    function _updateFundedValidators(IOperatorsRegistryV1.ValidatorDeposit[] calldata _allocations) internal virtual;
+
+>>>>>>> feat/pectra/remove-keys
     /// @notice Initializer to set the deposit contract address and the withdrawal credentials to use
     /// @param _depositContractAddress The address of the deposit contract
     /// @param _withdrawalCredentials The withdrawal credentials to apply to all deposits
@@ -100,6 +113,7 @@ abstract contract ConsensusLayerDepositManagerV1 is IConsensusLayerDepositManage
         }
 
         uint256 committedBalance = CommittedBalance.get();
+<<<<<<< feat/pectra/accounting-changes
         uint256 maxDepositableCount = committedBalance / DEPOSIT_SIZE;
         uint256 highestOperatorIndex = 0;
         if (maxDepositableCount == 0) {
@@ -107,10 +121,21 @@ abstract contract ConsensusLayerDepositManagerV1 is IConsensusLayerDepositManage
         }
         // Calculate total deposits and validate key lengths + operator ordering in a single pass
         uint256 totalDeposits = 0;
+=======
+
+        // early termination check
+        uint256 maxDepositableCount = committedBalance / DEPOSIT_SIZE;
+        if (maxDepositableCount == 0) {
+            revert NotEnoughFunds();
+        }
+        // Calculate total requested and validate key lengths + operator ordering in a single pass
+        uint256 totalRequested = 0;
+>>>>>>> feat/pectra/remove-keys
         for (uint256 i = 0; i < _allocations.length; ++i) {
             if (i > 0 && _allocations[i].operatorIndex < _allocations[i - 1].operatorIndex) {
                 revert IOperatorsRegistryV1.UnorderedOperatorList();
             }
+<<<<<<< feat/pectra/accounting-changes
             if (_allocations[i].pubkey.length != PUBLIC_KEY_LENGTH) {
                 revert InconsistentPublicKey();
             }
@@ -127,6 +152,16 @@ abstract contract ConsensusLayerDepositManagerV1 is IConsensusLayerDepositManage
 
         // Check if the total requested exceeds the committed balance
         if (totalDeposits > committedBalance) {
+=======
+            if (_allocations[i].depositAmount != DEPOSIT_SIZE) {
+                revert InvalidDepositSize(_allocations[i].depositAmount);
+            }
+            totalRequested += _allocations[i].depositAmount;
+        }
+
+        // Check if the total requested exceeds the committed balance
+        if (totalRequested > committedBalance) {
+>>>>>>> feat/pectra/remove-keys
             revert ValidatorDepositsExceedCommittedBalance();
         }
 
@@ -136,11 +171,18 @@ abstract contract ConsensusLayerDepositManagerV1 is IConsensusLayerDepositManage
             revert InvalidWithdrawalCredentials();
         }
 
+<<<<<<< feat/pectra/accounting-changes
+=======
+        _updateFundedValidators(_allocations);
+
+        address depositContract = DepositContractAddress.get();
+>>>>>>> feat/pectra/remove-keys
         for (uint256 idx = 0; idx < _allocations.length; ++idx) {
             _depositValidator(
                 _allocations[idx].pubkey,
                 _allocations[idx].signature,
                 _allocations[idx].depositAmount,
+<<<<<<< feat/pectra/accounting-changes
                 withdrawalCredentials
             );
             fundedETH[_allocations[idx].operatorIndex] += _allocations[idx].depositAmount;
@@ -156,6 +198,18 @@ abstract contract ConsensusLayerDepositManagerV1 is IConsensusLayerDepositManage
         uint256 currentTotalDepositedETH = TotalDepositedETH.get();
         TotalDepositedETH.set(currentTotalDepositedETH + totalDeposits);
         emit SetTotalDepositedETH(currentTotalDepositedETH, currentTotalDepositedETH + totalDeposits);
+=======
+                withdrawalCredentials,
+                depositContract
+            );
+        }
+        _setCommittedBalance(committedBalance - totalRequested);
+        uint256 currentDepositedValidatorCount = DepositedValidatorCount.get();
+        DepositedValidatorCount.set(currentDepositedValidatorCount + _allocations.length);
+        emit SetDepositedValidatorCount(
+            currentDepositedValidatorCount, currentDepositedValidatorCount + _allocations.length
+        );
+>>>>>>> feat/pectra/remove-keys
     }
 
     /// @notice Deposits 32 ETH to the official Deposit contract
@@ -166,7 +220,12 @@ abstract contract ConsensusLayerDepositManagerV1 is IConsensusLayerDepositManage
         bytes memory _publicKey,
         bytes memory _signature,
         uint256 _depositAmount,
+<<<<<<< feat/pectra/accounting-changes
         bytes32 _withdrawalCredentials
+=======
+        bytes32 _withdrawalCredentials,
+        address _depositContract
+>>>>>>> feat/pectra/remove-keys
     ) internal {
         if (_publicKey.length != PUBLIC_KEY_LENGTH) {
             revert InconsistentPublicKey();
@@ -196,7 +255,7 @@ abstract contract ConsensusLayerDepositManagerV1 is IConsensusLayerDepositManage
 
         uint256 targetBalance = address(this).balance - value;
 
-        IDepositContract(DepositContractAddress.get()).deposit{value: value}(
+        IDepositContract(_depositContract).deposit{value: value}(
             _publicKey, abi.encodePacked(_withdrawalCredentials), _signature, depositDataRoot
         );
         if (address(this).balance != targetBalance) {
