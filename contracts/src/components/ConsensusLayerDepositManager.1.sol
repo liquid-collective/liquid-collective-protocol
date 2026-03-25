@@ -136,12 +136,14 @@ abstract contract ConsensusLayerDepositManagerV1 is IConsensusLayerDepositManage
             revert InvalidWithdrawalCredentials();
         }
 
+        address depositContract = DepositContractAddress.get();
         for (uint256 idx = 0; idx < _allocations.length; ++idx) {
             _depositValidator(
                 _allocations[idx].pubkey,
                 _allocations[idx].signature,
                 _allocations[idx].depositAmount,
-                withdrawalCredentials
+                withdrawalCredentials,
+                depositContract
             );
             fundedETH[_allocations[idx].operatorIndex] += _allocations[idx].depositAmount;
         }
@@ -162,11 +164,13 @@ abstract contract ConsensusLayerDepositManagerV1 is IConsensusLayerDepositManage
     /// @param _publicKey The public key of the validator
     /// @param _signature The signature provided by the operator
     /// @param _withdrawalCredentials The withdrawal credentials provided by River
+    /// @param _depositContract The address of the deposit contract
     function _depositValidator(
         bytes memory _publicKey,
         bytes memory _signature,
         uint256 _depositAmount,
-        bytes32 _withdrawalCredentials
+        bytes32 _withdrawalCredentials,
+        address _depositContract
     ) internal {
         if (_publicKey.length != PUBLIC_KEY_LENGTH) {
             revert InconsistentPublicKey();
@@ -196,7 +200,7 @@ abstract contract ConsensusLayerDepositManagerV1 is IConsensusLayerDepositManage
 
         uint256 targetBalance = address(this).balance - value;
 
-        IDepositContract(DepositContractAddress.get()).deposit{value: value}(
+        IDepositContract(_depositContract).deposit{value: value}(
             _publicKey, abi.encodePacked(_withdrawalCredentials), _signature, depositDataRoot
         );
         if (address(this).balance != targetBalance) {
