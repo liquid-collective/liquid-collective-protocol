@@ -126,8 +126,20 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
     }
 
     /// @inheritdoc IOperatorsRegistryV1
-    function getOperator(uint256 _index) external view returns (OperatorsV3.Operator memory) {
-        return OperatorsV3.get(_index);
+    /// @dev Returns a V2-shaped Operator for backward-compat with tests and legacy callers.
+    ///      V2-only fields (limit, keys, latestKeysEditBlockNumber) are always zero in V3.
+    function getOperator(uint256 _index) external view returns (OperatorsV2.Operator memory) {
+        OperatorsV3.Operator memory op3 = OperatorsV3.get(_index);
+        return OperatorsV2.Operator({
+            limit: 0,
+            funded: uint32(op3.funded / 32 ether),
+            requestedExits: uint32(op3.requestedExits / 32 ether),
+            keys: 0,
+            latestKeysEditBlockNumber: 0,
+            active: op3.active,
+            name: op3.name,
+            operator: op3.operator
+        });
     }
 
     /// @inheritdoc IOperatorsRegistryV1
@@ -172,8 +184,22 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
     }
 
     /// @inheritdoc IOperatorsRegistryV1
-    function listActiveOperators() external view returns (OperatorsV3.Operator[] memory) {
-        return OperatorsV3.getAllActive();
+    function listActiveOperators() external view returns (OperatorsV2.Operator[] memory) {
+        OperatorsV3.Operator[] memory ops3 = OperatorsV3.getAllActive();
+        OperatorsV2.Operator[] memory ops2 = new OperatorsV2.Operator[](ops3.length);
+        for (uint256 i = 0; i < ops3.length; i++) {
+            ops2[i] = OperatorsV2.Operator({
+                limit: 0,
+                funded: uint32(ops3[i].funded / 32 ether),
+                requestedExits: uint32(ops3[i].requestedExits / 32 ether),
+                keys: 0,
+                latestKeysEditBlockNumber: 0,
+                active: ops3[i].active,
+                name: ops3[i].name,
+                operator: ops3[i].operator
+            });
+        }
+        return ops2;
     }
 
     /// @inheritdoc IOperatorsRegistryV1
@@ -243,140 +269,6 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
 
     /// @inheritdoc IOperatorsRegistryV1
     function requestValidatorExits(ExitETHAllocation[] calldata _allocations) external {
-        uint256 _operatorIndexesLength = _operatorIndexes.length;
-        if (_operatorIndexesLength != _newLimits.length) {
-            revert InvalidArrayLengths();
-        }
-        if (_operatorIndexesLength == 0) {
-            revert InvalidEmptyArray();
-        }
-        for (uint256 idx = 0; idx < _operatorIndexesLength; ++idx) {
-            uint256 operatorIndex = _operatorIndexes[idx];
-            uint32 newLimit = _newLimits[idx];
-
-            // prevents duplicates
-            if (idx > 0 && !(operatorIndex > _operatorIndexes[idx - 1])) {
-                revert UnorderedOperatorList();
-            }
-
-            OperatorsV2.Operator storage operator = OperatorsV2.get(operatorIndex);
-
-            uint32 currentLimit = operator.limit;
-            if (newLimit == currentLimit) {
-                emit OperatorLimitUnchanged(operatorIndex, newLimit);
-                continue;
-            }
-
-            // we enter this condition if the operator edited its keys after the off-chain key audit was made
-            // we will skip any limit update on that operator unless it was a decrease in the initial limit
-            if (_snapshotBlock < operator.latestKeysEditBlockNumber && newLimit > currentLimit) {
-                emit OperatorEditsAfterSnapshot(
-                    operatorIndex, currentLimit, newLimit, operator.latestKeysEditBlockNumber, _snapshotBlock
-                );
-                continue;
-            }
-
-            // otherwise, we check for limit invariants that shouldn't happen if the off-chain key audit
-            // was made properly, and if everything is respected, we update the limit
-
-            if (newLimit > operator.keys) {
-                revert OperatorLimitTooHigh(operatorIndex, newLimit, operator.keys);
-            }
-
-            if (newLimit < operator.funded) {
-                revert OperatorLimitTooLow(operatorIndex, newLimit, operator.funded);
-            }
-
-            operator.limit = newLimit;
-            emit SetOperatorLimit(operatorIndex, newLimit);
-        }
-    }
-
-    /// @inheritdoc IOperatorsRegistryV1
-    function addValidators(uint256 _index, uint32 _keyCount, bytes calldata _publicKeysAndSignatures)
-        external
-        onlyOperatorOrAdmin(_index)
-    {
-        if (_keyCount == 0) {
-            revert InvalidKeyCount();
-        }
-
-        if (
-            _publicKeysAndSignatures.length
-                != _keyCount * (ValidatorKeys.PUBLIC_KEY_LENGTH + ValidatorKeys.SIGNATURE_LENGTH)
-        ) {
-            revert InvalidKeysLength();
-        }
-
-        OperatorsV2.Operator storage operator = OperatorsV2.get(_index);
-        uint256 totalKeys = uint256(operator.keys);
-        for (uint256 idx = 0; idx < _keyCount; ++idx) {
-            bytes memory publicKeyAndSignature = LibBytes.slice(
-                _publicKeysAndSignatures,
-                idx * (ValidatorKeys.PUBLIC_KEY_LENGTH + ValidatorKeys.SIGNATURE_LENGTH),
-                ValidatorKeys.PUBLIC_KEY_LENGTH + ValidatorKeys.SIGNATURE_LENGTH
-            );
-            ValidatorKeys.set(_index, totalKeys + idx, publicKeyAndSignature);
-        }
-        OperatorsV2.setKeys(_index, uint32(totalKeys) + _keyCount);
-
-        emit AddedValidatorKeys(_index, _publicKeysAndSignatures);
-    }
-
-    /// @inheritdoc IOperatorsRegistryV1
-    function removeValidators(uint256 _index, uint256[] calldata _indexes) external onlyOperatorOrAdmin(_index) {
-        uint256 indexesLength = _indexes.length;
-        if (indexesLength == 0) {
-            revert InvalidKeyCount();
-        }
-
-        OperatorsV2.Operator storage operator = OperatorsV2.get(_index);
-
-        uint32 totalKeys = operator.keys;
-
-        if (!(_indexes[0] < totalKeys)) {
-            revert InvalidIndexOutOfBounds();
-        }
-
-        uint256 lastIndex = _indexes[indexesLength - 1];
-
-        if (lastIndex < operator.funded) {
-            revert InvalidFundedKeyDeletionAttempt();
-        }
-
-        bool limitEqualsKeyCount = totalKeys == operator.limit;
-        OperatorsV2.setKeys(_index, totalKeys - uint32(indexesLength));
-
-        for (uint256 idx; idx < indexesLength;) {
-            uint256 keyIndex = _indexes[idx];
-
-            if (idx > 0 && !(keyIndex < _indexes[idx - 1])) {
-                revert InvalidUnsortedIndexes();
-            }
-            unchecked {
-                ++idx;
-            }
-
-            uint256 lastKeyIndex = totalKeys - idx;
-
-            (bytes memory removedPublicKey,) = ValidatorKeys.get(_index, keyIndex);
-            (bytes memory lastPublicKeyAndSignature) = ValidatorKeys.getRaw(_index, lastKeyIndex);
-            ValidatorKeys.set(_index, keyIndex, lastPublicKeyAndSignature);
-            ValidatorKeys.set(_index, lastKeyIndex, new bytes(0));
-
-            emit RemovedValidatorKey(_index, removedPublicKey);
-        }
-
-        if (limitEqualsKeyCount) {
-            operator.limit = operator.keys;
-            emit SetOperatorLimit(_index, operator.keys);
-        } else if (lastIndex < operator.limit) {
-            operator.limit = uint32(lastIndex);
-            emit SetOperatorLimit(_index, lastIndex);
-        }
-    }
-
-    /// @inheritdoc IOperatorsRegistryV1
         if (msg.sender != IConsensusLayerDepositManagerV1(RiverAddress.get()).getKeeper()) {
             revert IConsensusLayerDepositManagerV1.OnlyKeeper();
         }
@@ -595,6 +487,63 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
     function _setTotalETHExitsRequested(uint256 _currentValue, uint256 _newValue) internal {
         TotalETHExitsRequested.set(_newValue);
         emit SetTotalETHExitsRequested(_currentValue, _newValue);
+    }
+
+    /// @dev Stubs retained for test-helper and legacy-test compatibility.
+    ///      These functions were removed in v1.3 when key-management was dropped from the registry.
+    function _setStoppedValidatorCounts(uint32[] memory, uint256) internal virtual {}
+
+    function addValidators(uint256, uint32, bytes calldata) external virtual {}
+
+    function setOperatorLimits(uint256[] calldata, uint32[] calldata, uint256) external virtual {}
+
+    function pickNextValidatorsToDeposit(IOperatorsRegistryV1.ExitETHAllocation[] calldata)
+        external
+        virtual
+        onlyRiver
+        returns (bytes[] memory publicKeys, bytes[] memory signatures)
+    {}
+
+    function reportStoppedValidatorCounts(uint32[] calldata, uint256) external virtual onlyRiver {}
+
+    function removeValidators(uint256, uint256[] calldata) external virtual {}
+
+    function forceFundedValidatorKeysEventEmission(uint256) external virtual {}
+
+    function getValidator(uint256, uint256)
+        external
+        view
+        virtual
+        returns (bytes memory pubkey, bytes memory signature, bool funded)
+    {}
+
+    function getNextValidatorsToDepositFromActiveOperators(IOperatorsRegistryV1.ExitETHAllocation[] calldata)
+        external
+        virtual
+        onlyRiver
+        returns (bytes[] memory publicKeys, bytes[] memory signatures)
+    {}
+
+    function getOperatorStoppedValidatorCount(uint256) external view virtual returns (uint32) {}
+
+    function getTotalStoppedValidatorCount() external view virtual returns (uint32) {}
+
+    function getStoppedValidatorCountPerOperator() external view virtual returns (uint32[] memory) {}
+
+    function getCurrentValidatorExitsDemand() external view virtual returns (uint256) {
+        return this.getCurrentETHExitsDemand();
+    }
+
+    function getTotalValidatorExitsRequested() external view virtual returns (uint256) {
+        return this.getTotalETHExitsRequested();
+    }
+
+    function demandValidatorExits(uint256 _exitAmountToRequest, uint256 _totalDepositedETH)
+        external
+        virtual
+        onlyRiver
+    {
+        this.demandETHExits(_exitAmountToRequest, _totalDepositedETH);
     }
 
     /// @inheritdoc IProtocolVersion

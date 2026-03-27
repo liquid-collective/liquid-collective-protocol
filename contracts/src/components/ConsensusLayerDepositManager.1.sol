@@ -17,6 +17,7 @@ import "../state/river/BalanceToDeposit.sol";
 import "../state/river/CommittedBalance.sol";
 import "../state/river/KeeperAddress.sol";
 import "../state/river/TotalDepositedETH.sol";
+import "../state/river/DepositedValidatorCount.sol";
 import "../state/river/InFlightDeposit.sol";
 import "../state/river/DepositDataBufferAddress.sol";
 import "../state/river/AttestationThreshold.sol";
@@ -144,6 +145,11 @@ abstract contract ConsensusLayerDepositManagerV1 is
     /// @inheritdoc IConsensusLayerDepositManagerV1
     function getTotalDepositedETH() external view returns (uint256) {
         return TotalDepositedETH.get();
+    }
+
+    /// @dev Retained for test-file compatibility. Returns count of deposited validators.
+    function getDepositedValidatorCount() external view returns (uint256) {
+        return DepositedValidatorCount.get();
     }
 
     /// @inheritdoc IConsensusLayerDepositManagerV1
@@ -291,6 +297,8 @@ abstract contract ConsensusLayerDepositManagerV1 is
         uint256 currentTotalDepositedETH = TotalDepositedETH.get();
         TotalDepositedETH.set(currentTotalDepositedETH + totalDeposits);
         emit SetTotalDepositedETH(currentTotalDepositedETH, currentTotalDepositedETH + totalDeposits);
+
+        DepositedValidatorCount.set(DepositedValidatorCount.get() + _allocations.length);
     }
 
     // -----------------------------------------------------------------------
@@ -341,11 +349,6 @@ abstract contract ConsensusLayerDepositManagerV1 is
         uint256 depositCount = deposits.length;
         uint256 totalDeposited = DEPOSIT_SIZE * depositCount;
         _setCommittedBalance(committedBalance - totalDeposited);
-        uint256 currentDepositedValidatorCount = DepositedValidatorCount.get();
-        DepositedValidatorCount.set(currentDepositedValidatorCount + depositCount);
-        emit SetDepositedValidatorCount(
-            currentDepositedValidatorCount, currentDepositedValidatorCount + depositCount
-        );
 
         uint256 currentInFlightETH = InFlightDeposit.get();
         InFlightDeposit.set(currentInFlightETH + totalDeposited);
