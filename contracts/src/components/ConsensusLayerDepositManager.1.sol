@@ -222,24 +222,28 @@ abstract contract ConsensusLayerDepositManagerV1 is IConsensusLayerDepositManage
             revert OnlyKeeper();
         }
 
-        // 2. Validate attestation quorum + BLS signatures; get deposits
+        // 2. Check withdrawal credentials (cheap SLOAD — fail fast before expensive BLS work)
+        bytes32 withdrawalCredentials = WithdrawalCredentials.get();
+        if (withdrawalCredentials == 0) {
+            revert InvalidWithdrawalCredentials();
+        }
+
+        // 3. Validate attestation quorum + BLS signatures; get deposits
         IDepositDataBuffer.DepositObject[] memory deposits =
             validate(depositDataBufferId, depositRootHash, signatures, depositYs);
 
-        // 3. Validate total amount against CommittedBalance
+        // 4. Validate total amount against CommittedBalance and check per-deposit withdrawal credentials
         uint256 committedBalance = CommittedBalance.get();
         uint256 totalAmount = 0;
         for (uint256 i = 0; i < deposits.length; i++) {
             totalAmount += deposits[i].amount;
+            bytes32 depositWC = abi.decode(deposits[i].withdrawalCredentials, (bytes32));
+            if (depositWC != withdrawalCredentials) {
+                revert WithdrawalCredentialsMismatch(i, withdrawalCredentials, depositWC);
+            }
         }
         if (totalAmount > committedBalance) {
             revert NotEnoughFunds();
-        }
-
-        // 4. Check withdrawal credentials
-        bytes32 withdrawalCredentials = WithdrawalCredentials.get();
-        if (withdrawalCredentials == 0) {
-            revert InvalidWithdrawalCredentials();
         }
 
         // 5. Update operator funded validator accounting

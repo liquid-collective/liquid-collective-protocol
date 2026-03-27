@@ -41,6 +41,9 @@ interface IConsensusLayerDepositManagerV1 {
     /// @notice The withdrawal credentials value is null
     error InvalidWithdrawalCredentials();
 
+    /// @notice A deposit's withdrawal credentials do not match the configured value
+    error WithdrawalCredentialsMismatch(uint256 depositIndex, bytes32 expected, bytes32 actual);
+
     /// @notice An error occured during the deposit
     error ErrorOnDeposit();
 
