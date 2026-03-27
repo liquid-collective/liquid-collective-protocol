@@ -1,7 +1,6 @@
 //SPDX-License-Identifier: BUSL-1.1
 pragma solidity 0.8.34;
 
-import "../state/operatorsRegistry/Operators.2.sol";
 import "../state/operatorsRegistry/Operators.3.sol";
 
 /// @title Operators Registry Interface (v1)
@@ -18,12 +17,6 @@ interface IOperatorsRegistryV1 {
         bytes pubkey; // 48 bytes
         bytes signature; // 96 bytes
         uint256 depositAmount; // deposit amount in wei (currently exactly 32 ETH)
-    }
-
-    /// @dev Retained for test-file compatibility. Structurally identical to ExitETHAllocation.
-    struct OperatorAllocation {
-        uint256 operatorIndex;
-        uint256 ethAmount;
     }
 
     /// @notice Structure representing an operator allocation for exits
@@ -146,9 +139,6 @@ interface IOperatorsRegistryV1 {
     /// @notice Thrown when an allocation with zero ETH amount is provided
     error AllocationWithZeroETHAmount();
 
-    /// @dev Retained for test-file compatibility. Renamed to AllocationWithZeroETHAmount in v1.3.
-    error AllocationWithZeroValidatorCount();
-
     /// @notice Initializes the operators registry
     /// @param _admin Admin in charge of managing operators
     /// @param _river Address of River system
@@ -167,7 +157,7 @@ interface IOperatorsRegistryV1 {
     /// @notice Get operator details
     /// @param _index The index of the operator
     /// @return The details of the operator
-    function getOperator(uint256 _index) external view returns (OperatorsV2.Operator memory);
+    function getOperator(uint256 _index) external view returns (OperatorsV3.Operator memory);
 
     /// @notice Get operator count
     /// @return The operator count
@@ -194,7 +184,7 @@ interface IOperatorsRegistryV1 {
 
     /// @notice Retrieve the active operator set
     /// @return The list of active operators and their details
-    function listActiveOperators() external view returns (OperatorsV2.Operator[] memory);
+    function listActiveOperators() external view returns (OperatorsV3.Operator[] memory);
 
     /// @notice Increments the funded ETH for the operators
     /// @param _fundedETH The array of funded ETH amounts

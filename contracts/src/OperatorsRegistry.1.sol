@@ -126,20 +126,8 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
     }
 
     /// @inheritdoc IOperatorsRegistryV1
-    /// @dev Returns a V2-shaped Operator for backward-compat with tests and legacy callers.
-    ///      V2-only fields (limit, keys, latestKeysEditBlockNumber) are always zero in V3.
-    function getOperator(uint256 _index) external view returns (OperatorsV2.Operator memory) {
-        OperatorsV3.Operator memory op3 = OperatorsV3.get(_index);
-        return OperatorsV2.Operator({
-            limit: 0,
-            funded: uint32(op3.funded / 32 ether),
-            requestedExits: uint32(op3.requestedExits / 32 ether),
-            keys: 0,
-            latestKeysEditBlockNumber: 0,
-            active: op3.active,
-            name: op3.name,
-            operator: op3.operator
-        });
+    function getOperator(uint256 _index) external view returns (OperatorsV3.Operator memory) {
+        return OperatorsV3.get(_index);
     }
 
     /// @inheritdoc IOperatorsRegistryV1
@@ -184,22 +172,8 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
     }
 
     /// @inheritdoc IOperatorsRegistryV1
-    function listActiveOperators() external view returns (OperatorsV2.Operator[] memory) {
-        OperatorsV3.Operator[] memory ops3 = OperatorsV3.getAllActive();
-        OperatorsV2.Operator[] memory ops2 = new OperatorsV2.Operator[](ops3.length);
-        for (uint256 i = 0; i < ops3.length; i++) {
-            ops2[i] = OperatorsV2.Operator({
-                limit: 0,
-                funded: uint32(ops3[i].funded / 32 ether),
-                requestedExits: uint32(ops3[i].requestedExits / 32 ether),
-                keys: 0,
-                latestKeysEditBlockNumber: 0,
-                active: ops3[i].active,
-                name: ops3[i].name,
-                operator: ops3[i].operator
-            });
-        }
-        return ops2;
+    function listActiveOperators() external view returns (OperatorsV3.Operator[] memory) {
+        return OperatorsV3.getAllActive();
     }
 
     /// @inheritdoc IOperatorsRegistryV1
@@ -487,59 +461,6 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
     function _setTotalETHExitsRequested(uint256 _currentValue, uint256 _newValue) internal {
         TotalETHExitsRequested.set(_newValue);
         emit SetTotalETHExitsRequested(_currentValue, _newValue);
-    }
-
-    /// @dev Stubs retained for test-helper and legacy-test compatibility.
-    ///      These functions were removed in v1.3 when key-management was dropped from the registry.
-    function _setStoppedValidatorCounts(uint32[] memory, uint256) internal virtual {}
-
-    function addValidators(uint256, uint32, bytes calldata) external virtual {}
-
-    function setOperatorLimits(uint256[] calldata, uint32[] calldata, uint256) external virtual {}
-
-    function pickNextValidatorsToDeposit(IOperatorsRegistryV1.ExitETHAllocation[] calldata)
-        external
-        virtual
-        onlyRiver
-        returns (bytes[] memory publicKeys, bytes[] memory signatures)
-    {}
-
-    function reportStoppedValidatorCounts(uint32[] calldata, uint256) external virtual onlyRiver {}
-
-    function removeValidators(uint256, uint256[] calldata) external virtual {}
-
-    function forceFundedValidatorKeysEventEmission(uint256) external virtual {}
-
-    function getValidator(uint256, uint256)
-        external
-        view
-        virtual
-        returns (bytes memory pubkey, bytes memory signature, bool funded)
-    {}
-
-    function getNextValidatorsToDepositFromActiveOperators(IOperatorsRegistryV1.ExitETHAllocation[] calldata)
-        external
-        virtual
-        onlyRiver
-        returns (bytes[] memory publicKeys, bytes[] memory signatures)
-    {}
-
-    function getOperatorStoppedValidatorCount(uint256) external view virtual returns (uint32) {}
-
-    function getTotalStoppedValidatorCount() external view virtual returns (uint32) {}
-
-    function getStoppedValidatorCountPerOperator() external view virtual returns (uint32[] memory) {}
-
-    function getCurrentValidatorExitsDemand() external view virtual returns (uint256) {
-        return this.getCurrentETHExitsDemand();
-    }
-
-    function getTotalValidatorExitsRequested() external view virtual returns (uint256) {
-        return this.getTotalETHExitsRequested();
-    }
-
-    function demandValidatorExits(uint256 _exitAmountToRequest, uint256 _totalDepositedETH) external virtual onlyRiver {
-        this.demandETHExits(_exitAmountToRequest, _totalDepositedETH);
     }
 
     /// @inheritdoc IProtocolVersion
