@@ -386,18 +386,45 @@ contract RiverV1 is
 
         uint256 len = deposits.length;
         uint256 highestOpIdx = 0;
+
+        // Pass 1: parse operator indices (cached to avoid double-parsing), find highestOpIdx
+        uint256[] memory opIndices = new uint256[](len);
         for (uint256 i = 0; i < len; i++) {
-            uint256 opIdx = _parseOperatorIndex(deposits[i].metadata);
-            if (opIdx > highestOpIdx) highestOpIdx = opIdx;
+            opIndices[i] = _parseOperatorIndex(deposits[i].metadata);
+            if (opIndices[i] > highestOpIdx) highestOpIdx = opIndices[i];
         }
 
-        uint256[] memory fundedETH = new uint256[](highestOpIdx + 1);
+        uint256 buckets = highestOpIdx + 1;
+        uint256[] memory fundedETH = new uint256[](buckets);
+        uint256[] memory counts = new uint256[](buckets);
         for (uint256 i = 0; i < len; i++) {
-            uint256 opIdx = _parseOperatorIndex(deposits[i].metadata);
+            counts[opIndices[i]]++;
+        }
+
+        // Allocate per-operator pubkey arrays with known sizes
+        bytes[][] memory perOpKeys = new bytes[][](buckets);
+        uint256[] memory cursors = new uint256[](buckets);
+        for (uint256 j = 0; j < buckets; j++) {
+            if (counts[j] > 0) {
+                perOpKeys[j] = new bytes[](counts[j]);
+            }
+        }
+
+        // Pass 2: fill fundedETH and perOpKeys
+        for (uint256 i = 0; i < len; i++) {
+            uint256 opIdx = opIndices[i];
             fundedETH[opIdx] += deposits[i].amount;
+            perOpKeys[opIdx][cursors[opIdx]++] = deposits[i].pubkey;
         }
 
         _incrementFundedETH(fundedETH);
+
+        // Emit per-operator event
+        for (uint256 j = 0; j < buckets; j++) {
+            if (counts[j] > 0) {
+                emit FundedValidatorKeys(j, perOpKeys[j], false);
+            }
+        }
     }
 
     /// @notice Overridden handler to pull funds from the execution layer fee recipient to River and return the delta in the balance
