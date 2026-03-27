@@ -11,8 +11,7 @@ library Attesters {
     bytes32 internal constant ATTESTER_MAPPING_BASE_SLOT =
         bytes32(uint256(keccak256("river.state.attesters.mapping")) - 1);
 
-    bytes32 internal constant ATTESTER_COUNT_SLOT =
-        bytes32(uint256(keccak256("river.state.attesters.count")) - 1);
+    bytes32 internal constant ATTESTER_COUNT_SLOT = bytes32(uint256(keccak256("river.state.attesters.count")) - 1);
 
     function isAttester(address account) internal view returns (bool) {
         bytes32 slot = keccak256(abi.encode(ATTESTER_MAPPING_BASE_SLOT, account));

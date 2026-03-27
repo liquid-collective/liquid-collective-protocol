@@ -60,10 +60,7 @@ interface IDepositDataBuffer {
     /// @notice Retrieve a stored deposit batch by its ID.
     /// @param depositDataBufferId  The batch identifier
     /// @return deposits            The stored array of deposit objects
-    function getDepositData(bytes32 depositDataBufferId)
-        external
-        view
-        returns (DepositObject[] memory deposits);
+    function getDepositData(bytes32 depositDataBufferId) external view returns (DepositObject[] memory deposits);
 
     /// @notice Returns the authorized writer address.
     function getWriter() external view returns (address);

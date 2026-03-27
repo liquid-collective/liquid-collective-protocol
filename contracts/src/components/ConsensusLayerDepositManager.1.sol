@@ -29,10 +29,7 @@ import "./DepositToConsensusLayerValidation.sol";
 /// @title Consensus Layer Deposit Manager (v1)
 /// @author Alluvial Finance Inc.
 /// @notice This contract handles the interactions with the official deposit contract, funding all validators.
-abstract contract ConsensusLayerDepositManagerV1 is
-    IConsensusLayerDepositManagerV1,
-    DepositToConsensusLayerValidation
-{
+abstract contract ConsensusLayerDepositManagerV1 is IConsensusLayerDepositManagerV1, DepositToConsensusLayerValidation {
     /// @notice Size of a BLS Public key in bytes
     uint256 public constant PUBLIC_KEY_LENGTH = 48;
     /// @notice Size of a BLS Signature in bytes
@@ -55,12 +52,9 @@ abstract contract ConsensusLayerDepositManagerV1 is
     /// @param newCommittedBalance The new committed balance value
     function _setCommittedBalance(uint256 newCommittedBalance) internal virtual;
 
-
     /// @notice Internal helper called to update operator funded ETH accounting for buffer-based deposits
     /// @dev Must be overridden by River.1.sol
-    function _updateFundedValidatorsFromBuffer(IDepositDataBuffer.DepositObject[] memory deposits)
-        internal
-        virtual;
+    function _updateFundedValidatorsFromBuffer(IDepositDataBuffer.DepositObject[] memory deposits) internal virtual;
 
     // -----------------------------------------------------------------------
     // DepositToConsensusLayerValidation overrides — unstructured storage hooks
@@ -84,9 +78,7 @@ abstract contract ConsensusLayerDepositManagerV1 is
 
     /// @dev Compute domain separator dynamically so address(this) resolves to the proxy address.
     function _domainSeparator() internal view override returns (bytes32) {
-        return keccak256(
-            abi.encode(EIP712_DOMAIN_TYPEHASH, NAME_HASH, VERSION_HASH, block.chainid, address(this))
-        );
+        return keccak256(abi.encode(EIP712_DOMAIN_TYPEHASH, NAME_HASH, VERSION_HASH, block.chainid, address(this)));
     }
 
     function _depositDataBuffer() internal view override returns (IDepositDataBuffer) {
@@ -104,7 +96,6 @@ abstract contract ConsensusLayerDepositManagerV1 is
     // -----------------------------------------------------------------------
     // Initializer
     // -----------------------------------------------------------------------
-
 
     /// @notice Initializer to set the deposit contract address and the withdrawal credentials to use
     /// @param _depositContractAddress The address of the deposit contract

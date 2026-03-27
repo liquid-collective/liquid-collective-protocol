@@ -66,10 +66,7 @@ contract DepositDataBuffer is IDepositDataBuffer {
     // -----------------------------------------------------------------------
 
     /// @inheritdoc IDepositDataBuffer
-    function submitDepositData(bytes32 depositDataBufferId, DepositObject[] calldata deposits)
-        external
-        onlyWriter
-    {
+    function submitDepositData(bytes32 depositDataBufferId, DepositObject[] calldata deposits) external onlyWriter {
         if (deposits.length == 0) revert EmptyDepositData();
 
         bytes32 computedId = keccak256(abi.encode(deposits));
@@ -88,11 +85,7 @@ contract DepositDataBuffer is IDepositDataBuffer {
     }
 
     /// @inheritdoc IDepositDataBuffer
-    function getDepositData(bytes32 depositDataBufferId)
-        external
-        view
-        returns (DepositObject[] memory deposits)
-    {
+    function getDepositData(bytes32 depositDataBufferId) external view returns (DepositObject[] memory deposits) {
         deposits = _buffer[depositDataBufferId];
         if (deposits.length == 0) revert DepositDataBufferIdNotFound(depositDataBufferId);
     }

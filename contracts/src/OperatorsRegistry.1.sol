@@ -538,11 +538,7 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
         return this.getTotalETHExitsRequested();
     }
 
-    function demandValidatorExits(uint256 _exitAmountToRequest, uint256 _totalDepositedETH)
-        external
-        virtual
-        onlyRiver
-    {
+    function demandValidatorExits(uint256 _exitAmountToRequest, uint256 _totalDepositedETH) external virtual onlyRiver {
         this.demandETHExits(_exitAmountToRequest, _totalDepositedETH);
     }
 

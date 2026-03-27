@@ -167,12 +167,13 @@ abstract contract DepositToConsensusLayerValidation {
         // 8. Verify BLS signatures
         for (uint256 i = 0; i < deposits.length; i++) {
             bytes32 wc = abi.decode(deposits[i].withdrawalCredentials, (bytes32));
-            (bool ok, bytes memory revertData) = address(this).staticcall(
-                abi.encodeCall(
-                    this.verifyBLSDeposit,
-                    (deposits[i].pubkey, deposits[i].signature, deposits[i].amount, depositYs[i], wc)
-                )
-            );
+            (bool ok, bytes memory revertData) = address(this)
+                .staticcall(
+                    abi.encodeCall(
+                        this.verifyBLSDeposit,
+                        (deposits[i].pubkey, deposits[i].signature, deposits[i].amount, depositYs[i], wc)
+                    )
+                );
             if (!ok) {
                 assembly {
                     revert(add(revertData, 32), mload(revertData))

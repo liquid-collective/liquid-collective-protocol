@@ -123,20 +123,17 @@ library BLS12_381 {
     // Internal helpers — signing root
     // -----------------------------------------------------------------------
 
-    function _computeSigningRoot(
-        bytes calldata pubkey,
-        uint256 amount,
-        bytes32 withdrawalCredentials,
-        bytes32 domain
-    ) internal pure returns (bytes32) {
+    function _computeSigningRoot(bytes calldata pubkey, uint256 amount, bytes32 withdrawalCredentials, bytes32 domain)
+        internal
+        pure
+        returns (bytes32)
+    {
         uint256 depositAmountGwei = amount / 1 gwei;
         bytes32 pubkeyRoot = sha256(abi.encodePacked(pubkey, bytes16(0)));
         bytes32 depositMessageRoot = sha256(
             abi.encodePacked(
                 sha256(abi.encodePacked(pubkeyRoot, withdrawalCredentials)),
-                sha256(
-                    abi.encodePacked(bytes32(LibUint256.toLittleEndian64(depositAmountGwei)), bytes24(0))
-                )
+                sha256(abi.encodePacked(bytes32(LibUint256.toLittleEndian64(depositAmountGwei)), bytes24(0)))
             )
         );
         return sha256(abi.encodePacked(depositMessageRoot, domain));
@@ -164,23 +161,14 @@ library BLS12_381 {
     }
 
     /// @dev expand_message_xmd(msg=signingRoot, DST=H2C_DST, len_in_bytes=256)
-    function _expandMessageXMD(bytes32 signingRoot, uint256 lenInBytes)
-        internal
-        pure
-        returns (bytes memory result)
-    {
+    function _expandMessageXMD(bytes32 signingRoot, uint256 lenInBytes) internal pure returns (bytes memory result) {
         uint256 ell = (lenInBytes + 31) / 32; // = 8
 
         bytes memory dstPrime = abi.encodePacked(H2C_DST, uint8(H2C_DST.length));
 
         bytes32 b0 = sha256(
             abi.encodePacked(
-                new bytes(64),
-                signingRoot,
-                uint8(lenInBytes >> 8),
-                uint8(lenInBytes & 0xff),
-                uint8(0),
-                dstPrime
+                new bytes(64), signingRoot, uint8(lenInBytes >> 8), uint8(lenInBytes & 0xff), uint8(0), dstPrime
             )
         );
 
@@ -292,11 +280,7 @@ library BLS12_381 {
 
     /// @dev Build a 128-byte G1 point from a 48-byte compressed pubkey and 48-byte y-coordinate.
     ///      EIP-2537 format: 64-byte padded x || 64-byte padded y. Clears compression flag bits.
-    function _buildG1Point(bytes calldata pubkey48, bytes memory y48)
-        internal
-        pure
-        returns (bytes memory g1pt)
-    {
+    function _buildG1Point(bytes calldata pubkey48, bytes memory y48) internal pure returns (bytes memory g1pt) {
         g1pt = new bytes(128);
         assembly {
             mcopy(add(g1pt, 0x30), pubkey48.offset, 48)

@@ -378,14 +378,10 @@ contract RiverV1 is
         }
     }
 
-
     /// @notice Overridden handler to update operator funded ETH accounting for attestation-based deposits.
     ///         Aggregates deposit objects by operator index and calls _incrementFundedETH.
     /// @param deposits Array of deposit objects from the DepositDataBuffer
-    function _updateFundedValidatorsFromBuffer(IDepositDataBuffer.DepositObject[] memory deposits)
-        internal
-        override
-    {
+    function _updateFundedValidatorsFromBuffer(IDepositDataBuffer.DepositObject[] memory deposits) internal override {
         if (deposits.length == 0) return;
 
         uint256 len = deposits.length;
