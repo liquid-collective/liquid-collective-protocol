@@ -2,7 +2,6 @@
 pragma solidity 0.8.34;
 
 import "../interfaces/components/IConsensusLayerDepositManager.1.sol";
-import "../interfaces/IOperatorRegistry.1.sol";
 import "../interfaces/IDepositContract.sol";
 import "../interfaces/IDepositDataBuffer.sol";
 
@@ -208,83 +207,6 @@ abstract contract ConsensusLayerDepositManagerV1 is IConsensusLayerDepositManage
     }
 
     // -----------------------------------------------------------------------
-    // Legacy deposit function (unchanged)
-    // -----------------------------------------------------------------------
-
-    /// @inheritdoc IConsensusLayerDepositManagerV1
-    function depositToConsensusLayerWithDepositRoot(
-        IOperatorsRegistryV1.ValidatorDeposit[] calldata _allocations,
-        bytes32 _depositRoot
-    ) external {
-        if (msg.sender != KeeperAddress.get()) {
-            revert OnlyKeeper();
-        }
-
-        if (_allocations.length == 0) {
-            revert EmptyAllocations();
-        }
-
-        if (IDepositContract(DepositContractAddress.get()).get_deposit_root() != _depositRoot) {
-            revert InvalidDepositRoot();
-        }
-
-        uint256 committedBalance = CommittedBalance.get();
-        uint256 highestOperatorIndex = 0;
-        if (committedBalance == 0) {
-            revert NotEnoughFunds();
-        }
-        // Calculate total deposits and validate key lengths + operator ordering in a single pass
-        uint256 totalDeposits = 0;
-        for (uint256 i = 0; i < _allocations.length; ++i) {
-            if (i > 0 && _allocations[i].operatorIndex < _allocations[i - 1].operatorIndex) {
-                revert IOperatorsRegistryV1.UnorderedOperatorList();
-            }
-            if (_allocations[i].pubkey.length != PUBLIC_KEY_LENGTH) {
-                revert InconsistentPublicKey();
-            }
-            if (_allocations[i].signature.length != SIGNATURE_LENGTH) {
-                revert InconsistentSignature();
-            }
-
-            totalDeposits += _allocations[i].depositAmount;
-            highestOperatorIndex = LibUint256.max(highestOperatorIndex, _allocations[i].operatorIndex);
-        }
-        uint256[] memory fundedETH = new uint256[](highestOperatorIndex + 1);
-
-        // Check if the total requested exceeds the committed balance
-        if (totalDeposits > committedBalance) {
-            revert ValidatorDepositsExceedCommittedBalance();
-        }
-
-        bytes32 withdrawalCredentials = WithdrawalCredentials.get();
-
-        if (withdrawalCredentials == 0) {
-            revert InvalidWithdrawalCredentials();
-        }
-
-        for (uint256 idx = 0; idx < _allocations.length; ++idx) {
-            _depositValidator(
-                _allocations[idx].pubkey,
-                _allocations[idx].signature,
-                _allocations[idx].depositAmount,
-                withdrawalCredentials
-            );
-            fundedETH[_allocations[idx].operatorIndex] += _allocations[idx].depositAmount;
-        }
-
-        _incrementFundedETH(fundedETH);
-        _setCommittedBalance(committedBalance - totalDeposits);
-
-        uint256 currentInFlightETH = InFlightDeposit.get();
-        InFlightDeposit.set(currentInFlightETH + totalDeposits);
-        emit SetInFlightETH(currentInFlightETH, currentInFlightETH + totalDeposits);
-
-        uint256 currentTotalDepositedETH = TotalDepositedETH.get();
-        TotalDepositedETH.set(currentTotalDepositedETH + totalDeposits);
-        emit SetTotalDepositedETH(currentTotalDepositedETH, currentTotalDepositedETH + totalDeposits);
-    }
-
-    // -----------------------------------------------------------------------
     // Attestation-based deposit function
     // -----------------------------------------------------------------------
 
@@ -325,23 +247,21 @@ abstract contract ConsensusLayerDepositManagerV1 is IConsensusLayerDepositManage
 
         // 6. Execute deposits
         for (uint256 i = 0; i < deposits.length; i++) {
-            _depositValidator(deposits[i].pubkey, deposits[i].signature, DEPOSIT_SIZE, withdrawalCredentials);
+            _depositValidator(deposits[i].pubkey, deposits[i].signature, deposits[i].amount, withdrawalCredentials);
         }
 
         // 7. Update balances and counters
-        uint256 depositCount = deposits.length;
-        uint256 totalDeposited = DEPOSIT_SIZE * depositCount;
-        _setCommittedBalance(committedBalance - totalDeposited);
+        _setCommittedBalance(committedBalance - totalAmount);
 
         uint256 currentInFlightETH = InFlightDeposit.get();
-        InFlightDeposit.set(currentInFlightETH + totalDeposited);
-        emit SetInFlightETH(currentInFlightETH, currentInFlightETH + totalDeposited);
+        InFlightDeposit.set(currentInFlightETH + totalAmount);
+        emit SetInFlightETH(currentInFlightETH, currentInFlightETH + totalAmount);
 
         uint256 currentTotalDepositedETH = TotalDepositedETH.get();
-        TotalDepositedETH.set(currentTotalDepositedETH + totalDeposited);
-        emit SetTotalDepositedETH(currentTotalDepositedETH, currentTotalDepositedETH + totalDeposited);
+        TotalDepositedETH.set(currentTotalDepositedETH + totalAmount);
+        emit SetTotalDepositedETH(currentTotalDepositedETH, currentTotalDepositedETH + totalAmount);
 
-        emit DepositsExecutedWithAttestation(depositDataBufferId, depositRootHash, depositCount);
+        emit DepositsExecutedWithAttestation(depositDataBufferId, depositRootHash, totalAmount);
     }
 
     // -----------------------------------------------------------------------

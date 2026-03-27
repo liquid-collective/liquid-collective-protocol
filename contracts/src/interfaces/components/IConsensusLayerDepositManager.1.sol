@@ -1,7 +1,6 @@
 //SPDX-License-Identifier: BUSL-1.1
 pragma solidity 0.8.34;
 
-import "../IOperatorRegistry.1.sol";
 import "../IDepositDataBuffer.sol";
 import "../../libraries/BLS12_381.sol";
 
@@ -27,9 +26,6 @@ interface IConsensusLayerDepositManagerV1 {
     /// @param newInFlightETH The new in flight ETH value
     event SetInFlightETH(uint256 oldInFlightETH, uint256 newInFlightETH);
 
-    /// @notice The allocations array must not be empty
-    error EmptyAllocations();
-
     /// @notice Not enough funds to deposit one validator
     error NotEnoughFunds();
 
@@ -48,14 +44,8 @@ interface IConsensusLayerDepositManagerV1 {
     /// @notice An error occured during the deposit
     error ErrorOnDeposit();
 
-    /// @notice Invalid deposit root
-    error InvalidDepositRoot();
-
     // @notice Not keeper
     error OnlyKeeper();
-
-    /// @notice The operator allocations exceed the committed balance
-    error ValidatorDepositsExceedCommittedBalance();
 
     // -----------------------------------------------------------------------
     // Attestation deposit errors / events
@@ -66,7 +56,7 @@ interface IConsensusLayerDepositManagerV1 {
 
     /// @notice Emitted after the attestation-based deposit flow succeeds
     event DepositsExecutedWithAttestation(
-        bytes32 indexed depositDataBufferId, bytes32 indexed depositRootHash, uint256 depositCount
+        bytes32 indexed depositDataBufferId, bytes32 indexed depositRootHash, uint256 totalAmount
     );
 
     /// @notice Emitted when the DepositDataBuffer address is updated
@@ -97,14 +87,6 @@ interface IConsensusLayerDepositManagerV1 {
     /// @notice Get the keeper address
     /// @return The keeper address
     function getKeeper() external view returns (address);
-
-    /// @notice Deposits current balance to the Consensus Layer based on explicit operator allocations
-    /// @param _allocations The operator allocations specifying how many validators per operator
-    /// @param _depositRoot The root of the deposit tree
-    function depositToConsensusLayerWithDepositRoot(
-        IOperatorsRegistryV1.ValidatorDeposit[] calldata _allocations,
-        bytes32 _depositRoot
-    ) external;
 
     /// @notice Deposit validators using pre-committed buffer data validated by an attester quorum.
     /// @param depositDataBufferId  Batch identifier in the DepositDataBuffer
