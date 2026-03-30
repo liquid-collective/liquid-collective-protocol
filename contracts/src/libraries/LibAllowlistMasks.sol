@@ -12,4 +12,6 @@ library LibAllowlistMasks {
     uint256 internal constant DONATE_MASK = 0x1 << 1;
     /// @notice The mask for the redeem right
     uint256 internal constant REDEEM_MASK = 0x1 << 2;
+    /// @notice The mask for the consolidation coverage donation right
+    uint256 internal constant DONATE_CONSOLIDATION_MASK = 0x1 << 4;
 }
