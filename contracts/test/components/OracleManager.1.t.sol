@@ -91,6 +91,20 @@ contract OracleManagerV1ExposeInitializer is OracleManagerV1 {
         emit Internal_PullCoverageFunds(_max, result);
     }
 
+    uint256 public consolidationCoverageFundAvailable;
+
+    function sudoSetConsolidationCoverageFundAvailable(uint256 newValue) external {
+        consolidationCoverageFundAvailable = newValue;
+    }
+
+    event Internal_PullConsolidationCoverageFunds(uint256 _max, uint256 _returned);
+
+    function _pullConsolidationCoverageFunds(uint256 _max) internal override returns (uint256 result) {
+        result = LibUint256.min(consolidationCoverageFundAvailable, _max);
+        amountToDeposit += result;
+        emit Internal_PullConsolidationCoverageFunds(_max, result);
+    }
+
     function _assetBalance() internal view override returns (uint256 result) {
         result = (DepositedValidatorCount.get() - LastConsensusLayerReport.get().validatorsCount) * 32 ether
             + LastConsensusLayerReport.get().validatorsBalance + amountToDeposit + amountToRedeem;
