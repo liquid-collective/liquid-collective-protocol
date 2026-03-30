@@ -17,8 +17,15 @@ import "./Initializable.sol";
 import "./Administrable.sol";
 
 import "./libraries/LibAllowlistMasks.sol";
+import "./libraries/LibErrors.sol";
+import "./libraries/BLS12_381.sol";
+import "./interfaces/IDepositDataBuffer.sol";
 
 import "./state/river/AllowlistAddress.sol";
+import "./state/river/DepositDataBufferAddress.sol";
+import "./state/river/AttestationThreshold.sol";
+import "./state/river/Attesters.sol";
+import "./state/river/DepositDomainValue.sol";
 import "./state/river/RedeemManagerAddress.sol";
 import "./state/river/OperatorsRegistryAddress.sol";
 import "./state/river/CollectorAddress.sol";
@@ -134,6 +141,40 @@ contract RiverV1 is
         if (clValidatorCount < depositedValidatorCount) {
             InFlightDeposit.set((depositedValidatorCount - clValidatorCount) * DEPOSIT_SIZE);
         }
+    }
+
+    /// @inheritdoc IRiverV1
+    function initRiverV1_4(
+        address _depositDataBuffer,
+        address[] calldata _attesters,
+        uint256 _threshold,
+        bytes4 _genesisForkVersion
+    ) external init(4) {
+        if (_depositDataBuffer == address(0)) revert LibErrors.InvalidZeroAddress();
+        DepositDataBufferAddress.set(_depositDataBuffer);
+        emit SetDepositDataBuffer(_depositDataBuffer);
+
+        DepositDomainValue.set(BLS12_381.computeDepositDomain(_genesisForkVersion));
+
+        for (uint256 i = 0; i < _attesters.length; i++) {
+            if (_attesters[i] == address(0)) revert LibErrors.InvalidZeroAddress();
+            if (!Attesters.isAttester(_attesters[i])) {
+                Attesters.setAttester(_attesters[i], true);
+                Attesters.setCount(Attesters.getCount() + 1);
+                emit SetAttester(_attesters[i], true);
+            }
+        }
+
+        if (_threshold == 0) revert ZeroThreshold();
+        uint256 attesterCount = Attesters.getCount();
+        if (_threshold > attesterCount) {
+            revert ThresholdExceedsAttesterCount(_threshold, attesterCount);
+        }
+        if (_threshold > MAX_SIGNATURES) {
+            revert ThresholdExceedsMaxSignatures(_threshold, MAX_SIGNATURES);
+        }
+        AttestationThreshold.set(_threshold);
+        emit SetAttestationThreshold(_threshold);
     }
 
     /// @inheritdoc IRiverV1
@@ -334,6 +375,55 @@ contract RiverV1 is
                 revert Denied(_recipient);
             }
             _transfer(_depositor, _recipient, mintedShares);
+        }
+    }
+
+    /// @notice Overridden handler to update operator funded ETH accounting for attestation-based deposits.
+    ///         Aggregates deposit objects by operator index and calls _incrementFundedETH.
+    /// @param deposits Array of deposit objects from the DepositDataBuffer
+    function _updateFundedValidatorsFromBuffer(IDepositDataBuffer.DepositObject[] memory deposits) internal override {
+        if (deposits.length == 0) return;
+
+        uint256 len = deposits.length;
+        uint256 highestOpIdx = 0;
+
+        // Pass 1: parse operator indices (cached to avoid double-parsing), find highestOpIdx
+        uint256[] memory opIndices = new uint256[](len);
+        for (uint256 i = 0; i < len; i++) {
+            opIndices[i] = _parseOperatorIndex(deposits[i].metadata);
+            if (opIndices[i] > highestOpIdx) highestOpIdx = opIndices[i];
+        }
+
+        uint256 buckets = highestOpIdx + 1;
+        uint256[] memory fundedETH = new uint256[](buckets);
+        uint256[] memory counts = new uint256[](buckets);
+        for (uint256 i = 0; i < len; i++) {
+            counts[opIndices[i]]++;
+        }
+
+        // Allocate per-operator pubkey arrays with known sizes
+        bytes[][] memory perOpKeys = new bytes[][](buckets);
+        uint256[] memory cursors = new uint256[](buckets);
+        for (uint256 j = 0; j < buckets; j++) {
+            if (counts[j] > 0) {
+                perOpKeys[j] = new bytes[](counts[j]);
+            }
+        }
+
+        // Pass 2: fill fundedETH and perOpKeys
+        for (uint256 i = 0; i < len; i++) {
+            uint256 opIdx = opIndices[i];
+            fundedETH[opIdx] += deposits[i].amount;
+            perOpKeys[opIdx][cursors[opIdx]++] = deposits[i].pubkey;
+        }
+
+        _incrementFundedETH(fundedETH);
+
+        // Emit per-operator event
+        for (uint256 j = 0; j < buckets; j++) {
+            if (counts[j] > 0) {
+                emit FundedValidatorKeys(j, perOpKeys[j], false);
+            }
         }
     }
 
