@@ -19,7 +19,6 @@ import "../src/Oracle.1.sol";
 import "../src/ELFeeRecipient.1.sol";
 import "../src/OperatorsRegistry.1.sol";
 import "../src/CoverageFund.1.sol";
-import "../src/ConsolidationCoverageFund.1.sol";
 import "../src/RedeemManager.1.sol";
 
 contract OperatorsRegistryWithOverridesV1 is OperatorsRegistryV1 {
@@ -46,7 +45,6 @@ abstract contract RiverV1TestBase is OperatorAllocationTestBase, BytesGenerator 
     OracleV1 internal oracle;
     ELFeeRecipientV1 internal elFeeRecipient;
     CoverageFundV1 internal coverageFund;
-    ConsolidationCoverageFundV1 internal consolidationCoverageFund;
     AllowlistV1 internal allowlist;
     OperatorsRegistryWithOverridesV1 internal operatorsRegistry;
 
@@ -107,7 +105,6 @@ abstract contract RiverV1TestBase is OperatorAllocationTestBase, BytesGenerator 
     event SetELFeeRecipient(address indexed elFeeRecipient);
     event SetCollector(address indexed collector);
     event SetCoverageFund(address indexed coverageFund);
-    event SetConsolidationCoverageFund(address indexed consolidationCoverageFund);
     event SetAllowlist(address indexed allowlist);
     event SetGlobalFee(uint256 fee);
     event SetOperatorsRegistry(address indexed operatorsRegistry);
@@ -140,8 +137,6 @@ abstract contract RiverV1TestBase is OperatorAllocationTestBase, BytesGenerator 
         LibImplementationUnbricker.unbrick(vm, address(elFeeRecipient));
         coverageFund = new CoverageFundV1();
         LibImplementationUnbricker.unbrick(vm, address(coverageFund));
-        consolidationCoverageFund = new ConsolidationCoverageFundV1();
-        LibImplementationUnbricker.unbrick(vm, address(consolidationCoverageFund));
         oracle = new OracleV1();
         LibImplementationUnbricker.unbrick(vm, address(oracle));
         allowlist = new AllowlistV1();
@@ -160,7 +155,6 @@ abstract contract RiverV1TestBase is OperatorAllocationTestBase, BytesGenerator 
         operatorsRegistry.initOperatorsRegistryV1(admin, address(river));
         elFeeRecipient.initELFeeRecipientV1(address(river));
         coverageFund.initCoverageFundV1(address(river));
-        consolidationCoverageFund.initConsolidationCoverageFundV1(address(river));
     }
 }
 
@@ -435,49 +429,6 @@ contract RiverV1Tests is RiverV1TestBase {
         assert(river.getCoverageFund() == address(coverageFund));
         vm.expectRevert(abi.encodeWithSignature("InvalidZeroAddress()"));
         river.setCoverageFund(address(0));
-    }
-
-    function testSetConsolidationCoverageFund(uint256 _newConsolidationCoverageFundSalt) public {
-        address newConsolidationCoverageFund = uf._new(_newConsolidationCoverageFundSalt);
-        vm.startPrank(admin);
-        river.setConsolidationCoverageFund(address(consolidationCoverageFund));
-        assert(river.getConsolidationCoverageFund() == address(consolidationCoverageFund));
-        vm.expectEmit(true, true, true, true);
-        emit SetConsolidationCoverageFund(newConsolidationCoverageFund);
-        river.setConsolidationCoverageFund(newConsolidationCoverageFund);
-        assert(river.getConsolidationCoverageFund() == newConsolidationCoverageFund);
-        vm.stopPrank();
-    }
-
-    function testSetConsolidationCoverageFundUnauthorized(uint256 _newConsolidationCoverageFundSalt) public {
-        address newConsolidationCoverageFund = uf._new(_newConsolidationCoverageFundSalt);
-        vm.startPrank(admin);
-        river.setConsolidationCoverageFund(address(consolidationCoverageFund));
-        vm.stopPrank();
-        assert(river.getConsolidationCoverageFund() == address(consolidationCoverageFund));
-        vm.expectRevert(abi.encodeWithSignature("Unauthorized(address)", address(this)));
-        river.setConsolidationCoverageFund(newConsolidationCoverageFund);
-    }
-
-    function testSetConsolidationCoverageFundZero() public {
-        vm.startPrank(admin);
-        river.setConsolidationCoverageFund(address(consolidationCoverageFund));
-        vm.expectEmit(true, true, true, true);
-        emit SetConsolidationCoverageFund(address(0));
-        river.setConsolidationCoverageFund(address(0));
-        assert(river.getConsolidationCoverageFund() == address(0));
-        vm.stopPrank();
-    }
-
-    function testSendConsolidationCoverageFundsUnauthorized(uint256 _invalidAddressSalt) public {
-        address invalidAddress = uf._new(_invalidAddressSalt);
-        vm.startPrank(admin);
-        river.setConsolidationCoverageFund(address(consolidationCoverageFund));
-        vm.stopPrank();
-        vm.startPrank(invalidAddress);
-        vm.expectRevert(abi.encodeWithSignature("Unauthorized(address)", invalidAddress));
-        river.sendConsolidationCoverageFunds();
-        vm.stopPrank();
     }
 
     function testSendCoverageFundsUnauthorized(uint256 _invalidAddressSalt) public {
