@@ -15,6 +15,7 @@ import "../src/Allowlist.1.sol";
 import "../src/River.1.sol";
 import "../src/interfaces/IDepositContract.sol";
 import "../src/Withdraw.1.sol";
+import "../src/interfaces/IWithdraw.1.sol";
 import "../src/Oracle.1.sol";
 import "../src/ELFeeRecipient.1.sol";
 import "../src/OperatorsRegistry.1.sol";
@@ -2303,5 +2304,133 @@ contract RiverV1TestsReport_HEAVY_FUZZING is RiverV1TestBase {
     function testExternalViewFunctions() public {
         assertEq(block.timestamp, river.getTime());
         assertEq(address(redeemManager), river.getRedeemManager());
+    }
+}
+
+// --- Mocks for River Pectra (withdraw/consolidate) tests ---
+
+contract MockELWithdrawalForRiver {
+    uint256 public fee = 1 gwei;
+
+    function setFee(uint256 _fee) external {
+        fee = _fee;
+    }
+
+    fallback(bytes calldata) external payable returns (bytes memory) {
+        return abi.encode(fee);
+    }
+}
+
+contract MockELConsolidationForRiver {
+    uint256 public fee = 1 gwei;
+
+    function setFee(uint256 _fee) external {
+        fee = _fee;
+    }
+
+    fallback(bytes calldata) external payable returns (bytes memory) {
+        return abi.encode(fee);
+    }
+}
+
+contract RiverV1PectraTests is RiverV1TestBase {
+    event PectraWithdrawRequested(
+        bytes[] pubkeys,
+        uint64[] amount,
+        uint256 maxFeePerWithdrawal,
+        address excessFeeRecipient,
+        uint256 valueSent
+    );
+    event PectraConsolidationRequested(
+        IWithdrawV1.ConsolidationRequest[] requests,
+        uint256 maxFeePerConsolidation,
+        address excessFeeRecipient,
+        uint256 valueSent
+    );
+
+    MockELWithdrawalForRiver internal mockWithdrawal;
+    MockELConsolidationForRiver internal mockConsolidation;
+
+    bytes internal constant VALID_PUBKEY_48 =
+        hex"0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef";
+
+    function setUp() public override {
+        super.setUp();
+        bytes32 withdrawalCredentials = withdraw.getCredentials();
+        river.initRiverV1(
+            address(deposit),
+            address(elFeeRecipient),
+            withdrawalCredentials,
+            address(oracle),
+            admin,
+            address(allowlist),
+            address(operatorsRegistry),
+            collector,
+            500
+        );
+        withdraw.initializeWithdrawV1(address(river));
+        mockWithdrawal = new MockELWithdrawalForRiver();
+        mockConsolidation = new MockELConsolidationForRiver();
+        withdraw.initWithdrawV1_1(address(mockWithdrawal), address(mockConsolidation));
+        vm.prank(admin);
+        river.setKeeper(admin);
+    }
+
+    function testRiverWithdrawAsAdminEmitsEventAndForwards() public {
+        bytes[] memory pubkeys = new bytes[](1);
+        pubkeys[0] = VALID_PUBKEY_48;
+        uint64[] memory amounts = new uint64[](1);
+        amounts[0] = 1 gwei;
+        uint256 valueSent = 5 gwei;
+        vm.deal(admin, valueSent);
+
+        vm.prank(admin);
+        vm.expectEmit(true, true, true, true);
+        emit PectraWithdrawRequested(pubkeys, amounts, 1 gwei, admin, valueSent);
+        river.withdraw{value: valueSent}(pubkeys, amounts, 1 gwei);
+
+        assertEq(address(mockWithdrawal).balance, 1 gwei);
+        assertEq(admin.balance, valueSent - 1 gwei);
+    }
+
+    function testRiverWithdrawNonAdminReverts() public {
+        bytes[] memory pubkeys = new bytes[](1);
+        pubkeys[0] = VALID_PUBKEY_48;
+        uint64[] memory amounts = new uint64[](1);
+        amounts[0] = 1 gwei;
+        vm.deal(bob, 1 gwei);
+
+        vm.prank(bob);
+        vm.expectRevert(abi.encodeWithSignature("OnlyKeeper()"));
+        river.withdraw{value: 1 gwei}(pubkeys, amounts, 1 gwei);
+    }
+
+    function testRiverConsolidateAsAdminEmitsEventAndForwards() public {
+        bytes[] memory srcPubkeys = new bytes[](1);
+        srcPubkeys[0] = VALID_PUBKEY_48;
+        IWithdrawV1.ConsolidationRequest[] memory requests = new IWithdrawV1.ConsolidationRequest[](1);
+        requests[0] = IWithdrawV1.ConsolidationRequest({srcPubkeys: srcPubkeys, targetPubkey: VALID_PUBKEY_48});
+        uint256 valueSent = 5 gwei;
+        vm.deal(admin, valueSent);
+
+        vm.prank(admin);
+        vm.expectEmit(true, true, true, true);
+        emit PectraConsolidationRequested(requests, 1 gwei, admin, valueSent);
+        river.consolidate{value: valueSent}(requests, 1 gwei);
+
+        assertEq(address(mockConsolidation).balance, 1 gwei);
+        assertEq(admin.balance, valueSent - 1 gwei);
+    }
+
+    function testRiverConsolidateNonAdminReverts() public {
+        bytes[] memory srcPubkeys = new bytes[](1);
+        srcPubkeys[0] = VALID_PUBKEY_48;
+        IWithdrawV1.ConsolidationRequest[] memory requests = new IWithdrawV1.ConsolidationRequest[](1);
+        requests[0] = IWithdrawV1.ConsolidationRequest({srcPubkeys: srcPubkeys, targetPubkey: VALID_PUBKEY_48});
+        vm.deal(bob, 1 gwei);
+
+        vm.prank(bob);
+        vm.expectRevert(abi.encodeWithSignature("OnlyKeeper()"));
+        river.consolidate{value: 1 gwei}(requests, 1 gwei);
     }
 }
