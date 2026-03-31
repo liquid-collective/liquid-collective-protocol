@@ -313,6 +313,8 @@ abstract contract OracleManagerV1 is IOracleManagerV1 {
         }
 
         uint256 currentInFlightETH = InFlightDeposit.get();
+        // the inFlightETH only increases when we perform a deposit to the consensus layer
+        // so, the value supplied by the oracle should not be higher than the current in flight eth value
         if (_report.inFlightETH > currentInFlightETH) {
             revert InvalidInFlightETHIncrease(currentInFlightETH, _report.inFlightETH);
         }

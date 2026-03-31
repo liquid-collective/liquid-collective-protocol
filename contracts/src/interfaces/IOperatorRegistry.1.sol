@@ -175,7 +175,7 @@ interface IOperatorsRegistryV1 {
 
     /// @notice Retrieve the total exited ETH and requested exit amount
     /// @return The total exited ETH
-    /// @return The total requested exit amount
+    /// @return The total requested exit amount (includes total requested exits and current exit demand)
     function getExitedETHAndRequestedExitAmounts() external view returns (uint256, uint256);
 
     /// @notice Retrieve the raw exited ETH array from storage
