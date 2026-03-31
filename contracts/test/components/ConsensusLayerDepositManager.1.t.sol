@@ -141,7 +141,8 @@ contract ConsensusLayerDepositManagerV1Tests is OperatorAllocationTestBase {
     }
 
     function testDepositNotEnoughFunds() public {
-        vm.deal(address(depositManager), 31.9 ether);
+        // committedBalance == 0 triggers NotEnoughFunds; balance exceeding deposits triggers ValidatorDepositsExceedCommittedBalance
+        vm.deal(address(depositManager), 0);
         ConsensusLayerDepositManagerV1ExposeInitializer(address(depositManager)).sudoSyncBalance();
         vm.expectRevert(abi.encodeWithSignature("NotEnoughFunds()"));
         vm.prank(address(0x1));
@@ -726,7 +727,7 @@ contract ConsensusLayerDepositManagerExposeDepositValidator is ConsensusLayerDep
         uint256 depositAmount,
         bytes32 withdrawalCredentials
     ) external {
-        _depositValidator(pubkey, signature, depositAmount, withdrawalCredentials);
+        _depositValidator(pubkey, signature, depositAmount, withdrawalCredentials, DepositContractAddress.get());
     }
 }
 
@@ -766,13 +767,13 @@ contract ConsensusLayerDepositManagerV1CoverageTests is OperatorAllocationTestBa
         dm.depositToConsensusLayerWithDepositRoot(allocs, bytes32(0));
     }
 
-    /// Asserts that depositToConsensusLayerWithDepositRoot reverts with InvalidDepositSize when depositAmount is not 32 ether.
+    /// Asserts that depositToConsensusLayerWithDepositRoot reverts with InvalidDepositSize when depositAmount is below 1 ether.
     function testDepositRevertsOnInvalidDepositSize() public {
         IOperatorsRegistryV1.ValidatorDeposit[] memory allocs = new IOperatorsRegistryV1.ValidatorDeposit[](1);
         allocs[0] = IOperatorsRegistryV1.ValidatorDeposit({
-            operatorIndex: 0, pubkey: new bytes(48), signature: new bytes(96), depositAmount: 16 ether
+            operatorIndex: 0, pubkey: new bytes(48), signature: new bytes(96), depositAmount: 0.5 ether
         });
-        vm.expectRevert(abi.encodeWithSignature("InvalidDepositSize(uint256)", 16 ether));
+        vm.expectRevert(abi.encodeWithSignature("InvalidDepositSize(uint256)", 0.5 ether));
         dm.depositToConsensusLayerWithDepositRoot(allocs, bytes32(0));
     }
 }
@@ -786,15 +787,29 @@ contract ConsensusLayerDepositManagerV1DepositValidatorCoverageTests is Operator
         dm.publicConsensusLayerDepositManagerInitializeV1(address(new DepositContractMock()), bytes32(uint256(1)));
     }
 
-    /// Asserts that _depositValidator reverts with InconsistentPublicKey when pubkey length is not 48.
+    /// Asserts that depositToConsensusLayerWithDepositRoot reverts with InconsistentPublicKey when pubkey length is not 48.
     function testDepositValidatorRevertsOnShortPublicKey() public {
+        vm.deal(address(dm), 32 ether);
+        dm.sudoSyncBalance();
+        IOperatorsRegistryV1.ValidatorDeposit[] memory allocs = new IOperatorsRegistryV1.ValidatorDeposit[](1);
+        allocs[0] = IOperatorsRegistryV1.ValidatorDeposit({
+            operatorIndex: 0, pubkey: new bytes(47), signature: new bytes(96), depositAmount: 32 ether
+        });
         vm.expectRevert(abi.encodeWithSignature("InconsistentPublicKey()"));
-        dm.sudoDepositValidator(new bytes(47), new bytes(96), 32 ether, bytes32(0));
+        vm.prank(address(0x1));
+        dm.depositToConsensusLayerWithDepositRoot(allocs, bytes32(0));
     }
 
-    /// Asserts that _depositValidator reverts with InconsistentSignature when signature length is not 96.
+    /// Asserts that depositToConsensusLayerWithDepositRoot reverts with InconsistentSignature when signature length is not 96.
     function testDepositValidatorRevertsOnShortSignature() public {
+        vm.deal(address(dm), 32 ether);
+        dm.sudoSyncBalance();
+        IOperatorsRegistryV1.ValidatorDeposit[] memory allocs = new IOperatorsRegistryV1.ValidatorDeposit[](1);
+        allocs[0] = IOperatorsRegistryV1.ValidatorDeposit({
+            operatorIndex: 0, pubkey: new bytes(48), signature: new bytes(95), depositAmount: 32 ether
+        });
         vm.expectRevert(abi.encodeWithSignature("InconsistentSignature()"));
-        dm.sudoDepositValidator(new bytes(48), new bytes(95), 32 ether, bytes32(0));
+        vm.prank(address(0x1));
+        dm.depositToConsensusLayerWithDepositRoot(allocs, bytes32(0));
     }
 }

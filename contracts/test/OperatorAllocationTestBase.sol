@@ -6,7 +6,8 @@ import "forge-std/Test.sol";
 import "../src/interfaces/IOperatorRegistry.1.sol";
 
 abstract contract OperatorAllocationTestBase is Test {
-    function _createAllocation(uint256 count) internal pure returns (IOperatorsRegistryV1.ExitETHAllocation[] memory) {
+    /// @dev Creates `count` ValidatorDeposit entries for operator 0, each with 32 ether depositAmount
+    function _createAllocation(uint256 count) internal pure returns (IOperatorsRegistryV1.ValidatorDeposit[] memory) {
         return _createAllocation(0, count);
     }
 
@@ -14,22 +15,63 @@ abstract contract OperatorAllocationTestBase is Test {
     function _createAllocation(uint256 operatorIndex, uint256 count)
         internal
         pure
-        returns (IOperatorsRegistryV1.ExitETHAllocation[] memory)
+        returns (IOperatorsRegistryV1.ValidatorDeposit[] memory)
     {
-        IOperatorsRegistryV1.ExitETHAllocation[] memory allocations = new IOperatorsRegistryV1.ExitETHAllocation[](1);
-        allocations[0] = IOperatorsRegistryV1.ExitETHAllocation({operatorIndex: operatorIndex, ethAmount: count});
+        IOperatorsRegistryV1.ValidatorDeposit[] memory allocations = new IOperatorsRegistryV1.ValidatorDeposit[](count);
+        for (uint256 i = 0; i < count; ++i) {
+            allocations[i] = IOperatorsRegistryV1.ValidatorDeposit({
+                operatorIndex: operatorIndex, pubkey: new bytes(48), signature: new bytes(96), depositAmount: 32 ether
+            });
+        }
         return allocations;
     }
 
+    /// @dev Creates ValidatorDeposit entries for multiple operators; counts[i] entries per opIndexes[i]
     function _createAllocation(uint256[] memory opIndexes, uint256[] memory counts)
         internal
         pure
-        returns (IOperatorsRegistryV1.ExitETHAllocation[] memory)
+        returns (IOperatorsRegistryV1.ValidatorDeposit[] memory)
     {
-        IOperatorsRegistryV1.ExitETHAllocation[] memory allocations =
-            new IOperatorsRegistryV1.ExitETHAllocation[](opIndexes.length);
+        uint256 total = 0;
+        for (uint256 i = 0; i < counts.length; ++i) {
+            total += counts[i];
+        }
+        IOperatorsRegistryV1.ValidatorDeposit[] memory allocations = new IOperatorsRegistryV1.ValidatorDeposit[](total);
+        uint256 idx = 0;
         for (uint256 i = 0; i < opIndexes.length; ++i) {
-            allocations[i] = IOperatorsRegistryV1.ExitETHAllocation({operatorIndex: opIndexes[i], ethAmount: counts[i]});
+            for (uint256 j = 0; j < counts[i]; ++j) {
+                allocations[idx++] = IOperatorsRegistryV1.ValidatorDeposit({
+                    operatorIndex: opIndexes[i],
+                    pubkey: new bytes(48),
+                    signature: new bytes(96),
+                    depositAmount: 32 ether
+                });
+            }
+        }
+        return allocations;
+    }
+
+    /// @dev Creates ValidatorDeposit entries for multiple operators; counts[i] entries per opIndexes[i] (uint32 overload)
+    function _createAllocation(uint256[] memory opIndexes, uint32[] memory counts)
+        internal
+        pure
+        returns (IOperatorsRegistryV1.ValidatorDeposit[] memory)
+    {
+        uint256 total = 0;
+        for (uint256 i = 0; i < counts.length; ++i) {
+            total += counts[i];
+        }
+        IOperatorsRegistryV1.ValidatorDeposit[] memory allocations = new IOperatorsRegistryV1.ValidatorDeposit[](total);
+        uint256 idx = 0;
+        for (uint256 i = 0; i < opIndexes.length; ++i) {
+            for (uint256 j = 0; j < counts[i]; ++j) {
+                allocations[idx++] = IOperatorsRegistryV1.ValidatorDeposit({
+                    operatorIndex: opIndexes[i],
+                    pubkey: new bytes(48),
+                    signature: new bytes(96),
+                    depositAmount: 32 ether
+                });
+            }
         }
         return allocations;
     }
@@ -38,7 +80,16 @@ abstract contract OperatorAllocationTestBase is Test {
         internal
         pure
         virtual
-        returns (IOperatorsRegistryV1.ExitETHAllocation[] memory)
+        returns (IOperatorsRegistryV1.ValidatorDeposit[] memory)
+    {
+        return _createAllocation(opIndexes, counts);
+    }
+
+    function _createMultiAllocation(uint256[] memory opIndexes, uint32[] memory counts)
+        internal
+        pure
+        virtual
+        returns (IOperatorsRegistryV1.ValidatorDeposit[] memory)
     {
         return _createAllocation(opIndexes, counts);
     }
