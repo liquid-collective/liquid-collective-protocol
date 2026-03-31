@@ -345,7 +345,7 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
         uint256 amountOfExitedETH;
         uint256 currentETHExitsDemand;
         uint256 cachedCurrentETHExitsDemand;
-        uint256 totalRequestedETHExits;
+        uint256 totalETHExitsRequested;
         uint256 cachedTotalRequestedETHExits;
     }
 
@@ -381,8 +381,8 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
         // create value to track unsolicited exits (e.g. to cover cases when Node Operator exit ETH without being requested to)
         vars.currentETHExitsDemand = CurrentETHExitsDemand.get();
         vars.cachedCurrentETHExitsDemand = vars.currentETHExitsDemand;
-        vars.totalRequestedETHExits = TotalETHExitsRequested.get();
-        vars.cachedTotalRequestedETHExits = vars.totalRequestedETHExits;
+        vars.totalETHExitsRequested = TotalETHExitsRequested.get();
+        vars.cachedTotalRequestedETHExits = vars.totalETHExitsRequested;
 
         uint256 idx = 1;
         uint256 unsolicitedExitsSum;
@@ -409,12 +409,12 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
             vars.amountOfExitedETH += _exitedETH[idx];
         }
 
-        vars.totalRequestedETHExits += unsolicitedExitsSum;
+        vars.totalETHExitsRequested += unsolicitedExitsSum;
         // we decrease the demand, considering unsolicited exits as if they were answering the demand
         vars.currentETHExitsDemand -= LibUint256.min(unsolicitedExitsSum, vars.currentETHExitsDemand);
 
-        if (vars.totalRequestedETHExits != vars.cachedTotalRequestedETHExits) {
-            _setTotalETHExitsRequested(vars.cachedTotalRequestedETHExits, vars.totalRequestedETHExits);
+        if (vars.totalETHExitsRequested != vars.cachedTotalRequestedETHExits) {
+            _setTotalETHExitsRequested(vars.cachedTotalRequestedETHExits, vars.totalETHExitsRequested);
         }
 
         if (vars.currentETHExitsDemand != vars.cachedCurrentETHExitsDemand) {
