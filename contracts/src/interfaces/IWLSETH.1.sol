@@ -51,9 +51,6 @@ interface IWLSETHV1 {
     /// @notice Invalid empty transfer
     error NullTransfer();
 
-    /// @notice The computed amount of shares to transfer is 0
-    error ZeroShares();
-
     /// @notice Invalid transfer recipients
     /// @param _from Account sending the funds in the invalid transfer
     /// @param _to Account receiving the funds in the invalid transfer
