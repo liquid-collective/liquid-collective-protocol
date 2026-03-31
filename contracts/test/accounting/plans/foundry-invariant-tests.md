@@ -190,6 +190,46 @@ totalExitedETH <= river.getTotalDepositedETH()
 ```
 Cannot exit more than was ever deposited.
 
+### Invariants I15-I20 (oracle report monotonicity & cross-checks)
+
+These use ghost variables snapshotted after each `handler_oracleReport()` call to track monotonicity.
+
+**I15: validatorsSkimmedBalance non-decreasing**
+```
+storedReport.validatorsSkimmedBalance >= ghost_lastSkimmedBalance
+```
+Cumulative skimmed rewards accumulator. Oracle rejects decreasing values.
+
+**I16: validatorsExitedBalance non-decreasing**
+```
+storedReport.validatorsExitedBalance >= ghost_lastExitedBalance
+```
+Cumulative exited balance accumulator. Oracle rejects decreasing values.
+
+**I17: Per-operator exitedETH non-decreasing**
+```
+exitedETHPerOperator[i] >= ghost_lastExitedPerOp[i]  for all i
+```
+The `reportExitedETH()` function explicitly enforces per-operator monotonicity.
+
+**I18: Exit requests bounded by funded (continuous)**
+```
+for each operator: requestedExits <= funded AND exited <= funded
+```
+Extends I4 to continuous checking (not just after reports). Matches the documented struct invariant in `Operators.3.sol`.
+
+**I19: CLValidatorCount bounded by total sim validators**
+```
+river.getCLValidatorCount() <= _simValidators.length
+```
+On-chain validator count should never exceed total validators ever created.
+
+**I20: TotalDepositedETH exact match with sim**
+```
+river.getTotalDepositedETH() == Σ _simValidators[i].depositedETH
+```
+Strengthens I5 from `>=` to exact equality. No phantom increments.
+
 ---
 
 ## 4. foundry.toml configuration
@@ -221,12 +261,9 @@ forge test --match-path "contracts/test/accounting/invariant/*" -vvv \
 
 ## 6. Results
 
-All 10 invariant functions pass across 128 runs x 32 depth = 4096 random handler calls each:
+All 16 invariant functions pass across 128 runs x 32 depth = 4096 random handler calls each:
 
 ```
-[PASS] invariant_I10_elSolvency()                 (runs: 128, calls: 4096)
-[PASS] invariant_I11_sharesUnderlyingConsistency() (runs: 128, calls: 4096)
-[PASS] invariant_I12_exitedBoundedByDeposited()    (runs: 128, calls: 4096)
 [PASS] invariant_I2_ethConservation()              (runs: 128, calls: 4096)
 [PASS] invariant_I3_inFlightConsistency()          (runs: 128, calls: 4096)
 [PASS] invariant_I5_totalDepositedETHMonotonic()   (runs: 128, calls: 4096)
@@ -234,4 +271,15 @@ All 10 invariant functions pass across 128 runs x 32 depth = 4096 random handler
 [PASS] invariant_I7_assetBalanceDecomposition()    (runs: 128, calls: 4096)
 [PASS] invariant_I8_totalDepositedETHConsistency() (runs: 128, calls: 4096)
 [PASS] invariant_I9_inFlightBoundedByDeposited()   (runs: 128, calls: 4096)
+[PASS] invariant_I10_elSolvency()                  (runs: 128, calls: 4096)
+[PASS] invariant_I11_sharesUnderlyingConsistency() (runs: 128, calls: 4096)
+[PASS] invariant_I12_exitedBoundedByDeposited()    (runs: 128, calls: 4096)
+[PASS] invariant_I15_skimmedBalanceNonDecreasing() (runs: 128, calls: 4096)
+[PASS] invariant_I16_exitedBalanceNonDecreasing()  (runs: 128, calls: 4096)
+[PASS] invariant_I17_perOperatorExitedNonDecreasing()(runs: 128, calls: 4096)
+[PASS] invariant_I18_exitRequestsBounded()         (runs: 128, calls: 4096)
+[PASS] invariant_I19_clValidatorCountBounded()     (runs: 128, calls: 4096)
+[PASS] invariant_I20_totalDepositedETHExactMatch() (runs: 128, calls: 4096)
 ```
+
+Note: I13 (CommittedBalance alignment to 32 ETH) and I14 (validatorsCount non-decreasing) were evaluated but removed from the final suite.

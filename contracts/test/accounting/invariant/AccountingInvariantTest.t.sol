@@ -4,12 +4,19 @@ pragma solidity 0.8.34;
 import "../AccountingInvariants.sol";
 import "./AccountingHandler.sol";
 import "../../../src/state/operatorsRegistry/Operators.3.sol";
+import "../../../src/interfaces/components/IOracleManager.1.sol";
 
 /// @title AccountingInvariantTest
 /// @notice Foundry-native invariant test that targets AccountingHandler.
 ///         After every random handler call, Foundry checks all invariant_ functions.
 contract AccountingInvariantTest is AccountingInvariants {
     AccountingHandler internal handler;
+
+    // ─── ghost state for monotonicity invariants (I14-I17) ──────────────────────
+
+    uint256 internal ghost_lastSkimmedBalance;
+    uint256 internal ghost_lastExitedBalance;
+    uint256[] internal ghost_lastExitedPerOp;
 
     function setUp() public override {
         super.setUp();
@@ -50,6 +57,11 @@ contract AccountingInvariantTest is AccountingInvariants {
         }
         sim_oracleReport(rebalance, slashingContainment);
         _setAllowSharePriceDecrease(false);
+        // Snapshot post-report state for monotonicity invariants (I14-I17)
+        IOracleManagerV1.StoredConsensusLayerReport memory report = river.getLastConsensusLayerReport();
+        ghost_lastSkimmedBalance = report.validatorsSkimmedBalance;
+        ghost_lastExitedBalance = report.validatorsExitedBalance;
+        ghost_lastExitedPerOp = operatorsRegistry.getExitedETHPerOperator();
     }
 
     // ─── state readers (called by handler for precondition guards) ───────────────
@@ -171,5 +183,57 @@ contract AccountingInvariantTest is AccountingInvariants {
     function invariant_I12_exitedBoundedByDeposited() public {
         (uint256 totalExited,) = operatorsRegistry.getExitedETHAndRequestedExitAmounts();
         assertLe(totalExited, river.getTotalDepositedETH(), "I12: total exited > TotalDepositedETH");
+    }
+
+    // ─── New invariants (I14-I20) ──────────────────────────────────────────────
+    // Note: I13 (CommittedBalance alignment) was removed — the test harness's
+    // debug_moveDepositToCommitted() bypasses the protocol's 32-ETH alignment
+    // logic, making the invariant invalid in this context.
+
+    /// @dev I15: Stored report validatorsSkimmedBalance never decreases (cumulative accumulator).
+    function invariant_I15_skimmedBalanceNonDecreasing() public {
+        IOracleManagerV1.StoredConsensusLayerReport memory report = river.getLastConsensusLayerReport();
+        assertGe(report.validatorsSkimmedBalance, ghost_lastSkimmedBalance, "I15: validatorsSkimmedBalance decreased");
+    }
+
+    /// @dev I16: Stored report validatorsExitedBalance never decreases (cumulative accumulator).
+    function invariant_I16_exitedBalanceNonDecreasing() public {
+        IOracleManagerV1.StoredConsensusLayerReport memory report = river.getLastConsensusLayerReport();
+        assertGe(report.validatorsExitedBalance, ghost_lastExitedBalance, "I16: validatorsExitedBalance decreased");
+    }
+
+    /// @dev I17: Per-operator exited ETH values never decrease across reports.
+    function invariant_I17_perOperatorExitedNonDecreasing() public {
+        uint256[] memory perOp = operatorsRegistry.getExitedETHPerOperator();
+        for (uint256 i = 0; i < ghost_lastExitedPerOp.length && i < perOp.length; i++) {
+            assertGe(perOp[i], ghost_lastExitedPerOp[i], "I17: per-operator exitedETH decreased");
+        }
+    }
+
+    /// @dev I18: Per-operator requestedExits <= funded and exited <= funded (continuous check).
+    function invariant_I18_exitRequestsBounded() public {
+        uint256 opCount = operatorsRegistry.getOperatorCount();
+        uint256[] memory perOp = operatorsRegistry.getExitedETHPerOperator();
+        for (uint256 i = 0; i < opCount; i++) {
+            OperatorsV3.Operator memory op = operatorsRegistry.getOperator(i);
+            uint256 exited = (i < perOp.length) ? perOp[i] : 0;
+            assertLe(op.requestedExits, op.funded, "I18: requestedExits > funded");
+            assertLe(exited, op.funded, "I18: exited > funded");
+        }
+    }
+
+    /// @dev I19: On-chain CLValidatorCount never exceeds total sim validators created.
+    function invariant_I19_clValidatorCountBounded() public {
+        uint256 onChainCount = river.getCLValidatorCount();
+        assertLe(onChainCount, _simValidators.length, "I19: CLValidatorCount exceeds total validators created");
+    }
+
+    /// @dev I20: TotalDepositedETH exactly equals sum of all sim validator deposits.
+    function invariant_I20_totalDepositedETHExactMatch() public {
+        uint256 simSum = 0;
+        for (uint256 i = 0; i < _simValidators.length; i++) {
+            simSum += _simValidators[i].depositedETH;
+        }
+        assertEq(river.getTotalDepositedETH(), simSum, "I20: TotalDepositedETH != exact sim sum");
     }
 }
