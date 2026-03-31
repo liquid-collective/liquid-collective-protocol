@@ -310,6 +310,7 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
         if (_totalDepositedETH < (totalETHExitsRequested + currentETHExitsDemand)) {
             revert DemandedETHExitsExceedsDepositedETH();
         }
+        // capping the new exit demand so total "requested + demanded" never exceeds deposited ETH(wei)
         _exitAmountToRequest =
             LibUint256.min(_exitAmountToRequest, _totalDepositedETH - (totalETHExitsRequested + currentETHExitsDemand));
         if (_exitAmountToRequest > 0) {
@@ -348,6 +349,9 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
         uint256 cachedTotalRequestedETHExits;
     }
 
+    /// @notice Internal utility to set the exited ETH array
+    /// @param _exitedETH The new exited ETH(wei) array per operator
+    /// @param _totalDepositedETH The total deposited ETH(wei)
     function _setExitedETH(uint256[] calldata _exitedETH, uint256 _totalDepositedETH) internal {
         SetExitedETHInternalVars memory vars;
         // we check that the array is not empty
@@ -383,35 +387,11 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
         uint256 idx = 1;
         uint256 unsolicitedExitsSum;
         uint256 opRequestedExits;
-        for (; idx < vars.currentExitedETHLength; ++idx) {
-            // if the previous array was long enough, we check that the values are not decreasing
-            if (_exitedETH[idx] < vars.currentExitedETH[idx]) {
-                revert ExitedETHPerOperatorDecreased();
-            }
-
-            // we check that the amount of exited ETH is not above the funded ETH of an operator
-            if (_exitedETH[idx] > operators[idx - 1].funded) {
-                revert ExitedETHExceedsFundedETH(idx - 1, _exitedETH[idx], operators[idx - 1].funded);
-            }
-
-            // if the reported exited ETH for this operator is greater than its recorded requestedExits,
-            // treat the difference as unsolicited exits and set requestedExits to the reported exited ETH.
-            opRequestedExits = operators[idx - 1].requestedExits;
-            if (_exitedETH[idx] > opRequestedExits) {
-                emit UpdatedRequestedETHExitsUponStopped(idx - 1, opRequestedExits, _exitedETH[idx]);
-                unsolicitedExitsSum += _exitedETH[idx] - opRequestedExits;
-                operators[idx - 1].requestedExits = _exitedETH[idx];
-            }
-            emit SetOperatorExitedETH(idx - 1, _exitedETH[idx]);
-
-            // we recompute the total to ensure it's not an invalid sum
-            vars.amountOfExitedETH += _exitedETH[idx];
-        }
 
         // In case of a new operator we do not check against the current exited ETH (would revert OOB)
         for (; idx < vars.exitedETHLength; ++idx) {
             // we check that the amount of exited ETH is not above the funded ETH of an operator
-            if (_exitedETH[idx] > operators[idx - 1].funded) {
+            if (idx < vars.currentExitedETHLength && _exitedETH[idx] > operators[idx - 1].funded) {
                 revert ExitedETHExceedsFundedETH(idx - 1, _exitedETH[idx], operators[idx - 1].funded);
             }
 

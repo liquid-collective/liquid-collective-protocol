@@ -45,8 +45,8 @@ interface IOracleManagerV1 {
     );
 
     /// @notice The in flight ETH increase is invalid
-    /// @param currentInFlightETH The current in flight ETH value
-    /// @param newInFlightETH The new in flight ETH value
+    /// @param currentInFlightETH The current in flight ETH(wei) value
+    /// @param newInFlightETH The new in flight ETH(wei) value
     error InvalidInFlightETHIncrease(uint256 currentInFlightETH, uint256 newInFlightETH);
 
     /// @notice Thrown when an invalid epoch was reported
@@ -54,8 +54,8 @@ interface IOracleManagerV1 {
     error InvalidEpoch(uint256 epoch);
 
     /// @notice The balance increase is higher than the maximum allowed by the upper bound
-    /// @param prevTotalEthIncludingExited The previous total balance, including all exited balance
-    /// @param postTotalEthIncludingExited The post-report total balance, including all exited balance
+    /// @param prevTotalEthIncludingExited The previous total balance, including all exited balance(wei)
+    /// @param postTotalEthIncludingExited The post-report total balance, including all exited balance(wei)
     /// @param timeElapsed The time in seconds since last report
     /// @param annualAprUpperBound The upper bound value that was used
     error TotalValidatorBalanceIncreaseOutOfBound(
@@ -66,8 +66,8 @@ interface IOracleManagerV1 {
     );
 
     /// @notice The balance decrease is higher than the maximum allowed by the lower bound
-    /// @param prevTotalEthIncludingExited The previous total balance, including all exited balance
-    /// @param postTotalEthIncludingExited The post-report total balance, including all exited balance
+    /// @param prevTotalEthIncludingExited The previous total balance, including all exited balance(wei)
+    /// @param postTotalEthIncludingExited The post-report total balance, including all exited balance(wei)
     /// @param timeElapsed The time in seconds since last report
     /// @param relativeLowerBound The lower bound value that was used
     error TotalValidatorBalanceDecreaseOutOfBound(
@@ -78,15 +78,15 @@ interface IOracleManagerV1 {
     );
 
     /// @notice The total exited balance decreased
-    /// @param currentValidatorsExitedBalance The current exited balance
-    /// @param newValidatorsExitedBalance The new exited balance
+    /// @param currentValidatorsExitedBalance The current exited balance(wei)
+    /// @param newValidatorsExitedBalance The new exited balance(wei)
     error InvalidDecreasingValidatorsExitedBalance(
         uint256 currentValidatorsExitedBalance, uint256 newValidatorsExitedBalance
     );
 
     /// @notice The total skimmed balance decreased
-    /// @param currentValidatorsSkimmedBalance The current exited balance
-    /// @param newValidatorsSkimmedBalance The new exited balance
+    /// @param currentValidatorsSkimmedBalance The current exited balance(wei)
+    /// @param newValidatorsSkimmedBalance The new exited balance(wei)
     error InvalidDecreasingValidatorsSkimmedBalance(
         uint256 currentValidatorsSkimmedBalance, uint256 newValidatorsSkimmedBalance
     );

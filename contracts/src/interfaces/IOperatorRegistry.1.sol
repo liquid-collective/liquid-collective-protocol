@@ -11,17 +11,17 @@ interface IOperatorsRegistryV1 {
     /// @param operatorIndex The index of the operator
     /// @param pubkey The BLS public key of the validator
     /// @param signature The BLS signature of the validator
-    /// @param depositAmount The deposit amount in ETH
+    /// @param depositAmount The deposit amount in ETH(wei)
     struct ValidatorDeposit {
         uint256 operatorIndex;
         bytes pubkey; // 48 bytes
         bytes signature; // 96 bytes
-        uint256 depositAmount; // deposit amount in wei (currently exactly 32 ETH)
+        uint256 depositAmount; // deposit amount in ETH(wei) (currently exactly 32 ETH)
     }
 
     /// @notice Structure representing an operator allocation for exits
     /// @param operatorIndex The index of the operator
-    /// @param ethAmount The amount of ETH to exit for this operator
+    /// @param ethAmount The amount of ETH(wei) to exit for this operator
     struct ExitETHAllocation {
         uint256 operatorIndex;
         uint256 ethAmount;
@@ -54,34 +54,34 @@ interface IOperatorsRegistryV1 {
 
     /// @notice The requested ETH amount has been updated
     /// @param index The operator index
-    /// @param amount The amount of requested exits in ETH
+    /// @param amount The amount of requested exits in ETH(wei)
     event RequestedETHExits(uint256 indexed index, uint256 amount);
 
     /// @notice The exit request demand has been updated
-    /// @param previousETHExitsDemand The previous exit request demand
-    /// @param nextETHExitsDemand The new exit request demand
+    /// @param previousETHExitsDemand The previous exit request demand in ETH(wei)
+    /// @param nextETHExitsDemand The new exit request demand in ETH(wei)
     event SetCurrentETHExitsDemand(uint256 previousETHExitsDemand, uint256 nextETHExitsDemand);
 
     /// @notice The total requested exit has been updated
-    /// @param previousTotalETHExitsRequested The previous total requested exit
-    /// @param newTotalETHExitsRequested The new total requested exit
+    /// @param previousTotalETHExitsRequested The previous total requested exit in ETH(wei)
+    /// @param newTotalETHExitsRequested The new total requested exit in ETH(wei)
     event SetTotalETHExitsRequested(uint256 previousTotalETHExitsRequested, uint256 newTotalETHExitsRequested);
 
     /// @notice The requested ETH amount has been updated to fill the gap with the reported exited ETH amount
     /// @param index The operator index
-    /// @param oldRequestedETHAmount The old requested ETH amount
-    /// @param newRequestedETHAmount The new requested ETH amount
+    /// @param oldRequestedETHAmount The old requested ETH(wei) amount
+    /// @param newRequestedETHAmount The new requested ETH(wei) amount
     event UpdatedRequestedETHExitsUponStopped(
         uint256 indexed index, uint256 oldRequestedETHAmount, uint256 newRequestedETHAmount
     );
 
     /// @notice The operator exited ETH has been set
     /// @param operatorIndex The operator index
-    /// @param exitedETH The exited ETH
+    /// @param exitedETH The exited ETH(wei)
     event SetOperatorExitedETH(uint256 operatorIndex, uint256 exitedETH);
 
     /// @notice The exited ETH have been updated
-    /// @param exitedETH The exited ETH
+    /// @param exitedETH The exited ETH(wei) per operator
     event UpdatedExitedETH(uint256[] exitedETH);
 
     /// @notice The calling operator is inactive
@@ -121,19 +121,19 @@ interface IOperatorsRegistryV1 {
 
     /// @notice The provided exit requests exceed the available funded ETH amount of the operator
     /// @param operatorIndex The operator index
-    /// @param requested The requested ETH amount
-    /// @param available The available ETH amount
+    /// @param requested The requested ETH(wei) amount
+    /// @param available The available ETH(wei) amount
     error ExitsRequestedExceedAvailableFundedAmount(uint256 operatorIndex, uint256 requested, uint256 available);
 
     /// @notice The provided exit requests exceed the current exit request demand
-    /// @param requestedETHAmount The requested ETH amount
-    /// @param currentETHExitsDemand The current ETH exits demand
+    /// @param requestedETHAmount The requested ETH(wei) amount
+    /// @param currentETHExitsDemand The current ETH(wei) exits demand
     error ExitsRequestedExceedDemand(uint256 requestedETHAmount, uint256 currentETHExitsDemand);
 
     /// @notice The provided exited ETH is above the funded ETH of the operator
     /// @param operatorIndex The operator index
-    /// @param exitedETH The exited ETH
-    /// @param fundedETH The funded ETH
+    /// @param exitedETH The exited ETH(wei)
+    /// @param fundedETH The funded ETH(wei)
     error ExitedETHExceedsFundedETH(uint256 operatorIndex, uint256 exitedETH, uint256 fundedETH);
 
     /// @notice Thrown when an allocation with zero ETH amount is provided
@@ -165,35 +165,35 @@ interface IOperatorsRegistryV1 {
 
     /// @notice Retrieve the total requested exit amount in ETH
     /// @notice This value is the amount of exit requests that have been performed, emitting an event for operators to catch
-    /// @return The total requested exit amount in ETH
+    /// @return The total requested exit amount in ETH(wei)
     function getTotalETHExitsRequested() external view returns (uint256);
 
     /// @notice Get the current exit request demand waiting to be triggered
     /// @notice This value is the amount of exit requests that are demanded and not yet performed by the contract
-    /// @return The current exit request demand
+    /// @return The current exit request demand in ETH(wei)
     function getCurrentETHExitsDemand() external view returns (uint256);
 
     /// @notice Retrieve the total exited ETH and requested exit amount
-    /// @return The total exited ETH
+    /// @return The total exited ETH(wei)
     /// @return The total requested exit amount (includes total requested exits and current exit demand)
     function getExitedETHAndRequestedExitAmounts() external view returns (uint256, uint256);
 
     /// @notice Retrieve the raw exited ETH array from storage
-    /// @return The exited ETH array
+    /// @return The exited ETH(wei) array per operator
     function getExitedETHPerOperator() external view returns (uint256[] memory);
 
     /// @notice Retrieve the active operator set
     /// @return The list of active operators and their details
     function listActiveOperators() external view returns (OperatorsV3.Operator[] memory);
 
-    /// @notice Increments the funded ETH for the operators
-    /// @param _fundedETH The array of funded ETH amounts
+    /// @notice Updates the funded ETH for each node operator in the Operators Registry
+    /// @param _fundedETH The array of funded ETH(wei) amounts per operator
     function incrementFundedETH(uint256[] calldata _fundedETH) external;
 
     /// @notice Allows river to override the exited ETH array
     /// @notice This actions happens during the Oracle report processing
-    /// @param _exitedETH The new exited ETH array
-    /// @param _totalDepositedETH The total deposited ETH
+    /// @param _exitedETH The new exited ETH(wei) array per operator
+    /// @param _totalDepositedETH The total deposited ETH(wei)
     function reportExitedETH(uint256[] calldata _exitedETH, uint256 _totalDepositedETH) external;
 
     /// @notice Adds an operator to the registry

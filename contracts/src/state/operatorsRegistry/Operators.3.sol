@@ -16,9 +16,9 @@ library OperatorsV3 {
         /// @dev The following values respect this invariant:
         /// @dev     funded >= requestedExits
 
-        /// @custom:attribute The amount of funded ETH
+        /// @custom:attribute The amount of funded ETH(wei)
         uint256 funded;
-        /// @custom:attribute The amount of requested ETH exits
+        /// @custom:attribute The amount of requested ETH(wei) exits
         uint256 requestedExits;
         /// @custom:attribute True if the operator is active and allowed to operate on River
         bool active;
