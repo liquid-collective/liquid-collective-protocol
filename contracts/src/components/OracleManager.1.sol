@@ -2,6 +2,7 @@
 pragma solidity 0.8.34;
 
 import "../interfaces/components/IOracleManager.1.sol";
+import "../interfaces/components/IConsensusLayerDepositManager.1.sol";
 import "../interfaces/IRedeemManager.1.sol";
 
 import "../libraries/LibUint256.sol";
@@ -10,8 +11,8 @@ import "../state/river/LastConsensusLayerReport.sol";
 import "../state/river/OracleAddress.sol";
 import "../state/river/CLValidatorTotalBalance.sol";
 import "../state/river/CLValidatorCount.sol";
-import "../state/river/DepositedValidatorCount.sol";
 import "../state/river/LastOracleRoundId.sol";
+import "../state/river/InFlightDeposit.sol";
 
 /// @title Oracle Manager (v1)
 /// @author Alluvial Finance Inc.
@@ -66,10 +67,12 @@ abstract contract OracleManagerV1 is IOracleManagerV1 {
 
     /// @notice Requests exits of validators after possibly rebalancing deposit and redeem balances
     /// @param _exitingBalance The currently exiting funds, soon to be received on the execution layer
+    /// @param _exitedETH The exited ETH
     /// @param _depositToRedeemRebalancingAllowed True if rebalancing from deposit to redeem is allowed
+    /// @param _slashingContainmentModeEnabled True if slashing containment mode is enabled
     function _requestExitsBasedOnRedeemDemandAfterRebalancings(
         uint256 _exitingBalance,
-        uint32[] memory _stoppedValidatorCounts,
+        uint256[] memory _exitedETH,
         bool _depositToRedeemRebalancingAllowed,
         bool _slashingContainmentModeEnabled
     ) internal virtual;
@@ -294,16 +297,6 @@ abstract contract OracleManagerV1 is IOracleManagerV1 {
                 );
             }
 
-            // we ensure that the reported validator count is not decreasing
-            if (
-                _report.validatorsCount > DepositedValidatorCount.get()
-                    || _report.validatorsCount < lastStoredReport.validatorsCount
-            ) {
-                revert InvalidValidatorCountReport(
-                    _report.validatorsCount, DepositedValidatorCount.get(), lastStoredReport.validatorsCount
-                );
-            }
-
             // we compute the new skimmed amount by taking the delta between reports
             vars.skimmedAmountIncrease = _report.validatorsSkimmedBalance - vars.lastReportSkimmedBalance;
 
@@ -317,6 +310,18 @@ abstract contract OracleManagerV1 is IOracleManagerV1 {
         if (vars.exitedAmountIncrease + vars.skimmedAmountIncrease > 0) {
             // this method pulls and updates ethToDeposit / ethToRedeem accordingly
             _pullCLFunds(vars.skimmedAmountIncrease, vars.exitedAmountIncrease);
+        }
+
+        uint256 currentInFlightETH = InFlightDeposit.get();
+        // the inFlightETH only increases when we perform a deposit to the consensus layer
+        // so, the value supplied by the oracle should not be higher than the current in flight eth value
+        if (_report.inFlightETH > currentInFlightETH) {
+            revert InvalidInFlightETHIncrease(currentInFlightETH, _report.inFlightETH);
+        }
+        if (_report.inFlightETH != currentInFlightETH) {
+            // we update the in flight eth value
+            InFlightDeposit.set(_report.inFlightETH);
+            emit IConsensusLayerDepositManagerV1.SetInFlightETH(currentInFlightETH, _report.inFlightETH);
         }
 
         {
@@ -420,7 +425,7 @@ abstract contract OracleManagerV1 is IOracleManagerV1 {
 
         _requestExitsBasedOnRedeemDemandAfterRebalancings(
             _report.validatorsExitingBalance,
-            _report.stoppedValidatorCountPerOperator,
+            _report.exitedETHPerOperator,
             _report.rebalanceDepositToRedeemMode,
             _report.slashingContainmentMode
         );

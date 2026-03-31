@@ -15,10 +15,15 @@ interface IConsensusLayerDepositManagerV1 {
     /// @param withdrawalCredentials The withdrawal credentials to use for deposits
     event SetWithdrawalCredentials(bytes32 withdrawalCredentials);
 
-    /// @notice Emitted when the deposited validator count is updated
-    /// @param oldDepositedValidatorCount The old deposited validator count value
-    /// @param newDepositedValidatorCount The new deposited validator count value
-    event SetDepositedValidatorCount(uint256 oldDepositedValidatorCount, uint256 newDepositedValidatorCount);
+    /// @notice Emitted when the total deposited ETH is updated
+    /// @param oldTotalDepositedETH The old total deposited ETH(wei) value
+    /// @param newTotalDepositedETH The new total deposited ETH(wei) value
+    event SetTotalDepositedETH(uint256 oldTotalDepositedETH, uint256 newTotalDepositedETH);
+
+    /// @notice Emitted when the in flight ETH is updated
+    /// @param oldInFlightETH The old in flight ETH(wei) value
+    /// @param newInFlightETH The new in flight ETH(wei) value
+    event SetInFlightETH(uint256 oldInFlightETH, uint256 newInFlightETH);
 
     /// @notice The allocations array must not be empty
     error EmptyAllocations();
@@ -47,31 +52,31 @@ interface IConsensusLayerDepositManagerV1 {
     // @notice Not keeper
     error OnlyKeeper();
 
-    /// @notice The validator deposits exceed the committed balance
+    /// @notice The operator allocations exceed the committed balance
     error ValidatorDepositsExceedCommittedBalance();
 
-    /// @notice Returns the amount of ETH not yet committed for deposit
-    /// @return The amount of ETH not yet committed for deposit
+    /// @notice Returns the amount of ETH(wei) not yet committed for deposit
+    /// @return The amount of ETH(wei) not yet committed for deposit
     function getBalanceToDeposit() external view returns (uint256);
 
-    /// @notice Returns the amount of ETH committed for deposit
-    /// @return The amount of ETH committed for deposit
+    /// @notice Returns the amount of ETH(wei) committed for deposit
+    /// @return The amount of ETH(wei) committed for deposit
     function getCommittedBalance() external view returns (uint256);
 
     /// @notice Retrieve the withdrawal credentials
     /// @return The withdrawal credentials
     function getWithdrawalCredentials() external view returns (bytes32);
 
-    /// @notice Get the deposited validator count (the count of deposits made by the contract)
-    /// @return The deposited validator count
-    function getDepositedValidatorCount() external view returns (uint256);
+    /// @notice Returns the total deposited ETH(wei)
+    /// @return The total deposited ETH(wei)
+    function getTotalDepositedETH() external view returns (uint256);
 
     /// @notice Get the keeper address
     /// @return The keeper address
     function getKeeper() external view returns (address);
 
-    /// @notice Deposits current balance to the Consensus Layer based on explicit validator deposits allocations
-    /// @param _allocations The allocations specifying the validator deposits to make
+    /// @notice Deposits current balance to the Consensus Layer based on explicit operator allocations
+    /// @param _allocations The operator allocations specifying how many validators per operator
     /// @param _depositRoot The root of the deposit tree
     function depositToConsensusLayerWithDepositRoot(
         IOperatorsRegistryV1.ValidatorDeposit[] calldata _allocations,
