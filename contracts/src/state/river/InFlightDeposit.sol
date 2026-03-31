@@ -17,8 +17,8 @@ library InFlightDeposit {
     }
 
     /// @notice Sets the InFlightDeposit
-    /// @param newValue New InFlightDeposit
-    function set(uint256 newValue) internal {
-        LibUnstructuredStorage.setStorageUint256(IN_FLIGHT_DEPOSIT_SLOT, newValue);
+    /// @param _newValue New InFlightDeposit
+    function set(uint256 _newValue) internal {
+        LibUnstructuredStorage.setStorageUint256(IN_FLIGHT_DEPOSIT_SLOT, _newValue);
     }
 }

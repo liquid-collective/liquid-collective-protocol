@@ -117,7 +117,7 @@ abstract contract ConsensusLayerDepositManagerV1 is IConsensusLayerDepositManage
             }
 
             totalDeposits += _allocations[i].depositAmount;
-            highestOperatorIndex = LibUint256.max(highestOperatorIndex, _allocations[i].operatorIndex);
+            highestOperatorIndex = _allocations[i].operatorIndex;
         }
         uint256[] memory fundedETH = new uint256[](highestOperatorIndex + 1);
 
