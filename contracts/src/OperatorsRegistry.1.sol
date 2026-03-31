@@ -358,7 +358,7 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
 
         OperatorsV3.Operator[] storage operators = OperatorsV3.getAll();
 
-        // we check that the cells containing operator stopped values are no more than the current operator count
+        // we check that the cells containing operator exited values are no more than the current operator count
         if (vars.exitedETHLength - 1 > operators.length) {
             revert ExitedETHArrayLengthExceedsOperatorCount();
         }
@@ -366,7 +366,7 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
         vars.currentExitedETH = OperatorsV3.getExitedETH();
         vars.currentExitedETHLength = vars.currentExitedETH.length;
 
-        // we check that the number of stopped values is not decreasing
+        // we check that the number of exited values is not decreasing
         if (vars.exitedETHLength < vars.currentExitedETHLength) {
             revert ExitedETHArrayShrinking();
         }
