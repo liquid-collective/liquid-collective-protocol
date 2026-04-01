@@ -47,15 +47,20 @@ contract MigrationTest is Test {
     address internal op1Addr = makeAddr("op1");
     address internal op2Addr = makeAddr("op2");
 
+    /// @notice Deploys a fresh `MigrationOperatorsRegistry`, unblocks the initializer proxy,
+    ///         and initializes the registry with a fixed admin and river address.
     function setUp() public {
+        // Step 1: Deploy the registry implementation and unblock the proxy for testing.
         registry = new MigrationOperatorsRegistry();
         LibImplementationUnbricker.unbrick(vm, address(registry));
+        // Step 2: Initialize the registry with the test admin and river addresses.
         registry.initOperatorsRegistryV1(admin, river);
     }
 
-    /// @dev Test V2 → V3 migration:
-    ///      - 2 operators in V2 with known funded/stopped counts
-    ///      - After initOperatorsRegistryV1_2(), V3 state should reflect ETH-scaled values
+    /// @notice Verifies the V2 → V3 migration for two operators with known funded and stopped
+    ///         validator counts. After calling `initOperatorsRegistryV1_2`, all V3 state
+    ///         (funded ETH, exited ETH per operator, and aggregate exited ETH) must be correctly
+    ///         scaled from validator counts to ETH amounts (×32 ETH per validator).
     function testMigrationV2toV3() public {
         // Op0: funded=3 validators, stopped=1 validator
         // Op1: funded=5 validators, stopped=2 validators
@@ -104,14 +109,19 @@ contract MigrationTest is Test {
         assertEq(totalExited, uint256(totalStopped) * 32 ether, "total exited ETH");
     }
 
-    /// @dev Test that V1_1 → V1_2 migration on empty state produces empty V3 state.
+    /// @notice Verifies that running the full V1_1 → V1_2 migration on an empty registry
+    ///         (no operators ever registered) produces a valid empty V3 state with zero operators.
     function testMigrationEmptyState() public {
+        // Step 1: Run the V1_1 migration (no-op on empty V1 array).
         registry.initOperatorsRegistryV1_1();
+        // Step 2: Run the V1_2 migration (V2 → V3 scaling) and assert no operators were created.
         registry.initOperatorsRegistryV1_2();
         assertEq(registry.getOperatorCount(), 0, "no operators after empty migration");
     }
 
-    /// @dev Test that a single operator with zero stops migrates cleanly.
+    /// @notice Verifies that a single operator with funded validators and zero stopped validators
+    ///         migrates cleanly from V2 to V3, with funded ETH correctly scaled and exited ETH
+    ///         remaining zero.
     function testMigrationSingleOperatorNoStops() public {
         uint32 funded = 4;
         registry.sudoPushV2Operator("Solo", op1Addr, funded, 0, funded, funded);

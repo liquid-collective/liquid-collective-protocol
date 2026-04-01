@@ -18,39 +18,68 @@ contract AccountingInvariantTest is AccountingInvariants {
     uint256 internal ghost_lastExitedBalance;
     uint256[] internal ghost_lastExitedPerOp;
 
+    /// @notice Initialises the base harness, deploys the `AccountingHandler`, and registers it
+    ///         as the sole Foundry invariant target so the fuzzer calls only its bounded functions.
     function setUp() public override {
+        // Step 1: Run the base harness setup (deploys river, oracle, operators registry, etc.).
         super.setUp();
+        // Step 2: Deploy the handler, wiring it back to this contract for action delegation.
         handler = new AccountingHandler(IAccountingActions(address(this)));
+        // Step 3: Register the handler as the only fuzzer target contract.
         targetContract(address(handler));
     }
 
     // ─── external wrappers (called by handler) ──────────────────────────────────
 
+    /// @notice Delegates a deposit action from the handler to the simulator.
+    /// @param opIdx  Operator index to deposit validators for.
+    /// @param n      Number of validators to deposit.
     function handler_deposit(uint256 opIdx, uint256 n) external {
         sim_deposit(opIdx, n);
     }
 
+    /// @notice Delegates a validator activation from the handler to the simulator.
+    /// @param n  Number of pending validators to activate.
     function handler_activateValidators(uint256 n) external {
         sim_activateValidators(n);
     }
 
+    /// @notice Delegates an epoch advancement (with optional rewards) from the handler to the simulator.
+    /// @param rewardsPerValidator  Per-validator reward amount in wei to sweep this epoch.
     function handler_advanceEpoch(uint256 rewardsPerValidator) external {
         sim_advanceEpoch(rewardsPerValidator);
     }
 
+    /// @notice Delegates a validator exit request from the handler to the simulator.
+    /// @param opIdx      Operator index whose active validators should be marked as Exiting.
+    /// @param ethAmount  Total ETH to exit (must be a multiple of DEPOSIT_SIZE).
     function handler_requestExit(uint256 opIdx, uint256 ethAmount) external {
         sim_requestExit(opIdx, ethAmount);
     }
 
+    /// @notice Delegates a validator exit completion from the handler to the simulator.
+    /// @param opIdx      Operator index whose Exiting validators should be marked as Exited.
+    /// @param ethAmount  Total ETH being returned (must be a multiple of DEPOSIT_SIZE).
+    /// @param penalty    Exit-time penalty in wei applied to the first exiting validator.
     function handler_completeExit(uint256 opIdx, uint256 ethAmount, uint256 penalty) external {
         sim_completeExit(opIdx, ethAmount, penalty);
     }
 
+    /// @notice Delegates a slash event from the handler to the simulator.
+    ///         Enables share price decrease before slashing so the invariant checker does not
+    ///         reject the expected balance reduction.
+    /// @param opIdx    Operator index whose first active validator will be slashed.
+    /// @param penalty  ETH penalty to deduct from the validator's current balance.
     function handler_slash(uint256 opIdx, uint256 penalty) external {
         _setAllowSharePriceDecrease(true);
         sim_slash(opIdx, penalty);
     }
 
+    /// @notice Delegates an oracle report from the handler to the simulator.
+    ///         Enables share price decrease when slashing-containment mode is active, then
+    ///         snapshots the post-report state for monotonicity invariants (I15–I17).
+    /// @param rebalance            Whether to submit the report in rebalancing mode.
+    /// @param slashingContainment  Whether to submit the report in slashing-containment mode.
     function handler_oracleReport(bool rebalance, bool slashingContainment) external {
         if (slashingContainment) {
             _setAllowSharePriceDecrease(true);
@@ -66,12 +95,17 @@ contract AccountingInvariantTest is AccountingInvariants {
 
     // ─── state readers (called by handler for precondition guards) ───────────────
 
+    /// @notice Returns the number of simulated validators currently in the Pending state.
+    ///         Used by the handler to guard `activateValidators` calls (skip if none are pending).
     function handler_pendingCount() external view returns (uint256 count) {
         for (uint256 i = 0; i < _simValidators.length; i++) {
             if (_simValidators[i].state == ValidatorState.Pending) count++;
         }
     }
 
+    /// @notice Returns the number of Active simulated validators belonging to `opIdx`.
+    ///         Used by the handler to guard `requestExit` calls (skip if none are active).
+    /// @param opIdx  Operator index to count active validators for.
     function handler_activeCount(uint256 opIdx) external view returns (uint256 count) {
         for (uint256 i = 0; i < _simValidators.length; i++) {
             if (_simValidators[i].operatorIndex == opIdx && _simValidators[i].state == ValidatorState.Active) {
@@ -80,6 +114,9 @@ contract AccountingInvariantTest is AccountingInvariants {
         }
     }
 
+    /// @notice Returns the number of Exiting simulated validators belonging to `opIdx`.
+    ///         Used by the handler to guard `completeExit` calls (skip if none are exiting).
+    /// @param opIdx  Operator index to count exiting validators for.
     function handler_exitingCount(uint256 opIdx) external view returns (uint256 count) {
         for (uint256 i = 0; i < _simValidators.length; i++) {
             if (_simValidators[i].operatorIndex == opIdx && _simValidators[i].state == ValidatorState.Exiting) {
@@ -88,6 +125,9 @@ contract AccountingInvariantTest is AccountingInvariants {
         }
     }
 
+    /// @notice Resolves a zero-indexed selector to the corresponding operator's registry index.
+    ///         Returns `operatorOneIndex` for `which == 0`, `operatorTwoIndex` otherwise.
+    /// @param which  0 for operator one, any other value for operator two.
     function handler_operatorIndex(uint256 which) external view returns (uint256) {
         return which == 0 ? operatorOneIndex : operatorTwoIndex;
     }

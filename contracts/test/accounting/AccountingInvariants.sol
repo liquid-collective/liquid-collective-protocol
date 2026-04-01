@@ -12,6 +12,12 @@ abstract contract AccountingInvariants is BeaconChainSimulator {
 
     // ─── sim_oracleReport implementation ─────────────────────────────────────
 
+    /// @notice Implements the oracle report step: warps time to the required finality epoch,
+    ///         funds the withdrawal contract with newly skimmed/exited ETH, builds the CL report,
+    ///         snapshots pre-report state, submits the report as the oracle member, and then
+    ///         asserts all six accounting invariants (I1–I6).
+    /// @param rebalance            Whether to request deposit-to-redeem rebalancing mode.
+    /// @param slashingContainment  Whether to submit the report in slashing-containment mode.
     function sim_oracleReport(bool rebalance, bool slashingContainment) internal virtual override {
         uint256 reportEpoch = river.getExpectedEpochId();
         uint256 targetTime = (SECONDS_PER_SLOT * SLOTS_PER_EPOCH) * (reportEpoch + EPOCHS_UNTIL_FINAL) + 1;
@@ -44,6 +50,9 @@ abstract contract AccountingInvariants is BeaconChainSimulator {
 
     // ─── snapshot / invariant helpers ────────────────────────────────────────
 
+    /// @notice Captures a pre-report snapshot of `totalUnderlyingSupply`, `totalSupply`,
+    ///         and `getTotalDepositedETH`, and also checks invariant I3 at this point
+    ///         (pre-report InFlightDeposit must match the simulator's independently tracked value).
     function _snapshotPreReport() internal {
         // I3 (pre-report): the contract's InFlightDeposit must equal the sim's independently-tracked
         // in-flight value (_simInFlightDeposit), which mirrors what the contract should hold:
@@ -57,10 +66,15 @@ abstract contract AccountingInvariants is BeaconChainSimulator {
         _snapTotalDepositedETH = river.getTotalDepositedETH();
     }
 
+    /// @notice Toggles the flag that permits a share price decrease in the next invariant check.
+    ///         Must be set to `true` before oracle reports that include a slash or containment
+    ///         penalty, and reset to `false` immediately after to restore the default guard.
+    /// @param allow  `true` to allow a share price decrease; `false` to re-enable the guard.
     function _setAllowSharePriceDecrease(bool allow) internal {
         _allowSharePriceDecrease = allow;
     }
 
+    /// @notice Executes all six post-report invariant assertions (I1–I6) in sequence.
     function _assertAllInvariants() internal {
         _assertI1_SharePriceNonDecrease();
         _assertI2_ETHConservation();
@@ -70,6 +84,10 @@ abstract contract AccountingInvariants is BeaconChainSimulator {
         _assertI6_ExitedETHAggregate();
     }
 
+    /// @notice I1: Verifies that the share price has not decreased since the pre-report snapshot.
+    ///         Computes `totalUnderlying_now × shares_snap >= totalUnderlying_snap × shares_now`
+    ///         (cross-multiplication avoids division precision loss). Skipped when
+    ///         `_allowSharePriceDecrease` is set (slashing / containment scenarios).
     function _assertI1_SharePriceNonDecrease() internal {
         if (_allowSharePriceDecrease) return;
         uint256 sharesTotalNow = river.totalSupply();
@@ -79,6 +97,10 @@ abstract contract AccountingInvariants is BeaconChainSimulator {
         assertGe(lhs, rhs, "I1: share price decreased unexpectedly");
     }
 
+    /// @notice I2: Verifies ETH conservation — `totalUnderlyingSupply` must never exceed
+    ///         total user deposits plus cumulative skimmed rewards. Both values are tracked
+    ///         independently of contract storage, making this a non-tautological check.
+    ///         Also asserts that underlying supply is non-zero whenever deposits have been made.
     function _assertI2_ETHConservation() internal {
         // totalUnderlyingSupply must never exceed total user deposits + total skimmed rewards.
         // These values are tracked independently of contract storage, so this is a non-tautological check.
@@ -90,12 +112,20 @@ abstract contract AccountingInvariants is BeaconChainSimulator {
         }
     }
 
+    /// @notice I3: In-flight deposit consistency check.
+    ///         The substantive check is performed in `_snapshotPreReport` (before the oracle
+    ///         report), where it is non-tautological. Post-report it would be a tautology since
+    ///         the oracle just set `InFlightDeposit = report.inFlightETH = _pendingETH()`.
     function _assertI3_InFlightConsistency() internal pure {
         // I3 is now checked in _snapshotPreReport() (before the oracle report),
         // where it is meaningful. Post-report it would be a tautology since the
         // oracle just set InFlightDeposit = report.inFlightETH = _pendingETH().
     }
 
+    /// @notice I4: Verifies per-operator ETH consistency — for each operator, the on-chain
+    ///         `funded` ETH must equal the simulator's sum of deposited ETH, and the on-chain
+    ///         `exitedETHPerOperator` must match the simulator's sum of exited ETH. Also asserts
+    ///         that `exited <= funded` and `requestedExits <= funded` for every operator.
     function _assertI4_PerOperatorETH() internal {
         uint256 opCount = operatorsRegistry.getOperatorCount();
         uint256[] memory exitedPerOp = operatorsRegistry.getExitedETHPerOperator();
@@ -126,10 +156,14 @@ abstract contract AccountingInvariants is BeaconChainSimulator {
         }
     }
 
+    /// @notice I5: Verifies that `getTotalDepositedETH` is monotonically non-decreasing.
+    ///         Compares the current value against the pre-report snapshot captured by `_snapshotPreReport`.
     function _assertI5_TotalDepositedETHMonotonic() internal {
         assertGe(river.getTotalDepositedETH(), _snapTotalDepositedETH, "I5: TotalDepositedETH decreased");
     }
 
+    /// @notice I6: Verifies that the aggregate exited ETH returned by `getExitedETHAndRequestedExitAmounts`
+    ///         equals the sum of all per-operator exited ETH values from `getExitedETHPerOperator`.
     function _assertI6_ExitedETHAggregate() internal {
         (uint256 totalExited,) = operatorsRegistry.getExitedETHAndRequestedExitAmounts();
         uint256[] memory perOp = operatorsRegistry.getExitedETHPerOperator();
