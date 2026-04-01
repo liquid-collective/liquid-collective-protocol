@@ -2041,24 +2041,25 @@ contract RedeemManagerV1Tests is RedeeManagerV1TestBase {
         redeemManager.requestRedeem(amount);
     }
 
-    function testClaimRedeemRequestsFourArgBlockedInSlashingMode() external {
+    function testClaimRedeemRequestsFourArgAllowedInSlashingMode() external {
         river.sudoSetSlashingContainmentMode(true);
 
         uint32[] memory redeemRequestIds = new uint32[](0);
         uint32[] memory withdrawalEventIds = new uint32[](0);
 
-        vm.expectRevert(abi.encodeWithSignature("SlashingContainmentModeEnabled()"));
-        redeemManager.claimRedeemRequests(redeemRequestIds, withdrawalEventIds, true, type(uint16).max);
+        uint8[] memory claimStatuses =
+            redeemManager.claimRedeemRequests(redeemRequestIds, withdrawalEventIds, true, type(uint16).max);
+        assertEq(claimStatuses.length, 0);
     }
 
-    function testClaimRedeemRequestsTwoArgBlockedInSlashingMode() external {
+    function testClaimRedeemRequestsTwoArgAllowedInSlashingMode() external {
         river.sudoSetSlashingContainmentMode(true);
 
         uint32[] memory redeemRequestIds = new uint32[](0);
         uint32[] memory withdrawalEventIds = new uint32[](0);
 
-        vm.expectRevert(abi.encodeWithSignature("SlashingContainmentModeEnabled()"));
-        redeemManager.claimRedeemRequests(redeemRequestIds, withdrawalEventIds);
+        uint8[] memory claimStatuses = redeemManager.claimRedeemRequests(redeemRequestIds, withdrawalEventIds);
+        assertEq(claimStatuses.length, 0);
     }
 
     function testRequestRedeemTwoArgAllowedWhenSlashingModeOff(uint256 _salt) external {

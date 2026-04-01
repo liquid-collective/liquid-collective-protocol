@@ -924,18 +924,6 @@ contract RiverV1Tests is RiverV1TestBase {
         river.requestRedeem(1 ether, bob);
     }
 
-    function testClaimRedeemRequestsBlockedInSlashingContainmentMode() public {
-        river.sudoSetSlashingContainmentMode(true);
-
-        uint32[] memory redeemRequestIds = new uint32[](1);
-        redeemRequestIds[0] = 0;
-        uint32[] memory withdrawalEventIds = new uint32[](1);
-        withdrawalEventIds[0] = 0;
-
-        vm.expectRevert(abi.encodeWithSignature("SlashingContainmentModeEnabled()"));
-        river.claimRedeemRequests(redeemRequestIds, withdrawalEventIds);
-    }
-
     function testDepositAllowedWhenSlashingModeOff() public {
         vm.deal(bob, 1 ether);
         _allow(bob);
@@ -1009,6 +997,30 @@ contract RiverV1Tests is RiverV1TestBase {
         );
 
         river.sudoSetSlashingContainmentMode(false);
+        uint32[] memory ids = new uint32[](0);
+        uint32[] memory events = new uint32[](0);
+        uint8[] memory claimStatuses = river.claimRedeemRequests(ids, events);
+        assertEq(claimStatuses.length, 0);
+    }
+
+    function testClaimRedeemRequestsAllowedInSlashingContainmentMode() public {
+        RedeemManagerV1 redeemManager = new RedeemManagerV1();
+        LibImplementationUnbricker.unbrick(vm, address(redeemManager));
+        redeemManager.initializeRedeemManagerV1(address(river));
+        river.initRiverV1_1(
+            address(redeemManager),
+            epochsPerFrame,
+            slotsPerEpoch,
+            secondsPerSlot,
+            0,
+            epochsUntilFinal,
+            1000,
+            500,
+            maxDailyNetCommittableAmount,
+            maxDailyRelativeCommittableAmount
+        );
+
+        river.sudoSetSlashingContainmentMode(true);
         uint32[] memory ids = new uint32[](0);
         uint32[] memory events = new uint32[](0);
         uint8[] memory claimStatuses = river.claimRedeemRequests(ids, events);
