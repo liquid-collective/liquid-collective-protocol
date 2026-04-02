@@ -126,9 +126,10 @@ contract RiverV1 is
         }
     }
 
+    /// @inheritdoc IRiverV1
     function initRiverV1_3() external init(3) {
-        IOracleManagerV1.StoredConsensusLayerReport storage storedReport = LastConsensusLayerReport.get();
-        uint256 clValidatorCount = storedReport.validatorsCount;
+        IOracleManagerV1.StoredConsensusLayerReport storage lastReport = LastConsensusLayerReport.get();
+        uint256 clValidatorCount = lastReport.validatorsCount;
         uint256 depositedValidatorCount = DepositedValidatorCount.get();
         TotalDepositedETH.set(depositedValidatorCount * DEPOSIT_SIZE);
         if (clValidatorCount < depositedValidatorCount) {

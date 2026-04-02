@@ -84,7 +84,6 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
             );
         }
 
-        // we migrate the exited ETH array from V2 to V3 format
         uint32[] memory stoppedValidators = OperatorsV2.getStoppedValidators();
         uint256[] memory exitedETH = new uint256[](stoppedValidators.length);
 
@@ -386,18 +385,20 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
 
         uint256 idx = 1;
         uint256 unsolicitedExitsSum;
-        uint256 opRequestedExits;
 
         // In case of a new operator we do not check against the current exited ETH (would revert OOB)
         for (; idx < vars.exitedETHLength; ++idx) {
             // we check that the amount of exited ETH is not above the funded ETH of an operator
-            if (idx < vars.currentExitedETHLength && _exitedETH[idx] > operators[idx - 1].funded) {
-                revert ExitedETHExceedsFundedETH(idx - 1, _exitedETH[idx], operators[idx - 1].funded);
+            if (idx < vars.currentExitedETHLength) {
+                uint256 opFunded = operators[idx - 1].funded;
+                if (_exitedETH[idx] > opFunded) {
+                    revert ExitedETHExceedsFundedETH(idx - 1, _exitedETH[idx], opFunded);
+                }
             }
 
             // if the reported exited ETH for this operator is greater than its recorded requestedExits,
             // treat the difference as unsolicited exits and set requestedExits to the reported exited ETH.
-            opRequestedExits = operators[idx - 1].requestedExits;
+            uint256 opRequestedExits = operators[idx - 1].requestedExits;
             if (_exitedETH[idx] > opRequestedExits) {
                 emit UpdatedRequestedETHExitsUponStopped(idx - 1, opRequestedExits, _exitedETH[idx]);
                 unsolicitedExitsSum += _exitedETH[idx] - opRequestedExits;
@@ -430,7 +431,6 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
             revert ExitedETHExceedsDeposited();
         }
 
-        // we set the exited ETH
         OperatorsV3.setRawExitedETH(_exitedETH);
         emit UpdatedExitedETH(_exitedETH);
     }
