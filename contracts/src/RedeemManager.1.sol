@@ -189,7 +189,7 @@ contract RedeemManagerV1 is Initializable, ReentrancyGuard, IRedeemManagerV1, IP
         uint32[] calldata withdrawalEventIds,
         bool skipAlreadyClaimed,
         uint16 _depth
-    ) external nonReentrant whenNotSlashingContainmentMode returns (uint8[] memory claimStatuses) {
+    ) external nonReentrant returns (uint8[] memory claimStatuses) {
         return _claimRedeemRequests(redeemRequestIds, withdrawalEventIds, skipAlreadyClaimed, _depth);
     }
 
@@ -197,7 +197,6 @@ contract RedeemManagerV1 is Initializable, ReentrancyGuard, IRedeemManagerV1, IP
     function claimRedeemRequests(uint32[] calldata _redeemRequestIds, uint32[] calldata _withdrawalEventIds)
         external
         nonReentrant
-        whenNotSlashingContainmentMode
         returns (uint8[] memory claimStatuses)
     {
         return _claimRedeemRequests(_redeemRequestIds, _withdrawalEventIds, true, type(uint16).max);

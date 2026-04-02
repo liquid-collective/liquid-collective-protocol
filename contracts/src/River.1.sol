@@ -212,7 +212,6 @@ contract RiverV1 is
     /// @inheritdoc IRiverV1
     function claimRedeemRequests(uint32[] calldata _redeemRequestIds, uint32[] calldata _withdrawalEventIds)
         external
-        whenNotSlashingContainmentMode
         returns (uint8[] memory claimStatuses)
     {
         return IRedeemManagerV1(RedeemManagerAddress.get())
