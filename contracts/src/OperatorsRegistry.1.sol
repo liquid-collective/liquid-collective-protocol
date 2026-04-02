@@ -409,8 +409,10 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
 
         if (limitEqualsKeyCount) {
             operator.limit = operator.keys;
+            emit SetOperatorLimit(_index, operator.keys);
         } else if (lastIndex < operator.limit) {
             operator.limit = uint32(lastIndex);
+            emit SetOperatorLimit(_index, lastIndex);
         }
     }
 
@@ -737,6 +739,6 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
 
     /// @inheritdoc IProtocolVersion
     function version() external pure returns (string memory) {
-        return "1.2.1";
+        return "1.3.0";
     }
 }

@@ -10,6 +10,7 @@ import "./interfaces/IWLSETH.1.sol";
 import "./state/shared/RiverAddress.sol";
 import "./state/shared/ApprovalsPerOwner.sol";
 import "./state/wlseth/BalanceOf.sol";
+import "./state/wlseth/BalanceOfLsETH.sol";
 
 /// @title Wrapped LsETH (v1)
 /// @author Alluvial Finance Inc.
@@ -59,7 +60,7 @@ contract WLSETHV1 is IWLSETHV1, Initializable, ReentrancyGuardUpgradeable {
 
     /// @inheritdoc IWLSETHV1
     function totalSupply() external view returns (uint256) {
-        return IRiverV1(payable(RiverAddress.get())).balanceOfUnderlying(address(this));
+        return IRiverV1(payable(RiverAddress.get())).underlyingBalanceFromShares(BalanceOfLsETH.get());
     }
 
     /// @inheritdoc IWLSETHV1
@@ -124,26 +125,42 @@ contract WLSETHV1 is IWLSETHV1, Initializable, ReentrancyGuardUpgradeable {
 
     /// @inheritdoc IWLSETHV1
     function mint(address _recipient, uint256 _shares) external nonReentrant {
-        BalanceOf.set(_recipient, BalanceOf.get(_recipient) + _shares);
         IRiverV1 river = IRiverV1(payable(RiverAddress.get()));
+        IAllowlistV1 allowlist = IAllowlistV1(river.getAllowlist());
+        if (allowlist.isDenied(msg.sender)) {
+            revert Denied(msg.sender);
+        }
+        if (allowlist.isDenied(_recipient)) {
+            revert Denied(_recipient);
+        }
+        BalanceOf.set(_recipient, BalanceOf.get(_recipient) + _shares);
         if (!river.transferFrom(msg.sender, address(this), _shares)) {
             revert TokenTransferError();
         }
+        BalanceOfLsETH.set(BalanceOfLsETH.get() + _shares);
         emit Mint(_recipient, _shares);
         emit Transfer(address(0), _recipient, river.underlyingBalanceFromShares(_shares));
     }
 
     /// @inheritdoc IWLSETHV1
     function burn(address _recipient, uint256 _shares) external nonReentrant {
+        IRiverV1 river = IRiverV1(payable(RiverAddress.get()));
+        IAllowlistV1 allowlist = IAllowlistV1(river.getAllowlist());
+        if (allowlist.isDenied(msg.sender)) {
+            revert Denied(msg.sender);
+        }
+        if (allowlist.isDenied(_recipient)) {
+            revert Denied(_recipient);
+        }
         uint256 shares = BalanceOf.get(msg.sender);
         if (_shares > shares) {
             revert BalanceTooLow();
         }
         BalanceOf.set(msg.sender, shares - _shares);
-        IRiverV1 river = IRiverV1(payable(RiverAddress.get()));
         if (!river.transfer(_recipient, _shares)) {
             revert TokenTransferError();
         }
+        BalanceOfLsETH.set(BalanceOfLsETH.get() - _shares);
         emit Transfer(msg.sender, address(0), river.underlyingBalanceFromShares(_shares));
         emit Burn(_recipient, _shares);
     }

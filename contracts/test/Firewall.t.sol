@@ -506,6 +506,6 @@ contract FirewallTests is BytesGenerator, OperatorAllocationTestBase {
     }
 
     function testVersion() external {
-        assertEq(riverFirewall.version(), "1.2.1");
+        assertEq(riverFirewall.version(), "1.3.0");
     }
 }
