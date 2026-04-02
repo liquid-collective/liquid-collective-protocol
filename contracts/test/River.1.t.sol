@@ -1020,11 +1020,36 @@ contract RiverV1Tests is RiverV1TestBase {
             maxDailyRelativeCommittableAmount
         );
 
+        // Set up a real redeem request while slashing mode is off
+        uint256 amount = 1 ether;
+        vm.deal(bob, amount);
+        _allow(bob);
+        vm.prank(bob);
+        river.deposit{value: amount}();
+        uint256 lsETHBalance = river.balanceOf(bob);
+
+        vm.prank(bob);
+        river.requestRedeem(lsETHBalance, bob);
+
+        // Fund the withdrawal event via the RedeemManager (called as river)
+        vm.deal(address(river), amount);
+        vm.prank(address(river));
+        redeemManager.reportWithdraw{value: amount}(lsETHBalance);
+
+        // Enable slashing containment mode and claim
         river.sudoSetSlashingContainmentMode(true);
-        uint32[] memory ids = new uint32[](0);
-        uint32[] memory events = new uint32[](0);
+
+        uint32[] memory ids = new uint32[](1);
+        uint32[] memory events = new uint32[](1);
+        ids[0] = 0;
+        events[0] = 0;
+
+        uint256 bobBalanceBefore = bob.balance;
         uint8[] memory claimStatuses = river.claimRedeemRequests(ids, events);
-        assertEq(claimStatuses.length, 0);
+
+        assertEq(claimStatuses.length, 1);
+        assertEq(claimStatuses[0], 0); // CLAIM_FULLY_CLAIMED
+        assertGt(bob.balance - bobBalanceBefore, 0);
     }
 
     function testDepositUnblockedAfterSlashingModeToggleOff() public {

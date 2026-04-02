@@ -2041,25 +2041,65 @@ contract RedeemManagerV1Tests is RedeeManagerV1TestBase {
         redeemManager.requestRedeem(amount);
     }
 
-    function testClaimRedeemRequestsFourArgAllowedInSlashingMode() external {
+    function testClaimRedeemRequestsFourArgAllowedInSlashingMode(uint256 _salt) external {
+        uint128 amount = uint128(bound(_salt, 1, type(uint128).max));
+        address user = _generateAllowlistedUser(_salt);
+
+        river.sudoDeal(user, uint256(amount));
+        vm.prank(user);
+        river.approve(address(redeemManager), uint256(amount));
+        vm.prank(user);
+        redeemManager.requestRedeem(amount, user);
+
+        vm.deal(address(this), amount);
+        river.sudoReportWithdraw{value: amount}(address(redeemManager), amount);
+
         river.sudoSetSlashingContainmentMode(true);
 
-        uint32[] memory redeemRequestIds = new uint32[](0);
-        uint32[] memory withdrawalEventIds = new uint32[](0);
+        uint32[] memory redeemRequestIds = new uint32[](1);
+        uint32[] memory withdrawalEventIds = new uint32[](1);
+        redeemRequestIds[0] = 0;
+        withdrawalEventIds[0] = 0;
+
+        uint256 userBalanceBefore = user.balance;
 
         uint8[] memory claimStatuses =
             redeemManager.claimRedeemRequests(redeemRequestIds, withdrawalEventIds, true, type(uint16).max);
-        assertEq(claimStatuses.length, 0);
+
+        assertEq(claimStatuses.length, 1);
+        assertEq(claimStatuses[0], 0); // CLAIM_FULLY_CLAIMED
+        assertEq(user.balance - userBalanceBefore, amount);
+        assertEq(address(redeemManager).balance, 0);
     }
 
-    function testClaimRedeemRequestsTwoArgAllowedInSlashingMode() external {
+    function testClaimRedeemRequestsTwoArgAllowedInSlashingMode(uint256 _salt) external {
+        uint128 amount = uint128(bound(_salt, 1, type(uint128).max));
+        address user = _generateAllowlistedUser(_salt);
+
+        river.sudoDeal(user, uint256(amount));
+        vm.prank(user);
+        river.approve(address(redeemManager), uint256(amount));
+        vm.prank(user);
+        redeemManager.requestRedeem(amount, user);
+
+        vm.deal(address(this), amount);
+        river.sudoReportWithdraw{value: amount}(address(redeemManager), amount);
+
         river.sudoSetSlashingContainmentMode(true);
 
-        uint32[] memory redeemRequestIds = new uint32[](0);
-        uint32[] memory withdrawalEventIds = new uint32[](0);
+        uint32[] memory redeemRequestIds = new uint32[](1);
+        uint32[] memory withdrawalEventIds = new uint32[](1);
+        redeemRequestIds[0] = 0;
+        withdrawalEventIds[0] = 0;
+
+        uint256 userBalanceBefore = user.balance;
 
         uint8[] memory claimStatuses = redeemManager.claimRedeemRequests(redeemRequestIds, withdrawalEventIds);
-        assertEq(claimStatuses.length, 0);
+
+        assertEq(claimStatuses.length, 1);
+        assertEq(claimStatuses[0], 0); // CLAIM_FULLY_CLAIMED
+        assertEq(user.balance - userBalanceBefore, amount);
+        assertEq(address(redeemManager).balance, 0);
     }
 
     function testRequestRedeemTwoArgAllowedWhenSlashingModeOff(uint256 _salt) external {
