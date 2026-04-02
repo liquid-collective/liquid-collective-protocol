@@ -114,6 +114,7 @@ contract RiverV1 is
         _approve(address(this), _redeemManager, type(uint256).max);
     }
 
+    /// @inheritdoc IRiverV1
     function initRiverV1_2() external init(2) {
         // force committed balance to a multiple of 32 ETH and
         // move extra funds back to the deposit buffer

@@ -107,8 +107,11 @@ abstract contract ConsensusLayerDepositManagerV1 is IConsensusLayerDepositManage
         if (maxDepositableCount == 0) {
             revert NotEnoughFunds();
         }
-        // Calculate total requested and validate key lengths + operator ordering in a single pass
-        uint256 totalRequested = 0;
+
+        // Validate deposit amounts and operator ordering in a single pass
+        // NOTE: operator indices must be non-decreasing (allows consecutive entries for the same operator,
+        // unlike requestValidatorExits which requires strictly ascending order)
+        // TODO: Once accounting changes are in, we will remove the DEPOSIT_SIZE restriction and sum the deposit amounts instead.
         for (uint256 i = 0; i < _allocations.length; ++i) {
             if (i > 0 && _allocations[i].operatorIndex < _allocations[i - 1].operatorIndex) {
                 revert IOperatorsRegistryV1.UnorderedOperatorList();
@@ -116,10 +119,9 @@ abstract contract ConsensusLayerDepositManagerV1 is IConsensusLayerDepositManage
             if (_allocations[i].depositAmount != DEPOSIT_SIZE) {
                 revert InvalidDepositSize(_allocations[i].depositAmount);
             }
-            totalRequested += _allocations[i].depositAmount;
         }
 
-        // Check if the total requested exceeds the committed balance
+        uint256 totalRequested = _allocations.length * DEPOSIT_SIZE;
         if (totalRequested > committedBalance) {
             revert ValidatorDepositsExceedCommittedBalance();
         }

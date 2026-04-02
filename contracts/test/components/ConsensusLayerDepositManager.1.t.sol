@@ -302,6 +302,54 @@ contract ConsensusLayerDepositManagerV1ErrorTests is OperatorAllocationTestBase 
         depositManager.depositToConsensusLayerWithDepositRoot(allocations, bytes32(0));
     }
 
+    function testUnorderedOperatorListReverts() public {
+        vm.deal(address(depositManager), 3 * 32 ether);
+        ConsensusLayerDepositManagerV1ControllableValidatorKeyRequest(address(depositManager)).sudoSyncBalance();
+
+        // Build allocations with decreasing operator indices: [1, 0]
+        IOperatorsRegistryV1.ValidatorDeposit[] memory allocations = new IOperatorsRegistryV1.ValidatorDeposit[](2);
+        allocations[0] = IOperatorsRegistryV1.ValidatorDeposit({
+            operatorIndex: 1,
+            pubkey: bytes(new bytes(48)),
+            signature: bytes(new bytes(96)),
+            depositAmount: 32 ether
+        });
+        allocations[1] = IOperatorsRegistryV1.ValidatorDeposit({
+            operatorIndex: 0,
+            pubkey: bytes(new bytes(48)),
+            signature: bytes(new bytes(96)),
+            depositAmount: 32 ether
+        });
+
+        vm.expectRevert(abi.encodeWithSignature("UnorderedOperatorList()"));
+        vm.prank(address(0x1));
+        depositManager.depositToConsensusLayerWithDepositRoot(allocations, bytes32(0));
+    }
+
+    function testEqualConsecutiveOperatorIndicesAllowed() public {
+        vm.deal(address(depositManager), 2 * 32 ether);
+        ConsensusLayerDepositManagerV1ControllableValidatorKeyRequest(address(depositManager)).sudoSyncBalance();
+
+        // Build allocations with equal consecutive operator indices: [0, 0]
+        IOperatorsRegistryV1.ValidatorDeposit[] memory allocations = new IOperatorsRegistryV1.ValidatorDeposit[](2);
+        allocations[0] = IOperatorsRegistryV1.ValidatorDeposit({
+            operatorIndex: 0,
+            pubkey: bytes(new bytes(48)),
+            signature: bytes(new bytes(96)),
+            depositAmount: 32 ether
+        });
+        allocations[1] = IOperatorsRegistryV1.ValidatorDeposit({
+            operatorIndex: 0,
+            pubkey: bytes(new bytes(48)),
+            signature: bytes(new bytes(96)),
+            depositAmount: 32 ether
+        });
+
+        // Should NOT revert with UnorderedOperatorList -- equal consecutive indices are valid
+        vm.prank(address(0x1));
+        depositManager.depositToConsensusLayerWithDepositRoot(allocations, bytes32(0));
+    }
+
     function testAllocationExactlyMatchesCommittedBalance() public {
         vm.deal(address(depositManager), 3 * 32 ether);
         ConsensusLayerDepositManagerV1ControllableValidatorKeyRequest(address(depositManager)).sudoSyncBalance();
