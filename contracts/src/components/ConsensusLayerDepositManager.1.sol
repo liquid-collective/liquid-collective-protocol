@@ -99,7 +99,6 @@ abstract contract ConsensusLayerDepositManagerV1 is IConsensusLayerDepositManage
         }
 
         uint256 committedBalance = CommittedBalance.get();
-        uint256 highestOperatorIndex = 0;
         if (committedBalance == 0) {
             revert NotEnoughFunds();
         }
@@ -117,9 +116,8 @@ abstract contract ConsensusLayerDepositManagerV1 is IConsensusLayerDepositManage
             }
 
             totalDeposits += _allocations[i].depositAmount;
-            highestOperatorIndex = _allocations[i].operatorIndex;
         }
-        uint256[] memory fundedETH = new uint256[](highestOperatorIndex + 1);
+        uint256[] memory fundedETH = new uint256[](_allocations[_allocations.length - 1].operatorIndex + 1);
 
         // Check if the total requested exceeds the committed balance
         if (totalDeposits > committedBalance) {
@@ -168,7 +166,7 @@ abstract contract ConsensusLayerDepositManagerV1 is IConsensusLayerDepositManage
         bytes32 _withdrawalCredentials,
         address _depositContract
     ) internal {
-        if (_depositAmount < 1 ether && _depositAmount > 2048 ether) {
+        if (_depositAmount < 1 ether || _depositAmount > 2048 ether) {
             revert InvalidDepositSize(_depositAmount);
         }
         uint256 depositAmount = _depositAmount / 1 gwei;

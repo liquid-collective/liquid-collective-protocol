@@ -101,9 +101,6 @@ interface IOperatorsRegistryV1 {
     /// @notice Thrown when the sum of exited ETH is invalid
     error ExitedETHSumMismatch();
 
-    /// @notice Thrown when an element in the exited ETH array is decreasing
-    error ExitedETHPerOperatorDecreased();
-
     /// @notice Thrown when the amount of exited ETH is too high compared to the operator's funded ETH amount
     error DemandedETHExitsExceedsDepositedETH();
 

@@ -346,7 +346,7 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
         uint256 currentETHExitsDemand;
         uint256 cachedCurrentETHExitsDemand;
         uint256 totalETHExitsRequested;
-        uint256 cachedTotalRequestedETHExits;
+        uint256 cachedTotalETHExitsRequested;
     }
 
     /// @notice Internal utility to set the exited ETH array
@@ -382,7 +382,7 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
         vars.currentETHExitsDemand = CurrentETHExitsDemand.get();
         vars.cachedCurrentETHExitsDemand = vars.currentETHExitsDemand;
         vars.totalETHExitsRequested = TotalETHExitsRequested.get();
-        vars.cachedTotalRequestedETHExits = vars.totalETHExitsRequested;
+        vars.cachedTotalETHExitsRequested = vars.totalETHExitsRequested;
 
         uint256 idx = 1;
         uint256 unsolicitedExitsSum;
@@ -413,8 +413,8 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
         // we decrease the demand, considering unsolicited exits as if they were answering the demand
         vars.currentETHExitsDemand -= LibUint256.min(unsolicitedExitsSum, vars.currentETHExitsDemand);
 
-        if (vars.totalETHExitsRequested != vars.cachedTotalRequestedETHExits) {
-            _setTotalETHExitsRequested(vars.cachedTotalRequestedETHExits, vars.totalETHExitsRequested);
+        if (vars.totalETHExitsRequested != vars.cachedTotalETHExitsRequested) {
+            _setTotalETHExitsRequested(vars.cachedTotalETHExitsRequested, vars.totalETHExitsRequested);
         }
 
         if (vars.currentETHExitsDemand != vars.cachedCurrentETHExitsDemand) {

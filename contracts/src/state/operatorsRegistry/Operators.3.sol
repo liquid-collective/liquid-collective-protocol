@@ -171,15 +171,7 @@ library OperatorsV3 {
     /// @param index The index of the operator to lookup
     /// @return The exited ETH for the given operator index
     function getExitedETHAtIndex(uint256 index) internal view returns (uint256) {
-        bytes32 slot = EXITED_ETH_SLOT;
-
-        SlotExitedETH storage r;
-
-        // solhint-disable-next-line no-inline-assembly
-        assembly {
-            r.slot := slot
-        }
-        return _getExitedETHAtIndex(r.value, index);
+        return _getExitedETHAtIndex(getExitedETH(), index);
     }
 
     /// @notice Retrieve the exited ETH for an operator by its index
