@@ -193,10 +193,10 @@ Explicit deposit method to mint on msg.sender and transfer to _recipient
 ### depositToConsensusLayerWithDepositRoot
 
 ```solidity
-function depositToConsensusLayerWithDepositRoot(uint256 _maxCount, bytes32 _depositRoot) external nonpayable
+function depositToConsensusLayerWithDepositRoot(IOperatorsRegistryV1.OperatorAllocation[] _allocations, bytes32 _depositRoot) external nonpayable
 ```
 
-Deposits current balance to the Consensus Layer by batches of 32 ETH
+
 
 
 
@@ -204,8 +204,8 @@ Deposits current balance to the Consensus Layer by batches of 32 ETH
 
 | Name | Type | Description |
 |---|---|---|
-| _maxCount | uint256 | The maximum amount of validator keys to fund |
-| _depositRoot | bytes32 | The root of the deposit tree |
+| _allocations | IOperatorsRegistryV1.OperatorAllocation[] | undefined |
+| _depositRoot | bytes32 | undefined |
 
 ### getAllowlist
 
@@ -1895,17 +1895,6 @@ Thrown when the amount received from the Withdraw contract doe not match the req
 | requested | uint256 | The amount that was requested |
 | received | uint256 | The amount that was received |
 
-### InvalidSignatureCount
-
-```solidity
-error InvalidSignatureCount()
-```
-
-The received count of signatures to deposit is invalid
-
-
-
-
 ### InvalidValidatorCountReport
 
 ```solidity
@@ -1975,6 +1964,17 @@ error OnlyKeeper()
 ```
 
 
+
+
+
+
+### OperatorAllocationsExceedCommittedBalance
+
+```solidity
+error OperatorAllocationsExceedCommittedBalance()
+```
+
+The operator allocations exceed the committed balance
 
 
 

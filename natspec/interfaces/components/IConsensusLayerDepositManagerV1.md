@@ -13,10 +13,10 @@ This interface exposes methods to handle the interactions with the official depo
 ### depositToConsensusLayerWithDepositRoot
 
 ```solidity
-function depositToConsensusLayerWithDepositRoot(uint256 _maxCount, bytes32 _depositRoot) external nonpayable
+function depositToConsensusLayerWithDepositRoot(IOperatorsRegistryV1.OperatorAllocation[] _allocations, bytes32 _depositRoot) external nonpayable
 ```
 
-Deposits current balance to the Consensus Layer by batches of 32 ETH
+
 
 
 
@@ -24,8 +24,8 @@ Deposits current balance to the Consensus Layer by batches of 32 ETH
 
 | Name | Type | Description |
 |---|---|---|
-| _maxCount | uint256 | The maximum amount of validator keys to fund |
-| _depositRoot | bytes32 | The root of the deposit tree |
+| _allocations | IOperatorsRegistryV1.OperatorAllocation[] | undefined |
+| _depositRoot | bytes32 | undefined |
 
 ### getBalanceToDeposit
 
@@ -224,17 +224,6 @@ The received count of public keys to deposit is invalid
 
 
 
-### InvalidSignatureCount
-
-```solidity
-error InvalidSignatureCount()
-```
-
-The received count of signatures to deposit is invalid
-
-
-
-
 ### InvalidWithdrawalCredentials
 
 ```solidity
@@ -275,6 +264,17 @@ error OnlyKeeper()
 ```
 
 
+
+
+
+
+### OperatorAllocationsExceedCommittedBalance
+
+```solidity
+error OperatorAllocationsExceedCommittedBalance()
+```
+
+The operator allocations exceed the committed balance
 
 
 
