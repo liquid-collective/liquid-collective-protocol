@@ -139,7 +139,7 @@ contract WLSETHV1 is IWLSETHV1, Initializable, ReentrancyGuardUpgradeable {
         }
         BalanceOfLsETH.set(BalanceOfLsETH.get() + _shares);
         emit Mint(_recipient, _shares);
-        emit Transfer(address(0), _recipient, river.underlyingBalanceFromShares(_shares));
+        emit Transfer(address(0), _recipient, _shares);
     }
 
     /// @inheritdoc IWLSETHV1
@@ -161,7 +161,7 @@ contract WLSETHV1 is IWLSETHV1, Initializable, ReentrancyGuardUpgradeable {
             revert TokenTransferError();
         }
         BalanceOfLsETH.set(BalanceOfLsETH.get() - _shares);
-        emit Transfer(msg.sender, address(0), river.underlyingBalanceFromShares(_shares));
+        emit Transfer(msg.sender, address(0), _shares);
         emit Burn(_recipient, _shares);
     }
 

@@ -356,7 +356,7 @@ contract WLSETHV1Tests is WLSETHV1TestBase {
             vm.startPrank(_guy);
             RiverTokenMock(address(river)).approve(address(wlseth), _sum);
             vm.expectEmit(true, true, true, true);
-            emit Transfer(address(0), _guy, 100 ether);
+            emit Transfer(address(0), _guy, _sum);
             wlseth.mint(_guy, balance);
             vm.stopPrank();
             balance = wlseth.balanceOf(_guy);
@@ -783,7 +783,7 @@ contract WLSETHV1Tests is WLSETHV1TestBase {
             balance = wlseth.sharesOf(_guy);
             vm.startPrank(_guy);
             vm.expectEmit(true, true, true, true);
-            emit Transfer(_guy, address(0), 100 ether);
+            emit Transfer(_guy, address(0), balance);
             wlseth.burn(_guy, balance);
             balance = wlseth.balanceOf(_guy);
             assert(balance == 0);
