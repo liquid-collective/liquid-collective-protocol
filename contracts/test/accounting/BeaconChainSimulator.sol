@@ -35,6 +35,9 @@ abstract contract BeaconChainSimulator is AccountingHarnessBase {
     /// @dev Mirrors the contract's InFlightDeposit: ETH sent to the deposit contract
     ///      but not yet oracle-confirmed. Incremented in sim_deposit, reset after oracle report.
     uint256 internal _simInFlightDeposit;
+    /// @dev Cumulative ETH deposited on the EL deposit contract that has been activated on the CL.
+    ///      Monotonically increasing — incremented in sim_activateValidators.
+    uint256 internal _simTotalDepositedActivatedETH;
 
     uint256 internal _lastReportedSkimmed;
     uint256 internal _lastReportedExited;
@@ -75,6 +78,7 @@ abstract contract BeaconChainSimulator is AccountingHarnessBase {
             }
         }
         assertEq(activated, n, "sim_activateValidators: insufficient pending validators");
+        _simTotalDepositedActivatedETH += n * DEPOSIT_SIZE;
     }
 
     function sim_advanceEpoch(uint256 rewardsPerValidator) internal {
@@ -176,7 +180,6 @@ abstract contract BeaconChainSimulator is AccountingHarnessBase {
         uint256 validatorsBalance = 0;
         uint256 validatorsExiting = 0;
         uint32 activatedCount = 0;
-        uint256 pendingETHTotal = 0;
 
         uint256 opCount = operatorsRegistry.getOperatorCount();
         uint256[] memory exitedArr = new uint256[](opCount + 1);
@@ -185,7 +188,7 @@ abstract contract BeaconChainSimulator is AccountingHarnessBase {
         for (uint256 i = 0; i < _simValidators.length; i++) {
             SimValidator memory v = _simValidators[i];
             if (v.state == ValidatorState.Pending) {
-                pendingETHTotal += v.depositedETH;
+                // pending validators are not yet activated; they are tracked via _simInFlightDeposit
             } else if (v.state == ValidatorState.Active) {
                 validatorsBalance += v.currentBalance;
                 activatedCount++;
@@ -205,7 +208,7 @@ abstract contract BeaconChainSimulator is AccountingHarnessBase {
         report.validatorsSkimmedBalance = _simCumulativeSkimmed;
         report.validatorsExitedBalance = _simCumulativeExited;
         report.validatorsExitingBalance = validatorsExiting;
-        report.inFlightETH = pendingETHTotal;
+        report.totalDepositedActivatedETH = _simTotalDepositedActivatedETH;
         report.validatorsCount = activatedCount;
         report.exitedETHPerOperator = exitedArr;
         report.rebalanceDepositToRedeemMode = rebalance;

@@ -61,21 +61,23 @@ contract InFlightETHTest is AccountingInvariants {
         assertEq(river.getInFlightDeposit(), 0);
     }
 
-    /// @notice Verifies that an oracle report attempting to increase the stored in-flight ETH
-    ///         value is rejected. After all validators are activated and in-flight ETH is zero,
-    ///         a crafted report with `inFlightETH = 1 ether` (invalid increase) must revert.
-    function testReportInFlightETHIncreaseReverts() public {
+    /// @notice Verifies that an oracle report attempting to increase `totalDepositedActivatedETH`
+    ///         beyond the current `InFlightDeposit` is rejected. After all validators are activated
+    ///         and in-flight ETH is zero, a crafted report with `totalDepositedActivatedETH`
+    ///         incremented by 1 ether (no new in-flight to cover it) must revert.
+    function testReportTotalDepositedActivatedETHExceedsInFlightReverts() public {
         // Step 1: Fund river, deposit 2 validators, activate them, and report to clear in-flight.
         _fundRiver(2 * DEPOSIT_SIZE);
         sim_deposit(operatorOneIndex, 2);
         sim_activateValidators(2);
         sim_oracleReport();
-        // Step 2: Build a valid report structure and override inFlightETH with an illegal increase.
+        // Step 2: Build a valid report and push totalDepositedActivatedETH 1 ether above the
+        //         stored value — invalid because InFlightDeposit is now 0.
         uint256 reportEpoch = river.getExpectedEpochId();
         vm.warp((SECONDS_PER_SLOT * SLOTS_PER_EPOCH) * (reportEpoch + EPOCHS_UNTIL_FINAL) + 1);
         IOracleManagerV1.ConsensusLayerReport memory bad = _buildReport(false, false);
         bad.epoch = reportEpoch;
-        bad.inFlightETH = 1 ether; // invalid: increases stored value
+        bad.totalDepositedActivatedETH = bad.totalDepositedActivatedETH + 1 ether; // invalid: increase exceeds InFlightDeposit (0)
         // Step 3: Submit the crafted report as the oracle member and expect a revert.
         vm.prank(oracleMember);
         vm.expectRevert();

@@ -144,8 +144,8 @@ These are checked after **every** handler call (not just after oracle reports):
 
 | Invariant | Property |
 |-----------|----------|
-| I2: ETH conservation | `totalUnderlyingSupply() <= _simTotalUserDeposited + _simCumulativeSkimmed` |
-| I3: InFlightDeposit consistency | `river.getInFlightDeposit() == _simInFlightDeposit` |
+| I2: ETH conservation | `totalUnderlyingSupply() <= _simTotalUserDeposited + _simCumulativeSkimmed` (upper-bound, non-tautological) |
+| I3: InFlightDeposit consistency | `river.getInFlightDeposit() == _simInFlightDeposit` — checked **pre-report** in `_snapshotPreReport()` |
 | I5: TotalDepositedETH monotonic | `getTotalDepositedETH() >= sum of all sim validator depositedETH` |
 | I6: ExitedETH aggregate | sum of per-operator exited == total exited |
 
@@ -220,9 +220,9 @@ Extends I4 to continuous checking (not just after reports). Matches the document
 
 **I19: CLValidatorCount bounded by total sim validators**
 ```
-river.getCLValidatorCount() <= _simValidators.length
+river.getLastConsensusLayerReport().validatorsCount <= _simValidators.length
 ```
-On-chain validator count should never exceed total validators ever created.
+On-chain activated validator count (from the stored oracle report) should never exceed total validators ever created by the simulator.
 
 **I20: TotalDepositedETH exact match with sim**
 ```

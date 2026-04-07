@@ -116,6 +116,9 @@ interface IOperatorsRegistryV1 {
     /// @notice The provided exited ETH array is shrinking
     error ExitedETHArrayShrinking();
 
+    /// @notice Thrown when the exited ETH for an operator has decreased compared to the previous report
+    error ExitedETHPerOperatorDecreased();
+
     /// @notice The provided exit requests exceed the available funded ETH amount of the operator
     /// @param operatorIndex The operator index
     /// @param requested The requested ETH(wei) amount

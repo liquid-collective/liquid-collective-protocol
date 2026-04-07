@@ -115,11 +115,11 @@ abstract contract AccountingInvariants is BeaconChainSimulator {
     /// @notice I3: In-flight deposit consistency check.
     ///         The substantive check is performed in `_snapshotPreReport` (before the oracle
     ///         report), where it is non-tautological. Post-report it would be a tautology since
-    ///         the oracle just set `InFlightDeposit = report.inFlightETH = _pendingETH()`.
+    ///         the oracle just decremented `InFlightDeposit` by `report.totalDepositedActivatedETH` increase.
     function _assertI3_InFlightConsistency() internal pure {
         // I3 is now checked in _snapshotPreReport() (before the oracle report),
         // where it is meaningful. Post-report it would be a tautology since the
-        // oracle just set InFlightDeposit = report.inFlightETH = _pendingETH().
+        // oracle just decremented InFlightDeposit by the totalDepositedActivatedETH increase.
     }
 
     /// @notice I4: Verifies per-operator ETH consistency — for each operator, the on-chain

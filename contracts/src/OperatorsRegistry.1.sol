@@ -386,14 +386,16 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
         uint256 idx = 1;
         uint256 unsolicitedExitsSum;
 
-        // In case of a new operator we do not check against the current exited ETH (would revert OOB)
         for (; idx < vars.exitedETHLength; ++idx) {
+            // we check that the amount of exited ETH is not decreasing for existing operators
+            if (idx < vars.currentExitedETHLength && _exitedETH[idx] < vars.currentExitedETH[idx]) {
+                revert ExitedETHPerOperatorDecreased();
+            }
+
             // we check that the amount of exited ETH is not above the funded ETH of an operator
-            if (idx < vars.currentExitedETHLength) {
-                uint256 opFunded = operators[idx - 1].funded;
-                if (_exitedETH[idx] > opFunded) {
-                    revert ExitedETHExceedsFundedETH(idx - 1, _exitedETH[idx], opFunded);
-                }
+            uint256 opFunded = operators[idx - 1].funded;
+            if (_exitedETH[idx] > opFunded) {
+                revert ExitedETHExceedsFundedETH(idx - 1, _exitedETH[idx], opFunded);
             }
 
             // if the reported exited ETH for this operator is greater than its recorded requestedExits,

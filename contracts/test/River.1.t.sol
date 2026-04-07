@@ -1124,6 +1124,7 @@ contract RiverV1TestsReport_HEAVY_FUZZING is RiverV1TestBase {
         clr.validatorsSkimmedBalance = 0;
         clr.validatorsExitedBalance = 0;
         clr.validatorsExitingBalance = type(uint256).max; // ensures no exits will be requested before asserted report
+        clr.totalDepositedActivatedETH = rfv.depositCount * 32 ether;
         clr.exitedETHPerOperator = new uint256[](1);
         clr.exitedETHPerOperator[0] = 0;
         _newSalt = _salt;
@@ -1278,6 +1279,7 @@ contract RiverV1TestsReport_HEAVY_FUZZING is RiverV1TestBase {
 
         clr.rebalanceDepositToRedeemMode = false;
         clr.slashingContainmentMode = false;
+        clr.totalDepositedActivatedETH = rfv.depositCount * 32 ether;
 
         rfv.expected_pre_elFeeRecipientBalance = 0;
         rfv.expected_pre_coverageFundBalance = 0;
@@ -1340,6 +1342,7 @@ contract RiverV1TestsReport_HEAVY_FUZZING is RiverV1TestBase {
 
         clr.rebalanceDepositToRedeemMode = false;
         clr.slashingContainmentMode = false;
+        clr.totalDepositedActivatedETH = rfv.depositCount * 32 ether;
 
         uint256 remainingIncrease = maxAllowedIncrease - totalIncrease;
         vm.deal(address(elFeeRecipient), remainingIncrease);
@@ -1405,6 +1408,7 @@ contract RiverV1TestsReport_HEAVY_FUZZING is RiverV1TestBase {
 
         clr.rebalanceDepositToRedeemMode = false;
         clr.slashingContainmentMode = false;
+        clr.totalDepositedActivatedETH = rfv.depositCount * 32 ether;
 
         uint256 remainingIncrease = maxAllowedIncrease - totalIncrease;
         address donator = uf._new(_salt);
@@ -1475,6 +1479,7 @@ contract RiverV1TestsReport_HEAVY_FUZZING is RiverV1TestBase {
 
         clr.rebalanceDepositToRedeemMode = false;
         clr.slashingContainmentMode = false;
+        clr.totalDepositedActivatedETH = rfv.depositCount * 32 ether;
 
         _salt = _redeemAllSatisfiedRedeemRequests(_salt);
 
@@ -1540,6 +1545,7 @@ contract RiverV1TestsReport_HEAVY_FUZZING is RiverV1TestBase {
             clr.slashingContainmentMode = false;
         }
 
+        clr.totalDepositedActivatedETH = rfv.depositCount * 32 ether;
         uint256 remainingIncrease = maxAllowedIncrease - totalIncrease;
         uint256 elAmount = remainingIncrease / 2;
         uint256 coverageAmount = remainingIncrease - elAmount;
@@ -1610,6 +1616,7 @@ contract RiverV1TestsReport_HEAVY_FUZZING is RiverV1TestBase {
 
         clr.rebalanceDepositToRedeemMode = true;
         clr.slashingContainmentMode = false;
+        clr.totalDepositedActivatedETH = rfv.depositCount * 32 ether;
 
         rfv.expected_pre_elFeeRecipientBalance = 0;
         rfv.expected_pre_coverageFundBalance = 0;
@@ -1671,6 +1678,7 @@ contract RiverV1TestsReport_HEAVY_FUZZING is RiverV1TestBase {
 
         clr.rebalanceDepositToRedeemMode = false;
         clr.slashingContainmentMode = true;
+        clr.totalDepositedActivatedETH = rfv.depositCount * 32 ether;
 
         rfv.expected_pre_elFeeRecipientBalance = 0;
         rfv.expected_pre_coverageFundBalance = 0;
@@ -1785,6 +1793,7 @@ contract RiverV1TestsReport_HEAVY_FUZZING is RiverV1TestBase {
         // reporting a count higher than deposits is now allowed
         clr.validatorsCount = depositCount + 1;
         clr.validatorsBalance = uint256(depositCount) * 32 ether;
+        clr.totalDepositedActivatedETH = uint256(depositCount) * 32 ether;
 
         vm.prank(address(oracle));
         river.setConsensusLayerData(clr);
@@ -1803,6 +1812,7 @@ contract RiverV1TestsReport_HEAVY_FUZZING is RiverV1TestBase {
         clr.validatorsExitingBalance = 0;
         clr.validatorsSkimmedBalance = 0;
         clr.validatorsExitedBalance = 32 ether;
+        clr.totalDepositedActivatedETH = uint256(depositCount) * 32 ether;
 
         vm.deal(address(withdraw), 32 ether);
 
@@ -1834,6 +1844,7 @@ contract RiverV1TestsReport_HEAVY_FUZZING is RiverV1TestBase {
         clr.validatorsExitingBalance = 0;
         clr.validatorsSkimmedBalance = 1 ether;
         clr.validatorsExitedBalance = 0;
+        clr.totalDepositedActivatedETH = uint256(depositCount) * 32 ether;
 
         vm.deal(address(withdraw), 1 ether);
 
@@ -1865,6 +1876,7 @@ contract RiverV1TestsReport_HEAVY_FUZZING is RiverV1TestBase {
         clr.validatorsExitingBalance = 0;
         clr.validatorsSkimmedBalance = 0;
         clr.validatorsExitedBalance = 0;
+        clr.totalDepositedActivatedETH = uint256(depositCount) * 32 ether;
 
         _salt = _next(_salt);
         uint256 framesBetween = bound(_salt, 1, 1_000_000);
@@ -1906,6 +1918,7 @@ contract RiverV1TestsReport_HEAVY_FUZZING is RiverV1TestBase {
         clr.validatorsExitingBalance = 0;
         clr.validatorsSkimmedBalance = 0;
         clr.validatorsExitedBalance = 0;
+        clr.totalDepositedActivatedETH = uint256(depositCount) * 32 ether;
 
         _salt = _next(_salt);
         uint256 framesBetween = bound(_salt, 1, 1_000_000);
@@ -1945,6 +1958,7 @@ contract RiverV1TestsReport_HEAVY_FUZZING is RiverV1TestBase {
         clr.validatorsExitingBalance = 0;
         clr.validatorsSkimmedBalance = 0;
         clr.validatorsExitedBalance = 0;
+        clr.totalDepositedActivatedETH = uint256(depositCount) * 32 ether;
 
         vm.prank(address(oracle));
         river.setConsensusLayerData(clr);
@@ -1973,6 +1987,7 @@ contract RiverV1TestsReport_HEAVY_FUZZING is RiverV1TestBase {
         clr.validatorsExitingBalance = 0;
         clr.validatorsSkimmedBalance = 0;
         clr.validatorsExitedBalance = 0;
+        clr.totalDepositedActivatedETH = uint256(depositCount) * 32 ether;
 
         vm.prank(address(oracle));
         river.setConsensusLayerData(clr);
@@ -2004,6 +2019,7 @@ contract RiverV1TestsReport_HEAVY_FUZZING is RiverV1TestBase {
         clr.validatorsExitingBalance = 0;
         clr.validatorsSkimmedBalance = skimmedAmount;
         clr.validatorsExitedBalance = 0;
+        clr.totalDepositedActivatedETH = uint256(depositCount) * 32 ether;
 
         vm.deal(address(withdraw), notEnoughAmount);
 
@@ -2030,6 +2046,7 @@ contract RiverV1TestsReport_HEAVY_FUZZING is RiverV1TestBase {
         clr.validatorsExitingBalance = 0;
         clr.validatorsSkimmedBalance = maxIncrease;
         clr.validatorsExitedBalance = 0;
+        clr.totalDepositedActivatedETH = uint256(depositCount) * 32 ether;
         clr.epoch = framesBetween * epochsPerFrame;
         clr.exitedETHPerOperator = new uint256[](2);
         clr.exitedETHPerOperator[0] = 2 * 32 ether;
@@ -2089,6 +2106,7 @@ contract RiverV1TestsReport_HEAVY_FUZZING is RiverV1TestBase {
         clr.validatorsExitingBalance = 0;
         clr.validatorsSkimmedBalance = maxIncrease;
         clr.validatorsExitedBalance = 0;
+        clr.totalDepositedActivatedETH = uint256(depositCount) * 32 ether;
         clr.epoch = framesBetween * epochsPerFrame;
         vm.warp((clr.epoch + epochsUntilFinal) * (secondsPerSlot * slotsPerEpoch));
 
@@ -2123,6 +2141,7 @@ contract RiverV1TestsReport_HEAVY_FUZZING is RiverV1TestBase {
         clr.validatorsExitingBalance = 0;
         clr.validatorsSkimmedBalance = 0;
         clr.validatorsExitedBalance = 0;
+        clr.totalDepositedActivatedETH = uint256(depositCount) * 32 ether;
         clr.epoch = framesBetween * epochsPerFrame;
         vm.warp((clr.epoch + epochsUntilFinal) * (secondsPerSlot * slotsPerEpoch));
 
@@ -2157,6 +2176,7 @@ contract RiverV1TestsReport_HEAVY_FUZZING is RiverV1TestBase {
         clr.validatorsExitingBalance = 0;
         clr.validatorsSkimmedBalance = 0;
         clr.validatorsExitedBalance = 0;
+        clr.totalDepositedActivatedETH = uint256(depositCount) * 32 ether;
         clr.epoch = framesBetween * epochsPerFrame;
         vm.warp((clr.epoch + epochsUntilFinal) * (secondsPerSlot * slotsPerEpoch));
 
@@ -2196,6 +2216,7 @@ contract RiverV1TestsReport_HEAVY_FUZZING is RiverV1TestBase {
         clr.validatorsExitingBalance = 0;
         clr.validatorsSkimmedBalance = maxIncrease / 3;
         clr.validatorsExitedBalance = 0;
+        clr.totalDepositedActivatedETH = uint256(depositCount) * 32 ether;
         clr.epoch = framesBetween * epochsPerFrame;
         vm.warp((clr.epoch + epochsUntilFinal) * (secondsPerSlot * slotsPerEpoch));
 
@@ -2246,7 +2267,7 @@ contract RiverV1CoverageTests is RiverV1TestBase {
         _initRiverAndV1_2();
         // 10 deposited validators, 7 reported -> 3 in flight.
         vm.store(address(river), DEPOSITED_VALIDATOR_COUNT_SLOT, bytes32(uint256(10)));
-        vm.store(address(river), bytes32(uint256(LAST_CLR_BASE_SLOT) + 5), bytes32(uint256(7)));
+        vm.store(address(river), bytes32(uint256(LAST_CLR_BASE_SLOT) + 6), bytes32(uint256(7)));
         river.initRiverV1_3();
         assertEq(river.getTotalDepositedETH(), 10 * 32 ether);
         assertEq(uint256(vm.load(address(river), IN_FLIGHT_DEPOSIT_SLOT)), 3 * 32 ether);
@@ -2256,7 +2277,7 @@ contract RiverV1CoverageTests is RiverV1TestBase {
     function testInitRiverV1_3NoInFlight() public {
         _initRiverAndV1_2();
         vm.store(address(river), DEPOSITED_VALIDATOR_COUNT_SLOT, bytes32(uint256(5)));
-        vm.store(address(river), bytes32(uint256(LAST_CLR_BASE_SLOT) + 5), bytes32(uint256(5)));
+        vm.store(address(river), bytes32(uint256(LAST_CLR_BASE_SLOT) + 6), bytes32(uint256(5)));
         river.initRiverV1_3();
         assertEq(river.getTotalDepositedETH(), 5 * 32 ether);
         assertEq(uint256(vm.load(address(river), IN_FLIGHT_DEPOSIT_SLOT)), 0);
@@ -2277,7 +2298,7 @@ contract RiverV1CoverageTests is RiverV1TestBase {
         IOracleManagerV1.ConsensusLayerReport memory clr;
         clr.epoch = epoch;
         clr.validatorsBalance = 32 ether + 1 wei;
-        clr.inFlightETH = 0;
+        clr.totalDepositedActivatedETH = 0;
         clr.exitedETHPerOperator = new uint256[](1);
         vm.prank(address(oracle));
         river.setConsensusLayerData(clr);
@@ -2292,7 +2313,7 @@ contract RiverV1CoverageTests is RiverV1TestBase {
         IOracleManagerV1.ConsensusLayerReport memory clr;
         clr.epoch = epoch;
         clr.validatorsBalance = 32 ether + 1 wei;
-        clr.inFlightETH = 0;
+        clr.totalDepositedActivatedETH = 32 ether;
         clr.exitedETHPerOperator = new uint256[](1);
         vm.prank(address(oracle));
         vm.expectRevert(abi.encodeWithSignature("ZeroMintedShares()"));
@@ -2314,7 +2335,7 @@ contract RiverV1CoverageTests is RiverV1TestBase {
         IOracleManagerV1.ConsensusLayerReport memory clr;
         clr.epoch = epoch;
         clr.validatorsBalance = 0;
-        clr.inFlightETH = 0;
+        clr.totalDepositedActivatedETH = 0;
         clr.exitedETHPerOperator = new uint256[](1);
         uint256 rdmBefore = address(redeemManager).balance;
         vm.prank(address(oracle));

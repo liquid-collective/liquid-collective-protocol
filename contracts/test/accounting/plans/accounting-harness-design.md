@@ -64,12 +64,13 @@ struct SimValidator {
     uint256 exitedETH;      // 32 ether minus slash penalty on exit
 }
 
-struct SimBeaconState {
-    SimValidator[] validators;
-    uint256 totalSkimmedBalance;  // monotonically increasing
-    uint256 totalExitedBalance;   // monotonically increasing
-    uint256 epoch;
-}
+// State tracked as individual variables in BeaconChainSimulator (no struct in actual impl):
+//   SimValidator[] _simValidators
+//   uint256 _simCumulativeSkimmed        -- monotonically increasing cumulative skimmed rewards
+//   uint256 _simCumulativeExited         -- monotonically increasing cumulative exited ETH
+//   uint256 _simInFlightDeposit          -- ETH sent to deposit contract, not yet oracle-confirmed
+//   uint256 _simTotalDepositedActivatedETH -- cumulative ETH activated on the CL (incremented in sim_activateValidators)
+//   uint256 _lastReportedSkimmed / _lastReportedExited / _lastReportEpoch
 ```
 
 ### Step Functions
@@ -77,7 +78,7 @@ struct SimBeaconState {
 | Function | Description |
 |---|---|
 | `sim_deposit(opIdx, n)` | Creates `n` `ValidatorDeposit` entries for `opIdx`, calls real `depositToConsensusLayerWithDepositRoot`, marks validators `Pending`, asserts `InFlightDeposit` increased |
-| `sim_activateValidators(n)` | Transitions `n` pending → active; reflected in next oracle report as `inFlightETH` decrease |
+| `sim_activateValidators(n)` | Transitions `n` pending → active; increments `_simTotalDepositedActivatedETH` by `n × 32 ETH`; reflected in next oracle report as a `totalDepositedActivatedETH` increase, which causes `InFlightDeposit` to decrease |
 | `sim_advanceEpoch(rewardsPerValidator)` | Advances epoch, accrues rewards to active validators as skimming |
 | `sim_requestExit(opIdx, ethAmount)` | Marks validators as exiting |
 | `sim_completeExit(opIdx, ethAmount, penalty)` | Marks validators as exited; `exitedETH = depositedETH - penalty` |
@@ -93,10 +94,11 @@ All invariants are checked after every `sim_oracleReport` call (and after deposi
 (skipped in explicit slashing scenarios)
 
 **I2 — ETH conservation**
-`river.totalUnderlyingSupply() == BalanceToDeposit + CommittedBalance + BalanceToRedeem + validatorsBalance + InFlightDeposit`
+`river.totalUnderlyingSupply() <= _simTotalUserDeposited + _simCumulativeSkimmed`
+(upper bound check using externally tracked values, making it non-tautological; also asserts `> 0` when deposits have been made)
 
 **I3 — InFlightDeposit consistency**
-`InFlightDeposit == Σ(pending validators' depositedETH)` (cross-checked against SimBeaconState)
+`river.getInFlightDeposit() == _simInFlightDeposit` — checked **before** each oracle report (in `_snapshotPreReport`) rather than after, because post-report the oracle itself sets `InFlightDeposit` making the check a tautology
 
 **I4 — Per-operator ETH conservation**
 For each operator `i`:

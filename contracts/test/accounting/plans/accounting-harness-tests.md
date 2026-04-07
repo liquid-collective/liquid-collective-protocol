@@ -127,8 +127,8 @@ Edge cases around the `InFlightDeposit` tracker — validators deposited to the 
 **What it tests:** The protocol rejects a report that tries to *increase* `InFlightDeposit` when it should be zero.
 
 1. Deposits 2 validators, activates them, reports → `InFlightDeposit == 0`.
-2. Manually crafts a `ConsensusLayerReport` with `inFlightETH = 1 ETH` (an invalid upward change).
-3. Submits the bad report via `oracle.reportConsensusLayerData` and asserts it reverts.
+2. Manually crafts a `ConsensusLayerReport` with `totalDepositedActivatedETH` set to a value lower than the current stored value (an invalid decrease that would imply an increase in `InFlightDeposit`).
+3. Submits the bad report via `oracle.reportConsensusLayerData` and asserts it reverts with `InvalidTotalDepositedActivatedETHIncrease`.
 
 ---
 

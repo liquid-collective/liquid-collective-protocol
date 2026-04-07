@@ -285,7 +285,9 @@ abstract contract BeaconChainSimulator is AccountingHarnessBase {
     }
 
     /// @notice Transition `n` pending validators to Active.
-    /// Reflected in the next oracle report as a reduction in inFlightETH.
+    /// Increments `_simTotalDepositedActivatedETH` by `n * DEPOSIT_SIZE`. The increase
+    /// is reported as `totalDepositedActivatedETH` in the next oracle report, causing
+    /// `InFlightDeposit` to decrease by the same amount.
     function sim_activateValidators(uint256 n) internal {
         revert("sim_activateValidators: not implemented");
     }
@@ -393,6 +395,13 @@ abstract contract AccountingInvariants is BeaconChainSimulator {
     // ─── snapshot ─────────────────────────────────────────────────────────────
 
     function _snapshotPreReport() internal {
+        // I3 (pre-report): InFlightDeposit must match sim's independently-tracked in-flight value.
+        // Checked here (before the oracle report) because post-report it would be a tautology —
+        // the oracle itself sets InFlightDeposit = pendingETH after confirming activated validators.
+        assertEq(
+            river.getInFlightDeposit(), _simInFlightDeposit,
+            "I3 (pre-report): InFlightDeposit != sim in-flight deposit"
+        );
         _snapTotalUnderlying   = river.totalUnderlyingSupply();
         _snapTotalShares       = river.totalSupply();
         _snapTotalDepositedETH = river.getTotalDepositedETH();
@@ -428,22 +437,24 @@ abstract contract AccountingInvariants is BeaconChainSimulator {
         assertGe(lhs, rhs, "I1: share price decreased unexpectedly");
     }
 
-    // ─── I2: ETH conservation (total underlying = sum of components) ──────────
+    // ─── I2: ETH conservation (upper bound check against externally tracked values) ───
 
-    function _assertI2_ETHConservation() internal view {
-        IOracleManagerV1.StoredConsensusLayerReport memory stored = river.getLastConsensusLayerReport();
-        uint256 expected = stored.validatorsBalance
-            + river.getBalanceToDeposit()
-            + river.getCommittedBalance()
-            + river.getBalanceToRedeem()
-            + river.getInFlightDeposit();
-        assertEq(river.totalUnderlyingSupply(), expected, "I2: ETH conservation violated");
+    function _assertI2_ETHConservation() internal {
+        // Upper bound: underlying can never exceed total user deposits + cumulative skimmed rewards.
+        // Both values are tracked independently of contract storage, making this non-tautological.
+        uint256 upperBound = _simTotalUserDeposited + _simCumulativeSkimmed;
+        assertLe(river.totalUnderlyingSupply(), upperBound, "I2: total underlying exceeds deposited + rewards");
+        if (_simTotalUserDeposited > 0) {
+            assertGt(river.totalUnderlyingSupply(), 0, "I2: total underlying is zero after deposits");
+        }
     }
 
-    // ─── I3: InFlightDeposit matches sim pending ETH ──────────────────────────
+    // ─── I3: InFlightDeposit consistency (checked pre-report in _snapshotPreReport) ────
 
-    function _assertI3_InFlightConsistency() internal view {
-        assertEq(river.getInFlightDeposit(), _pendingETH(), "I3: InFlightDeposit != sim pending ETH");
+    function _assertI3_InFlightConsistency() internal pure {
+        // The substantive I3 check is performed in _snapshotPreReport() before the oracle report,
+        // where it is non-tautological. Post-report the oracle already decremented InFlightDeposit
+        // by the totalDepositedActivatedETH increase, so checking here would be a tautology.
     }
 
     // ─── I4: per-operator funded and exited ETH matches sim ───────────────────
@@ -658,6 +669,7 @@ function sim_activateValidators(uint256 n) internal {
         }
     }
     assertEq(activated, n, "sim_activateValidators: not enough pending validators");
+    _simTotalDepositedActivatedETH += n * DEPOSIT_SIZE;
 }
 ```
 
@@ -672,7 +684,6 @@ function _buildReport(bool rebalance, bool slashingContainment)
     uint256 validatorsBalance    = 0;
     uint256 validatorsExiting    = 0;
     uint32  activatedCount       = 0;
-    uint256 pendingETHTotal      = 0;
 
     uint256 opCount = operatorsRegistry.getOperatorCount();
     // exitedETHPerOperator format: [totalSum, op0, op1, ...]
@@ -682,7 +693,7 @@ function _buildReport(bool rebalance, bool slashingContainment)
     for (uint256 i = 0; i < _simValidators.length; i++) {
         SimValidator memory v = _simValidators[i];
         if (v.state == ValidatorState.Pending) {
-            pendingETHTotal += v.depositedETH;
+            // pending validators tracked via _simInFlightDeposit; not included in report
         } else if (v.state == ValidatorState.Active) {
             validatorsBalance += v.currentBalance;
             activatedCount++;
@@ -698,13 +709,13 @@ function _buildReport(bool rebalance, bool slashingContainment)
     }
     exitedArr[0] = cumulativeExited;
 
-    report.validatorsBalance        = validatorsBalance;
-    report.validatorsSkimmedBalance = _simCumulativeSkimmed;
-    report.validatorsExitedBalance  = _simCumulativeExited;
-    report.validatorsExitingBalance = validatorsExiting;
-    report.inFlightETH              = pendingETHTotal;
-    report.validatorsCount          = activatedCount;
-    report.exitedETHPerOperator     = exitedArr;
+    report.validatorsBalance            = validatorsBalance;
+    report.validatorsSkimmedBalance     = _simCumulativeSkimmed;
+    report.validatorsExitedBalance      = _simCumulativeExited;
+    report.validatorsExitingBalance     = validatorsExiting;
+    report.totalDepositedActivatedETH   = _simTotalDepositedActivatedETH;
+    report.validatorsCount              = activatedCount;
+    report.exitedETHPerOperator         = exitedArr;
     report.rebalanceDepositToRedeemMode = rebalance;
     report.slashingContainmentMode      = slashingContainment;
 }
@@ -742,6 +753,8 @@ function sim_oracleReport(bool rebalance, bool slashingContainment) internal {
     _lastReportedSkimmed = _simCumulativeSkimmed;
     _lastReportedExited  = _simCumulativeExited;
     _lastReportEpoch     = reportEpoch;
+    // Sync sim in-flight to what the oracle just confirmed: oracle sets InFlightDeposit = _pendingETH().
+    _simInFlightDeposit = _pendingETH();
 
     _assertAllInvariants();
 }
@@ -924,10 +937,12 @@ contract InFlightETHTest is AccountingInvariants {
 
         IOracleManagerV1.ConsensusLayerReport memory bad = _buildReport(false, false);
         bad.epoch = reportEpoch;
-        bad.inFlightETH = 1 ether; // invalid: higher than current 0
+        // Decrease totalDepositedActivatedETH — invalid since it must be non-decreasing.
+        // This would imply InFlightDeposit increased, which is forbidden.
+        bad.totalDepositedActivatedETH = bad.totalDepositedActivatedETH - 1 ether;
 
         vm.prank(oracleMember);
-        vm.expectRevert(); // InvalidInFlightETHIncrease
+        vm.expectRevert(); // InvalidTotalDepositedActivatedETHIncrease
         oracle.reportConsensusLayerData(bad);
     }
 }

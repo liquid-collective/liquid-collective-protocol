@@ -506,8 +506,9 @@ contract OracleManagerV1CoverageTests is OracleManagerV1Tests {
         assertEq(r.validatorsBalance, 64 ether);
     }
 
-    /// Asserts that setConsensusLayerData reverts with InvalidInFlightETHIncrease when report inFlightETH is greater than current stored in-flight.
-    function testSetConsensusLayerDataRevertsOnInFlightETHIncrease() public {
+    /// Asserts that setConsensusLayerData reverts with InvalidTotalDepositedActivatedETHIncrease when
+    /// the reported totalDepositedActivatedETH increase exceeds the current InFlightDeposit.
+    function testSetConsensusLayerDataRevertsOnTotalDepositedActivatedETHExceedsInFlight() public {
         vm.store(address(oracleManager), IN_FLIGHT_DEPOSIT_SLOT, bytes32(uint256(10 ether)));
         uint256 epoch = epochsPerFrame;
         vm.warp(genesisTime + (epoch + epochsToAssumedFinality) * slotsPerEpoch * secondsPerSlot);
@@ -516,10 +517,10 @@ contract OracleManagerV1CoverageTests is OracleManagerV1Tests {
         clr.validatorsBalance = 0;
         clr.validatorsExitedBalance = 0;
         clr.validatorsSkimmedBalance = 0;
-        clr.inFlightETH = 11 ether;
+        clr.totalDepositedActivatedETH = 11 ether;
         clr.exitedETHPerOperator = new uint256[](1);
         vm.prank(oracle);
-        vm.expectRevert(abi.encodeWithSignature("InvalidInFlightETHIncrease(uint256,uint256)", 10 ether, 11 ether));
+        vm.expectRevert(abi.encodeWithSignature("InvalidTotalDepositedActivatedETHIncrease(uint256,uint256)", 10 ether, 11 ether));
         oracleManager.setConsensusLayerData(clr);
     }
 }
