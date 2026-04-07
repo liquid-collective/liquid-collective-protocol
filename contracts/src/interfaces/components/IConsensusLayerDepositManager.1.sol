@@ -16,13 +16,13 @@ interface IConsensusLayerDepositManagerV1 {
     event SetWithdrawalCredentials(bytes32 withdrawalCredentials);
 
     /// @notice Emitted when the total deposited ETH is updated
-    /// @param oldTotalDepositedETH The old total deposited ETH value
-    /// @param newTotalDepositedETH The new total deposited ETH value
+    /// @param oldTotalDepositedETH The old total deposited ETH(wei) value
+    /// @param newTotalDepositedETH The new total deposited ETH(wei) value
     event SetTotalDepositedETH(uint256 oldTotalDepositedETH, uint256 newTotalDepositedETH);
 
     /// @notice Emitted when the in flight ETH is updated
-    /// @param oldInFlightETH The old in flight ETH value
-    /// @param newInFlightETH The new in flight ETH value
+    /// @param oldInFlightETH The old in flight ETH(wei) value
+    /// @param newInFlightETH The new in flight ETH(wei) value
     event SetInFlightETH(uint256 oldInFlightETH, uint256 newInFlightETH);
 
     /// @notice The allocations array must not be empty
@@ -55,20 +55,20 @@ interface IConsensusLayerDepositManagerV1 {
     /// @notice The operator allocations exceed the committed balance
     error ValidatorDepositsExceedCommittedBalance();
 
-    /// @notice Returns the amount of ETH not yet committed for deposit
-    /// @return The amount of ETH not yet committed for deposit
+    /// @notice Returns the amount of ETH(wei) not yet committed for deposit
+    /// @return The amount of ETH(wei) not yet committed for deposit
     function getBalanceToDeposit() external view returns (uint256);
 
-    /// @notice Returns the amount of ETH committed for deposit
-    /// @return The amount of ETH committed for deposit
+    /// @notice Returns the amount of ETH(wei) committed for deposit
+    /// @return The amount of ETH(wei) committed for deposit
     function getCommittedBalance() external view returns (uint256);
 
     /// @notice Retrieve the withdrawal credentials
     /// @return The withdrawal credentials
     function getWithdrawalCredentials() external view returns (bytes32);
 
-    /// @notice Returns the total deposited ETH
-    /// @return The total deposited ETH
+    /// @notice Returns the total deposited ETH(wei)
+    /// @return The total deposited ETH(wei)
     function getTotalDepositedETH() external view returns (uint256);
 
     /// @notice Get the keeper address

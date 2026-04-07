@@ -251,6 +251,8 @@ abstract contract OracleManagerV1 is IOracleManagerV1 {
         uint256 lastReportSkimmedBalance;
         uint256 exitedAmountIncrease;
         uint256 skimmedAmountIncrease;
+        uint256 currentInFlightETH;
+        uint256 totalDepositedActivatedETHIncrease;
         uint256 timeElapsedSinceLastReport;
         uint256 availableAmountToUpperBound;
         uint256 redeemManagerDemand;
@@ -297,6 +299,23 @@ abstract contract OracleManagerV1 is IOracleManagerV1 {
                 );
             }
 
+            vars.currentInFlightETH = InFlightDeposit.get();
+            if (lastStoredReport.totalDepositedActivatedETH > _report.totalDepositedActivatedETH) {
+                revert InvalidTotalDepositedActivatedETHDecrease(
+                    lastStoredReport.totalDepositedActivatedETH, _report.totalDepositedActivatedETH
+                );
+            }
+
+            vars.totalDepositedActivatedETHIncrease =
+                _report.totalDepositedActivatedETH - lastStoredReport.totalDepositedActivatedETH;
+
+            // we ensure that the total deposited activated ETH increase is not higher than the current in flight ETH
+            if (vars.totalDepositedActivatedETHIncrease > vars.currentInFlightETH) {
+                revert InvalidTotalDepositedActivatedETHIncrease(
+                    vars.currentInFlightETH, _report.totalDepositedActivatedETH
+                );
+            }
+
             // we compute the new skimmed amount by taking the delta between reports
             vars.skimmedAmountIncrease = _report.validatorsSkimmedBalance - vars.lastReportSkimmedBalance;
 
@@ -312,16 +331,10 @@ abstract contract OracleManagerV1 is IOracleManagerV1 {
             _pullCLFunds(vars.skimmedAmountIncrease, vars.exitedAmountIncrease);
         }
 
-        uint256 currentInFlightETH = InFlightDeposit.get();
-        // the inFlightETH only increases when we perform a deposit to the consensus layer
-        // so, the value supplied by the oracle should not be higher than the current in flight eth value
-        if (_report.inFlightETH > currentInFlightETH) {
-            revert InvalidInFlightETHIncrease(currentInFlightETH, _report.inFlightETH);
-        }
-        if (_report.inFlightETH != currentInFlightETH) {
-            // we update the in flight eth value
-            InFlightDeposit.set(_report.inFlightETH);
-            emit IConsensusLayerDepositManagerV1.SetInFlightETH(currentInFlightETH, _report.inFlightETH);
+        if (vars.totalDepositedActivatedETHIncrease > 0) {
+            uint256 newInFlightETH = vars.currentInFlightETH - vars.totalDepositedActivatedETHIncrease;
+            InFlightDeposit.set(newInFlightETH);
+            emit IConsensusLayerDepositManagerV1.SetInFlightETH(vars.currentInFlightETH, newInFlightETH);
         }
 
         {
@@ -336,6 +349,7 @@ abstract contract OracleManagerV1 is IOracleManagerV1 {
             storedReport.validatorsCount = _report.validatorsCount;
             storedReport.rebalanceDepositToRedeemMode = _report.rebalanceDepositToRedeemMode;
             storedReport.slashingContainmentMode = _report.slashingContainmentMode;
+            storedReport.totalDepositedActivatedETH = _report.totalDepositedActivatedETH;
             LastConsensusLayerReport.set(storedReport);
         }
 

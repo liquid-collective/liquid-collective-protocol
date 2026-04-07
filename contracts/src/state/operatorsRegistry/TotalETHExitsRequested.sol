@@ -6,6 +6,7 @@ import "../../libraries/LibUnstructuredStorage.sol";
 /// @title TotalETHExitsRequested Storage
 /// @notice This value is the amount of performed exit requests, only increased when there is current exit demand
 /// @notice Utility to manage the TotalETHExitsRequested in storage
+/// @dev This value is in ETH(wei)
 library TotalETHExitsRequested {
     /// @notice Storage slot of the TotalETHExitsRequested
     bytes32 internal constant TOTAL_ETH_EXITS_REQUESTED_SLOT =

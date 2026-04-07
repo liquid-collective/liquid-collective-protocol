@@ -126,14 +126,27 @@ contract RiverV1 is
         }
     }
 
+    /// @inheritdoc IRiverV1
     function initRiverV1_3() external init(3) {
-        IOracleManagerV1.StoredConsensusLayerReport storage storedReport = LastConsensusLayerReport.get();
-        uint256 clValidatorCount = storedReport.validatorsCount;
+        IOracleManagerV1.StoredConsensusLayerReport storage lastReport = LastConsensusLayerReport.get();
+        uint256 clValidatorCount = lastReport.validatorsCount;
         uint256 depositedValidatorCount = DepositedValidatorCount.get();
         TotalDepositedETH.set(depositedValidatorCount * DEPOSIT_SIZE);
         if (clValidatorCount < depositedValidatorCount) {
             InFlightDeposit.set((depositedValidatorCount - clValidatorCount) * DEPOSIT_SIZE);
         }
+
+        IOracleManagerV1.StoredConsensusLayerReport memory storedReport;
+        storedReport.epoch = uint256(LastOracleRoundId.get());
+        storedReport.validatorsBalance = CLValidatorTotalBalance.get();
+        storedReport.validatorsSkimmedBalance = 0;
+        storedReport.validatorsExitedBalance = 0;
+        storedReport.validatorsExitingBalance = 0;
+        storedReport.validatorsCount = uint32(CLValidatorCount.get());
+        storedReport.rebalanceDepositToRedeemMode = false;
+        storedReport.slashingContainmentMode = false;
+        storedReport.totalDepositedActivatedETH = depositedValidatorCount * DEPOSIT_SIZE;
+        LastConsensusLayerReport.set(storedReport);
     }
 
     /// @inheritdoc IRiverV1

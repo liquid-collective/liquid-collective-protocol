@@ -16,9 +16,9 @@ library OperatorsV3 {
         /// @dev The following values respect this invariant:
         /// @dev     funded >= requestedExits
 
-        /// @custom:attribute The amount of funded ETH
+        /// @custom:attribute The amount of funded ETH(wei)
         uint256 funded;
-        /// @custom:attribute The amount of requested ETH exits
+        /// @custom:attribute The amount of requested ETH(wei) exits
         uint256 requestedExits;
         /// @custom:attribute True if the operator is active and allowed to operate on River
         bool active;
@@ -171,15 +171,7 @@ library OperatorsV3 {
     /// @param index The index of the operator to lookup
     /// @return The exited ETH for the given operator index
     function getExitedETHAtIndex(uint256 index) internal view returns (uint256) {
-        bytes32 slot = EXITED_ETH_SLOT;
-
-        SlotExitedETH storage r;
-
-        // solhint-disable-next-line no-inline-assembly
-        assembly {
-            r.slot := slot
-        }
-        return _getExitedETHAtIndex(r.value, index);
+        return _getExitedETHAtIndex(getExitedETH(), index);
     }
 
     /// @notice Retrieve the exited ETH for an operator by its index

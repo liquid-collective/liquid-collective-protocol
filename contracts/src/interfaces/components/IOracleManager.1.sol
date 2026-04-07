@@ -44,18 +44,25 @@ interface IOracleManagerV1 {
         IOracleManagerV1.ConsensusLayerReport report, ConsensusLayerDataReportingTrace trace
     );
 
-    /// @notice The in flight ETH increase is invalid
-    /// @param currentInFlightETH The current in flight ETH value
-    /// @param newInFlightETH The new in flight ETH value
-    error InvalidInFlightETHIncrease(uint256 currentInFlightETH, uint256 newInFlightETH);
+    /// @notice The total deposited activated ETH has decreased, which is invalid
+    /// @param lastTotalDepositedActivatedETH The last total deposited activated ETH(wei) value
+    /// @param newTotalDepositedActivatedETH The new total deposited activated ETH(wei) value
+    error InvalidTotalDepositedActivatedETHDecrease(
+        uint256 lastTotalDepositedActivatedETH, uint256 newTotalDepositedActivatedETH
+    );
+
+    /// @notice The total deposited activated ETH increase exceeds the current in-flight ETH, which is invalid
+    /// @param currentInFlightETH The current in-flight ETH(wei) value
+    /// @param newTotalDepositedActivatedETH The new total deposited activated ETH(wei) value
+    error InvalidTotalDepositedActivatedETHIncrease(uint256 currentInFlightETH, uint256 newTotalDepositedActivatedETH);
 
     /// @notice Thrown when an invalid epoch was reported
     /// @param epoch Invalid epoch
     error InvalidEpoch(uint256 epoch);
 
     /// @notice The balance increase is higher than the maximum allowed by the upper bound
-    /// @param prevTotalEthIncludingExited The previous total balance, including all exited balance
-    /// @param postTotalEthIncludingExited The post-report total balance, including all exited balance
+    /// @param prevTotalEthIncludingExited The previous total balance, including all exited balance(wei)
+    /// @param postTotalEthIncludingExited The post-report total balance, including all exited balance(wei)
     /// @param timeElapsed The time in seconds since last report
     /// @param annualAprUpperBound The upper bound value that was used
     error TotalValidatorBalanceIncreaseOutOfBound(
@@ -66,8 +73,8 @@ interface IOracleManagerV1 {
     );
 
     /// @notice The balance decrease is higher than the maximum allowed by the lower bound
-    /// @param prevTotalEthIncludingExited The previous total balance, including all exited balance
-    /// @param postTotalEthIncludingExited The post-report total balance, including all exited balance
+    /// @param prevTotalEthIncludingExited The previous total balance, including all exited balance(wei)
+    /// @param postTotalEthIncludingExited The post-report total balance, including all exited balance(wei)
     /// @param timeElapsed The time in seconds since last report
     /// @param relativeLowerBound The lower bound value that was used
     error TotalValidatorBalanceDecreaseOutOfBound(
@@ -78,15 +85,15 @@ interface IOracleManagerV1 {
     );
 
     /// @notice The total exited balance decreased
-    /// @param currentValidatorsExitedBalance The current exited balance
-    /// @param newValidatorsExitedBalance The new exited balance
+    /// @param currentValidatorsExitedBalance The current exited balance(wei)
+    /// @param newValidatorsExitedBalance The new exited balance(wei)
     error InvalidDecreasingValidatorsExitedBalance(
         uint256 currentValidatorsExitedBalance, uint256 newValidatorsExitedBalance
     );
 
     /// @notice The total skimmed balance decreased
-    /// @param currentValidatorsSkimmedBalance The current exited balance
-    /// @param newValidatorsSkimmedBalance The new exited balance
+    /// @param currentValidatorsSkimmedBalance The current exited balance(wei)
+    /// @param newValidatorsSkimmedBalance The new exited balance(wei)
     error InvalidDecreasingValidatorsSkimmedBalance(
         uint256 currentValidatorsSkimmedBalance, uint256 newValidatorsSkimmedBalance
     );
@@ -126,11 +133,10 @@ interface IOracleManagerV1 {
         // this includes voluntary exits and slashings
         // this value can decrease between reports
         uint256 validatorsExitingBalance;
-        // this is the amount of ETH that was deposited but not yet activated, the ETH is in either deposited or pending state
-        // this value can decrease between reports
-        // the assumption is that the oracle will report will be able to capture the in flight ETH value as soon as a deposit is made
-        // on the beacon deposit contract
-        uint256 inFlightETH;
+        // this is the amount of ETH that was deposited and got activated on the consensus layer
+        // this value cannot decrease over reports
+        // this value includes only the ETH that was deposited on the Execution Layer Deposit contract
+        uint256 totalDepositedActivatedETH;
         // the count of activated validators
         // even validators that are exited are still accounted
         // this value cannot decrease over reports
@@ -160,6 +166,7 @@ interface IOracleManagerV1 {
         uint256 validatorsSkimmedBalance;
         uint256 validatorsExitedBalance;
         uint256 validatorsExitingBalance;
+        uint256 totalDepositedActivatedETH;
         uint32 validatorsCount;
         bool rebalanceDepositToRedeemMode;
         bool slashingContainmentMode;
