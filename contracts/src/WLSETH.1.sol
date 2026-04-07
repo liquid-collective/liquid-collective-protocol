@@ -214,7 +214,7 @@ contract WLSETHV1 is IWLSETHV1, Initializable, ReentrancyGuardUpgradeable {
         BalanceOf.set(_from, BalanceOf.get(_from) - valueToShares);
         BalanceOf.set(_to, BalanceOf.get(_to) + valueToShares);
 
-        emit Transfer(_from, _to, _value);
+        emit Transfer(_from, _to, valueToShares);
 
         return true;
     }
