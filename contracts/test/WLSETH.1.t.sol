@@ -862,12 +862,26 @@ contract WLSETHV1Tests is WLSETHV1TestBase {
         vm.startPrank(_guy);
         RiverTokenMock(address(river)).approve(address(wlseth), shares);
 
-        // Transfer event should emit underlying value (100 ether), not shares (50 ether)
-        vm.expectEmit(true, true, true, true);
-        emit Transfer(address(0), _guy, 100 ether);
+        // mint emits Mint before Transfer, so record logs and assert on the later Transfer event
+        vm.recordLogs();
         wlseth.mint(_guy, shares);
         vm.stopPrank();
 
+        Vm.Log[] memory entries = vm.getRecordedLogs();
+        bytes32 transferSig = keccak256("Transfer(address,address,uint256)");
+        bool foundTransfer;
+
+        for (uint256 i = 0; i < entries.length; i++) {
+            if (entries[i].topics.length == 3 && entries[i].topics[0] == transferSig) {
+                foundTransfer = true;
+                assertEq(address(uint160(uint256(entries[i].topics[1]))), address(0));
+                assertEq(address(uint160(uint256(entries[i].topics[2]))), _guy);
+                assertEq(abi.decode(entries[i].data, (uint256)), 100 ether);
+                break;
+            }
+        }
+
+        assertTrue(foundTransfer, "expected Transfer event not found");
         // Verify the Mint event still emits shares
         assert(wlseth.sharesOf(_guy) == shares);
         assert(wlseth.balanceOf(_guy) == 100 ether);
