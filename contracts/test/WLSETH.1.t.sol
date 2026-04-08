@@ -849,6 +849,170 @@ contract WLSETHV1Tests is WLSETHV1TestBase {
             assert(balance == 0 ether);
         }
     }
+
+    function testMintTransferEventEmitsUnderlyingAfterRebase(uint256 _guySalt) external {
+        address _guy = uf._new(_guySalt);
+        // sudoSetBalance sets _guy's balance AND updates totalSupply
+        // So if we set balance to 50 shares, totalSupply becomes 50
+        // With underlyingTotal = 100 ether, ratio is 2:1 (underlying:shares)
+        // Thus 50 shares = 100 ether underlying
+        uint256 shares = 50 ether;
+        RiverTokenMock(address(river)).sudoSetBalance(_guy, shares);
+
+        vm.startPrank(_guy);
+        RiverTokenMock(address(river)).approve(address(wlseth), shares);
+
+        // Transfer event should emit underlying value (100 ether), not shares (50 ether)
+        vm.expectEmit(true, true, true, true);
+        emit Transfer(address(0), _guy, 100 ether);
+        wlseth.mint(_guy, shares);
+        vm.stopPrank();
+
+        // Verify the Mint event still emits shares
+        assert(wlseth.sharesOf(_guy) == shares);
+        assert(wlseth.balanceOf(_guy) == 100 ether);
+    }
+
+    function testBurnTransferEventEmitsUnderlyingAfterRebase(uint256 _guySalt) external {
+        address _guy = uf._new(_guySalt);
+        uint256 shares = 100 ether;
+        RiverTokenMock(address(river)).sudoSetBalance(_guy, shares);
+
+        vm.startPrank(_guy);
+        RiverTokenMock(address(river)).approve(address(wlseth), shares);
+        wlseth.mint(_guy, shares);
+        vm.stopPrank();
+
+        // Simulate rebase: 2:1 underlying:shares ratio
+        RiverTokenMock(address(river)).sudoSetUnderlyingTotal(200 ether);
+
+        uint256 sharesToBurn = 50 ether;
+        // Transfer event should emit underlying value (100 ether), not shares (50 ether)
+        vm.startPrank(_guy);
+        vm.expectEmit(true, true, true, true);
+        emit Transfer(_guy, address(0), 100 ether);
+        wlseth.burn(_guy, sharesToBurn);
+        vm.stopPrank();
+    }
+
+    function testTransferEventEmitsUnderlyingValue(uint256 _guySalt, uint256 _recipientSalt) external {
+        address _guy = uf._new(_guySalt);
+        address _recipient = uf._new(_recipientSalt);
+        uint256 shares = 100 ether;
+        RiverTokenMock(address(river)).sudoSetBalance(_guy, shares);
+
+        vm.startPrank(_guy);
+        RiverTokenMock(address(river)).approve(address(wlseth), shares);
+        wlseth.mint(_guy, shares);
+        vm.stopPrank();
+
+        // Simulate rebase: 2:1 underlying:shares ratio
+        RiverTokenMock(address(river)).sudoSetUnderlyingTotal(200 ether);
+        uint256 guyBalance = wlseth.balanceOf(_guy);
+        assert(guyBalance == 200 ether);
+
+        // Transfer 100 ether (underlying), which is 50 shares at 2:1 ratio
+        vm.startPrank(_guy);
+        vm.expectEmit(true, true, true, true);
+        emit Transfer(_guy, _recipient, 100 ether);
+        wlseth.transfer(_recipient, 100 ether);
+        vm.stopPrank();
+
+        assert(wlseth.balanceOf(_guy) == 100 ether);
+        assert(wlseth.balanceOf(_recipient) == 100 ether);
+    }
+
+    function testTransferFromEventEmitsUnderlyingValue(uint256 _fromSalt, uint256 _approvedSalt, uint256 _recipientSalt)
+        external
+    {
+        address _from = uf._new(_fromSalt);
+        address _approved = uf._new(_approvedSalt);
+        address _recipient = uf._new(_recipientSalt);
+        uint256 shares = 100 ether;
+        RiverTokenMock(address(river)).sudoSetBalance(_from, shares);
+
+        vm.startPrank(_from);
+        RiverTokenMock(address(river)).approve(address(wlseth), shares);
+        wlseth.mint(_from, shares);
+        vm.stopPrank();
+
+        // Simulate rebase: 2:1 underlying:shares ratio
+        RiverTokenMock(address(river)).sudoSetUnderlyingTotal(200 ether);
+
+        vm.prank(_from);
+        wlseth.approve(_approved, 100 ether);
+
+        // Transfer 100 ether (underlying) via transferFrom
+        vm.startPrank(_approved);
+        vm.expectEmit(true, true, true, true);
+        emit Transfer(_from, _recipient, 100 ether);
+        wlseth.transferFrom(_from, _recipient, 100 ether);
+        vm.stopPrank();
+
+        assert(wlseth.balanceOf(_from) == 100 ether);
+        assert(wlseth.balanceOf(_recipient) == 100 ether);
+    }
+
+    function testTransferEmitsZeroWhenValueTooSmallForShares(uint256 _guySalt, uint256 _recipientSalt) external {
+        address _guy = uf._new(_guySalt);
+        address _recipient = uf._new(_recipientSalt);
+        uint256 shares = 100 ether;
+        RiverTokenMock(address(river)).sudoSetBalance(_guy, shares);
+
+        vm.startPrank(_guy);
+        RiverTokenMock(address(river)).approve(address(wlseth), shares);
+        wlseth.mint(_guy, shares);
+        vm.stopPrank();
+
+        // Set up ratio where small underlying amounts don't convert to shares
+        // underlyingTotal = 1000 ether, totalSupply = 100 ether
+        // sharesFromUnderlyingBalance(1 wei) = (1 * 100 ether) / 1000 ether = 0
+        RiverTokenMock(address(river)).sudoSetUnderlyingTotal(1000 ether);
+
+        // User has 1000 ether balance now, try to transfer 1 wei
+        // This converts to 0 shares, so Transfer event emits 0
+        vm.startPrank(_guy);
+        vm.expectEmit(true, true, true, true);
+        emit Transfer(_guy, _recipient, 0);
+        wlseth.transfer(_recipient, 1);
+        vm.stopPrank();
+
+        // Balances unchanged since 0 shares transferred
+        assert(wlseth.balanceOf(_recipient) == 0);
+    }
+
+    function testTransferFromEmitsZeroWhenValueTooSmallForShares(
+        uint256 _fromSalt,
+        uint256 _approvedSalt,
+        uint256 _recipientSalt
+    ) external {
+        address _from = uf._new(_fromSalt);
+        address _approved = uf._new(_approvedSalt);
+        address _recipient = uf._new(_recipientSalt);
+        uint256 shares = 100 ether;
+        RiverTokenMock(address(river)).sudoSetBalance(_from, shares);
+
+        vm.startPrank(_from);
+        RiverTokenMock(address(river)).approve(address(wlseth), shares);
+        wlseth.mint(_from, shares);
+        vm.stopPrank();
+
+        // Set up ratio where small underlying amounts don't convert to shares
+        RiverTokenMock(address(river)).sudoSetUnderlyingTotal(1000 ether);
+
+        vm.prank(_from);
+        wlseth.approve(_approved, 1);
+
+        // Transfer 1 wei via transferFrom, converts to 0 shares
+        vm.startPrank(_approved);
+        vm.expectEmit(true, true, true, true);
+        emit Transfer(_from, _recipient, 0);
+        wlseth.transferFrom(_from, _recipient, 1);
+        vm.stopPrank();
+
+        // Balances unchanged since 0 shares transferred
+        assert(wlseth.balanceOf(_recipient) == 0);
+    }
 }
 
 contract WLSETHV1DenyTests is WLSETHV1TestBase {

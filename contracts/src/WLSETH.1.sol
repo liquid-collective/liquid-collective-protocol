@@ -211,10 +211,14 @@ contract WLSETHV1 is IWLSETHV1, Initializable, ReentrancyGuardUpgradeable {
             revert Denied(_to);
         }
         uint256 valueToShares = river.sharesFromUnderlyingBalance(_value);
-        BalanceOf.set(_from, BalanceOf.get(_from) - valueToShares);
-        BalanceOf.set(_to, BalanceOf.get(_to) + valueToShares);
+        if (valueToShares > 0) {
+            BalanceOf.set(_from, BalanceOf.get(_from) - valueToShares);
+            BalanceOf.set(_to, BalanceOf.get(_to) + valueToShares);
 
-        emit Transfer(_from, _to, _value);
+            emit Transfer(_from, _to, _value);
+        } else {
+            emit Transfer(_from, _to, 0);
+        }
 
         return true;
     }
