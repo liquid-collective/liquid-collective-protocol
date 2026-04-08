@@ -882,7 +882,7 @@ contract WLSETHV1Tests is WLSETHV1TestBase {
         }
 
         assertTrue(foundTransfer, "expected Transfer event not found");
-        // Verify the Mint event still emits shares
+        // Verify mint updated stored shares and the rebased underlying-denominated balance
         assert(wlseth.sharesOf(_guy) == shares);
         assert(wlseth.balanceOf(_guy) == 100 ether);
     }
