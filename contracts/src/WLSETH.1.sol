@@ -96,8 +96,8 @@ contract WLSETHV1 is IWLSETHV1, Initializable, ReentrancyGuardUpgradeable {
     function transferFrom(address _from, address _to, uint256 _value)
         external
         isNotNull(_value)
-        hasFunds(_from, _value)
         nonReentrant
+        hasFunds(_from, _value)
         returns (bool)
     {
         if (_to == address(0)) {
