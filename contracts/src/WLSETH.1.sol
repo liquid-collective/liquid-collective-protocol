@@ -88,7 +88,8 @@ contract WLSETHV1 is IWLSETHV1, Initializable, ReentrancyGuardUpgradeable {
         if (_to == address(0)) {
             revert UnauthorizedTransfer(msg.sender, address(0));
         }
-        return _transfer(msg.sender, _to, _value);
+        _transfer(msg.sender, _to, _value);
+        return true;
     }
 
     /// @inheritdoc IWLSETHV1
@@ -101,8 +102,11 @@ contract WLSETHV1 is IWLSETHV1, Initializable, ReentrancyGuardUpgradeable {
         if (_to == address(0)) {
             revert UnauthorizedTransfer(_from, address(0));
         }
-        _spendAllowance(_from, _value);
-        return _transfer(_from, _to, _value);
+        bool movedShares = _transfer(_from, _to, _value);
+        if (movedShares) {
+            _spendAllowance(_from, _value);
+        }
+        return true;
     }
 
     /// @inheritdoc IWLSETHV1
@@ -216,10 +220,10 @@ contract WLSETHV1 is IWLSETHV1, Initializable, ReentrancyGuardUpgradeable {
             BalanceOf.set(_to, BalanceOf.get(_to) + valueToShares);
 
             emit Transfer(_from, _to, _value);
+            return true;
         } else {
             emit Transfer(_from, _to, 0);
+            return false;
         }
-
-        return true;
     }
 }
