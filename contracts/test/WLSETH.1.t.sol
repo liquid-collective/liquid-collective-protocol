@@ -1033,6 +1033,34 @@ contract WLSETHV1Tests is WLSETHV1TestBase {
         assert(wlseth.balanceOf(_from) == 1000 ether);
         assertEq(wlseth.allowance(_from, _approved), 1);
     }
+
+    function testTransferFromRevertsWithZeroAllowanceWhenValueTooSmallForShares(
+        uint256 _fromSalt,
+        uint256 _approvedSalt,
+        uint256 _recipientSalt
+    ) external {
+        address _from = uf._new(_fromSalt);
+        address _approved = uf._new(_approvedSalt);
+        address _recipient = uf._new(_recipientSalt);
+        uint256 shares = 100 ether;
+        RiverTokenMock(address(river)).sudoSetBalance(_from, shares);
+
+        vm.startPrank(_from);
+        RiverTokenMock(address(river)).approve(address(wlseth), shares);
+        wlseth.mint(_from, shares);
+        vm.stopPrank();
+
+        // Set up ratio where 1 wei converts to 0 shares
+        RiverTokenMock(address(river)).sudoSetUnderlyingTotal(1000 ether);
+
+        // No allowance granted — should revert even though value converts to 0 shares
+        vm.startPrank(_approved);
+        vm.expectRevert(
+            abi.encodeWithSignature("AllowanceTooLow(address,address,uint256,uint256)", _from, _approved, 0, 1)
+        );
+        wlseth.transferFrom(_from, _recipient, 1);
+        vm.stopPrank();
+    }
 }
 
 contract WLSETHV1DenyTests is WLSETHV1TestBase {
