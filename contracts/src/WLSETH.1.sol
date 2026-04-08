@@ -2,7 +2,6 @@
 pragma solidity 0.8.34;
 
 import "openzeppelin-contracts-upgradeable/contracts/security/ReentrancyGuardUpgradeable.sol";
-import "openzeppelin-contracts/contracts/security/ReentrancyGuard.sol";
 
 import "./interfaces/IAllowlist.1.sol";
 import "./interfaces/IRiver.1.sol";
