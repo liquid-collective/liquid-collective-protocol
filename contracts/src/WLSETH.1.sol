@@ -209,7 +209,7 @@ contract WLSETHV1 is IWLSETHV1, Initializable, ReentrancyGuardUpgradeable {
     /// @param _from Address sending the tokens
     /// @param _to Address receiving the tokens
     /// @param _value Amount to be sent
-    /// @return True if success
+    /// @return True if shares equivalent to the _value were moved, else false
     function _transfer(address _from, address _to, uint256 _value) internal returns (bool) {
         IRiverV1 river = IRiverV1(payable(RiverAddress.get()));
         IAllowlistV1 allowlist = IAllowlistV1(river.getAllowlist());
