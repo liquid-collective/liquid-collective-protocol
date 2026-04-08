@@ -2,6 +2,7 @@
 pragma solidity 0.8.34;
 
 import "openzeppelin-contracts-upgradeable/contracts/security/ReentrancyGuardUpgradeable.sol";
+import "openzeppelin-contracts/contracts/security/ReentrancyGuard.sol";
 
 import "./interfaces/IAllowlist.1.sol";
 import "./interfaces/IRiver.1.sol";
@@ -97,6 +98,7 @@ contract WLSETHV1 is IWLSETHV1, Initializable, ReentrancyGuardUpgradeable {
         external
         isNotNull(_value)
         hasFunds(_from, _value)
+        nonReentrant
         returns (bool)
     {
         if (_to == address(0)) {

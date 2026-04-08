@@ -1031,6 +1031,7 @@ contract WLSETHV1Tests is WLSETHV1TestBase {
         assert(wlseth.sharesOf(_recipient) == 0);
         assert(wlseth.sharesOf(_from) == 100 ether);
         assert(wlseth.balanceOf(_from) == 1000 ether);
+        assertEq(wlseth.allowance(_from, _approved), 1);
     }
 }
 
