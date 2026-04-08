@@ -1012,6 +1012,9 @@ contract WLSETHV1Tests is WLSETHV1TestBase {
 
         // Balances unchanged since 0 shares transferred
         assert(wlseth.balanceOf(_recipient) == 0);
+        assert(wlseth.sharesOf(_recipient) == 0);
+        assert(wlseth.sharesOf(_from) == 100 ether);
+        assert(wlseth.balanceOf(_from) == 1000 ether);
     }
 }
 
