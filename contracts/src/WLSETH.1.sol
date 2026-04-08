@@ -102,9 +102,15 @@ contract WLSETHV1 is IWLSETHV1, Initializable, ReentrancyGuardUpgradeable {
         if (_to == address(0)) {
             revert UnauthorizedTransfer(_from, address(0));
         }
+
+        uint256 currentAllowance = ApprovalsPerOwner.get(_from, msg.sender);
+        if (currentAllowance < _value) {
+            revert AllowanceTooLow(_from, msg.sender, currentAllowance, _value);
+        }
+
         bool movedShares = _transfer(_from, _to, _value);
         if (movedShares) {
-            _spendAllowance(_from, _value);
+            _spendAllowance(_from, _value, currentAllowance);
         }
         return true;
     }
@@ -172,13 +178,10 @@ contract WLSETHV1 is IWLSETHV1, Initializable, ReentrancyGuardUpgradeable {
     /// @notice Internal utility to spend the allowance of an account from the message sender
     /// @param _from Address owning the allowance
     /// @param _value Amount of allowance to spend
-    function _spendAllowance(address _from, uint256 _value) internal {
-        uint256 currentAllowance = ApprovalsPerOwner.get(_from, msg.sender);
-        if (currentAllowance < _value) {
-            revert AllowanceTooLow(_from, msg.sender, currentAllowance, _value);
-        }
-        if (currentAllowance != type(uint256).max) {
-            _approve(_from, msg.sender, currentAllowance - _value);
+    /// @param _currentAllowance Pre-fetched current allowance (must be >= _value)
+    function _spendAllowance(address _from, uint256 _value, uint256 _currentAllowance) internal {
+        if (_currentAllowance != type(uint256).max) {
+            _approve(_from, msg.sender, _currentAllowance - _value);
         }
     }
 
