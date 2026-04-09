@@ -82,27 +82,39 @@ contract WLSETHV1 is IWLSETHV1, Initializable, ReentrancyGuardUpgradeable {
     function transfer(address _to, uint256 _value)
         external
         isNotNull(_value)
+        nonReentrant
         hasFunds(msg.sender, _value)
         returns (bool)
     {
         if (_to == address(0)) {
             revert UnauthorizedTransfer(msg.sender, address(0));
         }
-        return _transfer(msg.sender, _to, _value);
+        _transfer(msg.sender, _to, _value);
+        return true;
     }
 
     /// @inheritdoc IWLSETHV1
     function transferFrom(address _from, address _to, uint256 _value)
         external
         isNotNull(_value)
+        nonReentrant
         hasFunds(_from, _value)
         returns (bool)
     {
         if (_to == address(0)) {
             revert UnauthorizedTransfer(_from, address(0));
         }
-        _spendAllowance(_from, _value);
-        return _transfer(_from, _to, _value);
+
+        uint256 currentAllowance = ApprovalsPerOwner.get(_from, msg.sender);
+        if (currentAllowance < _value) {
+            revert AllowanceTooLow(_from, msg.sender, currentAllowance, _value);
+        }
+
+        bool movedShares = _transfer(_from, _to, _value);
+        if (movedShares) {
+            _spendAllowance(_from, _value, currentAllowance);
+        }
+        return true;
     }
 
     /// @inheritdoc IWLSETHV1
@@ -168,13 +180,10 @@ contract WLSETHV1 is IWLSETHV1, Initializable, ReentrancyGuardUpgradeable {
     /// @notice Internal utility to spend the allowance of an account from the message sender
     /// @param _from Address owning the allowance
     /// @param _value Amount of allowance to spend
-    function _spendAllowance(address _from, uint256 _value) internal {
-        uint256 currentAllowance = ApprovalsPerOwner.get(_from, msg.sender);
-        if (currentAllowance < _value) {
-            revert AllowanceTooLow(_from, msg.sender, currentAllowance, _value);
-        }
-        if (currentAllowance != type(uint256).max) {
-            _approve(_from, msg.sender, currentAllowance - _value);
+    /// @param _currentAllowance Pre-fetched current allowance (must be >= _value)
+    function _spendAllowance(address _from, uint256 _value, uint256 _currentAllowance) internal {
+        if (_currentAllowance != type(uint256).max) {
+            _approve(_from, msg.sender, _currentAllowance - _value);
         }
     }
 
@@ -200,7 +209,7 @@ contract WLSETHV1 is IWLSETHV1, Initializable, ReentrancyGuardUpgradeable {
     /// @param _from Address sending the tokens
     /// @param _to Address receiving the tokens
     /// @param _value Amount to be sent
-    /// @return True if success
+    /// @return True if shares equivalent to the _value were moved, else false
     function _transfer(address _from, address _to, uint256 _value) internal returns (bool) {
         IRiverV1 river = IRiverV1(payable(RiverAddress.get()));
         IAllowlistV1 allowlist = IAllowlistV1(river.getAllowlist());
@@ -211,11 +220,15 @@ contract WLSETHV1 is IWLSETHV1, Initializable, ReentrancyGuardUpgradeable {
             revert Denied(_to);
         }
         uint256 valueToShares = river.sharesFromUnderlyingBalance(_value);
-        BalanceOf.set(_from, BalanceOf.get(_from) - valueToShares);
-        BalanceOf.set(_to, BalanceOf.get(_to) + valueToShares);
+        if (valueToShares > 0) {
+            BalanceOf.set(_from, BalanceOf.get(_from) - valueToShares);
+            BalanceOf.set(_to, BalanceOf.get(_to) + valueToShares);
 
-        emit Transfer(_from, _to, _value);
-
-        return true;
+            emit Transfer(_from, _to, _value);
+            return true;
+        } else {
+            emit Transfer(_from, _to, 0);
+            return false;
+        }
     }
 }
