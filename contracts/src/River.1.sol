@@ -317,9 +317,19 @@ contract RiverV1 is
     }
 
     /// @notice Overridden handler to increment the funded ETH for the operators
-    /// @param _fundedETH The array of funded ETH amounts
+    /// @param _fundedETH The array of funded ETH amounts (length = highestOperatorIndex + 1)
     function _incrementFundedETH(uint256[] memory _fundedETH) internal override {
-        IOperatorsRegistryV1(OperatorsRegistryAddress.get()).incrementFundedETH(_fundedETH);
+        IOperatorsRegistryV1 registry = IOperatorsRegistryV1(OperatorsRegistryAddress.get());
+        uint256 operatorCount = registry.getOperatorCount();
+        if (_fundedETH.length < operatorCount) {
+            uint256[] memory paddedFundedETH = new uint256[](operatorCount);
+            for (uint256 i = 0; i < _fundedETH.length; ++i) {
+                paddedFundedETH[i] = _fundedETH[i];
+            }
+            registry.incrementFundedETH(paddedFundedETH);
+        } else {
+            registry.incrementFundedETH(_fundedETH);
+        }
     }
 
     /// @notice Overridden handler called whenever a token transfer is triggered
