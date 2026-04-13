@@ -118,6 +118,69 @@ contract OperatorsMigrationV2ToV3 is Test {
             );
     }
 
+    /// @notice After migration, verify that production functions work correctly on the migrated V3 state.
+    ///         A storage slot miscalculation would cause these operations to fail or corrupt data.
+    function test_migration_V2_to_V3_postMigrationFunctional() external shouldSkip {
+        IOperatorsRegistryV2 v2 = IOperatorsRegistryV2(OPERATORS_REGISTRY_MAINNET_ADDRESS);
+        uint256 opCount = v2.getOperatorCount();
+        assertGt(opCount, 0, "no operators on mainnet");
+
+        // Snapshot funded count of first active operator before upgrade
+        uint256 activeOpIdx;
+        uint32 preFunded;
+        for (uint256 i = 0; i < opCount; ++i) {
+            IOperatorsRegistryV2.OperatorV2 memory op = v2.getOperator(i);
+            if (op.active) {
+                activeOpIdx = i;
+                preFunded = op.funded;
+                break;
+            }
+        }
+
+        // ── Upgrade ──
+        TUPProxy orProxy = TUPProxy(payable(OPERATORS_REGISTRY_MAINNET_ADDRESS));
+        OperatorsRegistryV1 newImpl = new OperatorsRegistryV1();
+
+        vm.prank(OPERATORS_REGISTRY_MAINNET_PROXY_ADMIN_ADDRESS);
+        ITransparentUpgradeableProxy(address(orProxy)).upgradeToAndCall(
+            address(newImpl), abi.encodeWithSelector(OperatorsRegistryV1.initOperatorsRegistryV1_2.selector)
+        );
+
+        OperatorsRegistryV1 v3 = OperatorsRegistryV1(OPERATORS_REGISTRY_MAINNET_ADDRESS);
+        address river = v3.getRiver();
+        address admin = v3.getAdmin();
+
+        // ── incrementFundedValidators works on migrated state ──
+        bytes[] memory keys = new bytes[](1);
+        keys[0] = new bytes(48);
+        vm.prank(river);
+        v3.incrementFundedValidators(activeOpIdx, keys);
+        assertEq(
+            v3.getOperator(activeOpIdx).funded,
+            preFunded + 1,
+            "funded should increment by 1 after incrementFundedValidators"
+        );
+
+        // ── addOperator works on migrated state ──
+        uint256 preCount = v3.getOperatorCount();
+        vm.prank(admin);
+        v3.addOperator("PostMigrationTestOp", address(0xBEEF));
+        assertEq(v3.getOperatorCount(), preCount + 1, "operator count should increase by 1");
+        OperatorsV3.Operator memory newOp = v3.getOperator(preCount);
+        assertEq(newOp.name, "PostMigrationTestOp", "new operator name mismatch");
+        assertEq(newOp.operator, address(0xBEEF), "new operator address mismatch");
+        assertTrue(newOp.active, "new operator should be active");
+        assertEq(newOp.funded, 0, "new operator should have 0 funded");
+
+        // ── setOperatorStatus works on migrated state ──
+        vm.prank(admin);
+        v3.setOperatorStatus(activeOpIdx, false);
+        assertFalse(v3.getOperator(activeOpIdx).active, "operator should be deactivated");
+        vm.prank(admin);
+        v3.setOperatorStatus(activeOpIdx, true);
+        assertTrue(v3.getOperator(activeOpIdx).active, "operator should be reactivated");
+    }
+
     function _label(string memory field, uint256 idx) internal pure returns (string memory) {
         return string.concat(field, " mismatch at operator ", vm.toString(idx));
     }
