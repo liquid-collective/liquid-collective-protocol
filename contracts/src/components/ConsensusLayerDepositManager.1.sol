@@ -132,8 +132,6 @@ abstract contract ConsensusLayerDepositManagerV1 is IConsensusLayerDepositManage
             revert InvalidWithdrawalCredentials();
         }
 
-        _updateFundedValidators(_allocations);
-
         address depositContract = DepositContractAddress.get();
         for (uint256 idx = 0; idx < _allocations.length; ++idx) {
             _depositValidator(
@@ -144,12 +142,15 @@ abstract contract ConsensusLayerDepositManagerV1 is IConsensusLayerDepositManage
                 depositContract
             );
         }
+
         _setCommittedBalance(committedBalance - totalRequested);
         uint256 currentDepositedValidatorCount = DepositedValidatorCount.get();
         DepositedValidatorCount.set(currentDepositedValidatorCount + _allocations.length);
         emit SetDepositedValidatorCount(
             currentDepositedValidatorCount, currentDepositedValidatorCount + _allocations.length
         );
+
+        _updateFundedValidators(_allocations);
     }
 
     /// @notice Deposits 32 ETH to the official Deposit contract
