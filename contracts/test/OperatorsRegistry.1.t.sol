@@ -1426,3 +1426,115 @@ contract OperatorsRegistryV1FlattenAndAllocationTests is OperatorAllocationTestB
     }
 }
 
+/// @notice Verifies that no production code path writes to the deprecated OperatorsV2 storage slot.
+/// Only migration initializers should reference OperatorsV2; all live operations must use OperatorsV3.
+contract OperatorsRegistryV1NoV2LeakTests is OperatorsRegistryV1TestBase {
+    /// @dev OperatorsV2 storage slot, copied from Operators.2.sol
+    bytes32 internal constant OPERATORS_V2_SLOT = bytes32(uint256(keccak256("river.state.v2.operators")) - 1);
+
+    function setUp() public {
+        admin = makeAddr("admin");
+        keeper = makeAddr("keeper");
+        river = address(new RiverMock(0));
+        RiverMock(river).setKeeper(keeper);
+        operatorsRegistry = new OperatorsRegistryInitializableV1();
+        LibImplementationUnbricker.unbrick(vm, address(operatorsRegistry));
+        operatorsRegistry.initOperatorsRegistryV1(admin, river);
+    }
+
+    /// @dev Reads the raw array length at the OperatorsV2 storage slot
+    function _v2OperatorCount() internal view returns (uint256 count) {
+        bytes32 slot = OPERATORS_V2_SLOT;
+        bytes32 raw = vm.load(address(operatorsRegistry), slot);
+        count = uint256(raw);
+    }
+
+    /// @dev Adds `count` operators via the admin
+    function _addOperators(uint256 count) internal {
+        vm.startPrank(admin);
+        for (uint256 i = 0; i < count; ++i) {
+            address opAddr = makeAddr(string(abi.encodePacked("op", vm.toString(i))));
+            operatorsRegistry.addOperator(string(abi.encodePacked("Operator ", vm.toString(i))), opAddr);
+        }
+        vm.stopPrank();
+    }
+
+    function testAddOperatorDoesNotWriteV2() external {
+        assertEq(_v2OperatorCount(), 0, "V2 should be empty before addOperator");
+
+        vm.prank(admin);
+        operatorsRegistry.addOperator("TestOp", makeAddr("op1"));
+
+        assertEq(_v2OperatorCount(), 0, "V2 must remain empty after addOperator");
+        assertEq(operatorsRegistry.getOperatorCount(), 1, "V3 should have 1 operator");
+    }
+
+    function testSetOperatorStatusDoesNotWriteV2() external {
+        vm.startPrank(admin);
+        operatorsRegistry.addOperator("TestOp", makeAddr("op1"));
+        operatorsRegistry.setOperatorStatus(0, false);
+        vm.stopPrank();
+
+        assertEq(_v2OperatorCount(), 0, "V2 must remain empty after setOperatorStatus");
+    }
+
+    function testIncrementFundedDoesNotWriteV2() external {
+        _addOperators(1);
+
+        bytes[] memory keys = new bytes[](1);
+        keys[0] = new bytes(48);
+        operatorsRegistry.incrementFundedValidators(0, keys);
+
+        assertEq(_v2OperatorCount(), 0, "V2 must remain empty after incrementFundedValidators");
+    }
+
+    function testReportStoppedValidatorsDoesNotWriteV2() external {
+        _addOperators(2);
+
+        OperatorsRegistryInitializableV1(address(operatorsRegistry)).sudoSetFunded(0, 3);
+        OperatorsRegistryInitializableV1(address(operatorsRegistry)).sudoSetFunded(1, 2);
+        RiverMock(river).sudoSetDepositedValidatorsCount(5);
+
+        uint32[] memory stoppedCounts = new uint32[](3);
+        stoppedCounts[0] = 2; // total
+        stoppedCounts[1] = 1; // operator 0
+        stoppedCounts[2] = 1; // operator 1
+
+        operatorsRegistry.reportStoppedValidatorCounts(stoppedCounts, 5);
+
+        assertEq(_v2OperatorCount(), 0, "V2 must remain empty after reportStoppedValidatorCounts");
+    }
+
+    function testDemandValidatorExitsDoesNotWriteV2() external {
+        _addOperators(1);
+        OperatorsRegistryInitializableV1(address(operatorsRegistry)).sudoSetFunded(0, 3);
+        RiverMock(river).sudoSetDepositedValidatorsCount(3);
+
+        operatorsRegistry.demandValidatorExits(1, 3);
+
+        assertEq(_v2OperatorCount(), 0, "V2 must remain empty after demandValidatorExits");
+    }
+
+    function testMultipleOperationsNeverWriteV2() external {
+        vm.startPrank(admin);
+        operatorsRegistry.addOperator("Op1", makeAddr("op1"));
+        operatorsRegistry.addOperator("Op2", makeAddr("op2"));
+        operatorsRegistry.setOperatorStatus(0, false);
+        operatorsRegistry.setOperatorStatus(0, true);
+        vm.stopPrank();
+
+        OperatorsRegistryInitializableV1(address(operatorsRegistry)).sudoSetFunded(0, 2);
+        OperatorsRegistryInitializableV1(address(operatorsRegistry)).sudoSetFunded(1, 1);
+        RiverMock(river).sudoSetDepositedValidatorsCount(3);
+
+        bytes[] memory keys = new bytes[](1);
+        keys[0] = new bytes(48);
+        operatorsRegistry.incrementFundedValidators(0, keys);
+
+        operatorsRegistry.demandValidatorExits(1, 4);
+
+        assertEq(_v2OperatorCount(), 0, "V2 must remain empty after all production operations");
+        assertEq(operatorsRegistry.getOperatorCount(), 2, "V3 should have 2 operators");
+    }
+}
+
