@@ -695,10 +695,7 @@ contract ConsensusLayerDepositManagerV1FullDepositFlowTests is OperatorAllocatio
                 keccak256(abi.encode("op0-sig-c", i))
             );
             alloc[i] = IOperatorsRegistryV1.ValidatorDeposit({
-                operatorIndex: 0,
-                pubkey: pubkey,
-                signature: sig,
-                depositAmount: 32 ether
+                operatorIndex: 0, pubkey: pubkey, signature: sig, depositAmount: 32 ether
             });
             op0ExpectedKeys[i] = pubkey;
         }
@@ -712,10 +709,7 @@ contract ConsensusLayerDepositManagerV1FullDepositFlowTests is OperatorAllocatio
                 keccak256(abi.encode("op1-sig-c", i))
             );
             alloc[fromOp0 + i] = IOperatorsRegistryV1.ValidatorDeposit({
-                operatorIndex: 1,
-                pubkey: pubkey,
-                signature: sig,
-                depositAmount: 32 ether
+                operatorIndex: 1, pubkey: pubkey, signature: sig, depositAmount: 32 ether
             });
             op1ExpectedKeys[i] = pubkey;
         }
@@ -723,9 +717,7 @@ contract ConsensusLayerDepositManagerV1FullDepositFlowTests is OperatorAllocatio
         // Sanity: all pubkeys are distinct
         for (uint256 i = 0; i < total; ++i) {
             for (uint256 j = i + 1; j < total; ++j) {
-                assertTrue(
-                    keccak256(alloc[i].pubkey) != keccak256(alloc[j].pubkey), "pubkeys must be distinct"
-                );
+                assertTrue(keccak256(alloc[i].pubkey) != keccak256(alloc[j].pubkey), "pubkeys must be distinct");
             }
         }
 
@@ -767,10 +759,7 @@ contract ConsensusLayerDepositManagerV1FullDepositFlowTests is OperatorAllocatio
                 keccak256(abi.encode("single-op-sig-c", i))
             );
             alloc[i] = IOperatorsRegistryV1.ValidatorDeposit({
-                operatorIndex: 0,
-                pubkey: pubkey,
-                signature: sig,
-                depositAmount: 32 ether
+                operatorIndex: 0, pubkey: pubkey, signature: sig, depositAmount: 32 ether
             });
             expectedKeys[i] = pubkey;
         }
