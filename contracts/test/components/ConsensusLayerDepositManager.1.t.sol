@@ -667,6 +667,127 @@ contract ConsensusLayerDepositManagerV1FullDepositFlowTests is OperatorAllocatio
         assertEq(address(depositManager).balance, 32 ether, "balance unchanged");
     }
 
+    /// @dev Full flow with distinct pubkeys and signatures per validator across multiple operators.
+    ///      Verifies that:
+    ///      1. Each FundedValidatorKeys event contains the exact pubkeys for that operator (not just the count)
+    ///      2. Keys are correctly split by operator when multiple operators are in the allocation
+    function testFullDepositFlowDistinctKeysPerValidator() public {
+        vm.startPrank(admin);
+        registry.addOperator("Op0", admin);
+        registry.addOperator("Op1", admin);
+        vm.stopPrank();
+
+        // Generate 2 distinct keys for op0, 3 for op1 = 5 total
+        uint256 fromOp0 = 2;
+        uint256 fromOp1 = 3;
+        uint256 total = fromOp0 + fromOp1;
+
+        IOperatorsRegistryV1.ValidatorDeposit[] memory alloc = new IOperatorsRegistryV1.ValidatorDeposit[](total);
+        bytes[] memory op0ExpectedKeys = new bytes[](fromOp0);
+        bytes[] memory op1ExpectedKeys = new bytes[](fromOp1);
+
+        // Op0 keys: deterministic but distinct
+        for (uint256 i = 0; i < fromOp0; ++i) {
+            bytes memory pubkey = abi.encodePacked(keccak256(abi.encode("op0-pubkey", i)), bytes16(0));
+            bytes memory sig = abi.encodePacked(
+                keccak256(abi.encode("op0-sig-a", i)),
+                keccak256(abi.encode("op0-sig-b", i)),
+                keccak256(abi.encode("op0-sig-c", i))
+            );
+            alloc[i] = IOperatorsRegistryV1.ValidatorDeposit({
+                operatorIndex: 0,
+                pubkey: pubkey,
+                signature: sig,
+                depositAmount: 32 ether
+            });
+            op0ExpectedKeys[i] = pubkey;
+        }
+
+        // Op1 keys: distinct from op0 and from each other
+        for (uint256 i = 0; i < fromOp1; ++i) {
+            bytes memory pubkey = abi.encodePacked(keccak256(abi.encode("op1-pubkey", i)), bytes16(0));
+            bytes memory sig = abi.encodePacked(
+                keccak256(abi.encode("op1-sig-a", i)),
+                keccak256(abi.encode("op1-sig-b", i)),
+                keccak256(abi.encode("op1-sig-c", i))
+            );
+            alloc[fromOp0 + i] = IOperatorsRegistryV1.ValidatorDeposit({
+                operatorIndex: 1,
+                pubkey: pubkey,
+                signature: sig,
+                depositAmount: 32 ether
+            });
+            op1ExpectedKeys[i] = pubkey;
+        }
+
+        // Sanity: all pubkeys are distinct
+        for (uint256 i = 0; i < total; ++i) {
+            for (uint256 j = i + 1; j < total; ++j) {
+                assertTrue(
+                    keccak256(alloc[i].pubkey) != keccak256(alloc[j].pubkey), "pubkeys must be distinct"
+                );
+            }
+        }
+
+        vm.deal(address(depositManager), total * 32 ether);
+        ConsensusLayerDepositManagerV1UsesRegistry(address(depositManager)).sudoSyncBalance();
+
+        // Expect FundedValidatorKeys for op0 with op0's exact keys
+        vm.expectEmit(true, false, false, true, address(registry));
+        emit FundedValidatorKeys(0, op0ExpectedKeys, false);
+        // Expect FundedValidatorKeys for op1 with op1's exact keys
+        vm.expectEmit(true, false, false, true, address(registry));
+        emit FundedValidatorKeys(1, op1ExpectedKeys, false);
+
+        bytes32 depositRoot = depositContract.get_deposit_root();
+        vm.prank(keeper);
+        depositManager.depositToConsensusLayerWithDepositRoot(alloc, depositRoot);
+
+        assertEq(registry.getOperator(0).funded, fromOp0, "op0 funded");
+        assertEq(registry.getOperator(1).funded, fromOp1, "op1 funded");
+        assertEq(depositManager.getDepositedValidatorCount(), total, "total deposited");
+        assertEq(address(depositManager).balance, 0, "all ETH deposited");
+    }
+
+    /// @dev Single operator with distinct keys: verify the emitted event matches key-by-key
+    function testFullDepositFlowDistinctKeysSingleOperator() public {
+        vm.startPrank(admin);
+        registry.addOperator("Op0", admin);
+        vm.stopPrank();
+
+        uint256 count = 4;
+        IOperatorsRegistryV1.ValidatorDeposit[] memory alloc = new IOperatorsRegistryV1.ValidatorDeposit[](count);
+        bytes[] memory expectedKeys = new bytes[](count);
+
+        for (uint256 i = 0; i < count; ++i) {
+            bytes memory pubkey = abi.encodePacked(keccak256(abi.encode("single-op-key", i)), bytes16(0));
+            bytes memory sig = abi.encodePacked(
+                keccak256(abi.encode("single-op-sig-a", i)),
+                keccak256(abi.encode("single-op-sig-b", i)),
+                keccak256(abi.encode("single-op-sig-c", i))
+            );
+            alloc[i] = IOperatorsRegistryV1.ValidatorDeposit({
+                operatorIndex: 0,
+                pubkey: pubkey,
+                signature: sig,
+                depositAmount: 32 ether
+            });
+            expectedKeys[i] = pubkey;
+        }
+
+        vm.deal(address(depositManager), count * 32 ether);
+        ConsensusLayerDepositManagerV1UsesRegistry(address(depositManager)).sudoSyncBalance();
+
+        vm.expectEmit(true, false, false, true, address(registry));
+        emit FundedValidatorKeys(0, expectedKeys, false);
+
+        bytes32 depositRoot = depositContract.get_deposit_root();
+        vm.prank(keeper);
+        depositManager.depositToConsensusLayerWithDepositRoot(alloc, depositRoot);
+
+        assertEq(registry.getOperator(0).funded, count, "funded count");
+    }
+
     /// @dev Sequential deposits: first 2 validators, then 3 more from same operator
     function testFullDepositFlowSequentialDeposits() public {
         vm.startPrank(admin);
