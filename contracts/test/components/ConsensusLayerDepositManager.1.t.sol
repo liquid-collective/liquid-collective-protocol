@@ -463,6 +463,8 @@ contract ConsensusLayerDepositManagerV1FullDepositFlowTests is OperatorAllocatio
     IDepositContract internal depositContract;
     address internal admin;
 
+    event FundedValidatorKeys(uint256 indexed index, bytes[] publicKeys, bool deferred);
+
     function setUp() public {
         admin = makeAddr("admin");
         depositContract = new DepositContractMock();
@@ -490,6 +492,14 @@ contract ConsensusLayerDepositManagerV1FullDepositFlowTests is OperatorAllocatio
         uint256 toDeposit = 2;
         vm.deal(address(depositManager), toDeposit * 32 ether);
         ConsensusLayerDepositManagerV1UsesRegistry(address(depositManager)).sudoSyncBalance();
+
+        // Expect FundedValidatorKeys event with correct operator index, 2 keys, deferred=false
+        bytes[] memory expectedKeys = new bytes[](toDeposit);
+        for (uint256 i = 0; i < toDeposit; ++i) {
+            expectedKeys[i] = new bytes(48);
+        }
+        vm.expectEmit(true, false, false, true, address(registry));
+        emit FundedValidatorKeys(0, expectedKeys, false);
 
         bytes32 depositRoot = depositContract.get_deposit_root();
         vm.prank(keeper);
@@ -574,6 +584,20 @@ contract ConsensusLayerDepositManagerV1FullDepositFlowTests is OperatorAllocatio
         uint32[] memory counts = new uint32[](2);
         counts[0] = uint32(fromOp0);
         counts[1] = uint32(fromOp2);
+
+        // Expect two separate FundedValidatorKeys events: one per distinct operator
+        bytes[] memory keysOp0 = new bytes[](fromOp0);
+        for (uint256 i = 0; i < fromOp0; ++i) {
+            keysOp0[i] = new bytes(48);
+        }
+        bytes[] memory keysOp2 = new bytes[](fromOp2);
+        for (uint256 i = 0; i < fromOp2; ++i) {
+            keysOp2[i] = new bytes(48);
+        }
+        vm.expectEmit(true, false, false, true, address(registry));
+        emit FundedValidatorKeys(0, keysOp0, false);
+        vm.expectEmit(true, false, false, true, address(registry));
+        emit FundedValidatorKeys(2, keysOp2, false);
 
         bytes32 depositRoot = depositContract.get_deposit_root();
         vm.prank(keeper);

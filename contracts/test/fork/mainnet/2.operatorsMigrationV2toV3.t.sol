@@ -142,9 +142,10 @@ contract OperatorsMigrationV2ToV3 is Test {
         OperatorsRegistryV1 newImpl = new OperatorsRegistryV1();
 
         vm.prank(OPERATORS_REGISTRY_MAINNET_PROXY_ADMIN_ADDRESS);
-        ITransparentUpgradeableProxy(address(orProxy)).upgradeToAndCall(
-            address(newImpl), abi.encodeWithSelector(OperatorsRegistryV1.initOperatorsRegistryV1_2.selector)
-        );
+        ITransparentUpgradeableProxy(address(orProxy))
+            .upgradeToAndCall(
+                address(newImpl), abi.encodeWithSelector(OperatorsRegistryV1.initOperatorsRegistryV1_2.selector)
+            );
 
         OperatorsRegistryV1 v3 = OperatorsRegistryV1(OPERATORS_REGISTRY_MAINNET_ADDRESS);
         address river = v3.getRiver();
