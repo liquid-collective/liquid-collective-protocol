@@ -1321,56 +1321,50 @@ contract OperatorsRegistryV1ExitCorrectnessTests is OperatorAllocationTestBase {
     /// @notice When a new operator is added between two stopped-count reports,
     ///         the second report includes the new operator's stopped count which
     ///         triggers the requestedExits bump in the "new operator" loop.
-    //     function testStoppedCountExceedingRequestedExitsForNewOperator() external {
-    //         _fundAllOperators();
+    function testStoppedCountExceedingRequestedExitsForNewOperator() external {
+        _fundAllOperators();
 
-    //         // Initial stopped report for 5 operators (all zeros)
-    //         uint32[] memory stoppedCounts1 = new uint32[](6);
-    //         stoppedCounts1[0] = 0;
-    //         stoppedCounts1[1] = 0;
-    //         stoppedCounts1[2] = 0;
-    //         stoppedCounts1[3] = 0;
-    //         stoppedCounts1[4] = 0;
-    //         stoppedCounts1[5] = 0;
-    //         OperatorsRegistryInitializableV1(address(operatorsRegistry)).sudoStoppedValidatorCounts(stoppedCounts1, 250);
+        // Initial stopped report for 5 operators (all zeros)
+        uint32[] memory stoppedCounts1 = new uint32[](6);
+        stoppedCounts1[0] = 0;
+        stoppedCounts1[1] = 0;
+        stoppedCounts1[2] = 0;
+        stoppedCounts1[3] = 0;
+        stoppedCounts1[4] = 0;
+        stoppedCounts1[5] = 0;
+        OperatorsRegistryInitializableV1(address(operatorsRegistry)).sudoStoppedValidatorCounts(stoppedCounts1, 250);
 
-    //         // Add a 6th operator, fund it
-    //         vm.startPrank(admin);
-    //         operatorsRegistry.addOperator("operatorSix", makeAddr("op6"));
-    //         vm.stopPrank();
+        // Add a 6th operator and fund it via sudoSetFunded
+        vm.prank(admin);
+        operatorsRegistry.addOperator("operatorSix", makeAddr("op6"));
+        OperatorsRegistryInitializableV1(address(operatorsRegistry)).sudoSetFunded(5, 50);
+        RiverMock(river).sudoSetDepositedValidatorsCount(300);
 
-    //         uint256[] memory newOps = new uint256[](1);
-    //         newOps[0] = 5;
+        // Create demand
+        vm.prank(river);
+        operatorsRegistry.demandValidatorExits(10, 300);
+        assertEq(operatorsRegistry.getCurrentValidatorExitsDemand(), 10);
 
-    //         OperatorsRegistryInitializableV1(address(operatorsRegistry))
-    //             .pickNextValidatorsToDeposit(_createAllocation(newOps, newLimits));
-    //         RiverMock(river).sudoSetDepositedValidatorsCount(300);
+        // Report stopped with 7 entries (includes new op5 at index 6 in the array)
+        // The new operator (op5) has 0 requestedExits but 5 stopped -> unsolicited = 5
+        uint32[] memory stoppedCounts2 = new uint32[](7);
+        stoppedCounts2[0] = 5; // total
+        stoppedCounts2[1] = 0; // op0
+        stoppedCounts2[2] = 0; // op1
+        stoppedCounts2[3] = 0; // op2
+        stoppedCounts2[4] = 0; // op3
+        stoppedCounts2[5] = 0; // op4
+        stoppedCounts2[6] = 5; // op5 (new operator -- enters the second loop)
 
-    //         // Create demand
-    //         vm.prank(river);
-    //         operatorsRegistry.demandValidatorExits(10, 300);
-    //         assertEq(operatorsRegistry.getCurrentValidatorExitsDemand(), 10);
+        vm.expectEmit(true, true, true, true);
+        emit UpdatedRequestedValidatorExitsUponStopped(5, 0, 5);
 
-    //         // Report stopped with 7 entries (includes new op5 at index 6 in the array)
-    //         // The new operator (op5) has 0 requestedExits but 5 stopped -> unsolicited = 5
-    //         uint32[] memory stoppedCounts2 = new uint32[](7);
-    //         stoppedCounts2[0] = 5; // total
-    //         stoppedCounts2[1] = 0; // op0
-    //         stoppedCounts2[2] = 0; // op1
-    //         stoppedCounts2[3] = 0; // op2
-    //         stoppedCounts2[4] = 0; // op3
-    //         stoppedCounts2[5] = 0; // op4
-    //         stoppedCounts2[6] = 5; // op5 (new operator — enters the second loop)
+        OperatorsRegistryInitializableV1(address(operatorsRegistry)).sudoStoppedValidatorCounts(stoppedCounts2, 300);
 
-    //         vm.expectEmit(true, true, true, true);
-    //         emit UpdatedRequestedValidatorExitsUponStopped(5, 0, 5);
-
-    //         OperatorsRegistryInitializableV1(address(operatorsRegistry)).sudoStoppedValidatorCounts(stoppedCounts2, 300);
-
-    //         assertEq(operatorsRegistry.getOperator(5).requestedExits, 5, "New op requestedExits bumped to stoppedCount");
-    //         assertEq(operatorsRegistry.getTotalValidatorExitsRequested(), 5, "Total exits = unsolicited 5");
-    //         assertEq(operatorsRegistry.getCurrentValidatorExitsDemand(), 5, "Demand reduced by unsolicited 5");
-    //     }
+        assertEq(operatorsRegistry.getOperator(5).requestedExits, 5, "New op requestedExits bumped to stoppedCount");
+        assertEq(operatorsRegistry.getTotalValidatorExitsRequested(), 5, "Total exits = unsolicited 5");
+        assertEq(operatorsRegistry.getCurrentValidatorExitsDemand(), 5, "Demand reduced by unsolicited 5");
+    }
 }
 
 // ══════════════════════════════════════════════════════════════════════════
