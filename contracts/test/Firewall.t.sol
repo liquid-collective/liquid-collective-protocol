@@ -459,4 +459,48 @@ contract FirewallTests is BytesGenerator, OperatorAllocationTestBase {
     function testVersion() external {
         assertEq(riverFirewall.version(), "1.2.1");
     }
+
+    /// @notice incrementFundedValidators is protected by onlyRiver on the registry.
+    ///         Even the governor calling through the firewall should be rejected because
+    ///         the msg.sender to the registry is the firewall, not River.
+    function testGovernorCannotIncrementFundedValidatorsThroughFirewall() public {
+        haveGovernorAddOperatorBob();
+        bytes[] memory keys = new bytes[](1);
+        keys[0] = new bytes(48);
+        vm.prank(riverGovernorDAO);
+        vm.expectRevert(abi.encodeWithSignature("Unauthorized(address)", address(operatorsRegistryFirewall)));
+        firewalledOperatorsRegistry.incrementFundedValidators(0, keys);
+    }
+
+    /// @notice Executor cannot call incrementFundedValidators through the firewall
+    ///         because it is not in the executor-callable selectors list.
+    function testExecutorCannotIncrementFundedValidatorsThroughFirewall() public {
+        haveGovernorAddOperatorBob();
+        bytes[] memory keys = new bytes[](1);
+        keys[0] = new bytes(48);
+        vm.prank(executor);
+        vm.expectRevert(unauthExecutor);
+        firewalledOperatorsRegistry.incrementFundedValidators(0, keys);
+    }
+
+    /// @notice Random caller cannot call incrementFundedValidators through the firewall.
+    function testRandomCallerCannotIncrementFundedValidatorsThroughFirewall() public {
+        haveGovernorAddOperatorBob();
+        bytes[] memory keys = new bytes[](1);
+        keys[0] = new bytes(48);
+        vm.prank(joe);
+        vm.expectRevert(unauthJoe);
+        firewalledOperatorsRegistry.incrementFundedValidators(0, keys);
+    }
+
+    /// @notice incrementFundedValidators succeeds when called directly by River (bypassing the firewall).
+    function testRiverCanCallIncrementFundedValidatorsDirectly() public {
+        haveGovernorAddOperatorBob();
+        bytes[] memory keys = new bytes[](1);
+        keys[0] = new bytes(48);
+        // River calls the registry directly (not through firewall)
+        vm.prank(address(river));
+        operatorsRegistry.incrementFundedValidators(0, keys);
+        assertEq(operatorsRegistry.getOperator(0).funded, 1, "funded should be 1");
+    }
 }
