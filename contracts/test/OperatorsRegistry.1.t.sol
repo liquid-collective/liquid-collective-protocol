@@ -1411,6 +1411,14 @@ contract OperatorsRegistryV1FlattenAndAllocationTests is OperatorAllocationTestB
         vm.stopPrank();
     }
 
+    function testIncrementFundedRevertsEmptyPublicKeys() external {
+        _setupOperators(1, 10);
+
+        vm.expectRevert(abi.encodeWithSignature("InvalidEmptyArray()"));
+        bytes[] memory keys = new bytes[](0);
+        operatorsRegistry.incrementFundedValidators(0, keys);
+    }
+
     function testIncrementFundedRevertsOperatorIgnoredExitRequests() external {
         _setupOperators(1, 10);
 

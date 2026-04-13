@@ -277,6 +277,9 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
 
     /// @inheritdoc IOperatorsRegistryV1
     function incrementFundedValidators(uint256 _operatorIndex, bytes[] calldata _publicKeys) external onlyRiver {
+        if (_publicKeys.length == 0) {
+            revert InvalidEmptyArray();
+        }
         OperatorsV3.Operator storage operator = OperatorsV3.get(_operatorIndex);
         if (!operator.active) {
             revert InactiveOperator(_operatorIndex);
