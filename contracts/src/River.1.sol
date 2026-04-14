@@ -139,9 +139,9 @@ contract RiverV1 is
         IOracleManagerV1.StoredConsensusLayerReport memory storedReport;
         storedReport.epoch = uint256(LastOracleRoundId.get());
         storedReport.validatorsBalance = CLValidatorTotalBalance.get();
-        storedReport.validatorsSkimmedBalance = 0;
-        storedReport.validatorsExitedBalance = 0;
-        storedReport.validatorsExitingBalance = 0;
+        storedReport.validatorsSkimmedBalance = lastReport.validatorsSkimmedBalance;
+        storedReport.validatorsExitedBalance = lastReport.validatorsExitedBalance;
+        storedReport.validatorsExitingBalance = lastReport.validatorsExitingBalance;
         storedReport.validatorsCount = uint32(CLValidatorCount.get());
         storedReport.rebalanceDepositToRedeemMode = false;
         storedReport.slashingContainmentMode = false;

@@ -166,10 +166,10 @@ interface IOracleManagerV1 {
         uint256 validatorsSkimmedBalance;
         uint256 validatorsExitedBalance;
         uint256 validatorsExitingBalance;
-        uint256 totalDepositedActivatedETH;
         uint32 validatorsCount;
         bool rebalanceDepositToRedeemMode;
         bool slashingContainmentMode;
+        uint256 totalDepositedActivatedETH;
     }
 
     /// @notice Get oracle address
