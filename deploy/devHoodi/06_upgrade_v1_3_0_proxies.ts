@@ -23,7 +23,7 @@ const func: DeployFunction = async function ({
   ethers,
   network,
 }: HardhatRuntimeEnvironment) {
-  if (!["hardhat", "local", "tenderly", "hoodi", "devHoodi", "tenderly", "kurtosis"].includes(network.name)) {
+  if (!["hardhat", "local", "tenderly", "hoodi", "devHoodi", "kurtosis"].includes(network.name)) {
     throw new Error("Invalid network for devHoodi deployment");
   }
 
