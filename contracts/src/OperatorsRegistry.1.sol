@@ -26,6 +26,8 @@ import "./state/shared/RiverAddress.sol";
 /// @dev added, never removed, so the operator at index i is always the one at
 /// @dev array position i and indices are stable over time.
 contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrable, IProtocolVersion {
+    uint256 private constant DEPOSIT_SIZE = 32 ether;
+
     /// @inheritdoc IOperatorsRegistryV1
     function initOperatorsRegistryV1(address _admin, address _river) external init(0) {
         _setAdmin(_admin);
@@ -64,8 +66,8 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
     function initOperatorsRegistryV1_2() external init(2) {
         _migrateOperators_V2_3();
 
-        CurrentETHExitsDemand.set(CurrentValidatorExitsDemand.get() * 32 ether);
-        TotalETHExitsRequested.set(TotalValidatorExitsRequested.get() * 32 ether);
+        CurrentETHExitsDemand.set(CurrentValidatorExitsDemand.get() * DEPOSIT_SIZE);
+        TotalETHExitsRequested.set(TotalValidatorExitsRequested.get() * DEPOSIT_SIZE);
     }
 
     /// @notice Internal utility to migrate the operators from V2 to V3 format
@@ -75,8 +77,8 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
             OperatorsV2.Operator memory operator = OperatorsV2.get(idx);
             OperatorsV3.push(
                 OperatorsV3.Operator({
-                    funded: operator.funded * 32 ether,
-                    requestedExits: operator.requestedExits * 32 ether,
+                    funded: operator.funded * DEPOSIT_SIZE,
+                    requestedExits: operator.requestedExits * DEPOSIT_SIZE,
                     active: operator.active,
                     name: operator.name,
                     operator: operator.operator
@@ -88,7 +90,7 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
         uint256[] memory exitedETH = new uint256[](stoppedValidators.length);
 
         for (uint256 idx = 0; idx < stoppedValidators.length; ++idx) {
-            exitedETH[idx] = stoppedValidators[idx] * 32 ether;
+            exitedETH[idx] = stoppedValidators[idx] * DEPOSIT_SIZE;
         }
         OperatorsV3.setRawExitedETH(exitedETH);
     }

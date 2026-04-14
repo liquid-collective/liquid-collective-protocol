@@ -137,14 +137,14 @@ contract RiverV1 is
         }
 
         IOracleManagerV1.StoredConsensusLayerReport memory storedReport;
-        storedReport.epoch = uint256(LastOracleRoundId.get());
-        storedReport.validatorsBalance = CLValidatorTotalBalance.get();
+        storedReport.epoch = lastReport.epoch;
+        storedReport.validatorsBalance = lastReport.validatorsBalance;
         storedReport.validatorsSkimmedBalance = lastReport.validatorsSkimmedBalance;
         storedReport.validatorsExitedBalance = lastReport.validatorsExitedBalance;
         storedReport.validatorsExitingBalance = lastReport.validatorsExitingBalance;
-        storedReport.validatorsCount = uint32(CLValidatorCount.get());
-        storedReport.rebalanceDepositToRedeemMode = false;
-        storedReport.slashingContainmentMode = false;
+        storedReport.validatorsCount = clValidatorCount;
+        storedReport.rebalanceDepositToRedeemMode = lastReport.rebalanceDepositToRedeemMode;
+        storedReport.slashingContainmentMode = lastReport.slashingContainmentMode;
         storedReport.totalDepositedActivatedETH = depositedValidatorCount * DEPOSIT_SIZE;
         LastConsensusLayerReport.set(storedReport);
     }
