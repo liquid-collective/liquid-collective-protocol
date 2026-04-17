@@ -9,6 +9,9 @@ import "../../utils/LibImplementationUnbricker.sol";
 
 /// @dev Subclass of OperatorsRegistryV1 that exposes internal V2 storage writes for migration testing.
 contract MigrationOperatorsRegistry is OperatorsRegistryV1 {
+    /// @dev Advances the initializer version from 1 to 2, bridging the removed V1_1 migration step.
+    function sudoInitV1_1() external init(1) {}
+
     /// @dev Push a V2 operator directly into OperatorsV2 storage.
     function sudoPushV2Operator(
         string calldata _name,
@@ -81,9 +84,8 @@ contract MigrationTest is Test {
         stopped[2] = op1Stopped;
         registry.sudoSetStoppedValidators(stopped);
 
-        // V1_1 is a no-op (V1 array is empty)
-        registry.initOperatorsRegistryV1_1();
-
+        // V1_1 is a no-op bridge (advances init version 1→2 so V1_2 init(2) check passes)
+        registry.sudoInitV1_1();
         // V1_2 migrates V2 → V3 (scales by 32 ether)
         registry.initOperatorsRegistryV1_2();
 
@@ -112,8 +114,7 @@ contract MigrationTest is Test {
     /// @notice Verifies that running the full V1_1 → V1_2 migration on an empty registry
     ///         (no operators ever registered) produces a valid empty V3 state with zero operators.
     function testMigrationEmptyState() public {
-        // Step 1: Run the V1_1 migration (no-op on empty V1 array).
-        registry.initOperatorsRegistryV1_1();
+        registry.sudoInitV1_1();
         // Step 2: Run the V1_2 migration (V2 → V3 scaling) and assert no operators were created.
         registry.initOperatorsRegistryV1_2();
         assertEq(registry.getOperatorCount(), 0, "no operators after empty migration");
@@ -132,7 +133,7 @@ contract MigrationTest is Test {
         stopped[1] = 0;
         registry.sudoSetStoppedValidators(stopped);
 
-        registry.initOperatorsRegistryV1_1();
+        registry.sudoInitV1_1();
         registry.initOperatorsRegistryV1_2();
 
         assertEq(registry.getOperatorCount(), 1, "one operator");

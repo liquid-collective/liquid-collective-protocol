@@ -139,6 +139,7 @@ contract OracleManagerV1ExposeInitializer is OracleManagerV1 {
     }
 
     event Internal_SetReportedExitedETH(uint256[] exitedETHPerOperator);
+    event Internal_ReportCLETH(uint256[] activeCLETHPerOperator);
 
     event Internal_RequestExitsBasedOnRedeemDemandAfterRebalancings(
         uint256 exitingBalance, bool depositToRedeemRebalancingAllowed, uint256 exitCountRequest
@@ -147,6 +148,7 @@ contract OracleManagerV1ExposeInitializer is OracleManagerV1 {
     function _requestExitsBasedOnRedeemDemandAfterRebalancings(
         uint256 exitingBalance,
         uint256[] memory exitedETHPerOperator,
+        uint256 totalAvailableCLETH,
         bool depositToRedeemRebalancingAllowed,
         bool slashingContainmentModeEnabled
     ) internal override {
@@ -164,6 +166,10 @@ contract OracleManagerV1ExposeInitializer is OracleManagerV1 {
         emit Internal_RequestExitsBasedOnRedeemDemandAfterRebalancings(
             exitingBalance, depositToRedeemRebalancingAllowed, exitCount
         );
+    }
+
+    function _reportCLETH(uint256[] memory _activeCLETH) internal override {
+        emit Internal_ReportCLETH(_activeCLETH);
     }
 
     event Internal_CommitBalanceToDeposit(uint256 period, uint256 depositBalance);
@@ -520,7 +526,9 @@ contract OracleManagerV1CoverageTests is OracleManagerV1Tests {
         clr.totalDepositedActivatedETH = 11 ether;
         clr.exitedETHPerOperator = new uint256[](1);
         vm.prank(oracle);
-        vm.expectRevert(abi.encodeWithSignature("InvalidTotalDepositedActivatedETHIncrease(uint256,uint256)", 10 ether, 11 ether));
+        vm.expectRevert(
+            abi.encodeWithSignature("InvalidTotalDepositedActivatedETHIncrease(uint256,uint256)", 10 ether, 11 ether)
+        );
         oracleManager.setConsensusLayerData(clr);
     }
 }

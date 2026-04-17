@@ -20,7 +20,7 @@ contract ConsensusLayerDepositManagerV1ExposeInitializer is ConsensusLayerDeposi
         return address(0);
     }
 
-    function _incrementFundedETH(uint256[] memory) internal override {}
+    function _incrementFundedETH(uint256[] memory, bytes[][] memory) internal override {}
 
     function publicConsensusLayerDepositManagerInitializeV1(
         address _depositContractAddress,
@@ -57,8 +57,8 @@ contract ConsensusLayerDepositManagerV1UsesRegistry is ConsensusLayerDepositMana
         return address(0);
     }
 
-    function _incrementFundedETH(uint256[] memory _fundedETH) internal override {
-        registry.incrementFundedETH(_fundedETH);
+    function _incrementFundedETH(uint256[] memory _fundedETH, bytes[][] memory _publicKeys) internal override {
+        registry.incrementFundedETH(_fundedETH, _publicKeys);
     }
 
     function setRegistry(IOperatorsRegistryV1 _registry) external {
@@ -173,7 +173,7 @@ contract ConsensusLayerDepositManagerV1ControllableValidatorKeyRequest is Consen
         return address(0);
     }
 
-    function _incrementFundedETH(uint256[] memory) internal override {}
+    function _incrementFundedETH(uint256[] memory, bytes[][] memory) internal override {}
 
     function publicConsensusLayerDepositManagerInitializeV1(
         address _depositContractAddress,
@@ -555,7 +555,7 @@ contract ConsensusLayerDepositManagerV1ValidKeys is ConsensusLayerDepositManager
         return address(0);
     }
 
-    function _incrementFundedETH(uint256[] memory) internal override {}
+    function _incrementFundedETH(uint256[] memory, bytes[][] memory) internal override {}
 
     function publicConsensusLayerDepositManagerInitializeV1(
         address _depositContractAddress,
@@ -756,12 +756,17 @@ contract ConsensusLayerDepositManagerV1CoverageTests is OperatorAllocationTestBa
 
     /// Asserts that depositToConsensusLayerWithDepositRoot reverts with UnorderedOperatorList when operator indices are not non-decreasing.
     function testDepositRevertsOnUnorderedOperatorList() public {
-        IOperatorsRegistryV1.ValidatorDeposit[] memory allocs = new IOperatorsRegistryV1.ValidatorDeposit[](2);
+        // Use 3 allocations so the last element has the highest operatorIndex (sizing the internal
+        // publicKeyCountPerOperator array correctly), while an out-of-order pair earlier triggers the revert.
+        IOperatorsRegistryV1.ValidatorDeposit[] memory allocs = new IOperatorsRegistryV1.ValidatorDeposit[](3);
         allocs[0] = IOperatorsRegistryV1.ValidatorDeposit({
             operatorIndex: 1, pubkey: new bytes(48), signature: new bytes(96), depositAmount: 32 ether
         });
         allocs[1] = IOperatorsRegistryV1.ValidatorDeposit({
             operatorIndex: 0, pubkey: new bytes(48), signature: new bytes(96), depositAmount: 32 ether
+        });
+        allocs[2] = IOperatorsRegistryV1.ValidatorDeposit({
+            operatorIndex: 2, pubkey: new bytes(48), signature: new bytes(96), depositAmount: 32 ether
         });
         vm.expectRevert(abi.encodeWithSignature("UnorderedOperatorList()"));
         dm.depositToConsensusLayerWithDepositRoot(allocs, bytes32(0));

@@ -105,16 +105,17 @@ contract FirewallTests is BytesGenerator, OperatorAllocationTestBase {
         executorCallableRiverSelectors[1] = river.setOracle.selector;
         riverFirewall = new Firewall(riverGovernorDAO, executor, address(river), executorCallableRiverSelectors);
         firewalledRiver = RiverV1(payable(address(riverFirewall)));
+
         river.initRiverV1(
             address(deposit),
             address(elFeeRecipient),
             withdrawalCredentials,
             address(oracle),
-            payable(address(riverFirewall)),
-            payable(address(allowlist)),
-            payable(address(operatorsRegistry)),
+            address(riverFirewall),
+            address(allowlist),
+            address(operatorsRegistry),
             collector,
-            5000
+            500
         );
 
         vm.prank(address(riverFirewall));

@@ -22,6 +22,14 @@ import "../../src/libraries/LibAllowlistMasks.sol";
 import "../../src/state/river/InFlightDeposit.sol";
 import "../../src/state/river/CommittedBalance.sol";
 import "../../src/state/river/BalanceToDeposit.sol";
+import "../../src/state/operatorsRegistry/Operators.3.sol";
+
+/// @dev Test-only OperatorsRegistry subclass exposing raw exited ETH initialization.
+contract AccountingTestOperatorsRegistry is OperatorsRegistryV1 {
+    function sudoSetRawExitedETH(uint256[] memory value) external {
+        OperatorsV3.setRawExitedETH(value);
+    }
+}
 
 /// @dev Test-only River subclass exposing InFlightDeposit and debug helpers.
 contract AccountingRiverV1 is RiverV1 {
@@ -48,7 +56,7 @@ abstract contract AccountingHarnessBase is Test, BytesGenerator {
     // ─── contracts ────────────────────────────────────────────────────────────
     AccountingRiverV1 internal river;
     OracleV1 internal oracle;
-    OperatorsRegistryV1 internal operatorsRegistry;
+    AccountingTestOperatorsRegistry internal operatorsRegistry;
     AllowlistV1 internal allowlist;
     ELFeeRecipientV1 internal elFeeRecipient;
     CoverageFundV1 internal coverageFund;
@@ -91,7 +99,7 @@ abstract contract AccountingHarnessBase is Test, BytesGenerator {
         elFeeRecipient = new ELFeeRecipientV1();
         coverageFund = new CoverageFundV1();
         river = new AccountingRiverV1();
-        operatorsRegistry = new OperatorsRegistryV1();
+        operatorsRegistry = new AccountingTestOperatorsRegistry();
 
         LibImplementationUnbricker.unbrick(vm, address(withdraw));
         LibImplementationUnbricker.unbrick(vm, address(oracle));
@@ -148,6 +156,12 @@ abstract contract AccountingHarnessBase is Test, BytesGenerator {
         operatorOneIndex = operatorsRegistry.addOperator("OperatorOne", operatorOneAddr);
         operatorTwoIndex = operatorsRegistry.addOperator("OperatorTwo", operatorTwoAddr);
         vm.stopPrank();
+
+        // Initialize the exited ETH array to zeros (opCount + 1 elements: [total, op0, op1, ...]).
+        // Required because _setExitedETH accesses currentExitedETH[idx] without a bounds check,
+        // so the array must be pre-populated before the first oracle report.
+        uint256 opCount = operatorsRegistry.getOperatorCount();
+        operatorsRegistry.sudoSetRawExitedETH(new uint256[](opCount + 1));
     }
 
     // ─── helpers ──────────────────────────────────────────────────────────────

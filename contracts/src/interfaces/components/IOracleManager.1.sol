@@ -146,6 +146,8 @@ interface IOracleManagerV1 {
         // then index 1 would be operator 0
         // these values cannot decrease over reports
         uint256[] exitedETHPerOperator;
+        // an array containing the amount of funded ETH per operator
+        uint256[] activeCLETHPerOperator;
         // flag enabled by the oracles when the buffer rebalancing is activated
         // the activation logic is written in the oracle specification and all oracle members must agree on the activation
         // when active, the eth in the deposit buffer can be used to pay for exits in the redeem manager

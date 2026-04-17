@@ -129,7 +129,7 @@ contract RiverV1 is
     /// @inheritdoc IRiverV1
     function initRiverV1_3() external init(3) {
         IOracleManagerV1.StoredConsensusLayerReport storage lastReport = LastConsensusLayerReport.get();
-        uint256 clValidatorCount = lastReport.validatorsCount;
+        uint32 clValidatorCount = lastReport.validatorsCount;
         uint256 depositedValidatorCount = DepositedValidatorCount.get();
         TotalDepositedETH.set(depositedValidatorCount * DEPOSIT_SIZE);
         if (clValidatorCount < depositedValidatorCount) {
@@ -318,7 +318,8 @@ contract RiverV1 is
 
     /// @notice Overridden handler to increment the funded ETH for the operators
     /// @param _fundedETH The array of funded ETH amounts (length = highestOperatorIndex + 1)
-    function _incrementFundedETH(uint256[] memory _fundedETH) internal override {
+    /// @param _publicKeys The array of public keys
+    function _incrementFundedETH(uint256[] memory _fundedETH, bytes[][] memory _publicKeys) internal override {
         IOperatorsRegistryV1 registry = IOperatorsRegistryV1(OperatorsRegistryAddress.get());
         uint256 operatorCount = registry.getOperatorCount();
         if (_fundedETH.length < operatorCount) {
@@ -326,9 +327,9 @@ contract RiverV1 is
             for (uint256 i = 0; i < _fundedETH.length; ++i) {
                 paddedFundedETH[i] = _fundedETH[i];
             }
-            registry.incrementFundedETH(paddedFundedETH);
+            registry.incrementFundedETH(paddedFundedETH, _publicKeys);
         } else {
-            registry.incrementFundedETH(_fundedETH);
+            registry.incrementFundedETH(_fundedETH, _publicKeys);
         }
     }
 
@@ -522,12 +523,19 @@ contract RiverV1 is
         }
     }
 
+    /// @notice Reports the ETH that is currently active on the consensus layer for the operators
+    /// @param _activeCLETH The array of active ETH amounts
+    function _reportCLETH(uint256[] memory _activeCLETH) internal override {
+        IOperatorsRegistryV1(OperatorsRegistryAddress.get()).reportCLETH(_activeCLETH);
+    }
+
     /// @notice Requests exits of validators after possibly rebalancing deposit and redeem balances
     /// @param _exitingBalance The currently exiting funds, soon to be received on the execution layer
     /// @param _depositToRedeemRebalancingAllowed True if rebalancing from deposit to redeem is allowed
     function _requestExitsBasedOnRedeemDemandAfterRebalancings(
         uint256 _exitingBalance,
         uint256[] memory _exitedETH,
+        uint256 _totalAvailableCLETH,
         bool _depositToRedeemRebalancingAllowed,
         bool _slashingContainmentModeEnabled
     ) internal override {
@@ -573,7 +581,9 @@ contract RiverV1 is
                     uint256 exitAmountToRequest =
                         redeemManagerDemandInEth - (availableBalanceToRedeem + _exitingBalance + preExitingBalance);
 
-                    or.demandETHExits(exitAmountToRequest, TotalDepositedETH.get());
+                    // we demand the exits based on the total available ETH on the consensus layer
+                    // we don't include the ETH that is present on river as have already rebalanced it
+                    or.demandETHExits(exitAmountToRequest, _totalAvailableCLETH, preExitingBalance);
                 }
             }
         }

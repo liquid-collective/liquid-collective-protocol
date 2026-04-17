@@ -10,7 +10,6 @@ import "./libraries/LibUint256.sol";
 import "./Initializable.sol";
 import "./Administrable.sol";
 
-import "./state/operatorsRegistry/Operators.1.sol";
 import "./state/operatorsRegistry/Operators.2.sol";
 import "./state/operatorsRegistry/Operators.3.sol";
 import "./state/operatorsRegistry/TotalETHExitsRequested.sol";
@@ -35,33 +34,6 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
         emit SetRiver(_river);
     }
 
-    /// @notice Internal migration utility to migrate all operators to OperatorsV2 format
-    function _migrateOperators_V1_1() internal {
-        uint256 opCount = OperatorsV1.getCount();
-
-        for (uint256 idx = 0; idx < opCount; ++idx) {
-            OperatorsV1.Operator memory oldOperatorValue = OperatorsV1.get(idx);
-
-            OperatorsV2.push(
-                OperatorsV2.Operator({
-                    limit: uint32(oldOperatorValue.limit),
-                    funded: uint32(oldOperatorValue.funded),
-                    requestedExits: 0,
-                    keys: uint32(oldOperatorValue.keys),
-                    latestKeysEditBlockNumber: uint64(oldOperatorValue.latestKeysEditBlockNumber),
-                    active: oldOperatorValue.active,
-                    name: oldOperatorValue.name,
-                    operator: oldOperatorValue.operator
-                })
-            );
-        }
-    }
-
-    /// @inheritdoc IOperatorsRegistryV1
-    function initOperatorsRegistryV1_1() external init(1) {
-        _migrateOperators_V1_1();
-    }
-
     /// @inheritdoc IOperatorsRegistryV1
     function initOperatorsRegistryV1_2() external init(2) {
         _migrateOperators_V2_3();
@@ -81,7 +53,8 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
                     requestedExits: operator.requestedExits * DEPOSIT_SIZE,
                     active: operator.active,
                     name: operator.name,
-                    operator: operator.operator
+                    operator: operator.operator,
+                    activeCLETH: 0 // This is ok to set 0 here because it will be updated via the oracle report before it gets used
                 })
             );
         }
@@ -178,7 +151,7 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
     }
 
     /// @inheritdoc IOperatorsRegistryV1
-    function incrementFundedETH(uint256[] calldata _fundedETH) external onlyRiver {
+    function incrementFundedETH(uint256[] calldata _fundedETH, bytes[][] calldata _publicKeys) external onlyRiver {
         uint256 fundedETHLength = _fundedETH.length;
         if (fundedETHLength == 0) {
             revert InvalidEmptyArray();
@@ -196,7 +169,21 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
                 revert OperatorIgnoredExitRequests(idx);
             }
             operator.funded += _fundedETH[idx];
+            emit FundedValidatorKeys(idx, _publicKeys[idx], false);
         }
+    }
+
+    /// @inheritdoc IOperatorsRegistryV1
+    function reportCLETH(uint256[] calldata _activeCLETH) external onlyRiver {
+        uint256 activeCLETHLength = _activeCLETH.length;
+        if (activeCLETHLength == 0) {
+            revert InvalidEmptyArray();
+        }
+        for (uint256 idx = 0; idx < activeCLETHLength; ++idx) {
+            OperatorsV3.Operator storage operator = OperatorsV3.get(idx);
+            operator.activeCLETH = _activeCLETH[idx];
+        }
+        emit UpdatedActiveCLETH(_activeCLETH);
     }
 
     /// @inheritdoc IOperatorsRegistryV1
@@ -206,8 +193,9 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
 
     /// @inheritdoc IOperatorsRegistryV1
     function addOperator(string calldata _name, address _operator) external onlyAdmin returns (uint256) {
-        OperatorsV3.Operator memory newOperator =
-            OperatorsV3.Operator({active: true, operator: _operator, name: _name, funded: 0, requestedExits: 0});
+        OperatorsV3.Operator memory newOperator = OperatorsV3.Operator({
+            active: true, operator: _operator, name: _name, funded: 0, requestedExits: 0, activeCLETH: 0
+        });
 
         uint256 operatorIndex = OperatorsV3.push(newOperator) - 1;
 
@@ -243,7 +231,7 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
     }
 
     /// @inheritdoc IOperatorsRegistryV1
-    function requestValidatorExits(ExitETHAllocation[] calldata _allocations) external {
+    function requestETHExits(ExitETHAllocation[] calldata _allocations) external {
         if (msg.sender != IConsensusLayerDepositManagerV1(RiverAddress.get()).getKeeper()) {
             revert IConsensusLayerDepositManagerV1.OnlyKeeper();
         }
@@ -260,7 +248,7 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
 
         uint256 requestedETHAmount = 0;
 
-        // Check that the exits requested do not exceed the funded ETH count of the operator
+        // Check that the exits requested do not exceed the funded ETH amount of the operator
         for (uint256 i = 0; i < allocationsLength; ++i) {
             uint256 operatorIndex = _allocations[i].operatorIndex;
             uint256 ethAmount = _allocations[i].ethAmount;
@@ -280,7 +268,8 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
             }
 
             uint256 opRequestedExits = operator.requestedExits;
-            uint256 available = operator.funded - opRequestedExits;
+            uint256 opPendingExits = opRequestedExits - OperatorsV3.getExitedETHAtIndex(operatorIndex);
+            uint256 available = operator.activeCLETH > opPendingExits ? operator.activeCLETH - opPendingExits : 0;
             if (ethAmount > available) {
                 // Operator has insufficient available ETH
                 revert ExitsRequestedExceedAvailableFundedAmount(operatorIndex, ethAmount, available);
@@ -305,15 +294,17 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
     }
 
     /// @inheritdoc IOperatorsRegistryV1
-    function demandETHExits(uint256 _exitAmountToRequest, uint256 _totalDepositedETH) external onlyRiver {
+    function demandETHExits(uint256 _exitAmountToRequest, uint256 _totalAvailableCLETH, uint256 _preExitingBalance)
+        external
+        onlyRiver
+    {
         uint256 currentETHExitsDemand = CurrentETHExitsDemand.get();
-        uint256 totalETHExitsRequested = TotalETHExitsRequested.get();
-        if (_totalDepositedETH < (totalETHExitsRequested + currentETHExitsDemand)) {
-            revert DemandedETHExitsExceedsDepositedETH();
+        if (_totalAvailableCLETH < (_preExitingBalance + currentETHExitsDemand)) {
+            revert DemandedETHExitsExceedsCLETH();
         }
         // capping the new exit demand so total "requested + demanded" never exceeds deposited ETH(wei)
         _exitAmountToRequest =
-            LibUint256.min(_exitAmountToRequest, _totalDepositedETH - (totalETHExitsRequested + currentETHExitsDemand));
+            LibUint256.min(_exitAmountToRequest, _totalAvailableCLETH - (_preExitingBalance + currentETHExitsDemand));
         if (_exitAmountToRequest > 0) {
             _setCurrentETHExitsDemand(currentETHExitsDemand, currentETHExitsDemand + _exitAmountToRequest);
         }
@@ -338,6 +329,15 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
     }
 
     /// @notice Internal structure to hold variables for the _setExitedETH method
+    /// @param exitedETHLength The length of the exited ETH array that was passed
+    /// @param currentExitedETH The current exited ETH array that is stored in storage
+    /// @param currentExitedETHLength The length of the currentExitedETH array
+    /// @param totalExitedETH The total exited ETH, derived from the first element of the exitedETH array that was passed
+    /// @param amountOfExitedETH The amount of exited ETH
+    /// @param currentETHExitsDemand The current ETH exits demand stored in storage
+    /// @param cachedCurrentETHExitsDemand The cached current ETH exits demand, used to check if the value has changed
+    /// @param totalETHExitsRequested The total ETH exits requested stored in storage
+    /// @param cachedTotalETHExitsRequested The cached total ETH exits requested, used to check if the value has changed
     struct SetExitedETHInternalVars {
         uint256 exitedETHLength;
         uint256[] currentExitedETH;
@@ -387,17 +387,17 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
 
         uint256 idx = 1;
         uint256 unsolicitedExitsSum;
-
         for (; idx < vars.exitedETHLength; ++idx) {
             // we check that the amount of exited ETH is not decreasing for existing operators
             if (idx < vars.currentExitedETHLength && _exitedETH[idx] < vars.currentExitedETH[idx]) {
                 revert ExitedETHPerOperatorDecreased();
             }
 
-            // we check that the amount of exited ETH is not above the funded ETH of an operator
-            uint256 opFunded = operators[idx - 1].funded;
-            if (_exitedETH[idx] > opFunded) {
-                revert ExitedETHExceedsFundedETH(idx - 1, _exitedETH[idx], opFunded);
+            // we check that the amount of exited ETH is not above the CL ETH of an operator in the previous oracle report
+            uint256 deltaExited = _exitedETH[idx] - vars.currentExitedETH[idx];
+            uint256 priorActiveCL = operators[idx - 1].activeCLETH; // pre-update
+            if (deltaExited > priorActiveCL) {
+                revert ExitedETHExceedsPriorCLETH(idx - 1, _exitedETH[idx], priorActiveCL);
             }
 
             // if the reported exited ETH for this operator is greater than its recorded requestedExits,

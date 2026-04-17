@@ -52,7 +52,7 @@ interface IConsensusLayerDepositManagerV1 {
     // @notice Not keeper
     error OnlyKeeper();
 
-    /// @notice The operator allocations exceed the committed balance
+    /// @notice The amount of deposits requested exceeds the committed balance
     error ValidatorDepositsExceedCommittedBalance();
 
     /// @notice Returns the amount of ETH(wei) not yet committed for deposit

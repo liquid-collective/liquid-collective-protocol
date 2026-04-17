@@ -183,6 +183,7 @@ abstract contract BeaconChainSimulator is AccountingHarnessBase {
 
         uint256 opCount = operatorsRegistry.getOperatorCount();
         uint256[] memory exitedArr = new uint256[](opCount + 1);
+        uint256[] memory activeCLETHArr = new uint256[](opCount);
         uint256 cumulativeExited = 0;
 
         for (uint256 i = 0; i < _simValidators.length; i++) {
@@ -191,10 +192,12 @@ abstract contract BeaconChainSimulator is AccountingHarnessBase {
                 // pending validators are not yet activated; they are tracked via _simInFlightDeposit
             } else if (v.state == ValidatorState.Active) {
                 validatorsBalance += v.currentBalance;
+                activeCLETHArr[v.operatorIndex] += v.currentBalance;
                 activatedCount++;
             } else if (v.state == ValidatorState.Exiting) {
                 validatorsBalance += v.currentBalance;
                 validatorsExiting += v.currentBalance;
+                activeCLETHArr[v.operatorIndex] += v.currentBalance;
                 activatedCount++;
             } else if (v.state == ValidatorState.Exited) {
                 activatedCount++;
@@ -211,6 +214,7 @@ abstract contract BeaconChainSimulator is AccountingHarnessBase {
         report.totalDepositedActivatedETH = _simTotalDepositedActivatedETH;
         report.validatorsCount = activatedCount;
         report.exitedETHPerOperator = exitedArr;
+        report.activeCLETHPerOperator = activeCLETHArr;
         report.rebalanceDepositToRedeemMode = rebalance;
         report.slashingContainmentMode = slashingContainment;
     }

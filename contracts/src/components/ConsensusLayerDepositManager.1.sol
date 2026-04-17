@@ -33,7 +33,8 @@ abstract contract ConsensusLayerDepositManagerV1 is IConsensusLayerDepositManage
 
     /// @notice Handler called to increment the funded ETH for the operators
     /// @param _fundedETH The array of funded ETH amounts
-    function _incrementFundedETH(uint256[] memory _fundedETH) internal virtual;
+    /// @param _publicKeys The array of public keys
+    function _incrementFundedETH(uint256[] memory _fundedETH, bytes[][] memory _publicKeys) internal virtual;
 
     /// @notice Handler called to change the committed balance to deposit
     /// @param newCommittedBalance The new committed balance value
@@ -104,6 +105,8 @@ abstract contract ConsensusLayerDepositManagerV1 is IConsensusLayerDepositManage
         }
         // Calculate total deposits and validate key lengths + operator ordering in a single pass
         uint256 totalDeposits = 0;
+        uint256[] memory publicKeyCountPerOperator =
+            new uint256[](_allocations[_allocations.length - 1].operatorIndex + 1);
         for (uint256 i = 0; i < _allocations.length; ++i) {
             if (i > 0 && _allocations[i].operatorIndex < _allocations[i - 1].operatorIndex) {
                 revert IOperatorsRegistryV1.UnorderedOperatorList();
@@ -116,8 +119,14 @@ abstract contract ConsensusLayerDepositManagerV1 is IConsensusLayerDepositManage
             }
 
             totalDeposits += _allocations[i].depositAmount;
+            publicKeyCountPerOperator[_allocations[i].operatorIndex]++;
         }
         uint256[] memory fundedETH = new uint256[](_allocations[_allocations.length - 1].operatorIndex + 1);
+        bytes[][] memory publicKeys = new bytes[][](_allocations[_allocations.length - 1].operatorIndex + 1);
+        for (uint256 i = 0; i < publicKeys.length; ++i) {
+            publicKeys[i] = new bytes[](publicKeyCountPerOperator[i]);
+            publicKeyCountPerOperator[i] = 0;
+        }
 
         // Check if the total requested exceeds the committed balance
         if (totalDeposits > committedBalance) {
@@ -131,7 +140,9 @@ abstract contract ConsensusLayerDepositManagerV1 is IConsensusLayerDepositManage
         }
 
         address depositContract = DepositContractAddress.get();
+        uint256 operatorIndex;
         for (uint256 idx = 0; idx < _allocations.length; ++idx) {
+            operatorIndex = _allocations[idx].operatorIndex;
             _depositValidator(
                 _allocations[idx].pubkey,
                 _allocations[idx].signature,
@@ -139,10 +150,11 @@ abstract contract ConsensusLayerDepositManagerV1 is IConsensusLayerDepositManage
                 withdrawalCredentials,
                 depositContract
             );
-            fundedETH[_allocations[idx].operatorIndex] += _allocations[idx].depositAmount;
+            fundedETH[operatorIndex] += _allocations[idx].depositAmount;
+            publicKeys[operatorIndex][publicKeyCountPerOperator[operatorIndex]++] = _allocations[idx].pubkey;
         }
 
-        _incrementFundedETH(fundedETH);
+        _incrementFundedETH(fundedETH, publicKeys);
         _setCommittedBalance(committedBalance - totalDeposits);
 
         uint256 currentInFlightETH = InFlightDeposit.get();

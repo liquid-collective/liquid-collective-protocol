@@ -16,7 +16,7 @@ interface IOperatorsRegistryV1 {
         uint256 operatorIndex;
         bytes pubkey; // 48 bytes
         bytes signature; // 96 bytes
-        uint256 depositAmount; // deposit amount in ETH(wei) (currently exactly 32 ETH)
+        uint256 depositAmount; // deposit amount in ETH(wei)
     }
 
     /// @notice Structure representing an operator allocation for exits
@@ -84,6 +84,21 @@ interface IOperatorsRegistryV1 {
     /// @param exitedETH The exited ETH(wei) per operator
     event UpdatedExitedETH(uint256[] exitedETH);
 
+    /// @notice The active ETH on CL have been updated
+    /// @param activeCLETH The active ETH(wei) on CL per operator
+    event UpdatedActiveCLETH(uint256[] activeCLETH);
+
+    /// @notice A validator key got funded on the deposit contract
+    /// @notice This event was introduced during a contract upgrade, in order to cover all possible public keys, this event
+    /// @notice will be replayed for past funded keys in order to have a complete coverage of all the funded public keys.
+    /// @notice In this particular scenario, the deferred value will be set to true, to indicate that we are not going to have
+    /// @notice the expected additional events and side effects in the same transaction (deposit to official DepositContract etc ...) because
+    /// @notice the event was synthetically crafted.
+    /// @param index The operator index
+    /// @param publicKeys BLS Public key that got funded
+    /// @param deferred True if event has been replayed in the context of a migration
+    event FundedValidatorKeys(uint256 indexed index, bytes[] publicKeys, bool deferred);
+
     /// @notice The calling operator is inactive
     /// @param index The operator index
     error InactiveOperator(uint256 index);
@@ -101,8 +116,8 @@ interface IOperatorsRegistryV1 {
     /// @notice Thrown when the sum of exited ETH is invalid
     error ExitedETHSumMismatch();
 
-    /// @notice Thrown when the amount of exited ETH is too high compared to the operator's funded ETH amount
-    error DemandedETHExitsExceedsDepositedETH();
+    /// @notice Thrown when the amount of exited ETH is too high compared to the operator's active ETH on CL amount
+    error DemandedETHExitsExceedsCLETH();
 
     /// @notice Thrown when the amount of exited ETH is too high compared to the total deposited ETH
     error ExitedETHExceedsDeposited();
@@ -133,8 +148,8 @@ interface IOperatorsRegistryV1 {
     /// @notice The provided exited ETH is above the funded ETH of the operator
     /// @param operatorIndex The operator index
     /// @param exitedETH The exited ETH(wei)
-    /// @param fundedETH The funded ETH(wei)
-    error ExitedETHExceedsFundedETH(uint256 operatorIndex, uint256 exitedETH, uint256 fundedETH);
+    /// @param priorActiveCL The active ETH(wei) on CL of the operator in the previous oracle report
+    error ExitedETHExceedsPriorCLETH(uint256 operatorIndex, uint256 exitedETH, uint256 priorActiveCL);
 
     /// @notice Thrown when an allocation with zero ETH amount is provided
     error AllocationWithZeroETHAmount();
@@ -145,7 +160,7 @@ interface IOperatorsRegistryV1 {
     function initOperatorsRegistryV1(address _admin, address _river) external;
 
     /// @notice Initializes the operators registry for V1_1
-    function initOperatorsRegistryV1_1() external;
+    // function initOperatorsRegistryV1_1() external;
 
     /// @notice Migrates operators from V2 to V3 storage, dropping key-management fields
     function initOperatorsRegistryV1_2() external;
@@ -188,7 +203,12 @@ interface IOperatorsRegistryV1 {
 
     /// @notice Updates the funded ETH for each node operator in the Operators Registry
     /// @param _fundedETH The array of funded ETH(wei) amounts per operator
-    function incrementFundedETH(uint256[] calldata _fundedETH) external;
+    /// @param _publicKeys The array of public keys
+    function incrementFundedETH(uint256[] calldata _fundedETH, bytes[][] calldata _publicKeys) external;
+
+    /// @notice Updates the active CL ETH for each node operator in the Operators Registry
+    /// @param _activeCLETH The array of active ETH(wei) amounts per operator
+    function reportCLETH(uint256[] calldata _activeCLETH) external;
 
     /// @notice Allows river to override the exited ETH array
     /// @notice This actions happens during the Oracle report processing
@@ -234,11 +254,17 @@ interface IOperatorsRegistryV1 {
     /// @dev Reverts with ExitsRequestedExceedDemand if total exits requested exceed the current demand
     /// @dev Reverts with NoExitRequestsToPerform if there is no pending exit demand
     /// @param _allocations The proposed per-operator exit ETH allocations, sorted by operator index
-    function requestValidatorExits(ExitETHAllocation[] calldata _allocations) external;
+    function requestETHExits(ExitETHAllocation[] calldata _allocations) external;
 
     /// @notice Increases the exit request demand
-    /// @dev This method is only callable by the river contract, and to actually forward the information to the node operators via event emission, the requestValidatorExits method must be called
+    /// @dev This method is only callable by the river contract, and to actually forward the information to the node operators via event emission, the requestETHExits method must be called
+    /// @dev Due to autocompounding we cannot rely on the total deposited ETH, but on the total available ETH on CL
     /// @param _exitAmountToRequest The amount of exit requests to add to the demand
-    /// @param _totalDepositedETH The total deposited ETH
-    function demandETHExits(uint256 _exitAmountToRequest, uint256 _totalDepositedETH) external;
+    /// @param _totalAvailableCLETH The total available ETH
+    /// @param _preExitingBalance The ETH that is currently exiting and will soon be received on the execution layer
+    /// @dev This method is only callable by the river contract
+    /// @dev Reverts with DemandedETHExitsExceedsCLETH if the total available ETH is less than the sum of the pre-exiting balance and the current exit request demand
+    /// @dev Reverts with InvalidExitAmount if the exit amount to request is greater than the total available ETH minus the pre-exiting balance and the current exit request demand
+    function demandETHExits(uint256 _exitAmountToRequest, uint256 _totalAvailableCLETH, uint256 _preExitingBalance)
+        external;
 }

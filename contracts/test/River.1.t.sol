@@ -30,6 +30,15 @@ contract OperatorsRegistryWithOverridesV1 is OperatorsRegistryV1 {
         OperatorsV3.Operator storage operator = OperatorsV3.get(_index);
         operator.funded = _funded;
     }
+
+    function sudoSetRawExitedETH(uint256[] memory value) external {
+        OperatorsV3.setRawExitedETH(value);
+    }
+
+    function sudoSetActiveCLETH(uint256 _index, uint256 _activeCLETH) external {
+        OperatorsV3.Operator storage op = OperatorsV3.get(_index);
+        op.activeCLETH = _activeCLETH;
+    }
 }
 
 contract RiverV1ForceCommittable is RiverV1 {
@@ -184,6 +193,9 @@ contract RiverV1Tests is RiverV1TestBase {
         operatorOneIndex = operatorsRegistry.addOperator(operatorOneName, operatorOne);
         operatorTwoIndex = operatorsRegistry.addOperator(operatorTwoName, operatorTwo);
         vm.stopPrank();
+        // Pre-initialize the exited ETH array so _setExitedETH can safely access per-operator slots.
+        uint256 opCount = operatorsRegistry.getOperatorCount();
+        operatorsRegistry.sudoSetRawExitedETH(new uint256[](opCount + 1));
     }
 
     function testVersion() external {
@@ -803,6 +815,8 @@ contract RiverV1Tests is RiverV1TestBase {
         exitedETH[0] = 10 * 32 ether;
         exitedETH[1] = 10 * 32 ether;
         exitedETH[2] = 0;
+        // activeCLETH for operatorOne must be >= deltaExited (10*32) to pass ExitedETHExceedsPriorCLETH check.
+        operatorsRegistry.sudoSetActiveCLETH(operatorOneIndex, 20 * 32 ether);
         operatorsRegistry.sudoReportExitedETH(exitedETH, 20 * 32 ether);
 
         // Second deposit: 10 validators from operator 2
@@ -984,6 +998,10 @@ contract RiverV1TestsReport_HEAVY_FUZZING is RiverV1TestBase {
         vm.prank(admin);
         river.depositToConsensusLayerWithDepositRoot(allocation, bytes32(0));
 
+        // Pre-initialize the exited ETH storage array so _setExitedETH can access
+        // currentExitedETH[idx] without panicking when the first oracle report arrives.
+        operatorsRegistry.sudoSetRawExitedETH(new uint256[](operatorCount + 1));
+
         _newSalt = _salt;
     }
 
@@ -1125,8 +1143,19 @@ contract RiverV1TestsReport_HEAVY_FUZZING is RiverV1TestBase {
         clr.validatorsExitedBalance = 0;
         clr.validatorsExitingBalance = type(uint256).max; // ensures no exits will be requested before asserted report
         clr.totalDepositedActivatedETH = rfv.depositCount * 32 ether;
-        clr.exitedETHPerOperator = new uint256[](1);
-        clr.exitedETHPerOperator[0] = 0;
+        // Use operatorCount+1 length so the second report (length N+1) doesn't shrink the array.
+        clr.exitedETHPerOperator = new uint256[](rfv.operatorCount + 1);
+        // Populate activeCLETH with the deposit distribution so ExitedETHExceedsPriorCLETH passes
+        // for any stoppedTotalCount <= depositCount in subsequent scenario reports.
+        clr.activeCLETHPerOperator = new uint256[](rfv.operatorCount);
+        {
+            uint256 restActiveCL = rfv.depositCount % rfv.operatorCount;
+            for (uint256 idx = 0; idx < rfv.operatorCount; ++idx) {
+                uint256 opDepositCount = rfv.depositCount / rfv.operatorCount + (restActiveCL > 0 ? 1 : 0);
+                if (restActiveCL > 0) --restActiveCL;
+                clr.activeCLETHPerOperator[idx] = opDepositCount * 32 ether;
+            }
+        }
         _newSalt = _salt;
     }
 
@@ -1277,6 +1306,7 @@ contract RiverV1TestsReport_HEAVY_FUZZING is RiverV1TestBase {
             }
         }
 
+        clr.activeCLETHPerOperator = new uint256[](rfv.operatorCount);
         clr.rebalanceDepositToRedeemMode = false;
         clr.slashingContainmentMode = false;
         clr.totalDepositedActivatedETH = rfv.depositCount * 32 ether;
@@ -1340,6 +1370,7 @@ contract RiverV1TestsReport_HEAVY_FUZZING is RiverV1TestBase {
             }
         }
 
+        clr.activeCLETHPerOperator = new uint256[](rfv.operatorCount);
         clr.rebalanceDepositToRedeemMode = false;
         clr.slashingContainmentMode = false;
         clr.totalDepositedActivatedETH = rfv.depositCount * 32 ether;
@@ -1406,6 +1437,7 @@ contract RiverV1TestsReport_HEAVY_FUZZING is RiverV1TestBase {
             }
         }
 
+        clr.activeCLETHPerOperator = new uint256[](rfv.operatorCount);
         clr.rebalanceDepositToRedeemMode = false;
         clr.slashingContainmentMode = false;
         clr.totalDepositedActivatedETH = rfv.depositCount * 32 ether;
@@ -1477,6 +1509,7 @@ contract RiverV1TestsReport_HEAVY_FUZZING is RiverV1TestBase {
             }
         }
 
+        clr.activeCLETHPerOperator = new uint256[](rfv.operatorCount);
         clr.rebalanceDepositToRedeemMode = false;
         clr.slashingContainmentMode = false;
         clr.totalDepositedActivatedETH = rfv.depositCount * 32 ether;
@@ -1541,6 +1574,7 @@ contract RiverV1TestsReport_HEAVY_FUZZING is RiverV1TestBase {
                 }
             }
 
+            clr.activeCLETHPerOperator = new uint256[](rfv.operatorCount);
             clr.rebalanceDepositToRedeemMode = false;
             clr.slashingContainmentMode = false;
         }
@@ -1614,6 +1648,7 @@ contract RiverV1TestsReport_HEAVY_FUZZING is RiverV1TestBase {
             }
         }
 
+        clr.activeCLETHPerOperator = new uint256[](rfv.operatorCount);
         clr.rebalanceDepositToRedeemMode = true;
         clr.slashingContainmentMode = false;
         clr.totalDepositedActivatedETH = rfv.depositCount * 32 ether;
@@ -1676,6 +1711,7 @@ contract RiverV1TestsReport_HEAVY_FUZZING is RiverV1TestBase {
             }
         }
 
+        clr.activeCLETHPerOperator = new uint256[](rfv.operatorCount);
         clr.rebalanceDepositToRedeemMode = false;
         clr.slashingContainmentMode = true;
         clr.totalDepositedActivatedETH = rfv.depositCount * 32 ether;
@@ -1734,6 +1770,9 @@ contract RiverV1TestsReport_HEAVY_FUZZING is RiverV1TestBase {
     function _generateEmptyReport() internal pure returns (IOracleManagerV1.ConsensusLayerReport memory clr) {
         clr.exitedETHPerOperator = new uint256[](1);
         clr.exitedETHPerOperator[0] = 0;
+        // _reportCLETH reverts with InvalidEmptyArray() if this is empty;
+        // all callers first invoke _depositValidators which adds operator at index 0.
+        clr.activeCLETHPerOperator = new uint256[](1);
     }
 
     function testReportingError_Unauthorized(uint256 _salt) external {
@@ -2035,6 +2074,10 @@ contract RiverV1TestsReport_HEAVY_FUZZING is RiverV1TestBase {
         IOracleManagerV1.ConsensusLayerReport memory clr = _generateEmptyReport();
 
         _salt = _depositValidators(depositCount, _salt);
+        // Pre-initialize storage so _setExitedETH can access currentExitedETH[1] without panicking,
+        // and set activeCLETH so the ExitedETHExceedsPriorCLETH check passes (deltaExited = 2*32 ether).
+        operatorsRegistry.sudoSetRawExitedETH(new uint256[](2));
+        operatorsRegistry.sudoSetActiveCLETH(0, uint256(depositCount) * 32 ether);
 
         _salt = _next(_salt);
         uint256 framesBetween = bound(_salt, 1, 1_000_000);
@@ -2267,7 +2310,7 @@ contract RiverV1CoverageTests is RiverV1TestBase {
         _initRiverAndV1_2();
         // 10 deposited validators, 7 reported -> 3 in flight.
         vm.store(address(river), DEPOSITED_VALIDATOR_COUNT_SLOT, bytes32(uint256(10)));
-        vm.store(address(river), bytes32(uint256(LAST_CLR_BASE_SLOT) + 6), bytes32(uint256(7)));
+        vm.store(address(river), bytes32(uint256(LAST_CLR_BASE_SLOT) + 5), bytes32(uint256(7)));
         river.initRiverV1_3();
         assertEq(river.getTotalDepositedETH(), 10 * 32 ether);
         assertEq(uint256(vm.load(address(river), IN_FLIGHT_DEPOSIT_SLOT)), 3 * 32 ether);
@@ -2277,7 +2320,7 @@ contract RiverV1CoverageTests is RiverV1TestBase {
     function testInitRiverV1_3NoInFlight() public {
         _initRiverAndV1_2();
         vm.store(address(river), DEPOSITED_VALIDATOR_COUNT_SLOT, bytes32(uint256(5)));
-        vm.store(address(river), bytes32(uint256(LAST_CLR_BASE_SLOT) + 6), bytes32(uint256(5)));
+        vm.store(address(river), bytes32(uint256(LAST_CLR_BASE_SLOT) + 5), bytes32(uint256(5)));
         river.initRiverV1_3();
         assertEq(river.getTotalDepositedETH(), 5 * 32 ether);
         assertEq(uint256(vm.load(address(river), IN_FLIGHT_DEPOSIT_SLOT)), 0);
@@ -2300,6 +2343,7 @@ contract RiverV1CoverageTests is RiverV1TestBase {
         clr.validatorsBalance = 32 ether + 1 wei;
         clr.totalDepositedActivatedETH = 0;
         clr.exitedETHPerOperator = new uint256[](1);
+        clr.activeCLETHPerOperator = new uint256[](1);
         vm.prank(address(oracle));
         river.setConsensusLayerData(clr);
     }
@@ -2337,6 +2381,7 @@ contract RiverV1CoverageTests is RiverV1TestBase {
         clr.validatorsBalance = 0;
         clr.totalDepositedActivatedETH = 0;
         clr.exitedETHPerOperator = new uint256[](1);
+        clr.activeCLETHPerOperator = new uint256[](1);
         uint256 rdmBefore = address(redeemManager).balance;
         vm.prank(address(oracle));
         river.setConsensusLayerData(clr);
@@ -2417,6 +2462,9 @@ contract RiverV1CoverageTests is RiverV1TestBase {
         vm.prank(admin);
         river.setKeeper(admin);
         redeemManager.initializeRedeemManagerV1(address(river));
+        // Add one operator so _reportCLETH(activeCLETHPerOperator) doesn't revert InvalidEmptyArray.
+        vm.prank(admin);
+        operatorsRegistry.addOperator("MinimalOp", admin);
     }
 
     function _allowDeposit(address _who) internal {
