@@ -5,7 +5,7 @@ import "forge-std/StdUtils.sol";
 
 /// @dev Interface exposing the test contract's external wrappers and state readers.
 interface IAccountingActions {
-    function handler_deposit(uint256 opIdx, uint256 n) external;
+    function handler_deposit(uint256 opIdx, uint256 n, uint256 amountEach) external;
     function handler_activateValidators(uint256 n) external;
     function handler_advanceEpoch(uint256 rewardsPerValidator) external;
     function handler_requestExit(uint256 opIdx, uint256 ethAmount) external;
@@ -14,8 +14,8 @@ interface IAccountingActions {
     function handler_oracleReport(bool rebalance, bool slashingContainment) external;
 
     function handler_pendingCount() external view returns (uint256);
-    function handler_activeCount(uint256 opIdx) external view returns (uint256);
-    function handler_exitingCount(uint256 opIdx) external view returns (uint256);
+    function handler_activeAvailableETH(uint256 opIdx) external view returns (uint256);
+    function handler_exitingETH(uint256 opIdx) external view returns (uint256);
     function handler_operatorIndex(uint256 which) external view returns (uint256);
 }
 
@@ -23,6 +23,9 @@ interface IAccountingActions {
 /// @notice Foundry invariant-test handler that bounds fuzzed inputs and delegates to sim_* step functions
 ///         on the test contract. Each public function is a target for Foundry's stateful fuzzer.
 contract AccountingHandler is StdUtils {
+    uint256 private constant MIN_DEPOSIT = 1 ether;
+    uint256 private constant MAX_DEPOSIT = 2048 ether;
+
     IAccountingActions private _test;
 
     uint256 private _opOne;
@@ -52,16 +55,19 @@ contract AccountingHandler is StdUtils {
 
     // ─── bounded handler functions ──────────────────────────────────────────────
 
-    /// @notice Fuzzer entry point: deposits 1–4 validators for a pseudo-randomly selected operator.
+    /// @notice Fuzzer entry point: deposits 1–4 validators for a pseudo-randomly selected operator,
+    ///         each with a fuzzed amount in [1, 2048] ETH.
     ///         Updates `ghost_depositCount` so that `oracleReport` knows at least one deposit exists.
-    /// @param opSeed   Seed used to select the target operator (even → operator one, odd → operator two).
-    /// @param nSeed    Seed used to derive the number of validators to deposit, bounded to [1, 4].
-    function deposit(uint256 opSeed, uint256 nSeed) external {
-        // Step 1: Select operator and bound the validator count to a safe range.
+    /// @param opSeed     Seed used to select the target operator (even → operator one, odd → operator two).
+    /// @param nSeed      Seed used to derive the number of validators to deposit, bounded to [1, 4].
+    /// @param amountSeed Seed used to derive the per-validator deposit amount, bounded to [1, 2048] ETH.
+    function deposit(uint256 opSeed, uint256 nSeed, uint256 amountSeed) external {
+        // Step 1: Select operator and bound the validator count and deposit amount to safe ranges.
         uint256 opIdx = (opSeed % 2 == 0) ? _opOne : _opTwo;
         uint256 n = bound(nSeed, 1, 4);
+        uint256 amountEach = bound(amountSeed, MIN_DEPOSIT, MAX_DEPOSIT);
         // Step 2: Delegate the deposit to the test contract and update ghost/call counters.
-        _test.handler_deposit(opIdx, n);
+        _test.handler_deposit(opIdx, n, amountEach);
         ghost_depositCount += n;
         calls_deposit++;
     }
@@ -90,37 +96,36 @@ contract AccountingHandler is StdUtils {
         calls_advanceEpoch++;
     }
 
-    /// @notice Fuzzer entry point: requests the exit of 1–N active validators for a
-    ///         pseudo-randomly selected operator. Skips silently if none are active.
-    /// @param opSeed  Seed used to select the target operator.
-    /// @param nSeed   Seed used to derive the number of validators to exit, bounded to [1, active].
-    function requestExit(uint256 opSeed, uint256 nSeed) external {
-        // Step 1: Select operator and guard — skip if no active validators exist.
+    /// @notice Fuzzer entry point: requests a fuzzed ETH amount to exit for a pseudo-randomly
+    ///         selected operator. Amount is bounded to [1 ETH, available active ETH].
+    ///         Skips silently if no active ETH is available to exit.
+    /// @param opSeed     Seed used to select the target operator.
+    /// @param amountSeed Seed used to derive the ETH amount to exit.
+    function requestExit(uint256 opSeed, uint256 amountSeed) external {
+        // Step 1: Select operator and guard — skip if no active ETH is available to exit.
         uint256 opIdx = (opSeed % 2 == 0) ? _opOne : _opTwo;
-        uint256 active = _test.handler_activeCount(opIdx);
-        if (active == 0) return;
-        // Step 2: Bound the exit count and compute the corresponding ETH amount.
-        uint256 n = bound(nSeed, 1, active);
-        uint256 ethAmount = n * 32 ether;
+        uint256 available = _test.handler_activeAvailableETH(opIdx);
+        if (available == 0) return;
+        // Step 2: Bound the exit amount to the available active ETH.
+        uint256 ethAmount = bound(amountSeed, 1 ether, available);
         // Step 3: Delegate the exit request to the test contract.
         _test.handler_requestExit(opIdx, ethAmount);
         calls_requestExit++;
     }
 
-    /// @notice Fuzzer entry point: completes the exit of 1–N exiting validators for a
-    ///         pseudo-randomly selected operator with a random penalty up to 2 ETH.
-    ///         Skips silently if no validators are in the Exiting state.
+    /// @notice Fuzzer entry point: completes a fuzzed ETH amount of queued exits for a
+    ///         pseudo-randomly selected operator, with a random penalty up to 2 ETH.
+    ///         Skips silently if no ETH is queued for exit (handles both partial and full exits).
     /// @param opSeed      Seed used to select the target operator.
-    /// @param nSeed       Seed used to derive the number of validators to complete, bounded to [1, exiting].
+    /// @param amountSeed  Seed used to derive the ETH amount to complete, bounded to [1 ETH, queued ETH].
     /// @param penaltySeed Seed used to derive the exit penalty, bounded to [0, 2 ETH].
-    function completeExit(uint256 opSeed, uint256 nSeed, uint256 penaltySeed) external {
-        // Step 1: Select operator and guard — skip if no validators are currently exiting.
+    function completeExit(uint256 opSeed, uint256 amountSeed, uint256 penaltySeed) external {
+        // Step 1: Select operator and guard — skip if no ETH is currently queued for exit.
         uint256 opIdx = (opSeed % 2 == 0) ? _opOne : _opTwo;
-        uint256 exiting = _test.handler_exitingCount(opIdx);
+        uint256 exiting = _test.handler_exitingETH(opIdx);
         if (exiting == 0) return;
-        // Step 2: Bound the count and penalty, then compute the ETH amount.
-        uint256 n = bound(nSeed, 1, exiting);
-        uint256 ethAmount = n * 32 ether;
+        // Step 2: Bound the amount and penalty, then delegate.
+        uint256 ethAmount = bound(amountSeed, 1 ether, exiting);
         uint256 penalty = bound(penaltySeed, 0, 2 ether);
         // Step 3: Delegate the exit completion to the test contract.
         _test.handler_completeExit(opIdx, ethAmount, penalty);
@@ -135,7 +140,7 @@ contract AccountingHandler is StdUtils {
     function slash(uint256 opSeed, uint256 penaltySeed) external {
         // Step 1: Select operator and guard — skip if no active validators exist.
         uint256 opIdx = (opSeed % 2 == 0) ? _opOne : _opTwo;
-        uint256 active = _test.handler_activeCount(opIdx);
+        uint256 active = _test.handler_activeAvailableETH(opIdx);
         if (active == 0) return;
         // Step 2: Bound the penalty and delegate the slash to the test contract.
         uint256 penalty = bound(penaltySeed, 0.01 ether, 16 ether);

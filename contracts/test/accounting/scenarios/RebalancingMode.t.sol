@@ -11,7 +11,7 @@ contract RebalancingModeTest is AccountingInvariants {
     function testRebalancingModePreservesConservation() public {
         // Step 1: Fund river with enough ETH for 3 validators and deposit them for operator one.
         _fundRiver(6 * DEPOSIT_SIZE);
-        sim_deposit(operatorOneIndex, 3);
+        sim_deposit(operatorOneIndex, _amounts(3, DEPOSIT_SIZE));
         // Step 2: Activate all 3 validators and submit the initial normal oracle report.
         sim_activateValidators(3);
         sim_oracleReport();
@@ -26,7 +26,7 @@ contract RebalancingModeTest is AccountingInvariants {
     function testResumeAfterRebalancing() public {
         // Step 1: Fund river with enough ETH for 4 validators and deposit them for operator one.
         _fundRiver(4 * DEPOSIT_SIZE);
-        sim_deposit(operatorOneIndex, 4);
+        sim_deposit(operatorOneIndex, _amounts(4, DEPOSIT_SIZE));
         // Step 2: Activate all 4 validators and submit the initial normal oracle report.
         sim_activateValidators(4);
         sim_oracleReport();

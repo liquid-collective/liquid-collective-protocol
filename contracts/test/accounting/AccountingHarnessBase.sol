@@ -186,16 +186,24 @@ abstract contract AccountingHarnessBase is Test, BytesGenerator {
         allowlist.setAllowPermissions(addrs, masks);
     }
 
-    function _makeDeposits(uint256 opIdx, uint256 n)
+    function _makeDeposits(uint256 opIdx, uint256[] memory amounts)
         internal
         returns (IOperatorsRegistryV1.ValidatorDeposit[] memory allocs)
     {
-        allocs = new IOperatorsRegistryV1.ValidatorDeposit[](n);
-        for (uint256 i = 0; i < n; i++) {
+        allocs = new IOperatorsRegistryV1.ValidatorDeposit[](amounts.length);
+        for (uint256 i = 0; i < amounts.length; i++) {
             allocs[i] = IOperatorsRegistryV1.ValidatorDeposit({
-                operatorIndex: opIdx, pubkey: genBytes(48), signature: genBytes(96), depositAmount: DEPOSIT_SIZE
+                operatorIndex: opIdx, pubkey: genBytes(48), signature: genBytes(96), depositAmount: amounts[i]
             });
         }
         return allocs;
+    }
+
+    /// @dev Convenience: create an array of `n` identical deposit amounts.
+    function _amounts(uint256 n, uint256 amountEach) internal pure returns (uint256[] memory amounts) {
+        amounts = new uint256[](n);
+        for (uint256 i = 0; i < n; i++) {
+            amounts[i] = amountEach;
+        }
     }
 }

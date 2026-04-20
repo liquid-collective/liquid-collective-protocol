@@ -12,7 +12,7 @@ contract ExitAccountingTest is AccountingInvariants {
     function testCleanExit() public {
         // Step 1: Fund river with enough ETH for 4 validators and deposit them for operator one.
         _fundRiver(4 * DEPOSIT_SIZE);
-        sim_deposit(operatorOneIndex, 4);
+        sim_deposit(operatorOneIndex, _amounts(4, DEPOSIT_SIZE));
         // Step 2: Activate all 4 validators and submit the initial oracle report.
         sim_activateValidators(4);
         sim_oracleReport();
@@ -34,8 +34,8 @@ contract ExitAccountingTest is AccountingInvariants {
     function testTwoOperatorExits() public {
         // Step 1: Fund river for 6 validators and split deposits across both operators.
         _fundRiver(6 * DEPOSIT_SIZE);
-        sim_deposit(operatorOneIndex, 3);
-        sim_deposit(operatorTwoIndex, 3);
+        sim_deposit(operatorOneIndex, _amounts(3, DEPOSIT_SIZE));
+        sim_deposit(operatorTwoIndex, _amounts(3, DEPOSIT_SIZE));
         // Step 2: Activate all 6 validators and submit the initial oracle report.
         sim_activateValidators(6);
         sim_oracleReport();
@@ -59,7 +59,7 @@ contract ExitAccountingTest is AccountingInvariants {
     function testSlashedExit() public {
         // Step 1: Fund river for 2 validators and deposit them for operator one.
         _fundRiver(2 * DEPOSIT_SIZE);
-        sim_deposit(operatorOneIndex, 2);
+        sim_deposit(operatorOneIndex, _amounts(2, DEPOSIT_SIZE));
         // Step 2: Activate both validators and submit the initial oracle report.
         sim_activateValidators(2);
         sim_oracleReport();
@@ -82,7 +82,7 @@ contract ExitAccountingTest is AccountingInvariants {
     function testTotalDepositedETHMonotonic() public {
         // Step 1: Fund river for 3 validators and deposit them for operator one.
         _fundRiver(3 * DEPOSIT_SIZE);
-        sim_deposit(operatorOneIndex, 3);
+        sim_deposit(operatorOneIndex, _amounts(3, DEPOSIT_SIZE));
         // Step 2: Record total deposited ETH immediately after the deposit.
         uint256 totalAfterDeposit = river.getTotalDepositedETH();
         // Step 3: Activate all validators and report — total deposited must not change.

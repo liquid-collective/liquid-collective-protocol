@@ -10,7 +10,7 @@ contract SlashingContainmentTest is AccountingInvariants {
     function testSlashingContainmentModeActive() public {
         // Step 1: Fund river with enough ETH for 4 validators and deposit them for operator one.
         _fundRiver(4 * DEPOSIT_SIZE);
-        sim_deposit(operatorOneIndex, 4);
+        sim_deposit(operatorOneIndex, _amounts(4, DEPOSIT_SIZE));
         // Step 2: Activate all 4 validators and submit the initial oracle report.
         sim_activateValidators(4);
         sim_oracleReport();
@@ -31,7 +31,7 @@ contract SlashingContainmentTest is AccountingInvariants {
     function testNoExitRequestsDuringContainment() public {
         // Step 1: Fund river with enough ETH for 4 validators and deposit them for operator one.
         _fundRiver(4 * DEPOSIT_SIZE);
-        sim_deposit(operatorOneIndex, 4);
+        sim_deposit(operatorOneIndex, _amounts(4, DEPOSIT_SIZE));
         // Step 2: Activate all 4 validators and submit the initial oracle report.
         sim_activateValidators(4);
         sim_oracleReport();
@@ -53,7 +53,7 @@ contract SlashingContainmentTest is AccountingInvariants {
     function testContainmentEndAndResume() public {
         // Step 1: Fund river with enough ETH for 4 validators and deposit them for operator one.
         _fundRiver(4 * DEPOSIT_SIZE);
-        sim_deposit(operatorOneIndex, 4);
+        sim_deposit(operatorOneIndex, _amounts(4, DEPOSIT_SIZE));
         // Step 2: Activate all 4 validators and submit the initial oracle report.
         sim_activateValidators(4);
         sim_oracleReport();

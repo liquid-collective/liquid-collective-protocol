@@ -12,7 +12,7 @@ contract HappyPathTest is AccountingInvariants {
         // Step 1: Fund river with enough ETH for 3 validator deposits (3 × 32 ETH).
         _fundRiver(3 * DEPOSIT_SIZE);
         // Step 2: Deposit 3 validators for operator one; 96 ETH (3 × 32) should be in-flight.
-        sim_deposit(operatorOneIndex, 3);
+        sim_deposit(operatorOneIndex, _amounts(3, DEPOSIT_SIZE));
         assertEq(river.getInFlightDeposit(), 96 ether, "inFlight after deposit");
         // Step 3: Activate all 3 pending validators on the beacon chain simulator.
         sim_activateValidators(3);
@@ -30,8 +30,8 @@ contract HappyPathTest is AccountingInvariants {
         // Step 1: Fund river with enough ETH for 10 validator deposits (10 × 32 ETH).
         _fundRiver(10 * DEPOSIT_SIZE);
         // Step 2: Split deposits across two operators — 6 for operator one, 4 for operator two.
-        sim_deposit(operatorOneIndex, 6);
-        sim_deposit(operatorTwoIndex, 4);
+        sim_deposit(operatorOneIndex, _amounts(6, DEPOSIT_SIZE));
+        sim_deposit(operatorTwoIndex, _amounts(4, DEPOSIT_SIZE));
         // Step 3: Activate all 10 validators and submit the initial oracle report.
         sim_activateValidators(10);
         sim_oracleReport();
@@ -53,10 +53,10 @@ contract HappyPathTest is AccountingInvariants {
         // Step 1: Fund river with enough ETH for 5 validator deposits (5 × 32 ETH).
         _fundRiver(5 * DEPOSIT_SIZE);
         // Step 2: First deposit batch — 2 validators; expect 64 ETH (2 × 32) in-flight.
-        sim_deposit(operatorOneIndex, 2);
+        sim_deposit(operatorOneIndex, _amounts(2, DEPOSIT_SIZE));
         assertEq(river.getInFlightDeposit(), 64 ether, "after first batch");
         // Step 3: Second deposit batch — 3 more validators; expect 160 ETH (5 × 32) in-flight.
-        sim_deposit(operatorOneIndex, 3);
+        sim_deposit(operatorOneIndex, _amounts(3, DEPOSIT_SIZE));
         assertEq(river.getInFlightDeposit(), 160 ether, "after second batch");
         // Step 4: Activate all 5 validators.
         sim_activateValidators(5);

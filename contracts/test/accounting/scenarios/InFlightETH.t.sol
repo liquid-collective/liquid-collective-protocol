@@ -11,7 +11,7 @@ contract InFlightETHTest is AccountingInvariants {
     function testReportWithPendingValidators() public {
         // Step 1: Fund river and deposit 3 validators for operator one.
         _fundRiver(3 * DEPOSIT_SIZE);
-        sim_deposit(operatorOneIndex, 3);
+        sim_deposit(operatorOneIndex, _amounts(3, DEPOSIT_SIZE));
         // Step 2: Submit oracle report without activating validators first.
         //         Validators remain in Pending state, so in-flight ETH must be preserved.
         sim_oracleReport();
@@ -26,7 +26,7 @@ contract InFlightETHTest is AccountingInvariants {
     function testPartialActivation() public {
         // Step 1: Fund river and deposit 3 validators.
         _fundRiver(3 * DEPOSIT_SIZE);
-        sim_deposit(operatorOneIndex, 3);
+        sim_deposit(operatorOneIndex, _amounts(3, DEPOSIT_SIZE));
         // Step 2: Activate only 2 of the 3 validators, leaving 1 still pending.
         sim_activateValidators(2);
         // Step 3: Submit first oracle report; 1 validator's deposit should still be in-flight.
@@ -45,14 +45,14 @@ contract InFlightETHTest is AccountingInvariants {
     function testIncrementalDepositsBetweenReports() public {
         // Step 1: Fund river and deposit the first batch of 2 validators.
         _fundRiver(5 * DEPOSIT_SIZE);
-        sim_deposit(operatorOneIndex, 2);
+        sim_deposit(operatorOneIndex, _amounts(2, DEPOSIT_SIZE));
         // Step 2: Activate the first batch and submit the first oracle report.
         //         In-flight deposit should be zero after the report.
         sim_activateValidators(2);
         sim_oracleReport();
         assertEq(river.getInFlightDeposit(), 0);
         // Step 3: Deposit a second batch of 3 validators; 3 × 32 ETH should now be in-flight.
-        sim_deposit(operatorOneIndex, 3);
+        sim_deposit(operatorOneIndex, _amounts(3, DEPOSIT_SIZE));
         assertEq(river.getInFlightDeposit(), 3 * DEPOSIT_SIZE, "inFlight after second deposit");
         // Step 4: Activate the second batch and submit the second oracle report.
         //         In-flight deposit must clear to zero again.
@@ -68,7 +68,7 @@ contract InFlightETHTest is AccountingInvariants {
     function testReportTotalDepositedActivatedETHExceedsInFlightReverts() public {
         // Step 1: Fund river, deposit 2 validators, activate them, and report to clear in-flight.
         _fundRiver(2 * DEPOSIT_SIZE);
-        sim_deposit(operatorOneIndex, 2);
+        sim_deposit(operatorOneIndex, _amounts(2, DEPOSIT_SIZE));
         sim_activateValidators(2);
         sim_oracleReport();
         // Step 2: Build a valid report and push totalDepositedActivatedETH 1 ether above the

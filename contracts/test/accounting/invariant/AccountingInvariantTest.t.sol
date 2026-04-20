@@ -32,10 +32,11 @@ contract AccountingInvariantTest is AccountingInvariants {
     // ─── external wrappers (called by handler) ──────────────────────────────────
 
     /// @notice Delegates a deposit action from the handler to the simulator.
-    /// @param opIdx  Operator index to deposit validators for.
-    /// @param n      Number of validators to deposit.
-    function handler_deposit(uint256 opIdx, uint256 n) external {
-        sim_deposit(opIdx, n);
+    /// @param opIdx       Operator index to deposit validators for.
+    /// @param n           Number of validators to deposit.
+    /// @param amountEach  Per-validator deposit amount in wei (fuzzed, already bounded by caller).
+    function handler_deposit(uint256 opIdx, uint256 n, uint256 amountEach) external {
+        sim_deposit(opIdx, _amounts(n, amountEach));
     }
 
     /// @notice Delegates a validator activation from the handler to the simulator.
@@ -52,14 +53,14 @@ contract AccountingInvariantTest is AccountingInvariants {
 
     /// @notice Delegates a validator exit request from the handler to the simulator.
     /// @param opIdx      Operator index whose active validators should be marked as Exiting.
-    /// @param ethAmount  Total ETH to exit (must be a multiple of DEPOSIT_SIZE).
+    /// @param ethAmount  Total ETH to exit.
     function handler_requestExit(uint256 opIdx, uint256 ethAmount) external {
         sim_requestExit(opIdx, ethAmount);
     }
 
     /// @notice Delegates a validator exit completion from the handler to the simulator.
-    /// @param opIdx      Operator index whose Exiting validators should be marked as Exited.
-    /// @param ethAmount  Total ETH being returned (must be a multiple of DEPOSIT_SIZE).
+    /// @param opIdx      Operator index whose exiting validators should be marked as Exited.
+    /// @param ethAmount  Total ETH being returned.
     /// @param penalty    Exit-time penalty in wei applied to the first exiting validator.
     function handler_completeExit(uint256 opIdx, uint256 ethAmount, uint256 penalty) external {
         sim_completeExit(opIdx, ethAmount, penalty);
@@ -103,24 +104,29 @@ contract AccountingInvariantTest is AccountingInvariants {
         }
     }
 
-    /// @notice Returns the number of Active simulated validators belonging to `opIdx`.
-    ///         Used by the handler to guard `requestExit` calls (skip if none are active).
-    /// @param opIdx  Operator index to count active validators for.
-    function handler_activeCount(uint256 opIdx) external view returns (uint256 count) {
+    /// @notice Returns the total ETH available to exit for active validators of `opIdx`.
+    ///         Deducts any ETH already queued for exit (exitingETH) from each validator's balance.
+    ///         Used by the handler to guard `requestExit` calls and to bound the exit amount.
+    /// @param opIdx  Operator index to query available ETH for.
+    function handler_activeAvailableETH(uint256 opIdx) external view returns (uint256 total) {
         for (uint256 i = 0; i < _simValidators.length; i++) {
-            if (_simValidators[i].operatorIndex == opIdx && _simValidators[i].state == ValidatorState.Active) {
-                count++;
+            SimValidator storage v = _simValidators[i];
+            if (v.operatorIndex == opIdx && v.state == ValidatorState.Active) {
+                total += v.currentBalance - v.exitingETH;
             }
         }
     }
 
-    /// @notice Returns the number of Exiting simulated validators belonging to `opIdx`.
-    ///         Used by the handler to guard `completeExit` calls (skip if none are exiting).
-    /// @param opIdx  Operator index to count exiting validators for.
-    function handler_exitingCount(uint256 opIdx) external view returns (uint256 count) {
+    /// @notice Returns the total ETH currently queued for exit for validators of `opIdx`.
+    ///         Includes both partial exits (Active validators with exitingETH > 0) and
+    ///         full exits (validators in Exiting state).
+    ///         Used by the handler to guard `completeExit` calls and to bound the completion amount.
+    /// @param opIdx  Operator index to query queued exit ETH for.
+    function handler_exitingETH(uint256 opIdx) external view returns (uint256 total) {
         for (uint256 i = 0; i < _simValidators.length; i++) {
-            if (_simValidators[i].operatorIndex == opIdx && _simValidators[i].state == ValidatorState.Exiting) {
-                count++;
+            SimValidator storage v = _simValidators[i];
+            if (v.operatorIndex == opIdx) {
+                total += v.exitingETH;
             }
         }
     }

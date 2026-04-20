@@ -21,6 +21,7 @@ abstract contract BeaconChainSimulator is AccountingHarnessBase {
         uint256 depositedETH;
         uint256 currentBalance;
         ValidatorState state;
+        uint256 exitingETH;
         uint256 exitedETH;
     }
 
@@ -45,22 +46,26 @@ abstract contract BeaconChainSimulator is AccountingHarnessBase {
 
     // ─── step functions ───────────────────────────────────────────────────────
 
-    function sim_deposit(uint256 opIdx, uint256 n) internal {
-        uint256 needed = n * DEPOSIT_SIZE;
+    function sim_deposit(uint256 opIdx, uint256[] memory amounts) internal {
+        uint256 needed = 0;
+        for (uint256 i = 0; i < amounts.length; i++) {
+            needed += amounts[i];
+        }
         if (river.getCommittedBalance() < needed) {
             _fundRiver(needed - river.getCommittedBalance());
         }
         uint256 prevInFlight = river.getInFlightDeposit();
-        IOperatorsRegistryV1.ValidatorDeposit[] memory allocs = _makeDeposits(opIdx, n);
+        IOperatorsRegistryV1.ValidatorDeposit[] memory allocs = _makeDeposits(opIdx, amounts);
         vm.prank(keeper);
         river.depositToConsensusLayerWithDepositRoot(allocs, bytes32(0));
-        for (uint256 i = 0; i < n; i++) {
+        for (uint256 i = 0; i < amounts.length; i++) {
             _simValidators.push(
                 SimValidator({
                     operatorIndex: opIdx,
-                    depositedETH: DEPOSIT_SIZE,
-                    currentBalance: DEPOSIT_SIZE,
+                    depositedETH: amounts[i],
+                    currentBalance: amounts[i],
                     state: ValidatorState.Pending,
+                    exitingETH: 0,
                     exitedETH: 0
                 })
             );
@@ -74,11 +79,11 @@ abstract contract BeaconChainSimulator is AccountingHarnessBase {
         for (uint256 i = 0; i < _simValidators.length && activated < n; i++) {
             if (_simValidators[i].state == ValidatorState.Pending) {
                 _simValidators[i].state = ValidatorState.Active;
+                _simTotalDepositedActivatedETH += _simValidators[i].depositedETH;
                 activated++;
             }
         }
         assertEq(activated, n, "sim_activateValidators: insufficient pending validators");
-        _simTotalDepositedActivatedETH += n * DEPOSIT_SIZE;
     }
 
     function sim_advanceEpoch(uint256 rewardsPerValidator) internal {
@@ -93,40 +98,50 @@ abstract contract BeaconChainSimulator is AccountingHarnessBase {
     }
 
     function sim_requestExit(uint256 opIdx, uint256 ethAmount) internal {
-        require(ethAmount % DEPOSIT_SIZE == 0, "sim_requestExit: must be multiple of DEPOSIT_SIZE");
         uint256 remaining = ethAmount;
         for (uint256 i = 0; i < _simValidators.length && remaining > 0; i++) {
             SimValidator storage v = _simValidators[i];
-            if (v.operatorIndex == opIdx && v.state == ValidatorState.Active) {
-                v.state = ValidatorState.Exiting;
-                remaining -= DEPOSIT_SIZE;
-            }
+            if (v.operatorIndex != opIdx || v.state != ValidatorState.Active) continue;
+
+            uint256 available = v.currentBalance - v.exitingETH;
+            if (available == 0) continue;
+
+            uint256 toQueue = available < remaining ? available : remaining;
+            v.exitingETH += toQueue;
+            remaining -= toQueue;
+
+            if (v.exitingETH == v.currentBalance) v.state = ValidatorState.Exiting;
         }
-        assertEq(remaining, 0, "sim_requestExit: insufficient active validators");
+        assertEq(remaining, 0, "sim_requestExit: insufficient active ETH");
     }
 
-    /// @dev Completes the exit of `ethAmount / DEPOSIT_SIZE` validators belonging to `opIdx`.
-    ///      `penalty` is an ADDITIONAL exit-time deduction applied only to the first validator,
+    /// @dev Completes the exit of `ethAmount` wei belonging to `opIdx`.
+    ///      Handles both partial exits (active validators with exitingETH > 0) and full exits.
+    ///      `penalty` is an ADDITIONAL exit-time deduction applied only to the first exiting chunk,
     ///      on top of any slash already reflected in `v.currentBalance`.
     ///      For cleanly-exiting validators, `penalty` should be 0.
     function sim_completeExit(uint256 opIdx, uint256 ethAmount, uint256 penalty) internal {
-        require(ethAmount % DEPOSIT_SIZE == 0, "sim_completeExit: must be multiple of DEPOSIT_SIZE");
-        uint256 toExit = ethAmount / DEPOSIT_SIZE;
-        uint256 done = 0;
-        for (uint256 i = 0; i < _simValidators.length && done < toExit; i++) {
+        uint256 remaining = ethAmount;
+        bool penaltyApplied = false;
+        for (uint256 i = 0; i < _simValidators.length && remaining > 0; i++) {
             SimValidator storage v = _simValidators[i];
-            if (v.operatorIndex == opIdx && v.state == ValidatorState.Exiting) {
-                // currentBalance already reflects any prior slash; penalty is an additional
-                // exit-time deduction (e.g. a partial withdrawal not yet swept).
-                uint256 thisPenalty = (done == 0) ? penalty : 0;
-                v.exitedETH = v.currentBalance - thisPenalty; // currentBalance already reflects any prior slash
-                v.currentBalance = 0;
-                v.state = ValidatorState.Exited;
-                _simCumulativeExited += v.exitedETH;
-                done++;
-            }
+            if (v.operatorIndex != opIdx || v.exitingETH == 0) continue;
+
+            uint256 toComplete = v.exitingETH < remaining ? v.exitingETH : remaining;
+            uint256 thisPenalty = (!penaltyApplied && penalty > 0) ? penalty : 0;
+            if (thisPenalty > toComplete) thisPenalty = toComplete;
+            penaltyApplied = penaltyApplied || thisPenalty > 0;
+
+            uint256 actualExited = toComplete - thisPenalty;
+            v.currentBalance -= toComplete;
+            v.exitingETH -= toComplete;
+            v.exitedETH += actualExited;
+            _simCumulativeExited += actualExited;
+            remaining -= toComplete;
+
+            if (v.currentBalance == 0) v.state = ValidatorState.Exited;
         }
-        assertEq(done, toExit, "sim_completeExit: insufficient exiting validators");
+        assertEq(remaining, 0, "sim_completeExit: insufficient exiting ETH");
     }
 
     function sim_slash(uint256 opIdx, uint256 penalty) internal {
@@ -194,6 +209,7 @@ abstract contract BeaconChainSimulator is AccountingHarnessBase {
                 validatorsBalance += v.currentBalance;
                 activeCLETHArr[v.operatorIndex] += v.currentBalance;
                 activatedCount++;
+                if (v.exitingETH > 0) validatorsExiting += v.exitingETH;
             } else if (v.state == ValidatorState.Exiting) {
                 validatorsBalance += v.currentBalance;
                 validatorsExiting += v.currentBalance;
@@ -201,6 +217,9 @@ abstract contract BeaconChainSimulator is AccountingHarnessBase {
                 activatedCount++;
             } else if (v.state == ValidatorState.Exited) {
                 activatedCount++;
+            }
+            // Cumulative exited ETH tracked per-operator across all partial and full exits
+            if (v.state != ValidatorState.Pending && v.exitedETH > 0) {
                 exitedArr[v.operatorIndex + 1] += v.exitedETH;
                 cumulativeExited += v.exitedETH;
             }
