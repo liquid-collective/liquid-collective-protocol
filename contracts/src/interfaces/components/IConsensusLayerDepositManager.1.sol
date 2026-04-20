@@ -75,8 +75,12 @@ interface IConsensusLayerDepositManagerV1 {
     /// @return The keeper address
     function getKeeper() external view returns (address);
 
-    /// @notice Deposits current balance to the Consensus Layer based on explicit operator allocations
-    /// @param _allocations The operator allocations specifying how many validators per operator
+    /// @notice Deposits current balance to the Consensus Layer based on explicit validator deposits allocations
+    /// @dev Security: the keeper is fully trusted to supply correct validator public keys, signatures, and
+    ///      operator assignments. The contract enforces deposit amount, balance limits, operator ordering, and
+    ///      withdrawal credentials, but does not validate BLS key correctness or that keys belong to the claimed
+    ///      operator.
+    /// @param _allocations The allocations specifying the validator deposits to make
     /// @param _depositRoot The root of the deposit tree
     function depositToConsensusLayerWithDepositRoot(
         IOperatorsRegistryV1.ValidatorDeposit[] calldata _allocations,

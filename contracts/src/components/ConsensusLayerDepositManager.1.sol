@@ -103,14 +103,17 @@ abstract contract ConsensusLayerDepositManagerV1 is IConsensusLayerDepositManage
         if (committedBalance == 0) {
             revert NotEnoughFunds();
         }
-        // Calculate total deposits and validate key lengths + operator ordering in a single pass
+        // Validate operator ordering before using the last element's index to size arrays
+        for (uint256 i = 1; i < _allocations.length; ++i) {
+            if (_allocations[i].operatorIndex < _allocations[i - 1].operatorIndex) {
+                revert IOperatorsRegistryV1.UnorderedOperatorList();
+            }
+        }
+        // Calculate total deposits and validate key lengths in a single pass
         uint256 totalDeposits = 0;
         uint256[] memory publicKeyCountPerOperator =
             new uint256[](_allocations[_allocations.length - 1].operatorIndex + 1);
         for (uint256 i = 0; i < _allocations.length; ++i) {
-            if (i > 0 && _allocations[i].operatorIndex < _allocations[i - 1].operatorIndex) {
-                revert IOperatorsRegistryV1.UnorderedOperatorList();
-            }
             if (_allocations[i].pubkey.length != PUBLIC_KEY_LENGTH) {
                 revert InconsistentPublicKey();
             }

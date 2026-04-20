@@ -2,9 +2,11 @@
 pragma solidity 0.8.34;
 
 import "../state/operatorsRegistry/Operators.3.sol";
+import "../state/operatorsRegistry/Operators.3.sol";
 
 /// @title Operators Registry Interface (v1)
 /// @author Alluvial Finance Inc.
+/// @notice This interface exposes methods to handle the list of operators
 /// @notice This interface exposes methods to handle the list of operators
 interface IOperatorsRegistryV1 {
     /// @notice Structure representing a validator deposit

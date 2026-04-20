@@ -621,9 +621,8 @@ contract OperatorsRegistryV1Tests is OperatorsRegistryV1TestBase, OperatorAlloca
         // Pre-initialize exited ETH array and activeCLETH so _setExitedETH doesn't panic.
         OperatorsRegistryInitializableV1(address(operatorsRegistry)).sudoSetRawExitedETH(new uint256[](len + 1));
         for (uint256 idx2 = 0; idx2 < len; ++idx2) {
-            OperatorsRegistryInitializableV1(address(operatorsRegistry)).sudoSetActiveCLETH(
-                idx2, uint256(totalCount) * 32 ether
-            );
+            OperatorsRegistryInitializableV1(address(operatorsRegistry))
+                .sudoSetActiveCLETH(idx2, uint256(totalCount) * 32 ether);
         }
 
         vm.prank(river);
@@ -678,9 +677,8 @@ contract OperatorsRegistryV1Tests is OperatorsRegistryV1TestBase, OperatorAlloca
         // Pre-initialize exited ETH array and activeCLETH so _setExitedETH doesn't panic.
         OperatorsRegistryInitializableV1(address(operatorsRegistry)).sudoSetRawExitedETH(new uint256[](len + 1));
         for (uint256 idx2 = 0; idx2 < len; ++idx2) {
-            OperatorsRegistryInitializableV1(address(operatorsRegistry)).sudoSetActiveCLETH(
-                idx2, uint256(totalCount) * 32 ether
-            );
+            OperatorsRegistryInitializableV1(address(operatorsRegistry))
+                .sudoSetActiveCLETH(idx2, uint256(totalCount) * 32 ether);
         }
 
         // Make the total mismatch
@@ -1063,11 +1061,11 @@ contract OperatorsRegistryV1ExitCorrectnessTests is OperatorAllocationTestBase {
     // TEST 5: Deposit then exit end-to-end
     // ──────────────────────────────────────────────────────────────────────
 
-    /// @notice Combined flow: deposit validators via BYOV allocation, then exit some,
+    /// @notice Combined flow: deposit validators via incrementFundedValidators, then exit some,
     ///         then simulate validators stopping, then deposit more.
     ///         Verifies funded and requestedExits are both correct throughout.
     ///
-    ///         Key invariant: getAllFundable() requires stoppedCount >= requestedExits
+    ///         Key invariant: incrementFundedValidators requires stoppedCount >= requestedExits
     ///         for an operator to be eligible for new deposits. This means you can't
     ///         deposit to an operator with pending (unfulfilled) exit requests until
     ///         those validators have actually stopped.
@@ -1240,7 +1238,9 @@ contract OperatorsRegistryV1ExitCorrectnessTests is OperatorAllocationTestBase {
     // TEST 9: Stopped validators exceeding requestedExits bumps requestedExits
     // ──────────────────────────────────────────────────────────────────────
 
-    event UpdatedRequestedETHExitsUponStopped(uint256 indexed index, uint256 oldRequestedExits, uint256 newRequestedExits);
+    event UpdatedRequestedETHExitsUponStopped(
+        uint256 indexed index, uint256 oldRequestedExits, uint256 newRequestedExits
+    );
 
     /// @notice When reported exited ETH exceeds an operator's requestedExits,
     ///         requestedExits is bumped to match the exited ETH, the unsolicited
@@ -1729,7 +1729,9 @@ contract OperatorsRegistryV1CoverageTests is OperatorsRegistryV1TestBase, Operat
         second[0] = 3 * 32 ether;
         second[1] = 3 * 32 ether;
         vm.expectRevert(
-            abi.encodeWithSignature("ExitedETHExceedsPriorCLETH(uint256,uint256,uint256)", 0, 3 * 32 ether, 2 * 32 ether)
+            abi.encodeWithSignature(
+                "ExitedETHExceedsPriorCLETH(uint256,uint256,uint256)", 0, 3 * 32 ether, 2 * 32 ether
+            )
         );
         reg.reportExitedETH(second, 4 * 32 ether);
     }

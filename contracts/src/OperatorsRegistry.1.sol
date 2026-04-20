@@ -60,7 +60,13 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
         }
 
         uint32[] memory stoppedValidators = OperatorsV2.getStoppedValidators();
-        uint256[] memory exitedETH = new uint256[](stoppedValidators.length);
+        // Ensure the array has at least opCount + 1 entries (sum + one per operator) so that
+        // getExitedETHPerOperator() always returns an array of length opCount after stripping the sum.
+        uint256 exitedETHLength = opCount + 1;
+        if (stoppedValidators.length > exitedETHLength) {
+            exitedETHLength = stoppedValidators.length;
+        }
+        uint256[] memory exitedETH = new uint256[](exitedETHLength);
 
         for (uint256 idx = 0; idx < stoppedValidators.length; ++idx) {
             exitedETH[idx] = stoppedValidators[idx] * DEPOSIT_SIZE;

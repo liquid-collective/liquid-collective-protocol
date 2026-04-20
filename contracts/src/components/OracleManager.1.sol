@@ -431,7 +431,7 @@ abstract contract OracleManagerV1 is IOracleManagerV1 {
         if (vars.trace.rewards > 0) {
             _onEarnings(vars.trace.rewards);
         }
-        
+
         _requestExitsBasedOnRedeemDemandAfterRebalancings(
             _report.validatorsExitingBalance,
             _report.exitedETHPerOperator,
@@ -439,7 +439,7 @@ abstract contract OracleManagerV1 is IOracleManagerV1 {
             _report.rebalanceDepositToRedeemMode,
             _report.slashingContainmentMode
         );
-        
+
         _reportCLETH(_report.activeCLETHPerOperator);
 
         // we use the updated balanceToRedeem value to report a withdraw event on the redeem manager
