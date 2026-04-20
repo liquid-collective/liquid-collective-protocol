@@ -39,11 +39,6 @@ contract OperatorsRegistryWithOverridesV1 is OperatorsRegistryV1 {
         OperatorsV3.Operator storage op = OperatorsV3.get(_index);
         op.activeCLETH = _activeCLETH;
     }
-
-    function sudoSetFunded(uint256 _index, uint32 _funded) external {
-        OperatorsV3.Operator storage operator = OperatorsV3.get(_index);
-        operator.funded = _funded;
-    }
 }
 
 contract RiverV1ForceCommittable is RiverV1 {
