@@ -151,8 +151,9 @@ interface IOperatorsRegistryV1 {
     /// @param priorActiveCL The active ETH(wei) on CL of the operator in the previous oracle report
     error ExitedETHExceedsPriorCLETH(uint256 operatorIndex, uint256 exitedETH, uint256 priorActiveCL);
 
-    /// @notice Thrown when an allocation with zero ETH amount is provided
-    error AllocationWithZeroETHAmount();
+    /// @notice Thrown when an allocation with an incorrect ETH amount is provided
+    /// @param ethAmount The incorrect ETH(wei) amount
+    error AllocationWithIncorrectAmount(uint256 ethAmount);
 
     /// @notice Initializes the operators registry
     /// @param _admin Admin in charge of managing operators
@@ -247,7 +248,7 @@ interface IOperatorsRegistryV1 {
     /// @dev Each allocation's ethAmount must be non-zero and not exceed the operator's available funded-but-not-yet-exited ETH amount
     /// @dev The total requested exits across all allocations must not exceed the current ETH exit demand
     /// @dev Reverts with InvalidEmptyArray if _allocations is empty
-    /// @dev Reverts with AllocationWithZeroETHAmount if any allocation has a zero ETH amount
+    /// @dev Reverts with AllocationWithIncorrectAmount if any allocation has an ETH amount less than 1 ether
     /// @dev Reverts with UnorderedOperatorList if operator indexes are not strictly ascending
     /// @dev Reverts with InactiveOperator if a referenced operator is inactive
     /// @dev Reverts with ExitsRequestedExceedAvailableFundedAmount if count exceeds funded minus requestedExits for an operator

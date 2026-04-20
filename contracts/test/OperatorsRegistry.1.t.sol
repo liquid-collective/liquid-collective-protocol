@@ -1617,7 +1617,7 @@ contract OperatorsRegistryV1CoverageTests is OperatorsRegistryV1TestBase, Operat
         reg.requestETHExits(empty);
     }
 
-    /// Asserts that requestETHExits reverts with AllocationWithZeroETHAmount when an allocation has zero ethAmount.
+    /// Asserts that requestETHExits reverts with AllocationWithIncorrectAmount when an allocation has an incorrect ethAmount.
     function testrequestETHExitsRevertsOnZeroETHAmount() public {
         reg.initOperatorsRegistryV1(admin, river);
         vm.prank(admin);
@@ -1626,7 +1626,7 @@ contract OperatorsRegistryV1CoverageTests is OperatorsRegistryV1TestBase, Operat
         IOperatorsRegistryV1.ExitETHAllocation[] memory allocs = new IOperatorsRegistryV1.ExitETHAllocation[](1);
         allocs[0] = IOperatorsRegistryV1.ExitETHAllocation({operatorIndex: 0, ethAmount: 0});
         vm.prank(keeper);
-        vm.expectRevert(abi.encodeWithSignature("AllocationWithZeroETHAmount()"));
+        vm.expectRevert(abi.encodeWithSignature("AllocationWithIncorrectAmount(uint256)", 0));
         reg.requestETHExits(allocs);
     }
 

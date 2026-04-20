@@ -27,6 +27,8 @@ import "./state/shared/RiverAddress.sol";
 contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrable, IProtocolVersion {
     uint256 private constant DEPOSIT_SIZE = 32 ether;
 
+    uint256 private constant MIN_ETH_AMOUNT = 1 ether;
+
     /// @inheritdoc IOperatorsRegistryV1
     function initOperatorsRegistryV1(address _admin, address _river) external init(0) {
         _setAdmin(_admin);
@@ -259,8 +261,8 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
             uint256 operatorIndex = _allocations[i].operatorIndex;
             uint256 ethAmount = _allocations[i].ethAmount;
 
-            if (ethAmount == 0) {
-                revert AllocationWithZeroETHAmount();
+            if (ethAmount < MIN_ETH_AMOUNT) {
+                revert AllocationWithIncorrectAmount(ethAmount);
             }
             if (i > 0 && !(operatorIndex > _allocations[i - 1].operatorIndex)) {
                 revert UnorderedOperatorList();
@@ -291,12 +293,9 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
             revert ExitsRequestedExceedDemand(requestedETHAmount, currentETHExitsDemand);
         }
 
-        uint256 savedCurrentETHExitsDemand = currentETHExitsDemand;
-        currentETHExitsDemand -= requestedETHAmount;
-
         uint256 totalETHExitsRequested = TotalETHExitsRequested.get();
         _setTotalETHExitsRequested(totalETHExitsRequested, totalETHExitsRequested + requestedETHAmount);
-        _setCurrentETHExitsDemand(savedCurrentETHExitsDemand, currentETHExitsDemand);
+        _setCurrentETHExitsDemand(currentETHExitsDemand, currentETHExitsDemand - requestedETHAmount);
     }
 
     /// @inheritdoc IOperatorsRegistryV1

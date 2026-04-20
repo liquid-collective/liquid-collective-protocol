@@ -12,12 +12,6 @@ interface IOracleManagerV1 {
     /// @param oracleAddress The new oracle address
     event SetOracle(address indexed oracleAddress);
 
-    /// @notice The consensus layer data provided by the oracle has been updated
-    /// @param validatorCount The new count of validators running on the consensus layer
-    /// @param validatorTotalBalance The new total balance sum of all validators
-    /// @param roundId Round identifier
-    event ConsensusLayerDataUpdate(uint256 validatorCount, uint256 validatorTotalBalance, bytes32 roundId);
-
     /// @notice The Consensus Layer Spec is changed
     /// @param epochsPerFrame The number of epochs inside a frame
     /// @param slotsPerEpoch The number of slots inside an epoch
