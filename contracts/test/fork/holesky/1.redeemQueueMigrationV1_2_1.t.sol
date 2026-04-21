@@ -27,7 +27,7 @@ contract RedeemQueueMigrationV1_2 is Test {
     address internal constant REDEEM_MANAGER_STAGING_PROXY_ADMIN_ADDRESS = 0x80Cf8bD4abf6C078C313f72588720AB86d45c5E6;
 
     function setUp() external {
-        try vm.envString("TENDERLY_URL") returns (string memory rpcUrl) {
+        try vm.envString("TENDERLY_RPC_URL") returns (string memory rpcUrl) {
             _rpcUrl = rpcUrl;
             vm.createSelectFork(rpcUrl, 2440752);
             console.log("1.RedeemQueueMigrationV1_2.t.sol is active");
