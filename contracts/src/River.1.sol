@@ -582,7 +582,7 @@ contract RiverV1 is
                     totalRequestedExitAmounts > totalExitedETH ? (totalRequestedExitAmounts - totalExitedETH) : 0;
 
                 if (availableBalanceToRedeem + _exitingBalance + preExitingBalance < redeemManagerDemandInEth) {
-                    uint256 exitAmountToRequest = LibUint256.min(
+                    uint256 exitAmountToRequest = LibUint256.max(
                         redeemManagerDemandInEth - (availableBalanceToRedeem + _exitingBalance + preExitingBalance),
                         1 ether
                     );

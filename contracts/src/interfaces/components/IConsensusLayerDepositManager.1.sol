@@ -79,7 +79,7 @@ interface IConsensusLayerDepositManagerV1 {
     /// @dev Security: the keeper is fully trusted to supply correct validator public keys, signatures, and
     ///      operator assignments. The contract enforces deposit amount, balance limits, operator ordering, and
     ///      withdrawal credentials, but does not validate BLS key correctness or that keys belong to the claimed
-    ///      operator.
+    ///      operator. The keeper is also trusted to make deposits of the correct sizes.
     /// @param _allocations The allocations specifying the validator deposits to make
     /// @param _depositRoot The root of the deposit tree
     function depositToConsensusLayerWithDepositRoot(

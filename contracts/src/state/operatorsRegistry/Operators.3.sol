@@ -13,8 +13,6 @@ library OperatorsV3 {
 
     /// @notice The Operator structure in storage
     struct Operator {
-        /// @dev The following values respect this invariant:
-
         /// @custom:attribute The cumulative amount of funded ETH(wei)
         uint256 funded;
         /// @custom:attribute The cumulative amount of requested ETH(wei) exits
