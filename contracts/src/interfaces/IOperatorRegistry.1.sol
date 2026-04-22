@@ -117,7 +117,7 @@ interface IOperatorsRegistryV1 {
     error ExitedETHSumMismatch();
 
     /// @notice Thrown when the amount of exited ETH is too high compared to the total deposited ETH
-    error ExitedETHExceedsDeposited();
+    error ExitedETHExceedsDepositedETH();
 
     /// @notice Thrown when the number of exited ETH is too high compared to operator count
     error ExitedETHArrayLengthExceedsOperatorCount();

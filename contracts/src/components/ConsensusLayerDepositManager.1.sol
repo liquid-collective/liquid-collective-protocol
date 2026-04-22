@@ -181,7 +181,7 @@ abstract contract ConsensusLayerDepositManagerV1 is IConsensusLayerDepositManage
         bytes32 _withdrawalCredentials,
         address _depositContract
     ) internal {
-        if (_depositAmount < 1 ether || _depositAmount > 2048 ether) {
+        if (_depositAmount < 1 ether || _depositAmount > 2048 ether || _depositAmount % 1 gwei != 0) {
             revert InvalidDepositSize(_depositAmount);
         }
         uint256 depositAmount = _depositAmount / 1 gwei;

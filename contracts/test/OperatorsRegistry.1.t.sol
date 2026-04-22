@@ -1699,7 +1699,7 @@ contract OperatorsRegistryV1CoverageTests is OperatorsRegistryV1TestBase, Operat
         reg.reportExitedETH(shorter, 10 * 32 ether);
     }
 
-    /// Asserts that reportExitedETH reverts with ExitedETHExceedsDeposited when sum of exited ETH exceeds totalDepositedETH.
+    /// Asserts that reportExitedETH reverts with ExitedETHExceedsDepositedETH when sum of exited ETH exceeds totalDepositedETH.
     function testReportExitedETHRevertsWhenExceedsDeposited() public {
         reg.initOperatorsRegistryV1(admin, river);
         vm.prank(admin);
@@ -1710,7 +1710,7 @@ contract OperatorsRegistryV1CoverageTests is OperatorsRegistryV1TestBase, Operat
         uint256[] memory exited = new uint256[](2);
         exited[0] = 3 * 32 ether;
         exited[1] = 3 * 32 ether;
-        vm.expectRevert(abi.encodeWithSignature("ExitedETHExceedsDeposited()"));
+        vm.expectRevert(abi.encodeWithSignature("ExitedETHExceedsDepositedETH()"));
         reg.reportExitedETH(exited, 2 * 32 ether);
     }
 
