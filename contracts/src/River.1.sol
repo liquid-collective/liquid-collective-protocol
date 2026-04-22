@@ -127,7 +127,7 @@ contract RiverV1 is
     }
 
     /// @inheritdoc IRiverV1
-    function initRiverV1_3() external init(3) {
+    function initRiverV1_3() external init(3) onlyAdmin {
         IOracleManagerV1.StoredConsensusLayerReport storage lastReport = LastConsensusLayerReport.get();
         uint32 clValidatorCount = lastReport.validatorsCount;
         uint256 depositedValidatorCount = DepositedValidatorCount.get();
@@ -582,8 +582,10 @@ contract RiverV1 is
                     totalRequestedExitAmounts > totalExitedETH ? (totalRequestedExitAmounts - totalExitedETH) : 0;
 
                 if (availableBalanceToRedeem + _exitingBalance + preExitingBalance < redeemManagerDemandInEth) {
-                    uint256 exitAmountToRequest =
-                        redeemManagerDemandInEth - (availableBalanceToRedeem + _exitingBalance + preExitingBalance);
+                    uint256 exitAmountToRequest = LibUint256.min(
+                        redeemManagerDemandInEth - (availableBalanceToRedeem + _exitingBalance + preExitingBalance),
+                        1 ether
+                    );
 
                     // we demand the exits based on the total available ETH on the consensus layer
                     // we don't include the ETH that is present on river as have already rebalanced it

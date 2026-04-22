@@ -141,6 +141,7 @@ abstract contract AccountingHarnessBase is Test, BytesGenerator {
             MAX_DAILY_REL
         );
         river.initRiverV1_2();
+        vm.prank(admin);
         river.initRiverV1_3();
 
         withdraw.initializeWithdrawV1(address(river));

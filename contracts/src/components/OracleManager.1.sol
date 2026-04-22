@@ -439,10 +439,14 @@ abstract contract OracleManagerV1 is IOracleManagerV1 {
 
         _reportCLETH(_report.activeCLETHPerOperator);
 
+        uint256 base = _report.validatorsBalance + InFlightDeposit.get();
+        uint256 totalAvailableCLETH =
+            base > _report.validatorsExitingBalance ? base - _report.validatorsExitingBalance : 0;
+
         _requestExitsBasedOnRedeemDemandAfterRebalancings(
             _report.validatorsExitingBalance,
             _report.exitedETHPerOperator,
-            _report.validatorsBalance + InFlightDeposit.get() - _report.validatorsExitingBalance,
+            totalAvailableCLETH,
             _report.rebalanceDepositToRedeemMode,
             _report.slashingContainmentMode
         );

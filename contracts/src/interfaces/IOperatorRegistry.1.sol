@@ -78,7 +78,7 @@ interface IOperatorsRegistryV1 {
     /// @notice The operator exited ETH has been set
     /// @param index The operator index
     /// @param exitedETH The exited ETH(wei)
-    event SetOperatorExitedETH(uint256 indexedindex, uint256 exitedETH);
+    event SetOperatorExitedETH(uint256 indexed index, uint256 exitedETH);
 
     /// @notice The exited ETH have been updated
     /// @param exitedETH The exited ETH(wei) per operator
@@ -208,6 +208,8 @@ interface IOperatorsRegistryV1 {
     function incrementFundedETH(uint256[] calldata _fundedETH, bytes[][] calldata _publicKeys) external;
 
     /// @notice Updates the active CL ETH for each node operator in the Operators Registry
+    /// @dev We assume that the oracle would report the correct active CL ETH amounts for each operator.
+    ///      The trust lies in the assumption that the quorum of oracle members cannot be compromised.
     /// @param _activeCLETH The array of active ETH(wei) amounts per operator
     function reportCLETH(uint256[] calldata _activeCLETH) external;
 
@@ -263,6 +265,5 @@ interface IOperatorsRegistryV1 {
     /// @param _exitAmountToRequest The amount of exit requests to add to the demand
     /// @param _totalAvailableCLETH The total available ETH(wei) on the consensus layer which includes the InFlightDeposit amount and excludes the exiting balance
     /// @dev This method is only callable by the river contract
-    /// @dev Reverts with InvalidExitAmount if the exit amount to request is greater than the total available ETH minus the current exit request demand
     function demandETHExits(uint256 _exitAmountToRequest, uint256 _totalAvailableCLETH) external;
 }

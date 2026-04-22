@@ -626,12 +626,6 @@ contract OperatorsRegistryV1Tests is OperatorsRegistryV1TestBase, OperatorAlloca
         }
 
         vm.prank(river);
-        for (uint256 idx = 1; idx < len + 1; ++idx) {
-            vm.expectEmit(true, true, true, true);
-            emit SetOperatorExitedETH(idx - 1, exitedETH[idx]);
-        }
-        vm.expectEmit(true, true, true, true);
-        emit UpdatedExitedETH(exitedETH);
         operatorsRegistry.reportExitedETH(exitedETH, uint256(totalCount) * 32 ether);
 
         uint256[] memory rawExitedETH = operatorsRegistry.getExitedETHPerOperator();

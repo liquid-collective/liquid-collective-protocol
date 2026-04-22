@@ -304,8 +304,10 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
     /// @inheritdoc IOperatorsRegistryV1
     function demandETHExits(uint256 _exitAmountToRequest, uint256 _totalAvailableCLETH) external onlyRiver {
         uint256 currentETHExitsDemand = CurrentETHExitsDemand.get();
+        uint256 availableCLETHAfterCurrentETHExitsDemand =
+            _totalAvailableCLETH > currentETHExitsDemand ? _totalAvailableCLETH - currentETHExitsDemand : 0;
         // capping the new exit demand so total "requested + demanded" never exceeds deposited ETH(wei)
-        _exitAmountToRequest = LibUint256.min(_exitAmountToRequest, _totalAvailableCLETH - currentETHExitsDemand);
+        _exitAmountToRequest = LibUint256.min(_exitAmountToRequest, availableCLETHAfterCurrentETHExitsDemand);
         if (_exitAmountToRequest > 0) {
             _setCurrentETHExitsDemand(currentETHExitsDemand, currentETHExitsDemand + _exitAmountToRequest);
         }
