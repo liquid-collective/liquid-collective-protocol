@@ -92,6 +92,11 @@ interface IOracleManagerV1 {
         uint256 currentValidatorsSkimmedBalance, uint256 newValidatorsSkimmedBalance
     );
 
+    /// @notice The reported validator count is decreasing
+    /// @param reportedValidatorCount The reported validator count
+    /// @param lastReportedValidatorCount The last reported validator count
+    error InvalidValidatorCountReport(uint256 reportedValidatorCount, uint256 lastReportedValidatorCount);
+
     /// @notice Trace structure emitted via logs during reporting
     struct ConsensusLayerDataReportingTrace {
         uint256 rewards;

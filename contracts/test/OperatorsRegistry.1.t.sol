@@ -812,7 +812,7 @@ contract OperatorsRegistryV1ExitCorrectnessTests is OperatorAllocationTestBase {
 
         // Set demand to 100 validators (100 * 32 ETH)
         vm.prank(river);
-        operatorsRegistry.demandETHExits(100 * 32 ether, 250 * 32 ether, 0);
+        operatorsRegistry.demandETHExits(100 * 32 ether, 250 * 32 ether);
         assertEq(operatorsRegistry.getCurrentETHExitsDemand(), 100 * 32 ether);
 
         // Round 1: exit 10 from each of ops 0,1,2
@@ -874,7 +874,7 @@ contract OperatorsRegistryV1ExitCorrectnessTests is OperatorAllocationTestBase {
         _fundAllOperators();
 
         vm.prank(river);
-        operatorsRegistry.demandETHExits(30 * 32 ether, 250 * 32 ether, 0);
+        operatorsRegistry.demandETHExits(30 * 32 ether, 250 * 32 ether);
 
         uint256[] memory ops = new uint256[](2);
         ops[0] = 0;
@@ -910,7 +910,7 @@ contract OperatorsRegistryV1ExitCorrectnessTests is OperatorAllocationTestBase {
         _fundAllOperators();
 
         vm.prank(river);
-        operatorsRegistry.demandETHExits(100 * 32 ether, 250 * 32 ether, 0);
+        operatorsRegistry.demandETHExits(100 * 32 ether, 250 * 32 ether);
         assertEq(operatorsRegistry.getCurrentETHExitsDemand(), 100 * 32 ether);
         assertEq(operatorsRegistry.getTotalETHExitsRequested(), 0);
 
@@ -968,7 +968,7 @@ contract OperatorsRegistryV1ExitCorrectnessTests is OperatorAllocationTestBase {
 
         // Step 1: Create demand for 200 exits (200 * 32 ETH)
         vm.prank(river);
-        operatorsRegistry.demandETHExits(200 * 32 ether, 250 * 32 ether, 0);
+        operatorsRegistry.demandETHExits(200 * 32 ether, 250 * 32 ether);
         assertEq(operatorsRegistry.getCurrentETHExitsDemand(), 200 * 32 ether);
         assertEq(operatorsRegistry.getTotalETHExitsRequested(), 0);
 
@@ -1135,15 +1135,15 @@ contract OperatorsRegistryV1ExitCorrectnessTests is OperatorAllocationTestBase {
     // }
 
     // ──────────────────────────────────────────────────────────────────────
-    // TEST 6: ExitsRequestedExceedDemand by one
+    // TEST 6: ExitsRequestedExceedExitDemand by one
     // ──────────────────────────────────────────────────────────────────────
 
     /// @notice Demand is 10. Request exactly 11 exits (1 over). Verify the exact error parameters.
-    function testExitsRequestedExceedDemandByOne() external {
+    function testExitsRequestedExceedExitDemandByOne() external {
         _fundAllOperators();
 
         vm.prank(river);
-        operatorsRegistry.demandETHExits(10 * 32 ether, 250 * 32 ether, 0);
+        operatorsRegistry.demandETHExits(10 * 32 ether, 250 * 32 ether);
         assertEq(operatorsRegistry.getCurrentETHExitsDemand(), 10 * 32 ether);
 
         // Request 11 total (all from op0) -- 1 over demand
@@ -1154,7 +1154,7 @@ contract OperatorsRegistryV1ExitCorrectnessTests is OperatorAllocationTestBase {
 
         vm.expectRevert(
             abi.encodeWithSignature(
-                "ExitsRequestedExceedDemand(uint256,uint256)", uint256(11) * 32 ether, uint256(10) * 32 ether
+                "ExitsRequestedExceedExitDemand(uint256,uint256)", uint256(11) * 32 ether, uint256(10) * 32 ether
             )
         );
         vm.prank(keeper);
@@ -1162,15 +1162,15 @@ contract OperatorsRegistryV1ExitCorrectnessTests is OperatorAllocationTestBase {
     }
 
     // ──────────────────────────────────────────────────────────────────────
-    // TEST 7: ExitsRequestedExceedDemand after partial fulfillment
+    // TEST 7: ExitsRequestedExceedExitDemand after partial fulfillment
     // ──────────────────────────────────────────────────────────────────────
 
     /// @notice Demand is 20. First call fulfills 15. Second call tries to exit 10 (5 over remaining 5).
-    function testExitsRequestedExceedDemandAfterPartialFulfillment() external {
+    function testExitsRequestedExceedExitDemandAfterPartialFulfillment() external {
         _fundAllOperators();
 
         vm.prank(river);
-        operatorsRegistry.demandETHExits(20 * 32 ether, 250 * 32 ether, 0);
+        operatorsRegistry.demandETHExits(20 * 32 ether, 250 * 32 ether);
         assertEq(operatorsRegistry.getCurrentETHExitsDemand(), 20 * 32 ether);
 
         // First call: fulfill 15 (5 from each of ops 0,1,2)
@@ -1195,7 +1195,7 @@ contract OperatorsRegistryV1ExitCorrectnessTests is OperatorAllocationTestBase {
 
         vm.expectRevert(
             abi.encodeWithSignature(
-                "ExitsRequestedExceedDemand(uint256,uint256)", uint256(10) * 32 ether, uint256(5) * 32 ether
+                "ExitsRequestedExceedExitDemand(uint256,uint256)", uint256(10) * 32 ether, uint256(5) * 32 ether
             )
         );
         vm.prank(keeper);
@@ -1211,7 +1211,7 @@ contract OperatorsRegistryV1ExitCorrectnessTests is OperatorAllocationTestBase {
         _fundAllOperators();
 
         vm.prank(river);
-        operatorsRegistry.demandETHExits(10 * 32 ether, 250 * 32 ether, 0);
+        operatorsRegistry.demandETHExits(10 * 32 ether, 250 * 32 ether);
         assertEq(operatorsRegistry.getCurrentETHExitsDemand(), 10 * 32 ether);
 
         // Request exactly 10 total: 3 from op0, 3 from op1, 4 from op2
@@ -1253,7 +1253,7 @@ contract OperatorsRegistryV1ExitCorrectnessTests is OperatorAllocationTestBase {
 
         // Create demand of 50 validators (50 * 32 ETH)
         vm.prank(river);
-        operatorsRegistry.demandETHExits(50 * 32 ether, 250 * 32 ether, 0);
+        operatorsRegistry.demandETHExits(50 * 32 ether, 250 * 32 ether);
         assertEq(operatorsRegistry.getCurrentETHExitsDemand(), 50 * 32 ether);
         assertEq(operatorsRegistry.getTotalETHExitsRequested(), 0);
 
@@ -1338,7 +1338,7 @@ contract OperatorsRegistryV1ExitCorrectnessTests is OperatorAllocationTestBase {
 
         // Create small demand of 5 validators (5 * 32 ETH)
         vm.prank(river);
-        operatorsRegistry.demandETHExits(5 * 32 ether, 250 * 32 ether, 0);
+        operatorsRegistry.demandETHExits(5 * 32 ether, 250 * 32 ether);
         assertEq(operatorsRegistry.getCurrentETHExitsDemand(), 5 * 32 ether);
 
         // No keeper exit requests: all operators have requestedExits = 0
@@ -1591,7 +1591,7 @@ contract OperatorsRegistryV1CoverageTests is OperatorsRegistryV1TestBase, Operat
         vm.prank(admin);
         reg.addOperator("Op0", makeAddr("op0"));
         reg.sudoSetFundedV3(0, 32 ether);
-        reg.demandETHExits(32 ether, 64 ether, 0);
+        reg.demandETHExits(32 ether, 64 ether);
         vm.prank(makeAddr("notKeeper"));
         vm.expectRevert(abi.encodeWithSignature("OnlyKeeper()"));
         reg.requestETHExits(_createExitAllocation(_asArray(0), _asArrayU32(1)));
@@ -1610,7 +1610,7 @@ contract OperatorsRegistryV1CoverageTests is OperatorsRegistryV1TestBase, Operat
     /// Asserts that requestETHExits reverts with InvalidEmptyArray when allocations array is empty.
     function testrequestETHExitsRevertsOnEmptyAllocations() public {
         reg.initOperatorsRegistryV1(admin, river);
-        reg.demandETHExits(32 ether, 64 ether, 0);
+        reg.demandETHExits(32 ether, 64 ether);
         IOperatorsRegistryV1.ExitETHAllocation[] memory empty = new IOperatorsRegistryV1.ExitETHAllocation[](0);
         vm.prank(keeper);
         vm.expectRevert(abi.encodeWithSignature("InvalidEmptyArray()"));
@@ -1622,7 +1622,7 @@ contract OperatorsRegistryV1CoverageTests is OperatorsRegistryV1TestBase, Operat
         reg.initOperatorsRegistryV1(admin, river);
         vm.prank(admin);
         reg.addOperator("Op0", makeAddr("op0"));
-        reg.demandETHExits(64 ether, 128 ether, 0);
+        reg.demandETHExits(64 ether, 128 ether);
         IOperatorsRegistryV1.ExitETHAllocation[] memory allocs = new IOperatorsRegistryV1.ExitETHAllocation[](1);
         allocs[0] = IOperatorsRegistryV1.ExitETHAllocation({operatorIndex: 0, ethAmount: 0});
         vm.prank(keeper);
@@ -1641,7 +1641,7 @@ contract OperatorsRegistryV1CoverageTests is OperatorsRegistryV1TestBase, Operat
         reg.sudoSetFundedV3(1, 10 * 32 ether);
         reg.sudoSetActiveCLETH(0, 10 * 32 ether);
         reg.sudoSetActiveCLETH(1, 10 * 32 ether);
-        reg.demandETHExits(64 ether, 256 ether, 0);
+        reg.demandETHExits(64 ether, 256 ether);
         IOperatorsRegistryV1.ExitETHAllocation[] memory allocs = new IOperatorsRegistryV1.ExitETHAllocation[](2);
         allocs[0] = IOperatorsRegistryV1.ExitETHAllocation({operatorIndex: 1, ethAmount: 32 ether});
         allocs[1] = IOperatorsRegistryV1.ExitETHAllocation({operatorIndex: 0, ethAmount: 32 ether});
@@ -1658,7 +1658,7 @@ contract OperatorsRegistryV1CoverageTests is OperatorsRegistryV1TestBase, Operat
         reg.setOperatorStatus(0, false);
         vm.stopPrank();
         reg.sudoSetFundedV3(0, 10 * 32 ether);
-        reg.demandETHExits(32 ether, 64 ether, 0);
+        reg.demandETHExits(32 ether, 64 ether);
         vm.prank(keeper);
         vm.expectRevert(abi.encodeWithSignature("InactiveOperator(uint256)", 0));
         reg.requestETHExits(_createExitAllocation(_asArray(0), _asArrayU32(1)));
@@ -1671,7 +1671,7 @@ contract OperatorsRegistryV1CoverageTests is OperatorsRegistryV1TestBase, Operat
         reg.addOperator("Op0", makeAddr("op0"));
         reg.sudoSetFundedV3(0, 1 * 32 ether);
         reg.sudoSetActiveCLETH(0, 1 * 32 ether);
-        reg.demandETHExits(4 * 32 ether, 128 ether, 0);
+        reg.demandETHExits(4 * 32 ether, 128 ether);
         vm.prank(keeper);
         vm.expectRevert(
             abi.encodeWithSignature(
@@ -1679,18 +1679,6 @@ contract OperatorsRegistryV1CoverageTests is OperatorsRegistryV1TestBase, Operat
             )
         );
         reg.requestETHExits(_createExitAllocation(_asArray(0), _asArrayU32(2)));
-    }
-
-    /// Asserts that demandETHExits reverts with DemandedETHExitsExceedsCLETH when requested total would exceed deposited.
-    function testDemandETHExitsRevertsWhenExceedsDeposited() public {
-        reg.initOperatorsRegistryV1(admin, river);
-        // Set storage so total requested + new demand would exceed the deposited cap we pass.
-        bytes32 totalSlot = bytes32(uint256(keccak256("river.state.totalETHExitsRequested")) - 1);
-        vm.store(address(reg), totalSlot, bytes32(uint256(1 ether)));
-        bytes32 demandSlot = bytes32(uint256(keccak256("river.state.currentETHExitsDemand")) - 1);
-        vm.store(address(reg), demandSlot, bytes32(uint256(1 ether)));
-        vm.expectRevert(abi.encodeWithSignature("DemandedETHExitsExceedsCLETH()"));
-        reg.demandETHExits(0.5 ether, 1 ether, 1 ether);
     }
 
     /// Asserts that reportExitedETH reverts with ExitedETHArrayShrinking when a shorter array is submitted after a longer one.
@@ -1715,43 +1703,6 @@ contract OperatorsRegistryV1CoverageTests is OperatorsRegistryV1TestBase, Operat
         shorter[1] = 32 ether;
         vm.expectRevert(abi.encodeWithSignature("ExitedETHArrayShrinking()"));
         reg.reportExitedETH(shorter, 10 * 32 ether);
-    }
-
-    /// Asserts that reportExitedETH reverts with ExitedETHExceedsPriorCLETH when an existing operator's exited amount exceeds its funded amount.
-    function testReportExitedETHRevertsWhenExceedsFundedExistingOp() public {
-        reg.initOperatorsRegistryV1(admin, river);
-        vm.prank(admin);
-        reg.addOperator("Op0", makeAddr("op0"));
-        reg.sudoSetFundedV3(0, 2 * 32 ether);
-        reg.sudoSetActiveCLETH(0, 2 * 32 ether);
-        reg.sudoSetRawExitedETH(new uint256[](2));
-        uint256[] memory second = new uint256[](2);
-        second[0] = 3 * 32 ether;
-        second[1] = 3 * 32 ether;
-        vm.expectRevert(
-            abi.encodeWithSignature(
-                "ExitedETHExceedsPriorCLETH(uint256,uint256,uint256)", 0, 3 * 32 ether, 2 * 32 ether
-            )
-        );
-        reg.reportExitedETH(second, 4 * 32 ether);
-    }
-
-    /// Asserts that reportExitedETH reverts with ExitedETHExceedsPriorCLETH when a new operator index has non-zero exited ETH but zero funded.
-    function testReportExitedETHRevertsWhenExceedsFundedNewOp() public {
-        reg.initOperatorsRegistryV1(admin, river);
-        vm.startPrank(admin);
-        reg.addOperator("Op0", makeAddr("op0"));
-        reg.addOperator("Op1", makeAddr("op1"));
-        vm.stopPrank();
-        reg.sudoSetFundedV3(0, 2 * 32 ether);
-        reg.sudoSetActiveCLETH(0, 2 * 32 ether);
-        reg.sudoSetRawExitedETH(new uint256[](3));
-        uint256[] memory second = new uint256[](3);
-        second[0] = 2 * 32 ether;
-        second[1] = 32 ether;
-        second[2] = 32 ether;
-        vm.expectRevert(abi.encodeWithSignature("ExitedETHExceedsPriorCLETH(uint256,uint256,uint256)", 1, 32 ether, 0));
-        reg.reportExitedETH(second, 4 * 32 ether);
     }
 
     /// Asserts that reportExitedETH reverts with ExitedETHExceedsDeposited when sum of exited ETH exceeds totalDepositedETH.
@@ -1796,4 +1747,3 @@ contract OperatorsRegistryV1CoverageTests is OperatorsRegistryV1TestBase, Operat
         return a;
     }
 }
-

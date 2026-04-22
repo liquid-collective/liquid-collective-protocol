@@ -76,9 +76,9 @@ interface IOperatorsRegistryV1 {
     );
 
     /// @notice The operator exited ETH has been set
-    /// @param operatorIndex The operator index
+    /// @param index The operator index
     /// @param exitedETH The exited ETH(wei)
-    event SetOperatorExitedETH(uint256 operatorIndex, uint256 exitedETH);
+    event SetOperatorExitedETH(uint256 indexedindex, uint256 exitedETH);
 
     /// @notice The exited ETH have been updated
     /// @param exitedETH The exited ETH(wei) per operator
@@ -116,9 +116,6 @@ interface IOperatorsRegistryV1 {
     /// @notice Thrown when the sum of exited ETH is invalid
     error ExitedETHSumMismatch();
 
-    /// @notice Thrown when the amount of exited ETH is too high compared to the operator's active ETH on CL amount
-    error DemandedETHExitsExceedsCLETH();
-
     /// @notice Thrown when the amount of exited ETH is too high compared to the total deposited ETH
     error ExitedETHExceedsDeposited();
 
@@ -143,7 +140,7 @@ interface IOperatorsRegistryV1 {
     /// @notice The provided exit requests exceed the current exit request demand
     /// @param requestedETHAmount The requested ETH(wei) amount
     /// @param currentETHExitsDemand The current ETH(wei) exits demand
-    error ExitsRequestedExceedDemand(uint256 requestedETHAmount, uint256 currentETHExitsDemand);
+    error ExitsRequestedExceedExitDemand(uint256 requestedETHAmount, uint256 currentETHExitsDemand);
 
     /// @notice The provided exited ETH is above the funded ETH of the operator
     /// @param operatorIndex The operator index
@@ -154,6 +151,9 @@ interface IOperatorsRegistryV1 {
     /// @notice Thrown when an allocation with an incorrect ETH amount is provided
     /// @param ethAmount The incorrect ETH(wei) amount
     error AllocationWithIncorrectAmount(uint256 ethAmount);
+
+    /// @notice Thrown when the provided active CL ETH array length does not match the operator count
+    error InvalidActiveCLETHArrayLength();
 
     /// @notice Initializes the operators registry
     /// @param _admin Admin in charge of managing operators
@@ -252,7 +252,7 @@ interface IOperatorsRegistryV1 {
     /// @dev Reverts with UnorderedOperatorList if operator indexes are not strictly ascending
     /// @dev Reverts with InactiveOperator if a referenced operator is inactive
     /// @dev Reverts with ExitsRequestedExceedAvailableFundedAmount if count exceeds funded minus requestedExits for an operator
-    /// @dev Reverts with ExitsRequestedExceedDemand if total exits requested exceed the current demand
+    /// @dev Reverts with ExitsRequestedExceedExitDemand if total exits requested exceed the current demand
     /// @dev Reverts with NoExitRequestsToPerform if there is no pending exit demand
     /// @param _allocations The proposed per-operator exit ETH allocations, sorted by operator index
     function requestETHExits(ExitETHAllocation[] calldata _allocations) external;
@@ -261,11 +261,8 @@ interface IOperatorsRegistryV1 {
     /// @dev This method is only callable by the river contract, and to actually forward the information to the node operators via event emission, the requestETHExits method must be called
     /// @dev Due to autocompounding we cannot rely on the total deposited ETH, but on the total available ETH on CL
     /// @param _exitAmountToRequest The amount of exit requests to add to the demand
-    /// @param _totalAvailableCLETH The total available ETH
-    /// @param _preExitingBalance The ETH that is currently exiting and will soon be received on the execution layer
+    /// @param _totalAvailableCLETH The total available ETH(wei) on the consensus layer which includes the InFlightDeposit amount and excludes the exiting balance
     /// @dev This method is only callable by the river contract
-    /// @dev Reverts with DemandedETHExitsExceedsCLETH if the total available ETH is less than the sum of the pre-exiting balance and the current exit request demand
-    /// @dev Reverts with InvalidExitAmount if the exit amount to request is greater than the total available ETH minus the pre-exiting balance and the current exit request demand
-    function demandETHExits(uint256 _exitAmountToRequest, uint256 _totalAvailableCLETH, uint256 _preExitingBalance)
-        external;
+    /// @dev Reverts with InvalidExitAmount if the exit amount to request is greater than the total available ETH minus the current exit request demand
+    function demandETHExits(uint256 _exitAmountToRequest, uint256 _totalAvailableCLETH) external;
 }

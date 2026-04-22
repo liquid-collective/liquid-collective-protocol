@@ -14,13 +14,12 @@ library OperatorsV3 {
     /// @notice The Operator structure in storage
     struct Operator {
         /// @dev The following values respect this invariant:
-        /// @dev     funded >= requestedExits
 
-        /// @custom:attribute The amount of funded ETH(wei)
+        /// @custom:attribute The cumulative amount of funded ETH(wei)
         uint256 funded;
-        /// @custom:attribute The amount of requested ETH(wei) exits
+        /// @custom:attribute The cumulative amount of requested ETH(wei) exits
         uint256 requestedExits;
-        /// @custom:attribute The amount of ETH(wei) that has been deposited on the consensus layer
+        /// @custom:attribute The amount of ETH(wei) that is active on the consensus layer
         uint256 activeCLETH;
         /// @custom:attribute True if the operator is active and allowed to operate on River
         bool active;

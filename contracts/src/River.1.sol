@@ -145,7 +145,8 @@ contract RiverV1 is
         storedReport.validatorsCount = clValidatorCount;
         storedReport.rebalanceDepositToRedeemMode = lastReport.rebalanceDepositToRedeemMode;
         storedReport.slashingContainmentMode = lastReport.slashingContainmentMode;
-        storedReport.totalDepositedActivatedETH = depositedValidatorCount * DEPOSIT_SIZE;
+        // we subtract the in flight ETH to get the total deposited activated ETH
+        storedReport.totalDepositedActivatedETH = depositedValidatorCount * DEPOSIT_SIZE - InFlightDeposit.get();
         LastConsensusLayerReport.set(storedReport);
     }
 
@@ -531,7 +532,10 @@ contract RiverV1 is
 
     /// @notice Requests exits of validators after possibly rebalancing deposit and redeem balances
     /// @param _exitingBalance The currently exiting funds, soon to be received on the execution layer
+    /// @param _exitedETH The exited ETH(wei)
+    /// @param _totalAvailableCLETH The total available ETH(wei) on the consensus layer that can be used to exit validators, this value includes the InFlightDeposit amount & excludes the exiting balance
     /// @param _depositToRedeemRebalancingAllowed True if rebalancing from deposit to redeem is allowed
+    /// @param _slashingContainmentModeEnabled True if slashing containment mode is enabled
     function _requestExitsBasedOnRedeemDemandAfterRebalancings(
         uint256 _exitingBalance,
         uint256[] memory _exitedETH,
@@ -583,7 +587,7 @@ contract RiverV1 is
 
                     // we demand the exits based on the total available ETH on the consensus layer
                     // we don't include the ETH that is present on river as have already rebalanced it
-                    or.demandETHExits(exitAmountToRequest, _totalAvailableCLETH, preExitingBalance);
+                    or.demandETHExits(exitAmountToRequest, _totalAvailableCLETH);
                 }
             }
         }

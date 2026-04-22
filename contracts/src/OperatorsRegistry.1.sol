@@ -187,6 +187,9 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
         if (activeCLETHLength == 0) {
             revert InvalidEmptyArray();
         }
+        if (activeCLETHLength != OperatorsV3.getCount()) {
+            revert InvalidActiveCLETHArrayLength();
+        }
         for (uint256 idx = 0; idx < activeCLETHLength; ++idx) {
             OperatorsV3.Operator storage operator = OperatorsV3.get(idx);
             operator.activeCLETH = _activeCLETH[idx];
@@ -282,7 +285,7 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
                 // Operator has insufficient available ETH
                 revert ExitsRequestedExceedAvailableFundedAmount(operatorIndex, ethAmount, available);
             }
-            // Operator has sufficient ETH
+
             opRequestedExits += ethAmount;
             operator.requestedExits = opRequestedExits;
             emit RequestedETHExits(operatorIndex, opRequestedExits);
@@ -290,7 +293,7 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
 
         // Check that the exits requested do not exceed the current ETH exits demand
         if (requestedETHAmount > currentETHExitsDemand) {
-            revert ExitsRequestedExceedDemand(requestedETHAmount, currentETHExitsDemand);
+            revert ExitsRequestedExceedExitDemand(requestedETHAmount, currentETHExitsDemand);
         }
 
         uint256 totalETHExitsRequested = TotalETHExitsRequested.get();
@@ -299,17 +302,10 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
     }
 
     /// @inheritdoc IOperatorsRegistryV1
-    function demandETHExits(uint256 _exitAmountToRequest, uint256 _totalAvailableCLETH, uint256 _preExitingBalance)
-        external
-        onlyRiver
-    {
+    function demandETHExits(uint256 _exitAmountToRequest, uint256 _totalAvailableCLETH) external onlyRiver {
         uint256 currentETHExitsDemand = CurrentETHExitsDemand.get();
-        if (_totalAvailableCLETH < (_preExitingBalance + currentETHExitsDemand)) {
-            revert DemandedETHExitsExceedsCLETH();
-        }
         // capping the new exit demand so total "requested + demanded" never exceeds deposited ETH(wei)
-        _exitAmountToRequest =
-            LibUint256.min(_exitAmountToRequest, _totalAvailableCLETH - (_preExitingBalance + currentETHExitsDemand));
+        _exitAmountToRequest = LibUint256.min(_exitAmountToRequest, _totalAvailableCLETH - currentETHExitsDemand);
         if (_exitAmountToRequest > 0) {
             _setCurrentETHExitsDemand(currentETHExitsDemand, currentETHExitsDemand + _exitAmountToRequest);
         }
@@ -356,6 +352,7 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
     }
 
     /// @notice Internal utility to set the exited ETH array
+    /// @dev Please note that we rely on the Oracle to report the correct exitedETH array.
     /// @param _exitedETH The new exited ETH(wei) array per operator
     /// @param _totalDepositedETH The total deposited ETH(wei)
     function _setExitedETH(uint256[] calldata _exitedETH, uint256 _totalDepositedETH) internal {
@@ -396,13 +393,6 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
             // we check that the amount of exited ETH is not decreasing for existing operators
             if (idx < vars.currentExitedETHLength && _exitedETH[idx] < vars.currentExitedETH[idx]) {
                 revert ExitedETHPerOperatorDecreased();
-            }
-
-            // we check that the amount of exited ETH is not above the CL ETH of an operator in the previous oracle report
-            uint256 deltaExited = _exitedETH[idx] - vars.currentExitedETH[idx];
-            uint256 priorActiveCL = operators[idx - 1].activeCLETH; // pre-update
-            if (deltaExited > priorActiveCL) {
-                revert ExitedETHExceedsPriorCLETH(idx - 1, _exitedETH[idx], priorActiveCL);
             }
 
             // if the reported exited ETH for this operator is greater than its recorded requestedExits,

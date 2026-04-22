@@ -169,7 +169,7 @@ abstract contract ConsensusLayerDepositManagerV1 is IConsensusLayerDepositManage
         emit SetTotalDepositedETH(currentTotalDepositedETH, currentTotalDepositedETH + totalDeposits);
     }
 
-    /// @notice Deposits 32 ETH to the official Deposit contract
+    /// @notice Deposits _depositAmount ETH to the official Deposit contract
     /// @param _publicKey The public key of the validator
     /// @param _signature The signature provided by the operator
     /// @param _withdrawalCredentials The withdrawal credentials provided by River

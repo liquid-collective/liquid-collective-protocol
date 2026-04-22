@@ -245,7 +245,7 @@ abstract contract OracleManagerV1 is IOracleManagerV1 {
         uint256 lastReportSkimmedBalance;
         uint256 exitedAmountIncrease;
         uint256 skimmedAmountIncrease;
-        uint256 inFlightDeposits;
+        uint256 inFlightDepositedETH;
         uint256 totalDepositedActivatedETHIncrease;
         uint256 timeElapsedSinceLastReport;
         uint256 availableAmountToUpperBound;
@@ -301,13 +301,18 @@ abstract contract OracleManagerV1 is IOracleManagerV1 {
 
             vars.totalDepositedActivatedETHIncrease =
                 _report.totalDepositedActivatedETH - lastStoredReport.totalDepositedActivatedETH;
-            vars.inFlightDeposits = InFlightDeposit.get();
+            vars.inFlightDepositedETH = InFlightDeposit.get();
 
             // we ensure that the total deposited activated ETH increase is not higher than the current in flight ETH
-            if (vars.totalDepositedActivatedETHIncrease > vars.inFlightDeposits) {
+            if (vars.totalDepositedActivatedETHIncrease > vars.inFlightDepositedETH) {
                 revert InvalidTotalDepositedActivatedETHIncrease(
-                    vars.inFlightDeposits, _report.totalDepositedActivatedETH
+                    vars.inFlightDepositedETH, _report.totalDepositedActivatedETH
                 );
+            }
+
+            // we ensure that the reported validator count is not decreasing
+            if (_report.validatorsCount < lastStoredReport.validatorsCount) {
+                revert InvalidValidatorCountReport(_report.validatorsCount, lastStoredReport.validatorsCount);
             }
 
             // we compute the new skimmed amount by taking the delta between reports
@@ -327,9 +332,9 @@ abstract contract OracleManagerV1 is IOracleManagerV1 {
 
         // checks if we have new deposited stake that activated in the last oracle reporting
         if (vars.totalDepositedActivatedETHIncrease > 0) {
-            uint256 newInFlightETH = vars.inFlightDeposits - vars.totalDepositedActivatedETHIncrease;
+            uint256 newInFlightETH = vars.inFlightDepositedETH - vars.totalDepositedActivatedETHIncrease;
             InFlightDeposit.set(newInFlightETH);
-            emit IConsensusLayerDepositManagerV1.SetInFlightETH(vars.inFlightDeposits, newInFlightETH);
+            emit IConsensusLayerDepositManagerV1.SetInFlightETH(vars.inFlightDepositedETH, newInFlightETH);
         }
 
         {
@@ -432,15 +437,15 @@ abstract contract OracleManagerV1 is IOracleManagerV1 {
             _onEarnings(vars.trace.rewards);
         }
 
+        _reportCLETH(_report.activeCLETHPerOperator);
+
         _requestExitsBasedOnRedeemDemandAfterRebalancings(
             _report.validatorsExitingBalance,
             _report.exitedETHPerOperator,
-            _report.validatorsBalance,
+            _report.validatorsBalance + InFlightDeposit.get() - _report.validatorsExitingBalance,
             _report.rebalanceDepositToRedeemMode,
             _report.slashingContainmentMode
         );
-
-        _reportCLETH(_report.activeCLETHPerOperator);
 
         // we use the updated balanceToRedeem value to report a withdraw event on the redeem manager
         _reportWithdrawToRedeemManager();

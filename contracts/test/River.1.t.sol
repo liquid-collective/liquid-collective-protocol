@@ -1141,7 +1141,7 @@ contract RiverV1TestsReport_HEAVY_FUZZING is RiverV1TestBase {
 
         clr.validatorsSkimmedBalance = 0;
         clr.validatorsExitedBalance = 0;
-        clr.validatorsExitingBalance = type(uint256).max; // ensures no exits will be requested before asserted report
+        clr.validatorsExitingBalance = clr.validatorsBalance; // ensures no exits will be requested before asserted report
         clr.totalDepositedActivatedETH = rfv.depositCount * 32 ether;
         // Use operatorCount+1 length so the second report (length N+1) doesn't shrink the array.
         clr.exitedETHPerOperator = new uint256[](rfv.operatorCount + 1);
@@ -2009,6 +2009,9 @@ contract RiverV1TestsReport_HEAVY_FUZZING is RiverV1TestBase {
         // decreasing validator count is now allowed
         clr.validatorsCount -= 1;
 
+        vm.expectRevert(
+            abi.encodeWithSignature("InvalidValidatorCountReport(uint256,uint256)", clr.validatorsCount, depositCount)
+        );
         vm.prank(address(oracle));
         river.setConsensusLayerData(clr);
     }
