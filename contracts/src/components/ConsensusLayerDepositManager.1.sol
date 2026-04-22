@@ -128,6 +128,7 @@ abstract contract ConsensusLayerDepositManagerV1 is IConsensusLayerDepositManage
         bytes[][] memory publicKeys = new bytes[][](_allocations[_allocations.length - 1].operatorIndex + 1);
         for (uint256 i = 0; i < publicKeys.length; ++i) {
             publicKeys[i] = new bytes[](publicKeyCountPerOperator[i]);
+            // we reset the count to 0 so that we could reuse the array while adding the public keys in the loop below
             publicKeyCountPerOperator[i] = 0;
         }
 
@@ -160,9 +161,9 @@ abstract contract ConsensusLayerDepositManagerV1 is IConsensusLayerDepositManage
         _incrementFundedETH(fundedETH, publicKeys);
         _setCommittedBalance(committedBalance - totalDeposits);
 
-        uint256 currentInFlightETH = InFlightDeposit.get();
-        InFlightDeposit.set(currentInFlightETH + totalDeposits);
-        emit SetInFlightETH(currentInFlightETH, currentInFlightETH + totalDeposits);
+        uint256 oldInFlightETH = InFlightDeposit.get();
+        InFlightDeposit.set(oldInFlightETH + totalDeposits);
+        emit SetInFlightETH(oldInFlightETH, oldInFlightETH + totalDeposits);
 
         uint256 currentTotalDepositedETH = TotalDepositedETH.get();
         TotalDepositedETH.set(currentTotalDepositedETH + totalDeposits);

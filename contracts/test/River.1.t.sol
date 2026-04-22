@@ -28,7 +28,7 @@ contract OperatorsRegistryWithOverridesV1 is OperatorsRegistryV1 {
 
     function sudoSetFunded(uint256 _index, uint256 _funded) external {
         OperatorsV3.Operator storage operator = OperatorsV3.get(_index);
-        operator.funded = _funded;
+        operator.funded = _funded * 32 ether;
     }
 
     function sudoSetRawExitedETH(uint256[] memory value) external {
