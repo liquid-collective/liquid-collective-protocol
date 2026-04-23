@@ -238,7 +238,7 @@ library BLS12_381 {
             let j := b // Pointer to next position in output chain
             for {
                 let i := 2
-            } 1 { } {
+            } 1 {} {
                 // XOR `b0` with previous output and hash it
                 mstore(s, xor(b0, mload(j)))
                 j := add(j, 0x20)
@@ -375,10 +375,7 @@ library BLS12_381 {
         DepositY calldata depositY,
         bytes32 withdrawalCredentials,
         bytes32 depositDomain
-    )
-        internal
-        view
-    {
+    ) internal view {
         // validate compression flags in pubkey and signature to ensure that they correspond to provided Y coordinates
         // this ensures that this verification is equivalent to one by CL:
         // - we receive Y components and throw away compression flags in X
@@ -583,11 +580,7 @@ library BLS12_381 {
         uint256 amount,
         bytes32 withdrawalCredentials,
         bytes32 depositDomain
-    )
-        internal
-        view
-        returns (bytes32 root)
-    {
+    ) internal view returns (bytes32 root) {
         if (amount % 1 gwei != 0) revert InvalidDepositAmount();
         root = sha256Pair(
             // merkle root of the deposit message

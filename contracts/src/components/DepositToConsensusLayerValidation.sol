@@ -149,11 +149,10 @@ abstract contract DepositToConsensusLayerValidation {
         _verifyBLSSignatures(deposits, depositYs);
     }
 
-    function _verifyAttestationQuorum(
-        bytes32 depositDataBufferId,
-        bytes32 depositRootHash,
-        bytes[] calldata signatures
-    ) internal view {
+    function _verifyAttestationQuorum(bytes32 depositDataBufferId, bytes32 depositRootHash, bytes[] calldata signatures)
+        internal
+        view
+    {
         uint256 sigLen = signatures.length;
         if (sigLen > MAX_SIGNATURES) {
             revert TooManySignatures(sigLen, MAX_SIGNATURES);
@@ -204,12 +203,13 @@ abstract contract DepositToConsensusLayerValidation {
     ) internal view {
         for (uint256 i = 0; i < deposits.length; i++) {
             bytes32 wc = abi.decode(deposits[i].withdrawalCredentials, (bytes32));
-            (bool ok, bytes memory revertData) = address(this).staticcall(
-                abi.encodeCall(
-                    this.verifyBLSDeposit,
-                    (deposits[i].pubkey, deposits[i].signature, deposits[i].amount, depositYs[i], wc)
-                )
-            );
+            (bool ok, bytes memory revertData) = address(this)
+                .staticcall(
+                    abi.encodeCall(
+                        this.verifyBLSDeposit,
+                        (deposits[i].pubkey, deposits[i].signature, deposits[i].amount, depositYs[i], wc)
+                    )
+                );
             if (!ok) {
                 assembly {
                     revert(add(revertData, 32), mload(revertData))

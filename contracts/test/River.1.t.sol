@@ -233,7 +233,9 @@ abstract contract RiverV1TestBase is OperatorAllocationTestBase, BytesGenerator 
 
         // Count total deposits
         uint256 total = 0;
-        for (uint256 i = 0; i < counts.length; i++) total += counts[i];
+        for (uint256 i = 0; i < counts.length; i++) {
+            total += counts[i];
+        }
 
         // Build deposit objects
         IDepositDataBuffer.DepositObject[] memory deposits = new IDepositDataBuffer.DepositObject[](total);
