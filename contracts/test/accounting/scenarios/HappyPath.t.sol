@@ -43,7 +43,11 @@ contract HappyPathTest is AccountingInvariants {
         sim_oracleReport();
         // Step 6: Total underlying supply must be greater than the original principal,
         //         confirming that skimmed rewards have been accounted for.
-        assertGt(river.totalUnderlyingSupply(), 10 * DEPOSIT_SIZE, "rewards accrued");
+        //         Expected rewards: 10 validators × 0.008 ETH × 2 epochs = 0.16 ETH.
+        uint256 expectedRewards = 10 * 0.008 ether * 2;
+        uint256 totalUnderlying = river.totalUnderlyingSupply();
+        assertGt(totalUnderlying, 10 * DEPOSIT_SIZE, "rewards accrued");
+        assertLe(totalUnderlying, 10 * DEPOSIT_SIZE + expectedRewards, "underlying within expected reward bound");
     }
 
     /// @notice Verifies that multiple sequential deposit batches for the same operator

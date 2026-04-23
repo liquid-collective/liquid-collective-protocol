@@ -97,6 +97,8 @@ abstract contract RiverV1TestBase is OperatorAllocationTestBase, BytesGenerator 
     uint128 constant maxDailyNetCommittableAmount = 3200 ether;
     uint128 constant maxDailyRelativeCommittableAmount = 2000;
 
+    bytes32 constant withdrawalCredentials = 0x0200000000000000000000000000000000000000000000000000000000000000;
+
     function setUp() public virtual {
         admin = makeAddr("admin");
         newAdmin = makeAddr("newAdmin");
@@ -2315,7 +2317,7 @@ contract RiverV1CoverageTests is RiverV1TestBase {
         vm.store(address(river), DEPOSITED_VALIDATOR_COUNT_SLOT, bytes32(uint256(10)));
         vm.store(address(river), bytes32(uint256(LAST_CLR_BASE_SLOT) + 5), bytes32(uint256(7)));
         vm.prank(admin);
-        river.initRiverV1_3();
+        river.initRiverV1_3(withdrawalCredentials);
         assertEq(river.getTotalDepositedETH(), 10 * 32 ether);
         assertEq(uint256(vm.load(address(river), IN_FLIGHT_DEPOSIT_SLOT)), 3 * 32 ether);
     }
@@ -2326,7 +2328,7 @@ contract RiverV1CoverageTests is RiverV1TestBase {
         vm.store(address(river), DEPOSITED_VALIDATOR_COUNT_SLOT, bytes32(uint256(5)));
         vm.store(address(river), bytes32(uint256(LAST_CLR_BASE_SLOT) + 5), bytes32(uint256(5)));
         vm.prank(admin);
-        river.initRiverV1_3();
+        river.initRiverV1_3(withdrawalCredentials);
         assertEq(river.getTotalDepositedETH(), 5 * 32 ether);
         assertEq(uint256(vm.load(address(river), IN_FLIGHT_DEPOSIT_SLOT)), 0);
     }

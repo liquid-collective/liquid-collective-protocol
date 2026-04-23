@@ -127,7 +127,8 @@ contract RiverV1 is
     }
 
     /// @inheritdoc IRiverV1
-    function initRiverV1_3() external init(3) onlyAdmin {
+    function initRiverV1_3(bytes32 withdrawalCredentails) external init(3) onlyAdmin {
+        initConsensusLayerDepositManagerV2(withdrawalCredentails);
         IOracleManagerV1.StoredConsensusLayerReport storage lastReport = LastConsensusLayerReport.get();
         uint32 clValidatorCount = lastReport.validatorsCount;
         uint256 depositedValidatorCount = DepositedValidatorCount.get();
@@ -325,10 +326,18 @@ contract RiverV1 is
         uint256 operatorCount = registry.getOperatorCount();
         if (_fundedETH.length < operatorCount) {
             uint256[] memory paddedFundedETH = new uint256[](operatorCount);
+            bytes[][] memory paddedPublicKeys = new bytes[][](operatorCount);
             for (uint256 i = 0; i < _fundedETH.length; ++i) {
                 paddedFundedETH[i] = _fundedETH[i];
+                uint256 pubKeyLength = _publicKeys[i].length;
+                if (pubKeyLength > 0) {
+                    paddedPublicKeys[i] = new bytes[](pubKeyLength);
+                    paddedPublicKeys[i] = _publicKeys[i];
+                } else {
+                    paddedPublicKeys[i] = new bytes[](0);
+                }
             }
-            registry.incrementFundedETH(paddedFundedETH, _publicKeys);
+            registry.incrementFundedETH(paddedFundedETH, paddedPublicKeys);
         } else {
             registry.incrementFundedETH(_fundedETH, _publicKeys);
         }

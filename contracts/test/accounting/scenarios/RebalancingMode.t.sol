@@ -8,6 +8,7 @@ contract RebalancingModeTest is AccountingInvariants {
     ///         still satisfies all accounting invariants (ETH conservation, in-flight consistency,
     ///         per-operator integrity). No assertion on specific values — invariant checks inside
     ///         `sim_oracleReport` act as the oracle.
+    ///         All assertions are checked inside sim_oracleReport via _assertAllInvariants().
     function testRebalancingModePreservesConservation() public {
         // Step 1: Fund river with enough ETH for 3 validators and deposit them for operator one.
         _fundRiver(6 * DEPOSIT_SIZE);
@@ -23,6 +24,7 @@ contract RebalancingModeTest is AccountingInvariants {
     /// @notice Verifies that the protocol can correctly resume normal oracle reporting after
     ///         a rebalancing-mode report. Ensures accounting invariants hold throughout the full
     ///         sequence: normal report → rebalancing report → normal report.
+    ///         All assertions are checked inside sim_oracleReport via _assertAllInvariants().
     function testResumeAfterRebalancing() public {
         // Step 1: Fund river with enough ETH for 4 validators and deposit them for operator one.
         _fundRiver(4 * DEPOSIT_SIZE);

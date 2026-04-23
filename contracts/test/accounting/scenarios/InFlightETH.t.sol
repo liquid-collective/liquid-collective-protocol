@@ -78,9 +78,14 @@ contract InFlightETHTest is AccountingInvariants {
         IOracleManagerV1.ConsensusLayerReport memory bad = _buildReport(false, false);
         bad.epoch = reportEpoch;
         bad.totalDepositedActivatedETH = bad.totalDepositedActivatedETH + 1 ether; // invalid: increase exceeds InFlightDeposit (0)
-        // Step 3: Submit the crafted report as the oracle member and expect a revert.
+        // Step 3: Submit the crafted report as the oracle member and expect the specific revert.
+        //         InFlightDeposit is 0 (all activated), so any increase in totalDepositedActivatedETH is invalid.
         vm.prank(oracleMember);
-        vm.expectRevert();
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IOracleManagerV1.InvalidTotalDepositedActivatedETHIncrease.selector, 0, bad.totalDepositedActivatedETH
+            )
+        );
         oracle.reportConsensusLayerData(bad);
     }
 }
