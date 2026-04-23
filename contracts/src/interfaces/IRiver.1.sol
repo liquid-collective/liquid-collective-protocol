@@ -164,6 +164,18 @@ interface IRiverV1 is IConsensusLayerDepositManagerV1, IUserDepositManagerV1, IS
     /// @notice Initialized version 1.3 of the River System
     function initRiverV1_3() external;
 
+    /// @notice Initialized version 1.4 of the River System
+    /// @param _depositDataBuffer The address of the deposit data buffer
+    /// @param _attesters The list of attesters to add
+    /// @param _threshold The attestation threshold
+    /// @param _genesisForkVersion The genesis fork version for computing the deposit domain
+    function initRiverV1_4(
+        address _depositDataBuffer,
+        address[] calldata _attesters,
+        uint256 _threshold,
+        bytes4 _genesisForkVersion
+    ) external;
+
     /// @notice Get the current global fee
     /// @return The global fee
     function getGlobalFee() external view returns (uint256);

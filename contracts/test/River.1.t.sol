@@ -11,9 +11,11 @@ import "./utils/LibImplementationUnbricker.sol";
 import "./mocks/DepositContractMock.sol";
 
 import "../src/libraries/LibAllowlistMasks.sol";
+import "../src/libraries/BLS12_381.sol";
 import "../src/Allowlist.1.sol";
 import "../src/River.1.sol";
 import "../src/interfaces/IDepositContract.sol";
+import "../src/interfaces/IDepositDataBuffer.sol";
 import "../src/Withdraw.1.sol";
 import "../src/Oracle.1.sol";
 import "../src/ELFeeRecipient.1.sol";
@@ -21,25 +23,34 @@ import "../src/OperatorsRegistry.1.sol";
 import "../src/CoverageFund.1.sol";
 import "../src/RedeemManager.1.sol";
 
-contract OperatorsRegistryWithOverridesV1 is OperatorsRegistryV1 {
-    function sudoReportExitedETH(uint256[] calldata exitedETH, uint256 totalDepositedETH) external {
-        _setExitedETH(exitedETH, totalDepositedETH);
+contract MockDepositDataBuffer is IDepositDataBuffer {
+    mapping(bytes32 => DepositObject[]) internal _batches;
+    mapping(bytes32 => bool) internal _exists;
+
+    function submitDepositData(bytes32 depositDataBufferId, DepositObject[] calldata deposits) external {
+        if (_exists[depositDataBufferId]) revert DepositDataBufferIdAlreadyExists(depositDataBufferId);
+        _exists[depositDataBufferId] = true;
+        for (uint256 i = 0; i < deposits.length; i++) {
+            _batches[depositDataBufferId].push(deposits[i]);
+        }
+        emit DepositDataSubmitted(depositDataBufferId, deposits.length);
     }
 
-    function sudoSetFunded(uint256 _index, uint256 _funded) external {
-        OperatorsV3.Operator storage operator = OperatorsV3.get(_index);
-        operator.funded = _funded;
+    function getDepositData(bytes32 depositDataBufferId) external view returns (DepositObject[] memory) {
+        if (!_exists[depositDataBufferId]) revert DepositDataBufferIdNotFound(depositDataBufferId);
+        return _batches[depositDataBufferId];
     }
 
-    function sudoSetRawExitedETH(uint256[] memory value) external {
-        OperatorsV3.setRawExitedETH(value);
+    function getWriter() external pure returns (address) {
+        return address(0);
     }
 
-    function sudoSetActiveCLETH(uint256 _index, uint256 _activeCLETH) external {
-        OperatorsV3.Operator storage op = OperatorsV3.get(_index);
-        op.activeCLETH = _activeCLETH;
+    function getAdmin() external pure returns (address) {
+        return address(0);
     }
 }
+
+// OperatorsRegistryWithOverridesV1 removed: _setStoppedValidatorCounts no longer exists
 
 contract RiverV1ForceCommittable is RiverV1 {
     function debug_moveDepositToCommitted() external {
@@ -58,7 +69,22 @@ abstract contract RiverV1TestBase is OperatorAllocationTestBase, BytesGenerator 
     ELFeeRecipientV1 internal elFeeRecipient;
     CoverageFundV1 internal coverageFund;
     AllowlistV1 internal allowlist;
-    OperatorsRegistryWithOverridesV1 internal operatorsRegistry;
+    OperatorsRegistryV1 internal operatorsRegistry;
+
+    MockDepositDataBuffer internal depositBuffer;
+
+    uint256 internal attesterPk1 = 0xA1;
+    uint256 internal attesterPk2 = 0xA2;
+    address internal attester1;
+    address internal attester2;
+
+    // EIP-712 constants (must match DepositToConsensusLayerValidation)
+    bytes32 internal constant EIP712_DOMAIN_TYPEHASH =
+        keccak256("EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)");
+    bytes32 internal constant NAME_HASH = keccak256("DepositToConsensusLayerValidation");
+    bytes32 internal constant VERSION_HASH = keccak256("1");
+    bytes32 internal constant ATTEST_TYPEHASH =
+        keccak256("Attest(bytes32 depositDataBufferId,bytes32 depositRootHash)");
 
     address internal admin;
     address internal newAdmin;
@@ -97,6 +123,13 @@ abstract contract RiverV1TestBase is OperatorAllocationTestBase, BytesGenerator 
     uint128 constant maxDailyNetCommittableAmount = 3200 ether;
     uint128 constant maxDailyRelativeCommittableAmount = 2000;
 
+    function _emptyDepositY() internal pure returns (BLS12_381.DepositY memory) {
+        return BLS12_381.DepositY({
+            pubkeyY: BLS12_381.Fp({a: bytes32(0), b: bytes32(0)}),
+            signatureY: BLS12_381.Fp2({c0_a: bytes32(0), c0_b: bytes32(0), c1_a: bytes32(0), c1_b: bytes32(0)})
+        });
+    }
+
     function setUp() public virtual {
         admin = makeAddr("admin");
         newAdmin = makeAddr("newAdmin");
@@ -110,6 +143,9 @@ abstract contract RiverV1TestBase is OperatorAllocationTestBase, BytesGenerator 
         operatorTwo = makeAddr("operatorTwo");
         bob = makeAddr("bob");
         joe = makeAddr("joe");
+
+        attester1 = vm.addr(attesterPk1);
+        attester2 = vm.addr(attesterPk2);
 
         vm.warp(857034746);
 
@@ -127,14 +163,122 @@ abstract contract RiverV1TestBase is OperatorAllocationTestBase, BytesGenerator 
         LibImplementationUnbricker.unbrick(vm, address(withdraw));
         river = new RiverV1ForceCommittable();
         LibImplementationUnbricker.unbrick(vm, address(river));
-        operatorsRegistry = new OperatorsRegistryWithOverridesV1();
+        operatorsRegistry = new OperatorsRegistryV1();
         LibImplementationUnbricker.unbrick(vm, address(operatorsRegistry));
+        depositBuffer = new MockDepositDataBuffer();
 
         allowlist.initAllowlistV1(admin, allower);
         allowlist.initAllowlistV1_1(denier);
         operatorsRegistry.initOperatorsRegistryV1(admin, address(river));
         elFeeRecipient.initELFeeRecipientV1(address(river));
         coverageFund.initCoverageFundV1(address(river));
+    }
+
+    // -----------------------------------------------------------------------
+    // Attestation-based deposit helpers
+    // -----------------------------------------------------------------------
+
+    /// @dev Encode "operator:N" as left-aligned bytes32.
+    function _operatorMeta(uint256 opIdx) internal pure returns (bytes32) {
+        bytes memory prefix = "operator:";
+        bytes memory digits;
+        if (opIdx == 0) {
+            digits = "0";
+        } else {
+            uint256 temp = opIdx;
+            uint256 n = 0;
+            while (temp > 0) {
+                n++;
+                temp /= 10;
+            }
+            digits = new bytes(n);
+            temp = opIdx;
+            for (uint256 i = n; i > 0; i--) {
+                digits[i - 1] = bytes1(uint8(48 + temp % 10));
+                temp /= 10;
+            }
+        }
+        bytes memory full = abi.encodePacked(prefix, digits);
+        bytes32 result;
+        assembly {
+            result := mload(add(full, 32))
+        }
+        return result;
+    }
+
+    /// @dev Sign an EIP-712 attestation digest with the given private key.
+    function _signAttestation(uint256 pk, bytes32 bufferId, bytes32 rootHash) internal view returns (bytes memory) {
+        bytes32 domainSep =
+            keccak256(abi.encode(EIP712_DOMAIN_TYPEHASH, NAME_HASH, VERSION_HASH, block.chainid, address(river)));
+        bytes32 structHash = keccak256(abi.encode(ATTEST_TYPEHASH, bufferId, rootHash));
+        bytes32 digest = keccak256(abi.encodePacked("\x19\x01", domainSep, structHash));
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(pk, digest);
+        return abi.encodePacked(r, s, v);
+    }
+
+    /// @dev Generate a deterministic 48-byte pubkey.
+    function _fakePubkey(uint256 seed) internal pure returns (bytes memory) {
+        return abi.encodePacked(sha256(abi.encode("pubkey", seed)), bytes16(0));
+    }
+
+    /// @dev Generate a deterministic 96-byte signature.
+    function _fakeSignature(uint256 seed) internal pure returns (bytes memory) {
+        return abi.encodePacked(sha256(abi.encode("sig", seed)), sha256(abi.encode("sig2", seed)), bytes32(0));
+    }
+
+    /// @dev Replacement for the old depositToConsensusLayerWithDepositRoot.
+    ///      Builds deposit objects, submits to buffer, signs, and calls new function.
+    function _depositToConsensusLayer(uint256[] memory opIndices, uint32[] memory counts) internal {
+        bytes32 wc = river.getWithdrawalCredentials();
+
+        // Count total deposits
+        uint256 total = 0;
+        for (uint256 i = 0; i < counts.length; i++) total += counts[i];
+
+        // Build deposit objects
+        IDepositDataBuffer.DepositObject[] memory deposits = new IDepositDataBuffer.DepositObject[](total);
+        uint256 idx = 0;
+        for (uint256 i = 0; i < opIndices.length; i++) {
+            for (uint256 j = 0; j < counts[i]; j++) {
+                deposits[idx] = IDepositDataBuffer.DepositObject({
+                    pubkey: _fakePubkey(idx),
+                    signature: _fakeSignature(idx),
+                    amount: 32 ether,
+                    withdrawalCredentials: abi.encode(wc),
+                    depositDataRoot: bytes32(0),
+                    metadata: _operatorMeta(opIndices[i])
+                });
+                idx++;
+            }
+        }
+
+        bytes32 bufferId = keccak256(abi.encode(block.timestamp, total, opIndices.length));
+        depositBuffer.submitDepositData(bufferId, deposits);
+
+        bytes32 rootHash = deposit.get_deposit_root();
+
+        bytes[] memory sigs = new bytes[](2);
+        sigs[0] = _signAttestation(attesterPk1, bufferId, rootHash);
+        sigs[1] = _signAttestation(attesterPk2, bufferId, rootHash);
+
+        BLS12_381.DepositY[] memory ys = new BLS12_381.DepositY[](total);
+        for (uint256 i = 0; i < total; i++) {
+            ys[i] = _emptyDepositY();
+        }
+
+        // The new function requires keeper, not admin
+        address currentKeeper = river.getKeeper();
+        vm.prank(currentKeeper);
+        river.depositToConsensusLayerWithAttestation(bufferId, rootHash, sigs, ys);
+    }
+
+    /// @dev Single-operator convenience overload.
+    function _depositToConsensusLayer(uint256 opIndex, uint32 count) internal {
+        uint256[] memory idx = new uint256[](1);
+        idx[0] = opIndex;
+        uint32[] memory cnt = new uint32[](1);
+        cnt[0] = count;
+        _depositToConsensusLayer(idx, cnt);
     }
 }
 
@@ -192,10 +336,24 @@ contract RiverV1Tests is RiverV1TestBase {
 
         operatorOneIndex = operatorsRegistry.addOperator(operatorOneName, operatorOne);
         operatorTwoIndex = operatorsRegistry.addOperator(operatorTwoName, operatorTwo);
+
+        // Set up attestation infrastructure
+        river.setDepositDataBuffer(address(depositBuffer));
+        river.setAttester(attester1, true);
+        river.setAttester(attester2, true);
+        river.setAttestationThreshold(2);
+
         vm.stopPrank();
-        // Pre-initialize the exited ETH array so _setExitedETH can safely access per-operator slots.
-        uint256 opCount = operatorsRegistry.getOperatorCount();
-        operatorsRegistry.sudoSetRawExitedETH(new uint256[](opCount + 1));
+
+        // Set domain separator in storage
+        vm.store(
+            address(river),
+            bytes32(uint256(keccak256("river.state.domainSeparator")) - 1),
+            keccak256(abi.encode(EIP712_DOMAIN_TYPEHASH, NAME_HASH, VERSION_HASH, block.chainid, address(river)))
+        );
+
+        // Mock BLS verification (EIP-2537 precompiles not available in Foundry)
+        vm.mockCall(address(river), abi.encodeWithSelector(river.verifyBLSDeposit.selector), bytes(""));
     }
 
     function testVersion() external {
@@ -558,17 +716,16 @@ contract RiverV1Tests is RiverV1TestBase {
 
         river.debug_moveDepositToCommitted();
 
-        // Create allocation for 17 validators from each operator = 34 total
-        uint256[] memory indexes = new uint256[](2);
-        indexes[0] = operatorOneIndex;
-        indexes[1] = operatorTwoIndex;
-        uint32[] memory counts = new uint32[](2);
-        counts[0] = 17;
-        counts[1] = 17;
-        IOperatorsRegistryV1.ValidatorDeposit[] memory allocation = _createMultiAllocation(indexes, counts);
-
-        vm.prank(admin);
-        river.depositToConsensusLayerWithDepositRoot(allocation, bytes32(0));
+        // Deposit 17 validators from each operator = 34 total
+        {
+            uint256[] memory indexes = new uint256[](2);
+            indexes[0] = operatorOneIndex;
+            indexes[1] = operatorTwoIndex;
+            uint32[] memory counts = new uint32[](2);
+            counts[0] = 17;
+            counts[1] = 17;
+            _depositToConsensusLayer(indexes, counts);
+        }
 
         OperatorsV3.Operator memory op1 = operatorsRegistry.getOperator(operatorOneIndex);
         OperatorsV3.Operator memory op2 = operatorsRegistry.getOperator(operatorTwoIndex);
@@ -604,17 +761,16 @@ contract RiverV1Tests is RiverV1TestBase {
 
         river.debug_moveDepositToCommitted();
 
-        // Create allocation for 17 validators from each operator = 34 total
-        uint256[] memory indexes = new uint256[](2);
-        indexes[0] = operatorOneIndex;
-        indexes[1] = operatorTwoIndex;
-        uint32[] memory counts = new uint32[](2);
-        counts[0] = 17;
-        counts[1] = 17;
-        IOperatorsRegistryV1.ValidatorDeposit[] memory allocation = _createMultiAllocation(indexes, counts);
-
-        vm.prank(admin);
-        river.depositToConsensusLayerWithDepositRoot(allocation, bytes32(0));
+        // Deposit 17 validators from each operator = 34 total
+        {
+            uint256[] memory indexes = new uint256[](2);
+            indexes[0] = operatorOneIndex;
+            indexes[1] = operatorTwoIndex;
+            uint32[] memory counts = new uint32[](2);
+            counts[0] = 17;
+            counts[1] = 17;
+            _depositToConsensusLayer(indexes, counts);
+        }
 
         OperatorsV3.Operator memory op1 = operatorsRegistry.getOperator(operatorOneIndex);
         OperatorsV3.Operator memory op2 = operatorsRegistry.getOperator(operatorTwoIndex);
@@ -707,17 +863,16 @@ contract RiverV1Tests is RiverV1TestBase {
 
         river.debug_moveDepositToCommitted();
 
-        // Create allocation for 17 validators from each operator = 34 total
-        uint256[] memory indexes = new uint256[](2);
-        indexes[0] = operatorOneIndex;
-        indexes[1] = operatorTwoIndex;
-        uint32[] memory counts = new uint32[](2);
-        counts[0] = 17;
-        counts[1] = 17;
-        IOperatorsRegistryV1.ValidatorDeposit[] memory allocation = _createMultiAllocation(indexes, counts);
-
-        vm.prank(admin);
-        river.depositToConsensusLayerWithDepositRoot(allocation, bytes32(0));
+        // Deposit 17 validators from each operator = 34 total
+        {
+            uint256[] memory indexes = new uint256[](2);
+            indexes[0] = operatorOneIndex;
+            indexes[1] = operatorTwoIndex;
+            uint32[] memory counts = new uint32[](2);
+            counts[0] = 17;
+            counts[1] = 17;
+            _depositToConsensusLayer(indexes, counts);
+        }
 
         OperatorsV3.Operator memory op1 = operatorsRegistry.getOperator(operatorOneIndex);
         OperatorsV3.Operator memory op2 = operatorsRegistry.getOperator(operatorTwoIndex);
@@ -761,17 +916,16 @@ contract RiverV1Tests is RiverV1TestBase {
 
         river.debug_moveDepositToCommitted();
 
-        // Create allocation for 17 validators from each operator = 34 total
-        uint256[] memory indexes = new uint256[](2);
-        indexes[0] = operatorOneIndex;
-        indexes[1] = operatorTwoIndex;
-        uint32[] memory counts = new uint32[](2);
-        counts[0] = 17;
-        counts[1] = 17;
-        IOperatorsRegistryV1.ValidatorDeposit[] memory allocation = _createMultiAllocation(indexes, counts);
-
-        vm.prank(admin);
-        river.depositToConsensusLayerWithDepositRoot(allocation, bytes32(0));
+        // Deposit 17 validators from each operator = 34 total
+        {
+            uint256[] memory indexes = new uint256[](2);
+            indexes[0] = operatorOneIndex;
+            indexes[1] = operatorTwoIndex;
+            uint32[] memory counts = new uint32[](2);
+            counts[0] = 17;
+            counts[1] = 17;
+            _depositToConsensusLayer(indexes, counts);
+        }
 
         OperatorsV3.Operator memory op1 = operatorsRegistry.getOperator(operatorOneIndex);
         OperatorsV3.Operator memory op2 = operatorsRegistry.getOperator(operatorTwoIndex);
@@ -786,8 +940,8 @@ contract RiverV1Tests is RiverV1TestBase {
         assert(river.balanceOfUnderlying(bob) == 1000 ether);
     }
 
-    // Testing operator fee split when one operator has stopped validators
-    function testUserDepositsOperatorWithStoppedValidators() public {
+    // Testing sequential deposits to different operators
+    function testUserDepositsSequentialOperators() public {
         vm.deal(joe, 100 ether);
         vm.deal(bob, 1000 ether);
 
@@ -808,29 +962,16 @@ contract RiverV1Tests is RiverV1TestBase {
         river.debug_moveDepositToCommitted();
 
         // First deposit: 20 validators from operator 1
-        vm.prank(admin);
-        river.depositToConsensusLayerWithDepositRoot(_createAllocation(operatorOneIndex, 20), bytes32(0));
-
-        uint256[] memory exitedETH = new uint256[](3);
-        exitedETH[0] = 10 * 32 ether;
-        exitedETH[1] = 10 * 32 ether;
-        exitedETH[2] = 0;
-        // activeCLETH for operatorOne must be >= deltaExited (10*32) to pass ExitedETHExceedsPriorCLETH check.
-        operatorsRegistry.sudoSetActiveCLETH(operatorOneIndex, 20 * 32 ether);
-        operatorsRegistry.sudoReportExitedETH(exitedETH, 20 * 32 ether);
+        _depositToConsensusLayer(operatorOneIndex, 20);
 
         // Second deposit: 10 validators from operator 2
-        vm.prank(admin);
-        river.depositToConsensusLayerWithDepositRoot(_createAllocation(operatorTwoIndex, 10), bytes32(0));
+        _depositToConsensusLayer(operatorTwoIndex, 10);
 
         OperatorsV3.Operator memory op1 = operatorsRegistry.getOperator(operatorOneIndex);
         OperatorsV3.Operator memory op2 = operatorsRegistry.getOperator(operatorTwoIndex);
 
         assert(op1.funded == 20 * 32 ether);
-        assert(op1.requestedExits == 10 * 32 ether);
         assert(op2.funded == 10 * 32 ether);
-
-        assert(operatorsRegistry.getExitedETHPerOperator()[operatorOneIndex] == 10 * 32 ether);
 
         assert(river.getTotalDepositedETH() == 30 * 32 ether);
         assert(river.totalUnderlyingSupply() == 1100 ether);
@@ -896,7 +1037,24 @@ contract RiverV1TestsReport_HEAVY_FUZZING is RiverV1TestBase {
         oracle.addMember(oracleMember, 1);
         river.setCoverageFund(address(coverageFund));
         river.setKeeper(admin);
+
+        // Set up attestation infrastructure
+        river.setDepositDataBuffer(address(depositBuffer));
+        river.setAttester(attester1, true);
+        river.setAttester(attester2, true);
+        river.setAttestationThreshold(2);
+
         vm.stopPrank();
+
+        // Set domain separator in storage
+        vm.store(
+            address(river),
+            bytes32(uint256(keccak256("river.state.domainSeparator")) - 1),
+            keccak256(abi.encode(EIP712_DOMAIN_TYPEHASH, NAME_HASH, VERSION_HASH, block.chainid, address(river)))
+        );
+
+        // Mock BLS verification (EIP-2537 precompiles not available in Foundry)
+        vm.mockCall(address(river), abi.encodeWithSelector(river.verifyBLSDeposit.selector), bytes(""));
     }
 
     function _rawPermissions(address _who, uint256 _mask) internal {
@@ -991,16 +1149,8 @@ contract RiverV1TestsReport_HEAVY_FUZZING is RiverV1TestBase {
             operatorKeyCounts[idx] = uint32(operatorKeyCount);
         }
 
-        // Create allocation from collected operator data
-        IOperatorsRegistryV1.ValidatorDeposit[] memory allocation =
-            _createMultiAllocation(operatorIndices, operatorKeyCounts);
-
-        vm.prank(admin);
-        river.depositToConsensusLayerWithDepositRoot(allocation, bytes32(0));
-
-        // Pre-initialize the exited ETH storage array so _setExitedETH can access
-        // currentExitedETH[idx] without panicking when the first oracle report arrives.
-        operatorsRegistry.sudoSetRawExitedETH(new uint256[](operatorCount + 1));
+        // Deposit via attestation
+        _depositToConsensusLayer(operatorIndices, operatorKeyCounts);
 
         _newSalt = _salt;
     }
@@ -1141,21 +1291,9 @@ contract RiverV1TestsReport_HEAVY_FUZZING is RiverV1TestBase {
 
         clr.validatorsSkimmedBalance = 0;
         clr.validatorsExitedBalance = 0;
-        clr.validatorsExitingBalance = clr.validatorsBalance; // ensures no exits will be requested before asserted report
-        clr.totalDepositedActivatedETH = rfv.depositCount * 32 ether;
-        // Use operatorCount+1 length so the second report (length N+1) doesn't shrink the array.
-        clr.exitedETHPerOperator = new uint256[](rfv.operatorCount + 1);
-        // Populate activeCLETH with the deposit distribution so ExitedETHExceedsPriorCLETH passes
-        // for any stoppedTotalCount <= depositCount in subsequent scenario reports.
-        clr.activeCLETHPerOperator = new uint256[](rfv.operatorCount);
-        {
-            uint256 restActiveCL = rfv.depositCount % rfv.operatorCount;
-            for (uint256 idx = 0; idx < rfv.operatorCount; ++idx) {
-                uint256 opDepositCount = rfv.depositCount / rfv.operatorCount + (restActiveCL > 0 ? 1 : 0);
-                if (restActiveCL > 0) --restActiveCL;
-                clr.activeCLETHPerOperator[idx] = opDepositCount * 32 ether;
-            }
-        }
+        clr.validatorsExitingBalance = type(uint256).max; // ensures no exits will be requested before asserted report
+        clr.exitedETHPerOperator = new uint256[](1);
+        clr.exitedETHPerOperator[0] = 0;
         _newSalt = _salt;
     }
 
@@ -1300,16 +1438,14 @@ contract RiverV1TestsReport_HEAVY_FUZZING is RiverV1TestBase {
         uint256 rest = stoppedTotalCount % rfv.operatorCount;
         for (uint256 idx = 0; idx < rfv.operatorCount; ++idx) {
             clr.exitedETHPerOperator[idx + 1] =
-                uint256((stoppedTotalCount / rfv.operatorCount) + (rest > 0 ? 1 : 0)) * 32 ether;
+                ((stoppedTotalCount / rfv.operatorCount) + (rest > 0 ? 1 : 0)) * 32 ether;
             if (rest > 0) {
                 --rest;
             }
         }
 
-        clr.activeCLETHPerOperator = new uint256[](rfv.operatorCount);
         clr.rebalanceDepositToRedeemMode = false;
         clr.slashingContainmentMode = false;
-        clr.totalDepositedActivatedETH = rfv.depositCount * 32 ether;
 
         rfv.expected_pre_elFeeRecipientBalance = 0;
         rfv.expected_pre_coverageFundBalance = 0;
@@ -1364,16 +1500,14 @@ contract RiverV1TestsReport_HEAVY_FUZZING is RiverV1TestBase {
         uint256 rest = stoppedTotalCount % rfv.operatorCount;
         for (uint256 idx = 0; idx < rfv.operatorCount; ++idx) {
             clr.exitedETHPerOperator[idx + 1] =
-                uint256((stoppedTotalCount / rfv.operatorCount) + (rest > 0 ? 1 : 0)) * 32 ether;
+                ((stoppedTotalCount / rfv.operatorCount) + (rest > 0 ? 1 : 0)) * 32 ether;
             if (rest > 0) {
                 --rest;
             }
         }
 
-        clr.activeCLETHPerOperator = new uint256[](rfv.operatorCount);
         clr.rebalanceDepositToRedeemMode = false;
         clr.slashingContainmentMode = false;
-        clr.totalDepositedActivatedETH = rfv.depositCount * 32 ether;
 
         uint256 remainingIncrease = maxAllowedIncrease - totalIncrease;
         vm.deal(address(elFeeRecipient), remainingIncrease);
@@ -1431,16 +1565,14 @@ contract RiverV1TestsReport_HEAVY_FUZZING is RiverV1TestBase {
         uint256 rest = stoppedTotalCount % rfv.operatorCount;
         for (uint256 idx = 0; idx < rfv.operatorCount; ++idx) {
             clr.exitedETHPerOperator[idx + 1] =
-                uint256((stoppedTotalCount / rfv.operatorCount) + (rest > 0 ? 1 : 0)) * 32 ether;
+                ((stoppedTotalCount / rfv.operatorCount) + (rest > 0 ? 1 : 0)) * 32 ether;
             if (rest > 0) {
                 --rest;
             }
         }
 
-        clr.activeCLETHPerOperator = new uint256[](rfv.operatorCount);
         clr.rebalanceDepositToRedeemMode = false;
         clr.slashingContainmentMode = false;
-        clr.totalDepositedActivatedETH = rfv.depositCount * 32 ether;
 
         uint256 remainingIncrease = maxAllowedIncrease - totalIncrease;
         address donator = uf._new(_salt);
@@ -1503,16 +1635,14 @@ contract RiverV1TestsReport_HEAVY_FUZZING is RiverV1TestBase {
         uint256 rest = stoppedTotalCount % rfv.operatorCount;
         for (uint256 idx = 0; idx < rfv.operatorCount; ++idx) {
             clr.exitedETHPerOperator[idx + 1] =
-                uint256((stoppedTotalCount / rfv.operatorCount) + (rest > 0 ? 1 : 0)) * 32 ether;
+                ((stoppedTotalCount / rfv.operatorCount) + (rest > 0 ? 1 : 0)) * 32 ether;
             if (rest > 0) {
                 --rest;
             }
         }
 
-        clr.activeCLETHPerOperator = new uint256[](rfv.operatorCount);
         clr.rebalanceDepositToRedeemMode = false;
         clr.slashingContainmentMode = false;
-        clr.totalDepositedActivatedETH = rfv.depositCount * 32 ether;
 
         _salt = _redeemAllSatisfiedRedeemRequests(_salt);
 
@@ -1568,18 +1698,16 @@ contract RiverV1TestsReport_HEAVY_FUZZING is RiverV1TestBase {
             uint256 rest = stoppedTotalCount % rfv.operatorCount;
             for (uint256 idx = 0; idx < rfv.operatorCount; ++idx) {
                 clr.exitedETHPerOperator[idx + 1] =
-                    uint256((stoppedTotalCount / rfv.operatorCount) + (rest > 0 ? 1 : 0)) * 32 ether;
+                    ((stoppedTotalCount / rfv.operatorCount) + (rest > 0 ? 1 : 0)) * 32 ether;
                 if (rest > 0) {
                     --rest;
                 }
             }
 
-            clr.activeCLETHPerOperator = new uint256[](rfv.operatorCount);
             clr.rebalanceDepositToRedeemMode = false;
             clr.slashingContainmentMode = false;
         }
 
-        clr.totalDepositedActivatedETH = rfv.depositCount * 32 ether;
         uint256 remainingIncrease = maxAllowedIncrease - totalIncrease;
         uint256 elAmount = remainingIncrease / 2;
         uint256 coverageAmount = remainingIncrease - elAmount;
@@ -1642,16 +1770,14 @@ contract RiverV1TestsReport_HEAVY_FUZZING is RiverV1TestBase {
         uint256 rest = stoppedTotalCount % rfv.operatorCount;
         for (uint256 idx = 0; idx < rfv.operatorCount; ++idx) {
             clr.exitedETHPerOperator[idx + 1] =
-                uint256((stoppedTotalCount / rfv.operatorCount) + (rest > 0 ? 1 : 0)) * 32 ether;
+                ((stoppedTotalCount / rfv.operatorCount) + (rest > 0 ? 1 : 0)) * 32 ether;
             if (rest > 0) {
                 --rest;
             }
         }
 
-        clr.activeCLETHPerOperator = new uint256[](rfv.operatorCount);
         clr.rebalanceDepositToRedeemMode = true;
         clr.slashingContainmentMode = false;
-        clr.totalDepositedActivatedETH = rfv.depositCount * 32 ether;
 
         rfv.expected_pre_elFeeRecipientBalance = 0;
         rfv.expected_pre_coverageFundBalance = 0;
@@ -1705,16 +1831,14 @@ contract RiverV1TestsReport_HEAVY_FUZZING is RiverV1TestBase {
         uint256 rest = stoppedTotalCount % rfv.operatorCount;
         for (uint256 idx = 0; idx < rfv.operatorCount; ++idx) {
             clr.exitedETHPerOperator[idx + 1] =
-                uint256((stoppedTotalCount / rfv.operatorCount) + (rest > 0 ? 1 : 0)) * 32 ether;
+                ((stoppedTotalCount / rfv.operatorCount) + (rest > 0 ? 1 : 0)) * 32 ether;
             if (rest > 0) {
                 --rest;
             }
         }
 
-        clr.activeCLETHPerOperator = new uint256[](rfv.operatorCount);
         clr.rebalanceDepositToRedeemMode = false;
         clr.slashingContainmentMode = true;
-        clr.totalDepositedActivatedETH = rfv.depositCount * 32 ether;
 
         rfv.expected_pre_elFeeRecipientBalance = 0;
         rfv.expected_pre_coverageFundBalance = 0;
@@ -1732,11 +1856,11 @@ contract RiverV1TestsReport_HEAVY_FUZZING is RiverV1TestBase {
         IOracleManagerV1.ConsensusLayerReport memory clr,
         uint256
     ) internal {
-        uint256[] memory exitedETHPerOperator = clr.exitedETHPerOperator;
+        uint256[] memory exitedETHPerOp = clr.exitedETHPerOperator;
         for (uint256 idx = 0; idx < operatorsRegistry.getOperatorCount(); ++idx) {
             OperatorsV3.Operator memory op = operatorsRegistry.getOperator(idx);
-            if (exitedETHPerOperator.length - 1 > idx) {
-                assertEq(op.requestedExits, exitedETHPerOperator[idx + 1]);
+            if (exitedETHPerOp.length - 1 > idx) {
+                assertEq(op.requestedExits, exitedETHPerOp[idx + 1]);
             } else {
                 assertEq(op.requestedExits, 0);
             }
@@ -1770,9 +1894,6 @@ contract RiverV1TestsReport_HEAVY_FUZZING is RiverV1TestBase {
     function _generateEmptyReport() internal pure returns (IOracleManagerV1.ConsensusLayerReport memory clr) {
         clr.exitedETHPerOperator = new uint256[](1);
         clr.exitedETHPerOperator[0] = 0;
-        // _reportCLETH reverts with InvalidEmptyArray() if this is empty;
-        // all callers first invoke _depositValidators which adds operator at index 0.
-        clr.activeCLETHPerOperator = new uint256[](1);
     }
 
     function testReportingError_Unauthorized(uint256 _salt) external {
@@ -1813,30 +1934,15 @@ contract RiverV1TestsReport_HEAVY_FUZZING is RiverV1TestBase {
 
         river.debug_moveDepositToCommitted();
 
-        // Create allocation for this single operator
-        vm.prank(admin);
-        river.depositToConsensusLayerWithDepositRoot(_createAllocation(operatorIndex, uint32(count)), bytes32(0));
+        // Deposit via attestation for this single operator
+        _depositToConsensusLayer(operatorIndex, uint32(count));
 
         return _salt;
     }
 
-    function testReportingError_InvalidValidatorCountReport(uint256 _salt) external {
-        uint8 depositCount = uint8(bound(_salt, 1, 32));
-        IOracleManagerV1.ConsensusLayerReport memory clr = _generateEmptyReport();
-
-        clr.epoch = bound(_salt, 1, type(uint128).max) * epochsPerFrame;
-        vm.warp((clr.epoch + epochsUntilFinal) * (secondsPerSlot * slotsPerEpoch));
-        _salt = _depositValidators(depositCount, _salt);
-
-        // ValidatorCount validation was removed in the ETH-based accounting refactor;
-        // reporting a count higher than deposits is now allowed
-        clr.validatorsCount = depositCount + 1;
-        clr.validatorsBalance = uint256(depositCount) * 32 ether;
-        clr.totalDepositedActivatedETH = uint256(depositCount) * 32 ether;
-
-        vm.prank(address(oracle));
-        river.setConsensusLayerData(clr);
-    }
+    // DISABLED: InvalidValidatorCountReport error no longer exists; DepositedValidatorCount
+    // is no longer tracked. This validation has been removed in the new attestation-based flow.
+    // function testReportingError_InvalidValidatorCountReport(uint256 _salt) external { ... }
 
     function testReportingError_InvalidDecreasingValidatorsExitedBalance(uint256 _salt) external {
         uint8 depositCount = uint8(bound(_salt, 2, 32));
@@ -1851,7 +1957,6 @@ contract RiverV1TestsReport_HEAVY_FUZZING is RiverV1TestBase {
         clr.validatorsExitingBalance = 0;
         clr.validatorsSkimmedBalance = 0;
         clr.validatorsExitedBalance = 32 ether;
-        clr.totalDepositedActivatedETH = uint256(depositCount) * 32 ether;
 
         vm.deal(address(withdraw), 32 ether);
 
@@ -1883,7 +1988,6 @@ contract RiverV1TestsReport_HEAVY_FUZZING is RiverV1TestBase {
         clr.validatorsExitingBalance = 0;
         clr.validatorsSkimmedBalance = 1 ether;
         clr.validatorsExitedBalance = 0;
-        clr.totalDepositedActivatedETH = uint256(depositCount) * 32 ether;
 
         vm.deal(address(withdraw), 1 ether);
 
@@ -1915,7 +2019,6 @@ contract RiverV1TestsReport_HEAVY_FUZZING is RiverV1TestBase {
         clr.validatorsExitingBalance = 0;
         clr.validatorsSkimmedBalance = 0;
         clr.validatorsExitedBalance = 0;
-        clr.totalDepositedActivatedETH = uint256(depositCount) * 32 ether;
 
         _salt = _next(_salt);
         uint256 framesBetween = bound(_salt, 1, 1_000_000);
@@ -1957,7 +2060,6 @@ contract RiverV1TestsReport_HEAVY_FUZZING is RiverV1TestBase {
         clr.validatorsExitingBalance = 0;
         clr.validatorsSkimmedBalance = 0;
         clr.validatorsExitedBalance = 0;
-        clr.totalDepositedActivatedETH = uint256(depositCount) * 32 ether;
 
         _salt = _next(_salt);
         uint256 framesBetween = bound(_salt, 1, 1_000_000);
@@ -1984,66 +2086,10 @@ contract RiverV1TestsReport_HEAVY_FUZZING is RiverV1TestBase {
         river.setConsensusLayerData(clr);
     }
 
-    function testReportingError_ValidatorCountDecreasing(uint256 _salt) external {
-        uint8 depositCount = uint8(bound(_salt, 2, 32));
-        IOracleManagerV1.ConsensusLayerReport memory clr = _generateEmptyReport();
-
-        clr.epoch = bound(_salt, 1, type(uint128).max) * epochsPerFrame;
-        vm.warp((clr.epoch + epochsUntilFinal) * (secondsPerSlot * slotsPerEpoch));
-        _salt = _depositValidators(depositCount, _salt);
-
-        clr.validatorsCount = depositCount;
-        clr.validatorsBalance = 32 ether * (depositCount);
-        clr.validatorsExitingBalance = 0;
-        clr.validatorsSkimmedBalance = 0;
-        clr.validatorsExitedBalance = 0;
-        clr.totalDepositedActivatedETH = uint256(depositCount) * 32 ether;
-
-        vm.prank(address(oracle));
-        river.setConsensusLayerData(clr);
-
-        clr.epoch += epochsPerFrame;
-        vm.warp((clr.epoch + epochsUntilFinal) * (secondsPerSlot * slotsPerEpoch));
-
-        // ValidatorCount validation was removed in the ETH-based accounting refactor;
-        // decreasing validator count is now allowed
-        clr.validatorsCount -= 1;
-
-        vm.expectRevert(
-            abi.encodeWithSignature("InvalidValidatorCountReport(uint256,uint256)", clr.validatorsCount, depositCount)
-        );
-        vm.prank(address(oracle));
-        river.setConsensusLayerData(clr);
-    }
-
-    function testReportingError_ValidatorCountHigherThanDeposits(uint256 _salt) external {
-        uint8 depositCount = uint8(bound(_salt, 2, 32));
-        IOracleManagerV1.ConsensusLayerReport memory clr = _generateEmptyReport();
-
-        clr.epoch = bound(_salt, 1, type(uint128).max) * epochsPerFrame;
-        vm.warp((clr.epoch + epochsUntilFinal) * (secondsPerSlot * slotsPerEpoch));
-        _salt = _depositValidators(depositCount, _salt);
-
-        clr.validatorsCount = depositCount;
-        clr.validatorsBalance = 32 ether * (depositCount);
-        clr.validatorsExitingBalance = 0;
-        clr.validatorsSkimmedBalance = 0;
-        clr.validatorsExitedBalance = 0;
-        clr.totalDepositedActivatedETH = uint256(depositCount) * 32 ether;
-
-        vm.prank(address(oracle));
-        river.setConsensusLayerData(clr);
-
-        clr.epoch += epochsPerFrame;
-        vm.warp((clr.epoch + epochsUntilFinal) * (secondsPerSlot * slotsPerEpoch));
-
-        // ValidatorCount validation was removed in the ETH-based accounting refactor;
-        // reporting a count higher than deposits is now allowed
-        clr.validatorsCount += 1;
-
-        vm.prank(address(oracle));
-        river.setConsensusLayerData(clr);
-    }
+    // DISABLED: InvalidValidatorCountReport error no longer exists; DepositedValidatorCount
+    // is no longer tracked. These validations have been removed in the new attestation-based flow.
+    // function testReportingError_ValidatorCountDecreasing(uint256 _salt) external { ... }
+    // function testReportingError_ValidatorCountHigherThanDeposits(uint256 _salt) external { ... }
 
     function testReportingError_InvalidPulledClFundsAmount(uint256 _salt) external {
         uint8 depositCount = uint8(bound(_salt, 2, 32));
@@ -2061,7 +2107,6 @@ contract RiverV1TestsReport_HEAVY_FUZZING is RiverV1TestBase {
         clr.validatorsExitingBalance = 0;
         clr.validatorsSkimmedBalance = skimmedAmount;
         clr.validatorsExitedBalance = 0;
-        clr.totalDepositedActivatedETH = uint256(depositCount) * 32 ether;
 
         vm.deal(address(withdraw), notEnoughAmount);
 
@@ -2077,10 +2122,6 @@ contract RiverV1TestsReport_HEAVY_FUZZING is RiverV1TestBase {
         IOracleManagerV1.ConsensusLayerReport memory clr = _generateEmptyReport();
 
         _salt = _depositValidators(depositCount, _salt);
-        // Pre-initialize storage so _setExitedETH can access currentExitedETH[1] without panicking,
-        // and set activeCLETH so the ExitedETHExceedsPriorCLETH check passes (deltaExited = 2*32 ether).
-        operatorsRegistry.sudoSetRawExitedETH(new uint256[](2));
-        operatorsRegistry.sudoSetActiveCLETH(0, uint256(depositCount) * 32 ether);
 
         _salt = _next(_salt);
         uint256 framesBetween = bound(_salt, 1, 1_000_000);
@@ -2092,7 +2133,6 @@ contract RiverV1TestsReport_HEAVY_FUZZING is RiverV1TestBase {
         clr.validatorsExitingBalance = 0;
         clr.validatorsSkimmedBalance = maxIncrease;
         clr.validatorsExitedBalance = 0;
-        clr.totalDepositedActivatedETH = uint256(depositCount) * 32 ether;
         clr.epoch = framesBetween * epochsPerFrame;
         clr.exitedETHPerOperator = new uint256[](2);
         clr.exitedETHPerOperator[0] = 2 * 32 ether;
@@ -2152,7 +2192,6 @@ contract RiverV1TestsReport_HEAVY_FUZZING is RiverV1TestBase {
         clr.validatorsExitingBalance = 0;
         clr.validatorsSkimmedBalance = maxIncrease;
         clr.validatorsExitedBalance = 0;
-        clr.totalDepositedActivatedETH = uint256(depositCount) * 32 ether;
         clr.epoch = framesBetween * epochsPerFrame;
         vm.warp((clr.epoch + epochsUntilFinal) * (secondsPerSlot * slotsPerEpoch));
 
@@ -2187,7 +2226,6 @@ contract RiverV1TestsReport_HEAVY_FUZZING is RiverV1TestBase {
         clr.validatorsExitingBalance = 0;
         clr.validatorsSkimmedBalance = 0;
         clr.validatorsExitedBalance = 0;
-        clr.totalDepositedActivatedETH = uint256(depositCount) * 32 ether;
         clr.epoch = framesBetween * epochsPerFrame;
         vm.warp((clr.epoch + epochsUntilFinal) * (secondsPerSlot * slotsPerEpoch));
 
@@ -2222,7 +2260,6 @@ contract RiverV1TestsReport_HEAVY_FUZZING is RiverV1TestBase {
         clr.validatorsExitingBalance = 0;
         clr.validatorsSkimmedBalance = 0;
         clr.validatorsExitedBalance = 0;
-        clr.totalDepositedActivatedETH = uint256(depositCount) * 32 ether;
         clr.epoch = framesBetween * epochsPerFrame;
         vm.warp((clr.epoch + epochsUntilFinal) * (secondsPerSlot * slotsPerEpoch));
 
@@ -2262,7 +2299,6 @@ contract RiverV1TestsReport_HEAVY_FUZZING is RiverV1TestBase {
         clr.validatorsExitingBalance = 0;
         clr.validatorsSkimmedBalance = maxIncrease / 3;
         clr.validatorsExitedBalance = 0;
-        clr.totalDepositedActivatedETH = uint256(depositCount) * 32 ether;
         clr.epoch = framesBetween * epochsPerFrame;
         vm.warp((clr.epoch + epochsUntilFinal) * (secondsPerSlot * slotsPerEpoch));
 
@@ -2292,192 +2328,5 @@ contract RiverV1TestsReport_HEAVY_FUZZING is RiverV1TestBase {
     function testExternalViewFunctions() public {
         assertEq(block.timestamp, river.getTime());
         assertEq(address(redeemManager), river.getRedeemManager());
-    }
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// River coverage tests (100% for changed contracts, no CoverageGaps)
-// ─────────────────────────────────────────────────────────────────────────────
-
-contract RiverV1CoverageTests is RiverV1TestBase {
-    RedeemManagerV1 internal redeemManager;
-
-    bytes32 constant DEPOSITED_VALIDATOR_COUNT_SLOT =
-        bytes32(uint256(keccak256("river.state.depositedValidatorCount")) - 1);
-    bytes32 constant LAST_CLR_BASE_SLOT = bytes32(uint256(keccak256("river.state.lastConsensusLayerReport")) - 1);
-    bytes32 constant IN_FLIGHT_DEPOSIT_SLOT = bytes32(uint256(keccak256("river.state.inFlightDeposit")) - 1);
-    bytes32 constant BUFFERED_EXCEEDING_ETH_SLOT = bytes32(uint256(keccak256("river.state.bufferedExceedingEth")) - 1);
-
-    /// Asserts that initRiverV1_3 sets in-flight deposit when reported validator count is less than deposited count.
-    function testInitRiverV1_3WithInFlightValidators() public {
-        _initRiverAndV1_2();
-        // 10 deposited validators, 7 reported -> 3 in flight.
-        vm.store(address(river), DEPOSITED_VALIDATOR_COUNT_SLOT, bytes32(uint256(10)));
-        vm.store(address(river), bytes32(uint256(LAST_CLR_BASE_SLOT) + 5), bytes32(uint256(7)));
-        vm.prank(admin);
-        river.initRiverV1_3();
-        assertEq(river.getTotalDepositedETH(), 10 * 32 ether);
-        assertEq(uint256(vm.load(address(river), IN_FLIGHT_DEPOSIT_SLOT)), 3 * 32 ether);
-    }
-
-    /// Asserts that initRiverV1_3 leaves in-flight deposit zero when reported count equals deposited count.
-    function testInitRiverV1_3NoInFlight() public {
-        _initRiverAndV1_2();
-        vm.store(address(river), DEPOSITED_VALIDATOR_COUNT_SLOT, bytes32(uint256(5)));
-        vm.store(address(river), bytes32(uint256(LAST_CLR_BASE_SLOT) + 5), bytes32(uint256(5)));
-        vm.prank(admin);
-        river.initRiverV1_3();
-        assertEq(river.getTotalDepositedETH(), 5 * 32 ether);
-        assertEq(uint256(vm.load(address(river), IN_FLIGHT_DEPOSIT_SLOT)), 0);
-    }
-
-    /// Asserts that a consensus layer report succeeds when no coverage fund is configured (pull is skipped).
-    function testPullCoverageFundsNoCoverageFund() public {
-        _initRiverMinimalForReporting();
-        address alice = makeAddr("alice");
-        _allowDeposit(alice);
-        vm.deal(alice, 32 ether);
-        vm.prank(alice);
-        river.deposit{value: 32 ether}();
-        // Set last reported balance so the small increase is within bounds.
-        vm.store(address(river), bytes32(uint256(LAST_CLR_BASE_SLOT) + 1), bytes32(uint256(32 ether)));
-        uint256 epoch = epochsPerFrame;
-        vm.warp((epoch + epochsUntilFinal) * slotsPerEpoch * secondsPerSlot);
-        IOracleManagerV1.ConsensusLayerReport memory clr;
-        clr.epoch = epoch;
-        clr.validatorsBalance = 32 ether + 1 wei;
-        clr.totalDepositedActivatedETH = 0;
-        clr.exitedETHPerOperator = new uint256[](1);
-        clr.activeCLETHPerOperator = new uint256[](1);
-        vm.prank(address(oracle));
-        river.setConsensusLayerData(clr);
-    }
-
-    /// Asserts that setConsensusLayerData reverts with ZeroMintedShares when balance increases but total supply is zero.
-    function testOnEarningsZeroMintedSharesReverts() public {
-        _initRiverMinimalForReporting();
-        vm.store(address(river), IN_FLIGHT_DEPOSIT_SLOT, bytes32(uint256(32 ether)));
-        uint256 epoch = epochsPerFrame;
-        vm.warp((epoch + epochsUntilFinal) * slotsPerEpoch * secondsPerSlot);
-        IOracleManagerV1.ConsensusLayerReport memory clr;
-        clr.epoch = epoch;
-        clr.validatorsBalance = 32 ether + 1 wei;
-        clr.totalDepositedActivatedETH = 32 ether;
-        clr.exitedETHPerOperator = new uint256[](1);
-        vm.prank(address(oracle));
-        vm.expectRevert(abi.encodeWithSignature("ZeroMintedShares()"));
-        river.setConsensusLayerData(clr);
-    }
-
-    /// Asserts that when the redeem manager has buffered exceeding ETH, reporting pulls some of it and redeem manager balance decreases.
-    function testPullRedeemManagerExceedingEthNonZero() public {
-        _initRiverMinimalForReporting();
-        address alice = makeAddr("alice");
-        _allowDeposit(alice);
-        vm.deal(alice, 32 ether);
-        vm.prank(alice);
-        river.deposit{value: 32 ether}();
-        vm.store(address(redeemManager), BUFFERED_EXCEEDING_ETH_SLOT, bytes32(uint256(1 ether)));
-        vm.deal(address(redeemManager), 1 ether);
-        uint256 epoch = epochsPerFrame;
-        vm.warp((epoch + epochsUntilFinal) * slotsPerEpoch * secondsPerSlot);
-        IOracleManagerV1.ConsensusLayerReport memory clr;
-        clr.epoch = epoch;
-        clr.validatorsBalance = 0;
-        clr.totalDepositedActivatedETH = 0;
-        clr.exitedETHPerOperator = new uint256[](1);
-        clr.activeCLETHPerOperator = new uint256[](1);
-        uint256 rdmBefore = address(redeemManager).balance;
-        vm.prank(address(oracle));
-        river.setConsensusLayerData(clr);
-        assertLt(address(redeemManager).balance, rdmBefore);
-    }
-
-    function _initRiverAndV1_2() internal {
-        super.setUp();
-        redeemManager = new RedeemManagerV1();
-        LibImplementationUnbricker.unbrick(vm, address(redeemManager));
-        bytes32 wc = withdraw.getCredentials();
-        river.initRiverV1(
-            address(deposit),
-            address(elFeeRecipient),
-            wc,
-            address(oracle),
-            admin,
-            address(allowlist),
-            address(operatorsRegistry),
-            collector,
-            500
-        );
-        river.initRiverV1_1(
-            address(redeemManager),
-            epochsPerFrame,
-            slotsPerEpoch,
-            secondsPerSlot,
-            0,
-            epochsUntilFinal,
-            1000,
-            500,
-            maxDailyNetCommittableAmount,
-            maxDailyRelativeCommittableAmount
-        );
-        river.initRiverV1_2();
-        withdraw.initializeWithdrawV1(address(river));
-        oracle.initOracleV1(address(river), admin, epochsPerFrame, slotsPerEpoch, secondsPerSlot, 0, 1000, 500);
-        vm.prank(admin);
-        oracle.addMember(oracleMember, 1);
-        vm.prank(admin);
-        river.setKeeper(admin);
-        redeemManager.initializeRedeemManagerV1(address(river));
-    }
-
-    function _initRiverMinimalForReporting() internal {
-        super.setUp();
-        redeemManager = new RedeemManagerV1();
-        LibImplementationUnbricker.unbrick(vm, address(redeemManager));
-        bytes32 wc = withdraw.getCredentials();
-        river.initRiverV1(
-            address(deposit),
-            address(elFeeRecipient),
-            wc,
-            address(oracle),
-            admin,
-            address(allowlist),
-            address(operatorsRegistry),
-            collector,
-            500
-        );
-        river.initRiverV1_1(
-            address(redeemManager),
-            epochsPerFrame,
-            slotsPerEpoch,
-            secondsPerSlot,
-            0,
-            epochsUntilFinal,
-            1000,
-            500,
-            maxDailyNetCommittableAmount,
-            maxDailyRelativeCommittableAmount
-        );
-        river.initRiverV1_2();
-        withdraw.initializeWithdrawV1(address(river));
-        oracle.initOracleV1(address(river), admin, epochsPerFrame, slotsPerEpoch, secondsPerSlot, 0, 1000, 500);
-        vm.prank(admin);
-        oracle.addMember(oracleMember, 1);
-        vm.prank(admin);
-        river.setKeeper(admin);
-        redeemManager.initializeRedeemManagerV1(address(river));
-        // Add one operator so _reportCLETH(activeCLETHPerOperator) doesn't revert InvalidEmptyArray.
-        vm.prank(admin);
-        operatorsRegistry.addOperator("MinimalOp", admin);
-    }
-
-    function _allowDeposit(address _who) internal {
-        address[] memory allowees = new address[](1);
-        allowees[0] = _who;
-        uint256[] memory permissions = new uint256[](1);
-        permissions[0] = LibAllowlistMasks.REDEEM_MASK | LibAllowlistMasks.DEPOSIT_MASK;
-        vm.prank(allower);
-        allowlist.setAllowPermissions(allowees, permissions);
     }
 }

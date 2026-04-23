@@ -21,6 +21,7 @@ contract ConsensusLayerDepositManagerV1ExposeInitializer is ConsensusLayerDeposi
     }
 
     function _incrementFundedETH(uint256[] memory, bytes[][] memory) internal override {}
+    function _updateFundedETHFromBuffer(IDepositDataBuffer.DepositObject[] memory) internal override {}
 
     function publicConsensusLayerDepositManagerInitializeV1(
         address _depositContractAddress,
@@ -60,6 +61,8 @@ contract ConsensusLayerDepositManagerV1UsesRegistry is ConsensusLayerDepositMana
     function _incrementFundedETH(uint256[] memory _fundedETH, bytes[][] memory _publicKeys) internal override {
         registry.incrementFundedETH(_fundedETH, _publicKeys);
     }
+
+    function _updateFundedETHFromBuffer(IDepositDataBuffer.DepositObject[] memory) internal override {}
 
     function setRegistry(IOperatorsRegistryV1 _registry) external {
         registry = _registry;
@@ -174,6 +177,7 @@ contract ConsensusLayerDepositManagerV1ControllableValidatorKeyRequest is Consen
     }
 
     function _incrementFundedETH(uint256[] memory, bytes[][] memory) internal override {}
+    function _updateFundedETHFromBuffer(IDepositDataBuffer.DepositObject[] memory) internal override {}
 
     function publicConsensusLayerDepositManagerInitializeV1(
         address _depositContractAddress,
@@ -810,6 +814,7 @@ contract ConsensusLayerDepositManagerV1ValidKeys is ConsensusLayerDepositManager
     }
 
     function _incrementFundedETH(uint256[] memory, bytes[][] memory) internal override {}
+    function _updateFundedETHFromBuffer(IDepositDataBuffer.DepositObject[] memory) internal override {}
 
     function publicConsensusLayerDepositManagerInitializeV1(
         address _depositContractAddress,
