@@ -1070,9 +1070,9 @@ contract RiverV1TestsReport_HEAVY_FUZZING is RiverV1TestBase {
     function _fillReport(IOracleManagerV1.ConsensusLayerReport memory clr) internal view {
         if (clr.activeCLETHPerOperator.length == 0) {
             // OperatorsV3 storage: the Operator[] array length lives at OPERATORS_SLOT.
-            uint256 opCount = uint256(vm.load(
-                address(operatorsRegistry), bytes32(uint256(keccak256("river.state.v3.operators")) - 1)
-            ));
+            uint256 opCount = uint256(
+                vm.load(address(operatorsRegistry), bytes32(uint256(keccak256("river.state.v3.operators")) - 1))
+            );
             if (opCount > 0) {
                 clr.activeCLETHPerOperator = new uint256[](opCount);
             }
@@ -1081,11 +1081,9 @@ contract RiverV1TestsReport_HEAVY_FUZZING is RiverV1TestBase {
             // StoredConsensusLayerReport.totalDepositedActivatedETH is the 7th field (offset 6)
             // from LAST_CONSENSUS_LAYER_REPORT_SLOT.
             uint256 lastReportBase = uint256(keccak256("river.state.lastConsensusLayerReport")) - 1;
-            uint256 lastTotalDeposited =
-                uint256(vm.load(address(river), bytes32(lastReportBase + 6)));
-            uint256 inFlight = uint256(vm.load(
-                address(river), bytes32(uint256(keccak256("river.state.inFlightDeposit")) - 1)
-            ));
+            uint256 lastTotalDeposited = uint256(vm.load(address(river), bytes32(lastReportBase + 6)));
+            uint256 inFlight =
+                uint256(vm.load(address(river), bytes32(uint256(keccak256("river.state.inFlightDeposit")) - 1)));
             clr.totalDepositedActivatedETH = lastTotalDeposited + inFlight;
         }
     }

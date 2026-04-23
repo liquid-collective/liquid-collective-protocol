@@ -643,9 +643,7 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
 
         vm.prank(keeper);
         vm.expectRevert(
-            abi.encodeWithSelector(
-                DepositToConsensusLayerValidation.BufferIdMismatch.selector, signedId, actualId
-            )
+            abi.encodeWithSelector(DepositToConsensusLayerValidation.BufferIdMismatch.selector, signedId, actualId)
         );
         dm.depositToConsensusLayerWithAttestation(signedId, rootHash, sigs, depositYs);
     }
