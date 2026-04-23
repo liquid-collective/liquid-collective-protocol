@@ -80,11 +80,15 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
     }
 
     /// @notice Prevent unauthorized calls
-    modifier onlyRiver() virtual {
+    modifier onlyRiver() {
+        _checkRiver();
+        _;
+    }
+
+    function _checkRiver() internal virtual {
         if (msg.sender != RiverAddress.get()) {
             revert LibErrors.Unauthorized(msg.sender);
         }
-        _;
     }
 
     /// @notice Prevents anyone except the admin or the given operator to make the call. Also checks if operator is active
@@ -259,8 +263,12 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
             revert NoExitRequestsToPerform();
         }
 
-        uint256 requestedETHAmount = 0;
         uint256 allocationsLength = _allocations.length;
+        if (allocationsLength == 0 && _partialAllocations.length == 0) {
+            revert InvalidEmptyArray();
+        }
+
+        uint256 requestedETHAmount = 0;
 
         if (allocationsLength != 0) {
             // Check that the exits requested do not exceed the funded ETH amount of the operator
@@ -287,30 +295,29 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
         }
 
         // Partial Exits
-        uint256 partialLength = _partialAllocations.length;
-        if (partialLength > 0) {
+        if (_partialAllocations.length > 0) {
             IWithdrawV1 withdraw = IWithdrawV1(LCWithdrawAddress.get());
 
-            for (uint256 i = 0; i < partialLength; ++i) {
-                PartialExitETHAllocation calldata p = _partialAllocations[i];
-
+            for (uint256 i = 0; i < _partialAllocations.length; ++i) {
+                uint256 operatorIndex = _partialAllocations[i].operatorIndex;
                 uint256 partialExitAmount = 0;
-                uint256 ethAmount = 0;
-                uint256 amountsLength = p.amount.length;
-                for (uint256 j = 0; j < amountsLength; ++j) {
-                    ethAmount = p.amount[j];
+                for (uint256 j = 0; j < _partialAllocations[i].amount.length; ++j) {
+                    uint256 ethAmount = _partialAllocations[i].amount[j];
                     if (ethAmount < MIN_ETH_AMOUNT) {
                         revert AllocationWithIncorrectAmount(ethAmount);
                     }
                     partialExitAmount += ethAmount;
                 }
 
-                OperatorsV3.Operator storage operator = OperatorsV3.get(p.operatorIndex);
-                _reserveOperatorExit(operator, p.operatorIndex, partialExitAmount, true);
+                _reserveOperatorExit(OperatorsV3.get(operatorIndex), operatorIndex, partialExitAmount, true);
                 requestedETHAmount += partialExitAmount;
 
-                withdraw.withdraw(p.pubkeys, p.amount, _maxFeePerWithdrawal, msg.sender);
-                emit RequestedPartialETHExits(p.operatorIndex, p.pubkeys, p.amount);
+                withdraw.withdraw(
+                    _partialAllocations[i].pubkeys, _partialAllocations[i].amount, _maxFeePerWithdrawal, msg.sender
+                );
+                emit RequestedPartialETHExits(
+                    operatorIndex, _partialAllocations[i].pubkeys, _partialAllocations[i].amount
+                );
             }
         }
 

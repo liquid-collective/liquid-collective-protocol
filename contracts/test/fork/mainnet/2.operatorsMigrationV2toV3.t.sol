@@ -73,8 +73,7 @@ contract OperatorsMigrationV2ToV3 is Test {
         vm.prank(OPERATORS_REGISTRY_MAINNET_PROXY_ADMIN_ADDRESS);
         ITransparentUpgradeableProxy(address(orProxy))
             .upgradeToAndCall(
-                address(newImplementation),
-                abi.encodeWithSelector(OperatorsRegistryV1.initOperatorsRegistryV1_2.selector)
+                address(newImplementation), abi.encodeCall(OperatorsRegistryV1.initOperatorsRegistryV1_2, (address(1)))
             );
 
         // ── Verify V3 state matches V2 ──
@@ -104,8 +103,7 @@ contract OperatorsMigrationV2ToV3 is Test {
         vm.prank(OPERATORS_REGISTRY_MAINNET_PROXY_ADMIN_ADDRESS);
         ITransparentUpgradeableProxy(address(orProxy))
             .upgradeToAndCall(
-                address(newImplementation),
-                abi.encodeWithSelector(OperatorsRegistryV1.initOperatorsRegistryV1_2.selector)
+                address(newImplementation), abi.encodeCall(OperatorsRegistryV1.initOperatorsRegistryV1_2, (address(1)))
             );
 
         // Second call should revert (init version already set)
@@ -113,8 +111,7 @@ contract OperatorsMigrationV2ToV3 is Test {
         vm.expectRevert();
         ITransparentUpgradeableProxy(address(orProxy))
             .upgradeToAndCall(
-                address(newImplementation),
-                abi.encodeWithSelector(OperatorsRegistryV1.initOperatorsRegistryV1_2.selector)
+                address(newImplementation), abi.encodeCall(OperatorsRegistryV1.initOperatorsRegistryV1_2, (address(1)))
             );
     }
 
@@ -144,7 +141,7 @@ contract OperatorsMigrationV2ToV3 is Test {
         vm.prank(OPERATORS_REGISTRY_MAINNET_PROXY_ADMIN_ADDRESS);
         ITransparentUpgradeableProxy(address(orProxy))
             .upgradeToAndCall(
-                address(newImpl), abi.encodeWithSelector(OperatorsRegistryV1.initOperatorsRegistryV1_2.selector)
+                address(newImpl), abi.encodeCall(OperatorsRegistryV1.initOperatorsRegistryV1_2, (address(1)))
             );
 
         OperatorsRegistryV1 v3 = OperatorsRegistryV1(OPERATORS_REGISTRY_MAINNET_ADDRESS);

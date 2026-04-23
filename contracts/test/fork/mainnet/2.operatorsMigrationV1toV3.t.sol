@@ -80,7 +80,7 @@ contract OperatorsMigrationV1ToV2 is Test {
         ITransparentUpgradeableProxy(address(orProxy))
             .upgradeToAndCall(
                 address(migrationImplementation),
-                abi.encodeWithSelector(OperatorsRegistryV1.initOperatorsRegistryV1_2.selector)
+                abi.encodeCall(OperatorsRegistryV1.initOperatorsRegistryV1_2, (address(1)))
             );
 
         assertEq(or.getOperatorCount(), 3);
