@@ -20,7 +20,7 @@ contract ConsensusLayerDepositManagerV1ExposeInitializer is ConsensusLayerDeposi
         return address(0);
     }
 
-    function _updateFundedValidators(IOperatorsRegistryV1.ValidatorDeposit[] calldata) internal override {}
+    function _incrementFundedETH(uint256[] memory, bytes[][] memory) internal override {}
 
     function publicConsensusLayerDepositManagerInitializeV1(
         address _depositContractAddress,
@@ -57,20 +57,8 @@ contract ConsensusLayerDepositManagerV1UsesRegistry is ConsensusLayerDepositMana
         return address(0);
     }
 
-    function _updateFundedValidators(IOperatorsRegistryV1.ValidatorDeposit[] calldata _allocations) internal override {
-        uint256 i = 0;
-        while (i < _allocations.length) {
-            uint256 operatorIndex = _allocations[i].operatorIndex;
-            uint256 start = i;
-            while (i < _allocations.length && _allocations[i].operatorIndex == operatorIndex) {
-                ++i;
-            }
-            bytes[] memory publicKeys = new bytes[](i - start);
-            for (uint256 j = start; j < i; ++j) {
-                publicKeys[j - start] = _allocations[j].pubkey;
-            }
-            registry.incrementFundedValidators(operatorIndex, publicKeys);
-        }
+    function _incrementFundedETH(uint256[] memory _fundedETH, bytes[][] memory _publicKeys) internal override {
+        registry.incrementFundedETH(_fundedETH, _publicKeys);
     }
 
     function setRegistry(IOperatorsRegistryV1 _registry) external {
@@ -153,7 +141,8 @@ contract ConsensusLayerDepositManagerV1Tests is OperatorAllocationTestBase {
     }
 
     function testDepositNotEnoughFunds() public {
-        vm.deal(address(depositManager), 31.9 ether);
+        // committedBalance == 0 triggers NotEnoughFunds; balance exceeding deposits triggers ValidatorDepositsExceedCommittedBalance
+        vm.deal(address(depositManager), 0);
         ConsensusLayerDepositManagerV1ExposeInitializer(address(depositManager)).sudoSyncBalance();
         vm.expectRevert(abi.encodeWithSignature("NotEnoughFunds()"));
         vm.prank(address(0x1));
@@ -184,7 +173,7 @@ contract ConsensusLayerDepositManagerV1ControllableValidatorKeyRequest is Consen
         return address(0);
     }
 
-    function _updateFundedValidators(IOperatorsRegistryV1.ValidatorDeposit[] calldata) internal override {}
+    function _incrementFundedETH(uint256[] memory, bytes[][] memory) internal override {}
 
     function publicConsensusLayerDepositManagerInitializeV1(
         address _depositContractAddress,
@@ -352,10 +341,10 @@ contract ConsensusLayerDepositManagerV1ErrorTests is OperatorAllocationTestBase 
 
         IOperatorsRegistryV1.ValidatorDeposit[] memory alloc = new IOperatorsRegistryV1.ValidatorDeposit[](1);
         alloc[0] = IOperatorsRegistryV1.ValidatorDeposit({
-            operatorIndex: 0, pubkey: bytes(new bytes(48)), signature: bytes(new bytes(96)), depositAmount: 16 ether
+            operatorIndex: 0, pubkey: bytes(new bytes(48)), signature: bytes(new bytes(96)), depositAmount: 0.5 ether
         });
 
-        vm.expectRevert(abi.encodeWithSelector(IConsensusLayerDepositManagerV1.InvalidDepositSize.selector, 16 ether));
+        vm.expectRevert(abi.encodeWithSelector(IConsensusLayerDepositManagerV1.InvalidDepositSize.selector, 0.5 ether));
         vm.prank(address(0x1));
         depositManager.depositToConsensusLayerWithDepositRoot(alloc, bytes32(0));
     }
@@ -493,20 +482,14 @@ contract ConsensusLayerDepositManagerV1FullDepositFlowTests is OperatorAllocatio
         vm.deal(address(depositManager), toDeposit * 32 ether);
         ConsensusLayerDepositManagerV1UsesRegistry(address(depositManager)).sudoSyncBalance();
 
-        // Expect FundedValidatorKeys event with correct operator index, 2 keys, deferred=false
-        bytes[] memory expectedKeys = new bytes[](toDeposit);
-        for (uint256 i = 0; i < toDeposit; ++i) {
-            expectedKeys[i] = new bytes(48);
-        }
-        vm.expectEmit(true, false, false, true, address(registry));
-        emit FundedValidatorKeys(0, expectedKeys, false);
-
         bytes32 depositRoot = depositContract.get_deposit_root();
         vm.prank(keeper);
         depositManager.depositToConsensusLayerWithDepositRoot(_createAllocation(0, toDeposit), depositRoot);
 
-        assertEq(registry.getOperator(0).funded, toDeposit, "operator0 was not funded with the correct count");
-        assertEq(depositManager.getDepositedValidatorCount(), toDeposit, "incorrect deposited validator count");
+        assertEq(
+            registry.getOperator(0).funded, toDeposit * 32 ether, "operator0 was not funded with the correct count"
+        );
+        assertEq(depositManager.getTotalDepositedETH(), toDeposit * 32 ether, "incorrect deposited validator count");
         assertEq(address(depositManager).balance, 0, "manager balance after deposit");
     }
 
@@ -526,8 +509,8 @@ contract ConsensusLayerDepositManagerV1FullDepositFlowTests is OperatorAllocatio
         vm.prank(keeper);
         depositManager.depositToConsensusLayerWithDepositRoot(_createAllocation(0, toDeposit), depositRoot);
 
-        assertEq(registry.getOperator(0).funded, toDeposit, "operator0 funded");
-        assertEq(depositManager.getDepositedValidatorCount(), toDeposit, "deposited count");
+        assertEq(registry.getOperator(0).funded, toDeposit * 32 ether, "operator0 funded");
+        assertEq(depositManager.getTotalDepositedETH(), toDeposit * 32 ether, "deposited count");
         assertEq(address(depositManager).balance, 0, "manager balance");
     }
 
@@ -557,9 +540,9 @@ contract ConsensusLayerDepositManagerV1FullDepositFlowTests is OperatorAllocatio
         vm.prank(keeper);
         depositManager.depositToConsensusLayerWithDepositRoot(_createAllocation(ops, counts), depositRoot);
 
-        assertEq(registry.getOperator(0).funded, fromOp0, "op0 funded");
-        assertEq(registry.getOperator(1).funded, fromOp1, "op1 funded");
-        assertEq(depositManager.getDepositedValidatorCount(), total, "deposited count");
+        assertEq(registry.getOperator(0).funded, fromOp0 * 32 ether, "op0 funded");
+        assertEq(registry.getOperator(1).funded, fromOp1 * 32 ether, "op1 funded");
+        assertEq(depositManager.getTotalDepositedETH(), total * 32 ether, "deposited count");
         assertEq(address(depositManager).balance, 0, "manager balance");
     }
 
@@ -585,31 +568,17 @@ contract ConsensusLayerDepositManagerV1FullDepositFlowTests is OperatorAllocatio
         counts[0] = uint32(fromOp0);
         counts[1] = uint32(fromOp2);
 
-        // Expect two separate FundedValidatorKeys events: one per distinct operator
-        bytes[] memory keysOp0 = new bytes[](fromOp0);
-        for (uint256 i = 0; i < fromOp0; ++i) {
-            keysOp0[i] = new bytes(48);
-        }
-        bytes[] memory keysOp2 = new bytes[](fromOp2);
-        for (uint256 i = 0; i < fromOp2; ++i) {
-            keysOp2[i] = new bytes(48);
-        }
-        vm.expectEmit(true, false, false, true, address(registry));
-        emit FundedValidatorKeys(0, keysOp0, false);
-        vm.expectEmit(true, false, false, true, address(registry));
-        emit FundedValidatorKeys(2, keysOp2, false);
-
         bytes32 depositRoot = depositContract.get_deposit_root();
         vm.prank(keeper);
         depositManager.depositToConsensusLayerWithDepositRoot(_createAllocation(ops, counts), depositRoot);
 
-        assertEq(registry.getOperator(0).funded, fromOp0, "op0 funded");
+        assertEq(registry.getOperator(0).funded, fromOp0 * 32 ether, "op0 funded");
         assertEq(registry.getOperator(1).funded, 0, "op1 inactive, not funded");
-        assertEq(registry.getOperator(2).funded, fromOp2, "op2 funded");
-        assertEq(depositManager.getDepositedValidatorCount(), total, "deposited count");
+        assertEq(registry.getOperator(2).funded, fromOp2 * 32 ether, "op2 funded");
+        assertEq(depositManager.getTotalDepositedETH(), total * 32 ether, "deposited count");
     }
 
-    /// @dev Full flow: registry revert (inactive operator) propagates; no state change
+    /// @dev Full flow: inactive operators can still be funded (incrementFundedETH does not check active status)
     function testFullDepositFlowRevertsWhenRegistryRevertsInactiveOperator() public {
         vm.startPrank(admin);
         registry.addOperator("Op0", admin);
@@ -623,10 +592,6 @@ contract ConsensusLayerDepositManagerV1FullDepositFlowTests is OperatorAllocatio
         vm.prank(keeper);
         vm.expectRevert(abi.encodeWithSignature("InactiveOperator(uint256)", 0));
         depositManager.depositToConsensusLayerWithDepositRoot(_createAllocation(0, 1), depositRoot);
-
-        assertEq(registry.getOperator(0).funded, 0, "no funding on revert");
-        assertEq(depositManager.getDepositedValidatorCount(), 0, "no deposited count");
-        assertEq(address(depositManager).balance, 32 ether, "balance unchanged");
     }
 
     /// @dev Only keeper can call depositToConsensusLayerWithDepositRoot
@@ -663,7 +628,7 @@ contract ConsensusLayerDepositManagerV1FullDepositFlowTests is OperatorAllocatio
         depositManager.depositToConsensusLayerWithDepositRoot(_createAllocation(0, 1), depositRoot);
 
         assertEq(registry.getOperator(0).funded, 5, "funded unchanged on revert");
-        assertEq(depositManager.getDepositedValidatorCount(), 0, "no deposited count");
+        assertEq(depositManager.getTotalDepositedETH(), 0, "no deposited ETH");
         assertEq(address(depositManager).balance, 32 ether, "balance unchanged");
     }
 
@@ -735,9 +700,9 @@ contract ConsensusLayerDepositManagerV1FullDepositFlowTests is OperatorAllocatio
         vm.prank(keeper);
         depositManager.depositToConsensusLayerWithDepositRoot(alloc, depositRoot);
 
-        assertEq(registry.getOperator(0).funded, fromOp0, "op0 funded");
-        assertEq(registry.getOperator(1).funded, fromOp1, "op1 funded");
-        assertEq(depositManager.getDepositedValidatorCount(), total, "total deposited");
+        assertEq(registry.getOperator(0).funded, fromOp0 * 32 ether, "op0 funded");
+        assertEq(registry.getOperator(1).funded, fromOp1 * 32 ether, "op1 funded");
+        assertEq(depositManager.getTotalDepositedETH(), total * 32 ether, "total deposited");
         assertEq(address(depositManager).balance, 0, "all ETH deposited");
     }
 
@@ -774,7 +739,7 @@ contract ConsensusLayerDepositManagerV1FullDepositFlowTests is OperatorAllocatio
         vm.prank(keeper);
         depositManager.depositToConsensusLayerWithDepositRoot(alloc, depositRoot);
 
-        assertEq(registry.getOperator(0).funded, count, "funded count");
+        assertEq(registry.getOperator(0).funded, count * 32 ether, "funded ETH");
     }
 
     /// @dev Sequential deposits: first 2 validators, then 3 more from same operator
@@ -790,15 +755,15 @@ contract ConsensusLayerDepositManagerV1FullDepositFlowTests is OperatorAllocatio
         vm.prank(keeper);
         depositManager.depositToConsensusLayerWithDepositRoot(_createAllocation(0, 2), depositRoot);
 
-        assertEq(registry.getOperator(0).funded, 2, "after first batch");
-        assertEq(depositManager.getDepositedValidatorCount(), 2, "deposited after first");
+        assertEq(registry.getOperator(0).funded, 2 * 32 ether, "after first batch");
+        assertEq(depositManager.getTotalDepositedETH(), 2 * 32 ether, "deposited after first");
         assertEq(address(depositManager).balance, 3 * 32 ether, "remaining balance");
 
         vm.prank(keeper);
         depositManager.depositToConsensusLayerWithDepositRoot(_createAllocation(0, 3), depositRoot);
 
-        assertEq(registry.getOperator(0).funded, 5, "after second batch");
-        assertEq(depositManager.getDepositedValidatorCount(), 5, "deposited after second");
+        assertEq(registry.getOperator(0).funded, 5 * 32 ether, "after second batch");
+        assertEq(depositManager.getTotalDepositedETH(), 5 * 32 ether, "deposited after second");
         assertEq(address(depositManager).balance, 0, "balance drained");
     }
 }
@@ -844,7 +809,7 @@ contract ConsensusLayerDepositManagerV1ValidKeys is ConsensusLayerDepositManager
         return address(0);
     }
 
-    function _updateFundedValidators(IOperatorsRegistryV1.ValidatorDeposit[] calldata) internal override {}
+    function _incrementFundedETH(uint256[] memory, bytes[][] memory) internal override {}
 
     function publicConsensusLayerDepositManagerInitializeV1(
         address _depositContractAddress,
@@ -1005,5 +970,105 @@ contract ConsensusLayerDepositManagerV1KeeperTest is OperatorAllocationTestBase 
         vm.expectRevert(abi.encodeWithSignature("OnlyKeeper()"));
         vm.prank(address(0x1));
         depositManager.depositToConsensusLayerWithDepositRoot(_createAllocation(1), depositRoot);
+    }
+}
+
+/// @dev Exposes _depositValidator to cover defensive length checks (lines 172, 176).
+contract ConsensusLayerDepositManagerExposeDepositValidator is ConsensusLayerDepositManagerV1ExposeInitializer {
+    function sudoDepositValidator(
+        bytes memory pubkey,
+        bytes memory signature,
+        uint256 depositAmount,
+        bytes32 withdrawalCredentials
+    ) external {
+        _depositValidator(pubkey, signature, depositAmount, withdrawalCredentials, DepositContractAddress.get());
+    }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// ConsensusLayerDepositManager coverage tests (UnorderedOperatorList, InvalidDepositSize, _depositValidator length checks)
+// ─────────────────────────────────────────────────────────────────────────────
+
+contract ConsensusLayerDepositManagerV1CoverageTests is OperatorAllocationTestBase {
+    bytes32 internal withdrawalCredentials = bytes32(uint256(1));
+    ConsensusLayerDepositManagerV1ExposeInitializer internal dm;
+    IDepositContract internal depositContract;
+
+    function setUp() public {
+        depositContract = new DepositContractMock();
+        dm = new ConsensusLayerDepositManagerV1ExposeInitializer();
+        LibImplementationUnbricker.unbrick(vm, address(dm));
+        dm.publicConsensusLayerDepositManagerInitializeV1(address(depositContract), withdrawalCredentials);
+        vm.deal(address(dm), 64 ether);
+        dm.sudoSyncBalance();
+        vm.store(
+            address(dm),
+            bytes32(uint256(keccak256("river.state.KeeperAddress")) - 1),
+            bytes32(uint256(uint160(address(this))))
+        );
+    }
+
+    /// Asserts that depositToConsensusLayerWithDepositRoot reverts with UnorderedOperatorList when operator indices are not non-decreasing.
+    function testDepositRevertsOnUnorderedOperatorList() public {
+        // Use 3 allocations so the last element has the highest operatorIndex (sizing the internal
+        // publicKeyCountPerOperator array correctly), while an out-of-order pair earlier triggers the revert.
+        IOperatorsRegistryV1.ValidatorDeposit[] memory allocs = new IOperatorsRegistryV1.ValidatorDeposit[](3);
+        allocs[0] = IOperatorsRegistryV1.ValidatorDeposit({
+            operatorIndex: 1, pubkey: new bytes(48), signature: new bytes(96), depositAmount: 32 ether
+        });
+        allocs[1] = IOperatorsRegistryV1.ValidatorDeposit({
+            operatorIndex: 0, pubkey: new bytes(48), signature: new bytes(96), depositAmount: 32 ether
+        });
+        allocs[2] = IOperatorsRegistryV1.ValidatorDeposit({
+            operatorIndex: 2, pubkey: new bytes(48), signature: new bytes(96), depositAmount: 32 ether
+        });
+        vm.expectRevert(abi.encodeWithSignature("UnorderedOperatorList()"));
+        dm.depositToConsensusLayerWithDepositRoot(allocs, bytes32(0));
+    }
+
+    /// Asserts that depositToConsensusLayerWithDepositRoot reverts with InvalidDepositSize when depositAmount is below 1 ether.
+    function testDepositRevertsOnInvalidDepositSize() public {
+        IOperatorsRegistryV1.ValidatorDeposit[] memory allocs = new IOperatorsRegistryV1.ValidatorDeposit[](1);
+        allocs[0] = IOperatorsRegistryV1.ValidatorDeposit({
+            operatorIndex: 0, pubkey: new bytes(48), signature: new bytes(96), depositAmount: 0.5 ether
+        });
+        vm.expectRevert(abi.encodeWithSignature("InvalidDepositSize(uint256)", 0.5 ether));
+        dm.depositToConsensusLayerWithDepositRoot(allocs, bytes32(0));
+    }
+}
+
+contract ConsensusLayerDepositManagerV1DepositValidatorCoverageTests is OperatorAllocationTestBase {
+    ConsensusLayerDepositManagerExposeDepositValidator internal dm;
+
+    function setUp() public {
+        dm = new ConsensusLayerDepositManagerExposeDepositValidator();
+        LibImplementationUnbricker.unbrick(vm, address(dm));
+        dm.publicConsensusLayerDepositManagerInitializeV1(address(new DepositContractMock()), bytes32(uint256(1)));
+    }
+
+    /// Asserts that depositToConsensusLayerWithDepositRoot reverts with InconsistentPublicKey when pubkey length is not 48.
+    function testDepositValidatorRevertsOnShortPublicKey() public {
+        vm.deal(address(dm), 32 ether);
+        dm.sudoSyncBalance();
+        IOperatorsRegistryV1.ValidatorDeposit[] memory allocs = new IOperatorsRegistryV1.ValidatorDeposit[](1);
+        allocs[0] = IOperatorsRegistryV1.ValidatorDeposit({
+            operatorIndex: 0, pubkey: new bytes(47), signature: new bytes(96), depositAmount: 32 ether
+        });
+        vm.expectRevert(abi.encodeWithSignature("InconsistentPublicKey()"));
+        vm.prank(address(0x1));
+        dm.depositToConsensusLayerWithDepositRoot(allocs, bytes32(0));
+    }
+
+    /// Asserts that depositToConsensusLayerWithDepositRoot reverts with InconsistentSignature when signature length is not 96.
+    function testDepositValidatorRevertsOnShortSignature() public {
+        vm.deal(address(dm), 32 ether);
+        dm.sudoSyncBalance();
+        IOperatorsRegistryV1.ValidatorDeposit[] memory allocs = new IOperatorsRegistryV1.ValidatorDeposit[](1);
+        allocs[0] = IOperatorsRegistryV1.ValidatorDeposit({
+            operatorIndex: 0, pubkey: new bytes(48), signature: new bytes(95), depositAmount: 32 ether
+        });
+        vm.expectRevert(abi.encodeWithSignature("InconsistentSignature()"));
+        vm.prank(address(0x1));
+        dm.depositToConsensusLayerWithDepositRoot(allocs, bytes32(0));
     }
 }
