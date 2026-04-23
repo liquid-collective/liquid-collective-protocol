@@ -161,15 +161,14 @@ interface IRiverV1 is IConsensusLayerDepositManagerV1, IUserDepositManagerV1, IS
         uint128 _maxDailyRelativeCommittableAmount_
     ) external;
 
-    /// @notice Initialized version 1.3 of the River System
-    function initRiverV1_3() external;
-
-    /// @notice Initialized version 1.4 of the River System
+    /// @notice Initializes version 1.3 of the River System. Performs the Pectra accounting migration
+    ///         and wires the deposit security committee (attesters, threshold, buffer, domain) in a
+    ///         single admin-gated transaction so there is no race window on the attestation trust anchor.
     /// @param _depositDataBuffer The address of the deposit data buffer
     /// @param _attesters The list of attesters to add
     /// @param _threshold The attestation threshold
     /// @param _genesisForkVersion The genesis fork version for computing the deposit domain
-    function initRiverV1_4(
+    function initRiverV1_3(
         address _depositDataBuffer,
         address[] calldata _attesters,
         uint256 _threshold,

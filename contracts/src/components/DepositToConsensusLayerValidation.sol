@@ -26,6 +26,7 @@ abstract contract DepositToConsensusLayerValidation {
     error InsufficientAttestations(uint256 valid, uint256 threshold);
     error NoDeposits();
     error DepositRootMismatch(bytes32 expected, bytes32 actual);
+    error BufferIdMismatch(bytes32 expected, bytes32 actual);
     error TooManySignatures(uint256 count, uint256 max);
     error IncorrectDepositEther(uint256 expected, uint256 actual);
     error BLSSignatureCountMismatch(uint256 depositCount, uint256 yCount);
@@ -140,12 +141,21 @@ abstract contract DepositToConsensusLayerValidation {
         deposits = _depositDataBuffer().getDepositData(depositDataBufferId);
         if (deposits.length == 0) revert NoDeposits();
 
-        // 3. Check depositYs count
+        // 3. Verify the buffer returned deposits that hash back to the signed bufferId.
+        //    This removes the DepositDataBuffer contract from the attestation trust chain:
+        //    attesters sign the keccak256 commitment, and we enforce here that the deposits we
+        //    are about to execute are exactly the ones that commitment covers.
+        bytes32 computedId = keccak256(abi.encode(deposits));
+        if (computedId != depositDataBufferId) {
+            revert BufferIdMismatch(depositDataBufferId, computedId);
+        }
+
+        // 4. Check depositYs count
         if (depositYs.length != deposits.length) {
             revert BLSSignatureCountMismatch(deposits.length, depositYs.length);
         }
 
-        // 4. Verify BLS signatures
+        // 5. Verify BLS signatures
         _verifyBLSSignatures(deposits, depositYs);
     }
 

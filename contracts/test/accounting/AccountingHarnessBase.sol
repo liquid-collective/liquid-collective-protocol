@@ -141,8 +141,10 @@ abstract contract AccountingHarnessBase is Test, BytesGenerator {
             MAX_DAILY_REL
         );
         river.initRiverV1_2();
+        address[] memory _initAttesters = new address[](1);
+        _initAttesters[0] = makeAddr("attester");
         vm.prank(admin);
-        river.initRiverV1_3();
+        river.initRiverV1_3(makeAddr("depositBuffer"), _initAttesters, 1, bytes4(0));
 
         withdraw.initializeWithdrawV1(address(river));
         elFeeRecipient.initELFeeRecipientV1(address(river));

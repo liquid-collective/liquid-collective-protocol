@@ -254,7 +254,7 @@ abstract contract RiverV1TestBase is OperatorAllocationTestBase, BytesGenerator 
             }
         }
 
-        bytes32 bufferId = keccak256(abi.encode(block.timestamp, total, opIndices.length));
+        bytes32 bufferId = keccak256(abi.encode(deposits));
         depositBuffer.submitDepositData(bufferId, deposits);
 
         bytes32 rootHash = deposit.get_deposit_root();
@@ -1059,6 +1059,37 @@ contract RiverV1TestsReport_HEAVY_FUZZING is RiverV1TestBase {
         vm.mockCall(address(river), abi.encodeWithSelector(river.verifyBLSDeposit.selector), bytes(""));
     }
 
+    /// @dev Fills in the Pectra-era report fields that these pre-existing tests leave at their
+    ///      zero defaults: `activeCLETHPerOperator` (must match current opCount, or `reportCLETH`
+    ///      reverts with `InvalidEmptyArray`) and `totalDepositedActivatedETH` (must be monotonic
+    ///      non-decreasing and absorb the current in-flight ETH, or the balance-bound checks in
+    ///      `setConsensusLayerData` fire instead of the revert the test is asserting on).
+    /// @dev Reads storage via `vm.load` rather than external getters so that inserting this helper
+    ///      between `vm.prank`/`vm.expectRevert` and the report call does not consume those hooks
+    ///      (which only target the next external call).
+    function _fillReport(IOracleManagerV1.ConsensusLayerReport memory clr) internal view {
+        if (clr.activeCLETHPerOperator.length == 0) {
+            // OperatorsV3 storage: the Operator[] array length lives at OPERATORS_SLOT.
+            uint256 opCount = uint256(vm.load(
+                address(operatorsRegistry), bytes32(uint256(keccak256("river.state.v3.operators")) - 1)
+            ));
+            if (opCount > 0) {
+                clr.activeCLETHPerOperator = new uint256[](opCount);
+            }
+        }
+        if (clr.totalDepositedActivatedETH == 0) {
+            // StoredConsensusLayerReport.totalDepositedActivatedETH is the 7th field (offset 6)
+            // from LAST_CONSENSUS_LAYER_REPORT_SLOT.
+            uint256 lastReportBase = uint256(keccak256("river.state.lastConsensusLayerReport")) - 1;
+            uint256 lastTotalDeposited =
+                uint256(vm.load(address(river), bytes32(lastReportBase + 6)));
+            uint256 inFlight = uint256(vm.load(
+                address(river), bytes32(uint256(keccak256("river.state.inFlightDeposit")) - 1)
+            ));
+            clr.totalDepositedActivatedETH = lastTotalDeposited + inFlight;
+        }
+    }
+
     function _rawPermissions(address _who, uint256 _mask) internal {
         address[] memory allowees = new address[](1);
         allowees[0] = _who;
@@ -1320,12 +1351,14 @@ contract RiverV1TestsReport_HEAVY_FUZZING is RiverV1TestBase {
         (clr, _salt) = _retrieveInitialReportingData(rfv, _salt);
 
         vm.prank(oracleMember);
+        _fillReport(clr);
         oracle.reportConsensusLayerData(clr);
 
         (clr, _salt) = _retrieveReportingData(rfv, _salt);
 
         _performPreAssertions(rfv);
         vm.prank(oracleMember);
+        _fillReport(clr);
         oracle.reportConsensusLayerData(clr);
 
         _updateAssertions(clr, rfv, _salt);
@@ -1904,6 +1937,7 @@ contract RiverV1TestsReport_HEAVY_FUZZING is RiverV1TestBase {
 
         vm.prank(random);
         vm.expectRevert(abi.encodeWithSignature("Unauthorized(address)", random));
+        _fillReport(clr);
         river.setConsensusLayerData(clr);
     }
 
@@ -1915,6 +1949,7 @@ contract RiverV1TestsReport_HEAVY_FUZZING is RiverV1TestBase {
 
         vm.prank(address(oracle));
         vm.expectRevert(abi.encodeWithSignature("InvalidEpoch(uint256)", clr.epoch));
+        _fillReport(clr);
         river.setConsensusLayerData(clr);
     }
 
@@ -1963,6 +1998,7 @@ contract RiverV1TestsReport_HEAVY_FUZZING is RiverV1TestBase {
         vm.deal(address(withdraw), 32 ether);
 
         vm.prank(address(oracle));
+        _fillReport(clr);
         river.setConsensusLayerData(clr);
 
         clr.epoch += epochsPerFrame;
@@ -1974,6 +2010,7 @@ contract RiverV1TestsReport_HEAVY_FUZZING is RiverV1TestBase {
         vm.expectRevert(
             abi.encodeWithSignature("InvalidDecreasingValidatorsExitedBalance(uint256,uint256)", 32 ether, 0)
         );
+        _fillReport(clr);
         river.setConsensusLayerData(clr);
     }
 
@@ -1994,6 +2031,7 @@ contract RiverV1TestsReport_HEAVY_FUZZING is RiverV1TestBase {
         vm.deal(address(withdraw), 1 ether);
 
         vm.prank(address(oracle));
+        _fillReport(clr);
         river.setConsensusLayerData(clr);
 
         clr.epoch += epochsPerFrame;
@@ -2005,6 +2043,7 @@ contract RiverV1TestsReport_HEAVY_FUZZING is RiverV1TestBase {
         vm.expectRevert(
             abi.encodeWithSignature("InvalidDecreasingValidatorsSkimmedBalance(uint256,uint256)", 1 ether, 0)
         );
+        _fillReport(clr);
         river.setConsensusLayerData(clr);
     }
 
@@ -2030,6 +2069,7 @@ contract RiverV1TestsReport_HEAVY_FUZZING is RiverV1TestBase {
         console.log(maxIncrease);
 
         vm.prank(address(oracle));
+        _fillReport(clr);
         river.setConsensusLayerData(clr);
 
         clr.epoch += framesBetween * epochsPerFrame;
@@ -2046,6 +2086,7 @@ contract RiverV1TestsReport_HEAVY_FUZZING is RiverV1TestBase {
             )
         );
         vm.prank(address(oracle));
+        _fillReport(clr);
         river.setConsensusLayerData(clr);
     }
 
@@ -2069,6 +2110,7 @@ contract RiverV1TestsReport_HEAVY_FUZZING is RiverV1TestBase {
         uint256 maxDecrease = debug_maxDecrease(river.getReportBounds(), river.totalUnderlyingSupply());
 
         vm.prank(address(oracle));
+        _fillReport(clr);
         river.setConsensusLayerData(clr);
 
         clr.epoch += framesBetween * epochsPerFrame;
@@ -2085,6 +2127,7 @@ contract RiverV1TestsReport_HEAVY_FUZZING is RiverV1TestBase {
             )
         );
         vm.prank(address(oracle));
+        _fillReport(clr);
         river.setConsensusLayerData(clr);
     }
 
@@ -2116,6 +2159,7 @@ contract RiverV1TestsReport_HEAVY_FUZZING is RiverV1TestBase {
         vm.expectRevert(
             abi.encodeWithSignature("InvalidPulledClFundsAmount(uint256,uint256)", skimmedAmount, notEnoughAmount)
         );
+        _fillReport(clr);
         river.setConsensusLayerData(clr);
     }
 
@@ -2144,6 +2188,7 @@ contract RiverV1TestsReport_HEAVY_FUZZING is RiverV1TestBase {
         vm.deal(address(withdraw), maxIncrease);
 
         vm.prank(address(oracle));
+        _fillReport(clr);
         river.setConsensusLayerData(clr);
 
         clr.epoch += epochsPerFrame;
@@ -2153,6 +2198,7 @@ contract RiverV1TestsReport_HEAVY_FUZZING is RiverV1TestBase {
 
         vm.prank(address(oracle));
         vm.expectRevert(abi.encodeWithSignature("ExitedETHPerOperatorDecreased()"));
+        _fillReport(clr);
         river.setConsensusLayerData(clr);
     }
 
@@ -2203,6 +2249,7 @@ contract RiverV1TestsReport_HEAVY_FUZZING is RiverV1TestBase {
         uint256 depositAmount = river.getBalanceToDeposit();
 
         vm.prank(address(oracle));
+        _fillReport(clr);
         river.setConsensusLayerData(clr);
 
         assertEq(river.getCommittedBalance() % 32 ether, 0);
@@ -2237,6 +2284,7 @@ contract RiverV1TestsReport_HEAVY_FUZZING is RiverV1TestBase {
         uint256 depositAmount = river.getBalanceToDeposit();
 
         vm.prank(address(oracle));
+        _fillReport(clr);
         river.setConsensusLayerData(clr);
 
         assertEq(river.getCommittedBalance() % 32 ether, 0);
@@ -2276,6 +2324,7 @@ contract RiverV1TestsReport_HEAVY_FUZZING is RiverV1TestBase {
         uint256 depositAmount = river.getBalanceToDeposit();
 
         vm.prank(address(oracle));
+        _fillReport(clr);
         river.setConsensusLayerData(clr);
 
         assertEq(river.getCommittedBalance() % 32 ether, 0);
@@ -2318,6 +2367,7 @@ contract RiverV1TestsReport_HEAVY_FUZZING is RiverV1TestBase {
         uint256 depositAmount = river.getBalanceToDeposit();
 
         vm.prank(address(oracle));
+        _fillReport(clr);
         river.setConsensusLayerData(clr);
 
         assertEq(river.getCommittedBalance() % 32 ether, 0);

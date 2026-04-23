@@ -611,4 +611,42 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
         );
         dm.depositToConsensusLayerWithAttestation(bufferId, rootHash, sigs, depositYs);
     }
+
+    // Regression test for the defense-in-depth bufferId check added to validate().
+    // A malicious or buggy DepositDataBuffer may store (id, deposits) where
+    // id != keccak256(abi.encode(deposits)). The on-chain validator must catch this
+    // and revert with BufferIdMismatch so the attesters' signed commitment is
+    // always binding on the deposits that are actually executed.
+    function testRevert_bufferIdDoesNotMatchDeposits() public {
+        // Build two distinct batches. We will register deposits_actual under
+        // the id of deposits_signed, simulating a tampered/broken buffer.
+        IDepositDataBuffer.DepositObject[] memory depositsSigned = new IDepositDataBuffer.DepositObject[](1);
+        depositsSigned[0] = _makeDeposit(0, 1);
+
+        IDepositDataBuffer.DepositObject[] memory depositsActual = new IDepositDataBuffer.DepositObject[](1);
+        depositsActual[0] = _makeDeposit(0, 999); // different pubkey seed
+
+        bytes32 signedId = keccak256(abi.encode(depositsSigned));
+        bytes32 actualId = keccak256(abi.encode(depositsActual));
+        assertTrue(signedId != actualId, "test precondition: the two batches must hash differently");
+
+        // Malicious buffer: store `depositsActual` under `signedId`.
+        buffer.submitDepositData(signedId, depositsActual);
+
+        bytes32 rootHash = depositContract.get_deposit_root();
+        bytes[] memory sigs = new bytes[](2);
+        sigs[0] = _signAttestation(attesterPk1, signedId, rootHash);
+        sigs[1] = _signAttestation(attesterPk2, signedId, rootHash);
+
+        BLS12_381.DepositY[] memory depositYs = new BLS12_381.DepositY[](1);
+        depositYs[0] = _emptyDepositY();
+
+        vm.prank(keeper);
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                DepositToConsensusLayerValidation.BufferIdMismatch.selector, signedId, actualId
+            )
+        );
+        dm.depositToConsensusLayerWithAttestation(signedId, rootHash, sigs, depositYs);
+    }
 }

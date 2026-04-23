@@ -135,7 +135,12 @@ contract RiverV1 is
     }
 
     /// @inheritdoc IRiverV1
-    function initRiverV1_3() external init(3) onlyAdmin {
+    function initRiverV1_3(
+        address _depositDataBuffer,
+        address[] calldata _attesters,
+        uint256 _threshold,
+        bytes4 _genesisForkVersion
+    ) external init(3) onlyAdmin {
         IOracleManagerV1.StoredConsensusLayerReport storage lastReport = LastConsensusLayerReport.get();
         uint32 clValidatorCount = lastReport.validatorsCount;
         uint256 depositedValidatorCount = DepositedValidatorCount.get();
@@ -156,15 +161,7 @@ contract RiverV1 is
         // we subtract the in flight ETH to get the total deposited activated ETH
         storedReport.totalDepositedActivatedETH = depositedValidatorCount * DEPOSIT_SIZE - InFlightDeposit.get();
         LastConsensusLayerReport.set(storedReport);
-    }
 
-    /// @inheritdoc IRiverV1
-    function initRiverV1_4(
-        address _depositDataBuffer,
-        address[] calldata _attesters,
-        uint256 _threshold,
-        bytes4 _genesisForkVersion
-    ) external init(4) {
         if (_depositDataBuffer == address(0)) revert LibErrors.InvalidZeroAddress();
         if (_threshold == 0) revert ZeroThreshold();
         if (_threshold > MAX_SIGNATURES) {
