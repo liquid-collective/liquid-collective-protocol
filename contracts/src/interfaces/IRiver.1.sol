@@ -111,11 +111,7 @@ interface IRiverV1 is IConsensusLayerDepositManagerV1, IUserDepositManagerV1, IS
     /// @param excessFeeRecipient Address to receive any excess msg.value
     /// @param valueSent ETH sent with the call for fees
     event PectraWithdrawRequested(
-        bytes[] pubkeys,
-        uint64[] amount,
-        uint256 maxFeePerWithdrawal,
-        address excessFeeRecipient,
-        uint256 valueSent
+        bytes[] pubkeys, uint64[] amount, uint256 maxFeePerWithdrawal, address excessFeeRecipient, uint256 valueSent
     );
 
     /// @notice Emitted when River forwards a Pectra consolidation request to the Withdraw contract
@@ -296,21 +292,10 @@ interface IRiverV1 is IConsensusLayerDepositManagerV1, IUserDepositManagerV1, IS
     /// @notice Input for the redeem manager funds
     function sendRedeemManagerExceedingFunds() external payable;
 
-    /// @notice Request Pectra withdrawals via the Withdraw contract. Callable by admin; fee ETH sent as msg.value.
-    /// @param pubkeys Validator pubkeys (48 bytes each)
-    /// @param amount Withdrawal amount per validator (gwei)
-    /// @param maxFeePerWithdrawal Maximum fee per withdrawal to accept
-    function withdraw(
-        bytes[] calldata pubkeys,
-        uint64[] calldata amount,
-        uint256 maxFeePerWithdrawal
-    ) external payable;
-
     /// @notice Request Pectra consolidations via the Withdraw contract. Callable by admin; fee ETH sent as msg.value.
     /// @param requests Consolidation requests (each: src pubkeys -> target pubkey)
     /// @param maxFeePerConsolidation Maximum fee per consolidation to accept
-    function consolidate(
-        IWithdrawV1.ConsolidationRequest[] calldata requests,
-        uint256 maxFeePerConsolidation
-    ) external payable;
+    function consolidate(IWithdrawV1.ConsolidationRequest[] calldata requests, uint256 maxFeePerConsolidation)
+        external
+        payable;
 }

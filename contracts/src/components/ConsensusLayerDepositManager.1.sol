@@ -9,12 +9,12 @@ import "../libraries/LibBytes.sol";
 import "../libraries/LibUint256.sol";
 
 import "../state/river/DepositContractAddress.sol";
-import "../state/river/WithdrawalCredentials.sol";
 import "../state/river/BalanceToDeposit.sol";
 import "../state/river/CommittedBalance.sol";
 import "../state/river/KeeperAddress.sol";
 import "../state/river/TotalDepositedETH.sol";
 import "../state/river/InFlightDeposit.sol";
+import "../state/river/WithdrawalCredentials.sol";
 
 /// @title Consensus Layer Deposit Manager (v1)
 /// @author Alluvial Finance Inc.

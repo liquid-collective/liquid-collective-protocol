@@ -20,7 +20,6 @@ import "./libraries/LibAllowlistMasks.sol";
 
 import "./state/river/AllowlistAddress.sol";
 import "./state/river/RedeemManagerAddress.sol";
-import "./state/river/OperatorsRegistryAddress.sol";
 import "./state/river/CollectorAddress.sol";
 import "./state/river/ELFeeRecipientAddress.sol";
 import "./state/river/CoverageFundAddress.sol";
@@ -30,6 +29,7 @@ import "./state/river/MetadataURI.sol";
 import "./state/river/LastConsensusLayerReport.sol";
 import "./state/river/TotalDepositedETH.sol";
 import "./state/river/DepositedValidatorCount.sol";
+import "./state/shared/OperatorsRegistryAddress.sol";
 
 /// @title River (v1)
 /// @author Alluvial Finance Inc.
@@ -307,23 +307,11 @@ contract RiverV1 is
     }
 
     /// @inheritdoc IRiverV1
-    function withdraw(
-        bytes[] calldata pubkeys,
-        uint64[] calldata amount,
-        uint256 maxFeePerWithdrawal
-    ) external payable onlyKeeper {
-        address excessFeeRecipient = msg.sender;
-        emit PectraWithdrawRequested(pubkeys, amount, maxFeePerWithdrawal, excessFeeRecipient, msg.value);
-        IWithdrawV1(payable(WithdrawalCredentials.getAddress())).withdraw{value: msg.value}(
-            pubkeys, amount, maxFeePerWithdrawal, excessFeeRecipient
-        );
-    }
-
-    /// @inheritdoc IRiverV1
-    function consolidate(
-        IWithdrawV1.ConsolidationRequest[] calldata requests,
-        uint256 maxFeePerConsolidation
-    ) external payable onlyKeeper {
+    function consolidate(IWithdrawV1.ConsolidationRequest[] calldata requests, uint256 maxFeePerConsolidation)
+        external
+        payable
+        onlyKeeper
+    {
         address excessFeeRecipient = msg.sender;
         emit PectraConsolidationRequested(requests, maxFeePerConsolidation, excessFeeRecipient, msg.value);
         IWithdrawV1(payable(WithdrawalCredentials.getAddress())).consolidate{value: msg.value}(

@@ -13,6 +13,7 @@ import "./libraries/LibUint256.sol";
 import "./state/shared/RiverAddress.sol";
 import "./state/shared/WithdrawalContractAddress.sol";
 import "./state/shared/ConsolidationContractAddress.sol";
+import "./state/shared/OperatorsRegistryAddress.sol";
 
 /// @title Withdraw (v1)
 /// @author Alluvial Finance Inc.
@@ -31,9 +32,14 @@ contract WithdrawV1 is IWithdrawV1, Initializable, ReentrancyGuard, IProtocolVer
     }
 
     /// @inheritdoc IWithdrawV1
-    function initWithdrawV1_1(address _withdrawalContractAddress, address _consolidationContractAddress) external init(1) {
+    function initWithdrawV1_1(
+        address _withdrawalContractAddress,
+        address _consolidationContractAddress,
+        address _operatorsRegistry
+    ) external init(1) {
         WithdrawalContractAddress.set(_withdrawalContractAddress);
         ConsolidationContractAddress.set(_consolidationContractAddress);
+        OperatorsRegistryAddress.set(_operatorsRegistry);
     }
 
     /// @inheritdoc IWithdrawV1
@@ -63,7 +69,10 @@ contract WithdrawV1 is IWithdrawV1, Initializable, ReentrancyGuard, IProtocolVer
         uint64[] calldata amount,
         uint256 maxFeePerWithdrawal,
         address excessFeeRecipient
-    ) external payable onlyRiver nonReentrant {
+    ) external payable nonReentrant {
+        if (msg.sender != OperatorsRegistryAddress.get()) {
+            revert LibErrors.Unauthorized(msg.sender);
+        }
         if (pubkeys.length != amount.length) {
             revert LengthMismatch(pubkeys.length, amount.length);
         }
@@ -158,7 +167,9 @@ contract WithdrawV1 is IWithdrawV1, Initializable, ReentrancyGuard, IProtocolVer
     }
 
     /// @notice Internal: refund excess fee to recipient; emit on send failure instead of reverting
-    function _refundExcessFee(uint256 _totalValueReceived, uint256 _totalFeePaid, address _excessFeeRecipient) internal {
+    function _refundExcessFee(uint256 _totalValueReceived, uint256 _totalFeePaid, address _excessFeeRecipient)
+        internal
+    {
         if (_totalValueReceived > _totalFeePaid) {
             uint256 excess = _totalValueReceived - _totalFeePaid;
             (bool success,) = payable(_excessFeeRecipient).call{value: excess}("");
