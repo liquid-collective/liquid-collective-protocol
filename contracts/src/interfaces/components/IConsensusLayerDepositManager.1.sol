@@ -5,7 +5,7 @@ import "../IOperatorRegistry.1.sol";
 import "../IDepositDataBuffer.sol";
 import "../../libraries/BLS12_381.sol";
 
-/// @title Consensys Layer Deposit Manager Interface (v1)
+/// @title Consensus Layer Deposit Manager Interface (v1)
 /// @author Alluvial Finance Inc.
 /// @notice This interface exposes methods to handle the interactions with the official deposit contract
 interface IConsensusLayerDepositManagerV1 {

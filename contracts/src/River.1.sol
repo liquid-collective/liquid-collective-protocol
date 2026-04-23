@@ -141,6 +141,14 @@ contract RiverV1 is
         uint256 _threshold,
         bytes4 _genesisForkVersion
     ) external init(3) onlyAdmin {
+        if (_depositDataBuffer == address(0)) revert LibErrors.InvalidZeroAddress();
+        if (_threshold == 0) revert ZeroThreshold();
+        if (_threshold > MAX_SIGNATURES) {
+            revert ThresholdExceedsMaxSignatures(_threshold, MAX_SIGNATURES);
+        }
+        if (_attesters.length == 0) revert LibErrors.InvalidZeroAddress();
+
+        // accounting changes to move from 0x01 to 0x02 accounting
         IOracleManagerV1.StoredConsensusLayerReport storage lastReport = LastConsensusLayerReport.get();
         uint32 clValidatorCount = lastReport.validatorsCount;
         uint256 depositedValidatorCount = DepositedValidatorCount.get();
@@ -162,11 +170,7 @@ contract RiverV1 is
         storedReport.totalDepositedActivatedETH = depositedValidatorCount * DEPOSIT_SIZE - InFlightDeposit.get();
         LastConsensusLayerReport.set(storedReport);
 
-        if (_depositDataBuffer == address(0)) revert LibErrors.InvalidZeroAddress();
-        if (_threshold == 0) revert ZeroThreshold();
-        if (_threshold > MAX_SIGNATURES) {
-            revert ThresholdExceedsMaxSignatures(_threshold, MAX_SIGNATURES);
-        }
+        // Deposit Security Attestation Committee Setup
         DepositDataBufferAddress.set(_depositDataBuffer);
         emit SetDepositDataBuffer(_depositDataBuffer);
 

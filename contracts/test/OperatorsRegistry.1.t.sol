@@ -1464,9 +1464,10 @@ contract OperatorsRegistryV1FlattenAndAllocationTests is OperatorAllocationTestB
     function testIncrementFundedRevertsOperatorIgnoredExitRequests() external {
         _setupOperators(1, 10);
 
-        // Give the operator some funded validators then request exits for all of them
-        OperatorsRegistryInitializableV1(address(operatorsRegistry)).sudoSetFunded(0, 5);
-        OperatorsRegistryInitializableV1(address(operatorsRegistry)).sudoExitRequests(0, 5);
+        // Give the operator some funded ETH then request exits for all of it.
+        // Both fields are wei-denominated under the Pectra accounting model.
+        OperatorsRegistryInitializableV1(address(operatorsRegistry)).sudoSetFunded(0, 5 * 32 ether);
+        OperatorsRegistryInitializableV1(address(operatorsRegistry)).sudoExitRequests(0, 5 * 32 ether);
         // stoppedCount remains 0, so operator has not fulfilled any exits
 
         uint256[] memory fundedArr = new uint256[](1);

@@ -619,9 +619,10 @@ contract ConsensusLayerDepositManagerV1FullDepositFlowTests is OperatorAllocatio
         registry.addOperator("Op0", admin);
         vm.stopPrank();
 
-        // Give the operator some funded validators then request exits without stopping any
-        OperatorsRegistryInitializableV1(address(registry)).sudoSetFunded(0, 5);
-        OperatorsRegistryInitializableV1(address(registry)).sudoExitRequests(0, 5);
+        // Give the operator some funded ETH then request exits without stopping any.
+        // Both fields are wei-denominated under the Pectra accounting model.
+        OperatorsRegistryInitializableV1(address(registry)).sudoSetFunded(0, 5 * 32 ether);
+        OperatorsRegistryInitializableV1(address(registry)).sudoExitRequests(0, 5 * 32 ether);
 
         vm.deal(address(depositManager), 32 ether);
         ConsensusLayerDepositManagerV1UsesRegistry(address(depositManager)).sudoSyncBalance();
@@ -631,7 +632,7 @@ contract ConsensusLayerDepositManagerV1FullDepositFlowTests is OperatorAllocatio
         vm.expectRevert(abi.encodeWithSignature("OperatorIgnoredExitRequests(uint256)", 0));
         depositManager.depositToConsensusLayerWithDepositRoot(_createAllocation(0, 1), depositRoot);
 
-        assertEq(registry.getOperator(0).funded, 5, "funded unchanged on revert");
+        assertEq(registry.getOperator(0).funded, 5 * 32 ether, "funded unchanged on revert");
         assertEq(depositManager.getTotalDepositedETH(), 0, "no deposited ETH");
         assertEq(address(depositManager).balance, 32 ether, "balance unchanged");
     }
