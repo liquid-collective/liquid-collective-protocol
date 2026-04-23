@@ -317,6 +317,26 @@ contract RiverV1 is
         return Administrable._getAdmin();
     }
 
+    /// @notice Overridden handler to update funded validator counts on the operators registry after deposits
+    /// @dev Aggregates consecutive entries by operatorIndex (assumes sorted input) and calls
+    ///      incrementFundedValidators once per distinct operator.
+    function _updateFundedValidators(IOperatorsRegistryV1.ValidatorDeposit[] calldata _allocations) internal override {
+        IOperatorsRegistryV1 registry = IOperatorsRegistryV1(OperatorsRegistryAddress.get());
+        uint256 i = 0;
+        while (i < _allocations.length) {
+            uint256 operatorIndex = _allocations[i].operatorIndex;
+            uint256 start = i;
+            while (i < _allocations.length && _allocations[i].operatorIndex == operatorIndex) {
+                ++i;
+            }
+            bytes[] memory publicKeys = new bytes[](i - start);
+            for (uint256 j = start; j < i; ++j) {
+                publicKeys[j - start] = _allocations[j].pubkey;
+            }
+            registry.incrementFundedValidators(operatorIndex, publicKeys);
+        }
+    }
+
     /// @notice Overridden handler called whenever a token transfer is triggered
     /// @param _from Token sender
     /// @param _to Token receiver
@@ -343,18 +363,6 @@ contract RiverV1 is
             }
             _transfer(_depositor, _recipient, mintedShares);
         }
-    }
-
-    /// @notice Overridden handler called whenever a deposit to the consensus layer is made based on node operator allocations.
-    /// @param _allocations Node operator allocations
-    /// @return publicKeys Array of fundable public keys
-    /// @return signatures Array of signatures linked to the public keys
-    function _getNextValidators(IOperatorsRegistryV1.OperatorAllocation[] memory _allocations)
-        internal
-        override
-        returns (bytes[] memory publicKeys, bytes[] memory signatures)
-    {
-        return IOperatorsRegistryV1(OperatorsRegistryAddress.get()).pickNextValidatorsToDeposit(_allocations);
     }
 
     /// @notice Overridden handler to pull funds from the execution layer fee recipient to River and return the delta in the balance

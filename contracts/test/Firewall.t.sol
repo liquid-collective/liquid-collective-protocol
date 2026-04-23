@@ -93,7 +93,6 @@ contract FirewallTests is BytesGenerator, OperatorAllocationTestBase {
 
         bytes4[] memory executorCallableOperatorsRegistrySelectors = new bytes4[](2);
         executorCallableOperatorsRegistrySelectors[0] = operatorsRegistry.setOperatorStatus.selector;
-        executorCallableOperatorsRegistrySelectors[1] = operatorsRegistry.setOperatorLimits.selector;
         operatorsRegistryFirewall = new Firewall(
             riverGovernorDAO, executor, address(operatorsRegistry), executorCallableOperatorsRegistrySelectors
         );
@@ -232,54 +231,6 @@ contract FirewallTests is BytesGenerator, OperatorAllocationTestBase {
         vm.startPrank(joe);
         vm.expectRevert(unauthJoe);
         firewalledOperatorsRegistry.setOperatorStatus(operatorBobIndex, true);
-        vm.stopPrank();
-    }
-
-    function testGovernorCanSetOperatorLimit() public {
-        uint256 operatorBobIndex = haveGovernorAddOperatorBob();
-        vm.startPrank(bob);
-
-        bytes memory tenKeys = genBytes((48 + 96) * 10);
-
-        operatorsRegistry.addValidators(operatorBobIndex, 10, tenKeys);
-        vm.stopPrank();
-        vm.startPrank(riverGovernorDAO);
-        uint256[] memory operatorIndexes = new uint256[](1);
-        operatorIndexes[0] = operatorBobIndex;
-        uint32[] memory operatorLimits = new uint32[](1);
-        operatorLimits[0] = 10;
-        firewalledOperatorsRegistry.setOperatorLimits(operatorIndexes, operatorLimits, block.number);
-        assert(operatorsRegistry.getOperator(operatorBobIndex).limit == 10);
-        vm.stopPrank();
-    }
-
-    function testExecutorCanSetOperatorLimit() public {
-        uint256 operatorBobIndex = haveGovernorAddOperatorBob();
-        vm.startPrank(bob);
-
-        bytes memory tenKeys = genBytes((48 + 96) * 10);
-
-        operatorsRegistry.addValidators(operatorBobIndex, 10, tenKeys);
-        vm.stopPrank();
-        vm.startPrank(executor);
-        uint256[] memory operatorIndexes = new uint256[](1);
-        operatorIndexes[0] = operatorBobIndex;
-        uint32[] memory operatorLimits = new uint32[](1);
-        operatorLimits[0] = 10;
-        firewalledOperatorsRegistry.setOperatorLimits(operatorIndexes, operatorLimits, block.number);
-        assert(operatorsRegistry.getOperator(operatorBobIndex).limit == 10);
-        vm.stopPrank();
-    }
-
-    function testRandomCallerCannotSetOperatorLimit() public {
-        uint256 operatorBobIndex = haveGovernorAddOperatorBob();
-        vm.startPrank(joe);
-        vm.expectRevert(unauthJoe);
-        uint256[] memory operatorIndexes = new uint256[](1);
-        operatorIndexes[0] = operatorBobIndex;
-        uint32[] memory operatorLimits = new uint32[](1);
-        operatorLimits[0] = 10;
-        firewalledOperatorsRegistry.setOperatorLimits(operatorIndexes, operatorLimits, block.number);
         vm.stopPrank();
     }
 
@@ -507,5 +458,49 @@ contract FirewallTests is BytesGenerator, OperatorAllocationTestBase {
 
     function testVersion() external {
         assertEq(riverFirewall.version(), "1.2.1");
+    }
+
+    /// @notice incrementFundedValidators is protected by onlyRiver on the registry.
+    ///         Even the governor calling through the firewall should be rejected because
+    ///         the msg.sender to the registry is the firewall, not River.
+    function testGovernorCannotIncrementFundedValidatorsThroughFirewall() public {
+        haveGovernorAddOperatorBob();
+        bytes[] memory keys = new bytes[](1);
+        keys[0] = new bytes(48);
+        vm.prank(riverGovernorDAO);
+        vm.expectRevert(abi.encodeWithSignature("Unauthorized(address)", address(operatorsRegistryFirewall)));
+        firewalledOperatorsRegistry.incrementFundedValidators(0, keys);
+    }
+
+    /// @notice Executor cannot call incrementFundedValidators through the firewall
+    ///         because it is not in the executor-callable selectors list.
+    function testExecutorCannotIncrementFundedValidatorsThroughFirewall() public {
+        haveGovernorAddOperatorBob();
+        bytes[] memory keys = new bytes[](1);
+        keys[0] = new bytes(48);
+        vm.prank(executor);
+        vm.expectRevert(unauthExecutor);
+        firewalledOperatorsRegistry.incrementFundedValidators(0, keys);
+    }
+
+    /// @notice Random caller cannot call incrementFundedValidators through the firewall.
+    function testRandomCallerCannotIncrementFundedValidatorsThroughFirewall() public {
+        haveGovernorAddOperatorBob();
+        bytes[] memory keys = new bytes[](1);
+        keys[0] = new bytes(48);
+        vm.prank(joe);
+        vm.expectRevert(unauthJoe);
+        firewalledOperatorsRegistry.incrementFundedValidators(0, keys);
+    }
+
+    /// @notice incrementFundedValidators succeeds when called directly by River (bypassing the firewall).
+    function testRiverCanCallIncrementFundedValidatorsDirectly() public {
+        haveGovernorAddOperatorBob();
+        bytes[] memory keys = new bytes[](1);
+        keys[0] = new bytes(48);
+        // River calls the registry directly (not through firewall)
+        vm.prank(address(river));
+        operatorsRegistry.incrementFundedValidators(0, keys);
+        assertEq(operatorsRegistry.getOperator(0).funded, 1, "funded should be 1");
     }
 }
