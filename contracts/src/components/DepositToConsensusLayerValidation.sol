@@ -31,6 +31,8 @@ abstract contract DepositToConsensusLayerValidation {
     error IncorrectDepositEther(uint256 expected, uint256 actual);
     error BLSSignatureCountMismatch(uint256 depositCount, uint256 yCount);
     error ZeroThreshold();
+    error ZeroDomainSeparator();
+    error ZeroDepositDomain();
     error ThresholdExceedsAttesterCount(uint256 threshold, uint256 attesterCount);
     error ThresholdExceedsMaxSignatures(uint256 threshold, uint256 max);
     error ZeroAddress();
@@ -176,8 +178,10 @@ abstract contract DepositToConsensusLayerValidation {
             revert DepositRootMismatch(depositRootHash, onChainRoot);
         }
 
+        bytes32 domainSeparator = _domainSeparator();
+        if (domainSeparator == bytes32(0)) revert ZeroDomainSeparator();
         bytes32 structHash = keccak256(abi.encode(ATTEST_TYPEHASH, depositDataBufferId, depositRootHash));
-        bytes32 digest = ECDSA.toTypedDataHash(_domainSeparator(), structHash);
+        bytes32 digest = ECDSA.toTypedDataHash(domainSeparator, structHash);
 
         uint256 validCount = 0;
         address[] memory seen = new address[](sigLen);
@@ -246,7 +250,9 @@ abstract contract DepositToConsensusLayerValidation {
         BLS12_381.DepositY calldata depositY,
         bytes32 withdrawalCredentials
     ) external view {
-        BLS12_381.verifyDepositMessage(pubkey, signature, amount, depositY, withdrawalCredentials, _depositDomain());
+        bytes32 depositDomain = _depositDomain();
+        if (depositDomain == bytes32(0)) revert ZeroDepositDomain();
+        BLS12_381.verifyDepositMessage(pubkey, signature, amount, depositY, withdrawalCredentials, depositDomain);
     }
 
     // -----------------------------------------------------------------------

@@ -211,7 +211,7 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
         dm.setAttestationThreshold(2);
         vm.stopPrank();
 
-        // Cache the EIP-712 domain separator (mirrors initRiverV1_5 for proxy deployments)
+        // Cache the EIP-712 domain separator (mirrors initRiverV1_3 for proxy deployments)
         bytes32 domainSepSlot = bytes32(uint256(keccak256("river.state.domainSeparator")) - 1);
         bytes32 domainSep =
             keccak256(abi.encode(EIP712_DOMAIN_TYPEHASH, NAME_HASH, VERSION_HASH, block.chainid, address(dm)));
@@ -646,5 +646,36 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
             abi.encodeWithSelector(DepositToConsensusLayerValidation.BufferIdMismatch.selector, signedId, actualId)
         );
         dm.depositToConsensusLayerWithAttestation(signedId, rootHash, sigs, depositYs);
+    }
+
+    // An uninitialized cached EIP-712 domain separator must never be used — bytes32(0) would
+    // let any signer produce a "valid" digest that ECDSA cannot tell apart from real ones.
+    function testRevert_zeroDomainSeparator() public {
+        bytes32 domainSepSlot = bytes32(uint256(keccak256("river.state.domainSeparator")) - 1);
+        vm.store(address(dm), domainSepSlot, bytes32(0));
+
+        IDepositDataBuffer.DepositObject[] memory deposits = new IDepositDataBuffer.DepositObject[](1);
+        deposits[0] = _makeDeposit(0, 0);
+        (bytes32 bufferId, bytes32 rootHash, bytes[] memory sigs, BLS12_381.DepositY[] memory depositYs) =
+            _prepareDeposit(deposits);
+
+        vm.prank(keeper);
+        vm.expectRevert(DepositToConsensusLayerValidation.ZeroDomainSeparator.selector);
+        dm.depositToConsensusLayerWithAttestation(bufferId, rootHash, sigs, depositYs);
+    }
+
+    // An uninitialized BLS deposit domain must never reach the pairing check — bytes32(0) is
+    // a valid-looking domain the attackers could sign against if the guard were missing.
+    function testRevert_zeroDepositDomain() public {
+        // Un-mock verifyBLSDeposit so the real guard inside the function body runs.
+        vm.clearMockedCalls();
+        dm.sudoSetDepositDomain(bytes32(0));
+
+        bytes memory pk = _fakePubkey(0);
+        bytes memory sig = _fakeSignature(0);
+        BLS12_381.DepositY memory dy = _emptyDepositY();
+
+        vm.expectRevert(DepositToConsensusLayerValidation.ZeroDepositDomain.selector);
+        dm.verifyBLSDeposit(pk, sig, 32 ether, dy, withdrawalCredentials);
     }
 }
