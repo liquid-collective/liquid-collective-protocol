@@ -2,10 +2,14 @@ import { network, tenderly } from "hardhat";
 import * as hre from "hardhat";
 import { FactoryOptions } from "hardhat/types";
 
+const VERIFICATION_DELAY_MS = 30000;
+
 export const verify = async (name: string, contractAddress: string, args: any, libs?: FactoryOptions) => {
   if (network.name == "localhost" || network.name == "local") return;
   else if (network.name == "tenderly") tenderlyVerify(name, contractAddress);
   else {
+    // Wait for the block explorer to index the newly deployed contract before verifying.
+    await new Promise((resolve) => setTimeout(resolve, VERIFICATION_DELAY_MS));
     await hre
       .run("verify:verify", {
         address: contractAddress,
