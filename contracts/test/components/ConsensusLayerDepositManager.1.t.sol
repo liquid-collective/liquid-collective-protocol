@@ -818,6 +818,7 @@ contract ConsensusLayerDepositManagerV1WithdrawalCredentialError is OperatorAllo
 // values are coming from this tx https://etherscan.io/tx/0x87eb1df9b26c7e655c9eb568e38009c7c2b0e10b397708ea63dffccd93c6626a that was picked randomly
 contract ConsensusLayerDepositManagerV1ValidKeys is ConsensusLayerDepositManagerV1 {
     IOperatorsRegistryV1 public registry;
+
     function _getRiverAdmin() internal pure override returns (address) {
         return address(0);
     }
