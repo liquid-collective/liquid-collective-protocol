@@ -13,3 +13,8 @@ mainnet = "${MAINNET_FORK_RPC_URL}"
 
 [fuzz]
 runs = 1500
+
+[invariant]
+runs = 128
+depth = 32
+fail_on_revert = false

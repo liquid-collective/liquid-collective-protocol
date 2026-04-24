@@ -21,6 +21,6 @@ library CurrentValidatorExitsDemand {
     /// @notice Sets the CurrentValidatorExitsDemand
     /// @param _newValue New CurrentValidatorExitsDemand
     function set(uint256 _newValue) internal {
-        return LibUnstructuredStorage.setStorageUint256(CURRENT_VALIDATOR_EXITS_DEMAND_SLOT, _newValue);
+        LibUnstructuredStorage.setStorageUint256(CURRENT_VALIDATOR_EXITS_DEMAND_SLOT, _newValue);
     }
 }

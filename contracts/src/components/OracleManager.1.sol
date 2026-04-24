@@ -2,6 +2,7 @@
 pragma solidity 0.8.34;
 
 import "../interfaces/components/IOracleManager.1.sol";
+import "../interfaces/components/IConsensusLayerDepositManager.1.sol";
 import "../interfaces/IRedeemManager.1.sol";
 
 import "../libraries/LibUint256.sol";
@@ -9,9 +10,8 @@ import "../libraries/LibUint256.sol";
 import "../state/river/LastConsensusLayerReport.sol";
 import "../state/river/OracleAddress.sol";
 import "../state/river/CLValidatorTotalBalance.sol";
-import "../state/river/CLValidatorCount.sol";
-import "../state/river/DepositedValidatorCount.sol";
 import "../state/river/LastOracleRoundId.sol";
+import "../state/river/InFlightDeposit.sol";
 
 /// @title Oracle Manager (v1)
 /// @author Alluvial Finance Inc.
@@ -64,12 +64,20 @@ abstract contract OracleManagerV1 is IOracleManagerV1 {
     /// @notice Use the balance to redeem to report a withdrawal event on the redeem manager
     function _reportWithdrawToRedeemManager() internal virtual;
 
+    /// @notice Reports the ETH that is currently active on the consensus layer for the operators
+    /// @param _activeCLETH The array of active Consensus Layer ETH amounts per operator
+    function _reportCLETH(uint256[] memory _activeCLETH) internal virtual;
+
     /// @notice Requests exits of validators after possibly rebalancing deposit and redeem balances
     /// @param _exitingBalance The currently exiting funds, soon to be received on the execution layer
+    /// @param _exitedETH The exited ETH
+    /// @param _totalAvailableCLETH The total available Consensus Layer ETH
     /// @param _depositToRedeemRebalancingAllowed True if rebalancing from deposit to redeem is allowed
+    /// @param _slashingContainmentModeEnabled True if slashing containment mode is enabled
     function _requestExitsBasedOnRedeemDemandAfterRebalancings(
         uint256 _exitingBalance,
-        uint32[] memory _stoppedValidatorCounts,
+        uint256[] memory _exitedETH,
+        uint256 _totalAvailableCLETH,
         bool _depositToRedeemRebalancingAllowed,
         bool _slashingContainmentModeEnabled
     ) internal virtual;
@@ -130,17 +138,6 @@ abstract contract OracleManagerV1 is IOracleManagerV1 {
             })
         );
         emit SetBounds(_annualAprUpperBound, _relativeLowerBound);
-
-        IOracleManagerV1.StoredConsensusLayerReport memory storedReport;
-        storedReport.epoch = uint256(LastOracleRoundId.get());
-        storedReport.validatorsBalance = CLValidatorTotalBalance.get();
-        storedReport.validatorsSkimmedBalance = 0;
-        storedReport.validatorsExitedBalance = 0;
-        storedReport.validatorsExitingBalance = 0;
-        storedReport.validatorsCount = uint32(CLValidatorCount.get());
-        storedReport.rebalanceDepositToRedeemMode = false;
-        storedReport.slashingContainmentMode = false;
-        LastConsensusLayerReport.set(storedReport);
     }
 
     /// @inheritdoc IOracleManagerV1
@@ -249,6 +246,8 @@ abstract contract OracleManagerV1 is IOracleManagerV1 {
         uint256 lastReportSkimmedBalance;
         uint256 exitedAmountIncrease;
         uint256 skimmedAmountIncrease;
+        uint256 inFlightDepositedETH;
+        uint256 totalDepositedActivatedETHIncrease;
         uint256 timeElapsedSinceLastReport;
         uint256 availableAmountToUpperBound;
         uint256 redeemManagerDemand;
@@ -295,14 +294,26 @@ abstract contract OracleManagerV1 is IOracleManagerV1 {
                 );
             }
 
-            // we ensure that the reported validator count is not decreasing
-            if (
-                _report.validatorsCount > DepositedValidatorCount.get()
-                    || _report.validatorsCount < lastStoredReport.validatorsCount
-            ) {
-                revert InvalidValidatorCountReport(
-                    _report.validatorsCount, DepositedValidatorCount.get(), lastStoredReport.validatorsCount
+            if (lastStoredReport.totalDepositedActivatedETH > _report.totalDepositedActivatedETH) {
+                revert InvalidTotalDepositedActivatedETHDecrease(
+                    lastStoredReport.totalDepositedActivatedETH, _report.totalDepositedActivatedETH
                 );
+            }
+
+            vars.totalDepositedActivatedETHIncrease =
+                _report.totalDepositedActivatedETH - lastStoredReport.totalDepositedActivatedETH;
+            vars.inFlightDepositedETH = InFlightDeposit.get();
+
+            // we ensure that the total deposited activated ETH increase is not higher than the current in flight ETH
+            if (vars.totalDepositedActivatedETHIncrease > vars.inFlightDepositedETH) {
+                revert InvalidTotalDepositedActivatedETHIncrease(
+                    vars.inFlightDepositedETH, _report.totalDepositedActivatedETH
+                );
+            }
+
+            // we ensure that the reported validator count is not decreasing
+            if (_report.validatorsCount < lastStoredReport.validatorsCount) {
+                revert InvalidValidatorCountReport(_report.validatorsCount, lastStoredReport.validatorsCount);
             }
 
             // we compute the new skimmed amount by taking the delta between reports
@@ -320,6 +331,13 @@ abstract contract OracleManagerV1 is IOracleManagerV1 {
             _pullCLFunds(vars.skimmedAmountIncrease, vars.exitedAmountIncrease);
         }
 
+        // checks if we have new deposited stake that activated in the last oracle reporting
+        if (vars.totalDepositedActivatedETHIncrease > 0) {
+            uint256 newInFlightETH = vars.inFlightDepositedETH - vars.totalDepositedActivatedETHIncrease;
+            InFlightDeposit.set(newInFlightETH);
+            emit IConsensusLayerDepositManagerV1.SetInFlightETH(vars.inFlightDepositedETH, newInFlightETH);
+        }
+
         {
             // we update the system parameters, this will have an impact on how the total underlying balance is computed
             IOracleManagerV1.StoredConsensusLayerReport memory storedReport;
@@ -332,6 +350,7 @@ abstract contract OracleManagerV1 is IOracleManagerV1 {
             storedReport.validatorsCount = _report.validatorsCount;
             storedReport.rebalanceDepositToRedeemMode = _report.rebalanceDepositToRedeemMode;
             storedReport.slashingContainmentMode = _report.slashingContainmentMode;
+            storedReport.totalDepositedActivatedETH = _report.totalDepositedActivatedETH;
             LastConsensusLayerReport.set(storedReport);
         }
 
@@ -419,9 +438,16 @@ abstract contract OracleManagerV1 is IOracleManagerV1 {
             _onEarnings(vars.trace.rewards);
         }
 
+        _reportCLETH(_report.activeCLETHPerOperator);
+
+        uint256 base = _report.validatorsBalance + InFlightDeposit.get();
+        uint256 totalAvailableCLETH =
+            base > _report.validatorsExitingBalance ? base - _report.validatorsExitingBalance : 0;
+
         _requestExitsBasedOnRedeemDemandAfterRebalancings(
             _report.validatorsExitingBalance,
-            _report.stoppedValidatorCountPerOperator,
+            _report.exitedETHPerOperator,
+            totalAvailableCLETH,
             _report.rebalanceDepositToRedeemMode,
             _report.slashingContainmentMode
         );
