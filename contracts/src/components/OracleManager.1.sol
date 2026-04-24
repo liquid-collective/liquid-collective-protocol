@@ -65,13 +65,13 @@ abstract contract OracleManagerV1 is IOracleManagerV1 {
     function _reportWithdrawToRedeemManager() internal virtual;
 
     /// @notice Reports the ETH that is currently active on the consensus layer for the operators
-    /// @param _activeCLETH The array of active ETH amounts
+    /// @param _activeCLETH The array of active Consensus Layer ETH amounts per operator
     function _reportCLETH(uint256[] memory _activeCLETH) internal virtual;
 
     /// @notice Requests exits of validators after possibly rebalancing deposit and redeem balances
     /// @param _exitingBalance The currently exiting funds, soon to be received on the execution layer
     /// @param _exitedETH The exited ETH
-    /// @param _totalAvailableCLETH The total available ETH
+    /// @param _totalAvailableCLETH The total available Consensus Layer ETH
     /// @param _depositToRedeemRebalancingAllowed True if rebalancing from deposit to redeem is allowed
     /// @param _slashingContainmentModeEnabled True if slashing containment mode is enabled
     function _requestExitsBasedOnRedeemDemandAfterRebalancings(
@@ -87,7 +87,8 @@ abstract contract OracleManagerV1 is IOracleManagerV1 {
 
     /// @notice Commits the deposit balance up to the allowed daily limit
     /// @param _period The period between current and last report
-    function _commitBalanceToDeposit(uint256 _period) internal virtual;
+    /// @param _slashingContainmentModeEnabled True if slashing containment mode is enabled
+    function _commitBalanceToDeposit(uint256 _period, bool _slashingContainmentModeEnabled) internal virtual;
 
     /// @notice Prevents unauthorized calls
     modifier onlyAdmin_OMV1() {
@@ -458,7 +459,7 @@ abstract contract OracleManagerV1 is IOracleManagerV1 {
         _skimExcessBalanceToRedeem();
 
         // we update the committable amount based on daily maximum allowed
-        _commitBalanceToDeposit(vars.timeElapsedSinceLastReport);
+        _commitBalanceToDeposit(vars.timeElapsedSinceLastReport, _report.slashingContainmentMode);
 
         // we emit a summary event with all the reporting details
         emit ProcessedConsensusLayerReport(_report, vars.trace);

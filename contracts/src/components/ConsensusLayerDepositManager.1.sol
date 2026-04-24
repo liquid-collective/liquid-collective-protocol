@@ -69,6 +69,10 @@ abstract contract ConsensusLayerDepositManagerV1 is IConsensusLayerDepositManage
     /// @dev Must be overridden by River.1.sol
     function _updateFundedETHFromBuffer(IDepositDataBuffer.DepositObject[] memory deposits) internal virtual;
 
+    /// @notice Handler to check if slashing containment mode is active
+    /// @dev Must be overridden
+    function _getSlashingContainmentMode() internal view virtual returns (bool);
+
     // -----------------------------------------------------------------------
     // DepositToConsensusLayerValidation overrides — unstructured storage hooks
     // -----------------------------------------------------------------------
@@ -114,8 +118,16 @@ abstract contract ConsensusLayerDepositManagerV1 is IConsensusLayerDepositManage
         emit SetWithdrawalCredentials(_withdrawalCredentials);
     }
 
+    /// @notice Initializer to update the withdrawal credentials to use
+    /// @param _withdrawalCredentials The withdrawal credentials to apply to all deposits
+    function initConsensusLayerDepositManagerV2(bytes32 _withdrawalCredentials) internal {
+        WithdrawalCredentials.set(_withdrawalCredentials);
+        emit SetWithdrawalCredentials(_withdrawalCredentials);
+    }
+
     function _setKeeper(address _keeper) internal {
         KeeperAddress.set(_keeper);
+        emit SetKeeper(_keeper);
     }
 
     /// @inheritdoc IConsensusLayerDepositManagerV1
@@ -319,7 +331,9 @@ abstract contract ConsensusLayerDepositManagerV1 is IConsensusLayerDepositManage
         if (msg.sender != KeeperAddress.get()) {
             revert OnlyKeeper();
         }
-
+        if (_getSlashingContainmentMode()) {
+            revert SlashingContainmentModeEnabled();
+        }
         if (_allocations.length == 0) {
             revert EmptyAllocations();
         }
@@ -357,6 +371,7 @@ abstract contract ConsensusLayerDepositManagerV1 is IConsensusLayerDepositManage
         bytes[][] memory publicKeys = new bytes[][](_allocations[_allocations.length - 1].operatorIndex + 1);
         for (uint256 i = 0; i < publicKeys.length; ++i) {
             publicKeys[i] = new bytes[](publicKeyCountPerOperator[i]);
+            // we reset the count to 0 so that we could reuse the array while adding the public keys in the loop below
             publicKeyCountPerOperator[i] = 0;
         }
 

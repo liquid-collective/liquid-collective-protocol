@@ -202,11 +202,29 @@ abstract contract AccountingHarnessBase is Test, BytesGenerator {
         return allocs;
     }
 
+    /// @dev Convenience overload — builds `n` allocations of `DEPOSIT_SIZE` each for `opIdx`.
+    function _makeDeposits(uint256 opIdx, uint256 n) internal returns (IOperatorsRegistryV1.ValidatorDeposit[] memory) {
+        return _makeDeposits(opIdx, _amounts(n, DEPOSIT_SIZE));
+    }
+
+    /// @dev Returns the elapsed time (seconds) of a single reporting frame under the current
+    ///      harness constants. Used in boundary tests that must compare against the src's
+    ///      APR/lower-bound arithmetic without hardcoding the frame cadence.
+    function _frameDuration() internal pure returns (uint256) {
+        return uint256(EPOCHS_PER_FRAME) * uint256(SLOTS_PER_EPOCH) * uint256(SECONDS_PER_SLOT);
+    }
+
     /// @dev Convenience: create an array of `n` identical deposit amounts.
     function _amounts(uint256 n, uint256 amountEach) internal pure returns (uint256[] memory amounts) {
         amounts = new uint256[](n);
         for (uint256 i = 0; i < n; i++) {
             amounts[i] = amountEach;
         }
+    }
+
+    /// @dev Pranks `user` and invokes `river.requestRedeem(lsEthAmount, user)`.
+    function sim_requestRedeem(address user, uint256 lsEthAmount) internal {
+        vm.prank(user);
+        river.requestRedeem(lsEthAmount, user);
     }
 }

@@ -155,6 +155,6 @@ contract AllowlistV1 is IAllowlistV1, Initializable, Administrable, IProtocolVer
     }
 
     function version() external pure returns (string memory) {
-        return "1.2.1";
+        return "1.3.0";
     }
 }

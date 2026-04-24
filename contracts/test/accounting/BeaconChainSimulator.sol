@@ -46,6 +46,11 @@ abstract contract BeaconChainSimulator is AccountingHarnessBase {
 
     // ─── step functions ───────────────────────────────────────────────────────
 
+    /// @dev Convenience overload — deposits `n` validators of `DEPOSIT_SIZE` each for `opIdx`.
+    function sim_deposit(uint256 opIdx, uint256 n) internal {
+        sim_deposit(opIdx, _amounts(n, DEPOSIT_SIZE));
+    }
+
     function sim_deposit(uint256 opIdx, uint256[] memory amounts) internal {
         uint256 needed = 0;
         for (uint256 i = 0; i < amounts.length; i++) {
@@ -236,5 +241,31 @@ abstract contract BeaconChainSimulator is AccountingHarnessBase {
         report.activeCLETHPerOperator = activeCLETHArr;
         report.rebalanceDepositToRedeemMode = rebalance;
         report.slashingContainmentMode = slashingContainment;
+    }
+
+    /// @dev Builds a simulator-consistent `ConsensusLayerReport`, stamps `epoch` to the expected
+    ///      reporting epoch, funds `withdraw` with any pending skimmed/exited ETH, and warps time
+    ///      to post-finality. Intended for adversarial tests that mutate the returned struct and
+    ///      submit the mutated report directly via `oracle.reportConsensusLayerData(report)` with
+    ///      `vm.prank(oracleMember)` + `vm.expectRevert(...)`. Does NOT submit the report itself.
+    function _buildBadReport(bool rebalance, bool slashingContainment)
+        internal
+        virtual
+        returns (IOracleManagerV1.ConsensusLayerReport memory report)
+    {
+        uint256 reportEpoch = river.getExpectedEpochId();
+        uint256 targetTime = (SECONDS_PER_SLOT * SLOTS_PER_EPOCH) * (reportEpoch + EPOCHS_UNTIL_FINAL) + 1;
+        if (block.timestamp < targetTime) {
+            vm.warp(targetTime);
+        }
+
+        uint256 newSkimmed = _simCumulativeSkimmed - _lastReportedSkimmed;
+        uint256 newExited = _simCumulativeExited - _lastReportedExited;
+        if (newSkimmed + newExited > 0) {
+            vm.deal(address(withdraw), address(withdraw).balance + newSkimmed + newExited);
+        }
+
+        report = _buildReport(rebalance, slashingContainment);
+        report.epoch = reportEpoch;
     }
 }
