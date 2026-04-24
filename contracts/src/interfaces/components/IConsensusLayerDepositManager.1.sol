@@ -72,6 +72,10 @@ interface IConsensusLayerDepositManagerV1 {
     /// @notice Emitted when the attestation threshold is updated
     event SetAttestationThreshold(uint256 threshold);
 
+    event SetDomainSeparator(bytes32 domainSeparator);
+
+    event SetDepositDomain(bytes32 depositDomain);
+
     /// @notice Deposits are blocked while slashing containment mode is active
     error SlashingContainmentModeEnabled();
 

@@ -84,11 +84,11 @@ abstract contract ConsensusLayerDepositManagerV1 is IConsensusLayerDepositManage
         Attesters.setAttester(account, value);
     }
 
-    function _threshold() internal view override returns (uint256) {
+    function _depositCommitteeQuorum() internal view override returns (uint256) {
         return AttestationThreshold.get();
     }
 
-    function _setThreshold(uint256 value) internal override {
+    function _setDepositCommitteeQuorum(uint256 value) internal override {
         AttestationThreshold.set(value);
     }
 
@@ -194,9 +194,9 @@ abstract contract ConsensusLayerDepositManagerV1 is IConsensusLayerDepositManage
 
         uint256 count = Attesters.getCount();
         uint256 newCount = value ? count + 1 : count - 1;
-        uint256 currentThreshold = _threshold();
-        if (!value && currentThreshold > newCount) {
-            revert ThresholdExceedsAttesterCount(currentThreshold, newCount);
+        uint256 depositCommitteeQuorum = _depositCommitteeQuorum();
+        if (!value && depositCommitteeQuorum >= newCount) {
+            revert ThresholdExceedsAttesterCount(depositCommitteeQuorum, newCount);
         }
         Attesters.setCount(newCount);
         _setAttester(attester, value);
@@ -207,7 +207,7 @@ abstract contract ConsensusLayerDepositManagerV1 is IConsensusLayerDepositManage
     function setAttestationThreshold(uint256 newThreshold) external onlyRiverAdmin {
         if (newThreshold == 0) revert ZeroThreshold();
         uint256 attesterCount = Attesters.getCount();
-        if (newThreshold > attesterCount) {
+        if (newThreshold >= attesterCount) {
             revert ThresholdExceedsAttesterCount(newThreshold, attesterCount);
         }
         if (newThreshold > MAX_SIGNATURES) {

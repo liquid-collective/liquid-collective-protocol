@@ -174,7 +174,9 @@ contract RiverV1 is
         DepositDataBufferAddress.set(_depositDataBuffer);
         emit SetDepositDataBuffer(_depositDataBuffer);
 
-        DepositDomainValue.set(BLS12_381.computeDepositDomain(_genesisForkVersion));
+        bytes32 depositDomain = BLS12_381.computeDepositDomain(_genesisForkVersion);
+        DepositDomainValue.set(depositDomain);
+        emit SetDepositDomain(depositDomain);
 
         for (uint256 i = 0; i < _attesters.length; i++) {
             if (_attesters[i] == address(0)) revert LibErrors.InvalidZeroAddress();
@@ -185,15 +187,16 @@ contract RiverV1 is
             }
         }
         uint256 attesterCount = Attesters.getCount();
-        if (_threshold > attesterCount) {
+        if (_threshold >= attesterCount) {
             revert ThresholdExceedsAttesterCount(_threshold, attesterCount);
         }
         AttestationThreshold.set(_threshold);
         emit SetAttestationThreshold(_threshold);
 
-        DomainSeparator.set(
-            keccak256(abi.encode(EIP712_DOMAIN_TYPEHASH, NAME_HASH, VERSION_HASH, block.chainid, address(this)))
-        );
+        bytes32 domainSeparator =
+            keccak256(abi.encode(EIP712_DOMAIN_TYPEHASH, NAME_HASH, VERSION_HASH, block.chainid, address(this)));
+        DomainSeparator.set(domainSeparator);
+        emit SetDomainSeparator(domainSeparator);
     }
 
     /// @inheritdoc IRiverV1

@@ -69,7 +69,7 @@ abstract contract DepositToConsensusLayerValidation {
 
     /// @notice Retrieve the attestation threshold
     /// @return The attestation threshold
-    function _threshold() internal view virtual returns (uint256);
+    function _depositCommitteeQuorum() internal view virtual returns (uint256);
 
     /// @notice Set the attestation threshold
     /// @param value The new attestation threshold
@@ -108,8 +108,8 @@ abstract contract DepositToConsensusLayerValidation {
 
     /// @notice Retrieve the attestation threshold
     /// @return The attestation threshold
-    function threshold() public view returns (uint256) {
-        return _threshold();
+    function depositCommitteeQuorum() public view returns (uint256) {
+        return _depositCommitteeQuorum();
     }
 
     /// @notice Retrieve the deposit domain
@@ -169,8 +169,8 @@ abstract contract DepositToConsensusLayerValidation {
         if (sigLen > MAX_SIGNATURES) {
             revert TooManySignatures(sigLen, MAX_SIGNATURES);
         }
-        if (sigLen < _threshold()) {
-            revert InsufficientAttestations(sigLen, _threshold());
+        if (sigLen < _depositCommitteeQuorum()) {
+            revert InsufficientAttestations(sigLen, _depositCommitteeQuorum());
         }
 
         bytes32 onChainRoot = _depositContract().get_deposit_root();
@@ -204,10 +204,10 @@ abstract contract DepositToConsensusLayerValidation {
             validCount++;
         }
 
-        uint256 thresh = _threshold();
-        if (thresh == 0) revert ZeroThreshold();
-        if (validCount < thresh) {
-            revert InsufficientAttestations(validCount, thresh);
+        uint256 depositCommitteeQuorum = _depositCommitteeQuorum();
+        if (depositCommitteeQuorum == 0) revert ZeroThreshold();
+        if (validCount < depositCommitteeQuorum) {
+            revert InsufficientAttestations(validCount, depositCommitteeQuorum);
         }
     }
 
