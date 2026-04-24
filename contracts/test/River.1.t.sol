@@ -1019,7 +1019,6 @@ contract RiverV1Tests is RiverV1TestBase {
         assert(op1.funded == 20 * 32 ether);
         assert(op2.funded == 10 * 32 ether);
 
-
         assert(river.getTotalDepositedETH() == 30 * 32 ether);
         assert(river.totalUnderlyingSupply() == 1100 ether);
         assert(address(river).balance == (1000 ether + 100 ether) - (32 ether * 30));

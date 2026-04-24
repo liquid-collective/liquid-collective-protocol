@@ -2,7 +2,6 @@
 pragma solidity 0.8.34;
 
 import "../interfaces/components/IConsensusLayerDepositManager.1.sol";
-import "../interfaces/IOperatorRegistry.1.sol";
 import "../interfaces/IDepositContract.sol";
 import "../interfaces/IDepositDataBuffer.sol";
 
@@ -234,6 +233,10 @@ abstract contract ConsensusLayerDepositManagerV1 is IConsensusLayerDepositManage
             revert OnlyKeeper();
         }
 
+        if (_getSlashingContainmentMode()) {
+            revert SlashingContainmentModeEnabled();
+        }
+
         // 2. Check withdrawal credentials (cheap SLOAD — fail fast before expensive BLS work)
         bytes32 withdrawalCredentials = WithdrawalCredentials.get();
         if (withdrawalCredentials == 0) {
@@ -317,100 +320,6 @@ abstract contract ConsensusLayerDepositManagerV1 is IConsensusLayerDepositManage
             hasDigit = true;
         }
         if (!hasDigit) revert InvalidOperatorMetadata(metadata);
-    }
-
-    // -----------------------------------------------------------------------
-    // Deposit-root-based deposit function (keeper-trusted flow)
-    // -----------------------------------------------------------------------
-
-    /// @inheritdoc IConsensusLayerDepositManagerV1
-    function depositToConsensusLayerWithDepositRoot(
-        IOperatorsRegistryV1.ValidatorDeposit[] calldata _allocations,
-        bytes32 _depositRoot
-    ) external {
-        if (msg.sender != KeeperAddress.get()) {
-            revert OnlyKeeper();
-        }
-        if (_getSlashingContainmentMode()) {
-            revert SlashingContainmentModeEnabled();
-        }
-        if (_allocations.length == 0) {
-            revert EmptyAllocations();
-        }
-
-        if (IDepositContract(DepositContractAddress.get()).get_deposit_root() != _depositRoot) {
-            revert InvalidDepositRoot();
-        }
-
-        uint256 committedBalance = CommittedBalance.get();
-        if (committedBalance == 0) {
-            revert NotEnoughFunds();
-        }
-        // Validate operator ordering before using the last element's index to size arrays
-        for (uint256 i = 1; i < _allocations.length; ++i) {
-            if (_allocations[i].operatorIndex < _allocations[i - 1].operatorIndex) {
-                revert IOperatorsRegistryV1.UnorderedOperatorList();
-            }
-        }
-        // Calculate total deposits and validate key lengths in a single pass
-        uint256 totalDeposits = 0;
-        uint256[] memory publicKeyCountPerOperator =
-            new uint256[](_allocations[_allocations.length - 1].operatorIndex + 1);
-        for (uint256 i = 0; i < _allocations.length; ++i) {
-            if (_allocations[i].pubkey.length != PUBLIC_KEY_LENGTH) {
-                revert InconsistentPublicKey();
-            }
-            if (_allocations[i].signature.length != SIGNATURE_LENGTH) {
-                revert InconsistentSignature();
-            }
-
-            totalDeposits += _allocations[i].depositAmount;
-            publicKeyCountPerOperator[_allocations[i].operatorIndex]++;
-        }
-        uint256[] memory fundedETH = new uint256[](_allocations[_allocations.length - 1].operatorIndex + 1);
-        bytes[][] memory publicKeys = new bytes[][](_allocations[_allocations.length - 1].operatorIndex + 1);
-        for (uint256 i = 0; i < publicKeys.length; ++i) {
-            publicKeys[i] = new bytes[](publicKeyCountPerOperator[i]);
-            // we reset the count to 0 so that we could reuse the array while adding the public keys in the loop below
-            publicKeyCountPerOperator[i] = 0;
-        }
-
-        // Check if the total requested exceeds the committed balance
-        if (totalDeposits > committedBalance) {
-            revert ValidatorDepositsExceedCommittedBalance();
-        }
-
-        bytes32 withdrawalCredentials = WithdrawalCredentials.get();
-
-        if (withdrawalCredentials == 0) {
-            revert InvalidWithdrawalCredentials();
-        }
-
-        address depositContract = DepositContractAddress.get();
-        uint256 operatorIndex;
-        for (uint256 idx = 0; idx < _allocations.length; ++idx) {
-            operatorIndex = _allocations[idx].operatorIndex;
-            _depositValidator(
-                _allocations[idx].pubkey,
-                _allocations[idx].signature,
-                _allocations[idx].depositAmount,
-                withdrawalCredentials,
-                depositContract
-            );
-            fundedETH[operatorIndex] += _allocations[idx].depositAmount;
-            publicKeys[operatorIndex][publicKeyCountPerOperator[operatorIndex]++] = _allocations[idx].pubkey;
-        }
-
-        _incrementFundedETH(fundedETH, publicKeys);
-        _setCommittedBalance(committedBalance - totalDeposits);
-
-        uint256 currentInFlightETH = InFlightDeposit.get();
-        InFlightDeposit.set(currentInFlightETH + totalDeposits);
-        emit SetInFlightETH(currentInFlightETH, currentInFlightETH + totalDeposits);
-
-        uint256 currentTotalDepositedETH = TotalDepositedETH.get();
-        TotalDepositedETH.set(currentTotalDepositedETH + totalDeposits);
-        emit SetTotalDepositedETH(currentTotalDepositedETH, currentTotalDepositedETH + totalDeposits);
     }
 
     /// @notice Deposits _depositAmount ETH to the official Deposit contract
