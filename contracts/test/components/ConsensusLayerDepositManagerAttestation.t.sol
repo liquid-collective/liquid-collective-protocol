@@ -67,6 +67,10 @@ contract AttestationDepositHarness is ConsensusLayerDepositManagerV1 {
         CommittedBalance.set(v);
     }
 
+    function _getSlashingContainmentMode() internal pure override returns (bool) {
+        return false;
+    }
+
     /// @dev Recording stub — stores funded ETH per operator for test assertions.
     function _incrementFundedETH(uint256[] memory fundedETH, bytes[][] memory) internal override {
         delete lastFundedETH;
