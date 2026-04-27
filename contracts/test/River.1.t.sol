@@ -378,7 +378,7 @@ contract RiverV1Tests is RiverV1TestBase {
         river.setAttester(attester1, true);
         river.setAttester(attester2, true);
         river.setAttester(attester3, true);
-        river.setAttestationThreshold(2);
+        river.setAttestationQuorum(2);
 
         vm.stopPrank();
 
@@ -1270,7 +1270,7 @@ contract RiverV1TestsReport_HEAVY_FUZZING is RiverV1TestBase {
         river.setAttester(attester1, true);
         river.setAttester(attester2, true);
         river.setAttester(attester3, true);
-        river.setAttestationThreshold(2);
+        river.setAttestationQuorum(2);
 
         vm.stopPrank();
 

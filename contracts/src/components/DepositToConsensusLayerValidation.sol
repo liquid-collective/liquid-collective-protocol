@@ -23,18 +23,18 @@ abstract contract DepositToConsensusLayerValidation {
     // Errors
     // -----------------------------------------------------------------------
 
-    error InsufficientAttestations(uint256 valid, uint256 threshold);
+    error InsufficientAttestations(uint256 valid, uint256 quorum);
     error NoDeposits();
     error DepositRootMismatch(bytes32 expected, bytes32 actual);
     error BufferIdMismatch(bytes32 expected, bytes32 actual);
     error TooManySignatures(uint256 count, uint256 max);
     error IncorrectDepositEther(uint256 expected, uint256 actual);
     error BLSSignatureCountMismatch(uint256 depositCount, uint256 yCount);
-    error ZeroThreshold();
+    error ZeroQuorum();
     error ZeroDomainSeparator();
     error ZeroDepositDomain();
-    error ThresholdExceedsAttesterCount(uint256 threshold, uint256 attesterCount);
-    error ThresholdExceedsMaxSignatures(uint256 threshold, uint256 max);
+    error QuorumExceedsAttesterCount(uint256 quorum, uint256 attesterCount);
+    error QuorumExceedsMaxSignatures(uint256 quorum, uint256 max);
     error ZeroAddress();
     error DuplicateAttester(address attester);
     error AttesterStatusUnchanged(address attester, bool value);
@@ -68,12 +68,12 @@ abstract contract DepositToConsensusLayerValidation {
     /// @param value The new attester status
     function _setAttester(address account, bool value) internal virtual;
 
-    /// @notice Retrieve the attestation threshold
-    /// @return The attestation threshold
+    /// @notice Retrieve the attestation quorum
+    /// @return The attestation quorum
     function _depositCommitteeQuorum() internal view virtual returns (uint256);
 
-    /// @notice Set the attestation threshold
-    /// @param value The new attestation threshold
+    /// @notice Set the attestation quorum
+    /// @param value The new attestation quorum
     function _setDepositCommitteeQuorum(uint256 value) internal virtual;
 
     /// @notice Retrieve the domain separator
@@ -107,8 +107,8 @@ abstract contract DepositToConsensusLayerValidation {
         return _isAttester(a);
     }
 
-    /// @notice Retrieve the attestation threshold
-    /// @return The attestation threshold
+    /// @notice Retrieve the attestation quorum
+    /// @return The attestation quorum
     function depositCommitteeQuorum() public view returns (uint256) {
         return _depositCommitteeQuorum();
     }
@@ -206,7 +206,7 @@ abstract contract DepositToConsensusLayerValidation {
         }
 
         uint256 depositCommitteeQuorum = _depositCommitteeQuorum();
-        if (depositCommitteeQuorum == 0) revert ZeroThreshold();
+        if (depositCommitteeQuorum == 0) revert ZeroQuorum();
         if (validCount < depositCommitteeQuorum) {
             revert InsufficientAttestations(validCount, depositCommitteeQuorum);
         }

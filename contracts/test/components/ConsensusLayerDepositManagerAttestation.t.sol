@@ -217,7 +217,7 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
         dm.setAttester(attester1, true);
         dm.setAttester(attester2, true);
         dm.setAttester(attester3, true);
-        dm.setAttestationThreshold(2);
+        dm.setAttestationQuorum(2);
         vm.stopPrank();
 
         // Cache the EIP-712 domain separator (mirrors initRiverV1_3 for proxy deployments)

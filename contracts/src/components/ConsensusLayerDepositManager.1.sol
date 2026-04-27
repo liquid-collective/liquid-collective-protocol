@@ -18,7 +18,7 @@ import "../state/river/KeeperAddress.sol";
 import "../state/river/TotalDepositedETH.sol";
 import "../state/river/InFlightDeposit.sol";
 import "../state/river/DepositDataBufferAddress.sol";
-import "../state/river/AttestationThreshold.sol";
+import "../state/river/AttestationQuorum.sol";
 import "../state/river/Attesters.sol";
 import "../state/river/DepositDomainValue.sol";
 
@@ -85,11 +85,11 @@ abstract contract ConsensusLayerDepositManagerV1 is IConsensusLayerDepositManage
     }
 
     function _depositCommitteeQuorum() internal view override returns (uint256) {
-        return AttestationThreshold.get();
+        return AttestationQuorum.get();
     }
 
     function _setDepositCommitteeQuorum(uint256 value) internal override {
-        AttestationThreshold.set(value);
+        AttestationQuorum.set(value);
     }
 
     function _depositDataBuffer() internal view override returns (IDepositDataBuffer) {
@@ -160,8 +160,8 @@ abstract contract ConsensusLayerDepositManagerV1 is IConsensusLayerDepositManage
     }
 
     /// @inheritdoc IConsensusLayerDepositManagerV1
-    function getAttestationThreshold() external view returns (uint256) {
-        return AttestationThreshold.get();
+    function getAttestationQuorum() external view returns (uint256) {
+        return AttestationQuorum.get();
     }
 
     /// @inheritdoc IConsensusLayerDepositManagerV1
@@ -196,25 +196,25 @@ abstract contract ConsensusLayerDepositManagerV1 is IConsensusLayerDepositManage
         uint256 newCount = value ? count + 1 : count - 1;
         uint256 depositCommitteeQuorum = _depositCommitteeQuorum();
         if (!value && depositCommitteeQuorum >= newCount) {
-            revert ThresholdExceedsAttesterCount(depositCommitteeQuorum, newCount);
+            revert QuorumExceedsAttesterCount(depositCommitteeQuorum, newCount);
         }
         Attesters.setCount(newCount);
         _setAttester(attester, value);
         emit SetAttester(attester, value);
     }
 
-    /// @notice Set the attestation threshold. Admin only.
-    function setAttestationThreshold(uint256 newThreshold) external onlyRiverAdmin {
-        if (newThreshold == 0) revert ZeroThreshold();
+    /// @notice Set the attestation quorum. Admin only.
+    function setAttestationQuorum(uint256 newQuorum) external onlyRiverAdmin {
+        if (newQuorum == 0) revert ZeroQuorum();
         uint256 attesterCount = Attesters.getCount();
-        if (newThreshold >= attesterCount) {
-            revert ThresholdExceedsAttesterCount(newThreshold, attesterCount);
+        if (newQuorum >= attesterCount) {
+            revert QuorumExceedsAttesterCount(newQuorum, attesterCount);
         }
-        if (newThreshold > MAX_SIGNATURES) {
-            revert ThresholdExceedsMaxSignatures(newThreshold, MAX_SIGNATURES);
+        if (newQuorum > MAX_SIGNATURES) {
+            revert QuorumExceedsMaxSignatures(newQuorum, MAX_SIGNATURES);
         }
-        _setDepositCommitteeQuorum(newThreshold);
-        emit SetAttestationThreshold(newThreshold);
+        _setDepositCommitteeQuorum(newQuorum);
+        emit SetAttestationQuorum(newQuorum);
     }
 
     // -----------------------------------------------------------------------

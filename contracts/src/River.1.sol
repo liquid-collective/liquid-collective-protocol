@@ -23,7 +23,7 @@ import "./interfaces/IDepositDataBuffer.sol";
 
 import "./state/river/AllowlistAddress.sol";
 import "./state/river/DepositDataBufferAddress.sol";
-import "./state/river/AttestationThreshold.sol";
+import "./state/river/AttestationQuorum.sol";
 import "./state/river/Attesters.sol";
 import "./state/river/DepositDomainValue.sol";
 import "./state/river/DomainSeparator.sol";
@@ -138,13 +138,13 @@ contract RiverV1 is
     function initRiverV1_3(
         address _depositDataBuffer,
         address[] calldata _attesters,
-        uint256 _threshold,
+        uint256 _quorum,
         bytes4 _genesisForkVersion
     ) external init(3) onlyAdmin {
         if (_depositDataBuffer == address(0)) revert LibErrors.InvalidZeroAddress();
-        if (_threshold == 0) revert ZeroThreshold();
-        if (_threshold > MAX_SIGNATURES) {
-            revert ThresholdExceedsMaxSignatures(_threshold, MAX_SIGNATURES);
+        if (_quorum == 0) revert ZeroQuorum();
+        if (_quorum > MAX_SIGNATURES) {
+            revert QuorumExceedsMaxSignatures(_quorum, MAX_SIGNATURES);
         }
         if (_attesters.length == 0) revert LibErrors.InvalidZeroAddress();
 
@@ -187,11 +187,11 @@ contract RiverV1 is
             }
         }
         uint256 attesterCount = Attesters.getCount();
-        if (_threshold >= attesterCount) {
-            revert ThresholdExceedsAttesterCount(_threshold, attesterCount);
+        if (_quorum >= attesterCount) {
+            revert QuorumExceedsAttesterCount(_quorum, attesterCount);
         }
-        AttestationThreshold.set(_threshold);
-        emit SetAttestationThreshold(_threshold);
+        AttestationQuorum.set(_quorum);
+        emit SetAttestationQuorum(_quorum);
 
         bytes32 domainSeparator =
             keccak256(abi.encode(EIP712_DOMAIN_TYPEHASH, NAME_HASH, VERSION_HASH, block.chainid, address(this)));

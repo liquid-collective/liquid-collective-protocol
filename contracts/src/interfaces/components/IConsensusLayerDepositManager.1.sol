@@ -69,8 +69,8 @@ interface IConsensusLayerDepositManagerV1 {
     /// @notice Emitted when an attester is added or removed
     event SetAttester(address indexed attester, bool value);
 
-    /// @notice Emitted when the attestation threshold is updated
-    event SetAttestationThreshold(uint256 threshold);
+    /// @notice Emitted when the attestation quorum is updated
+    event SetAttestationQuorum(uint256 quorum);
 
     event SetDomainSeparator(bytes32 domainSeparator);
 
@@ -114,8 +114,8 @@ interface IConsensusLayerDepositManagerV1 {
     /// @notice Returns the DepositDataBuffer contract address
     function getDepositDataBuffer() external view returns (address);
 
-    /// @notice Returns the attestation threshold (minimum valid signatures for quorum)
-    function getAttestationThreshold() external view returns (uint256);
+    /// @notice Returns the attestation quorum (minimum valid signatures required)
+    function getAttestationQuorum() external view returns (uint256);
 
     /// @notice Returns the number of registered attesters
     function getAttesterCount() external view returns (uint256);
