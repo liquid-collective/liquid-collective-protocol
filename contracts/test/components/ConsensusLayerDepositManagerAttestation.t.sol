@@ -169,8 +169,10 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
 
     uint256 internal attesterPk1 = 0xA1;
     uint256 internal attesterPk2 = 0xA2;
+    uint256 internal attesterPk3 = 0xA3;
     address internal attester1;
     address internal attester2;
+    address internal attester3;
 
     // EIP-712 constants (must match DepositToConsensusLayerValidation)
     bytes32 internal constant EIP712_DOMAIN_TYPEHASH =
@@ -197,6 +199,7 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
     function setUp() public {
         attester1 = vm.addr(attesterPk1);
         attester2 = vm.addr(attesterPk2);
+        attester3 = vm.addr(attesterPk3);
 
         depositContract = new DepositContractEnhancedMock();
         buffer = new MockDepositDataBuffer();
@@ -210,8 +213,10 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
 
         vm.startPrank(admin);
         dm.setDepositDataBuffer(address(buffer));
+        // threshold must be strictly less than attester count
         dm.setAttester(attester1, true);
         dm.setAttester(attester2, true);
+        dm.setAttester(attester3, true);
         dm.setAttestationThreshold(2);
         vm.stopPrank();
 
@@ -681,5 +686,24 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
 
         vm.expectRevert(DepositToConsensusLayerValidation.ZeroDepositDomain.selector);
         dm.verifyBLSDeposit(pk, sig, 32 ether, dy, withdrawalCredentials);
+    }
+
+    // setAttester must reject calls that would leave the attester's status unchanged so the
+    // admin cannot silently no-op when intending to flip a flag.
+    function testRevert_setAttesterStatusUnchanged() public {
+        // attester1 was registered in setUp(); re-adding must revert
+        vm.prank(admin);
+        vm.expectRevert(
+            abi.encodeWithSelector(DepositToConsensusLayerValidation.AttesterStatusUnchanged.selector, attester1, true)
+        );
+        dm.setAttester(attester1, true);
+
+        // an unregistered address being removed must also revert
+        address stranger = address(0xDEAD);
+        vm.prank(admin);
+        vm.expectRevert(
+            abi.encodeWithSelector(DepositToConsensusLayerValidation.AttesterStatusUnchanged.selector, stranger, false)
+        );
+        dm.setAttester(stranger, false);
     }
 }

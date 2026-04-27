@@ -9,7 +9,7 @@ import {DomainSeparator} from "../state/river/DomainSeparator.sol";
 
 /// @title DepositToConsensusLayerValidation
 /// @notice Abstract contract that validates attestation quorum signatures and BLS deposit data.
-///         Storage hooks (_isAttester, _threshold) are virtual so that proxy-based deployments
+///         Storage hooks (_isAttester, _depositCommitteeQuorum) are virtual so that proxy-based deployments
 ///         (River) can override them with unstructured storage.
 abstract contract DepositToConsensusLayerValidation {
     // -----------------------------------------------------------------------
@@ -37,6 +37,7 @@ abstract contract DepositToConsensusLayerValidation {
     error ThresholdExceedsMaxSignatures(uint256 threshold, uint256 max);
     error ZeroAddress();
     error DuplicateAttester(address attester);
+    error AttesterStatusUnchanged(address attester, bool value);
 
     // -----------------------------------------------------------------------
     // EIP-712
@@ -73,7 +74,7 @@ abstract contract DepositToConsensusLayerValidation {
 
     /// @notice Set the attestation threshold
     /// @param value The new attestation threshold
-    function _setThreshold(uint256 value) internal virtual;
+    function _setDepositCommitteeQuorum(uint256 value) internal virtual;
 
     /// @notice Retrieve the domain separator
     /// @return The domain separator

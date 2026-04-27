@@ -190,7 +190,7 @@ abstract contract ConsensusLayerDepositManagerV1 is IConsensusLayerDepositManage
         if (attester == address(0)) revert ZeroAddress();
 
         bool current = Attesters.isAttester(attester);
-        if (current == value) return; // no-op
+        if (current == value) revert AttesterStatusUnchanged(attester, value);
 
         uint256 count = Attesters.getCount();
         uint256 newCount = value ? count + 1 : count - 1;
@@ -213,7 +213,7 @@ abstract contract ConsensusLayerDepositManagerV1 is IConsensusLayerDepositManage
         if (newThreshold > MAX_SIGNATURES) {
             revert ThresholdExceedsMaxSignatures(newThreshold, MAX_SIGNATURES);
         }
-        _setThreshold(newThreshold);
+        _setDepositCommitteeQuorum(newThreshold);
         emit SetAttestationThreshold(newThreshold);
     }
 

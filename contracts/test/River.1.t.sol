@@ -103,8 +103,10 @@ abstract contract RiverV1TestBase is OperatorAllocationTestBase, BytesGenerator 
 
     uint256 internal attesterPk1 = 0xA1;
     uint256 internal attesterPk2 = 0xA2;
+    uint256 internal attesterPk3 = 0xA3;
     address internal attester1;
     address internal attester2;
+    address internal attester3;
 
     // EIP-712 constants (must match DepositToConsensusLayerValidation)
     bytes32 internal constant EIP712_DOMAIN_TYPEHASH =
@@ -177,6 +179,7 @@ abstract contract RiverV1TestBase is OperatorAllocationTestBase, BytesGenerator 
 
         attester1 = vm.addr(attesterPk1);
         attester2 = vm.addr(attesterPk2);
+        attester3 = vm.addr(attesterPk3);
 
         vm.warp(857034746);
 
@@ -370,10 +373,11 @@ contract RiverV1Tests is RiverV1TestBase {
         operatorOneIndex = operatorsRegistry.addOperator(operatorOneName, operatorOne);
         operatorTwoIndex = operatorsRegistry.addOperator(operatorTwoName, operatorTwo);
 
-        // Set up attestation infrastructure
+        // Set up attestation infrastructure (threshold must be strictly less than attester count)
         river.setDepositDataBuffer(address(depositBuffer));
         river.setAttester(attester1, true);
         river.setAttester(attester2, true);
+        river.setAttester(attester3, true);
         river.setAttestationThreshold(2);
 
         vm.stopPrank();
@@ -1261,10 +1265,11 @@ contract RiverV1TestsReport_HEAVY_FUZZING is RiverV1TestBase {
         river.setCoverageFund(address(coverageFund));
         river.setKeeper(admin);
 
-        // Set up attestation infrastructure
+        // Set up attestation infrastructure (threshold must be strictly less than attester count)
         river.setDepositDataBuffer(address(depositBuffer));
         river.setAttester(attester1, true);
         river.setAttester(attester2, true);
+        river.setAttester(attester3, true);
         river.setAttestationThreshold(2);
 
         vm.stopPrank();
@@ -2675,8 +2680,10 @@ contract RiverV1CoverageTests is RiverV1TestBase {
         vm.store(address(river), DEPOSITED_VALIDATOR_COUNT_SLOT, bytes32(uint256(10)));
         vm.store(address(river), bytes32(uint256(LAST_CLR_BASE_SLOT) + 5), bytes32(uint256(7)));
         vm.prank(admin);
-        address[] memory _attesters_ = new address[](1);
-        _attesters_[0] = makeAddr("attester");
+        // threshold must be strictly less than attester count
+        address[] memory _attesters_ = new address[](2);
+        _attesters_[0] = makeAddr("attester1");
+        _attesters_[1] = makeAddr("attester2");
         river.initRiverV1_3(makeAddr("depositBuffer"), _attesters_, 1, bytes4(0));
         assertEq(river.getTotalDepositedETH(), 10 * 32 ether);
         assertEq(uint256(vm.load(address(river), IN_FLIGHT_DEPOSIT_SLOT)), 3 * 32 ether);
@@ -2688,8 +2695,10 @@ contract RiverV1CoverageTests is RiverV1TestBase {
         vm.store(address(river), DEPOSITED_VALIDATOR_COUNT_SLOT, bytes32(uint256(5)));
         vm.store(address(river), bytes32(uint256(LAST_CLR_BASE_SLOT) + 5), bytes32(uint256(5)));
         vm.prank(admin);
-        address[] memory _attesters_ = new address[](1);
-        _attesters_[0] = makeAddr("attester");
+        // threshold must be strictly less than attester count
+        address[] memory _attesters_ = new address[](2);
+        _attesters_[0] = makeAddr("attester1");
+        _attesters_[1] = makeAddr("attester2");
         river.initRiverV1_3(makeAddr("depositBuffer"), _attesters_, 1, bytes4(0));
         assertEq(river.getTotalDepositedETH(), 5 * 32 ether);
         assertEq(uint256(vm.load(address(river), IN_FLIGHT_DEPOSIT_SLOT)), 0);
