@@ -58,7 +58,7 @@ contract WithdrawV1Tests is WithdrawV1TestBase {
         assertEq(
             withdraw.getCredentials(),
             bytes32(
-                uint256(uint160(address(withdraw))) + 0x0100000000000000000000000000000000000000000000000000000000000000
+                uint256(uint160(address(withdraw))) + 0x0200000000000000000000000000000000000000000000000000000000000000
             )
         );
     }

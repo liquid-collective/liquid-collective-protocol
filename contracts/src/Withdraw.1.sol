@@ -30,7 +30,7 @@ contract WithdrawV1 is IWithdrawV1, Initializable, IProtocolVersion {
     function getCredentials() external view returns (bytes32) {
         return
             bytes32(
-                uint256(uint160(address(this))) + 0x0100000000000000000000000000000000000000000000000000000000000000
+                uint256(uint160(address(this))) + 0x0200000000000000000000000000000000000000000000000000000000000000
             );
     }
 

@@ -15,12 +15,6 @@ library ValidatorKeys {
     /// @notice Length in bytes of a BLS Signature used for validator deposits
     uint256 internal constant SIGNATURE_LENGTH = 96;
 
-    /// @notice The provided public key is not matching the expected length
-    error InvalidPublicKey();
-
-    /// @notice The provided signature is not matching the expected length
-    error InvalidSignature();
-
     /// @notice Structure of the Validator Keys in storage
     struct Slot {
         /// @custom:attribute The mapping from operator index to key index to key value
