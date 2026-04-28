@@ -496,6 +496,7 @@ contract OracleManagerV1Tests is Test {
 
 contract OracleManagerV1CoverageTests is OracleManagerV1Tests {
     bytes32 constant IN_FLIGHT_DEPOSIT_SLOT = bytes32(uint256(keccak256("river.state.inFlightDeposit")) - 1);
+    bytes32 constant LAST_CLR_BASE_SLOT = bytes32(uint256(keccak256("river.state.lastConsensusLayerReport")) - 1);
 
     /// Asserts that getCLValidatorTotalBalance returns the value stored in the last consensus layer report.
     function testGetCLValidatorTotalBalance() public {
@@ -510,6 +511,30 @@ contract OracleManagerV1CoverageTests is OracleManagerV1Tests {
         om.supersedeReportedBalanceSum(64 ether);
         IOracleManagerV1.StoredConsensusLayerReport memory r = oracleManager.getLastConsensusLayerReport();
         assertEq(r.validatorsBalance, 64 ether);
+    }
+
+    /// Asserts that setConsensusLayerData reverts with InvalidTotalDepositedActivatedETHDecrease when
+    /// the reported totalDepositedActivatedETH is less than the previous stored value.
+    function testRevert_setConsensusLayerData_totalDepositedActivatedETHDecrease() public {
+        // Seed the stored report's totalDepositedActivatedETH (slot offset 6) to 10 ether.
+        vm.store(address(oracleManager), bytes32(uint256(LAST_CLR_BASE_SLOT) + 6), bytes32(uint256(10 ether)));
+
+        uint256 epoch = epochsPerFrame;
+        vm.warp(genesisTime + (epoch + epochsToAssumedFinality) * slotsPerEpoch * secondsPerSlot);
+
+        IOracleManagerV1.ConsensusLayerReport memory clr;
+        clr.epoch = epoch;
+        clr.validatorsBalance = 0;
+        clr.validatorsExitedBalance = 0;
+        clr.validatorsSkimmedBalance = 0;
+        clr.totalDepositedActivatedETH = 9 ether;
+        clr.exitedETHPerOperator = new uint256[](1);
+
+        vm.prank(oracle);
+        vm.expectRevert(
+            abi.encodeWithSignature("InvalidTotalDepositedActivatedETHDecrease(uint256,uint256)", 10 ether, 9 ether)
+        );
+        oracleManager.setConsensusLayerData(clr);
     }
 
     /// Asserts that setConsensusLayerData reverts with InvalidTotalDepositedActivatedETHIncrease when

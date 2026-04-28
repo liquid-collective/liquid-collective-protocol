@@ -104,6 +104,10 @@ contract OperatorsRegistryWithMigrationHelpers is OperatorsRegistryV1 {
     function sudoSetRawExitedETH(uint256[] memory value) external {
         OperatorsV3.setRawExitedETH(value);
     }
+
+    function sudoExitRequestsV3(uint256 _operatorIndex, uint256 _requestedExits) external {
+        OperatorsV3.get(_operatorIndex).requestedExits = _requestedExits;
+    }
 }
 
 contract RiverMock {
@@ -1713,6 +1717,228 @@ contract OperatorsRegistryV1CoverageTests is OperatorsRegistryV1TestBase, Operat
         exited[1] = 3 * 32 ether;
         vm.expectRevert(abi.encodeWithSignature("ExitedETHExceedsDepositedETH()"));
         reg.reportExitedETH(exited, 2 * 32 ether);
+    }
+
+    // ──────────────────────────────────────────────────────────────────────
+    // incrementFundedETH branch coverage
+    // ──────────────────────────────────────────────────────────────────────
+
+    /// Asserts that operators with `_fundedETH[idx] == 0` are skipped: no event, no state change.
+    function testIncrementFundedETH_skipsZeroAmounts() public {
+        reg.initOperatorsRegistryV1(admin, river);
+        vm.startPrank(admin);
+        reg.addOperator("Op0", makeAddr("op0"));
+        reg.addOperator("Op1", makeAddr("op1"));
+        vm.stopPrank();
+
+        uint256[] memory fundedETH = new uint256[](2);
+        fundedETH[0] = 0;
+        fundedETH[1] = 32 ether;
+
+        bytes[][] memory pubkeys = new bytes[][](2);
+        pubkeys[0] = new bytes[](0);
+        pubkeys[1] = new bytes[](1);
+        pubkeys[1][0] = hex"abcd";
+
+        // Only operator 1 should get a FundedValidatorKeys event.
+        vm.expectEmit(true, false, false, true);
+        emit IOperatorsRegistryV1.FundedValidatorKeys(1, pubkeys[1], false);
+
+        reg.incrementFundedETH(fundedETH, pubkeys);
+
+        assertEq(reg.getOperator(0).funded, 0, "operator 0 funded should remain zero");
+        assertEq(reg.getOperator(1).funded, 32 ether, "operator 1 funded should be 32 ether");
+    }
+
+    /// Asserts that incrementFundedETH reverts InactiveOperator for inactive operators with non-zero funded entry.
+    function testRevert_incrementFundedETH_inactiveOperator() public {
+        reg.initOperatorsRegistryV1(admin, river);
+        vm.startPrank(admin);
+        reg.addOperator("Op0", makeAddr("op0"));
+        reg.setOperatorStatus(0, false);
+        vm.stopPrank();
+
+        uint256[] memory fundedETH = new uint256[](1);
+        fundedETH[0] = 32 ether;
+        bytes[][] memory pubkeys = new bytes[][](1);
+        pubkeys[0] = new bytes[](1);
+        pubkeys[0][0] = hex"ff";
+
+        vm.expectRevert(abi.encodeWithSignature("InactiveOperator(uint256)", 0));
+        reg.incrementFundedETH(fundedETH, pubkeys);
+    }
+
+    /// Asserts that incrementFundedETH reverts OperatorIgnoredExitRequests when requestedExits exceeds reported exitedETH.
+    function testRevert_incrementFundedETH_operatorIgnoredExitRequests() public {
+        reg.initOperatorsRegistryV1(admin, river);
+        vm.prank(admin);
+        reg.addOperator("Op0", makeAddr("op0"));
+        // Outstanding exit requests but no exited ETH yet.
+        reg.sudoExitRequestsV3(0, 32 ether);
+
+        uint256[] memory fundedETH = new uint256[](1);
+        fundedETH[0] = 32 ether;
+        bytes[][] memory pubkeys = new bytes[][](1);
+        pubkeys[0] = new bytes[](1);
+        pubkeys[0][0] = hex"ff";
+
+        vm.expectRevert(abi.encodeWithSignature("OperatorIgnoredExitRequests(uint256)", 0));
+        reg.incrementFundedETH(fundedETH, pubkeys);
+    }
+
+    // ──────────────────────────────────────────────────────────────────────
+    // reportCLETH coverage
+    // ──────────────────────────────────────────────────────────────────────
+
+    function testRevert_reportCLETH_emptyArray() public {
+        reg.initOperatorsRegistryV1(admin, river);
+        vm.expectRevert(abi.encodeWithSignature("InvalidEmptyArray()"));
+        reg.reportCLETH(new uint256[](0));
+    }
+
+    function testRevert_reportCLETH_lengthMismatch() public {
+        reg.initOperatorsRegistryV1(admin, river);
+        vm.startPrank(admin);
+        reg.addOperator("Op0", makeAddr("op0"));
+        reg.addOperator("Op1", makeAddr("op1"));
+        vm.stopPrank();
+
+        uint256[] memory tooLong = new uint256[](3);
+        vm.expectRevert(abi.encodeWithSignature("InvalidActiveCLETHArrayLength()"));
+        reg.reportCLETH(tooLong);
+    }
+
+    function testReportCLETH_setsActiveCLETH() public {
+        reg.initOperatorsRegistryV1(admin, river);
+        vm.startPrank(admin);
+        reg.addOperator("Op0", makeAddr("op0"));
+        reg.addOperator("Op1", makeAddr("op1"));
+        reg.addOperator("Op2", makeAddr("op2"));
+        vm.stopPrank();
+
+        uint256[] memory activeCLETH = new uint256[](3);
+        activeCLETH[0] = 100 ether;
+        activeCLETH[1] = 200 ether;
+        activeCLETH[2] = 300 ether;
+
+        vm.expectEmit(false, false, false, true);
+        emit IOperatorsRegistryV1.UpdatedActiveCLETH(activeCLETH);
+        reg.reportCLETH(activeCLETH);
+
+        assertEq(reg.getOperator(0).activeCLETH, 100 ether);
+        assertEq(reg.getOperator(1).activeCLETH, 200 ether);
+        assertEq(reg.getOperator(2).activeCLETH, 300 ether);
+    }
+
+    // ──────────────────────────────────────────────────────────────────────
+    // _setExitedETH branches
+    // ──────────────────────────────────────────────────────────────────────
+
+    function testRevert_reportExitedETH_perOperatorDecreased() public {
+        reg.initOperatorsRegistryV1(admin, river);
+        vm.startPrank(admin);
+        reg.addOperator("Op0", makeAddr("op0"));
+        reg.addOperator("Op1", makeAddr("op1"));
+        vm.stopPrank();
+        reg.sudoSetFundedV3(0, 5 * 32 ether);
+        reg.sudoSetFundedV3(1, 5 * 32 ether);
+        reg.sudoSetActiveCLETH(0, 5 * 32 ether);
+        reg.sudoSetActiveCLETH(1, 5 * 32 ether);
+        reg.sudoSetRawExitedETH(new uint256[](3));
+
+        uint256[] memory first = new uint256[](3);
+        first[0] = 2 * 32 ether;
+        first[1] = 32 ether;
+        first[2] = 32 ether;
+        reg.reportExitedETH(first, 10 * 32 ether);
+
+        uint256[] memory decrease = new uint256[](3);
+        decrease[0] = 32 ether;
+        decrease[1] = 0;
+        decrease[2] = 32 ether;
+        vm.expectRevert(abi.encodeWithSignature("ExitedETHPerOperatorDecreased()"));
+        reg.reportExitedETH(decrease, 10 * 32 ether);
+    }
+
+    function testReportExitedETH_unsolicitedExitsClampDemandAndUpdateRequestedExits() public {
+        reg.initOperatorsRegistryV1(admin, river);
+        vm.prank(admin);
+        reg.addOperator("Op0", makeAddr("op0"));
+        reg.sudoSetFundedV3(0, 10 * 32 ether);
+        reg.sudoSetActiveCLETH(0, 10 * 32 ether);
+        reg.sudoSetRawExitedETH(new uint256[](2));
+
+        // Seed a current exit demand of 50 ether (no requestedExits yet).
+        reg.demandETHExits(50 ether, 10 * 32 ether);
+        assertEq(reg.getCurrentETHExitsDemand(), 50 ether);
+
+        // ── Case A: unsolicited (30 ether) < demand (50 ether) → demand drops to 20 ether,
+        //          totalETHExitsRequested grows by 30 ether, requestedExits raised to 30 ether.
+        uint256[] memory caseA = new uint256[](2);
+        caseA[0] = 30 ether;
+        caseA[1] = 30 ether;
+        vm.expectEmit(false, false, false, true);
+        emit IOperatorsRegistryV1.UpdatedRequestedETHExitsUponStopped(0, 0, 30 ether);
+        reg.reportExitedETH(caseA, 10 * 32 ether);
+        assertEq(reg.getOperator(0).requestedExits, 30 ether);
+        assertEq(reg.getCurrentETHExitsDemand(), 20 ether);
+        assertEq(reg.getTotalETHExitsRequested(), 30 ether);
+
+        // ── Case B: unsolicited delta (60 ether more) >= remaining demand (20 ether)
+        //          → demand fully clamped to 0; requestedExits raised to 90 ether.
+        uint256[] memory caseB = new uint256[](2);
+        caseB[0] = 90 ether;
+        caseB[1] = 90 ether;
+        vm.expectEmit(false, false, false, true);
+        emit IOperatorsRegistryV1.UpdatedRequestedETHExitsUponStopped(0, 30 ether, 90 ether);
+        reg.reportExitedETH(caseB, 10 * 32 ether);
+        assertEq(reg.getOperator(0).requestedExits, 90 ether);
+        assertEq(reg.getCurrentETHExitsDemand(), 0);
+        assertEq(reg.getTotalETHExitsRequested(), 90 ether);
+    }
+
+    // ──────────────────────────────────────────────────────────────────────
+    // requestETHExits / demandETHExits branches
+    // ──────────────────────────────────────────────────────────────────────
+
+    function testRevert_requestETHExits_exceedsExitDemand() public {
+        reg.initOperatorsRegistryV1(admin, river);
+        vm.prank(admin);
+        reg.addOperator("Op0", makeAddr("op0"));
+        reg.sudoSetFundedV3(0, 10 * 32 ether);
+        reg.sudoSetActiveCLETH(0, 10 * 32 ether);
+        reg.demandETHExits(1 ether, 10 * 32 ether); // current demand = 1 ether
+
+        // Try to request 64 ether to exit, but the demand is only 1 ether.
+        IOperatorsRegistryV1.ExitETHAllocation[] memory allocs = new IOperatorsRegistryV1.ExitETHAllocation[](1);
+        allocs[0] = IOperatorsRegistryV1.ExitETHAllocation({operatorIndex: 0, ethAmount: 64 ether});
+
+        vm.prank(keeper);
+        vm.expectRevert(abi.encodeWithSignature("ExitsRequestedExceedExitDemand(uint256,uint256)", 64 ether, 1 ether));
+        reg.requestETHExits(allocs);
+    }
+
+    function testDemandETHExits_capsBelowRequested() public {
+        reg.initOperatorsRegistryV1(admin, river);
+        // CurrentETHExitsDemand starts at 0; availableCLETHAfterDemand = 50 ether.
+        vm.expectEmit(false, false, false, true);
+        emit IOperatorsRegistryV1.SetCurrentETHExitsDemand(0, 50 ether);
+        reg.demandETHExits(100 ether, 50 ether);
+        assertEq(reg.getCurrentETHExitsDemand(), 50 ether);
+    }
+
+    function testDemandETHExits_noOpWhenNothingAvailable() public {
+        reg.initOperatorsRegistryV1(admin, river);
+        // Set CurrentETHExitsDemand = 50 ether.
+        reg.demandETHExits(50 ether, 50 ether);
+        assertEq(reg.getCurrentETHExitsDemand(), 50 ether);
+
+        // totalAvailable=50 == currentDemand=50 → availableAfter=0 → no-op, no event.
+        vm.recordLogs();
+        reg.demandETHExits(100 ether, 50 ether);
+        Vm.Log[] memory logs = vm.getRecordedLogs();
+        assertEq(logs.length, 0, "no events should fire when no demand can be added");
+        assertEq(reg.getCurrentETHExitsDemand(), 50 ether);
     }
 
     /// Asserts that version() returns the expected registry version string.
