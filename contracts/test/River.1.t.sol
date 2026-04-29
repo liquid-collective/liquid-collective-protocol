@@ -2704,6 +2704,75 @@ contract RiverV1CoverageTests is RiverV1TestBase {
         assertEq(uint256(vm.load(address(river), IN_FLIGHT_DEPOSIT_SLOT)), 0);
     }
 
+    // ──────────────────────────────────────────────────────────────────────
+    // initRiverV1_3 revert paths
+    // ──────────────────────────────────────────────────────────────────────
+
+    function _initRiverV1_3DefaultAttesters() internal pure returns (address[] memory atts) {
+        atts = new address[](2);
+        atts[0] = address(0xA1);
+        atts[1] = address(0xA2);
+    }
+
+    function testRevert_initRiverV1_3_zeroDepositBuffer() public {
+        _initRiverAndV1_2();
+        address[] memory atts = _initRiverV1_3DefaultAttesters();
+        vm.prank(admin);
+        vm.expectRevert(abi.encodeWithSignature("InvalidZeroAddress()"));
+        river.initRiverV1_3(address(0), atts, 1, bytes4(0));
+    }
+
+    function testRevert_initRiverV1_3_zeroQuorum() public {
+        _initRiverAndV1_2();
+        address[] memory atts = _initRiverV1_3DefaultAttesters();
+        vm.prank(admin);
+        vm.expectRevert(abi.encodeWithSignature("ZeroQuorum()"));
+        river.initRiverV1_3(makeAddr("buffer"), atts, 0, bytes4(0));
+    }
+
+    function testRevert_initRiverV1_3_quorumExceedsMaxSignatures() public {
+        _initRiverAndV1_2();
+        address[] memory atts = _initRiverV1_3DefaultAttesters();
+        vm.prank(admin);
+        vm.expectRevert(abi.encodeWithSignature("QuorumExceedsMaxSignatures(uint256,uint256)", 21, 20));
+        river.initRiverV1_3(makeAddr("buffer"), atts, 21, bytes4(0));
+    }
+
+    function testRevert_initRiverV1_3_emptyAttesters() public {
+        _initRiverAndV1_2();
+        address[] memory atts = new address[](0);
+        vm.prank(admin);
+        vm.expectRevert(abi.encodeWithSignature("InvalidZeroAddress()"));
+        river.initRiverV1_3(makeAddr("buffer"), atts, 1, bytes4(0));
+    }
+
+    function testRevert_initRiverV1_3_zeroAttester() public {
+        _initRiverAndV1_2();
+        address[] memory atts = new address[](2);
+        atts[0] = makeAddr("a1");
+        atts[1] = address(0);
+        vm.prank(admin);
+        vm.expectRevert(abi.encodeWithSignature("InvalidZeroAddress()"));
+        river.initRiverV1_3(makeAddr("buffer"), atts, 1, bytes4(0));
+    }
+
+    function testRevert_initRiverV1_3_quorumExceedsAttesterCount() public {
+        _initRiverAndV1_2();
+        address[] memory atts = _initRiverV1_3DefaultAttesters();
+        vm.prank(admin);
+        vm.expectRevert(abi.encodeWithSignature("QuorumExceedsAttesterCount(uint256,uint256)", 2, 2));
+        river.initRiverV1_3(makeAddr("buffer"), atts, 2, bytes4(0));
+    }
+
+    function testRevert_initRiverV1_3_unauthorizedCaller() public {
+        _initRiverAndV1_2();
+        address stranger = makeAddr("stranger");
+        address[] memory atts = _initRiverV1_3DefaultAttesters();
+        vm.prank(stranger);
+        vm.expectRevert(abi.encodeWithSignature("Unauthorized(address)", stranger));
+        river.initRiverV1_3(makeAddr("buffer"), atts, 1, bytes4(0));
+    }
+
     /// Asserts that a consensus layer report succeeds when no coverage fund is configured (pull is skipped).
     function testPullCoverageFundsNoCoverageFund() public {
         _initRiverMinimalForReporting();

@@ -55,6 +55,9 @@ contract AttestationDepositHarness is ConsensusLayerDepositManagerV1 {
     /// @dev Stores the last fundedETH array passed to _incrementFundedETH for assertions.
     uint256[] public lastFundedETH;
 
+    /// @dev Flippable slashing-containment flag for tests.
+    bool internal _slashingContainmentMode;
+
     constructor(address admin_) {
         _admin = admin_;
     }
@@ -67,8 +70,12 @@ contract AttestationDepositHarness is ConsensusLayerDepositManagerV1 {
         CommittedBalance.set(v);
     }
 
-    function _getSlashingContainmentMode() internal pure override returns (bool) {
-        return false;
+    function _getSlashingContainmentMode() internal view override returns (bool) {
+        return _slashingContainmentMode;
+    }
+
+    function sudoSetSlashingContainmentMode(bool v) external {
+        _slashingContainmentMode = v;
     }
 
     /// @dev Recording stub — stores funded ETH per operator for test assertions.
@@ -705,5 +712,289 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
             abi.encodeWithSelector(DepositToConsensusLayerValidation.AttesterStatusUnchanged.selector, stranger, false)
         );
         dm.setAttester(stranger, false);
+    }
+
+    // -----------------------------------------------------------------------
+    // Admin setter revert coverage
+    // -----------------------------------------------------------------------
+
+    function testRevert_setDepositDataBuffer_zeroAddress() public {
+        vm.prank(admin);
+        vm.expectRevert(DepositToConsensusLayerValidation.ZeroAddress.selector);
+        dm.setDepositDataBuffer(address(0));
+    }
+
+    function testRevert_setAttester_zeroAddress() public {
+        vm.prank(admin);
+        vm.expectRevert(DepositToConsensusLayerValidation.ZeroAddress.selector);
+        dm.setAttester(address(0), true);
+    }
+
+    function testRevert_setAttester_removalUnderfilsQuorum() public {
+        // setUp registered 3 attesters with quorum=2. Removing one would leave count=2,
+        // and the guard reverts when quorum >= newCount.
+        vm.prank(admin);
+        vm.expectRevert(
+            abi.encodeWithSelector(DepositToConsensusLayerValidation.QuorumExceedsAttesterCount.selector, 2, 2)
+        );
+        dm.setAttester(attester3, false);
+    }
+
+    function testRevert_setAttestationQuorum_zero() public {
+        vm.prank(admin);
+        vm.expectRevert(DepositToConsensusLayerValidation.ZeroQuorum.selector);
+        dm.setAttestationQuorum(0);
+    }
+
+    function testRevert_setAttestationQuorum_exceedsAttesterCount() public {
+        // 3 attesters in setUp(); trying quorum=3 violates the strict-less-than rule.
+        vm.prank(admin);
+        vm.expectRevert(
+            abi.encodeWithSelector(DepositToConsensusLayerValidation.QuorumExceedsAttesterCount.selector, 3, 3)
+        );
+        dm.setAttestationQuorum(3);
+    }
+
+    function testRevert_setAttestationQuorum_exceedsMaxSignatures() public {
+        // Register 19 more attesters to reach 22 total, then quorum=21 passes the
+        // attester-count check (21 < 22) but fails the MAX_SIGNATURES (=20) cap.
+        vm.startPrank(admin);
+        for (uint256 i = 0; i < 19; i++) {
+            dm.setAttester(address(uint160(0x1000 + i)), true);
+        }
+        vm.expectRevert(
+            abi.encodeWithSelector(DepositToConsensusLayerValidation.QuorumExceedsMaxSignatures.selector, 21, 20)
+        );
+        dm.setAttestationQuorum(21);
+        vm.stopPrank();
+    }
+
+    function testRevert_adminSetters_unauthorized() public {
+        address stranger = address(0xCAFE);
+
+        vm.prank(stranger);
+        vm.expectRevert(abi.encodeWithSignature("Unauthorized(address)", stranger));
+        dm.setDepositDataBuffer(address(buffer));
+
+        vm.prank(stranger);
+        vm.expectRevert(abi.encodeWithSignature("Unauthorized(address)", stranger));
+        dm.setAttester(address(0xBEAD), true);
+
+        vm.prank(stranger);
+        vm.expectRevert(abi.encodeWithSignature("Unauthorized(address)", stranger));
+        dm.setAttestationQuorum(2);
+    }
+
+    // -----------------------------------------------------------------------
+    // depositToConsensusLayerWithAttestation revert paths not yet covered
+    // -----------------------------------------------------------------------
+
+    function testRevert_depositToConsensusLayer_slashingContainmentMode() public {
+        dm.sudoSetSlashingContainmentMode(true);
+        vm.prank(keeper);
+        vm.expectRevert(IConsensusLayerDepositManagerV1.SlashingContainmentModeEnabled.selector);
+        dm.depositToConsensusLayerWithAttestation(bytes32(0), bytes32(0), new bytes[](0), new BLS12_381.DepositY[](0));
+    }
+
+    /// @dev Helper: prepare a 1-deposit batch with the requested amount and return all calldata.
+    function _prepareInvalidSizeDeposit(uint256 amount)
+        internal
+        returns (bytes32 bufferId, bytes32 rootHash, bytes[] memory sigs, BLS12_381.DepositY[] memory depositYs)
+    {
+        IDepositDataBuffer.DepositObject[] memory deposits = new IDepositDataBuffer.DepositObject[](1);
+        deposits[0] = IDepositDataBuffer.DepositObject({
+            pubkey: _fakePubkey(0),
+            signature: _fakeSignature(0),
+            amount: amount,
+            withdrawalCredentials: abi.encode(withdrawalCredentials),
+            depositDataRoot: bytes32(0),
+            metadata: _operatorMetadata(0)
+        });
+        return _prepareDeposit(deposits);
+    }
+
+    function testRevert_invalidDepositSize_belowMin() public {
+        (bytes32 bufferId, bytes32 rootHash, bytes[] memory sigs, BLS12_381.DepositY[] memory depositYs) =
+            _prepareInvalidSizeDeposit(0.5 ether);
+
+        vm.prank(keeper);
+        vm.expectRevert(abi.encodeWithSelector(IConsensusLayerDepositManagerV1.InvalidDepositSize.selector, 0.5 ether));
+        dm.depositToConsensusLayerWithAttestation(bufferId, rootHash, sigs, depositYs);
+    }
+
+    function testRevert_invalidDepositSize_aboveMax() public {
+        // Bump committed balance and contract balance high enough that NotEnoughFunds
+        // does not fire before InvalidDepositSize.
+        vm.deal(address(dm), 4096 ether);
+        dm.sudoSetCommittedBalance(4096 ether);
+
+        (bytes32 bufferId, bytes32 rootHash, bytes[] memory sigs, BLS12_381.DepositY[] memory depositYs) =
+            _prepareInvalidSizeDeposit(2049 ether);
+
+        vm.prank(keeper);
+        vm.expectRevert(abi.encodeWithSelector(IConsensusLayerDepositManagerV1.InvalidDepositSize.selector, 2049 ether));
+        dm.depositToConsensusLayerWithAttestation(bufferId, rootHash, sigs, depositYs);
+    }
+
+    function testRevert_invalidDepositSize_notGweiAligned() public {
+        uint256 amount = 32 ether + 1 wei;
+        (bytes32 bufferId, bytes32 rootHash, bytes[] memory sigs, BLS12_381.DepositY[] memory depositYs) =
+            _prepareInvalidSizeDeposit(amount);
+
+        vm.prank(keeper);
+        vm.expectRevert(abi.encodeWithSelector(IConsensusLayerDepositManagerV1.InvalidDepositSize.selector, amount));
+        dm.depositToConsensusLayerWithAttestation(bufferId, rootHash, sigs, depositYs);
+    }
+
+    function testRevert_tooManySignatures() public {
+        bytes[] memory sigs = new bytes[](21);
+        // Each entry can be empty bytes — the count check fires before any recovery work.
+        for (uint256 i = 0; i < 21; i++) {
+            sigs[i] = new bytes(0);
+        }
+
+        vm.prank(keeper);
+        vm.expectRevert(abi.encodeWithSelector(DepositToConsensusLayerValidation.TooManySignatures.selector, 21, 20));
+        dm.depositToConsensusLayerWithAttestation(bytes32(0), bytes32(0), sigs, new BLS12_381.DepositY[](0));
+    }
+
+    function testRevert_blsSignatureCountMismatch() public {
+        IDepositDataBuffer.DepositObject[] memory deposits = new IDepositDataBuffer.DepositObject[](2);
+        deposits[0] = _makeDeposit(0, 0);
+        deposits[1] = _makeDeposit(0, 1);
+
+        bytes32 bufferId = keccak256(abi.encode(deposits));
+        buffer.submitDepositData(bufferId, deposits);
+
+        bytes32 rootHash = depositContract.get_deposit_root();
+        bytes[] memory sigs = new bytes[](2);
+        sigs[0] = _signAttestation(attesterPk1, bufferId, rootHash);
+        sigs[1] = _signAttestation(attesterPk2, bufferId, rootHash);
+
+        // 2 deposits, only 1 depositY — should revert in validate().
+        BLS12_381.DepositY[] memory depositYs = new BLS12_381.DepositY[](1);
+        depositYs[0] = _emptyDepositY();
+
+        vm.prank(keeper);
+        vm.expectRevert(
+            abi.encodeWithSelector(DepositToConsensusLayerValidation.BLSSignatureCountMismatch.selector, 2, 1)
+        );
+        dm.depositToConsensusLayerWithAttestation(bufferId, rootHash, sigs, depositYs);
+    }
+
+    function testRevert_noDeposits() public {
+        IDepositDataBuffer.DepositObject[] memory deposits = new IDepositDataBuffer.DepositObject[](0);
+        bytes32 bufferId = keccak256(abi.encode(deposits));
+        buffer.submitDepositData(bufferId, deposits);
+
+        bytes32 rootHash = depositContract.get_deposit_root();
+        bytes[] memory sigs = new bytes[](2);
+        sigs[0] = _signAttestation(attesterPk1, bufferId, rootHash);
+        sigs[1] = _signAttestation(attesterPk2, bufferId, rootHash);
+
+        vm.prank(keeper);
+        vm.expectRevert(DepositToConsensusLayerValidation.NoDeposits.selector);
+        dm.depositToConsensusLayerWithAttestation(bufferId, rootHash, sigs, new BLS12_381.DepositY[](0));
+    }
+
+    function testRevert_withdrawalCredentialsMismatch_atSecondIndex() public {
+        IDepositDataBuffer.DepositObject[] memory deposits = new IDepositDataBuffer.DepositObject[](2);
+        deposits[0] = _makeDeposit(0, 10);
+        deposits[1] = IDepositDataBuffer.DepositObject({
+            pubkey: _fakePubkey(11),
+            signature: _fakeSignature(11),
+            amount: 32 ether,
+            withdrawalCredentials: abi.encode(bytes32(uint256(0xBADBAD))),
+            depositDataRoot: bytes32(0),
+            metadata: _operatorMetadata(0)
+        });
+
+        (bytes32 bufferId, bytes32 rootHash, bytes[] memory sigs, BLS12_381.DepositY[] memory depositYs) =
+            _prepareDeposit(deposits);
+
+        vm.prank(keeper);
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IConsensusLayerDepositManagerV1.WithdrawalCredentialsMismatch.selector,
+                1,
+                withdrawalCredentials,
+                bytes32(uint256(0xBADBAD))
+            )
+        );
+        dm.depositToConsensusLayerWithAttestation(bufferId, rootHash, sigs, depositYs);
+    }
+
+    function testInvalidSignatureLengthIsFiltered() public {
+        // One valid attester signature plus a malformed (64-byte) blob.
+        // The malformed signature is silently dropped by _recover, so quorum is not met.
+        IDepositDataBuffer.DepositObject[] memory deposits = new IDepositDataBuffer.DepositObject[](1);
+        deposits[0] = _makeDeposit(0, 0);
+
+        bytes32 bufferId = keccak256(abi.encode(deposits));
+        buffer.submitDepositData(bufferId, deposits);
+        bytes32 rootHash = depositContract.get_deposit_root();
+
+        bytes[] memory sigs = new bytes[](2);
+        sigs[0] = _signAttestation(attesterPk1, bufferId, rootHash);
+        sigs[1] = new bytes(64); // wrong length, should be filtered
+
+        BLS12_381.DepositY[] memory depositYs = new BLS12_381.DepositY[](1);
+        depositYs[0] = _emptyDepositY();
+
+        vm.prank(keeper);
+        vm.expectRevert(
+            abi.encodeWithSelector(DepositToConsensusLayerValidation.InsufficientAttestations.selector, 1, 2)
+        );
+        dm.depositToConsensusLayerWithAttestation(bufferId, rootHash, sigs, depositYs);
+    }
+
+    // -----------------------------------------------------------------------
+    // _parseOperatorIndex coverage
+    // -----------------------------------------------------------------------
+
+    function testParseOperatorIndex_multiDigit() public {
+        IDepositDataBuffer.DepositObject[] memory deposits = new IDepositDataBuffer.DepositObject[](1);
+        deposits[0] = _makeDeposit(42, 7);
+
+        (bytes32 bufferId, bytes32 rootHash, bytes[] memory sigs, BLS12_381.DepositY[] memory depositYs) =
+            _prepareDeposit(deposits);
+
+        bytes[] memory opKeys = new bytes[](1);
+        opKeys[0] = deposits[0].pubkey;
+        vm.expectEmit(true, false, false, true);
+        emit FundedValidatorKeys(42, opKeys, false);
+
+        vm.prank(keeper);
+        dm.depositToConsensusLayerWithAttestation(bufferId, rootHash, sigs, depositYs);
+
+        assertEq(dm.lastFundedETH(42), 32 ether, "operator 42 funded 32 ETH");
+    }
+
+    function testRevert_parseOperatorIndex_noDigits() public {
+        // metadata = "operator:" (9 bytes prefix, then null padding) — no digits after the colon.
+        bytes memory raw = "operator:";
+        bytes32 metadata;
+        assembly {
+            metadata := mload(add(raw, 32))
+        }
+
+        IDepositDataBuffer.DepositObject[] memory deposits = new IDepositDataBuffer.DepositObject[](1);
+        deposits[0] = IDepositDataBuffer.DepositObject({
+            pubkey: _fakePubkey(0),
+            signature: _fakeSignature(0),
+            amount: 32 ether,
+            withdrawalCredentials: abi.encode(withdrawalCredentials),
+            depositDataRoot: bytes32(0),
+            metadata: metadata
+        });
+
+        (bytes32 bufferId, bytes32 rootHash, bytes[] memory sigs, BLS12_381.DepositY[] memory depositYs) =
+            _prepareDeposit(deposits);
+
+        vm.prank(keeper);
+        vm.expectRevert(
+            abi.encodeWithSelector(IConsensusLayerDepositManagerV1.InvalidOperatorMetadata.selector, metadata)
+        );
+        dm.depositToConsensusLayerWithAttestation(bufferId, rootHash, sigs, depositYs);
     }
 }
