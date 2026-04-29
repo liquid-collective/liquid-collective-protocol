@@ -8,6 +8,7 @@ import "./utils/LibImplementationUnbricker.sol";
 
 import "../src/interfaces/IWithdraw.1.sol";
 import "../src/Withdraw.1.sol";
+import "../src/OperatorsRegistry.1.sol";
 
 contract RiverMock {
     event DebugReceivedCLFunds(uint256 amount);
@@ -119,12 +120,14 @@ abstract contract WithdrawV1TestBase is Test {
     WithdrawV1 internal withdraw;
     RiverMock internal river;
     UserFactory internal uf = new UserFactory();
+    OperatorsRegistryV1 internal operatorsRegistry;
 
     event DebugReceivedCLFunds(uint256 amount);
 
     function setUp() public virtual {
         river = new RiverMock();
-
+        operatorsRegistry = new OperatorsRegistryV1();
+        LibImplementationUnbricker.unbrick(vm, address(operatorsRegistry));
         withdraw = new WithdrawV1();
         LibImplementationUnbricker.unbrick(vm, address(withdraw));
     }
@@ -152,7 +155,7 @@ contract WithdrawV1Tests is WithdrawV1TestBase {
         assertEq(
             withdraw.getCredentials(),
             bytes32(
-                uint256(uint160(address(withdraw))) + 0x0100000000000000000000000000000000000000000000000000000000000000
+                uint256(uint160(address(withdraw))) + 0x0200000000000000000000000000000000000000000000000000000000000000
             )
         );
     }
@@ -283,7 +286,7 @@ contract WithdrawV1PectraTests is WithdrawV1TestBase {
         mockWithdrawal = new MockELWithdrawal();
         mockConsolidation = new MockELConsolidation();
         excessFeeRecipient = makeAddr("excessFeeRecipient");
-        withdraw.initWithdrawV1_1(address(mockWithdrawal), address(mockConsolidation));
+        withdraw.initWithdrawV1_1(address(mockWithdrawal), address(mockConsolidation), address(operatorsRegistry));
     }
 
     function testInitWithdrawV1_1SetsAddresses() external {
@@ -292,20 +295,26 @@ contract WithdrawV1PectraTests is WithdrawV1TestBase {
         w.initializeWithdrawV1(address(river));
         assertEq(w.getRiver(), address(river));
 
-        w.initWithdrawV1_1(address(mockWithdrawal), address(mockConsolidation));
-        // Addresses are in storage; we verify by calling withdraw which uses them
-        bytes[] memory pubkeys = new bytes[](1);
-        pubkeys[0] = VALID_PUBKEY_48;
-        uint64[] memory amounts = new uint64[](1);
-        amounts[0] = 1 gwei;
-        vm.deal(address(river), 10 gwei);
-        vm.prank(address(river));
-        w.withdraw{value: 10 gwei}(pubkeys, amounts, 1 gwei, excessFeeRecipient);
+        w.initWithdrawV1_1(address(mockWithdrawal), address(mockConsolidation), address(operatorsRegistry));
+        // Unstructured storage slots match WithdrawalContractAddress, ConsolidationContractAddress,
+        // OperatorsRegistryAddress (see ../src/state/shared/*.sol)
+        assertEq(
+            vm.load(address(w), bytes32(uint256(keccak256("withdraw.state.withdrawalContractAddress")) - 1)),
+            bytes32(uint256(uint160(address(mockWithdrawal))))
+        );
+        assertEq(
+            vm.load(address(w), bytes32(uint256(keccak256("withdraw.state.consolidationContractAddress")) - 1)),
+            bytes32(uint256(uint160(address(mockConsolidation))))
+        );
+        assertEq(
+            vm.load(address(w), bytes32(uint256(keccak256("river.state.operatorsRegistryAddress")) - 1)),
+            bytes32(uint256(uint160(address(operatorsRegistry))))
+        );
     }
 
     function testReinitWithdrawV1_1Reverts() external {
         vm.expectRevert(abi.encodeWithSignature("InvalidInitialization(uint256,uint256)", 1, 2));
-        withdraw.initWithdrawV1_1(address(mockWithdrawal), address(mockConsolidation));
+        withdraw.initWithdrawV1_1(address(mockWithdrawal), address(mockConsolidation), address(operatorsRegistry));
     }
 
     function testWithdrawOnlyCallableByRiver() external {
@@ -338,8 +347,8 @@ contract WithdrawV1PectraTests is WithdrawV1TestBase {
         pubkeys[1] = VALID_PUBKEY_48;
         uint64[] memory amounts = new uint64[](1);
         amounts[0] = 1 gwei;
-        vm.deal(address(river), 2 gwei);
-        vm.prank(address(river));
+        vm.deal(address(operatorsRegistry), 2 gwei);
+        vm.prank(address(operatorsRegistry));
         vm.expectRevert(abi.encodeWithSelector(IWithdrawV1.LengthMismatch.selector, uint256(2), uint256(1)));
         withdraw.withdraw{value: 2 gwei}(pubkeys, amounts, 1 gwei, excessFeeRecipient);
     }
@@ -349,7 +358,7 @@ contract WithdrawV1PectraTests is WithdrawV1TestBase {
         pubkeys[0] = VALID_PUBKEY_48;
         uint64[] memory amounts = new uint64[](1);
         amounts[0] = 1 gwei;
-        vm.prank(address(river));
+        vm.prank(address(operatorsRegistry));
         vm.expectRevert(abi.encodeWithSignature("InsufficientValueForFee(uint256,uint256)", 0, 1 gwei));
         withdraw.withdraw{value: 0}(pubkeys, amounts, 1 gwei, excessFeeRecipient);
     }
@@ -360,8 +369,8 @@ contract WithdrawV1PectraTests is WithdrawV1TestBase {
         pubkeys[0] = VALID_PUBKEY_48;
         uint64[] memory amounts = new uint64[](1);
         amounts[0] = 1 gwei;
-        vm.deal(address(river), 2 gwei);
-        vm.prank(address(river));
+        vm.deal(address(operatorsRegistry), 2 gwei);
+        vm.prank(address(operatorsRegistry));
         vm.expectRevert(abi.encodeWithSelector(IWithdrawV1.FeeTooHigh.selector, uint256(2 gwei), uint256(1 gwei)));
         withdraw.withdraw{value: 2 gwei}(pubkeys, amounts, 1 gwei, excessFeeRecipient);
     }
@@ -371,8 +380,8 @@ contract WithdrawV1PectraTests is WithdrawV1TestBase {
         pubkeys[0] = hex"ab"; // 1 byte
         uint64[] memory amounts = new uint64[](1);
         amounts[0] = 1 gwei;
-        vm.deal(address(river), 1 gwei);
-        vm.prank(address(river));
+        vm.deal(address(operatorsRegistry), 1 gwei);
+        vm.prank(address(operatorsRegistry));
         vm.expectRevert(abi.encodeWithSelector(IWithdrawV1.InvalidPubkeyLength.selector, uint256(1)));
         withdraw.withdraw{value: 1 gwei}(pubkeys, amounts, 1 gwei, excessFeeRecipient);
     }
@@ -383,8 +392,8 @@ contract WithdrawV1PectraTests is WithdrawV1TestBase {
         uint64[] memory amounts = new uint64[](1);
         amounts[0] = 1 gwei;
         uint256 valueSent = 5 gwei;
-        vm.deal(address(river), valueSent);
-        vm.prank(address(river));
+        vm.deal(address(operatorsRegistry), valueSent);
+        vm.prank(address(operatorsRegistry));
         withdraw.withdraw{value: valueSent}(pubkeys, amounts, 1 gwei, excessFeeRecipient);
 
         assertEq(address(mockWithdrawal).balance, 1 gwei);
@@ -410,14 +419,14 @@ contract WithdrawV1PectraTests is WithdrawV1TestBase {
         WithdrawV1 w = new WithdrawV1();
         LibImplementationUnbricker.unbrick(vm, address(w));
         w.initializeWithdrawV1(address(river));
-        w.initWithdrawV1_1(address(mockFail), address(mockConsolidation));
+        w.initWithdrawV1_1(address(mockFail), address(mockConsolidation), address(operatorsRegistry));
 
         bytes[] memory pubkeys = new bytes[](1);
         pubkeys[0] = VALID_PUBKEY_48;
         uint64[] memory amounts = new uint64[](1);
         amounts[0] = 1 gwei;
-        vm.deal(address(river), 1 gwei);
-        vm.prank(address(river));
+        vm.deal(address(operatorsRegistry), 1 gwei);
+        vm.prank(address(operatorsRegistry));
         vm.expectRevert(abi.encodeWithSignature("RequestFailed()"));
         w.withdraw{value: 1 gwei}(pubkeys, amounts, 1 gwei, excessFeeRecipient);
     }
@@ -430,7 +439,7 @@ contract WithdrawV1PectraTests is WithdrawV1TestBase {
         WithdrawV1 w = new WithdrawV1();
         LibImplementationUnbricker.unbrick(vm, address(w));
         w.initializeWithdrawV1(address(river));
-        w.initWithdrawV1_1(address(mockWithdrawal), address(mockConsolidationFeeReadFails));
+        w.initWithdrawV1_1(address(mockWithdrawal), address(mockConsolidationFeeReadFails), address(operatorsRegistry));
 
         bytes[] memory srcPubkeys = new bytes[](1);
         srcPubkeys[0] = VALID_PUBKEY_48;
@@ -560,7 +569,7 @@ contract WithdrawV1PectraTests is WithdrawV1TestBase {
         WithdrawV1 w = new WithdrawV1();
         LibImplementationUnbricker.unbrick(vm, address(w));
         w.initializeWithdrawV1(address(river));
-        w.initWithdrawV1_1(address(mockWithdrawal), address(mockConsolidationFails));
+        w.initWithdrawV1_1(address(mockWithdrawal), address(mockConsolidationFails), address(operatorsRegistry));
 
         bytes[] memory srcPubkeys = new bytes[](1);
         srcPubkeys[0] = VALID_PUBKEY_48;
@@ -683,7 +692,7 @@ contract WithdrawV1PectraTests is WithdrawV1TestBase {
         WithdrawV1 w = new WithdrawV1();
         LibImplementationUnbricker.unbrick(vm, address(w));
         w.initializeWithdrawV1(address(river));
-        w.initWithdrawV1_1(address(mockWithdrawalFeeReadFails), address(mockConsolidation));
+        w.initWithdrawV1_1(address(mockWithdrawalFeeReadFails), address(mockConsolidation), address(operatorsRegistry));
 
         bytes[] memory pubkeys = new bytes[](1);
         pubkeys[0] = VALID_PUBKEY_48;
@@ -691,9 +700,9 @@ contract WithdrawV1PectraTests is WithdrawV1TestBase {
         amounts[0] = 1 ether;
 
         uint256 maxFeePerWithdrawal = 0.1 ether;
-        vm.deal(address(river), maxFeePerWithdrawal);
+        vm.deal(address(operatorsRegistry), maxFeePerWithdrawal);
 
-        vm.prank(address(river));
+        vm.prank(address(operatorsRegistry));
         vm.expectRevert(abi.encodeWithSelector(IWithdrawV1.FeeReadFailed.selector));
         w.withdraw{value: maxFeePerWithdrawal}(pubkeys, amounts, maxFeePerWithdrawal, excessFeeRecipient);
     }
@@ -708,9 +717,9 @@ contract WithdrawV1PectraTests is WithdrawV1TestBase {
         uint256 maxFeePerWithdrawal = 0.1 ether;
         uint256 fee = maxFeePerWithdrawal + 1;
         mockWithdrawal.setFee(fee);
-        vm.deal(address(river), maxFeePerWithdrawal);
+        vm.deal(address(operatorsRegistry), maxFeePerWithdrawal);
 
-        vm.prank(address(river));
+        vm.prank(address(operatorsRegistry));
         vm.expectRevert(abi.encodeWithSelector(IWithdrawV1.FeeTooHigh.selector, fee, maxFeePerWithdrawal));
         withdraw.withdraw{value: maxFeePerWithdrawal}(pubkeys, amounts, maxFeePerWithdrawal, excessFeeRecipient);
     }
@@ -721,7 +730,7 @@ contract WithdrawV1PectraTests is WithdrawV1TestBase {
         WithdrawV1 w = new WithdrawV1();
         LibImplementationUnbricker.unbrick(vm, address(w));
         w.initializeWithdrawV1(address(river));
-        w.initWithdrawV1_1(address(mockWithdrawalFails), address(mockConsolidation));
+        w.initWithdrawV1_1(address(mockWithdrawalFails), address(mockConsolidation), address(operatorsRegistry));
 
         bytes[] memory pubkeys = new bytes[](1);
         pubkeys[0] = VALID_PUBKEY_48;
@@ -729,9 +738,9 @@ contract WithdrawV1PectraTests is WithdrawV1TestBase {
         amounts[0] = 1 ether;
 
         uint256 maxFeePerWithdrawal = 0.1 ether;
-        vm.deal(address(river), maxFeePerWithdrawal);
+        vm.deal(address(operatorsRegistry), maxFeePerWithdrawal);
 
-        vm.prank(address(river));
+        vm.prank(address(operatorsRegistry));
         vm.expectRevert(abi.encodeWithSignature("RequestFailed()"));
         w.withdraw{value: maxFeePerWithdrawal}(pubkeys, amounts, maxFeePerWithdrawal, excessFeeRecipient);
     }
@@ -746,10 +755,10 @@ contract WithdrawV1PectraTests is WithdrawV1TestBase {
         uint256 maxFeePerWithdrawal = 2 ether;
         uint256 fee = maxFeePerWithdrawal - 1 ether;
         mockWithdrawal.setFee(fee);
-        vm.deal(address(river), maxFeePerWithdrawal);
+        vm.deal(address(operatorsRegistry), maxFeePerWithdrawal);
 
         uint256 recipientBalBefore = excessFeeRecipient.balance;
-        vm.prank(address(river));
+        vm.prank(address(operatorsRegistry));
         withdraw.withdraw{value: maxFeePerWithdrawal}(pubkeys, amounts, maxFeePerWithdrawal, excessFeeRecipient);
         uint256 recipientBalAfter = excessFeeRecipient.balance;
         assertEq(recipientBalAfter, recipientBalBefore + (maxFeePerWithdrawal - fee), "Recipient should be refunded any excess funds after actual fee deduction.");
@@ -765,7 +774,7 @@ contract WithdrawV1PectraTests is WithdrawV1TestBase {
         uint256 maxFeePerWithdrawal = 2 ether;
         uint256 fee = maxFeePerWithdrawal - 1 ether;
         mockWithdrawal.setFee(fee);
-        vm.deal(address(river), maxFeePerWithdrawal);
+        vm.deal(address(operatorsRegistry), maxFeePerWithdrawal);
 
         address excessFeeRecipientAddr = address(new MockBeneficiaryContract());
         uint256 totalValueReceived = maxFeePerWithdrawal;
@@ -774,7 +783,7 @@ contract WithdrawV1PectraTests is WithdrawV1TestBase {
         vm.expectEmit(true, true, true, true);
         emit UnsentExcessFee(excessFeeRecipientAddr, excessFee);
 
-        vm.prank(address(river));
+        vm.prank(address(operatorsRegistry));
         withdraw.withdraw{value: maxFeePerWithdrawal}(pubkeys, amounts, maxFeePerWithdrawal, excessFeeRecipientAddr);
     }
 
@@ -787,7 +796,7 @@ contract WithdrawV1PectraTests is WithdrawV1TestBase {
 
         uint256 maxFeePerWithdrawal = 0.1 ether;
         mockWithdrawal.setFee(maxFeePerWithdrawal);
-        vm.deal(address(river), maxFeePerWithdrawal);
+        vm.deal(address(operatorsRegistry), maxFeePerWithdrawal);
 
         bytes memory callData = abi.encodePacked(pubkeys[0], amounts[0]);
 
@@ -795,7 +804,7 @@ contract WithdrawV1PectraTests is WithdrawV1TestBase {
         vm.expectEmit(true, true, true, true);
         emit WithdrawalRequested(pubkeys[0], amounts[0], maxFeePerWithdrawal);
 
-        vm.prank(address(river));
+        vm.prank(address(operatorsRegistry));
         withdraw.withdraw{value: maxFeePerWithdrawal}(pubkeys, amounts, maxFeePerWithdrawal, excessFeeRecipient);
     }
 
@@ -810,7 +819,7 @@ contract WithdrawV1PectraTests is WithdrawV1TestBase {
 
         uint256 maxFeePerWithdrawal = 0.1 ether;
         mockWithdrawal.setFee(maxFeePerWithdrawal);
-        vm.deal(address(river), maxFeePerWithdrawal * 2);
+        vm.deal(address(operatorsRegistry), maxFeePerWithdrawal * 2);
 
         bytes memory callData1 = abi.encodePacked(pubkeys[0], amounts[0]);
         bytes memory callData2 = abi.encodePacked(pubkeys[1], amounts[1]);
@@ -822,7 +831,7 @@ contract WithdrawV1PectraTests is WithdrawV1TestBase {
         vm.expectEmit(true, true, true, true);
         emit WithdrawalRequested(pubkeys[1], amounts[1], maxFeePerWithdrawal);
 
-        vm.prank(address(river));
+        vm.prank(address(operatorsRegistry));
         withdraw.withdraw{value: maxFeePerWithdrawal * 2}(pubkeys, amounts, maxFeePerWithdrawal, excessFeeRecipient);
     }
 
@@ -850,10 +859,10 @@ contract WithdrawV1PectraTests is WithdrawV1TestBase {
         amounts[0] = 1 ether;
 
         uint256 maxFeePerWithdrawal = 0.1 ether;
-        vm.deal(address(river), maxFeePerWithdrawal);
+        vm.deal(address(operatorsRegistry), maxFeePerWithdrawal);
 
         vm.expectRevert(abi.encodeWithSelector(IWithdrawV1.InvalidPubkeyLength.selector, 47));
-        vm.prank(address(river));
+        vm.prank(address(operatorsRegistry));
         withdraw.withdraw{value: maxFeePerWithdrawal}(pubkeys, amounts, maxFeePerWithdrawal, excessFeeRecipient);
     }
 
@@ -867,10 +876,10 @@ contract WithdrawV1PectraTests is WithdrawV1TestBase {
         uint256 maxFeePerWithdrawal = 0.1 ether;
         mockWithdrawal.setFee(maxFeePerWithdrawal);
         uint256 value = maxFeePerWithdrawal - 1;
-        vm.deal(address(river), maxFeePerWithdrawal);
+        vm.deal(address(operatorsRegistry), maxFeePerWithdrawal);
 
         vm.expectRevert(abi.encodeWithSelector(IWithdrawV1.InsufficientValueForFee.selector, value, maxFeePerWithdrawal));
-        vm.prank(address(river));
+        vm.prank(address(operatorsRegistry));
         withdraw.withdraw{value: value}(pubkeys, amounts, maxFeePerWithdrawal, excessFeeRecipient);
     }
 
@@ -881,10 +890,10 @@ contract WithdrawV1PectraTests is WithdrawV1TestBase {
         uint64[] memory amounts = new uint64[](0);
 
         uint256 maxFeePerWithdrawal = 0.1 ether;
-        vm.deal(address(river), maxFeePerWithdrawal);
+        vm.deal(address(operatorsRegistry), maxFeePerWithdrawal);
 
         vm.expectRevert(abi.encodeWithSelector(IWithdrawV1.LengthMismatch.selector, pubkeys.length, amounts.length));
-        vm.prank(address(river));
+        vm.prank(address(operatorsRegistry));
         withdraw.withdraw{value: maxFeePerWithdrawal}(pubkeys, amounts, maxFeePerWithdrawal, excessFeeRecipient);
     }
 }

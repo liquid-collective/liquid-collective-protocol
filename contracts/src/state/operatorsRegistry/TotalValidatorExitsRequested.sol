@@ -20,6 +20,6 @@ library TotalValidatorExitsRequested {
     /// @notice Sets the TotalValidatorExitsRequested
     /// @param _newValue New TotalValidatorExitsRequested
     function set(uint256 _newValue) internal {
-        return LibUnstructuredStorage.setStorageUint256(TOTAL_VALIDATOR_EXITS_REQUESTED_SLOT, _newValue);
+        LibUnstructuredStorage.setStorageUint256(TOTAL_VALIDATOR_EXITS_REQUESTED_SLOT, _newValue);
     }
 }

@@ -26,7 +26,7 @@ interface IOperatorsRegistryV2 {
     function getOperator(uint256 _index) external view returns (OperatorV2 memory);
     function getOperatorCount() external view returns (uint256);
     function getOperatorStoppedValidatorCount(uint256 _idx) external view returns (uint32);
-    function getTotalStoppedValidatorCount() external view returns (uint32);
+    function getTotalDepositedETH() external view returns (uint256);
 }
 
 contract OperatorsMigrationV2ToV3 is Test {
@@ -60,7 +60,6 @@ contract OperatorsMigrationV2ToV3 is Test {
 
         IOperatorsRegistryV2.OperatorV2[] memory v2Ops = new IOperatorsRegistryV2.OperatorV2[](opCount);
         uint32[] memory v2StoppedCounts = new uint32[](opCount);
-        uint32 v2TotalStopped = v2.getTotalStoppedValidatorCount();
 
         for (uint256 i = 0; i < opCount; ++i) {
             v2Ops[i] = v2.getOperator(i);
@@ -74,25 +73,25 @@ contract OperatorsMigrationV2ToV3 is Test {
         vm.prank(OPERATORS_REGISTRY_MAINNET_PROXY_ADMIN_ADDRESS);
         ITransparentUpgradeableProxy(address(orProxy))
             .upgradeToAndCall(
-                address(newImplementation),
-                abi.encodeWithSelector(OperatorsRegistryV1.initOperatorsRegistryV1_2.selector)
+                address(newImplementation), abi.encodeCall(OperatorsRegistryV1.initOperatorsRegistryV1_2, (address(1)))
             );
 
         // ── Verify V3 state matches V2 ──
         OperatorsRegistryV1 v3 = OperatorsRegistryV1(OPERATORS_REGISTRY_MAINNET_ADDRESS);
 
         assertEq(v3.getOperatorCount(), opCount, "operator count mismatch");
-        assertEq(v3.getTotalStoppedValidatorCount(), v2TotalStopped, "total stopped mismatch");
+
+        uint256[] memory v3ExitedETH = v3.getExitedETHPerOperator();
 
         for (uint256 i = 0; i < opCount; ++i) {
             OperatorsV3.Operator memory op = v3.getOperator(i);
 
-            assertEq(op.funded, v2Ops[i].funded, _label("funded", i));
-            assertEq(op.requestedExits, v2Ops[i].requestedExits, _label("requestedExits", i));
+            assertEq(op.funded, uint256(v2Ops[i].funded) * 32 ether, _label("funded", i));
+            assertEq(op.requestedExits, uint256(v2Ops[i].requestedExits) * 32 ether, _label("requestedExits", i));
             assertEq(op.active, v2Ops[i].active, _label("active", i));
             assertEq(op.name, v2Ops[i].name, _label("name", i));
             assertEq(op.operator, v2Ops[i].operator, _label("operator", i));
-            assertEq(v3.getOperatorStoppedValidatorCount(i), v2StoppedCounts[i], _label("stopped", i));
+            assertEq(v3ExitedETH[i], uint256(v2StoppedCounts[i]) * 32 ether, _label("stopped", i));
         }
     }
 
@@ -104,8 +103,7 @@ contract OperatorsMigrationV2ToV3 is Test {
         vm.prank(OPERATORS_REGISTRY_MAINNET_PROXY_ADMIN_ADDRESS);
         ITransparentUpgradeableProxy(address(orProxy))
             .upgradeToAndCall(
-                address(newImplementation),
-                abi.encodeWithSelector(OperatorsRegistryV1.initOperatorsRegistryV1_2.selector)
+                address(newImplementation), abi.encodeCall(OperatorsRegistryV1.initOperatorsRegistryV1_2, (address(1)))
             );
 
         // Second call should revert (init version already set)
@@ -113,8 +111,7 @@ contract OperatorsMigrationV2ToV3 is Test {
         vm.expectRevert();
         ITransparentUpgradeableProxy(address(orProxy))
             .upgradeToAndCall(
-                address(newImplementation),
-                abi.encodeWithSelector(OperatorsRegistryV1.initOperatorsRegistryV1_2.selector)
+                address(newImplementation), abi.encodeCall(OperatorsRegistryV1.initOperatorsRegistryV1_2, (address(1)))
             );
     }
 
@@ -144,22 +141,25 @@ contract OperatorsMigrationV2ToV3 is Test {
         vm.prank(OPERATORS_REGISTRY_MAINNET_PROXY_ADMIN_ADDRESS);
         ITransparentUpgradeableProxy(address(orProxy))
             .upgradeToAndCall(
-                address(newImpl), abi.encodeWithSelector(OperatorsRegistryV1.initOperatorsRegistryV1_2.selector)
+                address(newImpl), abi.encodeCall(OperatorsRegistryV1.initOperatorsRegistryV1_2, (address(1)))
             );
 
         OperatorsRegistryV1 v3 = OperatorsRegistryV1(OPERATORS_REGISTRY_MAINNET_ADDRESS);
         address river = v3.getRiver();
         address admin = v3.getAdmin();
 
-        // ── incrementFundedValidators works on migrated state ──
-        bytes[] memory keys = new bytes[](1);
-        keys[0] = new bytes(48);
+        // ── incrementFundedETH works on migrated state ──
+        uint256[] memory fundedETH = new uint256[](activeOpIdx + 1);
+        bytes[][] memory keys = new bytes[][](activeOpIdx + 1);
+        keys[activeOpIdx] = new bytes[](1);
+        keys[activeOpIdx][0] = new bytes(48);
+        fundedETH[activeOpIdx] = 32 ether;
         vm.prank(river);
-        v3.incrementFundedValidators(activeOpIdx, keys);
+        v3.incrementFundedETH(fundedETH, keys);
         assertEq(
             v3.getOperator(activeOpIdx).funded,
-            preFunded + 1,
-            "funded should increment by 1 after incrementFundedValidators"
+            uint256(preFunded) * 32 ether + 32 ether,
+            "funded should increment by 32 ether after incrementFundedETH"
         );
 
         // ── addOperator works on migrated state ──

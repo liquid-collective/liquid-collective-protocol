@@ -12,12 +12,6 @@ interface IOracleManagerV1 {
     /// @param oracleAddress The new oracle address
     event SetOracle(address indexed oracleAddress);
 
-    /// @notice The consensus layer data provided by the oracle has been updated
-    /// @param validatorCount The new count of validators running on the consensus layer
-    /// @param validatorTotalBalance The new total balance sum of all validators
-    /// @param roundId Round identifier
-    event ConsensusLayerDataUpdate(uint256 validatorCount, uint256 validatorTotalBalance, bytes32 roundId);
-
     /// @notice The Consensus Layer Spec is changed
     /// @param epochsPerFrame The number of epochs inside a frame
     /// @param slotsPerEpoch The number of slots inside an epoch
@@ -44,21 +38,25 @@ interface IOracleManagerV1 {
         IOracleManagerV1.ConsensusLayerReport report, ConsensusLayerDataReportingTrace trace
     );
 
-    /// @notice The reported validator count is invalid
-    /// @param providedValidatorCount The received validator count value
-    /// @param depositedValidatorCount The number of deposits performed by the system
-    /// @param lastReportedValidatorCount The last reported validator count
-    error InvalidValidatorCountReport(
-        uint256 providedValidatorCount, uint256 depositedValidatorCount, uint256 lastReportedValidatorCount
+    /// @notice The total deposited activated ETH has decreased, which is invalid
+    /// @param lastTotalDepositedActivatedETH The last total deposited activated ETH(wei) value
+    /// @param newTotalDepositedActivatedETH The new total deposited activated ETH(wei) value
+    error InvalidTotalDepositedActivatedETHDecrease(
+        uint256 lastTotalDepositedActivatedETH, uint256 newTotalDepositedActivatedETH
     );
+
+    /// @notice The total deposited activated ETH increase exceeds the current in-flight ETH, which is invalid
+    /// @param currentInFlightETH The current in-flight ETH(wei) value
+    /// @param newTotalDepositedActivatedETH The new total deposited activated ETH(wei) value
+    error InvalidTotalDepositedActivatedETHIncrease(uint256 currentInFlightETH, uint256 newTotalDepositedActivatedETH);
 
     /// @notice Thrown when an invalid epoch was reported
     /// @param epoch Invalid epoch
     error InvalidEpoch(uint256 epoch);
 
     /// @notice The balance increase is higher than the maximum allowed by the upper bound
-    /// @param prevTotalEthIncludingExited The previous total balance, including all exited balance
-    /// @param postTotalEthIncludingExited The post-report total balance, including all exited balance
+    /// @param prevTotalEthIncludingExited The previous total balance, including all exited balance(wei)
+    /// @param postTotalEthIncludingExited The post-report total balance, including all exited balance(wei)
     /// @param timeElapsed The time in seconds since last report
     /// @param annualAprUpperBound The upper bound value that was used
     error TotalValidatorBalanceIncreaseOutOfBound(
@@ -69,8 +67,8 @@ interface IOracleManagerV1 {
     );
 
     /// @notice The balance decrease is higher than the maximum allowed by the lower bound
-    /// @param prevTotalEthIncludingExited The previous total balance, including all exited balance
-    /// @param postTotalEthIncludingExited The post-report total balance, including all exited balance
+    /// @param prevTotalEthIncludingExited The previous total balance, including all exited balance(wei)
+    /// @param postTotalEthIncludingExited The post-report total balance, including all exited balance(wei)
     /// @param timeElapsed The time in seconds since last report
     /// @param relativeLowerBound The lower bound value that was used
     error TotalValidatorBalanceDecreaseOutOfBound(
@@ -81,18 +79,23 @@ interface IOracleManagerV1 {
     );
 
     /// @notice The total exited balance decreased
-    /// @param currentValidatorsExitedBalance The current exited balance
-    /// @param newValidatorsExitedBalance The new exited balance
+    /// @param currentValidatorsExitedBalance The current exited balance(wei)
+    /// @param newValidatorsExitedBalance The new exited balance(wei)
     error InvalidDecreasingValidatorsExitedBalance(
         uint256 currentValidatorsExitedBalance, uint256 newValidatorsExitedBalance
     );
 
     /// @notice The total skimmed balance decreased
-    /// @param currentValidatorsSkimmedBalance The current exited balance
-    /// @param newValidatorsSkimmedBalance The new exited balance
+    /// @param currentValidatorsSkimmedBalance The current exited balance(wei)
+    /// @param newValidatorsSkimmedBalance The new exited balance(wei)
     error InvalidDecreasingValidatorsSkimmedBalance(
         uint256 currentValidatorsSkimmedBalance, uint256 newValidatorsSkimmedBalance
     );
+
+    /// @notice The reported validator count is decreasing
+    /// @param reportedValidatorCount The reported validator count
+    /// @param lastReportedValidatorCount The last reported validator count
+    error InvalidValidatorCountReport(uint256 reportedValidatorCount, uint256 lastReportedValidatorCount);
 
     /// @notice Trace structure emitted via logs during reporting
     struct ConsensusLayerDataReportingTrace {
@@ -129,15 +132,21 @@ interface IOracleManagerV1 {
         // this includes voluntary exits and slashings
         // this value can decrease between reports
         uint256 validatorsExitingBalance;
+        // this is the amount of ETH that was deposited and got activated on the consensus layer
+        // this value cannot decrease over reports
+        // this value includes only the ETH that was deposited on the Execution Layer Deposit contract
+        uint256 totalDepositedActivatedETH;
         // the count of activated validators
         // even validators that are exited are still accounted
         // this value cannot decrease over reports
         uint32 validatorsCount;
-        // an array containing the count of stopped validators per operator
-        // the first element of the array is the sum of all stopped validators
+        // an array containing the amount of exited ETH per operator
+        // the first element of the array is the sum of all exited ETH
         // then index 1 would be operator 0
         // these values cannot decrease over reports
-        uint32[] stoppedValidatorCountPerOperator;
+        uint256[] exitedETHPerOperator;
+        // an array containing the amount of funded ETH per operator
+        uint256[] activeCLETHPerOperator;
         // flag enabled by the oracles when the buffer rebalancing is activated
         // the activation logic is written in the oracle specification and all oracle members must agree on the activation
         // when active, the eth in the deposit buffer can be used to pay for exits in the redeem manager
@@ -161,6 +170,7 @@ interface IOracleManagerV1 {
         uint32 validatorsCount;
         bool rebalanceDepositToRedeemMode;
         bool slashingContainmentMode;
+        uint256 totalDepositedActivatedETH;
     }
 
     /// @notice Get oracle address
