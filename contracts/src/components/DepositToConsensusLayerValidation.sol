@@ -28,7 +28,6 @@ abstract contract DepositToConsensusLayerValidation {
     error DepositRootMismatch(bytes32 expected, bytes32 actual);
     error BufferIdMismatch(bytes32 expected, bytes32 actual);
     error TooManySignatures(uint256 count, uint256 max);
-    error TooManyDeposits(uint256 count, uint256 max);
     error IncorrectDepositEther(uint256 expected, uint256 actual);
     error BLSSignatureCountMismatch(uint256 depositCount, uint256 yCount);
     error InvalidWithdrawalCredentialsLength(uint256 index, uint256 length);
@@ -58,10 +57,6 @@ abstract contract DepositToConsensusLayerValidation {
 
     /// @notice Maximum number of signatures accepted. Bounds the O(n^2) duplicate-detection loop.
     uint256 public constant MAX_SIGNATURES = 20;
-
-    /// @notice Maximum number of deposits accepted in a single attestation batch.
-    ///         Bounds the per-tx BLS verification cost and the per-operator allocation arrays.
-    uint256 public constant MAX_DEPOSITS_PER_BATCH = 64;
 
     /// @notice Maximum number of registered attesters. Defensive cap to bound storage growth.
     uint256 public constant MAX_ATTESTERS = 32;
@@ -161,9 +156,6 @@ abstract contract DepositToConsensusLayerValidation {
         deposits = _depositDataBuffer().getDepositData(depositDataBufferId);
         uint256 depositCount = deposits.length;
         if (depositCount == 0) revert NoDeposits();
-        if (depositCount > MAX_DEPOSITS_PER_BATCH) {
-            revert TooManyDeposits(depositCount, MAX_DEPOSITS_PER_BATCH);
-        }
 
         // 3. Verify the buffer returned deposits that hash back to the signed bufferId.
         //    This removes the DepositDataBuffer contract from the attestation trust chain:
