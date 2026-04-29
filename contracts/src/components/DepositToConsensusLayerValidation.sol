@@ -28,13 +28,18 @@ abstract contract DepositToConsensusLayerValidation {
     error DepositRootMismatch(bytes32 expected, bytes32 actual);
     error BufferIdMismatch(bytes32 expected, bytes32 actual);
     error TooManySignatures(uint256 count, uint256 max);
+    error TooManyDeposits(uint256 count, uint256 max);
     error IncorrectDepositEther(uint256 expected, uint256 actual);
     error BLSSignatureCountMismatch(uint256 depositCount, uint256 yCount);
+    error InvalidWithdrawalCredentialsLength(uint256 index, uint256 length);
+    error InvalidPubkeyLength(uint256 index, uint256 length);
+    error InvalidSignatureLength(uint256 index, uint256 length);
     error ZeroQuorum();
     error ZeroDomainSeparator();
     error ZeroDepositDomain();
     error QuorumExceedsAttesterCount(uint256 quorum, uint256 attesterCount);
     error QuorumExceedsMaxSignatures(uint256 quorum, uint256 max);
+    error TooManyAttesters(uint256 count, uint256 max);
     error ZeroAddress();
     error DuplicateAttester(address attester);
     error AttesterStatusUnchanged(address attester, bool value);
@@ -53,6 +58,18 @@ abstract contract DepositToConsensusLayerValidation {
 
     /// @notice Maximum number of signatures accepted. Bounds the O(n^2) duplicate-detection loop.
     uint256 public constant MAX_SIGNATURES = 20;
+
+    /// @notice Maximum number of deposits accepted in a single attestation batch.
+    ///         Bounds the per-tx BLS verification cost and the per-operator allocation arrays.
+    uint256 public constant MAX_DEPOSITS_PER_BATCH = 64;
+
+    /// @notice Maximum number of registered attesters. Defensive cap to bound storage growth.
+    uint256 public constant MAX_ATTESTERS = 32;
+
+    /// @dev Expected lengths for fixed BLS-related fields in a DepositObject.
+    uint256 internal constant DEPOSIT_PUBKEY_LENGTH = 48;
+    uint256 internal constant DEPOSIT_SIGNATURE_LENGTH = 96;
+    uint256 internal constant DEPOSIT_WC_LENGTH = 32;
 
     // -----------------------------------------------------------------------
     // Virtual storage hooks — override in proxy-based deployments
@@ -142,7 +159,11 @@ abstract contract DepositToConsensusLayerValidation {
 
         // 2. Get deposit data from buffer
         deposits = _depositDataBuffer().getDepositData(depositDataBufferId);
-        if (deposits.length == 0) revert NoDeposits();
+        uint256 depositCount = deposits.length;
+        if (depositCount == 0) revert NoDeposits();
+        if (depositCount > MAX_DEPOSITS_PER_BATCH) {
+            revert TooManyDeposits(depositCount, MAX_DEPOSITS_PER_BATCH);
+        }
 
         // 3. Verify the buffer returned deposits that hash back to the signed bufferId.
         //    This removes the DepositDataBuffer contract from the attestation trust chain:
@@ -154,11 +175,28 @@ abstract contract DepositToConsensusLayerValidation {
         }
 
         // 4. Check depositYs count
-        if (depositYs.length != deposits.length) {
-            revert BLSSignatureCountMismatch(deposits.length, depositYs.length);
+        if (depositYs.length != depositCount) {
+            revert BLSSignatureCountMismatch(depositCount, depositYs.length);
         }
 
-        // 5. Verify BLS signatures
+        // 5. Enforce fixed lengths on dynamic-bytes fields. Without this, a buffer producer
+        //    can pad fields beyond their canonical length; the keccak commitment binds whatever
+        //    encoding was submitted, but downstream consumers (mload of first 32 bytes for the
+        //    WC, BLS lib for pubkey/sig) would silently ignore the trailing bytes and create
+        //    encoding ambiguity.
+        for (uint256 i = 0; i < depositCount; i++) {
+            if (deposits[i].withdrawalCredentials.length != DEPOSIT_WC_LENGTH) {
+                revert InvalidWithdrawalCredentialsLength(i, deposits[i].withdrawalCredentials.length);
+            }
+            if (deposits[i].pubkey.length != DEPOSIT_PUBKEY_LENGTH) {
+                revert InvalidPubkeyLength(i, deposits[i].pubkey.length);
+            }
+            if (deposits[i].signature.length != DEPOSIT_SIGNATURE_LENGTH) {
+                revert InvalidSignatureLength(i, deposits[i].signature.length);
+            }
+        }
+
+        // 6. Verify BLS signatures
         _verifyBLSSignatures(deposits, depositYs);
     }
 

@@ -55,6 +55,9 @@ interface IConsensusLayerDepositManagerV1 {
     /// @notice The metadata field in a DepositObject is not a valid "operator:N" encoding
     error InvalidOperatorMetadata(bytes32 metadata);
 
+    /// @notice The parsed operator index references an operator that does not exist
+    error InvalidOperatorIndex(uint256 operatorIndex, uint256 operatorCount);
+
     /// @notice Emitted after the attestation-based deposit flow succeeds
     event DepositsExecutedWithAttestation(
         bytes32 indexed depositDataBufferId, bytes32 indexed depositRootHash, uint256 totalAmount

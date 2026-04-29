@@ -187,7 +187,7 @@ contract RiverV1 is
             }
         }
         uint256 attesterCount = Attesters.getCount();
-        if (_quorum >= attesterCount) {
+        if (_quorum > attesterCount) {
             revert QuorumExceedsAttesterCount(_quorum, attesterCount);
         }
         AttestationQuorum.set(_quorum);
@@ -399,11 +399,18 @@ contract RiverV1 is
         uint256 len = deposits.length;
         uint256 highestOpIdx = 0;
 
-        // Pass 1: parse operator indices (cached to avoid double-parsing), find highestOpIdx
+        IOperatorsRegistryV1 registry = IOperatorsRegistryV1(OperatorsRegistryAddress.get());
+        uint256 operatorCount = registry.getOperatorCount();
+
+        // Pass 1: parse operator indices (cached to avoid double-parsing), find highestOpIdx.
+        //         Reject any index outside the registered range so a crafted "operator:N"
+        //         metadata cannot OOG-DoS the batch via an oversized memory allocation.
         uint256[] memory opIndices = new uint256[](len);
         for (uint256 i = 0; i < len; i++) {
-            opIndices[i] = _parseOperatorIndex(deposits[i].metadata);
-            if (opIndices[i] > highestOpIdx) highestOpIdx = opIndices[i];
+            uint256 opIdx = _parseOperatorIndex(deposits[i].metadata);
+            if (opIdx >= operatorCount) revert InvalidOperatorIndex(opIdx, operatorCount);
+            opIndices[i] = opIdx;
+            if (opIdx > highestOpIdx) highestOpIdx = opIdx;
         }
 
         uint256 buckets = highestOpIdx + 1;

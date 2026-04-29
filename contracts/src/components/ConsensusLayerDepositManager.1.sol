@@ -194,8 +194,11 @@ abstract contract ConsensusLayerDepositManagerV1 is IConsensusLayerDepositManage
 
         uint256 count = Attesters.getCount();
         uint256 newCount = value ? count + 1 : count - 1;
+        if (value && newCount > MAX_ATTESTERS) {
+            revert TooManyAttesters(newCount, MAX_ATTESTERS);
+        }
         uint256 depositCommitteeQuorum = _depositCommitteeQuorum();
-        if (!value && depositCommitteeQuorum >= newCount) {
+        if (!value && depositCommitteeQuorum > newCount) {
             revert QuorumExceedsAttesterCount(depositCommitteeQuorum, newCount);
         }
         Attesters.setCount(newCount);
@@ -207,7 +210,7 @@ abstract contract ConsensusLayerDepositManagerV1 is IConsensusLayerDepositManage
     function setAttestationQuorum(uint256 newQuorum) external onlyRiverAdmin {
         if (newQuorum == 0) revert ZeroQuorum();
         uint256 attesterCount = Attesters.getCount();
-        if (newQuorum >= attesterCount) {
+        if (newQuorum > attesterCount) {
             revert QuorumExceedsAttesterCount(newQuorum, attesterCount);
         }
         if (newQuorum > MAX_SIGNATURES) {
