@@ -164,6 +164,9 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
         if (fundedETHLength == 0) {
             revert InvalidEmptyArray();
         }
+        if (fundedETHLength > OperatorsV3.getCount()) {
+            revert FundedETHArrayLengthExceedsOperatorCount();
+        }
         for (uint256 idx = 0; idx < fundedETHLength; ++idx) {
             // We have this check to avoid unnecessary storage reads for operators with no funded ETH
             if (_fundedETH[idx] == 0) {

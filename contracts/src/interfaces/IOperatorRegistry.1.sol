@@ -122,6 +122,9 @@ interface IOperatorsRegistryV1 {
     /// @notice Thrown when the number of exited ETH is too high compared to operator count
     error ExitedETHArrayLengthExceedsOperatorCount();
 
+    /// @notice Thrown when the funded ETH array length exceeds the operator count
+    error FundedETHArrayLengthExceedsOperatorCount();
+
     /// @notice Thrown when no exit requests can be performed
     error NoExitRequestsToPerform();
 

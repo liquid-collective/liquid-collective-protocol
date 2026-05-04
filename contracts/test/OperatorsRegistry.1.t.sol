@@ -1579,6 +1579,21 @@ contract OperatorsRegistryV1CoverageTests is OperatorsRegistryV1TestBase, Operat
         reg.incrementFundedETH(empty, new bytes[][](0));
     }
 
+    /// Asserts that incrementFundedETH reverts when the array length exceeds operator count.
+    function testIncrementFundedETHRevertsWhenArrayExceedsOperatorCount() public {
+        reg.initOperatorsRegistryV1(admin, river);
+        vm.prank(admin);
+        reg.addOperator("Op0", makeAddr("op0"));
+        uint256[] memory oversized = new uint256[](2);
+        oversized[0] = 32 ether;
+        oversized[1] = 32 ether;
+        bytes[][] memory keys = new bytes[][](2);
+        keys[0] = new bytes[](0);
+        keys[1] = new bytes[](0);
+        vm.expectRevert(abi.encodeWithSignature("FundedETHArrayLengthExceedsOperatorCount()"));
+        reg.incrementFundedETH(oversized, keys);
+    }
+
     /// Asserts that requestETHExits reverts with OnlyKeeper when caller is not the keeper.
     function testrequestETHExitsRevertsIfNotKeeper() public {
         reg.initOperatorsRegistryV1(admin, river);
