@@ -42,7 +42,7 @@ abstract contract UserDepositManagerV1 is IUserDepositManagerV1 {
 
     /// @notice Internal utility calling the deposit handler and emitting the deposit details
     /// @param _recipient The account receiving the minted shares
-    function _deposit(address _recipient) internal {
+    function _deposit(address _recipient) internal virtual {
         if (msg.value == 0) {
             revert EmptyDeposit();
         }

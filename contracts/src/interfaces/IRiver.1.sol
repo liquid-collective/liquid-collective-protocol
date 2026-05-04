@@ -185,7 +185,7 @@ interface IRiverV1 is IConsensusLayerDepositManagerV1, IUserDepositManagerV1, IS
     ) external;
 
     /// @notice Initialized version 1.3 of the River System
-    function initRiverV1_3() external;
+    function initRiverV1_3(bytes32 withdrawalCredentails) external;
 
     /// @notice Get the current global fee
     /// @return The global fee
@@ -242,6 +242,10 @@ interface IRiverV1 is IConsensusLayerDepositManagerV1, IUserDepositManagerV1, IS
     /// @return The current balance to redeem
     function getBalanceToRedeem() external view returns (uint256);
 
+    /// @notice Returns whether slashing containment mode is currently active
+    /// @return True if slashing containment mode is active
+    function getSlashingContainmentMode() external view returns (bool);
+
     /// @notice Performs a redeem request on the redeem manager
     /// @param _lsETHAmount The amount of LsETH to redeem
     /// @param _recipient The address that will own the redeem request
@@ -271,6 +275,10 @@ interface IRiverV1 is IConsensusLayerDepositManagerV1, IUserDepositManagerV1, IS
     /// @notice Changes the execution layer fee recipient
     /// @param _newELFeeRecipient New address for the recipient
     function setELFeeRecipient(address _newELFeeRecipient) external;
+
+    /// @notice Changes the keeper address
+    /// @param _keeper New address for the keeper
+    function setKeeper(address _keeper) external;
 
     /// @notice Changes the coverage fund
     /// @param _newCoverageFund New address for the fund

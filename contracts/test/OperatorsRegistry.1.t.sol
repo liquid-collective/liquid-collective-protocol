@@ -1753,7 +1753,7 @@ contract OperatorsRegistryV1CoverageTests is OperatorsRegistryV1TestBase, Operat
     /// Asserts that version() returns the expected registry version string.
     function testOperatorsRegistryVersion() public {
         reg.initOperatorsRegistryV1(admin, river);
-        assertEq(reg.version(), "1.2.1");
+        assertEq(reg.version(), "1.3.0");
     }
 
     /// Asserts that the validator-exits state lib wrapper can set and read CurrentValidatorExitsDemand and TotalValidatorExitsRequested.

@@ -275,6 +275,6 @@ contract OracleV1 is IOracleV1, Initializable, Administrable, IProtocolVersion {
     }
 
     function version() external pure returns (string memory) {
-        return "1.2.1";
+        return "1.3.0";
     }
 }

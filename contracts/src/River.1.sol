@@ -127,7 +127,8 @@ contract RiverV1 is
     }
 
     /// @inheritdoc IRiverV1
-    function initRiverV1_3() external init(3) onlyAdmin {
+    function initRiverV1_3(bytes32 withdrawalCredentails) external init(3) onlyAdmin {
+        initConsensusLayerDepositManagerV2(withdrawalCredentails);
         IOracleManagerV1.StoredConsensusLayerReport storage lastReport = LastConsensusLayerReport.get();
         uint32 clValidatorCount = lastReport.validatorsCount;
         uint256 depositedValidatorCount = DepositedValidatorCount.get();
@@ -221,10 +222,17 @@ contract RiverV1 is
     }
 
     /// @inheritdoc IRiverV1
-    function requestRedeem(uint256 _lsETHAmount, address _recipient) external returns (uint32 _redeemRequestId) {
+    function requestRedeem(uint256 _lsETHAmount, address _recipient)
+        external
+        whenNotSlashingContainmentMode
+        returns (uint32 _redeemRequestId)
+    {
         IAllowlistV1(AllowlistAddress.get()).onlyAllowed(msg.sender, LibAllowlistMasks.REDEEM_MASK);
+        if (IAllowlistV1(AllowlistAddress.get()).isDenied(_recipient)) {
+            revert IRedeemManagerV1.RecipientIsDenied();
+        }
         _transfer(msg.sender, address(this), _lsETHAmount);
-        return IRedeemManagerV1(RedeemManagerAddress.get()).requestRedeem(_lsETHAmount, _recipient);
+        return IRedeemManagerV1(RedeemManagerAddress.get()).requestRedeem(_lsETHAmount, _recipient, msg.sender);
     }
 
     /// @inheritdoc IRiverV1
@@ -338,10 +346,18 @@ contract RiverV1 is
         uint256 operatorCount = registry.getOperatorCount();
         if (_fundedETH.length < operatorCount) {
             uint256[] memory paddedFundedETH = new uint256[](operatorCount);
+            bytes[][] memory paddedPublicKeys = new bytes[][](operatorCount);
             for (uint256 i = 0; i < _fundedETH.length; ++i) {
                 paddedFundedETH[i] = _fundedETH[i];
+                uint256 pubKeyLength = _publicKeys[i].length;
+                if (pubKeyLength > 0) {
+                    paddedPublicKeys[i] = new bytes[](pubKeyLength);
+                    paddedPublicKeys[i] = _publicKeys[i];
+                } else {
+                    paddedPublicKeys[i] = new bytes[](0);
+                }
             }
-            registry.incrementFundedETH(paddedFundedETH, _publicKeys);
+            registry.incrementFundedETH(paddedFundedETH, paddedPublicKeys);
         } else {
             registry.incrementFundedETH(_fundedETH, _publicKeys);
         }
@@ -457,6 +473,29 @@ contract RiverV1 is
     function _setBalanceToRedeem(uint256 _newBalanceToRedeem) internal {
         emit SetBalanceToRedeem(BalanceToRedeem.get(), _newBalanceToRedeem);
         BalanceToRedeem.set(_newBalanceToRedeem);
+    }
+
+    /// @notice Returns whether slashing containment mode is currently active
+    function _getSlashingContainmentMode() internal view override(ConsensusLayerDepositManagerV1) returns (bool) {
+        return LastConsensusLayerReport.get().slashingContainmentMode;
+    }
+
+    /// @inheritdoc IRiverV1
+    function getSlashingContainmentMode() external view returns (bool) {
+        return _getSlashingContainmentMode();
+    }
+
+    /// @notice Reverts if slashing containment mode is currently active
+    modifier whenNotSlashingContainmentMode() {
+        if (_getSlashingContainmentMode()) {
+            revert SlashingContainmentModeEnabled();
+        }
+        _;
+    }
+
+    /// @notice Override to block user deposits when slashing containment mode is active
+    function _deposit(address _recipient) internal override whenNotSlashingContainmentMode {
+        super._deposit(_recipient);
     }
 
     /// @notice Sets the committed balance, ready to be deposited to the consensus layer
@@ -623,7 +662,11 @@ contract RiverV1 is
     /// @notice Committed funds are funds waiting to be deposited but that cannot be used to fund the redeem manager anymore
     /// @notice This two step process is required to prevent possible out of gas issues we would have from actually funding the validators at this point
     /// @param _period The period between current and last report
-    function _commitBalanceToDeposit(uint256 _period) internal override {
+    function _commitBalanceToDeposit(uint256 _period, bool _slashingContainmentModeEnabled) internal override {
+        if (_slashingContainmentModeEnabled) {
+            return;
+        }
+
         uint256 underlyingAssetBalance = _assetBalance();
         uint256 currentBalanceToDeposit = BalanceToDeposit.get();
         DailyCommittableLimits.DailyCommittableLimitsStruct memory dcl = DailyCommittableLimits.get();
@@ -653,6 +696,6 @@ contract RiverV1 is
     }
 
     function version() external pure returns (string memory) {
-        return "1.2.1";
+        return "1.3.0";
     }
 }

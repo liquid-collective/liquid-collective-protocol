@@ -47,6 +47,10 @@ abstract contract ConsensusLayerDepositManagerV1 is IConsensusLayerDepositManage
     /// @param newCommittedBalance The new committed balance value
     function _setCommittedBalance(uint256 newCommittedBalance) internal virtual;
 
+    /// @notice Handler to check if slashing containment mode is active
+    /// @dev Must be overridden
+    function _getSlashingContainmentMode() internal view virtual returns (bool);
+
     /// @notice Initializer to set the deposit contract address and the withdrawal credentials to use
     /// @param _depositContractAddress The address of the deposit contract
     /// @param _withdrawalCredentials The withdrawal credentials to apply to all deposits
@@ -60,8 +64,16 @@ abstract contract ConsensusLayerDepositManagerV1 is IConsensusLayerDepositManage
         emit SetWithdrawalCredentials(_withdrawalCredentials);
     }
 
+    /// @notice Initializer to update the withdrawal credentials to use
+    /// @param _withdrawalCredentials The withdrawal credentials to apply to all deposits
+    function initConsensusLayerDepositManagerV2(bytes32 _withdrawalCredentials) internal {
+        WithdrawalCredentials.set(_withdrawalCredentials);
+        emit SetWithdrawalCredentials(_withdrawalCredentials);
+    }
+
     function _setKeeper(address _keeper) internal {
         KeeperAddress.set(_keeper);
+        emit SetKeeper(_keeper);
     }
 
     /// @inheritdoc IConsensusLayerDepositManagerV1
@@ -93,7 +105,13 @@ abstract contract ConsensusLayerDepositManagerV1 is IConsensusLayerDepositManage
     function depositToConsensusLayerWithDepositRoot(
         IOperatorsRegistryV1.ValidatorDeposit[] calldata _allocations,
         bytes32 _depositRoot
-    ) external onlyKeeper {
+    ) external {
+        if (msg.sender != KeeperAddress.get()) {
+            revert OnlyKeeper();
+        }
+        if (_getSlashingContainmentMode()) {
+            revert SlashingContainmentModeEnabled();
+        }
         if (_allocations.length == 0) {
             revert EmptyAllocations();
         }

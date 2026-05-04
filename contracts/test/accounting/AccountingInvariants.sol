@@ -3,12 +3,43 @@ pragma solidity 0.8.34;
 
 import "./BeaconChainSimulator.sol";
 import "../../src/state/operatorsRegistry/Operators.3.sol";
+import "../../src/state/river/ReportBounds.sol";
 
 abstract contract AccountingInvariants is BeaconChainSimulator {
     uint256 private _snapTotalUnderlying;
     uint256 private _snapTotalShares;
     uint256 private _snapTotalDepositedETH;
     bool private _allowSharePriceDecrease;
+
+    /// @dev Snapshot of ReportBounds captured by `_pushRelaxedLowerBound`, restored by `_popBounds`.
+    struct BoundsSnapshot {
+        uint256 aprUpper;
+        uint256 relLower;
+    }
+
+    /// @notice Widens `relativeLowerBound` to `relLowerBps` and disables the I1 share-price guard.
+    ///         Returns the prior bounds so callers can restore them exactly via `_popBounds`.
+    ///         Always paired with `_popBounds` so the I1 disable is scoped to a single report.
+    function _pushRelaxedLowerBound(uint256 relLowerBps) internal returns (BoundsSnapshot memory snap) {
+        ReportBounds.ReportBoundsStruct memory cur = river.getReportBounds();
+        snap = BoundsSnapshot({aprUpper: cur.annualAprUpperBound, relLower: cur.relativeLowerBound});
+        vm.prank(admin);
+        river.setReportBounds(
+            ReportBounds.ReportBoundsStruct({
+                annualAprUpperBound: cur.annualAprUpperBound, relativeLowerBound: relLowerBps
+            })
+        );
+        _setAllowSharePriceDecrease(true);
+    }
+
+    /// @notice Restores the ReportBounds captured by `_pushRelaxedLowerBound` and re-enables the I1 guard.
+    function _popBounds(BoundsSnapshot memory snap) internal {
+        _setAllowSharePriceDecrease(false);
+        vm.prank(admin);
+        river.setReportBounds(
+            ReportBounds.ReportBoundsStruct({annualAprUpperBound: snap.aprUpper, relativeLowerBound: snap.relLower})
+        );
+    }
 
     // ─── sim_oracleReport implementation ─────────────────────────────────────
 
