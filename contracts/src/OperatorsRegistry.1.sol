@@ -81,14 +81,10 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
 
     /// @notice Prevent unauthorized calls
     modifier onlyRiver() {
-        _checkRiver();
-        _;
-    }
-
-    function _checkRiver() internal virtual {
         if (msg.sender != RiverAddress.get()) {
             revert LibErrors.Unauthorized(msg.sender);
         }
+        _;
     }
 
     /// @notice Prevents anyone except the admin or the given operator to make the call. Also checks if operator is active
@@ -313,7 +309,7 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
                 uint256 partialExitAmount = 0;
                 for (uint256 j = 0; j < _partialAllocations[i].amounts.length; ++j) {
                     uint256 gweiAmount = _partialAllocations[i].amounts[j];
-                    if (gweiAmount % 1 gwei != 0) {
+                    if (gweiAmount < 1 gwei) {
                         revert AllocationWithIncorrectAmount(gweiAmount);
                     }
                     partialExitAmount += gweiAmount * 1 gwei;
