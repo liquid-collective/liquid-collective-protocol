@@ -47,6 +47,9 @@ interface IConsensusLayerDepositManagerV1 {
     /// @notice The withdrawal credentials value is null
     error InvalidWithdrawalCredentials();
 
+    /// @notice The withdrawal credentials have an invalid prefix (must be 0x01 or 0x02)
+    error InvalidWithdrawalCredentialsPrefix();
+
     /// @notice An error occured during the deposit
     error ErrorOnDeposit();
 

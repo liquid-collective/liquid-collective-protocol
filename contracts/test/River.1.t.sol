@@ -2534,6 +2534,24 @@ contract RiverV1CoverageTests is RiverV1TestBase {
         assertEq(uint256(vm.load(address(river), IN_FLIGHT_DEPOSIT_SLOT)), 0);
     }
 
+    /// Asserts that initRiverV1_3 reverts when withdrawal credentials have an invalid prefix.
+    function testInitRiverV1_3RevertsOnInvalidWithdrawalCredentialsPrefix() public {
+        _initRiverAndV1_2();
+        bytes32 invalidCredentials = bytes32(uint256(0x0300000000000000000000000000000000000000000000000000000000000000));
+        vm.prank(admin);
+        vm.expectRevert(abi.encodeWithSignature("InvalidWithdrawalCredentialsPrefix()"));
+        river.initRiverV1_3(invalidCredentials);
+    }
+
+    /// Asserts that initRiverV1_3 accepts 0x01-prefixed withdrawal credentials.
+    function testInitRiverV1_3AcceptsValidBLSWithdrawalCredentials() public {
+        _initRiverAndV1_2();
+        bytes32 blsCredentials = bytes32(uint256(0x0100000000000000000000000000000000000000000000000000000000000000));
+        vm.prank(admin);
+        river.initRiverV1_3(blsCredentials);
+        assertEq(river.getWithdrawalCredentials(), blsCredentials);
+    }
+
     /// Asserts that a consensus layer report succeeds when no coverage fund is configured (pull is skipped).
     function testPullCoverageFundsNoCoverageFund() public {
         _initRiverMinimalForReporting();
