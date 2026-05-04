@@ -27,10 +27,14 @@ interface IOperatorsRegistryV1 {
         uint256 ethAmount;
     }
 
+    /// @notice Structure representing a partial exit allocation for exits
+    /// @param operatorIndex The index of the operator
+    /// @param pubkeys The pubkeys through which the partial exits were requested
+    /// @param amounts The amounts (gwei) per pubkey that was requested for partial exits
     struct PartialExitETHAllocation {
         uint256 operatorIndex;
         bytes[] pubkeys;
-        uint64[] amount;
+        uint64[] amounts;
     }
 
     /// @notice A new operator has been added to the registry
@@ -276,7 +280,7 @@ interface IOperatorsRegistryV1 {
         ExitETHAllocation[] calldata _allocations,
         PartialExitETHAllocation[] calldata _partialAllocations,
         uint256 _maxFeePerWithdrawal
-    ) external;
+    ) external payable;
 
     /// @notice Increases the exit request demand
     /// @dev This method is only callable by the river contract, and to actually forward the information to the node operators via event emission, the requestETHExits method must be called

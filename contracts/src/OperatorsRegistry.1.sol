@@ -253,7 +253,7 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
         ExitETHAllocation[] calldata _allocations,
         PartialExitETHAllocation[] calldata _partialAllocations,
         uint256 _maxFeePerWithdrawal
-    ) external {
+    ) external payable {
         if (msg.sender != IConsensusLayerDepositManagerV1(RiverAddress.get()).getKeeper()) {
             revert IConsensusLayerDepositManagerV1.OnlyKeeper();
         }
@@ -300,23 +300,33 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
 
             for (uint256 i = 0; i < _partialAllocations.length; ++i) {
                 uint256 operatorIndex = _partialAllocations[i].operatorIndex;
-                uint256 partialExitAmount = 0;
-                for (uint256 j = 0; j < _partialAllocations[i].amount.length; ++j) {
-                    uint256 ethAmount = _partialAllocations[i].amount[j];
-                    if (ethAmount < MIN_ETH_AMOUNT) {
-                        revert AllocationWithIncorrectAmount(ethAmount);
-                    }
-                    partialExitAmount += ethAmount;
+
+                if (i > 0 && operatorIndex <= _partialAllocations[i - 1].operatorIndex) {
+                    revert UnorderedOperatorList();
                 }
 
-                _reserveOperatorExit(OperatorsV3.get(operatorIndex), operatorIndex, partialExitAmount, true);
+                OperatorsV3.Operator storage operator = OperatorsV3.get(operatorIndex);
+                if (!operator.active) {
+                    revert InactiveOperator(operatorIndex);
+                }
+
+                uint256 partialExitAmount = 0;
+                for (uint256 j = 0; j < _partialAllocations[i].amounts.length; ++j) {
+                    uint256 gweiAmount = _partialAllocations[i].amounts[j];
+                    if (gweiAmount % 1 gwei != 0) {
+                        revert AllocationWithIncorrectAmount(gweiAmount);
+                    }
+                    partialExitAmount += gweiAmount * 1 gwei;
+                }
+
+                _reserveOperatorExit(operator, operatorIndex, partialExitAmount, true);
                 requestedETHAmount += partialExitAmount;
 
-                withdraw.withdraw(
-                    _partialAllocations[i].pubkeys, _partialAllocations[i].amount, _maxFeePerWithdrawal, msg.sender
+                withdraw.withdraw{value: _maxFeePerWithdrawal * _partialAllocations[i].pubkeys.length}(
+                    _partialAllocations[i].pubkeys, _partialAllocations[i].amounts, _maxFeePerWithdrawal, msg.sender
                 );
                 emit RequestedPartialETHExits(
-                    operatorIndex, _partialAllocations[i].pubkeys, _partialAllocations[i].amount
+                    operatorIndex, _partialAllocations[i].pubkeys, _partialAllocations[i].amounts
                 );
             }
         }

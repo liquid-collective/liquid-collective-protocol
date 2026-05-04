@@ -145,7 +145,7 @@ contract WithdrawV1 is IWithdrawV1, Initializable, ReentrancyGuard, IProtocolVer
         if (!readOK) {
             revert FeeReadFailed();
         }
-        _fee = uint256(bytes32(feeData));
+        _fee = abi.decode(feeData, (uint256));
 
         if (_fee > _maxAllowedFee) {
             revert FeeTooHigh(_fee, _maxAllowedFee);

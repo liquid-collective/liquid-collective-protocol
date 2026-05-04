@@ -9,7 +9,7 @@ import "../../libraries/LibSanitize.sol";
 library LCWithdrawAddress {
     /// @notice Storage slot of the LCWithdraw Address
     bytes32 internal constant LC_WITHDRAW_ADDRESS_SLOT =
-        bytes32(uint256(keccak256("river.state.allowlistAddress")) - 1);
+        bytes32(uint256(keccak256("river.state.lcWithdrawAddress")) - 1);
 
     /// @notice Retrieve the LCWithdraw Address
     /// @return The LCWithdraw Address

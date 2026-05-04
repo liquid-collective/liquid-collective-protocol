@@ -318,7 +318,7 @@ contract WithdrawV1PectraTests is WithdrawV1TestBase {
         withdraw.initWithdrawV1_1(address(mockWithdrawal), address(mockConsolidation), address(operatorsRegistry));
     }
 
-    function testWithdrawOnlyCallableByRiver() external {
+    function testWithdrawOnlyCallableByOperatorsRegistry() external {
         bytes[] memory pubkeys = new bytes[](1);
         pubkeys[0] = VALID_PUBKEY_48;
         uint64[] memory amounts = new uint64[](1);
@@ -327,6 +327,17 @@ contract WithdrawV1PectraTests is WithdrawV1TestBase {
         vm.deal(random, 10 gwei);
         vm.prank(random);
         vm.expectRevert(abi.encodeWithSignature("Unauthorized(address)", random));
+        withdraw.withdraw{value: 1 gwei}(pubkeys, amounts, 1 gwei, excessFeeRecipient);
+    }
+
+    function testWithdrawRevertsIfCalledByRiver() external {
+        bytes[] memory pubkeys = new bytes[](1);
+        pubkeys[0] = VALID_PUBKEY_48;
+        uint64[] memory amounts = new uint64[](1);
+        amounts[0] = 1 gwei;
+        vm.deal(address(river), 10 gwei);
+        vm.prank(address(river));
+        vm.expectRevert(abi.encodeWithSignature("Unauthorized(address)", address(river)));
         withdraw.withdraw{value: 1 gwei}(pubkeys, amounts, 1 gwei, excessFeeRecipient);
     }
 
@@ -914,5 +925,34 @@ contract WithdrawV1PectraTests is WithdrawV1TestBase {
         vm.expectRevert(abi.encodeWithSelector(IWithdrawV1.LengthMismatch.selector, pubkeys.length, amounts.length));
         vm.prank(address(operatorsRegistry));
         withdraw.withdraw{value: maxFeePerWithdrawal}(pubkeys, amounts, maxFeePerWithdrawal, excessFeeRecipient);
+    }
+
+    /// @notice A ConsolidationRequest with empty srcPubkeys still validates targetPubkey length
+    ///         and completes as a no-op (no EL calls, no fee spent, full refund).
+    function testConsolidateWithEmptySrcPubkeys() public {
+        IWithdrawV1.ConsolidationRequest[] memory requests = new IWithdrawV1.ConsolidationRequest[](1);
+        requests[0] = IWithdrawV1.ConsolidationRequest({srcPubkeys: new bytes[](0), targetPubkey: VALID_PUBKEY_48});
+
+        uint256 maxFeePerConsolidation = 1 gwei;
+        uint256 valueSent = 5 gwei;
+        vm.deal(address(river), valueSent);
+
+        vm.prank(address(river));
+        withdraw.consolidate{value: valueSent}(requests, maxFeePerConsolidation, excessFeeRecipient);
+
+        assertEq(address(mockConsolidation).balance, 0, "no fee should be paid for empty srcPubkeys");
+        assertEq(excessFeeRecipient.balance, valueSent, "full value should be refunded");
+    }
+
+    /// @notice A ConsolidationRequest with empty srcPubkeys but invalid targetPubkey length reverts.
+    function testConsolidateWithEmptySrcPubkeysInvalidTargetReverts() public {
+        bytes memory shortPubkey = hex"1234"; // 2 bytes, not 48
+        IWithdrawV1.ConsolidationRequest[] memory requests = new IWithdrawV1.ConsolidationRequest[](1);
+        requests[0] = IWithdrawV1.ConsolidationRequest({srcPubkeys: new bytes[](0), targetPubkey: shortPubkey});
+
+        vm.deal(address(river), 1 gwei);
+        vm.prank(address(river));
+        vm.expectRevert(abi.encodeWithSelector(IWithdrawV1.InvalidPubkeyLength.selector, uint256(2)));
+        withdraw.consolidate{value: 1 gwei}(requests, 1 gwei, excessFeeRecipient);
     }
 }

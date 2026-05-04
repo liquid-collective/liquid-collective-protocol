@@ -80,6 +80,14 @@ contract OperatorsMigrationV2ToV3 is Test {
         OperatorsRegistryV1 v3 = OperatorsRegistryV1(OPERATORS_REGISTRY_MAINNET_ADDRESS);
 
         assertEq(v3.getOperatorCount(), opCount, "operator count mismatch");
+        {
+            bytes32 lcWithdrawSlot = bytes32(uint256(keccak256("river.state.lcWithdrawAddress")) - 1);
+            assertEq(
+                vm.load(address(orProxy), lcWithdrawSlot),
+                bytes32(uint256(uint160(address(1)))),
+                "LCWithdrawAddress not stored correctly after migration"
+            );
+        }
 
         uint256[] memory v3ExitedETH = v3.getExitedETHPerOperator();
 
