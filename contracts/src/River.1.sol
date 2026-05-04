@@ -568,7 +568,7 @@ contract RiverV1 is
             // if after all rebalancings, the redeem manager demand is still higher than the balance to redeem and exiting eth, we compute
             // the amount of ETH (wei) to exit in order to cover the remaining demand
             if (availableBalanceToRedeem + _exitingBalance < redeemManagerDemandInEth) {
-                // if reblancing is enabled and the redeem manager demand is higher than exiting eth, we add eth for deposit buffer to redeem buffer
+                // if rebalancing is enabled and the redeem manager demand is higher than exiting eth, we add eth for deposit buffer to redeem buffer
                 if (_depositToRedeemRebalancingAllowed && availableBalanceToDeposit > 0) {
                     uint256 rebalancingAmount = LibUint256.min(
                         availableBalanceToDeposit, redeemManagerDemandInEth - _exitingBalance - availableBalanceToRedeem
