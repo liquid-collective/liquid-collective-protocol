@@ -225,6 +225,6 @@ contract CoverageFundTestV1 is CoverageFundV1TestBase {
     }
 
     function testVersion() external {
-        assertEq(coverageFund.version(), "1.2.1");
+        assertEq(coverageFund.version(), "1.3.0");
     }
 }

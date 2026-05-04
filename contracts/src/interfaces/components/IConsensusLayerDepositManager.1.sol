@@ -25,6 +25,10 @@ interface IConsensusLayerDepositManagerV1 {
     /// @param newInFlightETH The new in flight ETH(wei) value
     event SetInFlightETH(uint256 oldInFlightETH, uint256 newInFlightETH);
 
+    /// @notice Emitted when the keeper address is updated
+    /// @param keeper The new keeper address
+    event SetKeeper(address indexed keeper);
+
     /// @notice The allocations array must not be empty
     error EmptyAllocations();
 
@@ -54,6 +58,9 @@ interface IConsensusLayerDepositManagerV1 {
 
     /// @notice The amount of deposits requested exceeds the committed balance
     error ValidatorDepositsExceedCommittedBalance();
+
+    /// @notice Deposits are blocked while slashing containment mode is active
+    error SlashingContainmentModeEnabled();
 
     /// @notice Returns the amount of ETH(wei) not yet committed for deposit
     /// @return The amount of ETH(wei) not yet committed for deposit
