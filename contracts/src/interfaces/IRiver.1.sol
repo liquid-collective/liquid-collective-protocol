@@ -104,16 +104,6 @@ interface IRiverV1 is IConsensusLayerDepositManagerV1, IUserDepositManagerV1, IS
         uint256 redeemManagerDemand, uint256 suppliedRedeemManagerDemand, uint256 suppliedRedeemManagerDemandInEth
     );
 
-    /// @notice Emitted when River forwards a Pectra withdraw request to the Withdraw contract
-    /// @param pubkeys Validator pubkeys (48 bytes each)
-    /// @param amount Withdrawal amount per validator (gwei)
-    /// @param maxFeePerWithdrawal Maximum fee per withdrawal
-    /// @param excessFeeRecipient Address to receive any excess msg.value
-    /// @param valueSent ETH sent with the call for fees
-    event PectraWithdrawRequested(
-        bytes[] pubkeys, uint64[] amount, uint256 maxFeePerWithdrawal, address excessFeeRecipient, uint256 valueSent
-    );
-
     /// @notice Emitted when River forwards a Pectra consolidation request to the Withdraw contract
     /// @param requests Consolidation requests
     /// @param maxFeePerConsolidation Maximum fee per consolidation
@@ -301,6 +291,8 @@ interface IRiverV1 is IConsensusLayerDepositManagerV1, IUserDepositManagerV1, IS
     function sendRedeemManagerExceedingFunds() external payable;
 
     /// @notice Request Pectra consolidations via the Withdraw contract. Callable by admin; fee ETH sent as msg.value.
+    /// @dev Only callable by the keeper
+    /// @dev Since we consolidate to validators we own there is no need to track the consolidation buffer
     /// @param requests Consolidation requests (each: src pubkeys -> target pubkey)
     /// @param maxFeePerConsolidation Maximum fee per consolidation to accept
     function consolidate(IWithdrawV1.ConsolidationRequest[] calldata requests, uint256 maxFeePerConsolidation)

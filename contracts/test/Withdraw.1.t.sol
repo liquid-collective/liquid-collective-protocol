@@ -273,7 +273,8 @@ contract WithdrawV1PectraTests is WithdrawV1TestBase {
     address internal excessFeeRecipient;
 
     /// 48 bytes = 96 hex chars
-    bytes internal constant VALID_PUBKEY_48 = hex"0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef";
+    bytes internal constant VALID_PUBKEY_48 =
+        hex"0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef";
 
     // Events for expectEmit (must match IWithdrawV1)
     event ConsolidationRequested(bytes srcPubkey, bytes targetPubkey, uint256 fee);
@@ -333,7 +334,7 @@ contract WithdrawV1PectraTests is WithdrawV1TestBase {
         bytes[] memory srcPubkeys = new bytes[](1);
         srcPubkeys[0] = VALID_PUBKEY_48;
         IWithdrawV1.ConsolidationRequest[] memory requests = new IWithdrawV1.ConsolidationRequest[](1);
-        requests[0] = IWithdrawV1.ConsolidationRequest({ srcPubkeys: srcPubkeys, targetPubkey: VALID_PUBKEY_48 });
+        requests[0] = IWithdrawV1.ConsolidationRequest({srcPubkeys: srcPubkeys, targetPubkey: VALID_PUBKEY_48});
         address random = makeAddr("random");
         vm.deal(random, 10 gwei);
         vm.prank(random);
@@ -404,7 +405,7 @@ contract WithdrawV1PectraTests is WithdrawV1TestBase {
         bytes[] memory srcPubkeys = new bytes[](1);
         srcPubkeys[0] = VALID_PUBKEY_48;
         IWithdrawV1.ConsolidationRequest[] memory requests = new IWithdrawV1.ConsolidationRequest[](1);
-        requests[0] = IWithdrawV1.ConsolidationRequest({ srcPubkeys: srcPubkeys, targetPubkey: VALID_PUBKEY_48 });
+        requests[0] = IWithdrawV1.ConsolidationRequest({srcPubkeys: srcPubkeys, targetPubkey: VALID_PUBKEY_48});
         uint256 valueSent = 5 gwei;
         vm.deal(address(river), valueSent);
         vm.prank(address(river));
@@ -469,7 +470,11 @@ contract WithdrawV1PectraTests is WithdrawV1TestBase {
         vm.prank(address(river));
         withdraw.consolidate{value: maxFeePerConsolidation}(requests, maxFeePerConsolidation, excessFeeRecipient);
         uint256 recipientBalAfter = excessFeeRecipient.balance;
-        assertEq(recipientBalAfter, recipientBalBefore + (maxFeePerConsolidation - fee), "Recipient should be refunded any excess funds after actual fee deduction.");
+        assertEq(
+            recipientBalAfter,
+            recipientBalBefore + (maxFeePerConsolidation - fee),
+            "Recipient should be refunded any excess funds after actual fee deduction."
+        );
     }
 
     /// @notice Tests that consolidate emits UnsentExcessFee when excess refund fails.
@@ -529,17 +534,23 @@ contract WithdrawV1PectraTests is WithdrawV1TestBase {
 
         uint256 value = maxFeePerConsolidation - 1;
         vm.prank(address(river));
-        vm.expectRevert(abi.encodeWithSelector(IWithdrawV1.InsufficientValueForFee.selector, value, maxFeePerConsolidation));
+        vm.expectRevert(
+            abi.encodeWithSelector(IWithdrawV1.InsufficientValueForFee.selector, value, maxFeePerConsolidation)
+        );
         withdraw.consolidate{value: value}(requests, maxFeePerConsolidation, excessFeeRecipient);
     }
 
     /// @notice Tests that consolidate reverts when value is insufficient for multiple consolidations.
     function testConsolidateFailsIfFeeExceedsValueForMultipleConsolidations() public {
         bytes[] memory srcPubkeys = new bytes[](4);
-        for (uint256 i = 0; i < 4; i++) srcPubkeys[i] = VALID_PUBKEY_48;
+        for (uint256 i = 0; i < 4; i++) {
+            srcPubkeys[i] = VALID_PUBKEY_48;
+        }
         bytes memory targetPubkey = VALID_PUBKEY_48;
         bytes[] memory srcPubkeys2 = new bytes[](4);
-        for (uint256 i = 0; i < 4; i++) srcPubkeys2[i] = VALID_PUBKEY_48;
+        for (uint256 i = 0; i < 4; i++) {
+            srcPubkeys2[i] = VALID_PUBKEY_48;
+        }
         bytes memory targetPubkey2 = VALID_PUBKEY_48;
 
         IWithdrawV1.ConsolidationRequest[] memory requests = new IWithdrawV1.ConsolidationRequest[](2);
@@ -655,7 +666,8 @@ contract WithdrawV1PectraTests is WithdrawV1TestBase {
     /// @notice Tests that consolidate reverts when a source pubkey is not 48 bytes.
     function testConsolidateFailsIfSrcPubkeyLengthInvalid() public {
         bytes[] memory srcPubkeys = new bytes[](1);
-        srcPubkeys[0] = hex"1234567890abcdef1234567890abcde67895645f1234567890abcdef1234567890abcdef1234567890abcdef123456"; // 47 bytes
+        srcPubkeys[0] =
+        hex"1234567890abcdef1234567890abcde67895645f1234567890abcdef1234567890abcdef1234567890abcdef123456"; // 47 bytes
         bytes memory targetPubkey = VALID_PUBKEY_48;
         IWithdrawV1.ConsolidationRequest[] memory requests = new IWithdrawV1.ConsolidationRequest[](1);
         requests[0] = IWithdrawV1.ConsolidationRequest(srcPubkeys, targetPubkey);
@@ -672,7 +684,8 @@ contract WithdrawV1PectraTests is WithdrawV1TestBase {
     function testConsolidateFailsIfTargetPubkeyLengthInvalid() public {
         bytes[] memory srcPubkeys = new bytes[](1);
         srcPubkeys[0] = VALID_PUBKEY_48;
-        bytes memory targetPubkey = hex"1234567890abcdef1234567890abcde67895645f1234567890abcdef1234567890abcdef1234567890abcdef123456"; // 47 bytes
+        bytes memory targetPubkey =
+            hex"1234567890abcdef1234567890abcde67895645f1234567890abcdef1234567890abcdef1234567890abcdef123456"; // 47 bytes
         IWithdrawV1.ConsolidationRequest[] memory requests = new IWithdrawV1.ConsolidationRequest[](1);
         requests[0] = IWithdrawV1.ConsolidationRequest(srcPubkeys, targetPubkey);
 
@@ -761,7 +774,11 @@ contract WithdrawV1PectraTests is WithdrawV1TestBase {
         vm.prank(address(operatorsRegistry));
         withdraw.withdraw{value: maxFeePerWithdrawal}(pubkeys, amounts, maxFeePerWithdrawal, excessFeeRecipient);
         uint256 recipientBalAfter = excessFeeRecipient.balance;
-        assertEq(recipientBalAfter, recipientBalBefore + (maxFeePerWithdrawal - fee), "Recipient should be refunded any excess funds after actual fee deduction.");
+        assertEq(
+            recipientBalAfter,
+            recipientBalBefore + (maxFeePerWithdrawal - fee),
+            "Recipient should be refunded any excess funds after actual fee deduction."
+        );
     }
 
     /// @notice Tests that withdraw emits UnsentExcessFee when excess refund fails.
@@ -878,7 +895,9 @@ contract WithdrawV1PectraTests is WithdrawV1TestBase {
         uint256 value = maxFeePerWithdrawal - 1;
         vm.deal(address(operatorsRegistry), maxFeePerWithdrawal);
 
-        vm.expectRevert(abi.encodeWithSelector(IWithdrawV1.InsufficientValueForFee.selector, value, maxFeePerWithdrawal));
+        vm.expectRevert(
+            abi.encodeWithSelector(IWithdrawV1.InsufficientValueForFee.selector, value, maxFeePerWithdrawal)
+        );
         vm.prank(address(operatorsRegistry));
         withdraw.withdraw{value: value}(pubkeys, amounts, maxFeePerWithdrawal, excessFeeRecipient);
     }

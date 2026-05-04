@@ -82,7 +82,7 @@ interface IWithdrawV1 {
     /// @param _amount The amount to pull
     function pullEth(uint256 _amount) external;
 
-    /// @notice Request withdrawals from validators (Pectra). Callable only by River. Fee paid via msg.value; excess refunded to excessFeeRecipient.
+    /// @notice Request withdrawals from validators (Pectra). Callable only via OperatorsRegistry. Fee paid via msg.value; excess refunded to excessFeeRecipient.
     /// @param pubkeys Validator pubkeys (48 bytes each)
     /// @param amount Withdrawal amount per validator (gwei)
     /// @param maxFeePerWithdrawal Maximum fee per withdrawal to accept

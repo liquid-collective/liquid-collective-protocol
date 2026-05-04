@@ -27,6 +27,7 @@ abstract contract ConsensusLayerDepositManagerV1 is IConsensusLayerDepositManage
     /// @notice Size of a deposit in ETH
     uint256 public constant DEPOSIT_SIZE = 32 ether;
 
+    /// @notice Used in river
     modifier onlyKeeper() {
         if (msg.sender != KeeperAddress.get()) {
             revert OnlyKeeper();

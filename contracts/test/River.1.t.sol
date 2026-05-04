@@ -2714,11 +2714,7 @@ contract MockELConsolidationForRiver {
 
 contract RiverV1PectraTests is RiverV1TestBase {
     event PectraWithdrawRequested(
-        bytes[] pubkeys,
-        uint64[] amount,
-        uint256 maxFeePerWithdrawal,
-        address excessFeeRecipient,
-        uint256 valueSent
+        bytes[] pubkeys, uint64[] amount, uint256 maxFeePerWithdrawal, address excessFeeRecipient, uint256 valueSent
     );
     event PectraConsolidationRequested(
         IWithdrawV1.ConsolidationRequest[] requests,
