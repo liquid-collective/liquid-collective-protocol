@@ -584,11 +584,6 @@ contract RiverV1 is
     ) internal override {
         IOperatorsRegistryV1(OperatorsRegistryAddress.get()).reportExitedETH(_exitedETH, TotalDepositedETH.get());
 
-        if (_slashingContainmentModeEnabled) {
-            emit SkippedExitRequestsDueToSlashingContainment();
-            return;
-        }
-
         uint256 totalSupply = _totalSupply();
         if (totalSupply > 0) {
             uint256 availableBalanceToRedeem = BalanceToRedeem.get();
@@ -605,10 +600,19 @@ contract RiverV1 is
                         availableBalanceToDeposit, redeemManagerDemandInEth - _exitingBalance - availableBalanceToRedeem
                     );
                     if (rebalancingAmount > 0) {
+                        if (_slashingContainmentModeEnabled) {
+                            emit SkippedExitRequestsDueToSlashingContainment();
+                            return;
+                        }
                         availableBalanceToRedeem += rebalancingAmount;
                         _setBalanceToRedeem(availableBalanceToRedeem);
                         _setBalanceToDeposit(availableBalanceToDeposit - rebalancingAmount);
                     }
+                }
+
+                if (_slashingContainmentModeEnabled) {
+                    emit SkippedExitRequestsDueToSlashingContainment();
+                    return;
                 }
 
                 IOperatorsRegistryV1 or = IOperatorsRegistryV1(OperatorsRegistryAddress.get());
