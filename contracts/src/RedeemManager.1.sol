@@ -8,6 +8,7 @@ import "./interfaces/IProtocolVersion.sol";
 import "./libraries/LibAllowlistMasks.sol";
 import "./libraries/LibUint256.sol";
 import "./Initializable.sol";
+import "openzeppelin-contracts/contracts/security/ReentrancyGuard.sol";
 
 import "./state/shared/RiverAddress.sol";
 import "./state/redeemManager/RedeemQueue.1.sol";
@@ -19,7 +20,7 @@ import "./state/redeemManager/RedeemDemand.sol";
 /// @title Redeem Manager (v1)
 /// @author Alluvial Finance Inc.
 /// @notice This contract handles the redeem requests of all users
-contract RedeemManagerV1 is Initializable, IRedeemManagerV1, IProtocolVersion {
+contract RedeemManagerV1 is Initializable, ReentrancyGuard, IRedeemManagerV1, IProtocolVersion {
     /// @notice Value returned when resolving a redeem request that is unsatisfied
     int64 internal constant RESOLVE_UNSATISFIED = -1;
     /// @notice Value returned when resolving a redeem request that is out of bounds
@@ -41,20 +42,20 @@ contract RedeemManagerV1 is Initializable, IRedeemManagerV1, IProtocolVersion {
         _;
     }
 
-    modifier onlyRedeemerOrRiver() {
-        {
-            IRiverV1 river = _castedRiver();
-            if (msg.sender != address(river)) {
-                IAllowlistV1(river.getAllowlist()).onlyAllowed(msg.sender, LibAllowlistMasks.REDEEM_MASK);
-            }
-        }
-        _;
-    }
-
     modifier onlyRedeemer() {
         {
             IRiverV1 river = _castedRiver();
             IAllowlistV1(river.getAllowlist()).onlyAllowed(msg.sender, LibAllowlistMasks.REDEEM_MASK);
+        }
+        _;
+    }
+
+    /// @notice Reverts if slashing containment mode is currently active
+    /// @dev Makes an external view call to River. River must be initialized before any function
+    ///      guarded by this modifier is callable; calls will revert with a non-contract error otherwise.
+    modifier whenNotSlashingContainmentMode() {
+        if (_castedRiver().getSlashingContainmentMode()) {
+            revert SlashingContainmentModeEnabled();
         }
         _;
     }
@@ -150,21 +151,36 @@ contract RedeemManagerV1 is Initializable, IRedeemManagerV1, IProtocolVersion {
     }
 
     /// @inheritdoc IRedeemManagerV1
+    function requestRedeem(uint256 _lsETHAmount, address _recipient, address _initiator)
+        external
+        onlyRiver
+        returns (uint32 redeemRequestId)
+    {
+        return _requestRedeem(_lsETHAmount, _recipient, _initiator);
+    }
+
+    /// @inheritdoc IRedeemManagerV1
     function requestRedeem(uint256 _lsETHAmount, address _recipient)
         external
-        onlyRedeemerOrRiver
+        whenNotSlashingContainmentMode
+        onlyRedeemer
         returns (uint32 redeemRequestId)
     {
         IRiverV1 river = _castedRiver();
         if (IAllowlistV1(river.getAllowlist()).isDenied(_recipient)) {
             revert RecipientIsDenied();
         }
-        return _requestRedeem(_lsETHAmount, _recipient);
+        return _requestRedeem(_lsETHAmount, _recipient, msg.sender);
     }
 
     /// @inheritdoc IRedeemManagerV1
-    function requestRedeem(uint256 _lsETHAmount) external onlyRedeemer returns (uint32 redeemRequestId) {
-        return _requestRedeem(_lsETHAmount, msg.sender);
+    function requestRedeem(uint256 _lsETHAmount)
+        external
+        whenNotSlashingContainmentMode
+        onlyRedeemer
+        returns (uint32 redeemRequestId)
+    {
+        return _requestRedeem(_lsETHAmount, msg.sender, msg.sender);
     }
 
     /// @inheritdoc IRedeemManagerV1
@@ -173,13 +189,14 @@ contract RedeemManagerV1 is Initializable, IRedeemManagerV1, IProtocolVersion {
         uint32[] calldata withdrawalEventIds,
         bool skipAlreadyClaimed,
         uint16 _depth
-    ) external returns (uint8[] memory claimStatuses) {
+    ) external nonReentrant returns (uint8[] memory claimStatuses) {
         return _claimRedeemRequests(redeemRequestIds, withdrawalEventIds, skipAlreadyClaimed, _depth);
     }
 
     /// @inheritdoc IRedeemManagerV1
     function claimRedeemRequests(uint32[] calldata _redeemRequestIds, uint32[] calldata _withdrawalEventIds)
         external
+        nonReentrant
         returns (uint8[] memory claimStatuses)
     {
         return _claimRedeemRequests(_redeemRequestIds, _withdrawalEventIds, true, type(uint16).max);
@@ -312,8 +329,12 @@ contract RedeemManagerV1 is Initializable, IRedeemManagerV1, IProtocolVersion {
     /// @notice Perform a new redeem request for the specified recipient
     /// @param _lsETHAmount The amount of LsETH to redeem
     /// @param _recipient The recipient owning the request
+    /// @param _initiator The initiator of the request
     /// @return redeemRequestId The id of the newly created redeem request
-    function _requestRedeem(uint256 _lsETHAmount, address _recipient) internal returns (uint32 redeemRequestId) {
+    function _requestRedeem(uint256 _lsETHAmount, address _recipient, address _initiator)
+        internal
+        returns (uint32 redeemRequestId)
+    {
         LibSanitize._notZeroAddress(_recipient);
         if (_lsETHAmount == 0) {
             revert InvalidZeroAmount();
@@ -336,7 +357,7 @@ contract RedeemManagerV1 is Initializable, IRedeemManagerV1, IProtocolVersion {
                 height: height,
                 amount: _lsETHAmount,
                 recipient: _recipient,
-                initiator: msg.sender,
+                initiator: _initiator,
                 maxRedeemableEth: maxRedeemableEth
             })
         );
@@ -564,6 +585,6 @@ contract RedeemManagerV1 is Initializable, IRedeemManagerV1, IProtocolVersion {
     }
 
     function version() external pure returns (string memory) {
-        return "1.2.1";
+        return "1.3.0";
     }
 }

@@ -40,6 +40,10 @@ abstract contract ConsensusLayerDepositManagerV1 is IConsensusLayerDepositManage
     /// @param newCommittedBalance The new committed balance value
     function _setCommittedBalance(uint256 newCommittedBalance) internal virtual;
 
+    /// @notice Handler to check if slashing containment mode is active
+    /// @dev Must be overridden
+    function _getSlashingContainmentMode() internal view virtual returns (bool);
+
     /// @notice Initializer to set the deposit contract address and the withdrawal credentials to use
     /// @param _depositContractAddress The address of the deposit contract
     /// @param _withdrawalCredentials The withdrawal credentials to apply to all deposits
@@ -62,6 +66,7 @@ abstract contract ConsensusLayerDepositManagerV1 is IConsensusLayerDepositManage
 
     function _setKeeper(address _keeper) internal {
         KeeperAddress.set(_keeper);
+        emit SetKeeper(_keeper);
     }
 
     /// @inheritdoc IConsensusLayerDepositManagerV1
@@ -97,7 +102,9 @@ abstract contract ConsensusLayerDepositManagerV1 is IConsensusLayerDepositManage
         if (msg.sender != KeeperAddress.get()) {
             revert OnlyKeeper();
         }
-
+        if (_getSlashingContainmentMode()) {
+            revert SlashingContainmentModeEnabled();
+        }
         if (_allocations.length == 0) {
             revert EmptyAllocations();
         }
