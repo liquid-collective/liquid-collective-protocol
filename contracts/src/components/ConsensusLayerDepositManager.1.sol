@@ -53,6 +53,11 @@ abstract contract ConsensusLayerDepositManagerV1 is IConsensusLayerDepositManage
         DepositContractAddress.set(_depositContractAddress);
         emit SetDepositContractAddress(_depositContractAddress);
 
+        bytes1 prefix = bytes1(_withdrawalCredentials);
+        if (prefix != 0x02) {
+            revert InvalidWithdrawalCredentialsPrefix();
+        }
+
         WithdrawalCredentials.set(_withdrawalCredentials);
         emit SetWithdrawalCredentials(_withdrawalCredentials);
     }
@@ -60,6 +65,10 @@ abstract contract ConsensusLayerDepositManagerV1 is IConsensusLayerDepositManage
     /// @notice Initializer to update the withdrawal credentials to use
     /// @param _withdrawalCredentials The withdrawal credentials to apply to all deposits
     function initConsensusLayerDepositManagerV2(bytes32 _withdrawalCredentials) internal {
+        bytes1 prefix = bytes1(_withdrawalCredentials);
+        if (prefix != 0x02) {
+            revert InvalidWithdrawalCredentialsPrefix();
+        }
         WithdrawalCredentials.set(_withdrawalCredentials);
         emit SetWithdrawalCredentials(_withdrawalCredentials);
     }

@@ -162,7 +162,7 @@ interface IRiverV1 is IConsensusLayerDepositManagerV1, IUserDepositManagerV1, IS
     ) external;
 
     /// @notice Initialized version 1.3 of the River System
-    function initRiverV1_3(bytes32 withdrawalCredentails) external;
+    function initRiverV1_3(bytes32 withdrawalCredentials) external;
 
     /// @notice Get the current global fee
     /// @return The global fee

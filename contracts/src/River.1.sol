@@ -127,8 +127,8 @@ contract RiverV1 is
     }
 
     /// @inheritdoc IRiverV1
-    function initRiverV1_3(bytes32 withdrawalCredentails) external init(3) onlyAdmin {
-        initConsensusLayerDepositManagerV2(withdrawalCredentails);
+    function initRiverV1_3(bytes32 withdrawalCredentials) external init(3) onlyAdmin {
+        initConsensusLayerDepositManagerV2(withdrawalCredentials);
         IOracleManagerV1.StoredConsensusLayerReport storage lastReport = LastConsensusLayerReport.get();
         uint32 clValidatorCount = lastReport.validatorsCount;
         uint256 depositedValidatorCount = DepositedValidatorCount.get();
