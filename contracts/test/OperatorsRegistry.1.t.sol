@@ -1714,6 +1714,82 @@ contract OperatorsRegistryV1CoverageTests is OperatorsRegistryV1TestBase, Operat
         reg.reportExitedETH(exited, 2 * 32 ether);
     }
 
+    // ─── reportCLETH tests ────────────────────────────────────────────────────
+
+    function testReportCLETHRevertsOnEmptyArray() public {
+        reg.initOperatorsRegistryV1(admin, river);
+        vm.prank(admin);
+        reg.addOperator("Op0", makeAddr("op0"));
+        uint256[] memory empty = new uint256[](0);
+        vm.expectRevert(abi.encodeWithSignature("InvalidEmptyArray()"));
+        reg.reportCLETH(empty);
+    }
+
+    function testReportCLETHRevertsOnWrongLength() public {
+        reg.initOperatorsRegistryV1(admin, river);
+        vm.prank(admin);
+        reg.addOperator("Op0", makeAddr("op0"));
+        uint256[] memory tooLong = new uint256[](2);
+        vm.expectRevert(abi.encodeWithSignature("InvalidActiveCLETHArrayLength()"));
+        reg.reportCLETH(tooLong);
+    }
+
+    function testReportCLETHSetsPerOperatorValues() public {
+        reg.initOperatorsRegistryV1(admin, river);
+        vm.startPrank(admin);
+        reg.addOperator("Op0", makeAddr("op0"));
+        reg.addOperator("Op1", makeAddr("op1"));
+        vm.stopPrank();
+        uint256[] memory values = new uint256[](2);
+        values[0] = 100 ether;
+        values[1] = 200 ether;
+        reg.reportCLETH(values);
+        assertEq(reg.getOperator(0).activeCLETH, 100 ether);
+        assertEq(reg.getOperator(1).activeCLETH, 200 ether);
+    }
+
+    function testReportCLETHEmitsEvent() public {
+        reg.initOperatorsRegistryV1(admin, river);
+        vm.startPrank(admin);
+        reg.addOperator("Op0", makeAddr("op0"));
+        reg.addOperator("Op1", makeAddr("op1"));
+        vm.stopPrank();
+        uint256[] memory values = new uint256[](2);
+        values[0] = 50 ether;
+        values[1] = 70 ether;
+        vm.expectEmit(false, false, false, true, address(reg));
+        emit IOperatorsRegistryV1.UpdatedActiveCLETH(values);
+        reg.reportCLETH(values);
+    }
+
+    // ─── demandETHExits cap tests ────────────────────────────────────────────
+
+    function testDemandETHExitsCapsToAvailable() public {
+        reg.initOperatorsRegistryV1(admin, river);
+        vm.prank(admin);
+        reg.addOperator("Op0", makeAddr("op0"));
+        reg.demandETHExits(100 ether, 60 ether);
+        assertEq(reg.getCurrentETHExitsDemand(), 60 ether);
+    }
+
+    function testDemandETHExitsSwallowsWhenAvailableIsZero() public {
+        reg.initOperatorsRegistryV1(admin, river);
+        vm.prank(admin);
+        reg.addOperator("Op0", makeAddr("op0"));
+        reg.demandETHExits(50 ether, 50 ether);
+        assertEq(reg.getCurrentETHExitsDemand(), 50 ether);
+        reg.demandETHExits(10 ether, 50 ether);
+        assertEq(reg.getCurrentETHExitsDemand(), 50 ether);
+    }
+
+    function testDemandETHExitsZeroTotalAvailableCLETH() public {
+        reg.initOperatorsRegistryV1(admin, river);
+        vm.prank(admin);
+        reg.addOperator("Op0", makeAddr("op0"));
+        reg.demandETHExits(100 ether, 0);
+        assertEq(reg.getCurrentETHExitsDemand(), 0);
+    }
+
     /// Asserts that version() returns the expected registry version string.
     function testOperatorsRegistryVersion() public {
         reg.initOperatorsRegistryV1(admin, river);
