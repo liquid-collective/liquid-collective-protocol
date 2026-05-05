@@ -109,6 +109,9 @@ interface IRedeemManagerV1 {
     /// @notice Thrown when the recipient of redeemRequest is denied
     error RecipientIsDenied();
 
+    /// @notice Thrown when an action is blocked because slashing containment mode is active
+    error SlashingContainmentModeEnabled();
+
     /// @param _river The address of the River contract
     function initializeRedeemManagerV1(address _river) external;
 
@@ -157,6 +160,15 @@ interface IRedeemManagerV1 {
         external
         view
         returns (int64[] memory withdrawalEventIds);
+
+    /// @notice Creates a redeem request
+    /// @param _lsETHAmount The amount of LsETH to redeem
+    /// @param _recipient The recipient owning the redeem request
+    /// @param _initiator The initiator of the request
+    /// @return redeemRequestId The id of the redeem request
+    function requestRedeem(uint256 _lsETHAmount, address _recipient, address _initiator)
+        external
+        returns (uint32 redeemRequestId);
 
     /// @notice Creates a redeem request
     /// @param _lsETHAmount The amount of LsETH to redeem

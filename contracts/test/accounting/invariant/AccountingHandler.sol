@@ -129,6 +129,12 @@ contract AccountingHandler is StdUtils {
         uint256 penalty = bound(penaltySeed, 0, 2 ether);
         // Step 3: Delegate the exit completion to the test contract.
         _test.handler_completeExit(opIdx, ethAmount, penalty);
+        // A penalised exit returns less ETH than deposited, reducing total pool ETH exactly like
+        // a slash. Signal this so the next oracle report uses slashing-containment mode and the
+        // River contract accepts the share-price decrease.
+        if (penalty > 0) {
+            ghost_slashOccurred = true;
+        }
         calls_completeExit++;
     }
 

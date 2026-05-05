@@ -193,7 +193,7 @@ contract OracleManagerV1ExposeInitializer is OracleManagerV1 {
 
     event Internal_CommitBalanceToDeposit(uint256 period, uint256 depositBalance);
 
-    function _commitBalanceToDeposit(uint256 period) internal override {
+    function _commitBalanceToDeposit(uint256 period, bool slashingContainmentModeEnabled) internal override {
         emit Internal_CommitBalanceToDeposit(period, amountToDeposit);
     }
 

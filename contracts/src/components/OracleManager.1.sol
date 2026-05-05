@@ -99,7 +99,8 @@ abstract contract OracleManagerV1 is IOracleManagerV1 {
 
     /// @notice Commits the deposit balance up to the allowed daily limit
     /// @param _period The period between current and last report
-    function _commitBalanceToDeposit(uint256 _period) internal virtual;
+    /// @param _slashingContainmentModeEnabled True if slashing containment mode is enabled
+    function _commitBalanceToDeposit(uint256 _period, bool _slashingContainmentModeEnabled) internal virtual;
 
     /// @notice Prevents unauthorized calls
     modifier onlyAdmin_OMV1() {
@@ -482,7 +483,7 @@ abstract contract OracleManagerV1 is IOracleManagerV1 {
         _skimExcessBalanceToRedeem();
 
         // we update the committable amount based on daily maximum allowed
-        _commitBalanceToDeposit(vars.timeElapsedSinceLastReport);
+        _commitBalanceToDeposit(vars.timeElapsedSinceLastReport, _report.slashingContainmentMode);
 
         // we emit a summary event with all the reporting details
         emit ProcessedConsensusLayerReport(_report, vars.trace);
