@@ -31,6 +31,9 @@ abstract contract BeaconChainSimulator is AccountingHarnessBase {
 
     /// @dev Cumulative skimmed ETH (monotonically increasing).
     uint256 internal _simCumulativeSkimmed;
+    /// @dev Cumulative autocompounded ETH (monotonically increasing).
+    ///      Tracks 0x02 rewards that increase validator CL balances rather than being swept.
+    uint256 internal _simCumulativeAutocompounded;
     /// @dev Cumulative exited ETH (monotonically increasing).
     uint256 internal _simCumulativeExited;
     /// @dev Mirrors the contract's InFlightDeposit: ETH sent to the deposit contract
@@ -91,13 +94,23 @@ abstract contract BeaconChainSimulator is AccountingHarnessBase {
         assertEq(activated, n, "sim_activateValidators: insufficient pending validators");
     }
 
+    /// @dev Models 0x01 skimming: rewards are swept from CL to EL each epoch.
+    ///      Validator CL balances remain at principal after the sweep.
     function sim_advanceEpoch(uint256 rewardsPerValidator) internal {
         for (uint256 i = 0; i < _simValidators.length; i++) {
             if (_simValidators[i].state == ValidatorState.Active) {
-                // Rewards are swept (skimmed) from the CL to EL each epoch.
-                // The validator's CL balance remains at the principal (DEPOSIT_SIZE)
-                // after the sweep, so we only track cumulative skimmed rewards separately.
                 _simCumulativeSkimmed += rewardsPerValidator;
+            }
+        }
+    }
+
+    /// @dev Models 0x02 autocompounding: rewards increase the validator's CL balance
+    ///      rather than being swept to the EL.
+    function sim_autocompound(uint256 rewardsPerValidator) internal {
+        for (uint256 i = 0; i < _simValidators.length; i++) {
+            if (_simValidators[i].state == ValidatorState.Active) {
+                _simValidators[i].currentBalance += rewardsPerValidator;
+                _simCumulativeAutocompounded += rewardsPerValidator;
             }
         }
     }
