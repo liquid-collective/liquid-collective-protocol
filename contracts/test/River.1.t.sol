@@ -1097,6 +1097,35 @@ contract RiverV1Tests is RiverV1TestBase {
         vm.expectRevert(abi.encodeWithSignature("RecipientIsDenied()"));
         river.requestRedeem(amount, recipient);
     }
+
+    /// Asserts that depositToConsensusLayer triggers the padding else-branch in River._incrementFundedETH
+    /// when an entry has zero pubkeys: by adding a 3rd operator and allocating only to operator 1, the
+    /// padding loop encounters publicKeys[0] with length 0.
+    function testIncrementFundedETHEmptyPublicKeysBranch() public {
+        // Add a third operator so registry.getOperatorCount() > allocations array length.
+        vm.prank(admin);
+        operatorsRegistry.addOperator("ThirdOp", makeAddr("operatorThree"));
+        // Re-size the exited ETH backing array so getExitedETHAtIndex stays in bounds.
+        operatorsRegistry.sudoSetRawExitedETH(new uint256[](operatorsRegistry.getOperatorCount() + 1));
+
+        vm.deal(joe, 100 ether);
+        _allow(joe);
+        vm.prank(joe);
+        river.deposit{value: 100 ether}();
+        river.debug_moveDepositToCommitted();
+
+        // Allocate only to operator at index 1 (operatorTwoIndex). This makes _allocations[last].operatorIndex == 1,
+        // so depositToConsensusLayer builds publicKeys with length 2 where publicKeys[0] is empty (no allocations).
+        // Then in River._incrementFundedETH, _fundedETH.length (2) < operatorCount (3), padding triggers,
+        // and the i=0 iteration hits the else branch (paddedPublicKeys[i] = new bytes[](0)).
+        IOperatorsRegistryV1.ValidatorDeposit[] memory allocation = _createAllocation(operatorTwoIndex, 2);
+
+        vm.prank(admin);
+        river.depositToConsensusLayerWithDepositRoot(allocation, bytes32(0));
+
+        OperatorsV3.Operator memory op2 = operatorsRegistry.getOperator(operatorTwoIndex);
+        assertEq(op2.funded, 2 * 32 ether);
+    }
 }
 
 contract RiverV1TestsReport_HEAVY_FUZZING is RiverV1TestBase {
@@ -2559,6 +2588,12 @@ contract RiverV1CoverageTests is RiverV1TestBase {
     bytes32 constant LAST_CLR_BASE_SLOT = bytes32(uint256(keccak256("river.state.lastConsensusLayerReport")) - 1);
     bytes32 constant IN_FLIGHT_DEPOSIT_SLOT = bytes32(uint256(keccak256("river.state.inFlightDeposit")) - 1);
     bytes32 constant BUFFERED_EXCEEDING_ETH_SLOT = bytes32(uint256(keccak256("river.state.bufferedExceedingEth")) - 1);
+    bytes32 constant CONSOLIDATION_BUFFER_SLOT = bytes32(uint256(keccak256("river.state.consolidationBuffer")) - 1);
+    bytes32 constant BALANCE_FOR_CONSOLIDATION_COVERAGE_SLOT =
+        bytes32(uint256(keccak256("river.state.balanceForConsolidationCoverage")) - 1);
+
+    event PulledConsolidationCoverageFunds(uint256 amount);
+    event SetConsolidationBuffer(uint256 oldAmount, uint256 newAmount);
 
     /// Asserts that initRiverV1_3 sets in-flight deposit when reported validator count is less than deposited count.
     function testInitRiverV1_3WithInFlightValidators() public {
@@ -2643,6 +2678,123 @@ contract RiverV1CoverageTests is RiverV1TestBase {
         vm.prank(address(oracle));
         river.setConsensusLayerData(clr);
         assertLt(address(redeemManager).balance, rdmBefore);
+    }
+
+    /// Asserts that with no consolidation coverage fund configured, a non-zero buffer triggers no pull and the buffer is left untouched.
+    function testPullConsolidationCoverageFundsZeroAddress() public {
+        _initRiverMinimalForReporting();
+        // No setConsolidationCoverageFund call - address stays at zero.
+        assertEq(river.getConsolidationCoverageFund(), address(0));
+
+        vm.store(address(river), CONSOLIDATION_BUFFER_SLOT, bytes32(uint256(1 ether)));
+
+        uint256 epoch = epochsPerFrame;
+        vm.warp((epoch + epochsUntilFinal) * slotsPerEpoch * secondsPerSlot);
+        IOracleManagerV1.ConsensusLayerReport memory clr;
+        clr.epoch = epoch;
+        clr.validatorsBalance = 0;
+        clr.totalDepositedActivatedETH = 0;
+        clr.exitedETHPerOperator = new uint256[](1);
+        clr.activeCLETHPerOperator = new uint256[](1);
+        vm.prank(address(oracle));
+        river.setConsensusLayerData(clr);
+
+        // Buffer slot must be untouched: _setConsolidationBuffer is only called if pulled > 0.
+        assertEq(uint256(vm.load(address(river), CONSOLIDATION_BUFFER_SLOT)), 1 ether);
+    }
+
+    /// Asserts that when the consolidation coverage fund is configured but holds zero ETH, no pull happens and the buffer is untouched.
+    function testPullConsolidationCoverageFundsZeroBalance() public {
+        _initRiverMinimalForReporting();
+        vm.prank(admin);
+        river.setConsolidationCoverageFund(address(consolidationCoverageFund));
+        assertEq(address(consolidationCoverageFund).balance, 0);
+
+        vm.store(address(river), CONSOLIDATION_BUFFER_SLOT, bytes32(uint256(1 ether)));
+
+        uint256 epoch = epochsPerFrame;
+        vm.warp((epoch + epochsUntilFinal) * slotsPerEpoch * secondsPerSlot);
+        IOracleManagerV1.ConsensusLayerReport memory clr;
+        clr.epoch = epoch;
+        clr.validatorsBalance = 0;
+        clr.totalDepositedActivatedETH = 0;
+        clr.exitedETHPerOperator = new uint256[](1);
+        clr.activeCLETHPerOperator = new uint256[](1);
+        vm.prank(address(oracle));
+        river.setConsensusLayerData(clr);
+
+        assertEq(uint256(vm.load(address(river), CONSOLIDATION_BUFFER_SLOT)), 1 ether);
+    }
+
+    /// Asserts the happy path: consolidation buffer fully drained when the fund holds enough ETH; BalanceToDeposit grows by the pulled amount.
+    function testPullConsolidationCoverageFundsHappyPath() public {
+        _initRiverMinimalForReporting();
+        vm.prank(admin);
+        river.setConsolidationCoverageFund(address(consolidationCoverageFund));
+
+        uint256 buffer = 0.5 ether;
+        vm.store(address(river), CONSOLIDATION_BUFFER_SLOT, bytes32(buffer));
+        // Fund the consolidation coverage contract so pullCoverageFunds can transfer.
+        vm.store(address(consolidationCoverageFund), BALANCE_FOR_CONSOLIDATION_COVERAGE_SLOT, bytes32(buffer));
+        vm.deal(address(consolidationCoverageFund), buffer);
+
+        uint256 balanceToDepositBefore = river.getBalanceToDeposit();
+
+        uint256 epoch = epochsPerFrame;
+        vm.warp((epoch + epochsUntilFinal) * slotsPerEpoch * secondsPerSlot);
+        IOracleManagerV1.ConsensusLayerReport memory clr;
+        clr.epoch = epoch;
+        clr.validatorsBalance = 0;
+        clr.totalDepositedActivatedETH = 0;
+        clr.exitedETHPerOperator = new uint256[](1);
+        clr.activeCLETHPerOperator = new uint256[](1);
+
+        vm.expectEmit(true, true, true, true, address(river));
+        emit PulledConsolidationCoverageFunds(buffer);
+        vm.expectEmit(true, true, true, true, address(river));
+        emit SetConsolidationBuffer(buffer, 0);
+
+        vm.prank(address(oracle));
+        river.setConsensusLayerData(clr);
+
+        assertEq(uint256(vm.load(address(river), CONSOLIDATION_BUFFER_SLOT)), 0);
+        assertEq(river.getBalanceToDeposit(), balanceToDepositBefore + buffer);
+        assertEq(address(consolidationCoverageFund).balance, 0);
+    }
+
+    /// Asserts that when the fund holds less ETH than the buffer, the buffer is partially drained and the remainder kept.
+    function testPullConsolidationCoverageFundsPartial() public {
+        _initRiverMinimalForReporting();
+        vm.prank(admin);
+        river.setConsolidationCoverageFund(address(consolidationCoverageFund));
+
+        uint256 buffer = 1 ether;
+        uint256 available = 0.3 ether;
+        vm.store(address(river), CONSOLIDATION_BUFFER_SLOT, bytes32(buffer));
+        vm.store(address(consolidationCoverageFund), BALANCE_FOR_CONSOLIDATION_COVERAGE_SLOT, bytes32(available));
+        vm.deal(address(consolidationCoverageFund), available);
+
+        uint256 balanceToDepositBefore = river.getBalanceToDeposit();
+
+        uint256 epoch = epochsPerFrame;
+        vm.warp((epoch + epochsUntilFinal) * slotsPerEpoch * secondsPerSlot);
+        IOracleManagerV1.ConsensusLayerReport memory clr;
+        clr.epoch = epoch;
+        clr.validatorsBalance = 0;
+        clr.totalDepositedActivatedETH = 0;
+        clr.exitedETHPerOperator = new uint256[](1);
+        clr.activeCLETHPerOperator = new uint256[](1);
+
+        vm.expectEmit(true, true, true, true, address(river));
+        emit PulledConsolidationCoverageFunds(available);
+        vm.expectEmit(true, true, true, true, address(river));
+        emit SetConsolidationBuffer(buffer, buffer - available);
+
+        vm.prank(address(oracle));
+        river.setConsensusLayerData(clr);
+
+        assertEq(uint256(vm.load(address(river), CONSOLIDATION_BUFFER_SLOT)), buffer - available);
+        assertEq(river.getBalanceToDeposit(), balanceToDepositBefore + available);
     }
 
     function _initRiverAndV1_2() internal {
