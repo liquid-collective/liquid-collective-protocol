@@ -9,7 +9,9 @@ abstract contract AccountingInvariants is BeaconChainSimulator {
     uint256 private _snapTotalUnderlying;
     uint256 private _snapTotalShares;
     uint256 private _snapTotalDepositedETH;
+    uint256 private _snapExitDemand;
     bool private _allowSharePriceDecrease;
+    bool private _lastReportWasContainment;
 
     /// @dev Snapshot of ReportBounds captured by `_pushRelaxedLowerBound`, restored by `_popBounds`.
     struct BoundsSnapshot {
@@ -66,6 +68,7 @@ abstract contract AccountingInvariants is BeaconChainSimulator {
         report.epoch = reportEpoch;
 
         _snapshotPreReport();
+        _lastReportWasContainment = slashingContainment;
 
         vm.prank(oracleMember);
         oracle.reportConsensusLayerData(report);
@@ -95,6 +98,7 @@ abstract contract AccountingInvariants is BeaconChainSimulator {
         _snapTotalUnderlying = river.totalUnderlyingSupply();
         _snapTotalShares = river.totalSupply();
         _snapTotalDepositedETH = river.getTotalDepositedETH();
+        _snapExitDemand = operatorsRegistry.getCurrentETHExitsDemand();
     }
 
     /// @notice Toggles the flag that permits a share price decrease in the next invariant check.
@@ -105,7 +109,7 @@ abstract contract AccountingInvariants is BeaconChainSimulator {
         _allowSharePriceDecrease = allow;
     }
 
-    /// @notice Executes all six post-report invariant assertions (I1–I6) in sequence.
+    /// @notice Executes all post-report invariant assertions (I1–I8) in sequence.
     function _assertAllInvariants() internal {
         _assertI1_SharePriceNonDecrease();
         _assertI2_ETHConservation();
@@ -113,6 +117,8 @@ abstract contract AccountingInvariants is BeaconChainSimulator {
         _assertI4_PerOperatorETH();
         _assertI5_TotalDepositedETHMonotonic();
         _assertI6_ExitedETHAggregate();
+        _assertI7_ExitDemandBounded();
+        _assertI8_ContainmentSuppressesDemand();
     }
 
     /// @notice I1: Verifies that the share price has not decreased since the pre-report snapshot.
@@ -203,5 +209,31 @@ abstract contract AccountingInvariants is BeaconChainSimulator {
             sum += perOp[i];
         }
         assertEq(totalExited, sum, "I6: exitedETHPerOperator aggregate mismatch");
+    }
+
+    /// @notice I7: Verifies that the total exit demand (pending demand + already-requested exits)
+    ///         is bounded by TotalDepositedETH. The protocol should never demand more exits than
+    ///         were ever deposited.
+    function _assertI7_ExitDemandBounded() internal {
+        uint256 demand = operatorsRegistry.getCurrentETHExitsDemand();
+        uint256 requested = operatorsRegistry.getTotalETHExitsRequested();
+        uint256 totalDeposited = river.getTotalDepositedETH();
+        assertLe(
+            demand + requested,
+            totalDeposited,
+            "I7: exit demand + requested exceeds TotalDepositedETH"
+        );
+    }
+
+    /// @notice I8: Verifies that slashing containment mode suppresses exit demand — if the last
+    ///         oracle report had containment enabled, exit demand must not have increased.
+    function _assertI8_ContainmentSuppressesDemand() internal {
+        if (!_lastReportWasContainment) return;
+        uint256 demandAfter = operatorsRegistry.getCurrentETHExitsDemand();
+        assertEq(
+            demandAfter,
+            _snapExitDemand,
+            "I8: exit demand changed during slashing containment"
+        );
     }
 }
