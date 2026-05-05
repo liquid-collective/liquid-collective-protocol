@@ -9,6 +9,7 @@ abstract contract AccountingInvariants is BeaconChainSimulator {
     uint256 private _snapTotalUnderlying;
     uint256 private _snapTotalShares;
     uint256 private _snapTotalDepositedETH;
+    uint256 private _snapActivatedETH;
     bool private _allowSharePriceDecrease;
 
     /// @dev Snapshot of ReportBounds captured by `_pushRelaxedLowerBound`, restored by `_popBounds`.
@@ -95,6 +96,7 @@ abstract contract AccountingInvariants is BeaconChainSimulator {
         _snapTotalUnderlying = river.totalUnderlyingSupply();
         _snapTotalShares = river.totalSupply();
         _snapTotalDepositedETH = river.getTotalDepositedETH();
+        _snapActivatedETH = river.getLastConsensusLayerReport().totalDepositedActivatedETH;
     }
 
     /// @notice Toggles the flag that permits a share price decrease in the next invariant check.
@@ -105,7 +107,7 @@ abstract contract AccountingInvariants is BeaconChainSimulator {
         _allowSharePriceDecrease = allow;
     }
 
-    /// @notice Executes all six post-report invariant assertions (I1–I6) in sequence.
+    /// @notice Executes all post-report invariant assertions (I1–I10) in sequence.
     function _assertAllInvariants() internal {
         _assertI1_SharePriceNonDecrease();
         _assertI2_ETHConservation();
@@ -113,6 +115,10 @@ abstract contract AccountingInvariants is BeaconChainSimulator {
         _assertI4_PerOperatorETH();
         _assertI5_TotalDepositedETHMonotonic();
         _assertI6_ExitedETHAggregate();
+        _assertI7_AccountingIdentity();
+        _assertI8_RequestedExitsGeExited();
+        _assertI9_TotalRequestedGeExited();
+        _assertI10_ActivatedETHNonDecreasing();
     }
 
     /// @notice I1: Verifies that the share price has not decreased since the pre-report snapshot.
@@ -203,5 +209,48 @@ abstract contract AccountingInvariants is BeaconChainSimulator {
             sum += perOp[i];
         }
         assertEq(totalExited, sum, "I6: exitedETHPerOperator aggregate mismatch");
+    }
+
+    /// @notice I7: The central accounting identity — every ETH sent to the deposit contract is
+    ///         either still in-flight or has activated:
+    ///         InFlightDeposit + totalDepositedActivatedETH == TotalDepositedETH
+    function _assertI7_AccountingIdentity() internal {
+        uint256 inFlight = river.getInFlightDeposit();
+        uint256 activated = river.getLastConsensusLayerReport().totalDepositedActivatedETH;
+        uint256 totalDeposited = river.getTotalDepositedETH();
+        assertEq(
+            inFlight + activated, totalDeposited, "I7: InFlightDeposit + activatedETH != TotalDepositedETH"
+        );
+    }
+
+    /// @notice I8: Per-operator requestedExits >= exited. This ordering is load-bearing —
+    ///         requestETHExits computes opPendingExits = requestedExits - exitedETH and relies
+    ///         on it being non-negative.
+    function _assertI8_RequestedExitsGeExited() internal {
+        uint256 opCount = operatorsRegistry.getOperatorCount();
+        uint256[] memory exitedPerOp = operatorsRegistry.getExitedETHPerOperator();
+        for (uint256 i = 0; i < opCount; i++) {
+            OperatorsV3.Operator memory op = operatorsRegistry.getOperator(i);
+            uint256 exited = exitedPerOp.length > i ? exitedPerOp[i] : 0;
+            assertGe(
+                op.requestedExits,
+                exited,
+                string(abi.encodePacked("I8: op", vm.toString(i), " requestedExits < exited"))
+            );
+        }
+    }
+
+    /// @notice I9: TotalETHExitsRequested >= totalExited. Every processed exit was either
+    ///         explicitly requested or bumped via the unsolicited path in _setExitedETH.
+    function _assertI9_TotalRequestedGeExited() internal {
+        (uint256 totalExited,) = operatorsRegistry.getExitedETHAndRequestedExitAmounts();
+        uint256 totalRequested = operatorsRegistry.getTotalETHExitsRequested();
+        assertGe(totalRequested, totalExited, "I9: TotalETHExitsRequested < totalExited");
+    }
+
+    /// @notice I10: totalDepositedActivatedETH is monotonically non-decreasing across reports.
+    function _assertI10_ActivatedETHNonDecreasing() internal {
+        uint256 activated = river.getLastConsensusLayerReport().totalDepositedActivatedETH;
+        assertGe(activated, _snapActivatedETH, "I10: totalDepositedActivatedETH decreased");
     }
 }

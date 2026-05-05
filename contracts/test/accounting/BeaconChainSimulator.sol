@@ -60,9 +60,17 @@ abstract contract BeaconChainSimulator is AccountingHarnessBase {
             _fundRiver(needed - river.getCommittedBalance());
         }
         uint256 prevInFlight = river.getInFlightDeposit();
+        uint256 sharesBefore = river.totalSupply();
+        uint256 underlyingBefore = river.totalUnderlyingSupply();
         IOperatorsRegistryV1.ValidatorDeposit[] memory allocs = _makeDeposits(opIdx, amounts);
         vm.prank(keeper);
         river.depositToConsensusLayerWithDepositRoot(allocs, bytes32(0));
+        if (sharesBefore > 0) {
+            uint256 sharesAfter = river.totalSupply();
+            uint256 underlyingAfter = river.totalUnderlyingSupply();
+            assertEq(sharesAfter, sharesBefore, "sim_deposit: share count changed");
+            assertEq(underlyingAfter, underlyingBefore, "sim_deposit: underlying changed");
+        }
         for (uint256 i = 0; i < amounts.length; i++) {
             _simValidators.push(
                 SimValidator({
