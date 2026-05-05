@@ -447,6 +447,7 @@ abstract contract OracleManagerV1 is IOracleManagerV1 {
 
         uint256 consolidationBuffer = ConsolidationBuffer.get();
         // if the consolidation buffer is greater than 0, we attempt to pull the funds from the consolidation coverage fund
+        // we always attempt to pull the funds as we don't track on-chain if a consolidation failure has occurred
         if (consolidationBuffer > 0) {
             vars.trace.pulledConsolidationCoverageFunds = _pullConsolidationCoverageFunds(consolidationBuffer);
             if (vars.trace.pulledConsolidationCoverageFunds > 0) {
