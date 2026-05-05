@@ -585,6 +585,7 @@ contract RiverV1 is
         IOperatorsRegistryV1(OperatorsRegistryAddress.get()).reportExitedETH(_exitedETH, TotalDepositedETH.get());
 
         if (_slashingContainmentModeEnabled) {
+            emit SkippedExitRequestsDueToSlashingContainment();
             return;
         }
 
