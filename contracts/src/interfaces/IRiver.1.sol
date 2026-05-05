@@ -103,6 +103,11 @@ interface IRiverV1 is IConsensusLayerDepositManagerV1, IUserDepositManagerV1, IS
     /// @param newAmount The new balance committed to deposit
     event SetBalanceCommittedToDeposit(uint256 oldAmount, uint256 newAmount);
 
+    /// @notice Emitted when the consolidation buffer is updated
+    /// @param oldAmount The old consolidation buffer
+    /// @param newAmount The new consolidation buffer
+    event SetConsolidationBuffer(uint256 oldAmount, uint256 newAmount);
+
     /// @notice Emitted when the redeem manager received a withdraw event report
     /// @param redeemManagerDemand The total demand in LsETH of the redeem manager
     /// @param suppliedRedeemManagerDemand The amount of LsETH demand actually supplied

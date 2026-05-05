@@ -432,6 +432,9 @@ contract RiverV1 is
         if (consolidationCoverageFund == address(0)) {
             return 0;
         }
+        if (consolidationCoverageFund.balance == 0) {
+            return 0;
+        }
         uint256 initialBalance = address(this).balance;
         IConsolidationCoverageFundV1(payable(consolidationCoverageFund)).pullCoverageFunds(_max);
         uint256 collected = address(this).balance - initialBalance;
@@ -498,6 +501,17 @@ contract RiverV1 is
     function _setCommittedBalance(uint256 _newCommittedBalance) internal override(ConsensusLayerDepositManagerV1) {
         emit SetBalanceCommittedToDeposit(CommittedBalance.get(), _newCommittedBalance);
         CommittedBalance.set(_newCommittedBalance);
+    }
+
+    /// @notice Sets the consolidation buffer
+    /// @param _oldConsolidationBuffer The old consolidation buffer value
+    /// @param _newConsolidationBuffer The new consolidation buffer value
+    function _setConsolidationBuffer(uint256 _oldConsolidationBuffer, uint256 _newConsolidationBuffer)
+        internal
+        override(OracleManagerV1)
+    {
+        emit SetConsolidationBuffer(_oldConsolidationBuffer, _newConsolidationBuffer);
+        ConsolidationBuffer.set(_newConsolidationBuffer);
     }
 
     /// @notice Pulls funds from the Withdraw contract, and adds funds to deposit and redeem balances

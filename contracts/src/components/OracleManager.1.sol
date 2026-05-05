@@ -12,6 +12,7 @@ import "../state/river/OracleAddress.sol";
 import "../state/river/CLValidatorTotalBalance.sol";
 import "../state/river/LastOracleRoundId.sol";
 import "../state/river/InFlightDeposit.sol";
+import "../state/river/ConsolidationBuffer.sol";
 
 /// @title Oracle Manager (v1)
 /// @author Alluvial Finance Inc.
@@ -73,6 +74,11 @@ abstract contract OracleManagerV1 is IOracleManagerV1 {
     /// @notice Reports the ETH that is currently active on the consensus layer for the operators
     /// @param _activeCLETH The array of active Consensus Layer ETH amounts per operator
     function _reportCLETH(uint256[] memory _activeCLETH) internal virtual;
+
+    /// @notice Sets the consolidation buffer
+    /// @param _oldConsolidationBuffer The old consolidation buffer value
+    /// @param _newConsolidationBuffer The new consolidation buffer value
+    function _setConsolidationBuffer(uint256 _oldConsolidationBuffer, uint256 _newConsolidationBuffer) internal virtual;
 
     /// @notice Requests exits of validators after possibly rebalancing deposit and redeem balances
     /// @param _exitingBalance The currently exiting funds, soon to be received on the execution layer
@@ -438,10 +444,16 @@ abstract contract OracleManagerV1 is IOracleManagerV1 {
             vars.availableAmountToUpperBound -= vars.trace.pulledCoverageFunds;
         }
 
-        // if we have available amount to upper bound after pulling coverage funds, we attempt to pull consolidation coverage funds
-        // TODO: This will change when we introduce the consolidation buffer. this would be called when the buffer value is not zero
-        if (vars.availableAmountToUpperBound > 0) {
-            vars.trace.pulledConsolidationCoverageFunds = _pullConsolidationCoverageFunds(vars.availableAmountToUpperBound);
+        uint256 consolidationBuffer = ConsolidationBuffer.get();
+        // if the consolidation buffer is greater than 0, we attempt to pull the funds from the consolidation coverage fund
+        if (consolidationBuffer > 0) {
+            vars.trace.pulledConsolidationCoverageFunds = _pullConsolidationCoverageFunds(consolidationBuffer);
+            if (vars.trace.pulledConsolidationCoverageFunds > 0) {
+                // we update the consolidation buffer
+                _setConsolidationBuffer(
+                    consolidationBuffer, consolidationBuffer - vars.trace.pulledConsolidationCoverageFunds
+                );
+            }
         }
 
         // if our rewards are not null, we dispatch the fee to the collector

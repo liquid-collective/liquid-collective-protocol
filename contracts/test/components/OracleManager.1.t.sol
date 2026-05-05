@@ -13,6 +13,11 @@ import "../../src/state/shared/AdministratorAddress.sol";
 import "../../src/state/river/DepositedValidatorCount.sol";
 
 contract OracleManagerV1ExposeInitializer is OracleManagerV1 {
+    function _setConsolidationBuffer(uint256 _oldConsolidationBuffer, uint256 _newConsolidationBuffer)
+        internal
+        override
+    {}
+
     function supersedeReportedBalanceSum(uint256 amount) external {
         LastConsensusLayerReport.get().validatorsBalance = amount;
     }
