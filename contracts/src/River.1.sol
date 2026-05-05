@@ -129,8 +129,16 @@ contract RiverV1 is
     }
 
     /// @inheritdoc IRiverV1
-    function initRiverV1_3(bytes32 withdrawalCredentails) external init(3) onlyAdmin {
+    function initRiverV1_3(bytes32 withdrawalCredentails, address _consolidationCoverageFund)
+        external
+        init(3)
+        onlyAdmin
+    {
         initConsensusLayerDepositManagerV2(withdrawalCredentails);
+
+        ConsolidationCoverageFundAddress.set(_consolidationCoverageFund);
+        emit SetConsolidationCoverageFund(_consolidationCoverageFund);
+
         IOracleManagerV1.StoredConsensusLayerReport storage lastReport = LastConsensusLayerReport.get();
         uint32 clValidatorCount = lastReport.validatorsCount;
         uint256 depositedValidatorCount = DepositedValidatorCount.get();
@@ -437,9 +445,6 @@ contract RiverV1 is
     function _pullConsolidationCoverageFunds(uint256 _max) internal override returns (uint256) {
         address consolidationCoverageFund = ConsolidationCoverageFundAddress.get();
         if (consolidationCoverageFund == address(0)) {
-            return 0;
-        }
-        if (consolidationCoverageFund.balance == 0) {
             return 0;
         }
         uint256 initialBalance = address(this).balance;

@@ -142,7 +142,7 @@ abstract contract AccountingHarnessBase is Test, BytesGenerator {
         );
         river.initRiverV1_2();
         vm.startPrank(admin);
-        river.initRiverV1_3(withdraw.getCredentials());
+        river.initRiverV1_3(withdraw.getCredentials(), address(0));
         vm.stopPrank();
 
         withdraw.initializeWithdrawV1(address(river));

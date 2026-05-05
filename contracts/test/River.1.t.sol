@@ -2602,7 +2602,7 @@ contract RiverV1CoverageTests is RiverV1TestBase {
         vm.store(address(river), DEPOSITED_VALIDATOR_COUNT_SLOT, bytes32(uint256(10)));
         vm.store(address(river), bytes32(uint256(LAST_CLR_BASE_SLOT) + 5), bytes32(uint256(7)));
         vm.prank(admin);
-        river.initRiverV1_3(withdrawalCredentials);
+        river.initRiverV1_3(withdrawalCredentials, address(consolidationCoverageFund));
         assertEq(river.getTotalDepositedETH(), 10 * 32 ether);
         assertEq(uint256(vm.load(address(river), IN_FLIGHT_DEPOSIT_SLOT)), 3 * 32 ether);
     }
@@ -2613,7 +2613,7 @@ contract RiverV1CoverageTests is RiverV1TestBase {
         vm.store(address(river), DEPOSITED_VALIDATOR_COUNT_SLOT, bytes32(uint256(5)));
         vm.store(address(river), bytes32(uint256(LAST_CLR_BASE_SLOT) + 5), bytes32(uint256(5)));
         vm.prank(admin);
-        river.initRiverV1_3(withdrawalCredentials);
+        river.initRiverV1_3(withdrawalCredentials, address(consolidationCoverageFund));
         assertEq(river.getTotalDepositedETH(), 5 * 32 ether);
         assertEq(uint256(vm.load(address(river), IN_FLIGHT_DEPOSIT_SLOT)), 0);
     }
