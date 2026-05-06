@@ -75,13 +75,11 @@ contract OperatorsMigrationV1ToV2 is Test {
 
         OperatorsRegistryV1 or = OperatorsRegistryV1(OPERATORS_REGISTRY_MAINNET_ADDRESS);
 
-        // Run V1_2 migration (V2 → V3 struct, drops limit/keys/latestKeysEditBlockNumber)
-        vm.prank(OPERATORS_REGISTRY_MAINNET_PROXY_ADMIN_ADDRESS);
-        ITransparentUpgradeableProxy(address(orProxy))
-            .upgradeToAndCall(
-                address(migrationImplementation),
-                abi.encodeWithSelector(OperatorsRegistryV1.initOperatorsRegistryV1_2.selector)
-            );
+        // Run V1_2 migration (V2 → V3 struct, drops limit/keys/latestKeysEditBlockNumber).
+        // The implementation is already upgraded above; initOperatorsRegistryV1_2 is `onlyAdmin`,
+        // so it must be called from the registry admin (distinct from the proxy admin).
+        vm.prank(OperatorsRegistryV1(address(orProxy)).getAdmin());
+        OperatorsRegistryV1(address(orProxy)).initOperatorsRegistryV1_2();
 
         assertEq(or.getOperatorCount(), 3);
         {
