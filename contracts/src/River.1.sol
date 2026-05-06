@@ -472,7 +472,11 @@ contract RiverV1 is
         return _getSlashingContainmentMode();
     }
 
-    /// @notice Reverts if slashing containment mode is currently active
+    /// @notice Reverts if slashing containment mode is currently active.
+    /// @dev Slashing containment is designed to pause new validator funding and shareholder churn
+    /// @dev (deposits, redeems, exit requests, balance-to-deposit commitment) to limit protocol
+    /// @dev exposure during a slashing event. The reward-pull pipeline (EL fees, CL skimming,
+    /// @dev coverage funds) continues to operate normally, as those flows reduce — not increase — risk.
     modifier whenNotSlashingContainmentMode() {
         if (_getSlashingContainmentMode()) {
             revert SlashingContainmentModeEnabled();
@@ -584,6 +588,8 @@ contract RiverV1 is
     ) internal override {
         IOperatorsRegistryV1(OperatorsRegistryAddress.get()).reportExitedETH(_exitedETH, TotalDepositedETH.get());
 
+        // When slashing containment mode is active, skip exit demand logic to avoid forcing additional
+        // validator exits during a slashing event. The reward-pull pipeline is unaffected by this check.
         if (_slashingContainmentModeEnabled) {
             return;
         }
@@ -650,6 +656,8 @@ contract RiverV1 is
     /// @notice This two step process is required to prevent possible out of gas issues we would have from actually funding the validators at this point
     /// @param _period The period between current and last report
     function _commitBalanceToDeposit(uint256 _period, bool _slashingContainmentModeEnabled) internal override {
+        // When slashing containment mode is active, skip new validator funding to prevent compounding
+        // losses. The deposit buffer remains available for redeem rebalancing but nothing is committed.
         if (_slashingContainmentModeEnabled) {
             return;
         }

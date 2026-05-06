@@ -102,6 +102,8 @@ abstract contract ConsensusLayerDepositManagerV1 is IConsensusLayerDepositManage
         if (msg.sender != KeeperAddress.get()) {
             revert OnlyKeeper();
         }
+        // Deposits to the consensus layer are blocked during slashing containment to prevent
+        // funding new validators while the protocol is managing a slashing event.
         if (_getSlashingContainmentMode()) {
             revert SlashingContainmentModeEnabled();
         }
