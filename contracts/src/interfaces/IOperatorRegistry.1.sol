@@ -149,6 +149,12 @@ interface IOperatorsRegistryV1 {
     /// @notice Thrown when the provided active CL ETH array length does not match the operator count
     error InvalidActiveCLETHArrayLength();
 
+    /// @notice Thrown when the operator state is invalid
+    /// @param index The operator index
+    /// @param funded The funded ETH(wei) amount
+    /// @param requestedExits The requested ETH(wei) amount
+    error InvalidOperatorState(uint256 index, uint256 funded, uint256 requestedExits);
+
     /// @notice Initializes the operators registry
     /// @param _admin Admin in charge of managing operators
     /// @param _river Address of River system

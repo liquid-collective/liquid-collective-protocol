@@ -49,6 +49,9 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
         uint256 opCount = OperatorsV2.getCount();
         for (uint256 idx = 0; idx < opCount; ++idx) {
             OperatorsV2.Operator memory operator = OperatorsV2.get(idx);
+            if (operator.funded < operator.requestedExits) {
+                revert InvalidOperatorState(idx, operator.funded, operator.requestedExits);
+            }
             OperatorsV3.push(
                 OperatorsV3.Operator({
                     funded: operator.funded * DEPOSIT_SIZE,
