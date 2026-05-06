@@ -272,6 +272,30 @@ Creates a redeem request
 ### requestRedeem
 
 ```solidity
+function requestRedeem(uint256 _lsETHAmount, address _recipient, address _initiator) external nonpayable returns (uint32 redeemRequestId)
+```
+
+Creates a redeem request
+
+
+
+#### Parameters
+
+| Name | Type | Description |
+|---|---|---|
+| _lsETHAmount | uint256 | The amount of LsETH to redeem |
+| _recipient | address | The recipient owning the redeem request |
+| _initiator | address | The initiator of the request |
+
+#### Returns
+
+| Name | Type | Description |
+|---|---|---|
+| redeemRequestId | uint32 | The id of the redeem request |
+
+### requestRedeem
+
+```solidity
 function requestRedeem(uint256 _lsETHAmount) external nonpayable returns (uint32 redeemRequestId)
 ```
 
@@ -554,6 +578,17 @@ Thrown when the provided redeem request id is out of bounds
 | Name | Type | Description |
 |---|---|---|
 | id | uint256 | The redeem request id |
+
+### SlashingContainmentModeEnabled
+
+```solidity
+error SlashingContainmentModeEnabled()
+```
+
+Thrown when an action is blocked because slashing containment mode is active
+
+
+
 
 ### TransferError
 

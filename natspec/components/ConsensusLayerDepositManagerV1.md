@@ -4,7 +4,7 @@
 
 > Consensus Layer Deposit Manager (v1)
 
-This contract handles the interactions with the official deposit contract, funding all validatorsWhenever a deposit to the consensus layer is requested, this contract computed the amount of keysthat could be deposited depending on the amount available in the contract. It then tries to retrievevalidator keys by calling its internal virtual method _getNextValidators. This method should beoverridden by the implementing contract to provide [0; _keyCount] keys when invoked.
+This contract handles the interactions with the official deposit contract, funding all validatorsWhenever a deposit to the consensus layer is requested, this contract computed the amount of keysthat could be deposited depending on the amount available in the contract. It then tries to retrievevalidator keys by calling its internal virtual method _getNextValidators. This method should beoverridden by the implementing contract to provide keys based on the allocation when invoked.
 
 
 
@@ -64,10 +64,10 @@ Size of a BLS Signature in bytes
 ### depositToConsensusLayerWithDepositRoot
 
 ```solidity
-function depositToConsensusLayerWithDepositRoot(uint256 _maxCount, bytes32 _depositRoot) external nonpayable
+function depositToConsensusLayerWithDepositRoot(IOperatorsRegistryV1.OperatorAllocation[] _allocations, bytes32 _depositRoot) external nonpayable
 ```
 
-Deposits current balance to the Consensus Layer by batches of 32 ETH
+
 
 
 
@@ -75,8 +75,8 @@ Deposits current balance to the Consensus Layer by batches of 32 ETH
 
 | Name | Type | Description |
 |---|---|---|
-| _maxCount | uint256 | The maximum amount of validator keys to fund |
-| _depositRoot | bytes32 | The root of the deposit tree |
+| _allocations | IOperatorsRegistryV1.OperatorAllocation[] | undefined |
+| _depositRoot | bytes32 | undefined |
 
 ### getBalanceToDeposit
 
@@ -200,6 +200,22 @@ Emitted when the deposited validator count is updated
 | oldDepositedValidatorCount  | uint256 | The old deposited validator count value |
 | newDepositedValidatorCount  | uint256 | The new deposited validator count value |
 
+### SetKeeper
+
+```solidity
+event SetKeeper(address indexed keeper)
+```
+
+Emitted when the keeper address is updated
+
+
+
+#### Parameters
+
+| Name | Type | Description |
+|---|---|---|
+| keeper `indexed` | address | The new keeper address |
+
 ### SetWithdrawalCredentials
 
 ```solidity
@@ -275,17 +291,6 @@ The received count of public keys to deposit is invalid
 
 
 
-### InvalidSignatureCount
-
-```solidity
-error InvalidSignatureCount()
-```
-
-The received count of signatures to deposit is invalid
-
-
-
-
 ### InvalidWithdrawalCredentials
 
 ```solidity
@@ -326,6 +331,28 @@ error OnlyKeeper()
 ```
 
 
+
+
+
+
+### OperatorAllocationsExceedCommittedBalance
+
+```solidity
+error OperatorAllocationsExceedCommittedBalance()
+```
+
+The operator allocations exceed the committed balance
+
+
+
+
+### SlashingContainmentModeEnabled
+
+```solidity
+error SlashingContainmentModeEnabled()
+```
+
+Deposits are blocked while slashing containment mode is active
 
 
 
