@@ -137,7 +137,7 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
         uint256[] memory rawExitedETH = OperatorsV3.getExitedETH();
         uint256 listLength = rawExitedETH.length;
         if (listLength > 0) {
-            assembly {
+            assembly ("memory-safe") {
                 // no need to use free memory pointer as we reuse the same memory range
 
                 // erase previous word storing length
