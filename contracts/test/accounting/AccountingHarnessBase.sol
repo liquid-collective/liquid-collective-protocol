@@ -8,6 +8,7 @@ import "../utils/LibImplementationUnbricker.sol";
 import "../mocks/DepositContractMock.sol";
 
 import "../../src/River.1.sol";
+import "../../src/AttestationValidator.1.sol";
 import "../../src/Oracle.1.sol";
 import "../../src/OperatorsRegistry.1.sol";
 import "../../src/Allowlist.1.sol";
@@ -24,7 +25,7 @@ import "../../src/libraries/LibAllowlistMasks.sol";
 import "../../src/state/river/InFlightDeposit.sol";
 import "../../src/state/river/CommittedBalance.sol";
 import "../../src/state/river/BalanceToDeposit.sol";
-import "../../src/state/river/DepositDomainValue.sol";
+import "../../src/state/attestationValidator/DepositDomainValue.sol";
 import "../../src/state/operatorsRegistry/Operators.3.sol";
 
 // -----------------------------------------------------------------------
@@ -98,6 +99,7 @@ abstract contract AccountingHarnessBase is Test, BytesGenerator {
     WithdrawV1 internal withdraw;
     IDepositContract internal depositContract;
     AccountingMockDepositDataBuffer internal depositBuffer;
+    AttestationValidatorV1 internal attestationValidator;
 
     // ─── attestation ──────────────────────────────────────────────────────────
     uint256 internal constant ATTESTER_PK_1 = 0xA1;
@@ -197,16 +199,31 @@ abstract contract AccountingHarnessBase is Test, BytesGenerator {
             MAX_DAILY_REL
         );
         river.initRiverV1_2();
-        // 3 attesters with threshold=2 (threshold must be strictly less than attester count)
+        // 3 attesters with quorum=2 (quorum must be ≤ attester count and ≤ MAX_SIGNATURES)
         address[] memory _initAttesters = new address[](3);
         _initAttesters[0] = attester1;
         _initAttesters[1] = attester2;
         _initAttesters[2] = attester3;
+
+        // Deploy and initialize the AttestationValidator sibling contract that River
+        // delegates attestation+BLS verification to. EIP-712 verifyingContract is
+        // pinned to River's address inside the validator's domain separator.
+        attestationValidator = new AttestationValidatorV1();
+        LibImplementationUnbricker.unbrick(vm, address(attestationValidator));
+        attestationValidator.initAttestationValidatorV1(
+            address(river), address(depositContract), address(depositBuffer), _initAttesters, 2, bytes4(0)
+        );
+
         bytes32 _initWc = withdraw.getCredentials();
         vm.prank(admin);
-        river.initRiverV1_3(_initWc, address(depositBuffer), _initAttesters, 2, bytes4(0));
-        // Mock BLS verification: EIP-2537 precompiles are unavailable in Foundry.
-        vm.mockCall(address(river), abi.encodeWithSelector(river.verifyBLSDeposit.selector), bytes(""));
+        river.initRiverV1_3(_initWc, address(attestationValidator));
+        // Mock BLS verification on the validator: EIP-2537 precompiles are unavailable
+        // in Foundry's default EVM.
+        vm.mockCall(
+            address(attestationValidator),
+            abi.encodeWithSelector(attestationValidator.verifyBLSDeposit.selector),
+            bytes("")
+        );
 
         withdraw.initializeWithdrawV1(address(river));
         elFeeRecipient.initELFeeRecipientV1(address(river));

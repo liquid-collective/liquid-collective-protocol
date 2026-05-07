@@ -2,6 +2,11 @@
 solc_version = "0.8.34"
 optimizer = true
 optimizer_runs = 100
+# via_ir enabled to shrink RiverV1 deployed bytecode by ~3.7 KB after the
+# AttestationValidator extraction. RiverV1 is still ~0.8 KB over the EIP-170
+# limit; further extraction (OracleManager surface, component flattening) is
+# tracked as follow-on work.
+via_ir = true
 
 # Disable optimizer for coverage so branch/line attribution for removeValidators is correct
 [profile.coverage]

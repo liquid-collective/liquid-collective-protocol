@@ -7,7 +7,7 @@ import "../../libraries/LibUnstructuredStorage.sol";
 /// @notice Library for storing the address of the DepositDataBuffer contract.
 library DepositDataBufferAddress {
     bytes32 internal constant DEPOSIT_DATA_BUFFER_ADDRESS_SLOT =
-        bytes32(uint256(keccak256("river.state.depositDataBufferAddress")) - 1);
+        bytes32(uint256(keccak256("attestationValidator.state.depositDataBufferAddress")) - 1);
 
     /// @notice Retrieve the address of the DepositDataBuffer contract
     /// @return The address of the DepositDataBuffer contract

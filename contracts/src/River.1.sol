@@ -18,15 +18,10 @@ import "./Administrable.sol";
 
 import "./libraries/LibAllowlistMasks.sol";
 import "./libraries/LibErrors.sol";
-import "./libraries/BLS12_381.sol";
 import "./interfaces/IDepositDataBuffer.sol";
 
 import "./state/river/AllowlistAddress.sol";
-import "./state/river/DepositDataBufferAddress.sol";
-import "./state/river/AttestationQuorum.sol";
-import "./state/river/Attesters.sol";
-import "./state/river/DepositDomainValue.sol";
-import "./state/river/DomainSeparator.sol";
+import "./state/river/AttestationValidatorAddress.sol";
 import "./state/river/RedeemManagerAddress.sol";
 import "./state/river/OperatorsRegistryAddress.sol";
 import "./state/river/CollectorAddress.sol";
@@ -135,25 +130,21 @@ contract RiverV1 is
     }
 
     /// @inheritdoc IRiverV1
-    function initRiverV1_3(
-        bytes32 _withdrawalCredentials,
-        address _depositDataBuffer,
-        address[] calldata _attesters,
-        uint256 _quorum,
-        bytes4 _genesisForkVersion
-    ) external init(3) onlyAdmin {
-        if (_withdrawalCredentials == bytes32(0) || _depositDataBuffer == address(0)) {
-            revert LibErrors.InvalidZeroAddress();
-        }
-        if (_attesters.length == 0 || _attesters.length > MAX_ATTESTERS) revert LibErrors.InvalidArgument();
-        if (_quorum == 0) revert ZeroQuorum();
-        if (_quorum > MAX_SIGNATURES) {
-            revert QuorumExceedsMaxSignatures(_quorum, MAX_SIGNATURES);
-        }
+    function initRiverV1_3(bytes32 _withdrawalCredentials, address _attestationValidator)
+        external
+        init(3)
+        onlyAdmin
+    {
+        if (_withdrawalCredentials == bytes32(0)) revert InvalidWithdrawalCredentials();
+        if (_attestationValidator == address(0)) revert LibErrors.InvalidZeroAddress();
 
         ConsensusLayerDepositManagerV1.initConsensusLayerDepositManagerV1_2(
             DepositContractAddress.get(), _withdrawalCredentials
         );
+
+        AttestationValidatorAddress.set(_attestationValidator);
+        emit SetAttestationValidator(_attestationValidator);
+
         // accounting changes to move from 0x01 to 0x02 accounting
         IOracleManagerV1.StoredConsensusLayerReport storage lastReport = LastConsensusLayerReport.get();
         uint32 clValidatorCount = lastReport.validatorsCount;
@@ -175,34 +166,6 @@ contract RiverV1 is
         // we subtract the in flight ETH to get the total deposited activated ETH
         storedReport.totalDepositedActivatedETH = depositedValidatorCount * DEPOSIT_SIZE - InFlightDeposit.get();
         LastConsensusLayerReport.set(storedReport);
-
-        // Deposit Security Attestation Committee Setup
-        DepositDataBufferAddress.set(_depositDataBuffer);
-        emit SetDepositDataBuffer(_depositDataBuffer);
-
-        bytes32 depositDomain = BLS12_381.computeDepositDomain(_genesisForkVersion);
-        DepositDomainValue.set(depositDomain);
-        emit SetDepositDomain(depositDomain);
-
-        for (uint256 i = 0; i < _attesters.length; i++) {
-            if (_attesters[i] == address(0)) revert LibErrors.InvalidZeroAddress();
-            if (!Attesters.isAttester(_attesters[i])) {
-                Attesters.setAttester(_attesters[i], true);
-                Attesters.setCount(Attesters.getCount() + 1);
-                emit SetAttester(_attesters[i], true);
-            }
-        }
-        uint256 attesterCount = Attesters.getCount();
-        if (_quorum > attesterCount) {
-            revert QuorumExceedsAttesterCount(_quorum, attesterCount);
-        }
-        AttestationQuorum.set(_quorum);
-        emit SetAttestationQuorum(_quorum);
-
-        bytes32 domainSeparator =
-            keccak256(abi.encode(EIP712_DOMAIN_TYPEHASH, NAME_HASH, VERSION_HASH, block.chainid, address(this)));
-        DomainSeparator.set(domainSeparator);
-        emit SetDomainSeparator(domainSeparator);
     }
 
     /// @inheritdoc IRiverV1

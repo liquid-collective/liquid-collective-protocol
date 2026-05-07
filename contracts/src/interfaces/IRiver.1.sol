@@ -162,21 +162,12 @@ interface IRiverV1 is IConsensusLayerDepositManagerV1, IUserDepositManagerV1, IS
     ) external;
 
     /// @notice Initializes version 1.3 of the River System. Performs the Pectra accounting migration,
-    ///         updates the withdrawal credentials, and wires the deposit security committee (attesters,
-    ///         quorum, buffer, domain) in a single admin-gated transaction so there is no race window
-    ///         on the attestation trust anchor.
+    ///         updates the withdrawal credentials, and wires the AttestationValidator sibling contract
+    ///         that River delegates attestation-quorum + BLS verification to. The validator must be
+    ///         deployed and initialized with this River's address before this initializer runs.
     /// @param _withdrawalCredentials The withdrawal credentials to apply to all deposits
-    /// @param _depositDataBuffer The address of the deposit data buffer
-    /// @param _attesters The list of attesters to add
-    /// @param _quorum The attestation quorum
-    /// @param _genesisForkVersion The genesis fork version for computing the deposit domain
-    function initRiverV1_3(
-        bytes32 _withdrawalCredentials,
-        address _depositDataBuffer,
-        address[] calldata _attesters,
-        uint256 _quorum,
-        bytes4 _genesisForkVersion
-    ) external;
+    /// @param _attestationValidator The pre-initialized AttestationValidator contract address
+    function initRiverV1_3(bytes32 _withdrawalCredentials, address _attestationValidator) external;
 
     /// @notice Get the current global fee
     /// @return The global fee
