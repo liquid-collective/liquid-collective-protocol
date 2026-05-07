@@ -2679,12 +2679,13 @@ contract RiverV1CoverageTests is RiverV1TestBase {
         // 10 deposited validators, 7 reported -> 3 in flight.
         vm.store(address(river), DEPOSITED_VALIDATOR_COUNT_SLOT, bytes32(uint256(10)));
         vm.store(address(river), bytes32(uint256(LAST_CLR_BASE_SLOT) + 5), bytes32(uint256(7)));
-        vm.prank(admin);
+        bytes32 wc = withdraw.getCredentials();
         // threshold must be strictly less than attester count
         address[] memory _attesters_ = new address[](2);
         _attesters_[0] = makeAddr("attester1");
         _attesters_[1] = makeAddr("attester2");
-        river.initRiverV1_3(makeAddr("depositBuffer"), _attesters_, 1, bytes4(0));
+        vm.prank(admin);
+        river.initRiverV1_3(wc, makeAddr("depositBuffer"), _attesters_, 1, bytes4(0));
         assertEq(river.getTotalDepositedETH(), 10 * 32 ether);
         assertEq(uint256(vm.load(address(river), IN_FLIGHT_DEPOSIT_SLOT)), 3 * 32 ether);
     }
@@ -2694,22 +2695,24 @@ contract RiverV1CoverageTests is RiverV1TestBase {
         _initRiverAndV1_2();
         vm.store(address(river), DEPOSITED_VALIDATOR_COUNT_SLOT, bytes32(uint256(5)));
         vm.store(address(river), bytes32(uint256(LAST_CLR_BASE_SLOT) + 5), bytes32(uint256(5)));
-        vm.prank(admin);
+        bytes32 wc = withdraw.getCredentials();
         // threshold must be strictly less than attester count
         address[] memory _attesters_ = new address[](2);
         _attesters_[0] = makeAddr("attester1");
         _attesters_[1] = makeAddr("attester2");
-        river.initRiverV1_3(makeAddr("depositBuffer"), _attesters_, 1, bytes4(0));
+        vm.prank(admin);
+        river.initRiverV1_3(wc, makeAddr("depositBuffer"), _attesters_, 1, bytes4(0));
         assertEq(river.getTotalDepositedETH(), 5 * 32 ether);
         assertEq(uint256(vm.load(address(river), IN_FLIGHT_DEPOSIT_SLOT)), 0);
     }
 
     function testInitRiverV1_3RevertsOnEmptyAttesters() public {
         _initRiverAndV1_2();
-        vm.prank(admin);
+        bytes32 wc = withdraw.getCredentials();
         address[] memory _attesters_ = new address[](0);
+        vm.prank(admin);
         vm.expectRevert(abi.encodeWithSignature("InvalidArgument()"));
-        river.initRiverV1_3(makeAddr("depositBuffer"), _attesters_, 1, bytes4(0));
+        river.initRiverV1_3(wc, makeAddr("depositBuffer"), _attesters_, 1, bytes4(0));
     }
 
     /// Asserts that a consensus layer report succeeds when no coverage fund is configured (pull is skipped).

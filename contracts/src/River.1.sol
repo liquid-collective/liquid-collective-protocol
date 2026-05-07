@@ -81,7 +81,7 @@ contract RiverV1 is
         OperatorsRegistryAddress.set(_operatorRegistryAddress);
         emit SetOperatorsRegistry(_operatorRegistryAddress);
 
-        ConsensusLayerDepositManagerV1.initConsensusLayerDepositManagerV1(
+        ConsensusLayerDepositManagerV1.initConsensusLayerDepositManagerV1_2(
             _depositContractAddress, _withdrawalCredentials
         );
 
@@ -136,18 +136,24 @@ contract RiverV1 is
 
     /// @inheritdoc IRiverV1
     function initRiverV1_3(
+        bytes32 _withdrawalCredentials,
         address _depositDataBuffer,
         address[] calldata _attesters,
         uint256 _quorum,
         bytes4 _genesisForkVersion
     ) external init(3) onlyAdmin {
-        if (_depositDataBuffer == address(0)) revert LibErrors.InvalidZeroAddress();
+        if (_withdrawalCredentials == bytes32(0) || _depositDataBuffer == address(0)) {
+            revert LibErrors.InvalidZeroAddress();
+        }
         if (_attesters.length == 0) revert LibErrors.InvalidArgument();
         if (_quorum == 0) revert ZeroQuorum();
         if (_quorum > MAX_SIGNATURES) {
             revert QuorumExceedsMaxSignatures(_quorum, MAX_SIGNATURES);
         }
 
+        ConsensusLayerDepositManagerV1.initConsensusLayerDepositManagerV1_2(
+            DepositContractAddress.get(), _withdrawalCredentials
+        );
         // accounting changes to move from 0x01 to 0x02 accounting
         IOracleManagerV1.StoredConsensusLayerReport storage lastReport = LastConsensusLayerReport.get();
         uint32 clValidatorCount = lastReport.validatorsCount;

@@ -125,7 +125,7 @@ contract AttestationDepositHarness is ConsensusLayerDepositManagerV1 {
     // -- Public admin helpers for test setup ----------------------------------
 
     function initialize(address depositContract_, bytes32 wc_) external {
-        initConsensusLayerDepositManagerV1(depositContract_, wc_);
+        initConsensusLayerDepositManagerV1_2(depositContract_, wc_);
     }
 
     function sudoSetKeeper(address k) external {
