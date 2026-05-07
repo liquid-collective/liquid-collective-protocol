@@ -8,6 +8,7 @@ import "./OperatorAllocationTestBase.sol";
 import "./utils/UserFactory.sol";
 import "./utils/BytesGenerator.sol";
 import "./utils/LibImplementationUnbricker.sol";
+import "./utils/RiverV1WithLegacyInit.sol";
 import "./mocks/DepositContractMock.sol";
 
 import "../src/libraries/LibAllowlistMasks.sol";
@@ -76,7 +77,7 @@ contract OperatorsRegistryWithOverridesV1 is OperatorsRegistryV1 {
 
 // OperatorsRegistryWithOverridesV1 removed: _setStoppedValidatorCounts no longer exists
 
-contract RiverV1ForceCommittable is RiverV1 {
+contract RiverV1ForceCommittable is RiverV1WithLegacyInit {
     function debug_moveDepositToCommitted() external {
         _setCommittedBalance(CommittedBalance.get() + BalanceToDeposit.get());
         _setBalanceToDeposit(0);

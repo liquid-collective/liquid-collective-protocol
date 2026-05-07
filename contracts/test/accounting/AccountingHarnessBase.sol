@@ -9,6 +9,7 @@ import "../mocks/DepositContractMock.sol";
 
 import "../../src/River.1.sol";
 import "../../src/AttestationValidator.1.sol";
+import "../utils/RiverV1WithLegacyInit.sol";
 import "../../src/Oracle.1.sol";
 import "../../src/OperatorsRegistry.1.sol";
 import "../../src/Allowlist.1.sol";
@@ -67,7 +68,7 @@ contract AccountingTestOperatorsRegistry is OperatorsRegistryV1 {
 }
 
 /// @dev Test-only River subclass exposing InFlightDeposit and debug helpers.
-contract AccountingRiverV1 is RiverV1 {
+contract AccountingRiverV1 is RiverV1WithLegacyInit {
     function getInFlightDeposit() external view returns (uint256) {
         return InFlightDeposit.get();
     }

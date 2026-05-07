@@ -115,52 +115,6 @@ interface IRiverV1 is IConsensusLayerDepositManagerV1, IUserDepositManagerV1, IS
     /// @param account The account that was denied
     error Denied(address account);
 
-    /// @notice Initializes the River system
-    /// @param _depositContractAddress Address to make Consensus Layer deposits
-    /// @param _elFeeRecipientAddress Address that receives the execution layer fees
-    /// @param _withdrawalCredentials Credentials to use for every validator deposit
-    /// @param _oracleAddress The address of the Oracle contract
-    /// @param _systemAdministratorAddress Administrator address
-    /// @param _allowlistAddress Address of the allowlist contract
-    /// @param _operatorRegistryAddress Address of the operator registry
-    /// @param _collectorAddress Address receiving the the global fee on revenue
-    /// @param _globalFee Amount retained when the ETH balance increases and sent to the collector
-    function initRiverV1(
-        address _depositContractAddress,
-        address _elFeeRecipientAddress,
-        bytes32 _withdrawalCredentials,
-        address _oracleAddress,
-        address _systemAdministratorAddress,
-        address _allowlistAddress,
-        address _operatorRegistryAddress,
-        address _collectorAddress,
-        uint256 _globalFee
-    ) external;
-
-    /// @notice Initialized version 1.1 of the River System
-    /// @param _redeemManager The redeem manager address
-    /// @param _epochsPerFrame The amounts of epochs in a frame
-    /// @param _slotsPerEpoch The slots inside an epoch
-    /// @param _secondsPerSlot The seconds inside a slot
-    /// @param _genesisTime The genesis timestamp
-    /// @param _epochsToAssumedFinality The number of epochs before an epoch is considered final on-chain
-    /// @param _annualAprUpperBound The reporting upper bound
-    /// @param _relativeLowerBound The reporting lower bound
-    /// @param _maxDailyNetCommittableAmount_ The net daily committable limit
-    /// @param _maxDailyRelativeCommittableAmount_ The relative daily committable limit
-    function initRiverV1_1(
-        address _redeemManager,
-        uint64 _epochsPerFrame,
-        uint64 _slotsPerEpoch,
-        uint64 _secondsPerSlot,
-        uint64 _genesisTime,
-        uint64 _epochsToAssumedFinality,
-        uint256 _annualAprUpperBound,
-        uint256 _relativeLowerBound,
-        uint128 _maxDailyNetCommittableAmount_,
-        uint128 _maxDailyRelativeCommittableAmount_
-    ) external;
-
     /// @notice Initializes version 1.3 of the River System. Performs the Pectra accounting migration,
     ///         updates the withdrawal credentials, and wires the AttestationValidator sibling contract
     ///         that River delegates attestation-quorum + BLS verification to. The validator must be
