@@ -18,6 +18,7 @@ import "./Administrable.sol";
 
 import "./libraries/LibAllowlistMasks.sol";
 import "./libraries/LibErrors.sol";
+import "./libraries/LibRiverV1_3InitMigration.sol";
 import "./interfaces/IDepositDataBuffer.sol";
 
 import "./state/river/AllowlistAddress.sol";
@@ -138,34 +139,9 @@ contract RiverV1 is
         if (_withdrawalCredentials == bytes32(0)) revert InvalidWithdrawalCredentials();
         if (_attestationValidator == address(0)) revert LibErrors.InvalidZeroAddress();
 
-        ConsensusLayerDepositManagerV1.initConsensusLayerDepositManagerV1_2(
-            DepositContractAddress.get(), _withdrawalCredentials
-        );
-
-        AttestationValidatorAddress.set(_attestationValidator);
-        emit SetAttestationValidator(_attestationValidator);
-
-        // accounting changes to move from 0x01 to 0x02 accounting
-        IOracleManagerV1.StoredConsensusLayerReport storage lastReport = LastConsensusLayerReport.get();
-        uint32 clValidatorCount = lastReport.validatorsCount;
-        uint256 depositedValidatorCount = DepositedValidatorCount.get();
-        TotalDepositedETH.set(depositedValidatorCount * DEPOSIT_SIZE);
-        if (clValidatorCount < depositedValidatorCount) {
-            InFlightDeposit.set((depositedValidatorCount - clValidatorCount) * DEPOSIT_SIZE);
-        }
-
-        IOracleManagerV1.StoredConsensusLayerReport memory storedReport;
-        storedReport.epoch = lastReport.epoch;
-        storedReport.validatorsBalance = lastReport.validatorsBalance;
-        storedReport.validatorsSkimmedBalance = lastReport.validatorsSkimmedBalance;
-        storedReport.validatorsExitedBalance = lastReport.validatorsExitedBalance;
-        storedReport.validatorsExitingBalance = lastReport.validatorsExitingBalance;
-        storedReport.validatorsCount = clValidatorCount;
-        storedReport.rebalanceDepositToRedeemMode = lastReport.rebalanceDepositToRedeemMode;
-        storedReport.slashingContainmentMode = lastReport.slashingContainmentMode;
-        // we subtract the in flight ETH to get the total deposited activated ETH
-        storedReport.totalDepositedActivatedETH = depositedValidatorCount * DEPOSIT_SIZE - InFlightDeposit.get();
-        LastConsensusLayerReport.set(storedReport);
+        // Whole init body lives in an external library: its bytecode is not duplicated
+        // inside River; this upgrade runs once but would otherwise live in River forever.
+        LibRiverV1_3InitMigration.runInitV1_3(_withdrawalCredentials, _attestationValidator, DEPOSIT_SIZE);
     }
 
     /// @inheritdoc IRiverV1

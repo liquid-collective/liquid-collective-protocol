@@ -1,12 +1,15 @@
 [profile.default]
 solc_version = "0.8.34"
 optimizer = true
-optimizer_runs = 100
-# via_ir enabled to shrink RiverV1 deployed bytecode by ~3.7 KB after the
-# AttestationValidator extraction. RiverV1 is still ~0.8 KB over the EIP-170
-# limit; further extraction (OracleManager surface, component flattening) is
-# tracked as follow-on work.
+# Lowered from 100 to fit RiverV1 under EIP-170 (24,576 bytes). Slight runtime
+# gas tradeoff for smaller deployed bytecode.
+optimizer_runs = 1
+# via_ir enabled to shrink RiverV1 deployed bytecode after the AttestationValidator
+# and V1.3-init-migration extractions.
 via_ir = true
+# Strip CBOR/IPFS metadata from the tail of every deployed contract. ~52 B per
+# contract; needed to land RiverV1 under the EIP-170 limit.
+bytecode_hash = "none"
 
 # Disable optimizer for coverage so branch/line attribution for removeValidators is correct
 [profile.coverage]
