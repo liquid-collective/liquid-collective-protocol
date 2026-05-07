@@ -142,11 +142,11 @@ contract RiverV1 is
         bytes4 _genesisForkVersion
     ) external init(3) onlyAdmin {
         if (_depositDataBuffer == address(0)) revert LibErrors.InvalidZeroAddress();
+        if (_attesters.length == 0) revert LibErrors.InvalidArgument();
         if (_quorum == 0) revert ZeroQuorum();
         if (_quorum > MAX_SIGNATURES) {
             revert QuorumExceedsMaxSignatures(_quorum, MAX_SIGNATURES);
         }
-        if (_attesters.length == 0) revert LibErrors.InvalidZeroAddress();
 
         // accounting changes to move from 0x01 to 0x02 accounting
         IOracleManagerV1.StoredConsensusLayerReport storage lastReport = LastConsensusLayerReport.get();

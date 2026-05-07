@@ -2704,6 +2704,14 @@ contract RiverV1CoverageTests is RiverV1TestBase {
         assertEq(uint256(vm.load(address(river), IN_FLIGHT_DEPOSIT_SLOT)), 0);
     }
 
+    function testInitRiverV1_3RevertsOnEmptyAttesters() public {
+        _initRiverAndV1_2();
+        vm.prank(admin);
+        address[] memory _attesters_ = new address[](0);
+        vm.expectRevert(abi.encodeWithSignature("InvalidArgument()"));
+        river.initRiverV1_3(makeAddr("depositBuffer"), _attesters_, 1, bytes4(0));
+    }
+
     /// Asserts that a consensus layer report succeeds when no coverage fund is configured (pull is skipped).
     function testPullCoverageFundsNoCoverageFund() public {
         _initRiverMinimalForReporting();
