@@ -2715,6 +2715,20 @@ contract RiverV1CoverageTests is RiverV1TestBase {
         river.initRiverV1_3(wc, makeAddr("depositBuffer"), _attesters_, 1, bytes4(0));
     }
 
+    /// Asserts that initRiverV1_3 reverts when the attesters array exceeds MAX_ATTESTERS.
+    function testInitRiverV1_3RevertsOnTooManyAttesters() public {
+        _initRiverAndV1_2();
+        bytes32 wc = withdraw.getCredentials();
+        uint256 tooMany = river.MAX_ATTESTERS() + 1;
+        address[] memory _attesters_ = new address[](tooMany);
+        for (uint256 i = 0; i < tooMany; i++) {
+            _attesters_[i] = address(uint160(i + 1));
+        }
+        vm.prank(admin);
+        vm.expectRevert(abi.encodeWithSignature("InvalidArgument()"));
+        river.initRiverV1_3(wc, makeAddr("depositBuffer"), _attesters_, 1, bytes4(0));
+    }
+
     /// Asserts that a consensus layer report succeeds when no coverage fund is configured (pull is skipped).
     function testPullCoverageFundsNoCoverageFund() public {
         _initRiverMinimalForReporting();

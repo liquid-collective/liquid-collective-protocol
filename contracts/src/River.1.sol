@@ -145,7 +145,7 @@ contract RiverV1 is
         if (_withdrawalCredentials == bytes32(0) || _depositDataBuffer == address(0)) {
             revert LibErrors.InvalidZeroAddress();
         }
-        if (_attesters.length == 0) revert LibErrors.InvalidArgument();
+        if (_attesters.length == 0 || _attesters.length > MAX_ATTESTERS) revert LibErrors.InvalidArgument();
         if (_quorum == 0) revert ZeroQuorum();
         if (_quorum > MAX_SIGNATURES) {
             revert QuorumExceedsMaxSignatures(_quorum, MAX_SIGNATURES);
