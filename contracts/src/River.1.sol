@@ -442,13 +442,6 @@ contract RiverV1 is
         }
 
         _incrementFundedETH(fundedETH, perOpKeys);
-
-        // Emit per-operator event
-        for (uint256 j = 0; j < buckets; j++) {
-            if (depositsCountPerOperator[j] > 0) {
-                emit FundedValidatorKeys(j, perOpKeys[j], false);
-            }
-        }
     }
 
     /// @notice Overridden handler called whenever a token transfer is triggered
