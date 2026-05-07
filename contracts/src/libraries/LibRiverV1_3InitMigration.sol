@@ -57,6 +57,10 @@ library LibRiverV1_3InitMigration {
         TotalDepositedETH.set(depositedValidatorCount * _depositSize);
         if (clValidatorCount < depositedValidatorCount) {
             InFlightDeposit.set((depositedValidatorCount - clValidatorCount) * _depositSize);
+        } else {
+            // explicit zero so a re-run on dirty storage cannot leak a stale value into
+            // the totalDepositedActivatedETH calculation below
+            InFlightDeposit.set(0);
         }
 
         IOracleManagerV1.StoredConsensusLayerReport memory storedReport;

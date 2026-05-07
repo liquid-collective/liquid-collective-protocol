@@ -1,6 +1,7 @@
 //SPDX-License-Identifier: BUSL-1.1
 pragma solidity 0.8.34;
 
+import "../../libraries/LibSanitize.sol";
 import "../../libraries/LibUnstructuredStorage.sol";
 
 /// @title DepositDataBufferAddress
@@ -18,6 +19,7 @@ library DepositDataBufferAddress {
     /// @notice Set the address of the DepositDataBuffer contract
     /// @param newValue The new address of the DepositDataBuffer contract
     function set(address newValue) internal {
+        LibSanitize._notZeroAddress(newValue);
         LibUnstructuredStorage.setStorageAddress(DEPOSIT_DATA_BUFFER_ADDRESS_SLOT, newValue);
     }
 }
