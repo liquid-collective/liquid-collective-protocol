@@ -3,7 +3,7 @@ solc_version = "0.8.34"
 optimizer = true
 # Lowered from 100 to fit RiverV1 under EIP-170 (24,576 bytes). Slight runtime
 # gas tradeoff for smaller deployed bytecode.
-optimizer_runs = 1
+optimizer_runs = 3
 # via_ir enabled to shrink RiverV1 deployed bytecode after the AttestationValidator
 # and V1.3-init-migration extractions.
 via_ir = true
