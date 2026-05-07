@@ -1,19 +1,32 @@
 //SPDX-License-Identifier: BUSL-1.1
 pragma solidity 0.8.34;
 
-import "../state/operatorsRegistry/Operators.2.sol";
+import "../state/operatorsRegistry/Operators.3.sol";
 
 /// @title Operators Registry Interface (v1)
 /// @author Alluvial Finance Inc.
-/// @notice This interface exposes methods to handle the list of operators and their keys
+/// @notice This interface exposes methods to handle the list of operators
 interface IOperatorsRegistryV1 {
-    /// @notice Structure representing an operator allocation for deposits or exits
+    /// @notice Structure representing a validator deposit
     /// @param operatorIndex The index of the operator
-    /// @param validatorCount The number of validators to deposit/exit for this operator
-    struct OperatorAllocation {
+    /// @param pubkey The BLS public key of the validator
+    /// @param signature The BLS signature of the validator
+    /// @param depositAmount The deposit amount in ETH(wei)
+    struct ValidatorDeposit {
         uint256 operatorIndex;
-        uint256 validatorCount;
+        bytes pubkey; // 48 bytes
+        bytes signature; // 96 bytes
+        uint256 depositAmount; // deposit amount in ETH(wei)
     }
+
+    /// @notice Structure representing an operator allocation for exits
+    /// @param operatorIndex The index of the operator
+    /// @param ethAmount The amount of ETH(wei) to exit for this operator
+    struct ExitETHAllocation {
+        uint256 operatorIndex;
+        uint256 ethAmount;
+    }
+
     /// @notice A new operator has been added to the registry
     /// @param index The operator index
     /// @param name The operator display name
@@ -25,16 +38,6 @@ interface IOperatorsRegistryV1 {
     /// @param active True if the operator is active
     event SetOperatorStatus(uint256 indexed index, bool active);
 
-    /// @notice The operator limit has been changed
-    /// @param index The operator index
-    /// @param newLimit The new operator staking limit
-    event SetOperatorLimit(uint256 indexed index, uint256 newLimit);
-
-    /// @notice The operator stopped validator count has been changed
-    /// @param index The operator index
-    /// @param newStoppedValidatorCount The new stopped validator count
-    event SetOperatorStoppedValidatorCount(uint256 indexed index, uint256 newStoppedValidatorCount);
-
     /// @notice The operator address has been changed
     /// @param index The operator index
     /// @param newOperatorAddress The new operator address
@@ -45,67 +48,45 @@ interface IOperatorsRegistryV1 {
     /// @param newName The new display name
     event SetOperatorName(uint256 indexed index, string newName);
 
-    /// @notice The operator or the admin added new validator keys and signatures
-    /// @dev The public keys and signatures are concatenated
-    /// @dev A public key is 48 bytes long
-    /// @dev A signature is 96 bytes long
-    /// @dev [P1, S1, P2, S2, ..., PN, SN] where N is the bytes length divided by (96 + 48)
-    /// @param index The operator index
-    /// @param publicKeysAndSignatures The concatenated public keys and signatures
-    event AddedValidatorKeys(uint256 indexed index, bytes publicKeysAndSignatures);
-
-    /// @notice The operator or the admin removed a public key and its signature from the registry
-    /// @param index The operator index
-    /// @param publicKey The BLS public key that has been removed
-    event RemovedValidatorKey(uint256 indexed index, bytes publicKey);
-
     /// @notice The stored river address has been changed
     /// @param river The new river address
     event SetRiver(address indexed river);
 
-    /// @notice The operator edited its keys after the snapshot block
-    /// @dev This means that we cannot assume that its key set is checked by the snapshot
-    /// @dev This happens only if the limit was meant to be increased
+    /// @notice The requested ETH amount has been updated
     /// @param index The operator index
-    /// @param currentLimit The current operator limit
-    /// @param newLimit The new operator limit that was attempted to be set
-    /// @param latestKeysEditBlockNumber The last block number at which the operator changed its keys
-    /// @param snapshotBlock The block number of the snapshot
-    event OperatorEditsAfterSnapshot(
-        uint256 indexed index,
-        uint256 currentLimit,
-        uint256 newLimit,
-        uint256 indexed latestKeysEditBlockNumber,
-        uint256 indexed snapshotBlock
-    );
-
-    /// @notice The call didn't alter the limit of the operator
-    /// @param index The operator index
-    /// @param limit The limit of the operator
-    event OperatorLimitUnchanged(uint256 indexed index, uint256 limit);
-
-    /// @notice The stopped validator array has been changed
-    /// @notice A validator is considered stopped if exiting, exited or slashed
-    /// @notice This event is emitted when the oracle reports new stopped validators counts
-    /// @param stoppedValidatorCounts The new stopped validator counts
-    event UpdatedStoppedValidators(uint32[] stoppedValidatorCounts);
-
-    /// @notice The requested exit count has been updated
-    /// @param index The operator index
-    /// @param count The count of requested exits
-    event RequestedValidatorExits(uint256 indexed index, uint256 count);
+    /// @param amount The amount of requested exits in ETH(wei)
+    event RequestedETHExits(uint256 indexed index, uint256 amount);
 
     /// @notice The exit request demand has been updated
-    /// @param previousValidatorExitsDemand The previous exit request demand
-    /// @param nextValidatorExitsDemand The new exit request demand
-    event SetCurrentValidatorExitsDemand(uint256 previousValidatorExitsDemand, uint256 nextValidatorExitsDemand);
+    /// @param previousETHExitsDemand The previous exit request demand in ETH(wei)
+    /// @param nextETHExitsDemand The new exit request demand in ETH(wei)
+    event SetCurrentETHExitsDemand(uint256 previousETHExitsDemand, uint256 nextETHExitsDemand);
 
     /// @notice The total requested exit has been updated
-    /// @param previousTotalValidatorExitsRequested The previous total requested exit
-    /// @param newTotalValidatorExitsRequested The new total requested exit
-    event SetTotalValidatorExitsRequested(
-        uint256 previousTotalValidatorExitsRequested, uint256 newTotalValidatorExitsRequested
+    /// @param previousTotalETHExitsRequested The previous total requested exit in ETH(wei)
+    /// @param newTotalETHExitsRequested The new total requested exit in ETH(wei)
+    event SetTotalETHExitsRequested(uint256 previousTotalETHExitsRequested, uint256 newTotalETHExitsRequested);
+
+    /// @notice The requested ETH amount has been updated to fill the gap with the reported exited ETH amount
+    /// @param index The operator index
+    /// @param oldRequestedETHAmount The old requested ETH(wei) amount
+    /// @param newRequestedETHAmount The new requested ETH(wei) amount
+    event UpdatedRequestedETHExitsUponStopped(
+        uint256 indexed index, uint256 oldRequestedETHAmount, uint256 newRequestedETHAmount
     );
+
+    /// @notice The operator exited ETH has been set
+    /// @param index The operator index
+    /// @param exitedETH The exited ETH(wei)
+    event SetOperatorExitedETH(uint256 indexed index, uint256 exitedETH);
+
+    /// @notice The exited ETH have been updated
+    /// @param exitedETH The exited ETH(wei) per operator
+    event UpdatedExitedETH(uint256[] exitedETH);
+
+    /// @notice The active ETH on CL have been updated
+    /// @param activeCLETH The active ETH(wei) on CL per operator
+    event UpdatedActiveCLETH(uint256[] activeCLETH);
 
     /// @notice A validator key got funded on the deposit contract
     /// @notice This event was introduced during a contract upgrade, in order to cover all possible public keys, this event
@@ -118,50 +99,12 @@ interface IOperatorsRegistryV1 {
     /// @param deferred True if event has been replayed in the context of a migration
     event FundedValidatorKeys(uint256 indexed index, bytes[] publicKeys, bool deferred);
 
-    /// @notice The requested exit count has been updated to fill the gap with the reported stopped count
-    /// @param index The operator index
-    /// @param oldRequestedExits The old requested exit count
-    /// @param newRequestedExits The new requested exit count
-    event UpdatedRequestedValidatorExitsUponStopped(
-        uint256 indexed index, uint32 oldRequestedExits, uint32 newRequestedExits
-    );
-
     /// @notice The calling operator is inactive
     /// @param index The operator index
     error InactiveOperator(uint256 index);
 
-    /// @notice A funded key deletion has been attempted
-    error InvalidFundedKeyDeletionAttempt();
-
-    /// @notice The index provided are not sorted properly (descending order)
-    error InvalidUnsortedIndexes();
-
-    /// @notice The provided operator and limits array have different lengths
-    error InvalidArrayLengths();
-
     /// @notice The provided operator and limits array are empty
     error InvalidEmptyArray();
-
-    /// @notice The provided key count is 0
-    error InvalidKeyCount();
-
-    /// @notice The provided concatenated keys do not have the expected length
-    error InvalidKeysLength();
-
-    /// @notice The index that is removed is out of bounds
-    error InvalidIndexOutOfBounds();
-
-    /// @notice The value for the operator limit is too high
-    /// @param index The operator index
-    /// @param limit The new limit provided
-    /// @param keyCount The operator key count
-    error OperatorLimitTooHigh(uint256 index, uint256 limit, uint256 keyCount);
-
-    /// @notice The value for the limit is too low
-    /// @param index The operator index
-    /// @param limit The new limit provided
-    /// @param fundedKeyCount The operator funded key count
-    error OperatorLimitTooLow(uint256 index, uint256 limit, uint256 fundedKeyCount);
 
     /// @notice The provided list of operators is not in increasing order
     error UnorderedOperatorList();
@@ -170,46 +113,41 @@ interface IOperatorsRegistryV1 {
     /// @param operatorIndex The operator index
     error OperatorIgnoredExitRequests(uint256 operatorIndex);
 
-    /// @notice Thrown when an operator lacks the required number of fundable keys
-    /// @param operatorIndex The operator index
-    /// @param requested The requested count
-    /// @param available The available count
-    error OperatorHasInsufficientFundableKeys(uint256 operatorIndex, uint256 requested, uint256 available);
+    /// @notice Thrown when the sum of exited ETH is invalid
+    error ExitedETHSumMismatch();
 
-    /// @notice Thrown when an allocation with zero validator count is provided
-    error AllocationWithZeroValidatorCount();
+    /// @notice Thrown when the amount of exited ETH is too high compared to the total deposited ETH
+    error ExitedETHExceedsDepositedETH();
 
-    /// @notice Thrown when an invalid empty stopped validator array is provided
-    error InvalidEmptyStoppedValidatorCountsArray();
-
-    /// @notice Thrown when the sum of stopped validators is invalid
-    error InvalidStoppedValidatorCountsSum();
-
-    /// @notice Thrown when an element in the stopped validator array is decreasing
-    error StoppedValidatorCountsDecreased();
-
-    /// @notice Thrown when the number of elements in the array is too high compared to operator count
-    error StoppedValidatorCountsTooHigh();
+    /// @notice Thrown when the number of exited ETH is too high compared to operator count
+    error ExitedETHArrayLengthExceedsOperatorCount();
 
     /// @notice Thrown when no exit requests can be performed
     error NoExitRequestsToPerform();
 
-    /// @notice The provided stopped validator count array is shrinking
-    error StoppedValidatorCountArrayShrinking();
+    /// @notice The provided exited ETH array is shrinking
+    error ExitedETHArrayShrinking();
 
-    /// @notice The provided stopped validator count of an operator is above its funded validator count
-    error StoppedValidatorCountAboveFundedCount(uint256 operatorIndex, uint32 stoppedCount, uint32 fundedCount);
+    /// @notice Thrown when the exited ETH for an operator has decreased compared to the previous report
+    error ExitedETHPerOperatorDecreased();
 
-    /// @notice The provided exit requests exceed the available funded validator count of the operator
+    /// @notice The provided exit requests exceed the available funded ETH amount of the operator
     /// @param operatorIndex The operator index
-    /// @param requested The requested count
-    /// @param available The available count
-    error ExitsRequestedExceedAvailableFundedCount(uint256 operatorIndex, uint256 requested, uint256 available);
+    /// @param requested The requested ETH(wei) amount
+    /// @param available The available ETH(wei) amount
+    error ExitsRequestedExceedAvailableFundedAmount(uint256 operatorIndex, uint256 requested, uint256 available);
 
     /// @notice The provided exit requests exceed the current exit request demand
-    /// @param requested The requested count
-    /// @param demand The demand count
-    error ExitsRequestedExceedDemand(uint256 requested, uint256 demand);
+    /// @param requestedETHAmount The requested ETH(wei) amount
+    /// @param currentETHExitsDemand The current ETH(wei) exits demand
+    error ExitsRequestedExceedExitDemand(uint256 requestedETHAmount, uint256 currentETHExitsDemand);
+
+    /// @notice Thrown when an allocation with an incorrect ETH amount is provided
+    /// @param ethAmount The incorrect ETH(wei) amount
+    error AllocationWithIncorrectAmount(uint256 ethAmount);
+
+    /// @notice Thrown when the provided active CL ETH array length does not match the operator count
+    error InvalidActiveCLETHArrayLength();
 
     /// @notice Initializes the operators registry
     /// @param _admin Admin in charge of managing operators
@@ -217,7 +155,10 @@ interface IOperatorsRegistryV1 {
     function initOperatorsRegistryV1(address _admin, address _river) external;
 
     /// @notice Initializes the operators registry for V1_1
-    function initOperatorsRegistryV1_1() external;
+    // function initOperatorsRegistryV1_1() external;
+
+    /// @notice Migrates operators from V2 to V3 storage, dropping key-management fields
+    function initOperatorsRegistryV1_2() external;
 
     /// @notice Retrieve the River address
     /// @return The address of River
@@ -226,70 +167,51 @@ interface IOperatorsRegistryV1 {
     /// @notice Get operator details
     /// @param _index The index of the operator
     /// @return The details of the operator
-    function getOperator(uint256 _index) external view returns (OperatorsV2.Operator memory);
+    function getOperator(uint256 _index) external view returns (OperatorsV3.Operator memory);
 
     /// @notice Get operator count
     /// @return The operator count
     function getOperatorCount() external view returns (uint256);
 
-    /// @notice Retrieve the stopped validator count for an operator index
-    /// @param _idx The index of the operator
-    /// @return The stopped validator count of the operator
-    function getOperatorStoppedValidatorCount(uint256 _idx) external view returns (uint32);
-
-    /// @notice Retrieve the total stopped validator count
-    /// @return The total stopped validator count
-    function getTotalStoppedValidatorCount() external view returns (uint32);
-
-    /// @notice Retrieve the total requested exit count
+    /// @notice Retrieve the total requested exit amount in ETH
     /// @notice This value is the amount of exit requests that have been performed, emitting an event for operators to catch
-    /// @return The total requested exit count
-    function getTotalValidatorExitsRequested() external view returns (uint256);
+    /// @return The total requested exit amount in ETH(wei)
+    function getTotalETHExitsRequested() external view returns (uint256);
 
     /// @notice Get the current exit request demand waiting to be triggered
     /// @notice This value is the amount of exit requests that are demanded and not yet performed by the contract
-    /// @return The current exit request demand
-    function getCurrentValidatorExitsDemand() external view returns (uint256);
+    /// @return The current exit request demand in ETH(wei)
+    function getCurrentETHExitsDemand() external view returns (uint256);
 
-    /// @notice Retrieve the total stopped and requested exit count
-    /// @return The total stopped count
-    /// @return The total requested exit count
-    function getStoppedAndRequestedExitCounts() external view returns (uint32, uint256);
+    /// @notice Retrieve the total exited ETH and requested exit amount
+    /// @return The total exited ETH(wei)
+    /// @return The total requested exit amount (includes total requested exits and current exit demand)
+    function getExitedETHAndRequestedExitAmounts() external view returns (uint256, uint256);
 
-    /// @notice Retrieve the raw stopped validators array from storage
-    /// @return The stopped validator array
-    function getStoppedValidatorCountPerOperator() external view returns (uint32[] memory);
-
-    /// @notice Get the details of a validator
-    /// @param _operatorIndex The index of the operator
-    /// @param _validatorIndex The index of the validator
-    /// @return publicKey The public key of the validator
-    /// @return signature The signature used during deposit
-    /// @return funded True if validator has been funded
-    function getValidator(uint256 _operatorIndex, uint256 _validatorIndex)
-        external
-        view
-        returns (bytes memory publicKey, bytes memory signature, bool funded);
-
-    /// @notice Get the next validators that would be funded based on the proposed allocations
-    /// @param _allocations The proposed allocations to validate
-    /// @return publicKeys An array of fundable public keys
-    /// @return signatures An array of signatures linked to the public keys
-    function getNextValidatorsToDepositFromActiveOperators(OperatorAllocation[] memory _allocations)
-        external
-        view
-        returns (bytes[] memory publicKeys, bytes[] memory signatures);
+    /// @notice Retrieve the raw exited ETH array from storage
+    /// @return The exited ETH(wei) array per operator
+    function getExitedETHPerOperator() external view returns (uint256[] memory);
 
     /// @notice Retrieve the active operator set
     /// @return The list of active operators and their details
-    function listActiveOperators() external view returns (OperatorsV2.Operator[] memory);
+    function listActiveOperators() external view returns (OperatorsV3.Operator[] memory);
 
-    /// @notice Allows river to override the stopped validators array
+    /// @notice Updates the funded ETH for each node operator in the Operators Registry
+    /// @param _fundedETH The array of funded ETH(wei) amounts per operator
+    /// @param _publicKeys The array of public keys
+    function incrementFundedETH(uint256[] calldata _fundedETH, bytes[][] calldata _publicKeys) external;
+
+    /// @notice Updates the active CL ETH for each node operator in the Operators Registry
+    /// @dev We assume that the oracle would report the correct active CL ETH amounts for each operator.
+    ///      The trust lies in the assumption that the quorum of oracle members cannot be compromised.
+    /// @param _activeCLETH The array of active ETH(wei) amounts per operator
+    function reportCLETH(uint256[] calldata _activeCLETH) external;
+
+    /// @notice Allows river to override the exited ETH array
     /// @notice This actions happens during the Oracle report processing
-    /// @param _stoppedValidatorCounts The new stopped validators array
-    /// @param _depositedValidatorCount The total deposited validator count
-    function reportStoppedValidatorCounts(uint32[] calldata _stoppedValidatorCounts, uint256 _depositedValidatorCount)
-        external;
+    /// @param _exitedETH The new exited ETH(wei) array per operator
+    /// @param _totalDepositedETH The total deposited ETH(wei)
+    function reportExitedETH(uint256[] calldata _exitedETH, uint256 _totalDepositedETH) external;
 
     /// @notice Adds an operator to the registry
     /// @dev Only callable by the administrator
@@ -316,76 +238,26 @@ interface IOperatorsRegistryV1 {
     /// @param _newStatus The new status of the operator
     function setOperatorStatus(uint256 _index, bool _newStatus) external;
 
-    /// @notice Changes the operator staking limit
-    /// @dev Only callable by the administrator
-    /// @dev The operator indexes must be in increasing order and contain no duplicate
-    /// @dev The limit cannot exceed the total key count of the operator
-    /// @dev The _indexes and _newLimits must have the same length.
-    /// @dev Each limit value is applied to the operator index at the same index in the _indexes array.
-    /// @param _operatorIndexes The operator indexes, in increasing order and duplicate free
-    /// @param _newLimits The new staking limit of the operators
-    /// @param _snapshotBlock The block number at which the snapshot was computed
-    function setOperatorLimits(
-        uint256[] calldata _operatorIndexes,
-        uint32[] calldata _newLimits,
-        uint256 _snapshotBlock
-    ) external;
-
-    /// @notice Adds new keys for an operator
-    /// @dev Only callable by the administrator or the operator address
-    /// @param _index The operator index
-    /// @param _keyCount The amount of keys provided
-    /// @param _publicKeysAndSignatures Public keys of the validator, concatenated
-    function addValidators(uint256 _index, uint32 _keyCount, bytes calldata _publicKeysAndSignatures) external;
-
-    /// @notice Remove validator keys
-    /// @dev Only callable by the administrator or the operator address
-    /// @dev The indexes must be provided sorted in decreasing order and duplicate-free, otherwise the method will revert
-    /// @dev The operator limit will be set to the lowest deleted key index if the operator's limit wasn't equal to its total key count
-    /// @dev The operator or the admin cannot remove funded keys
-    /// @dev When removing validators, the indexes of specific unfunded keys can be changed in order to properly
-    /// @dev remove the keys from the storage array. Beware of this specific behavior when chaining calls as the
-    /// @dev targeted public key indexes can point to a different key after a first call was made and performed
-    /// @dev some swaps
-    /// @param _index The operator index
-    /// @param _indexes The indexes of the keys to remove
-    function removeValidators(uint256 _index, uint256[] calldata _indexes) external;
-
-    /// @notice Retrieve validator keys based on explicit operator allocations and mark them as funded
-    /// @dev Only callable by the river contract
-    /// @dev The allocations must be sorted by operator index in strictly ascending order with no duplicates
-    /// @dev Each allocation's validatorCount must be non-zero and not exceed the operator's available fundable keys
-    /// @dev Reverts with InvalidEmptyArray if _allocations is empty
-    /// @dev Reverts with UnorderedOperatorList if operator indexes are not strictly ascending
-    /// @dev Reverts with AllocationWithZeroValidatorCount if any allocation has a zero validator count
-    /// @dev Reverts with InactiveOperator if a referenced operator is inactive
-    /// @dev Reverts with OperatorIgnoredExitRequests if an operator has not complied with exit requests
-    /// @dev Reverts with OperatorHasInsufficientFundableKeys if an operator lacks enough fundable keys
-    /// @param _allocations Node operator allocations specifying how many validators per operator
-    /// @return publicKeys An array of public keys
-    /// @return signatures An array of signatures linked to the public keys
-    function pickNextValidatorsToDeposit(OperatorAllocation[] calldata _allocations)
-        external
-        returns (bytes[] memory publicKeys, bytes[] memory signatures);
-
     /// @notice Process explicit per-operator exit allocations and update operator requestedExits
     /// @dev Only callable by the keeper address returned by the River contract's getKeeper()
     /// @dev The allocations must be sorted by operator index in strictly ascending order with no duplicates
-    /// @dev Each allocation's validatorCount must be non-zero and not exceed the operator's available funded-but-not-yet-exited validators
-    /// @dev The total requested exits across all allocations must not exceed the current validator exit demand
+    /// @dev Each allocation's ethAmount must be non-zero and not exceed the operator's available funded-but-not-yet-exited ETH amount
+    /// @dev The total requested exits across all allocations must not exceed the current ETH exit demand
     /// @dev Reverts with InvalidEmptyArray if _allocations is empty
-    /// @dev Reverts with AllocationWithZeroValidatorCount if any allocation has a zero validator count
+    /// @dev Reverts with AllocationWithIncorrectAmount if any allocation has an ETH amount less than 1 ether
     /// @dev Reverts with UnorderedOperatorList if operator indexes are not strictly ascending
     /// @dev Reverts with InactiveOperator if a referenced operator is inactive
-    /// @dev Reverts with ExitsRequestedExceedAvailableFundedCount if count exceeds funded minus requestedExits for an operator
-    /// @dev Reverts with ExitsRequestedExceedDemand if total exits requested exceed the current demand
+    /// @dev Reverts with ExitsRequestedExceedAvailableFundedAmount if count exceeds funded minus requestedExits for an operator
+    /// @dev Reverts with ExitsRequestedExceedExitDemand if total exits requested exceed the current demand
     /// @dev Reverts with NoExitRequestsToPerform if there is no pending exit demand
-    /// @param _allocations The proposed per-operator exit allocations, sorted by operator index
-    function requestValidatorExits(OperatorAllocation[] calldata _allocations) external;
+    /// @param _allocations The proposed per-operator exit ETH allocations, sorted by operator index
+    function requestETHExits(ExitETHAllocation[] calldata _allocations) external;
 
     /// @notice Increases the exit request demand
-    /// @dev This method is only callable by the river contract, and to actually forward the information to the node operators via event emission, the unprotected requestValidatorExits method must be called
-    /// @param _count The amount of exit requests to add to the demand
-    /// @param _depositedValidatorCount The total deposited validator count
-    function demandValidatorExits(uint256 _count, uint256 _depositedValidatorCount) external;
+    /// @dev This method is only callable by the river contract, and to actually forward the information to the node operators via event emission, the requestETHExits method must be called
+    /// @dev Due to autocompounding we cannot rely on the total deposited ETH, but on the total available ETH on CL
+    /// @param _exitAmountToRequest The amount of exit requests to add to the demand
+    /// @param _totalAvailableCLETH The total available ETH(wei) on the consensus layer which includes the InFlightDeposit amount and excludes the exiting balance
+    /// @dev This method is only callable by the river contract
+    function demandETHExits(uint256 _exitAmountToRequest, uint256 _totalAvailableCLETH) external;
 }

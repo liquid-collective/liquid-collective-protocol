@@ -3,8 +3,18 @@ solc_version = "0.8.34"
 optimizer = true
 optimizer_runs = 100
 
+# Disable optimizer for coverage so branch/line attribution for removeValidators is correct
+[profile.coverage]
+solc_version = "0.8.34"
+optimizer = false
+
 [rpc_endpoints]
 mainnet = "${MAINNET_FORK_RPC_URL}"
 
 [fuzz]
 runs = 1500
+
+[invariant]
+runs = 128
+depth = 32
+fail_on_revert = false

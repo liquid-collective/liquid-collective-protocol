@@ -18,6 +18,7 @@ import "../src/TUPProxy.sol";
 import "../src/Initializable.sol";
 import "../src/Allowlist.1.sol";
 import "./mocks/RejectEtherMock.sol";
+import "./mocks/ReentrancyClaimAttackMock.sol";
 
 contract RiverMock {
     mapping(address => uint256) internal balances;
@@ -90,6 +91,16 @@ contract RiverMock {
 
     function pullExceedingEth(address redeemManager, uint256 amount) external {
         RedeemManagerV1(redeemManager).pullExceedingEth(amount);
+    }
+
+    bool internal _slashingContainmentMode;
+
+    function getSlashingContainmentMode() external view returns (bool) {
+        return _slashingContainmentMode;
+    }
+
+    function sudoSetSlashingContainmentMode(bool _enabled) external {
+        _slashingContainmentMode = _enabled;
     }
 
     fallback() external payable {}
@@ -467,6 +478,18 @@ contract RedeemManagerV1Tests is RedeeManagerV1TestBase {
             )
         );
         river.sudoReportWithdraw{value: amount}(address(redeemManager), uint256(amount) + 1e18);
+    }
+
+    function testRequestRedeemFailNotRiver(uint256 _salt) external {
+        uint128 amount = uint128(bound(_salt, 1, type(uint128).max));
+        address user = _generateAllowlistedUser(_salt);
+
+        vm.prank(user);
+        river.approve(address(redeemManager), amount);
+
+        vm.prank(user);
+        vm.expectRevert(abi.encodeWithSignature("Unauthorized(address)", user));
+        redeemManager.requestRedeem(amount, user, user);
     }
 
     function testReportWithdrawMultiple(uint256 _salt) external {
@@ -1990,8 +2013,145 @@ contract RedeemManagerV1Tests is RedeeManagerV1TestBase {
         redeemManager.claimRedeemRequests(redeemRequestIds, withdrawEventIds, true, type(uint16).max);
     }
 
+    function testRequestRedeemTwoArgBlockedInSlashingMode(uint256 _salt) external {
+        address user = _generateAllowlistedUser(_salt);
+        uint64 amount = uint64(bound(_salt, 1, type(uint64).max));
+        river.sudoDeal(user, amount);
+        vm.prank(user);
+        river.approve(address(redeemManager), amount);
+
+        river.sudoSetSlashingContainmentMode(true);
+
+        vm.prank(user);
+        vm.expectRevert(abi.encodeWithSignature("SlashingContainmentModeEnabled()"));
+        redeemManager.requestRedeem(amount, user);
+    }
+
+    function testRequestRedeemOneArgBlockedInSlashingMode(uint256 _salt) external {
+        address user = _generateAllowlistedUser(_salt);
+        uint64 amount = uint64(bound(_salt, 1, type(uint64).max));
+        river.sudoDeal(user, amount);
+        vm.prank(user);
+        river.approve(address(redeemManager), amount);
+
+        river.sudoSetSlashingContainmentMode(true);
+
+        vm.prank(user);
+        vm.expectRevert(abi.encodeWithSignature("SlashingContainmentModeEnabled()"));
+        redeemManager.requestRedeem(amount);
+    }
+
+    function testClaimRedeemRequestsFourArgAllowedInSlashingMode(uint256 _salt) external {
+        uint128 amount = uint128(bound(_salt, 1, type(uint128).max));
+        address user = _generateAllowlistedUser(_salt);
+
+        river.sudoDeal(user, uint256(amount));
+        vm.prank(user);
+        river.approve(address(redeemManager), uint256(amount));
+        vm.prank(user);
+        redeemManager.requestRedeem(amount, user);
+
+        vm.deal(address(this), amount);
+        river.sudoReportWithdraw{value: amount}(address(redeemManager), amount);
+
+        river.sudoSetSlashingContainmentMode(true);
+
+        uint32[] memory redeemRequestIds = new uint32[](1);
+        uint32[] memory withdrawalEventIds = new uint32[](1);
+        redeemRequestIds[0] = 0;
+        withdrawalEventIds[0] = 0;
+
+        uint256 userBalanceBefore = user.balance;
+
+        uint8[] memory claimStatuses =
+            redeemManager.claimRedeemRequests(redeemRequestIds, withdrawalEventIds, true, type(uint16).max);
+
+        assertEq(claimStatuses.length, 1);
+        assertEq(claimStatuses[0], 0); // CLAIM_FULLY_CLAIMED
+        assertEq(user.balance - userBalanceBefore, amount);
+        assertEq(address(redeemManager).balance, 0);
+    }
+
+    function testClaimRedeemRequestsTwoArgAllowedInSlashingMode(uint256 _salt) external {
+        uint128 amount = uint128(bound(_salt, 1, type(uint128).max));
+        address user = _generateAllowlistedUser(_salt);
+
+        river.sudoDeal(user, uint256(amount));
+        vm.prank(user);
+        river.approve(address(redeemManager), uint256(amount));
+        vm.prank(user);
+        redeemManager.requestRedeem(amount, user);
+
+        vm.deal(address(this), amount);
+        river.sudoReportWithdraw{value: amount}(address(redeemManager), amount);
+
+        river.sudoSetSlashingContainmentMode(true);
+
+        uint32[] memory redeemRequestIds = new uint32[](1);
+        uint32[] memory withdrawalEventIds = new uint32[](1);
+        redeemRequestIds[0] = 0;
+        withdrawalEventIds[0] = 0;
+
+        uint256 userBalanceBefore = user.balance;
+
+        uint8[] memory claimStatuses = redeemManager.claimRedeemRequests(redeemRequestIds, withdrawalEventIds);
+
+        assertEq(claimStatuses.length, 1);
+        assertEq(claimStatuses[0], 0); // CLAIM_FULLY_CLAIMED
+        assertEq(user.balance - userBalanceBefore, amount);
+        assertEq(address(redeemManager).balance, 0);
+    }
+
+    function testRequestRedeemTwoArgAllowedWhenSlashingModeOff(uint256 _salt) external {
+        address user = _generateAllowlistedUser(_salt);
+        uint64 amount = uint64(bound(_salt, 1, type(uint64).max));
+        river.sudoDeal(user, amount);
+        vm.prank(user);
+        river.approve(address(redeemManager), amount);
+
+        river.sudoSetSlashingContainmentMode(false);
+
+        vm.prank(user);
+        uint32 id = redeemManager.requestRedeem(amount, user);
+        assertEq(redeemManager.getRedeemRequestCount(), 1);
+        assertEq(redeemManager.getRedeemRequestDetails(id).recipient, user);
+    }
+
+    function testClaimRedeemRequestsBlocksReentrancy() external {
+        uint256 amount = 32 ether;
+
+        // Deploy attacker whose receive() re-enters claimRedeemRequests
+        ReentrancyClaimAttackMock attacker = new ReentrancyClaimAttackMock(address(redeemManager));
+
+        // Allowlisted EOA requests a redeem with the attacker contract as recipient
+        address requester = _generateAllowlistedUser(999);
+        river.sudoDeal(requester, amount);
+        vm.prank(requester);
+        river.approve(address(redeemManager), amount);
+        vm.prank(requester);
+        redeemManager.requestRedeem(amount, address(attacker));
+
+        // Fund the withdrawal
+        vm.deal(address(this), amount);
+        river.sudoReportWithdraw{value: amount}(address(redeemManager), amount);
+
+        // Prime the attacker with the request/event IDs it will use during re-entry
+        uint32[] memory reqIds = new uint32[](1);
+        uint32[] memory eventIds = new uint32[](1);
+        reqIds[0] = 0;
+        eventIds[0] = 0;
+        attacker.setAttackIds(reqIds, eventIds);
+
+        // Trigger claim: attacker's receive() attempts a re-entrant call.
+        // Without nonReentrant: the re-entrant call succeeds (reentrancySucceeded = true).
+        // With nonReentrant:    the re-entrant call is blocked  (reentrancySucceeded = false).
+        redeemManager.claimRedeemRequests(reqIds, eventIds, true, type(uint16).max);
+
+        assertFalse(attacker.reentrancySucceeded(), "re-entrant call to claimRedeemRequests must be blocked");
+    }
+
     function testVersion() external {
-        assertEq(redeemManager.version(), "1.2.1");
+        assertEq(redeemManager.version(), "1.3.0");
     }
 }
 

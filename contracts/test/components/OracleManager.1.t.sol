@@ -10,8 +10,14 @@ import "../utils/LibImplementationUnbricker.sol";
 import "../../src/components/OracleManager.1.sol";
 import "../../src/libraries/LibUint256.sol";
 import "../../src/state/shared/AdministratorAddress.sol";
+import "../../src/state/river/DepositedValidatorCount.sol";
 
 contract OracleManagerV1ExposeInitializer is OracleManagerV1 {
+    function _setConsolidationBuffer(uint256 _oldConsolidationBuffer, uint256 _newConsolidationBuffer)
+        internal
+        override
+    {}
+
     function supersedeReportedBalanceSum(uint256 amount) external {
         LastConsensusLayerReport.get().validatorsBalance = amount;
     }
@@ -151,7 +157,8 @@ contract OracleManagerV1ExposeInitializer is OracleManagerV1 {
         amountToDeposit += result;
     }
 
-    event Internal_SetReportedStoppedValidatorCounts(uint32[] stoppedValidatorCounts);
+    event Internal_SetReportedExitedETH(uint256[] exitedETHPerOperator);
+    event Internal_ReportCLETH(uint256[] activeCLETHPerOperator);
 
     event Internal_RequestExitsBasedOnRedeemDemandAfterRebalancings(
         uint256 exitingBalance, bool depositToRedeemRebalancingAllowed, uint256 exitCountRequest
@@ -159,13 +166,14 @@ contract OracleManagerV1ExposeInitializer is OracleManagerV1 {
 
     function _requestExitsBasedOnRedeemDemandAfterRebalancings(
         uint256 exitingBalance,
-        uint32[] memory stoppedValidatorCounts,
+        uint256[] memory exitedETHPerOperator,
+        uint256 totalAvailableCLETH,
         bool depositToRedeemRebalancingAllowed,
         bool slashingContainmentModeEnabled
     ) internal override {
         uint256 exitCount = 0;
 
-        emit Internal_SetReportedStoppedValidatorCounts(stoppedValidatorCounts);
+        emit Internal_SetReportedExitedETH(exitedETHPerOperator);
 
         if (slashingContainmentModeEnabled) {
             return;
@@ -179,9 +187,13 @@ contract OracleManagerV1ExposeInitializer is OracleManagerV1 {
         );
     }
 
+    function _reportCLETH(uint256[] memory _activeCLETH) internal override {
+        emit Internal_ReportCLETH(_activeCLETH);
+    }
+
     event Internal_CommitBalanceToDeposit(uint256 period, uint256 depositBalance);
 
-    function _commitBalanceToDeposit(uint256 period) internal override {
+    function _commitBalanceToDeposit(uint256 period, bool slashingContainmentModeEnabled) internal override {
         emit Internal_CommitBalanceToDeposit(period, amountToDeposit);
     }
 
@@ -223,7 +235,7 @@ contract OracleManagerV1Tests is Test {
     );
     event Internal_CommitBalanceToDeposit(uint256 period, uint256 depositBalance);
     event Internal_SkimExcessBalanceToRedeem(uint256 balanceToDeposit, uint256 balanceToRedeem);
-    event Internal_SetReportedStoppedValidatorCounts(uint32[] stoppedValidatorCounts);
+    event Internal_SetReportedExitedETH(uint256[] exitedETHPerOperator);
 
     function setUp() public {
         admin = makeAddr("admin");
@@ -330,7 +342,7 @@ contract OracleManagerV1Tests is Test {
 
         v.clr.validatorsExitedBalance = exitedCount * 32 ether;
         v.clr.validatorsExitingBalance = (stoppedValidatorCount - exitedCount) * 32 ether;
-        v.clr.stoppedValidatorCountPerOperator = new uint32[](1);
+        v.clr.exitedETHPerOperator = new uint256[](1);
         v.clr.rebalanceDepositToRedeemMode = false;
         v.clr.slashingContainmentMode = false;
 
@@ -362,7 +374,7 @@ contract OracleManagerV1Tests is Test {
         vm.expectEmit(true, true, true, true);
         emit Internal_OnEarnings(v.elFeesAvailable + v.clr.validatorsSkimmedBalance);
         vm.expectEmit(true, true, true, true);
-        emit Internal_SetReportedStoppedValidatorCounts(v.clr.stoppedValidatorCountPerOperator);
+        emit Internal_SetReportedExitedETH(v.clr.exitedETHPerOperator);
         vm.expectEmit(true, true, true, true);
         emit Internal_RequestExitsBasedOnRedeemDemandAfterRebalancings(v.clr.validatorsExitingBalance, false, 0);
         vm.expectEmit(true, true, true, true);
@@ -494,5 +506,131 @@ contract OracleManagerV1Tests is Test {
     function testExternalViewFunctions() external {
         assertEq(false, oracleManager.isValidEpoch(1));
         assertEq(0, oracleManager.getCLValidatorCount());
+    }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// OracleManager view and revert tests
+// ─────────────────────────────────────────────────────────────────────────────
+
+contract OracleManagerV1CoverageTests is OracleManagerV1Tests {
+    bytes32 constant IN_FLIGHT_DEPOSIT_SLOT = bytes32(uint256(keccak256("river.state.inFlightDeposit")) - 1);
+    bytes32 constant CONSOLIDATION_BUFFER_SLOT = bytes32(uint256(keccak256("river.state.consolidationBuffer")) - 1);
+    bytes32 constant LAST_CLR_BASE_SLOT = bytes32(uint256(keccak256("river.state.lastConsensusLayerReport")) - 1);
+
+    event Internal_PullConsolidationCoverageFunds(uint256 _max, uint256 _returned);
+
+    /// Asserts that getCLValidatorTotalBalance returns the value stored in the last consensus layer report.
+    function testGetCLValidatorTotalBalance() public {
+        OracleManagerV1ExposeInitializer om = OracleManagerV1ExposeInitializer(address(oracleManager));
+        om.supersedeReportedBalanceSum(99 ether);
+        assertEq(oracleManager.getCLValidatorTotalBalance(), 99 ether);
+    }
+
+    /// Asserts that getLastConsensusLayerReport returns the stored report with the expected validatorsBalance.
+    function testGetLastConsensusLayerReport() public {
+        OracleManagerV1ExposeInitializer om = OracleManagerV1ExposeInitializer(address(oracleManager));
+        om.supersedeReportedBalanceSum(64 ether);
+        IOracleManagerV1.StoredConsensusLayerReport memory r = oracleManager.getLastConsensusLayerReport();
+        assertEq(r.validatorsBalance, 64 ether);
+    }
+
+    /// Asserts that setConsensusLayerData reverts with InvalidTotalDepositedActivatedETHIncrease when
+    /// the reported totalDepositedActivatedETH increase exceeds the current InFlightDeposit.
+    function testSetConsensusLayerDataRevertsOnTotalDepositedActivatedETHExceedsInFlight() public {
+        vm.store(address(oracleManager), IN_FLIGHT_DEPOSIT_SLOT, bytes32(uint256(10 ether)));
+        uint256 epoch = epochsPerFrame;
+        vm.warp(genesisTime + (epoch + epochsToAssumedFinality) * slotsPerEpoch * secondsPerSlot);
+        IOracleManagerV1.ConsensusLayerReport memory clr;
+        clr.epoch = epoch;
+        clr.validatorsBalance = 0;
+        clr.validatorsExitedBalance = 0;
+        clr.validatorsSkimmedBalance = 0;
+        clr.totalDepositedActivatedETH = 11 ether;
+        clr.exitedETHPerOperator = new uint256[](1);
+        vm.prank(oracle);
+        vm.expectRevert(
+            abi.encodeWithSignature("InvalidTotalDepositedActivatedETHIncrease(uint256,uint256)", 10 ether, 11 ether)
+        );
+        oracleManager.setConsensusLayerData(clr);
+    }
+
+    /// Asserts that setConsensusLayerData reverts with InvalidTotalDepositedActivatedETHDecrease when
+    /// the reported totalDepositedActivatedETH is lower than the previously stored value.
+    function testSetConsensusLayerDataRevertsOnTotalDepositedActivatedETHDecrease() public {
+        // Slot 6 in StoredConsensusLayerReport is totalDepositedActivatedETH.
+        vm.store(address(oracleManager), bytes32(uint256(LAST_CLR_BASE_SLOT) + 6), bytes32(uint256(10 ether)));
+
+        uint256 epoch = epochsPerFrame;
+        vm.warp(genesisTime + (epoch + epochsToAssumedFinality) * slotsPerEpoch * secondsPerSlot);
+        IOracleManagerV1.ConsensusLayerReport memory clr;
+        clr.epoch = epoch;
+        clr.validatorsBalance = 0;
+        clr.validatorsExitedBalance = 0;
+        clr.validatorsSkimmedBalance = 0;
+        clr.totalDepositedActivatedETH = 9 ether;
+        clr.exitedETHPerOperator = new uint256[](1);
+        vm.prank(oracle);
+        vm.expectRevert(
+            abi.encodeWithSignature("InvalidTotalDepositedActivatedETHDecrease(uint256,uint256)", 10 ether, 9 ether)
+        );
+        oracleManager.setConsensusLayerData(clr);
+    }
+
+    /// Asserts that with a non-zero ConsolidationBuffer, setConsensusLayerData calls _pullConsolidationCoverageFunds
+    /// with the buffer amount and pulls the available amount.
+    function testSetConsensusLayerDataConsolidationBufferNonZero() public {
+        OracleManagerV1ExposeInitializer om = OracleManagerV1ExposeInitializer(address(oracleManager));
+
+        uint256 buffer = 0.5 ether;
+        uint256 fundAvailable = 0.5 ether;
+        vm.store(address(oracleManager), CONSOLIDATION_BUFFER_SLOT, bytes32(buffer));
+        om.sudoSetConsolidationCoverageFundAvailable(fundAvailable);
+
+        uint256 epoch = epochsPerFrame;
+        vm.warp(genesisTime + (epoch + epochsToAssumedFinality) * slotsPerEpoch * secondsPerSlot);
+        IOracleManagerV1.ConsensusLayerReport memory clr;
+        clr.epoch = epoch;
+        clr.validatorsBalance = 0;
+        clr.validatorsExitedBalance = 0;
+        clr.validatorsSkimmedBalance = 0;
+        clr.totalDepositedActivatedETH = 0;
+        clr.exitedETHPerOperator = new uint256[](1);
+
+        vm.expectEmit(true, true, true, true, address(om));
+        emit Internal_PullConsolidationCoverageFunds(buffer, fundAvailable);
+
+        vm.prank(oracle);
+        oracleManager.setConsensusLayerData(clr);
+    }
+
+    /// Asserts that with a non-zero ConsolidationBuffer but zero pull, setConsensusLayerData skips _setConsolidationBuffer
+    /// (covers the false branch of `pulledConsolidationCoverageFunds > 0`).
+    function testSetConsensusLayerDataConsolidationBufferNoPull() public {
+        OracleManagerV1ExposeInitializer om = OracleManagerV1ExposeInitializer(address(oracleManager));
+
+        uint256 buffer = 0.5 ether;
+        vm.store(address(oracleManager), CONSOLIDATION_BUFFER_SLOT, bytes32(buffer));
+        // fundAvailable left at 0 - pull will return 0.
+
+        uint256 epoch = epochsPerFrame;
+        vm.warp(genesisTime + (epoch + epochsToAssumedFinality) * slotsPerEpoch * secondsPerSlot);
+        IOracleManagerV1.ConsensusLayerReport memory clr;
+        clr.epoch = epoch;
+        clr.validatorsBalance = 0;
+        clr.validatorsExitedBalance = 0;
+        clr.validatorsSkimmedBalance = 0;
+        clr.totalDepositedActivatedETH = 0;
+        clr.exitedETHPerOperator = new uint256[](1);
+
+        vm.expectEmit(true, true, true, true, address(om));
+        emit Internal_PullConsolidationCoverageFunds(buffer, 0);
+
+        vm.prank(oracle);
+        oracleManager.setConsensusLayerData(clr);
+
+        // Buffer slot must be untouched since the harness override of _setConsolidationBuffer is empty
+        // and the inner if (pulledConsolidationCoverageFunds > 0) was false.
+        assertEq(uint256(vm.load(address(oracleManager), CONSOLIDATION_BUFFER_SLOT)), buffer);
     }
 }

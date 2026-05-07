@@ -114,6 +114,11 @@ interface IRiverV1 is IConsensusLayerDepositManagerV1, IUserDepositManagerV1, IS
     /// @param newAmount The new balance committed to deposit
     event SetBalanceCommittedToDeposit(uint256 oldAmount, uint256 newAmount);
 
+    /// @notice Emitted when the consolidation buffer is updated
+    /// @param oldAmount The old consolidation buffer
+    /// @param newAmount The new consolidation buffer
+    event SetConsolidationBuffer(uint256 oldAmount, uint256 newAmount);
+
     /// @notice Emitted when the redeem manager received a withdraw event report
     /// @param redeemManagerDemand The total demand in LsETH of the redeem manager
     /// @param suppliedRedeemManagerDemand The amount of LsETH demand actually supplied
@@ -180,8 +185,8 @@ interface IRiverV1 is IConsensusLayerDepositManagerV1, IUserDepositManagerV1, IS
         uint128 _maxDailyRelativeCommittableAmount_
     ) external;
 
-    /// @notice Initializes version 1.2 of the River System
-    function initRiverV1_2() external;
+    /// @notice Initialized version 1.3 of the River System
+    function initRiverV1_3(bytes32 withdrawalCredentails, address _consolidationCoverageFund) external;
 
     /// @notice Get the current global fee
     /// @return The global fee
@@ -242,6 +247,10 @@ interface IRiverV1 is IConsensusLayerDepositManagerV1, IUserDepositManagerV1, IS
     /// @return The current balance to redeem
     function getBalanceToRedeem() external view returns (uint256);
 
+    /// @notice Returns whether slashing containment mode is currently active
+    /// @return True if slashing containment mode is active
+    function getSlashingContainmentMode() external view returns (bool);
+
     /// @notice Retrieve the current balance to consolidate
     /// @return The current balance to consolidate
     function getBalanceToConsolidate() external view returns (uint256);
@@ -280,6 +289,10 @@ interface IRiverV1 is IConsensusLayerDepositManagerV1, IUserDepositManagerV1, IS
     /// @notice Changes the execution layer fee recipient
     /// @param _newELFeeRecipient New address for the recipient
     function setELFeeRecipient(address _newELFeeRecipient) external;
+
+    /// @notice Changes the keeper address
+    /// @param _keeper New address for the keeper
+    function setKeeper(address _keeper) external;
 
     /// @notice Changes the coverage fund
     /// @param _newCoverageFund New address for the fund

@@ -3,8 +3,10 @@ pragma solidity 0.8.34;
 
 import "../../libraries/LibSanitize.sol";
 
-/// @title Operators Storage
+/// @title Operators Storage (v2)
 /// @notice Utility to manage the Operators in storage
+/// @dev DEPRECATED: This storage layout is retained solely for reading during the V1_2 migration
+/// @dev (initOperatorsRegistryV1_2). All live operator state is now stored in OperatorsV3.
 library OperatorsV2 {
     /// @notice Storage slot of the Operators
     bytes32 internal constant OPERATORS_SLOT = bytes32(uint256(keccak256("river.state.v2.operators")) - 1);
