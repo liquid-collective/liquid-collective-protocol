@@ -27,7 +27,6 @@ import "./state/river/ELFeeRecipientAddress.sol";
 import "./state/river/CoverageFundAddress.sol";
 import "./state/river/ConsolidationCoverageFundAddress.sol";
 import "./state/river/BalanceToRedeem.sol";
-import "./state/river/BalanceToConsolidate.sol";
 import "./state/river/GlobalFee.sol";
 import "./state/river/MetadataURI.sol";
 import "./state/river/LastConsensusLayerReport.sol";
