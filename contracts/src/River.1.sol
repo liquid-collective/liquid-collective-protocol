@@ -7,7 +7,6 @@ import "./interfaces/IRiver.1.sol";
 import "./interfaces/IWithdraw.1.sol";
 import "./interfaces/IELFeeRecipient.1.sol";
 import "./interfaces/ICoverageFund.1.sol";
-import "./interfaces/IConsolidationCoverageFund.1.sol";
 import "./interfaces/IProtocolVersion.sol";
 
 import "./components/ConsensusLayerDepositManager.1.sol";
@@ -450,7 +449,7 @@ contract RiverV1 is
             return 0;
         }
         uint256 initialBalance = address(this).balance;
-        IConsolidationCoverageFundV1(payable(_coverageFund)).pullCoverageFunds(_max);
+        ICoverageFundV1(payable(_coverageFund)).pullCoverageFunds(_max);
         uint256 collected = address(this).balance - initialBalance;
         if (collected > 0) {
             _setBalanceToDeposit(BalanceToDeposit.get() + collected);

@@ -447,11 +447,8 @@ contract RiverV1Tests is RiverV1TestBase {
 
     function testSetConsolidationCoverageFundZero() public {
         vm.startPrank(admin);
-        river.setConsolidationCoverageFund(address(consolidationCoverageFund));
-        vm.expectEmit(true, true, true, true);
-        emit SetConsolidationCoverageFund(address(0));
+        vm.expectRevert(abi.encodeWithSignature("InvalidZeroAddress()"));
         river.setConsolidationCoverageFund(address(0));
-        assert(river.getConsolidationCoverageFund() == address(0));
         vm.stopPrank();
     }
 
