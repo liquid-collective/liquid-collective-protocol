@@ -7,7 +7,7 @@ import "../../libraries/BLS12_381.sol";
 /// @title Consensus Layer Deposit Manager Interface (v1)
 /// @author Alluvial Finance Inc.
 /// @notice This interface exposes methods to handle the interactions with the official deposit contract.
-///         Attestation-quorum + BLS validation now lives in IAttestationValidatorV1; this interface is
+///         Attestation-quorum + BLS validation now lives in IAttestationVerifierV1; this interface is
 ///         only the River-side execution surface.
 interface IConsensusLayerDepositManagerV1 {
     /// @notice The stored deposit contract address changed
@@ -40,8 +40,8 @@ interface IConsensusLayerDepositManagerV1 {
     /// @notice Emitted per operator when validator keys are funded during a deposit
     event FundedValidatorKeys(uint256 indexed operatorIndex, bytes[] publicKeys, bool deferred);
 
-    /// @notice Emitted when the AttestationValidator address is updated
-    event SetAttestationValidator(address indexed attestationValidator);
+    /// @notice Emitted when the AttestationVerifier address is updated
+    event SetAttestationVerifier(address indexed attestationVerifier);
 
     /// @notice The deposit size is invalid
     error InvalidDepositSize(uint256 depositSize);
@@ -84,8 +84,8 @@ interface IConsensusLayerDepositManagerV1 {
     /// @return The keeper address
     function getKeeper() external view returns (address);
 
-    /// @notice Returns the AttestationValidator address River delegates BLS+quorum verification to
-    function getAttestationValidator() external view returns (address);
+    /// @notice Returns the AttestationVerifier address River delegates BLS+quorum verification to
+    function getAttestationVerifier() external view returns (address);
 
     /// @notice Deposit validators using pre-committed buffer data validated by an attester quorum.
     /// @param depositDataBufferId  Batch identifier in the DepositDataBuffer

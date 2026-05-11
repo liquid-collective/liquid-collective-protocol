@@ -6,7 +6,7 @@ import "../../libraries/LibUnstructuredStorage.sol";
 
 /// @title ValidatorDepositContractAddress
 /// @notice Library for storing the address of the official ETH deposit contract,
-///         used by the AttestationValidator to read `get_deposit_root()` for the
+///         used by the AttestationVerifier to read `get_deposit_root()` for the
 ///         front-run-resistant root-hash check.
 /// @dev River keeps its own copy of the deposit-contract address for executing
 ///      `deposit{value:}()` calls. Both copies MUST point at the same address.
@@ -15,7 +15,7 @@ import "../../libraries/LibUnstructuredStorage.sol";
 ///      by the same compilation unit (e.g. tests).
 library ValidatorDepositContractAddress {
     bytes32 internal constant DEPOSIT_CONTRACT_ADDRESS_SLOT =
-        bytes32(uint256(keccak256("attestationValidator.state.depositContractAddress")) - 1);
+        bytes32(uint256(keccak256("attestationVerifier.state.depositContractAddress")) - 1);
 
     /// @notice Retrieve the deposit contract address
     /// @return The deposit contract address

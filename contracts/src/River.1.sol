@@ -22,7 +22,7 @@ import "./libraries/LibRiverV1_3InitMigration.sol";
 import "./interfaces/IDepositDataBuffer.sol";
 
 import "./state/river/AllowlistAddress.sol";
-import "./state/river/AttestationValidatorAddress.sol";
+import "./state/river/AttestationVerifierAddress.sol";
 import "./state/river/RedeemManagerAddress.sol";
 import "./state/river/OperatorsRegistryAddress.sol";
 import "./state/river/CollectorAddress.sol";
@@ -49,17 +49,13 @@ contract RiverV1 is
     IRiverV1
 {
     /// @inheritdoc IRiverV1
-    function initRiverV1_3(bytes32 _withdrawalCredentials, address _attestationValidator)
-        external
-        init(3)
-        onlyAdmin
-    {
+    function initRiverV1_3(bytes32 _withdrawalCredentials, address _attestationVerifier) external init(3) onlyAdmin {
         if (_withdrawalCredentials == bytes32(0)) revert InvalidWithdrawalCredentials();
-        if (_attestationValidator == address(0)) revert LibErrors.InvalidZeroAddress();
+        if (_attestationVerifier == address(0)) revert LibErrors.InvalidZeroAddress();
 
         // Whole init body lives in an external library: its bytecode is not duplicated
         // inside River; this upgrade runs once but would otherwise live in River forever.
-        LibRiverV1_3InitMigration.runInitV1_3(_withdrawalCredentials, _attestationValidator, DEPOSIT_SIZE);
+        LibRiverV1_3InitMigration.runInitV1_3(_withdrawalCredentials, _attestationVerifier, DEPOSIT_SIZE);
     }
 
     /// @inheritdoc IRiverV1

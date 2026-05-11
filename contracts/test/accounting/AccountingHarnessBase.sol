@@ -8,7 +8,7 @@ import "../utils/LibImplementationUnbricker.sol";
 import "../mocks/DepositContractMock.sol";
 
 import "../../src/River.1.sol";
-import "../../src/AttestationValidator.1.sol";
+import "../../src/AttestationVerifier.1.sol";
 import "../utils/RiverV1WithLegacyInit.sol";
 import "../../src/Oracle.1.sol";
 import "../../src/OperatorsRegistry.1.sol";
@@ -26,7 +26,7 @@ import "../../src/libraries/LibAllowlistMasks.sol";
 import "../../src/state/river/InFlightDeposit.sol";
 import "../../src/state/river/CommittedBalance.sol";
 import "../../src/state/river/BalanceToDeposit.sol";
-import "../../src/state/attestationValidator/DepositDomainValue.sol";
+import "../../src/state/attestationVerifier/DepositDomainValue.sol";
 import "../../src/state/operatorsRegistry/Operators.3.sol";
 
 // -----------------------------------------------------------------------
@@ -100,7 +100,7 @@ abstract contract AccountingHarnessBase is Test, BytesGenerator {
     WithdrawV1 internal withdraw;
     IDepositContract internal depositContract;
     AccountingMockDepositDataBuffer internal depositBuffer;
-    AttestationValidatorV1 internal attestationValidator;
+    AttestationVerifierV1 internal attestationVerifier;
 
     // ─── attestation ──────────────────────────────────────────────────────────
     uint256 internal constant ATTESTER_PK_1 = 0xA1;
@@ -206,23 +206,23 @@ abstract contract AccountingHarnessBase is Test, BytesGenerator {
         _initAttesters[1] = attester2;
         _initAttesters[2] = attester3;
 
-        // Deploy and initialize the AttestationValidator sibling contract that River
+        // Deploy and initialize the AttestationVerifier sibling contract that River
         // delegates attestation+BLS verification to. EIP-712 verifyingContract is
         // pinned to River's address inside the validator's domain separator.
-        attestationValidator = new AttestationValidatorV1();
-        LibImplementationUnbricker.unbrick(vm, address(attestationValidator));
-        attestationValidator.initAttestationValidatorV1(
+        attestationVerifier = new AttestationVerifierV1();
+        LibImplementationUnbricker.unbrick(vm, address(attestationVerifier));
+        attestationVerifier.initAttestationVerifierV1(
             address(river), address(depositContract), address(depositBuffer), _initAttesters, 2, bytes4(0)
         );
 
         bytes32 _initWc = withdraw.getCredentials();
         vm.prank(admin);
-        river.initRiverV1_3(_initWc, address(attestationValidator));
+        river.initRiverV1_3(_initWc, address(attestationVerifier));
         // Mock BLS verification on the validator: EIP-2537 precompiles are unavailable
         // in Foundry's default EVM.
         vm.mockCall(
-            address(attestationValidator),
-            abi.encodeWithSelector(attestationValidator.verifyBLSDeposit.selector),
+            address(attestationVerifier),
+            abi.encodeWithSelector(attestationVerifier.verifyBLSDeposit.selector),
             bytes("")
         );
 

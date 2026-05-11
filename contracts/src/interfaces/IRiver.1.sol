@@ -116,12 +116,12 @@ interface IRiverV1 is IConsensusLayerDepositManagerV1, IUserDepositManagerV1, IS
     error Denied(address account);
 
     /// @notice Initializes version 1.3 of the River System. Performs the Pectra accounting migration,
-    ///         updates the withdrawal credentials, and wires the AttestationValidator sibling contract
-    ///         that River delegates attestation-quorum + BLS verification to. The validator must be
+    ///         updates the withdrawal credentials, and wires the AttestationVerifier sibling contract
+    ///         that River delegates attestation-quorum + BLS verification to. The verifier must be
     ///         deployed and initialized with this River's address before this initializer runs.
     /// @param _withdrawalCredentials The withdrawal credentials to apply to all deposits
-    /// @param _attestationValidator The pre-initialized AttestationValidator contract address
-    function initRiverV1_3(bytes32 _withdrawalCredentials, address _attestationValidator) external;
+    /// @param _attestationVerifier The pre-initialized AttestationVerifier contract address
+    function initRiverV1_3(bytes32 _withdrawalCredentials, address _attestationVerifier) external;
 
     /// @notice Get the current global fee
     /// @return The global fee

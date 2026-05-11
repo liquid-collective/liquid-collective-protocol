@@ -3,12 +3,12 @@ pragma solidity 0.8.34;
 
 import "forge-std/Test.sol";
 
-import "../../src/AttestationValidator.1.sol";
+import "../../src/AttestationVerifier.1.sol";
 import "../../src/components/ConsensusLayerDepositManager.1.sol";
-import "../../src/interfaces/IAttestationValidator.1.sol";
+import "../../src/interfaces/IAttestationVerifier.1.sol";
 import "../../src/interfaces/IDepositDataBuffer.sol";
 import "../../src/libraries/BLS12_381.sol";
-import "../../src/state/river/AttestationValidatorAddress.sol";
+import "../../src/state/river/AttestationVerifierAddress.sol";
 import "../utils/LibImplementationUnbricker.sol";
 import "../mocks/DepositContractEnhancedMock.sol";
 
@@ -45,8 +45,8 @@ contract MockDepositDataBuffer is IDepositDataBuffer {
 
 // ---------------------------------------------------------------------------
 // Test harness — mirrors RiverV1's wiring for the deposit-execution side. The
-// attestation+BLS validation now lives in AttestationValidatorV1 (a sibling
-// contract); the harness delegates to it via AttestationValidatorAddress.
+// attestation+BLS validation now lives in AttestationVerifierV1 (a sibling
+// contract); the harness delegates to it via AttestationVerifierAddress.
 //
 // Only _incrementFundedETH is stubbed (records values for assertions) because
 // the real implementation requires the full OperatorsRegistry. _updateFundedETHFromBuffer
@@ -64,7 +64,7 @@ contract AttestationDepositHarness is ConsensusLayerDepositManagerV1 {
         _admin = admin_;
     }
 
-    /// @notice Exposes the harness's admin so the AttestationValidator's
+    /// @notice Exposes the harness's admin so the AttestationVerifier's
     ///         `onlyRiverAdmin` cross-contract lookup (IAdministrable.getAdmin) works.
     function getAdmin() external view returns (address) {
         return _admin;
@@ -147,8 +147,8 @@ contract AttestationDepositHarness is ConsensusLayerDepositManagerV1 {
         CommittedBalance.set(v);
     }
 
-    function sudoSetAttestationValidator(address v) external {
-        AttestationValidatorAddress.set(v);
+    function sudoSetAttestationVerifier(address v) external {
+        AttestationVerifierAddress.set(v);
     }
 
     receive() external payable {}
@@ -159,7 +159,7 @@ contract AttestationDepositHarness is ConsensusLayerDepositManagerV1 {
 //
 // Mocking strategy:
 //   - BLS verification (verifyBLSDeposit) is mocked via vm.mockCall on the
-//     AttestationValidator address because EIP-2537 precompiles do not exist
+//     AttestationVerifier address because EIP-2537 precompiles do not exist
 //     in Foundry's EVM (without --evm-version prague + a vector).
 //   - DepositDataBuffer is a minimal mock because no real implementation exists.
 //   - Everything else runs real code:
@@ -172,7 +172,7 @@ contract AttestationDepositHarness is ConsensusLayerDepositManagerV1 {
 
 contract ConsensusLayerDepositManagerAttestationTest is Test {
     AttestationDepositHarness internal dm;
-    AttestationValidatorV1 internal validator;
+    AttestationVerifierV1 internal validator;
     MockDepositDataBuffer internal buffer;
     DepositContractEnhancedMock internal depositContract;
 
@@ -187,7 +187,7 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
     address internal attester2;
     address internal attester3;
 
-    // EIP-712 constants (must match AttestationValidatorV1)
+    // EIP-712 constants (must match AttestationVerifierV1)
     bytes32 internal constant EIP712_DOMAIN_TYPEHASH =
         keccak256("EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)");
     bytes32 internal constant NAME_HASH = keccak256("DepositToConsensusLayerValidation");
@@ -195,11 +195,11 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
     bytes32 internal constant ATTEST_TYPEHASH =
         keccak256("Attest(bytes32 depositDataBufferId,bytes32 depositRootHash)");
 
-    // Validator-scoped storage slots (must match contracts/src/state/attestationValidator/*)
+    // Validator-scoped storage slots (must match contracts/src/state/attestationVerifier/*)
     bytes32 internal constant VALIDATOR_DOMAIN_SEPARATOR_SLOT =
-        bytes32(uint256(keccak256("attestationValidator.state.domainSeparator")) - 1);
+        bytes32(uint256(keccak256("attestationVerifier.state.domainSeparator")) - 1);
     bytes32 internal constant VALIDATOR_DEPOSIT_DOMAIN_SLOT =
-        bytes32(uint256(keccak256("attestationValidator.state.depositDomain")) - 1);
+        bytes32(uint256(keccak256("attestationVerifier.state.depositDomain")) - 1);
 
     event FundedValidatorKeys(uint256 indexed operatorIndex, bytes[] publicKeys, bool deferred);
     event DepositsExecutedWithAttestation(
@@ -229,7 +229,7 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
         dm.initialize(address(depositContract), withdrawalCredentials);
         dm.sudoSetKeeper(keeper);
 
-        // 2. Deploy and init the AttestationValidator. The validator's EIP-712
+        // 2. Deploy and init the AttestationVerifier. The validator's EIP-712
         //    domain separator binds verifyingContract to the harness's address
         //    so attester signing tooling stays River-anchored.
         address[] memory attesters = new address[](3);
@@ -237,14 +237,14 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
         attesters[1] = attester2;
         attesters[2] = attester3;
 
-        validator = new AttestationValidatorV1();
+        validator = new AttestationVerifierV1();
         LibImplementationUnbricker.unbrick(vm, address(validator));
-        validator.initAttestationValidatorV1(
+        validator.initAttestationVerifierV1(
             address(dm), address(depositContract), address(buffer), attesters, 2, bytes4(0)
         );
 
         // 3. Wire the validator address into the harness.
-        dm.sudoSetAttestationValidator(address(validator));
+        dm.sudoSetAttestationVerifier(address(validator));
 
         // 4. Fund the harness and set committed balance.
         vm.deal(address(dm), 128 ether);
@@ -492,7 +492,7 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
         depositYs[0] = _emptyDepositY();
 
         vm.prank(keeper);
-        vm.expectRevert(abi.encodeWithSelector(IAttestationValidatorV1.InsufficientAttestations.selector, 1, 2));
+        vm.expectRevert(abi.encodeWithSelector(IAttestationVerifierV1.InsufficientAttestations.selector, 1, 2));
         dm.depositToConsensusLayerWithAttestation(bufferId, rootHash, sigs, depositYs);
     }
 
@@ -515,7 +515,7 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
         bytes32 actualRoot = depositContract.get_deposit_root();
         vm.prank(keeper);
         vm.expectRevert(
-            abi.encodeWithSelector(IAttestationValidatorV1.DepositRootMismatch.selector, staleRoot, actualRoot)
+            abi.encodeWithSelector(IAttestationVerifierV1.DepositRootMismatch.selector, staleRoot, actualRoot)
         );
         dm.depositToConsensusLayerWithAttestation(bufferId, staleRoot, sigs, depositYs);
     }
@@ -537,7 +537,7 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
         vm.prank(keeper);
         vm.expectRevert(
             abi.encodeWithSelector(
-                IAttestationValidatorV1.WithdrawalCredentialsMismatch.selector,
+                IAttestationVerifierV1.WithdrawalCredentialsMismatch.selector,
                 0,
                 withdrawalCredentials,
                 bytes32(uint256(0xDEAD))
@@ -557,7 +557,7 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
             _prepareDeposit(deposits);
 
         vm.prank(keeper);
-        vm.expectRevert(IAttestationValidatorV1.NotEnoughFunds.selector);
+        vm.expectRevert(IAttestationVerifierV1.NotEnoughFunds.selector);
         dm.depositToConsensusLayerWithAttestation(bufferId, rootHash, sigs, depositYs);
     }
 
@@ -578,7 +578,7 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
         depositYs[0] = _emptyDepositY();
 
         vm.prank(keeper);
-        vm.expectRevert(abi.encodeWithSelector(IAttestationValidatorV1.InsufficientAttestations.selector, 1, 2));
+        vm.expectRevert(abi.encodeWithSelector(IAttestationVerifierV1.InsufficientAttestations.selector, 1, 2));
         dm.depositToConsensusLayerWithAttestation(bufferId, rootHash, sigs, depositYs);
     }
 
@@ -600,7 +600,7 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
         depositYs[0] = _emptyDepositY();
 
         vm.prank(keeper);
-        vm.expectRevert(abi.encodeWithSelector(IAttestationValidatorV1.InsufficientAttestations.selector, 1, 2));
+        vm.expectRevert(abi.encodeWithSelector(IAttestationVerifierV1.InsufficientAttestations.selector, 1, 2));
         dm.depositToConsensusLayerWithAttestation(bufferId, rootHash, sigs, depositYs);
     }
 
@@ -655,7 +655,7 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
         depositYs[0] = _emptyDepositY();
 
         vm.prank(keeper);
-        vm.expectRevert(abi.encodeWithSelector(IAttestationValidatorV1.BufferIdMismatch.selector, signedId, actualId));
+        vm.expectRevert(abi.encodeWithSelector(IAttestationVerifierV1.BufferIdMismatch.selector, signedId, actualId));
         dm.depositToConsensusLayerWithAttestation(signedId, rootHash, sigs, depositYs);
     }
 
@@ -671,7 +671,7 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
             _prepareDeposit(deposits);
 
         vm.prank(keeper);
-        vm.expectRevert(IAttestationValidatorV1.ZeroDomainSeparator.selector);
+        vm.expectRevert(IAttestationVerifierV1.ZeroDomainSeparator.selector);
         dm.depositToConsensusLayerWithAttestation(bufferId, rootHash, sigs, depositYs);
     }
 
@@ -687,7 +687,7 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
         bytes memory sig = _fakeSignature(0);
         BLS12_381.DepositY memory dy = _emptyDepositY();
 
-        vm.expectRevert(IAttestationValidatorV1.ZeroDepositDomain.selector);
+        vm.expectRevert(IAttestationVerifierV1.ZeroDepositDomain.selector);
         validator.verifyBLSDeposit(pk, sig, 32 ether, dy, withdrawalCredentials);
     }
 
@@ -697,7 +697,7 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
         // attester1 was registered in setUp(); re-adding must revert
         vm.prank(admin);
         vm.expectRevert(
-            abi.encodeWithSelector(IAttestationValidatorV1.AttesterStatusUnchanged.selector, attester1, true)
+            abi.encodeWithSelector(IAttestationVerifierV1.AttesterStatusUnchanged.selector, attester1, true)
         );
         validator.setAttester(attester1, true);
 
@@ -705,7 +705,7 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
         address stranger = address(0xC0FFEE);
         vm.prank(admin);
         vm.expectRevert(
-            abi.encodeWithSelector(IAttestationValidatorV1.AttesterStatusUnchanged.selector, stranger, false)
+            abi.encodeWithSelector(IAttestationVerifierV1.AttesterStatusUnchanged.selector, stranger, false)
         );
         validator.setAttester(stranger, false);
     }

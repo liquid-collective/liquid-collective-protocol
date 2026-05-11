@@ -5,22 +5,22 @@ import {ECDSA} from "openzeppelin-contracts/contracts/utils/cryptography/ECDSA.s
 
 import "./Initializable.sol";
 import "./interfaces/IAdministrable.sol";
-import "./interfaces/IAttestationValidator.1.sol";
+import "./interfaces/IAttestationVerifier.1.sol";
 import "./interfaces/IDepositContract.sol";
 import "./interfaces/IDepositDataBuffer.sol";
 
 import "./libraries/BLS12_381.sol";
 import "./libraries/LibErrors.sol";
 
-import "./state/attestationValidator/AttestationQuorum.sol";
-import "./state/attestationValidator/Attesters.sol";
-import "./state/attestationValidator/ValidatorDepositContractAddress.sol";
-import "./state/attestationValidator/DepositDataBufferAddress.sol";
-import "./state/attestationValidator/DepositDomainValue.sol";
-import "./state/attestationValidator/DomainSeparator.sol";
+import "./state/attestationVerifier/AttestationQuorum.sol";
+import "./state/attestationVerifier/Attesters.sol";
+import "./state/attestationVerifier/ValidatorDepositContractAddress.sol";
+import "./state/attestationVerifier/DepositDataBufferAddress.sol";
+import "./state/attestationVerifier/DepositDomainValue.sol";
+import "./state/attestationVerifier/DomainSeparator.sol";
 import "./state/shared/RiverAddress.sol";
 
-/// @title AttestationValidator (v1)
+/// @title AttestationVerifier (v1)
 /// @author Alluvial Finance Inc.
 /// @notice Sibling contract that validates attestation-quorum + BLS deposit messages
 ///         on behalf of River. Extracted from RiverV1 to keep River's deployed
@@ -28,7 +28,7 @@ import "./state/shared/RiverAddress.sol";
 ///         of the attestation deposit flow (quorum/BLS verify, WC + total-amount check)
 ///         while retaining keeper authorization, slashing-containment gating, ETH
 ///         execution, operator funding accounting, and balance bookkeeping.
-contract AttestationValidatorV1 is Initializable, IAttestationValidatorV1 {
+contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1 {
     // -----------------------------------------------------------------------
     // EIP-712
     // -----------------------------------------------------------------------
@@ -57,7 +57,7 @@ contract AttestationValidatorV1 is Initializable, IAttestationValidatorV1 {
     // -----------------------------------------------------------------------
 
     /// @notice Restrict to River's admin via cross-contract view call.
-    /// @dev Single source of truth for governance — same admin manages River and this validator.
+    /// @dev Single source of truth for governance — same admin manages River and this verifier.
     modifier onlyRiverAdmin() {
         if (msg.sender != IAdministrable(RiverAddress.get()).getAdmin()) {
             revert LibErrors.Unauthorized(msg.sender);
@@ -69,8 +69,8 @@ contract AttestationValidatorV1 is Initializable, IAttestationValidatorV1 {
     // Initialization
     // -----------------------------------------------------------------------
 
-    /// @inheritdoc IAttestationValidatorV1
-    function initAttestationValidatorV1(
+    /// @inheritdoc IAttestationVerifierV1
+    function initAttestationVerifierV1(
         address _river,
         address _depositContract,
         address _depositDataBuffer,
@@ -112,8 +112,8 @@ contract AttestationValidatorV1 is Initializable, IAttestationValidatorV1 {
         emit SetAttestationQuorum(_quorum);
 
         // EIP-712 domain separator binds verifyingContract to River's address, not this
-        // validator's own address. This preserves attester signing tooling that signs
-        // against River's identity even if the validator is later redeployed.
+        // verifier's own address. This preserves attester signing tooling that signs
+        // against River's identity even if the verifier is later redeployed.
         bytes32 domainSeparator =
             keccak256(abi.encode(EIP712_DOMAIN_TYPEHASH, NAME_HASH, VERSION_HASH, block.chainid, _river));
         DomainSeparator.set(domainSeparator);
@@ -124,21 +124,21 @@ contract AttestationValidatorV1 is Initializable, IAttestationValidatorV1 {
     // Admin setters
     // -----------------------------------------------------------------------
 
-    /// @inheritdoc IAttestationValidatorV1
+    /// @inheritdoc IAttestationVerifierV1
     function setDepositDataBuffer(address _depositDataBuffer) external onlyRiverAdmin {
         if (_depositDataBuffer == address(0)) revert LibErrors.InvalidZeroAddress();
         DepositDataBufferAddress.set(_depositDataBuffer);
         emit SetDepositDataBuffer(_depositDataBuffer);
     }
 
-    /// @inheritdoc IAttestationValidatorV1
+    /// @inheritdoc IAttestationVerifierV1
     function setDepositContract(address _depositContract) external onlyRiverAdmin {
         if (_depositContract == address(0)) revert LibErrors.InvalidZeroAddress();
         ValidatorDepositContractAddress.set(_depositContract);
         emit SetDepositContract(_depositContract);
     }
 
-    /// @inheritdoc IAttestationValidatorV1
+    /// @inheritdoc IAttestationVerifierV1
     function setAttester(address attester, bool value) external onlyRiverAdmin {
         if (attester == address(0)) revert LibErrors.InvalidZeroAddress();
 
@@ -156,7 +156,7 @@ contract AttestationValidatorV1 is Initializable, IAttestationValidatorV1 {
         emit SetAttester(attester, value);
     }
 
-    /// @inheritdoc IAttestationValidatorV1
+    /// @inheritdoc IAttestationVerifierV1
     function setAttestationQuorum(uint256 newQuorum) external onlyRiverAdmin {
         if (newQuorum == 0) revert ZeroQuorum();
         uint256 attesterCount = Attesters.getCount();
@@ -207,7 +207,7 @@ contract AttestationValidatorV1 is Initializable, IAttestationValidatorV1 {
     // Validate-and-prepare — pure validation, no state changes
     // -----------------------------------------------------------------------
 
-    /// @inheritdoc IAttestationValidatorV1
+    /// @inheritdoc IAttestationVerifierV1
     // solhint-disable-next-line code-complexity
     function validateAndPrepare(
         bytes32 depositDataBufferId,
@@ -265,11 +265,10 @@ contract AttestationValidatorV1 is Initializable, IAttestationValidatorV1 {
     // Internal — attestation quorum + BLS verification
     // -----------------------------------------------------------------------
 
-    function _verifyAttestationQuorum(
-        bytes32 depositDataBufferId,
-        bytes32 depositRootHash,
-        bytes[] calldata signatures
-    ) internal view {
+    function _verifyAttestationQuorum(bytes32 depositDataBufferId, bytes32 depositRootHash, bytes[] calldata signatures)
+        internal
+        view
+    {
         uint256 sigLen = signatures.length;
         if (sigLen > MAX_SIGNATURES) revert TooManySignatures(sigLen, MAX_SIGNATURES);
 
@@ -315,12 +314,13 @@ contract AttestationValidatorV1 is Initializable, IAttestationValidatorV1 {
     ) internal view {
         for (uint256 i = 0; i < deposits.length; i++) {
             bytes32 wc = abi.decode(deposits[i].withdrawalCredentials, (bytes32));
-            (bool ok, bytes memory revertData) = address(this).staticcall(
-                abi.encodeCall(
-                    this.verifyBLSDeposit,
-                    (deposits[i].pubkey, deposits[i].signature, deposits[i].amount, depositYs[i], wc)
-                )
-            );
+            (bool ok, bytes memory revertData) = address(this)
+                .staticcall(
+                    abi.encodeCall(
+                        this.verifyBLSDeposit,
+                        (deposits[i].pubkey, deposits[i].signature, deposits[i].amount, depositYs[i], wc)
+                    )
+                );
             if (!ok) {
                 assembly {
                     revert(add(revertData, 32), mload(revertData))

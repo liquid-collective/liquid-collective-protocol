@@ -14,7 +14,7 @@ import "./mocks/DepositContractMock.sol";
 import "../src/libraries/LibAllowlistMasks.sol";
 import "../src/libraries/BLS12_381.sol";
 import "../src/Allowlist.1.sol";
-import "../src/AttestationValidator.1.sol";
+import "../src/AttestationVerifier.1.sol";
 import "../src/River.1.sol";
 import "../src/state/river/LastConsensusLayerReport.sol";
 import "../src/interfaces/components/IOracleManager.1.sol";
@@ -102,7 +102,7 @@ abstract contract RiverV1TestBase is OperatorAllocationTestBase, BytesGenerator 
     OperatorsRegistryWithOverridesV1 internal operatorsRegistry;
 
     MockDepositDataBuffer internal depositBuffer;
-    AttestationValidatorV1 internal attestationValidator;
+    AttestationVerifierV1 internal attestationVerifier;
 
     uint256 internal attesterPk1 = 0xA1;
     uint256 internal attesterPk2 = 0xA2;
@@ -378,15 +378,15 @@ contract RiverV1Tests is RiverV1TestBase {
 
         vm.stopPrank();
 
-        // Deploy + initialize the AttestationValidator sibling. The validator's EIP-712
+        // Deploy + initialize the AttestationVerifier sibling. The validator's EIP-712
         // domain separator binds verifyingContract to River's address.
         address[] memory _initAttesters = new address[](3);
         _initAttesters[0] = attester1;
         _initAttesters[1] = attester2;
         _initAttesters[2] = attester3;
-        attestationValidator = new AttestationValidatorV1();
-        LibImplementationUnbricker.unbrick(vm, address(attestationValidator));
-        attestationValidator.initAttestationValidatorV1(
+        attestationVerifier = new AttestationVerifierV1();
+        LibImplementationUnbricker.unbrick(vm, address(attestationVerifier));
+        attestationVerifier.initAttestationVerifierV1(
             address(river), address(deposit), address(depositBuffer), _initAttesters, 2, bytes4(0)
         );
 
@@ -394,14 +394,14 @@ contract RiverV1Tests is RiverV1TestBase {
         // because they don't require the V1_3 accounting migration).
         vm.store(
             address(river),
-            bytes32(uint256(keccak256("river.state.attestationValidatorAddress")) - 1),
-            bytes32(uint256(uint160(address(attestationValidator))))
+            bytes32(uint256(keccak256("river.state.attestationVerifierAddress")) - 1),
+            bytes32(uint256(uint160(address(attestationVerifier))))
         );
 
         // Mock BLS verification on the validator (EIP-2537 precompiles not enabled in Foundry).
         vm.mockCall(
-            address(attestationValidator),
-            abi.encodeWithSelector(attestationValidator.verifyBLSDeposit.selector),
+            address(attestationVerifier),
+            abi.encodeWithSelector(attestationVerifier.verifyBLSDeposit.selector),
             bytes("")
         );
 
@@ -1280,26 +1280,26 @@ contract RiverV1TestsReport_HEAVY_FUZZING is RiverV1TestBase {
 
         vm.stopPrank();
 
-        // Deploy + initialize the AttestationValidator sibling.
+        // Deploy + initialize the AttestationVerifier sibling.
         address[] memory _initAttesters2 = new address[](3);
         _initAttesters2[0] = attester1;
         _initAttesters2[1] = attester2;
         _initAttesters2[2] = attester3;
-        attestationValidator = new AttestationValidatorV1();
-        LibImplementationUnbricker.unbrick(vm, address(attestationValidator));
-        attestationValidator.initAttestationValidatorV1(
+        attestationVerifier = new AttestationVerifierV1();
+        LibImplementationUnbricker.unbrick(vm, address(attestationVerifier));
+        attestationVerifier.initAttestationVerifierV1(
             address(river), address(deposit), address(depositBuffer), _initAttesters2, 2, bytes4(0)
         );
         vm.store(
             address(river),
-            bytes32(uint256(keccak256("river.state.attestationValidatorAddress")) - 1),
-            bytes32(uint256(uint160(address(attestationValidator))))
+            bytes32(uint256(keccak256("river.state.attestationVerifierAddress")) - 1),
+            bytes32(uint256(uint160(address(attestationVerifier))))
         );
 
         // Mock BLS verification on the validator (EIP-2537 precompiles not enabled in Foundry).
         vm.mockCall(
-            address(attestationValidator),
-            abi.encodeWithSelector(attestationValidator.verifyBLSDeposit.selector),
+            address(attestationVerifier),
+            abi.encodeWithSelector(attestationVerifier.verifyBLSDeposit.selector),
             bytes("")
         );
     }
@@ -2692,16 +2692,14 @@ contract RiverV1CoverageTests is RiverV1TestBase {
     bytes32 constant IN_FLIGHT_DEPOSIT_SLOT = bytes32(uint256(keccak256("river.state.inFlightDeposit")) - 1);
     bytes32 constant BUFFERED_EXCEEDING_ETH_SLOT = bytes32(uint256(keccak256("river.state.bufferedExceedingEth")) - 1);
 
-    /// @dev Helper: deploy and init an AttestationValidator pointed at this test's River.
-    function _deployValidatorFor(address _river) internal returns (AttestationValidatorV1 v) {
+    /// @dev Helper: deploy and init an AttestationVerifier pointed at this test's River.
+    function _deployValidatorFor(address _river) internal returns (AttestationVerifierV1 v) {
         address[] memory _attesters_ = new address[](2);
         _attesters_[0] = makeAddr("attester1");
         _attesters_[1] = makeAddr("attester2");
-        v = new AttestationValidatorV1();
+        v = new AttestationVerifierV1();
         LibImplementationUnbricker.unbrick(vm, address(v));
-        v.initAttestationValidatorV1(
-            _river, address(deposit), makeAddr("depositBuffer"), _attesters_, 1, bytes4(0)
-        );
+        v.initAttestationVerifierV1(_river, address(deposit), makeAddr("depositBuffer"), _attesters_, 1, bytes4(0));
     }
 
     /// Asserts that initRiverV1_3 sets in-flight deposit when reported validator count is less than deposited count.
@@ -2710,7 +2708,7 @@ contract RiverV1CoverageTests is RiverV1TestBase {
         // 10 deposited validators, 7 reported -> 3 in flight.
         vm.store(address(river), DEPOSITED_VALIDATOR_COUNT_SLOT, bytes32(uint256(10)));
         vm.store(address(river), bytes32(uint256(LAST_CLR_BASE_SLOT) + 5), bytes32(uint256(7)));
-        AttestationValidatorV1 v = _deployValidatorFor(address(river));
+        AttestationVerifierV1 v = _deployValidatorFor(address(river));
         bytes32 wc = withdraw.getCredentials();
         vm.prank(admin);
         river.initRiverV1_3(wc, address(v));
@@ -2723,7 +2721,7 @@ contract RiverV1CoverageTests is RiverV1TestBase {
         _initRiverAndV1_2();
         vm.store(address(river), DEPOSITED_VALIDATOR_COUNT_SLOT, bytes32(uint256(5)));
         vm.store(address(river), bytes32(uint256(LAST_CLR_BASE_SLOT) + 5), bytes32(uint256(5)));
-        AttestationValidatorV1 v = _deployValidatorFor(address(river));
+        AttestationVerifierV1 v = _deployValidatorFor(address(river));
         bytes32 wc = withdraw.getCredentials();
         vm.prank(admin);
         river.initRiverV1_3(wc, address(v));
@@ -2731,22 +2729,22 @@ contract RiverV1CoverageTests is RiverV1TestBase {
         assertEq(uint256(vm.load(address(river), IN_FLIGHT_DEPOSIT_SLOT)), 0);
     }
 
-    /// Asserts that AttestationValidator init reverts on an empty attester array.
-    function testInitAttestationValidatorRevertsOnEmptyAttesters() public {
+    /// Asserts that AttestationVerifier init reverts on an empty attester array.
+    function testInitAttestationVerifierRevertsOnEmptyAttesters() public {
         _initRiverAndV1_2();
         address[] memory _attesters_ = new address[](0);
-        AttestationValidatorV1 v = new AttestationValidatorV1();
+        AttestationVerifierV1 v = new AttestationVerifierV1();
         LibImplementationUnbricker.unbrick(vm, address(v));
         vm.expectRevert(abi.encodeWithSignature("InvalidArgument()"));
-        v.initAttestationValidatorV1(
+        v.initAttestationVerifierV1(
             address(river), address(deposit), makeAddr("depositBuffer"), _attesters_, 1, bytes4(0)
         );
     }
 
-    /// Asserts that AttestationValidator init reverts when the attesters array exceeds MAX_ATTESTERS.
-    function testInitAttestationValidatorRevertsOnTooManyAttesters() public {
+    /// Asserts that AttestationVerifier init reverts when the attesters array exceeds MAX_ATTESTERS.
+    function testInitAttestationVerifierRevertsOnTooManyAttesters() public {
         _initRiverAndV1_2();
-        AttestationValidatorV1 v = new AttestationValidatorV1();
+        AttestationVerifierV1 v = new AttestationVerifierV1();
         LibImplementationUnbricker.unbrick(vm, address(v));
         uint256 tooMany = v.MAX_ATTESTERS() + 1;
         address[] memory _attesters_ = new address[](tooMany);
@@ -2754,7 +2752,7 @@ contract RiverV1CoverageTests is RiverV1TestBase {
             _attesters_[i] = address(uint160(i + 1));
         }
         vm.expectRevert(abi.encodeWithSignature("InvalidArgument()"));
-        v.initAttestationValidatorV1(
+        v.initAttestationVerifierV1(
             address(river), address(deposit), makeAddr("depositBuffer"), _attesters_, 1, bytes4(0)
         );
     }

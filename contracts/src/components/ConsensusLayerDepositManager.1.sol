@@ -2,7 +2,7 @@
 pragma solidity 0.8.34;
 
 import "../interfaces/components/IConsensusLayerDepositManager.1.sol";
-import "../interfaces/IAttestationValidator.1.sol";
+import "../interfaces/IAttestationVerifier.1.sol";
 import "../interfaces/IDepositContract.sol";
 import "../interfaces/IDepositDataBuffer.sol";
 
@@ -11,7 +11,7 @@ import "../libraries/LibUint256.sol";
 import "../libraries/LibErrors.sol";
 import "../libraries/BLS12_381.sol";
 
-import "../state/river/AttestationValidatorAddress.sol";
+import "../state/river/AttestationVerifierAddress.sol";
 import "../state/river/BalanceToDeposit.sol";
 import "../state/river/CommittedBalance.sol";
 import "../state/river/DepositContractAddress.sol";
@@ -24,7 +24,7 @@ import "../state/river/WithdrawalCredentials.sol";
 /// @author Alluvial Finance Inc.
 /// @notice Handles interactions with the official deposit contract and orchestrates the
 ///         attestation-gated deposit flow. Attestation-quorum and BLS verification are
-///         delegated to the AttestationValidator sibling contract; this component owns
+///         delegated to the AttestationVerifier sibling contract; this component owns
 ///         the keeper authorization, slashing-containment gating, ETH execution, and
 ///         the balance/in-flight bookkeeping.
 abstract contract ConsensusLayerDepositManagerV1 is IConsensusLayerDepositManagerV1 {
@@ -109,8 +109,8 @@ abstract contract ConsensusLayerDepositManagerV1 is IConsensusLayerDepositManage
     }
 
     /// @inheritdoc IConsensusLayerDepositManagerV1
-    function getAttestationValidator() external view returns (address) {
-        return AttestationValidatorAddress.get();
+    function getAttestationVerifier() external view returns (address) {
+        return AttestationVerifierAddress.get();
     }
 
     // -----------------------------------------------------------------------
@@ -132,11 +132,12 @@ abstract contract ConsensusLayerDepositManagerV1 is IConsensusLayerDepositManage
 
         uint256 committedBalance = CommittedBalance.get();
 
-        (IDepositDataBuffer.DepositObject[] memory deposits, uint256 totalAmount) = IAttestationValidatorV1(
-            AttestationValidatorAddress.get()
-        ).validateAndPrepare(
-            depositDataBufferId, depositRootHash, signatures, depositYs, withdrawalCredentials, committedBalance
-        );
+        (IDepositDataBuffer.DepositObject[] memory deposits, uint256 totalAmount) = IAttestationVerifierV1(
+                AttestationVerifierAddress.get()
+            )
+            .validateAndPrepare(
+                depositDataBufferId, depositRootHash, signatures, depositYs, withdrawalCredentials, committedBalance
+            );
 
         _updateFundedETHFromBuffer(deposits);
 

@@ -7,7 +7,7 @@ import "../../libraries/LibUnstructuredStorage.sol";
 /// @notice Library for storing the attestation quorum.
 library AttestationQuorum {
     bytes32 internal constant ATTESTATION_QUORUM_SLOT =
-        bytes32(uint256(keccak256("attestationValidator.state.attestationQuorum")) - 1);
+        bytes32(uint256(keccak256("attestationVerifier.state.attestationQuorum")) - 1);
 
     /// @notice Retrieve the attestation quorum
     /// @return The attestation quorum

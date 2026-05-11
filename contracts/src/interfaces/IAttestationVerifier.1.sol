@@ -4,12 +4,12 @@ pragma solidity 0.8.34;
 import "./IDepositDataBuffer.sol";
 import "../libraries/BLS12_381.sol";
 
-/// @title Attestation Validator Interface (v1)
+/// @title Attestation Verifier Interface (v1)
 /// @author Alluvial Finance Inc.
-/// @notice External surface of the AttestationValidator sibling contract that
+/// @notice External surface of the AttestationVerifier sibling contract that
 ///         River delegates to for attestation-quorum + BLS deposit-message verification
 ///         and for per-deposit withdrawal-credentials and committed-balance checks.
-interface IAttestationValidatorV1 {
+interface IAttestationVerifierV1 {
     // -----------------------------------------------------------------------
     // Events
     // -----------------------------------------------------------------------
@@ -32,7 +32,7 @@ interface IAttestationValidatorV1 {
     /// @notice Emitted when the BLS deposit domain is set
     event SetDepositDomain(bytes32 depositDomain);
 
-    /// @notice Emitted when the River address is set on this validator
+    /// @notice Emitted when the River address is set on this verifier
     event SetRiver(address indexed river);
 
     // -----------------------------------------------------------------------
@@ -62,7 +62,7 @@ interface IAttestationValidatorV1 {
     // Initialization
     // -----------------------------------------------------------------------
 
-    /// @notice One-shot initializer for v1 of the AttestationValidator.
+    /// @notice One-shot initializer for v1 of the AttestationVerifier.
     /// @param _river                The River proxy address; used for the EIP-712 verifyingContract
     ///                              binding and for the cross-contract admin lookup.
     /// @param _depositContract      The official ETH deposit contract.
@@ -70,7 +70,7 @@ interface IAttestationValidatorV1 {
     /// @param _attesters            Initial set of attester EOAs.
     /// @param _quorum               Initial attestation quorum (1 ≤ quorum ≤ attesters.length).
     /// @param _genesisForkVersion   Genesis fork version used to derive the BLS deposit domain.
-    function initAttestationValidatorV1(
+    function initAttestationVerifierV1(
         address _river,
         address _depositContract,
         address _depositDataBuffer,
@@ -126,6 +126,6 @@ interface IAttestationValidatorV1 {
     /// @dev Capitalized for backwards compatibility with prior public API
     /// solhint-disable-next-line func-name-mixedcase
     function DEPOSIT_DOMAIN() external view returns (bytes32);
-    /// @notice The River address this validator is bound to (verifyingContract + admin source)
+    /// @notice The River address this verifier is bound to (verifyingContract + admin source)
     function getRiver() external view returns (address);
 }

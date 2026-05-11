@@ -2,7 +2,7 @@
 pragma solidity 0.8.34;
 
 import "../interfaces/components/IOracleManager.1.sol";
-import "../state/river/AttestationValidatorAddress.sol";
+import "../state/river/AttestationVerifierAddress.sol";
 import "../state/river/DepositContractAddress.sol";
 import "../state/river/DepositedValidatorCount.sol";
 import "../state/river/InFlightDeposit.sol";
@@ -27,19 +27,17 @@ library LibRiverV1_3InitMigration {
     // Match the event signatures used elsewhere so topic0 is unchanged.
     event SetDepositContractAddress(address indexed depositContract);
     event SetWithdrawalCredentials(bytes32 withdrawalCredentials);
-    event SetAttestationValidator(address indexed attestationValidator);
+    event SetAttestationVerifier(address indexed attestationVerifier);
 
     /// @notice Run the full v1.3 init: reset deposit contract + withdrawal credentials
-    ///         (carried over from the prior init flow), wire the AttestationValidator
+    ///         (carried over from the prior init flow), wire the AttestationVerifier
     ///         sibling, and run the 0x01 → 0x02 accounting migration that rebuilds
     ///         `LastConsensusLayerReport` with the new `totalDepositedActivatedETH`
     ///         field and seeds `TotalDepositedETH` and `InFlightDeposit`.
     /// @param  _withdrawalCredentials The withdrawal credentials to apply to all deposits
-    /// @param  _attestationValidator  The pre-initialized AttestationValidator
+    /// @param  _attestationVerifier  The pre-initialized AttestationVerifier
     /// @param  _depositSize           Wei per validator (River's DEPOSIT_SIZE constant)
-    function runInitV1_3(bytes32 _withdrawalCredentials, address _attestationValidator, uint256 _depositSize)
-        external
-    {
+    function runInitV1_3(bytes32 _withdrawalCredentials, address _attestationVerifier, uint256 _depositSize) external {
         // Re-emit deposit-contract address (carry-over from prior initConsensusLayerDepositManagerV1_2 call)
         address depositContract = DepositContractAddress.get();
         DepositContractAddress.set(depositContract);
@@ -48,8 +46,8 @@ library LibRiverV1_3InitMigration {
         WithdrawalCredentials.set(_withdrawalCredentials);
         emit SetWithdrawalCredentials(_withdrawalCredentials);
 
-        AttestationValidatorAddress.set(_attestationValidator);
-        emit SetAttestationValidator(_attestationValidator);
+        AttestationVerifierAddress.set(_attestationVerifier);
+        emit SetAttestationVerifier(_attestationVerifier);
 
         IOracleManagerV1.StoredConsensusLayerReport storage lastReport = LastConsensusLayerReport.get();
         uint32 clValidatorCount = lastReport.validatorsCount;
