@@ -6,7 +6,7 @@
 
 This contract handles the list of operators and their keys
 
-
+*Operator index is the position in the operators array. Operators are onlyadded, never removed, so the operator at index i is always the one atarray position i and indices are stable over time.*
 
 ## Methods
 
@@ -132,10 +132,10 @@ Get the current exit request demand waiting to be triggeredThis value is the amo
 ### getNextValidatorsToDepositFromActiveOperators
 
 ```solidity
-function getNextValidatorsToDepositFromActiveOperators(uint256 _count) external view returns (bytes[] publicKeys, bytes[] signatures)
+function getNextValidatorsToDepositFromActiveOperators(IOperatorsRegistryV1.OperatorAllocation[] _allocations) external view returns (bytes[] publicKeys, bytes[] signatures)
 ```
 
-Get the next validators that would be funded
+
 
 
 
@@ -143,14 +143,14 @@ Get the next validators that would be funded
 
 | Name | Type | Description |
 |---|---|---|
-| _count | uint256 | Count of validators that would be funded next |
+| _allocations | IOperatorsRegistryV1.OperatorAllocation[] | undefined |
 
 #### Returns
 
 | Name | Type | Description |
 |---|---|---|
-| publicKeys | bytes[] | An array of fundable public keys |
-| signatures | bytes[] | An array of signatures linked to the public keys |
+| publicKeys | bytes[] | undefined |
+| signatures | bytes[] | undefined |
 
 ### getOperator
 
@@ -389,10 +389,10 @@ Retrieve the active operator set
 ### pickNextValidatorsToDeposit
 
 ```solidity
-function pickNextValidatorsToDeposit(uint256 _count) external nonpayable returns (bytes[] publicKeys, bytes[] signatures)
+function pickNextValidatorsToDeposit(IOperatorsRegistryV1.OperatorAllocation[] _allocations) external nonpayable returns (bytes[] publicKeys, bytes[] signatures)
 ```
 
-Retrieve validator keys based on operator statuses
+
 
 
 
@@ -400,14 +400,14 @@ Retrieve validator keys based on operator statuses
 
 | Name | Type | Description |
 |---|---|---|
-| _count | uint256 | Max amount of keys requested |
+| _allocations | IOperatorsRegistryV1.OperatorAllocation[] | undefined |
 
 #### Returns
 
 | Name | Type | Description |
 |---|---|---|
-| publicKeys | bytes[] | An array of public keys |
-| signatures | bytes[] | An array of signatures linked to the public keys |
+| publicKeys | bytes[] | undefined |
+| signatures | bytes[] | undefined |
 
 ### proposeAdmin
 
@@ -462,10 +462,10 @@ Allows river to override the stopped validators arrayThis actions happens during
 ### requestValidatorExits
 
 ```solidity
-function requestValidatorExits(uint256 _count) external nonpayable
+function requestValidatorExits(IOperatorsRegistryV1.OperatorAllocation[] _allocations) external nonpayable
 ```
 
-Public endpoint to consume the exit request demand and perform the actual exit requestsThe selection algorithm will pick validators based on their active validator countsThis value is computed by using the count of funded keys and taking into account the stopped validator counts and exit requests
+
 
 
 
@@ -473,7 +473,7 @@ Public endpoint to consume the exit request demand and perform the actual exit r
 
 | Name | Type | Description |
 |---|---|---|
-| _count | uint256 | Max amount of exits to request |
+| _allocations | IOperatorsRegistryV1.OperatorAllocation[] | undefined |
 
 ### setOperatorAddress
 
@@ -606,7 +606,7 @@ The operator or the admin added new validator keys and signatures
 event FundedValidatorKeys(uint256 indexed index, bytes[] publicKeys, bool deferred)
 ```
 
-A validator key got funded on the deposit contractThis event was introduced during a contract upgrade, in order to cover all possible public keys, this eventwill be replayed for past funded keys in order to have a complete coverage of all the funded public keys.In this particuliar scenario, the deferred value will be set to true, to indicate that we are not going to havethe expected additional events and side effects in the same transaction (deposit to official DepositContract etc ...) becausethe event was synthetically crafted.
+A validator key got funded on the deposit contractThis event was introduced during a contract upgrade, in order to cover all possible public keys, this eventwill be replayed for past funded keys in order to have a complete coverage of all the funded public keys.In this particular scenario, the deferred value will be set to true, to indicate that we are not going to havethe expected additional events and side effects in the same transaction (deposit to official DepositContract etc ...) becausethe event was synthetically crafted.
 
 
 
@@ -879,7 +879,7 @@ The total requested exit has been updated
 event UpdatedRequestedValidatorExitsUponStopped(uint256 indexed index, uint32 oldRequestedExits, uint32 newRequestedExits)
 ```
 
-The requested exit count has been update to fill the gap with the reported stopped count
+The requested exit count has been updated to fill the gap with the reported stopped count
 
 
 
@@ -910,6 +910,52 @@ The stopped validator array has been changedA validator is considered stopped if
 
 
 ## Errors
+
+### AllocationWithZeroValidatorCount
+
+```solidity
+error AllocationWithZeroValidatorCount()
+```
+
+Thrown when an allocation with zero validator count is provided
+
+
+
+
+### ExitsRequestedExceedAvailableFundedCount
+
+```solidity
+error ExitsRequestedExceedAvailableFundedCount(uint256 operatorIndex, uint256 requested, uint256 available)
+```
+
+The provided exit requests exceed the available funded validator count of the operator
+
+
+
+#### Parameters
+
+| Name | Type | Description |
+|---|---|---|
+| operatorIndex | uint256 | The operator index |
+| requested | uint256 | The requested count |
+| available | uint256 | The available count |
+
+### ExitsRequestedExceedDemand
+
+```solidity
+error ExitsRequestedExceedDemand(uint256 requested, uint256 demand)
+```
+
+The provided exit requests exceed the current exit request demand
+
+
+
+#### Parameters
+
+| Name | Type | Description |
+|---|---|---|
+| requested | uint256 | The requested count |
+| demand | uint256 | The demand count |
 
 ### FundedKeyEventMigrationComplete
 
@@ -1087,6 +1133,51 @@ Thrown when no exit requests can be performed
 
 
 
+### OnlyKeeper
+
+```solidity
+error OnlyKeeper()
+```
+
+
+
+
+
+
+### OperatorHasInsufficientFundableKeys
+
+```solidity
+error OperatorHasInsufficientFundableKeys(uint256 operatorIndex, uint256 requested, uint256 available)
+```
+
+Thrown when an operator lacks the required number of fundable keys
+
+
+
+#### Parameters
+
+| Name | Type | Description |
+|---|---|---|
+| operatorIndex | uint256 | The operator index |
+| requested | uint256 | The requested count |
+| available | uint256 | The available count |
+
+### OperatorIgnoredExitRequests
+
+```solidity
+error OperatorIgnoredExitRequests(uint256 operatorIndex)
+```
+
+Thrown when an operator ignored the required number of requested exits
+
+
+
+#### Parameters
+
+| Name | Type | Description |
+|---|---|---|
+| operatorIndex | uint256 | The operator index |
+
 ### OperatorLimitTooHigh
 
 ```solidity
@@ -1196,7 +1287,7 @@ The provided stopped validator count array is shrinking
 error StoppedValidatorCountsDecreased()
 ```
 
-Throw when an element in the stopped validator array is decreasing
+Thrown when an element in the stopped validator array is decreasing
 
 
 
