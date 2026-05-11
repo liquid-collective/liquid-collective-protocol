@@ -179,24 +179,23 @@ abstract contract ConsensusLayerDepositManagerV1 is IConsensusLayerDepositManage
     }
 
     /// @notice Add or remove an attester. Admin only.
-    function setAttester(address attester, bool value) external onlyRiverAdmin {
+    function setAttester(address attester, bool status) external onlyRiverAdmin {
         if (attester == address(0)) revert ZeroAddress();
 
-        bool current = Attesters.isAttester(attester);
-        if (current == value) revert AttesterStatusUnchanged(attester, value);
+        if (Attesters.isAttester(attester) == status) revert AttesterStatusUnchanged(attester, status);
 
         uint256 count = Attesters.getCount();
-        uint256 newCount = value ? count + 1 : count - 1;
-        if (value && newCount > MAX_ATTESTERS) {
+        uint256 newCount = status ? count + 1 : count - 1;
+        if (status && newCount > MAX_ATTESTERS) {
             revert TooManyAttesters(newCount, MAX_ATTESTERS);
         }
         uint256 depositCommitteeQuorum = _depositCommitteeQuorum();
-        if (!value && depositCommitteeQuorum > newCount) {
+        if (!status && depositCommitteeQuorum > newCount) {
             revert QuorumExceedsAttesterCount(depositCommitteeQuorum, newCount);
         }
         Attesters.setCount(newCount);
-        _setAttester(attester, value);
-        emit SetAttester(attester, value);
+        _setAttester(attester, status);
+        emit SetAttester(attester, status);
     }
 
     /// @notice Set the attestation quorum. Admin only.

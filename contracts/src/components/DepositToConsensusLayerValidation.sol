@@ -23,25 +23,80 @@ abstract contract DepositToConsensusLayerValidation {
     // Errors
     // -----------------------------------------------------------------------
 
+    /// @notice Insufficient attestations
+    /// @param valid The number of valid attestations
+    /// @param quorum The quorum required
     error InsufficientAttestations(uint256 valid, uint256 quorum);
+
+    /// @notice No deposits
     error NoDeposits();
+
+    /// @notice Deposit root mismatch
+    /// @param expected The expected deposit root
+    /// @param actual The actual deposit root
     error DepositRootMismatch(bytes32 expected, bytes32 actual);
+
+    /// @notice Buffer ID mismatch
+    /// @param expected The expected buffer ID
+    /// @param actual The actual buffer ID
     error BufferIdMismatch(bytes32 expected, bytes32 actual);
+
+    /// @notice Too many signatures
+    /// @param count The number of signatures
+    /// @param max The maximum number of signatures allowed
     error TooManySignatures(uint256 count, uint256 max);
-    error IncorrectDepositEther(uint256 expected, uint256 actual);
+
+    /// @notice BLS signature count mismatch
+    /// @param depositCount The number of deposits
+    /// @param yCount The number of Y-coordinates
     error BLSSignatureCountMismatch(uint256 depositCount, uint256 yCount);
+
+    /// @notice Invalid withdrawal credentials length
+    /// @param index The index of the withdrawal credentials
+    /// @param length The length of the withdrawal credentials
     error InvalidWithdrawalCredentialsLength(uint256 index, uint256 length);
+
+    /// @notice Invalid pubkey length
+    /// @param index The index of the pubkey
+    /// @param length The length of the pubkey
     error InvalidPubkeyLength(uint256 index, uint256 length);
+
+    /// @notice Invalid signature length
+    /// @param index The index of the signature
+    /// @param length The length of the signature
     error InvalidSignatureLength(uint256 index, uint256 length);
+
+    /// @notice Zero quorum
     error ZeroQuorum();
+
+    /// @notice Zero domain separator
     error ZeroDomainSeparator();
+
+    /// @notice Zero deposit domain
     error ZeroDepositDomain();
+
+    /// @notice Quorum exceeds attester count
+    /// @param quorum The quorum
+    /// @param attesterCount The number of attesters
     error QuorumExceedsAttesterCount(uint256 quorum, uint256 attesterCount);
+
+    /// @notice Quorum exceeds max signatures
+    /// @param quorum The quorum
+    /// @param max The maximum number of signatures allowed
     error QuorumExceedsMaxSignatures(uint256 quorum, uint256 max);
+
+    /// @notice Too many attesters
+    /// @param count The number of attesters
+    /// @param max The maximum number of attesters allowed
     error TooManyAttesters(uint256 count, uint256 max);
+
+    /// @notice Zero address
     error ZeroAddress();
-    error DuplicateAttester(address attester);
-    error AttesterStatusUnchanged(address attester, bool value);
+
+    /// @notice Attester status unchanged
+    /// @param attester The attester
+    /// @param status The new status
+    error AttesterStatusUnchanged(address attester, bool status);
 
     // -----------------------------------------------------------------------
     // EIP-712
