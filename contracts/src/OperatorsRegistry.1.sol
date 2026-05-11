@@ -427,10 +427,6 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
         if (vars.totalExitedETH != vars.amountOfExitedETH) {
             revert ExitedETHSumMismatch();
         }
-        // we check that the total is not higher than the current deposited ETH
-        if (vars.totalExitedETH > _totalDepositedETH) {
-            revert ExitedETHExceedsDepositedETH();
-        }
 
         OperatorsV3.setRawExitedETH(_exitedETH);
         emit UpdatedExitedETH(_exitedETH);

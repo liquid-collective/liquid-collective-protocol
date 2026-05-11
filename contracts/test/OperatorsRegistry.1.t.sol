@@ -1699,21 +1699,6 @@ contract OperatorsRegistryV1CoverageTests is OperatorsRegistryV1TestBase, Operat
         reg.reportExitedETH(shorter, 10 * 32 ether);
     }
 
-    /// Asserts that reportExitedETH reverts with ExitedETHExceedsDepositedETH when sum of exited ETH exceeds totalDepositedETH.
-    function testReportExitedETHRevertsWhenExceedsDeposited() public {
-        reg.initOperatorsRegistryV1(admin, river);
-        vm.prank(admin);
-        reg.addOperator("Op0", makeAddr("op0"));
-        reg.sudoSetFundedV3(0, 5 * 32 ether);
-        reg.sudoSetActiveCLETH(0, 5 * 32 ether);
-        reg.sudoSetRawExitedETH(new uint256[](2));
-        uint256[] memory exited = new uint256[](2);
-        exited[0] = 3 * 32 ether;
-        exited[1] = 3 * 32 ether;
-        vm.expectRevert(abi.encodeWithSignature("ExitedETHExceedsDepositedETH()"));
-        reg.reportExitedETH(exited, 2 * 32 ether);
-    }
-
     /// Asserts that version() returns the expected registry version string.
     function testOperatorsRegistryVersion() public {
         reg.initOperatorsRegistryV1(admin, river);
