@@ -17,6 +17,7 @@ import "../src/state/river/LastConsensusLayerReport.sol";
 import "../src/interfaces/components/IOracleManager.1.sol";
 import "../src/interfaces/IRiver.1.sol";
 import "../src/interfaces/IDepositContract.sol";
+import "../src/interfaces/components/IConsensusLayerDepositManager.1.sol";
 import "../src/Withdraw.1.sol";
 import "../src/Oracle.1.sol";
 import "../src/ELFeeRecipient.1.sol";
@@ -24,8 +25,6 @@ import "../src/OperatorsRegistry.1.sol";
 import "../src/CoverageFund.1.sol";
 import "../src/ConsolidationCoverageFund.1.sol";
 import "../src/RedeemManager.1.sol";
-import "../src/interfaces/IRiver.1.sol";
-import "../src/interfaces/components/IConsensusLayerDepositManager.1.sol";
 
 contract OperatorsRegistryWithOverridesV1 is OperatorsRegistryV1 {
     function sudoReportExitedETH(uint256[] calldata exitedETH, uint256 totalDepositedETH) external {
