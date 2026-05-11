@@ -442,7 +442,6 @@ abstract contract OracleManagerV1 is IOracleManagerV1 {
             // we pull the funds from the coverage recipient
             vars.trace.pulledCoverageFunds = _pullCoverageFunds(vars.availableAmountToUpperBound);
             // we do not update the rewards as coverage is not considered rewards
-            vars.availableAmountToUpperBound -= vars.trace.pulledCoverageFunds;
         }
 
         uint256 consolidationBuffer = ConsolidationBuffer.get();

@@ -423,37 +423,38 @@ contract RiverV1 is
 
     /// @notice Overridden handler to pull funds from the coverage fund to River and return the delta in the balance
     /// @param _max The maximum amount to pull from the coverage fund
-    /// @return The amount pulled from the coverage fund
-    function _pullCoverageFunds(uint256 _max) internal override returns (uint256) {
-        address coverageFund = CoverageFundAddress.get();
-        if (coverageFund == address(0)) {
-            return 0;
-        }
-        uint256 initialBalance = address(this).balance;
-        ICoverageFundV1(payable(coverageFund)).pullCoverageFunds(_max);
-        uint256 collectedCoverageFunds = address(this).balance - initialBalance;
-        if (collectedCoverageFunds > 0) {
-            _setBalanceToDeposit(BalanceToDeposit.get() + collectedCoverageFunds);
-        }
+    /// @return collectedCoverageFunds The amount pulled from the coverage fund
+    function _pullCoverageFunds(uint256 _max) internal override returns (uint256 collectedCoverageFunds) {
+        collectedCoverageFunds = _pullFundsFromCoverageFund(CoverageFundAddress.get(), _max);
         emit PulledCoverageFunds(collectedCoverageFunds);
-        return collectedCoverageFunds;
     }
 
     /// @notice Overridden handler to pull funds from the consolidation coverage fund to River and return the delta in the balance
     /// @param _max The maximum amount to pull from the consolidation coverage fund
-    /// @return The amount pulled from the consolidation coverage fund
-    function _pullConsolidationCoverageFunds(uint256 _max) internal override returns (uint256) {
-        address consolidationCoverageFund = ConsolidationCoverageFundAddress.get();
-        if (consolidationCoverageFund == address(0)) {
+    /// @return collectedConsolidationCoverageFunds The amount pulled from the consolidation coverage fund
+    function _pullConsolidationCoverageFunds(uint256 _max)
+        internal
+        override
+        returns (uint256 collectedConsolidationCoverageFunds)
+    {
+        collectedConsolidationCoverageFunds = _pullFundsFromCoverageFund(ConsolidationCoverageFundAddress.get(), _max);
+        emit PulledConsolidationCoverageFunds(collectedConsolidationCoverageFunds);
+    }
+
+    /// @notice Internal utility to pull funds from a coverage fund to River and return the delta in the balance
+    /// @param _coverageFund The address of the coverage fund
+    /// @param _max The maximum amount to pull from the coverage fund
+    /// @return The amount pulled from the coverage fund
+    function _pullFundsFromCoverageFund(address _coverageFund, uint256 _max) internal returns (uint256) {
+        if (_coverageFund == address(0)) {
             return 0;
         }
         uint256 initialBalance = address(this).balance;
-        IConsolidationCoverageFundV1(payable(consolidationCoverageFund)).pullCoverageFunds(_max);
+        IConsolidationCoverageFundV1(payable(_coverageFund)).pullCoverageFunds(_max);
         uint256 collected = address(this).balance - initialBalance;
         if (collected > 0) {
             _setBalanceToDeposit(BalanceToDeposit.get() + collected);
         }
-        emit PulledConsolidationCoverageFunds(collected);
         return collected;
     }
 
