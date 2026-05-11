@@ -29,8 +29,8 @@ contract OperatorsRegistryInitializableV1 is OperatorsRegistryV1 {
         OperatorsV3.get(_operatorIndex).requestedExits = _requestedExits;
     }
 
-    function sudoReportExitedETH(uint256[] calldata exitedETH, uint256 totalDepositedETH) external {
-        _setExitedETH(exitedETH, totalDepositedETH);
+    function sudoReportExitedETH(uint256[] calldata exitedETH) external {
+        _setExitedETH(exitedETH);
     }
 
     function sudoSetRawExitedETH(uint256[] memory value) external {
@@ -975,7 +975,7 @@ contract OperatorsRegistryV1ExitCorrectnessTests is OperatorAllocationTestBase {
         exitedETH1[3] = 10 * 32 ether; // op2
         exitedETH1[4] = 10 * 32 ether; // op3
         exitedETH1[5] = 10 * 32 ether; // op4
-        OperatorsRegistryInitializableV1(address(operatorsRegistry)).sudoReportExitedETH(exitedETH1, 250 * 32 ether);
+        OperatorsRegistryInitializableV1(address(operatorsRegistry)).sudoReportExitedETH(exitedETH1);
 
         assertEq(operatorsRegistry.getCurrentETHExitsDemand(), 150 * 32 ether, "Demand reduced by 50 exited");
         assertEq(operatorsRegistry.getTotalETHExitsRequested(), 50 * 32 ether, "Exited validators count as exits");
@@ -1012,7 +1012,7 @@ contract OperatorsRegistryV1ExitCorrectnessTests is OperatorAllocationTestBase {
         exitedETH2[3] = 16 * 32 ether; // op2
         exitedETH2[4] = 16 * 32 ether; // op3
         exitedETH2[5] = 16 * 32 ether; // op4
-        OperatorsRegistryInitializableV1(address(operatorsRegistry)).sudoReportExitedETH(exitedETH2, 250 * 32 ether);
+        OperatorsRegistryInitializableV1(address(operatorsRegistry)).sudoReportExitedETH(exitedETH2);
 
         // Demand unchanged because exitedETH(16*32e) < requestedExits(22*32e) for all operators
         assertEq(
@@ -1279,7 +1279,7 @@ contract OperatorsRegistryV1ExitCorrectnessTests is OperatorAllocationTestBase {
         exitedETH1[3] = 2 * 32 ether; // op2 (2*32e > requestedExits 0, bumps to 2*32e)
         exitedETH1[4] = 1 * 32 ether; // op3 (1*32e > requestedExits 0, bumps to 1*32e)
         exitedETH1[5] = 0; // op4
-        OperatorsRegistryInitializableV1(address(operatorsRegistry)).sudoReportExitedETH(exitedETH1, 250 * 32 ether);
+        OperatorsRegistryInitializableV1(address(operatorsRegistry)).sudoReportExitedETH(exitedETH1);
 
         // After first report: op2 bumped 0->2*32e, op3 bumped 0->1*32e (unsolicited = 3*32e)
         assertEq(operatorsRegistry.getOperator(0).requestedExits, 5 * 32 ether, "Op0 unchanged after first report");
@@ -1309,7 +1309,7 @@ contract OperatorsRegistryV1ExitCorrectnessTests is OperatorAllocationTestBase {
         vm.expectEmit(true, true, true, true);
         emit UpdatedRequestedETHExitsUponStopped(2, 2 * 32 ether, 7 * 32 ether);
 
-        OperatorsRegistryInitializableV1(address(operatorsRegistry)).sudoReportExitedETH(exitedETH2, 250 * 32 ether);
+        OperatorsRegistryInitializableV1(address(operatorsRegistry)).sudoReportExitedETH(exitedETH2);
 
         // requestedExits bumped for op0 (5->8) and op2 (2->7); others unchanged
         assertEq(operatorsRegistry.getOperator(0).requestedExits, 8 * 32 ether, "Op0 requestedExits bumped");
@@ -1349,7 +1349,7 @@ contract OperatorsRegistryV1ExitCorrectnessTests is OperatorAllocationTestBase {
         vm.expectEmit(true, true, true, true);
         emit UpdatedRequestedETHExitsUponStopped(0, 0, 20 * 32 ether);
 
-        OperatorsRegistryInitializableV1(address(operatorsRegistry)).sudoReportExitedETH(exitedETH, 250 * 32 ether);
+        OperatorsRegistryInitializableV1(address(operatorsRegistry)).sudoReportExitedETH(exitedETH);
 
         assertEq(operatorsRegistry.getOperator(0).requestedExits, 20 * 32 ether, "Op0 requestedExits bumped to 20*32e");
         assertEq(operatorsRegistry.getTotalETHExitsRequested(), 20 * 32 ether, "Total exits = unsolicited 20*32e");

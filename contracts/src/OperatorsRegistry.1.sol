@@ -199,7 +199,7 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
 
     /// @inheritdoc IOperatorsRegistryV1
     function reportExitedETH(uint256[] calldata _exitedETH, uint256 _totalDepositedETH) external onlyRiver {
-        _setExitedETH(_exitedETH, _totalDepositedETH);
+        _setExitedETH(_exitedETH);
     }
 
     /// @inheritdoc IOperatorsRegistryV1
@@ -356,8 +356,7 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
     /// @notice Internal utility to set the exited ETH array
     /// @dev Please note that we rely on the Oracle to report the correct exitedETH array.
     /// @param _exitedETH The new exited ETH(wei) array per operator
-    /// @param _totalDepositedETH The total deposited ETH(wei)
-    function _setExitedETH(uint256[] calldata _exitedETH, uint256 _totalDepositedETH) internal {
+    function _setExitedETH(uint256[] calldata _exitedETH) internal {
         SetExitedETHInternalVars memory vars;
         // we check that the array is not empty
         vars.exitedETHLength = _exitedETH.length;

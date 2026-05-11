@@ -25,8 +25,8 @@ import "../src/CoverageFund.1.sol";
 import "../src/RedeemManager.1.sol";
 
 contract OperatorsRegistryWithOverridesV1 is OperatorsRegistryV1 {
-    function sudoReportExitedETH(uint256[] calldata exitedETH, uint256 totalDepositedETH) external {
-        _setExitedETH(exitedETH, totalDepositedETH);
+    function sudoReportExitedETH(uint256[] calldata exitedETH) external {
+        _setExitedETH(exitedETH);
     }
 
     function sudoSetFunded(uint256 _index, uint256 _funded) external {
@@ -837,7 +837,7 @@ contract RiverV1Tests is RiverV1TestBase {
         exitedETH[2] = 0;
         // activeCLETH for operatorOne must be >= deltaExited (10*32) to pass ExitedETHExceedsPriorCLETH check.
         operatorsRegistry.sudoSetActiveCLETH(operatorOneIndex, 20 * 32 ether);
-        operatorsRegistry.sudoReportExitedETH(exitedETH, 20 * 32 ether);
+        operatorsRegistry.sudoReportExitedETH(exitedETH);
 
         // Second deposit: 10 validators from operator 2
         vm.prank(admin);
