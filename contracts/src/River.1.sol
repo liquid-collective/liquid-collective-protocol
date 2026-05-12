@@ -51,7 +51,6 @@ contract RiverV1 is
     /// @inheritdoc IRiverV1
     function initRiverV1_3(bytes32 _withdrawalCredentials, address _attestationVerifier) external init(3) onlyAdmin {
         if (_withdrawalCredentials == bytes32(0)) revert InvalidWithdrawalCredentials();
-        if (_attestationVerifier == address(0)) revert LibErrors.InvalidZeroAddress();
 
         // Whole init body lives in an external library: its bytecode is not duplicated
         // inside River; this upgrade runs once but would otherwise live in River forever.

@@ -78,10 +78,9 @@ contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1 {
         uint256 _quorum,
         bytes4 _genesisForkVersion
     ) external init(0) {
-        if (_river == address(0) || _depositContract == address(0) || _depositDataBuffer == address(0)) {
-            revert LibErrors.InvalidZeroAddress();
+        if (_attesters.length == 0 || _attesters.length > MAX_ATTESTERS) {
+            revert LibErrors.InvalidArgument();
         }
-        if (_attesters.length == 0 || _attesters.length > MAX_ATTESTERS) revert LibErrors.InvalidArgument();
         if (_quorum == 0) revert ZeroQuorum();
         if (_quorum > MAX_SIGNATURES) revert QuorumExceedsMaxSignatures(_quorum, MAX_SIGNATURES);
 
@@ -126,14 +125,12 @@ contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1 {
 
     /// @inheritdoc IAttestationVerifierV1
     function setDepositDataBuffer(address _depositDataBuffer) external onlyRiverAdmin {
-        if (_depositDataBuffer == address(0)) revert LibErrors.InvalidZeroAddress();
         DepositDataBufferAddress.set(_depositDataBuffer);
         emit SetDepositDataBuffer(_depositDataBuffer);
     }
 
     /// @inheritdoc IAttestationVerifierV1
     function setDepositContract(address _depositContract) external onlyRiverAdmin {
-        if (_depositContract == address(0)) revert LibErrors.InvalidZeroAddress();
         ValidatorDepositContractAddress.set(_depositContract);
         emit SetDepositContract(_depositContract);
     }
