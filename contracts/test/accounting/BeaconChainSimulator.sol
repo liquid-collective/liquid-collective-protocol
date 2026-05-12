@@ -75,8 +75,8 @@ abstract contract BeaconChainSimulator is AccountingHarnessBase {
         bytes32 rootHash = depositContract.get_deposit_root();
 
         bytes[] memory sigs = new bytes[](2);
-        sigs[0] = _signAttestation(ATTESTER_PK_1, bufferId, rootHash);
-        sigs[1] = _signAttestation(ATTESTER_PK_2, bufferId, rootHash);
+        sigs[0] = _signAttestation(DEPOSIT_COMMITTEE_ATTESTER_PK_1, bufferId, rootHash);
+        sigs[1] = _signAttestation(DEPOSIT_COMMITTEE_ATTESTER_PK_2, bufferId, rootHash);
 
         BLS12_381.DepositY[] memory ys = new BLS12_381.DepositY[](amounts.length);
         for (uint256 i = 0; i < amounts.length; i++) {

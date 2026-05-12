@@ -87,10 +87,10 @@ interface IConsensusLayerDepositManagerV1 {
     /// @notice Returns the AttestationVerifier address River delegates BLS+quorum verification to
     function getAttestationVerifier() external view returns (address);
 
-    /// @notice Deposit validators using pre-committed buffer data validated by an attester quorum.
+    /// @notice Deposit validators using pre-committed buffer data validated by a deposit-committee attester quorum.
     /// @param depositDataBufferId  Batch identifier in the DepositDataBuffer
-    /// @param depositRootHash      Current deposit contract root hash co-signed by attesters
-    /// @param signatures           EIP-712 signatures from attesters
+    /// @param depositRootHash      Current deposit contract root hash co-signed by deposit-committee attesters
+    /// @param signatures           EIP-712 signatures from deposit-committee attesters
     /// @param depositYs            Y-coordinates for BLS decompression, one per deposit
     function depositToConsensusLayerWithAttestation(
         bytes32 depositDataBufferId,

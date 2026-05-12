@@ -104,12 +104,12 @@ abstract contract RiverV1TestBase is OperatorAllocationTestBase, BytesGenerator 
     MockDepositDataBuffer internal depositBuffer;
     AttestationVerifierV1 internal attestationVerifier;
 
-    uint256 internal attesterPk1 = 0xA1;
-    uint256 internal attesterPk2 = 0xA2;
-    uint256 internal attesterPk3 = 0xA3;
-    address internal attester1;
-    address internal attester2;
-    address internal attester3;
+    uint256 internal depositCommitteeAttesterPk1 = 0xA1;
+    uint256 internal depositCommitteeAttesterPk2 = 0xA2;
+    uint256 internal depositCommitteeAttesterPk3 = 0xA3;
+    address internal depositCommitteeAttester1;
+    address internal depositCommitteeAttester2;
+    address internal depositCommitteeAttester3;
 
     // EIP-712 constants (must match DepositToConsensusLayerValidation)
     bytes32 internal constant EIP712_DOMAIN_TYPEHASH =
@@ -180,9 +180,9 @@ abstract contract RiverV1TestBase is OperatorAllocationTestBase, BytesGenerator 
         bob = makeAddr("bob");
         joe = makeAddr("joe");
 
-        attester1 = vm.addr(attesterPk1);
-        attester2 = vm.addr(attesterPk2);
-        attester3 = vm.addr(attesterPk3);
+        depositCommitteeAttester1 = vm.addr(depositCommitteeAttesterPk1);
+        depositCommitteeAttester2 = vm.addr(depositCommitteeAttesterPk2);
+        depositCommitteeAttester3 = vm.addr(depositCommitteeAttesterPk3);
 
         vm.warp(857034746);
 
@@ -296,8 +296,8 @@ abstract contract RiverV1TestBase is OperatorAllocationTestBase, BytesGenerator 
         bytes32 rootHash = deposit.get_deposit_root();
 
         bytes[] memory sigs = new bytes[](2);
-        sigs[0] = _signAttestation(attesterPk1, bufferId, rootHash);
-        sigs[1] = _signAttestation(attesterPk2, bufferId, rootHash);
+        sigs[0] = _signAttestation(depositCommitteeAttesterPk1, bufferId, rootHash);
+        sigs[1] = _signAttestation(depositCommitteeAttesterPk2, bufferId, rootHash);
 
         BLS12_381.DepositY[] memory ys = new BLS12_381.DepositY[](total);
         for (uint256 i = 0; i < total; i++) {
@@ -379,14 +379,14 @@ contract RiverV1Tests is RiverV1TestBase {
 
         // Deploy + initialize the AttestationVerifier sibling. The validator's EIP-712
         // domain separator binds verifyingContract to River's address.
-        address[] memory _initAttesters = new address[](3);
-        _initAttesters[0] = attester1;
-        _initAttesters[1] = attester2;
-        _initAttesters[2] = attester3;
+        address[] memory _initDepositCommitteeAttesters = new address[](3);
+        _initDepositCommitteeAttesters[0] = depositCommitteeAttester1;
+        _initDepositCommitteeAttesters[1] = depositCommitteeAttester2;
+        _initDepositCommitteeAttesters[2] = depositCommitteeAttester3;
         attestationVerifier = new AttestationVerifierV1();
         LibImplementationUnbricker.unbrick(vm, address(attestationVerifier));
         attestationVerifier.initAttestationVerifierV1(
-            address(river), address(depositBuffer), _initAttesters, 2, bytes4(0)
+            address(river), address(depositBuffer), _initDepositCommitteeAttesters, 2, bytes4(0)
         );
 
         // Wire validator address into River's storage (these tests skip initRiverV1_3
@@ -1280,14 +1280,14 @@ contract RiverV1TestsReport_HEAVY_FUZZING is RiverV1TestBase {
         vm.stopPrank();
 
         // Deploy + initialize the AttestationVerifier sibling.
-        address[] memory _initAttesters2 = new address[](3);
-        _initAttesters2[0] = attester1;
-        _initAttesters2[1] = attester2;
-        _initAttesters2[2] = attester3;
+        address[] memory _initDepositCommitteeAttesters2 = new address[](3);
+        _initDepositCommitteeAttesters2[0] = depositCommitteeAttester1;
+        _initDepositCommitteeAttesters2[1] = depositCommitteeAttester2;
+        _initDepositCommitteeAttesters2[2] = depositCommitteeAttester3;
         attestationVerifier = new AttestationVerifierV1();
         LibImplementationUnbricker.unbrick(vm, address(attestationVerifier));
         attestationVerifier.initAttestationVerifierV1(
-            address(river), address(depositBuffer), _initAttesters2, 2, bytes4(0)
+            address(river), address(depositBuffer), _initDepositCommitteeAttesters2, 2, bytes4(0)
         );
         vm.store(
             address(river),
@@ -2693,12 +2693,12 @@ contract RiverV1CoverageTests is RiverV1TestBase {
 
     /// @dev Helper: deploy and init an AttestationVerifier pointed at this test's River.
     function _deployValidatorFor(address _river) internal returns (AttestationVerifierV1 v) {
-        address[] memory _attesters_ = new address[](2);
-        _attesters_[0] = makeAddr("attester1");
-        _attesters_[1] = makeAddr("attester2");
+        address[] memory _depositCommitteeAttesters_ = new address[](2);
+        _depositCommitteeAttesters_[0] = makeAddr("depositCommitteeAttester1");
+        _depositCommitteeAttesters_[1] = makeAddr("depositCommitteeAttester2");
         v = new AttestationVerifierV1();
         LibImplementationUnbricker.unbrick(vm, address(v));
-        v.initAttestationVerifierV1(_river, makeAddr("depositBuffer"), _attesters_, 1, bytes4(0));
+        v.initAttestationVerifierV1(_river, makeAddr("depositBuffer"), _depositCommitteeAttesters_, 1, bytes4(0));
     }
 
     /// Asserts that initRiverV1_3 sets in-flight deposit when reported validator count is less than deposited count.
@@ -2728,28 +2728,32 @@ contract RiverV1CoverageTests is RiverV1TestBase {
         assertEq(uint256(vm.load(address(river), IN_FLIGHT_DEPOSIT_SLOT)), 0);
     }
 
-    /// Asserts that AttestationVerifier init reverts on an empty attester array.
-    function testInitAttestationVerifierRevertsOnEmptyAttesters() public {
+    /// Asserts that AttestationVerifier init reverts on an empty deposit-committee attester array.
+    function testInitAttestationVerifierRevertsOnEmptyDepositCommitteeAttesters() public {
         _initRiverAndV1_2();
-        address[] memory _attesters_ = new address[](0);
+        address[] memory _depositCommitteeAttesters_ = new address[](0);
         AttestationVerifierV1 v = new AttestationVerifierV1();
         LibImplementationUnbricker.unbrick(vm, address(v));
         vm.expectRevert(abi.encodeWithSignature("InvalidArgument()"));
-        v.initAttestationVerifierV1(address(river), makeAddr("depositBuffer"), _attesters_, 1, bytes4(0));
+        v.initAttestationVerifierV1(
+            address(river), makeAddr("depositBuffer"), _depositCommitteeAttesters_, 1, bytes4(0)
+        );
     }
 
-    /// Asserts that AttestationVerifier init reverts when the attesters array exceeds MAX_ATTESTERS.
-    function testInitAttestationVerifierRevertsOnTooManyAttesters() public {
+    /// Asserts that AttestationVerifier init reverts when the deposit-committee attesters array exceeds MAX_DEPOSIT_COMMITTEE_ATTESTERS.
+    function testInitAttestationVerifierRevertsOnTooManyDepositCommitteeAttesters() public {
         _initRiverAndV1_2();
         AttestationVerifierV1 v = new AttestationVerifierV1();
         LibImplementationUnbricker.unbrick(vm, address(v));
-        uint256 tooMany = v.MAX_ATTESTERS() + 1;
-        address[] memory _attesters_ = new address[](tooMany);
+        uint256 tooMany = v.MAX_DEPOSIT_COMMITTEE_ATTESTERS() + 1;
+        address[] memory _depositCommitteeAttesters_ = new address[](tooMany);
         for (uint256 i = 0; i < tooMany; i++) {
-            _attesters_[i] = address(uint160(i + 1));
+            _depositCommitteeAttesters_[i] = address(uint160(i + 1));
         }
         vm.expectRevert(abi.encodeWithSignature("InvalidArgument()"));
-        v.initAttestationVerifierV1(address(river), makeAddr("depositBuffer"), _attesters_, 1, bytes4(0));
+        v.initAttestationVerifierV1(
+            address(river), makeAddr("depositBuffer"), _depositCommitteeAttesters_, 1, bytes4(0)
+        );
     }
 
     /// Asserts that a consensus layer report succeeds when no coverage fund is configured (pull is skipped).

@@ -7,7 +7,7 @@ import "../../libraries/LibUnstructuredStorage.sol";
 /// @notice Stores the EIP-712 domain separator used by the AttestationVerifier,
 ///         computed once at initialisation time.
 /// @dev    The cached separator binds `verifyingContract` to River's address (not the
-///         verifier's own address) so attester signing tooling can sign against
+///         verifier's own address) so deposit-committee attester signing tooling can sign against
 ///         River's identity rather than a sibling verifier that may be redeployed.
 ///         Also bakes in `block.chainid` at `set()` time. Ethereum L1 preserves
 ///         `chainid` across regular hard forks so the cache is safe in the normal case.

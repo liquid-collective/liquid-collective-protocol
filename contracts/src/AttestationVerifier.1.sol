@@ -13,7 +13,7 @@ import "./libraries/BLS12_381.sol";
 import "./libraries/LibErrors.sol";
 
 import "./state/attestationVerifier/AttestationQuorum.sol";
-import "./state/attestationVerifier/Attesters.sol";
+import "./state/attestationVerifier/DepositCommitteeAttesters.sol";
 import "./state/attestationVerifier/DepositDataBufferAddress.sol";
 import "./state/attestationVerifier/DepositDomainValue.sol";
 import "./state/attestationVerifier/DomainSeparator.sol";
@@ -43,8 +43,8 @@ contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1 {
     /// @notice Maximum number of signatures accepted. Bounds the O(n^2) duplicate-detection loop.
     uint256 public constant MAX_SIGNATURES = 20;
 
-    /// @notice Maximum number of registered attesters. Defensive cap to bound storage growth.
-    uint256 public constant MAX_ATTESTERS = 32;
+    /// @notice Maximum number of registered deposit-committee attesters. Defensive cap to bound storage growth.
+    uint256 public constant MAX_DEPOSIT_COMMITTEE_ATTESTERS = 32;
 
     /// @dev Expected lengths for fixed BLS-related fields in a DepositObject.
     uint256 internal constant DEPOSIT_PUBKEY_LENGTH = 48;
@@ -71,11 +71,14 @@ contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1 {
     function initAttestationVerifierV1(
         address _river,
         address _depositDataBuffer,
-        address[] calldata _attesters,
+        address[] calldata _depositCommitteeAttesters,
         uint256 _quorum,
         bytes4 _genesisForkVersion
     ) external init(0) {
-        if (_attesters.length == 0 || _attesters.length > MAX_ATTESTERS) {
+        if (
+            _depositCommitteeAttesters.length == 0
+                || _depositCommitteeAttesters.length > MAX_DEPOSIT_COMMITTEE_ATTESTERS
+        ) {
             revert LibErrors.InvalidArgument();
         }
         if (_quorum == 0) revert ZeroQuorum();
@@ -91,22 +94,24 @@ contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1 {
         DepositDomainValue.set(depositDomain);
         emit SetDepositDomain(depositDomain);
 
-        for (uint256 i = 0; i < _attesters.length; i++) {
-            if (_attesters[i] == address(0)) revert LibErrors.InvalidZeroAddress();
-            if (!Attesters.isAttester(_attesters[i])) {
-                Attesters.setAttester(_attesters[i], true);
-                Attesters.setCount(Attesters.getCount() + 1);
-                emit SetAttester(_attesters[i], true);
+        for (uint256 i = 0; i < _depositCommitteeAttesters.length; i++) {
+            if (_depositCommitteeAttesters[i] == address(0)) revert LibErrors.InvalidZeroAddress();
+            if (!DepositCommitteeAttesters.isDepositCommitteeAttester(_depositCommitteeAttesters[i])) {
+                DepositCommitteeAttesters.setDepositCommitteeAttester(_depositCommitteeAttesters[i], true);
+                DepositCommitteeAttesters.setCount(DepositCommitteeAttesters.getCount() + 1);
+                emit SetDepositCommitteeAttester(_depositCommitteeAttesters[i], true);
             }
         }
-        uint256 attesterCount = Attesters.getCount();
-        if (_quorum > attesterCount) revert QuorumExceedsAttesterCount(_quorum, attesterCount);
+        uint256 depositCommitteeAttesterCount = DepositCommitteeAttesters.getCount();
+        if (_quorum > depositCommitteeAttesterCount) {
+            revert QuorumExceedsDepositCommitteeAttesterCount(_quorum, depositCommitteeAttesterCount);
+        }
         AttestationQuorum.set(_quorum);
         emit SetAttestationQuorum(_quorum);
 
         // EIP-712 domain separator binds verifyingContract to River's address, not this
-        // verifier's own address. This preserves attester signing tooling that signs
-        // against River's identity even if the verifier is later redeployed.
+        // verifier's own address. This preserves deposit-committee attester signing tooling that
+        // signs against River's identity even if the verifier is later redeployed.
         bytes32 domainSeparator =
             keccak256(abi.encode(EIP712_DOMAIN_TYPEHASH, NAME_HASH, VERSION_HASH, block.chainid, _river));
         DomainSeparator.set(domainSeparator);
@@ -124,28 +129,34 @@ contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1 {
     }
 
     /// @inheritdoc IAttestationVerifierV1
-    function setAttester(address attester, bool value) external onlyRiverAdmin {
-        if (attester == address(0)) revert LibErrors.InvalidZeroAddress();
+    function setDepositCommitteeAttester(address depositCommitteeAttester, bool value) external onlyRiverAdmin {
+        if (depositCommitteeAttester == address(0)) revert LibErrors.InvalidZeroAddress();
 
-        bool current = Attesters.isAttester(attester);
-        if (current == value) revert AttesterStatusUnchanged(attester, value);
+        bool current = DepositCommitteeAttesters.isDepositCommitteeAttester(depositCommitteeAttester);
+        if (current == value) revert DepositCommitteeAttesterStatusUnchanged(depositCommitteeAttester, value);
 
-        uint256 count = Attesters.getCount();
+        uint256 count = DepositCommitteeAttesters.getCount();
         uint256 newCount = value ? count + 1 : count - 1;
-        if (value && newCount > MAX_ATTESTERS) revert TooManyAttesters(newCount, MAX_ATTESTERS);
+        if (value && newCount > MAX_DEPOSIT_COMMITTEE_ATTESTERS) {
+            revert TooManyDepositCommitteeAttesters(newCount, MAX_DEPOSIT_COMMITTEE_ATTESTERS);
+        }
         uint256 currentQuorum = AttestationQuorum.get();
-        if (!value && currentQuorum > newCount) revert QuorumExceedsAttesterCount(currentQuorum, newCount);
+        if (!value && currentQuorum > newCount) {
+            revert QuorumExceedsDepositCommitteeAttesterCount(currentQuorum, newCount);
+        }
 
-        Attesters.setCount(newCount);
-        Attesters.setAttester(attester, value);
-        emit SetAttester(attester, value);
+        DepositCommitteeAttesters.setCount(newCount);
+        DepositCommitteeAttesters.setDepositCommitteeAttester(depositCommitteeAttester, value);
+        emit SetDepositCommitteeAttester(depositCommitteeAttester, value);
     }
 
     /// @inheritdoc IAttestationVerifierV1
     function setAttestationQuorum(uint256 newQuorum) external onlyRiverAdmin {
         if (newQuorum == 0) revert ZeroQuorum();
-        uint256 attesterCount = Attesters.getCount();
-        if (newQuorum > attesterCount) revert QuorumExceedsAttesterCount(newQuorum, attesterCount);
+        uint256 depositCommitteeAttesterCount = DepositCommitteeAttesters.getCount();
+        if (newQuorum > depositCommitteeAttesterCount) {
+            revert QuorumExceedsDepositCommitteeAttesterCount(newQuorum, depositCommitteeAttesterCount);
+        }
         if (newQuorum > MAX_SIGNATURES) revert QuorumExceedsMaxSignatures(newQuorum, MAX_SIGNATURES);
         AttestationQuorum.set(newQuorum);
         emit SetAttestationQuorum(newQuorum);
@@ -156,13 +167,13 @@ contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1 {
     // -----------------------------------------------------------------------
 
     /// @inheritdoc IAttestationVerifierV1
-    function isAttester(address account) external view returns (bool) {
-        return Attesters.isAttester(account);
+    function isDepositCommitteeAttester(address account) external view returns (bool) {
+        return DepositCommitteeAttesters.isDepositCommitteeAttester(account);
     }
 
     /// @inheritdoc IAttestationVerifierV1
-    function getAttesterCount() external view returns (uint256) {
-        return Attesters.getCount();
+    function getDepositCommitteeAttesterCount() external view returns (uint256) {
+        return DepositCommitteeAttesters.getCount();
     }
 
     /// @inheritdoc IAttestationVerifierV1
@@ -260,7 +271,7 @@ contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1 {
         if (quorum == 0) revert ZeroQuorum();
         if (sigLen < quorum) revert InsufficientAttestations(sigLen, quorum);
 
-        // This could be checked earlier in the flow, but this way the function performs all the validation required to ensure the attestations are valid in one place.
+        // Whilst this could be checked earlier in the flow, this way the function is self-contained and performs all the checks required to ensure the attestations are valid in one place.
         bytes32 onChainRoot = IDepositContract(depositContract).get_deposit_root();
         if (onChainRoot != depositRootHash) revert DepositRootMismatch(depositRootHash, onChainRoot);
 
@@ -275,7 +286,7 @@ contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1 {
         for (uint256 i = 0; i < sigLen; i++) {
             address signer = _recover(digest, signatures[i]);
             if (signer == address(0)) continue;
-            if (!Attesters.isAttester(signer)) continue;
+            if (!DepositCommitteeAttesters.isDepositCommitteeAttester(signer)) continue;
 
             bool duplicate = false;
             for (uint256 j = 0; j < validCount; j++) {
