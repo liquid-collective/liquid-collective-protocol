@@ -185,6 +185,7 @@ abstract contract ConsensusLayerDepositManagerV1 is IConsensusLayerDepositManage
         if (Attesters.isAttester(attester) == status) revert AttesterStatusUnchanged(attester, status);
 
         uint256 count = Attesters.getCount();
+        // count cannot underflow here because isAttester(attester) == true when status == false, so by the invariant count >= 1. 
         uint256 newCount = status ? count + 1 : count - 1;
         if (status && newCount > MAX_ATTESTERS) {
             revert TooManyAttesters(newCount, MAX_ATTESTERS);
