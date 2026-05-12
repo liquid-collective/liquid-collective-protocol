@@ -224,11 +224,12 @@ abstract contract ConsensusLayerDepositManagerV1 is IConsensusLayerDepositManage
         bytes[] calldata signatures,
         BLS12_381.DepositY[] calldata depositYs
     ) external {
-        // 1. Keeper check
+        // 0. Keeper check
         if (msg.sender != KeeperAddress.get()) {
             revert OnlyKeeper();
         }
 
+        // 1. Slashing containment mode check
         if (_getSlashingContainmentMode()) {
             revert SlashingContainmentModeEnabled();
         }
