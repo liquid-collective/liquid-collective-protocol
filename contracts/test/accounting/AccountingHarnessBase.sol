@@ -212,7 +212,7 @@ abstract contract AccountingHarnessBase is Test, BytesGenerator {
         attestationVerifier = new AttestationVerifierV1();
         LibImplementationUnbricker.unbrick(vm, address(attestationVerifier));
         attestationVerifier.initAttestationVerifierV1(
-            address(river), address(depositContract), address(depositBuffer), _initAttesters, 2, bytes4(0)
+            address(river), address(depositBuffer), _initAttesters, 2, bytes4(0)
         );
 
         bytes32 _initWc = withdraw.getCredentials();

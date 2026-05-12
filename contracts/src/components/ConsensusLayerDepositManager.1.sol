@@ -133,17 +133,23 @@ abstract contract ConsensusLayerDepositManagerV1 is IConsensusLayerDepositManage
         if (withdrawalCredentials == 0) revert InvalidWithdrawalCredentials();
 
         uint256 committedBalance = CommittedBalance.get();
+        address depositContract = DepositContractAddress.get();
 
         (IDepositDataBuffer.DepositObject[] memory deposits, uint256 totalAmount) = IAttestationVerifierV1(
                 AttestationVerifierAddress.get()
             )
             .validate(
-                depositDataBufferId, depositRootHash, signatures, depositYs, withdrawalCredentials, committedBalance
+                depositDataBufferId,
+                depositRootHash,
+                signatures,
+                depositYs,
+                depositContract,
+                withdrawalCredentials,
+                committedBalance
             );
 
         _updateFundedETHFromBuffer(deposits);
 
-        address depositContract = DepositContractAddress.get();
         uint256 len = deposits.length;
         for (uint256 i = 0; i < len; i++) {
             _depositValidator(

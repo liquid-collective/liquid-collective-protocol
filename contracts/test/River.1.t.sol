@@ -386,7 +386,7 @@ contract RiverV1Tests is RiverV1TestBase {
         attestationVerifier = new AttestationVerifierV1();
         LibImplementationUnbricker.unbrick(vm, address(attestationVerifier));
         attestationVerifier.initAttestationVerifierV1(
-            address(river), address(deposit), address(depositBuffer), _initAttesters, 2, bytes4(0)
+            address(river), address(depositBuffer), _initAttesters, 2, bytes4(0)
         );
 
         // Wire validator address into River's storage (these tests skip initRiverV1_3
@@ -1287,7 +1287,7 @@ contract RiverV1TestsReport_HEAVY_FUZZING is RiverV1TestBase {
         attestationVerifier = new AttestationVerifierV1();
         LibImplementationUnbricker.unbrick(vm, address(attestationVerifier));
         attestationVerifier.initAttestationVerifierV1(
-            address(river), address(deposit), address(depositBuffer), _initAttesters2, 2, bytes4(0)
+            address(river), address(depositBuffer), _initAttesters2, 2, bytes4(0)
         );
         vm.store(
             address(river),
@@ -2698,7 +2698,7 @@ contract RiverV1CoverageTests is RiverV1TestBase {
         _attesters_[1] = makeAddr("attester2");
         v = new AttestationVerifierV1();
         LibImplementationUnbricker.unbrick(vm, address(v));
-        v.initAttestationVerifierV1(_river, address(deposit), makeAddr("depositBuffer"), _attesters_, 1, bytes4(0));
+        v.initAttestationVerifierV1(_river, makeAddr("depositBuffer"), _attesters_, 1, bytes4(0));
     }
 
     /// Asserts that initRiverV1_3 sets in-flight deposit when reported validator count is less than deposited count.
@@ -2735,9 +2735,7 @@ contract RiverV1CoverageTests is RiverV1TestBase {
         AttestationVerifierV1 v = new AttestationVerifierV1();
         LibImplementationUnbricker.unbrick(vm, address(v));
         vm.expectRevert(abi.encodeWithSignature("InvalidArgument()"));
-        v.initAttestationVerifierV1(
-            address(river), address(deposit), makeAddr("depositBuffer"), _attesters_, 1, bytes4(0)
-        );
+        v.initAttestationVerifierV1(address(river), makeAddr("depositBuffer"), _attesters_, 1, bytes4(0));
     }
 
     /// Asserts that AttestationVerifier init reverts when the attesters array exceeds MAX_ATTESTERS.
@@ -2751,9 +2749,7 @@ contract RiverV1CoverageTests is RiverV1TestBase {
             _attesters_[i] = address(uint160(i + 1));
         }
         vm.expectRevert(abi.encodeWithSignature("InvalidArgument()"));
-        v.initAttestationVerifierV1(
-            address(river), address(deposit), makeAddr("depositBuffer"), _attesters_, 1, bytes4(0)
-        );
+        v.initAttestationVerifierV1(address(river), makeAddr("depositBuffer"), _attesters_, 1, bytes4(0));
     }
 
     /// Asserts that a consensus layer report succeeds when no coverage fund is configured (pull is skipped).

@@ -17,9 +17,6 @@ interface IAttestationVerifierV1 {
     /// @notice Emitted when the DepositDataBuffer address is updated
     event SetDepositDataBuffer(address indexed depositDataBuffer);
 
-    /// @notice Emitted when the deposit contract address is updated
-    event SetDepositContract(address indexed depositContract);
-
     /// @notice Emitted when an attester is added or removed
     event SetAttester(address indexed attester, bool value);
 
@@ -116,14 +113,12 @@ interface IAttestationVerifierV1 {
     /// @notice One-shot initializer for v1 of the AttestationVerifier.
     /// @param _river                The River proxy address; used for the EIP-712 verifyingContract
     ///                              binding and for the cross-contract admin lookup.
-    /// @param _depositContract      The official ETH deposit contract.
     /// @param _depositDataBuffer    The pre-commit buffer the keeper writes to.
     /// @param _attesters            Initial set of attester EOAs.
     /// @param _quorum               Initial attestation quorum (1 ≤ quorum ≤ attesters.length).
     /// @param _genesisForkVersion   Genesis fork version used to derive the BLS deposit domain.
     function initAttestationVerifierV1(
         address _river,
-        address _depositContract,
         address _depositDataBuffer,
         address[] calldata _attesters,
         uint256 _quorum,
@@ -137,10 +132,16 @@ interface IAttestationVerifierV1 {
     /// @notice Validate attestation quorum + BLS deposit signatures, enforce per-deposit
     ///         withdrawal credentials and total-amount-vs-committed-balance, and return
     ///         the validated batch + total amount for River to execute.
+    /// @dev `depositContract` is supplied by the caller (River) rather than read from the
+    ///      verifier's own storage so we avoid an additional cold SLOAD per call. The same
+    ///      address is used both for the front-run-resistant `get_deposit_root()` check here
+    ///      and for executing `deposit{value:}()` in River, which keeps the attested root and
+    ///      the executed-against contract consistent by construction.
     /// @param depositDataBufferId  Batch identifier in the DepositDataBuffer
     /// @param depositRootHash      Current deposit contract root hash co-signed by attesters
     /// @param signatures           EIP-712 attester signatures
     /// @param depositYs            Y-coordinates for BLS decompression, one per deposit
+    /// @param depositContract      The official ETH deposit contract; queried for the current root
     /// @param withdrawalCredentials The protocol-configured WC; every deposit's WC must match
     /// @param committedBalance     Total amount summed over deposits must not exceed this
     /// @return deposits            Validated deposit batch (caller executes)
@@ -150,6 +151,7 @@ interface IAttestationVerifierV1 {
         bytes32 depositRootHash,
         bytes[] calldata signatures,
         BLS12_381.DepositY[] calldata depositYs,
+        address depositContract,
         bytes32 withdrawalCredentials,
         uint256 committedBalance
     ) external view returns (IDepositDataBuffer.DepositObject[] memory deposits, uint256 totalAmount);
@@ -171,10 +173,6 @@ interface IAttestationVerifierV1 {
     /// @param _depositDataBuffer The new buffer address
     function setDepositDataBuffer(address _depositDataBuffer) external;
 
-    /// @notice Update the deposit contract address. Only callable by River's admin.
-    /// @param _depositContract The new deposit contract address
-    function setDepositContract(address _depositContract) external;
-
     // -----------------------------------------------------------------------
     // Views
     // -----------------------------------------------------------------------
@@ -195,10 +193,6 @@ interface IAttestationVerifierV1 {
     /// @notice Retrieve the configured DepositDataBuffer address
     /// @return The DepositDataBuffer address
     function getDepositDataBuffer() external view returns (address);
-
-    /// @notice Retrieve the configured deposit contract address
-    /// @return The deposit contract address
-    function getDepositContract() external view returns (address);
 
     /// @notice Retrieve the cached EIP-712 domain separator
     /// @return The EIP-712 domain separator

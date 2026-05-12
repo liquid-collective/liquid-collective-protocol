@@ -14,7 +14,6 @@ import "./libraries/LibErrors.sol";
 
 import "./state/attestationVerifier/AttestationQuorum.sol";
 import "./state/attestationVerifier/Attesters.sol";
-import "./state/attestationVerifier/ValidatorDepositContractAddress.sol";
 import "./state/attestationVerifier/DepositDataBufferAddress.sol";
 import "./state/attestationVerifier/DepositDomainValue.sol";
 import "./state/attestationVerifier/DomainSeparator.sol";
@@ -71,7 +70,6 @@ contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1 {
     /// @inheritdoc IAttestationVerifierV1
     function initAttestationVerifierV1(
         address _river,
-        address _depositContract,
         address _depositDataBuffer,
         address[] calldata _attesters,
         uint256 _quorum,
@@ -85,9 +83,6 @@ contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1 {
 
         RiverAddress.set(_river);
         emit SetRiver(_river);
-
-        ValidatorDepositContractAddress.set(_depositContract);
-        emit SetDepositContract(_depositContract);
 
         DepositDataBufferAddress.set(_depositDataBuffer);
         emit SetDepositDataBuffer(_depositDataBuffer);
@@ -126,12 +121,6 @@ contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1 {
     function setDepositDataBuffer(address _depositDataBuffer) external onlyRiverAdmin {
         DepositDataBufferAddress.set(_depositDataBuffer);
         emit SetDepositDataBuffer(_depositDataBuffer);
-    }
-
-    /// @inheritdoc IAttestationVerifierV1
-    function setDepositContract(address _depositContract) external onlyRiverAdmin {
-        ValidatorDepositContractAddress.set(_depositContract);
-        emit SetDepositContract(_depositContract);
     }
 
     /// @inheritdoc IAttestationVerifierV1
@@ -187,11 +176,6 @@ contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1 {
     }
 
     /// @inheritdoc IAttestationVerifierV1
-    function getDepositContract() external view returns (address) {
-        return ValidatorDepositContractAddress.get();
-    }
-
-    /// @inheritdoc IAttestationVerifierV1
     function getDomainSeparator() external view returns (bytes32) {
         return DomainSeparator.get();
     }
@@ -217,11 +201,12 @@ contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1 {
         bytes32 depositRootHash,
         bytes[] calldata signatures,
         BLS12_381.DepositY[] calldata depositYs,
+        address depositContract,
         bytes32 withdrawalCredentials,
         uint256 committedBalance
     ) external view returns (IDepositDataBuffer.DepositObject[] memory deposits, uint256 totalAmount) {
         // 1. Verify attestation quorum
-        _verifyAttestationQuorum(depositDataBufferId, depositRootHash, signatures);
+        _verifyAttestationQuorum(depositDataBufferId, depositRootHash, signatures, depositContract);
 
         // 2. Get deposit data from buffer
         deposits = IDepositDataBuffer(DepositDataBufferAddress.get()).getDepositData(depositDataBufferId);
@@ -261,10 +246,13 @@ contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1 {
     /// @param depositDataBufferId The deposit data buffer ID.
     /// @param depositRootHash The deposit root hash.
     /// @param signatures The signatures.
-    function _verifyAttestationQuorum(bytes32 depositDataBufferId, bytes32 depositRootHash, bytes[] calldata signatures)
-        internal
-        view
-    {
+    /// @param depositContract The official ETH deposit contract supplied by River.
+    function _verifyAttestationQuorum(
+        bytes32 depositDataBufferId,
+        bytes32 depositRootHash,
+        bytes[] calldata signatures,
+        address depositContract
+    ) internal view {
         uint256 sigLen = signatures.length;
         if (sigLen > MAX_SIGNATURES) revert TooManySignatures(sigLen, MAX_SIGNATURES);
 
@@ -272,7 +260,8 @@ contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1 {
         if (quorum == 0) revert ZeroQuorum();
         if (sigLen < quorum) revert InsufficientAttestations(sigLen, quorum);
 
-        bytes32 onChainRoot = IDepositContract(ValidatorDepositContractAddress.get()).get_deposit_root();
+        // This could be checked earlier in the flow, but this way the function performs all the validation required to ensure the attestations are valid in one place.
+        bytes32 onChainRoot = IDepositContract(depositContract).get_deposit_root();
         if (onChainRoot != depositRootHash) revert DepositRootMismatch(depositRootHash, onChainRoot);
 
         bytes32 domainSep = DomainSeparator.get();
