@@ -13,13 +13,6 @@ import {DomainSeparator} from "../state/river/DomainSeparator.sol";
 ///         (River) can override them with unstructured storage.
 abstract contract DepositToConsensusLayerValidation {
     // -----------------------------------------------------------------------
-    // Events
-    // -----------------------------------------------------------------------
-
-    /// @notice Emitted after attestation quorum is met and all deposits are executed.
-    event DepositsExecuted(bytes32 indexed depositDataBufferId, bytes32 indexed depositRootHash, uint256 depositCount);
-
-    // -----------------------------------------------------------------------
     // Errors
     // -----------------------------------------------------------------------
 
