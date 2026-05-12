@@ -51,11 +51,6 @@ abstract contract DepositToConsensusLayerValidation {
     /// @param yCount The number of Y-coordinates
     error BLSSignatureCountMismatch(uint256 depositCount, uint256 yCount);
 
-    /// @notice Invalid withdrawal credentials length
-    /// @param index The index of the withdrawal credentials
-    /// @param length The length of the withdrawal credentials
-    error InvalidWithdrawalCredentialsLength(uint256 index, uint256 length);
-
     /// @notice Invalid pubkey length
     /// @param index The index of the pubkey
     /// @param length The length of the pubkey
@@ -119,7 +114,6 @@ abstract contract DepositToConsensusLayerValidation {
     /// @dev Expected lengths for fixed BLS-related fields in a DepositObject.
     uint256 internal constant DEPOSIT_PUBKEY_LENGTH = 48;
     uint256 internal constant DEPOSIT_SIGNATURE_LENGTH = 96;
-    uint256 internal constant DEPOSIT_WC_LENGTH = 32;
 
     // -----------------------------------------------------------------------
     // Virtual storage hooks — override in proxy-based deployments
@@ -192,17 +186,20 @@ abstract contract DepositToConsensusLayerValidation {
 
     /// @notice Validate attestation signatures and BLS deposit data.
     ///         Returns the validated deposits array for use by the caller.
-    /// @param depositDataBufferId  Batch identifier in the DepositDataBuffer
-    /// @param depositRootHash      Current deposit contract root hash co-signed by attesters
-    /// @param signatures           EIP-712 signatures from attesters
-    /// @param depositYs            Y-coordinates for BLS decompression, one per deposit
-    /// @return deposits            The validated deposit batch
-    // solhint-disable-next-line code-complexity
+    /// @param depositDataBufferId   Batch identifier in the DepositDataBuffer
+    /// @param depositRootHash       Current deposit contract root hash co-signed by attesters
+    /// @param signatures            EIP-712 signatures from attesters
+    /// @param depositYs             Y-coordinates for BLS decompression, one per deposit
+    /// @param withdrawalCredentials Canonical River withdrawal credentials. Used for BLS
+    ///                              signature verification, removing any need to trust the
+    ///                              buffer producer on this field.
+    /// @return deposits             The validated deposit batch
     function validate(
         bytes32 depositDataBufferId,
         bytes32 depositRootHash,
         bytes[] calldata signatures,
-        BLS12_381.DepositY[] calldata depositYs
+        BLS12_381.DepositY[] calldata depositYs,
+        bytes32 withdrawalCredentials
     ) public view returns (IDepositDataBuffer.DepositObject[] memory deposits) {
         // 1. Verify attestation quorum
         _verifyAttestationQuorum(depositDataBufferId, depositRootHash, signatures);
@@ -228,13 +225,9 @@ abstract contract DepositToConsensusLayerValidation {
 
         // 5. Enforce fixed lengths on dynamic-bytes fields. Without this, a buffer producer
         //    can pad fields beyond their canonical length; the keccak commitment binds whatever
-        //    encoding was submitted, but downstream consumers (mload of first 32 bytes for the
-        //    WC, BLS lib for pubkey/sig) would silently ignore the trailing bytes and create
-        //    encoding ambiguity.
+        //    encoding was submitted, but the BLS lib would silently ignore trailing bytes and
+        //    create encoding ambiguity.
         for (uint256 i = 0; i < depositCount; i++) {
-            if (deposits[i].withdrawalCredentials.length != DEPOSIT_WC_LENGTH) {
-                revert InvalidWithdrawalCredentialsLength(i, deposits[i].withdrawalCredentials.length);
-            }
             if (deposits[i].pubkey.length != DEPOSIT_PUBKEY_LENGTH) {
                 revert InvalidPubkeyLength(i, deposits[i].pubkey.length);
             }
@@ -243,8 +236,8 @@ abstract contract DepositToConsensusLayerValidation {
             }
         }
 
-        // 6. Verify BLS signatures
-        _verifyBLSSignatures(deposits, depositYs);
+        // 6. Verify BLS signatures against the canonical River WC
+        _verifyBLSSignatures(deposits, depositYs, withdrawalCredentials);
     }
 
     function _verifyAttestationQuorum(bytes32 depositDataBufferId, bytes32 depositRootHash, bytes[] calldata signatures)
@@ -299,17 +292,22 @@ abstract contract DepositToConsensusLayerValidation {
 
     function _verifyBLSSignatures(
         IDepositDataBuffer.DepositObject[] memory deposits,
-        BLS12_381.DepositY[] calldata depositYs
+        BLS12_381.DepositY[] calldata depositYs,
+        bytes32 withdrawalCredentials
     ) internal view {
         for (uint256 i = 0; i < deposits.length; i++) {
-            bytes32 wc = abi.decode(deposits[i].withdrawalCredentials, (bytes32));
-            (bool ok, bytes memory revertData) = address(this)
-                .staticcall(
-                    abi.encodeCall(
-                        this.verifyBLSDeposit,
-                        (deposits[i].pubkey, deposits[i].signature, deposits[i].amount, depositYs[i], wc)
+            (bool ok, bytes memory revertData) = address(this).staticcall(
+                abi.encodeCall(
+                    this.verifyBLSDeposit,
+                    (
+                        deposits[i].pubkey,
+                        deposits[i].signature,
+                        deposits[i].amount,
+                        depositYs[i],
+                        withdrawalCredentials
                     )
-                );
+                )
+            );
             if (!ok) {
                 assembly {
                     revert(add(revertData, 32), mload(revertData))

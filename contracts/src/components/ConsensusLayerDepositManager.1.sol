@@ -185,7 +185,7 @@ abstract contract ConsensusLayerDepositManagerV1 is IConsensusLayerDepositManage
         if (Attesters.isAttester(attester) == status) revert AttesterStatusUnchanged(attester, status);
 
         uint256 count = Attesters.getCount();
-        // count cannot underflow here because isAttester(attester) == true when status == false, so by the invariant count >= 1. 
+        // count cannot underflow here because isAttester(attester) == true when status == false, so by the invariant count >= 1.
         uint256 newCount = status ? count + 1 : count - 1;
         if (status && newCount > MAX_ATTESTERS) {
             revert TooManyAttesters(newCount, MAX_ATTESTERS);
@@ -240,24 +240,16 @@ abstract contract ConsensusLayerDepositManagerV1 is IConsensusLayerDepositManage
             revert InvalidWithdrawalCredentials();
         }
 
-        // 3. Validate attestation quorum + BLS signatures; get deposits
+        // 3. Validate attestation quorum + BLS signatures (against the canonical River WC); get deposits
         IDepositDataBuffer.DepositObject[] memory deposits =
-            validate(depositDataBufferId, depositRootHash, signatures, depositYs);
+            validate(depositDataBufferId, depositRootHash, signatures, depositYs, withdrawalCredentials);
 
-        // 4. Validate total amount against CommittedBalance and check per-deposit withdrawal credentials
+        // 4. Validate total amount against CommittedBalance
         uint256 committedBalance = CommittedBalance.get();
         uint256 totalAmount = 0;
         uint256 len = deposits.length;
         for (uint256 i = 0; i < len; i++) {
             totalAmount += deposits[i].amount;
-            bytes32 depositWC;
-            bytes memory wc = deposits[i].withdrawalCredentials;
-            assembly {
-                depositWC := mload(add(wc, 32))
-            }
-            if (depositWC != withdrawalCredentials) {
-                revert WithdrawalCredentialsMismatch(i, withdrawalCredentials, depositWC);
-            }
         }
         if (totalAmount > committedBalance) {
             revert NotEnoughFunds();

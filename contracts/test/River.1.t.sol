@@ -280,7 +280,6 @@ abstract contract RiverV1TestBase is OperatorAllocationTestBase, BytesGenerator 
                     pubkey: _fakePubkey(idx),
                     signature: _fakeSignature(idx),
                     amount: 32 ether,
-                    withdrawalCredentials: abi.encode(wc),
                     depositDataRoot: bytes32(0),
                     metadata: _operatorMeta(opIndices[i])
                 });

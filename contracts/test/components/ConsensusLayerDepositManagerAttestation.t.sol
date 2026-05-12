@@ -125,7 +125,7 @@ contract AttestationDepositHarness is ConsensusLayerDepositManagerV1 {
     // -- Public admin helpers for test setup ----------------------------------
 
     function initialize(address depositContract_, bytes32 wc_) external {
-        initConsensusLayerDepositManagerV1_2(depositContract_, wc_);
+        initConsensusLayerDepositManagerV1(depositContract_, wc_);
     }
 
     function sudoSetKeeper(address k) external {
@@ -285,7 +285,6 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
             pubkey: _fakePubkey(seed),
             signature: _fakeSignature(seed),
             amount: 32 ether,
-            withdrawalCredentials: abi.encode(withdrawalCredentials),
             depositDataRoot: bytes32(0), // not checked by _depositValidator (it recomputes)
             metadata: _operatorMetadata(opIdx)
         });
@@ -510,32 +509,6 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
         dm.depositToConsensusLayerWithAttestation(bufferId, staleRoot, sigs, depositYs);
     }
 
-    function testRevert_withdrawalCredentialsMismatch() public {
-        IDepositDataBuffer.DepositObject[] memory deposits = new IDepositDataBuffer.DepositObject[](1);
-        deposits[0] = IDepositDataBuffer.DepositObject({
-            pubkey: _fakePubkey(0),
-            signature: _fakeSignature(0),
-            amount: 32 ether,
-            withdrawalCredentials: abi.encode(bytes32(uint256(0xDEAD))), // wrong WC
-            depositDataRoot: bytes32(0),
-            metadata: _operatorMetadata(0)
-        });
-
-        (bytes32 bufferId, bytes32 rootHash, bytes[] memory sigs, BLS12_381.DepositY[] memory depositYs) =
-            _prepareDeposit(deposits);
-
-        vm.prank(keeper);
-        vm.expectRevert(
-            abi.encodeWithSelector(
-                IConsensusLayerDepositManagerV1.WithdrawalCredentialsMismatch.selector,
-                0,
-                withdrawalCredentials,
-                bytes32(uint256(0xDEAD))
-            )
-        );
-        dm.depositToConsensusLayerWithAttestation(bufferId, rootHash, sigs, depositYs);
-    }
-
     function testRevert_notEnoughFunds() public {
         dm.sudoSetCommittedBalance(32 ether);
 
@@ -604,7 +577,6 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
             pubkey: _fakePubkey(0),
             signature: _fakeSignature(0),
             amount: 32 ether,
-            withdrawalCredentials: abi.encode(withdrawalCredentials),
             depositDataRoot: bytes32(0),
             metadata: bytes32("bad_metadata") // not "operator:N" format
         });

@@ -81,7 +81,7 @@ contract RiverV1 is
         OperatorsRegistryAddress.set(_operatorRegistryAddress);
         emit SetOperatorsRegistry(_operatorRegistryAddress);
 
-        ConsensusLayerDepositManagerV1.initConsensusLayerDepositManagerV1_2(
+        ConsensusLayerDepositManagerV1.initConsensusLayerDepositManagerV1(
             _depositContractAddress, _withdrawalCredentials
         );
 
@@ -151,7 +151,7 @@ contract RiverV1 is
             revert QuorumExceedsMaxSignatures(_quorum, MAX_SIGNATURES);
         }
 
-        ConsensusLayerDepositManagerV1.initConsensusLayerDepositManagerV1_2(
+        ConsensusLayerDepositManagerV1.initConsensusLayerDepositManagerV1(
             DepositContractAddress.get(), _withdrawalCredentials
         );
         // accounting changes to move from 0x01 to 0x02 accounting
