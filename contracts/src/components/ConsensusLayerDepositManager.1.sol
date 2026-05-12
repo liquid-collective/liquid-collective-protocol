@@ -107,7 +107,7 @@ abstract contract ConsensusLayerDepositManagerV1 is IConsensusLayerDepositManage
     /// @notice Initializer to set the deposit contract address and the withdrawal credentials to use
     /// @param _depositContractAddress The address of the deposit contract
     /// @param _withdrawalCredentials The withdrawal credentials to apply to all deposits
-    function initConsensusLayerDepositManagerV1_2(address _depositContractAddress, bytes32 _withdrawalCredentials)
+    function initConsensusLayerDepositManagerV1(address _depositContractAddress, bytes32 _withdrawalCredentials)
         internal
     {
         DepositContractAddress.set(_depositContractAddress);
