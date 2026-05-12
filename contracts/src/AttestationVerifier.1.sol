@@ -167,35 +167,43 @@ contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1 {
     // Views
     // -----------------------------------------------------------------------
 
+    /// @inheritdoc IAttestationVerifierV1
     function isAttester(address account) external view returns (bool) {
         return Attesters.isAttester(account);
     }
 
+    /// @inheritdoc IAttestationVerifierV1
     function getAttesterCount() external view returns (uint256) {
         return Attesters.getCount();
     }
 
+    /// @inheritdoc IAttestationVerifierV1
     function getAttestationQuorum() external view returns (uint256) {
         return AttestationQuorum.get();
     }
 
+    /// @inheritdoc IAttestationVerifierV1
     function getDepositDataBuffer() external view returns (address) {
         return DepositDataBufferAddress.get();
     }
 
+    /// @inheritdoc IAttestationVerifierV1
     function getDepositContract() external view returns (address) {
         return ValidatorDepositContractAddress.get();
     }
 
+    /// @inheritdoc IAttestationVerifierV1
     function getDomainSeparator() external view returns (bytes32) {
         return DomainSeparator.get();
     }
 
-    /// solhint-disable-next-line func-name-mixedcase
+    /// @inheritdoc IAttestationVerifierV1
+    // solhint-disable-next-line func-name-mixedcase
     function DEPOSIT_DOMAIN() external view returns (bytes32) {
         return DepositDomainValue.get();
     }
 
+    /// @inheritdoc IAttestationVerifierV1
     function getRiver() external view returns (address) {
         return RiverAddress.get();
     }
@@ -262,6 +270,10 @@ contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1 {
     // Internal — attestation quorum + BLS verification
     // -----------------------------------------------------------------------
 
+    /// @notice Verify the attestation quorum.
+    /// @param depositDataBufferId The deposit data buffer ID.
+    /// @param depositRootHash The deposit root hash.
+    /// @param signatures The signatures.
     function _verifyAttestationQuorum(bytes32 depositDataBufferId, bytes32 depositRootHash, bytes[] calldata signatures)
         internal
         view
@@ -305,6 +317,9 @@ contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1 {
         if (validCount < quorum) revert InsufficientAttestations(validCount, quorum);
     }
 
+    /// @notice Verify the BLS signatures.
+    /// @param deposits The deposits.
+    /// @param depositYs The deposit Y-coordinates.
     function _verifyBLSSignatures(
         IDepositDataBuffer.DepositObject[] memory deposits,
         BLS12_381.DepositY[] calldata depositYs
@@ -326,8 +341,16 @@ contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1 {
         }
     }
 
-    /// @notice Verify a single BLS deposit. Called via staticcall from validateAndPrepare so
-    ///         that memory bytes land in calldata for the BLS12_381 library.
+    /// @notice Verify a single BLS deposit message against the cached deposit domain.
+    /// @dev External only as a self-staticcall trampoline from validateAndPrepare: the call
+    ///      promotes the deposit's memory bytes into calldata so BLS12_381 can consume them
+    ///      without a memory copy. Not intended for direct external use — reverts on bad
+    ///      input but performs no authorization.
+    /// @param pubkey The BLS public key (48 bytes)
+    /// @param signature The BLS signature (96 bytes)
+    /// @param amount The deposit amount in gwei
+    /// @param depositY The Y-coordinates required for BLS decompression
+    /// @param withdrawalCredentials The 32-byte withdrawal credentials
     function verifyBLSDeposit(
         bytes calldata pubkey,
         bytes calldata signature,
@@ -345,6 +368,9 @@ contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1 {
     // -----------------------------------------------------------------------
 
     /// @dev Recover signer from a 65-byte EIP-712 signature, normalizing v.
+    /// @param digest The digest.
+    /// @param sig The signature.
+    /// @return The recovered signer.
     function _recover(bytes32 digest, bytes calldata sig) internal pure returns (address) {
         if (sig.length != 65) return address(0);
 

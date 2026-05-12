@@ -46,6 +46,8 @@ abstract contract ConsensusLayerDepositManagerV1 is IConsensusLayerDepositManage
     function _getRiverAdmin() internal view virtual returns (address);
 
     /// @notice Handler called to increment the funded ETH for the operators
+    /// @param _fundedETH The array of funded ETH amounts
+    /// @param _publicKeys The array of public keys
     function _incrementFundedETH(uint256[] memory _fundedETH, bytes[][] memory _publicKeys) internal virtual;
 
     /// @notice Handler called to change the committed balance to deposit
