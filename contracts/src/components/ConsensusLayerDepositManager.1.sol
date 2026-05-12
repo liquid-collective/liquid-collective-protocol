@@ -35,9 +35,6 @@ abstract contract ConsensusLayerDepositManagerV1 is IConsensusLayerDepositManage
     /// @notice Size of a deposit in ETH
     uint256 public constant DEPOSIT_SIZE = 32 ether;
 
-    /// @dev ASCII bytes for "operator:" prefix used in metadata encoding
-    bytes9 internal constant OPERATOR_PREFIX = "operator:";
-
     // -----------------------------------------------------------------------
     // Virtual hooks — must be overridden by River
     // -----------------------------------------------------------------------
@@ -168,35 +165,6 @@ abstract contract ConsensusLayerDepositManagerV1 is IConsensusLayerDepositManage
         emit SetTotalDepositedETH(currentTotalDepositedETH, currentTotalDepositedETH + totalAmount);
 
         emit DepositsExecutedWithAttestation(depositDataBufferId, depositRootHash, totalAmount);
-    }
-
-    // -----------------------------------------------------------------------
-    // Internal — metadata parsing
-    // -----------------------------------------------------------------------
-
-    /// @notice Parse an operator index from a bytes32 metadata field.
-    ///         Expected format: left-aligned ASCII "operator:N" zero-padded on the right.
-    /// @param metadata The metadata bytes32 value
-    /// @return operatorIndex The parsed operator index
-    function _parseOperatorIndex(bytes32 metadata) internal pure returns (uint256 operatorIndex) {
-        bytes9 prefix;
-        assembly {
-            prefix := metadata
-        }
-        if (prefix != OPERATOR_PREFIX) {
-            revert InvalidOperatorMetadata(metadata);
-        }
-
-        operatorIndex = 0;
-        bool hasDigit = false;
-        for (uint256 i = 9; i < 32; i++) {
-            uint8 c = uint8(bytes1(metadata << (i * 8)));
-            if (c == 0) break;
-            if (c < 0x30 || c > 0x39) revert InvalidOperatorMetadata(metadata);
-            operatorIndex = operatorIndex * 10 + (c - 0x30);
-            hasDigit = true;
-        }
-        if (!hasDigit) revert InvalidOperatorMetadata(metadata);
     }
 
     /// @notice Deposits _depositAmount ETH to the official Deposit contract

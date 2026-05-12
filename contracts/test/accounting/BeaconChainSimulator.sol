@@ -224,10 +224,8 @@ abstract contract BeaconChainSimulator is AccountingHarnessBase {
         uint256 validatorsExiting = 0;
         uint32 activatedCount = 0;
 
-        uint256 opCount = operatorsRegistry.getOperatorCount();
-        uint256[] memory exitedArr = new uint256[](opCount + 1);
-        uint256[] memory activeCLETHArr = new uint256[](opCount);
-        uint256 cumulativeExited = 0;
+        uint256[] memory exitedArr = new uint256[](operatorsRegistry.getOperatorCount() + 1);
+        uint256[] memory activeCLETHArr = new uint256[](exitedArr.length - 1);
 
         for (uint256 i = 0; i < _simValidators.length; i++) {
             SimValidator memory v = _simValidators[i];
@@ -249,10 +247,12 @@ abstract contract BeaconChainSimulator is AccountingHarnessBase {
             // Cumulative exited ETH tracked per-operator across all partial and full exits
             if (v.state != ValidatorState.Pending && v.exitedETH > 0) {
                 exitedArr[v.operatorIndex + 1] += v.exitedETH;
-                cumulativeExited += v.exitedETH;
             }
         }
-        exitedArr[0] = cumulativeExited;
+        // Sum per-operator exited ETH into exitedArr[0]
+        for (uint256 i = 1; i < exitedArr.length; i++) {
+            exitedArr[0] += exitedArr[i];
+        }
 
         report.validatorsBalance = validatorsBalance;
         report.validatorsSkimmedBalance = _simCumulativeSkimmed;

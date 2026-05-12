@@ -215,34 +215,6 @@ abstract contract RiverV1TestBase is OperatorAllocationTestBase, BytesGenerator 
     // Attestation-based deposit helpers
     // -----------------------------------------------------------------------
 
-    /// @dev Encode "operator:N" as left-aligned bytes32.
-    function _operatorMeta(uint256 opIdx) internal pure returns (bytes32) {
-        bytes memory prefix = "operator:";
-        bytes memory digits;
-        if (opIdx == 0) {
-            digits = "0";
-        } else {
-            uint256 temp = opIdx;
-            uint256 n = 0;
-            while (temp > 0) {
-                n++;
-                temp /= 10;
-            }
-            digits = new bytes(n);
-            temp = opIdx;
-            for (uint256 i = n; i > 0; i--) {
-                digits[i - 1] = bytes1(uint8(48 + temp % 10));
-                temp /= 10;
-            }
-        }
-        bytes memory full = abi.encodePacked(prefix, digits);
-        bytes32 result;
-        assembly {
-            result := mload(add(full, 32))
-        }
-        return result;
-    }
-
     /// @dev Sign an EIP-712 attestation digest with the given private key.
     function _signAttestation(uint256 pk, bytes32 bufferId, bytes32 rootHash) internal view returns (bytes memory) {
         bytes32 domainSep =
@@ -284,7 +256,7 @@ abstract contract RiverV1TestBase is OperatorAllocationTestBase, BytesGenerator 
                     signature: _fakeSignature(idx),
                     amount: 32 ether,
                     depositDataRoot: bytes32(0),
-                    metadata: _operatorMeta(opIndices[i])
+                    operatorIdx: opIndices[i]
                 });
                 idx++;
             }

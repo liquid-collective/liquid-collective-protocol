@@ -289,34 +289,6 @@ abstract contract AccountingHarnessBase is Test, BytesGenerator {
 
     // ─── attestation helpers ───────────────────────────────────────────────────
 
-    /// @dev Encode "operator:N" as left-aligned bytes32 metadata.
-    function _operatorMeta(uint256 opIdx) internal pure returns (bytes32) {
-        bytes memory prefix = "operator:";
-        bytes memory digits;
-        if (opIdx == 0) {
-            digits = "0";
-        } else {
-            uint256 temp = opIdx;
-            uint256 n = 0;
-            while (temp > 0) {
-                n++;
-                temp /= 10;
-            }
-            digits = new bytes(n);
-            temp = opIdx;
-            for (uint256 i = n; i > 0; i--) {
-                digits[i - 1] = bytes1(uint8(48 + temp % 10));
-                temp /= 10;
-            }
-        }
-        bytes memory full = abi.encodePacked(prefix, digits);
-        bytes32 result;
-        assembly {
-            result := mload(add(full, 32))
-        }
-        return result;
-    }
-
     function _emptyDepositY() internal pure returns (BLS12_381.DepositY memory) {
         return BLS12_381.DepositY({
             pubkeyY: BLS12_381.Fp({a: bytes32(0), b: bytes32(0)}),
@@ -354,7 +326,7 @@ abstract contract AccountingHarnessBase is Test, BytesGenerator {
                 ),
                 amount: amounts[i],
                 depositDataRoot: bytes32(0),
-                metadata: _operatorMeta(opIndices[i])
+                operatorIdx: opIndices[i]
             });
         }
     }

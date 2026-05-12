@@ -260,12 +260,12 @@ contract RiverV1 is
         IOperatorsRegistryV1 registry = IOperatorsRegistryV1(OperatorsRegistryAddress.get());
         uint256 operatorCount = registry.getOperatorCount();
 
-        // Pass 1: parse operator indices (cached to avoid double-parsing), find highestOpIdx.
-        //         Reject any index outside the registered range so a crafted "operator:N"
-        //         metadata cannot OOG-DoS the batch via an oversized memory allocation.
+        // Pass 1: cache operator indices and find highestOpIdx. Reject any index outside the
+        //         registered range so a crafted operatorIdx cannot OOG-DoS the batch via an
+        //         oversized memory allocation.
         uint256[] memory opIndices = new uint256[](len);
         for (uint256 i = 0; i < len; i++) {
-            uint256 opIdx = _parseOperatorIndex(deposits[i].metadata);
+            uint256 opIdx = deposits[i].operatorIdx;
             if (opIdx >= operatorCount) revert InvalidOperatorIndex(opIdx, operatorCount);
             opIndices[i] = opIdx;
             if (opIdx > highestOpIdx) highestOpIdx = opIdx;

@@ -99,7 +99,7 @@ contract AttestationDepositHarness is ConsensusLayerDepositManagerV1 {
 
         uint256[] memory opIndices = new uint256[](len);
         for (uint256 i = 0; i < len; i++) {
-            opIndices[i] = _parseOperatorIndex(deposits[i].metadata);
+            opIndices[i] = deposits[i].operatorIdx;
             if (opIndices[i] > highestOpIdx) highestOpIdx = opIndices[i];
         }
 
@@ -268,34 +268,6 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
         return abi.encodePacked(sha256(abi.encode("sig", seed)), sha256(abi.encode("sig2", seed)), bytes32(0));
     }
 
-    /// @dev Encode "operator:N" as left-aligned bytes32.
-    function _operatorMetadata(uint256 opIdx) internal pure returns (bytes32) {
-        bytes memory prefix = "operator:";
-        bytes memory digits;
-        if (opIdx == 0) {
-            digits = "0";
-        } else {
-            uint256 temp = opIdx;
-            uint256 n = 0;
-            while (temp > 0) {
-                n++;
-                temp /= 10;
-            }
-            digits = new bytes(n);
-            temp = opIdx;
-            for (uint256 i = n; i > 0; i--) {
-                digits[i - 1] = bytes1(uint8(48 + temp % 10));
-                temp /= 10;
-            }
-        }
-        bytes memory full = abi.encodePacked(prefix, digits);
-        bytes32 result;
-        assembly {
-            result := mload(add(full, 32))
-        }
-        return result;
-    }
-
     /// @dev Build a DepositObject with properly-sized fields.
     function _makeDeposit(uint256 opIdx, uint256 seed) internal view returns (IDepositDataBuffer.DepositObject memory) {
         return IDepositDataBuffer.DepositObject({
@@ -303,7 +275,7 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
             signature: _fakeSignature(seed),
             amount: 32 ether,
             depositDataRoot: bytes32(0), // not checked by _depositValidator (it recomputes)
-            metadata: _operatorMetadata(opIdx)
+            operatorIdx: opIdx
         });
     }
 
@@ -572,28 +544,6 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
 
         vm.prank(keeper);
         vm.expectRevert(abi.encodeWithSelector(IAttestationVerifierV1.InsufficientAttestations.selector, 1, 2));
-        dm.depositToConsensusLayerWithAttestation(bufferId, rootHash, sigs, depositYs);
-    }
-
-    function testRevert_invalidOperatorMetadata() public {
-        IDepositDataBuffer.DepositObject[] memory deposits = new IDepositDataBuffer.DepositObject[](1);
-        deposits[0] = IDepositDataBuffer.DepositObject({
-            pubkey: _fakePubkey(0),
-            signature: _fakeSignature(0),
-            amount: 32 ether,
-            depositDataRoot: bytes32(0),
-            metadata: bytes32("bad_metadata") // not "operator:N" format
-        });
-
-        (bytes32 bufferId, bytes32 rootHash, bytes[] memory sigs, BLS12_381.DepositY[] memory depositYs) =
-            _prepareDeposit(deposits);
-
-        vm.prank(keeper);
-        vm.expectRevert(
-            abi.encodeWithSelector(
-                IConsensusLayerDepositManagerV1.InvalidOperatorMetadata.selector, bytes32("bad_metadata")
-            )
-        );
         dm.depositToConsensusLayerWithAttestation(bufferId, rootHash, sigs, depositYs);
     }
 
