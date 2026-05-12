@@ -248,8 +248,10 @@ abstract contract DepositToConsensusLayerValidation {
         if (sigLen > MAX_SIGNATURES) {
             revert TooManySignatures(sigLen, MAX_SIGNATURES);
         }
-        if (sigLen < _depositCommitteeQuorum()) {
-            revert InsufficientAttestations(sigLen, _depositCommitteeQuorum());
+        uint256 depositCommitteeQuorum = _depositCommitteeQuorum();
+        if (depositCommitteeQuorum == 0) revert ZeroQuorum();
+        if (sigLen < depositCommitteeQuorum) {
+            revert InsufficientAttestations(sigLen, depositCommitteeQuorum);
         }
 
         bytes32 onChainRoot = _depositContract().get_deposit_root();
@@ -283,8 +285,6 @@ abstract contract DepositToConsensusLayerValidation {
             validCount++;
         }
 
-        uint256 depositCommitteeQuorum = _depositCommitteeQuorum();
-        if (depositCommitteeQuorum == 0) revert ZeroQuorum();
         if (validCount < depositCommitteeQuorum) {
             revert InsufficientAttestations(validCount, depositCommitteeQuorum);
         }
@@ -296,18 +296,19 @@ abstract contract DepositToConsensusLayerValidation {
         bytes32 withdrawalCredentials
     ) internal view {
         for (uint256 i = 0; i < deposits.length; i++) {
-            (bool ok, bytes memory revertData) = address(this).staticcall(
-                abi.encodeCall(
-                    this.verifyBLSDeposit,
-                    (
-                        deposits[i].pubkey,
-                        deposits[i].signature,
-                        deposits[i].amount,
-                        depositYs[i],
-                        withdrawalCredentials
+            (bool ok, bytes memory revertData) = address(this)
+                .staticcall(
+                    abi.encodeCall(
+                        this.verifyBLSDeposit,
+                        (
+                            deposits[i].pubkey,
+                            deposits[i].signature,
+                            deposits[i].amount,
+                            depositYs[i],
+                            withdrawalCredentials
+                        )
                     )
-                )
-            );
+                );
             if (!ok) {
                 assembly {
                     revert(add(revertData, 32), mload(revertData))
