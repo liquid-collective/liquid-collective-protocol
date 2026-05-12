@@ -18,7 +18,6 @@ import "./Administrable.sol";
 
 import "./libraries/LibAllowlistMasks.sol";
 import "./libraries/LibErrors.sol";
-import "./libraries/LibRiverV1_3InitMigration.sol";
 import "./interfaces/IDepositDataBuffer.sol";
 
 import "./state/river/AllowlistAddress.sol";
@@ -52,9 +51,42 @@ contract RiverV1 is
     function initRiverV1_3(bytes32 _withdrawalCredentials, address _attestationVerifier) external init(3) onlyAdmin {
         if (_withdrawalCredentials == bytes32(0)) revert InvalidWithdrawalCredentials();
 
-        // Whole init body lives in an external library: its bytecode is not duplicated
-        // inside River; this upgrade runs once but would otherwise live in River forever.
-        LibRiverV1_3InitMigration.runInitV1_3(_withdrawalCredentials, _attestationVerifier, DEPOSIT_SIZE);
+        // Re-emit deposit-contract address (carry-over from prior initConsensusLayerDepositManagerV1_2 call)
+        address depositContract = DepositContractAddress.get();
+        DepositContractAddress.set(depositContract);
+        emit SetDepositContractAddress(depositContract);
+
+        WithdrawalCredentials.set(_withdrawalCredentials);
+        emit SetWithdrawalCredentials(_withdrawalCredentials);
+
+        AttestationVerifierAddress.set(_attestationVerifier);
+        emit SetAttestationVerifier(_attestationVerifier);
+
+        // 0x01 → 0x02 accounting migration: rebuild LastConsensusLayerReport with the new
+        // totalDepositedActivatedETH field and seed TotalDepositedETH + InFlightDeposit.
+        IOracleManagerV1.StoredConsensusLayerReport storage lastReport = LastConsensusLayerReport.get();
+        uint32 clValidatorCount = lastReport.validatorsCount;
+        uint256 depositedValidatorCount = DepositedValidatorCount.get();
+        TotalDepositedETH.set(depositedValidatorCount * DEPOSIT_SIZE);
+        if (clValidatorCount < depositedValidatorCount) {
+            InFlightDeposit.set((depositedValidatorCount - clValidatorCount) * DEPOSIT_SIZE);
+        } else {
+            // explicit zero so a re-run on dirty storage cannot leak a stale value into
+            // the totalDepositedActivatedETH calculation below
+            InFlightDeposit.set(0);
+        }
+
+        IOracleManagerV1.StoredConsensusLayerReport memory storedReport;
+        storedReport.epoch = lastReport.epoch;
+        storedReport.validatorsBalance = lastReport.validatorsBalance;
+        storedReport.validatorsSkimmedBalance = lastReport.validatorsSkimmedBalance;
+        storedReport.validatorsExitedBalance = lastReport.validatorsExitedBalance;
+        storedReport.validatorsExitingBalance = lastReport.validatorsExitingBalance;
+        storedReport.validatorsCount = clValidatorCount;
+        storedReport.rebalanceDepositToRedeemMode = lastReport.rebalanceDepositToRedeemMode;
+        storedReport.slashingContainmentMode = lastReport.slashingContainmentMode;
+        storedReport.totalDepositedActivatedETH = depositedValidatorCount * DEPOSIT_SIZE - InFlightDeposit.get();
+        LastConsensusLayerReport.set(storedReport);
     }
 
     /// @inheritdoc IRiverV1
