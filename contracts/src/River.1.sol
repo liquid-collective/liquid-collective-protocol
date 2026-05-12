@@ -227,6 +227,26 @@ contract RiverV1 is
     }
 
     /// @inheritdoc IRiverV1
+    function getBalanceToConsolidate() external view returns (uint256) {
+        return ConsolidationBuffer.get();
+    }
+
+    /// @inheritdoc IRiverV1
+    function mintLsETHForConsolidation(uint256 _amount, address _recipient) external {
+        if (msg.sender != KeeperAddress.get()) {
+            revert IConsensusLayerDepositManagerV1.OnlyKeeper();
+        }
+        if (_amount == 0) {
+            revert LibErrors.InvalidArgument();
+        }
+        LibSanitize._notZeroAddress(_recipient);
+        uint256 oldConsolidationBuffer = ConsolidationBuffer.get();
+        _setConsolidationBuffer(oldConsolidationBuffer, oldConsolidationBuffer + _amount);
+        uint256 sharesMinted = _mintShares(_recipient, _amount);
+        emit LsETHMintedForConsolidation(_recipient, _amount, sharesMinted);
+    }
+
+    /// @inheritdoc IRiverV1
     function resolveRedeemRequests(uint32[] calldata _redeemRequestIds)
         external
         view

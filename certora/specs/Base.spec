@@ -40,6 +40,7 @@ methods {
 
     // RiverV1
     function RiverV1Harness.getBalanceToDeposit() external returns(uint256) envfree;
+    function RiverV1Harness.getBalanceToConsolidate() external returns(uint256) envfree;
     function RiverV1Harness.getCommittedBalance() external returns(uint256) envfree;
     function RiverV1Harness.getBalanceToRedeem() external returns(uint256) envfree;
     function RiverV1Harness.consensusLayerDepositSize() external returns(uint256) envfree;
@@ -67,6 +68,7 @@ methods {
     
     // RiverV1 : ConsensusLayerDepositManagerV1
     function _.depositToConsensusLayerWithDepositRoot(IOperatorsRegistryV1.OperatorAllocation[], bytes32) external => DISPATCHER(true);
+    function _.mintLsETHForConsolidation(uint256, address) external => DISPATCHER(true);
     function RiverV1Harness.getDepositedValidatorCount() external returns(uint256) envfree;
 
     // WithdrawV1

@@ -98,6 +98,17 @@ interface IRiverV1 is IConsensusLayerDepositManagerV1, IUserDepositManagerV1, IS
     /// @param newAmount The new balance to redeem
     event SetBalanceToRedeem(uint256 oldAmount, uint256 newAmount);
 
+    /// @notice Emitted when the balance to consolidate is updated
+    /// @param oldAmount The old balance to consolidate
+    /// @param newAmount The new balance to consolidate
+    event SetBalanceToConsolidate(uint256 oldAmount, uint256 newAmount);
+
+    /// @notice Emitted when LsETH is minted for consolidation
+    /// @param recipient The address that received the minted LsETH
+    /// @param amountEth The amount of ETH attributed to consolidation
+    /// @param sharesMinted The amount of LsETH shares minted
+    event LsETHMintedForConsolidation(address indexed recipient, uint256 amountEth, uint256 sharesMinted);
+
     /// @notice Emitted when the balance committed to deposit
     /// @param oldAmount The old balance committed to deposit
     /// @param newAmount The new balance committed to deposit
@@ -239,6 +250,15 @@ interface IRiverV1 is IConsensusLayerDepositManagerV1, IUserDepositManagerV1, IS
     /// @notice Returns whether slashing containment mode is currently active
     /// @return True if slashing containment mode is active
     function getSlashingContainmentMode() external view returns (bool);
+
+    /// @notice Retrieve the current balance to consolidate
+    /// @return The current balance to consolidate
+    function getBalanceToConsolidate() external view returns (uint256);
+
+    /// @notice Mints LsETH to a recipient for consolidated ETH (keeper only)
+    /// @param _amount The amount of ETH being consolidated
+    /// @param _recipient The address to receive the minted LsETH
+    function mintLsETHForConsolidation(uint256 _amount, address _recipient) external;
 
     /// @notice Performs a redeem request on the redeem manager
     /// @param _lsETHAmount The amount of LsETH to redeem
