@@ -252,7 +252,7 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
 
         // 5. Mock BLS verification on the validator address (EIP-2537 precompiles are
         //    not enabled in Foundry's default EVM). verifyBLSDeposit is called via
-        //    staticcall from validateAndPrepare; mocking returns success.
+        //    staticcall from validate; mocking returns success.
         vm.mockCall(address(validator), abi.encodeWithSelector(validator.verifyBLSDeposit.selector), bytes(""));
     }
 
@@ -599,7 +599,7 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
         dm.depositToConsensusLayerWithAttestation(bufferId, rootHash, sigs, depositYs);
     }
 
-    // Regression test for the defense-in-depth bufferId check in validateAndPrepare().
+    // Regression test for the defense-in-depth bufferId check in validate().
     // A malicious or buggy DepositDataBuffer may store (id, deposits) where
     // id != keccak256(abi.encode(deposits)). The on-chain validator must catch this
     // and revert with BufferIdMismatch so the attesters' signed commitment is

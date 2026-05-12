@@ -212,7 +212,7 @@ contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1 {
     // -----------------------------------------------------------------------
 
     /// @inheritdoc IAttestationVerifierV1
-    function validateAndPrepare(
+    function validate(
         bytes32 depositDataBufferId,
         bytes32 depositRootHash,
         bytes[] calldata signatures,
@@ -336,7 +336,7 @@ contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1 {
     }
 
     /// @notice Verify a single BLS deposit message against the cached deposit domain.
-    /// @dev External only as a self-staticcall trampoline from validateAndPrepare: the call
+    /// @dev External only as a self-staticcall trampoline from validate: the call
     ///      promotes the deposit's memory bytes into calldata so BLS12_381 can consume them
     ///      without a memory copy. Not intended for direct external use — reverts on bad
     ///      input but performs no authorization.
