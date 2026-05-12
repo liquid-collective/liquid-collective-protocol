@@ -95,7 +95,6 @@ contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1 {
         emit SetDepositDomain(depositDomain);
 
         for (uint256 i = 0; i < _depositCommitteeAttesters.length; i++) {
-            if (_depositCommitteeAttesters[i] == address(0)) revert LibErrors.InvalidZeroAddress();
             if (!DepositCommitteeAttesters.isDepositCommitteeAttester(_depositCommitteeAttesters[i])) {
                 DepositCommitteeAttesters.setDepositCommitteeAttester(_depositCommitteeAttesters[i], true);
                 DepositCommitteeAttesters.setCount(DepositCommitteeAttesters.getCount() + 1);
@@ -130,8 +129,6 @@ contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1 {
 
     /// @inheritdoc IAttestationVerifierV1
     function setDepositCommitteeAttester(address depositCommitteeAttester, bool value) external onlyRiverAdmin {
-        if (depositCommitteeAttester == address(0)) revert LibErrors.InvalidZeroAddress();
-
         bool current = DepositCommitteeAttesters.isDepositCommitteeAttester(depositCommitteeAttester);
         if (current == value) revert DepositCommitteeAttesterStatusUnchanged(depositCommitteeAttester, value);
 

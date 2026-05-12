@@ -1,6 +1,7 @@
 //SPDX-License-Identifier: BUSL-1.1
 pragma solidity 0.8.34;
 
+import "../../libraries/LibSanitize.sol";
 import "../../libraries/LibUnstructuredStorage.sol";
 
 /// @title DepositCommitteeAttesters
@@ -26,6 +27,7 @@ library DepositCommitteeAttesters {
     /// @param account The account to set
     /// @param value The new deposit-committee attester status
     function setDepositCommitteeAttester(address account, bool value) internal {
+        LibSanitize._notZeroAddress(account);
         bytes32 slot = keccak256(abi.encode(DEPOSIT_COMMITTEE_ATTESTER_MAPPING_BASE_SLOT, account));
         LibUnstructuredStorage.setStorageBool(slot, value);
     }
