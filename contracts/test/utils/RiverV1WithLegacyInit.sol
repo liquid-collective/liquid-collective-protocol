@@ -42,7 +42,7 @@ abstract contract RiverV1WithLegacyInit is RiverV1 {
         OperatorsRegistryAddress.set(_operatorRegistryAddress);
         emit SetOperatorsRegistry(_operatorRegistryAddress);
 
-        ConsensusLayerDepositManagerV1.initConsensusLayerDepositManagerV1_2(
+        ConsensusLayerDepositManagerV1.initConsensusLayerDepositManagerV1(
             _depositContractAddress, _withdrawalCredentials
         );
 

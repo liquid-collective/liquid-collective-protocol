@@ -50,7 +50,6 @@ contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1 {
     /// @dev Expected lengths for fixed BLS-related fields in a DepositObject.
     uint256 internal constant DEPOSIT_PUBKEY_LENGTH = 48;
     uint256 internal constant DEPOSIT_SIGNATURE_LENGTH = 96;
-    uint256 internal constant DEPOSIT_WC_LENGTH = 32;
 
     // -----------------------------------------------------------------------
     // Modifiers
@@ -213,7 +212,6 @@ contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1 {
     // -----------------------------------------------------------------------
 
     /// @inheritdoc IAttestationVerifierV1
-    // solhint-disable-next-line code-complexity
     function validateAndPrepare(
         bytes32 depositDataBufferId,
         bytes32 depositRootHash,
@@ -237,33 +235,22 @@ contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1 {
         // 4. depositYs count must match
         if (depositYs.length != depositCount) revert BLSSignatureCountMismatch(depositCount, depositYs.length);
 
-        // 5. Enforce fixed lengths on dynamic-bytes fields, and check WC + accumulate totalAmount
+        // 5. Enforce fixed lengths on BLS pubkey/signature and accumulate totalAmount.
+        //    The canonical River WC is supplied by the caller and used directly for BLS verification,
+        //    so the buffer producer is not trusted on the WC field (no per-deposit WC stored).
         for (uint256 i = 0; i < depositCount; i++) {
-            if (deposits[i].withdrawalCredentials.length != DEPOSIT_WC_LENGTH) {
-                revert InvalidWithdrawalCredentialsLength(i, deposits[i].withdrawalCredentials.length);
-            }
             if (deposits[i].pubkey.length != DEPOSIT_PUBKEY_LENGTH) {
                 revert InvalidPubkeyLength(i, deposits[i].pubkey.length);
             }
             if (deposits[i].signature.length != DEPOSIT_SIGNATURE_LENGTH) {
                 revert InvalidSignatureLength(i, deposits[i].signature.length);
             }
-
-            bytes32 depositWC;
-            bytes memory wcBytes = deposits[i].withdrawalCredentials;
-            assembly {
-                depositWC := mload(add(wcBytes, 32))
-            }
-            if (depositWC != withdrawalCredentials) {
-                revert WithdrawalCredentialsMismatch(i, withdrawalCredentials, depositWC);
-            }
-
             totalAmount += deposits[i].amount;
         }
         if (totalAmount > committedBalance) revert NotEnoughFunds();
 
-        // 6. Verify BLS signatures (heaviest step — last so cheap checks fail fast)
-        _verifyBLSSignatures(deposits, depositYs);
+        // 6. Verify BLS signatures against canonical River WC (heaviest step — last so cheap checks fail fast)
+        _verifyBLSSignatures(deposits, depositYs, withdrawalCredentials);
     }
 
     // -----------------------------------------------------------------------
@@ -282,6 +269,7 @@ contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1 {
         if (sigLen > MAX_SIGNATURES) revert TooManySignatures(sigLen, MAX_SIGNATURES);
 
         uint256 quorum = AttestationQuorum.get();
+        if (quorum == 0) revert ZeroQuorum();
         if (sigLen < quorum) revert InsufficientAttestations(sigLen, quorum);
 
         bytes32 onChainRoot = IDepositContract(ValidatorDepositContractAddress.get()).get_deposit_root();
@@ -313,24 +301,30 @@ contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1 {
             validCount++;
         }
 
-        if (quorum == 0) revert ZeroQuorum();
         if (validCount < quorum) revert InsufficientAttestations(validCount, quorum);
     }
 
-    /// @notice Verify the BLS signatures.
+    /// @notice Verify the BLS signatures against the canonical River withdrawal credentials.
     /// @param deposits The deposits.
     /// @param depositYs The deposit Y-coordinates.
+    /// @param withdrawalCredentials The canonical River withdrawal credentials.
     function _verifyBLSSignatures(
         IDepositDataBuffer.DepositObject[] memory deposits,
-        BLS12_381.DepositY[] calldata depositYs
+        BLS12_381.DepositY[] calldata depositYs,
+        bytes32 withdrawalCredentials
     ) internal view {
         for (uint256 i = 0; i < deposits.length; i++) {
-            bytes32 wc = abi.decode(deposits[i].withdrawalCredentials, (bytes32));
             (bool ok, bytes memory revertData) = address(this)
                 .staticcall(
                     abi.encodeCall(
                         this.verifyBLSDeposit,
-                        (deposits[i].pubkey, deposits[i].signature, deposits[i].amount, depositYs[i], wc)
+                        (
+                            deposits[i].pubkey,
+                            deposits[i].signature,
+                            deposits[i].amount,
+                            depositYs[i],
+                            withdrawalCredentials
+                        )
                     )
                 );
             if (!ok) {

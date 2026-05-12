@@ -67,11 +67,6 @@ interface IAttestationVerifierV1 {
     /// @param yCount The number of Y-coordinates supplied
     error BLSSignatureCountMismatch(uint256 depositCount, uint256 yCount);
 
-    /// @notice A deposit's withdrawalCredentials field has an unexpected byte length
-    /// @param index The deposit index in the batch
-    /// @param length The observed length
-    error InvalidWithdrawalCredentialsLength(uint256 index, uint256 length);
-
     /// @notice A deposit's pubkey field has an unexpected byte length
     /// @param index The deposit index in the batch
     /// @param length The observed length
@@ -81,12 +76,6 @@ interface IAttestationVerifierV1 {
     /// @param index The deposit index in the batch
     /// @param length The observed length
     error InvalidSignatureLength(uint256 index, uint256 length);
-
-    /// @notice A deposit's withdrawalCredentials do not match the protocol-configured WC
-    /// @param depositIndex The deposit index in the batch
-    /// @param expected The protocol-configured withdrawalCredentials
-    /// @param actual The withdrawalCredentials carried by the deposit
-    error WithdrawalCredentialsMismatch(uint256 depositIndex, bytes32 expected, bytes32 actual);
 
     /// @notice The summed deposit amount exceeds the committed balance passed by River
     error NotEnoughFunds();

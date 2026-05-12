@@ -5,6 +5,10 @@ pragma solidity 0.8.34;
 /// @notice Interface for the DepositDataBuffer contract that stores pre-committed validator deposit batches.
 interface IDepositDataBuffer {
     /// @notice A single validator deposit object stored in the buffer.
+    /// @dev Withdrawal credentials are NOT stored per-deposit. The canonical River WC is
+    ///      passed into `validate()` at deposit time and used both for BLS signature
+    ///      verification and for the official deposit contract call, removing any need
+    ///      to trust the buffer producer on this field.
     struct DepositObject {
         /// @dev 48-byte BLS public key of the validator
         bytes pubkey;
@@ -12,8 +16,6 @@ interface IDepositDataBuffer {
         bytes signature;
         /// @dev Deposit amount in wei (must be a multiple of 1 gwei and typically 32 ether)
         uint256 amount;
-        /// @dev 32-byte withdrawal credentials (abi-encoded bytes32)
-        bytes withdrawalCredentials;
         /// @dev SHA-256 deposit data root for use with the official deposit contract
         bytes32 depositDataRoot;
         /// @dev Arbitrary metadata bytes32. River encodes the operator index as left-aligned ASCII:

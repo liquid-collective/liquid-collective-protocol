@@ -353,7 +353,6 @@ abstract contract AccountingHarnessBase is Test, BytesGenerator {
                     bytes32(0)
                 ),
                 amount: amounts[i],
-                withdrawalCredentials: abi.encode(wc),
                 depositDataRoot: bytes32(0),
                 metadata: _operatorMeta(opIndices[i])
             });
