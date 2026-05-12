@@ -228,12 +228,12 @@ contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1 {
         uint256 depositCount = deposits.length;
         if (depositCount == 0) revert NoDeposits();
 
-        // 3. Re-compute and check the bufferId binding so the buffer cannot tamper post-attestation
+        // 3. depositYs count must match
+        if (depositYs.length != depositCount) revert BLSSignatureCountMismatch(depositCount, depositYs.length);
+
+        // 4. Re-compute and check the bufferId binding so the buffer cannot tamper post-attestation
         bytes32 computedId = keccak256(abi.encode(deposits));
         if (computedId != depositDataBufferId) revert BufferIdMismatch(depositDataBufferId, computedId);
-
-        // 4. depositYs count must match
-        if (depositYs.length != depositCount) revert BLSSignatureCountMismatch(depositCount, depositYs.length);
 
         // 5. Enforce fixed lengths on BLS pubkey/signature and accumulate totalAmount.
         //    The canonical River WC is supplied by the caller and used directly for BLS verification,
