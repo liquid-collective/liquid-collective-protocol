@@ -100,9 +100,8 @@ contract FirewallTests is BytesGenerator, OperatorAllocationTestBase {
         operatorsRegistry.initOperatorsRegistryV1(address(operatorsRegistryFirewall), address(river));
 
         bytes32 withdrawalCredentials = withdraw.getCredentials();
-        bytes4[] memory executorCallableRiverSelectors = new bytes4[](2);
-        executorCallableRiverSelectors[0] = river.depositToConsensusLayerWithDepositRoot.selector;
-        executorCallableRiverSelectors[1] = river.setOracle.selector;
+        bytes4[] memory executorCallableRiverSelectors = new bytes4[](1);
+        executorCallableRiverSelectors[0] = river.setOracle.selector;
         riverFirewall = new Firewall(riverGovernor, executor, address(river), executorCallableRiverSelectors);
         firewalledRiver = RiverV1(payable(address(riverFirewall)));
 
@@ -232,29 +231,6 @@ contract FirewallTests is BytesGenerator, OperatorAllocationTestBase {
         vm.startPrank(joe);
         vm.expectRevert(unauthJoe);
         firewalledOperatorsRegistry.setOperatorStatus(operatorBobIndex, true);
-        vm.stopPrank();
-    }
-
-    function testGovernorCannotdepositToConsensusLayerWithDepositRoot() public {
-        // Assert this by expecting NotEnoughFunds, NOT Unauthorized
-        vm.startPrank(riverGovernor);
-        vm.expectRevert(abi.encodeWithSignature("NotEnoughFunds()"));
-        firewalledRiver.depositToConsensusLayerWithDepositRoot(_createAllocation(10), bytes32(0));
-        vm.stopPrank();
-    }
-
-    function testExecutorCannotdepositToConsensusLayerWithDepositRoot() public {
-        // Assert this by expecting NotEnoughFunds, NOT Unauthorized
-        vm.startPrank(executor);
-        vm.expectRevert(abi.encodeWithSignature("NotEnoughFunds()"));
-        firewalledRiver.depositToConsensusLayerWithDepositRoot(_createAllocation(10), bytes32(0));
-        vm.stopPrank();
-    }
-
-    function testRandomCallerCannotdepositToConsensusLayerWithDepositRoot() public {
-        vm.startPrank(joe);
-        vm.expectRevert(unauthJoe);
-        firewalledRiver.depositToConsensusLayerWithDepositRoot(_createAllocation(10), bytes32(0));
         vm.stopPrank();
     }
 
