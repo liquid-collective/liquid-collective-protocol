@@ -175,7 +175,9 @@ abstract contract AccountingInvariants is BeaconChainSimulator {
             for (uint256 j = 0; j < _simValidators.length; j++) {
                 if (_simValidators[j].operatorIndex == i) {
                     simFunded += _simValidators[j].depositedETH;
-                    if (_simValidators[j].state == ValidatorState.Exited) {
+                    // Include exitedETH from all non-pending validators: Active validators can
+                    // carry exitedETH from partial exits, which _buildReport also reports on-chain.
+                    if (_simValidators[j].state != ValidatorState.Pending) {
                         simExited += _simValidators[j].exitedETH;
                     }
                 }
