@@ -71,14 +71,15 @@ contract OperatorsMigrationV2ToV3 is Test {
         OperatorsRegistryV1 newImplementation = new OperatorsRegistryV1();
 
         vm.prank(OPERATORS_REGISTRY_MAINNET_PROXY_ADMIN_ADDRESS);
-        ITransparentUpgradeableProxy(address(orProxy))
-            .upgradeToAndCall(
-                address(newImplementation),
-                abi.encodeWithSelector(OperatorsRegistryV1.initOperatorsRegistryV1_2.selector)
-            );
+        ITransparentUpgradeableProxy(address(orProxy)).upgradeTo(address(newImplementation));
+
+        OperatorsRegistryV1 v3 = OperatorsRegistryV1(OPERATORS_REGISTRY_MAINNET_ADDRESS);
+        // initOperatorsRegistryV1_2 is `onlyAdmin`, so it must be called by the registry admin
+        // (distinct from the proxy admin used for upgrades).
+        vm.prank(v3.getAdmin());
+        v3.initOperatorsRegistryV1_2();
 
         // ── Verify V3 state matches V2 ──
-        OperatorsRegistryV1 v3 = OperatorsRegistryV1(OPERATORS_REGISTRY_MAINNET_ADDRESS);
 
         assertEq(v3.getOperatorCount(), opCount, "operator count mismatch");
 
@@ -100,22 +101,20 @@ contract OperatorsMigrationV2ToV3 is Test {
         TUPProxy orProxy = TUPProxy(payable(OPERATORS_REGISTRY_MAINNET_ADDRESS));
         OperatorsRegistryV1 newImplementation = new OperatorsRegistryV1();
 
-        // First migration should succeed
         vm.prank(OPERATORS_REGISTRY_MAINNET_PROXY_ADMIN_ADDRESS);
-        ITransparentUpgradeableProxy(address(orProxy))
-            .upgradeToAndCall(
-                address(newImplementation),
-                abi.encodeWithSelector(OperatorsRegistryV1.initOperatorsRegistryV1_2.selector)
-            );
+        ITransparentUpgradeableProxy(address(orProxy)).upgradeTo(address(newImplementation));
+
+        OperatorsRegistryV1 v3 = OperatorsRegistryV1(OPERATORS_REGISTRY_MAINNET_ADDRESS);
+        address regAdmin = v3.getAdmin();
+
+        // First migration should succeed
+        vm.prank(regAdmin);
+        v3.initOperatorsRegistryV1_2();
 
         // Second call should revert (init version already set)
-        vm.prank(OPERATORS_REGISTRY_MAINNET_PROXY_ADMIN_ADDRESS);
+        vm.prank(regAdmin);
         vm.expectRevert();
-        ITransparentUpgradeableProxy(address(orProxy))
-            .upgradeToAndCall(
-                address(newImplementation),
-                abi.encodeWithSelector(OperatorsRegistryV1.initOperatorsRegistryV1_2.selector)
-            );
+        v3.initOperatorsRegistryV1_2();
     }
 
     /// @notice After migration, verify that production functions work correctly on the migrated V3 state.
@@ -142,14 +141,14 @@ contract OperatorsMigrationV2ToV3 is Test {
         OperatorsRegistryV1 newImpl = new OperatorsRegistryV1();
 
         vm.prank(OPERATORS_REGISTRY_MAINNET_PROXY_ADMIN_ADDRESS);
-        ITransparentUpgradeableProxy(address(orProxy))
-            .upgradeToAndCall(
-                address(newImpl), abi.encodeWithSelector(OperatorsRegistryV1.initOperatorsRegistryV1_2.selector)
-            );
+        ITransparentUpgradeableProxy(address(orProxy)).upgradeTo(address(newImpl));
 
         OperatorsRegistryV1 v3 = OperatorsRegistryV1(OPERATORS_REGISTRY_MAINNET_ADDRESS);
         address river = v3.getRiver();
         address admin = v3.getAdmin();
+
+        vm.prank(admin);
+        v3.initOperatorsRegistryV1_2();
 
         // ── incrementFundedETH works on migrated state ──
         uint256[] memory fundedETH = new uint256[](activeOpIdx + 1);

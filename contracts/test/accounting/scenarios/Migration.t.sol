@@ -87,6 +87,7 @@ contract MigrationTest is Test {
         // V1_1 is a no-op bridge (advances init version 1→2 so V1_2 init(2) check passes)
         registry.sudoInitV1_1();
         // V1_2 migrates V2 → V3 (scales by 32 ether)
+        vm.prank(admin);
         registry.initOperatorsRegistryV1_2();
 
         // Validate V3 state
@@ -116,6 +117,7 @@ contract MigrationTest is Test {
     function testMigrationEmptyState() public {
         registry.sudoInitV1_1();
         // Step 2: Run the V1_2 migration (V2 → V3 scaling) and assert no operators were created.
+        vm.prank(admin);
         registry.initOperatorsRegistryV1_2();
         assertEq(registry.getOperatorCount(), 0, "no operators after empty migration");
     }
@@ -134,6 +136,7 @@ contract MigrationTest is Test {
         registry.sudoSetStoppedValidators(stopped);
 
         registry.sudoInitV1_1();
+        vm.prank(admin);
         registry.initOperatorsRegistryV1_2();
 
         assertEq(registry.getOperatorCount(), 1, "one operator");
