@@ -20,6 +20,10 @@ interface IRiverV1 is IConsensusLayerDepositManagerV1, IUserDepositManagerV1, IS
     /// @param amount The amount pulled
     event PulledCoverageFunds(uint256 amount);
 
+    /// @notice Funds have been pulled from the Consolidation Coverage Fund
+    /// @param amount The amount pulled
+    event PulledConsolidationCoverageFunds(uint256 amount);
+
     /// @notice Emitted when funds are pulled from the redeem manager
     /// @param amount The amount pulled
     event PulledRedeemManagerExceedingEth(uint256 amount);
@@ -36,6 +40,10 @@ interface IRiverV1 is IConsensusLayerDepositManagerV1, IUserDepositManagerV1, IS
     /// @notice The stored Coverage Fund has been changed
     /// @param coverageFund The new Coverage Fund
     event SetCoverageFund(address indexed coverageFund);
+
+    /// @notice The stored Consolidation Coverage Fund has been changed
+    /// @param consolidationCoverageFund The new Consolidation Coverage Fund (address(0) to disable)
+    event SetConsolidationCoverageFund(address indexed consolidationCoverageFund);
 
     /// @notice The stored Collector has been changed
     /// @param collector The new Collector
@@ -94,6 +102,11 @@ interface IRiverV1 is IConsensusLayerDepositManagerV1, IUserDepositManagerV1, IS
     /// @param oldAmount The old balance committed to deposit
     /// @param newAmount The new balance committed to deposit
     event SetBalanceCommittedToDeposit(uint256 oldAmount, uint256 newAmount);
+
+    /// @notice Emitted when the consolidation buffer is updated
+    /// @param oldAmount The old consolidation buffer
+    /// @param newAmount The new consolidation buffer
+    event SetConsolidationBuffer(uint256 oldAmount, uint256 newAmount);
 
     /// @notice Emitted when the redeem manager received a withdraw event report
     /// @param redeemManagerDemand The total demand in LsETH of the redeem manager
@@ -170,12 +183,14 @@ interface IRiverV1 is IConsensusLayerDepositManagerV1, IUserDepositManagerV1, IS
     /// @param _attesters The list of attesters to add
     /// @param _quorum The attestation quorum
     /// @param _genesisForkVersion The genesis fork version for computing the deposit domain
+    /// @param _consolidationCoverageFund The address of the consolidation coverage fund
     function initRiverV1_3(
         bytes32 _withdrawalCredentials,
         address _depositDataBuffer,
         address[] calldata _attesters,
         uint256 _quorum,
-        bytes4 _genesisForkVersion
+        bytes4 _genesisForkVersion,
+        address _consolidationCoverageFund
     ) external;
 
     /// @notice Get the current global fee
@@ -197,6 +212,10 @@ interface IRiverV1 is IConsensusLayerDepositManagerV1, IUserDepositManagerV1, IS
     /// @notice Retrieve the coverage fund
     /// @return The coverage fund address
     function getCoverageFund() external view returns (address);
+
+    /// @notice Retrieve the consolidation coverage fund
+    /// @return The consolidation coverage fund address (address(0) if not set)
+    function getConsolidationCoverageFund() external view returns (address);
 
     /// @notice Retrieve the redeem manager
     /// @return The redeem manager address
@@ -275,6 +294,10 @@ interface IRiverV1 is IConsensusLayerDepositManagerV1, IUserDepositManagerV1, IS
     /// @param _newCoverageFund New address for the fund
     function setCoverageFund(address _newCoverageFund) external;
 
+    /// @notice Changes the consolidation coverage fund
+    /// @param _newConsolidationCoverageFund New address for the fund (address(0) to disable)
+    function setConsolidationCoverageFund(address _newConsolidationCoverageFund) external;
+
     /// @notice Sets the metadata uri string value
     /// @param _metadataURI The new metadata uri string value
     function setMetadataURI(string memory _metadataURI) external;
@@ -287,6 +310,9 @@ interface IRiverV1 is IConsensusLayerDepositManagerV1, IUserDepositManagerV1, IS
 
     /// @notice Input for coverage funds
     function sendCoverageFunds() external payable;
+
+    /// @notice Input for consolidation coverage funds
+    function sendConsolidationCoverageFunds() external payable;
 
     /// @notice Input for the redeem manager funds
     function sendRedeemManagerExceedingFunds() external payable;
