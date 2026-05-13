@@ -5,12 +5,9 @@ import "../interfaces/components/IConsensusLayerDepositManager.1.sol";
 import "../interfaces/IAttestationVerifier.1.sol";
 import "../interfaces/IDepositContract.sol";
 import "../interfaces/IDepositDataBuffer.sol";
-import "../interfaces/IDepositDataBuffer.sol";
 
 import "../libraries/LibBytes.sol";
 import "../libraries/LibUint256.sol";
-import "../libraries/LibErrors.sol";
-import "../libraries/BLS12_381.sol";
 import "../libraries/LibErrors.sol";
 import "../libraries/BLS12_381.sol";
 
@@ -126,15 +123,18 @@ abstract contract ConsensusLayerDepositManagerV1 is IConsensusLayerDepositManage
         bytes[] calldata signatures,
         BLS12_381.DepositY[] calldata depositYs
     ) external {
+        // 1. Keeper check
         if (msg.sender != KeeperAddress.get()) revert OnlyKeeper();
+        // 2. Slashing containment mode check
         if (_getSlashingContainmentMode()) revert SlashingContainmentModeEnabled();
 
+        // 3. Withdrawal credentials check
         bytes32 withdrawalCredentials = WithdrawalCredentials.get();
         if (withdrawalCredentials == 0) revert InvalidWithdrawalCredentials();
 
+        // 4. Validate attestation quorum + BLS signatures; get deposits
         uint256 committedBalance = CommittedBalance.get();
         address depositContract = DepositContractAddress.get();
-
         (IDepositDataBuffer.DepositObject[] memory deposits, uint256 totalAmount) = IAttestationVerifierV1(
                 AttestationVerifierAddress.get()
             )
@@ -148,8 +148,10 @@ abstract contract ConsensusLayerDepositManagerV1 is IConsensusLayerDepositManage
                 committedBalance
             );
 
+        // 5. Update operator funded validator accounting
         _updateFundedETHFromBuffer(deposits);
 
+        // 6. execute the deposits
         uint256 len = deposits.length;
         for (uint256 i = 0; i < len; i++) {
             _depositValidator(

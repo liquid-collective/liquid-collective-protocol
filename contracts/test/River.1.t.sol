@@ -13,7 +13,6 @@ import "./mocks/DepositContractMock.sol";
 
 import "../src/libraries/LibAllowlistMasks.sol";
 import "../src/libraries/BLS12_381.sol";
-import "../src/libraries/BLS12_381.sol";
 import "../src/Allowlist.1.sol";
 import "../src/AttestationVerifier.1.sol";
 import "../src/River.1.sol";
@@ -22,40 +21,12 @@ import "../src/interfaces/components/IOracleManager.1.sol";
 import "../src/interfaces/IRiver.1.sol";
 import "../src/interfaces/IDepositContract.sol";
 import "../src/interfaces/IDepositDataBuffer.sol";
-import "../src/interfaces/IDepositDataBuffer.sol";
 import "../src/Withdraw.1.sol";
 import "../src/Oracle.1.sol";
 import "../src/ELFeeRecipient.1.sol";
 import "../src/OperatorsRegistry.1.sol";
 import "../src/CoverageFund.1.sol";
 import "../src/RedeemManager.1.sol";
-
-contract MockDepositDataBuffer is IDepositDataBuffer {
-    mapping(bytes32 => DepositObject[]) internal _batches;
-    mapping(bytes32 => bool) internal _exists;
-
-    function submitDepositData(bytes32 depositDataBufferId, DepositObject[] calldata deposits) external {
-        if (_exists[depositDataBufferId]) revert DepositDataBufferIdAlreadyExists(depositDataBufferId);
-        _exists[depositDataBufferId] = true;
-        for (uint256 i = 0; i < deposits.length; i++) {
-            _batches[depositDataBufferId].push(deposits[i]);
-        }
-        emit DepositDataSubmitted(depositDataBufferId, deposits.length);
-    }
-
-    function getDepositData(bytes32 depositDataBufferId) external view returns (DepositObject[] memory) {
-        if (!_exists[depositDataBufferId]) revert DepositDataBufferIdNotFound(depositDataBufferId);
-        return _batches[depositDataBufferId];
-    }
-
-    function getWriter() external pure returns (address) {
-        return address(0);
-    }
-
-    function getAdmin() external pure returns (address) {
-        return address(0);
-    }
-}
 
 contract MockDepositDataBuffer is IDepositDataBuffer {
     mapping(bytes32 => DepositObject[]) internal _batches;
@@ -185,13 +156,6 @@ abstract contract RiverV1TestBase is OperatorAllocationTestBase, BytesGenerator 
 
     uint128 constant maxDailyNetCommittableAmount = 3200 ether;
     uint128 constant maxDailyRelativeCommittableAmount = 2000;
-
-    function _emptyDepositY() internal pure returns (BLS12_381.DepositY memory) {
-        return BLS12_381.DepositY({
-            pubkeyY: BLS12_381.Fp({a: bytes32(0), b: bytes32(0)}),
-            signatureY: BLS12_381.Fp2({c0_a: bytes32(0), c0_b: bytes32(0), c1_a: bytes32(0), c1_b: bytes32(0)})
-        });
-    }
 
     function _emptyDepositY() internal pure returns (BLS12_381.DepositY memory) {
         return BLS12_381.DepositY({
@@ -1051,8 +1015,6 @@ contract RiverV1Tests is RiverV1TestBase {
         assert(river.balanceOfUnderlying(bob) == 1000 ether);
     }
 
-    // Testing sequential deposits to different operators
-    function testUserDepositsSequentialOperators() public {
     // Testing sequential deposits to different operators
     function testUserDepositsSequentialOperators() public {
         vm.deal(joe, 100 ether);

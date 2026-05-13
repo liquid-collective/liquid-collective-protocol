@@ -12,7 +12,7 @@ import "./interfaces/IDepositDataBuffer.sol";
 import "./libraries/BLS12_381.sol";
 import "./libraries/LibErrors.sol";
 
-import "./state/attestationVerifier/AttestationQuorum.sol";
+import "./state/attestationVerifier/DepositCommitteeAttestationQuorum.sol";
 import "./state/attestationVerifier/DepositCommitteeAttesters.sol";
 import "./state/attestationVerifier/DepositDataBufferAddress.sol";
 import "./state/attestationVerifier/DepositDomainValue.sol";
@@ -105,8 +105,8 @@ contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1 {
         if (_quorum > depositCommitteeAttesterCount) {
             revert QuorumExceedsDepositCommitteeAttesterCount(_quorum, depositCommitteeAttesterCount);
         }
-        AttestationQuorum.set(_quorum);
-        emit SetAttestationQuorum(_quorum);
+        DepositCommitteeAttestationQuorum.set(_quorum);
+        emit SetDepositCommitteeAttestationQuorum(_quorum);
 
         // EIP-712 domain separator binds verifyingContract to River's address, not this
         // verifier's own address. This preserves deposit-committee attester signing tooling that
@@ -137,7 +137,7 @@ contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1 {
         if (value && newCount > MAX_DEPOSIT_COMMITTEE_ATTESTERS) {
             revert TooManyDepositCommitteeAttesters(newCount, MAX_DEPOSIT_COMMITTEE_ATTESTERS);
         }
-        uint256 currentQuorum = AttestationQuorum.get();
+        uint256 currentQuorum = DepositCommitteeAttestationQuorum.get();
         if (!value && currentQuorum > newCount) {
             revert QuorumExceedsDepositCommitteeAttesterCount(currentQuorum, newCount);
         }
@@ -148,15 +148,15 @@ contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1 {
     }
 
     /// @inheritdoc IAttestationVerifierV1
-    function setAttestationQuorum(uint256 newQuorum) external onlyRiverAdmin {
+    function setDepositCommitteeAttestationQuorum(uint256 newQuorum) external onlyRiverAdmin {
         if (newQuorum == 0) revert ZeroQuorum();
         uint256 depositCommitteeAttesterCount = DepositCommitteeAttesters.getCount();
         if (newQuorum > depositCommitteeAttesterCount) {
             revert QuorumExceedsDepositCommitteeAttesterCount(newQuorum, depositCommitteeAttesterCount);
         }
         if (newQuorum > MAX_SIGNATURES) revert QuorumExceedsMaxSignatures(newQuorum, MAX_SIGNATURES);
-        AttestationQuorum.set(newQuorum);
-        emit SetAttestationQuorum(newQuorum);
+        DepositCommitteeAttestationQuorum.set(newQuorum);
+        emit SetDepositCommitteeAttestationQuorum(newQuorum);
     }
 
     // -----------------------------------------------------------------------
@@ -174,8 +174,8 @@ contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1 {
     }
 
     /// @inheritdoc IAttestationVerifierV1
-    function getAttestationQuorum() external view returns (uint256) {
-        return AttestationQuorum.get();
+    function getDepositCommitteeAttestationQuorum() external view returns (uint256) {
+        return DepositCommitteeAttestationQuorum.get();
     }
 
     /// @inheritdoc IAttestationVerifierV1
@@ -264,7 +264,7 @@ contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1 {
         uint256 sigLen = signatures.length;
         if (sigLen > MAX_SIGNATURES) revert TooManySignatures(sigLen, MAX_SIGNATURES);
 
-        uint256 quorum = AttestationQuorum.get();
+        uint256 quorum = DepositCommitteeAttestationQuorum.get();
         if (quorum == 0) revert ZeroQuorum();
         if (sigLen < quorum) revert InsufficientAttestations(sigLen, quorum);
 

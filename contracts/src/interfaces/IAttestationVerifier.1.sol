@@ -20,8 +20,8 @@ interface IAttestationVerifierV1 {
     /// @notice Emitted when a deposit-committee attester is added or removed
     event SetDepositCommitteeAttester(address indexed depositCommitteeAttester, bool value);
 
-    /// @notice Emitted when the attestation quorum is updated
-    event SetAttestationQuorum(uint256 quorum);
+    /// @notice Emitted when the deposit-committee attestation quorum is updated
+    event SetDepositCommitteeAttestationQuorum(uint256 quorum);
 
     /// @notice Emitted when the EIP-712 domain separator is (re)cached
     event SetDomainSeparator(bytes32 domainSeparator);
@@ -165,9 +165,9 @@ interface IAttestationVerifierV1 {
     /// @param value True to register the deposit-committee attester, false to deregister
     function setDepositCommitteeAttester(address depositCommitteeAttester, bool value) external;
 
-    /// @notice Update the attestation quorum. Only callable by River's admin.
+    /// @notice Update the deposit-committee attestation quorum. Only callable by River's admin.
     /// @param newQuorum The new quorum (1 ≤ newQuorum ≤ depositCommitteeAttesterCount, ≤ MAX_SIGNATURES)
-    function setAttestationQuorum(uint256 newQuorum) external;
+    function setDepositCommitteeAttestationQuorum(uint256 newQuorum) external;
 
     /// @notice Update the DepositDataBuffer address. Only callable by River's admin.
     /// @param _depositDataBuffer The new buffer address
@@ -186,9 +186,9 @@ interface IAttestationVerifierV1 {
     /// @return The deposit-committee attester count
     function getDepositCommitteeAttesterCount() external view returns (uint256);
 
-    /// @notice Retrieve the current attestation quorum
+    /// @notice Retrieve the current deposit-committee attestation quorum
     /// @return The required number of valid, unique deposit-committee attester signatures
-    function getAttestationQuorum() external view returns (uint256);
+    function getDepositCommitteeAttestationQuorum() external view returns (uint256);
 
     /// @notice Retrieve the configured DepositDataBuffer address
     /// @return The DepositDataBuffer address
