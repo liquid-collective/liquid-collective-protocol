@@ -103,6 +103,9 @@ interface IRiverV1 is IConsensusLayerDepositManagerV1, IUserDepositManagerV1, IS
         uint256 redeemManagerDemand, uint256 suppliedRedeemManagerDemand, uint256 suppliedRedeemManagerDemandInEth
     );
 
+    /// @notice Emitted when exit request processing is skipped because slashing containment mode is active
+    event SkippedExitRequestsDueToSlashingContainment();
+
     /// @notice Thrown when the amount received from the Withdraw contract doe not match the requested amount
     /// @param requested The amount that was requested
     /// @param received The amount that was received
