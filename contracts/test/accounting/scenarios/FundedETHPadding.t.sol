@@ -44,8 +44,8 @@ contract FundedETHPaddingTest is AccountingInvariants {
         _fundRiver(5 * DEPOSIT_SIZE);
         // First batch: only operator 0 (triggers padding).
         sim_deposit(operatorOneIndex, _amounts(3, DEPOSIT_SIZE));
-        // Second batch: only operator 1 (also triggers padding, since operatorIndex=1 means
-        // the array has length 2 = operatorCount, so NO padding in this case).
+        // Second batch: only operator 1; this does not trigger padding, since operatorIndex=1
+        // means the array has length 2, which equals operatorCount.
         sim_deposit(operatorTwoIndex, _amounts(2, DEPOSIT_SIZE));
         sim_activateValidators(5);
         sim_oracleReport();
