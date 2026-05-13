@@ -88,8 +88,6 @@ abstract contract BeaconChainSimulator is AccountingHarnessBase {
         vm.prank(keeper);
         river.depositToConsensusLayerWithAttestation(bufferId, rootHash, sigs, ys);
 
-        river.depositToConsensusLayerWithAttestation(bufferId, rootHash, sigs, ys);
-
         for (uint256 i = 0; i < amounts.length; i++) {
             _simValidators.push(
                 SimValidator({

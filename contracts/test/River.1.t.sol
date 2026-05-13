@@ -73,6 +73,11 @@ contract OperatorsRegistryWithOverridesV1 is OperatorsRegistryV1 {
         OperatorsV3.Operator storage op = OperatorsV3.get(_index);
         op.activeCLETH = _activeCLETH;
     }
+
+    function sudoSetRequestedExits(uint256 _index, uint256 _requestedExits) external {
+        OperatorsV3.Operator storage op = OperatorsV3.get(_index);
+        op.requestedExits = _requestedExits;
+    }
 }
 
 // OperatorsRegistryWithOverridesV1 removed: _setStoppedValidatorCounts no longer exists
@@ -139,6 +144,7 @@ abstract contract RiverV1TestBase is OperatorAllocationTestBase, BytesGenerator 
 
     uint256 internal operatorOneIndex;
     uint256 internal operatorTwoIndex;
+    uint256 internal _pubkeySeedCursor;
 
     event PulledELFees(uint256 amount);
     event SetELFeeRecipient(address indexed elFeeRecipient);
@@ -247,14 +253,17 @@ abstract contract RiverV1TestBase is OperatorAllocationTestBase, BytesGenerator 
             total += counts[i];
         }
 
-        // Build deposit objects
+        // Build deposit objects. Seed pubkeys/signatures off the contract-level cursor so
+        // repeated invocations within the same test produce a fresh bufferId.
         IDepositDataBuffer.DepositObject[] memory deposits = new IDepositDataBuffer.DepositObject[](total);
         uint256 idx = 0;
+        uint256 seedBase = _pubkeySeedCursor;
         for (uint256 i = 0; i < opIndices.length; i++) {
             for (uint256 j = 0; j < counts[i]; j++) {
+                uint256 seed = seedBase + idx;
                 deposits[idx] = IDepositDataBuffer.DepositObject({
-                    pubkey: _fakePubkey(idx),
-                    signature: _fakeSignature(idx),
+                    pubkey: _fakePubkey(seed),
+                    signature: _fakeSignature(seed),
                     amount: 32 ether,
                     depositDataRoot: bytes32(0),
                     operatorIdx: opIndices[i]
@@ -262,6 +271,7 @@ abstract contract RiverV1TestBase is OperatorAllocationTestBase, BytesGenerator 
                 idx++;
             }
         }
+        _pubkeySeedCursor = seedBase + total;
 
         bytes32 bufferId = keccak256(abi.encode(deposits));
         depositBuffer.submitDepositData(bufferId, deposits);
@@ -290,6 +300,36 @@ abstract contract RiverV1TestBase is OperatorAllocationTestBase, BytesGenerator 
         uint32[] memory cnt = new uint32[](1);
         cnt[0] = count;
         _depositToConsensusLayer(idx, cnt);
+    }
+
+    /// @dev Build attestation deposit args for a single-operator, single-deposit batch.
+    ///      Returns args ready to pass into river.depositToConsensusLayerWithAttestation
+    ///      so the caller can place vm.expectRevert immediately before that call.
+    function _buildSingleDepositArgs(uint256 opIndex)
+        internal
+        returns (bytes32 bufferId, bytes32 rootHash, bytes[] memory sigs, BLS12_381.DepositY[] memory ys)
+    {
+        IDepositDataBuffer.DepositObject[] memory deposits = new IDepositDataBuffer.DepositObject[](1);
+        uint256 seed = _pubkeySeedCursor;
+        deposits[0] = IDepositDataBuffer.DepositObject({
+            pubkey: _fakePubkey(seed),
+            signature: _fakeSignature(seed),
+            amount: 32 ether,
+            depositDataRoot: bytes32(0),
+            operatorIdx: opIndex
+        });
+        _pubkeySeedCursor = seed + 1;
+
+        bufferId = keccak256(abi.encode(deposits));
+        depositBuffer.submitDepositData(bufferId, deposits);
+        rootHash = deposit.get_deposit_root();
+
+        sigs = new bytes[](2);
+        sigs[0] = _signAttestation(depositCommitteeAttesterPk1, bufferId, rootHash);
+        sigs[1] = _signAttestation(depositCommitteeAttesterPk2, bufferId, rootHash);
+
+        ys = new BLS12_381.DepositY[](1);
+        ys[0] = _emptyDepositY();
     }
 }
 
@@ -761,16 +801,6 @@ contract RiverV1Tests is RiverV1TestBase {
             counts[1] = 17;
             _depositToConsensusLayer(indexes, counts);
         }
-        // Deposit 17 validators from each operator = 34 total
-        {
-            uint256[] memory indexes = new uint256[](2);
-            indexes[0] = operatorOneIndex;
-            indexes[1] = operatorTwoIndex;
-            uint32[] memory counts = new uint32[](2);
-            counts[0] = 17;
-            counts[1] = 17;
-            _depositToConsensusLayer(indexes, counts);
-        }
 
         OperatorsV3.Operator memory op1 = operatorsRegistry.getOperator(operatorOneIndex);
         OperatorsV3.Operator memory op2 = operatorsRegistry.getOperator(operatorTwoIndex);
@@ -806,16 +836,6 @@ contract RiverV1Tests is RiverV1TestBase {
 
         river.debug_moveDepositToCommitted();
 
-        // Deposit 17 validators from each operator = 34 total
-        {
-            uint256[] memory indexes = new uint256[](2);
-            indexes[0] = operatorOneIndex;
-            indexes[1] = operatorTwoIndex;
-            uint32[] memory counts = new uint32[](2);
-            counts[0] = 17;
-            counts[1] = 17;
-            _depositToConsensusLayer(indexes, counts);
-        }
         // Deposit 17 validators from each operator = 34 total
         {
             uint256[] memory indexes = new uint256[](2);
@@ -928,16 +948,6 @@ contract RiverV1Tests is RiverV1TestBase {
             counts[1] = 17;
             _depositToConsensusLayer(indexes, counts);
         }
-        // Deposit 17 validators from each operator = 34 total
-        {
-            uint256[] memory indexes = new uint256[](2);
-            indexes[0] = operatorOneIndex;
-            indexes[1] = operatorTwoIndex;
-            uint32[] memory counts = new uint32[](2);
-            counts[0] = 17;
-            counts[1] = 17;
-            _depositToConsensusLayer(indexes, counts);
-        }
 
         OperatorsV3.Operator memory op1 = operatorsRegistry.getOperator(operatorOneIndex);
         OperatorsV3.Operator memory op2 = operatorsRegistry.getOperator(operatorTwoIndex);
@@ -991,16 +1001,6 @@ contract RiverV1Tests is RiverV1TestBase {
             counts[1] = 17;
             _depositToConsensusLayer(indexes, counts);
         }
-        // Deposit 17 validators from each operator = 34 total
-        {
-            uint256[] memory indexes = new uint256[](2);
-            indexes[0] = operatorOneIndex;
-            indexes[1] = operatorTwoIndex;
-            uint32[] memory counts = new uint32[](2);
-            counts[0] = 17;
-            counts[1] = 17;
-            _depositToConsensusLayer(indexes, counts);
-        }
 
         OperatorsV3.Operator memory op1 = operatorsRegistry.getOperator(operatorOneIndex);
         OperatorsV3.Operator memory op2 = operatorsRegistry.getOperator(operatorTwoIndex);
@@ -1038,10 +1038,8 @@ contract RiverV1Tests is RiverV1TestBase {
 
         // First deposit: 20 validators from operator 1
         _depositToConsensusLayer(operatorOneIndex, 20);
-        _depositToConsensusLayer(operatorOneIndex, 20);
 
         // Second deposit: 10 validators from operator 2
-        _depositToConsensusLayer(operatorTwoIndex, 10);
         _depositToConsensusLayer(operatorTwoIndex, 10);
 
         OperatorsV3.Operator memory op1 = operatorsRegistry.getOperator(operatorOneIndex);
@@ -1055,6 +1053,52 @@ contract RiverV1Tests is RiverV1TestBase {
         assert(address(river).balance == (1000 ether + 100 ether) - (32 ether * 30));
         assert(river.balanceOfUnderlying(joe) == 100 ether);
         assert(river.balanceOfUnderlying(bob) == 1000 ether);
+    }
+
+    // Reverts when the attested batch targets an inactive operator. The check fires in
+    // River._updateFundedETHFromBuffer before any _depositValidator call leaves the contract.
+    function testDepositRevertsForInactiveOperator() public {
+        vm.deal(bob, 1000 ether);
+        _allow(bob);
+        vm.prank(bob);
+        river.deposit{value: 1000 ether}();
+        river.debug_moveDepositToCommitted();
+
+        vm.prank(admin);
+        operatorsRegistry.setOperatorStatus(operatorOneIndex, false);
+
+        (bytes32 bufferId, bytes32 rootHash, bytes[] memory sigs, BLS12_381.DepositY[] memory ys) =
+            _buildSingleDepositArgs(operatorOneIndex);
+
+        vm.prank(river.getKeeper());
+        vm.expectRevert(abi.encodeWithSelector(IOperatorsRegistryV1.InactiveOperator.selector, operatorOneIndex));
+        river.depositToConsensusLayerWithAttestation(bufferId, rootHash, sigs, ys);
+
+        assertEq(river.getTotalDepositedETH(), 0);
+    }
+
+    // Reverts when the attested batch targets an operator whose requestedExits exceeds the
+    // recorded exited ETH (an unfulfilled exit request). Fires in _updateFundedETHFromBuffer.
+    function testDepositRevertsForOperatorWithPendingExitRequests() public {
+        vm.deal(bob, 1000 ether);
+        _allow(bob);
+        vm.prank(bob);
+        river.deposit{value: 1000 ether}();
+        river.debug_moveDepositToCommitted();
+
+        // No exitedETH recorded for this operator yet, so any non-zero requestedExits trips the check.
+        operatorsRegistry.sudoSetRequestedExits(operatorOneIndex, 32 ether);
+
+        (bytes32 bufferId, bytes32 rootHash, bytes[] memory sigs, BLS12_381.DepositY[] memory ys) =
+            _buildSingleDepositArgs(operatorOneIndex);
+
+        vm.prank(river.getKeeper());
+        vm.expectRevert(
+            abi.encodeWithSelector(IOperatorsRegistryV1.OperatorIgnoredExitRequests.selector, operatorOneIndex)
+        );
+        river.depositToConsensusLayerWithAttestation(bufferId, rootHash, sigs, ys);
+
+        assertEq(river.getTotalDepositedETH(), 0);
     }
 
     function _debugMaxIncrease(uint256 annualAprUpperBound, uint256 _prevTotalEth, uint256 _timeElapsed)
@@ -1439,8 +1483,6 @@ contract RiverV1TestsReport_HEAVY_FUZZING is RiverV1TestBase {
             operatorKeyCounts[idx] = uint32(operatorKeyCount);
         }
 
-        // Deposit via attestation
-        _depositToConsensusLayer(operatorIndices, operatorKeyCounts);
         // Deposit via attestation
         _depositToConsensusLayer(operatorIndices, operatorKeyCounts);
 
@@ -2273,8 +2315,6 @@ contract RiverV1TestsReport_HEAVY_FUZZING is RiverV1TestBase {
 
         river.debug_moveDepositToCommitted();
 
-        // Deposit via attestation for this single operator
-        _depositToConsensusLayer(operatorIndex, uint32(count));
         // Deposit via attestation for this single operator
         _depositToConsensusLayer(operatorIndex, uint32(count));
 

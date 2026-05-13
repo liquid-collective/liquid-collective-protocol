@@ -134,23 +134,23 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
 
     /// @inheritdoc IOperatorsRegistryV1
     function getExitedETHPerOperator() external view returns (uint256[] memory) {
-        uint256[] memory rawExitedETH = OperatorsV3.getExitedETH();
-        uint256 listLength = rawExitedETH.length;
+        uint256[] memory exitedETH = OperatorsV3.getExitedETH();
+        uint256 listLength = exitedETH.length;
         if (listLength > 0) {
             assembly {
                 // no need to use free memory pointer as we reuse the same memory range
 
                 // erase previous word storing length
-                mstore(rawExitedETH, 0)
+                mstore(exitedETH, 0)
 
                 // move memory pointer up by a word
-                rawExitedETH := add(rawExitedETH, 0x20)
+                exitedETH := add(exitedETH, 0x20)
 
                 // store updated length at new memory pointer location
-                mstore(rawExitedETH, sub(listLength, 1))
+                mstore(exitedETH, sub(listLength, 1))
             }
         }
-        return rawExitedETH;
+        return exitedETH;
     }
 
     /// @inheritdoc IOperatorsRegistryV1
@@ -173,7 +173,7 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
             if (!operator.active) {
                 revert InactiveOperator(idx);
             }
-            if (operator.requestedExits > OperatorsV3.getExitedETHAtIndex(idx)) {
+            if (operator.requestedExits > OperatorsV3.getExitedETH(idx)) {
                 revert OperatorIgnoredExitRequests(idx);
             }
             operator.funded += _fundedETH[idx];
@@ -279,7 +279,7 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
             }
 
             uint256 opRequestedExits = operator.requestedExits;
-            uint256 opPendingExits = opRequestedExits - OperatorsV3.getExitedETHAtIndex(operatorIndex);
+            uint256 opPendingExits = opRequestedExits - OperatorsV3.getExitedETH(operatorIndex);
             uint256 available = operator.activeCLETH > opPendingExits ? operator.activeCLETH - opPendingExits : 0;
             if (ethAmount > available) {
                 // Operator has insufficient available ETH

@@ -314,6 +314,11 @@ contract RiverV1 is
         uint256[] memory cursors = new uint256[](buckets);
         for (uint256 j = 0; j < buckets; j++) {
             if (depositsCountPerOperator[j] > 0) {
+                OperatorsV3.Operator memory operator = registry.getOperator(j);
+                if (!operator.active) revert IOperatorsRegistryV1.InactiveOperator(j);
+                if (operator.requestedExits > OperatorsV3.getExitedETH(j)) {
+                    revert IOperatorsRegistryV1.OperatorIgnoredExitRequests(j);
+                }
                 perOpKeys[j] = new bytes[](depositsCountPerOperator[j]);
             }
         }
