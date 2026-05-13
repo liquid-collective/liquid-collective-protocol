@@ -745,6 +745,7 @@ contract RiverV1 is
     /// @param _period The period between current and last report
     function _commitBalanceToDeposit(uint256 _period, bool _slashingContainmentModeEnabled) internal override {
         if (_slashingContainmentModeEnabled) {
+            emit SkippedCommitToDepositDueToSlashingContainment();
             return;
         }
 
