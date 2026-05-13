@@ -13,6 +13,7 @@ import "./mocks/DepositContractMock.sol";
 
 import "../src/libraries/LibAllowlistMasks.sol";
 import "../src/libraries/BLS12_381.sol";
+import "../src/libraries/BLS12_381.sol";
 import "../src/Allowlist.1.sol";
 import "../src/AttestationVerifier.1.sol";
 import "../src/River.1.sol";
@@ -21,12 +22,40 @@ import "../src/interfaces/components/IOracleManager.1.sol";
 import "../src/interfaces/IRiver.1.sol";
 import "../src/interfaces/IDepositContract.sol";
 import "../src/interfaces/IDepositDataBuffer.sol";
+import "../src/interfaces/IDepositDataBuffer.sol";
 import "../src/Withdraw.1.sol";
 import "../src/Oracle.1.sol";
 import "../src/ELFeeRecipient.1.sol";
 import "../src/OperatorsRegistry.1.sol";
 import "../src/CoverageFund.1.sol";
 import "../src/RedeemManager.1.sol";
+
+contract MockDepositDataBuffer is IDepositDataBuffer {
+    mapping(bytes32 => DepositObject[]) internal _batches;
+    mapping(bytes32 => bool) internal _exists;
+
+    function submitDepositData(bytes32 depositDataBufferId, DepositObject[] calldata deposits) external {
+        if (_exists[depositDataBufferId]) revert DepositDataBufferIdAlreadyExists(depositDataBufferId);
+        _exists[depositDataBufferId] = true;
+        for (uint256 i = 0; i < deposits.length; i++) {
+            _batches[depositDataBufferId].push(deposits[i]);
+        }
+        emit DepositDataSubmitted(depositDataBufferId, deposits.length);
+    }
+
+    function getDepositData(bytes32 depositDataBufferId) external view returns (DepositObject[] memory) {
+        if (!_exists[depositDataBufferId]) revert DepositDataBufferIdNotFound(depositDataBufferId);
+        return _batches[depositDataBufferId];
+    }
+
+    function getWriter() external pure returns (address) {
+        return address(0);
+    }
+
+    function getAdmin() external pure returns (address) {
+        return address(0);
+    }
+}
 
 contract MockDepositDataBuffer is IDepositDataBuffer {
     mapping(bytes32 => DepositObject[]) internal _batches;
@@ -164,6 +193,13 @@ abstract contract RiverV1TestBase is OperatorAllocationTestBase, BytesGenerator 
         });
     }
 
+    function _emptyDepositY() internal pure returns (BLS12_381.DepositY memory) {
+        return BLS12_381.DepositY({
+            pubkeyY: BLS12_381.Fp({a: bytes32(0), b: bytes32(0)}),
+            signatureY: BLS12_381.Fp2({c0_a: bytes32(0), c0_b: bytes32(0), c1_a: bytes32(0), c1_b: bytes32(0)})
+        });
+    }
+
     bytes32 constant withdrawalCredentials = 0x0200000000000000000000000000000000000000000000000000000000000000;
 
     function setUp() public virtual {
@@ -202,6 +238,7 @@ abstract contract RiverV1TestBase is OperatorAllocationTestBase, BytesGenerator 
         LibImplementationUnbricker.unbrick(vm, address(river));
         operatorsRegistry = new OperatorsRegistryWithOverridesV1();
         LibImplementationUnbricker.unbrick(vm, address(operatorsRegistry));
+        depositBuffer = new MockDepositDataBuffer();
         depositBuffer = new MockDepositDataBuffer();
 
         allowlist.initAllowlistV1(admin, allower);
@@ -760,6 +797,16 @@ contract RiverV1Tests is RiverV1TestBase {
             counts[1] = 17;
             _depositToConsensusLayer(indexes, counts);
         }
+        // Deposit 17 validators from each operator = 34 total
+        {
+            uint256[] memory indexes = new uint256[](2);
+            indexes[0] = operatorOneIndex;
+            indexes[1] = operatorTwoIndex;
+            uint32[] memory counts = new uint32[](2);
+            counts[0] = 17;
+            counts[1] = 17;
+            _depositToConsensusLayer(indexes, counts);
+        }
 
         OperatorsV3.Operator memory op1 = operatorsRegistry.getOperator(operatorOneIndex);
         OperatorsV3.Operator memory op2 = operatorsRegistry.getOperator(operatorTwoIndex);
@@ -795,6 +842,16 @@ contract RiverV1Tests is RiverV1TestBase {
 
         river.debug_moveDepositToCommitted();
 
+        // Deposit 17 validators from each operator = 34 total
+        {
+            uint256[] memory indexes = new uint256[](2);
+            indexes[0] = operatorOneIndex;
+            indexes[1] = operatorTwoIndex;
+            uint32[] memory counts = new uint32[](2);
+            counts[0] = 17;
+            counts[1] = 17;
+            _depositToConsensusLayer(indexes, counts);
+        }
         // Deposit 17 validators from each operator = 34 total
         {
             uint256[] memory indexes = new uint256[](2);
@@ -907,6 +964,16 @@ contract RiverV1Tests is RiverV1TestBase {
             counts[1] = 17;
             _depositToConsensusLayer(indexes, counts);
         }
+        // Deposit 17 validators from each operator = 34 total
+        {
+            uint256[] memory indexes = new uint256[](2);
+            indexes[0] = operatorOneIndex;
+            indexes[1] = operatorTwoIndex;
+            uint32[] memory counts = new uint32[](2);
+            counts[0] = 17;
+            counts[1] = 17;
+            _depositToConsensusLayer(indexes, counts);
+        }
 
         OperatorsV3.Operator memory op1 = operatorsRegistry.getOperator(operatorOneIndex);
         OperatorsV3.Operator memory op2 = operatorsRegistry.getOperator(operatorTwoIndex);
@@ -960,6 +1027,16 @@ contract RiverV1Tests is RiverV1TestBase {
             counts[1] = 17;
             _depositToConsensusLayer(indexes, counts);
         }
+        // Deposit 17 validators from each operator = 34 total
+        {
+            uint256[] memory indexes = new uint256[](2);
+            indexes[0] = operatorOneIndex;
+            indexes[1] = operatorTwoIndex;
+            uint32[] memory counts = new uint32[](2);
+            counts[0] = 17;
+            counts[1] = 17;
+            _depositToConsensusLayer(indexes, counts);
+        }
 
         OperatorsV3.Operator memory op1 = operatorsRegistry.getOperator(operatorOneIndex);
         OperatorsV3.Operator memory op2 = operatorsRegistry.getOperator(operatorTwoIndex);
@@ -974,6 +1051,8 @@ contract RiverV1Tests is RiverV1TestBase {
         assert(river.balanceOfUnderlying(bob) == 1000 ether);
     }
 
+    // Testing sequential deposits to different operators
+    function testUserDepositsSequentialOperators() public {
     // Testing sequential deposits to different operators
     function testUserDepositsSequentialOperators() public {
         vm.deal(joe, 100 ether);
@@ -997,8 +1076,10 @@ contract RiverV1Tests is RiverV1TestBase {
 
         // First deposit: 20 validators from operator 1
         _depositToConsensusLayer(operatorOneIndex, 20);
+        _depositToConsensusLayer(operatorOneIndex, 20);
 
         // Second deposit: 10 validators from operator 2
+        _depositToConsensusLayer(operatorTwoIndex, 10);
         _depositToConsensusLayer(operatorTwoIndex, 10);
 
         OperatorsV3.Operator memory op1 = operatorsRegistry.getOperator(operatorOneIndex);
@@ -1398,6 +1479,8 @@ contract RiverV1TestsReport_HEAVY_FUZZING is RiverV1TestBase {
 
         // Deposit via attestation
         _depositToConsensusLayer(operatorIndices, operatorKeyCounts);
+        // Deposit via attestation
+        _depositToConsensusLayer(operatorIndices, operatorKeyCounts);
 
         // Pre-initialize the exited ETH storage array so _setExitedETH can access
         // currentExitedETH[idx] without panicking when the first oracle report arrives.
@@ -1582,12 +1665,14 @@ contract RiverV1TestsReport_HEAVY_FUZZING is RiverV1TestBase {
 
         vm.prank(oracleMember);
         _fillReport(clr);
+        _fillReport(clr);
         oracle.reportConsensusLayerData(clr);
 
         (clr, _salt) = _retrieveReportingData(rfv, _salt);
 
         _performPreAssertions(rfv);
         vm.prank(oracleMember);
+        _fillReport(clr);
         _fillReport(clr);
         oracle.reportConsensusLayerData(clr);
 
@@ -2191,6 +2276,7 @@ contract RiverV1TestsReport_HEAVY_FUZZING is RiverV1TestBase {
         vm.prank(random);
         vm.expectRevert(abi.encodeWithSignature("Unauthorized(address)", random));
         _fillReport(clr);
+        _fillReport(clr);
         river.setConsensusLayerData(clr);
     }
 
@@ -2202,6 +2288,7 @@ contract RiverV1TestsReport_HEAVY_FUZZING is RiverV1TestBase {
 
         vm.prank(address(oracle));
         vm.expectRevert(abi.encodeWithSignature("InvalidEpoch(uint256)", clr.epoch));
+        _fillReport(clr);
         _fillReport(clr);
         river.setConsensusLayerData(clr);
     }
@@ -2226,10 +2313,15 @@ contract RiverV1TestsReport_HEAVY_FUZZING is RiverV1TestBase {
 
         // Deposit via attestation for this single operator
         _depositToConsensusLayer(operatorIndex, uint32(count));
+        // Deposit via attestation for this single operator
+        _depositToConsensusLayer(operatorIndex, uint32(count));
 
         return _salt;
     }
 
+    // DISABLED: InvalidValidatorCountReport error no longer exists; DepositedValidatorCount
+    // is no longer tracked. This validation has been removed in the new attestation-based flow.
+    // function testReportingError_InvalidValidatorCountReport(uint256 _salt) external { ... }
     // DISABLED: InvalidValidatorCountReport error no longer exists; DepositedValidatorCount
     // is no longer tracked. This validation has been removed in the new attestation-based flow.
     // function testReportingError_InvalidValidatorCountReport(uint256 _salt) external { ... }
@@ -2253,6 +2345,7 @@ contract RiverV1TestsReport_HEAVY_FUZZING is RiverV1TestBase {
 
         vm.prank(address(oracle));
         _fillReport(clr);
+        _fillReport(clr);
         river.setConsensusLayerData(clr);
 
         clr.epoch += epochsPerFrame;
@@ -2264,6 +2357,7 @@ contract RiverV1TestsReport_HEAVY_FUZZING is RiverV1TestBase {
         vm.expectRevert(
             abi.encodeWithSignature("InvalidDecreasingValidatorsExitedBalance(uint256,uint256)", 32 ether, 0)
         );
+        _fillReport(clr);
         _fillReport(clr);
         river.setConsensusLayerData(clr);
     }
@@ -2287,6 +2381,7 @@ contract RiverV1TestsReport_HEAVY_FUZZING is RiverV1TestBase {
 
         vm.prank(address(oracle));
         _fillReport(clr);
+        _fillReport(clr);
         river.setConsensusLayerData(clr);
 
         clr.epoch += epochsPerFrame;
@@ -2298,6 +2393,7 @@ contract RiverV1TestsReport_HEAVY_FUZZING is RiverV1TestBase {
         vm.expectRevert(
             abi.encodeWithSignature("InvalidDecreasingValidatorsSkimmedBalance(uint256,uint256)", 1 ether, 0)
         );
+        _fillReport(clr);
         _fillReport(clr);
         river.setConsensusLayerData(clr);
     }
@@ -2326,6 +2422,7 @@ contract RiverV1TestsReport_HEAVY_FUZZING is RiverV1TestBase {
 
         vm.prank(address(oracle));
         _fillReport(clr);
+        _fillReport(clr);
         river.setConsensusLayerData(clr);
 
         clr.epoch += framesBetween * epochsPerFrame;
@@ -2342,6 +2439,7 @@ contract RiverV1TestsReport_HEAVY_FUZZING is RiverV1TestBase {
             )
         );
         vm.prank(address(oracle));
+        _fillReport(clr);
         _fillReport(clr);
         river.setConsensusLayerData(clr);
     }
@@ -2368,6 +2466,7 @@ contract RiverV1TestsReport_HEAVY_FUZZING is RiverV1TestBase {
 
         vm.prank(address(oracle));
         _fillReport(clr);
+        _fillReport(clr);
         river.setConsensusLayerData(clr);
 
         clr.epoch += framesBetween * epochsPerFrame;
@@ -2385,9 +2484,14 @@ contract RiverV1TestsReport_HEAVY_FUZZING is RiverV1TestBase {
         );
         vm.prank(address(oracle));
         _fillReport(clr);
+        _fillReport(clr);
         river.setConsensusLayerData(clr);
     }
 
+    // DISABLED: InvalidValidatorCountReport error no longer exists; DepositedValidatorCount
+    // is no longer tracked. These validations have been removed in the new attestation-based flow.
+    // function testReportingError_ValidatorCountDecreasing(uint256 _salt) external { ... }
+    // function testReportingError_ValidatorCountHigherThanDeposits(uint256 _salt) external { ... }
     // DISABLED: InvalidValidatorCountReport error no longer exists; DepositedValidatorCount
     // is no longer tracked. These validations have been removed in the new attestation-based flow.
     // function testReportingError_ValidatorCountDecreasing(uint256 _salt) external { ... }
@@ -2417,6 +2521,7 @@ contract RiverV1TestsReport_HEAVY_FUZZING is RiverV1TestBase {
         vm.expectRevert(
             abi.encodeWithSignature("InvalidPulledClFundsAmount(uint256,uint256)", skimmedAmount, notEnoughAmount)
         );
+        _fillReport(clr);
         _fillReport(clr);
         river.setConsensusLayerData(clr);
     }
@@ -2452,6 +2557,7 @@ contract RiverV1TestsReport_HEAVY_FUZZING is RiverV1TestBase {
 
         vm.prank(address(oracle));
         _fillReport(clr);
+        _fillReport(clr);
         river.setConsensusLayerData(clr);
 
         clr.epoch += epochsPerFrame;
@@ -2461,6 +2567,7 @@ contract RiverV1TestsReport_HEAVY_FUZZING is RiverV1TestBase {
 
         vm.prank(address(oracle));
         vm.expectRevert(abi.encodeWithSignature("ExitedETHPerOperatorDecreased()"));
+        _fillReport(clr);
         _fillReport(clr);
         river.setConsensusLayerData(clr);
     }
@@ -2514,6 +2621,7 @@ contract RiverV1TestsReport_HEAVY_FUZZING is RiverV1TestBase {
 
         vm.prank(address(oracle));
         _fillReport(clr);
+        _fillReport(clr);
         river.setConsensusLayerData(clr);
 
         assertEq(river.getCommittedBalance() % 32 ether, 0);
@@ -2549,6 +2657,7 @@ contract RiverV1TestsReport_HEAVY_FUZZING is RiverV1TestBase {
         uint256 depositAmount = river.getBalanceToDeposit();
 
         vm.prank(address(oracle));
+        _fillReport(clr);
         _fillReport(clr);
         river.setConsensusLayerData(clr);
 
@@ -2590,6 +2699,7 @@ contract RiverV1TestsReport_HEAVY_FUZZING is RiverV1TestBase {
         uint256 depositAmount = river.getBalanceToDeposit();
 
         vm.prank(address(oracle));
+        _fillReport(clr);
         _fillReport(clr);
         river.setConsensusLayerData(clr);
 
@@ -2634,6 +2744,7 @@ contract RiverV1TestsReport_HEAVY_FUZZING is RiverV1TestBase {
         uint256 depositAmount = river.getBalanceToDeposit();
 
         vm.prank(address(oracle));
+        _fillReport(clr);
         _fillReport(clr);
         river.setConsensusLayerData(clr);
 

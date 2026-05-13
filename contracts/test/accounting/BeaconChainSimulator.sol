@@ -5,6 +5,8 @@ import "./AccountingHarnessBase.sol";
 import "../../src/interfaces/components/IOracleManager.1.sol";
 import "../../src/interfaces/IDepositDataBuffer.sol";
 import "../../src/libraries/BLS12_381.sol";
+import "../../src/interfaces/IDepositDataBuffer.sol";
+import "../../src/libraries/BLS12_381.sol";
 
 /// @dev Beacon-chain simulator mixin for accounting tests.
 ///      Step functions are shells that revert; view helpers are fully implemented.
@@ -84,6 +86,8 @@ abstract contract BeaconChainSimulator is AccountingHarnessBase {
         }
 
         vm.prank(keeper);
+        river.depositToConsensusLayerWithAttestation(bufferId, rootHash, sigs, ys);
+
         river.depositToConsensusLayerWithAttestation(bufferId, rootHash, sigs, ys);
 
         for (uint256 i = 0; i < amounts.length; i++) {

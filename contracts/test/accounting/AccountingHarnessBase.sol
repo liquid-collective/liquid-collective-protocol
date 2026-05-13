@@ -20,7 +20,9 @@ import "../../src/Withdraw.1.sol";
 
 import "../../src/interfaces/IOperatorRegistry.1.sol";
 import "../../src/interfaces/IDepositDataBuffer.sol";
+import "../../src/interfaces/IDepositDataBuffer.sol";
 import "../../src/interfaces/components/IOracleManager.1.sol";
+import "../../src/libraries/BLS12_381.sol";
 import "../../src/libraries/BLS12_381.sol";
 import "../../src/libraries/LibAllowlistMasks.sol";
 import "../../src/state/river/InFlightDeposit.sol";
@@ -28,6 +30,37 @@ import "../../src/state/river/CommittedBalance.sol";
 import "../../src/state/river/BalanceToDeposit.sol";
 import "../../src/state/attestationVerifier/DepositDomainValue.sol";
 import "../../src/state/operatorsRegistry/Operators.3.sol";
+
+// -----------------------------------------------------------------------
+// Mock DepositDataBuffer — stores batches by ID for accounting harness deposits
+// -----------------------------------------------------------------------
+
+contract AccountingMockDepositDataBuffer is IDepositDataBuffer {
+    mapping(bytes32 => DepositObject[]) internal _batches;
+    mapping(bytes32 => bool) internal _exists;
+
+    function submitDepositData(bytes32 depositDataBufferId, DepositObject[] calldata deposits) external {
+        if (_exists[depositDataBufferId]) revert DepositDataBufferIdAlreadyExists(depositDataBufferId);
+        _exists[depositDataBufferId] = true;
+        for (uint256 i = 0; i < deposits.length; i++) {
+            _batches[depositDataBufferId].push(deposits[i]);
+        }
+        emit DepositDataSubmitted(depositDataBufferId, deposits.length);
+    }
+
+    function getDepositData(bytes32 depositDataBufferId) external view returns (DepositObject[] memory) {
+        if (!_exists[depositDataBufferId]) revert DepositDataBufferIdNotFound(depositDataBufferId);
+        return _batches[depositDataBufferId];
+    }
+
+    function getWriter() external pure returns (address) {
+        return address(0);
+    }
+
+    function getAdmin() external pure returns (address) {
+        return address(0);
+    }
+}
 
 // -----------------------------------------------------------------------
 // Mock DepositDataBuffer — stores batches by ID for accounting harness deposits
@@ -150,6 +183,7 @@ abstract contract AccountingHarnessBase is Test, BytesGenerator {
         vm.warp(1_000_000);
 
         depositContract = new DepositContractMock();
+        depositBuffer = new AccountingMockDepositDataBuffer();
         depositBuffer = new AccountingMockDepositDataBuffer();
         withdraw = new WithdrawV1();
         oracle = new OracleV1();

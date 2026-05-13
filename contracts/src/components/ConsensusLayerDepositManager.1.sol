@@ -5,9 +5,12 @@ import "../interfaces/components/IConsensusLayerDepositManager.1.sol";
 import "../interfaces/IAttestationVerifier.1.sol";
 import "../interfaces/IDepositContract.sol";
 import "../interfaces/IDepositDataBuffer.sol";
+import "../interfaces/IDepositDataBuffer.sol";
 
 import "../libraries/LibBytes.sol";
 import "../libraries/LibUint256.sol";
+import "../libraries/LibErrors.sol";
+import "../libraries/BLS12_381.sol";
 import "../libraries/LibErrors.sol";
 import "../libraries/BLS12_381.sol";
 

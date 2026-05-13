@@ -3,7 +3,10 @@ pragma solidity 0.8.34;
 
 import "../IDepositDataBuffer.sol";
 import "../../libraries/BLS12_381.sol";
+import "../IDepositDataBuffer.sol";
+import "../../libraries/BLS12_381.sol";
 
+/// @title Consensus Layer Deposit Manager Interface (v1)
 /// @title Consensus Layer Deposit Manager Interface (v1)
 /// @author Alluvial Finance Inc.
 /// @notice This interface exposes methods to handle the interactions with the official deposit contract.
@@ -95,4 +98,16 @@ interface IConsensusLayerDepositManagerV1 {
         bytes[] calldata signatures,
         BLS12_381.DepositY[] calldata depositYs
     ) external;
+
+    /// @notice Returns the DepositDataBuffer contract address
+    function getDepositDataBuffer() external view returns (address);
+
+    /// @notice Returns the attestation quorum (minimum valid signatures required)
+    function getAttestationQuorum() external view returns (uint256);
+
+    /// @notice Returns the number of registered attesters
+    function getAttesterCount() external view returns (uint256);
+
+    /// @notice Returns whether an address is a registered attester
+    function getIsAttester(address attester) external view returns (bool);
 }

@@ -87,6 +87,34 @@ contract RiverV1 is
         storedReport.slashingContainmentMode = lastReport.slashingContainmentMode;
         storedReport.totalDepositedActivatedETH = depositedValidatorCount * DEPOSIT_SIZE - InFlightDeposit.get();
         LastConsensusLayerReport.set(storedReport);
+
+        // Deposit Security Attestation Committee Setup
+        DepositDataBufferAddress.set(_depositDataBuffer);
+        emit SetDepositDataBuffer(_depositDataBuffer);
+
+        bytes32 depositDomain = BLS12_381.computeDepositDomain(_genesisForkVersion);
+        DepositDomainValue.set(depositDomain);
+        emit SetDepositDomain(depositDomain);
+
+        for (uint256 i = 0; i < _attesters.length; i++) {
+            if (_attesters[i] == address(0)) revert LibErrors.InvalidZeroAddress();
+            if (!Attesters.isAttester(_attesters[i])) {
+                Attesters.setAttester(_attesters[i], true);
+                Attesters.setCount(Attesters.getCount() + 1);
+                emit SetAttester(_attesters[i], true);
+            }
+        }
+        uint256 attesterCount = Attesters.getCount();
+        if (_quorum > attesterCount) {
+            revert QuorumExceedsAttesterCount(_quorum, attesterCount);
+        }
+        AttestationQuorum.set(_quorum);
+        emit SetAttestationQuorum(_quorum);
+
+        bytes32 domainSeparator =
+            keccak256(abi.encode(EIP712_DOMAIN_TYPEHASH, NAME_HASH, VERSION_HASH, block.chainid, address(this)));
+        DomainSeparator.set(domainSeparator);
+        emit SetDomainSeparator(domainSeparator);
     }
 
     /// @inheritdoc IRiverV1
@@ -273,6 +301,8 @@ contract RiverV1 is
             uint256[] memory paddedFundedETH = new uint256[](operatorCount);
             for (uint256 i = 0; i < _fundedETH.length; ++i) {
                 paddedFundedETH[i] = _fundedETH[i];
+            }
+            registry.incrementFundedETH(paddedFundedETH, _publicKeys);
             }
             registry.incrementFundedETH(paddedFundedETH, _publicKeys);
         } else {
