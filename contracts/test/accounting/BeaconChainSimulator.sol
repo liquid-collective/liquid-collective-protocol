@@ -3,6 +3,8 @@ pragma solidity 0.8.34;
 
 import "./AccountingHarnessBase.sol";
 import "../../src/interfaces/components/IOracleManager.1.sol";
+import "../../src/interfaces/IDepositDataBuffer.sol";
+import "../../src/libraries/BLS12_381.sol";
 
 /// @dev Beacon-chain simulator mixin for accounting tests.
 ///      Step functions are shells that revert; view helpers are fully implemented.
@@ -60,9 +62,30 @@ abstract contract BeaconChainSimulator is AccountingHarnessBase {
             _fundRiver(needed - river.getCommittedBalance());
         }
         uint256 prevInFlight = river.getInFlightDeposit();
-        IOperatorsRegistryV1.ValidatorDeposit[] memory allocs = _makeDeposits(opIdx, amounts);
+
+        // Build DepositObjects for the attestation-based deposit path.
+        uint256[] memory opIndices = new uint256[](amounts.length);
+        for (uint256 i = 0; i < amounts.length; i++) {
+            opIndices[i] = opIdx;
+        }
+        IDepositDataBuffer.DepositObject[] memory deposits = _makeDepositObjects(opIndices, amounts);
+
+        bytes32 bufferId = keccak256(abi.encode(deposits));
+        depositBuffer.submitDepositData(bufferId, deposits);
+        bytes32 rootHash = depositContract.get_deposit_root();
+
+        bytes[] memory sigs = new bytes[](2);
+        sigs[0] = _signAttestation(ATTESTER_PK_1, bufferId, rootHash);
+        sigs[1] = _signAttestation(ATTESTER_PK_2, bufferId, rootHash);
+
+        BLS12_381.DepositY[] memory ys = new BLS12_381.DepositY[](amounts.length);
+        for (uint256 i = 0; i < amounts.length; i++) {
+            ys[i] = _emptyDepositY();
+        }
+
         vm.prank(keeper);
-        river.depositToConsensusLayerWithDepositRoot(allocs, bytes32(0));
+        river.depositToConsensusLayerWithAttestation(bufferId, rootHash, sigs, ys);
+
         for (uint256 i = 0; i < amounts.length; i++) {
             _simValidators.push(
                 SimValidator({

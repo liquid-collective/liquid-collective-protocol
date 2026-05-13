@@ -230,6 +230,6 @@ contract ConsolidationCoverageFundTestV1 is ConsolidationCoverageFundV1TestBase 
     }
 
     function testVersion() external {
-        assertEq(consolidationCoverageFund.version(), "1.0.0");
+        assertEq(consolidationCoverageFund.version(), "1.3.0");
     }
 }

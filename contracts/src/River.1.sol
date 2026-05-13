@@ -17,8 +17,16 @@ import "./Initializable.sol";
 import "./Administrable.sol";
 
 import "./libraries/LibAllowlistMasks.sol";
+import "./libraries/LibErrors.sol";
+import "./libraries/BLS12_381.sol";
+import "./interfaces/IDepositDataBuffer.sol";
 
 import "./state/river/AllowlistAddress.sol";
+import "./state/river/DepositDataBufferAddress.sol";
+import "./state/river/AttestationQuorum.sol";
+import "./state/river/Attesters.sol";
+import "./state/river/DepositDomainValue.sol";
+import "./state/river/DomainSeparator.sol";
 import "./state/river/RedeemManagerAddress.sol";
 import "./state/river/OperatorsRegistryAddress.sol";
 import "./state/river/CollectorAddress.sol";
@@ -128,12 +136,27 @@ contract RiverV1 is
     }
 
     /// @inheritdoc IRiverV1
-    function initRiverV1_3(bytes32 withdrawalCredentails, address _consolidationCoverageFund)
-        external
-        init(3)
-        onlyAdmin
-    {
-        initConsensusLayerDepositManagerV2(withdrawalCredentails);
+    function initRiverV1_3(
+        bytes32 _withdrawalCredentials,
+        address _depositDataBuffer,
+        address[] calldata _attesters,
+        uint256 _quorum,
+        bytes4 _genesisForkVersion,
+        address _consolidationCoverageFund
+    ) external init(3) onlyAdmin {
+        if (_withdrawalCredentials == bytes32(0) || _depositDataBuffer == address(0)) {
+            revert LibErrors.InvalidZeroAddress();
+        }
+        if (_attesters.length == 0 || _attesters.length > MAX_ATTESTERS) revert LibErrors.InvalidArgument();
+        if (_quorum == 0) revert ZeroQuorum();
+        if (_quorum > MAX_SIGNATURES) {
+            revert QuorumExceedsMaxSignatures(_quorum, MAX_SIGNATURES);
+        }
+
+        ConsensusLayerDepositManagerV1.initConsensusLayerDepositManagerV1(
+            DepositContractAddress.get(), _withdrawalCredentials
+        );
+        // accounting changes to move from 0x01 to 0x02 accounting
 
         ConsolidationCoverageFundAddress.set(_consolidationCoverageFund);
         emit SetConsolidationCoverageFund(_consolidationCoverageFund);
@@ -158,6 +181,34 @@ contract RiverV1 is
         // we subtract the in flight ETH to get the total deposited activated ETH
         storedReport.totalDepositedActivatedETH = depositedValidatorCount * DEPOSIT_SIZE - InFlightDeposit.get();
         LastConsensusLayerReport.set(storedReport);
+
+        // Deposit Security Attestation Committee Setup
+        DepositDataBufferAddress.set(_depositDataBuffer);
+        emit SetDepositDataBuffer(_depositDataBuffer);
+
+        bytes32 depositDomain = BLS12_381.computeDepositDomain(_genesisForkVersion);
+        DepositDomainValue.set(depositDomain);
+        emit SetDepositDomain(depositDomain);
+
+        for (uint256 i = 0; i < _attesters.length; i++) {
+            if (_attesters[i] == address(0)) revert LibErrors.InvalidZeroAddress();
+            if (!Attesters.isAttester(_attesters[i])) {
+                Attesters.setAttester(_attesters[i], true);
+                Attesters.setCount(Attesters.getCount() + 1);
+                emit SetAttester(_attesters[i], true);
+            }
+        }
+        uint256 attesterCount = Attesters.getCount();
+        if (_quorum > attesterCount) {
+            revert QuorumExceedsAttesterCount(_quorum, attesterCount);
+        }
+        AttestationQuorum.set(_quorum);
+        emit SetAttestationQuorum(_quorum);
+
+        bytes32 domainSeparator =
+            keccak256(abi.encode(EIP712_DOMAIN_TYPEHASH, NAME_HASH, VERSION_HASH, block.chainid, address(this)));
+        DomainSeparator.set(domainSeparator);
+        emit SetDomainSeparator(domainSeparator);
     }
 
     /// @inheritdoc IRiverV1
@@ -360,21 +411,61 @@ contract RiverV1 is
         uint256 operatorCount = registry.getOperatorCount();
         if (_fundedETH.length < operatorCount) {
             uint256[] memory paddedFundedETH = new uint256[](operatorCount);
-            bytes[][] memory paddedPublicKeys = new bytes[][](operatorCount);
             for (uint256 i = 0; i < _fundedETH.length; ++i) {
                 paddedFundedETH[i] = _fundedETH[i];
-                uint256 pubKeyLength = _publicKeys[i].length;
-                if (pubKeyLength > 0) {
-                    paddedPublicKeys[i] = new bytes[](pubKeyLength);
-                    paddedPublicKeys[i] = _publicKeys[i];
-                } else {
-                    paddedPublicKeys[i] = new bytes[](0);
-                }
             }
-            registry.incrementFundedETH(paddedFundedETH, paddedPublicKeys);
+            registry.incrementFundedETH(paddedFundedETH, _publicKeys);
         } else {
             registry.incrementFundedETH(_fundedETH, _publicKeys);
         }
+    }
+
+    /// @notice Overridden handler to update operator funded ETH accounting for attestation-based deposits.
+    ///         Aggregates deposit objects by operator index and calls _incrementFundedETH.
+    /// @param deposits Array of deposit objects from the DepositDataBuffer
+    function _updateFundedETHFromBuffer(IDepositDataBuffer.DepositObject[] memory deposits) internal override {
+        if (deposits.length == 0) return;
+
+        uint256 len = deposits.length;
+        uint256 highestOpIdx = 0;
+
+        IOperatorsRegistryV1 registry = IOperatorsRegistryV1(OperatorsRegistryAddress.get());
+        uint256 operatorCount = registry.getOperatorCount();
+
+        // Pass 1: parse operator indices (cached to avoid double-parsing), find highestOpIdx.
+        //         Reject any index outside the registered range so a crafted "operator:N"
+        //         metadata cannot OOG-DoS the batch via an oversized memory allocation.
+        uint256[] memory opIndices = new uint256[](len);
+        for (uint256 i = 0; i < len; i++) {
+            uint256 opIdx = _parseOperatorIndex(deposits[i].metadata);
+            if (opIdx >= operatorCount) revert InvalidOperatorIndex(opIdx, operatorCount);
+            opIndices[i] = opIdx;
+            if (opIdx > highestOpIdx) highestOpIdx = opIdx;
+        }
+
+        uint256 buckets = highestOpIdx + 1;
+        uint256[] memory fundedETH = new uint256[](buckets);
+        uint256[] memory depositsCountPerOperator = new uint256[](buckets);
+        for (uint256 i = 0; i < len; i++) {
+            depositsCountPerOperator[opIndices[i]]++;
+        }
+
+        bytes[][] memory perOpKeys = new bytes[][](buckets);
+        uint256[] memory cursors = new uint256[](buckets);
+        for (uint256 j = 0; j < buckets; j++) {
+            if (depositsCountPerOperator[j] > 0) {
+                perOpKeys[j] = new bytes[](depositsCountPerOperator[j]);
+            }
+        }
+
+        // Pass 2: fill fundedETH and perOpKeys
+        for (uint256 i = 0; i < len; i++) {
+            uint256 opIdx = opIndices[i];
+            fundedETH[opIdx] += deposits[i].amount;
+            perOpKeys[opIdx][cursors[opIdx]++] = deposits[i].pubkey;
+        }
+
+        _incrementFundedETH(fundedETH, perOpKeys);
     }
 
     /// @notice Overridden handler called whenever a token transfer is triggered
