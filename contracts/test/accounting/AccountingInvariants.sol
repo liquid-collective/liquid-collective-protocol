@@ -218,22 +218,15 @@ abstract contract AccountingInvariants is BeaconChainSimulator {
         uint256 demand = operatorsRegistry.getCurrentETHExitsDemand();
         uint256 requested = operatorsRegistry.getTotalETHExitsRequested();
         uint256 totalDeposited = river.getTotalDepositedETH();
-        assertLe(
-            demand + requested,
-            totalDeposited,
-            "I7: exit demand + requested exceeds TotalDepositedETH"
-        );
+        assertLe(demand + requested, totalDeposited, "I7: exit demand + requested exceeds TotalDepositedETH");
     }
 
-    /// @notice I8: Verifies that slashing containment mode suppresses exit demand — if the last
-    ///         oracle report had containment enabled, exit demand must not have increased.
+    /// @notice I8: Verifies that slashing containment mode suppresses new exit demand — if the last
+    ///         oracle report had containment enabled, exit demand must not have increased, though
+    ///         it may legitimately decrease when exited ETH is reported.
     function _assertI8_ContainmentSuppressesDemand() internal {
         if (!_lastReportWasContainment) return;
         uint256 demandAfter = operatorsRegistry.getCurrentETHExitsDemand();
-        assertEq(
-            demandAfter,
-            _snapExitDemand,
-            "I8: exit demand changed during slashing containment"
-        );
+        assertLe(demandAfter, _snapExitDemand, "I8: exit demand increased during slashing containment");
     }
 }
