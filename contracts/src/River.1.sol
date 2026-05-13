@@ -51,6 +51,9 @@ contract RiverV1 is
     /// @inheritdoc IRiverV1
     function initRiverV1_3(bytes32 _withdrawalCredentials, address _attestationVerifier) external init(3) onlyAdmin {
         if (_withdrawalCredentials == bytes32(0)) revert InvalidWithdrawalCredentials();
+        if (_attestationVerifier == address(0) || _attestationVerifier.code.length == 0) {
+            revert InvalidAttestationVerifier();
+        }
         if (IAttestationVerifierV1(_attestationVerifier).getRiver() != address(this)) {
             revert InvalidAttestationVerifier();
         }
