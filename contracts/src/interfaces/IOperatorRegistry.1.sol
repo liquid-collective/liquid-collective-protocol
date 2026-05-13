@@ -142,6 +142,12 @@ interface IOperatorsRegistryV1 {
     /// @param currentETHExitsDemand The current ETH(wei) exits demand
     error ExitsRequestedExceedExitDemand(uint256 requestedETHAmount, uint256 currentETHExitsDemand);
 
+    /// @notice The provided exited ETH is above the funded ETH of the operator
+    /// @param operatorIndex The operator index
+    /// @param exitedETH The exited ETH(wei)
+    /// @param priorActiveCL The active ETH(wei) on CL of the operator in the previous oracle report
+    error ExitedETHExceedsPriorCLETH(uint256 operatorIndex, uint256 exitedETH, uint256 priorActiveCL);
+
     /// @notice Thrown when an allocation with an incorrect ETH amount is provided
     /// @param ethAmount The incorrect ETH(wei) amount
     error AllocationWithIncorrectAmount(uint256 ethAmount);
