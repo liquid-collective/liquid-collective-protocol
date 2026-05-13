@@ -26,7 +26,6 @@ import "../../src/libraries/LibAllowlistMasks.sol";
 import "../../src/state/river/InFlightDeposit.sol";
 import "../../src/state/river/CommittedBalance.sol";
 import "../../src/state/river/BalanceToDeposit.sol";
-import "../../src/state/attestationVerifier/DepositDomainValue.sol";
 import "../../src/state/operatorsRegistry/Operators.3.sol";
 
 // -----------------------------------------------------------------------

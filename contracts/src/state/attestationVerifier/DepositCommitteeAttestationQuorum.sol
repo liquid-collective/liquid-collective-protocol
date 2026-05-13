@@ -3,8 +3,8 @@ pragma solidity 0.8.34;
 
 import "../../libraries/LibUnstructuredStorage.sol";
 
-/// @title AttestationQuorum
-/// @notice Library for storing the attestation quorum.
+/// @title DepositCommitteeAttestationQuorum
+/// @notice Library for storing the deposit-committee attestation quorum.
 library DepositCommitteeAttestationQuorum {
     bytes32 internal constant DEPOSIT_COMMITTEE_ATTESTATION_QUORUM_SLOT =
         bytes32(uint256(keccak256("attestationVerifier.state.depositCommitteeAttestationQuorum")) - 1);

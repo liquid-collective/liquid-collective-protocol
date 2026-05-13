@@ -2,6 +2,7 @@
 pragma solidity 0.8.34;
 
 import "./interfaces/IAllowlist.1.sol";
+import "./interfaces/IAttestationVerifier.1.sol";
 import "./interfaces/IOperatorRegistry.1.sol";
 import "./interfaces/IRiver.1.sol";
 import "./interfaces/IWithdraw.1.sol";
@@ -50,6 +51,9 @@ contract RiverV1 is
     /// @inheritdoc IRiverV1
     function initRiverV1_3(bytes32 _withdrawalCredentials, address _attestationVerifier) external init(3) onlyAdmin {
         if (_withdrawalCredentials == bytes32(0)) revert InvalidWithdrawalCredentials();
+        if (IAttestationVerifierV1(_attestationVerifier).getRiver() != address(this)) {
+            revert InvalidAttestationVerifier();
+        }
 
         // Re-emit deposit-contract address (carry-over from prior initConsensusLayerDepositManagerV1_2 call)
         address depositContract = DepositContractAddress.get();

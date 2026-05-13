@@ -4,7 +4,7 @@ optimizer = true
 # Lowered from 100 to fit RiverV1 under EIP-170 (24,576 bytes). Slight runtime
 # gas tradeoff for smaller deployed bytecode.
 optimizer_runs = 3
-# via_ir enabled to shrink RiverV1 deployed bytecode after the AttestationValidator
+# via_ir enabled to shrink RiverV1 deployed bytecode after the AttestationVerifier
 # and V1.3-init-migration extractions.
 via_ir = true
 # Strip CBOR/IPFS metadata from the tail of every deployed contract. ~52 B per

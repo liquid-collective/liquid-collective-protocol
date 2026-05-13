@@ -115,6 +115,9 @@ interface IRiverV1 is IConsensusLayerDepositManagerV1, IUserDepositManagerV1, IS
     /// @param account The account that was denied
     error Denied(address account);
 
+    /// @notice Thrown when the attestation verifier supplied to initRiverV1_3 is not bound to this River
+    error InvalidAttestationVerifier();
+
     /// @notice Initializes version 1.3 of the River System. Performs the Pectra accounting migration,
     ///         updates the withdrawal credentials, and wires the AttestationVerifier sibling contract
     ///         that River delegates attestation-quorum + BLS verification to. The verifier must be

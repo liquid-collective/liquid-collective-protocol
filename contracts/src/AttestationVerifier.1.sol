@@ -339,7 +339,7 @@ contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1 {
     ///      input but performs no authorization.
     /// @param pubkey The BLS public key (48 bytes)
     /// @param signature The BLS signature (96 bytes)
-    /// @param amount The deposit amount in gwei
+    /// @param amount The deposit amount in wei (must be gwei-aligned; verified inside BLS12_381.verifyDepositMessage)
     /// @param depositY The Y-coordinates required for BLS decompression
     /// @param withdrawalCredentials The 32-byte withdrawal credentials
     function verifyBLSDeposit(
