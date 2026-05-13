@@ -2,6 +2,7 @@
 pragma solidity 0.8.34;
 
 import "../AccountingInvariants.sol";
+import "../../../src/interfaces/IOperatorRegistry.1.sol";
 
 contract ExitDemandTest is AccountingInvariants {
     function _depositAndRedeem(uint256 ethAmount) internal {
@@ -12,6 +13,14 @@ contract ExitDemandTest is AccountingInvariants {
         vm.prank(user);
         river.deposit{value: ethAmount}();
         sim_requestRedeem(user, river.balanceOf(user));
+    }
+
+    function _requestETHExit(uint256 opIdx, uint256 ethAmount) internal {
+        IOperatorsRegistryV1.ExitETHAllocation[] memory allocations = new IOperatorsRegistryV1.ExitETHAllocation[](1);
+        allocations[0] = IOperatorsRegistryV1.ExitETHAllocation({operatorIndex: opIdx, ethAmount: ethAmount});
+
+        vm.prank(keeper);
+        operatorsRegistry.requestETHExits(allocations);
     }
 
     function testPreExitingBalanceReducesExitDemand() public {
@@ -26,13 +35,24 @@ contract ExitDemandTest is AccountingInvariants {
         uint256 demandAfterFirst = operatorsRegistry.getCurrentETHExitsDemand();
         assertTrue(demandAfterFirst > 0, "should have exit demand after redeem request");
 
+        uint256 requestedExitAmount = 2 * DEPOSIT_SIZE;
+        assertEq(demandAfterFirst, requestedExitAmount, "should demand the exact redeem shortfall");
+        _requestETHExit(operatorOneIndex, requestedExitAmount);
+        uint256 demandAfterRequest = operatorsRegistry.getCurrentETHExitsDemand();
+        assertEq(
+            demandAfterRequest, demandAfterFirst - requestedExitAmount, "keeper request should consume current demand"
+        );
+
         sim_requestExit(operatorOneIndex, DEPOSIT_SIZE);
         sim_completeExit(operatorOneIndex, DEPOSIT_SIZE, 0);
 
         sim_oracleReport();
         uint256 demandAfterSecond = operatorsRegistry.getCurrentETHExitsDemand();
+        (uint256 totalExitedETH, uint256 totalRequestedExitAmounts) =
+            operatorsRegistry.getExitedETHAndRequestedExitAmounts();
 
-        assertLe(demandAfterSecond, demandAfterFirst, "demand should not increase when preExiting covers shortfall");
+        assertGt(totalRequestedExitAmounts, totalExitedETH, "preExitingBalance should be non-zero");
+        assertEq(demandAfterSecond, demandAfterRequest, "preExiting should prevent new demand");
     }
 
     function testSlashingContainmentSkipsDemandETHExits() public {
@@ -43,7 +63,9 @@ contract ExitDemandTest is AccountingInvariants {
 
         _depositAndRedeem(2 * DEPOSIT_SIZE);
 
+        sim_oracleReport();
         uint256 demandBefore = operatorsRegistry.getCurrentETHExitsDemand();
+        assertTrue(demandBefore > 0, "should have exit demand before containment report");
 
         _setAllowSharePriceDecrease(true);
         sim_oracleReport(false, true);
@@ -67,16 +89,20 @@ contract ExitDemandTest is AccountingInvariants {
         vm.prank(depositor);
         river.deposit{value: 2 * DEPOSIT_SIZE}();
 
-        uint256 depositBefore = river.getBalanceToDeposit();
-        assertTrue(depositBefore > 0, "should have balance to deposit");
+        assertTrue(river.getBalanceToDeposit() > 0, "should have balance to deposit");
 
         // Create redeem demand that exceeds available redeem balance.
         _depositAndRedeem(2 * DEPOSIT_SIZE);
 
+        uint256 redeemDemandBefore = redeemManager.getRedeemDemand();
+        uint256 withdrawalCountBefore = redeemManager.getWithdrawalEventCount();
+        assertGt(redeemDemandBefore, 0, "should have redeem demand before rebalancing");
+
         sim_oracleReport(true, false);
 
-        uint256 depositAfter = river.getBalanceToDeposit();
-        assertLt(depositAfter, depositBefore, "BalanceToDeposit should decrease after rebalancing");
+        uint256 redeemDemandAfter = redeemManager.getRedeemDemand();
+        assertEq(redeemDemandAfter, 0, "rebalancing should fully satisfy redeem demand");
+        assertEq(redeemManager.getWithdrawalEventCount(), withdrawalCountBefore + 1, "should create withdrawal event");
     }
 
     function testOneEtherMinimumFloor() public {
@@ -90,6 +116,6 @@ contract ExitDemandTest is AccountingInvariants {
 
         sim_oracleReport();
         uint256 demand = operatorsRegistry.getCurrentETHExitsDemand();
-        assertGe(demand, 1 ether, "exit demand must be at least 1 ETH due to floor");
+        assertEq(demand, 1 ether, "exit demand should be exactly 1 ETH due to floor");
     }
 }
