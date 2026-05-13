@@ -35,6 +35,9 @@ abstract contract BeaconChainSimulator is AccountingHarnessBase {
     uint256 internal _simCumulativeSkimmed;
     /// @dev Cumulative exited ETH (monotonically increasing).
     uint256 internal _simCumulativeExited;
+    /// @dev Cumulative autocompounded rewards (Pectra 0x02). Increases validator CL balance
+    ///      rather than being skimmed, so exits can return more than the original deposit.
+    uint256 internal _simCumulativeAutocompounded;
     /// @dev Mirrors the contract's InFlightDeposit: ETH sent to the deposit contract
     ///      but not yet oracle-confirmed. Incremented in sim_deposit, reset after oracle report.
     uint256 internal _simInFlightDeposit;
@@ -117,10 +120,21 @@ abstract contract BeaconChainSimulator is AccountingHarnessBase {
     function sim_advanceEpoch(uint256 rewardsPerValidator) internal {
         for (uint256 i = 0; i < _simValidators.length; i++) {
             if (_simValidators[i].state == ValidatorState.Active) {
-                // Rewards are swept (skimmed) from the CL to EL each epoch.
-                // The validator's CL balance remains at the principal (DEPOSIT_SIZE)
-                // after the sweep, so we only track cumulative skimmed rewards separately.
+                // Models 0x01 (BLS) withdrawal credentials: rewards are swept (skimmed)
+                // from the CL to EL each epoch. The validator's CL balance remains at the
+                // principal after the sweep. See sim_autocompound for 0x02 (Pectra) behavior.
                 _simCumulativeSkimmed += rewardsPerValidator;
+            }
+        }
+    }
+
+    /// @dev Models 0x02 (Pectra) autocompounding: rewards increase the validator's CL balance
+    ///      instead of being skimmed. This means exits can return more than the original deposit.
+    function sim_autocompound(uint256 rewardsPerValidator) internal {
+        for (uint256 i = 0; i < _simValidators.length; i++) {
+            if (_simValidators[i].state == ValidatorState.Active) {
+                _simValidators[i].currentBalance += rewardsPerValidator;
+                _simCumulativeAutocompounded += rewardsPerValidator;
             }
         }
     }
