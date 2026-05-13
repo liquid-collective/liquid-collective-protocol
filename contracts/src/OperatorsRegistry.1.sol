@@ -412,7 +412,9 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
         }
 
         vars.totalETHExitsRequested += unsolicitedExitsSum;
-        // we decrease the demand, considering unsolicited exits as if they were answering the demand
+        // we decrease the demand, considering unsolicited exits as if they were answering the demand.
+        // we use min as the demand can't go below 0 & unsolicitedExitsSum can be greater than the demand
+        // hence the term "unsolicited exits"
         vars.currentETHExitsDemand -= LibUint256.min(unsolicitedExitsSum, vars.currentETHExitsDemand);
 
         if (vars.totalETHExitsRequested != vars.cachedTotalETHExitsRequested) {
