@@ -92,6 +92,9 @@ interface IConsensusLayerDepositManagerV1 {
     function getWithdrawalCredentials() external view returns (bytes32);
 
     /// @notice Returns the total deposited ETH(wei)
+    /// @dev This is a cumulative, monotonically-increasing value: all ETH ever deposited to the
+    /// @dev consensus layer deposit contract, including ETH for validators that have since exited.
+    /// @dev It does NOT represent the currently-active consensus layer balance.
     /// @return The total deposited ETH(wei)
     function getTotalDepositedETH() external view returns (uint256);
 
