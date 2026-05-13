@@ -3,6 +3,7 @@ pragma solidity 0.8.34;
 
 import "forge-std/Test.sol";
 import "../../../src/OperatorsRegistry.1.sol";
+import "../../../src/interfaces/IOperatorRegistry.1.sol";
 import "../../../src/state/operatorsRegistry/Operators.2.sol";
 import "../../../src/state/operatorsRegistry/Operators.3.sol";
 import "../../utils/LibImplementationUnbricker.sol";
@@ -143,5 +144,26 @@ contract MigrationTest is Test {
         uint256[] memory exitedPerOp = registry.getExitedETHPerOperator();
         assertEq(exitedPerOp.length, 1, "one entry");
         assertEq(exitedPerOp[0], 0, "no exited ETH");
+    }
+
+    /// @notice Verifies that the V2 → V3 migration reverts with `InvalidOperatorState` when an
+    ///         operator has more requested exits than funded validators — an inconsistent state
+    ///         that would otherwise produce an underflow during downstream accounting.
+    function testMigrationRevertsOnInvalidOperatorState() public {
+        uint32 op0Funded = 2;
+        uint32 op0RequestedExits = 2;
+        uint32 op1Funded = 1;
+        uint32 op1RequestedExits = 3; // funded < requestedExits → invalid
+
+        // Op0 is valid; Op1 triggers the revert. Index 1 is reported in the error.
+        registry.sudoPushV2Operator("OpAlpha", op1Addr, op0Funded, op0RequestedExits, op0Funded, op0Funded);
+        registry.sudoPushV2Operator("OpBeta", op2Addr, op1Funded, op1RequestedExits, op1Funded, op1Funded);
+
+        registry.sudoInitV1_1();
+
+        vm.expectRevert(
+            abi.encodeWithSelector(IOperatorsRegistryV1.InvalidOperatorState.selector, 1, op1Funded, op1RequestedExits)
+        );
+        registry.initOperatorsRegistryV1_2();
     }
 }
