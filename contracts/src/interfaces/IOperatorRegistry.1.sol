@@ -198,6 +198,11 @@ interface IOperatorsRegistryV1 {
     /// @return The exited ETH(wei) array per operator
     function getExitedETHPerOperator() external view returns (uint256[] memory);
 
+    /// @notice Retrieve the exited ETH for a single operator by index
+    /// @param _index The operator index to lookup
+    /// @return The exited ETH(wei) for the given operator
+    function getExitedETH(uint256 _index) external view returns (uint256);
+
     /// @notice Retrieve the active operator set
     /// @return The list of active operators and their details
     function listActiveOperators() external view returns (OperatorsV3.Operator[] memory);

@@ -133,6 +133,11 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
     }
 
     /// @inheritdoc IOperatorsRegistryV1
+    function getExitedETH(uint256 _index) external view returns (uint256) {
+        return OperatorsV3.getExitedETH(_index);
+    }
+
+    /// @inheritdoc IOperatorsRegistryV1
     function getExitedETHPerOperator() external view returns (uint256[] memory) {
         uint256[] memory exitedETH = OperatorsV3.getExitedETH();
         uint256 listLength = exitedETH.length;
