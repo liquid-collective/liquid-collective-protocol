@@ -2335,6 +2335,8 @@ contract RiverV1TestsReport_HEAVY_FUZZING is RiverV1TestBase {
             LibUint256.min(river.totalUnderlyingSupply(), (maxCommittedBalanceDailyIncrease * period) / 1 days)
         );
 
+        maxCommittedBalanceIncrease = (maxCommittedBalanceIncrease / 1 gwei) * 1 gwei;
+
         return initialCommittedAmount + maxCommittedBalanceIncrease;
     }
 

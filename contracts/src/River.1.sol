@@ -674,6 +674,8 @@ contract RiverV1 is
         uint256 currentMaxCommittableAmount =
             LibUint256.min((currentMaxDailyCommittableAmount * _period) / 1 days, currentBalanceToDeposit);
 
+        currentMaxCommittableAmount = (currentMaxCommittableAmount / 1 gwei) * 1 gwei;
+
         if (currentMaxCommittableAmount > 0) {
             _setCommittedBalance(CommittedBalance.get() + currentMaxCommittableAmount);
             _setBalanceToDeposit(currentBalanceToDeposit - currentMaxCommittableAmount);
