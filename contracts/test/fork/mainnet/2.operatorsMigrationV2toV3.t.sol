@@ -73,14 +73,21 @@ contract OperatorsMigrationV2ToV3 is Test {
         vm.prank(OPERATORS_REGISTRY_MAINNET_PROXY_ADMIN_ADDRESS);
         ITransparentUpgradeableProxy(address(orProxy))
             .upgradeToAndCall(
-                address(newImplementation),
-                abi.encodeWithSelector(OperatorsRegistryV1.initOperatorsRegistryV1_2.selector)
+                address(newImplementation), abi.encodeCall(OperatorsRegistryV1.initOperatorsRegistryV1_2, (address(1)))
             );
 
         // ── Verify V3 state matches V2 ──
         OperatorsRegistryV1 v3 = OperatorsRegistryV1(OPERATORS_REGISTRY_MAINNET_ADDRESS);
 
         assertEq(v3.getOperatorCount(), opCount, "operator count mismatch");
+        {
+            bytes32 lcWithdrawSlot = bytes32(uint256(keccak256("river.state.lcWithdrawAddress")) - 1);
+            assertEq(
+                vm.load(address(orProxy), lcWithdrawSlot),
+                bytes32(uint256(uint160(address(1)))),
+                "LCWithdrawAddress not stored correctly after migration"
+            );
+        }
 
         uint256[] memory v3ExitedETH = v3.getExitedETHPerOperator();
 
@@ -104,8 +111,7 @@ contract OperatorsMigrationV2ToV3 is Test {
         vm.prank(OPERATORS_REGISTRY_MAINNET_PROXY_ADMIN_ADDRESS);
         ITransparentUpgradeableProxy(address(orProxy))
             .upgradeToAndCall(
-                address(newImplementation),
-                abi.encodeWithSelector(OperatorsRegistryV1.initOperatorsRegistryV1_2.selector)
+                address(newImplementation), abi.encodeCall(OperatorsRegistryV1.initOperatorsRegistryV1_2, (address(1)))
             );
 
         // Second call should revert (init version already set)
@@ -113,8 +119,7 @@ contract OperatorsMigrationV2ToV3 is Test {
         vm.expectRevert();
         ITransparentUpgradeableProxy(address(orProxy))
             .upgradeToAndCall(
-                address(newImplementation),
-                abi.encodeWithSelector(OperatorsRegistryV1.initOperatorsRegistryV1_2.selector)
+                address(newImplementation), abi.encodeCall(OperatorsRegistryV1.initOperatorsRegistryV1_2, (address(1)))
             );
     }
 
@@ -144,7 +149,7 @@ contract OperatorsMigrationV2ToV3 is Test {
         vm.prank(OPERATORS_REGISTRY_MAINNET_PROXY_ADMIN_ADDRESS);
         ITransparentUpgradeableProxy(address(orProxy))
             .upgradeToAndCall(
-                address(newImpl), abi.encodeWithSelector(OperatorsRegistryV1.initOperatorsRegistryV1_2.selector)
+                address(newImpl), abi.encodeCall(OperatorsRegistryV1.initOperatorsRegistryV1_2, (address(1)))
             );
 
         OperatorsRegistryV1 v3 = OperatorsRegistryV1(OPERATORS_REGISTRY_MAINNET_ADDRESS);

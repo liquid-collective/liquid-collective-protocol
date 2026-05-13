@@ -80,10 +80,18 @@ contract OperatorsMigrationV1ToV2 is Test {
         ITransparentUpgradeableProxy(address(orProxy))
             .upgradeToAndCall(
                 address(migrationImplementation),
-                abi.encodeWithSelector(OperatorsRegistryV1.initOperatorsRegistryV1_2.selector)
+                abi.encodeCall(OperatorsRegistryV1.initOperatorsRegistryV1_2, (address(1)))
             );
 
         assertEq(or.getOperatorCount(), 3);
+        {
+            bytes32 lcWithdrawSlot = bytes32(uint256(keccak256("river.state.lcWithdrawAddress")) - 1);
+            assertEq(
+                vm.load(address(orProxy), lcWithdrawSlot),
+                bytes32(uint256(uint160(address(1)))),
+                "LCWithdrawAddress not stored correctly after migration"
+            );
+        }
         {
             (uint256 totalExitedETH,) = or.getExitedETHAndRequestedExitAmounts();
             assertEq(totalExitedETH, 0);

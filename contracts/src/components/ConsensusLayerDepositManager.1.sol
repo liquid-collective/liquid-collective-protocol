@@ -11,12 +11,12 @@ import "../libraries/LibErrors.sol";
 import "../libraries/BLS12_381.sol";
 
 import "../state/river/DepositContractAddress.sol";
-import "../state/river/WithdrawalCredentials.sol";
 import "../state/river/BalanceToDeposit.sol";
 import "../state/river/CommittedBalance.sol";
 import "../state/river/KeeperAddress.sol";
 import "../state/river/TotalDepositedETH.sol";
 import "../state/river/InFlightDeposit.sol";
+import "../state/river/WithdrawalCredentials.sol";
 import "../state/river/DepositDataBufferAddress.sol";
 import "../state/river/AttestationQuorum.sol";
 import "../state/river/Attesters.sol";
@@ -35,6 +35,14 @@ abstract contract ConsensusLayerDepositManagerV1 is IConsensusLayerDepositManage
     /// @notice Size of a deposit in ETH
     uint256 public constant DEPOSIT_SIZE = 32 ether;
 
+    /// @notice Used in river
+    modifier onlyKeeper() {
+        if (msg.sender != KeeperAddress.get()) {
+            revert OnlyKeeper();
+        }
+        _;
+    }
+
     /// @dev ASCII bytes for "operator:" prefix used in metadata encoding
     bytes9 internal constant OPERATOR_PREFIX = "operator:";
 
@@ -46,10 +54,6 @@ abstract contract ConsensusLayerDepositManagerV1 is IConsensusLayerDepositManage
         if (msg.sender != _getRiverAdmin()) revert LibErrors.Unauthorized(msg.sender);
         _;
     }
-
-    // -----------------------------------------------------------------------
-    // Virtual hooks — must be overridden
-    // -----------------------------------------------------------------------
 
     /// @notice Handler called to retrieve the internal River admin address
     /// @dev Must be Overridden

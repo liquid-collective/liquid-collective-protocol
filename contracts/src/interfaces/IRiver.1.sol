@@ -7,6 +7,7 @@ import "./components/IConsensusLayerDepositManager.1.sol";
 import "./components/IOracleManager.1.sol";
 import "./components/ISharesManager.1.sol";
 import "./components/IUserDepositManager.1.sol";
+import "./IWithdraw.1.sol";
 
 /// @title River Interface (v1)
 /// @author Alluvial Finance Inc.
@@ -101,6 +102,18 @@ interface IRiverV1 is IConsensusLayerDepositManagerV1, IUserDepositManagerV1, IS
     /// @param suppliedRedeemManagerDemandInEth The amount in ETH of the supplied demand
     event ReportedRedeemManager(
         uint256 redeemManagerDemand, uint256 suppliedRedeemManagerDemand, uint256 suppliedRedeemManagerDemandInEth
+    );
+
+    /// @notice Emitted when River forwards a Pectra consolidation request to the Withdraw contract
+    /// @param requests Consolidation requests
+    /// @param maxFeePerConsolidation Maximum fee per consolidation
+    /// @param excessFeeRecipient Address to receive any excess msg.value
+    /// @param valueSent ETH sent with the call for fees
+    event PectraConsolidationRequested(
+        IWithdrawV1.ConsolidationRequest[] requests,
+        uint256 maxFeePerConsolidation,
+        address excessFeeRecipient,
+        uint256 valueSent
     );
 
     /// @notice Thrown when the amount received from the Withdraw contract doe not match the requested amount
@@ -290,4 +303,13 @@ interface IRiverV1 is IConsensusLayerDepositManagerV1, IUserDepositManagerV1, IS
 
     /// @notice Input for the redeem manager funds
     function sendRedeemManagerExceedingFunds() external payable;
+
+    /// @notice Request Pectra consolidations via the Withdraw contract. Callable by admin; fee ETH sent as msg.value.
+    /// @dev Only callable by the keeper
+    /// @dev Since we consolidate to validators we own there is no need to track the consolidation buffer
+    /// @param requests Consolidation requests (each: src pubkeys -> target pubkey)
+    /// @param maxFeePerConsolidation Maximum fee per consolidation to accept
+    function consolidate(IWithdrawV1.ConsolidationRequest[] calldata requests, uint256 maxFeePerConsolidation)
+        external
+        payable;
 }
