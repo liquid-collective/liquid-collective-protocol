@@ -58,9 +58,6 @@ interface IConsensusLayerDepositManagerV1 {
     /// @notice Deposits are blocked while slashing containment mode is active
     error SlashingContainmentModeEnabled();
 
-    /// @notice The operator index on a DepositObject references an operator that does not exist
-    error InvalidOperatorIndex(uint256 operatorIndex, uint256 operatorCount);
-
     /// @notice Returns the amount of ETH(wei) not yet committed for deposit
     /// @return The amount of ETH(wei) not yet committed for deposit
     function getBalanceToDeposit() external view returns (uint256);

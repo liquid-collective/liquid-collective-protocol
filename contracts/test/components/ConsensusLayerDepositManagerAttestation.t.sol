@@ -8,6 +8,7 @@ import "../../src/components/ConsensusLayerDepositManager.1.sol";
 import "../../src/interfaces/IAttestationVerifier.1.sol";
 import "../../src/interfaces/IDepositDataBuffer.sol";
 import "../../src/interfaces/IOperatorRegistry.1.sol";
+import "../../src/libraries/LibFundingDeltas.sol";
 import "../../src/libraries/BLS12_381.sol";
 import "../../src/state/river/AttestationVerifierAddress.sol";
 import "../utils/LibImplementationUnbricker.sol";
@@ -62,6 +63,11 @@ contract AttestationDepositHarness is ConsensusLayerDepositManagerV1 {
     ///      operatorIndex. Each test gets a fresh harness via setUp, so no reset needed.
     mapping(uint256 => uint256) public lastFundedETH;
 
+    /// @dev Operator-count bound used by LibFundingDeltas.build. Default well above any
+    ///      operator index used by existing tests; tests that exercise the InvalidOperatorIndex
+    ///      revert path can shrink it via sudoSetOperatorCount.
+    uint256 public harnessOperatorCount = 1024;
+
     constructor(address admin_) {
         _admin = admin_;
     }
@@ -91,58 +97,14 @@ contract AttestationDepositHarness is ConsensusLayerDepositManagerV1 {
         }
     }
 
-    /// @dev Real implementation from River.1.sol — groups pubkeys by operator into a sparse,
-    ///      sorted OperatorFundingDelta[], forwards to the recording stub, then emits
-    ///      FundedValidatorKeys per delta (simulating what the real registry emits).
+    /// @dev Delegates bucketing to LibFundingDeltas — the exact same code path River uses —
+    ///      then forwards to the recording stub and emits FundedValidatorKeys per delta
+    ///      (simulating what the real registry emits).
     function _updateFundedETHFromBuffer(IDepositDataBuffer.DepositObject[] memory deposits) internal override {
         if (deposits.length == 0) return;
-
-        uint256 len = deposits.length;
-
-        uint256[] memory opIndices = new uint256[](len);
-        uint256 highestOpIdx = 0;
-        for (uint256 i = 0; i < len; i++) {
-            opIndices[i] = deposits[i].operatorIdx;
-            if (opIndices[i] > highestOpIdx) highestOpIdx = opIndices[i];
-        }
-
-        uint256 buckets = highestOpIdx + 1;
-        uint256[] memory amountPerOp = new uint256[](buckets);
-        uint256[] memory keyCountPerOp = new uint256[](buckets);
-        for (uint256 i = 0; i < len; i++) {
-            uint256 opIdx = opIndices[i];
-            amountPerOp[opIdx] += deposits[i].amount;
-            keyCountPerOp[opIdx]++;
-        }
-
-        uint256 nonEmpty = 0;
-        for (uint256 j = 0; j < buckets; j++) {
-            if (keyCountPerOp[j] > 0) ++nonEmpty;
-        }
-
         IOperatorsRegistryV1.OperatorFundingDelta[] memory deltas =
-            new IOperatorsRegistryV1.OperatorFundingDelta[](nonEmpty);
-        uint256[] memory deltaIdxByOp = new uint256[](buckets);
-        uint256[] memory keyCursors = new uint256[](buckets);
-        uint256 di = 0;
-        for (uint256 j = 0; j < buckets; j++) {
-            if (keyCountPerOp[j] > 0) {
-                deltas[di].operatorIndex = j;
-                deltas[di].fundedETH = amountPerOp[j];
-                deltas[di].newPublicKeys = new bytes[](keyCountPerOp[j]);
-                deltaIdxByOp[j] = di;
-                ++di;
-            }
-        }
-
-        for (uint256 i = 0; i < len; i++) {
-            uint256 opIdx = opIndices[i];
-            uint256 d = deltaIdxByOp[opIdx];
-            deltas[d].newPublicKeys[keyCursors[opIdx]++] = deposits[i].pubkey;
-        }
-
+            LibFundingDeltas.build(deposits, harnessOperatorCount);
         _incrementFundedETH(deltas);
-
         for (uint256 i = 0; i < deltas.length; i++) {
             emit FundedValidatorKeys(deltas[i].operatorIndex, deltas[i].newPublicKeys, false);
         }
@@ -164,6 +126,10 @@ contract AttestationDepositHarness is ConsensusLayerDepositManagerV1 {
 
     function sudoSetAttestationVerifier(address v) external {
         AttestationVerifierAddress.set(v);
+    }
+
+    function sudoSetOperatorCount(uint256 c) external {
+        harnessOperatorCount = c;
     }
 
     receive() external payable {}
