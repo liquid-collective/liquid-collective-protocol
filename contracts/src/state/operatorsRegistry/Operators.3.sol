@@ -169,15 +169,15 @@ library OperatorsV3 {
     /// @notice Retrieve the exited ETH for an operator by its index
     /// @param index The index of the operator to lookup
     /// @return The exited ETH for the given operator index
-    function getExitedETHAtIndex(uint256 index) internal view returns (uint256) {
-        return _getExitedETHAtIndex(getExitedETH(), index);
+    function getExitedETH(uint256 index) internal view returns (uint256) {
+        return _getExitedETH(getExitedETH(), index);
     }
 
     /// @notice Retrieve the exited ETH for an operator by its index
     /// @param exitedETH The storage pointer to the raw array containing the exited ETH
     /// @param index The index of the operator to lookup
     /// @return The exited ETH for the given operator index
-    function _getExitedETHAtIndex(uint256[] storage exitedETH, uint256 index) internal view returns (uint256) {
+    function _getExitedETH(uint256[] storage exitedETH, uint256 index) internal view returns (uint256) {
         if (index + 1 >= exitedETH.length) {
             return 0;
         }

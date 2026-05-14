@@ -3,9 +3,14 @@ pragma solidity 0.8.34;
 
 import "forge-std/Test.sol";
 
+import "../../src/AttestationVerifier.1.sol";
 import "../../src/components/ConsensusLayerDepositManager.1.sol";
+import "../../src/interfaces/IAttestationVerifier.1.sol";
 import "../../src/interfaces/IDepositDataBuffer.sol";
+import "../../src/interfaces/IOperatorRegistry.1.sol";
+import "../../src/libraries/LibFundingDeltas.sol";
 import "../../src/libraries/BLS12_381.sol";
+import "../../src/state/river/AttestationVerifierAddress.sol";
 import "../utils/LibImplementationUnbricker.sol";
 import "../mocks/DepositContractEnhancedMock.sol";
 
@@ -41,22 +46,36 @@ contract MockDepositDataBuffer is IDepositDataBuffer {
 }
 
 // ---------------------------------------------------------------------------
-// Test harness — extends ConsensusLayerDepositManagerV1 with the real
-// _updateFundedETHFromBuffer logic (mirrors River.1.sol) so we can
-// verify FundedValidatorKeys event emission end-to-end.
+// Test harness — mirrors RiverV1's wiring for the deposit-execution side. The
+// attestation+BLS validation now lives in AttestationVerifierV1 (a sibling
+// contract); the harness delegates to it via AttestationVerifierAddress.
 //
 // Only _incrementFundedETH is stubbed (records values for assertions) because
-// the real implementation requires the full OperatorsRegistry.
+// the real implementation requires the full OperatorsRegistry. _updateFundedETHFromBuffer
+// is the real River implementation so that FundedValidatorKeys event emission is
+// covered end-to-end.
 // ---------------------------------------------------------------------------
 
 contract AttestationDepositHarness is ConsensusLayerDepositManagerV1 {
     address internal immutable _admin;
 
-    /// @dev Stores the last fundedETH array passed to _incrementFundedETH for assertions.
-    uint256[] public lastFundedETH;
+    /// @dev Records funded ETH per operator index after each deposit batch, indexed by
+    ///      operatorIndex. Each test gets a fresh harness via setUp, so no reset needed.
+    mapping(uint256 => uint256) public lastFundedETH;
+
+    /// @dev Operator-count bound used by LibFundingDeltas.build. Default well above any
+    ///      operator index used by existing tests; tests that exercise the InvalidOperatorIndex
+    ///      revert path can shrink it via sudoSetOperatorCount.
+    uint256 public harnessOperatorCount = 1024;
 
     constructor(address admin_) {
         _admin = admin_;
+    }
+
+    /// @notice Exposes the harness's admin so the AttestationVerifier's
+    ///         `onlyRiverAdmin` cross-contract lookup (IAdministrable.getAdmin) works.
+    function getAdmin() external view returns (address) {
+        return _admin;
     }
 
     function _getRiverAdmin() internal view override returns (address) {
@@ -72,53 +91,22 @@ contract AttestationDepositHarness is ConsensusLayerDepositManagerV1 {
     }
 
     /// @dev Recording stub — stores funded ETH per operator for test assertions.
-    function _incrementFundedETH(uint256[] memory fundedETH, bytes[][] memory) internal override {
-        delete lastFundedETH;
-        for (uint256 i = 0; i < fundedETH.length; i++) {
-            lastFundedETH.push(fundedETH[i]);
+    function _incrementFundedETH(IOperatorsRegistryV1.OperatorFundingDelta[] memory deltas) internal override {
+        for (uint256 i = 0; i < deltas.length; i++) {
+            lastFundedETH[deltas[i].operatorIndex] = deltas[i].fundedETH;
         }
     }
 
-    /// @dev Real implementation from River.1.sol — groups pubkeys by operator and emits events.
+    /// @dev Delegates bucketing to LibFundingDeltas — the exact same code path River uses —
+    ///      then forwards to the recording stub and emits FundedValidatorKeys per delta
+    ///      (simulating what the real registry emits).
     function _updateFundedETHFromBuffer(IDepositDataBuffer.DepositObject[] memory deposits) internal override {
         if (deposits.length == 0) return;
-
-        uint256 len = deposits.length;
-        uint256 highestOpIdx = 0;
-
-        uint256[] memory opIndices = new uint256[](len);
-        for (uint256 i = 0; i < len; i++) {
-            opIndices[i] = _parseOperatorIndex(deposits[i].metadata);
-            if (opIndices[i] > highestOpIdx) highestOpIdx = opIndices[i];
-        }
-
-        uint256 buckets = highestOpIdx + 1;
-        uint256[] memory fundedETH = new uint256[](buckets);
-        uint256[] memory counts = new uint256[](buckets);
-        for (uint256 i = 0; i < len; i++) {
-            counts[opIndices[i]]++;
-        }
-
-        bytes[][] memory perOpKeys = new bytes[][](buckets);
-        uint256[] memory cursors = new uint256[](buckets);
-        for (uint256 j = 0; j < buckets; j++) {
-            if (counts[j] > 0) {
-                perOpKeys[j] = new bytes[](counts[j]);
-            }
-        }
-
-        for (uint256 i = 0; i < len; i++) {
-            uint256 opIdx = opIndices[i];
-            fundedETH[opIdx] += deposits[i].amount;
-            perOpKeys[opIdx][cursors[opIdx]++] = deposits[i].pubkey;
-        }
-
-        _incrementFundedETH(fundedETH, perOpKeys);
-
-        for (uint256 j = 0; j < buckets; j++) {
-            if (counts[j] > 0) {
-                emit FundedValidatorKeys(j, perOpKeys[j], false);
-            }
+        IOperatorsRegistryV1.OperatorFundingDelta[] memory deltas =
+            LibFundingDeltas.build(deposits, harnessOperatorCount);
+        _incrementFundedETH(deltas);
+        for (uint256 i = 0; i < deltas.length; i++) {
+            emit FundedValidatorKeys(deltas[i].operatorIndex, deltas[i].newPublicKeys, false);
         }
     }
 
@@ -136,8 +124,12 @@ contract AttestationDepositHarness is ConsensusLayerDepositManagerV1 {
         CommittedBalance.set(v);
     }
 
-    function sudoSetDepositDomain(bytes32 d) external {
-        DepositDomainValue.set(d);
+    function sudoSetAttestationVerifier(address v) external {
+        AttestationVerifierAddress.set(v);
+    }
+
+    function sudoSetOperatorCount(uint256 c) external {
+        harnessOperatorCount = c;
     }
 
     receive() external payable {}
@@ -147,8 +139,9 @@ contract AttestationDepositHarness is ConsensusLayerDepositManagerV1 {
 // End-to-end attestation deposit test
 //
 // Mocking strategy:
-//   - BLS verification (verifyBLSDeposit) is mocked via vm.mockCall because
-//     EIP-2537 precompiles do not exist in Foundry's EVM.
+//   - BLS verification (verifyBLSDeposit) is mocked via vm.mockCall on the
+//     AttestationVerifier address because EIP-2537 precompiles do not exist
+//     in Foundry's EVM (without --evm-version prague + a vector).
 //   - DepositDataBuffer is a minimal mock because no real implementation exists.
 //   - Everything else runs real code:
 //       * DepositContractEnhancedMock validates depositDataRoot, field lengths,
@@ -160,6 +153,7 @@ contract AttestationDepositHarness is ConsensusLayerDepositManagerV1 {
 
 contract ConsensusLayerDepositManagerAttestationTest is Test {
     AttestationDepositHarness internal dm;
+    AttestationVerifierV1 internal validator;
     MockDepositDataBuffer internal buffer;
     DepositContractEnhancedMock internal depositContract;
 
@@ -167,20 +161,26 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
     address internal keeper = address(0xBEEF);
     bytes32 internal withdrawalCredentials = bytes32(uint256(0x010000000000000000000000CAFEBABE));
 
-    uint256 internal attesterPk1 = 0xA1;
-    uint256 internal attesterPk2 = 0xA2;
-    uint256 internal attesterPk3 = 0xA3;
-    address internal attester1;
-    address internal attester2;
-    address internal attester3;
+    uint256 internal depositCommitteeAttesterPk1 = 0xA1;
+    uint256 internal depositCommitteeAttesterPk2 = 0xA2;
+    uint256 internal depositCommitteeAttesterPk3 = 0xA3;
+    address internal depositCommitteeAttester1;
+    address internal depositCommitteeAttester2;
+    address internal depositCommitteeAttester3;
 
-    // EIP-712 constants (must match DepositToConsensusLayerValidation)
+    // EIP-712 constants (must match AttestationVerifierV1)
     bytes32 internal constant EIP712_DOMAIN_TYPEHASH =
         keccak256("EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)");
     bytes32 internal constant NAME_HASH = keccak256("DepositToConsensusLayerValidation");
     bytes32 internal constant VERSION_HASH = keccak256("1");
     bytes32 internal constant ATTEST_TYPEHASH =
         keccak256("Attest(bytes32 depositDataBufferId,bytes32 depositRootHash)");
+
+    // Validator-scoped storage slots (must match contracts/src/state/attestationVerifier/*)
+    bytes32 internal constant VALIDATOR_DOMAIN_SEPARATOR_SLOT =
+        bytes32(uint256(keccak256("attestationVerifier.state.domainSeparator")) - 1);
+    bytes32 internal constant VALIDATOR_DEPOSIT_DOMAIN_SLOT =
+        bytes32(uint256(keccak256("attestationVerifier.state.depositDomain")) - 1);
 
     event FundedValidatorKeys(uint256 indexed operatorIndex, bytes[] publicKeys, bool deferred);
     event DepositsExecutedWithAttestation(
@@ -197,44 +197,42 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
     }
 
     function setUp() public {
-        attester1 = vm.addr(attesterPk1);
-        attester2 = vm.addr(attesterPk2);
-        attester3 = vm.addr(attesterPk3);
+        depositCommitteeAttester1 = vm.addr(depositCommitteeAttesterPk1);
+        depositCommitteeAttester2 = vm.addr(depositCommitteeAttesterPk2);
+        depositCommitteeAttester3 = vm.addr(depositCommitteeAttesterPk3);
 
         depositContract = new DepositContractEnhancedMock();
         buffer = new MockDepositDataBuffer();
 
+        // 1. Deploy and init the harness (River-shaped).
         dm = new AttestationDepositHarness(admin);
         LibImplementationUnbricker.unbrick(vm, address(dm));
-
         dm.initialize(address(depositContract), withdrawalCredentials);
         dm.sudoSetKeeper(keeper);
-        dm.sudoSetDepositDomain(bytes32(uint256(1)));
 
-        vm.startPrank(admin);
-        dm.setDepositDataBuffer(address(buffer));
-        // threshold must be strictly less than attester count
-        dm.setAttester(attester1, true);
-        dm.setAttester(attester2, true);
-        dm.setAttester(attester3, true);
-        dm.setAttestationQuorum(2);
-        vm.stopPrank();
+        // 2. Deploy and init the AttestationVerifier. The validator's EIP-712
+        //    domain separator binds verifyingContract to the harness's address
+        //    so deposit-committee attester signing tooling stays River-anchored.
+        address[] memory depositCommitteeAttesters = new address[](3);
+        depositCommitteeAttesters[0] = depositCommitteeAttester1;
+        depositCommitteeAttesters[1] = depositCommitteeAttester2;
+        depositCommitteeAttesters[2] = depositCommitteeAttester3;
 
-        // Cache the EIP-712 domain separator (mirrors initRiverV1_3 for proxy deployments)
-        bytes32 domainSepSlot = bytes32(uint256(keccak256("river.state.domainSeparator")) - 1);
-        bytes32 domainSep =
-            keccak256(abi.encode(EIP712_DOMAIN_TYPEHASH, NAME_HASH, VERSION_HASH, block.chainid, address(dm)));
-        vm.store(address(dm), domainSepSlot, domainSep);
+        validator = new AttestationVerifierV1();
+        LibImplementationUnbricker.unbrick(vm, address(validator));
+        validator.initAttestationVerifierV1(address(dm), address(buffer), depositCommitteeAttesters, 2, bytes4(0));
 
-        // Fund the harness and set committed balance
+        // 3. Wire the validator address into the harness.
+        dm.sudoSetAttestationVerifier(address(validator));
+
+        // 4. Fund the harness and set committed balance.
         vm.deal(address(dm), 128 ether);
         dm.sudoSetCommittedBalance(128 ether);
 
-        // Mock BLS verification — the ONLY mock besides the buffer.
-        // EIP-2537 precompiles (Pectra) are not available in Foundry.
-        // verifyBLSDeposit is called via staticcall from validate(); mocking it
-        // returns success (empty returndata) for any input.
-        vm.mockCall(address(dm), abi.encodeWithSelector(dm.verifyBLSDeposit.selector), bytes(""));
+        // 5. Mock BLS verification on the validator address (EIP-2537 precompiles are
+        //    not enabled in Foundry's default EVM). verifyBLSDeposit is called via
+        //    staticcall from validate; mocking returns success.
+        vm.mockCall(address(validator), abi.encodeWithSelector(validator.verifyBLSDeposit.selector), bytes(""));
     }
 
     // -----------------------------------------------------------------------
@@ -251,34 +249,6 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
         return abi.encodePacked(sha256(abi.encode("sig", seed)), sha256(abi.encode("sig2", seed)), bytes32(0));
     }
 
-    /// @dev Encode "operator:N" as left-aligned bytes32.
-    function _operatorMetadata(uint256 opIdx) internal pure returns (bytes32) {
-        bytes memory prefix = "operator:";
-        bytes memory digits;
-        if (opIdx == 0) {
-            digits = "0";
-        } else {
-            uint256 temp = opIdx;
-            uint256 n = 0;
-            while (temp > 0) {
-                n++;
-                temp /= 10;
-            }
-            digits = new bytes(n);
-            temp = opIdx;
-            for (uint256 i = n; i > 0; i--) {
-                digits[i - 1] = bytes1(uint8(48 + temp % 10));
-                temp /= 10;
-            }
-        }
-        bytes memory full = abi.encodePacked(prefix, digits);
-        bytes32 result;
-        assembly {
-            result := mload(add(full, 32))
-        }
-        return result;
-    }
-
     /// @dev Build a DepositObject with properly-sized fields.
     function _makeDeposit(uint256 opIdx, uint256 seed) internal view returns (IDepositDataBuffer.DepositObject memory) {
         return IDepositDataBuffer.DepositObject({
@@ -286,11 +256,12 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
             signature: _fakeSignature(seed),
             amount: 32 ether,
             depositDataRoot: bytes32(0), // not checked by _depositValidator (it recomputes)
-            metadata: _operatorMetadata(opIdx)
+            operatorIdx: opIdx
         });
     }
 
     /// @dev Sign an EIP-712 attestation digest with the given private key.
+    ///      Note: verifyingContract is the harness (River), NOT the validator.
     function _signAttestation(uint256 pk, bytes32 bufferId, bytes32 rootHash) internal view returns (bytes memory) {
         bytes32 domainSep =
             keccak256(abi.encode(EIP712_DOMAIN_TYPEHASH, NAME_HASH, VERSION_HASH, block.chainid, address(dm)));
@@ -311,8 +282,8 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
         rootHash = depositContract.get_deposit_root();
 
         sigs = new bytes[](2);
-        sigs[0] = _signAttestation(attesterPk1, bufferId, rootHash);
-        sigs[1] = _signAttestation(attesterPk2, bufferId, rootHash);
+        sigs[0] = _signAttestation(depositCommitteeAttesterPk1, bufferId, rootHash);
+        sigs[1] = _signAttestation(depositCommitteeAttesterPk2, bufferId, rootHash);
 
         depositYs = new BLS12_381.DepositY[](deposits.length);
         for (uint256 i = 0; i < deposits.length; i++) {
@@ -420,8 +391,8 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
         assertEq(root2, rootAfterFirst, "root hash should match current deposit contract state");
 
         bytes[] memory sigs2 = new bytes[](2);
-        sigs2[0] = _signAttestation(attesterPk1, bid2, root2);
-        sigs2[1] = _signAttestation(attesterPk2, bid2, root2);
+        sigs2[0] = _signAttestation(depositCommitteeAttesterPk1, bid2, root2);
+        sigs2[1] = _signAttestation(depositCommitteeAttesterPk2, bid2, root2);
 
         BLS12_381.DepositY[] memory ys2 = new BLS12_381.DepositY[](1);
         ys2[0] = _emptyDepositY();
@@ -445,19 +416,13 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
     }
 
     function testRevert_zeroWithdrawalCredentials() public {
-        // Deploy a fresh harness, init with valid WC, then zero it out via vm.store
-        AttestationDepositHarness dm2 = new AttestationDepositHarness(admin);
-        LibImplementationUnbricker.unbrick(vm, address(dm2));
-        dm2.initialize(address(depositContract), withdrawalCredentials);
-        dm2.sudoSetKeeper(keeper);
-
-        // WithdrawalCredentials.set() rejects zero, so clear it directly
+        // Zero out the harness WC via vm.store (the setter rejects zero)
         bytes32 wcSlot = bytes32(uint256(keccak256("river.state.withdrawalCredentials")) - 1);
-        vm.store(address(dm2), wcSlot, bytes32(0));
+        vm.store(address(dm), wcSlot, bytes32(0));
 
         vm.prank(keeper);
         vm.expectRevert(IConsensusLayerDepositManagerV1.InvalidWithdrawalCredentials.selector);
-        dm2.depositToConsensusLayerWithAttestation(bytes32(0), bytes32(0), new bytes[](0), new BLS12_381.DepositY[](0));
+        dm.depositToConsensusLayerWithAttestation(bytes32(0), bytes32(0), new bytes[](0), new BLS12_381.DepositY[](0));
     }
 
     function testRevert_insufficientAttestations() public {
@@ -469,17 +434,15 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
 
         bytes32 rootHash = depositContract.get_deposit_root();
 
-        // Only 1 signature but threshold is 2
+        // Only 1 signature but quorum is 2
         bytes[] memory sigs = new bytes[](1);
-        sigs[0] = _signAttestation(attesterPk1, bufferId, rootHash);
+        sigs[0] = _signAttestation(depositCommitteeAttesterPk1, bufferId, rootHash);
 
         BLS12_381.DepositY[] memory depositYs = new BLS12_381.DepositY[](1);
         depositYs[0] = _emptyDepositY();
 
         vm.prank(keeper);
-        vm.expectRevert(
-            abi.encodeWithSelector(DepositToConsensusLayerValidation.InsufficientAttestations.selector, 1, 2)
-        );
+        vm.expectRevert(abi.encodeWithSelector(IAttestationVerifierV1.InsufficientAttestations.selector, 1, 2));
         dm.depositToConsensusLayerWithAttestation(bufferId, rootHash, sigs, depositYs);
     }
 
@@ -493,8 +456,8 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
         // Sign over a stale root that won't match the deposit contract
         bytes32 staleRoot = bytes32(uint256(0xDEAD));
         bytes[] memory sigs = new bytes[](2);
-        sigs[0] = _signAttestation(attesterPk1, bufferId, staleRoot);
-        sigs[1] = _signAttestation(attesterPk2, bufferId, staleRoot);
+        sigs[0] = _signAttestation(depositCommitteeAttesterPk1, bufferId, staleRoot);
+        sigs[1] = _signAttestation(depositCommitteeAttesterPk2, bufferId, staleRoot);
 
         BLS12_381.DepositY[] memory depositYs = new BLS12_381.DepositY[](1);
         depositYs[0] = _emptyDepositY();
@@ -502,9 +465,7 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
         bytes32 actualRoot = depositContract.get_deposit_root();
         vm.prank(keeper);
         vm.expectRevert(
-            abi.encodeWithSelector(
-                DepositToConsensusLayerValidation.DepositRootMismatch.selector, staleRoot, actualRoot
-            )
+            abi.encodeWithSelector(IAttestationVerifierV1.DepositRootMismatch.selector, staleRoot, actualRoot)
         );
         dm.depositToConsensusLayerWithAttestation(bufferId, staleRoot, sigs, depositYs);
     }
@@ -520,11 +481,11 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
             _prepareDeposit(deposits);
 
         vm.prank(keeper);
-        vm.expectRevert(IConsensusLayerDepositManagerV1.NotEnoughFunds.selector);
+        vm.expectRevert(IAttestationVerifierV1.NotEnoughFunds.selector);
         dm.depositToConsensusLayerWithAttestation(bufferId, rootHash, sigs, depositYs);
     }
 
-    function testRevert_duplicateAttesterSignatures() public {
+    function testRevert_duplicateDepositCommitteeAttesterSignatures() public {
         IDepositDataBuffer.DepositObject[] memory deposits = new IDepositDataBuffer.DepositObject[](1);
         deposits[0] = _makeDeposit(0, 0);
 
@@ -532,22 +493,20 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
         buffer.submitDepositData(bufferId, deposits);
         bytes32 rootHash = depositContract.get_deposit_root();
 
-        // Two signatures from the same attester — should only count as 1
+        // Two signatures from the same deposit-committee attester — should only count as 1
         bytes[] memory sigs = new bytes[](2);
-        sigs[0] = _signAttestation(attesterPk1, bufferId, rootHash);
-        sigs[1] = _signAttestation(attesterPk1, bufferId, rootHash);
+        sigs[0] = _signAttestation(depositCommitteeAttesterPk1, bufferId, rootHash);
+        sigs[1] = _signAttestation(depositCommitteeAttesterPk1, bufferId, rootHash);
 
         BLS12_381.DepositY[] memory depositYs = new BLS12_381.DepositY[](1);
         depositYs[0] = _emptyDepositY();
 
         vm.prank(keeper);
-        vm.expectRevert(
-            abi.encodeWithSelector(DepositToConsensusLayerValidation.InsufficientAttestations.selector, 1, 2)
-        );
+        vm.expectRevert(abi.encodeWithSelector(IAttestationVerifierV1.InsufficientAttestations.selector, 1, 2));
         dm.depositToConsensusLayerWithAttestation(bufferId, rootHash, sigs, depositYs);
     }
 
-    function testRevert_nonAttesterSignature() public {
+    function testRevert_nonDepositCommitteeAttesterSignature() public {
         IDepositDataBuffer.DepositObject[] memory deposits = new IDepositDataBuffer.DepositObject[](1);
         deposits[0] = _makeDeposit(0, 0);
 
@@ -555,52 +514,26 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
         buffer.submitDepositData(bufferId, deposits);
         bytes32 rootHash = depositContract.get_deposit_root();
 
-        // One valid attester + one non-attester
-        uint256 nonAttesterPk = 0xBAD;
+        // One valid deposit-committee attester + one non-attester
+        uint256 nonDepositCommitteeAttesterPk = 0xBAD;
         bytes[] memory sigs = new bytes[](2);
-        sigs[0] = _signAttestation(attesterPk1, bufferId, rootHash);
-        sigs[1] = _signAttestation(nonAttesterPk, bufferId, rootHash);
+        sigs[0] = _signAttestation(depositCommitteeAttesterPk1, bufferId, rootHash);
+        sigs[1] = _signAttestation(nonDepositCommitteeAttesterPk, bufferId, rootHash);
 
         BLS12_381.DepositY[] memory depositYs = new BLS12_381.DepositY[](1);
         depositYs[0] = _emptyDepositY();
 
         vm.prank(keeper);
-        vm.expectRevert(
-            abi.encodeWithSelector(DepositToConsensusLayerValidation.InsufficientAttestations.selector, 1, 2)
-        );
+        vm.expectRevert(abi.encodeWithSelector(IAttestationVerifierV1.InsufficientAttestations.selector, 1, 2));
         dm.depositToConsensusLayerWithAttestation(bufferId, rootHash, sigs, depositYs);
     }
 
-    function testRevert_invalidOperatorMetadata() public {
-        IDepositDataBuffer.DepositObject[] memory deposits = new IDepositDataBuffer.DepositObject[](1);
-        deposits[0] = IDepositDataBuffer.DepositObject({
-            pubkey: _fakePubkey(0),
-            signature: _fakeSignature(0),
-            amount: 32 ether,
-            depositDataRoot: bytes32(0),
-            metadata: bytes32("bad_metadata") // not "operator:N" format
-        });
-
-        (bytes32 bufferId, bytes32 rootHash, bytes[] memory sigs, BLS12_381.DepositY[] memory depositYs) =
-            _prepareDeposit(deposits);
-
-        vm.prank(keeper);
-        vm.expectRevert(
-            abi.encodeWithSelector(
-                IConsensusLayerDepositManagerV1.InvalidOperatorMetadata.selector, bytes32("bad_metadata")
-            )
-        );
-        dm.depositToConsensusLayerWithAttestation(bufferId, rootHash, sigs, depositYs);
-    }
-
-    // Regression test for the defense-in-depth bufferId check added to validate().
+    // Regression test for the defense-in-depth bufferId check in validate().
     // A malicious or buggy DepositDataBuffer may store (id, deposits) where
     // id != keccak256(abi.encode(deposits)). The on-chain validator must catch this
-    // and revert with BufferIdMismatch so the attesters' signed commitment is
+    // and revert with BufferIdMismatch so the deposit-committee attesters' signed commitment is
     // always binding on the deposits that are actually executed.
     function testRevert_bufferIdDoesNotMatchDeposits() public {
-        // Build two distinct batches. We will register deposits_actual under
-        // the id of deposits_signed, simulating a tampered/broken buffer.
         IDepositDataBuffer.DepositObject[] memory depositsSigned = new IDepositDataBuffer.DepositObject[](1);
         depositsSigned[0] = _makeDeposit(0, 1);
 
@@ -616,24 +549,22 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
 
         bytes32 rootHash = depositContract.get_deposit_root();
         bytes[] memory sigs = new bytes[](2);
-        sigs[0] = _signAttestation(attesterPk1, signedId, rootHash);
-        sigs[1] = _signAttestation(attesterPk2, signedId, rootHash);
+        sigs[0] = _signAttestation(depositCommitteeAttesterPk1, signedId, rootHash);
+        sigs[1] = _signAttestation(depositCommitteeAttesterPk2, signedId, rootHash);
 
         BLS12_381.DepositY[] memory depositYs = new BLS12_381.DepositY[](1);
         depositYs[0] = _emptyDepositY();
 
         vm.prank(keeper);
-        vm.expectRevert(
-            abi.encodeWithSelector(DepositToConsensusLayerValidation.BufferIdMismatch.selector, signedId, actualId)
-        );
+        vm.expectRevert(abi.encodeWithSelector(IAttestationVerifierV1.BufferIdMismatch.selector, signedId, actualId));
         dm.depositToConsensusLayerWithAttestation(signedId, rootHash, sigs, depositYs);
     }
 
     // An uninitialized cached EIP-712 domain separator must never be used — bytes32(0) would
     // let any signer produce a "valid" digest that ECDSA cannot tell apart from real ones.
     function testRevert_zeroDomainSeparator() public {
-        bytes32 domainSepSlot = bytes32(uint256(keccak256("river.state.domainSeparator")) - 1);
-        vm.store(address(dm), domainSepSlot, bytes32(0));
+        // Domain separator now lives on the validator's storage.
+        vm.store(address(validator), VALIDATOR_DOMAIN_SEPARATOR_SLOT, bytes32(0));
 
         IDepositDataBuffer.DepositObject[] memory deposits = new IDepositDataBuffer.DepositObject[](1);
         deposits[0] = _makeDeposit(0, 0);
@@ -641,41 +572,46 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
             _prepareDeposit(deposits);
 
         vm.prank(keeper);
-        vm.expectRevert(DepositToConsensusLayerValidation.ZeroDomainSeparator.selector);
+        vm.expectRevert(IAttestationVerifierV1.ZeroDomainSeparator.selector);
         dm.depositToConsensusLayerWithAttestation(bufferId, rootHash, sigs, depositYs);
     }
 
     // An uninitialized BLS deposit domain must never reach the pairing check — bytes32(0) is
-    // a valid-looking domain the attackers could sign against if the guard were missing.
+    // a valid-looking domain attackers could sign against if the guard were missing.
     function testRevert_zeroDepositDomain() public {
         // Un-mock verifyBLSDeposit so the real guard inside the function body runs.
         vm.clearMockedCalls();
-        dm.sudoSetDepositDomain(bytes32(0));
+        // Zero out deposit domain on the validator.
+        vm.store(address(validator), VALIDATOR_DEPOSIT_DOMAIN_SLOT, bytes32(0));
 
         bytes memory pk = _fakePubkey(0);
         bytes memory sig = _fakeSignature(0);
         BLS12_381.DepositY memory dy = _emptyDepositY();
 
-        vm.expectRevert(DepositToConsensusLayerValidation.ZeroDepositDomain.selector);
-        dm.verifyBLSDeposit(pk, sig, 32 ether, dy, withdrawalCredentials);
+        vm.expectRevert(IAttestationVerifierV1.ZeroDepositDomain.selector);
+        validator.verifyBLSDeposit(pk, sig, 32 ether, dy, withdrawalCredentials);
     }
 
-    // setAttester must reject calls that would leave the attester's status unchanged so the
+    // setDepositCommitteeAttester must reject calls that would leave the attester's status unchanged so the
     // admin cannot silently no-op when intending to flip a flag.
-    function testRevert_setAttesterStatusUnchanged() public {
-        // attester1 was registered in setUp(); re-adding must revert
+    function testRevert_setDepositCommitteeAttesterStatusUnchanged() public {
+        // depositCommitteeAttester1 was registered in setUp(); re-adding must revert
         vm.prank(admin);
         vm.expectRevert(
-            abi.encodeWithSelector(DepositToConsensusLayerValidation.AttesterStatusUnchanged.selector, attester1, true)
+            abi.encodeWithSelector(
+                IAttestationVerifierV1.DepositCommitteeAttesterStatusUnchanged.selector, depositCommitteeAttester1, true
+            )
         );
-        dm.setAttester(attester1, true);
+        validator.setDepositCommitteeAttester(depositCommitteeAttester1, true);
 
         // an unregistered address being removed must also revert
-        address stranger = address(0xDEAD);
+        address stranger = address(0xC0FFEE);
         vm.prank(admin);
         vm.expectRevert(
-            abi.encodeWithSelector(DepositToConsensusLayerValidation.AttesterStatusUnchanged.selector, stranger, false)
+            abi.encodeWithSelector(
+                IAttestationVerifierV1.DepositCommitteeAttesterStatusUnchanged.selector, stranger, false
+            )
         );
-        dm.setAttester(stranger, false);
+        validator.setDepositCommitteeAttester(stranger, false);
     }
 }

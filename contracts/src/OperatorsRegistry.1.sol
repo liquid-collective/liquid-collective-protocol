@@ -134,23 +134,23 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
 
     /// @inheritdoc IOperatorsRegistryV1
     function getExitedETHPerOperator() external view returns (uint256[] memory) {
-        uint256[] memory rawExitedETH = OperatorsV3.getExitedETH();
-        uint256 listLength = rawExitedETH.length;
+        uint256[] memory exitedETH = OperatorsV3.getExitedETH();
+        uint256 listLength = exitedETH.length;
         if (listLength > 0) {
             assembly {
                 // no need to use free memory pointer as we reuse the same memory range
 
                 // erase previous word storing length
-                mstore(rawExitedETH, 0)
+                mstore(exitedETH, 0)
 
                 // move memory pointer up by a word
-                rawExitedETH := add(rawExitedETH, 0x20)
+                exitedETH := add(exitedETH, 0x20)
 
                 // store updated length at new memory pointer location
-                mstore(rawExitedETH, sub(listLength, 1))
+                mstore(exitedETH, sub(listLength, 1))
             }
         }
-        return rawExitedETH;
+        return exitedETH;
     }
 
     /// @inheritdoc IOperatorsRegistryV1
@@ -159,25 +159,36 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
     }
 
     /// @inheritdoc IOperatorsRegistryV1
-    function incrementFundedETH(uint256[] calldata _fundedETH, bytes[][] calldata _publicKeys) external onlyRiver {
-        uint256 fundedETHLength = _fundedETH.length;
-        if (fundedETHLength == 0) {
+    function incrementFundedETH(OperatorFundingDelta[] calldata _deltas) external onlyRiver {
+        uint256 len = _deltas.length;
+        if (len == 0) {
             revert InvalidEmptyArray();
         }
-        for (uint256 idx = 0; idx < fundedETHLength; ++idx) {
-            // We have this check to avoid unnecessary storage reads for operators with no funded ETH
-            if (_fundedETH[idx] == 0) {
-                continue;
+
+        uint256 operatorCount = OperatorsV3.getCount();
+        uint256 lastIndex;
+        for (uint256 i = 0; i < len; ++i) {
+            OperatorFundingDelta calldata delta = _deltas[i];
+            uint256 operatorIndex = delta.operatorIndex;
+
+            if (operatorIndex >= operatorCount) {
+                revert InvalidOperatorIndex(operatorIndex, operatorCount);
             }
-            OperatorsV3.Operator storage operator = OperatorsV3.get(idx);
+            if (i != 0 && operatorIndex <= lastIndex) {
+                revert OperatorIndicesUnsortedOrDuplicate(operatorIndex);
+            }
+            lastIndex = operatorIndex;
+
+            OperatorsV3.Operator storage operator = OperatorsV3.get(operatorIndex);
             if (!operator.active) {
-                revert InactiveOperator(idx);
+                revert InactiveOperator(operatorIndex);
             }
-            if (operator.requestedExits > OperatorsV3.getExitedETHAtIndex(idx)) {
-                revert OperatorIgnoredExitRequests(idx);
+            if (operator.requestedExits > OperatorsV3.getExitedETH(operatorIndex)) {
+                revert OperatorIgnoredExitRequests(operatorIndex);
             }
-            operator.funded += _fundedETH[idx];
-            emit FundedValidatorKeys(idx, _publicKeys[idx], false);
+
+            operator.funded += delta.fundedETH;
+            emit FundedValidatorKeys(operatorIndex, delta.newPublicKeys, false);
         }
     }
 
@@ -279,7 +290,7 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
             }
 
             uint256 opRequestedExits = operator.requestedExits;
-            uint256 opPendingExits = opRequestedExits - OperatorsV3.getExitedETHAtIndex(operatorIndex);
+            uint256 opPendingExits = opRequestedExits - OperatorsV3.getExitedETH(operatorIndex);
             uint256 available = operator.activeCLETH > opPendingExits ? operator.activeCLETH - opPendingExits : 0;
             if (ethAmount > available) {
                 // Operator has insufficient available ETH

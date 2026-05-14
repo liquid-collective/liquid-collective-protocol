@@ -8,7 +8,8 @@ import "../../libraries/LibUnstructuredStorage.sol";
 /// @dev Computed via BLS12_381.computeDepositDomain(genesisForkVersion) and used to verify
 ///      BLS signatures on validator deposit messages.
 library DepositDomainValue {
-    bytes32 internal constant DEPOSIT_DOMAIN_SLOT = bytes32(uint256(keccak256("river.state.depositDomain")) - 1);
+    bytes32 internal constant DEPOSIT_DOMAIN_SLOT =
+        bytes32(uint256(keccak256("attestationVerifier.state.depositDomain")) - 1);
 
     function get() internal view returns (bytes32) {
         return LibUnstructuredStorage.getStorageBytes32(DEPOSIT_DOMAIN_SLOT);
