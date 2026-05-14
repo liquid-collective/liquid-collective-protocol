@@ -7,6 +7,7 @@ import "../../src/AttestationVerifier.1.sol";
 import "../../src/components/ConsensusLayerDepositManager.1.sol";
 import "../../src/interfaces/IAttestationVerifier.1.sol";
 import "../../src/interfaces/IDepositDataBuffer.sol";
+import "../../src/interfaces/IOperatorRegistry.1.sol";
 import "../../src/libraries/BLS12_381.sol";
 import "../../src/state/river/AttestationVerifierAddress.sol";
 import "../utils/LibImplementationUnbricker.sol";
@@ -57,8 +58,9 @@ contract MockDepositDataBuffer is IDepositDataBuffer {
 contract AttestationDepositHarness is ConsensusLayerDepositManagerV1 {
     address internal immutable _admin;
 
-    /// @dev Stores the last fundedETH array passed to _incrementFundedETH for assertions.
-    uint256[] public lastFundedETH;
+    /// @dev Records funded ETH per operator index after each deposit batch, indexed by
+    ///      operatorIndex. Each test gets a fresh harness via setUp, so no reset needed.
+    mapping(uint256 => uint256) public lastFundedETH;
 
     constructor(address admin_) {
         _admin = admin_;
@@ -83,53 +85,66 @@ contract AttestationDepositHarness is ConsensusLayerDepositManagerV1 {
     }
 
     /// @dev Recording stub — stores funded ETH per operator for test assertions.
-    function _incrementFundedETH(uint256[] memory fundedETH, bytes[][] memory) internal override {
-        delete lastFundedETH;
-        for (uint256 i = 0; i < fundedETH.length; i++) {
-            lastFundedETH.push(fundedETH[i]);
+    function _incrementFundedETH(IOperatorsRegistryV1.OperatorFundingDelta[] memory deltas) internal override {
+        for (uint256 i = 0; i < deltas.length; i++) {
+            lastFundedETH[deltas[i].operatorIndex] = deltas[i].fundedETH;
         }
     }
 
-    /// @dev Real implementation from River.1.sol — groups pubkeys by operator and emits events.
+    /// @dev Real implementation from River.1.sol — groups pubkeys by operator into a sparse,
+    ///      sorted OperatorFundingDelta[], forwards to the recording stub, then emits
+    ///      FundedValidatorKeys per delta (simulating what the real registry emits).
     function _updateFundedETHFromBuffer(IDepositDataBuffer.DepositObject[] memory deposits) internal override {
         if (deposits.length == 0) return;
 
         uint256 len = deposits.length;
-        uint256 highestOpIdx = 0;
 
         uint256[] memory opIndices = new uint256[](len);
+        uint256 highestOpIdx = 0;
         for (uint256 i = 0; i < len; i++) {
             opIndices[i] = deposits[i].operatorIdx;
             if (opIndices[i] > highestOpIdx) highestOpIdx = opIndices[i];
         }
 
         uint256 buckets = highestOpIdx + 1;
-        uint256[] memory fundedETH = new uint256[](buckets);
-        uint256[] memory counts = new uint256[](buckets);
+        uint256[] memory amountPerOp = new uint256[](buckets);
+        uint256[] memory keyCountPerOp = new uint256[](buckets);
         for (uint256 i = 0; i < len; i++) {
-            counts[opIndices[i]]++;
+            uint256 opIdx = opIndices[i];
+            amountPerOp[opIdx] += deposits[i].amount;
+            keyCountPerOp[opIdx]++;
         }
 
-        bytes[][] memory perOpKeys = new bytes[][](buckets);
-        uint256[] memory cursors = new uint256[](buckets);
+        uint256 nonEmpty = 0;
         for (uint256 j = 0; j < buckets; j++) {
-            if (counts[j] > 0) {
-                perOpKeys[j] = new bytes[](counts[j]);
+            if (keyCountPerOp[j] > 0) ++nonEmpty;
+        }
+
+        IOperatorsRegistryV1.OperatorFundingDelta[] memory deltas =
+            new IOperatorsRegistryV1.OperatorFundingDelta[](nonEmpty);
+        uint256[] memory deltaIdxByOp = new uint256[](buckets);
+        uint256[] memory keyCursors = new uint256[](buckets);
+        uint256 di = 0;
+        for (uint256 j = 0; j < buckets; j++) {
+            if (keyCountPerOp[j] > 0) {
+                deltas[di].operatorIndex = j;
+                deltas[di].fundedETH = amountPerOp[j];
+                deltas[di].newPublicKeys = new bytes[](keyCountPerOp[j]);
+                deltaIdxByOp[j] = di;
+                ++di;
             }
         }
 
         for (uint256 i = 0; i < len; i++) {
             uint256 opIdx = opIndices[i];
-            fundedETH[opIdx] += deposits[i].amount;
-            perOpKeys[opIdx][cursors[opIdx]++] = deposits[i].pubkey;
+            uint256 d = deltaIdxByOp[opIdx];
+            deltas[d].newPublicKeys[keyCursors[opIdx]++] = deposits[i].pubkey;
         }
 
-        _incrementFundedETH(fundedETH, perOpKeys);
+        _incrementFundedETH(deltas);
 
-        for (uint256 j = 0; j < buckets; j++) {
-            if (counts[j] > 0) {
-                emit FundedValidatorKeys(j, perOpKeys[j], false);
-            }
+        for (uint256 i = 0; i < deltas.length; i++) {
+            emit FundedValidatorKeys(deltas[i].operatorIndex, deltas[i].newPublicKeys, false);
         }
     }
 

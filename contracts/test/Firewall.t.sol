@@ -447,51 +447,50 @@ contract FirewallTests is BytesGenerator, OperatorAllocationTestBase {
     ///         the msg.sender to the registry is the firewall, not River.
     function testGovernorCannotIncrementFundedValidatorsThroughFirewall() public {
         haveGovernorAddOperatorBob();
-        bytes[][] memory keys = new bytes[][](1);
-        keys[0] = new bytes[](1);
-        keys[0][0] = new bytes(48);
-        uint256[] memory fundedETH = new uint256[](1);
+        IOperatorsRegistryV1.OperatorFundingDelta[] memory deltas = _singleDelta(0, 32 ether);
         vm.prank(riverGovernor);
         vm.expectRevert(abi.encodeWithSignature("Unauthorized(address)", address(operatorsRegistryFirewall)));
-        firewalledOperatorsRegistry.incrementFundedETH(fundedETH, keys);
+        firewalledOperatorsRegistry.incrementFundedETH(deltas);
     }
 
     /// @notice Executor cannot call incrementFundedValidators through the firewall
     ///         because it is not in the executor-callable selectors list.
     function testExecutorCannotIncrementFundedValidatorsThroughFirewall() public {
         haveGovernorAddOperatorBob();
-        uint256[] memory fundedETH = new uint256[](1);
-        bytes[][] memory keys = new bytes[][](1);
-        keys[0] = new bytes[](1);
-        keys[0][0] = new bytes(48);
+        IOperatorsRegistryV1.OperatorFundingDelta[] memory deltas = _singleDelta(0, 32 ether);
         vm.prank(executor);
         vm.expectRevert(unauthExecutor);
-        firewalledOperatorsRegistry.incrementFundedETH(fundedETH, keys);
+        firewalledOperatorsRegistry.incrementFundedETH(deltas);
     }
 
     /// @notice Random caller cannot call incrementFundedValidators through the firewall.
     function testRandomCallerCannotIncrementFundedValidatorsThroughFirewall() public {
         haveGovernorAddOperatorBob();
-        uint256[] memory fundedETH = new uint256[](1);
-        bytes[][] memory keys = new bytes[][](1);
-        keys[0] = new bytes[](1);
-        keys[0][0] = new bytes(48);
+        IOperatorsRegistryV1.OperatorFundingDelta[] memory deltas = _singleDelta(0, 32 ether);
         vm.prank(joe);
         vm.expectRevert(unauthJoe);
-        firewalledOperatorsRegistry.incrementFundedETH(fundedETH, keys);
+        firewalledOperatorsRegistry.incrementFundedETH(deltas);
     }
 
     /// @notice incrementFundedValidators succeeds when called directly by River (bypassing the firewall).
     function testRiverCanCallIncrementFundedValidatorsDirectly() public {
         haveGovernorAddOperatorBob();
-        uint256[] memory fundedETH = new uint256[](1);
-        fundedETH[0] = 32 ether;
-        bytes[][] memory keys = new bytes[][](1);
-        keys[0] = new bytes[](1);
-        keys[0][0] = new bytes(48);
+        IOperatorsRegistryV1.OperatorFundingDelta[] memory deltas = _singleDelta(0, 32 ether);
         // River calls the registry directly (not through firewall)
         vm.prank(address(river));
-        operatorsRegistry.incrementFundedETH(fundedETH, keys);
+        operatorsRegistry.incrementFundedETH(deltas);
         assertEq(operatorsRegistry.getOperator(0).funded, 32 ether, "funded should be 32 ether");
+    }
+
+    function _singleDelta(uint256 operatorIndex, uint256 amount)
+        internal
+        pure
+        returns (IOperatorsRegistryV1.OperatorFundingDelta[] memory deltas)
+    {
+        deltas = new IOperatorsRegistryV1.OperatorFundingDelta[](1);
+        deltas[0].operatorIndex = operatorIndex;
+        deltas[0].fundedETH = amount;
+        deltas[0].newPublicKeys = new bytes[](1);
+        deltas[0].newPublicKeys[0] = new bytes(48);
     }
 }

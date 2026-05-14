@@ -5,6 +5,7 @@ import "../interfaces/components/IConsensusLayerDepositManager.1.sol";
 import "../interfaces/IAttestationVerifier.1.sol";
 import "../interfaces/IDepositContract.sol";
 import "../interfaces/IDepositDataBuffer.sol";
+import "../interfaces/IOperatorRegistry.1.sol";
 
 import "../libraries/LibBytes.sol";
 import "../libraries/LibUint256.sol";
@@ -43,9 +44,8 @@ abstract contract ConsensusLayerDepositManagerV1 is IConsensusLayerDepositManage
     function _getRiverAdmin() internal view virtual returns (address);
 
     /// @notice Handler called to increment the funded ETH for the operators
-    /// @param _fundedETH The array of funded ETH amounts
-    /// @param _publicKeys The array of public keys
-    function _incrementFundedETH(uint256[] memory _fundedETH, bytes[][] memory _publicKeys) internal virtual;
+    /// @param _deltas The per-operator funding deltas (sorted by operatorIndex)
+    function _incrementFundedETH(IOperatorsRegistryV1.OperatorFundingDelta[] memory _deltas) internal virtual;
 
     /// @notice Handler called to change the committed balance to deposit
     function _setCommittedBalance(uint256 newCommittedBalance) internal virtual;

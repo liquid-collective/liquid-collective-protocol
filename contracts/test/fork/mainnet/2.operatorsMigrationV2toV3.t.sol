@@ -152,13 +152,13 @@ contract OperatorsMigrationV2ToV3 is Test {
         address admin = v3.getAdmin();
 
         // ── incrementFundedETH works on migrated state ──
-        uint256[] memory fundedETH = new uint256[](activeOpIdx + 1);
-        bytes[][] memory keys = new bytes[][](activeOpIdx + 1);
-        keys[activeOpIdx] = new bytes[](1);
-        keys[activeOpIdx][0] = new bytes(48);
-        fundedETH[activeOpIdx] = 32 ether;
+        IOperatorsRegistryV1.OperatorFundingDelta[] memory deltas = new IOperatorsRegistryV1.OperatorFundingDelta[](1);
+        deltas[0].operatorIndex = activeOpIdx;
+        deltas[0].fundedETH = 32 ether;
+        deltas[0].newPublicKeys = new bytes[](1);
+        deltas[0].newPublicKeys[0] = new bytes(48);
         vm.prank(river);
-        v3.incrementFundedETH(fundedETH, keys);
+        v3.incrementFundedETH(deltas);
         assertEq(
             v3.getOperator(activeOpIdx).funded,
             uint256(preFunded) * 32 ether + 32 ether,

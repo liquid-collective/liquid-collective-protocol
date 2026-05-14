@@ -271,31 +271,19 @@ contract RiverV1 is
     }
 
     /// @notice Overridden handler to increment the funded ETH for the operators
-    /// @param _fundedETH The array of funded ETH amounts (length = highestOperatorIndex + 1)
-    /// @param _publicKeys The array of public keys
-    function _incrementFundedETH(uint256[] memory _fundedETH, bytes[][] memory _publicKeys) internal override {
-        IOperatorsRegistryV1 registry = IOperatorsRegistryV1(OperatorsRegistryAddress.get());
-        uint256 operatorCount = registry.getOperatorCount();
-        if (_fundedETH.length < operatorCount) {
-            uint256[] memory paddedFundedETH = new uint256[](operatorCount);
-            for (uint256 i = 0; i < _fundedETH.length; ++i) {
-                paddedFundedETH[i] = _fundedETH[i];
-            }
-            registry.incrementFundedETH(paddedFundedETH, _publicKeys);
-        } else {
-            registry.incrementFundedETH(_fundedETH, _publicKeys);
-        }
+    /// @param _deltas The per-operator funding deltas (sorted by operatorIndex)
+    function _incrementFundedETH(IOperatorsRegistryV1.OperatorFundingDelta[] memory _deltas) internal override {
+        IOperatorsRegistryV1(OperatorsRegistryAddress.get()).incrementFundedETH(_deltas);
     }
 
     /// @notice Overridden handler to update operator funded ETH accounting for attestation-based deposits.
-    ///         Aggregates deposit objects by operator index and calls _incrementFundedETH.
+    ///         Aggregates deposit objects by operator index into a sparse OperatorFundingDelta array
+    ///         sorted by operatorIndex, then forwards to _incrementFundedETH.
     /// @param deposits Array of deposit objects from the DepositDataBuffer
     function _updateFundedETHFromBuffer(IDepositDataBuffer.DepositObject[] memory deposits) internal override {
         if (deposits.length == 0) return;
 
         uint256 len = deposits.length;
-        uint256 highestOpIdx = 0;
-
         IOperatorsRegistryV1 registry = IOperatorsRegistryV1(OperatorsRegistryAddress.get());
         uint256 operatorCount = registry.getOperatorCount();
 
@@ -303,6 +291,7 @@ contract RiverV1 is
         //         registered range so a crafted operatorIdx cannot OOG-DoS the batch via an
         //         oversized memory allocation.
         uint256[] memory opIndices = new uint256[](len);
+        uint256 highestOpIdx = 0;
         for (uint256 i = 0; i < len; i++) {
             uint256 opIdx = deposits[i].operatorIdx;
             if (opIdx >= operatorCount) revert InvalidOperatorIndex(opIdx, operatorCount);
@@ -310,34 +299,47 @@ contract RiverV1 is
             if (opIdx > highestOpIdx) highestOpIdx = opIdx;
         }
 
+        // Pass 2: bucket-aggregate amounts and key counts per operator.
         uint256 buckets = highestOpIdx + 1;
-        uint256[] memory fundedETH = new uint256[](buckets);
-        uint256[] memory depositsCountPerOperator = new uint256[](buckets);
+        uint256[] memory amountPerOp = new uint256[](buckets);
+        uint256[] memory keyCountPerOp = new uint256[](buckets);
         for (uint256 i = 0; i < len; i++) {
-            depositsCountPerOperator[opIndices[i]]++;
+            uint256 opIdx = opIndices[i];
+            amountPerOp[opIdx] += deposits[i].amount;
+            keyCountPerOp[opIdx]++;
         }
 
-        bytes[][] memory perOpKeys = new bytes[][](buckets);
-        uint256[] memory cursors = new uint256[](buckets);
+        // Count populated buckets to size the deltas array.
+        uint256 nonEmpty = 0;
         for (uint256 j = 0; j < buckets; j++) {
-            if (depositsCountPerOperator[j] > 0) {
-                OperatorsV3.Operator memory operator = registry.getOperator(j);
-                if (!operator.active) revert IOperatorsRegistryV1.InactiveOperator(j);
-                if (operator.requestedExits > registry.getExitedETH(j)) {
-                    revert IOperatorsRegistryV1.OperatorIgnoredExitRequests(j);
-                }
-                perOpKeys[j] = new bytes[](depositsCountPerOperator[j]);
+            if (keyCountPerOp[j] > 0) ++nonEmpty;
+        }
+
+        // Pass 3: allocate sparse deltas in ascending operator-index order and record the
+        //         mapping from operatorIdx -> deltas array position for the key-fill pass.
+        IOperatorsRegistryV1.OperatorFundingDelta[] memory deltas =
+            new IOperatorsRegistryV1.OperatorFundingDelta[](nonEmpty);
+        uint256[] memory deltaIdxByOp = new uint256[](buckets);
+        uint256[] memory keyCursors = new uint256[](buckets);
+        uint256 di = 0;
+        for (uint256 j = 0; j < buckets; j++) {
+            if (keyCountPerOp[j] > 0) {
+                deltas[di].operatorIndex = j;
+                deltas[di].fundedETH = amountPerOp[j];
+                deltas[di].newPublicKeys = new bytes[](keyCountPerOp[j]);
+                deltaIdxByOp[j] = di;
+                ++di;
             }
         }
 
-        // Pass 2: fill fundedETH and perOpKeys
+        // Pass 4: fill per-operator pubkeys in deposit order.
         for (uint256 i = 0; i < len; i++) {
             uint256 opIdx = opIndices[i];
-            fundedETH[opIdx] += deposits[i].amount;
-            perOpKeys[opIdx][cursors[opIdx]++] = deposits[i].pubkey;
+            uint256 d = deltaIdxByOp[opIdx];
+            deltas[d].newPublicKeys[keyCursors[opIdx]++] = deposits[i].pubkey;
         }
 
-        _incrementFundedETH(fundedETH, perOpKeys);
+        _incrementFundedETH(deltas);
     }
 
     /// @notice Overridden handler called whenever a token transfer is triggered
