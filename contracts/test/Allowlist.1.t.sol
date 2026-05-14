@@ -274,6 +274,51 @@ contract AllowlistV1Tests is AllowlistV1TestBase {
         allowlist.onlyAllowed(user, LibAllowlistMasks.DEPOSIT_MASK);
     }
 
+    function testConsolidateMaskGranted(uint256 userSalt) public {
+        assert(LibAllowlistMasks.CONSOLIDATE_MASK == 0x1 << 3);
+        address user = uf._new(userSalt);
+        vm.startPrank(allower);
+        address[] memory allowees = new address[](1);
+        allowees[0] = user;
+        uint256[] memory permissions =
+            AllowlistHelper.batchAllowees(allowees.length, LibAllowlistMasks.CONSOLIDATE_MASK);
+        allowlist.setAllowPermissions(allowees, permissions);
+        assert(allowlist.isAllowed(user, LibAllowlistMasks.CONSOLIDATE_MASK) == true);
+        assert(allowlist.hasPermission(user, LibAllowlistMasks.CONSOLIDATE_MASK) == true);
+        allowlist.onlyAllowed(user, LibAllowlistMasks.CONSOLIDATE_MASK);
+        assert(allowlist.getPermissions(user) == LibAllowlistMasks.CONSOLIDATE_MASK);
+    }
+
+    function testConsolidateMaskUnauthorized(uint256 userSalt) public {
+        address user = uf._new(userSalt);
+        assert(allowlist.isAllowed(user, LibAllowlistMasks.CONSOLIDATE_MASK) == false);
+        vm.expectRevert(abi.encodeWithSignature("Unauthorized(address)", user));
+        allowlist.onlyAllowed(user, LibAllowlistMasks.CONSOLIDATE_MASK);
+    }
+
+    function testConsolidateMaskDeniedRevokesAccess(uint256 userSalt) public {
+        address user = uf._new(userSalt);
+        address[] memory allowees = new address[](1);
+        allowees[0] = user;
+        vm.startPrank(allower);
+        {
+            uint256[] memory permissions =
+                AllowlistHelper.batchAllowees(allowees.length, LibAllowlistMasks.CONSOLIDATE_MASK);
+            allowlist.setAllowPermissions(allowees, permissions);
+            assert(allowlist.isAllowed(user, LibAllowlistMasks.CONSOLIDATE_MASK) == true);
+        }
+        vm.stopPrank();
+        vm.startPrank(denier);
+        {
+            uint256[] memory permissions = AllowlistHelper.batchAllowees(allowees.length, LibAllowlistMasks.DENY_MASK);
+            allowlist.setDenyPermissions(allowees, permissions);
+            assert(allowlist.isDenied(user) == true);
+            assert(allowlist.isAllowed(user, LibAllowlistMasks.CONSOLIDATE_MASK) == false);
+            vm.expectRevert(abi.encodeWithSignature("Denied(address)", user));
+            allowlist.onlyAllowed(user, LibAllowlistMasks.CONSOLIDATE_MASK);
+        }
+    }
+
     function testGetRawPermissions(uint256 userSalt) public {
         address user = uf._new(userSalt);
         vm.startPrank(allower);
