@@ -2793,6 +2793,37 @@ contract RiverV1CoverageTests is RiverV1TestBase {
         assertEq(uint256(vm.load(address(river), IN_FLIGHT_DEPOSIT_SLOT)), 0);
     }
 
+    /// Asserts that initRiverV1_3 reverts when the attestation verifier address is zero.
+    function testInitRiverV1_3RevertsOnZeroVerifier() public {
+        _initRiverAndV1_2();
+        bytes32 wc = withdraw.getCredentials();
+        vm.prank(admin);
+        vm.expectRevert(abi.encodeWithSignature("InvalidAttestationVerifier()"));
+        river.initRiverV1_3(wc, address(0));
+    }
+
+    /// Asserts that initRiverV1_3 reverts when the attestation verifier address is an EOA (no code).
+    function testInitRiverV1_3RevertsOnEoaVerifier() public {
+        _initRiverAndV1_2();
+        bytes32 wc = withdraw.getCredentials();
+        address eoa = makeAddr("eoaVerifier");
+        // sanity: makeAddr returns an address with no deployed code
+        assertEq(eoa.code.length, 0);
+        vm.prank(admin);
+        vm.expectRevert(abi.encodeWithSignature("InvalidAttestationVerifier()"));
+        river.initRiverV1_3(wc, eoa);
+    }
+
+    /// Asserts that initRiverV1_3 reverts when the verifier is bound to a different River.
+    function testInitRiverV1_3RevertsOnVerifierBoundToWrongRiver() public {
+        _initRiverAndV1_2();
+        AttestationVerifierV1 v = _deployValidatorFor(makeAddr("otherRiver"));
+        bytes32 wc = withdraw.getCredentials();
+        vm.prank(admin);
+        vm.expectRevert(abi.encodeWithSignature("InvalidAttestationVerifier()"));
+        river.initRiverV1_3(wc, address(v));
+    }
+
     /// Asserts that AttestationVerifier init reverts on an empty deposit-committee attester array.
     function testInitAttestationVerifierRevertsOnEmptyDepositCommitteeAttesters() public {
         _initRiverAndV1_2();
