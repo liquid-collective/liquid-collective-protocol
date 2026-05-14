@@ -32,38 +32,30 @@ library LibFundingDeltas {
             return new IOperatorsRegistryV1.OperatorFundingDelta[](0);
         }
 
-        // Pass 1: cache operator indices, validate them, find highestOpIdx.
-        uint256[] memory opIndices = new uint256[](len);
-        uint256 highestOpIdx = 0;
+        // Pass 1 (over deposits): validate operator indices and bucket-aggregate amounts and key
+        // counts per operator. Buckets are sized to operatorCount rather than highestOpIdx+1 so
+        // the previous index-caching pass over `deposits` is no longer needed.
+        uint256[] memory amountPerOp = new uint256[](operatorCount);
+        uint256[] memory keyCountPerOp = new uint256[](operatorCount);
         for (uint256 i = 0; i < len; i++) {
             uint256 opIdx = deposits[i].operatorIdx;
             if (opIdx >= operatorCount) revert InvalidOperatorIndex(opIdx, operatorCount);
-            opIndices[i] = opIdx;
-            if (opIdx > highestOpIdx) highestOpIdx = opIdx;
-        }
-
-        // Pass 2: bucket-aggregate amounts and key counts per operator.
-        uint256 buckets = highestOpIdx + 1;
-        uint256[] memory amountPerOp = new uint256[](buckets);
-        uint256[] memory keyCountPerOp = new uint256[](buckets);
-        for (uint256 i = 0; i < len; i++) {
-            uint256 opIdx = opIndices[i];
             amountPerOp[opIdx] += deposits[i].amount;
             keyCountPerOp[opIdx]++;
         }
 
         // Count populated buckets to size the deltas array.
         uint256 nonEmpty = 0;
-        for (uint256 j = 0; j < buckets; j++) {
+        for (uint256 j = 0; j < operatorCount; j++) {
             if (keyCountPerOp[j] > 0) ++nonEmpty;
         }
 
-        // Pass 3: allocate sparse deltas in ascending operator-index order.
+        // Pass 2 (over buckets): allocate sparse deltas in ascending operator-index order.
         deltas = new IOperatorsRegistryV1.OperatorFundingDelta[](nonEmpty);
-        uint256[] memory deltaIdxByOp = new uint256[](buckets);
-        uint256[] memory keyCursors = new uint256[](buckets);
+        uint256[] memory deltaIdxByOp = new uint256[](operatorCount);
+        uint256[] memory keyCursors = new uint256[](operatorCount);
         uint256 di = 0;
-        for (uint256 j = 0; j < buckets; j++) {
+        for (uint256 j = 0; j < operatorCount; j++) {
             if (keyCountPerOp[j] > 0) {
                 deltas[di].operatorIndex = j;
                 deltas[di].fundedETH = amountPerOp[j];
@@ -73,9 +65,9 @@ library LibFundingDeltas {
             }
         }
 
-        // Pass 4: fill per-operator pubkeys in deposit order.
+        // Pass 3 (over deposits): fill per-operator pubkeys in deposit order.
         for (uint256 i = 0; i < len; i++) {
-            uint256 opIdx = opIndices[i];
+            uint256 opIdx = deposits[i].operatorIdx;
             uint256 d = deltaIdxByOp[opIdx];
             deltas[d].newPublicKeys[keyCursors[opIdx]++] = deposits[i].pubkey;
         }
