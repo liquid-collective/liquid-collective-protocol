@@ -302,8 +302,13 @@ contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1 {
     }
 
     /// @notice Verify the BLS signatures against the canonical River withdrawal credentials.
+    /// @dev Entries flagged as `isTopUp` are skipped: the beacon-chain deposit contract does
+    ///      not enforce the signature for non-initial deposits to the same pubkey, so BLS
+    ///      verification adds no security for top-ups. Authorization for the classification
+    ///      is provided by the deposit-committee attestation over the buffer hash.
     /// @param deposits The deposits.
-    /// @param depositYs The deposit Y-coordinates.
+    /// @param depositYs The deposit Y-coordinates. For top-up entries the corresponding
+    ///                  slot is unused and may be a zero placeholder.
     /// @param withdrawalCredentials The canonical River withdrawal credentials.
     function _verifyBLSSignatures(
         IDepositDataBuffer.DepositObject[] memory deposits,
@@ -311,6 +316,7 @@ contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1 {
         bytes32 withdrawalCredentials
     ) internal view {
         for (uint256 i = 0; i < deposits.length; i++) {
+            if (deposits[i].isTopUp) continue;
             (bool ok, bytes memory revertData) = address(this)
                 .staticcall(
                     abi.encodeCall(

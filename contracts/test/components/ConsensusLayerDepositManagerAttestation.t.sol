@@ -256,7 +256,24 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
             signature: _fakeSignature(seed),
             amount: 32 ether,
             depositDataRoot: bytes32(0), // not checked by _depositValidator (it recomputes)
-            operatorIdx: opIdx
+            operatorIdx: opIdx,
+            isTopUp: false
+        });
+    }
+
+    /// @dev Build a top-up DepositObject (BLS verification path must be skipped for this entry).
+    function _makeTopUpDeposit(uint256 opIdx, uint256 seed)
+        internal
+        view
+        returns (IDepositDataBuffer.DepositObject memory)
+    {
+        return IDepositDataBuffer.DepositObject({
+            pubkey: _fakePubkey(seed),
+            signature: _fakeSignature(seed),
+            amount: 32 ether,
+            depositDataRoot: bytes32(0),
+            operatorIdx: opIdx,
+            isTopUp: true
         });
     }
 
@@ -590,6 +607,129 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
 
         vm.expectRevert(IAttestationVerifierV1.ZeroDepositDomain.selector);
         validator.verifyBLSDeposit(pk, sig, 32 ether, dy, withdrawalCredentials);
+    }
+
+    // -----------------------------------------------------------------------
+    // Top-up tests — BLS verification must be skipped for entries with isTopUp=true.
+    // Authorization for top-ups is delegated to the deposit committee (the attestation
+    // quorum signs over keccak256(abi.encode(deposits)), so the committee is attesting
+    // to each entry's isTopUp classification).
+    // -----------------------------------------------------------------------
+
+    // Top-up entries must never enter the BLS verification path. Proven here by zeroing
+    // the cached deposit domain on the validator: if the path were entered, the real
+    // verifyBLSDeposit body would short-circuit with ZeroDepositDomain. The BLS success
+    // mock is cleared first so the real code runs.
+    function testTopUp_skipsBLSVerification() public {
+        vm.clearMockedCalls();
+        vm.store(address(validator), VALIDATOR_DEPOSIT_DOMAIN_SLOT, bytes32(0));
+
+        IDepositDataBuffer.DepositObject[] memory deposits = new IDepositDataBuffer.DepositObject[](2);
+        deposits[0] = _makeTopUpDeposit(0, 50);
+        deposits[1] = _makeTopUpDeposit(1, 51);
+
+        (bytes32 bufferId, bytes32 rootHash, bytes[] memory sigs, BLS12_381.DepositY[] memory depositYs) =
+            _prepareDeposit(deposits);
+
+        vm.prank(keeper);
+        dm.depositToConsensusLayerWithAttestation(bufferId, rootHash, sigs, depositYs);
+
+        assertEq(depositContract.deposit_count(), 2);
+        assertEq(dm.lastFundedETH(0), 32 ether);
+        assertEq(dm.lastFundedETH(1), 32 ether);
+        assertEq(dm.getTotalDepositedETH(), 64 ether);
+    }
+
+    // The inverse: under the same zeroed-domain setup, an initial deposit (isTopUp=false)
+    // must enter the real BLS path and revert with ZeroDepositDomain. Proves the gate is
+    // default-deny on the classification flag and that the BLS path is reached.
+    function testInitial_blsPathReached_revertsOnZeroDepositDomain() public {
+        vm.clearMockedCalls();
+        vm.store(address(validator), VALIDATOR_DEPOSIT_DOMAIN_SLOT, bytes32(0));
+
+        IDepositDataBuffer.DepositObject[] memory deposits = new IDepositDataBuffer.DepositObject[](1);
+        deposits[0] = _makeDeposit(0, 60);
+
+        (bytes32 bufferId, bytes32 rootHash, bytes[] memory sigs, BLS12_381.DepositY[] memory depositYs) =
+            _prepareDeposit(deposits);
+
+        vm.prank(keeper);
+        vm.expectRevert(IAttestationVerifierV1.ZeroDepositDomain.selector);
+        dm.depositToConsensusLayerWithAttestation(bufferId, rootHash, sigs, depositYs);
+    }
+
+    // Mixed batch: a single initial deposit hitting the failing BLS path must reject the
+    // entire batch, even when paired with top-ups that would otherwise pass.
+    function testMixed_initialFailure_rejectsWholeBatch() public {
+        vm.clearMockedCalls();
+        vm.store(address(validator), VALIDATOR_DEPOSIT_DOMAIN_SLOT, bytes32(0));
+
+        IDepositDataBuffer.DepositObject[] memory deposits = new IDepositDataBuffer.DepositObject[](2);
+        deposits[0] = _makeTopUpDeposit(0, 70);
+        deposits[1] = _makeDeposit(1, 71); // initial — BLS path entered, reverts on zero domain
+
+        (bytes32 bufferId, bytes32 rootHash, bytes[] memory sigs, BLS12_381.DepositY[] memory depositYs) =
+            _prepareDeposit(deposits);
+
+        vm.prank(keeper);
+        vm.expectRevert(IAttestationVerifierV1.ZeroDepositDomain.selector);
+        dm.depositToConsensusLayerWithAttestation(bufferId, rootHash, sigs, depositYs);
+    }
+
+    // The bufferId binding (keccak256(abi.encode(deposits))) must cover isTopUp — tampering
+    // with the flag after attesters sign must break the binding and revert with BufferIdMismatch.
+    // Without this, a malicious buffer could downgrade an attested initial deposit to a top-up
+    // and bypass BLS verification.
+    function testRevert_bufferIdMismatch_isTopUpTampered() public {
+        IDepositDataBuffer.DepositObject[] memory depositsSigned = new IDepositDataBuffer.DepositObject[](1);
+        depositsSigned[0] = _makeDeposit(0, 80); // isTopUp: false (initial)
+
+        IDepositDataBuffer.DepositObject[] memory depositsActual = new IDepositDataBuffer.DepositObject[](1);
+        depositsActual[0] = _makeTopUpDeposit(0, 80); // identical content, isTopUp: true
+
+        bytes32 signedId = keccak256(abi.encode(depositsSigned));
+        bytes32 actualId = keccak256(abi.encode(depositsActual));
+        assertTrue(signedId != actualId, "test precondition: flipping isTopUp must change the bufferId");
+
+        // Malicious buffer: store the top-up version under the initial-deposit's signedId.
+        buffer.submitDepositData(signedId, depositsActual);
+
+        bytes32 rootHash = depositContract.get_deposit_root();
+        bytes[] memory sigs = new bytes[](2);
+        sigs[0] = _signAttestation(depositCommitteeAttesterPk1, signedId, rootHash);
+        sigs[1] = _signAttestation(depositCommitteeAttesterPk2, signedId, rootHash);
+
+        BLS12_381.DepositY[] memory depositYs = new BLS12_381.DepositY[](1);
+        depositYs[0] = _emptyDepositY();
+
+        vm.prank(keeper);
+        vm.expectRevert(abi.encodeWithSelector(IAttestationVerifierV1.BufferIdMismatch.selector, signedId, actualId));
+        dm.depositToConsensusLayerWithAttestation(signedId, rootHash, sigs, depositYs);
+    }
+
+    // Top-ups must still count toward the operator's fundedETH and appear in newPublicKeys
+    // exactly like initial deposits — LibFundingDeltas has no branch on deposit kind.
+    function testTopUp_fundingDeltas_accountIdenticallyToInitials() public {
+        // Mock from setUp() is still active: BLS verification succeeds for the initial deposit.
+
+        IDepositDataBuffer.DepositObject[] memory deposits = new IDepositDataBuffer.DepositObject[](2);
+        deposits[0] = _makeDeposit(0, 90); // initial
+        deposits[1] = _makeTopUpDeposit(0, 91); // top-up for same operator
+
+        (bytes32 bufferId, bytes32 rootHash, bytes[] memory sigs, BLS12_381.DepositY[] memory depositYs) =
+            _prepareDeposit(deposits);
+
+        bytes[] memory opKeys = new bytes[](2);
+        opKeys[0] = deposits[0].pubkey;
+        opKeys[1] = deposits[1].pubkey;
+        vm.expectEmit(true, false, false, true);
+        emit FundedValidatorKeys(0, opKeys, false);
+
+        vm.prank(keeper);
+        dm.depositToConsensusLayerWithAttestation(bufferId, rootHash, sigs, depositYs);
+
+        assertEq(dm.lastFundedETH(0), 64 ether, "both initial and top-up bump fundedETH");
+        assertEq(depositContract.deposit_count(), 2);
     }
 
     // setDepositCommitteeAttester must reject calls that would leave the attester's status unchanged so the

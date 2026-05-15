@@ -325,7 +325,8 @@ abstract contract AccountingHarnessBase is Test, BytesGenerator {
                 ),
                 amount: amounts[i],
                 depositDataRoot: bytes32(0),
-                operatorIdx: opIndices[i]
+                operatorIdx: opIndices[i],
+                isTopUp: false
             });
         }
     }

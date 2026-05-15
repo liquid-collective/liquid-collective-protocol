@@ -265,7 +265,8 @@ abstract contract RiverV1TestBase is OperatorAllocationTestBase, BytesGenerator 
                     signature: _fakeSignature(seed),
                     amount: 32 ether,
                     depositDataRoot: bytes32(0),
-                    operatorIdx: opIndices[i]
+                    operatorIdx: opIndices[i],
+                    isTopUp: false
                 });
                 idx++;
             }
@@ -315,7 +316,8 @@ abstract contract RiverV1TestBase is OperatorAllocationTestBase, BytesGenerator 
             signature: _fakeSignature(seed),
             amount: 32 ether,
             depositDataRoot: bytes32(0),
-            operatorIdx: opIndex
+            operatorIdx: opIndex,
+            isTopUp: false
         });
         _pubkeySeedCursor = seed + 1;
 
