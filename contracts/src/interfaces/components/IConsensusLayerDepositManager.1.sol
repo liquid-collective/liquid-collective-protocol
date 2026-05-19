@@ -37,9 +37,6 @@ interface IConsensusLayerDepositManagerV1 {
         bytes32 indexed depositDataBufferId, bytes32 indexed depositRootHash, uint256 totalAmount
     );
 
-    /// @notice Emitted per operator when validator keys are funded during a deposit
-    event FundedValidatorKeys(uint256 indexed operatorIndex, bytes[] publicKeys, bool deferred);
-
     /// @notice Emitted when the AttestationVerifier address is updated
     event SetAttestationVerifier(address indexed attestationVerifier);
 

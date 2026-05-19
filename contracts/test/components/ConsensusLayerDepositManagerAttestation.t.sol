@@ -106,7 +106,7 @@ contract AttestationDepositHarness is ConsensusLayerDepositManagerV1 {
             LibFundingDeltas.build(deposits, harnessOperatorCount);
         _incrementFundedETH(deltas);
         for (uint256 i = 0; i < deltas.length; i++) {
-            emit FundedValidatorKeys(deltas[i].operatorIndex, deltas[i].newPublicKeys, false);
+            emit IOperatorsRegistryV1.FundedValidatorKeys(deltas[i].operatorIndex, deltas[i].newPublicKeys, false);
         }
     }
 
