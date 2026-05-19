@@ -24,6 +24,10 @@ library InitialDepositedPubkeys {
         bytes32(uint256(keccak256("attestationVerifier.state.initialDepositedPubkeys.mapping")) - 1);
 
     /// @notice Retrieve the raw sentinel for a pubkey: 0 = unknown, n != 0 = funded by operator (n - 1).
+    /// @dev Returns the sentinel as stored. Most callers should prefer `lookupFundedOperator`,
+    ///      which decodes the sentinel into `(exists, operatorIdx)` and confines the `+1`/`-1`
+    ///      arithmetic to this library. This raw accessor exists for the external view exposed
+    ///      to off-chain producers and for direct slot inspection.
     /// @param pubkeyHash The keccak256 hash of the 48-byte BLS pubkey.
     /// @return The stored sentinel (operatorIdx + 1), or 0 if never recorded.
     function getFundedOperator(bytes32 pubkeyHash) internal view returns (uint256) {
@@ -31,10 +35,22 @@ library InitialDepositedPubkeys {
         return LibUnstructuredStorage.getStorageUint256(slot);
     }
 
+    /// @notice Decoded read of the funded-operator entry for a pubkey.
+    /// @dev Encapsulates the `+1` sentinel scheme so callers never perform `stored - 1`
+    ///      themselves — eliminating the underflow risk if the existence check is reordered.
+    /// @param pubkeyHash The keccak256 hash of the 48-byte BLS pubkey.
+    /// @return exists True if the pubkey was recorded as initial-deposited.
+    /// @return operatorIdx The operator that funded the initial deposit (defined iff exists).
+    function lookupFundedOperator(bytes32 pubkeyHash) internal view returns (bool exists, uint256 operatorIdx) {
+        uint256 stored = getFundedOperator(pubkeyHash);
+        if (stored == 0) return (false, 0);
+        return (true, stored - 1);
+    }
+
     /// @notice Check if a pubkey has been initial-deposited by River.
     /// @dev Convenience wrapper kept for back-compat with callers that only need the
     ///      "is this our pubkey?" predicate. New top-up validation uses
-    ///      `getFundedOperator` directly to also bind the operator.
+    ///      `lookupFundedOperator` to also bind the operator.
     /// @param pubkeyHash The keccak256 hash of the 48-byte BLS pubkey.
     /// @return True if the pubkey was recorded as initial-deposited.
     function hasInitialDeposit(bytes32 pubkeyHash) internal view returns (bool) {

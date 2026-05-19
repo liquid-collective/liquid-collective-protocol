@@ -361,11 +361,10 @@ contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1 {
         for (uint256 i = 0; i < deposits.length; i++) {
             if (BLS12_381.isZero(deposits[i].depositY)) {
                 bytes32 pubkeyHash = keccak256(deposits[i].pubkey);
-                uint256 stored = InitialDepositedPubkeys.getFundedOperator(pubkeyHash);
-                if (stored == 0) revert TopUpPubkeyNotInitialDeposited(pubkeyHash);
-                uint256 expected = deposits[i].operatorIdx + 1;
-                if (stored != expected) {
-                    revert TopUpOperatorMismatch(pubkeyHash, stored - 1, deposits[i].operatorIdx);
+                (bool exists, uint256 fundedOperatorIdx) = InitialDepositedPubkeys.lookupFundedOperator(pubkeyHash);
+                if (!exists) revert TopUpPubkeyNotInitialDeposited(pubkeyHash);
+                if (fundedOperatorIdx != deposits[i].operatorIdx) {
+                    revert TopUpOperatorMismatch(pubkeyHash, fundedOperatorIdx, deposits[i].operatorIdx);
                 }
                 continue;
             }

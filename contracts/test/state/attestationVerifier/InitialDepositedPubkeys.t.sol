@@ -15,6 +15,10 @@ contract InitialDepositedPubkeysInputs {
         return InitialDepositedPubkeys.getFundedOperator(pubkeyHash);
     }
 
+    function lookupFundedOperator(bytes32 pubkeyHash) external view returns (bool exists, uint256 operatorIdx) {
+        return InitialDepositedPubkeys.lookupFundedOperator(pubkeyHash);
+    }
+
     function markInitialDeposited(bytes32 pubkeyHash, uint256 operatorIdx) external {
         InitialDepositedPubkeys.markInitialDeposited(pubkeyHash, operatorIdx);
     }
@@ -99,6 +103,36 @@ contract InitialDepositedPubkeysTest is Test {
         inputs.markInitialDeposited(pkh, 2);
         assertTrue(inputs.hasInitialDeposit(pkh));
         assertEq(inputs.getFundedOperator(pkh), 3);
+    }
+
+    /// @dev `lookupFundedOperator` returns (false, 0) for an unset entry and (true, operatorIdx)
+    ///      after marking. Locks the decode contract so callers never need to do `stored - 1`.
+    function testLookupFundedOperator() public {
+        bytes32 pkh = keccak256(abi.encodePacked("pubkey-lookup"));
+
+        (bool exists, uint256 op) = inputs.lookupFundedOperator(pkh);
+        assertFalse(exists);
+        assertEq(op, 0);
+
+        inputs.markInitialDeposited(pkh, 11);
+        (exists, op) = inputs.lookupFundedOperator(pkh);
+        assertTrue(exists);
+        assertEq(op, 11);
+
+        inputs.unmarkInitialDeposited(pkh);
+        (exists, op) = inputs.lookupFundedOperator(pkh);
+        assertFalse(exists);
+        assertEq(op, 0);
+    }
+
+    /// @dev `lookupFundedOperator` must return the canonical operator index 0 (not the sentinel
+    ///      value 1) for a pubkey funded by operator 0 — proves the decode mirrors the encode.
+    function testLookupFundedOperator_operatorZero() public {
+        bytes32 pkh = keccak256(abi.encodePacked("pubkey-lookup-zero"));
+        inputs.markInitialDeposited(pkh, 0);
+        (bool exists, uint256 op) = inputs.lookupFundedOperator(pkh);
+        assertTrue(exists);
+        assertEq(op, 0);
     }
 
     /// @dev Slot derivation cross-check: a direct `vm.store` at the expected slot must be

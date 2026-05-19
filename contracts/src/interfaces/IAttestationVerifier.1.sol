@@ -189,12 +189,11 @@ interface IAttestationVerifierV1 {
 
     /// @notice Record one or more pubkey hashes as initial-deposited, each bound to the operator
     ///         that funded it. Only callable by River.
-    /// @dev River invokes this after the deposit-execution loop in `depositToConsensusLayerWithAttestation`,
-    ///      passing the pubkey hashes and matching operator indices of entries where `isTopUp == false`.
-    ///      The verifier later consults this bind to ensure top-ups against the same pubkey are credited
-    ///      to the same operator that originally funded it (see `TopUpOperatorMismatch`). Reverts on
-    ///      duplicates so a re-deposit of an already-funded validator surfaces as an error rather than
-    ///      a silent ownership overwrite.
+    /// @dev Called by River after the deposit-execution loop, once per initial-deposit batch entry.
+    ///      The recorded bind is later consulted by the top-up branch of `_verifyBLSSignatures` to
+    ///      ensure subsequent top-ups against the same pubkey are credited to the original operator
+    ///      (see `TopUpOperatorMismatch`). Reverts on duplicates so a re-deposit of an already-funded
+    ///      validator surfaces as an error rather than a silent ownership overwrite.
     /// @param pubkeyHashes The keccak256 hashes of the 48-byte BLS pubkeys to record
     /// @param operatorIndices The operator indices that funded each pubkey (parallel to pubkeyHashes)
     function recordInitialDeposits(bytes32[] calldata pubkeyHashes, uint256[] calldata operatorIndices) external;
