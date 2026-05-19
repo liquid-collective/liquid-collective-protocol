@@ -68,6 +68,16 @@ library BLS12_381 {
         Fp2 signatureY;
     }
 
+    /// @notice Returns true if every byte of the `DepositY` struct is zero.
+    /// @dev The all-zero `DepositY` is used as a sentinel in `IDepositDataBuffer.DepositObject`
+    ///      to mark a deposit as a top-up (BLS verification skipped). A valid BLS12-381 G1/G2
+    ///      point cannot have Y = 0 — both groups are 2-torsion-free in their prime-order
+    ///      subgroup — so no honest signer can produce this value for an initial deposit.
+    function isZero(DepositY memory dy) internal pure returns (bool) {
+        return dy.pubkeyY.a == bytes32(0) && dy.pubkeyY.b == bytes32(0) && dy.signatureY.c0_a == bytes32(0)
+            && dy.signatureY.c0_b == bytes32(0) && dy.signatureY.c1_a == bytes32(0) && dy.signatureY.c1_b == bytes32(0);
+    }
+
     /*´:°•.°+.*•´.*:˚.°*.˚•´.°:°•.°•.*•´.*:˚.°*.˚•´.°:°•.°+.*•´.*:*/
     /*                         CONSTANTS                          */
     /*.•°:°.´+˚.*°.˚:*.´•*.+°.•°:´*.´•*.•°.•°:°.´:•˚°.*°.˚:*.´+°.•*/

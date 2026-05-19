@@ -301,6 +301,15 @@ abstract contract AccountingHarnessBase is Test, BytesGenerator {
         });
     }
 
+    /// @dev Non-zero placeholder DepositY for initial deposits. BLS is mocked in this harness,
+    ///      so the value only needs to differ from the zero sentinel used for top-ups.
+    function _nonZeroDepositY(uint256 seed) internal pure returns (BLS12_381.DepositY memory) {
+        return BLS12_381.DepositY({
+            pubkeyY: BLS12_381.Fp({a: bytes32(uint256(seed) + 1), b: bytes32(0)}),
+            signatureY: BLS12_381.Fp2({c0_a: bytes32(0), c0_b: bytes32(0), c1_a: bytes32(0), c1_b: bytes32(0)})
+        });
+    }
+
     /// @dev Sign an EIP-712 attestation digest with the given private key.
     function _signAttestation(uint256 pk, bytes32 bufferId, bytes32 rootHash) internal view returns (bytes memory) {
         bytes32 domainSep =
@@ -335,7 +344,7 @@ abstract contract AccountingHarnessBase is Test, BytesGenerator {
                 amount: amounts[i],
                 depositDataRoot: bytes32(0),
                 operatorIdx: opIndices[i],
-                isTopUp: false
+                depositY: _nonZeroDepositY(nonce * 1000 + i)
             });
         }
     }

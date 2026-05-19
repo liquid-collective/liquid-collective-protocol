@@ -170,6 +170,15 @@ abstract contract RiverV1TestBase is OperatorAllocationTestBase, BytesGenerator 
         });
     }
 
+    /// @dev Non-zero placeholder DepositY for initial deposits. BLS is mocked in these tests,
+    ///      so the value only needs to differ from the zero sentinel used for top-ups.
+    function _nonZeroDepositY(uint256 seed) internal pure returns (BLS12_381.DepositY memory) {
+        return BLS12_381.DepositY({
+            pubkeyY: BLS12_381.Fp({a: bytes32(uint256(seed) + 1), b: bytes32(0)}),
+            signatureY: BLS12_381.Fp2({c0_a: bytes32(0), c0_b: bytes32(0), c1_a: bytes32(0), c1_b: bytes32(0)})
+        });
+    }
+
     bytes32 constant withdrawalCredentials = 0x0200000000000000000000000000000000000000000000000000000000000000;
 
     function setUp() public virtual {
@@ -266,7 +275,7 @@ abstract contract RiverV1TestBase is OperatorAllocationTestBase, BytesGenerator 
                     amount: 32 ether,
                     depositDataRoot: bytes32(0),
                     operatorIdx: opIndices[i],
-                    isTopUp: false
+                    depositY: _nonZeroDepositY(seed)
                 });
                 idx++;
             }
@@ -282,15 +291,10 @@ abstract contract RiverV1TestBase is OperatorAllocationTestBase, BytesGenerator 
         sigs[0] = _signAttestation(depositCommitteeAttesterPk1, bufferId, rootHash);
         sigs[1] = _signAttestation(depositCommitteeAttesterPk2, bufferId, rootHash);
 
-        BLS12_381.DepositY[] memory ys = new BLS12_381.DepositY[](total);
-        for (uint256 i = 0; i < total; i++) {
-            ys[i] = _emptyDepositY();
-        }
-
         // The new function requires keeper, not admin
         address currentKeeper = river.getKeeper();
         vm.prank(currentKeeper);
-        river.depositToConsensusLayerWithAttestation(bufferId, rootHash, sigs, ys);
+        river.depositToConsensusLayerWithAttestation(bufferId, rootHash, sigs);
     }
 
     /// @dev Single-operator convenience overload.
@@ -307,7 +311,7 @@ abstract contract RiverV1TestBase is OperatorAllocationTestBase, BytesGenerator 
     ///      so the caller can place vm.expectRevert immediately before that call.
     function _buildSingleDepositArgs(uint256 opIndex)
         internal
-        returns (bytes32 bufferId, bytes32 rootHash, bytes[] memory sigs, BLS12_381.DepositY[] memory ys)
+        returns (bytes32 bufferId, bytes32 rootHash, bytes[] memory sigs)
     {
         IDepositDataBuffer.DepositObject[] memory deposits = new IDepositDataBuffer.DepositObject[](1);
         uint256 seed = _pubkeySeedCursor;
@@ -317,7 +321,7 @@ abstract contract RiverV1TestBase is OperatorAllocationTestBase, BytesGenerator 
             amount: 32 ether,
             depositDataRoot: bytes32(0),
             operatorIdx: opIndex,
-            isTopUp: false
+            depositY: _nonZeroDepositY(seed)
         });
         _pubkeySeedCursor = seed + 1;
 
@@ -328,9 +332,6 @@ abstract contract RiverV1TestBase is OperatorAllocationTestBase, BytesGenerator 
         sigs = new bytes[](2);
         sigs[0] = _signAttestation(depositCommitteeAttesterPk1, bufferId, rootHash);
         sigs[1] = _signAttestation(depositCommitteeAttesterPk2, bufferId, rootHash);
-
-        ys = new BLS12_381.DepositY[](1);
-        ys[0] = _emptyDepositY();
     }
 }
 
@@ -1068,12 +1069,11 @@ contract RiverV1Tests is RiverV1TestBase {
         vm.prank(admin);
         operatorsRegistry.setOperatorStatus(operatorOneIndex, false);
 
-        (bytes32 bufferId, bytes32 rootHash, bytes[] memory sigs, BLS12_381.DepositY[] memory ys) =
-            _buildSingleDepositArgs(operatorOneIndex);
+        (bytes32 bufferId, bytes32 rootHash, bytes[] memory sigs) = _buildSingleDepositArgs(operatorOneIndex);
 
         vm.prank(river.getKeeper());
         vm.expectRevert(abi.encodeWithSelector(IOperatorsRegistryV1.InactiveOperator.selector, operatorOneIndex));
-        river.depositToConsensusLayerWithAttestation(bufferId, rootHash, sigs, ys);
+        river.depositToConsensusLayerWithAttestation(bufferId, rootHash, sigs);
 
         assertEq(river.getTotalDepositedETH(), 0);
     }
@@ -1090,14 +1090,13 @@ contract RiverV1Tests is RiverV1TestBase {
         // No exitedETH recorded for this operator yet, so any non-zero requestedExits trips the check.
         operatorsRegistry.sudoSetRequestedExits(operatorOneIndex, 32 ether);
 
-        (bytes32 bufferId, bytes32 rootHash, bytes[] memory sigs, BLS12_381.DepositY[] memory ys) =
-            _buildSingleDepositArgs(operatorOneIndex);
+        (bytes32 bufferId, bytes32 rootHash, bytes[] memory sigs) = _buildSingleDepositArgs(operatorOneIndex);
 
         vm.prank(river.getKeeper());
         vm.expectRevert(
             abi.encodeWithSelector(IOperatorsRegistryV1.OperatorIgnoredExitRequests.selector, operatorOneIndex)
         );
-        river.depositToConsensusLayerWithAttestation(bufferId, rootHash, sigs, ys);
+        river.depositToConsensusLayerWithAttestation(bufferId, rootHash, sigs);
 
         assertEq(river.getTotalDepositedETH(), 0);
     }

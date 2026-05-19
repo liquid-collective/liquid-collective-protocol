@@ -63,11 +63,6 @@ interface IAttestationVerifierV1 {
     /// @param max The configured maximum
     error TooManySignatures(uint256 count, uint256 max);
 
-    /// @notice The depositYs array length does not match the deposit batch length
-    /// @param depositCount The number of deposits in the batch
-    /// @param yCount The number of Y-coordinates supplied
-    error BLSSignatureCountMismatch(uint256 depositCount, uint256 yCount);
-
     /// @notice A deposit's pubkey field has an unexpected byte length
     /// @param index The deposit index in the batch
     /// @param length The observed length
@@ -156,7 +151,6 @@ interface IAttestationVerifierV1 {
     /// @param depositDataBufferId  Batch identifier in the DepositDataBuffer
     /// @param depositRootHash      Current deposit contract root hash co-signed by deposit-committee attesters
     /// @param signatures           EIP-712 deposit-committee attester signatures
-    /// @param depositYs            Y-coordinates for BLS decompression, one per deposit
     /// @param depositContract      The official ETH deposit contract; queried for the current root
     /// @param withdrawalCredentials The protocol-configured WC; every deposit's WC must match
     /// @param committedBalance     Total amount summed over deposits must not exceed this
@@ -166,7 +160,6 @@ interface IAttestationVerifierV1 {
         bytes32 depositDataBufferId,
         bytes32 depositRootHash,
         bytes[] calldata signatures,
-        BLS12_381.DepositY[] calldata depositYs,
         address depositContract,
         bytes32 withdrawalCredentials,
         uint256 committedBalance

@@ -1,6 +1,8 @@
 //SPDX-License-Identifier: BUSL-1.1
 pragma solidity 0.8.34;
 
+import "../libraries/BLS12_381.sol";
+
 /// @title IDepositDataBuffer
 /// @notice Interface for the DepositDataBuffer contract that stores pre-committed validator deposit batches.
 interface IDepositDataBuffer {
@@ -9,13 +11,15 @@ interface IDepositDataBuffer {
     ///      passed into `validate()` at deposit time and used both for BLS signature
     ///      verification and for the official deposit contract call, removing any need
     ///      to trust the buffer producer on this field.
-    /// @dev `isTopUp` distinguishes a top-up (subsequent deposit to an existing protocol
-    ///      validator under Pectra 0x02 credentials) from an initial deposit. BLS signature
-    ///      verification is skipped for top-ups because the beacon-chain deposit contract
-    ///      does not enforce the signature for non-initial deposits to the same pubkey.
-    ///      Authorization for this classification is delegated to the deposit committee:
-    ///      the attestation quorum signs over `keccak256(abi.encode(deposits))`, so the
-    ///      committee is attesting to each entry's `isTopUp` flag.
+    /// @dev Initial vs top-up classification is encoded structurally via `depositY`:
+    ///      a non-zero `DepositY` carries the Y-coordinates needed for BLS decompression
+    ///      and marks the entry as an **initial deposit** (BLS is verified). An all-zero
+    ///      `DepositY` marks the entry as a **top-up** (BLS skipped; pubkey must already
+    ///      be in `InitialDepositedPubkeys` for the call to succeed). The sentinel is
+    ///      cryptographically safe because BLS12-381 has no Y=0 points in G1 or G2's
+    ///      prime-order subgroup, so no honest BLS signer can produce a zero `DepositY`.
+    ///      The deposit committee signs over `keccak256(abi.encode(deposits))`, so this
+    ///      classification is attested to as part of the buffer hash.
     struct DepositObject {
         /// @dev 48-byte BLS public key of the validator
         bytes pubkey;
@@ -32,10 +36,9 @@ interface IDepositDataBuffer {
         /// @dev Index of the node operator this deposit funds, as registered in the
         ///      OperatorsRegistry. Range-checked by River against the live operator count.
         uint256 operatorIdx;
-        /// @dev `false` for an initial deposit (BLS signature is verified). `true` for a
-        ///      top-up to an existing protocol validator (BLS verification is skipped).
-        ///      Default `false` is the safer default.
-        bool isTopUp;
+        /// @dev Y-coordinates for BLS decompression of the pubkey + signature. Non-zero for
+        ///      an initial deposit (BLS verified); all-zero for a top-up (BLS skipped).
+        BLS12_381.DepositY depositY;
     }
 
     // -----------------------------------------------------------------------

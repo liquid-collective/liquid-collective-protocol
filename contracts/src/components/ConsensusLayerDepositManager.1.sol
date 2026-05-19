@@ -120,8 +120,7 @@ abstract contract ConsensusLayerDepositManagerV1 is IConsensusLayerDepositManage
     function depositToConsensusLayerWithAttestation(
         bytes32 depositDataBufferId,
         bytes32 depositRootHash,
-        bytes[] calldata signatures,
-        BLS12_381.DepositY[] calldata depositYs
+        bytes[] calldata signatures
     ) external {
         // 1. Keeper check
         if (msg.sender != KeeperAddress.get()) revert OnlyKeeper();
@@ -139,23 +138,18 @@ abstract contract ConsensusLayerDepositManagerV1 is IConsensusLayerDepositManage
                 AttestationVerifierAddress.get()
             )
             .validate(
-                depositDataBufferId,
-                depositRootHash,
-                signatures,
-                depositYs,
-                depositContract,
-                withdrawalCredentials,
-                committedBalance
+                depositDataBufferId, depositRootHash, signatures, depositContract, withdrawalCredentials, committedBalance
             );
 
         // 5. Update operator funded validator accounting
         _updateFundedETHFromBuffer(deposits);
 
         // 6. Execute deposits and collect initial-deposit pubkey hashes for the verifier callback.
+        //    An all-zero `depositY` marks a top-up; non-zero marks an initial deposit.
         uint256 len = deposits.length;
         uint256 initialCount = 0;
         for (uint256 i = 0; i < len; i++) {
-            if (!deposits[i].isTopUp) initialCount++;
+            if (!BLS12_381.isZero(deposits[i].depositY)) initialCount++;
         }
         bytes32[] memory initialHashes = new bytes32[](initialCount);
         uint256 initialCursor = 0;
@@ -164,7 +158,7 @@ abstract contract ConsensusLayerDepositManagerV1 is IConsensusLayerDepositManage
             _depositValidator(
                 deposits[i].pubkey, deposits[i].signature, deposits[i].amount, withdrawalCredentials, depositContract
             );
-            if (!deposits[i].isTopUp) {
+            if (!BLS12_381.isZero(deposits[i].depositY)) {
                 initialHashes[initialCursor++] = keccak256(deposits[i].pubkey);
             }
         }

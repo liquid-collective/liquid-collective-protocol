@@ -219,7 +219,6 @@ contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1 {
         bytes32 depositDataBufferId,
         bytes32 depositRootHash,
         bytes[] calldata signatures,
-        BLS12_381.DepositY[] calldata depositYs,
         address depositContract,
         bytes32 withdrawalCredentials,
         uint256 committedBalance
@@ -232,14 +231,11 @@ contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1 {
         uint256 depositCount = deposits.length;
         if (depositCount == 0) revert NoDeposits();
 
-        // 3. depositYs count must match
-        if (depositYs.length != depositCount) revert BLSSignatureCountMismatch(depositCount, depositYs.length);
-
-        // 4. Re-compute and check the bufferId binding so the buffer cannot tamper post-attestation
+        // 3. Re-compute and check the bufferId binding so the buffer cannot tamper post-attestation
         bytes32 computedId = keccak256(abi.encode(deposits));
         if (computedId != depositDataBufferId) revert BufferIdMismatch(depositDataBufferId, computedId);
 
-        // 5. Enforce fixed lengths on BLS pubkey/signature and accumulate totalAmount.
+        // 4. Enforce fixed lengths on BLS pubkey/signature and accumulate totalAmount.
         //    The canonical River WC is supplied by the caller and used directly for BLS verification,
         //    so the buffer producer is not trusted on the WC field (no per-deposit WC stored).
         for (uint256 i = 0; i < depositCount; i++) {
@@ -253,8 +249,8 @@ contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1 {
         }
         if (totalAmount > committedBalance) revert NotEnoughFunds();
 
-        // 6. Verify BLS signatures against canonical River WC (heaviest step — last so cheap checks fail fast)
-        _verifyBLSSignatures(deposits, depositYs, withdrawalCredentials);
+        // 5. Verify BLS signatures against canonical River WC (heaviest step — last so cheap checks fail fast)
+        _verifyBLSSignatures(deposits, withdrawalCredentials);
     }
 
     // -----------------------------------------------------------------------
@@ -335,22 +331,21 @@ contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1 {
     }
 
     /// @notice Verify the BLS signatures against the canonical River withdrawal credentials.
-    /// @dev Entries flagged as `isTopUp` are skipped from BLS verification but must reference
-    ///      a pubkey already recorded in `InitialDepositedPubkeys` — defense in depth against a
-    ///      compromised committee marking an attacker-owned pubkey as a top-up. Note: this gate
-    ///      does NOT close the residual surface where an operator legitimately receives an
-    ///      initial deposit and then switches the validator's withdrawal credentials under
-    ///      Pectra; closing that needs current-WC proofs (EIP-4788) and is out of scope here.
+    /// @dev Entries with an all-zero `depositY` are treated as top-ups: BLS verification is
+    ///      skipped, but the pubkey must already be in `InitialDepositedPubkeys` — defense
+    ///      in depth against a compromised committee marking an attacker-owned pubkey as a
+    ///      top-up. Note: this gate does NOT close the residual surface where an operator
+    ///      legitimately receives an initial deposit and then switches the validator's
+    ///      withdrawal credentials under Pectra; closing that needs current-WC proofs
+    ///      (EIP-4788) and is out of scope here.
     /// @param deposits The deposits.
-    /// @param depositYs Y-coordinates, 1:1 with deposits. Top-up slots may be zero placeholders.
     /// @param withdrawalCredentials The canonical River withdrawal credentials.
     function _verifyBLSSignatures(
         IDepositDataBuffer.DepositObject[] memory deposits,
-        BLS12_381.DepositY[] calldata depositYs,
         bytes32 withdrawalCredentials
     ) internal view {
         for (uint256 i = 0; i < deposits.length; i++) {
-            if (deposits[i].isTopUp) {
+            if (BLS12_381.isZero(deposits[i].depositY)) {
                 bytes32 pubkeyHash = keccak256(deposits[i].pubkey);
                 if (!InitialDepositedPubkeys.hasInitialDeposit(pubkeyHash)) {
                     revert TopUpPubkeyNotInitialDeposited(pubkeyHash);
@@ -365,7 +360,7 @@ contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1 {
                             deposits[i].pubkey,
                             deposits[i].signature,
                             deposits[i].amount,
-                            depositYs[i],
+                            deposits[i].depositY,
                             withdrawalCredentials
                         )
                     )
