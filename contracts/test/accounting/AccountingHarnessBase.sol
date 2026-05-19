@@ -101,6 +101,12 @@ abstract contract AccountingHarnessBase is Test, BytesGenerator {
     AccountingMockDepositDataBuffer internal depositBuffer;
     AttestationVerifierV1 internal attestationVerifier;
 
+    /// @dev Monotonic counter mixed into pubkey/signature generation in `_makeDepositObjects`.
+    ///      Without it, two batches built in the same block with the same `(i, opIdx)` produce
+    ///      identical pubkeys, which collides with the on-chain `PubkeyAlreadyInitialDeposited`
+    ///      guard in `AttestationVerifier.recordInitialDeposits`.
+    uint256 internal _depositBatchNonce;
+
     // ─── attestation ──────────────────────────────────────────────────────────
     uint256 internal constant DEPOSIT_COMMITTEE_ATTESTER_PK_1 = 0xA1;
     uint256 internal constant DEPOSIT_COMMITTEE_ATTESTER_PK_2 = 0xA2;
@@ -306,21 +312,24 @@ abstract contract AccountingHarnessBase is Test, BytesGenerator {
     }
 
     /// @dev Build deposit objects from a set of (operatorIndex, amount) tuples.
-    ///      Each deposit uses a deterministic pubkey/signature seeded by position.
+    ///      Each deposit uses a deterministic pubkey/signature seeded by position and a
+    ///      monotonically-incrementing batch nonce so successive `sim_deposit` calls in the
+    ///      same block don't collide on pubkeys (which would trip the on-chain
+    ///      `PubkeyAlreadyInitialDeposited` guard).
     function _makeDepositObjects(uint256[] memory opIndices, uint256[] memory amounts)
         internal
-        view
         returns (IDepositDataBuffer.DepositObject[] memory deposits)
     {
         require(opIndices.length == amounts.length, "length mismatch");
+        uint256 nonce = ++_depositBatchNonce;
         bytes32 wc = river.getWithdrawalCredentials();
         deposits = new IDepositDataBuffer.DepositObject[](opIndices.length);
         for (uint256 i = 0; i < opIndices.length; i++) {
             deposits[i] = IDepositDataBuffer.DepositObject({
-                pubkey: abi.encodePacked(sha256(abi.encode("pubkey", i, opIndices[i], block.number)), bytes16(0)),
+                pubkey: abi.encodePacked(sha256(abi.encode("pubkey", i, opIndices[i], nonce)), bytes16(0)),
                 signature: abi.encodePacked(
-                    sha256(abi.encode("sig-a", i, opIndices[i], block.number)),
-                    sha256(abi.encode("sig-b", i, opIndices[i], block.number)),
+                    sha256(abi.encode("sig-a", i, opIndices[i], nonce)),
+                    sha256(abi.encode("sig-b", i, opIndices[i], nonce)),
                     bytes32(0)
                 ),
                 amount: amounts[i],

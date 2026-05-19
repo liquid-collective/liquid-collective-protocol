@@ -151,12 +151,35 @@ abstract contract ConsensusLayerDepositManagerV1 is IConsensusLayerDepositManage
         // 5. Update operator funded validator accounting
         _updateFundedETHFromBuffer(deposits);
 
-        // 6. execute the deposits
+        // 6. execute the deposits AND collect pubkey hashes of initial deposits.
+        //    The initial-deposit set must be populated post-execution so the AttestationVerifier
+        //    callback in step 7 only registers pubkeys whose deposit actually landed.
+        //
+        //    Two-pass / pre-sized allocation pattern (mirrors LibFundingDeltas.build) — count
+        //    initial entries first to size the hash array exactly, then fold collection into the
+        //    existing deposit-execution loop. Avoids memory-trim assembly and the per-batch cost
+        //    is bounded by `deposits.length`.
         uint256 len = deposits.length;
+        uint256 initialCount = 0;
+        for (uint256 i = 0; i < len; i++) {
+            if (!deposits[i].isTopUp) initialCount++;
+        }
+        bytes32[] memory initialHashes = new bytes32[](initialCount);
+        uint256 initialCursor = 0;
+
         for (uint256 i = 0; i < len; i++) {
             _depositValidator(
                 deposits[i].pubkey, deposits[i].signature, deposits[i].amount, withdrawalCredentials, depositContract
             );
+            if (!deposits[i].isTopUp) {
+                initialHashes[initialCursor++] = keccak256(deposits[i].pubkey);
+            }
+        }
+
+        // 7. Record initial-deposit pubkeys so future top-ups for them can pass the
+        //    `AttestationVerifier._verifyBLSSignatures` ownership check.
+        if (initialCount > 0) {
+            IAttestationVerifierV1(AttestationVerifierAddress.get()).recordInitialDeposits(initialHashes);
         }
 
         _setCommittedBalance(committedBalance - totalAmount);

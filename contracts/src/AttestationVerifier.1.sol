@@ -17,6 +17,7 @@ import "./state/attestationVerifier/DepositCommitteeAttesters.sol";
 import "./state/attestationVerifier/DepositDataBufferAddress.sol";
 import "./state/attestationVerifier/DepositDomainValue.sol";
 import "./state/attestationVerifier/DomainSeparator.sol";
+import "./state/attestationVerifier/InitialDepositedPubkeys.sol";
 import "./state/shared/RiverAddress.sol";
 
 /// @title AttestationVerifier (v1)
@@ -58,6 +59,16 @@ contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1 {
     /// @dev Single source of truth for governance — same admin manages River and this verifier.
     modifier onlyRiverAdmin() {
         if (msg.sender != IAdministrable(RiverAddress.get()).getAdmin()) {
+            revert LibErrors.Unauthorized(msg.sender);
+        }
+        _;
+    }
+
+    /// @notice Restrict to River itself (the deposit-execution path), not its admin.
+    /// @dev Used to gate state-mutating callbacks that should only fire as part of a
+    ///      River-initiated deposit flow (e.g. `recordInitialDeposits`).
+    modifier onlyRiver() {
+        if (msg.sender != RiverAddress.get()) {
             revert LibErrors.Unauthorized(msg.sender);
         }
         _;
@@ -247,6 +258,28 @@ contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1 {
     }
 
     // -----------------------------------------------------------------------
+    // Initial-deposit recording (callback from River after the deposit-execution loop)
+    // -----------------------------------------------------------------------
+
+    /// @inheritdoc IAttestationVerifierV1
+    function recordInitialDeposits(bytes32[] calldata pubkeyHashes) external onlyRiver {
+        uint256 len = pubkeyHashes.length;
+        for (uint256 i = 0; i < len; ++i) {
+            bytes32 pubkeyHash = pubkeyHashes[i];
+            if (InitialDepositedPubkeys.hasInitialDeposit(pubkeyHash)) {
+                revert PubkeyAlreadyInitialDeposited(pubkeyHash);
+            }
+            InitialDepositedPubkeys.markInitialDeposited(pubkeyHash);
+            emit InitialDepositRecorded(pubkeyHash);
+        }
+    }
+
+    /// @inheritdoc IAttestationVerifierV1
+    function hasInitialDeposit(bytes32 pubkeyHash) external view returns (bool) {
+        return InitialDepositedPubkeys.hasInitialDeposit(pubkeyHash);
+    }
+
+    // -----------------------------------------------------------------------
     // Internal — attestation quorum + BLS verification
     // -----------------------------------------------------------------------
 
@@ -302,10 +335,18 @@ contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1 {
     }
 
     /// @notice Verify the BLS signatures against the canonical River withdrawal credentials.
-    /// @dev Entries flagged as `isTopUp` are skipped: the beacon-chain deposit contract does
-    ///      not enforce the signature for non-initial deposits to the same pubkey, so BLS
-    ///      verification adds no security for top-ups. Authorization for the classification
-    ///      is provided by the deposit-committee attestation over the buffer hash.
+    /// @dev Entries flagged as `isTopUp` are skipped from BLS verification but must reference
+    ///      a pubkey already recorded in `InitialDepositedPubkeys` — defense in depth against a
+    ///      compromised committee marking an attacker-owned pubkey as a top-up. Note: this gate
+    ///      does NOT close the residual surface where an operator legitimately receives an
+    ///      initial deposit and then switches the validator's withdrawal credentials under
+    ///      Pectra; closing that needs current-WC proofs (EIP-4788) and is out of scope here.
+    /// @dev Dense vs sparse `depositYs`: `depositYs` is 1:1 with `deposits` (length must match
+    ///      `deposits.length`); for top-up indices the slot is never read and may be a zero
+    ///      placeholder. A sparse layout (one slot per non-top-up only) would save ~768 gas of
+    ///      zero-byte calldata per top-up but couples on-chain indexing to a "nth non-top-up"
+    ///      convention that's easy to mis-align with off-chain producers. Dense is preferred
+    ///      here for the mechanical `depositYs[i] ↔ deposits[i]` invariant.
     /// @param deposits The deposits.
     /// @param depositYs The deposit Y-coordinates. For top-up entries the corresponding
     ///                  slot is unused and may be a zero placeholder.
@@ -316,7 +357,13 @@ contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1 {
         bytes32 withdrawalCredentials
     ) internal view {
         for (uint256 i = 0; i < deposits.length; i++) {
-            if (deposits[i].isTopUp) continue;
+            if (deposits[i].isTopUp) {
+                bytes32 pubkeyHash = keccak256(deposits[i].pubkey);
+                if (!InitialDepositedPubkeys.hasInitialDeposit(pubkeyHash)) {
+                    revert TopUpPubkeyNotInitialDeposited(pubkeyHash);
+                }
+                continue;
+            }
             (bool ok, bytes memory revertData) = address(this)
                 .staticcall(
                     abi.encodeCall(

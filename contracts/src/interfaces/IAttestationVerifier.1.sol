@@ -32,6 +32,10 @@ interface IAttestationVerifierV1 {
     /// @notice Emitted when the River address is set on this verifier
     event SetRiver(address indexed river);
 
+    /// @notice Emitted when River records a pubkey as initial-deposited.
+    /// @param pubkeyHash keccak256 of the 48-byte BLS pubkey
+    event InitialDepositRecorded(bytes32 indexed pubkeyHash);
+
     // -----------------------------------------------------------------------
     // Errors
     // -----------------------------------------------------------------------
@@ -106,6 +110,18 @@ interface IAttestationVerifierV1 {
     /// @param value The requested status (matches current status)
     error DepositCommitteeAttesterStatusUnchanged(address depositCommitteeAttester, bool value);
 
+    /// @notice A top-up referenced a pubkey that has never been initial-deposited by River.
+    ///         Without this check, a malicious committee could mark an attacker pubkey as a
+    ///         top-up and bypass BLS verification.
+    /// @param pubkeyHash keccak256 of the offending BLS pubkey
+    error TopUpPubkeyNotInitialDeposited(bytes32 pubkeyHash);
+
+    /// @notice recordInitialDeposits was passed a pubkey already in the initial-deposit set.
+    ///         Re-funding the same validator as an "initial" deposit is almost certainly a bug
+    ///         or attack — surface it loudly rather than silently overwriting.
+    /// @param pubkeyHash keccak256 of the offending BLS pubkey
+    error PubkeyAlreadyInitialDeposited(bytes32 pubkeyHash);
+
     // -----------------------------------------------------------------------
     // Initialization
     // -----------------------------------------------------------------------
@@ -155,6 +171,17 @@ interface IAttestationVerifierV1 {
         bytes32 withdrawalCredentials,
         uint256 committedBalance
     ) external view returns (IDepositDataBuffer.DepositObject[] memory deposits, uint256 totalAmount);
+
+    // -----------------------------------------------------------------------
+    // Initial-deposit recording (called by River after a successful deposit batch)
+    // -----------------------------------------------------------------------
+
+    /// @notice Record one or more pubkey hashes as initial-deposited. Only callable by River.
+    /// @dev River invokes this after the deposit-execution loop in `depositToConsensusLayerWithAttestation`,
+    ///      passing only the pubkey hashes of entries where `isTopUp == false`. Reverts on duplicates so
+    ///      a re-deposit of an already-funded validator surfaces as an error rather than a silent overwrite.
+    /// @param pubkeyHashes The keccak256 hashes of the 48-byte BLS pubkeys to record
+    function recordInitialDeposits(bytes32[] calldata pubkeyHashes) external;
 
     // -----------------------------------------------------------------------
     // Admin setters
@@ -207,4 +234,11 @@ interface IAttestationVerifierV1 {
     /// @notice The River address this verifier is bound to (verifyingContract + admin source)
     /// @return The River address
     function getRiver() external view returns (address);
+
+    /// @notice Check whether a pubkey has been initial-deposited by River.
+    /// @dev Off-chain producers should subscribe to `InitialDepositRecorded` events and use
+    ///      this view to confirm a pubkey is eligible for top-up submissions.
+    /// @param pubkeyHash The keccak256 hash of the 48-byte BLS pubkey
+    /// @return True if the pubkey is currently in the initial-deposit set
+    function hasInitialDeposit(bytes32 pubkeyHash) external view returns (bool);
 }
