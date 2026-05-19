@@ -235,9 +235,15 @@ contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1 {
         bytes32 computedId = keccak256(abi.encode(deposits));
         if (computedId != depositDataBufferId) revert BufferIdMismatch(depositDataBufferId, computedId);
 
-        // 4. Enforce fixed lengths on BLS pubkey/signature and accumulate totalAmount.
-        //    The canonical River WC is supplied by the caller and used directly for BLS verification,
-        //    so the buffer producer is not trusted on the WC field (no per-deposit WC stored).
+        // 4. Single pass over deposits: enforce field lengths, accumulate totalAmount, and
+        //    validate each entry's pubkey-state. For top-ups, assert the pubkey is funded and
+        //    the buffer-asserted operator matches the recorded one. For initials, assert the
+        //    pubkey is not already recorded AND does not duplicate any earlier entry in this
+        //    batch — fails here, BEFORE any deposit is executed, so a producer bug burns one
+        //    `validate` call's gas rather than a full batch of `IDepositContract.deposit{}` ones.
+        //    The canonical River WC is supplied by the caller and used directly for BLS
+        //    verification, so the buffer producer is not trusted on the WC field.
+        bytes32[] memory pubkeyHashes = new bytes32[](depositCount);
         for (uint256 i = 0; i < depositCount; i++) {
             if (deposits[i].pubkey.length != DEPOSIT_PUBKEY_LENGTH) {
                 revert InvalidPubkeyLength(i, deposits[i].pubkey.length);
@@ -246,10 +252,31 @@ contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1 {
                 revert InvalidSignatureLength(i, deposits[i].signature.length);
             }
             totalAmount += deposits[i].amount;
+
+            bytes32 pkHash = keccak256(deposits[i].pubkey);
+            pubkeyHashes[i] = pkHash;
+
+            if (BLS12_381.isZero(deposits[i].depositY)) {
+                (bool exists, uint256 fundedOperatorIdx) = InitialDepositedPubkeys.lookupFundedOperator(pkHash);
+                if (!exists) revert TopUpPubkeyHasNoInitialDeposit(pkHash);
+                if (fundedOperatorIdx != deposits[i].operatorIdx) {
+                    revert TopUpOperatorMismatch(pkHash, fundedOperatorIdx, deposits[i].operatorIdx);
+                }
+            } else {
+                if (InitialDepositedPubkeys.hasInitialDeposit(pkHash)) {
+                    revert DuplicateInitialDeposit(pkHash);
+                }
+                for (uint256 j = 0; j < i; j++) {
+                    if (pubkeyHashes[j] == pkHash) {
+                        revert DuplicateInitialDeposit(pkHash);
+                    }
+                }
+            }
         }
         if (totalAmount > committedBalance) revert NotEnoughFunds();
 
-        // 5. Verify BLS signatures against canonical River WC (heaviest step — last so cheap checks fail fast)
+        // 5. Verify BLS signatures against canonical River WC (heaviest step — last so cheap checks fail fast).
+        //    Top-ups were already cleared above and are skipped here.
         _verifyBLSSignatures(deposits, withdrawalCredentials);
     }
 
@@ -345,16 +372,10 @@ contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1 {
     }
 
     /// @notice Verify the BLS signatures against the canonical River withdrawal credentials.
-    /// @dev Entries with an all-zero `depositY` are treated as top-ups: BLS verification is
-    ///      skipped, but the pubkey must already be in `InitialDepositedPubkeys` AND the
-    ///      stored operator must match the buffer entry's `operatorIdx` — defense in depth
-    ///      against (a) a compromised committee marking an attacker-owned pubkey as a top-up
-    ///      and (b) a compromised committee crediting a top-up against operator A's pubkey
-    ///      to operator B (silently desyncing on-chain operator accounting from beacon-state
-    ///      stake). Note: this gate does NOT close the residual surface where an operator
-    ///      legitimately receives an initial deposit and then switches the validator's
-    ///      withdrawal credentials under Pectra; closing that needs current-WC proofs
-    ///      (EIP-4788) and is out of scope here.
+    /// @dev Top-ups (entries with an all-zero `depositY`) are cleared upstream in
+    ///      `validate()` — both the pubkey-funded check and the operatorIdx bind run there,
+    ///      so this loop simply skips them. Initials are BLS-verified via a self-staticcall
+    ///      trampoline that promotes the deposit's memory bytes into calldata.
     /// @param deposits The deposits.
     /// @param withdrawalCredentials The canonical River withdrawal credentials.
     function _verifyBLSSignatures(IDepositDataBuffer.DepositObject[] memory deposits, bytes32 withdrawalCredentials)
@@ -362,15 +383,7 @@ contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1 {
         view
     {
         for (uint256 i = 0; i < deposits.length; i++) {
-            if (BLS12_381.isZero(deposits[i].depositY)) {
-                bytes32 pubkeyHash = keccak256(deposits[i].pubkey);
-                (bool exists, uint256 fundedOperatorIdx) = InitialDepositedPubkeys.lookupFundedOperator(pubkeyHash);
-                if (!exists) revert TopUpPubkeyHasNoInitialDeposit(pubkeyHash);
-                if (fundedOperatorIdx != deposits[i].operatorIdx) {
-                    revert TopUpOperatorMismatch(pubkeyHash, fundedOperatorIdx, deposits[i].operatorIdx);
-                }
-                continue;
-            }
+            if (BLS12_381.isZero(deposits[i].depositY)) continue;
             (bool ok, bytes memory revertData) = address(this)
                 .staticcall(
                     abi.encodeCall(

@@ -845,9 +845,10 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
     }
 
     /// @dev Initial deposit for a pubkey that's already in the mapping (e.g., re-deposit after
-    ///      a prior batch) must revert in `recordInitialDeposits` with DuplicateInitialDeposit.
-    ///      Uses the test helper to seed the mapping directly; submitting two identical batches
-    ///      through the real buffer would collide on bufferId before the mapping check fires.
+    ///      a prior batch) must revert in `validate()` with DuplicateInitialDeposit before any
+    ///      `IDepositContract.deposit{}()` call runs. Uses the test helper to seed the mapping
+    ///      directly; submitting two identical batches through the real buffer would collide on
+    ///      bufferId before the mapping check fires.
     function testRevert_doubleInitial_acrossBatches() public {
         IDepositDataBuffer.DepositObject[] memory deposits = new IDepositDataBuffer.DepositObject[](1);
         deposits[0] = _makeDeposit(0, 140);
@@ -858,11 +859,35 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
         (bytes32 bufferId, bytes32 rootHash, bytes[] memory sigs) = _prepareDeposit(deposits);
 
         bytes32 pubkeyHash = keccak256(deposits[0].pubkey);
+        uint256 depositCountBefore = depositContract.deposit_count();
         vm.prank(keeper);
         vm.expectRevert(
             abi.encodeWithSelector(IAttestationVerifierV1.DuplicateInitialDeposit.selector, pubkeyHash)
         );
         dm.depositToConsensusLayerWithAttestation(bufferId, rootHash, sigs);
+        assertEq(depositContract.deposit_count(), depositCountBefore, "no deposit should reach the beacon contract");
+    }
+
+    /// @dev Same-batch duplicate-initial (two entries with the same pubkey, both flagged as
+    ///      initials via non-zero depositY) must revert in `validate()` with DuplicateInitialDeposit
+    ///      before any deposit is sent to the beacon contract. Catches the producer-bug class where
+    ///      the dup is intra-batch and not yet recorded on-chain — the on-chain mapping is empty for
+    ///      this pubkey at validate-time, so the inner per-batch scan is what fires.
+    function testRevert_sameBatch_duplicateInitial_failsBeforeDeposit() public {
+        IDepositDataBuffer.DepositObject[] memory deposits = new IDepositDataBuffer.DepositObject[](2);
+        deposits[0] = _makeDeposit(0, 150);
+        deposits[1] = _makeDeposit(0, 150); // same operator + same seed → same pubkey, both initials
+
+        (bytes32 bufferId, bytes32 rootHash, bytes[] memory sigs) = _prepareDeposit(deposits);
+
+        bytes32 pubkeyHash = keccak256(deposits[1].pubkey);
+        uint256 depositCountBefore = depositContract.deposit_count();
+        vm.prank(keeper);
+        vm.expectRevert(
+            abi.encodeWithSelector(IAttestationVerifierV1.DuplicateInitialDeposit.selector, pubkeyHash)
+        );
+        dm.depositToConsensusLayerWithAttestation(bufferId, rootHash, sigs);
+        assertEq(depositContract.deposit_count(), depositCountBefore, "no deposit should reach the beacon contract");
     }
 
     /// @dev `recordInitialDeposits` is gated by `onlyRiver` (msg.sender == RiverAddress.get()).
