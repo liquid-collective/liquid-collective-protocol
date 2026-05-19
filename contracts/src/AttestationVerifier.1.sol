@@ -341,15 +341,8 @@ contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1 {
     ///      does NOT close the residual surface where an operator legitimately receives an
     ///      initial deposit and then switches the validator's withdrawal credentials under
     ///      Pectra; closing that needs current-WC proofs (EIP-4788) and is out of scope here.
-    /// @dev Dense vs sparse `depositYs`: `depositYs` is 1:1 with `deposits` (length must match
-    ///      `deposits.length`); for top-up indices the slot is never read and may be a zero
-    ///      placeholder. A sparse layout (one slot per non-top-up only) would save ~768 gas of
-    ///      zero-byte calldata per top-up but couples on-chain indexing to a "nth non-top-up"
-    ///      convention that's easy to mis-align with off-chain producers. Dense is preferred
-    ///      here for the mechanical `depositYs[i] ↔ deposits[i]` invariant.
     /// @param deposits The deposits.
-    /// @param depositYs The deposit Y-coordinates. For top-up entries the corresponding
-    ///                  slot is unused and may be a zero placeholder.
+    /// @param depositYs Y-coordinates, 1:1 with deposits. Top-up slots may be zero placeholders.
     /// @param withdrawalCredentials The canonical River withdrawal credentials.
     function _verifyBLSSignatures(
         IDepositDataBuffer.DepositObject[] memory deposits,
