@@ -258,21 +258,22 @@ contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1 {
     // -----------------------------------------------------------------------
 
     /// @inheritdoc IAttestationVerifierV1
-    function recordInitialDeposits(bytes32[] calldata pubkeyHashes, uint256[] calldata operatorIndices)
+    function recordInitialDeposits(bytes[] calldata pubkeys, uint256[] calldata operatorIndices)
         external
         onlyRiver
     {
-        uint256 len = pubkeyHashes.length;
+        uint256 len = pubkeys.length;
         if (len != operatorIndices.length) {
             revert RecordInitialDepositsLengthMismatch(len, operatorIndices.length);
         }
         for (uint256 i = 0; i < len; ++i) {
-            bytes32 pubkeyHash = pubkeyHashes[i];
+            bytes calldata pubkey = pubkeys[i];
+            bytes32 pubkeyHash = keccak256(pubkey);
             if (InitialDepositedPubkeys.hasInitialDeposit(pubkeyHash)) {
-                revert PubkeyAlreadyInitialDeposited(pubkeyHash);
+                revert DuplicateInitialDeposit(pubkeyHash);
             }
             InitialDepositedPubkeys.markInitialDeposited(pubkeyHash, operatorIndices[i]);
-            emit InitialDepositRecorded(pubkeyHash);
+            emit InitialDepositRecorded(operatorIndices[i], pubkey);
         }
     }
 
@@ -283,7 +284,9 @@ contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1 {
 
     /// @inheritdoc IAttestationVerifierV1
     function getFundedOperator(bytes32 pubkeyHash) external view returns (uint256) {
-        return InitialDepositedPubkeys.getFundedOperator(pubkeyHash);
+        (bool exists, uint256 operatorIdx) = InitialDepositedPubkeys.lookupFundedOperator(pubkeyHash);
+        if (!exists) revert PubkeyNotFunded(pubkeyHash);
+        return operatorIdx;
     }
 
     // -----------------------------------------------------------------------
@@ -354,15 +357,15 @@ contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1 {
     ///      (EIP-4788) and is out of scope here.
     /// @param deposits The deposits.
     /// @param withdrawalCredentials The canonical River withdrawal credentials.
-    function _verifyBLSSignatures(
-        IDepositDataBuffer.DepositObject[] memory deposits,
-        bytes32 withdrawalCredentials
-    ) internal view {
+    function _verifyBLSSignatures(IDepositDataBuffer.DepositObject[] memory deposits, bytes32 withdrawalCredentials)
+        internal
+        view
+    {
         for (uint256 i = 0; i < deposits.length; i++) {
             if (BLS12_381.isZero(deposits[i].depositY)) {
                 bytes32 pubkeyHash = keccak256(deposits[i].pubkey);
                 (bool exists, uint256 fundedOperatorIdx) = InitialDepositedPubkeys.lookupFundedOperator(pubkeyHash);
-                if (!exists) revert TopUpPubkeyNotInitialDeposited(pubkeyHash);
+                if (!exists) revert TopUpPubkeyHasNoInitialDeposit(pubkeyHash);
                 if (fundedOperatorIdx != deposits[i].operatorIdx) {
                     revert TopUpOperatorMismatch(pubkeyHash, fundedOperatorIdx, deposits[i].operatorIdx);
                 }

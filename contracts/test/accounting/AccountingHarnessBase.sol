@@ -103,7 +103,7 @@ abstract contract AccountingHarnessBase is Test, BytesGenerator {
 
     /// @dev Monotonic counter mixed into pubkey/signature generation in `_makeDepositObjects`.
     ///      Without it, two batches built in the same block with the same `(i, opIdx)` produce
-    ///      identical pubkeys, which collides with the on-chain `PubkeyAlreadyInitialDeposited`
+    ///      identical pubkeys, which collides with the on-chain `DuplicateInitialDeposit`
     ///      guard in `AttestationVerifier.recordInitialDeposits`.
     uint256 internal _depositBatchNonce;
 
@@ -324,7 +324,7 @@ abstract contract AccountingHarnessBase is Test, BytesGenerator {
     ///      Each deposit uses a deterministic pubkey/signature seeded by position and a
     ///      monotonically-incrementing batch nonce so successive `sim_deposit` calls in the
     ///      same block don't collide on pubkeys (which would trip the on-chain
-    ///      `PubkeyAlreadyInitialDeposited` guard).
+    ///      `DuplicateInitialDeposit` guard).
     function _makeDepositObjects(uint256[] memory opIndices, uint256[] memory amounts)
         internal
         returns (IDepositDataBuffer.DepositObject[] memory deposits)

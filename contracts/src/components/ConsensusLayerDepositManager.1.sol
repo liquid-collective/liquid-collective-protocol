@@ -138,7 +138,12 @@ abstract contract ConsensusLayerDepositManagerV1 is IConsensusLayerDepositManage
                 AttestationVerifierAddress.get()
             )
             .validate(
-                depositDataBufferId, depositRootHash, signatures, depositContract, withdrawalCredentials, committedBalance
+                depositDataBufferId,
+                depositRootHash,
+                signatures,
+                depositContract,
+                withdrawalCredentials,
+                committedBalance
             );
 
         // 5. Update operator funded validator accounting
@@ -154,7 +159,7 @@ abstract contract ConsensusLayerDepositManagerV1 is IConsensusLayerDepositManage
         for (uint256 i = 0; i < len; i++) {
             if (!BLS12_381.isZero(deposits[i].depositY)) initialCount++;
         }
-        bytes32[] memory initialHashes = new bytes32[](initialCount);
+        bytes[] memory initialPubkeys = new bytes[](initialCount);
         uint256[] memory initialOperators = new uint256[](initialCount);
         uint256 initialCursor = 0;
 
@@ -163,7 +168,7 @@ abstract contract ConsensusLayerDepositManagerV1 is IConsensusLayerDepositManage
                 deposits[i].pubkey, deposits[i].signature, deposits[i].amount, withdrawalCredentials, depositContract
             );
             if (!BLS12_381.isZero(deposits[i].depositY)) {
-                initialHashes[initialCursor] = keccak256(deposits[i].pubkey);
+                initialPubkeys[initialCursor] = deposits[i].pubkey;
                 initialOperators[initialCursor] = deposits[i].operatorIdx;
                 initialCursor++;
             }
@@ -171,9 +176,8 @@ abstract contract ConsensusLayerDepositManagerV1 is IConsensusLayerDepositManage
 
         // 7. Record initial-deposit pubkeys post-execution so future top-ups pass the ownership check.
         if (initialCount > 0) {
-            IAttestationVerifierV1(AttestationVerifierAddress.get()).recordInitialDeposits(
-                initialHashes, initialOperators
-            );
+            IAttestationVerifierV1(AttestationVerifierAddress.get())
+                .recordInitialDeposits(initialPubkeys, initialOperators);
         }
 
         _setCommittedBalance(committedBalance - totalAmount);
