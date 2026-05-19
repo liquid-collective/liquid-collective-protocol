@@ -111,11 +111,29 @@ interface IAttestationVerifierV1 {
     /// @param pubkeyHash keccak256 of the offending BLS pubkey
     error TopUpPubkeyNotInitialDeposited(bytes32 pubkeyHash);
 
+    /// @notice A top-up entry's operator index does not match the operator that originally
+    ///         funded the validator's initial deposit. Without this bind, a compromised
+    ///         deposit committee could mark a top-up against operator A's pubkey while
+    ///         crediting `operator.funded` to operator B — silently desyncing on-chain
+    ///         operator accounting from beacon-state stake (the validator's withdrawal
+    ///         credentials are pinned in beacon state, so the ETH still lands on A, but
+    ///         on-chain bookkeeping no longer reflects that).
+    /// @param pubkeyHash The keccak256 hash of the offending BLS pubkey
+    /// @param expectedOperatorIdx The operator index that performed the initial deposit
+    /// @param actualOperatorIdx The operator index attached to the buffer's top-up entry
+    error TopUpOperatorMismatch(bytes32 pubkeyHash, uint256 expectedOperatorIdx, uint256 actualOperatorIdx);
+
     /// @notice recordInitialDeposits was passed a pubkey already in the initial-deposit set.
     ///         Re-funding the same validator as an "initial" deposit is almost certainly a bug
     ///         or attack — surface it loudly rather than silently overwriting.
     /// @param pubkeyHash keccak256 of the offending BLS pubkey
     error PubkeyAlreadyInitialDeposited(bytes32 pubkeyHash);
+
+    /// @notice recordInitialDeposits was called with parallel arrays whose lengths differ.
+    ///         Each pubkey hash must be paired with exactly one operator index.
+    /// @param pubkeyCount Length of the pubkeyHashes array
+    /// @param operatorCount Length of the operatorIndices array
+    error RecordInitialDepositsLengthMismatch(uint256 pubkeyCount, uint256 operatorCount);
 
     // -----------------------------------------------------------------------
     // Initialization
@@ -169,12 +187,17 @@ interface IAttestationVerifierV1 {
     // Initial-deposit recording (called by River after a successful deposit batch)
     // -----------------------------------------------------------------------
 
-    /// @notice Record one or more pubkey hashes as initial-deposited. Only callable by River.
+    /// @notice Record one or more pubkey hashes as initial-deposited, each bound to the operator
+    ///         that funded it. Only callable by River.
     /// @dev River invokes this after the deposit-execution loop in `depositToConsensusLayerWithAttestation`,
-    ///      passing only the pubkey hashes of entries where `isTopUp == false`. Reverts on duplicates so
-    ///      a re-deposit of an already-funded validator surfaces as an error rather than a silent overwrite.
+    ///      passing the pubkey hashes and matching operator indices of entries where `isTopUp == false`.
+    ///      The verifier later consults this bind to ensure top-ups against the same pubkey are credited
+    ///      to the same operator that originally funded it (see `TopUpOperatorMismatch`). Reverts on
+    ///      duplicates so a re-deposit of an already-funded validator surfaces as an error rather than
+    ///      a silent ownership overwrite.
     /// @param pubkeyHashes The keccak256 hashes of the 48-byte BLS pubkeys to record
-    function recordInitialDeposits(bytes32[] calldata pubkeyHashes) external;
+    /// @param operatorIndices The operator indices that funded each pubkey (parallel to pubkeyHashes)
+    function recordInitialDeposits(bytes32[] calldata pubkeyHashes, uint256[] calldata operatorIndices) external;
 
     // -----------------------------------------------------------------------
     // Admin setters
@@ -234,4 +257,12 @@ interface IAttestationVerifierV1 {
     /// @param pubkeyHash The keccak256 hash of the 48-byte BLS pubkey
     /// @return True if the pubkey is currently in the initial-deposit set
     function hasInitialDeposit(bytes32 pubkeyHash) external view returns (bool);
+
+    /// @notice Retrieve the raw operator-bind sentinel for a pubkey.
+    /// @dev Returns the stored value, which is `operatorIdx + 1` for funded pubkeys and `0`
+    ///      for unknown ones. The +1 sentinel scheme lets us distinguish "never funded"
+    ///      from "funded by operator 0" without a separate exists-bit.
+    /// @param pubkeyHash The keccak256 hash of the 48-byte BLS pubkey
+    /// @return The stored sentinel (operatorIdx + 1), or 0 if the pubkey was never recorded
+    function getFundedOperator(bytes32 pubkeyHash) external view returns (uint256);
 }

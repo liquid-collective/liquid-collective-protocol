@@ -211,12 +211,14 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
         });
     }
 
-    /// @dev Mark a pubkey as initial-deposited directly via vm.store, bypassing the
-    ///      `recordInitialDeposits` path. Used by tests that need a seeded mapping but want
-    ///      to stay focused on the BLS-skip behaviour (rather than running a full prior batch).
-    function _seedInitialDeposited(bytes memory pubkey) internal {
+    /// @dev Mark a pubkey as initial-deposited by a specific operator directly via vm.store,
+    ///      bypassing the `recordInitialDeposits` path. Used by tests that need a seeded
+    ///      mapping but want to stay focused on the BLS-skip / ownership-bind behaviour
+    ///      (rather than running a full prior batch). The stored value is `operatorIdx + 1`
+    ///      to match the InitialDepositedPubkeys library's sentinel scheme.
+    function _seedFundedPubkey(bytes memory pubkey, uint256 operatorIdx) internal {
         bytes32 slot = keccak256(abi.encode(VALIDATOR_INITIAL_DEPOSITED_MAPPING_BASE_SLOT, keccak256(pubkey)));
-        vm.store(address(validator), slot, bytes32(uint256(1)));
+        vm.store(address(validator), slot, bytes32(operatorIdx + 1));
     }
 
     function setUp() public {
@@ -632,10 +634,11 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
         deposits[0] = _makeTopUpDeposit(0, 50);
         deposits[1] = _makeTopUpDeposit(1, 51);
 
-        // Seed the mapping so the top-up ownership check passes; without it the call would
-        // revert with TopUpPubkeyNotInitialDeposited before reaching the BLS branch.
-        _seedInitialDeposited(deposits[0].pubkey);
-        _seedInitialDeposited(deposits[1].pubkey);
+        // Seed the mapping with the matching operator so the top-up ownership check passes;
+        // without it the call would revert with TopUpPubkeyNotInitialDeposited (or
+        // TopUpOperatorMismatch on a wrong operator) before reaching the BLS branch.
+        _seedFundedPubkey(deposits[0].pubkey, deposits[0].operatorIdx);
+        _seedFundedPubkey(deposits[1].pubkey, deposits[1].operatorIdx);
 
         (bytes32 bufferId, bytes32 rootHash, bytes[] memory sigs) = _prepareDeposit(deposits);
 
@@ -675,9 +678,10 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
         deposits[0] = _makeTopUpDeposit(0, 70);
         deposits[1] = _makeDeposit(1, 71); // initial — BLS path entered, reverts on zero domain
 
-        // Seed only the top-up's pubkey: the initial entry must still reach the BLS path so
-        // we can assert the batch is rejected on its failure (not on the top-up's mapping check).
-        _seedInitialDeposited(deposits[0].pubkey);
+        // Seed only the top-up's pubkey under the matching operator: the initial entry must
+        // still reach the BLS path so we can assert the batch is rejected on its failure
+        // (not on the top-up's mapping check).
+        _seedFundedPubkey(deposits[0].pubkey, deposits[0].operatorIdx);
 
         (bytes32 bufferId, bytes32 rootHash, bytes[] memory sigs) = _prepareDeposit(deposits);
 
@@ -724,9 +728,10 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
         deposits[0] = _makeDeposit(0, 90); // initial
         deposits[1] = _makeTopUpDeposit(0, 91); // top-up for same operator
 
-        // Seed the top-up's pubkey so the ownership check passes; the initial entry will
-        // populate the mapping for seed 90 via the real recordInitialDeposits callback.
-        _seedInitialDeposited(deposits[1].pubkey);
+        // Seed the top-up's pubkey under the matching operator so the ownership check passes;
+        // the initial entry will populate the mapping for seed 90 via the real
+        // recordInitialDeposits callback.
+        _seedFundedPubkey(deposits[1].pubkey, deposits[1].operatorIdx);
 
         (bytes32 bufferId, bytes32 rootHash, bytes[] memory sigs) = _prepareDeposit(deposits);
 
@@ -764,12 +769,13 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
         dm.depositToConsensusLayerWithAttestation(bufferId, rootHash, sigs);
     }
 
-    /// @dev A successful initial deposit must record the pubkey hash in the mapping and
-    ///      emit InitialDepositRecorded. Future top-ups against this pubkey will then pass
-    ///      the ownership check.
+    /// @dev A successful initial deposit must record the pubkey hash in the mapping bound
+    ///      to the funding operator and emit InitialDepositRecorded. Future top-ups against
+    ///      this pubkey will then pass both the ownership and operator-bind checks.
     function testInitialDeposit_recordsPubkey() public {
+        uint256 operatorIdx = 4;
         IDepositDataBuffer.DepositObject[] memory deposits = new IDepositDataBuffer.DepositObject[](1);
-        deposits[0] = _makeDeposit(0, 110);
+        deposits[0] = _makeDeposit(operatorIdx, 110);
 
         (bytes32 bufferId, bytes32 rootHash, bytes[] memory sigs) = _prepareDeposit(deposits);
 
@@ -781,6 +787,11 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
         dm.depositToConsensusLayerWithAttestation(bufferId, rootHash, sigs);
 
         assertTrue(validator.hasInitialDeposit(pubkeyHash), "pubkey should be marked as initial-deposited");
+        assertEq(
+            validator.getFundedOperator(pubkeyHash),
+            operatorIdx + 1,
+            "stored sentinel must be operatorIdx + 1"
+        );
     }
 
     /// @dev End-to-end: an initial deposit in batch A records the pubkey; a top-up for that
@@ -840,8 +851,8 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
         IDepositDataBuffer.DepositObject[] memory deposits = new IDepositDataBuffer.DepositObject[](1);
         deposits[0] = _makeDeposit(0, 140);
 
-        // Simulate a prior batch having already recorded this pubkey.
-        _seedInitialDeposited(deposits[0].pubkey);
+        // Simulate a prior batch having already recorded this pubkey for the same operator.
+        _seedFundedPubkey(deposits[0].pubkey, deposits[0].operatorIdx);
 
         (bytes32 bufferId, bytes32 rootHash, bytes[] memory sigs) = _prepareDeposit(deposits);
 
@@ -858,11 +869,48 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
     function testRevert_recordInitialDeposits_notRiver() public {
         bytes32[] memory hashes = new bytes32[](1);
         hashes[0] = keccak256(abi.encodePacked("stranger-pubkey"));
+        uint256[] memory ops = new uint256[](1);
+        ops[0] = 0;
 
         address stranger = address(0xC0FFEE);
         vm.prank(stranger);
         vm.expectRevert(abi.encodeWithSelector(LibErrors.Unauthorized.selector, stranger));
-        validator.recordInitialDeposits(hashes);
+        validator.recordInitialDeposits(hashes, ops);
+    }
+
+    /// @dev `recordInitialDeposits` must reject parallel arrays of different lengths so
+    ///      the (pubkey, operator) bind cannot drift silently.
+    function testRevert_recordInitialDeposits_lengthMismatch() public {
+        bytes32[] memory hashes = new bytes32[](2);
+        hashes[0] = keccak256(abi.encodePacked("pkA"));
+        hashes[1] = keccak256(abi.encodePacked("pkB"));
+        uint256[] memory ops = new uint256[](1);
+        ops[0] = 0;
+
+        // Spoof msg.sender as River so we get past `onlyRiver` and hit the length check.
+        vm.prank(address(dm));
+        vm.expectRevert(
+            abi.encodeWithSelector(IAttestationVerifierV1.RecordInitialDepositsLengthMismatch.selector, 2, 1)
+        );
+        validator.recordInitialDeposits(hashes, ops);
+    }
+
+    /// @dev Top-up for a pubkey funded by operator A, but the buffer marks the entry as
+    ///      operator B, must revert TopUpOperatorMismatch. Without this guard, on-chain
+    ///      operator.funded accounting silently desyncs from beacon-state stake.
+    function testTopUp_operatorMismatch_reverts() public {
+        IDepositDataBuffer.DepositObject[] memory deposits = new IDepositDataBuffer.DepositObject[](1);
+        deposits[0] = _makeTopUpDeposit(5, 200); // operator 5 in the buffer
+        _seedFundedPubkey(deposits[0].pubkey, 3); // but actually funded by operator 3
+
+        (bytes32 bufferId, bytes32 rootHash, bytes[] memory sigs) = _prepareDeposit(deposits);
+
+        bytes32 pubkeyHash = keccak256(deposits[0].pubkey);
+        vm.prank(keeper);
+        vm.expectRevert(
+            abi.encodeWithSelector(IAttestationVerifierV1.TopUpOperatorMismatch.selector, pubkeyHash, 3, 5)
+        );
+        dm.depositToConsensusLayerWithAttestation(bufferId, rootHash, sigs);
     }
 
     // setDepositCommitteeAttester must reject calls that would leave the attester's status unchanged so the

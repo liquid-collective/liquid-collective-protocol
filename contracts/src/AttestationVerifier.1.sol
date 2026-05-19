@@ -258,14 +258,20 @@ contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1 {
     // -----------------------------------------------------------------------
 
     /// @inheritdoc IAttestationVerifierV1
-    function recordInitialDeposits(bytes32[] calldata pubkeyHashes) external onlyRiver {
+    function recordInitialDeposits(bytes32[] calldata pubkeyHashes, uint256[] calldata operatorIndices)
+        external
+        onlyRiver
+    {
         uint256 len = pubkeyHashes.length;
+        if (len != operatorIndices.length) {
+            revert RecordInitialDepositsLengthMismatch(len, operatorIndices.length);
+        }
         for (uint256 i = 0; i < len; ++i) {
             bytes32 pubkeyHash = pubkeyHashes[i];
             if (InitialDepositedPubkeys.hasInitialDeposit(pubkeyHash)) {
                 revert PubkeyAlreadyInitialDeposited(pubkeyHash);
             }
-            InitialDepositedPubkeys.markInitialDeposited(pubkeyHash);
+            InitialDepositedPubkeys.markInitialDeposited(pubkeyHash, operatorIndices[i]);
             emit InitialDepositRecorded(pubkeyHash);
         }
     }
@@ -273,6 +279,11 @@ contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1 {
     /// @inheritdoc IAttestationVerifierV1
     function hasInitialDeposit(bytes32 pubkeyHash) external view returns (bool) {
         return InitialDepositedPubkeys.hasInitialDeposit(pubkeyHash);
+    }
+
+    /// @inheritdoc IAttestationVerifierV1
+    function getFundedOperator(bytes32 pubkeyHash) external view returns (uint256) {
+        return InitialDepositedPubkeys.getFundedOperator(pubkeyHash);
     }
 
     // -----------------------------------------------------------------------
@@ -332,9 +343,12 @@ contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1 {
 
     /// @notice Verify the BLS signatures against the canonical River withdrawal credentials.
     /// @dev Entries with an all-zero `depositY` are treated as top-ups: BLS verification is
-    ///      skipped, but the pubkey must already be in `InitialDepositedPubkeys` — defense
-    ///      in depth against a compromised committee marking an attacker-owned pubkey as a
-    ///      top-up. Note: this gate does NOT close the residual surface where an operator
+    ///      skipped, but the pubkey must already be in `InitialDepositedPubkeys` AND the
+    ///      stored operator must match the buffer entry's `operatorIdx` — defense in depth
+    ///      against (a) a compromised committee marking an attacker-owned pubkey as a top-up
+    ///      and (b) a compromised committee crediting a top-up against operator A's pubkey
+    ///      to operator B (silently desyncing on-chain operator accounting from beacon-state
+    ///      stake). Note: this gate does NOT close the residual surface where an operator
     ///      legitimately receives an initial deposit and then switches the validator's
     ///      withdrawal credentials under Pectra; closing that needs current-WC proofs
     ///      (EIP-4788) and is out of scope here.
@@ -347,8 +361,11 @@ contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1 {
         for (uint256 i = 0; i < deposits.length; i++) {
             if (BLS12_381.isZero(deposits[i].depositY)) {
                 bytes32 pubkeyHash = keccak256(deposits[i].pubkey);
-                if (!InitialDepositedPubkeys.hasInitialDeposit(pubkeyHash)) {
-                    revert TopUpPubkeyNotInitialDeposited(pubkeyHash);
+                uint256 stored = InitialDepositedPubkeys.getFundedOperator(pubkeyHash);
+                if (stored == 0) revert TopUpPubkeyNotInitialDeposited(pubkeyHash);
+                uint256 expected = deposits[i].operatorIdx + 1;
+                if (stored != expected) {
+                    revert TopUpOperatorMismatch(pubkeyHash, stored - 1, deposits[i].operatorIdx);
                 }
                 continue;
             }

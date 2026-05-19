@@ -11,8 +11,12 @@ contract InitialDepositedPubkeysInputs {
         return InitialDepositedPubkeys.hasInitialDeposit(pubkeyHash);
     }
 
-    function markInitialDeposited(bytes32 pubkeyHash) external {
-        InitialDepositedPubkeys.markInitialDeposited(pubkeyHash);
+    function getFundedOperator(bytes32 pubkeyHash) external view returns (uint256) {
+        return InitialDepositedPubkeys.getFundedOperator(pubkeyHash);
+    }
+
+    function markInitialDeposited(bytes32 pubkeyHash, uint256 operatorIdx) external {
+        InitialDepositedPubkeys.markInitialDeposited(pubkeyHash, operatorIdx);
     }
 
     function unmarkInitialDeposited(bytes32 pubkeyHash) external {
@@ -35,11 +39,35 @@ contract InitialDepositedPubkeysTest is Test {
     function testInitiallyUnset() public {
         bytes32 pkh = keccak256(abi.encodePacked("unmarked-pubkey"));
         assertFalse(inputs.hasInitialDeposit(pkh));
+        assertEq(inputs.getFundedOperator(pkh), 0);
     }
 
     function testMarkThenIs() public {
         bytes32 pkh = keccak256(abi.encodePacked("pubkey-A"));
-        inputs.markInitialDeposited(pkh);
+        inputs.markInitialDeposited(pkh, 0);
+        assertTrue(inputs.hasInitialDeposit(pkh));
+    }
+
+    function testMarkRecordsOperator() public {
+        bytes32 pkh = keccak256(abi.encodePacked("pubkey-with-op-5"));
+        inputs.markInitialDeposited(pkh, 5);
+        // Stored sentinel is operatorIdx + 1.
+        assertEq(inputs.getFundedOperator(pkh), 6);
+    }
+
+    function testHasInitialDepositTrueAfterMark() public {
+        bytes32 pkh = keccak256(abi.encodePacked("pubkey-bool-wrapper"));
+        inputs.markInitialDeposited(pkh, 7);
+        assertTrue(inputs.hasInitialDeposit(pkh));
+    }
+
+    /// @dev Operator 0 must still produce a non-zero sentinel (1), distinguishing
+    ///      "funded by operator 0" from "never funded".
+    function testMarkOperatorZero_isDistinctFromUnset() public {
+        bytes32 pkh = keccak256(abi.encodePacked("pubkey-op-zero"));
+        assertEq(inputs.getFundedOperator(pkh), 0);
+        inputs.markInitialDeposited(pkh, 0);
+        assertEq(inputs.getFundedOperator(pkh), 1);
         assertTrue(inputs.hasInitialDeposit(pkh));
     }
 
@@ -47,29 +75,34 @@ contract InitialDepositedPubkeysTest is Test {
         bytes32 pkhA = keccak256(abi.encodePacked("pubkey-A"));
         bytes32 pkhB = keccak256(abi.encodePacked("pubkey-B"));
 
-        inputs.markInitialDeposited(pkhA);
+        inputs.markInitialDeposited(pkhA, 3);
         assertTrue(inputs.hasInitialDeposit(pkhA));
+        assertEq(inputs.getFundedOperator(pkhA), 4);
         assertFalse(inputs.hasInitialDeposit(pkhB));
+        assertEq(inputs.getFundedOperator(pkhB), 0);
     }
 
-    function testUnmarkClears() public {
+    function testUnmarkClearsOperator() public {
         bytes32 pkh = keccak256(abi.encodePacked("pubkey-C"));
-        inputs.markInitialDeposited(pkh);
+        inputs.markInitialDeposited(pkh, 9);
         assertTrue(inputs.hasInitialDeposit(pkh));
+        assertEq(inputs.getFundedOperator(pkh), 10);
 
         inputs.unmarkInitialDeposited(pkh);
         assertFalse(inputs.hasInitialDeposit(pkh));
+        assertEq(inputs.getFundedOperator(pkh), 0);
     }
 
     function testMarkIsIdempotent() public {
         bytes32 pkh = keccak256(abi.encodePacked("pubkey-D"));
-        inputs.markInitialDeposited(pkh);
-        inputs.markInitialDeposited(pkh);
+        inputs.markInitialDeposited(pkh, 2);
+        inputs.markInitialDeposited(pkh, 2);
         assertTrue(inputs.hasInitialDeposit(pkh));
+        assertEq(inputs.getFundedOperator(pkh), 3);
     }
 
     /// @dev Slot derivation cross-check: a direct `vm.store` at the expected slot must be
-    ///      observable via `hasInitialDeposit`. Guards against accidental rename of the
+    ///      observable via `getFundedOperator`. Guards against accidental rename of the
     ///      namespace string in either the library or any consumer (e.g., the harness in
     ///      ConsensusLayerDepositManagerAttestation.t.sol which uses the same slot).
     function testSlotDerivation() public {
@@ -77,14 +110,18 @@ contract InitialDepositedPubkeysTest is Test {
         bytes32 slot = keccak256(abi.encode(EXPECTED_BASE_SLOT, pkh));
 
         // Before: unset.
+        assertEq(inputs.getFundedOperator(pkh), 0);
         assertFalse(inputs.hasInitialDeposit(pkh));
 
-        // Write directly to the derived slot.
-        vm.store(address(inputs), slot, bytes32(uint256(1)));
+        // Write directly to the derived slot — the stored value is interpreted as the raw
+        // sentinel (operatorIdx + 1). 7 → "funded by operator 6".
+        vm.store(address(inputs), slot, bytes32(uint256(7)));
+        assertEq(inputs.getFundedOperator(pkh), 7);
         assertTrue(inputs.hasInitialDeposit(pkh));
 
         // Clear directly.
         vm.store(address(inputs), slot, bytes32(0));
+        assertEq(inputs.getFundedOperator(pkh), 0);
         assertFalse(inputs.hasInitialDeposit(pkh));
     }
 }
