@@ -63,7 +63,7 @@ library ValidatorPubkeyLookup {
     ///      silently rebind ownership, which is almost certainly a bug or attack.
     /// @param pubkey The raw 48-byte BLS pubkey.
     /// @param operatorIdx The operator index that funded the initial deposit.
-    function addValidatorPubkey(bytes memory pubkey, uint256 operatorIdx) internal {
+    function add(bytes memory pubkey, uint256 operatorIdx) internal {
         bytes32 slot = keccak256(abi.encode(VALIDATOR_PUBKEY_LOOKUP_MAPPING_BASE_SLOT, pubkey));
         LibUnstructuredStorage.setStorageUint256(slot, operatorIdx + 1);
     }
@@ -73,7 +73,7 @@ library ValidatorPubkeyLookup {
     ///      controlled by the protocol, its pubkey must stop authorizing top-ups. Not invoked
     ///      from any external entry point in this version of the contract.
     /// @param pubkey The raw 48-byte BLS pubkey.
-    function removeValidatorPubkey(bytes memory pubkey) internal {
+    function remove(bytes memory pubkey) internal {
         bytes32 slot = keccak256(abi.encode(VALIDATOR_PUBKEY_LOOKUP_MAPPING_BASE_SLOT, pubkey));
         LibUnstructuredStorage.setStorageUint256(slot, 0);
     }

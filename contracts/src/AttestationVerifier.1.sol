@@ -238,13 +238,7 @@ contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1 {
         // 4. Validate every entry before any `_depositValidator` runs — a producer bug
         //    (bad field length, top-up against an unknown / wrong-operator pubkey, or a
         //    duplicate initial) reverts here, burning one `validate` call's gas rather than
-        //    a full batch of `IDepositContract.deposit{}` ones downstream. The buffer
-        //    producer is not trusted on the WC field; the canonical River WC is supplied
-        //    by the caller and used directly for BLS verification.
-        // Internal-only scratch: per-entry keccak of the pubkey, used purely for the
-        // O(n^2) in-batch duplicate compare below. Cheaper than byte-comparing dynamic
-        // bytes pairwise. The hash never escapes this function — storage, events, and
-        // error payloads all carry the raw `bytes pubkey`.
+        //    a full batch of `IDepositContract.deposit{}` ones downstream.
         bytes32[] memory pubkeyHashes = new bytes32[](depositCount);
         for (uint256 i = 0; i < depositCount; i++) {
             if (deposits[i].pubkey.length != DEPOSIT_PUBKEY_LENGTH) {
@@ -301,7 +295,7 @@ contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1 {
             if (ValidatorPubkeyLookup.hasValidatorPubkey(pubkey)) {
                 revert DuplicateInitialDeposit(pubkey);
             }
-            ValidatorPubkeyLookup.addValidatorPubkey(pubkey, operatorIndices[i]);
+            ValidatorPubkeyLookup.add(pubkey, operatorIndices[i]);
             emit InitialDepositRecorded(operatorIndices[i], pubkey);
         }
     }

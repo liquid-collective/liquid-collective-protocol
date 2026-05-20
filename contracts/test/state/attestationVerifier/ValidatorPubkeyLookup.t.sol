@@ -19,12 +19,12 @@ contract ValidatorPubkeyLookupInputs {
         return ValidatorPubkeyLookup.lookupValidatorPubkey(pubkey);
     }
 
-    function addValidatorPubkey(bytes calldata pubkey, uint256 operatorIdx) external {
-        ValidatorPubkeyLookup.addValidatorPubkey(pubkey, operatorIdx);
+    function add(bytes calldata pubkey, uint256 operatorIdx) external {
+        ValidatorPubkeyLookup.add(pubkey, operatorIdx);
     }
 
-    function removeValidatorPubkey(bytes calldata pubkey) external {
-        ValidatorPubkeyLookup.removeValidatorPubkey(pubkey);
+    function remove(bytes calldata pubkey) external {
+        ValidatorPubkeyLookup.remove(pubkey);
     }
 }
 
@@ -53,20 +53,20 @@ contract ValidatorPubkeyLookupTest is Test {
 
     function testAddThenHas() public {
         bytes memory pk = _pubkey(keccak256("pubkey-A"));
-        inputs.addValidatorPubkey(pk, 0);
+        inputs.add(pk, 0);
         assertTrue(inputs.hasValidatorPubkey(pk));
     }
 
     function testAddRecordsOperator() public {
         bytes memory pk = _pubkey(keccak256("pubkey-with-op-5"));
-        inputs.addValidatorPubkey(pk, 5);
+        inputs.add(pk, 5);
         // Stored sentinel is operatorIdx + 1.
         assertEq(inputs.getRawValidatorPubkeyEntry(pk), 6);
     }
 
     function testHasValidatorPubkeyTrueAfterAdd() public {
         bytes memory pk = _pubkey(keccak256("pubkey-bool-wrapper"));
-        inputs.addValidatorPubkey(pk, 7);
+        inputs.add(pk, 7);
         assertTrue(inputs.hasValidatorPubkey(pk));
     }
 
@@ -75,7 +75,7 @@ contract ValidatorPubkeyLookupTest is Test {
     function testAddOperatorZero_isDistinctFromUnset() public {
         bytes memory pk = _pubkey(keccak256("pubkey-op-zero"));
         assertEq(inputs.getRawValidatorPubkeyEntry(pk), 0);
-        inputs.addValidatorPubkey(pk, 0);
+        inputs.add(pk, 0);
         assertEq(inputs.getRawValidatorPubkeyEntry(pk), 1);
         assertTrue(inputs.hasValidatorPubkey(pk));
     }
@@ -84,7 +84,7 @@ contract ValidatorPubkeyLookupTest is Test {
         bytes memory pkA = _pubkey(keccak256("pubkey-A"));
         bytes memory pkB = _pubkey(keccak256("pubkey-B"));
 
-        inputs.addValidatorPubkey(pkA, 3);
+        inputs.add(pkA, 3);
         assertTrue(inputs.hasValidatorPubkey(pkA));
         assertEq(inputs.getRawValidatorPubkeyEntry(pkA), 4);
         assertFalse(inputs.hasValidatorPubkey(pkB));
@@ -93,19 +93,19 @@ contract ValidatorPubkeyLookupTest is Test {
 
     function testRemoveClearsOperator() public {
         bytes memory pk = _pubkey(keccak256("pubkey-C"));
-        inputs.addValidatorPubkey(pk, 9);
+        inputs.add(pk, 9);
         assertTrue(inputs.hasValidatorPubkey(pk));
         assertEq(inputs.getRawValidatorPubkeyEntry(pk), 10);
 
-        inputs.removeValidatorPubkey(pk);
+        inputs.remove(pk);
         assertFalse(inputs.hasValidatorPubkey(pk));
         assertEq(inputs.getRawValidatorPubkeyEntry(pk), 0);
     }
 
     function testAddIsIdempotent() public {
         bytes memory pk = _pubkey(keccak256("pubkey-D"));
-        inputs.addValidatorPubkey(pk, 2);
-        inputs.addValidatorPubkey(pk, 2);
+        inputs.add(pk, 2);
+        inputs.add(pk, 2);
         assertTrue(inputs.hasValidatorPubkey(pk));
         assertEq(inputs.getRawValidatorPubkeyEntry(pk), 3);
     }
@@ -119,12 +119,12 @@ contract ValidatorPubkeyLookupTest is Test {
         assertFalse(exists);
         assertEq(op, 0);
 
-        inputs.addValidatorPubkey(pk, 11);
+        inputs.add(pk, 11);
         (exists, op) = inputs.lookupValidatorPubkey(pk);
         assertTrue(exists);
         assertEq(op, 11);
 
-        inputs.removeValidatorPubkey(pk);
+        inputs.remove(pk);
         (exists, op) = inputs.lookupValidatorPubkey(pk);
         assertFalse(exists);
         assertEq(op, 0);
@@ -134,7 +134,7 @@ contract ValidatorPubkeyLookupTest is Test {
     ///      value 1) for a pubkey funded by operator 0 — proves the decode mirrors the encode.
     function testLookupValidatorPubkey_operatorZero() public {
         bytes memory pk = _pubkey(keccak256("pubkey-lookup-zero"));
-        inputs.addValidatorPubkey(pk, 0);
+        inputs.add(pk, 0);
         (bool exists, uint256 op) = inputs.lookupValidatorPubkey(pk);
         assertTrue(exists);
         assertEq(op, 0);
