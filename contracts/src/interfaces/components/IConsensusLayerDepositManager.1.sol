@@ -51,9 +51,7 @@ interface IConsensusLayerDepositManagerV1 {
     /// @param operatorIdx The operator the top-up is credited to (must match the originally-bound operator)
     /// @param pubkey The 48-byte BLS pubkey of the validator
     /// @param amount The wei amount topped up
-    event TopUp(
-        bytes32 indexed depositDataBufferId, uint256 indexed operatorIdx, bytes pubkey, uint256 amount
-    );
+    event TopUp(bytes32 indexed depositDataBufferId, uint256 indexed operatorIdx, bytes pubkey, uint256 amount);
 
     /// @notice Emitted per operator when validator keys are funded during a deposit
     event FundedValidatorKeys(uint256 indexed operatorIndex, bytes[] publicKeys, bool deferred);

@@ -282,10 +282,7 @@ contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1 {
     // -----------------------------------------------------------------------
 
     /// @inheritdoc IAttestationVerifierV1
-    function recordInitialDeposits(bytes[] calldata pubkeys, uint256[] calldata operatorIndices)
-        external
-        onlyRiver
-    {
+    function recordInitialDeposits(bytes[] calldata pubkeys, uint256[] calldata operatorIndices) external onlyRiver {
         uint256 len = pubkeys.length;
         if (len != operatorIndices.length) {
             revert RecordInitialDepositsLengthMismatch(len, operatorIndices.length);
