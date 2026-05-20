@@ -32,13 +32,6 @@ interface IAttestationVerifierV1 {
     /// @notice Emitted when the River address is set on this verifier
     event SetRiver(address indexed river);
 
-    /// @notice Emitted when River records a pubkey as initial-deposited, bound to the operator
-    ///         that funded it. Matches the codebase convention of emitting raw BLS pubkeys
-    ///         (see `FundedValidatorKeys`, `DepositEvent`) rather than hashes.
-    /// @param operatorIdx The operator that performed the initial deposit
-    /// @param pubkey The 48-byte BLS pubkey of the validator
-    event InitialDepositRecorded(uint256 indexed operatorIdx, bytes pubkey);
-
     // -----------------------------------------------------------------------
     // Errors
     // -----------------------------------------------------------------------
@@ -201,13 +194,12 @@ interface IAttestationVerifierV1 {
 
     /// @notice Record one or more pubkeys as initial-deposited, each bound to the operator
     ///         that funded it. Only callable by River.
-    /// @dev Called by River after the deposit-execution loop, once per initial-deposit batch entry.
-    ///      Pubkeys are passed in raw to match the codebase convention for event payloads;
-    ///      the verifier hashes them internally for the mapping storage key. The recorded bind
-    ///      is later consulted by the top-up branch of `_verifyBLSSignatures` to ensure subsequent
-    ///      top-ups against the same pubkey are credited to the original operator
-    ///      (see `TopUpOperatorMismatch`). Reverts on duplicates so a re-deposit of an already-funded
-    ///      validator surfaces as an error rather than a silent ownership overwrite.
+    /// @dev Called by River after the deposit-execution loop. The recorded bind is later
+    ///      consulted by the top-up branch of `validate()` to ensure subsequent top-ups against
+    ///      the same pubkey are credited to the original operator (see `TopUpOperatorMismatch`).
+    ///      Reverts on duplicates so a re-deposit of an already-funded validator surfaces as an
+    ///      error rather than a silent ownership overwrite. Per-pubkey logging is emitted on the
+    ///      caller (ConsensusLayerDepositManager's `InitialDeposit` event), not here.
     /// @param pubkeys The 48-byte BLS pubkeys to record
     /// @param operatorIndices The operator indices that funded each pubkey (parallel to pubkeys)
     function recordInitialDeposits(bytes[] calldata pubkeys, uint256[] calldata operatorIndices) external;
@@ -265,8 +257,8 @@ interface IAttestationVerifierV1 {
     function getRiver() external view returns (address);
 
     /// @notice Check whether a pubkey has been initial-deposited by River.
-    /// @dev Off-chain producers should subscribe to `InitialDepositRecorded` events and use
-    ///      this view to confirm a pubkey is eligible for top-up submissions.
+    /// @dev Off-chain producers should subscribe to ConsensusLayerDepositManager's `InitialDeposit`
+    ///      events and use this view to confirm a pubkey is eligible for top-up submissions.
     /// @param pubkey The 48-byte BLS pubkey
     /// @return True if the pubkey is currently in the lookup
     function hasValidatorPubkey(bytes calldata pubkey) external view returns (bool);

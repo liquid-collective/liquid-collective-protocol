@@ -186,12 +186,12 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
         bytes32(uint256(keccak256("attestationVerifier.state.validatorPubkeyLookup.mapping")) - 1);
 
     event FundedValidatorKeys(uint256 indexed operatorIndex, bytes[] publicKeys, bool deferred);
-    event DepositsExecutedWithAttestation(
-        bytes32 indexed depositDataBufferId, bytes32 indexed depositRootHash, uint256 totalAmount
-    );
     event SetInFlightETH(uint256 oldInFlightETH, uint256 newInFlightETH);
     event SetTotalDepositedETH(uint256 oldTotalDepositedETH, uint256 newTotalDepositedETH);
-    event InitialDepositRecorded(uint256 indexed operatorIdx, bytes pubkey);
+    event InitialDeposit(
+        bytes32 indexed depositDataBufferId, uint256 indexed operatorIdx, bytes pubkey, uint256 amount
+    );
+    event TopUp(bytes32 indexed depositDataBufferId, uint256 indexed operatorIdx, bytes pubkey, uint256 amount);
 
     function _emptyDepositY() internal pure returns (BLS12_381.DepositY memory) {
         return BLS12_381.DepositY({
@@ -361,10 +361,6 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
         emit SetInFlightETH(0, 96 ether);
         vm.expectEmit(true, true, false, true);
         emit SetTotalDepositedETH(0, 96 ether);
-
-        // Expect: final event
-        vm.expectEmit(true, true, false, true);
-        emit DepositsExecutedWithAttestation(bufferId, rootHash, 96 ether);
 
         // Act
         vm.prank(keeper);
@@ -762,7 +758,7 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
     }
 
     /// @dev A successful initial deposit must record the pubkey in the lookup bound
-    ///      to the funding operator and emit InitialDepositRecorded. Future top-ups against
+    ///      to the funding operator and emit `InitialDeposit`. Future top-ups against
     ///      this pubkey will then pass both the ownership and operator-bind checks.
     function testInitialDeposit_recordsPubkey() public {
         uint256 operatorIdx = 4;
@@ -771,8 +767,8 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
 
         (bytes32 bufferId, bytes32 rootHash, bytes[] memory sigs) = _prepareDeposit(deposits);
 
-        vm.expectEmit(true, false, false, true);
-        emit InitialDepositRecorded(operatorIdx, deposits[0].pubkey);
+        vm.expectEmit(true, true, false, true);
+        emit InitialDeposit(bufferId, operatorIdx, deposits[0].pubkey, deposits[0].amount);
 
         vm.prank(keeper);
         dm.depositToConsensusLayerWithAttestation(bufferId, rootHash, sigs);

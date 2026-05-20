@@ -32,9 +32,27 @@ interface IConsensusLayerDepositManagerV1 {
     /// @param keeper The new keeper address
     event SetKeeper(address indexed keeper);
 
-    /// @notice Emitted after the attestation-based deposit flow succeeds
-    event DepositsExecutedWithAttestation(
-        bytes32 indexed depositDataBufferId, bytes32 indexed depositRootHash, uint256 totalAmount
+    /// @notice Emitted once per initial-deposit entry as it is executed against the deposit contract.
+    ///         Carries the full raw pubkey, the operator that funded it, the amount deposited, and
+    ///         the originating buffer id so consumers can correlate per-validator events with the
+    ///         attested batch they belong to.
+    /// @param depositDataBufferId The id of the deposit-data buffer batch
+    /// @param operatorIdx The operator that funded this initial deposit
+    /// @param pubkey The 48-byte BLS pubkey of the validator
+    /// @param amount The wei amount deposited
+    event InitialDeposit(
+        bytes32 indexed depositDataBufferId, uint256 indexed operatorIdx, bytes pubkey, uint256 amount
+    );
+
+    /// @notice Emitted once per top-up entry as it is executed against the deposit contract.
+    ///         Symmetric to `InitialDeposit` but for top-ups (entries with all-zero `depositY`,
+    ///         whose pubkey must already be bound to `operatorIdx` in the ValidatorPubkeyLookup).
+    /// @param depositDataBufferId The id of the deposit-data buffer batch
+    /// @param operatorIdx The operator the top-up is credited to (must match the originally-bound operator)
+    /// @param pubkey The 48-byte BLS pubkey of the validator
+    /// @param amount The wei amount topped up
+    event TopUp(
+        bytes32 indexed depositDataBufferId, uint256 indexed operatorIdx, bytes pubkey, uint256 amount
     );
 
     /// @notice Emitted per operator when validator keys are funded during a deposit

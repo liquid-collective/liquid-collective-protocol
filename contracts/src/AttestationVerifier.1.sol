@@ -296,7 +296,6 @@ contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1 {
                 revert DuplicateInitialDeposit(pubkey);
             }
             ValidatorPubkeyLookup.add(pubkey, operatorIndices[i]);
-            emit InitialDepositRecorded(operatorIndices[i], pubkey);
         }
     }
 

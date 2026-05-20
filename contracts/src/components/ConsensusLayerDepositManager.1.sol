@@ -149,11 +149,11 @@ abstract contract ConsensusLayerDepositManagerV1 is IConsensusLayerDepositManage
         // 5. Update operator funded validator accounting
         _updateFundedETHFromBuffer(deposits);
 
-        // 6. Execute deposits and collect (pubkey hash, operator) pairs for initial deposits to
-        //    record on the verifier. An all-zero `depositY` marks a top-up; non-zero marks an
-        //    initial deposit. Recording the operator alongside the pubkey lets the verifier
-        //    later assert that a top-up against this pubkey is credited to the same operator
-        //    that performed the initial deposit (see TopUpOperatorMismatch).
+        // 6. Execute deposits, emit per-entry classification events, and collect (pubkey, operator)
+        //    pairs for initial deposits to record on the verifier. An all-zero `depositY` marks a
+        //    top-up; non-zero marks an initial deposit. Recording the operator alongside the pubkey
+        //    lets the verifier later assert that a top-up against this pubkey is credited to the
+        //    same operator that performed the initial deposit (see TopUpOperatorMismatch).
         uint256 len = deposits.length;
         uint256 initialCount = 0;
         for (uint256 i = 0; i < len; i++) {
@@ -167,7 +167,12 @@ abstract contract ConsensusLayerDepositManagerV1 is IConsensusLayerDepositManage
             _depositValidator(
                 deposits[i].pubkey, deposits[i].signature, deposits[i].amount, withdrawalCredentials, depositContract
             );
-            if (!BLS12_381.isZero(deposits[i].depositY)) {
+            if (BLS12_381.isZero(deposits[i].depositY)) {
+                emit TopUp(depositDataBufferId, deposits[i].operatorIdx, deposits[i].pubkey, deposits[i].amount);
+            } else {
+                emit InitialDeposit(
+                    depositDataBufferId, deposits[i].operatorIdx, deposits[i].pubkey, deposits[i].amount
+                );
                 initialPubkeys[initialCursor] = deposits[i].pubkey;
                 initialOperators[initialCursor] = deposits[i].operatorIdx;
                 initialCursor++;
@@ -189,8 +194,6 @@ abstract contract ConsensusLayerDepositManagerV1 is IConsensusLayerDepositManage
         uint256 currentTotalDepositedETH = TotalDepositedETH.get();
         TotalDepositedETH.set(currentTotalDepositedETH + totalAmount);
         emit SetTotalDepositedETH(currentTotalDepositedETH, currentTotalDepositedETH + totalAmount);
-
-        emit DepositsExecutedWithAttestation(depositDataBufferId, depositRootHash, totalAmount);
     }
 
     /// @notice Deposits _depositAmount ETH to the official Deposit contract
