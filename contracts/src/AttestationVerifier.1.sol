@@ -17,7 +17,7 @@ import "./state/attestationVerifier/DepositCommitteeAttesters.sol";
 import "./state/attestationVerifier/DepositDataBufferAddress.sol";
 import "./state/attestationVerifier/DepositDomainValue.sol";
 import "./state/attestationVerifier/DomainSeparator.sol";
-import "./state/attestationVerifier/InitialDepositedPubkeys.sol";
+import "./state/attestationVerifier/ValidatorPubkeyLookup.sol";
 import "./state/shared/RiverAddress.sol";
 
 /// @title AttestationVerifier (v1)
@@ -235,14 +235,16 @@ contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1 {
         bytes32 computedId = keccak256(abi.encode(deposits));
         if (computedId != depositDataBufferId) revert BufferIdMismatch(depositDataBufferId, computedId);
 
-        // 4. Single pass over deposits: enforce field lengths, accumulate totalAmount, and
-        //    validate each entry's pubkey-state. For top-ups, assert the pubkey is funded and
-        //    the buffer-asserted operator matches the recorded one. For initials, assert the
-        //    pubkey is not already recorded AND does not duplicate any earlier entry in this
-        //    batch — fails here, BEFORE any deposit is executed, so a producer bug burns one
-        //    `validate` call's gas rather than a full batch of `IDepositContract.deposit{}` ones.
-        //    The canonical River WC is supplied by the caller and used directly for BLS
-        //    verification, so the buffer producer is not trusted on the WC field.
+        // 4. Validate every entry before any `_depositValidator` runs — a producer bug
+        //    (bad field length, top-up against an unknown / wrong-operator pubkey, or a
+        //    duplicate initial) reverts here, burning one `validate` call's gas rather than
+        //    a full batch of `IDepositContract.deposit{}` ones downstream. The buffer
+        //    producer is not trusted on the WC field; the canonical River WC is supplied
+        //    by the caller and used directly for BLS verification.
+        // Internal-only scratch: per-entry keccak of the pubkey, used purely for the
+        // O(n^2) in-batch duplicate compare below. Cheaper than byte-comparing dynamic
+        // bytes pairwise. The hash never escapes this function — storage, events, and
+        // error payloads all carry the raw `bytes pubkey`.
         bytes32[] memory pubkeyHashes = new bytes32[](depositCount);
         for (uint256 i = 0; i < depositCount; i++) {
             if (deposits[i].pubkey.length != DEPOSIT_PUBKEY_LENGTH) {
@@ -253,22 +255,23 @@ contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1 {
             }
             totalAmount += deposits[i].amount;
 
-            bytes32 pkHash = keccak256(deposits[i].pubkey);
+            bytes memory pubkey = deposits[i].pubkey;
+            bytes32 pkHash = keccak256(pubkey);
             pubkeyHashes[i] = pkHash;
 
             if (BLS12_381.isZero(deposits[i].depositY)) {
-                (bool exists, uint256 fundedOperatorIdx) = InitialDepositedPubkeys.lookupFundedOperator(pkHash);
-                if (!exists) revert TopUpPubkeyHasNoInitialDeposit(pkHash);
+                (bool exists, uint256 fundedOperatorIdx) = ValidatorPubkeyLookup.lookupValidatorPubkey(pubkey);
+                if (!exists) revert TopUpPubkeyHasNoInitialDeposit(pubkey);
                 if (fundedOperatorIdx != deposits[i].operatorIdx) {
-                    revert TopUpOperatorMismatch(pkHash, fundedOperatorIdx, deposits[i].operatorIdx);
+                    revert TopUpOperatorMismatch(pubkey, fundedOperatorIdx, deposits[i].operatorIdx);
                 }
             } else {
-                if (InitialDepositedPubkeys.hasInitialDeposit(pkHash)) {
-                    revert DuplicateInitialDeposit(pkHash);
+                if (ValidatorPubkeyLookup.hasValidatorPubkey(pubkey)) {
+                    revert DuplicateInitialDeposit(pubkey);
                 }
                 for (uint256 j = 0; j < i; j++) {
                     if (pubkeyHashes[j] == pkHash) {
-                        revert DuplicateInitialDeposit(pkHash);
+                        revert DuplicateInitialDeposit(pubkey);
                     }
                 }
             }
@@ -295,24 +298,23 @@ contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1 {
         }
         for (uint256 i = 0; i < len; ++i) {
             bytes calldata pubkey = pubkeys[i];
-            bytes32 pubkeyHash = keccak256(pubkey);
-            if (InitialDepositedPubkeys.hasInitialDeposit(pubkeyHash)) {
-                revert DuplicateInitialDeposit(pubkeyHash);
+            if (ValidatorPubkeyLookup.hasValidatorPubkey(pubkey)) {
+                revert DuplicateInitialDeposit(pubkey);
             }
-            InitialDepositedPubkeys.markInitialDeposited(pubkeyHash, operatorIndices[i]);
+            ValidatorPubkeyLookup.addValidatorPubkey(pubkey, operatorIndices[i]);
             emit InitialDepositRecorded(operatorIndices[i], pubkey);
         }
     }
 
     /// @inheritdoc IAttestationVerifierV1
-    function hasInitialDeposit(bytes32 pubkeyHash) external view returns (bool) {
-        return InitialDepositedPubkeys.hasInitialDeposit(pubkeyHash);
+    function hasValidatorPubkey(bytes calldata pubkey) external view returns (bool) {
+        return ValidatorPubkeyLookup.hasValidatorPubkey(pubkey);
     }
 
     /// @inheritdoc IAttestationVerifierV1
-    function getFundedOperator(bytes32 pubkeyHash) external view returns (uint256) {
-        (bool exists, uint256 operatorIdx) = InitialDepositedPubkeys.lookupFundedOperator(pubkeyHash);
-        if (!exists) revert PubkeyNotFunded(pubkeyHash);
+    function getValidatorPubkeyOperator(bytes calldata pubkey) external view returns (uint256) {
+        (bool exists, uint256 operatorIdx) = ValidatorPubkeyLookup.lookupValidatorPubkey(pubkey);
+        if (!exists) revert PubkeyNotFunded(pubkey);
         return operatorIdx;
     }
 
@@ -376,6 +378,11 @@ contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1 {
     ///      `validate()` — both the pubkey-funded check and the operatorIdx bind run there,
     ///      so this loop simply skips them. Initials are BLS-verified via a self-staticcall
     ///      trampoline that promotes the deposit's memory bytes into calldata.
+    /// @dev Residual surface NOT closed by these checks: an operator who legitimately receives
+    ///      an initial deposit can later switch the validator's withdrawal credentials under
+    ///      Pectra (BLS-signed change request). Subsequent top-ups would still pass our
+    ///      ownership check but route funds to the new (attacker-controlled) WC. Closing this
+    ///      needs current-WC proofs via EIP-4788 and is out of scope here.
     /// @param deposits The deposits.
     /// @param withdrawalCredentials The canonical River withdrawal credentials.
     function _verifyBLSSignatures(IDepositDataBuffer.DepositObject[] memory deposits, bytes32 withdrawalCredentials)
