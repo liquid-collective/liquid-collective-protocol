@@ -446,6 +446,31 @@ contract ConsolidationAttestationTest is Test {
         assertEq(validator.getConsolidationDataBuffer(), address(cBuffer));
     }
 
+    function testInit_revertZeroRiver() public {
+        AttestationVerifierV1 fresh = _deployFreshValidator();
+        address[] memory dep = new address[](1);
+        dep[0] = depositAttester;
+        address[] memory cc = new address[](1);
+        cc[0] = attester1;
+        // RiverAddress.set calls LibSanitize._notZeroAddress before writing the slot.
+        vm.expectRevert(LibErrors.InvalidZeroAddress.selector);
+        fresh.initAttestationVerifierV1(
+            address(0), address(dBuffer), dep, 1, bytes4(0), address(cBuffer), cc, 1
+        );
+    }
+
+    function testInit_revertZeroAttesterInArray() public {
+        AttestationVerifierV1 fresh = _deployFreshValidator();
+        // Length-2 array containing address(0) — passes the length bounds check, then
+        // fails inside the registration loop when setConsolidationCommitteeAttester
+        // calls LibSanitize._notZeroAddress.
+        address[] memory cc = new address[](2);
+        cc[0] = address(0);
+        cc[1] = attester1;
+        vm.expectRevert(LibErrors.InvalidZeroAddress.selector);
+        _initFreshWithConsolidationParams(fresh, address(cBuffer), cc, 1);
+    }
+
     // -----------------------------------------------------------------------
     // Structural validation tests
     // -----------------------------------------------------------------------
@@ -579,6 +604,16 @@ contract ConsolidationAttestationTest is Test {
     // Buffer integrity tests
     // -----------------------------------------------------------------------
 
+    function testRevert_bufferIdNotFound() public {
+        // Querying an id that was never submitted must propagate the buffer's
+        // ConsolidationDataBufferIdNotFound revert up through validateConsolidation.
+        bytes32 unknown = keccak256("never-submitted-id");
+        vm.expectRevert(
+            abi.encodeWithSelector(IConsolidationDataBuffer.ConsolidationDataBufferIdNotFound.selector, unknown)
+        );
+        validator.validateConsolidation(unknown);
+    }
+
     function testRevert_bufferIdMismatch() public {
         // Sign and "commit" to id1, but stash a DIFFERENT object under id1.
         address user = address(0xBEEF);
@@ -609,19 +644,70 @@ contract ConsolidationAttestationTest is Test {
     }
 
     function testSignaturesExcludedFromBufferId() public {
-        // Two consolidations identical except for signatures must hash to the same bufferId.
+        // Two ConsolidationObjects with identical (user, sources, targets, totalAmount)
+        // but different signatures must both pass the verifier's bufferId-recompute step
+        // under the SAME bufferId — i.e. signatures must not enter the hash.
+        //
+        // Test strategy: store the same content twice (under the same bufferId) into two
+        // different buffer instances, each with a different signature set. The first set
+        // is valid (real committee sigs); the second is well-formed ECDSA but signed over
+        // an unrelated digest. If signatures were part of the bufferId, the second call
+        // would revert with ConsolidationBufferIdMismatch. We confirm it does NOT — it
+        // gets past the bufferId binding and reverts at the quorum check instead.
         address user = address(0xBEEF);
         bytes[] memory sources = new bytes[](1);
         sources[0] = _pubkey(1);
         bytes[] memory targets = new bytes[](1);
         targets[0] = _pubkey(2);
         uint256 totalAmount = 32 ether;
+        bytes32 expectedId = _bufferId(user, sources, targets, totalAmount);
 
-        bytes32 id1 = _bufferId(user, sources, targets, totalAmount);
+        // --- Path A: same payload, signatures over `expectedId` — should succeed.
+        bytes[] memory sigsA = new bytes[](2);
+        sigsA[0] = _sign(pk1, expectedId);
+        sigsA[1] = _sign(pk2, expectedId);
+        cBuffer.submitRaw(
+            expectedId,
+            IConsolidationDataBuffer.ConsolidationObject({
+                user: user,
+                sourcePubkeys: sources,
+                targetPubkeys: targets,
+                totalAmount: totalAmount,
+                signatures: sigsA
+            })
+        );
+        (, uint256 totalAmountA) = validator.validateConsolidation(expectedId);
+        assertEq(totalAmountA, totalAmount);
 
-        // Mutate signatures (different content, even garbage) — bufferId must be unchanged.
-        bytes32 id2 = _bufferId(user, sources, targets, totalAmount);
-        assertEq(id1, id2, "bufferId must be invariant under signature mutation");
+        // --- Path B: same payload, signatures over a DIFFERENT bufferId — well-formed
+        // ECDSA but the recovered address won't match what the verifier expects for
+        // `expectedId`. Store this in a fresh buffer and swap.
+        bytes32 unrelatedId = keccak256("unrelated digest for signature replay test");
+        bytes[] memory sigsB = new bytes[](2);
+        sigsB[0] = _sign(pk1, unrelatedId);
+        sigsB[1] = _sign(pk2, unrelatedId);
+
+        MockConsolidationDataBuffer cBuffer2 = new MockConsolidationDataBuffer();
+        cBuffer2.submitRaw(
+            expectedId,
+            IConsolidationDataBuffer.ConsolidationObject({
+                user: user,
+                sourcePubkeys: sources,
+                targetPubkeys: targets,
+                totalAmount: totalAmount,
+                signatures: sigsB
+            })
+        );
+        vm.prank(admin);
+        validator.setConsolidationDataBuffer(address(cBuffer2));
+
+        // The verifier reaches the quorum check (proving it accepted the bufferId binding
+        // despite the different signatures) and then rejects because sigsB recover to
+        // addresses that did not sign the verifier's recomputed digest for `expectedId`.
+        vm.expectRevert(
+            abi.encodeWithSelector(IAttestationVerifierV1.InsufficientConsolidationAttestations.selector, 0, 2)
+        );
+        validator.validateConsolidation(expectedId);
     }
 
     // -----------------------------------------------------------------------
@@ -772,6 +858,72 @@ contract ConsolidationAttestationTest is Test {
 
         vm.expectRevert(
             abi.encodeWithSelector(IAttestationVerifierV1.InsufficientConsolidationAttestations.selector, 1, 2)
+        );
+        validator.validateConsolidation(id);
+    }
+
+    function testRevert_malformedSignatureBadV() public {
+        // 65-byte signature with a v byte outside {0,1,27,28} after normalization.
+        // _recoverMemory returns address(0); the recovery loop silently skips it.
+        address user = address(0x11);
+        bytes[] memory sources = new bytes[](1);
+        sources[0] = _pubkey(1);
+        bytes[] memory targets = new bytes[](1);
+        targets[0] = _pubkey(2);
+        uint256 totalAmount = 32 ether;
+        bytes32 id = _bufferId(user, sources, targets, totalAmount);
+
+        bytes memory corrupt = _sign(pk2, id);
+        corrupt[64] = bytes1(uint8(42)); // v=42 → 42 (no normalization), not in {27,28} → skipped
+
+        bytes[] memory sigs = new bytes[](2);
+        sigs[0] = _sign(pk1, id);
+        sigs[1] = corrupt;
+
+        cBuffer.submitConsolidationData(
+            id,
+            IConsolidationDataBuffer.ConsolidationObject({
+                user: user,
+                sourcePubkeys: sources,
+                targetPubkeys: targets,
+                totalAmount: totalAmount,
+                signatures: sigs
+            })
+        );
+
+        vm.expectRevert(
+            abi.encodeWithSelector(IAttestationVerifierV1.InsufficientConsolidationAttestations.selector, 1, 2)
+        );
+        validator.validateConsolidation(id);
+    }
+
+    function testRevert_zeroSignatures() public {
+        // signatures.length == 0 must be rejected at the sigLen<quorum gate before
+        // any signer recovery work runs. Distinct from `testRevert_insufficientSignatures`
+        // which uses sigLen = 1.
+        address user = address(0x11);
+        bytes[] memory sources = new bytes[](1);
+        sources[0] = _pubkey(1);
+        bytes[] memory targets = new bytes[](1);
+        targets[0] = _pubkey(2);
+        uint256 totalAmount = 32 ether;
+        bytes32 id = _bufferId(user, sources, targets, totalAmount);
+
+        bytes[] memory sigs = new bytes[](0);
+
+        cBuffer.submitConsolidationData(
+            id,
+            IConsolidationDataBuffer.ConsolidationObject({
+                user: user,
+                sourcePubkeys: sources,
+                targetPubkeys: targets,
+                totalAmount: totalAmount,
+                signatures: sigs
+            })
+        );
+
+        vm.expectRevert(
+            abi.encodeWithSelector(IAttestationVerifierV1.InsufficientConsolidationAttestations.selector, 0, 2)
         );
         validator.validateConsolidation(id);
     }

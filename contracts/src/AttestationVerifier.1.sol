@@ -379,6 +379,21 @@ contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1 {
     }
 
     /// @inheritdoc IAttestationVerifierV1
+    /// @dev Trust boundary: this function only validates structural shape (array shapes
+    ///      and pubkey byte lengths), the bufferId binding (recompute + compare), and the
+    ///      attestation quorum (ECDSA signature recovery against the consolidation
+    ///      committee). It does NOT check:
+    ///        - Source/target pubkey uniqueness within the request (EIP-7251 single-use
+    ///          source rule). A source pubkey appearing twice, or a pubkey appearing in
+    ///          both source and target arrays, is not rejected here.
+    ///        - `totalAmount` gwei alignment, upper bound, or correlation with the number
+    ///          of (source, target) pairs.
+    ///        - Whether the source validators actually exist on the consensus layer or
+    ///          carry the protocol's withdrawal credentials.
+    ///      These are the responsibility of the consolidation buffer producer (off-chain)
+    ///      and the consolidation committee that signs the request. The eventual
+    ///      `mintLsETHForConsolidation` River integration is the place to enforce any
+    ///      additional financial caps on `totalAmount`.
     function validateConsolidation(bytes32 consolidationDataBufferId)
         external
         view

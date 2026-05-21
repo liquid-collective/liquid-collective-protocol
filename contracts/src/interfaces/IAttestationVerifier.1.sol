@@ -236,8 +236,15 @@ interface IAttestationVerifierV1 {
     ///         and return the trusted struct + totalAmount for the caller to act on.
     /// @dev    Signatures are read from the buffer's `ConsolidationObject.signatures` field, not
     ///         supplied as calldata. The bufferId binding excludes signatures so signers can sign
-    ///         the bufferId without a circular dependency. This function does NOT enforce any
-    ///         financial cap — that lives in the eventual River integration.
+    ///         the bufferId without a circular dependency.
+    ///
+    ///         Trust boundary: this function only validates structural shape, the bufferId
+    ///         binding, and the attestation quorum. The following are intentionally NOT checked
+    ///         here and are delegated to the buffer producer / consolidation committee, or to
+    ///         the eventual River integration:
+    ///           - Source/target pubkey uniqueness (EIP-7251 single-use source rule)
+    ///           - `totalAmount` gwei alignment, upper bound, or correlation with pair count
+    ///           - Financial caps (e.g. against committed/in-flight balances)
     /// @param consolidationDataBufferId The bufferId co-signed by consolidation-committee attesters
     /// @return consolidation            The validated consolidation object
     /// @return totalAmount              Sum of the consolidation's totalAmount (mirrored from struct)
