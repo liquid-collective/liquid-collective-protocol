@@ -1,6 +1,7 @@
 //SPDX-License-Identifier: BUSL-1.1
 pragma solidity 0.8.34;
 
+import "./IConsolidationDataBuffer.sol";
 import "./IDepositDataBuffer.sol";
 import "../libraries/BLS12_381.sol";
 
@@ -31,6 +32,18 @@ interface IAttestationVerifierV1 {
 
     /// @notice Emitted when the River address is set on this verifier
     event SetRiver(address indexed river);
+
+    /// @notice Emitted when the ConsolidationDataBuffer address is updated
+    event SetConsolidationDataBuffer(address indexed consolidationDataBuffer);
+
+    /// @notice Emitted when a consolidation-committee attester is added or removed
+    event SetConsolidationCommitteeAttester(address indexed consolidationCommitteeAttester, bool value);
+
+    /// @notice Emitted when the consolidation-committee attestation quorum is updated
+    event SetConsolidationCommitteeAttestationQuorum(uint256 quorum);
+
+    /// @notice Emitted when the EIP-712 consolidation domain separator is (re)cached
+    event SetConsolidationDomainSeparator(bytes32 consolidationDomainSeparator);
 
     // -----------------------------------------------------------------------
     // Errors
@@ -106,6 +119,56 @@ interface IAttestationVerifierV1 {
     /// @param value The requested status (matches current status)
     error DepositCommitteeAttesterStatusUnchanged(address depositCommitteeAttester, bool value);
 
+    // -- Consolidation-side errors --
+
+    /// @notice The number of valid, unique consolidation-committee attester signatures is below the configured quorum
+    /// @param valid The count of valid, unique consolidation-committee attester signatures recovered
+    /// @param quorum The required quorum
+    error InsufficientConsolidationAttestations(uint256 valid, uint256 quorum);
+
+    /// @notice The ConsolidationDataBuffer returned a consolidation with zero source pubkeys
+    error NoConsolidations();
+
+    /// @notice The source and target pubkey arrays have different lengths
+    /// @param sourceLength The length of the source pubkey array
+    /// @param targetLength The length of the target pubkey array
+    error ConsolidationArrayLengthMismatch(uint256 sourceLength, uint256 targetLength);
+
+    /// @notice A pubkey field has an unexpected byte length
+    /// @param index The pair index
+    /// @param length The observed length
+    /// @param isSource True if the offending pubkey is the source pubkey, false if it is the target pubkey
+    error InvalidConsolidationPubkeyLength(uint256 index, uint256 length, bool isSource);
+
+    /// @notice The recomputed consolidation bufferId does not match the attested bufferId
+    /// @param expected The bufferId co-signed by consolidation-committee attesters
+    /// @param actual The bufferId recomputed from the buffer's returned content
+    error ConsolidationBufferIdMismatch(bytes32 expected, bytes32 actual);
+
+    /// @notice The EIP-712 consolidation domain separator has not been initialized
+    error ZeroConsolidationDomainSeparator();
+
+    /// @notice The consolidation's totalAmount is zero
+    error ZeroConsolidationTotalAmount();
+
+    /// @notice The consolidation's user is the zero address
+    error ZeroConsolidationUser();
+
+    /// @notice The supplied quorum is greater than the current consolidation-committee attester count
+    /// @param quorum The supplied quorum
+    /// @param consolidationCommitteeAttesterCount The current consolidation-committee attester count
+    error QuorumExceedsConsolidationCommitteeAttesterCount(uint256 quorum, uint256 consolidationCommitteeAttesterCount);
+
+    /// @notice Adding a consolidation-committee attester would exceed MAX_CONSOLIDATION_COMMITTEE_ATTESTERS
+    /// @param count The would-be consolidation-committee attester count
+    /// @param max The MAX_CONSOLIDATION_COMMITTEE_ATTESTERS bound
+    error TooManyConsolidationCommitteeAttesters(uint256 count, uint256 max);
+
+    /// @notice setConsolidationCommitteeAttester was called with the attester already in the requested state
+    /// @param consolidationCommitteeAttester The consolidation-committee attester address
+    /// @param value The requested status (matches current status)
+    error ConsolidationCommitteeAttesterStatusUnchanged(address consolidationCommitteeAttester, bool value);
+
     // -----------------------------------------------------------------------
     // Initialization
     // -----------------------------------------------------------------------
@@ -123,6 +186,19 @@ interface IAttestationVerifierV1 {
         address[] calldata _depositCommitteeAttesters,
         uint256 _quorum,
         bytes4 _genesisForkVersion
+    ) external;
+
+    /// @notice One-shot initializer for the consolidation-attestation extension.
+    /// @dev    Must be called after `initAttestationVerifierV1`. Uses `init(1)` so the River
+    ///         address and admin lookup configured by the v1 init are reused unchanged.
+    /// @param _consolidationDataBuffer    The pre-commit consolidation buffer the keeper reads from.
+    /// @param _consolidationCommitteeAttesters Initial set of consolidation-committee attester EOAs.
+    /// @param _quorum                     Initial consolidation-attestation quorum
+    ///                                    (1 ≤ quorum ≤ consolidationCommitteeAttesters.length).
+    function initAttestationVerifierV1_1(
+        address _consolidationDataBuffer,
+        address[] calldata _consolidationCommitteeAttesters,
+        uint256 _quorum
     ) external;
 
     // -----------------------------------------------------------------------
@@ -156,6 +232,20 @@ interface IAttestationVerifierV1 {
         uint256 committedBalance
     ) external view returns (IDepositDataBuffer.DepositObject[] memory deposits, uint256 totalAmount);
 
+    /// @notice Validate consolidation-committee attestations over a buffered consolidation request
+    ///         and return the trusted struct + totalAmount for the caller to act on.
+    /// @dev    Signatures are read from the buffer's `ConsolidationObject.signatures` field, not
+    ///         supplied as calldata. The bufferId binding excludes signatures so signers can sign
+    ///         the bufferId without a circular dependency. This function does NOT enforce any
+    ///         financial cap — that lives in the eventual River integration.
+    /// @param consolidationDataBufferId The bufferId co-signed by consolidation-committee attesters
+    /// @return consolidation            The validated consolidation object
+    /// @return totalAmount              Sum of the consolidation's totalAmount (mirrored from struct)
+    function validateConsolidation(bytes32 consolidationDataBufferId)
+        external
+        view
+        returns (IConsolidationDataBuffer.ConsolidationObject memory consolidation, uint256 totalAmount);
+
     // -----------------------------------------------------------------------
     // Admin setters
     // -----------------------------------------------------------------------
@@ -172,6 +262,19 @@ interface IAttestationVerifierV1 {
     /// @notice Update the DepositDataBuffer address. Only callable by River's admin.
     /// @param _depositDataBuffer The new buffer address
     function setDepositDataBuffer(address _depositDataBuffer) external;
+
+    /// @notice Add or remove a consolidation-committee attester. Only callable by River's admin.
+    /// @param consolidationCommitteeAttester The consolidation-committee attester address to update
+    /// @param value True to register, false to deregister
+    function setConsolidationCommitteeAttester(address consolidationCommitteeAttester, bool value) external;
+
+    /// @notice Update the consolidation-committee attestation quorum. Only callable by River's admin.
+    /// @param newQuorum The new quorum (1 ≤ newQuorum ≤ consolidationCommitteeAttesterCount, ≤ MAX_SIGNATURES)
+    function setConsolidationCommitteeAttestationQuorum(uint256 newQuorum) external;
+
+    /// @notice Update the ConsolidationDataBuffer address. Only callable by River's admin.
+    /// @param _consolidationDataBuffer The new buffer address
+    function setConsolidationDataBuffer(address _consolidationDataBuffer) external;
 
     // -----------------------------------------------------------------------
     // Views
@@ -207,4 +310,27 @@ interface IAttestationVerifierV1 {
     /// @notice The River address this verifier is bound to (verifyingContract + admin source)
     /// @return The River address
     function getRiver() external view returns (address);
+
+    // -- Consolidation-side views --
+
+    /// @notice Check whether an address is a registered consolidation-committee attester
+    /// @param account The address to check
+    /// @return True if account is a registered consolidation-committee attester
+    function isConsolidationCommitteeAttester(address account) external view returns (bool);
+
+    /// @notice Retrieve the current number of registered consolidation-committee attesters
+    /// @return The consolidation-committee attester count
+    function getConsolidationCommitteeAttesterCount() external view returns (uint256);
+
+    /// @notice Retrieve the current consolidation-committee attestation quorum
+    /// @return The required number of valid, unique consolidation-committee attester signatures
+    function getConsolidationCommitteeAttestationQuorum() external view returns (uint256);
+
+    /// @notice Retrieve the configured ConsolidationDataBuffer address
+    /// @return The ConsolidationDataBuffer address
+    function getConsolidationDataBuffer() external view returns (address);
+
+    /// @notice Retrieve the cached EIP-712 consolidation domain separator
+    /// @return The EIP-712 consolidation domain separator
+    function getConsolidationDomainSeparator() external view returns (bytes32);
 }

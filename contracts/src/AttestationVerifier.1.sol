@@ -6,12 +6,17 @@ import {ECDSA} from "openzeppelin-contracts/contracts/utils/cryptography/ECDSA.s
 import "./Initializable.sol";
 import "./interfaces/IAdministrable.sol";
 import "./interfaces/IAttestationVerifier.1.sol";
+import "./interfaces/IConsolidationDataBuffer.sol";
 import "./interfaces/IDepositContract.sol";
 import "./interfaces/IDepositDataBuffer.sol";
 
 import "./libraries/BLS12_381.sol";
 import "./libraries/LibErrors.sol";
 
+import "./state/attestationVerifier/ConsolidationCommitteeAttestationQuorum.sol";
+import "./state/attestationVerifier/ConsolidationCommitteeAttesters.sol";
+import "./state/attestationVerifier/ConsolidationDataBufferAddress.sol";
+import "./state/attestationVerifier/ConsolidationDomainSeparator.sol";
 import "./state/attestationVerifier/DepositCommitteeAttestationQuorum.sol";
 import "./state/attestationVerifier/DepositCommitteeAttesters.sol";
 import "./state/attestationVerifier/DepositDataBufferAddress.sol";
@@ -40,15 +45,30 @@ contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1 {
     bytes32 internal constant ATTEST_TYPEHASH =
         keccak256("Attest(bytes32 depositDataBufferId,bytes32 depositRootHash)");
 
+    /// @notice EIP-712 name used by the consolidation-attestation domain separator.
+    /// @dev    Distinct from `NAME_HASH` so attestor signatures cannot be replayed
+    ///         across the deposit and consolidation flows even if the rest of the
+    ///         domain (chainId, verifyingContract, version) were identical.
+    bytes32 internal constant CONSOLIDATION_NAME_HASH = keccak256("ConsolidationValidation");
+
+    bytes32 internal constant ATTEST_CONSOLIDATION_TYPEHASH =
+        keccak256("AttestConsolidation(bytes32 consolidationDataBufferId)");
+
     /// @notice Maximum number of signatures accepted. Bounds the O(n^2) duplicate-detection loop.
     uint256 public constant MAX_SIGNATURES = 20;
 
     /// @notice Maximum number of registered deposit-committee attesters. Defensive cap to bound storage growth.
     uint256 public constant MAX_DEPOSIT_COMMITTEE_ATTESTERS = 32;
 
+    /// @notice Maximum number of registered consolidation-committee attesters. Defensive cap to bound storage growth.
+    uint256 public constant MAX_CONSOLIDATION_COMMITTEE_ATTESTERS = 32;
+
     /// @dev Expected lengths for fixed BLS-related fields in a DepositObject.
     uint256 internal constant DEPOSIT_PUBKEY_LENGTH = 48;
     uint256 internal constant DEPOSIT_SIGNATURE_LENGTH = 96;
+
+    /// @dev Expected length for BLS pubkeys in a ConsolidationObject (source or target).
+    uint256 internal constant CONSOLIDATION_PUBKEY_LENGTH = 48;
 
     // -----------------------------------------------------------------------
     // Modifiers
@@ -117,6 +137,54 @@ contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1 {
         emit SetDomainSeparator(domainSeparator);
     }
 
+    /// @inheritdoc IAttestationVerifierV1
+    /// @dev Future initializers must use `init(2)` etc. — the version counter advances by one per init.
+    function initAttestationVerifierV1_1(
+        address _consolidationDataBuffer,
+        address[] calldata _consolidationCommitteeAttesters,
+        uint256 _quorum
+    ) external init(1) {
+        if (
+            _consolidationCommitteeAttesters.length == 0
+                || _consolidationCommitteeAttesters.length > MAX_CONSOLIDATION_COMMITTEE_ATTESTERS
+        ) {
+            revert LibErrors.InvalidArgument();
+        }
+        if (_quorum == 0) revert ZeroQuorum();
+        if (_quorum > MAX_SIGNATURES) revert QuorumExceedsMaxSignatures(_quorum, MAX_SIGNATURES);
+
+        ConsolidationDataBufferAddress.set(_consolidationDataBuffer);
+        emit SetConsolidationDataBuffer(_consolidationDataBuffer);
+
+        for (uint256 i = 0; i < _consolidationCommitteeAttesters.length; i++) {
+            if (
+                !ConsolidationCommitteeAttesters.isConsolidationCommitteeAttester(_consolidationCommitteeAttesters[i])
+            ) {
+                ConsolidationCommitteeAttesters.setConsolidationCommitteeAttester(
+                    _consolidationCommitteeAttesters[i], true
+                );
+                ConsolidationCommitteeAttesters.setCount(ConsolidationCommitteeAttesters.getCount() + 1);
+                emit SetConsolidationCommitteeAttester(_consolidationCommitteeAttesters[i], true);
+            }
+        }
+        uint256 attesterCount = ConsolidationCommitteeAttesters.getCount();
+        if (_quorum > attesterCount) {
+            revert QuorumExceedsConsolidationCommitteeAttesterCount(_quorum, attesterCount);
+        }
+        ConsolidationCommitteeAttestationQuorum.set(_quorum);
+        emit SetConsolidationCommitteeAttestationQuorum(_quorum);
+
+        // Distinct EIP-712 domain (different NAME_HASH) anchored to the same River address
+        // as the deposit flow. Replay across the two flows is prevented at both the domain
+        // separator level AND the typehash level (defense in depth).
+        address river = RiverAddress.get();
+        bytes32 consolidationDomainSeparator = keccak256(
+            abi.encode(EIP712_DOMAIN_TYPEHASH, CONSOLIDATION_NAME_HASH, VERSION_HASH, block.chainid, river)
+        );
+        ConsolidationDomainSeparator.set(consolidationDomainSeparator);
+        emit SetConsolidationDomainSeparator(consolidationDomainSeparator);
+    }
+
     // -----------------------------------------------------------------------
     // Admin setters
     // -----------------------------------------------------------------------
@@ -159,6 +227,49 @@ contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1 {
         emit SetDepositCommitteeAttestationQuorum(newQuorum);
     }
 
+    /// @inheritdoc IAttestationVerifierV1
+    function setConsolidationDataBuffer(address _consolidationDataBuffer) external onlyRiverAdmin {
+        ConsolidationDataBufferAddress.set(_consolidationDataBuffer);
+        emit SetConsolidationDataBuffer(_consolidationDataBuffer);
+    }
+
+    /// @inheritdoc IAttestationVerifierV1
+    function setConsolidationCommitteeAttester(address consolidationCommitteeAttester, bool value)
+        external
+        onlyRiverAdmin
+    {
+        bool current = ConsolidationCommitteeAttesters.isConsolidationCommitteeAttester(consolidationCommitteeAttester);
+        if (current == value) {
+            revert ConsolidationCommitteeAttesterStatusUnchanged(consolidationCommitteeAttester, value);
+        }
+
+        uint256 count = ConsolidationCommitteeAttesters.getCount();
+        uint256 newCount = value ? count + 1 : count - 1;
+        if (value && newCount > MAX_CONSOLIDATION_COMMITTEE_ATTESTERS) {
+            revert TooManyConsolidationCommitteeAttesters(newCount, MAX_CONSOLIDATION_COMMITTEE_ATTESTERS);
+        }
+        uint256 currentQuorum = ConsolidationCommitteeAttestationQuorum.get();
+        if (!value && currentQuorum > newCount) {
+            revert QuorumExceedsConsolidationCommitteeAttesterCount(currentQuorum, newCount);
+        }
+
+        ConsolidationCommitteeAttesters.setCount(newCount);
+        ConsolidationCommitteeAttesters.setConsolidationCommitteeAttester(consolidationCommitteeAttester, value);
+        emit SetConsolidationCommitteeAttester(consolidationCommitteeAttester, value);
+    }
+
+    /// @inheritdoc IAttestationVerifierV1
+    function setConsolidationCommitteeAttestationQuorum(uint256 newQuorum) external onlyRiverAdmin {
+        if (newQuorum == 0) revert ZeroQuorum();
+        uint256 attesterCount = ConsolidationCommitteeAttesters.getCount();
+        if (newQuorum > attesterCount) {
+            revert QuorumExceedsConsolidationCommitteeAttesterCount(newQuorum, attesterCount);
+        }
+        if (newQuorum > MAX_SIGNATURES) revert QuorumExceedsMaxSignatures(newQuorum, MAX_SIGNATURES);
+        ConsolidationCommitteeAttestationQuorum.set(newQuorum);
+        emit SetConsolidationCommitteeAttestationQuorum(newQuorum);
+    }
+
     // -----------------------------------------------------------------------
     // Views
     // -----------------------------------------------------------------------
@@ -197,6 +308,31 @@ contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1 {
     /// @inheritdoc IAttestationVerifierV1
     function getRiver() external view returns (address) {
         return RiverAddress.get();
+    }
+
+    /// @inheritdoc IAttestationVerifierV1
+    function isConsolidationCommitteeAttester(address account) external view returns (bool) {
+        return ConsolidationCommitteeAttesters.isConsolidationCommitteeAttester(account);
+    }
+
+    /// @inheritdoc IAttestationVerifierV1
+    function getConsolidationCommitteeAttesterCount() external view returns (uint256) {
+        return ConsolidationCommitteeAttesters.getCount();
+    }
+
+    /// @inheritdoc IAttestationVerifierV1
+    function getConsolidationCommitteeAttestationQuorum() external view returns (uint256) {
+        return ConsolidationCommitteeAttestationQuorum.get();
+    }
+
+    /// @inheritdoc IAttestationVerifierV1
+    function getConsolidationDataBuffer() external view returns (address) {
+        return ConsolidationDataBufferAddress.get();
+    }
+
+    /// @inheritdoc IAttestationVerifierV1
+    function getConsolidationDomainSeparator() external view returns (bytes32) {
+        return ConsolidationDomainSeparator.get();
     }
 
     // -----------------------------------------------------------------------
@@ -244,6 +380,51 @@ contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1 {
 
         // 6. Verify BLS signatures against canonical River WC (heaviest step — last so cheap checks fail fast)
         _verifyBLSSignatures(deposits, depositYs, withdrawalCredentials);
+    }
+
+    /// @inheritdoc IAttestationVerifierV1
+    function validateConsolidation(bytes32 consolidationDataBufferId)
+        external
+        view
+        returns (IConsolidationDataBuffer.ConsolidationObject memory consolidation, uint256 totalAmount)
+    {
+        // 1. Fetch consolidation from buffer
+        consolidation =
+            IConsolidationDataBuffer(ConsolidationDataBufferAddress.get()).getConsolidationData(consolidationDataBufferId);
+
+        // 2. Structural checks (cheapest first — fail fast)
+        uint256 sourceLen = consolidation.sourcePubkeys.length;
+        uint256 targetLen = consolidation.targetPubkeys.length;
+        if (sourceLen == 0) revert NoConsolidations();
+        if (sourceLen != targetLen) revert ConsolidationArrayLengthMismatch(sourceLen, targetLen);
+        if (consolidation.totalAmount == 0) revert ZeroConsolidationTotalAmount();
+        if (consolidation.user == address(0)) revert ZeroConsolidationUser();
+
+        // 3. Per-pair pubkey length checks
+        for (uint256 i = 0; i < sourceLen; i++) {
+            if (consolidation.sourcePubkeys[i].length != CONSOLIDATION_PUBKEY_LENGTH) {
+                revert InvalidConsolidationPubkeyLength(i, consolidation.sourcePubkeys[i].length, true);
+            }
+            if (consolidation.targetPubkeys[i].length != CONSOLIDATION_PUBKEY_LENGTH) {
+                revert InvalidConsolidationPubkeyLength(i, consolidation.targetPubkeys[i].length, false);
+            }
+        }
+
+        // 4. Re-compute and check the bufferId binding so the buffer cannot tamper post-attestation.
+        //    Signatures are DELIBERATELY excluded from the hash — see IConsolidationDataBuffer.
+        bytes32 computedId = keccak256(
+            abi.encode(
+                consolidation.user, consolidation.sourcePubkeys, consolidation.targetPubkeys, consolidation.totalAmount
+            )
+        );
+        if (computedId != consolidationDataBufferId) {
+            revert ConsolidationBufferIdMismatch(consolidationDataBufferId, computedId);
+        }
+
+        // 5. Verify the consolidation attestation quorum from signatures read off the buffer
+        _verifyConsolidationAttestationQuorum(consolidationDataBufferId, consolidation.signatures);
+
+        totalAmount = consolidation.totalAmount;
     }
 
     // -----------------------------------------------------------------------
@@ -299,6 +480,55 @@ contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1 {
         }
 
         if (validCount < quorum) revert InsufficientAttestations(validCount, quorum);
+    }
+
+    /// @notice Verify the consolidation-attestation quorum from signatures read off the buffer.
+    /// @dev    Mirrors `_verifyAttestationQuorum` but with three structural differences:
+    ///         (1) signatures arrive as `bytes memory` (sourced from the buffer's returned struct)
+    ///             so we use `_recoverMemory` instead of the calldata-optimized `_recover`;
+    ///         (2) no `depositRootHash` co-sign — consolidations have no front-runnable shared
+    ///             on-chain root, so the typehash hashes only the bufferId;
+    ///         (3) uses the consolidation-specific committee set, quorum, and domain separator.
+    /// @param consolidationDataBufferId The bufferId co-signed by consolidation-committee attesters
+    /// @param signatures                The signatures read off the buffer (bytes memory)
+    function _verifyConsolidationAttestationQuorum(bytes32 consolidationDataBufferId, bytes[] memory signatures)
+        internal
+        view
+    {
+        uint256 sigLen = signatures.length;
+        if (sigLen > MAX_SIGNATURES) revert TooManySignatures(sigLen, MAX_SIGNATURES);
+
+        uint256 quorum = ConsolidationCommitteeAttestationQuorum.get();
+        if (quorum == 0) revert ZeroQuorum();
+        if (sigLen < quorum) revert InsufficientConsolidationAttestations(sigLen, quorum);
+
+        bytes32 domainSep = ConsolidationDomainSeparator.get();
+        if (domainSep == bytes32(0)) revert ZeroConsolidationDomainSeparator();
+        bytes32 structHash = keccak256(abi.encode(ATTEST_CONSOLIDATION_TYPEHASH, consolidationDataBufferId));
+        bytes32 digest = ECDSA.toTypedDataHash(domainSep, structHash);
+
+        uint256 validCount = 0;
+        address[] memory seen = new address[](sigLen);
+
+        for (uint256 i = 0; i < sigLen; i++) {
+            address signer = _recoverMemory(digest, signatures[i]);
+            if (signer == address(0)) continue;
+            if (!ConsolidationCommitteeAttesters.isConsolidationCommitteeAttester(signer)) continue;
+
+            bool duplicate = false;
+            for (uint256 j = 0; j < validCount; j++) {
+                if (seen[j] == signer) {
+                    duplicate = true;
+                    break;
+                }
+            }
+            if (duplicate) continue;
+
+            seen[validCount] = signer;
+            validCount++;
+        }
+
+        if (validCount < quorum) revert InsufficientConsolidationAttestations(validCount, quorum);
     }
 
     /// @notice Verify the BLS signatures against the canonical River withdrawal credentials.
@@ -374,6 +604,33 @@ contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1 {
         assembly {
             r := calldataload(sig.offset)
             s := calldataload(add(sig.offset, 0x20))
+        }
+
+        (address recovered, ECDSA.RecoverError err) = ECDSA.tryRecover(digest, v, r, s);
+        if (err != ECDSA.RecoverError.NoError) return address(0);
+        return recovered;
+    }
+
+    /// @dev Recover signer from a 65-byte EIP-712 signature held in memory, normalizing v.
+    ///      A `bytes memory` variant of `_recover` for signatures that arrive via a memory
+    ///      struct (e.g. read from the consolidation buffer's `ConsolidationObject.signatures`).
+    ///      Keeping this separate from the calldata-optimized `_recover` avoids touching the
+    ///      deposit hot path.
+    /// @param digest The digest.
+    /// @param sig The signature (memory).
+    /// @return The recovered signer.
+    function _recoverMemory(bytes32 digest, bytes memory sig) internal pure returns (address) {
+        if (sig.length != 65) return address(0);
+
+        uint8 v = uint8(sig[64]);
+        if (v < 27) v += 27;
+        if (v != 27 && v != 28) return address(0);
+
+        bytes32 r;
+        bytes32 s;
+        assembly {
+            r := mload(add(sig, 0x20))
+            s := mload(add(sig, 0x40))
         }
 
         (address recovered, ECDSA.RecoverError err) = ECDSA.tryRecover(digest, v, r, s);
