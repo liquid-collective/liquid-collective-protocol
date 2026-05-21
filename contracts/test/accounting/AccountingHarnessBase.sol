@@ -210,8 +210,17 @@ abstract contract AccountingHarnessBase is Test, BytesGenerator {
         // pinned to River's address inside the validator's domain separator.
         attestationVerifier = new AttestationVerifierV1();
         LibImplementationUnbricker.unbrick(vm, address(attestationVerifier));
+        address[] memory _initConsolidationCommitteeAttesters = new address[](1);
+        _initConsolidationCommitteeAttesters[0] = makeAddr("consolidationCommitteeAttesterStub");
         attestationVerifier.initAttestationVerifierV1(
-            address(river), address(depositBuffer), _initDepositCommitteeAttesters, 2, bytes4(0)
+            address(river),
+            address(depositBuffer),
+            _initDepositCommitteeAttesters,
+            2,
+            bytes4(0),
+            makeAddr("consolidationDataBufferStub"),
+            _initConsolidationCommitteeAttesters,
+            1
         );
 
         bytes32 _initWc = withdraw.getCredentials();

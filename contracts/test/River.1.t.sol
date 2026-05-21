@@ -397,8 +397,17 @@ contract RiverV1Tests is RiverV1TestBase {
         _initDepositCommitteeAttesters[2] = depositCommitteeAttester3;
         attestationVerifier = new AttestationVerifierV1();
         LibImplementationUnbricker.unbrick(vm, address(attestationVerifier));
+        address[] memory _initConsolidationCommitteeAttesters = new address[](1);
+        _initConsolidationCommitteeAttesters[0] = makeAddr("consolidationCommitteeAttesterStub");
         attestationVerifier.initAttestationVerifierV1(
-            address(river), address(depositBuffer), _initDepositCommitteeAttesters, 2, bytes4(0)
+            address(river),
+            address(depositBuffer),
+            _initDepositCommitteeAttesters,
+            2,
+            bytes4(0),
+            makeAddr("consolidationDataBufferStub"),
+            _initConsolidationCommitteeAttesters,
+            1
         );
 
         // Wire validator address into River's storage (these tests skip initRiverV1_3
@@ -1344,8 +1353,17 @@ contract RiverV1TestsReport_HEAVY_FUZZING is RiverV1TestBase {
         _initDepositCommitteeAttesters2[2] = depositCommitteeAttester3;
         attestationVerifier = new AttestationVerifierV1();
         LibImplementationUnbricker.unbrick(vm, address(attestationVerifier));
+        address[] memory _initConsolidationCommitteeAttesters2 = new address[](1);
+        _initConsolidationCommitteeAttesters2[0] = makeAddr("consolidationCommitteeAttesterStub");
         attestationVerifier.initAttestationVerifierV1(
-            address(river), address(depositBuffer), _initDepositCommitteeAttesters2, 2, bytes4(0)
+            address(river),
+            address(depositBuffer),
+            _initDepositCommitteeAttesters2,
+            2,
+            bytes4(0),
+            makeAddr("consolidationDataBufferStub"),
+            _initConsolidationCommitteeAttesters2,
+            1
         );
         vm.store(
             address(river),
@@ -2761,9 +2779,20 @@ contract RiverV1CoverageTests is RiverV1TestBase {
         address[] memory _depositCommitteeAttesters_ = new address[](2);
         _depositCommitteeAttesters_[0] = makeAddr("depositCommitteeAttester1");
         _depositCommitteeAttesters_[1] = makeAddr("depositCommitteeAttester2");
+        address[] memory _consolidationCommitteeAttesters_ = new address[](1);
+        _consolidationCommitteeAttesters_[0] = makeAddr("consolidationCommitteeAttesterStub");
         v = new AttestationVerifierV1();
         LibImplementationUnbricker.unbrick(vm, address(v));
-        v.initAttestationVerifierV1(_river, makeAddr("depositBuffer"), _depositCommitteeAttesters_, 1, bytes4(0));
+        v.initAttestationVerifierV1(
+            _river,
+            makeAddr("depositBuffer"),
+            _depositCommitteeAttesters_,
+            1,
+            bytes4(0),
+            makeAddr("consolidationDataBufferStub"),
+            _consolidationCommitteeAttesters_,
+            1
+        );
     }
 
     /// Asserts that initRiverV1_3 sets in-flight deposit when reported validator count is less than deposited count.
@@ -2828,11 +2857,20 @@ contract RiverV1CoverageTests is RiverV1TestBase {
     function testInitAttestationVerifierRevertsOnEmptyDepositCommitteeAttesters() public {
         _initRiverAndV1_2();
         address[] memory _depositCommitteeAttesters_ = new address[](0);
+        address[] memory _consolidationCommitteeAttesters_ = new address[](1);
+        _consolidationCommitteeAttesters_[0] = makeAddr("consolidationCommitteeAttesterStub");
         AttestationVerifierV1 v = new AttestationVerifierV1();
         LibImplementationUnbricker.unbrick(vm, address(v));
         vm.expectRevert(abi.encodeWithSignature("InvalidArgument()"));
         v.initAttestationVerifierV1(
-            address(river), makeAddr("depositBuffer"), _depositCommitteeAttesters_, 1, bytes4(0)
+            address(river),
+            makeAddr("depositBuffer"),
+            _depositCommitteeAttesters_,
+            1,
+            bytes4(0),
+            makeAddr("consolidationDataBufferStub"),
+            _consolidationCommitteeAttesters_,
+            1
         );
     }
 
@@ -2846,9 +2884,18 @@ contract RiverV1CoverageTests is RiverV1TestBase {
         for (uint256 i = 0; i < tooMany; i++) {
             _depositCommitteeAttesters_[i] = address(uint160(i + 1));
         }
+        address[] memory _consolidationCommitteeAttesters_ = new address[](1);
+        _consolidationCommitteeAttesters_[0] = makeAddr("consolidationCommitteeAttesterStub");
         vm.expectRevert(abi.encodeWithSignature("InvalidArgument()"));
         v.initAttestationVerifierV1(
-            address(river), makeAddr("depositBuffer"), _depositCommitteeAttesters_, 1, bytes4(0)
+            address(river),
+            makeAddr("depositBuffer"),
+            _depositCommitteeAttesters_,
+            1,
+            bytes4(0),
+            makeAddr("consolidationDataBufferStub"),
+            _consolidationCommitteeAttesters_,
+            1
         );
     }
 

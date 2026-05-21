@@ -213,14 +213,27 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
         // 2. Deploy and init the AttestationVerifier. The validator's EIP-712
         //    domain separator binds verifyingContract to the harness's address
         //    so deposit-committee attester signing tooling stays River-anchored.
+        //    Consolidation params are dummies here — this suite exercises the deposit flow only.
         address[] memory depositCommitteeAttesters = new address[](3);
         depositCommitteeAttesters[0] = depositCommitteeAttester1;
         depositCommitteeAttesters[1] = depositCommitteeAttester2;
         depositCommitteeAttesters[2] = depositCommitteeAttester3;
 
+        address[] memory consolidationCommitteeAttesters = new address[](1);
+        consolidationCommitteeAttesters[0] = makeAddr("consolidationCommitteeAttesterStub");
+
         validator = new AttestationVerifierV1();
         LibImplementationUnbricker.unbrick(vm, address(validator));
-        validator.initAttestationVerifierV1(address(dm), address(buffer), depositCommitteeAttesters, 2, bytes4(0));
+        validator.initAttestationVerifierV1(
+            address(dm),
+            address(buffer),
+            depositCommitteeAttesters,
+            2,
+            bytes4(0),
+            makeAddr("consolidationDataBufferStub"),
+            consolidationCommitteeAttesters,
+            1
+        );
 
         // 3. Wire the validator address into the harness.
         dm.sudoSetAttestationVerifier(address(validator));

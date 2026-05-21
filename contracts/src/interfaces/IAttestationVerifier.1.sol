@@ -174,31 +174,31 @@ interface IAttestationVerifierV1 {
     // -----------------------------------------------------------------------
 
     /// @notice One-shot initializer for v1 of the AttestationVerifier.
-    /// @param _river                The River proxy address; used for the EIP-712 verifyingContract
-    ///                              binding and for the cross-contract admin lookup.
-    /// @param _depositDataBuffer    The pre-commit buffer the keeper writes to.
-    /// @param _depositCommitteeAttesters Initial set of deposit-committee attester EOAs.
-    /// @param _quorum               Initial attestation quorum (1 ≤ quorum ≤ depositCommitteeAttesters.length).
-    /// @param _genesisForkVersion   Genesis fork version used to derive the BLS deposit domain.
+    /// @dev    Configures both the deposit and consolidation attestation flows in a single call.
+    ///         Each flow has its own committee, quorum, buffer, and EIP-712 domain separator
+    ///         (distinct NAME_HASH per flow); they share only the River anchor and the admin
+    ///         lookup. Quorum and committee constraints are validated independently per flow.
+    /// @param _river                            The River proxy address; used for both
+    ///                                          EIP-712 domain separators and for the cross-
+    ///                                          contract admin lookup.
+    /// @param _depositDataBuffer                The pre-commit deposit buffer the keeper writes to.
+    /// @param _depositCommitteeAttesters        Initial set of deposit-committee attester EOAs.
+    /// @param _depositQuorum                    Initial deposit-attestation quorum
+    ///                                          (1 ≤ q ≤ depositCommitteeAttesters.length, ≤ MAX_SIGNATURES).
+    /// @param _genesisForkVersion               Genesis fork version used to derive the BLS deposit domain.
+    /// @param _consolidationDataBuffer          The consolidation buffer the keeper reads from.
+    /// @param _consolidationCommitteeAttesters  Initial set of consolidation-committee attester EOAs.
+    /// @param _consolidationQuorum              Initial consolidation-attestation quorum
+    ///                                          (1 ≤ q ≤ consolidationCommitteeAttesters.length, ≤ MAX_SIGNATURES).
     function initAttestationVerifierV1(
         address _river,
         address _depositDataBuffer,
         address[] calldata _depositCommitteeAttesters,
-        uint256 _quorum,
-        bytes4 _genesisForkVersion
-    ) external;
-
-    /// @notice One-shot initializer for the consolidation-attestation extension.
-    /// @dev    Must be called after `initAttestationVerifierV1`. Uses `init(1)` so the River
-    ///         address and admin lookup configured by the v1 init are reused unchanged.
-    /// @param _consolidationDataBuffer    The pre-commit consolidation buffer the keeper reads from.
-    /// @param _consolidationCommitteeAttesters Initial set of consolidation-committee attester EOAs.
-    /// @param _quorum                     Initial consolidation-attestation quorum
-    ///                                    (1 ≤ quorum ≤ consolidationCommitteeAttesters.length).
-    function initAttestationVerifierV1_1(
+        uint256 _depositQuorum,
+        bytes4 _genesisForkVersion,
         address _consolidationDataBuffer,
         address[] calldata _consolidationCommitteeAttesters,
-        uint256 _quorum
+        uint256 _consolidationQuorum
     ) external;
 
     // -----------------------------------------------------------------------

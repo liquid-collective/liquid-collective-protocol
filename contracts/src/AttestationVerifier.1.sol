@@ -92,28 +92,49 @@ contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1 {
         address _river,
         address _depositDataBuffer,
         address[] calldata _depositCommitteeAttesters,
-        uint256 _quorum,
-        bytes4 _genesisForkVersion
+        uint256 _depositQuorum,
+        bytes4 _genesisForkVersion,
+        address _consolidationDataBuffer,
+        address[] calldata _consolidationCommitteeAttesters,
+        uint256 _consolidationQuorum
     ) external init(0) {
+        // ---- Validate deposit-side parameters ----
         if (
             _depositCommitteeAttesters.length == 0
                 || _depositCommitteeAttesters.length > MAX_DEPOSIT_COMMITTEE_ATTESTERS
         ) {
             revert LibErrors.InvalidArgument();
         }
-        if (_quorum == 0) revert ZeroQuorum();
-        if (_quorum > MAX_SIGNATURES) revert QuorumExceedsMaxSignatures(_quorum, MAX_SIGNATURES);
+        if (_depositQuorum == 0) revert ZeroQuorum();
+        if (_depositQuorum > MAX_SIGNATURES) revert QuorumExceedsMaxSignatures(_depositQuorum, MAX_SIGNATURES);
 
+        // ---- Validate consolidation-side parameters ----
+        if (
+            _consolidationCommitteeAttesters.length == 0
+                || _consolidationCommitteeAttesters.length > MAX_CONSOLIDATION_COMMITTEE_ATTESTERS
+        ) {
+            revert LibErrors.InvalidArgument();
+        }
+        if (_consolidationQuorum == 0) revert ZeroQuorum();
+        if (_consolidationQuorum > MAX_SIGNATURES) {
+            revert QuorumExceedsMaxSignatures(_consolidationQuorum, MAX_SIGNATURES);
+        }
+
+        // ---- River + buffers + BLS deposit domain ----
         RiverAddress.set(_river);
         emit SetRiver(_river);
 
         DepositDataBufferAddress.set(_depositDataBuffer);
         emit SetDepositDataBuffer(_depositDataBuffer);
 
+        ConsolidationDataBufferAddress.set(_consolidationDataBuffer);
+        emit SetConsolidationDataBuffer(_consolidationDataBuffer);
+
         bytes32 depositDomain = BLS12_381.computeDepositDomain(_genesisForkVersion);
         DepositDomainValue.set(depositDomain);
         emit SetDepositDomain(depositDomain);
 
+        // ---- Deposit committee + quorum ----
         for (uint256 i = 0; i < _depositCommitteeAttesters.length; i++) {
             if (!DepositCommitteeAttesters.isDepositCommitteeAttester(_depositCommitteeAttesters[i])) {
                 DepositCommitteeAttesters.setDepositCommitteeAttester(_depositCommitteeAttesters[i], true);
@@ -122,40 +143,13 @@ contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1 {
             }
         }
         uint256 depositCommitteeAttesterCount = DepositCommitteeAttesters.getCount();
-        if (_quorum > depositCommitteeAttesterCount) {
-            revert QuorumExceedsDepositCommitteeAttesterCount(_quorum, depositCommitteeAttesterCount);
+        if (_depositQuorum > depositCommitteeAttesterCount) {
+            revert QuorumExceedsDepositCommitteeAttesterCount(_depositQuorum, depositCommitteeAttesterCount);
         }
-        DepositCommitteeAttestationQuorum.set(_quorum);
-        emit SetDepositCommitteeAttestationQuorum(_quorum);
+        DepositCommitteeAttestationQuorum.set(_depositQuorum);
+        emit SetDepositCommitteeAttestationQuorum(_depositQuorum);
 
-        // EIP-712 domain separator binds verifyingContract to River's address, not this
-        // verifier's own address. This preserves deposit-committee attester signing tooling that
-        // signs against River's identity even if the verifier is later redeployed.
-        bytes32 domainSeparator =
-            keccak256(abi.encode(EIP712_DOMAIN_TYPEHASH, NAME_HASH, VERSION_HASH, block.chainid, _river));
-        DomainSeparator.set(domainSeparator);
-        emit SetDomainSeparator(domainSeparator);
-    }
-
-    /// @inheritdoc IAttestationVerifierV1
-    /// @dev Future initializers must use `init(2)` etc. — the version counter advances by one per init.
-    function initAttestationVerifierV1_1(
-        address _consolidationDataBuffer,
-        address[] calldata _consolidationCommitteeAttesters,
-        uint256 _quorum
-    ) external init(1) {
-        if (
-            _consolidationCommitteeAttesters.length == 0
-                || _consolidationCommitteeAttesters.length > MAX_CONSOLIDATION_COMMITTEE_ATTESTERS
-        ) {
-            revert LibErrors.InvalidArgument();
-        }
-        if (_quorum == 0) revert ZeroQuorum();
-        if (_quorum > MAX_SIGNATURES) revert QuorumExceedsMaxSignatures(_quorum, MAX_SIGNATURES);
-
-        ConsolidationDataBufferAddress.set(_consolidationDataBuffer);
-        emit SetConsolidationDataBuffer(_consolidationDataBuffer);
-
+        // ---- Consolidation committee + quorum ----
         for (uint256 i = 0; i < _consolidationCommitteeAttesters.length; i++) {
             if (
                 !ConsolidationCommitteeAttesters.isConsolidationCommitteeAttester(_consolidationCommitteeAttesters[i])
@@ -167,19 +161,21 @@ contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1 {
                 emit SetConsolidationCommitteeAttester(_consolidationCommitteeAttesters[i], true);
             }
         }
-        uint256 attesterCount = ConsolidationCommitteeAttesters.getCount();
-        if (_quorum > attesterCount) {
-            revert QuorumExceedsConsolidationCommitteeAttesterCount(_quorum, attesterCount);
+        uint256 consolidationAttesterCount = ConsolidationCommitteeAttesters.getCount();
+        if (_consolidationQuorum > consolidationAttesterCount) {
+            revert QuorumExceedsConsolidationCommitteeAttesterCount(_consolidationQuorum, consolidationAttesterCount);
         }
-        ConsolidationCommitteeAttestationQuorum.set(_quorum);
-        emit SetConsolidationCommitteeAttestationQuorum(_quorum);
+        ConsolidationCommitteeAttestationQuorum.set(_consolidationQuorum);
+        emit SetConsolidationCommitteeAttestationQuorum(_consolidationQuorum);
 
-        // Distinct EIP-712 domain (different NAME_HASH) anchored to the same River address
-        // as the deposit flow. Replay across the two flows is prevented at both the domain
-        // separator level AND the typehash level (defense in depth).
-        address river = RiverAddress.get();
+        // ---- EIP-712 domain separators (distinct NAME_HASH per flow, both anchored to River) ----
+        bytes32 depositDomainSeparator =
+            keccak256(abi.encode(EIP712_DOMAIN_TYPEHASH, NAME_HASH, VERSION_HASH, block.chainid, _river));
+        DomainSeparator.set(depositDomainSeparator);
+        emit SetDomainSeparator(depositDomainSeparator);
+
         bytes32 consolidationDomainSeparator = keccak256(
-            abi.encode(EIP712_DOMAIN_TYPEHASH, CONSOLIDATION_NAME_HASH, VERSION_HASH, block.chainid, river)
+            abi.encode(EIP712_DOMAIN_TYPEHASH, CONSOLIDATION_NAME_HASH, VERSION_HASH, block.chainid, _river)
         );
         ConsolidationDomainSeparator.set(consolidationDomainSeparator);
         emit SetConsolidationDomainSeparator(consolidationDomainSeparator);

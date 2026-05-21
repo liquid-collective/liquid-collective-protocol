@@ -186,17 +186,44 @@ contract ConsolidationAttestationTest is Test {
         validator = new AttestationVerifierV1();
         LibImplementationUnbricker.unbrick(vm, address(validator));
 
-        // init(0) — deposit side. Throwaway committee just to advance Version.
         address[] memory depCommittee = new address[](1);
         depCommittee[0] = depositAttester;
-        validator.initAttestationVerifierV1(address(river), address(dBuffer), depCommittee, 1, bytes4(0));
-
-        // init(1) — consolidation side.
         address[] memory cCommittee = new address[](3);
         cCommittee[0] = attester1;
         cCommittee[1] = attester2;
         cCommittee[2] = attester3;
-        validator.initAttestationVerifierV1_1(address(cBuffer), cCommittee, 2);
+        validator.initAttestationVerifierV1(
+            address(river), address(dBuffer), depCommittee, 1, bytes4(0), address(cBuffer), cCommittee, 2
+        );
+    }
+
+    /// @dev Deploy + unbrick a fresh validator.
+    function _deployFreshValidator() internal returns (AttestationVerifierV1 fresh) {
+        fresh = new AttestationVerifierV1();
+        LibImplementationUnbricker.unbrick(vm, address(fresh));
+    }
+
+    /// @dev Init a fresh validator with the provided consolidation params, reusing a valid
+    ///      1-attester deposit committee. Internal so `vm.expectRevert` pierces through to
+    ///      the init external call.
+    function _initFreshWithConsolidationParams(
+        AttestationVerifierV1 fresh,
+        address consolidationBuffer,
+        address[] memory consolidationCommittee,
+        uint256 consolidationQuorum
+    ) internal {
+        address[] memory dep = new address[](1);
+        dep[0] = depositAttester;
+        fresh.initAttestationVerifierV1(
+            address(river),
+            address(dBuffer),
+            dep,
+            1,
+            bytes4(0),
+            consolidationBuffer,
+            consolidationCommittee,
+            consolidationQuorum
+        );
     }
 
     // -----------------------------------------------------------------------
@@ -332,69 +359,46 @@ contract ConsolidationAttestationTest is Test {
     // -----------------------------------------------------------------------
 
     function testInit_revertEmptyAttesterArray() public {
-        AttestationVerifierV1 fresh = new AttestationVerifierV1();
-        LibImplementationUnbricker.unbrick(vm, address(fresh));
-        address[] memory dep = new address[](1);
-        dep[0] = depositAttester;
-        fresh.initAttestationVerifierV1(address(river), address(dBuffer), dep, 1, bytes4(0));
-
+        AttestationVerifierV1 fresh = _deployFreshValidator();
         address[] memory empty = new address[](0);
         vm.expectRevert(LibErrors.InvalidArgument.selector);
-        fresh.initAttestationVerifierV1_1(address(cBuffer), empty, 1);
+        _initFreshWithConsolidationParams(fresh, address(cBuffer), empty, 1);
     }
 
     function testInit_revertTooManyAttesters() public {
-        AttestationVerifierV1 fresh = new AttestationVerifierV1();
-        LibImplementationUnbricker.unbrick(vm, address(fresh));
-        address[] memory dep = new address[](1);
-        dep[0] = depositAttester;
-        fresh.initAttestationVerifierV1(address(river), address(dBuffer), dep, 1, bytes4(0));
-
+        AttestationVerifierV1 fresh = _deployFreshValidator();
         address[] memory many = new address[](33);
         for (uint256 i = 0; i < 33; i++) {
             many[i] = address(uint160(0x1000 + i));
         }
         vm.expectRevert(LibErrors.InvalidArgument.selector);
-        fresh.initAttestationVerifierV1_1(address(cBuffer), many, 1);
+        _initFreshWithConsolidationParams(fresh, address(cBuffer), many, 1);
     }
 
     function testInit_revertZeroQuorum() public {
-        AttestationVerifierV1 fresh = new AttestationVerifierV1();
-        LibImplementationUnbricker.unbrick(vm, address(fresh));
-        address[] memory dep = new address[](1);
-        dep[0] = depositAttester;
-        fresh.initAttestationVerifierV1(address(river), address(dBuffer), dep, 1, bytes4(0));
-
+        AttestationVerifierV1 fresh = _deployFreshValidator();
         address[] memory cc = new address[](1);
         cc[0] = attester1;
         vm.expectRevert(IAttestationVerifierV1.ZeroQuorum.selector);
-        fresh.initAttestationVerifierV1_1(address(cBuffer), cc, 0);
+        _initFreshWithConsolidationParams(fresh, address(cBuffer), cc, 0);
     }
 
     function testInit_revertQuorumExceedsMaxSignatures() public {
-        AttestationVerifierV1 fresh = new AttestationVerifierV1();
-        LibImplementationUnbricker.unbrick(vm, address(fresh));
-        address[] memory dep = new address[](1);
-        dep[0] = depositAttester;
-        fresh.initAttestationVerifierV1(address(river), address(dBuffer), dep, 1, bytes4(0));
-
+        AttestationVerifierV1 fresh = _deployFreshValidator();
         address[] memory cc = new address[](32);
         for (uint256 i = 0; i < 32; i++) {
             cc[i] = address(uint160(0x2000 + i));
         }
         vm.expectRevert(
-            abi.encodeWithSelector(IAttestationVerifierV1.QuorumExceedsMaxSignatures.selector, 21, fresh.MAX_SIGNATURES())
+            abi.encodeWithSelector(
+                IAttestationVerifierV1.QuorumExceedsMaxSignatures.selector, 21, validator.MAX_SIGNATURES()
+            )
         );
-        fresh.initAttestationVerifierV1_1(address(cBuffer), cc, 21);
+        _initFreshWithConsolidationParams(fresh, address(cBuffer), cc, 21);
     }
 
     function testInit_revertQuorumExceedsAttesterCount() public {
-        AttestationVerifierV1 fresh = new AttestationVerifierV1();
-        LibImplementationUnbricker.unbrick(vm, address(fresh));
-        address[] memory dep = new address[](1);
-        dep[0] = depositAttester;
-        fresh.initAttestationVerifierV1(address(river), address(dBuffer), dep, 1, bytes4(0));
-
+        AttestationVerifierV1 fresh = _deployFreshValidator();
         address[] memory cc = new address[](2);
         cc[0] = attester1;
         cc[1] = attester2;
@@ -403,28 +407,27 @@ contract ConsolidationAttestationTest is Test {
                 IAttestationVerifierV1.QuorumExceedsConsolidationCommitteeAttesterCount.selector, 3, 2
             )
         );
-        fresh.initAttestationVerifierV1_1(address(cBuffer), cc, 3);
+        _initFreshWithConsolidationParams(fresh, address(cBuffer), cc, 3);
     }
 
     function testInit_revertZeroBuffer() public {
-        AttestationVerifierV1 fresh = new AttestationVerifierV1();
-        LibImplementationUnbricker.unbrick(vm, address(fresh));
-        address[] memory dep = new address[](1);
-        dep[0] = depositAttester;
-        fresh.initAttestationVerifierV1(address(river), address(dBuffer), dep, 1, bytes4(0));
-
+        AttestationVerifierV1 fresh = _deployFreshValidator();
         address[] memory cc = new address[](1);
         cc[0] = attester1;
         vm.expectRevert(LibErrors.InvalidZeroAddress.selector);
-        fresh.initAttestationVerifierV1_1(address(0), cc, 1);
+        _initFreshWithConsolidationParams(fresh, address(0), cc, 1);
     }
 
     function testInit_revertAlreadyInitialized() public {
-        // setUp already called init(1) — calling it again must revert.
+        // setUp already called init — calling it again must revert.
+        address[] memory dep = new address[](1);
+        dep[0] = depositAttester;
         address[] memory cc = new address[](1);
         cc[0] = attester1;
         vm.expectRevert();
-        validator.initAttestationVerifierV1_1(address(cBuffer), cc, 1);
+        validator.initAttestationVerifierV1(
+            address(river), address(dBuffer), dep, 1, bytes4(0), address(cBuffer), cc, 1
+        );
     }
 
     function testInit_consolidationDomainSeparatorDiffersFromDeposit() public {
