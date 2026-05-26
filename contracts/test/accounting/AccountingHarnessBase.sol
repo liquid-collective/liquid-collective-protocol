@@ -218,7 +218,6 @@ abstract contract AccountingHarnessBase is Test, BytesGenerator {
             _initDepositCommitteeAttesters,
             2,
             bytes4(0),
-            makeAddr("consolidationDataBufferStub"),
             _initConsolidationCommitteeAttesters,
             1
         );

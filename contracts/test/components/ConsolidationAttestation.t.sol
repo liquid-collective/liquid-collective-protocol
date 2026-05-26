@@ -5,12 +5,8 @@ import "forge-std/Test.sol";
 
 import "../../src/AttestationVerifier.1.sol";
 import "../../src/interfaces/IAttestationVerifier.1.sol";
-import "../../src/interfaces/IConsolidationDataBuffer.sol";
-import "../../src/interfaces/IDepositDataBuffer.sol";
-import "../../src/libraries/BLS12_381.sol";
 import "../../src/libraries/LibErrors.sol";
 import "../utils/LibImplementationUnbricker.sol";
-import "../mocks/DepositContractEnhancedMock.sol";
 
 // ---------------------------------------------------------------------------
 // Minimal River admin mock — exposes getAdmin() so AttestationVerifierV1's
@@ -30,112 +26,14 @@ contract MockRiverAdmin {
 }
 
 // ---------------------------------------------------------------------------
-// Mock DepositDataBuffer — copied from the deposit attestation tests because
-// no real implementation exists. We need it to satisfy the v1 init.
-// ---------------------------------------------------------------------------
-
-contract MockDepositDataBufferForConsolidation is IDepositDataBuffer {
-    mapping(bytes32 => DepositObject[]) internal _batches;
-    mapping(bytes32 => bool) internal _exists;
-
-    function submitDepositData(bytes32 depositDataBufferId, DepositObject[] calldata deposits) external {
-        if (_exists[depositDataBufferId]) revert DepositDataBufferIdAlreadyExists(depositDataBufferId);
-        _exists[depositDataBufferId] = true;
-        for (uint256 i = 0; i < deposits.length; i++) {
-            _batches[depositDataBufferId].push(deposits[i]);
-        }
-        emit DepositDataSubmitted(depositDataBufferId, deposits.length);
-    }
-
-    function getDepositData(bytes32 depositDataBufferId) external view returns (DepositObject[] memory) {
-        if (!_exists[depositDataBufferId]) revert DepositDataBufferIdNotFound(depositDataBufferId);
-        return _batches[depositDataBufferId];
-    }
-
-    function getWriter() external pure returns (address) {
-        return address(0);
-    }
-
-    function getAdmin() external pure returns (address) {
-        return address(0);
-    }
-}
-
-// ---------------------------------------------------------------------------
-// Mock ConsolidationDataBuffer — stores ConsolidationObject by bufferId.
-//
-// Includes a `submitRaw(id, obj)` helper that bypasses the id-derivation rule
-// so tests can store data under a deliberately wrong id (covers the
-// ConsolidationBufferIdMismatch path).
-// ---------------------------------------------------------------------------
-
-contract MockConsolidationDataBuffer is IConsolidationDataBuffer {
-    mapping(bytes32 => ConsolidationObject) internal _data;
-    mapping(bytes32 => bool) internal _exists;
-
-    function submitConsolidationData(bytes32 id, ConsolidationObject calldata consolidation) external {
-        if (_exists[id]) revert ConsolidationDataBufferIdAlreadyExists(id);
-        if (consolidation.sourcePubkeys.length == 0) revert EmptyConsolidationData();
-        _exists[id] = true;
-        _storeMemory(id, consolidation.user, consolidation.totalAmount);
-        for (uint256 i = 0; i < consolidation.sourcePubkeys.length; i++) {
-            _data[id].sourcePubkeys.push(consolidation.sourcePubkeys[i]);
-        }
-        for (uint256 i = 0; i < consolidation.targetPubkeys.length; i++) {
-            _data[id].targetPubkeys.push(consolidation.targetPubkeys[i]);
-        }
-        for (uint256 i = 0; i < consolidation.signatures.length; i++) {
-            _data[id].signatures.push(consolidation.signatures[i]);
-        }
-        emit ConsolidationDataSubmitted(id, consolidation.user, consolidation.sourcePubkeys.length);
-    }
-
-    /// @dev Test-only escape hatch: store a ConsolidationObject under an arbitrary id
-    ///      (not necessarily derived from its content). Used to exercise the verifier's
-    ///      bufferId-binding check.
-    function submitRaw(bytes32 id, ConsolidationObject memory consolidation) external {
-        _exists[id] = true;
-        _data[id].user = consolidation.user;
-        _data[id].totalAmount = consolidation.totalAmount;
-        for (uint256 i = 0; i < consolidation.sourcePubkeys.length; i++) {
-            _data[id].sourcePubkeys.push(consolidation.sourcePubkeys[i]);
-        }
-        for (uint256 i = 0; i < consolidation.targetPubkeys.length; i++) {
-            _data[id].targetPubkeys.push(consolidation.targetPubkeys[i]);
-        }
-        for (uint256 i = 0; i < consolidation.signatures.length; i++) {
-            _data[id].signatures.push(consolidation.signatures[i]);
-        }
-    }
-
-    function _storeMemory(bytes32 id, address user, uint256 totalAmount) internal {
-        _data[id].user = user;
-        _data[id].totalAmount = totalAmount;
-    }
-
-    function getConsolidationData(bytes32 id) external view returns (ConsolidationObject memory) {
-        if (!_exists[id]) revert ConsolidationDataBufferIdNotFound(id);
-        return _data[id];
-    }
-
-    function getWriter() external pure returns (address) {
-        return address(0);
-    }
-
-    function getAdmin() external pure returns (address) {
-        return address(0);
-    }
-}
-
-// ---------------------------------------------------------------------------
 // ConsolidationAttestationTest — exercises the consolidation half of
-// AttestationVerifierV1.
+// AttestationVerifierV1. The verifier now takes a `ConsolidationObject` directly
+// in calldata; there is no on-chain consolidation buffer.
 //
-// Setup runs both inits (deposit-side init(0) is required because consolidation
-// init(1) depends on Version having advanced). Tests focus on:
-//   - happy paths
+// Setup performs a single combined init. Tests focus on:
+//   - happy paths (struct passed directly)
 //   - structural validation (lengths, zero fields, pubkey lengths)
-//   - bufferId binding (signatures excluded from hash)
+//   - bufferId derivation excludes signatures
 //   - signature verification (quorum, duplicates, non-committee, malformed)
 //   - admin setters
 //   - isolation from the deposit flow
@@ -143,12 +41,10 @@ contract MockConsolidationDataBuffer is IConsolidationDataBuffer {
 
 contract ConsolidationAttestationTest is Test {
     AttestationVerifierV1 internal validator;
-    MockConsolidationDataBuffer internal cBuffer;
-    MockDepositDataBufferForConsolidation internal dBuffer;
-    DepositContractEnhancedMock internal depositContract;
     MockRiverAdmin internal river;
 
     address internal admin = address(0xAD);
+    address internal depositBufferStub;
 
     uint256 internal pk1 = 0xC1;
     uint256 internal pk2 = 0xC2;
@@ -170,8 +66,6 @@ contract ConsolidationAttestationTest is Test {
     // Storage slots (must match contracts/src/state/attestationVerifier/*)
     bytes32 internal constant CONSOLIDATION_DOMAIN_SEPARATOR_SLOT =
         bytes32(uint256(keccak256("attestationVerifier.state.consolidationDomainSeparator")) - 1);
-    bytes32 internal constant DEPOSIT_DOMAIN_SEPARATOR_SLOT =
-        bytes32(uint256(keccak256("attestationVerifier.state.domainSeparator")) - 1);
 
     function setUp() public {
         attester1 = vm.addr(pk1);
@@ -179,9 +73,9 @@ contract ConsolidationAttestationTest is Test {
         attester3 = vm.addr(pk3);
 
         river = new MockRiverAdmin(admin);
-        depositContract = new DepositContractEnhancedMock();
-        dBuffer = new MockDepositDataBufferForConsolidation();
-        cBuffer = new MockConsolidationDataBuffer();
+        // The consolidation tests do not exercise the deposit `validate` path; a non-zero
+        // EOA satisfies the deposit buffer's LibSanitize._notZeroAddress check at init.
+        depositBufferStub = makeAddr("depositDataBufferStub");
 
         validator = new AttestationVerifierV1();
         LibImplementationUnbricker.unbrick(vm, address(validator));
@@ -193,7 +87,7 @@ contract ConsolidationAttestationTest is Test {
         cCommittee[1] = attester2;
         cCommittee[2] = attester3;
         validator.initAttestationVerifierV1(
-            address(river), address(dBuffer), depCommittee, 1, bytes4(0), address(cBuffer), cCommittee, 2
+            address(river), depositBufferStub, depCommittee, 1, bytes4(0), cCommittee, 2
         );
     }
 
@@ -208,7 +102,6 @@ contract ConsolidationAttestationTest is Test {
     ///      the init external call.
     function _initFreshWithConsolidationParams(
         AttestationVerifierV1 fresh,
-        address consolidationBuffer,
         address[] memory consolidationCommittee,
         uint256 consolidationQuorum
     ) internal {
@@ -216,11 +109,10 @@ contract ConsolidationAttestationTest is Test {
         dep[0] = depositAttester;
         fresh.initAttestationVerifierV1(
             address(river),
-            address(dBuffer),
+            depositBufferStub,
             dep,
             1,
             bytes4(0),
-            consolidationBuffer,
             consolidationCommittee,
             consolidationQuorum
         );
@@ -268,7 +160,7 @@ contract ConsolidationAttestationTest is Test {
     function _validConsolidation(address user, uint256 seed)
         internal
         view
-        returns (IConsolidationDataBuffer.ConsolidationObject memory consolidation, bytes32 bufferId)
+        returns (IAttestationVerifierV1.ConsolidationObject memory consolidation)
     {
         bytes[] memory sources = new bytes[](1);
         sources[0] = _pubkey(seed);
@@ -276,13 +168,13 @@ contract ConsolidationAttestationTest is Test {
         targets[0] = _pubkey(seed + 1000);
         uint256 totalAmount = 32 ether;
 
-        bufferId = _bufferId(user, sources, targets, totalAmount);
+        bytes32 bufferId = _bufferId(user, sources, targets, totalAmount);
 
         bytes[] memory sigs = new bytes[](2);
         sigs[0] = _sign(pk1, bufferId);
         sigs[1] = _sign(pk2, bufferId);
 
-        consolidation = IConsolidationDataBuffer.ConsolidationObject({
+        consolidation = IAttestationVerifierV1.ConsolidationObject({
             user: user,
             sourcePubkeys: sources,
             targetPubkeys: targets,
@@ -297,17 +189,8 @@ contract ConsolidationAttestationTest is Test {
 
     function testValidateConsolidation_singlePair_quorumMet() public {
         address user = address(0xBEEF);
-        (IConsolidationDataBuffer.ConsolidationObject memory c, bytes32 id) = _validConsolidation(user, 1);
-        cBuffer.submitConsolidationData(id, c);
-
-        (IConsolidationDataBuffer.ConsolidationObject memory returned, uint256 totalAmount) =
-            validator.validateConsolidation(id);
-        assertEq(returned.user, user);
-        assertEq(returned.totalAmount, 32 ether);
-        assertEq(totalAmount, 32 ether);
-        assertEq(returned.sourcePubkeys.length, 1);
-        assertEq(returned.targetPubkeys.length, 1);
-        assertEq(returned.signatures.length, 2);
+        IAttestationVerifierV1.ConsolidationObject memory c = _validConsolidation(user, 1);
+        assertTrue(validator.validateConsolidation(c));
     }
 
     function testValidateConsolidation_multiplePairs_succeeds() public {
@@ -326,32 +209,21 @@ contract ConsolidationAttestationTest is Test {
         sigs[1] = _sign(pk2, id);
         sigs[2] = _sign(pk3, id);
 
-        cBuffer.submitConsolidationData(
-            id,
-            IConsolidationDataBuffer.ConsolidationObject({
-                user: user,
-                sourcePubkeys: sources,
-                targetPubkeys: targets,
-                totalAmount: totalAmount,
-                signatures: sigs
-            })
-        );
-
-        (IConsolidationDataBuffer.ConsolidationObject memory returned, uint256 amount) =
-            validator.validateConsolidation(id);
-        assertEq(amount, totalAmount);
-        assertEq(returned.sourcePubkeys.length, 3);
-        assertEq(returned.targetPubkeys.length, 3);
+        IAttestationVerifierV1.ConsolidationObject memory c = IAttestationVerifierV1.ConsolidationObject({
+            user: user,
+            sourcePubkeys: sources,
+            targetPubkeys: targets,
+            totalAmount: totalAmount,
+            signatures: sigs
+        });
+        assertTrue(validator.validateConsolidation(c));
     }
 
     function testValidateConsolidation_exactlyQuorumSignatures() public {
         // Quorum is 2; supplying exactly 2 valid signatures should pass.
         address user = address(0x11);
-        (IConsolidationDataBuffer.ConsolidationObject memory c, bytes32 id) = _validConsolidation(user, 7);
-        cBuffer.submitConsolidationData(id, c);
-
-        (, uint256 amount) = validator.validateConsolidation(id);
-        assertEq(amount, 32 ether);
+        IAttestationVerifierV1.ConsolidationObject memory c = _validConsolidation(user, 7);
+        assertTrue(validator.validateConsolidation(c));
     }
 
     // -----------------------------------------------------------------------
@@ -362,7 +234,7 @@ contract ConsolidationAttestationTest is Test {
         AttestationVerifierV1 fresh = _deployFreshValidator();
         address[] memory empty = new address[](0);
         vm.expectRevert(LibErrors.InvalidArgument.selector);
-        _initFreshWithConsolidationParams(fresh, address(cBuffer), empty, 1);
+        _initFreshWithConsolidationParams(fresh, empty, 1);
     }
 
     function testInit_revertTooManyAttesters() public {
@@ -372,7 +244,7 @@ contract ConsolidationAttestationTest is Test {
             many[i] = address(uint160(0x1000 + i));
         }
         vm.expectRevert(LibErrors.InvalidArgument.selector);
-        _initFreshWithConsolidationParams(fresh, address(cBuffer), many, 1);
+        _initFreshWithConsolidationParams(fresh, many, 1);
     }
 
     function testInit_revertZeroQuorum() public {
@@ -380,7 +252,7 @@ contract ConsolidationAttestationTest is Test {
         address[] memory cc = new address[](1);
         cc[0] = attester1;
         vm.expectRevert(IAttestationVerifierV1.ZeroQuorum.selector);
-        _initFreshWithConsolidationParams(fresh, address(cBuffer), cc, 0);
+        _initFreshWithConsolidationParams(fresh, cc, 0);
     }
 
     function testInit_revertQuorumExceedsMaxSignatures() public {
@@ -394,7 +266,7 @@ contract ConsolidationAttestationTest is Test {
                 IAttestationVerifierV1.QuorumExceedsMaxSignatures.selector, 21, validator.MAX_SIGNATURES()
             )
         );
-        _initFreshWithConsolidationParams(fresh, address(cBuffer), cc, 21);
+        _initFreshWithConsolidationParams(fresh, cc, 21);
     }
 
     function testInit_revertQuorumExceedsAttesterCount() public {
@@ -407,15 +279,7 @@ contract ConsolidationAttestationTest is Test {
                 IAttestationVerifierV1.QuorumExceedsConsolidationCommitteeAttesterCount.selector, 3, 2
             )
         );
-        _initFreshWithConsolidationParams(fresh, address(cBuffer), cc, 3);
-    }
-
-    function testInit_revertZeroBuffer() public {
-        AttestationVerifierV1 fresh = _deployFreshValidator();
-        address[] memory cc = new address[](1);
-        cc[0] = attester1;
-        vm.expectRevert(LibErrors.InvalidZeroAddress.selector);
-        _initFreshWithConsolidationParams(fresh, address(0), cc, 1);
+        _initFreshWithConsolidationParams(fresh, cc, 3);
     }
 
     function testInit_revertAlreadyInitialized() public {
@@ -426,7 +290,7 @@ contract ConsolidationAttestationTest is Test {
         cc[0] = attester1;
         vm.expectRevert();
         validator.initAttestationVerifierV1(
-            address(river), address(dBuffer), dep, 1, bytes4(0), address(cBuffer), cc, 1
+            address(river), depositBufferStub, dep, 1, bytes4(0), cc, 1
         );
     }
 
@@ -443,7 +307,6 @@ contract ConsolidationAttestationTest is Test {
         assertTrue(validator.isConsolidationCommitteeAttester(attester2));
         assertTrue(validator.isConsolidationCommitteeAttester(attester3));
         assertEq(validator.getConsolidationCommitteeAttestationQuorum(), 2);
-        assertEq(validator.getConsolidationDataBuffer(), address(cBuffer));
     }
 
     function testInit_revertZeroRiver() public {
@@ -455,7 +318,7 @@ contract ConsolidationAttestationTest is Test {
         // RiverAddress.set calls LibSanitize._notZeroAddress before writing the slot.
         vm.expectRevert(LibErrors.InvalidZeroAddress.selector);
         fresh.initAttestationVerifierV1(
-            address(0), address(dBuffer), dep, 1, bytes4(0), address(cBuffer), cc, 1
+            address(0), depositBufferStub, dep, 1, bytes4(0), cc, 1
         );
     }
 
@@ -468,7 +331,7 @@ contract ConsolidationAttestationTest is Test {
         cc[0] = address(0);
         cc[1] = attester1;
         vm.expectRevert(LibErrors.InvalidZeroAddress.selector);
-        _initFreshWithConsolidationParams(fresh, address(cBuffer), cc, 1);
+        _initFreshWithConsolidationParams(fresh, cc, 1);
     }
 
     // -----------------------------------------------------------------------
@@ -476,21 +339,16 @@ contract ConsolidationAttestationTest is Test {
     // -----------------------------------------------------------------------
 
     function testRevert_emptySourcePubkeys() public {
-        // Build a consolidation with empty arrays so submit lets it through via submitRaw.
         bytes[] memory empty = new bytes[](0);
-        bytes[] memory sigs = new bytes[](0);
-        IConsolidationDataBuffer.ConsolidationObject memory c = IConsolidationDataBuffer.ConsolidationObject({
+        IAttestationVerifierV1.ConsolidationObject memory c = IAttestationVerifierV1.ConsolidationObject({
             user: address(0xAA),
             sourcePubkeys: empty,
             targetPubkeys: empty,
             totalAmount: 1 ether,
-            signatures: sigs
+            signatures: new bytes[](0)
         });
-        bytes32 id = _bufferId(c.user, c.sourcePubkeys, c.targetPubkeys, c.totalAmount);
-        cBuffer.submitRaw(id, c);
-
         vm.expectRevert(IAttestationVerifierV1.NoConsolidations.selector);
-        validator.validateConsolidation(id);
+        validator.validateConsolidation(c);
     }
 
     function testRevert_sourceTargetLengthMismatch() public {
@@ -500,20 +358,17 @@ contract ConsolidationAttestationTest is Test {
         bytes[] memory targets = new bytes[](1);
         targets[0] = _pubkey(3);
 
-        IConsolidationDataBuffer.ConsolidationObject memory c = IConsolidationDataBuffer.ConsolidationObject({
+        IAttestationVerifierV1.ConsolidationObject memory c = IAttestationVerifierV1.ConsolidationObject({
             user: address(0xAA),
             sourcePubkeys: sources,
             targetPubkeys: targets,
             totalAmount: 32 ether,
             signatures: new bytes[](0)
         });
-        bytes32 id = _bufferId(c.user, c.sourcePubkeys, c.targetPubkeys, c.totalAmount);
-        cBuffer.submitRaw(id, c);
-
         vm.expectRevert(
             abi.encodeWithSelector(IAttestationVerifierV1.ConsolidationArrayLengthMismatch.selector, 2, 1)
         );
-        validator.validateConsolidation(id);
+        validator.validateConsolidation(c);
     }
 
     function testRevert_zeroTotalAmount() public {
@@ -522,18 +377,15 @@ contract ConsolidationAttestationTest is Test {
         bytes[] memory targets = new bytes[](1);
         targets[0] = _pubkey(2);
 
-        IConsolidationDataBuffer.ConsolidationObject memory c = IConsolidationDataBuffer.ConsolidationObject({
+        IAttestationVerifierV1.ConsolidationObject memory c = IAttestationVerifierV1.ConsolidationObject({
             user: address(0xAA),
             sourcePubkeys: sources,
             targetPubkeys: targets,
             totalAmount: 0,
             signatures: new bytes[](0)
         });
-        bytes32 id = _bufferId(c.user, c.sourcePubkeys, c.targetPubkeys, c.totalAmount);
-        cBuffer.submitRaw(id, c);
-
         vm.expectRevert(IAttestationVerifierV1.ZeroConsolidationTotalAmount.selector);
-        validator.validateConsolidation(id);
+        validator.validateConsolidation(c);
     }
 
     function testRevert_zeroUser() public {
@@ -542,18 +394,15 @@ contract ConsolidationAttestationTest is Test {
         bytes[] memory targets = new bytes[](1);
         targets[0] = _pubkey(2);
 
-        IConsolidationDataBuffer.ConsolidationObject memory c = IConsolidationDataBuffer.ConsolidationObject({
+        IAttestationVerifierV1.ConsolidationObject memory c = IAttestationVerifierV1.ConsolidationObject({
             user: address(0),
             sourcePubkeys: sources,
             targetPubkeys: targets,
             totalAmount: 32 ether,
             signatures: new bytes[](0)
         });
-        bytes32 id = _bufferId(c.user, c.sourcePubkeys, c.targetPubkeys, c.totalAmount);
-        cBuffer.submitRaw(id, c);
-
         vm.expectRevert(IAttestationVerifierV1.ZeroConsolidationUser.selector);
-        validator.validateConsolidation(id);
+        validator.validateConsolidation(c);
     }
 
     function testRevert_sourcePubkeyWrongLength() public {
@@ -562,20 +411,17 @@ contract ConsolidationAttestationTest is Test {
         bytes[] memory targets = new bytes[](1);
         targets[0] = _pubkey(2);
 
-        IConsolidationDataBuffer.ConsolidationObject memory c = IConsolidationDataBuffer.ConsolidationObject({
+        IAttestationVerifierV1.ConsolidationObject memory c = IAttestationVerifierV1.ConsolidationObject({
             user: address(0xAA),
             sourcePubkeys: sources,
             targetPubkeys: targets,
             totalAmount: 32 ether,
             signatures: new bytes[](0)
         });
-        bytes32 id = _bufferId(c.user, c.sourcePubkeys, c.targetPubkeys, c.totalAmount);
-        cBuffer.submitRaw(id, c);
-
         vm.expectRevert(
             abi.encodeWithSelector(IAttestationVerifierV1.InvalidConsolidationPubkeyLength.selector, 0, 47, true)
         );
-        validator.validateConsolidation(id);
+        validator.validateConsolidation(c);
     }
 
     function testRevert_targetPubkeyWrongLength() public {
@@ -584,76 +430,32 @@ contract ConsolidationAttestationTest is Test {
         bytes[] memory targets = new bytes[](1);
         targets[0] = _pubkeyOfLength(2, 49);
 
-        IConsolidationDataBuffer.ConsolidationObject memory c = IConsolidationDataBuffer.ConsolidationObject({
+        IAttestationVerifierV1.ConsolidationObject memory c = IAttestationVerifierV1.ConsolidationObject({
             user: address(0xAA),
             sourcePubkeys: sources,
             targetPubkeys: targets,
             totalAmount: 32 ether,
             signatures: new bytes[](0)
         });
-        bytes32 id = _bufferId(c.user, c.sourcePubkeys, c.targetPubkeys, c.totalAmount);
-        cBuffer.submitRaw(id, c);
-
         vm.expectRevert(
             abi.encodeWithSelector(IAttestationVerifierV1.InvalidConsolidationPubkeyLength.selector, 0, 49, false)
         );
-        validator.validateConsolidation(id);
+        validator.validateConsolidation(c);
     }
 
     // -----------------------------------------------------------------------
-    // Buffer integrity tests
+    // Signature / bufferId derivation tests
     // -----------------------------------------------------------------------
-
-    function testRevert_bufferIdNotFound() public {
-        // Querying an id that was never submitted must propagate the buffer's
-        // ConsolidationDataBufferIdNotFound revert up through validateConsolidation.
-        bytes32 unknown = keccak256("never-submitted-id");
-        vm.expectRevert(
-            abi.encodeWithSelector(IConsolidationDataBuffer.ConsolidationDataBufferIdNotFound.selector, unknown)
-        );
-        validator.validateConsolidation(unknown);
-    }
-
-    function testRevert_bufferIdMismatch() public {
-        // Sign and "commit" to id1, but stash a DIFFERENT object under id1.
-        address user = address(0xBEEF);
-        (IConsolidationDataBuffer.ConsolidationObject memory cSigned, bytes32 idSigned) =
-            _validConsolidation(user, 1);
-
-        // Different content (different seed → different pubkey → different content-hash).
-        bytes[] memory sources = new bytes[](1);
-        sources[0] = _pubkey(99); // different source
-        bytes[] memory targets = new bytes[](1);
-        targets[0] = _pubkey(100);
-        IConsolidationDataBuffer.ConsolidationObject memory cMalicious = IConsolidationDataBuffer.ConsolidationObject({
-            user: user,
-            sourcePubkeys: sources,
-            targetPubkeys: targets,
-            totalAmount: cSigned.totalAmount,
-            signatures: cSigned.signatures
-        });
-        bytes32 idActual = _bufferId(cMalicious.user, cMalicious.sourcePubkeys, cMalicious.targetPubkeys, cMalicious.totalAmount);
-        assertTrue(idSigned != idActual);
-
-        cBuffer.submitRaw(idSigned, cMalicious);
-
-        vm.expectRevert(
-            abi.encodeWithSelector(IAttestationVerifierV1.ConsolidationBufferIdMismatch.selector, idSigned, idActual)
-        );
-        validator.validateConsolidation(idSigned);
-    }
 
     function testSignaturesExcludedFromBufferId() public {
         // Two ConsolidationObjects with identical (user, sources, targets, totalAmount)
-        // but different signatures must both pass the verifier's bufferId-recompute step
-        // under the SAME bufferId — i.e. signatures must not enter the hash.
-        //
-        // Test strategy: store the same content twice (under the same bufferId) into two
-        // different buffer instances, each with a different signature set. The first set
-        // is valid (real committee sigs); the second is well-formed ECDSA but signed over
-        // an unrelated digest. If signatures were part of the bufferId, the second call
-        // would revert with ConsolidationBufferIdMismatch. We confirm it does NOT — it
-        // gets past the bufferId binding and reverts at the quorum check instead.
+        // but different signature sets. The first signs over the correct bufferId and
+        // passes. The second signs over an UNRELATED digest — if signatures were part
+        // of the bufferId hash, the verifier would compute a different digest for each
+        // (and the second would fail signature recovery against the same committee).
+        // By construction the digest the verifier computes is identical in both calls,
+        // so the second call reaches the quorum check and reverts there — proving
+        // signatures are not part of the verifier's bufferId derivation.
         address user = address(0xBEEF);
         bytes[] memory sources = new bytes[](1);
         sources[0] = _pubkey(1);
@@ -662,35 +464,30 @@ contract ConsolidationAttestationTest is Test {
         uint256 totalAmount = 32 ether;
         bytes32 expectedId = _bufferId(user, sources, targets, totalAmount);
 
-        // --- Path A: same payload, signatures over `expectedId` — should succeed.
         bytes[] memory sigsA = new bytes[](2);
         sigsA[0] = _sign(pk1, expectedId);
         sigsA[1] = _sign(pk2, expectedId);
-        cBuffer.submitRaw(
-            expectedId,
-            IConsolidationDataBuffer.ConsolidationObject({
-                user: user,
-                sourcePubkeys: sources,
-                targetPubkeys: targets,
-                totalAmount: totalAmount,
-                signatures: sigsA
-            })
+        assertTrue(
+            validator.validateConsolidation(
+                IAttestationVerifierV1.ConsolidationObject({
+                    user: user,
+                    sourcePubkeys: sources,
+                    targetPubkeys: targets,
+                    totalAmount: totalAmount,
+                    signatures: sigsA
+                })
+            )
         );
-        (, uint256 totalAmountA) = validator.validateConsolidation(expectedId);
-        assertEq(totalAmountA, totalAmount);
 
-        // --- Path B: same payload, signatures over a DIFFERENT bufferId — well-formed
-        // ECDSA but the recovered address won't match what the verifier expects for
-        // `expectedId`. Store this in a fresh buffer and swap.
         bytes32 unrelatedId = keccak256("unrelated digest for signature replay test");
         bytes[] memory sigsB = new bytes[](2);
         sigsB[0] = _sign(pk1, unrelatedId);
         sigsB[1] = _sign(pk2, unrelatedId);
-
-        MockConsolidationDataBuffer cBuffer2 = new MockConsolidationDataBuffer();
-        cBuffer2.submitRaw(
-            expectedId,
-            IConsolidationDataBuffer.ConsolidationObject({
+        vm.expectRevert(
+            abi.encodeWithSelector(IAttestationVerifierV1.InsufficientConsolidationAttestations.selector, 0, 2)
+        );
+        validator.validateConsolidation(
+            IAttestationVerifierV1.ConsolidationObject({
                 user: user,
                 sourcePubkeys: sources,
                 targetPubkeys: targets,
@@ -698,16 +495,6 @@ contract ConsolidationAttestationTest is Test {
                 signatures: sigsB
             })
         );
-        vm.prank(admin);
-        validator.setConsolidationDataBuffer(address(cBuffer2));
-
-        // The verifier reaches the quorum check (proving it accepted the bufferId binding
-        // despite the different signatures) and then rejects because sigsB recover to
-        // addresses that did not sign the verifier's recomputed digest for `expectedId`.
-        vm.expectRevert(
-            abi.encodeWithSelector(IAttestationVerifierV1.InsufficientConsolidationAttestations.selector, 0, 2)
-        );
-        validator.validateConsolidation(expectedId);
     }
 
     // -----------------------------------------------------------------------
@@ -726,9 +513,11 @@ contract ConsolidationAttestationTest is Test {
         bytes[] memory sigs = new bytes[](1);
         sigs[0] = _sign(pk1, id);
 
-        cBuffer.submitConsolidationData(
-            id,
-            IConsolidationDataBuffer.ConsolidationObject({
+        vm.expectRevert(
+            abi.encodeWithSelector(IAttestationVerifierV1.InsufficientConsolidationAttestations.selector, 1, 2)
+        );
+        validator.validateConsolidation(
+            IAttestationVerifierV1.ConsolidationObject({
                 user: user,
                 sourcePubkeys: sources,
                 targetPubkeys: targets,
@@ -736,11 +525,6 @@ contract ConsolidationAttestationTest is Test {
                 signatures: sigs
             })
         );
-
-        vm.expectRevert(
-            abi.encodeWithSelector(IAttestationVerifierV1.InsufficientConsolidationAttestations.selector, 1, 2)
-        );
-        validator.validateConsolidation(id);
     }
 
     function testRevert_tooManySignatures() public {
@@ -754,12 +538,12 @@ contract ConsolidationAttestationTest is Test {
 
         bytes[] memory sigs = new bytes[](21);
         for (uint256 i = 0; i < 21; i++) {
-            sigs[i] = _sign(pk1, id); // garbage content; just need 21 entries
+            sigs[i] = _sign(pk1, id); // content doesn't matter; just need 21 entries
         }
 
-        cBuffer.submitConsolidationData(
-            id,
-            IConsolidationDataBuffer.ConsolidationObject({
+        vm.expectRevert(abi.encodeWithSelector(IAttestationVerifierV1.TooManySignatures.selector, 21, 20));
+        validator.validateConsolidation(
+            IAttestationVerifierV1.ConsolidationObject({
                 user: user,
                 sourcePubkeys: sources,
                 targetPubkeys: targets,
@@ -767,9 +551,6 @@ contract ConsolidationAttestationTest is Test {
                 signatures: sigs
             })
         );
-
-        vm.expectRevert(abi.encodeWithSelector(IAttestationVerifierV1.TooManySignatures.selector, 21, 20));
-        validator.validateConsolidation(id);
     }
 
     function testRevert_duplicateSignerCountsOnce() public {
@@ -785,9 +566,11 @@ contract ConsolidationAttestationTest is Test {
         sigs[0] = _sign(pk1, id);
         sigs[1] = _sign(pk1, id); // same signer
 
-        cBuffer.submitConsolidationData(
-            id,
-            IConsolidationDataBuffer.ConsolidationObject({
+        vm.expectRevert(
+            abi.encodeWithSelector(IAttestationVerifierV1.InsufficientConsolidationAttestations.selector, 1, 2)
+        );
+        validator.validateConsolidation(
+            IAttestationVerifierV1.ConsolidationObject({
                 user: user,
                 sourcePubkeys: sources,
                 targetPubkeys: targets,
@@ -795,11 +578,6 @@ contract ConsolidationAttestationTest is Test {
                 signatures: sigs
             })
         );
-
-        vm.expectRevert(
-            abi.encodeWithSelector(IAttestationVerifierV1.InsufficientConsolidationAttestations.selector, 1, 2)
-        );
-        validator.validateConsolidation(id);
     }
 
     function testRevert_nonCommitteeSigner() public {
@@ -815,9 +593,11 @@ contract ConsolidationAttestationTest is Test {
         sigs[0] = _sign(pk1, id);
         sigs[1] = _sign(0xDEAD, id); // not on the consolidation committee
 
-        cBuffer.submitConsolidationData(
-            id,
-            IConsolidationDataBuffer.ConsolidationObject({
+        vm.expectRevert(
+            abi.encodeWithSelector(IAttestationVerifierV1.InsufficientConsolidationAttestations.selector, 1, 2)
+        );
+        validator.validateConsolidation(
+            IAttestationVerifierV1.ConsolidationObject({
                 user: user,
                 sourcePubkeys: sources,
                 targetPubkeys: targets,
@@ -825,11 +605,6 @@ contract ConsolidationAttestationTest is Test {
                 signatures: sigs
             })
         );
-
-        vm.expectRevert(
-            abi.encodeWithSelector(IAttestationVerifierV1.InsufficientConsolidationAttestations.selector, 1, 2)
-        );
-        validator.validateConsolidation(id);
     }
 
     function testRevert_malformedSignatureShort() public {
@@ -843,11 +618,13 @@ contract ConsolidationAttestationTest is Test {
 
         bytes[] memory sigs = new bytes[](2);
         sigs[0] = _sign(pk1, id);
-        sigs[1] = new bytes(64); // wrong length
+        sigs[1] = new bytes(64); // wrong length — _recover returns address(0), skipped
 
-        cBuffer.submitConsolidationData(
-            id,
-            IConsolidationDataBuffer.ConsolidationObject({
+        vm.expectRevert(
+            abi.encodeWithSelector(IAttestationVerifierV1.InsufficientConsolidationAttestations.selector, 1, 2)
+        );
+        validator.validateConsolidation(
+            IAttestationVerifierV1.ConsolidationObject({
                 user: user,
                 sourcePubkeys: sources,
                 targetPubkeys: targets,
@@ -855,16 +632,11 @@ contract ConsolidationAttestationTest is Test {
                 signatures: sigs
             })
         );
-
-        vm.expectRevert(
-            abi.encodeWithSelector(IAttestationVerifierV1.InsufficientConsolidationAttestations.selector, 1, 2)
-        );
-        validator.validateConsolidation(id);
     }
 
     function testRevert_malformedSignatureBadV() public {
         // 65-byte signature with a v byte outside {0,1,27,28} after normalization.
-        // _recoverMemory returns address(0); the recovery loop silently skips it.
+        // _recover returns address(0); the recovery loop silently skips it.
         address user = address(0x11);
         bytes[] memory sources = new bytes[](1);
         sources[0] = _pubkey(1);
@@ -874,15 +646,17 @@ contract ConsolidationAttestationTest is Test {
         bytes32 id = _bufferId(user, sources, targets, totalAmount);
 
         bytes memory corrupt = _sign(pk2, id);
-        corrupt[64] = bytes1(uint8(42)); // v=42 → 42 (no normalization), not in {27,28} → skipped
+        corrupt[64] = bytes1(uint8(42)); // v=42, not in {27,28} → skipped
 
         bytes[] memory sigs = new bytes[](2);
         sigs[0] = _sign(pk1, id);
         sigs[1] = corrupt;
 
-        cBuffer.submitConsolidationData(
-            id,
-            IConsolidationDataBuffer.ConsolidationObject({
+        vm.expectRevert(
+            abi.encodeWithSelector(IAttestationVerifierV1.InsufficientConsolidationAttestations.selector, 1, 2)
+        );
+        validator.validateConsolidation(
+            IAttestationVerifierV1.ConsolidationObject({
                 user: user,
                 sourcePubkeys: sources,
                 targetPubkeys: targets,
@@ -890,11 +664,6 @@ contract ConsolidationAttestationTest is Test {
                 signatures: sigs
             })
         );
-
-        vm.expectRevert(
-            abi.encodeWithSelector(IAttestationVerifierV1.InsufficientConsolidationAttestations.selector, 1, 2)
-        );
-        validator.validateConsolidation(id);
     }
 
     function testRevert_zeroSignatures() public {
@@ -907,25 +676,19 @@ contract ConsolidationAttestationTest is Test {
         bytes[] memory targets = new bytes[](1);
         targets[0] = _pubkey(2);
         uint256 totalAmount = 32 ether;
-        bytes32 id = _bufferId(user, sources, targets, totalAmount);
-
-        bytes[] memory sigs = new bytes[](0);
-
-        cBuffer.submitConsolidationData(
-            id,
-            IConsolidationDataBuffer.ConsolidationObject({
-                user: user,
-                sourcePubkeys: sources,
-                targetPubkeys: targets,
-                totalAmount: totalAmount,
-                signatures: sigs
-            })
-        );
 
         vm.expectRevert(
             abi.encodeWithSelector(IAttestationVerifierV1.InsufficientConsolidationAttestations.selector, 0, 2)
         );
-        validator.validateConsolidation(id);
+        validator.validateConsolidation(
+            IAttestationVerifierV1.ConsolidationObject({
+                user: user,
+                sourcePubkeys: sources,
+                targetPubkeys: targets,
+                totalAmount: totalAmount,
+                signatures: new bytes[](0)
+            })
+        );
     }
 
     function testRevert_zeroDomainSeparator() public {
@@ -933,11 +696,10 @@ contract ConsolidationAttestationTest is Test {
         vm.store(address(validator), CONSOLIDATION_DOMAIN_SEPARATOR_SLOT, bytes32(0));
 
         address user = address(0x11);
-        (IConsolidationDataBuffer.ConsolidationObject memory c, bytes32 id) = _validConsolidation(user, 1);
-        cBuffer.submitConsolidationData(id, c);
+        IAttestationVerifierV1.ConsolidationObject memory c = _validConsolidation(user, 1);
 
         vm.expectRevert(IAttestationVerifierV1.ZeroConsolidationDomainSeparator.selector);
-        validator.validateConsolidation(id);
+        validator.validateConsolidation(c);
     }
 
     // -----------------------------------------------------------------------
@@ -1052,24 +814,6 @@ contract ConsolidationAttestationTest is Test {
     function testSetConsolidationCommitteeAttestationQuorum_onlyRiverAdmin() public {
         vm.expectRevert(abi.encodeWithSelector(LibErrors.Unauthorized.selector, address(this)));
         validator.setConsolidationCommitteeAttestationQuorum(3);
-    }
-
-    function testSetConsolidationDataBuffer_succeeds() public {
-        address newBuffer = address(0xDDDD);
-        vm.prank(admin);
-        validator.setConsolidationDataBuffer(newBuffer);
-        assertEq(validator.getConsolidationDataBuffer(), newBuffer);
-    }
-
-    function testSetConsolidationDataBuffer_revertZeroAddress() public {
-        vm.prank(admin);
-        vm.expectRevert(LibErrors.InvalidZeroAddress.selector);
-        validator.setConsolidationDataBuffer(address(0));
-    }
-
-    function testSetConsolidationDataBuffer_onlyRiverAdmin() public {
-        vm.expectRevert(abi.encodeWithSelector(LibErrors.Unauthorized.selector, address(this)));
-        validator.setConsolidationDataBuffer(address(0xDDDD));
     }
 
     // -----------------------------------------------------------------------

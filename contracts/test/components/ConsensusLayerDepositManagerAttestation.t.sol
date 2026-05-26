@@ -230,7 +230,6 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
             depositCommitteeAttesters,
             2,
             bytes4(0),
-            makeAddr("consolidationDataBufferStub"),
             consolidationCommitteeAttesters,
             1
         );

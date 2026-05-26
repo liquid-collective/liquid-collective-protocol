@@ -405,7 +405,6 @@ contract RiverV1Tests is RiverV1TestBase {
             _initDepositCommitteeAttesters,
             2,
             bytes4(0),
-            makeAddr("consolidationDataBufferStub"),
             _initConsolidationCommitteeAttesters,
             1
         );
@@ -1361,7 +1360,6 @@ contract RiverV1TestsReport_HEAVY_FUZZING is RiverV1TestBase {
             _initDepositCommitteeAttesters2,
             2,
             bytes4(0),
-            makeAddr("consolidationDataBufferStub"),
             _initConsolidationCommitteeAttesters2,
             1
         );
@@ -2789,7 +2787,6 @@ contract RiverV1CoverageTests is RiverV1TestBase {
             _depositCommitteeAttesters_,
             1,
             bytes4(0),
-            makeAddr("consolidationDataBufferStub"),
             _consolidationCommitteeAttesters_,
             1
         );
@@ -2868,7 +2865,6 @@ contract RiverV1CoverageTests is RiverV1TestBase {
             _depositCommitteeAttesters_,
             1,
             bytes4(0),
-            makeAddr("consolidationDataBufferStub"),
             _consolidationCommitteeAttesters_,
             1
         );
@@ -2893,7 +2889,6 @@ contract RiverV1CoverageTests is RiverV1TestBase {
             _depositCommitteeAttesters_,
             1,
             bytes4(0),
-            makeAddr("consolidationDataBufferStub"),
             _consolidationCommitteeAttesters_,
             1
         );

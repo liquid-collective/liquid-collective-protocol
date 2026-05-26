@@ -6,7 +6,6 @@ import {ECDSA} from "openzeppelin-contracts/contracts/utils/cryptography/ECDSA.s
 import "./Initializable.sol";
 import "./interfaces/IAdministrable.sol";
 import "./interfaces/IAttestationVerifier.1.sol";
-import "./interfaces/IConsolidationDataBuffer.sol";
 import "./interfaces/IDepositContract.sol";
 import "./interfaces/IDepositDataBuffer.sol";
 
@@ -15,7 +14,6 @@ import "./libraries/LibErrors.sol";
 
 import "./state/attestationVerifier/ConsolidationCommitteeAttestationQuorum.sol";
 import "./state/attestationVerifier/ConsolidationCommitteeAttesters.sol";
-import "./state/attestationVerifier/ConsolidationDataBufferAddress.sol";
 import "./state/attestationVerifier/ConsolidationDomainSeparator.sol";
 import "./state/attestationVerifier/DepositCommitteeAttestationQuorum.sol";
 import "./state/attestationVerifier/DepositCommitteeAttesters.sol";
@@ -94,7 +92,6 @@ contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1 {
         address[] calldata _depositCommitteeAttesters,
         uint256 _depositQuorum,
         bytes4 _genesisForkVersion,
-        address _consolidationDataBuffer,
         address[] calldata _consolidationCommitteeAttesters,
         uint256 _consolidationQuorum
     ) external init(0) {
@@ -126,9 +123,6 @@ contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1 {
 
         DepositDataBufferAddress.set(_depositDataBuffer);
         emit SetDepositDataBuffer(_depositDataBuffer);
-
-        ConsolidationDataBufferAddress.set(_consolidationDataBuffer);
-        emit SetConsolidationDataBuffer(_consolidationDataBuffer);
 
         bytes32 depositDomain = BLS12_381.computeDepositDomain(_genesisForkVersion);
         DepositDomainValue.set(depositDomain);
@@ -224,12 +218,6 @@ contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1 {
     }
 
     /// @inheritdoc IAttestationVerifierV1
-    function setConsolidationDataBuffer(address _consolidationDataBuffer) external onlyRiverAdmin {
-        ConsolidationDataBufferAddress.set(_consolidationDataBuffer);
-        emit SetConsolidationDataBuffer(_consolidationDataBuffer);
-    }
-
-    /// @inheritdoc IAttestationVerifierV1
     function setConsolidationCommitteeAttester(address consolidationCommitteeAttester, bool value)
         external
         onlyRiverAdmin
@@ -322,11 +310,6 @@ contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1 {
     }
 
     /// @inheritdoc IAttestationVerifierV1
-    function getConsolidationDataBuffer() external view returns (address) {
-        return ConsolidationDataBufferAddress.get();
-    }
-
-    /// @inheritdoc IAttestationVerifierV1
     function getConsolidationDomainSeparator() external view returns (bytes32) {
         return ConsolidationDomainSeparator.get();
     }
@@ -380,9 +363,8 @@ contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1 {
 
     /// @inheritdoc IAttestationVerifierV1
     /// @dev Trust boundary: this function only validates structural shape (array shapes
-    ///      and pubkey byte lengths), the bufferId binding (recompute + compare), and the
-    ///      attestation quorum (ECDSA signature recovery against the consolidation
-    ///      committee). It does NOT check:
+    ///      and pubkey byte lengths) and the attestation quorum (ECDSA signature recovery
+    ///      against the consolidation committee). It does NOT check:
     ///        - Source/target pubkey uniqueness within the request (EIP-7251 single-use
     ///          source rule). A source pubkey appearing twice, or a pubkey appearing in
     ///          both source and target arrays, is not rejected here.
@@ -390,20 +372,16 @@ contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1 {
     ///          of (source, target) pairs.
     ///        - Whether the source validators actually exist on the consensus layer or
     ///          carry the protocol's withdrawal credentials.
-    ///      These are the responsibility of the consolidation buffer producer (off-chain)
-    ///      and the consolidation committee that signs the request. The eventual
+    ///      These are the responsibility of the caller (off-chain pipeline) and the
+    ///      consolidation committee that signs the request. The eventual
     ///      `mintLsETHForConsolidation` River integration is the place to enforce any
     ///      additional financial caps on `totalAmount`.
-    function validateConsolidation(bytes32 consolidationDataBufferId)
+    function validateConsolidation(IAttestationVerifierV1.ConsolidationObject calldata consolidation)
         external
         view
-        returns (IConsolidationDataBuffer.ConsolidationObject memory consolidation, uint256 totalAmount)
+        returns (bool)
     {
-        // 1. Fetch consolidation from buffer
-        consolidation =
-            IConsolidationDataBuffer(ConsolidationDataBufferAddress.get()).getConsolidationData(consolidationDataBufferId);
-
-        // 2. Structural checks (cheapest first — fail fast)
+        // 1. Structural checks (cheapest first — fail fast)
         uint256 sourceLen = consolidation.sourcePubkeys.length;
         uint256 targetLen = consolidation.targetPubkeys.length;
         if (sourceLen == 0) revert NoConsolidations();
@@ -411,7 +389,7 @@ contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1 {
         if (consolidation.totalAmount == 0) revert ZeroConsolidationTotalAmount();
         if (consolidation.user == address(0)) revert ZeroConsolidationUser();
 
-        // 3. Per-pair pubkey length checks
+        // 2. Per-pair pubkey length checks
         for (uint256 i = 0; i < sourceLen; i++) {
             if (consolidation.sourcePubkeys[i].length != CONSOLIDATION_PUBKEY_LENGTH) {
                 revert InvalidConsolidationPubkeyLength(i, consolidation.sourcePubkeys[i].length, true);
@@ -421,21 +399,22 @@ contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1 {
             }
         }
 
-        // 4. Re-compute and check the bufferId binding so the buffer cannot tamper post-attestation.
-        //    Signatures are DELIBERATELY excluded from the hash — see IConsolidationDataBuffer.
-        bytes32 computedId = keccak256(
+        // 3. Compute the bufferId — the EIP-712 message content the committee signed.
+        //    Signatures are DELIBERATELY excluded so attestors can sign the bufferId
+        //    without a circular dependency.
+        bytes32 consolidationDataBufferId = keccak256(
             abi.encode(
-                consolidation.user, consolidation.sourcePubkeys, consolidation.targetPubkeys, consolidation.totalAmount
+                consolidation.user,
+                consolidation.sourcePubkeys,
+                consolidation.targetPubkeys,
+                consolidation.totalAmount
             )
         );
-        if (computedId != consolidationDataBufferId) {
-            revert ConsolidationBufferIdMismatch(consolidationDataBufferId, computedId);
-        }
 
-        // 5. Verify the consolidation attestation quorum from signatures read off the buffer
+        // 4. Verify the consolidation attestation quorum from the supplied signatures
         _verifyConsolidationAttestationQuorum(consolidationDataBufferId, consolidation.signatures);
 
-        totalAmount = consolidation.totalAmount;
+        return true;
     }
 
     // -----------------------------------------------------------------------
@@ -493,16 +472,14 @@ contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1 {
         if (validCount < quorum) revert InsufficientAttestations(validCount, quorum);
     }
 
-    /// @notice Verify the consolidation-attestation quorum from signatures read off the buffer.
-    /// @dev    Mirrors `_verifyAttestationQuorum` but with three structural differences:
-    ///         (1) signatures arrive as `bytes memory` (sourced from the buffer's returned struct)
-    ///             so we use `_recoverMemory` instead of the calldata-optimized `_recover`;
-    ///         (2) no `depositRootHash` co-sign — consolidations have no front-runnable shared
+    /// @notice Verify the consolidation-attestation quorum over the supplied signatures.
+    /// @dev    Mirrors `_verifyAttestationQuorum` but with two structural differences:
+    ///         (1) no `depositRootHash` co-sign — consolidations have no front-runnable shared
     ///             on-chain root, so the typehash hashes only the bufferId;
-    ///         (3) uses the consolidation-specific committee set, quorum, and domain separator.
+    ///         (2) uses the consolidation-specific committee set, quorum, and domain separator.
     /// @param consolidationDataBufferId The bufferId co-signed by consolidation-committee attesters
-    /// @param signatures                The signatures read off the buffer (bytes memory)
-    function _verifyConsolidationAttestationQuorum(bytes32 consolidationDataBufferId, bytes[] memory signatures)
+    /// @param signatures                The signatures supplied alongside the consolidation request
+    function _verifyConsolidationAttestationQuorum(bytes32 consolidationDataBufferId, bytes[] calldata signatures)
         internal
         view
     {
@@ -522,7 +499,7 @@ contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1 {
         address[] memory seen = new address[](sigLen);
 
         for (uint256 i = 0; i < sigLen; i++) {
-            address signer = _recoverMemory(digest, signatures[i]);
+            address signer = _recover(digest, signatures[i]);
             if (signer == address(0)) continue;
             if (!ConsolidationCommitteeAttesters.isConsolidationCommitteeAttester(signer)) continue;
 
@@ -622,30 +599,4 @@ contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1 {
         return recovered;
     }
 
-    /// @dev Recover signer from a 65-byte EIP-712 signature held in memory, normalizing v.
-    ///      A `bytes memory` variant of `_recover` for signatures that arrive via a memory
-    ///      struct (e.g. read from the consolidation buffer's `ConsolidationObject.signatures`).
-    ///      Keeping this separate from the calldata-optimized `_recover` avoids touching the
-    ///      deposit hot path.
-    /// @param digest The digest.
-    /// @param sig The signature (memory).
-    /// @return The recovered signer.
-    function _recoverMemory(bytes32 digest, bytes memory sig) internal pure returns (address) {
-        if (sig.length != 65) return address(0);
-
-        uint8 v = uint8(sig[64]);
-        if (v < 27) v += 27;
-        if (v != 27 && v != 28) return address(0);
-
-        bytes32 r;
-        bytes32 s;
-        assembly {
-            r := mload(add(sig, 0x20))
-            s := mload(add(sig, 0x40))
-        }
-
-        (address recovered, ECDSA.RecoverError err) = ECDSA.tryRecover(digest, v, r, s);
-        if (err != ECDSA.RecoverError.NoError) return address(0);
-        return recovered;
-    }
 }
