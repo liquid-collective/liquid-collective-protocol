@@ -878,6 +878,80 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
         validator.recordInitialDeposits(pubkeys);
     }
 
+    /// @dev Two top-ups for the same pubkey within one batch are Pectra-legal under 0x02
+    ///      compounding withdrawal credentials. Both entries must succeed because the
+    ///      in-batch duplicate scan only applies to initial deposits — top-ups are exempt.
+    function testTopUp_sameBatch_twoTopUpsForSamePubkey_succeeds() public {
+        IDepositDataBuffer.DepositObject[] memory deposits = new IDepositDataBuffer.DepositObject[](2);
+        deposits[0] = _makeTopUpDeposit(0, 300);
+        deposits[1] = _makeTopUpDeposit(0, 300); // same seed → same pubkey, both top-ups
+
+        // Seed the pubkey so the membership check passes for both entries.
+        _seedFundedPubkey(deposits[0].pubkey);
+
+        (bytes32 bufferId, bytes32 rootHash, bytes[] memory sigs) = _prepareDeposit(deposits);
+
+        uint256 depositCountBefore = depositContract.deposit_count();
+        vm.prank(keeper);
+        dm.depositToConsensusLayerWithAttestation(bufferId, rootHash, sigs);
+
+        assertEq(
+            depositContract.deposit_count(), depositCountBefore + 2, "both top-ups for the same pubkey should execute"
+        );
+    }
+
+    /// @dev Documented trade-off post-removal of operator-bind: `ValidatorPubkeyLookup`
+    ///      records membership only (no operator association), so a top-up whose
+    ///      `operatorIdx` differs from the original initial-deposit operator is credited
+    ///      to whoever is mentioned in the deposit data buffer.
+    function testTopUp_operatorIdxMismatch_creditedAsBuffered() public {
+        IDepositDataBuffer.DepositObject[] memory deposits = new IDepositDataBuffer.DepositObject[](1);
+        deposits[0] = _makeTopUpDeposit(5, 200); // buffer says operator 5
+
+        // Seed the pubkey via the membership-only lookup (no operator tracked).
+        _seedFundedPubkey(deposits[0].pubkey);
+
+        (bytes32 bufferId, bytes32 rootHash, bytes[] memory sigs) = _prepareDeposit(deposits);
+
+        vm.prank(keeper);
+        dm.depositToConsensusLayerWithAttestation(bufferId, rootHash, sigs);
+
+        assertEq(dm.lastFundedETH(5), 32 ether, "operator 5 credited as recorded by the buffer");
+        assertEq(dm.lastFundedETH(3), 0, "operator 3 not credited - the lookup tracks membership only");
+    }
+
+    /// @dev The `onlyRiver` modifier compares msg.sender against the River CONTRACT address
+    ///      (RiverAddress.get()), NOT the River admin EOA. Calling as the admin must still
+    ///      revert with `LibErrors.Unauthorized(admin)`. Documents the distinction from
+    ///      `onlyRiverAdmin` so future refactors don't conflate the two gates.
+    function testRevert_recordInitialDeposits_notRiverAdmin() public {
+        bytes[] memory pubkeys = new bytes[](1);
+        pubkeys[0] = _fakePubkey(0xBEEF);
+
+        vm.prank(admin);
+        vm.expectRevert(abi.encodeWithSelector(LibErrors.Unauthorized.selector, admin));
+        validator.recordInitialDeposits(pubkeys);
+    }
+
+    /// @dev A successful top-up must emit `TopUp` with both indexed topics (bufferId,
+    ///      operatorIdx) and the non-indexed data (pubkey, amount). Mirrors the
+    ///      `testInitialDeposit_recordsPubkey` expectEmit pattern.
+    function testTopUp_emitsTopUpEvent() public {
+        uint256 operatorIdx = 7;
+        IDepositDataBuffer.DepositObject[] memory deposits = new IDepositDataBuffer.DepositObject[](1);
+        deposits[0] = _makeTopUpDeposit(operatorIdx, 222);
+
+        _seedFundedPubkey(deposits[0].pubkey);
+
+        (bytes32 bufferId, bytes32 rootHash, bytes[] memory sigs) = _prepareDeposit(deposits);
+
+        vm.expectEmit(true, true, false, true);
+        emit TopUp(bufferId, operatorIdx, deposits[0].pubkey, deposits[0].amount);
+
+        vm.prank(keeper);
+        dm.depositToConsensusLayerWithAttestation(bufferId, rootHash, sigs);
+    }
+
     // setDepositCommitteeAttester must reject calls that would leave the attester's status unchanged so the
     // admin cannot silently no-op when intending to flip a flag.
     function testRevert_setDepositCommitteeAttesterStatusUnchanged() public {

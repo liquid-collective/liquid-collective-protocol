@@ -69,10 +69,11 @@ library BLS12_381 {
     }
 
     /// @notice Returns true if every byte of the `DepositY` struct is zero.
-    /// @dev The all-zero `DepositY` is used as a sentinel in `IDepositDataBuffer.DepositObject`
-    ///      to mark a deposit as a top-up (BLS verification skipped). A valid BLS12-381 G1/G2
-    ///      point cannot have Y = 0 — both groups are 2-torsion-free in their prime-order
-    ///      subgroup — so no honest signer can produce this value for an initial deposit.
+    /// @dev Sentinel marking an entry as a top-up (BLS skipped). An honest BLS signer cannot
+    ///      produce Y = 0: (A) BLS operates in the prime-order subgroups of G1/G2, and
+    ///      (B) Y = 0 implies P = -P (2-torsion), which is impossible in a prime-order group.
+    ///      See https://datatracker.ietf.org/doc/html/draft-irtf-cfrg-pairing-friendly-curves-11
+    ///      §4.2.1 for the subgroup definitions.
     function isZero(DepositY memory dy) internal pure returns (bool) {
         return dy.pubkeyY.a == bytes32(0) && dy.pubkeyY.b == bytes32(0) && dy.signatureY.c0_a == bytes32(0)
             && dy.signatureY.c0_b == bytes32(0) && dy.signatureY.c1_a == bytes32(0) && dy.signatureY.c1_b == bytes32(0);
