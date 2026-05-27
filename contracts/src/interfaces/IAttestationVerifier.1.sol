@@ -172,10 +172,10 @@ interface IAttestationVerifierV1 {
     /// @notice Record one or more pubkeys as initial-deposited. Only callable by River.
     /// @dev Called by River after the deposit-execution loop. The recorded set is consulted
     ///      by the top-up branch of `validate()` to require that top-ups reference a pubkey
-    ///      River has previously initial-deposited. Reverts on duplicates so a re-deposit of
-    ///      an already-recorded validator surfaces as an error rather than a silent overwrite.
-    ///      Per-pubkey logging is emitted on the caller (ConsensusLayerDepositManager's
-    ///      `InitialDeposit` event), not here.
+    ///      River has previously initial-deposited. Assumes `pubkeys` is already deduplicated
+    ///      against the lookup and against itself; `validate()` enforces both invariants
+    ///      earlier in the same transaction. Per-pubkey logging is emitted on the caller
+    ///      (ConsensusLayerDepositManager's `InitialDeposit` event), not here.
     /// @param pubkeys The 48-byte BLS pubkeys to record
     function recordInitialDeposits(bytes[] calldata pubkeys) external;
 

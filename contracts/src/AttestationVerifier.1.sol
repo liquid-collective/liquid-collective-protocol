@@ -280,14 +280,15 @@ contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1 {
     // -----------------------------------------------------------------------
 
     /// @inheritdoc IAttestationVerifierV1
+    /// @dev Assumes `pubkeys` is already deduplicated against the lookup and against itself —
+    ///      `validate()` enforces both invariants (initial-deposit branch at the top of
+    ///      `validate()`) and runs in the same transaction. Re-checking here would only fire
+    ///      on a `validate()` regression and would cost a cold SLOAD per pubkey for a
+    ///      condition that cannot occur in production.
     function recordInitialDeposits(bytes[] calldata pubkeys) external onlyRiver {
         uint256 len = pubkeys.length;
         for (uint256 i = 0; i < len; ++i) {
-            bytes calldata pubkey = pubkeys[i];
-            if (ValidatorPubkeyLookup.hasValidatorPubkey(pubkey)) {
-                revert DuplicateInitialDeposit(pubkey);
-            }
-            ValidatorPubkeyLookup.add(pubkey);
+            ValidatorPubkeyLookup.add(pubkeys[i]);
         }
     }
 
