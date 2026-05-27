@@ -247,7 +247,13 @@ contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1 {
             if (deposits[i].signature.length != DEPOSIT_SIGNATURE_LENGTH) {
                 revert InvalidSignatureLength(i, deposits[i].signature.length);
             }
-            totalAmount += deposits[i].amount;
+            // Mirrors the bound check inside `_depositValidator` so a producer bug fails
+            // before the heavy BLS path runs rather than after.
+            uint256 amount = deposits[i].amount;
+            if (amount < 1 ether || amount > 2048 ether || amount % 1 gwei != 0) {
+                revert InvalidDepositAmount(i, amount);
+            }
+            totalAmount += amount;
 
             bytes memory pubkey = deposits[i].pubkey;
             bytes32 pkHash = keccak256(pubkey);

@@ -878,6 +878,40 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
         validator.recordInitialDeposits(pubkeys);
     }
 
+    /// @dev `validate()` must fail-fast on out-of-range or mis-aligned `amount` rather than
+    ///      deferring to the per-deposit check inside `_depositValidator`. Tests all three
+    ///      branches: below minimum (1 ether), above maximum (2048 ether), and non-gwei-aligned.
+    function testRevert_validate_invalidDepositAmount() public {
+        // Below minimum (0 wei).
+        IDepositDataBuffer.DepositObject[] memory deposits = new IDepositDataBuffer.DepositObject[](1);
+        deposits[0] = _makeDeposit(0, 400);
+        deposits[0].amount = 0;
+        (bytes32 bufferId, bytes32 rootHash, bytes[] memory sigs) = _prepareDeposit(deposits);
+        vm.prank(keeper);
+        vm.expectRevert(abi.encodeWithSelector(IAttestationVerifierV1.InvalidDepositAmount.selector, 0, 0));
+        dm.depositToConsensusLayerWithAttestation(bufferId, rootHash, sigs);
+
+        // Above maximum (2048 ether + 1 gwei).
+        deposits[0] = _makeDeposit(0, 401);
+        deposits[0].amount = 2048 ether + 1 gwei;
+        (bufferId, rootHash, sigs) = _prepareDeposit(deposits);
+        vm.prank(keeper);
+        vm.expectRevert(
+            abi.encodeWithSelector(IAttestationVerifierV1.InvalidDepositAmount.selector, 0, 2048 ether + 1 gwei)
+        );
+        dm.depositToConsensusLayerWithAttestation(bufferId, rootHash, sigs);
+
+        // Not gwei-aligned (32 ether + 1 wei).
+        deposits[0] = _makeDeposit(0, 402);
+        deposits[0].amount = 32 ether + 1;
+        (bufferId, rootHash, sigs) = _prepareDeposit(deposits);
+        vm.prank(keeper);
+        vm.expectRevert(
+            abi.encodeWithSelector(IAttestationVerifierV1.InvalidDepositAmount.selector, 0, 32 ether + 1)
+        );
+        dm.depositToConsensusLayerWithAttestation(bufferId, rootHash, sigs);
+    }
+
     /// @dev Two top-ups for the same pubkey within one batch are Pectra-legal under 0x02
     ///      compounding withdrawal credentials. Both entries must succeed because the
     ///      in-batch duplicate scan only applies to initial deposits — top-ups are exempt.

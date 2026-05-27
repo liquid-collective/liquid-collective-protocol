@@ -69,6 +69,14 @@ interface IAttestationVerifierV1 {
     /// @param length The observed length
     error InvalidSignatureLength(uint256 index, uint256 length);
 
+    /// @notice A deposit's `amount` is outside the protocol-accepted range
+    ///         [1 ether, 2048 ether] or is not gwei-aligned. Mirrors the
+    ///         `InvalidDepositSize` check enforced inside `_depositValidator`,
+    ///         hoisted up so producer bugs fail before the heavy BLS path runs.
+    /// @param index The deposit index in the batch
+    /// @param amount The offending amount in wei
+    error InvalidDepositAmount(uint256 index, uint256 amount);
+
     /// @notice The summed deposit amount exceeds the committed balance passed by River
     error NotEnoughFunds();
 

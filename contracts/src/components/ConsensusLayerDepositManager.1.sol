@@ -171,11 +171,7 @@ abstract contract ConsensusLayerDepositManagerV1 is IConsensusLayerDepositManage
             }
         }
 
-        // 7. Record initial-deposit pubkeys so future top-ups against them pass the membership check.
-        if (initialCount > 0) {
-            verifier.recordInitialDeposits(initialPubkeys);
-        }
-
+        // 7. Bookkeeping writes BEFORE the external `recordInitialDeposits` callback.
         _setCommittedBalance(committedBalance - totalAmount);
 
         uint256 currentInFlightETH = InFlightDeposit.get();
@@ -185,6 +181,11 @@ abstract contract ConsensusLayerDepositManagerV1 is IConsensusLayerDepositManage
         uint256 currentTotalDepositedETH = TotalDepositedETH.get();
         TotalDepositedETH.set(currentTotalDepositedETH + totalAmount);
         emit SetTotalDepositedETH(currentTotalDepositedETH, currentTotalDepositedETH + totalAmount);
+
+        // 8. Record initial-deposit pubkeys so future top-ups against them pass the membership check.
+        if (initialCount > 0) {
+            verifier.recordInitialDeposits(initialPubkeys);
+        }
     }
 
     /// @notice Deposits _depositAmount ETH to the official Deposit contract
