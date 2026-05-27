@@ -107,34 +107,9 @@ interface IAttestationVerifierV1 {
     /// @param pubkey The offending 48-byte BLS pubkey
     error TopUpPubkeyHasNoInitialDeposit(bytes pubkey);
 
-    /// @notice A top-up entry's operator index does not match the operator that originally
-    ///         funded the validator's initial deposit. Without this bind, a compromised
-    ///         deposit committee could mark a top-up against operator A's pubkey while
-    ///         crediting `operator.funded` to operator B — silently desyncing on-chain
-    ///         operator accounting from beacon-state stake (the validator's withdrawal
-    ///         credentials are pinned in beacon state, so the ETH still lands on A, but
-    ///         on-chain bookkeeping no longer reflects that).
-    /// @param pubkey The offending 48-byte BLS pubkey
-    /// @param expectedOperatorIdx The operator index that performed the initial deposit
-    /// @param actualOperatorIdx The operator index attached to the buffer's top-up entry
-    error TopUpOperatorMismatch(bytes pubkey, uint256 expectedOperatorIdx, uint256 actualOperatorIdx);
-
     /// @notice recordInitialDeposits was passed a pubkey already in the initial-deposit set.
     /// @param pubkey The offending 48-byte BLS pubkey
     error DuplicateInitialDeposit(bytes pubkey);
-
-    /// @notice recordInitialDeposits was called with parallel arrays whose lengths differ.
-    ///         Each pubkey must be paired with exactly one operator index.
-    /// @param pubkeyCount Length of the pubkeys array
-    /// @param operatorCount Length of the operatorIndices array
-    error RecordInitialDepositsLengthMismatch(uint256 pubkeyCount, uint256 operatorCount);
-
-    /// @notice `getValidatorPubkeyOperator` was queried with a pubkey not present in the lookup.
-    /// @dev Mirrors the `Operators.2.OperatorNotFound` pattern used for index-keyed lookups
-    ///      elsewhere in the codebase. Callers that need a non-reverting existence check should
-    ///      use `hasValidatorPubkey` instead.
-    /// @param pubkey The queried 48-byte BLS pubkey
-    error PubkeyNotFunded(bytes pubkey);
 
     // -----------------------------------------------------------------------
     // Initialization
@@ -163,9 +138,11 @@ interface IAttestationVerifierV1 {
     ///         withdrawal credentials and total-amount-vs-committed-balance, and return
     ///         the validated batch + total amount for River to execute.
     /// @dev Per-deposit pubkey-state checks fire eagerly inside this call — top-ups must
-    ///      reference a known operator-bound pubkey, initial deposits must not duplicate any
-    ///      already-recorded or in-batch pubkey. A failure reverts here, before River runs
-    ///      any `_depositValidator`.
+    ///      reference a pubkey already in the initial-deposit lookup, and initial deposits
+    ///      must not duplicate any already-recorded or in-batch pubkey. The buffer's
+    ///      `operatorIdx` is NOT verified against any on-chain record (the lookup tracks
+    ///      membership only — see ValidatorPubkeyLookup natspec). A failure reverts here,
+    ///      before River runs any `_depositValidator`.
     /// @dev `depositContract` is supplied by the caller (River) rather than read from the
     ///      verifier's own storage so we avoid an additional cold SLOAD per call. The same
     ///      address is used both for the front-run-resistant `get_deposit_root()` check here
@@ -192,17 +169,15 @@ interface IAttestationVerifierV1 {
     // Initial-deposit recording (called by River after a successful deposit batch)
     // -----------------------------------------------------------------------
 
-    /// @notice Record one or more pubkeys as initial-deposited, each bound to the operator
-    ///         that funded it. Only callable by River.
-    /// @dev Called by River after the deposit-execution loop. The recorded bind is later
-    ///      consulted by the top-up branch of `validate()` to ensure subsequent top-ups against
-    ///      the same pubkey are credited to the original operator (see `TopUpOperatorMismatch`).
-    ///      Reverts on duplicates so a re-deposit of an already-funded validator surfaces as an
-    ///      error rather than a silent ownership overwrite. Per-pubkey logging is emitted on the
-    ///      caller (ConsensusLayerDepositManager's `InitialDeposit` event), not here.
+    /// @notice Record one or more pubkeys as initial-deposited. Only callable by River.
+    /// @dev Called by River after the deposit-execution loop. The recorded set is consulted
+    ///      by the top-up branch of `validate()` to require that top-ups reference a pubkey
+    ///      River has previously initial-deposited. Reverts on duplicates so a re-deposit of
+    ///      an already-recorded validator surfaces as an error rather than a silent overwrite.
+    ///      Per-pubkey logging is emitted on the caller (ConsensusLayerDepositManager's
+    ///      `InitialDeposit` event), not here.
     /// @param pubkeys The 48-byte BLS pubkeys to record
-    /// @param operatorIndices The operator indices that funded each pubkey (parallel to pubkeys)
-    function recordInitialDeposits(bytes[] calldata pubkeys, uint256[] calldata operatorIndices) external;
+    function recordInitialDeposits(bytes[] calldata pubkeys) external;
 
     // -----------------------------------------------------------------------
     // Admin setters
@@ -262,13 +237,4 @@ interface IAttestationVerifierV1 {
     /// @param pubkey The 48-byte BLS pubkey
     /// @return True if the pubkey is currently in the lookup
     function hasValidatorPubkey(bytes calldata pubkey) external view returns (bool);
-
-    /// @notice Returns the operator index that funded the initial deposit for a pubkey.
-    /// @dev Reverts with `PubkeyNotFunded` if the pubkey has never been recorded.
-    ///      Mirrors the `Operators.2.OperatorNotFound` revert pattern used for operator-index
-    ///      lookups elsewhere in the codebase. For a non-reverting existence check, use
-    ///      `hasValidatorPubkey`.
-    /// @param pubkey The 48-byte BLS pubkey
-    /// @return operatorIdx The operator that performed the initial deposit
-    function getValidatorPubkeyOperator(bytes calldata pubkey) external view returns (uint256 operatorIdx);
 }

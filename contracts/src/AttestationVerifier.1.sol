@@ -236,9 +236,9 @@ contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1 {
         if (computedId != depositDataBufferId) revert BufferIdMismatch(depositDataBufferId, computedId);
 
         // 4. Validate every entry before any `_depositValidator` runs — a producer bug
-        //    (bad field length, top-up against an unknown / wrong-operator pubkey, or a
-        //    duplicate initial) reverts here, burning one `validate` call's gas rather than
-        //    a full batch of `IDepositContract.deposit{}` ones downstream.
+        //    (bad field length, top-up against an unknown pubkey, or a duplicate initial)
+        //    reverts here, burning one `validate` call's gas rather than a full batch of
+        //    `IDepositContract.deposit{}` ones downstream.
         bytes32[] memory pubkeyHashes = new bytes32[](depositCount);
         for (uint256 i = 0; i < depositCount; i++) {
             if (deposits[i].pubkey.length != DEPOSIT_PUBKEY_LENGTH) {
@@ -254,10 +254,8 @@ contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1 {
             pubkeyHashes[i] = pkHash;
 
             if (BLS12_381.isZero(deposits[i].depositY)) {
-                (bool exists, uint256 fundedOperatorIdx) = ValidatorPubkeyLookup.lookupValidatorPubkey(pubkey);
-                if (!exists) revert TopUpPubkeyHasNoInitialDeposit(pubkey);
-                if (fundedOperatorIdx != deposits[i].operatorIdx) {
-                    revert TopUpOperatorMismatch(pubkey, fundedOperatorIdx, deposits[i].operatorIdx);
+                if (!ValidatorPubkeyLookup.hasValidatorPubkey(pubkey)) {
+                    revert TopUpPubkeyHasNoInitialDeposit(pubkey);
                 }
             } else {
                 if (ValidatorPubkeyLookup.hasValidatorPubkey(pubkey)) {
@@ -282,30 +280,20 @@ contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1 {
     // -----------------------------------------------------------------------
 
     /// @inheritdoc IAttestationVerifierV1
-    function recordInitialDeposits(bytes[] calldata pubkeys, uint256[] calldata operatorIndices) external onlyRiver {
+    function recordInitialDeposits(bytes[] calldata pubkeys) external onlyRiver {
         uint256 len = pubkeys.length;
-        if (len != operatorIndices.length) {
-            revert RecordInitialDepositsLengthMismatch(len, operatorIndices.length);
-        }
         for (uint256 i = 0; i < len; ++i) {
             bytes calldata pubkey = pubkeys[i];
             if (ValidatorPubkeyLookup.hasValidatorPubkey(pubkey)) {
                 revert DuplicateInitialDeposit(pubkey);
             }
-            ValidatorPubkeyLookup.add(pubkey, operatorIndices[i]);
+            ValidatorPubkeyLookup.add(pubkey);
         }
     }
 
     /// @inheritdoc IAttestationVerifierV1
     function hasValidatorPubkey(bytes calldata pubkey) external view returns (bool) {
         return ValidatorPubkeyLookup.hasValidatorPubkey(pubkey);
-    }
-
-    /// @inheritdoc IAttestationVerifierV1
-    function getValidatorPubkeyOperator(bytes calldata pubkey) external view returns (uint256) {
-        (bool exists, uint256 operatorIdx) = ValidatorPubkeyLookup.lookupValidatorPubkey(pubkey);
-        if (!exists) revert PubkeyNotFunded(pubkey);
-        return operatorIdx;
     }
 
     // -----------------------------------------------------------------------
@@ -365,14 +353,7 @@ contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1 {
 
     /// @notice Verify the BLS signatures against the canonical River withdrawal credentials.
     /// @dev Top-ups (entries with an all-zero `depositY`) are cleared upstream in
-    ///      `validate()` — both the pubkey-funded check and the operatorIdx bind run there,
-    ///      so this loop simply skips them. Initials are BLS-verified via a self-staticcall
-    ///      trampoline that promotes the deposit's memory bytes into calldata.
-    /// @dev Residual surface NOT closed by these checks: an operator who legitimately receives
-    ///      an initial deposit can later switch the validator's withdrawal credentials under
-    ///      Pectra (BLS-signed change request). Subsequent top-ups would still pass our
-    ///      ownership check but route funds to the new (attacker-controlled) WC. Closing this
-    ///      needs current-WC proofs via EIP-4788 and is out of scope here.
+    ///      `validate()` via the membership check on `ValidatorPubkeyLookup`.
     /// @param deposits The deposits.
     /// @param withdrawalCredentials The canonical River withdrawal credentials.
     function _verifyBLSSignatures(IDepositDataBuffer.DepositObject[] memory deposits, bytes32 withdrawalCredentials)

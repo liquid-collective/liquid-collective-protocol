@@ -149,18 +149,16 @@ abstract contract ConsensusLayerDepositManagerV1 is IConsensusLayerDepositManage
         // 5. Update operator funded validator accounting
         _updateFundedETHFromBuffer(deposits);
 
-        // 6. Execute deposits, emit per-entry classification events, and collect (pubkey, operator)
-        //    pairs for initial deposits to record on the verifier. An all-zero `depositY` marks a
-        //    top-up; non-zero marks an initial deposit. Recording the operator alongside the pubkey
-        //    lets the verifier later assert that a top-up against this pubkey is credited to the
-        //    same operator that performed the initial deposit (see TopUpOperatorMismatch).
+        // 6. Execute deposits, emit per-entry classification events, and collect initial-deposit
+        //    pubkeys to record on the verifier. An all-zero `depositY` marks a top-up; non-zero
+        //    marks an initial deposit. Recording the pubkey lets the verifier later require that
+        //    a top-up references a pubkey River has previously initial-deposited.
         uint256 len = deposits.length;
         uint256 initialCount = 0;
         for (uint256 i = 0; i < len; i++) {
             if (!BLS12_381.isZero(deposits[i].depositY)) initialCount++;
         }
         bytes[] memory initialPubkeys = new bytes[](initialCount);
-        uint256[] memory initialOperators = new uint256[](initialCount);
         uint256 initialCursor = 0;
 
         for (uint256 i = 0; i < len; i++) {
@@ -174,15 +172,13 @@ abstract contract ConsensusLayerDepositManagerV1 is IConsensusLayerDepositManage
                     depositDataBufferId, deposits[i].operatorIdx, deposits[i].pubkey, deposits[i].amount
                 );
                 initialPubkeys[initialCursor] = deposits[i].pubkey;
-                initialOperators[initialCursor] = deposits[i].operatorIdx;
                 initialCursor++;
             }
         }
 
-        // 7. Record initial-deposit pubkeys post-execution so future top-ups pass the ownership check.
+        // 7. Record initial-deposit pubkeys post-execution so future top-ups pass the membership check.
         if (initialCount > 0) {
-            IAttestationVerifierV1(AttestationVerifierAddress.get())
-                .recordInitialDeposits(initialPubkeys, initialOperators);
+            IAttestationVerifierV1(AttestationVerifierAddress.get()).recordInitialDeposits(initialPubkeys);
         }
 
         _setCommittedBalance(committedBalance - totalAmount);
