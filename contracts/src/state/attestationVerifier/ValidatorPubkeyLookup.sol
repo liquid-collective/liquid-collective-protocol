@@ -23,16 +23,14 @@ library ValidatorPubkeyLookup {
     /// @return True if the pubkey was recorded.
     function hasValidatorPubkey(bytes memory pubkey) internal view returns (bool) {
         bytes32 slot = keccak256(abi.encode(VALIDATOR_PUBKEY_LOOKUP_MAPPING_BASE_SLOT, pubkey));
-        return LibUnstructuredStorage.getStorageUint256(slot) != 0;
+        return LibUnstructuredStorage.getStorageBool(slot);
     }
 
     /// @notice Record a pubkey as initial-deposited.
-    /// @dev Stores the literal `1` so the natural zero of unset storage doubles as
-    ///      the "never recorded" sentinel.
     /// @param pubkey The raw 48-byte BLS pubkey.
     function add(bytes memory pubkey) internal {
         bytes32 slot = keccak256(abi.encode(VALIDATOR_PUBKEY_LOOKUP_MAPPING_BASE_SLOT, pubkey));
-        LibUnstructuredStorage.setStorageUint256(slot, 1);
+        LibUnstructuredStorage.setStorageBool(slot, true);
     }
 
     /// @notice Clear the entry for a pubkey.
@@ -42,6 +40,6 @@ library ValidatorPubkeyLookup {
     /// @param pubkey The raw 48-byte BLS pubkey.
     function remove(bytes memory pubkey) internal {
         bytes32 slot = keccak256(abi.encode(VALIDATOR_PUBKEY_LOOKUP_MAPPING_BASE_SLOT, pubkey));
-        LibUnstructuredStorage.setStorageUint256(slot, 0);
+        LibUnstructuredStorage.setStorageBool(slot, false);
     }
 }
