@@ -1000,4 +1000,209 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
         );
         validator.setDepositCommitteeAttester(stranger, false);
     }
+
+    // -----------------------------------------------------------------------
+    // View functions
+    // -----------------------------------------------------------------------
+
+    /// @dev Test every external view on the verifier returns the value configured at init.
+    function testViews_returnConfiguredValues() public {
+        assertEq(validator.getRiver(), address(dm));
+        assertEq(validator.getDepositDataBuffer(), address(buffer));
+        assertEq(validator.getDepositCommitteeAttesterCount(), 3);
+        assertEq(validator.getDepositCommitteeAttestationQuorum(), 2);
+        assertTrue(validator.isDepositCommitteeAttester(depositCommitteeAttester1));
+        assertTrue(validator.isDepositCommitteeAttester(depositCommitteeAttester2));
+        assertTrue(validator.isDepositCommitteeAttester(depositCommitteeAttester3));
+        assertFalse(validator.isDepositCommitteeAttester(address(0xDEAD)));
+        assertTrue(validator.getDomainSeparator() != bytes32(0));
+        // DEPOSIT_DOMAIN was set at init from a zero genesis fork version; just check it was set.
+        assertTrue(validator.DEPOSIT_DOMAIN() != bytes32(0));
+    }
+
+    // -----------------------------------------------------------------------
+    // validate() length / empty-batch reverts
+    // -----------------------------------------------------------------------
+
+    /// @dev A deposit with a mis-sized pubkey must revert in validate() before the BLS path.
+    function testRevert_validate_invalidPubkeyLength() public {
+        IDepositDataBuffer.DepositObject[] memory deposits = new IDepositDataBuffer.DepositObject[](1);
+        deposits[0] = _makeDeposit(0, 700);
+        deposits[0].pubkey = new bytes(47); // off by one
+        (bytes32 bufferId, bytes32 rootHash, bytes[] memory sigs) = _prepareDeposit(deposits);
+        vm.prank(keeper);
+        vm.expectRevert(abi.encodeWithSelector(IAttestationVerifierV1.InvalidPubkeyLength.selector, 0, 47));
+        dm.depositToConsensusLayerWithAttestation(bufferId, rootHash, sigs);
+    }
+
+    /// @dev A deposit with a mis-sized signature must revert in validate() before the BLS path.
+    function testRevert_validate_invalidSignatureLength() public {
+        IDepositDataBuffer.DepositObject[] memory deposits = new IDepositDataBuffer.DepositObject[](1);
+        deposits[0] = _makeDeposit(0, 701);
+        deposits[0].signature = new bytes(95); // off by one
+        (bytes32 bufferId, bytes32 rootHash, bytes[] memory sigs) = _prepareDeposit(deposits);
+        vm.prank(keeper);
+        vm.expectRevert(abi.encodeWithSelector(IAttestationVerifierV1.InvalidSignatureLength.selector, 0, 95));
+        dm.depositToConsensusLayerWithAttestation(bufferId, rootHash, sigs);
+    }
+
+    /// @dev An empty deposit batch must revert with NoDeposits before any further processing.
+    function testRevert_validate_noDeposits() public {
+        IDepositDataBuffer.DepositObject[] memory deposits = new IDepositDataBuffer.DepositObject[](0);
+        bytes32 bufferId = keccak256(abi.encode(deposits));
+        buffer.submitDepositData(bufferId, deposits);
+        bytes32 rootHash = depositContract.get_deposit_root();
+        bytes[] memory sigs = new bytes[](2);
+        sigs[0] = _signAttestation(depositCommitteeAttesterPk1, bufferId, rootHash);
+        sigs[1] = _signAttestation(depositCommitteeAttesterPk2, bufferId, rootHash);
+        vm.prank(keeper);
+        vm.expectRevert(IAttestationVerifierV1.NoDeposits.selector);
+        dm.depositToConsensusLayerWithAttestation(bufferId, rootHash, sigs);
+    }
+
+    // -----------------------------------------------------------------------
+    // Admin setters — happy paths + onlyRiverAdmin gate
+    // -----------------------------------------------------------------------
+
+    /// @dev Admin can register a new attester; count increments; the attester becomes recognised.
+    function testSetDepositCommitteeAttester_addAndRemove() public {
+        address newAttester = address(0xFEED);
+        assertFalse(validator.isDepositCommitteeAttester(newAttester));
+
+        vm.prank(admin);
+        validator.setDepositCommitteeAttester(newAttester, true);
+        assertTrue(validator.isDepositCommitteeAttester(newAttester));
+        assertEq(validator.getDepositCommitteeAttesterCount(), 4);
+
+        // Removing brings us back to 3.
+        vm.prank(admin);
+        validator.setDepositCommitteeAttester(newAttester, false);
+        assertFalse(validator.isDepositCommitteeAttester(newAttester));
+        assertEq(validator.getDepositCommitteeAttesterCount(), 3);
+    }
+
+    /// @dev Non-admin caller must be rejected by onlyRiverAdmin.
+    function testRevert_setDepositCommitteeAttester_unauthorized() public {
+        address stranger = address(0xC0FFEE);
+        vm.prank(stranger);
+        vm.expectRevert(abi.encodeWithSelector(LibErrors.Unauthorized.selector, stranger));
+        validator.setDepositCommitteeAttester(address(0xFEED), true);
+    }
+
+    /// @dev Cannot remove an attester if doing so would leave fewer attesters than the configured quorum.
+    function testRevert_setDepositCommitteeAttester_wouldUnderQuorum() public {
+        // quorum=2, 3 attesters; remove one → 2 (still ok), remove another → 1 < 2 (rejects).
+        vm.prank(admin);
+        validator.setDepositCommitteeAttester(depositCommitteeAttester3, false);
+        vm.prank(admin);
+        vm.expectRevert(
+            abi.encodeWithSelector(IAttestationVerifierV1.QuorumExceedsDepositCommitteeAttesterCount.selector, 2, 1)
+        );
+        validator.setDepositCommitteeAttester(depositCommitteeAttester2, false);
+    }
+
+    /// @dev setDepositCommitteeAttestationQuorum happy path: drop quorum to 1, then back to 2.
+    function testSetDepositCommitteeAttestationQuorum_happyPath() public {
+        vm.prank(admin);
+        validator.setDepositCommitteeAttestationQuorum(1);
+        assertEq(validator.getDepositCommitteeAttestationQuorum(), 1);
+
+        vm.prank(admin);
+        validator.setDepositCommitteeAttestationQuorum(2);
+        assertEq(validator.getDepositCommitteeAttestationQuorum(), 2);
+    }
+
+    function testRevert_setDepositCommitteeAttestationQuorum_zero() public {
+        vm.prank(admin);
+        vm.expectRevert(IAttestationVerifierV1.ZeroQuorum.selector);
+        validator.setDepositCommitteeAttestationQuorum(0);
+    }
+
+    function testRevert_setDepositCommitteeAttestationQuorum_exceedsAttesterCount() public {
+        // 3 attesters; quorum > 3 is rejected.
+        vm.prank(admin);
+        vm.expectRevert(
+            abi.encodeWithSelector(IAttestationVerifierV1.QuorumExceedsDepositCommitteeAttesterCount.selector, 4, 3)
+        );
+        validator.setDepositCommitteeAttestationQuorum(4);
+    }
+
+    function testRevert_setDepositCommitteeAttestationQuorum_unauthorized() public {
+        address stranger = address(0xC0FFEE);
+        vm.prank(stranger);
+        vm.expectRevert(abi.encodeWithSelector(LibErrors.Unauthorized.selector, stranger));
+        validator.setDepositCommitteeAttestationQuorum(1);
+    }
+
+    /// @dev Admin can rotate the DepositDataBuffer address.
+    function testSetDepositDataBuffer_happyPath() public {
+        address newBuffer = address(0xBABE);
+        vm.prank(admin);
+        validator.setDepositDataBuffer(newBuffer);
+        assertEq(validator.getDepositDataBuffer(), newBuffer);
+    }
+
+    function testRevert_setDepositDataBuffer_unauthorized() public {
+        address stranger = address(0xC0FFEE);
+        vm.prank(stranger);
+        vm.expectRevert(abi.encodeWithSelector(LibErrors.Unauthorized.selector, stranger));
+        validator.setDepositDataBuffer(address(0xBABE));
+    }
+
+    // -----------------------------------------------------------------------
+    // CLDM view functions
+    // -----------------------------------------------------------------------
+
+    /// @dev Test every CLDM external view returns the value configured during setUp.
+    function testCLDM_viewFunctions() public {
+        assertEq(dm.getCommittedBalance(), 128 ether);
+        assertEq(dm.getBalanceToDeposit(), 0);
+        assertEq(dm.getWithdrawalCredentials(), withdrawalCredentials);
+        assertEq(dm.getTotalDepositedETH(), 0);
+        assertEq(dm.getKeeper(), keeper);
+        assertEq(dm.getAttestationVerifier(), address(validator));
+    }
+
+    // -----------------------------------------------------------------------
+    // initAttestationVerifierV1 — input validation
+    // -----------------------------------------------------------------------
+
+    /// @dev Cannot init with an empty attester array.
+    function testRevert_init_emptyAttesterArray() public {
+        AttestationVerifierV1 freshValidator = new AttestationVerifierV1();
+        LibImplementationUnbricker.unbrick(vm, address(freshValidator));
+        address[] memory empty = new address[](0);
+        vm.expectRevert(LibErrors.InvalidArgument.selector);
+        freshValidator.initAttestationVerifierV1(address(dm), address(buffer), empty, 1, bytes4(0));
+    }
+
+    /// @dev Cannot init with a quorum strictly greater than the attester count.
+    function testRevert_init_quorumExceedsAttesterCount() public {
+        AttestationVerifierV1 freshValidator = new AttestationVerifierV1();
+        LibImplementationUnbricker.unbrick(vm, address(freshValidator));
+        address[] memory attesters = new address[](2);
+        attesters[0] = depositCommitteeAttester1;
+        attesters[1] = depositCommitteeAttester2;
+        vm.expectRevert(
+            abi.encodeWithSelector(IAttestationVerifierV1.QuorumExceedsDepositCommitteeAttesterCount.selector, 3, 2)
+        );
+        freshValidator.initAttestationVerifierV1(address(dm), address(buffer), attesters, 3, bytes4(0));
+    }
+
+    /// @dev Cannot add an attester that would push the total past MAX_DEPOSIT_COMMITTEE_ATTESTERS.
+    ///      Fills the registry to the cap (32), then tries to add one more.
+    function testRevert_setDepositCommitteeAttester_exceedsMax() public {
+        uint256 max = validator.MAX_DEPOSIT_COMMITTEE_ATTESTERS();
+        // setUp already registered 3 attesters; add up to the cap.
+        for (uint256 i = 3; i < max; ++i) {
+            vm.prank(admin);
+            validator.setDepositCommitteeAttester(address(uint160(0x1000 + i)), true);
+        }
+        assertEq(validator.getDepositCommitteeAttesterCount(), max);
+        vm.prank(admin);
+        vm.expectRevert(
+            abi.encodeWithSelector(IAttestationVerifierV1.TooManyDepositCommitteeAttesters.selector, max + 1, max)
+        );
+        validator.setDepositCommitteeAttester(address(uint160(0x9999)), true);
+    }
 }
