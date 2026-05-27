@@ -73,6 +73,9 @@ contract WithdrawV1 is IWithdrawV1, Initializable, ReentrancyGuard, IProtocolVer
         if (msg.sender != OperatorsRegistryAddress.get()) {
             revert LibErrors.Unauthorized(msg.sender);
         }
+        if (pubkeys.length == 0) {
+            revert InvalidEmptyArray();
+        }
         if (pubkeys.length != amount.length) {
             revert LengthMismatch(pubkeys.length, amount.length);
         }
@@ -104,6 +107,9 @@ contract WithdrawV1 is IWithdrawV1, Initializable, ReentrancyGuard, IProtocolVer
         uint256 maxFeePerConsolidation,
         address excessFeeRecipient
     ) external payable onlyRiver nonReentrant {
+        if (requests.length == 0) {
+            revert InvalidEmptyArray();
+        }
         address consolidationContract = ConsolidationContractAddress.get();
         uint256 fee = _validateAndReturnFee(consolidationContract, maxFeePerConsolidation);
 

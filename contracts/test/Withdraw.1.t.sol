@@ -341,6 +341,14 @@ contract WithdrawV1PectraTests is WithdrawV1TestBase {
         withdraw.withdraw{value: 1 gwei}(pubkeys, amounts, 1 gwei, excessFeeRecipient);
     }
 
+    function testWithdrawRevertsIfEmptyPubkeysArray() external {
+        bytes[] memory pubkeys = new bytes[](0);
+        uint64[] memory amounts = new uint64[](0);
+        vm.prank(address(operatorsRegistry));
+        vm.expectRevert(IWithdrawV1.InvalidEmptyArray.selector);
+        withdraw.withdraw{value: 0}(pubkeys, amounts, 1 gwei, excessFeeRecipient);
+    }
+
     function testConsolidateOnlyCallableByRiver() external {
         bytes[] memory srcPubkeys = new bytes[](1);
         srcPubkeys[0] = VALID_PUBKEY_48;
@@ -351,6 +359,13 @@ contract WithdrawV1PectraTests is WithdrawV1TestBase {
         vm.prank(random);
         vm.expectRevert(abi.encodeWithSignature("Unauthorized(address)", random));
         withdraw.consolidate{value: 1 gwei}(requests, 1 gwei, excessFeeRecipient);
+    }
+
+    function testConsolidateRevertsIfEmptyRequestsArray() external {
+        IWithdrawV1.ConsolidationRequest[] memory requests = new IWithdrawV1.ConsolidationRequest[](0);
+        vm.prank(address(river));
+        vm.expectRevert(IWithdrawV1.InvalidEmptyArray.selector);
+        withdraw.consolidate{value: 0}(requests, 1 gwei, excessFeeRecipient);
     }
 
     function testWithdrawLengthMismatchReverts() external {

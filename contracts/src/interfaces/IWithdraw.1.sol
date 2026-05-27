@@ -57,6 +57,9 @@ interface IWithdrawV1 {
     /// @param length Actual length
     error InvalidPubkeyLength(uint256 length);
 
+    /// @notice Thrown when an empty array is provided
+    error InvalidEmptyArray();
+
     /// @param _river The address of the River contract
     function initializeWithdrawV1(address _river) external;
 
