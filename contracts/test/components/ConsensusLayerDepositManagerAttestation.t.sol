@@ -606,10 +606,10 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
     }
 
     // -----------------------------------------------------------------------
-    // Top-up tests — BLS verification must be skipped for entries with isTopUp=true.
+    // Top-up tests — BLS verification must be skipped for entries with all-zero depositY.
     // Authorization for top-ups is delegated to the deposit committee (the attestation
     // quorum signs over keccak256(abi.encode(deposits)), so the committee is attesting
-    // to each entry's isTopUp classification).
+    // to each entry's depositY-encoded classification).
     // -----------------------------------------------------------------------
 
     // Top-up entries must never enter the BLS verification path. Proven here by zeroing
@@ -640,9 +640,9 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
         assertEq(dm.getTotalDepositedETH(), 64 ether);
     }
 
-    // The inverse: under the same zeroed-domain setup, an initial deposit (isTopUp=false)
+    // The inverse: under the same zeroed-domain setup, an initial deposit (non-zero depositY)
     // must enter the real BLS path and revert with ZeroDepositDomain. Proves the gate is
-    // default-deny on the classification flag and that the BLS path is reached.
+    // default-deny on the depositY-encoded classification and that the BLS path is reached.
     function testInitial_blsPathReached_revertsOnZeroDepositDomain() public {
         vm.clearMockedCalls();
         vm.store(address(validator), VALIDATOR_DEPOSIT_DOMAIN_SLOT, bytes32(0));
@@ -679,20 +679,20 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
         dm.depositToConsensusLayerWithAttestation(bufferId, rootHash, sigs);
     }
 
-    // The bufferId binding (keccak256(abi.encode(deposits))) must cover isTopUp — tampering
-    // with the flag after attesters sign must break the binding and revert with BufferIdMismatch.
-    // Without this, a malicious buffer could downgrade an attested initial deposit to a top-up
-    // and bypass BLS verification.
+    // The bufferId binding (keccak256(abi.encode(deposits))) must cover depositY — tampering
+    // with the classification field after attesters sign must break the binding and revert
+    // with BufferIdMismatch. Without this, a malicious buffer could downgrade an attested
+    // initial deposit to a top-up and bypass BLS verification.
     function testRevert_bufferIdMismatch_isTopUpTampered() public {
         IDepositDataBuffer.DepositObject[] memory depositsSigned = new IDepositDataBuffer.DepositObject[](1);
-        depositsSigned[0] = _makeDeposit(0, 80); // isTopUp: false (initial)
+        depositsSigned[0] = _makeDeposit(0, 80); // initial (non-zero depositY)
 
         IDepositDataBuffer.DepositObject[] memory depositsActual = new IDepositDataBuffer.DepositObject[](1);
-        depositsActual[0] = _makeTopUpDeposit(0, 80); // identical content, isTopUp: true
+        depositsActual[0] = _makeTopUpDeposit(0, 80); // identical content, but all-zero depositY
 
         bytes32 signedId = keccak256(abi.encode(depositsSigned));
         bytes32 actualId = keccak256(abi.encode(depositsActual));
-        assertTrue(signedId != actualId, "test precondition: flipping isTopUp must change the bufferId");
+        assertTrue(signedId != actualId, "test precondition: flipping depositY must change the bufferId");
 
         // Malicious buffer: store the top-up version under the initial-deposit's signedId.
         buffer.submitDepositData(signedId, depositsActual);
