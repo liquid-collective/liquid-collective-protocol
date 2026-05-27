@@ -57,9 +57,6 @@ interface IConsensusLayerDepositManagerV1 {
     /// @notice Emitted when the AttestationVerifier address is updated
     event SetAttestationVerifier(address indexed attestationVerifier);
 
-    /// @notice The deposit size is invalid
-    error InvalidDepositSize(uint256 depositSize);
-
     /// @notice The withdrawal credentials value is null
     error InvalidWithdrawalCredentials();
 
