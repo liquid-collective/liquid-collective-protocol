@@ -467,40 +467,29 @@ contract ConsolidationAttestationTest is Test {
 
     function testSignaturesExcludedFromBufferId() public {
         // Two ConsolidationObjects with identical (user, sources, targets, totalAmount)
-        // but different signature sets. The first signs over the correct bufferId and
-        // passes. The second signs over an UNRELATED digest — if signatures were part
-        // of the bufferId hash, the verifier would compute a different digest for each
-        // (and the second would fail signature recovery against the same committee).
-        // By construction the digest the verifier computes is identical in both calls,
-        // so the second call reaches the quorum check and reverts there — proving
-        // signatures are not part of the verifier's bufferId derivation.
+        // but different signature sets must derive the same EIP-712 digest. The verifier
+        // builds the digest from only the four request fields, so the `signatures` field
+        // never enters the hash.
+        //
+        // Order matters: with replay protection now in place, a successful call marks the
+        // request as processed and any subsequent call with the same payload (regardless of
+        // signatures) reverts with `ConsolidationAlreadyProcessed`. To still observe that
+        // BOTH signature sets are evaluated against the SAME digest, we issue the
+        // wrong-signatures call first (reverts at quorum, no state change), then the
+        // correct-signatures call (succeeds).
         address user = address(0xBEEF);
         bytes[] memory sources = new bytes[](1);
         sources[0] = _pubkey(1);
         bytes[] memory targets = new bytes[](1);
         targets[0] = _pubkey(2);
         uint256 totalAmount = 32 ether;
-        bytes32 expectedId = _consolidationDigest(user, sources, targets, totalAmount);
+        bytes32 expectedDigest = _consolidationDigest(user, sources, targets, totalAmount);
 
-        bytes[] memory sigsA = new bytes[](2);
-        sigsA[0] = _sign(pk1, expectedId);
-        sigsA[1] = _sign(pk2, expectedId);
-        assertTrue(
-            validator.validateConsolidation(
-                IAttestationVerifierV1.ConsolidationObject({
-                    user: user,
-                    sourcePubkeys: sources,
-                    targetPubkeys: targets,
-                    totalAmount: totalAmount,
-                    signatures: sigsA
-                })
-            )
-        );
-
-        bytes32 unrelatedId = keccak256("unrelated digest for signature replay test");
+        // --- Wrong-message signatures: revert at the quorum step (no state mutation). ---
+        bytes32 unrelatedDigest = keccak256("unrelated digest for signature replay test");
         bytes[] memory sigsB = new bytes[](2);
-        sigsB[0] = _sign(pk1, unrelatedId);
-        sigsB[1] = _sign(pk2, unrelatedId);
+        sigsB[0] = _sign(pk1, unrelatedDigest);
+        sigsB[1] = _sign(pk2, unrelatedDigest);
         vm.expectRevert(
             abi.encodeWithSelector(IAttestationVerifierV1.InsufficientConsolidationAttestations.selector, 0, 2)
         );
@@ -513,6 +502,64 @@ contract ConsolidationAttestationTest is Test {
                 signatures: sigsB
             })
         );
+
+        // --- Correct-message signatures over the SAME (user, sources, targets, totalAmount):
+        // succeeds, proving the digest the verifier built didn't depend on signatures. ---
+        bytes[] memory sigsA = new bytes[](2);
+        sigsA[0] = _sign(pk1, expectedDigest);
+        sigsA[1] = _sign(pk2, expectedDigest);
+        assertTrue(
+            validator.validateConsolidation(
+                IAttestationVerifierV1.ConsolidationObject({
+                    user: user,
+                    sourcePubkeys: sources,
+                    targetPubkeys: targets,
+                    totalAmount: totalAmount,
+                    signatures: sigsA
+                })
+            )
+        );
+    }
+
+    function testRevert_consolidationAlreadyProcessed() public {
+        // A successful validateConsolidation marks the request as processed. A second
+        // call with the same payload (even with the same valid signatures) must revert.
+        address user = address(0xBEEF);
+        IAttestationVerifierV1.ConsolidationObject memory c = _validConsolidation(user, 1);
+        assertTrue(validator.validateConsolidation(c));
+
+        // The expected key is the EIP-712 structHash over the four request fields.
+        bytes32 structHash = keccak256(
+            abi.encode(
+                ATTEST_CONSOLIDATION_TYPEHASH,
+                c.user,
+                _hashBytesArray(c.sourcePubkeys),
+                _hashBytesArray(c.targetPubkeys),
+                c.totalAmount
+            )
+        );
+
+        vm.expectRevert(
+            abi.encodeWithSelector(IAttestationVerifierV1.ConsolidationAlreadyProcessed.selector, structHash)
+        );
+        validator.validateConsolidation(c);
+    }
+
+    function testValidateConsolidation_emitsConsolidationProcessed() public {
+        address user = address(0xBEEF);
+        IAttestationVerifierV1.ConsolidationObject memory c = _validConsolidation(user, 99);
+        bytes32 structHash = keccak256(
+            abi.encode(
+                ATTEST_CONSOLIDATION_TYPEHASH,
+                c.user,
+                _hashBytesArray(c.sourcePubkeys),
+                _hashBytesArray(c.targetPubkeys),
+                c.totalAmount
+            )
+        );
+        vm.expectEmit(true, false, false, true);
+        emit IAttestationVerifierV1.ConsolidationProcessed(structHash);
+        validator.validateConsolidation(c);
     }
 
     // -----------------------------------------------------------------------

@@ -138,7 +138,7 @@ abstract contract ConsensusLayerDepositManagerV1 is IConsensusLayerDepositManage
         (IDepositDataBuffer.DepositObject[] memory deposits, uint256 totalAmount) = IAttestationVerifierV1(
                 AttestationVerifierAddress.get()
             )
-            .validate(
+            .validateDeposits(
                 depositDataBufferId,
                 depositRootHash,
                 signatures,

@@ -15,6 +15,7 @@ import "./libraries/LibErrors.sol";
 import "./state/attestationVerifier/ConsolidationCommitteeAttestationQuorum.sol";
 import "./state/attestationVerifier/ConsolidationCommitteeAttesters.sol";
 import "./state/attestationVerifier/ConsolidationDomainSeparator.sol";
+import "./state/attestationVerifier/ProcessedConsolidations.sol";
 import "./state/attestationVerifier/DepositCommitteeAttestationQuorum.sol";
 import "./state/attestationVerifier/DepositCommitteeAttesters.sol";
 import "./state/attestationVerifier/DepositDataBufferAddress.sol";
@@ -24,12 +25,26 @@ import "./state/shared/RiverAddress.sol";
 
 /// @title AttestationVerifier (v1)
 /// @author Alluvial Finance Inc.
-/// @notice Sibling contract that validates attestation-quorum + BLS deposit messages
-///         on behalf of River. Extracted from RiverV1 to keep River's deployed
-///         bytecode under EIP-170. River delegates to this contract for steps 3 and 4
-///         of the attestation deposit flow (quorum/BLS verify, WC + total-amount check)
-///         while retaining keeper authorization, slashing-containment gating, ETH
-///         execution, operator funding accounting, and balance bookkeeping.
+/// @notice Sibling contract that validates committee attestations on behalf of River
+///         for two independent flows, each with its own committee, quorum, and EIP-712
+///         domain separator anchored to River:
+///
+///         1. Deposit flow (`validateDeposits`):
+///            Validates attestation-quorum + BLS deposit messages over a batch fetched
+///            from the `DepositDataBuffer`, enforces withdrawal-credentials and
+///            committed-balance bounds, and returns the validated batch + total
+///            amount for River to execute. River retains keeper authorization,
+///            slashing-containment gating, ETH execution, operator funding accounting,
+///            and balance bookkeeping. View-only.
+///
+///         2. Consolidation flow (`validateConsolidation`):
+///            Validates EIP-7251 consolidation requests passed in directly as a
+///            `ConsolidationObject` struct (no on-chain buffer). Verifies the
+///            consolidation-committee attestation quorum over a typed-data digest
+///            built from the request fields, and marks the request as processed
+///            for replay protection. State-mutating.
+///
+///         Extracted from RiverV1 to keep River's deployed bytecode under EIP-170.
 contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1 {
     // -----------------------------------------------------------------------
     // EIP-712
@@ -321,11 +336,11 @@ contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1 {
     }
 
     // -----------------------------------------------------------------------
-    // Validate-and-prepare — pure validation, no state changes
+    // Validate-and-prepare entry points
     // -----------------------------------------------------------------------
 
     /// @inheritdoc IAttestationVerifierV1
-    function validate(
+    function validateDeposits(
         bytes32 depositDataBufferId,
         bytes32 depositRootHash,
         bytes[] calldata signatures,
@@ -384,7 +399,6 @@ contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1 {
     ///      additional financial caps on `totalAmount`.
     function validateConsolidation(IAttestationVerifierV1.ConsolidationObject calldata consolidation)
         external
-        view
         returns (bool)
     {
         // 1. Structural checks (cheapest first — fail fast)
@@ -421,10 +435,21 @@ contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1 {
                 consolidation.totalAmount
             )
         );
-        bytes32 digest = ECDSA.toTypedDataHash(domainSep, structHash);
 
-        // 4. Verify the consolidation attestation quorum from the supplied signatures
+        // 4. Replay protection — reject any consolidation we've already accepted.
+        //    Checked BEFORE quorum verification so a previously-accepted request fails fast
+        //    even if the supplied signatures happen to be valid again.
+        if (ProcessedConsolidations.isProcessed(structHash)) {
+            revert ConsolidationAlreadyProcessed(structHash);
+        }
+
+        // 5. Verify the consolidation attestation quorum from the supplied signatures
+        bytes32 digest = ECDSA.toTypedDataHash(domainSep, structHash);
         _verifyConsolidationAttestationQuorum(digest, consolidation.signatures);
+
+        // 6. Mark as processed and emit
+        ProcessedConsolidations.markProcessed(structHash);
+        emit ConsolidationProcessed(structHash);
 
         return true;
     }

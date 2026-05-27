@@ -6,9 +6,14 @@ import "../libraries/BLS12_381.sol";
 
 /// @title Attestation Verifier Interface (v1)
 /// @author Alluvial Finance Inc.
-/// @notice External surface of the AttestationVerifier sibling contract that
-///         River delegates to for attestation-quorum + BLS deposit-message verification
-///         and for per-deposit withdrawal-credentials and committed-balance checks.
+/// @notice External surface of the AttestationVerifier sibling contract that River delegates
+///         to for two independent attestation flows:
+///         1. Deposit flow (`validateDeposits`) — attestation-quorum + BLS deposit-message
+///            verification, plus per-deposit withdrawal-credentials and committed-balance
+///            checks against a batch fetched from the `DepositDataBuffer`. View-only.
+///         2. Consolidation flow (`validateConsolidation`) — attestation-quorum verification
+///            over an EIP-7251 `ConsolidationObject` passed in by the caller (no on-chain
+///            buffer), with replay protection on the EIP-712 structHash. State-mutating.
 interface IAttestationVerifierV1 {
     // -----------------------------------------------------------------------
     // Types
@@ -67,6 +72,11 @@ interface IAttestationVerifierV1 {
 
     /// @notice Emitted when the EIP-712 consolidation domain separator is (re)cached
     event SetConsolidationDomainSeparator(bytes32 consolidationDomainSeparator);
+
+    /// @notice Emitted when a consolidation request is successfully validated and
+    ///         marked as processed for replay protection.
+    /// @param consolidationHash The EIP-712 structHash of the consolidation request
+    event ConsolidationProcessed(bytes32 indexed consolidationHash);
 
     // -----------------------------------------------------------------------
     // Errors
@@ -187,6 +197,10 @@ interface IAttestationVerifierV1 {
     /// @param value The requested status (matches current status)
     error ConsolidationCommitteeAttesterStatusUnchanged(address consolidationCommitteeAttester, bool value);
 
+    /// @notice The supplied consolidation has already been validated; replay rejected.
+    /// @param consolidationHash The EIP-712 structHash of the consolidation request
+    error ConsolidationAlreadyProcessed(bytes32 consolidationHash);
+
     // -----------------------------------------------------------------------
     // Initialization
     // -----------------------------------------------------------------------
@@ -240,7 +254,7 @@ interface IAttestationVerifierV1 {
     /// @param committedBalance     Total amount summed over deposits must not exceed this
     /// @return deposits            Validated deposit batch (caller executes)
     /// @return totalAmount         Sum of deposit amounts in the batch
-    function validate(
+    function validateDeposits(
         bytes32 depositDataBufferId,
         bytes32 depositRootHash,
         bytes[] calldata signatures,
@@ -251,12 +265,22 @@ interface IAttestationVerifierV1 {
     ) external view returns (IDepositDataBuffer.DepositObject[] memory deposits, uint256 totalAmount);
 
     /// @notice Validate consolidation-committee attestations over a `ConsolidationObject` passed
-    ///         in by the caller.
+    ///         in by the caller and mark the request as processed for replay protection.
     /// @dev    The caller supplies the full struct (including signatures) in calldata. The
     ///         verifier constructs the EIP-712 typed-data digest directly from the four
     ///         request fields and the cached consolidation domain separator, then recovers
     ///         each signature against that digest. The `signatures` field of the struct is
     ///         NOT part of the typed data.
+    ///
+    ///         Replay protection: the EIP-712 structHash is recorded in storage on success.
+    ///         Subsequent calls with a struct that hashes to the same value revert with
+    ///         `ConsolidationAlreadyProcessed`. Note that this makes the function
+    ///         state-mutating (not `view`). NOTE: the function is permissionless; if a
+    ///         malicious caller front-runs the legitimate consumer they can mark a request
+    ///         as processed and DoS subsequent legitimate validation. Caller-restriction is
+    ///         out of scope for this PR; it lives in the eventual River integration (which
+    ///         can either gate the verifier or atomically combine validation with its own
+    ///         downstream action).
     ///
     ///         The function reverts on any validation failure and returns `true` on success.
     ///         The boolean is a positive signal for off-chain `eth_call` style invocations.
@@ -271,10 +295,7 @@ interface IAttestationVerifierV1 {
     /// @param consolidation The consolidation request to validate (user, source/target pubkeys,
     ///                      totalAmount, signatures).
     /// @return Always `true` if the call returns; reverts otherwise.
-    function validateConsolidation(ConsolidationObject calldata consolidation)
-        external
-        view
-        returns (bool);
+    function validateConsolidation(ConsolidationObject calldata consolidation) external returns (bool);
 
     // -----------------------------------------------------------------------
     // Admin setters
