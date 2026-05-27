@@ -29,11 +29,10 @@ import "../state/river/WithdrawalCredentials.sol";
 ///         the keeper authorization, slashing-containment gating, ETH execution, and
 ///         the balance/in-flight bookkeeping.
 abstract contract ConsensusLayerDepositManagerV1 is IConsensusLayerDepositManagerV1 {
-    /// @notice Size of a BLS Public key in bytes
-    uint256 public constant PUBLIC_KEY_LENGTH = 48;
     /// @notice Size of a BLS Signature in bytes
     uint256 public constant SIGNATURE_LENGTH = 96;
-    /// @notice Size of a deposit in ETH
+    /// @notice Canonical legacy validator deposit size (32 ETH); used by River for
+    ///         pre-Pectra validator-count → ETH conversions.
     uint256 public constant DEPOSIT_SIZE = 32 ether;
 
     // -----------------------------------------------------------------------
