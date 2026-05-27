@@ -113,11 +113,11 @@ interface IAttestationVerifierV1 {
     ///         Without this check, a malicious committee could mark an attacker pubkey as a
     ///         top-up and bypass BLS verification.
     /// @param pubkey The offending 48-byte BLS pubkey
-    error TopUpPubkeyHasNoInitialDeposit(bytes pubkey);
+    error TopUpPubkeyNotFunded(bytes pubkey);
 
-    /// @notice recordInitialDeposits was passed a pubkey already in the initial-deposit set.
+    /// @notice recordNewlyFundedPubkeys was passed a pubkey already in the initial-deposit set.
     /// @param pubkey The offending 48-byte BLS pubkey
-    error DuplicateInitialDeposit(bytes pubkey);
+    error PubkeyAlreadyFunded(bytes pubkey);
 
     // -----------------------------------------------------------------------
     // Initialization
@@ -183,9 +183,9 @@ interface IAttestationVerifierV1 {
     ///      River has previously initial-deposited. Assumes `pubkeys` is already deduplicated
     ///      against the lookup and against itself; `validate()` enforces both invariants
     ///      earlier in the same transaction. Per-pubkey logging is emitted on the caller
-    ///      (ConsensusLayerDepositManager's `InitialDeposit` event), not here.
+    ///      (ConsensusLayerDepositManager's `PubkeyFunded` event), not here.
     /// @param pubkeys The 48-byte BLS pubkeys to record
-    function recordInitialDeposits(bytes[] calldata pubkeys) external;
+    function recordNewlyFundedPubkeys(bytes[] calldata pubkeys) external;
 
     // -----------------------------------------------------------------------
     // Admin setters
@@ -240,9 +240,9 @@ interface IAttestationVerifierV1 {
     function getRiver() external view returns (address);
 
     /// @notice Check whether a pubkey has been initial-deposited by River.
-    /// @dev Off-chain producers should subscribe to ConsensusLayerDepositManager's `InitialDeposit`
+    /// @dev Off-chain producers should subscribe to ConsensusLayerDepositManager's `PubkeyFunded`
     ///      events and use this view to confirm a pubkey is eligible for top-up submissions.
     /// @param pubkey The 48-byte BLS pubkey
     /// @return True if the pubkey is currently in the lookup
-    function hasValidatorPubkey(bytes calldata pubkey) external view returns (bool);
+    function isPubkeyFunded(bytes calldata pubkey) external view returns (bool);
 }

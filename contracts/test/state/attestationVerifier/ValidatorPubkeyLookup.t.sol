@@ -7,8 +7,8 @@ import "../../../src/state/attestationVerifier/ValidatorPubkeyLookup.sol";
 /// @dev Thin wrapper that exposes the ValidatorPubkeyLookup library functions as external
 ///      methods so the test can exercise storage operations against a real address.
 contract ValidatorPubkeyLookupInputs {
-    function hasValidatorPubkey(bytes calldata pubkey) external view returns (bool) {
-        return ValidatorPubkeyLookup.hasValidatorPubkey(pubkey);
+    function isPubkeyFunded(bytes calldata pubkey) external view returns (bool) {
+        return ValidatorPubkeyLookup.isPubkeyFunded(pubkey);
     }
 
     function add(bytes calldata pubkey) external {
@@ -39,13 +39,13 @@ contract ValidatorPubkeyLookupTest is Test {
 
     function testInitiallyUnset() public {
         bytes memory pk = _pubkey(keccak256("unmarked-pubkey"));
-        assertFalse(inputs.hasValidatorPubkey(pk));
+        assertFalse(inputs.isPubkeyFunded(pk));
     }
 
     function testAddThenHas() public {
         bytes memory pk = _pubkey(keccak256("pubkey-A"));
         inputs.add(pk);
-        assertTrue(inputs.hasValidatorPubkey(pk));
+        assertTrue(inputs.isPubkeyFunded(pk));
     }
 
     function testAddDoesNotLeakToOtherKeys() public {
@@ -53,28 +53,28 @@ contract ValidatorPubkeyLookupTest is Test {
         bytes memory pkB = _pubkey(keccak256("pubkey-B"));
 
         inputs.add(pkA);
-        assertTrue(inputs.hasValidatorPubkey(pkA));
-        assertFalse(inputs.hasValidatorPubkey(pkB));
+        assertTrue(inputs.isPubkeyFunded(pkA));
+        assertFalse(inputs.isPubkeyFunded(pkB));
     }
 
     function testRemoveClearsEntry() public {
         bytes memory pk = _pubkey(keccak256("pubkey-C"));
         inputs.add(pk);
-        assertTrue(inputs.hasValidatorPubkey(pk));
+        assertTrue(inputs.isPubkeyFunded(pk));
 
         inputs.remove(pk);
-        assertFalse(inputs.hasValidatorPubkey(pk));
+        assertFalse(inputs.isPubkeyFunded(pk));
     }
 
     function testAddIsIdempotent() public {
         bytes memory pk = _pubkey(keccak256("pubkey-D"));
         inputs.add(pk);
         inputs.add(pk);
-        assertTrue(inputs.hasValidatorPubkey(pk));
+        assertTrue(inputs.isPubkeyFunded(pk));
     }
 
     /// @dev Slot derivation cross-check: a direct `vm.store` at the expected slot must be
-    ///      observable via `hasValidatorPubkey`. Guards against accidental rename of the
+    ///      observable via `isPubkeyFunded`. Guards against accidental rename of the
     ///      namespace string in either the library or any consumer (e.g., the harness in
     ///      ConsensusLayerDepositManagerAttestation.t.sol which uses the same slot).
     function testSlotDerivation() public {
@@ -82,14 +82,14 @@ contract ValidatorPubkeyLookupTest is Test {
         bytes32 slot = keccak256(abi.encode(EXPECTED_BASE_SLOT, pk));
 
         // Before: unset.
-        assertFalse(inputs.hasValidatorPubkey(pk));
+        assertFalse(inputs.isPubkeyFunded(pk));
 
         // Write directly to the derived slot — any non-zero value means "recorded".
         vm.store(address(inputs), slot, bytes32(uint256(1)));
-        assertTrue(inputs.hasValidatorPubkey(pk));
+        assertTrue(inputs.isPubkeyFunded(pk));
 
         // Clear directly.
         vm.store(address(inputs), slot, bytes32(0));
-        assertFalse(inputs.hasValidatorPubkey(pk));
+        assertFalse(inputs.isPubkeyFunded(pk));
     }
 }

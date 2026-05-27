@@ -21,7 +21,7 @@ library ValidatorPubkeyLookup {
     /// @notice Check if a pubkey has been recorded.
     /// @param pubkey The raw 48-byte BLS pubkey.
     /// @return True if the pubkey was recorded.
-    function hasValidatorPubkey(bytes memory pubkey) internal view returns (bool) {
+    function isPubkeyFunded(bytes memory pubkey) internal view returns (bool) {
         bytes32 slot = keccak256(abi.encode(VALIDATOR_PUBKEY_LOOKUP_MAPPING_BASE_SLOT, pubkey));
         return LibUnstructuredStorage.getStorageBool(slot);
     }

@@ -66,7 +66,7 @@ contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1 {
 
     /// @notice Restrict to River itself (the deposit-execution path), not its admin.
     /// @dev Used to gate state-mutating callbacks that should only fire as part of a
-    ///      River-initiated deposit flow (e.g. `recordInitialDeposits`).
+    ///      River-initiated deposit flow (e.g. `recordNewlyFundedPubkeys`).
     modifier onlyRiver() {
         if (msg.sender != RiverAddress.get()) {
             revert LibErrors.Unauthorized(msg.sender);
@@ -235,10 +235,7 @@ contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1 {
         bytes32 computedId = keccak256(abi.encode(deposits));
         if (computedId != depositDataBufferId) revert BufferIdMismatch(depositDataBufferId, computedId);
 
-        // 4. Validate every entry before any `_depositValidator` runs — a producer bug
-        //    (bad field length, top-up against an unknown pubkey, or a duplicate initial)
-        //    reverts here, burning one `validate` call's gas rather than a full batch of
-        //    `IDepositContract.deposit{}` ones downstream.
+        // 4. Validate every entry before
         bytes32[] memory pubkeyHashes = new bytes32[](depositCount);
         for (uint256 i = 0; i < depositCount; i++) {
             if (deposits[i].pubkey.length != DEPOSIT_PUBKEY_LENGTH) {
@@ -247,8 +244,7 @@ contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1 {
             if (deposits[i].signature.length != DEPOSIT_SIGNATURE_LENGTH) {
                 revert InvalidSignatureLength(i, deposits[i].signature.length);
             }
-            // Mirrors the bound check inside `_depositValidator` so a producer bug fails
-            // before the heavy BLS path runs rather than after.
+            // Mirrors the bound check inside `_depositValidator` so we fail early
             uint256 amount = deposits[i].amount;
             if (amount < 1 ether || amount > 2048 ether || amount % 1 gwei != 0) {
                 revert InvalidDepositAmount(i, amount);
@@ -260,23 +256,23 @@ contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1 {
             pubkeyHashes[i] = pkHash;
 
             if (BLS12_381.isZero(deposits[i].depositY)) {
-                if (!ValidatorPubkeyLookup.hasValidatorPubkey(pubkey)) {
-                    revert TopUpPubkeyHasNoInitialDeposit(pubkey);
+                if (!ValidatorPubkeyLookup.isPubkeyFunded(pubkey)) {
+                    revert TopUpPubkeyNotFunded(pubkey);
                 }
             } else {
-                if (ValidatorPubkeyLookup.hasValidatorPubkey(pubkey)) {
-                    revert DuplicateInitialDeposit(pubkey);
+                if (ValidatorPubkeyLookup.isPubkeyFunded(pubkey)) {
+                    revert PubkeyAlreadyFunded(pubkey);
                 }
                 for (uint256 j = 0; j < i; j++) {
                     if (pubkeyHashes[j] == pkHash) {
-                        revert DuplicateInitialDeposit(pubkey);
+                        revert PubkeyAlreadyFunded(pubkey);
                     }
                 }
             }
         }
         if (totalAmount > committedBalance) revert NotEnoughFunds();
 
-        // 5. Verify BLS signatures against canonical River WC (heaviest step — last so cheap checks fail fast).
+        // 5. Verify BLS signatures against canonical River WC.
         //    Top-ups were already cleared above and are skipped here.
         _verifyBLSSignatures(deposits, withdrawalCredentials);
     }
@@ -291,7 +287,7 @@ contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1 {
     ///      `validate()`) and runs in the same transaction. Re-checking here would only fire
     ///      on a `validate()` regression and would cost a cold SLOAD per pubkey for a
     ///      condition that cannot occur in production.
-    function recordInitialDeposits(bytes[] calldata pubkeys) external onlyRiver {
+    function recordNewlyFundedPubkeys(bytes[] calldata pubkeys) external onlyRiver {
         uint256 len = pubkeys.length;
         for (uint256 i = 0; i < len; ++i) {
             ValidatorPubkeyLookup.add(pubkeys[i]);
@@ -299,8 +295,8 @@ contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1 {
     }
 
     /// @inheritdoc IAttestationVerifierV1
-    function hasValidatorPubkey(bytes calldata pubkey) external view returns (bool) {
-        return ValidatorPubkeyLookup.hasValidatorPubkey(pubkey);
+    function isPubkeyFunded(bytes calldata pubkey) external view returns (bool) {
+        return ValidatorPubkeyLookup.isPubkeyFunded(pubkey);
     }
 
     // -----------------------------------------------------------------------

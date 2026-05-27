@@ -136,12 +136,7 @@ abstract contract ConsensusLayerDepositManagerV1 is IConsensusLayerDepositManage
         address depositContract = DepositContractAddress.get();
         IAttestationVerifierV1 verifier = IAttestationVerifierV1(AttestationVerifierAddress.get());
         (IDepositDataBuffer.DepositObject[] memory deposits, uint256 totalAmount) = verifier.validate(
-            depositDataBufferId,
-            depositRootHash,
-            signatures,
-            depositContract,
-            withdrawalCredentials,
-            committedBalance
+            depositDataBufferId, depositRootHash, signatures, depositContract, withdrawalCredentials, committedBalance
         );
 
         // 5. Update operator funded validator accounting
@@ -149,12 +144,12 @@ abstract contract ConsensusLayerDepositManagerV1 is IConsensusLayerDepositManage
 
         // 6. Execute deposits and split into top-ups (all-zero depositY) vs initial deposits.
         uint256 len = deposits.length;
-        uint256 initialCount = 0;
+        uint256 newlyFundedPubkeysCount = 0;
         for (uint256 i = 0; i < len; i++) {
-            if (!BLS12_381.isZero(deposits[i].depositY)) initialCount++;
+            if (!BLS12_381.isZero(deposits[i].depositY)) newlyFundedPubkeysCount++;
         }
-        bytes[] memory initialPubkeys = new bytes[](initialCount);
-        uint256 initialCursor = 0;
+        bytes[] memory newlyFundedPubkeys = new bytes[](newlyFundedPubkeysCount);
+        uint256 newlyFundedPubkeysCursor = 0;
 
         for (uint256 i = 0; i < len; i++) {
             _depositValidator(
@@ -163,15 +158,13 @@ abstract contract ConsensusLayerDepositManagerV1 is IConsensusLayerDepositManage
             if (BLS12_381.isZero(deposits[i].depositY)) {
                 emit TopUp(depositDataBufferId, deposits[i].operatorIdx, deposits[i].pubkey, deposits[i].amount);
             } else {
-                emit InitialDeposit(
-                    depositDataBufferId, deposits[i].operatorIdx, deposits[i].pubkey, deposits[i].amount
-                );
-                initialPubkeys[initialCursor] = deposits[i].pubkey;
-                initialCursor++;
+                emit PubkeyFunded(depositDataBufferId, deposits[i].operatorIdx, deposits[i].pubkey, deposits[i].amount);
+                newlyFundedPubkeys[newlyFundedPubkeysCursor] = deposits[i].pubkey;
+                newlyFundedPubkeysCursor++;
             }
         }
 
-        // 7. Bookkeeping writes BEFORE the external `recordInitialDeposits` callback.
+        // 7. Bookkeeping writes BEFORE the external `recordNewlyFundedPubkeys` callback.
         _setCommittedBalance(committedBalance - totalAmount);
 
         uint256 currentInFlightETH = InFlightDeposit.get();
@@ -183,8 +176,8 @@ abstract contract ConsensusLayerDepositManagerV1 is IConsensusLayerDepositManage
         emit SetTotalDepositedETH(currentTotalDepositedETH, currentTotalDepositedETH + totalAmount);
 
         // 8. Record initial-deposit pubkeys so future top-ups against them pass the membership check.
-        if (initialCount > 0) {
-            verifier.recordInitialDeposits(initialPubkeys);
+        if (newlyFundedPubkeysCount > 0) {
+            verifier.recordNewlyFundedPubkeys(newlyFundedPubkeys);
         }
     }
 

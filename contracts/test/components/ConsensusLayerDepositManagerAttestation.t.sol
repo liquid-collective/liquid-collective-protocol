@@ -188,9 +188,7 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
     event FundedValidatorKeys(uint256 indexed operatorIndex, bytes[] publicKeys, bool deferred);
     event SetInFlightETH(uint256 oldInFlightETH, uint256 newInFlightETH);
     event SetTotalDepositedETH(uint256 oldTotalDepositedETH, uint256 newTotalDepositedETH);
-    event InitialDeposit(
-        bytes32 indexed depositDataBufferId, uint256 indexed operatorIdx, bytes pubkey, uint256 amount
-    );
+    event PubkeyFunded(bytes32 indexed depositDataBufferId, uint256 indexed operatorIdx, bytes pubkey, uint256 amount);
     event TopUp(bytes32 indexed depositDataBufferId, uint256 indexed operatorIdx, bytes pubkey, uint256 amount);
 
     function _emptyDepositY() internal pure returns (BLS12_381.DepositY memory) {
@@ -212,7 +210,7 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
     }
 
     /// @dev Mark a pubkey as initial-deposited directly via vm.store, bypassing the
-    ///      `recordInitialDeposits` path. Used by tests that need a seeded mapping but want
+    ///      `recordNewlyFundedPubkeys` path. Used by tests that need a seeded mapping but want
     ///      to stay focused on the BLS-skip / membership behaviour (rather than running a
     ///      full prior batch). The stored value matches the ValidatorPubkeyLookup library's
     ///      boolean-membership scheme.
@@ -625,7 +623,7 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
         deposits[1] = _makeTopUpDeposit(1, 51);
 
         // Seed the mapping so the top-up membership check passes; without it the call
-        // would revert with TopUpPubkeyHasNoInitialDeposit before reaching the BLS branch.
+        // would revert with TopUpPubkeyNotFunded before reaching the BLS branch.
         _seedFundedPubkey(deposits[0].pubkey);
         _seedFundedPubkey(deposits[1].pubkey);
 
@@ -717,7 +715,7 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
         deposits[1] = _makeTopUpDeposit(0, 91); // top-up for same operator
 
         // Seed the top-up's pubkey so the membership check passes; the initial entry will
-        // populate the mapping for seed 90 via the real recordInitialDeposits callback.
+        // populate the mapping for seed 90 via the real recordNewlyFundedPubkeys callback.
         _seedFundedPubkey(deposits[1].pubkey);
 
         (bytes32 bufferId, bytes32 rootHash, bytes[] memory sigs) = _prepareDeposit(deposits);
@@ -742,7 +740,7 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
     /// @dev Top-up to a pubkey that's not in the initial-deposit mapping must revert. This
     ///      is the defense-in-depth check against a malicious committee marking an attacker
     ///      pubkey as a top-up to bypass BLS verification.
-    function testTopUp_pubkeyNotInitialDeposited_reverts() public {
+    function testTopUp_pubkeyNotFunded_reverts() public {
         IDepositDataBuffer.DepositObject[] memory deposits = new IDepositDataBuffer.DepositObject[](1);
         deposits[0] = _makeTopUpDeposit(0, 100);
 
@@ -750,15 +748,15 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
 
         vm.prank(keeper);
         vm.expectRevert(
-            abi.encodeWithSelector(IAttestationVerifierV1.TopUpPubkeyHasNoInitialDeposit.selector, deposits[0].pubkey)
+            abi.encodeWithSelector(IAttestationVerifierV1.TopUpPubkeyNotFunded.selector, deposits[0].pubkey)
         );
         dm.depositToConsensusLayerWithAttestation(bufferId, rootHash, sigs);
     }
 
     /// @dev A successful initial deposit must record the pubkey in the lookup and emit
-    ///      `InitialDeposit`. Future top-ups against this pubkey will then pass the
+    ///      `PubkeyFunded`. Future top-ups against this pubkey will then pass the
     ///      membership check.
-    function testInitialDeposit_recordsPubkey() public {
+    function testPubkeyFunded_recordsPubkey() public {
         uint256 operatorIdx = 4;
         IDepositDataBuffer.DepositObject[] memory deposits = new IDepositDataBuffer.DepositObject[](1);
         deposits[0] = _makeDeposit(operatorIdx, 110);
@@ -766,17 +764,17 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
         (bytes32 bufferId, bytes32 rootHash, bytes[] memory sigs) = _prepareDeposit(deposits);
 
         vm.expectEmit(true, true, false, true);
-        emit InitialDeposit(bufferId, operatorIdx, deposits[0].pubkey, deposits[0].amount);
+        emit PubkeyFunded(bufferId, operatorIdx, deposits[0].pubkey, deposits[0].amount);
 
         vm.prank(keeper);
         dm.depositToConsensusLayerWithAttestation(bufferId, rootHash, sigs);
 
-        assertTrue(validator.hasValidatorPubkey(deposits[0].pubkey), "pubkey should be in the lookup");
+        assertTrue(validator.isPubkeyFunded(deposits[0].pubkey), "pubkey should be in the lookup");
     }
 
     /// @dev End-to-end: an initial deposit in batch A records the pubkey; a top-up for that
     ///      same pubkey in batch B passes the membership check and executes.
-    function testTopUp_succeedsAfterInitialDepositedInPriorBatch() public {
+    function testTopUp_succeedsAfterFundedInPriorBatch() public {
         // Batch A — initial deposit for pubkey X.
         IDepositDataBuffer.DepositObject[] memory batchA = new IDepositDataBuffer.DepositObject[](1);
         batchA[0] = _makeDeposit(0, 120);
@@ -784,7 +782,7 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
 
         vm.prank(keeper);
         dm.depositToConsensusLayerWithAttestation(bidA, rootA, sigsA);
-        assertTrue(validator.hasValidatorPubkey(batchA[0].pubkey));
+        assertTrue(validator.isPubkeyFunded(batchA[0].pubkey));
 
         // Batch B — top-up for the same pubkey X. Must succeed.
         IDepositDataBuffer.DepositObject[] memory batchB = new IDepositDataBuffer.DepositObject[](1);
@@ -807,7 +805,7 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
 
     /// @dev Same-batch initial + top-up for the SAME pubkey must revert. The top-up check
     ///      runs during validate() before the deposit executes, so the mapping is empty at
-    ///      that moment and TopUpPubkeyHasNoInitialDeposit fires.
+    ///      that moment and TopUpPubkeyNotFunded fires.
     function testSameBatch_initialAndTopUpSamePubkey_reverts() public {
         IDepositDataBuffer.DepositObject[] memory deposits = new IDepositDataBuffer.DepositObject[](2);
         deposits[0] = _makeDeposit(0, 130); // initial
@@ -817,13 +815,13 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
 
         vm.prank(keeper);
         vm.expectRevert(
-            abi.encodeWithSelector(IAttestationVerifierV1.TopUpPubkeyHasNoInitialDeposit.selector, deposits[1].pubkey)
+            abi.encodeWithSelector(IAttestationVerifierV1.TopUpPubkeyNotFunded.selector, deposits[1].pubkey)
         );
         dm.depositToConsensusLayerWithAttestation(bufferId, rootHash, sigs);
     }
 
     /// @dev Initial deposit for a pubkey that's already in the lookup (e.g., re-deposit after
-    ///      a prior batch) must revert in `validate()` with DuplicateInitialDeposit before any
+    ///      a prior batch) must revert in `validate()` with PubkeyAlreadyFunded before any
     ///      `IDepositContract.deposit{}()` call runs. Uses the test helper to seed the mapping
     ///      directly; submitting two identical batches through the real buffer would collide on
     ///      bufferId before the mapping check fires.
@@ -838,15 +836,13 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
 
         uint256 depositCountBefore = depositContract.deposit_count();
         vm.prank(keeper);
-        vm.expectRevert(
-            abi.encodeWithSelector(IAttestationVerifierV1.DuplicateInitialDeposit.selector, deposits[0].pubkey)
-        );
+        vm.expectRevert(abi.encodeWithSelector(IAttestationVerifierV1.PubkeyAlreadyFunded.selector, deposits[0].pubkey));
         dm.depositToConsensusLayerWithAttestation(bufferId, rootHash, sigs);
         assertEq(depositContract.deposit_count(), depositCountBefore, "no deposit should reach the beacon contract");
     }
 
     /// @dev Same-batch duplicate-initial (two entries with the same pubkey, both flagged as
-    ///      initials via non-zero depositY) must revert in `validate()` with DuplicateInitialDeposit
+    ///      initials via non-zero depositY) must revert in `validate()` with PubkeyAlreadyFunded
     ///      before any deposit is sent to the beacon contract. Catches the producer-bug class where
     ///      the dup is intra-batch and not yet recorded on-chain — the on-chain lookup is empty for
     ///      this pubkey at validate-time, so the inner per-batch scan is what fires.
@@ -859,23 +855,21 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
 
         uint256 depositCountBefore = depositContract.deposit_count();
         vm.prank(keeper);
-        vm.expectRevert(
-            abi.encodeWithSelector(IAttestationVerifierV1.DuplicateInitialDeposit.selector, deposits[1].pubkey)
-        );
+        vm.expectRevert(abi.encodeWithSelector(IAttestationVerifierV1.PubkeyAlreadyFunded.selector, deposits[1].pubkey));
         dm.depositToConsensusLayerWithAttestation(bufferId, rootHash, sigs);
         assertEq(depositContract.deposit_count(), depositCountBefore, "no deposit should reach the beacon contract");
     }
 
-    /// @dev `recordInitialDeposits` is gated by `onlyRiver` (msg.sender == RiverAddress.get()).
+    /// @dev `recordNewlyFundedPubkeys` is gated by `onlyRiver` (msg.sender == RiverAddress.get()).
     ///      Any other caller must revert with LibErrors.Unauthorized.
-    function testRevert_recordInitialDeposits_notRiver() public {
+    function testRevert_recordNewlyFundedPubkeys_notRiver() public {
         bytes[] memory pubkeys = new bytes[](1);
         pubkeys[0] = _fakePubkey(0xDEAD);
 
         address stranger = address(0xC0FFEE);
         vm.prank(stranger);
         vm.expectRevert(abi.encodeWithSelector(LibErrors.Unauthorized.selector, stranger));
-        validator.recordInitialDeposits(pubkeys);
+        validator.recordNewlyFundedPubkeys(pubkeys);
     }
 
     /// @dev `validate()` must fail-fast on out-of-range or mis-aligned `amount` rather than
@@ -906,9 +900,7 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
         deposits[0].amount = 32 ether + 1;
         (bufferId, rootHash, sigs) = _prepareDeposit(deposits);
         vm.prank(keeper);
-        vm.expectRevert(
-            abi.encodeWithSelector(IAttestationVerifierV1.InvalidDepositAmount.selector, 0, 32 ether + 1)
-        );
+        vm.expectRevert(abi.encodeWithSelector(IAttestationVerifierV1.InvalidDepositAmount.selector, 0, 32 ether + 1));
         dm.depositToConsensusLayerWithAttestation(bufferId, rootHash, sigs);
     }
 
@@ -958,18 +950,18 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
     ///      (RiverAddress.get()), NOT the River admin EOA. Calling as the admin must still
     ///      revert with `LibErrors.Unauthorized(admin)`. Documents the distinction from
     ///      `onlyRiverAdmin` so future refactors don't conflate the two gates.
-    function testRevert_recordInitialDeposits_notRiverAdmin() public {
+    function testRevert_recordNewlyFundedPubkeys_notRiverAdmin() public {
         bytes[] memory pubkeys = new bytes[](1);
         pubkeys[0] = _fakePubkey(0xBEEF);
 
         vm.prank(admin);
         vm.expectRevert(abi.encodeWithSelector(LibErrors.Unauthorized.selector, admin));
-        validator.recordInitialDeposits(pubkeys);
+        validator.recordNewlyFundedPubkeys(pubkeys);
     }
 
     /// @dev A successful top-up must emit `TopUp` with both indexed topics (bufferId,
     ///      operatorIdx) and the non-indexed data (pubkey, amount). Mirrors the
-    ///      `testInitialDeposit_recordsPubkey` expectEmit pattern.
+    ///      `testPubkeyFunded_recordsPubkey` expectEmit pattern.
     function testTopUp_emitsTopUpEvent() public {
         uint256 operatorIdx = 7;
         IDepositDataBuffer.DepositObject[] memory deposits = new IDepositDataBuffer.DepositObject[](1);

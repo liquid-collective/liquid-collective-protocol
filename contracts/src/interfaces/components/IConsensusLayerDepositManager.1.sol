@@ -40,12 +40,10 @@ interface IConsensusLayerDepositManagerV1 {
     /// @param operatorIdx The operator that funded this initial deposit
     /// @param pubkey The 48-byte BLS pubkey of the validator
     /// @param amount The wei amount deposited
-    event InitialDeposit(
-        bytes32 indexed depositDataBufferId, uint256 indexed operatorIdx, bytes pubkey, uint256 amount
-    );
+    event PubkeyFunded(bytes32 indexed depositDataBufferId, uint256 indexed operatorIdx, bytes pubkey, uint256 amount);
 
     /// @notice Emitted once per top-up entry as it is executed against the deposit contract.
-    ///         Symmetric to `InitialDeposit` but for top-ups (entries with all-zero `depositY`,
+    ///         Symmetric to `PubkeyFunded` but for top-ups (entries with all-zero `depositY`,
     ///         whose pubkey must already be bound to `operatorIdx` in the ValidatorPubkeyLookup).
     /// @param depositDataBufferId The id of the deposit-data buffer batch
     /// @param operatorIdx The operator the top-up is credited to (must match the originally-bound operator)
