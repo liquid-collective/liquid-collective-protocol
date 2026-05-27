@@ -49,8 +49,14 @@ contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1 {
     ///         domain (chainId, verifyingContract, version) were identical.
     bytes32 internal constant CONSOLIDATION_NAME_HASH = keccak256("ConsolidationValidation");
 
-    bytes32 internal constant ATTEST_CONSOLIDATION_TYPEHASH =
-        keccak256("AttestConsolidation(bytes32 consolidationDataBufferId)");
+    /// @dev EIP-712 typehash for a consolidation attestation. The four request fields are
+    ///      hashed directly into the EIP-712 struct (rather than first being squashed into a
+    ///      single `bytes32` id). `bytes[]` fields follow EIP-712 dynamic-array rules:
+    ///      each element is replaced by `keccak256(element)`, then the resulting `bytes32`
+    ///      array is concatenated and hashed (`_hashBytesArray`).
+    bytes32 internal constant ATTEST_CONSOLIDATION_TYPEHASH = keccak256(
+        "AttestConsolidation(address user,bytes[] sourcePubkeys,bytes[] targetPubkeys,uint256 totalAmount)"
+    );
 
     /// @notice Maximum number of signatures accepted. Bounds the O(n^2) duplicate-detection loop.
     uint256 public constant MAX_SIGNATURES = 20;
@@ -399,20 +405,26 @@ contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1 {
             }
         }
 
-        // 3. Compute the bufferId — the EIP-712 message content the committee signed.
-        //    Signatures are DELIBERATELY excluded so attestors can sign the bufferId
-        //    without a circular dependency.
-        bytes32 consolidationDataBufferId = keccak256(
+        // 3. Compute the EIP-712 digest the committee signed.
+        //    The struct's `signatures` field is NOT part of the typed data — only the four
+        //    request fields are. `bytes[]` arrays follow EIP-712 array rules: each element
+        //    becomes `keccak256(element)`, then the array hashes to `keccak256` over the
+        //    concatenation of those 32-byte element hashes.
+        bytes32 domainSep = ConsolidationDomainSeparator.get();
+        if (domainSep == bytes32(0)) revert ZeroConsolidationDomainSeparator();
+        bytes32 structHash = keccak256(
             abi.encode(
+                ATTEST_CONSOLIDATION_TYPEHASH,
                 consolidation.user,
-                consolidation.sourcePubkeys,
-                consolidation.targetPubkeys,
+                _hashBytesArray(consolidation.sourcePubkeys),
+                _hashBytesArray(consolidation.targetPubkeys),
                 consolidation.totalAmount
             )
         );
+        bytes32 digest = ECDSA.toTypedDataHash(domainSep, structHash);
 
         // 4. Verify the consolidation attestation quorum from the supplied signatures
-        _verifyConsolidationAttestationQuorum(consolidationDataBufferId, consolidation.signatures);
+        _verifyConsolidationAttestationQuorum(digest, consolidation.signatures);
 
         return true;
     }
@@ -473,27 +485,19 @@ contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1 {
     }
 
     /// @notice Verify the consolidation-attestation quorum over the supplied signatures.
-    /// @dev    Mirrors `_verifyAttestationQuorum` but with two structural differences:
-    ///         (1) no `depositRootHash` co-sign — consolidations have no front-runnable shared
-    ///             on-chain root, so the typehash hashes only the bufferId;
-    ///         (2) uses the consolidation-specific committee set, quorum, and domain separator.
-    /// @param consolidationDataBufferId The bufferId co-signed by consolidation-committee attesters
-    /// @param signatures                The signatures supplied alongside the consolidation request
-    function _verifyConsolidationAttestationQuorum(bytes32 consolidationDataBufferId, bytes[] calldata signatures)
-        internal
-        view
-    {
+    /// @dev    Pure signature-recovery loop. The caller has already constructed the EIP-712
+    ///         digest from the request fields and looked up the consolidation domain separator;
+    ///         this helper only enforces bounds, recovers signers, dedups them against the
+    ///         registered committee, and asserts the quorum.
+    /// @param digest      The EIP-712 digest the committee signed
+    /// @param signatures  Signatures supplied alongside the consolidation request
+    function _verifyConsolidationAttestationQuorum(bytes32 digest, bytes[] calldata signatures) internal view {
         uint256 sigLen = signatures.length;
         if (sigLen > MAX_SIGNATURES) revert TooManySignatures(sigLen, MAX_SIGNATURES);
 
         uint256 quorum = ConsolidationCommitteeAttestationQuorum.get();
         if (quorum == 0) revert ZeroQuorum();
         if (sigLen < quorum) revert InsufficientConsolidationAttestations(sigLen, quorum);
-
-        bytes32 domainSep = ConsolidationDomainSeparator.get();
-        if (domainSep == bytes32(0)) revert ZeroConsolidationDomainSeparator();
-        bytes32 structHash = keccak256(abi.encode(ATTEST_CONSOLIDATION_TYPEHASH, consolidationDataBufferId));
-        bytes32 digest = ECDSA.toTypedDataHash(domainSep, structHash);
 
         uint256 validCount = 0;
         address[] memory seen = new address[](sigLen);
@@ -517,6 +521,16 @@ contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1 {
         }
 
         if (validCount < quorum) revert InsufficientConsolidationAttestations(validCount, quorum);
+    }
+
+    /// @dev EIP-712 array hash for a `bytes[]` field. Each element is replaced by its
+    ///      `keccak256`, and the resulting `bytes32[]` is concatenated and hashed.
+    function _hashBytesArray(bytes[] calldata arr) internal pure returns (bytes32) {
+        bytes32[] memory hashes = new bytes32[](arr.length);
+        for (uint256 i = 0; i < arr.length; i++) {
+            hashes[i] = keccak256(arr[i]);
+        }
+        return keccak256(abi.encodePacked(hashes));
     }
 
     /// @notice Verify the BLS signatures against the canonical River withdrawal credentials.

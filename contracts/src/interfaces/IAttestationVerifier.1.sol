@@ -18,10 +18,11 @@ interface IAttestationVerifierV1 {
     ///         `validateConsolidation` by the caller (no on-chain buffer indirection).
     /// @dev    `sourcePubkeys[i]` is consolidated INTO `targetPubkeys[i]` — same-index pairing.
     ///         `signatures` are the consolidation-committee attestor EIP-712 ECDSA signatures
-    ///         over the bufferId that the verifier recomputes from the rest of the struct:
-    ///             keccak256(abi.encode(user, sourcePubkeys, targetPubkeys, totalAmount))
-    ///         `signatures` is EXCLUDED from the bufferId so signers can sign it without
-    ///         a circular dependency.
+    ///         over the typed-data struct
+    ///             AttestConsolidation(address user, bytes[] sourcePubkeys, bytes[] targetPubkeys, uint256 totalAmount)
+    ///         The `signatures` field itself is NOT part of the typed data — only the four
+    ///         request fields are. This is what lets attestors produce signatures over the
+    ///         request without a circular dependency.
     struct ConsolidationObject {
         /// @dev Initiator of the consolidation request; eventual recipient of LsETH.
         address user;
@@ -32,7 +33,7 @@ interface IAttestationVerifierV1 {
         /// @dev Total ETH being consolidated, in wei.
         uint256 totalAmount;
         /// @dev Consolidation-committee attestor EIP-712 ECDSA signatures (65 bytes each).
-        ///      EXCLUDED from the bufferId hash.
+        ///      Not part of the EIP-712 typed data the committee signs.
         bytes[] signatures;
     }
 
@@ -252,10 +253,10 @@ interface IAttestationVerifierV1 {
     /// @notice Validate consolidation-committee attestations over a `ConsolidationObject` passed
     ///         in by the caller.
     /// @dev    The caller supplies the full struct (including signatures) in calldata. The
-    ///         verifier recomputes the bufferId from
-    ///             keccak256(abi.encode(user, sourcePubkeys, targetPubkeys, totalAmount))
-    ///         and uses it as the EIP-712 message content; `signatures` are deliberately excluded
-    ///         from the bufferId so signers can sign it without a circular dependency.
+    ///         verifier constructs the EIP-712 typed-data digest directly from the four
+    ///         request fields and the cached consolidation domain separator, then recovers
+    ///         each signature against that digest. The `signatures` field of the struct is
+    ///         NOT part of the typed data.
     ///
     ///         The function reverts on any validation failure and returns `true` on success.
     ///         The boolean is a positive signal for off-chain `eth_call` style invocations.

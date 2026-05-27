@@ -60,8 +60,9 @@ contract ConsolidationAttestationTest is Test {
         keccak256("EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)");
     bytes32 internal constant CONSOLIDATION_NAME_HASH = keccak256("ConsolidationValidation");
     bytes32 internal constant VERSION_HASH = keccak256("1");
-    bytes32 internal constant ATTEST_CONSOLIDATION_TYPEHASH =
-        keccak256("AttestConsolidation(bytes32 consolidationDataBufferId)");
+    bytes32 internal constant ATTEST_CONSOLIDATION_TYPEHASH = keccak256(
+        "AttestConsolidation(address user,bytes[] sourcePubkeys,bytes[] targetPubkeys,uint256 totalAmount)"
+    );
 
     // Storage slots (must match contracts/src/state/attestationVerifier/*)
     bytes32 internal constant CONSOLIDATION_DOMAIN_SEPARATOR_SLOT =
@@ -136,22 +137,39 @@ contract ConsolidationAttestationTest is Test {
         }
     }
 
-    /// @dev Compute the bufferId following the verifier's encoding rule.
-    function _bufferId(address user, bytes[] memory sources, bytes[] memory targets, uint256 totalAmount)
-        internal
-        pure
-        returns (bytes32)
-    {
-        return keccak256(abi.encode(user, sources, targets, totalAmount));
+    /// @dev EIP-712 array-hash for a `bytes[]`. Mirrors `AttestationVerifierV1._hashBytesArray`.
+    function _hashBytesArray(bytes[] memory arr) internal pure returns (bytes32) {
+        bytes32[] memory hashes = new bytes32[](arr.length);
+        for (uint256 i = 0; i < arr.length; i++) {
+            hashes[i] = keccak256(arr[i]);
+        }
+        return keccak256(abi.encodePacked(hashes));
     }
 
-    /// @dev Sign an EIP-712 consolidation attestation digest with the given private key.
-    function _sign(uint256 pk, bytes32 bufferId) internal view returns (bytes memory) {
+    /// @dev Compute the EIP-712 digest the consolidation committee is expected to sign,
+    ///      derived directly from the request fields (no intermediate bufferId).
+    function _consolidationDigest(address user, bytes[] memory sources, bytes[] memory targets, uint256 totalAmount)
+        internal
+        view
+        returns (bytes32)
+    {
         bytes32 domainSep = keccak256(
             abi.encode(EIP712_DOMAIN_TYPEHASH, CONSOLIDATION_NAME_HASH, VERSION_HASH, block.chainid, address(river))
         );
-        bytes32 structHash = keccak256(abi.encode(ATTEST_CONSOLIDATION_TYPEHASH, bufferId));
-        bytes32 digest = keccak256(abi.encodePacked("\x19\x01", domainSep, structHash));
+        bytes32 structHash = keccak256(
+            abi.encode(
+                ATTEST_CONSOLIDATION_TYPEHASH,
+                user,
+                _hashBytesArray(sources),
+                _hashBytesArray(targets),
+                totalAmount
+            )
+        );
+        return keccak256(abi.encodePacked("\x19\x01", domainSep, structHash));
+    }
+
+    /// @dev Sign a precomputed EIP-712 digest with the given private key.
+    function _sign(uint256 pk, bytes32 digest) internal view returns (bytes memory) {
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(pk, digest);
         return abi.encodePacked(r, s, v);
     }
@@ -168,7 +186,7 @@ contract ConsolidationAttestationTest is Test {
         targets[0] = _pubkey(seed + 1000);
         uint256 totalAmount = 32 ether;
 
-        bytes32 bufferId = _bufferId(user, sources, targets, totalAmount);
+        bytes32 bufferId = _consolidationDigest(user, sources, targets, totalAmount);
 
         bytes[] memory sigs = new bytes[](2);
         sigs[0] = _sign(pk1, bufferId);
@@ -202,7 +220,7 @@ contract ConsolidationAttestationTest is Test {
             targets[i] = _pubkey(200 + i);
         }
         uint256 totalAmount = 96 ether;
-        bytes32 id = _bufferId(user, sources, targets, totalAmount);
+        bytes32 id = _consolidationDigest(user, sources, targets, totalAmount);
 
         bytes[] memory sigs = new bytes[](3);
         sigs[0] = _sign(pk1, id);
@@ -462,7 +480,7 @@ contract ConsolidationAttestationTest is Test {
         bytes[] memory targets = new bytes[](1);
         targets[0] = _pubkey(2);
         uint256 totalAmount = 32 ether;
-        bytes32 expectedId = _bufferId(user, sources, targets, totalAmount);
+        bytes32 expectedId = _consolidationDigest(user, sources, targets, totalAmount);
 
         bytes[] memory sigsA = new bytes[](2);
         sigsA[0] = _sign(pk1, expectedId);
@@ -508,7 +526,7 @@ contract ConsolidationAttestationTest is Test {
         bytes[] memory targets = new bytes[](1);
         targets[0] = _pubkey(2);
         uint256 totalAmount = 32 ether;
-        bytes32 id = _bufferId(user, sources, targets, totalAmount);
+        bytes32 id = _consolidationDigest(user, sources, targets, totalAmount);
 
         bytes[] memory sigs = new bytes[](1);
         sigs[0] = _sign(pk1, id);
@@ -534,7 +552,7 @@ contract ConsolidationAttestationTest is Test {
         bytes[] memory targets = new bytes[](1);
         targets[0] = _pubkey(2);
         uint256 totalAmount = 32 ether;
-        bytes32 id = _bufferId(user, sources, targets, totalAmount);
+        bytes32 id = _consolidationDigest(user, sources, targets, totalAmount);
 
         bytes[] memory sigs = new bytes[](21);
         for (uint256 i = 0; i < 21; i++) {
@@ -560,7 +578,7 @@ contract ConsolidationAttestationTest is Test {
         bytes[] memory targets = new bytes[](1);
         targets[0] = _pubkey(2);
         uint256 totalAmount = 32 ether;
-        bytes32 id = _bufferId(user, sources, targets, totalAmount);
+        bytes32 id = _consolidationDigest(user, sources, targets, totalAmount);
 
         bytes[] memory sigs = new bytes[](2);
         sigs[0] = _sign(pk1, id);
@@ -587,7 +605,7 @@ contract ConsolidationAttestationTest is Test {
         bytes[] memory targets = new bytes[](1);
         targets[0] = _pubkey(2);
         uint256 totalAmount = 32 ether;
-        bytes32 id = _bufferId(user, sources, targets, totalAmount);
+        bytes32 id = _consolidationDigest(user, sources, targets, totalAmount);
 
         bytes[] memory sigs = new bytes[](2);
         sigs[0] = _sign(pk1, id);
@@ -614,7 +632,7 @@ contract ConsolidationAttestationTest is Test {
         bytes[] memory targets = new bytes[](1);
         targets[0] = _pubkey(2);
         uint256 totalAmount = 32 ether;
-        bytes32 id = _bufferId(user, sources, targets, totalAmount);
+        bytes32 id = _consolidationDigest(user, sources, targets, totalAmount);
 
         bytes[] memory sigs = new bytes[](2);
         sigs[0] = _sign(pk1, id);
@@ -643,7 +661,7 @@ contract ConsolidationAttestationTest is Test {
         bytes[] memory targets = new bytes[](1);
         targets[0] = _pubkey(2);
         uint256 totalAmount = 32 ether;
-        bytes32 id = _bufferId(user, sources, targets, totalAmount);
+        bytes32 id = _consolidationDigest(user, sources, targets, totalAmount);
 
         bytes memory corrupt = _sign(pk2, id);
         corrupt[64] = bytes1(uint8(42)); // v=42, not in {27,28} → skipped
