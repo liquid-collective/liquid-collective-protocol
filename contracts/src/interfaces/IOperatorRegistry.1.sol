@@ -196,6 +196,11 @@ interface IOperatorsRegistryV1 {
     /// @param operatorIndex The offending operator index (equal to or below the previous index)
     error OperatorIndicesUnsortedOrDuplicate(uint256 operatorIndex);
 
+    /// @notice Thrown when the excess fee is not refunded
+    /// @param sender The sender of the transaction
+    /// @param excess The excess fee
+    error UnsentRefund(address sender, uint256 excess);
+
     /// @notice Initializes the operators registry
     /// @param _admin Admin in charge of managing operators
     /// @param _river Address of River system

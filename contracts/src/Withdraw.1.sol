@@ -115,6 +115,9 @@ contract WithdrawV1 is IWithdrawV1, Initializable, ReentrancyGuard, IProtocolVer
 
         uint256 totalNumOfConsolidationOperations = 0;
         for (uint256 i = 0; i < requests.length; i++) {
+            if (requests[i].srcPubkeys.length == 0) {
+                revert InvalidEmptyArray();
+            }
             totalNumOfConsolidationOperations += requests[i].srcPubkeys.length;
         }
         uint256 totalFeeRequired = fee * totalNumOfConsolidationOperations;

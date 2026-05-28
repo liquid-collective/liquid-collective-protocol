@@ -275,11 +275,20 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
         }
 
         uint256 requestedETHAmount = _requestFullETHExits(_allocations);
-        requestedETHAmount += _requestPartialETHExits(_partialAllocations, _maxFeePerWithdrawal);
+        (uint256 partialRequestedETHAmount, uint256 totalFeePaid) =
+            _requestPartialETHExits(_partialAllocations, _maxFeePerWithdrawal);
+        requestedETHAmount += partialRequestedETHAmount;
 
         // Check that the exits requested do not exceed the current ETH exits demand
         if (requestedETHAmount > currentETHExitsDemand) {
             revert ExitsRequestedExceedExitDemand(requestedETHAmount, currentETHExitsDemand);
+        }
+        if (totalFeePaid < msg.value) {
+            uint256 excess = msg.value - totalFeePaid;
+            (bool ok,) = msg.sender.call{value: excess}("");
+            if (!ok) {
+                revert UnsentRefund(msg.sender, excess);
+            }
         }
 
         uint256 totalETHExitsRequested = TotalETHExitsRequested.get();
@@ -318,7 +327,7 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
     function _requestPartialETHExits(
         PartialExitETHAllocation[] calldata _partialAllocations,
         uint256 _maxFeePerWithdrawal
-    ) private returns (uint256 requestedETHAmount) {
+    ) private returns (uint256 requestedETHAmount, uint256 totalFeePaid) {
         if (_partialAllocations.length == 0) {
             return 0;
         }
@@ -352,6 +361,7 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
             withdraw.withdraw{value: _maxFeePerWithdrawal * _partialAllocations[i].pubkeys.length}(
                 _partialAllocations[i].pubkeys, _partialAllocations[i].amounts, _maxFeePerWithdrawal, msg.sender
             );
+            totalFeePaid += _maxFeePerWithdrawal * _partialAllocations[i].pubkeys.length;
             emit RequestedPartialETHExits(operatorIndex, _partialAllocations[i].pubkeys, _partialAllocations[i].amounts);
         }
     }
