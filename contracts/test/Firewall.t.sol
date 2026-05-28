@@ -9,6 +9,7 @@ import "./utils/BytesGenerator.sol";
 import "./utils/LibImplementationUnbricker.sol";
 import "./mocks/DepositContractMock.sol";
 import "./mocks/RiverMock.sol";
+import "./utils/RiverV1WithLegacyInit.sol";
 
 import "../src/Firewall.sol";
 import "../src/Allowlist.1.sol";
@@ -18,6 +19,10 @@ import "../src/Withdraw.1.sol";
 import "../src/Oracle.1.sol";
 import "../src/OperatorsRegistry.1.sol";
 import "../src/ELFeeRecipient.1.sol";
+
+/// @dev Concrete `RiverV1WithLegacyInit` so tests can `new` it. Production
+///      `RiverV1` no longer ships `initRiverV1` / `_1` / `_2`.
+contract FirewallTestRiverV1 is RiverV1WithLegacyInit {}
 
 contract FirewallTests is BytesGenerator, OperatorAllocationTestBase {
     AllowlistV1 internal allowlist;
@@ -34,7 +39,7 @@ contract FirewallTests is BytesGenerator, OperatorAllocationTestBase {
     address internal don = address(0xc99b2dBB74607A04B458Ea740F3906C4851C6531);
     address internal collector = address(0xC88F7666330b4b511358b7742dC2a3234710e7B1);
 
-    RiverV1 internal river;
+    FirewallTestRiverV1 internal river;
     OracleV1 internal oracle;
     Firewall internal oracleFirewall;
     OracleV1 internal firewalledOracle;
@@ -43,7 +48,7 @@ contract FirewallTests is BytesGenerator, OperatorAllocationTestBase {
     AllowlistV1 internal firewalledAllowlist;
     Firewall internal allowlistFirewall;
 
-    RiverV1 internal firewalledRiver;
+    FirewallTestRiverV1 internal firewalledRiver;
     Firewall internal riverFirewall;
 
     OperatorsRegistryV1 internal firewalledOperatorsRegistry;
@@ -70,7 +75,7 @@ contract FirewallTests is BytesGenerator, OperatorAllocationTestBase {
         LibImplementationUnbricker.unbrick(vm, address(elFeeRecipient));
         withdraw = new WithdrawV1();
         LibImplementationUnbricker.unbrick(vm, address(withdraw));
-        river = new RiverV1();
+        river = new FirewallTestRiverV1();
         LibImplementationUnbricker.unbrick(vm, address(river));
         allowlist = new AllowlistV1();
         LibImplementationUnbricker.unbrick(vm, address(allowlist));
@@ -103,7 +108,7 @@ contract FirewallTests is BytesGenerator, OperatorAllocationTestBase {
         bytes4[] memory executorCallableRiverSelectors = new bytes4[](1);
         executorCallableRiverSelectors[0] = river.setOracle.selector;
         riverFirewall = new Firewall(riverGovernor, executor, address(river), executorCallableRiverSelectors);
-        firewalledRiver = RiverV1(payable(address(riverFirewall)));
+        firewalledRiver = FirewallTestRiverV1(payable(address(riverFirewall)));
 
         river.initRiverV1(
             address(deposit),
@@ -442,51 +447,50 @@ contract FirewallTests is BytesGenerator, OperatorAllocationTestBase {
     ///         the msg.sender to the registry is the firewall, not River.
     function testGovernorCannotIncrementFundedValidatorsThroughFirewall() public {
         haveGovernorAddOperatorBob();
-        bytes[][] memory keys = new bytes[][](1);
-        keys[0] = new bytes[](1);
-        keys[0][0] = new bytes(48);
-        uint256[] memory fundedETH = new uint256[](1);
+        IOperatorsRegistryV1.OperatorFundingDelta[] memory deltas = _singleDelta(0, 32 ether);
         vm.prank(riverGovernor);
         vm.expectRevert(abi.encodeWithSignature("Unauthorized(address)", address(operatorsRegistryFirewall)));
-        firewalledOperatorsRegistry.incrementFundedETH(fundedETH, keys);
+        firewalledOperatorsRegistry.incrementFundedETH(deltas);
     }
 
     /// @notice Executor cannot call incrementFundedValidators through the firewall
     ///         because it is not in the executor-callable selectors list.
     function testExecutorCannotIncrementFundedValidatorsThroughFirewall() public {
         haveGovernorAddOperatorBob();
-        uint256[] memory fundedETH = new uint256[](1);
-        bytes[][] memory keys = new bytes[][](1);
-        keys[0] = new bytes[](1);
-        keys[0][0] = new bytes(48);
+        IOperatorsRegistryV1.OperatorFundingDelta[] memory deltas = _singleDelta(0, 32 ether);
         vm.prank(executor);
         vm.expectRevert(unauthExecutor);
-        firewalledOperatorsRegistry.incrementFundedETH(fundedETH, keys);
+        firewalledOperatorsRegistry.incrementFundedETH(deltas);
     }
 
     /// @notice Random caller cannot call incrementFundedValidators through the firewall.
     function testRandomCallerCannotIncrementFundedValidatorsThroughFirewall() public {
         haveGovernorAddOperatorBob();
-        uint256[] memory fundedETH = new uint256[](1);
-        bytes[][] memory keys = new bytes[][](1);
-        keys[0] = new bytes[](1);
-        keys[0][0] = new bytes(48);
+        IOperatorsRegistryV1.OperatorFundingDelta[] memory deltas = _singleDelta(0, 32 ether);
         vm.prank(joe);
         vm.expectRevert(unauthJoe);
-        firewalledOperatorsRegistry.incrementFundedETH(fundedETH, keys);
+        firewalledOperatorsRegistry.incrementFundedETH(deltas);
     }
 
     /// @notice incrementFundedValidators succeeds when called directly by River (bypassing the firewall).
     function testRiverCanCallIncrementFundedValidatorsDirectly() public {
         haveGovernorAddOperatorBob();
-        uint256[] memory fundedETH = new uint256[](1);
-        fundedETH[0] = 32 ether;
-        bytes[][] memory keys = new bytes[][](1);
-        keys[0] = new bytes[](1);
-        keys[0][0] = new bytes(48);
+        IOperatorsRegistryV1.OperatorFundingDelta[] memory deltas = _singleDelta(0, 32 ether);
         // River calls the registry directly (not through firewall)
         vm.prank(address(river));
-        operatorsRegistry.incrementFundedETH(fundedETH, keys);
+        operatorsRegistry.incrementFundedETH(deltas);
         assertEq(operatorsRegistry.getOperator(0).funded, 32 ether, "funded should be 32 ether");
+    }
+
+    function _singleDelta(uint256 operatorIndex, uint256 amount)
+        internal
+        pure
+        returns (IOperatorsRegistryV1.OperatorFundingDelta[] memory deltas)
+    {
+        deltas = new IOperatorsRegistryV1.OperatorFundingDelta[](1);
+        deltas[0].operatorIndex = operatorIndex;
+        deltas[0].fundedETH = amount;
+        deltas[0].newPublicKeys = new bytes[](1);
+        deltas[0].newPublicKeys[0] = new bytes(48);
     }
 }
