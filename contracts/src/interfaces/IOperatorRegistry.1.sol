@@ -27,6 +27,16 @@ interface IOperatorsRegistryV1 {
         uint256 ethAmount;
     }
 
+    /// @notice Structure representing a per-operator funded ETH update
+    /// @param operatorIndex The index of the operator receiving the funded ETH
+    /// @param fundedETH The amount of ETH(wei) being added to the operator's funded total
+    /// @param newPublicKeys The validator public keys funded for this operator in this batch
+    struct OperatorFundingDelta {
+        uint256 operatorIndex;
+        uint256 fundedETH;
+        bytes[] newPublicKeys;
+    }
+
     /// @notice A new operator has been added to the registry
     /// @param index The operator index
     /// @param name The operator display name
@@ -142,12 +152,27 @@ interface IOperatorsRegistryV1 {
     /// @param currentETHExitsDemand The current ETH(wei) exits demand
     error ExitsRequestedExceedExitDemand(uint256 requestedETHAmount, uint256 currentETHExitsDemand);
 
+    /// @notice The provided exited ETH is above the funded ETH of the operator
+    /// @param operatorIndex The operator index
+    /// @param exitedETH The exited ETH(wei)
+    /// @param priorActiveCL The active ETH(wei) on CL of the operator in the previous oracle report
+    error ExitedETHExceedsPriorCLETH(uint256 operatorIndex, uint256 exitedETH, uint256 priorActiveCL);
+
     /// @notice Thrown when an allocation with an incorrect ETH amount is provided
     /// @param ethAmount The incorrect ETH(wei) amount
     error AllocationWithIncorrectAmount(uint256 ethAmount);
 
     /// @notice Thrown when the provided active CL ETH array length does not match the operator count
     error InvalidActiveCLETHArrayLength();
+
+    /// @notice Thrown when a delta references an operator index outside the registered range
+    /// @param operatorIndex The offending operator index
+    /// @param operatorCount The current number of registered operators
+    error InvalidOperatorIndex(uint256 operatorIndex, uint256 operatorCount);
+
+    /// @notice Thrown when deltas are not provided in strictly ascending operator-index order
+    /// @param operatorIndex The offending operator index (equal to or below the previous index)
+    error OperatorIndicesUnsortedOrDuplicate(uint256 operatorIndex);
 
     /// @notice Initializes the operators registry
     /// @param _admin Admin in charge of managing operators
@@ -196,10 +221,15 @@ interface IOperatorsRegistryV1 {
     /// @return The list of active operators and their details
     function listActiveOperators() external view returns (OperatorsV3.Operator[] memory);
 
-    /// @notice Updates the funded ETH for each node operator in the Operators Registry
-    /// @param _fundedETH The array of funded ETH(wei) amounts per operator
-    /// @param _publicKeys The array of public keys
-    function incrementFundedETH(uint256[] calldata _fundedETH, bytes[][] calldata _publicKeys) external;
+    /// @notice Updates the funded ETH for the node operators referenced in the provided deltas
+    /// @dev Deltas must be sorted by operatorIndex in strictly ascending order with no duplicates
+    /// @dev Reverts with InvalidEmptyArray when the deltas array is empty
+    /// @dev Reverts with InvalidOperatorIndex when a delta references an operator outside the registered range
+    /// @dev Reverts with OperatorIndicesUnsortedOrDuplicate when deltas are not strictly ascending
+    /// @dev Reverts with InactiveOperator when a referenced operator is inactive
+    /// @dev Reverts with OperatorIgnoredExitRequests when a referenced operator has unfulfilled exit requests
+    /// @param _deltas The per-operator funded ETH updates
+    function incrementFundedETH(OperatorFundingDelta[] calldata _deltas) external;
 
     /// @notice Updates the active CL ETH for each node operator in the Operators Registry
     /// @dev We assume that the oracle would report the correct active CL ETH amounts for each operator.
