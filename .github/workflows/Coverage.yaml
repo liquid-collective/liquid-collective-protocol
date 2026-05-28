@@ -34,7 +34,7 @@ jobs:
           version: nightly
 
       - name: Run coverage
-        run: forge coverage --report lcov --ir-minimum && mv lcov.info lcov.txt
+        run: forge coverage --report lcov && mv lcov.info lcov.txt
         env:
           FOUNDRY_FUZZ_RUNS: 1500
           MAINNET_FORK_RPC_URL: ${{ secrets.MAINNET_FORK_RPC_URL }}
