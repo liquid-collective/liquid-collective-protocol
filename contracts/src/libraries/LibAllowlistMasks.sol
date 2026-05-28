@@ -14,4 +14,6 @@ library LibAllowlistMasks {
     uint256 internal constant REDEEM_MASK = 0x1 << 2;
     /// @notice The mask for the consolidation coverage donation right
     uint256 internal constant DONATE_CONSOLIDATION_MASK = 0x1 << 4;
+    /// @notice The mask for withdrawal credentials with the right to consolidate active stake into LC
+    uint256 internal constant CONSOLIDATE_MASK = 0x1 << 3;
 }
