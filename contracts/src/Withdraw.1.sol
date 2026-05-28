@@ -12,8 +12,8 @@ import "./libraries/LibUint256.sol";
 
 import "./state/shared/RiverAddress.sol";
 import "./state/shared/OperatorsRegistryAddress.sol";
-import "./state/withdraw/WithdrawalContractAddress.sol";
-import "./state/withdraw/ConsolidationContractAddress.sol";
+import "./state/withdraw/PectraWithdrawalContractAddress.sol";
+import "./state/withdraw/PectraConsolidationContractAddress.sol";
 
 /// @title Withdraw (v1)
 /// @author Alluvial Finance Inc.
@@ -33,12 +33,12 @@ contract WithdrawV1 is IWithdrawV1, Initializable, ReentrancyGuard, IProtocolVer
 
     /// @inheritdoc IWithdrawV1
     function initWithdrawV1_1(
-        address _withdrawalContractAddress,
-        address _consolidationContractAddress,
+        address _pectraWithdrawalContractAddress,
+        address _pectraConsolidationContractAddress,
         address _operatorsRegistry
     ) external init(1) {
-        WithdrawalContractAddress.set(_withdrawalContractAddress);
-        ConsolidationContractAddress.set(_consolidationContractAddress);
+        PectraWithdrawalContractAddress.set(_pectraWithdrawalContractAddress);
+        PectraConsolidationContractAddress.set(_pectraConsolidationContractAddress);
         OperatorsRegistryAddress.set(_operatorsRegistry);
     }
 
@@ -83,7 +83,7 @@ contract WithdrawV1 is IWithdrawV1, Initializable, ReentrancyGuard, IProtocolVer
         uint256 maxFeePayable = maxFeePerWithdrawal * pubkeys.length;
         _validateSufficientValueForFee(msg.value, maxFeePayable);
 
-        address withdrawalContract = WithdrawalContractAddress.get();
+        address withdrawalContract = PectraWithdrawalContractAddress.get();
         uint256 fee = _validateAndReturnFee(withdrawalContract, maxFeePerWithdrawal);
 
         uint256 totalFeePaid = 0;
@@ -110,7 +110,7 @@ contract WithdrawV1 is IWithdrawV1, Initializable, ReentrancyGuard, IProtocolVer
         if (requests.length == 0) {
             revert InvalidEmptyArray();
         }
-        address consolidationContract = ConsolidationContractAddress.get();
+        address consolidationContract = PectraConsolidationContractAddress.get();
         uint256 fee = _validateAndReturnFee(consolidationContract, maxFeePerConsolidation);
 
         uint256 totalNumOfConsolidationOperations = 0;

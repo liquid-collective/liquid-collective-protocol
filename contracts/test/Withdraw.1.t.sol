@@ -297,14 +297,14 @@ contract WithdrawV1PectraTests is WithdrawV1TestBase {
         assertEq(w.getRiver(), address(river));
 
         w.initWithdrawV1_1(address(mockWithdrawal), address(mockConsolidation), address(operatorsRegistry));
-        // Unstructured storage slots match WithdrawalContractAddress, ConsolidationContractAddress,
+        // Unstructured storage slots match PectraWithdrawalContractAddress, PectraConsolidationContractAddress,
         // OperatorsRegistryAddress (see ../src/state/shared/*.sol)
         assertEq(
-            vm.load(address(w), bytes32(uint256(keccak256("withdraw.state.withdrawalContractAddress")) - 1)),
+            vm.load(address(w), bytes32(uint256(keccak256("withdraw.state.pectraWithdrawalContractAddress")) - 1)),
             bytes32(uint256(uint160(address(mockWithdrawal))))
         );
         assertEq(
-            vm.load(address(w), bytes32(uint256(keccak256("withdraw.state.consolidationContractAddress")) - 1)),
+            vm.load(address(w), bytes32(uint256(keccak256("withdraw.state.pectraConsolidationContractAddress")) - 1)),
             bytes32(uint256(uint160(address(mockConsolidation))))
         );
         assertEq(

@@ -66,12 +66,12 @@ interface IWithdrawV1 {
     function initializeWithdrawV1(address _river) external;
 
     /// @notice Initialize Pectra EL contract addresses (callable once after initializeWithdrawV1)
-    /// @param _withdrawalContractAddress The Pectra EL withdrawal contract address
-    /// @param _consolidationContractAddress The Pectra EL consolidation contract address
+    /// @param _pectraWithdrawalContractAddress The Pectra EL withdrawal contract address
+    /// @param _pectraConsolidationContractAddress The Pectra EL consolidation contract address
     /// @param _operatorsRegistry The OperatorsRegistry address
     function initWithdrawV1_1(
-        address _withdrawalContractAddress,
-        address _consolidationContractAddress,
+        address _pectraWithdrawalContractAddress,
+        address _pectraConsolidationContractAddress,
         address _operatorsRegistry
     ) external;
 
