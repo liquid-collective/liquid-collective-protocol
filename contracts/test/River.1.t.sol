@@ -131,6 +131,7 @@ abstract contract RiverV1TestBase is OperatorAllocationTestBase, BytesGenerator 
     address internal operatorTwoFeeRecipient;
     address internal bob;
     address internal joe;
+    address internal keeper;
 
     string internal operatorOneName = "NodeMasters";
     string internal operatorTwoName = "StakePros";
@@ -177,7 +178,7 @@ abstract contract RiverV1TestBase is OperatorAllocationTestBase, BytesGenerator 
         operatorTwo = makeAddr("operatorTwo");
         bob = makeAddr("bob");
         joe = makeAddr("joe");
-
+        keeper = makeAddr("keeper");
         attester1 = vm.addr(attesterPk1);
         attester2 = vm.addr(attesterPk2);
         attester3 = vm.addr(attesterPk3);
@@ -366,7 +367,7 @@ contract RiverV1Tests is RiverV1TestBase {
 
         vm.startPrank(admin);
         river.setCoverageFund(address(coverageFund));
-        river.setKeeper(admin);
+        river.setKeeper(keeper);
         oracle.addMember(oracleMember, 1);
         // ===================
 
@@ -402,20 +403,18 @@ contract RiverV1Tests is RiverV1TestBase {
     }
 
     function testOnlyAdminCanSetKeeper() public {
-        address keeper = makeAddr("keeper");
-        assert(river.getKeeper() == admin);
+        assert(river.getKeeper() == keeper);
         vm.prank(admin);
         vm.expectEmit(true, true, true, true);
-        emit SetKeeper(keeper);
-        river.setKeeper(keeper);
-        assert(river.getKeeper() == keeper);
+        emit SetKeeper(admin);
+        river.setKeeper(admin);
+        assert(river.getKeeper() == admin);
 
         vm.expectRevert(abi.encodeWithSignature("Unauthorized(address)", address(this)));
         river.setKeeper(address(0));
     }
 
     function testSetKeeperViaInterface() public {
-        address keeper = makeAddr("keeper");
         vm.prank(admin);
         IRiverV1(payable(address(river))).setKeeper(keeper);
         assert(river.getKeeper() == keeper);
@@ -1263,7 +1262,7 @@ contract RiverV1TestsReport_HEAVY_FUZZING is RiverV1TestBase {
 
         oracle.addMember(oracleMember, 1);
         river.setCoverageFund(address(coverageFund));
-        river.setKeeper(admin);
+        river.setKeeper(keeper);
 
         // Set up attestation infrastructure (threshold must be strictly less than attester count)
         river.setDepositDataBuffer(address(depositBuffer));
@@ -2825,7 +2824,7 @@ contract RiverV1CoverageTests is RiverV1TestBase {
         vm.prank(admin);
         oracle.addMember(oracleMember, 1);
         vm.prank(admin);
-        river.setKeeper(admin);
+        river.setKeeper(keeper);
         redeemManager.initializeRedeemManagerV1(address(river));
     }
 
@@ -2863,7 +2862,7 @@ contract RiverV1CoverageTests is RiverV1TestBase {
         vm.prank(admin);
         oracle.addMember(oracleMember, 1);
         vm.prank(admin);
-        river.setKeeper(admin);
+        river.setKeeper(keeper);
         redeemManager.initializeRedeemManagerV1(address(river));
         // Add one operator so _reportCLETH(activeCLETHPerOperator) doesn't revert InvalidEmptyArray.
         vm.prank(admin);
@@ -2942,24 +2941,24 @@ contract RiverV1PectraTests is RiverV1TestBase {
         mockConsolidation = new MockELConsolidationForRiver();
         withdraw.initWithdrawV1_1(address(mockWithdrawal), address(mockConsolidation), address(operatorsRegistry));
         vm.prank(admin);
-        river.setKeeper(admin);
+        river.setKeeper(keeper);
     }
 
-    function testRiverConsolidateAsAdminEmitsEventAndForwards() public {
+    function testRiverConsolidateAsKeeperEmitsEventAndForwards() public {
         bytes[] memory srcPubkeys = new bytes[](1);
         srcPubkeys[0] = VALID_PUBKEY_48;
         IWithdrawV1.ConsolidationRequest[] memory requests = new IWithdrawV1.ConsolidationRequest[](1);
         requests[0] = IWithdrawV1.ConsolidationRequest({srcPubkeys: srcPubkeys, targetPubkey: VALID_PUBKEY_48});
         uint256 valueSent = 5 gwei;
-        vm.deal(admin, valueSent);
+        vm.deal(keeper, valueSent);
 
-        vm.prank(admin);
+        vm.prank(keeper);
         vm.expectEmit(true, true, true, true);
-        emit PectraConsolidationRequested(requests, 1 gwei, admin, valueSent);
+        emit PectraConsolidationRequested(requests, 1 gwei, keeper, valueSent);
         river.consolidate{value: valueSent}(requests, 1 gwei);
 
         assertEq(address(mockConsolidation).balance, 1 gwei);
-        assertEq(admin.balance, valueSent - 1 gwei);
+        assertEq(keeper.balance, valueSent - 1 gwei);
     }
 
     function testRiverConsolidateNonAdminReverts() public {
@@ -2984,13 +2983,13 @@ contract RiverV1PectraTests is RiverV1TestBase {
 
         uint256 feePerOp = 1 gwei;
         uint256 valueSent = feePerOp * 3; // 3 src pubkeys
-        vm.deal(admin, valueSent);
+        vm.deal(keeper, valueSent);
 
-        vm.prank(admin);
+        vm.prank(keeper);
         river.consolidate{value: valueSent}(requests, feePerOp);
 
         assertEq(address(mockConsolidation).balance, valueSent, "all 3 fees should be forwarded");
-        assertEq(admin.balance, 0, "no excess since exact fee sent");
+        assertEq(keeper.balance, 0, "no excess since exact fee sent");
     }
 
     function testRiverConsolidateExcessFeeRefundedToKeeper() public {
@@ -3002,13 +3001,13 @@ contract RiverV1PectraTests is RiverV1TestBase {
         uint256 maxFee = 5 gwei;
         uint256 actualFee = 1 gwei;
         mockConsolidation.setFee(actualFee);
-        vm.deal(admin, maxFee);
+        vm.deal(keeper, maxFee);
 
-        vm.prank(admin);
+        vm.prank(keeper);
         river.consolidate{value: maxFee}(requests, maxFee);
 
         assertEq(address(mockConsolidation).balance, actualFee, "only actual fee paid");
-        assertEq(admin.balance, maxFee - actualFee, "excess refunded to keeper");
+        assertEq(keeper.balance, maxFee - actualFee, "excess refunded to keeper");
     }
 
     function testRiverConsolidateFeeTooHighReverts() public {
@@ -3020,9 +3019,9 @@ contract RiverV1PectraTests is RiverV1TestBase {
         uint256 maxFee = 1 gwei;
         uint256 actualFee = 2 gwei;
         mockConsolidation.setFee(actualFee);
-        vm.deal(admin, actualFee);
+        vm.deal(keeper, actualFee);
 
-        vm.prank(admin);
+        vm.prank(keeper);
         vm.expectRevert(abi.encodeWithSelector(IWithdrawV1.FeeTooHigh.selector, actualFee, maxFee));
         river.consolidate{value: actualFee}(requests, maxFee);
     }

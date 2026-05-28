@@ -304,10 +304,10 @@ interface IRiverV1 is IConsensusLayerDepositManagerV1, IUserDepositManagerV1, IS
     /// @notice Input for the redeem manager funds
     function sendRedeemManagerExceedingFunds() external payable;
 
-    /// @notice Request Pectra consolidations via the Withdraw contract. Callable by admin; fee ETH sent as msg.value.
+    /// @notice Request Pectra consolidations via the Withdraw contract. fee ETH sent as msg.value.
     /// @dev Only callable by the keeper
     /// @dev Since we consolidate to validators we own there is no need to track the consolidation buffer
-    /// @param requests Consolidation requests (each: src pubkeys -> target pubkey)
+    /// @param requests Consolidation requests (each: src pubkeys[] -> target pubkey)
     /// @param maxFeePerConsolidation Maximum fee per consolidation to accept
     function consolidate(IWithdrawV1.ConsolidationRequest[] calldata requests, uint256 maxFeePerConsolidation)
         external

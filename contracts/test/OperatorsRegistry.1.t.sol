@@ -15,9 +15,6 @@ import "../src/state/operatorsRegistry/CurrentValidatorExitsDemand.sol";
 import "../src/state/operatorsRegistry/TotalValidatorExitsRequested.sol";
 
 contract OperatorsRegistryInitializableV1 is OperatorsRegistryV1 {
-    /// @dev Override to allow tests to call functions without pranking as river
-    // function _checkRiver() internal override {}
-
     function sudoSetFunded(uint256 _index, uint256 _funded) external {
         OperatorsV3.Operator storage operator = OperatorsV3.get(_index);
         operator.funded = _funded;

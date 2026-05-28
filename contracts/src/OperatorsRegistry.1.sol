@@ -260,7 +260,8 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
         }
 
         uint256 allocationsLength = _allocations.length;
-        if (allocationsLength == 0 && _partialAllocations.length == 0) {
+        uint256 partialAllocationsLength = _partialAllocations.length;
+        if (allocationsLength == 0 && partialAllocationsLength == 0) {
             revert InvalidEmptyArray();
         }
 
@@ -291,10 +292,10 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
         }
 
         // Partial Exits
-        if (_partialAllocations.length > 0) {
+        if (partialAllocationsLength > 0) {
             IWithdrawV1 withdraw = IWithdrawV1(LCWithdrawAddress.get());
 
-            for (uint256 i = 0; i < _partialAllocations.length; ++i) {
+            for (uint256 i = 0; i < partialAllocationsLength; ++i) {
                 uint256 operatorIndex = _partialAllocations[i].operatorIndex;
 
                 if (i > 0 && operatorIndex <= _partialAllocations[i - 1].operatorIndex) {

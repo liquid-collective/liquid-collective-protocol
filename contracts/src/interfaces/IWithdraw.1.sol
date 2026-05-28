@@ -35,6 +35,8 @@ interface IWithdrawV1 {
     event UnsentExcessFee(address recipient, uint256 amount);
 
     /// @notice Thrown when pubkeys and amounts array lengths differ
+    /// @param pubkeysLength Length of the pubkeys array
+    /// @param amountLength Length of the amounts array
     error LengthMismatch(uint256 pubkeysLength, uint256 amountLength);
 
     /// @notice Thrown when the EL contract call (withdrawal or consolidation) fails

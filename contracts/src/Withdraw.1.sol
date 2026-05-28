@@ -11,9 +11,9 @@ import "./libraries/LibErrors.sol";
 import "./libraries/LibUint256.sol";
 
 import "./state/shared/RiverAddress.sol";
-import "./state/shared/WithdrawalContractAddress.sol";
-import "./state/shared/ConsolidationContractAddress.sol";
 import "./state/shared/OperatorsRegistryAddress.sol";
+import "./state/withdraw/WithdrawalContractAddress.sol";
+import "./state/withdraw/ConsolidationContractAddress.sol";
 
 /// @title Withdraw (v1)
 /// @author Alluvial Finance Inc.

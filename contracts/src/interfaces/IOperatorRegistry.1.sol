@@ -62,12 +62,12 @@ interface IOperatorsRegistryV1 {
     /// @param river The new river address
     event SetRiver(address indexed river);
 
-    /// @notice The requested ETH amount has been updated
+    /// @notice The amount of ETH(wei) that has been requested to be exited via CL
     /// @param index The operator index
     /// @param amount The amount of requested exits in ETH(wei)
     event RequestedETHExits(uint256 indexed index, uint256 amount);
 
-    /// @notice The requested ETH amount has been updated
+    /// @notice The amount of ETH(wei) that has been requested to be exited per pubkey via EL
     /// @param index The operator index
     /// @param pubkeys The pubkeys through which the partial exits were requested
     /// @param amount The amount per pubkey that was requested for partial exits
