@@ -85,11 +85,11 @@ contract OperatorsMigrationV1ToV2 is Test {
 
         assertEq(or.getOperatorCount(), 3);
         {
-            bytes32 lcWithdrawSlot = bytes32(uint256(keccak256("river.state.lcWithdrawAddress")) - 1);
+            bytes32 withdrawSlot = bytes32(uint256(keccak256("river.state.withdrawAddress")) - 1);
             assertEq(
-                vm.load(address(orProxy), lcWithdrawSlot),
+                vm.load(address(orProxy), withdrawSlot),
                 bytes32(uint256(uint160(address(1)))),
-                "LCWithdrawAddress not stored correctly after migration"
+                "WithdrawAddress not stored correctly after migration"
             );
         }
         {

@@ -205,8 +205,8 @@ interface IOperatorsRegistryV1 {
     // function initOperatorsRegistryV1_1() external;
 
     /// @notice Migrates operators from V2 to V3 storage, dropping key-management fields
-    /// @param _lcWithdrawAddress The address of the LC owned Withdrawal Address
-    function initOperatorsRegistryV1_2(address _lcWithdrawAddress) external;
+    /// @param _withdrawAddress The address of the Withdrawal contract
+    function initOperatorsRegistryV1_2(address _withdrawAddress) external;
 
     /// @notice Retrieve the River address
     /// @return The address of River

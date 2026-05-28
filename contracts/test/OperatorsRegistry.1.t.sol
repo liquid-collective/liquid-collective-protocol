@@ -75,8 +75,8 @@ contract OperatorsRegistryWithMigrationHelpers is OperatorsRegistryV1 {
         return OperatorsV2.getAllActive();
     }
 
-    function sudoSetLCWithdrawAddress(address _addr) external {
-        LCWithdrawAddress.set(_addr);
+    function sudoSetWithdrawAddress(address _addr) external {
+        WithdrawAddress.set(_addr);
     }
 
     /// Test helper: exposes OperatorsV2.setKeys() for tests.
@@ -1840,7 +1840,7 @@ contract OperatorsRegistryV1PartialExitTests is Test {
         reg.initOperatorsRegistryV1(admin, river);
 
         mockWithdraw = new MockWithdrawForPartialExits();
-        reg.sudoSetLCWithdrawAddress(address(mockWithdraw));
+        reg.sudoSetWithdrawAddress(address(mockWithdraw));
     }
 
     function _makePartialAlloc(uint256 opIndex, uint64 gweiAmount)

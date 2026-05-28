@@ -17,7 +17,7 @@ import "./state/operatorsRegistry/TotalETHExitsRequested.sol";
 import "./state/operatorsRegistry/CurrentETHExitsDemand.sol";
 import "./state/operatorsRegistry/TotalValidatorExitsRequested.sol";
 import "./state/operatorsRegistry/CurrentValidatorExitsDemand.sol";
-import "./state/operatorsRegistry/LCWithdrawAddress.sol";
+import "./state/operatorsRegistry/WithdrawAddress.sol";
 import "./state/shared/RiverAddress.sol";
 
 /// @title Operators Registry (v1)
@@ -39,10 +39,10 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
     }
 
     /// @inheritdoc IOperatorsRegistryV1
-    function initOperatorsRegistryV1_2(address _lcWithdrawAddress) external init(2) {
+    function initOperatorsRegistryV1_2(address _withdrawAddress) external init(2) {
         _migrateOperators_V2_3();
 
-        LCWithdrawAddress.set(_lcWithdrawAddress);
+        WithdrawAddress.set(_withdrawAddress);
         CurrentETHExitsDemand.set(CurrentValidatorExitsDemand.get() * DEPOSIT_SIZE);
         TotalETHExitsRequested.set(TotalValidatorExitsRequested.get() * DEPOSIT_SIZE);
     }
@@ -323,7 +323,7 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
             return 0;
         }
 
-        IWithdrawV1 withdraw = IWithdrawV1(LCWithdrawAddress.get());
+        IWithdrawV1 withdraw = IWithdrawV1(WithdrawAddress.get());
 
         for (uint256 i = 0; i < _partialAllocations.length; ++i) {
             uint256 operatorIndex = _partialAllocations[i].operatorIndex;
