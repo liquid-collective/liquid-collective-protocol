@@ -329,7 +329,7 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
         uint256 _maxFeePerWithdrawal
     ) private returns (uint256 requestedETHAmount, uint256 totalFeePaid) {
         if (_partialAllocations.length == 0) {
-            return 0;
+            return (0, 0);
         }
 
         IWithdrawV1 withdraw = IWithdrawV1(WithdrawAddress.get());
