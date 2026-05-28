@@ -1418,6 +1418,7 @@ contract OperatorsRegistryV1FlattenAndAllocationTests is OperatorAllocationTestB
         deltas[0].operatorIndex = 0;
         deltas[0].fundedETH = 32 ether;
         deltas[0].newPublicKeys = new bytes[](1);
+        vm.prank(river);
         vm.expectRevert(abi.encodeWithSignature("OperatorIgnoredExitRequests(uint256)", 0));
         operatorsRegistry.incrementFundedETH(deltas);
     }
@@ -1450,6 +1451,7 @@ contract OperatorsRegistryV1FlattenAndAllocationTests is OperatorAllocationTestB
         vm.expectEmit(true, false, false, true);
         emit IOperatorsRegistryV1.FundedValidatorKeys(5, deltas[2].newPublicKeys, false);
 
+        vm.prank(river);
         operatorsRegistry.incrementFundedETH(deltas);
 
         assertEq(operatorsRegistry.getOperator(0).funded, 32 ether, "op0 funded");
@@ -1470,7 +1472,7 @@ contract OperatorsRegistryV1FlattenAndAllocationTests is OperatorAllocationTestB
         deltas[0].operatorIndex = 3; // out of range: operatorCount = 3
         deltas[0].fundedETH = 32 ether;
         deltas[0].newPublicKeys = new bytes[](1);
-
+        vm.prank(river);
         vm.expectRevert(abi.encodeWithSelector(IOperatorsRegistryV1.InvalidOperatorIndex.selector, 3, 3));
         operatorsRegistry.incrementFundedETH(deltas);
     }
@@ -1488,6 +1490,7 @@ contract OperatorsRegistryV1FlattenAndAllocationTests is OperatorAllocationTestB
         dup[1].operatorIndex = 2;
         dup[1].fundedETH = 32 ether;
         dup[1].newPublicKeys = new bytes[](1);
+        vm.prank(river);
         vm.expectRevert(abi.encodeWithSelector(IOperatorsRegistryV1.OperatorIndicesUnsortedOrDuplicate.selector, 2));
         operatorsRegistry.incrementFundedETH(dup);
 
@@ -1499,6 +1502,7 @@ contract OperatorsRegistryV1FlattenAndAllocationTests is OperatorAllocationTestB
         desc[1].operatorIndex = 1;
         desc[1].fundedETH = 32 ether;
         desc[1].newPublicKeys = new bytes[](1);
+        vm.prank(river);
         vm.expectRevert(abi.encodeWithSelector(IOperatorsRegistryV1.OperatorIndicesUnsortedOrDuplicate.selector, 1));
         operatorsRegistry.incrementFundedETH(desc);
     }
@@ -1603,6 +1607,7 @@ contract OperatorsRegistryV1CoverageTests is OperatorsRegistryV1TestBase, Operat
     function testIncrementFundedETHRevertsOnEmptyArray() public {
         reg.initOperatorsRegistryV1(admin, river);
         IOperatorsRegistryV1.OperatorFundingDelta[] memory empty = new IOperatorsRegistryV1.OperatorFundingDelta[](0);
+        vm.prank(river);
         vm.expectRevert(abi.encodeWithSignature("InvalidEmptyArray()"));
         reg.incrementFundedETH(empty);
     }

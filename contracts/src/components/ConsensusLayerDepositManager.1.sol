@@ -40,6 +40,14 @@ abstract contract ConsensusLayerDepositManagerV1 is IConsensusLayerDepositManage
     // Modifiers
     // -----------------------------------------------------------------------
 
+    /// @notice Used in river
+    modifier onlyKeeper() {
+        if (msg.sender != KeeperAddress.get()) {
+            revert OnlyKeeper();
+        }
+        _;
+    }
+
     modifier onlyRiverAdmin() {
         if (msg.sender != _getRiverAdmin()) revert LibErrors.Unauthorized(msg.sender);
         _;

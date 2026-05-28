@@ -363,7 +363,7 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
         bool _isPartial
     ) private {
         uint256 opRequestedExits = _operator.requestedExits;
-        uint256 opPendingExits = opRequestedExits - OperatorsV3.getExitedETHAtIndex(_operatorIndex);
+        uint256 opPendingExits = opRequestedExits - OperatorsV3.getExitedETH(_operatorIndex);
         uint256 available = _operator.activeCLETH > opPendingExits ? _operator.activeCLETH - opPendingExits : 0;
         if (_amount > available) {
             if (_isPartial) {

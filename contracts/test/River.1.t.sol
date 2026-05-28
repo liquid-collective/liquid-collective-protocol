@@ -1336,11 +1336,11 @@ contract RiverV1TestsReport_HEAVY_FUZZING is RiverV1TestBase {
         river.setKeeper(keeper);
 
         // Set up attestation infrastructure (threshold must be strictly less than attester count)
-        river.setDepositDataBuffer(address(depositBuffer));
-        river.setAttester(attester1, true);
-        river.setAttester(attester2, true);
-        river.setAttester(attester3, true);
-        river.setAttestationQuorum(2);
+        // river.setDepositDataBuffer(address(depositBuffer));
+        // river.setAttester(depositCommitteeAttester1, true);
+        // river.setAttester(depositCommitteeAttester2, true);
+        // river.setAttester(depositCommitteeAttester3, true);
+        // river.setAttestationQuorum(2);
 
         vm.stopPrank();
 
