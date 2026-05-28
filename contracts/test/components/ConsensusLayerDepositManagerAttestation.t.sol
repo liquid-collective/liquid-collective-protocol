@@ -4,6 +4,7 @@ pragma solidity 0.8.34;
 import "forge-std/Test.sol";
 
 import "../../src/AttestationVerifier.1.sol";
+import "../../src/Initializable.sol";
 import "../../src/components/ConsensusLayerDepositManager.1.sol";
 import "../../src/interfaces/IAttestationVerifier.1.sol";
 import "../../src/interfaces/IDepositDataBuffer.sol";
@@ -1015,7 +1016,12 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
         assertTrue(validator.isDepositCommitteeAttester(depositCommitteeAttester2));
         assertTrue(validator.isDepositCommitteeAttester(depositCommitteeAttester3));
         assertFalse(validator.isDepositCommitteeAttester(address(0xDEAD)));
-        assertTrue(validator.getDomainSeparator() != bytes32(0));
+        // Cross-check the domain separator against an independently-recomputed value rather
+        // than just !=0, so a future drift in NAME_HASH / VERSION_HASH / TYPEHASH wording
+        // breaks the test instead of silently agreeing with the contract.
+        bytes32 expectedDomainSeparator =
+            keccak256(abi.encode(EIP712_DOMAIN_TYPEHASH, NAME_HASH, VERSION_HASH, block.chainid, address(dm)));
+        assertEq(validator.getDomainSeparator(), expectedDomainSeparator, "domain separator drift");
         // DEPOSIT_DOMAIN was set at init from a zero genesis fork version; just check it was set.
         assertTrue(validator.DEPOSIT_DOMAIN() != bytes32(0));
     }
@@ -1204,5 +1210,147 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
             abi.encodeWithSelector(IAttestationVerifierV1.TooManyDepositCommitteeAttesters.selector, max + 1, max)
         );
         validator.setDepositCommitteeAttester(address(uint160(0x9999)), true);
+    }
+
+    // -----------------------------------------------------------------------
+    // G-1: TooManySignatures bound
+    // -----------------------------------------------------------------------
+
+    /// @dev `validate()` rejects a signature array longer than MAX_SIGNATURES (20) before any
+    ///      recovery work runs — bounds the O(n^2) dedup loop. Sig content doesn't matter
+    ///      since the length check fires first.
+    function testRevert_validate_tooManySignatures() public {
+        IDepositDataBuffer.DepositObject[] memory deposits = new IDepositDataBuffer.DepositObject[](1);
+        deposits[0] = _makeDeposit(0, 800);
+        (bytes32 bufferId, bytes32 rootHash,) = _prepareDeposit(deposits);
+
+        uint256 max = validator.MAX_SIGNATURES();
+        bytes[] memory tooMany = new bytes[](max + 1);
+        for (uint256 i = 0; i < max + 1; i++) {
+            tooMany[i] = new bytes(65); // any 65-byte blob; length check fires before recovery
+        }
+        vm.prank(keeper);
+        vm.expectRevert(abi.encodeWithSelector(IAttestationVerifierV1.TooManySignatures.selector, max + 1, max));
+        dm.depositToConsensusLayerWithAttestation(bufferId, rootHash, tooMany);
+    }
+
+    // -----------------------------------------------------------------------
+    // G-2: QuorumExceedsMaxSignatures — both code paths
+    // -----------------------------------------------------------------------
+
+    /// @dev Cannot init with a quorum > MAX_SIGNATURES, even when the attester count would
+    ///      allow it. The MAX_SIGNATURES check at init fires before the attester-count check.
+    function testRevert_init_quorumExceedsMaxSignatures() public {
+        AttestationVerifierV1 fresh = new AttestationVerifierV1();
+        LibImplementationUnbricker.unbrick(vm, address(fresh));
+        // Need attesterCount > MAX_SIGNATURES so the attester-count check doesn't fire first.
+        uint256 max = validator.MAX_SIGNATURES();
+        address[] memory atts = new address[](max + 5);
+        for (uint256 i = 0; i < max + 5; i++) atts[i] = address(uint160(0x9000 + i));
+        vm.expectRevert(
+            abi.encodeWithSelector(IAttestationVerifierV1.QuorumExceedsMaxSignatures.selector, max + 1, max)
+        );
+        fresh.initAttestationVerifierV1(address(dm), address(buffer), atts, max + 1, bytes4(0));
+    }
+
+    /// @dev Admin cannot set quorum > MAX_SIGNATURES via the post-init setter. Distinct code
+    ///      path from the init-time check above.
+    function testRevert_setDepositCommitteeAttestationQuorum_exceedsMaxSignatures() public {
+        // Grow attester count past MAX_SIGNATURES so the attester-count check doesn't fire first.
+        uint256 max = validator.MAX_SIGNATURES();
+        for (uint256 i = 3; i <= max; i++) {
+            vm.prank(admin);
+            validator.setDepositCommitteeAttester(address(uint160(0xA000 + i)), true);
+        }
+        vm.prank(admin);
+        vm.expectRevert(
+            abi.encodeWithSelector(IAttestationVerifierV1.QuorumExceedsMaxSignatures.selector, max + 1, max)
+        );
+        validator.setDepositCommitteeAttestationQuorum(max + 1);
+    }
+
+    // -----------------------------------------------------------------------
+    // G-3: _recover negative branches
+    // -----------------------------------------------------------------------
+
+    /// @dev A short signature (length != 65) and an out-of-range `v` after normalization must
+    ///      be silently skipped by `_recover` (return address(0) → the dedup loop continues)
+    ///      AND must not contribute to `validCount`. We raise quorum to 3 so that the 2 valid
+    ///      sigs alone are insufficient — if the 2 bad sigs were ever miscounted as valid
+    ///      (validCount=4), the call would succeed; with them properly skipped (validCount=2)
+    ///      it must revert with `InsufficientAttestations(2, 3)`.
+    function testRecover_silentlySkipsBadSigs() public {
+        // Raise quorum above the number of valid sigs we'll provide so the assertion is tight.
+        vm.prank(admin);
+        validator.setDepositCommitteeAttestationQuorum(3);
+
+        IDepositDataBuffer.DepositObject[] memory deposits = new IDepositDataBuffer.DepositObject[](1);
+        deposits[0] = _makeDeposit(0, 850);
+        bytes32 bufferId = keccak256(abi.encode(deposits));
+        buffer.submitDepositData(bufferId, deposits);
+        bytes32 rootHash = depositContract.get_deposit_root();
+
+        bytes[] memory sigs = new bytes[](4);
+        // sigs[0]: length != 65 → silent skip via the length check
+        sigs[0] = bytes("short");
+        // sigs[1]: 65 bytes with v=2 → normalised to 29, outside {27,28} → silent skip
+        bytes memory badV = new bytes(65);
+        badV[64] = bytes1(uint8(2));
+        sigs[1] = badV;
+        // sigs[2] / sigs[3]: two valid signatures — only 2 of 4 will count toward quorum
+        sigs[2] = _signAttestation(depositCommitteeAttesterPk1, bufferId, rootHash);
+        sigs[3] = _signAttestation(depositCommitteeAttesterPk2, bufferId, rootHash);
+
+        vm.prank(keeper);
+        vm.expectRevert(abi.encodeWithSelector(IAttestationVerifierV1.InsufficientAttestations.selector, 2, 3));
+        dm.depositToConsensusLayerWithAttestation(bufferId, rootHash, sigs);
+    }
+
+    /// @dev The `v < 27 ? v += 27` normalization branch must accept legacy v=0/1 encodings
+    ///      from EIP-2098-style tooling. Sign normally then rewrite v to (v-27), submit, and
+    ///      assert the deposit succeeds (i.e. signer was correctly recovered).
+    function testRecover_normalizesLegacyVZero() public {
+        IDepositDataBuffer.DepositObject[] memory deposits = new IDepositDataBuffer.DepositObject[](1);
+        deposits[0] = _makeDeposit(0, 851);
+        bytes32 bufferId = keccak256(abi.encode(deposits));
+        buffer.submitDepositData(bufferId, deposits);
+        bytes32 rootHash = depositContract.get_deposit_root();
+
+        bytes[] memory sigs = new bytes[](2);
+        sigs[0] = _signAttestation_legacyV(depositCommitteeAttesterPk1, bufferId, rootHash);
+        sigs[1] = _signAttestation_legacyV(depositCommitteeAttesterPk2, bufferId, rootHash);
+
+        vm.prank(keeper);
+        dm.depositToConsensusLayerWithAttestation(bufferId, rootHash, sigs);
+        assertEq(depositContract.deposit_count(), 1, "legacy v=0/1 signatures were normalised + accepted");
+    }
+
+    /// @dev Helper that mirrors `_signAttestation` but encodes `v` as `v - 27` (i.e. 0 or 1),
+    ///      exercising the `if (v < 27) v += 27;` branch in `_recover`.
+    function _signAttestation_legacyV(uint256 pk, bytes32 bufferId, bytes32 rootHash)
+        internal
+        view
+        returns (bytes memory)
+    {
+        bytes32 structHash = keccak256(abi.encode(ATTEST_TYPEHASH, bufferId, rootHash));
+        bytes32 domainSep =
+            keccak256(abi.encode(EIP712_DOMAIN_TYPEHASH, NAME_HASH, VERSION_HASH, block.chainid, address(dm)));
+        bytes32 digest = keccak256(abi.encodePacked("\x19\x01", domainSep, structHash));
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(pk, digest);
+        return abi.encodePacked(r, s, uint8(v - 27));
+    }
+
+    // -----------------------------------------------------------------------
+    // G-4: init idempotency
+    // -----------------------------------------------------------------------
+
+    /// @dev `initAttestationVerifierV1` is `init(0)`-gated; a second call must revert via the
+    ///      Initializable modifier (current stored version is 1, modifier expects 0).
+    function testRevert_init_cannotBeCalledTwice() public {
+        address[] memory atts = new address[](2);
+        atts[0] = makeAddr("a");
+        atts[1] = makeAddr("b");
+        vm.expectRevert(abi.encodeWithSelector(Initializable.InvalidInitialization.selector, 0, 1));
+        validator.initAttestationVerifierV1(address(dm), address(buffer), atts, 1, bytes4(0));
     }
 }
