@@ -1066,8 +1066,9 @@ contract RiverV1Tests is RiverV1TestBase {
         assert(river.balanceOfUnderlying(bob) == 1000 ether);
     }
 
-    // Reverts when the attested batch targets an inactive operator. The check fires in
-    // River._updateFundedETHFromBuffer before any _depositValidator call leaves the contract.
+    // Reverts when the attested batch targets an inactive operator. The check fires inside
+    // OperatorsRegistry.incrementFundedETH (LibFundingDeltas.build is pure aggregation and does
+    // not enforce operator-status invariants), before any _depositValidator call leaves River.
     function testDepositRevertsForInactiveOperator() public {
         vm.deal(bob, 1000 ether);
         _allow(bob);
@@ -1088,7 +1089,9 @@ contract RiverV1Tests is RiverV1TestBase {
     }
 
     // Reverts when the attested batch targets an operator whose requestedExits exceeds the
-    // recorded exited ETH (an unfulfilled exit request). Fires in _updateFundedETHFromBuffer.
+    // recorded exited ETH (an unfulfilled exit request). Fires inside
+    // OperatorsRegistry.incrementFundedETH (LibFundingDeltas.build is pure aggregation and does
+    // not enforce operator-status invariants).
     function testDepositRevertsForOperatorWithPendingExitRequests() public {
         vm.deal(bob, 1000 ether);
         _allow(bob);
