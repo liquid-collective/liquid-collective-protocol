@@ -953,17 +953,19 @@ contract WithdrawV1PectraTests is WithdrawV1TestBase {
         vm.deal(address(river), valueSent);
 
         vm.prank(address(river));
+        vm.expectRevert(abi.encodeWithSelector(IWithdrawV1.InvalidEmptyArray.selector));
         withdraw.consolidate{value: valueSent}(requests, maxFeePerConsolidation, excessFeeRecipient);
 
         assertEq(address(mockConsolidation).balance, 0, "no fee should be paid for empty srcPubkeys");
-        assertEq(excessFeeRecipient.balance, valueSent, "full value should be refunded");
+        assertEq(address(river).balance, valueSent, "full value should be refunded");
     }
 
-    /// @notice A ConsolidationRequest with empty srcPubkeys but invalid targetPubkey length reverts.
+    /// @notice A ConsolidationRequest with srcPubkeys but invalid targetPubkey length reverts.
     function testConsolidateWithEmptySrcPubkeysInvalidTargetReverts() public {
         bytes memory shortPubkey = hex"1234"; // 2 bytes, not 48
         IWithdrawV1.ConsolidationRequest[] memory requests = new IWithdrawV1.ConsolidationRequest[](1);
-        requests[0] = IWithdrawV1.ConsolidationRequest({srcPubkeys: new bytes[](0), targetPubkey: shortPubkey});
+        requests[0] = IWithdrawV1.ConsolidationRequest({srcPubkeys: new bytes[](1), targetPubkey: shortPubkey});
+        requests[0].srcPubkeys[0] = VALID_PUBKEY_48;
 
         vm.deal(address(river), 1 gwei);
         vm.prank(address(river));
