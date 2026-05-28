@@ -18,10 +18,9 @@ interface IDepositDataBuffer {
         uint256 amount;
         /// @dev SHA-256 deposit data root for use with the official deposit contract
         bytes32 depositDataRoot;
-        /// @dev Arbitrary metadata bytes32. River encodes the operator index as left-aligned ASCII:
-        ///      "operator:N" zero-padded on the right. E.g. "operator:42" →
-        ///      0x6f70657261746f723a3432000000000000000000000000000000000000000000
-        bytes32 metadata;
+        /// @dev Index of the node operator this deposit funds, as registered in the
+        ///      OperatorsRegistry. Range-checked by River against the live operator count.
+        uint256 operatorIdx;
     }
 
     // -----------------------------------------------------------------------

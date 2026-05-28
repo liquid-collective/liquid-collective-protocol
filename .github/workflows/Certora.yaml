@@ -2,6 +2,8 @@ name: Certora verification
 
 on:
   push:
+    branches:
+      - main
     paths:
       - "contracts/**"
       - "lib/**"
