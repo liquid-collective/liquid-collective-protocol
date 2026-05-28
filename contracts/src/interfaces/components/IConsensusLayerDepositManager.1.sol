@@ -1,11 +1,14 @@
 //SPDX-License-Identifier: BUSL-1.1
 pragma solidity 0.8.34;
 
-import "../IOperatorRegistry.1.sol";
+import "../IDepositDataBuffer.sol";
+import "../../libraries/BLS12_381.sol";
 
-/// @title Consensys Layer Deposit Manager Interface (v1)
+/// @title Consensus Layer Deposit Manager Interface (v1)
 /// @author Alluvial Finance Inc.
-/// @notice This interface exposes methods to handle the interactions with the official deposit contract
+/// @notice This interface exposes methods to handle the interactions with the official deposit contract.
+///         Attestation-quorum + BLS validation now lives in IAttestationVerifierV1; this interface is
+///         only the River-side execution surface.
 interface IConsensusLayerDepositManagerV1 {
     /// @notice The stored deposit contract address changed
     /// @param depositContract Address of the deposit contract
@@ -29,17 +32,13 @@ interface IConsensusLayerDepositManagerV1 {
     /// @param keeper The new keeper address
     event SetKeeper(address indexed keeper);
 
-    /// @notice The allocations array must not be empty
-    error EmptyAllocations();
+    /// @notice Emitted after the attestation-based deposit flow succeeds
+    event DepositsExecutedWithAttestation(
+        bytes32 indexed depositDataBufferId, bytes32 indexed depositRootHash, uint256 totalAmount
+    );
 
-    /// @notice Not enough funds to deposit one validator
-    error NotEnoughFunds();
-
-    /// @notice The length of the BLS Public key is invalid during deposit
-    error InconsistentPublicKey();
-
-    /// @notice The length of the BLS Signature is invalid during deposit
-    error InconsistentSignature();
+    /// @notice Emitted when the AttestationVerifier address is updated
+    event SetAttestationVerifier(address indexed attestationVerifier);
 
     /// @notice The deposit size is invalid
     error InvalidDepositSize(uint256 depositSize);
@@ -50,14 +49,8 @@ interface IConsensusLayerDepositManagerV1 {
     /// @notice An error occured during the deposit
     error ErrorOnDeposit();
 
-    /// @notice Invalid deposit root
-    error InvalidDepositRoot();
-
-    // @notice Not keeper
+    /// @notice Not keeper
     error OnlyKeeper();
-
-    /// @notice The amount of deposits requested exceeds the committed balance
-    error ValidatorDepositsExceedCommittedBalance();
 
     /// @notice Deposits are blocked while slashing containment mode is active
     error SlashingContainmentModeEnabled();
@@ -85,15 +78,18 @@ interface IConsensusLayerDepositManagerV1 {
     /// @return The keeper address
     function getKeeper() external view returns (address);
 
-    /// @notice Deposits current balance to the Consensus Layer based on explicit validator deposits allocations
-    /// @dev Security: the keeper is fully trusted to supply correct validator public keys, signatures, and
-    ///      operator assignments. The contract enforces deposit amount, balance limits, operator ordering, and
-    ///      withdrawal credentials, but does not validate BLS key correctness or that keys belong to the claimed
-    ///      operator. The keeper is also trusted to make deposits of the correct sizes.
-    /// @param _allocations The allocations specifying the validator deposits to make
-    /// @param _depositRoot The root of the deposit tree
-    function depositToConsensusLayerWithDepositRoot(
-        IOperatorsRegistryV1.ValidatorDeposit[] calldata _allocations,
-        bytes32 _depositRoot
+    /// @notice Returns the AttestationVerifier address River delegates BLS+quorum verification to
+    function getAttestationVerifier() external view returns (address);
+
+    /// @notice Deposit validators using pre-committed buffer data validated by a deposit-committee attester quorum.
+    /// @param depositDataBufferId  Batch identifier in the DepositDataBuffer
+    /// @param depositRootHash      Current deposit contract root hash co-signed by deposit-committee attesters
+    /// @param signatures           EIP-712 signatures from deposit-committee attesters
+    /// @param depositYs            Y-coordinates for BLS decompression, one per deposit
+    function depositToConsensusLayerWithAttestation(
+        bytes32 depositDataBufferId,
+        bytes32 depositRootHash,
+        bytes[] calldata signatures,
+        BLS12_381.DepositY[] calldata depositYs
     ) external;
 }
