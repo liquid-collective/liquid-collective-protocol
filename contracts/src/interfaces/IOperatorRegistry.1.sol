@@ -27,6 +27,16 @@ interface IOperatorsRegistryV1 {
         uint256 ethAmount;
     }
 
+    /// @notice Structure representing a per-operator funded ETH update
+    /// @param operatorIndex The index of the operator receiving the funded ETH
+    /// @param fundedETH The amount of ETH(wei) being added to the operator's funded total
+    /// @param newPublicKeys The validator public keys funded for this operator in this batch
+    struct OperatorFundingDelta {
+        uint256 operatorIndex;
+        uint256 fundedETH;
+        bytes[] newPublicKeys;
+    }
+
     /// @notice A new operator has been added to the registry
     /// @param index The operator index
     /// @param name The operator display name
@@ -160,6 +170,14 @@ interface IOperatorsRegistryV1 {
     /// @param funded The funded ETH(wei) amount
     /// @param requestedExits The requested ETH(wei) amount
     error InvalidOperatorState(uint256 index, uint256 funded, uint256 requestedExits);
+    /// @notice Thrown when a delta references an operator index outside the registered range
+    /// @param operatorIndex The offending operator index
+    /// @param operatorCount The current number of registered operators
+    error InvalidOperatorIndex(uint256 operatorIndex, uint256 operatorCount);
+
+    /// @notice Thrown when deltas are not provided in strictly ascending operator-index order
+    /// @param operatorIndex The offending operator index (equal to or below the previous index)
+    error OperatorIndicesUnsortedOrDuplicate(uint256 operatorIndex);
 
     /// @notice Initializes the operators registry
     /// @param _admin Admin in charge of managing operators
@@ -208,10 +226,15 @@ interface IOperatorsRegistryV1 {
     /// @return The list of active operators and their details
     function listActiveOperators() external view returns (OperatorsV3.Operator[] memory);
 
-    /// @notice Updates the funded ETH for each node operator in the Operators Registry
-    /// @param _fundedETH The array of funded ETH(wei) amounts per operator
-    /// @param _publicKeys The array of public keys
-    function incrementFundedETH(uint256[] calldata _fundedETH, bytes[][] calldata _publicKeys) external;
+    /// @notice Updates the funded ETH for the node operators referenced in the provided deltas
+    /// @dev Deltas must be sorted by operatorIndex in strictly ascending order with no duplicates
+    /// @dev Reverts with InvalidEmptyArray when the deltas array is empty
+    /// @dev Reverts with InvalidOperatorIndex when a delta references an operator outside the registered range
+    /// @dev Reverts with OperatorIndicesUnsortedOrDuplicate when deltas are not strictly ascending
+    /// @dev Reverts with InactiveOperator when a referenced operator is inactive
+    /// @dev Reverts with OperatorIgnoredExitRequests when a referenced operator has unfulfilled exit requests
+    /// @param _deltas The per-operator funded ETH updates
+    function incrementFundedETH(OperatorFundingDelta[] calldata _deltas) external;
 
     /// @notice Updates the active CL ETH for each node operator in the Operators Registry
     /// @dev We assume that the oracle would report the correct active CL ETH amounts for each operator.
