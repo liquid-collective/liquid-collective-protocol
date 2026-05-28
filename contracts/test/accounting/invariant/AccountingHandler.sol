@@ -103,9 +103,11 @@ contract AccountingHandler is StdUtils {
     /// @param amountSeed Seed used to derive the ETH amount to exit.
     function requestExit(uint256 opSeed, uint256 amountSeed) external {
         // Step 1: Select operator and guard — skip if no active ETH is available to exit.
+        //         `bound` requires min <= max, so we must also skip when the remaining active
+        //         ETH is non-zero but below the 1 ether minimum we want to exit for.
         uint256 opIdx = (opSeed % 2 == 0) ? _opOne : _opTwo;
         uint256 available = _test.handler_activeAvailableETH(opIdx);
-        if (available == 0) return;
+        if (available < 1 ether) return;
         // Step 2: Bound the exit amount to the available active ETH.
         uint256 ethAmount = bound(amountSeed, 1 ether, available);
         // Step 3: Delegate the exit request to the test contract.
@@ -121,14 +123,22 @@ contract AccountingHandler is StdUtils {
     /// @param penaltySeed Seed used to derive the exit penalty, bounded to [0, 2 ETH].
     function completeExit(uint256 opSeed, uint256 amountSeed, uint256 penaltySeed) external {
         // Step 1: Select operator and guard — skip if no ETH is currently queued for exit.
+        //         `bound` requires min <= max, so we must also skip when the queued amount is
+        //         non-zero but below the 1 ether minimum we want to complete.
         uint256 opIdx = (opSeed % 2 == 0) ? _opOne : _opTwo;
         uint256 exiting = _test.handler_exitingETH(opIdx);
-        if (exiting == 0) return;
+        if (exiting < 1 ether) return;
         // Step 2: Bound the amount and penalty, then delegate.
         uint256 ethAmount = bound(amountSeed, 1 ether, exiting);
         uint256 penalty = bound(penaltySeed, 0, 2 ether);
         // Step 3: Delegate the exit completion to the test contract.
         _test.handler_completeExit(opIdx, ethAmount, penalty);
+        // A penalised exit returns less ETH than deposited, reducing total pool ETH exactly like
+        // a slash. Signal this so the next oracle report uses slashing-containment mode and the
+        // River contract accepts the share-price decrease.
+        if (penalty > 0) {
+            ghost_slashOccurred = true;
+        }
         calls_completeExit++;
     }
 
