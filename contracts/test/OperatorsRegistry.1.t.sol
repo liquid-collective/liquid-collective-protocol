@@ -49,10 +49,8 @@ contract OperatorsRegistryStrictRiverV1 is OperatorsRegistryV1 {
     }
 }
 
-/// @dev Extension that exposes internal V1/V2 storage writers and onlyRiver override for coverage tests.
+/// @dev Extension that exposes internal V1/V2 storage writers
 contract OperatorsRegistryWithMigrationHelpers is OperatorsRegistryV1 {
-    // function _checkRiver() internal override {}
-
     function sudoPushV2Operator(OperatorsV2.Operator memory op) external {
         OperatorsV2.push(op);
     }
