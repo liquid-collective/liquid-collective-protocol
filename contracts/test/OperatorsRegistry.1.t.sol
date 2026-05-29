@@ -54,12 +54,8 @@ contract OperatorsRegistryStrictRiverV1 is OperatorsRegistryV1 {
     }
 }
 
-/// @dev Extension that exposes internal V1/V2 storage writers and onlyRiver override for coverage tests.
+/// @dev Extension that exposes internal V1/V2 storage writers
 contract OperatorsRegistryWithMigrationHelpers is OperatorsRegistryV1 {
-    modifier onlyRiver() override {
-        _;
-    }
-
     function sudoPushV2Operator(OperatorsV2.Operator memory op) external {
         OperatorsV2.push(op);
     }
@@ -1659,6 +1655,7 @@ contract OperatorsRegistryV1CoverageTests is OperatorsRegistryV1TestBase, Operat
     function testIncrementFundedETHRevertsOnEmptyArray() public {
         reg.initOperatorsRegistryV1(admin, river);
         IOperatorsRegistryV1.OperatorFundingDelta[] memory empty = new IOperatorsRegistryV1.OperatorFundingDelta[](0);
+        vm.prank(river);
         vm.expectRevert(abi.encodeWithSignature("InvalidEmptyArray()"));
         reg.incrementFundedETH(empty);
     }
@@ -1669,6 +1666,7 @@ contract OperatorsRegistryV1CoverageTests is OperatorsRegistryV1TestBase, Operat
         vm.prank(admin);
         reg.addOperator("Op0", makeAddr("op0"));
         reg.sudoSetFundedV3(0, 32 ether);
+        vm.prank(river);
         reg.demandETHExits(32 ether, 64 ether);
         vm.prank(makeAddr("notKeeper"));
         vm.expectRevert(abi.encodeWithSignature("OnlyKeeper()"));
@@ -1688,6 +1686,7 @@ contract OperatorsRegistryV1CoverageTests is OperatorsRegistryV1TestBase, Operat
     /// Asserts that requestETHExits reverts with InvalidEmptyArray when allocations array is empty.
     function testrequestETHExitsRevertsOnEmptyAllocations() public {
         reg.initOperatorsRegistryV1(admin, river);
+        vm.prank(river);
         reg.demandETHExits(32 ether, 64 ether);
         IOperatorsRegistryV1.ExitETHAllocation[] memory empty = new IOperatorsRegistryV1.ExitETHAllocation[](0);
         vm.prank(keeper);
@@ -1700,6 +1699,7 @@ contract OperatorsRegistryV1CoverageTests is OperatorsRegistryV1TestBase, Operat
         reg.initOperatorsRegistryV1(admin, river);
         vm.prank(admin);
         reg.addOperator("Op0", makeAddr("op0"));
+        vm.prank(river);
         reg.demandETHExits(64 ether, 128 ether);
         IOperatorsRegistryV1.ExitETHAllocation[] memory allocs = new IOperatorsRegistryV1.ExitETHAllocation[](1);
         allocs[0] = IOperatorsRegistryV1.ExitETHAllocation({operatorIndex: 0, ethAmount: 0});
@@ -1719,6 +1719,7 @@ contract OperatorsRegistryV1CoverageTests is OperatorsRegistryV1TestBase, Operat
         reg.sudoSetFundedV3(1, 10 * 32 ether);
         reg.sudoSetActiveCLETH(0, 10 * 32 ether);
         reg.sudoSetActiveCLETH(1, 10 * 32 ether);
+        vm.prank(river);
         reg.demandETHExits(64 ether, 256 ether);
         IOperatorsRegistryV1.ExitETHAllocation[] memory allocs = new IOperatorsRegistryV1.ExitETHAllocation[](2);
         allocs[0] = IOperatorsRegistryV1.ExitETHAllocation({operatorIndex: 1, ethAmount: 32 ether});
@@ -1736,6 +1737,7 @@ contract OperatorsRegistryV1CoverageTests is OperatorsRegistryV1TestBase, Operat
         reg.setOperatorStatus(0, false);
         vm.stopPrank();
         reg.sudoSetFundedV3(0, 10 * 32 ether);
+        vm.prank(river);
         reg.demandETHExits(32 ether, 64 ether);
         vm.prank(keeper);
         vm.expectRevert(abi.encodeWithSignature("InactiveOperator(uint256)", 0));
@@ -1749,6 +1751,7 @@ contract OperatorsRegistryV1CoverageTests is OperatorsRegistryV1TestBase, Operat
         reg.addOperator("Op0", makeAddr("op0"));
         reg.sudoSetFundedV3(0, 1 * 32 ether);
         reg.sudoSetActiveCLETH(0, 1 * 32 ether);
+        vm.prank(river);
         reg.demandETHExits(4 * 32 ether, 128 ether);
         vm.prank(keeper);
         vm.expectRevert(
@@ -1775,10 +1778,12 @@ contract OperatorsRegistryV1CoverageTests is OperatorsRegistryV1TestBase, Operat
         first[0] = 2 * 32 ether;
         first[1] = 32 ether;
         first[2] = 32 ether;
+        vm.prank(river);
         reg.reportExitedETH(first, 10 * 32 ether);
         uint256[] memory shorter = new uint256[](2);
         shorter[0] = 2 * 32 ether;
         shorter[1] = 32 ether;
+        vm.prank(river);
         vm.expectRevert(abi.encodeWithSignature("ExitedETHArrayShrinking()"));
         reg.reportExitedETH(shorter, 10 * 32 ether);
     }
@@ -1794,6 +1799,7 @@ contract OperatorsRegistryV1CoverageTests is OperatorsRegistryV1TestBase, Operat
         uint256[] memory exited = new uint256[](2);
         exited[0] = 3 * 32 ether;
         exited[1] = 3 * 32 ether;
+        vm.prank(river);
         vm.expectRevert(abi.encodeWithSignature("ExitedETHExceedsDepositedETH()"));
         reg.reportExitedETH(exited, 2 * 32 ether);
     }
