@@ -4,6 +4,7 @@ pragma solidity 0.8.34;
 /// @title Consolidation Coverage Fund Interface (v1)
 /// @author Alluvial Finance Inc.
 /// @notice This interface exposes methods to receive donations for the consolidation coverage fund and pull the funds into river
+/// @notice An address only is able to donate if they have the DONATE_CONSOLIDATION_MASK mask set in the allowlist
 interface IConsolidationCoverageFundV1 {
     /// @notice The storage river address has changed
     /// @param river The new river address

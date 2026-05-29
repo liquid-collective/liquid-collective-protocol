@@ -15,6 +15,11 @@ import "../src/state/operatorsRegistry/CurrentValidatorExitsDemand.sol";
 import "../src/state/operatorsRegistry/TotalValidatorExitsRequested.sol";
 
 contract OperatorsRegistryInitializableV1 is OperatorsRegistryV1 {
+    /// @dev Override to allow tests to call functions without pranking as river
+    modifier onlyRiver() override {
+        _;
+    }
+
     function sudoSetFunded(uint256 _index, uint256 _funded) external {
         OperatorsV3.Operator storage operator = OperatorsV3.get(_index);
         operator.funded = _funded;
@@ -37,7 +42,7 @@ contract OperatorsRegistryInitializableV1 is OperatorsRegistryV1 {
     }
 }
 
-/// @dev Same as OperatorsRegistryInitializableV1 ; use for tests that assert Unauthorized
+/// @dev Same as OperatorsRegistryInitializableV1 but does NOT override onlyRiver; use for tests that assert Unauthorized
 contract OperatorsRegistryStrictRiverV1 is OperatorsRegistryV1 {
     function sudoSetFunded(uint256 _index, uint256 _funded) external {
         OperatorsV3.Operator storage operator = OperatorsV3.get(_index);
@@ -1455,16 +1460,99 @@ contract OperatorsRegistryV1FlattenAndAllocationTests is OperatorAllocationTestB
     function testIncrementFundedRevertsOperatorIgnoredExitRequests() external {
         _setupOperators(1, 10);
 
-        // Give the operator some funded validators then request exits for all of them
-        OperatorsRegistryInitializableV1(address(operatorsRegistry)).sudoSetFunded(0, 5);
-        OperatorsRegistryInitializableV1(address(operatorsRegistry)).sudoExitRequests(0, 5);
+        // Give the operator some funded ETH then request exits for all of it.
+        // Both fields are wei-denominated under the Pectra accounting model.
+        OperatorsRegistryInitializableV1(address(operatorsRegistry)).sudoSetFunded(0, 5 * 32 ether);
+        OperatorsRegistryInitializableV1(address(operatorsRegistry)).sudoExitRequests(0, 5 * 32 ether);
         // stoppedCount remains 0, so operator has not fulfilled any exits
 
-        uint256[] memory fundedArr = new uint256[](1);
-        fundedArr[0] = 32 ether;
-        vm.prank(river);
+        IOperatorsRegistryV1.OperatorFundingDelta[] memory deltas = new IOperatorsRegistryV1.OperatorFundingDelta[](1);
+        deltas[0].operatorIndex = 0;
+        deltas[0].fundedETH = 32 ether;
+        deltas[0].newPublicKeys = new bytes[](1);
         vm.expectRevert(abi.encodeWithSignature("OperatorIgnoredExitRequests(uint256)", 0));
-        operatorsRegistry.incrementFundedETH(fundedArr, new bytes[][](1));
+        operatorsRegistry.incrementFundedETH(deltas);
+    }
+
+    /// @notice Asserts incrementFundedETH credits exactly the operators referenced in a sparse
+    ///         delta array, leaves untouched operators unchanged, and emits FundedValidatorKeys
+    ///         once per delta in ascending operator-index order.
+    function testIncrementFundedSparseMultiOperator() external {
+        _setupOperators(10, 10);
+
+        IOperatorsRegistryV1.OperatorFundingDelta[] memory deltas = new IOperatorsRegistryV1.OperatorFundingDelta[](3);
+        deltas[0].operatorIndex = 0;
+        deltas[0].fundedETH = 32 ether;
+        deltas[0].newPublicKeys = new bytes[](1);
+        deltas[0].newPublicKeys[0] = bytes("op0-key");
+        deltas[1].operatorIndex = 2;
+        deltas[1].fundedETH = 64 ether;
+        deltas[1].newPublicKeys = new bytes[](2);
+        deltas[1].newPublicKeys[0] = bytes("op2-key-a");
+        deltas[1].newPublicKeys[1] = bytes("op2-key-b");
+        deltas[2].operatorIndex = 5;
+        deltas[2].fundedETH = 96 ether;
+        deltas[2].newPublicKeys = new bytes[](1);
+        deltas[2].newPublicKeys[0] = bytes("op5-key");
+
+        vm.expectEmit(true, false, false, true);
+        emit IOperatorsRegistryV1.FundedValidatorKeys(0, deltas[0].newPublicKeys, false);
+        vm.expectEmit(true, false, false, true);
+        emit IOperatorsRegistryV1.FundedValidatorKeys(2, deltas[1].newPublicKeys, false);
+        vm.expectEmit(true, false, false, true);
+        emit IOperatorsRegistryV1.FundedValidatorKeys(5, deltas[2].newPublicKeys, false);
+
+        operatorsRegistry.incrementFundedETH(deltas);
+
+        assertEq(operatorsRegistry.getOperator(0).funded, 32 ether, "op0 funded");
+        assertEq(operatorsRegistry.getOperator(1).funded, 0, "op1 untouched");
+        assertEq(operatorsRegistry.getOperator(2).funded, 64 ether, "op2 funded");
+        assertEq(operatorsRegistry.getOperator(3).funded, 0, "op3 untouched");
+        assertEq(operatorsRegistry.getOperator(4).funded, 0, "op4 untouched");
+        assertEq(operatorsRegistry.getOperator(5).funded, 96 ether, "op5 funded");
+        assertEq(operatorsRegistry.getOperator(9).funded, 0, "op9 untouched");
+    }
+
+    /// @notice Asserts incrementFundedETH reverts InvalidOperatorIndex when a delta references an
+    ///         operator beyond the registered range.
+    function testIncrementFundedRevertsInvalidOperatorIndex() external {
+        _setupOperators(3, 10);
+
+        IOperatorsRegistryV1.OperatorFundingDelta[] memory deltas = new IOperatorsRegistryV1.OperatorFundingDelta[](1);
+        deltas[0].operatorIndex = 3; // out of range: operatorCount = 3
+        deltas[0].fundedETH = 32 ether;
+        deltas[0].newPublicKeys = new bytes[](1);
+
+        vm.expectRevert(abi.encodeWithSelector(IOperatorsRegistryV1.InvalidOperatorIndex.selector, 3, 3));
+        operatorsRegistry.incrementFundedETH(deltas);
+    }
+
+    /// @notice Asserts incrementFundedETH reverts when deltas are not strictly ascending,
+    ///         covering both the duplicate and descending cases.
+    function testIncrementFundedRevertsUnsortedOrDuplicate() external {
+        _setupOperators(5, 10);
+
+        // Duplicate index
+        IOperatorsRegistryV1.OperatorFundingDelta[] memory dup = new IOperatorsRegistryV1.OperatorFundingDelta[](2);
+        dup[0].operatorIndex = 2;
+        dup[0].fundedETH = 32 ether;
+        dup[0].newPublicKeys = new bytes[](1);
+        dup[1].operatorIndex = 2;
+        dup[1].fundedETH = 32 ether;
+        dup[1].newPublicKeys = new bytes[](1);
+        vm.expectRevert(abi.encodeWithSelector(IOperatorsRegistryV1.OperatorIndicesUnsortedOrDuplicate.selector, 2));
+        operatorsRegistry.incrementFundedETH(dup);
+
+        // Descending order
+        IOperatorsRegistryV1.OperatorFundingDelta[] memory desc = new IOperatorsRegistryV1.OperatorFundingDelta[](2);
+        desc[0].operatorIndex = 3;
+        desc[0].fundedETH = 32 ether;
+        desc[0].newPublicKeys = new bytes[](1);
+        desc[1].operatorIndex = 1;
+        desc[1].fundedETH = 32 ether;
+        desc[1].newPublicKeys = new bytes[](1);
+        vm.expectRevert(abi.encodeWithSelector(IOperatorsRegistryV1.OperatorIndicesUnsortedOrDuplicate.selector, 1));
+        operatorsRegistry.incrementFundedETH(desc);
     }
 }
 
@@ -1520,10 +1608,10 @@ contract OperatorsRegistryV1CoverageTests is OperatorsRegistryV1TestBase, Operat
         OperatorsRegistryStrictRiverV1 strictReg = new OperatorsRegistryStrictRiverV1();
         LibImplementationUnbricker.unbrick(vm, address(strictReg));
         strictReg.initOperatorsRegistryV1(admin, river);
-        uint256[] memory empty = new uint256[](1);
+        IOperatorsRegistryV1.OperatorFundingDelta[] memory deltas = new IOperatorsRegistryV1.OperatorFundingDelta[](1);
         vm.prank(makeAddr("random"));
         vm.expectRevert(abi.encodeWithSignature("Unauthorized(address)", makeAddr("random")));
-        strictReg.incrementFundedETH(empty, new bytes[][](1));
+        strictReg.incrementFundedETH(deltas);
     }
 
     /// Exercises V2 operator helpers (getAll, getAllActive, setKeys, stopped validators) after V1->V2 migration.
@@ -1566,10 +1654,10 @@ contract OperatorsRegistryV1CoverageTests is OperatorsRegistryV1TestBase, Operat
     /// Asserts that incrementFundedETH reverts with InvalidEmptyArray when given an empty array.
     function testIncrementFundedETHRevertsOnEmptyArray() public {
         reg.initOperatorsRegistryV1(admin, river);
-        uint256[] memory empty = new uint256[](0);
+        IOperatorsRegistryV1.OperatorFundingDelta[] memory empty = new IOperatorsRegistryV1.OperatorFundingDelta[](0);
         vm.prank(river);
         vm.expectRevert(abi.encodeWithSignature("InvalidEmptyArray()"));
-        reg.incrementFundedETH(empty, new bytes[][](0));
+        reg.incrementFundedETH(empty);
     }
 
     /// Asserts that requestETHExits reverts with OnlyKeeper when caller is not the keeper.

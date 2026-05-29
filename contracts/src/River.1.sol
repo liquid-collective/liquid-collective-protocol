@@ -2,12 +2,12 @@
 pragma solidity 0.8.34;
 
 import "./interfaces/IAllowlist.1.sol";
+import "./interfaces/IAttestationVerifier.1.sol";
 import "./interfaces/IOperatorRegistry.1.sol";
 import "./interfaces/IRiver.1.sol";
 import "./interfaces/IWithdraw.1.sol";
 import "./interfaces/IELFeeRecipient.1.sol";
 import "./interfaces/ICoverageFund.1.sol";
-import "./interfaces/IConsolidationCoverageFund.1.sol";
 import "./interfaces/IProtocolVersion.sol";
 
 import "./components/ConsensusLayerDepositManager.1.sol";
@@ -18,8 +18,12 @@ import "./Initializable.sol";
 import "./Administrable.sol";
 
 import "./libraries/LibAllowlistMasks.sol";
+import "./libraries/LibErrors.sol";
+import "./libraries/LibFundingDeltas.sol";
+import "./interfaces/IDepositDataBuffer.sol";
 
 import "./state/river/AllowlistAddress.sol";
+import "./state/river/AttestationVerifierAddress.sol";
 import "./state/river/RedeemManagerAddress.sol";
 import "./state/river/OperatorsRegistryAddress.sol";
 import "./state/river/CollectorAddress.sol";
@@ -47,94 +51,34 @@ contract RiverV1 is
     IRiverV1
 {
     /// @inheritdoc IRiverV1
-    function initRiverV1(
-        address _depositContractAddress,
-        address _elFeeRecipientAddress,
+    function initRiverV1_3(
         bytes32 _withdrawalCredentials,
-        address _oracleAddress,
-        address _systemAdministratorAddress,
-        address _allowlistAddress,
-        address _operatorRegistryAddress,
-        address _collectorAddress,
-        uint256 _globalFee
-    ) external init(0) {
-        _setAdmin(_systemAdministratorAddress);
+        address _consolidationCoverageFund,
+        address _attestationVerifier
+    ) external init(3) onlyAdmin {
+        if (_withdrawalCredentials == bytes32(0)) {
+            revert InvalidWithdrawalCredentials();
+        }
+        if (_attestationVerifier == address(0) || _attestationVerifier.code.length == 0) {
+            revert InvalidAttestationVerifier();
+        }
+        if (IAttestationVerifierV1(_attestationVerifier).getRiver() != address(this)) {
+            revert InvalidAttestationVerifier();
+        }
 
-        CollectorAddress.set(_collectorAddress);
-        emit SetCollector(_collectorAddress);
-
-        GlobalFee.set(_globalFee);
-        emit SetGlobalFee(_globalFee);
-
-        ELFeeRecipientAddress.set(_elFeeRecipientAddress);
-        emit SetELFeeRecipient(_elFeeRecipientAddress);
-
-        AllowlistAddress.set(_allowlistAddress);
-        emit SetAllowlist(_allowlistAddress);
-
-        OperatorsRegistryAddress.set(_operatorRegistryAddress);
-        emit SetOperatorsRegistry(_operatorRegistryAddress);
+        // Re-emit deposit-contract address (carry-over from prior initConsensusLayerDepositManagerV1_2 call)
+        address depositContract = DepositContractAddress.get();
+        DepositContractAddress.set(depositContract);
+        emit SetDepositContractAddress(depositContract);
 
         ConsensusLayerDepositManagerV1.initConsensusLayerDepositManagerV1(
-            _depositContractAddress, _withdrawalCredentials
+            DepositContractAddress.get(), _withdrawalCredentials
         );
 
-        OracleManagerV1.initOracleManagerV1(_oracleAddress);
-    }
+        AttestationVerifierAddress.set(_attestationVerifier);
+        emit SetAttestationVerifier(_attestationVerifier);
 
-    /// @inheritdoc IRiverV1
-    function initRiverV1_1(
-        address _redeemManager,
-        uint64 _epochsPerFrame,
-        uint64 _slotsPerEpoch,
-        uint64 _secondsPerSlot,
-        uint64 _genesisTime,
-        uint64 _epochsToAssumedFinality,
-        uint256 _annualAprUpperBound,
-        uint256 _relativeLowerBound,
-        uint128 _minDailyNetCommittableAmount_,
-        uint128 _maxDailyRelativeCommittableAmount_
-    ) external init(1) {
-        RedeemManagerAddress.set(_redeemManager);
-        emit SetRedeemManager(_redeemManager);
-
-        _setDailyCommittableLimits(
-            DailyCommittableLimits.DailyCommittableLimitsStruct({
-                minDailyNetCommittableAmount: _minDailyNetCommittableAmount_,
-                maxDailyRelativeCommittableAmount: _maxDailyRelativeCommittableAmount_
-            })
-        );
-
-        initOracleManagerV1_1(
-            _epochsPerFrame,
-            _slotsPerEpoch,
-            _secondsPerSlot,
-            _genesisTime,
-            _epochsToAssumedFinality,
-            _annualAprUpperBound,
-            _relativeLowerBound
-        );
-
-        _approve(address(this), _redeemManager, type(uint256).max);
-    }
-
-    function initRiverV1_2() external init(2) {
-        // force committed balance to a multiple of 32 ETH and
-        // move extra funds back to the deposit buffer
-        uint256 dustToUncommit = CommittedBalance.get() % DEPOSIT_SIZE;
-        unchecked {
-            _setCommittedBalance(CommittedBalance.get() - dustToUncommit);
-            _setBalanceToDeposit(BalanceToDeposit.get() + dustToUncommit);
-        }
-    }
-
-    /// @inheritdoc IRiverV1
-    function initRiverV1_3(bytes32 withdrawalCredentails, address _consolidationCoverageFund)
-        external
-        init(3)
-        onlyAdmin
-    {
-        initConsensusLayerDepositManagerV2(withdrawalCredentails);
+        // accounting changes to move from 0x01 to 0x02 accounting
 
         ConsolidationCoverageFundAddress.set(_consolidationCoverageFund);
         emit SetConsolidationCoverageFund(_consolidationCoverageFund);
@@ -145,6 +89,10 @@ contract RiverV1 is
         TotalDepositedETH.set(depositedValidatorCount * DEPOSIT_SIZE);
         if (clValidatorCount < depositedValidatorCount) {
             InFlightDeposit.set((depositedValidatorCount - clValidatorCount) * DEPOSIT_SIZE);
+        } else {
+            // explicit zero so a re-run on dirty storage cannot leak a stale value into
+            // the totalDepositedActivatedETH calculation below
+            InFlightDeposit.set(0);
         }
 
         IOracleManagerV1.StoredConsensusLayerReport memory storedReport;
@@ -156,7 +104,6 @@ contract RiverV1 is
         storedReport.validatorsCount = clValidatorCount;
         storedReport.rebalanceDepositToRedeemMode = lastReport.rebalanceDepositToRedeemMode;
         storedReport.slashingContainmentMode = lastReport.slashingContainmentMode;
-        // we subtract the in flight ETH to get the total deposited activated ETH
         storedReport.totalDepositedActivatedETH = depositedValidatorCount * DEPOSIT_SIZE - InFlightDeposit.get();
         LastConsensusLayerReport.set(storedReport);
     }
@@ -374,28 +321,19 @@ contract RiverV1 is
     }
 
     /// @notice Overridden handler to increment the funded ETH for the operators
-    /// @param _fundedETH The array of funded ETH amounts (length = highestOperatorIndex + 1)
-    /// @param _publicKeys The array of public keys
-    function _incrementFundedETH(uint256[] memory _fundedETH, bytes[][] memory _publicKeys) internal override {
-        IOperatorsRegistryV1 registry = IOperatorsRegistryV1(OperatorsRegistryAddress.get());
-        uint256 operatorCount = registry.getOperatorCount();
-        if (_fundedETH.length < operatorCount) {
-            uint256[] memory paddedFundedETH = new uint256[](operatorCount);
-            bytes[][] memory paddedPublicKeys = new bytes[][](operatorCount);
-            for (uint256 i = 0; i < _fundedETH.length; ++i) {
-                paddedFundedETH[i] = _fundedETH[i];
-                uint256 pubKeyLength = _publicKeys[i].length;
-                if (pubKeyLength > 0) {
-                    paddedPublicKeys[i] = new bytes[](pubKeyLength);
-                    paddedPublicKeys[i] = _publicKeys[i];
-                } else {
-                    paddedPublicKeys[i] = new bytes[](0);
-                }
-            }
-            registry.incrementFundedETH(paddedFundedETH, paddedPublicKeys);
-        } else {
-            registry.incrementFundedETH(_fundedETH, _publicKeys);
-        }
+    /// @param _deltas The per-operator funding deltas (sorted by operatorIndex)
+    function _incrementFundedETH(IOperatorsRegistryV1.OperatorFundingDelta[] memory _deltas) internal override {
+        IOperatorsRegistryV1(OperatorsRegistryAddress.get()).incrementFundedETH(_deltas);
+    }
+
+    /// @notice Overridden handler to update operator funded ETH accounting for attestation-based deposits.
+    ///         Delegates bucketing/aggregation to LibFundingDeltas so the production path and the
+    ///         attestation test harness share the same code, then forwards to _incrementFundedETH.
+    /// @param deposits Array of deposit objects from the DepositDataBuffer
+    function _updateFundedETHFromBuffer(IDepositDataBuffer.DepositObject[] memory deposits) internal override {
+        if (deposits.length == 0) return;
+        uint256 operatorCount = IOperatorsRegistryV1(OperatorsRegistryAddress.get()).getOperatorCount();
+        _incrementFundedETH(LibFundingDeltas.build(deposits, operatorCount));
     }
 
     /// @notice Overridden handler called whenever a token transfer is triggered
@@ -443,37 +381,38 @@ contract RiverV1 is
 
     /// @notice Overridden handler to pull funds from the coverage fund to River and return the delta in the balance
     /// @param _max The maximum amount to pull from the coverage fund
-    /// @return The amount pulled from the coverage fund
-    function _pullCoverageFunds(uint256 _max) internal override returns (uint256) {
-        address coverageFund = CoverageFundAddress.get();
-        if (coverageFund == address(0)) {
-            return 0;
-        }
-        uint256 initialBalance = address(this).balance;
-        ICoverageFundV1(payable(coverageFund)).pullCoverageFunds(_max);
-        uint256 collectedCoverageFunds = address(this).balance - initialBalance;
-        if (collectedCoverageFunds > 0) {
-            _setBalanceToDeposit(BalanceToDeposit.get() + collectedCoverageFunds);
-        }
+    /// @return collectedCoverageFunds The amount pulled from the coverage fund
+    function _pullCoverageFunds(uint256 _max) internal override returns (uint256 collectedCoverageFunds) {
+        collectedCoverageFunds = _pullFundsFromCoverageFund(CoverageFundAddress.get(), _max);
         emit PulledCoverageFunds(collectedCoverageFunds);
-        return collectedCoverageFunds;
     }
 
     /// @notice Overridden handler to pull funds from the consolidation coverage fund to River and return the delta in the balance
     /// @param _max The maximum amount to pull from the consolidation coverage fund
-    /// @return The amount pulled from the consolidation coverage fund
-    function _pullConsolidationCoverageFunds(uint256 _max) internal override returns (uint256) {
-        address consolidationCoverageFund = ConsolidationCoverageFundAddress.get();
-        if (consolidationCoverageFund == address(0)) {
+    /// @return collectedConsolidationCoverageFunds The amount pulled from the consolidation coverage fund
+    function _pullConsolidationCoverageFunds(uint256 _max)
+        internal
+        override
+        returns (uint256 collectedConsolidationCoverageFunds)
+    {
+        collectedConsolidationCoverageFunds = _pullFundsFromCoverageFund(ConsolidationCoverageFundAddress.get(), _max);
+        emit PulledConsolidationCoverageFunds(collectedConsolidationCoverageFunds);
+    }
+
+    /// @notice Internal utility to pull funds from a coverage fund to River and return the delta in the balance
+    /// @param _coverageFund The address of the coverage fund
+    /// @param _max The maximum amount to pull from the coverage fund
+    /// @return The amount pulled from the coverage fund
+    function _pullFundsFromCoverageFund(address _coverageFund, uint256 _max) internal returns (uint256) {
+        if (_coverageFund == address(0)) {
             return 0;
         }
         uint256 initialBalance = address(this).balance;
-        IConsolidationCoverageFundV1(payable(consolidationCoverageFund)).pullCoverageFunds(_max);
+        ICoverageFundV1(payable(_coverageFund)).pullCoverageFunds(_max);
         uint256 collected = address(this).balance - initialBalance;
         if (collected > 0) {
             _setBalanceToDeposit(BalanceToDeposit.get() + collected);
         }
-        emit PulledConsolidationCoverageFunds(collected);
         return collected;
     }
 
