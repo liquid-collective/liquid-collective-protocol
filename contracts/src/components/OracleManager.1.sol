@@ -454,6 +454,7 @@ abstract contract OracleManagerV1 is IOracleManagerV1 {
                 _setConsolidationBuffer(
                     consolidationBuffer, consolidationBuffer - vars.trace.pulledConsolidationCoverageFunds
                 );
+                // we do not update the rewards as consolidation coverage is not considered rewards
             }
         }
 
