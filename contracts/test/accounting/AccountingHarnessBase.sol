@@ -205,6 +205,7 @@ abstract contract AccountingHarnessBase is Test, BytesGenerator {
             MAX_DAILY_REL
         );
         river.initRiverV1_2();
+
         // 3 deposit-committee attesters with quorum=2 (quorum must be ≤ attester count and ≤ MAX_SIGNATURES)
         address[] memory _initDepositCommitteeAttesters = new address[](3);
         _initDepositCommitteeAttesters[0] = depositCommitteeAttester1;
@@ -221,10 +222,10 @@ abstract contract AccountingHarnessBase is Test, BytesGenerator {
         );
 
         bytes32 _initWc = withdraw.getCredentials();
+        address _initConsolidationCoverageFund = makeAddr("consolidationCoverageFund");
         vm.prank(admin);
-        river.initRiverV1_3(_initWc, address(attestationVerifier));
-        // Mock BLS verification on the validator: EIP-2537 precompiles are unavailable
-        // in Foundry's default EVM.
+        river.initRiverV1_3(_initWc, _initConsolidationCoverageFund, address(attestationVerifier));
+        // Mock BLS verification: EIP-2537 precompiles are unavailable in Foundry.
         vm.mockCall(
             address(attestationVerifier),
             abi.encodeWithSelector(attestationVerifier.verifyBLSDeposit.selector),
