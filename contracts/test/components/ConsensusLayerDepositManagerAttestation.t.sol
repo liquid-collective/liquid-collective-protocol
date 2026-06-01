@@ -1411,4 +1411,105 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
         vm.expectRevert(abi.encodeWithSelector(Initializable.InvalidInitialization.selector, 0, 1));
         validator.initAttestationVerifierV1(address(dm), address(buffer), atts, 1, bytes4(0));
     }
+
+    // -----------------------------------------------------------------------
+    // DepositObject refactor — new invariants introduced by splitting Deposit / TopUp
+    // -----------------------------------------------------------------------
+
+    /// @dev Top-ups carry no signature in the buffer; ConsensusLayerDepositManager hardcodes a
+    ///      96-byte zero buffer when forwarding the call to the official deposit contract.
+    ///      Asserted by inspecting the `DepositEvent` log emitted by the deposit contract mock.
+    function testTopUp_passesZeroSignatureToDepositContract() public {
+        bytes memory pk = _fakePubkey(900);
+        _seedFundedPubkey(pk);
+
+        IDepositDataBuffer.TopUp[] memory topUps = new IDepositDataBuffer.TopUp[](1);
+        topUps[0] = IDepositDataBuffer.TopUp({pubkey: pk, amount: 32 ether, operatorIdx: 0});
+        (bytes32 bufferId, bytes32 rootHash, bytes[] memory sigs) = _prepareTopUps(topUps);
+
+        vm.recordLogs();
+        vm.prank(keeper);
+        dm.depositToConsensusLayerWithAttestation(bufferId, rootHash, sigs);
+
+        Vm.Log[] memory logs = vm.getRecordedLogs();
+        bytes32 depositEventTopic = keccak256("DepositEvent(bytes,bytes,bytes,bytes,bytes)");
+        bool depositEventFound = false;
+        for (uint256 i = 0; i < logs.length; i++) {
+            if (logs[i].emitter == address(depositContract) && logs[i].topics[0] == depositEventTopic) {
+                (,, , bytes memory recordedSignature,) =
+                    abi.decode(logs[i].data, (bytes, bytes, bytes, bytes, bytes));
+                assertEq(recordedSignature.length, 96, "signature length");
+                assertEq(recordedSignature, new bytes(96), "top-up signature must be 96 zero bytes");
+                depositEventFound = true;
+                break;
+            }
+        }
+        assertTrue(depositEventFound, "DepositEvent must be emitted by the deposit contract");
+    }
+
+    /// @dev The `recordNewlyFundedPubkeys` callback must contain only initial-deposit pubkeys.
+    ///      Including a top-up pubkey would pollute `ValidatorPubkeyLookup` with already-funded
+    ///      keys (harmless but a state-purity regression).
+    function testRecordNewlyFundedPubkeys_excludesTopUps() public {
+        bytes memory topUpPk = _fakePubkey(910);
+        _seedFundedPubkey(topUpPk);
+
+        IDepositDataBuffer.Deposit[] memory deposits = new IDepositDataBuffer.Deposit[](2);
+        deposits[0] = _makeDeposit(0, 911);
+        deposits[1] = _makeDeposit(1, 912);
+        IDepositDataBuffer.TopUp[] memory topUps = new IDepositDataBuffer.TopUp[](1);
+        topUps[0] = IDepositDataBuffer.TopUp({pubkey: topUpPk, amount: 32 ether, operatorIdx: 0});
+
+        bytes[] memory expectedPubkeys = new bytes[](2);
+        expectedPubkeys[0] = deposits[0].pubkey;
+        expectedPubkeys[1] = deposits[1].pubkey;
+        vm.expectCall(
+            address(validator),
+            abi.encodeCall(IAttestationVerifierV1.recordNewlyFundedPubkeys, (expectedPubkeys))
+        );
+
+        (bytes32 bufferId, bytes32 rootHash, bytes[] memory sigs) = _prepareDeposit(deposits, topUps);
+        vm.prank(keeper);
+        dm.depositToConsensusLayerWithAttestation(bufferId, rootHash, sigs);
+    }
+
+    /// @dev `LibFundingDeltas.build` aggregates fundedETH across BOTH the deposits[] and
+    ///      topUps[] sub-arrays. A regression that iterates only one would lose ETH from the
+    ///      per-operator delta. This test exercises a single operator receiving both initials
+    ///      and a top-up in the same batch and asserts the harness's recorded delta matches
+    ///      the full sum.
+    function testFundingDelta_aggregatesAcrossDepositsAndTopUps() public {
+        bytes memory topUpPk = _fakePubkey(920);
+        _seedFundedPubkey(topUpPk);
+
+        IDepositDataBuffer.Deposit[] memory deposits = new IDepositDataBuffer.Deposit[](2);
+        deposits[0] = _makeDeposit(0, 921);
+        deposits[1] = _makeDeposit(0, 922);
+        IDepositDataBuffer.TopUp[] memory topUps = new IDepositDataBuffer.TopUp[](1);
+        topUps[0] = IDepositDataBuffer.TopUp({pubkey: topUpPk, amount: 8 ether, operatorIdx: 0});
+
+        (bytes32 bufferId, bytes32 rootHash, bytes[] memory sigs) = _prepareDeposit(deposits, topUps);
+        vm.prank(keeper);
+        dm.depositToConsensusLayerWithAttestation(bufferId, rootHash, sigs);
+
+        assertEq(dm.lastFundedETH(0), 32 ether + 32 ether + 8 ether, "delta must include top-up amount");
+    }
+
+    /// @dev A container with both sub-arrays empty must revert NoDeposits. The check
+    ///      `depositCount == 0 && topUpCount == 0` is now a logical AND across two array
+    ///      lengths; a regression that drops either conjunct would accept a half-empty batch.
+    function testRevert_emptyContainer_revertsNoDeposits() public {
+        IDepositDataBuffer.DepositObject memory batch;
+        bytes32 bufferId = keccak256(abi.encode(batch));
+        buffer.submitDepositData(bufferId, batch);
+        bytes32 rootHash = depositContract.get_deposit_root();
+
+        bytes[] memory sigs = new bytes[](2);
+        sigs[0] = _signAttestation(depositCommitteeAttesterPk1, bufferId, rootHash);
+        sigs[1] = _signAttestation(depositCommitteeAttesterPk2, bufferId, rootHash);
+
+        vm.prank(keeper);
+        vm.expectRevert(IAttestationVerifierV1.NoDeposits.selector);
+        dm.depositToConsensusLayerWithAttestation(bufferId, rootHash, sigs);
+    }
 }
