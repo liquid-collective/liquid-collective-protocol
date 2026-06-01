@@ -366,7 +366,7 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
 
     /// @notice Internal utility to reserve an exit against an operator's available ETH.
     /// @dev Performs the available-ETH check and updates the operator's `requestedExits`.
-    /// @dev Reverts with the partial- or full-exit specific error depending on `_isEL`.
+    /// @dev Reverts with the EL- or full-exit specific error depending on `_isEL`.
     /// @param _operator Storage reference to the operator whose exit is being reserved
     /// @param _operatorIndex The operator index (used in revert data)
     /// @param _amount The ETH(wei) amount to reserve

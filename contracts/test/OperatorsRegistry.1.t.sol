@@ -1794,7 +1794,7 @@ contract OperatorsRegistryV1CoverageTests is OperatorsRegistryV1TestBase, Operat
 // Mock: minimal IWithdrawV1.withdraw() implementation for partial-exit unit tests
 // ─────────────────────────────────────────────────────────────────────────────
 
-contract MockWithdrawForPartialExits {
+contract MockWithdrawForELExits {
     uint256 public withdrawCallCount;
     uint64[] public lastAmounts;
 
@@ -1819,9 +1819,9 @@ contract MockWithdrawForPartialExits {
 // Partial-exit unit tests for requestETHExits (H-05)
 // ─────────────────────────────────────────────────────────────────────────────
 
-contract OperatorsRegistryV1PartialExitTests is Test {
+contract OperatorsRegistryV1ELExitTests is Test {
     OperatorsRegistryWithMigrationHelpers internal reg;
-    MockWithdrawForPartialExits internal mockWithdraw;
+    MockWithdrawForELExits internal mockWithdraw;
     address internal admin;
     address internal keeper;
     address internal river;
@@ -1841,11 +1841,11 @@ contract OperatorsRegistryV1PartialExitTests is Test {
         LibImplementationUnbricker.unbrick(vm, address(reg));
         reg.initOperatorsRegistryV1(admin, river);
 
-        mockWithdraw = new MockWithdrawForPartialExits();
+        mockWithdraw = new MockWithdrawForELExits();
         reg.sudoSetWithdrawAddress(address(mockWithdraw));
     }
 
-    function _makePartialAlloc(uint256 opIndex, uint64 gweiAmount)
+    function _makeELAlloc(uint256 opIndex, uint64 gweiAmount)
         internal
         view
         returns (IOperatorsRegistryV1.ELExitETHAllocation[] memory allocs)
@@ -1860,7 +1860,7 @@ contract OperatorsRegistryV1PartialExitTests is Test {
     }
 
     /// Happy path: partial exit reduces demand and updates requestedExits.
-    function testPartialExitHappyPath() public {
+    function testELExitHappyPath() public {
         vm.prank(admin);
         reg.addOperator("Op0", makeAddr("op0addr"));
         reg.sudoSetFundedV3(0, 32 ether);
@@ -1869,7 +1869,7 @@ contract OperatorsRegistryV1PartialExitTests is Test {
         reg.demandETHExits(8 ether, 32 ether);
 
         IOperatorsRegistryV1.ExitETHAllocation[] memory empty = new IOperatorsRegistryV1.ExitETHAllocation[](0);
-        IOperatorsRegistryV1.ELExitETHAllocation[] memory allocs = _makePartialAlloc(0, EIGHT_ETH_IN_GWEI);
+        IOperatorsRegistryV1.ELExitETHAllocation[] memory allocs = _makeELAlloc(0, EIGHT_ETH_IN_GWEI);
 
         vm.prank(keeper);
         reg.requestETHExits(empty, allocs, 0);
@@ -1880,7 +1880,7 @@ contract OperatorsRegistryV1PartialExitTests is Test {
     }
 
     /// Partial exit for an inactive operator must revert with InactiveOperator.
-    function testPartialExitRevertsForInactiveOperator() public {
+    function testELExitRevertsForInactiveOperator() public {
         vm.startPrank(admin);
         reg.addOperator("Op0", makeAddr("op0addr"));
         reg.setOperatorStatus(0, false);
@@ -1891,7 +1891,7 @@ contract OperatorsRegistryV1PartialExitTests is Test {
         reg.demandETHExits(8 ether, 32 ether);
 
         IOperatorsRegistryV1.ExitETHAllocation[] memory empty = new IOperatorsRegistryV1.ExitETHAllocation[](0);
-        IOperatorsRegistryV1.ELExitETHAllocation[] memory allocs = _makePartialAlloc(0, EIGHT_ETH_IN_GWEI);
+        IOperatorsRegistryV1.ELExitETHAllocation[] memory allocs = _makeELAlloc(0, EIGHT_ETH_IN_GWEI);
 
         vm.prank(keeper);
         vm.expectRevert(abi.encodeWithSignature("InactiveOperator(uint256)", 0));
@@ -1899,7 +1899,7 @@ contract OperatorsRegistryV1PartialExitTests is Test {
     }
 
     /// Out-of-order partial allocations must revert with UnorderedOperatorList.
-    function testPartialExitRevertsOnUnorderedOperators() public {
+    function testELExitRevertsOnUnorderedOperators() public {
         vm.startPrank(admin);
         reg.addOperator("Op0", makeAddr("op0addr"));
         reg.addOperator("Op1", makeAddr("op1addr"));
@@ -1926,7 +1926,7 @@ contract OperatorsRegistryV1PartialExitTests is Test {
     }
 
     /// Partial exit amount exceeding available activeCLETH must revert.
-    function testPartialExitRevertsWhenExceedsAvailable() public {
+    function testELExitRevertsWhenExceedsAvailable() public {
         vm.prank(admin);
         reg.addOperator("Op0", makeAddr("op0addr"));
         reg.sudoSetFundedV3(0, 8 ether);
@@ -1937,7 +1937,7 @@ contract OperatorsRegistryV1PartialExitTests is Test {
         IOperatorsRegistryV1.ExitETHAllocation[] memory empty = new IOperatorsRegistryV1.ExitETHAllocation[](0);
         // Try to partially exit 16 ETH from an operator with only 8 ETH available
         uint64 sixteenEthGwei = 16_000_000_000;
-        IOperatorsRegistryV1.ELExitETHAllocation[] memory allocs = _makePartialAlloc(0, sixteenEthGwei);
+        IOperatorsRegistryV1.ELExitETHAllocation[] memory allocs = _makeELAlloc(0, sixteenEthGwei);
 
         vm.prank(keeper);
         vm.expectRevert(
@@ -1949,7 +1949,7 @@ contract OperatorsRegistryV1PartialExitTests is Test {
     }
 
     /// Empty amounts array per allocation is a no-op: demand unchanged, requestedExits stays 0.
-    function testPartialExitEmptyAmountsIsNoOp() public {
+    function testELExitEmptyAmountsIsNoOp() public {
         vm.prank(admin);
         reg.addOperator("Op0", makeAddr("op0addr"));
         reg.sudoSetFundedV3(0, 32 ether);
@@ -1975,7 +1975,7 @@ contract OperatorsRegistryV1PartialExitTests is Test {
 
     /// A 0 amount means a full exit: it is accepted, reserves 0 ETH(wei) so demand/totals are
     /// untouched, yet the request is still forwarded to the withdrawal contract with amount 0.
-    function testPartialExitAcceptsZeroAmountAsFullExit() public {
+    function testELExitAcceptsZeroAmountAsFullExit() public {
         vm.prank(admin);
         reg.addOperator("Op0", makeAddr("op0addr"));
         reg.sudoSetFundedV3(0, 32 ether);
@@ -1984,7 +1984,7 @@ contract OperatorsRegistryV1PartialExitTests is Test {
         reg.demandETHExits(8 ether, 32 ether);
 
         IOperatorsRegistryV1.ExitETHAllocation[] memory empty = new IOperatorsRegistryV1.ExitETHAllocation[](0);
-        IOperatorsRegistryV1.ELExitETHAllocation[] memory allocs = _makePartialAlloc(0, 0);
+        IOperatorsRegistryV1.ELExitETHAllocation[] memory allocs = _makeELAlloc(0, 0);
 
         vm.prank(keeper);
         reg.requestETHExits(empty, allocs, 0);
@@ -2001,7 +2001,7 @@ contract OperatorsRegistryV1PartialExitTests is Test {
 
     /// A non-zero amount of 1 gwei is converted to exactly 1 gwei of reserved exit; no minimum
     /// amount is enforced.
-    function testPartialExitAcceptsOneGweiAmount() public {
+    function testELExitAcceptsOneGweiAmount() public {
         vm.prank(admin);
         reg.addOperator("Op0", makeAddr("op0addr"));
         reg.sudoSetFundedV3(0, 32 ether);
@@ -2010,7 +2010,7 @@ contract OperatorsRegistryV1PartialExitTests is Test {
         reg.demandETHExits(8 ether, 32 ether);
 
         IOperatorsRegistryV1.ExitETHAllocation[] memory empty = new IOperatorsRegistryV1.ExitETHAllocation[](0);
-        IOperatorsRegistryV1.ELExitETHAllocation[] memory allocs = _makePartialAlloc(0, 1);
+        IOperatorsRegistryV1.ELExitETHAllocation[] memory allocs = _makeELAlloc(0, 1);
 
         vm.prank(keeper);
         reg.requestETHExits(empty, allocs, 0);
@@ -2023,7 +2023,7 @@ contract OperatorsRegistryV1PartialExitTests is Test {
 
     /// Multiple amounts in one allocation are each converted from gwei to wei and summed into
     /// the reserved exit amount.
-    function testPartialExitAcceptsMultipleAmountsIncludingOneGwei() public {
+    function testELExitAcceptsMultipleAmountsIncludingOneGwei() public {
         vm.prank(admin);
         reg.addOperator("Op0", makeAddr("op0addr"));
         reg.sudoSetFundedV3(0, 32 ether);
