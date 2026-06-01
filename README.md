@@ -50,7 +50,7 @@ Liquid Collective enables users to stake ETH and mint LsETH. The LsETH liquid st
 ### Price Feeds
 | Feed                                                                                                                                 |                                                         Mainnet                                                         |
 |--------------------------------------------------------------------------------------------------------------------------------------|-------------------------------------------------------------------------------------------------------------------------|
-| LsETH/ETH (ChainLink)                                                                                                                | [`0xE858728eB31a25C4AcCcE17d01B68dCFC3A0ED2C`](https://etherscan.io/address/0xE858728eB31a25C4AcCcE17d01B68dCFC3A0ED2C) |
+| LsETH/ETH (Chainlink)                                                                                                                | [`0xE858728eB31a25C4AcCcE17d01B68dCFC3A0ED2C`](https://etherscan.io/address/0xE858728eB31a25C4AcCcE17d01B68dCFC3A0ED2C) |
 
 ## Security
 
