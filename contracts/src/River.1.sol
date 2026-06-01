@@ -105,6 +105,9 @@ contract RiverV1 is
         storedReport.rebalanceDepositToRedeemMode = lastReport.rebalanceDepositToRedeemMode;
         storedReport.slashingContainmentMode = lastReport.slashingContainmentMode;
         storedReport.totalDepositedActivatedETH = depositedValidatorCount * DEPOSIT_SIZE - InFlightDeposit.get();
+        storedReport.validatorsPartialExitWithdrawnBalance = lastReport.validatorsPartialExitWithdrawnBalance;
+        storedReport.validatorsStoppedEarningBalance = lastReport.validatorsStoppedEarningBalance;
+        storedReport.lastSharePrice = lastReport.lastSharePrice;
         LastConsensusLayerReport.set(storedReport);
     }
 
@@ -424,6 +427,20 @@ contract RiverV1 is
         IOracleManagerV1.StoredConsensusLayerReport storage storedReport = LastConsensusLayerReport.get();
         return storedReport.validatorsBalance + BalanceToDeposit.get() + CommittedBalance.get() + BalanceToRedeem.get()
             + InFlightDeposit.get() + ConsolidationBuffer.get();
+    }
+
+    /// @notice Returns the total share supply for oracle accounting
+    function _totalSupplyForOracle() internal view override returns (uint256) {
+        return _totalSupply();
+    }
+
+    /// @notice Reports inactive ETH coverage to the redeem manager
+    /// @param _lsETHAmount The amount of LsETH covered by inactive ETH
+    /// @param _ethAmount The amount of inactive ETH covering the LsETH amount
+    function _reportInactiveEthToRedeemManager(uint256 _lsETHAmount, uint256 _ethAmount) internal override {
+        if (_lsETHAmount > 0) {
+            IRedeemManagerV1(RedeemManagerAddress.get()).reportInactiveEth(_lsETHAmount, _ethAmount);
+        }
     }
 
     /// @notice Internal utility to set the daily committable limits

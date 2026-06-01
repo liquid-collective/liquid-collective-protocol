@@ -56,6 +56,15 @@ abstract contract OracleManagerV1 is IOracleManagerV1 {
     /// @return The current total asset balance managed by River
     function _assetBalance() internal view virtual returns (uint256);
 
+    /// @notice Overridden handler called whenever the total share supply is requested for oracle accounting
+    /// @return The current total share supply managed by River
+    function _totalSupplyForOracle() internal view virtual returns (uint256);
+
+    /// @notice Reports inactive ETH coverage to the redeem manager
+    /// @param _lsETHAmount The amount of LsETH covered by inactive ETH
+    /// @param _ethAmount The amount of inactive ETH covering the LsETH amount
+    function _reportInactiveEthToRedeemManager(uint256 _lsETHAmount, uint256 _ethAmount) internal virtual;
+
     /// @notice Pulls funds from the Withdraw contract, and adds funds to deposit and redeem balances
     /// @param _skimmedEthAmount The new amount of skimmed eth to pull
     /// @param _exitedEthAmount The new amount of exited eth to pull
@@ -256,6 +265,11 @@ abstract contract OracleManagerV1 is IOracleManagerV1 {
         uint256 lastReportSkimmedBalance;
         uint256 exitedAmountIncrease;
         uint256 skimmedAmountIncrease;
+        uint256 lastReportPartialExitWithdrawnBalance;
+        uint256 lastReportStoppedEarningBalance;
+        uint256 partialExitWithdrawnAmountIncrease;
+        uint256 stoppedEarningAmountIncrease;
+        uint256 previousSharePrice;
         uint256 inFlightDepositedETH;
         uint256 totalDepositedActivatedETHIncrease;
         uint256 timeElapsedSinceLastReport;
@@ -329,6 +343,25 @@ abstract contract OracleManagerV1 is IOracleManagerV1 {
             // we compute the new skimmed amount by taking the delta between reports
             vars.skimmedAmountIncrease = _report.validatorsSkimmedBalance - vars.lastReportSkimmedBalance;
 
+            vars.lastReportPartialExitWithdrawnBalance = lastStoredReport.validatorsPartialExitWithdrawnBalance;
+            if (_report.validatorsPartialExitWithdrawnBalance < vars.lastReportPartialExitWithdrawnBalance) {
+                revert InvalidDecreasingValidatorsPartialExitWithdrawnBalance(
+                    vars.lastReportPartialExitWithdrawnBalance, _report.validatorsPartialExitWithdrawnBalance
+                );
+            }
+            vars.partialExitWithdrawnAmountIncrease =
+                _report.validatorsPartialExitWithdrawnBalance - vars.lastReportPartialExitWithdrawnBalance;
+
+            vars.lastReportStoppedEarningBalance = lastStoredReport.validatorsStoppedEarningBalance;
+            if (_report.validatorsStoppedEarningBalance < vars.lastReportStoppedEarningBalance) {
+                revert InvalidDecreasingValidatorsStoppedEarningBalance(
+                    vars.lastReportStoppedEarningBalance, _report.validatorsStoppedEarningBalance
+                );
+            }
+            vars.stoppedEarningAmountIncrease =
+                _report.validatorsStoppedEarningBalance - vars.lastReportStoppedEarningBalance;
+            vars.previousSharePrice = lastStoredReport.lastSharePrice;
+
             vars.timeElapsedSinceLastReport = _timeBetweenEpochs(cls, lastStoredReport.epoch, _report.epoch);
         }
 
@@ -361,6 +394,9 @@ abstract contract OracleManagerV1 is IOracleManagerV1 {
             storedReport.rebalanceDepositToRedeemMode = _report.rebalanceDepositToRedeemMode;
             storedReport.slashingContainmentMode = _report.slashingContainmentMode;
             storedReport.totalDepositedActivatedETH = _report.totalDepositedActivatedETH;
+            storedReport.validatorsPartialExitWithdrawnBalance = _report.validatorsPartialExitWithdrawnBalance;
+            storedReport.validatorsStoppedEarningBalance = _report.validatorsStoppedEarningBalance;
+            storedReport.lastSharePrice = _report.lastSharePrice;
             LastConsensusLayerReport.set(storedReport);
         }
 
@@ -484,8 +520,20 @@ abstract contract OracleManagerV1 is IOracleManagerV1 {
         // we update the committable amount based on daily maximum allowed
         _commitBalanceToDeposit(vars.timeElapsedSinceLastReport, _report.slashingContainmentMode);
 
+        LastConsensusLayerReport.get().lastSharePrice = _currentSharePrice();
+
         // we emit a summary event with all the reporting details
         emit ProcessedConsensusLayerReport(_report, vars.trace);
+    }
+
+    /// @notice Calculates the current share price for oracle report storage
+    /// @return The current share price scaled by 1e18
+    function _currentSharePrice() internal view returns (uint256) {
+        uint256 totalSupply = _totalSupplyForOracle();
+        if (totalSupply == 0) {
+            return 0;
+        }
+        return (_assetBalance() * 1e18) / totalSupply;
     }
 
     /// @notice Retrieve the current epoch based on the current timestamp

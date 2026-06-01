@@ -92,6 +92,20 @@ interface IOracleManagerV1 {
         uint256 currentValidatorsSkimmedBalance, uint256 newValidatorsSkimmedBalance
     );
 
+    /// @notice The total partial exit withdrawn balance decreased
+    /// @param currentValidatorsPartialExitWithdrawnBalance The current partial exit withdrawn balance(wei)
+    /// @param newValidatorsPartialExitWithdrawnBalance The new partial exit withdrawn balance(wei)
+    error InvalidDecreasingValidatorsPartialExitWithdrawnBalance(
+        uint256 currentValidatorsPartialExitWithdrawnBalance, uint256 newValidatorsPartialExitWithdrawnBalance
+    );
+
+    /// @notice The total stopped earning balance decreased
+    /// @param currentValidatorsStoppedEarningBalance The current stopped earning balance(wei)
+    /// @param newValidatorsStoppedEarningBalance The new stopped earning balance(wei)
+    error InvalidDecreasingValidatorsStoppedEarningBalance(
+        uint256 currentValidatorsStoppedEarningBalance, uint256 newValidatorsStoppedEarningBalance
+    );
+
     /// @notice The reported validator count is decreasing
     /// @param reportedValidatorCount The reported validator count
     /// @param lastReportedValidatorCount The last reported validator count
@@ -158,6 +172,9 @@ interface IOracleManagerV1 {
         // This flag is deactivated when a bottom threshold is met, this means that when we reach the upper threshold and activate the flag, we will deactivate it when we reach the bottom threshold and not before
         // when active, no more validator exits can be requested by the protocol
         bool slashingContainmentMode;
+        uint256 validatorsPartialExitWithdrawnBalance;
+        uint256 validatorsStoppedEarningBalance;
+        uint256 lastSharePrice;
     }
 
     /// @notice The format of the oracle report in storage
@@ -172,6 +189,9 @@ interface IOracleManagerV1 {
         bool rebalanceDepositToRedeemMode;
         bool slashingContainmentMode;
         uint256 totalDepositedActivatedETH;
+        uint256 validatorsPartialExitWithdrawnBalance;
+        uint256 validatorsStoppedEarningBalance;
+        uint256 lastSharePrice;
     }
 
     /// @notice Get oracle address

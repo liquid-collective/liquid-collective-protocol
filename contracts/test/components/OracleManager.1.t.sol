@@ -62,11 +62,29 @@ contract OracleManagerV1ExposeInitializer is OracleManagerV1 {
 
     uint256 amountToRedeem;
     uint256 amountToDeposit;
+    uint256 public totalSupplyForOracle = 1e18;
+    uint256 public reportedInactiveLsEth;
+    uint256 public reportedInactiveEth;
+
+    function sudoSetTotalSupplyForOracle(uint256 newValue) external {
+        totalSupplyForOracle = newValue;
+    }
 
     event Internal_OnEarnings(uint256 amount);
+    event Internal_ReportInactiveEthToRedeemManager(uint256 lsEthAmount, uint256 ethAmount);
 
     function _onEarnings(uint256 amount) internal override {
         emit Internal_OnEarnings(amount);
+    }
+
+    function _totalSupplyForOracle() internal view override returns (uint256) {
+        return totalSupplyForOracle;
+    }
+
+    function _reportInactiveEthToRedeemManager(uint256 lsEthAmount, uint256 ethAmount) internal override {
+        reportedInactiveLsEth = lsEthAmount;
+        reportedInactiveEth = ethAmount;
+        emit Internal_ReportInactiveEthToRedeemManager(lsEthAmount, ethAmount);
     }
 
     uint256 public elFeesAvailable;
@@ -573,6 +591,52 @@ contract OracleManagerV1CoverageTests is OracleManagerV1Tests {
         vm.prank(oracle);
         vm.expectRevert(
             abi.encodeWithSignature("InvalidTotalDepositedActivatedETHDecrease(uint256,uint256)", 10 ether, 9 ether)
+        );
+        oracleManager.setConsensusLayerData(clr);
+    }
+
+    function testReportingError_InvalidDecreasingPartialExitWithdrawnBalance() public {
+        IOracleManagerV1.ConsensusLayerReport memory clr;
+        clr.epoch = epochsPerFrame;
+        clr.validatorsPartialExitWithdrawnBalance = 10 ether;
+        clr.totalDepositedActivatedETH = 0;
+
+        vm.warp(genesisTime + (clr.epoch + epochsToAssumedFinality) * slotsPerEpoch * secondsPerSlot);
+        vm.prank(oracle);
+        oracleManager.setConsensusLayerData(clr);
+
+        clr.epoch += epochsPerFrame;
+        clr.validatorsPartialExitWithdrawnBalance = 9 ether;
+        vm.warp(genesisTime + (clr.epoch + epochsToAssumedFinality) * slotsPerEpoch * secondsPerSlot);
+
+        vm.prank(oracle);
+        vm.expectRevert(
+            abi.encodeWithSignature(
+                "InvalidDecreasingValidatorsPartialExitWithdrawnBalance(uint256,uint256)", 10 ether, 9 ether
+            )
+        );
+        oracleManager.setConsensusLayerData(clr);
+    }
+
+    function testReportingError_InvalidDecreasingStoppedEarningBalance() public {
+        IOracleManagerV1.ConsensusLayerReport memory clr;
+        clr.epoch = epochsPerFrame;
+        clr.validatorsStoppedEarningBalance = 10 ether;
+        clr.totalDepositedActivatedETH = 0;
+
+        vm.warp(genesisTime + (clr.epoch + epochsToAssumedFinality) * slotsPerEpoch * secondsPerSlot);
+        vm.prank(oracle);
+        oracleManager.setConsensusLayerData(clr);
+
+        clr.epoch += epochsPerFrame;
+        clr.validatorsStoppedEarningBalance = 9 ether;
+        vm.warp(genesisTime + (clr.epoch + epochsToAssumedFinality) * slotsPerEpoch * secondsPerSlot);
+
+        vm.prank(oracle);
+        vm.expectRevert(
+            abi.encodeWithSignature(
+                "InvalidDecreasingValidatorsStoppedEarningBalance(uint256,uint256)", 10 ether, 9 ether
+            )
         );
         oracleManager.setConsensusLayerData(clr);
     }

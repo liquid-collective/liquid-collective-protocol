@@ -334,6 +334,8 @@ contract OracleV1Tests is OracleV1TestBase {
         returns (IOracleManagerV1.ConsensusLayerReport memory clr)
     {
         clr.exitedETHPerOperator = new uint256[](stoppedValidatorsCountElements);
+        clr.activeCLETHPerOperator =
+            new uint256[](stoppedValidatorsCountElements > 0 ? stoppedValidatorsCountElements - 1 : 0);
     }
 
     event DebugReceivedReport(IOracleManagerV1.ConsensusLayerReport report);
