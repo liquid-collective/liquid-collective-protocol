@@ -349,10 +349,11 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
             uint256 partialExitAmount = 0;
             for (uint256 j = 0; j < _partialAllocations[i].amounts.length; ++j) {
                 uint256 gweiAmount = _partialAllocations[i].amounts[j];
-                if (gweiAmount < 1 gwei) {
+                if (gweiAmount > 1 gwei || gweiAmount == 0) {
+                    partialExitAmount += gweiAmount * 1 gwei;
+                } else {
                     revert AllocationWithIncorrectAmount(gweiAmount);
                 }
-                partialExitAmount += gweiAmount * 1 gwei;
             }
 
             _reserveOperatorExit(operator, operatorIndex, partialExitAmount, true);
