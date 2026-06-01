@@ -16,6 +16,9 @@ import "./state/redeemManager/RedeemQueue.2.sol";
 import "./state/redeemManager/WithdrawalStack.sol";
 import "./state/redeemManager/BufferedExceedingEth.sol";
 import "./state/redeemManager/RedeemDemand.sol";
+import "./state/redeemManager/RateLockStack.sol";
+import "./state/redeemManager/RateLockDemand.sol";
+import "./state/redeemManager/RateLockHeightForRequest.sol";
 
 /// @title Redeem Manager (v1)
 /// @author Alluvial Finance Inc.
@@ -131,6 +134,25 @@ contract RedeemManagerV1 is Initializable, ReentrancyGuard, IRedeemManagerV1, IP
     }
 
     /// @inheritdoc IRedeemManagerV1
+    function getRateLockEventCount() external view returns (uint256) {
+        return RateLockStack.get().length;
+    }
+
+    /// @inheritdoc IRedeemManagerV1
+    function getRateLockEventDetails(uint32 _rateLockEventId)
+        external
+        view
+        returns (RateLockStack.RateLockEvent memory)
+    {
+        return RateLockStack.get()[_rateLockEventId];
+    }
+
+    /// @inheritdoc IRedeemManagerV1
+    function getRateLockDemand() external view returns (uint256) {
+        return RateLockDemand.get();
+    }
+
+    /// @inheritdoc IRedeemManagerV1
     function resolveRedeemRequests(uint32[] calldata _redeemRequestIds)
         external
         view
@@ -223,6 +245,36 @@ contract RedeemManagerV1 is Initializable, ReentrancyGuard, IRedeemManagerV1, IP
             _setRedeemDemand(redeemDemand - _lsETHWithdrawable);
         }
         emit ReportedWithdrawal(height, _lsETHWithdrawable, msgValue, withdrawalEventId);
+    }
+
+    /// @inheritdoc IRedeemManagerV1
+    function reportInactiveEth(uint256 _lsETHAmount, uint256 _ethAmount) external onlyRiver {
+        if (_lsETHAmount == 0) {
+            return;
+        }
+
+        uint256 rateLockDemand = RateLockDemand.get();
+        uint256 effectiveLsETHAmount = LibUint256.min(_lsETHAmount, rateLockDemand);
+        if (effectiveLsETHAmount == 0) {
+            return;
+        }
+
+        uint256 effectiveEthAmount = (_ethAmount * effectiveLsETHAmount) / _lsETHAmount;
+        RateLockStack.RateLockEvent[] storage rateLockEvents = RateLockStack.get();
+        uint32 rateLockEventId = uint32(rateLockEvents.length);
+        uint256 height = 0;
+        if (rateLockEventId != 0) {
+            RateLockStack.RateLockEvent memory previousRateLockEvent = rateLockEvents[rateLockEventId - 1];
+            height = previousRateLockEvent.height + previousRateLockEvent.amount;
+        }
+
+        rateLockEvents.push(
+            RateLockStack.RateLockEvent({height: height, amount: effectiveLsETHAmount, ethAmount: effectiveEthAmount})
+        );
+        unchecked {
+            _setRateLockDemand(rateLockDemand - effectiveLsETHAmount);
+        }
+        emit ReportedInactiveEth(height, effectiveLsETHAmount, effectiveEthAmount, rateLockEventId);
     }
 
     /// @inheritdoc IRedeemManagerV1
@@ -363,6 +415,8 @@ contract RedeemManagerV1 is Initializable, ReentrancyGuard, IRedeemManagerV1, IP
         );
 
         _setRedeemDemand(RedeemDemand.get() + _lsETHAmount);
+        RateLockHeightForRequest.set(redeemRequestId, height);
+        _setRateLockDemand(RateLockDemand.get() + _lsETHAmount);
 
         emit RequestedRedeem(_recipient, height, _lsETHAmount, maxRedeemableEth, redeemRequestId);
     }
@@ -582,6 +636,11 @@ contract RedeemManagerV1 is Initializable, ReentrancyGuard, IRedeemManagerV1, IP
     function _setRedeemDemand(uint256 _newValue) internal {
         emit SetRedeemDemand(RedeemDemand.get(), _newValue);
         RedeemDemand.set(_newValue);
+    }
+
+    function _setRateLockDemand(uint256 _newValue) internal {
+        emit SetRateLockDemand(RateLockDemand.get(), _newValue);
+        RateLockDemand.set(_newValue);
     }
 
     function version() external pure returns (string memory) {

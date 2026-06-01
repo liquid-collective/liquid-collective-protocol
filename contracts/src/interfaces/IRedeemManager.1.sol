@@ -3,6 +3,7 @@ pragma solidity 0.8.34;
 
 import "../state/redeemManager/RedeemQueue.2.sol";
 import "../state/redeemManager/WithdrawalStack.sol";
+import "../state/redeemManager/RateLockStack.sol";
 
 /// @title Redeem Manager Interface (v1)
 /// @author Alluvial Finance Inc.
@@ -24,6 +25,9 @@ interface IRedeemManagerV1 {
     /// @param ethAmount The amount of eth to distrubute to claimers
     /// @param id The id of the withdrawal event
     event ReportedWithdrawal(uint256 height, uint256 amount, uint256 ethAmount, uint32 id);
+
+    event ReportedInactiveEth(uint256 height, uint256 amount, uint256 ethAmount, uint32 id);
+    event SetRateLockDemand(uint256 oldRateLockDemand, uint256 newRateLockDemand);
 
     /// @notice Emitted when a redeem request has been satisfied and filled (even partially) from a withdrawal event
     /// @param redeemRequestId The id of the redeem request
@@ -148,6 +152,12 @@ interface IRedeemManagerV1 {
     /// @return The amount of LsETH waiting to be exited
     function getRedeemDemand() external view returns (uint256);
 
+    function getRateLockEventCount() external view returns (uint256);
+
+    function getRateLockEventDetails(uint32 _rateLockEventId) external view returns (RateLockStack.RateLockEvent memory);
+
+    function getRateLockDemand() external view returns (uint256);
+
     /// @notice Resolves the provided list of redeem request ids
     /// @dev The result is an array of equal length with ids or error code
     /// @dev -1 means that the request is not satisfied yet
@@ -205,6 +215,8 @@ interface IRedeemManagerV1 {
     /// @notice Reports a withdraw event from River
     /// @param _lsETHWithdrawable The amount of LsETH that can be redeemed due to this new withdraw event
     function reportWithdraw(uint256 _lsETHWithdrawable) external payable;
+
+    function reportInactiveEth(uint256 _lsETHAmount, uint256 _ethAmount) external;
 
     /// @notice Pulls exceeding buffer eth
     /// @param _max The maximum amount that should be pulled

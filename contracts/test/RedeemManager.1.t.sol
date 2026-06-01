@@ -9,6 +9,8 @@ import "./utils/LibImplementationUnbricker.sol";
 
 import "../src/state/shared/RiverAddress.sol";
 import "../src/state/redeemManager/RedeemDemand.sol";
+import "../src/state/redeemManager/RateLockStack.sol";
+import "../src/state/redeemManager/RateLockDemand.sol";
 import "../src/state/redeemManager/RedeemQueue.1.sol";
 import "../src/state/redeemManager/RedeemQueue.2.sol";
 
@@ -118,6 +120,8 @@ contract RedeeManagerV1TestBase is Test {
 
     event RequestedRedeem(address indexed recipient, uint256 height, uint256 size, uint256 maxRedeemableEth, uint32 id);
     event ReportedWithdrawal(uint256 height, uint256 size, uint256 ethAmount, uint32 id);
+    event ReportedInactiveEth(uint256 height, uint256 amount, uint256 ethAmount, uint32 id);
+    event SetRateLockDemand(uint256 oldRateLockDemand, uint256 newRateLockDemand);
     event SatisfiedRedeemRequest(
         uint32 indexed redeemRequestId,
         uint32 indexed withdrawalEventId,
@@ -228,6 +232,90 @@ contract RedeemManagerV1Tests is RedeeManagerV1TestBase {
 
         assertEq(river.balanceOf(user), 0);
         assertEq(redeemManager.getRedeemRequestCount(), 1);
+    }
+
+    function testRequestRedeemIncrementsRateLockDemand(uint256 _salt) external {
+        address user = _generateAllowlistedUser(_salt);
+        uint128 amount = uint128(bound(_salt, 1, type(uint128).max));
+
+        river.sudoDeal(user, amount);
+
+        vm.prank(user);
+        river.approve(address(redeemManager), amount);
+
+        vm.expectEmit(true, true, true, true);
+        emit SetRateLockDemand(0, amount);
+        vm.prank(user);
+        redeemManager.requestRedeem(amount, user);
+
+        assertEq(redeemManager.getRateLockDemand(), amount);
+        assertEq(redeemManager.getRateLockEventCount(), 0);
+    }
+
+    function testReportInactiveEthCreatesRateLockEvent(uint256 _salt) external {
+        address user = _generateAllowlistedUser(_salt);
+        uint128 amount = uint128(bound(_salt, 1 ether, 1000 ether));
+        uint256 lockedEth = uint256(amount) * 2;
+
+        river.sudoDeal(user, amount);
+
+        vm.prank(user);
+        river.approve(address(redeemManager), amount);
+
+        vm.prank(user);
+        redeemManager.requestRedeem(amount, user);
+
+        vm.expectEmit(true, true, true, true);
+        emit ReportedInactiveEth(0, amount, lockedEth, 0);
+        vm.prank(address(river));
+        redeemManager.reportInactiveEth(amount, lockedEth);
+
+        assertEq(redeemManager.getRateLockDemand(), 0);
+        assertEq(redeemManager.getRateLockEventCount(), 1);
+
+        RateLockStack.RateLockEvent memory event0 = redeemManager.getRateLockEventDetails(0);
+        assertEq(event0.height, 0);
+        assertEq(event0.amount, amount);
+        assertEq(event0.ethAmount, lockedEth);
+    }
+
+    function testReportInactiveEthCapsToRateLockDemand(uint256 _salt) external {
+        address user = _generateAllowlistedUser(_salt);
+        uint128 amount = uint128(bound(_salt, 1 ether, 1000 ether));
+        uint256 reportedLsEth = uint256(amount) * 2;
+        uint256 reportedEth = uint256(amount) * 6;
+
+        river.sudoDeal(user, amount);
+
+        vm.prank(user);
+        river.approve(address(redeemManager), amount);
+
+        vm.prank(user);
+        redeemManager.requestRedeem(amount, user);
+
+        vm.prank(address(river));
+        redeemManager.reportInactiveEth(reportedLsEth, reportedEth);
+
+        RateLockStack.RateLockEvent memory event0 = redeemManager.getRateLockEventDetails(0);
+        assertEq(event0.amount, amount);
+        assertEq(event0.ethAmount, reportedEth * amount / reportedLsEth);
+        assertEq(redeemManager.getRateLockDemand(), 0);
+    }
+
+    function testReportInactiveEthDoesNothingWithoutDemand(uint256 amount, uint256 ethAmount) external {
+        amount = bound(amount, 1, type(uint128).max);
+        ethAmount = bound(ethAmount, 1, type(uint128).max);
+
+        vm.prank(address(river));
+        redeemManager.reportInactiveEth(amount, ethAmount);
+
+        assertEq(redeemManager.getRateLockDemand(), 0);
+        assertEq(redeemManager.getRateLockEventCount(), 0);
+    }
+
+    function testReportInactiveEthOnlyRiver(uint256 amount, uint256 ethAmount) external {
+        vm.expectRevert(abi.encodeWithSignature("Unauthorized(address)", address(this)));
+        redeemManager.reportInactiveEth(amount, ethAmount);
     }
 
     function testRequestRedeemImplicitRecipient(uint256 _salt) external {
