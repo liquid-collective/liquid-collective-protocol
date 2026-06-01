@@ -544,18 +544,26 @@ contract RedeemManagerV1 is Initializable, ReentrancyGuard, IRedeemManagerV1, IP
         RedeemQueueV2.RedeemRequest redeemRequest;
         /// @custom:attribute The structure of the withdrawal event to use to claim the redeem request
         WithdrawalStack.WithdrawalEvent withdrawalEvent;
+        /// @custom:attribute The structure of the rate-lock event used to cap the redeem request payout
+        RateLockStack.RateLockEvent rateLockEvent;
         /// @custom:attribute The id of the redeem request to claim
         uint32 redeemRequestId;
         /// @custom:attribute The id of the withdrawal event to use to claim the redeem request
         uint32 withdrawalEventId;
+        /// @custom:attribute The id of the rate-lock event to use to claim the redeem request
+        uint32 rateLockEventId;
         /// @custom:attribute The count of withdrawal events
         uint32 withdrawalEventCount;
+        /// @custom:attribute The count of rate-lock events
+        uint32 rateLockEventCount;
         /// @custom:attribute The current depth of the recursive call
         uint16 depth;
         /// @custom:attribute The amount of LsETH redeemed/matched, needs to be reset to 0 for each call/before calling the recursive function
         uint256 lsETHAmount;
         /// @custom:attribute The amount of eth redeemed/matched, needs to be rest to 0 for each call/before calling the recursive function
         uint256 ethAmount;
+        /// @custom:attribute The current rate-lock height of the redeem request
+        uint256 rateLockHeight;
     }
 
     /// @notice Internal structure used to optimize stack usage in _claimRedeemRequest
@@ -566,6 +574,10 @@ contract RedeemManagerV1 is Initializable, ReentrancyGuard, IRedeemManagerV1, IP
         uint256 matchingAmount;
         /// @custom:attribute The amount of eth redirected to the exceeding eth buffer
         uint256 exceedingEthAmount;
+        /// @custom:attribute The eth amount calculated from the inactive ETH rate lock
+        uint256 lockedEthAmount;
+        /// @custom:attribute The eth amount calculated from the realized withdrawal event
+        uint256 withdrawalEthAmount;
     }
 
     /// @notice Internal utility to save a redeem request to storage
@@ -575,6 +587,7 @@ contract RedeemManagerV1 is Initializable, ReentrancyGuard, IRedeemManagerV1, IP
         redeemRequests[_params.redeemRequestId].height = _params.redeemRequest.height;
         redeemRequests[_params.redeemRequestId].amount = _params.redeemRequest.amount;
         redeemRequests[_params.redeemRequestId].maxRedeemableEth = _params.redeemRequest.maxRedeemableEth;
+        RateLockHeightForRequest.set(_params.redeemRequestId, _params.rateLockHeight);
     }
 
     /// @notice Internal utility to claim a redeem request if possible
@@ -584,26 +597,23 @@ contract RedeemManagerV1 is Initializable, ReentrancyGuard, IRedeemManagerV1, IP
         ClaimRedeemRequestInternalVariables memory vars;
         {
             uint256 withdrawalEventEndPosition = _params.withdrawalEvent.height + _params.withdrawalEvent.amount;
+            uint256 rateLockEventEndPosition = _params.rateLockEvent.height + _params.rateLockEvent.amount;
 
-            // it can occur that the redeem request is overlapping the provided withdrawal event
-            // the amount that is matched in the withdrawal event is adapted depending on this
-            vars.matchingAmount =
+            uint256 withdrawalMatched =
                 LibUint256.min(_params.redeemRequest.amount, withdrawalEventEndPosition - _params.redeemRequest.height);
-            // we can now compute the equivalent eth amount based on the withdrawal event details
-            vars.ethAmount =
+            uint256 rateLockMatched =
+                LibUint256.min(_params.redeemRequest.amount, rateLockEventEndPosition - _params.rateLockHeight);
+            vars.matchingAmount = LibUint256.min(withdrawalMatched, rateLockMatched);
+
+            vars.withdrawalEthAmount =
                 (vars.matchingAmount * _params.withdrawalEvent.withdrawnEth) / _params.withdrawalEvent.amount;
+            vars.lockedEthAmount =
+                (vars.matchingAmount * _params.rateLockEvent.ethAmount) / _params.rateLockEvent.amount;
 
-            // as each request has a maximum withdrawable amount, we verify that the eth amount is not exceeding this amount, pro rata
-            // the amount that is matched
-            uint256 maxRedeemableEthAmount =
-                (vars.matchingAmount * _params.redeemRequest.maxRedeemableEth) / _params.redeemRequest.amount;
-
-            if (maxRedeemableEthAmount < vars.ethAmount) {
-                unchecked {
-                    vars.exceedingEthAmount = vars.ethAmount - maxRedeemableEthAmount;
-                }
+            vars.ethAmount = LibUint256.min(vars.withdrawalEthAmount, vars.lockedEthAmount);
+            if (vars.withdrawalEthAmount > vars.ethAmount) {
+                vars.exceedingEthAmount = vars.withdrawalEthAmount - vars.ethAmount;
                 BufferedExceedingEth.set(BufferedExceedingEth.get() + vars.exceedingEthAmount);
-                vars.ethAmount = maxRedeemableEthAmount;
             }
 
             // height and amount are updated to reflect the amount that was matched.
@@ -614,8 +624,8 @@ contract RedeemManagerV1 is Initializable, ReentrancyGuard, IRedeemManagerV1, IP
             // the end position of a redeem request (height + amount) is an invariant that never changes throughout the lifetime of a request
             // this end position is used to define the starting position of the next redeem request
             _params.redeemRequest.height += vars.matchingAmount;
+            _params.rateLockHeight += vars.matchingAmount;
             _params.redeemRequest.amount -= vars.matchingAmount;
-            _params.redeemRequest.maxRedeemableEth -= vars.ethAmount;
 
             _params.lsETHAmount += vars.matchingAmount;
             _params.ethAmount += vars.ethAmount;
@@ -636,14 +646,31 @@ contract RedeemManagerV1 is Initializable, ReentrancyGuard, IRedeemManagerV1, IP
         // in the case where we haven't claimed all the redeem request AND that there are other withdrawal events
         // available next in the stack, we load the next withdrawal event and call this method recursively
         // also we stop the claim process if the claim depth is about to be 0
-        if (
-            _params.redeemRequest.amount > 0 && _params.withdrawalEventId + 1 < _params.withdrawalEventCount
-                && _params.depth > 0
-        ) {
-            WithdrawalStack.WithdrawalEvent[] storage withdrawalEvents = WithdrawalStack.get();
+        bool hasMoreWithdrawalEvents =
+            _params.redeemRequest.amount > 0 && _params.withdrawalEventId + 1 < _params.withdrawalEventCount;
+        bool hasMoreRateLockEvents =
+            _params.redeemRequest.amount > 0 && _params.rateLockEventId + 1 < _params.rateLockEventCount;
+        bool exhaustedWithdrawalEvent =
+            _params.redeemRequest.height == _params.withdrawalEvent.height + _params.withdrawalEvent.amount;
+        bool exhaustedRateLockEvent =
+            _params.rateLockHeight == _params.rateLockEvent.height + _params.rateLockEvent.amount;
+        bool canAdvanceWithdrawalEvent = exhaustedWithdrawalEvent && hasMoreWithdrawalEvents;
+        bool canAdvanceRateLockEvent = exhaustedRateLockEvent && hasMoreRateLockEvents;
 
-            ++_params.withdrawalEventId;
-            _params.withdrawalEvent = withdrawalEvents[_params.withdrawalEventId];
+        if (
+            _params.redeemRequest.amount > 0 && _params.depth > 0
+                && (canAdvanceWithdrawalEvent || canAdvanceRateLockEvent)
+        ) {
+            if (canAdvanceWithdrawalEvent) {
+                WithdrawalStack.WithdrawalEvent[] storage withdrawalEvents = WithdrawalStack.get();
+                ++_params.withdrawalEventId;
+                _params.withdrawalEvent = withdrawalEvents[_params.withdrawalEventId];
+            }
+            if (canAdvanceRateLockEvent) {
+                RateLockStack.RateLockEvent[] storage rateLockEvents = RateLockStack.get();
+                ++_params.rateLockEventId;
+                _params.rateLockEvent = rateLockEvents[_params.rateLockEventId];
+            }
             --_params.depth;
 
             _claimRedeemRequest(_params);
@@ -723,6 +750,17 @@ contract RedeemManagerV1 is Initializable, ReentrancyGuard, IRedeemManagerV1, IP
             if (!_isMatch(params.redeemRequest, params.withdrawalEvent)) {
                 revert DoesNotMatch(params.redeemRequestId, params.withdrawalEventId);
             }
+
+            int64 rateLockEventId = _resolveRateLockEventId(params.redeemRequestId);
+            if (rateLockEventId < 0) {
+                revert UnsatisfiedRateLock(params.redeemRequestId);
+            }
+
+            RateLockStack.RateLockEvent[] storage rateLockEvents = RateLockStack.get();
+            params.rateLockEventCount = uint32(rateLockEvents.length);
+            params.rateLockEventId = uint32(uint64(rateLockEventId));
+            params.rateLockEvent = rateLockEvents[params.rateLockEventId];
+            params.rateLockHeight = RateLockHeightForRequest.get(params.redeemRequestId);
 
             params.depth = _depth;
             params.ethAmount = 0;

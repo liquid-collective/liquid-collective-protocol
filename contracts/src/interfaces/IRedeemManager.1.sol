@@ -103,6 +103,10 @@ interface IRedeemManagerV1 {
     /// @param withdrawalEventId The provided associated withdrawal event id
     error DoesNotMatch(uint256 redeemRequestId, uint256 withdrawalEventId);
 
+    /// @notice Thrown when the redeem request is not covered by an inactive ETH rate-lock event during claim
+    /// @param redeemRequestId The redeem request id
+    error UnsatisfiedRateLock(uint256 redeemRequestId);
+
     /// @notice Thrown when the provided withdrawal event exceeds the redeem demand
     /// @param withdrawalAmount The amount of the withdrawal event
     /// @param redeemDemand The current redeem demand
