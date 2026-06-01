@@ -47,6 +47,11 @@ Liquid Collective enables users to stake ETH and mint LsETH. The LsETH liquid st
 |--------------------------------------------------------------------------------------------------------------------------------------|-------------------------------------------------------------------------------------------------------------------------|
 | [PendleLsETHSY](https://github.com/liquid-collective/pendle-sy-tests/blob/main/src/PendleLsETHSY.sol)                                | [`0xEC3f66d7FaC189Ed83593C730ef46b67A9d2d455`](https://etherscan.io/address/0xEC3f66d7FaC189Ed83593C730ef46b67A9d2d455) |
 
+### Price Feeds
+| Feed                                                                                                                                 |                                                         Mainnet                                                         |
+|--------------------------------------------------------------------------------------------------------------------------------------|-------------------------------------------------------------------------------------------------------------------------|
+| LsETH/ETH                                                                                                                            | [`0xE858728eB31a25C4AcCcE17d01B68dCFC3A0ED2C`](https://etherscan.io/address/0xE858728eB31a25C4AcCcE17d01B68dCFC3A0ED2C) |
+
 ## Security
 
 If you're interested in learning more about Liquid Collective security processes, including security audits and the protocol's vulnerability disclosure policy, see: [Liquid Collective Security](https://github.com/liquid-collective/security)
