@@ -25,7 +25,9 @@ contract AttesterSetHandler is Test {
         for (uint256 i = 0; i < _initialAttesters.length; i++) {
             candidates.push(_initialAttesters[i]);
         }
-        for (uint256 i = 0; i < 40; i++) {
+        uint256 cap = _verifier.MAX_DEPOSIT_COMMITTEE_ATTESTERS();
+        uint256 paddingCount = cap + 10 - _initialAttesters.length;
+        for (uint256 i = 0; i < paddingCount; i++) {
             candidates.push(address(uint160(0x1000 + i)));
         }
     }
