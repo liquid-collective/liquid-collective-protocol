@@ -78,6 +78,17 @@ abstract contract OracleManagerV1 is IOracleManagerV1 {
     /// @param _newConsolidationBuffer The new consolidation buffer value
     function _setConsolidationBuffer(uint256 _oldConsolidationBuffer, uint256 _newConsolidationBuffer) internal virtual;
 
+    /// @notice Handler called after pulling CL funds and persisting the stored report.
+    ///         Appends a MaxRedeemableETHLockedEvent for the newly-inactive principal at the
+    ///         current rate. No swap, no burn — pure cap-update.
+    /// @param _newlyInactiveExitedETH ETH-denominated principal from validators that reached exit_epoch
+    /// @param _newlyInactivePartialWithdrawalPrincipal ETH-denominated principal from partial withdrawals
+    ///        that reached their PendingPartialWithdrawal.withdrawable_epoch
+    function _lockMaxRedeemableETHForNewlyInactive(
+        uint256 _newlyInactiveExitedETH,
+        uint256 _newlyInactivePartialWithdrawalPrincipal
+    ) internal virtual;
+
     /// @notice Requests exits of validators after possibly rebalancing deposit and redeem balances
     /// @param _exitingBalance The currently exiting funds, soon to be received on the execution layer
     /// @param _exitedETH The exited ETH
@@ -361,7 +372,20 @@ abstract contract OracleManagerV1 is IOracleManagerV1 {
             storedReport.rebalanceDepositToRedeemMode = _report.rebalanceDepositToRedeemMode;
             storedReport.slashingContainmentMode = _report.slashingContainmentMode;
             storedReport.totalDepositedActivatedETH = _report.totalDepositedActivatedETH;
+            storedReport.newlyInactiveExitedETH = _report.newlyInactiveExitedETH;
+            storedReport.newlyInactivePartialWithdrawalPrincipal = _report.newlyInactivePartialWithdrawalPrincipal;
             LastConsensusLayerReport.set(storedReport);
+        }
+
+        // Append a MaxRedeemableETHLockedEvent for the inactivity slice if either source is non-zero.
+        // Fires AFTER _pullCLFunds (BalanceToRedeem reflects fresh exits) and AFTER the stored report
+        // update (validatorsBalance reflects the new value), but BEFORE _onEarnings and the EL/coverage
+        // pulls — so the locked rate reflects the validator-inactivity-time exchange rate without
+        // dilution from rewards minted to the collector or fee inflows that should benefit active LsETH only.
+        if (_report.newlyInactiveExitedETH + _report.newlyInactivePartialWithdrawalPrincipal > 0) {
+            _lockMaxRedeemableETHForNewlyInactive(
+                _report.newlyInactiveExitedETH, _report.newlyInactivePartialWithdrawalPrincipal
+            );
         }
 
         ReportBounds.ReportBoundsStruct memory rb = ReportBounds.get();

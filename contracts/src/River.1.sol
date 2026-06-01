@@ -528,16 +528,38 @@ contract RiverV1 is
         uint256 totalSupply = _totalSupply();
 
         if (underlyingAssetBalance > 0 && totalSupply > 0) {
-            // we compute the redeem manager demands in eth and lsEth based on current conversion rate
             uint256 redeemManagerDemand = redeemManager_.getRedeemDemand();
             uint256 suppliedRedeemManagerDemand = redeemManagerDemand;
-            uint256 suppliedRedeemManagerDemandInEth = _balanceFromShares(suppliedRedeemManagerDemand);
+
+            // ETH amount at the current exchange rate (today's behavior)
+            uint256 currentRateEth = _balanceFromShares(suppliedRedeemManagerDemand);
+            // ETH amount bounded by the effective per-slice cap (lock events + per-request fallback)
+            uint256 capEth = redeemManager_.getEffectiveCapForDemand(suppliedRedeemManagerDemand);
+            // exchange at min(current rate, cap) — when the rate has appreciated past the cap, the
+            // excess never leaves River and stays with active LsETH holders
+            uint256 suppliedRedeemManagerDemandInEth = LibUint256.min(currentRateEth, capEth);
             uint256 availableBalanceToRedeem = BalanceToRedeem.get();
 
-            // if demand is higher than available eth, we update demand values to use the available eth
+            // also bound by available ETH (existing behavior, e.g. for slashing-loss passthrough)
             if (suppliedRedeemManagerDemandInEth > availableBalanceToRedeem) {
                 suppliedRedeemManagerDemandInEth = availableBalanceToRedeem;
-                suppliedRedeemManagerDemand = _sharesFromBalance(suppliedRedeemManagerDemandInEth);
+            }
+
+            // Recompute the LsETH demand we're actually fulfilling. Picking the LsETH count that
+            // matches the effective per-LsETH rate keeps the burn proportional to the ETH transferred.
+            // - When the supplied ETH equals currentRateEth (cap didn't bind), use the full demand.
+            // - When the cap bound (capEth < currentRateEth), scale the demand down using cap's per-LsETH rate.
+            // - When availableBalanceToRedeem further bound the supply, scale using whichever rate is active.
+            if (suppliedRedeemManagerDemandInEth < currentRateEth) {
+                // either cap bound, or available balance bound, or both
+                uint256 effectiveRateEth = LibUint256.min(currentRateEth, capEth);
+                if (effectiveRateEth == 0) {
+                    suppliedRedeemManagerDemand = 0;
+                } else {
+                    // use the binding rate's per-LsETH ratio
+                    suppliedRedeemManagerDemand =
+                        (suppliedRedeemManagerDemandInEth * suppliedRedeemManagerDemand) / effectiveRateEth;
+                }
             }
 
             emit ReportedRedeemManager(
@@ -545,7 +567,6 @@ contract RiverV1 is
             );
 
             if (suppliedRedeemManagerDemandInEth > 0) {
-                // the available balance to redeem is updated
                 unchecked {
                     _setBalanceToRedeem(availableBalanceToRedeem - suppliedRedeemManagerDemandInEth);
                 }
@@ -563,6 +584,66 @@ contract RiverV1 is
     /// @param _activeCLETH The array of active ETH amounts
     function _reportCLETH(uint256[] memory _activeCLETH) internal override {
         IOperatorsRegistryV1(OperatorsRegistryAddress.get()).reportCLETH(_activeCLETH);
+    }
+
+    /// @notice Appends a MaxRedeemableETHLockedEvent for the newly-inactive principal at the
+    ///         current rate. Called from setConsensusLayerData after _pullCLFunds and before
+    ///         _onEarnings / pulls / reportWithdraw — see OracleManager.1.sol.
+    /// @dev No LsETH burn, no ETH transfer. Purely updates the per-slice cap.
+    function _lockMaxRedeemableETHForNewlyInactive(
+        uint256 _newlyInactiveExitedETH,
+        uint256 _newlyInactivePartialWithdrawalPrincipal
+    ) internal override {
+        uint256 totalNewlyInactiveETH = _newlyInactiveExitedETH + _newlyInactivePartialWithdrawalPrincipal;
+        if (totalNewlyInactiveETH == 0) {
+            return;
+        }
+        IRedeemManagerV1 redeemManager_ = IRedeemManagerV1(RedeemManagerAddress.get());
+        uint256 unlockedHead;
+        unchecked {
+            unlockedHead = redeemManager_.getRedeemDemand() - redeemManager_.getMaxRedeemableETHLockedDemand();
+        }
+        uint256 totalSupply = _totalSupply();
+        if (unlockedHead == 0 || totalSupply == 0 || _assetBalance() == 0) {
+            return;
+        }
+        uint256 lsETHSlice = LibUint256.min(_sharesFromBalance(totalNewlyInactiveETH), unlockedHead);
+        if (lsETHSlice == 0) {
+            return;
+        }
+        uint256 lockedEthSlice = _balanceFromShares(lsETHSlice);
+        redeemManager_.lockMaxRedeemableETH(
+            lsETHSlice,
+            lockedEthSlice,
+            _newlyInactiveExitedETH,
+            _newlyInactivePartialWithdrawalPrincipal,
+            0
+        );
+    }
+
+    /// @notice Appends a MaxRedeemableETHLockedEvent for an LsETH slice satisfied by a
+    ///         BalanceToDeposit → BalanceToRedeem rebalance, locking the slice's cap at the
+    ///         current rate. Called from _requestExitsBasedOnRedeemDemandAfterRebalancings
+    ///         right after the rebalance move.
+    /// @param _rebalancingAmountETH The ETH amount just rebalanced from deposit to redeem
+    function _lockMaxRedeemableETHForRebalancedDemand(uint256 _rebalancingAmountETH) internal {
+        if (_rebalancingAmountETH == 0) {
+            return;
+        }
+        IRedeemManagerV1 redeemManager_ = IRedeemManagerV1(RedeemManagerAddress.get());
+        uint256 unlockedHead;
+        unchecked {
+            unlockedHead = redeemManager_.getRedeemDemand() - redeemManager_.getMaxRedeemableETHLockedDemand();
+        }
+        if (unlockedHead == 0 || _totalSupply() == 0 || _assetBalance() == 0) {
+            return;
+        }
+        uint256 lsETHSlice = LibUint256.min(_sharesFromBalance(_rebalancingAmountETH), unlockedHead);
+        if (lsETHSlice == 0) {
+            return;
+        }
+        uint256 lockedEthSlice = _balanceFromShares(lsETHSlice);
+        redeemManager_.lockMaxRedeemableETH(lsETHSlice, lockedEthSlice, 0, 0, _rebalancingAmountETH);
     }
 
     /// @notice Requests exits of validators after possibly rebalancing deposit and redeem balances
@@ -603,6 +684,12 @@ contract RiverV1 is
                         availableBalanceToRedeem += rebalancingAmount;
                         _setBalanceToRedeem(availableBalanceToRedeem);
                         _setBalanceToDeposit(availableBalanceToDeposit - rebalancingAmount);
+
+                        // Lock the per-slice cap at the current rate for the LsETH slice that is now
+                        // backed by deposit-buffer ETH. Without this, the slice's claim would fall back
+                        // to the request-time maxRedeemableEth cap and miss queue-time pool appreciation
+                        // driven by other active validators (see plan edge case 6a).
+                        _lockMaxRedeemableETHForRebalancedDemand(rebalancingAmount);
                     }
                 }
 
@@ -679,6 +766,6 @@ contract RiverV1 is
     }
 
     function version() external pure returns (string memory) {
-        return "1.3.0";
+        return "1.4.0";
     }
 }
