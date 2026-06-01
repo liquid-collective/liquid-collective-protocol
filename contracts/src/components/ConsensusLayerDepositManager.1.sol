@@ -3,8 +3,10 @@ pragma solidity 0.8.34;
 
 import "../interfaces/components/IConsensusLayerDepositManager.1.sol";
 import "../interfaces/IAttestationVerifier.1.sol";
+import "../interfaces/IAttestationVerifier.1.sol";
 import "../interfaces/IDepositContract.sol";
 import "../interfaces/IDepositDataBuffer.sol";
+import "../interfaces/IOperatorRegistry.1.sol";
 import "../interfaces/IOperatorRegistry.1.sol";
 
 import "../libraries/LibBytes.sol";

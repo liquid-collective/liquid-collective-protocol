@@ -37,7 +37,7 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
     }
 
     /// @inheritdoc IOperatorsRegistryV1
-    function initOperatorsRegistryV1_2() external init(2) {
+    function initOperatorsRegistryV1_2() external init(2) onlyAdmin {
         _migrateOperators_V2_3();
 
         CurrentETHExitsDemand.set(CurrentValidatorExitsDemand.get() * DEPOSIT_SIZE);
@@ -137,7 +137,7 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
         uint256[] memory exitedETH = OperatorsV3.getExitedETH();
         uint256 listLength = exitedETH.length;
         if (listLength > 0) {
-            assembly {
+            assembly ("memory-safe") {
                 // no need to use free memory pointer as we reuse the same memory range
 
                 // erase previous word storing length

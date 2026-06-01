@@ -223,10 +223,10 @@ abstract contract AccountingHarnessBase is Test, BytesGenerator {
         );
 
         bytes32 _initWc = withdraw.getCredentials();
+        address _initConsolidationCoverageFund = makeAddr("consolidationCoverageFund");
         vm.prank(admin);
-        river.initRiverV1_3(_initWc, address(attestationVerifier));
-        // Mock BLS verification on the validator: EIP-2537 precompiles are unavailable
-        // in Foundry's default EVM.
+        river.initRiverV1_3(_initWc, _initConsolidationCoverageFund, address(attestationVerifier));
+        // Mock BLS verification: EIP-2537 precompiles are unavailable in Foundry.
         vm.mockCall(
             address(attestationVerifier),
             abi.encodeWithSelector(attestationVerifier.verifyBLSDeposit.selector),
