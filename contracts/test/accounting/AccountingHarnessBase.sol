@@ -332,7 +332,6 @@ abstract contract AccountingHarnessBase is Test, BytesGenerator {
     {
         require(opIndices.length == amounts.length, "length mismatch");
         uint256 nonce = ++_depositBatchNonce;
-        bytes32 wc = river.getWithdrawalCredentials();
         deposits = new IDepositDataBuffer.DepositObject[](opIndices.length);
         for (uint256 i = 0; i < opIndices.length; i++) {
             deposits[i] = IDepositDataBuffer.DepositObject({
