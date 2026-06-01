@@ -59,6 +59,9 @@ interface IAttestationVerifierV1 {
     /// @param max The configured maximum
     error TooManySignatures(uint256 count, uint256 max);
 
+    /// @notice An external caller invoked a function reserved for self-staticcall trampolining.
+    error OnlySelfCall();
+
     /// @notice A deposit's pubkey field has an unexpected byte length
     /// @param index The deposit index in the batch
     /// @param length The observed length
@@ -162,8 +165,8 @@ interface IAttestationVerifierV1 {
     /// @param depositContract      The official ETH deposit contract; queried for the current root
     /// @param withdrawalCredentials The protocol-configured WC; every deposit's WC must match
     /// @param committedBalance     Total amount summed over deposits must not exceed this
-    /// @return deposits            Validated deposit batch (caller executes)
-    /// @return totalAmount         Sum of deposit amounts in the batch
+    /// @return batch               Validated deposit batch (caller executes)
+    /// @return totalAmount         Sum of deposit + top-up amounts in the batch
     function validate(
         bytes32 depositDataBufferId,
         bytes32 depositRootHash,
@@ -171,7 +174,7 @@ interface IAttestationVerifierV1 {
         address depositContract,
         bytes32 withdrawalCredentials,
         uint256 committedBalance
-    ) external view returns (IDepositDataBuffer.DepositObject[] memory deposits, uint256 totalAmount);
+    ) external view returns (IDepositDataBuffer.DepositObject memory batch, uint256 totalAmount);
 
     // -----------------------------------------------------------------------
     // Initial-deposit recording (called by River after a successful deposit batch)
