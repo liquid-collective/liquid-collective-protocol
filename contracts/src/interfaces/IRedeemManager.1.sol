@@ -26,7 +26,16 @@ interface IRedeemManagerV1 {
     /// @param id The id of the withdrawal event
     event ReportedWithdrawal(uint256 height, uint256 amount, uint256 ethAmount, uint32 id);
 
+    /// @notice Emitted when an inactive ETH rate-lock event is created
+    /// @param height The height of the rate-lock event in LsETH rate-lock space
+    /// @param amount The amount of the rate-lock event in LsETH
+    /// @param ethAmount The amount of inactive ETH backing the rate-lock event
+    /// @param id The id of the rate-lock event
     event ReportedInactiveEth(uint256 height, uint256 amount, uint256 ethAmount, uint32 id);
+
+    /// @notice Emitted when the rate-lock demand is set
+    /// @param oldRateLockDemand The old rate-lock demand
+    /// @param newRateLockDemand The new rate-lock demand
     event SetRateLockDemand(uint256 oldRateLockDemand, uint256 newRateLockDemand);
 
     /// @notice Emitted when a redeem request has been satisfied and filled (even partially) from a withdrawal event
@@ -152,10 +161,16 @@ interface IRedeemManagerV1 {
     /// @return The amount of LsETH waiting to be exited
     function getRedeemDemand() external view returns (uint256);
 
+    /// @notice Retrieve the global count of rate-lock events
     function getRateLockEventCount() external view returns (uint256);
 
+    /// @notice Retrieve the details of a specific rate-lock event
+    /// @param _rateLockEventId The id of the rate-lock event
+    /// @return The rate-lock event details
     function getRateLockEventDetails(uint32 _rateLockEventId) external view returns (RateLockStack.RateLockEvent memory);
 
+    /// @notice Retrieve the amount of LsETH waiting for inactive ETH rate-lock coverage
+    /// @return The amount of LsETH waiting for inactive ETH rate-lock coverage
     function getRateLockDemand() external view returns (uint256);
 
     /// @notice Resolves the provided list of redeem request ids
@@ -216,6 +231,9 @@ interface IRedeemManagerV1 {
     /// @param _lsETHWithdrawable The amount of LsETH that can be redeemed due to this new withdraw event
     function reportWithdraw(uint256 _lsETHWithdrawable) external payable;
 
+    /// @notice Reports inactive ETH coverage from River
+    /// @param _lsETHAmount The amount of LsETH covered by inactive ETH
+    /// @param _ethAmount The amount of inactive ETH covering the LsETH amount
     function reportInactiveEth(uint256 _lsETHAmount, uint256 _ethAmount) external;
 
     /// @notice Pulls exceeding buffer eth

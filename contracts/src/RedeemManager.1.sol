@@ -415,10 +415,20 @@ contract RedeemManagerV1 is Initializable, ReentrancyGuard, IRedeemManagerV1, IP
         );
 
         _setRedeemDemand(RedeemDemand.get() + _lsETHAmount);
-        RateLockHeightForRequest.set(redeemRequestId, height);
+        RateLockHeightForRequest.set(redeemRequestId, _nextRateLockHeight());
         _setRateLockDemand(RateLockDemand.get() + _lsETHAmount);
 
         emit RequestedRedeem(_recipient, height, _lsETHAmount, maxRedeemableEth, redeemRequestId);
+    }
+
+    function _nextRateLockHeight() internal view returns (uint256) {
+        RateLockStack.RateLockEvent[] storage rateLockEvents = RateLockStack.get();
+        uint256 height = RateLockDemand.get();
+        if (rateLockEvents.length != 0) {
+            RateLockStack.RateLockEvent memory previousRateLockEvent = rateLockEvents[rateLockEvents.length - 1];
+            height += previousRateLockEvent.height + previousRateLockEvent.amount;
+        }
+        return height;
     }
 
     /// @notice Internal structure used to optimize stack usage in _claimRedeemRequest
