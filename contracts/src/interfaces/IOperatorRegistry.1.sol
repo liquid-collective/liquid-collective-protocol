@@ -31,7 +31,7 @@ interface IOperatorsRegistryV1 {
     /// @param operatorIndex The index of the operator
     /// @param pubkeys The pubkeys through which the partial exits were requested
     /// @param amounts The amounts (gwei) per pubkey that was requested for partial exits
-    struct PartialExitETHAllocation {
+    struct ELExitETHAllocation {
         uint256 operatorIndex;
         bytes[] pubkeys;
         uint64[] amounts;
@@ -313,7 +313,7 @@ interface IOperatorsRegistryV1 {
     /// @param _maxFeePerWithdrawal The maximum fee for per withdrawal request
     function requestETHExits(
         ExitETHAllocation[] calldata _allocations,
-        PartialExitETHAllocation[] calldata _partialAllocations,
+        ELExitETHAllocation[] calldata _partialAllocations,
         uint256 _maxFeePerWithdrawal
     ) external payable;
 

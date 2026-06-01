@@ -258,7 +258,7 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
     /// @inheritdoc IOperatorsRegistryV1
     function requestETHExits(
         ExitETHAllocation[] calldata _allocations,
-        PartialExitETHAllocation[] calldata _partialAllocations,
+        ELExitETHAllocation[] calldata _partialAllocations,
         uint256 _maxFeePerWithdrawal
     ) external payable {
         if (msg.sender != IConsensusLayerDepositManagerV1(RiverAddress.get()).getKeeper()) {
@@ -274,9 +274,9 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
             revert InvalidEmptyArray();
         }
 
-        uint256 requestedETHAmount = _requestFullETHExits(_allocations);
+        uint256 requestedETHAmount = _requestCLETHExits(_allocations);
         (uint256 partialRequestedETHAmount, uint256 totalFeePaid) =
-            _requestPartialETHExits(_partialAllocations, _maxFeePerWithdrawal);
+            _requestELETHExits(_partialAllocations, _maxFeePerWithdrawal);
         requestedETHAmount += partialRequestedETHAmount;
 
         // Check that the exits requested do not exceed the current ETH exits demand
@@ -296,8 +296,8 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
         _setCurrentETHExitsDemand(currentETHExitsDemand, currentETHExitsDemand - requestedETHAmount);
     }
 
-    /// @notice Reserves full ETH exits per operator and returns the total requested amount.
-    function _requestFullETHExits(ExitETHAllocation[] calldata _allocations)
+    /// @notice Reserves full ETH exits per operator via CL and returns the total requested amount.
+    function _requestCLETHExits(ExitETHAllocation[] calldata _allocations)
         private
         returns (uint256 requestedETHAmount)
     {
@@ -323,11 +323,11 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
         }
     }
 
-    /// @notice Requests partial ETH exits through Withdraw and returns the total requested amount.
-    function _requestPartialETHExits(
-        PartialExitETHAllocation[] calldata _partialAllocations,
-        uint256 _maxFeePerWithdrawal
-    ) private returns (uint256 requestedETHAmount, uint256 totalFeePaid) {
+    /// @notice Requests partial/full ETH exits through Withdrawal Contract and returns the total requested amount.
+    function _requestELETHExits(ELExitETHAllocation[] calldata _partialAllocations, uint256 _maxFeePerWithdrawal)
+        private
+        returns (uint256 requestedETHAmount, uint256 totalFeePaid)
+    {
         if (_partialAllocations.length == 0) {
             return (0, 0);
         }
