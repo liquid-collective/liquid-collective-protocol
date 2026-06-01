@@ -85,4 +85,26 @@ contract AttesterSetInvariantTest is Test {
     function invariant_quorumPositive() public {
         assertGt(verifier.getDepositCommitteeAttestationQuorum(), 0);
     }
+
+    /// @dev The verifier's `count` scalar and its `isDepositCommitteeAttester` mapping must
+    ///      stay in sync. A refactor that desyncs them (e.g. increments count without
+    ///      writing the flag, or vice versa) would make the contract lie about its own state
+    ///      and would not be caught by the four scalar-checking invariants above.
+    function invariant_countMatchesMapping() public {
+        uint256 expected = 0;
+        uint256 n = handler.getCandidatesLength();
+        for (uint256 i = 0; i < n; i++) {
+            if (verifier.isDepositCommitteeAttester(handler.getCandidate(i))) {
+                ++expected;
+            }
+        }
+        assertEq(verifier.getDepositCommitteeAttesterCount(), expected, "count != mapping");
+    }
+
+    /// @dev Design-time constants must satisfy `MAX_DEPOSIT_COMMITTEE_ATTESTERS >= MAX_SIGNATURES`.
+    ///      A violation would mean even at full attester capacity the system could not reach a
+    ///      MAX_SIGNATURES-sized quorum — making invariants 2 and 3 irreconcilable in edge cases.
+    function invariant_constantsCoherent() public {
+        assertGe(verifier.MAX_DEPOSIT_COMMITTEE_ATTESTERS(), verifier.MAX_SIGNATURES());
+    }
 }

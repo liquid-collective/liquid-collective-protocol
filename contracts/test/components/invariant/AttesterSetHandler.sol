@@ -56,4 +56,17 @@ contract AttesterSetHandler is Test {
         // solhint-disable-next-line no-empty-blocks
         try verifier.setDepositCommitteeAttestationQuorum(bounded) {} catch {}
     }
+
+    /// @dev Length of the candidate pool. The pool is the universe of addresses that could
+    ///      ever have been added to the verifier's attester set during this run.
+    function getCandidatesLength() external view returns (uint256) {
+        return candidates.length;
+    }
+
+    /// @dev Read a candidate by index. Paired with `getCandidatesLength()` so the invariant
+    ///      test can iterate the full pool and audit per-address consistency between the
+    ///      verifier's `count` field and its `isDepositCommitteeAttester` mapping.
+    function getCandidate(uint256 i) external view returns (address) {
+        return candidates[i];
+    }
 }
