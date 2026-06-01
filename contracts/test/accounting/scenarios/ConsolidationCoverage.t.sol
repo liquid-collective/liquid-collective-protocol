@@ -77,15 +77,15 @@ contract ConsolidationCoverageScenarioTest is AccountingInvariants {
         // Report a consolidation increase within the available buffer.
         uint256 delta = 1 ether;
         IOracleManagerV1.ConsensusLayerReport memory report = _buildBadReport(false, false);
-        report.totalConsolidationsAmountReported = delta;
+        report.totalExternalConsolidationsAmountReported = delta;
         vm.prank(oracleMember);
         oracle.reportConsensusLayerData(report);
 
         // The reported value is persisted into the stored report.
         assertEq(
-            river.getLastConsensusLayerReport().totalConsolidationsAmountReported,
+            river.getLastConsensusLayerReport().totalExternalConsolidationsAmountReported,
             delta,
-            "totalConsolidationsAmountReported persisted"
+            "totalExternalConsolidationsAmountReported persisted"
         );
         // Buffer: reduced by `delta` on the consolidation increase, then the remaining `buffer - delta`
         // is pulled from the coverage fund (coverage >= remaining), draining it to zero.
@@ -102,6 +102,40 @@ contract ConsolidationCoverageScenarioTest is AccountingInvariants {
         assertEq(river.totalUnderlyingSupply(), underlyingBefore - delta, "total underlying drops by the delta");
     }
 
+    /// @notice Netting flow (the realistic case): the consolidated principal lands in validatorsBalance in
+    ///         the same report that raises the reported consolidation by the same delta. The buffer reduction
+    ///         then offsets the validatorsBalance increase, so the total underlying supply is UNCHANGED — the
+    ///         consolidated principal is not booked as rewards and no fee shares are minted. This complements
+    ///         testConsolidationReportReducesBufferAndDoesNotIncreaseAssets, which covers the buffer-only
+    ///         (coverage-backfill) case where the principal does not land in validatorsBalance.
+    function testConsolidationReportWithValidatorBalanceIncreaseNetsOut() public {
+        _baseline();
+
+        // Seed the buffer with exactly the delta we are about to report (stands in for the off-chain mint),
+        // so the consolidation reduction draws it to zero and leaves no residual for the coverage pull.
+        uint256 delta = 1 ether;
+        vm.store(address(river), CONSOLIDATION_BUFFER_SLOT, bytes32(delta));
+
+        uint256 underlyingBefore = river.totalUnderlyingSupply();
+        uint256 sharesBefore = river.totalSupply();
+
+        // The consolidated principal appears in validatorsBalance AND is reported as consolidation in the same
+        // report; the buffer is drawn down by the same delta (no coverage residual, so no fund pull).
+        IOracleManagerV1.ConsensusLayerReport memory report = _buildBadReport(false, false);
+        report.validatorsBalance += delta;
+        report.totalExternalConsolidationsAmountReported = delta;
+        vm.prank(oracleMember);
+        oracle.reportConsensusLayerData(report);
+
+        // The reported value is persisted and the buffer is fully drawn down by the consolidation reduction.
+        assertEq(river.getLastConsensusLayerReport().totalExternalConsolidationsAmountReported, delta);
+        assertEq(uint256(vm.load(address(river), CONSOLIDATION_BUFFER_SLOT)), 0, "buffer drawn down by delta");
+        // Core invariant: the consolidated principal is exactly offset, so the total underlying is UNCHANGED
+        // (neither a drop nor an increase) and no fee shares are minted on the principal.
+        assertEq(river.totalUnderlyingSupply(), underlyingBefore, "total underlying unchanged (netted out)");
+        assertEq(river.totalSupply(), sharesBefore, "no fee shares minted on consolidated principal");
+    }
+
     /// @notice A reported consolidation increase larger than the available buffer reverts through the
     ///         real River -> Oracle flow with InvalidTotalConsolidationsAmountReportedIncrease.
     function testConsolidationIncreaseExceedingBufferReverts() public {
@@ -113,7 +147,7 @@ contract ConsolidationCoverageScenarioTest is AccountingInvariants {
 
         uint256 delta = 2 ether; // exceeds the 1 ether buffer
         IOracleManagerV1.ConsensusLayerReport memory report = _buildBadReport(false, false);
-        report.totalConsolidationsAmountReported = delta;
+        report.totalExternalConsolidationsAmountReported = delta;
         vm.prank(oracleMember);
         vm.expectRevert(
             abi.encodeWithSignature(

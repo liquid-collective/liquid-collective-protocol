@@ -106,7 +106,7 @@ contract RiverV1 is
         storedReport.rebalanceDepositToRedeemMode = lastReport.rebalanceDepositToRedeemMode;
         storedReport.slashingContainmentMode = lastReport.slashingContainmentMode;
         storedReport.totalDepositedActivatedETH = depositedValidatorCount * DEPOSIT_SIZE - InFlightDeposit.get();
-        /// We don't set the totalConsolidationsAmountReported here because consolidations were not enabled before this version.
+        /// We don't set the totalExternalConsolidationsAmountReported here because consolidations were not enabled before this version.
         /// And the default value will be 0, so we don't need to set it here.
         LastConsensusLayerReport.set(storedReport);
     }

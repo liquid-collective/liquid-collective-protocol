@@ -34,7 +34,7 @@ contract OracleManagerV1ExposeInitializer is OracleManagerV1 {
     }
 
     function supersedeTotalConsolidationsAmountReported(uint256 amount) external {
-        LastConsensusLayerReport.get().totalConsolidationsAmountReported = amount;
+        LastConsensusLayerReport.get().totalExternalConsolidationsAmountReported = amount;
     }
 
     function supersedeDepositedValidatorCount(uint256 amount) external {
@@ -649,7 +649,7 @@ contract OracleManagerV1CoverageTests is OracleManagerV1Tests {
     }
 
     /// Asserts that setConsensusLayerData reverts with InvalidTotalConsolidationsAmountReportedDecrease when the
-    /// reported totalConsolidationsAmountReported is lower than the previously stored value.
+    /// reported totalExternalConsolidationsAmountReported is lower than the previously stored value.
     function testSetConsensusLayerDataRevertsOnConsolidationsAmountDecrease() public {
         OracleManagerV1ExposeInitializer om = OracleManagerV1ExposeInitializer(address(oracleManager));
         om.supersedeTotalConsolidationsAmountReported(5 ether);
@@ -659,7 +659,7 @@ contract OracleManagerV1CoverageTests is OracleManagerV1Tests {
         IOracleManagerV1.ConsensusLayerReport memory clr;
         clr.epoch = epoch;
         clr.exitedETHPerOperator = new uint256[](1);
-        clr.totalConsolidationsAmountReported = 4 ether;
+        clr.totalExternalConsolidationsAmountReported = 4 ether;
 
         vm.prank(oracle);
         vm.expectRevert(
@@ -670,7 +670,7 @@ contract OracleManagerV1CoverageTests is OracleManagerV1Tests {
         oracleManager.setConsensusLayerData(clr);
     }
 
-    /// Asserts that when totalConsolidationsAmountReported increases within the available ConsolidationBuffer, the
+    /// Asserts that when totalExternalConsolidationsAmountReported increases within the available ConsolidationBuffer, the
     /// buffer is reduced by the delta and the new value is persisted.
     function testSetConsensusLayerDataConsolidationsIncreaseReducesBuffer() public {
         OracleManagerV1ExposeInitializer om = OracleManagerV1ExposeInitializer(address(oracleManager));
@@ -686,7 +686,10 @@ contract OracleManagerV1CoverageTests is OracleManagerV1Tests {
         IOracleManagerV1.ConsensusLayerReport memory clr;
         clr.epoch = epoch;
         clr.exitedETHPerOperator = new uint256[](1);
-        clr.totalConsolidationsAmountReported = 3 ether; // delta = 2 ether
+        clr.totalExternalConsolidationsAmountReported = 3 ether; // delta = 2 ether
+        // The consolidated principal (the 2 ether delta) lands in validatorsBalance in the same report, so the
+        // buffer reduction offsets it rather than registering as a loss.
+        clr.validatorsBalance = 2 ether;
 
         uint256 assetBalanceBefore = om.debug_getTotalUnderlyingBalance();
 
@@ -695,16 +698,14 @@ contract OracleManagerV1CoverageTests is OracleManagerV1Tests {
         vm.prank(oracle);
         oracleManager.setConsensusLayerData(clr);
 
-        assertEq(oracleManager.getLastConsensusLayerReport().totalConsolidationsAmountReported, 3 ether);
-        // Reducing the consolidation buffer must not inflate the asset balance: with validator balances unchanged,
-        // the total underlying drops by exactly the buffer delta and never increases.
-        uint256 assetBalanceAfter = om.debug_getTotalUnderlyingBalance();
-        assertLe(assetBalanceAfter, assetBalanceBefore);
-        assertEq(assetBalanceAfter, assetBalanceBefore - 2 ether);
+        assertEq(oracleManager.getLastConsensusLayerReport().totalExternalConsolidationsAmountReported, 3 ether);
+        // The buffer delta (-2 ether) is exactly offset by the validatorsBalance increase (+2 ether): the total
+        // underlying is unchanged and the consolidated principal is not counted as rewards.
+        assertEq(om.debug_getTotalUnderlyingBalance(), assetBalanceBefore);
     }
 
     /// Asserts that setConsensusLayerData reverts with InvalidTotalConsolidationsAmountReportedIncrease when the
-    /// increase in totalConsolidationsAmountReported exceeds the available ConsolidationBuffer.
+    /// increase in totalExternalConsolidationsAmountReported exceeds the available ConsolidationBuffer.
     function testSetConsensusLayerDataRevertsOnConsolidationsIncreaseExceedingBuffer() public {
         OracleManagerV1ExposeInitializer om = OracleManagerV1ExposeInitializer(address(oracleManager));
 
@@ -716,7 +717,7 @@ contract OracleManagerV1CoverageTests is OracleManagerV1Tests {
         IOracleManagerV1.ConsensusLayerReport memory clr;
         clr.epoch = epoch;
         clr.exitedETHPerOperator = new uint256[](1);
-        clr.totalConsolidationsAmountReported = 5 ether; // delta = 4 ether > 2 ether buffer
+        clr.totalExternalConsolidationsAmountReported = 5 ether; // delta = 4 ether > 2 ether buffer
 
         vm.prank(oracle);
         vm.expectRevert(
@@ -727,7 +728,7 @@ contract OracleManagerV1CoverageTests is OracleManagerV1Tests {
         oracleManager.setConsensusLayerData(clr);
     }
 
-    /// Asserts that an unchanged totalConsolidationsAmountReported neither reverts nor reduces the buffer, and that
+    /// Asserts that an unchanged totalExternalConsolidationsAmountReported neither reverts nor reduces the buffer, and that
     /// the value is persisted (confirms the decrease guard is `<`, not `<=`).
     function testSetConsensusLayerDataConsolidationsUnchangedKeepsBuffer() public {
         OracleManagerV1ExposeInitializer om = OracleManagerV1ExposeInitializer(address(oracleManager));
@@ -742,14 +743,14 @@ contract OracleManagerV1CoverageTests is OracleManagerV1Tests {
         IOracleManagerV1.ConsensusLayerReport memory clr;
         clr.epoch = epoch;
         clr.exitedETHPerOperator = new uint256[](1);
-        clr.totalConsolidationsAmountReported = 3 ether; // equal -> buffer-reduction branch skipped
+        clr.totalExternalConsolidationsAmountReported = 3 ether; // equal -> buffer-reduction branch skipped
 
         uint256 assetBalanceBefore = om.debug_getTotalUnderlyingBalance();
 
         vm.prank(oracle);
         oracleManager.setConsensusLayerData(clr);
 
-        assertEq(oracleManager.getLastConsensusLayerReport().totalConsolidationsAmountReported, 3 ether);
+        assertEq(oracleManager.getLastConsensusLayerReport().totalExternalConsolidationsAmountReported, 3 ether);
         // Equal report skips the buffer-reduction branch, so the buffer and asset balance are unchanged.
         assertEq(uint256(vm.load(address(oracleManager), CONSOLIDATION_BUFFER_SLOT)), buffer);
         assertEq(om.debug_getTotalUnderlyingBalance(), assetBalanceBefore);
@@ -778,7 +779,7 @@ contract OracleManagerV1CoverageTests is OracleManagerV1Tests {
         IOracleManagerV1.ConsensusLayerReport memory clr;
         clr.epoch = epoch;
         clr.exitedETHPerOperator = new uint256[](1);
-        clr.totalConsolidationsAmountReported = newConsolidation;
+        clr.totalExternalConsolidationsAmountReported = newConsolidation;
 
         if (newConsolidation < lastConsolidation) {
             vm.prank(oracle);
@@ -801,18 +802,78 @@ contract OracleManagerV1CoverageTests is OracleManagerV1Tests {
             );
             oracleManager.setConsensusLayerData(clr);
         } else if (newConsolidation > lastConsolidation) {
+            uint256 delta = newConsolidation - lastConsolidation;
+            // The consolidated principal lands in validatorsBalance in the same report, so the buffer reduction
+            // offsets it (mirrors the production flow) instead of registering as an out-of-bound loss.
+            clr.validatorsBalance = delta;
             uint256 assetBalanceBefore = om.debug_getTotalUnderlyingBalance();
             vm.expectEmit(true, true, true, true, address(om));
-            emit Internal_SetConsolidationBuffer(buffer, buffer - (newConsolidation - lastConsolidation));
+            emit Internal_SetConsolidationBuffer(buffer, buffer - delta);
             vm.prank(oracle);
             oracleManager.setConsensusLayerData(clr);
-            assertEq(oracleManager.getLastConsensusLayerReport().totalConsolidationsAmountReported, newConsolidation);
-            // The buffer decreased by the delta; with validator balances unchanged the asset balance must not increase.
-            assertLe(om.debug_getTotalUnderlyingBalance(), assetBalanceBefore);
+            assertEq(
+                oracleManager.getLastConsensusLayerReport().totalExternalConsolidationsAmountReported, newConsolidation
+            );
+            // validatorsBalance +delta and buffer -delta cancel, so the total underlying is unchanged.
+            assertEq(om.debug_getTotalUnderlyingBalance(), assetBalanceBefore);
         } else {
             vm.prank(oracle);
             oracleManager.setConsensusLayerData(clr);
-            assertEq(oracleManager.getLastConsensusLayerReport().totalConsolidationsAmountReported, newConsolidation);
+            assertEq(
+                oracleManager.getLastConsensusLayerReport().totalExternalConsolidationsAmountReported, newConsolidation
+            );
         }
+    }
+
+    /// Asserts the consolidation-buffer ordering invariant: when consolidated principal lands in
+    /// validatorsBalance in the SAME report that raises totalExternalConsolidationsAmountReported by the same
+    /// delta, the buffer reduction offsets the validatorsBalance increase so the delta is NOT booked as rewards
+    /// — even when the delta dwarfs the APR upper bound.
+    ///
+    /// This is the regression guard for the buffer-reduction ordering. The reduction must run between the pre-
+    /// and post-report _assetBalance snapshots so the `-delta` cancels the `+delta` in validatorsBalance and
+    /// rewards stay 0. If the reduction instead ran before the pre-report snapshot, the delta would be counted
+    /// as rewards and this large consolidation would revert with TotalValidatorBalanceIncreaseOutOfBound.
+    function testSetConsensusLayerDataConsolidationNetsOutAgainstValidatorBalanceIncrease() public {
+        OracleManagerV1ExposeInitializer om = OracleManagerV1ExposeInitializer(address(oracleManager));
+
+        uint256 validatorsBalanceBefore = 200 ether;
+        uint256 buffer = 100 ether;
+        om.supersedeReportedBalanceSum(validatorsBalanceBefore);
+        om.supersedeTotalConsolidationsAmountReported(0);
+        vm.store(address(om), CONSOLIDATION_BUFFER_SLOT, bytes32(buffer));
+        // Isolate the report-time reduction from the later coverage-pull path (no second buffer update).
+        om.sudoSetConsolidationCoverageFundAvailable(0);
+
+        uint256 assetBalanceBefore = om.debug_getTotalUnderlyingBalance();
+
+        // The consolidated principal (delta) appears in validatorsBalance AND is reported as external
+        // consolidation in the same report. delta is intentionally far above the APR upper bound to prove it is
+        // not treated as rewards (a pre-fix run would revert with TotalValidatorBalanceIncreaseOutOfBound).
+        uint256 delta = 64 ether;
+
+        uint256 epoch = epochsPerFrame;
+        vm.warp(genesisTime + (epoch + epochsToAssumedFinality) * slotsPerEpoch * secondsPerSlot);
+        IOracleManagerV1.ConsensusLayerReport memory clr;
+        clr.epoch = epoch;
+        clr.exitedETHPerOperator = new uint256[](1);
+        clr.validatorsBalance = validatorsBalanceBefore + delta; // principal now visible on the consensus layer
+        clr.totalExternalConsolidationsAmountReported = delta; // same delta reported as external consolidation
+
+        // The buffer is reduced by exactly the delta, between the pre- and post-report snapshots.
+        vm.expectEmit(true, true, true, true, address(om));
+        emit Internal_SetConsolidationBuffer(buffer, buffer - delta); // 100 -> 36
+        vm.prank(oracle);
+        // Must NOT revert despite delta >> APR upper bound, since the delta is offset, not counted as rewards.
+        oracleManager.setConsensusLayerData(clr);
+
+        // Core invariant: the consolidated principal is fully offset. Total underlying is unchanged, which means
+        // rewards == 0 (_onEarnings is only invoked when rewards > 0, so no fee is minted on the principal).
+        assertEq(om.debug_getTotalUnderlyingBalance(), assetBalanceBefore);
+        // The reported values are persisted: principal in validatorsBalance and the cumulative consolidation.
+        assertEq(oracleManager.getLastConsensusLayerReport().validatorsBalance, validatorsBalanceBefore + delta);
+        assertEq(oracleManager.getLastConsensusLayerReport().totalExternalConsolidationsAmountReported, delta);
+        // Buffer reduced by exactly the delta.
+        assertEq(uint256(vm.load(address(om), CONSOLIDATION_BUFFER_SLOT)), buffer - delta);
     }
 }

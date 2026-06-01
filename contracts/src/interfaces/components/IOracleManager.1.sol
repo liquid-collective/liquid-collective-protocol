@@ -151,9 +151,10 @@ interface IOracleManagerV1 {
         // this value cannot decrease over reports
         // this value includes only the ETH that was deposited on the Execution Layer Deposit contract
         uint256 totalDepositedActivatedETH;
-        // the sum of all the consolidation funds that were reported
+        // the sum of all external consolidation funds that were reported
+        // this will only include the consolidations that happend due to external validators merging into LC
         // this value cannot decrease over reports
-        uint256 totalConsolidationsAmountReported;
+        uint256 totalExternalConsolidationsAmountReported;
         // the count of activated validators
         // even validators that are exited are still accounted
         // this value cannot decrease over reports
@@ -189,7 +190,7 @@ interface IOracleManagerV1 {
         bool rebalanceDepositToRedeemMode;
         bool slashingContainmentMode;
         uint256 totalDepositedActivatedETH;
-        uint256 totalConsolidationsAmountReported;
+        uint256 totalExternalConsolidationsAmountReported;
     }
 
     /// @notice Get oracle address
