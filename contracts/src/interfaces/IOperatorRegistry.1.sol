@@ -27,10 +27,10 @@ interface IOperatorsRegistryV1 {
         uint256 ethAmount;
     }
 
-    /// @notice Structure representing a partial exit allocation for exits
+    /// @notice Structure representing a EL exit allocation for exits
     /// @param operatorIndex The index of the operator
-    /// @param pubkeys The pubkeys through which the partial exits were requested
-    /// @param amounts The amounts (gwei) per pubkey that was requested for partial exits
+    /// @param pubkeys The pubkeys through which the EL exits were requested
+    /// @param amounts The amounts (gwei) per pubkey that was requested for EL exits
     struct ELExitETHAllocation {
         uint256 operatorIndex;
         bytes[] pubkeys;
@@ -79,9 +79,9 @@ interface IOperatorsRegistryV1 {
 
     /// @notice The amount of ETH(wei) that has been requested to be exited per pubkey via EL
     /// @param index The operator index
-    /// @param pubkeys The pubkeys through which the partial exits were requested
-    /// @param amount The amount per pubkey that was requested for partial exits
-    event RequestedPartialETHExits(uint256 indexed index, bytes[] pubkeys, uint64[] amount);
+    /// @param pubkeys The pubkeys through which the EL exits were requested
+    /// @param amount The amount per pubkey that was requested for EL exits
+    event RequestedELETHExits(uint256 indexed index, bytes[] pubkeys, uint64[] amount);
 
     /// @notice The exit request demand has been updated
     /// @param previousETHExitsDemand The previous exit request demand in ETH(wei)
@@ -167,7 +167,7 @@ interface IOperatorsRegistryV1 {
     /// @param operatorIndex The operator index
     /// @param requested The requested ETH(wei) amount
     /// @param available The available ETH(wei) amount
-    error PartialExitsRequestedExceedAvailableFundedAmount(uint256 operatorIndex, uint256 requested, uint256 available);
+    error ELExitsRequestedExceedAvailableFundedAmount(uint256 operatorIndex, uint256 requested, uint256 available);
 
     /// @notice The provided exit requests exceed the current exit request demand
     /// @param requestedETHAmount The requested ETH(wei) amount
@@ -309,11 +309,11 @@ interface IOperatorsRegistryV1 {
     /// @dev Reverts with ExitsRequestedExceedExitDemand if total exits requested exceed the current demand
     /// @dev Reverts with NoExitRequestsToPerform if there is no pending exit demand
     /// @param _allocations The proposed per-operator exit ETH allocations, sorted by operator index
-    /// @param _partialAllocations The proposed per-operator per-pubkey partial exit ETH allocations, sorted by operator index
+    /// @param _elAllocations The proposed per-operator per-pubkey EL exit ETH allocations, sorted by operator index
     /// @param _maxFeePerWithdrawal The maximum fee for per withdrawal request
     function requestETHExits(
         ExitETHAllocation[] calldata _allocations,
-        ELExitETHAllocation[] calldata _partialAllocations,
+        ELExitETHAllocation[] calldata _elAllocations,
         uint256 _maxFeePerWithdrawal
     ) external payable;
 

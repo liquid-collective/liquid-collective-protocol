@@ -1930,7 +1930,7 @@ contract OperatorsRegistryV1PartialExitTests is Test {
         vm.prank(keeper);
         vm.expectRevert(
             abi.encodeWithSignature(
-                "PartialExitsRequestedExceedAvailableFundedAmount(uint256,uint256,uint256)", 0, 16 ether, 8 ether
+                "ELExitsRequestedExceedAvailableFundedAmount(uint256,uint256,uint256)", 0, 16 ether, 8 ether
             )
         );
         reg.requestETHExits(empty, allocs, 0);
