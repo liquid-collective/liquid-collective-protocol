@@ -346,13 +346,11 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
             }
 
             uint256 elExitAmount = 0;
+            // we don't compare the amounts here as they are already in gwei.
+            // and we are ok with it being 0 as it means a full exit.
             for (uint256 j = 0; j < _elAllocations[i].amounts.length; ++j) {
-                uint256 gweiAmount = _elAllocations[i].amounts[j];
-                if (gweiAmount > 1 gwei || gweiAmount == 0) {
-                    elExitAmount += gweiAmount * 1 gwei;
-                } else {
-                    revert AllocationWithIncorrectAmount(gweiAmount);
-                }
+                // we convert the gwei amount to wei
+                elExitAmount += _elAllocations[i].amounts[j] * 1 gwei;
             }
 
             _reserveOperatorExit(operator, operatorIndex, elExitAmount, true);

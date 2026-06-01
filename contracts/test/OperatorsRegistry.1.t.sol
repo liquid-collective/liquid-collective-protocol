@@ -1795,11 +1795,23 @@ contract OperatorsRegistryV1CoverageTests is OperatorsRegistryV1TestBase, Operat
 // ─────────────────────────────────────────────────────────────────────────────
 
 contract MockWithdrawForPartialExits {
-    function withdraw(bytes[] calldata, uint64[] calldata, uint256, address excessFeeRecipient) external payable {
+    uint256 public withdrawCallCount;
+    uint64[] public lastAmounts;
+
+    function withdraw(bytes[] calldata, uint64[] calldata amounts, uint256, address excessFeeRecipient)
+        external
+        payable
+    {
+        ++withdrawCallCount;
+        lastAmounts = amounts;
         if (msg.value > 0) {
             (bool ok,) = excessFeeRecipient.call{value: msg.value}("");
             require(ok, "MockWithdraw: refund failed");
         }
+    }
+
+    function lastAmountsLength() external view returns (uint256) {
+        return lastAmounts.length;
     }
 }
 
@@ -1956,5 +1968,86 @@ contract OperatorsRegistryV1PartialExitTests is Test {
 
         assertEq(reg.getOperator(0).requestedExits, 0, "requestedExits should remain 0");
         assertEq(reg.getCurrentETHExitsDemand(), 8 ether, "demand should be unchanged");
+    }
+
+    // ── Tests for the per-pubkey EL exit amounts (each amount is converted from gwei to wei and summed) ──
+    // There is no amount validation: 0 means a full exit, any non-zero amount is a partial exit.
+
+    /// A 0 amount means a full exit: it is accepted, reserves 0 ETH(wei) so demand/totals are
+    /// untouched, yet the request is still forwarded to the withdrawal contract with amount 0.
+    function testPartialExitAcceptsZeroAmountAsFullExit() public {
+        vm.prank(admin);
+        reg.addOperator("Op0", makeAddr("op0addr"));
+        reg.sudoSetFundedV3(0, 32 ether);
+        reg.sudoSetActiveCLETH(0, 32 ether);
+        vm.prank(river);
+        reg.demandETHExits(8 ether, 32 ether);
+
+        IOperatorsRegistryV1.ExitETHAllocation[] memory empty = new IOperatorsRegistryV1.ExitETHAllocation[](0);
+        IOperatorsRegistryV1.ELExitETHAllocation[] memory allocs = _makePartialAlloc(0, 0);
+
+        vm.prank(keeper);
+        reg.requestETHExits(empty, allocs, 0);
+
+        // A 0 amount reserves no ETH, so demand and totals are untouched ...
+        assertEq(reg.getOperator(0).requestedExits, 0, "full exit reserves 0 ETH");
+        assertEq(reg.getCurrentETHExitsDemand(), 8 ether, "demand unchanged for full exit");
+        assertEq(reg.getTotalETHExitsRequested(), 0, "total exits unchanged for full exit");
+        // ... but the full-exit request is still forwarded to the withdrawal contract.
+        assertEq(mockWithdraw.withdrawCallCount(), 1, "withdraw should be called once");
+        assertEq(mockWithdraw.lastAmountsLength(), 1, "one amount forwarded");
+        assertEq(mockWithdraw.lastAmounts(0), 0, "forwarded amount should be 0 (full exit)");
+    }
+
+    /// A non-zero amount of 1 gwei is converted to exactly 1 gwei of reserved exit; no minimum
+    /// amount is enforced.
+    function testPartialExitAcceptsOneGweiAmount() public {
+        vm.prank(admin);
+        reg.addOperator("Op0", makeAddr("op0addr"));
+        reg.sudoSetFundedV3(0, 32 ether);
+        reg.sudoSetActiveCLETH(0, 32 ether);
+        vm.prank(river);
+        reg.demandETHExits(8 ether, 32 ether);
+
+        IOperatorsRegistryV1.ExitETHAllocation[] memory empty = new IOperatorsRegistryV1.ExitETHAllocation[](0);
+        IOperatorsRegistryV1.ELExitETHAllocation[] memory allocs = _makePartialAlloc(0, 1);
+
+        vm.prank(keeper);
+        reg.requestETHExits(empty, allocs, 0);
+
+        assertEq(reg.getOperator(0).requestedExits, 1 gwei, "should reserve 1 gwei");
+        assertEq(reg.getCurrentETHExitsDemand(), 8 ether - 1 gwei, "demand reduced by 1 gwei");
+        assertEq(reg.getTotalETHExitsRequested(), 1 gwei, "total exits should be 1 gwei");
+        assertEq(mockWithdraw.lastAmounts(0), 1, "forwarded amount should be 1 gwei");
+    }
+
+    /// Multiple amounts in one allocation are each converted from gwei to wei and summed into
+    /// the reserved exit amount.
+    function testPartialExitAcceptsMultipleAmountsIncludingOneGwei() public {
+        vm.prank(admin);
+        reg.addOperator("Op0", makeAddr("op0addr"));
+        reg.sudoSetFundedV3(0, 32 ether);
+        reg.sudoSetActiveCLETH(0, 32 ether);
+        vm.prank(river);
+        reg.demandETHExits(16 ether, 32 ether);
+
+        IOperatorsRegistryV1.ExitETHAllocation[] memory empty = new IOperatorsRegistryV1.ExitETHAllocation[](0);
+        IOperatorsRegistryV1.ELExitETHAllocation[] memory allocs = new IOperatorsRegistryV1.ELExitETHAllocation[](1);
+        bytes[] memory pubkeys = new bytes[](2);
+        pubkeys[0] = PUBKEY_48;
+        pubkeys[1] = PUBKEY_48;
+        uint64[] memory amounts = new uint64[](2);
+        amounts[0] = EIGHT_ETH_IN_GWEI; // 8 ether
+        amounts[1] = 1; // 1 gwei
+        allocs[0] = IOperatorsRegistryV1.ELExitETHAllocation({operatorIndex: 0, pubkeys: pubkeys, amounts: amounts});
+
+        vm.prank(keeper);
+        reg.requestETHExits(empty, allocs, 0);
+
+        assertEq(reg.getOperator(0).requestedExits, 8 ether + 1 gwei, "reserves the sum of both amounts");
+        assertEq(reg.getCurrentETHExitsDemand(), 16 ether - (8 ether + 1 gwei), "demand reduced by the sum");
+        assertEq(reg.getTotalETHExitsRequested(), 8 ether + 1 gwei, "total exits equal the sum");
+        assertEq(mockWithdraw.lastAmountsLength(), 2, "both amounts forwarded");
+        assertEq(mockWithdraw.lastAmounts(1), 1, "second forwarded amount should be 1 gwei");
     }
 }
