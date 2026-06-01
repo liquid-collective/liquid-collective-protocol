@@ -68,7 +68,10 @@ abstract contract OracleManagerV1 is IOracleManagerV1 {
     /// @notice Pulls funds from the Withdraw contract, and adds funds to deposit and redeem balances
     /// @param _skimmedEthAmount The new amount of skimmed eth to pull
     /// @param _exitedEthAmount The new amount of exited eth to pull
-    function _pullCLFunds(uint256 _skimmedEthAmount, uint256 _exitedEthAmount) internal virtual;
+    /// @param _partialExitEthAmount The new amount of partial exit eth to pull
+    function _pullCLFunds(uint256 _skimmedEthAmount, uint256 _exitedEthAmount, uint256 _partialExitEthAmount)
+        internal
+        virtual;
 
     /// @notice Pulls funds from the redeem manager exceeding eth buffer
     /// @param _max The maximum amount to pull
@@ -368,10 +371,10 @@ abstract contract OracleManagerV1 is IOracleManagerV1 {
         // we retrieve the current total underlying balance before any reporting data is applied to the system
         vars.preReportUnderlyingBalance = _assetBalance();
 
-        // if we have new exited / skimmed eth available, we pull funds from the consensus layer recipient
-        if (vars.exitedAmountIncrease + vars.skimmedAmountIncrease > 0) {
+        // if we have new exited / skimmed / partial-exit eth available, we pull funds from the consensus layer recipient
+        if (vars.exitedAmountIncrease + vars.skimmedAmountIncrease + vars.partialExitWithdrawnAmountIncrease > 0) {
             // this method pulls and updates ethToDeposit / ethToRedeem accordingly
-            _pullCLFunds(vars.skimmedAmountIncrease, vars.exitedAmountIncrease);
+            _pullCLFunds(vars.skimmedAmountIncrease, vars.exitedAmountIncrease, vars.partialExitWithdrawnAmountIncrease);
         }
 
         // checks if we have new deposited stake that activated in the last oracle reporting
@@ -396,7 +399,7 @@ abstract contract OracleManagerV1 is IOracleManagerV1 {
             storedReport.totalDepositedActivatedETH = _report.totalDepositedActivatedETH;
             storedReport.validatorsPartialExitWithdrawnBalance = _report.validatorsPartialExitWithdrawnBalance;
             storedReport.validatorsStoppedEarningBalance = _report.validatorsStoppedEarningBalance;
-            storedReport.lastSharePrice = _report.lastSharePrice;
+            storedReport.lastSharePrice = vars.previousSharePrice;
             LastConsensusLayerReport.set(storedReport);
         }
 
@@ -495,6 +498,12 @@ abstract contract OracleManagerV1 is IOracleManagerV1 {
         // if our rewards are not null, we dispatch the fee to the collector
         if (vars.trace.rewards > 0) {
             _onEarnings(vars.trace.rewards);
+        }
+
+        uint256 inactiveEthAmount = vars.partialExitWithdrawnAmountIncrease + vars.stoppedEarningAmountIncrease;
+        if (inactiveEthAmount > 0 && vars.previousSharePrice > 0) {
+            uint256 inactiveLsEthAmount = (inactiveEthAmount * 1e18) / vars.previousSharePrice;
+            _reportInactiveEthToRedeemManager(inactiveLsEthAmount, inactiveEthAmount);
         }
 
         _reportCLETH(_report.activeCLETHPerOperator);

@@ -508,21 +508,26 @@ contract RiverV1 is
     /// @notice Pulls funds from the Withdraw contract, and adds funds to deposit and redeem balances
     /// @param _skimmedEthAmount The new amount of skimmed eth to pull
     /// @param _exitedEthAmount The new amount of exited eth to pull
-    function _pullCLFunds(uint256 _skimmedEthAmount, uint256 _exitedEthAmount) internal override {
+    /// @param _partialExitEthAmount The new amount of partial exit eth to pull
+    function _pullCLFunds(uint256 _skimmedEthAmount, uint256 _exitedEthAmount, uint256 _partialExitEthAmount)
+        internal
+        override
+    {
         uint256 currentBalance = address(this).balance;
-        uint256 totalAmountToPull = _skimmedEthAmount + _exitedEthAmount;
+        uint256 totalAmountToPull = _skimmedEthAmount + _exitedEthAmount + _partialExitEthAmount;
         IWithdrawV1(WithdrawalCredentials.getAddress()).pullEth(totalAmountToPull);
         uint256 collectedCLFunds = address(this).balance - currentBalance;
-        if (collectedCLFunds != _skimmedEthAmount + _exitedEthAmount) {
-            revert InvalidPulledClFundsAmount(_skimmedEthAmount + _exitedEthAmount, collectedCLFunds);
+        if (collectedCLFunds != totalAmountToPull) {
+            revert InvalidPulledClFundsAmount(totalAmountToPull, collectedCLFunds);
         }
         if (_skimmedEthAmount > 0) {
             _setBalanceToDeposit(BalanceToDeposit.get() + _skimmedEthAmount);
         }
-        if (_exitedEthAmount > 0) {
-            _setBalanceToRedeem(BalanceToRedeem.get() + _exitedEthAmount);
+        uint256 redeemEthAmount = _exitedEthAmount + _partialExitEthAmount;
+        if (redeemEthAmount > 0) {
+            _setBalanceToRedeem(BalanceToRedeem.get() + redeemEthAmount);
         }
-        emit PulledCLFunds(_skimmedEthAmount, _exitedEthAmount);
+        emit PulledCLFunds(_skimmedEthAmount, redeemEthAmount);
     }
 
     /// @notice Pulls funds from the redeem manager exceeding eth buffer

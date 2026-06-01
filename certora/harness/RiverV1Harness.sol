@@ -4,11 +4,10 @@ pragma solidity 0.8.34;
 import "contracts/src/River.1.sol";
 
 contract RiverV1Harness is RiverV1 {
-
     function riverEthBalance() external view returns (uint256) {
         return address(this).balance;
     }
-    
+
     function consensusLayerDepositSize() external view returns (uint256) {
         return ConsensusLayerDepositManagerV1.DEPOSIT_SIZE;
     }
@@ -19,8 +18,9 @@ contract RiverV1Harness is RiverV1 {
         uint256 depositedValidatorCount = DepositedValidatorCount.get();
 
         uint256 depositSize = ConsensusLayerDepositManagerV1.DEPOSIT_SIZE;
-        if (depositedValidatorCount == clValidatorCount)
+        if (depositedValidatorCount == clValidatorCount) {
             return 0;
+        }
         return (clValidatorCount - depositedValidatorCount) * depositSize;
     }
 
@@ -29,14 +29,17 @@ contract RiverV1Harness is RiverV1 {
     }
 
     /// @inheritdoc IOracleManagerV1
-    function setConsensusLayerData(IOracleManagerV1.ConsensusLayerReport calldata _report) external override(IOracleManagerV1, OracleManagerV1) {
+    function setConsensusLayerData(IOracleManagerV1.ConsensusLayerReport calldata _report)
+        external
+        override(IOracleManagerV1, OracleManagerV1)
+    {
         // only the oracle is allowed to call this endpoint
         if (msg.sender != OracleAddress.get()) {
             revert LibErrors.Unauthorized(msg.sender);
         }
         ConsensusLayerDataReportingVariables memory vars = helper1_fillUpVarsAndPullCL(_report);
 
-        helper2_updateLastReport(_report);
+        helper2_updateLastReport(_report, vars.previousSharePrice);
 
         ReportBounds.ReportBoundsStruct memory rb = ReportBounds.get();
 
@@ -88,20 +91,25 @@ contract RiverV1Harness is RiverV1 {
 
         helper7_onEarnings(vars);
 
+        helper8_reportInactiveEthToRedeemManager(vars);
+
         helper8_requestExitsBasedOnRedeemDemandAfterRebalancings(vars, _report);
 
         helper9_reportWithdrawToRedeemManager(vars);
 
         helper10_skimExcessBalanceToRedeem(vars);
 
-        helper11_commitBalanceToDeposit(vars);
+        helper11_commitBalanceToDeposit(vars, _report);
 
         // we emit a summary event with all the reporting details
         emit ProcessedConsensusLayerReport(_report, vars.trace);
     }
-    
+
     /// @notice helper1
-    function helper1_fillUpVarsAndPullCL(IOracleManagerV1.ConsensusLayerReport calldata _report) public returns (ConsensusLayerDataReportingVariables memory) {
+    function helper1_fillUpVarsAndPullCL(IOracleManagerV1.ConsensusLayerReport calldata _report)
+        public
+        returns (ConsensusLayerDataReportingVariables memory)
+    {
         CLSpec.CLSpecStruct memory cls = CLSpec.get();
 
         // we start by verifying that the reported epoch is valid based on the consensus layer spec
@@ -148,23 +156,44 @@ contract RiverV1Harness is RiverV1 {
             // we compute the new skimmed amount by taking the delta between reports
             vars.skimmedAmountIncrease = _report.validatorsSkimmedBalance - vars.lastReportSkimmedBalance;
 
+            vars.lastReportPartialExitWithdrawnBalance = lastStoredReport.validatorsPartialExitWithdrawnBalance;
+            if (_report.validatorsPartialExitWithdrawnBalance < vars.lastReportPartialExitWithdrawnBalance) {
+                revert InvalidDecreasingValidatorsPartialExitWithdrawnBalance(
+                    vars.lastReportPartialExitWithdrawnBalance, _report.validatorsPartialExitWithdrawnBalance
+                );
+            }
+            vars.partialExitWithdrawnAmountIncrease =
+                _report.validatorsPartialExitWithdrawnBalance - vars.lastReportPartialExitWithdrawnBalance;
+
+            vars.lastReportStoppedEarningBalance = lastStoredReport.validatorsStoppedEarningBalance;
+            if (_report.validatorsStoppedEarningBalance < vars.lastReportStoppedEarningBalance) {
+                revert InvalidDecreasingValidatorsStoppedEarningBalance(
+                    vars.lastReportStoppedEarningBalance, _report.validatorsStoppedEarningBalance
+                );
+            }
+            vars.stoppedEarningAmountIncrease =
+                _report.validatorsStoppedEarningBalance - vars.lastReportStoppedEarningBalance;
+            vars.previousSharePrice = lastStoredReport.lastSharePrice;
+
             vars.timeElapsedSinceLastReport = _timeBetweenEpochs(cls, lastStoredReport.epoch, _report.epoch);
         }
 
         // we retrieve the current total underlying balance before any reporting data is applied to the system
         vars.preReportUnderlyingBalance = _assetBalance();
 
-        // if we have new exited / skimmed eth available, we pull funds from the consensus layer recipient
-        if (vars.exitedAmountIncrease + vars.skimmedAmountIncrease > 0) {
+        // if we have new exited / skimmed / partial-exit eth available, we pull funds from the consensus layer recipient
+        if (vars.exitedAmountIncrease + vars.skimmedAmountIncrease + vars.partialExitWithdrawnAmountIncrease > 0) {
             // this method pulls and updates ethToDeposit / ethToRedeem accordingly
-            _pullCLFunds(vars.skimmedAmountIncrease, vars.exitedAmountIncrease);
+            _pullCLFunds(vars.skimmedAmountIncrease, vars.exitedAmountIncrease, vars.partialExitWithdrawnAmountIncrease);
         }
 
         return vars;
     }
 
     /// @notice helper 2
-    function helper2_updateLastReport(IOracleManagerV1.ConsensusLayerReport calldata _report) public {
+    function helper2_updateLastReport(IOracleManagerV1.ConsensusLayerReport calldata _report, uint256 _lastSharePrice)
+        public
+    {
         // we update the system parameters, this will have an impact on how the total underlying balance is computed
         IOracleManagerV1.StoredConsensusLayerReport memory storedReport;
 
@@ -176,14 +205,22 @@ contract RiverV1Harness is RiverV1 {
         storedReport.validatorsCount = _report.validatorsCount;
         storedReport.rebalanceDepositToRedeemMode = _report.rebalanceDepositToRedeemMode;
         storedReport.slashingContainmentMode = _report.slashingContainmentMode;
+        storedReport.totalDepositedActivatedETH = _report.totalDepositedActivatedETH;
+        storedReport.validatorsPartialExitWithdrawnBalance = _report.validatorsPartialExitWithdrawnBalance;
+        storedReport.validatorsStoppedEarningBalance = _report.validatorsStoppedEarningBalance;
+        storedReport.lastSharePrice = _lastSharePrice;
         LastConsensusLayerReport.set(storedReport);
     }
 
     /// @notice helper 3
-    function helper3_checkBounds(ConsensusLayerDataReportingVariables memory vars, ReportBounds.ReportBoundsStruct memory rb, uint256 maxDecrease) public {
+    function helper3_checkBounds(
+        ConsensusLayerDataReportingVariables memory vars,
+        ReportBounds.ReportBoundsStruct memory rb,
+        uint256 maxDecrease
+    ) public {
         if (
-                vars.postReportUnderlyingBalance
-                    < vars.preReportUnderlyingBalance - LibUint256.min(maxDecrease, vars.preReportUnderlyingBalance)
+            vars.postReportUnderlyingBalance
+                < vars.preReportUnderlyingBalance - LibUint256.min(maxDecrease, vars.preReportUnderlyingBalance)
         ) {
             revert TotalValidatorBalanceDecreaseOutOfBound(
                 vars.preReportUnderlyingBalance,
@@ -195,7 +232,10 @@ contract RiverV1Harness is RiverV1 {
     }
 
     /// @notice helper 4
-    function helper4_pullELFees(ConsensusLayerDataReportingVariables memory vars) public returns (ConsensusLayerDataReportingVariables memory) {
+    function helper4_pullELFees(ConsensusLayerDataReportingVariables memory vars)
+        public
+        returns (ConsensusLayerDataReportingVariables memory)
+    {
         // if we have available amount to upper bound after the reporting values are applied
         if (vars.availableAmountToUpperBound > 0) {
             // we pull the funds from the execution layer fee recipient
@@ -253,10 +293,29 @@ contract RiverV1Harness is RiverV1 {
     }
 
     /// @notice helper 8
-    function helper8_requestExitsBasedOnRedeemDemandAfterRebalancings(ConsensusLayerDataReportingVariables memory vars, IOracleManagerV1.ConsensusLayerReport calldata _report) public {
+    function helper8_reportInactiveEthToRedeemManager(ConsensusLayerDataReportingVariables memory vars) public {
+        uint256 inactiveEthAmount = vars.partialExitWithdrawnAmountIncrease + vars.stoppedEarningAmountIncrease;
+        if (inactiveEthAmount > 0 && vars.previousSharePrice > 0) {
+            uint256 inactiveLsEthAmount = (inactiveEthAmount * 1e18) / vars.previousSharePrice;
+            _reportInactiveEthToRedeemManager(inactiveLsEthAmount, inactiveEthAmount);
+        }
+    }
+
+    /// @notice helper 8
+    function helper8_requestExitsBasedOnRedeemDemandAfterRebalancings(
+        ConsensusLayerDataReportingVariables memory vars,
+        IOracleManagerV1.ConsensusLayerReport calldata _report
+    ) public {
+        _reportCLETH(_report.activeCLETHPerOperator);
+
+        uint256 base = _report.validatorsBalance + InFlightDeposit.get();
+        uint256 totalAvailableCLETH =
+            base > _report.validatorsExitingBalance ? base - _report.validatorsExitingBalance : 0;
+
         _requestExitsBasedOnRedeemDemandAfterRebalancings(
             _report.validatorsExitingBalance,
-            _report.stoppedValidatorCountPerOperator,
+            _report.exitedETHPerOperator,
+            totalAvailableCLETH,
             _report.rebalanceDepositToRedeemMode,
             _report.slashingContainmentMode
         );
@@ -275,8 +334,11 @@ contract RiverV1Harness is RiverV1 {
     }
 
     /// @notice helper 11
-    function helper11_commitBalanceToDeposit(ConsensusLayerDataReportingVariables memory vars) public {
+    function helper11_commitBalanceToDeposit(
+        ConsensusLayerDataReportingVariables memory vars,
+        IOracleManagerV1.ConsensusLayerReport calldata _report
+    ) public {
         // we update the committable amount based on daily maximum allowed
-        _commitBalanceToDeposit(vars.timeElapsedSinceLastReport);
+        _commitBalanceToDeposit(vars.timeElapsedSinceLastReport, _report.slashingContainmentMode);
     }
 }

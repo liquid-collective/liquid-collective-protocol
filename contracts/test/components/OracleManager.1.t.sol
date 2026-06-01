@@ -153,12 +153,15 @@ contract OracleManagerV1ExposeInitializer is OracleManagerV1 {
         redeemDemand -= amountToUse;
     }
 
-    event Internal_PullCLFunds(uint256 skimmedEthAmount, uint256 exitedEthAmount);
+    event Internal_PullCLFunds(uint256 skimmedEthAmount, uint256 exitedEthAmount, uint256 partialExitEthAmount);
 
-    function _pullCLFunds(uint256 skimmedEthAmount, uint256 exitedEthAmount) internal override {
+    function _pullCLFunds(uint256 skimmedEthAmount, uint256 exitedEthAmount, uint256 partialExitEthAmount)
+        internal
+        override
+    {
         amountToDeposit += skimmedEthAmount;
-        amountToRedeem += exitedEthAmount;
-        emit Internal_PullCLFunds(skimmedEthAmount, exitedEthAmount);
+        amountToRedeem += exitedEthAmount + partialExitEthAmount;
+        emit Internal_PullCLFunds(skimmedEthAmount, exitedEthAmount, partialExitEthAmount);
     }
 
     uint256 public exceedingEth;
@@ -246,7 +249,8 @@ contract OracleManagerV1Tests is Test {
     event Internal_PullELFees(uint256 _max, uint256 _returned);
     event Internal_PullCoverageFunds(uint256 _max, uint256 _returned);
     event Internal_ReportWithdrawToRedeemManager(uint256 currentAmountToRedeem);
-    event Internal_PullCLFunds(uint256 skimmedEthAmount, uint256 exitedEthAmount);
+    event Internal_PullCLFunds(uint256 skimmedEthAmount, uint256 exitedEthAmount, uint256 partialExitEthAmount);
+    event Internal_ReportInactiveEthToRedeemManager(uint256 lsEthAmount, uint256 ethAmount);
     event Internal_PullRedeemManagerExceedingEth(uint256 max, uint256 result);
     event Internal_RequestExitsBasedOnRedeemDemandAfterRebalancings(
         uint256 exitingBalance, bool depositToRedeemRebalancingAllowed, uint256 exitCountRequest
@@ -381,7 +385,7 @@ contract OracleManagerV1Tests is Test {
 
         if (v.clr.validatorsSkimmedBalance + v.clr.validatorsExitedBalance > 0) {
             vm.expectEmit(true, true, true, true);
-            emit Internal_PullCLFunds(v.clr.validatorsSkimmedBalance, v.clr.validatorsExitedBalance);
+            emit Internal_PullCLFunds(v.clr.validatorsSkimmedBalance, v.clr.validatorsExitedBalance, 0);
         }
         vm.expectEmit(true, true, true, true);
         emit Internal_PullELFees(v.maxIncrease, v.elFeesAvailable);
@@ -525,6 +529,67 @@ contract OracleManagerV1Tests is Test {
         assertEq(false, oracleManager.isValidEpoch(1));
         assertEq(0, oracleManager.getCLValidatorCount());
     }
+
+    function testReportingRoutesPartialExitToRedeemAndReportsInactiveLock() public {
+        IOracleManagerV1.ConsensusLayerReport memory clr;
+        OracleManagerV1ExposeInitializer om = OracleManagerV1ExposeInitializer(address(oracleManager));
+        om.sudoSetTotalSupplyForOracle(100 ether);
+        om.supersedeReportedBalanceSum(100 ether);
+
+        clr.epoch = epochsPerFrame;
+        clr.validatorsBalance = 100 ether;
+        clr.totalDepositedActivatedETH = 0;
+        vm.warp(genesisTime + (clr.epoch + epochsToAssumedFinality) * slotsPerEpoch * secondsPerSlot);
+
+        vm.prank(oracle);
+        oracleManager.setConsensusLayerData(clr);
+
+        clr.epoch += epochsPerFrame;
+        clr.validatorsPartialExitWithdrawnBalance = 10 ether;
+        clr.validatorsBalance = 90 ether;
+        vm.warp(genesisTime + (clr.epoch + epochsToAssumedFinality) * slotsPerEpoch * secondsPerSlot);
+
+        vm.expectEmit(true, true, true, true);
+        emit Internal_PullCLFunds(0, 0, 10 ether);
+        vm.expectEmit(true, true, true, true);
+        emit Internal_ReportInactiveEthToRedeemManager(10 ether, 10 ether);
+        vm.prank(oracle);
+        oracleManager.setConsensusLayerData(clr);
+    }
+
+    function testReportingStoresComputedLastSharePrice() public {
+        IOracleManagerV1.ConsensusLayerReport memory clr;
+        OracleManagerV1ExposeInitializer om = OracleManagerV1ExposeInitializer(address(oracleManager));
+        om.sudoSetTotalSupplyForOracle(100 ether);
+        om.supersedeReportedBalanceSum(100 ether);
+
+        clr.epoch = epochsPerFrame;
+        clr.validatorsBalance = 100 ether;
+        clr.lastSharePrice = 2e18;
+        vm.warp(genesisTime + (clr.epoch + epochsToAssumedFinality) * slotsPerEpoch * secondsPerSlot);
+
+        vm.prank(oracle);
+        oracleManager.setConsensusLayerData(clr);
+
+        assertEq(oracleManager.getLastConsensusLayerReport().lastSharePrice, 1e18);
+    }
+
+    function testReportingStoresZeroLastSharePriceWhenTotalSupplyIsZero() public {
+        IOracleManagerV1.ConsensusLayerReport memory clr;
+        OracleManagerV1ExposeInitializer om = OracleManagerV1ExposeInitializer(address(oracleManager));
+        om.sudoSetTotalSupplyForOracle(0);
+        om.supersedeReportedBalanceSum(100 ether);
+
+        clr.epoch = epochsPerFrame;
+        clr.validatorsBalance = 100 ether;
+        clr.lastSharePrice = 2e18;
+        vm.warp(genesisTime + (clr.epoch + epochsToAssumedFinality) * slotsPerEpoch * secondsPerSlot);
+
+        vm.prank(oracle);
+        oracleManager.setConsensusLayerData(clr);
+
+        assertEq(oracleManager.getLastConsensusLayerReport().lastSharePrice, 0);
+    }
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -596,17 +661,13 @@ contract OracleManagerV1CoverageTests is OracleManagerV1Tests {
     }
 
     function testReportingError_InvalidDecreasingPartialExitWithdrawnBalance() public {
+        vm.store(address(oracleManager), bytes32(uint256(LAST_CLR_BASE_SLOT) + 7), bytes32(uint256(10 ether)));
+
         IOracleManagerV1.ConsensusLayerReport memory clr;
         clr.epoch = epochsPerFrame;
-        clr.validatorsPartialExitWithdrawnBalance = 10 ether;
+        clr.validatorsPartialExitWithdrawnBalance = 9 ether;
         clr.totalDepositedActivatedETH = 0;
 
-        vm.warp(genesisTime + (clr.epoch + epochsToAssumedFinality) * slotsPerEpoch * secondsPerSlot);
-        vm.prank(oracle);
-        oracleManager.setConsensusLayerData(clr);
-
-        clr.epoch += epochsPerFrame;
-        clr.validatorsPartialExitWithdrawnBalance = 9 ether;
         vm.warp(genesisTime + (clr.epoch + epochsToAssumedFinality) * slotsPerEpoch * secondsPerSlot);
 
         vm.prank(oracle);
