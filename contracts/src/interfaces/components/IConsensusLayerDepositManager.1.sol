@@ -94,9 +94,10 @@ interface IConsensusLayerDepositManagerV1 {
     function getAttestationVerifier() external view returns (address);
 
     /// @notice Deposit validators using pre-committed buffer data validated by a deposit-committee attester quorum.
-    /// @dev Per-deposit Y-coordinates for BLS decompression are carried inside each
-    ///      `IDepositDataBuffer.DepositObject` (the `depositY` field). An all-zero `depositY`
-    ///      classifies the entry as a top-up; a non-zero one as an initial deposit.
+    /// @dev Initial deposits and top-ups are carried in separately-typed sub-arrays of
+    ///      `IDepositDataBuffer.DepositObject` (`deposits[]` and `topUps[]`). Initial deposits
+    ///      go through BLS verification; top-ups skip BLS and require their pubkey to already
+    ///      be in `ValidatorPubkeyLookup`.
     /// @param depositDataBufferId  Batch identifier in the DepositDataBuffer
     /// @param depositRootHash      Current deposit contract root hash co-signed by deposit-committee attesters
     /// @param signatures           EIP-712 signatures from deposit-committee attesters

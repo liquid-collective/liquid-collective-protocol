@@ -29,13 +29,14 @@ contract AdminStub {
 /// @notice Foundry-native invariant test on the attester-set state machine of
 ///         `AttestationVerifierV1`. Fuzzes random sequences of
 ///         `(addAttester, removeAttester, setQuorum)` via `AttesterSetHandler` and asserts the
-///         four global invariants always hold across all reachable states.
+///         five global invariants always hold across all reachable states.
 ///
-///         The four invariants protect against:
+///         The five invariants protect against:
 ///         - storage growth past `MAX_DEPOSIT_COMMITTEE_ATTESTERS`
 ///         - soft-bricking the deposit flow by setting quorum > registered count
 ///         - soft-bricking the deposit flow by setting quorum > `MAX_SIGNATURES`
 ///         - auth bypass via quorum = 0
+///         - desync between the `count` scalar and the `isDepositCommitteeAttester` mapping
 contract AttesterSetInvariantTest is Test {
     AttestationVerifierV1 internal verifier;
     AttesterSetHandler internal handler;
@@ -61,7 +62,7 @@ contract AttesterSetInvariantTest is Test {
 
     /// @dev The registered attester set never grows beyond the storage cap.
     function invariant_attesterCountBoundedByMax() public {
-        assertLe(verifier.getDepositCommitteeAttesterCount(), 32);
+        assertLe(verifier.getDepositCommitteeAttesterCount(), verifier.MAX_DEPOSIT_COMMITTEE_ATTESTERS());
     }
 
     /// @dev Quorum is never higher than the number of registered attesters. A violation here
@@ -77,7 +78,7 @@ contract AttesterSetInvariantTest is Test {
     ///      failure mode as above, different mechanism (`_verifyAttestationQuorum` rejects
     ///      sig arrays larger than MAX_SIGNATURES).
     function invariant_quorumLeMaxSignatures() public {
-        assertLe(verifier.getDepositCommitteeAttestationQuorum(), 20);
+        assertLe(verifier.getDepositCommitteeAttestationQuorum(), verifier.MAX_SIGNATURES());
     }
 
     /// @dev Quorum is always positive. A violation here would let the keeper submit deposits
