@@ -44,15 +44,16 @@ interface IConsensusLayerDepositManagerV1 {
 
     /// @notice Emitted once per top-up entry as it is executed against the deposit contract.
     ///         Symmetric to `PubkeyFunded` but for top-ups (entries with all-zero `depositY`,
-    ///         whose pubkey must already be bound to `operatorIdx` in the ValidatorPubkeyLookup).
+    ///         whose pubkey must already be present in `ValidatorPubkeyLookup`).
+    /// @dev    `ValidatorPubkeyLookup` is membership-only — there is no on-chain binding between
+    ///         a pubkey and the operator that performed its initial deposit. The `operatorIdx`
+    ///         on a top-up is whatever the deposit-committee-attested buffer specifies, and the
+    ///         protocol trusts the committee to attest the correct operator.
     /// @param depositDataBufferId The id of the deposit-data buffer batch
-    /// @param operatorIdx The operator the top-up is credited to (must match the originally-bound operator)
+    /// @param operatorIdx The operator the top-up is credited to (as attested by the deposit committee)
     /// @param pubkey The 48-byte BLS pubkey of the validator
     /// @param amount The wei amount topped up
     event TopUp(bytes32 indexed depositDataBufferId, uint256 indexed operatorIdx, bytes pubkey, uint256 amount);
-
-    /// @notice Emitted per operator when validator keys are funded during a deposit
-    event FundedValidatorKeys(uint256 indexed operatorIndex, bytes[] publicKeys, bool deferred);
 
     /// @notice Emitted when the AttestationVerifier address is updated
     event SetAttestationVerifier(address indexed attestationVerifier);

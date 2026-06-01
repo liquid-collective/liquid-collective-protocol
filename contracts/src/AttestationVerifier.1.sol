@@ -235,7 +235,8 @@ contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1 {
         bytes32 computedId = keccak256(abi.encode(deposits));
         if (computedId != depositDataBufferId) revert BufferIdMismatch(depositDataBufferId, computedId);
 
-        // 4. Validate every entry before
+        // 4. Validate every entry: pubkey/signature length, amount bounds, top-up vs
+        //    initial-deposit classification, and intra-batch pubkey dedup before BLS verification.
         bytes32[] memory pubkeyHashes = new bytes32[](depositCount);
         for (uint256 i = 0; i < depositCount; i++) {
             if (deposits[i].pubkey.length != DEPOSIT_PUBKEY_LENGTH) {
