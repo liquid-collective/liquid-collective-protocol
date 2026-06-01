@@ -195,13 +195,23 @@ When a claim succeeds:
 
 ## Resolution And Claim APIs
 
-Keep the existing claim API shape:
+Keep the existing claim API shape. Claim calldata must not include rate-lock event IDs:
 
 ```solidity
 claimRedeemRequests(uint32[] redeemRequestIds, uint32[] withdrawalEventIds, ...)
 ```
 
-Callers continue to supply withdrawal event IDs. `RedeemManager` resolves the matching rate-lock event internally from the request's `rateLockHeight`.
+Callers continue to supply withdrawal event IDs only. `RedeemManager` resolves the matching rate-lock event internally from the request's `rateLockHeight`.
+
+Internal claim flow:
+
+1. Load the redeem request.
+2. Validate the caller-supplied withdrawal event against the request's withdrawal `height`.
+3. Resolve the rate-lock event from the request's `rateLockHeight`.
+4. Claim the overlap across the redeem request, withdrawal event, and internally resolved rate-lock event.
+5. If the claim crosses a rate-lock boundary, advance to the next rate-lock event internally.
+
+Rate-lock event IDs are an implementation detail. They are not required from callers and are not trusted as claim input.
 
 Add a richer resolver for off-chain clients:
 
@@ -216,8 +226,9 @@ Rules:
 
 - If either side is missing, the request is unsatisfied.
 - Existing `resolveRedeemRequests` continues returning withdrawal event IDs only for backward compatibility.
-- New clients should use `resolveRedeemRequestsV2`.
+- New clients should use `resolveRedeemRequestsV2` for visibility into both coverage streams.
 - Claim reverts if the supplied withdrawal event matches but no matching rate-lock event exists.
+- Claim does not accept, validate, or trust rate-lock event IDs in calldata.
 
 ## Testing
 
@@ -228,6 +239,7 @@ RedeemManager unit tests:
 - `reportInactiveEth` does nothing when `rateLockDemand == 0`.
 - `reportInactiveEth` does not revert on unsolicited inactive ETH.
 - Claims require both rate-lock and withdrawal coverage.
+- Claims do not require rate-lock event IDs in calldata.
 - Claims split correctly across multiple rate-lock and withdrawal boundaries.
 - Slashing claims pay `min(locked rate, withdrawal rate)`.
 - Excess ETH is buffered only when withdrawal ETH is higher than locked ETH.
