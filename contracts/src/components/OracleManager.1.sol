@@ -326,6 +326,25 @@ abstract contract OracleManagerV1 is IOracleManagerV1 {
                 revert InvalidValidatorCountReport(_report.validatorsCount, lastStoredReport.validatorsCount);
             }
 
+            if (_report.totalConsolidationsAmountReported < lastStoredReport.totalConsolidationsAmountReported) {
+                revert InvalidTotalConsolidationsAmountReportedDecrease(
+                    lastStoredReport.totalConsolidationsAmountReported, _report.totalConsolidationsAmountReported
+                );
+            }
+
+            if (_report.totalConsolidationsAmountReported > lastStoredReport.totalConsolidationsAmountReported) {
+                // the total consolidation amount reported has increased so we need to reduce the buffer
+                uint256 increaseInConsolidation =
+                    _report.totalConsolidationsAmountReported - lastStoredReport.totalConsolidationsAmountReported;
+                uint256 oldConsolidationBuffer = ConsolidationBuffer.get();
+                if (increaseInConsolidation > oldConsolidationBuffer) {
+                    revert InvalidTotalConsolidationsAmountReportedIncrease(
+                        lastStoredReport.totalConsolidationsAmountReported, _report.totalConsolidationsAmountReported
+                    );
+                }
+                _setConsolidationBuffer(oldConsolidationBuffer, oldConsolidationBuffer - increaseInConsolidation);
+            }
+
             // we compute the new skimmed amount by taking the delta between reports
             vars.skimmedAmountIncrease = _report.validatorsSkimmedBalance - vars.lastReportSkimmedBalance;
 
@@ -361,6 +380,7 @@ abstract contract OracleManagerV1 is IOracleManagerV1 {
             storedReport.rebalanceDepositToRedeemMode = _report.rebalanceDepositToRedeemMode;
             storedReport.slashingContainmentMode = _report.slashingContainmentMode;
             storedReport.totalDepositedActivatedETH = _report.totalDepositedActivatedETH;
+            storedReport.totalConsolidationsAmountReported = _report.totalConsolidationsAmountReported;
             LastConsensusLayerReport.set(storedReport);
         }
 

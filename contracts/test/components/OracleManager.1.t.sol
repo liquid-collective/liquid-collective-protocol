@@ -11,12 +11,19 @@ import "../../src/components/OracleManager.1.sol";
 import "../../src/libraries/LibUint256.sol";
 import "../../src/state/shared/AdministratorAddress.sol";
 import "../../src/state/river/DepositedValidatorCount.sol";
+import "../../src/state/river/ConsolidationBuffer.sol";
 
 contract OracleManagerV1ExposeInitializer is OracleManagerV1 {
+    event Internal_SetConsolidationBuffer(uint256 oldValue, uint256 newValue);
+
     function _setConsolidationBuffer(uint256 _oldConsolidationBuffer, uint256 _newConsolidationBuffer)
         internal
         override
-    {}
+    {
+        emit Internal_SetConsolidationBuffer(_oldConsolidationBuffer, _newConsolidationBuffer);
+        // Persist like RiverV1 does so buffer changes are observable in storage and in _assetBalance.
+        ConsolidationBuffer.set(_newConsolidationBuffer);
+    }
 
     function supersedeReportedBalanceSum(uint256 amount) external {
         LastConsensusLayerReport.get().validatorsBalance = amount;
@@ -24,6 +31,10 @@ contract OracleManagerV1ExposeInitializer is OracleManagerV1 {
 
     function supersedeReportedValidatorCount(uint256 amount) external {
         LastConsensusLayerReport.get().validatorsCount = uint32(amount);
+    }
+
+    function supersedeTotalConsolidationsAmountReported(uint256 amount) external {
+        LastConsensusLayerReport.get().totalConsolidationsAmountReported = amount;
     }
 
     function supersedeDepositedValidatorCount(uint256 amount) external {
@@ -112,8 +123,10 @@ contract OracleManagerV1ExposeInitializer is OracleManagerV1 {
     }
 
     function _assetBalance() internal view override returns (uint256 result) {
+        // Mirror RiverV1._assetBalance by including the consolidation buffer in the total underlying.
         result = (DepositedValidatorCount.get() - LastConsensusLayerReport.get().validatorsCount) * 32 ether
-            + LastConsensusLayerReport.get().validatorsBalance + amountToDeposit + amountToRedeem;
+            + LastConsensusLayerReport.get().validatorsBalance + amountToDeposit + amountToRedeem
+            + ConsolidationBuffer.get();
     }
 
     function debug_getTotalUnderlyingBalance() external view returns (uint256) {
@@ -519,6 +532,7 @@ contract OracleManagerV1CoverageTests is OracleManagerV1Tests {
     bytes32 constant LAST_CLR_BASE_SLOT = bytes32(uint256(keccak256("river.state.lastConsensusLayerReport")) - 1);
 
     event Internal_PullConsolidationCoverageFunds(uint256 _max, uint256 _returned);
+    event Internal_SetConsolidationBuffer(uint256 oldValue, uint256 newValue);
 
     /// Asserts that getCLValidatorTotalBalance returns the value stored in the last consensus layer report.
     function testGetCLValidatorTotalBalance() public {
@@ -629,8 +643,176 @@ contract OracleManagerV1CoverageTests is OracleManagerV1Tests {
         vm.prank(oracle);
         oracleManager.setConsensusLayerData(clr);
 
-        // Buffer slot must be untouched since the harness override of _setConsolidationBuffer is empty
-        // and the inner if (pulledConsolidationCoverageFunds > 0) was false.
+        // Buffer slot must be untouched since the inner if (pulledConsolidationCoverageFunds > 0) was false,
+        // so _setConsolidationBuffer was never invoked for this report.
         assertEq(uint256(vm.load(address(oracleManager), CONSOLIDATION_BUFFER_SLOT)), buffer);
+    }
+
+    /// Asserts that setConsensusLayerData reverts with InvalidTotalConsolidationsAmountReportedDecrease when the
+    /// reported totalConsolidationsAmountReported is lower than the previously stored value.
+    function testSetConsensusLayerDataRevertsOnConsolidationsAmountDecrease() public {
+        OracleManagerV1ExposeInitializer om = OracleManagerV1ExposeInitializer(address(oracleManager));
+        om.supersedeTotalConsolidationsAmountReported(5 ether);
+
+        uint256 epoch = epochsPerFrame;
+        vm.warp(genesisTime + (epoch + epochsToAssumedFinality) * slotsPerEpoch * secondsPerSlot);
+        IOracleManagerV1.ConsensusLayerReport memory clr;
+        clr.epoch = epoch;
+        clr.exitedETHPerOperator = new uint256[](1);
+        clr.totalConsolidationsAmountReported = 4 ether;
+
+        vm.prank(oracle);
+        vm.expectRevert(
+            abi.encodeWithSignature(
+                "InvalidTotalConsolidationsAmountReportedDecrease(uint256,uint256)", 5 ether, 4 ether
+            )
+        );
+        oracleManager.setConsensusLayerData(clr);
+    }
+
+    /// Asserts that when totalConsolidationsAmountReported increases within the available ConsolidationBuffer, the
+    /// buffer is reduced by the delta and the new value is persisted.
+    function testSetConsensusLayerDataConsolidationsIncreaseReducesBuffer() public {
+        OracleManagerV1ExposeInitializer om = OracleManagerV1ExposeInitializer(address(oracleManager));
+
+        uint256 buffer = 5 ether;
+        vm.store(address(om), CONSOLIDATION_BUFFER_SLOT, bytes32(buffer));
+        om.supersedeTotalConsolidationsAmountReported(1 ether);
+        // Keep the later pull path from performing a second buffer update.
+        om.sudoSetConsolidationCoverageFundAvailable(0);
+
+        uint256 epoch = epochsPerFrame;
+        vm.warp(genesisTime + (epoch + epochsToAssumedFinality) * slotsPerEpoch * secondsPerSlot);
+        IOracleManagerV1.ConsensusLayerReport memory clr;
+        clr.epoch = epoch;
+        clr.exitedETHPerOperator = new uint256[](1);
+        clr.totalConsolidationsAmountReported = 3 ether; // delta = 2 ether
+
+        uint256 assetBalanceBefore = om.debug_getTotalUnderlyingBalance();
+
+        vm.expectEmit(true, true, true, true, address(om));
+        emit Internal_SetConsolidationBuffer(buffer, buffer - 2 ether); // 5 -> 3
+        vm.prank(oracle);
+        oracleManager.setConsensusLayerData(clr);
+
+        assertEq(oracleManager.getLastConsensusLayerReport().totalConsolidationsAmountReported, 3 ether);
+        // Reducing the consolidation buffer must not inflate the asset balance: with validator balances unchanged,
+        // the total underlying drops by exactly the buffer delta and never increases.
+        uint256 assetBalanceAfter = om.debug_getTotalUnderlyingBalance();
+        assertLe(assetBalanceAfter, assetBalanceBefore);
+        assertEq(assetBalanceAfter, assetBalanceBefore - 2 ether);
+    }
+
+    /// Asserts that setConsensusLayerData reverts with InvalidTotalConsolidationsAmountReportedIncrease when the
+    /// increase in totalConsolidationsAmountReported exceeds the available ConsolidationBuffer.
+    function testSetConsensusLayerDataRevertsOnConsolidationsIncreaseExceedingBuffer() public {
+        OracleManagerV1ExposeInitializer om = OracleManagerV1ExposeInitializer(address(oracleManager));
+
+        vm.store(address(om), CONSOLIDATION_BUFFER_SLOT, bytes32(uint256(2 ether)));
+        om.supersedeTotalConsolidationsAmountReported(1 ether);
+
+        uint256 epoch = epochsPerFrame;
+        vm.warp(genesisTime + (epoch + epochsToAssumedFinality) * slotsPerEpoch * secondsPerSlot);
+        IOracleManagerV1.ConsensusLayerReport memory clr;
+        clr.epoch = epoch;
+        clr.exitedETHPerOperator = new uint256[](1);
+        clr.totalConsolidationsAmountReported = 5 ether; // delta = 4 ether > 2 ether buffer
+
+        vm.prank(oracle);
+        vm.expectRevert(
+            abi.encodeWithSignature(
+                "InvalidTotalConsolidationsAmountReportedIncrease(uint256,uint256)", 1 ether, 5 ether
+            )
+        );
+        oracleManager.setConsensusLayerData(clr);
+    }
+
+    /// Asserts that an unchanged totalConsolidationsAmountReported neither reverts nor reduces the buffer, and that
+    /// the value is persisted (confirms the decrease guard is `<`, not `<=`).
+    function testSetConsensusLayerDataConsolidationsUnchangedKeepsBuffer() public {
+        OracleManagerV1ExposeInitializer om = OracleManagerV1ExposeInitializer(address(oracleManager));
+
+        uint256 buffer = 5 ether;
+        vm.store(address(om), CONSOLIDATION_BUFFER_SLOT, bytes32(buffer));
+        om.supersedeTotalConsolidationsAmountReported(3 ether);
+        om.sudoSetConsolidationCoverageFundAvailable(0);
+
+        uint256 epoch = epochsPerFrame;
+        vm.warp(genesisTime + (epoch + epochsToAssumedFinality) * slotsPerEpoch * secondsPerSlot);
+        IOracleManagerV1.ConsensusLayerReport memory clr;
+        clr.epoch = epoch;
+        clr.exitedETHPerOperator = new uint256[](1);
+        clr.totalConsolidationsAmountReported = 3 ether; // equal -> buffer-reduction branch skipped
+
+        uint256 assetBalanceBefore = om.debug_getTotalUnderlyingBalance();
+
+        vm.prank(oracle);
+        oracleManager.setConsensusLayerData(clr);
+
+        assertEq(oracleManager.getLastConsensusLayerReport().totalConsolidationsAmountReported, 3 ether);
+        // Equal report skips the buffer-reduction branch, so the buffer and asset balance are unchanged.
+        assertEq(uint256(vm.load(address(oracleManager), CONSOLIDATION_BUFFER_SLOT)), buffer);
+        assertEq(om.debug_getTotalUnderlyingBalance(), assetBalanceBefore);
+    }
+
+    /// Fuzzes the full consolidation branch: decrease revert, increase-exceeds-buffer revert, buffer reduction on
+    /// increase, and the unchanged case. Generalizes the targeted tests above.
+    function testFuzzSetConsensusLayerDataConsolidations(
+        uint256 lastConsolidation,
+        uint256 newConsolidation,
+        uint256 buffer
+    ) public {
+        OracleManagerV1ExposeInitializer om = OracleManagerV1ExposeInitializer(address(oracleManager));
+
+        lastConsolidation = bound(lastConsolidation, 0, 1_000_000 ether);
+        newConsolidation = bound(newConsolidation, 0, 1_000_000 ether);
+        buffer = bound(buffer, 0, 1_000_000 ether);
+
+        om.supersedeTotalConsolidationsAmountReported(lastConsolidation);
+        vm.store(address(om), CONSOLIDATION_BUFFER_SLOT, bytes32(buffer));
+        // Isolate the increase branch: the later pull path must not perform a second buffer update.
+        om.sudoSetConsolidationCoverageFundAvailable(0);
+
+        uint256 epoch = epochsPerFrame;
+        vm.warp(genesisTime + (epoch + epochsToAssumedFinality) * slotsPerEpoch * secondsPerSlot);
+        IOracleManagerV1.ConsensusLayerReport memory clr;
+        clr.epoch = epoch;
+        clr.exitedETHPerOperator = new uint256[](1);
+        clr.totalConsolidationsAmountReported = newConsolidation;
+
+        if (newConsolidation < lastConsolidation) {
+            vm.prank(oracle);
+            vm.expectRevert(
+                abi.encodeWithSignature(
+                    "InvalidTotalConsolidationsAmountReportedDecrease(uint256,uint256)",
+                    lastConsolidation,
+                    newConsolidation
+                )
+            );
+            oracleManager.setConsensusLayerData(clr);
+        } else if (newConsolidation - lastConsolidation > buffer) {
+            vm.prank(oracle);
+            vm.expectRevert(
+                abi.encodeWithSignature(
+                    "InvalidTotalConsolidationsAmountReportedIncrease(uint256,uint256)",
+                    lastConsolidation,
+                    newConsolidation
+                )
+            );
+            oracleManager.setConsensusLayerData(clr);
+        } else if (newConsolidation > lastConsolidation) {
+            uint256 assetBalanceBefore = om.debug_getTotalUnderlyingBalance();
+            vm.expectEmit(true, true, true, true, address(om));
+            emit Internal_SetConsolidationBuffer(buffer, buffer - (newConsolidation - lastConsolidation));
+            vm.prank(oracle);
+            oracleManager.setConsensusLayerData(clr);
+            assertEq(oracleManager.getLastConsensusLayerReport().totalConsolidationsAmountReported, newConsolidation);
+            // The buffer decreased by the delta; with validator balances unchanged the asset balance must not increase.
+            assertLe(om.debug_getTotalUnderlyingBalance(), assetBalanceBefore);
+        } else {
+            vm.prank(oracle);
+            oracleManager.setConsensusLayerData(clr);
+            assertEq(oracleManager.getLastConsensusLayerReport().totalConsolidationsAmountReported, newConsolidation);
+        }
     }
 }

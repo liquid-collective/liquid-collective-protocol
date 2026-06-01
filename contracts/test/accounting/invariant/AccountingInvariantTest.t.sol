@@ -17,6 +17,7 @@ contract AccountingInvariantTest is AccountingInvariants {
     uint256 internal ghost_lastSkimmedBalance;
     uint256 internal ghost_lastExitedBalance;
     uint256[] internal ghost_lastExitedPerOp;
+    uint256 internal ghost_lastConsolidationsAmountReported;
 
     /// @notice Initialises the base harness, deploys the `AccountingHandler`, and registers it
     ///         as the sole Foundry invariant target so the fuzzer calls only its bounded functions.
@@ -87,11 +88,12 @@ contract AccountingInvariantTest is AccountingInvariants {
         }
         sim_oracleReport(rebalance, slashingContainment);
         _setAllowSharePriceDecrease(false);
-        // Snapshot post-report state for monotonicity invariants (I14-I17)
+        // Snapshot post-report state for monotonicity invariants (I15-I17, I21)
         IOracleManagerV1.StoredConsensusLayerReport memory report = river.getLastConsensusLayerReport();
         ghost_lastSkimmedBalance = report.validatorsSkimmedBalance;
         ghost_lastExitedBalance = report.validatorsExitedBalance;
         ghost_lastExitedPerOp = operatorsRegistry.getExitedETHPerOperator();
+        ghost_lastConsolidationsAmountReported = report.totalConsolidationsAmountReported;
     }
 
     // ─── state readers (called by handler for precondition guards) ───────────────
@@ -281,5 +283,21 @@ contract AccountingInvariantTest is AccountingInvariants {
             simSum += _simValidators[i].depositedETH;
         }
         assertEq(river.getTotalDepositedETH(), simSum, "I20: TotalDepositedETH != exact sim sum");
+    }
+
+    /// @dev I21: Stored report totalConsolidationsAmountReported is monotonically non-decreasing across
+    ///      reports — mirrors the OracleManager InvalidTotalConsolidationsAmountReportedDecrease guard.
+    ///      The ghost is snapshotted after each oracle report; between reports the stored value is unchanged,
+    ///      and a new report may only keep or raise it.
+    ///      Note: the consolidation-buffer increase path is not yet wired into the simulator (the buffer has
+    ///      no on-chain increase path on this branch), so this currently observes a constant 0 and acts as a
+    ///      regression guard for the monotonic property once consolidation reporting is exercised.
+    function invariant_I21_consolidationsAmountNonDecreasing() public {
+        IOracleManagerV1.StoredConsensusLayerReport memory report = river.getLastConsensusLayerReport();
+        assertGe(
+            report.totalConsolidationsAmountReported,
+            ghost_lastConsolidationsAmountReported,
+            "I21: totalConsolidationsAmountReported decreased"
+        );
     }
 }
