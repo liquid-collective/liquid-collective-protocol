@@ -186,6 +186,19 @@ interface IRedeemManagerV1 {
         view
         returns (int64[] memory withdrawalEventIds);
 
+    /// @notice Resolves the provided list of redeem request ids against rate-lock and withdrawal events
+    /// @dev The result arrays are of equal length with ids or error codes
+    /// @dev -1 means that the request is not satisfied yet
+    /// @dev -2 means that the request is out of bounds
+    /// @dev -3 means that the request has already been claimed
+    /// @param _redeemRequestIds The list of redeem requests to resolve
+    /// @return rateLockEventIds The list of rate-lock events matching every redeem request (or error codes)
+    /// @return withdrawalEventIds The list of withdrawal events matching every redeem request (or error codes)
+    function resolveRedeemRequestsV2(uint32[] calldata _redeemRequestIds)
+        external
+        view
+        returns (int64[] memory rateLockEventIds, int64[] memory withdrawalEventIds);
+
     /// @notice Creates a redeem request
     /// @param _lsETHAmount The amount of LsETH to redeem
     /// @param _recipient The recipient owning the redeem request

@@ -1727,6 +1727,47 @@ contract RedeemManagerV1Tests is RedeeManagerV1TestBase {
         assertTrue(withdrawalEventIds[0] == -2);
     }
 
+    function testResolveRedeemRequestsV2RequiresBothStacks(uint256 _salt) external {
+        address user = _generateAllowlistedUser(_salt);
+        uint128 amount = uint128(bound(_salt, 1 ether, 1000 ether));
+
+        river.sudoDeal(user, amount);
+        vm.prank(user);
+        river.approve(address(redeemManager), amount);
+        vm.prank(user);
+        redeemManager.requestRedeem(amount, user);
+
+        uint32[] memory ids = new uint32[](1);
+        ids[0] = 0;
+
+        (int64[] memory rateLockIds, int64[] memory withdrawalIds) = redeemManager.resolveRedeemRequestsV2(ids);
+        assertEq(rateLockIds[0], -1);
+        assertEq(withdrawalIds[0], -1);
+
+        vm.prank(address(river));
+        redeemManager.reportInactiveEth(amount, amount);
+
+        (rateLockIds, withdrawalIds) = redeemManager.resolveRedeemRequestsV2(ids);
+        assertEq(rateLockIds[0], 0);
+        assertEq(withdrawalIds[0], -1);
+
+        vm.deal(address(this), amount);
+        river.sudoReportWithdraw{value: amount}(address(redeemManager), amount);
+
+        (rateLockIds, withdrawalIds) = redeemManager.resolveRedeemRequestsV2(ids);
+        assertEq(rateLockIds[0], 0);
+        assertEq(withdrawalIds[0], 0);
+    }
+
+    function testResolveRedeemRequestsV2OutOfBounds() external {
+        uint32[] memory ids = new uint32[](1);
+        ids[0] = 0;
+
+        (int64[] memory rateLockIds, int64[] memory withdrawalIds) = redeemManager.resolveRedeemRequestsV2(ids);
+        assertEq(rateLockIds[0], -2);
+        assertEq(withdrawalIds[0], -2);
+    }
+
     function testResolveUnsatisfied(uint256 _salt) external {
         uint128 amount = uint128(bound(_salt, 1, type(uint120).max));
         address user = _generateAllowlistedUser(_salt);

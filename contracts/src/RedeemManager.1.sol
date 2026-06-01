@@ -173,6 +173,30 @@ contract RedeemManagerV1 is Initializable, ReentrancyGuard, IRedeemManagerV1, IP
     }
 
     /// @inheritdoc IRedeemManagerV1
+    function resolveRedeemRequestsV2(uint32[] calldata _redeemRequestIds)
+        external
+        view
+        returns (int64[] memory rateLockEventIds, int64[] memory withdrawalEventIds)
+    {
+        rateLockEventIds = new int64[](_redeemRequestIds.length);
+        withdrawalEventIds = new int64[](_redeemRequestIds.length);
+
+        WithdrawalStack.WithdrawalEvent memory lastWithdrawalEvent;
+        WithdrawalStack.WithdrawalEvent[] storage withdrawalEvents = WithdrawalStack.get();
+        uint256 withdrawalEventsLength = withdrawalEvents.length;
+        if (withdrawalEventsLength > 0) {
+            unchecked {
+                lastWithdrawalEvent = withdrawalEvents[withdrawalEventsLength - 1];
+            }
+        }
+
+        for (uint256 idx = 0; idx < _redeemRequestIds.length; ++idx) {
+            rateLockEventIds[idx] = _resolveRateLockEventId(_redeemRequestIds[idx]);
+            withdrawalEventIds[idx] = _resolveRedeemRequestId(_redeemRequestIds[idx], lastWithdrawalEvent);
+        }
+    }
+
+    /// @inheritdoc IRedeemManagerV1
     function requestRedeem(uint256 _lsETHAmount, address _recipient, address _initiator)
         external
         onlyRiver
@@ -304,6 +328,19 @@ contract RedeemManagerV1 is Initializable, ReentrancyGuard, IRedeemManagerV1, IP
                 && _redeemRequest.height >= _withdrawalEvent.height);
     }
 
+    /// @notice Internal utility to determine if the rate-lock height matches the provided rate-lock event
+    /// @param _rateLockHeight The redeem request height in rate-lock space
+    /// @param _rateLockEvent The rate-lock event to test against
+    /// @return Whether the redeem request height matches the provided rate-lock event
+    function _isRateLockMatch(uint256 _rateLockHeight, RateLockStack.RateLockEvent memory _rateLockEvent)
+        internal
+        pure
+        returns (bool)
+    {
+        return (_rateLockHeight < _rateLockEvent.height + _rateLockEvent.amount
+                && _rateLockHeight >= _rateLockEvent.height);
+    }
+
     /// @notice Internal utility to perform a dichotomic search of the withdrawal event to use to claim the redeem request
     /// @param _redeemRequest The redeem request to resolve
     /// @return The matching withdrawal event
@@ -347,6 +384,45 @@ contract RedeemManagerV1 is Initializable, ReentrancyGuard, IRedeemManagerV1, IP
         return min;
     }
 
+    /// @notice Internal utility to perform a dichotomic search of the rate-lock event covering the redeem request
+    /// @param _rateLockHeight The redeem request height in rate-lock space
+    /// @return The matching rate-lock event
+    function _performRateLockDichotomicResolution(uint256 _rateLockHeight) internal view returns (int64) {
+        RateLockStack.RateLockEvent[] storage rateLockEvents = RateLockStack.get();
+
+        int64 max = int64(int256(rateLockEvents.length - 1));
+
+        if (_isRateLockMatch(_rateLockHeight, rateLockEvents[uint64(max)])) {
+            return max;
+        }
+
+        int64 min = 0;
+
+        if (_isRateLockMatch(_rateLockHeight, rateLockEvents[uint64(min)])) {
+            return min;
+        }
+
+        // we start a dichotomic search between min and max
+        while (min != max) {
+            int64 mid = (min + max) / 2;
+
+            // we identify and verify that the middle element is not matching
+            RateLockStack.RateLockEvent memory midRateLockEvent = rateLockEvents[uint64(mid)];
+            if (_isRateLockMatch(_rateLockHeight, midRateLockEvent)) {
+                return mid;
+            }
+
+            // depending on the position of the middle element, we update max or min to get our min max range
+            // closer to our redeem request position
+            if (_rateLockHeight < midRateLockEvent.height) {
+                max = mid;
+            } else {
+                min = mid;
+            }
+        }
+        return min;
+    }
+
     /// @notice Internal utility to resolve a redeem request and retrieve its satisfying withdrawal event id, or identify possible errors
     /// @param _redeemRequestId The redeem request id
     /// @param _lastWithdrawalEvent The last withdrawal event loaded in memory
@@ -376,6 +452,37 @@ contract RedeemManagerV1 is Initializable, ReentrancyGuard, IRedeemManagerV1, IP
         // we know for sure that the redeem request has funds yet to be claimed and there is a withdrawal event we need to identify
         // that would allow the user to claim the redeem request
         return _performDichotomicResolution(redeemRequest);
+    }
+
+    /// @notice Internal utility to resolve a redeem request and retrieve its covering rate-lock event id, or identify possible errors
+    /// @param _redeemRequestId The redeem request id
+    /// @return rateLockEventId The id of the rate-lock event matching the redeem request or error code
+    function _resolveRateLockEventId(uint32 _redeemRequestId) internal view returns (int64 rateLockEventId) {
+        RedeemQueueV2.RedeemRequest[] storage redeemRequests = RedeemQueueV2.get();
+        // if the redeem request id is >= than the size of requests, we know it's out of bounds and doesn't exist
+        if (_redeemRequestId >= redeemRequests.length) {
+            return RESOLVE_OUT_OF_BOUNDS;
+        }
+        RedeemQueueV2.RedeemRequest memory redeemRequest = redeemRequests[_redeemRequestId];
+        // if the redeem request remaining amount is 0, we know that the request has been entirely claimed
+        if (redeemRequest.amount == 0) {
+            return RESOLVE_FULLY_CLAIMED;
+        }
+        RateLockStack.RateLockEvent[] storage rateLockEvents = RateLockStack.get();
+        // if there are no existing rate-lock events, we know that the redeem request is not yet rate-lock covered
+        if (rateLockEvents.length == 0) {
+            return RESOLVE_UNSATISFIED;
+        }
+        RateLockStack.RateLockEvent memory lastRateLockEvent = rateLockEvents[rateLockEvents.length - 1];
+        uint256 rateLockHeight = RateLockHeightForRequest.get(_redeemRequestId);
+        // if the height of the redeem request is higher than the height and amount of the last rate-lock element,
+        // we know that the redeem request is not yet rate-lock covered
+        if (lastRateLockEvent.height + lastRateLockEvent.amount <= rateLockHeight) {
+            return RESOLVE_UNSATISFIED;
+        }
+        // we know for sure that the redeem request has funds yet to be claimed and there is a rate-lock event we need to identify
+        // that would allow the user to resolve the redeem request rate lock
+        return _performRateLockDichotomicResolution(rateLockHeight);
     }
 
     /// @notice Perform a new redeem request for the specified recipient
