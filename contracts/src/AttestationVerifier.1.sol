@@ -69,9 +69,8 @@ contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1 {
     ///      single `bytes32` id). `bytes[]` fields follow EIP-712 dynamic-array rules:
     ///      each element is replaced by `keccak256(element)`, then the resulting `bytes32`
     ///      array is concatenated and hashed (`_hashBytesArray`).
-    bytes32 internal constant ATTEST_CONSOLIDATION_TYPEHASH = keccak256(
-        "AttestConsolidation(address user,bytes[] sourcePubkeys,bytes[] targetPubkeys,uint256 totalAmount)"
-    );
+    bytes32 internal constant ATTEST_CONSOLIDATION_TYPEHASH =
+        keccak256("AttestConsolidation(address user,bytes[] sourcePubkeys,bytes[] targetPubkeys,uint256 totalAmount)");
 
     /// @notice Maximum number of signatures accepted. Bounds the O(n^2) duplicate-detection loop.
     uint256 public constant MAX_SIGNATURES = 20;
@@ -148,52 +147,56 @@ contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1 {
         bytes32 depositDomain = BLS12_381.computeDepositDomain(_genesisForkVersion);
         DepositDomainValue.set(depositDomain);
         emit SetDepositDomain(depositDomain);
-
-        // ---- Deposit committee + quorum ----
-        for (uint256 i = 0; i < _depositCommitteeAttesters.length; i++) {
-            if (!DepositCommitteeAttesters.isDepositCommitteeAttester(_depositCommitteeAttesters[i])) {
-                DepositCommitteeAttesters.setDepositCommitteeAttester(_depositCommitteeAttesters[i], true);
-                DepositCommitteeAttesters.setCount(DepositCommitteeAttesters.getCount() + 1);
-                emit SetDepositCommitteeAttester(_depositCommitteeAttesters[i], true);
+        {
+            // ---- Deposit committee + quorum ----
+            for (uint256 i = 0; i < _depositCommitteeAttesters.length; i++) {
+                if (!DepositCommitteeAttesters.isDepositCommitteeAttester(_depositCommitteeAttesters[i])) {
+                    DepositCommitteeAttesters.setDepositCommitteeAttester(_depositCommitteeAttesters[i], true);
+                    DepositCommitteeAttesters.setCount(DepositCommitteeAttesters.getCount() + 1);
+                    emit SetDepositCommitteeAttester(_depositCommitteeAttesters[i], true);
+                }
             }
-        }
-        uint256 depositCommitteeAttesterCount = DepositCommitteeAttesters.getCount();
-        if (_depositQuorum > depositCommitteeAttesterCount) {
-            revert QuorumExceedsDepositCommitteeAttesterCount(_depositQuorum, depositCommitteeAttesterCount);
-        }
-        DepositCommitteeAttestationQuorum.set(_depositQuorum);
-        emit SetDepositCommitteeAttestationQuorum(_depositQuorum);
+            uint256 depositCommitteeAttesterCount = DepositCommitteeAttesters.getCount();
+            if (_depositQuorum > depositCommitteeAttesterCount) {
+                revert QuorumExceedsDepositCommitteeAttesterCount(_depositQuorum, depositCommitteeAttesterCount);
+            }
+            DepositCommitteeAttestationQuorum.set(_depositQuorum);
+            emit SetDepositCommitteeAttestationQuorum(_depositQuorum);
 
-        // ---- Consolidation committee + quorum ----
-        for (uint256 i = 0; i < _consolidationCommitteeAttesters.length; i++) {
-            if (
-                !ConsolidationCommitteeAttesters.isConsolidationCommitteeAttester(_consolidationCommitteeAttesters[i])
-            ) {
-                ConsolidationCommitteeAttesters.setConsolidationCommitteeAttester(
-                    _consolidationCommitteeAttesters[i], true
+            // ---- Consolidation committee + quorum ----
+            for (uint256 i = 0; i < _consolidationCommitteeAttesters.length; i++) {
+                if (!ConsolidationCommitteeAttesters.isConsolidationCommitteeAttester(
+                        _consolidationCommitteeAttesters[i]
+                    )) {
+                    ConsolidationCommitteeAttesters.setConsolidationCommitteeAttester(
+                        _consolidationCommitteeAttesters[i], true
+                    );
+                    ConsolidationCommitteeAttesters.setCount(ConsolidationCommitteeAttesters.getCount() + 1);
+                    emit SetConsolidationCommitteeAttester(_consolidationCommitteeAttesters[i], true);
+                }
+            }
+            uint256 consolidationAttesterCount = ConsolidationCommitteeAttesters.getCount();
+            if (_consolidationQuorum > consolidationAttesterCount) {
+                revert QuorumExceedsConsolidationCommitteeAttesterCount(
+                    _consolidationQuorum, consolidationAttesterCount
                 );
-                ConsolidationCommitteeAttesters.setCount(ConsolidationCommitteeAttesters.getCount() + 1);
-                emit SetConsolidationCommitteeAttester(_consolidationCommitteeAttesters[i], true);
             }
+            ConsolidationCommitteeAttestationQuorum.set(_consolidationQuorum);
+            emit SetConsolidationCommitteeAttestationQuorum(_consolidationQuorum);
         }
-        uint256 consolidationAttesterCount = ConsolidationCommitteeAttesters.getCount();
-        if (_consolidationQuorum > consolidationAttesterCount) {
-            revert QuorumExceedsConsolidationCommitteeAttesterCount(_consolidationQuorum, consolidationAttesterCount);
+        {
+            // ---- EIP-712 domain separators (distinct NAME_HASH per flow, both anchored to River) ----
+            bytes32 domainSeparator =
+                keccak256(abi.encode(EIP712_DOMAIN_TYPEHASH, NAME_HASH, VERSION_HASH, block.chainid, _river));
+            DomainSeparator.set(domainSeparator);
+            emit SetDomainSeparator(domainSeparator);
+
+            domainSeparator = keccak256(
+                abi.encode(EIP712_DOMAIN_TYPEHASH, CONSOLIDATION_NAME_HASH, VERSION_HASH, block.chainid, _river)
+            );
+            ConsolidationDomainSeparator.set(domainSeparator);
+            emit SetConsolidationDomainSeparator(domainSeparator);
         }
-        ConsolidationCommitteeAttestationQuorum.set(_consolidationQuorum);
-        emit SetConsolidationCommitteeAttestationQuorum(_consolidationQuorum);
-
-        // ---- EIP-712 domain separators (distinct NAME_HASH per flow, both anchored to River) ----
-        bytes32 depositDomainSeparator =
-            keccak256(abi.encode(EIP712_DOMAIN_TYPEHASH, NAME_HASH, VERSION_HASH, block.chainid, _river));
-        DomainSeparator.set(depositDomainSeparator);
-        emit SetDomainSeparator(depositDomainSeparator);
-
-        bytes32 consolidationDomainSeparator = keccak256(
-            abi.encode(EIP712_DOMAIN_TYPEHASH, CONSOLIDATION_NAME_HASH, VERSION_HASH, block.chainid, _river)
-        );
-        ConsolidationDomainSeparator.set(consolidationDomainSeparator);
-        emit SetConsolidationDomainSeparator(consolidationDomainSeparator);
     }
 
     // -----------------------------------------------------------------------
@@ -637,5 +640,4 @@ contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1 {
         if (err != ECDSA.RecoverError.NoError) return address(0);
         return recovered;
     }
-
 }

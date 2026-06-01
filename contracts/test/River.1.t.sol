@@ -407,7 +407,12 @@ contract RiverV1Tests is RiverV1TestBase {
         attestationVerifier = new AttestationVerifierV1();
         LibImplementationUnbricker.unbrick(vm, address(attestationVerifier));
         attestationVerifier.initAttestationVerifierV1(
-            address(river), address(depositBuffer), _initDepositCommitteeAttesters, 2, bytes4(0),_initConsolidationCommitteeAttesters,
+            address(river),
+            address(depositBuffer),
+            _initDepositCommitteeAttesters,
+            2,
+            bytes4(0),
+            _initConsolidationCommitteeAttesters,
             1
         );
 
@@ -1386,7 +1391,12 @@ contract RiverV1TestsReport_HEAVY_FUZZING is RiverV1TestBase {
         attestationVerifier = new AttestationVerifierV1();
         LibImplementationUnbricker.unbrick(vm, address(attestationVerifier));
         attestationVerifier.initAttestationVerifierV1(
-            address(river), address(depositBuffer), _initDepositCommitteeAttesters2, 2, bytes4(0),_initConsolidationCommitteeAttesters,
+            address(river),
+            address(depositBuffer),
+            _initDepositCommitteeAttesters2,
+            2,
+            bytes4(0),
+            _initConsolidationCommitteeAttesters,
             1
         );
         vm.store(

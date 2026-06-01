@@ -225,13 +225,7 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
         validator = new AttestationVerifierV1();
         LibImplementationUnbricker.unbrick(vm, address(validator));
         validator.initAttestationVerifierV1(
-            address(dm),
-            address(buffer),
-            depositCommitteeAttesters,
-            2,
-            bytes4(0),
-            consolidationCommitteeAttesters,
-            1
+            address(dm), address(buffer), depositCommitteeAttesters, 2, bytes4(0), consolidationCommitteeAttesters, 1
         );
 
         // 3. Wire the validator address into the harness.

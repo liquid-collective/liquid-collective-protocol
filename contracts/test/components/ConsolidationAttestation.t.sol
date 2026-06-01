@@ -60,9 +60,8 @@ contract ConsolidationAttestationTest is Test {
         keccak256("EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)");
     bytes32 internal constant CONSOLIDATION_NAME_HASH = keccak256("ConsolidationValidation");
     bytes32 internal constant VERSION_HASH = keccak256("1");
-    bytes32 internal constant ATTEST_CONSOLIDATION_TYPEHASH = keccak256(
-        "AttestConsolidation(address user,bytes[] sourcePubkeys,bytes[] targetPubkeys,uint256 totalAmount)"
-    );
+    bytes32 internal constant ATTEST_CONSOLIDATION_TYPEHASH =
+        keccak256("AttestConsolidation(address user,bytes[] sourcePubkeys,bytes[] targetPubkeys,uint256 totalAmount)");
 
     // Storage slots (must match contracts/src/state/attestationVerifier/*)
     bytes32 internal constant CONSOLIDATION_DOMAIN_SEPARATOR_SLOT =
@@ -109,13 +108,7 @@ contract ConsolidationAttestationTest is Test {
         address[] memory dep = new address[](1);
         dep[0] = depositAttester;
         fresh.initAttestationVerifierV1(
-            address(river),
-            depositBufferStub,
-            dep,
-            1,
-            bytes4(0),
-            consolidationCommittee,
-            consolidationQuorum
+            address(river), depositBufferStub, dep, 1, bytes4(0), consolidationCommittee, consolidationQuorum
         );
     }
 
@@ -158,11 +151,7 @@ contract ConsolidationAttestationTest is Test {
         );
         bytes32 structHash = keccak256(
             abi.encode(
-                ATTEST_CONSOLIDATION_TYPEHASH,
-                user,
-                _hashBytesArray(sources),
-                _hashBytesArray(targets),
-                totalAmount
+                ATTEST_CONSOLIDATION_TYPEHASH, user, _hashBytesArray(sources), _hashBytesArray(targets), totalAmount
             )
         );
         return keccak256(abi.encodePacked("\x19\x01", domainSep, structHash));
@@ -193,11 +182,7 @@ contract ConsolidationAttestationTest is Test {
         sigs[1] = _sign(pk2, bufferId);
 
         consolidation = IAttestationVerifierV1.ConsolidationObject({
-            user: user,
-            sourcePubkeys: sources,
-            targetPubkeys: targets,
-            totalAmount: totalAmount,
-            signatures: sigs
+            user: user, sourcePubkeys: sources, targetPubkeys: targets, totalAmount: totalAmount, signatures: sigs
         });
     }
 
@@ -228,11 +213,7 @@ contract ConsolidationAttestationTest is Test {
         sigs[2] = _sign(pk3, id);
 
         IAttestationVerifierV1.ConsolidationObject memory c = IAttestationVerifierV1.ConsolidationObject({
-            user: user,
-            sourcePubkeys: sources,
-            targetPubkeys: targets,
-            totalAmount: totalAmount,
-            signatures: sigs
+            user: user, sourcePubkeys: sources, targetPubkeys: targets, totalAmount: totalAmount, signatures: sigs
         });
         assertTrue(validator.validateConsolidation(c));
     }
@@ -307,9 +288,7 @@ contract ConsolidationAttestationTest is Test {
         address[] memory cc = new address[](1);
         cc[0] = attester1;
         vm.expectRevert();
-        validator.initAttestationVerifierV1(
-            address(river), depositBufferStub, dep, 1, bytes4(0), cc, 1
-        );
+        validator.initAttestationVerifierV1(address(river), depositBufferStub, dep, 1, bytes4(0), cc, 1);
     }
 
     function testInit_consolidationDomainSeparatorDiffersFromDeposit() public {
@@ -335,9 +314,7 @@ contract ConsolidationAttestationTest is Test {
         cc[0] = attester1;
         // RiverAddress.set calls LibSanitize._notZeroAddress before writing the slot.
         vm.expectRevert(LibErrors.InvalidZeroAddress.selector);
-        fresh.initAttestationVerifierV1(
-            address(0), depositBufferStub, dep, 1, bytes4(0), cc, 1
-        );
+        fresh.initAttestationVerifierV1(address(0), depositBufferStub, dep, 1, bytes4(0), cc, 1);
     }
 
     function testInit_revertZeroAttesterInArray() public {
@@ -383,9 +360,7 @@ contract ConsolidationAttestationTest is Test {
             totalAmount: 32 ether,
             signatures: new bytes[](0)
         });
-        vm.expectRevert(
-            abi.encodeWithSelector(IAttestationVerifierV1.ConsolidationArrayLengthMismatch.selector, 2, 1)
-        );
+        vm.expectRevert(abi.encodeWithSelector(IAttestationVerifierV1.ConsolidationArrayLengthMismatch.selector, 2, 1));
         validator.validateConsolidation(c);
     }
 
@@ -495,11 +470,7 @@ contract ConsolidationAttestationTest is Test {
         );
         validator.validateConsolidation(
             IAttestationVerifierV1.ConsolidationObject({
-                user: user,
-                sourcePubkeys: sources,
-                targetPubkeys: targets,
-                totalAmount: totalAmount,
-                signatures: sigsB
+                user: user, sourcePubkeys: sources, targetPubkeys: targets, totalAmount: totalAmount, signatures: sigsB
             })
         );
 
@@ -583,11 +554,7 @@ contract ConsolidationAttestationTest is Test {
         );
         validator.validateConsolidation(
             IAttestationVerifierV1.ConsolidationObject({
-                user: user,
-                sourcePubkeys: sources,
-                targetPubkeys: targets,
-                totalAmount: totalAmount,
-                signatures: sigs
+                user: user, sourcePubkeys: sources, targetPubkeys: targets, totalAmount: totalAmount, signatures: sigs
             })
         );
     }
@@ -609,11 +576,7 @@ contract ConsolidationAttestationTest is Test {
         vm.expectRevert(abi.encodeWithSelector(IAttestationVerifierV1.TooManySignatures.selector, 21, 20));
         validator.validateConsolidation(
             IAttestationVerifierV1.ConsolidationObject({
-                user: user,
-                sourcePubkeys: sources,
-                targetPubkeys: targets,
-                totalAmount: totalAmount,
-                signatures: sigs
+                user: user, sourcePubkeys: sources, targetPubkeys: targets, totalAmount: totalAmount, signatures: sigs
             })
         );
     }
@@ -636,11 +599,7 @@ contract ConsolidationAttestationTest is Test {
         );
         validator.validateConsolidation(
             IAttestationVerifierV1.ConsolidationObject({
-                user: user,
-                sourcePubkeys: sources,
-                targetPubkeys: targets,
-                totalAmount: totalAmount,
-                signatures: sigs
+                user: user, sourcePubkeys: sources, targetPubkeys: targets, totalAmount: totalAmount, signatures: sigs
             })
         );
     }
@@ -663,11 +622,7 @@ contract ConsolidationAttestationTest is Test {
         );
         validator.validateConsolidation(
             IAttestationVerifierV1.ConsolidationObject({
-                user: user,
-                sourcePubkeys: sources,
-                targetPubkeys: targets,
-                totalAmount: totalAmount,
-                signatures: sigs
+                user: user, sourcePubkeys: sources, targetPubkeys: targets, totalAmount: totalAmount, signatures: sigs
             })
         );
     }
@@ -690,11 +645,7 @@ contract ConsolidationAttestationTest is Test {
         );
         validator.validateConsolidation(
             IAttestationVerifierV1.ConsolidationObject({
-                user: user,
-                sourcePubkeys: sources,
-                targetPubkeys: targets,
-                totalAmount: totalAmount,
-                signatures: sigs
+                user: user, sourcePubkeys: sources, targetPubkeys: targets, totalAmount: totalAmount, signatures: sigs
             })
         );
     }
@@ -722,11 +673,7 @@ contract ConsolidationAttestationTest is Test {
         );
         validator.validateConsolidation(
             IAttestationVerifierV1.ConsolidationObject({
-                user: user,
-                sourcePubkeys: sources,
-                targetPubkeys: targets,
-                totalAmount: totalAmount,
-                signatures: sigs
+                user: user, sourcePubkeys: sources, targetPubkeys: targets, totalAmount: totalAmount, signatures: sigs
             })
         );
     }
@@ -870,9 +817,7 @@ contract ConsolidationAttestationTest is Test {
         assertEq(validator.getConsolidationCommitteeAttesterCount(), 21);
 
         vm.prank(admin);
-        vm.expectRevert(
-            abi.encodeWithSelector(IAttestationVerifierV1.QuorumExceedsMaxSignatures.selector, 21, 20)
-        );
+        vm.expectRevert(abi.encodeWithSelector(IAttestationVerifierV1.QuorumExceedsMaxSignatures.selector, 21, 20));
         validator.setConsolidationCommitteeAttestationQuorum(21);
     }
 
