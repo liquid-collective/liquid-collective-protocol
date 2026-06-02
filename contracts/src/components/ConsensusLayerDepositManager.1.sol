@@ -36,8 +36,21 @@ abstract contract ConsensusLayerDepositManagerV1 is IConsensusLayerDepositManage
     uint256 public constant DEPOSIT_SIZE = 32 ether;
 
     // -----------------------------------------------------------------------
-    // Virtual hooks — must be overridden by River
+    // Modifiers
     // -----------------------------------------------------------------------
+
+    /// @notice Used in river
+    modifier onlyKeeper() {
+        if (msg.sender != KeeperAddress.get()) {
+            revert OnlyKeeper();
+        }
+        _;
+    }
+
+    modifier onlyRiverAdmin() {
+        if (msg.sender != _getRiverAdmin()) revert LibErrors.Unauthorized(msg.sender);
+        _;
+    }
 
     /// @notice Handler called to retrieve the internal River admin address
     function _getRiverAdmin() internal view virtual returns (address);
