@@ -299,11 +299,7 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
 
     /// @dev Build a TopUp. BLS verification path skipped; pubkey must already be in
     ///      `ValidatorPubkeyLookup`. No signature field — consumer hardcodes 96 zero bytes.
-    function _makeTopUpDeposit(uint256 opIdx, uint256 seed)
-        internal
-        pure
-        returns (IDepositDataBuffer.TopUp memory)
-    {
+    function _makeTopUpDeposit(uint256 opIdx, uint256 seed) internal pure returns (IDepositDataBuffer.TopUp memory) {
         return IDepositDataBuffer.TopUp({pubkey: _fakePubkey(seed), amount: 32 ether, operatorIdx: opIdx});
     }
 
@@ -327,10 +323,11 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
     }
 
     /// @dev Convenience: build a DepositObject from both arrays.
-    function _batchOf(
-        IDepositDataBuffer.Deposit[] memory deposits,
-        IDepositDataBuffer.TopUp[] memory topUps
-    ) internal pure returns (IDepositDataBuffer.DepositObject memory batch) {
+    function _batchOf(IDepositDataBuffer.Deposit[] memory deposits, IDepositDataBuffer.TopUp[] memory topUps)
+        internal
+        pure
+        returns (IDepositDataBuffer.DepositObject memory batch)
+    {
         batch.deposits = deposits;
         batch.topUps = topUps;
     }
@@ -370,10 +367,10 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
     }
 
     /// @dev Submit a mixed batch (initials + top-ups).
-    function _prepareDeposit(
-        IDepositDataBuffer.Deposit[] memory deposits,
-        IDepositDataBuffer.TopUp[] memory topUps
-    ) internal returns (bytes32 bufferId, bytes32 rootHash, bytes[] memory sigs) {
+    function _prepareDeposit(IDepositDataBuffer.Deposit[] memory deposits, IDepositDataBuffer.TopUp[] memory topUps)
+        internal
+        returns (bytes32 bufferId, bytes32 rootHash, bytes[] memory sigs)
+    {
         return _prepareDeposit(_batchOf(deposits, topUps));
     }
 
@@ -811,9 +808,7 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
         (bytes32 bufferId, bytes32 rootHash, bytes[] memory sigs) = _prepareTopUps(topUps);
 
         vm.prank(keeper);
-        vm.expectRevert(
-            abi.encodeWithSelector(IAttestationVerifierV1.TopUpPubkeyNotFunded.selector, topUps[0].pubkey)
-        );
+        vm.expectRevert(abi.encodeWithSelector(IAttestationVerifierV1.TopUpPubkeyNotFunded.selector, topUps[0].pubkey));
         dm.depositToConsensusLayerWithAttestation(bufferId, rootHash, sigs);
     }
 
@@ -879,9 +874,7 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
         (bytes32 bufferId, bytes32 rootHash, bytes[] memory sigs) = _prepareDeposit(deposits, topUps);
 
         vm.prank(keeper);
-        vm.expectRevert(
-            abi.encodeWithSelector(IAttestationVerifierV1.TopUpPubkeyNotFunded.selector, topUps[0].pubkey)
-        );
+        vm.expectRevert(abi.encodeWithSelector(IAttestationVerifierV1.TopUpPubkeyNotFunded.selector, topUps[0].pubkey));
         dm.depositToConsensusLayerWithAttestation(bufferId, rootHash, sigs);
     }
 
@@ -1243,7 +1236,7 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
         LibImplementationUnbricker.unbrick(vm, address(freshValidator));
         address[] memory empty = new address[](0);
         vm.expectRevert(LibErrors.InvalidArgument.selector);
-        freshValidator.initAttestationVerifierV1(address(dm), address(buffer), empty, 1, bytes4(0));
+        freshValidator.initAttestationVerifierV1(address(dm), address(buffer), empty, 1, bytes4(0), empty, 1);
     }
 
     /// @dev Cannot init with a quorum strictly greater than the attester count.
@@ -1256,7 +1249,7 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
         vm.expectRevert(
             abi.encodeWithSelector(IAttestationVerifierV1.QuorumExceedsDepositCommitteeAttesterCount.selector, 3, 2)
         );
-        freshValidator.initAttestationVerifierV1(address(dm), address(buffer), attesters, 3, bytes4(0));
+        freshValidator.initAttestationVerifierV1(address(dm), address(buffer), attesters, 3, bytes4(0), attesters, 3);
     }
 
     /// @dev Cannot add an attester that would push the total past MAX_DEPOSIT_COMMITTEE_ATTESTERS.
@@ -1310,11 +1303,13 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
         // Need attesterCount > MAX_SIGNATURES so the attester-count check doesn't fire first.
         uint256 max = validator.MAX_SIGNATURES();
         address[] memory atts = new address[](max + 5);
-        for (uint256 i = 0; i < max + 5; i++) atts[i] = address(uint160(0x9000 + i));
+        for (uint256 i = 0; i < max + 5; i++) {
+            atts[i] = address(uint160(0x9000 + i));
+        }
         vm.expectRevert(
             abi.encodeWithSelector(IAttestationVerifierV1.QuorumExceedsMaxSignatures.selector, max + 1, max)
         );
-        fresh.initAttestationVerifierV1(address(dm), address(buffer), atts, max + 1, bytes4(0));
+        fresh.initAttestationVerifierV1(address(dm), address(buffer), atts, max + 1, bytes4(0), atts, max + 1);
     }
 
     /// @dev Admin cannot set quorum > MAX_SIGNATURES via the post-init setter. Distinct code
@@ -1415,7 +1410,7 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
         atts[0] = makeAddr("a");
         atts[1] = makeAddr("b");
         vm.expectRevert(abi.encodeWithSelector(Initializable.InvalidInitialization.selector, 0, 1));
-        validator.initAttestationVerifierV1(address(dm), address(buffer), atts, 1, bytes4(0));
+        validator.initAttestationVerifierV1(address(dm), address(buffer), atts, 1, bytes4(0), atts, 1);
     }
 
     // -----------------------------------------------------------------------
@@ -1442,8 +1437,7 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
         bool depositEventFound = false;
         for (uint256 i = 0; i < logs.length; i++) {
             if (logs[i].emitter == address(depositContract) && logs[i].topics[0] == depositEventTopic) {
-                (,, , bytes memory recordedSignature,) =
-                    abi.decode(logs[i].data, (bytes, bytes, bytes, bytes, bytes));
+                (,,, bytes memory recordedSignature,) = abi.decode(logs[i].data, (bytes, bytes, bytes, bytes, bytes));
                 assertEq(recordedSignature.length, 96, "signature length");
                 assertEq(recordedSignature, new bytes(96), "top-up signature must be 96 zero bytes");
                 depositEventFound = true;
@@ -1470,8 +1464,7 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
         expectedPubkeys[0] = deposits[0].pubkey;
         expectedPubkeys[1] = deposits[1].pubkey;
         vm.expectCall(
-            address(validator),
-            abi.encodeCall(IAttestationVerifierV1.recordNewlyFundedPubkeys, (expectedPubkeys))
+            address(validator), abi.encodeCall(IAttestationVerifierV1.recordNewlyFundedPubkeys, (expectedPubkeys))
         );
 
         (bytes32 bufferId, bytes32 rootHash, bytes[] memory sigs) = _prepareDeposit(deposits, topUps);

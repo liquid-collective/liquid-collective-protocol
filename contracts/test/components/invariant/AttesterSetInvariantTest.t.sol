@@ -54,7 +54,7 @@ contract AttesterSetInvariantTest is Test {
         initial[1] = makeAddr("att2");
         initial[2] = makeAddr("att3");
 
-        verifier.initAttestationVerifierV1(address(riverStub), address(0xBEEF), initial, 2, bytes4(0));
+        verifier.initAttestationVerifierV1(address(riverStub), address(0xBEEF), initial, 2, bytes4(0), initial, 2);
 
         handler = new AttesterSetHandler(verifier, ADMIN, initial);
         targetContract(address(handler));
@@ -68,10 +68,7 @@ contract AttesterSetInvariantTest is Test {
     /// @dev Quorum is never higher than the number of registered attesters. A violation here
     ///      would mean `validate()` could not reach quorum from any valid input — soft-brick.
     function invariant_quorumLeAttesterCount() public {
-        assertLe(
-            verifier.getDepositCommitteeAttestationQuorum(),
-            verifier.getDepositCommitteeAttesterCount()
-        );
+        assertLe(verifier.getDepositCommitteeAttestationQuorum(), verifier.getDepositCommitteeAttesterCount());
     }
 
     /// @dev Quorum is never higher than the per-submission signature cap. Same soft-brick
