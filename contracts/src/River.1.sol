@@ -25,7 +25,6 @@ import "./interfaces/IDepositDataBuffer.sol";
 import "./state/river/AllowlistAddress.sol";
 import "./state/river/AttestationVerifierAddress.sol";
 import "./state/river/RedeemManagerAddress.sol";
-import "./state/river/OperatorsRegistryAddress.sol";
 import "./state/river/CollectorAddress.sol";
 import "./state/river/ELFeeRecipientAddress.sol";
 import "./state/river/CoverageFundAddress.sol";
@@ -36,6 +35,7 @@ import "./state/river/MetadataURI.sol";
 import "./state/river/LastConsensusLayerReport.sol";
 import "./state/river/TotalDepositedETH.sol";
 import "./state/river/DepositedValidatorCount.sol";
+import "./state/shared/OperatorsRegistryAddress.sol";
 
 /// @title River (v1)
 /// @author Alluvial Finance Inc.
@@ -287,6 +287,19 @@ contract RiverV1 is
         if (msg.sender != RedeemManagerAddress.get()) {
             revert LibErrors.Unauthorized(msg.sender);
         }
+    }
+
+    /// @inheritdoc IRiverV1
+    function consolidate(IWithdrawV1.ConsolidationRequest[] calldata requests, uint256 maxFeePerConsolidation)
+        external
+        payable
+        onlyKeeper
+    {
+        address excessFeeRecipient = msg.sender;
+        IWithdrawV1(payable(WithdrawalCredentials.getAddress())).consolidate{value: msg.value}(
+            requests, maxFeePerConsolidation, excessFeeRecipient
+        );
+        emit PectraConsolidationRequested(requests, maxFeePerConsolidation, excessFeeRecipient, msg.value);
     }
 
     /// @notice Overridden handler to pass the system admin inside components
