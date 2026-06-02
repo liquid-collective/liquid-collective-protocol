@@ -32,19 +32,23 @@ import "../src/ConsolidationCoverageFund.1.sol";
 import "../src/RedeemManager.1.sol";
 
 contract MockDepositDataBuffer is IDepositDataBuffer {
-    mapping(bytes32 => DepositObject[]) internal _batches;
+    mapping(bytes32 => DepositObject) internal _batches;
     mapping(bytes32 => bool) internal _exists;
 
-    function submitDepositData(bytes32 depositDataBufferId, DepositObject[] calldata deposits) external {
+    function submitDepositData(bytes32 depositDataBufferId, DepositObject calldata batch) external {
         if (_exists[depositDataBufferId]) revert DepositDataBufferIdAlreadyExists(depositDataBufferId);
         _exists[depositDataBufferId] = true;
-        for (uint256 i = 0; i < deposits.length; i++) {
-            _batches[depositDataBufferId].push(deposits[i]);
+        DepositObject storage stored = _batches[depositDataBufferId];
+        for (uint256 i = 0; i < batch.deposits.length; i++) {
+            stored.deposits.push(batch.deposits[i]);
         }
-        emit DepositDataSubmitted(depositDataBufferId, deposits.length);
+        for (uint256 i = 0; i < batch.topUps.length; i++) {
+            stored.topUps.push(batch.topUps[i]);
+        }
+        emit DepositDataSubmitted(depositDataBufferId, batch.deposits.length, batch.topUps.length);
     }
 
-    function getDepositData(bytes32 depositDataBufferId) external view returns (DepositObject[] memory) {
+    function getDepositData(bytes32 depositDataBufferId) external view returns (DepositObject memory) {
         if (!_exists[depositDataBufferId]) revert DepositDataBufferIdNotFound(depositDataBufferId);
         return _batches[depositDataBufferId];
     }
@@ -176,6 +180,15 @@ abstract contract RiverV1TestBase is OperatorAllocationTestBase, BytesGenerator 
         });
     }
 
+    /// @dev Non-zero placeholder DepositY for initial deposits. BLS is mocked in these tests,
+    ///      so the value only needs to differ from the zero sentinel used for top-ups.
+    function _nonZeroDepositY(uint256 seed) internal pure returns (BLS12_381.DepositY memory) {
+        return BLS12_381.DepositY({
+            pubkeyY: BLS12_381.Fp({a: bytes32(uint256(seed) + 1), b: bytes32(0)}),
+            signatureY: BLS12_381.Fp2({c0_a: bytes32(0), c0_b: bytes32(0), c1_a: bytes32(0), c1_b: bytes32(0)})
+        });
+    }
+
     bytes32 constant withdrawalCredentials = 0x0200000000000000000000000000000000000000000000000000000000000000;
 
     function setUp() public virtual {
@@ -263,26 +276,28 @@ abstract contract RiverV1TestBase is OperatorAllocationTestBase, BytesGenerator 
 
         // Build deposit objects. Seed pubkeys/signatures off the contract-level cursor so
         // repeated invocations within the same test produce a fresh bufferId.
-        IDepositDataBuffer.DepositObject[] memory deposits = new IDepositDataBuffer.DepositObject[](total);
+        IDepositDataBuffer.DepositObject memory batch;
+        batch.deposits = new IDepositDataBuffer.Deposit[](total);
+        // batch.topUps is left as a default empty array.
         uint256 idx = 0;
         uint256 seedBase = _pubkeySeedCursor;
         for (uint256 i = 0; i < opIndices.length; i++) {
             for (uint256 j = 0; j < counts[i]; j++) {
                 uint256 seed = seedBase + idx;
-                deposits[idx] = IDepositDataBuffer.DepositObject({
+                batch.deposits[idx] = IDepositDataBuffer.Deposit({
                     pubkey: _fakePubkey(seed),
                     signature: _fakeSignature(seed),
                     amount: 32 ether,
-                    depositDataRoot: bytes32(0),
-                    operatorIdx: opIndices[i]
+                    operatorIdx: opIndices[i],
+                    depositY: _nonZeroDepositY(seed)
                 });
                 idx++;
             }
         }
         _pubkeySeedCursor = seedBase + total;
 
-        bytes32 bufferId = keccak256(abi.encode(deposits));
-        depositBuffer.submitDepositData(bufferId, deposits);
+        bytes32 bufferId = keccak256(abi.encode(batch));
+        depositBuffer.submitDepositData(bufferId, batch);
 
         bytes32 rootHash = deposit.get_deposit_root();
 
@@ -290,15 +305,10 @@ abstract contract RiverV1TestBase is OperatorAllocationTestBase, BytesGenerator 
         sigs[0] = _signAttestation(depositCommitteeAttesterPk1, bufferId, rootHash);
         sigs[1] = _signAttestation(depositCommitteeAttesterPk2, bufferId, rootHash);
 
-        BLS12_381.DepositY[] memory ys = new BLS12_381.DepositY[](total);
-        for (uint256 i = 0; i < total; i++) {
-            ys[i] = _emptyDepositY();
-        }
-
         // The new function requires keeper, not admin
         address currentKeeper = river.getKeeper();
         vm.prank(currentKeeper);
-        river.depositToConsensusLayerWithAttestation(bufferId, rootHash, sigs, ys);
+        river.depositToConsensusLayerWithAttestation(bufferId, rootHash, sigs);
     }
 
     /// @dev Single-operator convenience overload.
@@ -315,29 +325,27 @@ abstract contract RiverV1TestBase is OperatorAllocationTestBase, BytesGenerator 
     ///      so the caller can place vm.expectRevert immediately before that call.
     function _buildSingleDepositArgs(uint256 opIndex)
         internal
-        returns (bytes32 bufferId, bytes32 rootHash, bytes[] memory sigs, BLS12_381.DepositY[] memory ys)
+        returns (bytes32 bufferId, bytes32 rootHash, bytes[] memory sigs)
     {
-        IDepositDataBuffer.DepositObject[] memory deposits = new IDepositDataBuffer.DepositObject[](1);
+        IDepositDataBuffer.DepositObject memory batch;
+        batch.deposits = new IDepositDataBuffer.Deposit[](1);
         uint256 seed = _pubkeySeedCursor;
-        deposits[0] = IDepositDataBuffer.DepositObject({
+        batch.deposits[0] = IDepositDataBuffer.Deposit({
             pubkey: _fakePubkey(seed),
             signature: _fakeSignature(seed),
             amount: 32 ether,
-            depositDataRoot: bytes32(0),
-            operatorIdx: opIndex
+            operatorIdx: opIndex,
+            depositY: _nonZeroDepositY(seed)
         });
         _pubkeySeedCursor = seed + 1;
 
-        bufferId = keccak256(abi.encode(deposits));
-        depositBuffer.submitDepositData(bufferId, deposits);
+        bufferId = keccak256(abi.encode(batch));
+        depositBuffer.submitDepositData(bufferId, batch);
         rootHash = deposit.get_deposit_root();
 
         sigs = new bytes[](2);
         sigs[0] = _signAttestation(depositCommitteeAttesterPk1, bufferId, rootHash);
         sigs[1] = _signAttestation(depositCommitteeAttesterPk2, bufferId, rootHash);
-
-        ys = new BLS12_381.DepositY[](1);
-        ys[0] = _emptyDepositY();
     }
 }
 
@@ -1072,8 +1080,9 @@ contract RiverV1Tests is RiverV1TestBase {
         assert(river.balanceOfUnderlying(bob) == 1000 ether);
     }
 
-    // Reverts when the attested batch targets an inactive operator. The check fires in
-    // River._updateFundedETHFromBuffer before any _depositValidator call leaves the contract.
+    // Reverts when the attested batch targets an inactive operator. The check fires inside
+    // OperatorsRegistry.incrementFundedETH (LibFundingDeltas.build is pure aggregation and does
+    // not enforce operator-status invariants), before any _depositValidator call leaves River.
     function testDepositRevertsForInactiveOperator() public {
         vm.deal(bob, 1000 ether);
         _allow(bob);
@@ -1084,18 +1093,19 @@ contract RiverV1Tests is RiverV1TestBase {
         vm.prank(admin);
         operatorsRegistry.setOperatorStatus(operatorOneIndex, false);
 
-        (bytes32 bufferId, bytes32 rootHash, bytes[] memory sigs, BLS12_381.DepositY[] memory ys) =
-            _buildSingleDepositArgs(operatorOneIndex);
+        (bytes32 bufferId, bytes32 rootHash, bytes[] memory sigs) = _buildSingleDepositArgs(operatorOneIndex);
 
         vm.prank(river.getKeeper());
         vm.expectRevert(abi.encodeWithSelector(IOperatorsRegistryV1.InactiveOperator.selector, operatorOneIndex));
-        river.depositToConsensusLayerWithAttestation(bufferId, rootHash, sigs, ys);
+        river.depositToConsensusLayerWithAttestation(bufferId, rootHash, sigs);
 
         assertEq(river.getTotalDepositedETH(), 0);
     }
 
     // Reverts when the attested batch targets an operator whose requestedExits exceeds the
-    // recorded exited ETH (an unfulfilled exit request). Fires in _updateFundedETHFromBuffer.
+    // recorded exited ETH (an unfulfilled exit request). Fires inside
+    // OperatorsRegistry.incrementFundedETH (LibFundingDeltas.build is pure aggregation and does
+    // not enforce operator-status invariants).
     function testDepositRevertsForOperatorWithPendingExitRequests() public {
         vm.deal(bob, 1000 ether);
         _allow(bob);
@@ -1106,16 +1116,46 @@ contract RiverV1Tests is RiverV1TestBase {
         // No exitedETH recorded for this operator yet, so any non-zero requestedExits trips the check.
         operatorsRegistry.sudoSetRequestedExits(operatorOneIndex, 32 ether);
 
-        (bytes32 bufferId, bytes32 rootHash, bytes[] memory sigs, BLS12_381.DepositY[] memory ys) =
-            _buildSingleDepositArgs(operatorOneIndex);
+        (bytes32 bufferId, bytes32 rootHash, bytes[] memory sigs) = _buildSingleDepositArgs(operatorOneIndex);
 
         vm.prank(river.getKeeper());
         vm.expectRevert(
             abi.encodeWithSelector(IOperatorsRegistryV1.OperatorIgnoredExitRequests.selector, operatorOneIndex)
         );
-        river.depositToConsensusLayerWithAttestation(bufferId, rootHash, sigs, ys);
+        river.depositToConsensusLayerWithAttestation(bufferId, rootHash, sigs);
 
         assertEq(river.getTotalDepositedETH(), 0);
+    }
+
+    // Positive regression test for the storage-context fix in commit 83eb06f. The registry's
+    // pending-exit check reads `operator.requestedExits` and `OperatorsV3.getExitedETH(index)`
+    // against the registry's own storage. Pre-fix, a buggy cross-contract read returned 0 from
+    // River's storage, which would have caused this case (requestedExits == exitedETH == 32 ether)
+    // to revert OperatorIgnoredExitRequests. Post-fix, the exit is correctly seen as fulfilled
+    // and the deposit proceeds. Negative-only coverage (the two tests above) cannot regress this
+    // class of bug because the buggy read of 0 makes the negative case still pass.
+    function testDepositSucceedsWhenExitsAreFulfilled() public {
+        vm.deal(bob, 1000 ether);
+        _allow(bob);
+        vm.prank(bob);
+        river.deposit{value: 1000 ether}();
+        river.debug_moveDepositToCommitted();
+
+        operatorsRegistry.sudoSetRequestedExits(operatorOneIndex, 32 ether);
+
+        // exitedETH layout: [total, op0, op1, ...]. Mark operator one's exit as fulfilled.
+        uint256 opCount = operatorsRegistry.getOperatorCount();
+        uint256[] memory exitedETH = new uint256[](opCount + 1);
+        exitedETH[0] = 32 ether;
+        exitedETH[operatorOneIndex + 1] = 32 ether;
+        operatorsRegistry.sudoSetRawExitedETH(exitedETH);
+
+        (bytes32 bufferId, bytes32 rootHash, bytes[] memory sigs) = _buildSingleDepositArgs(operatorOneIndex);
+
+        vm.prank(river.getKeeper());
+        river.depositToConsensusLayerWithAttestation(bufferId, rootHash, sigs);
+
+        assertEq(river.getTotalDepositedETH(), 32 ether);
     }
 
     function _debugMaxIncrease(uint256 annualAprUpperBound, uint256 _prevTotalEth, uint256 _timeElapsed)
@@ -1178,6 +1218,24 @@ contract RiverV1Tests is RiverV1TestBase {
         vm.prank(bob);
         vm.expectRevert(abi.encodeWithSignature("SlashingContainmentModeEnabled()"));
         address(river).call{value: 1 ether}("");
+    }
+
+    // Slashing containment is a panic-mode lever; the keeper-driven attestation deposit path must
+    // honour it just like the user-deposit, requestRedeem, receive, and depositAndTransfer paths.
+    function testDepositToConsensusLayerWithAttestationBlockedInSlashingContainmentMode() public {
+        vm.deal(bob, 1000 ether);
+        _allow(bob);
+        vm.prank(bob);
+        river.deposit{value: 1000 ether}();
+        river.debug_moveDepositToCommitted();
+
+        river.sudoSetSlashingContainmentMode(true);
+
+        (bytes32 bufferId, bytes32 rootHash, bytes[] memory sigs) = _buildSingleDepositArgs(operatorOneIndex);
+
+        vm.prank(river.getKeeper());
+        vm.expectRevert(abi.encodeWithSignature("SlashingContainmentModeEnabled()"));
+        river.depositToConsensusLayerWithAttestation(bufferId, rootHash, sigs);
     }
 
     function testRequestRedeemAllowedWhenSlashingModeOff() public {

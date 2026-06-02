@@ -105,10 +105,8 @@ interface IAttestationVerifierV1 {
     /// @param max The configured maximum
     error TooManySignatures(uint256 count, uint256 max);
 
-    /// @notice The depositYs array length does not match the deposit batch length
-    /// @param depositCount The number of deposits in the batch
-    /// @param yCount The number of Y-coordinates supplied
-    error BLSSignatureCountMismatch(uint256 depositCount, uint256 yCount);
+    /// @notice An external caller invoked a function reserved for self-staticcall trampolining.
+    error OnlySelfCall();
 
     /// @notice A deposit's pubkey field has an unexpected byte length
     /// @param index The deposit index in the batch
@@ -119,6 +117,14 @@ interface IAttestationVerifierV1 {
     /// @param index The deposit index in the batch
     /// @param length The observed length
     error InvalidSignatureLength(uint256 index, uint256 length);
+
+    /// @notice A deposit's `amount` is outside the protocol-accepted range
+    ///         [1 ether, 2048 ether] or is not gwei-aligned. Enforced here in
+    ///         `validate()` so producer bugs fail before the heavy BLS path runs;
+    ///         downstream `_depositValidator` trusts this check.
+    /// @param index The deposit index in the batch
+    /// @param amount The offending amount in wei
+    error InvalidDepositAmount(uint256 index, uint256 amount);
 
     /// @notice The summed deposit amount exceeds the committed balance passed by River
     error NotEnoughFunds();
@@ -200,6 +206,15 @@ interface IAttestationVerifierV1 {
     /// @notice The supplied consolidation has already been validated; replay rejected.
     /// @param consolidationHash The EIP-712 structHash of the consolidation request
     error ConsolidationAlreadyProcessed(bytes32 consolidationHash);
+    /// @notice A top-up referenced a pubkey that has never been initial-deposited by River.
+    ///         Without this check, a malicious committee could mark an attacker pubkey as a
+    ///         top-up and bypass BLS verification.
+    /// @param pubkey The offending 48-byte BLS pubkey
+    error TopUpPubkeyNotFunded(bytes pubkey);
+
+    /// @notice recordNewlyFundedPubkeys was passed a pubkey already in the initial-deposit set.
+    /// @param pubkey The offending 48-byte BLS pubkey
+    error PubkeyAlreadyFunded(bytes pubkey);
 
     // -----------------------------------------------------------------------
     // Initialization
@@ -240,6 +255,12 @@ interface IAttestationVerifierV1 {
     /// @notice Validate attestation quorum + BLS deposit signatures, enforce per-deposit
     ///         withdrawal credentials and total-amount-vs-committed-balance, and return
     ///         the validated batch + total amount for River to execute.
+    /// @dev Per-deposit pubkey-state checks fire eagerly inside this call — top-ups must
+    ///      reference a pubkey already in the initial-deposit lookup, and initial deposits
+    ///      must not duplicate any already-recorded or in-batch pubkey. The buffer's
+    ///      `operatorIdx` is NOT verified against any on-chain record (the lookup tracks
+    ///      membership only — see ValidatorPubkeyLookup natspec). A failure reverts here,
+    ///      before River runs any `_depositValidator`.
     /// @dev `depositContract` is supplied by the caller (River) rather than read from the
     ///      verifier's own storage so we avoid an additional cold SLOAD per call. The same
     ///      address is used both for the front-run-resistant `get_deposit_root()` check here
@@ -248,21 +269,33 @@ interface IAttestationVerifierV1 {
     /// @param depositDataBufferId  Batch identifier in the DepositDataBuffer
     /// @param depositRootHash      Current deposit contract root hash co-signed by deposit-committee attesters
     /// @param signatures           EIP-712 deposit-committee attester signatures
-    /// @param depositYs            Y-coordinates for BLS decompression, one per deposit
     /// @param depositContract      The official ETH deposit contract; queried for the current root
     /// @param withdrawalCredentials The protocol-configured WC; every deposit's WC must match
     /// @param committedBalance     Total amount summed over deposits must not exceed this
-    /// @return deposits            Validated deposit batch (caller executes)
-    /// @return totalAmount         Sum of deposit amounts in the batch
-    function validateDeposits(
+    /// @return batch               Validated deposit batch (caller executes)
+    /// @return totalAmount         Sum of deposit + top-up amounts in the batch
+    function validate(
         bytes32 depositDataBufferId,
         bytes32 depositRootHash,
         bytes[] calldata signatures,
-        BLS12_381.DepositY[] calldata depositYs,
         address depositContract,
         bytes32 withdrawalCredentials,
         uint256 committedBalance
-    ) external view returns (IDepositDataBuffer.DepositObject[] memory deposits, uint256 totalAmount);
+    ) external view returns (IDepositDataBuffer.DepositObject memory batch, uint256 totalAmount);
+
+    // -----------------------------------------------------------------------
+    // Initial-deposit recording (called by River after a successful deposit batch)
+    // -----------------------------------------------------------------------
+
+    /// @notice Record one or more pubkeys as initial-deposited. Only callable by River.
+    /// @dev Called by River after the deposit-execution loop. The recorded set is consulted
+    ///      by the top-up branch of `validate()` to require that top-ups reference a pubkey
+    ///      River has previously initial-deposited. Assumes `pubkeys` is already deduplicated
+    ///      against the lookup and against itself; `validate()` enforces both invariants
+    ///      earlier in the same transaction. Per-pubkey logging is emitted on the caller
+    ///      (ConsensusLayerDepositManager's `PubkeyFunded` event), not here.
+    /// @param pubkeys The 48-byte BLS pubkeys to record
+    function recordNewlyFundedPubkeys(bytes[] calldata pubkeys) external;
 
     /// @notice Validate consolidation-committee attestations over a `ConsolidationObject` passed
     ///         in by the caller and mark the request as processed for replay protection.
@@ -376,4 +409,10 @@ interface IAttestationVerifierV1 {
     /// @notice Retrieve the cached EIP-712 consolidation domain separator
     /// @return The EIP-712 consolidation domain separator
     function getConsolidationDomainSeparator() external view returns (bytes32);
+    /// @notice Check whether a pubkey has been initial-deposited by River.
+    /// @dev Off-chain producers should subscribe to ConsensusLayerDepositManager's `PubkeyFunded`
+    ///      events and use this view to confirm a pubkey is eligible for top-up submissions.
+    /// @param pubkey The 48-byte BLS pubkey
+    /// @return True if the pubkey is currently in the lookup
+    function isPubkeyFunded(bytes calldata pubkey) external view returns (bool);
 }

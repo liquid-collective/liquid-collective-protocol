@@ -33,19 +33,23 @@ import "../../src/state/operatorsRegistry/Operators.3.sol";
 // -----------------------------------------------------------------------
 
 contract AccountingMockDepositDataBuffer is IDepositDataBuffer {
-    mapping(bytes32 => DepositObject[]) internal _batches;
+    mapping(bytes32 => DepositObject) internal _batches;
     mapping(bytes32 => bool) internal _exists;
 
-    function submitDepositData(bytes32 depositDataBufferId, DepositObject[] calldata deposits) external {
+    function submitDepositData(bytes32 depositDataBufferId, DepositObject calldata batch) external {
         if (_exists[depositDataBufferId]) revert DepositDataBufferIdAlreadyExists(depositDataBufferId);
         _exists[depositDataBufferId] = true;
-        for (uint256 i = 0; i < deposits.length; i++) {
-            _batches[depositDataBufferId].push(deposits[i]);
+        DepositObject storage stored = _batches[depositDataBufferId];
+        for (uint256 i = 0; i < batch.deposits.length; i++) {
+            stored.deposits.push(batch.deposits[i]);
         }
-        emit DepositDataSubmitted(depositDataBufferId, deposits.length);
+        for (uint256 i = 0; i < batch.topUps.length; i++) {
+            stored.topUps.push(batch.topUps[i]);
+        }
+        emit DepositDataSubmitted(depositDataBufferId, batch.deposits.length, batch.topUps.length);
     }
 
-    function getDepositData(bytes32 depositDataBufferId) external view returns (DepositObject[] memory) {
+    function getDepositData(bytes32 depositDataBufferId) external view returns (DepositObject memory) {
         if (!_exists[depositDataBufferId]) revert DepositDataBufferIdNotFound(depositDataBufferId);
         return _batches[depositDataBufferId];
     }
@@ -100,6 +104,12 @@ abstract contract AccountingHarnessBase is Test, BytesGenerator {
     IDepositContract internal depositContract;
     AccountingMockDepositDataBuffer internal depositBuffer;
     AttestationVerifierV1 internal attestationVerifier;
+
+    /// @dev Monotonic counter mixed into pubkey/signature generation in `_makeDepositObjects`.
+    ///      Without it, two batches built in the same block with the same `(i, opIdx)` produce
+    ///      identical pubkeys, which collides with the on-chain `PubkeyAlreadyFunded` guard
+    ///      enforced inside `AttestationVerifier.validate()` (initial-deposit branch).
+    uint256 internal _depositBatchNonce;
 
     // ─── attestation ──────────────────────────────────────────────────────────
     uint256 internal constant DEPOSIT_COMMITTEE_ATTESTER_PK_1 = 0xA1;
@@ -199,6 +209,7 @@ abstract contract AccountingHarnessBase is Test, BytesGenerator {
             MAX_DAILY_REL
         );
         river.initRiverV1_2();
+
         // 3 deposit-committee attesters with quorum=2 (quorum must be ≤ attester count and ≤ MAX_SIGNATURES)
         address[] memory _initDepositCommitteeAttesters = new address[](3);
         _initDepositCommitteeAttesters[0] = depositCommitteeAttester1;
@@ -303,6 +314,15 @@ abstract contract AccountingHarnessBase is Test, BytesGenerator {
         });
     }
 
+    /// @dev Non-zero placeholder DepositY for initial deposits. BLS is mocked in this harness,
+    ///      so the value only needs to differ from the zero sentinel used for top-ups.
+    function _nonZeroDepositY(uint256 seed) internal pure returns (BLS12_381.DepositY memory) {
+        return BLS12_381.DepositY({
+            pubkeyY: BLS12_381.Fp({a: bytes32(uint256(seed) + 1), b: bytes32(0)}),
+            signatureY: BLS12_381.Fp2({c0_a: bytes32(0), c0_b: bytes32(0), c1_a: bytes32(0), c1_b: bytes32(0)})
+        });
+    }
+
     /// @dev Sign an EIP-712 attestation digest with the given private key.
     function _signAttestation(uint256 pk, bytes32 bufferId, bytes32 rootHash) internal view returns (bytes memory) {
         bytes32 domainSep =
@@ -314,26 +334,29 @@ abstract contract AccountingHarnessBase is Test, BytesGenerator {
     }
 
     /// @dev Build deposit objects from a set of (operatorIndex, amount) tuples.
-    ///      Each deposit uses a deterministic pubkey/signature seeded by position.
+    ///      Each deposit uses a deterministic pubkey/signature seeded by position and a
+    ///      monotonically-incrementing batch nonce so successive `sim_deposit` calls in the
+    ///      same block don't collide on pubkeys (which would trip the on-chain
+    ///      `PubkeyAlreadyFunded` guard).
     function _makeDepositObjects(uint256[] memory opIndices, uint256[] memory amounts)
         internal
-        view
-        returns (IDepositDataBuffer.DepositObject[] memory deposits)
+        returns (IDepositDataBuffer.DepositObject memory batch)
     {
         require(opIndices.length == amounts.length, "length mismatch");
-        bytes32 wc = river.getWithdrawalCredentials();
-        deposits = new IDepositDataBuffer.DepositObject[](opIndices.length);
+        uint256 nonce = ++_depositBatchNonce;
+        batch.deposits = new IDepositDataBuffer.Deposit[](opIndices.length);
+        // batch.topUps left as default empty array.
         for (uint256 i = 0; i < opIndices.length; i++) {
-            deposits[i] = IDepositDataBuffer.DepositObject({
-                pubkey: abi.encodePacked(sha256(abi.encode("pubkey", i, opIndices[i], block.number)), bytes16(0)),
+            batch.deposits[i] = IDepositDataBuffer.Deposit({
+                pubkey: abi.encodePacked(sha256(abi.encode("pubkey", i, opIndices[i], nonce)), bytes16(0)),
                 signature: abi.encodePacked(
-                    sha256(abi.encode("sig-a", i, opIndices[i], block.number)),
-                    sha256(abi.encode("sig-b", i, opIndices[i], block.number)),
+                    sha256(abi.encode("sig-a", i, opIndices[i], nonce)),
+                    sha256(abi.encode("sig-b", i, opIndices[i], nonce)),
                     bytes32(0)
                 ),
                 amount: amounts[i],
-                depositDataRoot: bytes32(0),
-                operatorIdx: opIndices[i]
+                operatorIdx: opIndices[i],
+                depositY: _nonZeroDepositY(nonce * 1000 + i)
             });
         }
     }
