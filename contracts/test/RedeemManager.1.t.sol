@@ -13,6 +13,8 @@ import "../src/state/redeemManager/RedeemQueue.1.sol";
 import "../src/state/redeemManager/RedeemQueue.2.sol";
 
 import "../src/state/redeemManager/WithdrawalStack.sol";
+import "../src/state/redeemManager/MaxRedeemableETHLockedStack.sol";
+import "../src/state/redeemManager/NextLockHeight.sol";
 import "../src/RedeemManager.1.sol";
 import "../src/TUPProxy.sol";
 import "../src/Initializable.sol";
@@ -2381,5 +2383,476 @@ contract InitializeRedeemManagerV1_2Test is RedeeManagerV1TestBase {
 
         // Check total length
         assertEq(RedeemManagerV1(redeemManager).getRedeemRequestCount(), 60);
+    }
+}
+
+/// @title Rewards-on-Redemption tests
+/// @notice Coverage for the MaxRedeemableETH lock mechanism added in V1_3:
+///         - lockMaxRedeemableETH state mutation and revert paths
+///         - getEffectiveCapForDemand aggregation across lock events and pre-upgrade fallback
+///         - _claimRedeemRequest override-not-min cap semantics
+///         - _claimRedeemRequest recursion across mixed withdrawal/lock-event boundaries
+///         - reportWithdraw's MaxRedeemableETHLockedDemand decrement
+contract RedeemManagerV1RewardsOnRedemptionTests is RedeeManagerV1TestBase {
+    RedeemManagerV1 internal redeemManager;
+    address internal initiatorAdmin;
+
+    event MaxRedeemableETHLocked(
+        uint32 indexed id,
+        uint256 height,
+        uint256 amount,
+        uint256 lockedEth,
+        uint256 fromFullExits,
+        uint256 fromPartialWithdrawals,
+        uint256 fromRebalancing
+    );
+
+    /// @dev Initializes all the way through V1_3 so post-upgrade behavior is the default.
+    ///      Tests that need to model a pre-upgrade slice submit requests BEFORE this setUp's V1_3 call
+    ///      via the helper `_simulatePreUpgradeQueueState` (see below).
+    function setUp() external {
+        allowlistAdmin = makeAddr("allowlistAdmin");
+        allowlistAllower = makeAddr("allowlistAllower");
+        allowlistDenier = makeAddr("allowlistDenier");
+        redeemManager = new RedeemManagerV1();
+        LibImplementationUnbricker.unbrick(vm, address(redeemManager));
+        allowlist = new AllowlistV1();
+        LibImplementationUnbricker.unbrick(vm, address(allowlist));
+        allowlist.initAllowlistV1(allowlistAdmin, allowlistAllower);
+        allowlist.initAllowlistV1_1(allowlistDenier);
+        river = new RiverMock(address(allowlist));
+
+        redeemManager.initializeRedeemManagerV1(address(river));
+        redeemManager.initializeRedeemManagerV1_2();
+        redeemManager.initializeRedeemManagerV1_3();
+    }
+
+    // ---- helpers ------------------------------------------------------------
+
+    function _allowlistUser(address user) internal {
+        address[] memory accounts = new address[](1);
+        accounts[0] = user;
+        uint256[] memory permissions = new uint256[](1);
+        permissions[0] = LibAllowlistMasks.REDEEM_MASK | LibAllowlistMasks.DEPOSIT_MASK;
+        vm.prank(allowlistAllower);
+        allowlist.setAllowPermissions(accounts, permissions);
+    }
+
+    /// @dev Mints LsETH on the river mock, allowlists the user, approves the redeem manager,
+    ///      and submits a request. Returns the assigned request id.
+    function _submitRequest(address user, uint256 amount) internal returns (uint32 id) {
+        _allowlistUser(user);
+        river.sudoDeal(user, amount);
+        vm.prank(user);
+        river.approve(address(redeemManager), amount);
+        vm.prank(user);
+        id = redeemManager.requestRedeem(amount, user);
+    }
+
+    /// @dev Issues a lock event from the river (the only authorized caller) with all amount going
+    ///      to `fromFullExits` for simplicity. Other source-attribution slots default to 0.
+    function _lock(uint256 lsETHToLock, uint256 lockedEth) internal {
+        vm.prank(address(river));
+        redeemManager.lockMaxRedeemableETH(lsETHToLock, lockedEth, lockedEth, 0, 0);
+    }
+
+    function _lockFromRebalance(uint256 lsETHToLock, uint256 lockedEth) internal {
+        vm.prank(address(river));
+        redeemManager.lockMaxRedeemableETH(lsETHToLock, lockedEth, 0, 0, lockedEth);
+    }
+
+    /// @dev Reports a withdrawal event via the river mock. ETH is dealt to river first so it can
+    ///      forward msg.value.
+    function _reportWithdraw(uint256 lsETHWithdrawable, uint256 ethAmount) internal {
+        vm.deal(address(river), address(river).balance + ethAmount);
+        river.sudoReportWithdraw{value: ethAmount}(address(redeemManager), lsETHWithdrawable);
+    }
+
+    /// @dev Simulates a pre-upgrade queue state by submitting a request while temporarily resetting
+    ///      NextLockHeight to 0, then restoring it after. Used by tests that need to verify pre-upgrade
+    ///      requests are NOT covered by future lock events.
+    function _submitAsPreUpgrade(address user, uint256 amount) internal returns (uint32 id) {
+        // Stash NextLockHeight, set to 0 to simulate the pre-V1_3 state, submit, then restore.
+        // We also have to re-bootstrap NextLockHeight to the new RedeemDemand after the submission
+        // to mirror what V1_3 init would have done at upgrade time.
+        bytes32 nextLockHeightSlot = bytes32(uint256(keccak256("river.state.nextLockHeight")) - 1);
+        uint256 saved = uint256(vm.load(address(redeemManager), nextLockHeightSlot));
+        vm.store(address(redeemManager), nextLockHeightSlot, bytes32(uint256(0)));
+        id = _submitRequest(user, amount);
+        // After the "pre-upgrade" request lands, set NextLockHeight to current RedeemDemand
+        // (this is what initializeRedeemManagerV1_3 would have set at upgrade).
+        vm.store(address(redeemManager), nextLockHeightSlot, bytes32(redeemManager.getRedeemDemand()));
+        // suppress unused-var warning
+        saved;
+    }
+
+    // ---- tests --------------------------------------------------------------
+
+    /// @notice lockMaxRedeemableETH only mutates the lock state — no shares burned, no ETH moved.
+    function testLockMaxRedeemableETHAppendsEventNoSwap() external {
+        address user = makeAddr("user_a");
+        _submitRequest(user, 10 ether);
+
+        // Snapshot pre-lock state
+        uint256 preRedeemDemand = redeemManager.getRedeemDemand();
+        uint256 preLockedDemand = redeemManager.getMaxRedeemableETHLockedDemand();
+        uint256 preLockEventCount = redeemManager.getMaxRedeemableETHLockedEventCount();
+        uint256 preWithdrawalEventCount = redeemManager.getWithdrawalEventCount();
+        uint256 preRMBalance = address(redeemManager).balance;
+        uint256 preTotalSupply = river.totalSupply();
+
+        vm.expectEmit(true, true, true, true);
+        emit MaxRedeemableETHLocked(0, redeemManager.getNextLockHeight(), 10 ether, 10 ether, 10 ether, 0, 0);
+        _lock(10 ether, 10 ether);
+
+        // Lock state advanced
+        assertEq(redeemManager.getMaxRedeemableETHLockedEventCount(), preLockEventCount + 1);
+        assertEq(redeemManager.getMaxRedeemableETHLockedDemand(), preLockedDemand + 10 ether);
+        assertEq(redeemManager.getNextLockHeight(), 10 ether + uint256(_initialNextLockHeight()));
+
+        // Untouched: RedeemDemand, WithdrawalStack, RedeemManager ETH balance, LsETH totalSupply
+        assertEq(redeemManager.getRedeemDemand(), preRedeemDemand);
+        assertEq(redeemManager.getWithdrawalEventCount(), preWithdrawalEventCount);
+        assertEq(address(redeemManager).balance, preRMBalance);
+        assertEq(river.totalSupply(), preTotalSupply);
+
+        MaxRedeemableETHLockedStack.MaxRedeemableETHLockedEvent memory ev =
+            redeemManager.getMaxRedeemableETHLockedEventDetails(0);
+        assertEq(ev.amount, 10 ether);
+        assertEq(ev.lockedEth, 10 ether);
+    }
+
+    /// @notice The lock event's `lockedEth` overrides the per-request `maxRedeemableEth` at claim
+    ///         when the lock covers the slice — this is the heart of the rewards-on-redemption feature.
+    function testLockMaxRedeemableETHOverridesPerRequestCap() external {
+        address user = makeAddr("user_override");
+        // Submit at rate 1.0
+        uint32 reqId = _submitRequest(user, 10 ether);
+
+        // Rate appreciates to 1.1 (pool earned 10% — driven by other validators)
+        river.sudoSetRate(1.1e18);
+
+        // Validator becomes inactive; lock at the new rate (10 LsETH × 1.1 = 11 ETH)
+        _lock(10 ether, 11 ether);
+
+        // Fund the redeem with 11 ETH at the current rate (one WithdrawalEvent)
+        _reportWithdraw(10 ether, 11 ether);
+
+        // Claim — user should receive the LOCK cap (11 ETH), not the original request cap (10 ETH)
+        uint32[] memory reqIds = new uint32[](1);
+        reqIds[0] = reqId;
+        uint32[] memory weIds = new uint32[](1);
+        weIds[0] = 0;
+        uint256 preUserBalance = user.balance;
+        redeemManager.claimRedeemRequests(reqIds, weIds);
+        assertEq(user.balance - preUserBalance, 11 ether);
+
+        // No excess routed to the buffer (lock cap == withdrawnEth pro-rata)
+        assertEq(redeemManager.getBufferedExceedingEth(), 0);
+    }
+
+    /// @notice Without the lock-event override, the user would only ever see the request-time cap.
+    ///         This is the failure mode the override prevents — assert it actually overrides.
+    function testLockMaxRedeemableETHCoversRateAppreciationAfterRequest() external {
+        address user = makeAddr("user_apprec");
+        _submitRequest(user, 10 ether);
+        // request-time maxRedeemableEth was 10 ETH (rate 1.0). After lock at 1.2:
+        river.sudoSetRate(1.2e18);
+        _lock(10 ether, 12 ether);
+        _reportWithdraw(10 ether, 12 ether);
+
+        uint32[] memory reqIds = new uint32[](1);
+        reqIds[0] = 0;
+        uint32[] memory weIds = new uint32[](1);
+        weIds[0] = 0;
+        uint256 preBalance = user.balance;
+        redeemManager.claimRedeemRequests(reqIds, weIds);
+        // User sees the appreciation (12 ETH, NOT capped at the request-time 10 ETH).
+        assertEq(user.balance - preBalance, 12 ether);
+        assertEq(redeemManager.getBufferedExceedingEth(), 0);
+    }
+
+    /// @notice Pre-upgrade requests must NOT be covered by any post-upgrade lock event — they retain
+    ///         the request-time maxRedeemableEth cap and behavior is unchanged from V1_2.
+    function testLockMaxRedeemableETHRespectsOldMaxRedeemableForPreUpgrade() external {
+        address oldUser = makeAddr("user_old");
+        address newUser = makeAddr("user_new");
+        // Pre-upgrade request at rate 1.0
+        _submitAsPreUpgrade(oldUser, 10 ether);
+        // Post-upgrade request at rate 1.0
+        _submitRequest(newUser, 10 ether);
+
+        // Rate appreciates; lock fires for the post-upgrade portion only
+        river.sudoSetRate(1.2e18);
+        _lock(10 ether, 12 ether);
+
+        // Single WithdrawalEvent funds both (20 LsETH at current rate = 24 ETH)
+        _reportWithdraw(20 ether, 24 ether);
+
+        // Pre-upgrade claim: capped at request-time 10 ETH; rate excess to buffer
+        uint32[] memory reqIds = new uint32[](1);
+        uint32[] memory weIds = new uint32[](1);
+        reqIds[0] = 0;
+        weIds[0] = 0;
+        uint256 preOld = oldUser.balance;
+        redeemManager.claimRedeemRequests(reqIds, weIds);
+        assertEq(oldUser.balance - preOld, 10 ether);
+        // Pro-rata of withdrawnEth for old's 10 LsETH = (10*24)/20 = 12 ETH; capped to 10 → 2 ETH to buffer
+        assertEq(redeemManager.getBufferedExceedingEth(), 2 ether);
+
+        // Post-upgrade claim: lock cap = 12 ETH; should receive full 12 ETH
+        reqIds[0] = 1;
+        weIds[0] = 0;
+        uint256 preNew = newUser.balance;
+        redeemManager.claimRedeemRequests(reqIds, weIds);
+        assertEq(newUser.balance - preNew, 12 ether);
+    }
+
+    /// @notice A request covered by multiple lock events at different rates is paid piecewise.
+    ///         Critical multi-event test (per plan).
+    function testClaimSpansMultipleLockEvents() external {
+        address user = makeAddr("user_multi");
+        // 100 LsETH request at rate 1.0 → request-time cap is 100 ETH (won't bind in this test)
+        uint32 reqId = _submitRequest(user, 100 ether);
+
+        // Three locks at appreciating rates (R1 < R2 < R3):
+        // [0, 30) at 1.05 → 31.5 ETH locked
+        // [30, 70) at 1.10 → 44 ETH locked
+        // [70, 100) at 1.15 → 34.5 ETH locked
+        river.sudoSetRate(1.05e18);
+        _lock(30 ether, 31.5 ether);
+        river.sudoSetRate(1.10e18);
+        _lock(40 ether, 44 ether);
+        river.sudoSetRate(1.15e18);
+        _lock(30 ether, 34.5 ether);
+
+        // Fund all 100 LsETH with a single WithdrawalEvent at the final rate (1.15 → 115 ETH)
+        _reportWithdraw(100 ether, 115 ether);
+
+        uint32[] memory reqIds = new uint32[](1);
+        reqIds[0] = reqId;
+        uint32[] memory weIds = new uint32[](1);
+        weIds[0] = 0;
+        uint256 preBalance = user.balance;
+        redeemManager.claimRedeemRequests(reqIds, weIds);
+
+        // Expected payout = sum of lockedEth per slice = 31.5 + 44 + 34.5 = 110 ETH
+        assertEq(user.balance - preBalance, 110 ether);
+
+        // The 5 ETH delta (115 sent - 110 paid) overflowed each lock-cap pro-rata and routed to buffer
+        assertEq(redeemManager.getBufferedExceedingEth(), 5 ether);
+    }
+
+    /// @notice A request spanning multiple lock events AND multiple withdrawal events with non-aligned
+    ///         boundaries is correctly resolved piecewise.
+    function testClaimSpansInterleavedLockAndWithdrawalEvents() external {
+        address user = makeAddr("user_inter");
+        uint32 reqId = _submitRequest(user, 100 ether);
+
+        // Two locks: [0, 60) at 1.1 (66 ETH), [60, 100) at 1.2 (48 ETH)
+        river.sudoSetRate(1.1e18);
+        _lock(60 ether, 66 ether);
+        river.sudoSetRate(1.2e18);
+        _lock(40 ether, 48 ether);
+
+        // Two withdrawal events with non-aligned boundaries: [0, 40), [40, 100)
+        // Funded at the current rate of 1.2 — same rate as the second lock, higher than the first
+        _reportWithdraw(40 ether, 48 ether); // [0, 40) — 1.2 ETH/LsETH supplied
+        _reportWithdraw(60 ether, 72 ether); // [40, 100) — 1.2 ETH/LsETH supplied
+
+        uint32[] memory reqIds = new uint32[](2);
+        uint32[] memory weIds = new uint32[](2);
+        reqIds[0] = reqId;
+        weIds[0] = 0; // start in withdrawal event 0
+        reqIds[1] = reqId;
+        weIds[1] = 1; // continuation in withdrawal event 1 (after recursion advances)
+
+        // Need only one claim entry — recursion handles event progression internally
+        uint32[] memory singleReqIds = new uint32[](1);
+        uint32[] memory singleWeIds = new uint32[](1);
+        singleReqIds[0] = reqId;
+        singleWeIds[0] = 0;
+        uint256 preBalance = user.balance;
+        redeemManager.claimRedeemRequests(singleReqIds, singleWeIds);
+
+        // Expected piecewise payout:
+        //   [0, 40) covered by lock1 (1.1 cap) and wd1 (1.2 supply) → capped at 40*1.1 = 44 ETH (4 ETH to buffer)
+        //   [40, 60) covered by lock1 (1.1 cap) and wd2 (1.2 supply) → capped at 20*1.1 = 22 ETH (2 ETH to buffer)
+        //   [60, 100) covered by lock2 (1.2 cap) and wd2 (1.2 supply) → 40*1.2 = 48 ETH (no excess)
+        // Total to user: 44 + 22 + 48 = 114 ETH
+        assertEq(user.balance - preBalance, 114 ether);
+        assertEq(redeemManager.getBufferedExceedingEth(), 6 ether);
+    }
+
+    /// @notice The over-lock guard reverts when an attempt would push MaxRedeemableETHLockedDemand
+    ///         above RedeemDemand.
+    function testOverLockReverts() external {
+        address user = makeAddr("user_over");
+        _submitRequest(user, 10 ether);
+
+        vm.prank(address(river));
+        vm.expectRevert(
+            abi.encodeWithSelector(IRedeemManagerV1.LockExceedsRedeemDemand.selector, 11 ether, 10 ether)
+        );
+        redeemManager.lockMaxRedeemableETH(11 ether, 11 ether, 11 ether, 0, 0);
+    }
+
+    /// @notice reportWithdraw decrements MaxRedeemableETHLockedDemand by min(_lsETHWithdrawable, locked).
+    function testReportWithdrawDecrementsMaxRedeemableETHLockedDemand() external {
+        address user = makeAddr("user_decr");
+        _submitRequest(user, 10 ether);
+        _lock(10 ether, 10 ether);
+        assertEq(redeemManager.getMaxRedeemableETHLockedDemand(), 10 ether);
+
+        // Partial reportWithdraw: 3 LsETH → locked demand drops by 3
+        _reportWithdraw(3 ether, 3 ether);
+        assertEq(redeemManager.getMaxRedeemableETHLockedDemand(), 7 ether);
+
+        // Remaining reportWithdraw: 7 LsETH → locked demand drops to 0
+        _reportWithdraw(7 ether, 7 ether);
+        assertEq(redeemManager.getMaxRedeemableETHLockedDemand(), 0);
+    }
+
+    /// @notice When a reportWithdraw arrives before any lock event covers the demand (pre-upgrade
+    ///         tail case), the locked demand decrement is bounded by current value (no underflow).
+    function testReportWithdrawDoesNotUnderflowLockedDemand() external {
+        address user = makeAddr("user_underflow");
+        _submitAsPreUpgrade(user, 10 ether);
+        assertEq(redeemManager.getMaxRedeemableETHLockedDemand(), 0);
+        _reportWithdraw(10 ether, 10 ether);
+        assertEq(redeemManager.getMaxRedeemableETHLockedDemand(), 0);
+    }
+
+    /// @notice getEffectiveCapForDemand sums lockedEth across the lock-covered portion and falls back
+    ///         to per-request maxRedeemableEth for any uncovered tail.
+    function testGetEffectiveCapForDemandMixed() external {
+        address oldUser = makeAddr("user_mix_old");
+        address newUser = makeAddr("user_mix_new");
+        _submitAsPreUpgrade(oldUser, 10 ether); // request 0: pre-upgrade, [0, 10), cap=10 ETH
+        _submitRequest(newUser, 10 ether); // request 1: post-upgrade, [10, 20), cap=10 ETH (request-time)
+
+        // Rate appreciates; lock fires for the post-upgrade slice only
+        river.sudoSetRate(1.3e18);
+        _lock(10 ether, 13 ether); // covers [10, 20), cap=13 ETH
+
+        // Cap for the full 20 LsETH demand = 10 (pre-upgrade, fallback) + 13 (lock) = 23 ETH
+        assertEq(redeemManager.getEffectiveCapForDemand(20 ether), 23 ether);
+
+        // Cap for the first 10 (pre-upgrade portion only)
+        assertEq(redeemManager.getEffectiveCapForDemand(10 ether), 10 ether);
+
+        // Cap for 15 LsETH straddles: 10 (pre) + 5 (lock pro-rata = 5*13/10 = 6.5) = 16.5 ETH
+        assertEq(redeemManager.getEffectiveCapForDemand(15 ether), 16.5 ether);
+    }
+
+    /// @notice getEffectiveCapForDemand aggregates across multiple lock events.
+    function testGetEffectiveCapForDemandAcrossMultipleLockEvents() external {
+        address user = makeAddr("user_acc");
+        _submitRequest(user, 100 ether);
+
+        river.sudoSetRate(1.05e18);
+        _lock(30 ether, 31.5 ether);
+        river.sudoSetRate(1.10e18);
+        _lock(40 ether, 44 ether);
+        river.sudoSetRate(1.15e18);
+        _lock(30 ether, 34.5 ether);
+
+        // Aggregate for full 100 = 31.5 + 44 + 34.5 = 110 ETH
+        assertEq(redeemManager.getEffectiveCapForDemand(100 ether), 110 ether);
+        // Aggregate for first 70 LsETH (across two lock events) = 31.5 + 44 = 75.5 ETH
+        assertEq(redeemManager.getEffectiveCapForDemand(70 ether), 75.5 ether);
+        // Aggregate for 50 LsETH (first lock event fully + 20/40 of second) = 31.5 + (20*44)/40 = 53.5 ETH
+        assertEq(redeemManager.getEffectiveCapForDemand(50 ether), 53.5 ether);
+    }
+
+    /// @notice A lock event with `fromRebalancing > 0` advances the same stack as inactivity locks
+    ///         and follows the same override semantics at claim. This test exercises the rebalance
+    ///         attribution path through RedeemManager (River-level integration covered elsewhere).
+    function testRebalanceLockFiresOnDepositToRedeem() external {
+        address user = makeAddr("user_rebal");
+        _submitRequest(user, 10 ether);
+
+        river.sudoSetRate(1.1e18);
+        // Simulate the rebalance lock the way River would fire it from
+        // _requestExitsBasedOnRedeemDemandAfterRebalancings
+        vm.expectEmit(true, true, true, true);
+        emit MaxRedeemableETHLocked(0, redeemManager.getNextLockHeight(), 10 ether, 11 ether, 0, 0, 11 ether);
+        _lockFromRebalance(10 ether, 11 ether);
+
+        // Claim at rebalance-time rate
+        _reportWithdraw(10 ether, 11 ether);
+        uint32[] memory reqIds = new uint32[](1);
+        uint32[] memory weIds = new uint32[](1);
+        reqIds[0] = 0;
+        weIds[0] = 0;
+        uint256 preBalance = user.balance;
+        redeemManager.claimRedeemRequests(reqIds, weIds);
+        assertEq(user.balance - preBalance, 11 ether);
+    }
+
+    /// @notice Two lock events fire in the same flow (one inactivity, one rebalance) and cover
+    ///         disjoint slices; claim resolves piecewise.
+    function testTwoLockEventsInOneReport() external {
+        address user = makeAddr("user_two");
+        _submitRequest(user, 20 ether);
+
+        river.sudoSetRate(1.1e18);
+        // Inactivity lock for first 10 LsETH at 1.1 (11 ETH)
+        _lock(10 ether, 11 ether);
+        // Rebalance lock for next 10 LsETH at 1.1 (11 ETH)
+        _lockFromRebalance(10 ether, 11 ether);
+
+        // Stack now has 2 events covering [0, 20) disjointly
+        assertEq(redeemManager.getMaxRedeemableETHLockedEventCount(), 2);
+        assertEq(redeemManager.getMaxRedeemableETHLockedDemand(), 20 ether);
+
+        _reportWithdraw(20 ether, 22 ether);
+        uint32[] memory reqIds = new uint32[](1);
+        uint32[] memory weIds = new uint32[](1);
+        reqIds[0] = 0;
+        weIds[0] = 0;
+        uint256 preBalance = user.balance;
+        redeemManager.claimRedeemRequests(reqIds, weIds);
+        assertEq(user.balance - preBalance, 22 ether);
+    }
+
+    /// @notice Over-locking via rebalance is also gated by the unlocked-head guard.
+    function testRebalanceLockRespectsUnlockedHead() external {
+        address user = makeAddr("user_head");
+        _submitRequest(user, 10 ether);
+        _lock(5 ether, 5 ether); // first 5 LsETH locked → only 5 LsETH unlocked head remains
+
+        vm.prank(address(river));
+        vm.expectRevert(
+            abi.encodeWithSelector(IRedeemManagerV1.LockExceedsRedeemDemand.selector, 6 ether, 5 ether)
+        );
+        redeemManager.lockMaxRedeemableETH(6 ether, 6 ether, 0, 0, 6 ether);
+    }
+
+    /// @notice Pre-upgrade-style request claimed after a post-upgrade reportWithdraw still pays at the
+    ///         request-time cap (no retroactive value transfer). The Pre-upgrade tail case from the plan.
+    function testPreUpgradeTailAtReportWithdraw() external {
+        address oldUser = makeAddr("user_tail_old");
+        _submitAsPreUpgrade(oldUser, 10 ether);
+
+        river.sudoSetRate(2e18);
+        // No lock fires for the pre-upgrade slice. reportWithdraw at rate 2.0 supplies 20 ETH.
+        _reportWithdraw(10 ether, 20 ether);
+
+        uint32[] memory reqIds = new uint32[](1);
+        uint32[] memory weIds = new uint32[](1);
+        reqIds[0] = 0;
+        weIds[0] = 0;
+        uint256 preBalance = oldUser.balance;
+        redeemManager.claimRedeemRequests(reqIds, weIds);
+        // Pre-upgrade cap = 10 ETH; user gets 10 ETH; 10 ETH excess to buffer
+        assertEq(oldUser.balance - preBalance, 10 ether);
+        assertEq(redeemManager.getBufferedExceedingEth(), 10 ether);
+    }
+
+    // The initial NextLockHeight after V1_3 init (RedeemDemand at init time = 0 because nothing
+    // was submitted in the base setUp).
+    function _initialNextLockHeight() internal pure returns (uint256) {
+        return 0;
     }
 }
