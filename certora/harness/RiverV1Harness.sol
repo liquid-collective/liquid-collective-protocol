@@ -93,7 +93,9 @@ contract RiverV1Harness is RiverV1 {
 
         helper8_reportInactiveEthToRedeemManager(vars);
 
-        helper8_requestExitsBasedOnRedeemDemandAfterRebalancings(vars, _report);
+        uint256 rebalancedEthAmount = helper8_requestExitsBasedOnRedeemDemandAfterRebalancings(vars, _report);
+
+        helper9_reportRebalancedEthToRedeemManager(vars, rebalancedEthAmount);
 
         helper9_reportWithdrawToRedeemManager(vars);
 
@@ -292,8 +294,8 @@ contract RiverV1Harness is RiverV1 {
     /// @notice helper 8
     function helper8_reportInactiveEthToRedeemManager(ConsensusLayerDataReportingVariables memory vars) public {
         uint256 inactiveEthAmount = vars.partialExitWithdrawnAmountIncrease + vars.stoppedEarningAmountIncrease;
-        if (inactiveEthAmount > 0 && vars.previousSharePrice > 0) {
-            uint256 inactiveLsEthAmount = (inactiveEthAmount * 1e18) / vars.previousSharePrice;
+        uint256 inactiveLsEthAmount = _sharesFromEthAtSharePrice(inactiveEthAmount, vars.previousSharePrice);
+        if (inactiveLsEthAmount > 0) {
             _reportInactiveEthToRedeemManager(inactiveLsEthAmount, inactiveEthAmount);
         }
     }
@@ -302,20 +304,32 @@ contract RiverV1Harness is RiverV1 {
     function helper8_requestExitsBasedOnRedeemDemandAfterRebalancings(
         ConsensusLayerDataReportingVariables memory vars,
         IOracleManagerV1.ConsensusLayerReport calldata _report
-    ) public {
+    ) public returns (uint256 rebalancedEthAmount) {
         _reportCLETH(_report.activeCLETHPerOperator);
 
         uint256 base = _report.validatorsBalance + InFlightDeposit.get();
         uint256 totalAvailableCLETH =
             base > _report.validatorsExitingBalance ? base - _report.validatorsExitingBalance : 0;
 
-        _requestExitsBasedOnRedeemDemandAfterRebalancings(
+        rebalancedEthAmount = _requestExitsBasedOnRedeemDemandAfterRebalancings(
             _report.validatorsExitingBalance,
             _report.exitedETHPerOperator,
             totalAvailableCLETH,
             _report.rebalanceDepositToRedeemMode,
             _report.slashingContainmentMode
         );
+    }
+
+    /// @notice helper 9
+    function helper9_reportRebalancedEthToRedeemManager(
+        ConsensusLayerDataReportingVariables memory vars,
+        uint256 rebalancedEthAmount
+    ) public {
+        uint256 rebalancingSharePrice = vars.previousSharePrice == 0 ? _currentSharePrice() : vars.previousSharePrice;
+        uint256 rebalancedLsEthAmount = _sharesFromEthAtSharePrice(rebalancedEthAmount, rebalancingSharePrice);
+        if (rebalancedLsEthAmount > 0) {
+            _reportInactiveEthToRedeemManager(rebalancedLsEthAmount, rebalancedEthAmount);
+        }
     }
 
     /// @notice helper 9

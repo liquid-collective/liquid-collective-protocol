@@ -102,7 +102,7 @@ abstract contract OracleManagerV1 is IOracleManagerV1 {
         uint256 _totalAvailableCLETH,
         bool _depositToRedeemRebalancingAllowed,
         bool _slashingContainmentModeEnabled
-    ) internal virtual;
+    ) internal virtual returns (uint256 rebalancedEthAmount);
 
     /// @notice Skims the redeem balance and sends remaining funds to the deposit balance
     function _skimExcessBalanceToRedeem() internal virtual;
@@ -501,8 +501,8 @@ abstract contract OracleManagerV1 is IOracleManagerV1 {
         }
 
         uint256 inactiveEthAmount = vars.partialExitWithdrawnAmountIncrease + vars.stoppedEarningAmountIncrease;
-        if (inactiveEthAmount > 0 && vars.previousSharePrice > 0) {
-            uint256 inactiveLsEthAmount = (inactiveEthAmount * 1e18) / vars.previousSharePrice;
+        uint256 inactiveLsEthAmount = _sharesFromEthAtSharePrice(inactiveEthAmount, vars.previousSharePrice);
+        if (inactiveLsEthAmount > 0) {
             _reportInactiveEthToRedeemManager(inactiveLsEthAmount, inactiveEthAmount);
         }
 
@@ -512,13 +512,19 @@ abstract contract OracleManagerV1 is IOracleManagerV1 {
         uint256 totalAvailableCLETH =
             base > _report.validatorsExitingBalance ? base - _report.validatorsExitingBalance : 0;
 
-        _requestExitsBasedOnRedeemDemandAfterRebalancings(
+        uint256 rebalancedEthAmount = _requestExitsBasedOnRedeemDemandAfterRebalancings(
             _report.validatorsExitingBalance,
             _report.exitedETHPerOperator,
             totalAvailableCLETH,
             _report.rebalanceDepositToRedeemMode,
             _report.slashingContainmentMode
         );
+
+        uint256 rebalancingSharePrice = vars.previousSharePrice == 0 ? _currentSharePrice() : vars.previousSharePrice;
+        uint256 rebalancedLsEthAmount = _sharesFromEthAtSharePrice(rebalancedEthAmount, rebalancingSharePrice);
+        if (rebalancedLsEthAmount > 0) {
+            _reportInactiveEthToRedeemManager(rebalancedLsEthAmount, rebalancedEthAmount);
+        }
 
         // we use the updated balanceToRedeem value to report a withdraw event on the redeem manager
         _reportWithdrawToRedeemManager();
@@ -543,6 +549,17 @@ abstract contract OracleManagerV1 is IOracleManagerV1 {
             return 0;
         }
         return (_assetBalance() * 1e18) / totalSupply;
+    }
+
+    /// @notice Converts ETH to shares at a fixed share price
+    /// @param _ethAmount The ETH amount to convert
+    /// @param _sharePrice The share price scaled by 1e18
+    /// @return The corresponding share amount
+    function _sharesFromEthAtSharePrice(uint256 _ethAmount, uint256 _sharePrice) internal pure returns (uint256) {
+        if (_ethAmount == 0 || _sharePrice == 0) {
+            return 0;
+        }
+        return (_ethAmount * 1e18) / _sharePrice;
     }
 
     /// @notice Retrieve the current epoch based on the current timestamp

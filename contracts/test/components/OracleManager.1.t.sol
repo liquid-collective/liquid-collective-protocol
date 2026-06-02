@@ -70,6 +70,10 @@ contract OracleManagerV1ExposeInitializer is OracleManagerV1 {
         totalSupplyForOracle = newValue;
     }
 
+    function sudoSetAmountToDeposit(uint256 newValue) external {
+        amountToDeposit = newValue;
+    }
+
     event Internal_OnEarnings(uint256 amount);
     event Internal_ReportInactiveEthToRedeemManager(uint256 lsEthAmount, uint256 ethAmount);
 
@@ -191,17 +195,26 @@ contract OracleManagerV1ExposeInitializer is OracleManagerV1 {
         uint256 totalAvailableCLETH,
         bool depositToRedeemRebalancingAllowed,
         bool slashingContainmentModeEnabled
-    ) internal override {
+    ) internal override returns (uint256 rebalancedEthAmount) {
         uint256 exitCount = 0;
 
         emit Internal_SetReportedExitedETH(exitedETHPerOperator);
 
         if (slashingContainmentModeEnabled) {
-            return;
+            return 0;
         }
 
         if (redeemDemand > amountToRedeem + exitingBalance) {
-            exitCount = LibUint256.ceil((redeemDemand - (amountToRedeem + exitingBalance)), 32 ether);
+            uint256 remainingDemand = redeemDemand - (amountToRedeem + exitingBalance);
+            if (depositToRedeemRebalancingAllowed && amountToDeposit > 0) {
+                rebalancedEthAmount = LibUint256.min(amountToDeposit, remainingDemand);
+                if (rebalancedEthAmount > 0) {
+                    amountToRedeem += rebalancedEthAmount;
+                    amountToDeposit -= rebalancedEthAmount;
+                    remainingDemand -= rebalancedEthAmount;
+                }
+            }
+            exitCount = LibUint256.ceil(remainingDemand, 32 ether);
         }
         emit Internal_RequestExitsBasedOnRedeemDemandAfterRebalancings(
             exitingBalance, depositToRedeemRebalancingAllowed, exitCount
@@ -555,6 +568,73 @@ contract OracleManagerV1Tests is Test {
         emit Internal_ReportInactiveEthToRedeemManager(10 ether, 10 ether);
         vm.prank(oracle);
         oracleManager.setConsensusLayerData(clr);
+    }
+
+    function testReportingRoutesRebalancedEthToInactiveLock() public {
+        IOracleManagerV1.ConsensusLayerReport memory clr;
+        OracleManagerV1ExposeInitializer om = OracleManagerV1ExposeInitializer(address(oracleManager));
+        om.sudoSetTotalSupplyForOracle(100 ether);
+        om.supersedeReportedBalanceSum(100 ether);
+
+        clr.epoch = epochsPerFrame;
+        clr.validatorsBalance = 100 ether;
+        vm.warp(genesisTime + (clr.epoch + epochsToAssumedFinality) * slotsPerEpoch * secondsPerSlot);
+
+        vm.prank(oracle);
+        oracleManager.setConsensusLayerData(clr);
+
+        om.sudoSetAmountToDeposit(10 ether);
+        om.sudoSetRedeemDemand(10 ether);
+
+        clr.epoch += epochsPerFrame;
+        clr.validatorsBalance = 100 ether;
+        clr.rebalanceDepositToRedeemMode = true;
+        vm.warp(genesisTime + (clr.epoch + epochsToAssumedFinality) * slotsPerEpoch * secondsPerSlot);
+
+        vm.expectEmit(true, true, true, true);
+        emit Internal_ReportInactiveEthToRedeemManager(10 ether, 10 ether);
+        vm.expectEmit(true, true, true, true);
+        emit Internal_ReportWithdrawToRedeemManager(10 ether);
+        vm.prank(oracle);
+        oracleManager.setConsensusLayerData(clr);
+
+        assertEq(om.reportedInactiveLsEth(), 10 ether);
+        assertEq(om.reportedInactiveEth(), 10 ether);
+    }
+
+    function testReportingUsesCurrentSharePriceForRebalancedEthWhenPreviousSharePriceIsZero() public {
+        IOracleManagerV1.ConsensusLayerReport memory clr;
+        OracleManagerV1ExposeInitializer om = OracleManagerV1ExposeInitializer(address(oracleManager));
+        om.sudoSetTotalSupplyForOracle(0);
+        om.supersedeReportedBalanceSum(190 ether);
+
+        clr.epoch = epochsPerFrame;
+        clr.validatorsBalance = 190 ether;
+        vm.warp(genesisTime + (clr.epoch + epochsToAssumedFinality) * slotsPerEpoch * secondsPerSlot);
+
+        vm.prank(oracle);
+        oracleManager.setConsensusLayerData(clr);
+
+        assertEq(oracleManager.getLastConsensusLayerReport().lastSharePrice, 0);
+
+        om.sudoSetTotalSupplyForOracle(100 ether);
+        om.sudoSetAmountToDeposit(10 ether);
+        om.sudoSetRedeemDemand(10 ether);
+
+        clr.epoch += epochsPerFrame;
+        clr.validatorsBalance = 190 ether;
+        clr.rebalanceDepositToRedeemMode = true;
+        vm.warp(genesisTime + (clr.epoch + epochsToAssumedFinality) * slotsPerEpoch * secondsPerSlot);
+
+        vm.expectEmit(true, true, true, true);
+        emit Internal_ReportInactiveEthToRedeemManager(5 ether, 10 ether);
+        vm.expectEmit(true, true, true, true);
+        emit Internal_ReportWithdrawToRedeemManager(10 ether);
+        vm.prank(oracle);
+        oracleManager.setConsensusLayerData(clr);
+
+        assertEq(om.reportedInactiveLsEth(), 5 ether);
+        assertEq(om.reportedInactiveEth(), 10 ether);
     }
 
     function testReportingStoresComputedLastSharePrice() public {

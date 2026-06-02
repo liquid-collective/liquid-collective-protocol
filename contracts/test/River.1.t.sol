@@ -30,6 +30,7 @@ import "../src/ConsolidationCoverageFund.1.sol";
 import "../src/RedeemManager.1.sol";
 import "../src/state/redeemManager/RateLockStack.sol";
 import "../src/state/redeemManager/RedeemQueue.2.sol";
+import "../src/state/redeemManager/WithdrawalStack.sol";
 
 contract MockDepositDataBuffer is IDepositDataBuffer {
     mapping(bytes32 => DepositObject[]) internal _batches;
@@ -2401,6 +2402,73 @@ contract RiverV1TestsReport_HEAVY_FUZZING is RiverV1TestBase {
         vm.prank(address(oracle));
         _fillReport(second);
         river.setConsensusLayerData(second);
+
+        RateLockStack.RateLockEvent memory lockEvent = redeemManager.getRateLockEventDetails(0);
+        assertEq(lockEvent.amount, 10 ether);
+        assertEq(lockEvent.ethAmount, 10 ether);
+    }
+
+    function testRebalancingCreatesRateLockAndAllowsClaim() external {
+        _prepareFourValidatorRedeemScenario(10 ether);
+
+        assertEq(river.getBalanceToDeposit(), 10 ether);
+        assertEq(redeemManager.getRateLockEventCount(), 0);
+
+        IOracleManagerV1.ConsensusLayerReport memory second = _generateEmptyReport();
+        second.epoch = epochsPerFrame * 2;
+        second.validatorsCount = 4;
+        second.validatorsBalance = 128 ether;
+        second.totalDepositedActivatedETH = 128 ether;
+        second.activeCLETHPerOperator[0] = 128 ether;
+        second.rebalanceDepositToRedeemMode = true;
+
+        vm.warp((second.epoch + epochsUntilFinal) * (secondsPerSlot * slotsPerEpoch));
+        vm.prank(address(oracle));
+        _fillReport(second);
+        river.setConsensusLayerData(second);
+
+        assertEq(redeemManager.getRateLockEventCount(), 1);
+        assertEq(redeemManager.getWithdrawalEventCount(), 1);
+
+        RateLockStack.RateLockEvent memory lockEvent = redeemManager.getRateLockEventDetails(0);
+        assertEq(lockEvent.amount, 10 ether);
+        assertEq(lockEvent.ethAmount, 10 ether);
+
+        WithdrawalStack.WithdrawalEvent memory withdrawalEvent = redeemManager.getWithdrawalEventDetails(0);
+        assertEq(withdrawalEvent.amount, 10 ether);
+        assertEq(withdrawalEvent.withdrawnEth, 10 ether);
+
+        uint32[] memory redeemRequestIds = new uint32[](1);
+        redeemRequestIds[0] = 0;
+        uint32[] memory withdrawalEventIds = new uint32[](1);
+        withdrawalEventIds[0] = 0;
+
+        vm.prank(bob);
+        uint8[] memory statuses = river.claimRedeemRequests(redeemRequestIds, withdrawalEventIds);
+
+        assertEq(statuses.length, 1);
+        assertEq(statuses[0], 0);
+    }
+
+    function testRebalancingDoesNotDoubleLockWhenInactiveCoverageAlreadySatisfiedDemand() external {
+        _prepareFourValidatorRedeemScenario(10 ether);
+
+        IOracleManagerV1.ConsensusLayerReport memory second = _generateEmptyReport();
+        second.epoch = epochsPerFrame * 2;
+        second.validatorsCount = 4;
+        second.validatorsBalance = 128 ether;
+        second.totalDepositedActivatedETH = 128 ether;
+        second.validatorsStoppedEarningBalance = 10 ether;
+        second.activeCLETHPerOperator[0] = 128 ether;
+        second.rebalanceDepositToRedeemMode = true;
+
+        vm.warp((second.epoch + epochsUntilFinal) * (secondsPerSlot * slotsPerEpoch));
+        vm.prank(address(oracle));
+        _fillReport(second);
+        river.setConsensusLayerData(second);
+
+        assertEq(redeemManager.getRateLockEventCount(), 1);
+        assertEq(redeemManager.getWithdrawalEventCount(), 1);
 
         RateLockStack.RateLockEvent memory lockEvent = redeemManager.getRateLockEventDetails(0);
         assertEq(lockEvent.amount, 10 ether);

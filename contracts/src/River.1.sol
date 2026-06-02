@@ -599,11 +599,11 @@ contract RiverV1 is
         uint256 _totalAvailableCLETH,
         bool _depositToRedeemRebalancingAllowed,
         bool _slashingContainmentModeEnabled
-    ) internal override {
+    ) internal override returns (uint256 rebalancedEthAmount) {
         IOperatorsRegistryV1(OperatorsRegistryAddress.get()).reportExitedETH(_exitedETH, TotalDepositedETH.get());
 
         if (_slashingContainmentModeEnabled) {
-            return;
+            return 0;
         }
 
         uint256 totalSupply = _totalSupply();
@@ -618,13 +618,13 @@ contract RiverV1 is
             if (availableBalanceToRedeem + _exitingBalance < redeemManagerDemandInEth) {
                 // if reblancing is enabled and the redeem manager demand is higher than exiting eth, we add eth for deposit buffer to redeem buffer
                 if (_depositToRedeemRebalancingAllowed && availableBalanceToDeposit > 0) {
-                    uint256 rebalancingAmount = LibUint256.min(
+                    rebalancedEthAmount = LibUint256.min(
                         availableBalanceToDeposit, redeemManagerDemandInEth - _exitingBalance - availableBalanceToRedeem
                     );
-                    if (rebalancingAmount > 0) {
-                        availableBalanceToRedeem += rebalancingAmount;
+                    if (rebalancedEthAmount > 0) {
+                        availableBalanceToRedeem += rebalancedEthAmount;
                         _setBalanceToRedeem(availableBalanceToRedeem);
-                        _setBalanceToDeposit(availableBalanceToDeposit - rebalancingAmount);
+                        _setBalanceToDeposit(availableBalanceToDeposit - rebalancedEthAmount);
                     }
                 }
 
