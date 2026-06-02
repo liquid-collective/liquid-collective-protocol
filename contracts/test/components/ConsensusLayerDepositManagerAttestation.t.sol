@@ -861,6 +861,43 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
         assertEq(dm.getTotalDepositedETH(), 64 ether, "total deposited reflects both initial and top-up");
     }
 
+    /// @dev Replay protection: re-using the same `depositDataBufferId` after a successful
+    ///      execution must revert with `DepositDataBufferIdAlreadyConsumed`. Without this gate
+    ///      a top-up batch could be replayed (its `pubkey-in-lookup` precondition still holds
+    ///      after the first execution).
+    function testRevert_replay_consumedBufferId() public {
+        // Seed an already-funded pubkey so the top-up branch is exercised.
+        IDepositDataBuffer.TopUp[] memory topUps = new IDepositDataBuffer.TopUp[](1);
+        topUps[0] = _makeTopUpDeposit(0, 160);
+        _seedFundedPubkey(topUps[0].pubkey);
+
+        (bytes32 bufferId, bytes32 rootHash, bytes[] memory sigs) = _prepareTopUps(topUps);
+
+        // First execution succeeds and marks the ID consumed.
+        vm.prank(keeper);
+        dm.depositToConsensusLayerWithAttestation(bufferId, rootHash, sigs);
+        assertTrue(validator.isDepositDataBufferIdConsumed(bufferId), "id should be marked consumed");
+
+        // Second execution with the same ID must revert before any state mutation.
+        uint256 depositCountBefore = depositContract.deposit_count();
+        vm.prank(keeper);
+        vm.expectRevert(
+            abi.encodeWithSelector(IAttestationVerifierV1.DepositDataBufferIdAlreadyConsumed.selector, bufferId)
+        );
+        dm.depositToConsensusLayerWithAttestation(bufferId, rootHash, sigs);
+        assertEq(depositContract.deposit_count(), depositCountBefore, "no deposit should reach the beacon contract on replay");
+    }
+
+    /// @dev `recordConsumedDepositDataBufferId` is gated by `onlyRiver`. Direct external calls
+    ///      from anyone else (even the admin) must revert.
+    function testRevert_recordConsumedDepositDataBufferId_notRiver() public {
+        bytes32 bufferId = keccak256("some-id");
+        address stranger = address(0xC0FFEE);
+        vm.prank(stranger);
+        vm.expectRevert(abi.encodeWithSelector(LibErrors.Unauthorized.selector, stranger));
+        validator.recordConsumedDepositDataBufferId(bufferId);
+    }
+
     /// @dev Same-batch initial + top-up for the SAME pubkey must revert. The top-up check
     ///      runs during validate() before the deposit executes, so the mapping is empty at
     ///      that moment and TopUpPubkeyNotFunded fires.

@@ -12,6 +12,7 @@ import "./interfaces/IDepositDataBuffer.sol";
 import "./libraries/BLS12_381.sol";
 import "./libraries/LibErrors.sol";
 
+import "./state/attestationVerifier/ConsumedDepositDataBufferIds.sol";
 import "./state/attestationVerifier/DepositCommitteeAttestationQuorum.sol";
 import "./state/attestationVerifier/DepositCommitteeAttesters.sol";
 import "./state/attestationVerifier/DepositDataBufferAddress.sol";
@@ -223,6 +224,13 @@ contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1 {
         bytes32 withdrawalCredentials,
         uint256 committedBalance
     ) external view returns (IDepositDataBuffer.DepositObject memory batch, uint256 totalAmount) {
+        // 0. Replay protection — reject any batch ID that has already been executed.
+        //    Critical for top-ups: their pubkey-in-lookup precondition still holds after the
+        //    first execution, so an unchecked replay would re-execute every top-up transfer.
+        if (ConsumedDepositDataBufferIds.isConsumed(depositDataBufferId)) {
+            revert DepositDataBufferIdAlreadyConsumed(depositDataBufferId);
+        }
+
         // 1. Verify attestation quorum
         _verifyAttestationQuorum(depositDataBufferId, depositRootHash, signatures, depositContract);
 
@@ -311,6 +319,16 @@ contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1 {
     /// @inheritdoc IAttestationVerifierV1
     function isPubkeyFunded(bytes calldata pubkey) external view returns (bool) {
         return ValidatorPubkeyLookup.isPubkeyFunded(pubkey);
+    }
+
+    /// @inheritdoc IAttestationVerifierV1
+    function recordConsumedDepositDataBufferId(bytes32 depositDataBufferId) external onlyRiver {
+        ConsumedDepositDataBufferIds.markConsumed(depositDataBufferId);
+    }
+
+    /// @inheritdoc IAttestationVerifierV1
+    function isDepositDataBufferIdConsumed(bytes32 depositDataBufferId) external view returns (bool) {
+        return ConsumedDepositDataBufferIds.isConsumed(depositDataBufferId);
     }
 
     // -----------------------------------------------------------------------
