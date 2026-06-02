@@ -84,10 +84,6 @@ interface IRedeemManagerV1 {
         uint256 fromRebalancing
     );
 
-    /// @notice Emitted when the MaxRedeemableETHLockedDemand is updated
-    /// @param oldValue The previous value
-    /// @param newValue The new value
-    event SetMaxRedeemableETHLockedDemand(uint256 oldValue, uint256 newValue);
 
     /// @notice Thrown When a zero value is provided
     error InvalidZeroAmount();
@@ -281,6 +277,9 @@ interface IRedeemManagerV1 {
         returns (MaxRedeemableETHLockedStack.MaxRedeemableETHLockedEvent memory);
 
     /// @notice Retrieve the LsETH currently covered by a lock event but not yet by a withdrawal event
+    /// @dev Computed dynamically as `NextLockHeight - max(head, firstLockHeight)` — there is no
+    ///      stored counter; the value reflects the live state of the queue head, the first lock
+    ///      event's position, and the cumulative lock heights.
     function getMaxRedeemableETHLockedDemand() external view returns (uint256);
 
     /// @notice Retrieve the height that will be used by the next appended lock event

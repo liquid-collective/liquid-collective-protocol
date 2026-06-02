@@ -17,7 +17,6 @@ import "./state/redeemManager/WithdrawalStack.sol";
 import "./state/redeemManager/BufferedExceedingEth.sol";
 import "./state/redeemManager/RedeemDemand.sol";
 import "./state/redeemManager/MaxRedeemableETHLockedStack.sol";
-import "./state/redeemManager/MaxRedeemableETHLockedDemand.sol";
 import "./state/redeemManager/NextLockHeight.sol";
 
 /// @title Redeem Manager (v1)
@@ -156,8 +155,34 @@ contract RedeemManagerV1 is Initializable, ReentrancyGuard, IRedeemManagerV1, IP
     }
 
     /// @inheritdoc IRedeemManagerV1
+    /// @dev Computed dynamically as `NextLockHeight - max(head, firstLockHeight)`. This represents
+    ///      the LsETH currently covered by a lock event AND not yet consumed by a withdrawal event.
+    ///      Computing rather than storing avoids positional ambiguity in the pre-upgrade tail case
+    ///      where the lock region sits BEHIND the queue head (post-upgrade slice after pre-upgrade
+    ///      requests).
     function getMaxRedeemableETHLockedDemand() external view returns (uint256) {
-        return MaxRedeemableETHLockedDemand.get();
+        return _maxRedeemableETHLockedDemand();
+    }
+
+    function _maxRedeemableETHLockedDemand() internal view returns (uint256) {
+        uint256 next = NextLockHeight.get();
+        uint256 head = _currentMatchingHead();
+        if (next <= head) {
+            return 0;
+        }
+        MaxRedeemableETHLockedStack.MaxRedeemableETHLockedEvent[] storage lockEvents =
+            MaxRedeemableETHLockedStack.get();
+        if (lockEvents.length == 0) {
+            return 0;
+        }
+        uint256 firstHeight = lockEvents[0].height;
+        if (head > firstHeight) {
+            firstHeight = head;
+        }
+        if (next <= firstHeight) {
+            return 0;
+        }
+        return next - firstHeight;
     }
 
     /// @inheritdoc IRedeemManagerV1
@@ -166,24 +191,48 @@ contract RedeemManagerV1 is Initializable, ReentrancyGuard, IRedeemManagerV1, IP
     }
 
     /// @inheritdoc IRedeemManagerV1
+    /// @dev Walks the MaxRedeemableETHLockedStack starting from the queue head, summing each
+    ///      overlapping lock event's pro-rata `lockedEth`. For any gap (pre-upgrade tail or a
+    ///      slice not yet locked), falls back to summing per-request `maxRedeemableEth` over
+    ///      the gap range.
     function getEffectiveCapForDemand(uint256 _lsETHDemand) external view returns (uint256) {
         if (_lsETHDemand == 0) {
             return 0;
         }
-        uint256 head = _currentMatchingHead();
-        uint256 lockedDemand = MaxRedeemableETHLockedDemand.get();
-        uint256 lockedPortion = LibUint256.min(_lsETHDemand, lockedDemand);
-        uint256 unlockedPortion;
-        unchecked {
-            unlockedPortion = _lsETHDemand - lockedPortion;
+        uint256 cursor = _currentMatchingHead();
+        uint256 endTarget = cursor + _lsETHDemand;
+
+        MaxRedeemableETHLockedStack.MaxRedeemableETHLockedEvent[] storage lockEvents =
+            MaxRedeemableETHLockedStack.get();
+        uint256 lockLen = lockEvents.length;
+        uint256 lockIdx = 0;
+        // skip lock events fully behind the cursor
+        while (lockIdx < lockLen && lockEvents[lockIdx].height + lockEvents[lockIdx].amount <= cursor) {
+            ++lockIdx;
         }
 
-        uint256 cap = 0;
-        if (lockedPortion > 0) {
-            cap += _aggregateLockedEth(head, lockedPortion);
-        }
-        if (unlockedPortion > 0) {
-            cap += _aggregateUnlockedMaxRedeemableEth(head + lockedPortion, unlockedPortion);
+        uint256 cap;
+        while (cursor < endTarget) {
+            if (lockIdx == lockLen) {
+                // no more lock events — remainder uses the per-request fallback
+                cap += _aggregateUnlockedMaxRedeemableEth(cursor, endTarget - cursor);
+                break;
+            }
+            MaxRedeemableETHLockedStack.MaxRedeemableETHLockedEvent storage e = lockEvents[lockIdx];
+            if (e.height > cursor) {
+                // gap before this lock event — fallback for the gap portion
+                uint256 gapEnd = LibUint256.min(e.height, endTarget);
+                cap += _aggregateUnlockedMaxRedeemableEth(cursor, gapEnd - cursor);
+                cursor = gapEnd;
+                if (cursor >= endTarget) {
+                    break;
+                }
+            }
+            // cursor is within [e.height, e.height + e.amount); contribute lock pro-rata
+            uint256 overlapEnd = LibUint256.min(endTarget, e.height + e.amount);
+            cap += ((overlapEnd - cursor) * e.lockedEth) / e.amount;
+            cursor = overlapEnd;
+            ++lockIdx;
         }
         return cap;
     }
@@ -280,16 +329,8 @@ contract RedeemManagerV1 is Initializable, ReentrancyGuard, IRedeemManagerV1, IP
         unchecked {
             _setRedeemDemand(redeemDemand - _lsETHWithdrawable);
         }
-        // The just-funded LsETH transitions from "locked but unmatched" to "matched"; drop it
-        // from MaxRedeemableETHLockedDemand. Bounded by current value to handle the case where
-        // the queue head crosses the pre/post-upgrade boundary mid-report.
-        uint256 lockedDemand = MaxRedeemableETHLockedDemand.get();
-        if (lockedDemand > 0) {
-            uint256 decrement = LibUint256.min(_lsETHWithdrawable, lockedDemand);
-            unchecked {
-                _setMaxRedeemableETHLockedDemand(lockedDemand - decrement);
-            }
-        }
+        // Note: MaxRedeemableETHLockedDemand is a computed view (NextLockHeight - max(head, firstLockHeight)),
+        // so it tracks the consumed portion of the locked region automatically as the head advances.
         emit ReportedWithdrawal(height, _lsETHWithdrawable, msgValue, withdrawalEventId);
     }
 
@@ -304,32 +345,36 @@ contract RedeemManagerV1 is Initializable, ReentrancyGuard, IRedeemManagerV1, IP
         if (_lsETHToLock == 0) {
             return;
         }
-        uint256 lockedDemand = MaxRedeemableETHLockedDemand.get();
-        uint256 redeemDemand = RedeemDemand.get();
-        uint256 unlockedHead;
-        unchecked {
-            unlockedHead = redeemDemand - lockedDemand;
-        }
-        if (_lsETHToLock > unlockedHead) {
+        // The end of the queue is at head + RedeemDemand. The end of the locked region is NextLockHeight.
+        // A new lock cannot push the locked region past the queue end.
+        uint256 head = _currentMatchingHead();
+        uint256 queueEnd = head + RedeemDemand.get();
+        uint256 nextLockHeight = NextLockHeight.get();
+        if (nextLockHeight + _lsETHToLock > queueEnd) {
+            uint256 unlockedHead = queueEnd > nextLockHeight ? queueEnd - nextLockHeight : 0;
             revert LockExceedsRedeemDemand(_lsETHToLock, unlockedHead);
         }
 
         MaxRedeemableETHLockedStack.MaxRedeemableETHLockedEvent[] storage lockEvents =
             MaxRedeemableETHLockedStack.get();
         uint32 lockEventId = uint32(lockEvents.length);
-        uint256 height = NextLockHeight.get();
         lockEvents.push(
             MaxRedeemableETHLockedStack.MaxRedeemableETHLockedEvent({
-                height: height,
+                height: nextLockHeight,
                 amount: _lsETHToLock,
                 lockedEth: _lockedEth
             })
         );
-        NextLockHeight.set(height + _lsETHToLock);
-        _setMaxRedeemableETHLockedDemand(lockedDemand + _lsETHToLock);
+        NextLockHeight.set(nextLockHeight + _lsETHToLock);
 
         emit MaxRedeemableETHLocked(
-            lockEventId, height, _lsETHToLock, _lockedEth, _fromFullExits, _fromPartialWithdrawals, _fromRebalancing
+            lockEventId,
+            nextLockHeight,
+            _lsETHToLock,
+            _lockedEth,
+            _fromFullExits,
+            _fromPartialWithdrawals,
+            _fromRebalancing
         );
     }
 
@@ -835,13 +880,6 @@ contract RedeemManagerV1 is Initializable, ReentrancyGuard, IRedeemManagerV1, IP
         RedeemDemand.set(_newValue);
     }
 
-    /// @notice Internal utility to set the MaxRedeemableETH locked demand
-    /// @param _newValue The new value to set
-    function _setMaxRedeemableETHLockedDemand(uint256 _newValue) internal {
-        emit SetMaxRedeemableETHLockedDemand(MaxRedeemableETHLockedDemand.get(), _newValue);
-        MaxRedeemableETHLockedDemand.set(_newValue);
-    }
-
     /// @notice The current cumulative LsETH position fully matched by appended WithdrawalEvents
     /// @return The end position of the last WithdrawalEvent, or 0 if none
     function _currentMatchingHead() internal view returns (uint256) {
@@ -852,45 +890,6 @@ contract RedeemManagerV1 is Initializable, ReentrancyGuard, IRedeemManagerV1, IP
         }
         WithdrawalStack.WithdrawalEvent storage last = withdrawalEvents[len - 1];
         return last.height + last.amount;
-    }
-
-    /// @notice Sums the lockedEth contributions covering [startHeight, startHeight + amount)
-    /// @dev Iterates the MaxRedeemableETHLockedStack from the start, skipping events fully behind
-    ///      the cursor. Stops once `amount` LsETH has been covered. Per the plan, this O(N) walk is
-    ///      acceptable for V1; optimize via a running aggregate if benchmarks ever show pressure.
-    function _aggregateLockedEth(uint256 startHeight, uint256 amount) internal view returns (uint256) {
-        MaxRedeemableETHLockedStack.MaxRedeemableETHLockedEvent[] storage lockEvents =
-            MaxRedeemableETHLockedStack.get();
-        uint256 len = lockEvents.length;
-        if (len == 0 || amount == 0) {
-            return 0;
-        }
-
-        uint256 cap;
-        uint256 cursor = startHeight;
-        uint256 endTarget = startHeight + amount;
-
-        for (uint256 i = 0; i < len; ++i) {
-            MaxRedeemableETHLockedStack.MaxRedeemableETHLockedEvent storage e = lockEvents[i];
-            uint256 eEnd = e.height + e.amount;
-            // skip lock events entirely before cursor
-            if (eEnd <= cursor) {
-                continue;
-            }
-            // stop once we've passed our demand window
-            if (e.height >= endTarget) {
-                break;
-            }
-            uint256 overlapStart = LibUint256.max(cursor, e.height);
-            uint256 overlapEnd = LibUint256.min(endTarget, eEnd);
-            uint256 overlap = overlapEnd - overlapStart;
-            cap += (overlap * e.lockedEth) / e.amount;
-            cursor = overlapEnd;
-            if (cursor >= endTarget) {
-                break;
-            }
-        }
-        return cap;
     }
 
     /// @notice Sums per-request maxRedeemableEth contributions covering [startHeight, startHeight + amount)
