@@ -58,8 +58,9 @@ abstract contract AccountingInvariants is BeaconChainSimulator {
 
         uint256 newSkimmed = _simCumulativeSkimmed - _lastReportedSkimmed;
         uint256 newExited = _simCumulativeExited - _lastReportedExited;
-        if (newSkimmed + newExited > 0) {
-            vm.deal(address(withdraw), address(withdraw).balance + newSkimmed + newExited);
+        uint256 newPartialExitWithdrawn = _simCumulativePartialExitWithdrawn - _lastReportedPartialExitWithdrawn;
+        if (newSkimmed + newExited + newPartialExitWithdrawn > 0) {
+            vm.deal(address(withdraw), address(withdraw).balance + newSkimmed + newExited + newPartialExitWithdrawn);
         }
 
         IOracleManagerV1.ConsensusLayerReport memory report = _buildReport(rebalance, slashingContainment);
@@ -72,6 +73,7 @@ abstract contract AccountingInvariants is BeaconChainSimulator {
 
         _lastReportedSkimmed = _simCumulativeSkimmed;
         _lastReportedExited = _simCumulativeExited;
+        _lastReportedPartialExitWithdrawn = _simCumulativePartialExitWithdrawn;
         _lastReportEpoch = reportEpoch;
         // Sync sim in-flight to what the oracle just confirmed: oracle sets InFlightDeposit = _pendingETH().
         _simInFlightDeposit = _pendingETH();

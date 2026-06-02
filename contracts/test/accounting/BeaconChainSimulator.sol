@@ -35,6 +35,10 @@ abstract contract BeaconChainSimulator is AccountingHarnessBase {
     uint256 internal _simCumulativeSkimmed;
     /// @dev Cumulative exited ETH (monotonically increasing).
     uint256 internal _simCumulativeExited;
+    /// @dev Cumulative partial-exit ETH withdrawn from still-active validators.
+    uint256 internal _simCumulativePartialExitWithdrawn;
+    /// @dev Cumulative ETH that stopped earning when validators entered full exit.
+    uint256 internal _simCumulativeStoppedEarning;
     /// @dev Mirrors the contract's InFlightDeposit: ETH sent to the deposit contract
     ///      but not yet oracle-confirmed. Incremented in sim_deposit, reset after oracle report.
     uint256 internal _simInFlightDeposit;
@@ -44,6 +48,7 @@ abstract contract BeaconChainSimulator is AccountingHarnessBase {
 
     uint256 internal _lastReportedSkimmed;
     uint256 internal _lastReportedExited;
+    uint256 internal _lastReportedPartialExitWithdrawn;
     uint256 internal _lastReportEpoch;
 
     // ─── step functions ───────────────────────────────────────────────────────
@@ -138,7 +143,10 @@ abstract contract BeaconChainSimulator is AccountingHarnessBase {
             v.exitingETH += toQueue;
             remaining -= toQueue;
 
-            if (v.exitingETH == v.currentBalance) v.state = ValidatorState.Exiting;
+            if (v.exitingETH == v.currentBalance) {
+                _simCumulativeStoppedEarning += v.currentBalance;
+                v.state = ValidatorState.Exiting;
+            }
         }
         assertEq(remaining, 0, "sim_requestExit: insufficient active ETH");
     }
@@ -160,11 +168,16 @@ abstract contract BeaconChainSimulator is AccountingHarnessBase {
             if (thisPenalty > toComplete) thisPenalty = toComplete;
             penaltyApplied = penaltyApplied || thisPenalty > 0;
 
+            bool isPartialExit = v.state == ValidatorState.Active;
             uint256 actualExited = toComplete - thisPenalty;
             v.currentBalance -= toComplete;
             v.exitingETH -= toComplete;
             v.exitedETH += actualExited;
-            _simCumulativeExited += actualExited;
+            if (isPartialExit) {
+                _simCumulativePartialExitWithdrawn += actualExited;
+            } else {
+                _simCumulativeExited += actualExited;
+            }
             remaining -= toComplete;
 
             if (v.currentBalance == 0) v.state = ValidatorState.Exited;
@@ -264,6 +277,8 @@ abstract contract BeaconChainSimulator is AccountingHarnessBase {
         report.activeCLETHPerOperator = activeCLETHArr;
         report.rebalanceDepositToRedeemMode = rebalance;
         report.slashingContainmentMode = slashingContainment;
+        report.validatorsPartialExitWithdrawnBalance = _simCumulativePartialExitWithdrawn;
+        report.validatorsStoppedEarningBalance = _simCumulativeStoppedEarning;
     }
 
     /// @dev Builds a simulator-consistent `ConsensusLayerReport`, stamps `epoch` to the expected
@@ -284,8 +299,9 @@ abstract contract BeaconChainSimulator is AccountingHarnessBase {
 
         uint256 newSkimmed = _simCumulativeSkimmed - _lastReportedSkimmed;
         uint256 newExited = _simCumulativeExited - _lastReportedExited;
-        if (newSkimmed + newExited > 0) {
-            vm.deal(address(withdraw), address(withdraw).balance + newSkimmed + newExited);
+        uint256 newPartialExitWithdrawn = _simCumulativePartialExitWithdrawn - _lastReportedPartialExitWithdrawn;
+        if (newSkimmed + newExited + newPartialExitWithdrawn > 0) {
+            vm.deal(address(withdraw), address(withdraw).balance + newSkimmed + newExited + newPartialExitWithdrawn);
         }
 
         report = _buildReport(rebalance, slashingContainment);

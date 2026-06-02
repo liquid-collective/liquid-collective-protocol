@@ -12,10 +12,12 @@ import "../../../src/interfaces/components/IOracleManager.1.sol";
 contract AccountingInvariantTest is AccountingInvariants {
     AccountingHandler internal handler;
 
-    // ─── ghost state for monotonicity invariants (I14-I17) ──────────────────────
+    // ─── ghost state for monotonicity invariants (I14-I19) ──────────────────────
 
     uint256 internal ghost_lastSkimmedBalance;
     uint256 internal ghost_lastExitedBalance;
+    uint256 internal ghost_lastPartialExitWithdrawnBalance;
+    uint256 internal ghost_lastStoppedEarningBalance;
     uint256[] internal ghost_lastExitedPerOp;
 
     /// @notice Initialises the base harness, deploys the `AccountingHandler`, and registers it
@@ -87,10 +89,12 @@ contract AccountingInvariantTest is AccountingInvariants {
         }
         sim_oracleReport(rebalance, slashingContainment);
         _setAllowSharePriceDecrease(false);
-        // Snapshot post-report state for monotonicity invariants (I14-I17)
+        // Snapshot post-report state for monotonicity invariants (I14-I19)
         IOracleManagerV1.StoredConsensusLayerReport memory report = river.getLastConsensusLayerReport();
         ghost_lastSkimmedBalance = report.validatorsSkimmedBalance;
         ghost_lastExitedBalance = report.validatorsExitedBalance;
+        ghost_lastPartialExitWithdrawnBalance = report.validatorsPartialExitWithdrawnBalance;
+        ghost_lastStoppedEarningBalance = report.validatorsStoppedEarningBalance;
         ghost_lastExitedPerOp = operatorsRegistry.getExitedETHPerOperator();
     }
 
@@ -231,7 +235,7 @@ contract AccountingInvariantTest is AccountingInvariants {
         assertLe(totalExited, river.getTotalDepositedETH(), "I12: total exited > TotalDepositedETH");
     }
 
-    // ─── New invariants (I14-I20) ──────────────────────────────────────────────
+    // ─── New invariants (I14-I22) ──────────────────────────────────────────────
     // Note: I13 (CommittedBalance alignment) was removed — the test harness's
     // debug_moveDepositToCommitted() bypasses the protocol's 32-ETH alignment
     // logic, making the invariant invalid in this context.
@@ -256,30 +260,50 @@ contract AccountingInvariantTest is AccountingInvariants {
         }
     }
 
-    /// @dev I18: Per-operator requestedExits <= funded and exited <= funded (continuous check).
-    function invariant_I18_exitRequestsBounded() public {
+    /// @dev I18: Stored report validatorsPartialExitWithdrawnBalance never decreases.
+    function invariant_I18_partialExitWithdrawnBalanceNonDecreasing() public {
+        IOracleManagerV1.StoredConsensusLayerReport memory report = river.getLastConsensusLayerReport();
+        assertGe(
+            report.validatorsPartialExitWithdrawnBalance,
+            ghost_lastPartialExitWithdrawnBalance,
+            "I18: validatorsPartialExitWithdrawnBalance decreased"
+        );
+    }
+
+    /// @dev I19: Stored report validatorsStoppedEarningBalance never decreases.
+    function invariant_I19_stoppedEarningBalanceNonDecreasing() public {
+        IOracleManagerV1.StoredConsensusLayerReport memory report = river.getLastConsensusLayerReport();
+        assertGe(
+            report.validatorsStoppedEarningBalance,
+            ghost_lastStoppedEarningBalance,
+            "I19: validatorsStoppedEarningBalance decreased"
+        );
+    }
+
+    /// @dev I20: Per-operator requestedExits <= funded and exited <= funded (continuous check).
+    function invariant_I20_exitRequestsBounded() public {
         uint256 opCount = operatorsRegistry.getOperatorCount();
         uint256[] memory perOp = operatorsRegistry.getExitedETHPerOperator();
         for (uint256 i = 0; i < opCount; i++) {
             OperatorsV3.Operator memory op = operatorsRegistry.getOperator(i);
             uint256 exited = (i < perOp.length) ? perOp[i] : 0;
-            assertLe(op.requestedExits, op.funded, "I18: requestedExits > funded");
-            assertLe(exited, op.funded, "I18: exited > funded");
+            assertLe(op.requestedExits, op.funded, "I20: requestedExits > funded");
+            assertLe(exited, op.funded, "I20: exited > funded");
         }
     }
 
-    /// @dev I19: On-chain CLValidatorCount never exceeds total sim validators created.
-    function invariant_I19_clValidatorCountBounded() public {
+    /// @dev I21: On-chain CLValidatorCount never exceeds total sim validators created.
+    function invariant_I21_clValidatorCountBounded() public {
         uint256 onChainCount = river.getCLValidatorCount();
-        assertLe(onChainCount, _simValidators.length, "I19: CLValidatorCount exceeds total validators created");
+        assertLe(onChainCount, _simValidators.length, "I21: CLValidatorCount exceeds total validators created");
     }
 
-    /// @dev I20: TotalDepositedETH exactly equals sum of all sim validator deposits.
-    function invariant_I20_totalDepositedETHExactMatch() public {
+    /// @dev I22: TotalDepositedETH exactly equals sum of all sim validator deposits.
+    function invariant_I22_totalDepositedETHExactMatch() public {
         uint256 simSum = 0;
         for (uint256 i = 0; i < _simValidators.length; i++) {
             simSum += _simValidators[i].depositedETH;
         }
-        assertEq(river.getTotalDepositedETH(), simSum, "I20: TotalDepositedETH != exact sim sum");
+        assertEq(river.getTotalDepositedETH(), simSum, "I22: TotalDepositedETH != exact sim sum");
     }
 }
