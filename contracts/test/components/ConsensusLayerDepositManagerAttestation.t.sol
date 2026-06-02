@@ -862,10 +862,10 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
     }
 
     /// @dev Replay protection: re-using the same `depositDataBufferId` after a successful
-    ///      execution must revert with `DepositDataBufferIdAlreadyConsumed`. Without this gate
+    ///      execution must revert with `DepositDataBufferIdAlreadyProcessed`. Without this gate
     ///      a top-up batch could be replayed (its `pubkey-in-lookup` precondition still holds
     ///      after the first execution).
-    function testRevert_replay_consumedBufferId() public {
+    function testRevert_replay_processedBufferId() public {
         // Seed an already-funded pubkey so the top-up branch is exercised.
         IDepositDataBuffer.TopUp[] memory topUps = new IDepositDataBuffer.TopUp[](1);
         topUps[0] = _makeTopUpDeposit(0, 160);
@@ -873,29 +873,29 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
 
         (bytes32 bufferId, bytes32 rootHash, bytes[] memory sigs) = _prepareTopUps(topUps);
 
-        // First execution succeeds and marks the ID consumed.
+        // First execution succeeds and marks the ID processed.
         vm.prank(keeper);
         dm.depositToConsensusLayerWithAttestation(bufferId, rootHash, sigs);
-        assertTrue(validator.isDepositDataBufferIdConsumed(bufferId), "id should be marked consumed");
+        assertTrue(validator.isDepositDataBufferIdProcessed(bufferId), "id should be marked processed");
 
         // Second execution with the same ID must revert before any state mutation.
         uint256 depositCountBefore = depositContract.deposit_count();
         vm.prank(keeper);
         vm.expectRevert(
-            abi.encodeWithSelector(IAttestationVerifierV1.DepositDataBufferIdAlreadyConsumed.selector, bufferId)
+            abi.encodeWithSelector(IAttestationVerifierV1.DepositDataBufferIdAlreadyProcessed.selector, bufferId)
         );
         dm.depositToConsensusLayerWithAttestation(bufferId, rootHash, sigs);
         assertEq(depositContract.deposit_count(), depositCountBefore, "no deposit should reach the beacon contract on replay");
     }
 
-    /// @dev `recordConsumedDepositDataBufferId` is gated by `onlyRiver`. Direct external calls
+    /// @dev `markDepositDataBufferIdProcessed` is gated by `onlyRiver`. Direct external calls
     ///      from anyone else (even the admin) must revert.
-    function testRevert_recordConsumedDepositDataBufferId_notRiver() public {
+    function testRevert_markDepositDataBufferIdProcessed_notRiver() public {
         bytes32 bufferId = keccak256("some-id");
         address stranger = address(0xC0FFEE);
         vm.prank(stranger);
         vm.expectRevert(abi.encodeWithSelector(LibErrors.Unauthorized.selector, stranger));
-        validator.recordConsumedDepositDataBufferId(bufferId);
+        validator.markDepositDataBufferIdProcessed(bufferId);
     }
 
     /// @dev Same-batch initial + top-up for the SAME pubkey must revert. The top-up check

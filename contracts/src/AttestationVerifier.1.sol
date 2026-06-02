@@ -12,12 +12,12 @@ import "./interfaces/IDepositDataBuffer.sol";
 import "./libraries/BLS12_381.sol";
 import "./libraries/LibErrors.sol";
 
-import "./state/attestationVerifier/ConsumedDepositDataBufferIds.sol";
 import "./state/attestationVerifier/DepositCommitteeAttestationQuorum.sol";
 import "./state/attestationVerifier/DepositCommitteeAttesters.sol";
 import "./state/attestationVerifier/DepositDataBufferAddress.sol";
 import "./state/attestationVerifier/DepositDomainValue.sol";
 import "./state/attestationVerifier/DomainSeparator.sol";
+import "./state/attestationVerifier/ProcessedDepositDataBufferIds.sol";
 import "./state/attestationVerifier/ValidatorPubkeyLookup.sol";
 import "./state/shared/RiverAddress.sol";
 
@@ -224,11 +224,11 @@ contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1 {
         bytes32 withdrawalCredentials,
         uint256 committedBalance
     ) external view returns (IDepositDataBuffer.DepositObject memory batch, uint256 totalAmount) {
-        // 0. Replay protection — reject any batch ID that has already been executed.
+        // 0. Replay protection — reject any batch ID that has already been processed.
         //    Critical for top-ups: their pubkey-in-lookup precondition still holds after the
         //    first execution, so an unchecked replay would re-execute every top-up transfer.
-        if (ConsumedDepositDataBufferIds.isConsumed(depositDataBufferId)) {
-            revert DepositDataBufferIdAlreadyConsumed(depositDataBufferId);
+        if (ProcessedDepositDataBufferIds.isProcessed(depositDataBufferId)) {
+            revert DepositDataBufferIdAlreadyProcessed(depositDataBufferId);
         }
 
         // 1. Verify attestation quorum
@@ -322,13 +322,13 @@ contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1 {
     }
 
     /// @inheritdoc IAttestationVerifierV1
-    function recordConsumedDepositDataBufferId(bytes32 depositDataBufferId) external onlyRiver {
-        ConsumedDepositDataBufferIds.markConsumed(depositDataBufferId);
+    function markDepositDataBufferIdProcessed(bytes32 depositDataBufferId) external onlyRiver {
+        ProcessedDepositDataBufferIds.markProcessed(depositDataBufferId);
     }
 
     /// @inheritdoc IAttestationVerifierV1
-    function isDepositDataBufferIdConsumed(bytes32 depositDataBufferId) external view returns (bool) {
-        return ConsumedDepositDataBufferIds.isConsumed(depositDataBufferId);
+    function isDepositDataBufferIdProcessed(bytes32 depositDataBufferId) external view returns (bool) {
+        return ProcessedDepositDataBufferIds.isProcessed(depositDataBufferId);
     }
 
     // -----------------------------------------------------------------------

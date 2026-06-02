@@ -196,10 +196,10 @@ abstract contract ConsensusLayerDepositManagerV1 is IConsensusLayerDepositManage
             verifier.recordNewlyFundedPubkeys(newlyFundedPubkeys);
         }
 
-        // 9. Mark the batch ID consumed so the same batch cannot be replayed. Without this
+        // 9. Mark the batch ID processed so the same batch cannot be replayed. Without this
         //    a replay would re-execute every top-up: their pubkey-in-lookup precondition is
         //    unchanged by the first execution.
-        verifier.recordConsumedDepositDataBufferId(depositDataBufferId);
+        verifier.markDepositDataBufferIdProcessed(depositDataBufferId);
     }
 
     /// @notice Deposits _depositAmount ETH to the official Deposit contract
