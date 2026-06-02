@@ -101,6 +101,8 @@ contract RiverV1Harness is RiverV1 {
 
         helper11_commitBalanceToDeposit(vars, _report);
 
+        LastConsensusLayerReport.get().lastSharePrice = _currentSharePrice();
+
         // we emit a summary event with all the reporting details
         emit ProcessedConsensusLayerReport(_report, vars.trace);
     }
@@ -144,13 +146,8 @@ contract RiverV1Harness is RiverV1 {
             }
 
             // we ensure that the reported validator count is not decreasing
-            if (
-                _report.validatorsCount > DepositedValidatorCount.get()
-                    || _report.validatorsCount < lastStoredReport.validatorsCount
-            ) {
-                revert InvalidValidatorCountReport(
-                    _report.validatorsCount, DepositedValidatorCount.get(), lastStoredReport.validatorsCount
-                );
+            if (_report.validatorsCount < lastStoredReport.validatorsCount) {
+                revert InvalidValidatorCountReport(_report.validatorsCount, lastStoredReport.validatorsCount);
             }
 
             // we compute the new skimmed amount by taking the delta between reports
