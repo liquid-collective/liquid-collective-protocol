@@ -249,6 +249,22 @@ interface IOperatorsRegistryV1 {
     /// @return The list of active operators and their details
     function listActiveOperators() external view returns (OperatorsV3.Operator[] memory);
 
+    /// @notice Retrieve the pre-Pectra funded validator count for an operator from legacy V2 storage.
+    /// @param operatorIndex The operator index
+    /// @return The legacy funded validator count
+    function getPrePectraFundedValidatorCount(uint256 operatorIndex) external view returns (uint256);
+
+    /// @notice Retrieve pre-Pectra validator pubkeys from legacy ValidatorKeys storage.
+    /// @dev `stopIndex` is exclusive; returns pubkeys for indexes [startIndex, stopIndex).
+    /// @param operatorIndex The operator index
+    /// @param startIndex The first key index to read
+    /// @param stopIndex The exclusive stop key index
+    /// @return publicKeys The legacy validator pubkeys in the requested range
+    function getPrePectraValidatorPubkeys(uint256 operatorIndex, uint256 startIndex, uint256 stopIndex)
+        external
+        view
+        returns (bytes[] memory publicKeys);
+
     /// @notice Updates the funded ETH for the node operators referenced in the provided deltas
     /// @dev Deltas must be sorted by operatorIndex in strictly ascending order with no duplicates
     /// @dev Reverts with InvalidEmptyArray when the deltas array is empty

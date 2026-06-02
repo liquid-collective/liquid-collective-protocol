@@ -78,6 +78,12 @@ interface IAttestationVerifierV1 {
     /// @param consolidationHash The EIP-712 structHash of the consolidation request
     event ConsolidationProcessed(bytes32 indexed consolidationHash);
 
+    /// @notice Emitted when a chunk of pre-Pectra validator pubkeys is migrated into verifier state.
+    /// @param operatorIndex The operator whose legacy pubkeys were migrated
+    /// @param startIndex The first migrated key index
+    /// @param stopIndex The exclusive stop key index
+    event MigratedPrePectraValidatorPubkeys(uint256 indexed operatorIndex, uint256 startIndex, uint256 stopIndex);
+
     // -----------------------------------------------------------------------
     // Errors
     // -----------------------------------------------------------------------
@@ -216,6 +222,27 @@ interface IAttestationVerifierV1 {
     /// @param pubkey The offending 48-byte BLS pubkey
     error PubkeyAlreadyFunded(bytes pubkey);
 
+    /// @notice The pre-Pectra migration range is empty or reversed.
+    /// @param startIndex The first requested key index
+    /// @param stopIndex The exclusive stop key index
+    error InvalidPrePectraMigrationRange(uint256 startIndex, uint256 stopIndex);
+
+    /// @notice The pre-Pectra migration range exceeds the legacy funded validator count.
+    /// @param operatorIndex The operator whose keys were requested
+    /// @param stopIndex The requested exclusive stop key index
+    /// @param funded The legacy funded validator count
+    error PrePectraMigrationStopIndexExceedsFunded(uint256 operatorIndex, uint256 stopIndex, uint256 funded);
+
+    /// @notice A legacy pubkey read during pre-Pectra migration is not 48 bytes.
+    /// @param operatorIndex The operator whose key was read
+    /// @param keyIndex The legacy key index
+    /// @param length The observed pubkey length
+    error InvalidPrePectraMigrationPubkeyLength(uint256 operatorIndex, uint256 keyIndex, uint256 length);
+
+    /// @notice A target pubkey is not funded
+    /// @param pubkey The offending 48-byte BLS pubkey
+    error TargetPubkeyNotFunded(bytes pubkey);
+
     // -----------------------------------------------------------------------
     // Initialization
     // -----------------------------------------------------------------------
@@ -296,6 +323,14 @@ interface IAttestationVerifierV1 {
     ///      (ConsensusLayerDepositManager's `PubkeyFunded` event), not here.
     /// @param pubkeys The 48-byte BLS pubkeys to record
     function recordNewlyFundedPubkeys(bytes[] calldata pubkeys) external;
+
+    /// @notice Migrate a chunk of pre-Pectra funded validator pubkeys into the verifier lookup.
+    /// @dev Only callable by River admin. `stopIndex` is exclusive and must be no greater than
+    ///      the operator's legacy funded validator count in OperatorsV2 storage.
+    /// @param operatorIndex The operator whose legacy keys should be migrated
+    /// @param startIndex The first legacy key index to migrate
+    /// @param stopIndex The exclusive stop legacy key index
+    function migratePrePectraValidatorPubkeys(uint256 operatorIndex, uint256 startIndex, uint256 stopIndex) external;
 
     /// @notice Validate consolidation-committee attestations over a `ConsolidationObject` passed
     ///         in by the caller and mark the request as processed for replay protection.

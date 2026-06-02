@@ -7,11 +7,13 @@ import "./Initializable.sol";
 import "./interfaces/IRiver.1.sol";
 import "./interfaces/IWithdraw.1.sol";
 import "./interfaces/IProtocolVersion.sol";
+import "./interfaces/IAttestationVerifier.1.sol";
 import "./libraries/LibErrors.sol";
 import "./libraries/LibUint256.sol";
 
 import "./state/shared/RiverAddress.sol";
 import "./state/shared/OperatorsRegistryAddress.sol";
+import "./state/shared/AttestationVerifierAddress.sol";
 import "./state/withdraw/PectraWithdrawalContractAddress.sol";
 import "./state/withdraw/PectraConsolidationContractAddress.sol";
 
@@ -35,7 +37,8 @@ contract WithdrawV1 is IWithdrawV1, Initializable, ReentrancyGuard, IProtocolVer
     function initWithdrawV1_1(
         address _pectraWithdrawalContractAddress,
         address _pectraConsolidationContractAddress,
-        address _operatorsRegistry
+        address _operatorsRegistry,
+        address _attestationVerifier
     ) external init(1) {
         PectraWithdrawalContractAddress.set(_pectraWithdrawalContractAddress);
         PectraConsolidationContractAddress.set(_pectraConsolidationContractAddress);
@@ -123,8 +126,12 @@ contract WithdrawV1 is IWithdrawV1, Initializable, ReentrancyGuard, IProtocolVer
         uint256 totalFeeRequired = fee * totalNumOfConsolidationOperations;
         _validateSufficientValueForFee(msg.value, totalFeeRequired);
 
+        IAttestationVerifierV1 attestationVerifier = IAttestationVerifierV1(AttestationVerifierAddress.get());
         for (uint256 i = 0; i < requests.length; i++) {
             _validatePubkeyLength(requests[i].targetPubkey);
+            if (!attestationVerifier.isPubkeyFunded(requests[i].targetPubkey)) {
+                revert TargetPubkeyNotFunded(requests[i].targetPubkey);
+            }
 
             for (uint256 j = 0; j < requests[i].srcPubkeys.length; j++) {
                 _validatePubkeyLength(requests[i].srcPubkeys[j]);

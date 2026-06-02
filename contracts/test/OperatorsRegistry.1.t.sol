@@ -13,6 +13,7 @@ import "./utils/LibImplementationUnbricker.sol";
 import "../src/OperatorsRegistry.1.sol";
 import "../src/state/operatorsRegistry/CurrentValidatorExitsDemand.sol";
 import "../src/state/operatorsRegistry/TotalValidatorExitsRequested.sol";
+import "../src/state/operatorsRegistry/ValidatorKeys.sol";
 
 contract OperatorsRegistryInitializableV1 is OperatorsRegistryV1 {
     function sudoSetFunded(uint256 _index, uint256 _funded) external {
@@ -82,6 +83,13 @@ contract OperatorsRegistryWithMigrationHelpers is OperatorsRegistryV1 {
         OperatorsV2.setKeys(_index, _newKeys);
     }
 
+    /// Test helper: exposes ValidatorKeys.set() for tests.
+    function sudoSetValidatorKeyV2(uint256 _operatorIndex, uint256 _keyIndex, bytes memory _publicKeyAndSignature)
+        external
+    {
+        ValidatorKeys.set(_operatorIndex, _keyIndex, _publicKeyAndSignature);
+    }
+
     /// Test helper: exposes OperatorsV2._getStoppedValidatorCountAtIndex() for tests.
     function sudoGetStoppedValidatorCountAtIndexV2(uint256 index) external view returns (uint32) {
         return OperatorsV2._getStoppedValidatorCountAtIndex(OperatorsV2.getStoppedValidators(), index);
@@ -98,6 +106,73 @@ contract OperatorsRegistryWithMigrationHelpers is OperatorsRegistryV1 {
 
     function sudoSetRawExitedETH(uint256[] memory value) external {
         OperatorsV3.setRawExitedETH(value);
+    }
+}
+
+contract OperatorsRegistryV1PrePectraBridgeTests is Test {
+    OperatorsRegistryWithMigrationHelpers internal reg;
+
+    address internal admin = makeAddr("admin");
+    address internal river = makeAddr("river");
+    address internal operator = makeAddr("operator");
+
+    function setUp() public {
+        reg = new OperatorsRegistryWithMigrationHelpers();
+        LibImplementationUnbricker.unbrick(vm, address(reg));
+        reg.initOperatorsRegistryV1(admin, river);
+    }
+
+    function _pubkey(uint256 seed) internal pure returns (bytes memory) {
+        return abi.encodePacked(sha256(abi.encode("pre-pectra-pubkey", seed)), bytes16(0));
+    }
+
+    function _signature(uint256 seed) internal pure returns (bytes memory) {
+        return abi.encodePacked(
+            sha256(abi.encode("pre-pectra-sig-0", seed)), sha256(abi.encode("pre-pectra-sig-1", seed)), bytes32(0)
+        );
+    }
+
+    function _rawKey(uint256 seed) internal pure returns (bytes memory) {
+        return bytes.concat(_pubkey(seed), _signature(seed));
+    }
+
+    function _pushV2Operator(uint32 funded, uint32 keys) internal {
+        reg.sudoPushV2Operator(
+            OperatorsV2.Operator({
+                limit: keys,
+                funded: funded,
+                requestedExits: 0,
+                keys: keys,
+                latestKeysEditBlockNumber: uint64(block.number),
+                active: true,
+                name: "Legacy Operator",
+                operator: operator
+            })
+        );
+    }
+
+    function testGetPrePectraFundedValidatorCountReadsOperatorsV2() public {
+        _pushV2Operator(2, 3);
+
+        assertEq(reg.getPrePectraFundedValidatorCount(0), 2);
+    }
+
+    function testGetPrePectraValidatorPubkeysReadsValidatorKeysRange() public {
+        _pushV2Operator(3, 3);
+        reg.sudoSetValidatorKeyV2(0, 0, _rawKey(10));
+        reg.sudoSetValidatorKeyV2(0, 1, _rawKey(11));
+        reg.sudoSetValidatorKeyV2(0, 2, _rawKey(12));
+
+        bytes[] memory pubkeys = reg.getPrePectraValidatorPubkeys(0, 1, 3);
+
+        assertEq(pubkeys.length, 2, "range length");
+        assertEq(pubkeys[0], _pubkey(11), "key 1");
+        assertEq(pubkeys[1], _pubkey(12), "key 2");
+    }
+
+    function testGetPrePectraValidatorPubkeysInvalidOperatorReverts() public {
+        vm.expectRevert(abi.encodeWithSelector(OperatorsV2.OperatorNotFound.selector, 0));
+        reg.getPrePectraValidatorPubkeys(0, 0, 1);
     }
 }
 

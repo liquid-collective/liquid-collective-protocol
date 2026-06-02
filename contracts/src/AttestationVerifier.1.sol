@@ -8,6 +8,8 @@ import "./interfaces/IAdministrable.sol";
 import "./interfaces/IAttestationVerifier.1.sol";
 import "./interfaces/IDepositContract.sol";
 import "./interfaces/IDepositDataBuffer.sol";
+import "./interfaces/IOperatorRegistry.1.sol";
+import "./interfaces/IRiver.1.sol";
 
 import "./libraries/BLS12_381.sol";
 import "./libraries/LibErrors.sol";
@@ -21,6 +23,7 @@ import "./state/attestationVerifier/DepositCommitteeAttesters.sol";
 import "./state/attestationVerifier/DepositDataBufferAddress.sol";
 import "./state/attestationVerifier/DepositDomainValue.sol";
 import "./state/attestationVerifier/DomainSeparator.sol";
+import "./state/attestationVerifier/PrePectraValidatorPubkeyLookup.sol";
 import "./state/attestationVerifier/ValidatorPubkeyLookup.sol";
 import "./state/shared/RiverAddress.sol";
 
@@ -354,7 +357,7 @@ contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1 {
     // -----------------------------------------------------------------------
 
     /// @inheritdoc IAttestationVerifierV1
-    function validateDeposits(
+    function validate(
         bytes32 depositDataBufferId,
         bytes32 depositRootHash,
         bytes[] calldata signatures,
@@ -398,7 +401,7 @@ contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1 {
             bytes32 pkHash = keccak256(d.pubkey);
             pubkeyHashes[i] = pkHash;
 
-            if (ValidatorPubkeyLookup.isPubkeyFunded(d.pubkey)) {
+            if (_isPubkeyFunded(d.pubkey)) {
                 revert PubkeyAlreadyFunded(d.pubkey);
             }
             for (uint256 j = 0; j < i; j++) {
@@ -420,7 +423,7 @@ contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1 {
             }
             totalAmount += t.amount;
 
-            if (!ValidatorPubkeyLookup.isPubkeyFunded(t.pubkey)) {
+            if (!_isPubkeyFunded(t.pubkey)) {
                 revert TopUpPubkeyNotFunded(t.pubkey);
             }
         }
@@ -449,7 +452,36 @@ contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1 {
 
     /// @inheritdoc IAttestationVerifierV1
     function isPubkeyFunded(bytes calldata pubkey) external view returns (bool) {
-        return ValidatorPubkeyLookup.isPubkeyFunded(pubkey);
+        return _isPubkeyFunded(pubkey);
+    }
+
+    /// @inheritdoc IAttestationVerifierV1
+    function migratePrePectraValidatorPubkeys(uint256 operatorIndex, uint256 startIndex, uint256 stopIndex)
+        external
+        onlyRiverAdmin
+    {
+        if (startIndex >= stopIndex) {
+            revert InvalidPrePectraMigrationRange(startIndex, stopIndex);
+        }
+
+        IOperatorsRegistryV1 operatorsRegistry =
+            IOperatorsRegistryV1(IRiverV1(payable(RiverAddress.get())).getOperatorsRegistry());
+        uint256 funded = operatorsRegistry.getPrePectraFundedValidatorCount(operatorIndex);
+        if (stopIndex > funded) {
+            revert PrePectraMigrationStopIndexExceedsFunded(operatorIndex, stopIndex, funded);
+        }
+
+        bytes[] memory pubkeys = operatorsRegistry.getPrePectraValidatorPubkeys(operatorIndex, startIndex, stopIndex);
+        uint256 len = pubkeys.length;
+        for (uint256 i = 0; i < len; ++i) {
+            bytes memory pubkey = pubkeys[i];
+            if (pubkey.length != DEPOSIT_PUBKEY_LENGTH) {
+                revert InvalidPrePectraMigrationPubkeyLength(operatorIndex, startIndex + i, pubkey.length);
+            }
+            PrePectraValidatorPubkeyLookup.add(pubkey);
+        }
+
+        emit MigratedPrePectraValidatorPubkeys(operatorIndex, startIndex, stopIndex);
     }
 
     /// @inheritdoc IAttestationVerifierV1
@@ -486,6 +518,10 @@ contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1 {
             }
             if (consolidation.targetPubkeys[i].length != CONSOLIDATION_PUBKEY_LENGTH) {
                 revert InvalidConsolidationPubkeyLength(i, consolidation.targetPubkeys[i].length, false);
+            }
+            // We only check the target pubkey as it is the one that belongs to LC
+            if (!_isPubkeyFunded(consolidation.targetPubkeys[i])) {
+                revert TargetPubkeyNotFunded(consolidation.targetPubkeys[i]);
             }
         }
 
@@ -527,6 +563,11 @@ contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1 {
     // -----------------------------------------------------------------------
     // Internal — attestation quorum + BLS verification
     // -----------------------------------------------------------------------
+
+    /// @notice Check both post-Pectra runtime-funded pubkeys and migrated pre-Pectra pubkeys.
+    function _isPubkeyFunded(bytes memory pubkey) internal view returns (bool) {
+        return ValidatorPubkeyLookup.isPubkeyFunded(pubkey);
+    }
 
     /// @notice Verify the attestation quorum.
     /// @param depositDataBufferId The deposit data buffer ID.

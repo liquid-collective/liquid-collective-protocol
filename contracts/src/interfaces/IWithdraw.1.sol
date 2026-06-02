@@ -62,6 +62,10 @@ interface IWithdrawV1 {
     /// @notice Thrown when an empty array is provided
     error InvalidEmptyArray();
 
+    /// @notice Thrown when a target pubkey is not funded
+    /// @param pubkey The offending 48-byte BLS pubkey
+    error TargetPubkeyNotFunded(bytes pubkey);
+
     /// @param _river The address of the River contract
     function initializeWithdrawV1(address _river) external;
 
@@ -69,10 +73,12 @@ interface IWithdrawV1 {
     /// @param _pectraWithdrawalContractAddress The Pectra EL withdrawal contract address
     /// @param _pectraConsolidationContractAddress The Pectra EL consolidation contract address
     /// @param _operatorsRegistry The OperatorsRegistry address
+    /// @param _attestationVerifier The AttestationVerifier address
     function initWithdrawV1_1(
         address _pectraWithdrawalContractAddress,
         address _pectraConsolidationContractAddress,
-        address _operatorsRegistry
+        address _operatorsRegistry,
+        address _attestationVerifier
     ) external;
 
     /// @notice Retrieve the withdrawal credentials to use

@@ -3329,7 +3329,12 @@ contract RiverV1PectraTests is RiverV1TestBase {
         withdraw.initializeWithdrawV1(address(river));
         mockWithdrawal = new MockELWithdrawalForRiver();
         mockConsolidation = new MockELConsolidationForRiver();
-        withdraw.initWithdrawV1_1(address(mockWithdrawal), address(mockConsolidation), address(operatorsRegistry));
+        withdraw.initWithdrawV1_1(
+            address(mockWithdrawal),
+            address(mockConsolidation),
+            address(operatorsRegistry),
+            address(attestationVerifier)
+        );
         vm.prank(admin);
         river.setKeeper(keeper);
     }
