@@ -81,6 +81,7 @@ contract OperatorsMigrationV2ToV3 is Test {
 
         // ── Verify V3 state matches V2 ──
 
+        
         assertEq(v3.getOperatorCount(), opCount, "operator count mismatch");
         {
             bytes32 withdrawSlot = bytes32(uint256(keccak256("river.state.withdrawAddress")) - 1);
