@@ -1386,7 +1386,7 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
         vm.expectRevert(
             abi.encodeWithSelector(IAttestationVerifierV1.QuorumExceedsDepositCommitteeAttesterCount.selector, 3, 2)
         );
-        freshValidator.initAttestationVerifierV1(address(dm), address(buffer), attesters, 3, bytes4(0), attesters, 1);
+        freshValidator.initAttestationVerifierV1(address(dm), address(buffer), attesters, 3, bytes4(0), attesters, 3);
     }
 
     /// @dev Cannot add an attester that would push the total past MAX_DEPOSIT_COMMITTEE_ATTESTERS.
@@ -1446,7 +1446,7 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
         vm.expectRevert(
             abi.encodeWithSelector(IAttestationVerifierV1.QuorumExceedsMaxSignatures.selector, max + 1, max)
         );
-        fresh.initAttestationVerifierV1(address(dm), address(buffer), atts, max + 1, bytes4(0), atts, 1);
+        fresh.initAttestationVerifierV1(address(dm), address(buffer), atts, max + 1, bytes4(0), atts, max + 1);
     }
 
     /// @dev Admin cannot set quorum > MAX_SIGNATURES via the post-init setter. Distinct code
