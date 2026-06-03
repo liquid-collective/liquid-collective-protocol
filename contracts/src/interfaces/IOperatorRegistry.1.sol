@@ -31,10 +31,12 @@ interface IOperatorsRegistryV1 {
     /// @param operatorIndex The index of the operator
     /// @param pubkeys The pubkeys through which the EL exits were requested
     /// @param amounts The amounts (gwei) per pubkey that was requested for EL exits
+    /// @param isFullExit True if the EL exit is a full exit for each pubkey
     struct ELExitETHAllocation {
         uint256 operatorIndex;
-        bytes[] pubkeys;
-        uint64[] amounts;
+        bytes[] pubkeys; // 48 bytes
+        uint64[] amounts; // gwei
+        bool[] isFullExit; // true if the EL exit is a full exit for each pubkey
     }
 
     /// @notice Structure representing a per-operator funded ETH update
@@ -183,6 +185,12 @@ interface IOperatorsRegistryV1 {
     /// @notice Thrown when an allocation with an incorrect ETH amount is provided
     /// @param ethAmount The incorrect ETH(wei) amount
     error AllocationWithIncorrectAmount(uint256 ethAmount);
+
+    /// @notice Thrown when an EL exit allocation amount does not match the full-exit flag
+    /// @param operatorIndex The operator index
+    /// @param isFullExit True if the EL exit allocation is marked as a full exit
+    /// @param amount The incorrect EL exit amount in gwei
+    error InvalidELExitETHAllocationAmount(uint256 operatorIndex, bool isFullExit, uint64 amount);
 
     /// @notice Thrown when the provided active CL ETH array length does not match the operator count
     error InvalidActiveCLETHArrayLength();
