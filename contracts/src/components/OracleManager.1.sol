@@ -12,6 +12,7 @@ import "../state/river/OracleAddress.sol";
 import "../state/river/CLValidatorTotalBalance.sol";
 import "../state/river/LastOracleRoundId.sol";
 import "../state/river/InFlightDeposit.sol";
+import "../state/river/ConsolidationBuffer.sol";
 
 /// @title Oracle Manager (v1)
 /// @author Alluvial Finance Inc.
@@ -22,8 +23,6 @@ import "../state/river/InFlightDeposit.sol";
 /// @notice validators that have been activated on the consensus layer.
 abstract contract OracleManagerV1 is IOracleManagerV1 {
     uint256 internal constant ONE_YEAR = 365 days;
-    /// @notice Size of a deposit in ETH
-    uint256 public constant _DEPOSIT_SIZE = 32 ether;
 
     /// @notice Handler called if the delta between the last and new validator balance sum is positive
     /// @dev Must be overridden
@@ -41,6 +40,12 @@ abstract contract OracleManagerV1 is IOracleManagerV1 {
     /// @param _max The maximum amount to pull inside the system
     /// @return The amount pulled inside the system
     function _pullCoverageFunds(uint256 _max) internal virtual returns (uint256);
+
+    /// @notice Handler called to pull the consolidation coverage funds
+    /// @dev Must be overridden
+    /// @param _max The maximum amount to pull inside the system
+    /// @return The amount pulled inside the system
+    function _pullConsolidationCoverageFunds(uint256 _max) internal virtual returns (uint256);
 
     /// @notice Handler called to retrieve the system administrator address
     /// @dev Must be overridden
@@ -68,6 +73,11 @@ abstract contract OracleManagerV1 is IOracleManagerV1 {
     /// @param _activeCLETH The array of active Consensus Layer ETH amounts per operator
     function _reportCLETH(uint256[] memory _activeCLETH) internal virtual;
 
+    /// @notice Sets the consolidation buffer
+    /// @param _oldConsolidationBuffer The old consolidation buffer value
+    /// @param _newConsolidationBuffer The new consolidation buffer value
+    function _setConsolidationBuffer(uint256 _oldConsolidationBuffer, uint256 _newConsolidationBuffer) internal virtual;
+
     /// @notice Requests exits of validators after possibly rebalancing deposit and redeem balances
     /// @param _exitingBalance The currently exiting funds, soon to be received on the execution layer
     /// @param _exitedETH The exited ETH
@@ -87,7 +97,8 @@ abstract contract OracleManagerV1 is IOracleManagerV1 {
 
     /// @notice Commits the deposit balance up to the allowed daily limit
     /// @param _period The period between current and last report
-    function _commitBalanceToDeposit(uint256 _period) internal virtual;
+    /// @param _slashingContainmentModeEnabled True if slashing containment mode is enabled
+    function _commitBalanceToDeposit(uint256 _period, bool _slashingContainmentModeEnabled) internal virtual;
 
     /// @notice Prevents unauthorized calls
     modifier onlyAdmin_OMV1() {
@@ -429,7 +440,20 @@ abstract contract OracleManagerV1 is IOracleManagerV1 {
             // we pull the funds from the coverage recipient
             vars.trace.pulledCoverageFunds = _pullCoverageFunds(vars.availableAmountToUpperBound);
             // we do not update the rewards as coverage is not considered rewards
-            // we do not update the available amount as there are no more pulling actions to perform afterwards
+        }
+
+        uint256 consolidationBuffer = ConsolidationBuffer.get();
+        // if the consolidation buffer is greater than 0, we attempt to pull the funds from the consolidation coverage fund
+        // we always attempt to pull the funds as we don't track on-chain if a consolidation failure has occurred
+        if (consolidationBuffer > 0) {
+            vars.trace.pulledConsolidationCoverageFunds = _pullConsolidationCoverageFunds(consolidationBuffer);
+            if (vars.trace.pulledConsolidationCoverageFunds > 0) {
+                // we update the consolidation buffer
+                _setConsolidationBuffer(
+                    consolidationBuffer, consolidationBuffer - vars.trace.pulledConsolidationCoverageFunds
+                );
+                // we do not update the rewards as consolidation coverage is not considered rewards
+            }
         }
 
         // if our rewards are not null, we dispatch the fee to the collector
@@ -458,7 +482,7 @@ abstract contract OracleManagerV1 is IOracleManagerV1 {
         _skimExcessBalanceToRedeem();
 
         // we update the committable amount based on daily maximum allowed
-        _commitBalanceToDeposit(vars.timeElapsedSinceLastReport);
+        _commitBalanceToDeposit(vars.timeElapsedSinceLastReport, _report.slashingContainmentMode);
 
         // we emit a summary event with all the reporting details
         emit ProcessedConsensusLayerReport(_report, vars.trace);
