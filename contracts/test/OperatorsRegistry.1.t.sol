@@ -2095,7 +2095,7 @@ contract OperatorsRegistryV1ELExitTests is Test {
         reg.requestETHExits(empty, allocs, 0);
     }
 
-    function testELExitRevertsWhenPartialExitHasZeroAmount() public {
+    function testELExitRevertsWhenELExitHasZeroAmount() public {
         vm.prank(admin);
         reg.addOperator("Op0", makeAddr("op0addr"));
         reg.sudoSetFundedV3(0, 32 ether);
@@ -2128,7 +2128,7 @@ contract OperatorsRegistryV1ELExitTests is Test {
         IOperatorsRegistryV1.ELExitETHAllocation[] memory allocs = _makeELAlloc(0, thirtyTwoEthGwei);
 
         vm.prank(keeper);
-        reg.requestETHExits(empty, allocs, 0); // reverts today: uint64 multiply overflow
+        reg.requestETHExits(empty, allocs, 0);
 
         assertEq(reg.getOperator(0).requestedExits, 32 ether, "should reserve the full 32 ETH");
         assertEq(reg.getCurrentETHExitsDemand(), 0, "demand should be fully satisfied");

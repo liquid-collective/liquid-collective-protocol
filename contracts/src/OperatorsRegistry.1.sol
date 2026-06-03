@@ -346,6 +346,13 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
                 revert UnorderedOperatorList();
             }
 
+            if (
+                _elAllocations[i].pubkeys.length != _elAllocations[i].isFullExit.length
+                    || _elAllocations[i].pubkeys.length != _elAllocations[i].amounts.length
+            ) {
+                revert InvalidELExitETHAllocationLength();
+            }
+
             OperatorsV3.Operator storage operator = OperatorsV3.get(operatorIndex);
             if (!operator.active) {
                 revert InactiveOperator(operatorIndex);
@@ -356,7 +363,7 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
             for (uint256 j = 0; j < _elAllocations[i].amounts.length; ++j) {
                 uint64 amount = _elAllocations[i].amounts[j];
                 bool isFullExit = _elAllocations[i].isFullExit[j];
-                if (amount == 0 || amount > MAX_EL_EXIT_AMOUNT_GWEI || (isFullExit && amount == 0)) {
+                if (amount == 0 || amount > MAX_EL_EXIT_AMOUNT_GWEI) {
                     revert InvalidELExitETHAllocationAmount(operatorIndex, isFullExit, amount);
                 }
                 elExitAmount += uint256(amount) * 1 gwei;

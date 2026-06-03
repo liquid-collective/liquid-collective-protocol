@@ -27,7 +27,7 @@ interface IOperatorsRegistryV1 {
         uint256 ethAmount;
     }
 
-    /// @notice Structure representing a EL exit allocation for exits
+    /// @notice Structure representing an EL exit allocation for exits
     /// @param operatorIndex The index of the operator
     /// @param pubkeys The pubkeys through which the EL exits were requested
     /// @param amounts The amounts (gwei) per pubkey that was requested for EL exits
@@ -82,8 +82,8 @@ interface IOperatorsRegistryV1 {
     /// @notice The amount of ETH(wei) that has been requested to be exited per pubkey via EL
     /// @param index The operator index
     /// @param pubkeys The pubkeys through which the EL exits were requested
-    /// @param amount The amount per pubkey that was requested for EL exits
-    event RequestedELETHExits(uint256 indexed index, bytes[] pubkeys, uint64[] amount);
+    /// @param amounts The amount per pubkey that was requested for EL exits
+    event RequestedELETHExits(uint256 indexed index, bytes[] pubkeys, uint64[] amounts);
 
     /// @notice The exit request demand has been updated
     /// @param previousETHExitsDemand The previous exit request demand in ETH(wei)
@@ -208,6 +208,9 @@ interface IOperatorsRegistryV1 {
     /// @param sender The sender of the transaction
     /// @param excess The excess fee
     error UnsentRefund(address sender, uint256 excess);
+
+    /// @notice Thrown when the EL exit allocation length does not match the pubkey and isFullExit length
+    error InvalidELExitETHAllocationLength();
 
     /// @notice Initializes the operators registry
     /// @param _admin Admin in charge of managing operators
