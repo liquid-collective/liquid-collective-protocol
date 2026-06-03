@@ -50,7 +50,7 @@ interface IConsensusLayerDepositManagerV1 {
     ///         on a top-up is whatever the root-attested buffer specifies, and the
     ///         protocol trusts the committee to attest the correct operator.
     /// @param depositDataBufferId The id of the deposit-data buffer batch
-    /// @param operatorIdx The operator the top-up is credited to (as attested by the root)
+    /// @param operatorIdx The operator the top-up is credited to (as attested by the root attestation quorum)
     /// @param pubkey The 48-byte BLS pubkey of the validator
     /// @param amount The wei amount topped up
     event TopUp(bytes32 indexed depositDataBufferId, uint256 indexed operatorIdx, bytes pubkey, uint256 amount);
@@ -93,7 +93,7 @@ interface IConsensusLayerDepositManagerV1 {
     /// @notice Returns the AttestationVerifier address River delegates BLS+quorum verification to
     function getAttestationVerifier() external view returns (address);
 
-    /// @notice Deposit validators using pre-committed buffer data validated by a root attester quorum.
+    /// @notice Deposit validators using pre-committed buffer data validated by a root attestation quorum.
     /// @dev Initial deposits and top-ups are carried in separately-typed sub-arrays of
     ///      `IDepositDataBuffer.DepositObject` (`deposits[]` and `topUps[]`). Initial deposits
     ///      go through BLS verification; top-ups skip BLS and require their pubkey to already
