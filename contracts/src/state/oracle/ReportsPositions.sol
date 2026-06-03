@@ -28,13 +28,13 @@ library ReportsPositions {
     /// @param _idx The index to register
     function register(uint256 _idx) internal {
         uint256 mask = 1 << _idx;
-        return LibUnstructuredStorage.setStorageUint256(
+        LibUnstructuredStorage.setStorageUint256(
             REPORTS_POSITIONS_SLOT, LibUnstructuredStorage.getStorageUint256(REPORTS_POSITIONS_SLOT) | mask
         );
     }
 
     /// @notice Clears all the report positions in storage
     function clear() internal {
-        return LibUnstructuredStorage.setStorageUint256(REPORTS_POSITIONS_SLOT, 0);
+        LibUnstructuredStorage.setStorageUint256(REPORTS_POSITIONS_SLOT, 0);
     }
 }

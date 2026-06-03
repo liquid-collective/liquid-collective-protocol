@@ -17,6 +17,7 @@ import "./state/attestationVerifier/DepositCommitteeAttesters.sol";
 import "./state/attestationVerifier/DepositDataBufferAddress.sol";
 import "./state/attestationVerifier/DepositDomainValue.sol";
 import "./state/attestationVerifier/DomainSeparator.sol";
+import "./state/attestationVerifier/ValidatorPubkeyLookup.sol";
 import "./state/shared/RiverAddress.sol";
 
 /// @title AttestationVerifier (v1)
@@ -58,6 +59,16 @@ contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1 {
     /// @dev Single source of truth for governance — same admin manages River and this verifier.
     modifier onlyRiverAdmin() {
         if (msg.sender != IAdministrable(RiverAddress.get()).getAdmin()) {
+            revert LibErrors.Unauthorized(msg.sender);
+        }
+        _;
+    }
+
+    /// @notice Restrict to River itself (the deposit-execution path), not its admin.
+    /// @dev Used to gate state-mutating callbacks that should only fire as part of a
+    ///      River-initiated deposit flow (e.g. `recordNewlyFundedPubkeys`).
+    modifier onlyRiver() {
+        if (msg.sender != RiverAddress.get()) {
             revert LibErrors.Unauthorized(msg.sender);
         }
         _;
@@ -208,7 +219,6 @@ contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1 {
         bytes32 depositDataBufferId,
         bytes32 depositRootHash,
         bytes[] calldata signatures,
-        BLS12_381.DepositY[] calldata depositYs,
         address depositContract,
         bytes32 withdrawalCredentials,
         uint256 committedBalance
@@ -221,16 +231,13 @@ contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1 {
         uint256 depositCount = deposits.length;
         if (depositCount == 0) revert NoDeposits();
 
-        // 3. depositYs count must match
-        if (depositYs.length != depositCount) revert BLSSignatureCountMismatch(depositCount, depositYs.length);
-
-        // 4. Re-compute and check the bufferId binding so the buffer cannot tamper post-attestation
+        // 3. Re-compute and check the bufferId binding so the buffer cannot tamper post-attestation
         bytes32 computedId = keccak256(abi.encode(deposits));
         if (computedId != depositDataBufferId) revert BufferIdMismatch(depositDataBufferId, computedId);
 
-        // 5. Enforce fixed lengths on BLS pubkey/signature and accumulate totalAmount.
-        //    The canonical River WC is supplied by the caller and used directly for BLS verification,
-        //    so the buffer producer is not trusted on the WC field (no per-deposit WC stored).
+        // 4. Validate every entry: pubkey/signature length, amount bounds, top-up vs
+        //    initial-deposit classification, and intra-batch pubkey dedup before BLS verification.
+        bytes32[] memory pubkeyHashes = new bytes32[](depositCount);
         for (uint256 i = 0; i < depositCount; i++) {
             if (deposits[i].pubkey.length != DEPOSIT_PUBKEY_LENGTH) {
                 revert InvalidPubkeyLength(i, deposits[i].pubkey.length);
@@ -238,12 +245,59 @@ contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1 {
             if (deposits[i].signature.length != DEPOSIT_SIGNATURE_LENGTH) {
                 revert InvalidSignatureLength(i, deposits[i].signature.length);
             }
-            totalAmount += deposits[i].amount;
+            // Mirrors the bound check inside `_depositValidator` so we fail early
+            uint256 amount = deposits[i].amount;
+            if (amount < 1 ether || amount > 2048 ether || amount % 1 gwei != 0) {
+                revert InvalidDepositAmount(i, amount);
+            }
+            totalAmount += amount;
+
+            bytes memory pubkey = deposits[i].pubkey;
+            bytes32 pkHash = keccak256(pubkey);
+            pubkeyHashes[i] = pkHash;
+
+            if (BLS12_381.isZero(deposits[i].depositY)) {
+                if (!ValidatorPubkeyLookup.isPubkeyFunded(pubkey)) {
+                    revert TopUpPubkeyNotFunded(pubkey);
+                }
+            } else {
+                if (ValidatorPubkeyLookup.isPubkeyFunded(pubkey)) {
+                    revert PubkeyAlreadyFunded(pubkey);
+                }
+                for (uint256 j = 0; j < i; j++) {
+                    if (pubkeyHashes[j] == pkHash) {
+                        revert PubkeyAlreadyFunded(pubkey);
+                    }
+                }
+            }
         }
         if (totalAmount > committedBalance) revert NotEnoughFunds();
 
-        // 6. Verify BLS signatures against canonical River WC (heaviest step — last so cheap checks fail fast)
-        _verifyBLSSignatures(deposits, depositYs, withdrawalCredentials);
+        // 5. Verify BLS signatures against canonical River WC.
+        //    Top-ups were already cleared above and are skipped here.
+        _verifyBLSSignatures(deposits, withdrawalCredentials);
+    }
+
+    // -----------------------------------------------------------------------
+    // Initial-deposit recording (callback from River after the deposit-execution loop)
+    // -----------------------------------------------------------------------
+
+    /// @inheritdoc IAttestationVerifierV1
+    /// @dev Assumes `pubkeys` is already deduplicated against the lookup and against itself —
+    ///      `validate()` enforces both invariants (initial-deposit branch at the top of
+    ///      `validate()`) and runs in the same transaction. Re-checking here would only fire
+    ///      on a `validate()` regression and would cost a cold SLOAD per pubkey for a
+    ///      condition that cannot occur in production.
+    function recordNewlyFundedPubkeys(bytes[] calldata pubkeys) external onlyRiver {
+        uint256 len = pubkeys.length;
+        for (uint256 i = 0; i < len; ++i) {
+            ValidatorPubkeyLookup.add(pubkeys[i]);
+        }
+    }
+
+    /// @inheritdoc IAttestationVerifierV1
+    function isPubkeyFunded(bytes calldata pubkey) external view returns (bool) {
+        return ValidatorPubkeyLookup.isPubkeyFunded(pubkey);
     }
 
     // -----------------------------------------------------------------------
@@ -302,15 +356,16 @@ contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1 {
     }
 
     /// @notice Verify the BLS signatures against the canonical River withdrawal credentials.
+    /// @dev Top-ups (entries with an all-zero `depositY`) are cleared upstream in
+    ///      `validate()` via the membership check on `ValidatorPubkeyLookup`.
     /// @param deposits The deposits.
-    /// @param depositYs The deposit Y-coordinates.
     /// @param withdrawalCredentials The canonical River withdrawal credentials.
-    function _verifyBLSSignatures(
-        IDepositDataBuffer.DepositObject[] memory deposits,
-        BLS12_381.DepositY[] calldata depositYs,
-        bytes32 withdrawalCredentials
-    ) internal view {
+    function _verifyBLSSignatures(IDepositDataBuffer.DepositObject[] memory deposits, bytes32 withdrawalCredentials)
+        internal
+        view
+    {
         for (uint256 i = 0; i < deposits.length; i++) {
+            if (BLS12_381.isZero(deposits[i].depositY)) continue;
             (bool ok, bytes memory revertData) = address(this)
                 .staticcall(
                     abi.encodeCall(
@@ -319,7 +374,7 @@ contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1 {
                             deposits[i].pubkey,
                             deposits[i].signature,
                             deposits[i].amount,
-                            depositYs[i],
+                            deposits[i].depositY,
                             withdrawalCredentials
                         )
                     )

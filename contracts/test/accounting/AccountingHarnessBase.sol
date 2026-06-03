@@ -101,6 +101,12 @@ abstract contract AccountingHarnessBase is Test, BytesGenerator {
     AccountingMockDepositDataBuffer internal depositBuffer;
     AttestationVerifierV1 internal attestationVerifier;
 
+    /// @dev Monotonic counter mixed into pubkey/signature generation in `_makeDepositObjects`.
+    ///      Without it, two batches built in the same block with the same `(i, opIdx)` produce
+    ///      identical pubkeys, which collides with the on-chain `PubkeyAlreadyFunded` guard
+    ///      enforced inside `AttestationVerifier.validate()` (initial-deposit branch).
+    uint256 internal _depositBatchNonce;
+
     // ─── attestation ──────────────────────────────────────────────────────────
     uint256 internal constant DEPOSIT_COMMITTEE_ATTESTER_PK_1 = 0xA1;
     uint256 internal constant DEPOSIT_COMMITTEE_ATTESTER_PK_2 = 0xA2;
@@ -296,6 +302,15 @@ abstract contract AccountingHarnessBase is Test, BytesGenerator {
         });
     }
 
+    /// @dev Non-zero placeholder DepositY for initial deposits. BLS is mocked in this harness,
+    ///      so the value only needs to differ from the zero sentinel used for top-ups.
+    function _nonZeroDepositY(uint256 seed) internal pure returns (BLS12_381.DepositY memory) {
+        return BLS12_381.DepositY({
+            pubkeyY: BLS12_381.Fp({a: bytes32(uint256(seed) + 1), b: bytes32(0)}),
+            signatureY: BLS12_381.Fp2({c0_a: bytes32(0), c0_b: bytes32(0), c1_a: bytes32(0), c1_b: bytes32(0)})
+        });
+    }
+
     /// @dev Sign an EIP-712 attestation digest with the given private key.
     function _signAttestation(uint256 pk, bytes32 bufferId, bytes32 rootHash) internal view returns (bytes memory) {
         bytes32 domainSep =
@@ -307,26 +322,29 @@ abstract contract AccountingHarnessBase is Test, BytesGenerator {
     }
 
     /// @dev Build deposit objects from a set of (operatorIndex, amount) tuples.
-    ///      Each deposit uses a deterministic pubkey/signature seeded by position.
+    ///      Each deposit uses a deterministic pubkey/signature seeded by position and a
+    ///      monotonically-incrementing batch nonce so successive `sim_deposit` calls in the
+    ///      same block don't collide on pubkeys (which would trip the on-chain
+    ///      `PubkeyAlreadyFunded` guard).
     function _makeDepositObjects(uint256[] memory opIndices, uint256[] memory amounts)
         internal
-        view
         returns (IDepositDataBuffer.DepositObject[] memory deposits)
     {
         require(opIndices.length == amounts.length, "length mismatch");
-        bytes32 wc = river.getWithdrawalCredentials();
+        uint256 nonce = ++_depositBatchNonce;
         deposits = new IDepositDataBuffer.DepositObject[](opIndices.length);
         for (uint256 i = 0; i < opIndices.length; i++) {
             deposits[i] = IDepositDataBuffer.DepositObject({
-                pubkey: abi.encodePacked(sha256(abi.encode("pubkey", i, opIndices[i], block.number)), bytes16(0)),
+                pubkey: abi.encodePacked(sha256(abi.encode("pubkey", i, opIndices[i], nonce)), bytes16(0)),
                 signature: abi.encodePacked(
-                    sha256(abi.encode("sig-a", i, opIndices[i], block.number)),
-                    sha256(abi.encode("sig-b", i, opIndices[i], block.number)),
+                    sha256(abi.encode("sig-a", i, opIndices[i], nonce)),
+                    sha256(abi.encode("sig-b", i, opIndices[i], nonce)),
                     bytes32(0)
                 ),
                 amount: amounts[i],
                 depositDataRoot: bytes32(0),
-                operatorIdx: opIndices[i]
+                operatorIdx: opIndices[i],
+                depositY: _nonZeroDepositY(nonce * 1000 + i)
             });
         }
     }

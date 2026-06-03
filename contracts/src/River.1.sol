@@ -25,7 +25,6 @@ import "./interfaces/IDepositDataBuffer.sol";
 import "./state/river/AllowlistAddress.sol";
 import "./state/river/AttestationVerifierAddress.sol";
 import "./state/river/RedeemManagerAddress.sol";
-import "./state/river/OperatorsRegistryAddress.sol";
 import "./state/river/CollectorAddress.sol";
 import "./state/river/ELFeeRecipientAddress.sol";
 import "./state/river/CoverageFundAddress.sol";
@@ -36,6 +35,7 @@ import "./state/river/MetadataURI.sol";
 import "./state/river/LastConsensusLayerReport.sol";
 import "./state/river/TotalDepositedETH.sol";
 import "./state/river/DepositedValidatorCount.sol";
+import "./state/shared/OperatorsRegistryAddress.sol";
 
 /// @title River (v1)
 /// @author Alluvial Finance Inc.
@@ -309,6 +309,19 @@ contract RiverV1 is
         }
     }
 
+    /// @inheritdoc IRiverV1
+    function consolidate(IWithdrawV1.ConsolidationRequest[] calldata requests, uint256 maxFeePerConsolidation)
+        external
+        payable
+        onlyKeeper
+    {
+        address excessFeeRecipient = msg.sender;
+        IWithdrawV1(payable(WithdrawalCredentials.getAddress())).consolidate{value: msg.value}(
+            requests, maxFeePerConsolidation, excessFeeRecipient
+        );
+        emit PectraConsolidationRequested(requests, maxFeePerConsolidation, excessFeeRecipient, msg.value);
+    }
+
     /// @notice Overridden handler to pass the system admin inside components
     /// @return The address of the admin
     function _getRiverAdmin()
@@ -477,7 +490,11 @@ contract RiverV1 is
         return _getSlashingContainmentMode();
     }
 
-    /// @notice Reverts if slashing containment mode is currently active
+    /// @notice Reverts if slashing containment mode is currently active.
+    /// @dev Slashing containment is designed to pause new validator funding and shareholder churn
+    /// @dev (deposits, redeems, exit requests, balance-to-deposit commitment) to limit protocol
+    /// @dev exposure during a slashing event. The reward-pull pipeline (EL fees, CL skimming,
+    /// @dev coverage funds) continues to operate normally, as those flows reduce — not increase — risk.
     modifier whenNotSlashingContainmentMode() {
         if (_getSlashingContainmentMode()) {
             revert SlashingContainmentModeEnabled();
@@ -600,6 +617,8 @@ contract RiverV1 is
     ) internal override {
         IOperatorsRegistryV1(OperatorsRegistryAddress.get()).reportExitedETH(_exitedETH, TotalDepositedETH.get());
 
+        // When slashing containment mode is active, skip exit demand logic to avoid forcing additional
+        // validator exits during a slashing event. The reward-pull pipeline is unaffected by this check.
         if (_slashingContainmentModeEnabled) {
             return;
         }
@@ -612,9 +631,9 @@ contract RiverV1 is
                 _balanceFromShares(IRedeemManagerV1(RedeemManagerAddress.get()).getRedeemDemand());
 
             // if after all rebalancings, the redeem manager demand is still higher than the balance to redeem and exiting eth, we compute
-            // the amount of validators to exit in order to cover the remaining demand
+            // the amount of ETH (wei) to exit in order to cover the remaining demand
             if (availableBalanceToRedeem + _exitingBalance < redeemManagerDemandInEth) {
-                // if reblancing is enabled and the redeem manager demand is higher than exiting eth, we add eth for deposit buffer to redeem buffer
+                // if rebalancing is enabled and the redeem manager demand is higher than exiting eth, we add eth for deposit buffer to redeem buffer
                 if (_depositToRedeemRebalancingAllowed && availableBalanceToDeposit > 0) {
                     uint256 rebalancingAmount = LibUint256.min(
                         availableBalanceToDeposit, redeemManagerDemandInEth - _exitingBalance - availableBalanceToRedeem
@@ -666,6 +685,8 @@ contract RiverV1 is
     /// @notice This two step process is required to prevent possible out of gas issues we would have from actually funding the validators at this point
     /// @param _period The period between current and last report
     function _commitBalanceToDeposit(uint256 _period, bool _slashingContainmentModeEnabled) internal override {
+        // When slashing containment mode is active, skip new validator funding to prevent compounding
+        // losses. The deposit buffer remains available for redeem rebalancing but nothing is committed.
         if (_slashingContainmentModeEnabled) {
             return;
         }
@@ -689,8 +710,8 @@ contract RiverV1 is
         // we adapt the value for the reporting period by using the asset balance as upper bound
         uint256 currentMaxCommittableAmount =
             LibUint256.min((currentMaxDailyCommittableAmount * _period) / 1 days, currentBalanceToDeposit);
-        // we only commit multiples of 32 ETH
-        currentMaxCommittableAmount = (currentMaxCommittableAmount / DEPOSIT_SIZE) * DEPOSIT_SIZE;
+
+        currentMaxCommittableAmount = (currentMaxCommittableAmount / 1 gwei) * 1 gwei;
 
         if (currentMaxCommittableAmount > 0) {
             _setCommittedBalance(CommittedBalance.get() + currentMaxCommittableAmount);
