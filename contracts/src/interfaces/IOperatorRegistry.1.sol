@@ -186,10 +186,10 @@ interface IOperatorsRegistryV1 {
     /// @param ethAmount The incorrect ETH(wei) amount
     error AllocationWithIncorrectAmount(uint256 ethAmount);
 
-    /// @notice Thrown when an EL exit allocation amount does not match the full-exit flag
+    /// @notice Thrown when an EL exit allocation amount is invalid (e.g. zero or above the allowed cap)
     /// @param operatorIndex The operator index
-    /// @param isFullExit True if the EL exit allocation is marked as a full exit
-    /// @param amount The incorrect EL exit amount in gwei
+    /// @param isFullExit True if the EL exit allocation is marked as a full exit for this pubkey
+    /// @param amount The EL exit accounting amount in gwei
     error InvalidELExitETHAllocationAmount(uint256 operatorIndex, bool isFullExit, uint64 amount);
 
     /// @notice Thrown when the provided active CL ETH array length does not match the operator count
@@ -209,8 +209,13 @@ interface IOperatorsRegistryV1 {
     /// @param excess The excess fee
     error UnsentRefund(address sender, uint256 excess);
 
-    /// @notice Thrown when the EL exit allocation length does not match the pubkey and isFullExit length
+    /// @notice Thrown when an EL exit allocation has mismatched pubkeys/amounts/isFullExit lengths
     error InvalidELExitETHAllocationLength();
+
+    /// @notice Thrown when the EL exit allocation amount is greater than the remaining exit demand
+    /// @param elExitAmount The EL exit allocation amount
+    /// @param remainingETHExitsDemand The remaining exit demand
+    error ExitsGreaterThanExitDemand(uint256 elExitAmount, uint256 remainingETHExitsDemand);
 
     /// @notice Initializes the operators registry
     /// @param _admin Admin in charge of managing operators
