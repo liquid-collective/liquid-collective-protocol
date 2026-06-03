@@ -2135,8 +2135,6 @@ contract OperatorsRegistryV1ELExitTests is Test {
         assertEq(reg.getTotalETHExitsRequested(), 32 ether, "total exits should be 32 ETH");
     }
 
-    /// M-1: a full EL exit (amount 0) removes the operator's entire CL balance, so it should
-    /// satisfy outstanding exit demand up to the operator's available ETH.
     function testELExit_M1_fullExitShouldReduceDemand() public {
         vm.prank(admin);
         reg.addOperator("Op0", makeAddr("op0addr"));

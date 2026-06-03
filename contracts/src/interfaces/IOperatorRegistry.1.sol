@@ -212,8 +212,8 @@ interface IOperatorsRegistryV1 {
     /// @notice Thrown when an EL exit allocation has mismatched pubkeys/amounts/isFullExit lengths
     error InvalidELExitETHAllocationLength();
 
-    /// @notice Thrown when the EL exit allocation amount is greater than the remaining exit demand
-    /// @param elExitAmount The EL exit allocation amount
+    /// @notice Thrown when the total EL exit amount requested is greater than the remaining exit demand
+    /// @param elExitAmount The total EL exit amount requested (sum of all EL allocations)
     /// @param remainingETHExitsDemand The remaining exit demand
     error ExitsGreaterThanExitDemand(uint256 elExitAmount, uint256 remainingETHExitsDemand);
 
