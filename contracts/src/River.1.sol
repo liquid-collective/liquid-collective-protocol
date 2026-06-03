@@ -25,16 +25,17 @@ import "./interfaces/IDepositDataBuffer.sol";
 import "./state/river/AllowlistAddress.sol";
 import "./state/river/AttestationVerifierAddress.sol";
 import "./state/river/RedeemManagerAddress.sol";
-import "./state/river/OperatorsRegistryAddress.sol";
 import "./state/river/CollectorAddress.sol";
 import "./state/river/ELFeeRecipientAddress.sol";
 import "./state/river/CoverageFundAddress.sol";
+import "./state/river/ConsolidationCoverageFundAddress.sol";
 import "./state/river/BalanceToRedeem.sol";
 import "./state/river/GlobalFee.sol";
 import "./state/river/MetadataURI.sol";
 import "./state/river/LastConsensusLayerReport.sol";
 import "./state/river/TotalDepositedETH.sol";
 import "./state/river/DepositedValidatorCount.sol";
+import "./state/shared/OperatorsRegistryAddress.sol";
 
 /// @title River (v1)
 /// @author Alluvial Finance Inc.
@@ -50,8 +51,14 @@ contract RiverV1 is
     IRiverV1
 {
     /// @inheritdoc IRiverV1
-    function initRiverV1_3(bytes32 _withdrawalCredentials, address _attestationVerifier) external init(3) onlyAdmin {
-        if (_withdrawalCredentials == bytes32(0)) revert InvalidWithdrawalCredentials();
+    function initRiverV1_3(
+        bytes32 _withdrawalCredentials,
+        address _consolidationCoverageFund,
+        address _attestationVerifier
+    ) external init(3) onlyAdmin {
+        if (_withdrawalCredentials == bytes32(0)) {
+            revert InvalidWithdrawalCredentials();
+        }
         if (_attestationVerifier == address(0) || _attestationVerifier.code.length == 0) {
             revert InvalidAttestationVerifier();
         }
@@ -64,14 +71,18 @@ contract RiverV1 is
         DepositContractAddress.set(depositContract);
         emit SetDepositContractAddress(depositContract);
 
-        WithdrawalCredentials.set(_withdrawalCredentials);
-        emit SetWithdrawalCredentials(_withdrawalCredentials);
+        ConsensusLayerDepositManagerV1.initConsensusLayerDepositManagerV1(
+            DepositContractAddress.get(), _withdrawalCredentials
+        );
 
         AttestationVerifierAddress.set(_attestationVerifier);
         emit SetAttestationVerifier(_attestationVerifier);
 
-        // 0x01 → 0x02 accounting migration: rebuild LastConsensusLayerReport with the new
-        // totalDepositedActivatedETH field and seed TotalDepositedETH + InFlightDeposit.
+        // accounting changes to move from 0x01 to 0x02 accounting
+
+        ConsolidationCoverageFundAddress.set(_consolidationCoverageFund);
+        emit SetConsolidationCoverageFund(_consolidationCoverageFund);
+
         IOracleManagerV1.StoredConsensusLayerReport storage lastReport = LastConsensusLayerReport.get();
         uint32 clValidatorCount = lastReport.validatorsCount;
         uint256 depositedValidatorCount = DepositedValidatorCount.get();
@@ -120,6 +131,11 @@ contract RiverV1 is
     /// @inheritdoc IRiverV1
     function getCoverageFund() external view returns (address) {
         return CoverageFundAddress.get();
+    }
+
+    /// @inheritdoc IRiverV1
+    function getConsolidationCoverageFund() external view returns (address) {
+        return ConsolidationCoverageFundAddress.get();
     }
 
     /// @inheritdoc IRiverV1
@@ -221,6 +237,12 @@ contract RiverV1 is
     }
 
     /// @inheritdoc IRiverV1
+    function setConsolidationCoverageFund(address _newConsolidationCoverageFund) external onlyAdmin {
+        ConsolidationCoverageFundAddress.set(_newConsolidationCoverageFund);
+        emit SetConsolidationCoverageFund(_newConsolidationCoverageFund);
+    }
+
+    /// @inheritdoc IRiverV1
     function setMetadataURI(string memory _metadataURI) external onlyAdmin {
         LibSanitize._notEmptyString(_metadataURI);
         MetadataURI.set(_metadataURI);
@@ -254,10 +276,30 @@ contract RiverV1 is
     }
 
     /// @inheritdoc IRiverV1
+    function sendConsolidationCoverageFunds() external payable {
+        if (msg.sender != ConsolidationCoverageFundAddress.get()) {
+            revert LibErrors.Unauthorized(msg.sender);
+        }
+    }
+
+    /// @inheritdoc IRiverV1
     function sendRedeemManagerExceedingFunds() external payable {
         if (msg.sender != RedeemManagerAddress.get()) {
             revert LibErrors.Unauthorized(msg.sender);
         }
+    }
+
+    /// @inheritdoc IRiverV1
+    function consolidate(IWithdrawV1.ConsolidationRequest[] calldata requests, uint256 maxFeePerConsolidation)
+        external
+        payable
+        onlyKeeper
+    {
+        address excessFeeRecipient = msg.sender;
+        IWithdrawV1(payable(WithdrawalCredentials.getAddress())).consolidate{value: msg.value}(
+            requests, maxFeePerConsolidation, excessFeeRecipient
+        );
+        emit PectraConsolidationRequested(requests, maxFeePerConsolidation, excessFeeRecipient, msg.value);
     }
 
     /// @notice Overridden handler to pass the system admin inside components
@@ -332,20 +374,39 @@ contract RiverV1 is
 
     /// @notice Overridden handler to pull funds from the coverage fund to River and return the delta in the balance
     /// @param _max The maximum amount to pull from the coverage fund
+    /// @return collectedCoverageFunds The amount pulled from the coverage fund
+    function _pullCoverageFunds(uint256 _max) internal override returns (uint256 collectedCoverageFunds) {
+        collectedCoverageFunds = _pullFundsFromCoverageFund(CoverageFundAddress.get(), _max);
+        emit PulledCoverageFunds(collectedCoverageFunds);
+    }
+
+    /// @notice Overridden handler to pull funds from the consolidation coverage fund to River and return the delta in the balance
+    /// @param _max The maximum amount to pull from the consolidation coverage fund
+    /// @return collectedConsolidationCoverageFunds The amount pulled from the consolidation coverage fund
+    function _pullConsolidationCoverageFunds(uint256 _max)
+        internal
+        override
+        returns (uint256 collectedConsolidationCoverageFunds)
+    {
+        collectedConsolidationCoverageFunds = _pullFundsFromCoverageFund(ConsolidationCoverageFundAddress.get(), _max);
+        emit PulledConsolidationCoverageFunds(collectedConsolidationCoverageFunds);
+    }
+
+    /// @notice Internal utility to pull funds from a coverage fund to River and return the delta in the balance
+    /// @param _coverageFund The address of the coverage fund
+    /// @param _max The maximum amount to pull from the coverage fund
     /// @return The amount pulled from the coverage fund
-    function _pullCoverageFunds(uint256 _max) internal override returns (uint256) {
-        address coverageFund = CoverageFundAddress.get();
-        if (coverageFund == address(0)) {
+    function _pullFundsFromCoverageFund(address _coverageFund, uint256 _max) internal returns (uint256) {
+        if (_coverageFund == address(0)) {
             return 0;
         }
         uint256 initialBalance = address(this).balance;
-        ICoverageFundV1(payable(coverageFund)).pullCoverageFunds(_max);
-        uint256 collectedCoverageFunds = address(this).balance - initialBalance;
-        if (collectedCoverageFunds > 0) {
-            _setBalanceToDeposit(BalanceToDeposit.get() + collectedCoverageFunds);
+        ICoverageFundV1(payable(_coverageFund)).pullCoverageFunds(_max);
+        uint256 collected = address(this).balance - initialBalance;
+        if (collected > 0) {
+            _setBalanceToDeposit(BalanceToDeposit.get() + collected);
         }
-        emit PulledCoverageFunds(collectedCoverageFunds);
-        return collectedCoverageFunds;
+        return collected;
     }
 
     /// @notice Overridden handler called whenever the balance of ETH handled by the system increases. Computes the fees paid to the collector
@@ -375,7 +436,7 @@ contract RiverV1 is
     function _assetBalance() internal view override(SharesManagerV1, OracleManagerV1) returns (uint256) {
         IOracleManagerV1.StoredConsensusLayerReport storage storedReport = LastConsensusLayerReport.get();
         return storedReport.validatorsBalance + BalanceToDeposit.get() + CommittedBalance.get() + BalanceToRedeem.get()
-            + InFlightDeposit.get();
+            + InFlightDeposit.get() + ConsolidationBuffer.get();
     }
 
     /// @notice Internal utility to set the daily committable limits
@@ -431,6 +492,17 @@ contract RiverV1 is
     function _setCommittedBalance(uint256 _newCommittedBalance) internal override(ConsensusLayerDepositManagerV1) {
         emit SetBalanceCommittedToDeposit(CommittedBalance.get(), _newCommittedBalance);
         CommittedBalance.set(_newCommittedBalance);
+    }
+
+    /// @notice Sets the consolidation buffer
+    /// @param _oldConsolidationBuffer The old consolidation buffer value
+    /// @param _newConsolidationBuffer The new consolidation buffer value
+    function _setConsolidationBuffer(uint256 _oldConsolidationBuffer, uint256 _newConsolidationBuffer)
+        internal
+        override(OracleManagerV1)
+    {
+        emit SetConsolidationBuffer(_oldConsolidationBuffer, _newConsolidationBuffer);
+        ConsolidationBuffer.set(_newConsolidationBuffer);
     }
 
     /// @notice Pulls funds from the Withdraw contract, and adds funds to deposit and redeem balances
@@ -539,9 +611,9 @@ contract RiverV1 is
                 _balanceFromShares(IRedeemManagerV1(RedeemManagerAddress.get()).getRedeemDemand());
 
             // if after all rebalancings, the redeem manager demand is still higher than the balance to redeem and exiting eth, we compute
-            // the amount of validators to exit in order to cover the remaining demand
+            // the amount of ETH (wei) to exit in order to cover the remaining demand
             if (availableBalanceToRedeem + _exitingBalance < redeemManagerDemandInEth) {
-                // if reblancing is enabled and the redeem manager demand is higher than exiting eth, we add eth for deposit buffer to redeem buffer
+                // if rebalancing is enabled and the redeem manager demand is higher than exiting eth, we add eth for deposit buffer to redeem buffer
                 if (_depositToRedeemRebalancingAllowed && availableBalanceToDeposit > 0) {
                     uint256 rebalancingAmount = LibUint256.min(
                         availableBalanceToDeposit, redeemManagerDemandInEth - _exitingBalance - availableBalanceToRedeem
@@ -618,8 +690,8 @@ contract RiverV1 is
         // we adapt the value for the reporting period by using the asset balance as upper bound
         uint256 currentMaxCommittableAmount =
             LibUint256.min((currentMaxDailyCommittableAmount * _period) / 1 days, currentBalanceToDeposit);
-        // we only commit multiples of 32 ETH
-        currentMaxCommittableAmount = (currentMaxCommittableAmount / DEPOSIT_SIZE) * DEPOSIT_SIZE;
+
+        currentMaxCommittableAmount = (currentMaxCommittableAmount / 1 gwei) * 1 gwei;
 
         if (currentMaxCommittableAmount > 0) {
             _setCommittedBalance(CommittedBalance.get() + currentMaxCommittableAmount);
