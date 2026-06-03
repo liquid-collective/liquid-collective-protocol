@@ -8,6 +8,8 @@ import "../utils/LibImplementationUnbricker.sol";
 import "../mocks/DepositContractMock.sol";
 
 import "../../src/River.1.sol";
+import "../../src/AttestationVerifier.1.sol";
+import "../utils/RiverV1WithLegacyInit.sol";
 import "../../src/Oracle.1.sol";
 import "../../src/OperatorsRegistry.1.sol";
 import "../../src/Allowlist.1.sol";
@@ -24,7 +26,6 @@ import "../../src/libraries/LibAllowlistMasks.sol";
 import "../../src/state/river/InFlightDeposit.sol";
 import "../../src/state/river/CommittedBalance.sol";
 import "../../src/state/river/BalanceToDeposit.sol";
-import "../../src/state/river/DepositDomainValue.sol";
 import "../../src/state/operatorsRegistry/Operators.3.sol";
 
 // -----------------------------------------------------------------------
@@ -66,7 +67,7 @@ contract AccountingTestOperatorsRegistry is OperatorsRegistryV1 {
 }
 
 /// @dev Test-only River subclass exposing InFlightDeposit and debug helpers.
-contract AccountingRiverV1 is RiverV1 {
+contract AccountingRiverV1 is RiverV1WithLegacyInit {
     function getInFlightDeposit() external view returns (uint256) {
         return InFlightDeposit.get();
     }
@@ -98,14 +99,21 @@ abstract contract AccountingHarnessBase is Test, BytesGenerator {
     WithdrawV1 internal withdraw;
     IDepositContract internal depositContract;
     AccountingMockDepositDataBuffer internal depositBuffer;
+    AttestationVerifierV1 internal attestationVerifier;
+
+    /// @dev Monotonic counter mixed into pubkey/signature generation in `_makeDepositObjects`.
+    ///      Without it, two batches built in the same block with the same `(i, opIdx)` produce
+    ///      identical pubkeys, which collides with the on-chain `PubkeyAlreadyFunded` guard
+    ///      enforced inside `AttestationVerifier.validate()` (initial-deposit branch).
+    uint256 internal _depositBatchNonce;
 
     // ─── attestation ──────────────────────────────────────────────────────────
-    uint256 internal constant ATTESTER_PK_1 = 0xA1;
-    uint256 internal constant ATTESTER_PK_2 = 0xA2;
-    uint256 internal constant ATTESTER_PK_3 = 0xA3;
-    address internal attester1;
-    address internal attester2;
-    address internal attester3;
+    uint256 internal constant DEPOSIT_COMMITTEE_ATTESTER_PK_1 = 0xA1;
+    uint256 internal constant DEPOSIT_COMMITTEE_ATTESTER_PK_2 = 0xA2;
+    uint256 internal constant DEPOSIT_COMMITTEE_ATTESTER_PK_3 = 0xA3;
+    address internal depositCommitteeAttester1;
+    address internal depositCommitteeAttester2;
+    address internal depositCommitteeAttester3;
 
     // EIP-712 constants (must match DepositToConsensusLayerValidation)
     bytes32 internal constant EIP712_DOMAIN_TYPEHASH =
@@ -140,9 +148,9 @@ abstract contract AccountingHarnessBase is Test, BytesGenerator {
         operatorOneAddr = makeAddr("operatorOne");
         operatorTwoAddr = makeAddr("operatorTwo");
 
-        attester1 = vm.addr(ATTESTER_PK_1);
-        attester2 = vm.addr(ATTESTER_PK_2);
-        attester3 = vm.addr(ATTESTER_PK_3);
+        depositCommitteeAttester1 = vm.addr(DEPOSIT_COMMITTEE_ATTESTER_PK_1);
+        depositCommitteeAttester2 = vm.addr(DEPOSIT_COMMITTEE_ATTESTER_PK_2);
+        depositCommitteeAttester3 = vm.addr(DEPOSIT_COMMITTEE_ATTESTER_PK_3);
 
         vm.warp(1_000_000);
 
@@ -197,16 +205,32 @@ abstract contract AccountingHarnessBase is Test, BytesGenerator {
             MAX_DAILY_REL
         );
         river.initRiverV1_2();
-        // 3 attesters with threshold=2 (threshold must be strictly less than attester count)
-        address[] memory _initAttesters = new address[](3);
-        _initAttesters[0] = attester1;
-        _initAttesters[1] = attester2;
-        _initAttesters[2] = attester3;
+
+        // 3 deposit-committee attesters with quorum=2 (quorum must be ≤ attester count and ≤ MAX_SIGNATURES)
+        address[] memory _initDepositCommitteeAttesters = new address[](3);
+        _initDepositCommitteeAttesters[0] = depositCommitteeAttester1;
+        _initDepositCommitteeAttesters[1] = depositCommitteeAttester2;
+        _initDepositCommitteeAttesters[2] = depositCommitteeAttester3;
+
+        // Deploy and initialize the AttestationVerifier sibling contract that River
+        // delegates attestation+BLS verification to. EIP-712 verifyingContract is
+        // pinned to River's address inside the validator's domain separator.
+        attestationVerifier = new AttestationVerifierV1();
+        LibImplementationUnbricker.unbrick(vm, address(attestationVerifier));
+        attestationVerifier.initAttestationVerifierV1(
+            address(river), address(depositBuffer), _initDepositCommitteeAttesters, 2, bytes4(0)
+        );
+
         bytes32 _initWc = withdraw.getCredentials();
+        address _initConsolidationCoverageFund = makeAddr("consolidationCoverageFund");
         vm.prank(admin);
-        river.initRiverV1_3(_initWc, address(depositBuffer), _initAttesters, 2, bytes4(0));
+        river.initRiverV1_3(_initWc, _initConsolidationCoverageFund, address(attestationVerifier));
         // Mock BLS verification: EIP-2537 precompiles are unavailable in Foundry.
-        vm.mockCall(address(river), abi.encodeWithSelector(river.verifyBLSDeposit.selector), bytes(""));
+        vm.mockCall(
+            address(attestationVerifier),
+            abi.encodeWithSelector(attestationVerifier.verifyBLSDeposit.selector),
+            bytes("")
+        );
 
         withdraw.initializeWithdrawV1(address(river));
         elFeeRecipient.initELFeeRecipientV1(address(river));
@@ -271,37 +295,18 @@ abstract contract AccountingHarnessBase is Test, BytesGenerator {
 
     // ─── attestation helpers ───────────────────────────────────────────────────
 
-    /// @dev Encode "operator:N" as left-aligned bytes32 metadata.
-    function _operatorMeta(uint256 opIdx) internal pure returns (bytes32) {
-        bytes memory prefix = "operator:";
-        bytes memory digits;
-        if (opIdx == 0) {
-            digits = "0";
-        } else {
-            uint256 temp = opIdx;
-            uint256 n = 0;
-            while (temp > 0) {
-                n++;
-                temp /= 10;
-            }
-            digits = new bytes(n);
-            temp = opIdx;
-            for (uint256 i = n; i > 0; i--) {
-                digits[i - 1] = bytes1(uint8(48 + temp % 10));
-                temp /= 10;
-            }
-        }
-        bytes memory full = abi.encodePacked(prefix, digits);
-        bytes32 result;
-        assembly {
-            result := mload(add(full, 32))
-        }
-        return result;
-    }
-
     function _emptyDepositY() internal pure returns (BLS12_381.DepositY memory) {
         return BLS12_381.DepositY({
             pubkeyY: BLS12_381.Fp({a: bytes32(0), b: bytes32(0)}),
+            signatureY: BLS12_381.Fp2({c0_a: bytes32(0), c0_b: bytes32(0), c1_a: bytes32(0), c1_b: bytes32(0)})
+        });
+    }
+
+    /// @dev Non-zero placeholder DepositY for initial deposits. BLS is mocked in this harness,
+    ///      so the value only needs to differ from the zero sentinel used for top-ups.
+    function _nonZeroDepositY(uint256 seed) internal pure returns (BLS12_381.DepositY memory) {
+        return BLS12_381.DepositY({
+            pubkeyY: BLS12_381.Fp({a: bytes32(uint256(seed) + 1), b: bytes32(0)}),
             signatureY: BLS12_381.Fp2({c0_a: bytes32(0), c0_b: bytes32(0), c1_a: bytes32(0), c1_b: bytes32(0)})
         });
     }
@@ -317,26 +322,29 @@ abstract contract AccountingHarnessBase is Test, BytesGenerator {
     }
 
     /// @dev Build deposit objects from a set of (operatorIndex, amount) tuples.
-    ///      Each deposit uses a deterministic pubkey/signature seeded by position.
+    ///      Each deposit uses a deterministic pubkey/signature seeded by position and a
+    ///      monotonically-incrementing batch nonce so successive `sim_deposit` calls in the
+    ///      same block don't collide on pubkeys (which would trip the on-chain
+    ///      `PubkeyAlreadyFunded` guard).
     function _makeDepositObjects(uint256[] memory opIndices, uint256[] memory amounts)
         internal
-        view
         returns (IDepositDataBuffer.DepositObject[] memory deposits)
     {
         require(opIndices.length == amounts.length, "length mismatch");
-        bytes32 wc = river.getWithdrawalCredentials();
+        uint256 nonce = ++_depositBatchNonce;
         deposits = new IDepositDataBuffer.DepositObject[](opIndices.length);
         for (uint256 i = 0; i < opIndices.length; i++) {
             deposits[i] = IDepositDataBuffer.DepositObject({
-                pubkey: abi.encodePacked(sha256(abi.encode("pubkey", i, opIndices[i], block.number)), bytes16(0)),
+                pubkey: abi.encodePacked(sha256(abi.encode("pubkey", i, opIndices[i], nonce)), bytes16(0)),
                 signature: abi.encodePacked(
-                    sha256(abi.encode("sig-a", i, opIndices[i], block.number)),
-                    sha256(abi.encode("sig-b", i, opIndices[i], block.number)),
+                    sha256(abi.encode("sig-a", i, opIndices[i], nonce)),
+                    sha256(abi.encode("sig-b", i, opIndices[i], nonce)),
                     bytes32(0)
                 ),
                 amount: amounts[i],
                 depositDataRoot: bytes32(0),
-                metadata: _operatorMeta(opIndices[i])
+                operatorIdx: opIndices[i],
+                depositY: _nonZeroDepositY(nonce * 1000 + i)
             });
         }
     }
