@@ -79,7 +79,7 @@ interface IOperatorsRegistryV1 {
     /// @param amount The amount of requested exits in ETH(wei)
     event RequestedETHExits(uint256 indexed index, uint256 amount);
 
-    /// @notice The amount of ETH(wei) that has been requested to be exited per pubkey via EL
+    /// @notice The amount of ETH(gwei) that has been requested to be exited per pubkey via EL
     /// @param index The operator index
     /// @param pubkeys The pubkeys through which the EL exits were requested
     /// @param amounts The amount per pubkey that was requested for EL exits
