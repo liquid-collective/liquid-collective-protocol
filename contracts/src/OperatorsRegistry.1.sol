@@ -375,15 +375,14 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
             _reserveOperatorExit(operator, operatorIndex, elExitAmount, true);
             requestedETHAmount += elExitAmount;
 
-            if (elExitAmount > _remainingETHExitsDemand) {
-                revert ExitsGreaterThanExitDemand(elExitAmount, _remainingETHExitsDemand);
-            }
-
             withdraw.withdraw{value: _maxFeePerWithdrawal * _elAllocations[i].pubkeys.length}(
                 _elAllocations[i].pubkeys, cachedAmounts, _maxFeePerWithdrawal, msg.sender
             );
             totalFeePaid += _maxFeePerWithdrawal * _elAllocations[i].pubkeys.length;
             emit RequestedELETHExits(operatorIndex, _elAllocations[i].pubkeys, _elAllocations[i].amounts);
+        }
+        if (requestedETHAmount > _remainingETHExitsDemand) {
+            revert ExitsGreaterThanExitDemand(requestedETHAmount, _remainingETHExitsDemand);
         }
     }
 
