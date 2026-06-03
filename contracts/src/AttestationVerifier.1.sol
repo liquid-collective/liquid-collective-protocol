@@ -379,6 +379,7 @@ contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1 {
         view
     {
         for (uint256 i = 0; i < deposits.length; i++) {
+            if (BLS12_381.isZero(deposits[i].depositY)) continue;
             (bool ok, bytes memory revertData) = address(this)
                 .staticcall(
                     abi.encodeCall(
