@@ -170,12 +170,12 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
     address internal keeper = address(0xBEEF);
     bytes32 internal withdrawalCredentials = bytes32(uint256(0x010000000000000000000000CAFEBABE));
 
-    uint256 internal depositCommitteeAttesterPk1 = 0xA1;
-    uint256 internal depositCommitteeAttesterPk2 = 0xA2;
-    uint256 internal depositCommitteeAttesterPk3 = 0xA3;
-    address internal depositCommitteeAttester1;
-    address internal depositCommitteeAttester2;
-    address internal depositCommitteeAttester3;
+    uint256 internal rootAttesterPk1 = 0xA1;
+    uint256 internal rootAttesterPk2 = 0xA2;
+    uint256 internal rootAttesterPk3 = 0xA3;
+    address internal rootAttester1;
+    address internal rootAttester2;
+    address internal rootAttester3;
 
     // EIP-712 constants (must match AttestationVerifierV1)
     bytes32 internal constant EIP712_DOMAIN_TYPEHASH =
@@ -228,9 +228,9 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
     }
 
     function setUp() public {
-        depositCommitteeAttester1 = vm.addr(depositCommitteeAttesterPk1);
-        depositCommitteeAttester2 = vm.addr(depositCommitteeAttesterPk2);
-        depositCommitteeAttester3 = vm.addr(depositCommitteeAttesterPk3);
+        rootAttester1 = vm.addr(rootAttesterPk1);
+        rootAttester2 = vm.addr(rootAttesterPk2);
+        rootAttester3 = vm.addr(rootAttesterPk3);
 
         depositContract = new DepositContractEnhancedMock();
         buffer = new MockDepositDataBuffer();
@@ -243,15 +243,15 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
 
         // 2. Deploy and init the AttestationVerifier. The validator's EIP-712
         //    domain separator binds verifyingContract to the harness's address
-        //    so deposit-committee attester signing tooling stays River-anchored.
-        address[] memory depositCommitteeAttesters = new address[](3);
-        depositCommitteeAttesters[0] = depositCommitteeAttester1;
-        depositCommitteeAttesters[1] = depositCommitteeAttester2;
-        depositCommitteeAttesters[2] = depositCommitteeAttester3;
+        //    so root attester signing tooling stays River-anchored.
+        address[] memory rootAttesters = new address[](3);
+        rootAttesters[0] = rootAttester1;
+        rootAttesters[1] = rootAttester2;
+        rootAttesters[2] = rootAttester3;
 
         validator = new AttestationVerifierV1();
         LibImplementationUnbricker.unbrick(vm, address(validator));
-        validator.initAttestationVerifierV1(address(dm), address(buffer), depositCommitteeAttesters, 2, bytes4(0));
+        validator.initAttestationVerifierV1(address(dm), address(buffer), rootAttesters, 2, bytes4(0));
 
         // 3. Wire the validator address into the harness.
         dm.sudoSetAttestationVerifier(address(validator));
@@ -351,8 +351,8 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
         rootHash = depositContract.get_deposit_root();
 
         sigs = new bytes[](2);
-        sigs[0] = _signAttestation(depositCommitteeAttesterPk1, bufferId, rootHash);
-        sigs[1] = _signAttestation(depositCommitteeAttesterPk2, bufferId, rootHash);
+        sigs[0] = _signAttestation(rootAttesterPk1, bufferId, rootHash);
+        sigs[1] = _signAttestation(rootAttesterPk2, bufferId, rootHash);
     }
 
     /// @dev Submit an initial-deposits-only batch.
@@ -473,8 +473,8 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
         assertEq(root2, rootAfterFirst, "root hash should match current deposit contract state");
 
         bytes[] memory sigs2 = new bytes[](2);
-        sigs2[0] = _signAttestation(depositCommitteeAttesterPk1, bid2, root2);
-        sigs2[1] = _signAttestation(depositCommitteeAttesterPk2, bid2, root2);
+        sigs2[0] = _signAttestation(rootAttesterPk1, bid2, root2);
+        sigs2[1] = _signAttestation(rootAttesterPk2, bid2, root2);
 
         vm.prank(keeper);
         dm.depositToConsensusLayerWithAttestation(bid2, root2, sigs2);
@@ -515,7 +515,7 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
 
         // Only 1 signature but quorum is 2
         bytes[] memory sigs = new bytes[](1);
-        sigs[0] = _signAttestation(depositCommitteeAttesterPk1, bufferId, rootHash);
+        sigs[0] = _signAttestation(rootAttesterPk1, bufferId, rootHash);
 
         vm.prank(keeper);
         vm.expectRevert(abi.encodeWithSelector(IAttestationVerifierV1.InsufficientAttestations.selector, 1, 2));
@@ -532,8 +532,8 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
         // Sign over a stale root that won't match the deposit contract
         bytes32 staleRoot = bytes32(uint256(0xDEAD));
         bytes[] memory sigs = new bytes[](2);
-        sigs[0] = _signAttestation(depositCommitteeAttesterPk1, bufferId, staleRoot);
-        sigs[1] = _signAttestation(depositCommitteeAttesterPk2, bufferId, staleRoot);
+        sigs[0] = _signAttestation(rootAttesterPk1, bufferId, staleRoot);
+        sigs[1] = _signAttestation(rootAttesterPk2, bufferId, staleRoot);
 
         bytes32 actualRoot = depositContract.get_deposit_root();
         vm.prank(keeper);
@@ -557,7 +557,7 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
         dm.depositToConsensusLayerWithAttestation(bufferId, rootHash, sigs);
     }
 
-    function testRevert_duplicateDepositCommitteeAttesterSignatures() public {
+    function testRevert_duplicateRootAttesterSignatures() public {
         IDepositDataBuffer.Deposit[] memory deposits = new IDepositDataBuffer.Deposit[](1);
         deposits[0] = _makeDeposit(0, 0);
 
@@ -565,17 +565,17 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
         buffer.submitDepositData(bufferId, _batchOf(deposits));
         bytes32 rootHash = depositContract.get_deposit_root();
 
-        // Two signatures from the same deposit-committee attester — should only count as 1
+        // Two signatures from the same root attester — should only count as 1
         bytes[] memory sigs = new bytes[](2);
-        sigs[0] = _signAttestation(depositCommitteeAttesterPk1, bufferId, rootHash);
-        sigs[1] = _signAttestation(depositCommitteeAttesterPk1, bufferId, rootHash);
+        sigs[0] = _signAttestation(rootAttesterPk1, bufferId, rootHash);
+        sigs[1] = _signAttestation(rootAttesterPk1, bufferId, rootHash);
 
         vm.prank(keeper);
         vm.expectRevert(abi.encodeWithSelector(IAttestationVerifierV1.InsufficientAttestations.selector, 1, 2));
         dm.depositToConsensusLayerWithAttestation(bufferId, rootHash, sigs);
     }
 
-    function testRevert_nonDepositCommitteeAttesterSignature() public {
+    function testRevert_nonRootAttesterSignature() public {
         IDepositDataBuffer.Deposit[] memory deposits = new IDepositDataBuffer.Deposit[](1);
         deposits[0] = _makeDeposit(0, 0);
 
@@ -583,11 +583,11 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
         buffer.submitDepositData(bufferId, _batchOf(deposits));
         bytes32 rootHash = depositContract.get_deposit_root();
 
-        // One valid deposit-committee attester + one non-attester
-        uint256 nonDepositCommitteeAttesterPk = 0xBAD;
+        // One valid root attester + one non-attester
+        uint256 nonRootAttesterPk = 0xBAD;
         bytes[] memory sigs = new bytes[](2);
-        sigs[0] = _signAttestation(depositCommitteeAttesterPk1, bufferId, rootHash);
-        sigs[1] = _signAttestation(nonDepositCommitteeAttesterPk, bufferId, rootHash);
+        sigs[0] = _signAttestation(rootAttesterPk1, bufferId, rootHash);
+        sigs[1] = _signAttestation(nonRootAttesterPk, bufferId, rootHash);
 
         vm.prank(keeper);
         vm.expectRevert(abi.encodeWithSelector(IAttestationVerifierV1.InsufficientAttestations.selector, 1, 2));
@@ -597,7 +597,7 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
     // Regression test for the defense-in-depth bufferId check in validate().
     // A malicious or buggy DepositDataBuffer may store (id, deposits) where
     // id != keccak256(abi.encode(deposits)). The on-chain validator must catch this
-    // and revert with BufferIdMismatch so the deposit-committee attesters' signed commitment is
+    // and revert with BufferIdMismatch so the root attesters' signed commitment is
     // always binding on the deposits that are actually executed.
     function testRevert_bufferIdDoesNotMatchDeposits() public {
         IDepositDataBuffer.Deposit[] memory depositsSigned = new IDepositDataBuffer.Deposit[](1);
@@ -615,8 +615,8 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
 
         bytes32 rootHash = depositContract.get_deposit_root();
         bytes[] memory sigs = new bytes[](2);
-        sigs[0] = _signAttestation(depositCommitteeAttesterPk1, signedId, rootHash);
-        sigs[1] = _signAttestation(depositCommitteeAttesterPk2, signedId, rootHash);
+        sigs[0] = _signAttestation(rootAttesterPk1, signedId, rootHash);
+        sigs[1] = _signAttestation(rootAttesterPk2, signedId, rootHash);
 
         vm.prank(keeper);
         vm.expectRevert(abi.encodeWithSelector(IAttestationVerifierV1.BufferIdMismatch.selector, signedId, actualId));
@@ -657,7 +657,7 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
 
     // -----------------------------------------------------------------------
     // Top-up tests — BLS verification must be skipped for entries with all-zero depositY.
-    // Authorization for top-ups is delegated to the deposit committee (the attestation
+    // Authorization for top-ups is delegated to the root (the attestation
     // quorum signs over keccak256(abi.encode(deposits)), so the committee is attesting
     // to each entry's depositY-encoded classification).
     // -----------------------------------------------------------------------
@@ -754,8 +754,8 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
 
         bytes32 rootHash = depositContract.get_deposit_root();
         bytes[] memory sigs = new bytes[](2);
-        sigs[0] = _signAttestation(depositCommitteeAttesterPk1, signedId, rootHash);
-        sigs[1] = _signAttestation(depositCommitteeAttesterPk2, signedId, rootHash);
+        sigs[0] = _signAttestation(rootAttesterPk1, signedId, rootHash);
+        sigs[1] = _signAttestation(rootAttesterPk2, signedId, rootHash);
 
         vm.prank(keeper);
         vm.expectRevert(abi.encodeWithSelector(IAttestationVerifierV1.BufferIdMismatch.selector, signedId, actualId));
@@ -851,8 +851,8 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
 
         bytes32 rootB = depositContract.get_deposit_root();
         bytes[] memory sigsB = new bytes[](2);
-        sigsB[0] = _signAttestation(depositCommitteeAttesterPk1, bidB, rootB);
-        sigsB[1] = _signAttestation(depositCommitteeAttesterPk2, bidB, rootB);
+        sigsB[0] = _signAttestation(rootAttesterPk1, bidB, rootB);
+        sigsB[1] = _signAttestation(rootAttesterPk2, bidB, rootB);
 
         vm.prank(keeper);
         dm.depositToConsensusLayerWithAttestation(bidB, rootB, sigsB);
@@ -1067,27 +1067,27 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
         dm.depositToConsensusLayerWithAttestation(bufferId, rootHash, sigs);
     }
 
-    // setDepositCommitteeAttester must reject calls that would leave the attester's status unchanged so the
+    // setRootAttester must reject calls that would leave the attester's status unchanged so the
     // admin cannot silently no-op when intending to flip a flag.
-    function testRevert_setDepositCommitteeAttesterStatusUnchanged() public {
-        // depositCommitteeAttester1 was registered in setUp(); re-adding must revert
+    function testRevert_setRootAttesterStatusUnchanged() public {
+        // rootAttester1 was registered in setUp(); re-adding must revert
         vm.prank(admin);
         vm.expectRevert(
             abi.encodeWithSelector(
-                IAttestationVerifierV1.DepositCommitteeAttesterStatusUnchanged.selector, depositCommitteeAttester1, true
+                IAttestationVerifierV1.RootAttesterStatusUnchanged.selector, rootAttester1, true
             )
         );
-        validator.setDepositCommitteeAttester(depositCommitteeAttester1, true);
+        validator.setRootAttester(rootAttester1, true);
 
         // an unregistered address being removed must also revert
         address stranger = address(0xC0FFEE);
         vm.prank(admin);
         vm.expectRevert(
             abi.encodeWithSelector(
-                IAttestationVerifierV1.DepositCommitteeAttesterStatusUnchanged.selector, stranger, false
+                IAttestationVerifierV1.RootAttesterStatusUnchanged.selector, stranger, false
             )
         );
-        validator.setDepositCommitteeAttester(stranger, false);
+        validator.setRootAttester(stranger, false);
     }
 
     // -----------------------------------------------------------------------
@@ -1098,12 +1098,12 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
     function testViews_returnConfiguredValues() public {
         assertEq(validator.getRiver(), address(dm));
         assertEq(validator.getDepositDataBuffer(), address(buffer));
-        assertEq(validator.getDepositCommitteeAttesterCount(), 3);
-        assertEq(validator.getDepositCommitteeAttestationQuorum(), 2);
-        assertTrue(validator.isDepositCommitteeAttester(depositCommitteeAttester1));
-        assertTrue(validator.isDepositCommitteeAttester(depositCommitteeAttester2));
-        assertTrue(validator.isDepositCommitteeAttester(depositCommitteeAttester3));
-        assertFalse(validator.isDepositCommitteeAttester(address(0xDEAD)));
+        assertEq(validator.getRootAttesterCount(), 3);
+        assertEq(validator.getRootAttestationQuorum(), 2);
+        assertTrue(validator.isRootAttester(rootAttester1));
+        assertTrue(validator.isRootAttester(rootAttester2));
+        assertTrue(validator.isRootAttester(rootAttester3));
+        assertFalse(validator.isRootAttester(address(0xDEAD)));
         // Cross-check the domain separator against an independently-recomputed value rather
         // than just !=0, so a future drift in NAME_HASH / VERSION_HASH / TYPEHASH wording
         // breaks the test instead of silently agreeing with the contract.
@@ -1147,8 +1147,8 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
         buffer.submitDepositData(bufferId, _batchOf(deposits));
         bytes32 rootHash = depositContract.get_deposit_root();
         bytes[] memory sigs = new bytes[](2);
-        sigs[0] = _signAttestation(depositCommitteeAttesterPk1, bufferId, rootHash);
-        sigs[1] = _signAttestation(depositCommitteeAttesterPk2, bufferId, rootHash);
+        sigs[0] = _signAttestation(rootAttesterPk1, bufferId, rootHash);
+        sigs[1] = _signAttestation(rootAttesterPk2, bufferId, rootHash);
         vm.prank(keeper);
         vm.expectRevert(IAttestationVerifierV1.NoDeposits.selector);
         dm.depositToConsensusLayerWithAttestation(bufferId, rootHash, sigs);
@@ -1159,73 +1159,73 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
     // -----------------------------------------------------------------------
 
     /// @dev Admin can register a new attester; count increments; the attester becomes recognised.
-    function testSetDepositCommitteeAttester_addAndRemove() public {
+    function testSetRootAttester_addAndRemove() public {
         address newAttester = address(0xFEED);
-        assertFalse(validator.isDepositCommitteeAttester(newAttester));
+        assertFalse(validator.isRootAttester(newAttester));
 
         vm.prank(admin);
-        validator.setDepositCommitteeAttester(newAttester, true);
-        assertTrue(validator.isDepositCommitteeAttester(newAttester));
-        assertEq(validator.getDepositCommitteeAttesterCount(), 4);
+        validator.setRootAttester(newAttester, true);
+        assertTrue(validator.isRootAttester(newAttester));
+        assertEq(validator.getRootAttesterCount(), 4);
 
         // Removing brings us back to 3.
         vm.prank(admin);
-        validator.setDepositCommitteeAttester(newAttester, false);
-        assertFalse(validator.isDepositCommitteeAttester(newAttester));
-        assertEq(validator.getDepositCommitteeAttesterCount(), 3);
+        validator.setRootAttester(newAttester, false);
+        assertFalse(validator.isRootAttester(newAttester));
+        assertEq(validator.getRootAttesterCount(), 3);
     }
 
     /// @dev Non-admin caller must be rejected by onlyRiverAdmin.
-    function testRevert_setDepositCommitteeAttester_unauthorized() public {
+    function testRevert_setRootAttester_unauthorized() public {
         address stranger = address(0xC0FFEE);
         vm.prank(stranger);
         vm.expectRevert(abi.encodeWithSelector(LibErrors.Unauthorized.selector, stranger));
-        validator.setDepositCommitteeAttester(address(0xFEED), true);
+        validator.setRootAttester(address(0xFEED), true);
     }
 
     /// @dev Cannot remove an attester if doing so would leave fewer attesters than the configured quorum.
-    function testRevert_setDepositCommitteeAttester_wouldUnderQuorum() public {
+    function testRevert_setRootAttester_wouldUnderQuorum() public {
         // quorum=2, 3 attesters; remove one → 2 (still ok), remove another → 1 < 2 (rejects).
         vm.prank(admin);
-        validator.setDepositCommitteeAttester(depositCommitteeAttester3, false);
+        validator.setRootAttester(rootAttester3, false);
         vm.prank(admin);
         vm.expectRevert(
-            abi.encodeWithSelector(IAttestationVerifierV1.QuorumExceedsDepositCommitteeAttesterCount.selector, 2, 1)
+            abi.encodeWithSelector(IAttestationVerifierV1.QuorumExceedsRootAttesterCount.selector, 2, 1)
         );
-        validator.setDepositCommitteeAttester(depositCommitteeAttester2, false);
+        validator.setRootAttester(rootAttester2, false);
     }
 
-    /// @dev setDepositCommitteeAttestationQuorum happy path: drop quorum to 1, then back to 2.
-    function testSetDepositCommitteeAttestationQuorum_happyPath() public {
+    /// @dev setRootAttestationQuorum happy path: drop quorum to 1, then back to 2.
+    function testSetRootAttestationQuorum_happyPath() public {
         vm.prank(admin);
-        validator.setDepositCommitteeAttestationQuorum(1);
-        assertEq(validator.getDepositCommitteeAttestationQuorum(), 1);
+        validator.setRootAttestationQuorum(1);
+        assertEq(validator.getRootAttestationQuorum(), 1);
 
         vm.prank(admin);
-        validator.setDepositCommitteeAttestationQuorum(2);
-        assertEq(validator.getDepositCommitteeAttestationQuorum(), 2);
+        validator.setRootAttestationQuorum(2);
+        assertEq(validator.getRootAttestationQuorum(), 2);
     }
 
-    function testRevert_setDepositCommitteeAttestationQuorum_zero() public {
+    function testRevert_setRootAttestationQuorum_zero() public {
         vm.prank(admin);
         vm.expectRevert(IAttestationVerifierV1.ZeroQuorum.selector);
-        validator.setDepositCommitteeAttestationQuorum(0);
+        validator.setRootAttestationQuorum(0);
     }
 
-    function testRevert_setDepositCommitteeAttestationQuorum_exceedsAttesterCount() public {
+    function testRevert_setRootAttestationQuorum_exceedsAttesterCount() public {
         // 3 attesters; quorum > 3 is rejected.
         vm.prank(admin);
         vm.expectRevert(
-            abi.encodeWithSelector(IAttestationVerifierV1.QuorumExceedsDepositCommitteeAttesterCount.selector, 4, 3)
+            abi.encodeWithSelector(IAttestationVerifierV1.QuorumExceedsRootAttesterCount.selector, 4, 3)
         );
-        validator.setDepositCommitteeAttestationQuorum(4);
+        validator.setRootAttestationQuorum(4);
     }
 
-    function testRevert_setDepositCommitteeAttestationQuorum_unauthorized() public {
+    function testRevert_setRootAttestationQuorum_unauthorized() public {
         address stranger = address(0xC0FFEE);
         vm.prank(stranger);
         vm.expectRevert(abi.encodeWithSelector(LibErrors.Unauthorized.selector, stranger));
-        validator.setDepositCommitteeAttestationQuorum(1);
+        validator.setRootAttestationQuorum(1);
     }
 
     /// @dev Admin can rotate the DepositDataBuffer address.
@@ -1275,29 +1275,29 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
         AttestationVerifierV1 freshValidator = new AttestationVerifierV1();
         LibImplementationUnbricker.unbrick(vm, address(freshValidator));
         address[] memory attesters = new address[](2);
-        attesters[0] = depositCommitteeAttester1;
-        attesters[1] = depositCommitteeAttester2;
+        attesters[0] = rootAttester1;
+        attesters[1] = rootAttester2;
         vm.expectRevert(
-            abi.encodeWithSelector(IAttestationVerifierV1.QuorumExceedsDepositCommitteeAttesterCount.selector, 3, 2)
+            abi.encodeWithSelector(IAttestationVerifierV1.QuorumExceedsRootAttesterCount.selector, 3, 2)
         );
         freshValidator.initAttestationVerifierV1(address(dm), address(buffer), attesters, 3, bytes4(0));
     }
 
-    /// @dev Cannot add an attester that would push the total past MAX_DEPOSIT_COMMITTEE_ATTESTERS.
+    /// @dev Cannot add an attester that would push the total past MAX_ROOT_ATTESTERS.
     ///      Fills the registry to the cap (32), then tries to add one more.
-    function testRevert_setDepositCommitteeAttester_exceedsMax() public {
-        uint256 max = validator.MAX_DEPOSIT_COMMITTEE_ATTESTERS();
+    function testRevert_setRootAttester_exceedsMax() public {
+        uint256 max = validator.MAX_ROOT_ATTESTERS();
         // setUp already registered 3 attesters; add up to the cap.
         for (uint256 i = 3; i < max; ++i) {
             vm.prank(admin);
-            validator.setDepositCommitteeAttester(address(uint160(0x1000 + i)), true);
+            validator.setRootAttester(address(uint160(0x1000 + i)), true);
         }
-        assertEq(validator.getDepositCommitteeAttesterCount(), max);
+        assertEq(validator.getRootAttesterCount(), max);
         vm.prank(admin);
         vm.expectRevert(
-            abi.encodeWithSelector(IAttestationVerifierV1.TooManyDepositCommitteeAttesters.selector, max + 1, max)
+            abi.encodeWithSelector(IAttestationVerifierV1.TooManyRootAttesters.selector, max + 1, max)
         );
-        validator.setDepositCommitteeAttester(address(uint160(0x9999)), true);
+        validator.setRootAttester(address(uint160(0x9999)), true);
     }
 
     // -----------------------------------------------------------------------
@@ -1343,18 +1343,18 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
 
     /// @dev Admin cannot set quorum > MAX_SIGNATURES via the post-init setter. Distinct code
     ///      path from the init-time check above.
-    function testRevert_setDepositCommitteeAttestationQuorum_exceedsMaxSignatures() public {
+    function testRevert_setRootAttestationQuorum_exceedsMaxSignatures() public {
         // Grow attester count past MAX_SIGNATURES so the attester-count check doesn't fire first.
         uint256 max = validator.MAX_SIGNATURES();
         for (uint256 i = 3; i <= max; i++) {
             vm.prank(admin);
-            validator.setDepositCommitteeAttester(address(uint160(0xA000 + i)), true);
+            validator.setRootAttester(address(uint160(0xA000 + i)), true);
         }
         vm.prank(admin);
         vm.expectRevert(
             abi.encodeWithSelector(IAttestationVerifierV1.QuorumExceedsMaxSignatures.selector, max + 1, max)
         );
-        validator.setDepositCommitteeAttestationQuorum(max + 1);
+        validator.setRootAttestationQuorum(max + 1);
     }
 
     // -----------------------------------------------------------------------
@@ -1370,7 +1370,7 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
     function testRecover_silentlySkipsBadSigs() public {
         // Raise quorum above the number of valid sigs we'll provide so the assertion is tight.
         vm.prank(admin);
-        validator.setDepositCommitteeAttestationQuorum(3);
+        validator.setRootAttestationQuorum(3);
 
         IDepositDataBuffer.Deposit[] memory deposits = new IDepositDataBuffer.Deposit[](1);
         deposits[0] = _makeDeposit(0, 850);
@@ -1386,8 +1386,8 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
         badV[64] = bytes1(uint8(2));
         sigs[1] = badV;
         // sigs[2] / sigs[3]: two valid signatures — only 2 of 4 will count toward quorum
-        sigs[2] = _signAttestation(depositCommitteeAttesterPk1, bufferId, rootHash);
-        sigs[3] = _signAttestation(depositCommitteeAttesterPk2, bufferId, rootHash);
+        sigs[2] = _signAttestation(rootAttesterPk1, bufferId, rootHash);
+        sigs[3] = _signAttestation(rootAttesterPk2, bufferId, rootHash);
 
         vm.prank(keeper);
         vm.expectRevert(abi.encodeWithSelector(IAttestationVerifierV1.InsufficientAttestations.selector, 2, 3));
@@ -1405,8 +1405,8 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
         bytes32 rootHash = depositContract.get_deposit_root();
 
         bytes[] memory sigs = new bytes[](2);
-        sigs[0] = _signAttestation_legacyV(depositCommitteeAttesterPk1, bufferId, rootHash);
-        sigs[1] = _signAttestation_legacyV(depositCommitteeAttesterPk2, bufferId, rootHash);
+        sigs[0] = _signAttestation_legacyV(rootAttesterPk1, bufferId, rootHash);
+        sigs[1] = _signAttestation_legacyV(rootAttesterPk2, bufferId, rootHash);
 
         vm.prank(keeper);
         dm.depositToConsensusLayerWithAttestation(bufferId, rootHash, sigs);
@@ -1535,8 +1535,8 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
         bytes32 rootHash = depositContract.get_deposit_root();
 
         bytes[] memory sigs = new bytes[](2);
-        sigs[0] = _signAttestation(depositCommitteeAttesterPk1, bufferId, rootHash);
-        sigs[1] = _signAttestation(depositCommitteeAttesterPk2, bufferId, rootHash);
+        sigs[0] = _signAttestation(rootAttesterPk1, bufferId, rootHash);
+        sigs[1] = _signAttestation(rootAttesterPk2, bufferId, rootHash);
 
         vm.prank(keeper);
         vm.expectRevert(IAttestationVerifierV1.NoDeposits.selector);

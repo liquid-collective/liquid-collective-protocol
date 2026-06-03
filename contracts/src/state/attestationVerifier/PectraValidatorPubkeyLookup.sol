@@ -12,7 +12,7 @@ import "../../libraries/LibUnstructuredStorage.sol";
 ///
 /// @dev    This set records membership only — not the operator that performed the initial
 ///         deposit. The `operatorIdx` field on a top-up's `DepositObject` is therefore
-///         NOT verified against any on-chain record: the deposit-committee-attested buffer
+///         NOT verified against any on-chain record: the root-attested buffer
 ///         is the only attestation we have for which operator a top-up credits.
 library PectraValidatorPubkeyLookup {
     bytes32 internal constant PECTRA_VALIDATOR_PUBKEY_LOOKUP_MAPPING_BASE_SLOT =

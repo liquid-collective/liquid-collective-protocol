@@ -17,11 +17,11 @@ interface IAttestationVerifierV1 {
     /// @notice Emitted when the DepositDataBuffer address is updated
     event SetDepositDataBuffer(address indexed depositDataBuffer);
 
-    /// @notice Emitted when a deposit-committee attester is added or removed
-    event SetDepositCommitteeAttester(address indexed depositCommitteeAttester, bool value);
+    /// @notice Emitted when a root attester is added or removed
+    event SetRootAttester(address indexed rootAttester, bool value);
 
-    /// @notice Emitted when the deposit-committee attestation quorum is updated
-    event SetDepositCommitteeAttestationQuorum(uint256 quorum);
+    /// @notice Emitted when the root attestation quorum is updated
+    event SetRootAttestationQuorum(uint256 quorum);
 
     /// @notice Emitted when the EIP-712 domain separator is (re)cached
     event SetDomainSeparator(bytes32 domainSeparator);
@@ -36,8 +36,8 @@ interface IAttestationVerifierV1 {
     // Errors
     // -----------------------------------------------------------------------
 
-    /// @notice The number of valid, unique deposit-committee attester signatures is below the configured quorum
-    /// @param valid The count of valid, unique deposit-committee attester signatures recovered
+    /// @notice The number of valid, unique root attester signatures is below the configured quorum
+    /// @param valid The count of valid, unique root attester signatures recovered
     /// @param quorum The required quorum
     error InsufficientAttestations(uint256 valid, uint256 quorum);
 
@@ -45,12 +45,12 @@ interface IAttestationVerifierV1 {
     error NoDeposits();
 
     /// @notice The co-signed deposit root does not match the deposit contract's current root
-    /// @param expected The deposit root co-signed by deposit-committee attesters
+    /// @param expected The deposit root co-signed by root attesters
     /// @param actual The current root reported by the deposit contract
     error DepositRootMismatch(bytes32 expected, bytes32 actual);
 
     /// @notice The recomputed bufferId does not match the attested bufferId — buffer tampered post-attestation
-    /// @param expected The bufferId co-signed by deposit-committee attesters
+    /// @param expected The bufferId co-signed by root attesters
     /// @param actual The bufferId recomputed from the returned deposits
     error BufferIdMismatch(bytes32 expected, bytes32 actual);
 
@@ -92,25 +92,25 @@ interface IAttestationVerifierV1 {
     /// @notice The BLS deposit domain has not been initialized
     error ZeroDepositDomain();
 
-    /// @notice The supplied quorum is greater than the current deposit-committee attester count
+    /// @notice The supplied quorum is greater than the current root attester count
     /// @param quorum The supplied quorum
-    /// @param depositCommitteeAttesterCount The current deposit-committee attester count
-    error QuorumExceedsDepositCommitteeAttesterCount(uint256 quorum, uint256 depositCommitteeAttesterCount);
+    /// @param rootAttesterCount The current root attester count
+    error QuorumExceedsRootAttesterCount(uint256 quorum, uint256 rootAttesterCount);
 
     /// @notice The supplied quorum is greater than MAX_SIGNATURES
     /// @param quorum The supplied quorum
     /// @param max The MAX_SIGNATURES bound
     error QuorumExceedsMaxSignatures(uint256 quorum, uint256 max);
 
-    /// @notice Adding a deposit-committee attester would exceed MAX_DEPOSIT_COMMITTEE_ATTESTERS
-    /// @param count The would-be deposit-committee attester count
-    /// @param max The MAX_DEPOSIT_COMMITTEE_ATTESTERS bound
-    error TooManyDepositCommitteeAttesters(uint256 count, uint256 max);
+    /// @notice Adding a root attester would exceed MAX_ROOT_ATTESTERS
+    /// @param count The would-be root attester count
+    /// @param max The MAX_ROOT_ATTESTERS bound
+    error TooManyRootAttesters(uint256 count, uint256 max);
 
-    /// @notice setDepositCommitteeAttester was called with the attester already in the requested state
-    /// @param depositCommitteeAttester The deposit-committee attester address
+    /// @notice setRootAttester was called with the attester already in the requested state
+    /// @param rootAttester The root attester address
     /// @param value The requested status (matches current status)
-    error DepositCommitteeAttesterStatusUnchanged(address depositCommitteeAttester, bool value);
+    error RootAttesterStatusUnchanged(address rootAttester, bool value);
 
     /// @notice A top-up referenced a pubkey that has never been initial-deposited by River.
     ///         Without this check, a malicious committee could mark an attacker pubkey as a
@@ -134,13 +134,13 @@ interface IAttestationVerifierV1 {
     /// @param _river                The River proxy address; used for the EIP-712 verifyingContract
     ///                              binding and for the cross-contract admin lookup.
     /// @param _depositDataBuffer    The pre-commit buffer the keeper writes to.
-    /// @param _depositCommitteeAttesters Initial set of deposit-committee attester EOAs.
-    /// @param _quorum               Initial attestation quorum (1 ≤ quorum ≤ depositCommitteeAttesters.length).
+    /// @param _rootAttesters Initial set of root attester EOAs.
+    /// @param _quorum               Initial attestation quorum (1 ≤ quorum ≤ rootAttesters.length).
     /// @param _genesisForkVersion   Genesis fork version used to derive the BLS deposit domain.
     function initAttestationVerifierV1(
         address _river,
         address _depositDataBuffer,
-        address[] calldata _depositCommitteeAttesters,
+        address[] calldata _rootAttesters,
         uint256 _quorum,
         bytes4 _genesisForkVersion
     ) external;
@@ -164,8 +164,8 @@ interface IAttestationVerifierV1 {
     ///      and for executing `deposit{value:}()` in River, which keeps the attested root and
     ///      the executed-against contract consistent by construction.
     /// @param depositDataBufferId  Batch identifier in the DepositDataBuffer
-    /// @param depositRootHash      Current deposit contract root hash co-signed by deposit-committee attesters
-    /// @param signatures           EIP-712 deposit-committee attester signatures
+    /// @param depositRootHash      Current deposit contract root hash co-signed by root attesters
+    /// @param signatures           EIP-712 root attester signatures
     /// @param depositContract      The official ETH deposit contract; queried for the current root
     /// @param withdrawalCredentials The protocol-configured WC; every deposit's WC must match
     /// @param committedBalance     Total amount summed over deposits must not exceed this
@@ -203,14 +203,14 @@ interface IAttestationVerifierV1 {
     // Admin setters
     // -----------------------------------------------------------------------
 
-    /// @notice Add or remove a deposit-committee attester. Only callable by River's admin.
-    /// @param depositCommitteeAttester The deposit-committee attester address to update
-    /// @param value True to register the deposit-committee attester, false to deregister
-    function setDepositCommitteeAttester(address depositCommitteeAttester, bool value) external;
+    /// @notice Add or remove a root attester. Only callable by River's admin.
+    /// @param rootAttester The root attester address to update
+    /// @param value True to register the root attester, false to deregister
+    function setRootAttester(address rootAttester, bool value) external;
 
-    /// @notice Update the deposit-committee attestation quorum. Only callable by River's admin.
-    /// @param newQuorum The new quorum (1 ≤ newQuorum ≤ depositCommitteeAttesterCount, ≤ MAX_SIGNATURES)
-    function setDepositCommitteeAttestationQuorum(uint256 newQuorum) external;
+    /// @notice Update the root attestation quorum. Only callable by River's admin.
+    /// @param newQuorum The new quorum (1 ≤ newQuorum ≤ rootAttesterCount, ≤ MAX_SIGNATURES)
+    function setRootAttestationQuorum(uint256 newQuorum) external;
 
     /// @notice Update the DepositDataBuffer address. Only callable by River's admin.
     /// @param _depositDataBuffer The new buffer address
@@ -220,18 +220,18 @@ interface IAttestationVerifierV1 {
     // Views
     // -----------------------------------------------------------------------
 
-    /// @notice Check whether an address is a registered deposit-committee attester
+    /// @notice Check whether an address is a registered root attester
     /// @param account The address to check
-    /// @return True if account is a registered deposit-committee attester
-    function isDepositCommitteeAttester(address account) external view returns (bool);
+    /// @return True if account is a registered root attester
+    function isRootAttester(address account) external view returns (bool);
 
-    /// @notice Retrieve the current number of registered deposit-committee attesters
-    /// @return The deposit-committee attester count
-    function getDepositCommitteeAttesterCount() external view returns (uint256);
+    /// @notice Retrieve the current number of registered root attesters
+    /// @return The root attester count
+    function getRootAttesterCount() external view returns (uint256);
 
-    /// @notice Retrieve the current deposit-committee attestation quorum
-    /// @return The required number of valid, unique deposit-committee attester signatures
-    function getDepositCommitteeAttestationQuorum() external view returns (uint256);
+    /// @notice Retrieve the current root attestation quorum
+    /// @return The required number of valid, unique root attester signatures
+    function getRootAttestationQuorum() external view returns (uint256);
 
     /// @notice Retrieve the configured DepositDataBuffer address
     /// @return The DepositDataBuffer address
