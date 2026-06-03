@@ -31,6 +31,8 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
 
     uint256 private constant MIN_ETH_AMOUNT = 1 ether;
 
+    uint64 private constant MAX_EL_EXIT_AMOUNT_GWEI = 2_048_000_000_000; // 2048 ETH
+
     /// @inheritdoc IOperatorsRegistryV1
     function initOperatorsRegistryV1(address _admin, address _river) external init(0) {
         _setAdmin(_admin);
@@ -354,7 +356,7 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
             for (uint256 j = 0; j < _elAllocations[i].amounts.length; ++j) {
                 uint64 amount = _elAllocations[i].amounts[j];
                 bool isFullExit = _elAllocations[i].isFullExit[j];
-                if (isFullExit && amount == 0 || amount > 2048) {
+                if (amount == 0 || amount > MAX_EL_EXIT_AMOUNT_GWEI || (isFullExit && amount == 0)) {
                     revert InvalidELExitETHAllocationAmount(operatorIndex, isFullExit, amount);
                 }
                 elExitAmount += uint256(amount) * 1 gwei;
