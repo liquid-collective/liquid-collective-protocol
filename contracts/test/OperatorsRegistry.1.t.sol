@@ -2153,4 +2153,76 @@ contract OperatorsRegistryV1ELExitTests is Test {
         assertEq(reg.getCurrentETHExitsDemand(), 0, "full exit should satisfy outstanding exit demand");
         assertEq(reg.getTotalETHExitsRequested(), 8 ether, "full exit should update total requested exits");
     }
+
+    /// An allocation whose pubkeys/amounts/isFullExit arrays have mismatched lengths must revert.
+    function testELExitRevertsOnMismatchedArrayLengths() public {
+        vm.prank(admin);
+        reg.addOperator("Op0", makeAddr("op0addr"));
+        reg.sudoSetFundedV3(0, 32 ether);
+        reg.sudoSetActiveCLETH(0, 32 ether);
+        vm.prank(river);
+        reg.demandETHExits(8 ether, 32 ether);
+
+        IOperatorsRegistryV1.ExitETHAllocation[] memory empty = new IOperatorsRegistryV1.ExitETHAllocation[](0);
+        IOperatorsRegistryV1.ELExitETHAllocation[] memory allocs = new IOperatorsRegistryV1.ELExitETHAllocation[](1);
+        bytes[] memory pubkeys = new bytes[](2); // 2 pubkeys
+        pubkeys[0] = PUBKEY_48;
+        pubkeys[1] = PUBKEY_48;
+        uint64[] memory amounts = new uint64[](1); // but only 1 amount
+        amounts[0] = EIGHT_ETH_IN_GWEI;
+        bool[] memory isFullExit = new bool[](1);
+        isFullExit[0] = false;
+        allocs[0] = IOperatorsRegistryV1.ELExitETHAllocation({
+            operatorIndex: 0, pubkeys: pubkeys, amounts: amounts, isFullExit: isFullExit
+        });
+
+        vm.prank(keeper);
+        vm.expectRevert(abi.encodeWithSignature("InvalidELExitETHAllocationLength()"));
+        reg.requestETHExits(empty, allocs, 0);
+    }
+
+    /// An EL exit amount above the per-pubkey cap (2048 ETH in gwei) must revert.
+    function testELExitRevertsWhenAmountExceedsCap() public {
+        vm.prank(admin);
+        reg.addOperator("Op0", makeAddr("op0addr"));
+        reg.sudoSetFundedV3(0, 32 ether);
+        reg.sudoSetActiveCLETH(0, 32 ether);
+        vm.prank(river);
+        reg.demandETHExits(8 ether, 32 ether);
+
+        IOperatorsRegistryV1.ExitETHAllocation[] memory empty = new IOperatorsRegistryV1.ExitETHAllocation[](0);
+        uint64 overCap = 2_048_000_000_000 + 1; // one gwei above MAX_EL_EXIT_AMOUNT_GWEI (2048 ETH)
+        IOperatorsRegistryV1.ELExitETHAllocation[] memory allocs = _makeELAlloc(0, overCap);
+
+        vm.prank(keeper);
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IOperatorsRegistryV1.InvalidELExitETHAllocationAmount.selector, uint256(0), false, overCap
+            )
+        );
+        reg.requestETHExits(empty, allocs, 0);
+    }
+
+    /// When the requested EL exits are within the operator's available CL ETH but exceed the
+    /// remaining exit demand, the aggregate ExitsGreaterThanExitDemand guard must revert.
+    function testELExitRevertsWhenExceedsRemainingDemand() public {
+        vm.prank(admin);
+        reg.addOperator("Op0", makeAddr("op0addr"));
+        reg.sudoSetFundedV3(0, 32 ether);
+        reg.sudoSetActiveCLETH(0, 32 ether); // plenty available per-operator
+        vm.prank(river);
+        reg.demandETHExits(4 ether, 32 ether); // but demand is only 4 ETH
+
+        IOperatorsRegistryV1.ExitETHAllocation[] memory empty = new IOperatorsRegistryV1.ExitETHAllocation[](0);
+        // Request an 8 ETH EL exit: below available (32) but above remaining demand (4).
+        IOperatorsRegistryV1.ELExitETHAllocation[] memory allocs = _makeELAlloc(0, EIGHT_ETH_IN_GWEI);
+
+        vm.prank(keeper);
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IOperatorsRegistryV1.ExitsGreaterThanExitDemand.selector, 8 ether, 4 ether
+            )
+        );
+        reg.requestETHExits(empty, allocs, 0);
+    }
 }
