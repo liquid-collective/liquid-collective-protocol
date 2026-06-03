@@ -35,7 +35,8 @@ contract OperatorsMigrationV2ToV3 is Test {
     address internal constant OPERATORS_REGISTRY_MAINNET_ADDRESS = 0x1235f1b60df026B2620e48E735C422425E06b725;
     address internal constant OPERATORS_REGISTRY_MAINNET_PROXY_ADMIN_ADDRESS =
         0x1d1FD2d8C87Fed864708bbab84c2Da54254F5a12;
-
+    address internal constant ONE_ADDRESS = address(1);
+    OperatorsRegistryV1 internal v3;
     function setUp() external {
         try vm.envString("MAINNET_FORK_RPC_URL") returns (string memory rpcUrl) {
             vm.createSelectFork(rpcUrl, 21_700_000);
@@ -43,6 +44,7 @@ contract OperatorsMigrationV2ToV3 is Test {
         } catch {
             _skip = true;
         }
+        v3 = OperatorsRegistryV1(OPERATORS_REGISTRY_MAINNET_ADDRESS);
     }
 
     modifier shouldSkip() {
@@ -73,14 +75,21 @@ contract OperatorsMigrationV2ToV3 is Test {
         vm.prank(OPERATORS_REGISTRY_MAINNET_PROXY_ADMIN_ADDRESS);
         ITransparentUpgradeableProxy(address(orProxy))
             .upgradeToAndCall(
-                address(newImplementation),
-                abi.encodeWithSelector(OperatorsRegistryV1.initOperatorsRegistryV1_2.selector)
+                address(newImplementation), abi.encodeCall(OperatorsRegistryV1.initOperatorsRegistryV1_2, ONE_ADDRESS)
             );
 
         // ── Verify V3 state matches V2 ──
-        OperatorsRegistryV1 v3 = OperatorsRegistryV1(OPERATORS_REGISTRY_MAINNET_ADDRESS);
 
+        
         assertEq(v3.getOperatorCount(), opCount, "operator count mismatch");
+        {
+            bytes32 withdrawSlot = bytes32(uint256(keccak256("river.state.withdrawAddress")) - 1);
+            assertEq(
+                vm.load(address(orProxy), withdrawSlot),
+                bytes32(uint256(uint160(ONE_ADDRESS))),
+                "WithdrawAddress not stored correctly after migration"
+            );
+        }
 
         uint256[] memory v3ExitedETH = v3.getExitedETHPerOperator();
 
@@ -100,21 +109,18 @@ contract OperatorsMigrationV2ToV3 is Test {
         TUPProxy orProxy = TUPProxy(payable(OPERATORS_REGISTRY_MAINNET_ADDRESS));
         OperatorsRegistryV1 newImplementation = new OperatorsRegistryV1();
 
-        // First migration should succeed
         vm.prank(OPERATORS_REGISTRY_MAINNET_PROXY_ADMIN_ADDRESS);
         ITransparentUpgradeableProxy(address(orProxy))
             .upgradeToAndCall(
-                address(newImplementation),
-                abi.encodeWithSelector(OperatorsRegistryV1.initOperatorsRegistryV1_2.selector)
+                address(newImplementation), abi.encodeCall(OperatorsRegistryV1.initOperatorsRegistryV1_2, ONE_ADDRESS)
             );
 
         // Second call should revert (init version already set)
-        vm.prank(OPERATORS_REGISTRY_MAINNET_PROXY_ADMIN_ADDRESS);
+        vm.prank(v3.getAdmin());
         vm.expectRevert();
         ITransparentUpgradeableProxy(address(orProxy))
             .upgradeToAndCall(
-                address(newImplementation),
-                abi.encodeWithSelector(OperatorsRegistryV1.initOperatorsRegistryV1_2.selector)
+                address(newImplementation), abi.encodeCall(OperatorsRegistryV1.initOperatorsRegistryV1_2, ONE_ADDRESS)
             );
     }
 
@@ -144,10 +150,10 @@ contract OperatorsMigrationV2ToV3 is Test {
         vm.prank(OPERATORS_REGISTRY_MAINNET_PROXY_ADMIN_ADDRESS);
         ITransparentUpgradeableProxy(address(orProxy))
             .upgradeToAndCall(
-                address(newImpl), abi.encodeWithSelector(OperatorsRegistryV1.initOperatorsRegistryV1_2.selector)
+                address(newImpl), abi.encodeCall(OperatorsRegistryV1.initOperatorsRegistryV1_2, ONE_ADDRESS)
             );
 
-        OperatorsRegistryV1 v3 = OperatorsRegistryV1(OPERATORS_REGISTRY_MAINNET_ADDRESS);
+
         address river = v3.getRiver();
         address admin = v3.getAdmin();
 
