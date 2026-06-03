@@ -66,6 +66,10 @@ interface IWithdrawV1 {
     /// @param pubkey The offending 48-byte BLS pubkey
     error TargetPubkeyNotFunded(bytes pubkey);
 
+    /// @notice Thrown when a source pubkey is not funded or migrated from the pre-Pectra validator set
+    /// @param pubkey The offending 48-byte BLS pubkey
+    error SourcePubkeyNotFunded(bytes pubkey);
+
     /// @param _river The address of the River contract
     function initializeWithdrawV1(address _river) external;
 

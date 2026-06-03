@@ -3311,6 +3311,10 @@ contract RiverV1PectraTests is RiverV1TestBase {
 
     bytes internal constant VALID_PUBKEY_48 =
         hex"0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef";
+    bytes32 internal constant VALIDATOR_PUBKEY_LOOKUP_MAPPING_BASE_SLOT =
+        bytes32(uint256(keccak256("attestationVerifier.state.validatorPubkeyLookup.mapping")) - 1);
+    bytes32 internal constant PRE_PECTRA_VALIDATOR_PUBKEY_LOOKUP_MAPPING_BASE_SLOT =
+        bytes32(uint256(keccak256("attestationVerifier.state.prePectraValidatorPubkeyLookup.mapping")) - 1);
 
     function setUp() public override {
         super.setUp();
@@ -3326,6 +3330,30 @@ contract RiverV1PectraTests is RiverV1TestBase {
             collector,
             500
         );
+
+        address[] memory _initDepositCommitteeAttesters = new address[](3);
+        _initDepositCommitteeAttesters[0] = depositCommitteeAttester1;
+        _initDepositCommitteeAttesters[1] = depositCommitteeAttester2;
+        _initDepositCommitteeAttesters[2] = depositCommitteeAttester3;
+        address[] memory _initConsolidationCommitteeAttesters = new address[](1);
+        _initConsolidationCommitteeAttesters[0] = makeAddr("consolidationCommitteeAttesterStub");
+        attestationVerifier = new AttestationVerifierV1();
+        LibImplementationUnbricker.unbrick(vm, address(attestationVerifier));
+        attestationVerifier.initAttestationVerifierV1(
+            address(river),
+            address(depositBuffer),
+            _initDepositCommitteeAttesters,
+            2,
+            bytes4(0),
+            _initConsolidationCommitteeAttesters,
+            1
+        );
+        vm.store(
+            address(river),
+            bytes32(uint256(keccak256("river.state.attestationVerifierAddress")) - 1),
+            bytes32(uint256(uint160(address(attestationVerifier))))
+        );
+
         withdraw.initializeWithdrawV1(address(river));
         mockWithdrawal = new MockELWithdrawalForRiver();
         mockConsolidation = new MockELConsolidationForRiver();
@@ -3335,8 +3363,23 @@ contract RiverV1PectraTests is RiverV1TestBase {
             address(operatorsRegistry),
             address(attestationVerifier)
         );
+        _seedValidatorPubkey(VALID_PUBKEY_48);
         vm.prank(admin);
         river.setKeeper(keeper);
+    }
+
+    function _seedValidatorPubkey(bytes memory pubkey) internal {
+        bytes32 slot = keccak256(abi.encode(VALIDATOR_PUBKEY_LOOKUP_MAPPING_BASE_SLOT, pubkey));
+        vm.store(address(attestationVerifier), slot, bytes32(uint256(1)));
+    }
+
+    function _seedPrePectraPubkey(bytes memory pubkey) internal {
+        bytes32 slot = keccak256(abi.encode(PRE_PECTRA_VALIDATOR_PUBKEY_LOOKUP_MAPPING_BASE_SLOT, pubkey));
+        vm.store(address(attestationVerifier), slot, bytes32(uint256(1)));
+    }
+
+    function _consolidationPubkey(uint256 seed) internal pure returns (bytes memory) {
+        return abi.encodePacked(sha256(abi.encode("river-consolidation", seed)), bytes16(0));
     }
 
     function testRiverConsolidateAsKeeperEmitsEventAndForwards() public {
@@ -3403,6 +3446,25 @@ contract RiverV1PectraTests is RiverV1TestBase {
 
         assertEq(address(mockConsolidation).balance, actualFee, "only actual fee paid");
         assertEq(keeper.balance, maxFee - actualFee, "excess refunded to keeper");
+    }
+
+    function testRiverConsolidateAllowsPrePectraSourceAndValidatorTarget() public {
+        bytes memory sourcePubkey = _consolidationPubkey(50);
+        _seedPrePectraPubkey(sourcePubkey);
+
+        bytes[] memory srcPubkeys = new bytes[](1);
+        srcPubkeys[0] = sourcePubkey;
+        IWithdrawV1.ConsolidationRequest[] memory requests = new IWithdrawV1.ConsolidationRequest[](1);
+        requests[0] = IWithdrawV1.ConsolidationRequest({srcPubkeys: srcPubkeys, targetPubkey: VALID_PUBKEY_48});
+
+        uint256 fee = 1 gwei;
+        vm.deal(keeper, fee);
+
+        vm.expectCall(address(mockConsolidation), fee, bytes.concat(sourcePubkey, VALID_PUBKEY_48));
+        vm.prank(keeper);
+        river.consolidate{value: fee}(requests, fee);
+
+        assertEq(address(mockConsolidation).balance, fee);
     }
 
     function testRiverConsolidateFeeTooHighReverts() public {

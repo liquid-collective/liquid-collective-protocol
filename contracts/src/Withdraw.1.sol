@@ -43,6 +43,7 @@ contract WithdrawV1 is IWithdrawV1, Initializable, ReentrancyGuard, IProtocolVer
         PectraWithdrawalContractAddress.set(_pectraWithdrawalContractAddress);
         PectraConsolidationContractAddress.set(_pectraConsolidationContractAddress);
         OperatorsRegistryAddress.set(_operatorsRegistry);
+        AttestationVerifierAddress.set(_attestationVerifier);
     }
 
     /// @inheritdoc IWithdrawV1
@@ -135,7 +136,17 @@ contract WithdrawV1 is IWithdrawV1, Initializable, ReentrancyGuard, IProtocolVer
 
             for (uint256 j = 0; j < requests[i].srcPubkeys.length; j++) {
                 _validatePubkeyLength(requests[i].srcPubkeys[j]);
+                if (
+                    !attestationVerifier.isPubkeyFunded(requests[i].srcPubkeys[j])
+                        && !attestationVerifier.isPrePectraValidatorPubkeyFunded(requests[i].srcPubkeys[j])
+                ) {
+                    revert SourcePubkeyNotFunded(requests[i].srcPubkeys[j]);
+                }
+            }
+        }
 
+        for (uint256 i = 0; i < requests.length; i++) {
+            for (uint256 j = 0; j < requests[i].srcPubkeys.length; j++) {
                 bytes memory callData = bytes.concat(requests[i].srcPubkeys[j], requests[i].targetPubkey);
                 (bool writeOK,) = consolidationContract.call{value: fee}(callData);
                 if (!writeOK) {

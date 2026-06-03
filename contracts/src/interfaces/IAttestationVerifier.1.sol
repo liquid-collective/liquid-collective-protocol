@@ -450,4 +450,9 @@ interface IAttestationVerifierV1 {
     /// @param pubkey The 48-byte BLS pubkey
     /// @return True if the pubkey is currently in the lookup
     function isPubkeyFunded(bytes calldata pubkey) external view returns (bool);
+
+    /// @notice Check whether a pubkey has been migrated from the pre-Pectra validator set.
+    /// @param pubkey The 48-byte BLS pubkey
+    /// @return True if the pubkey is currently in the pre-Pectra lookup
+    function isPrePectraValidatorPubkeyFunded(bytes calldata pubkey) external view returns (bool);
 }

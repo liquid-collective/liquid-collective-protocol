@@ -456,6 +456,11 @@ contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1 {
     }
 
     /// @inheritdoc IAttestationVerifierV1
+    function isPrePectraValidatorPubkeyFunded(bytes calldata pubkey) external view returns (bool) {
+        return PrePectraValidatorPubkeyLookup.isPubkeyFunded(pubkey);
+    }
+
+    /// @inheritdoc IAttestationVerifierV1
     function migratePrePectraValidatorPubkeys(uint256 operatorIndex, uint256 startIndex, uint256 stopIndex)
         external
         onlyRiverAdmin
