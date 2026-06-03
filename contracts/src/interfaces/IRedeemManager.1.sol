@@ -3,6 +3,7 @@ pragma solidity 0.8.34;
 
 import "../state/redeemManager/RedeemQueue.2.sol";
 import "../state/redeemManager/WithdrawalStack.sol";
+import "../state/redeemManager/RateLockStack.sol";
 
 /// @title Redeem Manager Interface (v1)
 /// @author Alluvial Finance Inc.
@@ -24,6 +25,18 @@ interface IRedeemManagerV1 {
     /// @param ethAmount The amount of eth to distrubute to claimers
     /// @param id The id of the withdrawal event
     event ReportedWithdrawal(uint256 height, uint256 amount, uint256 ethAmount, uint32 id);
+
+    /// @notice Emitted when an inactive ETH rate-lock event is created
+    /// @param height The height of the rate-lock event in LsETH rate-lock space
+    /// @param amount The amount of the rate-lock event in LsETH
+    /// @param ethAmount The amount of inactive ETH backing the rate-lock event
+    /// @param id The id of the rate-lock event
+    event ReportedInactiveEth(uint256 height, uint256 amount, uint256 ethAmount, uint32 id);
+
+    /// @notice Emitted when the rate-lock demand is set
+    /// @param oldRateLockDemand The old rate-lock demand
+    /// @param newRateLockDemand The new rate-lock demand
+    event SetRateLockDemand(uint256 oldRateLockDemand, uint256 newRateLockDemand);
 
     /// @notice Emitted when a redeem request has been satisfied and filled (even partially) from a withdrawal event
     /// @param redeemRequestId The id of the redeem request
@@ -90,6 +103,10 @@ interface IRedeemManagerV1 {
     /// @param withdrawalEventId The provided associated withdrawal event id
     error DoesNotMatch(uint256 redeemRequestId, uint256 withdrawalEventId);
 
+    /// @notice Thrown when the redeem request is not covered by an inactive ETH rate-lock event during claim
+    /// @param redeemRequestId The redeem request id
+    error UnsatisfiedRateLock(uint256 redeemRequestId);
+
     /// @notice Thrown when the provided withdrawal event exceeds the redeem demand
     /// @param withdrawalAmount The amount of the withdrawal event
     /// @param redeemDemand The current redeem demand
@@ -148,6 +165,18 @@ interface IRedeemManagerV1 {
     /// @return The amount of LsETH waiting to be exited
     function getRedeemDemand() external view returns (uint256);
 
+    /// @notice Retrieve the global count of rate-lock events
+    function getRateLockEventCount() external view returns (uint256);
+
+    /// @notice Retrieve the details of a specific rate-lock event
+    /// @param _rateLockEventId The id of the rate-lock event
+    /// @return The rate-lock event details
+    function getRateLockEventDetails(uint32 _rateLockEventId) external view returns (RateLockStack.RateLockEvent memory);
+
+    /// @notice Retrieve the amount of LsETH waiting for inactive ETH rate-lock coverage
+    /// @return The amount of LsETH waiting for inactive ETH rate-lock coverage
+    function getRateLockDemand() external view returns (uint256);
+
     /// @notice Resolves the provided list of redeem request ids
     /// @dev The result is an array of equal length with ids or error code
     /// @dev -1 means that the request is not satisfied yet
@@ -160,6 +189,19 @@ interface IRedeemManagerV1 {
         external
         view
         returns (int64[] memory withdrawalEventIds);
+
+    /// @notice Resolves the provided list of redeem request ids against rate-lock and withdrawal events
+    /// @dev The result arrays are of equal length with ids or error codes
+    /// @dev -1 means that the request is not satisfied yet
+    /// @dev -2 means that the request is out of bounds
+    /// @dev -3 means that the request has already been claimed
+    /// @param _redeemRequestIds The list of redeem requests to resolve
+    /// @return rateLockEventIds The list of rate-lock events matching every redeem request (or error codes)
+    /// @return withdrawalEventIds The list of withdrawal events matching every redeem request (or error codes)
+    function resolveRedeemRequestsV2(uint32[] calldata _redeemRequestIds)
+        external
+        view
+        returns (int64[] memory rateLockEventIds, int64[] memory withdrawalEventIds);
 
     /// @notice Creates a redeem request
     /// @param _lsETHAmount The amount of LsETH to redeem
@@ -205,6 +247,11 @@ interface IRedeemManagerV1 {
     /// @notice Reports a withdraw event from River
     /// @param _lsETHWithdrawable The amount of LsETH that can be redeemed due to this new withdraw event
     function reportWithdraw(uint256 _lsETHWithdrawable) external payable;
+
+    /// @notice Reports inactive ETH coverage from River
+    /// @param _lsETHAmount The amount of LsETH covered by inactive ETH
+    /// @param _ethAmount The amount of inactive ETH covering the LsETH amount
+    function reportInactiveEth(uint256 _lsETHAmount, uint256 _ethAmount) external;
 
     /// @notice Pulls exceeding buffer eth
     /// @param _max The maximum amount that should be pulled

@@ -56,10 +56,22 @@ abstract contract OracleManagerV1 is IOracleManagerV1 {
     /// @return The current total asset balance managed by River
     function _assetBalance() internal view virtual returns (uint256);
 
+    /// @notice Overridden handler called whenever the total share supply is requested for oracle accounting
+    /// @return The current total share supply managed by River
+    function _totalSupplyForOracle() internal view virtual returns (uint256);
+
+    /// @notice Reports inactive ETH coverage to the redeem manager
+    /// @param _lsETHAmount The amount of LsETH covered by inactive ETH
+    /// @param _ethAmount The amount of inactive ETH covering the LsETH amount
+    function _reportInactiveEthToRedeemManager(uint256 _lsETHAmount, uint256 _ethAmount) internal virtual;
+
     /// @notice Pulls funds from the Withdraw contract, and adds funds to deposit and redeem balances
     /// @param _skimmedEthAmount The new amount of skimmed eth to pull
     /// @param _exitedEthAmount The new amount of exited eth to pull
-    function _pullCLFunds(uint256 _skimmedEthAmount, uint256 _exitedEthAmount) internal virtual;
+    /// @param _partialExitEthAmount The new amount of partial exit eth to pull
+    function _pullCLFunds(uint256 _skimmedEthAmount, uint256 _exitedEthAmount, uint256 _partialExitEthAmount)
+        internal
+        virtual;
 
     /// @notice Pulls funds from the redeem manager exceeding eth buffer
     /// @param _max The maximum amount to pull
@@ -90,7 +102,7 @@ abstract contract OracleManagerV1 is IOracleManagerV1 {
         uint256 _totalAvailableCLETH,
         bool _depositToRedeemRebalancingAllowed,
         bool _slashingContainmentModeEnabled
-    ) internal virtual;
+    ) internal virtual returns (uint256 rebalancedEthAmount);
 
     /// @notice Skims the redeem balance and sends remaining funds to the deposit balance
     function _skimExcessBalanceToRedeem() internal virtual;
@@ -256,6 +268,11 @@ abstract contract OracleManagerV1 is IOracleManagerV1 {
         uint256 lastReportSkimmedBalance;
         uint256 exitedAmountIncrease;
         uint256 skimmedAmountIncrease;
+        uint256 lastReportPartialExitWithdrawnBalance;
+        uint256 lastReportStoppedEarningBalance;
+        uint256 partialExitWithdrawnAmountIncrease;
+        uint256 stoppedEarningAmountIncrease;
+        uint256 previousSharePrice;
         uint256 inFlightDepositedETH;
         uint256 totalDepositedActivatedETHIncrease;
         uint256 timeElapsedSinceLastReport;
@@ -329,16 +346,35 @@ abstract contract OracleManagerV1 is IOracleManagerV1 {
             // we compute the new skimmed amount by taking the delta between reports
             vars.skimmedAmountIncrease = _report.validatorsSkimmedBalance - vars.lastReportSkimmedBalance;
 
+            vars.lastReportPartialExitWithdrawnBalance = lastStoredReport.validatorsPartialExitWithdrawnBalance;
+            if (_report.validatorsPartialExitWithdrawnBalance < vars.lastReportPartialExitWithdrawnBalance) {
+                revert InvalidDecreasingValidatorsPartialExitWithdrawnBalance(
+                    vars.lastReportPartialExitWithdrawnBalance, _report.validatorsPartialExitWithdrawnBalance
+                );
+            }
+            vars.partialExitWithdrawnAmountIncrease =
+                _report.validatorsPartialExitWithdrawnBalance - vars.lastReportPartialExitWithdrawnBalance;
+
+            vars.lastReportStoppedEarningBalance = lastStoredReport.validatorsStoppedEarningBalance;
+            if (_report.validatorsStoppedEarningBalance < vars.lastReportStoppedEarningBalance) {
+                revert InvalidDecreasingValidatorsStoppedEarningBalance(
+                    vars.lastReportStoppedEarningBalance, _report.validatorsStoppedEarningBalance
+                );
+            }
+            vars.stoppedEarningAmountIncrease =
+                _report.validatorsStoppedEarningBalance - vars.lastReportStoppedEarningBalance;
+            vars.previousSharePrice = lastStoredReport.lastSharePrice;
+
             vars.timeElapsedSinceLastReport = _timeBetweenEpochs(cls, lastStoredReport.epoch, _report.epoch);
         }
 
         // we retrieve the current total underlying balance before any reporting data is applied to the system
         vars.preReportUnderlyingBalance = _assetBalance();
 
-        // if we have new exited / skimmed eth available, we pull funds from the consensus layer recipient
-        if (vars.exitedAmountIncrease + vars.skimmedAmountIncrease > 0) {
+        // if we have new exited / skimmed / partial-exit eth available, we pull funds from the consensus layer recipient
+        if (vars.exitedAmountIncrease + vars.skimmedAmountIncrease + vars.partialExitWithdrawnAmountIncrease > 0) {
             // this method pulls and updates ethToDeposit / ethToRedeem accordingly
-            _pullCLFunds(vars.skimmedAmountIncrease, vars.exitedAmountIncrease);
+            _pullCLFunds(vars.skimmedAmountIncrease, vars.exitedAmountIncrease, vars.partialExitWithdrawnAmountIncrease);
         }
 
         // checks if we have new deposited stake that activated in the last oracle reporting
@@ -361,6 +397,9 @@ abstract contract OracleManagerV1 is IOracleManagerV1 {
             storedReport.rebalanceDepositToRedeemMode = _report.rebalanceDepositToRedeemMode;
             storedReport.slashingContainmentMode = _report.slashingContainmentMode;
             storedReport.totalDepositedActivatedETH = _report.totalDepositedActivatedETH;
+            storedReport.validatorsPartialExitWithdrawnBalance = _report.validatorsPartialExitWithdrawnBalance;
+            storedReport.validatorsStoppedEarningBalance = _report.validatorsStoppedEarningBalance;
+            storedReport.lastSharePrice = vars.previousSharePrice;
             LastConsensusLayerReport.set(storedReport);
         }
 
@@ -461,19 +500,31 @@ abstract contract OracleManagerV1 is IOracleManagerV1 {
             _onEarnings(vars.trace.rewards);
         }
 
+        uint256 inactiveEthAmount = vars.partialExitWithdrawnAmountIncrease + vars.stoppedEarningAmountIncrease;
+        uint256 inactiveLsEthAmount = _sharesFromEthAtSharePrice(inactiveEthAmount, vars.previousSharePrice);
+        if (inactiveLsEthAmount > 0) {
+            _reportInactiveEthToRedeemManager(inactiveLsEthAmount, inactiveEthAmount);
+        }
+
         _reportCLETH(_report.activeCLETHPerOperator);
 
         uint256 base = _report.validatorsBalance + InFlightDeposit.get();
         uint256 totalAvailableCLETH =
             base > _report.validatorsExitingBalance ? base - _report.validatorsExitingBalance : 0;
 
-        _requestExitsBasedOnRedeemDemandAfterRebalancings(
+        uint256 rebalancedEthAmount = _requestExitsBasedOnRedeemDemandAfterRebalancings(
             _report.validatorsExitingBalance,
             _report.exitedETHPerOperator,
             totalAvailableCLETH,
             _report.rebalanceDepositToRedeemMode,
             _report.slashingContainmentMode
         );
+
+        uint256 rebalancingSharePrice = vars.previousSharePrice == 0 ? _currentSharePrice() : vars.previousSharePrice;
+        uint256 rebalancedLsEthAmount = _sharesFromEthAtSharePrice(rebalancedEthAmount, rebalancingSharePrice);
+        if (rebalancedLsEthAmount > 0) {
+            _reportInactiveEthToRedeemManager(rebalancedLsEthAmount, rebalancedEthAmount);
+        }
 
         // we use the updated balanceToRedeem value to report a withdraw event on the redeem manager
         _reportWithdrawToRedeemManager();
@@ -484,8 +535,31 @@ abstract contract OracleManagerV1 is IOracleManagerV1 {
         // we update the committable amount based on daily maximum allowed
         _commitBalanceToDeposit(vars.timeElapsedSinceLastReport, _report.slashingContainmentMode);
 
+        LastConsensusLayerReport.get().lastSharePrice = _currentSharePrice();
+
         // we emit a summary event with all the reporting details
         emit ProcessedConsensusLayerReport(_report, vars.trace);
+    }
+
+    /// @notice Calculates the current share price for oracle report storage
+    /// @return The current share price scaled by 1e18
+    function _currentSharePrice() internal view returns (uint256) {
+        uint256 totalSupply = _totalSupplyForOracle();
+        if (totalSupply == 0) {
+            return 0;
+        }
+        return (_assetBalance() * 1e18) / totalSupply;
+    }
+
+    /// @notice Converts ETH to shares at a fixed share price
+    /// @param _ethAmount The ETH amount to convert
+    /// @param _sharePrice The share price scaled by 1e18
+    /// @return The corresponding share amount
+    function _sharesFromEthAtSharePrice(uint256 _ethAmount, uint256 _sharePrice) internal pure returns (uint256) {
+        if (_ethAmount == 0 || _sharePrice == 0) {
+            return 0;
+        }
+        return (_ethAmount * 1e18) / _sharePrice;
     }
 
     /// @notice Retrieve the current epoch based on the current timestamp

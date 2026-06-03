@@ -29,6 +29,9 @@ import "../src/OperatorsRegistry.1.sol";
 import "../src/CoverageFund.1.sol";
 import "../src/ConsolidationCoverageFund.1.sol";
 import "../src/RedeemManager.1.sol";
+import "../src/state/redeemManager/RateLockStack.sol";
+import "../src/state/redeemManager/RedeemQueue.2.sol";
+import "../src/state/redeemManager/WithdrawalStack.sol";
 
 contract MockDepositDataBuffer is IDepositDataBuffer {
     mapping(bytes32 => DepositObject[]) internal _batches;
@@ -1258,6 +1261,8 @@ contract RiverV1Tests is RiverV1TestBase {
         // Fund the withdrawal event via the RedeemManager (called as river)
         vm.deal(address(river), amount);
         vm.prank(address(river));
+        redeemManager.reportInactiveEth(lsETHBalance, amount);
+        vm.prank(address(river));
         redeemManager.reportWithdraw{value: amount}(lsETHBalance);
 
         // Enable slashing containment mode and claim
@@ -1554,8 +1559,18 @@ contract RiverV1TestsReport_HEAVY_FUZZING is RiverV1TestBase {
         _salt = _next(_salt);
 
         uint256 satisfiedRedeemRequestCount = 0;
+        uint256 rateLockEventCount = redeemManager.getRateLockEventCount();
+        uint256 rateLockCoverage = 0;
+        if (rateLockEventCount > 0) {
+            RateLockStack.RateLockEvent memory lastRateLockEvent =
+                redeemManager.getRateLockEventDetails(uint32(rateLockEventCount - 1));
+            rateLockCoverage = lastRateLockEvent.height + lastRateLockEvent.amount;
+        }
         for (uint256 idx = 0; idx < resolutions.length; ++idx) {
-            if (resolutions[idx] >= 0) {
+            if (
+                resolutions[idx] >= 0
+                    && _redeemRequestCoveredByRateLock(unresolvedRedeemRequestIds[idx], rateLockCoverage)
+            ) {
                 ++satisfiedRedeemRequestCount;
             }
         }
@@ -1564,7 +1579,10 @@ contract RiverV1TestsReport_HEAVY_FUZZING is RiverV1TestBase {
         uint32[] memory withdrawalEventIds = new uint32[](satisfiedRedeemRequestCount);
         uint256 savedIdx = 0;
         for (uint256 idx = 0; idx < resolutions.length; ++idx) {
-            if (resolutions[idx] >= 0) {
+            if (
+                resolutions[idx] >= 0
+                    && _redeemRequestCoveredByRateLock(unresolvedRedeemRequestIds[idx], rateLockCoverage)
+            ) {
                 redeemRequestIds[savedIdx] = unresolvedRedeemRequestIds[idx];
                 withdrawalEventIds[savedIdx] = uint32(uint64(resolutions[idx]));
                 ++savedIdx;
@@ -1583,10 +1601,23 @@ contract RiverV1TestsReport_HEAVY_FUZZING is RiverV1TestBase {
             resolutions = river.resolveRedeemRequests(unresolvedRedeemRequestIds);
         }
         for (uint256 idx = 0; idx < resolutions.length; ++idx) {
-            assertTrue(resolutions[idx] < 0, "should not have satisfied requests left");
+            assertTrue(
+                resolutions[idx] < 0
+                    || !_redeemRequestCoveredByRateLock(unresolvedRedeemRequestIds[idx], rateLockCoverage),
+                "should not have claimable requests left"
+            );
         }
 
         return _salt;
+    }
+
+    function _redeemRequestCoveredByRateLock(uint32 redeemRequestId, uint256 rateLockCoverage)
+        internal
+        view
+        returns (bool)
+    {
+        RedeemQueueV2.RedeemRequest memory request = redeemManager.getRedeemRequestDetails(redeemRequestId);
+        return request.height < rateLockCoverage;
     }
 
     function _performPreAssertions(ReportingFuzzingVariables memory rfv) internal {
@@ -1832,6 +1863,7 @@ contract RiverV1TestsReport_HEAVY_FUZZING is RiverV1TestBase {
 
         clr.validatorsExitedBalance = 32 ether * (stoppedTotalCount - exitingTotalCount);
         clr.validatorsExitingBalance = 32 ether * exitingTotalCount;
+        clr.validatorsStoppedEarningBalance = 32 ether * stoppedTotalCount;
 
         vm.deal(address(withdraw), clr.validatorsSkimmedBalance + clr.validatorsExitedBalance);
 
@@ -1896,6 +1928,7 @@ contract RiverV1TestsReport_HEAVY_FUZZING is RiverV1TestBase {
 
         clr.validatorsExitedBalance = 32 ether * (stoppedTotalCount - exitingTotalCount);
         clr.validatorsExitingBalance = 32 ether * exitingTotalCount;
+        clr.validatorsStoppedEarningBalance = 32 ether * stoppedTotalCount;
 
         vm.deal(address(withdraw), clr.validatorsSkimmedBalance + clr.validatorsExitedBalance);
 
@@ -1963,6 +1996,7 @@ contract RiverV1TestsReport_HEAVY_FUZZING is RiverV1TestBase {
 
         clr.validatorsExitedBalance = 32 ether * (stoppedTotalCount - exitingTotalCount);
         clr.validatorsExitingBalance = 32 ether * exitingTotalCount;
+        clr.validatorsStoppedEarningBalance = 32 ether * stoppedTotalCount;
 
         vm.deal(address(withdraw), clr.validatorsSkimmedBalance + clr.validatorsExitedBalance);
 
@@ -2035,6 +2069,7 @@ contract RiverV1TestsReport_HEAVY_FUZZING is RiverV1TestBase {
 
         clr.validatorsExitedBalance = 32 ether * (stoppedTotalCount - exitingTotalCount);
         clr.validatorsExitingBalance = 32 ether * exitingTotalCount;
+        clr.validatorsStoppedEarningBalance = 32 ether * stoppedTotalCount;
 
         vm.deal(address(withdraw), clr.validatorsSkimmedBalance + clr.validatorsExitedBalance);
 
@@ -2100,6 +2135,7 @@ contract RiverV1TestsReport_HEAVY_FUZZING is RiverV1TestBase {
 
             clr.validatorsExitedBalance = 32 ether * (stoppedTotalCount - exitingTotalCount);
             clr.validatorsExitingBalance = 32 ether * exitingTotalCount;
+            clr.validatorsStoppedEarningBalance = 32 ether * stoppedTotalCount;
 
             vm.deal(address(withdraw), clr.validatorsSkimmedBalance + clr.validatorsExitedBalance);
 
@@ -2174,6 +2210,7 @@ contract RiverV1TestsReport_HEAVY_FUZZING is RiverV1TestBase {
 
         clr.validatorsExitedBalance = 0;
         clr.validatorsExitingBalance = 0;
+        clr.validatorsStoppedEarningBalance = 32 ether * stoppedTotalCount;
 
         vm.deal(address(withdraw), clr.validatorsSkimmedBalance + clr.validatorsExitedBalance);
 
@@ -2237,6 +2274,7 @@ contract RiverV1TestsReport_HEAVY_FUZZING is RiverV1TestBase {
 
         clr.validatorsExitedBalance = stoppedTotalCount * 32 ether;
         clr.validatorsExitingBalance = 0;
+        clr.validatorsStoppedEarningBalance = 32 ether * stoppedTotalCount;
 
         vm.deal(address(withdraw), clr.validatorsSkimmedBalance + clr.validatorsExitedBalance);
 
@@ -2314,6 +2352,138 @@ contract RiverV1TestsReport_HEAVY_FUZZING is RiverV1TestBase {
         // _reportCLETH reverts with InvalidEmptyArray() if this is empty;
         // all callers first invoke _depositValidators which adds operator at index 0.
         clr.activeCLETHPerOperator = new uint256[](1);
+    }
+
+    function _prepareFourValidatorRedeemScenario(uint256 redeemAmount) internal returns (uint256 operatorIndex) {
+        operatorIndex = _depositValidators(4, 1);
+
+        _allow(bob);
+        vm.deal(bob, redeemAmount);
+        vm.prank(bob);
+        river.deposit{value: redeemAmount}();
+        vm.prank(bob);
+        river.requestRedeem(redeemAmount, bob);
+
+        IOracleManagerV1.ConsensusLayerReport memory first = _generateEmptyReport();
+        first.epoch = epochsPerFrame;
+        first.validatorsCount = 4;
+        first.validatorsBalance = 128 ether;
+        first.totalDepositedActivatedETH = 128 ether;
+        first.activeCLETHPerOperator[0] = 128 ether;
+        vm.warp((first.epoch + epochsUntilFinal) * (secondsPerSlot * slotsPerEpoch));
+        vm.prank(address(oracle));
+        _fillReport(first);
+        river.setConsensusLayerData(first);
+    }
+
+    function testReportingPartialExitRoutesToRedeemManagerAndLocksRate() external {
+        _prepareFourValidatorRedeemScenario(10 ether);
+
+        IOracleManagerV1.ConsensusLayerReport memory clr = _generateEmptyReport();
+        clr.epoch = epochsPerFrame * 2;
+        clr.validatorsCount = 4;
+        clr.validatorsBalance = 118 ether;
+        clr.totalDepositedActivatedETH = 128 ether;
+        clr.validatorsPartialExitWithdrawnBalance = 10 ether;
+        clr.activeCLETHPerOperator[0] = 118 ether;
+        vm.deal(address(withdraw), 10 ether);
+        vm.warp((clr.epoch + epochsUntilFinal) * (secondsPerSlot * slotsPerEpoch));
+        vm.prank(address(oracle));
+        _fillReport(clr);
+        river.setConsensusLayerData(clr);
+
+        assertEq(redeemManager.getRateLockEventCount(), 1);
+        assertEq(redeemManager.getWithdrawalEventCount(), 1);
+    }
+
+    function testInactiveLockUsesPreviousReportSharePrice() external {
+        _prepareFourValidatorRedeemScenario(20 ether);
+
+        uint256 previousSharePrice = river.getLastConsensusLayerReport().lastSharePrice;
+        assertEq(previousSharePrice, 1e18);
+
+        IOracleManagerV1.ConsensusLayerReport memory second = _generateEmptyReport();
+        second.epoch = epochsPerFrame * 2;
+        second.validatorsCount = 4;
+        second.validatorsBalance = 128 ether;
+        second.totalDepositedActivatedETH = 128 ether;
+        second.validatorsStoppedEarningBalance = 10 ether;
+        second.activeCLETHPerOperator[0] = 128 ether;
+        vm.warp((second.epoch + epochsUntilFinal) * (secondsPerSlot * slotsPerEpoch));
+        vm.prank(address(oracle));
+        _fillReport(second);
+        river.setConsensusLayerData(second);
+
+        RateLockStack.RateLockEvent memory lockEvent = redeemManager.getRateLockEventDetails(0);
+        assertEq(lockEvent.amount, 10 ether);
+        assertEq(lockEvent.ethAmount, 10 ether);
+    }
+
+    function testRebalancingCreatesRateLockAndAllowsClaim() external {
+        _prepareFourValidatorRedeemScenario(10 ether);
+
+        assertEq(river.getBalanceToDeposit(), 10 ether);
+        assertEq(redeemManager.getRateLockEventCount(), 0);
+
+        IOracleManagerV1.ConsensusLayerReport memory second = _generateEmptyReport();
+        second.epoch = epochsPerFrame * 2;
+        second.validatorsCount = 4;
+        second.validatorsBalance = 128 ether;
+        second.totalDepositedActivatedETH = 128 ether;
+        second.activeCLETHPerOperator[0] = 128 ether;
+        second.rebalanceDepositToRedeemMode = true;
+
+        vm.warp((second.epoch + epochsUntilFinal) * (secondsPerSlot * slotsPerEpoch));
+        vm.prank(address(oracle));
+        _fillReport(second);
+        river.setConsensusLayerData(second);
+
+        assertEq(redeemManager.getRateLockEventCount(), 1);
+        assertEq(redeemManager.getWithdrawalEventCount(), 1);
+
+        RateLockStack.RateLockEvent memory lockEvent = redeemManager.getRateLockEventDetails(0);
+        assertEq(lockEvent.amount, 10 ether);
+        assertEq(lockEvent.ethAmount, 10 ether);
+
+        WithdrawalStack.WithdrawalEvent memory withdrawalEvent = redeemManager.getWithdrawalEventDetails(0);
+        assertEq(withdrawalEvent.amount, 10 ether);
+        assertEq(withdrawalEvent.withdrawnEth, 10 ether);
+
+        uint32[] memory redeemRequestIds = new uint32[](1);
+        redeemRequestIds[0] = 0;
+        uint32[] memory withdrawalEventIds = new uint32[](1);
+        withdrawalEventIds[0] = 0;
+
+        vm.prank(bob);
+        uint8[] memory statuses = river.claimRedeemRequests(redeemRequestIds, withdrawalEventIds);
+
+        assertEq(statuses.length, 1);
+        assertEq(statuses[0], 0);
+    }
+
+    function testRebalancingDoesNotDoubleLockWhenInactiveCoverageAlreadySatisfiedDemand() external {
+        _prepareFourValidatorRedeemScenario(10 ether);
+
+        IOracleManagerV1.ConsensusLayerReport memory second = _generateEmptyReport();
+        second.epoch = epochsPerFrame * 2;
+        second.validatorsCount = 4;
+        second.validatorsBalance = 128 ether;
+        second.totalDepositedActivatedETH = 128 ether;
+        second.validatorsStoppedEarningBalance = 10 ether;
+        second.activeCLETHPerOperator[0] = 128 ether;
+        second.rebalanceDepositToRedeemMode = true;
+
+        vm.warp((second.epoch + epochsUntilFinal) * (secondsPerSlot * slotsPerEpoch));
+        vm.prank(address(oracle));
+        _fillReport(second);
+        river.setConsensusLayerData(second);
+
+        assertEq(redeemManager.getRateLockEventCount(), 1);
+        assertEq(redeemManager.getWithdrawalEventCount(), 1);
+
+        RateLockStack.RateLockEvent memory lockEvent = redeemManager.getRateLockEventDetails(0);
+        assertEq(lockEvent.amount, 10 ether);
+        assertEq(lockEvent.ethAmount, 10 ether);
     }
 
     function testReportingError_Unauthorized(uint256 _salt) external {

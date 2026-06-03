@@ -105,6 +105,9 @@ contract RiverV1 is
         storedReport.rebalanceDepositToRedeemMode = lastReport.rebalanceDepositToRedeemMode;
         storedReport.slashingContainmentMode = lastReport.slashingContainmentMode;
         storedReport.totalDepositedActivatedETH = depositedValidatorCount * DEPOSIT_SIZE - InFlightDeposit.get();
+        storedReport.validatorsPartialExitWithdrawnBalance = lastReport.validatorsPartialExitWithdrawnBalance;
+        storedReport.validatorsStoppedEarningBalance = lastReport.validatorsStoppedEarningBalance;
+        storedReport.lastSharePrice = lastReport.lastSharePrice;
         LastConsensusLayerReport.set(storedReport);
     }
 
@@ -439,6 +442,20 @@ contract RiverV1 is
             + InFlightDeposit.get() + ConsolidationBuffer.get();
     }
 
+    /// @notice Returns the total share supply for oracle accounting
+    function _totalSupplyForOracle() internal view override returns (uint256) {
+        return _totalSupply();
+    }
+
+    /// @notice Reports inactive ETH coverage to the redeem manager
+    /// @param _lsETHAmount The amount of LsETH covered by inactive ETH
+    /// @param _ethAmount The amount of inactive ETH covering the LsETH amount
+    function _reportInactiveEthToRedeemManager(uint256 _lsETHAmount, uint256 _ethAmount) internal override {
+        if (_lsETHAmount > 0) {
+            IRedeemManagerV1(RedeemManagerAddress.get()).reportInactiveEth(_lsETHAmount, _ethAmount);
+        }
+    }
+
     /// @notice Internal utility to set the daily committable limits
     /// @param _dcl The new daily committable limits
     function _setDailyCommittableLimits(DailyCommittableLimits.DailyCommittableLimitsStruct memory _dcl) internal {
@@ -508,21 +525,26 @@ contract RiverV1 is
     /// @notice Pulls funds from the Withdraw contract, and adds funds to deposit and redeem balances
     /// @param _skimmedEthAmount The new amount of skimmed eth to pull
     /// @param _exitedEthAmount The new amount of exited eth to pull
-    function _pullCLFunds(uint256 _skimmedEthAmount, uint256 _exitedEthAmount) internal override {
+    /// @param _partialExitEthAmount The new amount of partial exit eth to pull
+    function _pullCLFunds(uint256 _skimmedEthAmount, uint256 _exitedEthAmount, uint256 _partialExitEthAmount)
+        internal
+        override
+    {
         uint256 currentBalance = address(this).balance;
-        uint256 totalAmountToPull = _skimmedEthAmount + _exitedEthAmount;
+        uint256 totalAmountToPull = _skimmedEthAmount + _exitedEthAmount + _partialExitEthAmount;
         IWithdrawV1(WithdrawalCredentials.getAddress()).pullEth(totalAmountToPull);
         uint256 collectedCLFunds = address(this).balance - currentBalance;
-        if (collectedCLFunds != _skimmedEthAmount + _exitedEthAmount) {
-            revert InvalidPulledClFundsAmount(_skimmedEthAmount + _exitedEthAmount, collectedCLFunds);
+        if (collectedCLFunds != totalAmountToPull) {
+            revert InvalidPulledClFundsAmount(totalAmountToPull, collectedCLFunds);
         }
         if (_skimmedEthAmount > 0) {
             _setBalanceToDeposit(BalanceToDeposit.get() + _skimmedEthAmount);
         }
-        if (_exitedEthAmount > 0) {
-            _setBalanceToRedeem(BalanceToRedeem.get() + _exitedEthAmount);
+        uint256 redeemEthAmount = _exitedEthAmount + _partialExitEthAmount;
+        if (redeemEthAmount > 0) {
+            _setBalanceToRedeem(BalanceToRedeem.get() + redeemEthAmount);
         }
-        emit PulledCLFunds(_skimmedEthAmount, _exitedEthAmount);
+        emit PulledCLFunds(_skimmedEthAmount, redeemEthAmount);
     }
 
     /// @notice Pulls funds from the redeem manager exceeding eth buffer
@@ -594,13 +616,13 @@ contract RiverV1 is
         uint256 _totalAvailableCLETH,
         bool _depositToRedeemRebalancingAllowed,
         bool _slashingContainmentModeEnabled
-    ) internal override {
+    ) internal override returns (uint256 rebalancedEthAmount) {
         IOperatorsRegistryV1(OperatorsRegistryAddress.get()).reportExitedETH(_exitedETH, TotalDepositedETH.get());
 
         // When slashing containment mode is active, skip exit demand logic to avoid forcing additional
         // validator exits during a slashing event. The reward-pull pipeline is unaffected by this check.
         if (_slashingContainmentModeEnabled) {
-            return;
+            return 0;
         }
 
         uint256 totalSupply = _totalSupply();
@@ -615,13 +637,13 @@ contract RiverV1 is
             if (availableBalanceToRedeem + _exitingBalance < redeemManagerDemandInEth) {
                 // if rebalancing is enabled and the redeem manager demand is higher than exiting eth, we add eth for deposit buffer to redeem buffer
                 if (_depositToRedeemRebalancingAllowed && availableBalanceToDeposit > 0) {
-                    uint256 rebalancingAmount = LibUint256.min(
+                    rebalancedEthAmount = LibUint256.min(
                         availableBalanceToDeposit, redeemManagerDemandInEth - _exitingBalance - availableBalanceToRedeem
                     );
-                    if (rebalancingAmount > 0) {
-                        availableBalanceToRedeem += rebalancingAmount;
+                    if (rebalancedEthAmount > 0) {
+                        availableBalanceToRedeem += rebalancedEthAmount;
                         _setBalanceToRedeem(availableBalanceToRedeem);
-                        _setBalanceToDeposit(availableBalanceToDeposit - rebalancingAmount);
+                        _setBalanceToDeposit(availableBalanceToDeposit - rebalancedEthAmount);
                     }
                 }
 

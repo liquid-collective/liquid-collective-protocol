@@ -9,6 +9,8 @@ import "./utils/LibImplementationUnbricker.sol";
 
 import "../src/state/shared/RiverAddress.sol";
 import "../src/state/redeemManager/RedeemDemand.sol";
+import "../src/state/redeemManager/RateLockStack.sol";
+import "../src/state/redeemManager/RateLockDemand.sol";
 import "../src/state/redeemManager/RedeemQueue.1.sol";
 import "../src/state/redeemManager/RedeemQueue.2.sol";
 
@@ -115,9 +117,14 @@ contract RedeeManagerV1TestBase is Test {
     address internal allowlistDenier;
     address public mockRiverAddress;
     bytes32 internal constant REDEEM_QUEUE_ID_SLOT = bytes32(uint256(keccak256("river.state.redeemQueue")) - 1);
+    bytes32 internal constant RATE_LOCK_DEMAND_SLOT = bytes32(uint256(keccak256("river.state.rateLockDemand")) - 1);
+    bytes32 internal constant RATE_LOCK_HEIGHT_FOR_REQUEST_SLOT =
+        bytes32(uint256(keccak256("river.state.rateLockHeightForRequest")) - 1);
 
     event RequestedRedeem(address indexed recipient, uint256 height, uint256 size, uint256 maxRedeemableEth, uint32 id);
     event ReportedWithdrawal(uint256 height, uint256 size, uint256 ethAmount, uint32 id);
+    event ReportedInactiveEth(uint256 height, uint256 amount, uint256 ethAmount, uint32 id);
+    event SetRateLockDemand(uint256 oldRateLockDemand, uint256 newRateLockDemand);
     event SatisfiedRedeemRequest(
         uint32 indexed redeemRequestId,
         uint32 indexed withdrawalEventId,
@@ -138,6 +145,13 @@ contract RedeeManagerV1TestBase is Test {
 
 contract RedeemManagerV1Tests is RedeeManagerV1TestBase {
     RedeemManagerV1 internal redeemManager;
+
+    function _getRateLockHeightForRequest(uint32 requestId) internal view returns (uint256) {
+        return
+            uint256(
+                vm.load(address(redeemManager), keccak256(abi.encode(requestId, RATE_LOCK_HEIGHT_FOR_REQUEST_SLOT)))
+            );
+    }
 
     function setUp() external {
         allowlistAdmin = makeAddr("allowlistAdmin");
@@ -169,6 +183,24 @@ contract RedeemManagerV1Tests is RedeeManagerV1TestBase {
         address user = uf._new(_salt);
         _allowlistUser(user);
         return user;
+    }
+
+    function _requestRedeem(address user, uint256 amount) internal returns (uint32) {
+        river.sudoDeal(user, amount);
+        vm.prank(user);
+        river.approve(address(redeemManager), amount);
+        vm.prank(user);
+        return redeemManager.requestRedeem(amount, user);
+    }
+
+    function _reportInactive(uint256 lsEthAmount, uint256 ethAmount) internal {
+        vm.prank(address(river));
+        redeemManager.reportInactiveEth(lsEthAmount, ethAmount);
+    }
+
+    function _reportWithdraw(uint256 lsEthAmount, uint256 ethAmount) internal {
+        vm.deal(address(this), ethAmount);
+        river.sudoReportWithdraw{value: ethAmount}(address(redeemManager), lsEthAmount);
     }
 
     function _denyUser(address user) internal {
@@ -228,6 +260,147 @@ contract RedeemManagerV1Tests is RedeeManagerV1TestBase {
 
         assertEq(river.balanceOf(user), 0);
         assertEq(redeemManager.getRedeemRequestCount(), 1);
+    }
+
+    function testRequestRedeemIncrementsRateLockDemand(uint256 _salt) external {
+        address user = _generateAllowlistedUser(_salt);
+        uint128 amount = uint128(bound(_salt, 1, type(uint128).max));
+
+        river.sudoDeal(user, amount);
+
+        vm.prank(user);
+        river.approve(address(redeemManager), amount);
+
+        vm.expectEmit(true, true, true, true);
+        emit SetRateLockDemand(0, amount);
+        vm.prank(user);
+        redeemManager.requestRedeem(amount, user);
+
+        assertEq(redeemManager.getRateLockDemand(), amount);
+        assertEq(redeemManager.getRateLockEventCount(), 0);
+    }
+
+    function testReportInactiveEthCreatesRateLockEvent(uint256 _salt) external {
+        address user = _generateAllowlistedUser(_salt);
+        uint128 amount = uint128(bound(_salt, 1 ether, 1000 ether));
+        uint256 lockedEth = uint256(amount) * 2;
+
+        river.sudoDeal(user, amount);
+
+        vm.prank(user);
+        river.approve(address(redeemManager), amount);
+
+        vm.prank(user);
+        redeemManager.requestRedeem(amount, user);
+
+        vm.expectEmit(true, true, true, true);
+        emit ReportedInactiveEth(0, amount, lockedEth, 0);
+        vm.prank(address(river));
+        redeemManager.reportInactiveEth(amount, lockedEth);
+
+        assertEq(redeemManager.getRateLockDemand(), 0);
+        assertEq(redeemManager.getRateLockEventCount(), 1);
+
+        RateLockStack.RateLockEvent memory event0 = redeemManager.getRateLockEventDetails(0);
+        assertEq(event0.height, 0);
+        assertEq(event0.amount, amount);
+        assertEq(event0.ethAmount, lockedEth);
+    }
+
+    function testReportInactiveEthCapsToRateLockDemand(uint256 _salt) external {
+        address user = _generateAllowlistedUser(_salt);
+        uint128 amount = uint128(bound(_salt, 1 ether, 1000 ether));
+        uint256 reportedLsEth = uint256(amount) * 2;
+        uint256 reportedEth = uint256(amount) * 6;
+
+        river.sudoDeal(user, amount);
+
+        vm.prank(user);
+        river.approve(address(redeemManager), amount);
+
+        vm.prank(user);
+        redeemManager.requestRedeem(amount, user);
+
+        vm.prank(address(river));
+        redeemManager.reportInactiveEth(reportedLsEth, reportedEth);
+
+        RateLockStack.RateLockEvent memory event0 = redeemManager.getRateLockEventDetails(0);
+        assertEq(event0.amount, amount);
+        assertEq(event0.ethAmount, reportedEth * amount / reportedLsEth);
+        assertEq(redeemManager.getRateLockDemand(), 0);
+    }
+
+    function testReportInactiveEthDoesNothingWithoutDemand(uint256 amount, uint256 ethAmount) external {
+        amount = bound(amount, 1, type(uint128).max);
+        ethAmount = bound(ethAmount, 1, type(uint128).max);
+
+        vm.prank(address(river));
+        redeemManager.reportInactiveEth(amount, ethAmount);
+
+        assertEq(redeemManager.getRateLockDemand(), 0);
+        assertEq(redeemManager.getRateLockEventCount(), 0);
+    }
+
+    function testReportInactiveEthZeroLsEthKeepsExistingDemand(uint256 _salt, uint256 ethAmount) external {
+        address user = _generateAllowlistedUser(_salt);
+        uint128 amount = uint128(bound(_salt, 1 ether, 1000 ether));
+        ethAmount = bound(ethAmount, 1, type(uint128).max);
+
+        river.sudoDeal(user, amount);
+
+        vm.prank(user);
+        river.approve(address(redeemManager), amount);
+
+        vm.prank(user);
+        redeemManager.requestRedeem(amount, user);
+
+        vm.prank(address(river));
+        redeemManager.reportInactiveEth(0, ethAmount);
+
+        assertEq(redeemManager.getRateLockDemand(), amount);
+        assertEq(redeemManager.getRateLockEventCount(), 0);
+    }
+
+    function testReportInactiveEthOnlyRiver(uint256 amount, uint256 ethAmount) external {
+        vm.expectRevert(abi.encodeWithSignature("Unauthorized(address)", address(this)));
+        redeemManager.reportInactiveEth(amount, ethAmount);
+    }
+
+    function testRequestRedeemUsesRateLockHeightSpaceWithLegacyQueue(uint256 _salt) external {
+        address legacyUser = _generateAllowlistedUser(_salt);
+        address newFlowUser = _generateAllowlistedUser(uint256(keccak256(abi.encode(_salt))));
+        uint128 legacyAmount = uint128(bound(_salt, 1 ether, 1000 ether));
+        uint128 newFlowAmount = uint128(bound(uint256(keccak256(abi.encode(_salt))), 1 ether, 1000 ether));
+        uint256 lockedEth = uint256(newFlowAmount) * 2;
+
+        river.sudoDeal(legacyUser, legacyAmount);
+        river.sudoDeal(newFlowUser, newFlowAmount);
+
+        vm.prank(legacyUser);
+        river.approve(address(redeemManager), legacyAmount);
+
+        vm.prank(legacyUser);
+        redeemManager.requestRedeem(legacyAmount, legacyUser);
+
+        vm.store(address(redeemManager), RATE_LOCK_DEMAND_SLOT, bytes32(0));
+
+        vm.prank(newFlowUser);
+        river.approve(address(redeemManager), newFlowAmount);
+
+        vm.prank(newFlowUser);
+        redeemManager.requestRedeem(newFlowAmount, newFlowUser);
+
+        assertEq(_getRateLockHeightForRequest(1), 0);
+
+        vm.expectEmit(true, true, true, true);
+        emit ReportedInactiveEth(0, newFlowAmount, lockedEth, 0);
+        vm.prank(address(river));
+        redeemManager.reportInactiveEth(newFlowAmount, lockedEth);
+
+        RateLockStack.RateLockEvent memory event0 = redeemManager.getRateLockEventDetails(0);
+        assertEq(event0.height, 0);
+        assertEq(event0.amount, newFlowAmount);
+        assertEq(redeemManager.getRateLockDemand(), 0);
     }
 
     function testRequestRedeemImplicitRecipient(uint256 _salt) external {
@@ -549,6 +722,7 @@ contract RedeemManagerV1Tests is RedeeManagerV1TestBase {
         vm.prank(user);
         redeemManager.requestRedeem(amount, user);
 
+        _reportInactive(amount, amount);
         vm.deal(address(this), amount);
         river.sudoReportWithdraw{value: amount}(address(redeemManager), amount);
 
@@ -617,6 +791,96 @@ contract RedeemManagerV1Tests is RedeeManagerV1TestBase {
         }
     }
 
+    function testClaimRequiresRateLockCoverage(uint256 _salt) external {
+        address user = _generateAllowlistedUser(_salt);
+        uint128 amount = uint128(bound(_salt, 1 ether, 1000 ether));
+        _requestRedeem(user, amount);
+        _reportWithdraw(amount, amount);
+
+        uint32[] memory requestIds = new uint32[](1);
+        uint32[] memory withdrawalIds = new uint32[](1);
+        requestIds[0] = 0;
+        withdrawalIds[0] = 0;
+
+        vm.expectRevert(abi.encodeWithSignature("UnsatisfiedRateLock(uint256)", 0));
+        redeemManager.claimRedeemRequests(requestIds, withdrawalIds);
+    }
+
+    function testClaimUsesLowerLockedRate(uint256 _salt) external {
+        address user = _generateAllowlistedUser(_salt);
+        uint128 amount = uint128(bound(_salt, 1 ether, 1000 ether));
+        _requestRedeem(user, amount);
+        _reportInactive(amount, amount);
+        _reportWithdraw(amount, uint256(amount) * 2);
+
+        uint32[] memory requestIds = new uint32[](1);
+        uint32[] memory withdrawalIds = new uint32[](1);
+        requestIds[0] = 0;
+        withdrawalIds[0] = 0;
+
+        redeemManager.claimRedeemRequests(requestIds, withdrawalIds);
+
+        assertEq(user.balance, amount);
+        assertEq(redeemManager.getBufferedExceedingEth(), amount);
+    }
+
+    function testClaimUsesLowerWithdrawalRateAfterSlashing(uint256 _salt) external {
+        address user = _generateAllowlistedUser(_salt);
+        uint128 amount = uint128(bound(_salt, 2 ether, 1000 ether));
+        uint256 withdrawnEth = uint256(amount) / 2;
+        _requestRedeem(user, amount);
+        _reportInactive(amount, amount);
+        _reportWithdraw(amount, withdrawnEth);
+
+        uint32[] memory requestIds = new uint32[](1);
+        uint32[] memory withdrawalIds = new uint32[](1);
+        requestIds[0] = 0;
+        withdrawalIds[0] = 0;
+
+        redeemManager.claimRedeemRequests(requestIds, withdrawalIds);
+
+        assertEq(user.balance, withdrawnEth);
+        assertEq(redeemManager.getBufferedExceedingEth(), 0);
+    }
+
+    function testClaimDoesNotNeedRateLockEventIdsInCalldata(uint256 _salt) external {
+        address user = _generateAllowlistedUser(_salt);
+        uint128 amount = uint128(bound(_salt, 1 ether, 1000 ether));
+        _requestRedeem(user, amount);
+        _reportInactive(amount, amount);
+        _reportWithdraw(amount, amount);
+
+        uint32[] memory requestIds = new uint32[](1);
+        uint32[] memory withdrawalIds = new uint32[](1);
+        requestIds[0] = 0;
+        withdrawalIds[0] = 0;
+
+        uint8[] memory statuses = redeemManager.claimRedeemRequests(requestIds, withdrawalIds);
+        assertEq(statuses[0], 0);
+        assertEq(user.balance, amount);
+    }
+
+    function testClaimSplitsAcrossRateLockAndWithdrawalBoundaries() external {
+        address user = _generateAllowlistedUser(123);
+        _requestRedeem(user, 100 ether);
+
+        _reportInactive(40 ether, 40 ether);
+        _reportInactive(60 ether, 120 ether);
+
+        _reportWithdraw(25 ether, 25 ether);
+        _reportWithdraw(75 ether, 75 ether);
+
+        uint32[] memory requestIds = new uint32[](1);
+        uint32[] memory withdrawalIds = new uint32[](1);
+        requestIds[0] = 0;
+        withdrawalIds[0] = 0;
+
+        redeemManager.claimRedeemRequests(requestIds, withdrawalIds, true, type(uint16).max);
+
+        assertEq(user.balance, 100 ether);
+        assertEq(redeemManager.getBufferedExceedingEth(), 0);
+    }
+
     function testClaimRedeemRequestWithImplicitSkipFlag(uint256 _salt) external {
         uint128 amount = uint128(bound(_salt, 1, type(uint128).max));
 
@@ -630,6 +894,7 @@ contract RedeemManagerV1Tests is RedeeManagerV1TestBase {
         vm.prank(user);
         redeemManager.requestRedeem(amount, user);
 
+        _reportInactive(amount, amount);
         vm.deal(address(this), amount);
         river.sudoReportWithdraw{value: amount}(address(redeemManager), amount);
 
@@ -710,6 +975,7 @@ contract RedeemManagerV1Tests is RedeeManagerV1TestBase {
         vm.prank(user);
         redeemManager.requestRedeem(amount, user);
 
+        _reportInactive(amount, amount);
         vm.deal(address(this), amount);
         river.sudoReportWithdraw{value: amount}(address(redeemManager), amount);
 
@@ -804,6 +1070,7 @@ contract RedeemManagerV1Tests is RedeeManagerV1TestBase {
         vm.prank(user);
         redeemManager.requestRedeem(amount, user);
 
+        _reportInactive(amount, amount);
         vm.deal(address(this), amount);
         river.sudoReportWithdraw{value: amount}(address(redeemManager), amount);
 
@@ -852,6 +1119,7 @@ contract RedeemManagerV1Tests is RedeeManagerV1TestBase {
         redeemManager.requestRedeem(amount, user1); // request 1
 
         // Report enough withdrawal to cover both requests
+        _reportInactive(uint256(amount) * 2, uint256(amount) * 2);
         vm.deal(address(this), uint256(amount) * 2);
         river.sudoReportWithdraw{value: uint256(amount) * 2}(address(redeemManager), uint256(amount) * 2);
 
@@ -920,6 +1188,7 @@ contract RedeemManagerV1Tests is RedeeManagerV1TestBase {
         vm.prank(user);
         redeemManager.requestRedeem(amount, user);
 
+        _reportInactive(amount, amount);
         vm.deal(address(this), amount / 2);
         river.sudoReportWithdraw{value: amount / 2}(address(redeemManager), amount / 2);
 
@@ -1004,6 +1273,7 @@ contract RedeemManagerV1Tests is RedeeManagerV1TestBase {
         vm.prank(user);
         redeemManager.requestRedeem(amount, user);
 
+        _reportInactive(amount, amount);
         vm.deal(address(this), amount);
         river.sudoReportWithdraw{value: amount / 10}(address(redeemManager), amount / 10);
         river.sudoReportWithdraw{value: amount / 10}(address(redeemManager), amount / 10);
@@ -1114,6 +1384,7 @@ contract RedeemManagerV1Tests is RedeeManagerV1TestBase {
         vm.prank(user);
         redeemManager.requestRedeem(amount, user);
 
+        _reportInactive(amount, amount);
         vm.deal(address(this), amount / 2);
         river.sudoReportWithdraw{value: amount / 2}(address(redeemManager), amount / 2);
 
@@ -1222,6 +1493,7 @@ contract RedeemManagerV1Tests is RedeeManagerV1TestBase {
         vm.prank(user);
         redeemManager.requestRedeem(amount, userB);
 
+        _reportInactive(amount * 2, amount * 2);
         vm.deal(address(this), amount * 2);
         river.sudoReportWithdraw{value: amount * 2}(address(redeemManager), amount * 2);
 
@@ -1317,6 +1589,7 @@ contract RedeemManagerV1Tests is RedeeManagerV1TestBase {
         vm.prank(user);
         redeemManager.requestRedeem(amount, user);
 
+        _reportInactive(amount, amount);
         vm.deal(address(this), amount);
         river.sudoReportWithdraw{value: amount}(address(redeemManager), amount);
 
@@ -1379,6 +1652,7 @@ contract RedeemManagerV1Tests is RedeeManagerV1TestBase {
         vm.prank(user);
         redeemManager.requestRedeem(amount, user);
 
+        _reportInactive(amount, amount);
         vm.deal(address(this), amount);
         river.sudoReportWithdraw{value: amount}(address(redeemManager), amount);
 
@@ -1435,6 +1709,7 @@ contract RedeemManagerV1Tests is RedeeManagerV1TestBase {
                 eventSize = totalAmount - filled;
             }
             filled += eventSize;
+            _reportInactive(eventSize, eventSize);
             vm.deal(address(this), eventSize * 2);
             river.sudoReportWithdraw{value: eventSize * 2}(address(redeemManager), eventSize);
         }
@@ -1512,6 +1787,10 @@ contract RedeemManagerV1Tests is RedeeManagerV1TestBase {
             assertEq(redeemRequest.maxRedeemableEth, applyRate(30e18, rates[idx]));
         }
 
+        for (uint256 idx = 0; idx < rates.length; ++idx) {
+            _reportInactive(30e18, applyRate(30e18, rates[idx]));
+        }
+
         uint256[] memory redeemRates = new uint256[](3);
         redeemRates[0] = 1_000_000_000_000_000_000;
         redeemRates[1] = 1_100_000_000_000_000_000;
@@ -1572,6 +1851,77 @@ contract RedeemManagerV1Tests is RedeeManagerV1TestBase {
         assertTrue(withdrawalEventIds[0] == -2);
     }
 
+    function testResolveRedeemRequestsV2RequiresBothStacks(uint256 _salt) external {
+        address user = _generateAllowlistedUser(_salt);
+        uint128 amount = uint128(bound(_salt, 1 ether, 1000 ether));
+
+        river.sudoDeal(user, amount);
+        vm.prank(user);
+        river.approve(address(redeemManager), amount);
+        vm.prank(user);
+        redeemManager.requestRedeem(amount, user);
+
+        uint32[] memory ids = new uint32[](1);
+        ids[0] = 0;
+
+        (int64[] memory rateLockIds, int64[] memory withdrawalIds) = redeemManager.resolveRedeemRequestsV2(ids);
+        assertEq(rateLockIds[0], -1);
+        assertEq(withdrawalIds[0], -1);
+
+        vm.prank(address(river));
+        redeemManager.reportInactiveEth(amount, amount);
+
+        (rateLockIds, withdrawalIds) = redeemManager.resolveRedeemRequestsV2(ids);
+        assertEq(rateLockIds[0], 0);
+        assertEq(withdrawalIds[0], -1);
+
+        vm.deal(address(this), amount);
+        river.sudoReportWithdraw{value: amount}(address(redeemManager), amount);
+
+        (rateLockIds, withdrawalIds) = redeemManager.resolveRedeemRequestsV2(ids);
+        assertEq(rateLockIds[0], 0);
+        assertEq(withdrawalIds[0], 0);
+    }
+
+    function testResolveRedeemRequestsV2ResolvesMultipleRateLockEvents() external {
+        address user = _generateAllowlistedUser(123);
+        _requestRedeem(user, 100 ether);
+        _requestRedeem(user, 100 ether);
+        _requestRedeem(user, 100 ether);
+        _requestRedeem(user, 1 ether);
+
+        _reportInactive(100 ether, 100 ether);
+        _reportInactive(100 ether, 100 ether);
+        _reportInactive(100 ether, 100 ether);
+        _reportWithdraw(301 ether, 301 ether);
+
+        uint32[] memory ids = new uint32[](4);
+        ids[0] = 0;
+        ids[1] = 1;
+        ids[2] = 2;
+        ids[3] = 3;
+
+        (int64[] memory rateLockIds, int64[] memory withdrawalIds) = redeemManager.resolveRedeemRequestsV2(ids);
+
+        assertEq(rateLockIds[0], 0);
+        assertEq(rateLockIds[1], 1);
+        assertEq(rateLockIds[2], 2);
+        assertEq(rateLockIds[3], -1);
+        assertEq(withdrawalIds[0], 0);
+        assertEq(withdrawalIds[1], 0);
+        assertEq(withdrawalIds[2], 0);
+        assertEq(withdrawalIds[3], 0);
+    }
+
+    function testResolveRedeemRequestsV2OutOfBounds() external {
+        uint32[] memory ids = new uint32[](1);
+        ids[0] = 0;
+
+        (int64[] memory rateLockIds, int64[] memory withdrawalIds) = redeemManager.resolveRedeemRequestsV2(ids);
+        assertEq(rateLockIds[0], -2);
+        assertEq(withdrawalIds[0], -2);
+    }
+
     function testResolveUnsatisfied(uint256 _salt) external {
         uint128 amount = uint128(bound(_salt, 1, type(uint120).max));
         address user = _generateAllowlistedUser(_salt);
@@ -1621,6 +1971,7 @@ contract RedeemManagerV1Tests is RedeeManagerV1TestBase {
         vm.prank(user);
         redeemManager.requestRedeem(amount, user);
 
+        _reportInactive(amount, amount);
         vm.deal(address(this), amount);
         river.sudoReportWithdraw{value: amount}(address(redeemManager), amount);
 
@@ -1684,6 +2035,7 @@ contract RedeemManagerV1Tests is RedeeManagerV1TestBase {
         vm.prank(initiator);
         redeemManager.requestRedeem(amount, user);
 
+        _reportInactive(amount, amount);
         vm.deal(address(this), amount);
         river.sudoReportWithdraw{value: amount}(address(redeemManager), amount);
 
@@ -1747,6 +2099,7 @@ contract RedeemManagerV1Tests is RedeeManagerV1TestBase {
         vm.prank(user);
         redeemManager.requestRedeem(amount, user);
 
+        _reportInactive(amount, amount);
         vm.deal(address(this), amount);
         river.sudoReportWithdraw{value: amount}(address(redeemManager), amount);
 
@@ -1857,6 +2210,7 @@ contract RedeemManagerV1Tests is RedeeManagerV1TestBase {
             vm.prank(user2);
             redeemManager.requestRedeem(amount, user2);
 
+            _reportInactive(uint256(amount) * 2, uint256(amount) * 2);
             vm.deal(address(this), amount);
             river.sudoReportWithdraw{value: amount}(address(redeemManager), amount);
 
@@ -1911,6 +2265,7 @@ contract RedeemManagerV1Tests is RedeeManagerV1TestBase {
         vm.prank(initiator);
         redeemManager.requestRedeem(amount, initiator);
 
+        _reportInactive(amount, amount);
         vm.deal(address(this), amount);
         river.sudoReportWithdraw{value: amount}(address(redeemManager), amount);
 
@@ -1972,6 +2327,7 @@ contract RedeemManagerV1Tests is RedeeManagerV1TestBase {
         vm.prank(initiator);
         redeemManager.requestRedeem(amount, recipient);
 
+        _reportInactive(amount, amount);
         vm.deal(address(this), amount);
         river.sudoReportWithdraw{value: amount}(address(redeemManager), amount);
 
@@ -2051,6 +2407,7 @@ contract RedeemManagerV1Tests is RedeeManagerV1TestBase {
         vm.prank(user);
         redeemManager.requestRedeem(amount, user);
 
+        _reportInactive(amount, amount);
         vm.deal(address(this), amount);
         river.sudoReportWithdraw{value: amount}(address(redeemManager), amount);
 
@@ -2082,6 +2439,7 @@ contract RedeemManagerV1Tests is RedeeManagerV1TestBase {
         vm.prank(user);
         redeemManager.requestRedeem(amount, user);
 
+        _reportInactive(amount, amount);
         vm.deal(address(this), amount);
         river.sudoReportWithdraw{value: amount}(address(redeemManager), amount);
 
@@ -2132,6 +2490,7 @@ contract RedeemManagerV1Tests is RedeeManagerV1TestBase {
         redeemManager.requestRedeem(amount, address(attacker));
 
         // Fund the withdrawal
+        _reportInactive(amount, amount);
         vm.deal(address(this), amount);
         river.sudoReportWithdraw{value: amount}(address(redeemManager), amount);
 
