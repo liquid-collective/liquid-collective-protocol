@@ -1124,6 +1124,76 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
         dm.depositToConsensusLayerWithAttestation(bufferId, rootHash, sigs);
     }
 
+    /// @dev A top-up with a mis-sized pubkey must revert in validate()'s top-up loop with
+    ///      InvalidPubkeyLength. Mirrors the initial-deposit pubkey-length check, exercising
+    ///      the separate top-up validation path.
+    function testRevert_validate_topUp_invalidPubkeyLength() public {
+        IDepositDataBuffer.TopUp[] memory topUps = new IDepositDataBuffer.TopUp[](1);
+        topUps[0] = _makeTopUpDeposit(0, 710);
+        topUps[0].pubkey = new bytes(47); // off by one
+        (bytes32 bufferId, bytes32 rootHash, bytes[] memory sigs) = _prepareTopUps(topUps);
+        vm.prank(keeper);
+        vm.expectRevert(abi.encodeWithSelector(IAttestationVerifierV1.InvalidPubkeyLength.selector, 0, 47));
+        dm.depositToConsensusLayerWithAttestation(bufferId, rootHash, sigs);
+    }
+
+    /// @dev A top-up amount outside the [1 ether, 2048 ether] gwei-aligned range must revert in
+    ///      validate()'s top-up loop with InvalidDepositAmount. The amount bound is checked
+    ///      before the funded-membership check, so no pubkey seeding is required.
+    function testRevert_validate_topUp_invalidDepositAmount() public {
+        // Below minimum (0 wei).
+        IDepositDataBuffer.TopUp[] memory topUps = new IDepositDataBuffer.TopUp[](1);
+        topUps[0] = _makeTopUpDeposit(0, 711);
+        topUps[0].amount = 0;
+        (bytes32 bufferId, bytes32 rootHash, bytes[] memory sigs) = _prepareTopUps(topUps);
+        vm.prank(keeper);
+        vm.expectRevert(abi.encodeWithSelector(IAttestationVerifierV1.InvalidDepositAmount.selector, 0, 0));
+        dm.depositToConsensusLayerWithAttestation(bufferId, rootHash, sigs);
+
+        // Not gwei-aligned (32 ether + 1 wei).
+        topUps[0] = _makeTopUpDeposit(0, 712);
+        topUps[0].amount = 32 ether + 1;
+        (bufferId, rootHash, sigs) = _prepareTopUps(topUps);
+        vm.prank(keeper);
+        vm.expectRevert(abi.encodeWithSelector(IAttestationVerifierV1.InvalidDepositAmount.selector, 0, 32 ether + 1));
+        dm.depositToConsensusLayerWithAttestation(bufferId, rootHash, sigs);
+    }
+
+    // -----------------------------------------------------------------------
+    // LibFundingDeltas.build operator-index bound (reached via the deposit flow)
+    // -----------------------------------------------------------------------
+
+    /// @dev An initial deposit whose operatorIdx is >= the registered operator count must revert
+    ///      with LibFundingDeltas.InvalidOperatorIndex once aggregation runs in
+    ///      _updateFundedETHFromBuffer. Shrinks the harness operator count to force the bound.
+    function testRevert_build_invalidOperatorIndex_deposit() public {
+        dm.sudoSetOperatorCount(1); // only operator 0 is in range
+
+        IDepositDataBuffer.Deposit[] memory deposits = new IDepositDataBuffer.Deposit[](1);
+        deposits[0] = _makeDeposit(5, 720); // operatorIdx 5 is out of range
+        (bytes32 bufferId, bytes32 rootHash, bytes[] memory sigs) = _prepareDeposit(deposits);
+
+        vm.prank(keeper);
+        vm.expectRevert(abi.encodeWithSelector(LibFundingDeltas.InvalidOperatorIndex.selector, 5, 1));
+        dm.depositToConsensusLayerWithAttestation(bufferId, rootHash, sigs);
+    }
+
+    /// @dev A top-up whose operatorIdx is >= the registered operator count must revert with
+    ///      LibFundingDeltas.InvalidOperatorIndex via the top-up bucketing pass. Exercises the
+    ///      second (top-up) index-bound branch in LibFundingDeltas.build.
+    function testRevert_build_invalidOperatorIndex_topUp() public {
+        dm.sudoSetOperatorCount(1); // only operator 0 is in range
+
+        IDepositDataBuffer.TopUp[] memory topUps = new IDepositDataBuffer.TopUp[](1);
+        topUps[0] = _makeTopUpDeposit(5, 721); // operatorIdx 5 is out of range
+        _seedFundedPubkey(topUps[0].pubkey); // pass the funded-membership check first
+        (bytes32 bufferId, bytes32 rootHash, bytes[] memory sigs) = _prepareTopUps(topUps);
+
+        vm.prank(keeper);
+        vm.expectRevert(abi.encodeWithSelector(LibFundingDeltas.InvalidOperatorIndex.selector, 5, 1));
+        dm.depositToConsensusLayerWithAttestation(bufferId, rootHash, sigs);
+    }
+
     // -----------------------------------------------------------------------
     // Admin setters — happy paths + onlyRiverAdmin gate
     // -----------------------------------------------------------------------
