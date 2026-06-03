@@ -190,8 +190,8 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
         bytes32(uint256(keccak256("attestationVerifier.state.domainSeparator")) - 1);
     bytes32 internal constant VALIDATOR_DEPOSIT_DOMAIN_SLOT =
         bytes32(uint256(keccak256("attestationVerifier.state.depositDomain")) - 1);
-    bytes32 internal constant VALIDATOR_PUBKEY_LOOKUP_MAPPING_BASE_SLOT =
-        bytes32(uint256(keccak256("attestationVerifier.state.validatorPubkeyLookup.mapping")) - 1);
+    bytes32 internal constant PECTRA_VALIDATOR_PUBKEY_LOOKUP_MAPPING_BASE_SLOT =
+        bytes32(uint256(keccak256("attestationVerifier.state.pectraValidatorPubkeyLookup.mapping")) - 1);
 
     event FundedValidatorKeys(uint256 indexed operatorIndex, bytes[] publicKeys, bool deferred);
     event SetInFlightETH(uint256 oldInFlightETH, uint256 newInFlightETH);
@@ -220,10 +220,10 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
     /// @dev Mark a pubkey as initial-deposited directly via vm.store, bypassing the
     ///      `recordNewlyFundedPubkeys` path. Used by tests that need a seeded mapping but want
     ///      to stay focused on the BLS-skip / membership behaviour (rather than running a
-    ///      full prior batch). The stored value matches the ValidatorPubkeyLookup library's
+    ///      full prior batch). The stored value matches the PectraValidatorPubkeyLookup library's
     ///      boolean-membership scheme.
     function _seedFundedPubkey(bytes memory pubkey) internal {
-        bytes32 slot = keccak256(abi.encode(VALIDATOR_PUBKEY_LOOKUP_MAPPING_BASE_SLOT, pubkey));
+        bytes32 slot = keccak256(abi.encode(PECTRA_VALIDATOR_PUBKEY_LOOKUP_MAPPING_BASE_SLOT, pubkey));
         vm.store(address(validator), slot, bytes32(uint256(1)));
     }
 
@@ -292,7 +292,7 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
     }
 
     /// @dev Build a TopUp. BLS verification path skipped; pubkey must already be in
-    ///      `ValidatorPubkeyLookup`. No signature field — consumer hardcodes 96 zero bytes.
+    ///      `PectraValidatorPubkeyLookup`. No signature field — consumer hardcodes 96 zero bytes.
     function _makeTopUpDeposit(uint256 opIdx, uint256 seed)
         internal
         pure
@@ -1015,7 +1015,7 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
         );
     }
 
-    /// @dev Documented trade-off post-removal of operator-bind: `ValidatorPubkeyLookup`
+    /// @dev Documented trade-off post-removal of operator-bind: `PectraValidatorPubkeyLookup`
     ///      records membership only (no operator association), so a top-up whose
     ///      `operatorIdx` differs from the original initial-deposit operator is credited
     ///      to whoever is mentioned in the deposit data buffer.
@@ -1478,7 +1478,7 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
     }
 
     /// @dev The `recordNewlyFundedPubkeys` callback must contain only initial-deposit pubkeys.
-    ///      Including a top-up pubkey would pollute `ValidatorPubkeyLookup` with already-funded
+    ///      Including a top-up pubkey would pollute `PectraValidatorPubkeyLookup` with already-funded
     ///      keys (harmless but a state-purity regression).
     function testRecordNewlyFundedPubkeys_excludesTopUps() public {
         bytes memory topUpPk = _fakePubkey(910);

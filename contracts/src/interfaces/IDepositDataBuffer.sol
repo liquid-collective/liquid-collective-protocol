@@ -11,7 +11,7 @@ import "../libraries/BLS12_381.sol";
 interface IDepositDataBuffer {
     /// @notice An initial validator deposit. BLS signature is verified by the verifier and
     ///         passed to the official deposit contract; pubkey must NOT already be in
-    ///         `ValidatorPubkeyLookup`.
+    ///         `PectraValidatorPubkeyLookup`.
     /// @dev Withdrawal credentials are NOT stored per-entry. The canonical River WC is
     ///      passed into `validate()` at deposit time and used both for BLS signature
     ///      verification and for the official deposit contract call, removing any need
@@ -31,7 +31,7 @@ interface IDepositDataBuffer {
     }
 
     /// @notice A top-up to an already-funded validator. BLS verification is skipped; pubkey
-    ///         must already be in `ValidatorPubkeyLookup`.
+    ///         must already be in `PectraValidatorPubkeyLookup`.
     /// @dev No `signature` field: the beacon chain ignores BLS signatures on subsequent
     ///      deposits to an existing validator, so the consumer hardcodes 96 zero bytes
     ///      when forwarding the call to the official deposit contract.

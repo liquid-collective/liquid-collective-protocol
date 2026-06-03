@@ -156,7 +156,7 @@ interface IAttestationVerifierV1 {
     ///      reference a pubkey already in the initial-deposit lookup, and initial deposits
     ///      must not duplicate any already-recorded or in-batch pubkey. The buffer's
     ///      `operatorIdx` is NOT verified against any on-chain record (the lookup tracks
-    ///      membership only — see ValidatorPubkeyLookup natspec). A failure reverts here,
+    ///      membership only — see PectraValidatorPubkeyLookup natspec). A failure reverts here,
     ///      before River runs any `_depositValidator`.
     /// @dev `depositContract` is supplied by the caller (River) rather than read from the
     ///      verifier's own storage so we avoid an additional cold SLOAD per call. The same

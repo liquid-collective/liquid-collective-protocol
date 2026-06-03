@@ -44,8 +44,8 @@ interface IConsensusLayerDepositManagerV1 {
 
     /// @notice Emitted once per top-up entry as it is executed against the deposit contract.
     ///         Symmetric to `PubkeyFunded` but for top-ups (entries with all-zero `depositY`,
-    ///         whose pubkey must already be present in `ValidatorPubkeyLookup`).
-    /// @dev    `ValidatorPubkeyLookup` is membership-only — there is no on-chain binding between
+    ///         whose pubkey must already be present in `PectraValidatorPubkeyLookup`).
+    /// @dev    `PectraValidatorPubkeyLookup` is membership-only — there is no on-chain binding between
     ///         a pubkey and the operator that performed its initial deposit. The `operatorIdx`
     ///         on a top-up is whatever the deposit-committee-attested buffer specifies, and the
     ///         protocol trusts the committee to attest the correct operator.
@@ -97,7 +97,7 @@ interface IConsensusLayerDepositManagerV1 {
     /// @dev Initial deposits and top-ups are carried in separately-typed sub-arrays of
     ///      `IDepositDataBuffer.DepositObject` (`deposits[]` and `topUps[]`). Initial deposits
     ///      go through BLS verification; top-ups skip BLS and require their pubkey to already
-    ///      be in `ValidatorPubkeyLookup`.
+    ///      be in `PectraValidatorPubkeyLookup`.
     /// @param depositDataBufferId  Batch identifier in the DepositDataBuffer
     /// @param depositRootHash      Current deposit contract root hash co-signed by deposit-committee attesters
     /// @param signatures           EIP-712 signatures from deposit-committee attesters

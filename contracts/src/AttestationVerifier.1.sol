@@ -18,7 +18,7 @@ import "./state/attestationVerifier/DepositDataBufferAddress.sol";
 import "./state/attestationVerifier/DepositDomainValue.sol";
 import "./state/attestationVerifier/DomainSeparator.sol";
 import "./state/attestationVerifier/ProcessedDepositDataBufferIds.sol";
-import "./state/attestationVerifier/ValidatorPubkeyLookup.sol";
+import "./state/attestationVerifier/PectraValidatorPubkeyLookup.sol";
 import "./state/shared/RiverAddress.sol";
 
 /// @title AttestationVerifier (v1)
@@ -265,7 +265,7 @@ contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1 {
             bytes32 pkHash = keccak256(d.pubkey);
             pubkeyHashes[i] = pkHash;
 
-            if (ValidatorPubkeyLookup.isPubkeyFunded(d.pubkey)) {
+            if (PectraValidatorPubkeyLookup.isPubkeyFunded(d.pubkey)) {
                 revert PubkeyAlreadyFunded(d.pubkey);
             }
             for (uint256 j = 0; j < i; j++) {
@@ -287,7 +287,7 @@ contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1 {
             }
             totalAmount += t.amount;
 
-            if (!ValidatorPubkeyLookup.isPubkeyFunded(t.pubkey)) {
+            if (!PectraValidatorPubkeyLookup.isPubkeyFunded(t.pubkey)) {
                 revert TopUpPubkeyNotFunded(t.pubkey);
             }
         }
@@ -310,13 +310,13 @@ contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1 {
     function recordNewlyFundedPubkeys(bytes[] calldata pubkeys) external onlyRiver {
         uint256 len = pubkeys.length;
         for (uint256 i = 0; i < len; ++i) {
-            ValidatorPubkeyLookup.add(pubkeys[i]);
+            PectraValidatorPubkeyLookup.add(pubkeys[i]);
         }
     }
 
     /// @inheritdoc IAttestationVerifierV1
     function isPubkeyFunded(bytes calldata pubkey) external view returns (bool) {
-        return ValidatorPubkeyLookup.isPubkeyFunded(pubkey);
+        return PectraValidatorPubkeyLookup.isPubkeyFunded(pubkey);
     }
 
     /// @inheritdoc IAttestationVerifierV1
@@ -387,7 +387,7 @@ contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1 {
     /// @notice Verify the BLS signatures of all initial deposits against the canonical River
     ///         withdrawal credentials. Top-ups are handled by the caller and never reach this
     ///         function — they're cleared upstream in `validate()` via the membership check
-    ///         on `ValidatorPubkeyLookup`.
+    ///         on `PectraValidatorPubkeyLookup`.
     /// @param deposits The initial deposits.
     /// @param withdrawalCredentials The canonical River withdrawal credentials.
     function _verifyBLSSignatures(IDepositDataBuffer.Deposit[] memory deposits, bytes32 withdrawalCredentials)
