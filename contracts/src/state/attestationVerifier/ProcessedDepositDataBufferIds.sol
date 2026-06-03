@@ -5,7 +5,7 @@ import "../../libraries/LibUnstructuredStorage.sol";
 
 /// @title ProcessedDepositDataBufferIds
 /// @notice Set of deposit data buffer IDs already executed by `depositToConsensusLayerWithAttestation`,
-///         consulted by `validate()` to reject replays. Critical for top-ups, whose pubkey-in-lookup
+///         consulted by `validateDeposits()` to reject replays. Critical for top-ups, whose pubkey-in-lookup
 ///         precondition is unchanged after the first execution.
 library ProcessedDepositDataBufferIds {
     bytes32 internal constant PROCESSED_DEPOSIT_DATA_BUFFER_IDS_MAPPING_BASE_SLOT =

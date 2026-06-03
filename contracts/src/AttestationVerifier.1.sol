@@ -216,7 +216,7 @@ contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1 {
     // -----------------------------------------------------------------------
 
     /// @inheritdoc IAttestationVerifierV1
-    function validate(
+    function validateDeposits(
         bytes32 depositDataBufferId,
         bytes32 depositRootHash,
         bytes[] calldata signatures,
@@ -303,9 +303,9 @@ contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1 {
 
     /// @inheritdoc IAttestationVerifierV1
     /// @dev Assumes `pubkeys` is already deduplicated against the lookup and against itself —
-    ///      `validate()` enforces both invariants (initial-deposit branch at the top of
-    ///      `validate()`) and runs in the same transaction. Re-checking here would only fire
-    ///      on a `validate()` regression and would cost a cold SLOAD per pubkey for a
+    ///      `validateDeposits()` enforces both invariants (initial-deposit branch at the top of
+    ///      `validateDeposits()`) and runs in the same transaction. Re-checking here would only fire
+    ///      on a `validateDeposits()` regression and would cost a cold SLOAD per pubkey for a
     ///      condition that cannot occur in production.
     function recordNewlyFundedPubkeys(bytes[] calldata pubkeys) external onlyRiver {
         uint256 len = pubkeys.length;
@@ -386,7 +386,7 @@ contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1 {
 
     /// @notice Verify the BLS signatures of all initial deposits against the canonical River
     ///         withdrawal credentials. Top-ups are handled by the caller and never reach this
-    ///         function — they're cleared upstream in `validate()` via the membership check
+    ///         function — they're cleared upstream in `validateDeposits()` via the membership check
     ///         on `PectraValidatorPubkeyLookup`.
     /// @param deposits The initial deposits.
     /// @param withdrawalCredentials The canonical River withdrawal credentials.

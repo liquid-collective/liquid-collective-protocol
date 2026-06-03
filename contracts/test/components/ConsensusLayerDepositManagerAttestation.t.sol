@@ -594,7 +594,7 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
         dm.depositToConsensusLayerWithAttestation(bufferId, rootHash, sigs);
     }
 
-    // Regression test for the defense-in-depth bufferId check in validate().
+    // Regression test for the defense-in-depth bufferId check in validateDeposits().
     // A malicious or buggy DepositDataBuffer may store (id, deposits) where
     // id != keccak256(abi.encode(deposits)). The on-chain validator must catch this
     // and revert with BufferIdMismatch so the root attesters' signed commitment is
@@ -641,7 +641,7 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
     // verifyBLSDeposit is only callable via the internal self-staticcall trampoline in
     // _verifyBLSSignatures. Any external caller must hit the OnlySelfCall guard so future
     // additions of state or events to this function cannot become world-callable. The
-    // ZeroDepositDomain path is exercised via the proper validate() flow in
+    // ZeroDepositDomain path is exercised via the proper validateDeposits() flow in
     // testInitial_blsPathReached_revertsOnZeroDepositDomain below.
     function testRevert_verifyBLSDeposit_onlySelfCall() public {
         // Un-mock so the real function body and its guard run.
@@ -892,7 +892,7 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
     }
 
     /// @dev Same-batch initial + top-up for the SAME pubkey must revert. The top-up check
-    ///      runs during validate() before the deposit executes, so the mapping is empty at
+    ///      runs during validateDeposits() before the deposit executes, so the mapping is empty at
     ///      that moment and TopUpPubkeyNotFunded fires.
     function testSameBatch_initialAndTopUpSamePubkey_reverts() public {
         IDepositDataBuffer.Deposit[] memory deposits = new IDepositDataBuffer.Deposit[](1);
@@ -910,7 +910,7 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
     }
 
     /// @dev Initial deposit for a pubkey that's already in the lookup (e.g., re-deposit after
-    ///      a prior batch) must revert in `validate()` with PubkeyAlreadyFunded before any
+    ///      a prior batch) must revert in `validateDeposits()` with PubkeyAlreadyFunded before any
     ///      `IDepositContract.deposit{}()` call runs. Uses the test helper to seed the mapping
     ///      directly; submitting two identical batches through the real buffer would collide on
     ///      bufferId before the mapping check fires.
@@ -931,7 +931,7 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
     }
 
     /// @dev Same-batch duplicate-initial (two entries with the same pubkey, both flagged as
-    ///      initials via non-zero depositY) must revert in `validate()` with PubkeyAlreadyFunded
+    ///      initials via non-zero depositY) must revert in `validateDeposits()` with PubkeyAlreadyFunded
     ///      before any deposit is sent to the beacon contract. Catches the producer-bug class where
     ///      the dup is intra-batch and not yet recorded on-chain — the on-chain lookup is empty for
     ///      this pubkey at validate-time, so the inner per-batch scan is what fires.
@@ -961,7 +961,7 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
         validator.recordNewlyFundedPubkeys(pubkeys);
     }
 
-    /// @dev `validate()` must fail-fast on out-of-range or mis-aligned `amount` rather than
+    /// @dev `validateDeposits()` must fail-fast on out-of-range or mis-aligned `amount` rather than
     ///      deferring to the per-deposit check inside `_depositValidator`. Tests all three
     ///      branches: below minimum (1 ether), above maximum (2048 ether), and non-gwei-aligned.
     function testRevert_validate_invalidDepositAmount() public {
@@ -1115,10 +1115,10 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
     }
 
     // -----------------------------------------------------------------------
-    // validate() length / empty-batch reverts
+    // validateDeposits() length / empty-batch reverts
     // -----------------------------------------------------------------------
 
-    /// @dev A deposit with a mis-sized pubkey must revert in validate() before the BLS path.
+    /// @dev A deposit with a mis-sized pubkey must revert in validateDeposits() before the BLS path.
     function testRevert_validate_invalidPubkeyLength() public {
         IDepositDataBuffer.Deposit[] memory deposits = new IDepositDataBuffer.Deposit[](1);
         deposits[0] = _makeDeposit(0, 700);
@@ -1129,7 +1129,7 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
         dm.depositToConsensusLayerWithAttestation(bufferId, rootHash, sigs);
     }
 
-    /// @dev A deposit with a mis-sized signature must revert in validate() before the BLS path.
+    /// @dev A deposit with a mis-sized signature must revert in validateDeposits() before the BLS path.
     function testRevert_validate_invalidSignatureLength() public {
         IDepositDataBuffer.Deposit[] memory deposits = new IDepositDataBuffer.Deposit[](1);
         deposits[0] = _makeDeposit(0, 701);
@@ -1304,7 +1304,7 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
     // G-1: TooManySignatures bound
     // -----------------------------------------------------------------------
 
-    /// @dev `validate()` rejects a signature array longer than MAX_SIGNATURES (20) before any
+    /// @dev `validateDeposits()` rejects a signature array longer than MAX_SIGNATURES (20) before any
     ///      recovery work runs — bounds the O(n^2) dedup loop. Sig content doesn't matter
     ///      since the length check fires first.
     function testRevert_validate_tooManySignatures() public {

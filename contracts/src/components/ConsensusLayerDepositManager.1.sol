@@ -150,7 +150,7 @@ abstract contract ConsensusLayerDepositManagerV1 is IConsensusLayerDepositManage
         uint256 committedBalance = CommittedBalance.get();
         address depositContract = DepositContractAddress.get();
         IAttestationVerifierV1 verifier = IAttestationVerifierV1(AttestationVerifierAddress.get());
-        (IDepositDataBuffer.DepositObject memory batch, uint256 totalAmount) = verifier.validate(
+        (IDepositDataBuffer.DepositObject memory batch, uint256 totalAmount) = verifier.validateDeposits(
             depositDataBufferId, depositRootHash, signatures, depositContract, withdrawalCredentials, committedBalance
         );
 
@@ -212,7 +212,7 @@ abstract contract ConsensusLayerDepositManagerV1 is IConsensusLayerDepositManage
         bytes32 _withdrawalCredentials,
         address _depositContract
     ) internal {
-        // `_depositAmount` bounds are enforced upstream in `AttestationVerifier.validate()`
+        // `_depositAmount` bounds are enforced upstream in `AttestationVerifier.validateDeposits()`
         // (revert: InvalidDepositAmount). The attestation flow is the only caller.
         uint256 depositAmount = _depositAmount / 1 gwei;
 

@@ -74,7 +74,7 @@ interface IAttestationVerifierV1 {
 
     /// @notice A deposit's `amount` is outside the protocol-accepted range
     ///         [1 ether, 2048 ether] or is not gwei-aligned. Enforced here in
-    ///         `validate()` so producer bugs fail before the heavy BLS path runs;
+    ///         `validateDeposits()` so producer bugs fail before the heavy BLS path runs;
     ///         downstream `_depositValidator` trusts this check.
     /// @param index The deposit index in the batch
     /// @param amount The offending amount in wei
@@ -171,7 +171,7 @@ interface IAttestationVerifierV1 {
     /// @param committedBalance     Total amount summed over deposits must not exceed this
     /// @return batch               Validated deposit batch (caller executes)
     /// @return totalAmount         Sum of deposit + top-up amounts in the batch
-    function validate(
+    function validateDeposits(
         bytes32 depositDataBufferId,
         bytes32 depositRootHash,
         bytes[] calldata signatures,
@@ -186,16 +186,16 @@ interface IAttestationVerifierV1 {
 
     /// @notice Record one or more pubkeys as initial-deposited. Only callable by River.
     /// @dev Called by River after the deposit-execution loop. The recorded set is consulted
-    ///      by the top-up branch of `validate()` to require that top-ups reference a pubkey
+    ///      by the top-up branch of `validateDeposits()` to require that top-ups reference a pubkey
     ///      River has previously initial-deposited. Assumes `pubkeys` is already deduplicated
-    ///      against the lookup and against itself; `validate()` enforces both invariants
+    ///      against the lookup and against itself; `validateDeposits()` enforces both invariants
     ///      earlier in the same transaction. Per-pubkey logging is emitted on the caller
     ///      (ConsensusLayerDepositManager's `PubkeyFunded` event), not here.
     /// @param pubkeys The 48-byte BLS pubkeys to record
     function recordNewlyFundedPubkeys(bytes[] calldata pubkeys) external;
 
     /// @notice Mark a `depositDataBufferId` as processed. Only callable by River.
-    /// @dev Called by River after the deposit-execution loop; consulted by `validate()` to reject replays.
+    /// @dev Called by River after the deposit-execution loop; consulted by `validateDeposits()` to reject replays.
     /// @param depositDataBufferId The batch identifier to mark processed.
     function markDepositDataBufferIdProcessed(bytes32 depositDataBufferId) external;
 
