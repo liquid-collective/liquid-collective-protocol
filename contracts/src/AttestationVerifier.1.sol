@@ -269,8 +269,9 @@ contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1 {
             }
         }
 
-        // 5. Validate top-ups: field length on pubkey, amount bounds, pubkey-must-be-funded.
-        //    Per-batch duplicate top-up pubkeys are allowed.
+        // 5. Validate top-ups: field length on pubkey, amount bounds, pubkey-must-be-funded,
+        //    and no in-batch duplicates (mirrors the dedupe in the initial-deposit loop).
+        bytes32[] memory topUpHashes = new bytes32[](topUpCount);
         for (uint256 i = 0; i < topUpCount; i++) {
             IDepositDataBuffer.TopUp memory t = batch.topUps[i];
             if (t.pubkey.length != DEPOSIT_PUBKEY_LENGTH) {
@@ -284,6 +285,14 @@ contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1 {
             if (!ValidatorPubkeyLookup.isPubkeyFunded(t.pubkey)) {
                 revert TopUpPubkeyNotFunded(t.pubkey);
             }
+
+            bytes32 pkHash = keccak256(t.pubkey);
+            for (uint256 j = 0; j < i; j++) {
+                if (topUpHashes[j] == pkHash) {
+                    revert DuplicateTopUpPubkey(t.pubkey);
+                }
+            }
+            topUpHashes[i] = pkHash;
         }
         if (totalAmount > committedBalance) revert NotEnoughFunds();
 

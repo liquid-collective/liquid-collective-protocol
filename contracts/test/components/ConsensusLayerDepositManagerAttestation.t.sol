@@ -963,26 +963,24 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
         dm.depositToConsensusLayerWithAttestation(bufferId, rootHash, sigs);
     }
 
-    /// @dev Two top-ups for the same pubkey within one batch are Pectra-legal under 0x02
-    ///      compounding withdrawal credentials. Both entries must succeed because the
-    ///      in-batch duplicate scan only applies to initial deposits — top-ups are exempt.
-    function testTopUp_sameBatch_twoTopUpsForSamePubkey_succeeds() public {
+    /// @dev Two top-ups for the same pubkey within one batch are rejected by the in-batch
+    ///      duplicate scan in `AttestationVerifier.validate()` — mirrors the dedupe applied
+    ///      to initial deposits. Off-chain producers must coalesce multiple top-ups for the
+    ///      same pubkey into a single buffered entry before submitting.
+    function testRevert_topUp_sameBatch_twoTopUpsForSamePubkey() public {
         IDepositDataBuffer.TopUp[] memory topUps = new IDepositDataBuffer.TopUp[](2);
         topUps[0] = _makeTopUpDeposit(0, 300);
         topUps[1] = _makeTopUpDeposit(0, 300); // same seed → same pubkey, both top-ups
 
-        // Seed the pubkey so the membership check passes for both entries.
+        // Seed the pubkey so the membership check passes for the first entry; the dedupe
+        // scan must still trip on the second entry.
         _seedFundedPubkey(topUps[0].pubkey);
 
         (bytes32 bufferId, bytes32 rootHash, bytes[] memory sigs) = _prepareTopUps(topUps);
 
-        uint256 depositCountBefore = depositContract.deposit_count();
         vm.prank(keeper);
+        vm.expectRevert(abi.encodeWithSelector(IAttestationVerifierV1.DuplicateTopUpPubkey.selector, topUps[1].pubkey));
         dm.depositToConsensusLayerWithAttestation(bufferId, rootHash, sigs);
-
-        assertEq(
-            depositContract.deposit_count(), depositCountBefore + 2, "both top-ups for the same pubkey should execute"
-        );
     }
 
     /// @dev Documented trade-off post-removal of operator-bind: `ValidatorPubkeyLookup`
