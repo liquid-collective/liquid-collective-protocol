@@ -924,14 +924,18 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
         vm.prank(admin);
         validator.migratePrePectraValidatorPubkeys(operatorIdx, 1, 3);
 
-        assertTrue(validator.isPubkeyFunded(pk1), "migrated key 1");
-        assertTrue(validator.isPubkeyFunded(pk2), "migrated key 2");
+        assertTrue(validator.isPrePectraValidatorPubkeyFunded(pk1), "migrated pre-Pectra key 1");
+        assertTrue(validator.isPrePectraValidatorPubkeyFunded(pk2), "migrated pre-Pectra key 2");
+        assertFalse(validator.isPubkeyFunded(pk1), "migrated key 1 not runtime-funded");
+        assertFalse(validator.isPubkeyFunded(pk2), "migrated key 2 not runtime-funded");
 
         vm.prank(admin);
         validator.migratePrePectraValidatorPubkeys(operatorIdx, 1, 3);
 
-        assertTrue(validator.isPubkeyFunded(pk1), "remigrated key 1");
-        assertTrue(validator.isPubkeyFunded(pk2), "remigrated key 2");
+        assertTrue(validator.isPrePectraValidatorPubkeyFunded(pk1), "remigrated pre-Pectra key 1");
+        assertTrue(validator.isPrePectraValidatorPubkeyFunded(pk2), "remigrated pre-Pectra key 2");
+        assertFalse(validator.isPubkeyFunded(pk1), "remigrated key 1 not runtime-funded");
+        assertFalse(validator.isPubkeyFunded(pk2), "remigrated key 2 not runtime-funded");
     }
 
     function testMigratePrePectraValidatorPubkeys_revertsWhenUnauthorized() public {
@@ -983,7 +987,8 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
 
         vm.prank(admin);
         validator.migratePrePectraValidatorPubkeys(operatorIdx, 0, 1);
-        assertTrue(validator.isPubkeyFunded(pubkey), "pre-Pectra lookup migration");
+        assertTrue(validator.isPrePectraValidatorPubkeyFunded(pubkey), "pre-Pectra lookup migration");
+        assertFalse(validator.isPubkeyFunded(pubkey), "runtime lookup still empty");
 
         IDepositDataBuffer.TopUp[] memory topUps = new IDepositDataBuffer.TopUp[](1);
         topUps[0] = _makeTopUpDeposit(operatorIdx, seed);

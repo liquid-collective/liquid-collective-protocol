@@ -66,6 +66,8 @@ contract ConsolidationAttestationTest is Test {
     // Storage slots (must match contracts/src/state/attestationVerifier/*)
     bytes32 internal constant CONSOLIDATION_DOMAIN_SEPARATOR_SLOT =
         bytes32(uint256(keccak256("attestationVerifier.state.consolidationDomainSeparator")) - 1);
+    bytes32 internal constant VALIDATOR_PUBKEY_LOOKUP_MAPPING_BASE_SLOT =
+        bytes32(uint256(keccak256("attestationVerifier.state.validatorPubkeyLookup.mapping")) - 1);
 
     function setUp() public {
         attester1 = vm.addr(pk1);
@@ -163,6 +165,17 @@ contract ConsolidationAttestationTest is Test {
         return abi.encodePacked(r, s, v);
     }
 
+    function _seedFundedPubkey(bytes memory pubkey) internal {
+        bytes32 slot = keccak256(abi.encode(VALIDATOR_PUBKEY_LOOKUP_MAPPING_BASE_SLOT, pubkey));
+        vm.store(address(validator), slot, bytes32(uint256(1)));
+    }
+
+    function _seedFundedPubkeys(bytes[] memory pubkeys) internal {
+        for (uint256 i = 0; i < pubkeys.length; ++i) {
+            _seedFundedPubkey(pubkeys[i]);
+        }
+    }
+
     /// @dev Build a single-pair consolidation object with two valid signatures (attester1 + attester2).
     function _validConsolidation(address user, uint256 seed)
         internal
@@ -186,13 +199,21 @@ contract ConsolidationAttestationTest is Test {
         });
     }
 
+    function _validFundedConsolidation(address user, uint256 seed)
+        internal
+        returns (IAttestationVerifierV1.ConsolidationObject memory c)
+    {
+        c = _validConsolidation(user, seed);
+        _seedFundedPubkeys(c.targetPubkeys);
+    }
+
     // -----------------------------------------------------------------------
     // Happy-path tests
     // -----------------------------------------------------------------------
 
     function testValidateConsolidation_singlePair_quorumMet() public {
         address user = address(0xBEEF);
-        IAttestationVerifierV1.ConsolidationObject memory c = _validConsolidation(user, 1);
+        IAttestationVerifierV1.ConsolidationObject memory c = _validFundedConsolidation(user, 1);
         assertTrue(validator.validateConsolidation(c));
     }
 
@@ -204,6 +225,7 @@ contract ConsolidationAttestationTest is Test {
             sources[i] = _pubkey(100 + i);
             targets[i] = _pubkey(200 + i);
         }
+        _seedFundedPubkeys(targets);
         uint256 totalAmount = 96 ether;
         bytes32 id = _consolidationDigest(user, sources, targets, totalAmount);
 
@@ -221,7 +243,7 @@ contract ConsolidationAttestationTest is Test {
     function testValidateConsolidation_exactlyQuorumSignatures() public {
         // Quorum is 2; supplying exactly 2 valid signatures should pass.
         address user = address(0x11);
-        IAttestationVerifierV1.ConsolidationObject memory c = _validConsolidation(user, 7);
+        IAttestationVerifierV1.ConsolidationObject memory c = _validFundedConsolidation(user, 7);
         assertTrue(validator.validateConsolidation(c));
     }
 
@@ -436,6 +458,16 @@ contract ConsolidationAttestationTest is Test {
         validator.validateConsolidation(c);
     }
 
+    function testRevert_targetPubkeyNotFunded() public {
+        address user = address(0xBEEF);
+        IAttestationVerifierV1.ConsolidationObject memory c = _validConsolidation(user, 1234);
+
+        vm.expectRevert(
+            abi.encodeWithSelector(IAttestationVerifierV1.TargetPubkeyNotFunded.selector, c.targetPubkeys[0])
+        );
+        validator.validateConsolidation(c);
+    }
+
     // -----------------------------------------------------------------------
     // Signature / bufferId derivation tests
     // -----------------------------------------------------------------------
@@ -457,6 +489,7 @@ contract ConsolidationAttestationTest is Test {
         sources[0] = _pubkey(1);
         bytes[] memory targets = new bytes[](1);
         targets[0] = _pubkey(2);
+        _seedFundedPubkeys(targets);
         uint256 totalAmount = 32 ether;
         bytes32 expectedDigest = _consolidationDigest(user, sources, targets, totalAmount);
 
@@ -496,7 +529,7 @@ contract ConsolidationAttestationTest is Test {
         // A successful validateConsolidation marks the request as processed. A second
         // call with the same payload (even with the same valid signatures) must revert.
         address user = address(0xBEEF);
-        IAttestationVerifierV1.ConsolidationObject memory c = _validConsolidation(user, 1);
+        IAttestationVerifierV1.ConsolidationObject memory c = _validFundedConsolidation(user, 1);
         assertTrue(validator.validateConsolidation(c));
 
         // The expected key is the EIP-712 structHash over the four request fields.
@@ -518,7 +551,7 @@ contract ConsolidationAttestationTest is Test {
 
     function testValidateConsolidation_emitsConsolidationProcessed() public {
         address user = address(0xBEEF);
-        IAttestationVerifierV1.ConsolidationObject memory c = _validConsolidation(user, 99);
+        IAttestationVerifierV1.ConsolidationObject memory c = _validFundedConsolidation(user, 99);
         bytes32 structHash = keccak256(
             abi.encode(
                 ATTEST_CONSOLIDATION_TYPEHASH,
@@ -543,6 +576,7 @@ contract ConsolidationAttestationTest is Test {
         sources[0] = _pubkey(1);
         bytes[] memory targets = new bytes[](1);
         targets[0] = _pubkey(2);
+        _seedFundedPubkeys(targets);
         uint256 totalAmount = 32 ether;
         bytes32 id = _consolidationDigest(user, sources, targets, totalAmount);
 
@@ -565,6 +599,7 @@ contract ConsolidationAttestationTest is Test {
         sources[0] = _pubkey(1);
         bytes[] memory targets = new bytes[](1);
         targets[0] = _pubkey(2);
+        _seedFundedPubkeys(targets);
         uint256 totalAmount = 32 ether;
         bytes32 id = _consolidationDigest(user, sources, targets, totalAmount);
 
@@ -587,6 +622,7 @@ contract ConsolidationAttestationTest is Test {
         sources[0] = _pubkey(1);
         bytes[] memory targets = new bytes[](1);
         targets[0] = _pubkey(2);
+        _seedFundedPubkeys(targets);
         uint256 totalAmount = 32 ether;
         bytes32 id = _consolidationDigest(user, sources, targets, totalAmount);
 
@@ -610,6 +646,7 @@ contract ConsolidationAttestationTest is Test {
         sources[0] = _pubkey(1);
         bytes[] memory targets = new bytes[](1);
         targets[0] = _pubkey(2);
+        _seedFundedPubkeys(targets);
         uint256 totalAmount = 32 ether;
         bytes32 id = _consolidationDigest(user, sources, targets, totalAmount);
 
@@ -633,6 +670,7 @@ contract ConsolidationAttestationTest is Test {
         sources[0] = _pubkey(1);
         bytes[] memory targets = new bytes[](1);
         targets[0] = _pubkey(2);
+        _seedFundedPubkeys(targets);
         uint256 totalAmount = 32 ether;
         bytes32 id = _consolidationDigest(user, sources, targets, totalAmount);
 
@@ -658,6 +696,7 @@ contract ConsolidationAttestationTest is Test {
         sources[0] = _pubkey(1);
         bytes[] memory targets = new bytes[](1);
         targets[0] = _pubkey(2);
+        _seedFundedPubkeys(targets);
         uint256 totalAmount = 32 ether;
         bytes32 id = _consolidationDigest(user, sources, targets, totalAmount);
 
@@ -687,6 +726,7 @@ contract ConsolidationAttestationTest is Test {
         sources[0] = _pubkey(1);
         bytes[] memory targets = new bytes[](1);
         targets[0] = _pubkey(2);
+        _seedFundedPubkeys(targets);
         uint256 totalAmount = 32 ether;
 
         vm.expectRevert(
@@ -708,7 +748,7 @@ contract ConsolidationAttestationTest is Test {
         vm.store(address(validator), CONSOLIDATION_DOMAIN_SEPARATOR_SLOT, bytes32(0));
 
         address user = address(0x11);
-        IAttestationVerifierV1.ConsolidationObject memory c = _validConsolidation(user, 1);
+        IAttestationVerifierV1.ConsolidationObject memory c = _validFundedConsolidation(user, 1);
 
         vm.expectRevert(IAttestationVerifierV1.ZeroConsolidationDomainSeparator.selector);
         validator.validateConsolidation(c);
