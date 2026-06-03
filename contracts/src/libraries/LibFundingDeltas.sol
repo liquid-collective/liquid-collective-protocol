@@ -19,6 +19,9 @@ library LibFundingDeltas {
     ///         outside the registered range — both to honour the registry's contract and to
     ///         bound the memory allocated by the bucketing passes (a crafted operatorIdx could
     ///         otherwise OOG-DoS the batch via an oversized allocation).
+    /// @dev    Pure aggregation only. Operator-status invariants (`active`, `requestedExits`
+    ///         vs `exitedETH`) are NOT checked here; they are enforced by
+    ///         `OperatorsRegistryV1.incrementFundedETH`.
     /// @param deposits The deposit objects to aggregate
     /// @param operatorCount The current number of registered operators (upper bound exclusive)
     /// @return deltas The aggregated per-operator deltas, sorted by operatorIndex
