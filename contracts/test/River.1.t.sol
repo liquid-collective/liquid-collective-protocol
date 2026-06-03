@@ -2675,7 +2675,8 @@ contract RiverV1TestsReport_HEAVY_FUZZING is RiverV1TestBase {
             extraBalanceToDeposit,
             LibUint256.min(river.totalUnderlyingSupply(), (maxCommittedBalanceDailyIncrease * period) / 1 days)
         );
-        maxCommittedBalanceIncrease = maxCommittedBalanceIncrease / 32 ether * 32 ether;
+
+        maxCommittedBalanceIncrease = (maxCommittedBalanceIncrease / 1 gwei) * 1 gwei;
 
         return initialCommittedAmount + maxCommittedBalanceIncrease;
     }
@@ -2709,7 +2710,6 @@ contract RiverV1TestsReport_HEAVY_FUZZING is RiverV1TestBase {
         _fillReport(clr);
         river.setConsensusLayerData(clr);
 
-        assertEq(river.getCommittedBalance() % 32 ether, 0);
         assertEq(
             river.getCommittedBalance(),
             _computeCommittedAmount(0, clr.epoch, committedAmount, depositAmount, maxIncrease)
@@ -2745,7 +2745,6 @@ contract RiverV1TestsReport_HEAVY_FUZZING is RiverV1TestBase {
         _fillReport(clr);
         river.setConsensusLayerData(clr);
 
-        assertEq(river.getCommittedBalance() % 32 ether, 0);
         assertEq(
             river.getCommittedBalance(),
             _computeCommittedAmount(0, clr.epoch, committedAmount, depositAmount, maxIncrease)
@@ -2786,7 +2785,6 @@ contract RiverV1TestsReport_HEAVY_FUZZING is RiverV1TestBase {
         _fillReport(clr);
         river.setConsensusLayerData(clr);
 
-        assertEq(river.getCommittedBalance() % 32 ether, 0);
         assertEq(
             river.getCommittedBalance(),
             _computeCommittedAmount(0, clr.epoch, committedAmount, depositAmount, maxIncrease)
@@ -2830,7 +2828,6 @@ contract RiverV1TestsReport_HEAVY_FUZZING is RiverV1TestBase {
         _fillReport(clr);
         river.setConsensusLayerData(clr);
 
-        assertEq(river.getCommittedBalance() % 32 ether, 0);
         assertEq(
             river.getCommittedBalance(),
             _computeCommittedAmount(0, clr.epoch, committedAmount, depositAmount, maxIncrease)
@@ -3078,7 +3075,7 @@ contract RiverV1CoverageTests is RiverV1TestBase {
         vm.store(address(consolidationCoverageFund), BALANCE_FOR_CONSOLIDATION_COVERAGE_SLOT, bytes32(buffer));
         vm.deal(address(consolidationCoverageFund), buffer);
 
-        uint256 balanceToDepositBefore = river.getBalanceToDeposit();
+        uint256 committedBalanceBefore = river.getCommittedBalance();
 
         uint256 epoch = epochsPerFrame;
         vm.warp((epoch + epochsUntilFinal) * slotsPerEpoch * secondsPerSlot);
@@ -3098,7 +3095,7 @@ contract RiverV1CoverageTests is RiverV1TestBase {
         river.setConsensusLayerData(clr);
 
         assertEq(uint256(vm.load(address(river), CONSOLIDATION_BUFFER_SLOT)), 0);
-        assertEq(river.getBalanceToDeposit(), balanceToDepositBefore + buffer);
+        assertEq(river.getCommittedBalance(), committedBalanceBefore + buffer);
         assertEq(address(consolidationCoverageFund).balance, 0);
     }
 
@@ -3114,7 +3111,7 @@ contract RiverV1CoverageTests is RiverV1TestBase {
         vm.store(address(consolidationCoverageFund), BALANCE_FOR_CONSOLIDATION_COVERAGE_SLOT, bytes32(available));
         vm.deal(address(consolidationCoverageFund), available);
 
-        uint256 balanceToDepositBefore = river.getBalanceToDeposit();
+        uint256 committedBalanceBefore = river.getCommittedBalance();
 
         uint256 epoch = epochsPerFrame;
         vm.warp((epoch + epochsUntilFinal) * slotsPerEpoch * secondsPerSlot);
@@ -3134,7 +3131,7 @@ contract RiverV1CoverageTests is RiverV1TestBase {
         river.setConsensusLayerData(clr);
 
         assertEq(uint256(vm.load(address(river), CONSOLIDATION_BUFFER_SLOT)), buffer - available);
-        assertEq(river.getBalanceToDeposit(), balanceToDepositBefore + available);
+        assertEq(river.getCommittedBalance(), committedBalanceBefore + available);
     }
 
     function _initRiverAndV1_2() internal {
