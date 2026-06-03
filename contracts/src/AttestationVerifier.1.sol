@@ -224,9 +224,7 @@ contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1 {
         bytes32 withdrawalCredentials,
         uint256 committedBalance
     ) external view returns (IDepositDataBuffer.DepositObject memory batch, uint256 totalAmount) {
-        // 0. Replay protection — reject any batch ID that has already been processed.
-        //    Critical for top-ups: their pubkey-in-lookup precondition still holds after the
-        //    first execution, so an unchecked replay would re-execute every top-up transfer.
+        // 0. Replay protection — reject any batch ID already processed
         if (ProcessedDepositDataBufferIds.isProcessed(depositDataBufferId)) {
             revert DepositDataBufferIdAlreadyProcessed(depositDataBufferId);
         }

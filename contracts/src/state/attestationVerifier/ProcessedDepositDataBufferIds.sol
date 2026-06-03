@@ -4,19 +4,9 @@ pragma solidity 0.8.34;
 import "../../libraries/LibUnstructuredStorage.sol";
 
 /// @title ProcessedDepositDataBufferIds
-/// @notice Unstructured storage library tracking deposit data buffer IDs that have already
-///         been executed through `depositToConsensusLayerWithAttestation`. Used for replay
-///         protection so the same batch ID cannot be validated twice.
-///         Membership uses a slot-based mapping:
-///         slot = keccak256(abi.encode(PROCESSED_DEPOSIT_DATA_BUFFER_IDS_MAPPING_BASE_SLOT, depositDataBufferId))
-///
-/// @dev    Replay protection is critical for top-ups: a replayed initial-deposit batch
-///         would already fail because every pubkey is in `ValidatorPubkeyLookup` after the
-///         first execution, but top-ups *require* their pubkeys to be in the lookup, so a
-///         second call with the same `depositDataBufferId` and attestations would otherwise
-///         re-execute the top-up transfers. The DepositDataBuffer is also expected to
-///         produce a unique `depositDataBufferId` per submission (see IDepositDataBuffer
-///         natspec), so this mapping is a defense-in-depth on the verifier side.
+/// @notice Set of deposit data buffer IDs already executed by `depositToConsensusLayerWithAttestation`,
+///         consulted by `validate()` to reject replays. Critical for top-ups, whose pubkey-in-lookup
+///         precondition is unchanged after the first execution.
 library ProcessedDepositDataBufferIds {
     bytes32 internal constant PROCESSED_DEPOSIT_DATA_BUFFER_IDS_MAPPING_BASE_SLOT =
         bytes32(uint256(keccak256("attestationVerifier.state.processedDepositDataBufferIds.mapping")) - 1);

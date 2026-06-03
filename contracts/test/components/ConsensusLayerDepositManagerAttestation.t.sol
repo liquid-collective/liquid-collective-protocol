@@ -861,24 +861,18 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
         assertEq(dm.getTotalDepositedETH(), 64 ether, "total deposited reflects both initial and top-up");
     }
 
-    /// @dev Replay protection: re-using the same `depositDataBufferId` after a successful
-    ///      execution must revert with `DepositDataBufferIdAlreadyProcessed`. Without this gate
-    ///      a top-up batch could be replayed (its `pubkey-in-lookup` precondition still holds
-    ///      after the first execution).
+    /// @dev Re-using a processed `depositDataBufferId` must revert with `DepositDataBufferIdAlreadyProcessed`.
     function testRevert_replay_processedBufferId() public {
-        // Seed an already-funded pubkey so the top-up branch is exercised.
         IDepositDataBuffer.TopUp[] memory topUps = new IDepositDataBuffer.TopUp[](1);
         topUps[0] = _makeTopUpDeposit(0, 160);
         _seedFundedPubkey(topUps[0].pubkey);
 
         (bytes32 bufferId, bytes32 rootHash, bytes[] memory sigs) = _prepareTopUps(topUps);
 
-        // First execution succeeds and marks the ID processed.
         vm.prank(keeper);
         dm.depositToConsensusLayerWithAttestation(bufferId, rootHash, sigs);
         assertTrue(validator.isDepositDataBufferIdProcessed(bufferId), "id should be marked processed");
 
-        // Second execution with the same ID must revert before any state mutation.
         uint256 depositCountBefore = depositContract.deposit_count();
         vm.prank(keeper);
         vm.expectRevert(
@@ -888,8 +882,7 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
         assertEq(depositContract.deposit_count(), depositCountBefore, "no deposit should reach the beacon contract on replay");
     }
 
-    /// @dev `markDepositDataBufferIdProcessed` is gated by `onlyRiver`. Direct external calls
-    ///      from anyone else (even the admin) must revert.
+    /// @dev `markDepositDataBufferIdProcessed` is gated by `onlyRiver`.
     function testRevert_markDepositDataBufferIdProcessed_notRiver() public {
         bytes32 bufferId = keccak256("some-id");
         address stranger = address(0xC0FFEE);

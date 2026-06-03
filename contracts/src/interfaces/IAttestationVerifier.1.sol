@@ -122,9 +122,7 @@ interface IAttestationVerifierV1 {
     /// @param pubkey The offending 48-byte BLS pubkey
     error PubkeyAlreadyFunded(bytes pubkey);
 
-    /// @notice The supplied `depositDataBufferId` has already been executed through
-    ///         `depositToConsensusLayerWithAttestation`. Replay is forbidden: each batch
-    ///         must be processed at most once.
+    /// @notice The supplied `depositDataBufferId` has already been executed. Each batch must be processed at most once.
     /// @param depositDataBufferId The offending batch identifier
     error DepositDataBufferIdAlreadyProcessed(bytes32 depositDataBufferId);
 
@@ -197,11 +195,7 @@ interface IAttestationVerifierV1 {
     function recordNewlyFundedPubkeys(bytes[] calldata pubkeys) external;
 
     /// @notice Mark a `depositDataBufferId` as processed. Only callable by River.
-    /// @dev Called by River after the deposit-execution loop. The recorded set is consulted
-    ///      at the top of `validate()` to prevent any replay of the same batch ID —
-    ///      essential because a top-up's pubkey-in-lookup precondition is unchanged after
-    ///      the first execution, so without this gate a replayed batch would re-execute
-    ///      every top-up transfer.
+    /// @dev Called by River after the deposit-execution loop; consulted by `validate()` to reject replays.
     /// @param depositDataBufferId The batch identifier to mark processed.
     function markDepositDataBufferIdProcessed(bytes32 depositDataBufferId) external;
 
@@ -265,7 +259,7 @@ interface IAttestationVerifierV1 {
     function isPubkeyFunded(bytes calldata pubkey) external view returns (bool);
 
     /// @notice Check whether a `depositDataBufferId` has already been processed.
-    /// @param depositDataBufferId The batch identifier.
-    /// @return True if the ID has already been executed.
+    /// @param depositDataBufferId The batch identifier
+    /// @return True if the ID has already been executed
     function isDepositDataBufferIdProcessed(bytes32 depositDataBufferId) external view returns (bool);
 }

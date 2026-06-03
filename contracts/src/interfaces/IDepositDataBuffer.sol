@@ -5,20 +5,9 @@ import "../libraries/BLS12_381.sol";
 
 /// @title IDepositDataBuffer
 /// @notice Interface for the DepositDataBuffer contract that stores pre-committed validator deposit batches.
-///
-/// @dev    UNIQUENESS ASSUMPTION — every `depositDataBufferId` produced by an implementation
-///         MUST be globally unique across the buffer's lifetime, even when two submissions carry
-///         identical `DepositObject` contents (e.g. two top-ups to the same validator for the
-///         same amount). Implementations are expected to enforce this by salting the ID with an
-///         ever-incrementing counter such as `lastQueueIdx++` so collisions are impossible by
-///         construction.
-///
-///         Why it matters: the AttestationVerifier records every successfully executed
-///         `depositDataBufferId` and rejects any subsequent call referencing the same ID
-///         (replay protection — critical for top-ups, whose `pubkey-in-ValidatorPubkeyLookup`
-///         precondition is unchanged after the first execution). If the buffer ever reuses an
-///         ID, the legitimate second batch is permanently un-executable, not just the malicious
-///         replay.
+/// @dev `depositDataBufferId` MUST be unique per submission — implementations should salt with an
+///      ever-incrementing counter (e.g. `lastQueueIdx++`). The AttestationVerifier marks every
+///      processed ID, so any reuse permanently bricks the colliding batch.
 interface IDepositDataBuffer {
     /// @notice An initial validator deposit. BLS signature is verified by the verifier and
     ///         passed to the official deposit contract; pubkey must NOT already be in
