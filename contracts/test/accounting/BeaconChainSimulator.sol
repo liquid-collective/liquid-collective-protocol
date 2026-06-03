@@ -78,13 +78,8 @@ abstract contract BeaconChainSimulator is AccountingHarnessBase {
         sigs[0] = _signAttestation(DEPOSIT_COMMITTEE_ATTESTER_PK_1, bufferId, rootHash);
         sigs[1] = _signAttestation(DEPOSIT_COMMITTEE_ATTESTER_PK_2, bufferId, rootHash);
 
-        BLS12_381.DepositY[] memory ys = new BLS12_381.DepositY[](amounts.length);
-        for (uint256 i = 0; i < amounts.length; i++) {
-            ys[i] = _emptyDepositY();
-        }
-
         vm.prank(keeper);
-        river.depositToConsensusLayerWithAttestation(bufferId, rootHash, sigs, ys);
+        river.depositToConsensusLayerWithAttestation(bufferId, rootHash, sigs);
 
         for (uint256 i = 0; i < amounts.length; i++) {
             _simValidators.push(
