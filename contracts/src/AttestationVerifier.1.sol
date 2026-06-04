@@ -165,12 +165,14 @@ contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1 {
                 emit SetRootAttester(_rootAttesters[i], true);
             }
         }
-        uint256 rootAttesterCount = RootAttesters.getCount();
-        if (_quorum > rootAttesterCount) {
-            revert QuorumExceedsRootAttesterCount(_quorum, rootAttesterCount);
+        {
+            uint256 rootAttesterCount = RootAttesters.getCount();
+            if (_quorum > rootAttesterCount) {
+                revert QuorumExceedsRootAttesterCount(_quorum, rootAttesterCount);
+            }
+            RootAttestationQuorum.set(_quorum);
+            emit SetRootAttestationQuorum(_quorum);
         }
-        RootAttestationQuorum.set(_quorum);
-        emit SetRootAttestationQuorum(_quorum);
 
         // ---- Consolidation committee + quorum ----
         for (uint256 i = 0; i < _consolidationCommitteeAttesters.length; i++) {
@@ -183,12 +185,16 @@ contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1 {
                 emit SetConsolidationCommitteeAttester(_consolidationCommitteeAttesters[i], true);
             }
         }
-        uint256 consolidationAttesterCount = ConsolidationCommitteeAttesters.getCount();
-        if (_consolidationQuorum > consolidationAttesterCount) {
-            revert QuorumExceedsConsolidationCommitteeAttesterCount(_consolidationQuorum, consolidationAttesterCount);
+        {
+            uint256 consolidationAttesterCount = ConsolidationCommitteeAttesters.getCount();
+            if (_consolidationQuorum > consolidationAttesterCount) {
+                revert QuorumExceedsConsolidationCommitteeAttesterCount(
+                    _consolidationQuorum, consolidationAttesterCount
+                );
+            }
+            ConsolidationCommitteeAttestationQuorum.set(_consolidationQuorum);
+            emit SetConsolidationCommitteeAttestationQuorum(_consolidationQuorum);
         }
-        ConsolidationCommitteeAttestationQuorum.set(_consolidationQuorum);
-        emit SetConsolidationCommitteeAttestationQuorum(_consolidationQuorum);
         {
             // EIP-712 domain separator binds verifyingContract to River's address, not this
             // verifier's own address. This preserves root attester signing tooling that
