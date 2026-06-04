@@ -59,21 +59,29 @@ interface IAttestationVerifierV1 {
     /// @param max The configured maximum
     error TooManySignatures(uint256 count, uint256 max);
 
-    /// @notice A deposit's pubkey field has an unexpected byte length
-    /// @param index The deposit index in the batch
+    /// @notice An external caller invoked a function reserved for self-staticcall trampolining.
+    error OnlySelfCall();
+
+    /// @notice An entry's pubkey field has an unexpected byte length
+    /// @param index Index into the sub-array currently being validated
+    ///              (either `batch.deposits` or `batch.topUps`); the loop that raised
+    ///              the revert determines which.
     /// @param length The observed length
     error InvalidPubkeyLength(uint256 index, uint256 length);
 
     /// @notice A deposit's BLS signature field has an unexpected byte length
-    /// @param index The deposit index in the batch
+    /// @dev Only raised while iterating `batch.deposits` — top-ups have no signature field.
+    /// @param index Index into `batch.deposits`
     /// @param length The observed length
     error InvalidSignatureLength(uint256 index, uint256 length);
 
-    /// @notice A deposit's `amount` is outside the protocol-accepted range
+    /// @notice An entry's `amount` is outside the protocol-accepted range
     ///         [1 ether, 2048 ether] or is not gwei-aligned. Enforced here in
     ///         `validate()` so producer bugs fail before the heavy BLS path runs;
     ///         downstream `_depositValidator` trusts this check.
-    /// @param index The deposit index in the batch
+    /// @param index Index into the sub-array currently being validated
+    ///              (either `batch.deposits` or `batch.topUps`); the loop that raised
+    ///              the revert determines which.
     /// @param amount The offending amount in wei
     error InvalidDepositAmount(uint256 index, uint256 amount);
 
@@ -119,6 +127,13 @@ interface IAttestationVerifierV1 {
     /// @param pubkey The offending 48-byte BLS pubkey
     error PubkeyAlreadyFunded(bytes pubkey);
 
+    /// @notice The same pubkey appeared more than once in `batch.topUps` within a single batch.
+    /// @dev Distinct from `PubkeyAlreadyFunded` (which fires from the initial-deposit branch
+    ///      against the global lookup); this fires from the top-up branch against the in-batch
+    ///      set being assembled during `validate()`.
+    /// @param pubkey The offending 48-byte BLS pubkey
+    error DuplicateTopUpPubkey(bytes pubkey);
+
     // -----------------------------------------------------------------------
     // Initialization
     // -----------------------------------------------------------------------
@@ -162,8 +177,8 @@ interface IAttestationVerifierV1 {
     /// @param depositContract      The official ETH deposit contract; queried for the current root
     /// @param withdrawalCredentials The protocol-configured WC; every deposit's WC must match
     /// @param committedBalance     Total amount summed over deposits must not exceed this
-    /// @return deposits            Validated deposit batch (caller executes)
-    /// @return totalAmount         Sum of deposit amounts in the batch
+    /// @return batch               Validated deposit batch (caller executes)
+    /// @return totalAmount         Sum of deposit + top-up amounts in the batch
     function validate(
         bytes32 depositDataBufferId,
         bytes32 depositRootHash,
@@ -171,7 +186,7 @@ interface IAttestationVerifierV1 {
         address depositContract,
         bytes32 withdrawalCredentials,
         uint256 committedBalance
-    ) external view returns (IDepositDataBuffer.DepositObject[] memory deposits, uint256 totalAmount);
+    ) external view returns (IDepositDataBuffer.DepositObject memory batch, uint256 totalAmount);
 
     // -----------------------------------------------------------------------
     // Initial-deposit recording (called by River after a successful deposit batch)
