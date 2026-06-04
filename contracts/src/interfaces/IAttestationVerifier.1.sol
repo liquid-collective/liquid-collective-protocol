@@ -24,13 +24,13 @@ interface IAttestationVerifierV1 {
     /// @dev    `sourcePubkeys[i]` is consolidated INTO `targetPubkeys[i]` — same-index pairing.
     ///         `signatures` are the consolidation-committee attestor EIP-712 ECDSA signatures
     ///         over the typed-data struct
-    ///             AttestConsolidation(address user, bytes[] sourcePubkeys, bytes[] targetPubkeys, uint256 totalAmount)
+    ///             AttestConsolidation(address withdrawalAddress, bytes[] sourcePubkeys, bytes[] targetPubkeys, uint256 totalAmount)
     ///         The `signatures` field itself is NOT part of the typed data — only the four
     ///         request fields are. This is what lets attestors produce signatures over the
     ///         request without a circular dependency.
     struct ConsolidationObject {
-        /// @dev Initiator of the consolidation request; eventual recipient of LsETH unless the mapping is set to a different address
-        address user;
+        /// @dev Address of the withdrawal credential that initiated the consolidation request; eventual recipient of LsETH unless the mapping is set to a different address
+        address withdrawalAddress;
         /// @dev Source validator BLS pubkeys (48 bytes each). Paired by index with targetPubkeys.
         bytes[] sourcePubkeys;
         /// @dev Target validator BLS pubkeys (48 bytes each). Paired by index with sourcePubkeys.
@@ -190,8 +190,8 @@ interface IAttestationVerifierV1 {
     /// @notice The consolidation's totalAmount is zero
     error ZeroConsolidationTotalAmount();
 
-    /// @notice The consolidation's user is the zero address
-    error ZeroConsolidationUser();
+    /// @notice The consolidation's withdrawal address is the zero address
+    error ZeroConsolidationWithdrawalAddress();
 
     /// @notice The supplied quorum is greater than the current consolidation-committee attester count
     /// @param quorum The supplied quorum
@@ -332,8 +332,8 @@ interface IAttestationVerifierV1 {
     ///           - Source/target pubkey uniqueness (EIP-7251 single-use source rule)
     ///           - `totalAmount` gwei alignment, upper bound, or correlation with pair count
     ///           - Financial caps (e.g. against committed/in-flight balances)
-    /// @param consolidation The consolidation request to validate (user, source/target pubkeys,
-    ///                      totalAmount, signatures).
+    /// @param consolidation The consolidation request to validate (withdrawal address,
+    ///                      source/target pubkeys, totalAmount, signatures).
     /// @return Always `true` if the call returns; reverts otherwise.
     function validateConsolidation(ConsolidationObject calldata consolidation) external returns (bool);
 

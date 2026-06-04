@@ -138,8 +138,9 @@ abstract contract RiverV1TestBase is OperatorAllocationTestBase, BytesGenerator 
     bytes32 internal constant ATTEST_TYPEHASH =
         keccak256("Attest(bytes32 depositDataBufferId,bytes32 depositRootHash)");
     bytes32 internal constant CONSOLIDATION_NAME_HASH = keccak256("ConsolidationValidation");
-    bytes32 internal constant ATTEST_CONSOLIDATION_TYPEHASH =
-        keccak256("AttestConsolidation(address user,bytes[] sourcePubkeys,bytes[] targetPubkeys,uint256 totalAmount)");
+    bytes32 internal constant ATTEST_CONSOLIDATION_TYPEHASH = keccak256(
+        "AttestConsolidation(address withdrawalAddress,bytes[] sourcePubkeys,bytes[] targetPubkeys,uint256 totalAmount)"
+    );
 
     address internal admin;
     address internal newAdmin;
@@ -285,17 +286,22 @@ abstract contract RiverV1TestBase is OperatorAllocationTestBase, BytesGenerator 
         return keccak256(abi.encodePacked(hashes));
     }
 
-    function _consolidationDigest(address user, bytes[] memory sources, bytes[] memory targets, uint256 totalAmount)
-        internal
-        view
-        returns (bytes32)
-    {
+    function _consolidationDigest(
+        address withdrawalAddress,
+        bytes[] memory sources,
+        bytes[] memory targets,
+        uint256 totalAmount
+    ) internal view returns (bytes32) {
         bytes32 domainSep = keccak256(
             abi.encode(EIP712_DOMAIN_TYPEHASH, CONSOLIDATION_NAME_HASH, VERSION_HASH, block.chainid, address(river))
         );
         bytes32 structHash = keccak256(
             abi.encode(
-                ATTEST_CONSOLIDATION_TYPEHASH, user, _hashBytesArray(sources), _hashBytesArray(targets), totalAmount
+                ATTEST_CONSOLIDATION_TYPEHASH,
+                withdrawalAddress,
+                _hashBytesArray(sources),
+                _hashBytesArray(targets),
+                totalAmount
             )
         );
         return keccak256(abi.encodePacked("\x19\x01", domainSep, structHash));
@@ -306,7 +312,7 @@ abstract contract RiverV1TestBase is OperatorAllocationTestBase, BytesGenerator 
         return abi.encodePacked(r, s, v);
     }
 
-    function _buildConsolidation(address user, uint256 totalAmount, uint256 seed)
+    function _buildConsolidation(address withdrawalAddress, uint256 totalAmount, uint256 seed)
         internal
         view
         returns (IAttestationVerifierV1.ConsolidationObject memory consolidation)
@@ -315,14 +321,18 @@ abstract contract RiverV1TestBase is OperatorAllocationTestBase, BytesGenerator 
         sources[0] = _fakePubkey(seed);
         bytes[] memory targets = new bytes[](1);
         targets[0] = _fakePubkey(seed + 1000);
-        bytes32 digest = _consolidationDigest(user, sources, targets, totalAmount);
+        bytes32 digest = _consolidationDigest(withdrawalAddress, sources, targets, totalAmount);
 
         bytes[] memory sigs = new bytes[](2);
         sigs[0] = _signConsolidation(consolidationCommitteeAttesterPk1, digest);
         sigs[1] = _signConsolidation(consolidationCommitteeAttesterPk2, digest);
 
         consolidation = IAttestationVerifierV1.ConsolidationObject({
-            user: user, sourcePubkeys: sources, targetPubkeys: targets, totalAmount: totalAmount, signatures: sigs
+            withdrawalAddress: withdrawalAddress,
+            sourcePubkeys: sources,
+            targetPubkeys: targets,
+            totalAmount: totalAmount,
+            signatures: sigs
         });
     }
 
@@ -3645,7 +3655,7 @@ contract RiverV1ConsolidationMintTests is RiverV1TestBase {
         uint256 amount = 7 ether;
         _allowConsolidation(bob);
         vm.prank(bob);
-        externalConsolidationRecipientMapping.setRecipient(bob, joe);
+        externalConsolidationRecipientMapping.setRecipient(joe);
         IAttestationVerifierV1.ConsolidationObject memory consolidation = _buildConsolidation(bob, amount, 6);
 
         vm.expectEmit(true, true, true, true);
@@ -3661,7 +3671,7 @@ contract RiverV1ConsolidationMintTests is RiverV1TestBase {
     function testMintLsETHForConsolidationMappedDeniedRecipientReverts() public {
         _allowConsolidation(bob);
         vm.prank(bob);
-        externalConsolidationRecipientMapping.setRecipient(bob, joe);
+        externalConsolidationRecipientMapping.setRecipient(joe);
         _denyAccount(joe);
         IAttestationVerifierV1.ConsolidationObject memory consolidation = _buildConsolidation(bob, 4 ether, 7);
 

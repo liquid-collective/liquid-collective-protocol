@@ -70,8 +70,9 @@ contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1 {
     ///      single `bytes32` id). `bytes[]` fields follow EIP-712 dynamic-array rules:
     ///      each element is replaced by `keccak256(element)`, then the resulting `bytes32`
     ///      array is concatenated and hashed (`_hashBytesArray`).
-    bytes32 internal constant ATTEST_CONSOLIDATION_TYPEHASH =
-        keccak256("AttestConsolidation(address user,bytes[] sourcePubkeys,bytes[] targetPubkeys,uint256 totalAmount)");
+    bytes32 internal constant ATTEST_CONSOLIDATION_TYPEHASH = keccak256(
+        "AttestConsolidation(address withdrawalAddress,bytes[] sourcePubkeys,bytes[] targetPubkeys,uint256 totalAmount)"
+    );
 
     /// @notice Maximum number of signatures accepted. Bounds the O(n^2) duplicate-detection loop.
     uint256 public constant MAX_SIGNATURES = 20;
@@ -445,9 +446,9 @@ contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1 {
 
     /// @inheritdoc IAttestationVerifierV1
     /// @dev Assumes `pubkeys` is already deduplicated against the lookup and against itself —
-    ///      `validate()` enforces both invariants (initial-deposit branch at the top of
-    ///      `validate()`) and runs in the same transaction. Re-checking here would only fire
-    ///      on a `validate()` regression and would cost a cold SLOAD per pubkey for a
+    ///      `validateDeposits()` enforces both invariants (initial-deposit branch at the top of
+    ///      `validateDeposits()`) and runs in the same transaction. Re-checking here would only fire
+    ///      on a `validateDeposits()` regression and would cost a cold SLOAD per pubkey for a
     ///      condition that cannot occur in production.
     function recordNewlyFundedPubkeys(bytes[] calldata pubkeys) external onlyRiver {
         uint256 len = pubkeys.length;
@@ -487,7 +488,7 @@ contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1 {
         if (sourceLen == 0) revert NoConsolidations();
         if (sourceLen != targetLen) revert ConsolidationArrayLengthMismatch(sourceLen, targetLen);
         if (consolidation.totalAmount == 0) revert ZeroConsolidationTotalAmount();
-        if (consolidation.user == address(0)) revert ZeroConsolidationUser();
+        if (consolidation.withdrawalAddress == address(0)) revert ZeroConsolidationWithdrawalAddress();
 
         // 2. Per-pair pubkey length checks
         for (uint256 i = 0; i < sourceLen; i++) {
@@ -509,7 +510,7 @@ contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1 {
         bytes32 structHash = keccak256(
             abi.encode(
                 ATTEST_CONSOLIDATION_TYPEHASH,
-                consolidation.user,
+                consolidation.withdrawalAddress,
                 _hashBytesArray(consolidation.sourcePubkeys),
                 _hashBytesArray(consolidation.targetPubkeys),
                 consolidation.totalAmount

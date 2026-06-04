@@ -191,15 +191,15 @@ contract RiverV1 is
         onlyKeeper
     {
         address recipient = IExternalConsolidationRecipientMappingV1(ExternalConsolidationRecipientMappingAddress.get())
-            .getRecipient(consolidation.user);
+            .getRecipient(consolidation.withdrawalAddress);
 
-        // we check the allowlist first to fail fast if the user/recipient is denied
+        // we check the allowlist first to fail fast if the withdrawalAddress/recipient is denied
         IAllowlistV1 allowlist = IAllowlistV1(AllowlistAddress.get());
-        allowlist.onlyAllowed(consolidation.user, LibAllowlistMasks.CONSOLIDATE_MASK);
+        allowlist.onlyAllowed(consolidation.withdrawalAddress, LibAllowlistMasks.CONSOLIDATE_MASK);
 
-        // if the recipient is not set, we use the user address
+        // if the recipient is not set, we use the withdrawalAddress
         if (recipient == address(0)) {
-            recipient = consolidation.user;
+            recipient = consolidation.withdrawalAddress;
         } else {
             if (allowlist.isDenied(recipient)) {
                 revert Denied(recipient);
