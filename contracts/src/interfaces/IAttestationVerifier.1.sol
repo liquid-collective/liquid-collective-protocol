@@ -29,7 +29,7 @@ interface IAttestationVerifierV1 {
     ///         request fields are. This is what lets attestors produce signatures over the
     ///         request without a circular dependency.
     struct ConsolidationObject {
-        /// @dev Initiator of the consolidation request; eventual recipient of LsETH.
+        /// @dev Initiator of the consolidation request; eventual recipient of LsETH unless the mapping is set to a different address
         address user;
         /// @dev Source validator BLS pubkeys (48 bytes each). Paired by index with targetPubkeys.
         bytes[] sourcePubkeys;

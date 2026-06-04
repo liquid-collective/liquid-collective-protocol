@@ -17,6 +17,7 @@ import "../../src/ELFeeRecipient.1.sol";
 import "../../src/CoverageFund.1.sol";
 import "../../src/RedeemManager.1.sol";
 import "../../src/Withdraw.1.sol";
+import "../../src/ExternalConsolidationRecipientMapping.sol";
 
 import "../../src/interfaces/IOperatorRegistry.1.sol";
 import "../../src/interfaces/IDepositDataBuffer.sol";
@@ -104,6 +105,7 @@ abstract contract AccountingHarnessBase is Test, BytesGenerator {
     IDepositContract internal depositContract;
     AccountingMockDepositDataBuffer internal depositBuffer;
     AttestationVerifierV1 internal attestationVerifier;
+    ExternalConsolidationRecipientMappingV1 internal externalConsolidationRecipientMapping;
 
     /// @dev Monotonic counter mixed into pubkey/signature generation in `_makeDepositObjects`.
     ///      Without it, two batches built in the same block with the same `(i, opIdx)` produce
@@ -166,6 +168,7 @@ abstract contract AccountingHarnessBase is Test, BytesGenerator {
         redeemManager = new RedeemManagerV1();
         elFeeRecipient = new ELFeeRecipientV1();
         coverageFund = new CoverageFundV1();
+        externalConsolidationRecipientMapping = new ExternalConsolidationRecipientMappingV1();
         river = new AccountingRiverV1();
         operatorsRegistry = new AccountingTestOperatorsRegistry();
 
@@ -175,6 +178,7 @@ abstract contract AccountingHarnessBase is Test, BytesGenerator {
         LibImplementationUnbricker.unbrick(vm, address(redeemManager));
         LibImplementationUnbricker.unbrick(vm, address(elFeeRecipient));
         LibImplementationUnbricker.unbrick(vm, address(coverageFund));
+        LibImplementationUnbricker.unbrick(vm, address(externalConsolidationRecipientMapping));
         LibImplementationUnbricker.unbrick(vm, address(river));
         LibImplementationUnbricker.unbrick(vm, address(operatorsRegistry));
 
@@ -235,8 +239,14 @@ abstract contract AccountingHarnessBase is Test, BytesGenerator {
 
         bytes32 _initWc = withdraw.getCredentials();
         address _initConsolidationCoverageFund = makeAddr("consolidationCoverageFund");
+        externalConsolidationRecipientMapping.initExternalConsolidationRecipientMappingV1(address(river));
         vm.prank(admin);
-        river.initRiverV1_3(_initWc, _initConsolidationCoverageFund, address(attestationVerifier));
+        river.initRiverV1_3(
+            _initWc,
+            _initConsolidationCoverageFund,
+            address(attestationVerifier),
+            address(externalConsolidationRecipientMapping)
+        );
         // Mock BLS verification: EIP-2537 precompiles are unavailable in Foundry.
         vm.mockCall(
             address(attestationVerifier),
