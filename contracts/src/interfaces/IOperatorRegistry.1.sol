@@ -35,7 +35,7 @@ interface IOperatorsRegistryV1 {
     struct ELExitETHAllocation {
         uint256 operatorIndex;
         bytes[] pubkeys; // 48 bytes
-        uint64[] amounts; // gwei
+        uint64[] amounts; // gwei, actual balance for full exits
         bool[] isFullExit; // true if the EL exit is a full exit for each pubkey
     }
 
@@ -82,7 +82,7 @@ interface IOperatorsRegistryV1 {
     /// @notice The amount of ETH(gwei) that has been requested to be exited per pubkey via EL
     /// @param index The operator index
     /// @param pubkeys The pubkeys through which the EL exits were requested
-    /// @param amounts The amount per pubkey that was requested for EL exits
+    /// @param amounts The amount per pubkey that was requested for EL exits (for full exits it is the actual balance)
     event RequestedELETHExits(uint256 indexed index, bytes[] pubkeys, uint64[] amounts);
 
     /// @notice The exit request demand has been updated

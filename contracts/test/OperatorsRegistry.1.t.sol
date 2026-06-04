@@ -2219,9 +2219,7 @@ contract OperatorsRegistryV1ELExitTests is Test {
 
         vm.prank(keeper);
         vm.expectRevert(
-            abi.encodeWithSelector(
-                IOperatorsRegistryV1.ExitsGreaterThanExitDemand.selector, 8 ether, 4 ether
-            )
+            abi.encodeWithSelector(IOperatorsRegistryV1.ExitsGreaterThanExitDemand.selector, 8 ether, 4 ether)
         );
         reg.requestETHExits(empty, allocs, 0);
     }
