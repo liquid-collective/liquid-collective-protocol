@@ -640,7 +640,7 @@ contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1 {
 
     /// @notice Verify the BLS signatures of all initial deposits against the canonical River
     ///         withdrawal credentials. Top-ups are handled by the caller and never reach this
-    ///         function — they're cleared upstream in `validate()` via the membership check
+    ///         function — they're cleared upstream in `validateDeposits()` via the membership check
     ///         on `ValidatorPubkeyLookup`.
     /// @param deposits The initial deposits.
     /// @param withdrawalCredentials The canonical River withdrawal credentials.
