@@ -9,7 +9,6 @@ import "./utils/UserFactory.sol";
 import "./utils/BytesGenerator.sol";
 import "./utils/LibImplementationUnbricker.sol";
 import "./utils/RiverV1WithLegacyInit.sol";
-import "./utils/RiverV1WithLegacyInit.sol";
 import "./mocks/DepositContractMock.sol";
 
 import "../src/libraries/LibAllowlistMasks.sol";

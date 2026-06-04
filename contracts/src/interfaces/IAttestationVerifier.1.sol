@@ -274,7 +274,7 @@ interface IAttestationVerifierV1 {
     /// @param committedBalance     Total amount summed over deposits must not exceed this
     /// @return batch               Validated deposit batch (caller executes)
     /// @return totalAmount         Sum of deposit + top-up amounts in the batch
-    function validate(
+    function validateDeposits(
         bytes32 depositDataBufferId,
         bytes32 depositRootHash,
         bytes[] calldata signatures,
