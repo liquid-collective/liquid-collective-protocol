@@ -7,8 +7,8 @@ import "../../libraries/LibUnstructuredStorage.sol";
 /// @notice Unstructured-storage mapping of 0x02 pubkeys that have been initial-deposited
 ///         by River. Used by AttestationVerifier as a defense-in-depth check on top-ups:
 ///         a top-up entry (depositY all-zero) skips BLS verification, so the pubkey must
-///         already be in this set or the call reverts. Without that gate, a malicious
-///         committee could mark an arbitrary attacker pubkey as a top-up and bypass BLS.
+///         already be in this set or the call reverts. Without that gate, malicious
+///         root attesters could mark an arbitrary attacker pubkey as a top-up and bypass BLS.
 ///
 /// @dev    This set records membership only — not the operator that performed the initial
 ///         deposit. The `operatorIdx` field on a top-up's `DepositObject` is therefore

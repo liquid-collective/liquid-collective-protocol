@@ -658,8 +658,8 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
     // -----------------------------------------------------------------------
     // Top-up tests — BLS verification must be skipped for entries with all-zero depositY.
     // Authorization for top-ups is delegated to the root (the attestation
-    // quorum signs over keccak256(abi.encode(deposits)), so the committee is attesting
-    // to each entry's depositY-encoded classification).
+    // quorum signs over keccak256(abi.encode(deposits)), so the root attesters are
+    // attesting to each entry's depositY-encoded classification).
     // -----------------------------------------------------------------------
 
     // Top-up entries must never enter the BLS verification path. Proven here by zeroing
@@ -796,7 +796,7 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
     // -----------------------------------------------------------------------
 
     /// @dev Top-up to a pubkey that's not in the initial-deposit mapping must revert. This
-    ///      is the defense-in-depth check against a malicious committee marking an attacker
+    ///      is the defense-in-depth check against malicious root attesters marking an attacker
     ///      pubkey as a top-up to bypass BLS verification.
     function testTopUp_pubkeyNotFunded_reverts() public {
         IDepositDataBuffer.TopUp[] memory topUps = new IDepositDataBuffer.TopUp[](1);

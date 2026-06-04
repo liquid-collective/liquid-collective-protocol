@@ -118,7 +118,7 @@ interface IAttestationVerifierV1 {
     error RootAttesterStatusUnchanged(address rootAttester, bool value);
 
     /// @notice A top-up referenced a pubkey that has never been initial-deposited by River.
-    ///         Without this check, a malicious committee could mark an attacker pubkey as a
+    ///         Without this check, malicious root attesters could mark an attacker pubkey as a
     ///         top-up and bypass BLS verification.
     /// @param pubkey The offending 48-byte BLS pubkey
     error TopUpPubkeyNotFunded(bytes pubkey);

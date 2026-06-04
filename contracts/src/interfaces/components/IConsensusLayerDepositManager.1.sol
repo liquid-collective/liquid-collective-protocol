@@ -48,7 +48,7 @@ interface IConsensusLayerDepositManagerV1 {
     /// @dev    `PectraValidatorPubkeyLookup` is membership-only — there is no on-chain binding between
     ///         a pubkey and the operator that performed its initial deposit. The `operatorIdx`
     ///         on a top-up is whatever the root-attested buffer specifies, and the
-    ///         protocol trusts the committee to attest the correct operator.
+    ///         protocol trusts the root attestation members to attest the correct operator.
     /// @param depositDataBufferId The id of the deposit-data buffer batch
     /// @param operatorIdx The operator the top-up is credited to (as attested by the root attestation quorum)
     /// @param pubkey The 48-byte BLS pubkey of the validator
