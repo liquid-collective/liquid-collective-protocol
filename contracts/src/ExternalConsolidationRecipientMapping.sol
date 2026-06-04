@@ -7,8 +7,6 @@ import "./interfaces/IProtocolVersion.sol";
 import "./interfaces/IRiver.1.sol";
 
 import "./libraries/LibAllowlistMasks.sol";
-import "./libraries/LibErrors.sol";
-import "./libraries/LibSanitize.sol";
 
 import "./Initializable.sol";
 
