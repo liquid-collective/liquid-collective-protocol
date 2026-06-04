@@ -158,27 +158,13 @@ abstract contract ConsensusLayerDepositManagerV1 is IConsensusLayerDepositManage
         _updateFundedETHFromBuffer(batch.deposits, batch.topUps);
 
         // 6a. Execute initial deposits — BLS signature is forwarded to the deposit contract.
-        uint256 depositCount = batch.deposits.length;
-        bytes[] memory newlyFundedPubkeys = new bytes[](depositCount);
-        for (uint256 i = 0; i < depositCount; i++) {
-            IDepositDataBuffer.Deposit memory d = batch.deposits[i];
-            _depositValidator(d.pubkey, d.signature, d.amount, withdrawalCredentials, depositContract);
-            emit PubkeyFunded(depositDataBufferId, d.operatorIdx, d.pubkey, d.amount);
-            newlyFundedPubkeys[i] = d.pubkey;
-        }
+        bytes[] memory newlyFundedPubkeys =
+            _executeDeposits(depositDataBufferId, batch.deposits, withdrawalCredentials, depositContract);
 
         // 6b. Execute top-ups — the beacon chain ignores BLS signatures on top-ups, so we
         //     forward 96 zero bytes. The signature field is required by the deposit contract's
         //     ABI but is semantically irrelevant for subsequent deposits to an existing validator.
-        uint256 topUpCount = batch.topUps.length;
-        if (topUpCount > 0) {
-            bytes memory zeroSig = new bytes(SIGNATURE_LENGTH);
-            for (uint256 i = 0; i < topUpCount; i++) {
-                IDepositDataBuffer.TopUp memory t = batch.topUps[i];
-                _depositValidator(t.pubkey, zeroSig, t.amount, withdrawalCredentials, depositContract);
-                emit TopUp(depositDataBufferId, t.operatorIdx, t.pubkey, t.amount);
-            }
-        }
+        _executeTopUps(depositDataBufferId, batch.topUps, withdrawalCredentials, depositContract);
 
         // 7. Bookkeeping writes BEFORE the external `recordNewlyFundedPubkeys` callback.
         _setCommittedBalance(committedBalance - totalAmount);
@@ -192,12 +178,49 @@ abstract contract ConsensusLayerDepositManagerV1 is IConsensusLayerDepositManage
         emit SetTotalDepositedETH(currentTotalDepositedETH, currentTotalDepositedETH + totalAmount);
 
         // 8. Record initial-deposit pubkeys so future top-ups against them pass the membership check.
-        if (depositCount > 0) {
+        if (newlyFundedPubkeys.length > 0) {
             verifier.recordNewlyFundedPubkeys(newlyFundedPubkeys);
         }
 
         // 9. Mark the batch ID processed so the same batch cannot be replayed.
         verifier.markDepositDataBufferIdProcessed(depositDataBufferId);
+    }
+
+    /// @notice Executes the initial validator deposits in a batch and emits PubkeyFunded for each.
+    /// @dev Extracted into a helper to keep the parent function below the EVM stack limit when
+    ///      compiled without the optimizer (e.g. under `forge coverage`).
+    function _executeDeposits(
+        bytes32 depositDataBufferId,
+        IDepositDataBuffer.Deposit[] memory deposits,
+        bytes32 withdrawalCredentials,
+        address depositContract
+    ) internal returns (bytes[] memory newlyFundedPubkeys) {
+        uint256 depositCount = deposits.length;
+        newlyFundedPubkeys = new bytes[](depositCount);
+        for (uint256 i = 0; i < depositCount; i++) {
+            IDepositDataBuffer.Deposit memory d = deposits[i];
+            _depositValidator(d.pubkey, d.signature, d.amount, withdrawalCredentials, depositContract);
+            emit PubkeyFunded(depositDataBufferId, d.operatorIdx, d.pubkey, d.amount);
+            newlyFundedPubkeys[i] = d.pubkey;
+        }
+    }
+
+    /// @notice Executes the top-up deposits in a batch and emits TopUp for each.
+    /// @dev See `_executeDeposits` for the rationale on extracting this loop.
+    function _executeTopUps(
+        bytes32 depositDataBufferId,
+        IDepositDataBuffer.TopUp[] memory topUps,
+        bytes32 withdrawalCredentials,
+        address depositContract
+    ) internal {
+        uint256 topUpCount = topUps.length;
+        if (topUpCount == 0) return;
+        bytes memory zeroSig = new bytes(SIGNATURE_LENGTH);
+        for (uint256 i = 0; i < topUpCount; i++) {
+            IDepositDataBuffer.TopUp memory t = topUps[i];
+            _depositValidator(t.pubkey, zeroSig, t.amount, withdrawalCredentials, depositContract);
+            emit TopUp(depositDataBufferId, t.operatorIdx, t.pubkey, t.amount);
+        }
     }
 
     /// @notice Deposits _depositAmount ETH to the official Deposit contract
