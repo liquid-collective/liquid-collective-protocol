@@ -320,12 +320,7 @@ interface IAttestationVerifierV1 {
     ///         Replay protection: the EIP-712 structHash is recorded in storage on success.
     ///         Subsequent calls with a struct that hashes to the same value revert with
     ///         `ConsolidationAlreadyProcessed`. Note that this makes the function
-    ///         state-mutating (not `view`). NOTE: the function is permissionless; if a
-    ///         malicious caller front-runs the legitimate consumer they can mark a request
-    ///         as processed and DoS subsequent legitimate validation. Caller-restriction is
-    ///         out of scope for this PR; it lives in the eventual River integration (which
-    ///         can either gate the verifier or atomically combine validation with its own
-    ///         downstream action).
+    ///         state-mutating (not `view`).
     ///
     ///         The function reverts on any validation failure and returns `true` on success.
     ///         The boolean is a positive signal for off-chain `eth_call` style invocations.
