@@ -60,8 +60,9 @@ contract ConsolidationAttestationTest is Test {
         keccak256("EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)");
     bytes32 internal constant CONSOLIDATION_NAME_HASH = keccak256("ConsolidationValidation");
     bytes32 internal constant VERSION_HASH = keccak256("1");
-    bytes32 internal constant ATTEST_CONSOLIDATION_TYPEHASH =
-        keccak256("AttestConsolidation(address user,bytes[] sourcePubkeys,bytes[] targetPubkeys,uint256 totalAmount)");
+    bytes32 internal constant ATTEST_CONSOLIDATION_TYPEHASH = keccak256(
+        "AttestConsolidation(address withdrawalAddress,bytes[] sourcePubkeys,bytes[] targetPubkeys,uint256 totalAmount)"
+    );
 
     // Storage slots (must match contracts/src/state/attestationVerifier/*)
     bytes32 internal constant CONSOLIDATION_DOMAIN_SEPARATOR_SLOT =
@@ -141,17 +142,22 @@ contract ConsolidationAttestationTest is Test {
 
     /// @dev Compute the EIP-712 digest the consolidation committee is expected to sign,
     ///      derived directly from the request fields (no intermediate bufferId).
-    function _consolidationDigest(address user, bytes[] memory sources, bytes[] memory targets, uint256 totalAmount)
-        internal
-        view
-        returns (bytes32)
-    {
+    function _consolidationDigest(
+        address withdrawalAddress,
+        bytes[] memory sources,
+        bytes[] memory targets,
+        uint256 totalAmount
+    ) internal view returns (bytes32) {
         bytes32 domainSep = keccak256(
             abi.encode(EIP712_DOMAIN_TYPEHASH, CONSOLIDATION_NAME_HASH, VERSION_HASH, block.chainid, address(river))
         );
         bytes32 structHash = keccak256(
             abi.encode(
-                ATTEST_CONSOLIDATION_TYPEHASH, user, _hashBytesArray(sources), _hashBytesArray(targets), totalAmount
+                ATTEST_CONSOLIDATION_TYPEHASH,
+                withdrawalAddress,
+                _hashBytesArray(sources),
+                _hashBytesArray(targets),
+                totalAmount
             )
         );
         return keccak256(abi.encodePacked("\x19\x01", domainSep, structHash));
@@ -164,7 +170,7 @@ contract ConsolidationAttestationTest is Test {
     }
 
     /// @dev Build a single-pair consolidation object with two valid signatures (attester1 + attester2).
-    function _validConsolidation(address user, uint256 seed)
+    function _validConsolidation(address withdrawalAddress, uint256 seed)
         internal
         view
         returns (IAttestationVerifierV1.ConsolidationObject memory consolidation)
@@ -175,15 +181,27 @@ contract ConsolidationAttestationTest is Test {
         targets[0] = _pubkey(seed + 1000);
         uint256 totalAmount = 32 ether;
 
-        bytes32 bufferId = _consolidationDigest(user, sources, targets, totalAmount);
+        bytes32 bufferId = _consolidationDigest(withdrawalAddress, sources, targets, totalAmount);
 
         bytes[] memory sigs = new bytes[](2);
         sigs[0] = _sign(pk1, bufferId);
         sigs[1] = _sign(pk2, bufferId);
 
         consolidation = IAttestationVerifierV1.ConsolidationObject({
-            user: user, sourcePubkeys: sources, targetPubkeys: targets, totalAmount: totalAmount, signatures: sigs
+            withdrawalAddress: withdrawalAddress,
+            sourcePubkeys: sources,
+            targetPubkeys: targets,
+            totalAmount: totalAmount,
+            signatures: sigs
         });
+    }
+
+    function _validateConsolidationAsRiver(IAttestationVerifierV1.ConsolidationObject memory consolidation)
+        internal
+        returns (bool)
+    {
+        vm.prank(address(river));
+        return validator.validateConsolidation(consolidation);
     }
 
     // -----------------------------------------------------------------------
@@ -193,7 +211,7 @@ contract ConsolidationAttestationTest is Test {
     function testValidateConsolidation_singlePair_quorumMet() public {
         address user = address(0xBEEF);
         IAttestationVerifierV1.ConsolidationObject memory c = _validConsolidation(user, 1);
-        assertTrue(validator.validateConsolidation(c));
+        assertTrue(_validateConsolidationAsRiver(c));
     }
 
     function testValidateConsolidation_multiplePairs_succeeds() public {
@@ -213,16 +231,26 @@ contract ConsolidationAttestationTest is Test {
         sigs[2] = _sign(pk3, id);
 
         IAttestationVerifierV1.ConsolidationObject memory c = IAttestationVerifierV1.ConsolidationObject({
-            user: user, sourcePubkeys: sources, targetPubkeys: targets, totalAmount: totalAmount, signatures: sigs
+            withdrawalAddress: user,
+            sourcePubkeys: sources,
+            targetPubkeys: targets,
+            totalAmount: totalAmount,
+            signatures: sigs
         });
-        assertTrue(validator.validateConsolidation(c));
+        assertTrue(_validateConsolidationAsRiver(c));
     }
 
     function testValidateConsolidation_exactlyQuorumSignatures() public {
         // Quorum is 2; supplying exactly 2 valid signatures should pass.
         address user = address(0x11);
         IAttestationVerifierV1.ConsolidationObject memory c = _validConsolidation(user, 7);
-        assertTrue(validator.validateConsolidation(c));
+        assertTrue(_validateConsolidationAsRiver(c));
+    }
+
+    function testRevert_validateConsolidation_onlyRiver() public {
+        IAttestationVerifierV1.ConsolidationObject memory c = _validConsolidation(address(0xBEEF), 123);
+        vm.expectRevert(abi.encodeWithSelector(LibErrors.Unauthorized.selector, address(this)));
+        validator.validateConsolidation(c);
     }
 
     // -----------------------------------------------------------------------
@@ -336,14 +364,14 @@ contract ConsolidationAttestationTest is Test {
     function testRevert_emptySourcePubkeys() public {
         bytes[] memory empty = new bytes[](0);
         IAttestationVerifierV1.ConsolidationObject memory c = IAttestationVerifierV1.ConsolidationObject({
-            user: address(0xAA),
+            withdrawalAddress: address(0xAA),
             sourcePubkeys: empty,
             targetPubkeys: empty,
             totalAmount: 1 ether,
             signatures: new bytes[](0)
         });
         vm.expectRevert(IAttestationVerifierV1.NoConsolidations.selector);
-        validator.validateConsolidation(c);
+        _validateConsolidationAsRiver(c);
     }
 
     function testRevert_sourceTargetLengthMismatch() public {
@@ -354,14 +382,14 @@ contract ConsolidationAttestationTest is Test {
         targets[0] = _pubkey(3);
 
         IAttestationVerifierV1.ConsolidationObject memory c = IAttestationVerifierV1.ConsolidationObject({
-            user: address(0xAA),
+            withdrawalAddress: address(0xAA),
             sourcePubkeys: sources,
             targetPubkeys: targets,
             totalAmount: 32 ether,
             signatures: new bytes[](0)
         });
         vm.expectRevert(abi.encodeWithSelector(IAttestationVerifierV1.ConsolidationArrayLengthMismatch.selector, 2, 1));
-        validator.validateConsolidation(c);
+        _validateConsolidationAsRiver(c);
     }
 
     function testRevert_zeroTotalAmount() public {
@@ -371,31 +399,31 @@ contract ConsolidationAttestationTest is Test {
         targets[0] = _pubkey(2);
 
         IAttestationVerifierV1.ConsolidationObject memory c = IAttestationVerifierV1.ConsolidationObject({
-            user: address(0xAA),
+            withdrawalAddress: address(0xAA),
             sourcePubkeys: sources,
             targetPubkeys: targets,
             totalAmount: 0,
             signatures: new bytes[](0)
         });
         vm.expectRevert(IAttestationVerifierV1.ZeroConsolidationTotalAmount.selector);
-        validator.validateConsolidation(c);
+        _validateConsolidationAsRiver(c);
     }
 
-    function testRevert_zeroUser() public {
+    function testRevert_zeroWithdrawalAddress() public {
         bytes[] memory sources = new bytes[](1);
         sources[0] = _pubkey(1);
         bytes[] memory targets = new bytes[](1);
         targets[0] = _pubkey(2);
 
         IAttestationVerifierV1.ConsolidationObject memory c = IAttestationVerifierV1.ConsolidationObject({
-            user: address(0),
+            withdrawalAddress: address(0),
             sourcePubkeys: sources,
             targetPubkeys: targets,
             totalAmount: 32 ether,
             signatures: new bytes[](0)
         });
-        vm.expectRevert(IAttestationVerifierV1.ZeroConsolidationUser.selector);
-        validator.validateConsolidation(c);
+        vm.expectRevert(IAttestationVerifierV1.ZeroConsolidationWithdrawalAddress.selector);
+        _validateConsolidationAsRiver(c);
     }
 
     function testRevert_sourcePubkeyWrongLength() public {
@@ -405,7 +433,7 @@ contract ConsolidationAttestationTest is Test {
         targets[0] = _pubkey(2);
 
         IAttestationVerifierV1.ConsolidationObject memory c = IAttestationVerifierV1.ConsolidationObject({
-            user: address(0xAA),
+            withdrawalAddress: address(0xAA),
             sourcePubkeys: sources,
             targetPubkeys: targets,
             totalAmount: 32 ether,
@@ -414,7 +442,7 @@ contract ConsolidationAttestationTest is Test {
         vm.expectRevert(
             abi.encodeWithSelector(IAttestationVerifierV1.InvalidConsolidationPubkeyLength.selector, 0, 47, true)
         );
-        validator.validateConsolidation(c);
+        _validateConsolidationAsRiver(c);
     }
 
     function testRevert_targetPubkeyWrongLength() public {
@@ -424,7 +452,7 @@ contract ConsolidationAttestationTest is Test {
         targets[0] = _pubkeyOfLength(2, 49);
 
         IAttestationVerifierV1.ConsolidationObject memory c = IAttestationVerifierV1.ConsolidationObject({
-            user: address(0xAA),
+            withdrawalAddress: address(0xAA),
             sourcePubkeys: sources,
             targetPubkeys: targets,
             totalAmount: 32 ether,
@@ -433,7 +461,7 @@ contract ConsolidationAttestationTest is Test {
         vm.expectRevert(
             abi.encodeWithSelector(IAttestationVerifierV1.InvalidConsolidationPubkeyLength.selector, 0, 49, false)
         );
-        validator.validateConsolidation(c);
+        _validateConsolidationAsRiver(c);
     }
 
     // -----------------------------------------------------------------------
@@ -441,7 +469,7 @@ contract ConsolidationAttestationTest is Test {
     // -----------------------------------------------------------------------
 
     function testSignaturesExcludedFromBufferId() public {
-        // Two ConsolidationObjects with identical (user, sources, targets, totalAmount)
+        // Two ConsolidationObjects with identical (withdrawalAddress, sources, targets, totalAmount)
         // but different signature sets must derive the same EIP-712 digest. The verifier
         // builds the digest from only the four request fields, so the `signatures` field
         // never enters the hash.
@@ -468,21 +496,25 @@ contract ConsolidationAttestationTest is Test {
         vm.expectRevert(
             abi.encodeWithSelector(IAttestationVerifierV1.InsufficientConsolidationAttestations.selector, 0, 2)
         );
-        validator.validateConsolidation(
+        _validateConsolidationAsRiver(
             IAttestationVerifierV1.ConsolidationObject({
-                user: user, sourcePubkeys: sources, targetPubkeys: targets, totalAmount: totalAmount, signatures: sigsB
+                withdrawalAddress: user,
+                sourcePubkeys: sources,
+                targetPubkeys: targets,
+                totalAmount: totalAmount,
+                signatures: sigsB
             })
         );
 
-        // --- Correct-message signatures over the SAME (user, sources, targets, totalAmount):
+        // --- Correct-message signatures over the SAME (withdrawalAddress, sources, targets, totalAmount):
         // succeeds, proving the digest the verifier built didn't depend on signatures. ---
         bytes[] memory sigsA = new bytes[](2);
         sigsA[0] = _sign(pk1, expectedDigest);
         sigsA[1] = _sign(pk2, expectedDigest);
         assertTrue(
-            validator.validateConsolidation(
+            _validateConsolidationAsRiver(
                 IAttestationVerifierV1.ConsolidationObject({
-                    user: user,
+                    withdrawalAddress: user,
                     sourcePubkeys: sources,
                     targetPubkeys: targets,
                     totalAmount: totalAmount,
@@ -497,13 +529,13 @@ contract ConsolidationAttestationTest is Test {
         // call with the same payload (even with the same valid signatures) must revert.
         address user = address(0xBEEF);
         IAttestationVerifierV1.ConsolidationObject memory c = _validConsolidation(user, 1);
-        assertTrue(validator.validateConsolidation(c));
+        assertTrue(_validateConsolidationAsRiver(c));
 
         // The expected key is the EIP-712 structHash over the four request fields.
         bytes32 structHash = keccak256(
             abi.encode(
                 ATTEST_CONSOLIDATION_TYPEHASH,
-                c.user,
+                c.withdrawalAddress,
                 _hashBytesArray(c.sourcePubkeys),
                 _hashBytesArray(c.targetPubkeys),
                 c.totalAmount
@@ -513,7 +545,7 @@ contract ConsolidationAttestationTest is Test {
         vm.expectRevert(
             abi.encodeWithSelector(IAttestationVerifierV1.ConsolidationAlreadyProcessed.selector, structHash)
         );
-        validator.validateConsolidation(c);
+        _validateConsolidationAsRiver(c);
     }
 
     function testValidateConsolidation_emitsConsolidationProcessed() public {
@@ -522,7 +554,7 @@ contract ConsolidationAttestationTest is Test {
         bytes32 structHash = keccak256(
             abi.encode(
                 ATTEST_CONSOLIDATION_TYPEHASH,
-                c.user,
+                c.withdrawalAddress,
                 _hashBytesArray(c.sourcePubkeys),
                 _hashBytesArray(c.targetPubkeys),
                 c.totalAmount
@@ -530,7 +562,7 @@ contract ConsolidationAttestationTest is Test {
         );
         vm.expectEmit(true, false, false, true);
         emit IAttestationVerifierV1.ConsolidationProcessed(structHash);
-        validator.validateConsolidation(c);
+        _validateConsolidationAsRiver(c);
     }
 
     // -----------------------------------------------------------------------
@@ -552,9 +584,13 @@ contract ConsolidationAttestationTest is Test {
         vm.expectRevert(
             abi.encodeWithSelector(IAttestationVerifierV1.InsufficientConsolidationAttestations.selector, 1, 2)
         );
-        validator.validateConsolidation(
+        _validateConsolidationAsRiver(
             IAttestationVerifierV1.ConsolidationObject({
-                user: user, sourcePubkeys: sources, targetPubkeys: targets, totalAmount: totalAmount, signatures: sigs
+                withdrawalAddress: user,
+                sourcePubkeys: sources,
+                targetPubkeys: targets,
+                totalAmount: totalAmount,
+                signatures: sigs
             })
         );
     }
@@ -574,9 +610,13 @@ contract ConsolidationAttestationTest is Test {
         }
 
         vm.expectRevert(abi.encodeWithSelector(IAttestationVerifierV1.TooManySignatures.selector, 21, 20));
-        validator.validateConsolidation(
+        _validateConsolidationAsRiver(
             IAttestationVerifierV1.ConsolidationObject({
-                user: user, sourcePubkeys: sources, targetPubkeys: targets, totalAmount: totalAmount, signatures: sigs
+                withdrawalAddress: user,
+                sourcePubkeys: sources,
+                targetPubkeys: targets,
+                totalAmount: totalAmount,
+                signatures: sigs
             })
         );
     }
@@ -597,9 +637,13 @@ contract ConsolidationAttestationTest is Test {
         vm.expectRevert(
             abi.encodeWithSelector(IAttestationVerifierV1.InsufficientConsolidationAttestations.selector, 1, 2)
         );
-        validator.validateConsolidation(
+        _validateConsolidationAsRiver(
             IAttestationVerifierV1.ConsolidationObject({
-                user: user, sourcePubkeys: sources, targetPubkeys: targets, totalAmount: totalAmount, signatures: sigs
+                withdrawalAddress: user,
+                sourcePubkeys: sources,
+                targetPubkeys: targets,
+                totalAmount: totalAmount,
+                signatures: sigs
             })
         );
     }
@@ -620,9 +664,13 @@ contract ConsolidationAttestationTest is Test {
         vm.expectRevert(
             abi.encodeWithSelector(IAttestationVerifierV1.InsufficientConsolidationAttestations.selector, 1, 2)
         );
-        validator.validateConsolidation(
+        _validateConsolidationAsRiver(
             IAttestationVerifierV1.ConsolidationObject({
-                user: user, sourcePubkeys: sources, targetPubkeys: targets, totalAmount: totalAmount, signatures: sigs
+                withdrawalAddress: user,
+                sourcePubkeys: sources,
+                targetPubkeys: targets,
+                totalAmount: totalAmount,
+                signatures: sigs
             })
         );
     }
@@ -643,9 +691,13 @@ contract ConsolidationAttestationTest is Test {
         vm.expectRevert(
             abi.encodeWithSelector(IAttestationVerifierV1.InsufficientConsolidationAttestations.selector, 1, 2)
         );
-        validator.validateConsolidation(
+        _validateConsolidationAsRiver(
             IAttestationVerifierV1.ConsolidationObject({
-                user: user, sourcePubkeys: sources, targetPubkeys: targets, totalAmount: totalAmount, signatures: sigs
+                withdrawalAddress: user,
+                sourcePubkeys: sources,
+                targetPubkeys: targets,
+                totalAmount: totalAmount,
+                signatures: sigs
             })
         );
     }
@@ -671,9 +723,13 @@ contract ConsolidationAttestationTest is Test {
         vm.expectRevert(
             abi.encodeWithSelector(IAttestationVerifierV1.InsufficientConsolidationAttestations.selector, 1, 2)
         );
-        validator.validateConsolidation(
+        _validateConsolidationAsRiver(
             IAttestationVerifierV1.ConsolidationObject({
-                user: user, sourcePubkeys: sources, targetPubkeys: targets, totalAmount: totalAmount, signatures: sigs
+                withdrawalAddress: user,
+                sourcePubkeys: sources,
+                targetPubkeys: targets,
+                totalAmount: totalAmount,
+                signatures: sigs
             })
         );
     }
@@ -692,9 +748,9 @@ contract ConsolidationAttestationTest is Test {
         vm.expectRevert(
             abi.encodeWithSelector(IAttestationVerifierV1.InsufficientConsolidationAttestations.selector, 0, 2)
         );
-        validator.validateConsolidation(
+        _validateConsolidationAsRiver(
             IAttestationVerifierV1.ConsolidationObject({
-                user: user,
+                withdrawalAddress: user,
                 sourcePubkeys: sources,
                 targetPubkeys: targets,
                 totalAmount: totalAmount,
@@ -711,7 +767,7 @@ contract ConsolidationAttestationTest is Test {
         IAttestationVerifierV1.ConsolidationObject memory c = _validConsolidation(user, 1);
 
         vm.expectRevert(IAttestationVerifierV1.ZeroConsolidationDomainSeparator.selector);
-        validator.validateConsolidation(c);
+        _validateConsolidationAsRiver(c);
     }
 
     // -----------------------------------------------------------------------

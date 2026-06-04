@@ -8,6 +8,9 @@ import "./components/IOracleManager.1.sol";
 import "./components/ISharesManager.1.sol";
 import "./components/IUserDepositManager.1.sol";
 
+import "./IWithdraw.1.sol";
+import "./IAttestationVerifier.1.sol";
+
 /// @title River Interface (v1)
 /// @author Alluvial Finance Inc.
 /// @notice The main system interface
@@ -98,6 +101,12 @@ interface IRiverV1 is IConsensusLayerDepositManagerV1, IUserDepositManagerV1, IS
     /// @param newAmount The new balance to redeem
     event SetBalanceToRedeem(uint256 oldAmount, uint256 newAmount);
 
+    /// @notice Emitted when LsETH is minted for consolidation
+    /// @param recipient The address that received the minted LsETH
+    /// @param amountEth The amount of ETH(wei) attributed to consolidation
+    /// @param sharesMinted The amount of LsETH shares minted
+    event LsETHMintedForConsolidation(address indexed recipient, uint256 amountEth, uint256 sharesMinted);
+
     /// @notice Emitted when the balance committed to deposit
     /// @param oldAmount The old balance committed to deposit
     /// @param newAmount The new balance committed to deposit
@@ -108,12 +117,28 @@ interface IRiverV1 is IConsensusLayerDepositManagerV1, IUserDepositManagerV1, IS
     /// @param newAmount The new consolidation buffer
     event SetConsolidationBuffer(uint256 oldAmount, uint256 newAmount);
 
+    /// @notice Emitted when the external consolidation recipient mapping address is changed
+    /// @param externalConsolidationRecipientMapping The new external consolidation recipient mapping address
+    event SetExternalConsolidationRecipientMapping(address indexed externalConsolidationRecipientMapping);
+
     /// @notice Emitted when the redeem manager received a withdraw event report
     /// @param redeemManagerDemand The total demand in LsETH of the redeem manager
     /// @param suppliedRedeemManagerDemand The amount of LsETH demand actually supplied
     /// @param suppliedRedeemManagerDemandInEth The amount in ETH of the supplied demand
     event ReportedRedeemManager(
         uint256 redeemManagerDemand, uint256 suppliedRedeemManagerDemand, uint256 suppliedRedeemManagerDemandInEth
+    );
+
+    /// @notice Emitted when River forwards a Pectra consolidation request to the Withdraw contract
+    /// @param requests Consolidation requests
+    /// @param maxFeePerConsolidation Maximum fee per consolidation
+    /// @param excessFeeRecipient Address to receive any excess msg.value
+    /// @param valueSent ETH sent with the call for fees
+    event PectraConsolidationRequested(
+        IWithdrawV1.ConsolidationRequest[] requests,
+        uint256 maxFeePerConsolidation,
+        address excessFeeRecipient,
+        uint256 valueSent
     );
 
     /// @notice Thrown when the amount received from the Withdraw contract doe not match the requested amount
@@ -138,10 +163,12 @@ interface IRiverV1 is IConsensusLayerDepositManagerV1, IUserDepositManagerV1, IS
     /// @param _withdrawalCredentials The withdrawal credentials to apply to all deposits
     /// @param _consolidationCoverageFund The address of the consolidation coverage fund
     /// @param _attestationVerifier The pre-initialized AttestationVerifier contract address
+    /// @param _externalConsolidationRecipientMapping The pre-initialized External Consolidation Recipient Mapping contract address
     function initRiverV1_3(
         bytes32 _withdrawalCredentials,
         address _consolidationCoverageFund,
-        address _attestationVerifier
+        address _attestationVerifier,
+        address _externalConsolidationRecipientMapping
     ) external;
 
     /// @notice Get the current global fee
@@ -207,6 +234,14 @@ interface IRiverV1 is IConsensusLayerDepositManagerV1, IUserDepositManagerV1, IS
     /// @return True if slashing containment mode is active
     function getSlashingContainmentMode() external view returns (bool);
 
+    /// @notice Retrieve the current balance to consolidate
+    /// @return The current balance to consolidate
+    function getBalanceToConsolidate() external view returns (uint256);
+
+    /// @notice Mints LsETH to a recipient for consolidated ETH (keeper only)
+    /// @param consolidation The consolidation object
+    function mintLsETHForConsolidation(IAttestationVerifierV1.ConsolidationObject calldata consolidation) external;
+
     /// @notice Performs a redeem request on the redeem manager
     /// @param _lsETHAmount The amount of LsETH to redeem
     /// @param _recipient The address that will own the redeem request
@@ -267,4 +302,13 @@ interface IRiverV1 is IConsensusLayerDepositManagerV1, IUserDepositManagerV1, IS
 
     /// @notice Input for the redeem manager funds
     function sendRedeemManagerExceedingFunds() external payable;
+
+    /// @notice Request Pectra consolidations via the Withdraw contract. fee ETH sent as msg.value.
+    /// @dev Only callable by the keeper
+    /// @dev Since we consolidate to validators we own there is no need to track the consolidation buffer
+    /// @param requests Consolidation requests (each: src pubkeys[] -> target pubkey)
+    /// @param maxFeePerConsolidation Maximum fee per consolidation to accept
+    function consolidate(IWithdrawV1.ConsolidationRequest[] calldata requests, uint256 maxFeePerConsolidation)
+        external
+        payable;
 }
