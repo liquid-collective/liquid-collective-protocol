@@ -32,7 +32,7 @@ abstract contract ExternalConsolidationRecipientMappingV1TestBase is Test {
     address internal admin;
 
     event SetRiver(address indexed river);
-    event SetRecipient(address indexed withdrawalCredential, address indexed account, address indexed recipient);
+    event SetRecipient(address indexed withdrawalCredential, address indexed recipient);
 
     function _allowConsolidation(address account) internal {
         address[] memory accounts = new address[](1);
@@ -103,8 +103,8 @@ contract ExternalConsolidationRecipientMappingV1Tests is ExternalConsolidationRe
 
         vm.startPrank(sender);
         vm.expectEmit(true, true, true, true);
-        emit SetRecipient(sender, sender, recipient);
-        mappingContract.setRecipient(sender, recipient);
+        emit SetRecipient(sender, recipient);
+        mappingContract.setRecipient(recipient);
         vm.stopPrank();
 
         assertEq(mappingContract.getRecipient(sender), recipient);
@@ -117,8 +117,8 @@ contract ExternalConsolidationRecipientMappingV1Tests is ExternalConsolidationRe
         _allowConsolidation(sender);
 
         vm.startPrank(sender);
-        mappingContract.setRecipient(sender, firstRecipient);
-        mappingContract.setRecipient(sender, secondRecipient);
+        mappingContract.setRecipient(firstRecipient);
+        mappingContract.setRecipient(secondRecipient);
         vm.stopPrank();
 
         assertEq(mappingContract.getRecipient(sender), secondRecipient);
@@ -130,19 +130,7 @@ contract ExternalConsolidationRecipientMappingV1Tests is ExternalConsolidationRe
 
         vm.startPrank(sender);
         vm.expectRevert(abi.encodeWithSignature("Unauthorized(address)", sender));
-        mappingContract.setRecipient(sender, recipient);
-        vm.stopPrank();
-    }
-
-    function testSetRecipientRejectsDifferentWithdrawalCredential() external {
-        address sender = makeAddr("sender");
-        address withdrawalCredential = makeAddr("withdrawalCredential");
-        address recipient = makeAddr("recipient");
-        _allowConsolidation(sender);
-
-        vm.startPrank(sender);
-        vm.expectRevert(abi.encodeWithSignature("Unauthorized(address)", sender));
-        mappingContract.setRecipient(withdrawalCredential, recipient);
+        mappingContract.setRecipient(recipient);
         vm.stopPrank();
     }
 
@@ -154,7 +142,7 @@ contract ExternalConsolidationRecipientMappingV1Tests is ExternalConsolidationRe
 
         vm.startPrank(sender);
         vm.expectRevert(abi.encodeWithSignature("Denied(address)", sender));
-        mappingContract.setRecipient(sender, recipient);
+        mappingContract.setRecipient(recipient);
         vm.stopPrank();
     }
 
@@ -166,31 +154,23 @@ contract ExternalConsolidationRecipientMappingV1Tests is ExternalConsolidationRe
 
         vm.startPrank(sender);
         vm.expectRevert(abi.encodeWithSelector(IExternalConsolidationRecipientMappingV1.RecipientIsDenied.selector));
-        mappingContract.setRecipient(sender, recipient);
+        mappingContract.setRecipient(recipient);
         vm.stopPrank();
 
         assertEq(mappingContract.getRecipient(sender), address(0));
     }
 
-    function testSetRecipientZeroWithdrawalCredential() external {
+    function testSetRecipientZeroRecipientClearsRecipient() external {
         address sender = makeAddr("sender");
         address recipient = makeAddr("recipient");
         _allowConsolidation(sender);
 
         vm.startPrank(sender);
-        vm.expectRevert(abi.encodeWithSignature("InvalidZeroAddress()"));
-        mappingContract.setRecipient(address(0), recipient);
+        mappingContract.setRecipient(recipient);
+        mappingContract.setRecipient(address(0));
         vm.stopPrank();
-    }
 
-    function testSetRecipientZeroRecipient() external {
-        address sender = makeAddr("sender");
-        _allowConsolidation(sender);
-
-        vm.startPrank(sender);
-        vm.expectRevert(abi.encodeWithSignature("InvalidZeroAddress()"));
-        mappingContract.setRecipient(sender, address(0));
-        vm.stopPrank();
+        assertEq(mappingContract.getRecipient(sender), address(0));
     }
 
     function testGetRecipientUnset() external {

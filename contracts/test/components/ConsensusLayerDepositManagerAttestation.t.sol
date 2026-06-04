@@ -293,11 +293,7 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
 
     /// @dev Build a TopUp. BLS verification path skipped; pubkey must already be in
     ///      `ValidatorPubkeyLookup`. No signature field — consumer hardcodes 96 zero bytes.
-    function _makeTopUpDeposit(uint256 opIdx, uint256 seed)
-        internal
-        pure
-        returns (IDepositDataBuffer.TopUp memory)
-    {
+    function _makeTopUpDeposit(uint256 opIdx, uint256 seed) internal pure returns (IDepositDataBuffer.TopUp memory) {
         return IDepositDataBuffer.TopUp({pubkey: _fakePubkey(seed), amount: 32 ether, operatorIdx: opIdx});
     }
 
@@ -321,10 +317,11 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
     }
 
     /// @dev Convenience: build a DepositObject from both arrays.
-    function _batchOf(
-        IDepositDataBuffer.Deposit[] memory deposits,
-        IDepositDataBuffer.TopUp[] memory topUps
-    ) internal pure returns (IDepositDataBuffer.DepositObject memory batch) {
+    function _batchOf(IDepositDataBuffer.Deposit[] memory deposits, IDepositDataBuffer.TopUp[] memory topUps)
+        internal
+        pure
+        returns (IDepositDataBuffer.DepositObject memory batch)
+    {
         batch.deposits = deposits;
         batch.topUps = topUps;
     }
@@ -364,10 +361,10 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
     }
 
     /// @dev Submit a mixed batch (initials + top-ups).
-    function _prepareDeposit(
-        IDepositDataBuffer.Deposit[] memory deposits,
-        IDepositDataBuffer.TopUp[] memory topUps
-    ) internal returns (bytes32 bufferId, bytes32 rootHash, bytes[] memory sigs) {
+    function _prepareDeposit(IDepositDataBuffer.Deposit[] memory deposits, IDepositDataBuffer.TopUp[] memory topUps)
+        internal
+        returns (bytes32 bufferId, bytes32 rootHash, bytes[] memory sigs)
+    {
         return _prepareDeposit(_batchOf(deposits, topUps));
     }
 
@@ -805,9 +802,7 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
         (bytes32 bufferId, bytes32 rootHash, bytes[] memory sigs) = _prepareTopUps(topUps);
 
         vm.prank(keeper);
-        vm.expectRevert(
-            abi.encodeWithSelector(IAttestationVerifierV1.TopUpPubkeyNotFunded.selector, topUps[0].pubkey)
-        );
+        vm.expectRevert(abi.encodeWithSelector(IAttestationVerifierV1.TopUpPubkeyNotFunded.selector, topUps[0].pubkey));
         dm.depositToConsensusLayerWithAttestation(bufferId, rootHash, sigs);
     }
 
@@ -873,9 +868,7 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
         (bytes32 bufferId, bytes32 rootHash, bytes[] memory sigs) = _prepareDeposit(deposits, topUps);
 
         vm.prank(keeper);
-        vm.expectRevert(
-            abi.encodeWithSelector(IAttestationVerifierV1.TopUpPubkeyNotFunded.selector, topUps[0].pubkey)
-        );
+        vm.expectRevert(abi.encodeWithSelector(IAttestationVerifierV1.TopUpPubkeyNotFunded.selector, topUps[0].pubkey));
         dm.depositToConsensusLayerWithAttestation(bufferId, rootHash, sigs);
     }
 
@@ -1506,8 +1499,7 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
         bool depositEventFound = false;
         for (uint256 i = 0; i < logs.length; i++) {
             if (logs[i].emitter == address(depositContract) && logs[i].topics[0] == depositEventTopic) {
-                (,, , bytes memory recordedSignature,) =
-                    abi.decode(logs[i].data, (bytes, bytes, bytes, bytes, bytes));
+                (,,, bytes memory recordedSignature,) = abi.decode(logs[i].data, (bytes, bytes, bytes, bytes, bytes));
                 assertEq(recordedSignature.length, 96, "signature length");
                 assertEq(recordedSignature, new bytes(96), "top-up signature must be 96 zero bytes");
                 depositEventFound = true;
@@ -1534,8 +1526,7 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
         expectedPubkeys[0] = deposits[0].pubkey;
         expectedPubkeys[1] = deposits[1].pubkey;
         vm.expectCall(
-            address(validator),
-            abi.encodeCall(IAttestationVerifierV1.recordNewlyFundedPubkeys, (expectedPubkeys))
+            address(validator), abi.encodeCall(IAttestationVerifierV1.recordNewlyFundedPubkeys, (expectedPubkeys))
         );
 
         (bytes32 bufferId, bytes32 rootHash, bytes[] memory sigs) = _prepareDeposit(deposits, topUps);
