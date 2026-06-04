@@ -11,9 +11,8 @@ interface IExternalConsolidationRecipientMappingV1 {
 
     /// @notice The recipient for a withdrawal credential address has changed
     /// @param withdrawalCredential The withdrawal credential address
-    /// @param account The account that set the recipient
     /// @param recipient The recipient address
-    event SetRecipient(address indexed withdrawalCredential, address indexed account, address indexed recipient);
+    event SetRecipient(address indexed withdrawalCredential, address indexed recipient);
 
     /// @notice The requested recipient is denied on the allowlist
     error RecipientIsDenied();
@@ -22,10 +21,10 @@ interface IExternalConsolidationRecipientMappingV1 {
     /// @param _riverAddress Address of River
     function initExternalConsolidationRecipientMappingV1(address _riverAddress) external;
 
-    /// @notice Sets the recipient address for the caller's withdrawal credential address
-    /// @param _withdrawalCredential The caller's withdrawal credential address to map
+    /// @notice Sets the recipient address for the caller.
+    /// @dev The assumption is that the caller is the withdrawal credential address.
     /// @param _recipient The address to receive minted LsETH
-    function setRecipient(address _withdrawalCredential, address _recipient) external;
+    function setRecipient(address _recipient) external;
 
     /// @notice Retrieves the recipient address mapped to a withdrawal credential address
     /// @param _withdrawalCredential The withdrawal credential address to query

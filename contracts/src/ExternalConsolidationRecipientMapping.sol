@@ -30,21 +30,15 @@ contract ExternalConsolidationRecipientMappingV1 is
     }
 
     /// @inheritdoc IExternalConsolidationRecipientMappingV1
-    function setRecipient(address _withdrawalCredential, address _recipient) external {
-        LibSanitize._notZeroAddress(_withdrawalCredential);
-        LibSanitize._notZeroAddress(_recipient);
-        if (msg.sender != _withdrawalCredential) {
-            revert LibErrors.Unauthorized(msg.sender);
-        }
-
+    function setRecipient(address _recipient) external {
         IAllowlistV1 allowlist = IAllowlistV1(IRiverV1(payable(RiverAddress.get())).getAllowlist());
         allowlist.onlyAllowed(msg.sender, LibAllowlistMasks.CONSOLIDATE_MASK);
         if (allowlist.isDenied(_recipient)) {
             revert RecipientIsDenied();
         }
 
-        ExternalConsolidationRecipientMapping.set(_withdrawalCredential, _recipient);
-        emit SetRecipient(_withdrawalCredential, msg.sender, _recipient);
+        ExternalConsolidationRecipientMapping.set(msg.sender, _recipient);
+        emit SetRecipient(msg.sender, _recipient);
     }
 
     /// @inheritdoc IExternalConsolidationRecipientMappingV1
