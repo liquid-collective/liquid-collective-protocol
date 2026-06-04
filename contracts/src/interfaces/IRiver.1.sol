@@ -99,14 +99,9 @@ interface IRiverV1 is IConsensusLayerDepositManagerV1, IUserDepositManagerV1, IS
     /// @param newAmount The new balance to redeem
     event SetBalanceToRedeem(uint256 oldAmount, uint256 newAmount);
 
-    /// @notice Emitted when the balance to consolidate is updated
-    /// @param oldAmount The old balance to consolidate
-    /// @param newAmount The new balance to consolidate
-    event SetBalanceToConsolidate(uint256 oldAmount, uint256 newAmount);
-
     /// @notice Emitted when LsETH is minted for consolidation
     /// @param recipient The address that received the minted LsETH
-    /// @param amountEth The amount of ETH attributed to consolidation
+    /// @param amountEth The amount of ETH(wei) attributed to consolidation
     /// @param sharesMinted The amount of LsETH shares minted
     event LsETHMintedForConsolidation(address indexed recipient, uint256 amountEth, uint256 sharesMinted);
 

@@ -1246,7 +1246,9 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
         // Need attesterCount > MAX_SIGNATURES so the attester-count check doesn't fire first.
         uint256 max = validator.MAX_SIGNATURES();
         address[] memory atts = new address[](max + 5);
-        for (uint256 i = 0; i < max + 5; i++) atts[i] = address(uint160(0x9000 + i));
+        for (uint256 i = 0; i < max + 5; i++) {
+            atts[i] = address(uint160(0x9000 + i));
+        }
         vm.expectRevert(
             abi.encodeWithSelector(IAttestationVerifierV1.QuorumExceedsMaxSignatures.selector, max + 1, max)
         );
