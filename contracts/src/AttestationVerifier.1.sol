@@ -478,6 +478,7 @@ contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1 {
     ///      additional financial caps on `totalAmount`.
     function validateConsolidation(IAttestationVerifierV1.ConsolidationObject calldata consolidation)
         external
+        onlyRiver
         returns (bool)
     {
         // 1. Structural checks (cheapest first — fail fast)
