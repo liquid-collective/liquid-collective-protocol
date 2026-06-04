@@ -123,20 +123,17 @@ contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1 {
         address _river,
         address _depositDataBuffer,
         address[] calldata _rootAttesters,
-        uint256 _depositQuorum,
+        uint256 _quorum,
         bytes4 _genesisForkVersion,
         address[] calldata _consolidationCommitteeAttesters,
         uint256 _consolidationQuorum
     ) external init(0) {
         // ---- Validate deposit-side parameters ----
-        if (
-            _rootAttesters.length == 0
-                || _rootAttesters.length > MAX_ROOT_ATTESTERS
-        ) {
+        if (_rootAttesters.length == 0 || _rootAttesters.length > MAX_ROOT_ATTESTERS) {
             revert LibErrors.InvalidArgument();
         }
-        if (_depositQuorum == 0) revert ZeroQuorum();
-        if (_depositQuorum > MAX_SIGNATURES) revert QuorumExceedsMaxSignatures(_depositQuorum, MAX_SIGNATURES);
+        if (_quorum == 0) revert ZeroQuorum();
+        if (_quorum > MAX_SIGNATURES) revert QuorumExceedsMaxSignatures(_quorum, MAX_SIGNATURES);
 
         // ---- Validate consolidation-side parameters ----
         if (
@@ -167,32 +164,35 @@ contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1 {
                 RootAttesters.setCount(RootAttesters.getCount() + 1);
                 emit SetRootAttester(_rootAttesters[i], true);
             }
-            DepositCommitteeAttestationQuorum.set(_depositQuorum);
-            emit SetDepositCommitteeAttestationQuorum(_depositQuorum);
-
-            // ---- Consolidation committee + quorum ----
-            for (uint256 i = 0; i < _consolidationCommitteeAttesters.length; i++) {
-                if (!ConsolidationCommitteeAttesters.isConsolidationCommitteeAttester(
-                        _consolidationCommitteeAttesters[i]
-                    )) {
-                    ConsolidationCommitteeAttesters.setConsolidationCommitteeAttester(
-                        _consolidationCommitteeAttesters[i], true
-                    );
-                    ConsolidationCommitteeAttesters.setCount(ConsolidationCommitteeAttesters.getCount() + 1);
-                    emit SetConsolidationCommitteeAttester(_consolidationCommitteeAttesters[i], true);
-                }
-            }
-            uint256 consolidationAttesterCount = ConsolidationCommitteeAttesters.getCount();
-            if (_consolidationQuorum > consolidationAttesterCount) {
-                revert QuorumExceedsConsolidationCommitteeAttesterCount(
-                    _consolidationQuorum, consolidationAttesterCount
-                );
-            }
-            ConsolidationCommitteeAttestationQuorum.set(_consolidationQuorum);
-            emit SetConsolidationCommitteeAttestationQuorum(_consolidationQuorum);
         }
+        uint256 rootAttesterCount = RootAttesters.getCount();
+        if (_quorum > rootAttesterCount) {
+            revert QuorumExceedsRootAttesterCount(_quorum, rootAttesterCount);
+        }
+        RootAttestationQuorum.set(_quorum);
+        emit SetRootAttestationQuorum(_quorum);
+
+        // ---- Consolidation committee + quorum ----
+        for (uint256 i = 0; i < _consolidationCommitteeAttesters.length; i++) {
+            if (!ConsolidationCommitteeAttesters.isConsolidationCommitteeAttester(_consolidationCommitteeAttesters[i]))
+            {
+                ConsolidationCommitteeAttesters.setConsolidationCommitteeAttester(
+                    _consolidationCommitteeAttesters[i], true
+                );
+                ConsolidationCommitteeAttesters.setCount(ConsolidationCommitteeAttesters.getCount() + 1);
+                emit SetConsolidationCommitteeAttester(_consolidationCommitteeAttesters[i], true);
+            }
+        }
+        uint256 consolidationAttesterCount = ConsolidationCommitteeAttesters.getCount();
+        if (_consolidationQuorum > consolidationAttesterCount) {
+            revert QuorumExceedsConsolidationCommitteeAttesterCount(_consolidationQuorum, consolidationAttesterCount);
+        }
+        ConsolidationCommitteeAttestationQuorum.set(_consolidationQuorum);
+        emit SetConsolidationCommitteeAttestationQuorum(_consolidationQuorum);
         {
-            // ---- EIP-712 domain separators (distinct NAME_HASH per flow, both anchored to River) ----
+            // EIP-712 domain separator binds verifyingContract to River's address, not this
+            // verifier's own address. This preserves root attester signing tooling that
+            // signs against River's identity even if the verifier is later redeployed.
             bytes32 domainSeparator =
                 keccak256(abi.encode(EIP712_DOMAIN_TYPEHASH, NAME_HASH, VERSION_HASH, block.chainid, _river));
             DomainSeparator.set(domainSeparator);
@@ -204,12 +204,6 @@ contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1 {
             ConsolidationDomainSeparator.set(domainSeparator);
             emit SetConsolidationDomainSeparator(domainSeparator);
         }
-        uint256 rootAttesterCount = RootAttesters.getCount();
-        if (_quorum > rootAttesterCount) {
-            revert QuorumExceedsRootAttesterCount(_quorum, rootAttesterCount);
-        }
-        RootAttestationQuorum.set(_quorum);
-        emit SetRootAttestationQuorum(_quorum);
     }
 
     // -----------------------------------------------------------------------

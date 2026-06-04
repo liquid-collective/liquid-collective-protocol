@@ -298,11 +298,7 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
 
     /// @dev Build a TopUp. BLS verification path skipped; pubkey must already be in
     ///      `PectraValidatorPubkeyLookup`. No signature field — consumer hardcodes 96 zero bytes.
-    function _makeTopUpDeposit(uint256 opIdx, uint256 seed)
-        internal
-        pure
-        returns (IDepositDataBuffer.TopUp memory)
-    {
+    function _makeTopUpDeposit(uint256 opIdx, uint256 seed) internal pure returns (IDepositDataBuffer.TopUp memory) {
         return IDepositDataBuffer.TopUp({pubkey: _fakePubkey(seed), amount: 32 ether, operatorIdx: opIdx});
     }
 
@@ -883,7 +879,9 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
             abi.encodeWithSelector(IAttestationVerifierV1.DepositDataBufferIdAlreadyProcessed.selector, bufferId)
         );
         dm.depositToConsensusLayerWithAttestation(bufferId, rootHash, sigs);
-        assertEq(depositContract.deposit_count(), depositCountBefore, "no deposit should reach the beacon contract on replay");
+        assertEq(
+            depositContract.deposit_count(), depositCountBefore, "no deposit should reach the beacon contract on replay"
+        );
     }
 
     /// @dev Re-using a processed `depositDataBufferId` from an initial-deposit-only batch
@@ -905,9 +903,7 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
         );
         dm.depositToConsensusLayerWithAttestation(bufferId, rootHash, sigs);
         assertEq(
-            depositContract.deposit_count(),
-            depositCountBefore,
-            "no deposit should reach the beacon contract on replay"
+            depositContract.deposit_count(), depositCountBefore, "no deposit should reach the beacon contract on replay"
         );
     }
 
@@ -934,9 +930,7 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
         );
         dm.depositToConsensusLayerWithAttestation(bufferId, rootHash, sigs);
         assertEq(
-            depositContract.deposit_count(),
-            depositCountBefore,
-            "no deposit should reach the beacon contract on replay"
+            depositContract.deposit_count(), depositCountBefore, "no deposit should reach the beacon contract on replay"
         );
     }
 
@@ -966,9 +960,7 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
         );
         dm.depositToConsensusLayerWithAttestation(bufferId, attackerRootHash, attackerSigs);
         assertEq(
-            depositContract.deposit_count(),
-            depositCountBefore,
-            "no deposit should reach the beacon contract on replay"
+            depositContract.deposit_count(), depositCountBefore, "no deposit should reach the beacon contract on replay"
         );
     }
 
@@ -1161,9 +1153,7 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
         // rootAttester1 was registered in setUp(); re-adding must revert
         vm.prank(admin);
         vm.expectRevert(
-            abi.encodeWithSelector(
-                IAttestationVerifierV1.RootAttesterStatusUnchanged.selector, rootAttester1, true
-            )
+            abi.encodeWithSelector(IAttestationVerifierV1.RootAttesterStatusUnchanged.selector, rootAttester1, true)
         );
         validator.setRootAttester(rootAttester1, true);
 
@@ -1171,9 +1161,7 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
         address stranger = address(0xC0FFEE);
         vm.prank(admin);
         vm.expectRevert(
-            abi.encodeWithSelector(
-                IAttestationVerifierV1.RootAttesterStatusUnchanged.selector, stranger, false
-            )
+            abi.encodeWithSelector(IAttestationVerifierV1.RootAttesterStatusUnchanged.selector, stranger, false)
         );
         validator.setRootAttester(stranger, false);
     }
@@ -1277,9 +1265,7 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
         vm.prank(admin);
         validator.setRootAttester(rootAttester3, false);
         vm.prank(admin);
-        vm.expectRevert(
-            abi.encodeWithSelector(IAttestationVerifierV1.QuorumExceedsRootAttesterCount.selector, 2, 1)
-        );
+        vm.expectRevert(abi.encodeWithSelector(IAttestationVerifierV1.QuorumExceedsRootAttesterCount.selector, 2, 1));
         validator.setRootAttester(rootAttester2, false);
     }
 
@@ -1303,9 +1289,7 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
     function testRevert_setRootAttestationQuorum_exceedsAttesterCount() public {
         // 3 attesters; quorum > 3 is rejected.
         vm.prank(admin);
-        vm.expectRevert(
-            abi.encodeWithSelector(IAttestationVerifierV1.QuorumExceedsRootAttesterCount.selector, 4, 3)
-        );
+        vm.expectRevert(abi.encodeWithSelector(IAttestationVerifierV1.QuorumExceedsRootAttesterCount.selector, 4, 3));
         validator.setRootAttestationQuorum(4);
     }
 
@@ -1365,9 +1349,7 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
         address[] memory attesters = new address[](2);
         attesters[0] = rootAttester1;
         attesters[1] = rootAttester2;
-        vm.expectRevert(
-            abi.encodeWithSelector(IAttestationVerifierV1.QuorumExceedsRootAttesterCount.selector, 3, 2)
-        );
+        vm.expectRevert(abi.encodeWithSelector(IAttestationVerifierV1.QuorumExceedsRootAttesterCount.selector, 3, 2));
         freshValidator.initAttestationVerifierV1(address(dm), address(buffer), attesters, 3, bytes4(0), attesters, 3);
     }
 
@@ -1382,9 +1364,7 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
         }
         assertEq(validator.getRootAttesterCount(), max);
         vm.prank(admin);
-        vm.expectRevert(
-            abi.encodeWithSelector(IAttestationVerifierV1.TooManyRootAttesters.selector, max + 1, max)
-        );
+        vm.expectRevert(abi.encodeWithSelector(IAttestationVerifierV1.TooManyRootAttesters.selector, max + 1, max));
         validator.setRootAttester(address(uint160(0x9999)), true);
     }
 

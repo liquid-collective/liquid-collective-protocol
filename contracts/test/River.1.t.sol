@@ -2980,13 +2980,7 @@ contract RiverV1CoverageTests is RiverV1TestBase {
         v = new AttestationVerifierV1();
         LibImplementationUnbricker.unbrick(vm, address(v));
         v.initAttestationVerifierV1(
-            _river,
-            makeAddr("depositBuffer"),
-            _rootAttesters_,
-            1,
-            bytes4(0),
-            _consolidationCommitteeAttesters_,
-            1
+            _river, makeAddr("depositBuffer"), _rootAttesters_, 1, bytes4(0), _consolidationCommitteeAttesters_, 1
         );
     }
 
@@ -3570,9 +3564,9 @@ contract RiverV1ConsolidationMintTests is RiverV1TestBase {
         );
         river.initRiverV1_2();
         address[] memory _initDepositCommitteeAttesters = new address[](3);
-        _initDepositCommitteeAttesters[0] = depositCommitteeAttester1;
-        _initDepositCommitteeAttesters[1] = depositCommitteeAttester2;
-        _initDepositCommitteeAttesters[2] = depositCommitteeAttester3;
+        _initDepositCommitteeAttesters[0] = rootAttester1;
+        _initDepositCommitteeAttesters[1] = rootAttester2;
+        _initDepositCommitteeAttesters[2] = rootAttester3;
         address[] memory _initConsolidationCommitteeAttesters = new address[](2);
         _initConsolidationCommitteeAttesters[0] = consolidationCommitteeAttester1;
         _initConsolidationCommitteeAttesters[1] = consolidationCommitteeAttester2;
@@ -3628,25 +3622,21 @@ contract RiverV1ConsolidationMintTests is RiverV1TestBase {
     }
 
     function testMintLsETHForConsolidationUnallowedUserRevertsAtAllowlist() public {
+        address notKeeper = makeAddr("notKeeper");
         IAttestationVerifierV1.ConsolidationObject memory consolidation = _buildConsolidation(bob, 1 ether, 4);
         vm.prank(admin);
         vm.expectRevert(abi.encodeWithSignature("Unauthorized(address)", bob));
         river.mintLsETHForConsolidation(consolidation);
         vm.prank(notKeeper);
         vm.expectRevert(abi.encodeWithSelector(IConsensusLayerDepositManagerV1.OnlyKeeper.selector));
-        river.mintLsETHForConsolidation(1 ether, bob);
-    }
-
-    function testMintLsETHForConsolidationZeroAmountReverts() public {
-        vm.prank(admin);
-        vm.expectRevert(abi.encodeWithSignature("InvalidArgument()"));
-        river.mintLsETHForConsolidation(0, bob);
+        river.mintLsETHForConsolidation(consolidation);
     }
 
     function testMintLsETHForConsolidationZeroRecipientReverts() public {
+        IAttestationVerifierV1.ConsolidationObject memory consolidation = _buildConsolidation(address(0), 1 ether, 4);
         vm.prank(admin);
-        vm.expectRevert(abi.encodeWithSignature("InvalidZeroAddress()"));
-        river.mintLsETHForConsolidation(1 ether, address(0));
+        vm.expectRevert(abi.encodeWithSignature("Unauthorized(address)", address(0)));
+        river.mintLsETHForConsolidation(consolidation);
     }
 
     function testMintLsETHForConsolidationHappyPath() public {

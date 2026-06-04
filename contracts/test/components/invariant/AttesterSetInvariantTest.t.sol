@@ -68,10 +68,7 @@ contract AttesterSetInvariantTest is Test {
     /// @dev Quorum is never higher than the number of registered attesters. A violation here
     ///      would mean `validateDeposits()` could not reach quorum from any valid input — soft-brick.
     function invariant_quorumLeAttesterCount() public {
-        assertLe(
-            verifier.getRootAttestationQuorum(),
-            verifier.getRootAttesterCount()
-        );
+        assertLe(verifier.getRootAttestationQuorum(), verifier.getRootAttesterCount());
     }
 
     /// @dev Quorum is never higher than the per-submission signature cap. Same soft-brick
