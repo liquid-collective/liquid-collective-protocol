@@ -75,11 +75,13 @@ interface IAttestationVerifierV1 {
     /// @param length The observed length
     error InvalidSignatureLength(uint256 index, uint256 length);
 
-    /// @notice A deposit's `amount` is outside the protocol-accepted range
+    /// @notice An entry's `amount` is outside the protocol-accepted range
     ///         [1 ether, 2048 ether] or is not gwei-aligned. Enforced here in
     ///         `validateDeposits()` so producer bugs fail before the heavy BLS path runs;
     ///         downstream `_depositValidator` trusts this check.
-    /// @param index The deposit index in the batch
+    /// @param index Index into the sub-array currently being validated
+    ///              (either `batch.deposits` or `batch.topUps`); the loop that raised
+    ///              the revert determines which.
     /// @param amount The offending amount in wei
     error InvalidDepositAmount(uint256 index, uint256 amount);
 

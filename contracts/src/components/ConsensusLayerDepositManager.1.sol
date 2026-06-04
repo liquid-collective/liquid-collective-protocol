@@ -154,19 +154,25 @@ abstract contract ConsensusLayerDepositManagerV1 is IConsensusLayerDepositManage
             depositDataBufferId, depositRootHash, signatures, depositContract, withdrawalCredentials, committedBalance
         );
 
-        // 5. Update operator funded validator accounting
+        // 5. Mark the batch ID processed BEFORE any external interactions (CEI). If the
+        //    deposit contract were ever misconfigured to a reentrant address, a re-entry
+        //    into this function with the same bufferId would now fail validateDeposits()'s
+        //    processed-ID check. The mark unwinds atomically with the tx on any later revert.
+        verifier.markDepositDataBufferIdProcessed(depositDataBufferId);
+
+        // 6. Update operator funded validator accounting
         _updateFundedETHFromBuffer(batch.deposits, batch.topUps);
 
-        // 6a. Execute initial deposits — BLS signature is forwarded to the deposit contract.
+        // 7a. Execute initial deposits — BLS signature is forwarded to the deposit contract.
         bytes[] memory newlyFundedPubkeys =
             _executeDeposits(depositDataBufferId, batch.deposits, withdrawalCredentials, depositContract);
 
-        // 6b. Execute top-ups — the beacon chain ignores BLS signatures on top-ups, so we
+        // 7b. Execute top-ups — the beacon chain ignores BLS signatures on top-ups, so we
         //     forward 96 zero bytes. The signature field is required by the deposit contract's
         //     ABI but is semantically irrelevant for subsequent deposits to an existing validator.
         _executeTopUps(depositDataBufferId, batch.topUps, withdrawalCredentials, depositContract);
 
-        // 7. Bookkeeping writes BEFORE the external `recordNewlyFundedPubkeys` callback.
+        // 8. Bookkeeping writes BEFORE the external `recordNewlyFundedPubkeys` callback.
         _setCommittedBalance(committedBalance - totalAmount);
 
         uint256 currentInFlightETH = InFlightDeposit.get();
@@ -177,13 +183,10 @@ abstract contract ConsensusLayerDepositManagerV1 is IConsensusLayerDepositManage
         TotalDepositedETH.set(currentTotalDepositedETH + totalAmount);
         emit SetTotalDepositedETH(currentTotalDepositedETH, currentTotalDepositedETH + totalAmount);
 
-        // 8. Record initial-deposit pubkeys so future top-ups against them pass the membership check.
+        // 9. Record initial-deposit pubkeys so future top-ups against them pass the membership check.
         if (newlyFundedPubkeys.length > 0) {
             verifier.recordNewlyFundedPubkeys(newlyFundedPubkeys);
         }
-
-        // 9. Mark the batch ID processed so the same batch cannot be replayed.
-        verifier.markDepositDataBufferIdProcessed(depositDataBufferId);
     }
 
     /// @notice Executes the initial validator deposits in a batch and emits PubkeyFunded for each.
