@@ -357,7 +357,7 @@ contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1 {
     // -----------------------------------------------------------------------
 
     /// @inheritdoc IAttestationVerifierV1
-    function validate(
+    function validateDeposits(
         bytes32 depositDataBufferId,
         bytes32 depositRootHash,
         bytes[] calldata signatures,
